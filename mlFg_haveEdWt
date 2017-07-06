@@ -1,0 +1,632 @@
+grep -i model- *.h *.cpp *.cc *.c
+HCrash.cpp:	if (model->getNumRow() == 0)
+HCrash.cpp:	model->timer.reset();
+HCrash.cpp:	numRow = model->getNumRow();
+HCrash.cpp:	numCol = model->getNumCol();
+HCrash.cpp:	numTot = model->getNumTot();
+HCrash.cpp:	bool HaveImpliedBounds = model->impliedBoundsPresolve;
+HCrash.cpp:	model->usingImpliedBoundsPresolve = false;
+HCrash.cpp:	  model->CpImpliedBd();
+HCrash.cpp:	model->totalTime += model->timer.getTime();
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:		model->updatePivots(columnIn, rowOut, sourceOut);
+HCrash.cpp:		model->updateMatrix(columnIn, columnOut);
+HCrash.cpp:  const double *colCost = model->getcolCost();
+HCrash.cpp:  const double *colLower = model->getcolLower();
+HCrash.cpp:  const double *colUpper = model->getcolUpper();
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:	const double *colCost = model->getcolCost();
+HCrash.cpp:	const double *colLower = model->getcolLower();
+HCrash.cpp:	const double *colUpper = model->getcolUpper();
+HCrash.cpp://	const double *primalColLowerImplied = model->getprimalColLowerImplied();
+HCrash.cpp://	const double *primalColUpperImplied = model->getprimalColUpperImplied();
+HCrash.cpp://	const double *dualColLowerImplied = model->getdualColLowerImplied();
+HCrash.cpp://	const double *dualColUpperImplied = model->getdualColUpperImplied();
+HCrash.cpp:	const double *colLower = model->getcolLower();
+HCrash.cpp:	const double *colUpper = model->getcolUpper();
+HCrash.cpp:	const double *rowLower = model->getrowLower();
+HCrash.cpp:	const double *rowUpper = model->getrowUpper();
+HCrash.cpp:	const double *colCost = model->getcolCost();
+HCrash.cpp:	const double *colLower = model->getcolLower();
+HCrash.cpp:	const double *colUpper = model->getcolUpper();
+HCrash.cpp:	const double *rowLower = model->getrowLower();
+HCrash.cpp:	const double *rowUpper = model->getrowUpper();
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:		int vr_n = model->getBaseIndex()[k];
+HCrash.cpp:		if (model->getNonbasicFlag()[vr_n] == 0)
+HCrash.cpp:		int vr_n = model->getBaseIndex()[r_n];
+HCrash.cpp:	const double *colLower = model->getcolLower();
+HCrash.cpp:	const double *colUpper = model->getcolUpper();
+HCrash.cpp:	const double *rowLower = model->getrowLower();
+HCrash.cpp:	const double *rowUpper = model->getrowUpper();
+HCrash.cpp:	const double *primalColLowerImplied = model->getprimalColLowerImplied();
+HCrash.cpp:	const double *primalColUpperImplied = model->getprimalColUpperImplied();
+HCrash.cpp:	const double *primalRowLowerImplied = model->getprimalRowLowerImplied();
+HCrash.cpp:	const double *primalRowUpperImplied = model->getprimalRowUpperImplied();
+HCrash.cpp:	const double *dualColLowerImplied = model->getdualColLowerImplied();
+HCrash.cpp:	const double *dualColUpperImplied = model->getdualColUpperImplied();
+HCrash.cpp:	const double *dualRowLowerImplied = model->getdualRowLowerImplied();
+HCrash.cpp:	const double *dualRowUpperImplied = model->getdualRowUpperImplied();
+HCrash.cpp:	model->mlFg_Report();
+HCrash.cpp:	if (model->mlFg_haveMatrixColWise) {
+HCrash.cpp:	  matrix = model->getMatrix();
+HCrash.cpp:	  Astart = &model->Astart[0];
+HCrash.cpp:	  Aindex = &model->Aindex[0];
+HCrash.cpp:	  Avalue = &model->Avalue[0];
+HCrash.cpp:	numRow = model->getNumRow();
+HCrash.cpp:	numCol = model->getNumCol();
+HCrash.cpp:	numTot = model->getNumTot();
+HCrash.cpp://				r_n, model->getBaseIndex()[r_n], model->getWorkLower()[r_n],
+HCrash.cpp://				model->getWorkValue()[r_n], model->getWorkUpper()[r_n],
+HCrash.cpp://				model->getBaseLower()[r_n], model->getBaseValue()[r_n],
+HCrash.cpp://				model->getBaseUpper()[r_n]);
+HCrash.cpp://				model->getNonbasicFlag()[vr_n],
+HCrash.cpp://				model->getNonbasicMove()[vr_n], model->getWorkLower()[vr_n],
+HCrash.cpp://				model->getWorkValue()[vr_n], model->getWorkUpper()[vr_n]);
+HCrash.cpp://	  const double *colCost = model->getcolCost();
+HCrash.cpp://    const double *colLower = model->getcolLower();
+HCrash.cpp://    const double *colUpper = model->getcolUpper();
+HCrash.cpp://    const double *rowLower = model->getrowLower();
+HCrash.cpp://    const double *rowUpper = model->getrowUpper();
+HCrash.cpp:			printf("In crash: LTSSF before model->updatePivots\n");cout<<flush;
+HCrash.cpp:			model->updatePivots(columnIn, rowOut, sourceOut);
+HCrash.cpp:			printf("In crash: LTSSF after  model->updatePivots\n");cout<<flush;
+HCrash.cpp:			if (model->mlFg_haveMatrixRowWise) {
+HCrash.cpp:			  model->updateMatrix(columnIn, columnOut);
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:	const double *colCost = model->getcolCost();
+HCrash.cpp:	const double *colLower = model->getcolLower();
+HCrash.cpp:	const double *colUpper = model->getcolUpper();
+HCrash.cpp:	const double *rowLower = model->getrowLower();
+HCrash.cpp:	const double *rowUpper = model->getrowUpper();
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:	matrix = model->getMatrix();
+HCrash.cpp:	const int *Astart = &model->Astart[0];
+HCrash.cpp:	const int *Aindex = &model->Aindex[0];
+HCrash.cpp:	const double *Avalue = &model->Avalue[0];
+HCrash.cpp://	const double *primalColLowerImplied = model->getprimalColLowerImplied();
+HCrash.cpp://	const double *primalColUpperImplied = model->getprimalColUpperImplied();
+HCrash.cpp://	const double *primalRowLowerImplied = model->getprimalRowLowerImplied();
+HCrash.cpp://	const double *primalRowUpperImplied = model->getprimalRowUpperImplied();
+HCrash.cpp://	const double *dualColLowerImplied = model->getdualColLowerImplied();
+HCrash.cpp://	const double *dualColUpperImplied = model->getdualColUpperImplied();
+HCrash.cpp://	const double *dualRowLowerImplied = model->getdualRowLowerImplied();
+HCrash.cpp://	const double *dualRowUpperImplied = model->getdualRowUpperImplied();
+HDual.cpp:  printf("model->mlFg_Report() 1\n");cout<<flush;
+HDual.cpp:  model->mlFg_Report();cout<<flush;
+HDual.cpp:  printf("model->mlFg_haveEdWt 0 = %d\n", model->mlFg_haveEdWt);cout<<flush;
+HDual.cpp:  model->setup_fromModelLgBs();cout<<flush;
+HDual.cpp:  //  printf("model->mlFg_haveEdWt 1 = %d\n", model->mlFg_haveEdWt);cout<<flush;
+HDual.cpp:  assert(model->mlFg_OKtoSolve());
+HDual.cpp:  model->problemStatus = LP_Status_Unset;
+HDual.cpp:  model->numberIteration = 0;
+HDual.cpp:  if (model->numRow == 0) return;
+HDual.cpp:  printf("model->mlFg_Report() 2\n");cout<<flush;
+HDual.cpp:  model->mlFg_Report();cout<<flush;
+HDual.cpp:  model->timer.reset();
+HDual.cpp:  model->initCost(1);
+HDual.cpp:  model->computeFactor();
+HDual.cpp:  //  printf("model->mlFg_haveEdWt 2 = %d\n", model->mlFg_haveEdWt);cout<<flush;
+HDual.cpp:  if (!model->mlFg_haveEdWt) {
+HDual.cpp:      if (model->numBasicLogicals != numRow && iz_DSE_wt) {
+HDual.cpp:	double IzDseEdWtTT = model->timer.getTime();
+HDual.cpp:	IzDseEdWtTT = model->timer.getTime() - IzDseEdWtTT;
+HDual.cpp:    model->mlFg_haveEdWt = 1;
+HDual.cpp:  model->computeDual();
+HDual.cpp:  model->computeDualInfeasInDual(&dualInfeasCount);
+HDual.cpp:    if (model->getNonbasicFlag()[i]) {
+HDual.cpp:    int it0 = model->numberIteration;
+HDual.cpp:    //    printf("Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n", solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());
+HDual.cpp:      n_ph1_du_it += (model->numberIteration - it0);
+HDual.cpp:      n_ph2_du_it += (model->numberIteration - it0);
+HDual.cpp:    if (model->problemStatus == LP_Status_OutOfTime)
+HDual.cpp:    //    model->timer.report(reportCount, reportList);
+HDual.cpp:    model->timer.report(reportCount, reportList);
+HDual.cpp:    model->timer.report(reportCount, reportList);
+HDual.cpp:	   model->modelName.c_str(), model->dblOption[DBLOPT_PAMI_CUTOFF],
+HDual.cpp:	   model->numberIteration / (1.0 + multi_iteration));
+HDual.cpp:  if (model->problemStatus != LP_Status_OutOfTime) {
+HDual.cpp:    int it0 = model->numberIteration;
+HDual.cpp:    n_pr_it += (model->numberIteration - it0);
+HDual.cpp:  model->totalTime += model->timer.getTime();
+HDual.cpp:  if (n_ph1_du_it + n_ph2_du_it + n_pr_it != model->numberIteration) {
+HDual.cpp:  		n_ph2_du_it, n_pr_it, model->numberIteration);
+HDual.cpp:	   model->numberIteration / n_dvx_fwk);
+HDual.cpp:	numCol = model->getNumCol();
+HDual.cpp:	numRow = model->getNumRow();
+HDual.cpp:	numTot = model->getNumTot();
+HDual.cpp:	matrix = model->getMatrix();
+HDual.cpp:	factor = model->getFactor();
+HDual.cpp:	jMove = model->getNonbasicMove();
+HDual.cpp:	workDual = model->getWorkDual();
+HDual.cpp:	workValue = model->getWorkValue();
+HDual.cpp:	workRange = model->getWorkRange();
+HDual.cpp:	baseLower = model->getBaseLower();
+HDual.cpp:	baseUpper = model->getBaseUpper();
+HDual.cpp:	baseValue = model->getBaseValue();
+HDual.cpp:	Tp = model->dblOption[DBLOPT_PRIMAL_TOL];
+HDual.cpp:	Td = model->dblOption[DBLOPT_DUAL_TOL];
+HDual.cpp:	string partitionFile = model->strOption[STROPT_PARTITION_FILE];
+HDual.cpp:	model->printMessage("dual-phase-1-start");
+HDual.cpp:	model->initBound(1);
+HDual.cpp:	model->initValue();
+HDual.cpp:	double lc_totalTime = model->totalTime + model->timer.getTime();
+HDual.cpp:		lc_totalTime = model->totalTime + model->timer.getTime();
+HDual.cpp:		  model->problemStatus = LP_Status_OutOfTime;
+HDual.cpp:		if (model->countUpdate == 0)
+HDual.cpp:	if (model->problemStatus == LP_Status_OutOfTime) return;
+HDual.cpp:		model->printMessage("dual-phase-1-optimal");
+HDual.cpp:		if (model->objective == 0) {
+HDual.cpp:			if (model->problemPerturbed) {
+HDual.cpp:				model->printMessage("dual-infeasible");
+HDual.cpp:				model->reportStatus(LP_Status_Unbounded);
+HDual.cpp:		model->printMessage("dual-phase-1-unbounded");
+HDual.cpp:		if (model->problemPerturbed) {
+HDual.cpp:			model->printMessage("dual-phase-1-not-solved");
+HDual.cpp:			model->reportStatus(LP_Status_Failed);
+HDual.cpp:		model->initBound();
+HDual.cpp:		model->initValue();
+HDual.cpp:	model->printMessage("dual-phase-2-start");
+HDual.cpp:	double lc_totalTime = model->totalTime + model->timer.getTime();
+HDual.cpp:			model->printProgress();
+HDual.cpp:		lc_totalTime = model->totalTime + model->timer.getTime();
+HDual.cpp:		  model->problemStatus = LP_Status_OutOfTime;
+HDual.cpp:		if (model->countUpdate == 0)
+HDual.cpp:	if (model->problemStatus == LP_Status_OutOfTime) return;
+HDual.cpp:		model->printMessage("dual-phase-2-found-free");
+HDual.cpp:		model->printMessage("dual-phase-2-optimal");
+HDual.cpp:			model->printMessage("problem-optimal");
+HDual.cpp:			model->reportStatus(LP_Status_Optimal);
+HDual.cpp:		model->printMessage("dual-phase-2-unbounded");
+HDual.cpp:		if (model->problemPerturbed) {
+HDual.cpp:			model->printMessage("problem-infeasible");
+HDual.cpp:			model->reportStatus(LP_Status_Infeasible);
+HDual.cpp:	model->reportPivots(-1, -1, 0); // Indicate REINVERT
+HDual.cpp:	model->timer.recordStart(HTICK_INVERT);
+HDual.cpp:	double tt0 = model->timer.getTime();
+HDual.cpp:	// Rebuild model->factor
+HDual.cpp:	if (model->countUpdate > 0) {
+HDual.cpp:		const int *baseIndex = model->getBaseIndex();
+HDual.cpp:		model->computeFactor();
+HDual.cpp:	model->computeDual();
+HDual.cpp:	model->correctDual(&dualInfeasCount);
+HDual.cpp:	model->computePrimal();
+HDual.cpp:	model->computeObjective(solvePhase);
+HDual.cpp:	model->printObjective();
+HDual.cpp:	model->timer.recordFinish(HTICK_INVERT);
+HDual.cpp:	double rebuildTime = model->timer.getTime()-tt0;
+HDual.cpp://	printf("Rebuild on iteration %9d: time = %g\n", model->numberIteration, rebuildTime);
+HDual.cpp:	model->printMessage("dual-cleanup-shift");
+HDual.cpp:	model->initCost();
+HDual.cpp:	model->initBound();
+HDual.cpp:	model->computeDual();
+HDual.cpp:	model->computeObjective(solvePhase);
+HDual.cpp:	model->printObjective();
+HDual.cpp:	model->computeDualInfeasInPrimal(&dualInfeasCount);
+HDual.cpp:	model->timer.recordStart(HTICK_GROUP1);
+HDual.cpp:	model->timer.recordFinish(HTICK_GROUP1);
+HDual.cpp:		model->timer.recordStart(HTICK_BTRAN);
+HDual.cpp:		model->timer.recordFinish(HTICK_BTRAN);
+HDual.cpp:			//	 model->numberIteration, DSE_wt_er, u_weight, c_weight);
+HDual.cpp:			//       model->numberIteration, DSE_wt_er, u_weight, c_weight,
+HDual.cpp:	columnOut = model->getBaseIndex()[rowOut];
+HDual.cpp:	model->timer.recordStart(HTICK_PRICE);
+HDual.cpp:	model->timer.recordFinish(HTICK_PRICE);
+HDual.cpp:	model->timer.recordStart(HTICK_CHUZC1);
+HDual.cpp:	model->timer.recordFinish(HTICK_CHUZC1);
+HDual.cpp://    	int si_it_n = model->numberIteration;
+HDual.cpp:		int vr_t_lv_bs = model->getBaseIndex()[rowOut];
+HDual.cpp:	model->timer.recordStart(HTICK_CHUZC1);
+HDual.cpp:	model->timer.recordFinish(HTICK_CHUZC1);
+HDual.cpp:	model->timer.recordStart(HTICK_FTRAN_MIX);
+HDual.cpp:	model->timer.recordFinish(HTICK_FTRAN_MIX);
+HDual.cpp:	model->timer.recordStart(HTICK_FTRAN);
+HDual.cpp:	model->timer.recordFinish(HTICK_FTRAN);
+HDual.cpp:	model->timer.recordStart(HTICK_FTRAN_DSE);
+HDual.cpp:	model->timer.recordFinish(HTICK_FTRAN_DSE);
+HDual.cpp:	if (aDiff / min(aCol, aRow) > 1e-7 && model->countUpdate > 0) {
+HDual.cpp://    double dualin_c = model->getWorkCost()[columnIn];
+HDual.cpp://        int iCol = model->getBaseIndex()[iRow];
+HDual.cpp://        double cost = model->getWorkCost()[iCol] + model->getWorkShift()[iCol];
+HDual.cpp:		model->shiftCost(columnIn, -workDual[columnIn]);
+HDual.cpp:	model->shiftBack(columnOut);
+HDual.cpp:	model->updatePivots(columnIn, rowOut, sourceOut);
+HDual.cpp:	model->reportPivots(columnIn, columnOut, alpha);
+HDual.cpp:	model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+HDual.cpp:	model->updateMatrix(columnIn, columnOut);
+HDual.cpp:			model->getWorkValue()[columnIn] + thetaPrimal);
+HDual.cpp:	if (total_fake >= factor->fakeTick && model->countUpdate >= 50) {
+HDual.cpp://                model->countUpdate, total_INVERT_TICK, total_FT_inc_TICK,
+HDual.cpp:		if (model->getNonbasicFlag()[vr_n])
+HDual.cpp:  matrix = model->getMatrix();
+HDual.cpp:    int vr_n = model->getBaseIndex()[r_n];
+HDual.cpp:	printf("\nIteration %d\n", model->numberIteration);
+HDual.cpp:		printf(" %4d", model->getNonbasicFlag()[i]);
+HDual.cpp:		printf(" %4d", model->getNonbasicMove()[i]);
+HDual.cpp:		printf(" %4d", model->getBaseIndex()[i]);
+HDual.cpp:	printf("\nIteration %d\n", model->numberIteration);
+HDual.cpp:	const double *colCost = model->getcolCost();
+HDual.cpp:	const double *colLower = model->getcolLower();
+HDual.cpp:	const double *colUpper = model->getcolUpper();
+HDual.cpp:	const double *rowLower = model->getrowLower();
+HDual.cpp:	const double *rowUpper = model->getrowUpper();
+HDual.cpp:	const int *nonbasicFlag = model->getNonbasicFlag();
+HDual.cpp:    int vr_n = model->getBaseIndex()[r_n];
+HDual.cpp:    if (model->getNonbasicFlag()[vr_n]) {
+HDual.cpp:      double pr_act_v = model->getWorkValue()[vr_n];
+HDualMulti.cpp:    if (model->countUpdate == 0)
+HDualMulti.cpp:    double pamiCutoff = model->dblOption[DBLOPT_PAMI_CUTOFF];
+HDualMulti.cpp:    model->timer.recordStart(HTICK_BTRAN);
+HDualMulti.cpp:    model->timer.recordFinish(HTICK_BTRAN);
+HDualMulti.cpp:        columnOut = model->getBaseIndex()[rowOut];
+HDualMulti.cpp:    Fin->moveIn = model->getNonbasicMove()[columnIn];
+HDualMulti.cpp:    Fin->shiftOut = model->getWorkShift()[columnOut];
+HDualMulti.cpp:        model->shiftCost(columnIn, -workDual[columnIn]);
+HDualMulti.cpp:    model->shiftBack(columnOut);
+HDualMulti.cpp:    model->updatePivots(columnIn, rowOut, sourceOut);
+HDualMulti.cpp:    Fin->basicValue = model->getWorkValue()[columnIn] + thetaPrimal;
+HDualMulti.cpp:    model->updateMatrix(columnIn, columnOut);
+HDualMulti.cpp:    model->reportPivots(columnIn, columnOut, alphaRow);
+HDualMulti.cpp:    model->timer.recordStart(HTICK_UPDATE_ROW_EP);
+HDualMulti.cpp:    model->timer.recordFinish(HTICK_UPDATE_ROW_EP);
+HDualMulti.cpp://        int startUpdate = model->countUpdate - multi_nFinish;
+HDualMulti.cpp:        if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
+HDualMulti.cpp:            cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
+HDualMulti.cpp:            cout << model->numberIteration << " alpha = " << alphaC
+HDualMulti.cpp:    model->timer.recordStart(HTICK_FTRAN_MIX);
+HDualMulti.cpp:    model->timer.recordFinish(HTICK_FTRAN_MIX);
+HDualMulti.cpp:    model->timer.recordStart(HTICK_FTRAN_MIX);
+HDualMulti.cpp:    model->timer.recordFinish(HTICK_FTRAN_MIX);
+HDualMulti.cpp:        model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep,
+HDualMulti.cpp:    if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
+HDualMulti.cpp:        model->getNonbasicMove()[Fin->columnIn] = Fin->moveIn;
+HDualMulti.cpp:        model->getNonbasicFlag()[Fin->columnIn] = 1;
+HDualMulti.cpp:        model->getNonbasicMove()[Fin->columnOut] = 0;
+HDualMulti.cpp:        model->getNonbasicFlag()[Fin->columnOut] = 0;
+HDualMulti.cpp:        model->getBaseIndex()[Fin->rowOut] = Fin->columnOut;
+HDualMulti.cpp:        model->updateMatrix(Fin->columnOut, Fin->columnIn);
+HDualMulti.cpp:            model->flipBound(Fin->flipList[i]);
+HDualMulti.cpp:        model->getWorkShift()[Fin->columnIn] = 0;
+HDualMulti.cpp:        model->getWorkShift()[Fin->columnOut] = Fin->shiftOut;
+HDualMulti.cpp:        model->numberIteration--;
+HDualRHS.cpp:    workMark.resize(workModel->getNumRow());
+HDualRHS.cpp:    workIndex.resize(workModel->getNumRow());
+HDualRHS.cpp:    workArray.resize(workModel->getNumRow());
+HDualRHS.cpp:    workEdWt.assign(workModel->getNumRow(), 1);
+HDualRHS.cpp:    workEdWtFull.resize(workModel->getNumTot());
+HDualRHS.cpp:    if (partNumRow != workModel->getNumRow()) {
+HDualRHS.cpp:        workModel->printMessage("wrong-partition-file");
+HDualRHS.cpp:    workPartition.assign(workModel->getNumRow(), 0);
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_CHUZR1);
+HDualRHS.cpp:    int random = workModel->random.intRandom();
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_CHUZR1);
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_CHUZR1);
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_CHUZR1);
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_CHUZR1);
+HDualRHS.cpp:    int random = workModel->random.intRandom();
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_CHUZR1);
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_UPDATE_PRIMAL);
+HDualRHS.cpp:    const int numRow = workModel->getNumRow();
+HDualRHS.cpp:    const double *baseLower = workModel->getBaseLower();
+HDualRHS.cpp:    const double *baseUpper = workModel->getBaseUpper();
+HDualRHS.cpp:    const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
+HDualRHS.cpp:    double *baseValue = workModel->getBaseValue();
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_UPDATE_PRIMAL);
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
+HDualRHS.cpp:    const int numRow = workModel->getNumRow();
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_UPDATE_WEIGHT);
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
+HDualRHS.cpp:    const int numRow = workModel->getNumRow();
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_UPDATE_WEIGHT);
+HDualRHS.cpp:    const double *baseLower = workModel->getBaseLower();
+HDualRHS.cpp:    const double *baseUpper = workModel->getBaseUpper();
+HDualRHS.cpp:    const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
+HDualRHS.cpp:    double *baseValue = workModel->getBaseValue();
+HDualRHS.cpp:    workModel->timer.recordStart(HTICK_UPDATE_PRIMAL);
+HDualRHS.cpp:    workModel->timer.recordFinish(HTICK_UPDATE_PRIMAL);
+HDualRHS.cpp:    int numRow = workModel->getNumRow();
+HDualRHS.cpp:    const double *baseValue = workModel->getBaseValue();
+HDualRHS.cpp:    const double *baseLower = workModel->getBaseLower();
+HDualRHS.cpp:    const double *baseUpper = workModel->getBaseUpper();
+HDualRHS.cpp:    const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
+HDualRHS.cpp:    int numRow = workModel->getNumRow();
+HDualRow.cpp:    workMove = model->getNonbasicMove();
+HDualRow.cpp:    workDual = model->getWorkDual();
+HDualRow.cpp:    workRange = model->getWorkRange();
+HDualRow.cpp:    setupSlice(model, model->getNumTot());
+HDualRow.cpp:    workRand = model->getWorkIntBreak();
+HDualRow.cpp:    const double Ta = workModel->countUpdate < 10 ? 1e-9 :
+HDualRow.cpp:                      workModel->countUpdate < 20 ? 3e-8 : 1e-6;
+HDualRow.cpp:    const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
+HDualRow.cpp:    workModel->timer.recordStart(HTICK_CHUZC2);
+HDualRow.cpp:    workModel->timer.recordFinish(HTICK_CHUZC2);
+HDualRow.cpp:    workModel->timer.recordStart(HTICK_CHUZC3);
+HDualRow.cpp:    const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
+HDualRow.cpp:    workModel->timer.recordFinish(HTICK_CHUZC3);
+HDualRow.cpp:        workModel->flipBound(iCol);
+HDualRow.cpp:        workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
+HDualRow.cpp:    workModel->timer.recordStart(HTICK_UPDATE_DUAL);
+HDualRow.cpp:    double *workDual = workModel->getWorkDual();
+HDualRow.cpp:    workModel->timer.recordFinish(HTICK_UPDATE_DUAL);
+HDualRow.cpp:    const int *nonbasicFlag = workModel->getNonbasicFlag();
+HDualRow.cpp:    for (int i = 0; i < workModel->getNumTot(); i++) {
+HDualRow.cpp:        double Ta = workModel->countUpdate < 10 ? 1e-9 :
+HDualRow.cpp:                    workModel->countUpdate < 20 ? 3e-8 : 1e-6;
+HDualRow.cpp:            assert(iCol < workModel->getNumCol());
+HDualRow.cpp:            double alpha = workModel->getMatrix()->compute_dot(*row_ep, iCol);
+HDualRow.cpp:                    workModel->getNonbasicMove()[iCol] = 1;
+HDualRow.cpp:                    workModel->getNonbasicMove()[iCol] = -1;
+HDualRow.cpp:            assert(iCol < workModel->getNumCol());
+HDualRow.cpp:            workModel->getNonbasicMove()[iCol] = 0;
+HDualRow.cpp:	int numTot = workModel->getNumTot();
+HModel.cpp:	numCol = ptr_model->numCol;
+HModel.cpp:    numRow = ptr_model->numRow;
+HModel.cpp:    numTot = ptr_model->numCol + ptr_model->numRow;
+HModel.cpp:    Astart = ptr_model->Astart;
+HModel.cpp:    Aindex = ptr_model->Aindex;
+HModel.cpp:    Avalue = ptr_model->Avalue;
+HModel.cpp:    colCost = ptr_model->colCost;
+HModel.cpp:    colLower = ptr_model->colLower;
+HModel.cpp:    colUpper = ptr_model->colUpper;
+HModel.cpp:    rowLower = ptr_model->rowLower;
+HModel.cpp:    rowUpper = ptr_model->rowUpper;
+HModel.cpp:		primalColLowerImplied = ptr_model->implColLower;
+HModel.cpp:		primalColUpperImplied = ptr_model->implColUpper;
+HModel.cpp:		dualColLowerImplied = ptr_model->implColDualLower;
+HModel.cpp:		dualColUpperImplied = ptr_model->implColDualUpper;
+HModel.cpp:		primalRowLowerImplied = ptr_model->implRowValueLower;
+HModel.cpp:		primalRowUpperImplied = ptr_model->implRowValueUpper;
+HModel.cpp:		dualRowLowerImplied = ptr_model->implRowDualLower;
+HModel.cpp:		dualRowUpperImplied = ptr_model->implRowDualUpper;
+HModel.cpp:	 ptr_model->numCol  = numCol;
+HModel.cpp:     ptr_model->numRow  = numRow;
+HModel.cpp:     ptr_model->numTot  = numTot;
+HModel.cpp:     ptr_model->Astart  = Astart;
+HModel.cpp:     ptr_model->Aindex  = Aindex;
+HModel.cpp:     ptr_model->Avalue  = Avalue;
+HModel.cpp:     ptr_model->colCost = colCost;
+HModel.cpp:     ptr_model->colLower= colLower;
+HModel.cpp:     ptr_model->colUpper= colUpper;
+HModel.cpp:     ptr_model->rowLower= rowLower;
+HModel.cpp:     ptr_model->rowUpper= rowUpper;
+HModel.cpp:     ptr_model->modelName = modelName;
+HModel.cpp:	basicIndex = ptr_model->basicIndex;
+HModel.cpp:	nonbasicFlag = ptr_model->nonbasicFlag;
+HModel.cpp:	nonbasicMove = ptr_model->nonbasicMove;
+HPrimal.cpp:    numCol = model->getNumCol();
+HPrimal.cpp:    numRow = model->getNumRow();
+HPrimal.cpp:    numTot = model->getNumTot();
+HPrimal.cpp:    model->printMessage("primal-start");
+HPrimal.cpp:    double lc_totalTime = model->totalTime + model->timer.getTime();
+HPrimal.cpp:	lc_totalTime = model->totalTime + model->timer.getTime();
+HPrimal.cpp:	  model->problemStatus = LP_Status_OutOfTime;
+HPrimal.cpp:    if (model->problemStatus == LP_Status_OutOfTime) return;
+HPrimal.cpp:        model->printMessage("primal-optimal");
+HPrimal.cpp:        model->printMessage("problem-optimal");
+HPrimal.cpp:        model->reportStatus(LP_Status_Optimal);
+HPrimal.cpp:        model->printMessage("primal-unbounded");
+HPrimal.cpp:        model->reportStatus(LP_Status_Unbounded);
+HPrimal.cpp:    model->reportPivots(-1, -1, 0); // Indicate REINVERT
+HPrimal.cpp:    // Rebuild model->factor - only if we got updates
+HPrimal.cpp:        model->computeFactor();
+HPrimal.cpp:    model->computeDual();
+HPrimal.cpp:    model->computePrimal();
+HPrimal.cpp:    model->computeObjective();
+HPrimal.cpp:    model->printObjective();
+HPrimal.cpp:    const int *jFlag = model->getNonbasicFlag();
+HPrimal.cpp:    const int *jMove = model->getNonbasicMove();
+HPrimal.cpp:    double *workDual = model->getWorkDual();
+HPrimal.cpp:    const double *workLower = model->getWorkLower();
+HPrimal.cpp:    const double *workUpper = model->getWorkUpper();
+HPrimal.cpp:    const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
+HPrimal.cpp:    const double *baseLower = model->getBaseLower();
+HPrimal.cpp:    const double *baseUpper = model->getBaseUpper();
+HPrimal.cpp:    double *baseValue = model->getBaseValue();
+HPrimal.cpp:    const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
+HPrimal.cpp:    model->getMatrix()->collect_aj(column, columnIn, 1);
+HPrimal.cpp:    model->getFactor()->ftran(column, columnDensity);
+HPrimal.cpp:    const int *jMove = model->getNonbasicMove();
+HPrimal.cpp:    int *jMove = model->getNonbasicMove();
+HPrimal.cpp:    double *workDual = model->getWorkDual();
+HPrimal.cpp:    const double *workLower = model->getWorkLower();
+HPrimal.cpp:    const double *workUpper = model->getWorkUpper();
+HPrimal.cpp:    const double *baseLower = model->getBaseLower();
+HPrimal.cpp:    const double *baseUpper = model->getBaseUpper();
+HPrimal.cpp:    double *workValue = model->getWorkValue();
+HPrimal.cpp:    double *baseValue = model->getBaseValue();
+HPrimal.cpp:    const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
+HPrimal.cpp:    int columnOut = model->getBaseIndex()[rowOut];
+HPrimal.cpp:    model->updatePivots(columnIn, rowOut, sourceOut);
+HPrimal.cpp:    model->getFactor()->btran(row_ep, row_epDensity);
+HPrimal.cpp:    model->getMatrix()->price_by_row(row_ap, row_ep);
+HPrimal.cpp:    // Update model->factor basis
+HPrimal.cpp:    model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+HPrimal.cpp:    model->updateMatrix(columnIn, columnOut);
+HPrimal.cpp:    model->reportPivots(columnIn, columnOut, alpha);
+lpi_hsol.cpp:   (*lpi)->hmodel->setup_clearModel();
+lpi_hsol.cpp:   (*lpi)->hmodel->intOption[INTOPT_PRINT_FLAG] = FALSE;
+lpi_hsol.cpp:   (*lpi)->hmodel->intOption[INTOPT_SCALE_FLAG] = FALSE;
+lpi_hsol.cpp:   HSOL_TRY( (*lpi)->messagehdlr, (*lpi)->hmodel->~HModel() );
+lpi_hsol.cpp:   lpi->hmodel->numRow = nrows;
+lpi_hsol.cpp:   lpi->hmodel->numCol = ncols;
+lpi_hsol.cpp:   assert(lpi->hmodel->numRow >= 0);
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   lpi->hmodel->util_addRows(nrows, lhs, rhs, 0, beg, ind, val);
+lpi_hsol.cpp:   lpi->hmodel->util_addCols(ncols, obj, lb, ub, nnonz, beg, ind, val);
+lpi_hsol.cpp:   /* This is done in lpi->hmodel->util_addCols
+lpi_hsol.cpp:         assert(ind[j] < lpi->hmodel->numRow);
+lpi_hsol.cpp:   lpi->hmodel->util_addCols(ncols, obj, lb, ub, nnonz, beg, ind, val);
+lpi_hsol.cpp:   lpi->hmodel->Astart.pop_back();
+lpi_hsol.cpp:      lpi->hmodel->colCost.push_back(obj[c]);
+lpi_hsol.cpp:      lpi->hmodel->colLower.push_back(lb[c]);
+lpi_hsol.cpp:      lpi->hmodel->colUpper.push_back(ub[c]);
+lpi_hsol.cpp:      lpi->hmodel->colScale.push_back(1.0);
+lpi_hsol.cpp:      lpi->hmodel->Astart.push_back(lpi->hmodel->Aindex.size());
+lpi_hsol.cpp:   lpi->hmodel->Astart.push_back(lpi->hmodel->Aindex.size());
+lpi_hsol.cpp:   lpi->hmodel->numCol += ncols;
+lpi_hsol.cpp:   lpi->hmodel->numTot += ncols;
+lpi_hsol.cpp:   //lpi->hmodel->util_rpLP();
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colCost", lpi->hmodel->colCost, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colLower", lpi->hmodel->colLower, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colUpper", lpi->hmodel->colUpper, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colScale", lpi->hmodel->colScale, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Astart", lpi->hmodel->Astart, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Aindex", lpi->hmodel->Aindex, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Avalue", lpi->hmodel->Avalue, "%g");
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->colCost, firstcol, lastcol + 1);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->colLower, firstcol, lastcol + 1);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->colUpper, firstcol, lastcol + 1);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->colScale, firstcol, lastcol + 1);
+lpi_hsol.cpp:   startpos = lpi->hmodel->Astart[firstcol];
+lpi_hsol.cpp:   shift = lpi->hmodel->Astart[lastcol + 1] - startpos;
+lpi_hsol.cpp:   for( i = lastcol + 1; (size_t)i < lpi->hmodel->Astart.size(); ++i )
+lpi_hsol.cpp:      lpi->hmodel->Astart[i] -= shift;
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->Astart, firstcol, lastcol + 1);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->Aindex, startpos, startpos + shift);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->Avalue, startpos, startpos + shift);
+lpi_hsol.cpp:   lpi->hmodel->numCol -= (lastcol - firstcol + 1);
+lpi_hsol.cpp:   lpi->hmodel->numTot -= (lastcol - firstcol + 1);
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colCost", lpi->hmodel->colCost, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colLower", lpi->hmodel->colLower, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colUpper", lpi->hmodel->colUpper, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("colScale", lpi->hmodel->colScale, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Astart", lpi->hmodel->Astart, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Aindex", lpi->hmodel->Aindex, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Avalue", lpi->hmodel->Avalue, "%g");
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   for( j = 0; j < lpi->hmodel->numCol; ++j )
+lpi_hsol.cpp:   lpi->hmodel->numCol -= cnt;
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   /* This is done in lpi->hmodel->util_addRows
+lpi_hsol.cpp:         assert(0 <= ind[j] && ind[j] < lpi->hmodel->numCol);
+lpi_hsol.cpp:   lpi->hmodel->util_addRows(nrows, lhs, rhs, nnonz, beg, ind, val);
+lpi_hsol.cpp:      newrowindex = lpi->hmodel->rowLower.size();
+lpi_hsol.cpp:      lpi->hmodel->rowLower.push_back(lhs[row]);
+lpi_hsol.cpp:      lpi->hmodel->rowUpper.push_back(rhs[row]);
+lpi_hsol.cpp:      lpi->hmodel->rowScale.push_back(1.0);
+lpi_hsol.cpp:         HSOL_PRINTVECTOR("Astart", lpi->hmodel->Astart, "%d");
+lpi_hsol.cpp:         HSOL_PRINTVECTOR("Aindex", lpi->hmodel->Aindex, "%+2d");
+lpi_hsol.cpp:         HSOL_PRINTVECTOR("Avalue", lpi->hmodel->Avalue, "%+2g");
+lpi_hsol.cpp:         HSOL_VECTORINSERT(lpi->hmodel->Aindex, lpi->hmodel->Astart[col+1], newrowindex);
+lpi_hsol.cpp:         HSOL_VECTORINSERT(lpi->hmodel->Avalue, lpi->hmodel->Astart[col+1], coef);
+lpi_hsol.cpp:         for( pos = col+1; pos < lpi->hmodel->Astart.size(); pos++ )
+lpi_hsol.cpp:            lpi->hmodel->Astart[pos]++;
+lpi_hsol.cpp:   lpi->hmodel->numRow += nrows;
+lpi_hsol.cpp:   lpi->hmodel->numTot += nrows;
+lpi_hsol.cpp:   //lpi->hmodel->util_rpLP();
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("rowLower", lpi->hmodel->rowLower, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("rowUpper", lpi->hmodel->rowUpper, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("rowScale", lpi->hmodel->rowScale, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Astart", lpi->hmodel->Astart, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Aindex", lpi->hmodel->Aindex, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Avalue", lpi->hmodel->Avalue, "%g");
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->rowLower, firstrow, lastrow + 1);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->rowUpper, firstrow, lastrow + 1);
+lpi_hsol.cpp:   HSOL_VECTORERASE(lpi->hmodel->rowScale, firstrow, lastrow + 1);
+lpi_hsol.cpp:   for( dbliter = lpi->hmodel->Avalue.begin(), intiter = lpi->hmodel->Aindex.begin(), c = 0, i = 0;
+lpi_hsol.cpp:        dbliter != lpi->hmodel->Avalue.end() && intiter != lpi->hmodel->Aindex.end(); ++dbliter, ++intiter, ++i )
+lpi_hsol.cpp:      if( i > lpi->hmodel->Astart[c+1] )
+lpi_hsol.cpp:         lpi->hmodel->Avalue.erase(dbliter);
+lpi_hsol.cpp:         lpi->hmodel->Aindex.erase(intiter);
+lpi_hsol.cpp:         for( pos = c+1; pos < lpi->hmodel->Astart.size(); pos++ )
+lpi_hsol.cpp:            lpi->hmodel->Astart[pos]--;
+lpi_hsol.cpp:   lpi->hmodel->numRow -= (lastrow - firstrow + 1);
+lpi_hsol.cpp:   lpi->hmodel->numTot -= (lastrow - firstrow + 1);
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("rowLower", lpi->hmodel->rowLower, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("rowUpper", lpi->hmodel->rowUpper, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("rowScale", lpi->hmodel->rowScale, "%g");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Astart", lpi->hmodel->Astart, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Aindex", lpi->hmodel->Aindex, "%d");
+lpi_hsol.cpp:   HSOL_PRINTVECTOR("Avalue", lpi->hmodel->Avalue, "%g");
+lpi_hsol.cpp:   assert(lpi->hmodel->numRow >= 0);
+lpi_hsol.cpp:   assert(lpi->hmodel->numRow >= 0);
+lpi_hsol.cpp:   for( i = 0; i < lpi->hmodel->numRow; ++i )
+lpi_hsol.cpp:   lpi->hmodel->numRow -= cnt;
+lpi_hsol.cpp:   assert(lpi->hmodel->numRow >= 0);
+lpi_hsol.cpp:   assert(lpi->hmodel->numRow >= 0);
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   lpi->hmodel->setup_clearModel();
+lpi_hsol.cpp:      assert(0 <= ind[i] && ind[i] < lpi->hmodel->numCol);
+lpi_hsol.cpp:      lpi->hmodel->colLower[ind[i]] = (SCIPlpiIsInfinity(lpi, -lb[i]) ? lb[i] : lb[i] / lpi->hmodel->colScale[ind[i]]);
+lpi_hsol.cpp:      lpi->hmodel->colUpper[ind[i]] = (SCIPlpiIsInfinity(lpi, ub[i]) ? ub[i] : ub[i] / lpi->hmodel->colScale[ind[i]]);
+lpi_hsol.cpp:      assert(0 <= ind[i] && ind[i] < lpi->hmodel->numRow);
+lpi_hsol.cpp:      lpi->hmodel->rowLower[ind[i]] = (SCIPlpiIsInfinity(lpi, -lhs[i]) ? lhs[i] : lhs[i] * lpi->hmodel->rowScale[ind[i]]);
+lpi_hsol.cpp:      lpi->hmodel->rowUpper[ind[i]] = (SCIPlpiIsInfinity(lpi, rhs[i]) ? rhs[i] : rhs[i] * lpi->hmodel->rowScale[ind[i]]);
+lpi_hsol.cpp:      assert(0 <= ind[i] && ind[i] < lpi->hmodel->numCol);
+lpi_hsol.cpp:      lpi->hmodel->colCost[ind[i]] = obj[i] * lpi->hmodel->colScale[ind[i]];
+lpi_hsol.cpp:   assert(lpi->hmodel->numRow >= 0);
+lpi_hsol.cpp:   *nrows = lpi->hmodel->numRow;
+lpi_hsol.cpp:   assert(lpi->hmodel->numCol >= 0);
+lpi_hsol.cpp:   *ncols = lpi->hmodel->numCol;
+lpi_hsol.cpp:   *nnonz = lpi->hmodel->Astart[0];
+lpi_hsol.cpp:   lpi->hmodel->util_getObjective(firstcol, lastcol, vals);
+lpi_hsol.cpp:   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->hmodel->numCol);
+lpi_hsol.cpp:      vals[i-firstcol] = lpi->hmodel->colCost[i] / lpi->hmodel->colScale[i];
+lpi_hsol.cpp:   lpi->hmodel->util_getColBounds(firstcol, lastcol, lbs, ubs);
+lpi_hsol.cpp:   assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->hmodel->numCol);
+lpi_hsol.cpp:         lbs[i-firstcol] = (SCIPlpiIsInfinity(lpi, -lpi->hmodel->colLower[i]) ? lpi->hmodel->colLower[i]
+lpi_hsol.cpp:            : lpi->hmodel->colLower[i] * lpi->hmodel->colScale[i]);
+lpi_hsol.cpp:         ubs[i-firstcol] = (SCIPlpiIsInfinity(lpi, lpi->hmodel->colUpper[i]) ? lpi->hmodel->colUpper[i]
+lpi_hsol.cpp:            : lpi->hmodel->colUpper[i] * lpi->hmodel->colScale[i]);
+lpi_hsol.cpp:     lpi->hmodel->setup_clearSolution();
+lpi_hsol.cpp:     lpi->hmodel->numTot = lpi->hmodel->numCol + lpi->hmodel->numRow;
+lpi_hsol.cpp:     if( lpi->hmodel->numRow <= 0 )
+lpi_hsol.cpp:     //Remove lpi->hmodel->setup_fromModelLgBs(); since it's now in solver.solve(&model);
+lpi_hsol.cpp:     //     lpi->hmodel->setup_fromModelLgBs();
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("colCost", lpi->hmodel->colCost, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("colLower", lpi->hmodel->colLower, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("colUpper", lpi->hmodel->colUpper, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("colScale", lpi->hmodel->colScale, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("rowLower", lpi->hmodel->rowLower, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("rowUpper", lpi->hmodel->rowUpper, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("rowScale", lpi->hmodel->rowScale, "%g");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("Astart", lpi->hmodel->Astart, "%d");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("Aindex", lpi->hmodel->Aindex, "%d");
+lpi_hsol.cpp:      HSOL_PRINTVECTOR("Avalue", lpi->hmodel->Avalue, "%g");
+lpi_hsol.cpp:   return (lpi->hmodel->getPrStatus() == LP_Status_Unbounded);
+lpi_hsol.cpp:   return (lpi->hmodel->getPrStatus() == LP_Status_Unbounded);
+lpi_hsol.cpp:   return (lpi->hmodel->getPrStatus() == LP_Status_Infeasible);
+lpi_hsol.cpp:   return (lpi->hmodel->getPrStatus() == LP_Status_Optimal);
+lpi_hsol.cpp:   const int status = lpi->hmodel->getPrStatus();
+lpi_hsol.cpp:   return lpi->hmodel->getPrStatus();
+lpi_hsol.cpp:   *objval = lpi->hmodel->getObjective();
+lpi_hsol.cpp:      *objval = lpi->hmodel->getObjective();
+lpi_hsol.cpp:   HSOL_TRY( lpi->messagehdlr, lpi->hmodel->getSolution(colValue, colDual, rowValue, rowDual) );
+lpi_hsol.cpp:   *iterations = lpi->hmodel->numberIteration;
+lpi_hsol.cpp:   HSOL_TRY( lpi->messagehdlr, nonbasicflag = lpi->hmodel->getNonbasicFlag());
+lpi_hsol.cpp:   HSOL_TRY( lpi->messagehdlr, nonbasicmove = lpi->hmodel->getNonbasicMove());
+lpi_hsol.cpp:   ncols = lpi->hmodel->numCol;
+lpi_hsol.cpp:   nrows = lpi->hmodel->numRow;
+lpi_hsol.cpp:            if( !SCIPlpiIsInfinity(lpi, -lpi->hmodel->colLower[i]) )
+lpi_hsol.cpp:            if( !SCIPlpiIsInfinity(lpi, lpi->hmodel->colUpper[i]) )
+lpi_hsol.cpp:            if( lpi->hmodel->colLower[i] == lpi->hmodel->colUpper[i] )
+lpi_hsol.cpp:               if( !SCIPlpiIsInfinity(lpi, lpi->hmodel->colUpper[i]) )
+lpi_hsol.cpp:               if( SCIPlpiIsInfinity(lpi, -lpi->hmodel->colLower[i])
+lpi_hsol.cpp:                  && SCIPlpiIsInfinity(lpi, lpi->hmodel->colUpper[i]) )
+lpi_hsol.cpp:            i, nonbasicflag[i], nonbasicmove[i], lpi->hmodel->colLower[i], lpi->hmodel->colUpper[i]);
+lpi_hsol.cpp:            if( !SCIPlpiIsInfinity(lpi, -lpi->hmodel->rowLower[i]) )
+lpi_hsol.cpp:            if( !SCIPlpiIsInfinity(lpi, lpi->hmodel->rowUpper[i]) )
+lpi_hsol.cpp:            if( lpi->hmodel->rowLower[i] == lpi->hmodel->rowUpper[i] )
+lpi_hsol.cpp:               if( !SCIPlpiIsInfinity(lpi, lpi->hmodel->rowUpper[i]) )
+lpi_hsol.cpp:               if( SCIPlpiIsInfinity(lpi, -lpi->hmodel->rowLower[i])
+lpi_hsol.cpp:                  && SCIPlpiIsInfinity(lpi, lpi->hmodel->rowUpper[i]) )
+lpi_hsol.cpp:            i, nonbasicflag[pos], nonbasicmove[pos], lpi->hmodel->rowLower[i], lpi->hmodel->rowUpper[i]);
+lpi_hsol.cpp:   ncols = lpi->hmodel->numCol;
+lpi_hsol.cpp:   nrows = lpi->hmodel->numRow;
+lpi_hsol.cpp:   lpncols = lpi->hmodel->numCol;
+lpi_hsol.cpp:   lpnrows = lpi->hmodel->numRow;
+lpi_hsol.cpp:      if( !SCIPlpiIsInfinity(lpi, -lpi->hmodel->colLower[i]) )
+lpi_hsol.cpp:      else if( !SCIPlpiIsInfinity(lpi, lpi->hmodel->colUpper[i]) )
+lpi_hsol.cpp:      *ival = lpi->hmodel->intOption[INTOPT_PRINT_FLAG];
+lpi_hsol.cpp:      *ival = lpi->hmodel->intOption[INTOPT_SCALE_FLAG];
+lpi_hsol.cpp:      lpi->hmodel->intOption[INTOPT_PRINT_FLAG] = ival;
+lpi_hsol.cpp:      lpi->hmodel->intOption[INTOPT_SCALE_FLAG] = ival;
+lpi_hsol.cpp:      *dval = lpi->hmodel->dblOption[DBLOPT_PRIMAL_TOL];
+lpi_hsol.cpp:      *dval = lpi->hmodel->dblOption[DBLOPT_DUAL_TOL];
+lpi_hsol.cpp:      *dval = lpi->hmodel->dblOption[DBLOPT_TIME_LIMIT];
+lpi_hsol.cpp:      lpi->hmodel->dblOption[DBLOPT_PRIMAL_TOL] = dval;
+lpi_hsol.cpp:      lpi->hmodel->dblOption[DBLOPT_DUAL_TOL] = dval;
+lpi_hsol.cpp:      lpi->hmodel->dblOption[DBLOPT_TIME_LIMIT] = dval;
