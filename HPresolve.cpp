@@ -14,15 +14,7 @@ using namespace std;
 
 int HPresolve::presolve(int print) {
 
-	if (print >= 2)
-		iPrint = -1;
-	else
-		iPrint = 0;
-
-	//test
-	if (print==33)
-			iPrint = 1;
-
+	iPrint = print;
 	iKKTcheck = 0;
 
 	chk.print = 1; // 3 for experiments mode
@@ -94,6 +86,9 @@ int HPresolve::presolve(int print) {
 	return 0;
 }
 
+int HPresolve::presolve() {
+	return presolve(0);
+}
 
 void HPresolve::removeDoubletonEquations() {
 	if (flagCol.size() == numCol)
@@ -586,11 +581,12 @@ void HPresolve::resizeProblem() {
     		k++;
 	    }
 
-    if (iPrint == -1) {
+	if (1) {
+    //if (iPrint == -1) {
     	cout<<"Presolve m="<<setw(2)<<numRow<<"(-"<<setw(2)<< numRowOriginal - numRow <<") ";
     	cout<<"n="<<setw(2)<< numCol <<"(-"<<setw(2)<< numColOriginal - numCol <<") ";
     	cout<<"nz="<<setw(4)<< Aindex.size() << "(-"<<setw(4)<< ARindex.size() - Aindex.size()  <<") ";
-
+		cout<<endl;
     }
 
     if (chk.print == 3) {
@@ -984,7 +980,24 @@ void HPresolve::removeDominatedColumns() {
 		}
 }
 
-
+void HPresolve::setProblemStatus(int s) {
+	if (s==1) {
+		cout<<"PR: Problem infeasible."<<endl;
+		cout<<"NOT-OPT status = 1, returned from solver after presolve.\n";
+		//exit(1);
+	}
+	if (s==2) {
+		cout<<"PR: Problem unbounded."<<endl;
+		cout<<"NOT-OPT status = 2, returned from solver after presolve.\n";
+		//exit(2);
+	}
+	if (s==0)
+		return;
+	else {
+		cout<<"unknown problem status returned from solver after presolve: "<<s<<endl;
+		//exit(s);
+	}
+}
 
 void HPresolve::setKKTcheckerData(){
 	//after initializing equations.
