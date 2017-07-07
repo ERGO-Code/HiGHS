@@ -23,14 +23,13 @@ public:
 
 	int iPrint;
 	int iKKTcheck;
-	void presolve();
+	int  presolve(int print);
 
 	void postsolve();
  	void printReducedSol();
 
  	double objShift;
  	void initializeVectors();
- 	void setProblemStatus(int s);
  	void initializeEquationsFormNoPresolve(); 
  	void reportTimes();
  	
@@ -61,12 +60,15 @@ private:
 
     bool hasChange;
     int debug;
+    int status=0;
     //Arrays of nonzeros and column/row validity
     list<int> singRow;    		//singleton rows 
 	list<int> singCol;    		//singleton columns
 
 	//original
+public:
 	vector<double> colCostOriginal;
+private:
 	vector<double> rowLowerOriginal;
 	vector<double> rowUpperOriginal;
 	vector<double> colLowerOriginal;

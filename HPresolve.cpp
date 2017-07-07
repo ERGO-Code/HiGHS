@@ -12,9 +12,17 @@
 
 using namespace std;
 
-void HPresolve::presolve() {
+int HPresolve::presolve(int print) {
 
-	iPrint = 0;
+	if (print >= 2)
+		iPrint = -1;
+	else
+		iPrint = 0;
+
+	//test
+	if (print==33)
+			iPrint = 1;
+
 	iKKTcheck = 0;
 
 	chk.print = 1; // 3 for experiments mode
@@ -32,7 +40,7 @@ void HPresolve::presolve() {
 	countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
 	countRemovedRows.resize(HTICK_ITEMS_COUNT_PRE, 0);
 	
-	if (iPrint) {
+	if (iPrint > 0) {
 		cout<<"Presolve started ..."<<endl;
 		cout<<"Original problem ... N="<<numCol<<"  M="<<numRow<<endl;
 	}
@@ -40,30 +48,36 @@ void HPresolve::presolve() {
 	int i,j,k;
 
 	initializeVectors();
+	if (status) return status;
 
 	int iter = 1;
 	//print(0);
 
 	timer.recordStart(HTICK_PRE_FIXED);
 	for (int j=0;j<numCol;j++)
-		if (flagCol[j])
+		if (flagCol[j]) {
 			removeIfFixed(j);
+			if (status) return status;
+		}
 	timer.recordFinish(HTICK_PRE_FIXED);
+
 
 	while (hasChange ) {
 
 		hasChange = false;
-		if (iPrint) 
+		if (iPrint > 0)
 			cout<<"PR: main loop "<<iter<<":"<<endl;
 		//***************** main loop ******************
 
 		removeRowSingletons();
 		removeForcingConstraints(iter);
-
-		removeDoubletonEquations();
+		if (status) return status;
 
 		removeRowSingletons();
+		removeDoubletonEquations();
+		if (status) return status;
 
+		removeRowSingletons();
 		removeColumnSingletons();
 		removeDominatedColumns();
 
@@ -77,7 +91,7 @@ void HPresolve::presolve() {
 	if (countsFile.length() > 0) {
 		recordCounts(countsFile);
 	}
-
+	return 0;
 }
 
 
@@ -216,7 +230,7 @@ void HPresolve::removeDoubletonEquations() {
 				addChange(17, row, y);
 
 				//remove y (col) and the row
-				if (iPrint)
+				if (iPrint > 0)
 					//cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<endl;
 					cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<"    nzy="<<nzCol[y]<<endl;
 				flagRow[row] = false;
@@ -405,11 +419,7 @@ void HPresolve::removeDoubletonEquations() {
 								if (nzCol[x]==0) {
 									nzRow[i]++;  //need this because below we decrease it by 1 too
 									removeEmptyColumn(x);
-
 								}
-
-
-
 							}
 						}
 					}
@@ -576,7 +586,13 @@ void HPresolve::resizeProblem() {
     		k++;
 	    }
 
-    cout<<"End of presolve: ... M="<<numRow<<"  N="<<numCol<<"   eliminated nz="<< ARindex.size() - Aindex.size() <<endl;
+    if (iPrint == -1) {
+    	cout<<"Presolve m="<<setw(2)<<numRow<<"(-"<<setw(2)<< numRowOriginal - numRow <<") ";
+    	cout<<"n="<<setw(2)<< numCol <<"(-"<<setw(2)<< numColOriginal - numCol <<") ";
+    	cout<<"nz="<<setw(4)<< Aindex.size() << "(-"<<setw(4)<< ARindex.size() - Aindex.size()  <<") ";
+
+    }
+
     if (chk.print == 3) {
 		ofstream myfile;
   		myfile.open ("../experiments/out", ios::app );
@@ -686,11 +702,11 @@ HPresolve::HPresolve() {
 
 void HPresolve::removeIfFixed(int j) {
 
-		if (colLower[j] == colUpper[j]) { 
+		if (colLower[j] == colUpper[j]) {
 
-			setPrimalValue(j, colUpper[j]); 
-			addChange(7,0,j);  	
-			if (iPrint) 
+			setPrimalValue(j, colUpper[j]);
+			addChange(7,0,j);
+			if (iPrint > 0)
 				cout<<"PR: Fixed variable "<<j<<" = "<<colUpper[j]<<". Column eliminated."<< endl;
 			countRemovedCols[HTICK_PRE_FIXED]++;
 
@@ -709,17 +725,17 @@ void HPresolve::removeIfFixed(int j) {
 
 void HPresolve::removeEmptyRow(int i) {
 	if (rowLower[i] <= tol && rowUpper[i] >= -tol) {
-		if (iPrint)
+		if (iPrint > 0)
 			cout<<"PR: Empty row "<<i<<" removed. "<<endl;
 		flagRow[i] = false;
 		valueRowDual[i] = 0;
 		addChange(0, i, 0);
 	}
 	else {
-		if (iPrint)
+		if (iPrint > 0)
 			cout<<"PR: Problem infeasible."<<endl;
-		cout<<("NOT-OPT status = 1, detected on presolve.\n");
-		exit(1);
+		status = 1;
+		return;
 	}
 }
 
@@ -728,10 +744,10 @@ void HPresolve::removeEmptyColumn(int j) {
 	singCol.remove(j);
 	double value;
 	if ((colCost[j] < 0 && colUpper[j] == HSOL_CONST_INF) || (colCost[j] > 0 && colLower[j] == -HSOL_CONST_INF) ) {
-		if (iPrint)
+		if (iPrint > 0)
 			cout<<"PR: Problem unbounded."<<endl;
-		printf("NOT-OPT status = %d, detected on presolve.\n", 2);
-		exit(2);
+		status = 2;
+		return;
 	}
 
 	if (colCost[j] > 0)
@@ -751,7 +767,7 @@ void HPresolve::removeEmptyColumn(int j) {
 
 	addChange(6, 0, j);
 
-	if (iPrint)
+	if (iPrint > 0)
 		cout<<"PR: Column: "<<j<<" eliminated: all nonzero rows have been removed. Cost = "<< colCost[j] <<", value = "<<value<<endl;
 	countRemovedCols[HTICK_PRE_EMPTY_COL]++;
 }
@@ -864,28 +880,28 @@ void HPresolve::removeDominatedColumns() {
 			//check if it is dominated 
 			if (colCost[j] - d > tol) {
 				if (colLower[j] == -HSOL_CONST_INF) {
-					if (iPrint) 
+					if (iPrint > 0)
 						cout<<"PR: Problem unbounded."<<endl;
 					cout<<"NOT-OPT status = 2, detected on presolve.\n";
 					exit(2);
 				}
 				setPrimalValue(j, colLower[j]); 
 				addChange(9, 0, j);
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Dominated column "<<j<<" removed. Value := "<<valuePrimal[j]<<endl;
 				timer.recordFinish(HTICK_PRE_DOMINATED_COLS);
 				countRemovedCols[HTICK_PRE_DOMINATED_COLS]++;
 			}
 			else if (colCost[j] - e < -tol) {
 				if (colUpper[j] == HSOL_CONST_INF) {
-					if (iPrint) 
+					if (iPrint > 0)
 						cout<<"PR: Problem unbounded."<<endl;
 					cout<<"NOT-OPT status = 2, detected on presolve.\n";
 					exit(2);
 				}
 				setPrimalValue(j, colUpper[j]); 
 				addChange(9, 0, j);
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Dominated column "<<j<<" removed. Value := "<<valuePrimal[j]<<endl;
 				timer.recordFinish(HTICK_PRE_DOMINATED_COLS);
 				countRemovedCols[HTICK_PRE_DOMINATED_COLS]++;
@@ -907,7 +923,7 @@ void HPresolve::removeDominatedColumns() {
 						timer.recordStart(HTICK_PRE_WEAKLY_DOMINATED_COLS);
 						setPrimalValue(j, colLower[j]);
 						addChange(10, 0, j);
-						if (iPrint)
+						if (iPrint > 0)
 							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal[j]<<endl;
 						countRemovedCols[HTICK_PRE_WEAKLY_DOMINATED_COLS]++;
 						timer.recordFinish(HTICK_PRE_WEAKLY_DOMINATED_COLS);
@@ -916,7 +932,7 @@ void HPresolve::removeDominatedColumns() {
 						timer.recordStart(HTICK_PRE_WEAKLY_DOMINATED_COLS);
 						setPrimalValue(j, colUpper[j]);
 						addChange(10, 0, j);
-						if (iPrint)
+						if (iPrint > 0)
 							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal[j]<<endl;
 						countRemovedCols[HTICK_PRE_WEAKLY_DOMINATED_COLS]++;
 						timer.recordFinish(HTICK_PRE_WEAKLY_DOMINATED_COLS);
@@ -969,28 +985,6 @@ void HPresolve::removeDominatedColumns() {
 }
 
 
-
-
-
-
-void HPresolve::setProblemStatus(int s) {
-	if (s==1) {
-		cout<<"PR: Problem infeasible."<<endl;
-		cout<<"NOT-OPT status = 1, returned from solver after presolve.\n";
-		//exit(1);
-	}
-	if (s==2) {
-		cout<<"PR: Problem unbounded."<<endl;
-		cout<<"NOT-OPT status = 2, returned from solver after presolve.\n";
-		//exit(2);
-	}
-	if (s==0)
-		return;
-	else {
-		cout<<"unknown problem status returned from solver after presolve: "<<s<<endl;
-		//exit(s);
-	}
-}
 
 void HPresolve::setKKTcheckerData(){
 	//after initializing equations.
@@ -1058,7 +1052,7 @@ void HPresolve::removeColumnSingletons()  {
 			//free
 			if (colLower[col] == -HSOL_CONST_INF && colUpper[col] == HSOL_CONST_INF) {
 				timer.recordStart(HTICK_PRE_FREE_SING_COL);
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Free column singleton "<<col<<" removed. Row "<<i<<" removed."<<endl;
 					
 				//modify costs
@@ -1173,7 +1167,7 @@ void HPresolve::removeColumnSingletons()  {
 				oldBounds.push(make_pair( j, bnds));
 				
 						//remove col as free column singleton
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Column singleton "<<col<<" in a doubleton inequality constraint removed. Row "<<i<<" removed. variable left is "<<j<<endl;
 				flagCol[col] = false;
 				fillStackRowBounds(i);
@@ -1195,7 +1189,7 @@ void HPresolve::removeColumnSingletons()  {
 					double value;
 					if (colCost[j] > 0) {
 						if (colLower[j] == -HSOL_CONST_INF) {
-							if (iPrint) 
+							if (iPrint > 0)
 								cout<<"PR: Problem unbounded."<<endl;
 							cout<<"NOT-OPT status = 2, detected on presolve.\n";
 							exit(2);
@@ -1204,7 +1198,7 @@ void HPresolve::removeColumnSingletons()  {
 					}
 					else if (colCost[j] < 0) {
 						if (colUpper[j] == HSOL_CONST_INF) {
-							if (iPrint)
+							if (iPrint > 0)
 								cout<<"PR: Problem unbounded."<<endl;
 							cout<<"NOT-OPT status = 2, detected on presolve.\n";
 							exit(2);
@@ -1221,7 +1215,7 @@ void HPresolve::removeColumnSingletons()  {
 					}
 					setPrimalValue(j, value);
 					addChange(19, 0, j);
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Second singleton column "<<j<<" in doubleton row "<<i<< " removed.\n";
 					countRemovedCols[HTICK_PRE_SING_COL_DOUBLETON_INEQ]++;
 					singCol.remove(j);
@@ -1349,7 +1343,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 		upp = upp/Avalue[k];
 
 	if (colLower[col] <= low && low <= upp && upp <= colUpper[col]) {
-		if (iPrint) 
+		if (iPrint > 0)
 			cout<<"PR: Implied free column singleton "<<col<<" removed.  Row "<<i<<" removed."<<endl;
 		
 		countRemovedCols[HTICK_PRE_IMPLIED_FREE_SING_COL]++;
@@ -1448,6 +1442,10 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				continue;
 			}
 
+			//removeRowSingletons will handle just after removeForcingConstraints
+			if (nzRow[i]==1)
+				continue;
+
 			timer.recordStart(HTICK_PRE_FORCING_ROW);
 
 			double g=0;
@@ -1504,14 +1502,14 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 			timer.recordFinish(HTICK_PRE_FORCING_ROW);
 
 			if (g>rowUpper[i] || h<rowLower[i]) {
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Problem infeasible."<<endl;
-				printf("NOT-OPT status = %d, detected on presolve.\n", 1);
-				exit(1);
+				status = 1;
+				return;
 			}
 			else if (g == rowUpper[i]) {
 				//set all variables to lower bound
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:   nzRow="<<nzRow[i]<<endl;
 				flagRow[i] = false;
 	        	addChange(3, i, 0);
@@ -1532,7 +1530,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						oldBounds.push(make_pair( j, bnds));
 						addChange(2, 0, j);
 						
-						if (iPrint) 
+						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
 						countRemovedCols[HTICK_PRE_FORCING_ROW]++;
 					} k++; 
@@ -1543,7 +1541,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 			}
 			else if (h == rowLower[i]) {
 				//set all variables to upper bound 
-				if (iPrint) 
+				if (iPrint > 0)
 					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:"<<endl;
 				flagRow[i] = false;
 	        	addChange(3, i, 0);
@@ -1563,7 +1561,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						bnds.push_back(colUpper[j]);
 						oldBounds.push(make_pair( j, bnds));
 						addChange(2, 0, j);
-						if (iPrint) 
+						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
 						countRemovedCols[HTICK_PRE_FORCING_ROW]++;
 					} k++;
@@ -1577,7 +1575,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 			else if (g >= rowLower[i] && h <= rowUpper[i]) {
 				removeRow(i);
 				addChange(16, i, 0);
-				if (iPrint)
+				if (iPrint > 0)
 					cout<<"PR: Redundant row "<<i<<" removed."<<endl;
 				countRemovedRows[HTICK_PRE_REDUNDANT_ROW]++;
 			}
@@ -1743,7 +1741,7 @@ void HPresolve::removeRowSingletons() {
 			}
 		}*/
 
-		if (iPrint)
+		if (iPrint > 0)
 					cout<<"PR: Singleton row "<<i<<" removed. Bounds of variable  "<<j<<" modified: l= "<<colLower[j] <<" u="<< colUpper[j] << ", aij = "<<aij<<endl;
 		addChange(1, i, j);
 		postValue.push(colCost[j]);
@@ -1837,7 +1835,7 @@ void HPresolve::checkForChanges(int iteration) {
 				break;
 			}
 		if (allPresent) {
-			if (iPrint)
+			if (iPrint > 0)
 				cout<<"PR: No variables were eliminated at presolve."<<endl;
 			noPostSolve = true;
 			return;
@@ -3449,13 +3447,13 @@ void HPresolve::updateRowsByNZ() {
 
 			if (nzRow[i] == 0)
 				if (b[i] == 0) {
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Empty row "<<i<<" removed. "<<endl;
 					flagRow[i] = false;
 					addChange(0, i, 0);
 				}
 				else {
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Problem infeasible."<<endl;
 					cout<<("NOT-OPT status = 1, detected on presolve.\n");
 					exit(1);
@@ -3614,7 +3612,7 @@ void HPresolve::findDuplicateRows() {
 			int r1 = (int) pairWise.front(); pairWise.pop();
 			int r2 = (int) pairWise.front(); pairWise.pop();
 			double rat = pairWise.front(); pairWise.pop();
-			//if (iPrint) cout<<"PR: Duplicate rows detected: "<<r1<<" and "<<r2<<". ratio = "<<rat<<"."<<endl;
+			//if (iPrint > 0) cout<<"PR: Duplicate rows detected: "<<r1<<" and "<<r2<<". ratio = "<<rat<<"."<<endl;
 
 			if (!checkDuplicateRows(r1,r2))
 				cout<<"ROWS NOT DUPLICATE: "<<r1<<" and "<<r2<<endl;
@@ -3704,7 +3702,7 @@ int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, ve
 	//empty
 	if (coeff.size()==0) { return 0;
 		if (newRowKLower <= tol && newRowKUpper >= -tol) {
-			if (iPrint)
+			if (iPrint > 0)
 				cout<<"PR: Row "<<ii<<" added to duplicate row "<<kk<<" resulted in empty row. Row "<<kk<<" removed."<<endl;
 			//update bounds on row ii
 			//add old bounds OF row ii to checker and for postsolve
@@ -3756,7 +3754,7 @@ int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, ve
 			addChange(11, kk, 0);
 		}
 		else {
-			if (iPrint)
+			if (iPrint > 0)
 				cout<<"PR: Problem infeasible."<<endl;
 			cout<<("NOT-OPT status = 1, detected on presolve.\n");
 			exit(1);
@@ -3849,7 +3847,7 @@ int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, ve
 		bnds.push_back(colCost[j]);
 		oldBounds.push(make_pair( j, bnds));
 
-		if (iPrint)
+		if (iPrint > 0)
 			cout<<"PR: Row "<<ii<<" added to duplicate row "<<kk<<" resulted in a doubleton equation. Variable "<<col<<" and row "<<kk<<" removed. variable left is "<<j<<endl;
 		flagCol[col] = false;
 
@@ -3984,7 +3982,7 @@ void HPresolve::findDuplicateColumns() {
 			int c1 = (int) pairWise.front(); pairWise.pop();
 			int c2 = (int) pairWise.front(); pairWise.pop();
 			double rat = pairWise.front(); pairWise.pop();
-			//if (iPrint) cout<<"PR: Duplicate columns detected: "<<c1<<" and "<<c2<<". ratio = "<<rat<<"."<<endl;
+			//if (iPrint > 0) cout<<"PR: Duplicate columns detected: "<<c1<<" and "<<c2<<". ratio = "<<rat<<"."<<endl;
 			if (checkDuplicateColumns(c1, c2))
 				removeDuplicateColumns(c1,c2,rat);
 		}
@@ -4006,7 +4004,7 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 			if (v>=0 && val>0) {
 				//zj > 0, variable j is at lower bound.
 				if (colLower[j] == -HSOL_CONST_INF) {
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Problem dual infeasible."<<endl;
 					cout<<"NOT-OPT status = 2, detected on presolve.\n";
 					exit(2);
@@ -4018,13 +4016,13 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 				xj = colLower[j];
 				setPrimalValue(j, xj);
 				addChange(7, 0, j);//postsolve is like a fixed variable
-				if (iPrint)
+				if (iPrint > 0)
 					cout<<"PR: Duplicate column "<<j<<" fixed. Value := "<<xj<<endl;
 			}
 			else if (v<=0 && val<0) {
 				//zj < 0, variable j is at upper bound.
 				if (colUpper[j] == HSOL_CONST_INF) {
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Problem dual infeasible."<<endl;
 					cout<<"NOT-OPT status = 2, detected on presolve.\n";
 					exit(2);
@@ -4036,7 +4034,7 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 				xj = colUpper[j];
 				setPrimalValue(j, xj);
 				addChange(7, 0, j);//postsolve is like a fixed variable
-				if (iPrint)
+				if (iPrint > 0)
 					cout<<"PR: Duplicate column "<<j<<" fixed. Value := "<<xj<<endl;
 			}
 		}
@@ -4045,7 +4043,7 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 			if (v<=0 && val>0) {
 				//zj > 0, variable j is at lower bound.
 				if (colLower[j] == -HSOL_CONST_INF) {
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Problem dual infeasible."<<endl;
 					cout<<"NOT-OPT status = 2, detected on presolve.\n";
 					exit(2);
@@ -4057,13 +4055,13 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 				xj = colLower[j];
 				setPrimalValue(j, xj);
 				addChange(7, 0, j);//postsolve is like a fixed variable
-				if (iPrint)
+				if (iPrint > 0)
 					cout<<"PR: Duplicate column "<<j<<" fixed. Value := "<<xj<<endl;
 			}
 			else if (v>=0 && val<0) {
 				//zj < 0, variable j is at upper bound.
 				if (colUpper[j] == HSOL_CONST_INF) {
-					if (iPrint)
+					if (iPrint > 0)
 						cout<<"PR: Problem dual infeasible."<<endl;
 					cout<<"NOT-OPT status = 2, detected on presolve.\n";
 					exit(2);
@@ -4091,7 +4089,7 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 			chk.cUppers.push(colUpper);
 		}
 
-		if (iPrint)
+		if (iPrint > 0)
 			cout<<"PR: Duplicate columns "<<k<<" and "<<j<<" replaced by one at "<<k<<"."<<endl;
 		if (v<0) {
 		//deal with infinities.
