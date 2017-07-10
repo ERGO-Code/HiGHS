@@ -174,9 +174,9 @@ int main(int argc, char **argv) {
 	solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
-	solvePlainWithPresolve(fileName);
+	//solvePlainWithPresolve(fileName);
 	//solvePlainExperiments(fileName);
-	//testIO("fileIO");
+	testIO("fileIO");
       }
       else
 	solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
@@ -706,29 +706,36 @@ void solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *P
 }
 
 double presolve(HModel& mod, double& time) {
-	double preT = 0;
-	double solT = 0;
-	double posT = 0;
 	cout << "------\n";
 
 	HPresolve * pre = new HPresolve();
 	mod.copy_fromHModelToHPresolve(pre);
-	pre->presolve();
-	pre->reportTimes();
-	mod.load_fromPresolve(pre);
+	int status = pre->presolve();
+	if (!status) {
+		pre->reportTimes();
+		mod.load_fromPresolve(pre);
 
-	HDual solver;
-	mod.scaleModel();
-	solver.solve(&mod);
-	pre->setProblemStatus(mod.getPrStatus());
-	mod.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
-	mod.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
-	pre->postsolve();
-	mod.load_fromPostsolve(pre);
-	solver.solve(&mod);
-	mod.util_reportSolverOutcome("Postsolve");
+		HDual solver;
+		mod.scaleModel();
+		solver.solve(&mod);
+		pre->setProblemStatus(mod.getPrStatus());
+		mod.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
+		mod.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
+		pre->postsolve();
+		mod.load_fromPostsolve(pre);
+		solver.solve(&mod);
+		mod.util_reportSolverOutcome("Postsolve");
+		time = mod.totalTime;
+	}
+	else if (status == HPresolve::Empty) {
+		pre->postsolve();
+		mod.load_fromPostsolve(pre);
+		HDual solver;
 
-	time = mod.totalTime;
+		solver.solve(&mod);
+		mod.util_reportSolverOutcome("Postsolve");
+		time = mod.totalTime;
+	}
 	return mod.util_getObjectiveValue();
 	delete pre;
 }
