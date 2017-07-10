@@ -152,6 +152,10 @@ void HPreData::print(int k) {
 				int ind = Astart[j];
 				while (Aindex[ind]!=i && ind<Aend[j])
 					ind++;
+
+				if (!flagCol[j])
+					continue;
+
 				//if a_ij is nonzero print
 				if (Aindex[ind]==i && ind<Aend[j])
 				{

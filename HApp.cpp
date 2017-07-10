@@ -174,9 +174,9 @@ int main(int argc, char **argv) {
 	solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
-	//solvePlainWithPresolve(fileName);
+	solvePlainWithPresolve(fileName);
 	//solvePlainExperiments(fileName);
-	testIO("fileIO");
+	//testIO("fileIO");
       }
       else
 	solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
@@ -199,16 +199,14 @@ void testIO(const char *filename) {
 		return;
 	}
 	else if (1) {
-		cout<<filename<<" : "<<endl;
 		double timeVar;
-
 		HPresolve * pre = new HPresolve();
 		model.copy_fromHModelToHPresolve(pre);
 		int status = pre->presolve();
+
 		if (!status) {
 			//pre->reportTimes();
 			model.load_fromPresolve(pre);
-
 			HDual solver;
 			solver.solve(&model);
 			pre->setProblemStatus(model.getPrStatus());
@@ -228,11 +226,15 @@ void testIO(const char *filename) {
 			solver.solve(&model);
 			model.util_reportSolverOutcome("Postsolve");
 		}
+		else cout <<"Status return from presolve: "<< status<< endl;
 		delete pre;
-
 	}
 	else {
 	  HDual solver;
+	  HPresolve * pre = new HPresolve();
+	  model.copy_fromHModelToHPresolve(pre);
+	  //pre->initializeVectors();
+	  //pre->print(0);
 	  model.initWithLogicalBasis();
 	  solver.solve(&model);
 	  model.util_reportSolverOutcome("testIO");

@@ -17,8 +17,6 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
-	iPrint = 1;
-
 	chk.print = 1; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
@@ -56,7 +54,7 @@ int HPresolve::presolve(int print) {
 	timer.recordFinish(HTICK_PRE_FIXED);
 
 
-	while (hasChange ) {
+	while (hasChange) {
 
 		hasChange = false;
 		if (iPrint > 0)
@@ -64,18 +62,22 @@ int HPresolve::presolve(int print) {
 		//***************** main loop ******************
 
 		removeRowSingletons();
-//		removeForcingConstraints(iter);
+		if (status) return status;
+		removeForcingConstraints(iter);
 		if (status) return status;
 
-//		removeRowSingletons();
+		removeRowSingletons();
+		if (status) return status;
 		removeDoubletonEquations();
 		if (status) return status;
 
-//		removeRowSingletons();
-//		removeColumnSingletons();
+		removeRowSingletons();
+		if (status) return status;
+		removeColumnSingletons();
+		if (status) return status;
 
-//		removeDominatedColumns();
-//		if (status) return status;
+		removeDominatedColumns();
+		if (status) return status;
 
 
 		//***************** main loop ******************
@@ -1757,6 +1759,12 @@ void HPresolve::removeRowSingletons() {
 				}
 			}
 		}*/
+
+		//check for feasibility
+		if (colLower[i] > colUpper[i] + tol) {
+			status = Infeasible;
+			return;
+		}
 
 		if (iPrint > 0)
 					cout<<"PR: Singleton row "<<i<<" removed. Bounds of variable  "<<j<<" modified: l= "<<colLower[j] <<" u="<< colUpper[j] << ", aij = "<<aij<<endl;
