@@ -57,12 +57,22 @@ public:
 
     HTimerPre timer;
 
+    enum stat {
+    	Infeasible = 1,
+    	Unbounded = 2,
+    	Empty = 3
+    };
 
 private: 
 
     bool hasChange;
     int debug;
     int status=0;
+    // 1  -  infeasible
+    // 2  -  unbounded
+    // 3  -  empty
+    // can change these to expressions
+
     //Arrays of nonzeros and column/row validity
     list<int> singRow;    		//singleton rows 
 	list<int> singCol;    		//singleton columns

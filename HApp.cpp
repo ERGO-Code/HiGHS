@@ -176,6 +176,7 @@ int main(int argc, char **argv) {
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
 	solvePlainWithPresolve(fileName);
 	//solvePlainExperiments(fileName);
+	//testIO("fileIO");
       }
       else
 	solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
@@ -185,20 +186,39 @@ int main(int argc, char **argv) {
 }
 
 void testIO(const char *filename) {
-  HModel model;
-  model.load_fromMPS(filename);
-  // Check size
-  if (model.numRow == 0) return;
-  
-  HinOut h("fileIO", "fileIO");
-  
-  h.HinOutTestIO(model);
-  //h.HinOutTestRead(model);
+//testIO solve the problem in file with presolve
 
-  model.scaleModel();
-  HDual solver;
-  solver.solve(&model);
-  model.util_reportSolverOutcome("Test IO");
+	HModel model;
+
+	HinOut h("fileIO", "fileIO");
+	h.HinOutTestRead(model);
+
+	// Check size
+	if (model.numRow == 0) {
+		cout<<"Empty problem";
+		return;
+	}
+else
+	cout<<filename<<" : "<<endl;
+	double timeVar;
+	double obj1 = presolve(model, timeVar);
+
+//testIO original testing code
+
+//  HModel model;
+//  model.load_fromMPS(filename);
+//  // Check size
+//  if (model.numRow == 0) return;
+//
+//  HinOut h("fileIO", "fileIO");
+//
+//  h.HinOutTestIO(model);
+//  //h.HinOutTestRead(model);
+//
+//  model.scaleModel();
+//  HDual solver;
+//  solver.solve(&model);
+//  model.util_reportSolverOutcome("Test IO");
 }
 
 

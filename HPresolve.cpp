@@ -71,7 +71,9 @@ int HPresolve::presolve(int print) {
 
 		removeRowSingletons();
 		removeColumnSingletons();
+
 		removeDominatedColumns();
+		if (status) return status;
 
 
 		//***************** main loop ******************
@@ -83,7 +85,7 @@ int HPresolve::presolve(int print) {
 	if (countsFile.length() > 0) {
 		recordCounts(countsFile);
 	}
-	return 0;
+	return status;
 }
 
 int HPresolve::presolve() {
@@ -498,6 +500,11 @@ void HPresolve::resizeProblem() {
 			nC++;
 		}
 
+	if (nR + nC == 0) {
+    	status = Empty;
+		return;
+	}
+
 	//counts
 	numRowOriginal = numRow;
 	numColOriginal = numCol;
@@ -730,7 +737,7 @@ void HPresolve::removeEmptyRow(int i) {
 	else {
 		if (iPrint > 0)
 			cout<<"PR: Problem infeasible."<<endl;
-		status = 1;
+		status = Infeasible;
 		return;
 	}
 }
@@ -742,7 +749,7 @@ void HPresolve::removeEmptyColumn(int j) {
 	if ((colCost[j] < 0 && colUpper[j] == HSOL_CONST_INF) || (colCost[j] > 0 && colLower[j] == -HSOL_CONST_INF) ) {
 		if (iPrint > 0)
 			cout<<"PR: Problem unbounded."<<endl;
-		status = 2;
+		status = Unbounded;
 		return;
 	}
 
@@ -878,8 +885,8 @@ void HPresolve::removeDominatedColumns() {
 				if (colLower[j] == -HSOL_CONST_INF) {
 					if (iPrint > 0)
 						cout<<"PR: Problem unbounded."<<endl;
-					cout<<"NOT-OPT status = 2, detected on presolve.\n";
-					exit(2);
+					status = Unbounded;
+					return;
 				}
 				setPrimalValue(j, colLower[j]); 
 				addChange(9, 0, j);
@@ -892,8 +899,8 @@ void HPresolve::removeDominatedColumns() {
 				if (colUpper[j] == HSOL_CONST_INF) {
 					if (iPrint > 0)
 						cout<<"PR: Problem unbounded."<<endl;
-					cout<<"NOT-OPT status = 2, detected on presolve.\n";
-					exit(2);
+					status = Unbounded;
+					return;
 				}
 				setPrimalValue(j, colUpper[j]); 
 				addChange(9, 0, j);
@@ -981,22 +988,15 @@ void HPresolve::removeDominatedColumns() {
 }
 
 void HPresolve::setProblemStatus(int s) {
-	if (s==1) {
-		cout<<"PR: Problem infeasible."<<endl;
-		cout<<"NOT-OPT status = 1, returned from solver after presolve.\n";
-		//exit(1);
-	}
-	if (s==2) {
-		cout<<"PR: Problem unbounded."<<endl;
-		cout<<"NOT-OPT status = 2, returned from solver after presolve.\n";
-		//exit(2);
-	}
-	if (s==0)
+	if (s==Infeasible)
+		cout<<"NOT-OPT status = 1, returned from solver after presolve: Problem infeasible.\n";
+	else if (s==Unbounded)
+		cout<<"NOT-OPT status = 2, returned from solver after presolve: Problem unbounded.\n";
+	else if (s==0)
 		return;
-	else {
+	else
 		cout<<"unknown problem status returned from solver after presolve: "<<s<<endl;
-		//exit(s);
-	}
+
 }
 
 void HPresolve::setKKTcheckerData(){
@@ -1204,8 +1204,8 @@ void HPresolve::removeColumnSingletons()  {
 						if (colLower[j] == -HSOL_CONST_INF) {
 							if (iPrint > 0)
 								cout<<"PR: Problem unbounded."<<endl;
-							cout<<"NOT-OPT status = 2, detected on presolve.\n";
-							exit(2);
+							status = Unbounded;
+							return;
 						}
 						value = colLower[j];
 					}
@@ -1213,8 +1213,8 @@ void HPresolve::removeColumnSingletons()  {
 						if (colUpper[j] == HSOL_CONST_INF) {
 							if (iPrint > 0)
 								cout<<"PR: Problem unbounded."<<endl;
-							cout<<"NOT-OPT status = 2, detected on presolve.\n";
-							exit(2);
+							status = Unbounded;
+							return;
 						}
 						value = colUpper[j];
 					}
@@ -1517,7 +1517,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 			if (g>rowUpper[i] || h<rowLower[i]) {
 				if (iPrint > 0)
 					cout<<"PR: Problem infeasible."<<endl;
-				status = 1;
+				status = Infeasible;
 				return;
 			}
 			else if (g == rowUpper[i]) {
@@ -2596,6 +2596,7 @@ void HPresolve::postsolve() {
 						else
 							xkValue = upp;
 					}
+
 					else if ((ck > 0 && aik > 0) || (ck < 0 && aik < 0)) {
 						if (low == -HSOL_CONST_INF)
 							cout<<"ERROR UNBOUNDED? unnecessary check";
