@@ -198,10 +198,45 @@ void testIO(const char *filename) {
 		cout<<"Empty problem";
 		return;
 	}
-else
-	cout<<filename<<" : "<<endl;
-	double timeVar;
-	double obj1 = presolve(model, timeVar);
+	else if (1) {
+		cout<<filename<<" : "<<endl;
+		double timeVar;
+
+		HPresolve * pre = new HPresolve();
+		model.copy_fromHModelToHPresolve(pre);
+		int status = pre->presolve();
+		if (!status) {
+			//pre->reportTimes();
+			model.load_fromPresolve(pre);
+
+			HDual solver;
+			solver.solve(&model);
+			pre->setProblemStatus(model.getPrStatus());
+			cout<<" STATUS = " << model.getPrStatus() <<endl;
+			model.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
+			model.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
+			pre->postsolve();
+			model.load_fromPostsolve(pre);
+			solver.solve(&model);
+			model.util_reportSolverOutcome("Postsolve");
+		}
+		else if (status == HPresolve::Empty) {
+			pre->postsolve();
+			model.load_fromPostsolve(pre);
+			HDual solver;
+
+			solver.solve(&model);
+			model.util_reportSolverOutcome("Postsolve");
+		}
+		delete pre;
+
+	}
+	else {
+	  HDual solver;
+	  model.initWithLogicalBasis();
+	  solver.solve(&model);
+	  model.util_reportSolverOutcome("testIO");
+	}
 
 //testIO original testing code
 
@@ -712,7 +747,7 @@ double presolve(HModel& mod, double& time) {
 	mod.copy_fromHModelToHPresolve(pre);
 	int status = pre->presolve();
 	if (!status) {
-		pre->reportTimes();
+		//pre->reportTimes();
 		mod.load_fromPresolve(pre);
 
 		HDual solver;

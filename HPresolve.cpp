@@ -17,6 +17,8 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
+	iPrint = 1;
+
 	chk.print = 1; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
@@ -62,18 +64,18 @@ int HPresolve::presolve(int print) {
 		//***************** main loop ******************
 
 		removeRowSingletons();
-		removeForcingConstraints(iter);
+//		removeForcingConstraints(iter);
 		if (status) return status;
 
-		removeRowSingletons();
+//		removeRowSingletons();
 		removeDoubletonEquations();
 		if (status) return status;
 
-		removeRowSingletons();
-		removeColumnSingletons();
+//		removeRowSingletons();
+//		removeColumnSingletons();
 
-		removeDominatedColumns();
-		if (status) return status;
+//		removeDominatedColumns();
+//		if (status) return status;
 
 
 		//***************** main loop ******************
@@ -479,6 +481,7 @@ void HPresolve::trimA() {
 void HPresolve::resizeProblem() {
 
 	int i, j, k;
+
 	int nz = 0;
 	int nR = 0;
 	int nC = 0;
@@ -500,17 +503,25 @@ void HPresolve::resizeProblem() {
 			nC++;
 		}
 
-	if (nR + nC == 0) {
-    	status = Empty;
-		return;
-	}
-
 	//counts
 	numRowOriginal = numRow;
 	numColOriginal = numCol;
 	numRow = nR;
 	numCol = nC;
 	numTot = nR + nC;
+
+	if (1) {
+    //if (iPrint == -1) {
+    	cout<<"Presolve m="<<setw(2)<<numRow<<"(-"<<setw(2)<< numRowOriginal - numRow <<") ";
+    	cout<<"n="<<setw(2)<< numCol <<"(-"<<setw(2)<< numColOriginal - numCol <<") ";
+    	cout<<"nz="<<setw(4)<< nz << "(-"<<setw(4)<< ARindex.size() - nz  <<") ";
+		cout<<endl;
+    }
+
+	if (nR + nC == 0) {
+    	status = Empty;
+		return;
+	}
 
 	//matrix
     vector<int> iwork(numCol, 0);
@@ -587,14 +598,6 @@ void HPresolve::resizeProblem() {
     		rowUpper[k] = teup[i];
     		k++;
 	    }
-
-	if (1) {
-    //if (iPrint == -1) {
-    	cout<<"Presolve m="<<setw(2)<<numRow<<"(-"<<setw(2)<< numRowOriginal - numRow <<") ";
-    	cout<<"n="<<setw(2)<< numCol <<"(-"<<setw(2)<< numColOriginal - numCol <<") ";
-    	cout<<"nz="<<setw(4)<< Aindex.size() << "(-"<<setw(4)<< ARindex.size() - Aindex.size()  <<") ";
-		cout<<endl;
-    }
 
     if (chk.print == 3) {
 		ofstream myfile;
@@ -996,6 +999,7 @@ void HPresolve::setProblemStatus(int s) {
 		return;
 	else
 		cout<<"unknown problem status returned from solver after presolve: "<<s<<endl;
+	status = s;
 
 }
 
@@ -2240,7 +2244,7 @@ void HPresolve::postsolve() {
 			chk.makeKKTCheck();
 		}
 
-		if (status != Empty) {
+		if (status == 0) {
 			//So there have been changes definitely ->
 			makeACopy(); // so we can efficiently calculate primal and dual values
 
@@ -2278,9 +2282,14 @@ void HPresolve::postsolve() {
 
 			//cmpNBF(-1, -1);
 		}
-		else {
+		else if (status == Empty) {
 			//Presolve reduced problem to zero
+			//TODO: postsolve
 			nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
+		}
+		else if (status) {
+			//TODO : message that postsolve is not happening
+			return;
 		}
 
 		int kk, jj;
