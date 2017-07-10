@@ -1761,7 +1761,7 @@ void HPresolve::removeRowSingletons() {
 		}*/
 
 		//check for feasibility
-		if (colLower[i] > colUpper[i] + tol) {
+		if (colLower[j] > colUpper[j] + tol) {
 			status = Infeasible;
 			return;
 		}
@@ -2290,14 +2290,11 @@ void HPresolve::postsolve() {
 
 			//cmpNBF(-1, -1);
 		}
-		else if (status == Empty) {
-			//Presolve reduced problem to zero
-			//TODO: postsolve
-			nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
+		else if (status == Unbounded || status == Infeasible) {
+			return; // no postsolve
 		}
-		else if (status) {
-			//TODO : message that postsolve is not happening
-			return;
+		else if (status == Empty) {
+			nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
 		}
 
 		int kk, jj;
