@@ -53,7 +53,7 @@ public:
     vector<double> implRowValueLower;
     vector<double> implRowValueUpper;
 
-    HTimerPre timer;
+    HTimerPre timer; //holds enum for main presolve rules
 
     enum stat {
     	Infeasible = 1,
@@ -65,19 +65,16 @@ private:
 
     bool hasChange;
     int debug;
-    int status=0;
-    // 1  -  infeasible
-    // 2  -  unbounded
-    // 3  -  empty
-    // can change these to expressions
 
-    //Arrays of nonzeros and column/row validity
+    int status=0;  //0 is unassigned, see enum stat
+
     list<int> singRow;    		//singleton rows 
 	list<int> singCol;    		//singleton columns
 
-	//original
+	//original data
 public:
 	vector<double> colCostOriginal;
+
 private:
 	vector<double> rowLowerOriginal;
 	vector<double> rowUpperOriginal;

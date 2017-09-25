@@ -46,7 +46,7 @@ int HPresolve::presolve(int print) {
 	//print(0);
 
 	timer.recordStart(FIXED);
-	for (int j=0;j<numCol;j++)
+	for (int j=0;j<numCol;++j)
 		if (flagCol.at(j)) {
 			removeIfFixed(j);
 			if (status) return status;
@@ -121,10 +121,10 @@ void HPresolve::removeDoubletonEquations() {
 							col2 = -2;
 							break;
 						}
-						kk++;
+						++kk;
 					}
 					else
-						kk++;
+						++kk;
 				}
 				if (col2==-1)
 					cout<<"ERROR: doubleton eq row"<< row << " has less than two variables. \n";
@@ -148,7 +148,7 @@ void HPresolve::removeDoubletonEquations() {
 				//different cases:
 
 				//singletons skip this
-				for (int k = Astart[y]; k<Aend[y]; k++)
+				for (int k = Astart[y]; k<Aend[y];++k )
 					if (flagRow[Aindex.at(k)]) {
 						int i = Aindex.at(k);
 						if (i==row)
@@ -248,7 +248,7 @@ void HPresolve::removeDoubletonEquations() {
 
 				vector<pair<int, double>> bndsL, bndsU;
 
-				for (int k = Astart[y]; k<Aend[y]; k++)
+				for (int k = Astart[y]; k<Aend[y];++k )
 					if (flagRow[Aindex.at(k)] && Aindex.at(k) != row) {
 						int i = Aindex.at(k);
 						double aiy = Avalue.at(k);
@@ -392,7 +392,7 @@ void HPresolve::removeDoubletonEquations() {
 									// A update for case when x is zero: move x entry to end and set
 									// Aend to be Aend - 1;
 									int indi;
-									for (indi=Astart[x];indi<Aend[x];indi++)
+									for (indi=Astart[x];indi<Aend[x];++indi)
 											if (Aindex[indi]==i)
 												break;
 
@@ -434,14 +434,14 @@ void HPresolve::removeDoubletonEquations() {
 
 void HPresolve::trimA() {
 	int cntEl=0;
-	for (int j=0;j<numCol;j++)
+	for (int j=0;j<numCol;++j)
 		if (flagCol.at(j))
 			cntEl+=nzCol.at(j);
 
 	vector<pair<int,size_t> > vp;
 	vp.reserve(numCol);
 
-	for (size_t i = 0 ; i != numCol ; i++) {
+	for (size_t i = 0 ; i != numCol ; ++i) {
 		vp.push_back(make_pair(Astart.at(i), i));
 	}
 
@@ -449,7 +449,7 @@ void HPresolve::trimA() {
 	// resolving ties using the original index
 	sort(vp.begin(), vp.end());
 
-//	for (size_t i = 0 ; i != vp.size() ; i++) {
+//	for (size_t i = 0 ; i != vp.size() ; ++i) {
 //		cout << vp.at(i).first << " " << vp.at(i).second << endl;
 //	}
 
@@ -457,7 +457,7 @@ void HPresolve::trimA() {
 	Aendtmp = Aend;
 
 	int iPut=0;
-	for (size_t i = 0 ; i != vp.size() ; i++) {
+	for (size_t i = 0 ; i != vp.size() ; ++i) {
 		int col = vp.at(i).second;
 		if (flagCol.at(col)) {
 			int k = vp.at(i).first; // = Astarttmp.at(col)
@@ -492,14 +492,14 @@ void HPresolve::resizeProblem() {
 	rIndex.assign(numRow, -1);
 	cIndex.assign(numCol, -1);
 
-	for (i=0;i<numRow;i++)
+	for (i=0;i<numRow;++i)
 		if (flagRow.at(i)) {
 			nz += nzRow.at(i);
 			rIndex.at(i) = nR;
 			nR++;
 			}
 
-	for (i=0;i<numCol;i++)
+	for (i=0;i<numCol;++i)
 		if (flagCol.at(i)) {
 			cIndex.at(i) = nC;
 			nC++;
@@ -533,21 +533,21 @@ void HPresolve::resizeProblem() {
     Avalue.resize(nz);
 
 
-    for (i = 0;i<numRowOriginal; i++)
+    for (i = 0;i<numRowOriginal; ++i)
     	if (flagRow.at(i))
-    	    for (int k = ARstart.at(i); k < ARstart[i+1]; k++) {
+    	    for (int k = ARstart.at(i); k < ARstart[i+1];++k ) {
     	    	j = ARindex.at(k);
     	    	if (flagCol.at(j))
         			iwork[cIndex.at(j)]++;
         		}
-    for (i = 1; i <= numCol; i++)
+    for (i = 1; i <= numCol; ++i)
         Astart.at(i) = Astart[i - 1] + iwork[i - 1];
-    for (i = 0; i < numCol; i++)
+    for (i = 0; i < numCol; ++i)
         iwork.at(i) = Aend.at(i) = Astart.at(i);
-    for (i = 0; i < numRowOriginal; i++) {
+    for (i = 0; i < numRowOriginal; ++i) {
     	if (flagRow.at(i)) {
 			int iRow = rIndex.at(i);
-		    for (k = ARstart.at(i); k < ARstart[i + 1]; k++) {
+		    for (k = ARstart.at(i); k < ARstart[i + 1];++k ) {
 		        j = ARindex.at(k);
 		        if (flagCol.at(j)) {
 		        	int iCol = cIndex.at(j);
@@ -578,7 +578,7 @@ void HPresolve::resizeProblem() {
     colUpper.resize(numCol);
 
     k=0;
-    for (i=0;i<numColOriginal;i++)
+    for (i=0;i<numColOriginal;++i)
     	if (flagCol.at(i)) {
     		colCost.at(k)  = tempCost.at(i);
     		colLower.at(k) = temp.at(i);
@@ -594,7 +594,7 @@ void HPresolve::resizeProblem() {
     rowLower.resize(numRow);
     rowUpper.resize(numRow);
     k=0;
-    for (i=0;i<numRowOriginal;i++)
+    for (i=0;i<numRowOriginal;++i)
     	if (flagRow.at(i)) {
     		rowLower.at(k) = temp.at(i);
     		rowUpper.at(k) = teup.at(i);
@@ -642,7 +642,7 @@ void HPresolve::initializeVectors() {
 	nzCol.assign(numCol,0);
 	nzRow.assign(numRow,0);
 
-	for (int i = 0; i < numRow; i++) {
+	for (int i = 0; i < numRow; ++i) {
 		nzRow.at(i) = ARstart.at(i+1)-ARstart.at(i);
 		if (nzRow.at(i) == 1)
 			singRow.push_back(i);
@@ -655,7 +655,7 @@ void HPresolve::initializeVectors() {
 	}
 
 	Aend.resize(numCol+1);
-	for (int i = 0; i < numCol; i++) {
+	for (int i = 0; i < numCol; ++i) {
 		Aend.at(i)  = Astart.at(i+1);
 		nzCol.at(i) = Aend.at(i)-Astart.at(i);
 		if (nzCol.at(i) == 1)
@@ -678,14 +678,14 @@ void HPresolve::initializeVectors() {
     implRowValueLower = rowLower;
     implRowValueUpper = rowUpper;
 
-    for (int i = 0; i < numRow; i++) {
+    for (int i = 0; i < numRow; ++i) {
 		if (rowLower.at(i) == -HSOL_CONST_INF)
 			implRowDualUpper.at(i) = 0;
 		if (rowUpper.at(i) == HSOL_CONST_INF)
 			implRowDualLower.at(i) = 0;
 	}
 
-    for (int i = 0; i < numCol; i++) {
+    for (int i = 0; i < numCol; ++i) {
     	if (colLower.at(i) == -HSOL_CONST_INF)
     		implColDualUpper.at(i) = 0;
     	if (colUpper.at(i) == HSOL_CONST_INF)
@@ -718,7 +718,7 @@ void HPresolve::removeIfFixed(int j) {
 				cout<<"PR: Fixed variable "<<j<<" = "<<colUpper.at(j)<<". Column eliminated."<< endl;
 			countRemovedCols[FIXED]++;
 
-			for (int k = Astart.at(j); k < Aend.at(j); k++) {
+			for (int k = Astart.at(j); k < Aend.at(j);++k ) {
 				if (flagRow[Aindex.at(k)]) {
 					int i = Aindex.at(k);
 
@@ -831,13 +831,13 @@ void HPresolve::removeDominatedColumns() {
 	
 	//for each column j calculate e and d and check:
 	double e,d;
-	for(int j=0;j<numCol;j++) 
+	for(int j=0;j<numCol;++j)
 		if (flagCol.at(j)) {
 			timer.recordStart(DOMINATED_COLS);
 			e=0;
 			d=0;
 
-			for (k=Astart.at(j); k<Aend.at(j); k++) {
+			for (k=Astart.at(j); k<Aend.at(j);++k ) {
 				i = Aindex.at(k);
 				if (flagRow.at(i))
 					if (Avalue.at(k) < 0) {
@@ -858,7 +858,7 @@ void HPresolve::removeDominatedColumns() {
 						}
 					}	
 			}
-			for (k=Astart.at(j); k<Aend.at(j); k++) {
+			for (k=Astart.at(j); k<Aend.at(j);++k ) {
 				i = Aindex.at(k);
 				if (flagRow.at(i))
 					if (Avalue.at(k) < 0) {
@@ -951,7 +951,7 @@ void HPresolve::removeDominatedColumns() {
 						double bnd;
 						//calculate new bounds
 						if (colLower.at(j) > -HSOL_CONST_INF || colUpper.at(j) == HSOL_CONST_INF)
-							for (int kk=Astart.at(j); kk<Aend.at(j);kk++)
+							for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
 								if (flagRow[Aindex.at(kk)] && d < HSOL_CONST_INF ) {
 									i = Aindex.at(kk);
 									if (Avalue.at(kk)>0 && implRowDualLower.at(i) > -HSOL_CONST_INF) {
@@ -969,7 +969,7 @@ void HPresolve::removeDominatedColumns() {
 								}
 
 						if (colLower.at(j) == -HSOL_CONST_INF || colUpper.at(j) < HSOL_CONST_INF)
-							for (int kk=Astart.at(j); kk<Aend.at(j);kk++)
+							for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
 								if (flagRow[Aindex.at(kk)] && e > -HSOL_CONST_INF ) {
 									i = Aindex.at(kk);
 									if (Avalue.at(kk)>0 && implRowDualUpper.at(i) < HSOL_CONST_INF) {
@@ -1076,7 +1076,7 @@ void HPresolve::removeColumnSingletons()  {
 					
 				//modify costs
 				vector<pair<int, double>> newCosts;
-				for (int kk=ARstart.at(i); kk<ARstart[i+1]; kk++) {
+				for (int kk=ARstart.at(i); kk<ARstart[i+1]; ++kk) {
 					j = ARindex.at(kk);
 					if (flagCol.at(j) && j!=col) {
 						newCosts.push_back(make_pair(j, colCost.at(j)));
@@ -1109,7 +1109,7 @@ void HPresolve::removeColumnSingletons()  {
 					if (flagCol.at(j) && j!=col)
 						break;
 					else
-						kk++;
+						++kk;
 				}
 				if (kk==ARstart[i+1]) 
 					cout<<"ERROR: nzRow["<< i<< "]=2, but no second variable in row. \n";
@@ -1299,7 +1299,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 	// if at any stage low becomes  or upp becomes inf break loop  
 	// can't use bounds for variables generated by the same row. 
 	//low
-	for (int kk = ARstart.at(i); kk<ARstart[i+1]; kk++) {
+	for (int kk = ARstart.at(i); kk<ARstart[i+1]; ++kk) {
 		j = ARindex.at(kk);
 		if (flagCol.at(j) && j!=col) {
 			// check if new bounds are precisely implied bounds from same row
@@ -1327,7 +1327,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 		}
 	}
 	//upp
-	for (int kk = ARstart.at(i); kk<ARstart[i+1]; kk++) {
+	for (int kk = ARstart.at(i); kk<ARstart[i+1]; ++kk) {
 		j = ARindex.at(kk);
 		if (flagCol.at(j) && j!=col) {
 			// check if new bounds are precisely implied bounds from same row
@@ -1370,7 +1370,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 
 		//modify costs
 		vector<pair<int, double>> newCosts;
-		for (int kk=ARstart.at(i); kk<ARstart[i+1]; kk++) {
+		for (int kk=ARstart.at(i); kk<ARstart[i+1]; ++kk) {
 			j = ARindex.at(kk);
 			if (flagCol.at(j) && j!=col) {
 				newCosts.push_back(make_pair(j, colCost.at(j)));
@@ -1419,7 +1419,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 void HPresolve::removeRow(int i) {
 	hasChange = true;
 	flagRow.at(i) = 0;
-	for(int k=ARstart.at(i);k<ARstart[i+1];k++) {
+	for(int k=ARstart.at(i);k<ARstart[i+1];++k ) {
 		int j = ARindex.at(k);
 		if (flagCol.at(j)) {
 			nzCol.at(j)--;
@@ -1453,7 +1453,7 @@ void HPresolve::fillStackRowBounds(int row) {
 void HPresolve::removeForcingConstraints(int mainIter) {
 	double val;
 	int i,j,k;
-	for(i=0;i<numRow;i++) 
+	for(i=0;i<numRow;++i)
 		if (flagRow.at(i)) {
 			if (nzRow.at(i)==0) {
 				removeEmptyRow(i);
@@ -1552,7 +1552,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
 						countRemovedCols[FORCING_ROW]++;
-					} k++; 
+					}++k ;
 				}
 				if (nzRow.at(i)==1)
 					singRow.remove(i);
@@ -1583,7 +1583,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
 						countRemovedCols[FORCING_ROW]++;
-					} k++;
+					}++k ;
 				}	
 				if (nzRow.at(i)==1)
 					singRow.remove(i);
@@ -1609,7 +1609,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 
 				//calculate implied bounds for discovering free column singletons
 				timer.recordStart(DOMINATED_ROW_BOUNDS);
-				for (k=ARstart.at(i); k<ARstart[i+1]; k++) {
+				for (k=ARstart.at(i); k<ARstart[i+1];++k ) {
 					j = ARindex.at(k);
 					if (flagCol.at(j)) {
 						if (ARvalue.at(k) < 0 && colLower.at(j)> -HSOL_CONST_INF) {
@@ -1639,7 +1639,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 
 				//calculate implied bounds for discovering free column singletons
 				timer.recordStart(DOMINATED_ROW_BOUNDS);
-				for (k=ARstart.at(i); k<ARstart[i+1]; k++) {
+				for (k=ARstart.at(i); k<ARstart[i+1];++k ) {
 					j = ARindex.at(k);
 					if (flagCol.at(j)) {
 						if (ARvalue.at(k) < 0 && colUpper.at(j) < HSOL_CONST_INF) {
@@ -1799,7 +1799,7 @@ void HPresolve::setPrimalValue(int j, double value) {
 	valuePrimal.at(j) = value;
 	
 	//update nonzeros
-	for(int k=Astart.at(j);k<Aend.at(j);k++) {
+	for(int k=Astart.at(j);k<Aend.at(j);++k ) {
 			int i = Aindex.at(k);
 			if (flagRow.at(i)) {
 				nzRow.at(i)--;
@@ -1817,7 +1817,7 @@ void HPresolve::setPrimalValue(int j, double value) {
 	if (fabs(value)>0) {
 		//RHS
 		vector<pair<int, double>> bndsL, bndsU;
-		for(int k=Astart.at(j);k<Aend.at(j);k++)
+		for(int k=Astart.at(j);k<Aend.at(j);++k )
 			if (flagRow[Aindex.at(k)]) {
 				if (iKKTcheck == 1) {
 		        	bndsL.push_back( make_pair( Aindex.at(k), rowLower[Aindex.at(k)]));
@@ -1849,12 +1849,12 @@ void HPresolve::checkForChanges(int iteration) {
 	int i;
 	if (iteration==2) {
 		bool allPresent = true;
-		for (i=0;i<numCol;i++)
+		for (i=0;i<numCol;++i)
 			if (!flagCol.at(i)) {
 				allPresent = false;
 				break;
 			}
-		for (i=0;i<numRow;i++)
+		for (i=0;i<numRow;++i)
 			if (!flagRow.at(i)) {
 				allPresent = false;
 				break;
@@ -1876,7 +1876,7 @@ void HPresolve::checkForChanges(int iteration) {
 bool HPresolve::checkIfRedundant(int r, int type, double bound) { //>= 1, <= 2
 	double rval = 0;
 	
-	for (int k = ARstart[r]; k<ARstart[r+1];k++)
+	for (int k = ARstart[r]; k<ARstart[r+1];++k )
 		if ( (((type==1) && ARvalue.at(k)>0)  || ((type==2) && ARvalue.at(k)<0)))
 			if (colLower[ARindex.at(k)]>-HSOL_CONST_INF)
 				rval += colLower[ARindex.at(k)]*ARvalue.at(k) ;
@@ -1913,14 +1913,14 @@ void HPresolve::reportTimes() {
 
 	double totalTick = timer.getTick();
 	printf("Presolve rules ");
-	for (int i = 0; i < reportCount; i++) {
+	for (int i = 0; i < reportCount; ++i) {
 		printf(" %s", timer.itemNames[reportList[i]].c_str());
 		cout<<flush;
 	}
 
 	printf("\n");
 	cout<<"Time spent     "<<flush;
-	for (int i = 0; i < reportCount; i++) {
+	for (int i = 0; i < reportCount; ++i) {
 		float f = (float) timer.itemTicks[reportList[i]];
 		if (f<0.01)
 			cout<<setw(4)<<" <.01 ";
@@ -1949,7 +1949,7 @@ void HPresolve::recordCounts(string fileName) {
 	myfile << "Rule   , removed rows , removed cols , time  \n";
 
 	int cRows=0, cCols=0;
-	for (int i = 0; i < reportCount; i++) {
+	for (int i = 0; i < reportCount; ++i) {
 		float f = (float) timer.itemTicks[reportList[i]];
 
 		myfile << setw(7) << timer.itemNames[reportList[i]].c_str() << ", "
@@ -1992,7 +1992,7 @@ void HPresolve::resizeImpliedBounds() {
     implRowDualUpper.resize(numRow);
     int k, i;
     k=0;
-    for (i=0;i<numRowOriginal;i++)
+    for (i=0;i<numRowOriginal;++i)
     	if (flagRow.at(i)) {
     		implRowDualLower.at(k) = temp.at(i);
     		implRowDualUpper.at(k) = teup.at(i);
@@ -2005,7 +2005,7 @@ void HPresolve::resizeImpliedBounds() {
     implRowValueLower.resize(numRow);
     implRowValueUpper.resize(numRow);
     k=0;
-    for (i=0;i<numRowOriginal;i++)
+    for (i=0;i<numRowOriginal;++i)
     	if (flagRow.at(i)) {
     		if (temp.at(i) < rowLower.at(i))
     			temp.at(i) = rowLower.at(i);
@@ -2022,7 +2022,7 @@ void HPresolve::resizeImpliedBounds() {
     implColDualLower.resize(numCol);
     implColDualUpper.resize(numCol);
     k=0;
-    for (i=0;i<numColOriginal;i++)
+    for (i=0;i<numColOriginal;++i)
     	if (flagCol.at(i)) {
     		implColDualLower.at(k) = temp.at(i);
     		implColDualUpper.at(k) = teup.at(i);
@@ -2035,7 +2035,7 @@ void HPresolve::resizeImpliedBounds() {
     implColLower.resize(numCol);
     implColUpper.resize(numCol);
     k=0;
-    for (i=0;i<numColOriginal;i++)
+    for (i=0;i<numColOriginal;++i)
     	if (flagCol.at(i)) {
     		if (temp.at(i) < colLower.at(i))
     			temp.at(i) = colLower.at(i);
@@ -2050,14 +2050,14 @@ void HPresolve::resizeImpliedBounds() {
 int HPresolve::getSingRowElementIndexInAR(int i) {
 	int k=ARstart.at(i);
     while (!flagCol[ARindex.at(k)])
-            k++;  
+           ++k ;
     return k;
 }
 
 int HPresolve::getSingColElementIndexInA(int j) {
 	int k=Astart.at(j);
     while (!flagRow[Aindex.at(k)])
-            k++;  
+           ++k ;
     return k;
 }
 
@@ -2066,7 +2066,7 @@ int HPresolve::testSingRows(int i) {
 
 	int k=ARstart.at(i);
     while (!flagCol[ARindex.at(k)])
-            k++;
+           ++k ;
             
 	char buff[5];
 	if (k>=ARstart[i+1]) { 
@@ -2074,18 +2074,18 @@ int HPresolve::testSingRows(int i) {
 			cout<< "all flagCol are false. row "<<i<<endl;
 		
 			cout<< "Avalue: ";
-			for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+			for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 				sprintf(buff, "%2.1f ", ARvalue.at(j));
 				cout<<setw(5)<<buff; 
 				
 			}
 			cout<<endl<<"Column: ";
-			for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+			for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 				sprintf(buff, "%i ", ARindex.at(j));
 				cout<<setw(5)<<buff; 
 			}
 			cout<<endl<<"isValid: ";
-			for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+			for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 				//sprintf(buff, "%i ", flagCol.at(j));
 				cout<<setw(5)<<flagCol.at(j);
 			}
@@ -2102,23 +2102,23 @@ int HPresolve::testSingRows(int i) {
 		cout<< "more than one flagCol is true."<<endl;
 		
 		cout<< "Avalue: ";
-		for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+		for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 			sprintf(buff, "%2.1f ", ARvalue.at(j));
     		cout<<setw(5)<<buff; 
     		
 		}
 		cout<< "Avalue: ";
-		for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+		for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 			sprintf(buff, "%2.1f ", ARvalue.at(j));
     		cout<<setw(5)<<buff; 
 		}
 		cout<<endl<<"Column: ";
-		for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+		for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 			sprintf(buff, "%i ", ARindex.at(j));
     		cout<<setw(5)<<buff; 
 		}
 		cout<<endl<<"isValid: ";
-		for (int j=ARstart.at(i); j< ARstart[i+1]; j++) {
+		for (int j=ARstart.at(i); j< ARstart[i+1]; ++j) {
 			//sprintf(buff, "%i ", flagCol.at(j));
     		cout<<setw(5)<<flagCol.at(j);
 		}
@@ -2135,7 +2135,7 @@ int HPresolve::testSingCols(int i) {
 	int out = -1;
 	int k=Astart.at(i);
     while (!flagRow[Aindex.at(k)])
-            k++;
+           ++k ;
             
 	if (k>=Aend.at(i)) {
 		cout<< "all flagRow are false."<<endl;
@@ -2169,20 +2169,20 @@ void HPresolve::testAnAR(int post) {
 	}
 
 	// check that A = AR
-	for (i=0; i<rows; i++) {
-		for (j=0; j<cols; j++) {
+	for (i=0; i<rows; ++i) {
+		for (j=0; j<cols; ++j) {
 			if (post==0)
 				if (!flagRow.at(i) || !flagCol.at(j))
 				continue;
 			hasValueA = false;
-			for (k = Astart.at(j); k<Aend.at(j); k++)
+			for (k = Astart.at(j); k<Aend.at(j);++k )
 				if (Aindex.at(k) == i) {
 					hasValueA = true;
 					valueA = Avalue.at(k);
 				}
 
 			hasValueAR = false;
-			for (k = ARstart.at(i); k<ARstart[i+1]; k++)
+			for (k = ARstart.at(i); k<ARstart[i+1];++k )
 				if (ARindex.at(k) == j) {
 					hasValueAR = true;
 					valueAR = ARvalue.at(k);
@@ -2198,22 +2198,22 @@ void HPresolve::testAnAR(int post) {
 	if (post == 0) {
 		//check nz
 		int nz=0;
-		for (i=0; i<rows; i++) {
+		for (i=0; i<rows; ++i) {
 			if (!flagRow.at(i))
 				continue;
 			nz=0;
-			for (k = ARstart.at(i); k<ARstart[i+1]; k++)
+			for (k = ARstart.at(i); k<ARstart[i+1];++k )
 				if (flagCol[ARindex.at(k)])
 					nz++;
 			if (nz != nzRow.at(i))
 				cout<<"    NZ ROW      DIFF row="<<i<< " nzRow="<<nzRow.at(i)<<" actually "<<nz <<"------------"<<endl;
 		}
 
-		for (j=0; j<cols; j++) {
+		for (j=0; j<cols; ++j) {
 			if (!flagCol.at(j))
 				continue;
 			nz=0;
-			for (k = Astart.at(j); k<Aend.at(j); k++)
+			for (k = Astart.at(j); k<Aend.at(j);++k )
 				if (flagRow[Aindex.at(k)])
 					nz++;
 			if (nz != nzCol.at(j))
@@ -2228,11 +2228,11 @@ void HPresolve::postsolve() {
 
 		if (noPostSolve) {
 			//set valuePrimal
-			for (int i=0;i<numCol;i++) {
+			for (int i=0;i<numCol;++i) {
 				valuePrimal.at(i) = colValue.at(i);
 				valueColDual.at(i) = colDual.at(i);
 			}
-			for (int i=0;i<numRow;i++)
+			for (int i=0;i<numRow;++i)
 				valueRowDual.at(i) = rowDual.at(i);
 			//For KKT check: first check solverz` results before we do any postsolve
 			if (iKKTcheck == 1) {
@@ -2258,29 +2258,29 @@ void HPresolve::postsolve() {
 		int j=0;
 		vector<int> eqIndexOfReduced(numCol, -1);
 		vector<int> eqIndexOfReduROW(numRow, -1);
-		for (int i=0;i<numColOriginal;i++)
+		for (int i=0;i<numColOriginal;++i)
 			if (cIndex.at(i)>-1) {
 				eqIndexOfReduced.at(j) = i;
-				j++;
+				++j;
 			}
 		j=0;
-		for (int i=0;i<numRowOriginal;i++)
+		for (int i=0;i<numRowOriginal;++i)
 			if (rIndex.at(i)>-1) {
 				eqIndexOfReduROW.at(j) = i;
-				j++;
+				++j;
 			}
 
 		vector<int> temp = nonbasicFlag;
 
 		nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
 
-		for (int i=0;i<numCol;i++) {
+		for (int i=0;i<numCol;++i) {
 			valuePrimal[eqIndexOfReduced.at(i)] = colValue.at(i);
 			valueColDual[eqIndexOfReduced.at(i)] = colDual.at(i);
 			nonbasicFlag[eqIndexOfReduced.at(i)] = temp.at(i);
 		}
 
-		for (int i=0;i<numRow;i++) {
+		for (int i=0;i<numRow;++i) {
 			valueRowDual[eqIndexOfReduROW.at(i)] = rowDual.at(i);
 			nonbasicFlag[numColOriginal + eqIndexOfReduROW.at(i)] = temp[numCol + i];
 		}
@@ -2319,11 +2319,11 @@ void HPresolve::postsolve() {
 					//just change value of entry in row for x
 
 					int indi;
-					for (indi=ARstart[c.row];indi<ARstart[c.row+1];indi++)
+					for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
 							if (ARindex[indi]==c.col)
 								break;
 					ARvalue[indi] = postValue.top();
-					for (indi=Astart[c.col];indi<Aend[c.col];indi++)
+					for (indi=Astart[c.col];indi<Aend[c.col];++indi)
 							if (Aindex[indi]==c.row)
 								break;
 					Avalue[indi] = postValue.top();
@@ -2342,14 +2342,14 @@ void HPresolve::postsolve() {
 				postValue.pop();
 
 				//reverse AR for case when x is zero and y entry has moved
-				for (indi=ARstart[c.row];indi<ARstart[c.row+1];indi++)
+				for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
 						if (ARindex[indi]==c.col)
 							break;
 				ARvalue[indi] = postValue.top();
 				ARindex[indi] = yindex;
 
 				//reverse A for case when x is zero and y entry has moved
-				for (indi=Astart[c.col];indi<Aend[c.col];indi++)
+				for (indi=Astart[c.col];indi<Aend[c.col];++indi)
 						if (Aindex[indi]==c.row)
 							break;
 
@@ -2385,7 +2385,7 @@ void HPresolve::postsolve() {
 			}
 			case 174: { //sp case x disappears row representation change
 				int indi;
-				for (indi=ARstart[c.row];indi<ARstart[c.row+1];indi++)
+				for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
 						if (ARindex[indi]==numColOriginal)
 							break;
 				ARindex[indi] = c.col;
@@ -2482,7 +2482,7 @@ void HPresolve::postsolve() {
 					//calculate row value without xj
 					double aij = getaij(c.row,c.col);
 					double sum = 0;
-					for (int k=ARstart[c.row]; k<ARstart[c.row+1]; k++)
+					for (int k=ARstart[c.row]; k<ARstart[c.row+1];++k )
 						if (flagCol[ARindex.at(k)])
 							sum += valuePrimal[ARindex.at(k)]*ARvalue.at(k);
 
@@ -2699,7 +2699,7 @@ void HPresolve::postsolve() {
 				case 6: case 9: case 10: {//empty column: got valuePrimal, need colDual, also dominated column and weakly dominated column
 					if (c.type != 6) {
 						z = colCostAtEl[c.col];
-						for (int k=Astart[c.col]; k<Astart[c.col+1]; k++)
+						for (int k=Astart[c.col]; k<Astart[c.col+1];++k )
 							if (flagRow[Aindex.at(k)])
 								z = z + valueRowDual[Aindex.at(k)]*Avalue.at(k);
 						valueColDual[c.col] = z;
@@ -2783,7 +2783,7 @@ void HPresolve::postsolve() {
 
 		int cntVar = 0;
 		basicIndex.resize(numRowOriginal);
-		for (int i=0; i< numColOriginal + numRowOriginal; i++) {
+		for (int i=0; i< numColOriginal + numRowOriginal; ++i) {
 			if (nonbasicFlag.at(i) == 0) {
 				if (cntVar==numRowOriginal) {
 					cout<<"Error during postsolve: wrong basic variables number: basic variables more than rows."<<endl;
@@ -2822,7 +2822,7 @@ void HPresolve::postsolve() {
 		colCost = colCostOriginal;
 
 		nonbasicMove.resize(numTot, 0);
-		for (int i=0; i< numColOriginal; i++) {
+		for (int i=0; i< numColOriginal; ++i) {
 			if (colLower.at(i) != colUpper.at(i) && colLower.at(i) != -HSOL_CONST_INF )
 				nonbasicMove.at(i) = 1;
 			else if (colUpper.at(i) != HSOL_CONST_INF)
@@ -2909,16 +2909,16 @@ int HPresolve::testBasisMatrixSingularity() {
 	vector<int> rIndex_(numRowOriginal, -1);
 	vector<int> cIndex_(numColOriginal, -1);
 
-	for (i=0;i<numRowOriginal;i++)
+	for (i=0;i<numRowOriginal;++i)
 		if (flagRow.at(i)) {
-			for (j = ARstart.at(i); j<ARstart[i+1]; j++)
+			for (j = ARstart.at(i); j<ARstart[i+1]; ++j)
 				if (flagCol[ARindex.at(j)])
 					nz ++;
 			rIndex_.at(i) = nR;
 			nR++;
 			}
 
-	for (i=0;i<numColOriginal;i++)
+	for (i=0;i<numColOriginal;++i)
 		if (flagCol.at(i)) {
 			cIndex_.at(i) = nC;
 			nC++;
@@ -2932,22 +2932,22 @@ int HPresolve::testBasisMatrixSingularity() {
 
     vector<int> iwork(nC, 0);
 
-    for (i = 0;i<numRowOriginal; i++)
+    for (i = 0;i<numRowOriginal; ++i)
     	if (flagRow.at(i))
-    	    for (int k = ARstart.at(i); k < ARstart[i+1]; k++) {
+    	    for (int k = ARstart.at(i); k < ARstart[i+1];++k ) {
     	    	j = ARindex.at(k);
     	    	if (flagCol.at(j))
         			iwork[cIndex_.at(j)]++;
         		}
-    for (i = 1; i <= nC; i++)
+    for (i = 1; i <= nC; ++i)
         Mstart.at(i) = Mstart[i - 1] + iwork[i - 1];
-   for (i = 0; i < numColOriginal; i++)
+   for (i = 0; i < numColOriginal; ++i)
         iwork.at(i) = Mstart.at(i);
 
-   for (i = 0; i < numRowOriginal; i++) {
+   for (i = 0; i < numRowOriginal; ++i) {
     	if (flagRow.at(i)) {
 			int iRow = rIndex_.at(i);
-		    for (k = ARstart.at(i); k < ARstart[i + 1]; k++) {
+		    for (k = ARstart.at(i); k < ARstart[i + 1];++k ) {
 		        j = ARindex.at(k);
 		        if (flagCol.at(j)) {
 		        	int iCol = cIndex_.at(j);
@@ -2962,7 +2962,7 @@ int HPresolve::testBasisMatrixSingularity() {
     vector<int>  bindex(nR);
     int countBasic=0;
 
-     for (int i=0; i< nonbasicFlag.size();i++) {
+     for (int i=0; i< nonbasicFlag.size();++i) {
     	 if (nonbasicFlag.at(i) == 0)
     			 countBasic++;
      }
@@ -2971,7 +2971,7 @@ int HPresolve::testBasisMatrixSingularity() {
     	 cout<<" Wrong count of basic variables: != numRow"<<endl;
 
      int c=0;
-     for (int i=0; i< nonbasicFlag.size();i++) {
+     for (int i=0; i< nonbasicFlag.size();++i) {
     	 if (nonbasicFlag.at(i) == 0) {
 			if (i < numColOriginal)
 				bindex[c] = cIndex_.at(i);
@@ -2988,16 +2988,16 @@ int HPresolve::testBasisMatrixSingularity() {
 			cout<<"columns\n";
 		if (nR - numRowOriginal != 0)
 			cout<<"rows\n";
-		for (int i=0; i< Mstart.size();i++)
+		for (int i=0; i< Mstart.size();++i)
 			if (Mstart.at(i) - Astart.at(i) != 0)
 				cout<<"Mstart "<<i<<"\n";
-		for (int i=0; i< Mindex.size();i++)
+		for (int i=0; i< Mindex.size();++i)
 			if (Mindex.at(i) - Aindex.at(i) != 0)
 				cout<<"Mindex "<<i<<"\n";
-		for (int i=0; i< Mvalue.size();i++)
+		for (int i=0; i< Mvalue.size();++i)
 			if (Mvalue.at(i) - Avalue.at(i) != 0)
 				cout<<"Mvalue "<<i<<"\n";
-		for (int i=0; i< bindex.size();i++)
+		for (int i=0; i< bindex.size();++i)
 			if (nonbasicFlag.at(i) - nbffull.at(i) != 0)
 				cout<<"nbf "<<i<<"\n";
 	} * /
@@ -3027,7 +3027,7 @@ void HPresolve::getBoundOnLByZj(int row, int j, double* lo, double* up, double c
 	double x = -cost;
 
 	double sum = 0;
-	for (int kk=Astart.at(j); kk<Aend.at(j);kk++)
+	for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
 		if (flagRow[Aindex.at(kk)]) {
 			sum = sum + Avalue.at(kk)*valueRowDual[Aindex.at(kk)];
 		}
@@ -3089,7 +3089,7 @@ double HPresolve::getColumnDualPost(int col) {
 double HPresolve::getRowDualPost(int row, int col) {
 	double x = 0;
 
-	for (int kk=Astart.at(col); kk<Aend.at(col);kk++)
+	for (int kk=Astart.at(col); kk<Aend.at(col);++kk)
 		if (flagRow[Aindex.at(kk)] && Aindex.at(kk) != row)
 			x = x + Avalue.at(kk)*valueRowDual[Aindex.at(kk)];
 
@@ -3112,7 +3112,7 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 
 	double cost, sum;
 
-	for (int jj=0;jj<fRjs.size();jj++) {
+	for (int jj=0;jj<fRjs.size();++jj) {
 			j = fRjs[jj];
 
 			pair<int, vector<double>> p = oldBounds.top();
@@ -3143,11 +3143,11 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 	flagRow.at(row) = 1;
 
 
-	for (int jj=0;jj<fRjs.size();jj++) {
+	for (int jj=0;jj<fRjs.size();++jj) {
 			j = fRjs[jj];
 			cost = valueColDual.at(j);
 			sum = 0;
-			for (int k=Astart.at(j); k<Aend.at(j); k++)
+			for (int k=Astart.at(j); k<Aend.at(j);++k )
 				if (flagRow[Aindex.at(k)]) {
 					sum = sum + valueRowDual[Aindex.at(k)]*Avalue.at(k);
 					//cout<<" row "<<Aindex.at(k)<<" dual "<<valueRowDual[Aindex.at(k)]<<" a_"<<Aindex.at(k)<<"_"<<j<<"\n";
@@ -3191,7 +3191,7 @@ void HPresolve::getDualsSingletonRow( int row, int col ) {
 		}
 
 		double sum = 0;
-		for (int k=Astart.at(col); k<Aend.at(col); k++)
+		for (int k=Astart.at(col); k<Aend.at(col);++k )
 			if (flagRow[Aindex.at(k)])
 				sum = sum + valueRowDual[Aindex.at(k)]*Avalue.at(k);
 
@@ -3292,7 +3292,7 @@ void HPresolve::getDualsSingletonRow( int row, int col ) {
 					valueRowDual.at(row) = 0;
 
 					sum = 0;
-					for (int k=Astart.at(col); k<Aend.at(col); k++)
+					for (int k=Astart.at(col); k<Aend.at(col);++k )
 						if (flagRow[Aindex.at(k)]) {
 							sum = sum + valueRowDual[Aindex.at(k)]*Avalue.at(k);
 							//cout<<" row "<<Aindex.at(k)<<" dual "<<valueRowDual[Aindex.at(k)]<<" a_"<<Aindex.at(k)<<"_"<<j<<"\n";
@@ -3383,7 +3383,7 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 
 	//get nzCol[y] before unflag row as missing
 	int nzy = Aend[y] - Astart[y];
-	for (int kk=Astart[y]; kk<Aend[y]; kk++)
+	for (int kk=Astart[y]; kk<Aend[y]; ++kk)
 		if (!flagRow[Aindex.at(kk)])
 			nzy--;
 
@@ -3462,7 +3462,7 @@ void HPresolve::updateRowsByNZ() {
 	//for (int j=Astart)
 
 
-	for (int i = 0; i < numRow; i++)
+	for (int i = 0; i < numRow; ++i)
 		if (flagRow.at(i)) {
 			if (nzRow.at(i) == 1) {
 				int singletonColIndex = testSingRows(i);
@@ -3541,7 +3541,7 @@ void HPresolve::findDuplicateRows() {
 
 	//row pass
 	vector<int>    s(numRow,-1);
-	for (int i=0;i<numRow;i++)
+	for (int i=0;i<numRow;++i)
 		if (flagRow.at(i)){
 			v++;
 			s.at(i) = 0;
@@ -3549,7 +3549,7 @@ void HPresolve::findDuplicateRows() {
 
 	//matrix pass
 	int n,t0, ind, r,r0;
-	for (int j=0; j<numCol; j++)
+	for (int j=0; j<numCol; ++j)
 		if (flagCol.at(j) && nzCol.at(j)>1) {
 			n = 0;
 			t0 = t;
@@ -3564,7 +3564,7 @@ void HPresolve::findDuplicateRows() {
 					}
 					else if (s[r]>0) {
 						bool isSat1 = false;
-						for (int ii=Astart.at(j); ii<Aend.at(j); ii++)  {
+						for (int ii=Astart.at(j); ii<Aend.at(j); i++i)  {
 							int i = Aindex[ii];
 							if (flagRow.at(i) && i!=r) {
 								if (s.at(i) == s[r]) {
@@ -3594,9 +3594,9 @@ void HPresolve::findDuplicateRows() {
 	queue<double> pairWise;
 	int col, indi, indj;
 	//if s.at(i) == s.at(j) rows i and j have the same sparsity pattern in nonsingleton columns
-	for (int i=0;i<numRow;i++) {
+	for (int i=0;i<numRow;++i) {
 		if (s.at(i)>-1) {
-			for (int j=i+1;j<numRow;j++)
+			for (int j=i+1;j<numRow;++j)
 				if (s.at(i) == s.at(j)) {
 					bool same = true;
 					double ratio = 0;
@@ -3605,11 +3605,11 @@ void HPresolve::findDuplicateRows() {
 					while (indi<ARstart[i+1] && same) {
 						col = ARindex[indi];
 						if (!flagCol.at(col) || nzCol.at(col) <= 1) 	{
-							indi++; continue; }
+							++indi; continue; }
 						// we've reached a nonsingleton column in row i, got to find the same in j
 						indj = ARstart.at(j);
 						while (ARindex[indj]!=col)
-							indj++;
+							ind++j;
 						if (indj >= ARstart[j+1]) {
 							cout<<"Error in part 2 of finding duplicate rows: rows "<<i<<" and "<<j<<".\n";
 							exit(18);
@@ -3617,12 +3617,12 @@ void HPresolve::findDuplicateRows() {
 						if (ratio == 0)
 							ratio = ARvalue[indi]/ARvalue[indj];
 						else if (ratio == ARvalue[indi]/ARvalue[indj]) {
-							indi++; continue; }
+							++indi; continue; }
 						else {
 							same = false;
 							break;
 						}
-						indi++;
+						++indi;
 					}
 					if (same && ratio!=0) {
 						pairWise.push(i);
@@ -3887,7 +3887,7 @@ int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, ve
 	}
 	//implied free
 	else if (coeff.size()>2){
-		for (int j=0;j<colIndex.size(); j++) {
+		for (int j=0;j<colIndex.size(); ++j) {
 			if (!flagRow.at(k))
 				return 0;
 
@@ -3916,7 +3916,7 @@ void HPresolve::findDuplicateColumns() {
 
 	//column pass
 	vector<int> s(numCol,-1);
-	for (int i=0;i<numCol;i++)
+	for (int i=0;i<numCol;++i)
 		if (flagCol.at(i)){
 			v++;
 			s.at(i) = 0;
@@ -3924,7 +3924,7 @@ void HPresolve::findDuplicateColumns() {
 
 	//matrix pass
 	int n,t0, ind, r,r0;
-	for (int j=0; j<numRow; j++)
+	for (int j=0; j<numRow; ++j)
 		if (flagRow.at(j)) { //row by row
 			n = 0;
 			t0 = t;
@@ -3939,7 +3939,7 @@ void HPresolve::findDuplicateColumns() {
 					}
 					else if (s[r]>0) {
 						bool isSat1 = false;
-						for (int ii=ARstart.at(j); ii<ARstart[j+1]; ii++)  {
+						for (int ii=ARstart.at(j); ii<ARstart[j+1]; i++i)  {
 							int i = ARindex[ii];
 							if (flagCol.at(i) && i!=r) {
 								if (s.at(i) == s[r]) {
@@ -3968,9 +3968,9 @@ void HPresolve::findDuplicateColumns() {
 		int row, indi, indj;
 
 		//if s.at(i) == s.at(j) columns i and j have the same sparsity pattern
-		for (int i=0;i<numCol;i++) {
+		for (int i=0;i<numCol;++i) {
 			if (s.at(i)>-1) {
-				for (int j=i+1;j<numCol;j++)
+				for (int j=i+1;j<numCol;++j)
 					if (s.at(i) == s.at(j)) {
 						bool same = true;
 						double ratio = 0;
@@ -3980,18 +3980,18 @@ void HPresolve::findDuplicateColumns() {
 						while (indi<Aend.at(i) && same) {
 							row = Aindex[indi];
 							if (!flagRow.at(row)) 	{
-								indi++; continue; }
+								++indi; continue; }
 							while (Aindex[indj]!=row)
-								indj++;
+								ind++j;
 							if (ratio == 0)
 								ratio = Avalue[indi]/Avalue[indj];
 							else if (ratio == Avalue[indi]/Avalue[indj]) {
-								indi++; continue; }
+								++indi; continue; }
 							else {
 								same = false;
 								break;
 							}
-							indi++;
+							++indi;
 						}
 						if (same) {
 							pairWise.push(i);
@@ -4155,7 +4155,7 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 		flagCol.at(j) = false;
 
 		//update nonzeros: two by one so for each row -1
-		for (int kk=Astart.at(j); kk< Aend.at(j); kk++) {
+		for (int kk=Astart.at(j); kk< Aend.at(j); ++kk) {
 			if (flagRow[Aindex.at(kk)])
 				nzRow[Aindex.at(kk)]--;
 				}
@@ -4177,12 +4177,12 @@ void HPresolve::cmpNBF(int row, int col) {
 
 	int countBasic=0, nR=0;
 
-     for (i=0; i< nonbasicFlag.size();i++) {
+     for (i=0; i< nonbasicFlag.size();++i) {
     	 if (nonbasicFlag.at(i) == 0)
     			 countBasic++;
      }
 
-     for (i=0;i<numRowOriginal;i++)
+     for (i=0;i<numRowOriginal;++i)
 		if (flagRow.at(i)) {
 			nR++;
 			}
@@ -4209,7 +4209,7 @@ void HPresolve::cmpNBF(int row, int col) {
 		cout<<"nbf count diff"<<endl;
 
 	else {
-		for (i=0; i<nbffull.size(); i++) {
+		for (i=0; i<nbffull.size(); ++i) {
 			if (nbffull.at(i) != nonbasicFlag.at(i)) {
 				if (i<numColOriginal) {
 					if (flagCol.at(i)) {
@@ -4228,11 +4228,11 @@ void HPresolve::cmpNBF(int row, int col) {
 
 		//print = true;
 		if (false) {
-			for (i=0; i<nbffull.size(); i++) {
+			for (i=0; i<nbffull.size(); ++i) {
 				cout<<nbffull.at(i) <<" ";
 			}
 			cout<<endl;
-			for (i=0; i<nonbasicFlag.size(); i++) {
+			for (i=0; i<nonbasicFlag.size(); ++i) {
 				cout<<nonbasicFlag.at(i) <<" ";
 			}
 		}
@@ -4248,7 +4248,7 @@ void HPresolve::cmpNBF(int row, int col) {
 //		cout<<"bindfull count diff"<<endl;
 //
 //	else
-//		for (i=0; i<bindfull.size(); i++) {
+//		for (i=0; i<bindfull.size(); ++i) {
 //			if (nbffull.at(i) != basicIndex.at(i))
 //				cout<<"		bindfull ["<<i<<"] diff"<<endl;
 //		}

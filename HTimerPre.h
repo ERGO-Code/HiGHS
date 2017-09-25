@@ -25,8 +25,12 @@ enum HTickItemPre {
 	EMPTY_COL,
 	//HTICK_PRE_DUPLICATE_ROWS,
 	//HTICK_PRE_DUPLICATE_COLUMNS,
+
     // The total count
     HTICK_ITEMS_COUNT_PRE
+
+	//Items required by postsolve
+	//TODO add
 };
 
 class HTimerPre {
