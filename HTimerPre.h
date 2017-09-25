@@ -10,7 +10,7 @@ using namespace std;
 enum HTickItemPre {
    	// Presolve items
 	EMPTY_ROW,
-	FIXED,
+	FIXED_COL,
 	SING_ROW,
 	DOUBLETON_EQUATION,
 	FORCING_ROW,
@@ -27,10 +27,16 @@ enum HTickItemPre {
 	//HTICK_PRE_DUPLICATE_COLUMNS,
 
     // The total count
-    HTICK_ITEMS_COUNT_PRE
+    HTICK_ITEMS_COUNT_PRE,
 
 	//Items required by postsolve
-	//TODO add
+	DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE,
+	DOUBLETON_EQUATION_X_ZERO_INITIALLY,
+	DOUBLETON_EQUATION_NEW_X_NONZERO,
+	DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE,
+	DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE,
+	SING_COL_DOUBLETON_INEQ_SECOND_SING_COL,
+	FORCING_ROW_VARIABLE,
 };
 
 class HTimerPre {
@@ -39,7 +45,7 @@ public:
     	itemNames.resize(HTICK_ITEMS_COUNT_PRE);
 
     	itemNames[EMPTY_ROW] = "emptR";
-    	itemNames[FIXED] = "fixCo";
+    	itemNames[FIXED_COL] = "fixCo";
     	itemNames[DOUBLETON_EQUATION] = "douEq";
         itemNames[SING_ROW] = "singR";
         itemNames[FORCING_ROW] = "forcR";
