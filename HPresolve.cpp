@@ -17,7 +17,7 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
-	chk.print = 1; // 3 for experiments mode
+	chk.print = 3; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
 		if (iKKTcheck) {
@@ -98,7 +98,7 @@ int HPresolve::presolve() {
 
 void HPresolve::removeDoubletonEquations() {
 	if (flagCol.size() == numCol)
-		flagCol.push_back(false);
+		flagCol.push_back(0);
 	double col1, col2, x, y, b, low, upp;
 	int iter = 0;
 
@@ -234,14 +234,14 @@ void HPresolve::removeDoubletonEquations() {
 				if (iPrint > 0)
 					//cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<endl;
 					cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<"    nzy="<<nzCol[y]<<endl;
-				flagRow[row] = false;
+				flagRow[row] = 0;
 				nzCol[x]--;
 
 				countRemovedRows[HTICK_PRE_DOUBLETON_EQUATION]++;
 				countRemovedCols[HTICK_PRE_DOUBLETON_EQUATION]++;
 
 				//----------------------------
-				flagCol[y] = false;
+				flagCol[y] = 0;
 				if (!hasChange)
 					hasChange = true;
 
@@ -633,8 +633,8 @@ void HPresolve::initializeVectors() {
 	valuePrimal.resize(numCol);
 	valueColDual.resize(numCol);
 
-	flagCol.assign(numCol, true);
-	flagRow.assign(numRow, true);
+	flagCol.assign(numCol, 1);
+	flagRow.assign(numRow, 1);
 
 	if (iKKTcheck)
 		setKKTcheckerData();
@@ -735,7 +735,7 @@ void HPresolve::removeEmptyRow(int i) {
 	if (rowLower[i] <= tol && rowUpper[i] >= -tol) {
 		if (iPrint > 0)
 			cout<<"PR: Empty row "<<i<<" removed. "<<endl;
-		flagRow[i] = false;
+		flagRow[i] = 0;
 		valueRowDual[i] = 0;
 		addChange(0, i, 0);
 	}
@@ -748,7 +748,7 @@ void HPresolve::removeEmptyRow(int i) {
 }
 
 void HPresolve::removeEmptyColumn(int j) {
-	flagCol[j] = false;
+	flagCol[j] = 0;
 	singCol.remove(j);
 	double value;
 	if ((colCost[j] < 0 && colUpper[j] == HSOL_CONST_INF) || (colCost[j] > 0 && colLower[j] == -HSOL_CONST_INF) ) {
@@ -1086,7 +1086,7 @@ void HPresolve::removeColumnSingletons()  {
 				if (iKKTcheck == 1)
 					chk.costs.push(newCosts);
 				
-				flagCol[col] = false;
+				flagCol[col] = 0;
 				postValue.push(colCost[col]);
 				fillStackRowBounds(i);
 
@@ -1188,7 +1188,7 @@ void HPresolve::removeColumnSingletons()  {
 						//remove col as free column singleton
 				if (iPrint > 0)
 					cout<<"PR: Column singleton "<<col<<" in a doubleton inequality constraint removed. Row "<<i<<" removed. variable left is "<<j<<endl;
-				flagCol[col] = false;
+				flagCol[col] = 0;
 				fillStackRowBounds(i);
 				countRemovedCols[HTICK_PRE_SING_COL_DOUBLETON_INEQ]++;
 				countRemovedRows[HTICK_PRE_SING_COL_DOUBLETON_INEQ]++;
@@ -1204,7 +1204,7 @@ void HPresolve::removeColumnSingletons()  {
 					// case two singleton columns
 					// when we get here bounds on xj are updated so we can choose low/upper one
 					// depending on the cost of xj
-					flagRow[i] = false;
+					flagRow[i] = 0;
 					double value;
 					if (colCost[j] > 0) {
 						if (colLower[j] == -HSOL_CONST_INF) {
@@ -1380,7 +1380,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 		if (iKKTcheck == 1)
 			chk.costs.push(newCosts);
 
-		flagCol[col] = false;
+		flagCol[col] = 0;
 		postValue.push(colCost[col]);
 		fillStackRowBounds(i);
 
@@ -1418,7 +1418,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 //used to remove column too, now possible to just modify bounds
 void HPresolve::removeRow(int i) {
 	hasChange = true;
-	flagRow[i] = false;
+	flagRow[i] = 0;
 	for(int k=ARstart[i];k<ARstart[i+1];k++) {
 		int j = ARindex[k];
 		if (flagCol[j]) {
@@ -1530,7 +1530,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				//set all variables to lower bound
 				if (iPrint > 0)
 					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:   nzRow="<<nzRow[i]<<endl;
-				flagRow[i] = false;
+				flagRow[i] = 0;
 	        	addChange(3, i, 0);
 				k = ARstart[i];
 				while (k<ARstart[i+1]) {
@@ -1562,7 +1562,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				//set all variables to upper bound 
 				if (iPrint > 0)
 					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:"<<endl;
-				flagRow[i] = false;
+				flagRow[i] = 0;
 	        	addChange(3, i, 0);
 				k = ARstart[i];
 				while (k<ARstart[i+1]) {
@@ -1793,7 +1793,7 @@ void HPresolve::addChange(int type, int row, int col) {
 
 //when setting a value to a primal variable and eliminating row update b, singleton Rows linked list, number of nonzeros in rows
 void HPresolve::setPrimalValue(int j, double value) {
-    flagCol[j] = false;
+    flagCol[j] = 0;
     if (!hasChange)
 	    hasChange = true;
 	valuePrimal[j] = value; 
@@ -2422,7 +2422,7 @@ void HPresolve::postsolve() {
 			}
 				case 0: {//empty row
 					valueRowDual[c.row] = 0;
-					flagRow[c.row] = true;
+					flagRow[c.row] = 1;
 					if (iKKTcheck == 1) {
 						if (chk.print == 1)
 							cout<<"----KKT check after empty row "<<c.row  <<" re-introduced-----\n";
@@ -2447,7 +2447,7 @@ void HPresolve::postsolve() {
 				}
 				case 2: //variables set at a bound by forcing row
 					fRjs.push_back(c.col);
-					flagCol[c.col] = true;
+					flagCol[c.col] = 1;
 					if (iKKTcheck == 1 && valuePrimal[c.col] != 0)
 						chk.addChange(22, c.row, c.col, 0, 0, 0);
 					break;
@@ -2467,7 +2467,7 @@ void HPresolve::postsolve() {
 				case 16: {//redundant row
 					valueRowDual[c.row] = 0;
 
-					flagRow[c.row] = true;
+					flagRow[c.row] = 1;
 
 					if (iKKTcheck == 1) {
 						if (chk.print == 1)
@@ -2543,8 +2543,8 @@ void HPresolve::postsolve() {
 					double costAtTimeOfElimination = postValue.top(); postValue.pop();
 					objShift += (costAtTimeOfElimination* sum)/aij;
 
-					flagRow[c.row] = true;
-					flagCol[c.col] = true;
+					flagRow[c.row] = 1;
+					flagCol[c.col] = 1;
 					//valueRowDual[c.row] = 0;
 
 					if (iKKTcheck == 1) {
@@ -2629,7 +2629,7 @@ void HPresolve::postsolve() {
 					double rowVal = aij* xj + aik*xkValue;
 					if (rowub - rowVal > tol && rowVal - rowlb > tol) {
 						valueRowDual[c.row] = 0;
-						flagRow[c.row] = true;
+						flagRow[c.row] = 1;
 						valueColDual[j] = getColumnDualPost(j);
 						valueColDual[c.col] = getColumnDualPost(c.col);
 					}
@@ -2666,7 +2666,7 @@ void HPresolve::postsolve() {
 							valueRowDual[c.row] = up;
 						}
 
-						flagRow[c.row] = true;
+						flagRow[c.row] = 1;
 						valueColDual[j] = getColumnDualPost(j);
 						if (iKKTcheck == 1)
 							chk.colDual[j] = valueColDual[j];
@@ -2683,8 +2683,8 @@ void HPresolve::postsolve() {
 					}
 
 
-					flagRow[c.row] = true;
-					flagCol[c.col] = true;
+					flagRow[c.row] = 1;
+					flagCol[c.col] = 1;
 
 					if (iKKTcheck == 1) {
 						if (chk.print == 1)
@@ -2707,7 +2707,7 @@ void HPresolve::postsolve() {
 					}
 
 
-					flagCol[c.col] = true;
+					flagCol[c.col] = 1;
 					if (iKKTcheck == 1) {
 						if (c.type == 6 && chk.print == 1)
 							cout<<"----KKT check after empty column "<<c.col <<" re-introduced.-----------\n";
@@ -2726,7 +2726,7 @@ void HPresolve::postsolve() {
 
 					valueColDual[c.col] = getColumnDualPost(c.col);
 
-					flagCol[c.col] = true;
+					flagCol[c.col] = 1;
 					if (iKKTcheck == 1) {
 						if (chk.print == 1)
 							cout<<"----KKT check after fixed variable "<<c.col <<" re-introduced.-----------\n";
@@ -2737,7 +2737,7 @@ void HPresolve::postsolve() {
 				}
 				case 11: {//empty row from duplucate rows
 					valueRowDual[c.row] = 0;
-					flagRow[c.row] = true;
+					flagRow[c.row] = 1;
 
 					//check duals
 					pair< int ,vector<double>> p = oldBounds.top(); oldBounds.pop();
@@ -3141,7 +3141,7 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 		valueRowDual[row] = up;
 	}
 
-	flagRow[row] = true;
+	flagRow[row] = 1;
 
 
 	for (int jj=0;jj<fRjs.size();jj++) {
@@ -3196,7 +3196,7 @@ void HPresolve::getDualsSingletonRow( int row, int col ) {
 			if (flagRow[Aindex[k]])
 				sum = sum + valueRowDual[Aindex[k]]*Avalue[k];
 
-		flagRow[row] = true;
+		flagRow[row] = 1;
 
 
 		double y = (valueColDual[col] - cost - sum)/aij;
@@ -3321,7 +3321,7 @@ void HPresolve::getDualsSingletonRow( int row, int col ) {
 		}
 	}
 
-	flagRow[row] = true;
+	flagRow[row] = 1;
 	//row is introduced so something needs to become basic :
 
 
@@ -3409,7 +3409,7 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 		valueRowDual[row] = up;
 	}
 
-	flagRow[row] = true;
+	flagRow[row] = 1;
 	valueColDual[y] = getColumnDualPost(y);
 	valueColDual[x] = getColumnDualPost(x);
 
@@ -3432,7 +3432,7 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 	}
 
 	//flagRow[row] = true;
-	flagCol[y] = true;
+	flagCol[y] = 1;
 }
 
 /*

@@ -71,8 +71,8 @@ public:
 
 	vector<int> nzCol;		  	//nonzeros in columns and rows
 	vector<int> nzRow;
-	vector<bool> flagCol;
-	vector<bool> flagRow;
+	vector<int> flagCol;
+	vector<int> flagRow;
 
 	vector<int> basicIndex;
     vector<int> nonbasicFlag;

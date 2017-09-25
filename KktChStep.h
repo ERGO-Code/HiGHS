@@ -34,8 +34,8 @@ private:
     vector<double> RrowLower;
     vector<double> RrowUpper;
 
-	vector<bool> flagCol;
-	vector<bool> flagRow;
+	vector<int> flagCol;
+	vector<int> flagRow;
 
 	//testing 
 	void printA();
@@ -73,7 +73,7 @@ private:
 	void setMatrixAR(int nCol, int nRow, const vector<int>& ARstart_, const  vector<int>& ARindex_, const  vector<double>& ARvalue_);
 	void setBoundsCostRHS(const  vector<double>& colUpper_, const  vector<double>& colLower_,const vector<double>& cost, const vector<double>& rowLower_, const vector<double>& rowUpper_);
 	void addChange(int type, int row, int col, double valC, double dualC, double dualR);
-	void setFlags(vector<bool>& r, vector<bool>& c);
+	void setFlags(vector<int>& r, vector<int>& c);
 	void makeKKTCheck();
 	void resizeProblemMatrix(KktCheck& checker);
 	void addCost(int col, double value);

@@ -114,10 +114,10 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		break;
 	}
 	case 0:  //empty row
-		flagRow[row] = true;
+		flagRow[row] = 1;
 		break;
 	case 1:  //row singleton
-		flagRow[row] = true;
+		flagRow[row] = 1;
 		colValue[col] = valC;
 		colDual[col] = dualC;
 		rowDual[row] = dualR;
@@ -139,7 +139,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 	case 2: //each variable at forcing row: rowDual is cost here
 		colValue[col] = valC;
 		colDual[col] = dualC;
-		flagCol[col] = true;
+		flagCol[col] = 1;
 		RcolCost[col] = dualR;
 		break;
 	case 21: //
@@ -161,7 +161,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		break;
 	case 3: //the row that is forcing 
 		rowDual[row] = dualR;
-		flagRow[row] = true;
+		flagRow[row] = 1;
 		if (valC != 0) {
 			upd =  rLowers.top();
 			rLowers.pop();
@@ -178,8 +178,8 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		}
 		break;
 	case 4: //implied free column singleton (also from duplicate row)
-		flagRow[row] = true;
-		flagCol[col] = true;
+		flagRow[row] = 1;
+		flagCol[col] = 1;
 		colValue[col] = valC;
 		colDual[col] = dualC;
 		rowDual[row] = dualR;
@@ -191,8 +191,8 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		}
 		break;
 	case 5: //doubleton eq with singleton col
-		flagRow[row] = true;
-		flagCol[col] = true;
+		flagRow[row] = 1;
+		flagCol[col] = 1;
 		colValue[col] = valC;
 		colDual[col] = dualC;
 		rowDual[row] = dualR;
@@ -216,8 +216,8 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		}
 		break;
 	case 17: {//doubleton equation
-		flagRow[row] = true;
-		flagCol[col] = true;
+		flagRow[row] = 1;
+		flagCol[col] = 1;
 		colValue[col] = valC;
 		colDual[col] = dualC;
 		rowDual[row] = dualR;
@@ -244,7 +244,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 	case 6: //empty column, dominated column or weakly dominated
 		colValue[col] = valC;
 		colDual[col] = dualC;
-		flagCol[col] = true;
+		flagCol[col] = 1;
 		if (valC != 0) {
 			upd =  rLowers.top();
 			rLowers.pop();
@@ -263,7 +263,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 	case 7: //fixed variable
 		colValue[col] = valC;
 		colDual[col] = dualC;
-		flagCol[col] = true;
+		flagCol[col] = 1;
 		if (valC != 0) {
 			upd =  rLowers.top();
 			rLowers.pop();
@@ -292,12 +292,12 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 			int ind = get<0>(upd[i]);
 			RrowUpper[ind] = get<1>(upd[i]);
 		}
-		flagRow[row] = true;
+		flagRow[row] = 1;
 		rowDual[row] = dualR;
 		break;
 	case 12: //doubleton eq from dupliocate rows;
-		flagRow[row] = true;
-		flagCol[col] = true;
+		flagRow[row] = 1;
+		flagCol[col] = 1;
 		colValue[col] = valC;
 		colDual[col] = dualC;
 		rowDual[row] = dualR;
@@ -337,7 +337,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 }
 
 
-void KktChStep::setFlags(vector<bool>& r, vector<bool>& c) {
+void KktChStep::setFlags(vector<int>& r, vector<int>& c) {
 	flagRow = r;
 	flagCol = c;
 }
