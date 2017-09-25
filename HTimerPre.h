@@ -9,20 +9,20 @@ using namespace std;
 
 enum HTickItemPre {
    	// Presolve items
-	HTICK_PRE_EMPTY_ROW,
-	HTICK_PRE_FIXED,
-	HTICK_PRE_SING_ROW,
-	HTICK_PRE_DOUBLETON_EQUATION,
-	HTICK_PRE_FORCING_ROW,
-	HTICK_PRE_REDUNDANT_ROW,
-	HTICK_PRE_DOMINATED_ROW_BOUNDS,
-	HTICK_PRE_FREE_SING_COL,
-	HTICK_PRE_SING_COL_DOUBLETON_INEQ,
-	HTICK_PRE_IMPLIED_FREE_SING_COL,
-	HTICK_PRE_DOMINATED_COLS,
-	HTICK_PRE_WEAKLY_DOMINATED_COLS,
-	HTICK_PRE_DOMINATED_COL_BOUNDS,
-	HTICK_PRE_EMPTY_COL,
+	EMPTY_ROW,
+	FIXED,
+	SING_ROW,
+	DOUBLETON_EQUATION,
+	FORCING_ROW,
+	REDUNDANT_ROW,
+	DOMINATED_ROW_BOUNDS,
+	FREE_SING_COL,
+	SING_COL_DOUBLETON_INEQ,
+	IMPLIED_FREE_SING_COL,
+	DOMINATED_COLS,
+	WEAKLY_DOMINATED_COLS,
+	DOMINATED_COL_BOUNDS,
+	EMPTY_COL,
 	//HTICK_PRE_DUPLICATE_ROWS,
 	//HTICK_PRE_DUPLICATE_COLUMNS,
     // The total count
@@ -34,18 +34,18 @@ public:
     HTimerPre() {
     	itemNames.resize(HTICK_ITEMS_COUNT_PRE);
 
-    	itemNames[HTICK_PRE_EMPTY_ROW] = "emptR";
-    	itemNames[HTICK_PRE_FIXED] = "fixCo";
-    	itemNames[HTICK_PRE_DOUBLETON_EQUATION] = "douEq";
-        itemNames[HTICK_PRE_SING_ROW] = "singR";
-        itemNames[HTICK_PRE_FORCING_ROW] = "forcR";
-        itemNames[HTICK_PRE_REDUNDANT_ROW] = "reduR";
-        itemNames[HTICK_PRE_FREE_SING_COL] = "colSi";
-        itemNames[HTICK_PRE_SING_COL_DOUBLETON_INEQ] = "colSD";
-        itemNames[HTICK_PRE_IMPLIED_FREE_SING_COL] = "colSI";
-        itemNames[HTICK_PRE_DOMINATED_COLS] = "domCo";
-        itemNames[HTICK_PRE_WEAKLY_DOMINATED_COLS] = "wdomC";
-        itemNames[HTICK_PRE_EMPTY_COL] = "emptC";
+    	itemNames[EMPTY_ROW] = "emptR";
+    	itemNames[FIXED] = "fixCo";
+    	itemNames[DOUBLETON_EQUATION] = "douEq";
+        itemNames[SING_ROW] = "singR";
+        itemNames[FORCING_ROW] = "forcR";
+        itemNames[REDUNDANT_ROW] = "reduR";
+        itemNames[FREE_SING_COL] = "colSi";
+        itemNames[SING_COL_DOUBLETON_INEQ] = "colSD";
+        itemNames[IMPLIED_FREE_SING_COL] = "colSI";
+        itemNames[DOMINATED_COLS] = "domCo";
+        itemNames[WEAKLY_DOMINATED_COLS] = "wdomC";
+        itemNames[EMPTY_COL] = "emptC";
 
         //itemNames[HTICK_PRE_DUPLICATE_ROWS] = "duplR";
         //itemNames[HTICK_PRE_DUPLICATE_COLUMNS] = "duplC";

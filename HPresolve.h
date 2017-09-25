@@ -30,8 +30,7 @@ public:
 
  	double objShift;
  	void initializeVectors();
-	void setProblemStatus(int s);
- 	void initializeEquationsFormNoPresolve(); 
+	void setProblemStatus(const int s);
  	void reportTimes();
  	
  	//new bounds on primal variables for implied free detection

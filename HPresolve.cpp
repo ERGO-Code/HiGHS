@@ -45,13 +45,13 @@ int HPresolve::presolve(int print) {
 	int iter = 1;
 	//print(0);
 
-	timer.recordStart(HTICK_PRE_FIXED);
+	timer.recordStart(FIXED);
 	for (int j=0;j<numCol;j++)
 		if (flagCol.at(j)) {
 			removeIfFixed(j);
 			if (status) return status;
 		}
-	timer.recordFinish(HTICK_PRE_FIXED);
+	timer.recordFinish(FIXED);
 
 
 	while (hasChange) {
@@ -237,8 +237,8 @@ void HPresolve::removeDoubletonEquations() {
 				flagRow.at(row) = 0;
 				nzCol[x]--;
 
-				countRemovedRows[HTICK_PRE_DOUBLETON_EQUATION]++;
-				countRemovedCols[HTICK_PRE_DOUBLETON_EQUATION]++;
+				countRemovedRows[DOUBLETON_EQUATION]++;
+				countRemovedCols[DOUBLETON_EQUATION]++;
 
 				//----------------------------
 				flagCol[y] = 0;
@@ -327,7 +327,7 @@ void HPresolve::removeDoubletonEquations() {
 							if (nzRow.at(i)==0) {
 								singRow.remove(i);
 								removeEmptyRow(i);
-								countRemovedRows[HTICK_PRE_DOUBLETON_EQUATION]++;
+								countRemovedRows[DOUBLETON_EQUATION]++;
 							}
 
 							double xNew;
@@ -366,7 +366,7 @@ void HPresolve::removeDoubletonEquations() {
 								if (nzRow.at(i)==0) {
 									singRow.remove(i);
 									removeEmptyRow(i);
-									countRemovedRows[HTICK_PRE_DOUBLETON_EQUATION]++;
+									countRemovedRows[DOUBLETON_EQUATION]++;
 								}
 
 
@@ -647,10 +647,10 @@ void HPresolve::initializeVectors() {
 		if (nzRow.at(i) == 1)
 			singRow.push_back(i);
 		if (nzRow.at(i) == 0) {
-			timer.recordStart(HTICK_PRE_EMPTY_ROW);
+			timer.recordStart(EMPTY_ROW);
 			removeEmptyRow(i);
-			countRemovedRows[HTICK_PRE_EMPTY_ROW]++;
-			timer.recordFinish(HTICK_PRE_EMPTY_ROW);
+			countRemovedRows[EMPTY_ROW]++;
+			timer.recordFinish(EMPTY_ROW);
 		}
 	}
 
@@ -716,7 +716,7 @@ void HPresolve::removeIfFixed(int j) {
 			addChange(7,0,j);
 			if (iPrint > 0)
 				cout<<"PR: Fixed variable "<<j<<" = "<<colUpper.at(j)<<". Column eliminated."<< endl;
-			countRemovedCols[HTICK_PRE_FIXED]++;
+			countRemovedCols[FIXED]++;
 
 			for (int k = Astart.at(j); k < Aend.at(j); k++) {
 				if (flagRow[Aindex.at(k)]) {
@@ -724,7 +724,7 @@ void HPresolve::removeIfFixed(int j) {
 
 					if (nzRow.at(i) == 0) {
 						removeEmptyRow(i);
-						countRemovedRows[HTICK_PRE_FIXED]++;
+						countRemovedRows[FIXED]++;
 					}
 				}
 			}
@@ -777,7 +777,7 @@ void HPresolve::removeEmptyColumn(int j) {
 
 	if (iPrint > 0)
 		cout<<"PR: Column: "<<j<<" eliminated: all nonzero rows have been removed. Cost = "<< colCost.at(j) <<", value = "<<value<<endl;
-	countRemovedCols[HTICK_PRE_EMPTY_COL]++;
+	countRemovedCols[EMPTY_COL]++;
 }
 
 
@@ -833,7 +833,7 @@ void HPresolve::removeDominatedColumns() {
 	double e,d;
 	for(int j=0;j<numCol;j++) 
 		if (flagCol.at(j)) {
-			timer.recordStart(HTICK_PRE_DOMINATED_COLS);
+			timer.recordStart(DOMINATED_COLS);
 			e=0;
 			d=0;
 
@@ -897,8 +897,8 @@ void HPresolve::removeDominatedColumns() {
 				addChange(9, 0, j);
 				if (iPrint > 0)
 					cout<<"PR: Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
-				timer.recordFinish(HTICK_PRE_DOMINATED_COLS);
-				countRemovedCols[HTICK_PRE_DOMINATED_COLS]++;
+				timer.recordFinish(DOMINATED_COLS);
+				countRemovedCols[DOMINATED_COLS]++;
 			}
 			else if (colCost.at(j) - e < -tol) {
 				if (colUpper.at(j) == HSOL_CONST_INF) {
@@ -911,8 +911,8 @@ void HPresolve::removeDominatedColumns() {
 				addChange(9, 0, j);
 				if (iPrint > 0)
 					cout<<"PR: Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
-				timer.recordFinish(HTICK_PRE_DOMINATED_COLS);
-				countRemovedCols[HTICK_PRE_DOMINATED_COLS]++;
+				timer.recordFinish(DOMINATED_COLS);
+				countRemovedCols[DOMINATED_COLS]++;
 			}
 			else {
 				if (implColDualLower.at(j) < (colCost.at(j) - d ))
@@ -922,32 +922,32 @@ void HPresolve::removeDominatedColumns() {
 				if (implColDualLower.at(j) > implColDualUpper.at(j) )
 					cout<<"INCONSISTENT\n";
 
-				timer.recordFinish(HTICK_PRE_DOMINATED_COLS);
+				timer.recordFinish(DOMINATED_COLS);
 
 
 				//check if it is weakly dominated: Excluding singletons!
 				if (nzCol.at(j)>1) {
 					if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HSOL_CONST_INF) {
-						timer.recordStart(HTICK_PRE_WEAKLY_DOMINATED_COLS);
+						timer.recordStart(WEAKLY_DOMINATED_COLS);
 						setPrimalValue(j, colLower.at(j));
 						addChange(10, 0, j);
 						if (iPrint > 0)
 							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
-						countRemovedCols[HTICK_PRE_WEAKLY_DOMINATED_COLS]++;
-						timer.recordFinish(HTICK_PRE_WEAKLY_DOMINATED_COLS);
+						countRemovedCols[WEAKLY_DOMINATED_COLS]++;
+						timer.recordFinish(WEAKLY_DOMINATED_COLS);
 					}
 					else if (abs(colCost.at(j) - e) < tol && colUpper.at(j) < HSOL_CONST_INF) {
-						timer.recordStart(HTICK_PRE_WEAKLY_DOMINATED_COLS);
+						timer.recordStart(WEAKLY_DOMINATED_COLS);
 						setPrimalValue(j, colUpper.at(j));
 						addChange(10, 0, j);
 						if (iPrint > 0)
 							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
-						countRemovedCols[HTICK_PRE_WEAKLY_DOMINATED_COLS]++;
-						timer.recordFinish(HTICK_PRE_WEAKLY_DOMINATED_COLS);
+						countRemovedCols[WEAKLY_DOMINATED_COLS]++;
+						timer.recordFinish(WEAKLY_DOMINATED_COLS);
 					}
 					else {
 
-						timer.recordStart(HTICK_PRE_DOMINATED_COL_BOUNDS);
+						timer.recordStart(DOMINATED_COL_BOUNDS);
 						double bnd;
 						//calculate new bounds
 						if (colLower.at(j) > -HSOL_CONST_INF || colUpper.at(j) == HSOL_CONST_INF)
@@ -985,14 +985,14 @@ void HPresolve::removeDominatedColumns() {
 
 									}
 								}
-						timer.recordFinish(HTICK_PRE_DOMINATED_COL_BOUNDS);
+						timer.recordFinish(DOMINATED_COL_BOUNDS);
 					}
 				}
 			}
 		}
 }
 
-void HPresolve::setProblemStatus(int s) {
+void HPresolve::setProblemStatus(const int s) {
 	if (s==Infeasible)
 		cout<<"NOT-OPT status = 1, returned from solver after presolve: Problem infeasible.\n";
 	else if (s==Unbounded)
@@ -1070,7 +1070,7 @@ void HPresolve::removeColumnSingletons()  {
 
 			//free
 			if (colLower.at(col) == -HSOL_CONST_INF && colUpper.at(col) == HSOL_CONST_INF) {
-				timer.recordStart(HTICK_PRE_FREE_SING_COL);
+				timer.recordStart(FREE_SING_COL);
 				if (iPrint > 0)
 					cout<<"PR: Free column singleton "<<col<<" removed. Row "<<i<<" removed."<<endl;
 					
@@ -1095,9 +1095,9 @@ void HPresolve::removeColumnSingletons()  {
 				addChange(4, i, col);
 				removeRow(i);
 				it = singCol.erase(it);
-				countRemovedCols[HTICK_PRE_FREE_SING_COL]++;
-				countRemovedRows[HTICK_PRE_FREE_SING_COL]++;
-				timer.recordFinish(HTICK_PRE_FREE_SING_COL);
+				countRemovedCols[FREE_SING_COL]++;
+				countRemovedRows[FREE_SING_COL]++;
+				timer.recordFinish(FREE_SING_COL);
 				continue;
 		}
 			//singleton column in a doubleton equation 
@@ -1123,7 +1123,7 @@ void HPresolve::removeColumnSingletons()  {
 					}
 				}
 
-				timer.recordStart(HTICK_PRE_SING_COL_DOUBLETON_INEQ);
+				timer.recordStart(SING_COL_DOUBLETON_INEQ);
 				// additional check if it is indeed implied free: need
 				// low and upp to be tighter than original bounds for variable col
 				// so it is indeed implied free and we can remove it
@@ -1133,7 +1133,7 @@ void HPresolve::removeColumnSingletons()  {
 				upp = get<1>(p);
 				if (!(colLower.at(col) <= low && colUpper.at(col) >= upp)) {
 					it++;
-					timer.recordFinish(HTICK_PRE_SING_COL_DOUBLETON_INEQ);
+					timer.recordFinish(SING_COL_DOUBLETON_INEQ);
 					continue;
 				}
 
@@ -1190,8 +1190,8 @@ void HPresolve::removeColumnSingletons()  {
 					cout<<"PR: Column singleton "<<col<<" in a doubleton inequality constraint removed. Row "<<i<<" removed. variable left is "<<j<<endl;
 				flagCol.at(col) = 0;
 				fillStackRowBounds(i);
-				countRemovedCols[HTICK_PRE_SING_COL_DOUBLETON_INEQ]++;
-				countRemovedRows[HTICK_PRE_SING_COL_DOUBLETON_INEQ]++;
+				countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
+				countRemovedRows[SING_COL_DOUBLETON_INEQ]++;
 
 				valueColDual.at(col) = 0;
 				valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k); //may be changed later, depending on bounds.
@@ -1236,26 +1236,26 @@ void HPresolve::removeColumnSingletons()  {
 					addChange(19, 0, j);
 					if (iPrint > 0)
 						cout<<"PR: Second singleton column "<<j<<" in doubleton row "<<i<< " removed.\n";
-					countRemovedCols[HTICK_PRE_SING_COL_DOUBLETON_INEQ]++;
+					countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
 					singCol.remove(j);
 
 				}
 				
 				it = singCol.erase(it); 
 				iter++;
-				timer.recordFinish(HTICK_PRE_SING_COL_DOUBLETON_INEQ);
+				timer.recordFinish(SING_COL_DOUBLETON_INEQ);
 				continue;
 
 			}
 			//implied free
 			else{
-				timer.recordStart(HTICK_PRE_IMPLIED_FREE_SING_COL);
+				timer.recordStart(IMPLIED_FREE_SING_COL);
 				bool res = removeIfImpliedFree(col, i, k);
 				if (res) {
 					it = singCol.erase(it);
 					iter++;
 				}
-				timer.recordFinish(HTICK_PRE_IMPLIED_FREE_SING_COL);
+				timer.recordFinish(IMPLIED_FREE_SING_COL);
 			}
 		
 			it++;
@@ -1365,8 +1365,8 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 		if (iPrint > 0)
 			cout<<"PR: Implied free column singleton "<<col<<" removed.  Row "<<i<<" removed."<<endl;
 		
-		countRemovedCols[HTICK_PRE_IMPLIED_FREE_SING_COL]++;
-		countRemovedRows[HTICK_PRE_IMPLIED_FREE_SING_COL]++;
+		countRemovedCols[IMPLIED_FREE_SING_COL]++;
+		countRemovedRows[IMPLIED_FREE_SING_COL]++;
 
 		//modify costs
 		vector<pair<int, double>> newCosts;
@@ -1457,7 +1457,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 		if (flagRow.at(i)) {
 			if (nzRow.at(i)==0) {
 				removeEmptyRow(i);
-				countRemovedRows[HTICK_PRE_EMPTY_ROW]++;
+				countRemovedRows[EMPTY_ROW]++;
 				continue;
 			}
 
@@ -1465,7 +1465,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 			if (nzRow.at(i)==1)
 				continue;
 
-			timer.recordStart(HTICK_PRE_FORCING_ROW);
+			timer.recordStart(FORCING_ROW);
 
 			double g=0;
 			double h=0;
@@ -1518,7 +1518,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				k--;
 			}
 	
-			timer.recordFinish(HTICK_PRE_FORCING_ROW);
+			timer.recordFinish(FORCING_ROW);
 
 			if (g>rowUpper.at(i) || h<rowLower.at(i)) {
 				if (iPrint > 0)
@@ -1551,12 +1551,12 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						
 						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
-						countRemovedCols[HTICK_PRE_FORCING_ROW]++;
+						countRemovedCols[FORCING_ROW]++;
 					} k++; 
 				}
 				if (nzRow.at(i)==1)
 					singRow.remove(i);
-				countRemovedRows[HTICK_PRE_FORCING_ROW]++;
+				countRemovedRows[FORCING_ROW]++;
 			}
 			else if (h == rowLower.at(i)) {
 				//set all variables to upper bound 
@@ -1582,12 +1582,12 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						addChange(2, 0, j);
 						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
-						countRemovedCols[HTICK_PRE_FORCING_ROW]++;
+						countRemovedCols[FORCING_ROW]++;
 					} k++;
 				}	
 				if (nzRow.at(i)==1)
 					singRow.remove(i);
-				countRemovedRows[HTICK_PRE_FORCING_ROW]++;
+				countRemovedRows[FORCING_ROW]++;
 			}
 			//redundant row: for any assignment of variables
 			//constraint is satisfied
@@ -1596,7 +1596,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				addChange(16, i, 0);
 				if (iPrint > 0)
 					cout<<"PR: Redundant row "<<i<<" removed."<<endl;
-				countRemovedRows[HTICK_PRE_REDUNDANT_ROW]++;
+				countRemovedRows[REDUNDANT_ROW]++;
 			}
 
 			//Dominated constraints:
@@ -1608,7 +1608,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 					implRowDualLower.at(i) = 0;
 
 				//calculate implied bounds for discovering free column singletons
-				timer.recordStart(HTICK_PRE_DOMINATED_ROW_BOUNDS);
+				timer.recordStart(DOMINATED_ROW_BOUNDS);
 				for (k=ARstart.at(i); k<ARstart[i+1]; k++) {
 					j = ARindex.at(k);
 					if (flagCol.at(j)) {
@@ -1628,7 +1628,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						}
 					}
 				}
-				timer.recordFinish(HTICK_PRE_DOMINATED_ROW_BOUNDS);
+				timer.recordFinish(DOMINATED_ROW_BOUNDS);
 			}
 			else if (g > -HSOL_CONST_INF) {
 				//fill in implied bounds arrays
@@ -1638,7 +1638,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 					implRowDualUpper.at(i) = 0;
 
 				//calculate implied bounds for discovering free column singletons
-				timer.recordStart(HTICK_PRE_DOMINATED_ROW_BOUNDS);
+				timer.recordStart(DOMINATED_ROW_BOUNDS);
 				for (k=ARstart.at(i); k<ARstart[i+1]; k++) {
 					j = ARindex.at(k);
 					if (flagCol.at(j)) {
@@ -1658,7 +1658,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						}
 					}
 				}
-				timer.recordFinish(HTICK_PRE_DOMINATED_ROW_BOUNDS);
+				timer.recordFinish(DOMINATED_ROW_BOUNDS);
 			}
 		}
 
@@ -1666,7 +1666,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 
 
 void HPresolve::removeRowSingletons() {
-	timer.recordStart(HTICK_PRE_SING_ROW);
+	timer.recordStart(SING_ROW);
 	int i;
 	while (!(singRow.empty()) ) {
 		i=singRow.front();
@@ -1776,10 +1776,10 @@ void HPresolve::removeRowSingletons() {
 		if (flagCol.at(j) && colLower.at(j) == colUpper.at(j))
 			removeIfFixed(j);
 
-		countRemovedRows[HTICK_PRE_SING_ROW]++;
+		countRemovedRows[SING_ROW]++;
 
 		}
-	timer.recordFinish(HTICK_PRE_SING_ROW);
+	timer.recordFinish(SING_ROW);
 }
 
 void HPresolve::addChange(int type, int row, int col) {
@@ -1898,17 +1898,17 @@ bool HPresolve::checkIfRedundant(int r, int type, double bound) { //>= 1, <= 2
 
 void HPresolve::reportTimes() {
 	int reportList[] = {
-				HTICK_PRE_EMPTY_ROW,
-				HTICK_PRE_FIXED,
-				HTICK_PRE_SING_ROW,
-				HTICK_PRE_DOUBLETON_EQUATION,
-				HTICK_PRE_FORCING_ROW,
-				HTICK_PRE_REDUNDANT_ROW,
-				HTICK_PRE_FREE_SING_COL,
-				HTICK_PRE_SING_COL_DOUBLETON_INEQ,
-				HTICK_PRE_IMPLIED_FREE_SING_COL,
-				HTICK_PRE_DOMINATED_COLS,
-				HTICK_PRE_WEAKLY_DOMINATED_COLS };
+				EMPTY_ROW,
+				FIXED,
+				SING_ROW,
+				DOUBLETON_EQUATION,
+				FORCING_ROW,
+				REDUNDANT_ROW,
+				FREE_SING_COL,
+				SING_COL_DOUBLETON_INEQ,
+				IMPLIED_FREE_SING_COL,
+				DOMINATED_COLS,
+				WEAKLY_DOMINATED_COLS };
 	int reportCount = sizeof(reportList) / sizeof(int);
 
 	double totalTick = timer.getTick();
@@ -1921,7 +1921,6 @@ void HPresolve::reportTimes() {
 	printf("\n");
 	cout<<"Time spent     "<<flush;
 	for (int i = 0; i < reportCount; i++) {
-		//int percent = 1000.0 * itemTicks[itemList.at(i)] / totalTick;
 		float f = (float) timer.itemTicks[reportList[i]];
 		if (f<0.01)
 			cout<<setw(4)<<" <.01 ";
@@ -1937,12 +1936,12 @@ void HPresolve::recordCounts(string fileName) {
 
 	ofstream myfile;
 	myfile.open(fileName, ios::app);
-	int reportList[] = { HTICK_PRE_EMPTY_ROW, HTICK_PRE_FIXED,
-			HTICK_PRE_SING_ROW, HTICK_PRE_DOUBLETON_EQUATION,
-			HTICK_PRE_FORCING_ROW, HTICK_PRE_REDUNDANT_ROW,
-			HTICK_PRE_FREE_SING_COL, HTICK_PRE_SING_COL_DOUBLETON_INEQ,
-			HTICK_PRE_IMPLIED_FREE_SING_COL, HTICK_PRE_DOMINATED_COLS,
-			HTICK_PRE_WEAKLY_DOMINATED_COLS, HTICK_PRE_EMPTY_COL };
+	int reportList[] = { EMPTY_ROW, FIXED,
+			SING_ROW, DOUBLETON_EQUATION,
+			FORCING_ROW, REDUNDANT_ROW,
+			FREE_SING_COL, SING_COL_DOUBLETON_INEQ,
+			IMPLIED_FREE_SING_COL, DOMINATED_COLS,
+			WEAKLY_DOMINATED_COLS, EMPTY_COL };
 	int reportCount = sizeof(reportList) / sizeof(int);
 
 	myfile << "Problem " << modelName << ":\n";
@@ -3536,7 +3535,7 @@ bool HPresolve::checkDuplicateRows(int i, int k) {
 
 
 void HPresolve::findDuplicateRows() {
-	timer.recordStart(HTICK_PRE_DUPLICATE_ROWS);
+	timer.recordStart(DUPLICATE_ROWS);
 	int v = 0; //remaining potential duplicates
 	int t = 1; //number of potential next set to be created
 
@@ -3644,7 +3643,7 @@ void HPresolve::findDuplicateRows() {
 				cout<<"ROWS NOT DUPLICATE: "<<r1<<" and "<<r2<<endl;
 			removeDuplicateRows(r1, r2, rat);
 		}
-	timer.recordFinish(HTICK_PRE_DUPLICATE_ROWS);
+	timer.recordFinish(DUPLICATE_ROWS);
 }
 
 
