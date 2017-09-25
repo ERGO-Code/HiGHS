@@ -2251,51 +2251,42 @@ void HPresolve::postsolve() {
 			chk.passSolution(colValue, colDual,  rowDual);
 			chk.makeKKTCheck();
 		}
+		//So there have been changes definitely ->
+		makeACopy(); // so we can efficiently calculate primal and dual values
 
-		if (status == 0) {
-			//So there have been changes definitely ->
-			makeACopy(); // so we can efficiently calculate primal and dual values
-
-			//	iKKTcheck = false;
-			//set corresponding parts of solution vectors:
-			int j=0;
-			vector<int> eqIndexOfReduced(numCol, -1);
-			vector<int> eqIndexOfReduROW(numRow, -1);
-			for (int i=0;i<numColOriginal;i++)
-				if (cIndex[i]>-1) {
-					eqIndexOfReduced[j] = i;
-					j++;
-				}
-			j=0;
-			for (int i=0;i<numRowOriginal;i++)
-				if (rIndex[i]>-1) {
-					eqIndexOfReduROW[j] = i;
-					j++;
-				}
-
-			vector<int> temp = nonbasicFlag;
-
-			nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
-
-			for (int i=0;i<numCol;i++) {
-				valuePrimal[eqIndexOfReduced[i]] = colValue[i];
-				valueColDual[eqIndexOfReduced[i]] = colDual[i];
-				nonbasicFlag[eqIndexOfReduced[i]] = temp[i];
+		//	iKKTcheck = false;
+		//set corresponding parts of solution vectors:
+		int j=0;
+		vector<int> eqIndexOfReduced(numCol, -1);
+		vector<int> eqIndexOfReduROW(numRow, -1);
+		for (int i=0;i<numColOriginal;i++)
+			if (cIndex[i]>-1) {
+				eqIndexOfReduced[j] = i;
+				j++;
+			}
+		j=0;
+		for (int i=0;i<numRowOriginal;i++)
+			if (rIndex[i]>-1) {
+				eqIndexOfReduROW[j] = i;
+				j++;
 			}
 
-			for (int i=0;i<numRow;i++) {
-				valueRowDual[eqIndexOfReduROW[i]] = rowDual[i];
-				nonbasicFlag[numColOriginal + eqIndexOfReduROW[i]] = temp[numCol + i];
-			}
+		vector<int> temp = nonbasicFlag;
 
-			//cmpNBF(-1, -1);
+		nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
+
+		for (int i=0;i<numCol;i++) {
+			valuePrimal[eqIndexOfReduced[i]] = colValue[i];
+			valueColDual[eqIndexOfReduced[i]] = colDual[i];
+			nonbasicFlag[eqIndexOfReduced[i]] = temp[i];
 		}
-		else if (status == Unbounded || status == Infeasible) {
-			return; // no postsolve
+
+		for (int i=0;i<numRow;i++) {
+			valueRowDual[eqIndexOfReduROW[i]] = rowDual[i];
+			nonbasicFlag[numColOriginal + eqIndexOfReduROW[i]] = temp[numCol + i];
 		}
-		else if (status == Empty) {
-			nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
-		}
+
+		//cmpNBF(-1, -1);
 
 		int kk, jj;
 		double y,z,x;
