@@ -117,8 +117,6 @@ private:
 	//old or test
 	//void updateRemovedColRow(int dim);
 	//void updateRowsByNZ();
-	int  testSingRows(int i);
-    int  testSingCols(int i);
     void testAnAR(int post);
 
     vector<int> countRemovedRows;

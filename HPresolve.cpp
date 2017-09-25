@@ -17,6 +17,7 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
+	//iPrint = 1;
 	chk.print = 3; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
@@ -54,7 +55,7 @@ int HPresolve::presolve(int print) {
 	timer.recordFinish(FIXED_COL);
 
 
-	while (hasChange) {
+	while (hasChange == 1) {
 
 		hasChange = false;
 		if (iPrint > 0)
@@ -1056,13 +1057,6 @@ void HPresolve::removeColumnSingletons()  {
 			k = getSingColElementIndexInA(col);
 			i = Aindex.at(k);
 
-			if (debug) {
-				if (i != testSingCols(col)) {
-				cout<<"ERROR: column "<<col<<" not singleton\n";
-				it++;
-				continue;}
-			}
-
 			if (!flagRow.at(i)) {
 				cout<<"ERROR: column singleton "<<col<<" is in row "<<i<<" which is already mapped off\n";
 				exit(18);
@@ -1425,20 +1419,15 @@ void HPresolve::removeRow(int i) {
 			nzCol.at(j)--;
 			//if now singleton add to list
 			if (nzCol.at(j)==1) {
-				if (debug) {
-					int singletonColIndex = testSingCols(j);
-					if (singletonColIndex >= 0)
-							singCol.push_back(j);
-					else
-						cout<<"Warning: Column "<<j<<" with 1 nz but not in singCol or? Row removing of "<<i<<". Ignored.\n";
-				}
-				else
+				int index = getSingColElementIndexInA(j);
+				if (index >= 0)
 					singCol.push_back(j);
+				else
+					cout<<"Warning: Column "<<j<<" with 1 nz but not in singCol or? Row removing of "<<i<<". Ignored.\n";
 			}
 			//if it was a singleton column remove from list and problem
-			if (nzCol.at(j)==0) {
+			if (nzCol.at(j)==0)
 				removeEmptyColumn(j);
-			}	
 		}
 	}
 }
@@ -1676,15 +1665,6 @@ void HPresolve::removeRowSingletons() {
 			cout<<"Warning: Row "<<i<<" already flagged off but in singleton row list. Ignored.\n";
 			continue;
 		}
-
-		if (debug) {
-			int vvv =  testSingRows(i);
-			if (vvv < 0) {
-				cout<<"Warning: Row "<<i<<" in singleton row list but not actually singleton. Ignored.\n";
-				continue;
-			}
-		}
-		
 
 		int k = getSingRowElementIndexInAR(i); 
 		int j = ARindex.at(k);
@@ -2028,8 +2008,19 @@ void HPresolve::resizeImpliedBounds() {
 
 int HPresolve::getSingRowElementIndexInAR(int i) {
 	int k=ARstart.at(i);
-    while (!flagCol[ARindex.at(k)])
-           ++k ;
+    while (!flagCol.at(ARindex.at(k)))
+        ++k ;
+    if (k >= ARstart.at(i+1)) {
+    	cout<<"Error during presolve: no variable found in singleton row "<<i<<".";
+    	return -1;
+    }
+    int rest = k+1;
+    while (rest < ARstart.at(i+1) && !flagCol.at(ARindex.at(rest)))
+    	++rest ;
+    if (rest < ARstart.at(i+1)) {
+       	cout<<"Error during presolve: more variables found in singleton row "<<i<<".";
+       	return -1;
+    }
     return k;
 }
 
@@ -2037,87 +2028,18 @@ int HPresolve::getSingColElementIndexInA(int j) {
 	int k=Astart.at(j);
     while (!flagRow.at(Aindex.at(k)))
            ++k ;
+    if (k >= Aend.at(j)) {
+		cout<<"Error during presolve: no variable found in singleton col "<<j<<".";
+		return -1;
+	}
+    int rest = k+1;
+	while (rest < Aend.at(j) && !flagRow.at(Aindex.at(rest)))
+		++rest ;
+	if (rest < Aend.at(j)) {
+		cout<<"Error during presolve: more variables found in singleton col "<<j<<".";
+		return -1;
+	}
     return k;
-}
-
-int HPresolve::testSingRows(int i) {
-	int out = -1;
-
-	int k=ARstart.at(i);
-    while (!flagCol.at(ARindex.at(k)))
-           ++k ;
-            
-	char buff[5];
-	if (k>=ARstart.at(i+1)) {
-		cout<< "all flagCol are false. row "<<i<<endl;
-		cout<< "Avalue: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-			sprintf(buff, "%2.1f ", ARvalue.at(j));
-			cout<<setw(5)<<buff;
-		}
-		cout<<endl<<"Column: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-			sprintf(buff, "%i ", ARindex.at(j));
-			cout<<setw(5)<<buff;
-		}
-		cout<<endl<<"isValid: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-			cout<<setw(5)<<flagCol.at(j);
-		}
-		cout<<endl;
-		return -3;	
-	}
-	out = k;
-	k++;
-	while (k<ARstart.at(i+1) && !flagCol.at(ARindex.at(k)) )
-		k++;
-	if (k<ARstart.at(i+1)) {
-		cout<< "more than one flagCol is true."<<endl;
-		cout<< "Avalue: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-			sprintf(buff, "%2.1f ", ARvalue.at(j));
-    		cout<<setw(5)<<buff; 
-		}
-		cout<< "Avalue: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-			sprintf(buff, "%2.1f ", ARvalue.at(j));
-    		cout<<setw(5)<<buff; 
-		}
-		cout<<endl<<"Column: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-			sprintf(buff, "%i ", ARindex.at(j));
-    		cout<<setw(5)<<buff; 
-		}
-		cout<<endl<<"isValid: ";
-		for (int j=ARstart.at(i); j< ARstart.at(i+1); ++j) {
-    		cout<<setw(5)<<flagCol.at(j);
-		}
-		cout<<endl;
-		return -2;
-	}
-	return ARindex.at(out);
-}
-
-
-int HPresolve::testSingCols(int j) {
-	int out = -1;
-	int k=Astart.at(j);
-    while (!flagRow.at(Aindex.at(k)))
-           ++k ;
-            
-	if (k>=Aend.at(j)) {
-		cout<< "all flagRow are false."<<endl;
-		return -3;	
-	}
-	out = k;
-	k++;
-	while (k<Aend.at(j) && !flagRow.at(Aindex.at(k)) )
-		k++;
-	if (k<Aend.at(j)) {
-		cout<< "more than one flagRow is true. j="<<j<<endl;
-		return -2;
-	}    
-	return Aindex[out];
 }
 
 void HPresolve::testAnAR(int post) {
@@ -2168,7 +2090,7 @@ void HPresolve::testAnAR(int post) {
 				continue;
 			nz=0;
 			for (k = ARstart.at(i); k<ARstart.at(i+1);++k )
-				if (flagCol[ARindex.at(k)])
+				if (flagCol.at(ARindex.at(k)))
 					nz++;
 			if (nz != nzRow.at(i))
 				cout<<"    NZ ROW      DIFF row="<<i<< " nzRow="<<nzRow.at(i)<<" actually "<<nz <<"------------"<<endl;
@@ -2452,8 +2374,8 @@ void HPresolve::postsolve() {
 					double aij = getaij(c.row,c.col);
 					double sum = 0;
 					for (int k=ARstart[c.row]; k<ARstart[c.row+1];++k )
-						if (flagCol[ARindex.at(k)])
-							sum += valuePrimal[ARindex.at(k)]*ARvalue.at(k);
+						if (flagCol.at(ARindex.at(k)))
+							sum += valuePrimal.at(ARindex.at(k))*ARvalue.at(k);
 
 					double rowlb = postValue.top(); postValue.pop();
 					double rowub = postValue.top(); postValue.pop();
