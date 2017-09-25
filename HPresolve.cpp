@@ -538,22 +538,22 @@ void HPresolve::resizeProblem() {
     	    for (int k = ARstart.at(i); k < ARstart[i+1];++k ) {
     	    	j = ARindex.at(k);
     	    	if (flagCol.at(j))
-        			iwork[cIndex.at(j)]++;
+        			iwork.at(cIndex.at(j))++;
         		}
     for (i = 1; i <= numCol; ++i)
-        Astart.at(i) = Astart[i - 1] + iwork[i - 1];
+        Astart.at(i) = Astart.at(i-1) + iwork.at(i-1);
     for (i = 0; i < numCol; ++i)
         iwork.at(i) = Aend.at(i) = Astart.at(i);
     for (i = 0; i < numRowOriginal; ++i) {
     	if (flagRow.at(i)) {
 			int iRow = rIndex.at(i);
-		    for (k = ARstart.at(i); k < ARstart[i + 1];++k ) {
+		    for (k = ARstart.at(i); k < ARstart.at(i+1);++k ) {
 		        j = ARindex.at(k);
 		        if (flagCol.at(j)) {
 		        	int iCol = cIndex.at(j);
-				    int iPut = iwork[iCol]++;
-				    Aindex[iPut] = iRow;
-				    Avalue[iPut] = ARvalue.at(k);
+				    int iPut = iwork.at(iCol)++;
+				    Aindex.at(iPut) = iRow;
+				    Avalue.at(iPut) = ARvalue.at(k);
 				}
 		    }
 		}
