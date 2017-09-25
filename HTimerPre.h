@@ -44,18 +44,18 @@ public:
     HTimerPre() {
     	itemNames.resize(HTICK_ITEMS_COUNT_PRE);
 
-//    	itemNames[EMPTY_ROW] = "emptR";
-//    	itemNames[FIXED_COL] = "fixCo";
-//    	itemNames[DOUBLETON_EQUATION] = "douEq";
-//        itemNames[SING_ROW] = "singR";
-//        itemNames[FORCING_ROW] = "forcR";
-//        itemNames[REDUNDANT_ROW] = "reduR";
-//        itemNames[FREE_SING_COL] = "colSi";
-//        itemNames[SING_COL_DOUBLETON_INEQ] = "colSD";
-//        itemNames[IMPLIED_FREE_SING_COL] = "colSI";
-//        itemNames[DOMINATED_COLS] = "domCo";
-//        itemNames[WEAKLY_DOMINATED_COLS] = "wdomC";
-//        itemNames[EMPTY_COL] = "emptC";
+    	itemNames[EMPTY_ROW] = "emptR";
+    	itemNames[FIXED_COL] = "fixCo";
+    	itemNames[DOUBLETON_EQUATION] = "douEq";
+        itemNames[SING_ROW] = "singR";
+        itemNames[FORCING_ROW] = "forcR";
+        itemNames[REDUNDANT_ROW] = "reduR";
+        itemNames[FREE_SING_COL] = "colSi";
+        itemNames[SING_COL_DOUBLETON_INEQ] = "colSD";
+        itemNames[IMPLIED_FREE_SING_COL] = "colSI";
+        itemNames[DOMINATED_COLS] = "domCo";
+        itemNames[WEAKLY_DOMINATED_COLS] = "wdomC";
+        itemNames[EMPTY_COL] = "emptC";
 
         //itemNames[HTICK_PRE_DUPLICATE_ROWS] = "duplR";
         //itemNames[HTICK_PRE_DUPLICATE_COLUMNS] = "duplC";
