@@ -27,7 +27,6 @@ public:
 	int  presolve();
 
 	void postsolve();
- 	void printReducedSol();
 
  	double objShift;
  	void initializeVectors();

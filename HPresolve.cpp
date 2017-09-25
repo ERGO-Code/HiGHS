@@ -643,7 +643,7 @@ void HPresolve::initializeVectors() {
 	nzRow.assign(numRow,0);
 
 	for (int i = 0; i < numRow; i++) {
-		nzRow.at(i) = ARstart[i+1]-ARstart.at(i);
+		nzRow.at(i) = ARstart.at(i+1)-ARstart.at(i);
 		if (nzRow.at(i) == 1)
 			singRow.push_back(i);
 		if (nzRow.at(i) == 0) {
@@ -656,7 +656,7 @@ void HPresolve::initializeVectors() {
 
 	Aend.resize(numCol+1);
 	for (int i = 0; i < numCol; i++) {
-		Aend.at(i)  = Astart[i+1];
+		Aend.at(i)  = Astart.at(i+1);
 		nzCol.at(i) = Aend.at(i)-Astart.at(i);
 		if (nzCol.at(i) == 1)
 			singCol.push_back(i);
