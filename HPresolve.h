@@ -94,7 +94,6 @@ private:
     void removeColumnSingletons();
     void addChange(int type, int row, int col);
 
-    bool checkIfRedundant(int r, int type, double bound);
     void removeDominatedColumns();
     bool removeIfImpliedFree(int col, int i, int k);
     pair<double, double> getNewBoundsDoubletonConstraint(int row, int col, int j, double aik, double aij);

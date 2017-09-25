@@ -77,6 +77,7 @@ void KktChStep::addCost(int col, double value) {
 }
 
 /*
+1  SING_ROW
 17 DOUBLETON_EQUATION
 
 171 DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE

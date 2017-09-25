@@ -228,7 +228,7 @@ void HPresolve::removeDoubletonEquations() {
 				bnds3.push_back(colCost[x]);
 				oldBounds.push(make_pair( x, bnds3));
 
-				addChange(17, row, y);
+				addChange(DOUBLETON_EQUATION, row, y);
 
 				//remove y (col) and the row
 				if (iPrint > 0)
@@ -259,7 +259,7 @@ void HPresolve::removeDoubletonEquations() {
 							bndsU.push_back( make_pair( i, rowUpper.at(i)));
 							chk.rLowers.push(bndsL);
 							chk.rUppers.push(bndsU);
-							addChange(171, i, y);
+							addChange(DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE, i, y);
 						}
 
 						if (rowLower.at(i) > -HSOL_CONST_INF)
@@ -287,7 +287,7 @@ void HPresolve::removeDoubletonEquations() {
 								}
 							postValue.push(ARvalue[ind]);
 							postValue.push(y);
-							addChange(173, i, x);
+							addChange(DOUBLETON_EQUATION_X_ZERO_INITIALLY, i, x);
 
 							ARindex[ind] = x;
 							ARvalue[ind] = -aiy*akx/aky;
@@ -341,7 +341,7 @@ void HPresolve::removeDoubletonEquations() {
 								//cout<<"case: x still there row "<<i<<" "<<endl;
 
 								postValue.push(ARvalue[ind]);
-								addChange(172, i, x);
+								addChange(DOUBLETON_EQUATION_NEW_X_NONZERO, i, x);
 								ARvalue[ind] = xNew;
 
 								if (iKKTcheck == 1)
@@ -385,7 +385,7 @@ void HPresolve::removeDoubletonEquations() {
 									}
 
 
-									addChange(174, i, x);
+									addChange(DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE, i, x);
 								}
 
 								if (nzCol[x] > 0) {
@@ -409,7 +409,7 @@ void HPresolve::removeDoubletonEquations() {
 
 									}
 									Aend[x]--;
-									addChange(175, i, x);
+									addChange(DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE, i, x);
 								}
 
 								//update nz col
@@ -713,7 +713,7 @@ void HPresolve::removeIfFixed(int j) {
 		if (colLower.at(j) == colUpper.at(j)) {
 
 			setPrimalValue(j, colUpper.at(j));
-			addChange(7,0,j);
+			addChange(FIXED_COL,0,j);
 			if (iPrint > 0)
 				cout<<"PR: Fixed variable "<<j<<" = "<<colUpper.at(j)<<". Column eliminated."<< endl;
 			countRemovedCols[FIXED_COL]++;
@@ -737,7 +737,7 @@ void HPresolve::removeEmptyRow(int i) {
 			cout<<"PR: Empty row "<<i<<" removed. "<<endl;
 		flagRow.at(i) = 0;
 		valueRowDual.at(i) = 0;
-		addChange(0, i, 0);
+		addChange(EMPTY_ROW, i, 0);
 	}
 	else {
 		if (iPrint > 0)
@@ -773,7 +773,7 @@ void HPresolve::removeEmptyColumn(int j) {
 	setPrimalValue(j, value);
 	valueColDual.at(j) = colCost.at(j);
 
-	addChange(6, 0, j);
+	addChange(EMPTY_COL, 0, j);
 
 	if (iPrint > 0)
 		cout<<"PR: Column: "<<j<<" eliminated: all nonzero rows have been removed. Cost = "<< colCost.at(j) <<", value = "<<value<<endl;
@@ -894,7 +894,7 @@ void HPresolve::removeDominatedColumns() {
 					return;
 				}
 				setPrimalValue(j, colLower.at(j));
-				addChange(9, 0, j);
+				addChange(DOMINATED_COLS, 0, j);
 				if (iPrint > 0)
 					cout<<"PR: Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
 				timer.recordFinish(DOMINATED_COLS);
@@ -908,7 +908,7 @@ void HPresolve::removeDominatedColumns() {
 					return;
 				}
 				setPrimalValue(j, colUpper.at(j));
-				addChange(9, 0, j);
+				addChange(DOMINATED_COLS, 0, j);
 				if (iPrint > 0)
 					cout<<"PR: Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
 				timer.recordFinish(DOMINATED_COLS);
@@ -930,7 +930,7 @@ void HPresolve::removeDominatedColumns() {
 					if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HSOL_CONST_INF) {
 						timer.recordStart(WEAKLY_DOMINATED_COLS);
 						setPrimalValue(j, colLower.at(j));
-						addChange(10, 0, j);
+						addChange(WEAKLY_DOMINATED_COLS, 0, j);
 						if (iPrint > 0)
 							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
 						countRemovedCols[WEAKLY_DOMINATED_COLS]++;
@@ -939,7 +939,7 @@ void HPresolve::removeDominatedColumns() {
 					else if (abs(colCost.at(j) - e) < tol && colUpper.at(j) < HSOL_CONST_INF) {
 						timer.recordStart(WEAKLY_DOMINATED_COLS);
 						setPrimalValue(j, colUpper.at(j));
-						addChange(10, 0, j);
+						addChange(WEAKLY_DOMINATED_COLS, 0, j);
 						if (iPrint > 0)
 							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
 						countRemovedCols[WEAKLY_DOMINATED_COLS]++;
@@ -1092,7 +1092,7 @@ void HPresolve::removeColumnSingletons()  {
 
 				valueColDual.at(col) = 0;
 				valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k);
-				addChange(4, i, col);
+				addChange(FREE_SING_COL, i, col);
 				removeRow(i);
 				it = singCol.erase(it);
 				countRemovedCols[FREE_SING_COL]++;
@@ -1196,7 +1196,7 @@ void HPresolve::removeColumnSingletons()  {
 				valueColDual.at(col) = 0;
 				valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k); //may be changed later, depending on bounds.
 
-				addChange(5, i, col);
+				addChange(SING_COL_DOUBLETON_INEQ, i, col);
 				
 				if (nzCol.at(j) > 1)
 					removeRow(i);
@@ -1233,7 +1233,7 @@ void HPresolve::removeColumnSingletons()  {
 							value = colLower.at(j);
 					}
 					setPrimalValue(j, value);
-					addChange(19, 0, j);
+					addChange(SING_COL_DOUBLETON_INEQ_SECOND_SING_COL, 0, j);
 					if (iPrint > 0)
 						cout<<"PR: Second singleton column "<<j<<" in doubleton row "<<i<< " removed.\n";
 					countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
@@ -1386,7 +1386,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 
 		valueColDual.at(col) = 0;
 		valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k);
-		addChange(8, i, col);
+		addChange(IMPLIED_FREE_SING_COL, i, col);
 		removeRow(i);
 		return true;
 
@@ -1531,7 +1531,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				if (iPrint > 0)
 					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:   nzRow="<<nzRow.at(i)<<endl;
 				flagRow.at(i) = 0;
-	        	addChange(3, i, 0);
+	        	addChange(FORCING_ROW, i, 0);
 				k = ARstart.at(i);
 				while (k<ARstart.at(i+1)) {
 					j = ARindex.at(k);
@@ -1547,7 +1547,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						bnds.push_back(colLower.at(j));
 						bnds.push_back(colUpper.at(j));
 						oldBounds.push(make_pair( j, bnds));
-						addChange(2, 0, j);
+						addChange(FORCING_ROW_VARIABLE, 0, j);
 						
 						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
@@ -1563,7 +1563,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 				if (iPrint > 0)
 					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:"<<endl;
 				flagRow.at(i) = 0;
-	        	addChange(3, i, 0);
+	        	addChange(FORCING_ROW, i, 0);
 				k = ARstart.at(i);
 				while (k<ARstart.at(i+1)) {
 					j = ARindex.at(k);
@@ -1579,7 +1579,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 						bnds.push_back(colLower.at(j));
 						bnds.push_back(colUpper.at(j));
 						oldBounds.push(make_pair( j, bnds));
-						addChange(2, 0, j);
+						addChange(FORCING_ROW_VARIABLE, 0, j);
 						if (iPrint > 0)
 							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
 						countRemovedCols[FORCING_ROW]++;
@@ -1593,7 +1593,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 			//constraint is satisfied
 			else if (g >= rowLower.at(i) && h <= rowUpper.at(i)) {
 				removeRow(i);
-				addChange(16, i, 0);
+				addChange(REDUNDANT_ROW, i, 0);
 				if (iPrint > 0)
 					cout<<"PR: Redundant row "<<i<<" removed."<<endl;
 				countRemovedRows[REDUNDANT_ROW]++;
@@ -1767,10 +1767,10 @@ void HPresolve::removeRowSingletons() {
 
 		if (iPrint > 0)
 			cout<<"PR: Singleton row "<<i<<" removed. Bounds of variable  "<<j<<" modified: l= "<<colLower.at(j) <<" u="<< colUpper.at(j) << ", aij = "<<aij<<endl;
-		addChange(1, i, j);
+
+		addChange(SING_ROW, i, j);
 		postValue.push(colCost.at(j));
 		removeRow(i);
-
 
 		if (flagCol.at(j) && colLower.at(j) == colUpper.at(j))
 			removeIfFixed(j);
@@ -1873,29 +1873,6 @@ void HPresolve::checkForChanges(int iteration) {
 	else
 		resizeProblem();
 }
-
-
-bool HPresolve::checkIfRedundant(int r, int type, double bound) { //>= 1, <= 2
-	double rval = 0;
-	
-	for (int k = ARstart[r]; k<ARstart[r+1];++k )
-		if ( (((type==1) && ARvalue.at(k)>0)  || ((type==2) && ARvalue.at(k)<0)))
-			if (colLower[ARindex.at(k)]>-HSOL_CONST_INF)
-				rval += colLower[ARindex.at(k)]*ARvalue.at(k) ;
-			else return false;
-		else if ( (((type==1) && ARvalue.at(k)<0)  || ((type==2) && ARvalue.at(k)>0)))
-			if (colUpper[ARindex.at(k)]<HSOL_CONST_INF)
-				rval += colUpper[ARindex.at(k)]*ARvalue.at(k) ;
-			else return false;
-	if (type==1 && rval >= bound)
-		return true;
-	if (type==2 && rval <= bound)
-		return true;
-	return false;
-}
-
-
-
 
 
 void HPresolve::reportTimes() {
@@ -2285,7 +2262,7 @@ void HPresolve::postsolve() {
 
 			setBasisElement(c);
 			switch(c.type) {
-				case 17: { //Doubleton equation row
+				case DOUBLETON_EQUATION: { //Doubleton equation row
 					getDualsDoubletonEquation(c.row,c.col);
 
 					if (iKKTcheck == 1) {
@@ -2297,12 +2274,14 @@ void HPresolve::postsolve() {
 					//exit(2);
 					break;
 				}
-				case 171: { //new bounds from doubleton equation, retrieve old ones
+				case DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE: {
+					//new bounds from doubleton equation, retrieve old ones
 					//just for KKT check, not called otherwise
 					chk.addChange(171, c.row, c.col, 0, 0, 0);
 					break;
 				}
-				case 172: { //matrix transformation from doubleton equation, case x still there
+				case DOUBLETON_EQUATION_NEW_X_NONZERO: {
+					//matrix transformation from doubleton equation, case x still there
 					//case new x is not 0
 					//just change value of entry in row for x
 
@@ -2322,7 +2301,8 @@ void HPresolve::postsolve() {
 
 					break;
 				}
-			case 173: { //matrix transformation from doubleton equation, retrieve old value
+			case DOUBLETON_EQUATION_X_ZERO_INITIALLY: {
+				//matrix transformation from doubleton equation, retrieve old value
 				//case when row does not have x initially: entries for row i swap x and y cols
 
 				int indi, yindex;
@@ -2371,7 +2351,8 @@ void HPresolve::postsolve() {
 
 				break;
 			}
-			case 174: { //sp case x disappears row representation change
+			case DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE: {
+				//sp case x disappears row representation change
 				int indi;
 				for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
 						if (ARindex[indi]==numColOriginal)
@@ -2388,7 +2369,8 @@ void HPresolve::postsolve() {
 
 				break;
 			}
-			case 175: { //sp case x disappears column representation change
+			case DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE: {
+				//sp case x disappears column representation change
 				//here A is copied from AR array at end of presolve so need to expand x column
 				//Aend[c.col]++; wouldn't do because old value is overriden
 				double oldXvalue = postValue.top();postValue.pop();
@@ -2407,7 +2389,7 @@ void HPresolve::postsolve() {
 
 				break;
 			}
-				case 0: {//empty row
+				case EMPTY_ROW: {
 					valueRowDual[c.row] = 0;
 					flagRow[c.row] = 1;
 					if (iKKTcheck == 1) {
@@ -2418,7 +2400,7 @@ void HPresolve::postsolve() {
 						}
 					break;
 				}
-				case 1: {//sing row
+				case SING_ROW: {
 					//valuePrimal is already set for this one, colDual also, we need rowDual. AR copy keeps full matrix.
 					//col dual maybe infeasible, we need to check.
 					//recover old bounds and see
@@ -2432,13 +2414,13 @@ void HPresolve::postsolve() {
 						}
 					break;
 				}
-				case 2: //variables set at a bound by forcing row
+				case FORCING_ROW_VARIABLE:
 					fRjs.push_back(c.col);
 					flagCol[c.col] = 1;
 					if (iKKTcheck == 1 && valuePrimal[c.col] != 0)
 						chk.addChange(22, c.row, c.col, 0, 0, 0);
 					break;
-				case 3: {//forcing row
+				case FORCING_ROW: {
 
 					string str = getDualsForcingRow( c.row, fRjs);
 
@@ -2451,7 +2433,7 @@ void HPresolve::postsolve() {
 					fRjs.clear();
 					break;
 				}
-				case 16: {//redundant row
+				case REDUNDANT_ROW: {
 					valueRowDual[c.row] = 0;
 
 					flagRow[c.row] = 1;
@@ -2464,9 +2446,8 @@ void HPresolve::postsolve() {
 						}
 					break;
 				}
-				case 4 : case 8: { //implied free
+				case FREE_SING_COL : case IMPLIED_FREE_SING_COL: {
 					//colDual rowDual already set.
-
 					//calculate row value without xj
 					double aij = getaij(c.row,c.col);
 					double sum = 0;
@@ -2536,16 +2517,16 @@ void HPresolve::postsolve() {
 
 					if (iKKTcheck == 1) {
 						chk.addCost(c.col, costAtTimeOfElimination);
-						if (c.type == 4 && chk.print == 1)
+						if (c.type == FREE_SING_COL && chk.print == 1)
 							cout<<"----KKT check after free col singleton "<<c.col <<" re-introduced. Row: "<<c.row<<" -----\n";
-						else if (c.type == 8 && chk.print == 1)
+						else if (c.type == IMPLIED_FREE_SING_COL && chk.print == 1)
 							cout<<"----KKT check after implied free col singleton "<<c.col <<" re-introduced. Row: "<<c.row<<" -----\n";
 						chk.addChange(4, c.row, c.col, valuePrimal[c.col], valueColDual[c.col], valueRowDual[c.row]);
 						chk.makeKKTCheck();
 						}
 					break;
 				}
-				case 5: {
+				case SING_COL_DOUBLETON_INEQ: {
 					// column singleton in a doubleton equation.
 					// colDual already set. need valuePrimal from stack. maybe change rowDual depending on bounds. old bounds kept in oldBounds.
 					// variables j,k : we eliminated j and are left with changed bounds on k and no row.
@@ -2684,8 +2665,9 @@ void HPresolve::postsolve() {
 					//exit(2);
 					break;
 				}
-				case 6: case 9: case 10: {//empty column: got valuePrimal, need colDual, also dominated column and weakly dominated column
-					if (c.type != 6) {
+				case EMPTY_COL: case DOMINATED_COLS: case WEAKLY_DOMINATED_COLS: {
+					//got valuePrimal, need colDual
+					if (c.type != EMPTY_COL) {
 						z = colCostAtEl[c.col];
 						for (int k=Astart[c.col]; k<Astart[c.col+1];++k )
 							if (flagRow.at(Aindex.at(k)))
@@ -2696,11 +2678,11 @@ void HPresolve::postsolve() {
 
 					flagCol[c.col] = 1;
 					if (iKKTcheck == 1) {
-						if (c.type == 6 && chk.print == 1)
+						if (c.type == EMPTY_COL && chk.print == 1)
 							cout<<"----KKT check after empty column "<<c.col <<" re-introduced.-----------\n";
-						else if (c.type == 9 && chk.print == 1)
+						else if (c.type == DOMINATED_COLS && chk.print == 1)
 							cout<<"----KKT check after dominated column "<<c.col <<" re-introduced.-----------\n";
-						else if (c.type == 10 && chk.print == 1)
+						else if (c.type == WEAKLY_DOMINATED_COLS && chk.print == 1)
 							cout<<"----KKT check after weakly dominated column "<<c.col <<" re-introduced.-----------\n";
 
 						chk.addChange(6, 0, c.col, valuePrimal[c.col], valueColDual[c.col], 0);
@@ -2709,8 +2691,8 @@ void HPresolve::postsolve() {
 					break;
 				}
 
-				case 7: { //fixed variable: got valuePrimal, need colDual
-
+				case FIXED_COL: {
+					//got valuePrimal, need colDual
 					valueColDual[c.col] = getColumnDualPost(c.col);
 
 					flagCol[c.col] = 1;
@@ -2722,45 +2704,6 @@ void HPresolve::postsolve() {
 					}
 					break;
 				}
-				case 11: {//empty row from duplucate rows
-					valueRowDual[c.row] = 0;
-					flagRow[c.row] = 1;
-
-					//check duals
-					pair< int ,vector<double>> p = oldBounds.top(); oldBounds.pop();
-					vector<double> vv = get<1>(p);
-					double ubOld = vv[1];
-					double lbOld = vv[0];
-					double ubNew = vv[2];
-					double lbNew = vv[3];
-
-					//then the linear transformation of A
-					double v = postValue.top(); postValue.pop();
-					int i = (int) postValue.top(); postValue.pop();
-					int k = (int) postValue.top(); postValue.pop();
-
-					if (k!=c.row)
-						cout<<"PR: Error in postsolving implied free row after duplicate row "<<i<<" added to row "<<k<<" "<<v<<" times. ";
-
-					double rv = getRowValue(i);
-
-					if ((valueRowDual.at(i) != 0 && rv == lbNew && lbNew > lbOld) ||
-						(valueRowDual.at(i) != 0 && rv == ubNew && ubNew < ubOld)) {
-						valueRowDual.at(k) = valueRowDual.at(i)/v;
-						valueRowDual.at(i) = 0;
-						if (iKKTcheck == 1)
-							chk.addChange(21, i, 0, 0, 0, 0);
-					}
-
-					if (iKKTcheck == 1) {
-						if (chk.print == 1)
-							cout<<"----KKT check after empty row "<<c.row <<" from duplucate rows re-introduced-----\n";
-						chk.addChange(11, c.row, 0, 0, 0, valueRowDual.at(k));
-						chk.makeKKTCheck();
-						}
-					break;
-				}
-
 			}
 			//cmpNBF(c.row, c.col);
 		}
@@ -2830,33 +2773,35 @@ void HPresolve::setBasisElement(change c) {
         //increased to [numColOriginal + numRowOriginal] so fill in gaps
 
         switch (c.type) {
-                        case 0: {//empty row
+                        case EMPTY_ROW: {
                                 nonbasicFlag[numColOriginal + c.row] = 0;
                                 break;
                         }
-                        case 1: {//sing row : elsewhere
+                        case SING_ROW: {
+                        	//elsewhere
                                 break;
                         }
-                        case 2: // variables set at a bound by forcing row fRjs.p
+                        case FORCING_ROW_VARIABLE:
+                        	// variables set at a bound by forcing row fRjs.p
                         		// all nonbasic
 
                                 break;
-                        case 3: {//forcing row
+                        case FORCING_ROW: {
                         		nonbasicFlag[numColOriginal + c.row] = 0;
                                 break;
                         }
-                        case 16: {//redundant row
+                        case REDUNDANT_ROW: {
                                 nonbasicFlag[numColOriginal + c.row] = 0;
                                 break;
                         }
-                        case 4 : case 8: { //(implied) free
+                        case FREE_SING_COL : case IMPLIED_FREE_SING_COL: {
                                 nonbasicFlag[c.col] = 0;
                                 basicIndex.push_back(c.col);
 
                                 nonbasicFlag[numColOriginal + c.row] = 1;
                                 break;
                         }
-                        case 5: {
+                        case SING_COL_DOUBLETON_INEQ: {
                                 // column singleton in a doubleton inequality.
                                 nonbasicFlag[c.col] = 0;
                                 basicIndex.push_back(c.col);
@@ -2864,14 +2809,14 @@ void HPresolve::setBasisElement(change c) {
                                 nonbasicFlag[numColOriginal + c.row] = 1;
                                 break;
                         }
-                        case 6: case 9: case 10: {//empty column, also dominated
+                        case EMPTY_COL: case DOMINATED_COLS: case WEAKLY_DOMINATED_COLS: {
                                 nonbasicFlag[c.col] = 1;
                                 break;
                         }
-                        case 7: { //fixed variable:
+                        case FIXED_COL: { //fixed variable:
                         		//check if it was NOT after singRow
                         		if (chng.size() > 0)
-									if (chng.top().type!=1)
+									if (chng.top().type != SING_ROW)
 										nonbasicFlag[c.col] = 1;
                                 break;
                         }
