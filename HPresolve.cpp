@@ -149,7 +149,7 @@ void HPresolve::removeDoubletonEquations() {
 
 				//singletons skip this
 				for (int k = Astart[y]; k<Aend[y];++k )
-					if (flagRow[Aindex.at(k)]) {
+					if (flagRow.at(Aindex.at(k))) {
 						int i = Aindex.at(k);
 						if (i==row)
 							continue;
@@ -249,7 +249,7 @@ void HPresolve::removeDoubletonEquations() {
 				vector<pair<int, double>> bndsL, bndsU;
 
 				for (int k = Astart[y]; k<Aend[y];++k )
-					if (flagRow[Aindex.at(k)] && Aindex.at(k) != row) {
+					if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
 						int i = Aindex.at(k);
 						double aiy = Avalue.at(k);
 
@@ -463,7 +463,7 @@ void HPresolve::trimA() {
 			int k = vp.at(i).first; // = Astarttmp.at(col)
 			Astart.at(col) = iPut;
 			while(k < Aendtmp.at(col)) {
-				if (flagRow[Aindex.at(k)]) {
+				if (flagRow.at(Aindex.at(k))) {
 					Avalue[iPut] = Avalue.at(k);
 					Aindex[iPut] = Aindex.at(k);
 
@@ -719,7 +719,7 @@ void HPresolve::removeIfFixed(int j) {
 			countRemovedCols[FIXED]++;
 
 			for (int k = Astart.at(j); k < Aend.at(j);++k ) {
-				if (flagRow[Aindex.at(k)]) {
+				if (flagRow.at(Aindex.at(k))) {
 					int i = Aindex.at(k);
 
 					if (nzRow.at(i) == 0) {
@@ -1800,42 +1800,45 @@ void HPresolve::setPrimalValue(int j, double value) {
 	
 	//update nonzeros
 	for(int k=Astart.at(j);k<Aend.at(j);++k ) {
-			int i = Aindex.at(k);
-			if (flagRow.at(i)) {
-				nzRow.at(i)--;
+		int i = Aindex.at(k);
+		if (flagRow.at(i)) {
+			nzRow.at(i)--;
 
-			//update singleton row list
-			if (nzRow.at(i)==1)
-				singRow.push_back(i);
-			if (nzRow.at(i)==0)
-				singRow.remove(i);
-
-			}
+		//update singleton row list
+		if (nzRow.at(i)==1)
+			singRow.push_back(i);
+		else if (nzRow.at(i)==0)
+			singRow.remove(i);
 		}
+	}
 	
 	//update values if necessary 
 	if (fabs(value)>0) {
 		//RHS
 		vector<pair<int, double>> bndsL, bndsU;
-		for(int k=Astart.at(j);k<Aend.at(j);++k )
-			if (flagRow[Aindex.at(k)]) {
+
+		for(int k=Astart.at(j);k<Aend.at(j);++k)
+			if (flagRow.at(Aindex.at(k))) {
 				if (iKKTcheck == 1) {
-		        	bndsL.push_back( make_pair( Aindex.at(k), rowLower[Aindex.at(k)]));
-					bndsU.push_back( make_pair( Aindex.at(k), rowUpper[Aindex.at(k)]));
+		        	bndsL.push_back( make_pair( Aindex.at(k), rowLower.at(Aindex.at(k))));
+					bndsU.push_back( make_pair( Aindex.at(k), rowUpper.at(Aindex.at(k))));
 				}
-				if (rowLower[Aindex.at(k)] > -HSOL_CONST_INF)
-					rowLower[Aindex.at(k)] -= Avalue.at(k)*value;
-				if (rowUpper[Aindex.at(k)] < HSOL_CONST_INF)
-					rowUpper[Aindex.at(k)] -= Avalue.at(k)*value;
-				if (implRowValueLower[Aindex.at(k)] > -HSOL_CONST_INF)
-					implRowValueLower[Aindex.at(k)] -= Avalue.at(k)*value;
-				if (implRowValueUpper[Aindex.at(k)] < HSOL_CONST_INF )
-					implRowValueUpper[Aindex.at(k)] -= Avalue.at(k)*value;
+				if (rowLower.at(Aindex.at(k)) > -HSOL_CONST_INF)
+					rowLower.at(Aindex.at(k)) -= Avalue.at(k)*value;
+				if (rowUpper.at(Aindex.at(k)) < HSOL_CONST_INF)
+					rowUpper.at(Aindex.at(k)) -= Avalue.at(k)*value;
+
+				if (implRowValueLower.at(Aindex.at(k)) > -HSOL_CONST_INF)
+					implRowValueLower.at(Aindex.at(k)) -= Avalue.at(k)*value;
+				if (implRowValueUpper.at(Aindex.at(k)) < HSOL_CONST_INF)
+					implRowValueUpper.at(Aindex.at(k)) -= Avalue.at(k)*value;
 			}
+
 		if (iKKTcheck == 1) {
 			chk.rLowers.push(bndsL);
 			chk.rUppers.push(bndsU);
 		}
+
 		//shift objective 
 		if (colCost.at(j) != 0)
 			objShift += colCost.at(j)*value;
@@ -2056,7 +2059,7 @@ int HPresolve::getSingRowElementIndexInAR(int i) {
 
 int HPresolve::getSingColElementIndexInA(int j) {
 	int k=Astart.at(j);
-    while (!flagRow[Aindex.at(k)])
+    while (!flagRow.at(Aindex.at(k)))
            ++k ;
     return k;
 }
@@ -2134,7 +2137,7 @@ int HPresolve::testSingRows(int i) {
 int HPresolve::testSingCols(int i) {
 	int out = -1;
 	int k=Astart.at(i);
-    while (!flagRow[Aindex.at(k)])
+    while (!flagRow.at(Aindex.at(k)))
            ++k ;
             
 	if (k>=Aend.at(i)) {
@@ -2144,7 +2147,7 @@ int HPresolve::testSingCols(int i) {
 	else 
 		out = k;
 	k++;
-	while (k<Aend.at(i) && !flagRow[Aindex.at(k)] )
+	while (k<Aend.at(i) && !flagRow.at(Aindex.at(k)) )
 		k++;
 	if (k<Aend.at(i)) {
 		cout<< "more than one flagRow is true. j="<<i<<endl;
@@ -2214,7 +2217,7 @@ void HPresolve::testAnAR(int post) {
 				continue;
 			nz=0;
 			for (k = Astart.at(j); k<Aend.at(j);++k )
-				if (flagRow[Aindex.at(k)])
+				if (flagRow.at(Aindex.at(k)))
 					nz++;
 			if (nz != nzCol.at(j))
 				cout<<"    NZ COL      DIFF col="<<j<< " nzCol="<<nzCol.at(j)<<" actually "<<nz <<"------------"<<endl;
@@ -2700,8 +2703,8 @@ void HPresolve::postsolve() {
 					if (c.type != 6) {
 						z = colCostAtEl[c.col];
 						for (int k=Astart[c.col]; k<Astart[c.col+1];++k )
-							if (flagRow[Aindex.at(k)])
-								z = z + valueRowDual[Aindex.at(k)]*Avalue.at(k);
+							if (flagRow.at(Aindex.at(k)))
+								z = z + valueRowDual.at(Aindex.at(k))*Avalue.at(k);
 						valueColDual[c.col] = z;
 					}
 
@@ -3148,9 +3151,9 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 			cost = valueColDual.at(j);
 			sum = 0;
 			for (int k=Astart.at(j); k<Aend.at(j);++k )
-				if (flagRow[Aindex.at(k)]) {
-					sum = sum + valueRowDual[Aindex.at(k)]*Avalue.at(k);
-					//cout<<" row "<<Aindex.at(k)<<" dual "<<valueRowDual[Aindex.at(k)]<<" a_"<<Aindex.at(k)<<"_"<<j<<"\n";
+				if (flagRow.at(Aindex.at(k))) {
+					sum = sum + valueRowDual.at(Aindex.at(k))*Avalue.at(k);
+					//cout<<" row "<<Aindex.at(k)<<" dual "<<valueRowDual.at(Aindex.at(k))<<" a_"<<Aindex.at(k)<<"_"<<j<<"\n";
 				}
 			z = cost + sum;
 
@@ -3192,8 +3195,8 @@ void HPresolve::getDualsSingletonRow( int row, int col ) {
 
 		double sum = 0;
 		for (int k=Astart.at(col); k<Aend.at(col);++k )
-			if (flagRow[Aindex.at(k)])
-				sum = sum + valueRowDual[Aindex.at(k)]*Avalue.at(k);
+			if (flagRow.at(Aindex.at(k)))
+				sum = sum + valueRowDual.at(Aindex.at(k))*Avalue.at(k);
 
 		flagRow.at(row) = 1;
 
@@ -3293,9 +3296,9 @@ void HPresolve::getDualsSingletonRow( int row, int col ) {
 
 					sum = 0;
 					for (int k=Astart.at(col); k<Aend.at(col);++k )
-						if (flagRow[Aindex.at(k)]) {
-							sum = sum + valueRowDual[Aindex.at(k)]*Avalue.at(k);
-							//cout<<" row "<<Aindex.at(k)<<" dual "<<valueRowDual[Aindex.at(k)]<<" a_"<<Aindex.at(k)<<"_"<<j<<"\n";
+						if (flagRow.at(Aindex.at(k))) {
+							sum = sum + valueRowDual.at(Aindex.at(k))*Avalue.at(k);
+							//cout<<" row "<<Aindex.at(k)<<" dual "<<valueRowDual.at(Aindex.at(k))<<" a_"<<Aindex.at(k)<<"_"<<j<<"\n";
 						}
 					double newz = cost + sum;
 					if ((valueColDual.at(col) > 0 && newz < 0) ||
