@@ -1536,16 +1536,80 @@ void HPresolve::setVariablesToBoundForForcingRow(const int row, const bool isLow
 	countRemovedRows[FORCING_ROW]++;
 }
 
-void HPresolve::dominatedConstraintProcedure(const int i) {
+void HPresolve::dominatedConstraintProcedure(const int i, const double g, const double h) {
+	int j;
+	double val;
+	if (h < HSOL_CONST_INF) {
 
+		//fill in implied bounds arrays
+		if (h < implRowValueUpper.at(i)) {
+			implRowValueUpper.at(i) = h;
+		}
+		if (h <= rowUpper.at(i))
+			implRowDualLower.at(i) = 0;
+
+		//calculate implied bounds for discovering free column singletons
+		timer.recordStart(DOMINATED_ROW_BOUNDS);
+		for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
+			j = ARindex.at(k);
+			if (flagCol.at(j)) {
+				if (ARvalue.at(k) < 0 && colLower.at(j) > -HSOL_CONST_INF) {
+					val = (rowLower.at(i) - h) / ARvalue.at(k) + colLower.at(j);
+					if (val < implColUpper.at(j)) {
+						implColUpper.at(j) = val;
+						implColUpperRowIndex.at(j) = i;
+					}
+				} else if (ARvalue.at(k) > 0
+						&& colUpper.at(j) < HSOL_CONST_INF) {
+					val = (rowLower.at(i) - h) / ARvalue.at(k) + colUpper.at(j);
+					if (val > implColLower.at(j)) {
+						implColLower.at(j) = val;
+						implColLowerRowIndex.at(j) = i;
+					}
+				}
+			}
+		}
+		timer.recordFinish(DOMINATED_ROW_BOUNDS);
+	}
+	if (g > -HSOL_CONST_INF) {
+
+		//fill in implied bounds arrays
+		if (g > implRowValueLower.at(i)) {
+			implRowValueLower.at(i) = g;
+		}
+		if (g >= rowLower.at(i))
+			implRowDualUpper.at(i) = 0;
+
+		//calculate implied bounds for discovering free column singletons
+		timer.recordStart(DOMINATED_ROW_BOUNDS);
+		for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
+			int j = ARindex.at(k);
+			if (flagCol.at(j)) {
+				if (ARvalue.at(k) < 0 && colUpper.at(j) < HSOL_CONST_INF) {
+					val = (rowUpper.at(i) - g) / ARvalue.at(k) + colUpper.at(j);
+					if (val > implColLower.at(j)) {
+						implColLower.at(j) = val;
+						implColLowerRowIndex.at(j) = i;
+					}
+				} else if (ARvalue.at(k) > 0
+						&& colLower.at(j) > -HSOL_CONST_INF) {
+					val = (rowUpper.at(i) - g) / ARvalue.at(k) + colLower.at(j);
+					if (val < implColUpper.at(j)) {
+						implColUpper.at(j) = val;
+						implColUpperRowIndex.at(j) = i;
+					}
+				}
+			}
+		}
+		timer.recordFinish(DOMINATED_ROW_BOUNDS);
+	}
 }
 
 void HPresolve::removeForcingConstraints(int mainIter) {
 	double val, g, h;
 	pair<double, double> implBounds;
 
-	int i,j,k;
-	for (i = 0; i < numRow; ++i)
+	for (int i = 0; i < numRow; ++i)
 		if (flagRow.at(i)) {
 			if (nzRow.at(i) == 0) {
 				removeEmptyRow(i);
@@ -1586,76 +1650,11 @@ void HPresolve::removeForcingConstraints(int mainIter) {
 					cout << "PR: Redundant row " << i << " removed." << endl;
 				countRemovedRows[REDUNDANT_ROW]++;
 			}
-			//Dominated constraints:
-			else if (h < HSOL_CONST_INF) {
-				//fill in implied bounds arrays
-				if (h < implRowValueUpper.at(i)) {
-					implRowValueUpper.at(i) = h;
-				} //	 cout<<"NEW UB row "<<i<< "iter = "<<mainIter<<endl; }
-				if (h <= rowUpper.at(i))
-					implRowDualLower.at(i) = 0;
-
-				//calculate implied bounds for discovering free column singletons
-				timer.recordStart(DOMINATED_ROW_BOUNDS);
-				for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
-					j = ARindex.at(k);
-					if (flagCol.at(j)) {
-						if (ARvalue.at(k) < 0
-								&& colLower.at(j) > -HSOL_CONST_INF) {
-							val = (rowLower.at(i) - h) / ARvalue.at(k)
-									+ colLower.at(j);
-							if (val < implColUpper.at(j)) {
-								implColUpper.at(j) = val;
-								implColUpperRowIndex.at(j) = i;
-							}
-						} else if (ARvalue.at(k) > 0
-								&& colUpper.at(j) < HSOL_CONST_INF) {
-							val = (rowLower.at(i) - h) / ARvalue.at(k)
-									+ colUpper.at(j);
-							if (val > implColLower.at(j)) {
-								implColLower.at(j) = val;
-								implColLowerRowIndex.at(j) = i;
-							}
-						}
-					}
-				}
-				timer.recordFinish(DOMINATED_ROW_BOUNDS);
-			} else if (g > -HSOL_CONST_INF) {
-				//fill in implied bounds arrays
-				if (g > implRowValueLower.at(i)) {
-					implRowValueLower.at(i) = g;
-				} //cout<<"NEW LB row "<<i<< "iter = "<<mainIter<<endl; }
-				if (g >= rowLower.at(i))
-					implRowDualUpper.at(i) = 0;
-
-				//calculate implied bounds for discovering free column singletons
-				timer.recordStart(DOMINATED_ROW_BOUNDS);
-				for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
-					j = ARindex.at(k);
-					if (flagCol.at(j)) {
-						if (ARvalue.at(k) < 0
-								&& colUpper.at(j) < HSOL_CONST_INF) {
-							val = (rowUpper.at(i) - g) / ARvalue.at(k)
-									+ colUpper.at(j);
-							if (val > implColLower.at(j)) {
-								implColLower.at(j) = val;
-								implColLowerRowIndex.at(j) = i;
-							}
-						} else if (ARvalue.at(k) > 0
-								&& colLower.at(j) > -HSOL_CONST_INF) {
-							val = (rowUpper.at(i) - g) / ARvalue.at(k)
-									+ colLower.at(j);
-							if (val < implColUpper.at(j)) {
-								implColUpper.at(j) = val;
-								implColUpperRowIndex.at(j) = i;
-							}
-						}
-					}
-				}
-				timer.recordFinish(DOMINATED_ROW_BOUNDS);
+			//Dominated constraints
+			else {
+				dominatedConstraintProcedure(i,g,h);
 			}
 		}
-
 }					
 
 
