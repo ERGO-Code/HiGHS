@@ -83,26 +83,38 @@ private:
 
 
 	//functions
+	void setPrimalValue(int j, double value);
     void checkForChanges(int iteration);
-    void setPrimalValue(int j, double value);
     void resizeProblem();
+	void resizeImpliedBounds();
+
+	//easy transformations
+    void removeIfFixed(int j);
+    void removeEmptyRow(int i);
+    void removeEmptyColumn(int j);
+    void removeRow(int i);
+
+    void addChange(int type, int row, int col);
+
+    //singleton rows
     void removeRowSingletons();
     int  getSingRowElementIndexInAR(int i);
     int  getSingColElementIndexInA(int j);
-    void removeForcingConstraints(int mainIter);
-    void removeRow(int i);
-    void removeColumnSingletons();
-    void addChange(int type, int row, int col);
 
-    void removeDominatedColumns();
-    bool removeIfImpliedFree(int col, int i, int k);
+    //forcing constraints
+    void removeForcingConstraints(int mainIter);
+    pair<double, double> getImpliedRowBounds(int row);
+
+    //doubleton equations
+    void removeDoubletonEquations();
     pair<double, double> getNewBoundsDoubletonConstraint(int row, int col, int j, double aik, double aij);
 
-	void removeIfFixed(int j);
-	void removeEmptyRow(int i);
-	void removeEmptyColumn(int j);
-	void resizeImpliedBounds();
-	void removeDoubletonEquations();
+    //column singletons
+    void removeColumnSingletons();
+    bool removeIfImpliedFree(int col, int i, int k);
+
+    //dominated columns
+    void removeDominatedColumns();
 
 
 //    void findDuplicateRows();
@@ -135,7 +147,7 @@ private:
 	string getDualsForcingRow( int row, vector<int>& fRjs);
 	void getDualsSingletonRow( int row, int col );
 	void getDualsDoubletonEquation(int row, int col);
-	void recordCounts(string fileName);
+	void recordCounts(const string fileName);
 	void trimA();
 
 	void setBasisElement(change c);

@@ -193,7 +193,7 @@ void HPresolve::removeDoubletonEquations() {
 
 				//add old bounds of x to checker and for postsolve
 				if (iKKTcheck == 1) {
-					vector<pair<int, double>> bndsL, bndsU, costS;
+					vector<pair<int, double> > bndsL, bndsU, costS;
 					bndsL.push_back( make_pair( x, colLower[x]));
 					bndsU.push_back( make_pair( x, colUpper[x]));
 					costS.push_back( make_pair( x, colCost[x]));
@@ -247,7 +247,7 @@ void HPresolve::removeDoubletonEquations() {
 					hasChange = true;
 
 
-				vector<pair<int, double>> bndsL, bndsU;
+				vector<pair<int, double> > bndsL, bndsU;
 
 				for (int k = Astart[y]; k<Aend[y];++k )
 					if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -612,9 +612,7 @@ void HPresolve::resizeProblem() {
 		myfile<<(numRowOriginal )<<"  &  "<<(numColOriginal ) << "  & ";
 		myfile<<(numRowOriginal - numRow)<<"  &  "<<(numColOriginal - numCol) << "  & "<<endl;
 
-
 		myfile.close();
-
 	}
 }
 
@@ -710,26 +708,27 @@ HPresolve::HPresolve() {
 }
 
 void HPresolve::removeIfFixed(int j) {
+	if (colLower.at(j) == colUpper.at(j)) {
 
-		if (colLower.at(j) == colUpper.at(j)) {
+		setPrimalValue(j, colUpper.at(j));
+		addChange(FIXED_COL, 0, j);
+		if (iPrint > 0)
+			cout << "PR: Fixed variable " << j << " = " << colUpper.at(j)
+					<< ". Column eliminated." << endl;
 
-			setPrimalValue(j, colUpper.at(j));
-			addChange(FIXED_COL,0,j);
-			if (iPrint > 0)
-				cout<<"PR: Fixed variable "<<j<<" = "<<colUpper.at(j)<<". Column eliminated."<< endl;
-			countRemovedCols[FIXED_COL]++;
+		countRemovedCols[FIXED_COL]++;
 
-			for (int k = Astart.at(j); k < Aend.at(j);++k ) {
-				if (flagRow.at(Aindex.at(k))) {
-					int i = Aindex.at(k);
+		for (int k = Astart.at(j); k < Aend.at(j); ++k) {
+			if (flagRow.at(Aindex.at(k))) {
+				int i = Aindex.at(k);
 
-					if (nzRow.at(i) == 0) {
-						removeEmptyRow(i);
-						countRemovedRows[FIXED_COL]++;
-					}
+				if (nzRow.at(i) == 0) {
+					removeEmptyRow(i);
+					countRemovedRows[FIXED_COL]++;
 				}
 			}
 		}
+	}
 }
 
 void HPresolve::removeEmptyRow(int i) {
@@ -752,7 +751,8 @@ void HPresolve::removeEmptyColumn(int j) {
 	flagCol.at(j) = 0;
 	singCol.remove(j);
 	double value;
-	if ((colCost.at(j) < 0 && colUpper.at(j) == HSOL_CONST_INF) || (colCost.at(j) > 0 && colLower.at(j) == -HSOL_CONST_INF) ) {
+	if ((colCost.at(j) < 0 && colUpper.at(j) ==  HSOL_CONST_INF) ||
+		(colCost.at(j) > 0 && colLower.at(j) == -HSOL_CONST_INF) ) {
 		if (iPrint > 0)
 			cout<<"PR: Problem unbounded."<<endl;
 		status = Unbounded;
@@ -770,14 +770,16 @@ void HPresolve::removeEmptyColumn(int j) {
 	else
 		value = colLower.at(j);
 
-	valuePrimal.at(j) = value;
 	setPrimalValue(j, value);
 	valueColDual.at(j) = colCost.at(j);
 
 	addChange(EMPTY_COL, 0, j);
 
 	if (iPrint > 0)
-		cout<<"PR: Column: "<<j<<" eliminated: all nonzero rows have been removed. Cost = "<< colCost.at(j) <<", value = "<<value<<endl;
+		cout << "PR: Column: " << j
+				<< " eliminated: all nonzero rows have been removed. Cost = "
+				<< colCost.at(j) << ", value = " << value << endl;
+
 	countRemovedCols[EMPTY_COL]++;
 }
 
@@ -1069,7 +1071,7 @@ void HPresolve::removeColumnSingletons()  {
 					cout<<"PR: Free column singleton "<<col<<" removed. Row "<<i<<" removed."<<endl;
 					
 				//modify costs
-				vector<pair<int, double>> newCosts;
+				vector<pair<int, double> > newCosts;
 				for (int kk=ARstart.at(i); kk<ARstart.at(i+1); ++kk) {
 					j = ARindex.at(kk);
 					if (flagCol.at(j) && j!=col) {
@@ -1143,7 +1145,7 @@ void HPresolve::removeColumnSingletons()  {
 				
 				//add old bounds of xj to checker and for postsolve
 				if (iKKTcheck == 1) {
-					vector<pair<int, double>> bndsL, bndsU, costS;
+					vector<pair<int, double> > bndsL, bndsU, costS;
 					bndsL.push_back( make_pair( j, colLower.at(j)));
 					bndsU.push_back( make_pair( j, colUpper.at(j)));
 					costS.push_back( make_pair( j, colCost.at(j)));
@@ -1363,7 +1365,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 		countRemovedRows[IMPLIED_FREE_SING_COL]++;
 
 		//modify costs
-		vector<pair<int, double>> newCosts;
+		vector<pair<int, double> > newCosts;
 		for (int kk=ARstart.at(i); kk<ARstart.at(i+1); ++kk) {
 			j = ARindex.at(kk);
 			if (flagCol.at(j) && j!=col) {
@@ -1413,7 +1415,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 void HPresolve::removeRow(int i) {
 	hasChange = true;
 	flagRow.at(i) = 0;
-	for(int k=ARstart.at(i);k<ARstart.at(i+1);++k ) {
+	for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
 		int j = ARindex.at(k);
 		if (flagCol.at(j)) {
 			nzCol.at(j)--;
@@ -1423,10 +1425,12 @@ void HPresolve::removeRow(int i) {
 				if (index >= 0)
 					singCol.push_back(j);
 				else
-					cout<<"Warning: Column "<<j<<" with 1 nz but not in singCol or? Row removing of "<<i<<". Ignored.\n";
+					cout << "Warning: Column " << j
+						 <<" with 1 nz but not in singCol or? Row removing of "
+						 << i << ". Ignored.\n";
 			}
 			//if it was a singleton column remove from list and problem
-			if (nzCol.at(j)==0)
+			if (nzCol.at(j) == 0)
 				removeEmptyColumn(j);
 		}
 	}
@@ -1438,6 +1442,10 @@ void HPresolve::fillStackRowBounds(int row) {
 	postValue.push(rowLower.at(row));
 }
 
+
+pair<double, double> HPresolve::getImpliedRowBounds(int row) {
+
+}
 
 void HPresolve::removeForcingConstraints(int mainIter) {
 	double val;
@@ -1671,7 +1679,7 @@ void HPresolve::removeRowSingletons() {
 
 		//add old bounds OF X to checker and for postsolve
 		if (iKKTcheck == 1) {
-			vector<pair<int, double>> bndsL, bndsU, costS;
+			vector<pair<int, double> > bndsL, bndsU, costS;
 			bndsL.push_back( make_pair( j, colLower.at(j)));
 			bndsU.push_back( make_pair( j, colUpper.at(j)));
 			chk.cLowers.push(bndsL);
@@ -1779,22 +1787,22 @@ void HPresolve::setPrimalValue(int j, double value) {
 	
 	//update nonzeros
 	for(int k=Astart.at(j);k<Aend.at(j);++k ) {
-		int i = Aindex.at(k);
-		if (flagRow.at(i)) {
-			nzRow.at(i)--;
+		int row = Aindex.at(k);
+		if (flagRow.at(row)) {
+			nzRow.at(row)--;
 
 		//update singleton row list
-		if (nzRow.at(i)==1)
-			singRow.push_back(i);
-		else if (nzRow.at(i)==0)
-			singRow.remove(i);
+		if (nzRow.at(row)==1)
+			singRow.push_back(row);
+		else if (nzRow.at(row)==0)
+			singRow.remove(row);
 		}
 	}
 	
 	//update values if necessary 
 	if (fabs(value)>0) {
 		//RHS
-		vector<pair<int, double>> bndsL, bndsU;
+		vector<pair<int, double> > bndsL, bndsU;
 
 		for(int k=Astart.at(j);k<Aend.at(j);++k)
 			if (flagRow.at(Aindex.at(k))) {
@@ -1828,15 +1836,14 @@ void HPresolve::setPrimalValue(int j, double value) {
 
 
 void HPresolve::checkForChanges(int iteration) {
-	int i;
 	if (iteration==2) {
 		bool allPresent = true;
-		for (i=0;i<numCol;++i)
+		for (int i=0;i<numCol;++i)
 			if (!flagCol.at(i)) {
 				allPresent = false;
 				break;
 			}
-		for (i=0;i<numRow;++i)
+		for (int i=0;i<numRow;++i)
 			if (!flagRow.at(i)) {
 				allPresent = false;
 				break;
@@ -1846,12 +1853,9 @@ void HPresolve::checkForChanges(int iteration) {
 				cout<<"PR: No variables were eliminated at presolve."<<endl;
 			noPostSolve = true;
 			return;
-			}
-		else
-			resizeProblem();
+		}
 	}
-	else
-		resizeProblem();
+	resizeProblem();
 }
 
 
@@ -1891,10 +1895,10 @@ void HPresolve::reportTimes() {
 }
 
 
-void HPresolve::recordCounts(string fileName) {
+void HPresolve::recordCounts(const string fileName) {
 
 	ofstream myfile;
-	myfile.open(fileName, ios::app);
+	myfile.open(fileName.c_str(), ios::app);
 	int reportList[] = { EMPTY_ROW, FIXED_COL,
 			SING_ROW, DOUBLETON_EQUATION,
 			FORCING_ROW, REDUNDANT_ROW,
@@ -1949,9 +1953,9 @@ void HPresolve::resizeImpliedBounds() {
     vector<double> teup = implRowDualUpper;
     implRowDualLower.resize(numRow);
     implRowDualUpper.resize(numRow);
-    int k, i;
-    k=0;
-    for (i=0;i<numRowOriginal;++i)
+
+    int k=0;
+    for (int i=0;i<numRowOriginal;++i)
     	if (flagRow.at(i)) {
     		implRowDualLower.at(k) = temp.at(i);
     		implRowDualUpper.at(k) = teup.at(i);
@@ -1964,7 +1968,7 @@ void HPresolve::resizeImpliedBounds() {
     implRowValueLower.resize(numRow);
     implRowValueUpper.resize(numRow);
     k=0;
-    for (i=0;i<numRowOriginal;++i)
+    for (int i=0;i<numRowOriginal;++i)
     	if (flagRow.at(i)) {
     		if (temp.at(i) < rowLower.at(i))
     			temp.at(i) = rowLower.at(i);
@@ -1980,8 +1984,9 @@ void HPresolve::resizeImpliedBounds() {
     teup = implColDualUpper;
     implColDualLower.resize(numCol);
     implColDualUpper.resize(numCol);
+
     k=0;
-    for (i=0;i<numColOriginal;++i)
+    for (int i=0;i<numColOriginal;++i)
     	if (flagCol.at(i)) {
     		implColDualLower.at(k) = temp.at(i);
     		implColDualUpper.at(k) = teup.at(i);
@@ -1993,8 +1998,9 @@ void HPresolve::resizeImpliedBounds() {
     teup = implColUpper;
     implColLower.resize(numCol);
     implColUpper.resize(numCol);
+
     k=0;
-    for (i=0;i<numColOriginal;++i)
+    for (int i=0;i<numColOriginal;++i)
     	if (flagCol.at(i)) {
     		if (temp.at(i) < colLower.at(i))
     			temp.at(i) = colLower.at(i);
@@ -2453,7 +2459,7 @@ void HPresolve::postsolve() {
 					// colDual already set. need valuePrimal from stack. maybe change rowDual depending on bounds. old bounds kept in oldBounds.
 					// variables j,k : we eliminated j and are left with changed bounds on k and no row.
 					// c.col is column COL (K) - eliminated, j is with new bounds
-					pair< int ,vector<double>> p = oldBounds.top(); oldBounds.pop();
+					pair< int ,vector<double> > p = oldBounds.top(); oldBounds.pop();
 					vector<double> v = get<1>(p);
 					int j = get<0>(p);
 					double ubNew = v[1];
@@ -2970,7 +2976,7 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 	for (int jj=0;jj<fRjs.size();++jj) {
 			j = fRjs[jj];
 
-			pair<int, vector<double>> p = oldBounds.top();
+			pair<int, vector<double> > p = oldBounds.top();
 			vector<double> v = get<1>(p);
 			oldBounds.pop();
 			double colLow = v[0];
@@ -3023,7 +3029,7 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 
 void HPresolve::getDualsSingletonRow( int row, int col ) {
 
-	pair< int ,vector<double>> bnd = oldBounds.top(); oldBounds.pop();
+	pair< int ,vector<double> > bnd = oldBounds.top(); oldBounds.pop();
 
 	valueRowDual.at(row) = 0;
 	double cost = postValue.top(); postValue.pop();
@@ -3204,7 +3210,7 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 	// variables j,k : we eliminated col(k)(c.col) and are left with changed bounds on j and no row.
 	//                               y                                                 x
 
-	pair< int ,vector<double>> p = oldBounds.top(); oldBounds.pop();
+	pair< int ,vector<double> > p = oldBounds.top(); oldBounds.pop();
 	vector<double> v = get<1>(p);
 	int x = get<0>(p);
 	double ubxNew = v[1];
@@ -3587,7 +3593,7 @@ int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, ve
 			//update bounds on row ii
 			//add old bounds OF row ii to checker and for postsolve
 			if (iKKTcheck == 1) {
-				vector<pair<int, double>> bndsL, bndsU;
+				vector<pair<int, double> > bndsL, bndsU;
 				bndsL.push_back( make_pair( ii, rowLower[ii]));
 				bndsU.push_back( make_pair( ii, rowUpper[ii]));
 				chk.rLowers.push(bndsL);
@@ -3691,7 +3697,7 @@ int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, ve
 
 		//add old bounds of xj to checker and for postsolve
 		if (iKKTcheck == 1) {
-			vector<pair<int, double>> bndsL, bndsU, costS;
+			vector<pair<int, double> > bndsL, bndsU, costS;
 			bndsL.push_back( make_pair( j, colLower.at(j)));
 			bndsU.push_back( make_pair( j, colUpper.at(j)));
 			costS.push_back( make_pair( j, colCost.at(j)));
