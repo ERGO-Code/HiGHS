@@ -17,8 +17,8 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
-	iPrint = 1;
-	chk.print = 1; // 3 for experiments mode
+	//iPrint = 1;
+	chk.print = 3; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
 		if (iKKTcheck) {
@@ -1267,7 +1267,7 @@ void HPresolve::removeColumnSingletons()  {
 	}
 }
 
-pair<double, double> HPresolve::getBoundsImpliedFree(const int lowInit, const int uppInit,
+pair<double, double> HPresolve::getBoundsImpliedFree(double lowInit, double uppInit,
 											const int col, const int i, const int k) {
 	double low = lowInit;
 	double upp = uppInit;

@@ -118,7 +118,7 @@ private:
     void removeFreeColumnSingleton(const int col, const int row, const int k);
     bool removeColumnSingletonInDoubletonInequality(const int col, const int i, const int k);
     void removeSecondColumnSingletonInDoubletonRow(const int j, const int i);
-    pair<double, double> getBoundsImpliedFree(const int lowInit, const int uppInit,
+    pair<double, double> getBoundsImpliedFree(double lowInit, double uppInit,
     		const int col, const int i, const int k);
     void removeImpliedFreeColumn(const int col, const int i, const int k);
 
