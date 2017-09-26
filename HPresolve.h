@@ -104,6 +104,8 @@ private:
     //forcing constraints
     void removeForcingConstraints(int mainIter);
     pair<double, double> getImpliedRowBounds(int row);
+    void setVariablesToBoundForForcingRow(const int row, const bool isLower);
+    void dominatedConstraintProcedure(const int i);
 
     //doubleton equations
     void removeDoubletonEquations();

@@ -1444,210 +1444,207 @@ void HPresolve::fillStackRowBounds(int row) {
 
 
 pair<double, double> HPresolve::getImpliedRowBounds(int row) {
+	double g=0;
+	double h=0;
+
+	int col;
+	for (int k = ARstart.at(row); k<ARstart.at(row+1); ++k) {
+		col = ARindex.at(k);
+		if (flagCol.at(col)) {
+			if (ARvalue.at(k) < 0) {
+				if (colUpper.at(col) < HSOL_CONST_INF)
+					g+= ARvalue.at(k)*colUpper.at(col);
+				else {
+					g = -HSOL_CONST_INF;
+					break;
+				}
+			}
+			else {
+				if (colLower.at(col) > -HSOL_CONST_INF)
+					g+= ARvalue.at(k)*colLower.at(col);
+				else {
+					g = -HSOL_CONST_INF;
+					break;
+				}
+			}
+		}
+	}
+
+	for (int k = ARstart.at(row); k<ARstart.at(row+1); ++k) {
+		col = ARindex.at(k);
+		if (flagCol.at(col)) {
+			if (ARvalue.at(k) < 0) {
+				if (colLower.at(col) > -HSOL_CONST_INF)
+					h+= ARvalue.at(k)*colLower.at(col);
+				else {
+					h = HSOL_CONST_INF;
+					break;
+				}
+
+			}
+			else {
+				if (colUpper.at(col) < HSOL_CONST_INF)
+					h+= ARvalue.at(k)*colUpper.at(col);
+				else {
+					h = HSOL_CONST_INF;
+					break;
+				}
+			}
+		}
+	}
+	return make_pair(g, h);
+}
+
+void HPresolve::setVariablesToBoundForForcingRow(const int row, const bool isLower) {
+	int k, col;
+	if (iPrint > 0)
+		cout << "PR: Forcing row " << row
+				<< " removed. Following variables too:   nzRow=" << nzRow.at(row)
+				<< endl;
+
+	flagRow.at(row) = 0;
+	addChange(FORCING_ROW, row, 0);
+	k = ARstart.at(row);
+	while (k < ARstart.at(row + 1)) {
+		col = ARindex.at(k);
+		if (flagCol.at(col)) {
+			double value;
+			if ((ARvalue.at(k) < 0 && isLower)
+					|| (ARvalue.at(k) > 0 && !isLower))
+				value = colUpper.at(col);
+			else
+				value = colLower.at(col);
+
+			setPrimalValue(col, value);
+			valueColDual.at(col) = colCost.at(col);
+			vector<double> bnds;
+			bnds.push_back(colLower.at(col));
+			bnds.push_back(colUpper.at(col));
+			oldBounds.push(make_pair(col, bnds));
+			addChange(FORCING_ROW_VARIABLE, 0, col);
+
+			if (iPrint > 0)
+				cout << "PR:      Variable  " << col << " := " << value << endl;
+			countRemovedCols[FORCING_ROW]++;
+		}
+		++k;
+	}
+
+	if (nzRow.at(row) == 1)
+		singRow.remove(row);
+
+	countRemovedRows[FORCING_ROW]++;
+}
+
+void HPresolve::dominatedConstraintProcedure(const int i) {
 
 }
 
 void HPresolve::removeForcingConstraints(int mainIter) {
-	double val;
+	double val, g, h;
+	pair<double, double> implBounds;
+
 	int i,j,k;
-	for(i=0;i<numRow;++i)
+	for (i = 0; i < numRow; ++i)
 		if (flagRow.at(i)) {
-			if (nzRow.at(i)==0) {
+			if (nzRow.at(i) == 0) {
 				removeEmptyRow(i);
 				countRemovedRows[EMPTY_ROW]++;
 				continue;
 			}
 
 			//removeRowSingletons will handle just after removeForcingConstraints
-			if (nzRow.at(i)==1)
+			if (nzRow.at(i) == 1)
 				continue;
 
 			timer.recordStart(FORCING_ROW);
-
-			double g=0;
-			double h=0;
-			k = ARstart.at(i+1)-1;
-			while (k>=ARstart.at(i)) {
-				j = ARindex.at(k);
-				if (flagCol.at(j)) {
-					if (ARvalue.at(k) < 0) {
-						if (colUpper.at(j) < HSOL_CONST_INF)
-							g+= ARvalue.at(k)*colUpper.at(j);
-						else {
-							g = -HSOL_CONST_INF;
-							break;
-						}
-						
-					}
-					else {
-						if (colLower.at(j) > -HSOL_CONST_INF)
-							g+= ARvalue.at(k)*colLower.at(j);
-						else {
-							g = -HSOL_CONST_INF;
-							break;
-						}
-					}	
-				}
-				k--;
-			}
-			k = ARstart.at(i+1)-1;
-			while (k>=ARstart.at(i)) {
-				j = ARindex.at(k);
-				if (flagCol.at(j)) {
-					if (ARvalue.at(k) < 0) {
-						if (colLower.at(j) > -HSOL_CONST_INF)
-							h+= ARvalue.at(k)*colLower.at(j);
-						else {
-							h = HSOL_CONST_INF;
-							break;
-						}
-						
-					}
-					else {
-						if (colUpper.at(j) < HSOL_CONST_INF)
-							h+= ARvalue.at(k)*colUpper.at(j);
-						else {
-							h = HSOL_CONST_INF;
-							break;
-						}
-					}	
-				}
-				k--;
-			}
-	
+			implBounds = getImpliedRowBounds(i);
 			timer.recordFinish(FORCING_ROW);
 
-			if (g>rowUpper.at(i) || h<rowLower.at(i)) {
+			g = implBounds.first;
+			h = implBounds.second;
+
+			//Infeasible row
+			if (g > rowUpper.at(i) || h < rowLower.at(i)) {
 				if (iPrint > 0)
-					cout<<"PR: Problem infeasible."<<endl;
+					cout << "PR: Problem infeasible." << endl;
 				status = Infeasible;
 				return;
 			}
+			//Forcing row
 			else if (g == rowUpper.at(i)) {
-				//set all variables to lower bound
-				if (iPrint > 0)
-					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:   nzRow="<<nzRow.at(i)<<endl;
-				flagRow.at(i) = 0;
-	        	addChange(FORCING_ROW, i, 0);
-				k = ARstart.at(i);
-				while (k<ARstart.at(i+1)) {
-					j = ARindex.at(k);
-					if (flagCol.at(j)) {
-						double value;
-						if (ARvalue.at(k) < 0)
-							value = colUpper.at(j);
-						else
-							value = colLower.at(j);
-						setPrimalValue(j, value);
-						valueColDual.at(j) = colCost.at(j);
-						vector<double> bnds;
-						bnds.push_back(colLower.at(j));
-						bnds.push_back(colUpper.at(j));
-						oldBounds.push(make_pair( j, bnds));
-						addChange(FORCING_ROW_VARIABLE, 0, j);
-						
-						if (iPrint > 0)
-							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
-						countRemovedCols[FORCING_ROW]++;
-					}++k ;
-				}
-				if (nzRow.at(i)==1)
-					singRow.remove(i);
-				countRemovedRows[FORCING_ROW]++;
+				setVariablesToBoundForForcingRow(i, true);
 			}
 			else if (h == rowLower.at(i)) {
-				//set all variables to upper bound 
-				if (iPrint > 0)
-					cout<<"PR: Forcing row "<<i<<" removed. Following variables too:"<<endl;
-				flagRow.at(i) = 0;
-	        	addChange(FORCING_ROW, i, 0);
-				k = ARstart.at(i);
-				while (k<ARstart.at(i+1)) {
-					j = ARindex.at(k);
-					if (flagCol.at(j)) {
-						double value;
-						if (ARvalue.at(k) < 0)
-							value = colLower.at(j);
-						else
-							value = colUpper.at(j);
-						setPrimalValue(j, value);
-						valueColDual.at(j) = colCost.at(j);
-						vector<double> bnds;
-						bnds.push_back(colLower.at(j));
-						bnds.push_back(colUpper.at(j));
-						oldBounds.push(make_pair( j, bnds));
-						addChange(FORCING_ROW_VARIABLE, 0, j);
-						if (iPrint > 0)
-							cout<<"PR:      Variable  "<<j<<" := "<<value<<endl;
-						countRemovedCols[FORCING_ROW]++;
-					}++k ;
-				}	
-				if (nzRow.at(i)==1)
-					singRow.remove(i);
-				countRemovedRows[FORCING_ROW]++;
+				setVariablesToBoundForForcingRow(i, false);
 			}
-			//redundant row: for any assignment of variables
-			//constraint is satisfied
+			//Redundant row
 			else if (g >= rowLower.at(i) && h <= rowUpper.at(i)) {
 				removeRow(i);
 				addChange(REDUNDANT_ROW, i, 0);
 				if (iPrint > 0)
-					cout<<"PR: Redundant row "<<i<<" removed."<<endl;
+					cout << "PR: Redundant row " << i << " removed." << endl;
 				countRemovedRows[REDUNDANT_ROW]++;
 			}
-
 			//Dominated constraints:
-			else if (h < HSOL_CONST_INF) { 
+			else if (h < HSOL_CONST_INF) {
 				//fill in implied bounds arrays
 				if (h < implRowValueUpper.at(i)) {
-					implRowValueUpper.at(i) = h;} //	 cout<<"NEW UB row "<<i<< "iter = "<<mainIter<<endl; }
+					implRowValueUpper.at(i) = h;
+				} //	 cout<<"NEW UB row "<<i<< "iter = "<<mainIter<<endl; }
 				if (h <= rowUpper.at(i))
 					implRowDualLower.at(i) = 0;
 
 				//calculate implied bounds for discovering free column singletons
 				timer.recordStart(DOMINATED_ROW_BOUNDS);
-				for (k=ARstart.at(i); k<ARstart.at(i+1);++k ) {
+				for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
 					j = ARindex.at(k);
 					if (flagCol.at(j)) {
-						if (ARvalue.at(k) < 0 && colLower.at(j)> -HSOL_CONST_INF) {
-							val =  (rowLower.at(i) - h)/ARvalue.at(k) + colLower.at(j);
-							if (val<implColUpper.at(j)) {
+						if (ARvalue.at(k) < 0
+								&& colLower.at(j) > -HSOL_CONST_INF) {
+							val = (rowLower.at(i) - h) / ARvalue.at(k)
+									+ colLower.at(j);
+							if (val < implColUpper.at(j)) {
 								implColUpper.at(j) = val;
 								implColUpperRowIndex.at(j) = i;
 							}
-						}
-						else if (ARvalue.at(k) > 0 && colUpper.at(j) < HSOL_CONST_INF)  {
-							 val = (rowLower.at(i) - h)/ARvalue.at(k) + colUpper.at(j);
-							 if (val>implColLower.at(j)) {
-							 	implColLower.at(j) = val;
-							 	implColLowerRowIndex.at(j) = i;
-							 }
-						}
-					}
-				}
-				timer.recordFinish(DOMINATED_ROW_BOUNDS);
-			}
-			else if (g > -HSOL_CONST_INF) {
-				//fill in implied bounds arrays
-				if (g > implRowValueLower.at(i)) {
-					implRowValueLower.at(i) = g; } //cout<<"NEW LB row "<<i<< "iter = "<<mainIter<<endl; }
-				if (g >= rowLower.at(i))
-					implRowDualUpper.at(i) = 0;
-
-				//calculate implied bounds for discovering free column singletons
-				timer.recordStart(DOMINATED_ROW_BOUNDS);
-				for (k=ARstart.at(i); k<ARstart.at(i+1);++k ) {
-					j = ARindex.at(k);
-					if (flagCol.at(j)) {
-						if (ARvalue.at(k) < 0 && colUpper.at(j) < HSOL_CONST_INF) {
-							val = (rowUpper.at(i) - g)/ARvalue.at(k) + colUpper.at(j);
+						} else if (ARvalue.at(k) > 0
+								&& colUpper.at(j) < HSOL_CONST_INF) {
+							val = (rowLower.at(i) - h) / ARvalue.at(k)
+									+ colUpper.at(j);
 							if (val > implColLower.at(j)) {
 								implColLower.at(j) = val;
 								implColLowerRowIndex.at(j) = i;
 							}
 						}
-						else if (ARvalue.at(k) > 0 && colLower.at(j)> -HSOL_CONST_INF) {
-							val = (rowUpper.at(i) - g)/ARvalue.at(k) + colLower.at(j);
+					}
+				}
+				timer.recordFinish(DOMINATED_ROW_BOUNDS);
+			} else if (g > -HSOL_CONST_INF) {
+				//fill in implied bounds arrays
+				if (g > implRowValueLower.at(i)) {
+					implRowValueLower.at(i) = g;
+				} //cout<<"NEW LB row "<<i<< "iter = "<<mainIter<<endl; }
+				if (g >= rowLower.at(i))
+					implRowDualUpper.at(i) = 0;
+
+				//calculate implied bounds for discovering free column singletons
+				timer.recordStart(DOMINATED_ROW_BOUNDS);
+				for (k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
+					j = ARindex.at(k);
+					if (flagCol.at(j)) {
+						if (ARvalue.at(k) < 0
+								&& colUpper.at(j) < HSOL_CONST_INF) {
+							val = (rowUpper.at(i) - g) / ARvalue.at(k)
+									+ colUpper.at(j);
+							if (val > implColLower.at(j)) {
+								implColLower.at(j) = val;
+								implColLowerRowIndex.at(j) = i;
+							}
+						} else if (ARvalue.at(k) > 0
+								&& colLower.at(j) > -HSOL_CONST_INF) {
+							val = (rowUpper.at(i) - g) / ARvalue.at(k)
+									+ colLower.at(j);
 							if (val < implColUpper.at(j)) {
 								implColUpper.at(j) = val;
 								implColUpperRowIndex.at(j) = i;
