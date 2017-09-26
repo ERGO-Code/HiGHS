@@ -1085,11 +1085,147 @@ void HPresolve::removeFreeColumnSingleton(const int col, const int row, const in
 	timer.recordFinish(FREE_SING_COL);
 }
 
-void HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const int i) {
+bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const int i, const int k) {
 	int j;
+
 	//count
+	int kk = ARstart.at(i);
+	while (kk<ARstart.at(i+1)) {
+		j = ARindex.at(kk);
+		if (flagCol.at(j) && j!=col)
+			break;
+		else
+			++kk;
+	}
+	if (kk==ARstart.at(i+1))
+		cout<<"ERROR: nzRow["<< i<< "]=2, but no second variable in row. \n";
+
+	//only inequality case and case two singletons here,
+	//others handled in doubleton equation
+	if ((abs(rowLower.at(i) - rowUpper.at(i)) < tol) && (nzCol.at(j) > 1))
+		return false;
 
 
+
+	timer.recordStart(SING_COL_DOUBLETON_INEQ);
+	// additional check if it is indeed implied free: need
+	// low and upp to be tighter than original bounds for variable col
+	// so it is indeed implied free and we can remove it
+	pair<double, double> p = getNewBoundsDoubletonConstraint(i, j, col, ARvalue.at(kk), Avalue.at(k));
+	double low, upp;
+	low = get<0>(p);
+	upp = get<1>(p);
+	if (!(colLower.at(col) <= low && colUpper.at(col) >= upp)) {
+		cout << "NOT ACTUALLY IMPLIED FREE\n";
+		timer.recordFinish(SING_COL_DOUBLETON_INEQ);
+		return false;
+	}
+
+	postValue.push(ARvalue.at(kk));
+	postValue.push(Avalue.at(k));
+
+	//modify bounds on variable j, variable col (k) is substituted out
+	//double aik = Avalue.at(k);
+	//double aij = Avalue.at(kk);
+	p = getNewBoundsDoubletonConstraint(i, col, j, Avalue.at(k), ARvalue.at(kk));
+	low = get<0>(p);
+	upp = get<1>(p);
+
+	//add old bounds of xj to checker and for postsolve
+	if (iKKTcheck == 1) {
+		vector<pair<int, double> > bndsL, bndsU, costS;
+		bndsL.push_back( make_pair( j, colLower.at(j)));
+		bndsU.push_back( make_pair( j, colUpper.at(j)));
+		costS.push_back( make_pair( j, colCost.at(j)));
+		chk.cLowers.push(bndsL);
+		chk.cUppers.push(bndsU);
+		chk.costs.push(costS);
+	}
+
+	vector<double> bnds;
+	bnds.push_back(colLower.at(col));
+	bnds.push_back(colUpper.at(col));
+	bnds.push_back(colCost.at(col));
+	oldBounds.push(make_pair( col, bnds));
+	bnds.clear();
+	bnds.push_back(colLower.at(j));
+	bnds.push_back(colUpper.at(j));
+	bnds.push_back(colCost.at(j));
+	oldBounds.push(make_pair( j, bnds));
+
+	if (low > colLower.at(j))
+		colLower.at(j) = low;
+	if (upp < colUpper.at(j))
+		colUpper.at(j) = upp;
+
+	//modify cost of xj
+	colCost.at(j) = colCost.at(j) - colCost.at(col)*ARvalue.at(kk)/Avalue.at(k);
+
+	//for postsolve: need the new bounds too
+	//oldBounds.push_back(colLower.at(j)); oldBounds.push_back(colUpper.at(j));
+	bnds.clear();
+	bnds.push_back(colLower.at(j));
+	bnds.push_back(colUpper.at(j));
+	bnds.push_back(colCost.at(j));
+	oldBounds.push(make_pair( j, bnds));
+
+			//remove col as free column singleton
+	if (iPrint > 0)
+		cout<<"PR: Column singleton "<<col<<" in a doubleton inequality constraint removed. Row "<<i<<" removed. variable left is "<<j<<endl;
+	flagCol.at(col) = 0;
+	fillStackRowBounds(i);
+	countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
+	countRemovedRows[SING_COL_DOUBLETON_INEQ]++;
+
+	valueColDual.at(col) = 0;
+	valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k); //may be changed later, depending on bounds.
+
+	addChange(SING_COL_DOUBLETON_INEQ, i, col);
+
+	if (nzCol.at(j) > 1)
+		removeRow(i);
+
+	else if (nzCol.at(j)==1) {
+		// case two singleton columns
+		// when we get here bounds on xj are updated so we can choose low/upper one
+		// depending on the cost of xj
+		flagRow.at(i) = 0;
+		double value;
+		if (colCost.at(j) > 0) {
+			if (colLower.at(j) == -HSOL_CONST_INF) {
+				if (iPrint > 0)
+					cout<<"PR: Problem unbounded."<<endl;
+				status = Unbounded;
+				return false;
+			}
+			value = colLower.at(j);
+		}
+		else if (colCost.at(j) < 0) {
+			if (colUpper.at(j) == HSOL_CONST_INF) {
+				if (iPrint > 0)
+					cout<<"PR: Problem unbounded."<<endl;
+				status = Unbounded;
+				return false;
+			}
+			value = colUpper.at(j);
+		}
+		else { //(colCost.at(j) == 0)
+			if (colUpper.at(j) >= 0 && colLower.at(j) <= 0)
+				value = 0;
+			else if ( abs(colUpper.at(j)) < abs(colLower.at(j)) )
+				value = colUpper.at(j);
+			else
+				value = colLower.at(j);
+		}
+		setPrimalValue(j, value);
+		addChange(SING_COL_DOUBLETON_INEQ_SECOND_SING_COL, 0, j);
+		if (iPrint > 0)
+			cout<<"PR: Second singleton column "<<j<<" in doubleton row "<<i<< " removed.\n";
+		countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
+		singCol.remove(j);
+	}
+	timer.recordFinish(SING_COL_DOUBLETON_INEQ);
+	return true;
 }
 
 void HPresolve::removeColumnSingletons()  {
@@ -1108,161 +1244,21 @@ void HPresolve::removeColumnSingletons()  {
 				it = singCol.erase(it);
 				continue;
 			}
-			//singleton column in a doubleton equation 
+			//singleton column in a doubleton inequality
+			//case two column singletons
 			else if (nzRow.at(i)==2) {
-
-
-									int kk = ARstart.at(i);
-									while (kk<ARstart.at(i+1)) {
-										j = ARindex.at(kk);
-										if (flagCol.at(j) && j!=col)
-											break;
-										else
-											++kk;
-									}
-									if (kk==ARstart.at(i+1))
-										cout<<"ERROR: nzRow["<< i<< "]=2, but no second variable in row. \n";
-
-									//only inequality case and case two singletons here,
-									//others in doubleton equation
-									if (abs(rowLower.at(i)-rowUpper.at(i)) < tol) {
-										if (nzCol.at(j)>1) {
-											it++;
-											continue;
-										}
-									}
-
-									timer.recordStart(SING_COL_DOUBLETON_INEQ);
-									// additional check if it is indeed implied free: need
-									// low and upp to be tighter than original bounds for variable col
-									// so it is indeed implied free and we can remove it
-									pair<double, double> p = getNewBoundsDoubletonConstraint(i, j, col, ARvalue.at(kk), Avalue.at(k));
-									double low, upp;
-									low = get<0>(p);
-									upp = get<1>(p);
-									if (!(colLower.at(col) <= low && colUpper.at(col) >= upp)) {
-										it++;
-										timer.recordFinish(SING_COL_DOUBLETON_INEQ);
-										continue;
-									}
-
-									postValue.push(ARvalue.at(kk));
-									postValue.push(Avalue.at(k));
-
-									//modify bounds on variable j, variable col (k) is substituted out
-									//double aik = Avalue.at(k);
-									//double aij = Avalue.at(kk);
-									p = getNewBoundsDoubletonConstraint(i, col, j, Avalue.at(k), ARvalue.at(kk));
-									low = get<0>(p);
-									upp = get<1>(p);
-
-									//add old bounds of xj to checker and for postsolve
-									if (iKKTcheck == 1) {
-										vector<pair<int, double> > bndsL, bndsU, costS;
-										bndsL.push_back( make_pair( j, colLower.at(j)));
-										bndsU.push_back( make_pair( j, colUpper.at(j)));
-										costS.push_back( make_pair( j, colCost.at(j)));
-										chk.cLowers.push(bndsL);
-										chk.cUppers.push(bndsU);
-										chk.costs.push(costS);
-									}
-
-									vector<double> bnds;
-									bnds.push_back(colLower.at(col));
-									bnds.push_back(colUpper.at(col));
-									bnds.push_back(colCost.at(col));
-									oldBounds.push(make_pair( col, bnds));
-									bnds.clear();
-									bnds.push_back(colLower.at(j));
-									bnds.push_back(colUpper.at(j));
-									bnds.push_back(colCost.at(j));
-									oldBounds.push(make_pair( j, bnds));
-
-									if (low > colLower.at(j))
-										colLower.at(j) = low;
-									if (upp < colUpper.at(j))
-										colUpper.at(j) = upp;
-
-									//modify cost of xj
-									colCost.at(j) = colCost.at(j) - colCost.at(col)*ARvalue.at(kk)/Avalue.at(k);
-
-									//for postsolve: need the new bounds too
-									//oldBounds.push_back(colLower.at(j)); oldBounds.push_back(colUpper.at(j));
-									bnds.clear();
-									bnds.push_back(colLower.at(j));
-									bnds.push_back(colUpper.at(j));
-									bnds.push_back(colCost.at(j));
-									oldBounds.push(make_pair( j, bnds));
-
-											//remove col as free column singleton
-									if (iPrint > 0)
-										cout<<"PR: Column singleton "<<col<<" in a doubleton inequality constraint removed. Row "<<i<<" removed. variable left is "<<j<<endl;
-									flagCol.at(col) = 0;
-									fillStackRowBounds(i);
-									countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
-									countRemovedRows[SING_COL_DOUBLETON_INEQ]++;
-
-									valueColDual.at(col) = 0;
-									valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k); //may be changed later, depending on bounds.
-
-									addChange(SING_COL_DOUBLETON_INEQ, i, col);
-
-									if (nzCol.at(j) > 1)
-										removeRow(i);
-									else if (nzCol.at(j)==1) {
-										// case two singleton columns
-										// when we get here bounds on xj are updated so we can choose low/upper one
-										// depending on the cost of xj
-										flagRow.at(i) = 0;
-										double value;
-										if (colCost.at(j) > 0) {
-											if (colLower.at(j) == -HSOL_CONST_INF) {
-												if (iPrint > 0)
-													cout<<"PR: Problem unbounded."<<endl;
-												status = Unbounded;
-												return;
-											}
-											value = colLower.at(j);
-										}
-										else if (colCost.at(j) < 0) {
-											if (colUpper.at(j) == HSOL_CONST_INF) {
-												if (iPrint > 0)
-													cout<<"PR: Problem unbounded."<<endl;
-												status = Unbounded;
-												return;
-											}
-											value = colUpper.at(j);
-										}
-										else { //(colCost.at(j) == 0)
-											if (colUpper.at(j) >= 0 && colLower.at(j) <= 0)
-												value = 0;
-											else if ( abs(colUpper.at(j)) < abs(colLower.at(j)) )
-												value = colUpper.at(j);
-											else
-												value = colLower.at(j);
-										}
-										setPrimalValue(j, value);
-										addChange(SING_COL_DOUBLETON_INEQ_SECOND_SING_COL, 0, j);
-										if (iPrint > 0)
-											cout<<"PR: Second singleton column "<<j<<" in doubleton row "<<i<< " removed.\n";
-										countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
-										singCol.remove(j);
-
-									}
-									timer.recordFinish(SING_COL_DOUBLETON_INEQ);
-
-
-
-
-
-				it = singCol.erase(it);
-				continue;
+				bool result = removeIfImpliedFree(col, i, k);
+				if (result) {
+					it = singCol.erase(it);
+					continue;
+				}
 			}
 			//implied free
 			else{
 				bool result = removeIfImpliedFree(col, i, k);
 				if (result) {
 					it = singCol.erase(it);
+					//continue;
 				}
 			}
 			it++;
