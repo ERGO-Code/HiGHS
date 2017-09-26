@@ -109,7 +109,8 @@ private:
 
     //doubleton equations
     void removeDoubletonEquations();
-    pair<double, double> getNewBoundsDoubletonConstraint(int row, int col, int j, double aik, double aij);
+    pair<double, double> getNewBoundsDoubletonConstraint(
+    		int row, int col, int j, double aik, double aij);
 
     //column singletons
     void removeColumnSingletons();
@@ -117,6 +118,9 @@ private:
     void removeFreeColumnSingleton(const int col, const int row, const int k);
     bool removeColumnSingletonInDoubletonInequality(const int col, const int i, const int k);
     void removeSecondColumnSingletonInDoubletonRow(const int j, const int i);
+    pair<double, double> getBoundsImpliedFree(const int lowInit, const int uppInit,
+    		const int col, const int i, const int k);
+    void removeImpliedFreeColumn(const int col, const int i, const int k);
 
     //dominated columns
     void removeDominatedColumns();

@@ -17,8 +17,8 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
-	//iPrint = 1;
-	chk.print = 3; // 3 for experiments mode
+	iPrint = 1;
+	chk.print = 1; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
 		if (iKKTcheck) {
@@ -1267,33 +1267,10 @@ void HPresolve::removeColumnSingletons()  {
 	}
 }
 
-bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
-	//first find which bound is active for row i
-	//A'y + c = z so yi = -ci/aij
-	double aij = getaij(i,col);
-	if (aij != Avalue.at(k))
-		cout<<"ERROR during implied free";
-	double yi = -colCost.at(col)/aij;
-	double low, upp;
-
-	if (yi > 0) {
-		if (rowUpper.at(i) == HSOL_CONST_INF)
-			return false;
-		low = rowUpper.at(i);
-		upp = rowUpper.at(i);
-	}
-	else if (yi < 0) {
-		if (rowLower.at(i) == -HSOL_CONST_INF)
-			return false;
-		low = rowLower.at(i);
-		upp = rowLower.at(i);
-	}
-	else  {
-		low = rowLower.at(i);
-		upp = rowUpper.at(i);
-	}
-
-	timer.recordStart(IMPLIED_FREE_SING_COL);
+pair<double, double> HPresolve::getBoundsImpliedFree(const int lowInit, const int uppInit,
+											const int col, const int i, const int k) {
+	double low = lowInit;
+	double upp = uppInit;
 
 	//use implied bounds with original bounds
 	int kk = ARstart.at(i);
@@ -1358,45 +1335,84 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 					upp -= ARvalue.at(kk)*l;
 		}
 	}
+	return make_pair(low, upp);
+}
+
+void HPresolve::removeImpliedFreeColumn(const int col, const int i, const int k) {
+	if (iPrint > 0)
+		cout << "PR: Implied free column singleton " << col << " removed.  Row "
+				<< i << " removed." << endl;
+
+	countRemovedCols[IMPLIED_FREE_SING_COL]++;
+	countRemovedRows[IMPLIED_FREE_SING_COL]++;
+
+	//modify costs
+	int j;
+	vector<pair<int, double> > newCosts;
+	for (int kk = ARstart.at(i); kk < ARstart.at(i + 1); ++kk) {
+		j = ARindex.at(kk);
+		if (flagCol.at(j) && j != col) {
+			newCosts.push_back(make_pair(j, colCost.at(j)));
+			colCost.at(j) = colCost.at(j)
+					- colCost.at(col) * ARvalue.at(kk) / Avalue.at(k);
+		}
+	}
+	if (iKKTcheck == 1)
+		chk.costs.push(newCosts);
+
+	flagCol.at(col) = 0;
+	postValue.push(colCost.at(col));
+	fillStackRowBounds(i);
+
+	valueColDual.at(col) = 0;
+	valueRowDual.at(i) = -colCost.at(col) / Avalue.at(k);
+	addChange(IMPLIED_FREE_SING_COL, i, col);
+	removeRow(i);
+}
+
+bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
+	//first find which bound is active for row i
+	//A'y + c = z so yi = -ci/aij
+	double aij = getaij(i,col);
+	if (aij != Avalue.at(k))
+		cout<<"ERROR during implied free";
+	double yi = -colCost.at(col)/aij;
+	double low, upp;
+
+	if (yi > 0) {
+		if (rowUpper.at(i) == HSOL_CONST_INF)
+			return false;
+		low = rowUpper.at(i);
+		upp = rowUpper.at(i);
+	}
+	else if (yi < 0) {
+		if (rowLower.at(i) == -HSOL_CONST_INF)
+			return false;
+		low = rowLower.at(i);
+		upp = rowLower.at(i);
+	}
+	else  {
+		low = rowLower.at(i);
+		upp = rowUpper.at(i);
+	}
+
+	timer.recordStart(IMPLIED_FREE_SING_COL);
+	pair<double, double> p = getBoundsImpliedFree(low, upp, col, i, k);
+	low = p.first;
+	upp = p.second;
 
 	if (low>-HSOL_CONST_INF)
 		low = low/Avalue.at(k);
 	if (upp<HSOL_CONST_INF)				
 		upp = upp/Avalue.at(k);
 
+	//if implied free
 	if (colLower.at(col) <= low && low <= upp && upp <= colUpper.at(col)) {
-		if (iPrint > 0)
-			cout<<"PR: Implied free column singleton "<<col<<" removed.  Row "<<i<<" removed."<<endl;
-		
-		countRemovedCols[IMPLIED_FREE_SING_COL]++;
-		countRemovedRows[IMPLIED_FREE_SING_COL]++;
-
-		//modify costs
-		vector<pair<int, double> > newCosts;
-		for (int kk=ARstart.at(i); kk<ARstart.at(i+1); ++kk) {
-			j = ARindex.at(kk);
-			if (flagCol.at(j) && j!=col) {
-				newCosts.push_back(make_pair(j, colCost.at(j)));
-				colCost.at(j) = colCost.at(j) -  colCost.at(col)*ARvalue.at(kk)/Avalue.at(k);
-			}
-		}
-		if (iKKTcheck == 1)
-			chk.costs.push(newCosts);
-
-		flagCol.at(col) = 0;
-		postValue.push(colCost.at(col));
-		fillStackRowBounds(i);
-
-		valueColDual.at(col) = 0;
-		valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k);
-		addChange(IMPLIED_FREE_SING_COL, i, col);
-		removeRow(i);
+		removeImpliedFreeColumn(col, i, k);
 		timer.recordFinish(IMPLIED_FREE_SING_COL);
 		return true;
-
 	}
-
-	//implied bounds
+	//else calculate implied bounds
 	else if (colLower.at(col) <= low && low <= upp) {
 		if (implColLower.at(col) < low) {
 			implColLower.at(col) = low;
@@ -1411,6 +1427,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 		}
 		implColDualLower.at(col) = 0;
 	}
+
 	timer.recordFinish(IMPLIED_FREE_SING_COL);
 	return false;
 }
