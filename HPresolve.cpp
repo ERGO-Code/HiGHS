@@ -100,6 +100,7 @@ int HPresolve::presolve() {
 void HPresolve::removeDoubletonEquations() {
 	if (flagCol.size() == numCol)
 		flagCol.push_back(0);
+
 	double col1, col2, x, y, b, low, upp;
 	int iter = 0;
 
@@ -1049,53 +1050,63 @@ pair<double, double> HPresolve::getNewBoundsDoubletonConstraint(int row, int col
 	return make_pair(low, upp);
 }
 
+void HPresolve::removeFreeColumnSingleton(const int col, const int row, const int k) {
+	timer.recordStart(FREE_SING_COL);
+	if (iPrint > 0)
+		cout << "PR: Free column singleton " << col << " removed. Row " << row
+				<< " removed." << endl;
+
+	//modify costs
+	vector<pair<int, double> > newCosts;
+	int j;
+	for (int kk = ARstart.at(row); kk < ARstart.at(row + 1); ++kk) {
+		j = ARindex.at(kk);
+		if (flagCol.at(j) && j != col) {
+			newCosts.push_back(make_pair(j, colCost.at(j)));
+			colCost.at(j) = colCost.at(j)
+					- colCost.at(col) * ARvalue.at(kk) / Avalue.at(k);
+		}
+	}
+	if (iKKTcheck == 1)
+		chk.costs.push(newCosts);
+
+	flagCol.at(col) = 0;
+	postValue.push(colCost.at(col));
+	fillStackRowBounds (row);
+
+	valueColDual.at(col) = 0;
+	valueRowDual.at(row) = -colCost.at(col) / Avalue.at(k);
+
+	addChange(FREE_SING_COL, row, col);
+	removeRow(row);
+
+	countRemovedCols[FREE_SING_COL]++;
+	countRemovedRows[FREE_SING_COL]++;
+	timer.recordFinish(FREE_SING_COL);
+}
+
+void HPresolve::removeColumnSingletonInDoubletonInequality(const int col) {
+
+
+
+}
+
 void HPresolve::removeColumnSingletons()  {
 	int i,j,k, col;
 	list<int>::iterator it = singCol.begin();
-	int iter=1;
+
 	while (it != singCol.end()) {
 		if (flagCol[*it]) {
 			col = *it;
-			k = getSingColElementIndexInA(col);
-			i = Aindex.at(k);
-
-			if (!flagRow.at(i)) {
-				cout<<"ERROR: column singleton "<<col<<" is in row "<<i<<" which is already mapped off\n";
-				exit(18);
-			}
+			int k = getSingColElementIndexInA(col);
+			int i = Aindex.at(k);
 
 			//free
 			if (colLower.at(col) == -HSOL_CONST_INF && colUpper.at(col) == HSOL_CONST_INF) {
-				timer.recordStart(FREE_SING_COL);
-				if (iPrint > 0)
-					cout<<"PR: Free column singleton "<<col<<" removed. Row "<<i<<" removed."<<endl;
-					
-				//modify costs
-				vector<pair<int, double> > newCosts;
-				for (int kk=ARstart.at(i); kk<ARstart.at(i+1); ++kk) {
-					j = ARindex.at(kk);
-					if (flagCol.at(j) && j!=col) {
-						newCosts.push_back(make_pair(j, colCost.at(j)));
-						colCost.at(j) = colCost.at(j) -  colCost.at(col)*ARvalue.at(kk)/Avalue.at(k);
-					}
-				}		
-				if (iKKTcheck == 1)
-					chk.costs.push(newCosts);
-				
-				flagCol.at(col) = 0;
-				postValue.push(colCost.at(col));
-				fillStackRowBounds(i);
-
-				valueColDual.at(col) = 0;
-				valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k);
-				addChange(FREE_SING_COL, i, col);
-				removeRow(i);
+				removeFreeColumnSingleton(col, i, k);
 				it = singCol.erase(it);
-				countRemovedCols[FREE_SING_COL]++;
-				countRemovedRows[FREE_SING_COL]++;
-				timer.recordFinish(FREE_SING_COL);
 				continue;
-		}
+			}
 			//singleton column in a doubleton equation 
 			else if (nzRow.at(i)==2) {
 				//count
@@ -1238,7 +1249,6 @@ void HPresolve::removeColumnSingletons()  {
 				}
 				
 				it = singCol.erase(it); 
-				iter++;
 				timer.recordFinish(SING_COL_DOUBLETON_INEQ);
 				continue;
 
@@ -1249,11 +1259,9 @@ void HPresolve::removeColumnSingletons()  {
 				bool res = removeIfImpliedFree(col, i, k);
 				if (res) {
 					it = singCol.erase(it);
-					iter++;
 				}
 				timer.recordFinish(IMPLIED_FREE_SING_COL);
 			}
-		
 			it++;
 		}
 		else 
