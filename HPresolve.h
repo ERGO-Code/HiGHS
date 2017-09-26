@@ -94,7 +94,7 @@ private:
     void removeEmptyColumn(int j);
     void removeRow(int i);
 
-    void addChange(int type, int row, int col);
+
 
     //singleton rows
     void removeRowSingletons();
@@ -116,6 +116,7 @@ private:
     bool removeIfImpliedFree(int col, int i, int k);
     void removeFreeColumnSingleton(const int col, const int row, const int k);
     bool removeColumnSingletonInDoubletonInequality(const int col, const int i, const int k);
+    void removeSecondColumnSingletonInDoubletonRow(const int j, const int i);
 
     //dominated columns
     void removeDominatedColumns();
@@ -142,6 +143,7 @@ private:
     //postsolve
     bool noPostSolve;
     
+    void addChange(int type, int row, int col);
     void fillStackRowBounds(int col);
 	void setKKTcheckerData();
 

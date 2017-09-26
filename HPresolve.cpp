@@ -1085,7 +1085,14 @@ void HPresolve::removeFreeColumnSingleton(const int col, const int row, const in
 	timer.recordFinish(FREE_SING_COL);
 }
 
+
+
+
+
+
 bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const int i, const int k) {
+	//second column index j
+	//second column row array index kk
 	int j;
 
 	//count
@@ -1105,18 +1112,13 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 	if ((abs(rowLower.at(i) - rowUpper.at(i)) < tol) && (nzCol.at(j) > 1))
 		return false;
 
-
-
 	timer.recordStart(SING_COL_DOUBLETON_INEQ);
 	// additional check if it is indeed implied free
 	// needed since we handle inequalities and it may not be true
 	// low and upp to be tighter than original bounds for variable col
 	// so it is indeed implied free and we can remove it
 	pair<double, double> p = getNewBoundsDoubletonConstraint(i, j, col, ARvalue.at(kk), Avalue.at(k));
-	double low, upp;
-	low = get<0>(p);
-	upp = get<1>(p);
-	if (!(colLower.at(col) <= low && colUpper.at(col) >= upp)) {
+	if (!(colLower.at(col) <= p.first && colUpper.at(col) >= p.second)) {
 		timer.recordFinish(SING_COL_DOUBLETON_INEQ);
 		return false;
 	}
@@ -1128,8 +1130,8 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 	//double aik = Avalue.at(k);
 	//double aij = Avalue.at(kk);
 	p = getNewBoundsDoubletonConstraint(i, col, j, Avalue.at(k), ARvalue.at(kk));
-	low = get<0>(p);
-	upp = get<1>(p);
+	double low = p.first;
+	double upp = p.second;
 
 	//add old bounds of xj to checker and for postsolve
 	if (iKKTcheck == 1) {
@@ -1142,17 +1144,12 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 		chk.costs.push(costS);
 	}
 
-	vector<double> bnds;
-	bnds.push_back(colLower.at(col));
-	bnds.push_back(colUpper.at(col));
-	bnds.push_back(colCost.at(col));
-	oldBounds.push(make_pair( col, bnds));
-	bnds.clear();
-	bnds.push_back(colLower.at(j));
-	bnds.push_back(colUpper.at(j));
-	bnds.push_back(colCost.at(j));
-	oldBounds.push(make_pair( j, bnds));
+	vector<double> bndsCol({colLower.at(col), colUpper.at(col), colCost.at(col)});
+	vector<double> bndsJ({colLower.at(j), colUpper.at(j), colCost.at(j)});
+	oldBounds.push(make_pair( col, bndsCol));
+	oldBounds.push(make_pair( j, bndsJ));
 
+	//modify bounds of xj
 	if (low > colLower.at(j))
 		colLower.at(j) = low;
 	if (upp < colUpper.at(j))
@@ -1163,15 +1160,15 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 
 	//for postsolve: need the new bounds too
 	//oldBounds.push_back(colLower.at(j)); oldBounds.push_back(colUpper.at(j));
-	bnds.clear();
-	bnds.push_back(colLower.at(j));
-	bnds.push_back(colUpper.at(j));
-	bnds.push_back(colCost.at(j));
-	oldBounds.push(make_pair( j, bnds));
+	bndsJ.at(0) = (colLower.at(j));
+	bndsJ.at(1) = (colUpper.at(j));
+	bndsJ.at(2) = (colCost.at(j));
+	oldBounds.push(make_pair( j, bndsJ));
 
-			//remove col as free column singleton
+	//remove col as free column singleton
 	if (iPrint > 0)
 		cout<<"PR: Column singleton "<<col<<" in a doubleton inequality constraint removed. Row "<<i<<" removed. variable left is "<<j<<endl;
+
 	flagCol.at(col) = 0;
 	fillStackRowBounds(i);
 	countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
@@ -1179,53 +1176,55 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 
 	valueColDual.at(col) = 0;
 	valueRowDual.at(i) = -colCost.at(col)/Avalue.at(k); //may be changed later, depending on bounds.
-
 	addChange(SING_COL_DOUBLETON_INEQ, i, col);
 
+	//if not special case two column singletons
 	if (nzCol.at(j) > 1)
 		removeRow(i);
+	else if (nzCol.at(j)==1)
+		removeSecondColumnSingletonInDoubletonRow(j, i);
 
-	else if (nzCol.at(j)==1) {
-		// case two singleton columns
-		// when we get here bounds on xj are updated so we can choose low/upper one
-		// depending on the cost of xj
-		flagRow.at(i) = 0;
-		double value;
-		if (colCost.at(j) > 0) {
-			if (colLower.at(j) == -HSOL_CONST_INF) {
-				if (iPrint > 0)
-					cout<<"PR: Problem unbounded."<<endl;
-				status = Unbounded;
-				return false;
-			}
-			value = colLower.at(j);
-		}
-		else if (colCost.at(j) < 0) {
-			if (colUpper.at(j) == HSOL_CONST_INF) {
-				if (iPrint > 0)
-					cout<<"PR: Problem unbounded."<<endl;
-				status = Unbounded;
-				return false;
-			}
-			value = colUpper.at(j);
-		}
-		else { //(colCost.at(j) == 0)
-			if (colUpper.at(j) >= 0 && colLower.at(j) <= 0)
-				value = 0;
-			else if ( abs(colUpper.at(j)) < abs(colLower.at(j)) )
-				value = colUpper.at(j);
-			else
-				value = colLower.at(j);
-		}
-		setPrimalValue(j, value);
-		addChange(SING_COL_DOUBLETON_INEQ_SECOND_SING_COL, 0, j);
-		if (iPrint > 0)
-			cout<<"PR: Second singleton column "<<j<<" in doubleton row "<<i<< " removed.\n";
-		countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
-		singCol.remove(j);
-	}
 	timer.recordFinish(SING_COL_DOUBLETON_INEQ);
 	return true;
+}
+
+void HPresolve::removeSecondColumnSingletonInDoubletonRow(const int j, const int i) {
+	// case two singleton columns
+	// when we get here bounds on xj are updated so we can choose low/upper one
+	// depending on the cost of xj
+	flagRow.at(i) = 0;
+	double value;
+	if (colCost.at(j) > 0) {
+		if (colLower.at(j) == -HSOL_CONST_INF) {
+			if (iPrint > 0)
+				cout << "PR: Problem unbounded." << endl;
+			status = Unbounded;
+			return;
+		}
+		value = colLower.at(j);
+	} else if (colCost.at(j) < 0) {
+		if (colUpper.at(j) == HSOL_CONST_INF) {
+			if (iPrint > 0)
+				cout << "PR: Problem unbounded." << endl;
+			status = Unbounded;
+			return;
+		}
+		value = colUpper.at(j);
+	} else { //(colCost.at(j) == 0)
+		if (colUpper.at(j) >= 0 && colLower.at(j) <= 0)
+			value = 0;
+		else if (abs(colUpper.at(j)) < abs(colLower.at(j)))
+			value = colUpper.at(j);
+		else
+			value = colLower.at(j);
+	}
+	setPrimalValue(j, value);
+	addChange(SING_COL_DOUBLETON_INEQ_SECOND_SING_COL, 0, j);
+	if (iPrint > 0)
+		cout << "PR: Second singleton column " << j << " in doubleton row " << i
+				<< " removed.\n";
+	countRemovedCols[SING_COL_DOUBLETON_INEQ]++;
+	singCol.remove(j);
 }
 
 void HPresolve::removeColumnSingletons()  {
@@ -1525,9 +1524,7 @@ void HPresolve::setVariablesToBoundForForcingRow(const int row, const bool isLow
 
 			setPrimalValue(col, value);
 			valueColDual.at(col) = colCost.at(col);
-			vector<double> bnds;
-			bnds.push_back(colLower.at(col));
-			bnds.push_back(colUpper.at(col));
+			vector<double> bnds({colLower.at(col), colUpper.at(col)});
 			oldBounds.push(make_pair(col, bnds));
 			addChange(FORCING_ROW_VARIABLE, 0, col);
 
@@ -1690,11 +1687,7 @@ void HPresolve::removeRowSingletons() {
 			chk.cUppers.push(bndsU);
 		}
 
-		vector<double> bnds;
-		bnds.push_back(colLower.at(j));
-		bnds.push_back(colUpper.at(j));
-		bnds.push_back(rowLower.at(i));
-		bnds.push_back(rowUpper.at(i));
+		vector<double> bnds({colLower.at(j), colUpper.at(j), rowLower.at(i), rowUpper.at(i)});
 		oldBounds.push(make_pair( j, bnds));
 
 		double aij = ARvalue.at(k);
