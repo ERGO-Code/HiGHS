@@ -115,7 +115,7 @@ private:
     void removeColumnSingletons();
     bool removeIfImpliedFree(int col, int i, int k);
     void removeFreeColumnSingleton(const int col, const int row, const int k);
-    void removeColumnSingletonInDoubletonInequality(const int col);
+    void removeColumnSingletonInDoubletonInequality(const int col, const int i);
 
     //dominated columns
     void removeDominatedColumns();
