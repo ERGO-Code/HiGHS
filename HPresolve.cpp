@@ -1258,14 +1258,13 @@ void HPresolve::removeColumnSingletons()  {
 				bool result = removeIfImpliedFree(col, i, k);
 				if (result) {
 					it = singCol.erase(it);
-					//continue;
+					continue;
 				}
 			}
 			it++;
 		}
 		else 
 			it = singCol.erase(it);
-
 	}
 }
 
