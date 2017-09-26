@@ -1108,7 +1108,8 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 
 
 	timer.recordStart(SING_COL_DOUBLETON_INEQ);
-	// additional check if it is indeed implied free: need
+	// additional check if it is indeed implied free
+	// needed since we handle inequalities and it may not be true
 	// low and upp to be tighter than original bounds for variable col
 	// so it is indeed implied free and we can remove it
 	pair<double, double> p = getNewBoundsDoubletonConstraint(i, j, col, ARvalue.at(kk), Avalue.at(k));
@@ -1116,7 +1117,6 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 	low = get<0>(p);
 	upp = get<1>(p);
 	if (!(colLower.at(col) <= low && colUpper.at(col) >= upp)) {
-		cout << "NOT ACTUALLY IMPLIED FREE\n";
 		timer.recordFinish(SING_COL_DOUBLETON_INEQ);
 		return false;
 	}
@@ -1229,14 +1229,14 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const 
 }
 
 void HPresolve::removeColumnSingletons()  {
-	int i,j,k, col;
+	int i, k, col;
 	list<int>::iterator it = singCol.begin();
 
 	while (it != singCol.end()) {
 		if (flagCol[*it]) {
 			col = *it;
-			int k = getSingColElementIndexInA(col);
-			int i = Aindex.at(k);
+			k = getSingColElementIndexInA(col);
+			i = Aindex.at(k);
 
 			//free
 			if (colLower.at(col) == -HSOL_CONST_INF && colUpper.at(col) == HSOL_CONST_INF) {
@@ -1247,7 +1247,7 @@ void HPresolve::removeColumnSingletons()  {
 			//singleton column in a doubleton inequality
 			//case two column singletons
 			else if (nzRow.at(i)==2) {
-				bool result = removeIfImpliedFree(col, i, k);
+				bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
 				if (result) {
 					it = singCol.erase(it);
 					continue;
