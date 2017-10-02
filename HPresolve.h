@@ -104,6 +104,9 @@ private:
 
     //doubleton equations
     void removeDoubletonEquations();
+    pair<int, int> getXYDoubletonEquations(const int row);
+    void processRowDoubletonEquation(const int row, const int x,
+    		const int y, const double akx, const double aky, const double b);
     pair<double, double> getNewBoundsDoubletonConstraint(
     		int row, int col, int j, double aik, double aij);
     void UpdateMatrixCoeffDoubletonEquationXzero(const int i,

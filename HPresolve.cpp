@@ -97,11 +97,14 @@ int HPresolve::presolve() {
 	return presolve(0);
 }
 
+
+
 void HPresolve::removeDoubletonEquations() {
 	if (flagCol.size() == numCol)
 		flagCol.push_back(0);
 
-	double col1, col2, x, y, b, low, upp;
+	double  b, low, upp;
+	int col1, col2, x, y;
 	int iter = 0;
 
 	for (int row=0;row<numRow;row++)
@@ -146,39 +149,9 @@ void HPresolve::removeDoubletonEquations() {
 				double aky = getaij(row, y);
 
 
-				/***********************************************
-				//different cases:
 
-				//singletons skip this
-				for (int k = Astart[y]; k<Aend[y];++k )
-					if (flagRow.at(Aindex.at(k))) {
-						int i = Aindex.at(k);
-						if (i==row)
-							continue;
-						double aiy = Avalue.at(k);
-						if (isZeroA(i,x)) {
-							//col2 = -1;   break;	 // no X
-						}
-						else {
-							double xNew;
-							int ind;
-							for (ind = ARstart.at(i); ind<ARstart.at(i+1); ind++)
-								if (ARindex[ind] == x)
-									break;
 
-							xNew = ARvalue[ind] - (aiy*akx)/aky;
-							//if (abs(xNew)>tol) { col2 = -1;		break;	}    // new x != 0
-							//if (abs(xNew)<tol) { col2 = -1;		break;	}    // new x == 0 only nonsingleton y anyway, singletons separately
-						}
-					}
-
-				//singleton case
-				//if (nzCol[y] == 1)  col2 = -1;                 // nonsingleton y
-				if (col2 < 0)
-					continue;  */
-				//***********************************************
-
-				if (nzCol[y] == 1 && nzCol[x] == 1 )            //two singletons case handled elsewhere
+				if (nzCol.at(y) == 1 && nzCol.at(x) == 1 )            //two singletons case handled elsewhere
 					continue;
 
 				postValue.push(akx);
@@ -195,39 +168,39 @@ void HPresolve::removeDoubletonEquations() {
 				//add old bounds of x to checker and for postsolve
 				if (iKKTcheck == 1) {
 					vector<pair<int, double> > bndsL, bndsU, costS;
-					bndsL.push_back( make_pair( x, colLower[x]));
-					bndsU.push_back( make_pair( x, colUpper[x]));
-					costS.push_back( make_pair( x, colCost[x]));
+					bndsL.push_back( make_pair( x, colLower.at(x)));
+					bndsU.push_back( make_pair( x, colUpper.at(x)));
+					costS.push_back( make_pair( x, colCost.at(x)));
 					chk.cLowers.push(bndsL);
 					chk.cUppers.push(bndsU);
 					chk.costs.push(costS);
 				}
 
 				vector<double> bnds, bnds2, bnds3;
-				bnds.push_back(colLower[y]);
-				bnds.push_back(colUpper[y]);
-				bnds.push_back(colCost[y]);
+				bnds.push_back(colLower.at(y));
+				bnds.push_back(colUpper.at(y));
+				bnds.push_back(colCost.at(y));
 				oldBounds.push(make_pair( y, bnds));
 
-				bnds2.push_back(colLower[x]);
-				bnds2.push_back(colUpper[x]);
-				bnds2.push_back(colCost[x]);
+				bnds2.push_back(colLower.at(x));
+				bnds2.push_back(colUpper.at(x));
+				bnds2.push_back(colCost.at(x));
 				oldBounds.push(make_pair( x, bnds2));
 
 
-				if (low > colLower[x])
-					colLower[x] = low;
-				if (upp < colUpper[x])
-					colUpper[x] = upp;
+				if (low > colLower.at(x))
+					colLower.at(x) = low;
+				if (upp < colUpper.at(x))
+					colUpper.at(x) = upp;
 
 				//modify cost of xj
-				colCost[x] = colCost[x] - colCost[y]*akx/aky;
+				colCost.at(x) = colCost.at(x) - colCost.at(y)*akx/aky;
 
 				//for postsolve: need the new bounds too
 
-				bnds3.push_back(colLower[x]);
-				bnds3.push_back(colUpper[x]);
-				bnds3.push_back(colCost[x]);
+				bnds3.push_back(colLower.at(x));
+				bnds3.push_back(colUpper.at(x));
+				bnds3.push_back(colCost.at(x));
 				oldBounds.push(make_pair( x, bnds3));
 
 				addChange(DOUBLETON_EQUATION, row, y);
@@ -235,22 +208,22 @@ void HPresolve::removeDoubletonEquations() {
 				//remove y (col) and the row
 				if (iPrint > 0)
 					//cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<endl;
-					cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<"    nzy="<<nzCol[y]<<endl;
+					cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<"    nzy="<<nzCol.at(y)<<endl;
 				flagRow.at(row) = 0;
-				nzCol[x]--;
+				nzCol.at(x)--;
 
 				countRemovedRows[DOUBLETON_EQUATION]++;
 				countRemovedCols[DOUBLETON_EQUATION]++;
 
 				//----------------------------
-				flagCol[y] = 0;
+				flagCol.at(y) = 0;
 				if (!hasChange)
 					hasChange = true;
 
 
 				vector<pair<int, double> > bndsL, bndsU;
 
-				for (int k = Astart[y]; k<Aend[y];++k )
+				for (int k = Astart.at(y); k<Aend.at(y);++k )
 					if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
 						int i = Aindex.at(k);
 						double aiy = Avalue.at(k);
@@ -322,18 +295,18 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i,
 
 	//update A: append X column to end of array
 	int st = Avalue.size();
-	for (int ind = Astart[x]; ind < Aend[x]; ind++) {
+	for (int ind = Astart.at(x); ind < Aend.at(x); ind++) {
 		Avalue.push_back(Avalue[ind]);
 		Aindex.push_back(Aindex[ind]);
 	}
 	Avalue.push_back(-aiy * akx / aky);
 	Aindex.push_back(i);
-	Astart[x] = st;
-	Aend[x] = Avalue.size();
+	Astart.at(x) = st;
+	Aend.at(x) = Avalue.size();
 
-	nzCol[x]++;
+	nzCol.at(x)++;
 	//nzRow does not change here.
-	if (nzCol[x] == 2)
+	if (nzCol.at(x) == 2)
 		singCol.remove(x);
 }
 
@@ -371,7 +344,7 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
 			chk.ARvalue[ind] = xNew;
 
 		//update A:
-		for (ind = Astart[x]; ind < Aend[x]; ind++)
+		for (ind = Astart.at(x); ind < Aend.at(x); ind++)
 			if (Aindex[ind] == i) {
 				break;
 			}
@@ -408,36 +381,36 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
 			addChange(DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE, i, x);
 		}
 
-		if (nzCol[x] > 0) {
+		if (nzCol.at(x) > 0) {
 			// A update for case when x is zero: move x entry to end and set
 			// Aend to be Aend - 1;
 			int indi;
-			for (indi = Astart[x]; indi < Aend[x]; ++indi)
+			for (indi = Astart.at(x); indi < Aend.at(x); ++indi)
 				if (Aindex[indi] == i)
 					break;
 
 			postValue.push(Avalue[indi]);
 
 			//if indi is not Aend-1 swap elements indi and Aend-1
-			if (indi != Aend[x] - 1) {
-				double tmp = Avalue[Aend[x] - 1];
-				int tmpi = Aindex[Aend[x] - 1];
-				Avalue[Aend[x] - 1] = Avalue[indi];
-				Aindex[Aend[x] - 1] = Aindex[indi];
+			if (indi != Aend.at(x) - 1) {
+				double tmp = Avalue[Aend.at(x) - 1];
+				int tmpi = Aindex[Aend.at(x) - 1];
+				Avalue[Aend.at(x) - 1] = Avalue[indi];
+				Aindex[Aend.at(x) - 1] = Aindex[indi];
 				Avalue[indi] = tmp;
 				Aindex[indi] = tmpi;
 
 			}
-			Aend[x]--;
+			Aend.at(x)--;
 			addChange(DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE, i, x);
 		}
 
 		//update nz col
-		nzCol[x]--;
+		nzCol.at(x)--;
 		//update singleton col list
-		if (nzCol[x] == 1)
+		if (nzCol.at(x) == 1)
 			singCol.push_back(x);
-		if (nzCol[x] == 0) {
+		if (nzCol.at(x) == 0) {
 			nzRow.at(i)++;  //need this because below we decrease it by 1 too
 			removeEmptyColumn
 			(x);
@@ -2315,14 +2288,14 @@ void HPresolve::postsolve() {
 
 				//update A: append X column to end of array
 				int st = Avalue.size();
-				for (int ind = Astart[x]; ind < Aend[x]; ind++) {
+				for (int ind = Astart.at(x); ind < Aend.at(x); ind++) {
 					Avalue.push_back(Avalue[ind]);
 					Aindex.push_back(Aindex[ind]);
 				}
 				Avalue.push_back(oldXvalue);
 				Aindex.push_back(c.row);
-				Astart[x] = st;
-				Aend[x] = Avalue.size();
+				Astart.at(x) = st;
+				Aend.at(x) = Avalue.size();
 
 				break;
 			}
@@ -3242,19 +3215,19 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 	double b = postValue.top(); postValue.pop();
 	double aky = postValue.top(); postValue.pop();
 	double akx = postValue.top(); postValue.pop();
-	double valueX = valuePrimal[x];
+	double valueX = valuePrimal.at(x);
 
 	// primal value and objective shift
-	valuePrimal[y] = (b - akx*valueX)/aky;
-	objShift += -cxNew*valueX + cxOld*valueX + cy*valuePrimal[y];
+	valuePrimal.at(y) = (b - akx*valueX)/aky;
+	objShift += -cxNew*valueX + cxOld*valueX + cy*valuePrimal.at(y);
 
 	//column cost of x
-	colCostAtEl[x] = cxOld;
+	colCostAtEl.at(x) = cxOld;
 
 
-	//get nzCol[y] before unflag row as missing
-	int nzy = Aend[y] - Astart[y];
-	for (int kk=Astart[y]; kk<Aend[y]; ++kk)
+	//get nzCol.at(y) before unflag row as missing
+	int nzy = Aend.at(y) - Astart.at(y);
+	for (int kk=Astart.at(y); kk<Aend.at(y); ++kk)
 		if (!flagRow[Aindex.at(kk)])
 			nzy--;
 
@@ -3280,29 +3253,29 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 	}
 
 	flagRow.at(row) = 1;
-	valueColDual[y] = getColumnDualPost(y);
-	valueColDual[x] = getColumnDualPost(x);
+	valueColDual.at(y) = getColumnDualPost(y);
+	valueColDual.at(x) = getColumnDualPost(x);
 
 	if (iKKTcheck == 1)
-		chk.colDual[x] = valueColDual[x];
+		chk.colDual.at(x) = valueColDual.at(x);
 
-	if ((nonbasicFlag[x] == 1 && valueX==ubxNew && ubxNew < ubxOld)  ||
-		(nonbasicFlag[x] == 1 && valueX==lbxNew && lbxNew > lbxOld))   {
-			nonbasicFlag[x] = 0;
+	if ((nonbasicFlag.at(x) == 1 && valueX==ubxNew && ubxNew < ubxOld)  ||
+		(nonbasicFlag.at(x) == 1 && valueX==lbxNew && lbxNew > lbxOld))   {
+			nonbasicFlag.at(x) = 0;
 	}
 	else {
 		//row becomes basic unless y is between bounds, in which case y is basic
-		if (valuePrimal[y] - lby > tol  && uby - valuePrimal[y] > tol) {
-			nonbasicFlag[y] = 0;
+		if (valuePrimal.at(y) - lby > tol  && uby - valuePrimal.at(y) > tol) {
+			nonbasicFlag.at(y) = 0;
 		}
 		else if (abs(valueX-ubxNew ) < tol || abs(valueX-lbxNew ) < tol)
-			nonbasicFlag[y] = 0;
+			nonbasicFlag.at(y) = 0;
 		else
 			nonbasicFlag[numColOriginal + row] = 0;
 	}
 
 	//flagRow.at(row) = true;
-	flagCol[y] = 1;
+	flagCol.at(y) = 1;
 }
 
 /*
