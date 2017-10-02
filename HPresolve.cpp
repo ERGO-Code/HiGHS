@@ -15,9 +15,9 @@ using namespace std;
 int HPresolve::presolve(int print) {
 
 	iPrint = print;
-	iKKTcheck = 1;
+	iKKTcheck = 0;
 
-	chk.print = 1; // 3 for experiments mode
+	chk.print = 3; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
 		if (iKKTcheck) {
@@ -2435,7 +2435,7 @@ void HPresolve::postsolve() {
 							bndL = (rowlb - sum )/aij;
 						else
 							bndL = (rowub - sum )/aij;
-						valuePrimal[c.col] = max(colLower[c.col], bndL);
+						valuePrimal[c.col] = max(colLowerOriginal[c.col], bndL);
 					}
 					else if (colCostAtEl[c.col] < 0) {
 						//we are interested in the highest possible value of x:
@@ -2445,7 +2445,7 @@ void HPresolve::postsolve() {
 							bndU = (rowlb - sum )/aij;
 						else
 							bndU = (rowub - sum )/aij;
-						valuePrimal[c.col] = min(colUpper[c.col], bndU);
+						valuePrimal[c.col] = min(colUpperOriginal[c.col], bndU);
 					}
 					else { //cost is zero
 						double bndL, bndU;
@@ -2457,8 +2457,12 @@ void HPresolve::postsolve() {
 							bndL = (rowub - sum )/aij;
 							bndU = (rowlb - sum )/aij;
 						}
-						double valuePrimalUB = min(colUpper[c.col], bndU);
-						double valuePrimalLB = max(colLower[c.col], bndL);
+						double valuePrimalUB = min(colUpperOriginal[c.col], bndU);
+						double valuePrimalLB = max(colLowerOriginal[c.col], bndL);
+						if (valuePrimalUB < valuePrimalLB - tol) {
+							cout<<"Postsolve error: inconsistent bounds for implied free column singleton "<<c.col<<endl;
+						}
+
 						if (abs(valuePrimalLB) < abs(valuePrimalUB))
 							valuePrimal[c.col] = valuePrimalLB;
 						else
