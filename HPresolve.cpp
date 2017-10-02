@@ -138,7 +138,7 @@ pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
 	}
 
 	int x,y;
-	if (nzCol[col1] <= nzCol[col2]) {
+	if (nzCol.at(col1) <= nzCol.at(col2)) {
 		y = col1;
 		x = col2;
 	} else {
@@ -167,8 +167,8 @@ void HPresolve::processRowDoubletonEquation(const int row, const int x,
 	//double aik = Avalue.at(k);
 	//double aij = Avalue.at(kk);
 	pair<double, double> p = getNewBoundsDoubletonConstraint(row, y, x, aky, akx);
-	double low = get<0>(p);
-	double upp = get<1>(p);
+	double low = p.first;
+	double upp = p.second;
 
 	//add old bounds of x to checker and for postsolve
 	if (iKKTcheck == 1) {
@@ -219,6 +219,8 @@ void HPresolve::processRowDoubletonEquation(const int row, const int x,
 }
 
 void HPresolve::removeDoubletonEquations() {
+	//flagCol should have one more element at end which is zero
+	//needed for AR matrix manipulation
 	if (flagCol.size() == numCol)
 		flagCol.push_back(0);
 
@@ -226,9 +228,9 @@ void HPresolve::removeDoubletonEquations() {
 	int col1, col2, x, y;
 	int iter = 0;
 
-	for (int row=0;row<numRow;row++)
+	for (int row = 0; row < numRow; row++)
 		if (flagRow.at(row))
-			if (nzRow.at(row)==2 && abs(rowLower.at(row)-rowUpper.at(row))< tol    ) {
+			if (nzRow.at(row) == 2	&& abs(rowLower.at(row) - rowUpper.at(row)) < tol) {
 
 				//row is of form akx_x + aky_y = b, where k=row and y is present in fewer constraints
 				b = rowLower.at(row);
@@ -242,10 +244,9 @@ void HPresolve::removeDoubletonEquations() {
 
 				akx = getaij(row, x);
 				aky = getaij(row, y);
-
 				processRowDoubletonEquation(row, x, y, akx, aky, b);
 
-				for (int k = Astart.at(y); k<Aend.at(y);++k )
+				for (int k = Astart.at(y); k < Aend.at(y); ++k)
 					if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
 						int i = Aindex.at(k);
 						double aiy = Avalue.at(k);
@@ -253,29 +254,28 @@ void HPresolve::removeDoubletonEquations() {
 						//update row bounds
 						if (iKKTcheck == 1) {
 							vector<pair<int, double> > bndsL, bndsU;
-							bndsL.push_back( make_pair( i, rowLower.at(i)));
-							bndsU.push_back( make_pair( i, rowUpper.at(i)));
+							bndsL.push_back(make_pair(i, rowLower.at(i)));
+							bndsU.push_back(make_pair(i, rowUpper.at(i)));
 							chk.rLowers.push(bndsL);
 							chk.rUppers.push(bndsU);
 							addChange(DOUBLETON_EQUATION_ROW_BOUNDS_UPDATE, i, y);
 						}
 
 						if (rowLower.at(i) > -HSOL_CONST_INF)
-							rowLower.at(i) -= b*aiy/aky;
+							rowLower.at(i) -= b * aiy / aky;
 						if (rowUpper.at(i) < HSOL_CONST_INF)
-							rowUpper.at(i) -= b*aiy/aky;
+							rowUpper.at(i) -= b * aiy / aky;
 
 						if (implRowValueLower.at(i) > -HSOL_CONST_INF)
-							implRowValueLower.at(i) -= b*aiy/aky;
-						if (implRowValueUpper.at(i) < HSOL_CONST_INF )
-							implRowValueUpper.at(i) -= b*aiy/aky;
-
+							implRowValueLower.at(i) -= b * aiy / aky;
+						if (implRowValueUpper.at(i) < HSOL_CONST_INF)
+							implRowValueUpper.at(i) -= b * aiy / aky;
 
 						//update matrix coefficients
-						if (isZeroA(i,x))
-							UpdateMatrixCoeffDoubletonEquationXzero(i,x,y,aiy,akx,aky);
+						if (isZeroA(i, x))
+							UpdateMatrixCoeffDoubletonEquationXzero(i, x, y, aiy, akx, aky);
 						else
-							UpdateMatrixCoeffDoubletonEquationXnonZero(i,x,y,aiy, akx, aky);
+							UpdateMatrixCoeffDoubletonEquationXnonZero(i, x, y,	aiy, akx, aky);
 
 					}
 				if (Avalue.size() > 40000000) {
@@ -294,33 +294,34 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i,
 		const int x, const int y, const double aiy, const double akx,
 		const double aky) {
 	//case x is zero initially
-	// row nonzero count doesn't change here
+	//row nonzero count doesn't change here
 	//cout<<"case: x not present "<<i<<" "<<endl;
 
 	//update AR
 	int ind;
-	for (ind = ARstart.at(i); ind < ARstart.at(i + 1); ind++)
-		if (ARindex[ind] == y) {
+	for (ind = ARstart.at(i); ind < ARstart.at(i + 1); ++ind)
+		if (ARindex.at(ind) == y) {
 			break;
 		}
-	postValue.push(ARvalue[ind]);
+
+	postValue.push(ARvalue.at(ind));
 	postValue.push(y);
 	addChange(DOUBLETON_EQUATION_X_ZERO_INITIALLY, i, x);
 
-	ARindex[ind] = x;
-	ARvalue[ind] = -aiy * akx / aky;
+	ARindex.at(ind) = x;
+	ARvalue.at(ind) = -aiy * akx / aky;
 
 	//just row rep in checker
 	if (iKKTcheck == 1) {
-		chk.ARvalue[ind] = ARvalue[ind];
-		chk.ARindex[ind] = ARindex[ind];
+		chk.ARvalue.at(ind) = ARvalue.at(ind);
+		chk.ARindex.at(ind) = ARindex.at(ind);
 	}
 
 	//update A: append X column to end of array
 	int st = Avalue.size();
-	for (int ind = Astart.at(x); ind < Aend.at(x); ind++) {
-		Avalue.push_back(Avalue[ind]);
-		Aindex.push_back(Aindex[ind]);
+	for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
+		Avalue.push_back(Avalue.at(ind));
+		Aindex.push_back(Aindex.at(ind));
 	}
 	Avalue.push_back(-aiy * akx / aky);
 	Aindex.push_back(i);
@@ -350,28 +351,28 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
 	}
 
 	double xNew;
-	for (ind = ARstart.at(i); ind < ARstart.at(i + 1); ind++)
-		if (ARindex[ind] == x)
+	for (ind = ARstart.at(i); ind < ARstart.at(i + 1); ++ind)
+		if (ARindex.at(ind) == x)
 			break;
 
-	xNew = ARvalue[ind] - (aiy * akx) / aky;
+	xNew = ARvalue.at(ind) - (aiy * akx) / aky;
 	if (abs(xNew) > tol) {
 		//case new x != 0
 		//cout<<"case: x still there row "<<i<<" "<<endl;
 
-		postValue.push(ARvalue[ind]);
+		postValue.push(ARvalue.at(ind));
 		addChange(DOUBLETON_EQUATION_NEW_X_NONZERO, i, x);
-		ARvalue[ind] = xNew;
+		ARvalue.at(ind) = xNew;
 
 		if (iKKTcheck == 1)
-			chk.ARvalue[ind] = xNew;
+			chk.ARvalue.at(ind) = xNew;
 
 		//update A:
-		for (ind = Astart.at(x); ind < Aend.at(x); ind++)
-			if (Aindex[ind] == i) {
+		for (ind = Astart.at(x); ind < Aend.at(x); ++ind)
+			if (Aindex.at(ind) == i) {
 				break;
 			}
-		Avalue[ind] = xNew;
+		Avalue.at(ind) = xNew;
 
 	} else if (xNew < tol) {
 		//case new x == 0
@@ -393,12 +394,12 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
 			//set ARindex of element for x to numCol
 			//flagCol[numCol] = false
 			//mind when resizing: should be OK
-			postValue.push(ARvalue[ind]);
+			postValue.push(ARvalue.at(ind));
 
-			ARindex[ind] = numCol;
+			ARindex.at(ind) = numCol;
 			if (iKKTcheck == 1) {
-				chk.ARindex[ind] = ARindex[ind];
-				chk.ARvalue[ind] = ARvalue[ind];
+				chk.ARindex.at(ind) = ARindex.at(ind);
+				chk.ARvalue.at(ind) = ARvalue.at(ind);
 			}
 
 			addChange(DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE, i, x);
@@ -409,20 +410,19 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
 			// Aend to be Aend - 1;
 			int indi;
 			for (indi = Astart.at(x); indi < Aend.at(x); ++indi)
-				if (Aindex[indi] == i)
+				if (Aindex.at(indi) == i)
 					break;
 
-			postValue.push(Avalue[indi]);
+			postValue.push(Avalue.at(indi));
 
 			//if indi is not Aend-1 swap elements indi and Aend-1
 			if (indi != Aend.at(x) - 1) {
-				double tmp = Avalue[Aend.at(x) - 1];
-				int tmpi = Aindex[Aend.at(x) - 1];
-				Avalue[Aend.at(x) - 1] = Avalue[indi];
-				Aindex[Aend.at(x) - 1] = Aindex[indi];
-				Avalue[indi] = tmp;
-				Aindex[indi] = tmpi;
-
+				double tmp = Avalue.at(Aend.at(x) - 1);
+				int tmpi = Aindex.at(Aend.at(x) - 1);
+				Avalue.at(Aend.at(x) - 1) = Avalue.at(indi);
+				Aindex.at(Aend.at(x) - 1) = Aindex.at(indi);
+				Avalue.at(indi) = tmp;
+				Aindex.at(indi) = tmpi;
 			}
 			Aend.at(x)--;
 			addChange(DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE, i, x);
@@ -1853,7 +1853,7 @@ void HPresolve::setPrimalValue(int j, double value) {
 void HPresolve::checkForChanges(int iteration) {
 	if (iteration==2) {
 		//flagCol has one more element at end which is zero
-		//from removeDoubletonEquatoins, see why
+		//from removeDoubletonEquatoins, needed for AR matrix manipulation
 		if (none_of(flagCol.begin(), flagCol.begin() + numCol, [](int i) { return i == 0; }) ||
 			none_of(flagRow.begin(), flagRow.begin() + numRow, [](int i) { return i == 0; })) {
 			if (iPrint > 0)
@@ -2220,13 +2220,13 @@ void HPresolve::postsolve() {
 
 					int indi;
 					for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
-							if (ARindex[indi]==c.col)
+							if (ARindex.at(indi)==c.col)
 								break;
-					ARvalue[indi] = postValue.top();
+					ARvalue.at(indi) = postValue.top();
 					for (indi=Astart[c.col];indi<Aend[c.col];++indi)
-							if (Aindex[indi]==c.row)
+							if (Aindex.at(indi)==c.row)
 								break;
-					Avalue[indi] = postValue.top();
+					Avalue.at(indi) = postValue.top();
 
 					if (iKKTcheck == 1)
 						chk.addChange(172, c.row, c.col, postValue.top(), 0, 0);
@@ -2244,14 +2244,14 @@ void HPresolve::postsolve() {
 
 				//reverse AR for case when x is zero and y entry has moved
 				for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
-						if (ARindex[indi]==c.col)
+						if (ARindex.at(indi)==c.col)
 							break;
-				ARvalue[indi] = postValue.top();
-				ARindex[indi] = yindex;
+				ARvalue.at(indi) = postValue.top();
+				ARindex.at(indi) = yindex;
 
 				//reverse A for case when x is zero and y entry has moved
 				for (indi=Astart[c.col];indi<Aend[c.col];++indi)
-						if (Aindex[indi]==c.row)
+						if (Aindex.at(indi)==c.row)
 							break;
 
 				//recover x: column decreases by 1
@@ -2259,19 +2259,19 @@ void HPresolve::postsolve() {
 				if (indi != Aend[c.col]-1) {
 					double tmp = Avalue[Aend[c.col]-1];
 					int   tmpi = Aindex[Aend[c.col]-1];
-					Avalue[Aend[c.col]-1] = Avalue[indi];
-					Aindex[Aend[c.col]-1] = Aindex[indi];
-					Avalue[indi] = tmp;
-					Aindex[indi] = tmpi;
+					Avalue[Aend[c.col]-1] = Avalue.at(indi);
+					Aindex[Aend[c.col]-1] = Aindex.at(indi);
+					Avalue.at(indi) = tmp;
+					Aindex.at(indi) = tmpi;
 				}
 				Aend[c.col]--;
 
 				//recover y: column increases by 1
 				//update A: append X column to end of array
 				int st = Avalue.size();
-				for (int ind = Astart[yindex]; ind < Aend[yindex]; ind++) {
-					Avalue.push_back(Avalue[ind]);
-					Aindex.push_back(Aindex[ind]);
+				for (int ind = Astart[yindex]; ind < Aend[yindex]; ++ind) {
+					Avalue.push_back(Avalue.at(ind));
+					Aindex.push_back(Aindex.at(ind));
 				}
 				Avalue.push_back(postValue.top());
 				Aindex.push_back(c.row);
@@ -2288,14 +2288,14 @@ void HPresolve::postsolve() {
 				//sp case x disappears row representation change
 				int indi;
 				for (indi=ARstart[c.row];indi<ARstart[c.row+1];++indi)
-						if (ARindex[indi]==numColOriginal)
+						if (ARindex.at(indi)==numColOriginal)
 							break;
-				ARindex[indi] = c.col;
-				ARvalue[indi] = postValue.top();
+				ARindex.at(indi) = c.col;
+				ARvalue.at(indi) = postValue.top();
 
 				if (iKKTcheck == 1) {
-					chk.ARindex[indi] = c.col;
-					chk.ARvalue[indi] = postValue.top();
+					chk.ARindex.at(indi) = c.col;
+					chk.ARvalue.at(indi) = postValue.top();
 				}
 
 				postValue.pop();
@@ -2311,9 +2311,9 @@ void HPresolve::postsolve() {
 
 				//update A: append X column to end of array
 				int st = Avalue.size();
-				for (int ind = Astart.at(x); ind < Aend.at(x); ind++) {
-					Avalue.push_back(Avalue[ind]);
-					Aindex.push_back(Aindex[ind]);
+				for (int ind = Astart.at(x); ind < Aend.at(x); ++ind) {
+					Avalue.push_back(Avalue.at(ind));
+					Aindex.push_back(Aindex.at(ind));
 				}
 				Avalue.push_back(oldXvalue);
 				Aindex.push_back(c.row);
@@ -3421,8 +3421,8 @@ void HPresolve::findDuplicateRows() {
 			n = 0;
 			t0 = t;
 			t++;
-			for (int ind=Astart.at(j); ind<Aend.at(j); ind++)  {
-				r = Aindex[ind];
+			for (int ind=Astart.at(j); ind<Aend.at(j); ++ind)  {
+				r = Aindex.at(ind);
 				if (flagRow[r]) {
 					if (s[r]==0) {
 						r0 = r;
@@ -3470,20 +3470,20 @@ void HPresolve::findDuplicateRows() {
 					//check coefficients
 					indi = ARstart.at(i);
 					while (indi<ARstart.at(i+1) && same) {
-						col = ARindex[indi];
+						col = ARindex.at(indi);
 						if (!flagCol.at(col) || nzCol.at(col) <= 1) 	{
 							++indi; continue; }
 						// we've reached a nonsingleton column in row i, got to find the same in j
 						indj = ARstart.at(j);
 						while (ARindex[indj]!=col)
-							ind++j;
+							++indj;
 						if (indj >= ARstart[j+1]) {
 							cout<<"Error in part 2 of finding duplicate rows: rows "<<i<<" and "<<j<<".\n";
 							exit(18);
 						}
 						if (ratio == 0)
-							ratio = ARvalue[indi]/ARvalue[indj];
-						else if (ratio == ARvalue[indi]/ARvalue[indj]) {
+							ratio = ARvalue.at(indi)/ARvalue[indj];
+						else if (ratio == ARvalue.at(indi)/ARvalue[indj]) {
 							++indi; continue; }
 						else {
 							same = false;
@@ -3796,8 +3796,8 @@ void HPresolve::findDuplicateColumns() {
 			n = 0;
 			t0 = t;
 			t++;
-			for (int ind=ARstart.at(j); ind<ARstart[j+1]; ind++)  {
-				r = ARindex[ind];
+			for (int ind=ARstart.at(j); ind<ARstart[j+1]; ++ind)  {
+				r = ARindex.at(ind);
 				if (flagCol[r]) {
 					if (s[r]==0) {
 						r0 = r;
@@ -3845,14 +3845,14 @@ void HPresolve::findDuplicateColumns() {
 						indi = Astart.at(i);
 						indj = Astart.at(j);
 						while (indi<Aend.at(i) && same) {
-							row = Aindex[indi];
+							row = Aindex.at(indi);
 							if (!flagRow.at(row)) 	{
 								++indi; continue; }
 							while (Aindex[indj]!=row)
-								ind++j;
+								++indj;
 							if (ratio == 0)
-								ratio = Avalue[indi]/Avalue[indj];
-							else if (ratio == Avalue[indi]/Avalue[indj]) {
+								ratio = Avalue.at(indi)/Avalue[indj];
+							else if (ratio == Avalue.at(indi)/Avalue[indj]) {
 								++indi; continue; }
 							else {
 								same = false;
