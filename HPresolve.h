@@ -129,6 +129,9 @@ private:
 
     //dominated columns
     void removeDominatedColumns();
+    void rowDualBoundsDominatedColumns();
+    pair<double, double> getImpliedColumnBounds(int j);
+    void removeIfWeaklyDominated(const int j, const double d, const double e);
 
 
 //    void findDuplicateRows();

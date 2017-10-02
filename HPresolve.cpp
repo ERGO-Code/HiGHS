@@ -15,9 +15,9 @@ using namespace std;
 int HPresolve::presolve(int print) {
 
 	iPrint = print;
-	iKKTcheck = 0;
+	iKKTcheck = 1;
 
-	chk.print = 3; // 3 for experiments mode
+	chk.print = 1; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
 		if (iKKTcheck) {
@@ -786,18 +786,19 @@ void HPresolve::removeEmptyColumn(int j) {
 }
 
 
-void HPresolve::removeDominatedColumns() {
+void HPresolve::rowDualBoundsDominatedColumns() {
 	int col, i, k;
-	
+
 	//for each row calc yihat and yibar and store in implRowDualLower and implRowDualUpper
-	for (list<int>::iterator it = singCol.begin(); it != singCol.end(); ++it) 
-		if (flagCol[*it]) {
+	for (list<int>::iterator it = singCol.begin(); it != singCol.end(); ++it)
+		if (flagCol.at(*it)) {
 			col = *it;
 			k = getSingColElementIndexInA(col);
 			i = Aindex.at(k);
+
 			if (!flagRow.at(i)) {
 				cout<<"ERROR: column singleton "<<col<<" is in row "<<i<<" which is already mapped off\n";
-				exit(18);
+				exit(-1);
 			}
 
 			if (colLower.at(col) == -HSOL_CONST_INF || colUpper.at(col) == HSOL_CONST_INF) {
@@ -825,70 +826,86 @@ void HPresolve::removeDominatedColumns() {
 					if ((colCost.at(col)/Avalue.at(k)) < implRowDualUpper.at(i))
 							implRowDualUpper.at(i) = colCost.at(col)/Avalue.at(k);
 				}
-				
+
 				if (implRowDualLower.at(i) > implRowDualUpper.at(i)) {
 					cout<<"Error: inconstistent bounds for Lagrange multiplier for row "<< i<< " detected after column singleton "<<col<<". In presolve::dominatedColumns"<<endl;
-					exit(0); 
-				}	
-			}		
+					exit(0);
+				}
+			}
 		}
-	
+
+}
+
+pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
+	pair<double, double> out;
+	double e=0;
+	double d=0;
+
+	int i;
+	for (int k=Astart.at(j); k<Aend.at(j);++k ) {
+		i = Aindex.at(k);
+		if (flagRow.at(i))
+			if (Avalue.at(k) < 0) {
+				if (implRowDualUpper.at(i) < HSOL_CONST_INF)
+					e+= Avalue.at(k)*implRowDualUpper.at(i);
+				else {
+					e = -HSOL_CONST_INF;
+					break;
+				}
+			}
+			else {
+				if (implRowDualLower.at(i) > -HSOL_CONST_INF)
+					e+= Avalue.at(k)*implRowDualLower.at(i);
+				else {
+					e = -HSOL_CONST_INF;
+					break;
+				}
+			}
+	}
+
+	for (int k=Astart.at(j); k<Aend.at(j);++k ) {
+		i = Aindex.at(k);
+		if (flagRow.at(i))
+			if (Avalue.at(k) < 0) {
+				if (implRowDualLower.at(i) > -HSOL_CONST_INF)
+					d+= Avalue.at(k)*implRowDualLower.at(i);
+				else {
+					d = HSOL_CONST_INF;
+					break;
+				}
+			}
+			else {
+				if (implRowDualUpper.at(i) < HSOL_CONST_INF)
+					d+= Avalue.at(k)*implRowDualUpper.at(i);
+				else {
+					d = HSOL_CONST_INF;
+					break;
+				}
+			}
+	}
+
+	if (e>d) {
+		cout<<"Error: inconstistent bounds for Lagrange multipliers for column "<<j<<": e>d. In presolve::dominatedColumns"<<endl;
+		exit(-1);
+	}
+	out.first = d;
+	out.second = e;
+	return out;
+}
+
+void HPresolve::removeDominatedColumns() {
+	int col, i, k;
 	
 	//for each column j calculate e and d and check:
 	double e,d;
+	pair<double, double> p;
 	for(int j=0;j<numCol;++j)
 		if (flagCol.at(j)) {
 			timer.recordStart(DOMINATED_COLS);
-			e=0;
-			d=0;
 
-			for (k=Astart.at(j); k<Aend.at(j);++k ) {
-				i = Aindex.at(k);
-				if (flagRow.at(i))
-					if (Avalue.at(k) < 0) {
-						if (implRowDualUpper.at(i) < HSOL_CONST_INF)
-							e+= Avalue.at(k)*implRowDualUpper.at(i);
-						else {
-							e = -HSOL_CONST_INF;
-							break;
-						}
-						
-					}
-					else {
-						if (implRowDualLower.at(i) > -HSOL_CONST_INF)
-							e+= Avalue.at(k)*implRowDualLower.at(i);
-						else {
-							e = -HSOL_CONST_INF;
-							break;
-						}
-					}	
-			}
-			for (k=Astart.at(j); k<Aend.at(j);++k ) {
-				i = Aindex.at(k);
-				if (flagRow.at(i))
-					if (Avalue.at(k) < 0) {
-						if (implRowDualLower.at(i) > -HSOL_CONST_INF)
-							d+= Avalue.at(k)*implRowDualLower.at(i);
-						else {
-							d = HSOL_CONST_INF;
-							break;
-						}
-						
-					}
-					else {
-						if (implRowDualUpper.at(i) < HSOL_CONST_INF)
-							d+= Avalue.at(k)*implRowDualUpper.at(i);
-						else {
-							d = HSOL_CONST_INF;
-							break;
-						}
-					}	
-			}
-	
-			if (e>d) {
-				cout<<"Error: inconstistent bounds for Lagrange multipliers for column "<<j<<": e>d. In presolve::dominatedColumns"<<endl;
-				exit(-2); 
-			}	
+			p = getImpliedColumnBounds(j);
+			d = p.first;
+			e = p.second;
 
 			//check if it is dominated 
 			if (colCost.at(j) - d > tol) {
@@ -920,6 +937,7 @@ void HPresolve::removeDominatedColumns() {
 				countRemovedCols[DOMINATED_COLS]++;
 			}
 			else {
+				//update implied bounds
 				if (implColDualLower.at(j) < (colCost.at(j) - d ))
 					implColDualLower.at(j) = colCost.at(j) - d;
 				if (implColDualUpper.at(j) > (colCost.at(j) - e ))
@@ -929,72 +947,79 @@ void HPresolve::removeDominatedColumns() {
 
 				timer.recordFinish(DOMINATED_COLS);
 
-
-				//check if it is weakly dominated: Excluding singletons!
-				if (nzCol.at(j)>1) {
-					if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HSOL_CONST_INF) {
-						timer.recordStart(WEAKLY_DOMINATED_COLS);
-						setPrimalValue(j, colLower.at(j));
-						addChange(WEAKLY_DOMINATED_COLS, 0, j);
-						if (iPrint > 0)
-							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
-						countRemovedCols[WEAKLY_DOMINATED_COLS]++;
-						timer.recordFinish(WEAKLY_DOMINATED_COLS);
-					}
-					else if (abs(colCost.at(j) - e) < tol && colUpper.at(j) < HSOL_CONST_INF) {
-						timer.recordStart(WEAKLY_DOMINATED_COLS);
-						setPrimalValue(j, colUpper.at(j));
-						addChange(WEAKLY_DOMINATED_COLS, 0, j);
-						if (iPrint > 0)
-							cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
-						countRemovedCols[WEAKLY_DOMINATED_COLS]++;
-						timer.recordFinish(WEAKLY_DOMINATED_COLS);
-					}
-					else {
-
-						timer.recordStart(DOMINATED_COL_BOUNDS);
-						double bnd;
-						//calculate new bounds
-						if (colLower.at(j) > -HSOL_CONST_INF || colUpper.at(j) == HSOL_CONST_INF)
-							for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
-								if (flagRow[Aindex.at(kk)] && d < HSOL_CONST_INF ) {
-									i = Aindex.at(kk);
-									if (Avalue.at(kk)>0 && implRowDualLower.at(i) > -HSOL_CONST_INF) {
-										bnd = -(colCost.at(j) + d)/Avalue.at(kk) + implRowDualLower.at(i);
-										if (bnd < implRowDualUpper.at(i) && !(bnd < implRowDualLower.at(i)))
-											implRowDualUpper.at(i) = bnd;
-
-									}
-									else if (Avalue.at(kk)<0 && implRowDualUpper.at(i) < HSOL_CONST_INF) {
-											bnd = -(colCost.at(j) + d)/Avalue.at(kk) + implRowDualUpper.at(i);
-										if (bnd > implRowDualLower.at(i) && !(bnd > implRowDualUpper.at(i)))
-											implRowDualLower.at(i) = bnd;
-
-									}
-								}
-
-						if (colLower.at(j) == -HSOL_CONST_INF || colUpper.at(j) < HSOL_CONST_INF)
-							for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
-								if (flagRow[Aindex.at(kk)] && e > -HSOL_CONST_INF ) {
-									i = Aindex.at(kk);
-									if (Avalue.at(kk)>0 && implRowDualUpper.at(i) < HSOL_CONST_INF) {
-										bnd = -(colCost.at(j) + e)/Avalue.at(kk) + implRowDualUpper.at(i);
-										if (bnd > implRowDualLower.at(i) && !(bnd > implRowDualUpper.at(i)))
-											implRowDualLower.at(i) = bnd;
-
-									}
-									else  if (Avalue.at(kk)<0  && implRowDualLower.at(i) > -HSOL_CONST_INF)     {
-										bnd = -(colCost.at(j) + e)/Avalue.at(kk) + implRowDualLower.at(i);
-										if (bnd < implRowDualUpper.at(i) && !(bnd < implRowDualLower.at(i)))
-											implRowDualUpper.at(i) = bnd;
-
-									}
-								}
-						timer.recordFinish(DOMINATED_COL_BOUNDS);
-					}
-				}
+				removeIfWeaklyDominated(j, d, e);
 			}
 		}
+}
+
+void HPresolve::removeIfWeaklyDominated(const int j, const double d, const double e) {
+	int i;
+
+	//check if it is weakly dominated: Excluding singletons!
+	if (nzCol.at(j)>1) {
+		if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HSOL_CONST_INF) {
+			timer.recordStart(WEAKLY_DOMINATED_COLS);
+			setPrimalValue(j, colLower.at(j));
+			addChange(WEAKLY_DOMINATED_COLS, 0, j);
+			if (iPrint > 0)
+				cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
+
+			countRemovedCols[WEAKLY_DOMINATED_COLS]++;
+			timer.recordFinish(WEAKLY_DOMINATED_COLS);
+		}
+		else if (abs(colCost.at(j) - e) < tol && colUpper.at(j) < HSOL_CONST_INF) {
+			timer.recordStart(WEAKLY_DOMINATED_COLS);
+			setPrimalValue(j, colUpper.at(j));
+			addChange(WEAKLY_DOMINATED_COLS, 0, j);
+			if (iPrint > 0)
+				cout<<"PR: Weakly Dominated column "<<j<<" removed. Value := "<<valuePrimal.at(j)<<endl;
+
+			countRemovedCols[WEAKLY_DOMINATED_COLS]++;
+			timer.recordFinish(WEAKLY_DOMINATED_COLS);
+		}
+		else {
+			timer.recordStart(DOMINATED_COL_BOUNDS);
+			double bnd;
+
+			//calculate new bounds
+			if (colLower.at(j) > -HSOL_CONST_INF || colUpper.at(j) == HSOL_CONST_INF)
+				for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
+					if (flagRow.at(Aindex.at(kk)) && d < HSOL_CONST_INF ) {
+						i = Aindex.at(kk);
+						if (Avalue.at(kk)>0 && implRowDualLower.at(i) > -HSOL_CONST_INF) {
+							bnd = -(colCost.at(j) + d)/Avalue.at(kk) + implRowDualLower.at(i);
+							if (bnd < implRowDualUpper.at(i) && !(bnd < implRowDualLower.at(i)))
+								implRowDualUpper.at(i) = bnd;
+
+						}
+						else if (Avalue.at(kk)<0 && implRowDualUpper.at(i) < HSOL_CONST_INF) {
+								bnd = -(colCost.at(j) + d)/Avalue.at(kk) + implRowDualUpper.at(i);
+							if (bnd > implRowDualLower.at(i) && !(bnd > implRowDualUpper.at(i)))
+								implRowDualLower.at(i) = bnd;
+
+						}
+					}
+
+			if (colLower.at(j) == -HSOL_CONST_INF || colUpper.at(j) < HSOL_CONST_INF)
+				for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
+					if (flagRow.at(Aindex.at(kk)) && e > -HSOL_CONST_INF ) {
+						i = Aindex.at(kk);
+						if (Avalue.at(kk)>0 && implRowDualUpper.at(i) < HSOL_CONST_INF) {
+							bnd = -(colCost.at(j) + e)/Avalue.at(kk) + implRowDualUpper.at(i);
+							if (bnd > implRowDualLower.at(i) && !(bnd > implRowDualUpper.at(i)))
+								implRowDualLower.at(i) = bnd;
+
+						}
+						else  if (Avalue.at(kk)<0  && implRowDualLower.at(i) > -HSOL_CONST_INF)     {
+							bnd = -(colCost.at(j) + e)/Avalue.at(kk) + implRowDualLower.at(i);
+							if (bnd < implRowDualUpper.at(i) && !(bnd < implRowDualLower.at(i)))
+								implRowDualUpper.at(i) = bnd;
+
+						}
+					}
+			timer.recordFinish(DOMINATED_COL_BOUNDS);
+		}
+	}
 }
 
 void HPresolve::setProblemStatus(const int s) {
@@ -3251,7 +3276,7 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 	//get nzCol.at(y) before unflag row as missing
 	int nzy = Aend.at(y) - Astart.at(y);
 	for (int kk=Astart.at(y); kk<Aend.at(y); ++kk)
-		if (!flagRow[Aindex.at(kk)])
+		if (!flagRow.at(Aindex.at(kk)))
 			nzy--;
 
 
@@ -4023,8 +4048,8 @@ void HPresolve::removeDuplicateColumns(int j, int k, double v) {
 
 		//update nonzeros: two by one so for each row -1
 		for (int kk=Astart.at(j); kk< Aend.at(j); ++kk) {
-			if (flagRow[Aindex.at(kk)])
-				nzRow[Aindex.at(kk)]--;
+			if (flagRow.at(Aindex.at(kk)))
+				nzRow.at(Aindex.at(kk))--;
 				}
 	}
 }*/
