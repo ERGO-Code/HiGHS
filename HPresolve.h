@@ -62,10 +62,8 @@ public:
     };
 
 private: 
-
     bool hasChange;
     int debug;
-
     int status=0;  //0 is unassigned, see enum stat
 
     list<int> singRow;    		//singleton rows 
@@ -81,7 +79,6 @@ private:
 	vector<double> colLowerOriginal;
 	vector<double> colUpperOriginal;
 
-
 	//functions
 	void setPrimalValue(int j, double value);
     void checkForChanges(int iteration);
@@ -93,8 +90,6 @@ private:
     void removeEmptyRow(int i);
     void removeEmptyColumn(int j);
     void removeRow(int i);
-
-
 
     //singleton rows
     void removeRowSingletons();
@@ -111,6 +106,13 @@ private:
     void removeDoubletonEquations();
     pair<double, double> getNewBoundsDoubletonConstraint(
     		int row, int col, int j, double aik, double aij);
+    void UpdateMatrixCoeffDoubletonEquationXzero(const int i,
+    		const int x, const int y, const double aiy, const double akx,
+    		const double aky);
+    void UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
+    		const int x, const int y, const double aiy, const double akx,
+    		const double aky);
+
 
     //column singletons
     void removeColumnSingletons();

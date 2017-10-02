@@ -3,8 +3,7 @@
 CCP      = g++
 
 # For up-to-date gnu compiler (mingw-32 on Fetteresk)
-CCSTDFLAGS= -std=gnu++11
-
+CCSTDFLAGS= -std=c++11
 
 # Default C++ macros
 # For debugging, need -g, but other flags like -Wall -Werror can be valuable

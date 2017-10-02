@@ -276,155 +276,11 @@ void HPresolve::removeDoubletonEquations() {
 
 
 						//update matrix coefficients
-						if (isZeroA(i,x)) {
-							//case x is zero initially
-							// row nonzero count doesn't change here
-							//cout<<"case: x not present "<<i<<" "<<endl;
+						if (isZeroA(i,x))
+							UpdateMatrixCoeffDoubletonEquationXzero(i,x,y,aiy,akx,aky);
+						else
+							UpdateMatrixCoeffDoubletonEquationXnonZero(i,x,y,aiy, akx, aky);
 
-							//update AR
-							int ind;
-							for (ind = ARstart.at(i); ind<ARstart.at(i+1); ind++)
-								if (ARindex[ind] == y) {
-									break;
-								}
-							postValue.push(ARvalue[ind]);
-							postValue.push(y);
-							addChange(DOUBLETON_EQUATION_X_ZERO_INITIALLY, i, x);
-
-							ARindex[ind] = x;
-							ARvalue[ind] = -aiy*akx/aky;
-
-							//just row rep in checker
-							if (iKKTcheck == 1) {
-								bndsL.push_back( make_pair( i, rowLower.at(i)));
-								bndsU.push_back( make_pair( i, rowUpper.at(i)));
-								chk.ARvalue[ind] = ARvalue[ind];
-								chk.ARindex[ind] = ARindex[ind];
-							}
-
-							//update A: append X column to end of array
-							int st = Avalue.size();
-							for (int ind = Astart[x]; ind < Aend[x]; ind++) {
-								Avalue.push_back(Avalue[ind]);
-								Aindex.push_back(Aindex[ind]);
-							}
-							Avalue.push_back(-aiy*akx/aky);
-							Aindex.push_back(i);
-							Astart[x] = st;
-							Aend[x] = Avalue.size();
-
-							nzCol[x]++;
-							//nzRow does not change here.
-							if (nzCol[x] == 2)
-								singCol.remove(x);
-
-						}
-						else {
-							int ind;
-
-							//update nonzeros: for removal of
-							nzRow.at(i)--;
-							if (nzRow.at(i)==1)
-								singRow.push_back(i);
-							if (nzRow.at(i)==0) {
-								singRow.remove(i);
-								removeEmptyRow(i);
-								countRemovedRows[DOUBLETON_EQUATION]++;
-							}
-
-							double xNew;
-							for (ind = ARstart.at(i); ind<ARstart.at(i+1); ind++)
-								if (ARindex[ind] == x)
-									break;
-
-							xNew = ARvalue[ind] - (aiy*akx)/aky;
-							if (abs(xNew)>tol) {
-								//case new x != 0
-								//cout<<"case: x still there row "<<i<<" "<<endl;
-
-								postValue.push(ARvalue[ind]);
-								addChange(DOUBLETON_EQUATION_NEW_X_NONZERO, i, x);
-								ARvalue[ind] = xNew;
-
-								if (iKKTcheck == 1)
-									chk.ARvalue[ind] = xNew;
-
-								//update A:
-								for (ind = Astart[x]; ind<Aend[x]; ind++)
-									if (Aindex[ind] ==i) {
-										break;
-									}
-								Avalue[ind] = xNew;
-
-							}
-							else if (xNew<tol) {
-								//case new x == 0
-								//cout<<"case: x also disappears from row "<<i<<" "<<endl;
-								//update nz row
-								nzRow.at(i)--;
-								//update singleton row list
-								if (nzRow.at(i)==1)
-									singRow.push_back(i);
-								if (nzRow.at(i)==0) {
-									singRow.remove(i);
-									removeEmptyRow(i);
-									countRemovedRows[DOUBLETON_EQUATION]++;
-								}
-
-
-
-								if (nzRow.at(i) > 0) {
-									// AR update
-									//set ARindex of element for x to numCol
-									//flagCol[numCol] = false
-									//mind when resizing: should be OK
-									postValue.push(ARvalue[ind]);
-
-									ARindex[ind] = numCol;
-									if (iKKTcheck == 1) {
-										chk.ARindex[ind] = ARindex[ind];
-										chk.ARvalue[ind] = ARvalue[ind];
-									}
-
-
-									addChange(DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE, i, x);
-								}
-
-								if (nzCol[x] > 0) {
-									// A update for case when x is zero: move x entry to end and set
-									// Aend to be Aend - 1;
-									int indi;
-									for (indi=Astart[x];indi<Aend[x];++indi)
-											if (Aindex[indi]==i)
-												break;
-
-									postValue.push(Avalue[indi]);
-
-									//if indi is not Aend-1 swap elements indi and Aend-1
-									if (indi != Aend[x]-1) {
-										double tmp = Avalue[Aend[x]-1];
-										int   tmpi = Aindex[Aend[x]-1];
-										Avalue[Aend[x]-1] = Avalue[indi];
-										Aindex[Aend[x]-1] = Aindex[indi];
-										Avalue[indi] = tmp;
-										Aindex[indi] = tmpi;
-
-									}
-									Aend[x]--;
-									addChange(DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE, i, x);
-								}
-
-								//update nz col
-								nzCol[x]--;
-								//update singleton col list
-								if (nzCol[x]==1)
-									singCol.push_back(x);
-								if (nzCol[x]==0) {
-									nzRow.at(i)++;  //need this because below we decrease it by 1 too
-									removeEmptyColumn(x);
-								}
-							}
-						}
 					}
 				if (Avalue.size() > 40000000) {
 					trimA();
@@ -432,6 +288,161 @@ void HPresolve::removeDoubletonEquations() {
 
 				iter++;
 			}
+}
+
+
+
+
+
+void HPresolve::UpdateMatrixCoeffDoubletonEquationXzero(const int i,
+		const int x, const int y, const double aiy, const double akx,
+		const double aky) {
+	//case x is zero initially
+	// row nonzero count doesn't change here
+	//cout<<"case: x not present "<<i<<" "<<endl;
+
+	//update AR
+	int ind;
+	for (ind = ARstart.at(i); ind < ARstart.at(i + 1); ind++)
+		if (ARindex[ind] == y) {
+			break;
+		}
+	postValue.push(ARvalue[ind]);
+	postValue.push(y);
+	addChange(DOUBLETON_EQUATION_X_ZERO_INITIALLY, i, x);
+
+	ARindex[ind] = x;
+	ARvalue[ind] = -aiy * akx / aky;
+
+	//just row rep in checker
+	if (iKKTcheck == 1) {
+		chk.ARvalue[ind] = ARvalue[ind];
+		chk.ARindex[ind] = ARindex[ind];
+	}
+
+	//update A: append X column to end of array
+	int st = Avalue.size();
+	for (int ind = Astart[x]; ind < Aend[x]; ind++) {
+		Avalue.push_back(Avalue[ind]);
+		Aindex.push_back(Aindex[ind]);
+	}
+	Avalue.push_back(-aiy * akx / aky);
+	Aindex.push_back(i);
+	Astart[x] = st;
+	Aend[x] = Avalue.size();
+
+	nzCol[x]++;
+	//nzRow does not change here.
+	if (nzCol[x] == 2)
+		singCol.remove(x);
+}
+
+void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(const int i,
+		const int x, const int y, const double aiy, const double akx,
+		const double aky) {
+	int ind;
+
+	//update nonzeros: for removal of
+	nzRow.at(i)--;
+	if (nzRow.at(i)==1)
+		singRow.push_back(i);
+
+	if (nzRow.at(i) == 0) {
+		singRow.remove(i);
+		removeEmptyRow(i);
+		countRemovedRows[DOUBLETON_EQUATION]++;
+	}
+
+	double xNew;
+	for (ind = ARstart.at(i); ind < ARstart.at(i + 1); ind++)
+		if (ARindex[ind] == x)
+			break;
+
+	xNew = ARvalue[ind] - (aiy * akx) / aky;
+	if (abs(xNew) > tol) {
+		//case new x != 0
+		//cout<<"case: x still there row "<<i<<" "<<endl;
+
+		postValue.push(ARvalue[ind]);
+		addChange(DOUBLETON_EQUATION_NEW_X_NONZERO, i, x);
+		ARvalue[ind] = xNew;
+
+		if (iKKTcheck == 1)
+			chk.ARvalue[ind] = xNew;
+
+		//update A:
+		for (ind = Astart[x]; ind < Aend[x]; ind++)
+			if (Aindex[ind] == i) {
+				break;
+			}
+		Avalue[ind] = xNew;
+
+	} else if (xNew < tol) {
+		//case new x == 0
+		//cout<<"case: x also disappears from row "<<i<<" "<<endl;
+		//update nz row
+		nzRow.at(i)--;
+		//update singleton row list
+		if (nzRow.at(i)==1)
+			singRow.push_back(i);
+
+		if (nzRow.at(i) == 0) {
+			singRow.remove(i);
+			removeEmptyRow(i);
+			countRemovedRows[DOUBLETON_EQUATION]++;
+		}
+
+		if (nzRow.at(i) > 0) {
+			// AR update
+			//set ARindex of element for x to numCol
+			//flagCol[numCol] = false
+			//mind when resizing: should be OK
+			postValue.push(ARvalue[ind]);
+
+			ARindex[ind] = numCol;
+			if (iKKTcheck == 1) {
+				chk.ARindex[ind] = ARindex[ind];
+				chk.ARvalue[ind] = ARvalue[ind];
+			}
+
+			addChange(DOUBLETON_EQUATION_NEW_X_ZERO_AR_UPDATE, i, x);
+		}
+
+		if (nzCol[x] > 0) {
+			// A update for case when x is zero: move x entry to end and set
+			// Aend to be Aend - 1;
+			int indi;
+			for (indi = Astart[x]; indi < Aend[x]; ++indi)
+				if (Aindex[indi] == i)
+					break;
+
+			postValue.push(Avalue[indi]);
+
+			//if indi is not Aend-1 swap elements indi and Aend-1
+			if (indi != Aend[x] - 1) {
+				double tmp = Avalue[Aend[x] - 1];
+				int tmpi = Aindex[Aend[x] - 1];
+				Avalue[Aend[x] - 1] = Avalue[indi];
+				Aindex[Aend[x] - 1] = Aindex[indi];
+				Avalue[indi] = tmp;
+				Aindex[indi] = tmpi;
+
+			}
+			Aend[x]--;
+			addChange(DOUBLETON_EQUATION_NEW_X_ZERO_A_UPDATE, i, x);
+		}
+
+		//update nz col
+		nzCol[x]--;
+		//update singleton col list
+		if (nzCol[x] == 1)
+			singCol.push_back(x);
+		if (nzCol[x] == 0) {
+			nzRow.at(i)++;  //need this because below we decrease it by 1 too
+			removeEmptyColumn
+			(x);
+		}
+	}
 }
 
 void HPresolve::trimA() {
@@ -451,10 +462,6 @@ void HPresolve::trimA() {
 	// resolving ties using the original index
 	sort(vp.begin(), vp.end());
 
-//	for (size_t i = 0 ; i != vp.size() ; ++i) {
-//		cout << vp.at(i).first << " " << vp.at(i).second << endl;
-//	}
-
 	vector<int> Aendtmp;
 	Aendtmp = Aend;
 
@@ -462,13 +469,12 @@ void HPresolve::trimA() {
 	for (size_t i = 0 ; i != vp.size() ; ++i) {
 		int col = vp.at(i).second;
 		if (flagCol.at(col)) {
-			int k = vp.at(i).first; // = Astarttmp.at(col)
+			int k = vp.at(i).first;
 			Astart.at(col) = iPut;
 			while(k < Aendtmp.at(col)) {
 				if (flagRow.at(Aindex.at(k))) {
 					Avalue[iPut] = Avalue.at(k);
 					Aindex[iPut] = Aindex.at(k);
-
 					iPut++;
 				}
 				k++;
@@ -478,7 +484,6 @@ void HPresolve::trimA() {
 	}
 	Avalue.resize(iPut);
 	Aindex.resize(iPut);
-
 }
 
 
@@ -1851,18 +1856,10 @@ void HPresolve::setPrimalValue(int j, double value) {
 
 void HPresolve::checkForChanges(int iteration) {
 	if (iteration==2) {
-		bool allPresent = true;
-		for (int i=0;i<numCol;++i)
-			if (!flagCol.at(i)) {
-				allPresent = false;
-				break;
-			}
-		for (int i=0;i<numRow;++i)
-			if (!flagRow.at(i)) {
-				allPresent = false;
-				break;
-			}
-		if (allPresent) {
+		//flagCol has one more element at end which is zero
+		//from removeDoubletonEquatoins, see why
+		if (none_of(flagCol.begin(), flagCol.begin() + numCol, [](int i) { return i == 0; }) ||
+			none_of(flagRow.begin(), flagRow.begin() + numRow, [](int i) { return i == 0; })) {
 			if (iPrint > 0)
 				cout<<"PR: No variables were eliminated at presolve."<<endl;
 			noPostSolve = true;
@@ -1922,7 +1919,6 @@ void HPresolve::recordCounts(const string fileName) {
 	int reportCount = sizeof(reportList) / sizeof(int);
 
 	myfile << "Problem " << modelName << ":\n";
-
 	myfile << "Rule   , removed rows , removed cols , time  \n";
 
 	int cRows=0, cCols=0;
@@ -1940,7 +1936,6 @@ void HPresolve::recordCounts(const string fileName) {
 
 		cRows += countRemovedRows[reportList[i]];
 		cCols += countRemovedCols[reportList[i]];
-
 	}
 
 	if (!noPostSolve) {
@@ -2711,59 +2706,62 @@ void HPresolve::postsolve() {
 
 void HPresolve::setBasisElement(change c) {
 
-        //nonbasicFlag starts off as [numCol + numRow] and is already
-        //increased to [numColOriginal + numRowOriginal] so fill in gaps
+	//nonbasicFlag starts off as [numCol + numRow] and is already
+	//increased to [numColOriginal + numRowOriginal] so fill in gaps
 
-        switch (c.type) {
-                        case EMPTY_ROW: {
-                                nonbasicFlag[numColOriginal + c.row] = 0;
-                                break;
-                        }
-                        case SING_ROW: {
-                        	//elsewhere
-                                break;
-                        }
-                        case FORCING_ROW_VARIABLE:
-                        	// variables set at a bound by forcing row fRjs.p
-                        		// all nonbasic
+	switch (c.type) {
+		case EMPTY_ROW: {
+			nonbasicFlag.at(numColOriginal + c.row) = 0;
+			break;
+		}
+		case SING_ROW: {
+			//elsewhere
+			break;
+		}
+		case FORCING_ROW_VARIABLE:
+			// variables set at a bound by forcing row fRjs.p
+			// all nonbasic
 
-                                break;
-                        case FORCING_ROW: {
-                        		nonbasicFlag[numColOriginal + c.row] = 0;
-                                break;
-                        }
-                        case REDUNDANT_ROW: {
-                                nonbasicFlag[numColOriginal + c.row] = 0;
-                                break;
-                        }
-                        case FREE_SING_COL : case IMPLIED_FREE_SING_COL: {
-                                nonbasicFlag[c.col] = 0;
-                                basicIndex.push_back(c.col);
+			break;
+		case FORCING_ROW: {
+			nonbasicFlag.at(numColOriginal + c.row) = 0;
+			break;
+		}
+		case REDUNDANT_ROW: {
+			nonbasicFlag.at(numColOriginal + c.row) = 0;
+			break;
+		}
+		case FREE_SING_COL:
+		case IMPLIED_FREE_SING_COL: {
+			nonbasicFlag[c.col] = 0;
+			basicIndex.push_back(c.col);
 
-                                nonbasicFlag[numColOriginal + c.row] = 1;
-                                break;
-                        }
-                        case SING_COL_DOUBLETON_INEQ: {
-                                // column singleton in a doubleton inequality.
-                                nonbasicFlag[c.col] = 0;
-                                basicIndex.push_back(c.col);
+			nonbasicFlag.at(numColOriginal + c.row) = 1;
+			break;
+		}
+		case SING_COL_DOUBLETON_INEQ: {
+			// column singleton in a doubleton inequality.
+			nonbasicFlag.at(c.col) = 0;
+			basicIndex.push_back(c.col);
 
-                                nonbasicFlag[numColOriginal + c.row] = 1;
-                                break;
-                        }
-                        case EMPTY_COL: case DOMINATED_COLS: case WEAKLY_DOMINATED_COLS: {
-                                nonbasicFlag[c.col] = 1;
-                                break;
-                        }
-                        case FIXED_COL: { //fixed variable:
-                        		//check if it was NOT after singRow
-                        		if (chng.size() > 0)
-									if (chng.top().type != SING_ROW)
-										nonbasicFlag[c.col] = 1;
-                                break;
-                        }
+			nonbasicFlag.at(numColOriginal + c.row) = 1;
+			break;
+		}
+		case EMPTY_COL:
+		case DOMINATED_COLS:
+		case WEAKLY_DOMINATED_COLS: {
+			nonbasicFlag.at(c.col) = 1;
+			break;
+		}
+		case FIXED_COL: { //fixed variable:
+			//check if it was NOT after singRow
+			if (chng.size() > 0)
+				if (chng.top().type != SING_ROW)
+					nonbasicFlag.at(c.col) = 1;
+			break;
+		}
 
-        }
+	}
 
 }
 
@@ -2903,8 +2901,8 @@ void HPresolve::getBoundOnLByZj(int row, int j, double* lo, double* up, double c
 
 	double sum = 0;
 	for (int kk=Astart.at(j); kk<Aend.at(j);++kk)
-		if (flagRow[Aindex.at(kk)]) {
-			sum = sum + Avalue.at(kk)*valueRowDual[Aindex.at(kk)];
+		if (flagRow.at(Aindex.at(kk))) {
+			sum = sum + Avalue.at(kk)*valueRowDual.at(Aindex.at(kk));
 		}
 	x = x - sum;
 
@@ -2926,13 +2924,11 @@ void HPresolve::getBoundOnLByZj(int row, int j, double* lo, double* up, double c
 	else if ((valuePrimal.at(j) == colLow && aij<0) || (valuePrimal.at(j) == colUpp && aij>0)) {
 		if (x<*up)
 			*up = x;
-
 	}
 	else if ((valuePrimal.at(j) == colLow && aij>0) || (valuePrimal.at(j) == colUpp && aij<0)) {
 		if (x>*lo)
 			*lo = x;
 	}
-
 }
 
 
@@ -2946,9 +2942,9 @@ double HPresolve::getColumnDualPost(int col) {
 	double z;
 	double sum = 0;
 	for (int cnt=Astart.at(col); cnt<Aend.at(col); cnt++)
-		if (flagRow[Aindex[cnt]]) {
-			row = Aindex[cnt];
-			sum = sum + valueRowDual.at(row)*Avalue[cnt];
+		if (flagRow.at(Aindex.at(cnt))) {
+			row = Aindex.at(cnt);
+			sum = sum + valueRowDual.at(row)*Avalue.at(cnt);
 		}
 	z = sum + colCostAtEl.at(col) ;
 	return z;
@@ -2965,8 +2961,8 @@ double HPresolve::getRowDualPost(int row, int col) {
 	double x = 0;
 
 	for (int kk=Astart.at(col); kk<Aend.at(col);++kk)
-		if (flagRow[Aindex.at(kk)] && Aindex.at(kk) != row)
-			x = x + Avalue.at(kk)*valueRowDual[Aindex.at(kk)];
+		if (flagRow.at(Aindex.at(kk)) && Aindex.at(kk) != row)
+			x = x + Avalue.at(kk)*valueRowDual.at(Aindex.at(kk));
 
 	x = x + colCostAtEl.at(col) - valueColDual.at(col);
 
