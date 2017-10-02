@@ -17,7 +17,6 @@ int HPresolve::presolve(int print) {
 	iPrint = print;
 	iKKTcheck = 0;
 
-	//iPrint = 1;
 	chk.print = 3; // 3 for experiments mode
 	if (chk.print==3) {
 		iPrint = 0;
@@ -26,6 +25,9 @@ int HPresolve::presolve(int print) {
 			countsFile = "../experiments/t2";
 		}
 	}
+
+	//iPrint = 1;
+
 	if (iPrint || iKKTcheck)
 		debug = 1;
 		
@@ -97,131 +99,151 @@ int HPresolve::presolve() {
 	return presolve(0);
 }
 
+/**
+ * returns <x, y>
+ * 		   <x, -1> if we need to skip row
+ *
+ * 		   row is of form akx_x + aky_y = b,
+ */
+pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
+	pair<int, int> colIndex;
+	//row is of form akx_x + aky_y = b, where k=row and y is present in fewer constraints
 
+	double b = rowLower.at(row);
+	int col1 = -1;
+	int col2 = -1;
+	int kk = ARstart.at(row);
+	while (kk < ARstart.at(row + 1)) {
+		if (flagCol.at(ARindex.at(kk))) {
+			if (col1 == -1)
+				col1 = ARindex.at(kk);
+			else if (col2 == -1)
+				col2 = ARindex.at(kk);
+			else {
+				cout << "ERROR: doubleton eq row" << row
+						<< " has more than two variables. \n";
+				col2 = -2;
+				break;
+			}
+			++kk;
+		} else
+			++kk;
+	}
+	if (col2 == -1)
+		cout << "ERROR: doubleton eq row" << row
+				<< " has less than two variables. \n";
+	if (col2 < 0) {
+		colIndex.second = -1;
+		return colIndex;
+	}
+
+	int x,y;
+	if (nzCol[col1] <= nzCol[col2]) {
+		y = col1;
+		x = col2;
+	} else {
+		x = col1;
+		y = col2;
+	}
+
+//	if (nzCol.at(y) == 1 && nzCol.at(x) == 1) { //two singletons case handled elsewhere
+//		colIndex.second = -1;
+//		return colIndex;
+//	}
+
+	colIndex.first = x;
+	colIndex.second = y;
+	return colIndex;
+}
+
+void HPresolve::processRowDoubletonEquation(const int row, const int x,
+		const int y, const double akx, const double aky, const double b) {
+
+	postValue.push(akx);
+	postValue.push(aky);
+	postValue.push(b);
+
+	//modify bounds on variable x (j), variable y (col,k) is substituted out
+	//double aik = Avalue.at(k);
+	//double aij = Avalue.at(kk);
+	pair<double, double> p = getNewBoundsDoubletonConstraint(row, y, x, aky, akx);
+	double low = get<0>(p);
+	double upp = get<1>(p);
+
+	//add old bounds of x to checker and for postsolve
+	if (iKKTcheck == 1) {
+		vector<pair<int, double> > bndsL, bndsU, costS;
+		bndsL.push_back(make_pair(x, colLower.at(x)));
+		bndsU.push_back(make_pair(x, colUpper.at(x)));
+		costS.push_back(make_pair(x, colCost.at(x)));
+		chk.cLowers.push(bndsL);
+		chk.cUppers.push(bndsU);
+		chk.costs.push(costS);
+	}
+
+	vector<double> bnds({colLower.at(y), colUpper.at(y), colCost.at(y)});
+	vector<double> bnds2({colLower.at(x), colUpper.at(x), colCost.at(x)});
+	oldBounds.push(make_pair(y, bnds));
+	oldBounds.push(make_pair(x, bnds2));
+
+	if (low > colLower.at(x))
+		colLower.at(x) = low;
+	if (upp < colUpper.at(x))
+		colUpper.at(x) = upp;
+
+	//modify cost of xj
+	colCost.at(x) = colCost.at(x) - colCost.at(y) * akx / aky;
+
+	//for postsolve: need the new bounds too
+	vector<double> bnds3({colLower.at(x), colUpper.at(x), colCost.at(x)});
+	oldBounds.push(make_pair(x, bnds3));
+
+	addChange(DOUBLETON_EQUATION, row, y);
+
+	//remove y (col) and the row
+	if (iPrint > 0)
+		cout << "PR: Doubleton equation removed. Row " << row << ", column "
+				<< y << ", column left is " << x << "    nzy=" << nzCol.at(y)
+				<< endl;
+
+	flagRow.at(row) = 0;
+	nzCol.at(x)--;
+
+	countRemovedRows[DOUBLETON_EQUATION]++;
+	countRemovedCols[DOUBLETON_EQUATION]++;
+
+	//----------------------------
+	flagCol.at(y) = 0;
+	if (!hasChange)
+		hasChange = true;
+}
 
 void HPresolve::removeDoubletonEquations() {
 	if (flagCol.size() == numCol)
 		flagCol.push_back(0);
 
-	double  b, low, upp;
+	double  b, low, upp, akx, aky;
 	int col1, col2, x, y;
 	int iter = 0;
 
 	for (int row=0;row<numRow;row++)
 		if (flagRow.at(row))
 			if (nzRow.at(row)==2 && abs(rowLower.at(row)-rowUpper.at(row))< tol    ) {
+
 				//row is of form akx_x + aky_y = b, where k=row and y is present in fewer constraints
+				b = rowLower.at(row);
+				pair<int, int> colIndex = getXYDoubletonEquations(row);
+				x = colIndex.first;
+				y = colIndex.second;
 
-				double b = rowLower.at(row);
-				col1 = col2 = -1;
-				int kk = ARstart.at(row);
-				while (kk<ARstart.at(row+1)) {
-					if (flagCol[ARindex.at(kk)]) {
-						if (col1==-1)
-							col1 = ARindex.at(kk);
-						else if (col2==-1)
-							col2 = ARindex.at(kk);
-						else {
-							cout<<"ERROR: doubleton eq row"<< row << " has more than two variables. \n";
-							col2 = -2;
-							break;
-						}
-						++kk;
-					}
-					else
-						++kk;
-				}
-				if (col2==-1)
-					cout<<"ERROR: doubleton eq row"<< row << " has less than two variables. \n";
-				if (col2 < 0)
+				//two singletons case handled elsewhere
+				if (y < 0 || ((nzCol.at(y) == 1 && nzCol.at(x) == 1)))
 					continue;
 
-				if (nzCol[col1] <= nzCol[col2]) {
-					y = col1;
-					x = col2;
-				}
-				else {
-					x = col1;
-					y = col2;
-				}
+				akx = getaij(row, x);
+				aky = getaij(row, y);
 
-				double akx = getaij(row, x);
-				double aky = getaij(row, y);
-
-
-
-
-				if (nzCol.at(y) == 1 && nzCol.at(x) == 1 )            //two singletons case handled elsewhere
-					continue;
-
-				postValue.push(akx);
-				postValue.push(aky);
-				postValue.push(b);
-
-				//modify bounds on variable x (j), variable y (col,k) is substituted out
-				//double aik = Avalue.at(k);
-				//double aij = Avalue.at(kk);
-				pair<double, double> p = getNewBoundsDoubletonConstraint(row, y, x, aky, akx);
-				low = get<0>(p);
-				upp = get<1>(p);
-
-				//add old bounds of x to checker and for postsolve
-				if (iKKTcheck == 1) {
-					vector<pair<int, double> > bndsL, bndsU, costS;
-					bndsL.push_back( make_pair( x, colLower.at(x)));
-					bndsU.push_back( make_pair( x, colUpper.at(x)));
-					costS.push_back( make_pair( x, colCost.at(x)));
-					chk.cLowers.push(bndsL);
-					chk.cUppers.push(bndsU);
-					chk.costs.push(costS);
-				}
-
-				vector<double> bnds, bnds2, bnds3;
-				bnds.push_back(colLower.at(y));
-				bnds.push_back(colUpper.at(y));
-				bnds.push_back(colCost.at(y));
-				oldBounds.push(make_pair( y, bnds));
-
-				bnds2.push_back(colLower.at(x));
-				bnds2.push_back(colUpper.at(x));
-				bnds2.push_back(colCost.at(x));
-				oldBounds.push(make_pair( x, bnds2));
-
-
-				if (low > colLower.at(x))
-					colLower.at(x) = low;
-				if (upp < colUpper.at(x))
-					colUpper.at(x) = upp;
-
-				//modify cost of xj
-				colCost.at(x) = colCost.at(x) - colCost.at(y)*akx/aky;
-
-				//for postsolve: need the new bounds too
-
-				bnds3.push_back(colLower.at(x));
-				bnds3.push_back(colUpper.at(x));
-				bnds3.push_back(colCost.at(x));
-				oldBounds.push(make_pair( x, bnds3));
-
-				addChange(DOUBLETON_EQUATION, row, y);
-
-				//remove y (col) and the row
-				if (iPrint > 0)
-					//cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<endl;
-					cout<<"PR: Doubleton equation removed. Row "<<row<<", column "<<y<<", column left is "<<x<<"    nzy="<<nzCol.at(y)<<endl;
-				flagRow.at(row) = 0;
-				nzCol.at(x)--;
-
-				countRemovedRows[DOUBLETON_EQUATION]++;
-				countRemovedCols[DOUBLETON_EQUATION]++;
-
-				//----------------------------
-				flagCol.at(y) = 0;
-				if (!hasChange)
-					hasChange = true;
-
-
-				vector<pair<int, double> > bndsL, bndsU;
+				processRowDoubletonEquation(row, x, y, akx, aky, b);
 
 				for (int k = Astart.at(y); k<Aend.at(y);++k )
 					if (flagRow.at(Aindex.at(k)) && Aindex.at(k) != row) {
@@ -230,6 +252,7 @@ void HPresolve::removeDoubletonEquations() {
 
 						//update row bounds
 						if (iKKTcheck == 1) {
+							vector<pair<int, double> > bndsL, bndsU;
 							bndsL.push_back( make_pair( i, rowLower.at(i)));
 							bndsU.push_back( make_pair( i, rowUpper.at(i)));
 							chk.rLowers.push(bndsL);
