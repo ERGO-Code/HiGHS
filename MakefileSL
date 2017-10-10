@@ -1,9 +1,10 @@
 #Makefile for hsol 
 #C++ compiler 
-CCP      = g++
+#CCP      = g++ -D JAJH_dev -D JAJH_rp
+CCP      = g++ -D SCIP_dev 
 
 # For up-to-date gnu compiler (mingw-32 on Fetteresk)
-CCSTDFLAGS= -std=c++11
+CCSTDFLAGS= -std=c++11 -fPIC
 
 # Default C++ macros
 # For debugging, need -g, but other flags like -Wall -Werror can be valuable
