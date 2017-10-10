@@ -1,0 +1,20 @@
+!>>>>adlittle<<<<
+====================================================================================
+Running hsol
+Edge weight is set to DSE1
+Crash is set to LTSSF6
+Presolve is set to On
+Reading file adlittle.mps
+Presolve m=53(- 3) n=95(- 2) nz= 373(-  10) 
+Presolve rules  emptR fixCo singR douEq forcR reduR colSi colSD colSI domCo wdomC
+Time spent      <.01  <.01  <.01  <.01  <.01  <.01  <.01  <.01  <.01  <.01  <.01 
+After presolve:  : OPTIMAL    adlittle.mps     2.2549496316e+05         77      0.008
+After postsolve: : OPTIMAL    adlittle.mps     2.2549496316e+05         17      0.009
+Final:           : OPTIMAL    adlittle.mps     2.2549496316e+05         17      0.009
+====================================================================================
+Running hsol
+Reading file adlittle.mps
+Setting default value presolveMode = Off
+Setting default value crashMode = Off
+Setting default value edWtMode = DSE1
+Solve plain: OPTIMAL    adlittle.mps     2.2549496316e+05         81      0.013

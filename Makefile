@@ -27,7 +27,7 @@ SOURCE_CPP_H=HDual.cpp HDualRHS.cpp HDualRow.cpp HFactor.cpp HMatrix.cpp HModel.
 	HPresolve.cpp HPreData.cpp \
 	KktCheck.cpp KktChStep.cpp \
 	HinOut.cpp
-	
+
 SOURCE_CPP=HApp.cpp HDualMulti.cpp #$(SOURCE_CPP_H:%=HApp.cpp HDualMulti.cpp)
 
 OBJECTS_H= $(SOURCE_CPP_H:%.cpp=%.o) 
@@ -36,7 +36,7 @@ OBJECTS_NO_HEADER=  $(SOURCE_CPP:%.cpp=%.o)
 deb : $(OBJECTS_H) $(OBJECTS_NO_HEADER) 
 	$(LINK) $(CCFLAGS) $(OBJECTS_H) $(OBJECTS_NO_HEADER) -o $(DEBUG)
 	EXE=$(DEBUG)
-	
+
 exe: $(OBJECTS_H) $(OBJECTS_NO_HEADER) 
 	CCFLAGS=$(CCSTDFLAGS)
 	EXE=$(EXECUTABLE)
@@ -59,12 +59,12 @@ $(info $$CCFLAGS    is [${CCFLAGS}])
 
 $(OBJECTS_H): %.o : %.cpp %.h
 	$(CCP) $(CCFLAGS) -c $(DIR)$(@F:.o=.cpp)
-	
+
 $(OBJECTS_NO_HEADER): %.o : %.cpp
 	$(CCP) $(CCFLAGS) -c $(DIR)$(@F:.o=.cpp)
-	
+
 test:
-	$(EXE) -e DSE1 -c LTSSF7 -p On -T 3600 -f  25fv47.mps
+	$(EXE) -f 25fv47.mps
 
 # "Cleaning the Directory": for .PHONY logic see GNU make documentation
 # Make sure that rm is known: not in mingw-32!
@@ -74,7 +74,7 @@ clean:
 
 cleanall: 
 	rm -f $(EXE) $(DEBUG) $(OBJECTS_H) $(OBJECTS_NO_HEADER)  $(EXECUTABLE:%=%.exe) *.o 
-	
+
 .DONE:          # performed last, unless errors occur so .FAILED defined
 .FAILED:        # performed instead of .DONE if error occurs
 		-@echo 
