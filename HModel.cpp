@@ -2668,7 +2668,7 @@ int HModel::util_chgRowBoundsSet(int nrows, const int* XrowBoundIndex, const dou
 // Convert model basic/nonbasic status from SCIP-like status
 // Postive  return value k implies invalid basis status for column k-1
 // Negative return value k implies invalid basis status for row   -k-1
-int HModel::util_convertBaseStatToWorking(int* cstat, int* rstat) {
+int HModel::util_convertBaseStatToWorking(const int* cstat, const int* rstat) {
   int numBasic=0;
   for (int col = 0; col < numCol; col++) {
     int var = col;

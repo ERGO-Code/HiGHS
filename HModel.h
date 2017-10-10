@@ -233,7 +233,7 @@ public:
     int util_chgRowBoundsSet(int nrows, const int* XrowBoundIndex, const double* XrowLowerValues, const double* XrowUpperValues);
 
     // Utilities to convert model basic/nonbasic status to/from SCIP-like status
-    int util_convertBaseStatToWorking(int* cstat, int* rstat);
+    int util_convertBaseStatToWorking(const int* cstat, const int* rstat);
     int util_convertWorkingToBaseStat(int* cstat, int* rstat);
     // Utility to get the indices of the basic variables for SCIP
     int util_getBasicIndices(int* bind);
