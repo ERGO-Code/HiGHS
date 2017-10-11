@@ -1,0 +1,8 @@
+if(NOT TARGET libh2gmp)
+  include("${CMAKE_CURRENT_LIST_DIR}/h2gmp-targets.cmake")
+endif()
+
+set(h2gmp_LIBRARIES libh2gmp)
+set(h2gmp_PIC_LIBRARIES libh2gmp-pic)
+set(h2gmp_INCLUDE_DIRS "@CONF_INCLUDE_DIRS@")
+set(h2gmp_FOUND TRUE)

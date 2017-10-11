@@ -1,8 +1,0 @@
-export EXE=/home/jajhall/Ivet/couscous/hsol_opt.exe
-export EXE=/home/jajhall/Ivet/couscous/hsol_deb.exe
-mps_ml $1
-
-$EXE 
-
-rm -f $1.mps
-
