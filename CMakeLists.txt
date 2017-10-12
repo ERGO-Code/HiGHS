@@ -17,14 +17,24 @@ set(CPACK_PACKAGE_VERSION_PATCH "${H2GMP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 include(CPack)
 
-option(SCIP_DEV "SCIP development" ON)
-option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# wether to use shared or static libraries
+option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+option(SCIP_DEV "SCIP development" ON)
+
+# whether to use OpenMP
+option(OPENMP "Use OpenMP" ON)
+if(OPENMP)
+  FIND_PACKAGE(OpenMP)
+  IF(OPENMP_FOUND)
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  ENDIF()
+ENDIF()
+
+# whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
