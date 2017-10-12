@@ -24,10 +24,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
+# wether to use shared or static libraries
+option(SHARED "Build shared libraries" ON)
+set(BUILD_SHARED_LIBS ${SHARED})
+message(STATUS "Build shared libraries: " ${SHARED})
+
 # make 'Release' the default build type
 if(CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE Release)
 endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
@@ -53,6 +59,3 @@ if(MSVC)
 endif()
 
 add_subdirectory(src)
-add_subdirectory(check)
-
-enable_testing()
