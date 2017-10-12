@@ -32,24 +32,17 @@ Unzip the file hsol_1.0 into your folder of choice
 Compilation
 -----------
 
-A serial executable is obtained by using your favourite C++ compiler
-to compile and link the downloaded .cpp files. For example, using g++
+HSOL uses CMake as build system. To compile the run you need to setup
+a build directory and define your build configuration:
 
-g++ *.cpp
+    mkdir build
+    cd build
+    cmake .. [add otional parameters here]
 
-The solver has also been tested successfully with the Intel "icc"
-compiler and with various levels of optimization (for g++ and icc),
-and -O2 is recommended. Since they exist as comments, the OpenMP
-directives are ignored by default.
+Afterwards you may compile the code wrt the set configuration using your
+defined build generator, e.g. `make`:
 
-A parallel executable is obtained invoking the OpenMP directives. This
-is achieved using GNU g++ thus
-
-g++ -fopenmp *.cpp
-
-and with icc  thus
-
-icc -openmp *.cpp
+    make
 
 Run-time options
 ----------------
