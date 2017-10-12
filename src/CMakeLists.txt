@@ -2,6 +2,7 @@ set(sources
     HDual.cpp
     HDualRHS.cpp
     HDualRow.cpp
+    HDualMulti.cpp
     HFactor.cpp
     HMatrix.cpp
     HModel.cpp
@@ -52,7 +53,7 @@ else()
 endif()
 
 # create h2gmp binary using library without pic
-add_executable(h2gmp HApp.cpp HDualMulti.cpp)
+add_executable(h2gmp HApp.cpp)
 target_link_libraries(h2gmp libh2gmp)
 
 # set the install rpath to the installed destination

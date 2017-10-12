@@ -33,6 +33,7 @@ if(OPENMP)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   ENDIF()
 ENDIF()
+message(STATUS "Use OpenMP: " ${OPENMP})
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
