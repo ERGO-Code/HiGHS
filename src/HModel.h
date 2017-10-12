@@ -249,8 +249,10 @@ public:
 		      int nnonz, const int* XARstart, const int* XARindex, const double* XARvalue);
     void util_deleteRows(int firstrow, int lastrow);
     void util_deleteRowset(int* dstat);
-    void util_extractRows(int firstrow, int lastrow, vector<double>& XrowLower, vector<double>& XrowUpper,
-			  vector<int>& XARstart, vector<int>& XARindex, vector<double>& XARvalue);
+    void util_extractRows(int firstrow, int lastrow, double* XrowLower_, double* XrowUpper_,
+			  int* XARstart_, int* XARindex_, double* XARvalue_);
+    void util_changeCoeff(int row, int col, const double newval);
+    void util_getCoeff(int row, int col, double* val);
 
     // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG] is false
     void util_reportMessage(const char *message);

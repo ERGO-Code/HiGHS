@@ -2740,6 +2740,8 @@ int HModel::util_convertBaseStatToWorking(const int* cstat, const int* rstat) {
 	     row, rstat[row], rowLower[row], rowUpper[row]);
 #endif
       return -(row+1);}
+      printf("convertBaseStatToWorking: row=%d, rstat=%d, lower=%g, upper=%g, nonbasicMove=%d\n",
+	     row, rstat[row], rowLower[row], rowUpper[row], nonbasicMove[var]);
   }
   assert(numBasic=numRow);
   populate_WorkArrays();
@@ -3034,7 +3036,7 @@ void HModel::util_addRows(int nrows, const double* XrowLower, const double* Xrow
 			  int nnonz, const int* XARstart, const int* XARindex, const double* XARvalue) {
   assert(nrows >= 0);
   assert(nnonz >= 0);
-  assert(nnonz > 0 && numCol > 0);
+  assert(nnonz == 0 || numCol > 0);
 #ifdef JAJH_dev
   printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);cout << flush;
 #endif
@@ -3270,15 +3272,21 @@ void HModel::util_deleteRowset(int* dstat) {
 }
 
 // Extract the model data for a contiguous set of rows
-void HModel::util_extractRows(int firstrow, int lastrow, vector<double>& XrowLower, vector<double>& XrowUpper,
-			      vector<int>& XARstart, vector<int>& XARindex, vector<double>& XARvalue) {
+void HModel::util_extractRows(int firstrow, int lastrow, double* XrowLower_, double* XrowUpper_,
+			      int* XARstart_, int* XARindex_, double* XARvalue_) {
   assert(firstrow >= 0);
   assert(lastrow < numRow);
   assert(firstrow <= lastrow);
 #ifdef JAJH_dev
   printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);cout << flush;
 #endif
-  
+  printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);cout << flush;
+  vector<double> XrowLower;
+  vector<double> XrowUpper;
+  vector<int> XARstart;
+  vector<int> XARindex;
+  vector<double> XARvalue;
+
   //Determine the number of rows to be extracted and resize the
   //space into which vectors will be extracted
   int numExtractRows = lastrow-firstrow+1;
@@ -3291,6 +3299,8 @@ void HModel::util_extractRows(int firstrow, int lastrow, vector<double>& XrowLow
     //    printf("Extracting row %d\n", row);cout << flush;
     XrowLower[row-firstrow] = rowLower[row];
     XrowUpper[row-firstrow] = rowUpper[row];
+    printf("Extracted row %d from %d with bounds [%g, %g]\n",
+	   row-firstrow, row, XrowLower[row-firstrow], XrowUpper[row-firstrow]);cout << flush;
   }
   //Determine how many entries are in each row to be extracted
   vector<int> XARlength;
@@ -3327,8 +3337,75 @@ void HModel::util_extractRows(int firstrow, int lastrow, vector<double>& XrowLow
       }
     }
   }
+  XrowLower_ = &(*XrowLower.begin());
+  XrowUpper_ = &(*XrowUpper.begin());
+  XARstart_ = &(*XARstart.begin());
+  XARindex_ = &(*XARindex.begin());
+  XARvalue_ = &(*XARvalue.begin());
 }
 
+// Change a single coefficient in the matrix
+void HModel::util_changeCoeff(int row, int col, const double newval) {
+  assert(row >= 0 && row < numRow);
+  assert(col >= 0 && col < numCol);
+#ifdef JAJH_dev
+  printf("Called model.util_changeCoeff(row=%d, col=%d, newval=%g)\n", row, col, newval);cout << flush;
+#endif
+  //  printf("\n\nCalled model.util_changeCoeff(row=%d, col=%d, newval=%g)\n\n", row, col, newval);cout << flush;
+
+  //  util_reportModel();
+  int cg_el = -1;
+  for (int el=Astart[col]; el < Astart[col+1]; el++) {
+  //    printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el, Aindex[el], row);
+    if (Aindex[el] == row) {
+      cg_el = el;
+      break;
+    }
+  }
+  if (cg_el < 0) {
+  //    printf("model.util_changeCoeff: Cannot find row %d in column %d\n", row, col);
+    cg_el = Astart[col+1];
+    int nwNnonz = Astart[numCol] + 1;
+    //    printf("model.util_changeCoeff: Increasing Nnonz from %d to %d\n", Astart[numCol], nwNnonz);
+    Aindex.resize(nwNnonz);
+    Avalue.resize(nwNnonz);
+    for (int i=col+1; i<=numCol; i++) Astart[i]++;
+    for (int el=nwNnonz-1; el>cg_el; el--) {
+      Aindex[el] = Aindex[el-1];
+      Avalue[el] = Avalue[el-1];
+    }
+  }    
+  Avalue[cg_el] = newval;
+
+  //Deduce the consequences of a changed element
+  //ToDo: Can do something more intelligent if element is in nonbasic column. Otherwise, treat it as if 
+  mlFg_Update(mlFg_action_NewRows);
+  //  util_reportModel();
+
+}
+
+// Get a single coefficient from the matrix
+void HModel::util_getCoeff(int row, int col, double* val) {
+  assert(row >= 0 && row < numRow);
+  assert(col >= 0 && col < numCol);
+#ifdef JAJH_dev
+  printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);cout << flush;
+#endif
+  int get_el = -1;
+  for (int el=Astart[col]; el < Astart[col+1]; el++) {
+  //    printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el, Aindex[el], row);
+    if (Aindex[el] == row) {
+      get_el = el;
+      break;
+    }
+  }
+  if (get_el < 0) {
+  //    printf("model.util_getCoeff: Cannot find row %d in column %d\n", row, col);
+    *val = 0;
+  } else { 
+    *val = Avalue[get_el];
+  }
+}
 
 // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG] is false
 void HModel::util_reportMessage(const char *message) {
