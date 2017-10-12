@@ -4,7 +4,7 @@ Welcome to HSOL 1.0
 HSOL is a high performance serial and parallel solver for large scale
 sparse linear programming (LP) problems of the form
 
-Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
+    Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
 
 It is written in C++ with OpenMP directives. It is based on the dual
 revised simplex method, exploiting parallelism using either "parallel
@@ -44,48 +44,57 @@ defined build generator, e.g. `make`:
 
     make
 
+Useful options
+--------------
+
+Set custom options with `-D <option>=<value>` during the configuration step (`cmake ..`):
+
+- `OPENMP`: turn OpenMP support on or off 
+
 Run-time options
 ----------------
 
 In the following discussion, the name of the executable file generated
-is assumed to be "hsol"
+is assumed to be `hsol`.
 
 HSOL can only read plain text MPS files, and the following command
-solves the model in ml.mps
+solves the model in `ml.mps`
 
-hsol -f ml.mps
+    hsol -f ml.mps
 
-----------------
+Usage
+-----
+
+```
 usage: hsol [options] -f fName.mps 
 
-Options: \n
-		  -p mode  : use presolve mode: Vslues:
-		     	   : Off On
-		  -c mode  : use crash mode to mode. Values:
-		           : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7
-		  -e edWt  : set edge weight to edWt. Values:
-		           : Dan Dvx DSE DSE0 DSE1
-		  -s       : use option sip
-		  -m [cut] : use pami. Cutoff optional double value.
-		  -t fName : use pami with partition file fName
-		  -d       : debug mode on
-		  
-		  
----------------
-Run-time options -p and -s direct hsol to use PAMI or SIP. 
+Options:
+    -p mode  : use presolve mode. Values:
+             : Off On
+    -c mode  : use crash mode to mode. Values:
+             : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7
+    -e edWt  : set edge weight to edWt. Values:
+             : Dan Dvx DSE DSE0 DSE1
+    -s       : use option sip
+    -m [cut] : use pami. Cutoff optional double value.
+    -t fName : use pami with partition file fName
+    -d       : debug mode on
+```		  
+
+Run-time options `-p` and `-s` direct hsol to use PAMI or SIP. 
 
 When compiled with the OpenMP directives invoked, the number of
 threads used at run time is the value of the environment variable
-OMP_NUM_THREADS. For example, to use HSOL with PAMI and eight
-threads to solve ml.mps execute
+`OMP_NUM_THREADS`. For example, to use HSOL with PAMI and eight
+threads to solve `ml.mps` execute
 
-export OMP_NUM_THREADS=8
-hsol -m -f ml.mps
+    export OMP_NUM_THREADS=8
+    hsol -m -f ml.mps
 
-If OMP_NUM_THREADS is not set, either because it has not been set or
+If `OMP_NUM_THREADS` is not set, either because it has not been set or
 due to executing the command
 
-unset OMP_NUM_THREADS
+    unset OMP_NUM_THREADS
 
 then all available threads will be used.
 
@@ -93,27 +102,17 @@ Observations
 ------------
 
 When compiled without the OpenMP directives, or if run with
-OMP_NUM_THREADS=1, hsol is serial. The -sip run-time option will not
-affect performance. The -pami run-time option will cause hsol to use
+`OMP_NUM_THREADS=1`, hsol is serial. The `-sip` run-time option will not
+affect performance. The `-pami` run-time option will cause hsol to use
 serial minor iterations and, although this could lead to better
 performance on some problems, performance will typically be
 diminished.
 
-When compiled with the OpenMP directives and OMP_NUM_THREADS>1 or
-unset, hsol will use multiple threads if the -pami or -sip run-time
-option is specified. If OMP_NUM_THREADS is unset, hsol will try to use
+When compiled with the OpenMP directives and `OMP_NUM_THREADS>1` or
+unset, hsol will use multiple threads if the `-pami` or `-sip` run-time
+option is specified. If `OMP_NUM_THREADS` is unset, hsol will try to use
 all available threads so performance may be very slow. Although the
 best value will be problem and architecture dependent,
-OMP_NUM_THREADS=8 is typically a good choice. Although hsol is slower
+`OMP_NUM_THREADS=8` is typically a good choice. Although hsol is slower
 when run in parallel than in serial for some problems, it is typically
-faster, with the -pami option usually faster than the -sip option.
-
-
-
-
-
-
-
-
-
-
+faster, with the `-pami` option usually faster than the `-sip` option.
