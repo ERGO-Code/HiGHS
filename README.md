@@ -51,6 +51,14 @@ Set custom options with `-D <option>=<value>` during the configuration step (`cm
 
 - `OPENMP`: turn OpenMP support on or off 
 
+
+Testing
+-------
+
+To perform a quick test whether the compilation was successful, run
+
+    ctest
+
 Run-time options
 ----------------
 
