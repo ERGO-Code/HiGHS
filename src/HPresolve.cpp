@@ -2723,7 +2723,16 @@ void HPresolve::postsolve() {
 			else
 				nonbasicMove.at(i) = 0;
 		}
+		
+		colValue = valuePrimal;
+		colDual  = valueColDual;
+		rowDual  = valueRowDual;
+		rowValue.assign(numRow, 0);
+		for (int i=0;i<numRowOriginal; ++i) {
+			for (int k=ARstart.at(i); k<ARstart.at(i+1); ++k) 
+				rowValue.at(i) += valuePrimal.at(ARindex.at(k))*ARvalue.at(k);
 
+		}
 }
 
 

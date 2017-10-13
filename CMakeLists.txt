@@ -22,19 +22,33 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
+
 option(SCIP_DEV "SCIP development" ON)
+if(SCIP_DEV)
+    add_definitions(-DSCIP_dev)
+endif()
+message(STATUS "SCIP development: " ${SCIP_DEV})
+
 option(JAJH_DEV "JAJH development" ON)
+if(JAJH_DEV)
+    add_definitions(-DJAJH_dev)
+endif()
+message(STATUS "JAJH development: " ${JAJH_DEV})
+
 option(JAJH_RP  "JAJH reporting" ON)
+if(JAJH_RP)
+    add_definitions(-DJAJH_rp)
+endif()
+message(STATUS "JAJH reporting: " ${JAJH_RP})
 
 # whether to use OpenMP
 option(OPENMP "Use OpenMP" ON)
 if(OPENMP)
-  FIND_PACKAGE(OpenMP)
-  IF(OPENMP_FOUND)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  ENDIF()
-ENDIF()
+    find_package(OpenMP)
+    if(OPENMP_FOUND)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    endif()
+endif()
 message(STATUS "Use OpenMP: " ${OPENMP})
 
 # whether to use shared or static libraries
@@ -53,16 +67,6 @@ set(CMAKE_MACOSX_RPATH ON)
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
-
-if(SCIP_DEV)
-    add_definitions(-DSCIP_dev)
-endif()
-if(JAJH_DEV)
-    add_definitions(-DJAJH_dev)
-endif()
-if(JAJH_RP)
-    add_definitions(-DJAJH_rp)
-endif()
 
 # enable all warnings and explicitly switch on colored output for ninja
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
