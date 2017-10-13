@@ -391,8 +391,8 @@ void solveSCIP(const char *filename) {
   vector<int> XARstart;
   vector<int> XARindex;
   vector<double> XARvalue;
-  model.util_extractRows(FmRow, ToRow, &(*XrowLower.begin()), &(*XrowUpper.begin()),
-			 &(*XARstart.begin()), &(*XARindex.begin()), &(*XARvalue.begin()));
+  //  model.util_extractRows(FmRow, ToRow, &(*XrowLower.begin()), &(*XrowUpper.begin()),
+  // &(*XARstart.begin()), &(*XARindex.begin()), &(*XARvalue.begin()));
 
   //  printf("Returned from model.util_extractRows with\n");
   //  model.util_reportRowVec(numExtractRows, XrowLower, XrowUpper);
@@ -412,8 +412,8 @@ void solveSCIP(const char *filename) {
   vector<int> X0ARindex;
   vector<double> X0ARvalue;
 
-  model.util_extractRows(FmRow, ToRow, &(*X0rowLower.begin()), &(*X0rowUpper.begin()),
-			 &(*X0ARstart.begin()), &(*X0ARindex.begin()), &(*X0ARvalue.begin()));
+  //model.util_extractRows(FmRow, ToRow, &(*X0rowLower.begin()), &(*X0rowUpper.begin()),
+  //			 &(*X0ARstart.begin()), &(*X0ARindex.begin()), &(*X0ARvalue.begin()));
 
   //Delete the rows just extracted
   model.util_deleteRows(FmRow, ToRow);

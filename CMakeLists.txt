@@ -23,6 +23,8 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 option(SCIP_DEV "SCIP development" ON)
+option(JAJH_DEV "JAJH development" ON)
+option(JAJH_RP  "JAJH reporting" ON)
 
 # whether to use OpenMP
 option(OPENMP "Use OpenMP" ON)
@@ -54,6 +56,12 @@ set(CMAKE_CXX_STANDARD 11)
 
 if(SCIP_DEV)
     add_definitions(-DSCIP_dev)
+endif()
+if(JAJH_DEV)
+    add_definitions(-DJAJH_dev)
+endif()
+if(JAJH_RP)
+    add_definitions(-DJAJH_rp)
 endif()
 
 # enable all warnings and explicitly switch on colored output for ninja

@@ -3272,35 +3272,23 @@ void HModel::util_deleteRowset(int* dstat) {
 }
 
 // Extract the model data for a contiguous set of rows
-void HModel::util_extractRows(int firstrow, int lastrow, double* XrowLower_, double* XrowUpper_,
-			      int* XARstart_, int* XARindex_, double* XARvalue_) {
+void HModel::util_extractRows(int firstrow, int lastrow, double* XrowLower, double* XrowUpper,
+			       int* nnonz, int* XARstart, int* XARindex, double* XARvalue) {
   assert(firstrow >= 0);
   assert(lastrow < numRow);
   assert(firstrow <= lastrow);
 #ifdef JAJH_dev
   printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);cout << flush;
 #endif
-  printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);cout << flush;
-  vector<double> XrowLower;
-  vector<double> XrowUpper;
-  vector<int> XARstart;
-  vector<int> XARindex;
-  vector<double> XARvalue;
-
-  //Determine the number of rows to be extracted and resize the
-  //space into which vectors will be extracted
+  //Determine the number of rows to be extracted
   int numExtractRows = lastrow-firstrow+1;
-  //  printf("Extracting %d rows\n", numExtractRows);cout << flush;
-  XrowLower.resize(numExtractRows);
-  XrowUpper.resize(numExtractRows);
-  XARstart.resize(numExtractRows+1);
-  //  printf("Resized XrowLower; XrowUpper; XARstart\n");cout << flush;
+  //    printf("Extracting %d rows\n", numExtractRows);cout << flush;
   for (int row = firstrow; row <= lastrow; row++) {
-    //    printf("Extracting row %d\n", row);cout << flush;
+    //printf("Extracting row %d\n", row);cout << flush;
     XrowLower[row-firstrow] = rowLower[row];
     XrowUpper[row-firstrow] = rowUpper[row];
-    printf("Extracted row %d from %d with bounds [%g, %g]\n",
-	   row-firstrow, row, XrowLower[row-firstrow], XrowUpper[row-firstrow]);cout << flush;
+    //printf("Extracted row %d from %d with bounds [%g, %g]\n",
+    //	   row-firstrow, row, XrowLower[row-firstrow], XrowUpper[row-firstrow]);cout << flush;
   }
   //Determine how many entries are in each row to be extracted
   vector<int> XARlength;
@@ -3312,36 +3300,31 @@ void HModel::util_extractRows(int firstrow, int lastrow, double* XrowLower_, dou
       XARlength[row-firstrow] += 1;
   }
   XARstart[0] = 0;
-  for (int row = 0; row < numExtractRows; row++) {
+  //printf("Start of row %2d is %d\n", 0, XARstart[0]);cout << flush;
+  //printf("Length of row %2d is %d\n", 0, XARlength[0]);cout << flush;
+  for (int row = 0; row < numExtractRows-1; row++) {
     XARstart[row+1] = XARstart[row] + XARlength[row];
-    //    printf("Start of row %2d is %d\n", row+1, XARstart[row+1]);
+    XARlength[row] = 0;
+    //printf("Start of row %2d is %d\n", row+1, XARstart[row+1]);cout << flush;
+    //printf("Length of row %2d is %d\n", row+1, XARlength[row+1]);cout << flush;
   }
-  //Determine the number of nonzeros to be extracted and resize the
-  //space into which vectors will be extracted
-  int numExtractNz = XARstart[numExtractRows];
-  //  printf("Extracting %d nonzeros\n", numExtractNz);
-  XARindex.resize(numExtractNz);
-  XARvalue.resize(numExtractNz);
-  //  printf("Resized XARindex; XARvalue\n");cout << flush;
-  XARlength.assign(numExtractRows, 0);
-  
+  XARlength[numExtractRows-1] = 0;
+
   for (int col = 0; col < numCol; col++) {
     for (int el = Astart[col]; el < Astart[col+1]; el++) {
       int row = Aindex[el];
+      //printf("Is row=%d in [%d, %d]?\n", row, firstrow, lastrow);cout << flush;
       if (row >= firstrow && row <= lastrow) {
 	int rowEl = XARstart[row-firstrow] + XARlength[row-firstrow];
-	//	printf("Column %2d: Extracted element %d\n", col, rowEl);
+	//printf("Column %2d: Extracted element %d with value %g\n", col, rowEl, Avalue[el]);cout << flush;
 	XARlength[row-firstrow] += 1;
 	XARindex[rowEl] = col;
 	XARvalue[rowEl] = Avalue[el];
       }
     }
   }
-  XrowLower_ = &(*XrowLower.begin());
-  XrowUpper_ = &(*XrowUpper.begin());
-  XARstart_ = &(*XARstart.begin());
-  XARindex_ = &(*XARindex.begin());
-  XARvalue_ = &(*XARvalue.begin());
+  *nnonz = XARstart[lastrow-firstrow] + XARlength[lastrow-firstrow];
+  //  printf("Set nnonz = %d\n", *nnonz);cout << flush;
 }
 
 // Change a single coefficient in the matrix
@@ -3391,20 +3374,26 @@ void HModel::util_getCoeff(int row, int col, double* val) {
 #ifdef JAJH_dev
   printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);cout << flush;
 #endif
+  //  printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);cout << flush;
+
+  cout << val << endl;
+
+
   int get_el = -1;
   for (int el=Astart[col]; el < Astart[col+1]; el++) {
-  //    printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el, Aindex[el], row);
-    if (Aindex[el] == row) {
-      get_el = el;
-      break;
-    }
-  }
+    //  printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el, Aindex[el], row);cout << flush;
+  if (Aindex[el] == row) {
+  get_el = el;
+  break;
+}
+}
   if (get_el < 0) {
-  //    printf("model.util_getCoeff: Cannot find row %d in column %d\n", row, col);
-    *val = 0;
-  } else { 
-    *val = Avalue[get_el];
-  }
+    //  printf("model.util_getCoeff: Cannot find row %d in column %d\n", row, col);cout << flush;
+  *val = 0;
+} else { 
+    //  printf("model.util_getCoeff: Found row %d in column %d as element %d: value %g\n", row, col, get_el, Avalue[get_el]);cout << flush;
+  *val = Avalue[get_el];
+}
 }
 
 // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG] is false

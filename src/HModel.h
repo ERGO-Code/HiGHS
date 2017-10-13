@@ -249,8 +249,8 @@ public:
 		      int nnonz, const int* XARstart, const int* XARindex, const double* XARvalue);
     void util_deleteRows(int firstrow, int lastrow);
     void util_deleteRowset(int* dstat);
-    void util_extractRows(int firstrow, int lastrow, double* XrowLower_, double* XrowUpper_,
-			  int* XARstart_, int* XARindex_, double* XARvalue_);
+    void util_extractRows(int firstrow, int lastrow, double* XrowLower, double* XrowUpper,
+			  int* nnonz, int* XARstart, int* XARindex, double* XARvalue);
     void util_changeCoeff(int row, int col, const double newval);
     void util_getCoeff(int row, int col, double* val);
 
@@ -298,6 +298,8 @@ public:
     // Possibly prevent reinversion on optimality in phase 1 or phase 2
     const bool InvertIfRowOutNeg = true;
 
+    const bool forbidSuperBasic = true;
+    
     // Number of basic logicals - allows logical basis to be deduced
     int numBasicLogicals;
 
@@ -403,7 +405,7 @@ public:
     // 
     // workDual: Values of the dual variables corresponding to
     // workCost. Not known until solve() is called since B^{-1} is
-    // required to compute them. Knowlege of them is indicated by
+    // required to compute them. Knowledge of them is indicated by
     // mlFg_haveNonbasicDuals.
     // 
     // workShift: WTF
@@ -428,7 +430,7 @@ public:
 
     // baseLower/baseUpper/baseValue: Lower and upper bounds on the
     // basic variables and their values. Not known until solve() is
-    // called since B^{-1} is required to compute them. Knowlege of
+    // called since B^{-1} is required to compute them. Knowledge of
     // them is indicated by mlFg_haveBasicPrimals;
     //
     vector<double> baseLower;
