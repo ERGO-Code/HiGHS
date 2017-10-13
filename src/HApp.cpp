@@ -371,8 +371,8 @@ void solveSCIP(const char *filename) {
   vector<int> XAstart;
   vector<int> XAindex;
   vector<double> XAvalue;
-  model.util_extractCols(FmCol, ToCol, XcolCost, XcolLower, XcolUpper,
-			 XAstart, XAindex, XAvalue);
+  //  model.util_extractCols(FmCol, ToCol, XcolCost, XcolLower, XcolUpper,
+  //			 XAstart, XAindex, XAvalue);
 
   //  printf("Returned from model.util_extractCols with\n");
   //  model.util_reportColVec(numExtractCols, XcolCost, XcolLower, XcolUpper);
@@ -429,8 +429,8 @@ void solveSCIP(const char *filename) {
   vector<int> X0Astart;
   vector<int> X0Aindex;
   vector<double> X0Avalue;
-  model.util_extractCols(FmCol, ToCol, X0colCost, X0colLower, X0colUpper,
-			 X0Astart, X0Aindex, X0Avalue);
+  //  model.util_extractCols(FmCol, ToCol, X0colCost, X0colLower, X0colUpper,
+  //			 X0Astart, X0Aindex, X0Avalue);
   
   //Delete the columns just extracted
   model.util_deleteCols(FmCol, ToCol);

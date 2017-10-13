@@ -575,6 +575,9 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   int local_newNumRow = max(local_oldNumRow, lastrow+1);
   int local_newNumTot = local_newNumCol + local_newNumRow;
 
+  printf("extendWithLogicalBasis\n");cout<<flush;
+  printf("numCol/Row/Tot = %d/%d/%d\n", numCol, numRow, numTot);cout<<flush;
+  printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol, local_newNumRow, local_newNumTot);cout<<flush;
   assert(local_newNumCol == numCol);
   assert(local_newNumRow == numRow);
   assert(local_newNumTot == numTot);
@@ -2991,44 +2994,29 @@ void HModel::util_deleteColset(vector<int>& dstat) {
 }
 
 // Extract the model data for a contiguous set of columns
-void HModel::util_extractCols(int firstcol, int lastcol, vector<double>& XcolCost, vector<double>& XcolLower, vector<double>& XcolUpper,
-			      vector<int>& XAstart, vector<int>& XAindex, vector<double>& XAvalue) {
+void HModel::util_extractCols(int firstcol, int lastcol, double* XcolLower, double* XcolUpper,
+			  int* nnonz, int* XAstart, int* XAindex, double* XAvalue) {
   assert(firstcol >= 0);
   assert(lastcol < numCol);
   assert(firstcol <= lastcol);
 #ifdef JAJH_dev
   printf("Called model.util_extractCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);cout << flush;
 #endif
-
-  //Determine the number of columns to be extracted and resize the
-  //space into which vectors will be extracted
+  //Determine the number of columns to be extracted
   int numExtractCols = lastcol-firstcol+1;
   //  printf("Extracting %d columns\n", numExtractCols);cout << flush;
-  XcolCost.resize(numExtractCols);
-  XcolLower.resize(numExtractCols);
-  XcolUpper.resize(numExtractCols);
-  XAstart.resize(numExtractCols+1);
-  //  printf("Resized XcolCost; XcolLower; XcolUpper; XAstart\n");cout << flush;
   int elOs = Astart[firstcol];
   for (int col = firstcol; col <= lastcol; col++) {
     //    printf("Extracting column %d\n", col);cout << flush;
-    XcolCost[col-firstcol] = colCost[col];
     XcolLower[col-firstcol] = colLower[col];
     XcolUpper[col-firstcol] = colUpper[col];
     XAstart[col-firstcol] = Astart[col]-elOs;
   }
-  XAstart[numExtractCols] = Astart[lastcol+1]-elOs;
-  //Determine the number of nonzeros to be extracted and resize the
-  //space into which vectors will be extracted
-  int numExtractNz=Astart[lastcol+1]-Astart[firstcol];
-  //  printf("Extracting %d nonzeros\n", numExtractNz);
-  XAindex.resize(numExtractNz);
-  XAvalue.resize(numExtractNz);
-  //  printf("Resized XAindex; XAvalue\n");cout << flush;
   for (int el = Astart[firstcol]; el < Astart[lastcol+1]; el++) {
     XAindex[el-elOs] = Aindex[el];
     XAvalue[el-elOs] = Avalue[el];
   }
+  *nnonz = Astart[lastcol+1]-elOs;
 }
 
 // Add a contiguous set of rows to the model data---making them basic

@@ -243,8 +243,8 @@ public:
 		      int nnonz, const int* XAstart, const int* XAindex, const double* XAvalue);
     void util_deleteCols(int firstcol, int lastcol);
     void util_deleteColset(vector<int>& dstat);
-    void util_extractCols(int firstcol, int lastcol, vector<double>& XcolCost, vector<double>& XcolLower, vector<double>& XcolUpper,
-			  vector<int>& XAstart, vector<int>& XAindex, vector<double>& XAvalue);
+    void util_extractCols(int firstcol, int lastcol, double* XcolLower, double* XcolUpper,
+			  int* nnonz, int* XAstart, int* XAindex, double* XAvalue);
     void util_addRows(int nrows, const double* XrowLower, const double* XrowUpper,
 		      int nnonz, const int* XARstart, const int* XARindex, const double* XARvalue);
     void util_deleteRows(int firstrow, int lastrow);
