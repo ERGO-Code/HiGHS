@@ -78,3 +78,6 @@ if(MSVC)
 endif()
 
 add_subdirectory(src)
+add_subdirectory(check)
+
+enable_testing()
