@@ -2765,7 +2765,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	}
 	else if (nonbasicMove[var] == NONBASIC_MOVE_UP) 
 	  {
-#ifdef JAJH_dev
+#ifdef H2DEBUG
 	    if (!hsol_isInfinity(-colLower[col])) 
 #endif
 	      {
@@ -2775,7 +2775,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	  }
 	else if (nonbasicMove[var] == NONBASIC_MOVE_DN)
 	  {
-#ifdef JAJH_dev
+#ifdef H2DEBUG
             if (!hsol_isInfinity(colUpper[col])) 
 #endif
 	      {
@@ -2787,7 +2787,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	  {
             if (colLower[col] == colUpper[col])
 	      {
-#ifndef JAJH_dev
+#ifndef H2DEBUG
 		if (!hsol_isInfinity(colUpper[col]))
 #endif
 		  {
@@ -2797,7 +2797,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	      }
             else
 	      {
-#ifndef JAJH_dev
+#ifndef H2DEBUG
 		if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colLower[col]))
 #endif
 		  {
@@ -2825,7 +2825,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	else if (nonbasicMove[var] == NONBASIC_MOVE_DN)
 	  //Free to move only down from -rowLower[row]
 	  {
-#ifdef JAJH_dev
+#ifdef H2DEBUG
 	    if (!hsol_isInfinity(-rowLower[row])) 
 #endif
 	      {
@@ -2836,7 +2836,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	else if (nonbasicMove[var] == NONBASIC_MOVE_UP)
 	  //Free to move only up from -rowUpper[row]
 	  {
-#ifdef JAJH_dev
+#ifdef H2DEBUG
             if (!hsol_isInfinity(rowUpper[row])) 
 #endif
 	      {
@@ -2848,7 +2848,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	  {
             if (rowLower[row] == rowUpper[row])
 	      {
-#ifndef JAJH_dev
+#ifndef H2DEBUG
 		if (!hsol_isInfinity(rowUpper[row]))
 #endif
 		  {
@@ -2858,7 +2858,7 @@ int HModel::util_convertWorkingToBaseStat(int* cstat, int* rstat) {
 	      }
             else
 	      {
-#ifndef JAJH_dev
+#ifndef H2DEBUG
 		if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowLower[row]))
 #endif
 		  {
@@ -2933,8 +2933,10 @@ void HModel::util_addCols(int ncols, const double* XcolCost, const double* XcolL
       Astart[numCol+col] = XAstart[col]+cuNnonz;
     for (int el = 0; el < nnonz; el++) {
       int row = XAindex[el];
+#ifdef H2DEBUG
       assert(row >=0);
       assert(row < numRow);
+#endif
       Aindex[cuNnonz+el] = row;
       Avalue[cuNnonz+el] = XAvalue[el];
     }
@@ -3029,6 +3031,12 @@ void HModel::util_addRows(int nrows, const double* XrowLower, const double* Xrow
   printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);cout << flush;
 #endif
 
+#ifdef H2DEBUG
+  printf("H2DEBUG is being set OK\n");
+  printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);cout << flush;
+#endif
+
+
   if (nrows==0) return;
 
   int nwNumRow = numRow + nrows;
@@ -3049,8 +3057,10 @@ void HModel::util_addRows(int nrows, const double* XrowLower, const double* Xrow
     for (int el = 0; el < nnonz; el++) {
       int col = XARindex[el];
       //      printf("El %2d: adding entry in column %2d\n", el, col); cout << flush;
+#ifdef H2DEBUG
       assert(col >= 0);
       assert(col < numCol);
+#endif
       Alength[col]++;
     }
     //Determine the new number of nonzeros and resize the column-wise matrix arrays

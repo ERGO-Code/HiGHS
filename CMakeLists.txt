@@ -29,6 +29,12 @@ if(SCIP_DEV)
 endif()
 message(STATUS "SCIP development: " ${SCIP_DEV})
 
+option(H2DEBUG "H2GMP debug" ON)
+if(H2DEBUG)
+    add_definitions(-DH2DEBUG)
+endif()
+message(STATUS "H2GMP debug: " ${H2DEBUG})
+
 option(JAJH_DEV "JAJH development" ON)
 if(JAJH_DEV)
     add_definitions(-DJAJH_dev)
