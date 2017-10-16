@@ -88,7 +88,7 @@ public:
         printf("\n");
         printf("profile-item ");
         for (int i = 0; i < itemCount; i++) {
-            int percent = 1000.0 * itemTicks[itemList[i]] / totalTick;
+            int percent = (int) (1000.0 * itemTicks[itemList[i]] / totalTick);
             printf(" %5d", percent);
         }
         printf("\n");
@@ -122,7 +122,7 @@ private:
         double walltime;
         struct timeval tv;
         gettimeofday(&tv, NULL);
-        walltime = tv.tv_sec;
+        walltime = static_cast<double>(tv.tv_sec);
         walltime += (double) tv.tv_usec / 1000000.0;
         return walltime;
     }
@@ -131,7 +131,7 @@ private:
     double getWallTick() {
         unsigned a, d;
         asm volatile("rdtsc" : "=a" (a), "=d" (d));
-        return ((unsigned long long) a) | (((unsigned long long) d) << 32);
+        return (static_cast<unsigned long long>(a)) | ((static_cast<unsigned long long>(d)) << 32);
     }
 };
 
