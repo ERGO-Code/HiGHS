@@ -2899,6 +2899,7 @@ void HModel::util_addCols(int ncols, const double* XcolCost, const double* XcolL
 #ifdef JAJH_dev
   printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);cout << flush;
 #endif
+  printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);cout << flush;
 
   if (ncols==0) return;
 
