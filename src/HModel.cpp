@@ -2916,22 +2916,31 @@ void HModel::util_addCols(int ncols, const double* XcolCost, const double* XcolL
     colLower[numCol+col] = XcolLower[col];
     colUpper[numCol+col] = XcolUpper[col];
     colScale[numCol+col] = 1.0;
+    printf("In HModel::util_addCols: column %d: setting Astart[numCol+col+1] = %d \n", col, Astart[numCol]); cout<<flush;
     Astart[numCol+col+1] = Astart[numCol];
   }
 
+  printf("In HModel::util_addCols: nnonz = %d; cuNnonz = %d\n", nnonz, Astart[numCol]); cout<<flush;
   if (nnonz > 0) {
     //Determine the current number of nonzeros
     int cuNnonz = Astart[numCol];
 
     //Determine the new number of nonzeros and resize the column-wise matrix arrays
     int nwNnonz = cuNnonz + nnonz;
-    Astart.resize(nwNumCol+1);
+    //Astart.resize(nwNumCol+1);
     Aindex.resize(nwNnonz);
     Avalue.resize(nwNnonz);
 
     //Add the new columns
-    for (int col = 0; col <= ncols; col++)
+    for (int col = 0; col < ncols; col++) {
+      printf("In HModel::util_addCols: column %d: setting Astart[numCol+col] = %d = %d + %d\n",
+	     col, XAstart[col]+cuNnonz, XAstart[col], cuNnonz); cout<<flush;
       Astart[numCol+col] = XAstart[col]+cuNnonz;
+    }
+    printf("In HModel::util_addCols: setting Astart[numCol+ncols] = %d\n", nwNnonz); cout<<flush;
+    Astart[numCol+ncols] = nwNnonz;
+
+
     for (int el = 0; el < nnonz; el++) {
       int row = XAindex[el];
 #ifdef H2DEBUG
@@ -2945,6 +2954,9 @@ void HModel::util_addCols(int ncols, const double* XcolCost, const double* XcolL
   //Increase the number of columns and total number of variables in the model
   numCol += ncols;
   numTot += ncols;
+
+  printf("In HModel::util_addCols: Model now has Astart[%d] = %d nonzeros\n", numCol, Astart[numCol]); cout<<flush;
+
 
   //Update the basis and work vectors correponding to new nonbasic columns
   extendWithLogicalBasis(numCol-ncols, numCol-1, numRow, -1);

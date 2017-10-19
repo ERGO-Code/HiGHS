@@ -22,6 +22,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 #ifdef JAJH_dev
   printf("model->mlFg_Report() 1\n");cout<<flush; model->mlFg_Report();cout<<flush;
 #endif
+  printf("HDual::solve - model->mlFg_Report() 1\n");cout<<flush; model->mlFg_Report();cout<<flush;
   // Setup two work buffers in model required for solve()
   model->buffer.setup(model->numRow);
   model->bufferLong.setup(model->numCol);
@@ -29,6 +30,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   //  printf("model->mlFg_haveEdWt 0 = %d\n", model->mlFg_haveEdWt);cout<<flush;
   
   // Setup aspects of the model data which are needed for solve() but better left until now for efficiency reasons.
+  printf("HDual::solve - Calling model->setup_for_solve()\n");cout<<flush;
   model->setup_for_solve();
   
   //  printf("model->mlFg_haveEdWt 1 = %d\n", model->mlFg_haveEdWt);cout<<flush;
@@ -127,6 +129,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   }
 #endif
   
+  printf("HDual::solve - Calling model->computeDualInfeasInDual\n");cout<<flush;
   model->computeDualInfeasInDual(&dualInfeasCount);
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
   

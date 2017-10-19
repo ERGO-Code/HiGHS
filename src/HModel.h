@@ -381,6 +381,7 @@ public:
     int numRow;
     int numTot;
     int problemStatus;
+    int objSense; //+1 => min; -1 => max
     double objOffset;
     string modelName;
     vector<int> Astart;
