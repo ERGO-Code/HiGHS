@@ -28,7 +28,10 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   numRow = model->getNumRow();
   numCol = model->getNumCol();
   numTot = model->getNumTot();
-  
+#ifdef H2DEBUG
+  const int objSense = model->getObjSense();
+  assert(abs(objSense)==1);
+#endif
   bool HaveImpliedBounds = model->impliedBoundsPresolve;
   //bool HaveImpliedBounds = Presolve_Mode == Presolve_Mode_On;
   //	printf("HaveImpliedBounds = %d\n", HaveImpliedBounds);
@@ -207,12 +210,15 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
 
 void HCrash::bixby_rp_mrt(HModel *ptr_model) {
   model = ptr_model; 
+  const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
   double mx_co_v = -HSOL_CONST_INF;
-  for (int c_n = 0; c_n < numCol; c_n++)
-    mx_co_v = max(abs(colCost[c_n]), mx_co_v);
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    double sense_col_cost = objSense*colCost[c_n];
+    mx_co_v = max(abs(sense_col_cost), mx_co_v);
+  }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
   int c_n = bixby_mrt_ix[0];
@@ -227,7 +233,8 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
   for (int ps_n = 0; ps_n < numCol; ps_n++) {
     double mrt_v = bixby_mrt_v[ps_n];
     int c_n = bixby_mrt_ix[ps_n];
-    double mrt_v0 = mrt_v - colCost[c_n] / co_v_mu;
+    double sense_col_cost = objSense*colCost[c_n];
+    double mrt_v0 = mrt_v - sense_col_cost / co_v_mu;
     double c_lb = colLower[c_n];
     double c_ub = colUpper[c_n];
     if ((ps_n == 0) || (ps_n == numCol-1))
@@ -260,6 +267,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   const double *Avalue = &model->Avalue[0];;
   int numEl = Astart[numCol];
   
+  const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
@@ -322,7 +330,8 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
 				     crsh_mtx_c_mx_abs_v[c_n]);
     }
     //		printf("Column %3d has max |entry| = %g\n", c_n, crsh_mtx_c_mx_abs_v[c_n]);
-    mx_co_v = max(abs(colCost[c_n]), mx_co_v);
+    double sense_col_cost = objSense*colCost[c_n];
+    mx_co_v = max(abs(sense_col_cost), mx_co_v);
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
@@ -335,9 +344,10 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   n_en = 0;
   for (int c_n = 0; c_n < numCol; c_n++) {
     if (crsh_c_ty[c_n] != crsh_vr_ty_fr) continue;
-    if (bixby_no_nz_c_co && colCost[c_n] != 0.0) continue;
+    double sense_col_cost = objSense*colCost[c_n];
+    if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    bixby_mrt_v[os+n_en] = colCost[c_n] / co_v_mu;
+    bixby_mrt_v[os+n_en] = sense_col_cost / co_v_mu;
     bixby_mrt_ix[os+n_en] = c_n;
   }
   if (n_en >0) {
@@ -359,12 +369,13 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   n_en = 0;
   for (int c_n = 0; c_n < numCol; c_n++) {
     if (crsh_c_ty[c_n] != crsh_vr_ty_1_sd) continue;
-    if (bixby_no_nz_c_co && colCost[c_n] != 0.0) continue;
+    double sense_col_cost = objSense*colCost[c_n];
+    if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
     if (colUpper[c_n] >= HSOL_CONST_INF) {
-      bixby_mrt_v[os+n_en] =  colLower[c_n] + colCost[c_n] / co_v_mu;
+      bixby_mrt_v[os+n_en] =  colLower[c_n] + sense_col_cost / co_v_mu;
     } else {
-      bixby_mrt_v[os+n_en] = -colUpper[c_n] + colCost[c_n] / co_v_mu;
+      bixby_mrt_v[os+n_en] = -colUpper[c_n] + sense_col_cost / co_v_mu;
     }
     bixby_mrt_ix[os+n_en] = c_n;
   }
@@ -387,9 +398,10 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   n_en = 0;
   for (int c_n = 0; c_n < numCol; c_n++) {
     if (crsh_c_ty[c_n] != crsh_vr_ty_2_sd) continue;
-    if (bixby_no_nz_c_co && colCost[c_n] != 0.0) continue;
+    double sense_col_cost = objSense*colCost[c_n];
+    if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    bixby_mrt_v[os+n_en] =  colLower[c_n]-colUpper[c_n] + colCost[c_n] / co_v_mu;
+    bixby_mrt_v[os+n_en] =  colLower[c_n]-colUpper[c_n] + sense_col_cost / co_v_mu;
     bixby_mrt_ix[os+n_en] = c_n;
   }
   if (n_en >0) {
@@ -411,7 +423,8 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   n_en = 0;
   for (int c_n = 0; c_n < numCol; c_n++) {
     if (crsh_c_ty[c_n] != crsh_vr_ty_fx) continue;
-    if (bixby_no_nz_c_co && colCost[c_n] != 0.0) continue;
+    double sense_col_cost = objSense*colCost[c_n];
+    if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
     bixby_mrt_v[os+n_en] = HSOL_CONST_INF;
     bixby_mrt_ix[os+n_en] = c_n;
@@ -507,6 +520,7 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model) {
 
 void HCrash::crsh_an_c_co(HModel *ptr_model) {
   model = ptr_model;
+  const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
@@ -517,7 +531,8 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
   int n_fs_c_co = 0;
   
   for (int c_n = 0; c_n < numCol; c_n++) {
-    if (colCost[c_n] == 0.0) {
+    double sense_col_cost = objSense*colCost[c_n];
+    if (sense_col_cost == 0.0) {
       n_ze_c_co += 1;
       n_fs_c_co += 1;
       continue;
@@ -526,14 +541,16 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
       // Free column: nonzero cost cannot be feasible
       if (colLower[c_n] > -HSOL_CONST_INF) {
 	// Lower-bounded (1-sided) column: non-negative cost is feasible
-	if (colCost[c_n] >= 0.0)
+	double sense_col_cost = objSense*colCost[c_n];
+	if (sense_col_cost >= 0.0)
 	  n_fs_c_co += 1;
       }
     }
     else {
       if (colLower[c_n] <= -HSOL_CONST_INF) {
 	// Upper-bonded (1-sided) column: non-positive cost is feasible
-	if (colCost[c_n] <= 0.0)
+	double sense_col_cost = objSense*colCost[c_n];
+	if (sense_col_cost <= 0.0)
 	  n_fs_c_co += 1;
       } else {
 	// Two-sided column: any cost is feasible
@@ -1256,6 +1273,7 @@ void HCrash::ltssf_cz_r() {
 void HCrash::ltssf_cz_c(HModel *ptr_model) {
   model = ptr_model;
   //  matrix = model->getMatrix();
+  const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
@@ -1326,14 +1344,16 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
       cz_c_n = c_n;
       pv_v = CrshARvalue[el_n];
       n_eqv_c = 1;
-      mn_co = colCost[c_n];
+      double sense_col_cost = objSense*colCost[c_n];
+      mn_co = sense_col_cost;
     } else if (c_pri_fn_v == mx_c_pri_fn_v) {
       //				Matches the best column so far: possibly break tie on cost
-      if (mn_co_tie_bk && (colCost[c_n] < mn_co)) {
+      double sense_col_cost = objSense*colCost[c_n];
+      if (mn_co_tie_bk && (sense_col_cost < mn_co)) {
 	cz_c_n = c_n;
 	pv_v = CrshARvalue[el_n];
 	n_eqv_c = 1;
-	mn_co = colCost[c_n];
+	mn_co = sense_col_cost;
       }
       n_eqv_c += 1;
     }

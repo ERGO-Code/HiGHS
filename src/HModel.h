@@ -41,6 +41,13 @@ enum HSOL_BaseStat
 };
 typedef enum HSOL_BaseStat HSOL_BASESTAT;
 
+/** SCIP/HSOL Objective sense */
+enum objSense
+{
+  OBJSENSE_MINIMIZE = 1,
+  OBJSENSE_MAXIMIZE = -1
+};
+
 /** HSOL nonbasicFlag status for columns and rows */
 enum nonbasicFlagStat
 {
@@ -92,7 +99,7 @@ public:
     // allocate and populate (where possible) work* arrays and
     // allocate basis* arrays
     void load_fromMPS(const char *filename);
-    void load_fromArrays(int XnumCol, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
+    void load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
 			 int XnumRow, const double* XrowLower, const double* XrowUpper,
 			 int XnumNz, const int* XAstart, const int* XAindex, const double* XAvalue);
     void load_fromPresolve(HPresolve* ptr_model);
@@ -133,6 +140,10 @@ public:
 
     void initScale();
     void setup_loadMPS(const char *filename);
+    //    int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+    //		vector<int>& Astart,  vector<int>& Aindex, vector<double>& Avalue,
+    //		vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+    //		vector<double>& rowLower, vector<double>& rowUpper);
     bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
     bool workArrays_OK(int phase);
     bool allNonbasicMoveVsWorkArrays_OK();
@@ -225,6 +236,7 @@ public:
     void util_getCosts(int firstcol, int lastcol, double* XcolCost);
     void util_getColBounds(int firstcol, int lastcol, double* XcolLower, double* XcolUpper);
     void util_getRowBounds(int firstrow, int lastrow, double* XrowLower, double* XrowUpper);
+    int util_chgObjSense(int Xobjense);
     int util_chgCostsAll(const double* XcolCost);
     int util_chgCostsSet(int ncols, const int* XcolCostIndex, const double* XcolCostValues);
     int util_chgColBoundsAll(const double* XcolLower, const double* XcolUpper);
@@ -264,6 +276,7 @@ public:
     void util_reportModel();
     void util_reportModelSolution();
     void util_reportModelDimensions();
+    void util_reportModelObjSense();
     void util_reportModelStatus();
 #ifdef JAJH_dev
     void util_reportModelDense();
@@ -394,6 +407,7 @@ public:
     vector<double> rowLower;
     vector<double> rowUpper;
     vector<double> rowScale;
+    vector<int> integerColumn;
     vector<int> basicIndex;
     vector<int> nonbasicFlag;
     vector<int> nonbasicMove;
@@ -486,6 +500,9 @@ public:
     }
     int getPrStatus() {
       return problemStatus;
+    }
+    int getObjSense() {
+      return objSense;
     }
     const HMatrix *getMatrix() {
       return &matrix;

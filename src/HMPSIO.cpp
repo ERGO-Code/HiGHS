@@ -1,4 +1,10 @@
 #include "HMPSIO.h"
+enum objSense
+{
+  OBJSENSE_MINIMIZE = 1,
+  OBJSENSE_MAXIMIZE = -1
+};
+const double HSOL_CONST_INF = 1e200;
 int readInput_c(const char *filename, int* m_p, int* n_p, int* maxmin, double* offset,
 		double ** A,
 		double ** b, double ** c, double ** lb, double ** ub,

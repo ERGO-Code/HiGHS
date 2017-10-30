@@ -2,6 +2,7 @@
 #include "HConst.h"
 #include "HTimer.h"
 #include "HPresolve.h"
+#include "HMPSIO.h"
 
 #include <cctype>
 #include <cmath>
@@ -54,7 +55,21 @@ void HModel::load_fromMPS(const char *filename) {
   // Load the model, timing the process
   timer.reset();
   modelName = filename;
-  setup_loadMPS(filename);
+
+  //setup_loadMPS(filename);
+
+  int RtCd = readMPS(filename, numRow, numCol, objSense, objOffset,
+		     Astart,  Aindex, Avalue,
+		     colCost, colLower, colUpper, rowLower, rowUpper,
+		     integerColumn);
+#ifdef JAJH_dev
+  int numIntegerColumn = 0;
+  for (int c_n=0; c_n<numCol; c_n++) {
+    if (integerColumn[c_n]) numIntegerColumn++;
+  }
+  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+#endif
+ 
   numTot = numCol + numRow;
 
 #ifdef JAJH_dev
@@ -72,7 +87,7 @@ void HModel::load_fromMPS(const char *filename) {
   totalTime += timer.getTime();
 }
 
-void HModel::load_fromArrays(int XnumCol, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
+void HModel::load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
 			     int XnumRow, const double* XrowLower, const double* XrowUpper,
 			     int XnumNz, const int* XAstart, const int* XAindex, const double* XAvalue) {
   //  printf("load_fromArrays: XnumCol = %d; XnumRow = %d; XnumNz = %d\n", XnumCol, XnumRow, XnumNz);
@@ -86,6 +101,7 @@ void HModel::load_fromArrays(int XnumCol, const double* XcolCost, const double* 
 
   numCol = XnumCol;
   numRow = XnumRow;
+  objSense = XobjSense;
   int numNz = XnumNz;
   colCost.assign(&XcolCost[0], &XcolCost[0] + numCol);
   colLower.assign(&XcolLower[0], &XcolLower[0] + numCol);
@@ -690,6 +706,7 @@ void HModel::clearModel() {
   numCol = 0;
   numTot = 0;
   problemStatus = LP_Status_Unset;
+  objSense = 0;
   objOffset = 0.0;
   Astart.clear();
   Aindex.clear();
@@ -701,6 +718,7 @@ void HModel::clearModel() {
   rowLower.clear();
   rowUpper.clear();
   rowScale.clear();
+  integerColumn.clear();
   basicIndex.clear();
   nonbasicFlag.clear();
   nonbasicMove.clear();
@@ -947,7 +965,8 @@ bool HModel::workArrays_OK(int phase) {
   if (!problemPerturbed) {
     for (int col = 0; col < numCol; ++col) {
       int var = col;
-      ok = workCost[var] == colCost[col];
+      double sense_col_cost = objSense*colCost[col];
+      ok = workCost[var] == sense_col_cost;
       if (!ok) {
 	printf("For col %d, workLower should be %g but is %g\n", col, colLower[col], workCost[var]);
 	return ok;
@@ -1142,6 +1161,7 @@ void HModel::setup_loadMPS(const char *filename) {
     numRow = 0;
     numCol = 0;
     objOffset = 0;
+    objSense = OBJSENSE_MINIMIZE;
     //Astart.clear() added since setting Astart.push_back(0) in
     //setup_clearModel() messes up the MPS read
     Astart.clear();
@@ -1442,9 +1462,11 @@ void HModel::scaleModel() {
 
     // See if we want to include cost include if min-cost < 0.1
     double minc = inf;
-    for (int i = 0; i < numCol; i++)
-        if (colCost[i])
-            minc = min(minc, fabs(colCost[i]));
+    for (int i = 0; i < numCol; i++) {
+      double sense_col_cost = objSense*colCost[i];
+      if (sense_col_cost)
+	minc = min(minc, fabs(sense_col_cost));
+    }
     bool doCost = minc < 0.1;
 
     // Search up to 6 times
@@ -1456,7 +1478,8 @@ void HModel::scaleModel() {
             // For column scale (find)
             double colMin = inf;
             double colMax = 1 / inf;
-            double myCost = fabs(colCost[iCol]);
+	    double sense_col_cost = objSense*colCost[iCol];
+            double myCost = fabs(sense_col_cost);
             if (doCost && myCost != 0)
                 colMin = min(colMin, myCost), colMax = max(colMax, myCost);
             for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
@@ -1942,7 +1965,8 @@ void HModel::initPh2ColCost(int firstcol, int lastcol) {
   // Copy the Phase 2 cost and zero the shift
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
-    workCost[var] = colCost[col];
+    double sense_col_cost = objSense*colCost[col];
+    workCost[var] = sense_col_cost;
     workShift[var] = 0.;
   }
 }
@@ -2361,6 +2385,7 @@ void HModel::check_load_fromArrays() {
   int XnumCol = numCol;
   int XnumRow = numRow;
   int XnumNz = Astart[numCol];
+  int XobjSense = objSense;
   vector<double> XcolCost;
   vector<double> XcolLower;
   vector<double> XcolUpper;
@@ -2380,7 +2405,7 @@ void HModel::check_load_fromArrays() {
   XAvalue.assign(&Avalue[0], &Avalue[0] + XnumNz);
   
   clearModel();
-  load_fromArrays(XnumCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  load_fromArrays(XnumCol, XobjSense, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
 		  XnumRow, &XrowLower[0], &XrowUpper[0],
 		  XnumNz, &XAstart[0], &XAindex[0], &XAvalue[0]);
 }
@@ -2490,9 +2515,9 @@ void HModel::util_getPrimalDualValues(vector<double>& colValue, vector<double>& 
     for (int i = 0; i < numCol; i++)
         colValue[i] = valuePtr[i];
     for (int i = 0; i < numRow; i++)
-        rowDual[i] = dual[i + numCol];
+        rowDual[i] = objSense*dual[i + numCol];
     for (int i = 0; i < numCol; i++)
-        colDual[i] = dual[i];
+        colDual[i] = objSense*dual[i];
 }
 
 void HModel::util_getBasicIndexNonbasicFlag(vector<int>& basicIndex_, vector<int>& nonbasicFlag_) {
@@ -2505,7 +2530,6 @@ void HModel::util_getBasicIndexNonbasicFlag(vector<int>& basicIndex_, vector<int
 
 }
 
-
 // Utilities to get/change costs and bounds
 // Get the costs for a contiguous set of columns
 void HModel::util_getCosts(int firstcol, int lastcol, double* XcolCost) {
@@ -2515,7 +2539,6 @@ void HModel::util_getCosts(int firstcol, int lastcol, double* XcolCost) {
   for (int col = firstcol; col <= lastcol; ++col)
     XcolCost[col-firstcol] = colCost[col] / colScale[col];
 }
-
 // Get the bounds for a contiguous set of columns
 void HModel::util_getColBounds(int firstcol, int lastcol, double* XcolLower, double* XcolUpper) {
   assert(0 <= firstcol);
@@ -2543,6 +2566,19 @@ void HModel::util_getRowBounds(int firstrow, int lastrow, double* XrowLower, dou
     if (XrowUpper != NULL)
       XrowUpper[row-firstrow] = (hsol_isInfinity(rowUpper[row]) ? rowUpper[row]
 				 : rowUpper[row] * rowScale[row]);
+  }
+}
+
+// Possibly change the objective sense
+int HModel::util_chgObjSense(const int XobjSense) {
+  if ((XobjSense == OBJSENSE_MINIMIZE) != (objSense == OBJSENSE_MINIMIZE)) {
+    //Flip the objective sense
+    objSense = XobjSense;
+    for (int var=0; var<numTot; var++) {
+      workDual[var] = -workDual[var];
+      workCost[var] = -workCost[var];
+    }
+    problemStatus = LP_Status_Unset;
   }
 }
 
@@ -3468,6 +3504,7 @@ void HModel::util_reportModel() {
   printf("util_reportModel\n");
 #endif
   util_reportModelDimensions();
+  util_reportModelObjSense();
   if (numTot>100) return;
   util_reportColVec(numCol, colCost, colLower, colUpper);
   util_reportRowVec(numRow, rowLower, rowUpper);
@@ -3480,6 +3517,7 @@ void HModel::util_reportModelSolution() {
   printf("util_reportModelSolution:\n");
 #endif
   util_reportModelDimensions();
+  util_reportModelObjSense();
   util_reportModelStatus();
   if (numTot>100) return;
   assert(numCol>0);
@@ -3499,6 +3537,16 @@ void HModel::util_reportModelSolution() {
 // Report the model dimensions
 void HModel::util_reportModelDimensions() {
   printf("Model %s has %d columns, %d rows and %d nonzeros\n", modelName.c_str(), numCol, numRow, Astart[numCol]);
+}
+
+// Report the model dimensions
+void HModel::util_reportModelObjSense() {
+  if (objSense == OBJSENSE_MINIMIZE)
+    printf("Objective sense is minimize\n");
+  else if (objSense == OBJSENSE_MAXIMIZE)
+    printf("Objective sense is maximize\n");
+  else
+    printf("Objective sense is ill-defined as %d\n", objSense);
 }
 
 // Report the model status
