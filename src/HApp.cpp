@@ -199,7 +199,6 @@ void testIO(const char *filename) {
 		return;
 	}
 	else if (1) {
-		double timeVar;
 		HPresolve * pre = new HPresolve();
 		model.copy_fromHModelToHPresolve(pre);
 		int status = pre->presolve();
@@ -280,7 +279,9 @@ void solvePlainWithPresolve(const char *filename) {
 	HModel model;
 	model.load_fromMPS(filename);
 	double time1;
+
 	double obj1 = presolve(model, time1);
+	(void)obj1;
 
 	//to test singularity of basis matrix after postsolve
 /*

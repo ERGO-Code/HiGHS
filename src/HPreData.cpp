@@ -58,7 +58,7 @@ bool HPreData::isZeroA(int i, int j) {
 
 void HPreData::makeARCopy() {
 	// Make a AR copy
-    int i,j,k;
+    int i,k;
     vector<int> iwork(numRow, 0);
     ARstart.resize(numRow + 1, 0);
     int AcountX = Aindex.size();
@@ -83,7 +83,7 @@ void HPreData::makeARCopy() {
 void HPreData::makeACopy() {
     // Make a A copy
 
-    int i,j,k;
+    int i,k;
     vector<int> iwork(numColOriginal, 0);
     Astart.assign(numColOriginal + 1, 0);
     int AcountX = ARindex.size();
@@ -120,21 +120,21 @@ void HPreData::print(int k) {
 	cout<<"\n-----cost-----\n";
 
 	if (k==0) {
-		for (int i=0;i<colCost.size();i++) {
+		for (size_t i=0;i<colCost.size();i++) {
 			sprintf(buff, "%2.1g ", colCost[i]);
 			cout<<std::setw(5)<<buff;
 		}
 	}
 
 	if (k==1) {
-		for (int i=0;i<colCostAtEl.size();i++) {
+		for (size_t i=0;i<colCostAtEl.size();i++) {
 			sprintf(buff, "%2.1g ", colCostAtEl[i]);
 			cout<<std::setw(5)<<buff;
 		}
 	}
 
 	if (k==2) {
-		for (int i=0;i<colCostAtEl.size();i++) {
+		for (size_t i=0;i<colCostAtEl.size();i++) {
 			sprintf(buff, "%2.1g ", colCostAtEl[i]);
 			cout<<std::setw(5)<<buff;
 		}
@@ -147,7 +147,7 @@ void HPreData::print(int k) {
 
 	for (int i=0;i<rows;i++) {
 		if (flagRow[i] ) {
-			for (int j=0;j<Astart.size()-1;j++) {
+			for (size_t j=0;j<Astart.size()-1;j++) {
 
 				int ind = Astart[j];
 				while (Aindex[ind]!=i && ind<Aend[j])
@@ -169,7 +169,7 @@ void HPreData::print(int k) {
 		}
 	}
 	cout<<"------l------\n";
-	for (int i=0;i<colLower.size();i++) {
+	for (size_t i=0;i<colLower.size();i++) {
 		if (colLower[i]>-HSOL_CONST_INF)
 			sprintf(buff, "%2.1g ", colLower[i]);
 		else
@@ -178,7 +178,7 @@ void HPreData::print(int k) {
 	}
 	cout<<endl;
 	cout<<"------u------\n";
-	for (int i=0;i<colUpper.size();i++) {
+	for (size_t i=0;i<colUpper.size();i++) {
 		if (colUpper[i]<HSOL_CONST_INF)
 			sprintf(buff, "%2.1g ", colUpper[i]);
 		else
@@ -198,7 +198,7 @@ void HPreData::printAR(int i) {
 	cout<<"\n-----cost-----\n";
 
 	char buff [4];
-	for (int i=0;i<colCost.size();i++) {
+	for (size_t i=0;i<colCost.size();i++) {
 		sprintf(buff, "%2.1g ", colCost[i]);
 		cout<<std::setw(5)<<buff;
 	}

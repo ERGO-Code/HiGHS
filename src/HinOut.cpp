@@ -264,7 +264,7 @@ void HinOut::compareData(int lvl) {
 
 		for (int k=oAstart[j]; k<oAstart[j+1]; k++) {
 			//pair<int, double> p(oAindex[k], oAvalue[k]);
-			for (int l=0;l < columnA.size(); l++)
+			for (size_t l=0;l < columnA.size(); l++)
 				if (get<0>(columnA[l])==oAindex[k]) {
 					if (get<1>(columnA[l])==oAvalue[k]) {
 						columnA.erase(columnA.begin() + l);

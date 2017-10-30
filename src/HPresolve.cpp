@@ -30,6 +30,8 @@ int HPresolve::presolve(int print) {
 
 	if (iPrint || iKKTcheck)
 		debug = 1;
+
+//#define KKT
 		
 	//counter for the different types of reductions
 	countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -39,8 +41,6 @@ int HPresolve::presolve(int print) {
 		cout<<"Presolve started ..."<<endl;
 		cout<<"Original problem ... N="<<numCol<<"  M="<<numRow<<endl;
 	}
-
-	int i,j,k;
 
 	initializeVectors();
 	if (status) return status;
@@ -109,7 +109,6 @@ pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
 	pair<int, int> colIndex;
 	//row is of form akx_x + aky_y = b, where k=row and y is present in fewer constraints
 
-	double b = rowLower.at(row);
 	int col1 = -1;
 	int col2 = -1;
 	int kk = ARstart.at(row);
@@ -221,11 +220,11 @@ void HPresolve::processRowDoubletonEquation(const int row, const int x,
 void HPresolve::removeDoubletonEquations() {
 	//flagCol should have one more element at end which is zero
 	//needed for AR matrix manipulation
-	if (flagCol.size() == numCol)
+	if ((int) flagCol.size() == numCol)
 		flagCol.push_back(0);
 
-	double  b, low, upp, akx, aky;
-	int col1, col2, x, y;
+	double  b, akx, aky;
+	int x, y;
 	int iter = 0;
 
 	for (int row = 0; row < numRow; row++)
@@ -450,7 +449,7 @@ void HPresolve::trimA() {
 	vector<pair<int,size_t> > vp;
 	vp.reserve(numCol);
 
-	for (size_t i = 0 ; i != numCol ; ++i) {
+	for (int i = 0 ; i != numCol ; ++i) {
 		vp.push_back(make_pair(Astart.at(i), i));
 	}
 
@@ -844,7 +843,7 @@ pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
 	int i;
 	for (int k=Astart.at(j); k<Aend.at(j);++k ) {
 		i = Aindex.at(k);
-		if (flagRow.at(i))
+		if (flagRow.at(i)) {
 			if (Avalue.at(k) < 0) {
 				if (implRowDualUpper.at(i) < HSOL_CONST_INF)
 					e+= Avalue.at(k)*implRowDualUpper.at(i);
@@ -861,11 +860,12 @@ pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
 					break;
 				}
 			}
+		}
 	}
 
 	for (int k=Astart.at(j); k<Aend.at(j);++k ) {
 		i = Aindex.at(k);
-		if (flagRow.at(i))
+		if (flagRow.at(i)) {
 			if (Avalue.at(k) < 0) {
 				if (implRowDualLower.at(i) > -HSOL_CONST_INF)
 					d+= Avalue.at(k)*implRowDualLower.at(i);
@@ -882,6 +882,7 @@ pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
 					break;
 				}
 			}
+		}
 	}
 
 	if (e>d) {
@@ -894,7 +895,6 @@ pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
 }
 
 void HPresolve::removeDominatedColumns() {
-	int col, i, k;
 	
 	//for each column j calculate e and d and check:
 	double e,d;
@@ -1299,7 +1299,6 @@ pair<double, double> HPresolve::getBoundsImpliedFree(double lowInit, double uppI
 	double upp = uppInit;
 
 	//use implied bounds with original bounds
-	int kk = ARstart.at(i);
 	int j;
 	double l,u;
 	// if at any stage low becomes  or upp becomes inf break loop  
@@ -1654,7 +1653,7 @@ void HPresolve::dominatedConstraintProcedure(const int i, const double g, const 
 }
 
 void HPresolve::removeForcingConstraints(int mainIter) {
-	double val, g, h;
+	double g, h;
 	pair<double, double> implBounds;
 
 	for (int i = 0; i < numRow; ++i)
@@ -1906,7 +1905,6 @@ void HPresolve::reportTimes() {
 				WEAKLY_DOMINATED_COLS };
 	int reportCount = sizeof(reportList) / sizeof(int);
 
-	double totalTick = timer.getTick();
 	printf("Presolve rules ");
 	for (int i = 0; i < reportCount; ++i) {
 		printf(" %s", timer.itemNames[reportList[i]].c_str());
@@ -2210,8 +2208,8 @@ void HPresolve::postsolve() {
 
 		//cmpNBF(-1, -1);
 
-		int kk, jj;
-		double y,z,x;
+
+		double z;
 		vector<int> fRjs;
 		while (!chng.empty()) {
 			change c = chng.top();
@@ -2496,8 +2494,8 @@ void HPresolve::postsolve() {
 					pair< int ,vector<double> > p = oldBounds.top(); oldBounds.pop();
 					vector<double> v = get<1>(p);
 					int j = get<0>(p);
-					double ubNew = v[1];
-					double lbNew = v[0];
+					//double ubNew = v[1];
+					//double lbNew = v[0];
 					double cjNew = v[2];
 					p = oldBounds.top(); oldBounds.pop();
 					v = get<1>(p);
@@ -2889,7 +2887,7 @@ int HPresolve::testBasisMatrixSingularity() {
     }
 
 	factor.setup(nC, nR, &Mstart[0], &Mindex[0], &Mvalue[0],  &bindex[0]);
-/*	if (1) // for this check both A and M are the full matrix again
+/ *	if (1) // for this check both A and M are the full matrix again
 	{
 		if (nC - numColOriginal != 0)
 			cout<<"columns\n";
@@ -3008,7 +3006,7 @@ double HPresolve::getRowDualPost(int row, int col) {
 
 
 string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
-	double x,aij,z;
+	double z;
 	stringstream ss;
 	int j;
 
@@ -3017,7 +3015,7 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 
 	double cost, sum;
 
-	for (int jj=0;jj<fRjs.size();++jj) {
+	for (size_t jj=0;jj<fRjs.size();++jj) {
 			j = fRjs[jj];
 
 			pair<int, vector<double> > p = oldBounds.top();
@@ -3048,7 +3046,7 @@ string HPresolve::getDualsForcingRow( int row, vector<int>& fRjs) {
 	flagRow.at(row) = 1;
 
 
-	for (int jj=0;jj<fRjs.size();++jj) {
+	for (size_t jj=0;jj<fRjs.size();++jj) {
 			j = fRjs[jj];
 			cost = valueColDual.at(j);
 			sum = 0;
@@ -3339,822 +3337,3 @@ void HPresolve::getDualsDoubletonEquation(int row, int col) {
 	flagCol.at(y) = 1;
 }
 
-/*
-void HPresolve::updateRemovedColRow(int dim) {
-	list<int>::iterator it;
-
-	if (dim==1) {
-		it = singRow.begin();
-		while (it != singRow.end())
-			if (!flagRow[*it]) {
-					it = singRow.erase(it);
-					}
-			else
-				it++;
-				}
-	else if (dim==2) {
-		it = singCol.begin();
-		while (it != singCol.end())
-			if (!flagCol[*it]) {
-					it = singCol.erase(it);
-					}
-			else
-				it++;
-	}
-}
-
-void HPresolve::updateRowsByNZ() {
-	//for (int j=Astart)
-
-
-	for (int i = 0; i < numRow; ++i)
-		if (flagRow.at(i)) {
-			if (nzRow.at(i) == 1) {
-				int singletonColIndex = testSingRows(i);
-				if (singletonColIndex > 0)
-					singRow.push_back(i);
-			}
-
-			if (nzRow.at(i) == 0)
-				if (b.at(i) == 0) {
-					if (iPrint > 0)
-						cout<<"PR: Empty row "<<i<<" removed. "<<endl;
-					flagRow.at(i) = false;
-					addChange(0, i, 0);
-				}
-				else {
-					if (iPrint > 0)
-						cout<<"PR: Problem infeasible."<<endl;
-					cout<<("NOT-OPT status = 1, detected on presolve.\n");
-					exit(1);
-				}
-		}
-
-}
-
-
-bool HPresolve::checkDuplicateColumns(int i, int k) {
-	int j, p;
-	//check all entries in i are either in k too or singleton
-	for (p=Astart.at(i); p<Aend.at(i); p++) {
-		j = Aindex[p];
-		if (!flagRow.at(j))
-			continue;
-		else if (isZeroA(j, k))
-			return false;
-	}
-	//the other way about
-	for (p=Astart.at(k); p<Aend.at(k); p++) {
-		j = Aindex[p];
-		if (!flagRow.at(j))
-			continue;
-		else if (isZeroA(j, i))
-			return false;
-	}
-
-	return true;
-}
-
-
-bool HPresolve::checkDuplicateRows(int i, int k) {
-	int j, p;
-	//check all entries in i are either in k too or singleton
-	for (p=ARstart.at(i); p<ARstart.at(i+1); p++) {
-		j = ARindex[p];
-		if (nzCol.at(j)==1 || !flagCol.at(j))
-			continue;
-		else if (isZeroA(k, j))
-			return false;
-	}
-	//the other way about
-	for (p=ARstart.at(k); p<ARstart[k+1]; p++) {
-		j = ARindex[p];
-		if (nzCol.at(j)==1 || !flagCol.at(j))
-			continue;
-		else if (isZeroA(i, j))
-			return false;
-	}
-
-	return true;
-}
-
-
-void HPresolve::findDuplicateRows() {
-	timer.recordStart(DUPLICATE_ROWS);
-	int v = 0; //remaining potential duplicates
-	int t = 1; //number of potential next set to be created
-
-	//row pass
-	vector<int>    s(numRow,-1);
-	for (int i=0;i<numRow;++i)
-		if (flagRow.at(i)){
-			v++;
-			s.at(i) = 0;
-			}
-
-	//matrix pass
-	int n,t0, ind, r,r0;
-	for (int j=0; j<numCol; ++j)
-		if (flagCol.at(j) && nzCol.at(j)>1) {
-			n = 0;
-			t0 = t;
-			t++;
-			for (int ind=Astart.at(j); ind<Aend.at(j); ++ind)  {
-				r = Aindex.at(ind);
-				if (flagRow[r]) {
-					if (s[r]==0) {
-						r0 = r;
-						s[r] = t0;
-						n++;
-					}
-					else if (s[r]>0) {
-						bool isSat1 = false;
-						for (int ii=Astart.at(j); ii<Aend.at(j); i++i)  {
-							int i = Aindex[ii];
-							if (flagRow.at(i) && i!=r) {
-								if (s.at(i) == s[r]) {
-									s.at(i) = t;
-									//s[r] = t;//
-									isSat1 = true;
-								}
-							}
-						}
-						if (isSat1) {
-							s[r] = t;
-							t++;
-						}
-						else
-							s[r] = -1;
-					}
-				}
-			}
-			if (n==1) {
-				s[r0] = -1;
-				v--;
-				if (v==0) {
-					break; break; }
-			}
-		}
-
-	queue<double> pairWise;
-	int col, indi, indj;
-	//if s.at(i) == s.at(j) rows i and j have the same sparsity pattern in nonsingleton columns
-	for (int i=0;i<numRow;++i) {
-		if (s.at(i)>-1) {
-			for (int j=i+1;j<numRow;++j)
-				if (s.at(i) == s.at(j)) {
-					bool same = true;
-					double ratio = 0;
-					//check coefficients
-					indi = ARstart.at(i);
-					while (indi<ARstart.at(i+1) && same) {
-						col = ARindex.at(indi);
-						if (!flagCol.at(col) || nzCol.at(col) <= 1) 	{
-							++indi; continue; }
-						// we've reached a nonsingleton column in row i, got to find the same in j
-						indj = ARstart.at(j);
-						while (ARindex[indj]!=col)
-							++indj;
-						if (indj >= ARstart[j+1]) {
-							cout<<"Error in part 2 of finding duplicate rows: rows "<<i<<" and "<<j<<".\n";
-							exit(18);
-						}
-						if (ratio == 0)
-							ratio = ARvalue.at(indi)/ARvalue[indj];
-						else if (ratio == ARvalue.at(indi)/ARvalue[indj]) {
-							++indi; continue; }
-						else {
-							same = false;
-							break;
-						}
-						++indi;
-					}
-					if (same && ratio!=0) {
-						pairWise.push(i);
-						pairWise.push(j);
-						pairWise.push(ratio);
-					}
-				}
-		}
-	}
-
-	while (!pairWise.empty()) {
-			int r1 = (int) pairWise.front(); pairWise.pop();
-			int r2 = (int) pairWise.front(); pairWise.pop();
-			double rat = pairWise.front(); pairWise.pop();
-			//if (iPrint > 0) cout<<"PR: Duplicate rows detected: "<<r1<<" and "<<r2<<". ratio = "<<rat<<"."<<endl;
-
-			if (!checkDuplicateRows(r1,r2))
-				cout<<"ROWS NOT DUPLICATE: "<<r1<<" and "<<r2<<endl;
-			removeDuplicateRows(r1, r2, rat);
-		}
-	timer.recordFinish(DUPLICATE_ROWS);
-}
-
-
-void HPresolve::removeDuplicateRows(int i, int k, double v) {
-	if (!flagRow.at(i) || !flagRow.at(k))
-		return;
-	vector<double> coeffK, coeffI;
-	vector<int> colK, colI;
-	for (int l = ARstart.at(i); l<ARstart.at(i+1);l++)
-		if (flagCol[ARindex[l]] && nzCol[ARindex[l]]==1) {
-			coeffK.push_back(-(1/v)*ARvalue[l]);
-			colK.push_back(ARindex[l]);
-			coeffI.push_back(ARvalue[l]);
-			colI.push_back(ARindex[l]);
-		}
-	for (int l = ARstart.at(k); l<ARstart[k+1];l++)
-		if (flagCol[ARindex[l]] && nzCol[ARindex[l]]==1) {
-			coeffK.push_back(ARvalue[l]);
-			colK.push_back(ARindex[l]);
-			coeffI.push_back(-v*ARvalue[l]);
-			colI.push_back(ARindex[l]);
-		}
-
-	// coeffK = (row k)-v*(row i)
-	int j = makeCheckForDuplicateRows(k, i, coeffK, colK, 1/v, 1);
-	if (j>0) { //fill stack with linear transformation of A for postsolve
-		postValue.push((double) k);
-		postValue.push((double) i);
-		postValue.push(1/v);
-		cnts[9]++;
-		}
-	if (j==0) {
-		// coeffI = (row i)-v*(row k)
-		j = makeCheckForDuplicateRows(i, k, coeffI, colI, v, 2);
-		if (j>0) { //fill stack with linear transformation of A for postsolve
-			postValue.push((double) i);
-			postValue.push((double) k);
-			postValue.push(v);
-			cnts[9]++;
-		}
-	}
-}
-
-/**
-* return value: 0 no action, 1 empty row, 2 doubleton eq, 3 implied free
-**/
-/*
-int HPresolve::makeCheckForDuplicateRows(int k, int i, vector<double>& coeff, vector<int>& colIndex, double v, int whichIsFirst) {
-	double newRowKLower, newRowKUpper;
-	int ii,kk;
-	if (whichIsFirst==1) {
-		ii = i;
-		kk = k;
-	}
-	else {
-		ii = k;
-		kk = i;
-	}
-
-	if (v>0) {
-		if (rowUpper[ii] == HSOL_CONST_INF || rowLower.at(kk) == -HSOL_CONST_INF)
-			newRowKLower = -HSOL_CONST_INF;
-		else
-			newRowKLower = max(rowLower.at(kk) - v*rowUpper[ii], -HSOL_CONST_INF);
-		if (rowUpper.at(kk) == HSOL_CONST_INF || rowLower[ii] == -HSOL_CONST_INF)
-			newRowKUpper = HSOL_CONST_INF;
-		else
-			newRowKUpper = min(rowUpper.at(kk) - v*rowLower[ii], HSOL_CONST_INF);
-	}
-	else {
-		if (rowLower[ii] == -HSOL_CONST_INF || rowLower.at(kk) == -HSOL_CONST_INF)
-			newRowKLower = -HSOL_CONST_INF;
-		else
-			newRowKLower = max(rowLower.at(kk) - v*rowLower[ii], -HSOL_CONST_INF);
-		if (rowUpper.at(kk) == HSOL_CONST_INF || rowUpper[ii] == HSOL_CONST_INF)
-			newRowKUpper = HSOL_CONST_INF;
-		else
-			newRowKUpper = min(rowUpper.at(kk) - v*rowUpper[ii], HSOL_CONST_INF);
-	}
-
-	//empty
-	if (coeff.size()==0) { return 0;
-		if (newRowKLower <= tol && newRowKUpper >= -tol) {
-			if (iPrint > 0)
-				cout<<"PR: Row "<<ii<<" added to duplicate row "<<kk<<" resulted in empty row. Row "<<kk<<" removed."<<endl;
-			//update bounds on row ii
-			//add old bounds OF row ii to checker and for postsolve
-			if (iKKTcheck == 1) {
-				vector<pair<int, double> > bndsL, bndsU;
-				bndsL.push_back( make_pair( ii, rowLower[ii]));
-				bndsU.push_back( make_pair( ii, rowUpper[ii]));
-				chk.rLowers.push(bndsL);
-				chk.rUppers.push(bndsU);
-			}
-			vector<double> bnds;
-			bnds.push_back(rowLower[ii]);
-			bnds.push_back(rowUpper[ii]);
-
-
-			if (rowUpper.at(kk) < HSOL_CONST_INF) {
-				double ubOfVi;
-				if ((rowUpper[ii]==HSOL_CONST_INF && v > 0) || (rowLower[ii]==-HSOL_CONST_INF && v < 0))
-					ubOfVi=HSOL_CONST_INF;
-				else if (v>0)
-					ubOfVi = v*rowUpper[ii];
-				else
-					ubOfVi = v*rowLower[ii];
-				if (v>0)
-					rowUpper[ii] = min(ubOfVi, rowUpper.at(kk))/v;
-				else
-					rowLower[ii] = min(ubOfVi, rowUpper.at(kk))/v;
-			}
-
-			if (rowUpper.at(kk) < HSOL_CONST_INF) {
-				double lbOfVi;
-				if ((rowLower[ii]==HSOL_CONST_INF && v > 0) || (rowUpper[ii]==-HSOL_CONST_INF && v < 0))
-					lbOfVi=-HSOL_CONST_INF;
-				if (v>0)
-					lbOfVi = v*rowLower[ii];
-				else
-					lbOfVi = v*rowUpper[ii];
-				if (v>0)
-					rowLower[ii] = max(lbOfVi, rowLower.at(kk))/v;
-				else
-					rowUpper[ii] = max(lbOfVi, rowLower.at(kk))/v;
-			}
-
-			bnds.push_back(rowLower[ii]);
-			bnds.push_back(rowUpper[ii]);
-			oldBounds.push(make_pair( ii, bnds));
-
-			flagRow.at(kk) = false;
-			addChange(11, kk, 0);
-		}
-		else {
-			if (iPrint > 0)
-				cout<<"PR: Problem infeasible."<<endl;
-			cout<<("NOT-OPT status = 1, detected on presolve.\n");
-			exit(1);
-		}
-
-		return 1;
-	}
-	/* /doubleton eq with a singleton equation
-	else if (coeff.size()==2) { return 0;
-		int col, j;
-		double aij, aicol;
-
-		if (isZeroA(i, colIndex[0])) {
-			col = colIndex[0];
-			j   = colIndex[1];
-			aij = coeff[1];
-			aicol = coeff[0];
-		}
-		else if (isZeroA(i, colIndex[1])) {
-			j = colIndex[0];
-			col   = colIndex[1];
-			aij = coeff[0];
-			aicol = coeff[1];
-		}
-		else return 0;
-		cout<<"doubleton free"<<endl;
-   		//modify bounds on variable j
-		//set row 's bounds to the new ones before we eliminate it
-		rowLower.at(kk) = newRowKLower;
-		rowUpper.at(kk) = newRowKUpper;
-
-		// additional check if it is indeed implied free: need
-		// low and upp to be tighter than original bounds for variable col
-		// so it is indeed implied free and we can remove it
-		pair<double, double> p = getNewBoundsDoubletonConstraint(kk, j, col, aij, aicol);
-		double low, upp;
-		low = get<0>(p);
-		upp = get<1>(p);
-		if (!(colLower.at(col) <= low && colUpper.at(col) >= upp))
-			return 0;
-
-
-		postValue.push(aij);
-		postValue.push(aicol);
-		postValue.push(newRowKUpper);
-		postValue.push(newRowKLower);
-
-		//modify bounds on variable j, variable col (k) is substituted out
-		//double aik = Avalue.at(k);
-		//double aij = Avalue.at(kk);
-		p = getNewBoundsDoubletonConstraint(kk, col, j, aicol, aij);
-		low = get<0>(p);
-		upp = get<1>(p);
-
-		//add old bounds of xj to checker and for postsolve
-		if (iKKTcheck == 1) {
-			vector<pair<int, double> > bndsL, bndsU, costS;
-			bndsL.push_back( make_pair( j, colLower.at(j)));
-			bndsU.push_back( make_pair( j, colUpper.at(j)));
-			costS.push_back( make_pair( j, colCost.at(j)));
-			chk.cLowers.push(bndsL);
-			chk.cUppers.push(bndsU);
-			chk.costs.push(costS);
-		}
-
-		vector<double> bnds;
-		bnds.push_back(colLower.at(col));
-		bnds.push_back(colUpper.at(col));
-		bnds.push_back(colCost.at(col));
-		oldBounds.push(make_pair( col, bnds));
-		bnds.clear();
-		bnds.push_back(colLower.at(j));
-		bnds.push_back(colUpper.at(j));
-		bnds.push_back(colCost.at(j));
-		oldBounds.push(make_pair( j, bnds));
-
-		if (low > colLower.at(j))
-			colLower.at(j) = low;
-		if (upp < colUpper.at(j))
-			colUpper.at(j) = upp;
-
-		//modify cost of xj
-		colCost.at(j) = colCost.at(j) - colCost.at(col)*aij/aicol;
-
-		//for postsolve: need the new bounds too
-		//oldBounds.push_back(colLower.at(j)); oldBounds.push_back(colUpper.at(j));
-		bnds.clear();
-		bnds.push_back(colLower.at(j));
-		bnds.push_back(colUpper.at(j));
-		bnds.push_back(colCost.at(j));
-		oldBounds.push(make_pair( j, bnds));
-
-		if (iPrint > 0)
-			cout<<"PR: Row "<<ii<<" added to duplicate row "<<kk<<" resulted in a doubleton equation. Variable "<<col<<" and row "<<kk<<" removed. variable left is "<<j<<endl;
-		flagCol.at(col) = false;
-
-		valueColDual.at(col) = 0;
-		valueRowDual.at(kk) = -colCost.at(col)/aicol; //may be changed later, depending on bounds.
-
-
-
-		removeRow(kk);
-		addChange(12, kk, col);
-		return 2;
-	}
-	//implied free
-	else if (coeff.size()>2){
-		for (int j=0;j<colIndex.size(); ++j) {
-			if (!flagRow.at(k))
-				return 0;
-
-			//check if singleton
-			if (whichIsFirst == 1 && !isZeroA(i, colIndex.at(j)))
-			 continue;
-
-			if (whichIsFirst == 2 && !isZeroA(k, colIndex.at(j)))
-			 continue;
-
-			int elem = getaij(k, colIndex.at(j));
-			bool res = removeIfImpliedFree(colIndex.at(j), k, elem);
-			if (res) {
-				cout<<"impl free"<<endl;
-				addChange(11, k, colIndex.at(j));
-				return 3;
-			}
-		}
-	}* /
-	return 0;
-}
-/*
-void HPresolve::findDuplicateColumns() {
-	int v = 0; //remaining potential duplicates
-	int t = 1; //number of potential next set to be created
-
-	//column pass
-	vector<int> s(numCol,-1);
-	for (int i=0;i<numCol;++i)
-		if (flagCol.at(i)){
-			v++;
-			s.at(i) = 0;
-			}
-
-	//matrix pass
-	int n,t0, ind, r,r0;
-	for (int j=0; j<numRow; ++j)
-		if (flagRow.at(j)) { //row by row
-			n = 0;
-			t0 = t;
-			t++;
-			for (int ind=ARstart.at(j); ind<ARstart[j+1]; ++ind)  {
-				r = ARindex.at(ind);
-				if (flagCol[r]) {
-					if (s[r]==0) {
-						r0 = r;
-						s[r] = t0;
-						n++;
-					}
-					else if (s[r]>0) {
-						bool isSat1 = false;
-						for (int ii=ARstart.at(j); ii<ARstart[j+1]; i++i)  {
-							int i = ARindex[ii];
-							if (flagCol.at(i) && i!=r) {
-								if (s.at(i) == s[r]) {
-									s.at(i) = t;
-									s[r] = t;
-									isSat1 = true;
-								}
-							}
-						}
-						if (isSat1)
-							t++;
-						else
-							s[r] = -1;
-					}
-				}
-			}
-			if (n==1) {
-				s[r0] = -1;
-				v--;
-				if (v==0) {
-					break; break;	}
-			}
-		}
-
-		queue<double> pairWise;
-		int row, indi, indj;
-
-		//if s.at(i) == s.at(j) columns i and j have the same sparsity pattern
-		for (int i=0;i<numCol;++i) {
-			if (s.at(i)>-1) {
-				for (int j=i+1;j<numCol;++j)
-					if (s.at(i) == s.at(j)) {
-						bool same = true;
-						double ratio = 0;
-						//check coefficients
-						indi = Astart.at(i);
-						indj = Astart.at(j);
-						while (indi<Aend.at(i) && same) {
-							row = Aindex.at(indi);
-							if (!flagRow.at(row)) 	{
-								++indi; continue; }
-							while (Aindex[indj]!=row)
-								++indj;
-							if (ratio == 0)
-								ratio = Avalue.at(indi)/Avalue[indj];
-							else if (ratio == Avalue.at(indi)/Avalue[indj]) {
-								++indi; continue; }
-							else {
-								same = false;
-								break;
-							}
-							++indi;
-						}
-						if (same) {
-							pairWise.push(i);
-							pairWise.push(j);
-							pairWise.push(ratio);
-						}
-					}
-			}
-		}
-
-
-		while (!pairWise.empty()) {
-			int c1 = (int) pairWise.front(); pairWise.pop();
-			int c2 = (int) pairWise.front(); pairWise.pop();
-			double rat = pairWise.front(); pairWise.pop();
-			//if (iPrint > 0) cout<<"PR: Duplicate columns detected: "<<c1<<" and "<<c2<<". ratio = "<<rat<<"."<<endl;
-			if (checkDuplicateColumns(c1, c2))
-				removeDuplicateColumns(c1,c2,rat);
-		}
-
-
-}
-
-/*
-void HPresolve::removeDuplicateColumns(int j, int k, double v) {
-	//in case there's more than two duplicate columns
-	if (!flagCol.at(j) || !flagCol.at(k))
-		return;
-	double val = colCost.at(j) - v*colCost.at(k);
-	double xj;
-	//fix a duplicate column
-	if (val!=0) {
-		//has only a lower bound
-		if (colLower.at(k)>-HSOL_CONST_INF && colUpper.at(k) == HSOL_CONST_INF) {
-			if (v>=0 && val>0) {
-				//zj > 0, variable j is at lower bound.
-				if (colLower.at(j) == -HSOL_CONST_INF) {
-					if (iPrint > 0)
-						cout<<"PR: Problem dual infeasible."<<endl;
-					cout<<"NOT-OPT status = 2, detected on presolve.\n";
-					exit(2);
-				}
-		        if (iKKTcheck == 1)   {
-			        chk.rLowers.push(rowLower);
-			        chk.rUppers.push(rowUpper);
-		        }
-				xj = colLower.at(j);
-				setPrimalValue(j, xj);
-				addChange(7, 0, j);//postsolve is like a fixed variable
-				if (iPrint > 0)
-					cout<<"PR: Duplicate column "<<j<<" fixed. Value := "<<xj<<endl;
-			}
-			else if (v<=0 && val<0) {
-				//zj < 0, variable j is at upper bound.
-				if (colUpper.at(j) == HSOL_CONST_INF) {
-					if (iPrint > 0)
-						cout<<"PR: Problem dual infeasible."<<endl;
-					cout<<"NOT-OPT status = 2, detected on presolve.\n";
-					exit(2);
-				}
-		        if (iKKTcheck == 1)   {
-			        chk.rLowers.push(rowLower);
-			        chk.rUppers.push(rowUpper);
-		        }
-				xj = colUpper.at(j);
-				setPrimalValue(j, xj);
-				addChange(7, 0, j);//postsolve is like a fixed variable
-				if (iPrint > 0)
-					cout<<"PR: Duplicate column "<<j<<" fixed. Value := "<<xj<<endl;
-			}
-		}
-		//has only an upper bound
-		if (colLower.at(k)==-HSOL_CONST_INF && colUpper.at(k) < HSOL_CONST_INF) {
-			if (v<=0 && val>0) {
-				//zj > 0, variable j is at lower bound.
-				if (colLower.at(j) == -HSOL_CONST_INF) {
-					if (iPrint > 0)
-						cout<<"PR: Problem dual infeasible."<<endl;
-					cout<<"NOT-OPT status = 2, detected on presolve.\n";
-					exit(2);
-				}
-		        if (iKKTcheck == 1)   {
-			        chk.rLowers.push(rowLower);
-			        chk.rUppers.push(rowUpper);
-		        }
-				xj = colLower.at(j);
-				setPrimalValue(j, xj);
-				addChange(7, 0, j);//postsolve is like a fixed variable
-				if (iPrint > 0)
-					cout<<"PR: Duplicate column "<<j<<" fixed. Value := "<<xj<<endl;
-			}
-			else if (v>=0 && val<0) {
-				//zj < 0, variable j is at upper bound.
-				if (colUpper.at(j) == HSOL_CONST_INF) {
-					if (iPrint > 0)
-						cout<<"PR: Problem dual infeasible."<<endl;
-					cout<<"NOT-OPT status = 2, detected on presolve.\n";
-					exit(2);
-				}
-				xj = colUpper.at(j);
-		        if (iKKTcheck == 1)   {
-			        chk.rLowers.push(rowLower);
-			        chk.rUppers.push(rowUpper);
-		        }
-				setPrimalValue(j, xj);
-				addChange(7, 0, j);//postsolve is like a fixed variable
-
-			}
-		}
-	}
-	//replace two by one:
-	else {
-		oldBounds.push_back(v);
-		oldBounds.push_back((double) k);
-		oldBounds.push_back(colLower.at(k));
-		oldBounds.push_back(colUpper.at(k));
-
-		if (iKKTcheck == 1) {
-			chk.cLowers.push(colLower);
-			chk.cUppers.push(colUpper);
-		}
-
-		if (iPrint > 0)
-			cout<<"PR: Duplicate columns "<<k<<" and "<<j<<" replaced by one at "<<k<<"."<<endl;
-		if (v<0) {
-		//deal with infinities.
-			if (colLower.at(k)>-HSOL_CONST_INF && colUpper.at(j)<HSOL_CONST_INF) {
-				colLower.at(k) = colLower.at(k) + v*colUpper.at(j);
-				if (colLower.at(k) < -HSOL_CONST_INF)
-					colLower.at(k) = -HSOL_CONST_INF;
-			}
-			else
-				colLower.at(k)	= -HSOL_CONST_INF;
-
-			if (colUpper.at(k)<HSOL_CONST_INF && colLower.at(j)> -HSOL_CONST_INF) {
-				colUpper.at(k) = colUpper.at(k) + v*colLower.at(j);
-				if (colUpper.at(k) > HSOL_CONST_INF)
-					colUpper.at(k) = HSOL_CONST_INF;
-			}
-			else
-				colUpper.at(k) = HSOL_CONST_INF;
-		}
-		else if (v>0) {
-			if (colLower.at(k)>-HSOL_CONST_INF && colLower.at(j)>-HSOL_CONST_INF) {
-				colLower.at(k) = colLower.at(k) + v*colLower.at(j);
-				if (colLower.at(k) < -HSOL_CONST_INF)
-					colLower.at(k) = -HSOL_CONST_INF;
-			}
-			else
-				colLower.at(k)	= -HSOL_CONST_INF;
-
-			if (colUpper.at(k)<HSOL_CONST_INF && colUpper.at(j)> -HSOL_CONST_INF) {
-				colUpper.at(k) = colUpper.at(k) + v*colUpper.at(j);
-				if (colUpper.at(k) > HSOL_CONST_INF)
-					colUpper.at(k) = HSOL_CONST_INF;
-			}
-			else
-				colUpper.at(k) = HSOL_CONST_INF;
-		}
-		addChange(14, k, j);
-		flagCol.at(j) = false;
-
-		//update nonzeros: two by one so for each row -1
-		for (int kk=Astart.at(j); kk< Aend.at(j); ++kk) {
-			if (flagRow.at(Aindex.at(kk)))
-				nzRow.at(Aindex.at(kk))--;
-				}
-	}
-}*/
-
-
-/*/testing and dev
-void HPresolve::setNBFfullproblem(vector<int>& nbfFull, vector<int>& bnFull) {
-	nbffull = nbfFull;
-	bindfull = bnFull;
-}
-
-
-void HPresolve::cmpNBF(int row, int col) {
-	int i;
-	bool print = false;
-
-
-	int countBasic=0, nR=0;
-
-     for (i=0; i< nonbasicFlag.size();++i) {
-    	 if (nonbasicFlag.at(i) == 0)
-    			 countBasic++;
-     }
-
-     for (i=0;i<numRowOriginal;++i)
-		if (flagRow.at(i)) {
-			nR++;
-			}
-
-     if (countBasic != nR)
-    	 cout<<" Wrong count of basic variables:  numRow="<<nR<<" basic="<< countBasic << "\n";
-
-     if (col>-1 && row>-1) {
-		 i = col;
-		 if (nbffull.at(i) != nonbasicFlag.at(i))
-			 cout<<"		nbffull ["<<i<<"] ="<< nbffull.at(i) <<"		nonbasicFlag ["<<i<<"] = "<<  nonbasicFlag.at(i) <<endl;
-		 i = numColOriginal + row;
-		 if (nbffull.at(i) != nonbasicFlag.at(i)) {
-			 cout<<"		nbffull ["<<i<<"] ="<< nbffull.at(i) <<"		nonbasicFlag ["<<i<<"] = "<<  nonbasicFlag.at(i) <<endl;
-		 }
-	 }
-
-
-
-	// basis different.
-	/*
-	//nbffull
-	if (nbffull.size() != nonbasicFlag.size())
-		cout<<"nbf count diff"<<endl;
-
-	else {
-		for (i=0; i<nbffull.size(); ++i) {
-			if (nbffull.at(i) != nonbasicFlag.at(i)) {
-				if (i<numColOriginal) {
-					if (flagCol.at(i)) {
-						cout<<"		nbffull ["<<i<<"] ="<< nbffull.at(i) <<"		nonbasicFlag ["<<i<<"] = "<<  nonbasicFlag.at(i) <<endl;
-						print = true;
-					}
-				}
-				else {
-					if (flagRow[i - numColOriginal]) {
-						cout<<"		nbffull ["<<i<<"] ="<< nbffull.at(i) <<"		nonbasicFlag ["<<i<<"] = "<<  nonbasicFlag.at(i) <<endl;
-						print = true;
-					}
-				}
-			}
-		}
-
-		//print = true;
-		if (false) {
-			for (i=0; i<nbffull.size(); ++i) {
-				cout<<nbffull.at(i) <<" ";
-			}
-			cout<<endl;
-			for (i=0; i<nonbasicFlag.size(); ++i) {
-				cout<<nonbasicFlag.at(i) <<" ";
-			}
-		}
-	}
-
-	if (!print) {
-		cout<<"nbf SAME"<<endl;
-	}
-	cout<<endl; * /
-
-	//bindfull
-//	if (bindfull.size() != basicIndex.size())
-//		cout<<"bindfull count diff"<<endl;
-//
-//	else
-//		for (i=0; i<bindfull.size(); ++i) {
-//			if (nbffull.at(i) != basicIndex.at(i))
-//				cout<<"		bindfull ["<<i<<"] diff"<<endl;
-//		}
-}*/

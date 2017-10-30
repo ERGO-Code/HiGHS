@@ -33,13 +33,13 @@ void KktChStep::passSolution(const vector<double>& colVal, const vector<double>&
 	int j=0;
 	vector<int> eqIndexOfReduced(numCol, -1);
 	vector<int> eqIndexOfReduROW(numRow, -1);
-	for (int i=0;i<RnumCol;i++) 
+	for (int i=0;i<RnumCol;i++)
 		if (cIndex[i]>-1) {
 			eqIndexOfReduced[j] = i;
 			j++;
 		}
 	j=0;
-	for (int i=0;i<RnumRow;i++) 
+	for (int i=0;i<RnumRow;i++)
 		if (rIndex[i]>-1) {
 			eqIndexOfReduROW[j] = i;
 			j++;
@@ -50,7 +50,7 @@ void KktChStep::passSolution(const vector<double>& colVal, const vector<double>&
 		colDual[eqIndexOfReduced[i]] = colDu[i];
 	}
 	
-	for (int i=0;i<numRow;i++) 
+	for (int i=0;i<numRow;i++)
 		rowDual[eqIndexOfReduROW[i]] = rDu[i];
 	
 }
@@ -108,13 +108,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 	case 171: //new bounds from doubleton equation, retrieve old ones
 		upd =  rLowers.top();
 		rLowers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RrowLower[ind] = get<1>(upd[i]);
 		}
 		upd =  rUppers.top();
 		rUppers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RrowUpper[ind] = get<1>(upd[i]);
 		}
@@ -147,13 +147,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		if (valC != 0) {
 			upd =  cLowers.top();
 			cLowers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RcolLower[ind] = get<1>(upd[i]);
 			}
 			upd =  cUppers.top();
 			cUppers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RcolUpper[ind] = get<1>(upd[i]);
 			}
@@ -171,13 +171,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 	case 22: //
 		upd =  rLowers.top();
 		rLowers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RrowLower[ind] = get<1>(upd[i]);
 		}
 		upd =  rUppers.top();
 		rUppers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RrowUpper[ind] = get<1>(upd[i]);
 		}
@@ -188,13 +188,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		if (valC != 0) {
 			upd =  rLowers.top();
 			rLowers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RrowLower[ind] = get<1>(upd[i]);
 			}
 			upd =  rUppers.top();
 			rUppers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RrowUpper[ind] = get<1>(upd[i]);
 			}
@@ -208,7 +208,7 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		rowDual[row] = dualR;
 		upd =  costs.top();
 		costs.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolCost[ind] = get<1>(upd[i]);
 		}
@@ -221,19 +221,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		rowDual[row] = dualR;
 		upd =  cLowers.top();
 		cLowers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolLower[ind] = get<1>(upd[i]);
 		}
 		upd =  cUppers.top();
 		cUppers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolUpper[ind] = get<1>(upd[i]);
 		}
 		upd =  costs.top();
 		costs.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolCost[ind] = get<1>(upd[i]);
 		}
@@ -246,19 +246,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		rowDual[row] = dualR;
 		upd =  cLowers.top();
 		cLowers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolLower[ind] = get<1>(upd[i]);
 		}
 		upd =  cUppers.top();
 		cUppers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolUpper[ind] = get<1>(upd[i]);
 		}
 		upd =  costs.top();
 		costs.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolCost[ind] = get<1>(upd[i]);
 		}
@@ -271,13 +271,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		if (valC != 0) {
 			upd =  rLowers.top();
 			rLowers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RrowLower[ind] = get<1>(upd[i]);
 			}
 			upd =  rUppers.top();
 			rUppers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RrowUpper[ind] = get<1>(upd[i]);
 			}
@@ -290,13 +290,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		if (valC != 0) {
 			upd =  rLowers.top();
 			rLowers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RrowLower[ind] = get<1>(upd[i]);
 			}
 			upd =  rUppers.top();
 			rUppers.pop();
-			for (int i=0;i<upd.size();i++) {
+			for (size_t i=0;i<upd.size();i++) {
 				int ind = get<0>(upd[i]);
 				RrowUpper[ind] = get<1>(upd[i]);
 			}
@@ -305,13 +305,13 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 	case 11: //empty row from duplucate rows
 		upd =  rLowers.top();
 		rLowers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RrowLower[ind] = get<1>(upd[i]);
 		}
 		upd =  rUppers.top();
 		rUppers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RrowUpper[ind] = get<1>(upd[i]);
 		}
@@ -326,19 +326,19 @@ void KktChStep::addChange(int type, int row, int col, double valC, double dualC,
 		rowDual[row] = dualR;
 				upd =  cLowers.top();
 		cLowers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolLower[ind] = get<1>(upd[i]);
 		}
 		upd =  cUppers.top();
 		cUppers.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolUpper[ind] = get<1>(upd[i]);
 		}
 		upd =  costs.top();
 		costs.pop();
-		for (int i=0;i<upd.size();i++) {
+		for (size_t i=0;i<upd.size();i++) {
 			int ind = get<0>(upd[i]);
 			RcolCost[ind] = get<1>(upd[i]);
 		}
@@ -492,7 +492,7 @@ void KktChStep::makeKKTCheck() {
     cD.resize(numCol);    
     
     int k=0;
-    for (int i=0;i<RnumCol;i++) 
+    for (int i=0;i<RnumCol;i++)
     	if (flagCol[i]) {
     		cV[k]  = colValue[i];
     		cD[k] = colDual[i];
@@ -501,7 +501,7 @@ void KktChStep::makeKKTCheck() {
     
     rD.resize(numRow);
     k=0;
-    for (int i=0;i<RnumRow;i++) 
+    for (int i=0;i<RnumRow;i++)
     	if (flagRow[i]) {
     		rD[k] = rowDual[i];
     		k++;
@@ -517,7 +517,7 @@ void KktChStep::printA() {
 	char buff [4];
 	cout<<"\n-----cost-----\n";
 
-	for (int i=0;i<numCol;i++) { 
+	for (int i=0;i<numCol;i++) {
 		sprintf(buff, "%2.1g ", colCost[i]);
 		cout<<std::setw(5)<<buff; 
 	}
@@ -541,7 +541,7 @@ void KktChStep::printA() {
 		cout<<"  |   "<<std::setw(5)<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
 	}
 	cout<<"------l------\n";
-	for (int i=0;i<numCol;i++) { 
+	for (int i=0;i<numCol;i++) {
 		if (colLower[i]>-HSOL_CONST_INF)
 			sprintf(buff, "%2.1g ", colLower[i]);
 		else 
@@ -550,7 +550,7 @@ void KktChStep::printA() {
 	}
 	cout<<endl;
 	cout<<"------u------\n";
-	for (int i=0;i<numCol;i++) { 
+	for (int i=0;i<numCol;i++) {
 		if (colUpper[i]<HSOL_CONST_INF)
 			sprintf(buff, "%2.1g ", colUpper[i]);
 		else 
@@ -565,7 +565,7 @@ void KktChStep::printAR() {
 	char buff [4];
 	cout<<"\n-----cost-----\n";
 
-	for (int i=0;i<numCol;i++) { 
+	for (int i=0;i<numCol;i++) {
 		sprintf(buff, "%2.1g ", colCost[i]);
 		cout<<std::setw(5)<<buff; 
 	}

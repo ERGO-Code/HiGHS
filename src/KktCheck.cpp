@@ -9,7 +9,7 @@ void KktCheck::printAR() {
 
 	char buff [4];
 	cout<<"\n-----cost-----\n";
-	for (i=0;i<colCost.size();i++) { 
+	for (size_t i=0;i<colCost.size();i++) {
 		sprintf(buff, "%2.1g ", colCost[i]);
 		cout<<std::setw(5)<<buff; 
 	}
@@ -247,12 +247,12 @@ void KktCheck::chComplementarySlackness() {
 void KktCheck::printSol() {
 	char buff [10];
 	cout<<endl<<"Col value: ";
-	for (i=0;i<colValue.size();i++) {
+	for (size_t i=0;i<colValue.size();i++) {
 		sprintf(buff, "%2.2f ", colValue[i]); 
 		cout<<setw(5)<<buff; 
 		}  
 	cout<<endl<<"Col dual:  ";
-	for (i=0;i<colDual.size();i++) {
+	for (size_t i=0;i<colDual.size();i++) {
 		sprintf(buff, "%2.2f ", colDual[i]);
 		cout<<setw(5)<<buff; 
 		}  
@@ -262,7 +262,7 @@ void KktCheck::printSol() {
 	  	cout<<setw(5)<<buff;
 	  	}*/
 	cout<<endl<<"Row dual:  ";
-	for (i=0;i<rowDual.size();i++) {
+	for (size_t i=0;i<rowDual.size();i++) {
 		sprintf(buff, "%2.2f ", rowDual[i]);  
 		cout<<setw(5)<<buff; 
 		}  
@@ -356,12 +356,12 @@ void KktCheck::setIndexVectors(vector<int>& rIndex, vector<int>& cIndex){
 	rIndexRev.clear();
 	cIndexRev.clear();
 
-	for (int i=0;i<rIndex.size(); i++) {
+	for (size_t i=0;i<rIndex.size(); i++) {
 		if (rIndex[i] != -1) {
 			rIndexRev.push_back(i);
 		}
 	}
-	for (int i=0;i<cIndex.size(); i++) {
+	for (size_t i=0;i<cIndex.size(); i++) {
 		if (cIndex[i] != -1) {
 			cIndexRev.push_back(i);
 		}
