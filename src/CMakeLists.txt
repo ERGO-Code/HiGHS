@@ -15,6 +15,7 @@ set(sources
     HinOut.cpp
     KktCheck.cpp
     KktChStep.cpp
+	HMPSIO.cpp
 )
 
 set(headers
@@ -37,6 +38,7 @@ set(headers
     HTimerPre.h
     KktCheck.h
     KktChStep.h
+	HMPSIO.h
 )
 
 add_library(libh2gmp ${sources})
