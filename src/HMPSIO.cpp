@@ -1,239 +1,11 @@
 #include "HMPSIO.h"
-enum objSense
-{
-  OBJSENSE_MINIMIZE = 1,
-  OBJSENSE_MAXIMIZE = -1
-};
-const double HSOL_CONST_INF = 1e200;
-int readInput_c(const char *filename, int* m_p, int* n_p, int* maxmin, double* offset,
-		double ** A,
-		double ** b, double ** c, double ** lb, double ** ub,
-		int** integerColumn_p) {
-  const int buff_ln=255;
-  char buff[buff_ln];
-  char *fgets_rt;
-  int n, m;
-  int start, end;
-  int rp_rd = 0;
-  double number;
-  char *term;
-  int i, j, k;
-  
-#ifdef JAJH_dev
-    printf("readMPS: Trying to open file %s\n", filename);
-#endif
-    FILE *file_p = fopen(filename, "r");
-    if (file_p == 0) {
-#ifdef JAJH_dev
-      printf("readInput: Not opened file OK\n");
-#endif
-      return 1;
-    }
-#ifdef JAJH_dev
-    printf("readInput: Opened file  OK\n");
-#endif
-    fgets_rt = fgets(buff, buff_ln, file_p);
-    
-    sscanf(buff, "%d %d %d", m_p, n_p, maxmin);
-    printf("Read %d %d %d for m_p, n_p, maxmin\n", *(m_p), *(n_p), *(maxmin));
-    n = *(n_p);
-    m = *(m_p);
-    
-    //Allocate arrays
-    *c = (double *) malloc(sizeof(double)*n);
-    *A = (double *) malloc(sizeof(double)*(m*n));
-    *b = (double *) malloc(sizeof(double)*m);
-    *lb = (double *) malloc(sizeof(double)*n);
-    *ub = (double *) malloc(sizeof(double)*n);
+#include "HMPSIO_C.h"
+#include "HModelCs.h"
+#include "HConst.h"
 
-    fgets_rt = fgets(buff, buff_ln, file_p);
-    start=0;
-    while (buff[start]==' ' &&  buff[start] != '\0') {
-      //      printf("buff[%3d] = %s\n", start, buff[start]);
-      start++;}
-    
-    //Read cost and offset
-    j = 0;
-    start = 0;
-    while ( j <= n ) {
-      if (rp_rd > 0) printf("\n Col %d\n", j);
-      while (buff[start]==' ') 
-	start++;
-      
-      end = start;
-      while (buff[end]!=' ' && buff[end] != '\0')
-	end++;
-      
-      int len = end - start;
-      if (rp_rd > 0) printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
-      if (len>0) {
-	term = (char *) malloc(sizeof(char)*len);
-	for (k=0;k<len;k++)
-	  term[k] = buff[start+k];
-      } else {
-	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on row of objective.\n");
-	return 1;
-      }
-      
-      number = atof(term);
-      if (j < n) {
-	(*c)[j] = number;
-	if (rp_rd > 0) printf("Read %g for (*c)[%d]\n", number, j);
-	j++;
-	start = end + 1;
-      }
-      else {
-	*offset = number;
-	if (rp_rd > 0) printf("Read %g for offset\n", number);
-	j++;
-      }
-    }
-    
-    //Read matrix and RHS
-    i = 0;
-    while (i < m) {
-      fgets_rt = fgets(buff, buff_ln, file_p);
-      
-      start=0;
-      while (buff[start]==' ' &&  buff[start] != '\0')
-	start++;
-      
-      //JAJH: QY - This doesn't seem to do what was intended
-      if (buff[start] == '\0')
-	printf("Error reading file: not enough numbers on row %d of A.\n", i);
-      
-      j = 0;
-      while (j < n) {
-	while (buff[start]==' ')
-	  start++;
-	
-	end = start;
-	while (buff[end]!=' ' && buff[end] != '\0')
-	  end++;
-	
-	int len = end - start;
-	
-	if (len>0) {
-	  term = (char *) malloc(sizeof(char)*len);
-	  for (k=0;k<len;k++)
-	    term[k] = buff[start+k];
-	} else {
-	  //JAJH: QY - LEN<=0 means that the end of the line has been reached
-	  printf("Error reading file: not enough numbers on row for RHS.\n");
-	  return 1;
-	}
-	
-	number = atof(term);
-	
-	int ind = (i * n) + j;
-	(*A)[ind] = number;
-	j++;
-	start = end + 1;
-      }
-      
-      //RHS
-      while (buff[start]==' ')
-	start++;
-      
-      end = start;
-      while (buff[end]!=' ' && buff[end] != '\0')
-	end++;
-      
-      int len = end - start;
-      if (len>0) {
-	term = (char *) malloc(sizeof(char)*len);
-	for (k=0;k<len;k++)
-	  term[k] = buff[start+k];
-      } else {
-	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on constraint row.\n");
-	return 1;
-      }
-      
-      number = atof(term);
-      (*b)[i] = number;
-      i++;
-    }
+//#ifndef __cplusplus
+//#endif
 
-    //Read lower bounds on columns
-    fgets_rt = fgets(buff, buff_ln, file_p);
-    start=0;
-    while (buff[start]==' ' &&  buff[start] != '\0') {
-      //      printf("buff[%3d] = %s\n", start, buff[start]);
-      start++;}
-    
-    j = 0;
-    start = 0;
-    while ( j < n ) {
-      if (rp_rd > 0) printf("\n Col %d\n", j);
-      while (buff[start]==' ') 
-	start++;
-      
-      end = start;
-      while (buff[end]!=' ' && buff[end] != '\0')
-	end++;
-      
-      int len = end - start;
-      if (rp_rd > 0) printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
-      if (len>0) {
-	term = (char *) malloc(sizeof(char)*len);
-	for (k=0;k<len;k++)
-	  term[k] = buff[start+k];
-      } else {
-	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on LB row.\n");
-	return 1;
-      }
-      
-      number = atof(term);
-      (*lb)[j] = number;
-      if (rp_rd > 0) printf("Read %g for (*lb)[%d]\n", number, j);
-      j++;
-      start = end + 1;
-    }
-    
-    //Read upper bounds on columns
-    fgets_rt = fgets(buff, buff_ln, file_p);
-    start=0;
-    while (buff[start]==' ' &&  buff[start] != '\0') {
-      //      printf("buff[%3d] = %s\n", start, buff[start]);
-      start++;}
-    
-    j = 0;
-    start = 0;
-    while ( j < n ) {
-      if (rp_rd > 0) printf("\n Col %d\n", j);
-      while (buff[start]==' ') 
-	start++;
-      
-      end = start;
-      while (buff[end]!=' ' && buff[end] != '\0')
-	end++;
-      
-      int len = end - start;
-      if (rp_rd > 0) printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
-      if (len>0) {
-	term = (char *) malloc(sizeof(char)*len);
-	for (k=0;k<len;k++)
-	  term[k] = buff[start+k];
-      } else {
-	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on UB row.\n");
-	return 1;
-      }
-      
-      number = atof(term);
-      (*ub)[j] = number;
-      if (rp_rd > 0) printf("Read %g for (*ub)[%d]\n", number, j);
-      j++;
-      start = end + 1;
-    }
-    fclose(file_p);
-    return 0;
-}
-
-//
 // Calls readMPS_dense to read file called filename, receives problem
 // [c^T 0]x st [A I]x=0 l<=x<=u with dense [A I] and converts to
 // C data structures
@@ -248,6 +20,16 @@ int readMPS_LP_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* 
 		  rhs_p, cost_p, lb_p, ub_p,
 		  &integerColumn);
 }
+
+extern "C" int readMPS_LP_dense_fc(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+		    double ** A_rw_p,
+		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
+  readMPS_LP_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
+		  A_rw_p,
+		  rhs_p, cost_p, lb_p, ub_p);
+}
+
+
 int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
 		    double ** A_rw_p,
 		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
@@ -963,3 +745,231 @@ inline const char * const BoolToString(bool b)
 {
   return b ? "True" : "False";
 }
+int readInput_c(const char *filename, int* m_p, int* n_p, int* maxmin, double* offset,
+		double ** A,
+		double ** b, double ** c, double ** lb, double ** ub,
+		int** integerColumn_p) {
+  const int buff_ln=255;
+  char buff[buff_ln];
+  char *fgets_rt;
+  int n, m;
+  int start, end;
+  int rp_rd = 0;
+  double number;
+  char *term;
+  int i, j, k;
+  
+#ifdef JAJH_dev
+    printf("readMPS: Trying to open file %s\n", filename);
+#endif
+    FILE *file_p = fopen(filename, "r");
+    if (file_p == 0) {
+#ifdef JAJH_dev
+      printf("readInput: Not opened file OK\n");
+#endif
+      return 1;
+    }
+#ifdef JAJH_dev
+    printf("readInput: Opened file  OK\n");
+#endif
+    fgets_rt = fgets(buff, buff_ln, file_p);
+    
+    sscanf(buff, "%d %d %d", m_p, n_p, maxmin);
+    printf("Read %d %d %d for m_p, n_p, maxmin\n", *(m_p), *(n_p), *(maxmin));
+    n = *(n_p);
+    m = *(m_p);
+    
+    //Allocate arrays
+    *c = (double *) malloc(sizeof(double)*n);
+    *A = (double *) malloc(sizeof(double)*(m*n));
+    *b = (double *) malloc(sizeof(double)*m);
+    *lb = (double *) malloc(sizeof(double)*n);
+    *ub = (double *) malloc(sizeof(double)*n);
+
+    fgets_rt = fgets(buff, buff_ln, file_p);
+    start=0;
+    while (buff[start]==' ' &&  buff[start] != '\0') {
+      //      printf("buff[%3d] = %s\n", start, buff[start]);
+      start++;}
+    
+    //Read cost and offset
+    j = 0;
+    start = 0;
+    while ( j <= n ) {
+      if (rp_rd > 0) printf("\n Col %d\n", j);
+      while (buff[start]==' ') 
+	start++;
+      
+      end = start;
+      while (buff[end]!=' ' && buff[end] != '\0')
+	end++;
+      
+      int len = end - start;
+      if (rp_rd > 0) printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
+      if (len>0) {
+	term = (char *) malloc(sizeof(char)*len);
+	for (k=0;k<len;k++)
+	  term[k] = buff[start+k];
+      } else {
+	//JAJH: QY - LEN<=0 means that the end of the line has been reached
+	printf("Error reading file: not enough numbers on row of objective.\n");
+	return 1;
+      }
+      
+      number = atof(term);
+      if (j < n) {
+	(*c)[j] = number;
+	if (rp_rd > 0) printf("Read %g for (*c)[%d]\n", number, j);
+	j++;
+	start = end + 1;
+      }
+      else {
+	*offset = number;
+	if (rp_rd > 0) printf("Read %g for offset\n", number);
+	j++;
+      }
+    }
+    
+    //Read matrix and RHS
+    i = 0;
+    while (i < m) {
+      fgets_rt = fgets(buff, buff_ln, file_p);
+      
+      start=0;
+      while (buff[start]==' ' &&  buff[start] != '\0')
+	start++;
+      
+      //JAJH: QY - This doesn't seem to do what was intended
+      if (buff[start] == '\0')
+	printf("Error reading file: not enough numbers on row %d of A.\n", i);
+      
+      j = 0;
+      while (j < n) {
+	while (buff[start]==' ')
+	  start++;
+	
+	end = start;
+	while (buff[end]!=' ' && buff[end] != '\0')
+	  end++;
+	
+	int len = end - start;
+	
+	if (len>0) {
+	  term = (char *) malloc(sizeof(char)*len);
+	  for (k=0;k<len;k++)
+	    term[k] = buff[start+k];
+	} else {
+	  //JAJH: QY - LEN<=0 means that the end of the line has been reached
+	  printf("Error reading file: not enough numbers on row for RHS.\n");
+	  return 1;
+	}
+	
+	number = atof(term);
+	
+	int ind = (i * n) + j;
+	(*A)[ind] = number;
+	j++;
+	start = end + 1;
+      }
+      
+      //RHS
+      while (buff[start]==' ')
+	start++;
+      
+      end = start;
+      while (buff[end]!=' ' && buff[end] != '\0')
+	end++;
+      
+      int len = end - start;
+      if (len>0) {
+	term = (char *) malloc(sizeof(char)*len);
+	for (k=0;k<len;k++)
+	  term[k] = buff[start+k];
+      } else {
+	//JAJH: QY - LEN<=0 means that the end of the line has been reached
+	printf("Error reading file: not enough numbers on constraint row.\n");
+	return 1;
+      }
+      
+      number = atof(term);
+      (*b)[i] = number;
+      i++;
+    }
+
+    //Read lower bounds on columns
+    fgets_rt = fgets(buff, buff_ln, file_p);
+    start=0;
+    while (buff[start]==' ' &&  buff[start] != '\0') {
+      //      printf("buff[%3d] = %s\n", start, buff[start]);
+      start++;}
+    
+    j = 0;
+    start = 0;
+    while ( j < n ) {
+      if (rp_rd > 0) printf("\n Col %d\n", j);
+      while (buff[start]==' ') 
+	start++;
+      
+      end = start;
+      while (buff[end]!=' ' && buff[end] != '\0')
+	end++;
+      
+      int len = end - start;
+      if (rp_rd > 0) printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
+      if (len>0) {
+	term = (char *) malloc(sizeof(char)*len);
+	for (k=0;k<len;k++)
+	  term[k] = buff[start+k];
+      } else {
+	//JAJH: QY - LEN<=0 means that the end of the line has been reached
+	printf("Error reading file: not enough numbers on LB row.\n");
+	return 1;
+      }
+      
+      number = atof(term);
+      (*lb)[j] = number;
+      if (rp_rd > 0) printf("Read %g for (*lb)[%d]\n", number, j);
+      j++;
+      start = end + 1;
+    }
+    
+    //Read upper bounds on columns
+    fgets_rt = fgets(buff, buff_ln, file_p);
+    start=0;
+    while (buff[start]==' ' &&  buff[start] != '\0') {
+      //      printf("buff[%3d] = %s\n", start, buff[start]);
+      start++;}
+    
+    j = 0;
+    start = 0;
+    while ( j < n ) {
+      if (rp_rd > 0) printf("\n Col %d\n", j);
+      while (buff[start]==' ') 
+	start++;
+      
+      end = start;
+      while (buff[end]!=' ' && buff[end] != '\0')
+	end++;
+      
+      int len = end - start;
+      if (rp_rd > 0) printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
+      if (len>0) {
+	term = (char *) malloc(sizeof(char)*len);
+	for (k=0;k<len;k++)
+	  term[k] = buff[start+k];
+      } else {
+	//JAJH: QY - LEN<=0 means that the end of the line has been reached
+	printf("Error reading file: not enough numbers on UB row.\n");
+	return 1;
+      }
+      
+      number = atof(term);
+      (*ub)[j] = number;
+      if (rp_rd > 0) printf("Read %g for (*ub)[%d]\n", number, j);
+      j++;
+      start = end + 1;
+    }
+    fclose(file_p);
+    return 0;
+}
+

@@ -12,28 +12,12 @@
 #include <map>
 #include <vector>
 using namespace std;
-//enum objSense
-//{
-//  OBJSENSE_MINIMIZE = 1,
-//  OBJSENSE_MAXIMIZE = -1
-//};
-//const double HSOL_CONST_INF = 1e200;
-enum mps_r_ty
-{
-  MPS_ROW_TY_N = 0,
-  MPS_ROW_TY_E = 1,
-  MPS_ROW_TY_L = 2,
-  MPS_ROW_TY_G = 3
-};
 
-int readInput_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		double ** A_cw_p,
-		double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		int** integerColumn_p);
-int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		    double ** A_cw_p,
-		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		    int** integerColumn_p);
+extern "C" int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+			       double ** A_cw_p,
+			       double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
+			       int** integerColumn_p);
+
 int writeMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
 		     double ** A_cw_p,
 		     double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
@@ -74,3 +58,7 @@ char * fgets ( char * str, int num, FILE * stream );
 
 inline const char * const BoolToString(bool b);
 
+int readInput_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+		double ** A_cw_p,
+		double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
+		int** integerColumn_p);

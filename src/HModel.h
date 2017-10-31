@@ -7,6 +7,8 @@
 #include "HRandom.h"
 #include "HTimer.h"
 #include "HPresolve.h"
+#include "HModelCs.h"
+#include "HConst.h"
 
 #include <string>
 #include <vector>
@@ -42,11 +44,12 @@ enum HSOL_BaseStat
 typedef enum HSOL_BaseStat HSOL_BASESTAT;
 
 /** SCIP/HSOL Objective sense */
-enum objSense
+/*enum objSense
 {
   OBJSENSE_MINIMIZE = 1,
   OBJSENSE_MAXIMIZE = -1
 };
+*/
 
 /** HSOL nonbasicFlag status for columns and rows */
 enum nonbasicFlagStat
