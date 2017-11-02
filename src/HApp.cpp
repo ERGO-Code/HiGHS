@@ -29,13 +29,13 @@ int debug = 0;
 
 int main(int argc, char **argv) {
   int opt, filename=0, presolve=0, crash=0, edgeWeight=0, pami=0, sip=0, scip=0, timeLimit=0;
-	double cut;
+	double cut = 0;
 	const char * fileName;
 	const char * presolveMode;
 	const char * edWtMode;
 	const char * crashMode;
 	const char * partitionFile = 0;
-	double TimeLimit_ArgV;
+	double TimeLimit_ArgV = HSOL_CONST_INF;
 
 #ifdef JAJH_dev
 	cout <<"===================================================================================="<<endl;

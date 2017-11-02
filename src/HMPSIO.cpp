@@ -14,19 +14,21 @@ int readMPS_LP_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* 
 		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
   
   int *integerColumn;
-  readMPS_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
+  int rtCd = readMPS_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
 		  A_rw_p,
 		  rhs_p, cost_p, lb_p, ub_p,
 		  &integerColumn);
+  return rtCd;
 }
 
 //Interface to readMPS_LP_dense_c: must come _after_ its defintion
 extern "C" int readMPS_LP_dense_fc(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
 		    double ** A_rw_p,
 		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
-  readMPS_LP_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
+  int rtCd = readMPS_LP_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
 		  A_rw_p,
 		  rhs_p, cost_p, lb_p, ub_p);
+  return rtCd;
 }
 
 
@@ -371,6 +373,7 @@ int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, doubl
 
 bool load_mpsLine(FILE *file, int& integerVar, int lmax, char *line, char *flag, double *data) {
     int F1 = 1, F2 = 4, F3 = 14, F4 = 24, F5 = 39, F6 = 49;
+    char *fgets_rt;
 
     // check the buffer
     if (flag[1]) {
@@ -383,8 +386,8 @@ bool load_mpsLine(FILE *file, int& integerVar, int lmax, char *line, char *flag,
     // try to read some to the line
     for (;;) {
         // Line input
-        fgets(line, lmax, file);
-
+        fgets_rt = fgets(line, lmax, file);
+	printf("load_mpsLine: fgets_rt = %s\n", fgets_rt);
         // Line trim   -- to delete tailing white spaces
         int lcnt = strlen(line) - 1;
         while (isspace(line[lcnt]) && lcnt >= 0)
