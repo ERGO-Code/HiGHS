@@ -101,7 +101,7 @@ public:
     // Methods which load whole models, initialise the basis then
     // allocate and populate (where possible) work* arrays and
     // allocate basis* arrays
-    void load_fromMPS(const char *filename);
+    int load_fromMPS(const char *filename);
     void load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
 			 int XnumRow, const double* XrowLower, const double* XrowUpper,
 			 int XnumNz, const int* XAstart, const int* XAindex, const double* XAvalue);
@@ -143,10 +143,6 @@ public:
 
     void initScale();
     void setup_loadMPS(const char *filename);
-    //    int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
-    //		vector<int>& Astart,  vector<int>& Aindex, vector<double>& Avalue,
-    //		vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
-    //		vector<double>& rowLower, vector<double>& rowUpper);
     bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
     bool workArrays_OK(int phase);
     bool allNonbasicMoveVsWorkArrays_OK();

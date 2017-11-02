@@ -122,10 +122,10 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   //  printf("Solve: Computed dual\n");cout<<flush;
 
 #ifdef JAJH_dev
-  bool rp_bs_cond = true;
+  bool rp_bs_cond = false;
   if (rp_bs_cond) {
     double bs_cond = an_bs_cond(ptr_model);
-    //printf("Initial basis condition estimate is %g\n", bs_cond);
+    printf("Initial basis condition estimate is %g\n", bs_cond);
   }
 #endif
   
@@ -266,7 +266,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   }
   if (rp_bs_cond) {
     double bs_cond = an_bs_cond(ptr_model);
-    //printf("Optimal basis condition estimate is %g\n", bs_cond);
+    printf("Optimal basis condition estimate is %g\n", bs_cond);
     }
   //  rp_hsol_sol(ptr_model);
   ok = model->OKtoSolve(1, solvePhase);
@@ -502,106 +502,109 @@ void HDual::solve_phase1() {
 }
 
 void HDual::solve_phase2() {
-	model->util_reportMessage("dual-phase-2-start");
+  model->util_reportMessage("dual-phase-2-start");
 
-	// Collect free variables
-	dualRow.create_Freelist();
+  // Collect free variables
+  dualRow.create_Freelist();
 
-	double lc_totalTime = model->totalTime + model->timer.getTime();
-	int lc_totalTime_rp_n = 0;
-	//	printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+  double lc_totalTime = model->totalTime + model->timer.getTime();
+  int lc_totalTime_rp_n = 0;
+  //	printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 
-	// Main solving structure
-	for (;;) {
-	  // Outer loop of solve_phase2()
-	  // Rebuild all values, reinverting B if updates have been performed
-		rebuild();
-		if (dualInfeasCount > 0)
-			break;
-		for (;;) {
-		  // Inner loop of solve_phase2()
-		  // Performs one iteration in case HDUAL_VARIANT_PLAIN:
-			model->util_reportSolverProgress();
-			switch (dual_variant) {
-			default:
-			case HDUAL_VARIANT_PLAIN:
-				iterate();
-				break;
-			case HDUAL_VARIANT_TASKS:
-				iterate_tasks();
-				break;
-			case HDUAL_VARIANT_MULTI:
-				iterate_multi();
-				break;
-			}
-			//invertHint can be true for various reasons see HModel.h
-			if (invertHint)
-				break;
-			model->computeDuObj();
-			double pr_obj_v = model->computePrObj();
-			//printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n", model->numberIteration, pr_obj_v, model->objective);
-			if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
-#ifdef SCIP_dev
-			  //printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
-#endif
-			  model->problemStatus = LP_Status_ObjUB;
-			  SolveBailout = true;
-			  break;
-			}
-		}
-		lc_totalTime = model->totalTime + model->timer.getTime();
-		if (model->problemStatus == LP_Status_ObjUB) {
-		  SolveBailout = true;
-		  break;
-		}
+  // Main solving structure
+  for (;;) {
+    // Outer loop of solve_phase2()
+    // Rebuild all values, reinverting B if updates have been performed
+    rebuild();
+    if (dualInfeasCount > 0)
+      break;
+    for (;;) {
+      // Inner loop of solve_phase2()
+      // Performs one iteration in case HDUAL_VARIANT_PLAIN:
+      model->util_reportSolverProgress();
+      switch (dual_variant) {
+      default:
+      case HDUAL_VARIANT_PLAIN:
+	iterate();
+	break;
+      case HDUAL_VARIANT_TASKS:
+	iterate_tasks();
+	break;
+      case HDUAL_VARIANT_MULTI:
+	iterate_multi();
+	break;
+      }
+      //invertHint can be true for various reasons see HModel.h
+      if (invertHint)
+	break;
+      model->computeDuObj();
 #ifdef JAJH_dev
-		lc_totalTime_rp_n += 1;
-		printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+      double pr_obj_v = model->computePrObj();
+      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n",
+	     model->numberIteration, pr_obj_v, model->objective);
 #endif
-		if (lc_totalTime > TimeLimitValue) {
-		  model->problemStatus = LP_Status_OutOfTime; 
-		  SolveBailout = true;
-		  break;
-		}
-		// If the data are fresh from rebuild(), break out of
-		// the outer loop to see what's ocurred
-		// Was:	if (model->countUpdate == 0) break;
-		if (model->mlFg_haveFreshRebuild) break;
-	}
-
-	if (SolveBailout) return;
-
-	if (dualInfeasCount > 0) {
-	  // There are dual infeasiblities so switch to Phase 1 and return
-		model->util_reportMessage("dual-phase-2-found-free");
-		solvePhase = 1;
-	} else if (rowOut == -1) {
-	  // There is no candidate in CHUZR, even after rebuild so probably optimal
-		model->util_reportMessage("dual-phase-2-optimal");
-		//		printf("Rebuild: cleanup()\n");
-		cleanup();
-		if (dualInfeasCount > 0) {
-		  // There are dual infeasiblities after cleanup() so switch to primal simplex
-			solvePhase = 4; // Do primal
-		} else {
-		  // There are no dual infeasiblities after cleanup() so optimal!
-			solvePhase = 0;
-			model->util_reportMessage("problem-optimal");
-			model->setProblemStatus(LP_Status_Optimal);
-		}
-	} else if (columnIn == -1) {
-	  // There is no candidate in CHUZC, so probably dual unbounded
-		model->util_reportMessage("dual-phase-2-unbounded");
-		if (model->problemPerturbed) {
-		  //If the costs have been perturbed, clean up and return
-			cleanup();
-		} else {
-		  //If the costs have not been perturbed, so dual unbounded---and hence primal infeasible
-			solvePhase = -1;
-			model->util_reportMessage("problem-infeasible");
-			model->setProblemStatus(LP_Status_Infeasible);
-		}
-	}
+      if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+#ifdef SCIP_dev
+	//printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+#endif
+	model->problemStatus = LP_Status_ObjUB;
+	SolveBailout = true;
+	break;
+      }
+    }
+    lc_totalTime = model->totalTime + model->timer.getTime();
+    if (model->problemStatus == LP_Status_ObjUB) {
+      SolveBailout = true;
+      break;
+    }
+#ifdef JAJH_dev
+    lc_totalTime_rp_n += 1;
+    printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+#endif
+    if (lc_totalTime > TimeLimitValue) {
+      model->problemStatus = LP_Status_OutOfTime; 
+      SolveBailout = true;
+      break;
+    }
+    // If the data are fresh from rebuild(), break out of
+    // the outer loop to see what's ocurred
+    // Was:	if (model->countUpdate == 0) break;
+    if (model->mlFg_haveFreshRebuild) break;
+  }
+  
+  if (SolveBailout) return;
+  
+  if (dualInfeasCount > 0) {
+    // There are dual infeasiblities so switch to Phase 1 and return
+    model->util_reportMessage("dual-phase-2-found-free");
+    solvePhase = 1;
+  } else if (rowOut == -1) {
+    // There is no candidate in CHUZR, even after rebuild so probably optimal
+    model->util_reportMessage("dual-phase-2-optimal");
+    //		printf("Rebuild: cleanup()\n");
+    cleanup();
+    if (dualInfeasCount > 0) {
+      // There are dual infeasiblities after cleanup() so switch to primal simplex
+      solvePhase = 4; // Do primal
+    } else {
+      // There are no dual infeasiblities after cleanup() so optimal!
+      solvePhase = 0;
+      model->util_reportMessage("problem-optimal");
+      model->setProblemStatus(LP_Status_Optimal);
+    }
+  } else if (columnIn == -1) {
+    // There is no candidate in CHUZC, so probably dual unbounded
+    model->util_reportMessage("dual-phase-2-unbounded");
+    if (model->problemPerturbed) {
+      //If the costs have been perturbed, clean up and return
+      cleanup();
+    } else {
+      //If the costs have not been perturbed, so dual unbounded---and hence primal infeasible
+      solvePhase = -1;
+      model->util_reportMessage("problem-infeasible");
+      model->setProblemStatus(LP_Status_Infeasible);
+    }
+  }
 }
 
 void HDual::rebuild() {
@@ -1233,7 +1236,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
   const int *Astart = matrix->getAstart();
   const double *Avalue = matrix->getAvalue();
   //Compute the Hager condition number estimate for the basis matrix
-  double NoDensity;
+  double NoDensity = 1;
   bs_cond_x.resize(numRow);
   bs_cond_y.resize(numRow);
   bs_cond_z.resize(numRow);
@@ -1374,21 +1377,18 @@ void HDual::rp_hsol_si_it() {
 }
 
 void HDual::rp_hsol_pv_c(HVector *column) const {
-	const int columnCount = column->count;
-	const int *columnIndex = &column->index[0];
-	const double *columnArray = &column->array[0];
-	// Alias
-	//Set limits on problem size for reporting
-//	const int mx_rp_numTot = 20;
-	if (numCol > mx_rp_numTot)
-		return;
-	printf("\nPvC: %2d  \n", columnIn);
-	for (int i = 0; i < numRow; i++) {
-		if (abs(columnArray[i]) > 1e-3)
-			printf(" %2d: %4.1g\n", i, columnArray[i]);
-	}
-	printf("\n");
-
+  const double *columnArray = &column->array[0];
+  // Alias
+  //Set limits on problem size for reporting
+  //	const int mx_rp_numTot = 20;
+  if (numCol > mx_rp_numTot)
+    return;
+  printf("\nPvC: %2d  \n", columnIn);
+  for (int i = 0; i < numRow; i++) {
+    if (abs(columnArray[i]) > 1e-3)
+      printf(" %2d: %4.1g\n", i, columnArray[i]);
+  }
+  printf("\n");
 }
 
 void HDual::rp_hsol_sol(HModel *ptr_model) {

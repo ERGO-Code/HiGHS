@@ -30,6 +30,7 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   numTot = model->getNumTot();
 #ifdef H2DEBUG
   const int objSense = model->getObjSense();
+  if (abs(objSense)!=1) printf("HCrash::crash: objSense = %d has not been set\n", objSense); cout<<flush;
   assert(abs(objSense)==1);
 #endif
   bool HaveImpliedBounds = model->impliedBoundsPresolve;
@@ -63,7 +64,6 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
   const int *Astart = &model->Astart[0];
   const int *Aindex = &model->Aindex[0];
   const double *Avalue = &model->Avalue[0];;
-  int numEl = Astart[numCol];
   
   bixby_no_nz_c_co = Crash_Mode == Crash_Mode_Dev;
   bixby_no_nz_c_co = false;
@@ -91,8 +91,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
     int c_n = bixby_mrt_ix[ps_n];
     double c_mx_abs_v = crsh_mtx_c_mx_abs_v[c_n];
     //		Find the max |entry| over all rows with a count of zero
+    int r_o_mx_aa = -1;
     double aa = 0;
-    int r_o_mx_aa;
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       int r_n = Aindex[el_n];
       if (bixby_r_k[r_n] == 0) {
@@ -106,6 +106,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
 #ifdef JAJH_dev
     if (Rp_Bixby_Ps) printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
 			    ps_n, c_n, c_mx_abs_v, aa, aa / c_mx_abs_v);
+    assert(r_o_mx_aa>=0);
 #endif
     //		Scale aa by the max |entry| in the column since CPLEX assumes the
     //		matrix is scaled so the max entry in each column is 1
@@ -221,8 +222,8 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  int c_n = bixby_mrt_ix[0];
-  double mrt_v = bixby_mrt_v[0];
+  //  int c_n = bixby_mrt_ix[0];
+  //  double mrt_v = bixby_mrt_v[0];
   double prev_mrt_v0 = -HSOL_CONST_INF;
   double prev_mrt_v = -HSOL_CONST_INF;
   bool rp_c;
@@ -263,9 +264,7 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
 bool HCrash::bixby_iz_da(HModel *ptr_model) {
   model = ptr_model;
   const int *Astart = &model->Astart[0];
-  const int *Aindex = &model->Aindex[0];
   const double *Avalue = &model->Avalue[0];;
-  int numEl = Astart[numCol];
   
   const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
@@ -325,7 +324,6 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     //	Find largest |entry| in each column
     crsh_mtx_c_mx_abs_v[c_n] = 0.0;
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
-      int r_n = Aindex[el_n];
       crsh_mtx_c_mx_abs_v[c_n] = max(abs(Avalue[el_n]),
 				     crsh_mtx_c_mx_abs_v[c_n]);
     }
@@ -524,8 +522,6 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
-  const double *rowLower = model->getrowLower();
-  const double *rowUpper = model->getrowUpper();
   
   int n_ze_c_co = 0;
   int n_fs_c_co = 0;
@@ -567,8 +563,6 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
 void HCrash::crsh_an_r_c_st_af(HModel *ptr_model) {
   model = ptr_model;
   const int *Astart = &model->Astart[0];
-  const int *Aindex = &model->Aindex[0];
-  const double *Avalue = &model->Avalue[0];;
   for (int k = 0; k < numRow; k++) {
     int vr_n = model->getBaseIndex()[k];
     if (vr_n < numCol) {
@@ -1003,14 +997,9 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
   
   model->mlFg_Report();
   
-  const int *Astart = &model->Astart[0];
-  const int *Aindex = &model->Aindex[0];
-  const double *Avalue = &model->Avalue[0];;
-  
   numRow = model->getNumRow();
   numCol = model->getNumCol();
   numTot = model->getNumTot();
-  int numEl = Astart[numCol];
   printf("In crash: LTSSF after Alias to the matrix\n");cout<<flush;
   
   //	for (int r_n = 0; r_n < numRow; r_n++)
@@ -1154,7 +1143,6 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
     //Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
     if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
     if (Rp_TwoD_da) ltssf_rp_pri_k_da();
-    int mn_r_k = numCol + 1;
     if (TwoD_hdr) {
       //			Determine whether the are still rows worth removing
       mx_r_pri = crsh_mn_pri_v - 1;
@@ -1275,10 +1263,6 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
   //  matrix = model->getMatrix();
   const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
-  const double *rowLower = model->getrowLower();
-  const double *rowUpper = model->getrowUpper();
   
   cz_c_n = no_ix;
   int su_r_c_pri_v_lm = crsh_mx_pri_v;
@@ -1296,9 +1280,9 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
   //     .  will never be satisfied
   
   if (alw_al_bs_cg)
-    int su_r_c_pri_v_lm = -crsh_mx_pri_v;
+    su_r_c_pri_v_lm = -crsh_mx_pri_v;
   else
-    int su_r_c_pri_v_lm = crsh_mx_pri_v;
+    su_r_c_pri_v_lm = crsh_mx_pri_v;
   
   n_eqv_c = 0;
   pv_v = 0.0;
@@ -1392,7 +1376,6 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
   model = ptr_model;
   const int *Astart = &model->Astart[0];
   const int *Aindex = &model->Aindex[0];
-  const double *Avalue = &model->Avalue[0];;
   //	ltssf_rp_r_k();
   for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1];
        r_el_n++) {
@@ -1843,7 +1826,9 @@ void HCrash::ltssf_iz_da(HModel *ptr_model) {
 }
 
 void HCrash::ltssf_ck_da() {
+#ifdef JAJH_dev
   bool er_fd = false;
+#endif
   if (OneD_hdr) {
     for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
       
@@ -1856,7 +1841,9 @@ void HCrash::ltssf_ck_da() {
 	//			printf("Row %d: Type %d\n", r_n, r_ty);
 	int ck_pri_v = crsh_r_ty_pri_v[r_ty];
 	if (ck_pri_v != pri_v) {
+#ifdef JAJH_dev
 	  er_fd = true;
+#endif	  
 	  printf(
 		 "ERROR: Row %d: Type %d has priority value error %d; %d\n",
 		 r_n, r_ty, ck_pri_v, pri_v);
@@ -1864,7 +1851,9 @@ void HCrash::ltssf_ck_da() {
 	int nx_r_n = crsh_r_pri_lkf[r_n];
 	if (nx_r_n != no_lk) {
 	  if (crsh_r_pri_lkb[nx_r_n] != r_n) {
+#ifdef JAJH_dev
 	    er_fd = true;
+#endif	    
 	    printf(
 		   "ERROR: Row %d: Type %d has back link error %d; %d\n",
 		   r_n, r_ty, nx_r_n, crsh_r_pri_lkf[r_n]);
@@ -1887,7 +1876,9 @@ void HCrash::ltssf_ck_da() {
 	      ck_k += 1;
 	  }
 	  if (ck_k != k) {
+#ifdef JAJH_dev
 	    er_fd = true;
+#endif	    
 	    printf(
 		   "ERROR: Row %d has number of entries error: True = %d; Updated = %d\n",
 		   r_n, ck_k, k);
@@ -1895,7 +1886,9 @@ void HCrash::ltssf_ck_da() {
 	  int nx_r_n = crsh_r_k_lkf[r_n];
 	  if (nx_r_n != no_lk) {
 	    if (crsh_r_k_lkb[nx_r_n] != r_n) {
+#ifdef JAJH_dev
 	      er_fd = true;
+#endif	      
 	      printf(
 		     "ERROR: Row %d: Count %d has back link error nx_r_n = %d; crsh_r_k_lkf[r_n] = %d\n",
 		     r_n, k, nx_r_n, crsh_r_k_lkf[r_n]);
@@ -1918,7 +1911,9 @@ void HCrash::ltssf_ck_da() {
 	  ck_k += 1;
       }
       if (ck_k != k) {
+#ifdef JAJH_dev
 	er_fd = true;
+#endif	
 	printf(
 	       "ERROR: Row %d has number of entries error: True = %d; Updated = %d\n",
 	       r_n, ck_k, k);
@@ -1934,14 +1929,18 @@ void HCrash::ltssf_ck_da() {
 	do {
 	  int ck_pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
 	  if (ck_pri_v != pri_v) {
+#ifdef JAJH_dev
 	    er_fd = true;
+#endif	    
 	    printf(
 		   "ERROR: Row %d has ck_pri_v = %d but pri_v = %d\n",
 		   r_n, ck_pri_v, pri_v);
 	  }
 	  int ck_k = crsh_r_k[r_n];
 	  if (ck_k != k) {
+#ifdef JAJH_dev
 	    er_fd = true;
+#endif	    
 	    printf("ERROR: Row %d has ck_k = %d but k = %d\n", r_n,
 		   ck_k, k);
 	  }
@@ -1949,7 +1948,9 @@ void HCrash::ltssf_ck_da() {
 	  if (nx_r_n != no_lk) {
 	    int prev_nx_r_n = crsh_r_pri_k_lkb[nx_r_n];
 	    if (prev_nx_r_n != r_n) {
+#ifdef JAJH_dev
 	      er_fd = true;
+#endif	      
 	      printf(
 		     "ERROR: Back link error for nx_r_n = %d: prev_nx_r_n = %d but r_n = %d\n",
 		     nx_r_n, prev_nx_r_n, r_n);
@@ -1967,7 +1968,13 @@ void HCrash::ltssf_ck_da() {
       crsh_r_pri_mn_r_k[pri_v] = mn_r_k;
     }
   }
-  //	if (!er_fd)	printf("No error in LTSSF data\n");
+#ifdef JAJH_dev
+  if (er_fd) {
+    printf("Error in LTSSF data\n");
+  } else {
+    //printf("No error in LTSSF data\n");
+  }
+#endif  
 }
 
 void HCrash::ltssf_rp_r_pri() {

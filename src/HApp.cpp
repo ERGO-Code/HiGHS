@@ -15,15 +15,15 @@
 #include <iomanip> 
 using namespace std;
 
-void solvePlain(const char *filename);
-void solveSCIP(const char *filename);
-void solveTasks(const char *filename);
-void solveMulti(const char *filename, const char *partitionfile = 0);
-void solvePlainWithPresolve(const char *filename);
-void solvePlainExperiments(const char *filename);
-void solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
+int solvePlain(const char *filename);
+int solveSCIP(const char *filename);
+int solveTasks(const char *filename);
+int solveMulti(const char *filename, const char *partitionfile = 0);
+int solvePlainWithPresolve(const char *filename);
+int solvePlainExperiments(const char *filename);
+int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
 double presolve(HModel& mod, double& time);
-void testIO(const char *filename);
+int testIO(const char *filename);
 
 int debug = 0;
 
@@ -157,7 +157,8 @@ int main(int argc, char **argv) {
             model.intOption[INTOPT_PRINT_FLAG] = 1;
             model.intOption[INTOPT_PERMUTE_FLAG] = 1;
             model.dblOption[DBLOPT_PAMI_CUTOFF] = cut;
-	    model.load_fromMPS(fileName);
+	    int RtCd = model.load_fromMPS(fileName);
+	    if (RtCd) return RtCd;
 
 	    model.scaleModel();
             HDual solver;
@@ -185,7 +186,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void testIO(const char *filename) {
+int testIO(const char *filename) {
 //testIO solve the problem in file with presolve
 
 	HModel model;
@@ -196,7 +197,7 @@ void testIO(const char *filename) {
 	// Check size
 	if (model.numRow == 0) {
 		cout<<"Empty problem";
-		return;
+		return 1;
 	}
 	else if (1) {
 		HPresolve * pre = new HPresolve();
@@ -238,30 +239,15 @@ void testIO(const char *filename) {
 	  solver.solve(&model);
 	  model.util_reportSolverOutcome("testIO");
 	}
-
-//testIO original testing code
-
-//  HModel model;
-//  model.load_fromMPS(filename);
-//  // Check size
-//  if (model.numRow == 0) return;
-//
-//  HinOut h("fileIO", "fileIO");
-//
-//  h.HinOutTestIO(model);
-//  //h.HinOutTestRead(model);
-//
-//  model.scaleModel();
-//  HDual solver;
-//  solver.solve(&model);
-//  model.util_reportSolverOutcome("Test IO");
+	return 0;
 }
 
 
-void solvePlain(const char *filename) {
+int solvePlain(const char *filename) {
   HModel model;
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
-  model.load_fromMPS(filename);
+  int RtCd = model.load_fromMPS(filename);
+  if (RtCd) return RtCd;
   
   model.scaleModel();
   HDual solver;
@@ -272,12 +258,14 @@ void solvePlain(const char *filename) {
 #endif
   //  model.util_reportModel();
   //  model.util_reportModelSolution();
+  return 0;
 }
 
 //Ivet
-void solvePlainWithPresolve(const char *filename) {
+int solvePlainWithPresolve(const char *filename) {
 	HModel model;
-	model.load_fromMPS(filename);
+	int RtCd = model.load_fromMPS(filename);
+	    if (RtCd) return RtCd;
 	double time1;
 
 	double obj1 = presolve(model, time1);
@@ -353,13 +341,15 @@ void solvePlainWithPresolve(const char *filename) {
 	test.readDataPostsolve(model);
 	test.compareData(2);
 */
+	return 0;
 }
 
 //Julian
-void solveSCIP(const char *filename) {
+int solveSCIP(const char *filename) {
   HModel model;
   printf("Called solveSCIP\n");cout << flush;
-  model.load_fromMPS(filename);
+  int RtCd = model.load_fromMPS(filename);
+  if (RtCd) return RtCd;
   //  model.util_reportModel();
 
   //Extract columns numCol-3..numCol-1
@@ -517,9 +507,10 @@ void solveSCIP(const char *filename) {
     }
   }
   printf("Returning from solveSCIP\n"); cout << flush;
+  return 0;
 }
 
-void solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV) {
+int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV) {
   double setupTime = 0;
   double presolve1Time = 0;
   double crashTime = 0;
@@ -558,9 +549,10 @@ void solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *P
   bool EightThreads = false;
   
   if (with_presolve) {
-    model.load_fromMPS(filename);
+    int RtCd = model.load_fromMPS(filename);
+    if (RtCd) return RtCd;
     // Check size
-    if (model.numRow == 0) return;
+    if (model.numRow == 0) return 1;
     HPresolve * pre = new HPresolve();
     model.copy_fromHModelToHPresolve(pre);
     setupTime += model.timer.getTime();
@@ -685,7 +677,8 @@ void solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *P
 #endif
     }
   } else {
-    model.load_fromMPS(filename);
+    int RtCd = model.load_fromMPS(filename);
+    if (RtCd) return RtCd;
     
 
   setupTime += model.timer.getTime();
@@ -741,6 +734,7 @@ void solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *P
 	 solver.n_wg_DSE_wt);
   cout << flush;
 #endif
+  return 0;
 }
 
 double presolve(HModel& mod, double& time) {
@@ -778,7 +772,7 @@ double presolve(HModel& mod, double& time) {
 	delete pre;
 }
 
-void solvePlainExperiments(const char *filename) {
+int solvePlainExperiments(const char *filename) {
 
 	bool exp = true;
 	ofstream myfile;
@@ -808,9 +802,11 @@ void solvePlainExperiments(const char *filename) {
 	}
 
 	HModel model;
-	model.load_fromMPS(filename);
+	int RtCd;
+	RtCd = model.load_fromMPS(filename);
+	if (RtCd) return RtCd;
 	// Check size
-	if (model.numRow == 0) return;
+	if (model.numRow == 0) return 1;
 
 	double time1;
 	double obj1 = presolve(model, time1);
@@ -819,7 +815,8 @@ void solvePlainExperiments(const char *filename) {
 
 
 	HModel model2;
-	model2.load_fromMPS(filename);
+	RtCd = model2.load_fromMPS(filename);
+	if (RtCd) return RtCd;
 	model2.scaleModel();
 
 	HDual solver2;
@@ -837,14 +834,15 @@ void solvePlainExperiments(const char *filename) {
 		myfile.close();
 	}
 
-
+	return 0;
 }
 
-void solveTasks(const char *filename) {
+int solveTasks(const char *filename) {
     HModel model;
     model.intOption[INTOPT_PRINT_FLAG] = 1;
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    model.load_fromMPS(filename);
+    int RtCd = model.load_fromMPS(filename);
+    if (RtCd) return RtCd;
 
     model.scaleModel();
     HDual solver;
@@ -854,16 +852,18 @@ void solveTasks(const char *filename) {
 #ifdef JAJH_dev
     model.writePivots("tasks");
 #endif
+    return 0;
 }
 
-void solveMulti(const char *filename, const char *partitionfile) {
+int solveMulti(const char *filename, const char *partitionfile) {
     HModel model;
     model.intOption[INTOPT_PRINT_FLAG] = 1;
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
     if (partitionfile) {
         model.strOption[STROPT_PARTITION_FILE] = partitionfile;
     }
-    model.load_fromMPS(filename);
+    int RtCd = model.load_fromMPS(filename);
+    if (RtCd) return RtCd;
 
     model.scaleModel();
     HDual solver;
@@ -873,6 +873,7 @@ void solveMulti(const char *filename, const char *partitionfile) {
 #ifdef JAJH_dev
     model.writePivots("multi");
 #endif
+    return 0;
 }
 
 

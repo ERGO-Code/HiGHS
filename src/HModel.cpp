@@ -45,7 +45,7 @@ HModel::HModel() {
 
 }
 
-void HModel::load_fromMPS(const char *filename) {
+int HModel::load_fromMPS(const char *filename) {
   // Remove any current model
   clearModel();
   
@@ -62,6 +62,10 @@ void HModel::load_fromMPS(const char *filename) {
 		     Astart,  Aindex, Avalue,
 		     colCost, colLower, colUpper, rowLower, rowUpper,
 		     integerColumn);
+  if (RtCd) {
+    totalTime += timer.getTime();
+    return RtCd;
+  }
 #ifdef JAJH_dev
   int numIntegerColumn = 0;
   for (int c_n=0; c_n<numCol; c_n++) {
@@ -85,6 +89,7 @@ void HModel::load_fromMPS(const char *filename) {
   initWithLogicalBasis();
 
   totalTime += timer.getTime();
+  return RtCd;
 }
 
 void HModel::load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
@@ -602,6 +607,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
 #ifdef JAJH_dev
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
   bool basisOK = nonbasicFlagBasicIndex_OK(local_oldNumCol, local_oldNumRow);
+  if (!basisOK) printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
   assert(basisOK);
 #endif
     
@@ -917,7 +923,7 @@ bool HModel::workArrays_OK(int phase) {
   //  printf("Called workArrays_OK(%d)\n", phase);cout << flush;
   bool ok = true;
   //Don't check phase 1 bounds: these will have been set by solve() so can be trusted
-  if (!phase == 1) {
+  if (phase != 1) {
     for (int col = 0; col < numCol; ++col) {
       int var = col;
       if (!hsol_isInfinity(-workLower[var])) {
@@ -1016,7 +1022,6 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
   if (!hsol_isInfinity(-workLower[var])) {
     if (!hsol_isInfinity(workUpper[var])) {
       //Finite lower and upper bounds so nonbasic move depends on whether they are equal
-      double rsdu = abs(workUpper[var]-workLower[var]);
       if (workLower[var] == workUpper[var]) {
 	//Fixed variable
 	ok = nonbasicMove[var] == NONBASIC_MOVE_ZE;
@@ -1104,6 +1109,7 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
 
 bool load_mpsLine(FILE *file, int lmax, char *line, char *flag, double *data) {
     int F1 = 1, F2 = 4, F3 = 14, F4 = 24, F5 = 39, F6 = 49;
+    char *fgets_rt;
 
     // check the buffer
     if (flag[1]) {
@@ -1116,8 +1122,8 @@ bool load_mpsLine(FILE *file, int lmax, char *line, char *flag, double *data) {
     // try to read some to the line
     for (;;) {
         // Line input
-        fgets(line, lmax, file);
-
+        fgets_rt = fgets(line, lmax, file);
+	printf("load_mpsLine: fgets_rt = %s\n", fgets_rt);
         // Line trim   -- to delete tailing white spaces
         int lcnt = strlen(line) - 1;
         while (isspace(line[lcnt]) && lcnt >= 0)
@@ -2415,8 +2421,10 @@ void HModel::check_load_fromPostsolve() {
   //  printf("Checking load_fromPostsolve\n");
   bool ok;
   ok = nonbasicFlagBasicIndex_OK(numCol, numRow);
+  printf("HModel::check_load_fromPostsolve: return from nonbasicFlagBasicIndex_OK = %d\n", ok);
   assert(ok);
   ok = allNonbasicMoveVsWorkArrays_OK();
+  printf("HModel::check_load_fromPostsolve: return from allNonbasicMoveVsWorkArrays_OK = %d\n", ok);
   assert(ok);
 }  
 #endif
@@ -2521,13 +2529,12 @@ void HModel::util_getPrimalDualValues(vector<double>& colValue, vector<double>& 
 }
 
 void HModel::util_getBasicIndexNonbasicFlag(vector<int>& basicIndex_, vector<int>& nonbasicFlag_) {
-	basicIndex_.resize(numRow);
-    nonbasicFlag_.resize(nonbasicFlag.size());
-    for (int i = 0; i < basicIndex.size(); i++)
-    	basicIndex_[i] = basicIndex[i];
-    for (int i = 0; i < nonbasicFlag.size(); i++)
-    	nonbasicFlag_[i] = nonbasicFlag[i];
-
+  basicIndex_.resize(numRow);
+  nonbasicFlag_.resize(nonbasicFlag.size());
+  int basicIndexSz = basicIndex.size();
+  for (int i = 0; i < basicIndexSz; i++) basicIndex_[i] = basicIndex[i];
+  int nonbasicFlagSz = nonbasicFlag.size();
+  for (int i = 0; i < nonbasicFlagSz; i++) nonbasicFlag_[i] = nonbasicFlag[i];
 }
 
 // Utilities to get/change costs and bounds
@@ -2580,6 +2587,7 @@ int HModel::util_chgObjSense(const int XobjSense) {
     }
     problemStatus = LP_Status_Unset;
   }
+  return 0;
 }
 
 // Change the costs for all columns
@@ -2590,6 +2598,7 @@ int HModel::util_chgCostsAll(const double* XcolCost) {
   }
   //Deduce the consequences of new costs
   mlFg_Update(mlFg_action_NewCosts);
+  return 0;
 }
 
 // Change the costs for a set of columns
@@ -2604,6 +2613,7 @@ int HModel::util_chgCostsSet(int ncols, const int* XcolCostIndex, const double* 
   }
   //Deduce the consequences of new costs
   mlFg_Update(mlFg_action_NewCosts);
+  return 0;
 }
 
 // Change the bounds for all columns
@@ -2785,6 +2795,7 @@ int HModel::util_convertBaseStatToWorking(const int* cstat, const int* rstat) {
   assert(numBasic=numRow);
   populate_WorkArrays();
   mlFg_Update(mlFg_action_NewBasis);
+  return 0;
 }
 
 // Convert model basic/nonbasic status to SCIP-like status
@@ -3054,8 +3065,8 @@ void HModel::util_extractCols(int firstcol, int lastcol, double* XcolLower, doub
   printf("Called model.util_extractCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);cout << flush;
 #endif
   //Determine the number of columns to be extracted
-  int numExtractCols = lastcol-firstcol+1;
-  //  printf("Extracting %d columns\n", numExtractCols);cout << flush;
+  //int numExtractCols = lastcol-firstcol+1;
+  //printf("Extracting %d columns\n", numExtractCols);cout << flush;
   int elOs = Astart[firstcol];
   for (int col = firstcol; col <= lastcol; col++) {
     //    printf("Extracting column %d\n", col);cout << flush;
@@ -3578,7 +3589,8 @@ void HModel::util_reportModelDense() {
   cout<<"\n-----cost-----\n";
   
   char buff [4];
-  for (int i=0;i<colCost.size();i++) { 
+  int colCostSz = colCost.size();
+  for (int i=0; i<colCostSz; i++) { 
     sprintf(buff, "%2.1g ", colCost[i]);
     cout<<buff; 
   }
