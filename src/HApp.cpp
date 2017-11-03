@@ -246,7 +246,8 @@ int testIO(const char *filename) {
 int solvePlain(const char *filename) {
   HModel model;
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
-  int RtCd = model.load_fromMPS(filename);
+    int RtCd = model.load_fromMPS(filename);
+  //  int RtCd = model.load_fromToy(filename);
   if (RtCd) return RtCd;
   
   model.scaleModel();
@@ -257,7 +258,7 @@ int solvePlain(const char *filename) {
   model.util_reportModelDense();
 #endif
   //  model.util_reportModel();
-  //  model.util_reportModelSolution();
+  //model.util_reportModelSolution();
   return 0;
 }
 
@@ -514,8 +515,10 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
   double setupTime = 0;
   double presolve1Time = 0;
   double crashTime = 0;
+#ifdef JAJH_rp
   double crossoverTime = 0;
   double presolve2Time = 0;
+#endif
   double solveTime = 0;
   double postsolveTime = 0;
   int solveIt = 0;

@@ -387,7 +387,10 @@ bool load_mpsLine(FILE *file, int& integerVar, int lmax, char *line, char *flag,
     for (;;) {
         // Line input
         fgets_rt = fgets(line, lmax, file);
-	printf("load_mpsLine: fgets_rt = %s\n", fgets_rt);
+	if (fgets_rt == NULL) {
+	  printf("load_mpsLine: fgets_rt = %s\n", fgets_rt);
+	  return false;
+	}
         // Line trim   -- to delete tailing white spaces
         int lcnt = strlen(line) - 1;
         while (isspace(line[lcnt]) && lcnt >= 0)

@@ -76,7 +76,6 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
   //	These multipliers are in Step 2(a) and Step 2(b) of the paper: default values 0.99 and 0.01
   bixby_mu_a = 0.99;
   bixby_mu_b = 0.01;
-  double rp_v;
   
 #ifdef JAJH_dev
   printf("\nBixby Crash");
@@ -132,18 +131,27 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
       nx_ps = true;
     } else {
       //			Find out if there is some row l for which |entry| > bixby_mu_b * v_l
+#ifdef JAJH_dev
+      double rp_v;
+#endif
       for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
 	int r_n = Aindex[el_n];
 	//				If this value in the column would give an unacceptable multiplier then continue to next pass
 	nx_ps = abs(Avalue[el_n])
 	  > bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
 	if (nx_ps) {
+#ifdef JAJH_dev
 	  rp_v = abs(Avalue[el_n])/(bixby_pseudo_pv_v[r_n] * c_mx_abs_v);
+#endif
 	  break;
 	}
       }
 #ifdef JAJH_dev
-      if (nx_ps) if (Rp_Bixby_Ps) printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
+      if (nx_ps) {
+	if (Rp_Bixby_Ps) {
+	  printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
+	}
+      }
 #endif
     }
     //		Some value in the column would give an unacceptable multiplier so continue to next pass
@@ -682,23 +690,22 @@ void HCrash::crsh_rp_r_c_st(int mode) {
 	TyNm = "Fr ";
       else
 	printf("Unrecognised type %d\n", vr_ty);
-      if (mode == 0)
 #ifdef JAJH_dev
-	ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
+      if (mode == 0) ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
 #endif
-	if (crsh_vr_ty_og_n_c[vr_ty] > 0)
-	  printf(" Model has %7d %3s cols (%3d%%)\n",
-		 crsh_vr_ty_og_n_c[vr_ty], TyNm.c_str(),
-		 (100 * crsh_vr_ty_og_n_c[vr_ty]) / numCol);
+      if (crsh_vr_ty_og_n_c[vr_ty] > 0)
+	printf(" Model has %7d %3s cols (%3d%%)\n",
+	       crsh_vr_ty_og_n_c[vr_ty], TyNm.c_str(),
+	       (100 * crsh_vr_ty_og_n_c[vr_ty]) / numCol);
       
-	else if (mode == 1) {
-	  if (crsh_vr_ty_og_n_c[vr_ty] > 0)
-	    printf(" Added   %7d of %7d %3s cols (%3d%%)\n",
-		   crsh_vr_ty_add_n_c[vr_ty],
-		   crsh_vr_ty_og_n_c[vr_ty], TyNm.c_str(),
-		   (100 * crsh_vr_ty_add_n_c[vr_ty])
-		   / crsh_vr_ty_og_n_c[vr_ty]);
-	}
+      else if (mode == 1) {
+	if (crsh_vr_ty_og_n_c[vr_ty] > 0)
+	  printf(" Added   %7d of %7d %3s cols (%3d%%)\n",
+		 crsh_vr_ty_add_n_c[vr_ty],
+		 crsh_vr_ty_og_n_c[vr_ty], TyNm.c_str(),
+		 (100 * crsh_vr_ty_add_n_c[vr_ty])
+		 / crsh_vr_ty_og_n_c[vr_ty]);
+      }
     }
 #ifdef JAJH_dev
     if (mode == 0) assert(ck_su_n_c == numCol);

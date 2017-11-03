@@ -171,8 +171,10 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // The major solving loop
   
   while (solvePhase) {
+#ifdef JAJH_dev
     int it0 = model->numberIteration;
-    //    printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n", solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());
+    //printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n", solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());
+#endif
     switch (solvePhase) {
     case 1:
       solve_phase1();
@@ -238,7 +240,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   
   if (model->problemStatus != LP_Status_OutOfTime) {
     // Use primal to clean up if not out of time
+#ifdef JAJH_dev
     int it0 = model->numberIteration;
+#endif
     if (solvePhase == 4) {
       HPrimal hPrimal;
       hPrimal.TimeLimitValue = TimeLimitValue;
@@ -408,11 +412,11 @@ void HDual::solve_phase1() {
 	// Switch to dual phase 1 bounds
 	model->initBound(1);
 	model->initValue();
-
 	double lc_totalTime = model->totalTime + model->timer.getTime();
+#ifdef JAJH_dev
 	int lc_totalTime_rp_n = 0;
 	//	printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
-
+#endif
 	// Main solving structure
 	for (;;) {
 		rebuild();
@@ -506,11 +510,11 @@ void HDual::solve_phase2() {
 
   // Collect free variables
   dualRow.create_Freelist();
-
   double lc_totalTime = model->totalTime + model->timer.getTime();
+#ifdef JAJH_dev
   int lc_totalTime_rp_n = 0;
   //	printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
-
+#endif
   // Main solving structure
   for (;;) {
     // Outer loop of solve_phase2()

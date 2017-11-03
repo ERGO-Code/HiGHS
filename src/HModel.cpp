@@ -3,6 +3,7 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 #include "HMPSIO.h"
+#include "HToyIO.h"
 
 #include <cctype>
 #include <cmath>
@@ -66,6 +67,100 @@ int HModel::load_fromMPS(const char *filename) {
     totalTime += timer.getTime();
     return RtCd;
   }
+#ifdef JAJH_dev
+  int numIntegerColumn = 0;
+  for (int c_n=0; c_n<numCol; c_n++) {
+    if (integerColumn[c_n]) numIntegerColumn++;
+  }
+  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+#endif
+ 
+  numTot = numCol + numRow;
+
+#ifdef JAJH_dev
+  //Use this next line to check the loading of a model from arrays
+  //check_load_fromArrays(); return;
+#endif
+
+  // Assign and initialise the scaling factors
+  initScale();
+  
+  // Initialise with a logical basis then allocate and populate (where
+  // possible) work* arrays and allocate basis* arrays
+  initWithLogicalBasis();
+
+  totalTime += timer.getTime();
+  return RtCd;
+}
+
+int HModel::load_fromToy(const char *filename) {
+  //  int m, n, maxmin;
+  //double offset;
+  double *A, *b, * c, *lb, *ub;
+  int *intColumn;
+  // Remove any current model
+  clearModel();
+  
+  // Initialise the total runtine for this model
+  totalTime = 0;
+
+  // Load the model, timing the process
+  timer.reset();
+  modelName = filename;
+
+  int RtCd = readToy_MIP_cpp(filename, &numRow, &numCol, &objSense, &objOffset,
+			     &A,
+			     &b, &c, &lb, &ub,
+			     &intColumn);
+  if (RtCd) {
+    totalTime += timer.getTime();
+    return RtCd;
+  }
+  printf("Model has %3d rows and %3d cols\n", numRow, numCol);
+  printf("Model has Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
+  int numNz = 0;
+  for (int c_n = 0; c_n<numCol; c_n++) {
+    for (int r_n = 0; r_n<numRow; r_n++) {
+      double r_v = A[r_n+c_n*numRow];
+      if (r_v != 0) numNz++;
+    }
+  }
+  printf("Model has %d nonzeros\n", numNz);cout<<flush;
+  Astart.resize(numCol+1);
+  Aindex.resize(numNz);
+  Avalue.resize(numNz);
+  Astart[0] = 0;
+  for (int c_n = 0; c_n<numCol; c_n++) {
+    int el_n = Astart[c_n];
+    for (int r_n = 0; r_n<numRow; r_n++) {
+      double r_v = A[r_n+c_n*numRow];
+      if (r_v != 0) {
+  	Aindex[el_n] = r_n;
+  	Avalue[el_n] = r_v;
+  	el_n++;
+      }
+    }
+    Astart[c_n+1] = el_n;
+  }
+  printf("Model has sparse matrix\n");cout<<flush;
+  colCost.resize(numCol);
+  colLower.resize(numCol);
+  colUpper.resize(numCol);
+  integerColumn.resize(numCol);
+  rowLower.resize(numRow);
+  rowUpper.resize(numRow);
+
+  for (int c_n = 0; c_n<numCol; c_n++) {
+    colCost[c_n] = c[c_n];
+    colLower[c_n] = lb[c_n];
+    colUpper[c_n] = ub[c_n];
+    integerColumn[c_n] = intColumn[c_n];
+  }
+  printf("Model has column data\n");cout<<flush;
+  for (int r_n = 0; r_n<numRow; r_n++) {
+    rowLower[r_n] = b[r_n];
+    rowUpper[r_n] = b[r_n];
+  }  
 #ifdef JAJH_dev
   int numIntegerColumn = 0;
   for (int c_n=0; c_n<numCol; c_n++) {

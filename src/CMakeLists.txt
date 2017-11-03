@@ -15,7 +15,8 @@ set(sources
     HinOut.cpp
     KktCheck.cpp
     KktChStep.cpp
-	HMPSIO.cpp
+    HMPSIO.cpp
+    HToyIO.cpp
 )
 
 set(headers

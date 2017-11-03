@@ -32,9 +32,10 @@ int readToy_LP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, double
 extern "C" int readToy_LP_c(const char *filename, int* m_p, int* n_p, int* maxmin, double* offset,
 			     double ** A,
 			     double ** b, double ** c, double ** lb, double ** ub) {
-  readToy_LP_cpp(filename, m_p, n_p, maxmin, offset,
+  int RtCd = readToy_LP_cpp(filename, m_p, n_p, maxmin, offset,
 		 A,
 		 b, c, lb, ub);
+  return RtCd;
 }
 
 int readToy_MIP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, double* offset,
@@ -204,9 +205,9 @@ int readToy_MIP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, doubl
     }
     //Set up default values of lower bounds, upper bounds and integer information
     for (int c_n = 0; c_n < n; c_n++) {
-      (*lb)[j] = 0;
-      (*ub)[j] = HSOL_CONST_INF;
-      (*integerColumn)[j] = 0;
+      (*lb)[c_n] = 0;
+      (*ub)[c_n] = HSOL_CONST_INF;
+      (*integerColumn)[c_n] = 0;
     }
 
     //Read lower bounds on columns
@@ -240,8 +241,8 @@ int readToy_MIP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, doubl
 	  term[k] = buff[start+k];
       } else {
 	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on LB row.\n");
-	return 1;
+	printf("Comment reading file: no numbers on LB row.\n");
+	return 0;
       }
       
       rl_v = atof(term);
@@ -286,8 +287,8 @@ int readToy_MIP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, doubl
 	  term[k] = buff[start+k];
       } else {
 	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on UB row.\n");
-	return 1;
+	printf("Comment reading file: no numbers on UB row.\n");
+	return 0;
       }
       
       rl_v = atof(term);
@@ -332,8 +333,8 @@ int readToy_MIP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, doubl
 	  term[k] = buff[start+k];
       } else {
 	//JAJH: QY - LEN<=0 means that the end of the line has been reached
-	printf("Error reading file: not enough numbers on integerColumn row.\n");
-	return 1;
+	printf("Comment reading file: no numbers on integerColumn row.\n");
+	return 0;
       }
       
       i_v = atoi(term);

@@ -102,6 +102,7 @@ public:
     // allocate and populate (where possible) work* arrays and
     // allocate basis* arrays
     int load_fromMPS(const char *filename);
+    int load_fromToy(const char *filename);
     void load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost, const double* XcolLower, const double* XcolUpper,
 			 int XnumRow, const double* XrowLower, const double* XrowUpper,
 			 int XnumNz, const int* XAstart, const int* XAindex, const double* XAvalue);
