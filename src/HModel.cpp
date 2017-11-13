@@ -59,7 +59,10 @@ int HModel::load_fromMPS(const char *filename) {
 
   //setup_loadMPS(filename);
 
-  int RtCd = readMPS(filename, numRow, numCol, objSense, objOffset,
+  int mxNumRow = -1;
+  int mxNumCol = -1;
+  int RtCd = readMPS(filename, mxNumRow, mxNumCol,
+		     numRow, numCol, objSense, objOffset,
 		     Astart,  Aindex, Avalue,
 		     colCost, colLower, colUpper, rowLower, rowUpper,
 		     integerColumn);

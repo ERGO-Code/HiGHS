@@ -9,38 +9,44 @@
 // [c^T 0]x st [A I]x=0 l<=x<=u with dense [A I] and converts to
 // C data structures
 //
-int readMPS_LP_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		    double ** A_rw_p,
-		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
+int readMPS_LP_dense_cpp(const char *filename, int mxNumRow, int mxNumCol, 
+			 int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+			 double ** A_rw_p,
+			 double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
   
   int *integerColumn;
-  int rtCd = readMPS_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
-		  A_rw_p,
-		  rhs_p, cost_p, lb_p, ub_p,
-		  &integerColumn);
+  int rtCd = readMPS_dense_cpp(filename, mxNumRow, mxNumCol,
+			       numRow_p, numCol_p, objSense_p, objOffset_p,
+			       A_rw_p,
+			       rhs_p, cost_p, lb_p, ub_p,
+			       &integerColumn);
   return rtCd;
 }
 
 //Interface to readMPS_LP_dense_c: must come _after_ its defintion
-extern "C" int readMPS_LP_dense_fc(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		    double ** A_rw_p,
-		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
-  int rtCd = readMPS_LP_dense_c(filename, numRow_p, numCol_p, objSense_p, objOffset_p,
-		  A_rw_p,
-		  rhs_p, cost_p, lb_p, ub_p);
+extern "C" int readMPS_LP_dense_c(const char *filename, int mxNumRow, int mxNumCol, 
+				  int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+				  double ** A_rw_p,
+				  double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
+  int rtCd = readMPS_LP_dense_cpp(filename, mxNumRow, mxNumCol,
+				  numRow_p, numCol_p, objSense_p, objOffset_p,
+				  A_rw_p,
+				  rhs_p, cost_p, lb_p, ub_p);
   return rtCd;
 }
 
 
-int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		    double ** A_rw_p,
-		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		    int** integerColumn_p) {
+int readMPS_dense_cpp(const char *filename, int mxNumRow, int mxNumCol, 
+		      int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+		      double ** A_rw_p,
+		      double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
+		      int** integerColumn_p) {
   int numRow, numCol, objSense;
   double objOffset;
   vector<double> A_rw, rhs, cost, lb, ub;
   vector<int> integerColumn;
-  int rtCd = readMPS_dense(filename, numRow, numCol, objSense, objOffset,
+  int rtCd = readMPS_dense(filename, mxNumRow, mxNumCol,
+			   numRow, numCol, objSense, objOffset,
 			   A_rw,
 			   rhs, cost, lb, ub,
 			   integerColumn);
@@ -50,8 +56,8 @@ int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* obj
   (*objSense_p) = objSense;
   (*objOffset_p) = objOffset;
 #ifdef JAJH_dev
-    printf("readMPS_dense_c: Model has %d rows and %d columns\n", numRow, numCol);
-    printf("readMPS_dense_c: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
+    printf("readMPS_dense_cpp: Model has %d rows and %d columns\n", numRow, numCol);
+    printf("readMPS_dense_cpp: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
 #endif
   *A_rw_p = (double *) malloc(sizeof(double)*numRow*numCol);
   *rhs_p = (double *) malloc(sizeof(double)*numRow);
@@ -78,14 +84,16 @@ int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* obj
 // [c^T 0]x st [A I]x=0 l<=x<=u with sparse [A I] and converts to
 // dense [A I]
 //
-int readMPS_dense(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int readMPS_dense(const char *filename, int mxNumRow, int mxNumCol, 
+		  int& numRow, int& numCol, int& objSense, double& objOffset,
 		  vector<double>& A_cw,
 		  vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		  vector<int>& integerColumn) {
   vector<int> Astart;
   vector<int> Aindex;
   vector<double> Avalue;
-  int rtCd = readMPS_sparse(filename, numRow, numCol, objSense, objOffset,
+  int rtCd = readMPS_sparse(filename, mxNumRow, mxNumCol,
+			    numRow, numCol, objSense, objOffset,
 			    Astart, Aindex, Avalue,
 			    rhs, cost, lb, ub,
 			    integerColumn);
@@ -107,7 +115,8 @@ int readMPS_dense(const char *filename, int& numRow, int& numCol, int& objSense,
 //
 // Calls readMPS to read file called filename and converts the problem to [c^T 0]x st [A I]x=0 l<=x<=u
 //
-int readMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int readMPS_sparse(const char *filename, int mxNumRow, int mxNumCol,
+		   int& numRow, int& numCol, int& objSense, double& objOffset,
 		   vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
 		   vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		   vector<int>& integerColumn) {
@@ -117,7 +126,8 @@ int readMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSense
   vector<double> rowLower;
   vector<double> rowUpper;
 
-  int rtCd = readMPS(filename, numRow, numCol, objSense, objOffset,
+  int rtCd = readMPS(filename, mxNumRow, mxNumCol,
+		     numRow, numCol, objSense, objOffset,
 		     Astart,  Aindex, Avalue,
 		     colCost, colLower, colUpper,
 		     rowLower, rowUpper,
@@ -172,7 +182,8 @@ int readMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSense
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int readMPS(const char *filename, int mxNumRow, int mxNumCol,
+	    int& numRow, int& numCol, int& objSense, double& objOffset,
 	    vector<int>& Astart,  vector<int>& Aindex, vector<double>& Avalue,
 	    vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
 	    vector<double>& rowLower, vector<double>& rowUpper,
@@ -219,12 +230,13 @@ int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, doubl
     map<double, int> rowIndex;
     double objName = 0;
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-        if (flag[0] == 'N' && objName == 0) {
-            objName = data[1];
-        } else {
-            rowType.push_back(flag[0]);
-            rowIndex[data[1]] = numRow++;
-        }
+      if (flag[0] == 'N' && objName == 0) {
+	objName = data[1];
+      } else {
+	if (mxNumRow>0 && numRow >= mxNumRow) return 2;
+	rowType.push_back(flag[0]);
+	rowIndex[data[1]] = numRow++;
+      }
     }
 #ifdef JAJH_dev
     printf("readMPS: Read ROWS    OK\n");
@@ -234,20 +246,20 @@ int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, doubl
     map<double, int> colIndex;
     double lastName = 0;
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-
-        if (lastName != data[1]) { // New column
-            lastName = data[1];
-            colIndex[data[1]] = numCol++;
-            colCost.push_back(0);
-            Astart.push_back(Aindex.size());
-            integerColumn.push_back(integerCol);
-        }
-        if (data[2] == objName) // Cost
-            colCost.back() = data[0];
-        else if (data[0] != 0) {
-            Aindex.push_back(rowIndex[data[2]]);
-            Avalue.push_back(data[0]);
-        }
+      if (lastName != data[1]) { // New column
+	if (mxNumCol>0 && numCol >= mxNumCol) return 2;
+	lastName = data[1];
+	colIndex[data[1]] = numCol++;
+	colCost.push_back(0);
+	Astart.push_back(Aindex.size());
+	integerColumn.push_back(integerCol);
+      }
+      if (data[2] == objName) // Cost
+	colCost.back() = data[0];
+      else if (data[0] != 0) {
+	Aindex.push_back(rowIndex[data[2]]);
+	Avalue.push_back(data[0]);
+      }
     }
     Astart.push_back(Aindex.size());
 
@@ -455,7 +467,7 @@ bool hsol_isInfinity(double val) {
 //
 //Copies C data structures to C++ data structures and calls writeMPS_dense
 //
-int writeMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+int writeMPS_dense_cpp(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
 		     double ** A_rw_p,
 		     double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
 		     int** integerColumn_p) {
@@ -468,8 +480,8 @@ int writeMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* ob
   objSense = (*objSense_p);
   objOffset = (*objOffset_p);
 #ifdef JAJH_dev
-  printf("writeMPS_dense_c: Model has %d rows and %d columns\n", numRow, numCol);
-  printf("writeMPS_dense_c: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
+  printf("writeMPS_dense_cpp: Model has %d rows and %d columns\n", numRow, numCol);
+  printf("writeMPS_dense_cpp: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
 #endif
   A_rw.resize(numRow*numCol);
   rhs.resize(numRow);
@@ -477,7 +489,7 @@ int writeMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* ob
   lb.resize(numCol);
   ub.resize(numCol);
   integerColumn.resize(numCol);
-  printf("writeMPS_dense_c: Allocated space\n");cout<<flush;
+  printf("writeMPS_dense_cpp: Allocated space\n");cout<<flush;
   for (int ix_n=0; ix_n<numRow*numCol; ix_n++) {
     A_rw[ix_n] = (*A_rw_p)[ix_n];
   }
@@ -490,7 +502,7 @@ int writeMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* ob
     ub[c_n] = (*ub_p)[c_n];
     integerColumn[c_n] = (*integerColumn_p)[c_n];
   }
-  printf("writeMPS_dense_c: Copied A, RHS, costs and bounds\n");cout<<flush;
+  printf("writeMPS_dense_cpp: Copied A, RHS, costs and bounds\n");cout<<flush;
   int rtCd = writeMPS_dense(filename, numRow, numCol, objSense, objOffset,
 			    A_rw,
 			    rhs, cost, lb, ub,

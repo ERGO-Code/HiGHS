@@ -7,16 +7,18 @@
 #include <vector>
 using namespace std;
 
-int readMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		    double ** A_cw_p,
-		    double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		    int** integerColumn_p);
-int writeMPS_dense_c(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		     double ** A_cw_p,
-		     double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		     int** integerColumn_p);
+int readMPS_dense_cpp(const char *filename, int mxNumRow, int mxNumCol, 
+		      int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+		      double ** A_cw_p,
+		      double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
+		      int** integerColumn_p);
+int writeMPS_dense_cpp(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
+		       double ** A_cw_p,
+		       double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
+		       int** integerColumn_p);
 
-int readMPS_dense(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int readMPS_dense(const char *filename, int mxNumRow, int mxNumCol,
+		  int& numRow, int& numCol, int& objSense, double& objOffset,
 		  vector<double>& A_cw,
 		  vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		  vector<int>& integerColumn);
@@ -25,7 +27,8 @@ int writeMPS_dense(const char *filename, int& numRow, int& numCol, int& objSense
 		   vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		   vector<int>& integerColumn);
 
-int readMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int readMPS_sparse(const char *filename, int mxNumRow, int mxNumCol,
+		   int& numRow, int& numCol, int& objSense, double& objOffset,
 		   vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
 		   vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		   vector<int>& integerColumn);
@@ -34,7 +37,8 @@ int writeMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSens
 		    vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		    vector<int>& integerColumn);
 
-int readMPS(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int readMPS(const char *filename, int mxNumRow, int mxNumCol,
+	    int& numRow, int& numCol, int& objSense, double& objOffset,
 	    vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
 	    vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
 	    vector<double>& rowLower, vector<double>& rowUpper,
