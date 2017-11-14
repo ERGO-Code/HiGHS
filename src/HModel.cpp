@@ -3480,9 +3480,10 @@ void HModel::util_reportModelDense() {
   if (numCol>10 || numRow>100) return;
   cout<<"\n-----cost-----\n";
   
-  char buff [4];
+  char buff [16];
   int colCostSz = colCost.size();
   for (int i=0; i<colCostSz; i++) { 
+    printf("util_reportModelDense: colCost[%d]\n", i); cout<<flush;
     sprintf(buff, "%2.1g ", colCost[i]);
     cout<<buff; 
   }
