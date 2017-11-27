@@ -16,6 +16,7 @@
 using namespace std;
 
 int solvePlain(const char *filename);
+int solvePlainAPI(const char *filename);
 int solveSCIP(const char *filename);
 int solveTasks(const char *filename);
 int solveMulti(const char *filename, const char *partitionfile = 0);
@@ -172,7 +173,8 @@ int main(int argc, char **argv) {
     //serial
     else {
       if (!presolve && !crash && !edgeWeight && !timeLimit) {
-	solvePlain(fileName);
+	solvePlainAPI(fileName);
+	//	solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
 	//solvePlainWithPresolve(fileName);
@@ -259,6 +261,74 @@ int solvePlain(const char *filename) {
 #endif
   //  model.util_reportModel();
   //model.util_reportModelSolution();
+  return 0;
+}
+
+void solve_fromArrays(int XnumCol, int XobjSense,
+		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,
+		      int XnumRow,
+		      const double* XrowLower, const double* XrowUpper,
+		      int XnumNz, const int* XAstart, const int* XAindex, const double* XAvalue) {
+  
+  HModel model;
+  model.load_fromArrays(XnumCol, XobjSense, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+			XnumRow, &XrowLower[0], &XrowUpper[0],
+			XnumNz, &XAstart[0], &XAindex[0], &XAvalue[0]);
+
+  model.scaleModel();
+  HDual solver;
+  solver.solve(&model);
+  model.util_reportSolverOutcome("Solve plain API");
+#ifdef JAJH_dev
+  model.util_reportModelDense();
+#endif
+  //  model.util_reportModel();
+  //model.util_reportModelSolution();
+
+// Remove any current model
+  model.clearModel();
+ return;
+}
+
+int solvePlainAPI(const char *filename) {
+  HModel model;
+  printf("\nUsing SolvePlainAPI\n\n");
+  //  model.intOption[INTOPT_PRINT_FLAG] = 1;
+    int RtCd = model.load_fromMPS(filename);
+  //  int RtCd = model.load_fromToy(filename);
+  if (RtCd) return RtCd;
+  
+  // Use the arrays read from an MPS file to test the routine to
+  // read a model passed by arrays. First copy the data.
+  int XnumCol = model.numCol;
+  int XnumRow = model.numRow;
+  int XnumNz = model.Astart[model.numCol];
+  int XobjSense = model.objSense;
+  vector<double> XcolCost;
+  vector<double> XcolLower;
+  vector<double> XcolUpper;
+  vector<double> XrowLower;
+  vector<double> XrowUpper;
+  vector<int> XAstart;
+  vector<int> XAindex;
+  vector<double> XAvalue;
+  
+  XcolCost.assign(&model.colCost[0], &model.colCost[0] + XnumCol);
+  XcolLower.assign(&model.colLower[0], &model.colLower[0] + XnumCol);
+  XcolUpper.assign(&model.colUpper[0], &model.colUpper[0] + XnumCol);
+  XrowLower.assign(&model.rowLower[0], &model.rowLower[0] + XnumRow);
+  XrowUpper.assign(&model.rowUpper[0], &model.rowUpper[0] + XnumRow);
+  XAstart.assign(&model.Astart[0], &model.Astart[0] + XnumCol + 1);
+  XAindex.assign(&model.Aindex[0], &model.Aindex[0] + XnumNz);
+  XAvalue.assign(&model.Avalue[0], &model.Avalue[0] + XnumNz);
+  model.clearModel();
+  
+  solve_fromArrays(XnumCol, XobjSense,
+		   &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+		   XnumRow,
+		   &XrowLower[0], &XrowUpper[0],
+		   XnumNz, &XAstart[0], &XAindex[0], &XAvalue[0]);
+
   return 0;
 }
 
