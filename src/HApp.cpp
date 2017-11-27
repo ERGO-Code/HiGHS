@@ -264,12 +264,15 @@ int solvePlain(const char *filename) {
   return 0;
 }
 
-void solve_fromArrays(int XnumCol, int XobjSense,
+void solve_fromArrays(int probStatus, int basisStatus,
+		      int XnumCol, int XnumRow, int XnumNz, 
+		      int XobjSense, int XobjOffset,
 		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,
-		      int XnumRow,
 		      const double* XrowLower, const double* XrowUpper,
-		      int XnumNz, const int* XAstart, const int* XAindex, const double* XAvalue) {
-  
+		      const int* XAstart, const int* XAindex, const double* XAvalue,
+		      double* colPrimalValues, double* colDualValues,
+		      double* rowPrimalValues, double* rowDualValues,
+		      int* basicVariables) {
   HModel model;
   model.load_fromArrays(XnumCol, XobjSense, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
 			XnumRow, &XrowLower[0], &XrowUpper[0],
@@ -304,6 +307,7 @@ int solvePlainAPI(const char *filename) {
   int XnumRow = model.numRow;
   int XnumNz = model.Astart[model.numCol];
   int XobjSense = model.objSense;
+  int XobjOffset = model.objOffset;
   vector<double> XcolCost;
   vector<double> XcolLower;
   vector<double> XcolUpper;
@@ -312,6 +316,13 @@ int solvePlainAPI(const char *filename) {
   vector<int> XAstart;
   vector<int> XAindex;
   vector<double> XAvalue;
+
+  int probStatus, basisStatus;
+  vector<double> colPrimalValues;
+  vector<double> colDualValues;
+  vector<double> rowPrimalValues;
+  vector<double> rowDualValues;
+  vector<int> basicVariables;
   
   XcolCost.assign(&model.colCost[0], &model.colCost[0] + XnumCol);
   XcolLower.assign(&model.colLower[0], &model.colLower[0] + XnumCol);
@@ -323,12 +334,15 @@ int solvePlainAPI(const char *filename) {
   XAvalue.assign(&model.Avalue[0], &model.Avalue[0] + XnumNz);
   model.clearModel();
   
-  solve_fromArrays(XnumCol, XobjSense,
+  solve_fromArrays(probStatus, basisStatus,
+		   XnumCol, XnumRow, XnumNz, 
+		   XobjSense, XobjOffset,
 		   &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-		   XnumRow,
 		   &XrowLower[0], &XrowUpper[0],
-		   XnumNz, &XAstart[0], &XAindex[0], &XAvalue[0]);
-
+		   &XAstart[0], &XAindex[0], &XAvalue[0],
+		   &colPrimalValues[0], &colDualValues[0],
+		   &rowPrimalValues[0], &rowDualValues[0],
+		   &basicVariables[0]);
   return 0;
 }
 
