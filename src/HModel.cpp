@@ -2382,7 +2382,8 @@ double HModel::util_getObjectiveValue() {
 }
 
 // Get the column and row (primal) values and dual (values)
-void HModel::util_getPrimalDualValues(vector<double>& colValue, vector<double>& colDual, vector<double>& rowValue, vector<double>& rowDual) {
+void HModel::util_getPrimalDualValues(vector<double>& colValue, vector<double>& colDual,
+				      vector<double>& rowValue, vector<double>& rowDual) {
 	// Take primal solution
 	vector<double> value = workValue;
 	for (int iRow = 0; iRow < numRow; iRow++)

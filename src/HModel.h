@@ -231,7 +231,8 @@ public:
     
     // Utilities to get objective, solution and basis: all just copy what's there with no re-evaluation!
     double util_getObjectiveValue();
-    void util_getPrimalDualValues(vector<double>& colValue, vector<double>& colDual, vector<double>& rowValue, vector<double>& rowDual);
+    void util_getPrimalDualValues(vector<double>& colValue, vector<double>& colDual,
+				  vector<double>& rowValue, vector<double>& rowDual);
     void util_getBasicIndexNonbasicFlag(vector<int>& bi, vector<int>& nbf);
 
     // Utilities to get/change costs and bounds

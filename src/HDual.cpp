@@ -290,7 +290,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   else
     printf("\n");
   cout << flush;
-  
+ 
 #endif
 }
 

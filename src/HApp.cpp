@@ -1,9 +1,13 @@
+#include "HApp.h"
+#include "HConst.h"
 #include "HDual.h"
 #include "HTimer.h"
 #include "HTester.h"
 #include "HPresolve.h"
 #include "HCrash.h"
 #include "HinOut.h"
+//Just to write out boxed model
+#include "HMPSIO.h"
 #include <getopt.h>
 
 #include <set>
@@ -265,8 +269,8 @@ int solvePlain(const char *filename) {
 }
 
 void solve_fromArrays(int probStatus, int basisStatus,
-		      int XnumCol, int XnumRow, int XnumNz, 
-		      int XobjSense, int XobjOffset,
+		      const int XnumCol, const int XnumRow, const int XnumNz, 
+		      const int XobjSense, const int XobjOffset,
 		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,
 		      const double* XrowLower, const double* XrowUpper,
 		      const int* XAstart, const int* XAindex, const double* XAvalue,
@@ -274,13 +278,28 @@ void solve_fromArrays(int probStatus, int basisStatus,
 		      double* rowPrimalValues, double* rowDualValues,
 		      int* basicVariables) {
   HModel model;
-  model.load_fromArrays(XnumCol, XobjSense, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-			XnumRow, &XrowLower[0], &XrowUpper[0],
-			XnumNz, &XAstart[0], &XAindex[0], &XAvalue[0]);
-
+  model.load_fromArrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
+			XnumRow, XrowLower, XrowUpper,
+			XnumNz, XAstart, XAindex, XAvalue);
   model.scaleModel();
+
   HDual solver;
   solver.solve(&model);
+  
+  vector<double> XcolPrimalValues;
+  vector<double> XcolDualValues;
+  vector<double> XrowPrimalValues;
+  vector<double> XrowDualValues;
+  vector<double> XbasicVariables;
+  
+  model.util_getPrimalDualValues(XcolPrimalValues, XcolDualValues, XrowPrimalValues, XrowDualValues);
+
+  memcpy(colPrimalValues, &(XcolPrimalValues[0]), sizeof(double)*model.numCol);
+  memcpy(rowPrimalValues, &(XrowPrimalValues[0]), sizeof(double)*model.numRow);
+  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double)*model.numCol);
+  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double)*model.numRow);
+  memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int)*model.numRow);
+
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef JAJH_dev
   model.util_reportModelDense();
@@ -288,9 +307,10 @@ void solve_fromArrays(int probStatus, int basisStatus,
   //  model.util_reportModel();
   //model.util_reportModelSolution();
 
+  probStatus = model.problemStatus;
 // Remove any current model
   model.clearModel();
- return;
+  return;
 }
 
 int solvePlainAPI(const char *filename) {
@@ -302,47 +322,88 @@ int solvePlainAPI(const char *filename) {
   if (RtCd) return RtCd;
   
   // Use the arrays read from an MPS file to test the routine to
-  // read a model passed by arrays. First copy the data.
+  // solve a model passed by arrays. First copy the data.
   int XnumCol = model.numCol;
   int XnumRow = model.numRow;
   int XnumNz = model.Astart[model.numCol];
   int XobjSense = model.objSense;
   int XobjOffset = model.objOffset;
-  vector<double> XcolCost;
-  vector<double> XcolLower;
-  vector<double> XcolUpper;
-  vector<double> XrowLower;
-  vector<double> XrowUpper;
-  vector<int> XAstart;
-  vector<int> XAindex;
-  vector<double> XAvalue;
+  double* XcolCost;
+  double* XcolLower;
+  double* XcolUpper;
+  double* XrowLower;
+  double* XrowUpper;
+  int* XAstart;
+  int* XAindex;
+  double* XAvalue;
 
-  int probStatus, basisStatus;
-  vector<double> colPrimalValues;
-  vector<double> colDualValues;
-  vector<double> rowPrimalValues;
-  vector<double> rowDualValues;
-  vector<int> basicVariables;
-  
-  XcolCost.assign(&model.colCost[0], &model.colCost[0] + XnumCol);
-  XcolLower.assign(&model.colLower[0], &model.colLower[0] + XnumCol);
-  XcolUpper.assign(&model.colUpper[0], &model.colUpper[0] + XnumCol);
-  XrowLower.assign(&model.rowLower[0], &model.rowLower[0] + XnumRow);
-  XrowUpper.assign(&model.rowUpper[0], &model.rowUpper[0] + XnumRow);
-  XAstart.assign(&model.Astart[0], &model.Astart[0] + XnumCol + 1);
-  XAindex.assign(&model.Aindex[0], &model.Aindex[0] + XnumNz);
-  XAvalue.assign(&model.Avalue[0], &model.Avalue[0] + XnumNz);
+  XcolCost = (double *) malloc(sizeof(double)*XnumCol);
+  XcolLower = (double *) malloc(sizeof(double)*XnumCol);
+  XcolUpper = (double *) malloc(sizeof(double)*XnumCol);
+  XrowLower = (double *) malloc(sizeof(double)*XnumRow);
+  XrowUpper = (double *) malloc(sizeof(double)*XnumRow);
+  XAstart = (int *) malloc(sizeof(int)*(XnumCol+1));
+  XAindex = (int *) malloc(sizeof(int)*XnumNz);
+  XAvalue = (double *) malloc(sizeof(double)*XnumNz);
+
+  memcpy(XcolCost, &(model.colCost[0]), sizeof(double)*model.numCol);
+  memcpy(XcolLower, &(model.colLower[0]), sizeof(double)*model.numCol);
+  memcpy(XcolUpper, &(model.colUpper[0]), sizeof(double)*model.numCol);
+  memcpy(XrowLower, &(model.rowLower[0]), sizeof(double)*model.numRow);
+  memcpy(XrowUpper, &(model.rowUpper[0]), sizeof(double)*model.numRow);
+  memcpy(XAstart, &(model.Astart[0]), sizeof(int)*(XnumCol+1));
+  memcpy(XAindex, &(model.Aindex[0]), sizeof(int)*XnumNz);
+  memcpy(XAvalue, &(model.Avalue[0]), sizeof(double)*XnumNz);
+
   model.clearModel();
   
+  int probStatus, basisStatus;
+  double* colPrimalValues;
+  double* colDualValues;
+  double* rowPrimalValues;
+  double* rowDualValues;
+  int* basicVariables;
+  
+  colPrimalValues = (double *) malloc(sizeof(double)*XnumCol);
+  rowPrimalValues = (double *) malloc(sizeof(double)*XnumRow);
+  colDualValues = (double *) malloc(sizeof(double)*XnumCol);
+  rowDualValues = (double *) malloc(sizeof(double)*XnumRow);
+  basicVariables = (int *) malloc(sizeof(int)*XnumRow);
+
+  basisStatus = HiGHS_basisStatus_no;
   solve_fromArrays(probStatus, basisStatus,
 		   XnumCol, XnumRow, XnumNz, 
 		   XobjSense, XobjOffset,
-		   &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-		   &XrowLower[0], &XrowUpper[0],
-		   &XAstart[0], &XAindex[0], &XAvalue[0],
-		   &colPrimalValues[0], &colDualValues[0],
-		   &rowPrimalValues[0], &rowDualValues[0],
-		   &basicVariables[0]);
+		   XcolCost, XcolLower, XcolUpper,
+		   XrowLower, XrowUpper,
+		   XAstart, XAindex, XAvalue,
+		   colPrimalValues, colDualValues,
+		   rowPrimalValues, rowDualValues,
+		   basicVariables);
+  //printf("GOT back from solve_fromArrays\n");cout<<flush;
+  //  for (int col=0; col<XnumCol; col++) {printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);}
+  //  for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
+  //TEMP CODE TO GENERATE BOXED PROBLEMS
+  for (int col = 0; col < XnumCol; col++) {
+    //    printf("Col %3d has (%11.4g, %11.4g, %11.4g)", col, XcolLower[col], colPrimalValues[col], XcolUpper[col]);
+    if (-XcolLower[col] >= HSOL_CONST_INF) {
+      XcolLower[col] = colPrimalValues[col] - 0.1*fmax(1, fabs(colPrimalValues[col]));
+    }
+    if (XcolUpper[col] >= HSOL_CONST_INF) {
+      XcolUpper[col] = colPrimalValues[col] + 0.1*fmax(1, fabs(colPrimalValues[col]));
+    }
+    //    printf(": now (%11.4g, %11.4g)\n", XcolLower[col], XcolUpper[col]);
+  }
+  const char *fileName = "WrMl.mps";
+  int* integerColumn;
+  integerColumn = (int *) malloc(sizeof(int)*XnumCol);
+  for (int col=0; col< XnumCol; col++) {integerColumn[col]=0;}
+  //  writeMPS(fileName, XnumRow, XnumCol, XobjSense, XobjOffset,
+  //	   XAstart, XAindex, XAvalue,
+  //	   XcolCost, XcolLower, XcolUpper,
+  //	   XrowLower, XrowUpper,
+  //	   integerColumn);
+  //TEMP CODE TO GENERATE BOXED PROBLEMS
   return 0;
 }
 
