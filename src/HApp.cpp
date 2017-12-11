@@ -20,7 +20,7 @@
 using namespace std;
 
 int solvePlain(const char *filename);
-int solvePlainAPI(const char *filename);
+//int solvePlainAPI(const char *filename);
 int solveSCIP(const char *filename);
 int solveTasks(const char *filename);
 int solveMulti(const char *filename, const char *partitionfile = 0);
@@ -177,8 +177,8 @@ int main(int argc, char **argv) {
     //serial
     else {
       if (!presolve && !crash && !edgeWeight && !timeLimit) {
-	solvePlainAPI(fileName);
-	//	solvePlain(fileName);
+	//	solvePlainAPI(fileName);
+		solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
 	//solvePlainWithPresolve(fileName);
@@ -313,7 +313,7 @@ void solve_fromArrays(int probStatus, int basisStatus,
   return;
 }
 
-int solvePlainAPI(const char *filename) {
+/*int solvePlainAPI(const char *filename) {
   HModel model;
   printf("\nUsing SolvePlainAPI\n\n");
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
@@ -395,18 +395,17 @@ int solvePlainAPI(const char *filename) {
     //    printf(": now (%11.4g, %11.4g)\n", XcolLower[col], XcolUpper[col]);
   }
   const char *fileName = "WrMl.mps";
-  int* integerColumn;
-  integerColumn = (int *) malloc(sizeof(int)*XnumCol);
-  for (int col=0; col< XnumCol; col++) {integerColumn[col]=0;}
-  //  writeMPS(fileName, XnumRow, XnumCol, XobjSense, XobjOffset,
-  //	   XAstart, XAindex, XAvalue,
-  //	   XcolCost, XcolLower, XcolUpper,
-  //	   XrowLower, XrowUpper,
-  //	   integerColumn);
+  //  int* integerColumn; integerColumn = (int *) malloc(sizeof(int)*XnumCol); for (int col=0; col< XnumCol; col++) {integerColumn[col]=0;}
+  vector<int> integerColumn; integerColumn.assign(XnumCol,0);
+    writeMPS(fileName, XnumRow, XnumCol, XobjSense, XobjOffset,
+  	   XAstart, XAindex, XAvalue,
+  	   XcolCost, XcolLower, XcolUpper,
+  	   XrowLower, XrowUpper,
+  	   integerColumn);
   //TEMP CODE TO GENERATE BOXED PROBLEMS
   return 0;
 }
-
+*/
 //Ivet
 int solvePlainWithPresolve(const char *filename) {
 	HModel model;
