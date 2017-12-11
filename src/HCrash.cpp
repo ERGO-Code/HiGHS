@@ -1002,7 +1002,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
   
   mn_co_tie_bk = false;
   
-  model->mlFg_Report();
+  //  model->mlFg_Report();
   
   numRow = model->getNumRow();
   numCol = model->getNumCol();

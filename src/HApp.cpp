@@ -831,9 +831,9 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
   setupTime += model.timer.getTime();
     if (solver.Crash_Mode > 0) {
       HCrash crash;
-      printf("Calling crash.crash(&model, solver.Crash_Mode);\n");cout<<flush;
+      //      printf("Calling crash.crash(&model, solver.Crash_Mode);\n");cout<<flush;
       crash.crash(&model, solver.Crash_Mode);
-      printf("Called  crash.crash(&model, solver.Crash_Mode);\n");cout<<flush;
+      //printf("Called  crash.crash(&model, solver.Crash_Mode);\n");cout<<flush;
       crashTime += model.timer.getTime();
     }
     //		printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
