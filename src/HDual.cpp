@@ -91,7 +91,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 #ifdef JAJH_dev
       n_wg_DSE_wt = 0;
 #endif
-      if (model->numBasicLogicals != numRow && iz_DSE_wt) {
+      int numBasicStructurals = numRow - model->numBasicLogicals;
+      if (numBasicStructurals > 0 && iz_DSE_wt) {
 	//Basis is not logical and DSE weights are to be initialised
 	//printf("Compute exct DSE weights\n");
 	double IzDseEdWtTT = model->timer.getTime();
@@ -110,6 +111,10 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 #ifdef JAJH_dev
 	printf("Computed %d initial DSE weights in %gs\n", numRow, IzDseEdWtTT);
 #endif
+	printf("solve:: %d basic structurals: computed %d initial DSE weights in %gs, %d, %d, %g\n",
+	numBasicStructurals, numRow, IzDseEdWtTT, numBasicStructurals, numRow, IzDseEdWtTT);
+      } else {
+	printf("solve:: %d basic structurals: starting from B=I so unit initial DSE weights\n", numBasicStructurals);
       }
     }
     //Indicate that edge weights are known

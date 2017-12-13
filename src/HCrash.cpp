@@ -105,13 +105,15 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
 #ifdef JAJH_dev
     if (Rp_Bixby_Ps) printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
 			    ps_n, c_n, c_mx_abs_v, aa, aa / c_mx_abs_v);
-    assert(r_o_mx_aa>=0);
 #endif
     //		Scale aa by the max |entry| in the column since CPLEX assumes the
     //		matrix is scaled so the max entry in each column is 1
     aa /= c_mx_abs_v;
     bool nx_ps = false;
     if (aa >= bixby_mu_a) {
+#ifdef JAJH_dev
+    assert(r_o_mx_aa>=0);
+#endif
       //			Column pv_c_n becomes basic in row pv_r_n
       int pv_c_n = c_n;
       int pv_r_n = r_o_mx_aa;

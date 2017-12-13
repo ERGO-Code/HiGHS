@@ -81,7 +81,6 @@ int HModel::load_fromMPS(const char *filename) {
  
   numTot = numCol + numRow;
 
-  printf("load_fromMPS: Assigned numTot = %d\n", numTot);cout<<flush;
 #ifdef JAJH_dev
   //Use this next line to check the loading of a model from arrays
   //check_load_fromArrays(); return;
