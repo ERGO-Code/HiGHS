@@ -334,6 +334,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     // Load BOUNDS
     colLower.assign(numCol, 0);
     colUpper.assign(numCol, HSOL_CONST_INF);
+
     if (flag[0] == 'B') {
         while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
             int iCol = colIndex[data[2]];
@@ -366,7 +367,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     }
 
     //bounds of [0,1] for integer variables without bounds
-    for (int iCol = 0; iCol < numRow; iCol++) {
+    for (int iCol = 0; iCol < numCol; iCol++) {
       if (integerColumn[iCol]) {
 	if (colUpper[iCol] == HSOL_CONST_INF)
 	  colUpper[iCol] = 1;
