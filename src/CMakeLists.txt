@@ -1,4 +1,5 @@
 set(sources
+    HAPI.cpp
     HDual.cpp
     HDualRHS.cpp
     HDualRow.cpp

@@ -121,7 +121,7 @@ public:
     // Methods which replace the basis then populate (where possible)
     // work* arrays and allocate basis* arrays
     void replaceWithLogicalBasis();
-    void replaceWithNewBasis(const int* XnonbasicFlag, const int* XnonbasicMove);
+    void replaceWithNewBasis(const int* XbasicIndex);
 
     //Method to clear the current model
     void clearModel();

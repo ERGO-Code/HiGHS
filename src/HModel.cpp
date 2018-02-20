@@ -600,18 +600,21 @@ void HModel::replaceWithLogicalBasis() {
   mlFg_Update(mlFg_action_NewBasis);
 }
 
-void HModel::replaceWithNewBasis(const int* XnonbasicFlag, const int* XnonbasicMove) {
+void HModel::replaceWithNewBasis(const int* XbasicIndex) {
   // Replace basis with a new basis then populate (where possible)
   // work* arrays
+
+  //  printf("replaceWithNewBasis: \n");
+  for (int var = 0; var < numTot; var++) {
+    nonbasicFlag[var] = NONBASIC_FLAG_TRUE;
+  }
+  numBasicLogicals = 0;
   for (int row = 0; row < numRow; row++) {
-    int var = numCol + row;
-    nonbasicFlag[var] = NONBASIC_FLAG_FALSE;
+    int var = XbasicIndex[row];
+    if (var >= numCol) numBasicLogicals++;
     basicIndex[row] = var;
+    nonbasicFlag[var] = NONBASIC_FLAG_FALSE;
   }
-  for (int col = 0; col < numCol; col++) {
-    nonbasicFlag[col] = NONBASIC_FLAG_TRUE;
-  }
-  numBasicLogicals = numRow;
 
   populate_WorkArrays();
 

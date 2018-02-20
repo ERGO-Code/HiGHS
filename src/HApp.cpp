@@ -1,4 +1,5 @@
 #include "HApp.h"
+#include "HAPI.h"
 #include "HConst.h"
 #include "HDual.h"
 #include "HTimer.h"
@@ -20,7 +21,7 @@
 using namespace std;
 
 int solvePlain(const char *filename);
-//int solvePlainAPI(const char *filename);
+int solvePlainAPI(const char *filename);
 int solveSCIP(const char *filename);
 int solveTasks(const char *filename);
 int solveMulti(const char *filename, const char *partitionfile = 0);
@@ -177,8 +178,8 @@ int main(int argc, char **argv) {
     //serial
     else {
       if (!presolve && !crash && !edgeWeight && !timeLimit) {
-	//	solvePlainAPI(fileName);
-		solvePlain(fileName);
+		solvePlainAPI(fileName);
+		//	solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
 	//solvePlainWithPresolve(fileName);
@@ -268,56 +269,12 @@ int solvePlain(const char *filename) {
   return 0;
 }
 
-void solve_fromArrays(int probStatus, int basisStatus,
-		      const int XnumCol, const int XnumRow, const int XnumNz, 
-		      const int XobjSense, const int XobjOffset,
-		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,
-		      const double* XrowLower, const double* XrowUpper,
-		      const int* XAstart, const int* XAindex, const double* XAvalue,
-		      double* colPrimalValues, double* colDualValues,
-		      double* rowPrimalValues, double* rowDualValues,
-		      int* basicVariables) {
+int solvePlainAPI(const char *filename) {
   HModel model;
-  model.load_fromArrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
-			XnumRow, XrowLower, XrowUpper,
-			XnumNz, XAstart, XAindex, XAvalue);
-  model.scaleModel();
-
-  HDual solver;
-  solver.solve(&model);
-  
-  vector<double> XcolPrimalValues;
-  vector<double> XcolDualValues;
-  vector<double> XrowPrimalValues;
-  vector<double> XrowDualValues;
-  vector<double> XbasicVariables;
-  
-  model.util_getPrimalDualValues(XcolPrimalValues, XcolDualValues, XrowPrimalValues, XrowDualValues);
-
-  memcpy(colPrimalValues, &(XcolPrimalValues[0]), sizeof(double)*model.numCol);
-  memcpy(rowPrimalValues, &(XrowPrimalValues[0]), sizeof(double)*model.numRow);
-  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double)*model.numCol);
-  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double)*model.numRow);
-  memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int)*model.numRow);
-
-  model.util_reportSolverOutcome("Solve plain API");
-#ifdef JAJH_dev
-  model.util_reportModelDense();
-#endif
-  //  model.util_reportModel();
-  //model.util_reportModelSolution();
-
-  probStatus = model.problemStatus;
-// Remove any current model
-  model.clearModel();
-  return;
-}
-
-/*int solvePlainAPI(const char *filename) {
-  HModel model;
+  int RpRtVec=0;
   printf("\nUsing SolvePlainAPI\n\n");
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
-    int RtCd = model.load_fromMPS(filename);
+  int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
   if (RtCd) return RtCd;
   
@@ -370,6 +327,7 @@ void solve_fromArrays(int probStatus, int basisStatus,
   rowDualValues = (double *) malloc(sizeof(double)*XnumRow);
   basicVariables = (int *) malloc(sizeof(int)*XnumRow);
 
+  probStatus = 0;
   basisStatus = HiGHS_basisStatus_no;
   solve_fromArrays(probStatus, basisStatus,
 		   XnumCol, XnumRow, XnumNz, 
@@ -380,9 +338,28 @@ void solve_fromArrays(int probStatus, int basisStatus,
 		   colPrimalValues, colDualValues,
 		   rowPrimalValues, rowDualValues,
 		   basicVariables);
-  //printf("GOT back from solve_fromArrays\n");cout<<flush;
-  //  for (int col=0; col<XnumCol; col++) {printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);}
-  //  for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
+  printf("GOT back from solve_fromArrays: probStatus = %d\n", probStatus);cout<<flush;
+  if (RpRtVec) {
+    for (int col=0; col<XnumCol; col++) {printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);}
+    for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
+  }
+  basisStatus = HiGHS_basisStatus_yes;
+  solve_fromArrays(probStatus, basisStatus,
+		   XnumCol, XnumRow, XnumNz, 
+		   XobjSense, XobjOffset,
+		   XcolCost, XcolLower, XcolUpper,
+		   XrowLower, XrowUpper,
+		   XAstart, XAindex, XAvalue,
+		   colPrimalValues, colDualValues,
+		   rowPrimalValues, rowDualValues,
+		   basicVariables);
+  printf("GOT back from solve_fromArrays: probStatus = %d\n", probStatus);cout<<flush;
+  if (RpRtVec) {
+    for (int col=0; col<XnumCol; col++) {printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);}
+    for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
+  }
+  
+  /*
   //TEMP CODE TO GENERATE BOXED PROBLEMS
   for (int col = 0; col < XnumCol; col++) {
     //    printf("Col %3d has (%11.4g, %11.4g, %11.4g)", col, XcolLower[col], colPrimalValues[col], XcolUpper[col]);
@@ -403,9 +380,10 @@ void solve_fromArrays(int probStatus, int basisStatus,
   	   XrowLower, XrowUpper,
   	   integerColumn);
   //TEMP CODE TO GENERATE BOXED PROBLEMS
+*/
   return 0;
 }
-*/
+
 //Ivet
 int solvePlainWithPresolve(const char *filename) {
 	HModel model;
