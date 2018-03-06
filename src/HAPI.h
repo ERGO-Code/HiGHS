@@ -1,4 +1,4 @@
-void solve_fromArrays_dense(int probStatus, int basisStatus,
+void solve_fromArrays_dense(int* probStatus, int* basisStatus,
 			    const int XnumCol, const int XnumRow, 
 			    const int XobjSense, const int XobjOffset,
 			    const double* XcolCost, const double* XcolLower, const double* XcolUpper,
@@ -8,7 +8,7 @@ void solve_fromArrays_dense(int probStatus, int basisStatus,
 			    double* rowPrimalValues, double* rowDualValues,
 			    int* basicVariables);
   
-void solve_fromArrays(int probStatus, int basisStatus,
+void solve_fromArrays(int* probStatus, int* basisStatus,
 		      const int XnumCol, const int XnumRow, const int XnumNz, 
 		      const int XobjSense, const int XobjOffset,
 		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,

@@ -1,7 +1,8 @@
 #include "HAPI.h"
+#include "HApp.h"
 #include "HDual.h"
 
-void solve_fromArrays_dense(int probStatus, int basisStatus,
+void solve_fromArrays_dense(int* probStatus, int* basisStatus,
 		      const int XnumCol, const int XnumRow, 
 		      const int XobjSense, const int XobjOffset,
 		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,
@@ -47,7 +48,7 @@ void solve_fromArrays_dense(int probStatus, int basisStatus,
 		   basicVariables);
 }
 
-void solve_fromArrays(int probStatus, int basisStatus,
+void solve_fromArrays(int* probStatus, int* basisStatus,
 		      const int XnumCol, const int XnumRow, const int XnumNz, 
 		      const int XobjSense, const int XobjOffset,
 		      const double* XcolCost, const double* XcolLower, const double* XcolUpper,
@@ -62,8 +63,10 @@ void solve_fromArrays(int probStatus, int basisStatus,
 			XnumNz, XAstart, XAindex, XAvalue);
   model.scaleModel();
 
-  if (basisStatus) {
-    //    printf("Basis status is %d\n", basisStatus);
+  int LcBasisStatus = (*basisStatus);
+  //printf("solve_fromArrays: LcBasisStatus = %d\n", LcBasisStatus);fflush(stdout);
+  if (LcBasisStatus) {
+    //    printf("Basis status is %d\n", LcBasisStatus);
     model.replaceWithNewBasis(basicVariables);
     //    printf("Number of basic logicals is %d\n", model.numBasicLogicals);
   }
@@ -84,7 +87,7 @@ void solve_fromArrays(int probStatus, int basisStatus,
   memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double)*model.numCol);
   memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double)*model.numRow);
   memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int)*model.numRow);
-
+  LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef JAJH_dev
   model.util_reportModelDense();
@@ -92,9 +95,12 @@ void solve_fromArrays(int probStatus, int basisStatus,
   //  model.util_reportModel();
   //  model.util_reportModelSolution();
 
-  probStatus = model.problemStatus;
+  //  printf("model.problemStatus = %d\n", model.problemStatus);
+  (*probStatus) = model.problemStatus;
+  (*basisStatus) = LcBasisStatus;
 // Remove any current model
   model.clearModel();
+  //  printf("solve_fromArrays: probStatus = %d\n", (*probStatus));
   return;
 }
 
