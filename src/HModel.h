@@ -294,6 +294,8 @@ public:
 			      vector<double>& XcolPrimal, vector<double>& XcolDual, vector<int>& XcolStatus);
     void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex, vector<double>& XAvalue);
 
+    void util_anPrDuDgn();
+
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Solving options and scalar solution data section: Sort it out!
     // Solving options

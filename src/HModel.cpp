@@ -3717,3 +3717,37 @@ void HModel::util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAin
     printf("       Start %8d\n", XAstart[ncol]);
 }
 
+void HModel::util_anPrDuDgn() {
+  double normPrAct = 0;
+  int numDgnPrAct = 0;
+  double normDuAct = 0;
+  int numDgnDuAct = 0;
+  double TlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
+  double TlDuIfs = dblOption[DBLOPT_DUAL_TOL];
+  for (int row=0; row < numRow; row++) {
+    double prAct = baseValue[row];
+    normPrAct += prAct*prAct;
+    double rsdu = max(baseLower[row]-prAct, prAct-baseUpper[row]);
+    if (abs(rsdu) < TlPrIfs) {numDgnPrAct++;}
+  }
+  normPrAct = sqrt(normPrAct);
+  double pctDgnPrAct = numDgnPrAct;
+  pctDgnPrAct = 100*pctDgnPrAct/numRow;
+
+  for (int var=0; var < numTot; var++) {
+    if (nonbasicFlag[var] == NONBASIC_FLAG_TRUE) {
+      double duAct = workDual[var];
+      normDuAct += duAct*duAct;
+      if (abs(duAct) < TlDuIfs) {numDgnDuAct++;}
+    }
+  }
+  normDuAct = sqrt(normDuAct);
+  double pctDgnDuAct = numDgnDuAct;
+  pctDgnDuAct = 100*pctDgnDuAct/numRow;
+
+  printf("anPrDuDgn: model %s: ||BcPrAct|| = %g; numDgnPrAct = %d of %d (%7.2f%%); ||NonBcDuAct|| = %g; numDgnDuAct = %d of %d (%7.2f%%)\n",
+	 modelName.c_str(), normPrAct, numDgnPrAct, numRow, pctDgnPrAct, normDuAct, numDgnDuAct, numRow, pctDgnDuAct);
+  printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n",
+	 modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numRow);
+  
+}

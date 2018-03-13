@@ -178,8 +178,8 @@ int main(int argc, char **argv) {
     //serial
     else {
       if (!presolve && !crash && !edgeWeight && !timeLimit) {
-		solvePlainAPI(fileName);
-		//	solvePlain(fileName);
+	//solvePlainAPI(fileName);
+			solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
 	//solvePlainWithPresolve(fileName);
@@ -264,6 +264,7 @@ int solvePlain(const char *filename) {
 #ifdef JAJH_dev
   model.util_reportModelDense();
 #endif
+  model.util_anPrDuDgn();
   //  model.util_reportModel();
   //model.util_reportModelSolution();
   return 0;
@@ -329,7 +330,7 @@ int solvePlainAPI(const char *filename) {
 
   probStatus = 0;
   basisStatus = HiGHS_basisStatus_no;
-  solve_fromArrays(probStatus, basisStatus,
+  solve_fromArrays(&probStatus, &basisStatus,
 		   XnumCol, XnumRow, XnumNz, 
 		   XobjSense, XobjOffset,
 		   XcolCost, XcolLower, XcolUpper,
@@ -344,7 +345,7 @@ int solvePlainAPI(const char *filename) {
     for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
   }
   basisStatus = HiGHS_basisStatus_yes;
-  solve_fromArrays(probStatus, basisStatus,
+  solve_fromArrays(&probStatus, &basisStatus,
 		   XnumCol, XnumRow, XnumNz, 
 		   XobjSense, XobjOffset,
 		   XcolCost, XcolLower, XcolUpper,
