@@ -182,8 +182,8 @@ int main(int argc, char **argv) {
 			solvePlain(fileName);
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
-	//solvePlainWithPresolve(fileName);
-	solvePlainExperiments(fileName);
+	solvePlainWithPresolve(fileName);
+	//solvePlainExperiments(fileName);
 	//testIO("fileIO");
       }
       else
