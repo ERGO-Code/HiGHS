@@ -178,8 +178,12 @@ int main(int argc, char **argv) {
     //serial
     else {
       if (!presolve && !crash && !edgeWeight && !timeLimit) {
+	int RtCod = 
 	//solvePlainAPI(fileName);
 			solvePlain(fileName);
+	if (RtCod != 0) {
+	  printf("solvePlain(API) return code is %d\n", RtCod);
+	}
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
 	//solvePlainWithPresolve(fileName);
@@ -263,8 +267,9 @@ int solvePlain(const char *filename) {
   model.util_reportSolverOutcome("Solve plain");
 #ifdef JAJH_dev
   model.util_reportModelDense();
+  //Possibly analyse the degeneracy of the primal and dual activities
+  //  model.util_anPrDuDgn();
 #endif
-  model.util_anPrDuDgn();
   //  model.util_reportModel();
   //model.util_reportModelSolution();
   return 0;

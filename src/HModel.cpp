@@ -3729,6 +3729,8 @@ void HModel::util_anPrDuDgn() {
     normPrAct += prAct*prAct;
     double rsdu = max(baseLower[row]-prAct, prAct-baseUpper[row]);
     if (abs(rsdu) < TlPrIfs) {numDgnPrAct++;}
+    printf("Basic variable %7d is %7d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g; numDgnPrAct = %7d\n",
+	   row, basicIndex[row], baseLower[row], prAct, baseUpper[row], rsdu, numDgnPrAct);
   }
   normPrAct = sqrt(normPrAct);
   double pctDgnPrAct = numDgnPrAct;
@@ -3739,15 +3741,16 @@ void HModel::util_anPrDuDgn() {
       double duAct = workDual[var];
       normDuAct += duAct*duAct;
       if (abs(duAct) < TlDuIfs) {numDgnDuAct++;}
+      printf("Variable %7d is nonbasic: %11.4g; numDgnDuAct = %7d\n", var, duAct, numDgnDuAct);
     }
   }
   normDuAct = sqrt(normDuAct);
   double pctDgnDuAct = numDgnDuAct;
-  pctDgnDuAct = 100*pctDgnDuAct/numRow;
+  pctDgnDuAct = 100*pctDgnDuAct/numCol;
 
   printf("anPrDuDgn: model %s: ||BcPrAct|| = %g; numDgnPrAct = %d of %d (%7.2f%%); ||NonBcDuAct|| = %g; numDgnDuAct = %d of %d (%7.2f%%)\n",
-	 modelName.c_str(), normPrAct, numDgnPrAct, numRow, pctDgnPrAct, normDuAct, numDgnDuAct, numRow, pctDgnDuAct);
+	 modelName.c_str(), normPrAct, numDgnPrAct, numRow, pctDgnPrAct, normDuAct, numDgnDuAct, numCol, pctDgnDuAct);
   printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n",
-	 modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numRow);
+	 modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numCol);
   
 }
