@@ -18,6 +18,10 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+
+// for external presolve
+#include "core/ConstraintMatrix.hpp"
+
 using namespace std;
 
 int solvePlain(const char *filename);
@@ -1099,10 +1103,18 @@ int solveExternalPresolve(const char* fileName) {
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
     return RtCd;
-  double time1;
+ 
+  //Now we got a loaded model that we will pass to external presolve 
+  //set up data 
+  ConstraintMatrix<double> M;
 
-  double obj1 = presolve(model, time1);
-  (void)obj1;
+  //presolve 
+
+  //Create new or update old HModel and set up solver to solve 
+
+  //pass reduced solutions back to external presolve class for postsolve 
+
+  //report solution
 
   return 0;
 }
