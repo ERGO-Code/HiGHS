@@ -1119,7 +1119,7 @@ void HPresolve::removeFreeColumnSingleton(const int col, const int row, const in
 bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col, const int i, const int k) {
 	//second column index j
 	//second column row array index kk
-	int j;
+	int j = -1;
 
 	//count
 	int kk = ARstart.at(i);
@@ -2527,7 +2527,7 @@ void HPresolve::postsolve() {
 						low = (rowlb - aij*xj) / aik;
 					}
 
-					double xkValue;
+					double xkValue = 0;
 					if (ck == 0) {
 						if (low < 0 && upp > 0)
 							xkValue = 0;

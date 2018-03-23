@@ -36,10 +36,10 @@ int debug = 0;
 int main(int argc, char **argv) {
   int opt, filename=0, presolve=0, crash=0, edgeWeight=0, pami=0, sip=0, scip=0, timeLimit=0;
 	double cut = 0;
-	const char * fileName;
-	const char * presolveMode;
-	const char * edWtMode;
-	const char * crashMode;
+	const char * fileName = "";
+	const char * presolveMode = "";
+	const char * edWtMode = "";
+	const char * crashMode= "";
 	const char * partitionFile = 0;
 	double TimeLimit_ArgV = HSOL_CONST_INF;
 
@@ -186,8 +186,8 @@ int main(int argc, char **argv) {
 	}
       }
       else if (presolve && !crash && !edgeWeight && !timeLimit) {
-	//solvePlainWithPresolve(fileName);
-	solvePlainExperiments(fileName);
+	solvePlainWithPresolve(fileName);
+	//solvePlainExperiments(fileName);
 	//testIO("fileIO");
       }
       else
