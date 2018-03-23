@@ -70,8 +70,13 @@ int main(int argc, char **argv) {
 	      break;
 	    case 'p':
 	      presolveMode = optarg;
-	      presolve = (presolveMode[0]=='O' && presolveMode[1]=='n') ? 1 : 0;
-	      cout <<"Presolve is set to "<< optarg <<endl;
+        if (presolveMode[0]=='O' && presolveMode[1]=='n')
+          presolve = 1;
+        else if (presolveMode[0]=='E' && presolveMode[1]=='x')
+          presolve = 2;
+	      else 
+          presolve = 0;
+        cout <<"Presolve is set to "<< optarg <<endl;
 	      break;
 	    case 's':
 	      sip = 1;
