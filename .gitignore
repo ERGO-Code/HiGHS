@@ -223,3 +223,8 @@ pip-log.txt
 .mr.developer.cfg
 .nfs*
 *~
+
+SolveMl
+hsol.ou
+libhsol.a
+lpi_h2gmp.cpp
