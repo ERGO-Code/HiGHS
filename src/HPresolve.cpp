@@ -2731,7 +2731,6 @@ void HPresolve::postsolve() {
 				rowValue.at(i) += valuePrimal.at(ARindex.at(k))*ARvalue.at(k);
 
 		}
-
 }
 
 

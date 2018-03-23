@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string>
-#include <vector>
+//#include <vector>
 using namespace std;
 
 enum HTickItemPre {
