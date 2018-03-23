@@ -17,7 +17,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <iomanip> 
+#include <iomanip>
 using namespace std;
 
 int solvePlain(const char *filename);
@@ -28,244 +28,270 @@ int solveMulti(const char *filename, const char *partitionfile = 0);
 int solvePlainWithPresolve(const char *filename);
 int solvePlainExperiments(const char *filename);
 int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
-double presolve(HModel& mod, double& time);
+int solveExternalPresolve(const char* fileName);
+double presolve(HModel &mod, double &time);
 int testIO(const char *filename);
 
 int debug = 0;
 
-int main(int argc, char **argv) {
-  int opt, filename=0, presolve=0, crash=0, edgeWeight=0, pami=0, sip=0, scip=0, timeLimit=0;
-	double cut = 0;
-	const char * fileName = "";
-	const char * presolveMode = "";
-	const char * edWtMode = "";
-	const char * crashMode= "";
-	const char * partitionFile = 0;
-	double TimeLimit_ArgV = HSOL_CONST_INF;
+int main(int argc, char **argv)
+{
+  int opt, filename = 0, presolve = 0, crash = 0, edgeWeight = 0, pami = 0, sip = 0, scip = 0, timeLimit = 0;
+  double cut = 0;
+  const char *fileName = "";
+  const char *presolveMode = "";
+  const char *edWtMode = "";
+  const char *crashMode = "";
+  const char *partitionFile = 0;
+  double TimeLimit_ArgV = HSOL_CONST_INF;
 
 #ifdef JAJH_dev
-	cout <<"===================================================================================="<<endl;
-	cout <<"Running hsol"<<endl;
+  cout << "====================================================================================" << endl;
+  cout << "Running hsol" << endl;
 #else
-	cout <<"===================================================================================="<<endl;
-	cout <<"Running hsol"<<endl;
+  cout << "====================================================================================" << endl;
+  cout << "Running hsol" << endl;
 #endif
 
-	if (argc == 4 && strcmp(argv[1], "-repeat")==0) {
+  if (argc == 4 && strcmp(argv[1], "-repeat") == 0)
+  {
 #ifdef JAJH_dev
-	  HTester tester;
-	  tester.setup(argv[2]);
-	  tester.testUpdate(atoi(argv[3]));
+    HTester tester;
+    tester.setup(argv[2]);
+    tester.testUpdate(atoi(argv[3]));
 #endif
-	  return 0;
-        }
-	
-	while ((opt = getopt(argc,argv,"p:c:e:sSm::t:T:df:")) != EOF)
-	  switch(opt)
-	    {
-	    case 'f':
-	      filename = 1;
-	      cout <<"Reading file "<< optarg <<endl;
-	      fileName = optarg;
-	      break;
-	    case 'p':
-	      presolveMode = optarg;
-        if (presolveMode[0]=='O' && presolveMode[1]=='n')
-          presolve = 1;
-        else if (presolveMode[0]=='E' && presolveMode[1]=='x')
-          presolve = 2;
-	      else 
-          presolve = 0;
-        cout <<"Presolve is set to "<< optarg <<endl;
-	      break;
-	    case 's':
-	      sip = 1;
-	      break;
-	    case 'S':
-	      scip = 1;
-	      break;
-	    case 'm':
-	      pami = 1;
-	      if (optarg) {
-		cut = atof(optarg);
-		cout<< "Pami cutoff = "<< cut<<endl;
-	      }
-	      break;
-	    case 'd':
-	      debug = 1;
-	      break;
-            case 'c':
-	      crash = 1;
-	      crashMode = optarg;
-	      cout <<"Crash is set to "<< optarg <<endl;
-	      break;
-            case 'e':
-	      edgeWeight = 1;
-	      edWtMode = optarg;
-	      cout <<"Edge weight is set to "<< optarg <<endl;
-	      break;
-	    case 't':
-	      partitionFile = optarg;
-	      cout <<"Partition file is set to "<< optarg <<endl;
-	      break;
-	    case 'T':
-	      timeLimit = 1;
-	      TimeLimit_ArgV = atof(optarg);
-	      cout <<"Time limit is set to "<< optarg <<endl;
-	      break;
-            case '?':
-	      if (opt == 'p')
-		fprintf (stderr, "Option -%c requires an argument. Current options: Off On \n", opt);
-	      if (opt == 'c')
-		fprintf (stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
-	      if (opt == 'e')
-		fprintf (stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
-	      else
-		fprintf(stderr, "usage: %s [options] -f fName.mps \n%s", argv[0],
-			"Options: \n"
-			"  -p On(Off): use presolve\n"
-			"  -c mode   : set crash mode to mode. Values:\n"
-			"            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
-			"  -e edWt   : set edge weight to edWt. Values: \n"
-			"            : Dan Dvx DSE DSE0 DSE1\n\n"
-			"  -s        : use option sip\n"
-			"  -S        : use option SCIP (to test utilities)\n"
-			"  -m [cut]  : use pami. Cutoff optional double value.\n"
-			"  -t fName  : use pami with partition file fName"
-			"  -T time   : use a time limit"
-			"  -d        : debug mode on\n");
-	    default:
-	      cout<<endl;
-	      abort();
-	    }
-	//Set defaults
-     if (!filename) {
-       fileName = "ml.mps";
-       printf("Setting default value filenameMode = %s\n", fileName);
-     }
-     if (!presolve) {
-       presolveMode = "Off";
-       printf("Setting default value presolveMode = %s\n", presolveMode);
-     }
-     if (!crash) {
-       crashMode = "Off";
-       printf("Setting default value crashMode = %s\n", crashMode);
-     }
-     if (!edgeWeight) {
-       edWtMode = "DSE1";
-       printf("Setting default value edWtMode = %s\n", edWtMode);
-     }
-    //parallel
-    if (sip)
-      solveTasks(fileName);
-    if (scip)
-      solveSCIP(fileName);
-    else if (pami) {
-    	if (partitionFile)
-    		solveMulti(fileName, partitionFile);
-    	else if (cut) {
-            HModel model;
-            model.intOption[INTOPT_PRINT_FLAG] = 1;
-            model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-            model.dblOption[DBLOPT_PAMI_CUTOFF] = cut;
-	    int RtCd = model.load_fromMPS(fileName);
-	    if (RtCd) return RtCd;
-
-	    model.scaleModel();
-            HDual solver;
-            solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-
-            model.util_reportSolverOutcome("Cut");
-        }
-    	else
-			solveMulti(fileName);
-    }
-    //serial
-    else {
-      if (!presolve && !crash && !edgeWeight && !timeLimit) {
-	int RtCod = 
-	//solvePlainAPI(fileName);
-			solvePlain(fileName);
-	if (RtCod != 0) {
-	  printf("solvePlain(API) return code is %d\n", RtCod);
-	}
-      }
-      else if (presolve && !crash && !edgeWeight && !timeLimit) {
-	solvePlainWithPresolve(fileName);
-	//solvePlainExperiments(fileName);
-	//testIO("fileIO");
-      }
-      else
-	solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
-    }
-
     return 0;
+  }
+
+  while ((opt = getopt(argc, argv, "p:c:e:sSm::t:T:df:")) != EOF)
+    switch (opt)
+    {
+    case 'f':
+      filename = 1;
+      cout << "Reading file " << optarg << endl;
+      fileName = optarg;
+      break;
+    case 'p':
+      presolveMode = optarg;
+      if (presolveMode[0] == 'O' && presolveMode[1] == 'n')
+        presolve = 1;
+      else if (presolveMode[0] == 'E' && presolveMode[1] == 'x')
+        presolve = 2;
+      else
+        presolve = 0;
+      cout << "Presolve is set to " << optarg << endl;
+      break;
+    case 's':
+      sip = 1;
+      break;
+    case 'S':
+      scip = 1;
+      break;
+    case 'm':
+      pami = 1;
+      if (optarg)
+      {
+        cut = atof(optarg);
+        cout << "Pami cutoff = " << cut << endl;
+      }
+      break;
+    case 'd':
+      debug = 1;
+      break;
+    case 'c':
+      crash = 1;
+      crashMode = optarg;
+      cout << "Crash is set to " << optarg << endl;
+      break;
+    case 'e':
+      edgeWeight = 1;
+      edWtMode = optarg;
+      cout << "Edge weight is set to " << optarg << endl;
+      break;
+    case 't':
+      partitionFile = optarg;
+      cout << "Partition file is set to " << optarg << endl;
+      break;
+    case 'T':
+      timeLimit = 1;
+      TimeLimit_ArgV = atof(optarg);
+      cout << "Time limit is set to " << optarg << endl;
+      break;
+    case '?':
+      if (opt == 'p')
+        fprintf(stderr, "Option -%c requires an argument. Current options: Off On \n", opt);
+      if (opt == 'c')
+        fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
+      if (opt == 'e')
+        fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
+      else
+        fprintf(stderr, "usage: %s [options] -f fName.mps \n%s", argv[0],
+                "Options: \n"
+                "  -p On(Off): use presolve\n"
+                "  -c mode   : set crash mode to mode. Values:\n"
+                "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
+                "  -e edWt   : set edge weight to edWt. Values: \n"
+                "            : Dan Dvx DSE DSE0 DSE1\n\n"
+                "  -s        : use option sip\n"
+                "  -S        : use option SCIP (to test utilities)\n"
+                "  -m [cut]  : use pami. Cutoff optional double value.\n"
+                "  -t fName  : use pami with partition file fName"
+                "  -T time   : use a time limit"
+                "  -d        : debug mode on\n");
+    default:
+      cout << endl;
+      abort();
+    }
+  //Set defaults
+  if (!filename)
+  {
+    fileName = "ml.mps";
+    printf("Setting default value filenameMode = %s\n", fileName);
+  }
+  if (!presolve)
+  {
+    presolveMode = "Off";
+    printf("Setting default value presolveMode = %s\n", presolveMode);
+  }
+  if (!crash)
+  {
+    crashMode = "Off";
+    printf("Setting default value crashMode = %s\n", crashMode);
+  }
+  if (!edgeWeight)
+  {
+    edWtMode = "DSE1";
+    printf("Setting default value edWtMode = %s\n", edWtMode);
+  }
+  //parallel
+  if (sip)
+    solveTasks(fileName);
+  if (scip)
+    solveSCIP(fileName);
+  else if (pami)
+  {
+    if (partitionFile)
+      solveMulti(fileName, partitionFile);
+    else if (cut)
+    {
+      HModel model;
+      model.intOption[INTOPT_PRINT_FLAG] = 1;
+      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+      model.dblOption[DBLOPT_PAMI_CUTOFF] = cut;
+      int RtCd = model.load_fromMPS(fileName);
+      if (RtCd)
+        return RtCd;
+
+      model.scaleModel();
+      HDual solver;
+      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+
+      model.util_reportSolverOutcome("Cut");
+    }
+    else
+      solveMulti(fileName);
+  }
+  //serial
+  else
+  {
+    if (!presolve && !crash && !edgeWeight && !timeLimit)
+    {
+      int RtCod =
+          //solvePlainAPI(fileName);
+          solvePlain(fileName);
+      if (RtCod != 0)
+      {
+        printf("solvePlain(API) return code is %d\n", RtCod);
+      }
+    }
+    else if (presolve && !crash && !edgeWeight && !timeLimit)
+    {
+      if (presolve == 1)
+        solvePlainWithPresolve(fileName);
+      else if (presolve == 2)
+        solveExternalPresolve(fileName);
+      //solvePlainExperiments(fileName);
+      //testIO("fileIO");
+    }
+    else
+      solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
+  }
+
+  return 0;
 }
 
-int testIO(const char *filename) {
-//testIO solve the problem in file with presolve
+int testIO(const char *filename)
+{
+  //testIO solve the problem in file with presolve
 
-	HModel model;
+  HModel model;
 
-	HinOut h("fileIO", "fileIO");
-	h.HinOutTestRead(model);
+  HinOut h("fileIO", "fileIO");
+  h.HinOutTestRead(model);
 
-	// Check size
-	if (model.numRow == 0) {
-		cout<<"Empty problem";
-		return 1;
-	}
-	else if (1) {
-		HPresolve * pre = new HPresolve();
-		model.copy_fromHModelToHPresolve(pre);
-		int status = pre->presolve();
+  // Check size
+  if (model.numRow == 0)
+  {
+    cout << "Empty problem";
+    return 1;
+  }
+  else if (1)
+  {
+    HPresolve *pre = new HPresolve();
+    model.copy_fromHModelToHPresolve(pre);
+    int status = pre->presolve();
 
-		if (!status) {
-			//pre->reportTimes();
-			model.load_fromPresolve(pre);
-			HDual solver;
-			solver.solve(&model);
-			pre->setProblemStatus(model.getPrStatus());
-			cout<<" STATUS = " << model.getPrStatus() <<endl;
-			model.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
-			model.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
-			pre->postsolve();
-			model.load_fromPostsolve(pre);
-			solver.solve(&model);
-			model.util_reportSolverOutcome("Postsolve");
-		}
-		else if (status == HPresolve::Empty) {
-			pre->postsolve();
-			model.load_fromPostsolve(pre);
-			HDual solver;
+    if (!status)
+    {
+      //pre->reportTimes();
+      model.load_fromPresolve(pre);
+      HDual solver;
+      solver.solve(&model);
+      pre->setProblemStatus(model.getPrStatus());
+      cout << " STATUS = " << model.getPrStatus() << endl;
+      model.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
+      model.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
+      pre->postsolve();
+      model.load_fromPostsolve(pre);
+      solver.solve(&model);
+      model.util_reportSolverOutcome("Postsolve");
+    }
+    else if (status == HPresolve::Empty)
+    {
+      pre->postsolve();
+      model.load_fromPostsolve(pre);
+      HDual solver;
 
-			solver.solve(&model);
-			model.util_reportSolverOutcome("Postsolve");
-		}
-		else cout <<"Status return from presolve: "<< status<< endl;
-		delete pre;
-	}
-	else {
-	  HDual solver;
-	  HPresolve * pre = new HPresolve();
-	  model.copy_fromHModelToHPresolve(pre);
-	  //pre->initializeVectors();
-	  //pre->print(0);
-	  model.initWithLogicalBasis();
-	  solver.solve(&model);
-	  model.util_reportSolverOutcome("testIO");
-	}
-	return 0;
+      solver.solve(&model);
+      model.util_reportSolverOutcome("Postsolve");
+    }
+    else
+      cout << "Status return from presolve: " << status << endl;
+    delete pre;
+  }
+  else
+  {
+    HDual solver;
+    HPresolve *pre = new HPresolve();
+    model.copy_fromHModelToHPresolve(pre);
+    //pre->initializeVectors();
+    //pre->print(0);
+    model.initWithLogicalBasis();
+    solver.solve(&model);
+    model.util_reportSolverOutcome("testIO");
+  }
+  return 0;
 }
 
-
-int solvePlain(const char *filename) {
+int solvePlain(const char *filename)
+{
   HModel model;
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
-    int RtCd = model.load_fromMPS(filename);
+  int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
-  if (RtCd) return RtCd;
-  
+  if (RtCd)
+    return RtCd;
+
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
@@ -280,15 +306,17 @@ int solvePlain(const char *filename) {
   return 0;
 }
 
-int solvePlainAPI(const char *filename) {
+int solvePlainAPI(const char *filename)
+{
   HModel model;
-  int RpRtVec=0;
+  int RpRtVec = 0;
   printf("\nUsing SolvePlainAPI\n\n");
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
   int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
-  if (RtCd) return RtCd;
-  
+  if (RtCd)
+    return RtCd;
+
   // Use the arrays read from an MPS file to test the routine to
   // solve a model passed by arrays. First copy the data.
   int XnumCol = model.numCol;
@@ -296,80 +324,96 @@ int solvePlainAPI(const char *filename) {
   int XnumNz = model.Astart[model.numCol];
   int XobjSense = model.objSense;
   int XobjOffset = model.objOffset;
-  double* XcolCost;
-  double* XcolLower;
-  double* XcolUpper;
-  double* XrowLower;
-  double* XrowUpper;
-  int* XAstart;
-  int* XAindex;
-  double* XAvalue;
+  double *XcolCost;
+  double *XcolLower;
+  double *XcolUpper;
+  double *XrowLower;
+  double *XrowUpper;
+  int *XAstart;
+  int *XAindex;
+  double *XAvalue;
 
-  XcolCost = (double *) malloc(sizeof(double)*XnumCol);
-  XcolLower = (double *) malloc(sizeof(double)*XnumCol);
-  XcolUpper = (double *) malloc(sizeof(double)*XnumCol);
-  XrowLower = (double *) malloc(sizeof(double)*XnumRow);
-  XrowUpper = (double *) malloc(sizeof(double)*XnumRow);
-  XAstart = (int *) malloc(sizeof(int)*(XnumCol+1));
-  XAindex = (int *) malloc(sizeof(int)*XnumNz);
-  XAvalue = (double *) malloc(sizeof(double)*XnumNz);
+  XcolCost = (double *)malloc(sizeof(double) * XnumCol);
+  XcolLower = (double *)malloc(sizeof(double) * XnumCol);
+  XcolUpper = (double *)malloc(sizeof(double) * XnumCol);
+  XrowLower = (double *)malloc(sizeof(double) * XnumRow);
+  XrowUpper = (double *)malloc(sizeof(double) * XnumRow);
+  XAstart = (int *)malloc(sizeof(int) * (XnumCol + 1));
+  XAindex = (int *)malloc(sizeof(int) * XnumNz);
+  XAvalue = (double *)malloc(sizeof(double) * XnumNz);
 
-  memcpy(XcolCost, &(model.colCost[0]), sizeof(double)*model.numCol);
-  memcpy(XcolLower, &(model.colLower[0]), sizeof(double)*model.numCol);
-  memcpy(XcolUpper, &(model.colUpper[0]), sizeof(double)*model.numCol);
-  memcpy(XrowLower, &(model.rowLower[0]), sizeof(double)*model.numRow);
-  memcpy(XrowUpper, &(model.rowUpper[0]), sizeof(double)*model.numRow);
-  memcpy(XAstart, &(model.Astart[0]), sizeof(int)*(XnumCol+1));
-  memcpy(XAindex, &(model.Aindex[0]), sizeof(int)*XnumNz);
-  memcpy(XAvalue, &(model.Avalue[0]), sizeof(double)*XnumNz);
+  memcpy(XcolCost, &(model.colCost[0]), sizeof(double) * model.numCol);
+  memcpy(XcolLower, &(model.colLower[0]), sizeof(double) * model.numCol);
+  memcpy(XcolUpper, &(model.colUpper[0]), sizeof(double) * model.numCol);
+  memcpy(XrowLower, &(model.rowLower[0]), sizeof(double) * model.numRow);
+  memcpy(XrowUpper, &(model.rowUpper[0]), sizeof(double) * model.numRow);
+  memcpy(XAstart, &(model.Astart[0]), sizeof(int) * (XnumCol + 1));
+  memcpy(XAindex, &(model.Aindex[0]), sizeof(int) * XnumNz);
+  memcpy(XAvalue, &(model.Avalue[0]), sizeof(double) * XnumNz);
 
   model.clearModel();
-  
+
   int probStatus, basisStatus;
-  double* colPrimalValues;
-  double* colDualValues;
-  double* rowPrimalValues;
-  double* rowDualValues;
-  int* basicVariables;
-  
-  colPrimalValues = (double *) malloc(sizeof(double)*XnumCol);
-  rowPrimalValues = (double *) malloc(sizeof(double)*XnumRow);
-  colDualValues = (double *) malloc(sizeof(double)*XnumCol);
-  rowDualValues = (double *) malloc(sizeof(double)*XnumRow);
-  basicVariables = (int *) malloc(sizeof(int)*XnumRow);
+  double *colPrimalValues;
+  double *colDualValues;
+  double *rowPrimalValues;
+  double *rowDualValues;
+  int *basicVariables;
+
+  colPrimalValues = (double *)malloc(sizeof(double) * XnumCol);
+  rowPrimalValues = (double *)malloc(sizeof(double) * XnumRow);
+  colDualValues = (double *)malloc(sizeof(double) * XnumCol);
+  rowDualValues = (double *)malloc(sizeof(double) * XnumRow);
+  basicVariables = (int *)malloc(sizeof(int) * XnumRow);
 
   probStatus = 0;
   basisStatus = HiGHS_basisStatus_no;
   solve_fromArrays(&probStatus, &basisStatus,
-		   XnumCol, XnumRow, XnumNz, 
-		   XobjSense, XobjOffset,
-		   XcolCost, XcolLower, XcolUpper,
-		   XrowLower, XrowUpper,
-		   XAstart, XAindex, XAvalue,
-		   colPrimalValues, colDualValues,
-		   rowPrimalValues, rowDualValues,
-		   basicVariables);
-  printf("GOT back from solve_fromArrays: probStatus = %d\n", probStatus);cout<<flush;
-  if (RpRtVec) {
-    for (int col=0; col<XnumCol; col++) {printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);}
-    for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
+                   XnumCol, XnumRow, XnumNz,
+                   XobjSense, XobjOffset,
+                   XcolCost, XcolLower, XcolUpper,
+                   XrowLower, XrowUpper,
+                   XAstart, XAindex, XAvalue,
+                   colPrimalValues, colDualValues,
+                   rowPrimalValues, rowDualValues,
+                   basicVariables);
+  printf("GOT back from solve_fromArrays: probStatus = %d\n", probStatus);
+  cout << flush;
+  if (RpRtVec)
+  {
+    for (int col = 0; col < XnumCol; col++)
+    {
+      printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);
+    }
+    for (int row = 0; row < XnumRow; row++)
+    {
+      printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);
+    }
   }
   basisStatus = HiGHS_basisStatus_yes;
   solve_fromArrays(&probStatus, &basisStatus,
-		   XnumCol, XnumRow, XnumNz, 
-		   XobjSense, XobjOffset,
-		   XcolCost, XcolLower, XcolUpper,
-		   XrowLower, XrowUpper,
-		   XAstart, XAindex, XAvalue,
-		   colPrimalValues, colDualValues,
-		   rowPrimalValues, rowDualValues,
-		   basicVariables);
-  printf("GOT back from solve_fromArrays: probStatus = %d\n", probStatus);cout<<flush;
-  if (RpRtVec) {
-    for (int col=0; col<XnumCol; col++) {printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);}
-    for (int row=0; row<XnumRow; row++) {printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);}
+                   XnumCol, XnumRow, XnumNz,
+                   XobjSense, XobjOffset,
+                   XcolCost, XcolLower, XcolUpper,
+                   XrowLower, XrowUpper,
+                   XAstart, XAindex, XAvalue,
+                   colPrimalValues, colDualValues,
+                   rowPrimalValues, rowDualValues,
+                   basicVariables);
+  printf("GOT back from solve_fromArrays: probStatus = %d\n", probStatus);
+  cout << flush;
+  if (RpRtVec)
+  {
+    for (int col = 0; col < XnumCol; col++)
+    {
+      printf("Col %3d: Pr, Du = %11.4g, %11.4g\n", col, colPrimalValues[col], colDualValues[col]);
+    }
+    for (int row = 0; row < XnumRow; row++)
+    {
+      printf("Row %3d: Bc = %3d; Pr, Du = %11.4g, %11.4g\n", row, basicVariables[row], rowPrimalValues[row], rowDualValues[row]);
+    }
   }
-  
+
   /*
   //TEMP CODE TO GENERATE BOXED PROBLEMS
   for (int col = 0; col < XnumCol; col++) {
@@ -396,17 +440,19 @@ int solvePlainAPI(const char *filename) {
 }
 
 //Ivet
-int solvePlainWithPresolve(const char *filename) {
-	HModel model;
-	int RtCd = model.load_fromMPS(filename);
-	    if (RtCd) return RtCd;
-	double time1;
+int solvePlainWithPresolve(const char *filename)
+{
+  HModel model;
+  int RtCd = model.load_fromMPS(filename);
+  if (RtCd)
+    return RtCd;
+  double time1;
 
-	double obj1 = presolve(model, time1);
-	(void)obj1;
+  double obj1 = presolve(model, time1);
+  (void)obj1;
 
-	//to test singularity of basis matrix after postsolve
-/*
+  //to test singularity of basis matrix after postsolve
+  /*
 	HModel model2;
 
 	model2.load_fromMPS(filename);
@@ -461,7 +507,7 @@ int solvePlainWithPresolve(const char *filename) {
 		cout<<"OBJECTIVE FAIL: diff = "<<obj1-obj2<<endl;
 	*/
 
-/*	// to compare data presolve receives and returns after postsolve
+  /*	// to compare data presolve receives and returns after postsolve
 	HModel model;
 	model.load_fromMPS(filename);
 
@@ -475,21 +521,24 @@ int solvePlainWithPresolve(const char *filename) {
 	test.readDataPostsolve(model);
 	test.compareData(2);
 */
-	return 0;
+  return 0;
 }
 
 //Julian
-int solveSCIP(const char *filename) {
+int solveSCIP(const char *filename)
+{
   HModel model;
-  printf("Called solveSCIP\n");cout << flush;
+  printf("Called solveSCIP\n");
+  cout << flush;
   int RtCd = model.load_fromMPS(filename);
-  if (RtCd) return RtCd;
+  if (RtCd)
+    return RtCd;
   //  model.util_reportModel();
 
   //Extract columns numCol-3..numCol-1
-  int FmCol = model.numCol-3;
-  int ToCol = model.numCol-1;
-  int numExtractCols = ToCol-FmCol+1;
+  int FmCol = model.numCol - 3;
+  int ToCol = model.numCol - 1;
+  int numExtractCols = ToCol - FmCol + 1;
   vector<double> XcolCost;
   vector<double> XcolLower;
   vector<double> XcolUpper;
@@ -502,15 +551,15 @@ int solveSCIP(const char *filename) {
   //  printf("Returned from model.util_extractCols with\n");
   //  model.util_reportColVec(numExtractCols, XcolCost, XcolLower, XcolUpper);
   //  model.util_reportColMtx(numExtractCols, XAstart, XAindex, XAvalue);
-  
+
   //Delete the columns just extracted
   model.util_deleteCols(FmCol, ToCol);
   //  model.util_reportModel();
 
   //Extract rows numRow-3..numRow-1
-  int FmRow = model.numRow-3;
-  int ToRow = model.numRow-1;
-  int numExtractRows = ToRow-FmRow+1;
+  int FmRow = model.numRow - 3;
+  int ToRow = model.numRow - 1;
+  int numExtractRows = ToRow - FmRow + 1;
   vector<double> XrowLower;
   vector<double> XrowUpper;
   vector<int> XARstart;
@@ -522,15 +571,15 @@ int solveSCIP(const char *filename) {
   //  printf("Returned from model.util_extractRows with\n");
   //  model.util_reportRowVec(numExtractRows, XrowLower, XrowUpper);
   //  model.util_reportRowMtx(numExtractRows, XARstart, XARindex, XARvalue);
-  
+
   //Delete the rows just extracted
   model.util_deleteRows(FmRow, ToRow);
   //  model.util_reportModel();
 
   //Extract all remaining rows
   FmRow = 0;
-  ToRow = model.numRow-1;
-  int num0ExtractRows = ToRow-FmRow+1;
+  ToRow = model.numRow - 1;
+  int num0ExtractRows = ToRow - FmRow + 1;
   vector<double> X0rowLower;
   vector<double> X0rowUpper;
   vector<int> X0ARstart;
@@ -546,8 +595,8 @@ int solveSCIP(const char *filename) {
 
   //Extract all remaining columns
   FmCol = 0;
-  ToCol = model.numCol-1;
-  int num0ExtractCols = ToCol-FmCol+1;
+  ToCol = model.numCol - 1;
+  int num0ExtractCols = ToCol - FmCol + 1;
   vector<double> X0colCost;
   vector<double> X0colLower;
   vector<double> X0colUpper;
@@ -556,31 +605,31 @@ int solveSCIP(const char *filename) {
   vector<double> X0Avalue;
   //  model.util_extractCols(FmCol, ToCol, X0colCost, X0colLower, X0colUpper,
   //			 X0Astart, X0Aindex, X0Avalue);
-  
+
   //Delete the columns just extracted
   model.util_deleteCols(FmCol, ToCol);
   //  model.util_reportModel();
 
   int nnonz = 0;
   model.util_addCols(num0ExtractCols, &X0colCost[0], &X0colLower[0], &X0colUpper[0],
-		     nnonz, &X0Astart[0], &X0Aindex[0], &X0Avalue[0]);
+                     nnonz, &X0Astart[0], &X0Aindex[0], &X0Avalue[0]);
   //  model.util_reportModel();
-  
+
   nnonz = X0ARstart[num0ExtractRows];
   model.util_addRows(num0ExtractRows, &X0rowLower[0], &X0rowUpper[0],
-		     nnonz, &X0ARstart[0], &X0ARindex[0], &X0ARvalue[0]);
+                     nnonz, &X0ARstart[0], &X0ARindex[0], &X0ARvalue[0]);
   //  model.util_reportModel();
 
   nnonz = XARstart[numExtractRows];
   model.util_addRows(numExtractRows, &XrowLower[0], &XrowUpper[0],
-		     nnonz, &XARstart[0], &XARindex[0], &XARvalue[0]);
+                     nnonz, &XARstart[0], &XARindex[0], &XARvalue[0]);
   //  model.util_reportModel();
 
   nnonz = XAstart[numExtractCols];
   model.util_addCols(numExtractCols, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-		     nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
+                     nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
-  
+
   model.numTot = model.numCol + model.numRow;
   model.scaleModel();
   HDual solver;
@@ -597,8 +646,8 @@ int solveSCIP(const char *filename) {
   vector<double> rowLower(model.numRow);
   vector<double> rowUpper(model.numRow);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(0, model.numCol-1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(0, model.numRow-1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(0, model.numCol - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(0, model.numRow - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -607,25 +656,30 @@ int solveSCIP(const char *filename) {
   double nw_colUpper;
 
   int num_resolve = 0;
-  for (int col = 0; col < model.numCol; col++) {
+  for (int col = 0; col < model.numCol; col++)
+  {
     model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col, colPrimal[col], og_colLower, og_colUpper);
-    if (model.nonbasicFlag[col]) {
+    if (model.nonbasicFlag[col])
+    {
       printf(": nonbasic so don't branch\n");
       continue;
-    } else {
-      double rsdu = min(colPrimal[col]-og_colLower, og_colUpper-colPrimal[col]);
-      if (rsdu < 0.1) {
-	printf(": basic but rsdu = %11g so don't branch\n", rsdu);
-	continue;
+    }
+    else
+    {
+      double rsdu = min(colPrimal[col] - og_colLower, og_colUpper - colPrimal[col]);
+      if (rsdu < 0.1)
+      {
+        printf(": basic but rsdu = %11g so don't branch\n", rsdu);
+        continue;
       }
       printf(": basic with rsdu = %11g so branch\n\n", rsdu);
       num_resolve++;
       colBoundIndex = col;
-      if (model.hsol_isInfinity(og_colUpper)) 
-	nw_colLower = colPrimal[col]+1;
+      if (model.hsol_isInfinity(og_colUpper))
+        nw_colLower = colPrimal[col] + 1;
       else
-	nw_colLower = og_colUpper;
+        nw_colLower = og_colUpper;
       nw_colUpper = og_colUpper;
       printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex, nw_colLower, nw_colUpper);
       model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
@@ -637,14 +691,17 @@ int solveSCIP(const char *filename) {
       model.util_reportSolverOutcome("SCIP 2");
       //Was &nw_colLower, &nw_colUpper); and might be more interesting for avgas
       model.util_chgColBoundsSet(1, &colBoundIndex, &og_colLower, &og_colUpper);
-      if (num_resolve >= 10) break;
+      if (num_resolve >= 10)
+        break;
     }
   }
-  printf("Returning from solveSCIP\n"); cout << flush;
+  printf("Returning from solveSCIP\n");
+  cout << flush;
   return 0;
 }
 
-int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV) {
+int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV)
+{
   double setupTime = 0;
   double presolve1Time = 0;
   double crashTime = 0;
@@ -665,31 +722,34 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
   HDual solver;
 
   const bool presolveNoScale = false;
-  
+
   vector<double> colPrAct;
   vector<double> colDuAct;
   vector<double> rowPrAct;
   vector<double> rowDuAct;
-  
+
   //	printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
   solver.setPresolve(Presolve_ArgV);
   solver.setEdWt(EdWt_ArgV);
   solver.setCrash(Crash_ArgV);
   solver.setTimeLimit(TimeLimit_ArgV);
-  
+
   model.timer.reset();
   bool with_presolve = solver.Presolve_Mode == Presolve_Mode_On;
   //  bool FourThreads = true;
   bool FourThreads = false;
   //  bool EightThreads = true;
   bool EightThreads = false;
-  
-  if (with_presolve) {
+
+  if (with_presolve)
+  {
     int RtCd = model.load_fromMPS(filename);
-    if (RtCd) return RtCd;
+    if (RtCd)
+      return RtCd;
     // Check size
-    if (model.numRow == 0) return 1;
-    HPresolve * pre = new HPresolve();
+    if (model.numRow == 0)
+      return 1;
+    HPresolve *pre = new HPresolve();
     model.copy_fromHModelToHPresolve(pre);
     setupTime += model.timer.getTime();
     model.timer.reset();
@@ -700,8 +760,9 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
     model.load_fromPresolve(pre);
     presolve1Time += model.timer.getTime();
     setupTime += model.timer.getTime();
-    
-    if (solver.Crash_Mode > 0) {
+
+    if (solver.Crash_Mode > 0)
+    {
       HCrash crash;
       crash.crash(&model, solver.Crash_Mode);
       crashTime += model.timer.getTime();
@@ -713,9 +774,9 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
     else
       model.scaleModel();
 
-    if (FourThreads) 
+    if (FourThreads)
       solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
-    else if (EightThreads) 
+    else if (EightThreads)
       solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
     else
       solver.solve(&model);
@@ -728,43 +789,46 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
     solvePh2DuIt += solver.n_ph2_du_it;
     solvePrIt += solver.n_pr_it;
     printf(
-	   "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
-	   "%10.3f,%20.10e,%10d,%10d,%10d\n",
-	   model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
-	   lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
+        "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
+        "%10.3f,%20.10e,%10d,%10d,%10d\n",
+        model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
+        lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
     //Possibly recover bounds after presolve (after using bounds tightened by presolve)
-    if (model.usingImpliedBoundsPresolve) {
-      //		Recover the true bounds overwritten by the implied bounds
+    if (model.usingImpliedBoundsPresolve)
+    {
+    //		Recover the true bounds overwritten by the implied bounds
 #ifdef JAJH_dev
       printf("\nRecovering bounds after using implied bounds and resolving\n");
 #endif
-      if (model.problemStatus != LP_Status_OutOfTime) {
-	
-	model.copy_savedBoundsToModelBounds();
-	
-	model.timer.reset();
-	solver.solve(&model);
-	lcSolveTime = model.timer.getTime();
-	solveTime += lcSolveTime;
-	solveIt += model.numberIteration;
-	model.util_reportSolverOutcome("After recover:   ");
+      if (model.problemStatus != LP_Status_OutOfTime)
+      {
+
+        model.copy_savedBoundsToModelBounds();
+
+        model.timer.reset();
+        solver.solve(&model);
+        lcSolveTime = model.timer.getTime();
+        solveTime += lcSolveTime;
+        solveIt += model.numberIteration;
+        model.util_reportSolverOutcome("After recover:   ");
 #ifdef JAJH_dev
-	solvePh1DuIt += solver.n_ph1_du_it;
-	solvePh2DuIt += solver.n_ph2_du_it;
-	solvePrIt += solver.n_pr_it;
-	printf(
-	       "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
-	       "%10.3f,%20.10e,%10d,%10d,%10d\n",
-	       model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
-	       lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
+        solvePh1DuIt += solver.n_ph1_du_it;
+        solvePh2DuIt += solver.n_ph2_du_it;
+        solvePrIt += solver.n_pr_it;
+        printf(
+            "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
+            "%10.3f,%20.10e,%10d,%10d,%10d\n",
+            model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
+            lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
     }
-    
-    if (model.problemStatus != LP_Status_OutOfTime) {
-      
+
+    if (model.problemStatus != LP_Status_OutOfTime)
+    {
+
 #ifdef JAJH_dev
       printf("\nPostsolving\n");
 #endif
@@ -775,7 +839,7 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
       //arrays. Undos scaling since presolve works on the unscaled
       //model
       model.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue,
-			pre->rowDual);
+                                     pre->rowDual);
       model.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
 
       //Perform postsolve
@@ -790,9 +854,10 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
 #ifdef JAJH_dev
       model.util_reportModelSolution();
 #endif
-      
+
 #ifdef JAJH_dev
-      printf("\nBefore solve after Postsolve\n"); cout << flush;
+      printf("\nBefore solve after Postsolve\n");
+      cout << flush;
 #endif
       model.timer.reset();
       solver.solve(&model);
@@ -805,20 +870,23 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
       solvePh2DuIt += solver.n_ph2_du_it;
       solvePrIt += solver.n_pr_it;
       printf(
-	     "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
-	     "%10.3f,%20.10e,%10d,%10d,%10d\n",
-	     model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
-	     lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
-  cout << flush;
+          "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
+          "%10.3f,%20.10e,%10d,%10d,%10d\n",
+          model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
+          lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
+      cout << flush;
 #endif
     }
-  } else {
+  }
+  else
+  {
     int RtCd = model.load_fromMPS(filename);
-    if (RtCd) return RtCd;
-    
+    if (RtCd)
+      return RtCd;
 
-  setupTime += model.timer.getTime();
-    if (solver.Crash_Mode > 0) {
+    setupTime += model.timer.getTime();
+    if (solver.Crash_Mode > 0)
+    {
       HCrash crash;
       //      printf("Calling crash.crash(&model, solver.Crash_Mode);\n");cout<<flush;
       crash.crash(&model, solver.Crash_Mode);
@@ -827,9 +895,9 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
     }
     //		printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
     model.scaleModel();
-    if (FourThreads) 
+    if (FourThreads)
       solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
-    else if (EightThreads) 
+    else if (EightThreads)
       solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
     else
       solver.solve(&model);
@@ -838,11 +906,11 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
 #ifdef JAJH_rp
   double sumTime = setupTime + presolve1Time + crashTime + solveTime + postsolveTime;
   printf(
-	 "Time: setup = %10.3f; presolve = %10.3f; crash = %10.3f; solve = %10.3f; postsolve = %10.3f; sum = %10.3f; total = %10.3f\n",
-	 setupTime, presolve1Time, crashTime, solveTime, postsolveTime, sumTime,
-	 model.totalTime);
+      "Time: setup = %10.3f; presolve = %10.3f; crash = %10.3f; solve = %10.3f; postsolve = %10.3f; sum = %10.3f; total = %10.3f\n",
+      setupTime, presolve1Time, crashTime, solveTime, postsolveTime, sumTime,
+      model.totalTime);
   cout << flush;
-  double errTime = abs(sumTime-model.totalTime);
+  double errTime = abs(sumTime - model.totalTime);
   if (errTime > 1e-3)
     printf("!! Sum-Total time error of %g\n", errTime);
 #endif
@@ -858,159 +926,183 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
   int numCol = model.numCol;
   int numRow = model.numRow;
   printf(
-	 "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
-	 "Crash %s,EdWt %s,%d,%d,%10.3f,%10.3f,"
-	 "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
-	 "%20.10e,%10d,%10.3f,"
-	 "%d\n",
-	 model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
-	 Crash_ArgV, EdWt_ArgV, numRow, numCol, setupTime, presolve1Time,
-	 crashTime, crossoverTime, presolve2Time, solveTime, postsolveTime,
-	 model.objective, model.numberIteration, model.totalTime,
-	 solver.n_wg_DSE_wt);
+      "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
+      "Crash %s,EdWt %s,%d,%d,%10.3f,%10.3f,"
+      "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
+      "%20.10e,%10d,%10.3f,"
+      "%d\n",
+      model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
+      Crash_ArgV, EdWt_ArgV, numRow, numCol, setupTime, presolve1Time,
+      crashTime, crossoverTime, presolve2Time, solveTime, postsolveTime,
+      model.objective, model.numberIteration, model.totalTime,
+      solver.n_wg_DSE_wt);
   cout << flush;
 #endif
   return 0;
 }
 
-double presolve(HModel& mod, double& time) {
-	cout << "------\n";
+double presolve(HModel &mod, double &time)
+{
+  cout << "------\n";
 
-	HPresolve * pre = new HPresolve();
-	mod.copy_fromHModelToHPresolve(pre);
-	int status = pre->presolve();
-	if (!status) {
-		//pre->reportTimes();
-		mod.load_fromPresolve(pre);
+  HPresolve *pre = new HPresolve();
+  mod.copy_fromHModelToHPresolve(pre);
+  int status = pre->presolve();
+  if (!status)
+  {
+    //pre->reportTimes();
+    mod.load_fromPresolve(pre);
 
-		HDual solver;
-		mod.scaleModel();
-		solver.solve(&mod);
-		pre->setProblemStatus(mod.getPrStatus());
-		mod.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
-		mod.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
-		pre->postsolve();
-		mod.load_fromPostsolve(pre);
-		solver.solve(&mod);
-		mod.util_reportSolverOutcome("Postsolve");
-		time = mod.totalTime;
-	}
-	else if (status == HPresolve::Empty) {
-		pre->postsolve();
-		mod.load_fromPostsolve(pre);
-		HDual solver;
-
-		solver.solve(&mod);
-		mod.util_reportSolverOutcome("Postsolve");
-		time = mod.totalTime;
-	}
-	return mod.util_getObjectiveValue();
-	delete pre;
-}
-
-int solvePlainExperiments(const char *filename) {
-
-	bool exp = true;
-	ofstream myfile;
-	if (exp) {
-
-		std::string crName(filename);
-
-		std::string sub2 = crName;
-		if (sub2[0] == '.' && sub2[1] == '.')
-			sub2 = crName.substr(10, crName.size());
-		myfile.open("../experiments/out", ios::app);
-		myfile << sub2;
-		myfile << " &  ";
-		myfile.close();
-		myfile.open("../experiments/t1", ios::app);
-		myfile << sub2;
-		myfile << " &  ";
-		myfile.close();
-//		myfile.open("../experiments/t2", ios::app);
-//		myfile << sub2;
-//		myfile << " &  ";
-//		myfile.close();
-		myfile.open("../experiments/t3", ios::app);
-		myfile << sub2;
-		myfile << " &  ";
-		myfile.close();
-	}
-
-	HModel model;
-	int RtCd;
-	RtCd = model.load_fromMPS(filename);
-	if (RtCd) return RtCd;
-	// Check size
-	if (model.numRow == 0) return 1;
-
-	double time1;
-	double obj1 = presolve(model, time1);
-
-	cout << "----------\n";
-
-
-	HModel model2;
-	RtCd = model2.load_fromMPS(filename);
-	if (RtCd) return RtCd;
-	model2.scaleModel();
-
-	HDual solver2;
-	solver2.solve(&model2);
-	model2.util_reportSolverOutcome("SolvePlainExperiments");
-	double obj2 = model2.util_getObjectiveValue();
-
-	if (exp) {
-		ofstream myfile;
-		myfile.open("../experiments/out", ios::app);
-		if (abs(obj1 - obj2) <= 0.000001)
-			myfile << " obj pass" << endl;
-		else
-			myfile << " obj fail" << endl;
-		myfile.close();
-	}
-
-	return 0;
-}
-
-int solveTasks(const char *filename) {
-    HModel model;
-    model.intOption[INTOPT_PRINT_FLAG] = 1;
-    model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    int RtCd = model.load_fromMPS(filename);
-    if (RtCd) return RtCd;
-
-    model.scaleModel();
     HDual solver;
-    solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
-
-    model.util_reportSolverOutcome("Solve tasks");
-#ifdef JAJH_dev
-    model.writePivots("tasks");
-#endif
-    return 0;
-}
-
-int solveMulti(const char *filename, const char *partitionfile) {
-    HModel model;
-    model.intOption[INTOPT_PRINT_FLAG] = 1;
-    model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    if (partitionfile) {
-        model.strOption[STROPT_PARTITION_FILE] = partitionfile;
-    }
-    int RtCd = model.load_fromMPS(filename);
-    if (RtCd) return RtCd;
-
-    model.scaleModel();
+    mod.scaleModel();
+    solver.solve(&mod);
+    pre->setProblemStatus(mod.getPrStatus());
+    mod.util_getPrimalDualValues(pre->colValue, pre->colDual, pre->rowValue, pre->rowDual);
+    mod.util_getBasicIndexNonbasicFlag(pre->basicIndex, pre->nonbasicFlag);
+    pre->postsolve();
+    mod.load_fromPostsolve(pre);
+    solver.solve(&mod);
+    mod.util_reportSolverOutcome("Postsolve");
+    time = mod.totalTime;
+  }
+  else if (status == HPresolve::Empty)
+  {
+    pre->postsolve();
+    mod.load_fromPostsolve(pre);
     HDual solver;
-    solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 
-    model.util_reportSolverOutcome("Solve multi");
-#ifdef JAJH_dev
-    model.writePivots("multi");
-#endif
-    return 0;
+    solver.solve(&mod);
+    mod.util_reportSolverOutcome("Postsolve");
+    time = mod.totalTime;
+  }
+  return mod.util_getObjectiveValue();
+  delete pre;
 }
 
+int solvePlainExperiments(const char *filename)
+{
 
+  bool exp = true;
+  ofstream myfile;
+  if (exp)
+  {
 
+    std::string crName(filename);
+
+    std::string sub2 = crName;
+    if (sub2[0] == '.' && sub2[1] == '.')
+      sub2 = crName.substr(10, crName.size());
+    myfile.open("../experiments/out", ios::app);
+    myfile << sub2;
+    myfile << " &  ";
+    myfile.close();
+    myfile.open("../experiments/t1", ios::app);
+    myfile << sub2;
+    myfile << " &  ";
+    myfile.close();
+    //		myfile.open("../experiments/t2", ios::app);
+    //		myfile << sub2;
+    //		myfile << " &  ";
+    //		myfile.close();
+    myfile.open("../experiments/t3", ios::app);
+    myfile << sub2;
+    myfile << " &  ";
+    myfile.close();
+  }
+
+  HModel model;
+  int RtCd;
+  RtCd = model.load_fromMPS(filename);
+  if (RtCd)
+    return RtCd;
+  // Check size
+  if (model.numRow == 0)
+    return 1;
+
+  double time1;
+  double obj1 = presolve(model, time1);
+
+  cout << "----------\n";
+
+  HModel model2;
+  RtCd = model2.load_fromMPS(filename);
+  if (RtCd)
+    return RtCd;
+  model2.scaleModel();
+
+  HDual solver2;
+  solver2.solve(&model2);
+  model2.util_reportSolverOutcome("SolvePlainExperiments");
+  double obj2 = model2.util_getObjectiveValue();
+
+  if (exp)
+  {
+    ofstream myfile;
+    myfile.open("../experiments/out", ios::app);
+    if (abs(obj1 - obj2) <= 0.000001)
+      myfile << " obj pass" << endl;
+    else
+      myfile << " obj fail" << endl;
+    myfile.close();
+  }
+
+  return 0;
+}
+
+int solveTasks(const char *filename)
+{
+  HModel model;
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
+  model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+  int RtCd = model.load_fromMPS(filename);
+  if (RtCd)
+    return RtCd;
+
+  model.scaleModel();
+  HDual solver;
+  solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
+
+  model.util_reportSolverOutcome("Solve tasks");
+#ifdef JAJH_dev
+  model.writePivots("tasks");
+#endif
+  return 0;
+}
+
+int solveMulti(const char *filename, const char *partitionfile)
+{
+  HModel model;
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
+  model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+  if (partitionfile)
+  {
+    model.strOption[STROPT_PARTITION_FILE] = partitionfile;
+  }
+  int RtCd = model.load_fromMPS(filename);
+  if (RtCd)
+    return RtCd;
+
+  model.scaleModel();
+  HDual solver;
+  solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+
+  model.util_reportSolverOutcome("Solve multi");
+#ifdef JAJH_dev
+  model.writePivots("multi");
+#endif
+  return 0;
+}
+
+int solveExternalPresolve(const char* fileName) {
+   
+  HModel model;
+  int RtCd = model.load_fromMPS(fileName);
+  if (RtCd)
+    return RtCd;
+  double time1;
+
+  double obj1 = presolve(model, time1);
+  (void)obj1;
+
+  return 0;
+}
