@@ -66,9 +66,9 @@ before_install:
     - eval "${MATRIX_EVAL}"
     
 install:
-    - cmake -H. -BDebug .. -DCMAKE_BUILD_TYPE=Debug
+    - cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug
     - cmake --build Debug
-    - cmake -H. -BRelease .. -DCMAKE_BUILD_TYPE=Release
+    - cmake -H. -BRelease -DCMAKE_BUILD_TYPE=Release
     - cmake --build Release
 
 script:
