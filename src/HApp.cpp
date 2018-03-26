@@ -21,7 +21,6 @@
 
 // for external presolve
 #include "core/Problem.hpp"
-
 using namespace std;
 
 int solvePlain(const char *filename);
@@ -1134,10 +1133,10 @@ int solveExternalPresolve(const char* fileName) {
   
   problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
   problem.setVariableDomainsLP(model.colLower, model.colUpper); 
-  
-  //presolve 
-  //  
+  problem.fixInfiniteBounds(); 
 
+  //presolve 
+    
   //Create new or update old HModel and set up solver to solve 
 
   //pass reduced solutions back to external presolve class for postsolve 
