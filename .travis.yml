@@ -72,5 +72,6 @@ install:
     - cmake --build Release
 
 script:
-    - cd Debug && ctest && cd ..
-    - cd Release && ctest && cd ..
+    - cd Debug && ctest
+    - cd ..
+    - cd Release && ctest
