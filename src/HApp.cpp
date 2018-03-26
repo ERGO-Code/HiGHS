@@ -20,7 +20,7 @@
 #include <iomanip>
 
 // for external presolve
-#include "core/ConstraintMatrix.hpp"
+#include "core/Problem.hpp"
 
 using namespace std;
 
@@ -1103,12 +1103,40 @@ int solveExternalPresolve(const char* fileName) {
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
     return RtCd;
+
+  
  
   //Now we got a loaded model that we will pass to external presolve 
   //set up data 
-  ConstraintMatrix<double> M;
+  //SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0], 
+  //      model.numCol, model.Avalue.size());
 
+  HPresolve *pre = new HPresolve();
+  model.copy_fromHModelToHPresolve(pre);
+  pre->makeARCopy();
+
+  SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0], &pre->ARindex[0], 
+        model.numRow, model.numCol, model.Avalue.size());
+
+  //ConstraintMatrix<double> M(matrix, matrix_transpose, model.rowLower, model.rowUpper);
+
+  Problem<double> problem;
+  problem.setObjective(model.colCost);
+
+  string prName(fileName);
+  problem.setName(prName);
+
+
+  
+  vector<double> rowLowerVec = model.rowLower;
+  vector<double> rowUpperVec = model.rowUpper;
+  //problem.setConstraintMatrix(matrix_transpose, rowLowerVec, rowUpperVec, true);
+  
+  problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
+  problem.setVariableDomainsLP(model.colLower, model.colUpper); 
+  
   //presolve 
+  
 
   //Create new or update old HModel and set up solver to solve 
 
