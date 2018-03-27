@@ -1,0 +1,2 @@
+# HiGHS
+Linear optimization software
