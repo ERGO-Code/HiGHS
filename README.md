@@ -1,19 +1,18 @@
-Welcome to HSOL 1.0
-===================
+# HiGHS - Linear optimization software
 
-HSOL is a high performance serial and parallel solver for large scale
+HiGHS is a high performance serial and parallel solver for large scale
 sparse linear programming (LP) problems of the form
 
     Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
 
 It is written in C++ with OpenMP directives. It is based on the dual
-revised simplex method, exploiting parallelism using either "parallel
+revised simplex method implemented in HSOL, exploiting parallelism using either "parallel
 minor iterations" (PAMI) or "single iteration parallelism" (SIP). A
 full technical reference to PAMI and SIP is
 
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
-Technical Report ERGO-14-011. 
+Technical Report ERGO-14-011.
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
@@ -24,15 +23,10 @@ Galabova.
 HSOL has been developed and tested on various linux installations
 using both the GNU (g++) and Intel (icc) C++ compilers.
 
-Download
---------
-
-Unzip the file hsol_1.0 into your folder of choice
-
 Compilation
 -----------
 
-HSOL uses CMake as build system. To compile the run you need to setup
+HiGHS uses CMake as build system. To compile the run you need to setup
 a build directory and define your build configuration:
 
     mkdir build
@@ -63,18 +57,18 @@ Run-time options
 ----------------
 
 In the following discussion, the name of the executable file generated
-is assumed to be `hsol`.
+is assumed to be `HiGHS`.
 
-HSOL can only read plain text MPS files, and the following command
+HiGHS can only read plain text MPS files, and the following command
 solves the model in `ml.mps`
 
-    hsol -f ml.mps
+    highs -f ml.mps
 
 Usage
 -----
 
 ```
-usage: hsol [options] -f fName.mps 
+usage: highs [options] -f fName.mps 
 
 Options:
     -p mode  : use presolve mode. Values:
@@ -87,17 +81,17 @@ Options:
     -m [cut] : use pami. Cutoff optional double value.
     -t fName : use pami with partition file fName
     -d       : debug mode on
-```		  
+```
 
-Run-time options `-p` and `-s` direct hsol to use PAMI or SIP. 
+Run-time options `-p` and `-s` direct HiGHS to use PAMI or SIP.
 
 When compiled with the OpenMP directives invoked, the number of
 threads used at run time is the value of the environment variable
-`OMP_NUM_THREADS`. For example, to use HSOL with PAMI and eight
+`OMP_NUM_THREADS`. For example, to use HiGHS with PAMI and eight
 threads to solve `ml.mps` execute
 
     export OMP_NUM_THREADS=8
-    hsol -m -f ml.mps
+    highs -m -f ml.mps
 
 If `OMP_NUM_THREADS` is not set, either because it has not been set or
 due to executing the command
@@ -110,17 +104,17 @@ Observations
 ------------
 
 When compiled without the OpenMP directives, or if run with
-`OMP_NUM_THREADS=1`, hsol is serial. The `-sip` run-time option will not
-affect performance. The `-pami` run-time option will cause hsol to use
+`OMP_NUM_THREADS=1`, HiGHS is serial. The `-sip` run-time option will not
+affect performance. The `-pami` run-time option will cause HiGHS to use
 serial minor iterations and, although this could lead to better
 performance on some problems, performance will typically be
 diminished.
 
 When compiled with the OpenMP directives and `OMP_NUM_THREADS>1` or
-unset, hsol will use multiple threads if the `-pami` or `-sip` run-time
-option is specified. If `OMP_NUM_THREADS` is unset, hsol will try to use
+unset, HiGHS will use multiple threads if the `-pami` or `-sip` run-time
+option is specified. If `OMP_NUM_THREADS` is unset, HiGHS will try to use
 all available threads so performance may be very slow. Although the
 best value will be problem and architecture dependent,
-`OMP_NUM_THREADS=8` is typically a good choice. Although hsol is slower
+`OMP_NUM_THREADS=8` is typically a good choice. Although HiGHS is slower
 when run in parallel than in serial for some problems, it is typically
 faster, with the `-pami` option usually faster than the `-sip` option.
