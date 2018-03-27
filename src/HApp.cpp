@@ -1134,49 +1134,73 @@ int solveExternalPresolve(const char *fileName)
 
   //presolve
   problem.presolve();
-  const int * Astart = problem.getConstraintMatrix().getTransposeColStart();
-  const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
-  const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
+
 
   //Update old HModel and set up solver to solve
   //TODO what is the second parameter objSense? Is it offset? 
-  model.load_fromArrays(problem.getNCols(), 0, 
+  const int * Astart = problem.getConstraintMatrix().getTransposeColStart();
+  const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
+  vector<double> colLower = problem.getLowerBounds();
+  vector<double> colUpper = problem.getUpperBounds();
+  vector<double> rowLower = problem.getConstraintMatrix().getLeftHandSides();
+  vector<double> rowUpper = problem.getConstraintMatrix().getRightHandSides();
+
+  int nCols = problem.getNCols();
+  int nRows = problem.getNRows();
+ 
+  for (int i=0; i<nCols; i++) {
+    if (colLower.at(i) <= -HSOL_CONST_INF)
+      colLower.at(i) = -HSOL_CONST_INF;
+    if (colUpper.at(i) >= HSOL_CONST_INF)
+      colUpper.at(i) = HSOL_CONST_INF;
+  }
+
+  for (int i=0; i<nRows; i++) {
+    if (rowLower.at(i) <= -HSOL_CONST_INF)
+      rowLower.at(i) = -HSOL_CONST_INF;
+    if (rowUpper.at(i) >= HSOL_CONST_INF)
+      rowUpper.at(i) = HSOL_CONST_INF;
+  }
+
+
+  model.load_fromArrays(nCols, 0, 
         &(problem.getObjective().coefficients[0]), 
-        &(problem.getLowerBounds()[0]),
-        &(problem.getUpperBounds()[0]),
-        problem.getNRows(), 
-        &(problem.getConstraintMatrix().getLeftHandSides()[0]),
-        &(problem.getConstraintMatrix().getRightHandSides()[0]),
+        &colLower[0],
+        &colUpper[0],
+        nRows, 
+        &rowLower[0],
+        &rowUpper[0],
         problem.getConstraintMatrix().getNnz(),
         Astart, Aindex, Avalue);
 
-  model.scaleModel();
+  //HModel model2;
+  //RtCd = model2.load_fromMPS(fileName);
+  //if (RtCd)
+  //  return RtCd;
+  
 
+  model.scaleModel();
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();
-  
+
+  //model2.scaleModel();
+  //HDual solver2;
+  //solver2.solve(&model2);
+  //double obj2 = model2.util_getObjectiveValue();
+
+  //if (abs(obj2 - obj)>0.00001) 
+  //  cout<<"OBJECTIVES DIFFER"<<endl;
+  //else
+  //  cout<<"Objectives match."<<endl;
+
 
   //pass reduced solutions back to external presolve class for postsolve
 
   //report solution
 
-  //check that obj value is the same by solving the original problem
-
-  HModel model2;
-  RtCd = model2.load_fromMPS(fileName);
-  if (RtCd)
-    return RtCd;
-  model2.scaleModel();
-
-  HDual solver2;
-  solver2.solve(&model2);
-  double obj2 = model2.util_getObjectiveValue();
-
-  if (abs(obj2 - obj)>0.00001) 
-    cout<<"OBJECTIVES DIFFER"<<endl;
-  else
-    cout<<"Objectives match."<<endl;
+  //check that obj value is the same by solving the original problemV
 
   return 0;
 }
