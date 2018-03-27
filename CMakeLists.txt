@@ -46,7 +46,8 @@ if(JAJH_RP)
     add_definitions(-DJAJH_rp)
 endif()
 message(STATUS "JAJH reporting: " ${JAJH_RP})
-
+include_directories("/nfs/homeoptimi/bzfgalab/Schreibtisch/presolve/src")
+include_directories("/nfs/homeoptimi/bzfgalab/Schreibtisch/presolve/external")
 # whether to use OpenMP
 option(OPENMP "Use OpenMP" ON)
 if(OPENMP)
