@@ -1,5 +1,7 @@
 # HiGHS - Linear optimization software
 
+![Travis-CI](https://travis-ci.org/ERGO-Code/HiGHS.svg?branch=master)
+
 HiGHS is a high performance serial and parallel solver for large scale
 sparse linear programming (LP) problems of the form
 
