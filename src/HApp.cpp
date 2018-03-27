@@ -151,6 +151,10 @@ int main(int argc, char **argv) {
        printf("Setting default value edWtMode = %s\n", edWtMode);
      }
     //parallel
+#ifdef JAJH_dev
+     printf("HApp: sip = %d; scip = %d; pami = %d; presolve = %d;  crash = %d; edgeWeight = %d; timeLimit = %d\n",
+	    sip,scip,pami,presolve,crash,edgeWeight,timeLimit);
+#endif
     if (sip)
       solveTasks(fileName);
     if (scip)
@@ -178,6 +182,7 @@ int main(int argc, char **argv) {
     //serial
     else {
       if (!presolve && !crash && !edgeWeight && !timeLimit) {
+	
 	int RtCod = 
 	//solvePlainAPI(fileName);
 			solvePlain(fileName);
@@ -256,13 +261,19 @@ int testIO(const char *filename) {
 
 int solvePlain(const char *filename) {
   HModel model;
-  //  model.intOption[INTOPT_PRINT_FLAG] = 1;
+  //    model.intOption[INTOPT_PRINT_FLAG] = 1;
     int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
   if (RtCd) return RtCd;
-  
+  if (model.intOption[INTOPT_PRINT_FLAG]) model.util_reportModel();
+#ifdef JAJH_dev
+  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" << endl;
+#endif
   model.scaleModel();
   HDual solver;
+#ifdef JAJH_dev
+  cout << "\n Using solvePlain() - Calling solver.solve(&model)\n" << endl;
+#endif
   solver.solve(&model);
   model.util_reportSolverOutcome("Solve plain");
 #ifdef JAJH_dev
@@ -679,6 +690,7 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
   //  bool EightThreads = true;
   bool EightThreads = false;
   
+  printf("solvePlainJAJH: with_presolve = %d\n", with_presolve); 
   if (with_presolve) {
     int RtCd = model.load_fromMPS(filename);
     if (RtCd) return RtCd;

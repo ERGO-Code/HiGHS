@@ -117,7 +117,7 @@ void HPrimal::primalRebuild() {
     model->computeDual();
     model->computePrimal();
     model->computeDuObj();
-    model->util_reportNumberIterationObjectiveValue();
+    model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
     double rebuildTime = model->timer.getTime()-tt0;
     totalRebuilds++;

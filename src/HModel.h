@@ -70,7 +70,10 @@ enum nonbasicMoveStat
 //this is the number of options and used to dimension as
 //***Option[***OPT_COUNT]
 enum HSOL_INT_OPTIONS {
-    INTOPT_PRINT_FLAG = 0, // 0/1 = none/do-print
+    INTOPT_PRINT_FLAG = 0, // 0/>=1 = none/do-print
+    //If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
+    //If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
+    //If 4\in INTOPT_PRINT_FLAG print iteration log line    
     INTOPT_TRANSPOSE_FLAG, // 0/1 = none/do-transpose if possible
     INTOPT_SCALE_FLAG,     // 0/1 = none/do-scale
     INTOPT_TIGHT_FLAG,     // 0/1 = none/do-tight
@@ -271,7 +274,7 @@ public:
 
     // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG] is false
     void util_reportMessage(const char *message);
-    void util_reportNumberIterationObjectiveValue();
+    void util_reportNumberIterationObjectiveValue(int i_v);
     void util_reportSolverOutcome(const char *message);
     void util_reportSolverProgress();
 

@@ -270,18 +270,18 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     // Load RHS
     vector<double> RHS(numRow, 0);
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-        if (data[2] != objName) {
-            int iRow = rowIndex[data[2]];
-            RHS[iRow] = data[0];
-        } else {
-//        	Strictly, if there is a RHS entry for the N row, it is an objective offset
-//        	However, the reported objective values for problems (eg e226) ignore this
+      if (data[2] != objName) {
+	int iRow = rowIndex[data[2]];
+	RHS[iRow] = data[0];
+      } else {
+	//        	Strictly, if there is a RHS entry for the N row, it is an objective offset
+	//        	However, the reported objective values for problems (eg e226) ignore this
 #ifdef JAJH_dev
-        	printf("RHS for N-row in MPS file implies objective offset of %g: ignoring this!\n", data[0]);
+	printf("RHS for N-row in MPS file implies objective offset of %g: ignoring this!\n", data[0]);
 #endif
-//            objOffset = data[0]; // Objective offset
-            objOffset = 0;
-        }
+	//            objOffset = data[0]; // Objective offset
+	objOffset = 0;
+      }
     }
 #ifdef JAJH_dev
     printf("readMPS: Read RHS     OK\n");
@@ -291,41 +291,41 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     rowLower.resize(numRow);
     rowUpper.resize(numRow);
     if (flag[0] == 'R') {
-        while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-            int iRow = rowIndex[data[2]];
-            if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
-                rowLower[iRow] = RHS[iRow] - fabs(data[0]);
-                rowUpper[iRow] = RHS[iRow];
-            } else {
-                rowUpper[iRow] = RHS[iRow] + fabs(data[0]);
-                rowLower[iRow] = RHS[iRow];
-            }
-            rowType[iRow] = 'X';
-        }
+      while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+	int iRow = rowIndex[data[2]];
+	if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
+	  rowLower[iRow] = RHS[iRow] - fabs(data[0]);
+	  rowUpper[iRow] = RHS[iRow];
+	} else {
+	  rowUpper[iRow] = RHS[iRow] + fabs(data[0]);
+	  rowLower[iRow] = RHS[iRow];
+	}
+	rowType[iRow] = 'X';
+      }
     }
 
     // Setup bounds for row without 'RANGE'
     for (int iRow = 0; iRow < numRow; iRow++) {
-        switch (rowType[iRow]) {
-        case 'L':
-            rowLower[iRow] = -HSOL_CONST_INF;
-            rowUpper[iRow] = RHS[iRow];
-            break;
-        case 'G':
-            rowLower[iRow] = RHS[iRow];
-            rowUpper[iRow] = +HSOL_CONST_INF;
-            break;
-        case 'E':
-            rowLower[iRow] = RHS[iRow];
-            rowUpper[iRow] = RHS[iRow];
-            break;
-        case 'N':
-            rowLower[iRow] = -HSOL_CONST_INF;
-            rowUpper[iRow] = +HSOL_CONST_INF;
-            break;
-        case 'X':
-            break;
-        }
+      switch (rowType[iRow]) {
+      case 'L':
+	rowLower[iRow] = -HSOL_CONST_INF;
+	rowUpper[iRow] = RHS[iRow];
+	break;
+      case 'G':
+	rowLower[iRow] = RHS[iRow];
+	rowUpper[iRow] = +HSOL_CONST_INF;
+	break;
+      case 'E':
+	rowLower[iRow] = RHS[iRow];
+	rowUpper[iRow] = RHS[iRow];
+	break;
+      case 'N':
+	rowLower[iRow] = -HSOL_CONST_INF;
+	rowUpper[iRow] = +HSOL_CONST_INF;
+	break;
+      case 'X':
+	break;
+      }
     }
 #ifdef JAJH_dev
     printf("readMPS: Read RANGES  OK\n");
@@ -336,34 +336,34 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     colUpper.assign(numCol, HSOL_CONST_INF);
 
     if (flag[0] == 'B') {
-        while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-            int iCol = colIndex[data[2]];
-
-            switch (flag[0]) {
-            case 'O': /*LO*/
-                colLower[iCol] = data[0];
-                break;
-            case 'I': /*MI*/
-                colLower[iCol] = -HSOL_CONST_INF;
-                break;
-            case 'L': /*PL*/
-                colUpper[iCol] = HSOL_CONST_INF;
-                break;
-            case 'X': /*FX*/
-                colLower[iCol] = data[0];
-                colUpper[iCol] = data[0];
-                break;
-            case 'R': /*FR*/
-                colLower[iCol] = -HSOL_CONST_INF;
-                colUpper[iCol] = HSOL_CONST_INF;
-                break;
-            case 'P': /*UP*/
-                colUpper[iCol] = data[0];
-                if (colLower[iCol] == 0 && data[0] < 0)
-                    colLower[iCol] = -HSOL_CONST_INF;
-                break;
-            }
-        }
+      while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+	int iCol = colIndex[data[2]];
+	
+	switch (flag[0]) {
+	case 'O': /*LO*/
+	  colLower[iCol] = data[0];
+	  break;
+	case 'I': /*MI*/
+	  colLower[iCol] = -HSOL_CONST_INF;
+	  break;
+	case 'L': /*PL*/
+	  colUpper[iCol] = HSOL_CONST_INF;
+	  break;
+	case 'X': /*FX*/
+	  colLower[iCol] = data[0];
+	  colUpper[iCol] = data[0];
+	  break;
+	case 'R': /*FR*/
+	  colLower[iCol] = -HSOL_CONST_INF;
+	  colUpper[iCol] = HSOL_CONST_INF;
+	  break;
+	case 'P': /*UP*/
+	  colUpper[iCol] = data[0];
+	  if (colLower[iCol] == 0 && data[0] < 0)
+	    colLower[iCol] = -HSOL_CONST_INF;
+	  break;
+	}
+      }
     }
 
     //bounds of [0,1] for integer variables without bounds
