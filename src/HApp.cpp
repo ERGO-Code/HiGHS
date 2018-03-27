@@ -31,7 +31,7 @@ int solveMulti(const char *filename, const char *partitionfile = 0);
 int solvePlainWithPresolve(const char *filename);
 int solvePlainExperiments(const char *filename);
 int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
-int solveExternalPresolve(const char* fileName);
+int solveExternalPresolve(const char *fileName);
 double presolve(HModel &mod, double &time);
 int testIO(const char *filename);
 
@@ -1096,26 +1096,25 @@ int solveMulti(const char *filename, const char *partitionfile)
   return 0;
 }
 
-int solveExternalPresolve(const char* fileName) {
-   
+int solveExternalPresolve(const char *fileName)
+{
+
   HModel model;
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
     return RtCd;
 
-  
- 
-  //Now we got a loaded model that we will pass to external presolve 
-  //set up data 
-  //SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0], 
+  //Now we got a loaded model that we will pass to external presolve
+  //set up data
+  //SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0],
   //      model.numCol, model.Avalue.size());
 
   HPresolve *pre = new HPresolve();
   model.copy_fromHModelToHPresolve(pre);
   pre->makeARCopy();
 
-  SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0], &pre->ARindex[0], 
-        model.numRow, model.numCol, model.Avalue.size());
+  SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0], &pre->ARindex[0],
+                               model.numRow, model.numCol, model.Avalue.size());
 
   //ConstraintMatrix<double> M(matrix, matrix_transpose, model.rowLower, model.rowUpper);
 
@@ -1125,23 +1124,35 @@ int solveExternalPresolve(const char* fileName) {
   string prName(fileName);
   problem.setName(prName);
 
-
-  
   vector<double> rowLowerVec = model.rowLower;
   vector<double> rowUpperVec = model.rowUpper;
   //problem.setConstraintMatrix(matrix_transpose, rowLowerVec, rowUpperVec, true);
-  
+
   problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
-  problem.setVariableDomainsLP(model.colLower, model.colUpper); 
-  problem.fixInfiniteBounds(); 
+  problem.setVariableDomainsLP(model.colLower, model.colUpper);
+  problem.fixInfiniteBounds();
 
-  //presolve 
-    
-  //Create new or update old HModel and set up solver to solve 
+  //presolve
+  problem.presolve();
 
-  //pass reduced solutions back to external presolve class for postsolve 
+  //Create new or update old HModel and set up solver to solve
+  //model.load_fromArrays()
+  //pass reduced solutions back to external presolve class for postsolve
 
   //report solution
+
+  //check that obj value is the same by solving the original problem
+
+  HModel model2;
+  RtCd = model2.load_fromMPS(fileName);
+  if (RtCd)
+    return RtCd;
+  model2.scaleModel();
+
+  HDual solver2;
+  solver2.solve(&model2);
+  model2.util_reportSolverOutcome("SolvePlainExperiments");
+  double obj2 = model2.util_getObjectiveValue();
 
   return 0;
 }
