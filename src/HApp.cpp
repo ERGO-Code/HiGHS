@@ -1130,13 +1130,33 @@ int solveExternalPresolve(const char *fileName)
 
   problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
   problem.setVariableDomainsLP(model.colLower, model.colUpper);
-  problem.fixInfiniteBounds();
+  problem.fixInfiniteBounds(HSOL_CONST_INF);
 
   //presolve
   problem.presolve();
+  const int * Astart = problem.getConstraintMatrix().getTransposeColStart();
+  const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
 
-  //Create new or update old HModel and set up solver to solve
-  //model.load_fromArrays()
+  //Update old HModel and set up solver to solve
+  //TODO what is the second parameter objSense? Is it offset? 
+  model.load_fromArrays(problem.getNCols(), 0, 
+        &(problem.getObjective().coefficients[0]), 
+        &(problem.getLowerBounds()[0]),
+        &(problem.getUpperBounds()[0]),
+        problem.getNRows(), 
+        &(problem.getConstraintMatrix().getLeftHandSides()[0]),
+        &(problem.getConstraintMatrix().getRightHandSides()[0]),
+        problem.getConstraintMatrix().getNnz(),
+        Astart, Aindex, Avalue);
+
+  model.scaleModel();
+
+  HDual solver;
+  solver.solve(&model);
+  double obj = model.util_getObjectiveValue();
+  
+
   //pass reduced solutions back to external presolve class for postsolve
 
   //report solution
@@ -1151,8 +1171,12 @@ int solveExternalPresolve(const char *fileName)
 
   HDual solver2;
   solver2.solve(&model2);
-  model2.util_reportSolverOutcome("SolvePlainExperiments");
   double obj2 = model2.util_getObjectiveValue();
+
+  if (abs(obj2 - obj)>0.00001) 
+    cout<<"OBJECTIVES DIFFER"<<endl;
+  else
+    cout<<"Objectives match."<<endl;
 
   return 0;
 }
