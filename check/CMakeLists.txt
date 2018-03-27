@@ -54,7 +54,7 @@ set(failInstances
 set(settings
     " "
     "-m"
-    "-pOn"
+    # "-pOn"
     )
 
 # define a macro to add tests
@@ -72,7 +72,7 @@ foreach(instance ${${instances}})
         # specify the instance and the settings load command
         set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
         # add a test and test properties
-        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:h2gmp> ${setting} -f ${inst})
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} -f ${inst})
         set_tests_properties (${name}${setting} PROPERTIES PASS_REGULAR_EXPRESSION "(Solve plain|multi)|Postsolve: ${solutionstatus}")
     endforeach(setting)
 endforeach(instance)
