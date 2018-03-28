@@ -1220,7 +1220,9 @@ int solveExternalPresolve(const char *fileName)
   problem.setRowValues(rowValue);
   problem.setRowDuals(rowDual);
 
-
+  //postsolve
+  problem.postsolve();
+  
   //report solution
 
   //check that obj value is the same by solving the original problemV
