@@ -1,4 +1,3 @@
-//using namespace std;
 #include "HAPI.h"
 #include "HConst.h"
 #include "HDual.h"
