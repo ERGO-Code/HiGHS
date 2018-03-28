@@ -1,42 +1,6 @@
 #include "HApp.h"
-#include "HAPI.h"
-#include "HConst.h"
-#include "HDual.h"
-#include "HTimer.h"
-#include "HTester.h"
-#include "HPresolve.h"
-#include "HCrash.h"
-#include "HinOut.h"
-//Just to write out boxed model
-#include "HMPSIO.h"
-#include <getopt.h>
-
-#include <set>
-#include <map>
-#include <vector>
-#include <cstring>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-
-//#define EXT_PRESOLVE  
-#ifdef EXT_PRESOLVE
-#include "core/Problem.hpp"
-#endif
 
 using namespace std;
-
-int solvePlain(const char *filename);
-int solvePlainAPI(const char *filename);
-int solveSCIP(const char *filename);
-int solveTasks(const char *filename);
-int solveMulti(const char *filename, const char *partitionfile = 0);
-int solvePlainWithPresolve(const char *filename);
-int solvePlainExperiments(const char *filename);
-int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
-int solveExternalPresolve(const char *fileName);
-double presolve(HModel &mod, double &time);
-int testIO(const char *filename);
 
 int debug = 0;
 
@@ -214,8 +178,10 @@ int main(int argc, char **argv)
     {
       if (presolve == 1)
         solvePlainWithPresolve(fileName);
+#ifdef EXT_PRESOLVE
       else if (presolve == 2)
         solveExternalPresolve(fileName);
+#endif
       //solvePlainExperiments(fileName);
       //testIO("fileIO");
     }
