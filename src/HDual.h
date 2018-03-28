@@ -128,13 +128,13 @@ public:
     void an_iz_vr_v();
 
     // Variant choice
-    int dual_variant;
-    int EdWt_Mode;
-    int Crash_Mode;
-    int Presolve_Mode;
+    int dual_variant = 0;
+    int EdWt_Mode = 0;
+    int Crash_Mode = 0;
+    int Presolve_Mode = 0;
 
     bool SolveBailout;
-    double TimeLimitValue;
+    double TimeLimitValue=0;
 
     // Analysis of rebuilds
     int totalRebuilds;
