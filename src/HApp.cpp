@@ -19,8 +19,11 @@
 #include <iostream>
 #include <iomanip>
 
-// for external presolve
+//#define EXT_PRESOLVE  
+#ifdef EXT_PRESOLVE
 #include "core/Problem.hpp"
+#endif
+
 using namespace std;
 
 int solvePlain(const char *filename);
@@ -1096,6 +1099,7 @@ int solveMulti(const char *filename, const char *partitionfile)
   return 0;
 }
 
+#ifdef EXT_PRESOLVE
 int solveExternalPresolve(const char *fileName)
 {
 
@@ -1216,3 +1220,4 @@ int solveExternalPresolve(const char *fileName)
 
   return 0;
 }
+#endif

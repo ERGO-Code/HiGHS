@@ -35,6 +35,12 @@ if(H2DEBUG)
 endif()
 message(STATUS "HIGHS debug: " ${H2DEBUG})
 
+option(EXT_PRESOLVE "External presolve" OFF)
+if(EXT_PRESOLVE)
+    add_definitions(-DEXT_PRESOLVE)
+endif()
+message(STATUS "External presolve: " ${EXT_PRESOLVE})
+
 option(JAJH_DEV "JAJH development" ON)
 if(JAJH_DEV)
     add_definitions(-DJAJH_dev)
