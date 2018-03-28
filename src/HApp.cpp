@@ -19,7 +19,7 @@
 #include <iostream>
 #include <iomanip>
 
-//#define EXT_PRESOLVE  
+#define EXT_PRESOLVE  
 #ifdef EXT_PRESOLVE
 #include "core/Problem.hpp"
 #endif
@@ -1213,6 +1213,13 @@ int solveExternalPresolve(const char *fileName)
     cout<<"Objectives match."<<endl;
 
   //pass reduced solutions back to external presolve class for postsolve
+  vector<double> colValue, colDual, rowValue, rowDual;
+  model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
+  problem.setPrimalValues(colValue); 
+  problem.setDualValues(colDual);
+  problem.setRowValues(rowValue);
+  problem.setRowDuals(rowDual);
+
 
   //report solution
 
