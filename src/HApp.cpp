@@ -1138,7 +1138,7 @@ int solveExternalPresolve(const char *fileName)
 
   //Update old HModel and set up solver to solve
   //TODO what is the second parameter objSense? Is it offset? 
-  const int * Astart = problem.getConstraintMatrix().getTransposeColStart();
+  vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
   const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
   const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
   vector<double> colLower = problem.getLowerBounds();
@@ -1164,7 +1164,7 @@ int solveExternalPresolve(const char *fileName)
   }
 
 
-  model.load_fromArrays(nCols, 0, 
+  model.load_fromArrays(nCols, 1, 
         &(problem.getObjective().coefficients[0]), 
         &colLower[0],
         &colUpper[0],
@@ -1172,26 +1172,45 @@ int solveExternalPresolve(const char *fileName)
         &rowLower[0],
         &rowUpper[0],
         problem.getConstraintMatrix().getNnz(),
-        Astart, Aindex, Avalue);
+        &Astart[0], Aindex, Avalue);
 
   //HModel model2;
   //RtCd = model2.load_fromMPS(fileName);
   //if (RtCd)
   //  return RtCd;
   
-
   model.scaleModel();
+
+
+  HPresolve *pre2 = new HPresolve();
+  model.copy_fromHModelToHPresolve(pre2);
+  pre2->initializeVectors();
+  pre2->print(0);
+
+
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();
 
-  //model2.scaleModel();
-  //HDual solver2;
-  //solver2.solve(&model2);
-  //double obj2 = model2.util_getObjectiveValue();
+  HModel model2;
+  RtCd = model2.load_fromMPS(fileName);
+  if (RtCd)
+    return RtCd;
+  model2.scaleModel();
+  
+  
+  HPresolve *pre3 = new HPresolve();
+  model2.copy_fromHModelToHPresolve(pre3);
+  pre3->initializeVectors();
+  pre3->print(0);
 
-  //if (abs(obj2 - obj)>0.00001) 
-  //  cout<<"OBJECTIVES DIFFER"<<endl;
+  
+  HDual solver2;
+  solver2.solve(&model2);
+  double obj2 = model2.util_getObjectiveValue();
+
+  if (abs(obj2 - obj)>0.00001) 
+    cout<<"OBJECTIVES DIFFER"<<endl;
   //else
   //  cout<<"Objectives match."<<endl;
 
