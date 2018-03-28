@@ -1106,38 +1106,33 @@ int solveExternalPresolve(const char *fileName)
 
   //Now we got a loaded model that we will pass to external presolve
   //set up data
-  //SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0],
-  //      model.numCol, model.Avalue.size());
+  SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0],
+        model.numCol, model.numRow, model.Avalue.size());
 
-  HPresolve *pre = new HPresolve();
-  model.copy_fromHModelToHPresolve(pre);
-  pre->makeARCopy();
-
-  SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0], &pre->ARindex[0],
-                               model.numRow, model.numCol, model.Avalue.size());
-
-  //ConstraintMatrix<double> M(matrix, matrix_transpose, model.rowLower, model.rowUpper);
+  //code below makes a row wise copy and passes that 
+  //HPresolve *pre = new HPresolve();
+  //model.copy_fromHModelToHPresolve(pre);
+  //pre->makeARCopy();
+  //SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0], &pre->ARindex[0],
+  //                            model.numRow, model.numCol, model.Avalue.size());
+  //problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
 
   Problem<double> problem;
   problem.setObjective(model.colCost);
-
-  string prName(fileName);
-  problem.setName(prName);
+  //string prName(fileName);
+  problem.setName(string(fileName));
 
   vector<double> rowLowerVec = model.rowLower;
   vector<double> rowUpperVec = model.rowUpper;
-  //problem.setConstraintMatrix(matrix_transpose, rowLowerVec, rowUpperVec, true);
+  problem.setConstraintMatrix(matrix_transpose, rowLowerVec, rowUpperVec, true);
 
-  problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
   problem.setVariableDomainsLP(model.colLower, model.colUpper);
   problem.fixInfiniteBounds(HSOL_CONST_INF);
 
   //presolve
   problem.presolve();
 
-
   //Update old HModel and set up solver to solve
-  //TODO what is the second parameter objSense? Is it offset? 
   vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
   const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
   const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
@@ -1181,16 +1176,15 @@ int solveExternalPresolve(const char *fileName)
   
   model.scaleModel();
 
-
-  HPresolve *pre2 = new HPresolve();
-  model.copy_fromHModelToHPresolve(pre2);
-  pre2->initializeVectors();
-  pre2->print(0);
-
+  //HPresolve *pre2 = new HPresolve();
+  //model.copy_fromHModelToHPresolve(pre2);
+  //pre2->initializeVectors();
+  //pre2->print(0);
 
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();
+
 
   HModel model2;
   RtCd = model2.load_fromMPS(fileName);
@@ -1199,21 +1193,20 @@ int solveExternalPresolve(const char *fileName)
   model2.scaleModel();
   
   
-  HPresolve *pre3 = new HPresolve();
-  model2.copy_fromHModelToHPresolve(pre3);
-  pre3->initializeVectors();
-  pre3->print(0);
+  //HPresolve *pre3 = new HPresolve();
+  //model2.copy_fromHModelToHPresolve(pre3);
+  //pre3->initializeVectors();
+  //pre3->print(0);
 
-  
+  //check
   HDual solver2;
   solver2.solve(&model2);
   double obj2 = model2.util_getObjectiveValue();
 
   if (abs(obj2 - obj)>0.00001) 
     cout<<"OBJECTIVES DIFFER"<<endl;
-  //else
-  //  cout<<"Objectives match."<<endl;
-
+  else
+    cout<<"Objectives match."<<endl;
 
   //pass reduced solutions back to external presolve class for postsolve
 

@@ -48,7 +48,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/bin/highs",
             "args": ["-p", "Ex", "-f", "${workspaceFolder}/../afiro.mps"],
-            "stopAtEntry": false,
+            "stopAtEntry": true,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": true,
