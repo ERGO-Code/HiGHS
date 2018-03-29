@@ -18,6 +18,7 @@ set(sources
     KktChStep.cpp
     HMPSIO.cpp
     HToyIO.cpp
+    HMpsFF.cpp
 )
 
 set(headers
@@ -40,7 +41,8 @@ set(headers
     HTimerPre.h
     KktCheck.h
     KktChStep.h
-	HMPSIO.h
+    HMPSIO.h
+    HMpsFF.h
 )
 
 add_library(libhighs ${sources})
