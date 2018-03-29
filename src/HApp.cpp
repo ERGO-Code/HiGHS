@@ -1059,9 +1059,11 @@ int solveMulti(const char *filename, const char *partitionfile)
   return 0;
 }
 
+#define EXT_PRESOLVE
 #ifdef EXT_PRESOLVE
 int solveExternalPresolve(const char *fileName)
-{
+{ 
+  
 
   HModel model;
   int RtCd = model.load_fromMPS(fileName);
