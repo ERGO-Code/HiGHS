@@ -81,7 +81,7 @@ private:
   parse(boost::iostreams::filtering_istream &file);
 
   int 
-  getStatus();
+  getStatus() {};
 
   enum class boundtype
   {

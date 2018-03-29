@@ -57,7 +57,11 @@ else()
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
 endif()
+find_package(Boost COMPONENTS iostreams REQUIRED)
 
+include_directories(${Boost_INCLUDE_DIRS})
+
+target_link_libraries(libhighs ${Boost_LIBRARIES})
 # create highs binary using library without pic
 add_executable(highs HApp.cpp)
 target_link_libraries(highs libhighs)
