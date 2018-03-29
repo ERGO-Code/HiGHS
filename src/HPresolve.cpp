@@ -2080,7 +2080,7 @@ void HPresolve::checkForChanges(int iteration)
 	{
 		//flagCol has one more element at end which is zero
 		//from removeDoubletonEquatoins, needed for AR matrix manipulation
-		if (none_of(flagCol.begin(), flagCol.begin() + numCol, [](int i) { return i == 0; }) ||
+		if (none_of(flagCol.begin(), flagCol.begin() + numCol, [](int i) { return i == 0; }) &&
 			none_of(flagRow.begin(), flagRow.begin() + numRow, [](int i) { return i == 0; }))
 		{
 			if (iPrint > 0)
