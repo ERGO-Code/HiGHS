@@ -1,3 +1,6 @@
+#ifndef HMPSIO_H_
+#define HMPSIO_H_
+
 #include <cmath>
 #include <cstring>
 #include <cstdio>
@@ -54,3 +57,5 @@ int isspace ( int c );
 char * fgets ( char * str, int num, FILE * stream );
 
 inline const char * const BoolToString(bool b);
+
+#endif
