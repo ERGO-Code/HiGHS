@@ -2,7 +2,10 @@
 #include "HConst.h"
 #include "HTimer.h"
 #include "HPresolve.h"
+
 #include "HMPSIO.h"
+//#include "HMpsFF.h"
+
 #include "HToyIO.h"
 
 #include <cctype>
@@ -62,7 +65,9 @@ int HModel::load_fromMPS(const char *filename)
 
   int mxNumRow = -1;
   int mxNumCol = -1;
-  int RtCd = readMPS(filename, mxNumRow, mxNumCol,
+
+  //int RtCd = readMPS(filename, 
+  int RtCd = readMPS(filename, mxNumCol, mxNumRow, 
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper,

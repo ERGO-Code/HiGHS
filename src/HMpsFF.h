@@ -46,6 +46,9 @@ template <typename REAL>
 class MpsParser
 {
 private:
+
+  int status;
+
   int numRow;
   int numCol;
   int objSense;
@@ -70,7 +73,7 @@ public:
   
   int getProb();
 
-  MpsParser() {}
+  MpsParser() : status(-1) {}
 private:
 
   /// load LP from MPS file as transposed triplet matrix
@@ -81,7 +84,9 @@ private:
   parse(boost::iostreams::filtering_istream &file);
 
   int 
-  getStatus() {};
+  getStatus() { 
+    return status;
+  };
 
   enum class boundtype
   {
@@ -671,9 +676,8 @@ int MpsParser<REAL>::loadProblem(const char *filename_, int &numRow_, int &numCo
               vector<int> &integerColumn_)
   {
     string filename(filename_);
-
-    MpsParser parser{};
-    parser.parseFile(filename);
+    
+    parseFile(filename);
 
     numRow_ = numRow;
     numCol_ = numCol;
@@ -689,20 +693,40 @@ int MpsParser<REAL>::loadProblem(const char *filename_, int &numRow_, int &numCo
     rowLower_ = rowUpper;
     integerColumn_ = integerColumn;
 
-    return parser.getStatus();
+    return getStatus();
   }
 
-class HMpsFF {
-  public: 
-  
-  HMpsFF();
+//class HMpsFF {
 
+//public: 
+  //HMpsFF() {}
+
+//private: 
+  /*
   int readMPS(const char *filename, int &numRow, int &numCol,
             int &objSense, double &objOffset,
             vector<int> &Astart, vector<int> &Aindex, vector<double> &Avalue,
             vector<double> &colCost, vector<double> &colLower, vector<double> &colUpper,
             vector<double> &rowLower, vector<double> &rowUpper,
-            vector<int> &integerColumn);
-};
+            vector<int> &integerColumn);*/
+//};
 
+int readMPS(const char *filename, int &numRow, int &numCol,
+//int HMpsFF::readMPS(const char *filename, int &numRow, int &numCol,
+            int &objSense, double &objOffset,
+            vector<int> &Astart, vector<int> &Aindex, vector<double> &Avalue,
+            vector<double> &colCost, vector<double> &colLower, vector<double> &colUpper,
+            vector<double> &rowLower, vector<double> &rowUpper,
+            vector<int> &integerColumn)
+{
+  MpsParser<double> parser{};
+  int result = parser.loadProblem(filename, numRow, numCol,
+                                              objSense, objOffset,
+                                              Astart, Aindex, Avalue,
+                                              colCost, colLower, colUpper,
+                                              rowLower, rowUpper,
+                                              integerColumn);
+                                              
+  return result;
+}
 #endif

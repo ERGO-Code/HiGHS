@@ -18,7 +18,6 @@ set(sources
     KktChStep.cpp
     HMPSIO.cpp
     HToyIO.cpp
-    HMpsFF.cpp
 )
 
 set(headers
@@ -59,7 +58,7 @@ else()
 endif()
 find_package(Boost COMPONENTS iostreams REQUIRED)
 
-include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS} "/home/s1131817/Programs/boost_1_61_0/")
 
 target_link_libraries(libhighs ${Boost_LIBRARIES})
 # create highs binary using library without pic
