@@ -1,3 +1,4 @@
+#define EXT_PRESOLVE
 #include "HApp.h"
 
 using namespace std;
@@ -1059,7 +1060,6 @@ int solveMulti(const char *filename, const char *partitionfile)
   return 0;
 }
 
-#define EXT_PRESOLVE
 #ifdef EXT_PRESOLVE
 int solveExternalPresolve(const char *fileName)
 { 
@@ -1095,7 +1095,7 @@ int solveExternalPresolve(const char *fileName)
   problem.fixInfiniteBounds(HSOL_CONST_INF);
 
   //presolve
-  problem.presolve();
+  //problem.presolve();
 
   //Update old HModel and set up solver to solve
   vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
