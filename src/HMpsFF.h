@@ -178,20 +178,20 @@ int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
     if (!status)
         fillArrays();
     
-    numRow_ = nRows;
-    numCol_ = nCols;
+    numRow_ = std::move(  nRows );
+    numCol_ = std::move(  nCols );
 
-    objSense_ = objSense;
-    objOffset_ = objOffset;
+    objSense_ = 1;
+    objOffset_ = 0;
     
-    Astart_ = Astart;
-    Aindex_ = Aindex;
-    Avalue_ = Avalue;
-    colCost_ = colCost;
-    colLower_ = colLower;
-    colUpper_ = colUpper;
-    rowLower_ = rowLower;
-    rowLower_ = rowUpper;
+    Astart_ = std::move(  Astart );
+    Aindex_ = std::move(  Aindex );
+    Avalue_ = std::move(  Avalue );
+    colCost_ = std::move(  colCost );
+    colLower_ = std::move(  colLower );
+    colUpper_ = std::move(  colUpper );
+    rowLower_ = std::move(  rowLower );
+    rowUpper_ = std::move(  rowUpper );
 
     return status;
   }
@@ -217,7 +217,7 @@ void MpsParser::fillArrays()
 {
     assert(nnz >= 0);
 
-    std::vector<double> colCost(size_t(nCols), 0.0);
+    colCost.assign(nCols, 0.0);
 
     for (auto i : coeffobj)
         colCost[i.first] = i.second;
@@ -270,6 +270,11 @@ int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in, int nCols_
 int MpsParser::parseFile(std::string filename)
 {
     std::ifstream file(filename, std::ifstream::in);
+    if (!file.good()) {
+        cout<<"Can not access file. Make sure it exists."<<std::endl;
+        return 1;
+    }
+
     boost::iostreams::filtering_istream in;
 
     if (boost::algorithm::ends_with(filename, ".gz"))
