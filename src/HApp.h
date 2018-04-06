@@ -1,18 +1,7 @@
 #ifndef HAPP_H_
 #define  HAPP_H_
 
-#include "HAPI.h"
-#include "HConst.h"
-#include "HDual.h"
-#include "HTimer.h"
-#include "HTester.h"
-#include "HPresolve.h"
-#include "HCrash.h"
-#include "HinOut.h"
-//Just to write out boxed model
-#include "HMPSIO.h"
 #include <getopt.h>
-
 #include <set>
 #include <map>
 #include <vector>
@@ -20,6 +9,24 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+
+#include "HAPI.h"
+#include "HConst.h"
+#include "HDual.h"
+#include "HTimer.h"
+#include "HTester.h"
+#include "HPresolve.h"
+#include "HCrash.h"
+
+//#include "HinOut.h"
+//Just to write out boxed model
+
+//new mps reader
+//#include "HMpsFF.h"
+
+//old mps reader
+//#include "HMPSIO.h"
+
 
 #ifdef EXT_PRESOLVE
 #include "core/Problem.hpp"
@@ -47,6 +54,6 @@ int solvePlainExperiments(const char *filename);
 int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
 int solveExternalPresolve(const char *fileName);
 double presolve(HModel &mod, double &time);
-int testIO(const char *filename);
+//int testIO(const char *filename);
 
 #endif

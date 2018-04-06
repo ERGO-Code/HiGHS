@@ -40,7 +40,8 @@ set(headers
     HTimerPre.h
     KktCheck.h
     KktChStep.h
-	HMPSIO.h
+    HMPSIO.h
+    HMpsFF.h
 )
 
 add_library(libhighs ${sources})
@@ -55,7 +56,11 @@ else()
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
 endif()
+find_package(Boost COMPONENTS iostreams REQUIRED)
 
+# include_directories(${Boost_INCLUDE_DIRS} "/home/s1131817/Programs/boost_1_61_0/")
+
+target_link_libraries(libhighs ${Boost_LIBRARIES})
 # create highs binary using library without pic
 add_executable(highs HApp.cpp)
 target_link_libraries(highs libhighs)
