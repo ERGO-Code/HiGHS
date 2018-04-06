@@ -1,4 +1,3 @@
-#define EXT_PRESOLVE
 #include "HApp.h"
 
 using namespace std;
@@ -186,7 +185,7 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
+/*
 int testIO(const char *filename)
 {
   //testIO solve the problem in file with presolve
@@ -249,6 +248,7 @@ int testIO(const char *filename)
   }
   return 0;
 }
+*/
 
 int solvePlain(const char *filename)
 {

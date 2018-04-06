@@ -3,8 +3,8 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 
-#include "HMPSIO.h"
-//#include "HMpsFF.h"
+#include "HMpsFF.h"
+//#include "HMPSIO.h"
 
 #include "HToyIO.h"
 
@@ -63,15 +63,20 @@ int HModel::load_fromMPS(const char *filename)
 
   //setup_loadMPS(filename);
 
-  int mxNumRow = -1;
-  int mxNumCol = -1;
-
-  //int RtCd = readMPS(filename, 
-  int RtCd = readMPS(filename, mxNumCol, mxNumRow, 
+  int RtCd = readMPS(filename, 
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper,
                      integerColumn);
+  
+  // for old mps reader uncomment below and the other header file 
+  // at the top of this file HMpsIO instead of HMpsFF
+  //int RtCd = readMPS(filename, -1, -1,
+  //                   numRow, numCol, objSense, objOffset,
+  //                   Astart, Aindex, Avalue,
+  //                   colCost, colLower, colUpper, rowLower, rowUpper,
+  //                   integerColumn);
+  
   if (RtCd)
   {
     totalTime += timer.getTime();
