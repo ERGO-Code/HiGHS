@@ -57,15 +57,13 @@ class MpsParser
     std::vector<double> colUpper;
     std::vector<double> rowLower;
     std::vector<double> rowUpper;
-    std::vector<int> integerColumn;
 
   public:
-    int loadProblem(const char *filename__, int &numRow_, int &numCol_,
-                    int &objSense_, double &objOffset_,
-                    std::vector<int> &Astart_, std::vector<int> &Aindex_, std::vector<double> &Avalue_,
-                    std::vector<double> &colCost_, std::vector<double> &colLower_, std::vector<double> &colUpper_,
-                    std::vector<double> &rowLower_, std::vector<double> &rowUpper_,
-                    std::vector<int> &integerColumn_);
+    int loadProblem(const char *filename_, int &numRow_, int &numCol_,
+              int &objSense_, double &objOffset_,
+              std::vector<int> &Astart_, std::vector<int> &Aindex_, std::vector<double> &Avalue_,
+              std::vector<double> &colCost_, std::vector<double> &colLower_, std::vector<double> &colUpper_,
+              std::vector<double> &rowLower_, std::vector<double> &rowUpper_);
 
     int getProb();
 
@@ -169,14 +167,13 @@ bool operator==(boost::string_ref word, std::string str)
 
 int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
               int &objSense_, double &objOffset_,
-              vector<int> &Astart_, vector<int> &Aindex_, vector<double> &Avalue_,
-              vector<double> &colCost_, vector<double> &colLower_, vector<double> &colUpper_,
-              vector<double> &rowLower_, vector<double> &rowUpper_,
-              vector<int> &integerColumn_)
+              std::vector<int> &Astart_, std::vector<int> &Aindex_, std::vector<double> &Avalue_,
+              std::vector<double> &colCost_, std::vector<double> &colLower_, std::vector<double> &colUpper_,
+              std::vector<double> &rowLower_, std::vector<double> &rowUpper_)
   {
-    string filename(filename_);
+    std::string filename(filename_);
     
-    parseFile(filename);
+    status = parseFile(filename);
 
     if (!status)
         fillArrays();
@@ -198,21 +195,20 @@ int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
 
     return status;
   }
-  int readMPS(const char *filename, int &numRow, int &numCol,
-//int HMpsFF::readMPS(const char *filename, int &numRow, int &numCol,
+
+int 
+readMPS(const char *filename, int &numRow, int &numCol,
             int &objSense, double &objOffset,
-            vector<int> &Astart, vector<int> &Aindex, vector<double> &Avalue,
-            vector<double> &colCost, vector<double> &colLower, vector<double> &colUpper,
-            vector<double> &rowLower, vector<double> &rowUpper,
-            vector<int> &integerColumn)
+            std::vector<int> &Astart, std::vector<int> &Aindex, std::vector<double> &Avalue,
+            std::vector<double> &colCost, std::vector<double> &colLower, std::vector<double> &colUpper,
+            std::vector<double> &rowLower, std::vector<double> &rowUpper)
 {
   MpsParser parser{};
   int result = parser.loadProblem(filename, numRow, numCol,
                                               objSense, objOffset,
                                               Astart, Aindex, Avalue,
                                               colCost, colLower, colUpper,
-                                              rowLower, rowUpper,
-                                              integerColumn);
+                                              rowLower, rowUpper);
                                               
   return result;
 }
@@ -805,5 +801,6 @@ MpsParser::parseBounds(boost::iostreams::filtering_istream &file)
 
     return parsekey::FAIL;
 }
+
 
 #endif

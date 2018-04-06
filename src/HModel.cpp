@@ -66,8 +66,7 @@ int HModel::load_fromMPS(const char *filename)
   int RtCd = readMPS(filename, 
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
-                     colCost, colLower, colUpper, rowLower, rowUpper,
-                     integerColumn);
+                     colCost, colLower, colUpper, rowLower, rowUpper);
   
   // for old mps reader uncomment below and the other header file 
   // at the top of this file HMpsIO instead of HMpsFF
