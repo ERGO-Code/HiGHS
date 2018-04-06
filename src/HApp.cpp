@@ -1064,7 +1064,6 @@ int solveMulti(const char *filename, const char *partitionfile)
 int solveExternalPresolve(const char *fileName)
 { 
   
-
   HModel model;
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
@@ -1095,7 +1094,7 @@ int solveExternalPresolve(const char *fileName)
   problem.fixInfiniteBounds(HSOL_CONST_INF);
 
   //presolve
-  //problem.presolve();
+  problem.presolve();
 
   //Update old HModel and set up solver to solve
   vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
