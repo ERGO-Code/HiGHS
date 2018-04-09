@@ -91,6 +91,7 @@ class MpsParser
         COLS,
         RHS,
         BOUNDS,
+        RANGES,
         NONE,
         END,
         FAIL,
@@ -147,6 +148,9 @@ class MpsParser
 
     MpsParser::parsekey
     parseRhs(boost::iostreams::filtering_istream &file);
+
+    MpsParser::parsekey
+    parseRanges(boost::iostreams::filtering_istream &file);
 
     MpsParser::parsekey
     parseBounds(boost::iostreams::filtering_istream &file);
@@ -316,6 +320,9 @@ int MpsParser::parse(boost::iostreams::filtering_istream &file)
         case MpsParser::parsekey::BOUNDS:
             keyword = parseBounds(file);
             break;
+        case MpsParser::parsekey::RANGES:
+            keyword = parseRanges(file);
+            break;
         case MpsParser::parsekey::FAIL:
             return 1;
             break;
@@ -364,6 +371,8 @@ MpsParser::checkFirstWord(std::string &strline,
             return MpsParser::parsekey::ROWS;
         else if (word == "RHS")
             return MpsParser::parsekey::RHS;
+        else if (word == "RANGES")
+            return MpsParser::parsekey::RANGES;
         else
             return MpsParser::parsekey::NONE;
     }
@@ -816,5 +825,72 @@ MpsParser::parseBounds(boost::iostreams::filtering_istream &file)
     return parsekey::FAIL;
 }
 
+MpsParser::parsekey
+MpsParser::parseRanges(boost::iostreams::filtering_istream &file)
+{
+    using namespace boost::spirit;
+    std::string strline;
+
+    while (getline(file, strline))
+    {
+        std::string::iterator it;
+        if (strline.size() == 0)
+            continue;
+
+        bool empty = true;
+        for (unsigned int i = 0; i < strline.size(); i++)
+            if (strline.at(i) != ' ' && strline.at(i) != '\t' && strline.at(i) != '\n')
+            {
+                empty = false;
+                break;
+            }
+        if (empty)
+            continue;
+
+        boost::string_ref word_ref;
+        MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
+
+        // start of new section?
+        if (key != parsekey::NONE)
+            return key;
+
+        int rowidx;
+
+        auto parsename = [&rowidx, this](std::string name) {
+            auto mit = rowname2idx.find(name);
+
+            assert(mit != rowname2idx.end());
+            rowidx = mit->second;
+
+            assert(rowidx >= 0);
+            assert(rowidx < nRows);
+        };
+
+        auto addrhs = [&rowidx, this](double val) {
+            if ((row_type[rowidx] == boundtype::EQ && val < 0 ) ||
+                row_type[rowidx] == boundtype::LE)
+            {
+                assert(rowrhs.at(rowidx) < infinity());
+                rowlhs.at(rowidx) = rowrhs.at(rowidx) - abs(val);
+            }
+
+            else //if (row_type[rowidx] == boundtype::EQ && val > 0 ||
+                 //row_type[rowidx] == boundtype::GE)
+            {
+                assert(rowlhs.at(rowidx) > (-infinity()));
+                rowrhs.at(rowidx) = rowrhs.at(rowidx) + abs(val);
+            }
+        };
+
+        if (!qi::phrase_parse(
+                it, strline.end(),
+                +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
+                  qi::double_[(addrhs)]),
+                ascii::space))
+            return parsekey::FAIL;
+    }
+
+    return MpsParser::parsekey::FAIL;
+}
 
 #endif
