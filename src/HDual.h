@@ -122,10 +122,11 @@ public:
     void RpVrSt();
     void iz_dvx_fwk();
     void rp_hsol_da_str();
-    void rp_hsol_si_it();
     void rp_hsol_pv_c(HVector *column) const;
     void rp_hsol_sol(HModel *ptr_model);
     void an_iz_vr_v();
+
+    void iterateRp();
 
     // Variant choice
     int dual_variant = 0;
@@ -210,6 +211,7 @@ public:
     double thetaPrimal;
     double alpha;
     double alphaRow;
+    double numericalTrouble;
 
     // Iteration counts
     int n_ph1_du_it;

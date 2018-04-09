@@ -81,7 +81,7 @@ int HModel::load_fromMPS(const char *filename)
     totalTime += timer.getTime();
     return RtCd;
   }
-
+/*
 #ifdef JAJH_dev
   int numIntegerColumn = 0;
   for (int c_n = 0; c_n < numCol; c_n++)
@@ -92,7 +92,7 @@ int HModel::load_fromMPS(const char *filename)
   if (numIntegerColumn)
     printf("MPS file has %d integer variables\n", numIntegerColumn);
 #endif
-
+*/
   numTot = numCol + numRow;
 
 #ifdef JAJH_dev
@@ -2373,8 +2373,8 @@ void HModel::computeDual()
     workDual[i] = workCost[i] - buffer.array[i - numCol];
   }
 #ifdef JAJH_dev
-  norm_dl_du = sqrt(norm_dl_du);
-  //    printf("computeDual():   ||DlDu|| = %11g\n", norm_dl_du);
+    norm_dl_du = sqrt(norm_dl_du);
+    printf("computeDual():   ||DlDu|| = %11g\n", norm_dl_du);
 #endif
   //Now have a nonbasic duals
   mlFg_haveNonbasicDuals = 1;
@@ -2575,15 +2575,13 @@ void HModel::flipBound(int iCol)
 // The major model updates. Factor calls factor.update; Matrix
 // calls matrix.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
-void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow, int *hint)
-{
-  timer.recordStart(HTICK_UPDATE_FACTOR);
-  factor.update(column, row_ep, iRow, hint);
-  //Now have a representation of B^{-1}, but it is not fresh
-  mlFg_haveInvert = 1;
-  if (countUpdate >= limitUpdate)
-    *hint = 1;
-  timer.recordFinish(HTICK_UPDATE_FACTOR);
+void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow, int *hint) {
+    timer.recordStart(HTICK_UPDATE_FACTOR);
+    factor.update(column, row_ep, iRow, hint);
+    //Now have a representation of B^{-1}, but it is not fresh
+    mlFg_haveInvert = 1;
+    if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
+    timer.recordFinish(HTICK_UPDATE_FACTOR);
 }
 
 void HModel::updateMatrix(int columnIn, int columnOut)
@@ -3883,11 +3881,9 @@ void HModel::util_reportMessage(const char *message)
   printf("%s\n", message);
 }
 
-void HModel::util_reportNumberIterationObjectiveValue()
-{
-  if (!intOption[INTOPT_PRINT_FLAG])
-    return;
-  printf("%10d  %20.10e\n", numberIteration, objective);
+void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
+  if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4) return;
+  printf("%10d  %20.10e  %2d\n", numberIteration, objective, i_v);
 }
 
 void HModel::util_reportSolverOutcome(const char *message)
@@ -3902,7 +3898,7 @@ void HModel::util_reportSolverOutcome(const char *message)
     printf("%s: NOT-OPT", message);
 #ifdef SCIP_dev
   double prObjVal = computePrObj();
-  double dlObjVal = abs(prObjVal - objective) / max(objective, max(abs(prObjVal), 1.0));
+  double dlObjVal = abs(prObjVal-objective)/max(abs(objective), max(abs(prObjVal), 1.0));
   printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
          prObjVal, objective, dlObjVal, numberIteration, totalTime);
 #else
@@ -3915,10 +3911,11 @@ void HModel::util_reportSolverOutcome(const char *message)
     util_reportModelStatus();
 }
 
-void HModel::util_reportSolverProgress()
-{
-  if (!intOption[INTOPT_PRINT_FLAG])
-    return;
+void HModel::util_reportSolverProgress() {
+  //Reports every 0.2 seconds until 50 seconds
+  //Reports every 1.0 second until 500 seconds
+  //Reports every 5.0 seconds thereafter
+  if (intOption[INTOPT_PRINT_FLAG] != 2) return;
   static double nextReport = 0;
   double currentTime = timer.getTime();
   if (currentTime >= nextReport)
