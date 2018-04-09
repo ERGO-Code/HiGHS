@@ -252,17 +252,26 @@ int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in, int nCols_
 
         if (std::get<0>(entries.at(k)) != newColIndex)
         {
+            int nEmptyCols = std::get<0>(entries.at(k)) - newColIndex;
             newColIndex = std::get<0>(entries.at(k));
             if (newColIndex >= nCols_in)
                 return 1;
 
             Astart.at(newColIndex) = k;
+            for (int i=1; i < nEmptyCols; i++) {
+                Astart.at(newColIndex - i) = k;
+            }
         }
     }
 
     Astart.at(nCols_in) = nnz;
 
-    assert(std::is_sorted(Astart.begin(), Astart.end()));
+    for (int i=0; i<nCols_in; i++) {
+        if (Astart[i] > Astart[i+1]) {
+            std::cout<<"Error filling in matrix data\n";
+            return 1;
+        }
+    }
 
     return 0;
 }

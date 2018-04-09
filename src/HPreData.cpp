@@ -65,17 +65,17 @@ void HPreData::makeARCopy() {
     ARindex.resize(AcountX);
     ARvalue.resize(AcountX);
     for (int k = 0; k < AcountX; k++)
-        iwork[Aindex[k]]++;
+        iwork.at(Aindex.at(k))++;
     for (i = 1; i <= numRow; i++)
-        ARstart[i] = ARstart[i - 1] + iwork[i - 1];
+        ARstart.at(i) = ARstart.at(i - 1) + iwork.at(i - 1);
     for (i = 0; i < numRow; i++)
-        iwork[i] = ARstart[i];
+        iwork.at(i) = ARstart.at(i);
     for (int iCol = 0; iCol < numCol; iCol++) {
-        for (k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
-            int iRow = Aindex[k];
-            int iPut = iwork[iRow]++;
-            ARindex[iPut] = iCol;
-            ARvalue[iPut] = Avalue[k];
+        for (k = Astart.at(iCol); k < Astart.at(iCol + 1); k++) {
+            int iRow = Aindex.at(k);
+            int iPut = iwork.at(iRow)++;
+            ARindex.at(iPut) = iCol;
+            ARvalue.at(iPut) = Avalue[k];
         }
     }
 }
