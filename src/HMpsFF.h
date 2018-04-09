@@ -280,7 +280,7 @@ int MpsParser::parseFile(std::string filename)
 {
     std::ifstream file(filename, std::ifstream::in);
     if (!file.good()) {
-        cout<<"Can not access file. Make sure it exists."<<std::endl;
+        std::cout<<"Can not access file. Make sure it exists."<<std::endl;
         return 1;
     }
 
