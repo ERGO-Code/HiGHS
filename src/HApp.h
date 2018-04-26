@@ -1,4 +1,6 @@
-//using namespace std;
+#ifndef HAPP_H_
+#define  HAPP_H_
+
 #include "HAPI.h"
 #include "HConst.h"
 #include "HDual.h"
@@ -46,3 +48,5 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
 int solveExternalPresolve(const char *fileName);
 double presolve(HModel &mod, double &time);
 int testIO(const char *filename);
+
+#endif

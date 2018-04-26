@@ -1,3 +1,6 @@
+#ifndef HAPI_H_
+#define HAPI_H_
+
 void solve_fromArrays_dense(int* probStatus, int* basisStatus,
 			    const int XnumCol, const int XnumRow, 
 			    const int XobjSense, const int XobjOffset,
@@ -17,3 +20,4 @@ void solve_fromArrays(int* probStatus, int* basisStatus,
 		      double* colPrimalValues, double* colDualValues,
 		      double* rowPrimalValues, double* rowDualValues,
 		      int* basicVariables);
+#endif

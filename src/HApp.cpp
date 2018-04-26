@@ -1083,7 +1083,6 @@ int solveExternalPresolve(const char *fileName)
 
   Problem<double> problem;
   problem.setObjective(model.colCost);
-  //string prName(fileName);
   problem.setName(string(fileName));
 
   vector<double> rowLowerVec = model.rowLower;
@@ -1133,22 +1132,36 @@ int solveExternalPresolve(const char *fileName)
         problem.getConstraintMatrix().getNnz(),
         &Astart[0], Aindex, Avalue);
 
-  //HModel model2;
-  //RtCd = model2.load_fromMPS(fileName);
-  //if (RtCd)
-  //  return RtCd;
   
   model.scaleModel();
-
-  //HPresolve *pre2 = new HPresolve();
-  //model.copy_fromHModelToHPresolve(pre2);
-  //pre2->initializeVectors();
-  //pre2->print(0);
 
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();
 
+  //pass reduced solutions back to external presolve class for postsolve
+  vector<double> colValue, colDual, rowValue, rowDual;
+  model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
+  problem.setPrimalValues(colValue); 
+  problem.setDualValues(colDual);
+  problem.setRowValues(rowValue);
+  problem.setRowDuals(rowDual);
+
+  //postsolve
+  problem.postsolve();
+
+  //get solution from postsolve 
+  colValue = problem.getPrimalValues();
+  colDual  = problem.getDualValues();
+  rowValue = problem.getRowValues();
+  rowDual  = problem.getRowDuals();
+  
+  double objective = problem.getOptimalObjective();
+
+  //report solution
+  cout<<"Optimal objecive value after postsolve: "<< objective << endl;
+
+  //check that obj value is the same by solving the original problemV
 
   HModel model2;
   RtCd = model2.load_fromMPS(fileName);
@@ -1171,22 +1184,6 @@ int solveExternalPresolve(const char *fileName)
     cout<<"OBJECTIVES DIFFER"<<endl;
   else
     cout<<"Objectives match."<<endl;
-
-  //pass reduced solutions back to external presolve class for postsolve
-  vector<double> colValue, colDual, rowValue, rowDual;
-  model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
-  problem.setPrimalValues(colValue); 
-  problem.setDualValues(colDual);
-  problem.setRowValues(rowValue);
-  problem.setRowDuals(rowDual);
-
-  //postsolve
-  problem.postsolve();
-  
-  //report solution
-
-  //check that obj value is the same by solving the original problemV
-
   return 0;
 }
 #endif

@@ -1,3 +1,6 @@
+#ifndef HTOYIO_H
+#define HTOYIO_H
+
 //#include <cmath>
 //#include <cstring>
 //#include <cstdio>
@@ -13,3 +16,5 @@ int readToy_MIP_cpp(const char *filename, int* numRow_p, int* numCol_p, int* obj
 		  double ** A_cw_p,
 		  double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
 		  int** integerColumn);
+
+#endif

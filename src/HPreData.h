@@ -1,19 +1,11 @@
-/*
- * HPreData.h
- *
- *  Created on: 8 Jan 2017
- *      Author: ivet
- */
+#ifndef HPREDATA_H_
+#define HPREDATA_H_
 
 #include <vector>
 #include <list>
 #include <stack>
 #include <utility>
 #include <cstring>
-
-#ifndef HPREDATA_H_
-#define HPREDATA_H_
-
 
 #include "KktChStep.h"
 
