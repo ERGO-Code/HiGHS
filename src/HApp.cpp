@@ -172,12 +172,12 @@ int main(int argc, char **argv)
     {
       if (presolve == 1)
         solvePlainWithPresolve(fileName);
+        //solvePlainExperiments(fileName);
+        //testIO("fileIO");
 #ifdef EXT_PRESOLVE
       else if (presolve == 2)
         solveExternalPresolve(fileName);
 #endif
-      //solvePlainExperiments(fileName);
-      //testIO("fileIO");
     }
     else
       solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
@@ -914,7 +914,7 @@ double presolve(HModel &mod, double &time)
   HPresolve *pre = new HPresolve();
   mod.copy_fromHModelToHPresolve(pre);
   int status = pre->presolve();
-  if (!status)
+  if (status == HPresolve::Unset)
   {
     //pre->reportTimes();
     mod.load_fromPresolve(pre);
@@ -941,6 +941,18 @@ double presolve(HModel &mod, double &time)
     mod.util_reportSolverOutcome("Postsolve");
     time = mod.totalTime;
   }
+  else 
+  {
+      std::cout<< "Presolve detected problem status: ";
+      if ( status == HPresolve::Infeasible )
+        std::cout << "Infeasible" << std::endl;
+      else if ( status == HPresolve::Unbounded)
+        std::cout << "Unbounded" << std::endl;
+      else
+        std::cout << "Unknown, status=" << status << std::endl;
+      return 0;
+  }
+
   return mod.util_getObjectiveValue();
   delete pre;
 }
@@ -1000,6 +1012,10 @@ int solvePlainExperiments(const char *filename)
   solver2.solve(&model2);
   model2.util_reportSolverOutcome("SolvePlainExperiments");
   double obj2 = model2.util_getObjectiveValue();
+
+  //get primal column solution 
+  vector<double> colValue2, colDual2, rowValue2, rowDual2;
+  model.util_getPrimalDualValues(colValue2, colDual2, rowValue2, rowDual2);
 
   if (exp)
   {

@@ -18,7 +18,7 @@ int HPresolve::presolve(int print)
 	iPrint = print;
 	iKKTcheck = 0;
 
-	chk.print = 3; // 3 for experiments mode
+	chk.print = 0; // 3 for experiments mode
 	if (chk.print == 3)
 	{
 		iPrint = 0;
@@ -30,11 +30,6 @@ int HPresolve::presolve(int print)
 	}
 
 	//iPrint = 1;
-
-	if (iPrint || iKKTcheck)
-		debug = 1;
-
-	//#define KKT
 
 	//counter for the different types of reductions
 	countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -768,7 +763,6 @@ HPresolve::HPresolve()
 	hasChange = true;
 	iKKTcheck = 0;
 	iPrint = 0;
-	debug = 0;
 	countsFile = "";
 }
 
@@ -1136,8 +1130,10 @@ void HPresolve::setProblemStatus(const int s)
 		cout << "NOT-OPT status = 1, returned from solver after presolve: Problem infeasible.\n";
 	else if (s == Unbounded)
 		cout << "NOT-OPT status = 2, returned from solver after presolve: Problem unbounded.\n";
-	else if (s == 0)
+	else if (s == 0) {
+    status = Optimal;
 		return;
+  }
 	else
 		cout << "unknown problem status returned from solver after presolve: " << s << endl;
 	status = s;
@@ -2076,7 +2072,7 @@ void HPresolve::setPrimalValue(int j, double value)
 
 void HPresolve::checkForChanges(int iteration)
 {
-	if (iteration == 2)
+	if (iteration <= 2)
 	{
 		//flagCol has one more element at end which is zero
 		//from removeDoubletonEquatoins, needed for AR matrix manipulation

@@ -40,9 +40,7 @@ public:
 
 
 	//Solution data
-	int problemStatus;
 	int numberIteration;
-	double objVal;
 	double solveTime;
 
 	vector<double> colValue;
