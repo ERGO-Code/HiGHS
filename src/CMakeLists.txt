@@ -40,7 +40,8 @@ set(headers
     HTimerPre.h
     KktCheck.h
     KktChStep.h
-	HMPSIO.h
+    HMPSIO.h
+    HMpsFF.h
 )
 
 add_library(libhighs ${sources})
@@ -54,6 +55,16 @@ if(${BUILD_SHARED_LIBS})
 else()
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
+endif()
+
+if (UNIX)
+  find_package(Boost COMPONENTS iostreams)
+  if (Boost_FOUND)
+    add_definitions(-DBoost_FOUND)
+    # include_directories(${Boost_INCLUDE_DIRS} "/home/s1131817/Programs/boost_1_61_0/")
+    target_link_libraries(libhighs ${Boost_LIBRARIES})
+
+  endif()
 endif()
 
 # create highs binary using library without pic

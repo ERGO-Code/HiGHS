@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
+/*
 int testIO(const char *filename)
 {
   //testIO solve the problem in file with presolve
@@ -248,6 +248,7 @@ int testIO(const char *filename)
   }
   return 0;
 }
+*/
 
 int solvePlain(const char *filename)
 {
@@ -1077,8 +1078,8 @@ int solveMulti(const char *filename, const char *partitionfile)
 
 #ifdef EXT_PRESOLVE
 int solveExternalPresolve(const char *fileName)
-{
-
+{ 
+  
   HModel model;
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
