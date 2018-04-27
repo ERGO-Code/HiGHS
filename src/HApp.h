@@ -72,7 +72,7 @@ void printHelp(std::string execName) {
                 "  -t fName  : use pami with partition file fName\n"
                 "  -T time   : use a time limit\n"
                 "\n"
-                "Note:\n"
+                "Note: "
                 "The default parser reads fixed format MPS files. If a boost installation is present\n"
                 "free format MPS and .GZ (MPS) files can also be processed.\n"
                 );
