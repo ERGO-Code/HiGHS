@@ -3,7 +3,6 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 
-
 #ifdef Boost_FOUND
 #include "HMpsFF.h"
 #else
@@ -66,27 +65,27 @@ int HModel::load_fromMPS(const char *filename)
   modelName = filename;
 
   //setup_loadMPS(filename);
-  // Here differentiate between parsers! 
+  // Here differentiate between parsers!
 #ifdef Boost_FOUND
-  int RtCd = readMPS(filename, 
+  int RtCd = readMPS(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
 #else
-  int RtCd = readMPS(filename, -1, -1, 
+  int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
 #endif
 
-  // for old mps reader uncomment below and the other header file 
+  // for old mps reader uncomment below and the other header file
   // at the top of this file HMpsIO instead of HMpsFF
   //int RtCd = readMPS(filename, -1, -1,
   //                   numRow, numCol, objSense, objOffset,
   //                   Astart, Aindex, Avalue,
   //                   colCost, colLower, colUpper, rowLower, rowUpper,
   //                   integerColumn);
-  
+
   if (RtCd)
   {
     totalTime += timer.getTime();
