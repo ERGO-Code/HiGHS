@@ -56,14 +56,15 @@ public:
     HTimerPre timer; //holds enum for main presolve rules
 
     enum stat {
+      Unset = 0, 
     	Infeasible = 1,
     	Unbounded = 2,
-    	Empty = 3
+    	Empty = 3,
+      Optimal = 4,
     };
 
 private: 
     bool hasChange;
-    int debug;
     int status=0;  //0 is unassigned, see enum stat
 
     list<int> singRow;    		//singleton rows 
