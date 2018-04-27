@@ -656,23 +656,24 @@ MpsParser::parseRhs(boost::iostreams::filtering_istream &file)
             assert(mit != rowname2idx.end());
             rowidx = mit->second;
 
-            assert(rowidx >= 0);
             assert(rowidx < nRows);
         };
 
         auto addrhs = [&rowidx, this](double val) {
-            if (row_type[rowidx] == boundtype::EQ ||
-                row_type[rowidx] == boundtype::LE)
-            {
-                assert(size_t(rowidx) < rowrhs.size());
-                rowrhs[rowidx] = val;
-            }
+            if (rowidx > -1) {
+              if (row_type[rowidx] == boundtype::EQ ||
+                  row_type[rowidx] == boundtype::LE)
+              {
+                  assert(size_t(rowidx) < rowrhs.size());
+                  rowrhs[rowidx] = val;
+              }
 
-            if (row_type[rowidx] == boundtype::EQ ||
-                row_type[rowidx] == boundtype::GE)
-            {
-                assert(size_t(rowidx) < rowlhs.size());
-                rowlhs[rowidx] = val;
+              if (row_type[rowidx] == boundtype::EQ ||
+                  row_type[rowidx] == boundtype::GE)
+              {
+                  assert(size_t(rowidx) < rowlhs.size());
+                  rowlhs[rowidx] = val;
+              }
             }
         };
 
