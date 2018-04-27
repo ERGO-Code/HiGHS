@@ -1,5 +1,5 @@
 #ifndef HAPP_H_
-#define  HAPP_H_
+#define HAPP_H_
 
 #include <getopt.h>
 #include <set>
@@ -26,7 +26,6 @@
 
 //old mps reader
 //#include "HMPSIO.h"
-
 
 #ifdef EXT_PRESOLVE
 #include "core/Problem.hpp"

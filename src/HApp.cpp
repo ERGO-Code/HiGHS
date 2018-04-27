@@ -942,16 +942,16 @@ double presolve(HModel &mod, double &time)
     mod.util_reportSolverOutcome("Postsolve");
     time = mod.totalTime;
   }
-  else 
+  else
   {
-      std::cout<< "Presolve detected problem status: ";
-      if ( status == HPresolve::Infeasible )
-        std::cout << "Infeasible" << std::endl;
-      else if ( status == HPresolve::Unbounded)
-        std::cout << "Unbounded" << std::endl;
-      else
-        std::cout << "Unknown, status=" << status << std::endl;
-      return 0;
+    std::cout << "Presolve detected problem status: ";
+    if (status == HPresolve::Infeasible)
+      std::cout << "Infeasible" << std::endl;
+    else if (status == HPresolve::Unbounded)
+      std::cout << "Unbounded" << std::endl;
+    else
+      std::cout << "Unknown, status=" << status << std::endl;
+    return 0;
   }
 
   return mod.util_getObjectiveValue();
@@ -1014,7 +1014,7 @@ int solvePlainExperiments(const char *filename)
   model2.util_reportSolverOutcome("SolvePlainExperiments");
   double obj2 = model2.util_getObjectiveValue();
 
-  //get primal column solution 
+  //get primal column solution
   vector<double> colValue2, colDual2, rowValue2, rowDual2;
   model.util_getPrimalDualValues(colValue2, colDual2, rowValue2, rowDual2);
 
@@ -1078,8 +1078,8 @@ int solveMulti(const char *filename, const char *partitionfile)
 
 #ifdef EXT_PRESOLVE
 int solveExternalPresolve(const char *fileName)
-{ 
-  
+{
+
   HModel model;
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
@@ -1088,9 +1088,9 @@ int solveExternalPresolve(const char *fileName)
   //Now we got a loaded model that we will pass to external presolve
   //set up data
   SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0],
-        model.numCol, model.numRow, model.Avalue.size());
+                                         model.numCol, model.numRow, model.Avalue.size());
 
-  //code below makes a row wise copy and passes that 
+  //code below makes a row wise copy and passes that
   //HPresolve *pre = new HPresolve();
   //model.copy_fromHModelToHPresolve(pre);
   //pre->makeARCopy();
@@ -1114,8 +1114,8 @@ int solveExternalPresolve(const char *fileName)
 
   //Update old HModel and set up solver to solve
   vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
-  const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
-  const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
+  const int *Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double *Avalue = problem.getConstraintMatrix().getTransposeValues();
   vector<double> colLower = problem.getLowerBounds();
   vector<double> colUpper = problem.getUpperBounds();
   vector<double> rowLower = problem.getConstraintMatrix().getLeftHandSides();
@@ -1123,33 +1123,33 @@ int solveExternalPresolve(const char *fileName)
 
   int nCols = problem.getNCols();
   int nRows = problem.getNRows();
- 
-  for (int i=0; i<nCols; i++) {
+
+  for (int i = 0; i < nCols; i++)
+  {
     if (colLower.at(i) <= -HSOL_CONST_INF)
       colLower.at(i) = -HSOL_CONST_INF;
     if (colUpper.at(i) >= HSOL_CONST_INF)
       colUpper.at(i) = HSOL_CONST_INF;
   }
 
-  for (int i=0; i<nRows; i++) {
+  for (int i = 0; i < nRows; i++)
+  {
     if (rowLower.at(i) <= -HSOL_CONST_INF)
       rowLower.at(i) = -HSOL_CONST_INF;
     if (rowUpper.at(i) >= HSOL_CONST_INF)
       rowUpper.at(i) = HSOL_CONST_INF;
   }
 
+  model.load_fromArrays(nCols, 1,
+                        &(problem.getObjective().coefficients[0]),
+                        &colLower[0],
+                        &colUpper[0],
+                        nRows,
+                        &rowLower[0],
+                        &rowUpper[0],
+                        problem.getConstraintMatrix().getNnz(),
+                        &Astart[0], Aindex, Avalue);
 
-  model.load_fromArrays(nCols, 1, 
-        &(problem.getObjective().coefficients[0]), 
-        &colLower[0],
-        &colUpper[0],
-        nRows, 
-        &rowLower[0],
-        &rowUpper[0],
-        problem.getConstraintMatrix().getNnz(),
-        &Astart[0], Aindex, Avalue);
-
-  
   model.scaleModel();
 
   HDual solver;
@@ -1159,7 +1159,7 @@ int solveExternalPresolve(const char *fileName)
   //pass reduced solutions back to external presolve class for postsolve
   vector<double> colValue, colDual, rowValue, rowDual;
   model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
-  problem.setPrimalValues(colValue); 
+  problem.setPrimalValues(colValue);
   problem.setDualValues(colDual);
   problem.setRowValues(rowValue);
   problem.setRowDuals(rowDual);
@@ -1167,16 +1167,16 @@ int solveExternalPresolve(const char *fileName)
   //postsolve
   problem.postsolve();
 
-  //get solution from postsolve 
+  //get solution from postsolve
   colValue = problem.getPrimalValues();
-  colDual  = problem.getDualValues();
+  colDual = problem.getDualValues();
   rowValue = problem.getRowValues();
-  rowDual  = problem.getRowDuals();
-  
+  rowDual = problem.getRowDuals();
+
   double objective = problem.getOptimalObjective();
 
   //report solution
-  cout<<"Optimal objecive value after postsolve: "<< objective << endl;
+  cout << "Optimal objecive value after postsolve: " << objective << endl;
 
   //check that obj value is the same by solving the original problemV
 
@@ -1185,8 +1185,7 @@ int solveExternalPresolve(const char *fileName)
   if (RtCd)
     return RtCd;
   model2.scaleModel();
-  
-  
+
   //HPresolve *pre3 = new HPresolve();
   //model2.copy_fromHModelToHPresolve(pre3);
   //pre3->initializeVectors();
@@ -1197,10 +1196,10 @@ int solveExternalPresolve(const char *fileName)
   solver2.solve(&model2);
   double obj2 = model2.util_getObjectiveValue();
 
-  if (abs(obj2 - obj)>0.00001) 
-    cout<<"OBJECTIVES DIFFER"<<endl;
+  if (abs(obj2 - obj) > 0.00001)
+    cout << "OBJECTIVES DIFFER" << endl;
   else
-    cout<<"Objectives match."<<endl;
+    cout << "Objectives match." << endl;
   return 0;
 }
 #endif
