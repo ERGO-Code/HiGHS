@@ -13,13 +13,12 @@ int main(int argc, char **argv)
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
 
-#ifdef JAJH_dev
-  cout << "====================================================================================" << endl;
-  cout << "Running hsol" << endl;
-#else
-  cout << "====================================================================================" << endl;
-  cout << "Running hsol" << endl;
-#endif
+
+  if (argc == 1) {
+    std::cout<< "Error: No file specified. \n"<< std::endl;
+    printHelp(argv[0]);
+    return 0;
+  }
 
   if (argc == 4 && strcmp(argv[1], "-repeat") == 0)
   {
@@ -90,18 +89,7 @@ int main(int argc, char **argv)
       if (opt == 'e')
         fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
       else
-        fprintf(stderr, "usage: %s [options] -f fName.mps \n%s", argv[0],
-                "Options: \n"
-                "  -p On(Off): use presolve\n"
-                "  -c mode   : set crash mode to mode. Values:\n"
-                "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
-                "  -e edWt   : set edge weight to edWt. Values: \n"
-                "            : Dan Dvx DSE DSE0 DSE1\n\n"
-                "  -s        : use option sip\n"
-                "  -S        : use option SCIP (to test utilities)\n"
-                "  -m [cut]  : use pami. Cutoff optional double value.\n"
-                "  -t fName  : use pami with partition file fName"
-                "  -T time   : use a time limit");
+        printHelp(argv[0]);
     default:
       cout << endl;
       abort();
@@ -109,29 +97,51 @@ int main(int argc, char **argv)
   //Set defaults
   if (!filename)
   {
+#ifdef JAJH_dev
     fileName = "ml.mps";
     printf("Setting default value filenameMode = %s\n", fileName);
+#else 
+    std::cout<< "No file specified. "<< std::endl;
+    printHelp(argv[0]);
+    return 0;
+#endif 
   }
+  // Check if file exists
+  else if ( access( fileName, F_OK ) == -1 ) 
+  {
+    std::cout<< "Error: File Not Found.\n"<< std::endl;
+    printHelp(argv[0]);
+    return 0;
+  }
+
   if (!presolve)
   {
     presolveMode = "Off";
     printf("Setting default value presolveMode = %s\n", presolveMode);
   }
+
   if (!crash)
   {
     crashMode = "Off";
     printf("Setting default value crashMode = %s\n", crashMode);
   }
+
   if (!edgeWeight)
   {
     edWtMode = "DSE1";
     printf("Setting default value edWtMode = %s\n", edWtMode);
   }
+
+  cout << "====================================================================================" << endl;
+  cout << "Running HiGHS" << endl;
+ 
   //parallel
   if (sip)
     solveTasks(fileName);
+
   if (scip)
     solveSCIP(fileName);
+
   else if (pami)
   {
     if (partitionFile)
