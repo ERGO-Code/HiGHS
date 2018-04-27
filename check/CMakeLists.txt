@@ -44,7 +44,7 @@ set(infeasibleInstances
     )
 
 set(unboundedInstances
-    # "gas11\;         unbounded"
+     "gas11\;         unbounded"
     )
 
 set(failInstances
