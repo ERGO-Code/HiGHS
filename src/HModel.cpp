@@ -1955,6 +1955,8 @@ void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model)
   colUpper = ptr_model.colUpper;
   rowLower = ptr_model.rowLower;
   rowUpper = ptr_model.rowUpper;
+
+  objSense = 1;
 }
 
 void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model)
@@ -1970,6 +1972,8 @@ void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model)
   colUpper = ptr_model->colUpper;
   rowLower = ptr_model->rowLower;
   rowUpper = ptr_model->rowUpper;
+
+  objSense = 1;
 }
 
 void HModel::copy_fromHPresolveToHModelImplied(HPresolve &ptr_model)
