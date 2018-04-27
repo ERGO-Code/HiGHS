@@ -2,7 +2,14 @@
 #include "HConst.h"
 #include "HTimer.h"
 #include "HPresolve.h"
+
+
+#ifdef Boost_FOUND
+#include "HMpsFF.h"
+#else
 #include "HMPSIO.h"
+#endif
+
 #include "HToyIO.h"
 
 #include <cctype>
@@ -59,14 +66,27 @@ int HModel::load_fromMPS(const char *filename)
   modelName = filename;
 
   //setup_loadMPS(filename);
-
-  int mxNumRow = -1;
-  int mxNumCol = -1;
-  int RtCd = readMPS(filename, mxNumRow, mxNumCol,
+  // Here differentiate between parsers! 
+#ifdef Boost_FOUND
+  int RtCd = readMPS(filename, 
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
-                     colCost, colLower, colUpper, rowLower, rowUpper,
-                     integerColumn);
+                     colCost, colLower, colUpper, rowLower, rowUpper);
+#else
+  int RtCd = readMPS(filename, -1, -1, 
+                     numRow, numCol, objSense, objOffset,
+                     Astart, Aindex, Avalue,
+                     colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
+#endif
+
+  // for old mps reader uncomment below and the other header file 
+  // at the top of this file HMpsIO instead of HMpsFF
+  //int RtCd = readMPS(filename, -1, -1,
+  //                   numRow, numCol, objSense, objOffset,
+  //                   Astart, Aindex, Avalue,
+  //                   colCost, colLower, colUpper, rowLower, rowUpper,
+  //                   integerColumn);
+  
   if (RtCd)
   {
     totalTime += timer.getTime();
