@@ -944,14 +944,16 @@ double presolve(HModel &mod, double &time)
   }
   else 
   {
-      std::cout<< "Presolve detected problem status: ";
       if ( status == HPresolve::Infeasible )
-        std::cout << "Infeasible" << std::endl;
+        mod.problemStatus = 1;
       else if ( status == HPresolve::Unbounded)
-        std::cout << "Unbounded" << std::endl;
-      else
+        mod.problemStatus = 2;
+      else {
         std::cout << "Unknown, status=" << status << std::endl;
-      return 0;
+        return 0;
+      }
+
+      mod.util_reportSolverOutcome("Presolve");
   }
 
   return mod.util_getObjectiveValue();
