@@ -14,6 +14,8 @@ int main(int argc, char **argv)
   double TimeLimit_ArgV = HSOL_CONST_INF;
 
 
+  std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+
   if (argc == 1) {
     std::cout<< "Error: No file specified. \n"<< std::endl;
     printHelp(argv[0]);
@@ -101,7 +103,7 @@ int main(int argc, char **argv)
     fileName = "ml.mps";
     printf("Setting default value filenameMode = %s\n", fileName);
 #else 
-    std::cout<< "No file specified. "<< std::endl;
+    std::cout << "No file specified. " << std::endl;
     printHelp(argv[0]);
     return 0;
 #endif 
@@ -109,7 +111,7 @@ int main(int argc, char **argv)
   // Check if file exists
   else if ( access( fileName, F_OK ) == -1 ) 
   {
-    std::cout<< "Error: File Not Found.\n"<< std::endl;
+    std::cout << "Error: File Not Found.\n" << std::endl;
     printHelp(argv[0]);
     return 0;
   }
@@ -133,7 +135,7 @@ int main(int argc, char **argv)
   }
 
   cout << "====================================================================================" << endl;
-  cout << "Running HiGHS" << endl;
+  cout << "Running solver" << endl;
  
   //parallel
   if (sip)
