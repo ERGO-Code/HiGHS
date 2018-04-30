@@ -29,7 +29,7 @@
 //#include "HMPSIO.h"
 
 #ifdef EXT_PRESOLVE
-#include "core/Problem.hpp"
+#include "core/Presolve.hpp"
 #endif
 
 const int HiGHS_probStatusUnset = -1;
