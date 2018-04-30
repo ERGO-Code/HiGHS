@@ -1097,6 +1097,54 @@ int solveMulti(const char *filename, const char *partitionfile)
 }
 
 #ifdef EXT_PRESOLVE
+
+void copyMatrix(const Problem<double>& problem, vector<int>& Astart, vector<int>& Aend, vector<int>& Aindex, vector<double>& Avalue) {
+
+ 
+  int numCol = problem.getNCols();
+  int nnz = problem.getConstraintMatrix().getNnz();
+
+  assert((unsigned int) numCol + 1 == Aend.size());
+  assert((unsigned int) numCol + 1 == Astart.size());
+
+  vector<pair<int, size_t>> vp;
+  vp.reserve(numCol);
+
+  for (int i = 0; i != numCol; ++i)
+  {
+    vp.push_back(make_pair(Astart.at(i), i));
+  }
+
+  // Sorting will put lower values ahead of larger ones,
+  // resolving ties using the original index
+  sort(vp.begin(), vp.end());
+
+  vector<int> Aendtmp;
+  Aendtmp = Aend;
+  const int* Aindex_ = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double* Avalue_ = problem.getConstraintMatrix().getTransposeValues();
+
+  int iPut = 0;
+  for (size_t i = 0; i != vp.size(); ++i)
+    {
+      int col = vp.at(i).second;
+        int k = vp.at(i).first;
+        Astart.at(col) = iPut;
+        while (k < Aendtmp.at(col))
+        {
+            Avalue[iPut] = Avalue_[k];
+            Aindex[iPut] = Aindex_[k];
+            iPut++;
+          k++;
+        }
+        Aend.at(col) = iPut;
+    }
+
+  assert(iPut == nnz);
+
+  return;
+}
+
 int solveExternalPresolve(const char *fileName)
 {
 
@@ -1121,21 +1169,53 @@ int solveExternalPresolve(const char *fileName)
   Problem<double> problem;
   problem.setObjective(model.colCost);
   problem.setName(string(fileName));
-
-  vector<double> rowLowerVec = model.rowLower;
-  vector<double> rowUpperVec = model.rowUpper;
-  problem.setConstraintMatrix(matrix_transpose, rowLowerVec, rowUpperVec, true);
-
+  problem.setConstraintMatrix(matrix_transpose, model.rowLower, model.rowUpper, true);
   problem.setVariableDomainsLP(model.colLower, model.colUpper);
   problem.fixInfiniteBounds(HSOL_CONST_INF);
 
   //presolve
-  problem.presolve();
+  Presolve<double> presolve;
+  //presolve.addPresolveMethod(...);
+  presolve.apply(problem);
+
+
+  //Load presolved problem in solver 
 
   //Update old HModel and set up solver to solve
-  vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
-  const int *Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
-  const double *Avalue = problem.getConstraintMatrix().getTransposeValues();
+  vector<int>      Astart = problem.getConstraintMatrix().getTransposeColStart();
+  vector<int>        Aend = problem.getConstraintMatrix().getTransposeColEnd();
+
+  int*       Aindex_p = NULL;
+  double*    Avalue_p = NULL;
+
+  vector<int> Aindex;
+  vector<double> Avalue;
+
+  //check if matrix copy is necessary
+  int numCol = problem.getNCols();
+  bool isNeeded = false;
+  for (int i=0; i< numCol; ++i) {
+    if (Astart[i+1] != Aend[i]) {
+      isNeeded = true;
+      break;
+    }
+  }
+  
+  //if we need matrix copy
+  if (isNeeded) {
+    int nnz = problem.getConstraintMatrix().getNnz();
+    Aindex.resize(nnz);
+    Avalue.resize(nnz);
+    copyMatrix(problem, Astart, Aend, Aindex, Avalue);
+    Astart.at(numCol) = nnz;
+  }
+  //if not needed do not make matrix copy 
+  else {
+    Aindex_p = (int *) problem.getConstraintMatrix().getTransposeRowIndices();
+    Avalue_p = (double *) problem.getConstraintMatrix().getTransposeValues();
+  }
+
+
   vector<double> colLower = problem.getLowerBounds();
   vector<double> colUpper = problem.getUpperBounds();
   vector<double> rowLower = problem.getConstraintMatrix().getLeftHandSides();
@@ -1160,6 +1240,11 @@ int solveExternalPresolve(const char *fileName)
       rowUpper.at(i) = HSOL_CONST_INF;
   }
 
+  if (!Aindex_p)
+    Aindex_p = &Aindex[0];
+  if (!Avalue_p)
+    Avalue_p = &Avalue[0];
+
   model.load_fromArrays(nCols, 1,
                         &(problem.getObjective().coefficients[0]),
                         &colLower[0],
@@ -1168,10 +1253,11 @@ int solveExternalPresolve(const char *fileName)
                         &rowLower[0],
                         &rowUpper[0],
                         problem.getConstraintMatrix().getNnz(),
-                        &Astart[0], Aindex, Avalue);
+                        &Astart[0], Aindex_p, Avalue_p);
 
   model.scaleModel();
 
+  //solve 
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();
@@ -1222,4 +1308,6 @@ int solveExternalPresolve(const char *fileName)
     cout << "Objectives match." << endl;
   return 0;
 }
+
+
 #endif
