@@ -13,13 +13,14 @@ int main(int argc, char **argv)
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
 
-#ifdef JAJH_dev
-  cout << "====================================================================================" << endl;
-  cout << "Running hsol" << endl;
-#else
-  cout << "====================================================================================" << endl;
-  cout << "Running hsol" << endl;
-#endif
+
+  std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+
+  if (argc == 1) {
+    std::cout<< "Error: No file specified. \n"<< std::endl;
+    printHelp(argv[0]);
+    return 0;
+  }
 
   if (argc == 4 && strcmp(argv[1], "-repeat") == 0)
   {
@@ -90,18 +91,7 @@ int main(int argc, char **argv)
       if (opt == 'e')
         fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
       else
-        fprintf(stderr, "usage: %s [options] -f fName.mps \n%s", argv[0],
-                "Options: \n"
-                "  -p On(Off): use presolve\n"
-                "  -c mode   : set crash mode to mode. Values:\n"
-                "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
-                "  -e edWt   : set edge weight to edWt. Values: \n"
-                "            : Dan Dvx DSE DSE0 DSE1\n\n"
-                "  -s        : use option sip\n"
-                "  -S        : use option SCIP (to test utilities)\n"
-                "  -m [cut]  : use pami. Cutoff optional double value.\n"
-                "  -t fName  : use pami with partition file fName"
-                "  -T time   : use a time limit");
+        printHelp(argv[0]);
     default:
       cout << endl;
       abort();
@@ -109,29 +99,51 @@ int main(int argc, char **argv)
   //Set defaults
   if (!filename)
   {
+#ifdef JAJH_dev
     fileName = "ml.mps";
     printf("Setting default value filenameMode = %s\n", fileName);
+#else 
+    std::cout << "No file specified. " << std::endl;
+    printHelp(argv[0]);
+    return 0;
+#endif 
   }
+  // Check if file exists
+  else if ( access( fileName, F_OK ) == -1 ) 
+  {
+    std::cout << "Error: File Not Found.\n" << std::endl;
+    printHelp(argv[0]);
+    return 0;
+  }
+
   if (!presolve)
   {
     presolveMode = "Off";
     printf("Setting default value presolveMode = %s\n", presolveMode);
   }
+
   if (!crash)
   {
     crashMode = "Off";
     printf("Setting default value crashMode = %s\n", crashMode);
   }
+
   if (!edgeWeight)
   {
     edWtMode = "DSE1";
     printf("Setting default value edWtMode = %s\n", edWtMode);
   }
+
+  cout << "====================================================================================" << endl;
+  cout << "Running solver" << endl;
+ 
   //parallel
   if (sip)
     solveTasks(fileName);
+
   if (scip)
     solveSCIP(fileName);
+
   else if (pami)
   {
     if (partitionFile)
@@ -942,7 +954,7 @@ double presolve(HModel &mod, double &time)
     mod.util_reportSolverOutcome("Postsolve");
     time = mod.totalTime;
   }
-  else 
+  else
   {
       if ( status == HPresolve::Infeasible )
         mod.problemStatus = 1;
@@ -1016,7 +1028,7 @@ int solvePlainExperiments(const char *filename)
   model2.util_reportSolverOutcome("SolvePlainExperiments");
   double obj2 = model2.util_getObjectiveValue();
 
-  //get primal column solution 
+  //get primal column solution
   vector<double> colValue2, colDual2, rowValue2, rowDual2;
   model.util_getPrimalDualValues(colValue2, colDual2, rowValue2, rowDual2);
 
@@ -1080,8 +1092,8 @@ int solveMulti(const char *filename, const char *partitionfile)
 
 #ifdef EXT_PRESOLVE
 int solveExternalPresolve(const char *fileName)
-{ 
-  
+{
+
   HModel model;
   int RtCd = model.load_fromMPS(fileName);
   if (RtCd)
@@ -1090,9 +1102,9 @@ int solveExternalPresolve(const char *fileName)
   //Now we got a loaded model that we will pass to external presolve
   //set up data
   SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0], &model.Aindex[0],
-        model.numCol, model.numRow, model.Avalue.size());
+                                         model.numCol, model.numRow, model.Avalue.size());
 
-  //code below makes a row wise copy and passes that 
+  //code below makes a row wise copy and passes that
   //HPresolve *pre = new HPresolve();
   //model.copy_fromHModelToHPresolve(pre);
   //pre->makeARCopy();
@@ -1116,8 +1128,8 @@ int solveExternalPresolve(const char *fileName)
 
   //Update old HModel and set up solver to solve
   vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
-  const int * Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
-  const double * Avalue = problem.getConstraintMatrix().getTransposeValues();
+  const int *Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double *Avalue = problem.getConstraintMatrix().getTransposeValues();
   vector<double> colLower = problem.getLowerBounds();
   vector<double> colUpper = problem.getUpperBounds();
   vector<double> rowLower = problem.getConstraintMatrix().getLeftHandSides();
@@ -1125,33 +1137,33 @@ int solveExternalPresolve(const char *fileName)
 
   int nCols = problem.getNCols();
   int nRows = problem.getNRows();
- 
-  for (int i=0; i<nCols; i++) {
+
+  for (int i = 0; i < nCols; i++)
+  {
     if (colLower.at(i) <= -HSOL_CONST_INF)
       colLower.at(i) = -HSOL_CONST_INF;
     if (colUpper.at(i) >= HSOL_CONST_INF)
       colUpper.at(i) = HSOL_CONST_INF;
   }
 
-  for (int i=0; i<nRows; i++) {
+  for (int i = 0; i < nRows; i++)
+  {
     if (rowLower.at(i) <= -HSOL_CONST_INF)
       rowLower.at(i) = -HSOL_CONST_INF;
     if (rowUpper.at(i) >= HSOL_CONST_INF)
       rowUpper.at(i) = HSOL_CONST_INF;
   }
 
+  model.load_fromArrays(nCols, 1,
+                        &(problem.getObjective().coefficients[0]),
+                        &colLower[0],
+                        &colUpper[0],
+                        nRows,
+                        &rowLower[0],
+                        &rowUpper[0],
+                        problem.getConstraintMatrix().getNnz(),
+                        &Astart[0], Aindex, Avalue);
 
-  model.load_fromArrays(nCols, 1, 
-        &(problem.getObjective().coefficients[0]), 
-        &colLower[0],
-        &colUpper[0],
-        nRows, 
-        &rowLower[0],
-        &rowUpper[0],
-        problem.getConstraintMatrix().getNnz(),
-        &Astart[0], Aindex, Avalue);
-
-  
   model.scaleModel();
 
   HDual solver;
@@ -1161,7 +1173,7 @@ int solveExternalPresolve(const char *fileName)
   //pass reduced solutions back to external presolve class for postsolve
   vector<double> colValue, colDual, rowValue, rowDual;
   model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
-  problem.setPrimalValues(colValue); 
+  problem.setPrimalValues(colValue);
   problem.setDualValues(colDual);
   problem.setRowValues(rowValue);
   problem.setRowDuals(rowDual);
@@ -1169,16 +1181,16 @@ int solveExternalPresolve(const char *fileName)
   //postsolve
   problem.postsolve();
 
-  //get solution from postsolve 
+  //get solution from postsolve
   colValue = problem.getPrimalValues();
-  colDual  = problem.getDualValues();
+  colDual = problem.getDualValues();
   rowValue = problem.getRowValues();
-  rowDual  = problem.getRowDuals();
-  
+  rowDual = problem.getRowDuals();
+
   double objective = problem.getOptimalObjective();
 
   //report solution
-  cout<<"Optimal objecive value after postsolve: "<< objective << endl;
+  cout << "Optimal objecive value after postsolve: " << objective << endl;
 
   //check that obj value is the same by solving the original problemV
 
@@ -1187,8 +1199,7 @@ int solveExternalPresolve(const char *fileName)
   if (RtCd)
     return RtCd;
   model2.scaleModel();
-  
-  
+
   //HPresolve *pre3 = new HPresolve();
   //model2.copy_fromHModelToHPresolve(pre3);
   //pre3->initializeVectors();
@@ -1199,10 +1210,10 @@ int solveExternalPresolve(const char *fileName)
   solver2.solve(&model2);
   double obj2 = model2.util_getObjectiveValue();
 
-  if (abs(obj2 - obj)>0.00001) 
-    cout<<"OBJECTIVES DIFFER"<<endl;
+  if (abs(obj2 - obj) > 0.00001)
+    cout << "OBJECTIVES DIFFER" << endl;
   else
-    cout<<"Objectives match."<<endl;
+    cout << "Objectives match." << endl;
   return 0;
 }
 #endif
