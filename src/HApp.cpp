@@ -32,70 +32,78 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  while ((opt = getopt(argc, argv, "p:c:e:sSm::t:T:df:")) != EOF)
+  if (argc == 2) {
+    filename = 1;
+    fileName = argv[1];
+  }
+  
+  else {
+    while ((opt = getopt(argc, argv, "p:c:e:sSm::t:T:df:")) != EOF)
     switch (opt)
     {
-    case 'f':
-      filename = 1;
-      cout << "Reading file " << optarg << endl;
-      fileName = optarg;
-      break;
-    case 'p':
-      presolveMode = optarg;
-      if (presolveMode[0] == 'O' && presolveMode[1] == 'n')
-        presolve = 1;
-      else if (presolveMode[0] == 'E' && presolveMode[1] == 'x')
-        presolve = 2;
-      else
-        presolve = 0;
-      cout << "Presolve is set to " << optarg << endl;
-      break;
-    case 's':
-      sip = 1;
-      break;
-    case 'S':
-      scip = 1;
-      break;
-    case 'm':
-      pami = 1;
-      if (optarg)
-      {
-        cut = atof(optarg);
-        cout << "Pami cutoff = " << cut << endl;
+        case 'f':
+        filename = 1;
+        cout << "Reading file " << optarg << endl;
+        fileName = optarg;
+        break;
+      case 'p':
+        presolveMode = optarg;
+        if (presolveMode[0] == 'O' && presolveMode[1] == 'n')
+          presolve = 1;
+        else if (presolveMode[0] == 'E' && presolveMode[1] == 'x')
+          presolve = 2;
+        else
+          presolve = 0;
+        cout << "Presolve is set to " << optarg << endl;
+        break;
+      case 's':
+        sip = 1;
+        break;
+      case 'S':
+        scip = 1;
+        break;
+      case 'm':
+        pami = 1;
+        if (optarg)
+        {
+          cut = atof(optarg);
+          cout << "Pami cutoff = " << cut << endl;
+        }
+        break;
+      case 'c':
+        crash = 1;
+        crashMode = optarg;
+        cout << "Crash is set to " << optarg << endl;
+        break;
+      case 'e':
+        edgeWeight = 1;
+        edWtMode = optarg;
+        cout << "Edge weight is set to " << optarg << endl;
+        break;
+      case 't':
+        partitionFile = optarg;
+        cout << "Partition file is set to " << optarg << endl;
+        break;
+      case 'T':
+        timeLimit = 1;
+        TimeLimit_ArgV = atof(optarg);
+        cout << "Time limit is set to " << optarg << endl;
+        break;
+      case '?':
+        if (opt == 'p')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Off On \n", opt);
+        if (opt == 'c')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
+        if (opt == 'e')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
+        else
+          printHelp(argv[0]);
+      default:
+        cout << endl;
+        abort();
       }
-      break;
-    case 'c':
-      crash = 1;
-      crashMode = optarg;
-      cout << "Crash is set to " << optarg << endl;
-      break;
-    case 'e':
-      edgeWeight = 1;
-      edWtMode = optarg;
-      cout << "Edge weight is set to " << optarg << endl;
-      break;
-    case 't':
-      partitionFile = optarg;
-      cout << "Partition file is set to " << optarg << endl;
-      break;
-    case 'T':
-      timeLimit = 1;
-      TimeLimit_ArgV = atof(optarg);
-      cout << "Time limit is set to " << optarg << endl;
-      break;
-    case '?':
-      if (opt == 'p')
-        fprintf(stderr, "Option -%c requires an argument. Current options: Off On \n", opt);
-      if (opt == 'c')
-        fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
-      if (opt == 'e')
-        fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
-      else
-        printHelp(argv[0]);
-    default:
-      cout << endl;
-      abort();
-    }
+  }
+
   //Set defaults
   if (!filename)
   {
