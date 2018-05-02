@@ -957,19 +957,21 @@ double presolve(HModel &mod, double &time)
   else
   {
       if ( status == HPresolve::Infeasible )
-        mod.problemStatus = 1;
+        mod.problemStatus = LP_Status_Infeasible;
       else if ( status == HPresolve::Unbounded)
-        mod.problemStatus = 2;
+        mod.problemStatus = LP_Status_Unbounded;
       else {
         std::cout << "Unknown, status=" << status << std::endl;
+        mod.problemStatus = LP_Status_Failed;
+        delete pre;
         return 0;
       }
 
       mod.util_reportSolverOutcome("Presolve");
   }
 
-  return mod.util_getObjectiveValue();
   delete pre;
+  return mod.util_getObjectiveValue();
 }
 
 int solvePlainExperiments(const char *filename)
