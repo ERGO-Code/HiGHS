@@ -10,8 +10,11 @@ set(successInstances
     "bore3d\;           0.1373080394e4"
     "brandy\;           0.1518509896e4"
     "capri\;            0.2690012913e4"
+    "cycle\;           -5.2263930249"
     "etamacro\;        -0.7557152333e3"
     "finnis\;           0.1727910655e6"
+    "greenbea\;        -7.2555248130"
+    "greenbeb\;        -4.3022602612"
     "grow7\;           -0.4778781181e8"
     "israel\;          -0.8966448218e6"
     "kb2\;             -0.1749900129e4"
@@ -54,7 +57,7 @@ set(failInstances
 set(settings
     " "
     "-m"
-    "-pOn"
+    #"-pOn"
     )
 
 # define a macro to add tests
