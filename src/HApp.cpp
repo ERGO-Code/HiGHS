@@ -1269,6 +1269,25 @@ int solveExternalPresolve(const char *fileName)
   //pass reduced solutions back to external presolve class for postsolve
   vector<double> colValue, colDual, rowValue, rowDual;
   model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
+
+/*
+  this checker not working but I fixed the other one
+  
+  //KKT check
+  KktCheck chk;
+  vector<int> inR(nRows, 1);
+  vector<int> inC(nCols, 1);
+	chk.setIndexVectors(inR, inC);
+	
+	chk.passSolution(colValue, colDual, rowDual);
+  chk.setMatrix(model.Astart, model.Aindex, model.Avalue);
+	chk.setBounds(model.colUpper, model.colLower);
+
+	chk.setNumbersCostRHS(nCols, nRows, rowLower, rowUpper, model.colCost);
+  chk.print = 1;
+  chk.checkKKT();
+*/
+
   problem.setPrimalValues(colValue);
   problem.setDualValues(colDual);
   problem.setRowValues(rowValue);
