@@ -1180,12 +1180,14 @@ int solveExternalPresolve(const char *fileName)
   //presolve
   Presolve<double> presolve;
 
-  presolve.addPresolveMethod(
+  /*
+   presolve.addPresolveMethod(
       std::unique_ptr<PresolveMethod<double>>{new SingletonRow<double>()} );
-  presolve.addPresolveMethod( std::unique_ptr<PresolveMethod<double>>{
+   presolve.addPresolveMethod( std::unique_ptr<PresolveMethod<double>>{
       new ConstraintPropagation<double>()} );
-  presolve.addPresolveMethod(
+   presolve.addPresolveMethod(
       std::unique_ptr<PresolveMethod<double>>{new DualFix<double>()} );
+  */
 
   presolve.apply(problem);
 
@@ -1277,8 +1279,9 @@ int solveExternalPresolve(const char *fileName)
   vector<double> colValue, colDual, rowValue, rowDual;
   model.util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
 
-/*
-  this checker not working but I fixed the other one
+
+  //this checker not working on adlittle but I fixed the other one
+  //code below still works on test.mps
   
   //KKT check
   KktCheck chk;
@@ -1293,7 +1296,7 @@ int solveExternalPresolve(const char *fileName)
 	chk.setNumbersCostRHS(nCols, nRows, rowLower, rowUpper, model.colCost);
   chk.print = 1;
   chk.checkKKT();
-*/
+
 
   problem.setPrimalValues(colValue);
   problem.setDualValues(colDual);
