@@ -1180,14 +1180,14 @@ int solveExternalPresolve(const char *fileName)
   //presolve
   Presolve<double> presolve;
 
-  /*
+
    presolve.addPresolveMethod(
       std::unique_ptr<PresolveMethod<double>>{new SingletonRow<double>()} );
    presolve.addPresolveMethod( std::unique_ptr<PresolveMethod<double>>{
       new ConstraintPropagation<double>()} );
    presolve.addPresolveMethod(
       std::unique_ptr<PresolveMethod<double>>{new DualFix<double>()} );
-  */
+ 
 
   presolve.apply(problem);
 
@@ -1268,7 +1268,7 @@ int solveExternalPresolve(const char *fileName)
                         problem.getConstraintMatrix().getNnz(),
                         &Astart[0], Aindex_p, Avalue_p);
 
-  model.scaleModel();
+  //model.scaleModel();
 
   //solve 
   HDual solver;
@@ -1291,9 +1291,12 @@ int solveExternalPresolve(const char *fileName)
 	
 	chk.passSolution(colValue, colDual, rowDual);
   chk.setMatrix(model.Astart, model.Aindex, model.Avalue);
-	chk.setBounds(model.colUpper, model.colLower);
+	chk.setBounds(colUpper, colLower);
 
-	chk.setNumbersCostRHS(nCols, nRows, rowLower, rowUpper, model.colCost);
+  vector<double> cost(nCols);
+  double * pp = &(problem.getObjective().coefficients[0]);
+  cost.assign(pp, pp + nCols);
+	chk.setNumbersCostRHS(nCols, nRows, rowLower, rowUpper, cost);
   chk.print = 1;
   chk.checkKKT();
 
