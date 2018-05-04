@@ -1179,7 +1179,14 @@ int solveExternalPresolve(const char *fileName)
 
   //presolve
   Presolve<double> presolve;
-  //presolve.addPresolveMethod(...);
+
+  presolve.addPresolveMethod(
+      std::unique_ptr<PresolveMethod<double>>{new SingletonRow<double>()} );
+  presolve.addPresolveMethod( std::unique_ptr<PresolveMethod<double>>{
+      new ConstraintPropagation<double>()} );
+  presolve.addPresolveMethod(
+      std::unique_ptr<PresolveMethod<double>>{new DualFix<double>()} );
+
   presolve.apply(problem);
 
 
