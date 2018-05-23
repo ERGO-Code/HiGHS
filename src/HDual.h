@@ -56,176 +56,182 @@ const bool rp_dvx = false;
 //const bool rp_dvx = true;
 const int mx_rp_numTot = 20;
 
-enum HDUAL_VARIANT {
-    HDUAL_VARIANT_PLAIN = 0, HDUAL_VARIANT_TASKS, HDUAL_VARIANT_MULTI,
+enum HDUAL_VARIANT
+{
+  HDUAL_VARIANT_PLAIN = 0,
+  HDUAL_VARIANT_TASKS,
+  HDUAL_VARIANT_MULTI,
 };
 
-class HDual {
+class HDual
+{
 public:
-    void solve(HModel *model, int variant = 0, int num_threads = 1);
+  void solve(HModel *model, int variant = 0, int num_threads = 1);
+
 public:
-    void init(int num_threads);
-    void init_slice(int init_sliced_num);
+  void init(int num_threads);
+  void init_slice(int init_sliced_num);
 
-    void solve_phase1();
-    void solve_phase2();
+  void solve_phase1();
+  void solve_phase2();
 
-    void rebuild();
-    void cleanup();
+  void rebuild();
+  void cleanup();
 
-    void iterate();
-    void iterate_tasks();
-    void iterate_multi();
+  void iterate();
+  void iterate_tasks();
+  void iterate_multi();
+  void iterateRp();
 
-    void chooseRow();
+  void chooseRow();
 
-    void chooseColumn(HVector *row_ep);
-    void chooseColumn_slice(HVector *row_ep);
+  void chooseColumn(HVector *row_ep);
+  void chooseColumn_slice(HVector *row_ep);
 
-    void updateFtranBFRT();
-    void updateFtran();
-    void updateFtranDSE(HVector *DSE_Vector);
-    void updateVerify();
-    void updateDual();
-    void updatePrimal(HVector *DSE_Vector);
-    void updatePivots();
+  void updateFtranBFRT();
+  void updateFtran();
+  void updateFtranDSE(HVector *DSE_Vector);
+  void updateVerify();
+  void updateDual();
+  void updatePrimal(HVector *DSE_Vector);
+  void updatePivots();
 
-    void major_chooseRow();
-    void major_chooseRowBtran();
-    void minor_chooseRow();
+  void major_chooseRow();
+  void major_chooseRowBtran();
+  void minor_chooseRow();
 
-    void minor_update();
-    void minor_updateDual();
-    void minor_updatePrimal();
-    void minor_updatePivots();
-    void minor_updateRows();
+  void minor_update();
+  void minor_updateDual();
+  void minor_updatePrimal();
+  void minor_updatePivots();
+  void minor_updateRows();
 
-    void major_update();
-    void major_updateFtranPrepare();
-    void major_updateFtranParallel();
-    void major_updateFtranFinal();
-    void major_updatePrimal();
-    void major_updateFactor();
+  void major_update();
+  void major_updateFtranPrepare();
+  void major_updateFtranParallel();
+  void major_updateFtranFinal();
+  void major_updatePrimal();
+  void major_updateFactor();
 
-    void major_rollback();
+  void major_rollback();
 
-    void setEdWt(const char *EdWtMode);
-    void setCrash(const char *CrashMode);
-    void setPresolve(const char *PresolveMode);
-    void setTimeLimit(double TimeLimit_ArgV);
+  void setEdWt(const char *EdWtMode);
+  void setCrash(const char *CrashMode);
+  void setPresolve(const char *PresolveMode);
+  void setTimeLimit(double TimeLimit_ArgV);
 
-    // Utility to get a row of the inverse of B for SCIP
-    int util_getBasisInvRow(int r, double* coef, int* inds, int* ninds);
+  // Utility to get a row of the inverse of B for SCIP
+  int util_getBasisInvRow(int r, double *coef, int *inds, int *ninds);
 
-    double an_bs_cond(HModel *ptr_model);
-    
-    void RpVrSt();
-    void iz_dvx_fwk();
-    void rp_hsol_da_str();
-    void rp_hsol_pv_c(HVector *column) const;
-    void rp_hsol_sol(HModel *ptr_model);
-    void an_iz_vr_v();
+  double an_bs_cond(HModel *ptr_model);
 
-    void iterateRp();
+  void RpVrSt();
+  void iz_dvx_fwk();
+  void rp_hsol_da_str();
+  //void rp_hsol_si_it();
+  void rp_hsol_pv_c(HVector *column) const;
+  void rp_hsol_sol(HModel *ptr_model);
+  void an_iz_vr_v();
 
-    // Variant choice
-    int dual_variant = 0;
-    int EdWt_Mode = 0;
-    int Crash_Mode = 0;
-    int Presolve_Mode = 0;
+  // Variant choice
+  int dual_variant = 0;
+  int EdWt_Mode = 0;
+  int Crash_Mode = 0;
+  int Presolve_Mode = 0;
 
-    bool SolveBailout;
-    double TimeLimitValue=0;
+  bool SolveBailout;
+  double TimeLimitValue = 0;
 
-    // Analysis of rebuilds
-    int totalRebuilds;
-    double totalRebuildTime;
+  // Analysis of rebuilds
+  int totalRebuilds;
+  double totalRebuildTime;
 
-    // Devex scalars
-    int n_dvx_fwk;
-    int n_dvx_it;
-    bool nw_dvx_fwk;
-    // Devex vector
-    vector<int> dvx_ix;
+  // Devex scalars
+  int n_dvx_fwk;
+  int n_dvx_it;
+  bool nw_dvx_fwk;
+  // Devex vector
+  vector<int> dvx_ix;
 
-    // DSE scalars
-    bool iz_DSE_wt;
-    int n_wg_DSE_wt;
+  // DSE scalars
+  bool iz_DSE_wt;
+  int n_wg_DSE_wt;
 
-    // Model
-    HModel *model;
-    double Tp; // Tolerance for primal
-    double Td; // Tolerance for dual
+  // Model
+  HModel *model;
+  double Tp; // Tolerance for primal
+  double Td; // Tolerance for dual
 
-    int numCol;
-    int numRow;
-    int numTot;
-    const HMatrix *matrix;
-    const HFactor *factor;
+  int numCol;
+  int numRow;
+  int numTot;
+  const HMatrix *matrix;
+  const HFactor *factor;
 
-    const int *jMove;
-    const double *workRange;
-    const double *baseLower;
-    const double *baseUpper;
-    double *baseValue;
-    double *workDual;
-//    JAJH: Only because I can't get these from HModel.h
-    double *workValue;
-    double *colLower;
-    double *colUpper;
-    double *rowLower;
-    double *rowUpper;
-    int *nonbasicFlag;
+  const int *jMove;
+  const double *workRange;
+  const double *baseLower;
+  const double *baseUpper;
+  double *baseValue;
+  double *workDual;
+  //    JAJH: Only because I can't get these from HModel.h
+  double *workValue;
+  double *colLower;
+  double *colUpper;
+  double *rowLower;
+  double *rowUpper;
+  int *nonbasicFlag;
 
-    vector<double> bs_cond_x;
-    vector<double> bs_cond_y;
-    vector<double> bs_cond_z;
-    vector<double> bs_cond_w;
-    
-    int solvePhase;
-    int invertHint;
+  vector<double> bs_cond_x;
+  vector<double> bs_cond_y;
+  vector<double> bs_cond_z;
+  vector<double> bs_cond_w;
 
-    HVector row_ep;
-    HVector row_ap;
-    HVector column;
-    HVector columnBFRT;
-    HVector columnDSE;
-    double row_epDensity;
-    double rowdseDensity;
-    double columnDensity;
+  int solvePhase;
+  int invertHint;
 
-    HDualRow dualRow;
+  HVector row_ep;
+  HVector row_ap;
+  HVector column;
+  HVector columnBFRT;
+  HVector columnDSE;
+  double row_epDensity;
+  double rowdseDensity;
+  double columnDensity;
 
-    // Solving related buffers
-    int dualInfeasCount;
+  HDualRow dualRow;
 
-    HDualRHS dualRHS;
+  // Solving related buffers
+  int dualInfeasCount;
 
-    // Simplex pivotal information
-    int rowOut;
-    int columnOut;
-    int sourceOut; // -1 from small to lower, +1 to upper
-    int columnIn;
-    double deltaPrimal;
-    double thetaDual;
-    double thetaPrimal;
-    double alpha;
-    double alphaRow;
-    double numericalTrouble;
+  HDualRHS dualRHS;
 
-    // Iteration counts
-    int n_ph1_du_it;
-    int n_ph2_du_it;
-    int n_pr_it;
-    // Partitioned coefficient matrix
-    int slice_num;
-    int slice_PRICE;
-    int slice_start[HSOL_SLICED_LIMIT + 1];
-    HMatrix slice_matrix[HSOL_SLICED_LIMIT];
-    HVector slice_row_ap[HSOL_SLICED_LIMIT];
-    HDualRow slice_dualRow[HSOL_SLICED_LIMIT];
+  // Simplex pivotal information
+  int rowOut;
+  int columnOut;
+  int sourceOut; // -1 from small to lower, +1 to upper
+  int columnIn;
+  double deltaPrimal;
+  double thetaDual;
+  double thetaPrimal;
+  double alpha;
+  double alphaRow;
+  double numericalTrouble;
 
-    // Multiple price data
+  // Iteration counts
+  int n_ph1_du_it;
+  int n_ph2_du_it;
+  int n_pr_it;
+  // Partitioned coefficient matrix
+  int slice_num;
+  int slice_PRICE;
+  int slice_start[HSOL_SLICED_LIMIT + 1];
+  HMatrix slice_matrix[HSOL_SLICED_LIMIT];
+  HVector slice_row_ap[HSOL_SLICED_LIMIT];
+  HDualRow slice_dualRow[HSOL_SLICED_LIMIT];
+
+
+  // Multiple price data
     struct MChoice {
         int rowOut;
         double baseValue;
@@ -269,5 +275,6 @@ public:
     double total_INVERT_TICK;
     double total_FT_inc_TICK;
 };
+
 
 #endif /* HDUAL_H_ */

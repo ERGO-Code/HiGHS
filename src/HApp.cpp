@@ -13,13 +13,14 @@ int main(int argc, char **argv)
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
 
-#ifdef JAJH_dev
-  cout << "====================================================================================" << endl;
-  cout << "Running hsol" << endl;
-#else
-  cout << "====================================================================================" << endl;
-  cout << "Running hsol" << endl;
-#endif
+
+  std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+
+  if (argc == 1) {
+    std::cout<< "Error: No file specified. \n"<< std::endl;
+    printHelp(argv[0]);
+    return 0;
+  }
 
   if (argc == 4 && strcmp(argv[1], "-repeat") == 0)
   {
@@ -31,112 +32,130 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  while ((opt = getopt(argc, argv, "p:c:e:sSm::t:T:df:")) != EOF)
+  if (argc == 2) {
+    filename = 1;
+    fileName = argv[1];
+  }
+  
+  else {
+    while ((opt = getopt(argc, argv, "p:c:e:sSm::t:T:df:")) != EOF)
     switch (opt)
     {
-    case 'f':
-      filename = 1;
-      cout << "Reading file " << optarg << endl;
-      fileName = optarg;
-      break;
-    case 'p':
-      presolveMode = optarg;
-      if (presolveMode[0] == 'O' && presolveMode[1] == 'n')
-        presolve = 1;
-      else if (presolveMode[0] == 'E' && presolveMode[1] == 'x')
-        presolve = 2;
-      else
-        presolve = 0;
-      cout << "Presolve is set to " << optarg << endl;
-      break;
-    case 's':
-      sip = 1;
-      break;
-    case 'S':
-      scip = 1;
-      break;
-    case 'm':
-      pami = 1;
-      if (optarg)
-      {
-        cut = atof(optarg);
-        cout << "Pami cutoff = " << cut << endl;
+        case 'f':
+        filename = 1;
+        cout << "Reading file " << optarg << endl;
+        fileName = optarg;
+        break;
+      case 'p':
+        presolveMode = optarg;
+        if (presolveMode[0] == 'O' && presolveMode[1] == 'n')
+          presolve = 1;
+        else if (presolveMode[0] == 'E' && presolveMode[1] == 'x')
+          presolve = 2;
+        else
+          presolve = 0;
+        cout << "Presolve is set to " << optarg << endl;
+        break;
+      case 's':
+        sip = 1;
+        break;
+      case 'S':
+        scip = 1;
+        break;
+      case 'm':
+        pami = 1;
+        if (optarg)
+        {
+          cut = atof(optarg);
+          cout << "Pami cutoff = " << cut << endl;
+        }
+        break;
+      case 'c':
+        crash = 1;
+        crashMode = optarg;
+        cout << "Crash is set to " << optarg << endl;
+        break;
+      case 'e':
+        edgeWeight = 1;
+        edWtMode = optarg;
+        cout << "Edge weight is set to " << optarg << endl;
+        break;
+      case 't':
+        partitionFile = optarg;
+        cout << "Partition file is set to " << optarg << endl;
+        break;
+      case 'T':
+        timeLimit = 1;
+        TimeLimit_ArgV = atof(optarg);
+        cout << "Time limit is set to " << optarg << endl;
+        break;
+      case '?':
+        if (opt == 'p')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Off On \n", opt);
+        if (opt == 'c')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
+        if (opt == 'e')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
+        else
+          printHelp(argv[0]);
+      default:
+        cout << endl;
+        abort();
       }
-      break;
-    case 'c':
-      crash = 1;
-      crashMode = optarg;
-      cout << "Crash is set to " << optarg << endl;
-      break;
-    case 'e':
-      edgeWeight = 1;
-      edWtMode = optarg;
-      cout << "Edge weight is set to " << optarg << endl;
-      break;
-    case 't':
-      partitionFile = optarg;
-      cout << "Partition file is set to " << optarg << endl;
-      break;
-    case 'T':
-      timeLimit = 1;
-      TimeLimit_ArgV = atof(optarg);
-      cout << "Time limit is set to " << optarg << endl;
-      break;
-    case '?':
-      if (opt == 'p')
-        fprintf(stderr, "Option -%c requires an argument. Current options: Off On \n", opt);
-      if (opt == 'c')
-        fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
-      if (opt == 'e')
-        fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
-      else
-        fprintf(stderr, "usage: %s [options] -f fName.mps \n%s", argv[0],
-                "Options: \n"
-                "  -p On(Off): use presolve\n"
-                "  -c mode   : set crash mode to mode. Values:\n"
-                "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
-                "  -e edWt   : set edge weight to edWt. Values: \n"
-                "            : Dan Dvx DSE DSE0 DSE1\n\n"
-                "  -s        : use option sip\n"
-                "  -S        : use option SCIP (to test utilities)\n"
-                "  -m [cut]  : use pami. Cutoff optional double value.\n"
-                "  -t fName  : use pami with partition file fName"
-                "  -T time   : use a time limit"
-                "  -d        : debug mode on\n");
-    default:
-      cout << endl;
-      abort();
-    }
+  }
+
   //Set defaults
   if (!filename)
   {
+#ifdef JAJH_dev
     fileName = "ml.mps";
     printf("Setting default value filenameMode = %s\n", fileName);
+#else 
+    std::cout << "No file specified. " << std::endl;
+    printHelp(argv[0]);
+    return 0;
+#endif 
   }
+  // Check if file exists
+  else if ( access( fileName, F_OK ) == -1 ) 
+  {
+    std::cout << "Error: File Not Found.\n" << std::endl;
+    printHelp(argv[0]);
+    return 0;
+  }
+
   if (!presolve)
   {
     presolveMode = "Off";
     printf("Setting default value presolveMode = %s\n", presolveMode);
   }
+
   if (!crash)
   {
     crashMode = "Off";
     printf("Setting default value crashMode = %s\n", crashMode);
   }
+
   if (!edgeWeight)
   {
     edWtMode = "DSE1";
     printf("Setting default value edWtMode = %s\n", edWtMode);
   }
-    //parallel
 #ifdef JAJH_dev
   printf("HApp: sip = %d; scip = %d; pami = %d; presolve = %d;  crash = %d; edgeWeight = %d; timeLimit = %d\n",
          sip, scip, pami, presolve, crash, edgeWeight, timeLimit);
 #endif
+
+  cout << "====================================================================================" << endl;
+  cout << "Running solver" << endl;
+
+  //parallel
   if (sip)
     solveTasks(fileName);
+
   if (scip)
     solveSCIP(fileName);
+
   else if (pami)
   {
     if (partitionFile)
@@ -178,12 +197,12 @@ int main(int argc, char **argv)
     {
       if (presolve == 1)
         solvePlainWithPresolve(fileName);
+        //solvePlainExperiments(fileName);
+        //testIO("fileIO");
 #ifdef EXT_PRESOLVE
       else if (presolve == 2)
         solveExternalPresolve(fileName);
 #endif
-      //solvePlainExperiments(fileName);
-      //testIO("fileIO");
     }
     else
       solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
@@ -931,7 +950,7 @@ double presolve(HModel &mod, double &time)
   HPresolve *pre = new HPresolve();
   mod.copy_fromHModelToHPresolve(pre);
   int status = pre->presolve();
-  if (!status)
+  if (status == HPresolve::Unset)
   {
     //pre->reportTimes();
     mod.load_fromPresolve(pre);
@@ -958,8 +977,24 @@ double presolve(HModel &mod, double &time)
     mod.util_reportSolverOutcome("Postsolve");
     time = mod.totalTime;
   }
-  return mod.util_getObjectiveValue();
+  else
+  {
+      if ( status == HPresolve::Infeasible )
+        mod.problemStatus = LP_Status_Infeasible;
+      else if ( status == HPresolve::Unbounded)
+        mod.problemStatus = LP_Status_Unbounded;
+      else {
+        std::cout << "Unknown, status=" << status << std::endl;
+        mod.problemStatus = LP_Status_Failed;
+        delete pre;
+        return 0;
+      }
+
+      mod.util_reportSolverOutcome("Presolve");
+  }
+
   delete pre;
+  return mod.util_getObjectiveValue();
 }
 
 int solvePlainExperiments(const char *filename)
@@ -1017,6 +1052,10 @@ int solvePlainExperiments(const char *filename)
   solver2.solve(&model2);
   model2.util_reportSolverOutcome("SolvePlainExperiments");
   double obj2 = model2.util_getObjectiveValue();
+
+  //get primal column solution
+  vector<double> colValue2, colDual2, rowValue2, rowDual2;
+  model.util_getPrimalDualValues(colValue2, colDual2, rowValue2, rowDual2);
 
   if (exp)
   {
@@ -1077,6 +1116,54 @@ int solveMulti(const char *filename, const char *partitionfile)
 }
 
 #ifdef EXT_PRESOLVE
+
+void copyMatrix(const Problem<double>& problem, vector<int>& Astart, vector<int>& Aend, vector<int>& Aindex, vector<double>& Avalue) {
+
+ 
+  int numCol = problem.getNCols();
+  int nnz = problem.getConstraintMatrix().getNnz();
+
+  assert((unsigned int) numCol + 1 == Aend.size());
+  assert((unsigned int) numCol + 1 == Astart.size());
+
+  vector<pair<int, size_t>> vp;
+  vp.reserve(numCol);
+
+  for (int i = 0; i != numCol; ++i)
+  {
+    vp.push_back(make_pair(Astart.at(i), i));
+  }
+
+  // Sorting will put lower values ahead of larger ones,
+  // resolving ties using the original index
+  sort(vp.begin(), vp.end());
+
+  vector<int> Aendtmp;
+  Aendtmp = Aend;
+  const int* Aindex_ = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double* Avalue_ = problem.getConstraintMatrix().getTransposeValues();
+
+  int iPut = 0;
+  for (size_t i = 0; i != vp.size(); ++i)
+    {
+      int col = vp.at(i).second;
+        int k = vp.at(i).first;
+        Astart.at(col) = iPut;
+        while (k < Aendtmp.at(col))
+        {
+            Avalue[iPut] = Avalue_[k];
+            Aindex[iPut] = Aindex_[k];
+            iPut++;
+          k++;
+        }
+        Aend.at(col) = iPut;
+    }
+
+  assert(iPut == nnz);
+
+  return;
+}
+
 int solveExternalPresolve(const char *fileName)
 {
 
@@ -1101,21 +1188,53 @@ int solveExternalPresolve(const char *fileName)
   Problem<double> problem;
   problem.setObjective(model.colCost);
   problem.setName(string(fileName));
-
-  vector<double> rowLowerVec = model.rowLower;
-  vector<double> rowUpperVec = model.rowUpper;
-  problem.setConstraintMatrix(matrix_transpose, rowLowerVec, rowUpperVec, true);
-
+  problem.setConstraintMatrix(matrix_transpose, model.rowLower, model.rowUpper, true);
   problem.setVariableDomainsLP(model.colLower, model.colUpper);
   problem.fixInfiniteBounds(HSOL_CONST_INF);
 
   //presolve
-  problem.presolve();
+  Presolve<double> presolve;
+  //presolve.addPresolveMethod(...);
+  presolve.apply(problem);
+
+
+  //Load presolved problem in solver 
 
   //Update old HModel and set up solver to solve
-  vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
-  const int *Aindex = problem.getConstraintMatrix().getTransposeRowIndices();
-  const double *Avalue = problem.getConstraintMatrix().getTransposeValues();
+  vector<int>      Astart = problem.getConstraintMatrix().getTransposeColStart();
+  vector<int>        Aend = problem.getConstraintMatrix().getTransposeColEnd();
+
+  int*       Aindex_p = NULL;
+  double*    Avalue_p = NULL;
+
+  vector<int> Aindex;
+  vector<double> Avalue;
+
+  //check if matrix copy is necessary
+  int numCol = problem.getNCols();
+  bool isNeeded = false;
+  for (int i=0; i< numCol; ++i) {
+    if (Astart[i+1] != Aend[i]) {
+      isNeeded = true;
+      break;
+    }
+  }
+
+  //if we need matrix copy
+  if (isNeeded) {
+    int nnz = problem.getConstraintMatrix().getNnz();
+    Aindex.resize(nnz);
+    Avalue.resize(nnz);
+    copyMatrix(problem, Astart, Aend, Aindex, Avalue);
+    Astart.at(numCol) = nnz;
+  }
+  //if not needed do not make matrix copy 
+  else {
+    Aindex_p = (int *) problem.getConstraintMatrix().getTransposeRowIndices();
+    Avalue_p = (double *) problem.getConstraintMatrix().getTransposeValues();
+  }
+
+
   vector<double> colLower = problem.getLowerBounds();
   vector<double> colUpper = problem.getUpperBounds();
   vector<double> rowLower = problem.getConstraintMatrix().getLeftHandSides();
@@ -1140,6 +1259,11 @@ int solveExternalPresolve(const char *fileName)
       rowUpper.at(i) = HSOL_CONST_INF;
   }
 
+  if (!Aindex_p)
+    Aindex_p = &Aindex[0];
+  if (!Avalue_p)
+    Avalue_p = &Avalue[0];
+
   model.load_fromArrays(nCols, 1,
                         &(problem.getObjective().coefficients[0]),
                         &colLower[0],
@@ -1148,10 +1272,11 @@ int solveExternalPresolve(const char *fileName)
                         &rowLower[0],
                         &rowUpper[0],
                         problem.getConstraintMatrix().getNnz(),
-                        &Astart[0], Aindex, Avalue);
+                        &Astart[0], Aindex_p, Avalue_p);
 
   model.scaleModel();
 
+  //solve 
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();

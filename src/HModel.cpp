@@ -3,8 +3,11 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 
+#ifdef Boost_FOUND
 #include "HMpsFF.h"
-//#include "HMPSIO.h"
+#else
+#include "HMPSIO.h"
+#endif
 
 #include "HToyIO.h"
 
@@ -62,20 +65,27 @@ int HModel::load_fromMPS(const char *filename)
   modelName = filename;
 
   //setup_loadMPS(filename);
-
-  int RtCd = readMPS(filename, 
+  // Here differentiate between parsers!
+#ifdef Boost_FOUND
+  int RtCd = readMPS(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
-  
-  // for old mps reader uncomment below and the other header file 
+#else
+  int RtCd = readMPS(filename, -1, -1,
+                     numRow, numCol, objSense, objOffset,
+                     Astart, Aindex, Avalue,
+                     colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
+#endif
+
+  // for old mps reader uncomment below and the other header file
   // at the top of this file HMpsIO instead of HMpsFF
   //int RtCd = readMPS(filename, -1, -1,
   //                   numRow, numCol, objSense, objOffset,
   //                   Astart, Aindex, Avalue,
   //                   colCost, colLower, colUpper, rowLower, rowUpper,
   //                   integerColumn);
-  
+
   if (RtCd)
   {
     totalTime += timer.getTime();
@@ -1944,6 +1954,8 @@ void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model)
   colUpper = ptr_model.colUpper;
   rowLower = ptr_model.rowLower;
   rowUpper = ptr_model.rowUpper;
+
+  objSense = 1;
 }
 
 void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model)
@@ -1959,6 +1971,8 @@ void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model)
   colUpper = ptr_model->colUpper;
   rowLower = ptr_model->rowLower;
   rowUpper = ptr_model->rowUpper;
+
+  objSense = 1;
 }
 
 void HModel::copy_fromHPresolveToHModelImplied(HPresolve &ptr_model)
