@@ -3,11 +3,11 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 
-#ifdef Boost_FOUND
-#include "HMpsFF.h"
-#else
+//#ifdef Boost_FOUND
+//#include "HMpsFF.h"
+//#else
 #include "HMPSIO.h"
-#endif
+//#endif
 
 #include "HToyIO.h"
 
@@ -66,17 +66,17 @@ int HModel::load_fromMPS(const char *filename)
 
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
-#ifdef Boost_FOUND
-  int RtCd = readMPS(filename,
-                     numRow, numCol, objSense, objOffset,
-                     Astart, Aindex, Avalue,
-                     colCost, colLower, colUpper, rowLower, rowUpper);
-#else
+  //#ifdef Boost_FOUND
+  //  int RtCd = readMPS(filename,
+  //                     numRow, numCol, objSense, objOffset,
+  //                     Astart, Aindex, Avalue,
+  //                     colCost, colLower, colUpper, rowLower, rowUpper);
+  //#else
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
-#endif
+  //#endif
 
   // for old mps reader uncomment below and the other header file
   // at the top of this file HMpsIO instead of HMpsFF
@@ -3897,7 +3897,9 @@ void HModel::util_reportMessage(const char *message)
 
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
   if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4) return;
-  printf("%10d  %20.10e  %2d\n", numberIteration, objective, i_v);
+  //Suppress i_v so inverHint isn't reported for output comparison with hsol1.0
+  //  printf("%10d  %20.10e  %2d\n", numberIteration, objective, i_v);
+  printf("%10d  %20.10e\n", numberIteration, objective);
 }
 
 void HModel::util_reportSolverOutcome(const char *message)

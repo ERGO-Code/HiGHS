@@ -278,7 +278,7 @@ int testIO(const char *filename)
 int solvePlain(const char *filename)
 {
   HModel model;
-  //    model.intOption[INTOPT_PRINT_FLAG] = 1;
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
   int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
   if (RtCd)
@@ -310,6 +310,7 @@ int solvePlain(const char *filename)
 int solvePlainAPI(const char *filename)
 {
   HModel model;
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
   int RpRtVec = 0;
   printf("\nUsing SolvePlainAPI\n\n");
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
@@ -720,6 +721,7 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
 #endif
   double lcSolveTime;
   HModel model;
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
   HDual solver;
 
   const bool presolveNoScale = false;

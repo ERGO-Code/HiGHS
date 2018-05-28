@@ -262,7 +262,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
       break;
   }
   
-#ifdef JAJH_dev
+#ifdef H2DEBUG
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
     int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
@@ -1579,9 +1579,14 @@ void HDual::iterateRp() {
   //deltaPrimal: Move to bound from basic value for leaving variable
   //thetaDual:   
   //thetaPrimal: 
-  //alpha:       
-  printf("Iter %9d: DuObj %11.4g; Ph%1d; NumCk %11.4g; InvHint%2d; LvR %7d; LvC %7d; EnC %7d; DlPr %11.4g; ThDu %11.4g; ThPr %11.4g; Aa %11.4g\n", 
-	 model->numberIteration, model->objective, solvePhase, numericalTrouble, invertHint,
+  //alpha:
+  //NumCk %11.4g; DuObj %11.4g; 
+  printf("Iter %9d: Ph%1d; InvHint%2d; LvR %7d; LvC %7d; EnC %7d; DlPr %11.4g; ThDu %11.4g; ThPr %11.4g; Aa %11.4g\n", 
+	 model->numberIteration,
+	 //model->objective,
+	 solvePhase,
+	 //numericalTrouble,
+	 invertHint,
 	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
 }
 
