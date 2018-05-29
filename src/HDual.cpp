@@ -645,7 +645,7 @@ void HDual::solve_phase2()
       //invertHint can be true for various reasons see HModel.h
       if (invertHint)
         break;
-      model->computeDuObj();
+      //      model->computeDuObj();
 #ifdef JAJH_dev
       //      double pr_obj_v = model->computePrObj();
       //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n",

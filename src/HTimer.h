@@ -100,11 +100,24 @@ public:
             printf(" %s", itemNames[itemList[i]].c_str());
         printf("\n");
         printf("profile-item ");
+	int suPerMille=0;
         for (int i = 0; i < itemCount; i++) {
-            int percent = 1000.0 * itemTicks[itemList[i]] / totalTick;
-            printf(" %3d", percent);
+            int perMille = 1000.0 * itemTicks[itemList[i]] / totalTick;
+            printf(" %3d", perMille);
+	    suPerMille += perMille;
         }
+	printf(" per mille: Sum = %d", suPerMille);
         printf("\n");
+	//        printf("profile-time\n");
+	//	double tick2sec = 3.6e-10;
+	//	double suTi=0;
+	//        for (int i = 0; i < itemCount; i++) {
+	//	  double ti = tick2sec*itemTicks[itemList[i]];
+	//	  printf(" %s: %6.4g\n", itemNames[itemList[i]].c_str(), ti);
+	//	  suTi += ti;
+	//        }
+	//	printf(" suTi = %g\n", suTi);
+	//	printf(" totalTick = %g\n", tick2sec*totalTick);
     }
 
     void reportLocal(int itemCount, int *itemList) {
@@ -117,11 +130,21 @@ public:
             printf(" %s", itemNames[itemList[i]].c_str());
         printf("\n");
         printf("profile-item ");
+	int suPerMille=0;
         for (int i = 0; i < itemCount; i++) {
-            int percent = 1000.0 * itemTicks[itemList[i]] / totalTick;
-            printf(" %3d", percent);
+            int perMille = 1000.0 * itemTicks[itemList[i]] / totalTick;
+            printf(" %3d", perMille);
+	    suPerMille += perMille;
         }
+	printf(" per mille: Sum = %d", suPerMille);
         printf("\n");
+
+	//        printf("profile-time\n");
+	//        for (int i = 0; i < itemCount; i++) {
+	//	  printf(" %s: %6.4g\n", itemNames[itemList[i]].c_str(), itemTicks[itemList[i]]);
+	//        }
+	//	printf(" totalTick = %g\n", totalTick);
+
     }
 
     // Current eclipsed time

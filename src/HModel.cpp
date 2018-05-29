@@ -3918,15 +3918,16 @@ void HModel::util_reportSolverOutcome(const char *message)
   printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
          prObjVal, objective, dlObjVal, numberIteration, totalTime);
 #else
-    //Greppable report line added
-    printf("grep_HiGHS,%15.8g,%d,%g\n", objective, numberIteration, totalTime);
-    //  printf("%16s %20.10e %10d %10.3f", modelName.c_str(),
-    //     objective, numberIteration, totalTime);
+  printf("%16s %20.10e %10d %10.3f", modelName.c_str(),
+         objective, numberIteration, totalTime);
 #endif
   if (problemStatus == LP_Status_Optimal)
     printf("\n");
   else
     util_reportModelStatus();
+  //Greppable report line added
+  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n",
+	 objective, numberIteration, totalTime, problemStatus, modelName.c_str());
 }
 
 void HModel::util_reportSolverProgress() {
