@@ -1108,6 +1108,9 @@ int solveMulti(const char *filename, const char *partitionfile)
 
   model.scaleModel();
   HDual solver;
+    //    solver.solve(&model, HDUAL_VARIANT_MULTI, 1);
+    //    solver.solve(&model, HDUAL_VARIANT_MULTI, 2);
+    //    solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
   solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 
   model.util_reportSolverOutcome("Solve multi");
