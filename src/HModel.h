@@ -279,6 +279,7 @@ public:
     void util_reportSolverProgress();
 
     // Methods for reporting the model, its solution, row and column data and matrix
+    void util_reportModelDa(const char *filename);
     void util_reportModel();
     void util_reportModelSolution();
     void util_reportModelDimensions();

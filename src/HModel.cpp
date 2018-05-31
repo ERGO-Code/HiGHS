@@ -3,11 +3,12 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 
-//#ifdef Boost_FOUND
-//#include "HMpsFF.h"
-//#else
+//Remove FF MPS Read by commenting out lines 1,2,3,5 below
+#ifdef Boost_FOUND
+#include "HMpsFF.h"
+#else
 #include "HMPSIO.h"
-//#endif
+#endif
 
 #include "HToyIO.h"
 
@@ -66,17 +67,18 @@ int HModel::load_fromMPS(const char *filename)
 
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
-  //#ifdef Boost_FOUND
-  //  int RtCd = readMPS(filename,
-  //                     numRow, numCol, objSense, objOffset,
-  //                     Astart, Aindex, Avalue,
-  //                     colCost, colLower, colUpper, rowLower, rowUpper);
-  //#else
+  //Remove FF MPS Read by commenting out lines 1-6 and 11 below
+  #ifdef Boost_FOUND
+    int RtCd = readMPS(filename,
+                       numRow, numCol, objSense, objOffset,
+                       Astart, Aindex, Avalue,
+                       colCost, colLower, colUpper, rowLower, rowUpper);
+  #else
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
-  //#endif
+  #endif
 
   // for old mps reader uncomment below and the other header file
   // at the top of this file HMpsIO instead of HMpsFF
@@ -104,6 +106,13 @@ int HModel::load_fromMPS(const char *filename)
 #endif
 */
   numTot = numCol + numRow;
+  const char *ModelDaFileName = "HiGHS_ModelDa.txt";
+
+  util_reportModelDa(ModelDaFileName);
+#ifdef H2DEBUG
+  //  util_reportModelDa(filename);
+#endif
+
 
 #ifdef JAJH_dev
   //Use this next line to check the loading of a model from arrays
@@ -120,6 +129,7 @@ int HModel::load_fromMPS(const char *filename)
   totalTime += timer.getTime();
   return RtCd;
 }
+
 
 int HModel::load_fromToy(const char *filename)
 {
@@ -4364,3 +4374,44 @@ void HModel::util_anPrDuDgn()
   printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n",
          modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numCol);
 }
+
+void HModel::util_reportModelDa(const char *filename)
+{
+    vector<double> wkDseCol;
+    wkDseCol.resize(numRow);
+    for (int r_n=0; r_n<numRow; r_n++) wkDseCol[r_n]=0;
+    FILE *file = fopen(filename, "w");
+    if (file == 0) {
+      printf("util_reportModelDa: Not opened file OK\n");
+#ifdef JAJH_dev
+      printf("util_reportModelDa: Not opened file OK\n");
+#endif
+      //      return 1;
+    }
+    fprintf(file, "%d %d %d\n", numRow, numCol, Astart[numCol]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "%d, %20g\n", c_n, colCost[c_n]);
+    for (int c_n=0; c_n<numCol; c_n++) {
+      for (int el_n=Astart[c_n]; el_n<Astart[c_n+1]; el_n++) {
+	int r_n = Aindex[el_n];
+	wkDseCol[r_n] = Avalue[el_n];
+      }
+      int nnz = 0;
+      for (int r_n=0; r_n<numRow; r_n++) {
+	if (wkDseCol[r_n] != 0) nnz++;
+      }
+      fprintf(file, "%d %d\n", c_n, nnz);
+      for (int r_n=0; r_n<numRow; r_n++) {
+	if (wkDseCol[r_n] != 0) {
+	  fprintf(file, "%d, %20g\n", r_n, wkDseCol[r_n]);
+	}
+	wkDseCol[r_n] = 0;
+      }
+    }
+    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "%d, %20g\n", r_n, rowLower[r_n]);
+    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "%d, %20g\n", r_n, rowUpper[r_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "%d, %20g\n", c_n, colLower[c_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "%d, %20g\n", c_n, colUpper[c_n]);
+    fclose(file);
+}
+
+
