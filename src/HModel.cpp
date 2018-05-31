@@ -4389,7 +4389,7 @@ void HModel::util_reportModelDa(const char *filename)
       //      return 1;
     }
     fprintf(file, "%d %d %d\n", numRow, numCol, Astart[numCol]);
-    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "%d, %20g\n", c_n, colCost[c_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "ColCost, %d, %20g\n", c_n, colCost[c_n]);
     for (int c_n=0; c_n<numCol; c_n++) {
       for (int el_n=Astart[c_n]; el_n<Astart[c_n+1]; el_n++) {
 	int r_n = Aindex[el_n];
@@ -4399,18 +4399,18 @@ void HModel::util_reportModelDa(const char *filename)
       for (int r_n=0; r_n<numRow; r_n++) {
 	if (wkDseCol[r_n] != 0) nnz++;
       }
-      fprintf(file, "%d %d\n", c_n, nnz);
+      fprintf(file, "Mtx_Col_nnz, %d, %d\n", c_n, nnz);
       for (int r_n=0; r_n<numRow; r_n++) {
 	if (wkDseCol[r_n] != 0) {
-	  fprintf(file, "%d, %20g\n", r_n, wkDseCol[r_n]);
+	  fprintf(file, "MtxVRow, %d, %20g\n", r_n, wkDseCol[r_n]);
 	}
 	wkDseCol[r_n] = 0;
       }
     }
-    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "%d, %20g\n", r_n, rowLower[r_n]);
-    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "%d, %20g\n", r_n, rowUpper[r_n]);
-    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "%d, %20g\n", c_n, colLower[c_n]);
-    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "%d, %20g\n", c_n, colUpper[c_n]);
+    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "RowLB, %d, %20g\n", r_n, rowLower[r_n]);
+    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "RowUB, %d, %20g\n", r_n, rowUpper[r_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "ColLB, %d, %20g\n", c_n, colLower[c_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "ColUB, %d, %20g\n", c_n, colUpper[c_n]);
     fclose(file);
 }
 
