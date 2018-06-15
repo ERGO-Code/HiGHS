@@ -108,16 +108,16 @@ public:
         }
 	printf(" per mille: Sum = %d", suPerMille);
         printf("\n");
-	//        printf("profile-time\n");
-	//	double tick2sec = 3.6e-10;
-	//	double suTi=0;
-	//        for (int i = 0; i < itemCount; i++) {
-	//	  double ti = tick2sec*itemTicks[itemList[i]];
-	//	  printf(" %s: %6.4g\n", itemNames[itemList[i]].c_str(), ti);
-	//	  suTi += ti;
-	//        }
-	//	printf(" suTi = %g\n", suTi);
-	//	printf(" totalTick = %g\n", tick2sec*totalTick);
+	//	        printf("profile-time\n");
+	//		double tick2sec = 3.6e-10;
+	//		double suTi=0;
+	//	        for (int i = 0; i < itemCount; i++) {
+	//		  double ti = tick2sec*itemTicks[itemList[i]];
+	//		  printf(" %s: %6.4g\n", itemNames[itemList[i]].c_str(), ti);
+	//		  suTi += ti;
+	//	        }
+	//		printf(" suTi = %g\n", suTi);
+	//		printf(" totalTick = %g\n", tick2sec*totalTick);
     }
 
     void reportLocal(int itemCount, int *itemList) {

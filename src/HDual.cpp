@@ -266,7 +266,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
     int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
-			 HTICK_PRICE, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3,
+			 HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
 			 HTICK_FTRAN, HTICK_FTRAN_MIX, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR };
@@ -974,10 +974,12 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordFinish(HTICK_PRICE);
 
   // Choose column - possible
-  model->timer.recordStart(HTICK_CHUZC1);
+  model->timer.recordStart(HTICK_CHUZC0);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
+  model->timer.recordFinish(HTICK_CHUZC0);
+  model->timer.recordStart(HTICK_CHUZC1);
   dualRow.choose_makepack(&row_ap, 0);
   dualRow.choose_makepack(row_ep, numCol);
   dualRow.choose_possible();
@@ -993,7 +995,9 @@ void HDual::chooseColumn(HVector *row_ep)
 
   // Choose column - final
   dualRow.choose_final();
+  model->timer.recordStart(HTICK_CHUZC4);
   dualRow.delete_Freemove();
+  model->timer.recordFinish(HTICK_CHUZC4);
 
   columnIn = dualRow.workPivot;
   alphaRow = dualRow.workAlpha;
@@ -1575,19 +1579,38 @@ void HDual::rp_hsol_da_str()
 }
 
 void HDual::iterateRp() {
-  if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
+  //    if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
+    int numIter = model->numberIteration;
   //deltaPrimal: Move to bound from basic value for leaving variable
   //thetaDual:   
   //thetaPrimal: 
   //alpha:
-  //NumCk %11.4g; DuObj %11.4g; 
-  printf("Iter %9d: Ph%1d; InvHint%2d; LvR %7d; LvC %7d; EnC %7d; DlPr %11.4g; ThDu %11.4g; ThPr %11.4g; Aa %11.4g\n", 
-	 model->numberIteration,
+  //NumCk %11.4g; InvHint%2d; DuObj %11.4g; 
+  //  printf("Iter %9d: Ph%1d; LvR %7d; LvC %7d; EnC %7d; DlPr %11.4g; ThDu %11.4g; ThPr %11.4g; Aa %11.4g\n", 
+  //	 model->numberIteration,
+  //	 //model->objective,
+  //	 solvePhase,
+  //	 //numericalTrouble,
+  //	 //invertHint,
+  //	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
+  //  //DuObj %11.4g;
+    if (numIter % 10 == 1) 
+      printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RSeD\n");
+
+    int l10ColDse = -99;
+    int l10REpDse = -99;
+    int l10DseDse = -99;
+    if (columnDensity>0) l10ColDse = log(columnDensity)/log(10.0);
+    if (row_epDensity>0) l10REpDse = log(row_epDensity)/log(10.0);
+    if (rowdseDensity>0) l10DseDse = log(rowdseDensity)/log(10.0);
+
+    printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %4d %4d %4d\n", 
+	   numIter,
 	 //model->objective,
-	 solvePhase,
-	 //numericalTrouble,
-	 invertHint,
-	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
+	   solvePhase,
+	   invertHint, numericalTrouble,
+	   rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha,
+	   l10ColDse, l10REpDse, l10DseDse);
 }
 
 void HDual::rp_hsol_pv_c(HVector *column) const

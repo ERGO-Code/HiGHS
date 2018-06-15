@@ -106,9 +106,7 @@ int HModel::load_fromMPS(const char *filename)
 #endif
 */
   numTot = numCol + numRow;
-  const char *ModelDaFileName = "HiGHS_ModelDa.txt";
-
-  util_reportModelDa(ModelDaFileName);
+  //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
 #ifdef H2DEBUG
   //  util_reportModelDa(filename);
 #endif
