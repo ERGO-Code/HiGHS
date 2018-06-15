@@ -1348,16 +1348,19 @@ void HDual::setEdWt(const char *EdWt_ArgV)
   {
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = true;
+    alw_DSE2Dvx_sw = false;
   }
   else if (strcmp(EdWt_ArgV, "DSE0") == 0)
   {
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = false;
+    alw_DSE2Dvx_sw = false;
   }
-  else if (strcmp(EdWt_ArgV, "DSE1") == 0)
+  else if (strcmp(EdWt_ArgV, "DSE2Dvx") == 0)
   {
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = true;
+    alw_DSE2Dvx_sw = true;
   }
   else
   {
@@ -1365,6 +1368,7 @@ void HDual::setEdWt(const char *EdWt_ArgV)
          << " - using DSE with exact initial weights" << endl;
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = true;
+    alw_DSE2Dvx_sw = false;
   }
   //	cout<<"HDual::setEdWt iz_DSE_wt = " << iz_DSE_wt << endl;
 }
@@ -1595,7 +1599,7 @@ void HDual::iterateRp() {
   //	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
   //  //DuObj %11.4g;
     if (numIter % 10 == 1) 
-      printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RSeD\n");
+      printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RSeD FreeLsZ\n");
 
     int l10ColDse = -99;
     int l10REpDse = -99;
@@ -1604,13 +1608,14 @@ void HDual::iterateRp() {
     if (row_epDensity>0) l10REpDse = log(row_epDensity)/log(10.0);
     if (rowdseDensity>0) l10DseDse = log(rowdseDensity)/log(10.0);
 
-    printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %4d %4d %4d\n", 
+    printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %4d %4d %4d %7d\n", 
 	   numIter,
 	 //model->objective,
 	   solvePhase,
 	   invertHint, numericalTrouble,
 	   rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha,
-	   l10ColDse, l10REpDse, l10DseDse);
+	   l10ColDse, l10REpDse, l10DseDse,
+	   dualRow.freeListSize);
 }
 
 void HDual::rp_hsol_pv_c(HVector *column) const

@@ -155,6 +155,7 @@ public:
 
   // DSE scalars
   bool iz_DSE_wt;
+  bool alw_DSE2Dvx_sw;
   int n_wg_DSE_wt;
 
   // Model

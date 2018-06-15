@@ -254,11 +254,21 @@ void HDualRow::create_Freelist()
 {
   freeList.clear();
   const int *nonbasicFlag = workModel->getNonbasicFlag();
+  int ckFreeListSize = 0;
   for (int i = 0; i < workModel->getNumTot(); i++)
   {
-    if (nonbasicFlag[i] && workRange[i] > 1.5 * HSOL_CONST_INF)
+    if (nonbasicFlag[i] && workRange[i] > 1.5 * HSOL_CONST_INF) {
       freeList.insert(i);
+      ckFreeListSize++;
+    }
   }
+  //  int freeListSa = *freeList.begin();
+  //  int freeListE = *freeList.end();
+  freeListSize = *freeList.end();
+  if (freeListSize != ckFreeListSize) {
+    printf("!! STRANGE: freeListSize != ckFreeListSize\n");
+  }
+  //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa, freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
 }
 
 void HDualRow::create_Freemove(HVector *row_ep)
@@ -303,6 +313,24 @@ void HDualRow::delete_Freelist(int iColumn)
   {
     if (freeList.count(iColumn))
       freeList.erase(iColumn);
+    //  int freeListSa = *freeList.begin();
+    //  int freeListE = *freeList.end();
+    int ckFreeListSize = 0;
+    set<int>::iterator sit;
+    for (sit = freeList.begin(); sit != freeList.end(); sit++) ckFreeListSize++;
+    freeListSize = *freeList.end();
+    if (freeListSize != ckFreeListSize) {
+      printf("!! STRANGE: freeListSize != ckFreeListSize\n");
+    }
+    //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa, freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
+    //  if (freeList.empty()) {
+    //    printf("Empty  Freelist\n");
+    //  } else {
+    //    printf("\n");
+    //  }
+  } else {
+    if (freeListSize > 0)
+      printf("!! STRANGE: Empty Freelist has size %d\n", freeListSize);
   }
 }
 void HDualRow::rp_hsol_pv_r()

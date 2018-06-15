@@ -40,6 +40,7 @@ public:
     const double *workRange;
 
     set<int> freeList;
+    int freeListSize;
 
     int packCount;
     vector<int> packIndex;

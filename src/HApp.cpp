@@ -95,7 +95,7 @@ int main(int argc, char **argv)
         if (opt == 'c')
           fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
         if (opt == 'e')
-          fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE1 \n", opt);
+          fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE2Dvx\n", opt);
         else
           printHelp(argv[0]);
       default:
