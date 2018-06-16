@@ -230,6 +230,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   
   // The major solving loop
   
+  //Initialise the iteration analysis
+  iterateIzAn();
   while (solvePhase) {
 #ifdef JAJH_dev
     int it0 = model->numberIteration;
@@ -850,8 +852,8 @@ void HDual::iterate()
 	//Update the basis representation
 	updatePivots();
 
-	//Possibly report on the iteration
-	iterateRp();
+	//Analyse the iteration: possibly report; possibly switch strategy
+	iterateAn();
 }
 
 void HDual::iterate_tasks()
@@ -1582,8 +1584,16 @@ void HDual::rp_hsol_da_str()
   printf("\n");
 }
 
+void HDual::iterateIzAn() {
+}
+
+void HDual::iterateAn() {
+	//Possibly report on the iteration
+	iterateRp();
+}
+
 void HDual::iterateRp() {
-  //    if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
+      if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
     int numIter = model->numberIteration;
   //deltaPrimal: Move to bound from basic value for leaving variable
   //thetaDual:   

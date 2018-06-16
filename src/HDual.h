@@ -81,6 +81,8 @@ public:
   void iterate();
   void iterate_tasks();
   void iterate_multi();
+  void iterateIzAn();
+  void iterateAn();
   void iterateRp();
 
   void chooseRow();

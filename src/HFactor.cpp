@@ -907,8 +907,8 @@ void HFactor::buildFinish() {
 }
 
 void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
-    const double hyperFTRANL = 0.15;
-    const double hyperCANCEL = 0.05;
+  //    const double hyperFTRANL = 0.15;
+  //    const double hyperCANCEL = 0.05;
 
     if (updateMethod == UPDATE_METHOD_APF) {
         rhs.tight();
@@ -952,8 +952,8 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
 }
 
 void HFactor::btranL(HVector& rhs, double hist_dsty) const {
-    const double hyperBTRANL = 0.10;
-    const double hyperCANCEL = 0.05;
+  //    const double hyperBTRANL = 0.10;
+  //    const double hyperCANCEL = 0.05;
 
     double curr_dsty = 1.0 * rhs.count / numRow;
     if (curr_dsty > hyperCANCEL || hist_dsty > hyperBTRANL) {
@@ -1010,8 +1010,8 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty) const {
     }
 
     // The regular part
-    const double hyperFTRANU = 0.10;
-    const double hyperCANCEL = 0.05;
+    //    const double hyperFTRANU = 0.10;
+    //    const double hyperCANCEL = 0.05;
 
     double curr_dsty = 1.0 * rhs.count / numRow;
     if (curr_dsty > hyperCANCEL || hist_dsty > hyperFTRANU) {
@@ -1078,8 +1078,8 @@ void HFactor::btranU(HVector& rhs, double hist_dsty) const {
     }
 
     // The regular part
-    const double hyperBTRANU = 0.15;
-    const double hyperCANCEL = 0.05;
+    //    const double hyperBTRANU = 0.15;
+    //    const double hyperCANCEL = 0.05;
 
     double curr_dsty = 1.0 * rhs.count / numRow;
     if (curr_dsty > hyperCANCEL || hist_dsty > hyperBTRANU) {

@@ -299,6 +299,9 @@ public:
     void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex, vector<double>& XAvalue);
 
     void util_anPrDuDgn();
+    void util_anMl(const char *message);
+    void util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper);
+    void util_anVecV(const char *message, int vecDim, vector<double>& vec);
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Solving options and scalar solution data section: Sort it out!

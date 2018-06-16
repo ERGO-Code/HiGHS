@@ -109,6 +109,8 @@ int HModel::load_fromMPS(const char *filename)
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
 #ifdef H2DEBUG
   //  util_reportModelDa(filename);
+
+  util_anMl("unscaled");
 #endif
 
 
@@ -117,7 +119,7 @@ int HModel::load_fromMPS(const char *filename)
   //check_load_fromArrays(); return;
 #endif
 
-  // Assign and initialise the scaling factors
+  // Assign and initialise unit scaling factors
   initScale();
 
   // Initialise with a logical basis then allocate and populate (where
@@ -1707,6 +1709,7 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
+  util_anMl("scaled");
 }
 
 void HModel::setup_tightenBound()
@@ -4413,3 +4416,122 @@ void HModel::util_reportModelDa(const char *filename)
 }
 
 
+void HModel::util_anMl(const char *message) {
+  printf("\nAnalysing %s model\n", message);
+  util_anVecV("column costs", numCol, colCost);
+  util_anVecV("column lower bounds", numCol, colLower);
+  util_anVecV("column upper bounds", numCol, colUpper);
+  util_anVecV("row lower bounds", numRow, rowLower);
+  util_anVecV("row upper bounds", numRow, rowUpper);
+  util_anVecV("matrix entries", Astart[numCol], Avalue);
+  util_anMlBd("column", numCol, colLower, colUpper);
+  util_anMlBd("row", numRow, rowLower, rowUpper);
+}
+
+void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper) {
+  if (numBd==0) return;
+  int numFr = 0;
+  int numLb = 0;
+  int numUb = 0;
+  int numBx = 0;
+  int numFx = 0;
+  for (int ix=0; ix<numBd; ix++) {
+    if (hsol_isInfinity(-lower[ix])) {
+	//Infinite lower bound
+      if (hsol_isInfinity(upper[ix])) {
+	//Infinite lower bound and infinite upper bound: Fr
+	numFr++;
+      } else {
+	//Infinite lower bound and   finite upper bound: Ub
+	numUb++;
+      }
+    } else {
+      //Finite lower bound
+      if (hsol_isInfinity(upper[ix])) {
+	//Finite lower bound and infinite upper bound: Lb
+	numLb++;
+      } else {
+	//Finite lower bound and   finite upper bound: 
+	if (lower[ix] < upper[ix]) {
+	  //Distinct finite bounds: Bx
+	  numBx++;
+	} else {
+	  //Equal finite bounds: Fx
+	  numFx++;
+	}
+      }
+    }
+  }
+  printf("Analysing %d %s bounds\n", numBd, message);
+  if (numFr>0) printf("   Free:  %7d (%3d%%)\n", numFr, (100*numFr)/numBd);
+  if (numLb>0) printf("   LB:    %7d (%3d%%)\n", numLb, (100*numLb)/numBd);
+  if (numUb>0) printf("   UB:    %7d (%3d%%)\n", numUb, (100*numUb)/numBd);
+  if (numBx>0) printf("   Boxed: %7d (%3d%%)\n", numBx, (100*numBx)/numBd);
+  if (numFx>0) printf("   Fixed: %7d (%3d%%)\n", numFx, (100*numFx)/numBd);
+
+}
+
+void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {
+  if (vecDim==0) return;
+  double log10 = log(10.0);
+  int nVK = 20;
+  int nNz = 0;
+  int nPosInfV = 0;
+  int nNegInfV = 0;
+  vector<int> posVK;
+  vector<int> negVK;
+  posVK.resize(nVK+1, 0);
+  negVK.resize(nVK+1, 0);
+  for (int ix=0; ix<vecDim; ix++) {
+    double v = vec[ix];
+    double absV = abs(v);
+    int log10V;
+    if (absV > 0) {
+      //Nonzero value
+      nNz++;
+      if (hsol_isInfinity(-v)) {
+      //-Inf value
+	nNegInfV++;
+      } else if (hsol_isInfinity(v)) {
+      //+Inf value
+	nPosInfV++;
+      }	else {
+	//Finite nonzero value
+	if (absV==1) {
+	  log10V = 0;
+	} else if (absV==10) {
+	  log10V = 1;
+	} else if (absV==100) {
+	  log10V = 2;
+	} else if (absV==1000) {
+	  log10V = 3;
+	} else {
+	  log10V = log(absV)/log10;
+	}	
+	if (log10V >= 0) {
+	  int k = min(log10V, nVK);
+	  posVK[k]++;
+	} else {
+	  int k = min(-log10V, nVK);
+	  negVK[k]++;
+	}
+      }
+    }
+  }
+  printf("Analysing %s of dimension %d with %d nonzeros (%3d%%)\n", message, vecDim, nNz, 100*nNz/vecDim);
+  if (nNegInfV > 0) printf("   %7d values are -Inf\n", nNegInfV);
+  if (nPosInfV > 0) printf("   %7d values are +Inf\n", nPosInfV);
+  int k = nVK;
+  int vK = posVK[k];
+  if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < Inf\n", vK, k);
+    for (int k=nVK-1; k>=0; k--) {
+    int vK = posVK[k];
+    if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, k, k+1);
+  }
+  for (int k=1; k<=nVK; k++) {
+    int vK = negVK[k];
+    if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, -k, 1-k);
+  }
+  vK = vecDim-nNz;
+  if (vK > 0) printf("   %7d values are zero\n", vK);
+}

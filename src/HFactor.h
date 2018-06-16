@@ -15,6 +15,12 @@ enum UPDATE_METHOD {
     UPDATE_METHOD_APF = 4
 };
 
+const double hyperFTRANL = 0.15;
+const double hyperFTRANU = 0.10;
+const double hyperBTRANL = 0.10;
+const double hyperBTRANU = 0.15;
+const double hyperCANCEL = 0.05;
+
 class HFactor {
 public:
   void copyFrom(const HFactor *from);

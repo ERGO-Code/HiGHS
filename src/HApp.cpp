@@ -171,6 +171,7 @@ int main(int argc, char **argv)
         return RtCd;
 
       model.scaleModel();
+
       HDual solver;
       solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 
@@ -775,9 +776,9 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
     //    printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
     if (presolveNoScale)
       printf("*****************************\n* !!Not currently scaling!! *\n*****************************\n");
-    else
+    else {
       model.scaleModel();
-
+    }
     if (FourThreads)
       solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
     else if (EightThreads)
