@@ -83,6 +83,7 @@ public:
   void iterate_multi();
   void iterateIzAn();
   void iterateAn();
+  void iterateRpAn();
   void iterateRp();
 
   void chooseRow();
@@ -277,6 +278,35 @@ public:
     double total_fake;
     double total_INVERT_TICK;
     double total_FT_inc_TICK;
+
+    int AnIterIt0;
+    //Major operation analysis struct
+enum AnIterOpTy
+{
+  AnIterOpTy_Btran = 0,
+  AnIterOpTy_Price,
+  AnIterOpTy_Ftran,
+  AnIterOpTy_FtranBFRT,
+  AnIterOpTy_FtranDSE,
+  NumAnIterOpTy,
+};
+ 
+ struct AnIterOpRec {
+      double AnIterOpSuLog10RsDsty;
+      double AnIterOpCuDsty;
+      double AnIterOpRsDsty;
+      int AnIterOpNumCa;
+      int AnIterOpNumHyperOp;
+      int AnIterOpNumHyperRs;
+      bool AnIterOpCa;
+      string AnIterOpName;
+    };
+    AnIterOpRec AnIterOp[NumAnIterOpTy];
+
+    const int AnIterNumInvertHint = 7;    
+    int AnIterNumInvert[8];
+    int AnIterNumPrDgnIt;
+    int AnIterNumDuDgnIt;
 };
 
 

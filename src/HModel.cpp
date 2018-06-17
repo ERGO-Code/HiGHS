@@ -110,7 +110,7 @@ int HModel::load_fromMPS(const char *filename)
 #ifdef H2DEBUG
   //  util_reportModelDa(filename);
 
-  util_anMl("unscaled");
+  util_anMl("Unscaled");
 #endif
 
 
@@ -1709,7 +1709,7 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
-  util_anMl("scaled");
+  util_anMl("Scaled");
 }
 
 void HModel::setup_tightenBound()
@@ -4417,15 +4417,15 @@ void HModel::util_reportModelDa(const char *filename)
 
 
 void HModel::util_anMl(const char *message) {
-  printf("\nAnalysing %s model\n", message);
-  util_anVecV("column costs", numCol, colCost);
-  util_anVecV("column lower bounds", numCol, colLower);
-  util_anVecV("column upper bounds", numCol, colUpper);
-  util_anVecV("row lower bounds", numRow, rowLower);
-  util_anVecV("row upper bounds", numRow, rowUpper);
-  util_anVecV("matrix entries", Astart[numCol], Avalue);
-  util_anMlBd("column", numCol, colLower, colUpper);
-  util_anMlBd("row", numRow, rowLower, rowUpper);
+  printf("\n%s model data: Analysis\n", message);
+  util_anVecV("Column costs", numCol, colCost);
+  util_anVecV("Column lower bounds", numCol, colLower);
+  util_anVecV("Column upper bounds", numCol, colUpper);
+  util_anVecV("Row lower bounds", numRow, rowLower);
+  util_anVecV("Row upper bounds", numRow, rowUpper);
+  util_anVecV("Matrix entries", Astart[numCol], Avalue);
+  util_anMlBd("Column", numCol, colLower, colUpper);
+  util_anMlBd("Row", numRow, rowLower, rowUpper);
 }
 
 void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper) {
@@ -4518,7 +4518,7 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {
       }
     }
   }
-  printf("Analysing %s of dimension %d with %d nonzeros (%3d%%)\n", message, vecDim, nNz, 100*nNz/vecDim);
+  printf("%s of dimension %d with %d nonzeros (%3d%%): Analysis\n", message, vecDim, nNz, 100*nNz/vecDim);
   if (nNegInfV > 0) printf("   %7d values are -Inf\n", nNegInfV);
   if (nPosInfV > 0) printf("   %7d values are +Inf\n", nPosInfV);
   int k = nVK;

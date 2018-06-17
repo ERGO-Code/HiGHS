@@ -264,6 +264,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
       break;
   }
   
+  iterateRpAn();
 #ifdef H2DEBUG
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
@@ -918,7 +919,23 @@ void HDual::chooseRow()
     row_ep.index[0] = rowOut;
     row_ep.array[rowOut] = 1;
     row_ep.packFlag = true;
+
+    AnIterOpRec *AnIter = &AnIterOp[AnIterOpTy_Btran];
+    if (AnIter->AnIterOpCa) {
+      printf("STRANGE: Already called Btran\n");
+    }
+    AnIter->AnIterOpCa = true;
+    double cuDsty = row_epDensity;
+    //  double cuDsty = 1.0 * row_ep.count / numRow;
+    //  printf("Btran: cuDsty = %g\n", cuDsty);
+    AnIter->AnIterOpCuDsty = cuDsty;
+    
     factor->btran(row_ep, row_epDensity);
+
+    double rsDsty = 1.0 * row_ep.count / numRow;
+    // printf("Btran: rsDsty = %g\n", rsDsty);
+    AnIter->AnIterOpRsDsty = rsDsty;
+
     model->timer.recordFinish(HTICK_BTRAN);
     if (EdWt_Mode == EdWt_Mode_DSE)
     {
@@ -972,7 +989,24 @@ void HDual::chooseColumn(HVector *row_ep)
   // Compute pivot row
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
+
+  AnIterOpRec *AnIter = &AnIterOp[AnIterOpTy_Price];
+  if (AnIter->AnIterOpCa) {
+    printf("STRANGE: Already called Price\n");
+  }
+  AnIter->AnIterOpCa = true;
+  double cuDsty = 1.0;
+  //  double cuDsty = 1.0 * (*row_ep->.count) / numRow;
+  //  printf("Price: cuDsty = %g\n", cuDsty);
+  AnIter->AnIterOpCuDsty = cuDsty;
+
+  //matrix->price_by_col(row_ap, *row_ep);
   matrix->price_by_row(row_ap, *row_ep);
+
+  double rsDsty = 1.0 * row_ap.count / numCol;
+  //  printf("Price: rsDsty = %g\n", rsDsty);
+  AnIter->AnIterOpRsDsty = rsDsty;
+
   model->timer.recordFinish(HTICK_PRICE);
 
   // Choose column - possible
@@ -1123,24 +1157,56 @@ void HDual::chooseColumn_slice(HVector *row_ep)
 
 void HDual::updateFtranBFRT()
 {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   model->timer.recordStart(HTICK_FTRAN_MIX);
+
   dualRow.update_flip(&columnBFRT);
-  if (columnBFRT.count)
+  if (columnBFRT.count) {
+
+    AnIterOpRec *AnIter = &AnIterOp[AnIterOpTy_FtranBFRT];
+    if (AnIter->AnIterOpCa) {
+      printf("STRANGE: Already called updateFtranBFRT\n");
+    }
+    AnIter->AnIterOpCa = true;
+    double cuDsty = columnDensity;
+    //  double cuDsty = 1.0 * columnBFRT.count / numRow;
+    //  printf("FtranBFRT: cuDsty = %g\n", cuDsty);
+    AnIter->AnIterOpCuDsty = cuDsty;
+
     factor->ftran(columnBFRT, columnDensity);
+
+    double rsDsty = 1.0 * columnBFRT.count / numRow;
+    // printf("FtranBFRT: rsDsty = %g\n", rsDsty);
+    AnIter->AnIterOpRsDsty = rsDsty;
+
+  }
   model->timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::updateFtran()
 {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   model->timer.recordStart(HTICK_FTRAN);
   column.clear();
   column.packFlag = true;
   matrix->collect_aj(column, columnIn, 1);
+
+  AnIterOpRec *AnIter = &AnIterOp[AnIterOpTy_Ftran];
+  if (AnIter->AnIterOpCa) {
+    printf("STRANGE: Already called updateFtran\n");
+  }
+  AnIter->AnIterOpCa = true;
+  double cuDsty = columnDensity;
+  //  double cuDsty = 1.0 * column.count / numRow;
+  //  printf("Ftran: cuDsty = %g\n", cuDsty);
+  AnIter->AnIterOpCuDsty = cuDsty;
+
   factor->ftran(column, columnDensity);
+
+  double rsDsty = 1.0 * column.count / numRow;
+  //  printf("Ftran: rsDsty = %g\n", rsDsty);
+  AnIter->AnIterOpRsDsty = rsDsty;
+
   alpha = column.array[rowOut];
   model->timer.recordFinish(HTICK_FTRAN);
 }
@@ -1150,7 +1216,23 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
   if (invertHint)
     return;
   model->timer.recordStart(HTICK_FTRAN_DSE);
+
+  AnIterOpRec *AnIter = &AnIterOp[AnIterOpTy_FtranDSE];
+  if (AnIter->AnIterOpCa) {
+    printf("STRANGE: Already called updateFtranDSE\n");
+  }
+  AnIter->AnIterOpCa = true;
+  double cuDsty = rowdseDensity;
+  //  double cuDsty = 1.0 * column.count / numRow;
+  //  printf("FtranDSE: cuDsty = %g\n", cuDsty);
+  AnIter->AnIterOpCuDsty = cuDsty;
+
   factor->ftran(*DSE_Vector, rowdseDensity);
+
+  double rsDsty = 1.0 * (DSE_Vector->count) / numRow;
+  //  printf("FtranDSE: rsDsty = %g\n", rsDsty);
+  AnIter->AnIterOpRsDsty = rsDsty;
+
   model->timer.recordFinish(HTICK_FTRAN_DSE);
 }
 
@@ -1585,11 +1667,94 @@ void HDual::rp_hsol_da_str()
 }
 
 void HDual::iterateIzAn() {
+  AnIterIt0 = model->numberIteration;
+  AnIterOpRec *AnIter;
+  AnIter = &AnIterOp[AnIterOpTy_Btran]; AnIter->AnIterOpName = "Btran";
+  AnIter = &AnIterOp[AnIterOpTy_Price]; AnIter->AnIterOpName = "Price";
+  AnIter = &AnIterOp[AnIterOpTy_Ftran]; AnIter->AnIterOpName = "Ftran";
+  AnIter = &AnIterOp[AnIterOpTy_FtranBFRT]; AnIter->AnIterOpName = "FtranBFRT";
+  AnIter = &AnIterOp[AnIterOpTy_FtranDSE]; AnIter->AnIterOpName = "FtranDSE";
+  for (int k=0; k<NumAnIterOpTy; k++) {
+    AnIter = &AnIterOp[k];
+    AnIter->AnIterOpCa = false;
+    AnIter->AnIterOpSuLog10RsDsty = 0;
+    AnIter->AnIterOpRsDsty = 0;
+    AnIter->AnIterOpNumCa = 0;
+    AnIter->AnIterOpNumHyperOp = 0;
+    AnIter->AnIterOpNumHyperRs = 0;
+  }
+  for (int k=1; k<=AnIterNumInvertHint; k++) AnIterNumInvert[k]=0;
+  AnIterNumPrDgnIt = 0;
+  AnIterNumDuDgnIt = 0;
 }
 
 void HDual::iterateAn() {
-	//Possibly report on the iteration
-	iterateRp();
+  //Possibly report on the iteration
+  iterateRp();
+
+  for (int k=0; k<NumAnIterOpTy; k++) {
+    AnIterOpRec *AnIter = &AnIterOp[k];
+    if (AnIter->AnIterOpCa) {
+      AnIter->AnIterOpNumCa++;
+      double lcCuDsty = AnIter->AnIterOpCuDsty;
+      if (lcCuDsty <= hyperINITIAL) AnIter->AnIterOpNumHyperOp++;
+      double lcRsDsty = AnIter->AnIterOpRsDsty;
+      if (lcRsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
+      if (lcRsDsty > 0) {
+	AnIter->AnIterOpSuLog10RsDsty += log(lcRsDsty)/log(10.0);
+      } else {
+	printf("Strange: operation %s has result density = %g\n", AnIter->AnIterOpName.c_str(), lcRsDsty);
+      }
+    }
+    AnIter->AnIterOpCa = false;
+  }
+  if (invertHint > 0) AnIterNumInvert[invertHint]++;
+  if (thetaDual <= 0) AnIterNumDuDgnIt++;
+  if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
+}
+
+void HDual::iterateRpAn() {
+  int AnIterNumIter = model->numberIteration - AnIterIt0;
+  printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter, AnIterIt0+1, model->numberIteration);
+  for (int k=0; k<NumAnIterOpTy; k++) {
+    AnIterOpRec *AnIter = &AnIterOp[k];
+    int lcNumCa = AnIter->AnIterOpNumCa;
+    printf("\n%-9s performed %7d times\n", AnIter->AnIterOpName.c_str(), AnIter->AnIterOpNumCa);
+    if (lcNumCa > 0) {
+      int lcHyperOp = AnIter->AnIterOpNumHyperOp;
+      int lcHyperRs = AnIter->AnIterOpNumHyperRs;
+      int pctHyperOp = (100*lcHyperOp)/lcNumCa;
+      int pctHyperRs = (100*lcHyperRs)/lcNumCa;
+      double lcRsDsty = pow(10.0, AnIter->AnIterOpSuLog10RsDsty/lcNumCa);
+      printf("   %11d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
+      printf("   %11d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
+      printf("   %11.4g density of result\n", lcRsDsty);
+    }
+  }
+  int NumInvert = 0;
+  for (int k=1; k<=AnIterNumInvertHint; k++) NumInvert += AnIterNumInvert[k];
+  if (NumInvert>0) {
+    int lcNumInvert = 0;
+    printf("\nInvert    performed %7d times: average frequency = %d\n", NumInvert, AnIterNumIter/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_updateLimitReached];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to update Limit Reached\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_pseudoClockSaysInvert];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to pseudo-clock says Invert\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_possiblyOptimal];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to possibly optimal\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_possiblyPrimalUnbounded];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to possibly primal unbounded\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_possiblyDualUnbounded];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to possibly dual unbounded\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_possiblySingularBasis];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to possibly singular basis\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+    lcNumInvert = AnIterNumInvert[invertHint_primalInfeasibleInPrimalSimplex];
+    if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to primal infeasible in primal simplex\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
+  }
+  printf("\n%7d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt, (100*AnIterNumPrDgnIt)/AnIterNumIter);
+  printf("%7d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt, (100*AnIterNumDuDgnIt)/AnIterNumIter);
+  
+  printf("\n");
 }
 
 void HDual::iterateRp() {
