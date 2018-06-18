@@ -47,6 +47,8 @@ const int mn_n_dvx_it = 25;
 const double nw_dvx_fwk_fq = 1e-2;
 const double tl_dvx_wt = 3.0;
 
+const double densityRunningAverageMu = 0.05;
+
 const bool noInvertWhenOptimal = false;
 
 //Set limits on problem size for reporting
@@ -83,16 +85,19 @@ public:
   void iterate_multi();
   void iterateIzAn();
   void iterateAn();
+  void iterateOpRecBf(int opTy, double hist_dsty);
+  void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
   void iterateRp();
+  void iterateRpForced(bool header);
 
   void chooseRow();
 
   void chooseColumn(HVector *row_ep);
   void chooseColumn_slice(HVector *row_ep);
 
-  void updateFtranBFRT();
   void updateFtran();
+  void updateFtranBFRT();
   void updateFtranDSE(HVector *DSE_Vector);
   void updateVerify();
   void updateDual();
@@ -292,13 +297,15 @@ enum AnIterOpTy
 };
  
  struct AnIterOpRec {
+      double AnIterOpLog10RsDsty;
       double AnIterOpSuLog10RsDsty;
-      double AnIterOpCuDsty;
-      double AnIterOpRsDsty;
+      int AnIterOpDim;
       int AnIterOpNumCa;
       int AnIterOpNumHyperOp;
       int AnIterOpNumHyperRs;
-      bool AnIterOpCa;
+      int AnIterOpSuNumCa;
+      int AnIterOpSuNumHyperOp;
+      int AnIterOpSuNumHyperRs;
       string AnIterOpName;
     };
     AnIterOpRec AnIterOp[NumAnIterOpTy];
@@ -307,6 +314,12 @@ enum AnIterOpTy
     int AnIterNumInvert[8];
     int AnIterNumPrDgnIt;
     int AnIterNumDuDgnIt;
+    int AnIterNumCostlyDseIt;
+    const int AnIterSpeedMxNumRec = 20;
+    int AnIterSpeedNumRec;
+    int AnIterSpeedIterDl;
+    int AnIterSpeedIterRec[22];//1+AnIterSpeedMxNumRec];
+    double AnIterSpeedTimeRec[22];//1+AnIterSpeedMxNumRec];
 };
 
 

@@ -231,6 +231,8 @@ void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
             double value1 = value0 + multi * ARvalue[k];
             if (value0 == 0)
                 ap_index[ap_count++] = index;
+	    //TODO Unlikely, but possible for ap_count to reach numCol
+	    assert(ap_count<numCol);
             ap_array[index] =
                     (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
         }
@@ -249,6 +251,9 @@ void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
         }
     }
     row_ap.count = ap_count;
+}
+
+void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep) const {
 }
 
 void HMatrix::compute_vecT_matB(const double *vec, const int *base,
