@@ -32,6 +32,8 @@ public:
     void compute_vecT_matB(const double *vec, const int *base, HVector *res);
     void compute_matB_vec(const double *vec, const int *base, HVector *res);
     void rp_mtx();
+    const int price_by_row_sw_dsty_num = 1;
+    const int price_by_row_sw_dsty_den = 10;
 private:
     int numCol;
     int numRow;
