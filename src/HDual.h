@@ -285,6 +285,8 @@ public:
     double total_INVERT_TICK;
     double total_FT_inc_TICK;
 
+const bool AnIterLg = true;
+
     int AnIterIt0;
     //Major operation analysis struct
 enum AnIterOpTy

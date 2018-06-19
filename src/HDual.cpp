@@ -231,7 +231,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   // The major solving loop
   
   //Initialise the iteration analysis
-  iterateIzAn();
+  if (AnIterLg) {
+    iterateIzAn();
+  }
   while (solvePhase) {
 #ifdef JAJH_dev
     int it0 = model->numberIteration;
@@ -264,7 +266,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
       break;
   }
   
-  iterateRpAn();
+  if (AnIterLg) {
+    iterateRpAn();
+  }
 #ifdef H2DEBUG
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
@@ -855,7 +859,12 @@ void HDual::iterate()
 	updatePivots();
 
 	//Analyse the iteration: possibly report; possibly switch strategy
-	iterateAn();
+	if (AnIterLg) {
+	  iterateAn();
+	} else {
+	  //Possibly report on the iteration
+	  iterateRp();
+	}
 }
 
 void HDual::iterate_tasks()
@@ -921,11 +930,15 @@ void HDual::chooseRow()
     row_ep.array[rowOut] = 1;
     row_ep.packFlag = true;
 
-    iterateOpRecBf(AnIterOpTy_Btran, row_epDensity);
+    if (AnIterLg) {
+      iterateOpRecBf(AnIterOpTy_Btran, row_epDensity);
+    }
     
     factor->btran(row_ep, row_epDensity);
 
-    iterateOpRecAf(AnIterOpTy_Btran, row_ep);
+    if (AnIterLg) {
+      iterateOpRecAf(AnIterOpTy_Btran, row_ep);
+    }
 
     model->timer.recordFinish(HTICK_BTRAN);
     if (EdWt_Mode == EdWt_Mode_DSE)
@@ -981,16 +994,30 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  iterateOpRecBf(AnIterOpTy_Price, 1.0);
-
-  //matrix->price_by_col(row_ap, *row_ep);
-  //  matrix->price_by_row(row_ap, *row_ep);
-  matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
+  bool price_by_row_w_sw = true;
+  if (price_by_row_w_sw) {
+    //Avoid Hyper Price on current density of result or switch if the
+    //density of this Price becomes extreme
+    if (AnIterLg) {
+      iterateOpRecBf(AnIterOpTy_Price, row_apDensity);
+    }
+    matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
+  } else {
+    //No avoiding Hyper Price on current density of result or
+    //switching if the density of this Price becomes extreme
+    if (AnIterLg) {
+      iterateOpRecBf(AnIterOpTy_Price, 0.0);
+    }
+    //matrix->price_by_col(row_ap, *row_ep);
+    matrix->price_by_row(row_ap, *row_ep);
+  }
 
   row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
     densityRunningAverageMu * (1.0 * row_ap.count / numCol);
 
-  iterateOpRecAf(AnIterOpTy_Price, row_ap);
+  if (AnIterLg) {
+    iterateOpRecAf(AnIterOpTy_Price, row_ap);
+  }
 
   model->timer.recordFinish(HTICK_PRICE);
 
@@ -1148,11 +1175,15 @@ void HDual::updateFtran()
   column.packFlag = true;
   matrix->collect_aj(column, columnIn, 1);
   
-  iterateOpRecBf(AnIterOpTy_Ftran, columnDensity);
+  if (AnIterLg) {
+    iterateOpRecBf(AnIterOpTy_Ftran, columnDensity);
+  }
 
   factor->ftran(column, columnDensity);
 
-  iterateOpRecAf(AnIterOpTy_Ftran, column);
+  if (AnIterLg) {
+    iterateOpRecAf(AnIterOpTy_Ftran, column);
+  }
 
   alpha = column.array[rowOut];
   model->timer.recordFinish(HTICK_FTRAN);
@@ -1166,11 +1197,15 @@ void HDual::updateFtranBFRT()
   dualRow.update_flip(&columnBFRT);
   if (columnBFRT.count) {
 
-  iterateOpRecBf(AnIterOpTy_FtranBFRT, columnDensity);
+    if (AnIterLg) {
+      iterateOpRecBf(AnIterOpTy_FtranBFRT, columnDensity);
+    }
 
-  factor->ftran(columnBFRT, columnDensity);
+    factor->ftran(columnBFRT, columnDensity);
 
-  iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
+    if (AnIterLg) {
+      iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
+    }
 
   }
   model->timer.recordFinish(HTICK_FTRAN_MIX);
@@ -1182,11 +1217,15 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
     return;
   model->timer.recordStart(HTICK_FTRAN_DSE);
 
-  iterateOpRecBf(AnIterOpTy_FtranDSE, rowdseDensity);
+  if (AnIterLg) {
+    iterateOpRecBf(AnIterOpTy_FtranDSE, rowdseDensity);
+  }
 
   factor->ftran(*DSE_Vector, rowdseDensity);
 
-  iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
+  if (AnIterLg) {
+    iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
+  }
 
   model->timer.recordFinish(HTICK_FTRAN_DSE);
 }
