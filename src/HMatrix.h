@@ -17,6 +17,9 @@ public:
     const double *getAvalue() const {
         return &Avalue[0];
     }
+    //    const double getRow_apDensity() const {
+    //        return row_apDensity;
+    //    }
     void setup(int numCol, int numRow, const int *Astart, const int *Aindex,
             const double *Avalue, const int *nonbasicFlag);
     void setup_lgBs(int numCol, int numRow, const int *Astart, const int *Aindex,
@@ -24,7 +27,7 @@ public:
     bool setup_ok(const int *nonbasicFlag);
     void price_by_col(HVector& row_ap, HVector& row_ep) const;
     void price_by_row(HVector& row_ap, HVector& row_ep) const;
-    void price_by_row_w_sw(HVector& row_ap, HVector& row_ep) const;
+    void price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty) const;
     void update(int columnIn, int columnOut);
     double compute_dot(HVector& vector, int iCol) const;
     void collect_aj(HVector& vector, int iCol, double multi) const;
@@ -34,6 +37,9 @@ public:
     void rp_mtx();
     const int price_by_row_sw_dsty_num = 1;
     const int price_by_row_sw_dsty_den = 10;
+    const double hyperPRICE = 0.10;
+    const double densityRunningAverageMu = 0.05;
+    //    double row_apDensity;
 private:
     int numCol;
     int numRow;

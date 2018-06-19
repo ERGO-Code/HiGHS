@@ -204,9 +204,10 @@ public:
   HVector column;
   HVector columnBFRT;
   HVector columnDSE;
-  double row_epDensity;
-  double rowdseDensity;
   double columnDensity;
+  double row_epDensity;
+  double row_apDensity;
+  double rowdseDensity;
 
   HDualRow dualRow;
 

@@ -147,7 +147,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	  factor->btran(row_ep, row_epDensity);
 	  dualRHS.workEdWt[i] = row_ep.norm2();
 	  row_epDensity = (1-densityRunningAverageMu) * row_epDensity +
-	    densityRunningAverageMu * row_ep.count / numRow;
+	    densityRunningAverageMu * (1.0 * row_ep.count / numRow);
 	}
 	IzDseEdWtTT = model->timer.getTime() - IzDseEdWtTT;
 #ifdef JAJH_dev
@@ -399,6 +399,7 @@ void HDual::init(int num_threads)
   row_ap.setup(numCol);
   columnDensity = 0;
   row_epDensity = 0;
+  row_apDensity = 0;
   rowdseDensity = 0;
   // Setup other buffers
   dualRow.setup(model);
@@ -967,7 +968,7 @@ void HDual::chooseRow()
     deltaPrimal = baseValue[rowOut] - baseUpper[rowOut];
   sourceOut = deltaPrimal < 0 ? -1 : 1;
   row_epDensity = (1-densityRunningAverageMu) * row_epDensity +
-			    densityRunningAverageMu * row_ep.count / numRow;
+			    densityRunningAverageMu * (1.0 * row_ep.count / numRow);
 }
 
 void HDual::chooseColumn(HVector *row_ep)
@@ -983,7 +984,11 @@ void HDual::chooseColumn(HVector *row_ep)
   iterateOpRecBf(AnIterOpTy_Price, 1.0);
 
   //matrix->price_by_col(row_ap, *row_ep);
-  matrix->price_by_row(row_ap, *row_ep);
+  //  matrix->price_by_row(row_ap, *row_ep);
+  matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
+
+  row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
+    densityRunningAverageMu * (1.0 * row_ap.count / numCol);
 
   iterateOpRecAf(AnIterOpTy_Price, row_ap);
 
@@ -1276,10 +1281,10 @@ void HDual::updatePrimal(HVector *DSE_Vector)
   if (EdWt_Mode == EdWt_Mode_DSE)
   {
     rowdseDensity = (1-densityRunningAverageMu) * rowdseDensity +
-      densityRunningAverageMu * DSE_Vector->count / numRow;
+      densityRunningAverageMu * (1.0 * DSE_Vector->count / numRow);
   }
   columnDensity = (1-densityRunningAverageMu) * columnDensity +
-    densityRunningAverageMu * column.count / numRow;
+    densityRunningAverageMu * (1.0 * column.count / numRow);
 
   total_fake += column.fakeTick;
   if (EdWt_Mode == EdWt_Mode_DSE)
@@ -1685,7 +1690,7 @@ void HDual::iterateAn() {
       AnIterSpeedNumRec++;
       AnIterSpeedIterRec[AnIterSpeedNumRec] = model->numberIteration;
       AnIterSpeedTimeRec[AnIterSpeedNumRec] = model->timer.getTime();
-      if (AnIterSpeedIterDl > 100) {
+      /*      if (AnIterSpeedIterDl > 100) {
 	int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
 			     HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
 			     HTICK_FTRAN, HTICK_FTRAN_MIX, HTICK_FTRAN_DSE,
@@ -1694,8 +1699,9 @@ void HDual::iterateAn() {
 	int reportCount = sizeof(reportList) / sizeof(int);
 	model->timer.report(reportCount, reportList);
 	bool header = true;
-	iterateRpForced(header);
+        iterateRpForced(header);
       }
+      */
     }
   }
 }
@@ -1788,10 +1794,10 @@ void HDual::iterateRpAn() {
 }
 
 void HDual::iterateRp() {
-      if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
-      int numIter = model->numberIteration;
-      bool header= numIter % 10 == 1;
-      iterateRpForced(header);
+  if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
+  int numIter = model->numberIteration;
+  bool header= numIter % 10 == 1;
+  iterateRpForced(header);
 }
 
 void HDual::iterateRpForced(bool header) {
@@ -1810,22 +1816,25 @@ void HDual::iterateRpForced(bool header) {
   //	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
   //  //DuObj %11.4g;
     if (header) 
-      printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RSeD FreeLsZ\n");
+      printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RApD RSeD FreeLsZ\n");
 
     int l10ColDse = -99;
     int l10REpDse = -99;
+    int l10RapDse = -99;
     int l10DseDse = -99;
+    //    double row_apDensity = matrix->row_apDensity;
     if (columnDensity>0) l10ColDse = log(columnDensity)/log(10.0);
     if (row_epDensity>0) l10REpDse = log(row_epDensity)/log(10.0);
+    if (row_apDensity>0) l10RapDse = log(row_apDensity)/log(10.0);
     if (rowdseDensity>0) l10DseDse = log(rowdseDensity)/log(10.0);
 
-    printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %4d %4d %4d %7d\n", 
+    printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %4d %4d %4d %4d %7d\n", 
 	   numIter,
 	 //model->objective,
 	   solvePhase,
 	   invertHint, numericalTrouble,
 	   rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha,
-	   l10ColDse, l10REpDse, l10DseDse,
+	   l10ColDse, l10REpDse, l10RapDse, l10DseDse,
 	   dualRow.freeListSize);
 }
 

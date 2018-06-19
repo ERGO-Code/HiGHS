@@ -66,6 +66,8 @@ void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
       }
     }
   }
+  //Initialise the density of the Price result
+  //  row_apDensity = 0;
 #ifdef JAJH_dev
   assert(setup_ok(nonbasicFlag_));
 #endif
@@ -128,6 +130,8 @@ void HMatrix::setup_lgBs(int numCol_, int numRow_, const int *Astart_,
       ARvalue[iPut] = Avalue[k];
     }
   }
+  //Initialise the density of the Price result
+  //  row_apDensity = 0;
 }
 
 void HMatrix::update(int columnIn, int columnOut) {
@@ -209,6 +213,8 @@ void HMatrix::price_by_col(HVector& row_ap, HVector& row_ep) const {
         }
     }
     row_ap.count = ap_count;
+    //    row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
+    //      densityRunningAverageMu * (1.0 * row_ap.count / numCol);
 
 }
 
@@ -251,9 +257,11 @@ void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
         }
     }
     row_ap.count = ap_count;
+    //    row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
+    //      densityRunningAverageMu * (1.0 * row_ap.count / numCol);
 }
 
-void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep) const {
+void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty) const {
     // Alias
 
   int ap_count = 0;
@@ -290,25 +298,30 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep) const {
   lc_row_ap.count = lc_ap_count;
   */
     // Computation
-  int nextI = 0;
-  for (int i = 0; i < ep_count; i++) {
-    int iRow = ep_index[i];
-    int iRowNNz = AR_Nend[iRow]-ARstart[iRow];
-    bool price_by_row_sw = ap_count+iRowNNz >= numCol ||
-      ap_count*price_by_row_sw_dsty_den > numCol*price_by_row_sw_dsty_num;
-    //    if (price_by_row_sw) printf("Stop maintaining nonzeros in Price\n");
-    if (price_by_row_sw) break;
-    double multi = ep_array[iRow];
-    for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
-      int index = ARindex[k];
-      double value0 = ap_array[index];
-      double value1 = value0 + multi * ARvalue[k];
-      if (value0 == 0) ap_index[ap_count++] = index;
-      ap_array[index] = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+
+  int nextI;
+  //Determine whether to start hyper-sparse Price  
+  nextI = 0;
+  if (hist_dsty <= hyperPRICE) {
+    for (int i = 0; i < ep_count; i++) {
+      int iRow = ep_index[i];
+      int iRowNNz = AR_Nend[iRow]-ARstart[iRow];
+      bool price_by_row_sw = ap_count+iRowNNz >= numCol ||
+	ap_count*price_by_row_sw_dsty_den > numCol*price_by_row_sw_dsty_num;
+      //    if (price_by_row_sw) printf("Stop maintaining nonzeros in Price\n");
+      if (price_by_row_sw) break;
+      double multi = ep_array[iRow];
+      for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
+	int index = ARindex[k];
+	double value0 = ap_array[index];
+	double value1 = value0 + multi * ARvalue[k];
+	if (value0 == 0) ap_index[ap_count++] = index;
+	ap_array[index] = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+      }
+      nextI = i+1;
     }
-    nextI = i+1;
   }
-  
+    
   if (nextI < ep_count) {
     //Price is not complete: finish without maintaining nonzeros of result
     for (int i = nextI; i < ep_count; i++) {
@@ -368,6 +381,8 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep) const {
   }
   if (priceEr > 1e-6) printf("Price error 2 is %g\n", priceEr);
   */
+  //  row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
+  //    densityRunningAverageMu * (1.0 * row_ap.count / numCol);
 }
 
 void HMatrix::compute_vecT_matB(const double *vec, const int *base,
