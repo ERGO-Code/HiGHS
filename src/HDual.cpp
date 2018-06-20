@@ -1002,6 +1002,9 @@ void HDual::chooseColumn(HVector *row_ep)
       iterateOpRecBf(AnIterOpTy_Price, row_apDensity);
     }
     matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
+
+    bool anPriceEr = false;
+    if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
   } else {
     //No avoiding Hyper Price on current density of result or
     //switching if the density of this Price becomes extreme
@@ -1686,6 +1689,7 @@ void HDual::iterateIzAn() {
   for (int k=1; k<=AnIterNumInvertHint; k++) AnIterNumInvert[k]=0;
   AnIterNumPrDgnIt = 0;
   AnIterNumDuDgnIt = 0;
+  for (int k=0; k<=EdWt_Mode_Dan; k++) AnIterNumEdWtIt[k]=0;
   AnIterNumCostlyDseIt = 0;
   AnIterSpeedNumRec = 0;
   AnIterSpeedIterDl = 1;
@@ -1713,10 +1717,28 @@ void HDual::iterateAn() {
   if (invertHint > 0) AnIterNumInvert[invertHint]++;
   if (thetaDual <= 0) AnIterNumDuDgnIt++;
   if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
-  bool CostlyDseIt =
-    rowdseDensity*rowdseDensity > 1000.0*row_epDensity*columnDensity &&
-    rowdseDensity > 1e-2;
-  if (CostlyDseIt) AnIterNumCostlyDseIt++;
+  AnIterNumEdWtIt[EdWt_Mode]++;
+ if (EdWt_Mode == EdWt_Mode_DSE) {
+    bool CostlyDseIt =
+      rowdseDensity*rowdseDensity > AnIterCostlyDseFac*row_epDensity*columnDensity &&
+      rowdseDensity > AnIterCostlyDseMnDensity;
+    if (CostlyDseIt) {
+      AnIterNumCostlyDseIt++;
+      int lcNumIter = model->numberIteration-AnIterIt0;
+      if (alw_DSE2Dvx_sw
+	  && (AnIterNumCostlyDseIt > lcNumIter*AnIterFracNumCostlyDseItbfSw)
+	  && (AnIterNumCostlyDseIt > AnIterMnNumCostlyDseItbfSw)) {
+        //At least min(100, 5%) of the iterations have been costly DSE so switch to Devex
+        printf("Switch from DSE to Dvx after %d costly DSE iterations of %d\n", AnIterNumCostlyDseIt, lcNumIter);
+        printf("rowdseDensity = %g; row_epDensity = %g; columnDensity = %g\n", rowdseDensity, row_epDensity,  columnDensity);
+        EdWt_Mode = EdWt_Mode_Dvx;
+        //Zero the number of Devex frameworks used and set up the first one
+        n_dvx_fwk = 0;
+        dvx_ix.assign(numTot, 0);
+        iz_dvx_fwk();
+      }
+    }
+  }
   if (model->numberIteration == AnIterSpeedIterRec[AnIterSpeedNumRec]+AnIterSpeedIterDl) {
     if (AnIterSpeedNumRec == AnIterSpeedMxNumRec) {
       for (int rec = 1; rec<=AnIterSpeedMxNumRec/2; rec++) {
@@ -1770,6 +1792,15 @@ void HDual::iterateOpRecAf(int opTy, HVector& vector) {
 void HDual::iterateRpAn() {
   int AnIterNumIter = model->numberIteration - AnIterIt0;
   printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter, AnIterIt0+1, model->numberIteration);
+  if (AnIterNumIter <=0) return;
+  int lc_EdWtNumIter;
+  lc_EdWtNumIter = AnIterNumEdWtIt[EdWt_Mode_DSE];
+  if (lc_EdWtNumIter>0) printf("DSE for %7d (%3d%%) iterations\n", lc_EdWtNumIter, (100*lc_EdWtNumIter)/AnIterNumIter);
+  lc_EdWtNumIter = AnIterNumEdWtIt[EdWt_Mode_Dvx];
+  if (lc_EdWtNumIter>0) printf("Dvx for %7d (%3d%%) iterations\n", lc_EdWtNumIter, (100*lc_EdWtNumIter)/AnIterNumIter);
+  lc_EdWtNumIter = AnIterNumEdWtIt[EdWt_Mode_Dan];
+  if (lc_EdWtNumIter>0) printf("Dan for %7d (%3d%%) iterations\n", lc_EdWtNumIter, (100*lc_EdWtNumIter)/AnIterNumIter);
+  printf("\n");
   for (int k=0; k<NumAnIterOpTy; k++) {
     AnIterOpRec *AnIter = &AnIterOp[k];
     int lcNumCa = AnIter->AnIterOpSuNumCa;

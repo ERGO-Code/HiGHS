@@ -262,43 +262,15 @@ void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
 }
 
 void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty) const {
-    // Alias
-
+  // Alias
   int ap_count = 0;
   int *ap_index = &row_ap.index[0];
   double *ap_array = &row_ap.array[0];
   const int ep_count = row_ep.count;
   const int *ep_index = &row_ep.index[0];
   const double *ep_array = &row_ep.array[0];
-  /*  HVector lc_row_ap;
-  lc_row_ap.setup(numCol);
 
-  int *lc_ap_index = &lc_row_ap.index[0];
-  double *lc_ap_array = &lc_row_ap.array[0];
-
-  for (int i = 0; i < ep_count; i++) {
-    int iRow = ep_index[i];
-    double multi = ep_array[iRow];
-    for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
-      int index = ARindex[k];
-      double value0 = lc_ap_array[index];
-      double value1 = value0 + multi * ARvalue[k];
-      lc_ap_array[index] = value1;
-    }
-  }
-  int lc_ap_count = 0;
-  for (int index=0; index<numCol; index++) {
-    double value1 = lc_ap_array[index];
-    if (fabs(value1) < HSOL_CONST_TINY) {
-      lc_ap_array[index] = 0;
-    } else {
-      lc_ap_index[lc_ap_count++] = index;
-    }
-  }
-  lc_row_ap.count = lc_ap_count;
-  */
-    // Computation
-
+  // Computation
   int nextI;
   //Determine whether to start hyper-sparse Price  
   nextI = 0;
@@ -362,27 +334,69 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_ds
     }
     row_ap.count = ap_count;
   }
-  /*  
-  double priceEr=0;
+}
+
+void HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
+  // Alias
+  int *ap_index = &row_ap.index[0];
+  double *ap_array = &row_ap.array[0];
+
+  HVector lc_row_ap;
+  lc_row_ap.setup(numCol);
+  //  int *lc_ap_index = &lc_row_ap.index[0];
+  double *lc_ap_array = &lc_row_ap.array[0];
+
+  price_by_row(lc_row_ap, row_ep);
+
+  double priceErTl=1e-4;
+  double priceEr1=0;
+  double row_apNormCk=0;
+  double mxTinyVEr=0;
   for (int index=0; index<numCol; index++) {
-    double dlPriceV = abs(ap_array[index] - lc_ap_array[index]);
-    priceEr += dlPriceV*dlPriceV;
-  }
-  if (priceEr > 1e-6) printf("Price error 1 is %g\n", priceEr);
-  
-  for (int i=0; i<lc_row_ap.count; i++) {
-    int index = lc_ap_index[i];
+    double PriceV = ap_array[index];
+    double lcPriceV = lc_ap_array[index];
+    if ((fabs(PriceV) > HSOL_CONST_TINY && fabs(lcPriceV) <= HSOL_CONST_TINY)
+      || (fabs(lcPriceV) > HSOL_CONST_TINY && fabs(PriceV) <= HSOL_CONST_TINY))
+      mxTinyVEr = max(max(fabs(PriceV), fabs(lcPriceV)),mxTinyVEr);
+    //      printf("Index %7d: Small value inconsistency PriceV = %11.4g; lcPriceV = %11.4g\n", index, PriceV, lcPriceV);
+    double dlPriceV = abs(PriceV - lcPriceV);
+    priceEr1 += dlPriceV*dlPriceV;
+    row_apNormCk += PriceV*PriceV;
     lc_ap_array[index]=0;
   }
-  priceEr=0;
-  for (int index=0; index<numCol; index++) {
-    double PriceV = lc_ap_array[index];
-    priceEr += PriceV*PriceV;
+  double row_apNorm=sqrt(row_apNormCk);
+
+  bool row_apCountEr = lc_row_ap.count != row_ap.count;
+
+  for (int i=0; i<row_ap.count; i++) {
+    int index = ap_index[i];
+    double PriceV = ap_array[index];
+    row_apNormCk -= PriceV*PriceV;
+    lc_ap_array[index]=PriceV;
+    ap_array[index]=0;
   }
-  if (priceEr > 1e-6) printf("Price error 2 is %g\n", priceEr);
-  */
-  //  row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
-  //    densityRunningAverageMu * (1.0 * row_ap.count / numCol);
+  double priceEr2=0;
+  for (int index=0; index<numCol; index++) {
+    double PriceV = ap_array[index];
+    priceEr2 += PriceV*PriceV;
+    ap_array[index] = lc_ap_array[index];
+  }
+  priceEr1 = sqrt(priceEr1);
+  priceEr2 = sqrt(priceEr2);
+  row_apNormCk = sqrt(abs(row_apNormCk));
+  double row_apNormCkTl = 1e-7;
+  bool row_apNormCkEr = row_apNormCk > row_apNormCkTl*row_apNorm;
+  if (row_apCountEr
+      ||priceEr1 > priceErTl
+      || priceEr2 > priceErTl
+      || row_apNormCkEr) {
+    printf("Price error");
+    if (priceEr1 > priceErTl) printf(": ||row_apDl|| = %11.4g", priceEr1);
+    if (priceEr2 > priceErTl) printf(": ||row_apNZ|| = %11.4g", priceEr2);
+    if (row_apNormCkEr) printf(": ||IxCk|| = %11.4g ||row_ap|| = %11.4g, Tl=%11.4g", row_apNormCk, row_apNorm, row_apNormCkTl*row_apNorm);
+    if (row_apCountEr) printf(": row_apCountEr with mxTinyVEr = %11.4g", mxTinyVEr);
+    printf("\n");
+  }
 }
 
 void HMatrix::compute_vecT_matB(const double *vec, const int *base,

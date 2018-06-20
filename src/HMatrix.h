@@ -28,6 +28,7 @@ public:
     void price_by_col(HVector& row_ap, HVector& row_ep) const;
     void price_by_row(HVector& row_ap, HVector& row_ep) const;
     void price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty) const;
+    void price_er_ck(HVector& row_ap, HVector& row_ep) const;
     void update(int columnIn, int columnOut);
     double compute_dot(HVector& vector, int iCol) const;
     void collect_aj(HVector& vector, int iCol, double multi) const;

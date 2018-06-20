@@ -317,7 +317,13 @@ enum AnIterOpTy
     int AnIterNumInvert[8];
     int AnIterNumPrDgnIt;
     int AnIterNumDuDgnIt;
+    int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1
+    const double AnIterCostlyDseFac = 1000.0;
+    const double AnIterCostlyDseMnDensity = 0.01;
     int AnIterNumCostlyDseIt;
+    const int AnIterMnNumCostlyDseItbfSw = 100;
+    const double AnIterFracNumCostlyDseItbfSw = 0.05;
+    
     const int AnIterSpeedMxNumRec = 20;
     int AnIterSpeedNumRec;
     int AnIterSpeedIterDl;
