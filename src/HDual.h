@@ -288,6 +288,7 @@ public:
 const bool AnIterLg = true;
 
     int AnIterIt0;
+    int AnIterPrevIt;
     //Major operation analysis struct
 enum AnIterOpTy
 {
@@ -312,6 +313,15 @@ enum AnIterOpTy
       string AnIterOpName;
     };
     AnIterOpRec AnIterOp[NumAnIterOpTy];
+
+ struct AnIterRec {
+   double AnIterRecTime;
+   double AnIterRecDsty[NumAnIterOpTy];
+   int AnIterRecIter;
+   int AnIterRecEdWt_Mode;
+ };
+
+ AnIterRec AnIterAllRec[22];//1+AnIterSpeedMxNumRec];
 
     const int AnIterNumInvertHint = 7;    
     int AnIterNumInvert[8];

@@ -994,7 +994,7 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  bool price_by_row_w_sw = true;
+  bool price_by_row_w_sw = false;
   if (price_by_row_w_sw) {
     //Avoid Hyper Price on current density of result or switch if the
     //density of this Price becomes extreme
@@ -1003,7 +1003,7 @@ void HDual::chooseColumn(HVector *row_ep)
     }
     matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
 
-    bool anPriceEr = false;
+    bool anPriceEr = true;
     if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
   } else {
     //No avoiding Hyper Price on current density of result or
@@ -1667,6 +1667,7 @@ void HDual::rp_hsol_da_str()
 
 void HDual::iterateIzAn() {
   AnIterIt0 = model->numberIteration;
+  AnIterPrevIt = 0;
   AnIterOpRec *AnIter;
   AnIter = &AnIterOp[AnIterOpTy_Btran]; AnIter->AnIterOpName = "Btran";
   AnIter = &AnIterOp[AnIterOpTy_Price]; AnIter->AnIterOpName = "Price";
@@ -1695,30 +1696,34 @@ void HDual::iterateIzAn() {
   AnIterSpeedIterDl = 1;
   AnIterSpeedIterRec[AnIterSpeedNumRec] = AnIterIt0;
   AnIterSpeedTimeRec[AnIterSpeedNumRec] = model->timer.getTime();
+  AnIterRec *lcAnIter = &AnIterAllRec[0];
+  lcAnIter->AnIterRecIter = AnIterIt0;
+  lcAnIter->AnIterRecTime = model->timer.getTime();
+  
 }
 
 void HDual::iterateAn() {
   //Possibly report on the iteration
   iterateRp();
-
+  int AnIterCuIt = model->numberIteration;
   for (int k=0; k<NumAnIterOpTy; k++) {
-    AnIterOpRec *AnIter = &AnIterOp[k];
-    if (AnIter->AnIterOpNumCa) {
-      AnIter->AnIterOpSuNumCa      += AnIter->AnIterOpNumCa;
-      AnIter->AnIterOpSuNumHyperOp += AnIter->AnIterOpNumHyperOp;
-      AnIter->AnIterOpSuNumHyperRs += AnIter->AnIterOpNumHyperRs;
-      AnIter->AnIterOpSuLog10RsDsty += AnIter->AnIterOpLog10RsDsty;
+    AnIterOpRec *lcAnIterOp = &AnIterOp[k];
+    if (lcAnIterOp->AnIterOpNumCa) {
+      lcAnIterOp->AnIterOpSuNumCa      += lcAnIterOp->AnIterOpNumCa;
+      lcAnIterOp->AnIterOpSuNumHyperOp += lcAnIterOp->AnIterOpNumHyperOp;
+      lcAnIterOp->AnIterOpSuNumHyperRs += lcAnIterOp->AnIterOpNumHyperRs;
+      lcAnIterOp->AnIterOpSuLog10RsDsty += lcAnIterOp->AnIterOpLog10RsDsty;
     }
-    AnIter->AnIterOpNumCa = 0;
-    AnIter->AnIterOpNumHyperOp = 0;
-    AnIter->AnIterOpNumHyperRs = 0;
-    AnIter->AnIterOpLog10RsDsty = 0;
+    lcAnIterOp->AnIterOpNumCa = 0;
+    lcAnIterOp->AnIterOpNumHyperOp = 0;
+    lcAnIterOp->AnIterOpNumHyperRs = 0;
+    lcAnIterOp->AnIterOpLog10RsDsty = 0;
   }
   if (invertHint > 0) AnIterNumInvert[invertHint]++;
   if (thetaDual <= 0) AnIterNumDuDgnIt++;
   if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
-  AnIterNumEdWtIt[EdWt_Mode]++;
- if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (AnIterCuIt > AnIterPrevIt) AnIterNumEdWtIt[EdWt_Mode] += (AnIterCuIt-AnIterPrevIt);
+  if (EdWt_Mode == EdWt_Mode_DSE) {
     bool CostlyDseIt =
       rowdseDensity*rowdseDensity > AnIterCostlyDseFac*row_epDensity*columnDensity &&
       rowdseDensity > AnIterCostlyDseMnDensity;
@@ -1739,9 +1744,11 @@ void HDual::iterateAn() {
       }
     }
   }
+ 
   if (model->numberIteration == AnIterSpeedIterRec[AnIterSpeedNumRec]+AnIterSpeedIterDl) {
     if (AnIterSpeedNumRec == AnIterSpeedMxNumRec) {
       for (int rec = 1; rec<=AnIterSpeedMxNumRec/2; rec++) {
+	AnIterAllRec[rec] = AnIterAllRec[2*rec];
 	AnIterSpeedIterRec[rec] = AnIterSpeedIterRec[2*rec];
 	AnIterSpeedTimeRec[rec] = AnIterSpeedTimeRec[2*rec];
       }
@@ -1749,6 +1756,15 @@ void HDual::iterateAn() {
       AnIterSpeedIterDl = AnIterSpeedIterDl*2;
     } else {
       AnIterSpeedNumRec++;
+      AnIterRec *lcAnIter = &AnIterAllRec[AnIterSpeedNumRec];
+      lcAnIter->AnIterRecIter = model->numberIteration;
+      lcAnIter->AnIterRecEdWt_Mode = EdWt_Mode;
+      lcAnIter->AnIterRecTime = model->timer.getTime();
+      lcAnIter->AnIterRecDsty[AnIterOpTy_Btran] = row_epDensity;
+      lcAnIter->AnIterRecDsty[AnIterOpTy_Price] = row_apDensity;
+      lcAnIter->AnIterRecDsty[AnIterOpTy_Ftran] = columnDensity;
+      lcAnIter->AnIterRecDsty[AnIterOpTy_FtranBFRT] = columnDensity;
+      lcAnIter->AnIterRecDsty[AnIterOpTy_FtranDSE] = rowdseDensity;
       AnIterSpeedIterRec[AnIterSpeedNumRec] = model->numberIteration;
       AnIterSpeedTimeRec[AnIterSpeedNumRec] = model->timer.getTime();
       /*      if (AnIterSpeedIterDl > 100) {
@@ -1765,6 +1781,7 @@ void HDual::iterateAn() {
       */
     }
   }
+  AnIterPrevIt = AnIterCuIt;
 }
 
 void HDual::iterateOpRecBf(int opTy, double hist_dsty) {
@@ -1784,7 +1801,13 @@ void HDual::iterateOpRecAf(int opTy, HVector& vector) {
   if (rsDsty > 0) {
     AnIter->AnIterOpLog10RsDsty += log(rsDsty)/log(10.0);
   } else {
-    printf("Strange: operation %s has result density = %g\n", AnIter->AnIterOpName.c_str(), rsDsty);
+    double vectorNorm = 0;
+    for (int index = 0; index < AnIter->AnIterOpDim; index++) {
+      double vectorValue = vector.array[index];
+      vectorNorm += vectorValue*vectorValue;
+    }
+    vectorNorm = sqrt(vectorNorm);
+    printf("Strange: operation %s has result density = %g: ||vector|| = %g\n", AnIter->AnIterOpName.c_str(), rsDsty, vectorNorm);
   }
 
 }
@@ -1846,19 +1869,53 @@ void HDual::iterateRpAn() {
   //than AnIterSpeedMxNumRec records, so ensure that there is enough
   //space in the arrays
   //
+  AnIterRec *lcAnIter; 
   AnIterSpeedNumRec++;
   AnIterSpeedIterRec[AnIterSpeedNumRec] = model->numberIteration;
   AnIterSpeedTimeRec[AnIterSpeedNumRec] = model->timer.getTime();
+
+  lcAnIter = &AnIterAllRec[AnIterSpeedNumRec];
+  lcAnIter->AnIterRecIter = model->numberIteration;
+  lcAnIter->AnIterRecTime = model->timer.getTime();
+
   printf("\n Iteration speed analysis\n");
+  lcAnIter = &AnIterAllRec[0];
+  int fmIter = lcAnIter->AnIterRecIter;
+  double fmTime = lcAnIter->AnIterRecTime;
+  printf("   Iter ( FmIter: ToIter)     Time Iter/sec |   CD REpD RApD RSeD | EdWt\n");
   for (int rec = 1; rec<=AnIterSpeedNumRec; rec++) {
-    int dlIter = AnIterSpeedIterRec[rec] - AnIterSpeedIterRec[rec-1];
+    lcAnIter = &AnIterAllRec[rec];
+    int toIter = lcAnIter->AnIterRecIter;
+    double toTime = lcAnIter->AnIterRecTime;
+    //    int dlIter = AnIterSpeedIterRec[rec] - AnIterSpeedIterRec[rec-1];
+    int dlIter = toIter-fmIter;
     if (rec<AnIterSpeedNumRec && dlIter != AnIterSpeedIterDl) printf("STRANGE: %d = dlIter != AnIterSpeedIterDl = %d\n", dlIter, AnIterSpeedIterDl);
-    double dlTime = AnIterSpeedTimeRec[rec] - AnIterSpeedTimeRec[rec-1];
+    //    double dlTime = AnIterSpeedTimeRec[rec] - AnIterSpeedTimeRec[rec-1];
+    double dlTime = toTime-fmTime;
     int iterSpeed = 0;
     if (dlTime>0) iterSpeed = dlIter/dlTime;
-    printf("%7d Iterations %7d to %7d in %8.4f seconds: %7d iterations/second\n",
+    int l10ColDse = -99;
+    int l10REpDse = -99;
+    int l10RapDse = -99;
+    int l10DseDse = -99;
+    if (columnDensity>0) l10ColDse = log(lcAnIter->AnIterRecDsty[AnIterOpTy_Ftran])/log(10.0);
+    if (row_epDensity>0) l10REpDse = log(lcAnIter->AnIterRecDsty[AnIterOpTy_Btran])/log(10.0);
+    if (row_apDensity>0) l10RapDse = log(lcAnIter->AnIterRecDsty[AnIterOpTy_Price])/log(10.0);
+    if (rowdseDensity>0) l10DseDse = log(lcAnIter->AnIterRecDsty[AnIterOpTy_FtranDSE])/log(10.0);
+    int lcEdWt_Mode = lcAnIter->AnIterRecEdWt_Mode;
+    string strEdWt_Mode;
+    if (lcEdWt_Mode == EdWt_Mode_DSE) strEdWt_Mode = "DSE";
+    else if (lcEdWt_Mode == EdWt_Mode_Dvx) strEdWt_Mode = "Dvx";
+    else if (lcEdWt_Mode == EdWt_Mode_Dvx) strEdWt_Mode = "Dan";
+    else strEdWt_Mode = "XXX";					
+
+    printf("%7d (%7d:%7d) %8.4f  %7d | %4d %4d %4d %4d |  %3s\n",
 	   dlIter, AnIterSpeedIterRec[rec-1], AnIterSpeedIterRec[rec],
-	   dlTime, iterSpeed);
+	   dlTime, iterSpeed,
+	   l10ColDse, l10REpDse, l10RapDse, l10DseDse,
+	   strEdWt_Mode.c_str());
+    fmIter = toIter;
+    fmTime = toTime;
   }
   printf("\n");
 }
