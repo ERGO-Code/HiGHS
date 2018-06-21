@@ -88,9 +88,11 @@ public:
   void iterateOpRecBf(int opTy, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
-  int intLog10(double v);
   void iterateRp();
   void iterateRpForced(bool header);
+  void iterateRpInvert(int i_v);
+  void iterateRpDsty();
+  int intLog10(double v);
 
   void chooseRow();
 
@@ -166,10 +168,12 @@ public:
   bool iz_DSE_wt;
   bool alw_DSE2Dvx_sw;
   int n_wg_DSE_wt;
+  int AnIterPrevRpNumCostlyDseIt;
+  double AnIterCostlyDseFq;
   const double AnIterCostlyDseMeasureLimit = 1000.0;
-  const double AnIterCostlyDseMnDensity = 0.01;
+  const double AnIterCostlyDseMnDensity = 0.1;
   const int AnIterMnNumCostlyDseItbfSw = 100;
-  const double AnIterFracNumCostlyDseItbfSw = 0.05;
+  const double AnIterFracNumCostlyDseItbfSw = 0.10;
   double AnIterCostlyDseMeasure;
 
   // Model

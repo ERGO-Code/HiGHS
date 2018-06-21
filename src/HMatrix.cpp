@@ -303,7 +303,8 @@ void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_ds
 	int index = ARindex[k];
 	double value0 = ap_array[index];
 	double value1 = value0 + multi * ARvalue[k];
-	ap_array[index] = value1;
+	//	ap_array[index] = value1;
+	ap_array[index] = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
       }
     }
     //Determine indices of nonzeros in Price result

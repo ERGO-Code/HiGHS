@@ -785,7 +785,8 @@ void HDual::rebuild()
 
 	// Compute the objective value
 	model->computeDuObj(solvePhase);
-	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
+	//	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
+	iterateRpInvert(sv_invertHint);
 
 	total_INVERT_TICK = factor->pseudoTick;
 	total_FT_inc_TICK = 0;
@@ -811,7 +812,8 @@ void HDual::cleanup() {
 	model->initBound();
 	model->computeDual();
 	model->computeDuObj(solvePhase);
-	model->util_reportNumberIterationObjectiveValue(-1);
+	//	model->util_reportNumberIterationObjectiveValue(-1);
+	iterateRpInvert(-1);
 
   model->computeDualInfeasInPrimal(&dualInfeasCount);
 }
@@ -994,7 +996,7 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  bool price_by_row_w_sw = false;
+  bool price_by_row_w_sw = true;
   if (price_by_row_w_sw) {
     //Avoid Hyper Price on current density of result or switch if the
     //density of this Price becomes extreme
@@ -1003,8 +1005,6 @@ void HDual::chooseColumn(HVector *row_ep)
     }
     matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
 
-    bool anPriceEr = true;
-    if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
   } else {
     //No avoiding Hyper Price on current density of result or
     //switching if the density of this Price becomes extreme
@@ -1014,6 +1014,9 @@ void HDual::chooseColumn(HVector *row_ep)
     //matrix->price_by_col(row_ap, *row_ep);
     matrix->price_by_row(row_ap, *row_ep);
   }
+
+  bool anPriceEr = false;
+  if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
 
   row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
     densityRunningAverageMu * (1.0 * row_ap.count / numCol);
@@ -1697,13 +1700,30 @@ void HDual::iterateIzAn() {
   AnIterTraceRec *lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
   lcAnIter->AnIterTraceTime = model->timer.getTime();
-  
+
+  AnIterCostlyDseFq = 0;
+  AnIterPrevRpNumCostlyDseIt = 0;
 }
 
 void HDual::iterateAn() {
   //Possibly report on the iteration
   iterateRp();
+
   int AnIterCuIt = model->numberIteration;
+  if (AnIterCuIt % 100 == 0) {
+    int lc_NumCostlyDseIt = AnIterNumCostlyDseIt - AnIterPrevRpNumCostlyDseIt;
+    AnIterPrevRpNumCostlyDseIt = AnIterNumCostlyDseIt;
+    printf("Iter %10d: CD REpD RApD RSeD", AnIterCuIt);
+    iterateRpDsty();
+    if (EdWt_Mode == EdWt_Mode_DSE) {
+      int lc_pct = (100*AnIterNumCostlyDseIt)/(AnIterCuIt-AnIterIt0);
+      printf("| Fq = %4.2f; Su =%5d (%3d%%)", AnIterCostlyDseFq, AnIterNumCostlyDseIt, lc_pct);
+
+      if (lc_NumCostlyDseIt>0) printf("; LcNum =%3d", lc_NumCostlyDseIt);
+    }
+    printf("\n");
+  }
+
   for (int k=0; k<NumAnIterOpTy; k++) {
     AnIterOpRec *lcAnIterOp = &AnIterOp[k];
     if (lcAnIterOp->AnIterOpNumCa) {
@@ -1722,22 +1742,30 @@ void HDual::iterateAn() {
   if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
   if (AnIterCuIt > AnIterPrevIt) AnIterNumEdWtIt[EdWt_Mode] += (AnIterCuIt-AnIterPrevIt);
   if (EdWt_Mode == EdWt_Mode_DSE) {
-    if (row_epDensity*columnDensity > 0) 
-      AnIterCostlyDseMeasure = rowdseDensity*rowdseDensity/(row_epDensity*columnDensity);
-    else
+    double AnIterCostlyDseMeasureDen;
+    //    AnIterCostlyDseMeasureDen = row_epDensity*columnDensity;
+    AnIterCostlyDseMeasureDen = max(max(row_epDensity, columnDensity), row_apDensity);
+    if (AnIterCostlyDseMeasureDen > 0) {
+      //      AnIterCostlyDseMeasure = rowdseDensity*rowdseDensity/AnIterCostlyDseMeasureDen;
+      AnIterCostlyDseMeasure = rowdseDensity/AnIterCostlyDseMeasureDen;
+      AnIterCostlyDseMeasure = AnIterCostlyDseMeasure*AnIterCostlyDseMeasure;
+    } else {
       AnIterCostlyDseMeasure = 0;
+    }
     bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
 	//      rowdseDensity*rowdseDensity > AnIterCostlyDseMeasureLimit*row_epDensity*columnDensity &&
       rowdseDensity > AnIterCostlyDseMnDensity;
+    AnIterCostlyDseFq = (1-densityRunningAverageMu)*AnIterCostlyDseFq;
     if (CostlyDseIt) {
       AnIterNumCostlyDseIt++;
+      AnIterCostlyDseFq += densityRunningAverageMu*1.0;
       int lcNumIter = model->numberIteration-AnIterIt0;
       if (alw_DSE2Dvx_sw
 	  && (AnIterNumCostlyDseIt > lcNumIter*AnIterFracNumCostlyDseItbfSw)
 	  && (AnIterNumCostlyDseIt > AnIterMnNumCostlyDseItbfSw)) {
         //At least min(100, 5%) of the iterations have been costly DSE so switch to Devex
-        printf("Switch from DSE to Dvx after %d costly DSE iterations of %d\n", AnIterNumCostlyDseIt, lcNumIter);
-        printf("rowdseDensity = %g; row_epDensity = %g; columnDensity = %g\n", rowdseDensity, row_epDensity,  columnDensity);
+        printf("Switch from DSE to Dvx after %d costly DSE iterations of %d: RSeD = %g; REpD = %g; CD = %g\n",
+	       AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,  columnDensity);
         EdWt_Mode = EdWt_Mode_Dvx;
         //Zero the number of Devex frameworks used and set up the first one
         n_dvx_fwk = 0;
@@ -1929,12 +1957,6 @@ void HDual::iterateRpAn() {
   printf("\n");
 }
 
-int HDual::intLog10(double v) {
-  int intLog10V = -99;
-  if (v > 0) intLog10V = log(v)/log(10.0);
-  return intLog10V;
-}
-
 void HDual::iterateRp() {
   if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
   int numIter = model->numberIteration;
@@ -1943,7 +1965,7 @@ void HDual::iterateRp() {
 }
 
 void HDual::iterateRpForced(bool header) {
-    int numIter = model->numberIteration;
+  int numIter = model->numberIteration;
   //deltaPrimal: Move to bound from basic value for leaving variable
   //thetaDual:   
   //thetaPrimal: 
@@ -1957,27 +1979,47 @@ void HDual::iterateRpForced(bool header) {
   //	 //invertHint,
   //	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
   //  //DuObj %11.4g;
-    if (header) 
-      printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RApD RSeD FreeLsZ\n");
-
-    int l10ColDse = -99;
-    int l10REpDse = -99;
-    int l10RapDse = -99;
-    int l10DseDse = -99;
-    //    double row_apDensity = matrix->row_apDensity;
-    if (columnDensity>0) l10ColDse = log(columnDensity)/log(10.0);
-    if (row_epDensity>0) l10REpDse = log(row_epDensity)/log(10.0);
-    if (row_apDensity>0) l10RapDse = log(row_apDensity)/log(10.0);
-    if (rowdseDensity>0) l10DseDse = log(rowdseDensity)/log(10.0);
-
-    printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g %4d %4d %4d %4d %7d\n", 
-	   numIter,
+  if (header) 
+    printf("     Iter Ph Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa   CD REpD RApD RSeD FreeLsZ\n");
+  
+  printf("%9d %2d %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g", 
+	 numIter,
 	 //model->objective,
-	   solvePhase,
-	   invertHint, numericalTrouble,
-	   rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha,
-	   l10ColDse, l10REpDse, l10RapDse, l10DseDse,
-	   dualRow.freeListSize);
+	 solvePhase,
+	 invertHint, numericalTrouble,
+	 rowOut, columnOut, columnIn, deltaPrimal, thetaDual, thetaPrimal, alpha);
+  iterateRpDsty();
+  printf("%7d\n", dualRow.freeListSize);
+}
+
+void HDual::iterateRpInvert(int i_v) {
+  if (model->intOption[INTOPT_PRINT_FLAG] != 1 && model->intOption[INTOPT_PRINT_FLAG] != 4) return;
+  //Suppress i_v so inverHint isn't reported for output comparison with hsol1.0
+  //  printf("%10d  %20.10e  %2d\n", numberIteration, objective, i_v);
+  printf("Iter %10d:", model->numberIteration);
+  printf(" CD REpD RApD RSeD");
+  iterateRpDsty();
+  printf(" %20.10e\n", model->objective);
+
+}
+void HDual::iterateRpDsty() {
+  int l10ColDse = intLog10(columnDensity);
+  int l10REpDse = intLog10(row_epDensity);
+  int l10RapDse = intLog10(row_apDensity);
+  double lc_rowdseDensity;
+  if (EdWt_Mode == EdWt_Mode_DSE) {
+    lc_rowdseDensity = rowdseDensity;
+  } else {
+    lc_rowdseDensity = 0;
+  }    
+  int l10DseDse = intLog10(lc_rowdseDensity);
+  printf(" %4d %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse, l10DseDse);
+}
+
+int HDual::intLog10(double v) {
+  int intLog10V = -99;
+  if (v > 0) intLog10V = log(v)/log(10.0);
+  return intLog10V;
 }
 
 void HDual::rp_hsol_pv_c(HVector *column) const
