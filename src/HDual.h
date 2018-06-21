@@ -88,6 +88,7 @@ public:
   void iterateOpRecBf(int opTy, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
+  int intLog10(double v);
   void iterateRp();
   void iterateRpForced(bool header);
 
@@ -165,6 +166,11 @@ public:
   bool iz_DSE_wt;
   bool alw_DSE2Dvx_sw;
   int n_wg_DSE_wt;
+  const double AnIterCostlyDseMeasureLimit = 1000.0;
+  const double AnIterCostlyDseMnDensity = 0.01;
+  const int AnIterMnNumCostlyDseItbfSw = 100;
+  const double AnIterFracNumCostlyDseItbfSw = 0.05;
+  double AnIterCostlyDseMeasure;
 
   // Model
   HModel *model;
@@ -314,31 +320,25 @@ enum AnIterOpTy
     };
     AnIterOpRec AnIterOp[NumAnIterOpTy];
 
- struct AnIterRec {
-   double AnIterRecTime;
-   double AnIterRecDsty[NumAnIterOpTy];
-   int AnIterRecIter;
-   int AnIterRecEdWt_Mode;
+ struct AnIterTraceRec {
+   double AnIterTraceTime;
+   double AnIterTraceDsty[NumAnIterOpTy];
+   double AnIterTraceAux0;
+   int AnIterTraceIter;
+   int AnIterTraceEdWt_Mode;
  };
 
- AnIterRec AnIterAllRec[22];//1+AnIterSpeedMxNumRec];
+ const int AnIterTraceMxNumRec = 20;
+ int AnIterTraceNumRec;
+ int AnIterTraceIterDl;
+ AnIterTraceRec AnIterTrace[22];//How can this be 1+AnIterTraceMxNumRec+1;
 
-    const int AnIterNumInvertHint = 7;    
-    int AnIterNumInvert[8];
-    int AnIterNumPrDgnIt;
-    int AnIterNumDuDgnIt;
-    int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1
-    const double AnIterCostlyDseFac = 1000.0;
-    const double AnIterCostlyDseMnDensity = 0.01;
-    int AnIterNumCostlyDseIt;
-    const int AnIterMnNumCostlyDseItbfSw = 100;
-    const double AnIterFracNumCostlyDseItbfSw = 0.05;
-    
-    const int AnIterSpeedMxNumRec = 20;
-    int AnIterSpeedNumRec;
-    int AnIterSpeedIterDl;
-    int AnIterSpeedIterRec[22];//1+AnIterSpeedMxNumRec];
-    double AnIterSpeedTimeRec[22];//1+AnIterSpeedMxNumRec];
+ const int AnIterNumInvertHint = 7;    
+ int AnIterNumInvert[8];//How can this be AnIterNumInvertHint+1
+ int AnIterNumPrDgnIt;
+ int AnIterNumDuDgnIt;
+ int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1
+ int AnIterNumCostlyDseIt;
 };
 
 
