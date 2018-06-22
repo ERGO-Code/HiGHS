@@ -353,7 +353,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model)
 #endif
   crsh_iz_vr_ty(ptr_model);
 
-#ifdef JAJH_dev
+#ifdef H2DEBUG
   crsh_rp_r_c_st(0);
 #endif
 
@@ -719,7 +719,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model)
     }
   }
 
-#ifdef JAJH_dev
+#ifdef H2DEBUG
   crsh_rp_r_c_st(1);
   crsh_rp_r_c_st(2);
   printf(" Basis    matrix    contains%7d structural entries\n",
@@ -1250,11 +1250,11 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
   if (Rp_TwoD_da)
     ltssf_rp_pri_k_da();
 
-#ifdef JAJH_dev
+#ifdef H2DEBUG
   crsh_rp_r_c_st(0);
 #endif
   ltssf_iterate(ptr_model);
-#ifdef JAJH_dev
+#ifdef H2DEBUG
   printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
          n_crsh_ps);
   printf(
