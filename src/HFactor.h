@@ -15,7 +15,6 @@ enum UPDATE_METHOD {
     UPDATE_METHOD_APF = 4
 };
 
-const double hyperINITIAL = 0.10;
 const double hyperFTRANL = 0.15;
 const double hyperFTRANU = 0.10;
 const double hyperBTRANL = 0.10;

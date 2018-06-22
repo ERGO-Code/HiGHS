@@ -47,7 +47,7 @@ const int mn_n_dvx_it = 25;
 const double nw_dvx_fwk_fq = 1e-2;
 const double tl_dvx_wt = 3.0;
 
-const double densityRunningAverageMu = 0.05;
+const double runningAverageMu = 0.05;
 
 const bool noInvertWhenOptimal = false;
 
@@ -85,7 +85,7 @@ public:
   void iterate_multi();
   void iterateIzAn();
   void iterateAn();
-  void iterateOpRecBf(int opTy, double hist_dsty);
+  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
   void iterateRp();
@@ -93,6 +93,7 @@ public:
   void iterateRpInvert(int i_v);
   void iterateRpDsty();
   int intLog10(double v);
+  double uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density); 
 
   void chooseRow();
 
@@ -218,6 +219,14 @@ public:
   double row_epDensity;
   double row_apDensity;
   double rowdseDensity;
+  double columnAvLog10Density;
+  double row_epAvLog10Density;
+  double row_apAvLog10Density;
+  double rowdseAvLog10Density;
+  double columnAvDensity;
+  double row_epAvDensity;
+  double row_apAvDensity;
+  double rowdseAvDensity;
 
   HDualRow dualRow;
 
@@ -313,7 +322,9 @@ enum AnIterOpTy
  struct AnIterOpRec {
       double AnIterOpLog10RsDsty;
       double AnIterOpSuLog10RsDsty;
-      int AnIterOpDim;
+      double AnIterOpHyperCANCEL;
+      double AnIterOpHyperTRAN;
+      int AnIterOpRsDim;
       int AnIterOpNumCa;
       int AnIterOpNumHyperOp;
       int AnIterOpNumHyperRs;

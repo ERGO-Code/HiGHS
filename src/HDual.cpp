@@ -135,7 +135,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	for (int i = 0; i < numRow; i++) {
 #ifdef JAJH_dev
 	  if (i==RpI) {
-	      printf("Computeing exact DSE weight %d\n", i);
+	      printf("Computing exact DSE weight %d\n", i);
 	      RpI = RpI*2;
 	    }
 #endif
@@ -146,8 +146,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	  row_ep.packFlag = false;
 	  factor->btran(row_ep, row_epDensity);
 	  dualRHS.workEdWt[i] = row_ep.norm2();
-	  row_epDensity = (1-densityRunningAverageMu) * row_epDensity +
-	    densityRunningAverageMu * (1.0 * row_ep.count / numRow);
+	  double lc_OpRsDensity = 1.0 * row_ep.count / numRow;
+	  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
+        //row_epDensity = (1-runningAverageMu) * row_epDensity + runningAverageMu * (1.0 * row_ep.count / numRow);
 	}
 	IzDseEdWtTT = model->timer.getTime() - IzDseEdWtTT;
 #ifdef JAJH_dev
@@ -933,7 +934,7 @@ void HDual::chooseRow()
     row_ep.packFlag = true;
 
     if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_Btran, row_epDensity);
+      iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
     }
     
     factor->btran(row_ep, row_epDensity);
@@ -982,8 +983,9 @@ void HDual::chooseRow()
   else
     deltaPrimal = baseValue[rowOut] - baseUpper[rowOut];
   sourceOut = deltaPrimal < 0 ? -1 : 1;
-  row_epDensity = (1-densityRunningAverageMu) * row_epDensity +
-			    densityRunningAverageMu * (1.0 * row_ep.count / numRow);
+  double lc_OpRsDensity = 1.0 * row_ep.count / numRow;
+  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
+//row_epDensity = (1-runningAverageMu) * row_epDensity + runningAverageMu * (1.0 * row_ep.count / numRow);
 }
 
 void HDual::chooseColumn(HVector *row_ep)
@@ -1001,7 +1003,7 @@ void HDual::chooseColumn(HVector *row_ep)
     //Avoid Hyper Price on current density of result or switch if the
     //density of this Price becomes extreme
     if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_Price, row_apDensity);
+      iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
     }
     matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
 
@@ -1009,7 +1011,7 @@ void HDual::chooseColumn(HVector *row_ep)
     //No avoiding Hyper Price on current density of result or
     //switching if the density of this Price becomes extreme
     if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_Price, 0.0);
+      iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
     }
     //matrix->price_by_col(row_ap, *row_ep);
     matrix->price_by_row(row_ap, *row_ep);
@@ -1018,8 +1020,9 @@ void HDual::chooseColumn(HVector *row_ep)
   bool anPriceEr = false;
   if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
 
-  row_apDensity = (1-densityRunningAverageMu) * row_apDensity +
-    densityRunningAverageMu * (1.0 * row_ap.count / numCol);
+  double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
+  row_apDensity = uOpRsDensityRec(lc_OpRsDensity, &row_apDensity, &row_apAvDensity, &row_apAvLog10Density); 
+//row_apDensity = (1-runningAverageMu) * row_apDensity + runningAverageMu * (1.0 * row_ap.count / numCol);
 
   if (AnIterLg) {
     iterateOpRecAf(AnIterOpTy_Price, row_ap);
@@ -1182,7 +1185,7 @@ void HDual::updateFtran()
   matrix->collect_aj(column, columnIn, 1);
   
   if (AnIterLg) {
-    iterateOpRecBf(AnIterOpTy_Ftran, columnDensity);
+    iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
   }
 
   factor->ftran(column, columnDensity);
@@ -1204,7 +1207,7 @@ void HDual::updateFtranBFRT()
   if (columnBFRT.count) {
 
     if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_FtranBFRT, columnDensity);
+      iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
     }
 
     factor->ftran(columnBFRT, columnDensity);
@@ -1224,7 +1227,7 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
   model->timer.recordStart(HTICK_FTRAN_DSE);
 
   if (AnIterLg) {
-    iterateOpRecBf(AnIterOpTy_FtranDSE, rowdseDensity);
+    iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
   }
 
   factor->ftran(*DSE_Vector, rowdseDensity);
@@ -1325,11 +1328,13 @@ void HDual::updatePrimal(HVector *DSE_Vector)
 
   if (EdWt_Mode == EdWt_Mode_DSE)
   {
-    rowdseDensity = (1-densityRunningAverageMu) * rowdseDensity +
-      densityRunningAverageMu * (1.0 * DSE_Vector->count / numRow);
+    double lc_OpRsDensity = 1.0 * DSE_Vector->count / numRow;
+    rowdseDensity = uOpRsDensityRec(lc_OpRsDensity, &rowdseDensity, &rowdseAvDensity, &rowdseAvLog10Density); 
+  //rowdseDensity = (1-runningAverageMu) * rowdseDensity + runningAverageMu * (1.0 * DSE_Vector->count / numRow);
   }
-  columnDensity = (1-densityRunningAverageMu) * columnDensity +
-    densityRunningAverageMu * (1.0 * column.count / numRow);
+  double lc_OpRsDensity = 1.0 * column.count / numRow;
+  columnDensity = uOpRsDensityRec(lc_OpRsDensity, &columnDensity, &columnAvDensity, &columnAvLog10Density); 
+//columnDensity = (1-runningAverageMu) * columnDensity + runningAverageMu * (1.0 * column.count / numRow);
 
   total_fake += column.fakeTick;
   if (EdWt_Mode == EdWt_Mode_DSE)
@@ -1451,10 +1456,10 @@ void HDual::setEdWt(const char *EdWt_ArgV)
   else
   {
     cout << "HDual::setEdWt unrecognised EdWtArgV = " << EdWt_ArgV
-         << " - using DSE with exact initial weights" << endl;
+         << " - using DSE with possible switch to Devex" << endl;
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = false;
+    alw_DSE2Dvx_sw = true;
   }
   //	cout<<"HDual::setEdWt iz_DSE_wt = " << iz_DSE_wt << endl;
 }
@@ -1679,8 +1684,20 @@ void HDual::iterateIzAn() {
   AnIter = &AnIterOp[AnIterOpTy_FtranDSE]; AnIter->AnIterOpName = "FtranDSE";
   for (int k=0; k<NumAnIterOpTy; k++) {
     AnIter = &AnIterOp[k];
-    if (k == AnIterOpTy_Price) AnIter->AnIterOpDim = numCol;
-    else AnIter->AnIterOpDim = numRow;
+    if (k == AnIterOpTy_Price) {
+      AnIter->AnIterOpRsDim = numCol;
+      AnIter->AnIterOpHyperCANCEL = 1.0;
+      AnIter->AnIterOpHyperTRAN = 1.0;
+    } else {
+      AnIter->AnIterOpRsDim = numRow;
+      if (k == AnIterOpTy_Btran) {
+	AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
+	  AnIter->AnIterOpHyperTRAN = hyperBTRANU;
+      } else {
+	AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
+	AnIter->AnIterOpHyperTRAN = hyperFTRANL;
+      }
+    }
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
@@ -1755,10 +1772,10 @@ void HDual::iterateAn() {
     bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
 	//      rowdseDensity*rowdseDensity > AnIterCostlyDseMeasureLimit*row_epDensity*columnDensity &&
       rowdseDensity > AnIterCostlyDseMnDensity;
-    AnIterCostlyDseFq = (1-densityRunningAverageMu)*AnIterCostlyDseFq;
+    AnIterCostlyDseFq = (1-runningAverageMu)*AnIterCostlyDseFq;
     if (CostlyDseIt) {
       AnIterNumCostlyDseIt++;
-      AnIterCostlyDseFq += densityRunningAverageMu*1.0;
+      AnIterCostlyDseFq += runningAverageMu*1.0;
       int lcNumIter = model->numberIteration-AnIterIt0;
       if (alw_DSE2Dvx_sw
 	  && (AnIterNumCostlyDseIt > lcNumIter*AnIterFracNumCostlyDseItbfSw)
@@ -1816,25 +1833,33 @@ void HDual::iterateAn() {
   AnIterPrevIt = AnIterCuIt;
 }
 
-void HDual::iterateOpRecBf(int opTy, double hist_dsty) {
+void HDual::iterateOpRecBf(int opTy, HVector& vector, double hist_dsty) {
 
   AnIterOpRec *AnIter = &AnIterOp[opTy];
   AnIter->AnIterOpNumCa++;
-  double cuDsty = hist_dsty;
-  if (cuDsty <= hyperINITIAL) AnIter->AnIterOpNumHyperOp++;
-
+  double curr_dsty = 1.0 * vector.count / numRow;
+  //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter->AnIterOpName.c_str(),
+  //	 curr_dsty, AnIter->AnIterOpHyperCANCEL,
+  //	 hist_dsty, AnIter->AnIterOpHyperTRAN);
+  if (curr_dsty <= AnIter->AnIterOpHyperCANCEL && hist_dsty <= AnIter->AnIterOpHyperTRAN) 
+    AnIter->AnIterOpNumHyperOp++;
 }
 
 void HDual::iterateOpRecAf(int opTy, HVector& vector) {
 
   AnIterOpRec *AnIter = &AnIterOp[opTy];
-  double rsDsty = 1.0 * vector.count / AnIter->AnIterOpDim;
+  double rsDsty = 1.0 * vector.count / AnIter->AnIterOpRsDim;
   if (rsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
+  if (opTy == AnIterOpTy_Ftran) {
+    //    printf("FTRAN: Iter %7d, NCa = %7d; NHS = %7d; RsDsty = %6.4f; AvgDsty = %6.4f\n", 
+    //	   model->numberIteration,
+    //	   AnIter->AnIterOpNumCa, AnIter->AnIterOpNumHyperRs, rsDsty, columnDensity);
+  }
   if (rsDsty > 0) {
     AnIter->AnIterOpLog10RsDsty += log(rsDsty)/log(10.0);
   } else {
     double vectorNorm = 0;
-    for (int index = 0; index < AnIter->AnIterOpDim; index++) {
+    for (int index = 0; index < AnIter->AnIterOpRsDim; index++) {
       double vectorValue = vector.array[index];
       vectorNorm += vectorValue*vectorValue;
     }
@@ -1866,7 +1891,7 @@ void HDual::iterateRpAn() {
       int pctHyperOp = (100*lcHyperOp)/lcNumCa;
       int pctHyperRs = (100*lcHyperRs)/lcNumCa;
       double lcRsDsty = pow(10.0, AnIter->AnIterOpSuLog10RsDsty/lcNumCa);
-      int lcNumNNz = lcRsDsty*AnIter->AnIterOpDim;
+      int lcNumNNz = lcRsDsty*AnIter->AnIterOpRsDim;
       printf("   %11d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
       printf("   %11d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("   %11.4g density of result (%d nonzeros)\n", lcRsDsty, lcNumNNz);
@@ -2021,6 +2046,22 @@ int HDual::intLog10(double v) {
   if (v > 0) intLog10V = log(v)/log(10.0);
   return intLog10V;
 }
+
+double HDual::uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density) {
+  double log10_lc_OpRsDensity;
+  if (lc_OpRsDensity <= 0) {
+    log10_lc_OpRsDensity = -20;
+  } else {
+    log10_lc_OpRsDensity = log(lc_OpRsDensity)/log(10.0);
+  }
+  *opRsAvDensity = (1-runningAverageMu)*(*opRsAvDensity) + runningAverageMu*lc_OpRsDensity;
+  *opRsAvLog10Density = (1-runningAverageMu)*(*opRsAvLog10Density) + runningAverageMu*log10_lc_OpRsDensity;
+  double rtV;
+  rtV = (*opRsAvDensity);
+  //  rtV = pow(10.0, *opRsAvLog10Density);  
+  return rtV;
+}
+
 
 void HDual::rp_hsol_pv_c(HVector *column) const
 {

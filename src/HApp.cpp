@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 
   if (!edgeWeight)
   {
-    edWtMode = "DSE1";
+    edWtMode = "DSE2Dvx";
     printf("Setting default value edWtMode = %s\n", edWtMode);
   }
 #ifdef JAJH_dev
