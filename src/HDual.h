@@ -171,9 +171,9 @@ public:
   int AnIterPrevRpNumCostlyDseIt;
   double AnIterCostlyDseFq;
   const double AnIterCostlyDseMeasureLimit = 1000.0;
-  const double AnIterCostlyDseMnDensity = 0.1;
-  const int AnIterMnNumCostlyDseItbfSw = 100;
-  const double AnIterFracNumCostlyDseItbfSw = 0.10;
+  const double AnIterCostlyDseMnDensity = 0.01;
+  const double AnIterFracNumTot_ItBfSw = 0.1;
+  const double AnIterFracNumCostlyDseItbfSw = 0.05;
   double AnIterCostlyDseMeasure;
 
   // Model

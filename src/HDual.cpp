@@ -1762,8 +1762,8 @@ void HDual::iterateAn() {
       int lcNumIter = model->numberIteration-AnIterIt0;
       if (alw_DSE2Dvx_sw
 	  && (AnIterNumCostlyDseIt > lcNumIter*AnIterFracNumCostlyDseItbfSw)
-	  && (AnIterNumCostlyDseIt > AnIterMnNumCostlyDseItbfSw)) {
-        //At least min(100, 5%) of the iterations have been costly DSE so switch to Devex
+	  && (lcNumIter > AnIterFracNumTot_ItBfSw*numTot)) {
+        //At least 5% of the (at least) 0.1NumTot iterations have been costly DSE so switch to Devex
         printf("Switch from DSE to Dvx after %d costly DSE iterations of %d: RSeD = %g; REpD = %g; CD = %g\n",
 	       AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,  columnDensity);
         EdWt_Mode = EdWt_Mode_Dvx;
