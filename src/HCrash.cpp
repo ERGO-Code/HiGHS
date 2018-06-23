@@ -737,64 +737,89 @@ void HCrash::crsh_rp_r_c_st(int mode)
   int ck_su_n_bc_vr = 0;
   int ck_su_n_nonbc_vr = 0;
 #endif
-  for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++)
-  {
-    if (vr_ty == crsh_vr_ty_fx)
-      TyNm = "Fx ";
-    else if (vr_ty == crsh_vr_ty_2_sd)
-      TyNm = "2sd";
-    else if (vr_ty == crsh_vr_ty_1_sd)
-      TyNm = "1sd";
-    else if (vr_ty == crsh_vr_ty_fr)
-      TyNm = "Fr ";
-    else
-      printf("Unrecognised type %d\n", vr_ty);
-    if (mode == 0)
-    {
+  int n_ps = 2;
+  if (mode == 1) n_ps = 1;
+  for (int ps_n = 0; ps_n < n_ps; ps_n++) {
+    if (ps_n == 1) {
+      if (mode == 0) printf("grep_CharCrash,Rows");
+      else if (mode == 2) printf("grep_CharCrash,Basic");
+      else printf("grep_CharCrash,Nonbasic");
+      for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {      
+	TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
+	if (mode == 0) {
+	  printf(",%s", TyNm.c_str());
+	} else {
+	  printf(",%s_Row", TyNm.c_str());
+	  printf(",%s_Col", TyNm.c_str());
+	}
+      }
+      printf("\n");
+      if (mode == 0) printf("grep_CharCrash,%d", numRow);
+      else if (mode == 2) printf("grep_CharCrash,%d", numRow);
+      else if (mode == 3) printf("grep_CharCrash,%d", numCol);
+    }
+    for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++)
+      {
+	TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
+	if (mode == 0)
+	  {
 #ifdef JAJH_dev
-      ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
+	    ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
 #endif
-      if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-        printf(" Model has %7d %3s rows (%3d%%)\n",
-               crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(),
-               (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow);
-    }
-    else if (mode == 1)
-    {
-      if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-        printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
-               crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
-               TyNm.c_str(),
-               (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
-    }
-    else if (mode == 2)
-    {
+	    int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
+	    if (ps_n == 0) {
+	      if (crsh_vr_ty_og_n_r[vr_ty] > 0)
+		printf(" Model has %7d %3s rows (%3d%%)\n", crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(), lc_pct);
+	    } else {
+	      printf(",%7d", crsh_vr_ty_og_n_r[vr_ty]);
+	    }
+	  }
+	else if (mode == 1)
+	  {
+	    if (crsh_vr_ty_og_n_r[vr_ty] > 0)
+	      printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
+		     crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
+		     TyNm.c_str(),
+		     (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
+	  }
+	else if (mode == 2)
+	  {
 #ifdef JAJH_dev
-      ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
-      ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
-      ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
-      ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
+	    ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
+	    ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
+	    ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
+	    ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
 #endif
-      if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
-        printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
-               crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
-               (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
-      if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
-        printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
-               crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
-               (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
-    }
-    else
-    {
-      if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
-        printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
-               crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
-               (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
-      if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
-        printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
-               crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
-               (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
-    }
+	    if (ps_n == 0) {
+	      if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
+		printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
+		       crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
+		       (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
+	      if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
+		printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
+		       crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
+		       (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
+	    } else {
+	      printf(",%d,%d", crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
+	    }
+	  }
+	else
+	  {
+	    if (ps_n == 0) {
+	      if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
+		printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
+		       crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
+		       (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
+	      if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
+		printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
+		       crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
+		       (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
+	    } else {
+	      printf(",%d,%d", crsh_nonbc_vr_ty_n_r[vr_ty], crsh_nonbc_vr_ty_n_c[vr_ty]);
+	    }
+	  }
+      }
+    if (ps_n == 1) printf("\n");
   }
 #ifdef JAJH_dev
   if (mode == 0)
@@ -808,16 +833,7 @@ void HCrash::crsh_rp_r_c_st(int mode)
   {
     for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++)
     {
-      if (vr_ty == crsh_vr_ty_fx)
-        TyNm = "Fx ";
-      else if (vr_ty == crsh_vr_ty_2_sd)
-        TyNm = "2sd";
-      else if (vr_ty == crsh_vr_ty_1_sd)
-        TyNm = "1sd";
-      else if (vr_ty == crsh_vr_ty_fr)
-        TyNm = "Fr ";
-      else
-        printf("Unrecognised type %d\n", vr_ty);
+      TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
 #ifdef JAJH_dev
       if (mode == 0)
         ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
@@ -841,6 +857,21 @@ void HCrash::crsh_rp_r_c_st(int mode)
       assert(ck_su_n_c == numCol);
 #endif
   }
+}
+
+string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty) {
+  string TyNm;
+  if (vr_ty == crsh_vr_ty_fx)
+    TyNm = "Fx ";
+  else if (vr_ty == crsh_vr_ty_2_sd)
+    TyNm = "2sd";
+  else if (vr_ty == crsh_vr_ty_1_sd)
+    TyNm = "1sd";
+  else if (vr_ty == crsh_vr_ty_fr)
+    TyNm = "Fr ";
+  else
+    printf("Unrecognised type %d\n", vr_ty);
+  return TyNm;
 }
 
 void HCrash::crsh_ck_an_impl_bd()

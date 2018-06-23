@@ -1709,7 +1709,7 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
-  util_anMl("Scaled");
+  //  util_anMl("Scaled");
 }
 
 void HModel::setup_tightenBound()
@@ -4468,7 +4468,8 @@ void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, 
   if (numUb>0) printf("   UB:    %7d (%3d%%)\n", numUb, (100*numUb)/numBd);
   if (numBx>0) printf("   Boxed: %7d (%3d%%)\n", numBx, (100*numBx)/numBd);
   if (numFx>0) printf("   Fixed: %7d (%3d%%)\n", numFx, (100*numFx)/numBd);
-
+  printf("grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
+  printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n",numBd,numFr,numLb,numUb,numBx,numFx);
 }
 
 void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {

@@ -61,6 +61,7 @@ public:
   void crsh_an_c_co(HModel *ptr_model);
   void crsh_an_r_c_st_af(HModel *ptr_model);
   void crsh_rp_r_c_st(int mode);
+  string crsh_nm_o_crsh_vr_ty(int vr_ty);
   void crsh_ck_an_impl_bd();
   void ltssf(HModel *ptr_model, int Crash_Mode);
   void ltssf_iz_mode(int Crash_Mode);
