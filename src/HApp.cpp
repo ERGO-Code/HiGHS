@@ -4,11 +4,12 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-  int opt, filename = 0, presolve = 0, crash = 0, edgeWeight = 0, pami = 0, sip = 0, scip = 0, timeLimit = 0;
+  int opt, filename = 0, presolve = 0, crash = 0, edgeWeight = 0, price = 0, pami = 0, sip = 0, scip = 0, timeLimit = 0;
   double cut = 0;
   const char *fileName = "";
   const char *presolveMode = "";
   const char *edWtMode = "";
+  const char *priceMode = "";
   const char *crashMode = "";
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
@@ -38,7 +39,7 @@ int main(int argc, char **argv)
   }
   
   else {
-    while ((opt = getopt(argc, argv, "p:c:e:sSm::t:T:df:")) != EOF)
+    while ((opt = getopt(argc, argv, "p:c:e:P:sSm::t:T:df:")) != EOF)
     switch (opt)
     {
         case 'f':
@@ -80,6 +81,11 @@ int main(int argc, char **argv)
         edWtMode = optarg;
         cout << "Edge weight is set to " << optarg << endl;
         break;
+      case 'P':
+        price = 1;
+        priceMode = optarg;
+        cout << "Price is set to " << optarg << endl;
+        break;
       case 't':
         partitionFile = optarg;
         cout << "Partition file is set to " << optarg << endl;
@@ -96,6 +102,8 @@ int main(int argc, char **argv)
           fprintf(stderr, "Option -%c requires an argument. Current options: Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 \n", opt);
         if (opt == 'e')
           fprintf(stderr, "Option -%c requires an argument. Current options: Dan Dvx DSE DSE0 DSE2Dvx\n", opt);
+        if (opt == 'P')
+          fprintf(stderr, "Option -%c requires an argument. Current options: Row Col RowSw RowSwColSw\n", opt);
         else
           printHelp(argv[0]);
       default:
@@ -141,9 +149,15 @@ int main(int argc, char **argv)
     edWtMode = "DSE2Dvx";
     printf("Setting default value edWtMode = %s\n", edWtMode);
   }
+
+  if (!price)
+  {
+    priceMode = "RowSwColSw";
+    printf("Setting default value priceMode = %s\n", priceMode);
+  }
 #ifdef JAJH_dev
-  printf("HApp: sip = %d; scip = %d; pami = %d; presolve = %d;  crash = %d; edgeWeight = %d; timeLimit = %d\n",
-         sip, scip, pami, presolve, crash, edgeWeight, timeLimit);
+  printf("HApp: sip = %d; scip = %d; pami = %d; presolve = %d;  crash = %d; edgeWeight = %d; price = %d; timeLimit = %d\n",
+         sip, scip, pami, presolve, crash, edgeWeight, price, timeLimit);
 #endif
 
   cout << "====================================================================================" << endl;
@@ -183,7 +197,7 @@ int main(int argc, char **argv)
   //serial
   else
   {
-    if (!presolve && !crash && !edgeWeight && !timeLimit)
+    if (!presolve && !crash && !edgeWeight && !price && !timeLimit)
     {
 
       int RtCod =
@@ -194,7 +208,7 @@ int main(int argc, char **argv)
         printf("solvePlain(API) return code is %d\n", RtCod);
       }
     }
-    else if (presolve && !crash && !edgeWeight && !timeLimit)
+    else if (presolve && !crash && !edgeWeight && !price && !timeLimit)
     {
       if (presolve == 1)
         solvePlainWithPresolve(fileName);
@@ -206,7 +220,7 @@ int main(int argc, char **argv)
 #endif
     }
     else
-      solvePlainJAJH(edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
+      solvePlainJAJH(priceMode, edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
   }
 
   return 0;
@@ -703,7 +717,7 @@ int solveSCIP(const char *filename)
   return 0;
 }
 
-int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV)
+int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV)
 {
   double setupTime = 0;
   double presolve1Time = 0;
@@ -734,6 +748,7 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
 
   //	printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
   solver.setPresolve(Presolve_ArgV);
+  solver.setPrice(Price_ArgV);
   solver.setEdWt(EdWt_ArgV);
   solver.setCrash(Crash_ArgV);
   solver.setTimeLimit(TimeLimit_ArgV);
@@ -932,12 +947,12 @@ int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Pr
   int numRow = model.numRow;
   printf(
       "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
-      "Crash %s,EdWt %s,%d,%d,%10.3f,%10.3f,"
+      "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
       "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
       "%20.10e,%10d,%10.3f,"
       "%d\n",
       model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
-      Crash_ArgV, EdWt_ArgV, numRow, numCol, setupTime, presolve1Time,
+      Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime, presolve1Time,
       crashTime, crossoverTime, presolve2Time, solveTime, postsolveTime,
       model.objective, model.numberIteration, model.totalTime,
       solver.n_wg_DSE_wt);

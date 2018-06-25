@@ -51,7 +51,7 @@ int solveTasks(const char *filename);
 int solveMulti(const char *filename, const char *partitionfile = 0);
 int solvePlainWithPresolve(const char *filename);
 int solvePlainExperiments(const char *filename);
-int solvePlainJAJH(const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
+int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Crash_ArgV, const char *Presolve_ArgV, const char *filename, double TimeLimit_ArgV);
 int solveExternalPresolve(const char *fileName);
 double presolve(HModel &mod, double &time);
 //int testIO(const char *filename);
@@ -66,6 +66,7 @@ void printHelp(std::string execName) {
                 "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
                 "  -e edWt   : set edge weight to edWt. Values: \n"
                 "            : Dan Dvx DSE DSE0 DSE2Dvx\n"
+                "  -P Price  : Row Col RowSw RowSwColSw\n"
                 "  -s        : use option sip\n"
                 "  -S        : use option SCIP (to test utilities)\n"
                 "  -m [cut]  : use pami. Cutoff optional double value.\n"

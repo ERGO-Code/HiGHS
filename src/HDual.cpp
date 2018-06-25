@@ -998,23 +998,42 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  bool price_by_row_w_sw = true;
-  if (price_by_row_w_sw) {
-    //Avoid Hyper Price on current density of result or switch if the
-    //density of this Price becomes extreme
-    if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
-    }
-    matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
-
-  } else {
-    //No avoiding Hyper Price on current density of result or
-    //switching if the density of this Price becomes extreme
+  int lc_numIt = model->numberIteration;
+  if (Price_Mode == Price_Mode_Col) {
+    //Column-wise PRICE
+    if (lc_numIt<2) printf("Using column price\n");
     if (AnIterLg) {
       iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
     }
-    //matrix->price_by_col(row_ap, *row_ep);
-    matrix->price_by_row(row_ap, *row_ep);
+    AnIterNumColPrice++;
+    matrix->price_by_col(row_ap, *row_ep);
+  } else {
+    //Row-wise PRICE
+    double lc_dsty = 1.0 * (*row_ep).count/numRow;
+    if (alw_price_by_col_sw && (lc_dsty > dstyColPriceSw)) {
+      //Avoid row price due to density of row_ep
+      if (AnIterLg) {
+	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
+      }
+      AnIterNumColPrice++;
+      matrix->price_by_col(row_ap, *row_ep);
+    } else if (alw_price_by_row_sw) {
+      //Avoid Hyper Price on current density of result or switch if
+      //the density of this Price becomes extreme
+      if (AnIterLg) {
+	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
+      }
+      AnIterNumRowPriceWSw++;
+      matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
+    } else {
+      //No avoiding Hyper Price on current density of result or
+      //switching if the density of this Price becomes extreme
+      if (AnIterLg) {
+	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
+      }
+      AnIterNumRowPrice++;
+      matrix->price_by_row(row_ap, *row_ep);
+    }
   }
 
   bool anPriceEr = false;
@@ -1428,6 +1447,38 @@ void HDual::setCrash(const char *Crash_ArgV)
   //		cout<<"HDual::setCrash Crash_Mode = " << Crash_Mode << endl;
 }
 
+void HDual::setPrice(const char *Price_ArgV)
+{
+  //	cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
+  alw_price_by_col_sw = false;
+  alw_price_by_row_sw = false;
+  if (strcmp(Price_ArgV, "Col") == 0) {
+    Price_Mode = Price_Mode_Col;
+  }
+  else if (strcmp(Price_ArgV, "Row") == 0) {
+    Price_Mode = Price_Mode_Row;
+  }
+  else if (strcmp(Price_ArgV, "RowSw") == 0)
+  {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_row_sw = true;
+  }
+  else if (strcmp(Price_ArgV, "RowSwColSw") == 0)
+  {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+  }
+  else
+  {
+    cout << "HDual::setPrice unrecognised PriceArgV = " << Price_ArgV
+         << " - using row Price with switch or colump price switch" << endl;
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+  }
+}
+
 void HDual::setEdWt(const char *EdWt_ArgV)
 {
   //	cout<<"HDual::setEdWt EdWt_ArgV = "<<EdWt_ArgV<<endl;
@@ -1710,6 +1761,9 @@ void HDual::iterateIzAn() {
   for (int k=1; k<=AnIterNumInvertHint; k++) AnIterNumInvert[k]=0;
   AnIterNumPrDgnIt = 0;
   AnIterNumDuDgnIt = 0;
+  AnIterNumColPrice = 0;
+  AnIterNumRowPrice = 0;
+  AnIterNumRowPriceWSw = 0;
   for (int k=0; k<=EdWt_Mode_Dan; k++) AnIterNumEdWtIt[k]=0;
   AnIterNumCostlyDseIt = 0;
   AnIterTraceNumRec = 0;
@@ -1921,7 +1975,14 @@ void HDual::iterateRpAn() {
   }
   printf("\n%7d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt, (100*AnIterNumPrDgnIt)/AnIterNumIter);
   printf("%7d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt, (100*AnIterNumDuDgnIt)/AnIterNumIter);
-  printf("%7d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt, (100*AnIterNumCostlyDseIt)/AnIterNumIter);
+  int suPrice = AnIterNumColPrice + AnIterNumRowPrice + AnIterNumRowPriceWSw;
+  if (suPrice>0) {
+    printf("\n%7d Price operations:\n", suPrice);
+    printf("%7d Col Price    (%3d%%)\n", AnIterNumColPrice, (100*AnIterNumColPrice)/suPrice);
+    printf("%7d Row Price    (%3d%%)\n", AnIterNumRowPrice, (100*AnIterNumRowPrice)/suPrice);  
+    printf("%7d Row PriceWSw (%3d%%)\n", AnIterNumRowPriceWSw, (100*AnIterNumRowPriceWSw/suPrice));
+  }
+  printf("\n%7d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt, (100*AnIterNumCostlyDseIt)/AnIterNumIter);
 
   //
   //Add a record for the final iterations: may end up with one more

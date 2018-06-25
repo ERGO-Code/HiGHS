@@ -22,6 +22,10 @@ const int EdWt_Mode_DSE = 0;
 const int EdWt_Mode_Dvx = 1;
 const int EdWt_Mode_Dan = 2;
 
+//Define the Price modes
+const int Price_Mode_Row = 0;
+const int Price_Mode_Col = 1;
+
 //Define the Crash modes
 const int Crash_Mode_No = 0;
 const int Crash_Mode_LTSSF_k = 1;
@@ -127,6 +131,7 @@ public:
 
   void major_rollback();
 
+  void setPrice(const char *PriceMode);
   void setEdWt(const char *EdWtMode);
   void setCrash(const char *CrashMode);
   void setPresolve(const char *PresolveMode);
@@ -147,6 +152,7 @@ public:
 
   // Variant choice
   int dual_variant = 0;
+  int Price_Mode = 0;
   int EdWt_Mode = 0;
   int Crash_Mode = 0;
   int Presolve_Mode = 0;
@@ -164,6 +170,11 @@ public:
   bool nw_dvx_fwk;
   // Devex vector
   vector<int> dvx_ix;
+
+  // Price scalars
+  bool alw_price_by_col_sw;
+  bool alw_price_by_row_sw;
+  const double dstyColPriceSw = 0.75;
 
   // DSE scalars
   bool iz_DSE_wt;
@@ -350,6 +361,9 @@ enum AnIterOpTy
 
  const int AnIterNumInvertHint = 7;    
  int AnIterNumInvert[8];//How can this be AnIterNumInvertHint+1
+ int AnIterNumColPrice;
+ int AnIterNumRowPrice;
+ int AnIterNumRowPriceWSw;
  int AnIterNumPrDgnIt;
  int AnIterNumDuDgnIt;
  int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1
