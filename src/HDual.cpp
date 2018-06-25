@@ -1727,7 +1727,9 @@ void HDual::iterateAn() {
   iterateRp();
 
   int AnIterCuIt = model->numberIteration;
-  if (AnIterCuIt % 100 == 0) {
+  bool iterLg = AnIterCuIt % 100 == 0;
+  iterLg = false;
+  if (iterLg) {
     int lc_NumCostlyDseIt = AnIterNumCostlyDseIt - AnIterPrevRpNumCostlyDseIt;
     AnIterPrevRpNumCostlyDseIt = AnIterNumCostlyDseIt;
     printf("Iter %10d: CD REpD RApD RSeD", AnIterCuIt);
