@@ -93,9 +93,13 @@ public:
   void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
   void iterateRp();
-  void iterateRpForced(bool header);
+  void iterateRpFull(bool header);
+  void iterateRpBrief(bool header);
   void iterateRpInvert(int i_v);
-  void iterateRpDsty();
+  void iterateRpIterPh(bool header);
+  void iterateRpIterDa(bool header);
+  void iterateRpDuObj(bool header);
+  void iterateRpDsty(bool header);
   int intLog10(double v);
   double uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density); 
 
