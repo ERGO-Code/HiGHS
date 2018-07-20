@@ -339,6 +339,7 @@ enum AnIterOpTy
       int AnIterOpNumCa;
       int AnIterOpNumHyperOp;
       int AnIterOpNumHyperRs;
+      int AnIterOpRsMxNNZ;
       int AnIterOpSuNumCa;
       int AnIterOpSuNumHyperOp;
       int AnIterOpSuNumHyperRs;
