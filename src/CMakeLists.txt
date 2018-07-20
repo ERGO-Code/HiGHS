@@ -18,6 +18,7 @@ set(sources
     KktChStep.cpp
     HMPSIO.cpp
     HToyIO.cpp
+    HVectorUltra.cpp
 )
 
 set(headers
@@ -42,6 +43,7 @@ set(headers
     KktChStep.h
     HMPSIO.h
     HMpsFF.h
+    HVectorUltra.h
 )
 
 add_library(libhighs ${sources})

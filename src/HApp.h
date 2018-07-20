@@ -66,7 +66,7 @@ void printHelp(std::string execName) {
                 "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7\n"
                 "  -e edWt   : set edge weight to edWt. Values: \n"
                 "            : Dan Dvx DSE DSE0 DSE2Dvx\n"
-                "  -P Price  : Row Col RowSw RowSwColSw\n"
+                "  -P Price  : Row Col RowSw RowSwColSw RowUltra\n"
                 "  -s        : use option sip\n"
                 "  -S        : use option SCIP (to test utilities)\n"
                 "  -m [cut]  : use pami. Cutoff optional double value.\n"

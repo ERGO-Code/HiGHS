@@ -70,9 +70,9 @@ int HModel::load_fromMPS(const char *filename)
   //Remove FF MPS Read by commenting out lines 1-6 and 11 below
 #ifdef Boost_FOUND
   int RtCd = readMPS(filename,
-		     numRow, numCol, objSense, objOffset,
-		     Astart, Aindex, Avalue,
-		     colCost, colLower, colUpper, rowLower, rowUpper);
+  		     numRow, numCol, objSense, objOffset,
+  		     Astart, Aindex, Avalue,
+  		     colCost, colLower, colUpper, rowLower, rowUpper);
 #else
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,

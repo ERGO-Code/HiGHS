@@ -402,6 +402,7 @@ void HDual::init(int num_threads)
   column.setup(numRow);
   row_ep.setup(numRow);
   row_ap.setup(numCol);
+  row_ap_ultra.setup(numCol);
   columnDensity = 0;
   row_epDensity = 0;
   row_apDensity = 0;
@@ -999,6 +1000,7 @@ void HDual::chooseColumn(HVector *row_ep)
   row_ap.clear();
 
   int lc_numIt = model->numberIteration;
+  if (lc_numIt<2) printf("Before PRICE: Mode = %d; Ultra = %d\n", Price_Mode, alw_price_ultra);
   if (Price_Mode == Price_Mode_Col) {
     //Column-wise PRICE
     if (lc_numIt<2) printf("Using column price\n");
@@ -1035,7 +1037,11 @@ void HDual::chooseColumn(HVector *row_ep)
       matrix->price_by_row(row_ap, *row_ep);
     }
   }
-
+  if (alw_price_ultra) {
+    row_ap_ultra.clear();
+    matrix->price_by_row_ultra(row_ap_ultra, *row_ep);
+    matrix->price_er_ck_ultra(row_ap_ultra, *row_ep);
+  }
   bool anPriceEr = false;
   if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
 
@@ -1452,6 +1458,7 @@ void HDual::setPrice(const char *Price_ArgV)
   //	cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
   alw_price_by_col_sw = false;
   alw_price_by_row_sw = false;
+  alw_price_ultra = false;
   if (strcmp(Price_ArgV, "Col") == 0) {
     Price_Mode = Price_Mode_Col;
   }
@@ -1468,6 +1475,13 @@ void HDual::setPrice(const char *Price_ArgV)
     Price_Mode = Price_Mode_Row;
     alw_price_by_col_sw = true;
     alw_price_by_row_sw = true;
+  }
+  else if (strcmp(Price_ArgV, "RowUltra") == 0)
+  {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+    alw_price_ultra = true;
   }
   else
   {
@@ -1735,12 +1749,13 @@ void HDual::iterateIzAn() {
   AnIter = &AnIterOp[AnIterOpTy_FtranDSE]; AnIter->AnIterOpName = "FtranDSE";
   for (int k=0; k<NumAnIterOpTy; k++) {
     AnIter = &AnIterOp[k];
+    AnIter->AnIterOpLog10RsDsty = 0;
+    AnIter->AnIterOpSuLog10RsDsty = 0;
     if (k == AnIterOpTy_Price) {
-      AnIter->AnIterOpRsDim = numCol;
       AnIter->AnIterOpHyperCANCEL = 1.0;
       AnIter->AnIterOpHyperTRAN = 1.0;
+      AnIter->AnIterOpRsDim = numCol;
     } else {
-      AnIter->AnIterOpRsDim = numRow;
       if (k == AnIterOpTy_Btran) {
 	AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
 	  AnIter->AnIterOpHyperTRAN = hyperBTRANU;
@@ -1748,15 +1763,15 @@ void HDual::iterateIzAn() {
 	AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
 	AnIter->AnIterOpHyperTRAN = hyperFTRANL;
       }
+      AnIter->AnIterOpRsDim = numRow;
     }
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
     AnIter->AnIterOpNumHyperRs = 0;
-    AnIter->AnIterOpLog10RsDsty = 0;
+    AnIter->AnIterOpRsMxNNZ = 0;
     AnIter->AnIterOpSuNumCa = 0;
     AnIter->AnIterOpSuNumHyperOp = 0;
     AnIter->AnIterOpSuNumHyperRs = 0;
-    AnIter->AnIterOpSuLog10RsDsty = 0;
   }
   for (int k=1; k<=AnIterNumInvertHint; k++) AnIterNumInvert[k]=0;
   AnIterNumPrDgnIt = 0;
@@ -1906,6 +1921,7 @@ void HDual::iterateOpRecAf(int opTy, HVector& vector) {
   AnIterOpRec *AnIter = &AnIterOp[opTy];
   double rsDsty = 1.0 * vector.count / AnIter->AnIterOpRsDim;
   if (rsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
+  AnIter->AnIterOpRsMxNNZ = max(vector.count, AnIter->AnIterOpRsMxNNZ);
   if (opTy == AnIterOpTy_Ftran) {
     //    printf("FTRAN: Iter %7d, NCa = %7d; NHS = %7d; RsDsty = %6.4f; AvgDsty = %6.4f\n", 
     //	   model->numberIteration,
@@ -1948,9 +1964,12 @@ void HDual::iterateRpAn() {
       int pctHyperRs = (100*lcHyperRs)/lcNumCa;
       double lcRsDsty = pow(10.0, AnIter->AnIterOpSuLog10RsDsty/lcNumCa);
       int lcNumNNz = lcRsDsty*AnIter->AnIterOpRsDim;
+      int lcMxNNz = AnIter->AnIterOpRsMxNNZ;
+      double lcMxNNzDsty = (1.0 * lcMxNNz)/AnIter->AnIterOpRsDim;
       printf("   %11d hyper-sparse operations (%3d%%)\n", lcHyperOp, pctHyperOp);
       printf("   %11d hyper-sparse results    (%3d%%)\n", lcHyperRs, pctHyperRs);
       printf("   %11.4g density of result (%d nonzeros)\n", lcRsDsty, lcNumNNz);
+      printf("   %11.4g density of result with max (%d) nonzeros\n", lcMxNNzDsty, lcMxNNz);
     }
   }
   int NumInvert = 0;
