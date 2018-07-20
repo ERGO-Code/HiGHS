@@ -402,6 +402,7 @@ void HDual::init(int num_threads)
   column.setup(numRow);
   row_ep.setup(numRow);
   row_ap.setup(numCol);
+  row_ap_ultra.setup(numCol);
   columnDensity = 0;
   row_epDensity = 0;
   row_apDensity = 0;
@@ -999,6 +1000,7 @@ void HDual::chooseColumn(HVector *row_ep)
   row_ap.clear();
 
   int lc_numIt = model->numberIteration;
+  if (lc_numIt<2) printf("Before PRICE: Mode = %d; Ultra = %d\n", Price_Mode, alw_price_ultra);
   if (Price_Mode == Price_Mode_Col) {
     //Column-wise PRICE
     if (lc_numIt<2) printf("Using column price\n");
@@ -1035,7 +1037,11 @@ void HDual::chooseColumn(HVector *row_ep)
       matrix->price_by_row(row_ap, *row_ep);
     }
   }
-
+  if (alw_price_ultra) {
+    row_ap_ultra.clear();
+    matrix->price_by_row_ultra(row_ap_ultra, *row_ep);
+    matrix->price_er_ck_ultra(row_ap_ultra, *row_ep);
+  }
   bool anPriceEr = false;
   if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
 
@@ -1452,6 +1458,7 @@ void HDual::setPrice(const char *Price_ArgV)
   //	cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
   alw_price_by_col_sw = false;
   alw_price_by_row_sw = false;
+  alw_price_ultra = false;
   if (strcmp(Price_ArgV, "Col") == 0) {
     Price_Mode = Price_Mode_Col;
   }
@@ -1468,6 +1475,13 @@ void HDual::setPrice(const char *Price_ArgV)
     Price_Mode = Price_Mode_Row;
     alw_price_by_col_sw = true;
     alw_price_by_row_sw = true;
+  }
+  else if (strcmp(Price_ArgV, "RowUltra") == 0)
+  {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+    alw_price_ultra = true;
   }
   else
   {

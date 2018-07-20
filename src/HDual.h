@@ -8,6 +8,7 @@
 #include "HDualRow.h"
 #include "HDualRHS.h"
 #include "HCrash.h"
+#include "HVectorUltra.h"
 
 #include <set>
 #include <string>
@@ -174,6 +175,7 @@ public:
   // Price scalars
   bool alw_price_by_col_sw;
   bool alw_price_by_row_sw;
+  bool alw_price_ultra;
   const double dstyColPriceSw = 0.75;
 
   // DSE scalars
@@ -226,6 +228,7 @@ public:
   HVector column;
   HVector columnBFRT;
   HVector columnDSE;
+  HVectorUltra row_ap_ultra;
   double columnDensity;
   double row_epDensity;
   double row_apDensity;
