@@ -11,12 +11,15 @@ public:
     void clear();
     int size;
     int count;   // count of non zeros
-    int pWd;
+    const unsigned char ilP1 = 255;
+    const unsigned short ilP2 = 65535;
+    const unsigned int ilP4 = 4294967295;
+    int pWd; // Bytes of pointer to values [0 => No pointers]
     vector<int> index;   // index of non zeros
     vector<double> array;   // array
     vector<unsigned char> valueP1;   // 1-byte pointer to values
-    vector<short> valueP2;   // 2-byte pointer to values
-    vector<int> valueP4;   // 4-byte pointer to values
+    vector<unsigned short> valueP2;   // 2-byte pointer to values
+    vector<unsigned int> valueP4;   // 4-byte pointer to values
     int pseudoTick;
     double fakeTick;
 

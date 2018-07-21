@@ -10,9 +10,9 @@ void HVectorUltra::setup(int size_) {
     pWd = 0;
     index.resize(size);
     array.assign(size, 0);
-    valueP1.assign(size, 0);
-    valueP2.assign(size, 0);
-    valueP4.assign(size, 0);
+    valueP1.assign(size, ilP1);
+    valueP2.assign(size, ilP2);
+    valueP4.assign(size, ilP4);
     cwork.assign(size + 6400, 0); // MAX invert
     iwork.assign(size * 4, 0);
 
@@ -22,12 +22,23 @@ void HVectorUltra::setup(int size_) {
 }
 
 void HVectorUltra::clear() {
-    int clearVector_inDense = count < 0 || count > size * 0.3;
-    if (clearVector_inDense) {
+    if (pWd == 0) {
+      //Standard HVector to clear
+      int clearVector_inDense = count < 0 || count > size * 0.3;
+      if (clearVector_inDense) {
         array.assign(size, 0);
-    } else {
-        for (int i = 0; i < count; i++)
-            array[index[i]] = 0;
+      } else {
+        for (int i = 0; i < count; i++) array[index[i]] = 0;
+      }
+    } else if (pWd == 1) {
+      //1-byte pointer to clear
+        for (int i = 0; i < count; i++) valueP1[index[i]] = ilP1;
+    } else if (pWd == 2) {
+      //2-byte pointer to clear
+        for (int i = 0; i < count; i++) valueP2[index[i]] = ilP2;
+    } else if (pWd == 4) {
+      //4-byte pointer to clear
+        for (int i = 0; i < count; i++) valueP4[index[i]] = ilP4;
     }
     packFlag = false;
     count = 0;

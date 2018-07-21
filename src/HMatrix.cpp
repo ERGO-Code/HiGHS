@@ -405,7 +405,7 @@ void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   // Alias
   int ap_count = 0;
   int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
+  //double *ap_array = &row_ap.array[0];
   double *ap_packValue = &row_ap.packValue[0];
   //unsigned char *ap_valueP1 = &row_ap.valueP1[0];
   // short *ap_valueP2 = &row_ap.valueP2[0];
@@ -414,25 +414,38 @@ void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   const int ep_count = row_ep.count;
   const int *ep_index = &row_ep.index[0];
   const double *ep_array = &row_ep.array[0];
-
-  int *ap_valueP = &row_ap.valueP4[0];
+  row_ap.pWd = 4;
+  int ilP = row_ap.ilP4;
+  unsigned int *ap_valueP = &row_ap.valueP4[0];
   //ap_pWd = 4;
   int valueP = 0;
+  double value0;
+  double value1;
   // Computation
   for (int i = 0; i < ep_count; i++) {
     int iRow = ep_index[i];
     double multi = ep_array[iRow];
+    //        printf("Row %1d: multi = %g\n", i, multi);
     for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
       int index = ARindex[k];
-      double value0 = ap_array[index];
-      double value1 = value0 + multi * ARvalue[k];
-      if (value0 == 0) {
+      //            printf("Entry %2d: index %2d; value %11.4g", k, index, ARvalue[k]);
+      valueP = ap_valueP[index];
+      if (valueP == ilP) {
+	//Row entry is not in list of values
+	value0 = 0;
+	valueP = ap_count;
+	ap_valueP[index] = valueP;
 	ap_index[ap_count++] = index;
-	ap_valueP[index] = ap_count;
-      } 
+	//		printf(" New");
+      } else {
+	//Row entry is in list of values
+	value0 = ap_packValue[valueP];
+	//		printf(" Old");
+      }
+      value1 = value0 + multi * ARvalue[k];
+      //            printf(" value P=%2d; value0 = %11.4g; value1 = %11.4g\n", valueP, value0, value1);
       //TODO Unlikely, but possible for ap_count to reach numCol
       assert(ap_count<numCol);
-      valueP = ap_valueP[index];
       ap_packValue[valueP] =
 	(fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
     }
@@ -446,8 +459,11 @@ void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
     valueP = ap_valueP[index];
     const double value = ap_packValue[valueP];
     if (fabs(value) > HSOL_CONST_TINY) {
+      ap_valueP[index] = ap_count;
+      ap_packValue[ap_count] = value;
       ap_index[ap_count++] = index;
     } else {
+      ap_valueP[index] = ilP;
       ap_packValue[valueP] = 0;
     }
   }
@@ -461,17 +477,24 @@ void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   int *ap_index = &row_ap.index[0];
   double *ap_array = &row_ap.array[0];
   double *ap_packValue = &row_ap.packValue[0];
-  unsigned char *ap_valueP1 = &row_ap.valueP1[0];
-  short *ap_valueP2 = &row_ap.valueP2[0];
-  int *ap_valueP4 = &row_ap.valueP4[0];
+  //  unsigned char *ap_valueP1 = &row_ap.valueP1[0];
+  //  short *ap_valueP2 = &row_ap.valueP2[0];
+  //  int *ap_valueP4 = &row_ap.valueP4[0];
   int ap_pWd = row_ap.pWd;
-  //Scatter the values to simplify checking
-  if (ap_pWd == 1) {
-    for (int ix = 0; ix < row_ap.count; ix++) {ap_array[ap_index[ix]] = ap_packValue[ap_valueP1[ix]];}
-  } else if (ap_pWd == 2) {
-    for (int ix = 0; ix < row_ap.count; ix++) {ap_array[ap_index[ix]] = ap_packValue[ap_valueP2[ix]];}
-  } else if (ap_pWd == 4) {
-    for (int ix = 0; ix < row_ap.count; ix++) {ap_array[ap_index[ix]] = ap_packValue[ap_valueP4[ix]];}
+
+  //Check the ultra data structure and scatter the values to simplify checking
+  unsigned int *ap_valueP = &row_ap.valueP4[0];
+  for (int en = 0; en < row_ap.count; en++) {
+    int index = ap_index[en];
+    double value = ap_packValue[en];
+    int pointer = ap_valueP[index];
+    bool pointer_er = pointer != en;
+    if (pointer_er) {
+      printf("PvR entry %2d: index = %2d, value = %11.4g", en, index, value);
+      if (pointer_er) printf(" - ERROR: pointer is %d", pointer);
+      printf("\n");
+    }
+    ap_array[index] = value;
   }
 
   HVector lc_row_ap;
@@ -493,6 +516,8 @@ void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
       mxTinyVEr = max(max(fabs(PriceV), fabs(lcPriceV)),mxTinyVEr);
     //      printf("Index %7d: Small value inconsistency PriceV = %11.4g; lcPriceV = %11.4g\n", index, PriceV, lcPriceV);
     double dlPriceV = abs(PriceV - lcPriceV);
+    if (dlPriceV > 1e-4)
+      printf("Pivotal row entry %2d: TruV = %11.4g; UltraV = %11.4g\n", index, lcPriceV, PriceV);
     priceEr1 += dlPriceV*dlPriceV;
     row_apNormCk += PriceV*PriceV;
     lc_ap_array[index]=0;
@@ -529,18 +554,13 @@ void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
     if (row_apNormCkEr) printf(": ||IxCk|| = %11.4g ||row_ap|| = %11.4g, Tl=%11.4g", row_apNormCk, row_apNorm, row_apNormCkTl*row_apNorm);
     if (row_apCountEr) printf(": row_apCountEr with mxTinyVEr = %11.4g", mxTinyVEr);
     printf("\n");
-  } else {
-    printf(": ||row_apDl|| = %11.4g\n", priceEr1);
   }
+    else {
+      printf(": ||row_apDl|| = %11.4g\n", priceEr1);
+    }
 
   //Zero the values
-  if (ap_pWd == 1) {
-    for (int ix = 0; ix < row_ap.count; ix++) ap_array[ap_index[ix]] = 0;
-  } else if (ap_pWd == 2) {
-    for (int ix = 0; ix < row_ap.count; ix++) ap_array[ap_index[ix]] = 0;
-  } else if (ap_pWd == 4) {
-      for (int ix = 0; ix < row_ap.count; ix++) ap_array[ap_index[ix]] = 0;
-  }
+  for (int en = 0; en < row_ap.count; en++) ap_array[ap_index[en]] = 0;
 }
 
 void HMatrix::compute_vecT_matB(const double *vec, const int *base,

@@ -1888,6 +1888,7 @@ void HDual::iterateAn() {
 	lcAnIter->AnIterTraceAux0 = 0;
       }
       lcAnIter->AnIterTraceEdWt_Mode = EdWt_Mode;
+      /*
       if (AnIterTraceIterDl > 10) {
 	//	int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
 	//			     HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
@@ -1899,6 +1900,7 @@ void HDual::iterateAn() {
         iterateRpBrief(true);
         iterateRpBrief(false);
       }
+      */
     }
   }
   AnIterPrevIt = AnIterCuIt;
