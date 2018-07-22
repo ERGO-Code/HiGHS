@@ -11,9 +11,9 @@ public:
     void clear();
     int size;
     int count;   // count of non zeros
-    const unsigned char ilP1 = 255;
-    const unsigned short ilP2 = 65535;
-    const unsigned int ilP4 = 4294967295;
+    const unsigned char ilP1 =       255;
+    const unsigned short ilP2 =    65535;
+    const unsigned int ilP4 = 2147483647;
     int pWd; // Bytes of pointer to values [0 => No pointers]
     vector<int> index;   // index of non zeros
     vector<double> array;   // array
