@@ -1000,7 +1000,8 @@ void HDual::chooseColumn(HVector *row_ep)
   row_ap.clear();
 
   int lc_numIt = model->numberIteration;
-  if (lc_numIt<2) printf("Before PRICE: Mode = %d; Ultra = %d\n", Price_Mode, alw_price_ultra);
+  if (lc_numIt<1) printf("Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
+			 Price_Mode, alw_price_by_col_sw, alw_price_by_row_sw, alw_price_ultra);
   if (Price_Mode == Price_Mode_Col) {
     //Column-wise PRICE
     if (lc_numIt<2) printf("Using column price\n");
@@ -1026,7 +1027,8 @@ void HDual::chooseColumn(HVector *row_ep)
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
       }
       AnIterNumRowPriceWSw++;
-      matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity);
+      const double sw_dsty = matrix->price_by_row_sw_dsty;
+      matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity, 0, sw_dsty);
     } else {
       //No avoiding Hyper Price on current density of result or
       //switching if the density of this Price becomes extreme
@@ -1043,7 +1045,7 @@ void HDual::chooseColumn(HVector *row_ep)
     matrix->price_er_ck_ultra(row_ap_ultra, *row_ep);
   }
   bool anPriceEr = false;
-  if (anPriceEr) matrix->price_er_ck(&row_ap.array[0], &row_ap.index[0],
+  if (anPriceEr) matrix->price_er_ck(&row_ap.array[0], &row_ap.index[0], row_ap.count, 
 				     //row_ap,
 				     *row_ep);
 
@@ -1457,7 +1459,7 @@ void HDual::setCrash(const char *Crash_ArgV)
 
 void HDual::setPrice(const char *Price_ArgV)
 {
-  //	cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
+	cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
   alw_price_by_col_sw = false;
   alw_price_by_row_sw = false;
   alw_price_ultra = false;

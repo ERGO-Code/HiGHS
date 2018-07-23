@@ -157,10 +157,10 @@ public:
 
   // Variant choice
   int dual_variant = 0;
-  int Price_Mode = 0;
-  int EdWt_Mode = 0;
-  int Crash_Mode = 0;
-  int Presolve_Mode = 0;
+  int Price_Mode = 0; //Row-wise PRICE
+  int EdWt_Mode = 0; //DSE
+  int Crash_Mode = 0; //No crash
+  int Presolve_Mode = 0; //No presolve
 
   bool SolveBailout;
   double TimeLimitValue = 0;
@@ -177,14 +177,14 @@ public:
   vector<int> dvx_ix;
 
   // Price scalars
-  bool alw_price_by_col_sw;
-  bool alw_price_by_row_sw;
-  bool alw_price_ultra;
+  bool alw_price_by_col_sw = true; //By default allow switch to column PRICE if results sufficiently dense
+  bool alw_price_by_row_sw = true; //By default allow switch to standard row-wise PRICE if result is sufficiently dense
+  bool alw_price_ultra = false; //By default don't allow ultra-sparse PRICE
   const double dstyColPriceSw = 0.75;
 
   // DSE scalars
   bool iz_DSE_wt;
-  bool alw_DSE2Dvx_sw;
+  bool alw_DSE2Dvx_sw = true;
   int n_wg_DSE_wt;
   int AnIterPrevRpNumCostlyDseIt;
   double AnIterCostlyDseFq;

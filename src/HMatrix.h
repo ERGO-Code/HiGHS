@@ -28,12 +28,12 @@ public:
     bool setup_ok(const int *nonbasicFlag);
     void price_by_col(HVector& row_ap, HVector& row_ep) const;
     void price_by_row(HVector& row_ap, HVector& row_ep) const;
-    void price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty) const;
-    void price_er_ck(const double *ap_value, const int *ap_index, HVector& row_ep) const;
+    void price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty, int fm_i, double sw_dsty) const;
+    void price_by_row_no_index(HVector& row_ap, HVector& row_ep, int fm_i) const;
+    void price_er_ck(//HVector& row_ap,
+		     double *ap_array, int *ap_index, int ap_count, HVector& row_ep) const;
     void price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const;
     void price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const;
-    void price_by_row_w_index(HVector& row_ap, HVector& row_ep, int fm_i, double sw_dsty) const;
-    void price_by_row_no_index(HVector& row_ap, HVector& row_ep, int fm_i) const;
     void update(int columnIn, int columnOut);
     double compute_dot(HVector& vector, int iCol) const;
     void collect_aj(HVector& vector, int iCol, double multi) const;
@@ -41,8 +41,7 @@ public:
     void compute_vecT_matB(const double *vec, const int *base, HVector *res);
     void compute_matB_vec(const double *vec, const int *base, HVector *res);
     void rp_mtx();
-    const int price_by_row_sw_dsty_num = 1;
-    const int price_by_row_sw_dsty_den = 10;
+    const double price_by_row_sw_dsty = 0.1;
     const double hyperPRICE = 0.10;
     const double densityRunningAverageMu = 0.05;
     //    double row_apDensity;
