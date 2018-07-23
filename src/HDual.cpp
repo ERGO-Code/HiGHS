@@ -1043,7 +1043,9 @@ void HDual::chooseColumn(HVector *row_ep)
     matrix->price_er_ck_ultra(row_ap_ultra, *row_ep);
   }
   bool anPriceEr = false;
-  if (anPriceEr) matrix->price_er_ck(row_ap, *row_ep);
+  if (anPriceEr) matrix->price_er_ck(&row_ap.array[0], &row_ap.index[0],
+				     //row_ap,
+				     *row_ep);
 
   double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
   row_apDensity = uOpRsDensityRec(lc_OpRsDensity, &row_apDensity, &row_apAvDensity, &row_apAvLog10Density); 
