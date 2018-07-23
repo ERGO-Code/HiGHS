@@ -1,5 +1,6 @@
 #include "HVectorUltra.h"
 #include "HConst.h"
+#include "stdio.h"
 
 #include <cmath>
 #include <cassert>
@@ -12,7 +13,6 @@ void HVectorUltra::setup(int size_) {
     array.assign(size, 0);
     valueP1.assign(size, ilP1);
     valueP2.assign(size, ilP2);
-    valueP4.assign(size, ilP4);
     cwork.assign(size + 6400, 0); // MAX invert
     iwork.assign(size * 4, 0);
 
@@ -35,10 +35,10 @@ void HVectorUltra::clear() {
         for (int i = 0; i < count; i++) valueP1[index[i]] = ilP1;
     } else if (pWd == 2) {
       //2-byte pointer to clear
-        for (int i = 0; i < count; i++) valueP2[index[i]] = ilP2;
-    } else if (pWd == 4) {
-      //4-byte pointer to clear
-        for (int i = 0; i < count; i++) valueP4[index[i]] = ilP4;
+      for (int i = 0; i < count; i++) {
+	//	printf("Clearing %2d: valueP2[%5d]\n", i, index[i]);
+	valueP2[index[i]] = ilP2;
+      }
     }
     packFlag = false;
     count = 0;

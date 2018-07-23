@@ -110,7 +110,7 @@ int HModel::load_fromMPS(const char *filename)
 #ifdef H2DEBUG
   //  util_reportModelDa(filename);
 
-  util_anMl("Unscaled");
+  //  util_anMl("Unscaled");
 #endif
 
 
@@ -1709,7 +1709,7 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
-  util_anMl("Scaled");
+  //  util_anMl("Scaled");
 }
 
 void HModel::setup_tightenBound()
