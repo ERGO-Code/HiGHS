@@ -2,7 +2,6 @@
 #define HMATRIX_H_
 
 #include "HVector.h"
-#include "HVectorUltra.h"
 
 #include <vector>
 using namespace std;

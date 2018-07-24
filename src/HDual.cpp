@@ -1000,8 +1000,9 @@ void HDual::chooseColumn(HVector *row_ep)
   row_ap.clear();
 
   int lc_numIt = model->numberIteration;
-  if (lc_numIt<1) printf("Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
-			 Price_Mode, alw_price_by_col_sw, alw_price_by_row_sw, alw_price_ultra);
+  if (lc_numIt<1) 
+    printf("\nIteration %d: Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
+       lc_numIt, Price_Mode, alw_price_by_col_sw, alw_price_by_row_sw, alw_price_ultra);
   if (Price_Mode == Price_Mode_Col) {
     //Column-wise PRICE
     if (lc_numIt<2) printf("Using column price\n");
@@ -1043,6 +1044,7 @@ void HDual::chooseColumn(HVector *row_ep)
     row_ap_ultra.clear();
     matrix->price_by_row_ultra(row_ap_ultra, *row_ep);
     matrix->price_er_ck_ultra(row_ap_ultra, *row_ep);
+    row_ap.copyUltra(&row_ap_ultra);
   }
   bool anPriceEr = false;
   if (anPriceEr) matrix->price_er_ck(&row_ap.array[0], &row_ap.index[0], row_ap.count, 

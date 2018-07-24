@@ -8,7 +8,6 @@
 #include "HDualRow.h"
 #include "HDualRHS.h"
 #include "HCrash.h"
-#include "HVectorUltra.h"
 
 #include <set>
 #include <string>

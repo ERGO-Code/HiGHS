@@ -2,6 +2,7 @@
 #define HVECTOR_H_
 
 #include <vector>
+#include "HVectorUltra.h"
 using namespace std;
 
 class HVector {
@@ -31,6 +32,7 @@ public:
 
     // Advanced
     void copy(const HVector *from);
+    void copyUltra(const HVectorUltra *from);
     double norm2();
     void saxpy(const double pivotX, const HVector *pivot);
 };

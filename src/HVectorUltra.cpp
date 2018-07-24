@@ -1,6 +1,6 @@
 #include "HVectorUltra.h"
 #include "HConst.h"
-#include "stdio.h"
+#include "stdio.h"//Just for temporary printf
 
 #include <cmath>
 #include <cassert>
@@ -38,6 +38,14 @@ void HVectorUltra::clear() {
       for (int i = 0; i < count; i++) {
 	//	printf("Clearing %2d: valueP2[%5d]\n", i, index[i]);
 	valueP2[index[i]] = ilP2;
+      }
+    }
+    bool ckClear = true;
+    if (ckClear) {
+      for (int i = 0; i < size; i++) {
+	if (array[i] != 0) {printf("Error: cleared array[%d]=%g\n", i, array[i]);fflush(stdout);}
+	if (valueP1[i] != ilP1) {printf("Error: cleared valueP1[%d]=%d\n", i, valueP1[i]);fflush(stdout);}
+	if (valueP2[i] != ilP2) {printf("Error: cleared valueP2[%d]=%d\n", i, valueP2[i]);fflush(stdout);}
       }
     }
     packFlag = false;

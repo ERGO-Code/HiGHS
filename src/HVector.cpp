@@ -1,6 +1,7 @@
 #include "HVector.h"
 #include "HConst.h"
 
+#include "stdio.h"//Just for temporary printf
 #include <cmath>
 #include <cassert>
 
@@ -72,6 +73,45 @@ void HVector::copy(const HVector *from) {
         const double xFrom = fromArray[iFrom];
         index[i] = iFrom;
         array[iFrom] = xFrom;
+    }
+}
+
+void HVector::copyUltra(const HVectorUltra *from) {
+    clear();
+    fakeTick = from->fakeTick;
+    pseudoTick = from->pseudoTick;
+    const int fromCount = count = from->count;
+    const int *fromIndex = &from->index[0];
+    const double *fromArray = &from->array[0];
+    const int fromPWd = from->pWd;
+    printf("Copying from HVectorUltra: fromPWd = %1d\n", fromPWd);
+    if (fromPWd == 0) {
+      for (int i = 0; i < fromCount; i++) {
+        const int iFrom = fromIndex[i];
+        const double xFrom = fromArray[iFrom];
+        index[i] = iFrom;
+        array[iFrom] = xFrom;
+      }
+    } else if (fromPWd == 1) {
+      const unsigned char *fromValueP1 = &from->valueP1[0];
+      const double *fromPackValue = &from->packValue[0];
+      for (int i = 0; i < fromCount; i++) {
+        const int iFrom = fromIndex[i];
+        const int valueP = fromValueP1[iFrom];
+        const double xFrom = fromPackValue[valueP];
+        index[i] = iFrom;
+        array[iFrom] = xFrom;
+      }
+    } else if (fromPWd == 2) {
+      const unsigned short *fromValueP2 = &from->valueP2[0];
+      const double *fromPackValue = &from->packValue[0];
+      for (int i = 0; i < fromCount; i++) {
+        const int iFrom = fromIndex[i];
+        const int valueP = fromValueP2[iFrom];
+        const double xFrom = fromPackValue[valueP];
+        index[i] = iFrom;
+        array[iFrom] = xFrom;
+      }
     }
 }
 
