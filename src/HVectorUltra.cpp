@@ -40,7 +40,7 @@ void HVectorUltra::clear() {
 	valueP2[index[i]] = ilP2;
       }
     }
-    bool ckClear = true;
+    bool ckClear = false;
     if (ckClear) {
       for (int i = 0; i < size; i++) {
 	if (array[i] != 0) {printf("Error: cleared array[%d]=%g\n", i, array[i]);fflush(stdout);}

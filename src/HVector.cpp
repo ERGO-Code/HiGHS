@@ -84,7 +84,7 @@ void HVector::copyUltra(const HVectorUltra *from) {
     const int *fromIndex = &from->index[0];
     const double *fromArray = &from->array[0];
     const int fromPWd = from->pWd;
-    printf("Copying from HVectorUltra: fromPWd = %1d\n", fromPWd);
+    //    printf("Copying from HVectorUltra: fromPWd = %1d\n", fromPWd);
     if (fromPWd == 0) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
@@ -98,6 +98,7 @@ void HVector::copyUltra(const HVectorUltra *from) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
         const int valueP = fromValueP1[iFrom];
+	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
         const double xFrom = fromPackValue[valueP];
         index[i] = iFrom;
         array[iFrom] = xFrom;
@@ -108,6 +109,7 @@ void HVector::copyUltra(const HVectorUltra *from) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
         const int valueP = fromValueP2[iFrom];
+	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
         const double xFrom = fromPackValue[valueP];
         index[i] = iFrom;
         array[iFrom] = xFrom;

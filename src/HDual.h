@@ -371,6 +371,7 @@ enum AnIterOpTy
  int AnIterNumColPrice;
  int AnIterNumRowPrice;
  int AnIterNumRowPriceWSw;
+ int AnIterNumRowPriceUltra;
  int AnIterNumPrDgnIt;
  int AnIterNumDuDgnIt;
  int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1

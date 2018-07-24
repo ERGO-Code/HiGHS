@@ -358,10 +358,10 @@ void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   ap_pWd = 1;
   ilP = row_ap.ilP1;
   //Ultra-sparse PRICE with 1-byte pointers
-  //  printf("Ultra-sparse PRICE with 1-byte pointers\n");fflush(stdout);
-  for (int index = 0; index < numCol; index++) {
-    if (ap_valueP1[index] != ilP) {printf("ERROR: Initial ap_valueP1[%5d] = %d != %d = ilP\n", index, ap_valueP1[index], ilP); fflush(stdout);}
-  }
+  // printf("Ultra-sparse PRICE with 1-byte pointers\n");fflush(stdout);
+  //  for (int index = 0; index < numCol; index++) {
+  //    if (ap_valueP1[index] != ilP) {printf("ERROR: Initial ap_valueP1[%5d] = %d != %d = ilP\n", index, ap_valueP1[index], ilP); fflush(stdout);}
+  //  }
   for (int i = fm_i; i < ep_count; i++) {
     int iRow = ep_index[i];
     double multi = ep_array[iRow];
@@ -387,7 +387,7 @@ void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
       value1 = value0 + multi * ARvalue[k];
       if (rpOps) {printf(" value P=%2d; value0 = %11.4g; value1 = %11.4g\n", valueP, value0, value1);fflush(stdout);}
       //TODO Unlikely, but possible for ap_count to reach numCol
-      assert(ap_count<numCol);
+      //      assert(ap_count<numCol);
       ap_packValue[valueP] =
 	(fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
     }
@@ -545,7 +545,7 @@ void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   //  printf("Ultra PRICE completion: Set  row_ap.pWd = %d; row_ap.count = %d\n", ap_pWd, ap_count);
 }
 
-void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
+bool HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   // Alias
   int *ap_index = &row_ap.index[0];
   double *ap_array = &row_ap.array[0];
@@ -554,7 +554,7 @@ void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
   unsigned short *ap_valueP2 = &row_ap.valueP2[0];
   int ap_pWd = row_ap.pWd;
 
-  //  printf("\nHMatrix::price_er_ck_ultra, count = %d, pWd = %d\n", row_ap.count, row_ap.pWd);
+  //  printf("HMatrix::price_er_ck_ultra, count = %d, pWd = %d\n", row_ap.count, row_ap.pWd);
   //Check the ultra data structure and scatter the values to simplify checking
   if (ap_pWd > 0) {
     for (int en = 0; en < row_ap.count; en++) {
@@ -563,7 +563,7 @@ void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
       int pointer;
       if (ap_pWd == 1) {
 	pointer = ap_valueP1[index];
-      } else if (ap_pWd == 2) {
+      } else {
 	pointer = ap_valueP2[index];
       }
       bool pointer_er = pointer != en;
@@ -576,44 +576,24 @@ void HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
     }
   }
 
-  price_er_ck(&row_ap.array[0], &row_ap.index[0], row_ap.count, row_ep);
+  bool price_er;
+  price_er = price_er_ck(&row_ap.array[0], &row_ap.index[0], row_ap.count, row_ep);
 
   if (ap_pWd > 0) {
   //Zero the temporarily scattered values
     for (int en = 0; en < row_ap.count; en++) ap_array[ap_index[en]] = 0;
   }
+  return price_er;
 }
 
-void HMatrix::compute_vecT_matB(const double *vec, const int *base,
-        HVector *result) {
-    result->clear();
-    int resultCount = 0;
-    int *resultIndex = &result->index[0];
-    double *resultArray = &result->array[0];
-    for (int i = 0; i < numRow; i++) {
-        int iCol = base[i];
-        double value = 0;
-        if (iCol < numCol) {
-            for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
-                value += vec[Aindex[k]] * Avalue[k];
-        } else {
-            value = vec[iCol - numCol];
-        }
-        if (fabs(value) > HSOL_CONST_TINY) {
-            resultArray[i] = value;
-            resultIndex[resultCount++] = i;
-        }
-    }
-    result->count = resultCount;
-}
-
-void HMatrix::price_er_ck(//HVector& row_ap,
+bool HMatrix::price_er_ck(//HVector& row_ap,
 			  double *ap_array, int *ap_index, int ap_count,
 			  HVector& row_ep) const {
   // Alias
   //  int *ap_index = &row_ap.index[0];
   //  double *ap_array = &row_ap.array[0];
 
+  //  printf("HMatrix::price_er_ck      , count = %d\n", ap_count);
   HVector lc_row_ap;
   lc_row_ap.setup(numCol);
   //  int *lc_ap_index = &lc_row_ap.index[0];
@@ -625,6 +605,8 @@ void HMatrix::price_er_ck(//HVector& row_ap,
   double priceEr1=0;
   double row_apNormCk=0;
   double mxTinyVEr=0;
+  int numTinyVEr=0;
+  int numDlPriceV=0;
   int use_ap_count = ap_count;//row_ap.count;
   for (int index=0; index<numCol; index++) {
     double PriceV = ap_array[index];
@@ -633,19 +615,25 @@ void HMatrix::price_er_ck(//HVector& row_ap,
 	|| (fabs(lcPriceV) > HSOL_CONST_TINY && fabs(PriceV) <= HSOL_CONST_TINY)) {
       double TinyVEr = max(fabs(PriceV), fabs(lcPriceV));
       mxTinyVEr = max(TinyVEr,mxTinyVEr);
-      if (TinyVEr > 1e-4)
-	printf("Index %7d: Small value inconsistency PriceV = %11.4g; lcPriceV = %11.4g\n", index, PriceV, lcPriceV);}
+      if (TinyVEr > 1e-4) {
+	numTinyVEr++;
+	printf("Index %7d: Small value inconsistency %7d PriceV = %11.4g; lcPriceV = %11.4g\n", index, numTinyVEr, PriceV, lcPriceV);
+      }
+    }
     double dlPriceV = abs(PriceV - lcPriceV);
-    if (dlPriceV > 1e-4)
-      printf("Index %7d: dlPriceV = %11.4g; PriceV = %11.4g; lcPriceV = %11.4g\n", index, dlPriceV, PriceV, lcPriceV);
+    if (dlPriceV > 1e-4) {
+      numDlPriceV++;
+      printf("Index %7d: %7d dlPriceV = %11.4g; PriceV = %11.4g; lcPriceV = %11.4g\n", index, numDlPriceV, dlPriceV, PriceV, lcPriceV);
+    }
     priceEr1 += dlPriceV*dlPriceV;
     row_apNormCk += PriceV*PriceV;
     lc_ap_array[index]=0;
   }
   double row_apNorm=sqrt(row_apNormCk);
 
-  bool row_apCountEr = lc_row_ap.count != use_ap_count;
-  if (row_apCountEr) printf("row_apCountEr: %d = lc_row_ap.count != use_ap_count = %d\n", lc_row_ap.count, use_ap_count);
+  bool row_apCountEr = false;
+  //  lc_row_ap.count != use_ap_count;
+  //  if (row_apCountEr) printf("row_apCountEr: %d = lc_row_ap.count != use_ap_count = %d\n", lc_row_ap.count, use_ap_count);
 
   // Go through the indices in the row to be checked, subtracting the
   // squares of corresponding values from the squared norm, saving
@@ -673,10 +661,11 @@ void HMatrix::price_er_ck(//HVector& row_ap,
   row_apNormCk = sqrt(abs(row_apNormCk));
   double row_apNormCkTl = 1e-3;
   bool row_apNormCkEr = row_apNormCk > row_apNormCkTl*row_apNorm;
-  if (row_apCountEr
-      ||priceEr1 > priceErTl
-      || priceEr2 > priceErTl
-      || row_apNormCkEr) {
+  bool price_er = row_apCountEr
+    ||priceEr1 > priceErTl
+    || priceEr2 > priceErTl
+    || row_apNormCkEr;
+  if (price_er) {
     printf("Price error");
     if (priceEr1 > priceErTl) printf(": ||row_apDl|| = %11.4g", priceEr1);
     if (priceEr2 > priceErTl) printf(": ||row_apNZ|| = %11.4g", priceEr2);
@@ -684,6 +673,30 @@ void HMatrix::price_er_ck(//HVector& row_ap,
     if (row_apCountEr) printf(": row_apCountEr with mxTinyVEr = %11.4g", mxTinyVEr);
     printf("\n");
   }
+  return price_er;
+}
+
+void HMatrix::compute_vecT_matB(const double *vec, const int *base,
+        HVector *result) {
+    result->clear();
+    int resultCount = 0;
+    int *resultIndex = &result->index[0];
+    double *resultArray = &result->array[0];
+    for (int i = 0; i < numRow; i++) {
+        int iCol = base[i];
+        double value = 0;
+        if (iCol < numCol) {
+            for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
+                value += vec[Aindex[k]] * Avalue[k];
+        } else {
+            value = vec[iCol - numCol];
+        }
+        if (fabs(value) > HSOL_CONST_TINY) {
+            resultArray[i] = value;
+            resultIndex[resultCount++] = i;
+        }
+    }
+    result->count = resultCount;
 }
 
 void HMatrix::compute_matB_vec(const double *vec, const int *base,
