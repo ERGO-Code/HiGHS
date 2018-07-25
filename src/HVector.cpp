@@ -16,24 +16,49 @@ void HVector::setup(int size_) {
     packCount = 0;
     packIndex.resize(size);
     packValue.resize(size);
+
+    pWd = 0;
+    valueP1.assign(size, ilP1);
+    valueP2.assign(size, ilP2);
 }
 
 void HVector::clear() {
-    int clearVector_inDense = count < 0 || count > size * 0.3;
-    if (clearVector_inDense) {
+    if (pWd == 0) {
+      //Standard HVector to clear
+      int clearVector_inDense = count < 0 || count > size * 0.3;
+      if (clearVector_inDense) {
         array.assign(size, 0);
-    } else {
-        for (int i = 0; i < count; i++)
-            array[index[i]] = 0;
+      } else {
+        for (int i = 0; i < count; i++) array[index[i]] = 0;
+      }
+    } else if (pWd == 1) {
+      //1-byte pointer to clear
+        for (int i = 0; i < count; i++) valueP1[index[i]] = ilP1;
+    } else if (pWd == 2) {
+      //2-byte pointer to clear
+      for (int i = 0; i < count; i++) {
+	//	printf("Clearing %2d: valueP2[%5d]\n", i, index[i]);
+	valueP2[index[i]] = ilP2;
+      }
+    }
+    bool ckClear = false;
+    if (ckClear) {
+      for (int i = 0; i < size; i++) {
+	if (array[i] != 0) {printf("Error: cleared array[%d]=%g\n", i, array[i]);fflush(stdout);}
+	if (valueP1[i] != ilP1) {printf("Error: cleared valueP1[%d]=%d\n", i, valueP1[i]);fflush(stdout);}
+	if (valueP2[i] != ilP2) {printf("Error: cleared valueP2[%d]=%d\n", i, valueP2[i]);fflush(stdout);}
+      }
     }
     packFlag = false;
     count = 0;
     pseudoTick = 0;
     fakeTick = 0;
     next = 0;
+    pWd = 0;
 }
 
 void HVector::tight() {
+    if (pWd != 0) {printf("ERROR: HVector::tight() not implemented for pWd=%d\n", pWd);}
     int totalCount = 0;
     for (int i = 0; i < count; i++) {
         const int my_index = index[i];
@@ -50,14 +75,20 @@ void HVector::tight() {
 void HVector::pack() {
     if (packFlag) {
         packFlag = false;
-        packCount = 0;
-
-        for (int i = 0; i < count; i++) {
+	packCount = 0;
+	if (pWd == 0) {
+	  for (int i = 0; i < count; i++) {
             const int ipack = index[i];
             packIndex[packCount] = ipack;
             packValue[packCount] = array[ipack];
             packCount++;
-        }
+	  }
+	} else if (pWd >= 1) {
+	  for (int i = 0; i < count; i++) {
+            packIndex[packCount] = index[i];
+            packCount++;
+	  }
+	}
     }
 }
 
@@ -68,31 +99,15 @@ void HVector::copy(const HVector *from) {
     const int fromCount = count = from->count;
     const int *fromIndex = &from->index[0];
     const double *fromArray = &from->array[0];
-    for (int i = 0; i < fromCount; i++) {
-        const int iFrom = fromIndex[i];
-        const double xFrom = fromArray[iFrom];
-        index[i] = iFrom;
-        array[iFrom] = xFrom;
-    }
-}
-
-void HVector::copyUltra(const HVectorUltra *from) {
-    clear();
-    fakeTick = from->fakeTick;
-    pseudoTick = from->pseudoTick;
-    const int fromCount = count = from->count;
-    const int *fromIndex = &from->index[0];
-    const double *fromArray = &from->array[0];
-    const int fromPWd = from->pWd;
-    //    printf("Copying from HVectorUltra: fromPWd = %1d\n", fromPWd);
-    if (fromPWd == 0) {
+    const int frompWd = from->pWd;
+    if (frompWd == 0) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
         const double xFrom = fromArray[iFrom];
         index[i] = iFrom;
         array[iFrom] = xFrom;
       }
-    } else if (fromPWd == 1) {
+    } else if (frompWd == 1) {
       const unsigned char *fromValueP1 = &from->valueP1[0];
       const double *fromPackValue = &from->packValue[0];
       for (int i = 0; i < fromCount; i++) {
@@ -103,7 +118,48 @@ void HVector::copyUltra(const HVectorUltra *from) {
         index[i] = iFrom;
         array[iFrom] = xFrom;
       }
-    } else if (fromPWd == 2) {
+    } else if (frompWd == 2) {
+      const unsigned short *fromValueP2 = &from->valueP2[0];
+      const double *fromPackValue = &from->packValue[0];
+      for (int i = 0; i < fromCount; i++) {
+        const int iFrom = fromIndex[i];
+        const int valueP = fromValueP2[iFrom];
+	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
+        const double xFrom = fromPackValue[valueP];
+        index[i] = iFrom;
+        array[iFrom] = xFrom;
+      }
+    }
+}
+
+void HVector::copyUltra(const HVectorUltra *from) {
+    clear();
+    fakeTick = from->fakeTick;
+    pseudoTick = from->pseudoTick;
+    const int fromCount = count = from->count;
+    const int *fromIndex = &from->index[0];
+    const double *fromArray = &from->array[0];
+    const int frompWd = from->pWd;
+    //    printf("Copying from HVectorUltra: frompWd = %1d\n", frompWd);
+    if (frompWd == 0) {
+      for (int i = 0; i < fromCount; i++) {
+        const int iFrom = fromIndex[i];
+        const double xFrom = fromArray[iFrom];
+        index[i] = iFrom;
+        array[iFrom] = xFrom;
+      }
+    } else if (frompWd == 1) {
+      const unsigned char *fromValueP1 = &from->valueP1[0];
+      const double *fromPackValue = &from->packValue[0];
+      for (int i = 0; i < fromCount; i++) {
+        const int iFrom = fromIndex[i];
+        const int valueP = fromValueP1[iFrom];
+	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
+        const double xFrom = fromPackValue[valueP];
+        index[i] = iFrom;
+        array[iFrom] = xFrom;
+      }
+    } else if (frompWd == 2) {
       const unsigned short *fromValueP2 = &from->valueP2[0];
       const double *fromPackValue = &from->packValue[0];
       for (int i = 0; i < fromCount; i++) {
@@ -122,6 +178,7 @@ double HVector::norm2() {
     const int *workIndex = &index[0];
     const double *workArray = &array[0];
 
+    if (pWd != 0) {printf("ERROR: HVector::norm2() not implemented for pWd=%d\n", pWd);}
     double result = 0;
     for (int i = 0; i < workCount; i++) {
         double value = workArray[workIndex[i]];
@@ -139,6 +196,7 @@ void HVector::saxpy(const double pivotX, const HVector *pivot) {
     const int *pivotIndex = &pivot->index[0];
     const double *pivotArray = &pivot->array[0];
 
+    if (pWd != 0) {printf("ERROR: HVector::saxpy(const double pivotX, const HVector *pivot) not implemented for pWd=%d\n", pWd);}
     for (int k = 0; k < pivotCount; k++) {
         const int iRow = pivotIndex[k];
         const double x0 = workArray[iRow];
