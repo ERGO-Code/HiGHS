@@ -132,47 +132,6 @@ void HVector::copy(const HVector *from) {
     }
 }
 
-void HVector::copyUltra(const HVectorUltra *from) {
-    clear();
-    fakeTick = from->fakeTick;
-    pseudoTick = from->pseudoTick;
-    const int fromCount = count = from->count;
-    const int *fromIndex = &from->index[0];
-    const double *fromArray = &from->array[0];
-    const int frompWd = from->pWd;
-    //    printf("Copying from HVectorUltra: frompWd = %1d\n", frompWd);
-    if (frompWd == 0) {
-      for (int i = 0; i < fromCount; i++) {
-        const int iFrom = fromIndex[i];
-        const double xFrom = fromArray[iFrom];
-        index[i] = iFrom;
-        array[iFrom] = xFrom;
-      }
-    } else if (frompWd == 1) {
-      const unsigned char *fromValueP1 = &from->valueP1[0];
-      const double *fromPackValue = &from->packValue[0];
-      for (int i = 0; i < fromCount; i++) {
-        const int iFrom = fromIndex[i];
-        const int valueP = fromValueP1[iFrom];
-	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
-        const double xFrom = fromPackValue[valueP];
-        index[i] = iFrom;
-        array[iFrom] = xFrom;
-      }
-    } else if (frompWd == 2) {
-      const unsigned short *fromValueP2 = &from->valueP2[0];
-      const double *fromPackValue = &from->packValue[0];
-      for (int i = 0; i < fromCount; i++) {
-        const int iFrom = fromIndex[i];
-        const int valueP = fromValueP2[iFrom];
-	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
-        const double xFrom = fromPackValue[valueP];
-        index[i] = iFrom;
-        array[iFrom] = xFrom;
-      }
-    }
-}
-
 double HVector::norm2() {
     const int workCount = count;
     const int *workIndex = &index[0];

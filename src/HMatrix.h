@@ -29,13 +29,9 @@ public:
     void price_by_row(HVector& row_ap, HVector& row_ep) const;
     void price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty, int fm_i, double sw_dsty) const;
     void price_by_row_no_index(HVector& row_ap, HVector& row_ep, int fm_i) const;
-    bool price_er_ck(HVector& row_ap, HVector& row_ep) const;
-    bool price_er_ck_core(//HVector& row_ap,
-		     double *ap_array, int *ap_index, int ap_count, HVector& row_ep) const;
-    //    void price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const;
     void price_by_row_ultra(HVector& row_ap, HVector& row_ep) const;
-    //    bool price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const;
-    bool price_er_ck_ultra(HVector& row_ap, HVector& row_ep) const;
+    bool price_er_ck(HVector& row_ap, HVector& row_ep) const;
+    bool price_er_ck_core(HVector& row_ap, HVector& row_ep) const;
     void update(int columnIn, int columnOut);
     double compute_dot(HVector& vector, int iCol) const;
     void collect_aj(HVector& vector, int iCol, double multi) const;

@@ -327,7 +327,6 @@ void HMatrix::price_by_row_no_index(HVector& row_ap, HVector& row_ep, int fm_i) 
   row_ap.count = ap_count;
 }
 
-//void HMatrix::price_by_row_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
 void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   // Alias
   int ap_count = 0;
@@ -546,48 +545,6 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   //  printf("Ultra PRICE completion: Set  row_ap.pWd = %d; row_ap.count = %d\n", ap_pWd, ap_count);
 }
 
-//bool HMatrix::price_er_ck_ultra(HVectorUltra& row_ap, HVector& row_ep) const {
-bool HMatrix::price_er_ck_ultra(HVector& row_ap, HVector& row_ep) const {
-  // Alias
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
-  double *ap_packValue = &row_ap.packValue[0];
-  unsigned char *ap_valueP1 = &row_ap.valueP1[0];
-  unsigned short *ap_valueP2 = &row_ap.valueP2[0];
-  int ap_pWd = row_ap.pWd;
-
-  //  printf("HMatrix::price_er_ck_ultra, count = %d, pWd = %d\n", row_ap.count, row_ap.pWd);
-  //Check the ultra data structure and scatter the values to simplify checking
-  if (ap_pWd > 0) {
-    for (int en = 0; en < row_ap.count; en++) {
-      int index = ap_index[en];
-      double value = ap_packValue[en];
-      int pointer;
-      if (ap_pWd == 1) {
-	pointer = ap_valueP1[index];
-      } else {
-	pointer = ap_valueP2[index];
-      }
-      bool pointer_er = pointer != en;
-      if (pointer_er) {
-	printf("PvR entry %2d: index = %2d, value = %11.4g", en, index, value);
-	if (pointer_er) printf(" - ERROR: pointer is %d", pointer);
-	printf("\n");
-      }
-      ap_array[index] = value;
-    }
-  }
-
-  bool price_er;
-  price_er = price_er_ck_core(&row_ap.array[0], &row_ap.index[0], row_ap.count, row_ep);
-
-  if (ap_pWd > 0) {
-  //Zero the temporarily scattered values
-    for (int en = 0; en < row_ap.count; en++) ap_array[ap_index[en]] = 0;
-  }
-  return price_er;
-}
-
 bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
   // Alias
   int *ap_index = &row_ap.index[0];
@@ -620,7 +577,7 @@ bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
   }
 
   bool price_er;
-  price_er = price_er_ck_core(&row_ap.array[0], &row_ap.index[0], row_ap.count, row_ep);
+  price_er = price_er_ck_core(row_ap, row_ep);
 
   if (ap_pWd > 0) {
   //Zero the temporarily scattered values
@@ -629,12 +586,10 @@ bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
   return price_er;
 }
 
-bool HMatrix::price_er_ck_core(//HVector& row_ap,
-			  double *ap_array, int *ap_index, int ap_count,
-			  HVector& row_ep) const {
+bool HMatrix::price_er_ck_core(HVector& row_ap, HVector& row_ep) const {
   // Alias
-  //  int *ap_index = &row_ap.index[0];
-  //  double *ap_array = &row_ap.array[0];
+  int *ap_index = &row_ap.index[0];
+  double *ap_array = &row_ap.array[0];
 
   //  printf("HMatrix::price_er_ck      , count = %d\n", ap_count);
   HVector lc_row_ap;
@@ -650,7 +605,7 @@ bool HMatrix::price_er_ck_core(//HVector& row_ap,
   double mxTinyVEr=0;
   int numTinyVEr=0;
   int numDlPriceV=0;
-  int use_ap_count = ap_count;//row_ap.count;
+  int use_ap_count = row_ap.count;
   for (int index=0; index<numCol; index++) {
     double PriceV = ap_array[index];
     double lcPriceV = lc_ap_array[index];

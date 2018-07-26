@@ -999,8 +999,11 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  bool anPriceEr = true;
+  bool anPriceEr = false;
   bool rpPriceTy = false;
+  bool useUltraPrice = alw_price_ultra
+    && row_apDensity*numCol*10 < row_ap.ilP2
+    && row_apDensity < 1e-3;
   int lc_numIt = model->numberIteration;
   if (lc_numIt<1 || rpPriceTy) 
     printf("\nIteration %d: Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
@@ -1028,19 +1031,16 @@ void HDual::chooseColumn(HVector *row_ep)
 	row_ap.array[col] = model->nonbasicFlag[col]*row_ap.array[col];
       }
 
-    } else if (alw_price_ultra) {
+    } else if (useUltraPrice) {
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
       }
       AnIterNumRowPriceUltra++;
       //      row_ap_ultra.clear();
       if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - ultra\n");
-      matrix->price_by_row_ultra(
-				 //row_ap_ultra,
-				 row_ap, *row_ep);
+      matrix->price_by_row_ultra(row_ap, *row_ep);
       if (anPriceEr) {
 	bool price_er;
-	//price_er = matrix->price_er_ck_ultra(row_ap_ultra, *row_ep);
 	price_er = matrix->price_er_ck(row_ap, *row_ep);
 	//	if (!price_er) printf("No ultra PRICE error\n");
       }

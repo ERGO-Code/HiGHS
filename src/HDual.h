@@ -231,7 +231,6 @@ public:
   HVector column;
   HVector columnBFRT;
   HVector columnDSE;
-  HVectorUltra row_ap_ultra;
   double columnDensity;
   double row_epDensity;
   double row_apDensity;
