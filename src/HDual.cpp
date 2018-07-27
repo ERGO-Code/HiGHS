@@ -1467,6 +1467,10 @@ void HDual::setCrash(const char *Crash_ArgV)
     Crash_Mode = Crash_Mode_Bixby;
   else if (strcmp(Crash_ArgV, "LTSSF7") == 0)
     Crash_Mode = Crash_Mode_Dev;
+  else if (strcmp(Crash_ArgV, "Bs") == 0)
+    Crash_Mode = Crash_Mode_Bs;
+  else if (strcmp(Crash_ArgV, "TsSing") == 0)
+    Crash_Mode = Crash_Mode_TsSing;
   else
   {
     cout << "HDual::setCrash unrecognised CrashArgV = " << Crash_ArgV

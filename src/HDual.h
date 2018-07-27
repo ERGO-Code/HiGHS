@@ -35,6 +35,8 @@ const int Crash_Mode_LTSF_pri = 4;
 const int Crash_Mode_LTSF = 5;
 const int Crash_Mode_Bixby = 6;
 const int Crash_Mode_Dev = 7;
+const int Crash_Mode_Bs = 8;
+const int Crash_Mode_TsSing = 9;
 const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
 
 //Define the Presolve modes
