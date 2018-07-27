@@ -2,6 +2,7 @@
 #define HVECTOR_H_
 
 #include <vector>
+#include <set>
 using namespace std;
 
 class HVector {
@@ -15,11 +16,22 @@ public:
     vector<double> array;   // array
 
     //For Ultra-sparsity
+    const int dfSparseDaStr = -1;
+    const int p0SparseDaStr = 0;
+    const int p1SparseDaStr = 1;
+    const int p2SparseDaStr = 2;
+    const int           mxSetP0 =  1024;//10;
     const unsigned char ilP1 =     255;//10;
     const unsigned short ilP2 =    65535;//20;
-    int pWd; // Bytes of pointer to values [0 => No pointers]
-    vector<unsigned char> valueP1;   // 1-byte pointer to values
-    vector<unsigned short> valueP2;   // 2-byte pointer to values
+    int numEnSetP0; // Number of entries in setP0
+    int pWd; // Bytes of pointer to values
+    // -1 => Vanilla index-array sparse data structure
+    //  0 => Ultra-sparse set of indices without pointers
+    //  1 => Ultra-sparse set of indices with 1-byte pointers
+    //  2 => Ultra-sparse set of indices with 2-byte pointers
+    set<pair<int, double>> setP0; //set of index-array pairs 
+    vector<unsigned char> valueP1;   // 1-byte pointers
+    vector<unsigned short> valueP2;   // 2-byte pointers
 
     int pseudoTick;
     double fakeTick;

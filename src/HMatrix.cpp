@@ -333,6 +333,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   int *ap_index = &row_ap.index[0];
   double *ap_array = &row_ap.array[0];
   double *ap_packValue = &row_ap.packValue[0];
+  set<pair<int, double>> *row_apSetP0 = &row_ap.setP0;
   unsigned char *ap_valueP1 = &row_ap.valueP1[0];
   unsigned short *ap_valueP2 = &row_ap.valueP2[0];
   const int ep_count = row_ep.count;
@@ -355,7 +356,46 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   //  rpRow = true;
   //  rpOps = true;
 
-  ap_pWd = 1;
+  bool useSetP0 = false;
+  if (useSetP0) {
+    printf("ERROR: Ultra-sparse PRICE for setP0 is not implemented\n");
+    ap_pWd = row_ap.p0SparseDaStr;
+    //Ultra-sparse PRICE without pointers
+    printf("Ultra-sparse PRICE without pointers\n");fflush(stdout);
+    if (!row_apSetP0->empty()) {printf("ERROR: row_apSetP0 not empty\n");fflush(stdout);}
+    for (int i = fm_i; i < ep_count; i++) {
+      int iRow = ep_index[i];
+      double multi = ep_array[iRow];
+      iRowNNz = AR_Nend[iRow]- ARstart[iRow];
+      if (rpRow) {printf("Ultra-0 Row %1d: multi = %g; NNz = %d\n", i, multi, iRowNNz);fflush(stdout);}
+      if (ap_count+iRowNNz >= row_ap.mxSetP0) {nx_i = i; break;}
+      for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
+	int index = ARindex[k];
+	if (rpOps) {printf("Entry %2d: index %2d; value %11.4g", k, index, ARvalue[k]);fflush(stdout);}
+	//	int en = row_apSetP0.find(index);
+	if (valueP == ilP) {
+	  //Row entry is not in list of values
+	  value0 = 0;
+	  valueP = ap_count;
+	  ap_valueP1[index] = valueP;
+	  ap_index[ap_count++] = index;
+	  if (rpOps) {printf(" New");fflush(stdout);}
+	} else {
+	  //Row entry is in list of values
+	  value0 = ap_packValue[valueP];
+	  if (rpOps) {printf(" Old");fflush(stdout);}
+	}
+	value1 = value0 + multi * ARvalue[k];
+	if (rpOps) {printf(" value P=%2d; value0 = %11.4g; value1 = %11.4g\n", valueP, value0, value1);fflush(stdout);}
+	//TODO Unlikely, but possible for ap_count to reach numCol
+	//      assert(ap_count<numCol);
+	ap_packValue[valueP] =
+	  (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+      }
+      nx_i = i+1;
+    }
+  }
+  ap_pWd = row_ap.p1SparseDaStr;
   ilP = row_ap.ilP1;
   //Ultra-sparse PRICE with 1-byte pointers
   // printf("Ultra-sparse PRICE with 1-byte pointers\n");fflush(stdout);
@@ -405,7 +445,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
       ap_valueP2[index] = ap_valueP1[index];
       ap_valueP1[index] = ilP;
     }
-    ap_pWd = 2*ap_pWd;
+    ap_pWd = row_ap.p2SparseDaStr;
     ilP = row_ap.ilP2;
   }
   //Ultra-sparse PRICE with 2-byte pointers
@@ -452,7 +492,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
       printf("\n");
     }
     // Convert the ultra-sparse data to hyper-sparse data
-    ap_pWd = 0;
+    ap_pWd = row_ap.dfSparseDaStr;
     for (int en = 0; en<ap_count; en++) {
       int index = ap_index[en];
       valueP = ap_valueP2[index];
@@ -493,7 +533,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
     // Try to remove cancellation
     const int apcount1 = ap_count;
     ap_count = 0;
-    if (ap_pWd == 0) {
+    if (ap_pWd == row_ap.dfSparseDaStr) {
       for (int i = 0; i < apcount1; i++) {
 	const int index = ap_index[i];
 	const double value = ap_array[index];
@@ -503,7 +543,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
 	  ap_array[index] = 0;
 	}
       }
-    } else if (ap_pWd == 1) {
+    } else if (ap_pWd == row_ap.p1SparseDaStr) {
       for (int i = 0; i < apcount1; i++) {
 	const int index = ap_index[i];
 	valueP = ap_valueP1[index];
@@ -517,7 +557,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
 	  ap_packValue[valueP] = 0;
 	}
       }
-    } else if (ap_pWd == 2) {
+    } else if (ap_pWd == row_ap.p2SparseDaStr) {
       if (rpRow) {printf("PRICE cancellation removal for ap_pWd = %1d\n", ap_pWd); fflush(stdout);}
       if (rpRow) {printf("PRICE cancellation removal for apcount1 = %1d\n", apcount1); fflush(stdout);}
       for (int i = 0; i < apcount1; i++) {
@@ -556,12 +596,12 @@ bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
 
   //  printf("HMatrix::price_er_ck_ultra, count = %d, pWd = %d\n", row_ap.count, row_ap.pWd);
   //Check the ultra data structure and scatter the values to simplify checking
-  if (ap_pWd > 0) {
+  if (ap_pWd >= row_ap.p0SparseDaStr) {
     for (int en = 0; en < row_ap.count; en++) {
       int index = ap_index[en];
       double value = ap_packValue[en];
       int pointer;
-      if (ap_pWd == 1) {
+      if (ap_pWd == row_ap.p1SparseDaStr) {
 	pointer = ap_valueP1[index];
       } else {
 	pointer = ap_valueP2[index];
@@ -579,7 +619,7 @@ bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
   bool price_er;
   price_er = price_er_ck_core(row_ap, row_ep);
 
-  if (ap_pWd > 0) {
+  if (ap_pWd >= row_ap.p0SparseDaStr) {
   //Zero the temporarily scattered values
     for (int en = 0; en < row_ap.count; en++) ap_array[ap_index[en]] = 0;
   }

@@ -49,13 +49,24 @@ void HDualRow::choose_makepack(const HVector *row, const int offset)
   const double *rowPackValue = &row->packValue[0];
   const int rowPWd = row->pWd;
 
-  if (rowPWd == 0) {
+  if (rowPWd == row->dfSparseDaStr) {
     for (int i = 0; i < rowCount; i++) {
       const int index = rowIndex[i];
       const double value = rowArray[index];
       packIndex[packCount] = index + offset;
       packValue[packCount++] = value;
     }
+  } else if (rowPWd == row->p0SparseDaStr) {
+    printf("HDualRow::choose_makepack: Cannot handle p0SparseDaStr\n");
+    /*
+    const set rowSetP0 = &row->setP0;
+    for (int i = 0; i < rowCount; i++) {
+      const int index = rowSetP0[i];
+      const double value = rowPackValue[i];
+      packIndex[packCount] = index + offset;
+      packValue[packCount++] = value;
+    }
+    */
   } else {
     for (int i = 0; i < rowCount; i++) {
       const int index = rowIndex[i];

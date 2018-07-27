@@ -17,13 +17,14 @@ void HVector::setup(int size_) {
     packIndex.resize(size);
     packValue.resize(size);
 
-    pWd = 0;
+    pWd = dfSparseDaStr;
+    setP0.clear();
     valueP1.assign(size, ilP1);
     valueP2.assign(size, ilP2);
 }
 
 void HVector::clear() {
-    if (pWd == 0) {
+    if (pWd == dfSparseDaStr) {
       //Standard HVector to clear
       int clearVector_inDense = count < 0 || count > size * 0.3;
       if (clearVector_inDense) {
@@ -31,10 +32,10 @@ void HVector::clear() {
       } else {
         for (int i = 0; i < count; i++) array[index[i]] = 0;
       }
-    } else if (pWd == 1) {
+    } else if (pWd == p1SparseDaStr) {
       //1-byte pointer to clear
         for (int i = 0; i < count; i++) valueP1[index[i]] = ilP1;
-    } else if (pWd == 2) {
+    } else if (pWd == p2SparseDaStr) {
       //2-byte pointer to clear
       for (int i = 0; i < count; i++) {
 	//	printf("Clearing %2d: valueP2[%5d]\n", i, index[i]);
@@ -54,11 +55,11 @@ void HVector::clear() {
     pseudoTick = 0;
     fakeTick = 0;
     next = 0;
-    pWd = 0;
+    pWd = dfSparseDaStr;
 }
 
 void HVector::tight() {
-    if (pWd != 0) {printf("ERROR: HVector::tight() not implemented for pWd=%d\n", pWd);}
+    if (pWd != dfSparseDaStr) {printf("ERROR: HVector::tight() not implemented for pWd=%d\n", pWd);}
     int totalCount = 0;
     for (int i = 0; i < count; i++) {
         const int my_index = index[i];
@@ -76,14 +77,14 @@ void HVector::pack() {
     if (packFlag) {
         packFlag = false;
 	packCount = 0;
-	if (pWd == 0) {
+	if (pWd == dfSparseDaStr) {
 	  for (int i = 0; i < count; i++) {
             const int ipack = index[i];
             packIndex[packCount] = ipack;
             packValue[packCount] = array[ipack];
             packCount++;
 	  }
-	} else if (pWd >= 1) {
+	} else if (pWd >= p1SparseDaStr) {
 	  for (int i = 0; i < count; i++) {
             packIndex[packCount] = index[i];
             packCount++;
@@ -100,14 +101,14 @@ void HVector::copy(const HVector *from) {
     const int *fromIndex = &from->index[0];
     const double *fromArray = &from->array[0];
     const int frompWd = from->pWd;
-    if (frompWd == 0) {
+    if (frompWd == dfSparseDaStr) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
         const double xFrom = fromArray[iFrom];
         index[i] = iFrom;
         array[iFrom] = xFrom;
       }
-    } else if (frompWd == 1) {
+    } else if (frompWd == p1SparseDaStr) {
       const unsigned char *fromValueP1 = &from->valueP1[0];
       const double *fromPackValue = &from->packValue[0];
       for (int i = 0; i < fromCount; i++) {
@@ -118,7 +119,7 @@ void HVector::copy(const HVector *from) {
         index[i] = iFrom;
         array[iFrom] = xFrom;
       }
-    } else if (frompWd == 2) {
+    } else if (frompWd == p2SparseDaStr) {
       const unsigned short *fromValueP2 = &from->valueP2[0];
       const double *fromPackValue = &from->packValue[0];
       for (int i = 0; i < fromCount; i++) {
@@ -137,7 +138,7 @@ double HVector::norm2() {
     const int *workIndex = &index[0];
     const double *workArray = &array[0];
 
-    if (pWd != 0) {printf("ERROR: HVector::norm2() not implemented for pWd=%d\n", pWd);}
+    if (pWd != dfSparseDaStr) {printf("ERROR: HVector::norm2() not implemented for pWd=%d\n", pWd);}
     double result = 0;
     for (int i = 0; i < workCount; i++) {
         double value = workArray[workIndex[i]];
@@ -155,7 +156,7 @@ void HVector::saxpy(const double pivotX, const HVector *pivot) {
     const int *pivotIndex = &pivot->index[0];
     const double *pivotArray = &pivot->array[0];
 
-    if (pWd != 0) {printf("ERROR: HVector::saxpy(const double pivotX, const HVector *pivot) not implemented for pWd=%d\n", pWd);}
+    if (pWd != dfSparseDaStr) {printf("ERROR: HVector::saxpy(const double pivotX, const HVector *pivot) not implemented for pWd=%d\n", pWd);}
     for (int k = 0; k < pivotCount; k++) {
         const int iRow = pivotIndex[k];
         const double x0 = workArray[iRow];
