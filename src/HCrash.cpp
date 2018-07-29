@@ -73,24 +73,18 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
     crsh_no_act_pri_v = crsh_mn_pri_v;
   }
 
-  if (Crash_Mode == Crash_Mode_TsSing)
-  {
-    tsSing(ptr_model);
-    Crash_Mode = Crash_Mode_Bs;
-  }
-
   if (Crash_Mode == Crash_Mode_Bixby || Crash_Mode == Crash_Mode_Dev)
   {
     bixby(ptr_model, Crash_Mode);
   }
-  //  else if (Crash_Mode == Crash_Mode_TsSing)
-  //  {
-  //    tsSing(ptr_model);
-  //  }
+  else if (Crash_Mode == Crash_Mode_TsSing)
+    {
+      tsSing(ptr_model);
+    }
   else
-  {
-    ltssf(ptr_model, Crash_Mode);
-  }
+    {
+      ltssf(ptr_model, Crash_Mode);
+    }
   model->totalTime += model->timer.getTime();
 }
 
@@ -115,13 +109,12 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
   bixby_mu_a = 0.99;
   bixby_mu_b = 0.01;
 
-  //#ifdef JAJH_dev
+#ifdef JAJH_dev
   printf("\nBixby Crash");
   if (bixby_no_nz_c_co)
     printf(": No basic columns with nonzero costs\n");
   else
     printf(": Any basic columns regardless of cost\n");
-#ifdef JAJH_dev
 #endif
   for (int ps_n = 0; ps_n < numCol; ps_n++)
   {
@@ -1293,7 +1286,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
   //    const double *rowUpper = model->getrowUpper();
 
   ltssf_iz_da(ptr_model, Crash_Mode);
-  //#ifdef JAJH_dev
+#ifdef JAJH_dev
   printf("\nLTSSF Crash\n");
   printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
   printf(" crsh_fn_cf_k = %d\n", crsh_fn_cf_k);
@@ -1313,15 +1306,13 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
 
   printf("Max row priority is %d\n", mx_r_pri);
   printf("Max col priority is %d\n", mx_c_pri);
-#ifdef JAJH_dev
 #endif
   if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v))
   {
-    //#ifdef JAJH_dev
+#ifdef JAJH_dev
     printf(
         "Max row priority of %d + Max col priority of %d = %d <= %d: no value in performing LTSSF crash\n",
         mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
-#ifdef JAJH_dev
 #endif
     // Save the solved results
     return;
@@ -1345,6 +1336,14 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
   crsh_rp_r_c_st(0, Crash_Mode);
 #endif
   ltssf_iterate(ptr_model);
+  
+  /*
+  if (Crash_Mode == Crash_Mode_Bs) {
+    const int *nonbasicFlag = model->getNonbasicFlag();
+    for (int r_n = 0; r_n < numRow; r_n++) printf("Row %4d has nonbasic flag = %1d\n", r_n, nonbasicFlag[numCol+r_n]);
+    for (int c_n = 0; c_n < numCol; c_n++) printf("Col %4d has nonbasic flag = %1d\n", c_n, nonbasicFlag[c_n]);
+  }
+  */
 #ifdef H2DEBUG
   printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
          n_crsh_ps);
@@ -1968,6 +1967,7 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode)
     crsh_r_ty_pri_v[crsh_vr_ty_bc] =     0;
     crsh_c_ty_pri_v[crsh_vr_ty_non_bc] = 0;
     crsh_c_ty_pri_v[crsh_vr_ty_bc] =     1;
+    
   } else {
   //Standard crash:
     printf("Standard crash:\n");
@@ -2014,6 +2014,14 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode)
 
   crsh_iz_vr_ty(ptr_model, Crash_Mode);
 
+  if (Crash_Mode == Crash_Mode_Bs) {
+    // For the basis crash, once the row and column priorities have
+    // been set, start from a logical basis
+    model->replaceWithLogicalBasis();
+    model->matrix.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
+    model->mlFg_haveMatrixColWise = 1;
+    model->mlFg_haveMatrixRowWise = 1;
+  }
   mx_r_pri = crsh_mn_pri_v;
   for (int r_n = 0; r_n < numRow; r_n++)
     mx_r_pri = max(mx_r_pri, crsh_r_ty_pri_v[crsh_r_ty[r_n]]);
@@ -2578,9 +2586,8 @@ void HCrash::max_heapify(double *heap_v, int *heap_i, int i, int n)
 void HCrash::tsSing(HModel *ptr_model)
 {
   model = ptr_model;
-  //#ifdef JAJH_dev
-  printf("\nTesting singularity Crash\n");
 #ifdef JAJH_dev
+  printf("\nTesting singularity Crash\n");
 #endif
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
