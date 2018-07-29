@@ -333,7 +333,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   int *ap_index = &row_ap.index[0];
   double *ap_array = &row_ap.array[0];
   double *ap_packValue = &row_ap.packValue[0];
-  set<pair<int, double>> *row_apSetP0 = &row_ap.setP0;
+  map<int, double> *row_apPackMap = &row_ap.packMap;
   unsigned char *ap_valueP1 = &row_ap.valueP1[0];
   unsigned short *ap_valueP2 = &row_ap.valueP2[0];
   const int ep_count = row_ep.count;
@@ -356,41 +356,51 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   //  rpRow = true;
   //  rpOps = true;
 
-  bool useSetP0 = false;
-  if (useSetP0) {
-    printf("ERROR: Ultra-sparse PRICE for setP0 is not implemented\n");
+  bool usePackMap = false;
+  if (usePackMap) {
+    printf("ERROR: Ultra-sparse PRICE for packMap is not implemented\n");
     ap_pWd = row_ap.p0SparseDaStr;
     //Ultra-sparse PRICE without pointers
     printf("Ultra-sparse PRICE without pointers\n");fflush(stdout);
-    if (!row_apSetP0->empty()) {printf("ERROR: row_apSetP0 not empty\n");fflush(stdout);}
+    if (!row_apPackMap->empty()) {printf("ERROR: row_apPackMap not empty\n");fflush(stdout);}
     for (int i = fm_i; i < ep_count; i++) {
       int iRow = ep_index[i];
       double multi = ep_array[iRow];
       iRowNNz = AR_Nend[iRow]- ARstart[iRow];
       if (rpRow) {printf("Ultra-0 Row %1d: multi = %g; NNz = %d\n", i, multi, iRowNNz);fflush(stdout);}
-      if (ap_count+iRowNNz >= row_ap.mxSetP0) {nx_i = i; break;}
+      if (ap_count+iRowNNz >= row_ap.packMapMxZ) {nx_i = i; break;}
       for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
 	int index = ARindex[k];
 	if (rpOps) {printf("Entry %2d: index %2d; value %11.4g", k, index, ARvalue[k]);fflush(stdout);}
-	//	int en = row_apSetP0.find(index);
-	if (valueP == ilP) {
+	map<int, double>::iterator itPackMap;
+	itPackMap = row_apPackMap.find(index);
+	int indexEn = itPackMap->first;
+	int ckPackMapZ = row_apPackMap.size();
+	if (indexEn == packMapZ) {
 	  //Row entry is not in list of values
 	  value0 = 0;
-	  valueP = ap_count;
-	  ap_valueP1[index] = valueP;
-	  ap_index[ap_count++] = index;
 	  if (rpOps) {printf(" New");fflush(stdout);}
 	} else {
 	  //Row entry is in list of values
-	  value0 = ap_packValue[valueP];
+	  value0 = itPackMap->second; 
 	  if (rpOps) {printf(" Old");fflush(stdout);}
 	}
 	value1 = value0 + multi * ARvalue[k];
-	if (rpOps) {printf(" value P=%2d; value0 = %11.4g; value1 = %11.4g\n", valueP, value0, value1);fflush(stdout);}
-	//TODO Unlikely, but possible for ap_count to reach numCol
-	//      assert(ap_count<numCol);
-	ap_packValue[valueP] =
-	  (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+	value1 = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+	if (rpOps) {printf(" ckPackMapZ=%2d; indexEn=%2d; value0 = %11.4g; value1 = %11.4g\n",
+			   ckPackMapZ, indexEn, value0, value1);fflush(stdout);}
+	if (indexEn == packMapZ) {
+	  // add new element
+	  row_apPackMap[index] = value1;
+	  packMapZ++;
+	} else {
+	  // update element
+	  row_apPackMap[indexEn] = value1;
+	}
+	printf("row_apPackMap contains:");
+	for (itPackMap = row_apPackMap.begin(); itPackMap != row_apPackMap.end(); ++itPackMap)
+	  printf(" (%d, %11.4g)", itPackMap->first, itPackMap->second);
+	printf("\n");
       }
       nx_i = i+1;
     }

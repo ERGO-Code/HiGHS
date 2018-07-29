@@ -18,7 +18,7 @@ void HVector::setup(int size_) {
     packValue.resize(size);
 
     pWd = dfSparseDaStr;
-    setP0.clear();
+    packMap.clear();
     valueP1.assign(size, ilP1);
     valueP2.assign(size, ilP2);
 }

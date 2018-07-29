@@ -644,6 +644,7 @@ void HFactor::buildKernel() {
         }
 
         // 1.4. If we found nothing: tell singular
+	printf("FoundPivot = %1d, (Row, Col) = (%d, %d)\n", foundPivot, jColPivot, iRowPivot);
         if (!foundPivot)
             throw runtime_error("singular-basis-matrix");
 
