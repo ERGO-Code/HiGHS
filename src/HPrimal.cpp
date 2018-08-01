@@ -111,7 +111,10 @@ void HPrimal::primalRebuild() {
       }
     }
     if (reInvert) {
-        model->computeFactor();
+        int rankDeficiency = model->computeFactor();
+	if (rankDeficiency) {
+	  throw runtime_error("Primal reInvert: singular-basis-matrix");
+	}
         countUpdate = 0;
     }
     model->computeDual();

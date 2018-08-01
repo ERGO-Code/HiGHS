@@ -28,7 +28,7 @@ public:
   void setup(int numCol, int numRow, int *Astart, int *Aindex, double *Avalue, int *baseIndex,
 	     int updateMethod = UPDATE_METHOD_FT);
   void change(int updateMethod);
-  void build();
+  int build();
   void ftran(HVector& vector, double hist_dsty) const;
   void btran(HVector& vector, double hist_dsty) const;
   void update(HVector *aq, HVector *ep, int *iRow, int *hint);
@@ -135,7 +135,10 @@ private:
 
     // Implementation
     void buildSimple();
-    void buildKernel();
+    //    void buildKernel();
+    int buildKernel();
+    void buildAnSingC();
+    void buildMarkSingC();
     void buildFinish();
 
     void ftranL(HVector& vector, double hist_dsty) const;

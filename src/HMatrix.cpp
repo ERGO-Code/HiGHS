@@ -333,7 +333,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   int *ap_index = &row_ap.index[0];
   double *ap_array = &row_ap.array[0];
   double *ap_packValue = &row_ap.packValue[0];
-  map<int, double> *row_apPackMap = &row_ap.packMap;
+  map<int, double> & row_apPackMap = row_ap.packMap;
   unsigned char *ap_valueP1 = &row_ap.valueP1[0];
   unsigned short *ap_valueP2 = &row_ap.valueP2[0];
   const int ep_count = row_ep.count;
@@ -356,13 +356,14 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   //  rpRow = true;
   //  rpOps = true;
 
-  bool usePackMap = false;
+  bool usePackMap = true;
   if (usePackMap) {
     printf("ERROR: Ultra-sparse PRICE for packMap is not implemented\n");
+    /*
     ap_pWd = row_ap.p0SparseDaStr;
     //Ultra-sparse PRICE without pointers
-    printf("Ultra-sparse PRICE without pointers\n");fflush(stdout);
-    if (!row_apPackMap->empty()) {printf("ERROR: row_apPackMap not empty\n");fflush(stdout);}
+    //    printf("Ultra-sparse PRICE without pointers\n");fflush(stdout);
+    if (!row_apPackMap.empty()) {printf("ERROR: row_apPackMap not empty\n");fflush(stdout);}
     for (int i = fm_i; i < ep_count; i++) {
       int iRow = ep_index[i];
       double multi = ep_array[iRow];
@@ -376,7 +377,9 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
 	itPackMap = row_apPackMap.find(index);
 	int indexEn = itPackMap->first;
 	int ckPackMapZ = row_apPackMap.size();
-	if (indexEn == packMapZ) {
+	if (ckPackMapZ != row_ap.packMapZ) {
+	  printf("Error: %d = ckPackMapZ != row_ap.packMapZ = %d\n", ckPackMapZ, row_ap.packMapZ);}
+	if (indexEn == row_ap.packMapZ) {
 	  //Row entry is not in list of values
 	  value0 = 0;
 	  if (rpOps) {printf(" New");fflush(stdout);}
@@ -389,10 +392,10 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
 	value1 = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
 	if (rpOps) {printf(" ckPackMapZ=%2d; indexEn=%2d; value0 = %11.4g; value1 = %11.4g\n",
 			   ckPackMapZ, indexEn, value0, value1);fflush(stdout);}
-	if (indexEn == packMapZ) {
+	if (indexEn == row_ap.packMapZ) {
 	  // add new element
 	  row_apPackMap[index] = value1;
-	  packMapZ++;
+	  row_ap.packMapZ++;
 	} else {
 	  // update element
 	  row_apPackMap[indexEn] = value1;
@@ -404,6 +407,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
       }
       nx_i = i+1;
     }
+    */
   }
   ap_pWd = row_ap.p1SparseDaStr;
   ilP = row_ap.ilP1;

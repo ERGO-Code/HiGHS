@@ -77,24 +77,20 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   init(num_threads);
 
   model->initCost(1);
-  if (!model->mlFg_haveFreshInvert)
-    model->computeFactor();
-
-  //Consider initialising edge weights
-  //
-  //NB workEdWt is assigned and initialised to 1s in
-  //dualRHS.setup(model) so that CHUZR is well defined, even for
-
-  
-
-
-
-
-
-
-
-
-
+  if (!model->mlFg_haveFreshInvert) {
+    int rankDeficiency = model->computeFactor();
+    if (rankDeficiency) {
+      handleRankDeficiency();
+      int rankDeficiency = model->computeFactor();
+      if (rankDeficiency) {
+	handleRankDeficiency();
+	int rankDeficiency = model->computeFactor();
+	if (rankDeficiency) {
+	  throw runtime_error("Dual initialise: singular-basis-matrix");
+	}
+      }
+    }
+  }
   //Consider initialising edge weights
   //
   //NB workEdWt is assigned and initialised to 1s in
@@ -769,7 +765,8 @@ void HDual::rebuild()
 		// permutation of baseIndex
 		for (int i = 0; i < numRow; i++)
 			dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
-		model->computeFactor();
+		int rankDeficiency = model->computeFactor();
+		if (rankDeficiency) throw runtime_error("Dual reInvert: singular-basis-matrix");
 		// Gather the edge weights according to the
 		// permutation of baseIndex after INVERT
 		for (int i = 0; i < numRow; i++)
@@ -1425,6 +1422,29 @@ void HDual::updatePivots() {
 	if (invertHint) {printf("HDual::updatePivots: invertHint = %d\n", invertHint);}
 #endif
 	
+}
+
+void HDual::handleRankDeficiency() {
+  int *baseIndex = model->getBaseIndex();
+  bool rp = true;
+  if (rp) rp = numRow<100;
+  if (rp) {
+    printf("handleRankDeficiency:\nBaseI  "); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
+    printf("\n");
+  }
+  for (int i = 0; i < numRow; i++) {
+    if (baseIndex[i] < 0) {
+      columnOut = -baseIndex[i]-1;
+      baseIndex[i] = columnOut;
+      rowOut = i;
+      columnIn = numCol + rowOut;
+      sourceOut = 1;
+      printf("handleRankDeficiency: columnOut=%d, columnIn=%d, rowOut=%d\n", columnOut, columnIn, rowOut);
+      model->updatePivots(columnIn, rowOut, sourceOut);
+      model->recordPivots(columnIn, columnOut, alpha);
+      model->updateMatrix(columnIn, columnOut);
+    }
+  }
 }
 
 void HDual::iz_dvx_fwk()

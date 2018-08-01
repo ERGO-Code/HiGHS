@@ -118,6 +118,8 @@ public:
   void updatePrimal(HVector *DSE_Vector);
   void updatePivots();
 
+  void handleRankDeficiency();
+
   void major_chooseRow();
   void major_chooseRowBtran();
   void minor_chooseRow();

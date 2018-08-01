@@ -2308,25 +2308,19 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar)
 // ???? Housekeeping done from here down ????
 // For the solver: methods to call INVERT and form dual and primal activities
 // Call INVERT
-void HModel::computeFactor()
+int HModel::computeFactor()
 {
 #ifdef JAJH_dev
 //	double tt0 = timer.getTime();
 #endif
   double tt0 = timer.getTime();
-  try
-  {
-    factor.build();
-  }
-  catch (runtime_error &error)
-  {
-    cout << error.what() << endl;
+  int rankDeficiency = factor.build();
+  if (rankDeficiency) {
     problemStatus = LP_Status_Singular;
-    // TODO Change to return
 #ifdef JAJH_dev
     writePivots("failed");
 #endif
-    exit(0);
+    return rankDeficiency;
   }
   //    printf("INVERT: After %d iterations and %d updates\n", numberIteration, countUpdate);
   countUpdate = 0;
@@ -2342,6 +2336,7 @@ void HModel::computeFactor()
   //Now have a representation of B^{-1}, and it is fresh!
   mlFg_haveInvert = 1;
   mlFg_haveFreshInvert = 1;
+  return 0;
 }
 
 // Compute the dual activities

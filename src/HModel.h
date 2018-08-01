@@ -181,7 +181,7 @@ public:
     // ???? Housekeeping done from here down ????
     // For the solver:
     // Call INVERT and form dual and primal activities
-    void computeFactor();
+    int computeFactor();
     void computeDual();
     void computeDualInfeasInDual(int *dualInfeasCount);
     void computeDualInfeasInPrimal(int *dualInfeasCount);
