@@ -424,6 +424,10 @@ public:
     vector<int> nonbasicFlag;
     vector<int> nonbasicMove;
 
+    // Rank deficiency information
+    int *noPvR;
+    int *noPvC;
+
     // Part of working model which assigned and populated as much as
     // possible when a model is being defined
 

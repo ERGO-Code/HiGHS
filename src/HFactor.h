@@ -26,6 +26,7 @@ class HFactor {
 public:
   void copyFrom(const HFactor *from);
   void setup(int numCol, int numRow, int *Astart, int *Aindex, double *Avalue, int *baseIndex,
+	     int *noPvR, int *noPvC, 
 	     int updateMethod = UPDATE_METHOD_FT);
   void change(int updateMethod);
   int build();
@@ -142,8 +143,8 @@ private:
     void buildSimple();
     //    void buildKernel();
     int buildKernel();
-    void buildRankDeficiency();
-    void buildAnSingC();
+    void buildHandleRankDeficiency();
+    void buildRpRankDeficiency();
     void buildMarkSingC();
     void buildFinish();
 

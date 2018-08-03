@@ -1012,7 +1012,8 @@ void HModel::setup_for_solve()
   {
     // Initialise factor arrays, passing &basicIndex[0] so that its
     // address can be copied to the internal Factor pointer
-    factor.setup(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0], &basicIndex[0]);
+    factor.setup(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0], &basicIndex[0],
+		 noPvR, noPvC);
     // Indicate that the model has factor arrays: can't be done in factor.setup
     mlFg_haveFactorArrays = 1;
     limitUpdate = 5000;
@@ -2316,6 +2317,12 @@ int HModel::computeFactor()
   double tt0 = timer.getTime();
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
+    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
+    printf("noPvR[0] = %d; noPvC[0] = %d\n", noPvR[0], noPvC[0]);fflush(stdout);
+    for (int k=0; k<rankDeficiency; k++) {
+      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, noPvR[k], k, noPvC[k]);fflush(stdout);
+    }
+    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
     problemStatus = LP_Status_Singular;
 #ifdef JAJH_dev
     writePivots("failed");
