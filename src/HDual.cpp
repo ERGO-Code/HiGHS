@@ -79,17 +79,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   model->initCost(1);
   if (!model->mlFg_haveFreshInvert) {
     int rankDeficiency = model->computeFactor();
-    if (rankDeficiency) {
-      handleRankDeficiency();
-      int rankDeficiency = model->computeFactor();
-      if (rankDeficiency) {
-	handleRankDeficiency();
-	int rankDeficiency = model->computeFactor();
-	if (rankDeficiency) {
-	  throw runtime_error("Dual initialise: singular-basis-matrix");
-	}
-      }
-    }
+    throw runtime_error("Dual initialise: singular-basis-matrix");
   }
   //Consider initialising edge weights
   //

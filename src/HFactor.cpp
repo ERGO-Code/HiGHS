@@ -294,13 +294,14 @@ int HFactor::build() {
     fakeTick = 0;
     realTick = timer.getTick();
     buildSimple();
-    int rankDeficiency = buildKernel();
+    rankDeficiency = buildKernel();
     if (rankDeficiency > 0) {
       printf("buildKernel() returns rankDeficiency = %d\n", rankDeficiency);
       // Singular matrix B: reorder the basic variables so that the
       // singular columns are in the position corresponding to the
       // logical which replaces them
-      //      buildAnSingC();
+      buildRankDeficiency();
+      buildAnSingC();
       buildMarkSingC();
       return rankDeficiency;
     } else {
@@ -393,13 +394,14 @@ void HFactor::buildSimple() {
 
         if (iRow >= 0) {
             // 1.3 Record unit column
+	  //printf("Found unit column (Row, Col) = (%d, %d)\n", Lindex.size(), Uindex.size());
             permute[iCol] = iRow;
             Lstart.push_back(Lindex.size());
             UpivotIndex.push_back(iRow);
             UpivotValue.push_back(1);
             Ustart.push_back(Uindex.size());
             MRcountb4[iRow] = -numRow;
-	    printf("Found unit column (Row, Col) = (%d, %d)\n", iRow, iCol);
+	    //	    printf("Found unit column (Row, Col) = (%d, %d)\n", iRow, iCol);
         }
         Bstart[iCol + 1] = BcountX;
     }
@@ -474,7 +476,7 @@ void HFactor::buildSimple() {
                 UpivotIndex.push_back(iRow);
                 UpivotValue.push_back(Bvalue[pivot_k]);
                 Ustart.push_back(Uindex.size());
-		printf("Found row singleton (Row, Col) = (%d, %d)\n", iRow, iCol);
+		//		printf("Found row singleton (Row, Col) = (%d, %d)\n", iRow, iCol);
             } else if (count == 1) {
                 // 2.3 Deal with column singleton
                 for (int k = start; k < pivot_k; k++) {
@@ -494,7 +496,7 @@ void HFactor::buildSimple() {
                 UpivotIndex.push_back(iRow);
                 UpivotValue.push_back(Bvalue[pivot_k]);
                 Ustart.push_back(Uindex.size());
-		printf("Found col singleton (Row, Col) = (%d, %d)\n", iRow, iCol);
+		//		printf("Found col singleton (Row, Col) = (%d, %d)\n", iRow, iCol);
             } else {
                 iwork[nwork++] = iCol;
             }
@@ -540,7 +542,7 @@ void HFactor::buildSimple() {
     int MCcountX = 0;
     for (int i = 0; i < nwork; i++) {
         int iCol = iwork[i];
-	printf("Preparing kernel: column iwork[%1d]= %2d\n", i, iCol);
+	//	printf("Preparing kernel: column iwork[%1d]= %2d\n", i, iCol);
         MCstart[iCol] = MCcountX;
         MCspace[iCol] = (Bstart[iCol + 1] - Bstart[iCol]) * 2;
         MCcountX += MCspace[iCol];
@@ -696,11 +698,12 @@ int HFactor::buildKernel() {
         }
 
         // 1.4. If we found nothing: tell singular
-	printf("Stage%3d: foundpivot = %1d, (Row, Col) = (%d, %d)\n", nwork, foundPivot, iRowPivot, jColPivot);
+	//	printf("Stage%3d: foundpivot = %1d, (Row, Col) = (%d, %d)\n", nwork, foundPivot, iRowPivot, jColPivot);
 	if (!foundPivot) {
 	  //            throw runtime_error("singular-basis-matrix");
 	  
-	  int rankDeficiency = nwork+1;
+	  printf("Lindex.size()=%d; Uindex.size()=%d\n", Lindex.size(), Uindex.size());
+	  rankDeficiency = nwork+1;
 	  return rankDeficiency;
 	}
 
@@ -868,80 +871,104 @@ int HFactor::buildKernel() {
         }
     }
     fakeTick += fake_search * 20 + fake_fill * 160 + fake_eliminate * 80;
-    int rankDeficiency = 0;
+    rankDeficiency = 0;
     return rankDeficiency;
 }
 
-void HFactor::buildAnSingC() {
-  // Singular matrix B: analyse the active submatrix
+void HFactor::buildRankDeficiency() {
   bool rp = true;
   if (rp) rp = numRow<100;
   if (rp) {
-    printf("buildAnSingC1:\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("buildRankDeficiency1:"); 
+    printf("\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i);
     printf("\nPerm   "); for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
     printf("\nBaseI  "); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
   }
   // iwork can now be used as workspace: use it to accumulate the new
   // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
   // Indices of iwork corresponding to missing indices in permute
-  // remain -1. Hence the -1's becomre markers for the logicals which
+  // remain -1. Hence the -1's become markers for the logicals which
   // will replace singular columns. Once baseIndex[i] is read, it can
   // be used to pack up the entries in baseIndex which are not
   // permuted anywhere - and so will be singular columns.
+  noPvR.resize(rankDeficiency);
+  noPvC.resize(rankDeficiency);
+  int lc_rankDeficiency=0;
   for (int i = 0; i < numRow; i++) iwork[i]=-1;
-  int rankDeficiency = 0;
   for (int i = 0; i < numRow; i++) {
     int perm_i = permute[i];
-    if (perm_i >=0) {
+    if (perm_i >= 0) {
       iwork[perm_i] = baseIndex[i];
     } else {
-      rankDeficiency++;
+      noPvC[lc_rankDeficiency] = i;
+      lc_rankDeficiency++;
     }
   }
-  int ASMrow = 0;
+  lc_rankDeficiency=0;
   for (int i = 0; i < numRow; i++) {
-    if (iwork[i]<0) iwork[i]=-ASMrow++;
+    if (iwork[i]<0) {
+      // Record the rows with no pivots in noPvR and indicate them
+      // within iwork by storing the negation of one more than their
+      // rank deficiency counter [since we can't have -0].
+      noPvR[lc_rankDeficiency] = i;
+      iwork[i] = -(lc_rankDeficiency+1);
+      lc_rankDeficiency++;
+    }
   }
-  printf("\nbuildAnSingC2:\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
-  if (rp) printf("\nDeficiency = %d\n", rankDeficiency);
+  rp = true;
+  if (rp) rp = rankDeficiency<100;
+  if (rp) {
+    printf("\nbuildRankDeficiency2:"); 
+    printf("\nIndex  "); for (int i = 0; i < rankDeficiency; i++) printf(" %2d", i);
+    printf("\nnoPvR  "); for (int i = 0; i < rankDeficiency; i++) printf(" %2d", noPvR[i]);
+    printf("\nnoPvC  "); for (int i = 0; i < rankDeficiency; i++) printf(" %2d", noPvC[i]);
+    if (rp) {
+      printf("\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i);
+      printf("\nIwork  "); for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
+    }
+    printf("\n");   
+  }
+}
+
+void HFactor::buildAnSingC() {
+  // Singular matrix B: analyse the active submatrix
+  if (rankDeficiency>10) return;
   double *ASM;
   ASM = (double *)malloc(sizeof(double) * rankDeficiency*rankDeficiency);
-  for (int ASMrow=0; ASMrow<rankDeficiency; ASMrow++) {
-    for (int ASMcol=0; ASMcol<rankDeficiency; ASMcol++) {
-      ASM[ASMrow+ASMcol*rankDeficiency] = 0;
+  for (int i=0; i<rankDeficiency; i++) {
+    for (int j=0; j<rankDeficiency; j++) {
+      ASM[i+j*rankDeficiency] = 0;
     }
   }
-  int ASMcol = -1;
-  for (int i = 0; i < numRow; i++) {
-    if (permute[i] < 0) {
-      ASMcol++;
-      //      int col = baseIndex[i];
-      int start = MCstart[i];
-      int end = start + MCcountA[i];
-      for (int en = start; en < end; en++) {
-	int row = MCindex[en];
-	if (iwork[row]>0) {
-	  printf("STRANGE: iwork[%d]=%d>0\n", row, iwork[row]);
-	} else {
-	  ASMrow = -iwork[row];
-	  printf("Setting ASM(%2d, %2d) = %11.4g\n", ASMrow, ASMcol, MCvalue[en]);
-	  ASM[ASMrow+ASMcol*rankDeficiency] = MCvalue[en];
-	}
+  for (int j = 0; j < rankDeficiency; j++) {
+    int ASMcol = noPvC[j];
+    int start = MCstart[ASMcol];
+    int end = start + MCcountA[ASMcol];
+    for (int en = start; en < end; en++) {
+      int ASMrow = MCindex[en];
+      int i = -iwork[ASMrow]-1;
+      if (i<0 || i >= rankDeficiency) {
+	printf("STRANGE: 0 > i = %d || %d = i >= rankDeficiency = %d\n", i, i, rankDeficiency);
+      } else {
+	if (noPvR[i] != ASMrow) {
+	  printf("STRANGE: %d = noPvR[i] != ASMrow = %d\n", noPvR[i], ASMrow);
+	} 
+	printf("Setting ASM(%2d, %2d) = %11.4g\n", i, j, MCvalue[en]);
+	ASM[i+j*rankDeficiency] = MCvalue[en];
       }
     }
   }
-  if (rankDeficiency<10) {
-    printf("\n\nASM:\n            ");
-    for (int ASMcol=0; ASMcol<rankDeficiency; ASMcol++) printf(" %11d", ASMcol);
-    printf("\n            ");
-    for (int ASMcol=0; ASMcol<rankDeficiency; ASMcol++) printf("------------");
-    printf("\n");
-    for (int ASMrow=0; ASMrow<rankDeficiency; ASMrow++) {
-      printf("%11d|", ASMrow);
-      for (int ASMcol=0; ASMcol<rankDeficiency; ASMcol++) {
-	printf(" %11.4g", ASM[ASMrow+ASMcol*rankDeficiency]);
-      }
-      printf("\n");
+  printf("\nASM:                    ");
+  for (int j=0; j<rankDeficiency; j++) printf(" %11d", j);
+  printf("\n                        ");
+  for (int j=0; j<rankDeficiency; j++) printf(" %11d", noPvC[j]);
+  printf("\n                        ");
+  for (int j=0; j<rankDeficiency; j++) printf("------------");
+  printf("\n");
+  for (int i=0; i<rankDeficiency; i++) {
+    printf("%11d %11d|", i, noPvR[i]);
+    for (int j=0; j<rankDeficiency; j++) {
+      printf(" %11.4g", ASM[i+j*rankDeficiency]);
     }
     printf("\n");
   }
@@ -954,46 +981,29 @@ void HFactor::buildMarkSingC() {
   bool rp = true;
   if (rp) rp = numRow<100;
   if (rp) {
-    printf("buildMarkSingC1:\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i);
-    printf("\nPerm   "); for (int i = 0; i < numRow; i++) printf(" %2d", permute[i]);
+    printf("\nMarkSingC1");
+    printf("\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\niwork  "); for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
     printf("\nBaseI  "); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
   }
-  // iwork can now be used as workspace: use it to accumulate the new
-  // baseIndex. iwork is set to -1 and baseIndex is permuted into it.
-  // Indices of iwork corresponding to missing indices in permute
-  // remain -1. Hence the -1's becomre markers for the logicals which
-  // will replace singular columns. Once baseIndex[i] is read, it can
-  // be used to pack up the entries in baseIndex which are not
-  // permuted anywhere - and so will be singular columns.
-  for (int i = 0; i < numRow; i++) iwork[i]=-1;
-  int numRm = 0;
-  for (int i = 0; i < numRow; i++) {
-    int perm_i = permute[i];
-    if (perm_i >=0) {
-      iwork[perm_i] = baseIndex[i];
-      baseIndex[i] = -1;
-    }
-    else {baseIndex[numRm++] = baseIndex[i];}
-  }
-  if (rp) {
-    printf("\nMarkSingC2\niwork  "); for (int i = 0; i < numRow; i++) printf(" %2d", iwork[i]);
-    printf("\nBaseI  "); for (int i = 0; i < numRm; i++) printf(" %2d", baseIndex[i]);
-  }
-  for (int i = 0; i < numRow; i++) {
-    if (iwork[i] < 0) {
-      numRm--;
-      int enR = i;
-      int rmC = baseIndex[numRm];
-      //      if (iwork[enR] != -1) {printf("ERROR: %d = iwork[%d] != -1\n", iwork[rmC], rmC);}
-      printf("\n%2d: enR=%2d, rmC=%2d", numRm+1, enR, rmC);
-      iwork[enR] = -(rmC+1); // Store negation of 1+rmC so that removing column 0 can be identified!
+  
+  for (int k = 0; k < rankDeficiency; k++) {
+    int ASMrow = noPvR[k];
+    int ASMcol = noPvC[k];
+    int i = -iwork[ASMrow]-1;
+    if (i<0 || i >= rankDeficiency) {
+	printf("STRANGE: 0 > i = %d || %d = i >= rankDeficiency = %d\n", i, i, rankDeficiency);
+      } else {
+      iwork[ASMrow] = -(ASMcol+1); // Store negation of 1+ASMcol so that removing column 0 can be identified!
     }
   }
   for (int i = 0; i < numRow; i++) baseIndex[i] = iwork[i];
   if (rp) {
-    printf("\nMarkSingC3\nNwBaseI"); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
+    printf("\nMarkSingC2");
+    printf("\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i);
+    printf("\nNwBaseI"); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
+    printf("\n");
   }
-  if (rp) printf("\n");
 }
 
 void HFactor::buildFinish() {

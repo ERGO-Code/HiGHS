@@ -133,10 +133,16 @@ private:
     vector<int> PFindex;
     vector<double> PFvalue;
 
+    // Rank deficiency information
+    int rankDeficiency;
+    vector<int> noPvR;
+    vector<int> noPvC;
+    
     // Implementation
     void buildSimple();
     //    void buildKernel();
     int buildKernel();
+    void buildRankDeficiency();
     void buildAnSingC();
     void buildMarkSingC();
     void buildFinish();
