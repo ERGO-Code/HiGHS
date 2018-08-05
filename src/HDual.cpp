@@ -988,7 +988,7 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  bool anPriceEr = false;
+  bool anPriceEr = true;
   bool rpPriceTy = false;
   bool useUltraPrice = alw_price_ultra
     && row_apDensity*numCol*10 < row_ap.ilP2
@@ -1031,7 +1031,7 @@ void HDual::chooseColumn(HVector *row_ep)
       if (anPriceEr) {
 	bool price_er;
 	price_er = matrix->price_er_ck(row_ap, *row_ep);
-	//	if (!price_er) printf("No ultra PRICE error\n");
+	if (!price_er) printf("No ultra PRICE error\n");
       }
 
       //      row_ap.copyUltra(&row_ap_ultra);
@@ -1059,6 +1059,7 @@ void HDual::chooseColumn(HVector *row_ep)
   if (anPriceEr) {
     bool price_er;
     price_er = matrix->price_er_ck(row_ap, *row_ep);
+    //    if (!price_er) printf("No PRICE error\n");
   }
   double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
   row_apDensity = uOpRsDensityRec(lc_OpRsDensity, &row_apDensity, &row_apAvDensity, &row_apAvLog10Density); 

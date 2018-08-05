@@ -24,6 +24,7 @@ void HVector::setup(int size_) {
 }
 
 void HVector::clear() {
+  printf("HVector::clear with pWd = %d\n", pWd);
     if (pWd == dfSparseDaStr) {
       //Standard HVector to clear
       int clearVector_inDense = count < 0 || count > size * 0.3;
@@ -32,6 +33,10 @@ void HVector::clear() {
       } else {
         for (int i = 0; i < count; i++) array[index[i]] = 0;
       }
+    } else if (pWd == p0SparseDaStr) {
+      //map to clear
+      printf("HVector::clear calling packMap.clear()\n");
+      packMap.clear();
     } else if (pWd == p1SparseDaStr) {
       //1-byte pointer to clear
         for (int i = 0; i < count; i++) valueP1[index[i]] = ilP1;
