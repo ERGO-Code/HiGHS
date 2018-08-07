@@ -24,7 +24,7 @@ void HVector::setup(int size_) {
 }
 
 void HVector::clear() {
-  printf("HVector::clear with pWd = %d\n", pWd);
+  //  printf("HVector::clear with pWd = %d\n", pWd);
     if (pWd == dfSparseDaStr) {
       //Standard HVector to clear
       int clearVector_inDense = count < 0 || count > size * 0.3;

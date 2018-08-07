@@ -184,7 +184,6 @@ void solveHyper(const int Hsize, const int *Hlookup, const int *HpivotIndex,
 }
 
 void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double *Avalue_, int *baseIndex_,
-		    int *noPvR_, int *noPvC_, 
 		    int updateMethod_) {
 
     // Copy Problem size and (pointer to) coefficient matrix
@@ -194,10 +193,6 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
     Aindex = Aindex_;
     Avalue = Avalue_;
     baseIndex = baseIndex_;
-    noPvR.resize(1);
-    noPvC.resize(1);
-    noPvR_ = &noPvR[0];
-    noPvC_ = &noPvC[0];
     updateMethod = updateMethod_;
 
     // Allocate for working buffer

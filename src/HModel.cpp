@@ -1012,8 +1012,7 @@ void HModel::setup_for_solve()
   {
     // Initialise factor arrays, passing &basicIndex[0] so that its
     // address can be copied to the internal Factor pointer
-    factor.setup(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0], &basicIndex[0],
-		 noPvR, noPvC);
+    factor.setup(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0], &basicIndex[0]);
     // Indicate that the model has factor arrays: can't be done in factor.setup
     mlFg_haveFactorArrays = 1;
     limitUpdate = 5000;
@@ -2315,19 +2314,16 @@ int HModel::computeFactor()
 //	double tt0 = timer.getTime();
 #endif
   double tt0 = timer.getTime();
+  //TODO Understand why handling noPvC and noPvR in what seem to be
+  //different ways ends up equivalent.
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
-    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
-    printf("noPvR[0] = %d; noPvC[0] = %d\n", noPvR[0], noPvC[0]);fflush(stdout);
-    for (int k=0; k<rankDeficiency; k++) {
-      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, noPvR[k], k, noPvC[k]);fflush(stdout);
-    }
-    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
-    problemStatus = LP_Status_Singular;
+    handleRankDeficiency();
+    //    problemStatus = LP_Status_Singular;
 #ifdef JAJH_dev
-    writePivots("failed");
+    //    writePivots("failed");
 #endif
-    return rankDeficiency;
+    //      return rankDeficiency;
   }
   //    printf("INVERT: After %d iterations and %d updates\n", numberIteration, countUpdate);
   countUpdate = 0;
@@ -2574,6 +2570,28 @@ void HModel::computeDuObj(int phase)
   if (phase != 1)
     objective -= objOffset;
   //    printf("Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g\n", phase, sv_objective, objOffset, objective);
+}
+
+int HModel::handleRankDeficiency()
+{
+  int rankDeficiency = factor.rankDeficiency;
+  const int *noPvC = factor.getNoPvC();
+    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
+    vector<int> basicRows;
+    basicRows.resize(numTot);
+    for (int iRow=0; iRow<numRow; iRow++) basicRows[basicIndex[iRow]] = iRow;    
+    for (int k=0; k<rankDeficiency; k++) {
+      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k], k, noPvC[k]);fflush(stdout);
+      int columnIn = factor.noPvR[k];
+      int columnOut = noPvC[k];
+      int rowOut = basicRows[columnOut];
+      if (basicIndex[rowOut] != columnOut) {printf("%d = basicIndex[rowOut] != noPvC[k] = %d\n", basicIndex[rowOut], columnOut); fflush(stdout);}
+      int sourceOut = 1;
+      updatePivots(columnIn, rowOut, sourceOut);
+      updateMatrix(columnIn, columnOut);
+    }
+    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
+    return 0;
 }
 
 // Utilities for shifting costs and flipping bounds

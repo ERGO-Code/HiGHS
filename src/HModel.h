@@ -190,6 +190,7 @@ public:
     void computeDuObj(int phase = 2);
     double computePrObj();
     double computePh2Objective(vector<double>& colPrAct);
+    int handleRankDeficiency();
 
     // Utilities for shifting costs and flipping bounds
     void shiftCost(int iCol, double amount);
@@ -423,10 +424,6 @@ public:
     vector<int> basicIndex;
     vector<int> nonbasicFlag;
     vector<int> nonbasicMove;
-
-    // Rank deficiency information
-    int *noPvR;
-    int *noPvC;
 
     // Part of working model which assigned and populated as much as
     // possible when a model is being defined

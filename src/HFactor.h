@@ -26,7 +26,6 @@ class HFactor {
 public:
   void copyFrom(const HFactor *from);
   void setup(int numCol, int numRow, int *Astart, int *Aindex, double *Avalue, int *baseIndex,
-	     int *noPvR, int *noPvC, 
 	     int updateMethod = UPDATE_METHOD_FT);
   void change(int updateMethod);
   int build();
@@ -40,6 +39,16 @@ public:
   double realTick;
   double fakeTick;
 
+  // Rank deficiency information
+  int rankDeficiency;
+  vector<int> noPvR;
+  vector<int> noPvC;
+  vector<int>& getNoPvR() {return noPvR;}
+  //TODO Understand why handling noPvC and noPvR in what seem to be
+  //different ways ends up equivalent.
+  //  vector<int>& getNoPvC() {return noPvC;}
+  const int *getNoPvC() const {return &noPvC[0];}
+    
 private:
     /**
      * Data of the factor
@@ -134,11 +143,6 @@ private:
     vector<int> PFindex;
     vector<double> PFvalue;
 
-    // Rank deficiency information
-    int rankDeficiency;
-    vector<int> noPvR;
-    vector<int> noPvC;
-    
     // Implementation
     void buildSimple();
     //    void buildKernel();

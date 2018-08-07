@@ -356,7 +356,7 @@ void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   //  rpRow = true;
   //  rpOps = true;
 
-  bool usePackMap = true;
+  bool usePackMap = false;
   if (usePackMap) {
     printf("ERROR: Ultra-sparse PRICE for packMap is not implemented\n");
     /*
