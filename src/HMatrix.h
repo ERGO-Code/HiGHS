@@ -30,7 +30,9 @@ public:
     void price_by_row_w_sw(HVector& row_ap, HVector& row_ep, double hist_dsty, int fm_i, double sw_dsty) const;
     void price_by_row_no_index(HVector& row_ap, HVector& row_ep, int fm_i) const;
     void price_by_row_ultra(HVector& row_ap, HVector& row_ep) const;
-    void price_by_row_ultra12(HVector& row_ap, HVector& row_ep, int fm_i) const;
+    void price_by_row_ultra0(HVector& row_ap, HVector& row_ep, int* fm_i_) const;
+    void price_by_row_ultra12(HVector& row_ap, HVector& row_ep, int* fm_i_) const;
+    void price_by_row_rm_cancellation(HVector& row_ap) const;
     bool price_er_ck(HVector& row_ap, HVector& row_ep) const;
     bool price_er_ck_core(HVector& row_ap, HVector& row_ep) const;
     void update(int columnIn, int columnOut);

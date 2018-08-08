@@ -56,24 +56,15 @@ void HDualRow::choose_makepack(const HVector *row, const int offset)
       packIndex[packCount] = index + offset;
       packValue[packCount++] = value;
     }
-  } else if (rowPWd == row->p0SparseDaStr) {
-    printf("HDualRow::choose_makepack: Cannot handle p0SparseDaStr\n");
-    /*
-    const set rowSetP0 = &row->setP0;
-    for (int i = 0; i < rowCount; i++) {
-      const int index = rowSetP0[i];
-      const double value = rowPackValue[i];
-      packIndex[packCount] = index + offset;
-      packValue[packCount++] = value;
-    }
-    */
-  } else {
+  } else if (rowPWd >= row->p0SparseDaStr) {
     for (int i = 0; i < rowCount; i++) {
       const int index = rowIndex[i];
       const double value = rowPackValue[i];
       packIndex[packCount] = index + offset;
       packValue[packCount++] = value;
     }
+  } else {
+    printf("HDualRow::choose_makepack: Cannot handle rowPWd = %d\n", rowPWd);
   }
 }
 

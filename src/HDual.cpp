@@ -988,7 +988,7 @@ void HDual::chooseColumn(HVector *row_ep)
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
-  bool anPriceEr = true;
+  bool anPriceEr = false;
   bool rpPriceTy = false;
   bool useUltraPrice = alw_price_ultra
     && row_apDensity*numCol*10 < row_ap.ilP2

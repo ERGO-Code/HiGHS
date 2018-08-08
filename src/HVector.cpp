@@ -35,7 +35,7 @@ void HVector::clear() {
       }
     } else if (pWd == p0SparseDaStr) {
       //map to clear
-      printf("HVector::clear calling packMap.clear()\n");
+      //      printf("HVector::clear calling packMap.clear()\n");
       packMap.clear();
     } else if (pWd == p1SparseDaStr) {
       //1-byte pointer to clear
