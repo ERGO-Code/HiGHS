@@ -2579,18 +2579,32 @@ int HModel::handleRankDeficiency()
     printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
     vector<int> basicRows;
     basicRows.resize(numTot);
-    for (int iRow=0; iRow<numRow; iRow++) basicRows[basicIndex[iRow]] = iRow;    
+    //    printf("Before - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
+    for (int iRow=0; iRow<numRow; iRow++) basicRows[basicIndex[iRow]] = iRow;
     for (int k=0; k<rankDeficiency; k++) {
-      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k], k, noPvC[k]);fflush(stdout);
-      int columnIn = factor.noPvR[k];
+      //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k], k, noPvC[k]);fflush(stdout);
+      int columnIn = numCol + factor.noPvR[k];
       int columnOut = noPvC[k];
       int rowOut = basicRows[columnOut];
+      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g, %11.4g]\n", columnIn, columnOut, rowOut, workLower[columnOut], workUpper[columnOut]);
       if (basicIndex[rowOut] != columnOut) {printf("%d = basicIndex[rowOut] != noPvC[k] = %d\n", basicIndex[rowOut], columnOut); fflush(stdout);}
-      int sourceOut = 1;
+      int sourceOut;
+      if (!hsol_isInfinity(-workLower[columnOut])) {
+	//Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
+	sourceOut = -1;
+      } else {
+	//Infinite LB so sourceOut = 1 ensures value set to UB
+	sourceOut = 1;
+	if (!hsol_isInfinity(workUpper[columnOut])) {
+	  //Free variable => trouble!
+	  printf("TROUBLE: variable leaving the basis following rank deficiency adjustment is free!\n");
+	}
+      }	
       updatePivots(columnIn, rowOut, sourceOut);
       updateMatrix(columnIn, columnOut);
     }
-    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
+    //    printf("After  - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
+    factor.checkInvert();
     return 0;
 }
 

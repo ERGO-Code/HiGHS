@@ -347,6 +347,48 @@ void HFactor::update(HVector *aq, HVector *ep, int *iRow, int *hint) {
         updateAPF(aq, ep, *iRow, hint);
 }
 
+void HFactor::checkInvert() {
+  HVector column;
+  column.setup(numRow);
+  double columnDensity = 0;
+  double invertEr0 = 0;
+  double tlInvertEr0 = 0;
+  bool rpR = numRow<20;
+  for (int iRow=0; iRow< numRow; iRow++) {
+    int iCol = baseIndex[iRow];
+    column.clear();
+    column.packFlag = true;
+    if (iCol < numCol) {
+      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+	int index = Aindex[k];
+	column.array[index] = Avalue[k];
+	column.index[column.count++] = index;
+      }
+    } else {
+      int index = iCol - numCol;
+      column.array[index] = 1.0;
+      column.index[column.count++] = index;
+    }
+    ftran(column, columnDensity);
+    if (rpR) printf("Checking Basic column %2d as %2d\n", iRow, iCol);
+    for (int lc_iRow=0; lc_iRow< numRow; lc_iRow++) {
+      double value = column.array[lc_iRow];
+      double ckValue;
+      if (lc_iRow == iRow) {
+	ckValue = 1;
+      }	else {
+	ckValue = 0;
+      }
+      double lcEr = abs(value-ckValue);
+      invertEr0 += lcEr*lcEr;
+      if (rpR && lcEr > 1e-12) printf("   Row: %2d has value %11.4g: error = %11.4g\n", lc_iRow, value, lcEr);
+    }
+  }
+  invertEr0 = sqrt(invertEr0);
+  if (invertEr0 > tlInvertEr0) printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
+  else printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
+}
+
 void HFactor::buildSimple() {
     /**
      * 0. Clear L and U factor
@@ -2048,4 +2090,3 @@ void HFactor::updateAPF(HVector *aq, HVector *ep, int iRow, int *hint) {
     PFpivotValue.push_back(aq->array[iRow]);
 
 }
-

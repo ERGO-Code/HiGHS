@@ -49,6 +49,8 @@ public:
   //  vector<int>& getNoPvC() {return noPvC;}
   const int *getNoPvC() const {return &noPvC[0];}
     
+  void checkInvert();
+
 private:
     /**
      * Data of the factor
