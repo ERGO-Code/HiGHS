@@ -410,13 +410,19 @@ void HMatrix::price_by_row_ultra0(HVector& row_ap, HVector& row_ep, int* fm_i_) 
     if (ap_count+iRowNNz >= row_ap.packMapMxZ) {nx_i = i; break;}
     for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
       int index = ARindex[k];
-      if (rpOps) {printf("Entry %2d: index %2d; value %11.4g", k, index, ARvalue[k]);fflush(stdout);}
       itPackMap = row_apPackMap.find(index);
       int indexEn = itPackMap->first;
       int ckPackMapZ = row_apPackMap.size();
       if (ckPackMapZ != ap_count) {
-	printf("Error: %d = ckPackMapZ != ap_count = %d\n", ckPackMapZ, ap_count);}
-      bool newValue = indexEn == ap_count;
+	printf("Error: %d = ckPackMapZ != ap_count = %d\n", ckPackMapZ, ap_count);
+	printf("For index i = %d; k = %d; ARstart[iRow] = %d\n", i, k, ARstart[iRow]);
+	fflush(stdout);
+	//	rpOps = true;
+	//	rpPackmap = true;
+      }
+      if (rpOps) {printf("Entry %5d: ix %4d; v %11.4g; ixEn %4d; ap_c = %6d; PV2 = %11.4g",
+			 k, index, ARvalue[k], indexEn, ap_count, itPackMap->second);fflush(stdout);}
+      bool newValue = itPackMap == row_apPackMap.end();
       if (newValue) {
 	//Row entry is not in list of values
 	value0 = 0;
@@ -428,8 +434,8 @@ void HMatrix::price_by_row_ultra0(HVector& row_ap, HVector& row_ep, int* fm_i_) 
       }
       value1 = value0 + multi * ARvalue[k];
       value1 = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
-      if (rpOps) {printf(" ckPackMapZ=%2d; indexEn=%2d; value0 = %11.4g; value1 = %11.4g\n",
-			 ckPackMapZ, indexEn, value0, value1);fflush(stdout);}
+      if (rpOps) {printf(" ckPMZ=%6d; v0 = %11.4g; v1 = %11.4g",
+			 ckPackMapZ, value0, value1);fflush(stdout);}
       if (newValue) {
 	// add new element
 	row_apPackMap[index] = value1;
@@ -438,11 +444,21 @@ void HMatrix::price_by_row_ultra0(HVector& row_ap, HVector& row_ep, int* fm_i_) 
 	// update element
 	row_apPackMap[indexEn] = value1;
       }
-      if (rpPackmap) {
-	printf("row_apPackMap contains:");
-	for (itPackMap = row_apPackMap.begin(); itPackMap != row_apPackMap.end(); ++itPackMap)
-	  printf(" (%d, %11.4g)", itPackMap->first, itPackMap->second);
+      if (rpOps) {
+	int ckPackMapZ = row_apPackMap.size();
+	printf(" ap_count = %6d; ckPackMapZ=%6d", ap_count, ckPackMapZ);
 	printf("\n");
+	fflush(stdout);
+      }
+      if (rpPackmap) {
+	printf("row_apPackMap contains:\n");
+	int en=0;
+	for (itPackMap = row_apPackMap.begin(); itPackMap != row_apPackMap.end(); ++itPackMap) {
+	  printf("%6d: (%6d, %11.4g)", en, itPackMap->first, itPackMap->second);
+	  printf("\n");
+	  en++;
+	}
+	fflush(stdout);
       }
     }
     nx_i = i+1;

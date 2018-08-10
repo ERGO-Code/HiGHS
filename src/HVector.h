@@ -20,7 +20,7 @@ public:
     const int p0SparseDaStr = 0;
     const int p1SparseDaStr = 1;
     const int p2SparseDaStr = 2;
-    const int packMapMxZ =  1024;//10;//
+    const int packMapMxZ =  128;//10;//
     const unsigned char ilP1 =     255;//10;//
     const unsigned short ilP2 =    65535;//20;//
     int packMapZ; // Number of entries in setP0
