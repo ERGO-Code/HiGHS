@@ -263,7 +263,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     int columnIn = cz_c_n;
     int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = 1;
+    int sourceOut = model->setSourceOutFmBd(columnOut);
     //			Update the basic/nonbasic variable info and the row-wise copy of the matrix
     model->updatePivots(columnIn, rowOut, sourceOut);
     if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
@@ -1396,7 +1396,7 @@ void HCrash::ltssf_iterate(HModel *ptr_model)
       int columnIn = cz_c_n;
       int rowOut = cz_r_n;
       int columnOut = numCol + cz_r_n;
-      int sourceOut = 1;
+      int sourceOut = model->setSourceOutFmBd(columnOut);
       //			Update the basic/nonbasic variable info and the row-wise copy of the matrix
       model->updatePivots(columnIn, rowOut, sourceOut);
       if (model->mlFg_haveMatrixRowWise)
@@ -2592,16 +2592,19 @@ void HCrash::tsSing(HModel *ptr_model)
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
   // of basic variables reaches numRow
+  const int *lc_NonbasicMove = model->getNonbasicMove();
+  printf("In crash.tssing %6d: NonbasicMove(1775) = %d\n", -1, lc_NonbasicMove[1775]);
   for (int c_n = 0; c_n < numTot; c_n++) {
     int r_n = c_n;
     int columnIn = c_n;
     int rowOut = r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = 1;
+    int sourceOut = model->setSourceOutFmBd(columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy of the matrix
     model->updatePivots(columnIn, rowOut, sourceOut);
     if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
     nBcVr++;
     if (nBcVr == numRow) break;
   }
+  printf("In crash.tssing %6d: NonbasicMove(1775) = %d\n", 999999, lc_NonbasicMove[1775]);
 }

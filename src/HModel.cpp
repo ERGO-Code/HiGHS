@@ -1078,11 +1078,12 @@ bool HModel::OKtoSolve(int level, int phase)
       ok = oneNonbasicMoveVsWorkArrays_OK(var);
       if (!ok)
       {
-        printf("Error in nonbasicMoveVsWorkArrays for variable %d\n", var);
+        printf("Error in nonbasicMoveVsWorkArrays for variable %d of %d\n", var, numTot);
         cout << flush;
 #ifdef JAJH_dev
         assert(ok);
 #endif
+        assert(ok);
         return ok;
       }
     }
@@ -1360,8 +1361,8 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var)
       ok = nonbasicMove[var] == NONBASIC_MOVE_UP;
       if (!ok)
       {
-        printf("Finite lower bound and infinite upper bound variable %d (numCol = %d) [%11g, %11g, %11g] so nonbasic move should be up but is  %d\n",
-               var, numCol, workLower[var], workValue[var], workUpper[var], nonbasicMove[var]);
+        printf("Finite lower bound and infinite upper bound variable %d (numCol = %d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  %d\n",
+	  var, numCol, workLower[var], workValue[var], workUpper[var], NONBASIC_MOVE_UP, nonbasicMove[var]);
         return ok;
       }
       ok = workValue[var] == workLower[var];
@@ -2586,20 +2587,9 @@ int HModel::handleRankDeficiency()
       int columnIn = numCol + factor.noPvR[k];
       int columnOut = noPvC[k];
       int rowOut = basicRows[columnOut];
-      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g, %11.4g]\n", columnIn, columnOut, rowOut, workLower[columnOut], workUpper[columnOut]);
+      //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g, %11.4g]\n", columnIn, columnOut, rowOut, workLower[columnOut], workUpper[columnOut]);
       if (basicIndex[rowOut] != columnOut) {printf("%d = basicIndex[rowOut] != noPvC[k] = %d\n", basicIndex[rowOut], columnOut); fflush(stdout);}
-      int sourceOut;
-      if (!hsol_isInfinity(-workLower[columnOut])) {
-	//Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
-	sourceOut = -1;
-      } else {
-	//Infinite LB so sourceOut = 1 ensures value set to UB
-	sourceOut = 1;
-	if (!hsol_isInfinity(workUpper[columnOut])) {
-	  //Free variable => trouble!
-	  printf("TROUBLE: variable leaving the basis following rank deficiency adjustment is free!\n");
-	}
-      }	
+      int sourceOut = setSourceOutFmBd(columnOut);
       updatePivots(columnIn, rowOut, sourceOut);
       updateMatrix(columnIn, columnOut);
     }
@@ -2608,6 +2598,26 @@ int HModel::handleRankDeficiency()
     return 0;
 }
 
+int HModel::setSourceOutFmBd(const int columnOut)
+{
+  int sourceOut = 0;
+  if (workLower[columnOut] != workUpper[columnOut]) {
+    if (!hsol_isInfinity(-workLower[columnOut])) {
+    //Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
+      sourceOut = -1;
+      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g] so setting sourceOut = -1\n", columnOut, workLower[columnOut], workUpper[columnOut]);
+    } else {
+    //Infinite LB so sourceOut = 1 ensures value set to UB
+      sourceOut = 1;
+      if (!hsol_isInfinity(workUpper[columnOut])) {
+	//Free variable => trouble!
+	printf("TROUBLE: variable %d leaving the basis is free!\n", columnOut);
+      }
+    }
+  }
+  return sourceOut;
+}
+ 
 // Utilities for shifting costs and flipping bounds
 // Record the shift in the cost of a particular column
 void HModel::shiftCost(int iCol, double amount)

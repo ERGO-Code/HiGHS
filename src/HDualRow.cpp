@@ -146,6 +146,7 @@ void HDualRow::choose_final()
   }
   workModel->timer.recordFinish(HTICK_CHUZC2);
 
+  printf("Completed choose_final 1\n"); cout<<flush;
   // 2. Choose by small step BFRT
   workModel->timer.recordStart(HTICK_CHUZC3);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
@@ -158,6 +159,7 @@ void HDualRow::choose_final()
   while (selectTheta < 1e18)
   {
     double remainTheta = 1e100;
+    printf("Performing choose_final 2; selectTheta = %11.4g; workCount=%d; fullCount=%d\n", selectTheta, workCount, fullCount); cout<<flush;
     for (int i = workCount; i < fullCount; i++)
     {
       int iCol = workData[i].first;
@@ -173,6 +175,7 @@ void HDualRow::choose_final()
       {
         remainTheta = (dual + Td) / value;
       }
+      printf("Completed choose_final 1.%-d\n", i); cout<<flush;
     }
     workGroup.push_back(workCount);
     selectTheta = remainTheta;
@@ -180,6 +183,7 @@ void HDualRow::choose_final()
       break;
   }
 
+  printf("Completed choose_final 2\n"); cout<<flush;
   // 3. Choose large alpha
   double finalCompare = 0;
   for (int i = 0; i < workCount; i++)
@@ -218,6 +222,7 @@ void HDualRow::choose_final()
     }
   }
 
+  printf("Completed choose_final 3\n"); cout<<flush;
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
@@ -239,6 +244,7 @@ void HDualRow::choose_final()
     workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
   workModel->timer.recordFinish(HTICK_CHUZC3);
+  printf("Completed choose_final 4\n"); cout<<flush;
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn)

@@ -191,6 +191,7 @@ public:
     double computePrObj();
     double computePh2Objective(vector<double>& colPrAct);
     int handleRankDeficiency();
+    int setSourceOutFmBd(const int columnOut);
 
     // Utilities for shifting costs and flipping bounds
     void shiftCost(int iCol, double amount);

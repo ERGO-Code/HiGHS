@@ -901,6 +901,8 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
   else
   {
     int RtCd = model.load_fromMPS(filename);
+  const int *lc_NonbasicMove = model.getNonbasicMove();
+  printf("Af load_fromMPS: NonbasicMove(1775) = %d\n", lc_NonbasicMove[1775]);
     if (RtCd)
       return RtCd;
 
@@ -914,6 +916,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
       crashTime += model.timer.getTime();
     }
     //		printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
+  printf("Af crash: NonbasicMove(1775) = %d\n", lc_NonbasicMove[1775]);
     model.scaleModel();
     if (FourThreads)
       solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
