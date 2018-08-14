@@ -107,7 +107,7 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow)
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
-void HDualRow::choose_final()
+bool HDualRow::choose_final()
 {
   /**
      * This routine choose the dual entering variable by
@@ -121,6 +121,7 @@ void HDualRow::choose_final()
      */
 
   bool rp_Choose_final = false;
+  //  rp_Choose_final = true;
   // 1. Reduce by large step BFRT
   workModel->timer.recordStart(HTICK_CHUZC2);
   int fullCount = workCount;
@@ -157,9 +158,13 @@ void HDualRow::choose_final()
   selectTheta = workTheta;
   workGroup.clear();
   workGroup.push_back(0);
+  const double iz_remainTheta = 1e100;
+  int prev_workCount = workCount;
+  double prev_remainTheta = iz_remainTheta;
+  double prev_selectTheta = selectTheta;
   while (selectTheta < 1e18)
   {
-    double remainTheta = 1e100;
+    double remainTheta = iz_remainTheta;
     if (rp_Choose_final) printf("Performing choose_final 2; selectTheta = %11.4g; workCount=%d; fullCount=%d\n", selectTheta, workCount, fullCount);
     for (int i = workCount; i < fullCount; i++)
     {
@@ -181,7 +186,17 @@ void HDualRow::choose_final()
       if (rp_Choose_final) printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
     }
     workGroup.push_back(workCount);
+    // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
+    //Check for no change in this loop - to prevent infinite loop
+    if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) && (prev_remainTheta == remainTheta)) {
+      printf("In choose_final: No change in loop 2 so return error\n");
+      return true;
+    }
+    // Record the initial values of workCount, remainTheta and selectTheta for the next pass through the loop
+    prev_workCount = workCount;
+    prev_remainTheta = remainTheta;
+    prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount)
       break;
   }
@@ -248,6 +263,7 @@ void HDualRow::choose_final()
   sort(workData.begin(), workData.begin() + workCount);
   workModel->timer.recordFinish(HTICK_CHUZC3);
   if (rp_Choose_final) printf("Completed  choose_final 4\n");
+  return false;
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn)

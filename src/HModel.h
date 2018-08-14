@@ -32,6 +32,7 @@ const int invertHint_possiblyPrimalUnbounded =         4;
 const int invertHint_possiblyDualUnbounded =           5;
 const int invertHint_possiblySingularBasis =           6;
 const int invertHint_primalInfeasibleInPrimalSimplex = 7;
+const int invertHint_chooseColumnFail =                8;
 
 /** SCIP-like basis status for columns and rows */
 enum HSOL_BaseStat

@@ -21,7 +21,7 @@ public:
     void choose_makepack(const HVector *row, const int offset);
     void choose_possible();
     void choose_joinpack(const HDualRow* otherRow);
-    void choose_final();
+    bool choose_final();
 
     void update_flip(HVector *bfrtColumn);
     void update_dual(double theta);

@@ -16,7 +16,7 @@ using namespace std;
 
 void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 {
-  printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
+  //  printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
@@ -584,6 +584,14 @@ void HDual::solve_phase1()
       }
     }
   }
+  else if (invertHint == invertHint_chooseColumnFail)
+  {
+    // chooseColumn has failed
+    // Behave as "Report strange issues" below
+    solvePhase = -1;
+    model->util_reportMessage("dual-phase-1-not-solved");
+    model->setProblemStatus(LP_Status_Failed);
+  }
   else if (columnIn == -1)
   {
     // We got dual phase 1 unbounded - strange
@@ -717,6 +725,14 @@ void HDual::solve_phase2()
       model->util_reportMessage("problem-optimal");
       model->setProblemStatus(LP_Status_Optimal);
     }
+  }
+  else if (invertHint == invertHint_chooseColumnFail)
+  {
+    // chooseColumn has failed
+    // Behave as "Report strange issues" below
+    solvePhase = -1;
+    model->util_reportMessage("dual-phase-2-not-solved");
+    model->setProblemStatus(LP_Status_Failed);
   }
   else if (columnIn == -1)
   {
@@ -1100,7 +1116,11 @@ void HDual::chooseColumn(HVector *row_ep)
   }
 
   // Choose column - final
-  dualRow.choose_final();
+  bool chooseColumnFail = dualRow.choose_final();
+  if (chooseColumnFail) {
+    invertHint = invertHint_chooseColumnFail;
+    return;
+  }
   model->timer.recordStart(HTICK_CHUZC4);
   dualRow.delete_Freemove();
   model->timer.recordFinish(HTICK_CHUZC4);
@@ -1168,6 +1188,7 @@ void HDual::chooseColumn(HVector *row_ep)
         printf("!!NEW DEVEX FRAMEWORK!!\n");
     dualRHS.workEdWt[rowOut] = tru_dvx_wt_o_rowOut;
   }
+  return;
 }
 
 void HDual::chooseColumn_slice(HVector *row_ep)
