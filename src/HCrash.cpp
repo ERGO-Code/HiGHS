@@ -2592,8 +2592,6 @@ void HCrash::tsSing(HModel *ptr_model)
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
   // of basic variables reaches numRow
-  const int *lc_NonbasicMove = model->getNonbasicMove();
-  printf("In crash.tssing %6d: NonbasicMove(1775) = %d\n", -1, lc_NonbasicMove[1775]);
   for (int c_n = 0; c_n < numTot; c_n++) {
     int r_n = c_n;
     int columnIn = c_n;
@@ -2606,5 +2604,4 @@ void HCrash::tsSing(HModel *ptr_model)
     nBcVr++;
     if (nBcVr == numRow) break;
   }
-  printf("In crash.tssing %6d: NonbasicMove(1775) = %d\n", 999999, lc_NonbasicMove[1775]);
 }

@@ -2605,7 +2605,7 @@ int HModel::setSourceOutFmBd(const int columnOut)
     if (!hsol_isInfinity(-workLower[columnOut])) {
     //Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
       sourceOut = -1;
-      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g] so setting sourceOut = -1\n", columnOut, workLower[columnOut], workUpper[columnOut]);
+      //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g] so setting sourceOut = -1\n", columnOut, workLower[columnOut], workUpper[columnOut]);
     } else {
     //Infinite LB so sourceOut = 1 ensures value set to UB
       sourceOut = 1;

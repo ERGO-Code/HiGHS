@@ -20,10 +20,6 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
-
-  const int *lc_NonbasicMove = model->getNonbasicMove();
-  printf("NonbasicMove(1775) = %d\n", lc_NonbasicMove[1775]);
-
 #ifdef JAJH_dev
   printf("model->mlFg_Report() 1\n");
   cout << flush;
@@ -85,6 +81,14 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     int rankDeficiency = model->computeFactor();
     if (rankDeficiency) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
+    }
+    double bsCond = an_bs_cond(model);
+    printf("Initial basis condition estimate of %11.4g is", bsCond);
+    if (bsCond > 1e12) {
+      printf(" excessive\n");
+      return;
+    } else {
+      printf(" OK\n");
     }
   }
   //Consider initialising edge weights
@@ -767,6 +771,7 @@ void HDual::rebuild()
 		// permutation of baseIndex after INVERT
 		for (int i = 0; i < numRow; i++)
 			dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
+		//		double bsCond = an_bs_cond(model);
 	}
 
 	// Recompute dual solution
@@ -832,36 +837,27 @@ void HDual::iterate()
 #ifdef JAJH_dev
 	if (rp_hsol && rowOut >= 0) {printf("\nPvR: Row %2d\n", rowOut); dualRow.rp_hsol_pv_r();} cout<<flush;
 #endif
-	printf("Returned from chooseColumn\n"); cout<<flush;
-
 	updateFtranBFRT();
-	printf("Returned from FtranBFRT\n"); cout<<flush;
 	// updateFtran(); computes the pivotal column in the data structure "column"
 	updateFtran();
 	if (rp_hsol) rp_hsol_pv_c(&column);
-	printf("Returned from Ftran\n"); cout<<flush;
 
 	//updateFtranDSE performs the DSE FTRAN on pi_p
 	if (EdWt_Mode == EdWt_Mode_DSE) updateFtranDSE(&row_ep);
-	printf("Returned from FtranDSE\n"); cout<<flush;
 
 	//updateVerify() Checks row-wise pivot against column-wise pivot for numerical trouble
 	updateVerify();
-	printf("Returned from updateVerify\n"); cout<<flush;
 
 	//updateDual() Updates the dual values
 	updateDual();
-	printf("Returned from updateDual\n"); cout<<flush;
 
 	//updatePrimal(&row_ep); Updates the primal values and the edge weights
 	updatePrimal(&row_ep);
-	printf("Returned from updatePrimal\n"); cout<<flush;
 
 	if ((EdWt_Mode == EdWt_Mode_Dvx) && (nw_dvx_fwk)) iz_dvx_fwk();
 
 	//Update the basis representation
 	updatePivots();
-	printf("Returned from updatePivots\n"); cout<<flush;
 
 	//Analyse the iteration: possibly report; possibly switch strategy
 	if (AnIterLg) {
@@ -1068,7 +1064,6 @@ void HDual::chooseColumn(HVector *row_ep)
       matrix->price_by_row(row_ap, *row_ep);
     }
   }
-  printf("Returned from PRICE\n"); cout<<flush;
   if (anPriceEr) {
     bool price_er;
     price_er = matrix->price_er_ck(row_ap, *row_ep);
@@ -1090,31 +1085,24 @@ void HDual::chooseColumn(HVector *row_ep)
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
   model->timer.recordFinish(HTICK_CHUZC0);
-  printf("Returned from CHUZC0\n"); cout<<flush;
   model->timer.recordStart(HTICK_CHUZC1);
   dualRow.choose_makepack(&row_ap, 0);
   dualRow.choose_makepack(row_ep, numCol);
   dualRow.choose_possible();
   model->timer.recordFinish(HTICK_CHUZC1);
 
-  printf("Returned from CHUZC1\n"); cout<<flush;
-
   // Choose column - check problem
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0)
   {
     invertHint = invertHint_possiblyDualUnbounded; // Was 1
-    printf("Returned from HDual::chooseColumn invertHint = %d\n", invertHint); cout<<flush;
     return;
   }
 
-  printf("Calling dualRow.choose_final\n"); cout<<flush;
   // Choose column - final
   dualRow.choose_final();
-  printf("Returned from dualRow.choose_final\n"); cout<<flush;
   model->timer.recordStart(HTICK_CHUZC4);
   dualRow.delete_Freemove();
-  printf("Returned from dualRow.delete_Freemove\n"); cout<<flush;
   model->timer.recordFinish(HTICK_CHUZC4);
 
   columnIn = dualRow.workPivot;
@@ -1180,7 +1168,6 @@ void HDual::chooseColumn(HVector *row_ep)
         printf("!!NEW DEVEX FRAMEWORK!!\n");
     dualRHS.workEdWt[rowOut] = tru_dvx_wt_o_rowOut;
   }
-  printf("Returned from HDual::chooseColumn\n"); cout<<flush;
 }
 
 void HDual::chooseColumn_slice(HVector *row_ep)
@@ -1747,7 +1734,7 @@ double HDual::an_bs_cond(HModel *ptr_model)
     norm_B = max(c_norm, norm_B);
   }
   double cond_B = norm_Binv * norm_B;
-  // printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n", norm_Binv, norm_B, cond_B);
+  //  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n", norm_Binv, norm_B, cond_B);
   return cond_B;
 }
 
@@ -2133,7 +2120,7 @@ void HDual::iterateRpAn() {
 }
 
 void HDual::iterateRp() {
-  //  if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
+  if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
   int numIter = model->numberIteration;
   bool header= numIter % 10 == 1;
   if (header) iterateRpFull(header);
