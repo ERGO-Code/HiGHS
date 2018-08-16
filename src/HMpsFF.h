@@ -79,7 +79,7 @@ class MpsParser
     int
     parseFile(std::string filename);
 
-    void
+    int 
     fillArrays();
 
     int
@@ -179,8 +179,13 @@ int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
     
     status = parseFile(filename);
 
-    if (!status)
-        fillArrays();
+    if (!status) {
+      int fillArrays_rt = fillArrays();
+      status = fillArrays_rt;
+      if (status) return status;
+    } else {
+      return status;
+    }
     
     numRow_ = std::move(  nRows );
     numCol_ = std::move(  nCols );
@@ -217,7 +222,7 @@ readMPS(const char *filename, int &numRow, int &numCol,
   return result;
 }
 
-void MpsParser::fillArrays()
+int MpsParser::fillArrays()
 {
     assert(nnz >= 0);
 
@@ -234,7 +239,8 @@ void MpsParser::fillArrays()
 
     //TODO matrix values
     //problem.setConstraintMatrix(   SparseStorage<REAL>{entries, nCols, nRows, true},   std::move(rowlhs),     std::move(rowrhs), true);
-    fillMatrix(entries, nRows, nCols);
+    int fillMatrix_rt = fillMatrix(entries, nRows, nCols);
+    return fillMatrix_rt;
 }
 
 int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in, int nCols_in)
