@@ -1431,7 +1431,10 @@ void HDual::updatePivots() {
 	dualRHS.update_pivots(rowOut,
 			model->getWorkValue()[columnIn] + thetaPrimal);
 
-	if (total_fake >= factor->fakeTick && model->countUpdate >= 50) {
+	bool reinvert_pseudoClock = total_fake >= factor->fakeTick;
+	
+	//	reinvert_pseudoClock = 2*total_fake >= factor->fakeTick;
+	if (reinvert_pseudoClock && model->countUpdate >= 50) {
 //        cout << total_fake << "\t" << factor->fakeTick << endl;
 //        printf(
 //                "%10d   %10.2e  %10.2e  %10.4f          %10.2e  %10.2e  %10.4f\n",

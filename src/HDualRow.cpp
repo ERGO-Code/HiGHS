@@ -121,7 +121,7 @@ bool HDualRow::choose_final()
      */
 
   bool rp_Choose_final = false;
-  //  rp_Choose_final = true;
+  //   rp_Choose_final = true;
   // 1. Reduce by large step BFRT
   workModel->timer.recordStart(HTICK_CHUZC2);
   int fullCount = workCount;

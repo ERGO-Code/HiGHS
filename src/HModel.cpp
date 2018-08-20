@@ -2347,6 +2347,12 @@ int HModel::computeFactor()
 void HModel::computeDual()
 {
   //  printf("computeDual: Entry\n");cout<<flush;
+
+  bool an_computeDual_norm2 = false;
+  double btranRHS_norm2;
+  double btranSol_norm2;
+  double workDual_norm2;
+
   buffer.clear();
   for (int iRow = 0; iRow < numRow; iRow++)
   {
@@ -2354,52 +2360,41 @@ void HModel::computeDual()
     buffer.array[iRow] = workCost[basicIndex[iRow]] + workShift[basicIndex[iRow]];
   }
   buffer.count = numRow;
-
+  if (an_computeDual_norm2) {
+    btranRHS_norm2 = buffer.norm2(); btranRHS_norm2 = sqrt(btranRHS_norm2);
+  }
   //  printf("computeDual: Before BTRAN\n");cout<<flush;
   factor.btran(buffer, 1);
   //  printf("computeDual: After  BTRAN\n");cout<<flush;
-
-#ifdef JAJH_dev
-  int n_rp = 0;
-  double rp_tl = 0.0;
-  int mx_n_rp = 10;
-  double norm_dl_du = 0.0;
-#endif
+  if (an_computeDual_norm2) {
+    btranSol_norm2 = buffer.norm2(); btranSol_norm2 = sqrt(btranSol_norm2);
+  }
 
   bufferLong.clear();
   matrix.price_by_col(bufferLong, buffer);
-  for (int i = 0; i < numCol; i++)
-  {
-#ifdef JAJH_dev
-    double dl_du = abs(workCost[i] - bufferLong.array[i] - workDual[i]);
-    if (dl_du > rp_tl && n_rp < mx_n_rp)
-    {
-      rp_tl = dl_du * 10;
-      n_rp += 1;
-      //	printf("computeDual():     DlDu   = %11g for i = %d\n", dl_du, i);
-    }
-    norm_dl_du += dl_du * dl_du;
-#endif
+  for (int i = 0; i < numCol; i++) {
     workDual[i] = workCost[i] - bufferLong.array[i];
   }
-  for (int i = numCol; i < numTot; i++)
-  {
-#ifdef JAJH_dev
-    double dl_du = abs(workCost[i] - buffer.array[i - numCol] - workDual[i]);
-    if (dl_du > rp_tl && n_rp < mx_n_rp)
-    {
-      rp_tl = dl_du * 10;
-      n_rp += 1;
-      //	printf("computeDual():     DlDu_i = %11g for i = %d\n", dl_du, i);
-    }
-    norm_dl_du += dl_du * dl_du;
-#endif
+  for (int i = numCol; i < numTot; i++) {
     workDual[i] = workCost[i] - buffer.array[i - numCol];
   }
-#ifdef JAJH_dev
-    norm_dl_du = sqrt(norm_dl_du);
-    printf("computeDual():   ||DlDu|| = %11g\n", norm_dl_du);
-#endif
+
+  if (an_computeDual_norm2) {
+    workDual_norm2 = 0;
+    for (int i = 0; i < numTot; i++) workDual_norm2 += workDual[i]*workDual[i];
+    workDual_norm2 = sqrt(workDual_norm2);
+    //  printf("computeDual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g; ||pi^TA-c||=%11.4g\n", btranRHS_norm2, btranSol_norm2, workDual_norm2);
+    double cuTlDuIfs = dblOption[DBLOPT_DUAL_TOL];
+    double nwTlDuIfs = workDual_norm2/1e16;
+    if (nwTlDuIfs > 1e-1) {
+      printf("Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g\n", workDual_norm2);
+    } else if (nwTlDuIfs > 10*cuTlDuIfs) {
+      printf("computeDual: In light of ||pi^TA-c||=%11.4g, consider setting dblOption[DBLOPT_DUAL_TOL] = %11.4g\n",
+	     workDual_norm2, nwTlDuIfs);
+      //    dblOption[DBLOPT_DUAL_TOL] = nwTlDuIfs;
+    }
+  }
+
   //Now have a nonbasic duals
   mlFg_haveNonbasicDuals = 1;
 }
