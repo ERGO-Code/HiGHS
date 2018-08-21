@@ -2187,7 +2187,10 @@ void HDual::iterateRpInvert(int i_v) {
   iterateRpDsty(true);
   iterateRpDsty(false);
   iterateRpDuObj(false);
-  printf(" %2d\n", i_v);
+  printf(" %2d", i_v);
+  printf(" %10.0f; %6.4f; %6.4f",
+	 factor->realTick, (factor->realTick)/(factor->fakeTick), factor->pseudoTick/(factor->fakeTick));
+  printf("\n");
 
 }
 void HDual::iterateRpIterPh(bool header) {

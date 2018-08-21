@@ -39,7 +39,17 @@ void HDualRHS::setup_partition(const char *filename)
 
 void HDualRHS::choose_normal(int *chIndex)
 {
-  workModel->timer.recordStart(HTICK_CHUZR1);
+  // Moved the following to the top to avoid starting the clock for a trivial call.
+  if (workCount == 0)
+    {
+      *chIndex = -1;
+      return;
+    }
+
+  // Since choose_normal calls itself, only start the clock if it's not currently running 
+  bool keepTimerRunning = workModel->timer.itemStart[HTICK_CHUZR1] < 0;
+  if (!keepTimerRunning) workModel->timer.recordStart(HTICK_CHUZR1);
+
   int random = workModel->random.intRandom();
   if (workCount < 0)
   {
@@ -71,11 +81,12 @@ void HDualRHS::choose_normal(int *chIndex)
   else
   {
     // SPARSE mode
-    if (workCount == 0)
-    {
-      *chIndex = -1;
-      return;
-    }
+    // Moved the following to the top to avoid starting the clock for a trivial call.
+    //    if (workCount == 0)
+    //    {
+    //      *chIndex = -1;
+    //      return;
+    //    }
 
     int randomStart = random % workCount;
     double bestMerit = 0;
@@ -116,7 +127,8 @@ void HDualRHS::choose_normal(int *chIndex)
     }
     *chIndex = bestIndex;
   }
-  workModel->timer.recordFinish(HTICK_CHUZR1);
+  // Since choose_normal calls itself, only stop the clock if it's not currently running 
+  if (!keepTimerRunning) workModel->timer.recordFinish(HTICK_CHUZR1);
 }
 
 void HDualRHS::choose_multi_global(int *chIndex, int *chCount, int chLimit)
@@ -211,6 +223,7 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit)
   {
     choose_multi_global(chIndex, chCount, chLimit);
     partSwitch = 0;
+    workModel->timer.recordFinish(HTICK_CHUZR1);
     return;
   }
 
@@ -261,6 +274,7 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit)
     // SPARSE mode
     if (workCount == 0)
     {
+      workModel->timer.recordFinish(HTICK_CHUZR1);
       return;
     }
 
@@ -440,14 +454,14 @@ void HDualRHS::update_pivots(int iRow, double value)
 
 void HDualRHS::update_infeasList(HVector *column)
 {
-  workModel->timer.recordStart(HTICK_UPDATE_PRIMAL);
-
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
 
   // DENSE mode: disabled
   if (workCount < 0)
     return;
+
+  workModel->timer.recordStart(HTICK_UPDATE_PRIMAL);
 
   if (workCutoff <= 0)
   {
