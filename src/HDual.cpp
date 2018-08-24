@@ -271,7 +271,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
     int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
 			 HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
-			 HTICK_FTRAN, HTICK_FTRAN_MIX, HTICK_FTRAN_DSE,
+			 HTICK_DEVEX, HTICK_FTRAN, HTICK_FTRAN_BFRT, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR };
     int reportCount = sizeof(reportList) / sizeof(int);
@@ -281,7 +281,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   if (dual_variant == HDUAL_VARIANT_TASKS) {
     int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
 			 HTICK_PRICE, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3,
-			 HTICK_FTRAN, HTICK_FTRAN_MIX, HTICK_FTRAN_DSE,
+			 HTICK_DEVEX, HTICK_FTRAN, HTICK_FTRAN_BFRT, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR, HTICK_GROUP1, HTICK_GROUP2 };
     int reportCount = sizeof(reportList) / sizeof(int);
@@ -291,7 +291,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   if (dual_variant == HDUAL_VARIANT_MULTI) {
     int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
 			 HTICK_PRICE, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3,
-			 HTICK_FTRAN, HTICK_FTRAN_MIX, HTICK_FTRAN_DSE,
+			 HTICK_DEVEX, HTICK_FTRAN, HTICK_FTRAN_BFRT, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR, HTICK_UPDATE_ROW_EP };
     int reportCount = sizeof(reportList) / sizeof(int);
@@ -1136,6 +1136,7 @@ void HDual::chooseColumn(HVector *row_ep)
   }
   if (EdWt_Mode == EdWt_Mode_Dvx)
   {
+    model->timer.recordStart(HTICK_DEVEX);
     //
     //Determine the exact Devex weight
     //
@@ -1187,6 +1188,7 @@ void HDual::chooseColumn(HVector *row_ep)
       if (rp_dvx)
         printf("!!NEW DEVEX FRAMEWORK!!\n");
     dualRHS.workEdWt[rowOut] = tru_dvx_wt_o_rowOut;
+    model->timer.recordFinish(HTICK_DEVEX);
   }
   return;
 }
@@ -1271,9 +1273,16 @@ void HDual::updateFtran()
 void HDual::updateFtranBFRT()
 {
   if (invertHint) return;
-  model->timer.recordStart(HTICK_FTRAN_MIX);
+
+  // Only time updateFtranBFRT if dualRow.workCount > 0;
+  // If dualRow.workCount = 0 then dualRow.update_flip(&columnBFRT)
+  // merely clears columnBFRT so no FTRAN is performed
+  bool time_updateFtranBFRT = dualRow.workCount > 0;
+
+  if (time_updateFtranBFRT) model->timer.recordStart(HTICK_FTRAN_BFRT);
 
   dualRow.update_flip(&columnBFRT);
+
   if (columnBFRT.count) {
 
     if (AnIterLg) {
@@ -1287,7 +1296,7 @@ void HDual::updateFtranBFRT()
     }
 
   }
-  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  if (time_updateFtranBFRT) model->timer.recordFinish(HTICK_FTRAN_BFRT);
 }
 
 void HDual::updateFtranDSE(HVector *DSE_Vector)
@@ -1968,7 +1977,7 @@ void HDual::iterateAn() {
       if (AnIterTraceIterDl > 10) {
 	//	int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
 	//			     HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
-	//			     HTICK_FTRAN, HTICK_FTRAN_MIX, HTICK_FTRAN_DSE,
+	//			     HTICK_DEVEX, HTICK_FTRAN, HTICK_FTRAN_DSE,
 	//			     HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 	//			     HTICK_UPDATE_FACTOR };
 	//	int reportCount = sizeof(reportList) / sizeof(int);
@@ -2129,7 +2138,7 @@ void HDual::iterateRpAn() {
     string strEdWt_Mode;
     if (lcEdWt_Mode == EdWt_Mode_DSE) strEdWt_Mode = "DSE";
     else if (lcEdWt_Mode == EdWt_Mode_Dvx) strEdWt_Mode = "Dvx";
-    else if (lcEdWt_Mode == EdWt_Mode_Dvx) strEdWt_Mode = "Dan";
+    else if (lcEdWt_Mode == EdWt_Mode_Dan) strEdWt_Mode = "Dan";
     else strEdWt_Mode = "XXX";					
 
     printf("%7d (%7d:%7d) %8.4f  %7d | %4d %4d %4d %4d |  %3s | %4d\n",

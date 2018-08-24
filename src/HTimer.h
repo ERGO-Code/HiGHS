@@ -28,11 +28,13 @@ enum HTickItem {
     HTICK_CHUZC2,
     HTICK_CHUZC3,
     HTICK_CHUZC4,
+    HTICK_DEVEX,
     HTICK_FTRAN,
     HTICK_BTRAN,
     HTICK_PRICE,
     HTICK_FTRAN_DSE,
     HTICK_FTRAN_MIX,
+    HTICK_FTRAN_BFRT,
     HTICK_UPDATE_DUAL,
     HTICK_UPDATE_PRIMAL,
     HTICK_UPDATE_WEIGHT,
@@ -63,11 +65,13 @@ public:
     itemNames[HTICK_CHUZC2] = "CHUZC2"; itemCh3Names[HTICK_CHUZC2] = "CC2";
     itemNames[HTICK_CHUZC3] = "CHUZC3"; itemCh3Names[HTICK_CHUZC3] = "CC3";
     itemNames[HTICK_CHUZC4] = "CHUZC4"; itemCh3Names[HTICK_CHUZC4] = "CC4";
+    itemNames[HTICK_DEVEX] = "DEVEX"; itemCh3Names[HTICK_DEVEX] = "DVX";
     itemNames[HTICK_FTRAN] = "FTRAN"; itemCh3Names[HTICK_FTRAN] = "COL";
     itemNames[HTICK_BTRAN] = "BTRAN"; itemCh3Names[HTICK_BTRAN] = "REP";
     itemNames[HTICK_PRICE] = "PRICE"; itemCh3Names[HTICK_PRICE] = "RAP";
     itemNames[HTICK_FTRAN_DSE] = "FTRAN_DSE"; itemCh3Names[HTICK_FTRAN_DSE] = "DSE";
     itemNames[HTICK_FTRAN_MIX] = "FTRAN_MIX"; itemCh3Names[HTICK_FTRAN_MIX] = "MIX";
+    itemNames[HTICK_FTRAN_BFRT] = "FTRAN_BFRT"; itemCh3Names[HTICK_FTRAN_BFRT] = "BFR";
     itemNames[HTICK_UPDATE_DUAL] = "UPDATE_DUAL"; itemCh3Names[HTICK_UPDATE_DUAL] = "UPD";
     itemNames[HTICK_UPDATE_PRIMAL] = "UPDATE_PRIMAL"; itemCh3Names[HTICK_UPDATE_PRIMAL] = "UPP";
     itemNames[HTICK_UPDATE_WEIGHT] = "UPDATE_WEIGHT"; itemCh3Names[HTICK_UPDATE_WEIGHT] = "UPW";
@@ -133,20 +137,23 @@ public:
     }
     printf(" per mille: Sum = %d", suPerMille);
     printf("\n");
-    printf("txt-profile-time ID: Operation       :     Time           :    Calls  Time/Call\n");
+    printf("txt-profile-time ID: Operation       :    Time            :   Calls   Time/Call\n");
     double tick2sec = 3.6e-10;
+    double suTick=0;
     double suTi=0;
     for (int i = 0; i < itemCount; i++) {
       int item = itemList[i];
-      double ti = tick2sec*itemTicks[item];
-      double perCent = 100.0 * itemTicks[item] / totalTick;
+      double tick = itemTicks[item];
+      double ti = tick2sec*tick;
+      double perCent = 100.0 * tick / totalTick;
       double tiPerCall = 0;
       if (itemNumCall[item]>0) tiPerCall = ti/itemNumCall[item];
       printf("txt-profile-time %2d: %-16s: %11.4e (%4.1f%%): %7d %11.4e\n",
 	     item, itemNames[item].c_str(), ti, perCent, itemNumCall[item], tiPerCall);
       suTi += ti;
+      suTick += tick;
     }
-    double perCent = 100.0 * suTi / totalTick;
+    double perCent = 100.0 * suTick / totalTick;
     printf("txt-profile-time   : SUM             : %11.4e (%4.1f%%)\n", suTi, perCent);
     printf("txt-profile-time   : TOTAL           : %11.4e\n", tick2sec*totalTick);
     //Report for Excel
@@ -156,7 +163,7 @@ public:
     printf(",TotalTime\n");
     printf("grep_excel-profile-time");
     for (int i = 0; i < itemCount; i++) printf(",%e", tick2sec*itemTicks[itemList[i]]);
-    printf(",%e,", suTi);
+    printf(",%e", suTi);
     printf(",%e\n", tick2sec*totalTick);
     printf("grep_excel-profile-calls");
     for (int i = 0; i < itemCount; i++) printf(",%d", itemNumCall[itemList[i]]);
