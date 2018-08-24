@@ -269,13 +269,21 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 #ifdef H2DEBUG
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
-    int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
+    int reportList[] = { HTICK_INVERT, HTICK_COMPUTE_DUAL, HTICK_COMPUTE_PRIMAL, HTICK_CHUZR1, HTICK_BTRAN,
 			 HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
 			 HTICK_DEVEX, HTICK_FTRAN, HTICK_FTRAN_BFRT, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR };
     int reportCount = sizeof(reportList) / sizeof(int);
     model->timer.report(reportCount, reportList);
+    int report_list[] = { HTICK_ITERATE };
+    int report_count = sizeof(report_list) / sizeof(int);
+    model->timer.report(report_count, report_list);
+    int report_iter_list[] = {
+      HTICK_ITERATE_REBUILD, HTICK_ITERATE_CHUZR, HTICK_ITERATE_CHUZC, HTICK_ITERATE_FTRAN, HTICK_ITERATE_VERIFY, HTICK_ITERATE_DUAL, HTICK_ITERATE_PRIMAL, HTICK_ITERATE_DEVEX, HTICK_ITERATE_PIVOTS
+    };
+    int report_iter_count = sizeof(report_iter_list) / sizeof(int);
+    model->timer.report(report_iter_count, report_iter_list);
   }
   
   if (dual_variant == HDUAL_VARIANT_TASKS) {
@@ -506,57 +514,61 @@ void HDual::solve_phase1()
   //	printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
   // Main solving structure
+  model->timer.recordStart(HTICK_ITERATE);
   for (;;)
-  {
-    rebuild();
-    for (;;)
     {
-      switch (dual_variant)
-      {
-      default:
-      case HDUAL_VARIANT_PLAIN:
-        iterate();
-        break;
-      case HDUAL_VARIANT_TASKS:
-        iterate_tasks();
-        break;
-      case HDUAL_VARIANT_MULTI:
-        iterate_multi();
-        break;
-      }
-      if (invertHint)
-        break;
-      //printf("HDual::solve_phase1: Iter = %d; Objective = %g\n", model->numberIteration, model->objective);
-      /*			if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
-#ifdef SCIP_dev
-			  printf("HDual::solve_phase1: %g = Objective > dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
-#endif
-			  model->problemStatus = LP_Status_ObjUB; 
-                          break;
-			}
-			*/
-    }
-    lc_totalTime = model->totalTime + model->timer.getTime();
+      model->timer.recordStart(HTICK_ITERATE_REBUILD);
+      rebuild();
+      model->timer.recordFinish(HTICK_ITERATE_REBUILD);
+      for (;;)
+	{
+	  switch (dual_variant)
+	    {
+	    default:
+	    case HDUAL_VARIANT_PLAIN:
+	      iterate();
+	      break;
+	    case HDUAL_VARIANT_TASKS:
+	      iterate_tasks();
+	      break;
+	    case HDUAL_VARIANT_MULTI:
+	      iterate_multi();
+	      break;
+	    }
+	  if (invertHint)
+	    break;
+	  //printf("HDual::solve_phase1: Iter = %d; Objective = %g\n", model->numberIteration, model->objective);
+	  /*			if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+				#ifdef SCIP_dev
+				printf("HDual::solve_phase1: %g = Objective > dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+				#endif
+				model->problemStatus = LP_Status_ObjUB; 
+				break;
+				}
+	  */
+	}
+      lc_totalTime = model->totalTime + model->timer.getTime();
 #ifdef JAJH_dev
-    lc_totalTime_rp_n += 1;
-    //		printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+      lc_totalTime_rp_n += 1;
+      //		printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
-    if (lc_totalTime > TimeLimitValue)
-    {
-      SolveBailout = true;
-      model->problemStatus = LP_Status_OutOfTime;
-      break;
+      if (lc_totalTime > TimeLimitValue)
+	{
+	  SolveBailout = true;
+	  model->problemStatus = LP_Status_OutOfTime;
+	  break;
+	}
+      // If the data are fresh from rebuild(), break out of
+      // the outer loop to see what's ocurred
+      // Was:	if (model->countUpdate == 0) break;
+      if (model->mlFg_haveFreshRebuild)
+	break;
     }
-    // If the data are fresh from rebuild(), break out of
-    // the outer loop to see what's ocurred
-    // Was:	if (model->countUpdate == 0) break;
-    if (model->mlFg_haveFreshRebuild)
-      break;
-  }
-
+  
+  model->timer.recordFinish(HTICK_ITERATE);
   if (SolveBailout)
     return;
-
+  
   if (rowOut == -1)
   {
     model->util_reportMessage("dual-phase-1-optimal");
@@ -631,188 +643,196 @@ void HDual::solve_phase2()
   printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
   // Main solving structure
+  model->timer.recordStart(HTICK_ITERATE);
   for (;;)
-  {
-    // Outer loop of solve_phase2()
-    // Rebuild all values, reinverting B if updates have been performed
-    rebuild();
-    if (dualInfeasCount > 0)
-      break;
-    for (;;)
     {
-      // Inner loop of solve_phase2()
-      // Performs one iteration in case HDUAL_VARIANT_PLAIN:
-      model->util_reportSolverProgress();
-      switch (dual_variant)
-      {
-      default:
-      case HDUAL_VARIANT_PLAIN:
-        iterate();
-        break;
-      case HDUAL_VARIANT_TASKS:
-        iterate_tasks();
-        break;
-      case HDUAL_VARIANT_MULTI:
-        iterate_multi();
-        break;
-      }
-      //invertHint can be true for various reasons see HModel.h
-      if (invertHint)
-        break;
-      //      model->computeDuObj();
+      // Outer loop of solve_phase2()
+      // Rebuild all values, reinverting B if updates have been performed
+      model->timer.recordStart(HTICK_ITERATE_REBUILD);
+      rebuild();
+      model->timer.recordFinish(HTICK_ITERATE_REBUILD);
+      if (dualInfeasCount > 0)
+	break;
+      for (;;)
+	{
+	  // Inner loop of solve_phase2()
+	  // Performs one iteration in case HDUAL_VARIANT_PLAIN:
+	  model->util_reportSolverProgress();
+	  switch (dual_variant)
+	    {
+	    default:
+	    case HDUAL_VARIANT_PLAIN:
+	      iterate();
+	      break;
+	    case HDUAL_VARIANT_TASKS:
+	      iterate_tasks();
+	      break;
+	    case HDUAL_VARIANT_MULTI:
+	      iterate_multi();
+	      break;
+	    }
+	  //invertHint can be true for various reasons see HModel.h
+	  if (invertHint)
+	    break;
+	  //      model->computeDuObj();
 #ifdef JAJH_dev
-      //      double pr_obj_v = model->computePrObj();
-      //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n",
-      //	     model->numberIteration, pr_obj_v, model->objective);
+	  //      double pr_obj_v = model->computePrObj();
+	  //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n",
+	  //	     model->numberIteration, pr_obj_v, model->objective);
 #endif
-      if (model->objective > model->dblOption[DBLOPT_OBJ_UB])
-      {
+	  if (model->objective > model->dblOption[DBLOPT_OBJ_UB])
+	    {
 #ifdef SCIP_dev
-      //printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+	      //printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
-        model->problemStatus = LP_Status_ObjUB;
-        SolveBailout = true;
-        break;
-      }
-    }
-    lc_totalTime = model->totalTime + model->timer.getTime();
-    if (model->problemStatus == LP_Status_ObjUB)
-    {
-      SolveBailout = true;
-      break;
-    }
+	      model->problemStatus = LP_Status_ObjUB;
+	      SolveBailout = true;
+	      break;
+	    }
+	}
+      lc_totalTime = model->totalTime + model->timer.getTime();
+      if (model->problemStatus == LP_Status_ObjUB)
+	{
+	  SolveBailout = true;
+	  break;
+	}
 #ifdef JAJH_dev
-    lc_totalTime_rp_n += 1;
-    printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+      lc_totalTime_rp_n += 1;
+      printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
-    if (lc_totalTime > TimeLimitValue)
-    {
-      model->problemStatus = LP_Status_OutOfTime;
-      SolveBailout = true;
-      break;
+      if (lc_totalTime > TimeLimitValue)
+	{
+	  model->problemStatus = LP_Status_OutOfTime;
+	  SolveBailout = true;
+	  break;
+	}
+      // If the data are fresh from rebuild(), break out of
+      // the outer loop to see what's ocurred
+      // Was:	if (model->countUpdate == 0) break;
+      if (model->mlFg_haveFreshRebuild)
+	break;
     }
-    // If the data are fresh from rebuild(), break out of
-    // the outer loop to see what's ocurred
-    // Was:	if (model->countUpdate == 0) break;
-    if (model->mlFg_haveFreshRebuild)
-      break;
-  }
-
-  if (SolveBailout)
+  model->timer.recordFinish(HTICK_ITERATE);
+  
+  if (SolveBailout) {
     return;
-
+  }
   if (dualInfeasCount > 0)
-  {
-    // There are dual infeasiblities so switch to Phase 1 and return
-    model->util_reportMessage("dual-phase-2-found-free");
-    solvePhase = 1;
-  }
+    {
+      // There are dual infeasiblities so switch to Phase 1 and return
+      model->util_reportMessage("dual-phase-2-found-free");
+      solvePhase = 1;
+    }
   else if (rowOut == -1)
-  {
-    // There is no candidate in CHUZR, even after rebuild so probably optimal
-    model->util_reportMessage("dual-phase-2-optimal");
-    //		printf("Rebuild: cleanup()\n");
-    cleanup();
-    if (dualInfeasCount > 0)
     {
-      // There are dual infeasiblities after cleanup() so switch to primal simplex
-      solvePhase = 4; // Do primal
-    }
-    else
-    {
-      // There are no dual infeasiblities after cleanup() so optimal!
-      solvePhase = 0;
-      model->util_reportMessage("problem-optimal");
-      model->setProblemStatus(LP_Status_Optimal);
-    }
-  }
-  else if (invertHint == invertHint_chooseColumnFail)
-  {
-    // chooseColumn has failed
-    // Behave as "Report strange issues" below
-    solvePhase = -1;
-    model->util_reportMessage("dual-phase-2-not-solved");
-    model->setProblemStatus(LP_Status_Failed);
-  }
-  else if (columnIn == -1)
-  {
-    // There is no candidate in CHUZC, so probably dual unbounded
-    model->util_reportMessage("dual-phase-2-unbounded");
-    if (model->problemPerturbed)
-    {
-      //If the costs have been perturbed, clean up and return
+      // There is no candidate in CHUZR, even after rebuild so probably optimal
+      model->util_reportMessage("dual-phase-2-optimal");
+      //		printf("Rebuild: cleanup()\n");
       cleanup();
+      if (dualInfeasCount > 0)
+	{
+	  // There are dual infeasiblities after cleanup() so switch to primal simplex
+	  solvePhase = 4; // Do primal
+	}
+      else
+	{
+	  // There are no dual infeasiblities after cleanup() so optimal!
+	  solvePhase = 0;
+	  model->util_reportMessage("problem-optimal");
+	  model->setProblemStatus(LP_Status_Optimal);
+	}
     }
-    else
+  else if (invertHint == invertHint_chooseColumnFail)
     {
-      //If the costs have not been perturbed, so dual unbounded---and hence primal infeasible
+      // chooseColumn has failed
+      // Behave as "Report strange issues" below
       solvePhase = -1;
-      model->util_reportMessage("problem-infeasible");
-      model->setProblemStatus(LP_Status_Infeasible);
+      model->util_reportMessage("dual-phase-2-not-solved");
+      model->setProblemStatus(LP_Status_Failed);
     }
-  }
+  else if (columnIn == -1)
+    {
+      // There is no candidate in CHUZC, so probably dual unbounded
+      model->util_reportMessage("dual-phase-2-unbounded");
+      if (model->problemPerturbed)
+	{
+	  //If the costs have been perturbed, clean up and return
+	  cleanup();
+	}
+      else
+	{
+	  //If the costs have not been perturbed, so dual unbounded---and hence primal infeasible
+	  solvePhase = -1;
+	  model->util_reportMessage("problem-infeasible");
+	  model->setProblemStatus(LP_Status_Infeasible);
+	}
+    }
 }
 
 void HDual::rebuild()
 {
   // Save history information
   model->recordPivots(-1, -1, 0); // Indicate REINVERT
-  model->timer.recordStart(HTICK_INVERT);
 #ifdef JAJH_dev
   //	double tt0 = model->timer.getTime();
 #endif
-	double tt0 = model->timer.getTime();
-	int sv_invertHint = invertHint;
-	invertHint = invertHint_no; // Was 0
+  double tt0 = model->timer.getTime();
+  int sv_invertHint = invertHint;
+  invertHint = invertHint_no; // Was 0
 
-	// Possibly Rebuild model->factor
-	bool reInvert = model->countUpdate > 0;
-	if (!model->InvertIfRowOutNeg) {
-	  // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint == invertHint_possiblyOptimal]
-	  if (sv_invertHint == invertHint_possiblyOptimal) {
-	    assert(rowOut == -1);
-	    reInvert = false;
-	  }
-	}
-	if (reInvert) {
-		const int *baseIndex = model->getBaseIndex();
-		// Scatter the edge weights so that, after INVERT,
-		// they can be gathered according to the new
-		// permutation of baseIndex
-		for (int i = 0; i < numRow; i++)
-			dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
-		int rankDeficiency = model->computeFactor();
-		if (rankDeficiency) throw runtime_error("Dual reInvert: singular-basis-matrix");
-		// Gather the edge weights according to the
-		// permutation of baseIndex after INVERT
-		for (int i = 0; i < numRow; i++)
-			dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
-		//		double bsCond = an_bs_cond(model);
-	}
-
-	// Recompute dual solution
-	model->computeDual();
-	model->correctDual(&dualInfeasCount);
-	model->computePrimal();
-
-	// Collect primal infeasible as a list
-	dualRHS.create_infeasArray();
-	dualRHS.create_infeasList(columnDensity);
-
-	// Compute the objective value
-	model->computeDuObj(solvePhase);
-	//	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
-	iterateRpInvert(sv_invertHint);
-
-	total_INVERT_TICK = factor->pseudoTick;
-	total_FT_inc_TICK = 0;
-	total_fake = 0;
-
-	model->timer.recordFinish(HTICK_INVERT);
-
-	double rebuildTime = model->timer.getTime()-tt0;
-	totalRebuilds++;
-	totalRebuildTime += rebuildTime;
+  // Possibly Rebuild model->factor
+  bool reInvert = model->countUpdate > 0;
+  if (!model->InvertIfRowOutNeg) {
+    // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint == invertHint_possiblyOptimal]
+    if (sv_invertHint == invertHint_possiblyOptimal) {
+      assert(rowOut == -1);
+      reInvert = false;
+    }
+  }
+  if (reInvert) {
+    const int *baseIndex = model->getBaseIndex();
+    // Scatter the edge weights so that, after INVERT,
+    // they can be gathered according to the new
+    // permutation of baseIndex
+    for (int i = 0; i < numRow; i++)
+      dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
+    model->timer.recordStart(HTICK_INVERT);
+    int rankDeficiency = model->computeFactor();
+    model->timer.recordFinish(HTICK_INVERT);
+    if (rankDeficiency) throw runtime_error("Dual reInvert: singular-basis-matrix");
+    // Gather the edge weights according to the
+    // permutation of baseIndex after INVERT
+    for (int i = 0; i < numRow; i++)
+      dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
+    //		double bsCond = an_bs_cond(model);
+  }
+  
+  // Recompute dual solution
+  model->timer.recordStart(HTICK_COMPUTE_DUAL);
+  model->computeDual();
+  model->timer.recordFinish(HTICK_COMPUTE_DUAL);
+  model->correctDual(&dualInfeasCount);
+  model->timer.recordStart(HTICK_COMPUTE_PRIMAL);
+  model->computePrimal();
+  model->timer.recordFinish(HTICK_COMPUTE_PRIMAL);
+  
+  // Collect primal infeasible as a list
+  dualRHS.create_infeasArray();
+  dualRHS.create_infeasList(columnDensity);
+  
+  // Compute the objective value
+  model->computeDuObj(solvePhase);
+  //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
+  iterateRpInvert(sv_invertHint);
+  
+  total_INVERT_TICK = factor->pseudoTick;
+  total_FT_inc_TICK = 0;
+  total_fake = 0;
+  
+  
+  double rebuildTime = model->timer.getTime()-tt0;
+  totalRebuilds++;
+  totalRebuildTime += rebuildTime;
 #ifdef JAJH_dev
   printf("Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Rebuild time = %11.4g; Total rebuild time = %11.4g\n",
          solvePhase, totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime, totalRebuildTime);
@@ -848,11 +868,16 @@ void HDual::iterate()
 //	hsol simplex iteration [rowOut; coumnOut; columnIn] in rp_hsol_si_it();
 //	hsol row-wise matrix after update in updateMatrix(columnIn, columnOut);
 	if (rp_hsol) rp_hsol_da_str();
+  model->timer.recordStart(HTICK_ITERATE_CHUZR);
 	chooseRow();
+  model->timer.recordFinish(HTICK_ITERATE_CHUZR);
+  model->timer.recordStart(HTICK_ITERATE_CHUZC);
 	chooseColumn(&row_ep);
+  model->timer.recordFinish(HTICK_ITERATE_CHUZC);
 #ifdef JAJH_dev
 	if (rp_hsol && rowOut >= 0) {printf("\nPvR: Row %2d\n", rowOut); dualRow.rp_hsol_pv_r();} cout<<flush;
 #endif
+  model->timer.recordStart(HTICK_ITERATE_FTRAN);
 	updateFtranBFRT();
 	// updateFtran(); computes the pivotal column in the data structure "column"
 	updateFtran();
@@ -860,20 +885,31 @@ void HDual::iterate()
 
 	//updateFtranDSE performs the DSE FTRAN on pi_p
 	if (EdWt_Mode == EdWt_Mode_DSE) updateFtranDSE(&row_ep);
+  model->timer.recordFinish(HTICK_ITERATE_FTRAN);
 
 	//updateVerify() Checks row-wise pivot against column-wise pivot for numerical trouble
+  model->timer.recordStart(HTICK_ITERATE_VERIFY);
 	updateVerify();
+  model->timer.recordFinish(HTICK_ITERATE_VERIFY);
 
 	//updateDual() Updates the dual values
+  model->timer.recordStart(HTICK_ITERATE_DUAL);
 	updateDual();
+  model->timer.recordFinish(HTICK_ITERATE_DUAL);
 
 	//updatePrimal(&row_ep); Updates the primal values and the edge weights
+  model->timer.recordStart(HTICK_ITERATE_PRIMAL);
 	updatePrimal(&row_ep);
+  model->timer.recordFinish(HTICK_ITERATE_PRIMAL);
 
+  model->timer.recordStart(HTICK_ITERATE_DEVEX);
 	if ((EdWt_Mode == EdWt_Mode_Dvx) && (nw_dvx_fwk)) iz_dvx_fwk();
+  model->timer.recordFinish(HTICK_ITERATE_DEVEX);
 
 	//Update the basis representation
+  model->timer.recordStart(HTICK_ITERATE_PIVOTS);
 	updatePivots();
+  model->timer.recordFinish(HTICK_ITERATE_PIVOTS);
 
 	//Analyse the iteration: possibly report; possibly switch strategy
 	if (AnIterLg) {
