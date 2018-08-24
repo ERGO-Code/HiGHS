@@ -2649,14 +2649,15 @@ void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow, int *hint
 
 void HModel::updateMatrix(int columnIn, int columnOut)
 {
-  timer.recordStart(HTICK_UPDATE_FACTOR);
+  timer.recordStart(HTICK_UPDATE_MATRIX);
   matrix.update(columnIn, columnOut);
-  timer.recordFinish(HTICK_UPDATE_FACTOR);
+  timer.recordFinish(HTICK_UPDATE_MATRIX);
 }
 
 void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
 {
   //  printf("Called updatePivots(%d, %d, %d)\n", columnIn, rowOut, sourceOut);cout<<flush;
+    timer.recordStart(HTICK_UPDATE_PIVOTS);
   int columnOut = basicIndex[rowOut];
 
   // Incoming variable
@@ -2697,6 +2698,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
   mlFg_haveFreshInvert = 0;
   //Data are no longer fresh from rebuild
   mlFg_haveFreshRebuild = 0;
+  timer.recordFinish(HTICK_UPDATE_PIVOTS);
 }
 
 void HModel::changeUpdate(int updateMethod)

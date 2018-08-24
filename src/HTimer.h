@@ -29,19 +29,21 @@ enum HTickItem {
     HTICK_ITERATE_VERIFY,
     HTICK_ITERATE_DUAL,
     HTICK_ITERATE_PRIMAL,
-    HTICK_ITERATE_DEVEX,
+    HTICK_ITERATE_DEVEX_IZ,
     HTICK_ITERATE_PIVOTS,
 
     HTICK_INVERT,
     HTICK_COMPUTE_DUAL,
+    HTICK_CORRECT_DUAL,
     HTICK_COMPUTE_PRIMAL,
+    HTICK_COMPUTE_DUOBJ,
     HTICK_CHUZR1,
     HTICK_CHUZC0,
     HTICK_CHUZC1,
     HTICK_CHUZC2,
     HTICK_CHUZC3,
     HTICK_CHUZC4,
-    HTICK_DEVEX,
+    HTICK_DEVEX_WT,
     HTICK_FTRAN,
     HTICK_BTRAN,
     HTICK_PRICE,
@@ -50,8 +52,11 @@ enum HTickItem {
     HTICK_FTRAN_BFRT,
     HTICK_UPDATE_DUAL,
     HTICK_UPDATE_PRIMAL,
+    HTICK_DEVEX_IZ,
     HTICK_UPDATE_WEIGHT,
+    HTICK_UPDATE_PIVOTS,
     HTICK_UPDATE_FACTOR,
+    HTICK_UPDATE_MATRIX,
     HTICK_UPDATE_ROW_EP,
 
     // The total count
@@ -79,19 +84,21 @@ public:
     itemNames[HTICK_ITERATE_VERIFY] = "VERIFY"; itemCh3Names[HTICK_ITERATE_VERIFY] = "VRF";
     itemNames[HTICK_ITERATE_DUAL] = "DUAL"; itemCh3Names[HTICK_ITERATE_DUAL] = "UDU";
     itemNames[HTICK_ITERATE_PRIMAL] = "PRIMAL"; itemCh3Names[HTICK_ITERATE_PRIMAL] = "UPR";
-    itemNames[HTICK_ITERATE_DEVEX] = "DEVEX"; itemCh3Names[HTICK_ITERATE_DEVEX] = "DVX";
+    itemNames[HTICK_ITERATE_DEVEX_IZ] = "DEVEX_IZ"; itemCh3Names[HTICK_ITERATE_DEVEX_IZ] = "DIZ";
     itemNames[HTICK_ITERATE_PIVOTS] = "PIVOTS"; itemCh3Names[HTICK_ITERATE_PIVOTS] = "PIV";
   
     itemNames[HTICK_INVERT] = "INVERT"; itemCh3Names[HTICK_INVERT] = "INV";
-    itemNames[HTICK_COMPUTE_DUAL] = "COMPUTE_DUAL"; itemCh3Names[HTICK_COMPUTE_DUAL] = "CDU";
-    itemNames[HTICK_COMPUTE_PRIMAL] = "COMPUTE_PRIMAL"; itemCh3Names[HTICK_COMPUTE_PRIMAL] = "CPR";
+    itemNames[HTICK_COMPUTE_DUAL] = "COMPUTE_DUAL"; itemCh3Names[HTICK_COMPUTE_DUAL] = "CPD";
+    itemNames[HTICK_CORRECT_DUAL] = "CORRECT_DUAL"; itemCh3Names[HTICK_CORRECT_DUAL] = "CRD";
+    itemNames[HTICK_COMPUTE_PRIMAL] = "COMPUTE_PRIMAL"; itemCh3Names[HTICK_COMPUTE_PRIMAL] = "CPP";
+    itemNames[HTICK_COMPUTE_DUOBJ] = "COMPUTE_DUOBJ"; itemCh3Names[HTICK_COMPUTE_DUOBJ] = "DOB";
     itemNames[HTICK_CHUZR1] = "CHUZR1"; itemCh3Names[HTICK_CHUZR1] = "CR1";
     itemNames[HTICK_CHUZC0] = "CHUZC0"; itemCh3Names[HTICK_CHUZC0] = "CC0";
     itemNames[HTICK_CHUZC1] = "CHUZC1"; itemCh3Names[HTICK_CHUZC1] = "CC1";
     itemNames[HTICK_CHUZC2] = "CHUZC2"; itemCh3Names[HTICK_CHUZC2] = "CC2";
     itemNames[HTICK_CHUZC3] = "CHUZC3"; itemCh3Names[HTICK_CHUZC3] = "CC3";
     itemNames[HTICK_CHUZC4] = "CHUZC4"; itemCh3Names[HTICK_CHUZC4] = "CC4";
-    itemNames[HTICK_DEVEX] = "DEVEX"; itemCh3Names[HTICK_DEVEX] = "DVX";
+    itemNames[HTICK_DEVEX_WT] = "DEVEX_WT"; itemCh3Names[HTICK_DEVEX_WT] = "DWT";
     itemNames[HTICK_FTRAN] = "FTRAN"; itemCh3Names[HTICK_FTRAN] = "COL";
     itemNames[HTICK_BTRAN] = "BTRAN"; itemCh3Names[HTICK_BTRAN] = "REP";
     itemNames[HTICK_PRICE] = "PRICE"; itemCh3Names[HTICK_PRICE] = "RAP";
@@ -101,7 +108,10 @@ public:
     itemNames[HTICK_UPDATE_DUAL] = "UPDATE_DUAL"; itemCh3Names[HTICK_UPDATE_DUAL] = "UPD";
     itemNames[HTICK_UPDATE_PRIMAL] = "UPDATE_PRIMAL"; itemCh3Names[HTICK_UPDATE_PRIMAL] = "UPP";
     itemNames[HTICK_UPDATE_WEIGHT] = "UPDATE_WEIGHT"; itemCh3Names[HTICK_UPDATE_WEIGHT] = "UPW";
+    itemNames[HTICK_DEVEX_IZ] = "DEVEX_IZ"; itemCh3Names[HTICK_DEVEX_IZ] = "DIZ";
+    itemNames[HTICK_UPDATE_PIVOTS] = "UPDATE_PIVOTS"; itemCh3Names[HTICK_UPDATE_PIVOTS] = "UPP";
     itemNames[HTICK_UPDATE_FACTOR] = "UPDATE_FACTOR"; itemCh3Names[HTICK_UPDATE_FACTOR] = "UPF";
+    itemNames[HTICK_UPDATE_MATRIX] = "UPDATE_MATRIX"; itemCh3Names[HTICK_UPDATE_MATRIX] = "UPM";
     itemNames[HTICK_UPDATE_ROW_EP] = "UPDATE_ROW_EP"; itemCh3Names[HTICK_UPDATE_ROW_EP] = "UPR";
     
     reset();
@@ -185,7 +195,7 @@ public:
     //Report for Excel
     printf("grep_excel-profile-name");
     for (int i = 0; i < itemCount; i++) printf(",%s", itemNames[itemList[i]].c_str());
-    printf(",SumTime,");
+    printf(",SumTime");
     printf(",TotalTime\n");
     printf("grep_excel-profile-time");
     for (int i = 0; i < itemCount; i++) printf(",%e", tick2sec*itemTicks[itemList[i]]);
