@@ -416,22 +416,33 @@ void HFactor::buildSimple() {
         int iMat = baseIndex[iCol];
         int iRow = -1;
 
+	// PRINT OUT MRcountb4
+	
         if (iMat >= numCol) {
             // 1.1 Logical column
+
+need to checkk for double pivot here!
+	  
+
+
             iRow = iMat - numCol;
         } else {
             // 1.2 Structural column
             int start = Astart[iMat];
             int count = Astart[iMat + 1] - start;
-            if (count == 1 && Avalue[start] == 1) {
-                iRow = Aindex[start];
+	    int lc_iRow = Aindex[start];
+            if (count == 1 && Avalue[start] == 1 && MRcountb4[lc_iRow] < 0) {
+	      iRow = lc_iRow;
             } else {
-                for (int k = start; k < start + count; k++) {
-                    MRcountb4[Aindex[k]]++;
-                    Bindex[BcountX] = Aindex[k];
-                    Bvalue[BcountX++] = Avalue[k];
-                }
-                iwork[nwork++] = iCol;
+	      if (count == 1 && Avalue[start] == 1) {
+		printf("STRANGE: Found a second unit column with pivot in row %d\n", lc_iRow);
+	      }
+	      for (int k = start; k < start + count; k++) {
+		MRcountb4[Aindex[k]]++;
+		Bindex[BcountX] = Aindex[k];
+		Bvalue[BcountX++] = Avalue[k];
+	      }
+	      iwork[nwork++] = iCol;
             }
         }
 

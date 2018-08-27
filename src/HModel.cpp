@@ -4,11 +4,11 @@
 #include "HPresolve.h"
 
 //Remove FF MPS Read by commenting out lines 1,2,3,5 below
-#ifdef Boost_FOUND
-#include "HMpsFF.h"
-#else
+//#ifdef Boost_FOUND
+//#include "HMpsFF.h"
+//#else
 #include "HMPSIO.h"
-#endif
+//#endif
 #include "HToyIO.h"
 
 #include <cctype>
@@ -67,17 +67,17 @@ int HModel::load_fromMPS(const char *filename)
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
   //Remove FF MPS Read by commenting out lines 1-6 and 11 below
-#ifdef Boost_FOUND
-  int RtCd = readMPS(filename,
-  		     numRow, numCol, objSense, objOffset,
-  		     Astart, Aindex, Avalue,
-  		     colCost, colLower, colUpper, rowLower, rowUpper);
-#else
+  //#ifdef Boost_FOUND
+  //  int RtCd = readMPS(filename,
+  //  		     numRow, numCol, objSense, objOffset,
+  //  		     Astart, Aindex, Avalue,
+  //  		     colCost, colLower, colUpper, rowLower, rowUpper);
+  //#else
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
-#endif
+  //#endif
 
   // for old mps reader uncomment below and the other header file
   // at the top of this file HMpsIO instead of HMpsFF
