@@ -269,7 +269,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 #ifdef H2DEBUG
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
-    int reportList[] = { HTICK_INVERT, HTICK_COMPUTE_DUAL, HTICK_CORRECT_DUAL, HTICK_COMPUTE_PRIMAL, HTICK_COMPUTE_DUOBJ, HTICK_CHUZR1, HTICK_BTRAN,
+    int reportList[] = { HTICK_INVERT, HTICK_PERM_WT, HTICK_COMPUTE_DUAL, HTICK_CORRECT_DUAL, HTICK_COMPUTE_PRIMAL, HTICK_COLLECT_PR_IFS, HTICK_COMPUTE_DUOBJ, HTICK_REPORT_INVERT,
+			 HTICK_CHUZR1, HTICK_BTRAN,
 			 HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4, HTICK_DEVEX_WT, 
 			 HTICK_FTRAN, HTICK_FTRAN_BFRT, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_DEVEX_IZ,
@@ -793,18 +794,26 @@ void HDual::rebuild()
     const int *baseIndex = model->getBaseIndex();
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
+
     // permutation of baseIndex
-    //    model->timer.recordStart(HTICK_PERM_WT);
+    model->timer.recordStart(HTICK_PERM_WT);
     for (int i = 0; i < numRow; i++)
       dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
+    model->timer.recordFinish(HTICK_PERM_WT);
+
     model->timer.recordStart(HTICK_INVERT);
     int rankDeficiency = model->computeFactor();
     model->timer.recordFinish(HTICK_INVERT);
+
     if (rankDeficiency) throw runtime_error("Dual reInvert: singular-basis-matrix");
     // Gather the edge weights according to the
     // permutation of baseIndex after INVERT
+    model->timer.recordStart(HTICK_PERM_WT);
     for (int i = 0; i < numRow; i++)
       dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
+    model->timer.recordFinish(HTICK_PERM_WT);
+
+    // Possibly look at the basis condition
     //		double bsCond = an_bs_cond(model);
   }
   
@@ -823,15 +832,20 @@ void HDual::rebuild()
   model->timer.recordFinish(HTICK_COMPUTE_PRIMAL);
   
   // Collect primal infeasible as a list
+  model->timer.recordStart(HTICK_COLLECT_PR_IFS);
   dualRHS.create_infeasArray();
   dualRHS.create_infeasList(columnDensity);
+  model->timer.recordFinish(HTICK_COLLECT_PR_IFS);
   
   // Compute the objective value
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
   model->computeDuObj(solvePhase);
   model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
+
+  model->timer.recordStart(HTICK_REPORT_INVERT);
   iterateRpInvert(sv_invertHint);
+  model->timer.recordFinish(HTICK_REPORT_INVERT);
   
   total_INVERT_TICK = factor->pseudoTick;
   total_FT_inc_TICK = 0;
@@ -1127,8 +1141,8 @@ void HDual::chooseColumn(HVector *row_ep)
     }
   }
   if (anPriceEr) {
-    bool price_er;
-    price_er = matrix->price_er_ck(row_ap, *row_ep);
+    //    bool price_er =
+    matrix->price_er_ck(row_ap, *row_ep);
     //    if (!price_er) printf("No PRICE error\n");
   }
   double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
@@ -1531,6 +1545,7 @@ void HDual::iz_dvx_fwk()
 {
   //Initialise the Devex framework: reference set is all basic variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
+  //  const int *NonbasicFlag = model->getNonbasicFlag();
   for (int vr_n = 0; vr_n < numTot; vr_n++)
     {
       if (model->getNonbasicFlag()[vr_n])
