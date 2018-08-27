@@ -413,51 +413,53 @@ void HFactor::buildSimple() {
     fill_n(&MRcountb4[0], numRow, 0);
     nwork = 0;
     for (int iCol = 0; iCol < numRow; iCol++) {
-        int iMat = baseIndex[iCol];
-        int iRow = -1;
+      int iMat = baseIndex[iCol];
+      int iRow = -1;
+      if (iMat >= numCol) {
+	// 1.1 Logical column
+	// Check for double pivot
+	int lc_iRow = iMat - numCol;
+	if (MRcountb4[lc_iRow] >= 0) {
+	  iRow = lc_iRow;
+	} else {
+	  printf("STRANGE: Found a logical column with pivot already in row %d\n", lc_iRow);
+	  MRcountb4[lc_iRow]++;
+	  Bindex[BcountX] = lc_iRow;
+	  Bvalue[BcountX++] = 1.0;
+	  iwork[nwork++] = iCol;
+	}
+      } else {
+	// 1.2 Structural column
+	int start = Astart[iMat];
+	int count = Astart[iMat + 1] - start;
+	int lc_iRow = Aindex[start];
+	// Check for unit column with double pivot
+	bool unit_column = count == 1 && Avalue[start] == 1;
+	if (unit_column && MRcountb4[lc_iRow] >= 0) {
+	  iRow = lc_iRow;
+	} else {
+	  if (unit_column) printf("STRANGE: Found a second unit column with pivot in row %d\n", lc_iRow);
+	  for (int k = start; k < start + count; k++) {
+	    MRcountb4[Aindex[k]]++;
+	    Bindex[BcountX] = Aindex[k];
+	    Bvalue[BcountX++] = Avalue[k];
+	  }
+	  iwork[nwork++] = iCol;
+	}
+      }
 
-	// PRINT OUT MRcountb4
-	
-        if (iMat >= numCol) {
-            // 1.1 Logical column
-
-need to checkk for double pivot here!
-	  
-
-
-            iRow = iMat - numCol;
-        } else {
-            // 1.2 Structural column
-            int start = Astart[iMat];
-            int count = Astart[iMat + 1] - start;
-	    int lc_iRow = Aindex[start];
-            if (count == 1 && Avalue[start] == 1 && MRcountb4[lc_iRow] < 0) {
-	      iRow = lc_iRow;
-            } else {
-	      if (count == 1 && Avalue[start] == 1) {
-		printf("STRANGE: Found a second unit column with pivot in row %d\n", lc_iRow);
-	      }
-	      for (int k = start; k < start + count; k++) {
-		MRcountb4[Aindex[k]]++;
-		Bindex[BcountX] = Aindex[k];
-		Bvalue[BcountX++] = Avalue[k];
-	      }
-	      iwork[nwork++] = iCol;
-            }
-        }
-
-        if (iRow >= 0) {
-            // 1.3 Record unit column
-	  //printf("Found unit column (Row, Col) = (%d, %d)\n", Lindex.size(), Uindex.size());
-            permute[iCol] = iRow;
-            Lstart.push_back(Lindex.size());
-            UpivotIndex.push_back(iRow);
-            UpivotValue.push_back(1);
-            Ustart.push_back(Uindex.size());
-            MRcountb4[iRow] = -numRow;
-	    //	    printf("Found unit column (Row, Col) = (%d, %d)\n", iRow, iCol);
-        }
-        Bstart[iCol + 1] = BcountX;
+      if (iRow >= 0) {
+	// 1.3 Record unit column
+	//printf("Found unit column (Row, Col) = (%d, %d)\n", Lindex.size(), Uindex.size());
+	permute[iCol] = iRow;
+	Lstart.push_back(Lindex.size());
+	UpivotIndex.push_back(iRow);
+	UpivotValue.push_back(1);
+	Ustart.push_back(Uindex.size());
+	MRcountb4[iRow] = -numRow;
+	// printf("Found unit column (Row, Col) = (%d, %d)\n", iRow, iCol);
+      }
+      Bstart[iCol + 1] = BcountX;
     }
     BtotalX = numRow - nwork + BcountX;
     pseudoTick += (numRow - nwork) * 2;
