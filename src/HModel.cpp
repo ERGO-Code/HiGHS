@@ -109,7 +109,7 @@ int HModel::load_fromMPS(const char *filename)
 #ifdef H2DEBUG
   //  util_reportModelDa(filename);
 
-  //  util_anMl("Unscaled");
+  util_anMl("Unscaled");
 #endif
 
 
@@ -1709,7 +1709,7 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
-  //  util_anMl("Scaled");
+  util_anMl("Scaled");
 }
 
 void HModel::setup_tightenBound()
@@ -3969,7 +3969,7 @@ void HModel::util_reportSolverOutcome(const char *message)
   printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
          prObjVal, objective, dlObjVal, numberIteration, totalTime);
 #else
-  printf("%16s %20.10e %10d %10.3f", modelName.c_str(),
+  printf("%32s %20.10e %10d %10.3f", modelName.c_str(),
          objective, numberIteration, totalTime);
 #endif
   if (problemStatus == LP_Status_Optimal)
@@ -4458,12 +4458,12 @@ void HModel::util_reportModelDa(const char *filename)
 
 void HModel::util_anMl(const char *message) {
   printf("\n%s model data: Analysis\n", message);
-  util_anVecV("Column costs", numCol, colCost);
-  util_anVecV("Column lower bounds", numCol, colLower);
-  util_anVecV("Column upper bounds", numCol, colUpper);
-  util_anVecV("Row lower bounds", numRow, rowLower);
-  util_anVecV("Row upper bounds", numRow, rowUpper);
-  util_anVecV("Matrix entries", Astart[numCol], Avalue);
+  util_anVecV("Column costs", numCol, colCost, false);
+  util_anVecV("Column lower bounds", numCol, colLower, false);
+  util_anVecV("Column upper bounds", numCol, colUpper, false);
+  util_anVecV("Row lower bounds", numRow, rowLower, false);
+  util_anVecV("Row upper bounds", numRow, rowUpper, false);
+  util_anVecV("Matrix entries", Astart[numCol], Avalue, true);
   util_anMlBd("Column", numCol, colLower, colUpper);
   util_anMlBd("Row", numRow, rowLower, rowUpper);
 }
@@ -4512,10 +4512,10 @@ void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, 
   printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n",numBd,numFr,numLb,numUb,numBx,numFx);
 }
 
-void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {
+void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec, bool anVLs) {
   if (vecDim==0) return;
   double log10 = log(10.0);
-  int nVK = 20;
+  const int nVK = 20;
   int nNz = 0;
   int nPosInfV = 0;
   int nNegInfV = 0;
@@ -4523,6 +4523,20 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {
   vector<int> negVK;
   posVK.resize(nVK+1, 0);
   negVK.resize(nVK+1, 0);
+
+  const int VLsMxZ = 10;
+  vector<int> VLsK;
+  vector<double> VLsV;
+  VLsK.resize(VLsMxZ, 0);
+  VLsV.resize(VLsMxZ, 0);
+  // Ensure that 1.0 and -1.0 are counted
+  const int PlusOneIx = 0;
+  const int MinusOneIx = 1;
+  bool excessVLsV = false;
+  int VLsZ = 2;
+  VLsV[PlusOneIx] =  1.0;
+  VLsV[MinusOneIx] = -1.0;
+
   for (int ix=0; ix<vecDim; ix++) {
     double v = vec[ix];
     double absV = abs(v);
@@ -4558,6 +4572,35 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {
 	}
       }
     }
+    if (anVLs) {
+      if (v == 1.0) {
+	VLsK[PlusOneIx]++;
+      } else if (v == -1.0) {
+	VLsK[MinusOneIx]++;
+      } else {
+	int fdIx = -1;
+	for (int ix = 2; ix<VLsZ; ix++) {
+	  if (v == VLsV[ix]) {
+	    fdIx = ix;
+	    break;
+	  }
+	}
+	if (fdIx == -1) {
+	  // New value
+	  if (VLsZ < VLsMxZ) {
+	    fdIx = VLsZ;
+	    VLsV[fdIx] = v;
+	    VLsK[fdIx]++;
+	    VLsZ++;
+	  } else {
+	    excessVLsV = true;
+	  }
+	} else {
+	  // Existing value
+	  VLsK[fdIx]++;
+	}
+      }
+    }
   }
   printf("%s of dimension %d with %d nonzeros (%3d%%): Analysis\n", message, vecDim, nNz, 100*nNz/vecDim);
   if (nNegInfV > 0) printf("   %7d values are -Inf\n", nNegInfV);
@@ -4575,4 +4618,13 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec) {
   }
   vK = vecDim-nNz;
   if (vK > 0) printf("   %7d values are zero\n", vK);
+  if (anVLs) {
+    printf("           Value distribution:");
+    if (excessVLsV) printf(" More than %d different values", VLsZ);
+    printf("\n           Value    Count\n");
+    for (int ix = 0; ix<VLsZ; ix++) {
+      int pct = ((100.0*VLsK[ix])/vecDim)+0.5;
+      printf("     %11.4g %8d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
+    }
+  }
 }

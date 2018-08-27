@@ -171,13 +171,15 @@ public:
       printf(" %-3s", itemCh3Names[itemList[i]].c_str());
     printf("\n");
     printf("txt-profile-item ");
-    int suPerMille=0;
+    double suPerMille=0;
     for (int i = 0; i < itemCount; i++) {
-      int perMille = 1000.0 * itemTicks[itemList[i]] / totalTick;
-      printf(" %3d", perMille);
+      double perMille = 1000.0 * itemTicks[itemList[i]] / totalTick;
+      int int_PerMille = (perMille+0.5); //Forcing proper rounding
+      printf(" %3d", int_PerMille);
       suPerMille += perMille;
     }
-    printf(" per mille: Sum = %d", suPerMille);
+    int int_suPerMille = suPerMille;
+    printf(" per mille: Sum = %d", int_suPerMille);
     printf("\n");
     printf("txt-profile-time ID: Operation       :    Time            :   Calls   Time/Call\n");
     double tick2sec = 3.6e-10;

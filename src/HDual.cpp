@@ -1361,8 +1361,7 @@ void HDual::updateFtranBFRT()
 
 void HDual::updateFtranDSE(HVector *DSE_Vector)
 {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   model->timer.recordStart(HTICK_FTRAN_DSE);
   
   if (AnIterLg) {
@@ -1379,8 +1378,7 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
 }
 
 void HDual::updateVerify() {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   
   // The alpha
   double aCol = fabs(alpha);
@@ -1411,8 +1409,7 @@ void HDual::updateVerify() {
 
 void HDual::updateDual()
 {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   
   // Update - dual (shift and back)
   if (thetaDual == 0)
@@ -1431,8 +1428,7 @@ void HDual::updateDual()
 
 void HDual::updatePrimal(HVector *DSE_Vector)
 {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   // NB DSE_Vector is only computed if EdWt_Mode == EdWt_Mode_DSE
   // Update - primal and weight
   dualRHS.update_primal(&columnBFRT, 1);
@@ -1488,8 +1484,7 @@ void HDual::updatePrimal(HVector *DSE_Vector)
 }
 
 void HDual::updatePivots() {
-  if (invertHint)
-    return;
+  if (invertHint) return;
   
   // Update - pivots
   model->updatePivots(columnIn, rowOut, sourceOut);
@@ -1545,18 +1540,30 @@ void HDual::iz_dvx_fwk()
 {
   //Initialise the Devex framework: reference set is all basic variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
-  //  const int *NonbasicFlag = model->getNonbasicFlag();
+  const int *NonbasicFlag = model->getNonbasicFlag();
   for (int vr_n = 0; vr_n < numTot; vr_n++)
     {
-      if (model->getNonbasicFlag()[vr_n])
-	//			Nonbasic variables not in reference set
-	dvx_ix[vr_n] = dvx_not_in_R;
-      else
-	//			Basic variables in reference set
-	dvx_ix[vr_n] = dvx_in_R;
+      //      if (model->getNonbasicFlag()[vr_n])
+      //      if (NonbasicFlag[vr_n])
+      //			Nonbasic variables not in reference set
+      //	dvx_ix[vr_n] = dvx_not_in_R;
+      //      else
+      //			Basic variables in reference set
+      //	dvx_ix[vr_n] = dvx_in_R;
+      //
+      // Assume all nonbasic variables have |NonbasicFlag[vr_n]|=1
+      //
+      // NonbasicFlag[vr_n]*NonbasicFlag[vr_n] evaluates faster than abs(NonbasicFlag[vr_n])
+      //
+      //int dvx_ix_o_vr = 1-abs(NonbasicFlag[vr_n]);
+      //
+      int dvx_ix_o_vr = 1-NonbasicFlag[vr_n]*NonbasicFlag[vr_n];
+      dvx_ix[vr_n] = dvx_ix_o_vr;
+      //      if (dvx_ix[vr_n] != dvx_ix_o_vr) printf("%1d = dvx_ix[%6d] != dvx_ix_o_vr = %1d\n", dvx_ix[vr_n], vr_n, dvx_ix_o_vr);
+      
     }
-  for (int i = 0; i < numRow; i++)
-    dualRHS.workEdWt[i] = 1.0;
+  //  for (int i = 0; i < numRow; i++) dualRHS.workEdWt[i] = 1.0;
+  dualRHS.workEdWt.assign(numRow, 1.0);
   n_dvx_it = 0;
   n_dvx_fwk += 1;
   nw_dvx_fwk = false;

@@ -304,7 +304,7 @@ public:
     void util_anPrDuDgn();
     void util_anMl(const char *message);
     void util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper);
-    void util_anVecV(const char *message, int vecDim, vector<double>& vec);
+    void util_anVecV(const char *message, int vecDim, vector<double>& vec, bool anVLs);
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Solving options and scalar solution data section: Sort it out!
