@@ -109,7 +109,7 @@ int HModel::load_fromMPS(const char *filename)
 #ifdef H2DEBUG
   //  util_reportModelDa(filename);
 
-  util_anMl("Unscaled");
+  //  util_anMl("Unscaled");
 #endif
 
 
@@ -1709,7 +1709,7 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
-  util_anMl("Scaled");
+  //  util_anMl("Scaled");
 }
 
 void HModel::setup_tightenBound()
@@ -2467,7 +2467,9 @@ void HModel::correctDual(int *freeInfeasCount)
           problemPerturbed = 1;
           if (nonbasicMove[i] == 1)
           {
-            double dual = (1 + random.dblRandom()) * tau_d;
+	    double random_v = random.dblRandom();
+            double dual = (1 + random_v) * tau_d;
+	    //            double dual = (1 + random.dblRandom()) * tau_d;
             double shift = dual - workDual[i];
             workDual[i] = dual;
             workCost[i] = workCost[i] + shift;

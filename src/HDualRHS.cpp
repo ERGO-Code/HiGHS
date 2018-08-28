@@ -40,6 +40,9 @@ void HDualRHS::setup_partition(const char *filename)
 void HDualRHS::choose_normal(int *chIndex)
 {
   // Moved the following to the top to avoid starting the clock for a trivial call.
+  // NB Must still call intRandom to maintain sequence of random numbers for code reproducibility!!
+  // Never mind if we're not timing the random number call!! 
+  int random = workModel->random.intRandom();
   if (workCount == 0)
     {
       *chIndex = -1;
@@ -50,7 +53,6 @@ void HDualRHS::choose_normal(int *chIndex)
   bool keepTimerRunning = workModel->timer.itemStart[HTICK_CHUZR1] < 0;
   if (!keepTimerRunning) workModel->timer.recordStart(HTICK_CHUZR1);
 
-  int random = workModel->random.intRandom();
   if (workCount < 0)
   {
     // DENSE mode
