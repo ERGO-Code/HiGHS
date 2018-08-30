@@ -276,15 +276,20 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_DEVEX_IZ,
 			 HTICK_UPDATE_PIVOTS, HTICK_UPDATE_FACTOR, HTICK_UPDATE_MATRIX };
     int reportCount = sizeof(reportList) / sizeof(int);
-    model->timer.report(reportCount, reportList);
-    int report_list[] = { HTICK_ITERATE };
-    int report_count = sizeof(report_list) / sizeof(int);
-    model->timer.report(report_count, report_list);
-    int report_iter_list[] = {
-      HTICK_ITERATE_REBUILD, HTICK_ITERATE_CHUZR, HTICK_ITERATE_CHUZC, HTICK_ITERATE_FTRAN, HTICK_ITERATE_VERIFY, HTICK_ITERATE_DUAL, HTICK_ITERATE_PRIMAL, HTICK_ITERATE_DEVEX_IZ, HTICK_ITERATE_PIVOTS
-    };
-    int report_iter_count = sizeof(report_iter_list) / sizeof(int);
-    model->timer.report(report_iter_count, report_iter_list);
+    model->timer.report(reportCount, reportList, 1.0);
+    bool rpIterate = false;
+    if (rpIterate) {
+      int reportList[] = { HTICK_ITERATE };
+      int reportCount = sizeof(reportList) / sizeof(int);
+      model->timer.report(reportCount, reportList, 1.0);
+    }
+    if (rpIterate) {
+      int reportList[] = {
+	HTICK_ITERATE_REBUILD, HTICK_ITERATE_CHUZR, HTICK_ITERATE_CHUZC, HTICK_ITERATE_FTRAN, HTICK_ITERATE_VERIFY, HTICK_ITERATE_DUAL, HTICK_ITERATE_PRIMAL, HTICK_ITERATE_DEVEX_IZ, HTICK_ITERATE_PIVOTS
+      };
+      int reportCount = sizeof(reportList) / sizeof(int);
+      model->timer.report(reportCount, reportList, 1.0);
+    }
   }
   
   if (dual_variant == HDUAL_VARIANT_TASKS) {
@@ -294,7 +299,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR, HTICK_GROUP1, HTICK_GROUP2 };
     int reportCount = sizeof(reportList) / sizeof(int);
-    model->timer.report(reportCount, reportList);
+    model->timer.report(reportCount, reportList, 1.0);
   }
   
   if (dual_variant == HDUAL_VARIANT_MULTI) {
@@ -304,7 +309,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 			 HTICK_UPDATE_FACTOR, HTICK_UPDATE_ROW_EP };
     int reportCount = sizeof(reportList) / sizeof(int);
-    model->timer.report(reportCount, reportList);
+    model->timer.report(reportCount, reportList, 1.0);
     printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
 	   model->modelName.c_str(), model->dblOption[DBLOPT_PAMI_CUTOFF],
 	   model->numberIteration / (1.0 + multi_iteration));
@@ -2051,7 +2056,7 @@ void HDual::iterateAn() {
 	//			     HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
 	//			     HTICK_UPDATE_FACTOR };
 	//	int reportCount = sizeof(reportList) / sizeof(int);
-	//	model->timer.report(reportCount, reportList);
+	//	model->timer.report(reportCount, reportList, 1.0);
         iterateRpBrief(true);
         iterateRpBrief(false);
 	}
@@ -2184,42 +2189,43 @@ void HDual::iterateRpAn() {
   }
   lcAnIter->AnIterTraceEdWt_Mode = EdWt_Mode;
   
-  printf("\n Iteration speed analysis\n");
-  lcAnIter = &AnIterTrace[0];
-  int fmIter = lcAnIter->AnIterTraceIter;
-  double fmTime = lcAnIter->AnIterTraceTime;
-  printf("   Iter ( FmIter: ToIter)     Time Iter/sec |  Col R_Ep R_Ap  DSE | EdWt | Aux0\n");
-  for (int rec = 1; rec<=AnIterTraceNumRec; rec++) {
-    lcAnIter = &AnIterTrace[rec];
-    int toIter = lcAnIter->AnIterTraceIter;
-    double toTime = lcAnIter->AnIterTraceTime;
-    int dlIter = toIter-fmIter;
-    if (rec<AnIterTraceNumRec && dlIter != AnIterTraceIterDl)
-      printf("STRANGE: %d = dlIter != AnIterTraceIterDl = %d\n", dlIter, AnIterTraceIterDl);
-    double dlTime = toTime-fmTime;
-    int iterSpeed = 0;
-    if (dlTime>0) iterSpeed = dlIter/dlTime;
-    int lcEdWt_Mode = lcAnIter->AnIterTraceEdWt_Mode;
-    int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran]);
-    int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran]);
-    int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Price]);
-    int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
-    int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
-    string strEdWt_Mode;
-    if (lcEdWt_Mode == EdWt_Mode_DSE) strEdWt_Mode = "DSE";
-    else if (lcEdWt_Mode == EdWt_Mode_Dvx) strEdWt_Mode = "Dvx";
-    else if (lcEdWt_Mode == EdWt_Mode_Dan) strEdWt_Mode = "Dan";
-    else strEdWt_Mode = "XXX";					
-    
-    printf("%7d (%7d:%7d) %8.4f  %7d | %4d %4d %4d %4d |  %3s | %4d\n",
-	   dlIter, fmIter, toIter,
-	   dlTime, iterSpeed,
-	   l10ColDse, l10REpDse, l10RapDse, l10DseDse,
-	   strEdWt_Mode.c_str(), l10Aux0);
-    fmIter = toIter;
-    fmTime = toTime;
+  if (AnIterTraceIterDl >= 100) {
+    printf("\n Iteration speed analysis\n");
+    lcAnIter = &AnIterTrace[0];
+    int fmIter = lcAnIter->AnIterTraceIter;
+    double fmTime = lcAnIter->AnIterTraceTime;
+    printf("   Iter ( FmIter: ToIter)     Time Iter/sec |  Col R_Ep R_Ap  DSE | EdWt | Aux0\n");
+    for (int rec = 1; rec<=AnIterTraceNumRec; rec++) {
+      lcAnIter = &AnIterTrace[rec];
+      int toIter = lcAnIter->AnIterTraceIter;
+      double toTime = lcAnIter->AnIterTraceTime;
+      int dlIter = toIter-fmIter;
+      if (rec<AnIterTraceNumRec && dlIter != AnIterTraceIterDl)
+	printf("STRANGE: %d = dlIter != AnIterTraceIterDl = %d\n", dlIter, AnIterTraceIterDl);
+      double dlTime = toTime-fmTime;
+      int iterSpeed = 0;
+      if (dlTime>0) iterSpeed = dlIter/dlTime;
+      int lcEdWt_Mode = lcAnIter->AnIterTraceEdWt_Mode;
+      int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran]);
+      int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran]);
+      int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Price]);
+      int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
+      int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
+      string strEdWt_Mode;
+      if (lcEdWt_Mode == EdWt_Mode_DSE) strEdWt_Mode = "DSE";
+      else if (lcEdWt_Mode == EdWt_Mode_Dvx) strEdWt_Mode = "Dvx";
+      else if (lcEdWt_Mode == EdWt_Mode_Dan) strEdWt_Mode = "Dan";
+      else strEdWt_Mode = "XXX";					
+      printf("%7d (%7d:%7d) %8.4f  %7d | %4d %4d %4d %4d |  %3s | %4d\n",
+	     dlIter, fmIter, toIter,
+	     dlTime, iterSpeed,
+	     l10ColDse, l10REpDse, l10RapDse, l10DseDse,
+	     strEdWt_Mode.c_str(), l10Aux0);
+      fmIter = toIter;
+      fmTime = toTime;
+    }
+    printf("\n");
   }
-  printf("\n");
 }
 
 void HDual::iterateRp() {

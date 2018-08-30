@@ -729,7 +729,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
   double solveTime = 0;
   double postsolveTime = 0;
   int solveIt = 0;
-#ifdef JAJH_dev
+#ifdef H2DEBUG
   int solvePh1DuIt = 0;
   int solvePh2DuIt = 0;
   int solvePrIt = 0;
@@ -804,7 +804,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
     solveTime += lcSolveTime;
     solveIt += model.numberIteration;
     model.util_reportSolverOutcome("After presolve:  ");
-#ifdef JAJH_dev
+#ifdef H2DEBUG
     solvePh1DuIt += solver.n_ph1_du_it;
     solvePh2DuIt += solver.n_ph2_du_it;
     solvePrIt += solver.n_pr_it;
@@ -819,7 +819,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
     if (model.usingImpliedBoundsPresolve)
     {
     //		Recover the true bounds overwritten by the implied bounds
-#ifdef JAJH_dev
+#ifdef H2DEBUG
       printf("\nRecovering bounds after using implied bounds and resolving\n");
 #endif
       if (model.problemStatus != LP_Status_OutOfTime)
@@ -833,7 +833,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
         solveTime += lcSolveTime;
         solveIt += model.numberIteration;
         model.util_reportSolverOutcome("After recover:   ");
-#ifdef JAJH_dev
+#ifdef H2DEBUG
         solvePh1DuIt += solver.n_ph1_du_it;
         solvePh2DuIt += solver.n_ph2_du_it;
         solvePrIt += solver.n_pr_it;
@@ -849,7 +849,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
     if (model.problemStatus != LP_Status_OutOfTime)
     {
 
-#ifdef JAJH_dev
+#ifdef H2DEBUG
       printf("\nPostsolving\n");
 #endif
       model.timer.reset();
@@ -871,11 +871,11 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
       postsolveTime += model.timer.getTime();
       // Save the solved results
       model.totalTime += model.timer.getTime();
-#ifdef JAJH_dev
+#ifdef H2DEBUG
       model.util_reportModelSolution();
 #endif
 
-#ifdef JAJH_dev
+#ifdef H2DEBUG
       printf("\nBefore solve after Postsolve\n");
       cout << flush;
 #endif
@@ -885,7 +885,7 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
       solveTime += lcSolveTime;
       solveIt += model.numberIteration;
       model.util_reportSolverOutcome("After postsolve: ");
-#ifdef JAJH_dev
+#ifdef H2DEBUG
       solvePh1DuIt += solver.n_ph1_du_it;
       solvePh2DuIt += solver.n_ph2_du_it;
       solvePrIt += solver.n_pr_it;

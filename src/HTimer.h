@@ -164,7 +164,7 @@ public:
   }
 
   // Report specific items in the list
-  void report(int itemCount, int *itemList) {
+  void report(int itemCount, int *itemList, double tlPerCentReport) {
     double totalTick = getTick();
     printf("txt-profile-name ");
     for (int i = 0; i < itemCount; i++)
@@ -192,8 +192,10 @@ public:
       double perCent = 100.0 * tick / totalTick;
       double tiPerCall = 0;
       if (itemNumCall[item]>0) tiPerCall = ti/itemNumCall[item];
-      printf("txt-profile-time %2d: %-16s: %11.4e (%4.1f%%): %7d %11.4e\n",
-	     item, itemNames[item].c_str(), ti, perCent, itemNumCall[item], tiPerCall);
+      if (perCent>=tlPerCentReport) {
+	printf("txt-profile-time %2d: %-16s: %11.4e (%4.1f%%): %7d %11.4e\n",
+	       item, itemNames[item].c_str(), ti, perCent, itemNumCall[item], tiPerCall);
+      }
       suTi += ti;
       suTick += tick;
     }
