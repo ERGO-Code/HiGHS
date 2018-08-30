@@ -1,4 +1,4 @@
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 #include "HTester.h"
 #include "HTimer.h"
 

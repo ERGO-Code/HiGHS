@@ -41,8 +41,10 @@ const double tl_crsh_rlv_pv_v = 1e-2;
 const bool OneD_hdr = false;
 const bool TwoD_hdr = true;
 const int ltssf_ck_fq = 0;
+#ifdef HiGHSDEV
 const bool Rp_TwoD_da = false;
 const bool Rp_Bixby_Ps = false;
+#endif
 
 class HCrash
 {
@@ -56,7 +58,9 @@ public:
   void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
   void crsh_rp_r_c_st(int mode, int Crash_Mode);
   string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
+#ifdef HiGHSDEV
   void crsh_ck_an_impl_bd();
+#endif
   void ltssf(HModel *ptr_model, int Crash_Mode);
   void ltssf_iz_mode(int Crash_Mode);
   void ltssf_iz_da(HModel *ptr_model, int Crash_Mode);
@@ -64,7 +68,9 @@ public:
   void ltssf_u_da(HModel *ptr_model);
   void ltssf_u_da_af_bs_cg(HModel *ptr_model);
   void ltssf_u_da_af_no_bs_cg();
+#ifdef HiGHSDEV
   void ltssf_ck_da();
+#endif
   void ltssf_cz_r();
   void ltssf_cz_c(HModel *ptr_model);
   void ltssf_rp_r_k();
@@ -73,7 +79,9 @@ public:
   void build_maxheap(double *heap_v, int *heap_i, int n);
   void heapsort(double *heap_v, int *heap_i, int n);
   void max_heapify(double *heap_v, int *heap_i, int i, int n);
+#ifdef HiGHSDEV
   void tsSing(HModel *ptr_model);
+#endif
   // Model
   HModel *model;
 

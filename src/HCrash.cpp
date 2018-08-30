@@ -30,17 +30,15 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
   numRow = model->getNumRow();
   numCol = model->getNumCol();
   numTot = model->getNumTot();
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
   const int objSense = model->getObjSense();
-  if (abs(objSense) != 1)
-    printf("HCrash::crash: objSense = %d has not been set\n", objSense);
-  cout << flush;
+  if (abs(objSense) != 1) {printf("HCrash::crash: objSense = %d has not been set\n", objSense); cout << flush;}
   assert(abs(objSense) == 1);
 #endif
   bool HaveImpliedBounds = model->impliedBoundsPresolve;
   //bool HaveImpliedBounds = Presolve_Mode == Presolve_Mode_On;
   //	printf("HaveImpliedBounds = %d\n", HaveImpliedBounds);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   if (HaveImpliedBounds)
   {
     crsh_ck_an_impl_bd();
@@ -51,15 +49,17 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
   if (HaveImpliedBounds && Crash_Mode == Crash_Mode_Dev)
   {
   //		Overwrite the true bounds by the implied bounds
-#ifdef JAJH_dev
-    printf("Over-writing bounds with implied bounds\n");
-#else
+#ifdef HiGHSDEV
     printf("Over-writing bounds with implied bounds\n");
 #endif
     model->copy_impliedBoundsToModelBounds();
   }
 
-  if (Crash_Mode == Crash_Mode_Bs || Crash_Mode == Crash_Mode_TsSing) {
+  if (Crash_Mode == Crash_Mode_Bs
+#ifdef HiGHSDEV
+      || Crash_Mode == Crash_Mode_TsSing
+#endif
+      ) {
     crsh_f_vr_ty = crsh_vr_ty_non_bc;
     crsh_l_vr_ty = crsh_vr_ty_bc;
     crsh_mn_pri_v = crsh_vr_ty_non_bc;
@@ -77,10 +77,12 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
   {
     bixby(ptr_model, Crash_Mode);
   }
+#ifdef HiGHSDEV
   else if (Crash_Mode == Crash_Mode_TsSing)
     {
       tsSing(ptr_model);
     }
+#endif
   else
     {
       ltssf(ptr_model, Crash_Mode);
@@ -109,7 +111,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
   bixby_mu_a = 0.99;
   bixby_mu_b = 0.01;
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("\nBixby Crash");
   if (bixby_no_nz_c_co)
     printf(": No basic columns with nonzero costs\n");
@@ -138,9 +140,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
         }
       }
     }
-#ifdef JAJH_dev
-    if (Rp_Bixby_Ps)
-      printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
+#ifdef HiGHSDEV
+    if (Rp_Bixby_Ps) printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
              ps_n, c_n, c_mx_abs_v, aa, aa / c_mx_abs_v);
 #endif
     //		Scale aa by the max |entry| in the column since CPLEX assumes the
@@ -149,7 +150,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     bool nx_ps = false;
     if (aa >= bixby_mu_a)
     {
-#ifdef JAJH_dev
+#ifdef HiGHSDEBUG
       assert(r_o_mx_aa >= 0);
 #endif
       //			Column pv_c_n becomes basic in row pv_r_n
@@ -166,7 +167,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
         bixby_r_k[Aindex[el_n]] += 1;
       }
       bixby_n_cdd_r -= 1;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       if (Rp_Bixby_Ps)
         printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
 #endif
@@ -175,7 +176,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     else
     {
     //			Find out if there is some row l for which |entry| > bixby_mu_b * v_l
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       double rp_v;
 #endif
       for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++)
@@ -185,20 +186,14 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
         nx_ps = abs(Avalue[el_n]) > bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
         if (nx_ps)
         {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
           rp_v = abs(Avalue[el_n]) / (bixby_pseudo_pv_v[r_n] * c_mx_abs_v);
 #endif
           break;
         }
       }
-#ifdef JAJH_dev
-      if (nx_ps)
-      {
-        if (Rp_Bixby_Ps)
-        {
-          printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
-        }
-      }
+#ifdef HiGHSDEV
+      if (nx_ps && Rp_Bixby_Ps) printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
 #endif
     }
     //		Some value in the column would give an unacceptable multiplier so continue to next pass
@@ -223,8 +218,9 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     //		If there is no entry in a row with no pivot then continue to next pass
     if (r_o_mx_aa == no_ix)
     {
-      if (Rp_Bixby_Ps)
-        printf(": No entry in a row with no pivot\n");
+#ifdef HiGHSDEV
+      if (Rp_Bixby_Ps) printf(": No entry in a row with no pivot\n");
+#endif
       continue;
     }
     //		Scale aa by the max |entry| in the column since CPLEX assumes the
@@ -244,9 +240,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
       bixby_r_k[Aindex[el_n]] += 1;
     }
     bixby_n_cdd_r -= 1;
-#ifdef JAJH_dev
-    if (Rp_Bixby_Ps)
-      printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
+#ifdef HiGHSDEV
+    if (Rp_Bixby_Ps) printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
 #endif
     if (bixby_n_cdd_r == 0)
       break;
@@ -365,12 +360,12 @@ bool HCrash::bixby_iz_da(HModel *ptr_model)
   bixby_r_k.resize(numRow);
   //	bixby_ze_r_k.resize(numRow);
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   crsh_an_c_co(ptr_model);
 #endif
   crsh_iz_vr_ty(ptr_model, Crash_Mode_Bixby);
 
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode_Bixby);
 #endif
 
@@ -448,7 +443,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model)
     }
     os += 1 + n_en;
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("%5d Free    cols (%1d)\n", n_en, crsh_vr_ty_fr);
   //	printf("%5d Free    cols (%1d): from %5d to %5d\n", n_en, crsh_vr_ty_fr, os-n_en, os-1);
 #endif
@@ -485,7 +480,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model)
     }
     os += 1 + n_en;
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("%5d 1-sided cols (%1d)\n", n_en, crsh_vr_ty_1_sd);
   //	printf("%5d 1-sided cols (%1d): from %5d to %5d\n", n_en, crsh_vr_ty_1_sd, os-n_en, os-1);
 #endif
@@ -515,7 +510,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model)
     }
     os += 1 + n_en;
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("%5d 2-sided cols (%1d)\n", n_en, crsh_vr_ty_2_sd);
   //	printf("%5d 2-sided cols (%1d): from %5d to %5d\n", n_en, crsh_vr_ty_2_sd, os-n_en, os-1);
 #endif
@@ -545,7 +540,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model)
     }
     os += 1 + n_en;
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("%5d Fixed   cols (%1d)\n", n_en, crsh_vr_ty_fx);
   //	printf("%5d Fixed   cols (%1d): from %5d to %5d\n", n_en, crsh_vr_ty_fx, os-n_en, os-1);
 
@@ -754,7 +749,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode)
     }
   }
 
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
   crsh_rp_r_c_st(1, Crash_Mode);
   crsh_rp_r_c_st(2, Crash_Mode);
   printf(" Basis    matrix    contains%7d structural entries\n",
@@ -766,7 +761,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode)
 void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
 {
   string TyNm;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   int ck_su_n_c = 0;
   int ck_su_n_r = 0;
   int ck_su_n_bc_vr = 0;
@@ -798,7 +793,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
 	TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
 	if (mode == 0)
 	  {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 	    ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
 #endif
 	    int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
@@ -819,7 +814,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
 	  }
 	else if (mode == 2)
 	  {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 	    ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
 	    ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
 	    ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
@@ -856,7 +851,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
       }
     if (ps_n == 1) printf("\n");
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   if (mode == 0)
     assert(ck_su_n_r == numRow);
   if (mode == 2)
@@ -869,7 +864,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
     for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++)
     {
       TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       if (mode == 0)
         ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
 #endif
@@ -887,7 +882,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
                  (100 * crsh_vr_ty_add_n_c[vr_ty]) / crsh_vr_ty_og_n_c[vr_ty]);
       }
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     if (mode == 0)
       assert(ck_su_n_c == numCol);
 #endif
@@ -918,6 +913,7 @@ string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode) {
   return TyNm;
 }
 
+#ifdef HiGHSDEV
 void HCrash::crsh_ck_an_impl_bd()
 {
   const double *colLower = model->getcolLower();
@@ -1200,6 +1196,7 @@ void HCrash::crsh_ck_an_impl_bd()
     printf("\nModel has no slacker implied bounds\n\n");
   }
 }
+#endif
 
 void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
 {
@@ -1258,7 +1255,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
 
   mn_co_tie_bk = false;
 
-  //  model->mlFg_Report();
+  //  model->mlFg_Report(); cout << flush;
 
   numRow = model->getNumRow();
   numCol = model->getNumCol();
@@ -1286,7 +1283,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
   //    const double *rowUpper = model->getrowUpper();
 
   ltssf_iz_da(ptr_model, Crash_Mode);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("\nLTSSF Crash\n");
   printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
   printf(" crsh_fn_cf_k = %d\n", crsh_fn_cf_k);
@@ -1309,7 +1306,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
 #endif
   if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v))
   {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf(
         "Max row priority of %d + Max col priority of %d = %d <= %d: no value in performing LTSSF crash\n",
         mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
@@ -1321,18 +1318,17 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
     //		if (crsh_act_r[r_n] != 0)
     //			printf("Row %2d , Pri = %1d; K = %2d\n", r_n, crsh_r_ty_pri_v[crsh_r_ty[r_n]], crsh_r_k[r_n]);
     //	}
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   if (ltssf_ck_fq > 0)
   {
     printf("\nCHECKING LTSSF DATA NOW AND EVERY %d PASS(ES)!!\n\n",
            ltssf_ck_fq);
     ltssf_ck_da();
   }
+  if (Rp_TwoD_da) ltssf_rp_pri_k_da();
 #endif
-  if (Rp_TwoD_da)
-    ltssf_rp_pri_k_da();
 
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode);
 #endif
   ltssf_iterate(ptr_model);
@@ -1344,9 +1340,8 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
     for (int c_n = 0; c_n < numCol; c_n++) printf("Col %4d has nonbasic flag = %1d\n", c_n, nonbasicFlag[c_n]);
   }
   */
-#ifdef H2DEBUG
-  printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
-         n_crsh_ps);
+#ifdef HiGHSDEV
+  printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow, n_crsh_ps);
   printf(
       " Absolute tolerance (%6.4f): Rejected %7d pivots: min absolute pivot value = %6.4e\n",
       tl_crsh_abs_pv_v, n_abs_pv_no_ok, mn_abs_pv_v);
@@ -1384,9 +1379,10 @@ void HCrash::ltssf_iterate(HModel *ptr_model)
     bool bs_cg = cz_c_n != no_ix;
     if (bs_cg)
     {
-      if (Rp_TwoD_da)
-        printf("Pass %2d; cz_r = %2d; cz_c = %2d\n", n_crsh_ps, cz_r_n,
-               cz_c_n);
+#ifdef HiGHSDEV
+      if (Rp_TwoD_da) printf("Pass %2d; cz_r = %2d; cz_c = %2d\n", n_crsh_ps, cz_r_n, cz_c_n);
+#endif
+      
       //			A basis change has occurred
       n_crsh_bs_cg += 1;
       double abs_pv_v = abs(pv_v);
@@ -1409,21 +1405,23 @@ void HCrash::ltssf_iterate(HModel *ptr_model)
     }
     else
     {
-      if (Rp_TwoD_da)
-        printf("Pass %2d; cz_r = %2d: No basis change\n", n_crsh_ps, cz_r_n);
+#ifdef HiGHSDEV
+      if (Rp_TwoD_da) printf("Pass %2d; cz_r = %2d: No basis change\n", n_crsh_ps, cz_r_n);
+#endif
     }
-    if (Rp_TwoD_da)
-      ltssf_rp_pri_k_da();
+#ifdef HiGHSDEV
+    if (Rp_TwoD_da) ltssf_rp_pri_k_da();
+#endif
     ltssf_u_da(ptr_model);
     //for (int r_n = 0; r_n < numRow; r_n++) {
     //if (crsh_act_r[r_n] != 0)
     //printf("Row %2d , Pri = %1d; K = %2d\n", r_n, crsh_r_ty_pri_v[crsh_r_ty[r_n]], crsh_r_k[r_n]);
     //}
     //Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
-    if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0))
-      ltssf_ck_da();
-    if (Rp_TwoD_da)
-      ltssf_rp_pri_k_da();
+#ifdef HiGHSDEV
+    if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
+    if (Rp_TwoD_da) ltssf_rp_pri_k_da();
+#endif
     if (TwoD_hdr)
     {
       //			Determine whether the are still rows worth removing
@@ -1760,13 +1758,12 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model)
           r_k += 1;
         }
         int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
-        if (Rp_TwoD_da)
-        {
+#ifdef HiGHSDEV
+        if (Rp_TwoD_da) {
           ltssf_rp_pri_k_da();
-          printf(
-              "1: Remove row %d of pri %d from linked list with %d entries\n",
-              r_n, pri_v, r_k);
+          printf("1: Remove row %d of pri %d from linked list with %d entries\n", r_n, pri_v, r_k);
         }
+#endif
         int hdr_ix = pri_v * (numCol + 1) + r_k;
         //     Remove the row from the linked list with this number of active entries
         int prev_r_n;
@@ -1805,13 +1802,12 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model)
         if (r_k > 0)
         {
           //     ... either add the row as the header of the list with one fewer number of active entries...
-          if (Rp_TwoD_da)
-          {
+#ifdef HiGHSDEV
+          if (Rp_TwoD_da) {
             ltssf_rp_pri_k_da();
-            printf(
-                "Add row %d of pri %d to linked list with %d entries\n",
-                r_n, pri_v, r_k);
+            printf("Add row %d of pri %d to linked list with %d entries\n", r_n, pri_v, r_k);
           }
+#endif
           int hdr_ix = pri_v * (numCol + 1) + r_k;
           nx_r_n = crsh_r_pri_k_hdr[hdr_ix];
           crsh_r_pri_k_hdr[hdr_ix] = r_n;
@@ -1826,13 +1822,12 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model)
         }
         else
         {
-          if (Rp_TwoD_da)
-          {
+#ifdef HiGHSDEV
+          if (Rp_TwoD_da) {
             ltssf_rp_pri_k_da();
-            printf(
-                "2: Remove row %d of pri %d and count %d from active submatrix\n",
-                r_n, pri_v, r_k);
-          }
+            printf("2: Remove row %d of pri %d and count %d from active submatrix\n", r_n, pri_v, r_k);
+	  }
+#endif
           //     ...or, if the count is zero, the row leaves the active submatrix...
           crsh_act_r[r_n] = crsh_vr_st_no_act;
           //     ... and has already left the priority value and count data structure
@@ -2222,11 +2217,10 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode)
   //	printf("ltssf_iz_da complete\n");cout<<flush;
 }
 
+#ifdef HiGHSDEV
 void HCrash::ltssf_ck_da()
 {
-#ifdef JAJH_dev
   bool er_fd = false;
-#endif
   if (OneD_hdr)
   {
     for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++)
@@ -2243,9 +2237,7 @@ void HCrash::ltssf_ck_da()
         int ck_pri_v = crsh_r_ty_pri_v[r_ty];
         if (ck_pri_v != pri_v)
         {
-#ifdef JAJH_dev
           er_fd = true;
-#endif
           printf(
               "ERROR: Row %d: Type %d has priority value error %d; %d\n",
               r_n, r_ty, ck_pri_v, pri_v);
@@ -2255,9 +2247,7 @@ void HCrash::ltssf_ck_da()
         {
           if (crsh_r_pri_lkb[nx_r_n] != r_n)
           {
-#ifdef JAJH_dev
             er_fd = true;
-#endif
             printf(
                 "ERROR: Row %d: Type %d has back link error %d; %d\n",
                 r_n, r_ty, nx_r_n, crsh_r_pri_lkf[r_n]);
@@ -2284,9 +2274,7 @@ void HCrash::ltssf_ck_da()
           }
           if (ck_k != k)
           {
-#ifdef JAJH_dev
             er_fd = true;
-#endif
             printf(
                 "ERROR: Row %d has number of entries error: True = %d; Updated = %d\n",
                 r_n, ck_k, k);
@@ -2296,9 +2284,7 @@ void HCrash::ltssf_ck_da()
           {
             if (crsh_r_k_lkb[nx_r_n] != r_n)
             {
-#ifdef JAJH_dev
               er_fd = true;
-#endif
               printf(
                   "ERROR: Row %d: Count %d has back link error nx_r_n = %d; crsh_r_k_lkf[r_n] = %d\n",
                   r_n, k, nx_r_n, crsh_r_k_lkf[r_n]);
@@ -2325,9 +2311,7 @@ void HCrash::ltssf_ck_da()
       }
       if (ck_k != k)
       {
-#ifdef JAJH_dev
         er_fd = true;
-#endif
         printf(
             "ERROR: Row %d has number of entries error: True = %d; Updated = %d\n",
             r_n, ck_k, k);
@@ -2347,9 +2331,7 @@ void HCrash::ltssf_ck_da()
           int ck_pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
           if (ck_pri_v != pri_v)
           {
-#ifdef JAJH_dev
             er_fd = true;
-#endif
             printf(
                 "ERROR: Row %d has ck_pri_v = %d but pri_v = %d\n",
                 r_n, ck_pri_v, pri_v);
@@ -2357,9 +2339,7 @@ void HCrash::ltssf_ck_da()
           int ck_k = crsh_r_k[r_n];
           if (ck_k != k)
           {
-#ifdef JAJH_dev
             er_fd = true;
-#endif
             printf("ERROR: Row %d has ck_k = %d but k = %d\n", r_n,
                    ck_k, k);
           }
@@ -2369,9 +2349,7 @@ void HCrash::ltssf_ck_da()
             int prev_nx_r_n = crsh_r_pri_k_lkb[nx_r_n];
             if (prev_nx_r_n != r_n)
             {
-#ifdef JAJH_dev
               er_fd = true;
-#endif
               printf(
                   "ERROR: Back link error for nx_r_n = %d: prev_nx_r_n = %d but r_n = %d\n",
                   nx_r_n, prev_nx_r_n, r_n);
@@ -2389,17 +2367,12 @@ void HCrash::ltssf_ck_da()
       crsh_r_pri_mn_r_k[pri_v] = mn_r_k;
     }
   }
-#ifdef JAJH_dev
   if (er_fd)
-  {
     printf("Error in LTSSF data\n");
-  }
   else
-  {
-    //printf("No error in LTSSF data\n");
-  }
-#endif
+    printf("No error in LTSSF data\n");
 }
+#endif
 
 void HCrash::ltssf_rp_r_pri()
 {
@@ -2583,12 +2556,11 @@ void HCrash::max_heapify(double *heap_v, int *heap_i, int i, int n)
   return;
 }
 
+#ifdef HiGHSDEV
 void HCrash::tsSing(HModel *ptr_model)
 {
   model = ptr_model;
-#ifdef JAJH_dev
   printf("\nTesting singularity Crash\n");
-#endif
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
   // of basic variables reaches numRow
@@ -2605,3 +2577,4 @@ void HCrash::tsSing(HModel *ptr_model)
     if (nBcVr == numRow) break;
   }
 }
+#endif

@@ -13,7 +13,7 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
     numRow = model->getNumRow();
     numTot = model->getNumTot();
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("************************************\nPerforming primal simplex iterations\n************************************\n");
 #endif
     // Setup update limits
@@ -58,7 +58,7 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
 	    }
 	    //	    printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n", model->numberIteration, model->objective);
 	    if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
 	      printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
 	      model->problemStatus = LP_Status_ObjUB;
@@ -93,7 +93,7 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
 
 void HPrimal::primalRebuild() {
     model->recordPivots(-1, -1, 0); // Indicate REINVERT
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     //    double tt0 = model->timer.getTime();
 #endif
     double tt0 = model->timer.getTime();
@@ -125,7 +125,7 @@ void HPrimal::primalRebuild() {
     double rebuildTime = model->timer.getTime()-tt0;
     totalRebuilds++;
     totalRebuildTime += rebuildTime;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("Primal     rebuild %d (%1d) on iteration %9d: Rebuild time = %g; Total rebuild time %g\n",
 	   totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime, totalRebuildTime);
 #endif

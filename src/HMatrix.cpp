@@ -68,7 +68,7 @@ void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
   }
   //Initialise the density of the Price result
   //  row_apDensity = 0;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   assert(setup_ok(nonbasicFlag_));
 #endif
 }

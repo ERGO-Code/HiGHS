@@ -55,7 +55,7 @@ int readMPS_dense_cpp(const char *filename, int mxNumRow, int mxNumCol,
   (*numCol_p) = numCol;
   (*objSense_p) = objSense;
   (*objOffset_p) = objOffset;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS_dense_cpp: Model has %d rows and %d columns\n", numRow, numCol);
     printf("readMPS_dense_cpp: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
 #endif
@@ -98,7 +98,7 @@ int readMPS_dense(const char *filename, int mxNumRow, int mxNumCol,
 			    rhs, cost, lb, ub,
 			    integerColumn);
   if (rtCd) return rtCd;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("readMPS_dense: Model has %d rows and %d columns\n", numRow, numCol);
   printf("readMPS_dense: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
 #endif
@@ -134,7 +134,7 @@ int readMPS_sparse(const char *filename, int mxNumRow, int mxNumCol,
 		     integerColumn);
   if (rtCd) return rtCd;
     
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("readMPS_sparse: Model has %d rows, %d columns and %d nonzeros\n", numRow, numCol, Astart[numCol]);
 #endif
   //Convert
@@ -198,17 +198,17 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     //Astart.clear() added since setting Astart.push_back(0) in
     //setup_clearModel() messes up the MPS read
     Astart.clear();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Trying to open file %s\n", filename);
 #endif
     FILE *file = fopen(filename, "r");
     if (file == 0) {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("readMPS: Not opened file OK\n");
 #endif
       return 1;
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Opened file  OK\n");
 #endif
     // Input buffer
@@ -222,7 +222,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     // Load NAME and ROWS
     load_mpsLine(file, integerCol, lmax, line, flag, data);
     load_mpsLine(file, integerCol, lmax, line, flag, data);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Read NAME    OK\n");
 #endif
 
@@ -238,7 +238,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
 	rowIndex[data[1]] = numRow++;
       }
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Read ROWS    OK\n");
 #endif
 
@@ -263,7 +263,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
     }
     Astart.push_back(Aindex.size());
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Read COLUMNS OK\n");
 #endif
 
@@ -276,14 +276,14 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
       } else {
 	//        	Strictly, if there is a RHS entry for the N row, it is an objective offset
 	//        	However, the reported objective values for problems (eg e226) ignore this
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 	printf("RHS for N-row in MPS file implies objective offset of %g: ignoring this!\n", data[0]);
 #endif
 	//            objOffset = data[0]; // Objective offset
 	objOffset = 0;
       }
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Read RHS     OK\n");
 #endif
 
@@ -327,7 +327,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
 	break;
       }
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Read RANGES  OK\n");
 #endif
 
@@ -374,7 +374,7 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
       }
     }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Read BOUNDS  OK\n");
     printf("readMPS: Read ENDATA  OK\n");
     printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow, numCol, integerCol);
@@ -480,7 +480,7 @@ int writeMPS_dense_cpp(const char *filename, int* numRow_p, int* numCol_p, int* 
   numCol = (*numCol_p);
   objSense = (*objSense_p);
   objOffset = (*objOffset_p);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("writeMPS_dense_cpp: Model has %d rows and %d columns\n", numRow, numCol);
   printf("writeMPS_dense_cpp: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
 #endif
@@ -517,7 +517,7 @@ int writeMPS_dense(const char *filename, int& numRow, int& numCol, int& objSense
 		   vector<double>& A_cw,
 		   vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
 		   vector<int>& integerColumn) {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("writeMPS_dense: Model has %d rows and %d columns\n", numRow, numCol);
   printf("writeMPS_dense: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
   cout<<flush;
@@ -570,7 +570,7 @@ int writeMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSens
   vector<double> rowLower;
   vector<double> rowUpper;
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("writeMPS_sparse: Model has %d rows, %d columns and  nonzeros\n", numRow, numCol);//, Astart[numCol]);
   cout<<flush;
 #endif
@@ -602,17 +602,17 @@ int writeMPS(const char *filename, int& numRow, int& numCol, int& objSense, doub
 	     vector<double>& rowLower, vector<double>& rowUpper,
 	     vector<int>& integerColumn) {
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("writeMPS: Trying to open file %s\n", filename);
 #endif
     FILE *file = fopen(filename, "w");
     if (file == 0) {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("writeMPS: Not opened file OK\n");
 #endif
       return 1;
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("writeMPS: Opened file  OK\n");
 #endif
     vector<int> r_ty;

@@ -162,7 +162,9 @@ public:
     void copy_savedBoundsToModelBounds();
     void mlFg_Clear();
     void mlFg_Update(int mlFg_action);
+#ifdef HiGHSDEV
     void mlFg_Report();
+#endif
 
     void initFromNonbasic();
     void replaceFromNonbasic();
@@ -210,7 +212,7 @@ public:
     void setProblemStatus(int status);
 
     // Checking methods
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     // Method to check code to load a model from arrays of data
     void check_load_fromArrays();
     void check_load_fromPostsolve();
@@ -229,7 +231,7 @@ public:
 
     // Increment numberIteration (here!) and (possibly) store the pivots for debugging NLA
     void recordPivots(int columnIn, int columnOut, double alpha);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     // Store and write out the pivots for debugging NLA
     void writePivots(const char *suffix);
 #endif
@@ -285,10 +287,11 @@ public:
     void util_reportModelDa(const char *filename);
     void util_reportModel();
     void util_reportModelSolution();
+    void util_reportModelBrief();
     void util_reportModelDimensions();
     void util_reportModelObjSense();
     void util_reportModelStatus();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     void util_reportModelDense();
     void util_reportModelMPS(const char *filename);
 #endif
@@ -345,9 +348,12 @@ public:
     // Essentials
     int numberIteration;
     double objective;
+#ifdef HiGHSDEV
     // Analysis of INVERT
+    const bool anInvertTime = false;
     int totalInverts;
     double totalInvertTime;
+#endif
     //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     // Model and solver status flags
@@ -478,7 +484,7 @@ public:
     HVector buffer;
     HVector bufferLong;
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     vector<int> historyColumnIn;
     vector<int> historyColumnOut;
     vector<double> historyAlpha;

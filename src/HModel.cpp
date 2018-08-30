@@ -92,29 +92,22 @@ int HModel::load_fromMPS(const char *filename)
     totalTime += timer.getTime();
     return RtCd;
   }
-/*
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++)
-  {
-    if (integerColumn[c_n])
-      numIntegerColumn++;
-  }
-  if (numIntegerColumn)
-    printf("MPS file has %d integer variables\n", numIntegerColumn);
+  for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numIntegerColumn++;}
+  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
 #endif
-*/
   numTot = numCol + numRow;
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
   //  util_reportModelDa(filename);
 
   //  util_anMl("Unscaled");
 #endif
 
 
-#ifdef JAJH_dev
-  //Use this next line to check the loading of a model from arrays
+#ifdef HiGHSDEV
+  // Use this next line to check the loading of a model from arrays
   //check_load_fromArrays(); return;
 #endif
 
@@ -211,20 +204,15 @@ int HModel::load_fromToy(const char *filename)
     rowLower[r_n] = b[r_n];
     rowUpper[r_n] = b[r_n];
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++)
-  {
-    if (integerColumn[c_n])
-      numIntegerColumn++;
-  }
-  if (numIntegerColumn)
-    printf("MPS file has %d integer variables\n", numIntegerColumn);
+  for (int c_n = 0; c_n < numCol; c_n++) { if (integerColumn[c_n]) numIntegerColumn++;}
+  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
 #endif
 
   numTot = numCol + numRow;
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   //Use this next line to check the loading of a model from arrays
   //check_load_fromArrays(); return;
 #endif
@@ -302,7 +290,7 @@ void HModel::load_fromPostsolve(HPresolve *ptr_model)
   initScale();
   copy_basisFromPostsolve(ptr_model);
   initFromNonbasic();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   check_load_fromPostsolve();
 #endif
 }
@@ -314,7 +302,7 @@ void HModel::load_fromPostsolve(HPresolve &ptr_model)
   initScale();
   copy_basisFromPostsolve(ptr_model);
   initFromNonbasic();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   check_load_fromPostsolve();
 #endif
 }
@@ -647,6 +635,7 @@ void HModel::mlFg_Update(int mlFg_action)
   }
 }
 
+#ifdef HiGHSDEV
 void HModel::mlFg_Report()
 {
   printf("\nReporting model/solver status and flags:\n\n");
@@ -668,7 +657,7 @@ void HModel::mlFg_Report()
   printf("mlFg_haveSavedBounds =   %2d\n\n", mlFg_haveSavedBounds);
   cout << flush;
 }
-
+#endif
 void HModel::replaceWithLogicalBasis()
 {
   // Replace basis with a logical basis then populate (where possible)
@@ -811,11 +800,10 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   assert(local_newNumTot == numTot);
   //ToDo: Replace references to local_newNum* by references to num* from here on
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
   bool basisOK = nonbasicFlagBasicIndex_OK(local_oldNumCol, local_oldNumRow);
-  if (!basisOK)
-    printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
+  if (!basisOK) printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
   assert(basisOK);
 #endif
 
@@ -904,7 +892,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   // Initialise values (and nonbasicMove) for the new columns
   initValueFromNonbasic(firstcol, lastcol);
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
   basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
   assert(basisOK);
@@ -1043,7 +1031,7 @@ bool HModel::OKtoSolve(int level, int phase)
       printf("Not OK to solve since mlFg_haveInvert = %d\n", mlFg_haveInvert);
     cout << flush;
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   assert(ok);
 #endif
   if (level <= 0)
@@ -1054,7 +1042,7 @@ bool HModel::OKtoSolve(int level, int phase)
   {
     printf("Error in nonbasicFlag and basicIndex\n");
     cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     assert(ok);
 #endif
     return ok;
@@ -1064,7 +1052,7 @@ bool HModel::OKtoSolve(int level, int phase)
   {
     printf("Error in workArrays\n");
     cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     assert(ok);
 #endif
     return ok;
@@ -1079,10 +1067,9 @@ bool HModel::OKtoSolve(int level, int phase)
       {
         printf("Error in nonbasicMoveVsWorkArrays for variable %d of %d\n", var, numTot);
         cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
         assert(ok);
 #endif
-        assert(ok);
         return ok;
       }
     }
@@ -1281,14 +1268,16 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK()
     {
       printf("Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n", var);
       cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       assert(ok);
 #endif
       return ok;
     }
   }
   //ok must be true if we reach here
+#ifdef HiGHSDEBUG
   assert(ok);
+#endif
   return ok;
 }
 
@@ -2310,17 +2299,17 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar)
 // Call INVERT
 int HModel::computeFactor()
 {
-#ifdef JAJH_dev
-//	double tt0 = timer.getTime();
+#ifdef HiGHSDEV
+  double tt0=0;
+  if (anInvertTime) tt0 = timer.getTime();
 #endif
-  double tt0 = timer.getTime();
   //TODO Understand why handling noPvC and noPvR in what seem to be
   //different ways ends up equivalent.
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
     handleRankDeficiency();
     //    problemStatus = LP_Status_Singular;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     //    writePivots("failed");
 #endif
     //      return rankDeficiency;
@@ -2328,12 +2317,14 @@ int HModel::computeFactor()
   //    printf("INVERT: After %d iterations and %d updates\n", numberIteration, countUpdate);
   countUpdate = 0;
 
-  double invertTime = timer.getTime() - tt0;
-  totalInverts++;
-  totalInvertTime += invertTime;
-#ifdef JAJH_dev
-  printf("           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; Total INVERT  time = %11.4g\n",
-         totalInverts, numberIteration, invertTime, totalInvertTime);
+#ifdef HiGHSDEV
+  if (anInvertTime) {
+    double invertTime = timer.getTime() - tt0;
+    totalInverts++;
+    totalInvertTime += invertTime;
+    printf("           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; Total INVERT  time = %11.4g\n",
+	   totalInverts, numberIteration, invertTime, totalInvertTime);
+  }
 #endif
 
   //Now have a representation of B^{-1}, and it is fresh!
@@ -2494,38 +2485,16 @@ void HModel::computePrimal()
 {
   buffer.clear();
   for (int i = 0; i < numTot; i++)
-    if (nonbasicFlag[i] && workValue[i] != 0)
-      matrix.collect_aj(buffer, i, workValue[i]);
+    if (nonbasicFlag[i] && workValue[i] != 0) matrix.collect_aj(buffer, i, workValue[i]);
   factor.ftran(buffer, 1);
-
-#ifdef JAJH_dev
-  int n_rp = 0;
-  double rp_tl = 0.0;
-  int mx_n_rp = 10;
-  double norm_dl_pr = 0.0;
-#endif
 
   for (int i = 0; i < numRow; i++)
   {
     int iCol = basicIndex[i];
-#ifdef JAJH_dev
-    double dl_pr = abs(baseValue[i] + buffer.array[i]);
-    if (dl_pr > rp_tl && n_rp < mx_n_rp)
-    {
-      rp_tl = dl_pr * 10;
-      n_rp += 1;
-      //	  printf("computePrimal():   DlPr_i = %11g for i = %d\n", dl_pr, i);
-    }
-    norm_dl_pr += dl_pr * dl_pr;
-#endif
     baseValue[i] = -buffer.array[i];
     baseLower[i] = workLower[iCol];
     baseUpper[i] = workUpper[iCol];
   }
-#ifdef JAJH_dev
-  norm_dl_pr = sqrt(norm_dl_pr);
-  //    printf("computePrimal(): ||DlPr|| = %11g\n", norm_dl_pr);
-#endif
   //Now have a basic primals
   mlFg_haveBasicPrimals = 1;
 }
@@ -2713,7 +2682,7 @@ void HModel::setProblemStatus(int status)
   problemStatus = status;
 }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 // Checking methods Check loading of a model from arrays of data -
 // just loads using arrays from an MPS read so optimality is check
 void HModel::check_load_fromArrays()
@@ -2795,16 +2764,16 @@ void HModel::shiftObjectiveValue(double shift)
 
 void HModel::recordPivots(int columnIn, int columnOut, double alpha)
 {
-  if (columnIn >= 0)
-    numberIteration++;
-#ifdef JAJH_dev
+  // NB This is where the iteration count is updated!
+  if (columnIn >= 0) numberIteration++;
+#ifdef HiGHSDEV
   historyColumnIn.push_back(columnIn);
   historyColumnOut.push_back(columnOut);
   historyAlpha.push_back(alpha);
 #endif
 }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 void HModel::writePivots(const char *suffix)
 {
   string filename = "z-" + modelName + "-" + suffix;
@@ -3133,7 +3102,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat)
     }
     else
     {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: col=%d, cstat=%d, lower=%g, upper=%g\n",
              col, cstat[col], colLower[col], colUpper[col]);
 #endif
@@ -3178,7 +3147,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat)
     }
     else
     {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
              row, rstat[row], rowLower[row], rowUpper[row]);
 #endif
@@ -3210,7 +3179,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       }
       else if (nonbasicMove[var] == NONBASIC_MOVE_UP)
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(-colLower[col]))
 #endif
         {
@@ -3220,7 +3189,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       }
       else if (nonbasicMove[var] == NONBASIC_MOVE_DN)
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(colUpper[col]))
 #endif
         {
@@ -3232,7 +3201,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       {
         if (colLower[col] == colUpper[col])
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (!hsol_isInfinity(colUpper[col]))
 #endif
           {
@@ -3242,7 +3211,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colLower[col]))
 #endif
           {
@@ -3251,7 +3220,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
           }
         }
       }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              col, nonbasicFlag[var], nonbasicMove[var], colLower[col], colUpper[col]);
 #endif
@@ -3272,7 +3241,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       else if (nonbasicMove[var] == NONBASIC_MOVE_DN)
       //Free to move only down from -rowLower[row]
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(-rowLower[row]))
 #endif
         {
@@ -3283,7 +3252,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       else if (nonbasicMove[var] == NONBASIC_MOVE_UP)
       //Free to move only up from -rowUpper[row]
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(rowUpper[row]))
 #endif
         {
@@ -3295,7 +3264,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       {
         if (rowLower[row] == rowUpper[row])
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (!hsol_isInfinity(rowUpper[row]))
 #endif
           {
@@ -3305,7 +3274,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowLower[row]))
 #endif
           {
@@ -3314,7 +3283,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
           }
         }
       }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              row, nonbasicFlag[var], nonbasicMove[var], rowLower[row], rowUpper[row]);
 #endif
@@ -3346,12 +3315,10 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
   assert(ncols >= 0);
   assert(nnonz >= 0);
   //ToDo How to check that Astart[numCol] exists in util_addCols?
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);
   cout << flush;
 #endif
-  printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);
-  cout << flush;
 
   if (ncols == 0)
     return;
@@ -3403,7 +3370,7 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     for (int el = 0; el < nnonz; el++)
     {
       int row = XAindex[el];
-#ifdef H2DEBUG
+#ifdef HiGHSDEBUG
       assert(row >= 0);
       assert(row < numRow);
 #endif
@@ -3428,7 +3395,7 @@ void HModel::util_deleteCols(int firstcol, int lastcol)
   assert(firstcol >= 0);
   assert(lastcol < numCol);
   assert(firstcol <= lastcol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_deleteCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);
   cout << flush;
 #endif
@@ -3481,7 +3448,7 @@ void HModel::util_extractCols(int firstcol, int lastcol, double *XcolLower, doub
   assert(firstcol >= 0);
   assert(lastcol < numCol);
   assert(firstcol <= lastcol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_extractCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);
   cout << flush;
 #endif
@@ -3511,13 +3478,12 @@ void HModel::util_addRows(int nrows, const double *XrowLower, const double *Xrow
   assert(nrows >= 0);
   assert(nnonz >= 0);
   assert(nnonz == 0 || numCol > 0);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);
   cout << flush;
 #endif
 
-#ifdef H2DEBUG
-  printf("H2DEBUG is being set OK\n");
+#ifdef HiGHSDEV
   printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);
   cout << flush;
 #endif
@@ -3546,7 +3512,7 @@ void HModel::util_addRows(int nrows, const double *XrowLower, const double *Xrow
     {
       int col = XARindex[el];
       //      printf("El %2d: adding entry in column %2d\n", el, col); cout << flush;
-#ifdef H2DEBUG
+#ifdef HiGHSDEBUG
       assert(col >= 0);
       assert(col < numCol);
 #endif
@@ -3612,7 +3578,7 @@ void HModel::util_deleteRows(int firstrow, int lastrow)
   assert(firstrow >= 0);
   assert(lastrow < numRow);
   assert(firstrow <= lastrow);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_deleteRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);
   cout << flush;
 #endif
@@ -3733,7 +3699,7 @@ void HModel::util_deleteRowset(int *dstat)
 
   //Reduce the number of rows and total number of variables in the model
   int dlNumRow = numRow - newRow;
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
   if (rp)
     printf("Had %d rows; removed %d rows; now %d rows\n", numRow, dlNumRow, newRow);
 #endif
@@ -3773,7 +3739,7 @@ void HModel::util_deleteRowset(int *dstat)
   if (basisOK)
   {
   //All rows removed had basic slacks so basis should be OK
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
     // Check that basis is valid basis.
     basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
     cout << flush;
@@ -3785,7 +3751,7 @@ void HModel::util_deleteRowset(int *dstat)
   }
   else
   {
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
     assert(basisOK);
     printf("util_deleteRowset: not all rows removed are basic slacks\n");
     cout << flush;
@@ -3802,7 +3768,7 @@ void HModel::util_extractRows(int firstrow, int lastrow, double *XrowLower, doub
   assert(firstrow >= 0);
   assert(lastrow < numRow);
   assert(firstrow <= lastrow);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);
   cout << flush;
 #endif
@@ -3864,7 +3830,7 @@ void HModel::util_changeCoeff(int row, int col, const double newval)
 {
   assert(row >= 0 && row < numRow);
   assert(col >= 0 && col < numCol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_changeCoeff(row=%d, col=%d, newval=%g)\n", row, col, newval);
   cout << flush;
 #endif
@@ -3910,7 +3876,7 @@ void HModel::util_getCoeff(int row, int col, double *val)
 {
   assert(row >= 0 && row < numRow);
   assert(col >= 0 && col < numCol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);
   cout << flush;
 #endif
@@ -3957,15 +3923,12 @@ void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
 
 void HModel::util_reportSolverOutcome(const char *message)
 {
-#ifdef JAJH_dev
-#else
-//  if (!intOption[INTOPT_PRINT_FLAG]) return;
-#endif
+  if (!intOption[INTOPT_PRINT_FLAG]) return;
   if (problemStatus == LP_Status_Optimal)
     printf("%s: OPTIMAL", message);
   else
     printf("%s: NOT-OPT", message);
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal = abs(prObjVal-objective)/max(abs(objective), max(abs(prObjVal), 1.0));
   printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
@@ -4015,13 +3978,7 @@ void HModel::util_reportSolverProgress() {
 // Report the whole model
 void HModel::util_reportModel()
 {
-#ifdef JAJH_dev
-  printf("util_reportModel\n");
-#endif
-  util_reportModelDimensions();
-  util_reportModelObjSense();
-  if (numTot > 100)
-    return;
+  util_reportModelBrief();
   util_reportColVec(numCol, colCost, colLower, colUpper);
   util_reportRowVec(numRow, rowLower, rowUpper);
   util_reportColMtx(numCol, Astart, Aindex, Avalue);
@@ -4030,14 +3987,8 @@ void HModel::util_reportModel()
 // Report the model solution
 void HModel::util_reportModelSolution()
 {
-#ifdef JAJH_dev
-  printf("util_reportModelSolution:\n");
-#endif
-  util_reportModelDimensions();
-  util_reportModelObjSense();
+  util_reportModelBrief();
   util_reportModelStatus();
-  if (numTot > 100)
-    return;
   assert(numCol > 0);
   assert(numRow > 0);
   vector<double> colPrimal(numCol);
@@ -4053,13 +4004,19 @@ void HModel::util_reportModelSolution()
   util_reportRowVecSol(numRow, rowLower, rowUpper, rowPrimal, rowDual, rowStatus);
 }
 
+void HModel::util_reportModelBrief()
+{
+  util_reportModelDimensions();
+  util_reportModelObjSense();
+}
+
 // Report the model dimensions
 void HModel::util_reportModelDimensions()
 {
   printf("Model %s has %d columns, %d rows and %d nonzeros\n", modelName.c_str(), numCol, numRow, Astart[numCol]);
 }
 
-// Report the model dimensions
+// Report the model objective sense
 void HModel::util_reportModelObjSense()
 {
   if (objSense == OBJSENSE_MINIMIZE)
@@ -4092,7 +4049,7 @@ void HModel::util_reportModelStatus()
     printf("Unrecognised\n");
 }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 // Report the whole model in Ivet's dense format: useful for toy examples
 void HModel::util_reportModelDense()
 {
@@ -4425,8 +4382,7 @@ void HModel::util_reportModelDa(const char *filename)
     for (int r_n=0; r_n<numRow; r_n++) wkDseCol[r_n]=0;
     FILE *file = fopen(filename, "w");
     if (file == 0) {
-      printf("util_reportModelDa: Not opened file OK\n");
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("util_reportModelDa: Not opened file OK\n");
 #endif
       //      return 1;

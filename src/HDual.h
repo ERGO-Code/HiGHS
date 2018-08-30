@@ -36,7 +36,9 @@ const int Crash_Mode_LTSF = 5;
 const int Crash_Mode_Bixby = 6;
 const int Crash_Mode_Dev = 7;
 const int Crash_Mode_Bs = 8;
+#ifdef HiGHSDEV
 const int Crash_Mode_TsSing = 9;
+#endif
 const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
 
 //Define the Presolve modes
@@ -89,11 +91,13 @@ public:
   void iterate();
   void iterate_tasks();
   void iterate_multi();
+#ifdef HiGHSDEV
   void iterateIzAn();
   void iterateAn();
   void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
+#endif
   void iterateRp();
   void iterateRpFull(bool header);
   void iterateRpBrief(bool header);
@@ -168,9 +172,12 @@ public:
   bool SolveBailout;
   double TimeLimitValue = 0;
 
+#ifdef HiGHSDEV
   // Analysis of rebuilds
+  const bool anRebuildTime = false;
   int totalRebuilds;
   double totalRebuildTime;
+#endif
 
   // Devex scalars
   int n_dvx_fwk;

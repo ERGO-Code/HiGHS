@@ -20,13 +20,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
-#ifdef JAJH_dev
-  printf("model->mlFg_Report() 1\n");
-  cout << flush;
-  model->mlFg_Report();
-  cout << flush;
+#ifdef HiGHSDEV
+  //  printf("model->mlFg_Report() 1\n"); cout << flush; model->mlFg_Report(); cout << flush;
 #endif
-  //  printf("HDual::solve - model->mlFg_Report() 1\n");cout<<flush; model->mlFg_Report();cout<<flush;
   // Setup two work buffers in model required for solve()
   model->buffer.setup(model->numRow);
   model->bufferLong.setup(model->numCol);
@@ -41,19 +37,18 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   
   model->problemStatus = LP_Status_Unset;
   model->numberIteration = 0;
+#ifdef HiGHSDEV
   //Initialise numbers and times of rebuilds and inverts.
   totalRebuilds = 0;
   totalRebuildTime = 0;
   model->totalInverts = 0;
   model->totalInvertTime = 0;
+#endif
   //Cannot solve box-constrained LPs
   if (model->numRow == 0)
     return;
-#ifdef JAJH_dev
-  printf("model->mlFg_Report() 2\n");
-  cout << flush;
-  model->mlFg_Report();
-  cout << flush;
+#ifdef HiGHSDEV
+  //  printf("model->mlFg_Report() 2\n"); cout << flush; model->mlFg_Report(); cout << flush;
 #endif
   
   model->timer.reset();
@@ -66,7 +61,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   if (TimeLimitValue == 0)
     {
       TimeLimitValue = 1000000.0;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Setting TimeLimitValue = %g\n", TimeLimitValue);
 #endif
     }
@@ -82,6 +77,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     if (rankDeficiency) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
+#ifdef HiGHSDEV
     double bsCond = an_bs_cond(model);
     printf("Initial basis condition estimate of %11.4g is", bsCond);
     if (bsCond > 1e12) {
@@ -90,6 +86,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     } else {
       printf(" OK\n");
     }
+#endif
   }
   //Consider initialising edge weights
   //
@@ -97,11 +94,10 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   //dualRHS.setup(model) so that CHUZR is well defined, even for
   //Dantzig pricing
   //
-#ifdef JAJH_dev
-  printf("model->mlFg_haveEdWt 2 = %d;EdWt_Mode = %d; EdWt_Mode_DSE = %d\n", model->mlFg_haveEdWt, EdWt_Mode, EdWt_Mode_DSE);cout<<flush;
-#endif
-#ifdef JAJH_dev
-  printf("Edge weights known? %d\n", !model->mlFg_haveEdWt);cout<<flush;
+#ifdef HiGHSDEV
+  //  printf("model->mlFg_haveEdWt 2 = %d; EdWt_Mode = %d; EdWt_Mode_DSE = %d\n",
+  //	 model->mlFg_haveEdWt, EdWt_Mode, EdWt_Mode_DSE);cout<<flush;
+  //  printf("Edge weights known? %d\n", !model->mlFg_haveEdWt);cout<<flush;
 #endif
   if (!model->mlFg_haveEdWt) {
     //Edge weights are not known
@@ -114,26 +110,21 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
       iz_dvx_fwk();}
     else if (EdWt_Mode == EdWt_Mode_DSE) {
       //Using dual steepest edge (DSE) weights
-#ifdef JAJH_dev
-      n_wg_DSE_wt = 0;
-#endif
       int numBasicStructurals = numRow - model->numBasicLogicals;
-#ifdef JAJH_dev
-      printf("If (0<numBasicStructurals = %d) && %d = iz_DSE_wt: Compute exact DSE weights\n", numBasicStructurals, iz_DSE_wt);
+#ifdef HiGHSDEV
+      n_wg_DSE_wt = 0;
+      printf("If (0<numBasicStructurals = %d) && %d = iz_DSE_wt: Compute exact DSE weights\n",
+	     numBasicStructurals, iz_DSE_wt);
 #endif
       if (numBasicStructurals > 0 && iz_DSE_wt) {
 	//Basis is not logical and DSE weights are to be initialised
-#ifdef JAJH_dev
-	printf("Compute exact DSE weights\n");
-	int RpI = 1;
-#endif
+#ifdef HiGHSDEV
+	printf("Compute exact DSE weights\n"); //int RpI = 1;
 	double IzDseEdWtTT = model->timer.getTime();
+#endif
 	for (int i = 0; i < numRow; i++) {
-#ifdef JAJH_dev
-	  if (i==RpI) {
-	    printf("Computing exact DSE weight %d\n", i);
-	    RpI = RpI*2;
-	  }
+#ifdef HiGHSDEV
+	  //	  if (i==RpI) {printf("Computing exact DSE weight %d\n", i); RpI = RpI*2;}
 #endif
 	  row_ep.clear();
 	  row_ep.count = 1;
@@ -146,32 +137,25 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
 	  //row_epDensity = (1-runningAverageMu) * row_epDensity + runningAverageMu * (1.0 * row_ep.count / numRow);
 	}
+#ifdef HiGHSDEV
 	IzDseEdWtTT = model->timer.getTime() - IzDseEdWtTT;
-#ifdef JAJH_dev
 	printf("Computed %d initial DSE weights in %gs\n", numRow, IzDseEdWtTT);
-#endif
-	if (model->intOption[INTOPT_PRINT_FLAG]) {
-	  printf("solve:: %d basic structurals: computed %d initial DSE weights in %gs, %d, %d, %g\n",
+	if (model->intOption[INTOPT_PRINT_FLAG]) printf("solve:: %d basic structurals: computed %d initial DSE weights in %gs, %d, %d, %g\n",
 		 numBasicStructurals, numRow, IzDseEdWtTT, numBasicStructurals, numRow, IzDseEdWtTT);
-	}
-      } else {
-	if (model->intOption[INTOPT_PRINT_FLAG]) {
-	  printf("solve:: %d basic structurals: starting from B=I so unit initial DSE weights\n", numBasicStructurals);}
+#endif
       }
+#ifdef HiGHSDEV
+      else {
+	if (model->intOption[INTOPT_PRINT_FLAG]) printf("solve:: %d basic structurals: starting from B=I so unit initial DSE weights\n", numBasicStructurals);
+      }
+#endif
     }
     //Indicate that edge weights are known
     model->mlFg_haveEdWt = 1;
   }
   
-#ifdef JAJH_dev
-  printf("model->mlFg_haveEdWt 3 = %d\n", model->mlFg_haveEdWt);cout<<flush;
-#endif
-  model->computeDual();
-#ifdef JAJH_dev
-  printf("Solve: Computed dual\n");cout<<flush;
-#endif
-  
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
+  //  printf("model->mlFg_haveEdWt 3 = %d\n", model->mlFg_haveEdWt);cout<<flush;
   bool rp_bs_cond = false;
   if (rp_bs_cond) {
     double bs_cond = an_bs_cond(ptr_model);
@@ -179,15 +163,10 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   }
 #endif
   
-#ifdef JAJH_dev
-  printf("HDual::solve - Calling model->computeDualInfeasInDual\n");cout<<flush;
-#endif
+  model->computeDual();
+  
   model->computeDualInfeasInDual(&dualInfeasCount);
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
-  
-#ifdef JAJH_dev
-  printf("Solve: Computed phase = %d\n", solvePhase);cout<<flush;
-#endif
   
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
@@ -198,8 +177,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	largeDual = myDual;
     }
   }
-#ifdef JAJH_dev
-  printf("Solve: Large dual = %g\n", largeDual);cout<<flush;
+#ifdef HiGHSDEV
+  //  printf("Solve: Large dual = %g\n", largeDual);cout<<flush;
 #endif
   
   // Check that the model is OK to solve:
@@ -227,25 +206,26 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   
   // The major solving loop
   
+#ifdef HiGHSDEV
   //Initialise the iteration analysis
-  if (AnIterLg) {
-    iterateIzAn();
-  }
+  if (AnIterLg) iterateIzAn();
+#endif
   while (solvePhase) {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     int it0 = model->numberIteration;
-    printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n", solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
+    //    printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n",
+    //	   solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
 #endif
     switch (solvePhase) {
     case 1:
       solve_phase1();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       n_ph1_du_it += (model->numberIteration - it0);
 #endif
       break;
     case 2:
       solve_phase2();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       n_ph2_du_it += (model->numberIteration - it0);
 #endif
       break;
@@ -263,10 +243,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
       break;
   }
   
-  if (AnIterLg) {
-    iterateRpAn();
-  }
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateRpAn();
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
     int reportList[] = { HTICK_INVERT, HTICK_PERM_WT, HTICK_COMPUTE_DUAL, HTICK_CORRECT_DUAL, HTICK_COMPUTE_PRIMAL, HTICK_COLLECT_PR_IFS, HTICK_COMPUTE_DUOBJ, HTICK_REPORT_INVERT,
@@ -318,7 +296,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   
   if (model->problemStatus != LP_Status_OutOfTime) {
     // Use primal to clean up if not out of time
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     int it0 = model->numberIteration;
 #endif
     if (solvePhase == 4) {
@@ -326,17 +304,19 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
       hPrimal.TimeLimitValue = TimeLimitValue;
       hPrimal.solvePhase2(model);
       //Add in the count and time for any primal rebuilds
+#ifdef HiGHSDEV
       totalRebuildTime += hPrimal.totalRebuildTime;
       totalRebuilds += hPrimal.totalRebuilds;
+#endif
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     n_pr_it += (model->numberIteration - it0);
 #endif
   }
   // Save the solved results
   model->totalTime += model->timer.getTime();
   
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   if (n_ph1_du_it + n_ph2_du_it + n_pr_it != model->numberIteration) {
     printf("Iteration total error \n");
   }
@@ -350,25 +330,32 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     double bs_cond = an_bs_cond(ptr_model);
     printf("Optimal basis condition estimate is %g\n", bs_cond);
     }
+#endif
   //  rp_hsol_sol(ptr_model);
   ok = model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n");cout<<flush;}
   //  assert(ok);
-  printf("model->mlFg_Report() 9\n");cout<<flush;  model->mlFg_Report();cout<<flush;
+#ifdef HiGHSDEV
+  //  printf("model->mlFg_Report() 9\n");cout<<flush; model->mlFg_Report();cout<<flush;
+#endif
 
-  printf("Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g", model->totalInverts, model->totalInvertTime, model->totalTime);
-  if (model->totalTime > 0.001) 
-    printf(" (%6.2f%%)\n", (100*model->totalInvertTime)/model->totalTime);
-  else
-    printf("\n");
-  cout << flush;
-  printf("Time: Total rebuilds = %4d; Total rebuild time = %11.4g of Total time = %11.4g", totalRebuilds, totalRebuildTime, model->totalTime);
-  if (model->totalTime > 0.001) 
-    printf(" (%6.2f%%)\n", (100*totalRebuildTime)/model->totalTime);
-  else
-    printf("\n");
-  cout << flush;
- 
+#ifdef HiGHSDEV
+  if (model->anInvertTime) {
+    printf("Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g", model->totalInverts, model->totalInvertTime, model->totalTime);
+    if (model->totalTime > 0.001) {
+      printf(" (%6.2f%%)\n", (100*model->totalInvertTime)/model->totalTime);
+    } else { 
+      printf("\n");
+    }
+    cout << flush;
+    printf("Time: Total rebuilds = %4d; Total rebuild time = %11.4g of Total time = %11.4g", totalRebuilds, totalRebuildTime, model->totalTime);
+    if (model->totalTime > 0.001) {
+      printf(" (%6.2f%%)\n", (100*totalRebuildTime)/model->totalTime);
+    } else {
+      printf("\n");
+    }
+    cout << flush;
+  }
 #endif
 }
 
@@ -515,9 +502,8 @@ void HDual::solve_phase1()
   model->initBound(1);
   model->initValue();
   double lc_totalTime = model->totalTime + model->timer.getTime();
-#ifdef JAJH_dev
-  int lc_totalTime_rp_n = 0;
-  //	printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+#ifdef HiGHSDEV
+  // int lc_totalTime_rp_n = 0; printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
   // Main solving structure
   model->timer.recordStart(HTICK_ITERATE);
@@ -544,19 +530,19 @@ void HDual::solve_phase1()
 	  if (invertHint)
 	    break;
 	  //printf("HDual::solve_phase1: Iter = %d; Objective = %g\n", model->numberIteration, model->objective);
-	  /*			if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
-				#ifdef SCIP_dev
-				printf("HDual::solve_phase1: %g = Objective > dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
-				#endif
-				model->problemStatus = LP_Status_ObjUB; 
-				break;
-				}
+	  /*
+	  if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+#ifdef SCIP_DEV
+	    printf("HDual::solve_phase1: %g = Objective > dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+#endif
+	    model->problemStatus = LP_Status_ObjUB; 
+	    break;
+	  }
 	  */
 	}
       lc_totalTime = model->totalTime + model->timer.getTime();
-#ifdef JAJH_dev
-      lc_totalTime_rp_n += 1;
-      //		printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+#ifdef HiGHSDEV
+      //      lc_totalTime_rp_n += 1; printf("DualPh1: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
       if (lc_totalTime > TimeLimitValue)
 	{
@@ -644,9 +630,8 @@ void HDual::solve_phase2()
   // Collect free variables
   dualRow.create_Freelist();
   double lc_totalTime = model->totalTime + model->timer.getTime();
-#ifdef JAJH_dev
-  int lc_totalTime_rp_n = 0;
-  printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+#ifdef HiGHSDEV
+  //  int lc_totalTime_rp_n = 0; printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
   // Main solving structure
   model->timer.recordStart(HTICK_ITERATE);
@@ -678,17 +663,19 @@ void HDual::solve_phase2()
 	      break;
 	    }
 	  //invertHint can be true for various reasons see HModel.h
-	  if (invertHint)
-	    break;
+	  if (invertHint) break;
+	  // Need the dual objective value to check for exceeding the
+	  // upper bound, but can't afford to compute it every
+	  // iteration!
 	  //      model->computeDuObj();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 	  //      double pr_obj_v = model->computePrObj();
 	  //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n",
 	  //	     model->numberIteration, pr_obj_v, model->objective);
 #endif
 	  if (model->objective > model->dblOption[DBLOPT_OBJ_UB])
 	    {
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
 	      //printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
 	      model->problemStatus = LP_Status_ObjUB;
@@ -702,9 +689,8 @@ void HDual::solve_phase2()
 	  SolveBailout = true;
 	  break;
 	}
-#ifdef JAJH_dev
-      lc_totalTime_rp_n += 1;
-      printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+#ifdef HiGHSDEV
+      //      lc_totalTime_rp_n += 1; printf("DualPh2: lc_totalTime = %5.2f; Record %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
       if (lc_totalTime > TimeLimitValue)
 	{
@@ -779,10 +765,10 @@ void HDual::rebuild()
 {
   // Save history information
   model->recordPivots(-1, -1, 0); // Indicate REINVERT
-#ifdef JAJH_dev
-  //	double tt0 = model->timer.getTime();
+#ifdef HiGHSDEV
+  double tt0 = 0;
+  if (anRebuildTime) tt0 = model->timer.getTime();
 #endif
-  double tt0 = model->timer.getTime();
   int sv_invertHint = invertHint;
   invertHint = invertHint_no; // Was 0
 
@@ -856,13 +842,14 @@ void HDual::rebuild()
   total_FT_inc_TICK = 0;
   total_fake = 0;
   
-  
-  double rebuildTime = model->timer.getTime()-tt0;
-  totalRebuilds++;
-  totalRebuildTime += rebuildTime;
-#ifdef JAJH_dev
-  printf("Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Rebuild time = %11.4g; Total rebuild time = %11.4g\n",
-         solvePhase, totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime, totalRebuildTime);
+#ifdef HiGHSDEV
+  if (anRebuildTime) {
+    double rebuildTime = model->timer.getTime()-tt0;
+    totalRebuilds++;
+    totalRebuildTime += rebuildTime;
+    printf("Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Rebuild time = %11.4g; Total rebuild time = %11.4g\n",
+	   solvePhase, totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime, totalRebuildTime);
+  }
 #endif
   //Data are fresh from rebuild
   model->mlFg_haveFreshRebuild = 1;
@@ -901,7 +888,7 @@ void HDual::iterate()
   model->timer.recordStart(HTICK_ITERATE_CHUZC);
   chooseColumn(&row_ep);
   model->timer.recordFinish(HTICK_ITERATE_CHUZC);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   if (rp_hsol && rowOut >= 0) {printf("\nPvR: Row %2d\n", rowOut); dualRow.rp_hsol_pv_r();} cout<<flush;
 #endif
   model->timer.recordStart(HTICK_ITERATE_FTRAN);
@@ -941,12 +928,11 @@ void HDual::iterate()
   model->timer.recordFinish(HTICK_ITERATE_PIVOTS);
   
   //Analyse the iteration: possibly report; possibly switch strategy
-  if (AnIterLg) {
-    iterateAn();
-  } else {
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateAn(); else
+#endif
     //Possibly report on the iteration
     iterateRp();
-  }
 }
 
 void HDual::iterate_tasks()
@@ -1011,17 +997,13 @@ void HDual::chooseRow()
       row_ep.index[0] = rowOut;
       row_ep.array[rowOut] = 1;
       row_ep.packFlag = true;
-      
-      if (AnIterLg) {
-	iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
-      }
-      
+#ifdef HiGHSDEV
+      if (AnIterLg) iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
+#endif      
       factor->btran(row_ep, row_epDensity);
-      
-      if (AnIterLg) {
-	iterateOpRecAf(AnIterOpTy_Btran, row_ep);
-      }
-      
+#ifdef HiGHSDEV
+      if (AnIterLg) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
+#endif      
       model->timer.recordFinish(HTICK_BTRAN);
       if (EdWt_Mode == EdWt_Mode_DSE)
 	{
@@ -1031,7 +1013,7 @@ void HDual::chooseRow()
 	  double c_weight = dualRHS.workEdWt[rowOut] = row_ep.norm2();
 	  //For DSE compute the correct weight c_weight and use if to see how
 	  //accurate the updated weight is.
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 	  //			double DSE_wt_er = abs((u_weight - c_weight) / max(u_weight, c_weight));
 	  //if (DSE_wt_er > 1e-2)
 	  //			  printf(
@@ -1040,7 +1022,7 @@ void HDual::chooseRow()
 #endif
 	  if (u_weight >= 0.25 * c_weight)
 	    break;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 	  //printf(
 	  //       " !! JAJH RARE PRINT: Iter %d: DSE_wt_er = %8g from %8g, %8g with u_weight/c_weight = %g < 0.25\n",
 	  //       model->numberIteration, DSE_wt_er, u_weight, c_weight,
@@ -1078,20 +1060,21 @@ void HDual::chooseColumn(HVector *row_ep)
   row_ap.clear();
   
   bool anPriceEr = false;
-  bool rpPriceTy = false;
   bool useUltraPrice = alw_price_ultra
     && row_apDensity*numCol*10 < row_ap.ilP2
 				 && row_apDensity < 1e-3;
-  int lc_numIt = model->numberIteration;
-  if (lc_numIt<1 || rpPriceTy) 
-    printf("\nIteration %d: Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
-	   lc_numIt, Price_Mode, alw_price_by_col_sw, alw_price_by_row_sw, alw_price_ultra);
+#ifdef HiGHSDEV
+  //  bool rpPriceTy = false;
+  //  int lc_numIt = model->numberIteration;
+  //  if (lc_numIt<1 || rpPriceTy) printf("Iteration %d: Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
+  //	   lc_numIt, Price_Mode, alw_price_by_col_sw, alw_price_by_row_sw, alw_price_ultra);
+#endif
   if (Price_Mode == Price_Mode_Col) {
     //Column-wise PRICE
-    if (lc_numIt<1 || rpPriceTy) printf("Using column price\n");
-    if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
-    }
+#ifdef HiGHSDEV
+    //    if (lc_numIt<1 || rpPriceTy) printf("Using column price\n");
+    if (AnIterLg) iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
+#endif
     AnIterNumColPrice++;
     matrix->price_by_col(row_ap, *row_ep);
   } else {
@@ -1099,49 +1082,54 @@ void HDual::chooseColumn(HVector *row_ep)
     double lc_dsty = 1.0 * (*row_ep).count/numRow;
     if (alw_price_by_col_sw && (lc_dsty > dstyColPriceSw)) {
       //Avoid row price due to density of row_ep
+#ifdef HiGHSDEV
+      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By column, %d\n", numCol);
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
+	AnIterNumColPrice++;
       }
-      AnIterNumColPrice++;
-      if (lc_numIt<1 || rpPriceTy) printf("PRICE By column, %d\n", numCol);
+#endif
       matrix->price_by_col(row_ap, *row_ep);
       for (int col = 0; col < numCol; col++) {
 	row_ap.array[col] = model->nonbasicFlag[col]*row_ap.array[col];
       }
       
     } else if (useUltraPrice) {
+#ifdef HiGHSDEV
+      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - ultra\n");
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
+	AnIterNumRowPriceUltra++;
       }
-      AnIterNumRowPriceUltra++;
-      //      row_ap_ultra.clear();
-      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - ultra\n");
+#endif
       matrix->price_by_row_ultra(row_ap, *row_ep);
       if (anPriceEr) {
 	bool price_er;
 	price_er = matrix->price_er_ck(row_ap, *row_ep);
 	if (!price_er) printf("No ultra PRICE error\n");
       }
-      
-      //      row_ap.copyUltra(&row_ap_ultra);
     } else if (alw_price_by_row_sw) {
       //Avoid Hyper Price on current density of result or switch if
       //the density of this Price becomes extreme
+#ifdef HiGHSDEV
+      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - switch\n");
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
+	AnIterNumRowPriceWSw++;
       }
-      AnIterNumRowPriceWSw++;
+#endif
       const double sw_dsty = matrix->price_by_row_sw_dsty;
-      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - switch\n");
       matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity, 0, sw_dsty);
     } else {
       //No avoiding Hyper Price on current density of result or
       //switching if the density of this Price becomes extreme
+#ifdef HiGHSDEV
+      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - vanilla\n");
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
+	AnIterNumRowPrice++;
       }
-      AnIterNumRowPrice++;
-      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - vanilla\n");
+#endif
       matrix->price_by_row(row_ap, *row_ep);
     }
   }
@@ -1153,11 +1141,9 @@ void HDual::chooseColumn(HVector *row_ep)
   double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
   row_apDensity = uOpRsDensityRec(lc_OpRsDensity, &row_apDensity, &row_apAvDensity, &row_apAvLog10Density); 
   //row_apDensity = (1-runningAverageMu) * row_apDensity + runningAverageMu * (1.0 * row_ap.count / numCol);
-  
-  if (AnIterLg) {
-    iterateOpRecAf(AnIterOpTy_Price, row_ap);
-  }
-  
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateOpRecAf(AnIterOpTy_Price, row_ap);
+#endif
   model->timer.recordFinish(HTICK_PRICE);
   
   // Choose column - possible
@@ -1320,17 +1306,13 @@ void HDual::updateFtran()
   column.clear();
   column.packFlag = true;
   matrix->collect_aj(column, columnIn, 1);
-  
-  if (AnIterLg) {
-    iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
-  }
-  
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
+#endif
   factor->ftran(column, columnDensity);
-  
-  if (AnIterLg) {
-    iterateOpRecAf(AnIterOpTy_Ftran, column);
-  }
-  
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateOpRecAf(AnIterOpTy_Ftran, column);
+#endif
   alpha = column.array[rowOut];
   model->timer.recordFinish(HTICK_FTRAN);
 }
@@ -1349,17 +1331,13 @@ void HDual::updateFtranBFRT()
   dualRow.update_flip(&columnBFRT);
   
   if (columnBFRT.count) {
-    
-    if (AnIterLg) {
-      iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
-    }
-    
+#ifdef HiGHSDEV
+    if (AnIterLg) iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
+#endif
     factor->ftran(columnBFRT, columnDensity);
-    
-    if (AnIterLg) {
-      iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
-    }
-    
+#ifdef HiGHSDEV
+    if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
+#endif
   }
   if (time_updateFtranBFRT) model->timer.recordFinish(HTICK_FTRAN_BFRT);
 }
@@ -1368,17 +1346,13 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
 {
   if (invertHint) return;
   model->timer.recordStart(HTICK_FTRAN_DSE);
-  
-  if (AnIterLg) {
-    iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
-  }
-  
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
+#endif
   factor->ftran(*DSE_Vector, rowdseDensity);
-  
-  if (AnIterLg) {
-    iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
-  }
-  
+#ifdef HiGHSDEV
+  if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
+#endif
   model->timer.recordFinish(HTICK_FTRAN_DSE);
 }
 
@@ -1512,8 +1486,8 @@ void HDual::updatePivots() {
     //                total_fake, total_fake / factor->fakeTick);
     invertHint = invertHint_pseudoClockSaysInvert; // Was 1
   }
-#ifdef JAJH_dev
-  if (invertHint) {printf("HDual::updatePivots: invertHint = %d\n", invertHint);}
+#ifdef HiGHSDEV
+  //  if (invertHint) {printf("HDual::updatePivots: invertHint = %d\n", invertHint);}
 #endif
   
 }
@@ -1598,8 +1572,10 @@ void HDual::setCrash(const char *Crash_ArgV)
     Crash_Mode = Crash_Mode_Dev;
   else if (strcmp(Crash_ArgV, "Bs") == 0)
     Crash_Mode = Crash_Mode_Bs;
+#ifdef HiGHSDEV
   else if (strcmp(Crash_ArgV, "TsSing") == 0)
     Crash_Mode = Crash_Mode_TsSing;
+#endif
   else
     {
       cout << "HDual::setCrash unrecognised CrashArgV = " << Crash_ArgV
@@ -1614,7 +1590,7 @@ void HDual::setCrash(const char *Crash_ArgV)
 
 void HDual::setPrice(const char *Price_ArgV)
 {
-  cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
+  //  cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
   alw_price_by_col_sw = false;
   alw_price_by_row_sw = false;
   alw_price_ultra = false;
@@ -1897,6 +1873,7 @@ void HDual::rp_hsol_da_str()
   printf("\n");
 }
 
+#ifdef HiGHSDEV
 void HDual::iterateIzAn() {
   AnIterIt0 = model->numberIteration;
   AnIterPrevIt = 0;
@@ -2067,7 +2044,6 @@ void HDual::iterateAn() {
 }
 
 void HDual::iterateOpRecBf(int opTy, HVector& vector, double hist_dsty) {
-  
   AnIterOpRec *AnIter = &AnIterOp[opTy];
   AnIter->AnIterOpNumCa++;
   double curr_dsty = 1.0 * vector.count / numRow;
@@ -2227,7 +2203,7 @@ void HDual::iterateRpAn() {
     printf("\n");
   }
 }
-
+#endif
 void HDual::iterateRp() {
   if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
   int numIter = model->numberIteration;
