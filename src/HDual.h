@@ -90,23 +90,15 @@ public:
 
   void iterate();
   void iterate_tasks();
-  void iterate_multi();
-#ifdef HiGHSDEV
+  void iterate_multi();// in HDualMulti.cpp
   void iterateIzAn();
   void iterateAn();
-  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector& vector);
-  void iterateRpAn();
-#endif
   void iterateRp();
   void iterateRpFull(bool header);
   void iterateRpBrief(bool header);
   void iterateRpInvert(int i_v);
   void iterateRpIterPh(bool header);
-  void iterateRpIterDa(bool header);
   void iterateRpDuObj(bool header);
-  void iterateRpDsty(bool header);
-  int intLog10(double v);
   double uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density); 
 
   void chooseRow();
@@ -123,6 +115,17 @@ public:
   void updatePivots();
 
   void handleRankDeficiency();
+  void iz_dvx_fwk();
+  void setCrash(const char *CrashMode);
+  void setPrice(const char *PriceMode);
+  void setEdWt(const char *EdWtMode);
+  void setTimeLimit(double TimeLimit_ArgV);
+  void setPresolve(const char *PresolveMode);
+
+  // Utility to get a row of the inverse of B for SCIP
+  int util_getBasisInvRow(int r, double *coef, int *inds, int *ninds);
+
+  double an_bs_cond(HModel *ptr_model);
 
   void major_chooseRow();
   void major_chooseRowBtran();
@@ -143,24 +146,20 @@ public:
 
   void major_rollback();
 
-  void setPrice(const char *PriceMode);
-  void setEdWt(const char *EdWtMode);
-  void setCrash(const char *CrashMode);
-  void setPresolve(const char *PresolveMode);
-  void setTimeLimit(double TimeLimit_ArgV);
-
-  // Utility to get a row of the inverse of B for SCIP
-  int util_getBasisInvRow(int r, double *coef, int *inds, int *ninds);
-
-  double an_bs_cond(HModel *ptr_model);
-
-  void RpVrSt();
-  void iz_dvx_fwk();
+#ifdef HiGHSDEV
+  void iterateRpIterDa(bool header);
+  void iterateRpDsty(bool header);
+  int intLog10(double v);
+  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
+  void iterateOpRecAf(int opTy, HVector& vector);
+  void iterateRpAn();
   void rp_hsol_da_str();
   //void rp_hsol_si_it();
   void rp_hsol_pv_c(HVector *column) const;
   void rp_hsol_sol(HModel *ptr_model);
   void an_iz_vr_v();
+#endif
+
 
   // Variant choice
   int dual_variant = 0;
@@ -196,6 +195,7 @@ public:
   bool iz_DSE_wt;
   bool alw_DSE2Dvx_sw = true;
   int n_wg_DSE_wt;
+  int AnIterNumCostlyDseIt;
   int AnIterPrevRpNumCostlyDseIt;
   double AnIterCostlyDseFq;
   const double AnIterCostlyDseMeasureLimit = 1000.0;
@@ -331,9 +331,9 @@ public:
     double total_INVERT_TICK;
     double total_FT_inc_TICK;
 
-const bool AnIterLg = true;
-
     int AnIterIt0;
+#ifdef HiGHSDEV
+    const bool AnIterLg = true;
     int AnIterPrevIt;
     //Major operation analysis struct
 enum AnIterOpTy
@@ -385,8 +385,7 @@ enum AnIterOpTy
  int AnIterNumPrDgnIt;
  int AnIterNumDuDgnIt;
  int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1
- int AnIterNumCostlyDseIt;
+#endif
 };
-
 
 #endif /* HDUAL_H_ */
