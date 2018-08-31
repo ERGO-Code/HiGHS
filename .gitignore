@@ -228,3 +228,5 @@ SolveMl
 hsol.ou
 libhsol.a
 lpi_h2gmp.cpp
+
+buildOpt/
