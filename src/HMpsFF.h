@@ -1,6 +1,7 @@
 #ifndef HMPSFF_H_
 #define HMPSFF_H_
 
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <cstdio>
@@ -8,7 +9,6 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include <cassert>
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -106,7 +106,8 @@ class MpsParser
     {
         LE,
         EQ,
-        GE
+        GE,
+        FR
     };
     /*
     * data for mps problem
@@ -220,6 +221,8 @@ readMPS(const char *filename, int &numRow, int &numCol,
 void MpsParser::fillArrays()
 {
     assert(nnz >= 0);
+
+    std::cout << "entries: " << entries.size() << std::endl;
 
     colCost.assign(nCols, 0.0);
 
@@ -405,6 +408,7 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
 
     std::string strline;
     size_t nrows = 0;
+    bool has_objective = false;
 
     while (getline(file, strline))
     {
@@ -451,9 +455,19 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
             rowrhs.push_back(0.0);
             rowtype.push_back(boundtype::LE);
         }
-        else if (word_ref.front() ==
-                 'N') // todo properly treat multiple free rows
-            isobj = true;
+        else if (word_ref.front() == 'N') 
+        {
+            if (!has_objective) {
+                isobj = true;
+            }
+            else {
+                isobj = false;
+                has_objective = false; 
+                rowlhs.push_back(-infinity());
+                rowrhs.push_back(infinity());
+                rowtype.push_back(boundtype::FR);
+            }
+        }
         else
         {
             std::cerr << "reading error in ROWS section " << std::endl;
