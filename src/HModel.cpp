@@ -65,8 +65,8 @@ int HModel::load_fromMPS(const char *filename)
 
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
-#ifdef Boost_FOUND
-  int RtCd = readMPS(filename,
+#if defined(Boost_FOUND) && !defined(OLD_PARSER)
+  int RtCd = readMPS_FF(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
