@@ -875,11 +875,11 @@ MpsParser::parseRanges(boost::iostreams::filtering_istream &file)
                 rowlhs.at(rowidx) = rowrhs.at(rowidx) - abs(val);
             }
 
-            else //if (row_type[rowidx] == boundtype::EQ && val > 0 ||
-                 //row_type[rowidx] == boundtype::GE)
+            else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
+                 row_type[rowidx] == boundtype::GE)
             {
                 assert(rowlhs.at(rowidx) > (-infinity()));
-                rowrhs.at(rowidx) = rowrhs.at(rowidx) + abs(val);
+                rowrhs.at(rowidx) = rowlhs.at(rowidx) + abs(val);
             }
         };
 
