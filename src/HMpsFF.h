@@ -202,7 +202,7 @@ int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
   }
 
 int 
-readMPS(const char *filename, int &numRow, int &numCol,
+readMPS_FF(const char *filename, int &numRow, int &numCol,
             int &objSense, double &objOffset,
             std::vector<int> &Astart, std::vector<int> &Aindex, std::vector<double> &Avalue,
             std::vector<double> &colCost, std::vector<double> &colLower, std::vector<double> &colUpper,
@@ -887,11 +887,11 @@ MpsParser::parseRanges(boost::iostreams::filtering_istream &file)
                 rowlhs.at(rowidx) = rowrhs.at(rowidx) - abs(val);
             }
 
-            else //if (row_type[rowidx] == boundtype::EQ && val > 0 ||
-                 //row_type[rowidx] == boundtype::GE)
+            else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
+                 row_type[rowidx] == boundtype::GE)
             {
                 assert(rowlhs.at(rowidx) > (-infinity()));
-                rowrhs.at(rowidx) = rowrhs.at(rowidx) + abs(val);
+                rowrhs.at(rowidx) = rowlhs.at(rowidx) + abs(val);
             }
         };
 
