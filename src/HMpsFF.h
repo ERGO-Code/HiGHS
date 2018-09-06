@@ -222,8 +222,6 @@ void MpsParser::fillArrays()
 {
     assert(nnz >= 0);
 
-    std::cout << "entries: " << entries.size() << std::endl;
-
     colCost.assign(nCols, 0.0);
 
     for (auto i : coeffobj)
