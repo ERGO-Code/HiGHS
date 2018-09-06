@@ -344,7 +344,8 @@ int MpsParser::parse(boost::iostreams::filtering_istream &file)
     assert(row_type.size() == unsigned(nRows));
 
     nCols = colname2idx.size();
-    nRows = rowname2idx.size() - 1; // subtract obj row
+    // No need to update nRows because the assert ensures
+    // it is correct.
 
     return 0;
 }
@@ -426,6 +427,7 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
             continue;
 
         bool isobj = false;
+        bool isFreeRow = false;
         std::string::iterator it;
         boost::string_ref word_ref;
         MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
@@ -461,6 +463,10 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
                 isobj = true;
             }
             else {
+                // For the moment we add the free rows to the constraint
+                // matrix. A better way would be not to like soplex does but I 
+                // didn't have enough time to do that.
+                // isFreeRow = true;
                 rowlhs.push_back(-infinity());
                 rowrhs.push_back(infinity());
                 rowtype.push_back(boundtype::FR);
@@ -478,11 +484,21 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
         qi::phrase_parse(it, strline.end(), qi::lexeme[+qi::graph], ascii::space,
                          rowname); // todo use ref
 
+        // Do not add to matrix if row is free.
+        if (isFreeRow) {
+          rowname2idx.emplace(rowname, -2);
+          continue;
+        }
+
         // todo whitespace in name possible?
+        // so in rowname2idx -1 is the objective, -2 is all the free rows
         auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (nrows++));
 
+        // Else is enough here because all free rows are ignored.
         if (!isobj)
             rownames.push_back(rowname);
+        else
+            objectiveName = rowname;
 
         if (!ret.second)
         {
@@ -490,6 +506,10 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
             return MpsParser::parsekey::FAIL;
         }
     }
+
+    // Update numRow in case there is free rows. They won't be added to the
+    // constraint matrix.
+    numRow = rowLower.size();
 
     return MpsParser::parsekey::FAIL;
 }
@@ -517,7 +537,7 @@ MpsParser::parseCols(boost::iostreams::filtering_istream &file,
         if (rowidx >= 0)
             this->nnz++;
         else
-            assert(-1 == rowidx);
+            assert(-1 == rowidx || -2 == rowidx);
     };
 
     auto addtuple = [&rowtype, &rowidx, &ncols, this](double coeff) {
