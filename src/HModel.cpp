@@ -3,10 +3,9 @@
 #include "HTimer.h"
 #include "HPresolve.h"
 
+#include "HMPSIO.h"
 #ifdef Boost_FOUND
 #include "HMpsFF.h"
-#else
-#include "HMPSIO.h"
 #endif
 
 #include "HToyIO.h"
