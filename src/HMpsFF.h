@@ -408,7 +408,7 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
 
     std::string strline;
     size_t nrows = 0;
-    bool has_objective = false;
+    std::string objectiveName = "";
 
     while (getline(file, strline))
     {
@@ -457,12 +457,10 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
         }
         else if (word_ref.front() == 'N') 
         {
-            if (!has_objective) {
+            if (objectiveName == "") {
                 isobj = true;
             }
             else {
-                isobj = false;
-                has_objective = false; 
                 rowlhs.push_back(-infinity());
                 rowrhs.push_back(infinity());
                 rowtype.push_back(boundtype::FR);
