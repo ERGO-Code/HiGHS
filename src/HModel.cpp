@@ -77,14 +77,6 @@ int HModel::load_fromMPS(const char *filename)
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
 #endif
 
-  // for old mps reader uncomment below and the other header file
-  // at the top of this file HMpsIO instead of HMpsFF
-  //int RtCd = readMPS(filename, -1, -1,
-  //                   numRow, numCol, objSense, objOffset,
-  //                   Astart, Aindex, Avalue,
-  //                   colCost, colLower, colUpper, rowLower, rowUpper,
-  //                   integerColumn);
-
   if (RtCd)
   {
     totalTime += timer.getTime();
