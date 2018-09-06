@@ -201,7 +201,7 @@ int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
   }
 
 int 
-readMPS(const char *filename, int &numRow, int &numCol,
+readMPS_FF(const char *filename, int &numRow, int &numCol,
             int &objSense, double &objOffset,
             std::vector<int> &Astart, std::vector<int> &Aindex, std::vector<double> &Avalue,
             std::vector<double> &colCost, std::vector<double> &colLower, std::vector<double> &colUpper,
