@@ -83,6 +83,14 @@ if(OLD_PARSER)
     message(STATUS "Using old hsol parser.")
 endif()
 
+# use interior point solver
+set(IPX_DIR "" CACHE STRING "Path to IPX folder.")
+if(IPX_DIR)
+    add_definitions(-DIPX)
+    message(STATUS "Using interior point solver.")
+    include_directories(${IPX_DIR}/src)
+endif()
+
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
 

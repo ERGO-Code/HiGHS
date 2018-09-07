@@ -71,6 +71,12 @@ endif()
 add_executable(highs HApp.cpp)
 target_link_libraries(highs libhighs)
 
+# use interior point solver
+if (IPX)
+  target_link_libraries(highs -lipx)
+  target_link_libraries(highs -L${IPX_DIR}/lib)
+endif()
+
 # set the install rpath to the installed destination
 set_target_properties(highs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 # on UNIX system the 'lib' prefix is automatically added

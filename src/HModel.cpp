@@ -2,13 +2,16 @@
 #include "HConst.h"
 #include "HTimer.h"
 #include "HPresolve.h"
+#include "HToyIO.h"
 
 #include "HMPSIO.h"
 #ifdef Boost_FOUND
 #include "HMpsFF.h"
 #endif
 
-#include "HToyIO.h"
+#ifdef IPX
+#include "lp_solver.h"
+#endif
 
 #include <cctype>
 #include <cmath>
@@ -23,6 +26,7 @@
 #include <iomanip>
 #include <iostream>
 #include <stdexcept>
+
 using namespace std;
 
 // Methods which load whole models, initialise the basis then
@@ -101,14 +105,19 @@ int HModel::load_fromMPS(const char *filename)
   //check_load_fromArrays(); return;
 #endif
 
+#ifdef IP_SOLVER
+
+
+#else
   // Assign and initialise the scaling factors
   initScale();
 
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
-
   totalTime += timer.getTime();
+#endif
+
   return RtCd;
 }
 
