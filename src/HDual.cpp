@@ -2280,12 +2280,18 @@ void HDual::rp_hsol_da_str()
   
   printf("\nData structures\n");
   printf("         ");
-  for (int i = 0; i < numTot; i++) printf(" %4d", i); printf("\n");
-  printf("NonBcFg: "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicFlag()[i]); printf("\n");
-  printf("WorkMv:  "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicMove()[i]); printf("\n");
-  printf("DvxIx:   "); for (int i = 0; i < numTot; i++) printf(" %4d", dvx_ix[i]); printf("\n");
-  printf("BcIx:    "); for (int i = 0; i < numRow; i++) printf(" %4d", model->getBaseIndex()[i]); printf("\n");
-  printf("DvxV:    "); for (int i = 0; i < numRow; i++) printf(" %4.1g", dualRHS.workEdWt[i]); printf("\n");
+  for (int i = 0; i < numTot; i++) printf(" %4d", i); 
+  printf("\n");
+  printf("NonBcFg: "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicFlag()[i]); 
+  printf("\n");
+  printf("WorkMv:  "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicMove()[i]); 
+  printf("\n");
+  printf("DvxIx:   "); for (int i = 0; i < numTot; i++) printf(" %4d", dvx_ix[i]); 
+  printf("\n");
+  printf("BcIx:    "); for (int i = 0; i < numRow; i++) printf(" %4d", model->getBaseIndex()[i]); 
+  printf("\n");
+  printf("DvxV:    "); for (int i = 0; i < numRow; i++) printf(" %4.1g", dualRHS.workEdWt[i]); 
+  printf("\n");
 }
 void HDual::rp_hsol_pv_c(HVector *column) const
 {
