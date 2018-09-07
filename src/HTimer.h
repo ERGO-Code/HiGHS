@@ -142,7 +142,7 @@ public:
     if (itemStart[itemKey]<0)
       printf("recordStart [%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
 	     itemKey, itemStart[itemKey], itemTicks[itemKey], itemNumCall[itemKey]);
-    assert(itemStart[itemKey]<0);
+    assert(itemStart[itemKey]>0);
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started in recordFinish
     itemStart[itemKey] = -getWallTick();
@@ -154,7 +154,7 @@ public:
     if (itemStart[itemKey]>0)
       printf("recordFinish[%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
 	     itemKey, itemStart[itemKey], itemTicks[itemKey], itemNumCall[itemKey]);
-    assert(itemStart[itemKey]>0);
+    assert(itemStart[itemKey]<0);
     double wallTick = getWallTick();
     itemTicks[itemKey] += (wallTick + itemStart[itemKey]);
     itemNumCall[itemKey]++;
