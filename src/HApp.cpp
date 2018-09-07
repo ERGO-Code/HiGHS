@@ -1,5 +1,9 @@
 #include "HApp.h"
 
+#ifdef IPX
+#include "ipx.h"
+#endif
+
 using namespace std;
 
 int main(int argc, char **argv)
@@ -279,6 +283,23 @@ int solvePlain(const char *filename)
   if (RtCd)
     return RtCd;
 
+  
+#ifdef IPX
+  bool result = IPSolverInit(model.filename,
+                             model.numRow,
+                             model.numCol,
+                             model.objOffset,
+                             model.Astart,
+                             model.Aindex,
+                             model.Avalue,
+                             model.colCost,
+                             model.colLower,
+                             model.colUpper,
+                             model.rowLower,
+                             model.rowUpper);
+
+  if (!result_ok) std::cout << "Error calling IPX.";
+#else
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
@@ -290,6 +311,8 @@ int solvePlain(const char *filename)
 #endif
   //  model.util_reportModel();
   //model.util_reportModelSolution();
+#endif
+
   return 0;
 }
 

@@ -86,9 +86,9 @@ endif()
 # use interior point solver
 set(IPX_DIR "" CACHE STRING "Path to IPX folder.")
 if(IPX_DIR)
-    add_definitions(-DIPX)
+    add_compile_options(-D IPX=ON) 
     message(STATUS "Using interior point solver.")
-    include_directories(${IPX_DIR}/src)
+    include_directories(${IPX_DIR}/include)
 endif()
 
 # set the correct rpath for OS X

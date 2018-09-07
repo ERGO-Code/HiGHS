@@ -9,10 +9,6 @@
 #include "HMpsFF.h"
 #endif
 
-#ifdef IPX
-#include "lp_solver.h"
-#endif
-
 #include <cctype>
 #include <cmath>
 #include <cassert>
@@ -105,10 +101,8 @@ int HModel::load_fromMPS(const char *filename)
   //check_load_fromArrays(); return;
 #endif
 
-#ifdef IP_SOLVER
 
-
-#else
+#ifndef IPX
   // Assign and initialise the scaling factors
   initScale();
 
