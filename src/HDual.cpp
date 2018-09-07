@@ -2281,7 +2281,7 @@ void HDual::rp_hsol_da_str()
   printf("\nData structures\n");
   printf("         ");
   for (int i = 0; i < numTot; i++) printf(" %4d", i);
-     printf("\n");
+  printf("\n");
   printf("NonBcFg: "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicFlag()[i]); 
   printf("\n");
   printf("WorkMv:  "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicMove()[i]); 
