@@ -2,13 +2,10 @@
 #include "HConst.h"
 #include "HTimer.h"
 #include "HPresolve.h"
-
-//Remove FF MPS Read by commenting out lines 1,2,3,5 below
-//#ifdef Boost_FOUND
-//#include "HMpsFF.h"
-//#else
 #include "HMPSIO.h"
-//#endif
+#ifdef Boost_FOUND
+#include "HMpsFF.h"
+#endif
 #include "HToyIO.h"
 
 #include <cctype>
@@ -66,26 +63,17 @@ int HModel::load_fromMPS(const char *filename)
 
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
-  //Remove FF MPS Read by commenting out lines 1-6 and 11 below
-  //#ifdef Boost_FOUND
-  //  int RtCd = readMPS(filename,
-  //  		     numRow, numCol, objSense, objOffset,
-  //  		     Astart, Aindex, Avalue,
-  //  		     colCost, colLower, colUpper, rowLower, rowUpper);
-  //#else
+#if defined(Boost_FOUND) && !defined(OLD_PARSER)
+  int RtCd = readMPS_FF(filename,
+                     numRow, numCol, objSense, objOffset,
+                     Astart, Aindex, Avalue,
+                     colCost, colLower, colUpper, rowLower, rowUpper);
+#else
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
-  //#endif
-
-  // for old mps reader uncomment below and the other header file
-  // at the top of this file HMpsIO instead of HMpsFF
-  //int RtCd = readMPS(filename, -1, -1,
-  //                   numRow, numCol, objSense, objOffset,
-  //                   Astart, Aindex, Avalue,
-  //                   colCost, colLower, colUpper, rowLower, rowUpper,
-  //                   integerColumn);
+#endif
 
   if (RtCd)
   {
@@ -2731,7 +2719,7 @@ void HModel::check_load_fromPostsolve()
 }
 #endif
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//>->->->->->->->->->->->->->->->->->->->->->-
 // Esoterica!
 // Initialise the random vectors required by hsol
 void HModel::initRandomVec()
@@ -2790,7 +2778,7 @@ void HModel::writePivots(const char *suffix)
   output.close();
 }
 #endif
-//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-
 
 // Methods to get objective, solution and basis: all just copy what's there with no re-evaluation!
 // Return the current value of ther objective

@@ -1,6 +1,7 @@
 #ifndef HMPSFF_H_
 #define HMPSFF_H_
 
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <cstdio>
@@ -8,7 +9,6 @@
 #include <iostream>
 #include <map>
 #include <vector>
-#include <cassert>
 
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -106,7 +106,8 @@ class MpsParser
     {
         LE,
         EQ,
-        GE
+        GE,
+        FR
     };
     /*
     * data for mps problem
@@ -206,7 +207,7 @@ int MpsParser::loadProblem(const char *filename_, int &numRow_, int &numCol_,
   }
 
 int 
-readMPS(const char *filename, int &numRow, int &numCol,
+readMPS_FF(const char *filename, int &numRow, int &numCol,
             int &objSense, double &objOffset,
             std::vector<int> &Astart, std::vector<int> &Aindex, std::vector<double> &Avalue,
             std::vector<double> &colCost, std::vector<double> &colLower, std::vector<double> &colUpper,
@@ -347,7 +348,8 @@ int MpsParser::parse(boost::iostreams::filtering_istream &file)
     assert(row_type.size() == unsigned(nRows));
 
     nCols = colname2idx.size();
-    nRows = rowname2idx.size() - 1; // subtract obj row
+    // No need to update nRows because the assert ensures
+    // it is correct.
 
     return 0;
 }
@@ -411,6 +413,7 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
 
     std::string strline;
     size_t nrows = 0;
+    std::string objectiveName = "";
 
     while (getline(file, strline))
     {
@@ -428,6 +431,7 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
             continue;
 
         bool isobj = false;
+        bool isFreeRow = false;
         std::string::iterator it;
         boost::string_ref word_ref;
         MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
@@ -457,9 +461,21 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
             rowrhs.push_back(0.0);
             rowtype.push_back(boundtype::LE);
         }
-        else if (word_ref.front() ==
-                 'N') // todo properly treat multiple free rows
-            isobj = true;
+        else if (word_ref.front() == 'N') 
+        {
+            if (objectiveName == "") {
+                isobj = true;
+            }
+            else {
+                // For the moment we add the free rows to the constraint
+                // matrix. A better way would be not to like soplex does but I 
+                // didn't have enough time to do that.
+                // isFreeRow = true;
+                rowlhs.push_back(-infinity());
+                rowrhs.push_back(infinity());
+                rowtype.push_back(boundtype::FR);
+            }
+        }
         else
         {
             std::cerr << "reading error in ROWS section " << std::endl;
@@ -472,11 +488,21 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
         qi::phrase_parse(it, strline.end(), qi::lexeme[+qi::graph], ascii::space,
                          rowname); // todo use ref
 
+        // Do not add to matrix if row is free.
+        if (isFreeRow) {
+          rowname2idx.emplace(rowname, -2);
+          continue;
+        }
+
         // todo whitespace in name possible?
+        // so in rowname2idx -1 is the objective, -2 is all the free rows
         auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (nrows++));
 
+        // Else is enough here because all free rows are ignored.
         if (!isobj)
             rownames.push_back(rowname);
+        else
+            objectiveName = rowname;
 
         if (!ret.second)
         {
@@ -484,6 +510,10 @@ MpsParser::parseRows(boost::iostreams::filtering_istream &file,
             return MpsParser::parsekey::FAIL;
         }
     }
+
+    // Update numRow in case there is free rows. They won't be added to the
+    // constraint matrix.
+    numRow = rowLower.size();
 
     return MpsParser::parsekey::FAIL;
 }
@@ -511,7 +541,7 @@ MpsParser::parseCols(boost::iostreams::filtering_istream &file,
         if (rowidx >= 0)
             this->nnz++;
         else
-            assert(-1 == rowidx);
+            assert(-1 == rowidx || -2 == rowidx);
     };
 
     auto addtuple = [&rowtype, &rowidx, &ncols, this](double coeff) {
@@ -881,11 +911,11 @@ MpsParser::parseRanges(boost::iostreams::filtering_istream &file)
                 rowlhs.at(rowidx) = rowrhs.at(rowidx) - abs(val);
             }
 
-            else //if (row_type[rowidx] == boundtype::EQ && val > 0 ||
-                 //row_type[rowidx] == boundtype::GE)
+            else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
+                 row_type[rowidx] == boundtype::GE)
             {
                 assert(rowlhs.at(rowidx) > (-infinity()));
-                rowrhs.at(rowidx) = rowrhs.at(rowidx) + abs(val);
+                rowrhs.at(rowidx) = rowlhs.at(rowidx) + abs(val);
             }
         };
 
