@@ -1,7 +1,7 @@
 #include "HApp.h"
 
 #ifdef IPX
-#include "ipx.h"
+#include "ipx_interface.h"
 #endif
 
 using namespace std;
@@ -285,8 +285,7 @@ int solvePlain(const char *filename)
 
   
 #ifdef IPX
-  bool result = IPSolverInit(model.filename,
-                             model.numRow,
+  bool result_ok = ipx::IPSolverInit(model.numRow,
                              model.numCol,
                              model.objOffset,
                              model.Astart,

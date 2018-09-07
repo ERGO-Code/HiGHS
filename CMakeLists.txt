@@ -88,6 +88,7 @@ set(IPX_DIR "" CACHE STRING "Path to IPX folder.")
 if(IPX_DIR)
     add_compile_options(-D IPX=ON) 
     message(STATUS "Using interior point solver.")
+    include_directories(${IPX_DIR}/src)
     include_directories(${IPX_DIR}/include)
 endif()
 

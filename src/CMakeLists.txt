@@ -73,8 +73,8 @@ target_link_libraries(highs libhighs)
 
 # use interior point solver
 if (IPX)
-  target_link_libraries(highs -lipx)
-  target_link_libraries(highs -L${IPX_DIR}/lib)
+  link_directories("${IPX_DIR}/lib/")
+  target_link_libraries(highs ${IPX_DIR}/lib/libipx.so)
 endif()
 
 # set the install rpath to the installed destination

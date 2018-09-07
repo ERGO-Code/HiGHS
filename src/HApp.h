@@ -22,12 +22,6 @@
 //#include "HinOut.h"
 //Just to write out boxed model
 
-//new mps reader
-//#include "HMpsFF.h"
-
-//old mps reader
-//#include "HMPSIO.h"
-
 #ifdef EXT_PRESOLVE
 #include "core/Presolve.hpp"
 #endif
