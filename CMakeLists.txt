@@ -74,7 +74,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 option(OLD_PARSER  "USE OLD PARSER" OFF)
 if(OLD_PARSER)
     add_definitions(-DOLD_PARSER)
-    message(STATUS "Using old hsol parser.")
+    message(STATUS "Using old hsol parser")
 endif()
 
 # set the correct rpath for OS X

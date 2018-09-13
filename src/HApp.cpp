@@ -16,15 +16,35 @@ int main(int argc, char **argv)
 
 
   std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
-  //Report on preprocessing macros
-#ifdef SCIP_DEV
-  std::cout << "SCIP_DEV is ON\n" << std::endl;
-#endif
-#ifdef HiGHSDEBUG
-  std::cout << "HiGHSDEBUG is ON\n" << std::endl;
-#endif
 #ifdef HiGHSDEV
-  std::cout << "HiGHSDEV is ON\n" << std::endl;
+  //Report on preprocessing macros
+#ifdef CMAKE_BUILD_TYPE
+#if CMAKE_BUILD_TYPE="Optim"
+  std::cout << "CMAKE_BUILD_TYPE is Optim" << std::endl;
+#elif CMAKE_BUILD_TYPE="Debug"
+  std::cout << "CMAKE_BUILD_TYPE is Debug" << std::endl;
+#else
+  std::cout << "CMAKE_BUILD_TYPE is     defined" << std::endl;
+#endif
+#else
+  std::cout << "CMAKE_BUILD_TYPE is not defined" << std::endl;
+#endif
+#ifdef OLD_PARSER
+  std::cout << "OLD_PARSER       is     defined" << std::endl;
+#else
+  std::cout << "OLD_PARSER       is not defined" << std::endl;
+#endif
+#ifdef SCIP_DEV
+  std::cout << "SCIP_DEV         is     defined" << std::endl;
+#else
+  std::cout << "SCIP_DEV         is not defined" << std::endl;
+#endif
+  std::cout << "HiGHSDEV         is     defined" << std::endl;
+#ifdef HiGHSDEBUG
+  std::cout << "HiGHSDEBUG       is     defined" << std::endl;
+#else
+  std::cout << "HiGHSDEBUG       is not defined" << std::endl;
+#endif
 #endif
 
   if (argc == 1) {

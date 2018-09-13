@@ -230,3 +230,5 @@ libhsol.a
 lpi_h2gmp.cpp
 
 buildOpt/
+.vscode/
+vscodeSetup

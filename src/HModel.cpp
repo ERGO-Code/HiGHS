@@ -60,21 +60,21 @@ int HModel::load_fromMPS(const char *filename)
   // Load the model, timing the process
   timer.reset();
   modelName = filename;
-
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
+  bool mps_ff = true;
   int RtCd = readMPS_FF(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
 #else
+  bool mps_ff = false;
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
 #endif
-
   if (RtCd)
   {
     totalTime += timer.getTime();
@@ -82,7 +82,7 @@ int HModel::load_fromMPS(const char *filename)
   }
 #ifdef HiGHSDEV
   int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numIntegerColumn++;}
+  if (!mps_ff) for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numIntegerColumn++;}
   if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
 #endif
   numTot = numCol + numRow;
