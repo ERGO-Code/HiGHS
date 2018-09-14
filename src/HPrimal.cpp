@@ -94,10 +94,9 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
 void HPrimal::primalRebuild() {
     model->recordPivots(-1, -1, 0); // Indicate REINVERT
 #ifdef HiGHSDEV
-    //    double tt0 = model->timer.getTime();
+    double tt0 = 0;
+    if (anRebuildTime) tt0 = model->timer.getTime();
 #endif
-    double tt0 = model->timer.getTime();
-
     // Rebuild model->factor - only if we got updates
     int sv_invertHint = invertHint;
     invertHint = invertHint_no; // Was 0
@@ -122,15 +121,17 @@ void HPrimal::primalRebuild() {
     model->computeDuObj();
     model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
+#ifdef HiGHSDEV
+  if (anRebuildTime) {
     double rebuildTime = model->timer.getTime()-tt0;
     totalRebuilds++;
     totalRebuildTime += rebuildTime;
-#ifdef HiGHSDEV
     printf("Primal     rebuild %d (%1d) on iteration %9d: Rebuild time = %g; Total rebuild time %g\n",
 	   totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime, totalRebuildTime);
+  }
 #endif
-    //Data are fresh from rebuild
-    model->mlFg_haveFreshRebuild = 1;
+  //Data are fresh from rebuild
+  model->mlFg_haveFreshRebuild = 1;
 }
 
 void HPrimal::primalChooseColumn() {
