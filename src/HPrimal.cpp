@@ -27,9 +27,11 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
     columnDensity = 0;
     row_epDensity = 0;
 
+#ifdef HiGHSDEV
     // Initialise rebuild count and time
     totalRebuildTime = 0;
     totalRebuilds = 0;
+#endif
 
     // Setup other buffers
 

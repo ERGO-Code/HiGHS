@@ -63,13 +63,17 @@ int HModel::load_fromMPS(const char *filename)
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
+#ifdef HiGHSDEV
   bool mps_ff = true;
+#endif
   int RtCd = readMPS_FF(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
 #else
+#ifdef HiGHSDEV
   bool mps_ff = false;
+#endif
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,

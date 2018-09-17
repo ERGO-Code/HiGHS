@@ -16,8 +16,9 @@ int main(int argc, char **argv)
 
 
   std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
-#ifdef HiGHSDEV
+#if defined(HiGHSDEV) || defined(HiGHSDEBUG)
   //Report on preprocessing macros
+
 #ifdef CMAKE_BUILD_TYPE
 #if CMAKE_BUILD_TYPE="Optim"
   std::cout << "CMAKE_BUILD_TYPE is Optim" << std::endl;
@@ -29,22 +30,31 @@ int main(int argc, char **argv)
 #else
   std::cout << "CMAKE_BUILD_TYPE is not defined" << std::endl;
 #endif
+
 #ifdef OLD_PARSER
   std::cout << "OLD_PARSER       is     defined" << std::endl;
 #else
   std::cout << "OLD_PARSER       is not defined" << std::endl;
 #endif
+
 #ifdef SCIP_DEV
   std::cout << "SCIP_DEV         is     defined" << std::endl;
 #else
   std::cout << "SCIP_DEV         is not defined" << std::endl;
 #endif
+
+#ifdef HiGHSDEV
   std::cout << "HiGHSDEV         is     defined" << std::endl;
+#else
+  std::cout << "HiGHSDEV         is not defined" << std::endl;
+#endif
+
 #ifdef HiGHSDEBUG
   std::cout << "HiGHSDEBUG       is     defined" << std::endl;
 #else
   std::cout << "HiGHSDEBUG       is not defined" << std::endl;
 #endif
+
 #endif
 
   if (argc == 1) {
@@ -1087,7 +1097,7 @@ int solveTasks(const char *filename)
   solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
 
   model.util_reportSolverOutcome("Solve tasks");
-#ifdef HiGHSDEBUG
+#ifdef HiGHSDEV
   model.writePivots("tasks");
 #endif
   return 0;
@@ -1114,7 +1124,7 @@ int solveMulti(const char *filename, const char *partitionfile)
   solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 
   model.util_reportSolverOutcome("Solve multi");
-#ifdef HiGHSDEBUG
+#ifdef HiGHSDEV
   model.writePivots("multi");
 #endif
   return 0;
