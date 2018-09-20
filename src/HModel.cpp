@@ -93,8 +93,7 @@ int HModel::load_fromMPS(const char *filename)
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
 #ifdef HiGHSDEV
   //  util_reportModelDa(filename);
-
-  //  util_anMl("Unscaled");
+  util_anMl("Unscaled");
 #endif
 
 
@@ -1690,7 +1689,9 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
-  //  util_anMl("Scaled");
+#ifdef HiGHSDEV
+  util_anMl("Scaled");
+#endif
 }
 
 void HModel::setup_tightenBound()
@@ -4416,6 +4417,7 @@ void HModel::util_anMl(const char *message) {
   util_anVecV("Matrix entries", Astart[numCol], Avalue, true);
   util_anMlBd("Column", numCol, colLower, colUpper);
   util_anMlBd("Row", numRow, rowLower, rowUpper);
+  util_anMlLargeCo(colCost, colLower, colUpper, Astart, Aindex, Avalue);
 }
 
 void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper) {
@@ -4577,4 +4579,30 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec, b
       printf("     %11.4g %8d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
     }
   }
+}
+
+void HModel::util_anMlLargeCo(vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+			      vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue) {
+  double tlLargeCo=1e8;
+  double mxLargeCo=0;
+  int numLargeCo=0;
+  for (int iCol=0; iCol<numCol; iCol++) {
+    double iColCo = colCost[iCol];
+    double iColLower = colLower[iCol];
+    double iColUpper = colUpper[iCol];
+    mxLargeCo = max(abs(iColCo), mxLargeCo);
+    if (abs(iColCo) > tlLargeCo) {
+      numLargeCo++;
+      int numColNZ = Astart[iCol+1] - Astart[iCol];
+      printf("Large cost %3d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros",
+	     numLargeCo, iColCo, iCol, iColLower, iColUpper, numColNZ);
+      if (numColNZ == 1) {
+	int elN = Astart[iCol];
+	printf(": Matrix entry %11.4g in row %6d\n", Avalue[elN], Aindex[elN]);
+      } else {
+	printf("\n");	
+      }
+    }
+  }
+  printf("Found %d |cost| > %11.4g: largest is %11.4g\n", numLargeCo, tlLargeCo, mxLargeCo);
 }

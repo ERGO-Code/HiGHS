@@ -304,10 +304,14 @@ public:
 			      vector<double>& XcolPrimal, vector<double>& XcolDual, vector<int>& XcolStatus);
     void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex, vector<double>& XAvalue);
 
+#ifdef HiGHSDEV
     void util_anPrDuDgn();
     void util_anMl(const char *message);
     void util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper);
     void util_anVecV(const char *message, int vecDim, vector<double>& vec, bool anVLs);
+    void util_anMlLargeCo(vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+			  vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue);
+#endif
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Solving options and scalar solution data section: Sort it out!
