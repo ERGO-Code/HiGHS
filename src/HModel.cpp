@@ -4585,7 +4585,14 @@ void HModel::util_anMlLargeCo(vector<double>& colCost, vector<double>& colLower,
 			      vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue) {
   double tlLargeCo=1e8;
   double mxLargeCo=0;
+  double mxLargeStrucCo=0;
+  double mxLargeSlackCo=0;
   int numLargeCo=0;
+  int numRp=0;
+  int numZeInfSlacks=0;
+  int numInfZeSlacks=0;
+  bool rpSlackC = false;
+  bool rpStrucC = true;
   for (int iCol=0; iCol<numCol; iCol++) {
     double iColCo = colCost[iCol];
     double iColLower = colLower[iCol];
@@ -4594,15 +4601,32 @@ void HModel::util_anMlLargeCo(vector<double>& colCost, vector<double>& colLower,
     if (abs(iColCo) > tlLargeCo) {
       numLargeCo++;
       int numColNZ = Astart[iCol+1] - Astart[iCol];
-      printf("Large cost %3d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros",
-	     numLargeCo, iColCo, iCol, iColLower, iColUpper, numColNZ);
       if (numColNZ == 1) {
-	int elN = Astart[iCol];
-	printf(": Matrix entry %11.4g in row %6d\n", Avalue[elN], Aindex[elN]);
+	mxLargeSlackCo = max(abs(iColCo), mxLargeSlackCo);
+	if (iColLower==0 && hsol_isInfinity(iColUpper)) numZeInfSlacks++;
+	if (hsol_isInfinity(-iColLower) && iColUpper==0) numInfZeSlacks++;
+	bool rpC = rpSlackC && numRp<1000;
+	if (rpC) {
+	  numRp++;
+	  printf("Large cost %6d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros",
+		 numLargeCo, iColCo, iCol, iColLower, iColUpper, numColNZ);
+	  int elN = Astart[iCol];
+	  printf(": Matrix entry %11.4g in row %6d\n", Avalue[elN], Aindex[elN]);
+	}
       } else {
-	printf("\n");	
+	mxLargeStrucCo = max(abs(iColCo), mxLargeStrucCo);
+	bool rpC = rpStrucC && numRp<1000;
+	if (rpC) {
+	  numRp++;
+	  printf("Large cost %6d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros\n",
+		 numLargeCo, iColCo, iCol, iColLower, iColUpper, numColNZ);
+	}
       }
     }
   }
-  printf("Found %d |cost| > %11.4g: largest is %11.4g\n", numLargeCo, tlLargeCo, mxLargeCo);
+  printf("Found %7d |cost| > %11.4g: largest is %11.4g\nMax slack cost is %11.4g\nMax struc cost is %11.4g\n", numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo);
+  if (numLargeCo>0) {
+    printf("   %7d such columns are slacks with bounds [0,  Inf] (%3d%%)\n", numZeInfSlacks, (100*numZeInfSlacks)/numLargeCo);
+    printf("   %7d such columns are slacks with bounds [-Inf, 0] (%3d%%)\n", numInfZeSlacks, (100*numInfZeSlacks)/numLargeCo);
+  }
 }
