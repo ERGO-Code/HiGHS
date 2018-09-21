@@ -356,7 +356,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     }
     cout << flush;
   }
-#endif
+  model->util_anMlSol();
+  
+#endif  
 }
  
 void HDual::init(int num_threads)
