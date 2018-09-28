@@ -501,25 +501,24 @@ void KktChStep::makeKKTCheck() {
     
     rD.resize(numRow);
     k=0;
-    for (int i=0;i<RnumRow;i++)
-    	if (flagRow[i]) {
+    for (int i=0;i<RnumRow;i++) {
+		 if (flagRow[i]) {
     		rD[k] = rowDual[i];
     		k++;
-	    }
-	
-	
+		 }
+    }
 	
 	checker.passSolution(cV, cD, rD);
 	checker.checkKKT();
 	}
 
 void KktChStep::printA() {
-	char buff [4];
+	char buff [7];
 	cout<<"\n-----cost-----\n";
 
 	for (int i=0;i<numCol;i++) {
 		sprintf(buff, "%2.1g ", colCost[i]);
-		cout<<std::setw(5)<<buff; 
+		cout<<std::setw(7)<<buff; 
 	}
 	cout<<endl;
 	cout<<"------A-|-b-----\n";
@@ -533,9 +532,9 @@ void KktChStep::printA() {
 			if (Aindex[ind]==i && ind<Astart[j+1])
 			{	
 				sprintf(buff, "%2.1g ", Avalue[ind]);
-				cout<<std::setw(5)<<buff; 
+				cout<<std::setw(7)<<buff; 
 				}
-			else cout<<std::setw(5)<<"   ";
+			else cout<<std::setw(7)<<"   ";
 			
 		}
 		cout<<"  |   "<<std::setw(5)<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
@@ -546,7 +545,7 @@ void KktChStep::printA() {
 			sprintf(buff, "%2.1g ", colLower[i]);
 		else 
 			sprintf(buff, "-inf");
-		cout<<setw(5)<<buff; 
+		cout<<setw(7)<<buff; 
 	}
 	cout<<endl;
 	cout<<"------u------\n";
@@ -555,19 +554,19 @@ void KktChStep::printA() {
 			sprintf(buff, "%2.1g ", colUpper[i]);
 		else 
 			sprintf(buff, "inf");
-		cout<<setw(5)<<buff; 
+		cout<<setw(7)<<buff; 
 	}
 	cout<<endl;
 
 }
 
 void KktChStep::printAR() {
-	char buff [4];
+	char buff [7];
 	cout<<"\n-----cost-----\n";
 
 	for (int i=0;i<numCol;i++) {
 		sprintf(buff, "%2.1g ", colCost[i]);
-		cout<<std::setw(5)<<buff; 
+		cout<<std::setw(7)<<buff; 
 	}
 	cout<<endl;
 	cout<<"------AR-|-b-----\n";
@@ -581,13 +580,13 @@ void KktChStep::printAR() {
 			if (ARindex[ind]==j && ind<ARstart[i+1])
 			{	
 				sprintf(buff, "%2.1g ", ARvalue[ind]);
-				cout<<std::setw(5)<<buff; 
+				cout<<std::setw(7)<<buff; 
 				}
-			else cout<<std::setw(5)<<"   ";
+			else cout<<std::setw(7)<<"   ";
 			
 		}
 		
-		cout<<"  |   "<<std::setw(5)<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
+		cout<<"  |   "<<std::setw(7)<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
 		
 	}
 	

@@ -315,8 +315,8 @@ void HModel::copy_fromHModelToHPresolve(HPresolve *ptr_model)
   ptr_model->rowLower = rowLower;
   ptr_model->rowUpper = rowUpper;
 
-  ptr_model->modelName = modelName;
-}
+  ptr_model->modelName = &modelName[0];
+  }
 
 void HModel::printSolution()
 {
