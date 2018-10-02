@@ -4632,7 +4632,8 @@ void HModel::util_anMlLargeCo() {
       }
     }
   }
-  printf("Found %7d |cost| > %11.4g: largest is %11.4g\nMax large slack cost is %11.4g\nMax large struc cost is %11.4g\n", numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo);
+  printf("Found %7d |cost| > %11.4g: largest is %11.4g\nMax large slack cost is %11.4g\nMax large struc cost is %11.4g\n",
+	 numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo);
   if (numLargeCo>0) {
     printf("   %7d such columns are slacks with bounds [0,  Inf] (%3d%%)\n", numZeInfLargeCoSlack, (100*numZeInfLargeCoSlack)/numLargeCo);
     printf("   %7d such columns are slacks with bounds [-Inf, 0] (%3d%%)\n", numInfZeLargeCoSlack, (100*numInfZeLargeCoSlack)/numLargeCo);
@@ -4653,7 +4654,6 @@ void HModel::util_anMlSol() {
   printf("\nAnalysing the model solution\n");
   const double inf = HSOL_CONST_INF;
   const double tlValueEr = 1e-8;
-  const double tlDualEr = 1e-8;
   const double tlPrRsduEr = 1e-8;
   const double tlDuRsduEr = 1e-8;
   const double tlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
@@ -4668,45 +4668,65 @@ void HModel::util_anMlSol() {
   for (int iRow = 0; iRow < numRow; iRow++) dual[basicIndex[iRow]] = 0;
 
   // Allocate and zero values of row primal activites and column dual activities to check the residuals
-  vector<double> rowPrAct;
   vector<double> sclRowPrAct;
-  rowPrAct.assign(numRow, 0);
+  vector<double> rowPrAct;
   sclRowPrAct.assign(numRow, 0);
-  vector<double> colDuAct;
+  rowPrAct.assign(numRow, 0);
   vector<double> sclColDuAct;
-  colDuAct.assign(numCol, 0);
+  vector<double> colDuAct;
   sclColDuAct.assign(numCol, 0);
+  colDuAct.assign(numCol, 0);
 
   // Determine row primal activites and column dual activities
   for (int iCol=0; iCol<numCol; iCol++) {
-    double lcColDuAct = -colCost[iCol];
-    double lcSclColDuAct = -colCost[iCol]/colScale[iCol];
+    //    printf("\nCol %2d\n", iCol);
+    double lcSclColDuAct = -colCost[iCol];
+    double lcColDuAct = -colCost[iCol]/colScale[iCol];
     for (int en = Astart[iCol]; en < Astart[iCol+1]; en++) {
       int iRow = Aindex[en];
       double AvalueEn = Avalue[en];
       double unsclAvalueEn = AvalueEn / (colScale[iCol] * rowScale[iRow]);
       sclRowPrAct[iRow] += AvalueEn*value[iCol];
       rowPrAct[iRow] += unsclAvalueEn*value[iCol]*colScale[iCol];
-      lcSclColDuAct += AvalueEn*dual[iRow];
-      lcColDuAct += unsclAvalueEn*dual[iRow]*rowScale[iRow];
+      //      double lcSum = lcSclColDuAct - AvalueEn*dual[numCol+iRow]; printf("Row %2d: %11.4g - (%11.4g*%11.4g=%11.4g) = %11.4g\n", iRow, lcSclColDuAct, AvalueEn, dual[numCol+iRow], AvalueEn*dual[numCol+iRow], lcSum);
+      lcSclColDuAct -= AvalueEn*dual[numCol+iRow];
+      lcColDuAct -= unsclAvalueEn*dual[numCol+iRow]*rowScale[iRow];
     }
     sclColDuAct[iCol] = lcSclColDuAct;
     colDuAct[iCol] = lcColDuAct;
   }
 
   // Look for column residual errors and infeasibilities - primal and dual
+  if (objOffset != 0.) printf("Primal objective offset is %11.4g\n", objOffset);
+  double ckPrObjV = objOffset;
+  double ckPrObjV_LargeCo = 0;
+  double ckPrObjV_OtherCo = 0;
+  
   bool rpAllCol = false;
+  int numRpCol = 0;
+  int mxRpCol = 100;
+  bool rpNoCol = false;
   int numColPrIfs=0;
   double maxColPrIfs=0;
   double sumColPrIfs=0;
   int numSclColPrIfs=0;
   double maxSclColPrIfs=0;
   double sumSclColPrIfs=0;
+  int numColDuIfs=0;
+  double maxColDuIfs=0;
+  double sumColDuIfs=0;
+  int numSclColDuIfs=0;
+  double maxSclColDuIfs=0;
+  double sumSclColDuIfs=0;
+  int numColDuRsduEr=0;
+  double sumColDuRsduEr=0;
+  double maxColDuRsduEr=0;
+  int numSclColDuRsduEr=0;
+  double sumSclColDuRsduEr=0;
+  double maxSclColDuRsduEr=0;
   for (int iCol=0; iCol<numCol; iCol++) {
     double sclColValue;
-    double sclColDual;
-    double unsclColValue;
-    double unsclColDual;
+    double sclColDuIfs;
     // Get the unscaled column bounds
     double unsclColLower = colLower[iCol];
     double unsclColUpper = colUpper[iCol];
@@ -4718,13 +4738,16 @@ void HModel::util_anMlSol() {
       if (nonbasicMove[iCol] == NONBASIC_MOVE_UP) {
 	// At lower bound
 	sclColValue = colLower[iCol];
+	sclColDuIfs = max(-dual[iCol], 0.);
       } else if (nonbasicMove[iCol] == NONBASIC_MOVE_DN) {
 	// At upper bound
 	sclColValue = colUpper[iCol];
+	sclColDuIfs = max(dual[iCol], 0.);
       } else {
 	// Fixed or free
 	if (colLower[iCol] == colUpper[iCol]) {
 	  sclColValue = colUpper[iCol];
+	  sclColDuIfs = 0;
 	} else {
 	  // Free
 	  bool freeEr = false;
@@ -4737,9 +4760,8 @@ void HModel::util_anMlSol() {
 	    printf("Column %7d supposed to be free but has upper bound of %g\n", iCol, colUpper[iCol]);
 	  }
 	  sclColValue = value[iCol];
-	  if (!freeEr) {
-	    printf("Column %7d is free with value %g\n", iCol ,sclColValue);
-	  }
+	  sclColDuIfs = abs(dual[iCol]);
+	  //	  if (!freeEr) {printf("Column %7d is free with value %g\n", iCol ,sclColValue);}
 	}
       }
       double valueEr = abs(sclColValue-value[iCol]);
@@ -4751,47 +4773,127 @@ void HModel::util_anMlSol() {
     } else {
       // Basic variable
       sclColValue = value[iCol];
+      sclColDuIfs = abs(dual[iCol]);
     }
+
+    double prObjTerm = sclColValue*colCost[iCol];
+    ckPrObjV += prObjTerm;
+    if (largeCostFlag[iCol]) {
+      ckPrObjV_LargeCo += prObjTerm;
+    } else {
+      ckPrObjV_OtherCo += prObjTerm;
+    }
+
+    double unsclColValue = sclColValue*colScale[iCol];
     //      assert(hsol_isInfinity(-sclColValue));
     //      assert(hsol_isInfinity(sclColValue));
-    double colRsdu = max(unsclColLower-unsclColValue, unsclColValue-unsclColUpper);
-    double colIfs = max(colRsdu, 0.0);
-    if (colIfs > tlPrIfs) {
-      numColPrIfs++;
-      sumColPrIfs += colIfs;
-    }
-    maxColPrIfs = max(colIfs, maxColPrIfs);
-    double sclColRsdu = max(colLower[iCol]-sclColValue, sclColValue-colUpper[iCol]);
-    double sclColPrIfs = max(sclColRsdu, 0.0);
+    // Assess primal infeasibility
+    // For scaled values
+    double sclColPrIfs = max(max(colLower[iCol]-sclColValue, sclColValue-colUpper[iCol]), 0.0);
     if (sclColPrIfs > tlPrIfs) {
       numSclColPrIfs++;
       sumSclColPrIfs += sclColPrIfs;
     }
     maxSclColPrIfs = max(sclColPrIfs, maxSclColPrIfs);
-    if (rpAllCol) {
-      printf("Col %3d: Scl = %11.4g: [%11.4g, %11.4g, %11.4g] (%11.4g) | Unscl [%11.4g, %11.4g, %11.4g] (%11.4g)\n", 
-	     iCol,colScale[iCol],
-	     colLower[iCol], sclColValue, colUpper[iCol], sclColPrIfs,
-	     unsclColLower, unsclColValue, unsclColUpper, colIfs);
+    // For unscaled values
+    double colPrIfs = max(max(unsclColLower-unsclColValue, unsclColValue-unsclColUpper), 0.0);
+    if (colPrIfs > tlPrIfs) {
+      numColPrIfs++;
+      sumColPrIfs += colPrIfs;
     }
-    //    unsclColDual = sclColDual/colScale[iCol];
-    //    double dualEr = abs(sclColDual-dual[iCol]);
-    //    if (dualEr > tlDualEr) {
-    //      printf("Column %7d has dual error of %11.4g for sclColDual = %11.4g and dual[iCol] = %11.4g\n", iCol, dualEr, sclColDual, dual[iCol]);
-    //      sclColDual = dual[iCol];
-    //    }
+    maxColPrIfs = max(colPrIfs, maxColPrIfs);
+    
+    // Assess dual infeasibility
+    // In scaled values
+    if (sclColDuIfs > tlDuIfs) {
+      numSclColDuIfs++;
+      sumSclColDuIfs += sclColDuIfs;
+    }
+    maxSclColDuIfs = max(sclColDuIfs, maxSclColDuIfs);
+    // In unscaled values
+    double colDuIfs = sclColDuIfs/colScale[iCol];
+    if (colDuIfs > tlDuIfs) {
+      numColDuIfs++;
+      sumColDuIfs += colDuIfs;
+    }
+    maxColDuIfs = max(colDuIfs, maxColDuIfs);
+
+    // Check column residual errors
+    // Using scaled column activities
+    double sclColDual = dual[iCol];
+    double sclColDuRsduEr = abs(sclColDuAct[iCol]+sclColDual);
+    if (sclColDuRsduEr > tlDuRsduEr) {
+      /*
+      bool rpCol = (rpAllCol || (numRpCol<mxRpCol)) && !rpNoCol;
+      if (rpCol) {
+	numRpCol++;
+	printf("Col    %7d has a   dual residual error of %11.4g for sclColDuAct[iCol] = %11.4g and -sclColDual = %11.4g\n",
+	       iCol, sclColDuRsduEr, sclColDuAct[iCol], -sclColDual);
+      }
+      */
+      numSclColDuRsduEr++;
+      sumSclColDuRsduEr += sclColDuRsduEr;
+    }
+    maxSclColDuRsduEr = max(sclColDuRsduEr, maxSclColDuRsduEr);
+    // Using unscaled column activities
+    double colDual = sclColDual/colScale[iCol];
+    double colDuRsduEr = abs(colDuAct[iCol]+colDual);
+    if (colDuRsduEr > tlDuRsduEr) {
+      /*
+      bool rpCol = (rpAllCol || (numRpCol<mxRpCol)) && !rpNoCol;
+      if (rpCol) {
+	numRpCol++;
+	printf("Col    %7d has a   dual residual error of %11.4g for colDuAct[iCol] = %11.4g and -colDual = %11.4g\n",
+	       iCol, colDuRsduEr, colDuAct[iCol], -colDual);
+      }
+      */
+      numColDuRsduEr++;
+      sumColDuRsduEr += colDuRsduEr;
+    }
+    maxColDuRsduEr = max(colDuRsduEr, maxColDuRsduEr);
+
+    bool erFd =
+      sclColPrIfs > tlPrIfs
+      || colPrIfs > tlPrIfs
+      || sclColDuIfs > tlDuIfs
+      || colDuIfs > tlDuIfs
+      || sclColDuRsduEr > tlDuRsduEr
+      || colDuRsduEr > tlDuRsduEr;
+    bool rpCol = (rpAllCol || (numRpCol<mxRpCol && erFd)) && !rpNoCol;
+    if (rpCol) {
+      numRpCol++;
+      printf("\nCol %3d: [Fg = %2d; Mv = %2d] Scl = %11.4g\n", 
+	     iCol, nonbasicFlag[iCol], nonbasicMove[iCol], colScale[iCol]);
+      printf("Scl   [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g)\n", 
+	     colLower[iCol], sclColValue, colUpper[iCol], sclColPrIfs, sclColDuIfs, sclColDuRsduEr);
+      printf("Unscl [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g) \n", 
+	     unsclColLower, unsclColValue, unsclColUpper, colPrIfs, colDuIfs, colDuRsduEr);
+    }
   }
-  printf("Found %6d        column primal infeasibilities: sum %11.4g; max %11.4g\n",  numColPrIfs, sumColPrIfs, maxColPrIfs);
-  printf("Found %6d scaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs);
+  printf("Found %6d   scaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs);
+  printf("Found %6d unscaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numColPrIfs, sumColPrIfs, maxColPrIfs);
+  printf("Found %6d   scaled column   dual infeasibilities: sum %11.4g; max %11.4g\n",  numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs);
+  printf("Found %6d unscaled column   dual infeasibilities: sum %11.4g; max %11.4g\n",  numColDuIfs, sumColDuIfs, maxColDuIfs);
+  printf("Found %6d   scaled column   dual residual errors: sum %11.4g; max %11.4g\n",  numSclColDuRsduEr, sumSclColDuRsduEr, maxSclColDuRsduEr);
+  printf("Found %6d unscaled column   dual residual errors: sum %11.4g; max %11.4g\n",  numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
 
 
   bool rpAllRow = false;
+  int numRpRow = 0;
+  int mxRpRow = 100;
+  bool rpNoRow = false;
   int numRowPrIfs=0;
   double sumRowPrIfs=0;
   double maxRowPrIfs=0;
   int numSclRowPrIfs=0;
   double sumSclRowPrIfs=0;
   double maxSclRowPrIfs=0;
+  int numRowDuIfs=0;
+  double maxRowDuIfs=0;
+  double sumRowDuIfs=0;
+  int numSclRowDuIfs=0;
+  double maxSclRowDuIfs=0;
+  double sumSclRowDuIfs=0;
   int numRowPrRsduEr=0;
   double sumRowPrRsduEr=0;
   double maxRowPrRsduEr=0;
@@ -4800,8 +4902,7 @@ void HModel::util_anMlSol() {
   double maxSclRowPrRsduEr=0;
   for (int iRow=0; iRow<numRow; iRow++) {
     double sclRowValue;
-    double sclRowDual;
-    double unsclRowValue;
+    double sclRowDuIfs;
     // Get the unscaled row bounds
     double unsclRowLower = rowLower[iRow];
     double unsclRowUpper = rowUpper[iRow];
@@ -4813,13 +4914,16 @@ void HModel::util_anMlSol() {
       if (nonbasicMove[numCol+iRow] == NONBASIC_MOVE_DN) {
 	// At lower bound
 	sclRowValue = rowLower[iRow];
+	sclRowDuIfs = max(dual[numCol+iRow], 0.);
       } else if (nonbasicMove[numCol+iRow] == NONBASIC_MOVE_UP) {
 	// At upper bound
 	sclRowValue = rowUpper[iRow];
+	sclRowDuIfs = max(-dual[numCol+iRow], 0.);
       } else {
 	// Fixed or free
 	if (rowLower[iRow] == rowUpper[iRow]) {
 	  sclRowValue = rowUpper[iRow];
+	  sclRowDuIfs = 0.;
 	} else {
 	  // Free
 	  bool freeEr = false;
@@ -4832,9 +4936,8 @@ void HModel::util_anMlSol() {
 	    printf("Row    %7d supposed to be free but has upper bound of %g\n", iRow, rowUpper[iRow]);
 	  }
 	  sclRowValue = -value[numCol+iRow];
-	  if (!freeEr) {
-	    printf("Row    %7d is free with value %g\n", iRow ,sclRowValue);
-	  }
+	  sclRowDuIfs = abs(dual[numCol+iRow]);
+	  //	  if (!freeEr) {printf("Row    %7d is free with value %g\n", iRow, sclRowValue);}
 	}
       }
       double valueEr = abs(sclRowValue+value[numCol+iRow]);
@@ -4846,64 +4949,108 @@ void HModel::util_anMlSol() {
     } else {
       // Basic variable
       sclRowValue = -value[numCol+iRow];
+      sclRowDuIfs = abs(dual[numCol+iRow]);
     }
     //      assert(hsol_isInfinity(-sclRowValue));
     //      assert(hsol_isInfinity(sclRowValue));
-    unsclRowValue = sclRowValue * rowScale[iRow];
-    double rowPrRsdu = max(unsclRowLower-unsclRowValue, unsclRowValue-unsclRowUpper);
-    double rowPrIfs = max(rowPrRsdu, 0.0);
+    double unsclRowValue = sclRowValue*rowScale[iRow];
+
+    // Assess primal infeasibility
+    // For scaled values
+    double sclRowPrIfs = max(max(rowLower[iRow]-sclRowValue, sclRowValue-rowUpper[iRow]), 0.0);
+    if (sclRowPrIfs > tlPrIfs) {
+      numSclRowPrIfs++;
+      sumSclRowPrIfs += sclRowPrIfs;
+    }
+    maxSclRowPrIfs = max(sclRowPrIfs, maxSclRowPrIfs);
+    // For unscaled values
+    double rowPrIfs = max(max(unsclRowLower-unsclRowValue, unsclRowValue-unsclRowUpper), 0.0);
     if (rowPrIfs > tlPrIfs) {
       numRowPrIfs++;
       sumRowPrIfs += rowPrIfs;
     }
     maxRowPrIfs = max(rowPrIfs, maxRowPrIfs);
 
-    double sclRowPrRsdu = max(rowLower[iRow]-sclRowValue, sclRowValue-rowUpper[iRow]);
-    double sclRowPrIfs = max(sclRowPrRsdu, 0.0);
-    if (sclRowPrIfs > tlPrIfs) {
-      numSclRowPrIfs++;
-      sumSclRowPrIfs += sclRowPrIfs;
+    // Assess dual infeasibility
+    // In scaled values
+    if (sclRowDuIfs > tlDuIfs) {
+      numSclRowDuIfs++;
+      sumSclRowDuIfs += sclRowDuIfs;
     }
-    maxSclRowPrIfs = max(sclRowPrIfs, maxSclRowPrIfs);
-
+    maxSclRowDuIfs = max(sclRowDuIfs, maxSclRowDuIfs);
+    // In unscaled values
+    double rowDuIfs = sclRowDuIfs/rowScale[iRow];
+    if (rowDuIfs > tlDuIfs) {
+      numRowDuIfs++;
+      sumRowDuIfs += rowDuIfs;
+    }
+    maxRowDuIfs = max(rowDuIfs, maxRowDuIfs);
 
     // Check row residual errors
-    // Using unscaled row activities
-    double rowValue = value[numCol+iRow]/rowScale[iRow];
-    double rowPrRsduEr = abs(rowPrAct[iRow]+rowValue);
-    if (rowPrRsduEr > tlPrRsduEr) {
-      if (rpAllRow) {
-	printf("Row    %7d has a primal residual error of %11.4g for rowPrAct[iRow] = %11.4g and -rowValue = %11.4g\n",
-	       iRow, rowPrRsduEr, rowPrAct[iRow], -rowValue);
+    // Using scaled row activities
+    double sclRowPrRsduEr = abs(sclRowPrAct[iRow]-sclRowValue);
+    if (sclRowPrRsduEr > tlPrRsduEr) {
+      /*
+      bool rpRow = (rpAllRow || (numRpRow<mxRpRow)) && !rpNoRow;
+      if (rpRow) {
+	numRpRow++;
+	printf("Row    %7d has a primal residual error of %11.4g for sclRowPrAct[iRow] = %11.4g and sclRowValue = %11.4g\n",
+	       iRow, sclRowPrRsduEr, sclRowPrAct[iRow], sclRowValue);
       }
+      */
+      numSclRowPrRsduEr++;
+      sumSclRowPrRsduEr += sclRowPrRsduEr;
+    }
+    maxSclRowPrRsduEr = max(sclRowPrRsduEr, maxSclRowPrRsduEr);
+    // Using unscaled row activities
+    double rowValue = sclRowValue/rowScale[iRow];
+    double rowPrRsduEr = abs(rowPrAct[iRow]-rowValue);
+    if (rowPrRsduEr > tlPrRsduEr) {
+      /*
+      bool rpRow = (rpAllRow || (numRpRow<mxRpRow)) && !rpNoRow;
+      if (rpRow) {
+	numRpRow++;
+	printf("Row    %7d has a primal residual error of %11.4g for rowPrAct[iRow] = %11.4g and rowValue = %11.4g\n",
+	       iRow, rowPrRsduEr, rowPrAct[iRow], rowValue);
+      }
+      */
       numRowPrRsduEr++;
       sumRowPrRsduEr += rowPrRsduEr;
     }
     maxRowPrRsduEr = max(rowPrRsduEr, maxRowPrRsduEr);
 
-    // Using scaled row activities
-    double sclRowPrRsduEr = abs(sclRowPrAct[iRow]+value[numCol+iRow]);
-    if (sclRowPrRsduEr > tlPrRsduEr) {
-      if (rpAllRow) {
-	printf("Row    %7d has a primal residual error of %11.4g for sclRowPrAct[iRow] = %11.4g and -value[numCol+iRow] = %11.4g\n",
-	       iRow, sclRowPrRsduEr, sclRowPrAct[iRow], -value[numCol+iRow]);
-      }
-      numSclRowPrRsduEr++;
-      sumSclRowPrRsduEr += sclRowPrRsduEr;
-    }
-    maxSclRowPrRsduEr = max(sclRowPrRsduEr, maxSclRowPrRsduEr);
-    
-
-    if (rpAllRow) {
-      printf("Row %3d: Scl = %11.4g: [%11.4g, %11.4g, %11.4g] (%11.4g, %11.4g) | Unscl [%11.4g, %11.4g, %11.4g] (%11.4g, %11.4g)\n", 
-	     iRow,rowScale[iRow],
-	     rowLower[iRow], sclRowValue, rowUpper[iRow], sclRowPrIfs, sclRowPrRsduEr,
-	     unsclRowLower, unsclRowValue, unsclRowUpper, rowPrIfs, rowPrRsduEr);
+    bool erFd =
+      sclRowPrIfs > tlPrIfs
+      || rowPrIfs > tlPrIfs
+      || sclRowDuIfs > tlDuIfs
+      || rowDuIfs > tlDuIfs
+      || sclRowPrRsduEr > tlPrRsduEr
+      || rowPrRsduEr > tlPrRsduEr;
+    bool rpRow = (rpAllRow || (numRpRow<mxRpRow && erFd)) && !rpNoRow;
+    if (rpRow) {
+      numRpRow++;
+      printf("Row %3d: [Fg = %2d; Mv = %2d] Scl = %11.4g\n",
+	     iRow, nonbasicFlag[numCol+iRow], nonbasicMove[numCol+iRow], rowScale[iRow]);
+      printf("Scl   [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g)\n",
+	     rowLower[iRow], sclRowValue, rowUpper[iRow], sclRowPrIfs, sclRowDuIfs, sclRowPrRsduEr);
+      printf("Unscl [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g)\n",
+	     unsclRowLower, unsclRowValue, unsclRowUpper, rowPrIfs, rowDuIfs, rowPrRsduEr);
     }
   }
-  printf("Found %6d        row    primal infeasibilities: sum %11.4g; max %11.4g\n",  numRowPrIfs, sumRowPrIfs, maxRowPrIfs);
-  printf("Found %6d scaled row    primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs);
-  printf("Found %6d        row    primal residual errors: sum %11.4g; max %11.4g\n",  numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
-  printf("Found %6d scaled row    primal residual errors: sum %11.4g; max %11.4g\n",  numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr);
+  printf("Found %6d   scaled    row primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs);
+  printf("Found %6d unscaled    row primal infeasibilities: sum %11.4g; max %11.4g\n",  numRowPrIfs, sumRowPrIfs, maxRowPrIfs);
+  printf("Found %6d   scaled    row   dual infeasibilities: sum %11.4g; max %11.4g\n",  numSclRowDuIfs, sumSclRowDuIfs, maxSclRowDuIfs);
+  printf("Found %6d unscaled    row   dual infeasibilities: sum %11.4g; max %11.4g\n",  numRowDuIfs, sumRowDuIfs, maxRowDuIfs);
+  printf("Found %6d   scaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr);
+  printf("Found %6d unscaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
+
+  double ObjEr = abs(objective - ckPrObjV)/max(1.0, abs(objective));
+  //  if (ObjEr > 1e-8)
+  printf("Relative objective error of %11.4g: objective = %g; ckPrObjV = %g\n", ObjEr, objective, ckPrObjV);
+  if (numLargeCo>0) {
+    printf("Objective offset = %11.4g\n", objOffset);
+    printf("Large cost terms = %11.4g\n", ckPrObjV_LargeCo);
+    printf("Other cost terms = %11.4g\n", ckPrObjV_OtherCo);
+  }
 }
 #endif
