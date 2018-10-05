@@ -1581,7 +1581,7 @@ void HModel::scaleModel()
   if (min0 >= 0.2 && max0 <= 5) {
     // No matrix scaling, but possible cost scaling
 #ifdef HiGHSDEV
-    printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName);
+    printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName.c_str());
 #endif
     // Possibly scale the costs
     if (!originalScaling) scaleCosts();
@@ -1666,7 +1666,7 @@ void HModel::scaleModel()
    (maxRowScale > maxAlwRowScale);
  
  printf("grep_Scaling,%s,Obj,%d,Row,%g,%g,Col,%g,%g,%d\n",
-	modelName, includeCost, minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
+	modelName.c_str(), includeCost, minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
 #endif
 
   // Apply scaling to matrix and bounds
