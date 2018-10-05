@@ -437,10 +437,19 @@ public:
     vector<int> nonbasicFlag;
     vector<int> nonbasicMove;
 #ifdef HiGHSDEV
-    //Information on large costs
+    // Information on large costs
     const double tlLargeCo = 1e6;
     int numLargeCo;
     vector<int> largeCostFlag;
+    // Limits on scaling factors
+    double minAlwScale = 1/1024.0;
+    double maxAlwScale = 1024.0;
+    double minAlwCostScale = minAlwScale;
+    double maxAlwCostScale = maxAlwScale;
+    double minAlwColScale = minAlwScale;
+    double maxAlwColScale = maxAlwScale;
+    double minAlwRowScale = minAlwScale;
+    double maxAlwRowScale = maxAlwScale;
 #endif
 
     // Part of working model which assigned and populated as much as

@@ -1629,11 +1629,31 @@ void HModel::scaleModel()
   }
 
   // Make it numerical better
+  // Also determine the max and min row and column scaling factors
+  double minColScale = inf;
+  double maxColScale = 1/inf;
+  double minRowScale = inf;
+  double maxRowScale = 1/inf;
   const double ln2 = log(2.0);
-  for (int iCol = 0; iCol < numCol; iCol++)
+  for (int iCol = 0; iCol < numCol; iCol++) {
     colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / ln2 + 0.5));
-  for (int iRow = 0; iRow < numRow; iRow++)
+    minColScale = min(colScale[iCol], minColScale);
+    maxColScale = max(colScale[iCol], maxColScale);
+  }
+ for (int iRow = 0; iRow < numRow; iRow++) {
     rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / ln2 + 0.5));
+    minRowScale = min(rowScale[iRow], minRowScale);
+    maxRowScale = max(rowScale[iRow], maxRowScale);
+  }
+#ifdef HiGHSDEV
+  bool excessScaling = 
+    minColScale < minAlwColScale ||
+    maxColScale > maxAlwColScale ||
+    minRowScale < minAlwRowScale ||
+    maxRowScale > maxAlwRowScale;
+		  
+    printf("grep_Scaling Obj,%d,Row,%g,%g,Col,%g,%g,%d\n", doCost, minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
+#endif
 
   // Apply scaling to matrix and bounds
   for (int iCol = 0; iCol < numCol; iCol++)
@@ -1691,6 +1711,29 @@ void HModel::scaleModel()
   mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
   util_anMl("Scaled");
+  bool scaleCost = false;
+  if (scaleCost) {
+    // Scale the costs by at most maxAlwCostScale
+    double maxNzCost = 0;
+    for (int iCol = 0; iCol < numCol; iCol++) {
+      double absColCost = abs(colCost[iCol]);
+      if (absColCost>0) maxNzCost = max(absColCost, maxNzCost);
+    }
+    double costScale = max(minAlwCostScale, min(maxAlwCostScale, maxNzCost));
+    printf("Max |nzCost| = %11.4g: scaling all costs by %11.4g\ngrep_CostScale,%g,%g\n", maxNzCost, costScale, maxNzCost, costScale);
+    if (costScale>0) {
+      for (int iCol = 0; iCol < numCol; iCol++) colCost[iCol]/=costScale;
+      if (numLargeCo > 0) {
+	// Scale the large costs by at most (a further) maxAlwCostScale
+	double maxLargeCost = maxNzCost/costScale;
+	double largeCostScale = min(tlLargeCo/maxLargeCost, maxAlwCostScale);
+	printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_CostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
+	for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
+      }
+    }
+  }
+  printf("After cost scaling\n");
+  util_anVecV("Column costs", numCol, colCost, false);
 #endif
 }
 
@@ -4416,6 +4459,10 @@ void HModel::util_anMl(const char *message) {
   util_anVecV("Row lower bounds", numRow, rowLower, false);
   util_anVecV("Row upper bounds", numRow, rowUpper, false);
   util_anVecV("Matrix entries", Astart[numCol], Avalue, true);
+  if (mlFg_scaledLP) {
+    util_anVecV("Column scaling factors", numCol, colScale, false);
+    util_anVecV("Row scaling factors", numRow, rowScale, false);
+  }
   util_anMlBd("Column", numCol, colLower, colUpper);
   util_anMlBd("Row", numRow, rowLower, rowUpper);
   util_anMlLargeCo();
@@ -4583,6 +4630,7 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec, b
 }
 
 void HModel::util_anMlLargeCo() {
+  numLargeCo = 0;
   largeCostFlag.assign(numCol, 0);
   double mxLargeCo=0;
   double mxLargeStrucCo=0;
@@ -4612,7 +4660,7 @@ void HModel::util_anMlLargeCo() {
 	} else {
 	  numLargeCoSlack++;
 	}
-	bool rpC = rpSlackC && numRp<1000;
+	bool rpC = rpSlackC && numRp<100;
 	if (rpC) {
 	  numRp++;
 	  printf("Large cost %6d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros",
@@ -4623,7 +4671,7 @@ void HModel::util_anMlLargeCo() {
       } else {
 	mxLargeStrucCo = max(abs(iColCo), mxLargeStrucCo);
 	numLargeCoStruc++;
-	bool rpC = rpStrucC && numRp<1000;
+	bool rpC = rpStrucC && numRp<100;
 	if (rpC) {
 	  numRp++;
 	  printf("Large cost %6d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros\n",
@@ -4640,14 +4688,9 @@ void HModel::util_anMlLargeCo() {
     printf("   %7d such columns are slacks with other bounds     (%3d%%)\n", numLargeCoSlack, (100*numLargeCoSlack)/numLargeCo);
     printf("   %7d such columns are strucs                       (%3d%%)\n", numLargeCoStruc, (100*numLargeCoStruc)/numLargeCo);
   }
-  if (numLargeCo == 0) return;
-  bool frigCo=true;
-  if (frigCo) {
-    double coMu = tlLargeCo/mxLargeCo;
-    for (int iCol=0; iCol<numCol; iCol++) {
-      colCost[iCol] = coMu*colCost[iCol];
-    }
-  }
+  printf("grep_LargeCo,%d,%d,%g,%g,%g,%g,%d,%d,%d,%d\n",
+	 numCol, numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo,
+	 numZeInfLargeCoSlack, numInfZeLargeCoSlack, numLargeCoSlack, numLargeCoStruc);
 }
 
 void HModel::util_anMlSol() {
@@ -4702,6 +4745,11 @@ void HModel::util_anMlSol() {
   double ckPrObjV_LargeCo = 0;
   double ckPrObjV_OtherCo = 0;
   
+  int numRpFreeRowEr = 0;
+  int maxRpFreeRowEr = 100;
+  int numRpFreeColEr = 0;
+  int maxRpFreeColEr = 100;
+
   bool rpAllCol = false;
   int numRpCol = 0;
   int mxRpCol = 100;
@@ -4753,11 +4801,17 @@ void HModel::util_anMlSol() {
 	  bool freeEr = false;
 	  if (!hsol_isInfinity(-colLower[iCol])) {
 	    freeEr = true;
-	    printf("Column %7d supposed to be free but has lower bound of %g\n", iCol, colLower[iCol]);
+	    if (numRpFreeColEr< maxRpFreeColEr) {
+	      numRpFreeColEr++;
+	      printf("Column %7d supposed to be free but has lower bound of %g\n", iCol, colLower[iCol]);
+	    }
 	  }
 	  if (!hsol_isInfinity(colUpper[iCol])) {
 	    freeEr = true;
-	    printf("Column %7d supposed to be free but has upper bound of %g\n", iCol, colUpper[iCol]);
+	    if (numRpFreeColEr< maxRpFreeColEr) {
+	      numRpFreeColEr++;
+	      printf("Column %7d supposed to be free but has upper bound of %g\n", iCol, colUpper[iCol]);
+	    }
 	  }
 	  sclColValue = value[iCol];
 	  sclColDuIfs = abs(dual[iCol]);
@@ -4929,11 +4983,17 @@ void HModel::util_anMlSol() {
 	  bool freeEr = false;
 	  if (!hsol_isInfinity(-rowLower[iRow])) {
 	    freeEr = true;
-	    printf("Row    %7d supposed to be free but has lower bound of %g\n", iRow, rowLower[iRow]);
+	    if (numRpFreeRowEr< maxRpFreeRowEr) {
+	      numRpFreeRowEr++;
+	      printf("Row    %7d supposed to be free but has lower bound of %g\n", iRow, rowLower[iRow]);
+	    }
 	  }
 	  if (!hsol_isInfinity(rowUpper[iRow])) {
 	    freeEr = true;
-	    printf("Row    %7d supposed to be free but has upper bound of %g\n", iRow, rowUpper[iRow]);
+	    if (numRpFreeRowEr< maxRpFreeRowEr) {
+	      numRpFreeRowEr++;
+	      printf("Row    %7d supposed to be free but has upper bound of %g\n", iRow, rowUpper[iRow]);
+	    }
 	  }
 	  sclRowValue = -value[numCol+iRow];
 	  sclRowDuIfs = abs(dual[numCol+iRow]);

@@ -190,7 +190,22 @@ bool HDualRow::choose_final()
     selectTheta = remainTheta;
     //Check for no change in this loop - to prevent infinite loop
     if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) && (prev_remainTheta == remainTheta)) {
+#ifdef HiGHSDEV
       printf("In choose_final: No change in loop 2 so return error\n");
+      double workDataNorm = 0;
+      double dualNorm = 0;
+      for (int i = 0; i < workCount; i++) {
+	int iCol = workData[i].first;
+	double value = workData[i].second;
+	workDataNorm += value*value;
+	value = workDual[iCol];
+	dualNorm += value*value;
+      }
+      workDataNorm += sqrt(workDataNorm);
+      dualNorm += sqrt(dualNorm);
+      printf("   workCount = %d; selectTheta=%g; remainTheta=%g\n", workCount, selectTheta, remainTheta);
+      printf(   "workDataNorm = %g; dualNorm = %g\n", workDataNorm, dualNorm);      
+#endif
       return true;
     }
     // Record the initial values of workCount, remainTheta and selectTheta for the next pass through the loop
