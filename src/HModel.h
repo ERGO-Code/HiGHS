@@ -132,6 +132,7 @@ public:
 
     // Methods to modify the current model. Only scaleModel is currently in use
     void scaleModel();
+    void scaleCosts();
     void setup_transposeLP();
     void setup_tightenBound();
     void setup_shuffleColumn();
@@ -441,16 +442,17 @@ public:
     const double tlLargeCo = 1e6;
     int numLargeCo;
     vector<int> largeCostFlag;
-    // Limits on scaling factors
-    double minAlwScale = 1/1024.0;
-    double maxAlwScale = 1024.0;
-    double minAlwCostScale = minAlwScale;
-    double maxAlwCostScale = maxAlwScale;
-    double minAlwColScale = minAlwScale;
-    double maxAlwColScale = maxAlwScale;
-    double minAlwRowScale = minAlwScale;
-    double maxAlwRowScale = maxAlwScale;
 #endif
+    // Limits on scaling factors
+    const double minAlwScale = 1/1024.0;
+    const double maxAlwScale = 1024.0;
+    const double maxAlwCostScale = maxAlwScale;
+    const double minAlwColScale = minAlwScale;
+    const double maxAlwColScale = maxAlwScale;
+    const double minAlwRowScale = minAlwScale;
+    const double maxAlwRowScale = maxAlwScale;
+    // Cost scaling factor
+    double costScale;    
 
     // Part of working model which assigned and populated as much as
     // possible when a model is being defined

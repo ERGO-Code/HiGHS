@@ -1222,8 +1222,7 @@ bool HModel::workArrays_OK(int phase)
     for (int col = 0; col < numCol; ++col)
     {
       int var = col;
-      double sense_col_cost = objSense * colCost[col];
-      ok = workCost[var] == sense_col_cost;
+      ok = workCost[var] == objSense * colCost[col];
       if (!ok)
       {
         printf("For col %d, workLower should be %g but is %g\n", col, colLower[col], workCost[var]);
@@ -1563,11 +1562,14 @@ void HModel::scaleModel()
     return;
   }
 
-  // Reset all scaling to 1
-  colScale.assign(numCol, 1);
-  rowScale.assign(numRow, 1);
+  // Allow a switch to/from the original scaling rules
+  bool originalScaling = true;
 
-  // Find out min0 / max0, skip on if in [0.2, 5]
+  // Reset all scaling to 1
+  initScale();
+
+  // Find out range of matrix values and skip matrix scaling if all
+  // |values| are in [0.2, 5]
   const double inf = HSOL_CONST_INF;
   double min0 = inf, max0 = 0;
   for (int k = 0, AnX = Astart[numCol]; k < AnX; k++)
@@ -1576,18 +1578,22 @@ void HModel::scaleModel()
     min0 = min(min0, value);
     max0 = max(max0, value);
   }
-  if (min0 >= 0.2 && max0 <= 5)
+  if (min0 >= 0.2 && max0 <= 5) {
+    // No matrix scaling, but possible cost scaling
+#ifdef HiGHSDEV
+    printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName);
+#endif
+    // Possibly scale the costs
+    if (!originalScaling) scaleCosts();
     return;
-
-  // See if we want to include cost include if min-cost < 0.1
-  double minc = inf;
-  for (int i = 0; i < numCol; i++)
-  {
-    double sense_col_cost = objSense * colCost[i];
-    if (sense_col_cost)
-      minc = min(minc, fabs(sense_col_cost));
   }
-  bool doCost = minc < 0.1;
+  bool includeCost = false;
+  if (originalScaling) {
+  // See if we want to include cost include if minimum nonzero cost is less than 0.1
+    double minNzCost = inf;
+    for (int i = 0; i < numCol; i++) {if (colCost[i]) minNzCost = min(fabs(colCost[i]), minNzCost);}
+    includeCost = minNzCost < 0.1;
+  }
 
   // Search up to 6 times
   vector<double> rowMin(numRow, inf);
@@ -1600,9 +1606,8 @@ void HModel::scaleModel()
       // For column scale (find)
       double colMin = inf;
       double colMax = 1 / inf;
-      double sense_col_cost = objSense * colCost[iCol];
-      double myCost = fabs(sense_col_cost);
-      if (doCost && myCost != 0)
+      double myCost = fabs(colCost[iCol]);
+      if (includeCost && myCost != 0)
         colMin = min(colMin, myCost), colMax = max(colMax, myCost);
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
       {
@@ -1610,7 +1615,10 @@ void HModel::scaleModel()
         colMin = min(colMin, value), colMax = max(colMax, value);
       }
       colScale[iCol] = 1 / sqrt(colMin * colMax);
-
+      if (!originalScaling) {
+	// Ensure that column scale factor is not excessively large or small
+	colScale[iCol] = min(max(minAlwColScale, colScale[iCol]), maxAlwColScale);
+      }
       // For row scale (only collect)
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
       {
@@ -1622,8 +1630,13 @@ void HModel::scaleModel()
     }
 
     // For row scale (find)
-    for (int iRow = 0; iRow < numRow; iRow++)
+    for (int iRow = 0; iRow < numRow; iRow++) {
       rowScale[iRow] = 1 / sqrt(rowMin[iRow] * rowMax[iRow]);
+      if (!originalScaling) {
+	// Ensure that row scale factor is not excessively large or small
+	rowScale[iRow] = min(max(minAlwRowScale, rowScale[iRow]), maxAlwRowScale);
+      }
+    }
     rowMin.assign(numRow, inf);
     rowMax.assign(numRow, 1 / inf);
   }
@@ -1646,13 +1659,14 @@ void HModel::scaleModel()
     maxRowScale = max(rowScale[iRow], maxRowScale);
   }
 #ifdef HiGHSDEV
-  bool excessScaling = 
-    minColScale < minAlwColScale ||
-    maxColScale > maxAlwColScale ||
-    minRowScale < minAlwRowScale ||
-    maxRowScale > maxAlwRowScale;
-		  
-    printf("grep_Scaling Obj,%d,Row,%g,%g,Col,%g,%g,%d\n", doCost, minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
+ bool excessScaling = 
+   (minColScale < minAlwColScale) ||
+   (maxColScale > maxAlwColScale) ||
+   (minRowScale < minAlwRowScale) ||
+   (maxRowScale > maxAlwRowScale);
+ 
+ printf("grep_Scaling,%s,Obj,%d,Row,%g,%g,Col,%g,%g,%d\n",
+	modelName, includeCost, minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
 #endif
 
   // Apply scaling to matrix and bounds
@@ -1710,31 +1724,50 @@ void HModel::scaleModel()
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
+  // Analyse the scaled model
   util_anMl("Scaled");
-  bool scaleCost = false;
-  if (scaleCost) {
-    // Scale the costs by at most maxAlwCostScale
-    double maxNzCost = 0;
-    for (int iCol = 0; iCol < numCol; iCol++) {
-      double absColCost = abs(colCost[iCol]);
-      if (absColCost>0) maxNzCost = max(absColCost, maxNzCost);
-    }
-    double costScale = max(minAlwCostScale, min(maxAlwCostScale, maxNzCost));
-    printf("Max |nzCost| = %11.4g: scaling all costs by %11.4g\ngrep_CostScale,%g,%g\n", maxNzCost, costScale, maxNzCost, costScale);
-    if (costScale>0) {
-      for (int iCol = 0; iCol < numCol; iCol++) colCost[iCol]/=costScale;
-      if (numLargeCo > 0) {
-	// Scale the large costs by at most (a further) maxAlwCostScale
-	double maxLargeCost = maxNzCost/costScale;
-	double largeCostScale = min(tlLargeCo/maxLargeCost, maxAlwCostScale);
-	printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_CostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
-	for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
-      }
-    }
+#endif
+  // Possibly scale the costs
+  if (!originalScaling) scaleCosts();
+}
+
+void HModel::scaleCosts()
+{
+  // Scale the costs by no less than minAlwCostScale
+  double maxNzCost = 0;
+  for (int iCol = 0; iCol < numCol; iCol++) {if (colCost[iCol]) {maxNzCost = max(fabs(colCost[iCol]), maxNzCost);}}
+  // Scaling the costs up effectively increases the dual tolerance to
+  // which the problem is solved - so, if the max cost is small the
+  // scaling factor pushes it up by a power of 2 so it's close to 1
+  // Scaling the costs down effectively decreases the dual tolerance
+  // to which the problem is solved - so this can't be done too much
+  double costScale = 1;
+  const double ln2 = log(2.0);
+  if ((maxNzCost > 0) || (maxNzCost<(1.0/16) || maxNzCost > 16)) {
+    costScale = maxNzCost;
+    costScale = pow(2.0, floor(log(costScale) / ln2 + 0.5));
+    costScale = min(costScale, maxAlwCostScale);
   }
+#ifdef HiGHSDEV
+  printf("MaxNzCost = %11.4g: scaling all costs by %11.4g\ngrep_CostScale,%g,%g\n", maxNzCost, costScale, maxNzCost, costScale);
+#endif
+  if (costScale == 1) return;
+  // Scale the costs (and record of maxNzCost) by costScale, being at most maxAlwCostScale
+  for (int iCol = 0; iCol < numCol; iCol++) colCost[iCol]/=costScale;
+  maxNzCost/=costScale;
+ 
+#ifdef HiGHSDEV
+  if (numLargeCo > 0) {
+    // Scale any large costs by largeCostScale, being at most (a further) maxAlwCostScale
+    double largeCostScale = maxNzCost;
+    largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
+    largeCostScale = min(largeCostScale, maxAlwCostScale);
+    printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_CostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
+    for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
+  }
+#endif
   printf("After cost scaling\n");
   util_anVecV("Column costs", numCol, colCost, false);
-#endif
 }
 
 void HModel::setup_tightenBound()
@@ -2048,8 +2081,9 @@ void HModel::setup_numBasicLogicals()
 
 void HModel::initScale()
 {
-  colScale.assign(numCol, 1.0);
-  rowScale.assign(numRow, 1.0);
+  colScale.assign(numCol, 1);
+  rowScale.assign(numRow, 1);
+  costScale = 1;
 }
 
 void HModel::initBasicIndex()
@@ -2208,8 +2242,7 @@ void HModel::initPh2ColCost(int firstcol, int lastcol)
   for (int col = firstcol; col <= lastcol; col++)
   {
     int var = col;
-    double sense_col_cost = objSense * colCost[col];
-    workCost[var] = sense_col_cost;
+    workCost[var] = objSense * colCost[col];
     workShift[var] = 0.;
   }
 }
