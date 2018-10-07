@@ -1564,7 +1564,7 @@ void HModel::scaleModel()
 
   // Allow a switch to/from the original scaling rules
   //  bool originalScaling = false;
-  bool originalScaling = true;
+  bool originalScaling = false;
 
   // Reset all scaling to 1
   initScale();
@@ -1742,7 +1742,7 @@ void HModel::scaleCosts()
   // scaling factor pushes it up by a power of 2 so it's close to 1
   // Scaling the costs down effectively decreases the dual tolerance
   // to which the problem is solved - so this can't be done too much
-  double costScale = 1;
+  costScale = 1;
   const double ln2 = log(2.0);
   if ((maxNzCost > 0) || (maxNzCost<(1.0/16) || maxNzCost > 16)) {
     costScale = maxNzCost;
@@ -1760,7 +1760,7 @@ void HModel::scaleCosts()
 #ifdef HiGHSDEV
   if (numLargeCo > 0) {
     // Scale any large costs by largeCostScale, being at most (a further) maxAlwCostScale
-    double largeCostScale = maxNzCost;
+    largeCostScale = maxNzCost;
     largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
     largeCostScale = min(largeCostScale, maxAlwCostScale);
     printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_CostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
@@ -2576,6 +2576,7 @@ double HModel::computePh2Objective(vector<double> &colPrAct)
   for (int i = 0; i < numCol; i++)
     Ph2Objective += colPrAct[i] * colCost[i];
   //  printf("Ph2Objective Ph2Objective = %g\n", Ph2Objective);
+  Ph2Objective *= costScale;
   return Ph2Objective;
 }
 
@@ -2592,6 +2593,8 @@ double HModel::computePrObj()
   for (int col = 0; col < numCol; col++)
     if (nonbasicFlag[col])
       prObj += workValue[col] * colCost[col];
+  prObj *= costScale;  
+  printf("Scaling by %11.4g in computePrObj\n", costScale);
   return prObj;
 }
 
@@ -2603,8 +2606,10 @@ void HModel::computeDuObj(int phase)
     if (nonbasicFlag[i])
       objective += workValue[i] * workDual[i];
   //    double sv_objective = objective;
-  if (phase != 1)
+  if (phase != 1) {
+    objective *= costScale;
     objective -= objOffset;
+  }
   //    printf("Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g\n", phase, sv_objective, objOffset, objective);
 }
 
@@ -4775,7 +4780,7 @@ void HModel::util_anMlSol() {
 
   // Look for column residual errors and infeasibilities - primal and dual
   if (objOffset != 0.) printf("Primal objective offset is %11.4g\n", objOffset);
-  double ckPrObjV = objOffset;
+  double ckPrObjV = 0;
   double ckPrObjV_LargeCo = 0;
   double ckPrObjV_OtherCo = 0;
   
@@ -5138,6 +5143,10 @@ void HModel::util_anMlSol() {
   printf("Found %6d   scaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr);
   printf("Found %6d unscaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
 
+  ckPrObjV *= costScale;
+  ckPrObjV += objOffset;
+  ckPrObjV_LargeCo *= costScale;
+  ckPrObjV_OtherCo *= costScale;
   double ObjEr = abs(objective - ckPrObjV)/max(1.0, abs(objective));
   //  if (ObjEr > 1e-8)
   printf("Relative objective error of %11.4g: objective = %g; ckPrObjV = %g\n", ObjEr, objective, ckPrObjV);

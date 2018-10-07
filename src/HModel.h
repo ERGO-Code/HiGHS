@@ -437,12 +437,7 @@ public:
     vector<int> basicIndex;
     vector<int> nonbasicFlag;
     vector<int> nonbasicMove;
-#ifdef HiGHSDEV
-    // Information on large costs
-    const double tlLargeCo = 1e6;
-    int numLargeCo;
-    vector<int> largeCostFlag;
-#endif
+
     // Limits on scaling factors
     const double minAlwScale = 1/1024.0;
     const double maxAlwScale = 1024.0;
@@ -453,6 +448,14 @@ public:
     const double maxAlwRowScale = maxAlwScale;
     // Cost scaling factor
     double costScale;    
+
+#ifdef HiGHSDEV
+    // Information on large costs
+    const double tlLargeCo = 1e6;
+    int numLargeCo;
+    vector<int> largeCostFlag;
+    double largeCostScale;
+#endif
 
     // Part of working model which assigned and populated as much as
     // possible when a model is being defined
