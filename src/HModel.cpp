@@ -1563,6 +1563,7 @@ void HModel::scaleModel()
   }
 
   // Allow a switch to/from the original scaling rules
+  //  bool originalScaling = false;
   bool originalScaling = true;
 
   // Reset all scaling to 1
