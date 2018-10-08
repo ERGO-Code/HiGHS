@@ -1563,8 +1563,8 @@ void HModel::scaleModel()
   }
 
   // Allow a switch to/from the original scaling rules
-  //  bool originalScaling = false;
   bool originalScaling = false;
+  bool alwCostScaling = false;
 
   // Reset all scaling to 1
   initScale();
@@ -1585,16 +1585,15 @@ void HModel::scaleModel()
     printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName.c_str());
 #endif
     // Possibly scale the costs
-    if (!originalScaling) scaleCosts();
+    if (!originalScaling && alwCostScaling) scaleCosts();
     return;
   }
-  bool includeCost = false;
-  if (originalScaling) {
   // See if we want to include cost include if minimum nonzero cost is less than 0.1
-    double minNzCost = inf;
-    for (int i = 0; i < numCol; i++) {if (colCost[i]) minNzCost = min(fabs(colCost[i]), minNzCost);}
+  double minNzCost = inf;
+  for (int i = 0; i < numCol; i++) {if (colCost[i]) minNzCost = min(fabs(colCost[i]), minNzCost);}
+  bool includeCost = false;
+  //  if (originalScaling)
     includeCost = minNzCost < 0.1;
-  }
 
   // Search up to 6 times
   vector<double> rowMin(numRow, inf);
@@ -1666,8 +1665,10 @@ void HModel::scaleModel()
    (minRowScale < minAlwRowScale) ||
    (maxRowScale > maxAlwRowScale);
  
- printf("grep_Scaling,%s,Obj,%d,Row,%g,%g,Col,%g,%g,%d\n",
-	modelName.c_str(), includeCost, minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
+ printf("grep_Scaling,%s,%d,%d,Obj,%g,%d,Row,%g,%g,Col,%g,%g,%d\n",
+	modelName.c_str(), originalScaling, alwCostScaling, 
+	minNzCost, includeCost, 
+	minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
 #endif
 
   // Apply scaling to matrix and bounds
@@ -1729,7 +1730,7 @@ void HModel::scaleModel()
   util_anMl("Scaled");
 #endif
   // Possibly scale the costs
-  if (!originalScaling) scaleCosts();
+  if (!originalScaling && alwCostScaling) scaleCosts();
 }
 
 void HModel::scaleCosts()
@@ -1764,7 +1765,7 @@ void HModel::scaleCosts()
     largeCostScale = maxNzCost;
     largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
     largeCostScale = min(largeCostScale, maxAlwCostScale);
-    printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_CostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
+    printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
     for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
   }
 #endif
@@ -4505,7 +4506,7 @@ void HModel::util_anMl(const char *message) {
   }
   util_anMlBd("Column", numCol, colLower, colUpper);
   util_anMlBd("Row", numRow, rowLower, rowUpper);
-  util_anMlLargeCo();
+  util_anMlLargeCo(message);
 }
 
 void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper) {
@@ -4669,7 +4670,7 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec, b
   }
 }
 
-void HModel::util_anMlLargeCo() {
+void HModel::util_anMlLargeCo(const char *message) {
   numLargeCo = 0;
   largeCostFlag.assign(numCol, 0);
   double mxLargeCo=0;
@@ -4728,7 +4729,7 @@ void HModel::util_anMlLargeCo() {
     printf("   %7d such columns are slacks with other bounds     (%3d%%)\n", numLargeCoSlack, (100*numLargeCoSlack)/numLargeCo);
     printf("   %7d such columns are strucs                       (%3d%%)\n", numLargeCoStruc, (100*numLargeCoStruc)/numLargeCo);
   }
-  printf("grep_LargeCo,%d,%d,%g,%g,%g,%g,%d,%d,%d,%d\n",
+  printf("grep_LargeCostData,%s,%d,%d,%g,%g,%g,%g,%d,%d,%d,%d\n", message,
 	 numCol, numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo,
 	 numZeInfLargeCoSlack, numInfZeLargeCoSlack, numLargeCoSlack, numLargeCoStruc);
 }
@@ -4971,6 +4972,13 @@ void HModel::util_anMlSol() {
   printf("Found %6d   scaled column   dual residual errors: sum %11.4g; max %11.4g\n",  numSclColDuRsduEr, sumSclColDuRsduEr, maxSclColDuRsduEr);
   printf("Found %6d unscaled column   dual residual errors: sum %11.4g; max %11.4g\n",  numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
 
+  printf("grep_AnMlSolIfsRsduEr,Col,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
+	 numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs,
+	 numColPrIfs, sumColPrIfs, maxColPrIfs,
+	 numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs,
+	 numColDuIfs, sumColDuIfs, maxColDuIfs,
+	 numSclColDuRsduEr, sumSclColDuRsduEr, maxSclColDuRsduEr,
+	 numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
 
   bool rpAllRow = false;
   int numRpRow = 0;
@@ -5143,6 +5151,14 @@ void HModel::util_anMlSol() {
   printf("Found %6d unscaled    row   dual infeasibilities: sum %11.4g; max %11.4g\n",  numRowDuIfs, sumRowDuIfs, maxRowDuIfs);
   printf("Found %6d   scaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr);
   printf("Found %6d unscaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
+
+  printf("grep_AnMlSolIfsRsduEr,Row,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
+	 numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs,
+	 numRowPrIfs, sumRowPrIfs, maxRowPrIfs,
+	 numSclRowDuIfs, sumSclRowDuIfs, maxSclRowDuIfs,
+	 numRowDuIfs, sumRowDuIfs, maxRowDuIfs,
+	 numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr,
+	 numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
 
   ckPrObjV *= costScale;
   ckPrObjV += objOffset;
