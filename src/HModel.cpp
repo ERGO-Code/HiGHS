@@ -1758,7 +1758,8 @@ void HModel::scaleCosts()
   maxNzCost/=costScale;
  
 #ifdef HiGHSDEV
-  if (numLargeCo > 0) {
+  bool alwLargeCostScaling = false;
+  if (alwLargeCostScaling && (numLargeCo > 0)) {
     // Scale any large costs by largeCostScale, being at most (a further) maxAlwCostScale
     largeCostScale = maxNzCost;
     largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
