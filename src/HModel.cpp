@@ -2087,6 +2087,7 @@ void HModel::initScale()
   colScale.assign(numCol, 1);
   rowScale.assign(numRow, 1);
   costScale = 1;
+  largeCostScale = 1;
 }
 
 void HModel::initBasicIndex()
@@ -4782,9 +4783,11 @@ void HModel::util_anMlSol() {
 
   // Look for column residual errors and infeasibilities - primal and dual
   if (objOffset != 0.) printf("Primal objective offset is %11.4g\n", objOffset);
-  double ckPrObjV = 0;
-  double ckPrObjV_LargeCo = 0;
-  double ckPrObjV_OtherCo = 0;
+  double lcPrObjV = 0;
+  double lcPrObjV_LargeCo = 0;
+  double lcPrObjV_OtherCo = 0;
+  double lcValue_LargeCo = 0;
+  double lcValue_OtherCo = 0;
   
   int numRpFreeRowEr = 0;
   int maxRpFreeRowEr = 100;
@@ -4872,11 +4875,13 @@ void HModel::util_anMlSol() {
     }
 
     double prObjTerm = sclColValue*colCost[iCol];
-    ckPrObjV += prObjTerm;
+    lcPrObjV += prObjTerm;
     if (largeCostFlag[iCol]) {
-      ckPrObjV_LargeCo += prObjTerm;
+      lcPrObjV_LargeCo += prObjTerm;
+      lcValue_LargeCo += sclColValue;
     } else {
-      ckPrObjV_OtherCo += prObjTerm;
+      lcPrObjV_OtherCo += prObjTerm;
+      lcValue_OtherCo += sclColValue;
     }
 
     double unsclColValue = sclColValue*colScale[iCol];
@@ -5160,17 +5165,21 @@ void HModel::util_anMlSol() {
 	 numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr,
 	 numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
 
-  ckPrObjV *= costScale;
-  ckPrObjV += objOffset;
-  ckPrObjV_LargeCo *= costScale;
-  ckPrObjV_OtherCo *= costScale;
-  double ObjEr = abs(objective - ckPrObjV)/max(1.0, abs(objective));
-  //  if (ObjEr > 1e-8)
-  printf("Relative objective error of %11.4g: objective = %g; ckPrObjV = %g\n", ObjEr, objective, ckPrObjV);
+  lcPrObjV *= costScale;
+  lcPrObjV += objOffset;
+  lcPrObjV_LargeCo *= costScale;
+  lcPrObjV_OtherCo *= costScale;
+  if (largeCostScale == 1.0) {
+    double ObjEr = abs(objective - lcPrObjV)/max(1.0, abs(objective));
+    //    if (ObjEr > 1e-8)
+    printf("Relative objective error of %11.4g: objective = %g; lcPrObjV = %g\n", ObjEr, objective, lcPrObjV);
+  }
   if (numLargeCo>0) {
     printf("Objective offset = %11.4g\n", objOffset);
-    printf("Large cost terms = %11.4g\n", ckPrObjV_LargeCo);
-    printf("Other cost terms = %11.4g\n", ckPrObjV_OtherCo);
+    printf("Large cost terms = %11.4g\n", lcPrObjV_LargeCo);
+    printf("Other cost terms = %11.4g\n", lcPrObjV_OtherCo);
+    printf("Large values = %11.4g\n", lcValue_LargeCo);
+    printf("Other values = %11.4g\n", lcValue_OtherCo);
   }
 }
 #endif

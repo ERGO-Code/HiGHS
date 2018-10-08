@@ -77,6 +77,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_definitions(-DHiGHSRELEASE)
+endif()
+
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
 

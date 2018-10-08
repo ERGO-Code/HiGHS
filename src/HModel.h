@@ -451,7 +451,7 @@ public:
 
 #ifdef HiGHSDEV
     // Information on large costs
-    const double tlLargeCo = 1e6;
+    const double tlLargeCo = 1e5;
     int numLargeCo;
     vector<int> largeCostFlag;
     double largeCostScale;
