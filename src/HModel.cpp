@@ -1158,8 +1158,8 @@ bool HModel::workArrays_OK(int phase)
 {
   //  printf("Called workArrays_OK(%d)\n", phase);cout << flush;
   bool ok = true;
-  //Don't check phase 1 bounds: these will have been set by solve() so can be trusted
-  if (phase != 1)
+  //Only check phase 2 bounds: others will have been set by solve() so can be trusted
+  if (phase == 2)
   {
     for (int col = 0; col < numCol; ++col)
     {
@@ -1563,7 +1563,7 @@ void HModel::scaleModel()
   }
 
   // Allow a switch to/from the original scaling rules
-  bool originalScaling = false;
+  bool originalScaling = true;
   bool alwCostScaling = false;
 
   // Reset all scaling to 1
@@ -4015,10 +4015,12 @@ void HModel::util_reportSolverOutcome(const char *message)
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(),
          objective, numberIteration, totalTime);
 #endif
-  if (problemStatus == LP_Status_Optimal)
+  if (problemStatus == LP_Status_Optimal) {
     printf("\n");
-  else
+  } else {
+    printf(" ");
     util_reportModelStatus();
+  }
   //Greppable report line added
   printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n",
 	 objective, numberIteration, totalTime, problemStatus, modelName.c_str());
@@ -4736,6 +4738,7 @@ void HModel::util_anMlLargeCo(const char *message) {
 }
 
 void HModel::util_anMlSol() {
+  if (problemStatus != LP_Status_Optimal) return;
   printf("\nAnalysing the model solution\n");
   const double inf = HSOL_CONST_INF;
   const double tlValueEr = 1e-8;

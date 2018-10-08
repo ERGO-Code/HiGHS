@@ -194,6 +194,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   // Level 3 (will) checks expensive things like the INVERT and
   // steepeest edge weights
   //
+#ifdef HiGHSDEV
+  //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve(): solvePhase = %d\n", solvePhase);cout<<flush;}
+#endif
   bool ok = model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK TO SOLVE???\n");cout<<flush;}
   //  assert(ok);
@@ -331,6 +334,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     printf("Optimal basis condition estimate is %g\n", bs_cond);
     }
   //  rp_hsol_sol(ptr_model);
+#endif
+#ifdef HiGHSDEV
+  //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve(): solvePhase = %d\n", solvePhase);cout<<flush;}
 #endif
   ok = model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n");cout<<flush;}
@@ -1545,6 +1551,7 @@ void HDual::chooseColumn_slice(HVector *row_ep)
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0)
     {
       invertHint = invertHint_possiblyDualUnbounded; // Was 1
+      model->timer.recordFinish(HTICK_CHUZC1);
       return;
     }
   model->timer.recordFinish(HTICK_CHUZC1);
