@@ -7,21 +7,23 @@
 #include <vector>
 using namespace std;
 
-class HTester {
+class HTester
+{
 public:
-    void setup(const char *pivotFile);
-    void testUpdate(int item);
-    void testCFT();
+  void setup(const char *pivotFile);
+  void testUpdate(int item);
+  void testCFT();
+
 private:
-    double solveTime;
-    string modelName;
-    int numPivot;
+  double solveTime;
+  string modelName;
+  int numPivot;
 
-    vector<int> historyIn;
-    vector<int> historyOut;
-    vector<double> historyAlpha;
+  vector<int> historyIn;
+  vector<int> historyOut;
+  vector<double> historyAlpha;
 
-    HModel model;
+  HModel model;
 };
 #endif
 #endif /* HTESTER_H_ */

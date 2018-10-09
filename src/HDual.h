@@ -90,7 +90,7 @@ public:
 
   void iterate();
   void iterate_tasks();
-  void iterate_multi();// in HDualMulti.cpp
+  void iterate_multi(); // in HDualMulti.cpp
   void iterateIzAn();
   void iterateAn();
   void iterateRp();
@@ -99,7 +99,7 @@ public:
   void iterateRpInvert(int i_v);
   void iterateRpIterPh(bool header);
   void iterateRpDuObj(bool header);
-  double uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density); 
+  double uOpRsDensityRec(double lc_OpRsDensity, double *opRsDensity, double *opRsAvDensity, double *opRsAvLog10Density);
 
   void chooseRow();
 
@@ -150,8 +150,8 @@ public:
   void iterateRpIterDa(bool header);
   void iterateRpDsty(bool header);
   int intLog10(double v);
-  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector& vector);
+  void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
+  void iterateOpRecAf(int opTy, HVector &vector);
   void iterateRpAn();
   void rp_hsol_da_str();
   //void rp_hsol_si_it();
@@ -160,12 +160,11 @@ public:
   void an_iz_vr_v();
 #endif
 
-
   // Variant choice
   int dual_variant = 0;
-  int Price_Mode = 0; //Row-wise PRICE
-  int EdWt_Mode = 0; //DSE
-  int Crash_Mode = 0; //No crash
+  int Price_Mode = 0;    //Row-wise PRICE
+  int EdWt_Mode = 0;     //DSE
+  int Crash_Mode = 0;    //No crash
   int Presolve_Mode = 0; //No presolve
 
   bool SolveBailout;
@@ -188,7 +187,7 @@ public:
   // Price scalars
   bool alw_price_by_col_sw = true; //By default allow switch to column PRICE if results sufficiently dense
   bool alw_price_by_row_sw = true; //By default allow switch to standard row-wise PRICE if result is sufficiently dense
-  bool alw_price_ultra = false; //By default don't allow ultra-sparse PRICE
+  bool alw_price_ultra = false;    //By default don't allow ultra-sparse PRICE
   const double dstyColPriceSw = 0.75;
 
   // DSE scalars
@@ -286,105 +285,108 @@ public:
   HVector slice_row_ap[HSOL_SLICED_LIMIT];
   HDualRow slice_dualRow[HSOL_SLICED_LIMIT];
 
-
   // Multiple price data
-    struct MChoice {
-        int rowOut;
-        double baseValue;
-        double baseLower;
-        double baseUpper;
-        double infeasValue;
-        double infeasEdWt;
-        double infeasLimit;
-        HVector row_ep;
-        HVector column;
-        HVector columnBFRT;
-    };
+  struct MChoice
+  {
+    int rowOut;
+    double baseValue;
+    double baseLower;
+    double baseUpper;
+    double infeasValue;
+    double infeasEdWt;
+    double infeasLimit;
+    HVector row_ep;
+    HVector column;
+    HVector columnBFRT;
+  };
 
-    struct MFinish {
-        int moveIn;
-        double shiftOut;
-        vector<int> flipList;
+  struct MFinish
+  {
+    int moveIn;
+    double shiftOut;
+    vector<int> flipList;
 
-        int rowOut;
-        int columnOut;
-        int columnIn;
-        double alphaRow;
-        double thetaPrimal;
-        double basicBound;
-        double basicValue;
-        double EdWt;
-        HVector_ptr row_ep;
-        HVector_ptr column;
-        HVector_ptr columnBFRT;
-    };
+    int rowOut;
+    int columnOut;
+    int columnIn;
+    double alphaRow;
+    double thetaPrimal;
+    double basicBound;
+    double basicValue;
+    double EdWt;
+    HVector_ptr row_ep;
+    HVector_ptr column;
+    HVector_ptr columnBFRT;
+  };
 
-    int multi_num;
-    int multi_iChoice;
-    int multi_nFinish;
-    int multi_iteration;
-    int multi_chooseAgain;
-    MChoice multi_choice[HSOL_THREAD_LIMIT];
-    MFinish multi_finish[HSOL_THREAD_LIMIT];
+  int multi_num;
+  int multi_iChoice;
+  int multi_nFinish;
+  int multi_iteration;
+  int multi_chooseAgain;
+  MChoice multi_choice[HSOL_THREAD_LIMIT];
+  MFinish multi_finish[HSOL_THREAD_LIMIT];
 
-    double total_fake;
-    double total_INVERT_TICK;
-    double total_FT_inc_TICK;
+  double total_fake;
+  double total_INVERT_TICK;
+  double total_FT_inc_TICK;
 
-    int AnIterIt0;
+  int AnIterIt0;
 #ifdef HiGHSDEV
-    const bool AnIterLg = true;
-    int AnIterPrevIt;
-    //Major operation analysis struct
-enum AnIterOpTy
-{
-  AnIterOpTy_Btran = 0,
-  AnIterOpTy_Price,
-  AnIterOpTy_Ftran,
-  AnIterOpTy_FtranBFRT,
-  AnIterOpTy_FtranDSE,
-  NumAnIterOpTy,
-};
- 
- struct AnIterOpRec {
-      double AnIterOpLog10RsDsty;
-      double AnIterOpSuLog10RsDsty;
-      double AnIterOpHyperCANCEL;
-      double AnIterOpHyperTRAN;
-      int AnIterOpRsDim;
-      int AnIterOpNumCa;
-      int AnIterOpNumHyperOp;
-      int AnIterOpNumHyperRs;
-      int AnIterOpRsMxNNZ;
-      int AnIterOpSuNumCa;
-      int AnIterOpSuNumHyperOp;
-      int AnIterOpSuNumHyperRs;
-      string AnIterOpName;
-    };
-    AnIterOpRec AnIterOp[NumAnIterOpTy];
+  const bool AnIterLg = true;
+  int AnIterPrevIt;
+  //Major operation analysis struct
+  enum AnIterOpTy
+  {
+    AnIterOpTy_Btran = 0,
+    AnIterOpTy_Price,
+    AnIterOpTy_Ftran,
+    AnIterOpTy_FtranBFRT,
+    AnIterOpTy_FtranDSE,
+    NumAnIterOpTy,
+  };
 
- struct AnIterTraceRec {
-   double AnIterTraceTime;
-   double AnIterTraceDsty[NumAnIterOpTy];
-   double AnIterTraceAux0;
-   int AnIterTraceIter;
-   int AnIterTraceEdWt_Mode;
- };
+  struct AnIterOpRec
+  {
+    double AnIterOpLog10RsDsty;
+    double AnIterOpSuLog10RsDsty;
+    double AnIterOpHyperCANCEL;
+    double AnIterOpHyperTRAN;
+    int AnIterOpRsDim;
+    int AnIterOpNumCa;
+    int AnIterOpNumHyperOp;
+    int AnIterOpNumHyperRs;
+    int AnIterOpRsMxNNZ;
+    int AnIterOpSuNumCa;
+    int AnIterOpSuNumHyperOp;
+    int AnIterOpSuNumHyperRs;
+    string AnIterOpName;
+  };
+  AnIterOpRec AnIterOp[NumAnIterOpTy];
 
- const int AnIterTraceMxNumRec = 20;
- int AnIterTraceNumRec;
- int AnIterTraceIterDl;
- AnIterTraceRec AnIterTrace[22];//How can this be 1+AnIterTraceMxNumRec+1;
+  struct AnIterTraceRec
+  {
+    double AnIterTraceTime;
+    double AnIterTraceDsty[NumAnIterOpTy];
+    double AnIterTraceAux0;
+    int AnIterTraceIter;
+    int AnIterTraceEdWt_Mode;
+  };
 
- const int AnIterNumInvertHint = 7;    
- int AnIterNumInvert[8];//How can this be AnIterNumInvertHint+1
- int AnIterNumColPrice;
- int AnIterNumRowPrice;
- int AnIterNumRowPriceWSw;
- int AnIterNumRowPriceUltra;
- int AnIterNumPrDgnIt;
- int AnIterNumDuDgnIt;
- int AnIterNumEdWtIt[3];//How can this be EdWt_Mode_Dan+1
+  const int AnIterTraceMxNumRec = 20;
+  int AnIterTraceNumRec;
+  int AnIterTraceIterDl;
+  AnIterTraceRec AnIterTrace[22]; //How can this be 1+AnIterTraceMxNumRec+1;
+
+  const int AnIterNumInvertHint = 7;
+  int AnIterNumInvert[8]; //How can this be AnIterNumInvertHint+1
+  int AnIterNumColPrice;
+  int AnIterNumRowPrice;
+  int AnIterNumRowPriceWSw;
+  int AnIterNumRowPriceUltra;
+  int AnIterNumPrDgnIt;
+  int AnIterNumDuDgnIt;
+  int AnIterNumEdWtIt[3]; //How can this be EdWt_Mode_Dan+1
 #endif
 };
 

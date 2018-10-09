@@ -32,7 +32,11 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
   numTot = model->getNumTot();
 #ifdef HiGHSDEV
   const int objSense = model->getObjSense();
-  if (abs(objSense) != 1) {printf("HCrash::crash: objSense = %d has not been set\n", objSense); cout << flush;}
+  if (abs(objSense) != 1)
+  {
+    printf("HCrash::crash: objSense = %d has not been set\n", objSense);
+    cout << flush;
+  }
   assert(abs(objSense) == 1);
 #endif
   bool HaveImpliedBounds = model->impliedBoundsPresolve;
@@ -59,13 +63,16 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
 #ifdef HiGHSDEV
       || Crash_Mode == Crash_Mode_TsSing
 #endif
-      ) {
+  )
+  {
     crsh_f_vr_ty = crsh_vr_ty_non_bc;
     crsh_l_vr_ty = crsh_vr_ty_bc;
     crsh_mn_pri_v = crsh_vr_ty_non_bc;
     crsh_mx_pri_v = crsh_vr_ty_bc;
     crsh_no_act_pri_v = crsh_mn_pri_v;
-  } else {
+  }
+  else
+  {
     crsh_f_vr_ty = crsh_vr_ty_fx;
     crsh_l_vr_ty = crsh_vr_ty_fr;
     crsh_mn_pri_v = crsh_vr_ty_fx;
@@ -79,14 +86,14 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode)
   }
 #ifdef HiGHSDEV
   else if (Crash_Mode == Crash_Mode_TsSing)
-    {
-      tsSing(ptr_model);
-    }
+  {
+    tsSing(ptr_model);
+  }
 #endif
   else
-    {
-      ltssf(ptr_model, Crash_Mode);
-    }
+  {
+    ltssf(ptr_model, Crash_Mode);
+  }
   model->totalTime += model->timer.getTime();
 }
 
@@ -141,7 +148,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
       }
     }
 #ifdef HiGHSDEV
-    if (Rp_Bixby_Ps) printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
+    if (Rp_Bixby_Ps)
+      printf("Pass %3d: c_n = %3d; MxEn = %10g; aa = %10g; aa/MxEn = %10g",
              ps_n, c_n, c_mx_abs_v, aa, aa / c_mx_abs_v);
 #endif
     //		Scale aa by the max |entry| in the column since CPLEX assumes the
@@ -193,7 +201,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
         }
       }
 #ifdef HiGHSDEV
-      if (nx_ps && Rp_Bixby_Ps) printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
+      if (nx_ps && Rp_Bixby_Ps)
+        printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
 #endif
     }
     //		Some value in the column would give an unacceptable multiplier so continue to next pass
@@ -219,7 +228,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     if (r_o_mx_aa == no_ix)
     {
 #ifdef HiGHSDEV
-      if (Rp_Bixby_Ps) printf(": No entry in a row with no pivot\n");
+      if (Rp_Bixby_Ps)
+        printf(": No entry in a row with no pivot\n");
 #endif
       continue;
     }
@@ -241,7 +251,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     }
     bixby_n_cdd_r -= 1;
 #ifdef HiGHSDEV
-    if (Rp_Bixby_Ps) printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
+    if (Rp_Bixby_Ps)
+      printf(": pv_r = %3d; n_cdd_r = %3d\n", pv_r_n, bixby_n_cdd_r);
 #endif
     if (bixby_n_cdd_r == 0)
       break;
@@ -261,7 +272,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     int sourceOut = model->setSourceOutFmBd(columnOut);
     //			Update the basic/nonbasic variable info and the row-wise copy of the matrix
     model->updatePivots(columnIn, rowOut, sourceOut);
-    if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
+    if (model->mlFg_haveMatrixRowWise)
+      model->updateMatrix(columnIn, columnOut);
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
     vr_ty = crsh_c_ty[cz_c_n];
@@ -560,69 +572,74 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode)
   //Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
-  if (Crash_Mode == Crash_Mode_Bs) {
-    for (int r_n = 0; r_n < numRow; r_n++) {
+  if (Crash_Mode == Crash_Mode_Bs)
+  {
+    for (int r_n = 0; r_n < numRow; r_n++)
+    {
       //      printf("Row %4d has nonbasic flag = %1d\n", r_n, nonbasicFlag[numCol+r_n]);
-      if (nonbasicFlag[numCol+r_n] == NONBASIC_FLAG_TRUE)
-	crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
-      else 
-	crsh_r_ty[r_n] = crsh_vr_ty_bc;
+      if (nonbasicFlag[numCol + r_n] == NONBASIC_FLAG_TRUE)
+        crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
+      else
+        crsh_r_ty[r_n] = crsh_vr_ty_bc;
     }
-    for (int c_n = 0; c_n < numCol; c_n++) {
+    for (int c_n = 0; c_n < numCol; c_n++)
+    {
       //      printf("Col %4d has nonbasic flag = %1d\n", c_n, nonbasicFlag[c_n]);
       if (nonbasicFlag[c_n] == NONBASIC_FLAG_TRUE)
-	crsh_c_ty[c_n] = crsh_vr_ty_non_bc;
+        crsh_c_ty[c_n] = crsh_vr_ty_non_bc;
       else
-	crsh_c_ty[c_n] = crsh_vr_ty_bc;
+        crsh_c_ty[c_n] = crsh_vr_ty_bc;
     }
-  } else {
+  }
+  else
+  {
     for (int r_n = 0; r_n < numRow; r_n++)
+    {
+      if (rowUpper[r_n] >= HSOL_CONST_INF)
       {
-	if (rowUpper[r_n] >= HSOL_CONST_INF)
-	  {
-	    if (rowLower[r_n] <= -HSOL_CONST_INF)
-	      crsh_r_ty[r_n] = crsh_vr_ty_fr; // Free row
-	    else
-	      crsh_r_ty[r_n] = crsh_vr_ty_1_sd; // Lower-bounded (1-sided) row
-	  }
-	else
-	  {
-	    if (rowLower[r_n] <= -HSOL_CONST_INF)
-	      crsh_r_ty[r_n] = crsh_vr_ty_1_sd; // Upper-bonded (1-sided) row
-	    else
-	      {
-		//Two-sided row - maybe fixed (equality)
-		if (rowLower[r_n] != rowUpper[r_n])
-		  crsh_r_ty[r_n] = crsh_vr_ty_2_sd; // 2-sided row
-		else
-		  crsh_r_ty[r_n] = crsh_vr_ty_fx; // fixed (equality) row
-	      }
-	  }
+        if (rowLower[r_n] <= -HSOL_CONST_INF)
+          crsh_r_ty[r_n] = crsh_vr_ty_fr; // Free row
+        else
+          crsh_r_ty[r_n] = crsh_vr_ty_1_sd; // Lower-bounded (1-sided) row
       }
+      else
+      {
+        if (rowLower[r_n] <= -HSOL_CONST_INF)
+          crsh_r_ty[r_n] = crsh_vr_ty_1_sd; // Upper-bonded (1-sided) row
+        else
+        {
+          //Two-sided row - maybe fixed (equality)
+          if (rowLower[r_n] != rowUpper[r_n])
+            crsh_r_ty[r_n] = crsh_vr_ty_2_sd; // 2-sided row
+          else
+            crsh_r_ty[r_n] = crsh_vr_ty_fx; // fixed (equality) row
+        }
+      }
+    }
     // Set up the column variable types for crash
     for (int c_n = 0; c_n < numCol; c_n++)
+    {
+      if (colUpper[c_n] >= HSOL_CONST_INF)
       {
-	if (colUpper[c_n] >= HSOL_CONST_INF)
-	  {
-	    if (colLower[c_n] <= -HSOL_CONST_INF)
-	      crsh_c_ty[c_n] = crsh_vr_ty_fr; // Free column
-	    else
-	      crsh_c_ty[c_n] = crsh_vr_ty_1_sd; // Lower-bounded (1-sided) column
-	  }
-	else
-	  {
-	    if (colLower[c_n] <= -HSOL_CONST_INF)
-	      crsh_c_ty[c_n] = crsh_vr_ty_1_sd; // Upper-bonded (1-sided) column
-	    else
-	      {
-		//Two-sided row - maybe fixed (equality)
-		if (colLower[c_n] != colUpper[c_n])
-		  crsh_c_ty[c_n] = crsh_vr_ty_2_sd; // 2-sided column
-		else
-		  crsh_c_ty[c_n] = crsh_vr_ty_fx; // fixed column
-	      }
-	  }
+        if (colLower[c_n] <= -HSOL_CONST_INF)
+          crsh_c_ty[c_n] = crsh_vr_ty_fr; // Free column
+        else
+          crsh_c_ty[c_n] = crsh_vr_ty_1_sd; // Lower-bounded (1-sided) column
       }
+      else
+      {
+        if (colLower[c_n] <= -HSOL_CONST_INF)
+          crsh_c_ty[c_n] = crsh_vr_ty_1_sd; // Upper-bonded (1-sided) column
+        else
+        {
+          //Two-sided row - maybe fixed (equality)
+          if (colLower[c_n] != colUpper[c_n])
+            crsh_c_ty[c_n] = crsh_vr_ty_2_sd; // 2-sided column
+          else
+            crsh_c_ty[c_n] = crsh_vr_ty_fx; // fixed column
+        }
+      }
+    }
   }
   //Allocate the arrays to analyse crash
   crsh_vr_ty_og_n_r.resize(crsh_l_vr_ty + 1);
@@ -768,88 +785,111 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
   int ck_su_n_nonbc_vr = 0;
 #endif
   int n_ps = 2;
-  if (mode == 1) n_ps = 1;
-  for (int ps_n = 0; ps_n < n_ps; ps_n++) {
-    if (ps_n == 1) {
-      if (mode == 0) printf("grep_CharCrash,Rows");
-      else if (mode == 2) printf("grep_CharCrash,Basic");
-      else printf("grep_CharCrash,Nonbasic");
-      for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {      
-	TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
-	if (mode == 0) {
-	  printf(",%s", TyNm.c_str());
-	} else {
-	  printf(",%s_Row", TyNm.c_str());
-	  printf(",%s_Col", TyNm.c_str());
-	}
+  if (mode == 1)
+    n_ps = 1;
+  for (int ps_n = 0; ps_n < n_ps; ps_n++)
+  {
+    if (ps_n == 1)
+    {
+      if (mode == 0)
+        printf("grep_CharCrash,Rows");
+      else if (mode == 2)
+        printf("grep_CharCrash,Basic");
+      else
+        printf("grep_CharCrash,Nonbasic");
+      for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++)
+      {
+        TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
+        if (mode == 0)
+        {
+          printf(",%s", TyNm.c_str());
+        }
+        else
+        {
+          printf(",%s_Row", TyNm.c_str());
+          printf(",%s_Col", TyNm.c_str());
+        }
       }
       printf("\n");
-      if (mode == 0) printf("grep_CharCrash,%d", numRow);
-      else if (mode == 2) printf("grep_CharCrash,%d", numRow);
-      else if (mode == 3) printf("grep_CharCrash,%d", numCol);
+      if (mode == 0)
+        printf("grep_CharCrash,%d", numRow);
+      else if (mode == 2)
+        printf("grep_CharCrash,%d", numRow);
+      else if (mode == 3)
+        printf("grep_CharCrash,%d", numCol);
     }
     for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++)
+    {
+      TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
+      if (mode == 0)
       {
-	TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
-	if (mode == 0)
-	  {
 #ifdef HiGHSDEV
-	    ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
+        ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
 #endif
-	    int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
-	    if (ps_n == 0) {
-	      if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-		printf(" Model has %7d %3s rows (%3d%%)\n", crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(), lc_pct);
-	    } else {
-	      printf(",%7d", crsh_vr_ty_og_n_r[vr_ty]);
-	    }
-	  }
-	else if (mode == 1)
-	  {
-	    if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-	      printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
-		     crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
-		     TyNm.c_str(),
-		     (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
-	  }
-	else if (mode == 2)
-	  {
-#ifdef HiGHSDEV
-	    ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
-	    ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
-	    ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
-	    ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
-#endif
-	    if (ps_n == 0) {
-	      if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
-		printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
-		       crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
-		       (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
-	      if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
-		printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
-		       crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
-		       (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
-	    } else {
-	      printf(",%d,%d", crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
-	    }
-	  }
-	else
-	  {
-	    if (ps_n == 0) {
-	      if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
-		printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
-		       crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
-		       (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
-	      if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
-		printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
-		       crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
-		       (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
-	    } else {
-	      printf(",%d,%d", crsh_nonbc_vr_ty_n_r[vr_ty], crsh_nonbc_vr_ty_n_c[vr_ty]);
-	    }
-	  }
+        int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
+        if (ps_n == 0)
+        {
+          if (crsh_vr_ty_og_n_r[vr_ty] > 0)
+            printf(" Model has %7d %3s rows (%3d%%)\n", crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(), lc_pct);
+        }
+        else
+        {
+          printf(",%7d", crsh_vr_ty_og_n_r[vr_ty]);
+        }
       }
-    if (ps_n == 1) printf("\n");
+      else if (mode == 1)
+      {
+        if (crsh_vr_ty_og_n_r[vr_ty] > 0)
+          printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
+                 crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
+                 TyNm.c_str(),
+                 (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
+      }
+      else if (mode == 2)
+      {
+#ifdef HiGHSDEV
+        ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
+        ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
+        ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
+        ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
+#endif
+        if (ps_n == 0)
+        {
+          if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
+            printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
+                   crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
+                   (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
+          if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
+            printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
+                   crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
+                   (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
+        }
+        else
+        {
+          printf(",%d,%d", crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
+        }
+      }
+      else
+      {
+        if (ps_n == 0)
+        {
+          if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
+            printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
+                   crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
+                   (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
+          if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
+            printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
+                   crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
+                   (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
+        }
+        else
+        {
+          printf(",%d,%d", crsh_nonbc_vr_ty_n_r[vr_ty], crsh_nonbc_vr_ty_n_c[vr_ty]);
+        }
+      }
+    }
+    if (ps_n == 1)
+      printf("\n");
   }
 #ifdef HiGHSDEV
   if (mode == 0)
@@ -889,16 +929,20 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode)
   }
 }
 
-string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode) {
+string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode)
+{
   string TyNm;
-  if (Crash_Mode == Crash_Mode_Bs) {
+  if (Crash_Mode == Crash_Mode_Bs)
+  {
     if (vr_ty == crsh_vr_ty_non_bc)
       TyNm = "NBc";
     else if (vr_ty == crsh_vr_ty_bc)
       TyNm = " Bc";
     else
       printf("Unrecognised type %d\n", vr_ty);
-  } else {
+  }
+  else
+  {
     if (vr_ty == crsh_vr_ty_fx)
       TyNm = "Fx ";
     else if (vr_ty == crsh_vr_ty_2_sd)
@@ -1325,14 +1369,15 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode)
            ltssf_ck_fq);
     ltssf_ck_da();
   }
-  if (Rp_TwoD_da) ltssf_rp_pri_k_da();
+  if (Rp_TwoD_da)
+    ltssf_rp_pri_k_da();
 #endif
 
 #ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode);
 #endif
   ltssf_iterate(ptr_model);
-  
+
   /*
   if (Crash_Mode == Crash_Mode_Bs) {
     const int *nonbasicFlag = model->getNonbasicFlag();
@@ -1380,9 +1425,10 @@ void HCrash::ltssf_iterate(HModel *ptr_model)
     if (bs_cg)
     {
 #ifdef HiGHSDEV
-      if (Rp_TwoD_da) printf("Pass %2d; cz_r = %2d; cz_c = %2d\n", n_crsh_ps, cz_r_n, cz_c_n);
+      if (Rp_TwoD_da)
+        printf("Pass %2d; cz_r = %2d; cz_c = %2d\n", n_crsh_ps, cz_r_n, cz_c_n);
 #endif
-      
+
       //			A basis change has occurred
       n_crsh_bs_cg += 1;
       double abs_pv_v = abs(pv_v);
@@ -1406,11 +1452,13 @@ void HCrash::ltssf_iterate(HModel *ptr_model)
     else
     {
 #ifdef HiGHSDEV
-      if (Rp_TwoD_da) printf("Pass %2d; cz_r = %2d: No basis change\n", n_crsh_ps, cz_r_n);
+      if (Rp_TwoD_da)
+        printf("Pass %2d; cz_r = %2d: No basis change\n", n_crsh_ps, cz_r_n);
 #endif
     }
 #ifdef HiGHSDEV
-    if (Rp_TwoD_da) ltssf_rp_pri_k_da();
+    if (Rp_TwoD_da)
+      ltssf_rp_pri_k_da();
 #endif
     ltssf_u_da(ptr_model);
     //for (int r_n = 0; r_n < numRow; r_n++) {
@@ -1419,8 +1467,10 @@ void HCrash::ltssf_iterate(HModel *ptr_model)
     //}
     //Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
 #ifdef HiGHSDEV
-    if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
-    if (Rp_TwoD_da) ltssf_rp_pri_k_da();
+    if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0))
+      ltssf_ck_da();
+    if (Rp_TwoD_da)
+      ltssf_rp_pri_k_da();
 #endif
     if (TwoD_hdr)
     {
@@ -1759,7 +1809,8 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model)
         }
         int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
 #ifdef HiGHSDEV
-        if (Rp_TwoD_da) {
+        if (Rp_TwoD_da)
+        {
           ltssf_rp_pri_k_da();
           printf("1: Remove row %d of pri %d from linked list with %d entries\n", r_n, pri_v, r_k);
         }
@@ -1801,9 +1852,10 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model)
         crsh_r_k[r_n] = r_k;
         if (r_k > 0)
         {
-          //     ... either add the row as the header of the list with one fewer number of active entries...
+        //     ... either add the row as the header of the list with one fewer number of active entries...
 #ifdef HiGHSDEV
-          if (Rp_TwoD_da) {
+          if (Rp_TwoD_da)
+          {
             ltssf_rp_pri_k_da();
             printf("Add row %d of pri %d to linked list with %d entries\n", r_n, pri_v, r_k);
           }
@@ -1823,10 +1875,11 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model)
         else
         {
 #ifdef HiGHSDEV
-          if (Rp_TwoD_da) {
+          if (Rp_TwoD_da)
+          {
             ltssf_rp_pri_k_da();
             printf("2: Remove row %d of pri %d and count %d from active submatrix\n", r_n, pri_v, r_k);
-	  }
+          }
 #endif
           //     ...or, if the count is zero, the row leaves the active submatrix...
           crsh_act_r[r_n] = crsh_vr_st_no_act;
@@ -1955,16 +2008,18 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode)
   //Allocate the crash variable type arrays
   crsh_r_ty_pri_v.resize(crsh_l_vr_ty);
   crsh_c_ty_pri_v.resize(crsh_l_vr_ty);
-  if (Crash_Mode == Crash_Mode_Bs) {
-  //Basis-preserving crash:
+  if (Crash_Mode == Crash_Mode_Bs)
+  {
+    //Basis-preserving crash:
     printf("Basis-preserving crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_non_bc] = 1;
-    crsh_r_ty_pri_v[crsh_vr_ty_bc] =     0;
+    crsh_r_ty_pri_v[crsh_vr_ty_bc] = 0;
     crsh_c_ty_pri_v[crsh_vr_ty_non_bc] = 0;
-    crsh_c_ty_pri_v[crsh_vr_ty_bc] =     1;
-    
-  } else {
-  //Standard crash:
+    crsh_c_ty_pri_v[crsh_vr_ty_bc] = 1;
+  }
+  else
+  {
+    //Standard crash:
     printf("Standard crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_fx] = 3;
     crsh_r_ty_pri_v[crsh_vr_ty_2_sd] = 2;
@@ -2009,7 +2064,8 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode)
 
   crsh_iz_vr_ty(ptr_model, Crash_Mode);
 
-  if (Crash_Mode == Crash_Mode_Bs) {
+  if (Crash_Mode == Crash_Mode_Bs)
+  {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
     model->replaceWithLogicalBasis();
@@ -2564,7 +2620,8 @@ void HCrash::tsSing(HModel *ptr_model)
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
   // of basic variables reaches numRow
-  for (int c_n = 0; c_n < numTot; c_n++) {
+  for (int c_n = 0; c_n < numTot; c_n++)
+  {
     int r_n = c_n;
     int columnIn = c_n;
     int rowOut = r_n;
@@ -2572,9 +2629,11 @@ void HCrash::tsSing(HModel *ptr_model)
     int sourceOut = model->setSourceOutFmBd(columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy of the matrix
     model->updatePivots(columnIn, rowOut, sourceOut);
-    if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
+    if (model->mlFg_haveMatrixRowWise)
+      model->updateMatrix(columnIn, columnOut);
     nBcVr++;
-    if (nBcVr == numRow) break;
+    if (nBcVr == numRow)
+      break;
   }
 }
 #endif

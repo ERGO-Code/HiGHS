@@ -14,7 +14,6 @@ int main(int argc, char **argv)
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
 
-
   std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #if defined(HiGHSDEV) || defined(HiGHSDEBUG)
   //Report on preprocessing macros
@@ -51,8 +50,10 @@ int main(int argc, char **argv)
 
 #endif
 
-  if (argc == 1) {
-    std::cout<< "Error: No file specified. \n"<< std::endl;
+  if (argc == 1)
+  {
+    std::cout << "Error: No file specified. \n"
+              << std::endl;
     printHelp(argv[0]);
     return 0;
   }
@@ -67,16 +68,18 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  if (argc == 2) {
+  if (argc == 2)
+  {
     filename = 1;
     fileName = argv[1];
   }
-  
-  else {
+
+  else
+  {
     while ((opt = getopt(argc, argv, "p:c:e:P:sSm::t:T:df:")) != EOF)
-    switch (opt)
-    {
-        case 'f':
+      switch (opt)
+      {
+      case 'f':
         filename = 1;
         cout << "Reading file " << optarg << endl;
         fileName = optarg;
@@ -152,16 +155,17 @@ int main(int argc, char **argv)
 #ifdef HiGHSDEV
     fileName = "ml.mps";
     printf("Setting default value filenameMode = %s\n", fileName);
-#else 
+#else
     std::cout << "No file specified. " << std::endl;
     printHelp(argv[0]);
     return 0;
-#endif 
+#endif
   }
   // Check if file exists
-  else if ( access( fileName, F_OK ) == -1 ) 
+  else if (access(fileName, F_OK) == -1)
   {
-    std::cout << "Error: File Not Found.\n" << std::endl;
+    std::cout << "Error: File Not Found.\n"
+              << std::endl;
     printHelp(argv[0]);
     return 0;
   }
@@ -197,17 +201,20 @@ int main(int argc, char **argv)
   cout << "====================================================================================" << endl;
 
   //parallel
-  if (sip) {
+  if (sip)
+  {
     cout << "Running solveTasks" << endl;
     solveTasks(fileName);
   }
-  if (scip) {
+  if (scip)
+  {
     cout << "Running solveSCIP" << endl;
     solveSCIP(fileName);
   }
   else if (pami)
   {
-    if (partitionFile) {
+    if (partitionFile)
+    {
       cout << "Running solveMulti" << endl;
       solveMulti(fileName, partitionFile);
     }
@@ -229,7 +236,8 @@ int main(int argc, char **argv)
 
       model.util_reportSolverOutcome("Cut");
     }
-    else {
+    else
+    {
       cout << "Running solvemulti" << endl;
       solveMulti(fileName);
     }
@@ -240,7 +248,7 @@ int main(int argc, char **argv)
     if (!presolve && !crash && !edgeWeight && !price && !timeLimit)
     {
 
-    cout << "Running solvePlain" << endl;
+      cout << "Running solvePlain" << endl;
       int RtCod =
           //solvePlainAPI(fileName);
           solvePlain(fileName);
@@ -251,20 +259,23 @@ int main(int argc, char **argv)
     }
     else if (presolve && !crash && !edgeWeight && !price && !timeLimit)
     {
-      if (presolve == 1) {
-	cout << "Running solvePlainWithPresolve" << endl;
+      if (presolve == 1)
+      {
+        cout << "Running solvePlainWithPresolve" << endl;
         solvePlainWithPresolve(fileName);
         //solvePlainExperiments(fileName);
         //testIO("fileIO");
       }
 #ifdef EXT_PRESOLVE
-      else if (presolve == 2) {
-	cout << "Running solveExternalPresolve" << endl;
+      else if (presolve == 2)
+      {
+        cout << "Running solveExternalPresolve" << endl;
         solveExternalPresolve(fileName);
       }
 #endif
     }
-    else {
+    else
+    {
       cout << "Running solvePlainJAJH" << endl;
       solvePlainJAJH(priceMode, edWtMode, crashMode, presolveMode, fileName, TimeLimit_ArgV);
     }
@@ -279,10 +290,12 @@ int solvePlain(const char *filename)
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
-  if (RtCd) return RtCd;
-  if (model.intOption[INTOPT_PRINT_FLAG]) model.util_reportModelBrief();
+  if (RtCd)
+    return RtCd;
+  if (model.intOption[INTOPT_PRINT_FLAG])
+    model.util_reportModelBrief();
 #ifdef HiGHSDEV
-  //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" << endl;
+    //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" << endl;
 #endif
   model.scaleModel();
   HDual solver;
@@ -771,7 +784,8 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
     //    printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n", model.intOption[INTOPT_PRINT_FLAG]);
     if (presolveNoScale)
       printf("*****************************\n* !!Not currently scaling!! *\n*****************************\n");
-    else {
+    else
+    {
       model.scaleModel();
     }
     if (FourThreads)
@@ -856,7 +870,8 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
 #endif
 
 #ifdef HiGHSDEV
-      printf("\nBefore solve after Postsolve\n"); cout << flush;
+      printf("\nBefore solve after Postsolve\n");
+      cout << flush;
 #endif
       model.timer.reset();
       solver.solve(&model);
@@ -901,9 +916,10 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
     else
       solver.solve(&model);
     solveTime += model.timer.getTime();
-    int problemStatus = model.getPrStatus(); 
+    int problemStatus = model.getPrStatus();
     //    printf("After solve() model status is %d\n", problemStatus);
-    if (problemStatus == LP_Status_Unset) {
+    if (problemStatus == LP_Status_Unset)
+    {
       HCrash crash;
       crash.crash(&model, Crash_Mode_Bs);
       solver.solve(&model);
@@ -929,20 +945,21 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV, const char *Cr
   model.util_reportSolverOutcome("Final:           ");
 #ifdef HiGHSDEV
   bool rpBnchmk = false;
-  if (rpBnchmk) {
+  if (rpBnchmk)
+  {
     int numCol = model.numCol;
     int numRow = model.numRow;
     printf(
-	   "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
-	   "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
-	   "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
-	   "%20.10e,%10d,%10.3f,"
-	   "%d\n",
-	   model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
-	   Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime, presolve1Time,
-	   crashTime, crossoverTime, presolve2Time, solveTime, postsolveTime,
-	   model.objective, model.numberIteration, model.totalTime,
-	   solver.n_wg_DSE_wt);
+        "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
+        "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
+        "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
+        "%20.10e,%10d,%10.3f,"
+        "%d\n",
+        model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
+        Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime, presolve1Time,
+        crashTime, crossoverTime, presolve2Time, solveTime, postsolveTime,
+        model.objective, model.numberIteration, model.totalTime,
+        solver.n_wg_DSE_wt);
     cout << flush;
   }
 #endif
@@ -985,18 +1002,19 @@ double presolve(HModel &mod, double &time)
   }
   else
   {
-      if ( status == HPresolve::Infeasible )
-        mod.problemStatus = LP_Status_Infeasible;
-      else if ( status == HPresolve::Unbounded)
-        mod.problemStatus = LP_Status_Unbounded;
-      else {
-        std::cout << "Unknown, status=" << status << std::endl;
-        mod.problemStatus = LP_Status_Failed;
-        delete pre;
-        return 0;
-      }
+    if (status == HPresolve::Infeasible)
+      mod.problemStatus = LP_Status_Infeasible;
+    else if (status == HPresolve::Unbounded)
+      mod.problemStatus = LP_Status_Unbounded;
+    else
+    {
+      std::cout << "Unknown, status=" << status << std::endl;
+      mod.problemStatus = LP_Status_Failed;
+      delete pre;
+      return 0;
+    }
 
-      mod.util_reportSolverOutcome("Presolve");
+    mod.util_reportSolverOutcome("Presolve");
   }
 
   delete pre;
@@ -1112,9 +1130,9 @@ int solveMulti(const char *filename, const char *partitionfile)
 
   model.scaleModel();
   HDual solver;
-    //    solver.solve(&model, HDUAL_VARIANT_MULTI, 1);
-    //    solver.solve(&model, HDUAL_VARIANT_MULTI, 2);
-    //    solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
+  //    solver.solve(&model, HDUAL_VARIANT_MULTI, 1);
+  //    solver.solve(&model, HDUAL_VARIANT_MULTI, 2);
+  //    solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
   solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 
   model.util_reportSolverOutcome("Solve multi");
@@ -1126,14 +1144,14 @@ int solveMulti(const char *filename, const char *partitionfile)
 
 #ifdef EXT_PRESOLVE
 
-void copyMatrix(const Problem<double>& problem, vector<int>& Astart, vector<int>& Aend, vector<int>& Aindex, vector<double>& Avalue) {
+void copyMatrix(const Problem<double> &problem, vector<int> &Astart, vector<int> &Aend, vector<int> &Aindex, vector<double> &Avalue)
+{
 
- 
   int numCol = problem.getNCols();
   int nnz = problem.getConstraintMatrix().getNnz();
 
-  assert((unsigned int) numCol + 1 == Aend.size());
-  assert((unsigned int) numCol + 1 == Astart.size());
+  assert((unsigned int)numCol + 1 == Aend.size());
+  assert((unsigned int)numCol + 1 == Astart.size());
 
   vector<pair<int, size_t>> vp;
   vp.reserve(numCol);
@@ -1149,24 +1167,24 @@ void copyMatrix(const Problem<double>& problem, vector<int>& Astart, vector<int>
 
   vector<int> Aendtmp;
   Aendtmp = Aend;
-  const int* Aindex_ = problem.getConstraintMatrix().getTransposeRowIndices();
-  const double* Avalue_ = problem.getConstraintMatrix().getTransposeValues();
+  const int *Aindex_ = problem.getConstraintMatrix().getTransposeRowIndices();
+  const double *Avalue_ = problem.getConstraintMatrix().getTransposeValues();
 
   int iPut = 0;
   for (size_t i = 0; i != vp.size(); ++i)
+  {
+    int col = vp.at(i).second;
+    int k = vp.at(i).first;
+    Astart.at(col) = iPut;
+    while (k < Aendtmp.at(col))
     {
-      int col = vp.at(i).second;
-        int k = vp.at(i).first;
-        Astart.at(col) = iPut;
-        while (k < Aendtmp.at(col))
-        {
-            Avalue[iPut] = Avalue_[k];
-            Aindex[iPut] = Aindex_[k];
-            iPut++;
-          k++;
-        }
-        Aend.at(col) = iPut;
+      Avalue[iPut] = Avalue_[k];
+      Aindex[iPut] = Aindex_[k];
+      iPut++;
+      k++;
     }
+    Aend.at(col) = iPut;
+  }
 
   assert(iPut == nnz);
 
@@ -1206,15 +1224,14 @@ int solveExternalPresolve(const char *fileName)
   //presolve.addPresolveMethod(...);
   presolve.apply(problem);
 
-
-  //Load presolved problem in solver 
+  //Load presolved problem in solver
 
   //Update old HModel and set up solver to solve
-  vector<int>      Astart = problem.getConstraintMatrix().getTransposeColStart();
-  vector<int>        Aend = problem.getConstraintMatrix().getTransposeColEnd();
+  vector<int> Astart = problem.getConstraintMatrix().getTransposeColStart();
+  vector<int> Aend = problem.getConstraintMatrix().getTransposeColEnd();
 
-  int*       Aindex_p = NULL;
-  double*    Avalue_p = NULL;
+  int *Aindex_p = NULL;
+  double *Avalue_p = NULL;
 
   vector<int> Aindex;
   vector<double> Avalue;
@@ -1222,27 +1239,30 @@ int solveExternalPresolve(const char *fileName)
   //check if matrix copy is necessary
   int numCol = problem.getNCols();
   bool isNeeded = false;
-  for (int i=0; i< numCol; ++i) {
-    if (Astart[i+1] != Aend[i]) {
+  for (int i = 0; i < numCol; ++i)
+  {
+    if (Astart[i + 1] != Aend[i])
+    {
       isNeeded = true;
       break;
     }
   }
 
   //if we need matrix copy
-  if (isNeeded) {
+  if (isNeeded)
+  {
     int nnz = problem.getConstraintMatrix().getNnz();
     Aindex.resize(nnz);
     Avalue.resize(nnz);
     copyMatrix(problem, Astart, Aend, Aindex, Avalue);
     Astart.at(numCol) = nnz;
   }
-  //if not needed do not make matrix copy 
-  else {
-    Aindex_p = (int *) problem.getConstraintMatrix().getTransposeRowIndices();
-    Avalue_p = (double *) problem.getConstraintMatrix().getTransposeValues();
+  //if not needed do not make matrix copy
+  else
+  {
+    Aindex_p = (int *)problem.getConstraintMatrix().getTransposeRowIndices();
+    Avalue_p = (double *)problem.getConstraintMatrix().getTransposeValues();
   }
-
 
   vector<double> colLower = problem.getLowerBounds();
   vector<double> colUpper = problem.getUpperBounds();
@@ -1285,7 +1305,7 @@ int solveExternalPresolve(const char *fileName)
 
   model.scaleModel();
 
-  //solve 
+  //solve
   HDual solver;
   solver.solve(&model);
   double obj = model.util_getObjectiveValue();

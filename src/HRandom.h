@@ -1,28 +1,33 @@
 #ifndef HRANDOM_H_
 #define HRANDOM_H_
 
-class HRandom {
+class HRandom
+{
 public:
-    HRandom() {
-        random_mw = 1985;
-        random_mz = 2012;
-    }
-    int intRandom() {
-        random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
-        random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
-        unsigned result = (random_mz << 16) + random_mw;
-        return result >> 1;
-    }
-    double dblRandom() {
-        random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
-        random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
-        unsigned result = (random_mz << 16) + random_mw;
-	double returnValue = (result + 1.0) * 2.328306435454494e-10;
-        return returnValue;
-    }
+  HRandom()
+  {
+    random_mw = 1985;
+    random_mz = 2012;
+  }
+  int intRandom()
+  {
+    random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
+    random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
+    unsigned result = (random_mz << 16) + random_mw;
+    return result >> 1;
+  }
+  double dblRandom()
+  {
+    random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
+    random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
+    unsigned result = (random_mz << 16) + random_mw;
+    double returnValue = (result + 1.0) * 2.328306435454494e-10;
+    return returnValue;
+  }
+
 private:
-    unsigned random_mw;
-    unsigned random_mz;
+  unsigned random_mw;
+  unsigned random_mz;
 };
 
 #endif /* HRANDOM_H_ */

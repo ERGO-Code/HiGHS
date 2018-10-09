@@ -56,27 +56,27 @@ int solveExternalPresolve(const char *fileName);
 double presolve(HModel &mod, double &time);
 //int testIO(const char *filename);
 
-void printHelp(std::string execName) {
+void printHelp(std::string execName)
+{
 
   fprintf(stderr, "Usage: %s [options] -f fileName \n\n", execName.c_str());
-  fprintf(stderr, 
-              "Options: \n"
-                "  -p On     : use presolve\n"
-                "  -c mode   : set crash mode to mode. Values:\n"
-                "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7 Bs SingTs\n"
-                "  -e edWt   : set edge weight to edWt. Values: \n"
-                "            : Dan Dvx DSE DSE0 DSE2Dvx\n"
-                "  -P Price  : Row Col RowSw RowSwColSw RowUltra\n"
-                "  -s        : use option sip\n"
-                "  -S        : use option SCIP (to test utilities)\n"
-                "  -m [cut]  : use pami. Cutoff optional double value.\n"
-                "  -t fName  : use pami with partition file fName\n"
-                "  -T time   : use a time limit\n"
-                "\n"
-                "Note: "
-                "The default parser reads fixed format MPS files. If a boost installation is present\n"
-                "free format MPS and .GZ (MPS) files can also be processed.\n"
-                );
+  fprintf(stderr,
+          "Options: \n"
+          "  -p On     : use presolve\n"
+          "  -c mode   : set crash mode to mode. Values:\n"
+          "            : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7 Bs SingTs\n"
+          "  -e edWt   : set edge weight to edWt. Values: \n"
+          "            : Dan Dvx DSE DSE0 DSE2Dvx\n"
+          "  -P Price  : Row Col RowSw RowSwColSw RowUltra\n"
+          "  -s        : use option sip\n"
+          "  -S        : use option SCIP (to test utilities)\n"
+          "  -m [cut]  : use pami. Cutoff optional double value.\n"
+          "  -t fName  : use pami with partition file fName\n"
+          "  -T time   : use a time limit\n"
+          "\n"
+          "Note: "
+          "The default parser reads fixed format MPS files. If a boost installation is present\n"
+          "free format MPS and .GZ (MPS) files can also be processed.\n");
   return;
 }
 

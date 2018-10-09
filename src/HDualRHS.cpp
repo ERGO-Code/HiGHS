@@ -41,17 +41,18 @@ void HDualRHS::choose_normal(int *chIndex)
 {
   // Moved the following to the top to avoid starting the clock for a trivial call.
   // NB Must still call intRandom to maintain sequence of random numbers for code reproducibility!!
-  // Never mind if we're not timing the random number call!! 
+  // Never mind if we're not timing the random number call!!
   int random = workModel->random.intRandom();
   if (workCount == 0)
-    {
-      *chIndex = -1;
-      return;
-    }
+  {
+    *chIndex = -1;
+    return;
+  }
 
-  // Since choose_normal calls itself, only start the clock if it's not currently running 
+  // Since choose_normal calls itself, only start the clock if it's not currently running
   bool keepTimerRunning = workModel->timer.itemStart[HTICK_CHUZR1] < 0;
-  if (!keepTimerRunning) workModel->timer.recordStart(HTICK_CHUZR1);
+  if (!keepTimerRunning)
+    workModel->timer.recordStart(HTICK_CHUZR1);
 
   if (workCount < 0)
   {
@@ -129,8 +130,9 @@ void HDualRHS::choose_normal(int *chIndex)
     }
     *chIndex = bestIndex;
   }
-  // Since choose_normal calls itself, only stop the clock if it's not currently running 
-  if (!keepTimerRunning) workModel->timer.recordFinish(HTICK_CHUZR1);
+  // Since choose_normal calls itself, only stop the clock if it's not currently running
+  if (!keepTimerRunning)
+    workModel->timer.recordFinish(HTICK_CHUZR1);
 }
 
 void HDualRHS::choose_multi_global(int *chIndex, int *chCount, int chLimit)

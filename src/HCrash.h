@@ -143,10 +143,9 @@ public:
   int crsh_f_vr_ty;
   int crsh_l_vr_ty;
 
-  int crsh_mn_pri_v;// = 0;
-  int crsh_mx_pri_v;// = 3;
-  int crsh_no_act_pri_v;// = crsh_mn_pri_v;
-
+  int crsh_mn_pri_v;     // = 0;
+  int crsh_mx_pri_v;     // = 3;
+  int crsh_no_act_pri_v; // = crsh_mn_pri_v;
 
   int crsh_fn_cf_pri_v;
   int crsh_fn_cf_k;

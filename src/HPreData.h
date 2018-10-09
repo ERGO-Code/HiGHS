@@ -11,91 +11,88 @@
 
 using namespace std;
 
-struct change {
-		  int type;
-		  int row;
-		  int col;
-		};
+struct change
+{
+  int type;
+  int row;
+  int col;
+};
 
-class HPreData {
+class HPreData
+{
 public:
-	HPreData();
+  HPreData();
 
-	//Model data
-	int numCol;
-	int numRow;
-	int numRowOriginal;
-	int numColOriginal;
-	int numTot;
+  //Model data
+  int numCol;
+  int numRow;
+  int numRowOriginal;
+  int numColOriginal;
+  int numTot;
 
-	vector<int> Astart;
-	vector<int> Aindex;
-	vector<double> Avalue;
-	vector<double> colCost;
-	vector<double> colLower;
-	vector<double> colUpper;
-	vector<double> rowLower;
-	vector<double> rowUpper;
+  vector<int> Astart;
+  vector<int> Aindex;
+  vector<double> Avalue;
+  vector<double> colCost;
+  vector<double> colLower;
+  vector<double> colUpper;
+  vector<double> rowLower;
+  vector<double> rowUpper;
 
+  //Solution data
+  int numberIteration;
+  double solveTime;
 
+  vector<double> colValue;
+  vector<double> colDual;
+  vector<double> rowValue;
+  vector<double> rowDual;
 
-	//Solution data
-	int numberIteration;
-	double solveTime;
+  vector<int> ARstart;
+  vector<int> ARindex;
+  vector<double> ARvalue;
 
-	vector<double> colValue;
-	vector<double> colDual;
-	vector<double> rowValue;
-	vector<double> rowDual;
+  vector<int> Aend;
 
-	vector<int> ARstart;
-	vector<int> ARindex;
-	vector<double> ARvalue;
+  //solution
+  vector<double> valuePrimal; //the first numColOriginal elements are the primal variables and slacks after them
+  vector<double> valueColDual;
+  vector<double> valueRowDual;
 
-	vector<int> Aend;
+  vector<int> nzCol; //nonzeros in columns and rows
+  vector<int> nzRow;
+  vector<int> flagCol;
+  vector<int> flagRow;
 
-	//solution
-	vector<double> valuePrimal; //the first numColOriginal elements are the primal variables and slacks after them
-	vector<double> valueColDual;
-	vector<double> valueRowDual;
+  vector<int> basicIndex;
+  vector<int> nonbasicFlag;
+  vector<int> nonbasicMove;
 
-	vector<int> nzCol;		  	//nonzeros in columns and rows
-	vector<int> nzRow;
-	vector<int> flagCol;
-	vector<int> flagRow;
+  vector<double> colCostAtEl;
+  vector<double> rowLowerAtEl;
+  vector<double> rowUpperAtEl;
 
-	vector<int> basicIndex;
-    vector<int> nonbasicFlag;
-    vector<int> nonbasicMove;
+  void print(int k);
+  void printAR(int i);
+  void makeARCopy();
+  void makeACopy();
+  double getaij(int i, int j);
+  bool isZeroA(int i, int j);
+  void printSolution();
+  double getRowValue(int i);
 
-	vector<double> colCostAtEl;
-	vector<double> rowLowerAtEl;
-	vector<double> rowUpperAtEl;
+  stack<double> postValue;
 
+  //to match reduced solution to original
+  vector<int> rIndex;
+  vector<int> cIndex;
 
-	void print(int k);
-	void printAR(int i);
-	void makeARCopy();
-	void makeACopy();
-    double getaij(int i, int j);
-	bool isZeroA(int i, int j);
- 	void printSolution();
-	double getRowValue(int i);
+  KktChStep chk;
 
-	stack<double> postValue;
+  stack<change> chng;
+  stack<pair<int, vector<double>>> oldBounds; //(j, l, u)
 
-   //to match reduced solution to original
-	vector<int> rIndex;
-	vector<int> cIndex;
-
-
-	KktChStep chk;
-
-
-	stack<change> chng;
-	stack< pair< int ,vector<double> > > oldBounds; //(j, l, u)
-
-	void writeNewFormat(string fileName) ;
+  void writeNewFormat(string fileName);
 };
 
 #endif /* HPREDATA_H_ */
