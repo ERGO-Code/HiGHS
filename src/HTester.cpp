@@ -1,5 +1,6 @@
-#ifdef HiGHSDEV
 #include "HTester.h"
+
+#ifdef HiGHSDEV
 #include "HTimer.h"
 
 #include <fstream>

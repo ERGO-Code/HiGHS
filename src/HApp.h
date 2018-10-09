@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <unistd.h>
 
+#include "HConfig.h"
 #include "HAPI.h"
 #include "HConst.h"
 #include "HDual.h"

@@ -98,7 +98,7 @@ set_target_properties(libhighs PROPERTIES
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # install the header files of highs
-install(FILES ${headers} DESTINATION include)
+install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
 install(TARGETS highs libhighs EXPORT highs-targets
@@ -112,7 +112,7 @@ export(TARGETS libhighs
   FILE "${CMAKE_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)
 
