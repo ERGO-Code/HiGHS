@@ -1563,8 +1563,9 @@ void HModel::scaleModel()
   }
 
   // Allow a switch to/from the original scaling rules
-  bool originalScaling = true;
-  bool alwCostScaling = false;
+  bool originalScaling = false;
+  bool alwCostScaling = true;
+  if (originalScaling) alwCostScaling = false;
 
   // Reset all scaling to 1
   initScale();
@@ -1745,7 +1746,8 @@ void HModel::scaleCosts()
   // to which the problem is solved - so this can't be done too much
   costScale = 1;
   const double ln2 = log(2.0);
-  if ((maxNzCost > 0) || (maxNzCost<(1.0/16) || maxNzCost > 16)) {
+  // Scale the costs if the max cost is positive and outside the range [1/16, 16]
+  if ((maxNzCost > 0) && ((maxNzCost<(1.0/16)) || (maxNzCost > 16))) {
     costScale = maxNzCost;
     costScale = pow(2.0, floor(log(costScale) / ln2 + 0.5));
     costScale = min(costScale, maxAlwCostScale);
@@ -2893,12 +2895,12 @@ void HModel::util_getPrimalDualValues(vector<double> &colValue, vector<double> &
   for (int iCol = 0; iCol < numCol; iCol++)
   {
     value[iCol] *= colScale[iCol];
-    dual[iCol] /= colScale[iCol];
+    dual[iCol] /= (colScale[iCol]/costScale);
   }
   for (int iRow = 0, iTot = numCol; iRow < numRow; iRow++, iTot++)
   {
     value[iTot] /= rowScale[iRow];
-    dual[iTot] *= rowScale[iRow];
+    dual[iTot] *= (rowScale[iRow]*costScale);
   }
 
   //************** part 2: gepr and gedu
@@ -4769,7 +4771,7 @@ void HModel::util_anMlSol() {
   for (int iCol=0; iCol<numCol; iCol++) {
     //    printf("\nCol %2d\n", iCol);
     double lcSclColDuAct = -colCost[iCol];
-    double lcColDuAct = -colCost[iCol]/colScale[iCol];
+    double lcColDuAct = -(colCost[iCol]*costScale)/colScale[iCol];
     for (int en = Astart[iCol]; en < Astart[iCol+1]; en++) {
       int iRow = Aindex[en];
       double AvalueEn = Avalue[en];
@@ -4778,7 +4780,7 @@ void HModel::util_anMlSol() {
       rowPrAct[iRow] += unsclAvalueEn*value[iCol]*colScale[iCol];
       //      double lcSum = lcSclColDuAct - AvalueEn*dual[numCol+iRow]; printf("Row %2d: %11.4g - (%11.4g*%11.4g=%11.4g) = %11.4g\n", iRow, lcSclColDuAct, AvalueEn, dual[numCol+iRow], AvalueEn*dual[numCol+iRow], lcSum);
       lcSclColDuAct -= AvalueEn*dual[numCol+iRow];
-      lcColDuAct -= unsclAvalueEn*dual[numCol+iRow]*rowScale[iRow];
+      lcColDuAct -= unsclAvalueEn*dual[numCol+iRow]*costScale*rowScale[iRow];
     }
     sclColDuAct[iCol] = lcSclColDuAct;
     colDuAct[iCol] = lcColDuAct;
@@ -4914,7 +4916,7 @@ void HModel::util_anMlSol() {
     }
     maxSclColDuIfs = max(sclColDuIfs, maxSclColDuIfs);
     // In unscaled values
-    double colDuIfs = sclColDuIfs/colScale[iCol];
+    double colDuIfs = sclColDuIfs*costScale/colScale[iCol];
     if (colDuIfs > tlDuIfs) {
       numColDuIfs++;
       sumColDuIfs += colDuIfs;
@@ -4939,7 +4941,7 @@ void HModel::util_anMlSol() {
     }
     maxSclColDuRsduEr = max(sclColDuRsduEr, maxSclColDuRsduEr);
     // Using unscaled column activities
-    double colDual = sclColDual/colScale[iCol];
+    double colDual = sclColDual*costScale/colScale[iCol];
     double colDuRsduEr = abs(colDuAct[iCol]+colDual);
     if (colDuRsduEr > tlDuRsduEr) {
       /*
@@ -5095,7 +5097,7 @@ void HModel::util_anMlSol() {
     }
     maxSclRowDuIfs = max(sclRowDuIfs, maxSclRowDuIfs);
     // In unscaled values
-    double rowDuIfs = sclRowDuIfs/rowScale[iRow];
+    double rowDuIfs = sclRowDuIfs*costScale/rowScale[iRow];
     if (rowDuIfs > tlDuIfs) {
       numRowDuIfs++;
       sumRowDuIfs += rowDuIfs;
