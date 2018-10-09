@@ -68,8 +68,8 @@ add_library(libhighs ${sources})
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES
-        VERSION ${highs_VERSION_MAJOR}.${highs_VERSION_MINOR}.${highs_VERSION_PATCH}
-        SOVERSION ${highs_VERSION_MAJOR}.${highs_VERSION_MINOR})
+        VERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
+        SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
 # create static highs library with pic
 else()
     set_target_properties(libhighs PROPERTIES
