@@ -392,34 +392,29 @@ void HModel::printSolution()
   // }
   //*rtcod = 0;*/
 
-  char buff[5];
   cout << endl
        << "Col value: ";
   for (int i = 0; i < numCol; i++)
   {
-    sprintf(buff, "%2.2f ", colValue[i]);
-    cout << buff;
-  } //cout<< colValue[i] <<" ";
+    cout<< colValue[i] <<" ";
+  }
   cout << endl
        << "Col dual:  ";
   for (int i = 0; i < numCol; i++)
   {
-    sprintf(buff, "%2.2f ", colDual[i]);
-    cout << buff;
+    cout<< colDual[i] <<" ";
   } //cout<< colDual[i] <<" ";
   cout << endl
        << "Row value: ";
   for (int i = 0; i < numRow; i++)
   {
-    sprintf(buff, "%2.2f ", rowValue[i]);
-    cout << buff;
+    cout << rowValue[i] << " ";
   } //cout<< rowValue[i] <<" ";
   cout << endl
        << "Row dual:  ";
   for (int i = 0; i < numRow; i++)
   {
-    sprintf(buff, "%2.2f ", rowDual[i]);
-    cout << buff;
+    cout<< rowDual[i] <<" ";
   } //cout<< rowDual[i] <<" ";
   cout << endl
        << endl;

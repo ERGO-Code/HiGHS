@@ -558,12 +558,10 @@ void KktChStep::printA() {
 }
 
 void KktChStep::printAR() {
-	char buff [7];
 	cout<<"\n-----cost-----\n";
 
 	for (int i=0;i<numCol;i++) {
-		sprintf(buff, "%2.1g ", colCost[i]);
-		cout<<std::setw(7)<<buff; 
+		cout << colCost[i] << " ";
 	}
 	cout<<endl;
 	cout<<"------AR-|-b-----\n";
@@ -576,15 +574,11 @@ void KktChStep::printAR() {
 			//if a_ij is nonzero print
 			if (ARindex[ind]==j && ind<ARstart[i+1])
 			{	
-				sprintf(buff, "%2.1g ", ARvalue[ind]);
-				cout<<std::setw(7)<<buff; 
+        cout << ARvalue[ind] << " ";
 				}
-			else cout<<std::setw(7)<<"   ";
-			
+			else cout << " ";
 		}
-		
-		cout<<"  |   "<<std::setw(7)<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
-		
+		cout<<"  |   "<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
 	}
 	
 	cout<<endl;
