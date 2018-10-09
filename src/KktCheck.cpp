@@ -7,11 +7,9 @@
 void KktCheck::printAR() {
 	cout<<"N="<<numCol<<",  M="<<numRow<<",  NZ= "<<ARstart[numRow]<<'\n';	
 
-	char buff [7];
 	cout<<"\n-----cost-----\n";
 	for (size_t i=0;i<colCost.size();i++) {
-		sprintf(buff, "%2.1g ", colCost[i]);
-		cout<<std::setw(9)<<buff; 
+    cout << colCost[i] << " ";
 	}
 	cout<<endl;
 	cout<<"------AR | b----KktCheck-\n";
@@ -24,31 +22,28 @@ void KktCheck::printAR() {
 			//if a_ij is nonzero print
 			if (ARindex[ind]==j && ind<ARstart[i+1])
 			{	
-				sprintf(buff, "%2.1g ", ARvalue[ind]);
-				cout<<std::setw(9)<<buff; 
-				}
-			else cout<<std::setw(9)<<"   ";
+        cout << ARvalue[ind] << " ";
+  		}
+			else cout << "   ";
 		
 		}
-		cout<<"  |   "<<std::setw(9)<<rowLower[i]<<" < < "<<rowUpper[i]<<endl;
+		cout<<"  |   "<<rowLower[i]<<" < < "<<rowUpper[i]<<endl;
 	}
 	cout<<endl;
 	cout<<"------l------\n";
 	for (int i=0;i<numCol;i++) { 
 		if (colLower[i]>-HSOL_CONST_INF)
-			sprintf(buff, "%2.1g ", colLower[i]);
+      cout << colLower[i] << " ";
 		else 
-			sprintf(buff, "-inf");
-		cout<<setw(9)<<buff; 
+			cout << "-inf ";
 	}
 	cout<<endl;
 	cout<<"------u------\n";
 	for (int i=0;i<numCol;i++) { 
 		if (colUpper[i]<HSOL_CONST_INF)
-			sprintf(buff, "%2.1g ", colUpper[i]);
+      cout << colUpper[i] << " ";
 		else 
-			sprintf(buff, "inf");
-		cout<<setw(9)<<buff; 
+			cout << "inf ";
 	}
 	cout<<endl;
 }

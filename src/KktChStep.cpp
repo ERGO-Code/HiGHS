@@ -517,8 +517,7 @@ void KktChStep::printA() {
 	cout<<"\n-----cost-----\n";
 
 	for (int i=0;i<numCol;i++) {
-		sprintf(buff, "%2.1g ", colCost[i]);
-		cout<<std::setw(9)<<buff; 
+    cout << colCost[i] << " ";
 	}
 	cout<<endl;
 	cout<<"------A-|-b-----\n";
@@ -531,30 +530,28 @@ void KktChStep::printA() {
 			//if a_ij is nonzero print
 			if (Aindex[ind]==i && ind<Astart[j+1])
 			{	
-				sprintf(buff, "%2.1g ", Avalue[ind]);
-				cout<<std::setw(9)<<buff; 
+        cout << Avalue[ind]  << " ";
 				}
-			else cout<<std::setw(9)<<"   ";
+			else cout << " ";
 			
 		}
-		cout<<"  |   "<<std::setw(5)<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
+		cout<<"  |   "<<RrowLower[i]<<" < < "<<RrowUpper[i]<<endl;
 	}
 	cout<<"------l------\n";
 	for (int i=0;i<numCol;i++) {
 		if (colLower[i]>-HSOL_CONST_INF)
-			sprintf(buff, "%2.1g ", colLower[i]);
+      cout << colLower[i] << " ";
 		else 
-			sprintf(buff, "-inf");
+      cout << "-inf ";
 		cout<<setw(9)<<buff; 
 	}
 	cout<<endl;
 	cout<<"------u------\n";
 	for (int i=0;i<numCol;i++) {
 		if (colUpper[i]<HSOL_CONST_INF)
-			sprintf(buff, "%2.1g ", colUpper[i]);
+    cout << colUpper[i] << " ";
 		else 
-			sprintf(buff, "inf");
-		cout<<setw(9)<<buff; 
+      cout << "inf ";
 	}
 	cout<<endl;
 

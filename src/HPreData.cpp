@@ -156,7 +156,7 @@ void HPreData::print(int k) {
 				//if a_ij is nonzero print
 				if (Aindex[ind]==i && ind<Aend[j])
 				{
-          cout << Avalue[ind]) << " ";
+          cout << Avalue[ind] << " ";
 					}
 				else cout<<"   ";
 
@@ -175,10 +175,9 @@ void HPreData::print(int k) {
 	cout<<"------u------\n";
 	for (size_t i=0;i<colUpper.size();i++) {
 		if (colUpper[i]<HSOL_CONST_INF)
-      cout << colLower[i];
+      cout << colUpper[i];
 		else
 			cout << "inf";
-		cout<<setw(9)<<buff;
 	}
 	cout<<endl;
 }
@@ -192,10 +191,8 @@ void HPreData::printAR(int i) {
 
 	cout<<"\n-----cost-----\n";
 
-	char buff [7];
 	for (size_t i=0;i<colCost.size();i++) {
-		sprintf(buff, "%2.1g ", colCost[i]);
-		cout<<std::setw(9)<<buff;
+		cout << colCost[i] << " ";
 	}
 	cout<<endl;
 	cout<<"------AR-|-b-----\n";
@@ -207,31 +204,25 @@ void HPreData::printAR(int i) {
 				ind++;
 			//if a_ij is nonzero print
 			if (ARindex[ind]==j && ind<ARstart[i+1])
-			{
-				sprintf(buff, "%2.1g ", ARvalue[ind]);
-				cout<<std::setw(9)<<buff;
-				}
-			else cout<<std::setw(9)<<"   ";
-
+        cout << ARvalue[ind];
+			else cout << "   ";
 		}
-		cout<<"  |   "<<std::setw(9)<<rowLower[i]<<" < < "<<rowUpper[i]<<endl;
+		cout<<"  |   "<<rowLower[i]<<" < < "<<rowUpper[i]<<endl;
 	}
 	cout<<"------l------\n";
 	for (int i=0;i<cols;i++) {
 		if (colLower[i]>-HSOL_CONST_INF)
-			sprintf(buff, "%2.1g ", colLower[i]);
+      cout << colLower[i] << " ";
 		else
-			sprintf(buff, "-inf");
-		cout<<setw(9)<<buff;
+			cout << "-inf";
 	}
 	cout<<endl;
 	cout<<"------u------\n";
 	for (int i=0;i<cols;i++) {
 		if (colUpper[i]<HSOL_CONST_INF)
-			sprintf(buff, "%2.1g ", colUpper[i]);
+			cout << colUpper[i] << " ";
 		else
-			sprintf(buff, "inf");
-		cout<<setw(9)<<buff;
+      cout << "inf ";
 	}
 	cout<<endl;
 }
