@@ -19,11 +19,7 @@ int main(int argc, char **argv)
 #if defined(HiGHSDEV) || defined(HiGHSDEBUG)
   //Report on preprocessing macros
 
-#ifdef HiGHSRELEASE
-  std::cout << "Built with CMAKE_BUILD_TYPE=Release" << std::endl;
-#else
-  std::cout << "Built with CMAKE_BUILD_TYPE!=Release" << std::endl;
-#endif
+std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 
 #ifdef OLD_PARSER
   std::cout << "OLD_PARSER       is     defined" << std::endl;
