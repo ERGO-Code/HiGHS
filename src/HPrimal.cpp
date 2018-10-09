@@ -13,7 +13,7 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
     numRow = model->getNumRow();
     numTot = model->getNumTot();
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("************************************\nPerforming primal simplex iterations\n************************************\n");
 #endif
     // Setup update limits
@@ -27,9 +27,11 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
     columnDensity = 0;
     row_epDensity = 0;
 
+#ifdef HiGHSDEV
     // Initialise rebuild count and time
     totalRebuildTime = 0;
     totalRebuilds = 0;
+#endif
 
     // Setup other buffers
 
@@ -58,7 +60,7 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
 	    }
 	    //	    printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n", model->numberIteration, model->objective);
 	    if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
 	      printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
 	      model->problemStatus = LP_Status_ObjUB;
@@ -93,11 +95,10 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
 
 void HPrimal::primalRebuild() {
     model->recordPivots(-1, -1, 0); // Indicate REINVERT
-#ifdef JAJH_dev
-    //    double tt0 = model->timer.getTime();
+#ifdef HiGHSDEV
+    double tt0 = 0;
+    if (anRebuildTime) tt0 = model->timer.getTime();
 #endif
-    double tt0 = model->timer.getTime();
-
     // Rebuild model->factor - only if we got updates
     int sv_invertHint = invertHint;
     invertHint = invertHint_no; // Was 0
@@ -111,23 +112,28 @@ void HPrimal::primalRebuild() {
       }
     }
     if (reInvert) {
-        model->computeFactor();
+        int rankDeficiency = model->computeFactor();
+	if (rankDeficiency) {
+	  throw runtime_error("Primal reInvert: singular-basis-matrix");
+	}
         countUpdate = 0;
     }
     model->computeDual();
     model->computePrimal();
     model->computeDuObj();
-    model->util_reportNumberIterationObjectiveValue();
+    model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
+#ifdef HiGHSDEV
+  if (anRebuildTime) {
     double rebuildTime = model->timer.getTime()-tt0;
     totalRebuilds++;
     totalRebuildTime += rebuildTime;
-#ifdef JAJH_dev
     printf("Primal     rebuild %d (%1d) on iteration %9d: Rebuild time = %g; Total rebuild time %g\n",
 	   totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime, totalRebuildTime);
+  }
 #endif
-    //Data are fresh from rebuild
-    model->mlFg_haveFreshRebuild = 1;
+  //Data are fresh from rebuild
+  model->mlFg_haveFreshRebuild = 1;
 }
 
 void HPrimal::primalChooseColumn() {

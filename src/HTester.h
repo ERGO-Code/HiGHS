@@ -1,7 +1,7 @@
 #ifndef HTESTER_H_
 #define HTESTER_H_
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 #include "HModel.h"
 #include <string>
 #include <vector>

@@ -1,4 +1,4 @@
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 #include "HTester.h"
 #include "HTimer.h"
 
@@ -47,7 +47,7 @@ void HTester::testUpdate(int item) {
         return;
     }
 
-    string itemNames[] = { "", "FT", "PF", "MPF", "APF" };
+    string itemCh3Names[] = { "   ", " FT", " PF", "MPF", "APF" };
 
     HTimer timer;
     timer.reset();
@@ -95,7 +95,7 @@ void HTester::testUpdate(int item) {
             double time = timer.getTime();
             if (time - lastReportTime > 100) {
                 printf("Model=%-16s  item=%-3s  time=%-6.0f  where=%-3.0f\n",
-                        modelName.c_str(), itemNames[item].c_str(), time,
+                        modelName.c_str(), itemCh3Names[item].c_str(), time,
                         ((100.0 * ip) / numPivot));
                 fflush(stdout);
                 lastReportTime = time;
@@ -164,7 +164,7 @@ void HTester::testUpdate(int item) {
         double alphaFTRAN = column.array[rowOut];
         if (diff_double(alphaFTRAN, alphaBTRAN)) {
             printf("Model=%-16s  item=%-3s  diff: ip=%d %f %f %f\n",
-                    modelName.c_str(), itemNames[item].c_str(), ip, alpha,
+                    modelName.c_str(), itemCh3Names[item].c_str(), ip, alpha,
                     alphaFTRAN, alphaBTRAN);
         }
 
@@ -177,7 +177,7 @@ void HTester::testUpdate(int item) {
     double rate = exp(sumLnRate / countRate);
     printf(
             "Model=%-16s  item=%-3s  fill=%f  interval=%d FTRAN=%10f  BTRAN=%10f  Fpack=%10.9f  Bpack=%10.9f  Ffull=%10.9f  Bfull=%10.9f  inv=%f  sol=%f\n",
-            modelName.c_str(), itemNames[item].c_str(), rate,
+            modelName.c_str(), itemCh3Names[item].c_str(), rate,
             (int) (1.0 * totalUpdate / (totalInvert - 1)),
             100.0 * countFTRAN / countTotal, 100.0 * countBTRAN / countTotal,
             sumFTRANpack / countSolve,

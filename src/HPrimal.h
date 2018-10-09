@@ -8,9 +8,12 @@ public:
     void solvePhase2(HModel *ptr_model);
     double TimeLimitValue;
 
-    // Analysis of rebuilds
-    int totalRebuilds;
-    double totalRebuildTime;
+#ifdef HiGHSDEV
+  // Analysis of rebuilds
+  const bool anRebuildTime = false;
+  int totalRebuilds;
+  double totalRebuildTime;
+#endif
 
 private:
     void primalRebuild();

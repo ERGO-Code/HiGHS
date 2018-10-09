@@ -18,10 +18,6 @@ using namespace std;
 const int crsh_vr_st_no_act = 0;
 const int crsh_vr_st_act = 1;
 
-const int crsh_mn_pri_v = 0;
-const int crsh_mx_pri_v = 3;
-const int crsh_no_act_pri_v = crsh_mn_pri_v;
-
 //Crash variable types
 //Basis-preserving crash:
 const int crsh_vr_ty_non_bc = 0;
@@ -31,8 +27,6 @@ const int crsh_vr_ty_fx = 0;
 const int crsh_vr_ty_2_sd = 1;
 const int crsh_vr_ty_1_sd = 2;
 const int crsh_vr_ty_fr = 3;
-const int crsh_f_vr_ty = crsh_vr_ty_fx;
-const int crsh_l_vr_ty = crsh_vr_ty_fr;
 
 //Null header for linked lists
 const int no_lk = -1;
@@ -47,8 +41,10 @@ const double tl_crsh_rlv_pv_v = 1e-2;
 const bool OneD_hdr = false;
 const bool TwoD_hdr = true;
 const int ltssf_ck_fq = 0;
+#ifdef HiGHSDEV
 const bool Rp_TwoD_da = false;
 const bool Rp_Bixby_Ps = false;
+#endif
 
 class HCrash
 {
@@ -57,19 +53,24 @@ public:
   void bixby(HModel *ptr_model, int Crash_Mode);
   bool bixby_iz_da(HModel *ptr_model);
   void bixby_rp_mrt(HModel *ptr_model);
-  void crsh_iz_vr_ty(HModel *ptr_model);
+  void crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode);
   void crsh_an_c_co(HModel *ptr_model);
-  void crsh_an_r_c_st_af(HModel *ptr_model);
-  void crsh_rp_r_c_st(int mode);
+  void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
+  void crsh_rp_r_c_st(int mode, int Crash_Mode);
+  string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
+#ifdef HiGHSDEV
   void crsh_ck_an_impl_bd();
+#endif
   void ltssf(HModel *ptr_model, int Crash_Mode);
   void ltssf_iz_mode(int Crash_Mode);
-  void ltssf_iz_da(HModel *ptr_model);
+  void ltssf_iz_da(HModel *ptr_model, int Crash_Mode);
   void ltssf_iterate(HModel *ptr_model);
   void ltssf_u_da(HModel *ptr_model);
   void ltssf_u_da_af_bs_cg(HModel *ptr_model);
   void ltssf_u_da_af_no_bs_cg();
+#ifdef HiGHSDEV
   void ltssf_ck_da();
+#endif
   void ltssf_cz_r();
   void ltssf_cz_c(HModel *ptr_model);
   void ltssf_rp_r_k();
@@ -78,6 +79,9 @@ public:
   void build_maxheap(double *heap_v, int *heap_i, int n);
   void heapsort(double *heap_v, int *heap_i, int n);
   void max_heapify(double *heap_v, int *heap_i, int i, int n);
+#ifdef HiGHSDEV
+  void tsSing(HModel *ptr_model);
+#endif
   // Model
   HModel *model;
 
@@ -136,6 +140,14 @@ public:
 
   //LTSSF scalar identifiers
   //	int crsh_mode;
+  int crsh_f_vr_ty;
+  int crsh_l_vr_ty;
+
+  int crsh_mn_pri_v;// = 0;
+  int crsh_mx_pri_v;// = 3;
+  int crsh_no_act_pri_v;// = crsh_mn_pri_v;
+
+
   int crsh_fn_cf_pri_v;
   int crsh_fn_cf_k;
   bool mn_co_tie_bk;

@@ -32,6 +32,7 @@ const int invertHint_possiblyPrimalUnbounded =         4;
 const int invertHint_possiblyDualUnbounded =           5;
 const int invertHint_possiblySingularBasis =           6;
 const int invertHint_primalInfeasibleInPrimalSimplex = 7;
+const int invertHint_chooseColumnFail =                8;
 
 /** SCIP-like basis status for columns and rows */
 enum HSOL_BaseStat
@@ -70,7 +71,10 @@ enum nonbasicMoveStat
 //this is the number of options and used to dimension as
 //***Option[***OPT_COUNT]
 enum HSOL_INT_OPTIONS {
-    INTOPT_PRINT_FLAG = 0, // 0/1 = none/do-print
+    INTOPT_PRINT_FLAG = 0, // 0/>=1 = none/do-print
+    //If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
+    //If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
+    //If 4\in INTOPT_PRINT_FLAG print iteration log line    
     INTOPT_TRANSPOSE_FLAG, // 0/1 = none/do-transpose if possible
     INTOPT_SCALE_FLAG,     // 0/1 = none/do-scale
     INTOPT_TIGHT_FLAG,     // 0/1 = none/do-tight
@@ -128,6 +132,7 @@ public:
 
     // Methods to modify the current model. Only scaleModel is currently in use
     void scaleModel();
+    void scaleCosts();
     void setup_transposeLP();
     void setup_tightenBound();
     void setup_shuffleColumn();
@@ -158,7 +163,9 @@ public:
     void copy_savedBoundsToModelBounds();
     void mlFg_Clear();
     void mlFg_Update(int mlFg_action);
+#ifdef HiGHSDEV
     void mlFg_Report();
+#endif
 
     void initFromNonbasic();
     void replaceFromNonbasic();
@@ -178,7 +185,7 @@ public:
     // ???? Housekeeping done from here down ????
     // For the solver:
     // Call INVERT and form dual and primal activities
-    void computeFactor();
+    int computeFactor();
     void computeDual();
     void computeDualInfeasInDual(int *dualInfeasCount);
     void computeDualInfeasInPrimal(int *dualInfeasCount);
@@ -187,6 +194,8 @@ public:
     void computeDuObj(int phase = 2);
     double computePrObj();
     double computePh2Objective(vector<double>& colPrAct);
+    int handleRankDeficiency();
+    int setSourceOutFmBd(const int columnOut);
 
     // Utilities for shifting costs and flipping bounds
     void shiftCost(int iCol, double amount);
@@ -204,7 +213,7 @@ public:
     void setProblemStatus(int status);
 
     // Checking methods
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     // Method to check code to load a model from arrays of data
     void check_load_fromArrays();
     void check_load_fromPostsolve();
@@ -223,7 +232,7 @@ public:
 
     // Increment numberIteration (here!) and (possibly) store the pivots for debugging NLA
     void recordPivots(int columnIn, int columnOut, double alpha);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     // Store and write out the pivots for debugging NLA
     void writePivots(const char *suffix);
 #endif
@@ -271,17 +280,19 @@ public:
 
     // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG] is false
     void util_reportMessage(const char *message);
-    void util_reportNumberIterationObjectiveValue();
+    void util_reportNumberIterationObjectiveValue(int i_v);
     void util_reportSolverOutcome(const char *message);
     void util_reportSolverProgress();
 
     // Methods for reporting the model, its solution, row and column data and matrix
+    void util_reportModelDa(const char *filename);
     void util_reportModel();
     void util_reportModelSolution();
+    void util_reportModelBrief();
     void util_reportModelDimensions();
     void util_reportModelObjSense();
     void util_reportModelStatus();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     void util_reportModelDense();
     void util_reportModelMPS(const char *filename);
 #endif
@@ -294,7 +305,14 @@ public:
 			      vector<double>& XcolPrimal, vector<double>& XcolDual, vector<int>& XcolStatus);
     void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex, vector<double>& XAvalue);
 
+#ifdef HiGHSDEV
     void util_anPrDuDgn();
+    void util_anMl(const char *message);
+    void util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper);
+    void util_anVecV(const char *message, int vecDim, vector<double>& vec, bool anVLs);
+    void util_anMlLargeCo(const char *message);
+    void util_anMlSol();
+#endif
 
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Solving options and scalar solution data section: Sort it out!
@@ -335,9 +353,12 @@ public:
     // Essentials
     int numberIteration;
     double objective;
+#ifdef HiGHSDEV
     // Analysis of INVERT
+    const bool anInvertTime = false;
     int totalInverts;
     double totalInvertTime;
+#endif
     //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     // Model and solver status flags
@@ -417,6 +438,25 @@ public:
     vector<int> nonbasicFlag;
     vector<int> nonbasicMove;
 
+    // Limits on scaling factors
+    const double minAlwScale = 1/1024.0;
+    const double maxAlwScale = 1024.0;
+    const double maxAlwCostScale = maxAlwScale;
+    const double minAlwColScale = minAlwScale;
+    const double maxAlwColScale = maxAlwScale;
+    const double minAlwRowScale = minAlwScale;
+    const double maxAlwRowScale = maxAlwScale;
+    // Cost scaling factor
+    double costScale;    
+
+#ifdef HiGHSDEV
+    // Information on large costs
+    const double tlLargeCo = 1e5;
+    int numLargeCo;
+    vector<int> largeCostFlag;
+    double largeCostScale;
+#endif
+
     // Part of working model which assigned and populated as much as
     // possible when a model is being defined
 
@@ -468,7 +508,7 @@ public:
     HVector buffer;
     HVector bufferLong;
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     vector<int> historyColumnIn;
     vector<int> historyColumnOut;
     vector<double> historyAlpha;

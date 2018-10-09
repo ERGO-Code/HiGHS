@@ -46,13 +46,25 @@ void HDualRow::choose_makepack(const HVector *row, const int offset)
   const int rowCount = row->count;
   const int *rowIndex = &row->index[0];
   const double *rowArray = &row->array[0];
+  const double *rowPackValue = &row->packValue[0];
+  const int rowPWd = row->pWd;
 
-  for (int i = 0; i < rowCount; i++)
-  {
-    const int index = rowIndex[i];
-    const double value = rowArray[index];
-    packIndex[packCount] = index + offset;
-    packValue[packCount++] = value;
+  if (rowPWd == row->dfSparseDaStr) {
+    for (int i = 0; i < rowCount; i++) {
+      const int index = rowIndex[i];
+      const double value = rowArray[index];
+      packIndex[packCount] = index + offset;
+      packValue[packCount++] = value;
+    }
+  } else if (rowPWd >= row->p0SparseDaStr) {
+    for (int i = 0; i < rowCount; i++) {
+      const int index = rowIndex[i];
+      const double value = rowPackValue[i];
+      packIndex[packCount] = index + offset;
+      packValue[packCount++] = value;
+    }
+  } else {
+    printf("HDualRow::choose_makepack: Cannot handle rowPWd = %d\n", rowPWd);
   }
 }
 
@@ -95,7 +107,7 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow)
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
-void HDualRow::choose_final()
+bool HDualRow::choose_final()
 {
   /**
      * This routine choose the dual entering variable by
@@ -108,6 +120,8 @@ void HDualRow::choose_final()
      * (4) determine final flip variables
      */
 
+  bool rp_Choose_final = false;
+  //   rp_Choose_final = true;
   // 1. Reduce by large step BFRT
   workModel->timer.recordStart(HTICK_CHUZC2);
   int fullCount = workCount;
@@ -134,6 +148,7 @@ void HDualRow::choose_final()
   }
   workModel->timer.recordFinish(HTICK_CHUZC2);
 
+  if (rp_Choose_final) printf("Completed  choose_final 1\n"); 
   // 2. Choose by small step BFRT
   workModel->timer.recordStart(HTICK_CHUZC3);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
@@ -143,15 +158,22 @@ void HDualRow::choose_final()
   selectTheta = workTheta;
   workGroup.clear();
   workGroup.push_back(0);
+  const double iz_remainTheta = 1e100;
+  int prev_workCount = workCount;
+  double prev_remainTheta = iz_remainTheta;
+  double prev_selectTheta = selectTheta;
   while (selectTheta < 1e18)
   {
-    double remainTheta = 1e100;
+    double remainTheta = iz_remainTheta;
+    if (rp_Choose_final) printf("Performing choose_final 2; selectTheta = %11.4g; workCount=%d; fullCount=%d\n", selectTheta, workCount, fullCount);
     for (int i = workCount; i < fullCount; i++)
     {
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
+      if (rp_Choose_final) printf("iCol=%4d; v=%11.4g; d=%11.4g |", iCol, value, dual);
       // Tight satisfy
+      if (rp_Choose_final) printf(" %11.4g = dual ?<=? sTh * v = %11.4g; workCount=%2d", dual, selectTheta * value, workCount);
       if (dual <= selectTheta * value)
       {
         swap(workData[workCount++], workData[i]);
@@ -161,13 +183,40 @@ void HDualRow::choose_final()
       {
         remainTheta = (dual + Td) / value;
       }
+      if (rp_Choose_final) printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
     }
     workGroup.push_back(workCount);
+    // Update selectTheta with the value of remainTheta;
     selectTheta = remainTheta;
+    //Check for no change in this loop - to prevent infinite loop
+    if ((workCount == prev_workCount) && (prev_selectTheta == selectTheta) && (prev_remainTheta == remainTheta)) {
+#ifdef HiGHSDEV
+      printf("In choose_final: No change in loop 2 so return error\n");
+      double workDataNorm = 0;
+      double dualNorm = 0;
+      for (int i = 0; i < workCount; i++) {
+	int iCol = workData[i].first;
+	double value = workData[i].second;
+	workDataNorm += value*value;
+	value = workDual[iCol];
+	dualNorm += value*value;
+      }
+      workDataNorm += sqrt(workDataNorm);
+      dualNorm += sqrt(dualNorm);
+      printf("   workCount = %d; selectTheta=%g; remainTheta=%g\n", workCount, selectTheta, remainTheta);
+      printf(   "workDataNorm = %g; dualNorm = %g\n", workDataNorm, dualNorm);      
+#endif
+      return true;
+    }
+    // Record the initial values of workCount, remainTheta and selectTheta for the next pass through the loop
+    prev_workCount = workCount;
+    prev_remainTheta = remainTheta;
+    prev_selectTheta = selectTheta;
     if (totalChange >= totalDelta || workCount == fullCount)
       break;
   }
 
+  if (rp_Choose_final) printf("Completed  choose_final 2\n");
   // 3. Choose large alpha
   double finalCompare = 0;
   for (int i = 0; i < workCount; i++)
@@ -206,6 +255,7 @@ void HDualRow::choose_final()
     }
   }
 
+  if (rp_Choose_final) printf("Completed  choose_final 3\n");
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
@@ -227,6 +277,8 @@ void HDualRow::choose_final()
     workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
   workModel->timer.recordFinish(HTICK_CHUZC3);
+  if (rp_Choose_final) printf("Completed  choose_final 4\n");
+  return false;
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn)
@@ -254,11 +306,21 @@ void HDualRow::create_Freelist()
 {
   freeList.clear();
   const int *nonbasicFlag = workModel->getNonbasicFlag();
+  int ckFreeListSize = 0;
   for (int i = 0; i < workModel->getNumTot(); i++)
   {
-    if (nonbasicFlag[i] && workRange[i] > 1.5 * HSOL_CONST_INF)
+    if (nonbasicFlag[i] && workRange[i] > 1.5 * HSOL_CONST_INF) {
       freeList.insert(i);
+      ckFreeListSize++;
+    }
   }
+  //  int freeListSa = *freeList.begin();
+  //  int freeListE = *freeList.end();
+  freeListSize = *freeList.end();
+  if (freeListSize != ckFreeListSize) {
+    printf("!! STRANGE: freeListSize != ckFreeListSize\n");
+  }
+  //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa, freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
 }
 
 void HDualRow::create_Freemove(HVector *row_ep)
@@ -303,6 +365,24 @@ void HDualRow::delete_Freelist(int iColumn)
   {
     if (freeList.count(iColumn))
       freeList.erase(iColumn);
+    //  int freeListSa = *freeList.begin();
+    //  int freeListE = *freeList.end();
+    int ckFreeListSize = 0;
+    set<int>::iterator sit;
+    for (sit = freeList.begin(); sit != freeList.end(); sit++) ckFreeListSize++;
+    freeListSize = *freeList.end();
+    if (freeListSize != ckFreeListSize) {
+      printf("!! STRANGE: freeListSize != ckFreeListSize\n");
+    }
+    //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa, freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
+    //  if (freeList.empty()) {
+    //    printf("Empty  Freelist\n");
+    //  } else {
+    //    printf("\n");
+    //  }
+  } else {
+    if (freeListSize > 0)
+      printf("!! STRANGE: Empty Freelist has size %d\n", freeListSize);
   }
 }
 void HDualRow::rp_hsol_pv_r()
