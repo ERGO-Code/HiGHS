@@ -780,16 +780,16 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   int local_newNumRow = max(local_oldNumRow, lastrow + 1);
   int local_newNumTot = local_newNumCol + local_newNumRow;
 
-  printf("extendWithLogicalBasis\n");
-  cout << flush;
-  printf("numCol/Row/Tot = %d/%d/%d\n", numCol, numRow, numTot);
-  cout << flush;
+#ifdef SCIPDEV
+  printf("extendWithLogicalBasis\n"); 
+  printf("numCol/Row/Tot = %d/%d/%d\n", numCol, numRow, numTot); 
   printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol, local_newNumRow, local_newNumTot);
   cout << flush;
+#endif
+  //ToDo: Replace references to local_newNum* by references to num* from here on
   assert(local_newNumCol == numCol);
   assert(local_newNumRow == numRow);
   assert(local_newNumTot == numTot);
-  //ToDo: Replace references to local_newNum* by references to num* from here on
 
 #ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
@@ -909,6 +909,7 @@ void HModel::clearModel()
   problemStatus = LP_Status_Unset;
   objSense = 0;
   objOffset = 0.0;
+  costScale = 1;
   Astart.clear();
   Aindex.clear();
   Avalue.clear();
@@ -1563,7 +1564,7 @@ void HModel::scaleModel()
   }
 
   // Allow a switch to/from the original scaling rules
-  bool originalScaling = false;
+  bool originalScaling = true;
   bool alwCostScaling = true;
   if (originalScaling) alwCostScaling = false;
 
@@ -1770,9 +1771,9 @@ void HModel::scaleCosts()
     printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
     for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
   }
-#endif
   printf("After cost scaling\n");
   util_anVecV("Column costs", numCol, colCost, false);
+#endif
 }
 
 void HModel::setup_tightenBound()
@@ -2089,7 +2090,9 @@ void HModel::initScale()
   colScale.assign(numCol, 1);
   rowScale.assign(numRow, 1);
   costScale = 1;
+#ifdef HiGHSDEV
   largeCostScale = 1;
+#endif
 }
 
 void HModel::initBasicIndex()
@@ -2599,7 +2602,6 @@ double HModel::computePrObj()
     if (nonbasicFlag[col])
       prObj += workValue[col] * colCost[col];
   prObj *= costScale;  
-  printf("Scaling by %11.4g in computePrObj\n", costScale);
   return prObj;
 }
 
@@ -2607,9 +2609,11 @@ double HModel::computePrObj()
 void HModel::computeDuObj(int phase)
 {
   objective = 0;
-  for (int i = 0; i < numTot; i++)
-    if (nonbasicFlag[i])
+  for (int i = 0; i < numTot; i++) {
+    if (nonbasicFlag[i]) {
       objective += workValue[i] * workDual[i];
+    }
+  }
   //    double sv_objective = objective;
   if (phase != 1) {
     objective *= costScale;
@@ -3417,13 +3421,11 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     colLower[numCol + col] = XcolLower[col];
     colUpper[numCol + col] = XcolUpper[col];
     colScale[numCol + col] = 1.0;
-    printf("In HModel::util_addCols: column %d: setting Astart[numCol+col+1] = %d \n", col, Astart[numCol]);
-    cout << flush;
+    //    printf("In HModel::util_addCols: column %d: setting Astart[numCol+col+1] = %d \n", col, Astart[numCol]); cout << flush;
     Astart[numCol + col + 1] = Astart[numCol];
   }
 
-  printf("In HModel::util_addCols: nnonz = %d; cuNnonz = %d\n", nnonz, Astart[numCol]);
-  cout << flush;
+  //  printf("In HModel::util_addCols: nnonz = %d; cuNnonz = %d\n", nnonz, Astart[numCol]); cout << flush;
   if (nnonz > 0)
   {
     //Determine the current number of nonzeros
@@ -3438,12 +3440,11 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     //Add the new columns
     for (int col = 0; col < ncols; col++)
     {
-      printf("In HModel::util_addCols: column %d: setting Astart[numCol+col] = %d = %d + %d\n",
-             col, XAstart[col] + cuNnonz, XAstart[col], cuNnonz);
-      cout << flush;
+      //      printf("In HModel::util_addCols: column %d: setting Astart[numCol+col] = %d = %d + %d\n",
+      //             col, XAstart[col] + cuNnonz, XAstart[col], cuNnonz); cout << flush;
       Astart[numCol + col] = XAstart[col] + cuNnonz;
     }
-    printf("In HModel::util_addCols: setting Astart[numCol+ncols] = %d\n", nwNnonz);
+    //    printf("In HModel::util_addCols: setting Astart[numCol+ncols] = %d\n", nwNnonz);
     cout << flush;
     Astart[numCol + ncols] = nwNnonz;
 
@@ -3462,7 +3463,7 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
   numCol += ncols;
   numTot += ncols;
 
-  printf("In HModel::util_addCols: Model now has Astart[%d] = %d nonzeros\n", numCol, Astart[numCol]);
+  //  printf("In HModel::util_addCols: Model now has Astart[%d] = %d nonzeros\n", numCol, Astart[numCol]);
   cout << flush;
 
   //Update the basis and work vectors correponding to new nonbasic columns
@@ -4410,6 +4411,7 @@ void HModel::util_reportColMtx(int ncol, vector<int> &XAstart, vector<int> &XAin
   printf("       Start %8d\n", XAstart[ncol]);
 }
 
+#ifdef HiGHSDEV
 void HModel::util_anPrDuDgn()
 {
   double normPrAct = 0;
@@ -4456,6 +4458,7 @@ void HModel::util_anPrDuDgn()
   printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n",
          modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numCol);
 }
+#endif
 
 void HModel::util_reportModelDa(const char *filename)
 {
