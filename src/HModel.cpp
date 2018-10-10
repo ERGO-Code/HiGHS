@@ -905,6 +905,9 @@ void HModel::clearModel()
   objSense = 0;
   objOffset = 0.0;
   costScale = 1;
+#ifdef HiGHSDEV
+  numLargeCo = 0;
+#endif
   Astart.clear();
   Aindex.clear();
   Avalue.clear();
@@ -2603,7 +2606,7 @@ double HModel::computePrObj()
 // Compute the (dual) objective via nonbasic primal values (current bound) and dual values
 void HModel::computeDuObj(int phase)
 {
-  double currentObjective = objective;
+  //JAJH10/10 double currentObjective = objective;
   objective = 0;
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i]) {
@@ -4756,10 +4759,9 @@ void HModel::util_anMlLargeCo(const char *message) {
 }
 
 void HModel::util_anMlSol() {
-  const char *fileName = "OutMl.mps";
-  writeToMPS(fileName);
+  //  const char *fileName = "OutMl.mps"; writeToMPS(fileName);
   if (problemStatus != LP_Status_Optimal) return;
-  printf("\nAnalysing the model solution\n");
+  printf("\nAnalysing the model solution\n");fflush(stdout);
   const double inf = HSOL_CONST_INF;
   const double tlValueEr = 1e-8;
   const double tlPrRsduEr = 1e-8;
@@ -4805,7 +4807,7 @@ void HModel::util_anMlSol() {
   }
 
   // Look for column residual errors and infeasibilities - primal and dual
-  if (objOffset != 0.) printf("Primal objective offset is %11.4g\n", objOffset);
+  if (objOffset) printf("Primal objective offset is %11.4g\n", objOffset);
   double lcPrObjV = 0;
   double lcPrObjV_LargeCo = 0;
   double lcPrObjV_OtherCo = 0;
@@ -4865,16 +4867,16 @@ void HModel::util_anMlSol() {
 	  sclColDuIfs = 0;
 	} else {
 	  // Free
-	  bool freeEr = false;
+	  //	  bool freeEr = false;
 	  if (!hsol_isInfinity(-colLower[iCol])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeColEr< maxRpFreeColEr) {
 	      numRpFreeColEr++;
 	      printf("Column %7d supposed to be free but has lower bound of %g\n", iCol, colLower[iCol]);
 	    }
 	  }
 	  if (!hsol_isInfinity(colUpper[iCol])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeColEr< maxRpFreeColEr) {
 	      numRpFreeColEr++;
 	      printf("Column %7d supposed to be free but has upper bound of %g\n", iCol, colUpper[iCol]);
@@ -4899,9 +4901,14 @@ void HModel::util_anMlSol() {
 
     double prObjTerm = sclColValue*colCost[iCol];
     lcPrObjV += prObjTerm;
-    if (largeCostFlag[iCol]) {
-      lcPrObjV_LargeCo += prObjTerm;
-      lcValue_LargeCo += sclColValue;
+    if (numLargeCo) {
+      if (largeCostFlag[iCol]) {
+	lcPrObjV_LargeCo += prObjTerm;
+	lcValue_LargeCo += sclColValue;
+      } else {
+	lcPrObjV_OtherCo += prObjTerm;
+	lcValue_OtherCo += sclColValue;
+      }
     } else {
       lcPrObjV_OtherCo += prObjTerm;
       lcValue_OtherCo += sclColValue;
@@ -4993,6 +5000,7 @@ void HModel::util_anMlSol() {
 	     unsclColLower, unsclColValue, unsclColUpper, colPrIfs, colDuIfs, colDuRsduEr);
     }
   }
+
   printf("Found %6d   scaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs);
   printf("Found %6d unscaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numColPrIfs, sumColPrIfs, maxColPrIfs);
   printf("Found %6d   scaled column   dual infeasibilities: sum %11.4g; max %11.4g\n",  numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs);
@@ -5056,16 +5064,16 @@ void HModel::util_anMlSol() {
 	  sclRowDuIfs = 0.;
 	} else {
 	  // Free
-	  bool freeEr = false;
+	  //	  bool freeEr = false;
 	  if (!hsol_isInfinity(-rowLower[iRow])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeRowEr< maxRpFreeRowEr) {
 	      numRpFreeRowEr++;
 	      printf("Row    %7d supposed to be free but has lower bound of %g\n", iRow, rowLower[iRow]);
 	    }
 	  }
 	  if (!hsol_isInfinity(rowUpper[iRow])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeRowEr< maxRpFreeRowEr) {
 	      numRpFreeRowEr++;
 	      printf("Row    %7d supposed to be free but has upper bound of %g\n", iRow, rowUpper[iRow]);
