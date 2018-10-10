@@ -44,13 +44,32 @@ set(headers
     HMpsFF.h
 )
 
+
+include(CheckCXXCompilerFlag)
+
+function(enable_cxx_compiler_flag_if_supported flag)
+    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
+    if(flag_already_set EQUAL -1)
+        check_cxx_compiler_flag("${flag}" flag_supported)
+        if(flag_supported)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
+        endif()
+        unset(flag_supported CACHE)
+    endif()
+endfunction()
+
+# example usage
+#enable_cxx_compiler_flag_if_supported("-Wall")
+#enable_cxx_compiler_flag_if_supported("-Wextra")
+#enable_cxx_compiler_flag_if_supported("-pedantic")
+
 add_library(libhighs ${sources})
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES
-        VERSION ${highs_VERSION_MAJOR}.${highs_VERSION_MINOR}.${highs_VERSION_PATCH}
-        SOVERSION ${highs_VERSION_MAJOR}.${highs_VERSION_MINOR})
+        VERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
+        SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
 # create static highs library with pic
 else()
     set_target_properties(libhighs PROPERTIES
@@ -79,7 +98,7 @@ set_target_properties(libhighs PROPERTIES
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # install the header files of highs
-install(FILES ${headers} DESTINATION include)
+install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
 install(TARGETS highs libhighs EXPORT highs-targets
@@ -93,7 +112,7 @@ export(TARGETS libhighs
   FILE "${CMAKE_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src")
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)
 

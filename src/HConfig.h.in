@@ -1,0 +1,6 @@
+#cmakedefine EXT_PRESOLVE
+#cmakedefine OLD_PARSER
+#cmakedefine SCIP_DEV
+#cmakedefine HiGHSDEV
+#cmakedefine HiGHSDEBUG
+#cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"

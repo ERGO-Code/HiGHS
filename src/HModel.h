@@ -1,6 +1,7 @@
 #ifndef HMODEL_H_
 #define HMODEL_H_
 
+#include "HConfig.h"
 #include "HMatrix.h"
 #include "HFactor.h"
 #include "HVector.h"

@@ -26,7 +26,6 @@ option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
     message(STATUS "External presolve: " ${EXT_PRESOLVE_DIR})
-    add_definitions(-DEXT_PRESOLVE)
     include_directories(${EXT_PRESOLVE_DIR}/src)
     include_directories(${EXT_PRESOLVE_DIR}/external)
 endif()
@@ -34,7 +33,6 @@ endif()
 # use hsol parser
 option(OLD_PARSER  "USE OLD PARSER" OFF)
 if(OLD_PARSER)
-    add_definitions(-DOLD_PARSER)
     message(STATUS "Using old hsol parser")
 endif()
 
@@ -49,21 +47,12 @@ endif()
 message(STATUS "OpenMP: " ${OPENMP})
 
 option(SCIP_DEV "SCIP  development" OFF)
-if(SCIP_DEV)
-    add_definitions(-DSCIP_DEV)
-endif()
 message(STATUS "SCIP  development: " ${SCIP_DEV})
 
 option(HiGHSDEV "HiGHS development" ON)
-if(HiGHSDEV)
-    add_definitions(-DHiGHSDEV)
-endif()
 message(STATUS "HiGHS development: " ${HiGHSDEV})
 
 option(HiGHSDEBUG "HiGHS debug" ON)
-if(HiGHSDEBUG)
-    add_definitions(-DHiGHSDEBUG)
-endif()
 message(STATUS "HiGHS debug: " ${HiGHSDEBUG})
 
 # whether to use shared or static libraries
@@ -77,9 +66,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  add_definitions(-DHiGHSRELEASE)
-endif()
+configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.h)
+include_directories(${CMAKE_BINARY_DIR})
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)

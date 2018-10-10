@@ -1,6 +1,7 @@
 #ifndef HTESTER_H_
 #define HTESTER_H_
 
+#include "HConfig.h"
 #ifdef HiGHSDEV
 #include "HModel.h"
 #include <string>
