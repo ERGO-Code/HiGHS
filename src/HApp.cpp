@@ -13,9 +13,11 @@ int main(int argc, char **argv)
   const char *crashMode = "";
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
-
-
-  std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+  std::cout << "Running HiGHS "
+	    << HIGHS_VERSION_MAJOR << "."
+	    << HIGHS_VERSION_MINOR << "."
+	    << HIGHS_VERSION_PATCH << "\n"
+	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #if defined(HiGHSDEV) || defined(HiGHSDEBUG)
   //Report on preprocessing macros
 
@@ -273,6 +275,7 @@ int solvePlain(const char *filename)
 {
   HModel model;
   model.intOption[INTOPT_PRINT_FLAG] = 1;
+  //  model.intOption[INTOPT_PRINT_FLAG] = 4;JAJH10/10
   int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
   if (RtCd) return RtCd;

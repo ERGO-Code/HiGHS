@@ -1156,6 +1156,7 @@ void HDual::iterateRp() {
   if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
   int numIter = model->numberIteration;
   bool header= numIter % 10 == 1;
+  header=true;//ZIB Mod 10/10
   if (header) iterateRpFull(header);
   iterateRpFull(false);
 }
@@ -1163,7 +1164,7 @@ void HDual::iterateRp() {
 void HDual::iterateRpFull(bool header) {
   if (header) {
     iterateRpIterPh(true);
-    iterateRpDuObj(true);
+    //    iterateRpDuObj(true);//ZIB Mod 10/10
 #ifdef HiGHSDEV
     iterateRpIterDa(true);
     iterateRpDsty(true);
@@ -1172,13 +1173,14 @@ void HDual::iterateRpFull(bool header) {
     printf("\n");
   } else {
     iterateRpIterPh(false);
-    iterateRpDuObj(false);
+    //    iterateRpDuObj(false);//ZIB Mod 10/10
 #ifdef HiGHSDEV
     iterateRpIterDa(false);
     iterateRpDsty(false);
     printf(" %7d", dualRow.freeListSize);
 #endif
     printf("\n");
+    iterateRpDuObj(false);//ZIB Mod 10/10
   }
 }
 

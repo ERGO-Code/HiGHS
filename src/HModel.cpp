@@ -2603,18 +2603,25 @@ double HModel::computePrObj()
 // Compute the (dual) objective via nonbasic primal values (current bound) and dual values
 void HModel::computeDuObj(int phase)
 {
+  double currentObjective = objective;
   objective = 0;
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i]) {
       objective += workValue[i] * workDual[i];
+      double dlObjective = workValue[i] * workDual[i];
+      //      printf("Column %2d: workValue = %11.4g; workDual = %11.4g; dlObjective = %11.4g; objective = %11.4g\n", 
+      //	     i, workValue[i], workDual[i], dlObjective, objective); JAJH10/10
     }
   }
-  //    double sv_objective = objective;
   if (phase != 1) {
     objective *= costScale;
     objective -= objOffset;
   }
-  //    printf("Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g\n", phase, sv_objective, objOffset, objective);
+  double objectiveError = 0;//abs(objective-currentObjective)/max(1.0, abs(objective));JAJH10/10
+  if (objectiveError > 1e-8) 
+    printf("Phase %1d: currentObjective = %11.4g; Objective = %11.4g; Error = %11.4g\n",
+	   phase, currentObjective, objective, objectiveError);
+  //    printf(" Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g", phase, sv_objective, objOffset, objective);
 }
 
 int HModel::handleRankDeficiency()
