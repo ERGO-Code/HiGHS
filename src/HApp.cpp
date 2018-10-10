@@ -16,7 +16,9 @@ int main(int argc, char **argv)
   std::cout << "Running HiGHS "
 	    << HIGHS_VERSION_MAJOR << "."
 	    << HIGHS_VERSION_MINOR << "."
-	    << HIGHS_VERSION_PATCH << "\n"
+	    << HIGHS_VERSION_PATCH
+       << " [date: " << HIGHS_COMPILATION_DATE
+       << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
 	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #if defined(HiGHSDEV) || defined(HiGHSDEBUG)
   //Report on preprocessing macros
