@@ -2608,20 +2608,22 @@ void HModel::computeDuObj(int phase)
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i]) {
       objective += workValue[i] * workDual[i];
-      double dlObjective = workValue[i] * workDual[i];
-      //      printf("Column %2d: workValue = %11.4g; workDual = %11.4g; dlObjective = %11.4g; objective = %11.4g\n", 
-      //	     i, workValue[i], workDual[i], dlObjective, objective); JAJH10/10
+      //JAJH10/10
+  /*  double dlObjective = workValue[i] * workDual[i];
+      printf("Column %2d: workValue = %11.4g; workDual = %11.4g; dlObjective = %11.4g; objective = %11.4g\n", 
+      	     i, workValue[i], workDual[i], dlObjective, objective); 
+  */
     }
   }
   if (phase != 1) {
     objective *= costScale;
     objective -= objOffset;
   }
-  double objectiveError = 0;//abs(objective-currentObjective)/max(1.0, abs(objective));JAJH10/10
-  if (objectiveError > 1e-8) 
-    printf("Phase %1d: currentObjective = %11.4g; Objective = %11.4g; Error = %11.4g\n",
+  //JAJH10/10
+  /*  double objectiveError = abs(objective-currentObjective)/max(1.0, abs(objective));
+  if (objectiveError > 1e-8) printf("Phase %1d: currentObjective = %11.4g; Objective = %11.4g; Error = %11.4g\n",
 	   phase, currentObjective, objective, objectiveError);
-  //    printf(" Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g", phase, sv_objective, objOffset, objective);
+  */
 }
 
 int HModel::handleRankDeficiency()
@@ -2816,6 +2818,15 @@ void HModel::check_load_fromPostsolve()
   assert(ok);
 }
 #endif
+
+int HModel::writeToMPS(const char *filename) {
+  int rtCd = writeMPS(filename, numRow, numCol, objSense, objOffset,
+		      Astart, Aindex, Avalue,
+		      colCost, colLower, colUpper,
+		      rowLower, rowUpper,
+		      integerColumn);
+  return rtCd;
+}
 
 //>->->->->->->->->->->->->->->->->->->->->->-
 // Esoterica!
@@ -4745,6 +4756,8 @@ void HModel::util_anMlLargeCo(const char *message) {
 }
 
 void HModel::util_anMlSol() {
+  const char *fileName = "OutMl.mps";
+  writeToMPS(fileName);
   if (problemStatus != LP_Status_Optimal) return;
   printf("\nAnalysing the model solution\n");
   const double inf = HSOL_CONST_INF;

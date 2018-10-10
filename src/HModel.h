@@ -219,7 +219,7 @@ public:
     void check_load_fromArrays();
     void check_load_fromPostsolve();
 #endif
-    
+    int writeToMPS(const char *filename);
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Esoterica!
     // Initialise the random vectors required by hsol

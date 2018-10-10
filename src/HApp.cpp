@@ -275,7 +275,7 @@ int solvePlain(const char *filename)
 {
   HModel model;
   model.intOption[INTOPT_PRINT_FLAG] = 1;
-  //  model.intOption[INTOPT_PRINT_FLAG] = 4;JAJH10/10
+  //  model.intOption[INTOPT_PRINT_FLAG] = 4;//JAJH10/10
   int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
   if (RtCd) return RtCd;
