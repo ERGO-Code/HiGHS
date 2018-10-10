@@ -3251,6 +3251,8 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat)
       printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
              row, rstat[row], rowLower[row], rowUpper[row]);
 #endif
+      printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
+             row, rstat[row], rowLower[row], rowUpper[row]);
       return -(row + 1);
     }
     printf("convertBaseStatToWorking: row=%d, rstat=%d, lower=%g, upper=%g, nonbasicMove=%d\n",
@@ -3324,6 +3326,8 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       printf("Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              col, nonbasicFlag[var], nonbasicMove[var], colLower[col], colUpper[col]);
 #endif
+      printf("Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
+             col, nonbasicFlag[var], nonbasicMove[var], colLower[col], colUpper[col]);
       return col + 1;
     }
   }
@@ -3387,6 +3391,8 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       printf("Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              row, nonbasicFlag[var], nonbasicMove[var], rowLower[row], rowUpper[row]);
 #endif
+      printf("Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
+             row, nonbasicFlag[var], nonbasicMove[var], rowLower[row], rowUpper[row]);
       return -(row + 1);
     }
   }
