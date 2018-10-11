@@ -63,17 +63,13 @@ int HModel::load_fromMPS(const char *filename)
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
-#ifdef HiGHSDEV
   bool mps_ff = true;
-#endif
   int RtCd = readMPS_FF(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
 #else
-#ifdef HiGHSDEV
   bool mps_ff = false;
-#endif
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
@@ -902,6 +898,7 @@ void HModel::clearModel()
   numRow = 0;
   numCol = 0;
   numTot = 0;
+  numInt = 0;
   problemStatus = LP_Status_Unset;
   objSense = 0;
   objOffset = 0.0;
@@ -3319,9 +3316,10 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       }
       else if (nonbasicMove[var] == NONBASIC_MOVE_ZE)
       {
+	//	printf("Var %d Move = %d [%g, %g]\n", var, nonbasicMove[var], colLower[col], colUpper[col]);
         if (colLower[col] == colUpper[col])
         {
-#ifndef HiGHSDEV
+#ifdef HiGHSDEV
           if (!hsol_isInfinity(colUpper[col]))
 #endif
           {
@@ -3331,8 +3329,8 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef HiGHSDEV
-          if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colLower[col]))
+#ifdef HiGHSDEV
+          if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colUpper[col]))
 #endif
           {
             cstat[col] = HSOL_BASESTAT_ZERO;
@@ -3344,8 +3342,6 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       printf("Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              col, nonbasicFlag[var], nonbasicMove[var], colLower[col], colUpper[col]);
 #endif
-      printf("Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
-             col, nonbasicFlag[var], nonbasicMove[var], colLower[col], colUpper[col]);
       return col + 1;
     }
   }
@@ -3386,7 +3382,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       {
         if (rowLower[row] == rowUpper[row])
         {
-#ifndef HiGHSDEV
+#ifdef HiGHSDEV
           if (!hsol_isInfinity(rowUpper[row]))
 #endif
           {
@@ -3396,8 +3392,8 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef HiGHSDEV
-          if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowLower[row]))
+#ifdef HiGHSDEV
+          if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowUpper[row]))
 #endif
           {
             rstat[row] = HSOL_BASESTAT_ZERO;
@@ -3409,8 +3405,6 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       printf("Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              row, nonbasicFlag[var], nonbasicMove[var], rowLower[row], rowUpper[row]);
 #endif
-      printf("Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
-             row, nonbasicFlag[var], nonbasicMove[var], rowLower[row], rowUpper[row]);
       return -(row + 1);
     }
   }
