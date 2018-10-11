@@ -3514,29 +3514,44 @@ void HModel::util_deleteCols(int firstcol, int lastcol)
   printf("Called model.util_deleteCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);
   cout << flush;
 #endif
+  // Trivial cases are
+  //
+  // colStep = 0, in which case no columns are removed
+  //
+  // lastcol = numCol-1, in which case no columns need be
+  // shifted. However, this implies numCol-colStep=firstcol, in which
+  // case the loop is vacuous
   int colStep = lastcol - firstcol + 1;
-  for (int col = firstcol; col < numCol - colStep; col++)
-  {
-    //    printf("Copy from colCost[%d] to colCost[%d]\n", col+colStep, col);cout << flush;
-    colCost[col] = colCost[col + colStep];
-    colLower[col] = colLower[col + colStep];
-    colUpper[col] = colUpper[col + colStep];
-    colScale[col] = colScale[col + colStep];
+  if (colStep) {
+    for (int col = firstcol; col < numCol - colStep; col++)
+      {
+	colCost[col] = colCost[col + colStep];
+	colLower[col] = colLower[col + colStep];
+	colUpper[col] = colUpper[col + colStep];
+	colScale[col] = colScale[col + colStep];
+      }
   }
-  int elOs = Astart[firstcol];
-  int elStep = Astart[lastcol + 1] - elOs;
-  //    printf("El loop over cols %2d [%2d] to %2d [%2d]\n", lastcol+1, Astart[lastcol+1], numCol+1, Astart[numCol]-1);
-  for (int el = Astart[lastcol + 1]; el < Astart[numCol]; el++)
-  {
-    //        printf("Over-write entry %3d [%3d] by entry %3d [%3d]\n", el-elStep, Aindex[el-elStep], el, Aindex[el]);
-    Aindex[el - elStep] = Aindex[el];
-    Avalue[el - elStep] = Avalue[el];
-  }
-
-  for (int col = firstcol; col <= numCol - colStep; col++)
-  {
-    //    printf("Over-write start %3d [%3d] by entry %3d [%3d]\n", col, Astart[col], col+colStep,  Astart[col+colStep]-elStep);
-    Astart[col] = Astart[col + colStep] - elStep;
+  // Trivial cases are
+  // 
+  // colstep = 0, in which case no columns are removed so elStep = 0
+  //
+  // lastcol = numCol-1, in which case no columns need be
+  // shifted and the loops are vacuous
+  if (colStep) {
+    int elOs = Astart[firstcol];
+    int elStep = Astart[lastcol + 1] - elOs;
+    //    printf("El loop over cols %2d [%2d] to %2d [%2d]\n", lastcol+1, Astart[lastcol+1], numCol+1, Astart[numCol]-1);
+    for (int el = Astart[lastcol + 1]; el < Astart[numCol]; el++)
+      {
+	//        printf("Over-write entry %3d [%3d] by entry %3d [%3d]\n", el-elStep, Aindex[el-elStep], el, Aindex[el]);
+	Aindex[el - elStep] = Aindex[el];
+	Avalue[el - elStep] = Avalue[el];
+      }
+    for (int col = firstcol; col <= numCol - colStep; col++)
+      {
+	//    printf("Over-write start %3d [%3d] by entry %3d [%3d]\n", col, Astart[col], col+colStep,  Astart[col+colStep]-elStep);
+	Astart[col] = Astart[col + colStep] - elStep;
+      }
   }
 
   //Reduce the number of columns and total number of variables in the model
@@ -3697,38 +3712,54 @@ void HModel::util_deleteRows(int firstrow, int lastrow)
   printf("Called model.util_deleteRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);
   cout << flush;
 #endif
+  // Trivial cases are
+  //
+  // rowStep = 0, in which case no rows are removed
+  //
+  // lastrow = numRow-1, in which case no rows need be
+  // shifted. However, this implies numRow-rowStep=firstrow, in which
+  // case the loop is vacuous. However, they still have to be removed
+  // from the matrix unless all rows are to be removed
   int rowStep = lastrow - firstrow + 1;
-  for (int row = firstrow; row < lastrow; row++)
-  {
-    rowLower[row] = rowLower[rowStep + row];
-    rowUpper[row] = rowUpper[rowStep + row];
-    //    rowScale[row] = rowScale[rowStep+row];
-  }
-
-  int nnz = 0;
-  for (int col = 0; col < numCol; col++)
-  {
-    int fmEl = Astart[col];
-    Astart[col] = nnz;
-    for (int el = fmEl; el < Astart[col + 1]; el++)
-    {
-      int row = Aindex[el];
-      if (row < firstrow || row > lastrow)
+  bool allRows = rowStep == numRow;
+#ifdef HiGHSDEV
+  if (allRows) printf("In model.util_deleteRows, aa rows are being removed)\n");
+#endif
+  if (rowStep) {
+    // Was: for (int row = firstrow; row < lastrow; row++) - surely wrong!
+    for (int row = firstrow; row < numRow - rowStep; row++)
       {
-        if (row < firstrow)
-        {
-          Aindex[nnz] = row;
-        }
-        else
-        {
-          Aindex[nnz] = row - rowStep;
-        }
-        Avalue[nnz] = Avalue[el];
-        nnz++;
+	rowLower[row] = rowLower[row + rowStep];
+	rowUpper[row] = rowUpper[row + rowStep];
+	//    rowScale[row] = rowScale[row + rowStep];
       }
+    if (!allRows) {
+      int nnz = 0;
+      for (int col = 0; col < numCol; col++)
+	{
+	  int fmEl = Astart[col];
+	  Astart[col] = nnz;
+	  for (int el = fmEl; el < Astart[col + 1]; el++)
+	    {
+	      int row = Aindex[el];
+	      if (row < firstrow || row > lastrow)
+		{
+		  if (row < firstrow)
+		    {
+		      Aindex[nnz] = row;
+		    }
+		  else
+		    {
+		      Aindex[nnz] = row - rowStep;
+		    }
+		  Avalue[nnz] = Avalue[el];
+		  nnz++;
+		}
+	    }
+	}
+      Astart[numCol] = nnz;
     }
   }
-  Astart[numCol] = nnz;
 
   //Reduce the number of rows and total number of variables in the model
   numRow -= rowStep;
