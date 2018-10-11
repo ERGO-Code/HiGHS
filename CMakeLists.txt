@@ -23,6 +23,21 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
+find_program(GIT git)
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
+    execute_process(
+        COMMAND ${GIT} describe --always --dirty
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+else()
+    set(GITHASH "n/a")
+endif()
+message(STATUS "Git hash: " ${GITHASH})
+
+string(TIMESTAMP TODAY "%Y-%m-%d")
+message(STATUS "compilation date: " ${TODAY})
+
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
     message(STATUS "External presolve: " ${EXT_PRESOLVE_DIR})
