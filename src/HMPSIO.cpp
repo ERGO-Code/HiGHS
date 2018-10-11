@@ -1,184 +1,6 @@
 #include "HMPSIO.h"
 #include "HModelCs.h"
 #include "HConst.h"
-
-//#ifndef __cplusplus
-//#endif
-
-// Calls readMPS_dense to read file called filename, receives problem
-// [c^T 0]x st [A I]x=0 l<=x<=u with dense [A I] and converts to
-// C data structures
-//
-int readMPS_LP_dense_cpp(const char *filename, int mxNumRow, int mxNumCol, 
-			 int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-			 double ** A_rw_p,
-			 double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
-  
-  int *integerColumn;
-  int rtCd = readMPS_dense_cpp(filename, mxNumRow, mxNumCol,
-			       numRow_p, numCol_p, objSense_p, objOffset_p,
-			       A_rw_p,
-			       rhs_p, cost_p, lb_p, ub_p,
-			       &integerColumn);
-  return rtCd;
-}
-
-//Interface to readMPS_LP_dense_c: must come _after_ its defintion
-extern "C" int readMPS_LP_dense_c(const char *filename, int mxNumRow, int mxNumCol, 
-				  int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-				  double ** A_rw_p,
-				  double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p) {
-  int rtCd = readMPS_LP_dense_cpp(filename, mxNumRow, mxNumCol,
-				  numRow_p, numCol_p, objSense_p, objOffset_p,
-				  A_rw_p,
-				  rhs_p, cost_p, lb_p, ub_p);
-  return rtCd;
-}
-
-
-int readMPS_dense_cpp(const char *filename, int mxNumRow, int mxNumCol, 
-		      int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		      double ** A_rw_p,
-		      double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		      int** integerColumn_p) {
-  int numRow, numCol, objSense;
-  double objOffset;
-  vector<double> A_rw, rhs, cost, lb, ub;
-  vector<int> integerColumn;
-  int rtCd = readMPS_dense(filename, mxNumRow, mxNumCol,
-			   numRow, numCol, objSense, objOffset,
-			   A_rw,
-			   rhs, cost, lb, ub,
-			   integerColumn);
-  if (rtCd) return rtCd;
-  (*numRow_p) = numRow;
-  (*numCol_p) = numCol;
-  (*objSense_p) = objSense;
-  (*objOffset_p) = objOffset;
-#ifdef HiGHSDEV
-    printf("readMPS_dense_cpp: Model has %d rows and %d columns\n", numRow, numCol);
-    printf("readMPS_dense_cpp: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
-#endif
-  *A_rw_p = (double *) malloc(sizeof(double)*numRow*numCol);
-  *rhs_p = (double *) malloc(sizeof(double)*numRow);
-  *cost_p = (double *) malloc(sizeof(double)*numCol);
-  *lb_p = (double *) malloc(sizeof(double)*numCol);
-  *ub_p = (double *) malloc(sizeof(double)*numCol);
-  *integerColumn_p = (int *) malloc(sizeof(int)*numCol);
-  for (int ix_n=0; ix_n<numRow*numCol; ix_n++) {
-    (*A_rw_p)[ix_n] = A_rw[ix_n];
-  }
-  for (int r_n=0; r_n<numRow; r_n++) {
-    (*rhs_p)[r_n] = rhs[r_n];
-  }
-  for (int c_n=0; c_n<numCol; c_n++) {
-    (*cost_p)[c_n] = cost[c_n];
-    (*lb_p)[c_n] = lb[c_n];
-    (*ub_p)[c_n] = ub[c_n];
-    (*integerColumn_p)[c_n] = integerColumn[c_n];
-  }
-  return 0;
-}
-//
-// Calls readMPS_sparse to read file called filename, receives problem
-// [c^T 0]x st [A I]x=0 l<=x<=u with sparse [A I] and converts to
-// dense [A I]
-//
-int readMPS_dense(const char *filename, int mxNumRow, int mxNumCol, 
-		  int& numRow, int& numCol, int& objSense, double& objOffset,
-		  vector<double>& A_cw,
-		  vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
-		  vector<int>& integerColumn) {
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  int rtCd = readMPS_sparse(filename, mxNumRow, mxNumCol,
-			    numRow, numCol, objSense, objOffset,
-			    Astart, Aindex, Avalue,
-			    rhs, cost, lb, ub,
-			    integerColumn);
-  if (rtCd) return rtCd;
-#ifdef HiGHSDEV
-  printf("readMPS_dense: Model has %d rows and %d columns\n", numRow, numCol);
-  printf("readMPS_dense: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
-#endif
-  A_cw.assign(numCol*numRow,0);
-  for (int c_n = 0; c_n<numCol; c_n++) {
-    for (int el_n = Astart[c_n]; el_n < Astart[c_n+1]; el_n++) {
-      int r_n = Aindex[el_n];
-      double r_v = Avalue[el_n];
-      A_cw[r_n+c_n*numRow] = r_v;
-    }
-  }
-  return 0;
-}
-//
-// Calls readMPS to read file called filename and converts the problem to [c^T 0]x st [A I]x=0 l<=x<=u
-//
-int readMPS_sparse(const char *filename, int mxNumRow, int mxNumCol,
-		   int& numRow, int& numCol, int& objSense, double& objOffset,
-		   vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
-		   vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
-		   vector<int>& integerColumn) {
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper;
-  vector<double> rowLower;
-  vector<double> rowUpper;
-
-  int rtCd = readMPS(filename, mxNumRow, mxNumCol,
-		     numRow, numCol, objSense, objOffset,
-		     Astart,  Aindex, Avalue,
-		     colCost, colLower, colUpper,
-		     rowLower, rowUpper,
-		     integerColumn);
-  if (rtCd) return rtCd;
-    
-#ifdef HiGHSDEV
-  printf("readMPS_sparse: Model has %d rows, %d columns and %d nonzeros\n", numRow, numCol, Astart[numCol]);
-#endif
-  //Convert
-  //   c^Tx st L <= Ax <= U l <= x <= u
-  //to
-  //   [c^T 0]x st [A I]x=0 [l -U] <= x <= [u -L]
-  //
-  int nwNumRow = numRow;
-  int nwNumCol = numCol + numRow;
-  int numNz = Astart[numCol];
-  int nwNumNz = numNz + numRow;
-  Astart.resize(nwNumCol+1);
-  Aindex.resize(nwNumNz);
-  Avalue.resize(nwNumNz);
-  rhs.assign(nwNumRow, 0);
-  cost.resize(nwNumCol);
-  lb.resize(nwNumCol);
-  ub.resize(nwNumCol);
-  integerColumn.resize(nwNumCol);
-  
-  for (int r_n=0; r_n<numRow; r_n++) {
-    int c_n = numCol+r_n;
-    Astart[c_n] = numNz + r_n;
-    Aindex[numNz+r_n] = r_n;
-    Avalue[numNz+r_n] = 1;
-  }
-  Astart[nwNumCol] = nwNumNz;
-  for (int c_n=0; c_n<numCol; c_n++) {
-    cost[c_n] = colCost[c_n];
-    lb[c_n] = colLower[c_n];
-    ub[c_n] = colUpper[c_n];
-  }
-  
-  for (int r_n=0; r_n<numRow; r_n++) {
-    int c_n = numCol+r_n;
-    cost[c_n] = 0;
-    lb[c_n] = -rowUpper[r_n];
-    ub[c_n] = -rowLower[r_n];
-    integerColumn[c_n] = 0;
-  }
-  numRow = nwNumRow;
-  numCol = nwNumCol;
-  return 0;
-}
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
@@ -365,15 +187,12 @@ int readMPS(const char *filename, int mxNumRow, int mxNumCol,
 	}
       }
     }
-
-    //bounds of [0,1] for integer variables without bounds
+    // Set bounds of [0,1] for integer variables without bounds
     for (int iCol = 0; iCol < numCol; iCol++) {
       if (integerColumn[iCol]) {
-	if (colUpper[iCol] == HSOL_CONST_INF)
-	  colUpper[iCol] = 1;
+	if (colUpper[iCol] == HSOL_CONST_INF) colUpper[iCol] = 1;
       }
     }
-
 #ifdef HiGHSDEV
     printf("readMPS: Read BOUNDS  OK\n");
     printf("readMPS: Read ENDATA  OK\n");
@@ -457,146 +276,8 @@ bool load_mpsLine(FILE *file, int& integerVar, int lmax, char *line, char *flag,
     return true;
 }
 
-
-// Logical check of double being +Infinity
-bool hsol_isInfinity(double val) {
-  if (val >= HSOL_CONST_INF)
-    return true;
-  return false;
-}
-
-//
-//Copies C data structures to C++ data structures and calls writeMPS_dense
-//
-int writeMPS_dense_cpp(const char *filename, int* numRow_p, int* numCol_p, int* objSense_p, double* objOffset_p,
-		     double ** A_rw_p,
-		     double ** rhs_p, double ** cost_p, double ** lb_p, double ** ub_p,
-		     int** integerColumn_p) {
-  int numRow, numCol, objSense;
-  double objOffset;
-  vector<double> A_rw, rhs, cost, lb, ub;
-  vector<int> integerColumn;
-  numRow = (*numRow_p);
-  numCol = (*numCol_p);
-  objSense = (*objSense_p);
-  objOffset = (*objOffset_p);
-#ifdef HiGHSDEV
-  printf("writeMPS_dense_cpp: Model has %d rows and %d columns\n", numRow, numCol);
-  printf("writeMPS_dense_cpp: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
-#endif
-  A_rw.resize(numRow*numCol);
-  rhs.resize(numRow);
-  cost.resize(numCol);
-  lb.resize(numCol);
-  ub.resize(numCol);
-  integerColumn.resize(numCol);
-  printf("writeMPS_dense_cpp: Allocated space\n");cout<<flush;
-  for (int ix_n=0; ix_n<numRow*numCol; ix_n++) {
-    A_rw[ix_n] = (*A_rw_p)[ix_n];
-  }
-  for (int r_n=0; r_n<numRow; r_n++) {
-    rhs[r_n] = (*rhs_p)[r_n];
-  }
-  for (int c_n=0; c_n<numCol; c_n++) {
-    cost[c_n] = (*cost_p)[c_n];
-    lb[c_n] = (*lb_p)[c_n];
-    ub[c_n] = (*ub_p)[c_n];
-    integerColumn[c_n] = (*integerColumn_p)[c_n];
-  }
-  printf("writeMPS_dense_cpp: Copied A, RHS, costs and bounds\n");cout<<flush;
-  int rtCd = writeMPS_dense(filename, numRow, numCol, objSense, objOffset,
-			    A_rw,
-			    rhs, cost, lb, ub,
-			    integerColumn);
-  return rtCd;
-}
-//
-//Forms a sparse representation of the matrix and calls writeMPS_sparse
-//
-int writeMPS_dense(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
-		   vector<double>& A_cw,
-		   vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
-		   vector<int>& integerColumn) {
-#ifdef HiGHSDEV
-  printf("writeMPS_dense: Model has %d rows and %d columns\n", numRow, numCol);
-  printf("writeMPS_dense: Objective sense is %d; Objective offset is %g\n", objSense, objOffset);
-  cout<<flush;
-#endif
-  
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  int numNz = 0;
-  for (int c_n = 0; c_n<numCol; c_n++) {
-    for (int r_n = 0; r_n<numRow; r_n++) {
-      double r_v = A_cw[r_n+c_n*numRow];
-      if (r_v != 0) numNz++;
-    }
-  }
-  printf("Model has %d nonzeros\n", numNz);cout<<flush;
-  Astart.resize(numCol+1);
-  Aindex.resize(numNz);
-  Avalue.resize(numNz);
-  Astart[0] = 0;
-  for (int c_n = 0; c_n<numCol; c_n++) {
-    int el_n = Astart[c_n];
-    for (int r_n = 0; r_n<numRow; r_n++) {
-      double r_v = A_cw[r_n+c_n*numRow];
-      if (r_v != 0) {
-  	Aindex[el_n] = r_n;
-  	Avalue[el_n] = r_v;
-  	el_n++;
-      }
-    }
-    Astart[c_n+1] = el_n;
-  }
-  printf("writeMPS_dense: calling writeMPS_sparse\n"); cout<<flush;
-  int rtCd = writeMPS_sparse(filename, numRow, numCol, objSense, objOffset,
-			    Astart, Aindex, Avalue,
-			    rhs, cost, lb, ub,
-			    integerColumn);
-  return rtCd;
-}
-//
-//Generates row and column bounds to correspond to the model and calls writeMPS to write it out
-//
-int writeMPS_sparse(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
-		    vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
-		    vector<double>& rhs, vector<double>& cost, vector<double>& lb, vector<double>& ub,
-		    vector<int>& integerColumn) {
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper;
-  vector<double> rowLower;
-  vector<double> rowUpper;
-
-#ifdef HiGHSDEV
-  printf("writeMPS_sparse: Model has %d rows, %d columns and  nonzeros\n", numRow, numCol);//, Astart[numCol]);
-  cout<<flush;
-#endif
-  colCost.resize(numCol);
-  colLower.resize(numCol);
-  colUpper.resize(numCol);
-  rowLower.resize(numRow);
-  rowUpper.resize(numRow);
-
-  for (int c_n = 0; c_n<numCol; c_n++) {
-    colCost[c_n] = cost[c_n];
-    colLower[c_n] = lb[c_n];
-    colUpper[c_n] = ub[c_n];
-  }
-  for (int r_n = 0; r_n<numRow; r_n++) {
-    rowLower[r_n] = rhs[r_n];
-    rowUpper[r_n] = rhs[r_n];
-  }  
-  int rtCd = writeMPS(filename, numRow, numCol, objSense, objOffset,
-		      Astart,  Aindex, Avalue,
-		      colCost, colLower, colUpper,
-		      rowLower, rowUpper,
-		      integerColumn);
-  return rtCd;
-}
-int writeMPS(const char *filename, int& numRow, int& numCol, int& objSense, double& objOffset,
+int writeMPS(const char *filename,
+	     int& numRow, int& numCol, int& numInt, int& objSense, double& objOffset,
 	     vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
 	     vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
 	     vector<double>& rowLower, vector<double>& rowUpper,
@@ -669,8 +350,10 @@ int writeMPS(const char *filename, int& numRow, int& numCol, int& objSense, doub
 	break;
       }
     }
+#ifdef HiGHSDEV
     printf("Model: RHS =     %s\n       RANGES =  %s\n       BOUNDS =  %s\n",
 	   BoolToString(have_rhs), BoolToString(have_ranges), BoolToString(have_bounds));
+#endif
     
     //Field:    1           2          3         4         5         6
     //Columns:  2-3        5-12      15-22     25-36     40-47     50-61
@@ -695,25 +378,27 @@ int writeMPS(const char *filename, int& numRow, int& numCol, int& objSense, doub
     int nIntegerMk = 0;
     fprintf(file, "COLUMNS\n");
     for (int c_n = 0; c_n < numCol; c_n++) {
-      if (integerColumn[c_n] && !integerFg) {
-	//Start an integer section
-	fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n", nIntegerMk);
-	nIntegerMk++;
-	integerFg = true;
-      } else if (!integerColumn[c_n] && integerFg) {
-	//End an integer section
-	fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n", nIntegerMk);
-	nIntegerMk++;
-	integerFg = false;
+      if (numInt) {
+	if (integerColumn[c_n] && !integerFg) {
+	  //Start an integer section
+	  fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n", nIntegerMk);
+	  nIntegerMk++;
+	  integerFg = true;
+	} else if (!integerColumn[c_n] && integerFg) {
+	  //End an integer section
+	  fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n", nIntegerMk);
+	  nIntegerMk++;
+	  integerFg = false;
+	}
       }
       if (colCost[c_n] != 0) {
 	double v = colCost[c_n];
-	fprintf(file, "    C%-7d  COST      %12g\n", c_n+1, v);	
+	fprintf(file, "    C%-7d  COST      %.15g\n", c_n+1, v);	
       }
       for (int el_n = Astart[c_n]; el_n<Astart[c_n+1]; el_n++) {
 	double v = Avalue[el_n];
 	int r_n = Aindex[el_n];
-	fprintf(file, "    C%-7d  R%-7d  %12g\n", c_n+1, r_n+1, v);	
+	fprintf(file, "    C%-7d  R%-7d  %.15g\n", c_n+1, r_n+1, v);	
       }
     }
     have_rhs = true;
@@ -721,33 +406,34 @@ int writeMPS(const char *filename, int& numRow, int& numCol, int& objSense, doub
       fprintf(file, "RHS\n");
       for (int r_n = 0; r_n < numRow; r_n++) {
 	double v = rhs[r_n];
-	//	if (v !=0)
-	  fprintf(file, "    RHS_V     R%-7d  %12g\n", r_n+1, v);
+	if (v) fprintf(file, "    RHS_V     R%-7d  %.15g\n", r_n+1, v);
       }
     }
     if (have_ranges) {
       fprintf(file, "RANGES\n");
       for (int r_n = 0; r_n < numRow; r_n++) {
 	double v = ranges[r_n];
-	if (v !=0) fprintf(file, "    RANGE     R%-7d  %12g\n", r_n+1, v);
+	if (v) fprintf(file, "    RANGE     R%-7d  %.15g\n", r_n+1, v);
       }
     }
     if (have_bounds) {
       fprintf(file, "BOUNDS\n");
       for (int c_n = 0; c_n < numCol; c_n++) {
 	double lb = colLower[c_n];
+
+
 	double ub = colUpper[c_n];
 	if (lb == ub) {
-	  fprintf(file, " FX BOUND     C%-7d  %12g\n", c_n+1, lb);
+	  fprintf(file, " FX BOUND     C%-7d  %.15g\n", c_n+1, lb);
 	} else {
 	  if (!hsol_isInfinity(ub)) {
 	    //Upper bounded variable
-	    fprintf(file, " UP BOUND     C%-7d  %12g\n", c_n+1, ub);
+	    fprintf(file, " UP BOUND     C%-7d  %.15g\n", c_n+1, ub);
 	  }
 	  if (!hsol_isInfinity(-lb)) {
 	      //Lower bounded variable - default is 0
 	      if (lb) {
-		fprintf(file, " LO BOUND     C%-7d  %12g\n", c_n+1, lb);
+		fprintf(file, " LO BOUND     C%-7d  %.15g\n", c_n+1, lb);
 	      }
 	    } else {
 	      //Infinite lower bound
@@ -760,6 +446,14 @@ int writeMPS(const char *filename, int& numRow, int& numCol, int& objSense, doub
     fclose(file);
     return 0;
 }
+
+// Logical check of double being +Infinity
+bool hsol_isInfinity(double val) {
+  if (val >= HSOL_CONST_INF)
+    return true;
+  return false;
+}
+
 inline const char * const BoolToString(bool b)
 {
   return b ? "True" : "False";

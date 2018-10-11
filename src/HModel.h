@@ -420,6 +420,7 @@ public:
     int numCol;
     int numRow;
     int numTot;
+    int numInt;
     int problemStatus;
     int objSense; //+1 => min; -1 => max
     double objOffset;

@@ -84,10 +84,10 @@ int HModel::load_fromMPS(const char *filename)
     totalTime += timer.getTime();
     return RtCd;
   }
+  int numInt = 0;
+  if (!mps_ff) for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numInt++;}
 #ifdef HiGHSDEV
-  int numIntegerColumn = 0;
-  if (!mps_ff) for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numIntegerColumn++;}
-  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+  if (numInt) printf("MPS file has %d integer variables\n", numInt);
 #endif
   numTot = numCol + numRow;
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
@@ -195,10 +195,11 @@ int HModel::load_fromToy(const char *filename)
     rowLower[r_n] = b[r_n];
     rowUpper[r_n] = b[r_n];
   }
+
+  numInt = 0;
+  for (int c_n = 0; c_n < numCol; c_n++) { if (integerColumn[c_n]) numInt++;}
 #ifdef HiGHSDEV
-  int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) { if (integerColumn[c_n]) numIntegerColumn++;}
-  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+  if (numInt) printf("MPS file has %d integer variables\n", numInt);
 #endif
 
   numTot = numCol + numRow;
@@ -2823,10 +2824,31 @@ void HModel::check_load_fromPostsolve()
 #endif
 
 int HModel::writeToMPS(const char *filename) {
-  int rtCd = writeMPS(filename, numRow, numCol, objSense, objOffset,
-		      Astart, Aindex, Avalue,
-		      colCost, colLower, colUpper,
-		      rowLower, rowUpper,
+  vector<double> unsclAvalue = Avalue;
+  vector<double> unsclColCost = colCost;
+  vector<double> unsclColLower = colLower;
+  vector<double> unsclColUpper = colUpper;
+  vector<double> unsclRowLower = rowLower;
+  vector<double> unsclRowUpper = rowUpper;
+  
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    unsclRowLower[r_n] = (hsol_isInfinity(-rowLower[r_n]) ? rowLower[r_n]: rowLower[r_n] / rowScale[r_n]);
+    unsclRowUpper[r_n] = (hsol_isInfinity( rowUpper[r_n]) ? rowUpper[r_n]: rowUpper[r_n] / rowScale[r_n]);
+  }
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    unsclColCost[c_n] = colCost[c_n]/colScale[c_n];
+    unsclColLower[c_n] = (hsol_isInfinity(-colLower[c_n]) ? colLower[c_n]: colLower[c_n] * colScale[c_n]);
+    unsclColUpper[c_n] = (hsol_isInfinity( colUpper[c_n]) ? colUpper[c_n]: colUpper[c_n] * colScale[c_n]);
+    for (int el_n = Astart[c_n]; el_n < Astart[c_n+1]; el_n++) {
+      int r_n = Aindex[el_n];
+      unsclAvalue[el_n] = Avalue[el_n]/(colScale[c_n] * rowScale[r_n]);
+    }
+  }
+  int rtCd = writeMPS(filename,
+		      numRow, numCol, numInt, objSense, objOffset,
+		      Astart, Aindex, unsclAvalue,
+		      unsclColCost, unsclColLower, unsclColUpper,
+		      unsclRowLower, unsclRowUpper,
 		      integerColumn);
   return rtCd;
 }
@@ -2972,11 +2994,9 @@ void HModel::util_getColBounds(int firstcol, int lastcol, double *XcolLower, dou
   for (int col = firstcol; col <= lastcol; ++col)
   {
     if (XcolLower != NULL)
-      XcolLower[col - firstcol] = (hsol_isInfinity(-colLower[col]) ? colLower[col]
-                                                                   : colLower[col] * colScale[col]);
+      XcolLower[col - firstcol] = (hsol_isInfinity(-colLower[col]) ? colLower[col] : colLower[col] * colScale[col]);
     if (XcolUpper != NULL)
-      XcolUpper[col - firstcol] = (hsol_isInfinity(colUpper[col]) ? colUpper[col]
-                                                                  : colUpper[col] * colScale[col]);
+      XcolUpper[col - firstcol] = (hsol_isInfinity( colUpper[col]) ? colUpper[col] : colUpper[col] * colScale[col]);
   }
 }
 
@@ -2989,11 +3009,9 @@ void HModel::util_getRowBounds(int firstrow, int lastrow, double *XrowLower, dou
   for (int row = firstrow; row <= lastrow; ++row)
   {
     if (XrowLower != NULL)
-      XrowLower[row - firstrow] = (hsol_isInfinity(-rowLower[row]) ? rowLower[row]
-                                                                   : rowLower[row] * rowScale[row]);
+      XrowLower[row - firstrow] = (hsol_isInfinity(-rowLower[row]) ? rowLower[row] : rowLower[row] / rowScale[row]);
     if (XrowUpper != NULL)
-      XrowUpper[row - firstrow] = (hsol_isInfinity(rowUpper[row]) ? rowUpper[row]
-                                                                  : rowUpper[row] * rowScale[row]);
+      XrowUpper[row - firstrow] = (hsol_isInfinity( rowUpper[row]) ? rowUpper[row] : rowUpper[row] / rowScale[row]);
   }
 }
 
