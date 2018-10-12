@@ -52,7 +52,7 @@ Set custom options with `-D<option>=<value>` during the configuration step (`cma
 - `OPENMP`:
     on: Causes OpenMP to be used if available - cmake checks for this
 - `SCIP_DEV`:
-    on: Suppresses all output so that HiGHS runs clean within SCIP
+    on: Adds some printing for SCIP interface development when, otherwise, all HiGHS output is suppressed
 - `HiGHSDEV`:
     on: Includes a lot of testing and development code which should not be used in "production" or when running optimized code
 - `HiGHSRELEASE`:
