@@ -1262,9 +1262,7 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK()
     }
   }
   //ok must be true if we reach here
-#ifdef HiGHSDEBUG
   assert(ok);
-#endif
   return ok;
 }
 
@@ -3485,10 +3483,8 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     for (int el = 0; el < nnonz; el++)
     {
       int row = XAindex[el];
-#ifdef HiGHSDEBUG
       assert(row >= 0);
       assert(row < numRow);
-#endif
       Aindex[cuNnonz + el] = row;
       Avalue[cuNnonz + el] = XAvalue[el];
     }
@@ -3642,10 +3638,8 @@ void HModel::util_addRows(int nrows, const double *XrowLower, const double *Xrow
     {
       int col = XARindex[el];
       //      printf("El %2d: adding entry in column %2d\n", el, col); cout << flush;
-#ifdef HiGHSDEBUG
       assert(col >= 0);
       assert(col < numCol);
-#endif
       Alength[col]++;
     }
     //Determine the new number of nonzeros and resize the column-wise matrix arrays
@@ -3888,7 +3882,6 @@ void HModel::util_deleteRowset(int *dstat)
 #ifdef SCIP_DEV
     // Check that basis is valid basis.
     basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
-    cout << flush;
     assert(basisOK);
     //    printf("util_deleteRowset: all rows removed are basic slacks so basisOK\n"); cout<<flush;
 #endif
@@ -3897,10 +3890,9 @@ void HModel::util_deleteRowset(int *dstat)
   }
   else
   {
-#ifdef SCIP_DEV
     assert(basisOK);
+#ifdef SCIP_DEV
     printf("util_deleteRowset: not all rows removed are basic slacks\n");
-    cout << flush;
 #endif
     //Determine consequences for basis when deleting rows to leave no basis
     mlFg_Update(mlFg_action_DelRows);
@@ -4077,7 +4069,7 @@ void HModel::util_reportSolverOutcome(const char *message)
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal = abs(prObjVal-objective)/max(abs(objective), max(abs(prObjVal), 1.0));
-  printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
+  printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
          prObjVal, objective, dlObjVal, numberIteration, totalTime);
 #else
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(),

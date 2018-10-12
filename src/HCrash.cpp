@@ -150,9 +150,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode)
     bool nx_ps = false;
     if (aa >= bixby_mu_a)
     {
-#ifdef HiGHSDEBUG
       assert(r_o_mx_aa >= 0);
-#endif
       //			Column pv_c_n becomes basic in row pv_r_n
       int pv_c_n = c_n;
       int pv_r_n = r_o_mx_aa;

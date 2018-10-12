@@ -67,9 +67,6 @@ message(STATUS "SCIP  development: " ${SCIP_DEV})
 option(HiGHSDEV "HiGHS development" ON)
 message(STATUS "HiGHS development: " ${HiGHSDEV})
 
-option(HiGHSDEBUG "HiGHS debug" ON)
-message(STATUS "HiGHS debug: " ${HiGHSDEBUG})
-
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})

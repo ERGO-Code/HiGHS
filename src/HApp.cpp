@@ -20,7 +20,7 @@ int main(int argc, char **argv)
        << " [date: " << HIGHS_COMPILATION_DATE
        << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
 	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
-#if defined(HiGHSDEV) || defined(HiGHSDEBUG)
+#ifdef HiGHSDEV
   //Report on preprocessing macros
 
 std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
@@ -29,6 +29,12 @@ std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
   std::cout << "OLD_PARSER       is     defined" << std::endl;
 #else
   std::cout << "OLD_PARSER       is not defined" << std::endl;
+#endif
+
+#ifdef OPENMP
+  std::cout << "OPENMP           is     defined" << std::endl;
+#else
+  std::cout << "OPENMP           is not defined" << std::endl;
 #endif
 
 #ifdef SCIP_DEV
@@ -43,10 +49,10 @@ std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
   std::cout << "HiGHSDEV         is not defined" << std::endl;
 #endif
 
-#ifdef HiGHSDEBUG
-  std::cout << "HiGHSDEBUG       is     defined" << std::endl;
+#ifdef HiGHSRELEASE
+  std::cout << "HiGHSRELEASE     is     defined" << std::endl;
 #else
-  std::cout << "HiGHSDEBUG       is not defined" << std::endl;
+  std::cout << "HiGHSRELEASE     is not defined" << std::endl;
 #endif
 
 #endif
