@@ -98,7 +98,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus,
   memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int) * model.numRow);
   LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   model.util_reportModelDense();
 #endif
   //  model.util_reportModel();

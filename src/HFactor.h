@@ -15,13 +15,20 @@ enum UPDATE_METHOD {
     UPDATE_METHOD_APF = 4
 };
 
+const double hyperFTRANL = 0.15;
+const double hyperFTRANU = 0.10;
+const double hyperBTRANL = 0.10;
+const double hyperBTRANU = 0.15;
+const double hyperCANCEL = 0.05;
+const double hyperRESULT = 0.10;
+
 class HFactor {
 public:
   void copyFrom(const HFactor *from);
   void setup(int numCol, int numRow, int *Astart, int *Aindex, double *Avalue, int *baseIndex,
 	     int updateMethod = UPDATE_METHOD_FT);
   void change(int updateMethod);
-  void build();
+  int build();
   void ftran(HVector& vector, double hist_dsty) const;
   void btran(HVector& vector, double hist_dsty) const;
   void update(HVector *aq, HVector *ep, int *iRow, int *hint);
@@ -31,6 +38,18 @@ public:
 
   double realTick;
   double fakeTick;
+
+  // Rank deficiency information
+  int rankDeficiency;
+  vector<int> noPvR;
+  vector<int> noPvC;
+  vector<int>& getNoPvR() {return noPvR;}
+  //TODO Understand why handling noPvC and noPvR in what seem to be
+  //different ways ends up equivalent.
+  //  vector<int>& getNoPvC() {return noPvC;}
+  const int *getNoPvC() const {return &noPvC[0];}
+    
+  void checkInvert();
 
 private:
     /**
@@ -128,7 +147,11 @@ private:
 
     // Implementation
     void buildSimple();
-    void buildKernel();
+    //    void buildKernel();
+    int buildKernel();
+    void buildHandleRankDeficiency();
+    void buildRpRankDeficiency();
+    void buildMarkSingC();
     void buildFinish();
 
     void ftranL(HVector& vector, double hist_dsty) const;

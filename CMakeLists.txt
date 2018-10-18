@@ -23,47 +23,37 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
-option(SCIP_DEV "SCIP development" OFF)
-if(SCIP_DEV)
-    add_definitions(-DSCIP_dev)
-endif()
-message(STATUS "SCIP development: " ${SCIP_DEV})
-
-option(H2DEBUG "HIGHS debug" ON)
-if(H2DEBUG)
-    add_definitions(-DH2DEBUG)
-endif()
-message(STATUS "HIGHS debug: " ${H2DEBUG})
-
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
     message(STATUS "External presolve: " ${EXT_PRESOLVE_DIR})
-    add_definitions(-DEXT_PRESOLVE)
     include_directories(${EXT_PRESOLVE_DIR}/src)
     include_directories(${EXT_PRESOLVE_DIR}/external)
 endif()
 
-option(JAJH_DEV "JAJH development" OFF)
-if(JAJH_DEV)
-    add_definitions(-DJAJH_dev)
+# use hsol parser
+option(OLD_PARSER  "USE OLD PARSER" OFF)
+if(OLD_PARSER)
+    message(STATUS "Using old hsol parser")
 endif()
-message(STATUS "JAJH development: " ${JAJH_DEV})
-
-option(JAJH_RP  "JAJH reporting" OFF)
-if(JAJH_RP)
-    add_definitions(-DJAJH_rp)
-endif()
-message(STATUS "JAJH reporting: " ${JAJH_RP})
 
 # whether to use OpenMP
-option(OPENMP "Use OpenMP" ON)
+option(OPENMP "OpenMP" ON)
 if(OPENMP)
     find_package(OpenMP)
     if(OPENMP_FOUND)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     endif()
 endif()
-message(STATUS "Use OpenMP: " ${OPENMP})
+message(STATUS "OpenMP: " ${OPENMP})
+
+option(SCIP_DEV "SCIP  development" OFF)
+message(STATUS "SCIP  development: " ${SCIP_DEV})
+
+option(HiGHSDEV "HiGHS development" ON)
+message(STATUS "HiGHS development: " ${HiGHSDEV})
+
+option(HiGHSDEBUG "HiGHS debug" ON)
+message(STATUS "HiGHS debug: " ${HiGHSDEBUG})
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
@@ -76,20 +66,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "")
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-# use hsol parser
-option(OLD_PARSER  "USE OLD PARSER" OFF)
-if(OLD_PARSER)
-    add_definitions(-DOLD_PARSER)
-    message(STATUS "Using old hsol parser.")
-endif()
+configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.h)
+include_directories(${CMAKE_BINARY_DIR})
 
 # use interior point solver
 set(IPX_DIR "" CACHE STRING "Path to IPX folder.")
 if(IPX_DIR)
     add_compile_options(-D IPX=ON) 
     message(STATUS "Using interior point solver.")
-    include_directories(${IPX_DIR}/src)
-    include_directories(${IPX_DIR}/include)
+    include_directories("${IPX_DIR}/src")
+    include_directories("${IPX_DIR}/include")
+    link_directories("${IPX_DIR}/lib")
 endif()
 
 # set the correct rpath for OS X

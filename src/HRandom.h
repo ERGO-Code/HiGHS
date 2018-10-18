@@ -17,7 +17,8 @@ public:
         random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
         random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
         unsigned result = (random_mz << 16) + random_mw;
-        return (result + 1.0) * 2.328306435454494e-10;
+	double returnValue = (result + 1.0) * 2.328306435454494e-10;
+        return returnValue;
     }
 private:
     unsigned random_mw;

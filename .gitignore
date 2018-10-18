@@ -47,6 +47,7 @@ local.properties
 [Rr]elease/
 x64/
 build/
+buildDebug/
 [Bb]in/
 [Oo]bj/
 
@@ -228,3 +229,7 @@ SolveMl
 hsol.ou
 libhsol.a
 lpi_h2gmp.cpp
+
+buildOpt/
+.vscode/
+vscodeSetup

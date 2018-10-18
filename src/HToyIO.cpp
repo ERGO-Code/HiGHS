@@ -53,17 +53,17 @@ int readToy_MIP_cpp(const char *filename, int* m_p, int* n_p, int* maxmin, doubl
   char *term;
   int i, j, k;
   
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readMPS: Trying to open file %s\n", filename);
 #endif
     FILE *file_p = fopen(filename, "r");
     if (file_p == 0) {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("readInput: Not opened file OK\n");
 #endif
       return 1;
     }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     printf("readInput: Opened file  OK\n");
 #endif
     fgets_rt = fgets(buff, buff_ln, file_p);

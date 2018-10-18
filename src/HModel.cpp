@@ -2,12 +2,11 @@
 #include "HConst.h"
 #include "HTimer.h"
 #include "HPresolve.h"
-#include "HToyIO.h"
-
 #include "HMPSIO.h"
 #ifdef Boost_FOUND
 #include "HMpsFF.h"
 #endif
+#include "HToyIO.h"
 
 #include <cctype>
 #include <cmath>
@@ -62,42 +61,45 @@ int HModel::load_fromMPS(const char *filename)
   // Load the model, timing the process
   timer.reset();
   modelName = filename;
-
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
+#ifdef HiGHSDEV
+  bool mps_ff = true;
+#endif
   int RtCd = readMPS_FF(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
 #else
+#ifdef HiGHSDEV
+  bool mps_ff = false;
+#endif
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper, integerColumn);
 #endif
-
   if (RtCd)
   {
     totalTime += timer.getTime();
     return RtCd;
   }
-
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++)
-  {
-    if (integerColumn[c_n])
-      numIntegerColumn++;
-  }
-  if (numIntegerColumn)
-    printf("MPS file has %d integer variables\n", numIntegerColumn);
+  if (!mps_ff) for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numIntegerColumn++;}
+  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+#endif
+  numTot = numCol + numRow;
+  //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
+#ifdef HiGHSDEV
+  //  util_reportModelDa(filename);
+  util_anMl("Unscaled");
 #endif
 
-  numTot = numCol + numRow;
 
-#ifdef JAJH_dev
-  //Use this next line to check the loading of a model from arrays
+#ifdef HiGHSDEV
+  // Use this next line to check the loading of a model from arrays
   //check_load_fromArrays(); return;
 #endif
 
@@ -114,6 +116,7 @@ int HModel::load_fromMPS(const char *filename)
 
   return RtCd;
 }
+
 
 int HModel::load_fromToy(const char *filename)
 {
@@ -196,20 +199,15 @@ int HModel::load_fromToy(const char *filename)
     rowLower[r_n] = b[r_n];
     rowUpper[r_n] = b[r_n];
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++)
-  {
-    if (integerColumn[c_n])
-      numIntegerColumn++;
-  }
-  if (numIntegerColumn)
-    printf("MPS file has %d integer variables\n", numIntegerColumn);
+  for (int c_n = 0; c_n < numCol; c_n++) { if (integerColumn[c_n]) numIntegerColumn++;}
+  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
 #endif
 
   numTot = numCol + numRow;
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   //Use this next line to check the loading of a model from arrays
   //check_load_fromArrays(); return;
 #endif
@@ -287,7 +285,7 @@ void HModel::load_fromPostsolve(HPresolve *ptr_model)
   initScale();
   copy_basisFromPostsolve(ptr_model);
   initFromNonbasic();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   check_load_fromPostsolve();
 #endif
 }
@@ -299,7 +297,7 @@ void HModel::load_fromPostsolve(HPresolve &ptr_model)
   initScale();
   copy_basisFromPostsolve(ptr_model);
   initFromNonbasic();
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   check_load_fromPostsolve();
 #endif
 }
@@ -318,8 +316,8 @@ void HModel::copy_fromHModelToHPresolve(HPresolve *ptr_model)
   ptr_model->rowLower = rowLower;
   ptr_model->rowUpper = rowUpper;
 
-  ptr_model->modelName = modelName;
-}
+  ptr_model->modelName = &modelName[0];
+  }
 
 void HModel::printSolution()
 {
@@ -395,34 +393,29 @@ void HModel::printSolution()
   // }
   //*rtcod = 0;*/
 
-  char buff[5];
   cout << endl
        << "Col value: ";
   for (int i = 0; i < numCol; i++)
   {
-    sprintf(buff, "%2.2f ", colValue[i]);
-    cout << setw(5) << buff;
-  } //cout<< colValue[i] <<" ";
+    cout<< colValue[i] <<" ";
+  }
   cout << endl
        << "Col dual:  ";
   for (int i = 0; i < numCol; i++)
   {
-    sprintf(buff, "%2.2f ", colDual[i]);
-    cout << setw(5) << buff;
+    cout<< colDual[i] <<" ";
   } //cout<< colDual[i] <<" ";
   cout << endl
        << "Row value: ";
   for (int i = 0; i < numRow; i++)
   {
-    sprintf(buff, "%2.2f ", rowValue[i]);
-    cout << setw(5) << buff;
+    cout << rowValue[i] << " ";
   } //cout<< rowValue[i] <<" ";
   cout << endl
        << "Row dual:  ";
   for (int i = 0; i < numRow; i++)
   {
-    sprintf(buff, "%2.2f ", rowDual[i]);
-    cout << setw(5) << buff;
+    cout<< rowDual[i] <<" ";
   } //cout<< rowDual[i] <<" ";
   cout << endl
        << endl;
@@ -632,6 +625,7 @@ void HModel::mlFg_Update(int mlFg_action)
   }
 }
 
+#ifdef HiGHSDEV
 void HModel::mlFg_Report()
 {
   printf("\nReporting model/solver status and flags:\n\n");
@@ -653,7 +647,7 @@ void HModel::mlFg_Report()
   printf("mlFg_haveSavedBounds =   %2d\n\n", mlFg_haveSavedBounds);
   cout << flush;
 }
-
+#endif
 void HModel::replaceWithLogicalBasis()
 {
   // Replace basis with a logical basis then populate (where possible)
@@ -796,11 +790,10 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   assert(local_newNumTot == numTot);
   //ToDo: Replace references to local_newNum* by references to num* from here on
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
   bool basisOK = nonbasicFlagBasicIndex_OK(local_oldNumCol, local_oldNumRow);
-  if (!basisOK)
-    printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
+  if (!basisOK) printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
   assert(basisOK);
 #endif
 
@@ -889,7 +882,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   // Initialise values (and nonbasicMove) for the new columns
   initValueFromNonbasic(firstcol, lastcol);
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
   basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
   assert(basisOK);
@@ -1028,7 +1021,7 @@ bool HModel::OKtoSolve(int level, int phase)
       printf("Not OK to solve since mlFg_haveInvert = %d\n", mlFg_haveInvert);
     cout << flush;
   }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   assert(ok);
 #endif
   if (level <= 0)
@@ -1039,7 +1032,7 @@ bool HModel::OKtoSolve(int level, int phase)
   {
     printf("Error in nonbasicFlag and basicIndex\n");
     cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     assert(ok);
 #endif
     return ok;
@@ -1049,7 +1042,7 @@ bool HModel::OKtoSolve(int level, int phase)
   {
     printf("Error in workArrays\n");
     cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
     assert(ok);
 #endif
     return ok;
@@ -1062,9 +1055,9 @@ bool HModel::OKtoSolve(int level, int phase)
       ok = oneNonbasicMoveVsWorkArrays_OK(var);
       if (!ok)
       {
-        printf("Error in nonbasicMoveVsWorkArrays for variable %d\n", var);
+        printf("Error in nonbasicMoveVsWorkArrays for variable %d of %d\n", var, numTot);
         cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
         assert(ok);
 #endif
         return ok;
@@ -1164,8 +1157,8 @@ bool HModel::workArrays_OK(int phase)
 {
   //  printf("Called workArrays_OK(%d)\n", phase);cout << flush;
   bool ok = true;
-  //Don't check phase 1 bounds: these will have been set by solve() so can be trusted
-  if (phase != 1)
+  //Only check phase 2 bounds: others will have been set by solve() so can be trusted
+  if (phase == 2)
   {
     for (int col = 0; col < numCol; ++col)
     {
@@ -1228,8 +1221,7 @@ bool HModel::workArrays_OK(int phase)
     for (int col = 0; col < numCol; ++col)
     {
       int var = col;
-      double sense_col_cost = objSense * colCost[col];
-      ok = workCost[var] == sense_col_cost;
+      ok = workCost[var] == objSense * colCost[col];
       if (!ok)
       {
         printf("For col %d, workLower should be %g but is %g\n", col, colLower[col], workCost[var]);
@@ -1265,14 +1257,16 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK()
     {
       printf("Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n", var);
       cout << flush;
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       assert(ok);
 #endif
       return ok;
     }
   }
   //ok must be true if we reach here
+#ifdef HiGHSDEBUG
   assert(ok);
+#endif
   return ok;
 }
 
@@ -1344,8 +1338,8 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var)
       ok = nonbasicMove[var] == NONBASIC_MOVE_UP;
       if (!ok)
       {
-        printf("Finite lower bound and infinite upper bound variable %d (numCol = %d) [%11g, %11g, %11g] so nonbasic move should be up but is  %d\n",
-               var, numCol, workLower[var], workValue[var], workUpper[var], nonbasicMove[var]);
+        printf("Finite lower bound and infinite upper bound variable %d (numCol = %d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  %d\n",
+	  var, numCol, workLower[var], workValue[var], workUpper[var], NONBASIC_MOVE_UP, nonbasicMove[var]);
         return ok;
       }
       ok = workValue[var] == workLower[var];
@@ -1567,11 +1561,16 @@ void HModel::scaleModel()
     return;
   }
 
-  // Reset all scaling to 1
-  colScale.assign(numCol, 1);
-  rowScale.assign(numRow, 1);
+  // Allow a switch to/from the original scaling rules
+  bool originalScaling = false;
+  bool alwCostScaling = true;
+  if (originalScaling) alwCostScaling = false;
 
-  // Find out min0 / max0, skip on if in [0.2, 5]
+  // Reset all scaling to 1
+  initScale();
+
+  // Find out range of matrix values and skip matrix scaling if all
+  // |values| are in [0.2, 5]
   const double inf = HSOL_CONST_INF;
   double min0 = inf, max0 = 0;
   for (int k = 0, AnX = Astart[numCol]; k < AnX; k++)
@@ -1580,18 +1579,21 @@ void HModel::scaleModel()
     min0 = min(min0, value);
     max0 = max(max0, value);
   }
-  if (min0 >= 0.2 && max0 <= 5)
+  if (min0 >= 0.2 && max0 <= 5) {
+    // No matrix scaling, but possible cost scaling
+#ifdef HiGHSDEV
+    printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName.c_str());
+#endif
+    // Possibly scale the costs
+    if (!originalScaling && alwCostScaling) scaleCosts();
     return;
-
-  // See if we want to include cost include if min-cost < 0.1
-  double minc = inf;
-  for (int i = 0; i < numCol; i++)
-  {
-    double sense_col_cost = objSense * colCost[i];
-    if (sense_col_cost)
-      minc = min(minc, fabs(sense_col_cost));
   }
-  bool doCost = minc < 0.1;
+  // See if we want to include cost include if minimum nonzero cost is less than 0.1
+  double minNzCost = inf;
+  for (int i = 0; i < numCol; i++) {if (colCost[i]) minNzCost = min(fabs(colCost[i]), minNzCost);}
+  bool includeCost = false;
+  //  if (originalScaling)
+    includeCost = minNzCost < 0.1;
 
   // Search up to 6 times
   vector<double> rowMin(numRow, inf);
@@ -1604,9 +1606,8 @@ void HModel::scaleModel()
       // For column scale (find)
       double colMin = inf;
       double colMax = 1 / inf;
-      double sense_col_cost = objSense * colCost[iCol];
-      double myCost = fabs(sense_col_cost);
-      if (doCost && myCost != 0)
+      double myCost = fabs(colCost[iCol]);
+      if (includeCost && myCost != 0)
         colMin = min(colMin, myCost), colMax = max(colMax, myCost);
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
       {
@@ -1614,7 +1615,10 @@ void HModel::scaleModel()
         colMin = min(colMin, value), colMax = max(colMax, value);
       }
       colScale[iCol] = 1 / sqrt(colMin * colMax);
-
+      if (!originalScaling) {
+	// Ensure that column scale factor is not excessively large or small
+	colScale[iCol] = min(max(minAlwColScale, colScale[iCol]), maxAlwColScale);
+      }
       // For row scale (only collect)
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
       {
@@ -1626,18 +1630,46 @@ void HModel::scaleModel()
     }
 
     // For row scale (find)
-    for (int iRow = 0; iRow < numRow; iRow++)
+    for (int iRow = 0; iRow < numRow; iRow++) {
       rowScale[iRow] = 1 / sqrt(rowMin[iRow] * rowMax[iRow]);
+      if (!originalScaling) {
+	// Ensure that row scale factor is not excessively large or small
+	rowScale[iRow] = min(max(minAlwRowScale, rowScale[iRow]), maxAlwRowScale);
+      }
+    }
     rowMin.assign(numRow, inf);
     rowMax.assign(numRow, 1 / inf);
   }
 
   // Make it numerical better
+  // Also determine the max and min row and column scaling factors
+  double minColScale = inf;
+  double maxColScale = 1/inf;
+  double minRowScale = inf;
+  double maxRowScale = 1/inf;
   const double ln2 = log(2.0);
-  for (int iCol = 0; iCol < numCol; iCol++)
+  for (int iCol = 0; iCol < numCol; iCol++) {
     colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / ln2 + 0.5));
-  for (int iRow = 0; iRow < numRow; iRow++)
+    minColScale = min(colScale[iCol], minColScale);
+    maxColScale = max(colScale[iCol], maxColScale);
+  }
+ for (int iRow = 0; iRow < numRow; iRow++) {
     rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / ln2 + 0.5));
+    minRowScale = min(rowScale[iRow], minRowScale);
+    maxRowScale = max(rowScale[iRow], maxRowScale);
+  }
+#ifdef HiGHSDEV
+ bool excessScaling = 
+   (minColScale < minAlwColScale) ||
+   (maxColScale > maxAlwColScale) ||
+   (minRowScale < minAlwRowScale) ||
+   (maxRowScale > maxAlwRowScale);
+ 
+ printf("grep_Scaling,%s,%d,%d,Obj,%g,%d,Row,%g,%g,Col,%g,%g,%d\n",
+	modelName.c_str(), originalScaling, alwCostScaling, 
+	minNzCost, includeCost, 
+	minColScale, maxColScale, minRowScale, maxRowScale, excessScaling);
+#endif
 
   // Apply scaling to matrix and bounds
   for (int iCol = 0; iCol < numCol; iCol++)
@@ -1693,6 +1725,53 @@ void HModel::scaleModel()
   }
   //Deduce the consequences of scaling the LP
   mlFg_Update(mlFg_action_ScaleLP);
+#ifdef HiGHSDEV
+  // Analyse the scaled model
+  util_anMl("Scaled");
+#endif
+  // Possibly scale the costs
+  if (!originalScaling && alwCostScaling) scaleCosts();
+}
+
+void HModel::scaleCosts()
+{
+  // Scale the costs by no less than minAlwCostScale
+  double maxNzCost = 0;
+  for (int iCol = 0; iCol < numCol; iCol++) {if (colCost[iCol]) {maxNzCost = max(fabs(colCost[iCol]), maxNzCost);}}
+  // Scaling the costs up effectively increases the dual tolerance to
+  // which the problem is solved - so, if the max cost is small the
+  // scaling factor pushes it up by a power of 2 so it's close to 1
+  // Scaling the costs down effectively decreases the dual tolerance
+  // to which the problem is solved - so this can't be done too much
+  costScale = 1;
+  const double ln2 = log(2.0);
+  // Scale the costs if the max cost is positive and outside the range [1/16, 16]
+  if ((maxNzCost > 0) && ((maxNzCost<(1.0/16)) || (maxNzCost > 16))) {
+    costScale = maxNzCost;
+    costScale = pow(2.0, floor(log(costScale) / ln2 + 0.5));
+    costScale = min(costScale, maxAlwCostScale);
+  }
+#ifdef HiGHSDEV
+  printf("MaxNzCost = %11.4g: scaling all costs by %11.4g\ngrep_CostScale,%g,%g\n", maxNzCost, costScale, maxNzCost, costScale);
+#endif
+  if (costScale == 1) return;
+  // Scale the costs (and record of maxNzCost) by costScale, being at most maxAlwCostScale
+  for (int iCol = 0; iCol < numCol; iCol++) colCost[iCol]/=costScale;
+  maxNzCost/=costScale;
+ 
+#ifdef HiGHSDEV
+  bool alwLargeCostScaling = false;
+  if (alwLargeCostScaling && (numLargeCo > 0)) {
+    // Scale any large costs by largeCostScale, being at most (a further) maxAlwCostScale
+    largeCostScale = maxNzCost;
+    largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
+    largeCostScale = min(largeCostScale, maxAlwCostScale);
+    printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
+    for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
+  }
+  printf("After cost scaling\n");
+  util_anVecV("Column costs", numCol, colCost, false);
+#endif
 }
 
 void HModel::setup_tightenBound()
@@ -2006,8 +2085,9 @@ void HModel::setup_numBasicLogicals()
 
 void HModel::initScale()
 {
-  colScale.assign(numCol, 1.0);
-  rowScale.assign(numRow, 1.0);
+  colScale.assign(numCol, 1);
+  rowScale.assign(numRow, 1);
+  costScale = 1;
 }
 
 void HModel::initBasicIndex()
@@ -2166,8 +2246,7 @@ void HModel::initPh2ColCost(int firstcol, int lastcol)
   for (int col = firstcol; col <= lastcol; col++)
   {
     int var = col;
-    double sense_col_cost = objSense * colCost[col];
-    workCost[var] = sense_col_cost;
+    workCost[var] = objSense * colCost[col];
     workShift[var] = 0.;
   }
 }
@@ -2291,46 +2370,52 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar)
 // ???? Housekeeping done from here down ????
 // For the solver: methods to call INVERT and form dual and primal activities
 // Call INVERT
-void HModel::computeFactor()
+int HModel::computeFactor()
 {
-#ifdef JAJH_dev
-//	double tt0 = timer.getTime();
+#ifdef HiGHSDEV
+  double tt0=0;
+  if (anInvertTime) tt0 = timer.getTime();
 #endif
-  double tt0 = timer.getTime();
-  try
-  {
-    factor.build();
-  }
-  catch (runtime_error &error)
-  {
-    cout << error.what() << endl;
-    problemStatus = LP_Status_Singular;
-    // TODO Change to return
-#ifdef JAJH_dev
-    writePivots("failed");
+  //TODO Understand why handling noPvC and noPvR in what seem to be
+  //different ways ends up equivalent.
+  int rankDeficiency = factor.build();
+  if (rankDeficiency) {
+    handleRankDeficiency();
+    //    problemStatus = LP_Status_Singular;
+#ifdef HiGHSDEV
+    //    writePivots("failed");
 #endif
-    exit(0);
+    //      return rankDeficiency;
   }
   //    printf("INVERT: After %d iterations and %d updates\n", numberIteration, countUpdate);
   countUpdate = 0;
 
-  double invertTime = timer.getTime() - tt0;
-  totalInverts++;
-  totalInvertTime += invertTime;
-#ifdef JAJH_dev
-  printf("           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; Total INVERT  time = %11.4g\n",
-         totalInverts, numberIteration, invertTime, totalInvertTime);
+#ifdef HiGHSDEV
+  if (anInvertTime) {
+    double invertTime = timer.getTime() - tt0;
+    totalInverts++;
+    totalInvertTime += invertTime;
+    printf("           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; Total INVERT  time = %11.4g\n",
+	   totalInverts, numberIteration, invertTime, totalInvertTime);
+  }
 #endif
 
   //Now have a representation of B^{-1}, and it is fresh!
   mlFg_haveInvert = 1;
   mlFg_haveFreshInvert = 1;
+  return 0;
 }
 
 // Compute the dual activities
 void HModel::computeDual()
 {
   //  printf("computeDual: Entry\n");cout<<flush;
+
+  bool an_computeDual_norm2 = false;
+  double btranRHS_norm2;
+  double btranSol_norm2;
+  double workDual_norm2;
+
   buffer.clear();
   for (int iRow = 0; iRow < numRow; iRow++)
   {
@@ -2338,52 +2423,41 @@ void HModel::computeDual()
     buffer.array[iRow] = workCost[basicIndex[iRow]] + workShift[basicIndex[iRow]];
   }
   buffer.count = numRow;
-
+  if (an_computeDual_norm2) {
+    btranRHS_norm2 = buffer.norm2(); btranRHS_norm2 = sqrt(btranRHS_norm2);
+  }
   //  printf("computeDual: Before BTRAN\n");cout<<flush;
   factor.btran(buffer, 1);
   //  printf("computeDual: After  BTRAN\n");cout<<flush;
-
-#ifdef JAJH_dev
-  int n_rp = 0;
-  double rp_tl = 0.0;
-  int mx_n_rp = 10;
-  double norm_dl_du = 0.0;
-#endif
+  if (an_computeDual_norm2) {
+    btranSol_norm2 = buffer.norm2(); btranSol_norm2 = sqrt(btranSol_norm2);
+  }
 
   bufferLong.clear();
   matrix.price_by_col(bufferLong, buffer);
-  for (int i = 0; i < numCol; i++)
-  {
-#ifdef JAJH_dev
-    double dl_du = abs(workCost[i] - bufferLong.array[i] - workDual[i]);
-    if (dl_du > rp_tl && n_rp < mx_n_rp)
-    {
-      rp_tl = dl_du * 10;
-      n_rp += 1;
-      //	printf("computeDual():     DlDu   = %11g for i = %d\n", dl_du, i);
-    }
-    norm_dl_du += dl_du * dl_du;
-#endif
+  for (int i = 0; i < numCol; i++) {
     workDual[i] = workCost[i] - bufferLong.array[i];
   }
-  for (int i = numCol; i < numTot; i++)
-  {
-#ifdef JAJH_dev
-    double dl_du = abs(workCost[i] - buffer.array[i - numCol] - workDual[i]);
-    if (dl_du > rp_tl && n_rp < mx_n_rp)
-    {
-      rp_tl = dl_du * 10;
-      n_rp += 1;
-      //	printf("computeDual():     DlDu_i = %11g for i = %d\n", dl_du, i);
-    }
-    norm_dl_du += dl_du * dl_du;
-#endif
+  for (int i = numCol; i < numTot; i++) {
     workDual[i] = workCost[i] - buffer.array[i - numCol];
   }
-#ifdef JAJH_dev
-  norm_dl_du = sqrt(norm_dl_du);
-  //    printf("computeDual():   ||DlDu|| = %11g\n", norm_dl_du);
-#endif
+
+  if (an_computeDual_norm2) {
+    workDual_norm2 = 0;
+    for (int i = 0; i < numTot; i++) workDual_norm2 += workDual[i]*workDual[i];
+    workDual_norm2 = sqrt(workDual_norm2);
+    //  printf("computeDual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g; ||pi^TA-c||=%11.4g\n", btranRHS_norm2, btranSol_norm2, workDual_norm2);
+    double cuTlDuIfs = dblOption[DBLOPT_DUAL_TOL];
+    double nwTlDuIfs = workDual_norm2/1e16;
+    if (nwTlDuIfs > 1e-1) {
+      printf("Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g\n", workDual_norm2);
+    } else if (nwTlDuIfs > 10*cuTlDuIfs) {
+      printf("computeDual: In light of ||pi^TA-c||=%11.4g, consider setting dblOption[DBLOPT_DUAL_TOL] = %11.4g\n",
+	     workDual_norm2, nwTlDuIfs);
+      //    dblOption[DBLOPT_DUAL_TOL] = nwTlDuIfs;
+    }
+  }
+
   //Now have a nonbasic duals
   mlFg_haveNonbasicDuals = 1;
 }
@@ -2457,7 +2531,9 @@ void HModel::correctDual(int *freeInfeasCount)
           problemPerturbed = 1;
           if (nonbasicMove[i] == 1)
           {
-            double dual = (1 + random.dblRandom()) * tau_d;
+	    double random_v = random.dblRandom();
+            double dual = (1 + random_v) * tau_d;
+	    //            double dual = (1 + random.dblRandom()) * tau_d;
             double shift = dual - workDual[i];
             workDual[i] = dual;
             workCost[i] = workCost[i] + shift;
@@ -2482,38 +2558,16 @@ void HModel::computePrimal()
 {
   buffer.clear();
   for (int i = 0; i < numTot; i++)
-    if (nonbasicFlag[i] && workValue[i] != 0)
-      matrix.collect_aj(buffer, i, workValue[i]);
+    if (nonbasicFlag[i] && workValue[i] != 0) matrix.collect_aj(buffer, i, workValue[i]);
   factor.ftran(buffer, 1);
-
-#ifdef JAJH_dev
-  int n_rp = 0;
-  double rp_tl = 0.0;
-  int mx_n_rp = 10;
-  double norm_dl_pr = 0.0;
-#endif
 
   for (int i = 0; i < numRow; i++)
   {
     int iCol = basicIndex[i];
-#ifdef JAJH_dev
-    double dl_pr = abs(baseValue[i] + buffer.array[i]);
-    if (dl_pr > rp_tl && n_rp < mx_n_rp)
-    {
-      rp_tl = dl_pr * 10;
-      n_rp += 1;
-      //	  printf("computePrimal():   DlPr_i = %11g for i = %d\n", dl_pr, i);
-    }
-    norm_dl_pr += dl_pr * dl_pr;
-#endif
     baseValue[i] = -buffer.array[i];
     baseLower[i] = workLower[iCol];
     baseUpper[i] = workUpper[iCol];
   }
-#ifdef JAJH_dev
-  norm_dl_pr = sqrt(norm_dl_pr);
-  //    printf("computePrimal(): ||DlPr|| = %11g\n", norm_dl_pr);
-#endif
   //Now have a basic primals
   mlFg_haveBasicPrimals = 1;
 }
@@ -2525,6 +2579,7 @@ double HModel::computePh2Objective(vector<double> &colPrAct)
   for (int i = 0; i < numCol; i++)
     Ph2Objective += colPrAct[i] * colCost[i];
   //  printf("Ph2Objective Ph2Objective = %g\n", Ph2Objective);
+  Ph2Objective *= costScale;
   return Ph2Objective;
 }
 
@@ -2541,6 +2596,8 @@ double HModel::computePrObj()
   for (int col = 0; col < numCol; col++)
     if (nonbasicFlag[col])
       prObj += workValue[col] * colCost[col];
+  prObj *= costScale;  
+  printf("Scaling by %11.4g in computePrObj\n", costScale);
   return prObj;
 }
 
@@ -2552,11 +2609,58 @@ void HModel::computeDuObj(int phase)
     if (nonbasicFlag[i])
       objective += workValue[i] * workDual[i];
   //    double sv_objective = objective;
-  if (phase != 1)
+  if (phase != 1) {
+    objective *= costScale;
     objective -= objOffset;
+  }
   //    printf("Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g\n", phase, sv_objective, objOffset, objective);
 }
 
+int HModel::handleRankDeficiency()
+{
+  int rankDeficiency = factor.rankDeficiency;
+  const int *noPvC = factor.getNoPvC();
+    printf("Returned %d = factor.build();\n", rankDeficiency);fflush(stdout);
+    vector<int> basicRows;
+    basicRows.resize(numTot);
+    //    printf("Before - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
+    for (int iRow=0; iRow<numRow; iRow++) basicRows[basicIndex[iRow]] = iRow;
+    for (int k=0; k<rankDeficiency; k++) {
+      //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k], k, noPvC[k]);fflush(stdout);
+      int columnIn = numCol + factor.noPvR[k];
+      int columnOut = noPvC[k];
+      int rowOut = basicRows[columnOut];
+      //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g, %11.4g]\n", columnIn, columnOut, rowOut, workLower[columnOut], workUpper[columnOut]);
+      if (basicIndex[rowOut] != columnOut) {printf("%d = basicIndex[rowOut] != noPvC[k] = %d\n", basicIndex[rowOut], columnOut); fflush(stdout);}
+      int sourceOut = setSourceOutFmBd(columnOut);
+      updatePivots(columnIn, rowOut, sourceOut);
+      updateMatrix(columnIn, columnOut);
+    }
+    //    printf("After  - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
+    factor.checkInvert();
+    return 0;
+}
+
+int HModel::setSourceOutFmBd(const int columnOut)
+{
+  int sourceOut = 0;
+  if (workLower[columnOut] != workUpper[columnOut]) {
+    if (!hsol_isInfinity(-workLower[columnOut])) {
+    //Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
+      sourceOut = -1;
+      //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g] so setting sourceOut = -1\n", columnOut, workLower[columnOut], workUpper[columnOut]);
+    } else {
+    //Infinite LB so sourceOut = 1 ensures value set to UB
+      sourceOut = 1;
+      if (!hsol_isInfinity(workUpper[columnOut])) {
+	//Free variable => trouble!
+	printf("TROUBLE: variable %d leaving the basis is free!\n", columnOut);
+      }
+    }
+  }
+  return sourceOut;
+}
+ 
 // Utilities for shifting costs and flipping bounds
 // Record the shift in the cost of a particular column
 void HModel::shiftCost(int iCol, double amount)
@@ -2583,27 +2687,26 @@ void HModel::flipBound(int iCol)
 // The major model updates. Factor calls factor.update; Matrix
 // calls matrix.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
-void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow, int *hint)
-{
-  timer.recordStart(HTICK_UPDATE_FACTOR);
-  factor.update(column, row_ep, iRow, hint);
-  //Now have a representation of B^{-1}, but it is not fresh
-  mlFg_haveInvert = 1;
-  if (countUpdate >= limitUpdate)
-    *hint = 1;
-  timer.recordFinish(HTICK_UPDATE_FACTOR);
+void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow, int *hint) {
+    timer.recordStart(HTICK_UPDATE_FACTOR);
+    factor.update(column, row_ep, iRow, hint);
+    //Now have a representation of B^{-1}, but it is not fresh
+    mlFg_haveInvert = 1;
+    if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
+    timer.recordFinish(HTICK_UPDATE_FACTOR);
 }
 
 void HModel::updateMatrix(int columnIn, int columnOut)
 {
-  timer.recordStart(HTICK_UPDATE_FACTOR);
+  timer.recordStart(HTICK_UPDATE_MATRIX);
   matrix.update(columnIn, columnOut);
-  timer.recordFinish(HTICK_UPDATE_FACTOR);
+  timer.recordFinish(HTICK_UPDATE_MATRIX);
 }
 
 void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
 {
   //  printf("Called updatePivots(%d, %d, %d)\n", columnIn, rowOut, sourceOut);cout<<flush;
+    timer.recordStart(HTICK_UPDATE_PIVOTS);
   int columnOut = basicIndex[rowOut];
 
   // Incoming variable
@@ -2644,6 +2747,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
   mlFg_haveFreshInvert = 0;
   //Data are no longer fresh from rebuild
   mlFg_haveFreshRebuild = 0;
+  timer.recordFinish(HTICK_UPDATE_PIVOTS);
 }
 
 void HModel::changeUpdate(int updateMethod)
@@ -2656,7 +2760,7 @@ void HModel::setProblemStatus(int status)
   problemStatus = status;
 }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 // Checking methods Check loading of a model from arrays of data -
 // just loads using arrays from an MPS read so optimality is check
 void HModel::check_load_fromArrays()
@@ -2705,7 +2809,7 @@ void HModel::check_load_fromPostsolve()
 }
 #endif
 
-//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//>->->->->->->->->->->->->->->->->->->->->->-
 // Esoterica!
 // Initialise the random vectors required by hsol
 void HModel::initRandomVec()
@@ -2738,16 +2842,16 @@ void HModel::shiftObjectiveValue(double shift)
 
 void HModel::recordPivots(int columnIn, int columnOut, double alpha)
 {
-  if (columnIn >= 0)
-    numberIteration++;
-#ifdef JAJH_dev
+  // NB This is where the iteration count is updated!
+  if (columnIn >= 0) numberIteration++;
+#ifdef HiGHSDEV
   historyColumnIn.push_back(columnIn);
   historyColumnOut.push_back(columnOut);
   historyAlpha.push_back(alpha);
 #endif
 }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 void HModel::writePivots(const char *suffix)
 {
   string filename = "z-" + modelName + "-" + suffix;
@@ -2764,7 +2868,7 @@ void HModel::writePivots(const char *suffix)
   output.close();
 }
 #endif
-//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-
 
 // Methods to get objective, solution and basis: all just copy what's there with no re-evaluation!
 // Return the current value of ther objective
@@ -2789,12 +2893,12 @@ void HModel::util_getPrimalDualValues(vector<double> &colValue, vector<double> &
   for (int iCol = 0; iCol < numCol; iCol++)
   {
     value[iCol] *= colScale[iCol];
-    dual[iCol] /= colScale[iCol];
+    dual[iCol] /= (colScale[iCol]/costScale);
   }
   for (int iRow = 0, iTot = numCol; iRow < numRow; iRow++, iTot++)
   {
     value[iTot] /= rowScale[iRow];
-    dual[iTot] *= rowScale[iRow];
+    dual[iTot] *= (rowScale[iRow]*costScale);
   }
 
   //************** part 2: gepr and gedu
@@ -3076,7 +3180,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat)
     }
     else
     {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: col=%d, cstat=%d, lower=%g, upper=%g\n",
              col, cstat[col], colLower[col], colUpper[col]);
 #endif
@@ -3121,7 +3225,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat)
     }
     else
     {
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
              row, rstat[row], rowLower[row], rowUpper[row]);
 #endif
@@ -3153,7 +3257,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       }
       else if (nonbasicMove[var] == NONBASIC_MOVE_UP)
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(-colLower[col]))
 #endif
         {
@@ -3163,7 +3267,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       }
       else if (nonbasicMove[var] == NONBASIC_MOVE_DN)
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(colUpper[col]))
 #endif
         {
@@ -3175,7 +3279,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       {
         if (colLower[col] == colUpper[col])
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (!hsol_isInfinity(colUpper[col]))
 #endif
           {
@@ -3185,7 +3289,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colLower[col]))
 #endif
           {
@@ -3194,7 +3298,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
           }
         }
       }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              col, nonbasicFlag[var], nonbasicMove[var], colLower[col], colUpper[col]);
 #endif
@@ -3215,7 +3319,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       else if (nonbasicMove[var] == NONBASIC_MOVE_DN)
       //Free to move only down from -rowLower[row]
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(-rowLower[row]))
 #endif
         {
@@ -3226,7 +3330,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       else if (nonbasicMove[var] == NONBASIC_MOVE_UP)
       //Free to move only up from -rowUpper[row]
       {
-#ifdef H2DEBUG
+#ifdef HiGHSDEV
         if (!hsol_isInfinity(rowUpper[row]))
 #endif
         {
@@ -3238,7 +3342,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       {
         if (rowLower[row] == rowUpper[row])
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (!hsol_isInfinity(rowUpper[row]))
 #endif
           {
@@ -3248,7 +3352,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef H2DEBUG
+#ifndef HiGHSDEV
           if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowLower[row]))
 #endif
           {
@@ -3257,7 +3361,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
           }
         }
       }
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
       printf("Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, lower=%g, upper=%g\n",
              row, nonbasicFlag[var], nonbasicMove[var], rowLower[row], rowUpper[row]);
 #endif
@@ -3289,12 +3393,10 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
   assert(ncols >= 0);
   assert(nnonz >= 0);
   //ToDo How to check that Astart[numCol] exists in util_addCols?
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);
   cout << flush;
 #endif
-  printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);
-  cout << flush;
 
   if (ncols == 0)
     return;
@@ -3346,7 +3448,7 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     for (int el = 0; el < nnonz; el++)
     {
       int row = XAindex[el];
-#ifdef H2DEBUG
+#ifdef HiGHSDEBUG
       assert(row >= 0);
       assert(row < numRow);
 #endif
@@ -3371,7 +3473,7 @@ void HModel::util_deleteCols(int firstcol, int lastcol)
   assert(firstcol >= 0);
   assert(lastcol < numCol);
   assert(firstcol <= lastcol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_deleteCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);
   cout << flush;
 #endif
@@ -3424,7 +3526,7 @@ void HModel::util_extractCols(int firstcol, int lastcol, double *XcolLower, doub
   assert(firstcol >= 0);
   assert(lastcol < numCol);
   assert(firstcol <= lastcol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_extractCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);
   cout << flush;
 #endif
@@ -3454,13 +3556,12 @@ void HModel::util_addRows(int nrows, const double *XrowLower, const double *Xrow
   assert(nrows >= 0);
   assert(nnonz >= 0);
   assert(nnonz == 0 || numCol > 0);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);
   cout << flush;
 #endif
 
-#ifdef H2DEBUG
-  printf("H2DEBUG is being set OK\n");
+#ifdef HiGHSDEV
   printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);
   cout << flush;
 #endif
@@ -3489,7 +3590,7 @@ void HModel::util_addRows(int nrows, const double *XrowLower, const double *Xrow
     {
       int col = XARindex[el];
       //      printf("El %2d: adding entry in column %2d\n", el, col); cout << flush;
-#ifdef H2DEBUG
+#ifdef HiGHSDEBUG
       assert(col >= 0);
       assert(col < numCol);
 #endif
@@ -3555,7 +3656,7 @@ void HModel::util_deleteRows(int firstrow, int lastrow)
   assert(firstrow >= 0);
   assert(lastrow < numRow);
   assert(firstrow <= lastrow);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_deleteRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);
   cout << flush;
 #endif
@@ -3676,7 +3777,7 @@ void HModel::util_deleteRowset(int *dstat)
 
   //Reduce the number of rows and total number of variables in the model
   int dlNumRow = numRow - newRow;
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
   if (rp)
     printf("Had %d rows; removed %d rows; now %d rows\n", numRow, dlNumRow, newRow);
 #endif
@@ -3716,7 +3817,7 @@ void HModel::util_deleteRowset(int *dstat)
   if (basisOK)
   {
   //All rows removed had basic slacks so basis should be OK
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
     // Check that basis is valid basis.
     basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
     cout << flush;
@@ -3728,7 +3829,7 @@ void HModel::util_deleteRowset(int *dstat)
   }
   else
   {
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
     assert(basisOK);
     printf("util_deleteRowset: not all rows removed are basic slacks\n");
     cout << flush;
@@ -3745,7 +3846,7 @@ void HModel::util_extractRows(int firstrow, int lastrow, double *XrowLower, doub
   assert(firstrow >= 0);
   assert(lastrow < numRow);
   assert(firstrow <= lastrow);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);
   cout << flush;
 #endif
@@ -3807,7 +3908,7 @@ void HModel::util_changeCoeff(int row, int col, const double newval)
 {
   assert(row >= 0 && row < numRow);
   assert(col >= 0 && col < numCol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_changeCoeff(row=%d, col=%d, newval=%g)\n", row, col, newval);
   cout << flush;
 #endif
@@ -3853,7 +3954,7 @@ void HModel::util_getCoeff(int row, int col, double *val)
 {
   assert(row >= 0 && row < numRow);
   assert(col >= 0 && col < numCol);
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
   printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);
   cout << flush;
 #endif
@@ -3891,42 +3992,45 @@ void HModel::util_reportMessage(const char *message)
   printf("%s\n", message);
 }
 
-void HModel::util_reportNumberIterationObjectiveValue()
-{
-  if (!intOption[INTOPT_PRINT_FLAG])
-    return;
+void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
+  if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4) return;
+  //Suppress i_v so inverHint isn't reported for output comparison with hsol1.0
+  //  printf("%10d  %20.10e  %2d\n", numberIteration, objective, i_v);
   printf("%10d  %20.10e\n", numberIteration, objective);
 }
 
 void HModel::util_reportSolverOutcome(const char *message)
 {
-#ifdef JAJH_dev
-#else
-//  if (!intOption[INTOPT_PRINT_FLAG]) return;
-#endif
+  if (!intOption[INTOPT_PRINT_FLAG]) return;
   if (problemStatus == LP_Status_Optimal)
     printf("%s: OPTIMAL", message);
   else
     printf("%s: NOT-OPT", message);
-#ifdef SCIP_dev
+#ifdef SCIP_DEV
   double prObjVal = computePrObj();
-  double dlObjVal = abs(prObjVal - objective) / max(objective, max(abs(prObjVal), 1.0));
+  double dlObjVal = abs(prObjVal-objective)/max(abs(objective), max(abs(prObjVal), 1.0));
   printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
          prObjVal, objective, dlObjVal, numberIteration, totalTime);
 #else
-  printf("%16s %20.10e %10d %10.3f", modelName.c_str(),
+  printf("%32s %20.10e %10d %10.3f", modelName.c_str(),
          objective, numberIteration, totalTime);
 #endif
-  if (problemStatus == LP_Status_Optimal)
+  if (problemStatus == LP_Status_Optimal) {
     printf("\n");
-  else
+  } else {
+    printf(" ");
     util_reportModelStatus();
+  }
+  //Greppable report line added
+  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n",
+	 objective, numberIteration, totalTime, problemStatus, modelName.c_str());
 }
 
-void HModel::util_reportSolverProgress()
-{
-  if (!intOption[INTOPT_PRINT_FLAG])
-    return;
+void HModel::util_reportSolverProgress() {
+  //Reports every 0.2 seconds until 50 seconds
+  //Reports every 1.0 second until 500 seconds
+  //Reports every 5.0 seconds thereafter
+  if (intOption[INTOPT_PRINT_FLAG] != 2) return;
   static double nextReport = 0;
   double currentTime = timer.getTime();
   if (currentTime >= nextReport)
@@ -3954,13 +4058,7 @@ void HModel::util_reportSolverProgress()
 // Report the whole model
 void HModel::util_reportModel()
 {
-#ifdef JAJH_dev
-  printf("util_reportModel\n");
-#endif
-  util_reportModelDimensions();
-  util_reportModelObjSense();
-  if (numTot > 100)
-    return;
+  util_reportModelBrief();
   util_reportColVec(numCol, colCost, colLower, colUpper);
   util_reportRowVec(numRow, rowLower, rowUpper);
   util_reportColMtx(numCol, Astart, Aindex, Avalue);
@@ -3969,14 +4067,8 @@ void HModel::util_reportModel()
 // Report the model solution
 void HModel::util_reportModelSolution()
 {
-#ifdef JAJH_dev
-  printf("util_reportModelSolution:\n");
-#endif
-  util_reportModelDimensions();
-  util_reportModelObjSense();
+  util_reportModelBrief();
   util_reportModelStatus();
-  if (numTot > 100)
-    return;
   assert(numCol > 0);
   assert(numRow > 0);
   vector<double> colPrimal(numCol);
@@ -3992,13 +4084,19 @@ void HModel::util_reportModelSolution()
   util_reportRowVecSol(numRow, rowLower, rowUpper, rowPrimal, rowDual, rowStatus);
 }
 
+void HModel::util_reportModelBrief()
+{
+  util_reportModelDimensions();
+  util_reportModelObjSense();
+}
+
 // Report the model dimensions
 void HModel::util_reportModelDimensions()
 {
   printf("Model %s has %d columns, %d rows and %d nonzeros\n", modelName.c_str(), numCol, numRow, Astart[numCol]);
 }
 
-// Report the model dimensions
+// Report the model objective sense
 void HModel::util_reportModelObjSense()
 {
   if (objSense == OBJSENSE_MINIMIZE)
@@ -4031,7 +4129,7 @@ void HModel::util_reportModelStatus()
     printf("Unrecognised\n");
 }
 
-#ifdef JAJH_dev
+#ifdef HiGHSDEV
 // Report the whole model in Ivet's dense format: useful for toy examples
 void HModel::util_reportModelDense()
 {
@@ -4310,49 +4408,735 @@ void HModel::util_reportColMtx(int ncol, vector<int> &XAstart, vector<int> &XAin
   printf("       Start %8d\n", XAstart[ncol]);
 }
 
-void HModel::util_anPrDuDgn()
+
+void HModel::util_reportModelDa(const char *filename)
 {
-  double normPrAct = 0;
-  int numDgnPrAct = 0;
-  double normDuAct = 0;
-  int numDgnDuAct = 0;
-  double TlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
-  double TlDuIfs = dblOption[DBLOPT_DUAL_TOL];
-  for (int row = 0; row < numRow; row++)
-  {
-    double prAct = baseValue[row];
-    normPrAct += prAct * prAct;
-    double rsdu = max(baseLower[row] - prAct, prAct - baseUpper[row]);
-    if (abs(rsdu) < TlPrIfs)
-    {
-      numDgnPrAct++;
+    vector<double> wkDseCol;
+    wkDseCol.resize(numRow);
+    for (int r_n=0; r_n<numRow; r_n++) wkDseCol[r_n]=0;
+    FILE *file = fopen(filename, "w");
+    if (file == 0) {
+#ifdef HiGHSDEV
+      printf("util_reportModelDa: Not opened file OK\n");
+#endif
+      //      return 1;
     }
-    printf("Basic variable %7d is %7d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g; numDgnPrAct = %7d\n",
-           row, basicIndex[row], baseLower[row], prAct, baseUpper[row], rsdu, numDgnPrAct);
-  }
-  normPrAct = sqrt(normPrAct);
-  double pctDgnPrAct = numDgnPrAct;
-  pctDgnPrAct = 100 * pctDgnPrAct / numRow;
-
-  for (int var = 0; var < numTot; var++)
-  {
-    if (nonbasicFlag[var] == NONBASIC_FLAG_TRUE)
-    {
-      double duAct = workDual[var];
-      normDuAct += duAct * duAct;
-      if (abs(duAct) < TlDuIfs)
-      {
-        numDgnDuAct++;
+    fprintf(file, "%d %d %d\n", numRow, numCol, Astart[numCol]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "ColCost, %d, %20g\n", c_n, colCost[c_n]);
+    for (int c_n=0; c_n<numCol; c_n++) {
+      for (int el_n=Astart[c_n]; el_n<Astart[c_n+1]; el_n++) {
+	int r_n = Aindex[el_n];
+	wkDseCol[r_n] = Avalue[el_n];
       }
-      printf("Variable %7d is nonbasic: %11.4g; numDgnDuAct = %7d\n", var, duAct, numDgnDuAct);
+      int nnz = 0;
+      for (int r_n=0; r_n<numRow; r_n++) {
+	if (wkDseCol[r_n] != 0) nnz++;
+      }
+      fprintf(file, "Mtx_Col_nnz, %d, %d\n", c_n, nnz);
+      for (int r_n=0; r_n<numRow; r_n++) {
+	if (wkDseCol[r_n] != 0) {
+	  fprintf(file, "MtxVRow, %d, %20g\n", r_n, wkDseCol[r_n]);
+	}
+	wkDseCol[r_n] = 0;
+      }
+    }
+    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "RowLB, %d, %20g\n", r_n, rowLower[r_n]);
+    for (int r_n=0; r_n<numRow; r_n++) fprintf(file, "RowUB, %d, %20g\n", r_n, rowUpper[r_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "ColLB, %d, %20g\n", c_n, colLower[c_n]);
+    for (int c_n=0; c_n<numCol; c_n++) fprintf(file, "ColUB, %d, %20g\n", c_n, colUpper[c_n]);
+    fclose(file);
+}
+
+
+#ifdef HiGHSDEV
+void HModel::util_anMl(const char *message) {
+  printf("\n%s model data: Analysis\n", message);
+  util_anVecV("Column costs", numCol, colCost, false);
+  util_anVecV("Column lower bounds", numCol, colLower, false);
+  util_anVecV("Column upper bounds", numCol, colUpper, false);
+  util_anVecV("Row lower bounds", numRow, rowLower, false);
+  util_anVecV("Row upper bounds", numRow, rowUpper, false);
+  util_anVecV("Matrix entries", Astart[numCol], Avalue, true);
+  if (mlFg_scaledLP) {
+    util_anVecV("Column scaling factors", numCol, colScale, false);
+    util_anVecV("Row scaling factors", numRow, rowScale, false);
+  }
+  util_anMlBd("Column", numCol, colLower, colUpper);
+  util_anMlBd("Row", numRow, rowLower, rowUpper);
+  util_anMlLargeCo(message);
+}
+
+void HModel::util_anMlBd(const char *message, int numBd, vector<double>& lower, vector<double>& upper) {
+  if (numBd==0) return;
+  int numFr = 0;
+  int numLb = 0;
+  int numUb = 0;
+  int numBx = 0;
+  int numFx = 0;
+  for (int ix=0; ix<numBd; ix++) {
+    if (hsol_isInfinity(-lower[ix])) {
+	//Infinite lower bound
+      if (hsol_isInfinity(upper[ix])) {
+	//Infinite lower bound and infinite upper bound: Fr
+	numFr++;
+      } else {
+	//Infinite lower bound and   finite upper bound: Ub
+	numUb++;
+      }
+    } else {
+      //Finite lower bound
+      if (hsol_isInfinity(upper[ix])) {
+	//Finite lower bound and infinite upper bound: Lb
+	numLb++;
+      } else {
+	//Finite lower bound and   finite upper bound: 
+	if (lower[ix] < upper[ix]) {
+	  //Distinct finite bounds: Bx
+	  numBx++;
+	} else {
+	  //Equal finite bounds: Fx
+	  numFx++;
+	}
+      }
     }
   }
-  normDuAct = sqrt(normDuAct);
-  double pctDgnDuAct = numDgnDuAct;
-  pctDgnDuAct = 100 * pctDgnDuAct / numCol;
-
-  printf("anPrDuDgn: model %s: ||BcPrAct|| = %g; numDgnPrAct = %d of %d (%7.2f%%); ||NonBcDuAct|| = %g; numDgnDuAct = %d of %d (%7.2f%%)\n",
-         modelName.c_str(), normPrAct, numDgnPrAct, numRow, pctDgnPrAct, normDuAct, numDgnDuAct, numCol, pctDgnDuAct);
-  printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n",
-         modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numCol);
+  printf("Analysing %d %s bounds\n", numBd, message);
+  if (numFr>0) printf("   Free:  %7d (%3d%%)\n", numFr, (100*numFr)/numBd);
+  if (numLb>0) printf("   LB:    %7d (%3d%%)\n", numLb, (100*numLb)/numBd);
+  if (numUb>0) printf("   UB:    %7d (%3d%%)\n", numUb, (100*numUb)/numBd);
+  if (numBx>0) printf("   Boxed: %7d (%3d%%)\n", numBx, (100*numBx)/numBd);
+  if (numFx>0) printf("   Fixed: %7d (%3d%%)\n", numFx, (100*numFx)/numBd);
+  printf("grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
+  printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n",numBd,numFr,numLb,numUb,numBx,numFx);
 }
+
+void HModel::util_anVecV(const char *message, int vecDim, vector<double>& vec, bool anVLs) {
+  if (vecDim==0) return;
+  double log10 = log(10.0);
+  const int nVK = 20;
+  int nNz = 0;
+  int nPosInfV = 0;
+  int nNegInfV = 0;
+  vector<int> posVK;
+  vector<int> negVK;
+  posVK.resize(nVK+1, 0);
+  negVK.resize(nVK+1, 0);
+
+  const int VLsMxZ = 10;
+  vector<int> VLsK;
+  vector<double> VLsV;
+  VLsK.resize(VLsMxZ, 0);
+  VLsV.resize(VLsMxZ, 0);
+  // Ensure that 1.0 and -1.0 are counted
+  const int PlusOneIx = 0;
+  const int MinusOneIx = 1;
+  bool excessVLsV = false;
+  int VLsZ = 2;
+  VLsV[PlusOneIx] =  1.0;
+  VLsV[MinusOneIx] = -1.0;
+
+  for (int ix=0; ix<vecDim; ix++) {
+    double v = vec[ix];
+    double absV = abs(v);
+    int log10V;
+    if (absV > 0) {
+      //Nonzero value
+      nNz++;
+      if (hsol_isInfinity(-v)) {
+      //-Inf value
+	nNegInfV++;
+      } else if (hsol_isInfinity(v)) {
+      //+Inf value
+	nPosInfV++;
+      }	else {
+	//Finite nonzero value
+	if (absV==1) {
+	  log10V = 0;
+	} else if (absV==10) {
+	  log10V = 1;
+	} else if (absV==100) {
+	  log10V = 2;
+	} else if (absV==1000) {
+	  log10V = 3;
+	} else {
+	  log10V = log(absV)/log10;
+	}	
+	if (log10V >= 0) {
+	  int k = min(log10V, nVK);
+	  posVK[k]++;
+	} else {
+	  int k = min(-log10V, nVK);
+	  negVK[k]++;
+	}
+      }
+    }
+    if (anVLs) {
+      if (v == 1.0) {
+	VLsK[PlusOneIx]++;
+      } else if (v == -1.0) {
+	VLsK[MinusOneIx]++;
+      } else {
+	int fdIx = -1;
+	for (int ix = 2; ix<VLsZ; ix++) {
+	  if (v == VLsV[ix]) {
+	    fdIx = ix;
+	    break;
+	  }
+	}
+	if (fdIx == -1) {
+	  // New value
+	  if (VLsZ < VLsMxZ) {
+	    fdIx = VLsZ;
+	    VLsV[fdIx] = v;
+	    VLsK[fdIx]++;
+	    VLsZ++;
+	  } else {
+	    excessVLsV = true;
+	  }
+	} else {
+	  // Existing value
+	  VLsK[fdIx]++;
+	}
+      }
+    }
+  }
+  printf("%s of dimension %d with %d nonzeros (%3d%%): Analysis\n", message, vecDim, nNz, 100*nNz/vecDim);
+  if (nNegInfV > 0) printf("   %7d values are -Inf\n", nNegInfV);
+  if (nPosInfV > 0) printf("   %7d values are +Inf\n", nPosInfV);
+  int k = nVK;
+  int vK = posVK[k];
+  if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < Inf\n", vK, k);
+    for (int k=nVK-1; k>=0; k--) {
+    int vK = posVK[k];
+    if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, k, k+1);
+  }
+  for (int k=1; k<=nVK; k++) {
+    int vK = negVK[k];
+    if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, -k, 1-k);
+  }
+  vK = vecDim-nNz;
+  if (vK > 0) printf("   %7d values are zero\n", vK);
+  if (anVLs) {
+    printf("           Value distribution:");
+    if (excessVLsV) printf(" More than %d different values", VLsZ);
+    printf("\n           Value    Count\n");
+    for (int ix = 0; ix<VLsZ; ix++) {
+      int pct = ((100.0*VLsK[ix])/vecDim)+0.5;
+      printf("     %11.4g %8d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
+    }
+  }
+}
+
+void HModel::util_anMlLargeCo(const char *message) {
+  numLargeCo = 0;
+  largeCostFlag.assign(numCol, 0);
+  double mxLargeCo=0;
+  double mxLargeStrucCo=0;
+  double mxLargeSlackCo=0;
+  int numRp=0;
+  int numZeInfLargeCoSlack=0;
+  int numInfZeLargeCoSlack=0;
+  int numLargeCoSlack=0;
+  int numLargeCoStruc=0;
+  bool rpSlackC = false;
+  bool rpStrucC = true;
+  for (int iCol=0; iCol<numCol; iCol++) {
+    double iColCo = colCost[iCol];
+    double iColLower = colLower[iCol];
+    double iColUpper = colUpper[iCol];
+    mxLargeCo = max(abs(iColCo), mxLargeCo);
+    if (abs(iColCo) > tlLargeCo) {
+      numLargeCo++;
+      largeCostFlag[iCol]=1;
+      int numColNZ = Astart[iCol+1] - Astart[iCol];
+      if (numColNZ == 1) {
+	mxLargeSlackCo = max(abs(iColCo), mxLargeSlackCo);
+	if (iColLower==0 && hsol_isInfinity(iColUpper)) {
+	  numZeInfLargeCoSlack++;
+	} else if (hsol_isInfinity(-iColLower) && iColUpper==0) {
+	  numInfZeLargeCoSlack++;
+	} else {
+	  numLargeCoSlack++;
+	}
+	bool rpC = rpSlackC && numRp<100;
+	if (rpC) {
+	  numRp++;
+	  printf("Large cost %6d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros",
+		 numLargeCo, iColCo, iCol, iColLower, iColUpper, numColNZ);
+	  int elN = Astart[iCol];
+	  printf(": Matrix entry %11.4g in row %6d\n", Avalue[elN], Aindex[elN]);
+	}
+      } else {
+	mxLargeStrucCo = max(abs(iColCo), mxLargeStrucCo);
+	numLargeCoStruc++;
+	bool rpC = rpStrucC && numRp<100;
+	if (rpC) {
+	  numRp++;
+	  printf("Large cost %6d is %11.4g for column %6d with bounds [%11.4g, %11.4g] and %2d nonzeros\n",
+		 numLargeCo, iColCo, iCol, iColLower, iColUpper, numColNZ);
+	}
+      }
+    }
+  }
+  printf("Found %7d |cost| > %11.4g: largest is %11.4g\nMax large slack cost is %11.4g\nMax large struc cost is %11.4g\n",
+	 numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo);
+  if (numLargeCo>0) {
+    printf("   %7d such columns are slacks with bounds [0,  Inf] (%3d%%)\n", numZeInfLargeCoSlack, (100*numZeInfLargeCoSlack)/numLargeCo);
+    printf("   %7d such columns are slacks with bounds [-Inf, 0] (%3d%%)\n", numInfZeLargeCoSlack, (100*numInfZeLargeCoSlack)/numLargeCo);
+    printf("   %7d such columns are slacks with other bounds     (%3d%%)\n", numLargeCoSlack, (100*numLargeCoSlack)/numLargeCo);
+    printf("   %7d such columns are strucs                       (%3d%%)\n", numLargeCoStruc, (100*numLargeCoStruc)/numLargeCo);
+  }
+  printf("grep_LargeCostData,%s,%d,%d,%g,%g,%g,%g,%d,%d,%d,%d\n", message,
+	 numCol, numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo,
+	 numZeInfLargeCoSlack, numInfZeLargeCoSlack, numLargeCoSlack, numLargeCoStruc);
+}
+
+void HModel::util_anMlSol() {
+  if (problemStatus != LP_Status_Optimal) return;
+  printf("\nAnalysing the model solution\n");
+  const double inf = HSOL_CONST_INF;
+  const double tlValueEr = 1e-8;
+  const double tlPrRsduEr = 1e-8;
+  const double tlDuRsduEr = 1e-8;
+  const double tlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
+  const double tlDuIfs = dblOption[DBLOPT_DUAL_TOL];
+
+  // Copy the values of (nonbasic) primal variables and scatter values of primal variables which are basic
+  vector<double> value = workValue;
+  for (int iRow = 0; iRow < numRow; iRow++) value[basicIndex[iRow]] = baseValue[iRow];
+
+  // Copy the values of (nonbasic) dual variables and zero values of dual variables which are basic
+  vector<double> dual = workDual;
+  for (int iRow = 0; iRow < numRow; iRow++) dual[basicIndex[iRow]] = 0;
+
+  // Allocate and zero values of row primal activites and column dual activities to check the residuals
+  vector<double> sclRowPrAct;
+  vector<double> rowPrAct;
+  sclRowPrAct.assign(numRow, 0);
+  rowPrAct.assign(numRow, 0);
+  vector<double> sclColDuAct;
+  vector<double> colDuAct;
+  sclColDuAct.assign(numCol, 0);
+  colDuAct.assign(numCol, 0);
+
+  // Determine row primal activites and column dual activities
+  for (int iCol=0; iCol<numCol; iCol++) {
+    //    printf("\nCol %2d\n", iCol);
+    double lcSclColDuAct = -colCost[iCol];
+    double lcColDuAct = -(colCost[iCol]*costScale)/colScale[iCol];
+    for (int en = Astart[iCol]; en < Astart[iCol+1]; en++) {
+      int iRow = Aindex[en];
+      double AvalueEn = Avalue[en];
+      double unsclAvalueEn = AvalueEn / (colScale[iCol] * rowScale[iRow]);
+      sclRowPrAct[iRow] += AvalueEn*value[iCol];
+      rowPrAct[iRow] += unsclAvalueEn*value[iCol]*colScale[iCol];
+      //      double lcSum = lcSclColDuAct - AvalueEn*dual[numCol+iRow]; printf("Row %2d: %11.4g - (%11.4g*%11.4g=%11.4g) = %11.4g\n", iRow, lcSclColDuAct, AvalueEn, dual[numCol+iRow], AvalueEn*dual[numCol+iRow], lcSum);
+      lcSclColDuAct -= AvalueEn*dual[numCol+iRow];
+      lcColDuAct -= unsclAvalueEn*dual[numCol+iRow]*costScale*rowScale[iRow];
+    }
+    sclColDuAct[iCol] = lcSclColDuAct;
+    colDuAct[iCol] = lcColDuAct;
+  }
+
+  // Look for column residual errors and infeasibilities - primal and dual
+  if (objOffset != 0.) printf("Primal objective offset is %11.4g\n", objOffset);
+  double lcPrObjV = 0;
+  double lcPrObjV_LargeCo = 0;
+  double lcPrObjV_OtherCo = 0;
+  double lcValue_LargeCo = 0;
+  double lcValue_OtherCo = 0;
+  
+  int numRpFreeRowEr = 0;
+  int maxRpFreeRowEr = 100;
+  int numRpFreeColEr = 0;
+  int maxRpFreeColEr = 100;
+
+  bool rpAllCol = false;
+  int numRpCol = 0;
+  int mxRpCol = 100;
+  bool rpNoCol = false;
+  int numColPrIfs=0;
+  double maxColPrIfs=0;
+  double sumColPrIfs=0;
+  int numSclColPrIfs=0;
+  double maxSclColPrIfs=0;
+  double sumSclColPrIfs=0;
+  int numColDuIfs=0;
+  double maxColDuIfs=0;
+  double sumColDuIfs=0;
+  int numSclColDuIfs=0;
+  double maxSclColDuIfs=0;
+  double sumSclColDuIfs=0;
+  int numColDuRsduEr=0;
+  double sumColDuRsduEr=0;
+  double maxColDuRsduEr=0;
+  int numSclColDuRsduEr=0;
+  double sumSclColDuRsduEr=0;
+  double maxSclColDuRsduEr=0;
+  for (int iCol=0; iCol<numCol; iCol++) {
+    double sclColValue;
+    double sclColDuIfs;
+    // Get the unscaled column bounds
+    double unsclColLower = colLower[iCol];
+    double unsclColUpper = colUpper[iCol];
+    unsclColLower *= unsclColLower == -inf ? 1 : colScale[iCol];
+    unsclColUpper *= unsclColUpper == +inf ? 1 : colScale[iCol];
+    // Determine the column primal values given nonbasicMove and the bounds - and check the dual residual errors and infeasibilities
+    if (nonbasicFlag[iCol]) {
+      // Nonbasic variable - check that the value array is correct given nonbasicMove and the bounds
+      if (nonbasicMove[iCol] == NONBASIC_MOVE_UP) {
+	// At lower bound
+	sclColValue = colLower[iCol];
+	sclColDuIfs = max(-dual[iCol], 0.);
+      } else if (nonbasicMove[iCol] == NONBASIC_MOVE_DN) {
+	// At upper bound
+	sclColValue = colUpper[iCol];
+	sclColDuIfs = max(dual[iCol], 0.);
+      } else {
+	// Fixed or free
+	if (colLower[iCol] == colUpper[iCol]) {
+	  sclColValue = colUpper[iCol];
+	  sclColDuIfs = 0;
+	} else {
+	  // Free
+	  bool freeEr = false;
+	  if (!hsol_isInfinity(-colLower[iCol])) {
+	    freeEr = true;
+	    if (numRpFreeColEr< maxRpFreeColEr) {
+	      numRpFreeColEr++;
+	      printf("Column %7d supposed to be free but has lower bound of %g\n", iCol, colLower[iCol]);
+	    }
+	  }
+	  if (!hsol_isInfinity(colUpper[iCol])) {
+	    freeEr = true;
+	    if (numRpFreeColEr< maxRpFreeColEr) {
+	      numRpFreeColEr++;
+	      printf("Column %7d supposed to be free but has upper bound of %g\n", iCol, colUpper[iCol]);
+	    }
+	  }
+	  sclColValue = value[iCol];
+	  sclColDuIfs = abs(dual[iCol]);
+	  //	  if (!freeEr) {printf("Column %7d is free with value %g\n", iCol ,sclColValue);}
+	}
+      }
+      double valueEr = abs(sclColValue-value[iCol]);
+      if (valueEr > tlValueEr) {
+	printf("Column %7d has value error of %11.4g for sclColValue = %11.4g and value[iCol] = %11.4g\n", iCol, valueEr, sclColValue, value[iCol]);
+	sclColValue = value[iCol];
+      }
+
+    } else {
+      // Basic variable
+      sclColValue = value[iCol];
+      sclColDuIfs = abs(dual[iCol]);
+    }
+
+    double prObjTerm = sclColValue*colCost[iCol];
+    lcPrObjV += prObjTerm;
+    if (largeCostFlag[iCol]) {
+      lcPrObjV_LargeCo += prObjTerm;
+      lcValue_LargeCo += sclColValue;
+    } else {
+      lcPrObjV_OtherCo += prObjTerm;
+      lcValue_OtherCo += sclColValue;
+    }
+
+    double unsclColValue = sclColValue*colScale[iCol];
+    //      assert(hsol_isInfinity(-sclColValue));
+    //      assert(hsol_isInfinity(sclColValue));
+    // Assess primal infeasibility
+    // For scaled values
+    double sclColPrIfs = max(max(colLower[iCol]-sclColValue, sclColValue-colUpper[iCol]), 0.0);
+    if (sclColPrIfs > tlPrIfs) {
+      numSclColPrIfs++;
+      sumSclColPrIfs += sclColPrIfs;
+    }
+    maxSclColPrIfs = max(sclColPrIfs, maxSclColPrIfs);
+    // For unscaled values
+    double colPrIfs = max(max(unsclColLower-unsclColValue, unsclColValue-unsclColUpper), 0.0);
+    if (colPrIfs > tlPrIfs) {
+      numColPrIfs++;
+      sumColPrIfs += colPrIfs;
+    }
+    maxColPrIfs = max(colPrIfs, maxColPrIfs);
+    
+    // Assess dual infeasibility
+    // In scaled values
+    if (sclColDuIfs > tlDuIfs) {
+      numSclColDuIfs++;
+      sumSclColDuIfs += sclColDuIfs;
+    }
+    maxSclColDuIfs = max(sclColDuIfs, maxSclColDuIfs);
+    // In unscaled values
+    double colDuIfs = sclColDuIfs*costScale/colScale[iCol];
+    if (colDuIfs > tlDuIfs) {
+      numColDuIfs++;
+      sumColDuIfs += colDuIfs;
+    }
+    maxColDuIfs = max(colDuIfs, maxColDuIfs);
+
+    // Check column residual errors
+    // Using scaled column activities
+    double sclColDual = dual[iCol];
+    double sclColDuRsduEr = abs(sclColDuAct[iCol]+sclColDual);
+    if (sclColDuRsduEr > tlDuRsduEr) {
+      /*
+      bool rpCol = (rpAllCol || (numRpCol<mxRpCol)) && !rpNoCol;
+      if (rpCol) {
+	numRpCol++;
+	printf("Col    %7d has a   dual residual error of %11.4g for sclColDuAct[iCol] = %11.4g and -sclColDual = %11.4g\n",
+	       iCol, sclColDuRsduEr, sclColDuAct[iCol], -sclColDual);
+      }
+      */
+      numSclColDuRsduEr++;
+      sumSclColDuRsduEr += sclColDuRsduEr;
+    }
+    maxSclColDuRsduEr = max(sclColDuRsduEr, maxSclColDuRsduEr);
+    // Using unscaled column activities
+    double colDual = sclColDual*costScale/colScale[iCol];
+    double colDuRsduEr = abs(colDuAct[iCol]+colDual);
+    if (colDuRsduEr > tlDuRsduEr) {
+      /*
+      bool rpCol = (rpAllCol || (numRpCol<mxRpCol)) && !rpNoCol;
+      if (rpCol) {
+	numRpCol++;
+	printf("Col    %7d has a   dual residual error of %11.4g for colDuAct[iCol] = %11.4g and -colDual = %11.4g\n",
+	       iCol, colDuRsduEr, colDuAct[iCol], -colDual);
+      }
+      */
+      numColDuRsduEr++;
+      sumColDuRsduEr += colDuRsduEr;
+    }
+    maxColDuRsduEr = max(colDuRsduEr, maxColDuRsduEr);
+
+    bool erFd =
+      sclColPrIfs > tlPrIfs
+      || colPrIfs > tlPrIfs
+      || sclColDuIfs > tlDuIfs
+      || colDuIfs > tlDuIfs
+      || sclColDuRsduEr > tlDuRsduEr
+      || colDuRsduEr > tlDuRsduEr;
+    bool rpCol = (rpAllCol || (numRpCol<mxRpCol && erFd)) && !rpNoCol;
+    if (rpCol) {
+      numRpCol++;
+      printf("\nCol %3d: [Fg = %2d; Mv = %2d] Scl = %11.4g\n", 
+	     iCol, nonbasicFlag[iCol], nonbasicMove[iCol], colScale[iCol]);
+      printf("Scl   [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g)\n", 
+	     colLower[iCol], sclColValue, colUpper[iCol], sclColPrIfs, sclColDuIfs, sclColDuRsduEr);
+      printf("Unscl [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g) \n", 
+	     unsclColLower, unsclColValue, unsclColUpper, colPrIfs, colDuIfs, colDuRsduEr);
+    }
+  }
+  printf("Found %6d   scaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs);
+  printf("Found %6d unscaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numColPrIfs, sumColPrIfs, maxColPrIfs);
+  printf("Found %6d   scaled column   dual infeasibilities: sum %11.4g; max %11.4g\n",  numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs);
+  printf("Found %6d unscaled column   dual infeasibilities: sum %11.4g; max %11.4g\n",  numColDuIfs, sumColDuIfs, maxColDuIfs);
+  printf("Found %6d   scaled column   dual residual errors: sum %11.4g; max %11.4g\n",  numSclColDuRsduEr, sumSclColDuRsduEr, maxSclColDuRsduEr);
+  printf("Found %6d unscaled column   dual residual errors: sum %11.4g; max %11.4g\n",  numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
+
+  printf("grep_AnMlSolIfsRsduEr,Col,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
+	 numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs,
+	 numColPrIfs, sumColPrIfs, maxColPrIfs,
+	 numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs,
+	 numColDuIfs, sumColDuIfs, maxColDuIfs,
+	 numSclColDuRsduEr, sumSclColDuRsduEr, maxSclColDuRsduEr,
+	 numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
+
+  bool rpAllRow = false;
+  int numRpRow = 0;
+  int mxRpRow = 100;
+  bool rpNoRow = false;
+  int numRowPrIfs=0;
+  double sumRowPrIfs=0;
+  double maxRowPrIfs=0;
+  int numSclRowPrIfs=0;
+  double sumSclRowPrIfs=0;
+  double maxSclRowPrIfs=0;
+  int numRowDuIfs=0;
+  double maxRowDuIfs=0;
+  double sumRowDuIfs=0;
+  int numSclRowDuIfs=0;
+  double maxSclRowDuIfs=0;
+  double sumSclRowDuIfs=0;
+  int numRowPrRsduEr=0;
+  double sumRowPrRsduEr=0;
+  double maxRowPrRsduEr=0;
+  int numSclRowPrRsduEr=0;
+  double sumSclRowPrRsduEr=0;
+  double maxSclRowPrRsduEr=0;
+  for (int iRow=0; iRow<numRow; iRow++) {
+    double sclRowValue;
+    double sclRowDuIfs;
+    // Get the unscaled row bounds
+    double unsclRowLower = rowLower[iRow];
+    double unsclRowUpper = rowUpper[iRow];
+    unsclRowLower *= unsclRowLower == -inf ? 1 : rowScale[iRow];
+    unsclRowUpper *= unsclRowUpper == +inf ? 1 : rowScale[iRow];
+    // Determine the row primal values given nonbasicMove and the bounds - and check the dual residual errors and infeasibilities
+    if (nonbasicFlag[numCol+iRow]) {
+      // Nonbasic variable
+      if (nonbasicMove[numCol+iRow] == NONBASIC_MOVE_DN) {
+	// At lower bound
+	sclRowValue = rowLower[iRow];
+	sclRowDuIfs = max(dual[numCol+iRow], 0.);
+      } else if (nonbasicMove[numCol+iRow] == NONBASIC_MOVE_UP) {
+	// At upper bound
+	sclRowValue = rowUpper[iRow];
+	sclRowDuIfs = max(-dual[numCol+iRow], 0.);
+      } else {
+	// Fixed or free
+	if (rowLower[iRow] == rowUpper[iRow]) {
+	  sclRowValue = rowUpper[iRow];
+	  sclRowDuIfs = 0.;
+	} else {
+	  // Free
+	  bool freeEr = false;
+	  if (!hsol_isInfinity(-rowLower[iRow])) {
+	    freeEr = true;
+	    if (numRpFreeRowEr< maxRpFreeRowEr) {
+	      numRpFreeRowEr++;
+	      printf("Row    %7d supposed to be free but has lower bound of %g\n", iRow, rowLower[iRow]);
+	    }
+	  }
+	  if (!hsol_isInfinity(rowUpper[iRow])) {
+	    freeEr = true;
+	    if (numRpFreeRowEr< maxRpFreeRowEr) {
+	      numRpFreeRowEr++;
+	      printf("Row    %7d supposed to be free but has upper bound of %g\n", iRow, rowUpper[iRow]);
+	    }
+	  }
+	  sclRowValue = -value[numCol+iRow];
+	  sclRowDuIfs = abs(dual[numCol+iRow]);
+	  //	  if (!freeEr) {printf("Row    %7d is free with value %g\n", iRow, sclRowValue);}
+	}
+      }
+      double valueEr = abs(sclRowValue+value[numCol+iRow]);
+      if (valueEr > tlValueEr) {
+	printf("Row    %7d has value error of %11.4g for sclRowValue = %11.4g and -value[numCol+iRow] = %11.4g\n",
+	       iRow, valueEr, sclRowValue, -value[numCol+iRow]);
+	sclRowValue = -value[numCol+iRow];
+      }
+    } else {
+      // Basic variable
+      sclRowValue = -value[numCol+iRow];
+      sclRowDuIfs = abs(dual[numCol+iRow]);
+    }
+    //      assert(hsol_isInfinity(-sclRowValue));
+    //      assert(hsol_isInfinity(sclRowValue));
+    double unsclRowValue = sclRowValue*rowScale[iRow];
+
+    // Assess primal infeasibility
+    // For scaled values
+    double sclRowPrIfs = max(max(rowLower[iRow]-sclRowValue, sclRowValue-rowUpper[iRow]), 0.0);
+    if (sclRowPrIfs > tlPrIfs) {
+      numSclRowPrIfs++;
+      sumSclRowPrIfs += sclRowPrIfs;
+    }
+    maxSclRowPrIfs = max(sclRowPrIfs, maxSclRowPrIfs);
+    // For unscaled values
+    double rowPrIfs = max(max(unsclRowLower-unsclRowValue, unsclRowValue-unsclRowUpper), 0.0);
+    if (rowPrIfs > tlPrIfs) {
+      numRowPrIfs++;
+      sumRowPrIfs += rowPrIfs;
+    }
+    maxRowPrIfs = max(rowPrIfs, maxRowPrIfs);
+
+    // Assess dual infeasibility
+    // In scaled values
+    if (sclRowDuIfs > tlDuIfs) {
+      numSclRowDuIfs++;
+      sumSclRowDuIfs += sclRowDuIfs;
+    }
+    maxSclRowDuIfs = max(sclRowDuIfs, maxSclRowDuIfs);
+    // In unscaled values
+    double rowDuIfs = sclRowDuIfs*costScale/rowScale[iRow];
+    if (rowDuIfs > tlDuIfs) {
+      numRowDuIfs++;
+      sumRowDuIfs += rowDuIfs;
+    }
+    maxRowDuIfs = max(rowDuIfs, maxRowDuIfs);
+
+    // Check row residual errors
+    // Using scaled row activities
+    double sclRowPrRsduEr = abs(sclRowPrAct[iRow]-sclRowValue);
+    if (sclRowPrRsduEr > tlPrRsduEr) {
+      /*
+      bool rpRow = (rpAllRow || (numRpRow<mxRpRow)) && !rpNoRow;
+      if (rpRow) {
+	numRpRow++;
+	printf("Row    %7d has a primal residual error of %11.4g for sclRowPrAct[iRow] = %11.4g and sclRowValue = %11.4g\n",
+	       iRow, sclRowPrRsduEr, sclRowPrAct[iRow], sclRowValue);
+      }
+      */
+      numSclRowPrRsduEr++;
+      sumSclRowPrRsduEr += sclRowPrRsduEr;
+    }
+    maxSclRowPrRsduEr = max(sclRowPrRsduEr, maxSclRowPrRsduEr);
+    // Using unscaled row activities
+    double rowValue = sclRowValue/rowScale[iRow];
+    double rowPrRsduEr = abs(rowPrAct[iRow]-rowValue);
+    if (rowPrRsduEr > tlPrRsduEr) {
+      /*
+      bool rpRow = (rpAllRow || (numRpRow<mxRpRow)) && !rpNoRow;
+      if (rpRow) {
+	numRpRow++;
+	printf("Row    %7d has a primal residual error of %11.4g for rowPrAct[iRow] = %11.4g and rowValue = %11.4g\n",
+	       iRow, rowPrRsduEr, rowPrAct[iRow], rowValue);
+      }
+      */
+      numRowPrRsduEr++;
+      sumRowPrRsduEr += rowPrRsduEr;
+    }
+    maxRowPrRsduEr = max(rowPrRsduEr, maxRowPrRsduEr);
+
+    bool erFd =
+      sclRowPrIfs > tlPrIfs
+      || rowPrIfs > tlPrIfs
+      || sclRowDuIfs > tlDuIfs
+      || rowDuIfs > tlDuIfs
+      || sclRowPrRsduEr > tlPrRsduEr
+      || rowPrRsduEr > tlPrRsduEr;
+    bool rpRow = (rpAllRow || (numRpRow<mxRpRow && erFd)) && !rpNoRow;
+    if (rpRow) {
+      numRpRow++;
+      printf("Row %3d: [Fg = %2d; Mv = %2d] Scl = %11.4g\n",
+	     iRow, nonbasicFlag[numCol+iRow], nonbasicMove[numCol+iRow], rowScale[iRow]);
+      printf("Scl   [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g)\n",
+	     rowLower[iRow], sclRowValue, rowUpper[iRow], sclRowPrIfs, sclRowDuIfs, sclRowPrRsduEr);
+      printf("Unscl [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: %11.4g)\n",
+	     unsclRowLower, unsclRowValue, unsclRowUpper, rowPrIfs, rowDuIfs, rowPrRsduEr);
+    }
+  }
+  printf("Found %6d   scaled    row primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs);
+  printf("Found %6d unscaled    row primal infeasibilities: sum %11.4g; max %11.4g\n",  numRowPrIfs, sumRowPrIfs, maxRowPrIfs);
+  printf("Found %6d   scaled    row   dual infeasibilities: sum %11.4g; max %11.4g\n",  numSclRowDuIfs, sumSclRowDuIfs, maxSclRowDuIfs);
+  printf("Found %6d unscaled    row   dual infeasibilities: sum %11.4g; max %11.4g\n",  numRowDuIfs, sumRowDuIfs, maxRowDuIfs);
+  printf("Found %6d   scaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr);
+  printf("Found %6d unscaled    row primal residual errors: sum %11.4g; max %11.4g\n",  numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
+
+  printf("grep_AnMlSolIfsRsduEr,Row,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
+	 numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs,
+	 numRowPrIfs, sumRowPrIfs, maxRowPrIfs,
+	 numSclRowDuIfs, sumSclRowDuIfs, maxSclRowDuIfs,
+	 numRowDuIfs, sumRowDuIfs, maxRowDuIfs,
+	 numSclRowPrRsduEr, sumSclRowPrRsduEr, maxSclRowPrRsduEr,
+	 numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
+
+  lcPrObjV *= costScale;
+  lcPrObjV += objOffset;
+  lcPrObjV_LargeCo *= costScale;
+  lcPrObjV_OtherCo *= costScale;
+  if (largeCostScale == 1.0) {
+    double ObjEr = abs(objective - lcPrObjV)/max(1.0, abs(objective));
+    //    if (ObjEr > 1e-8)
+    printf("Relative objective error of %11.4g: objective = %g; lcPrObjV = %g\n", ObjEr, objective, lcPrObjV);
+  }
+  if (numLargeCo>0) {
+    printf("Objective offset = %11.4g\n", objOffset);
+    printf("Large cost terms = %11.4g\n", lcPrObjV_LargeCo);
+    printf("Other cost terms = %11.4g\n", lcPrObjV_OtherCo);
+    printf("Large values = %11.4g\n", lcValue_LargeCo);
+    printf("Other values = %11.4g\n", lcValue_OtherCo);
+  }
+}
+#endif

@@ -14,7 +14,8 @@ full technical reference to PAMI and SIP is
 
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
-Technical Report ERGO-14-011.
+Mathematical Programming Computation, 10 (1), 119-142, 2018.
+DOI: 10.1007/s12532-017-0130-5
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
@@ -43,10 +44,19 @@ defined build generator, e.g. `make`:
 Useful options
 --------------
 
-Set custom options with `-D <option>=<value>` during the configuration step (`cmake ..`):
+Set custom options with `-D<option>=<value>` during the configuration step (`cmake ..`):
 
-- `OPENMP`: turn OpenMP support on or off 
-
+- `OLD_PARSER`: 
+    on: Uses the original fixed-format MPS file reader
+    off: Uses the new free-format MPS file reader (which requires Boost)
+- `OPENMP`:
+    on: Causes OpenMP to be used if available - cmake checks for this
+- `SCIP_DEV`:
+    on: Adds some printing for SCIP interface development when, otherwise, all HiGHS output is suppressed
+- `HiGHSDEV`:
+    on: Includes a lot of testing and development code which should not be used in "production" or when running optimized code
+- `HiGHSRELEASE`:
+    on: Defined when CMAKE_BUILD_TYPE=Release
 
 Testing
 -------
