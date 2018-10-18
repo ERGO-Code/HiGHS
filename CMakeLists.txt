@@ -49,10 +49,10 @@ message(STATUS "OpenMP: " ${OPENMP})
 option(SCIP_DEV "SCIP  development" OFF)
 message(STATUS "SCIP  development: " ${SCIP_DEV})
 
-option(HiGHSDEV "HiGHS development" ON)
+option(HiGHSDEV "HiGHS development" OFF)
 message(STATUS "HiGHS development: " ${HiGHSDEV})
 
-option(HiGHSDEBUG "HiGHS debug" ON)
+option(HiGHSDEBUG "HiGHS debug" OFF)
 message(STATUS "HiGHS debug: " ${HiGHSDEBUG})
 
 # whether to use shared or static libraries
