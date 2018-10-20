@@ -1,7 +1,7 @@
 #include "HApp.h"
 
 #ifdef IPX
-#include "lp_solver.h"
+#include "HWrappers.h"
 int solveIpx(const char* filename);
 int solveIpxWithPresolve(const char* filename);
 int solveModelWithIpx(HModel& model);
@@ -300,13 +300,6 @@ int main(int argc, char **argv)
 }
 
 #ifdef IPX
-
-int solveModelWithIpx(HModel &model)
-{
-  ipx::LpSolver lps;
-  return 0;
-}
-
 int solveIpx(const char *filename)
 {
   HModel model;
