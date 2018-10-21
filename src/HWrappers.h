@@ -31,14 +31,15 @@ int fillInIpxData(const HModel &model, ipx::Int &num_col,
   assert(model.rowLower.size() == (unsigned int)num_row);
   assert(model.rowUpper.size() == (unsigned int)num_row);
   std::vector<int> general_bounded_rows;
-  std::vector<int> free_rows;
 
   for (int row = 0; row < num_row; row++)
     if (model.rowLower[row] > -HSOL_CONST_INF &&
         model.rowUpper[row] < HSOL_CONST_INF)
       general_bounded_rows.push_back(row);
 
-  // For each row (excluding free rows) add entry to char array and set up rhs
+  const int num_slack = general_bounded_rows.size();
+
+  // For each row (assuming no free rows) add entry to char array and set up rhs
   // vector
   rhs.reserve(num_row);
   constraint_type.reserve(num_row);
@@ -64,40 +65,19 @@ int fillInIpxData(const HModel &model, ipx::Int &num_col,
     }
     else
     {
-      free_rows.push_back(row);
+      std::cout << "Error setting up IPX data: free row encountered."
+                << std::endl;
+      return 1;
     }
   }
 
-  // num_row is still not decreased so it can be used as below.
-  std::vector<int> truncated_row_index(num_row);
-  if (free_rows.size() == 0)
-  {
-    for (int row = 0; row < num_row; row++)
-      truncated_row_index[row] = row;
-  }
-  else
-  {
-    truncated_row_index.assign(num_row, -1);
-    int current = 0;
-    int index = 0;
-    for (int row = 0; row < num_row; row++)
-    {
-      if (row != free_rows[current])
-      {
-        truncated_row_index[row] = index;
-        index++;
-      }
-    }
-  }
-
-  num_col += general_bounded_rows.size();
-  num_row -= free_rows.size();
+  num_col += num_slack;
 
   // Copy Astart and Aindex to ipx::Int array.
   int nnz = model.Aindex.size();
   Ap.resize(num_col + 1);
-  Ai.resize(nnz + general_bounded_rows.size());
-  Ax.resize(nnz + general_bounded_rows.size());
+  Ai.resize(nnz + num_slack);
+  Ax.resize(nnz + num_slack);
 
   // Set starting points of original and newly introduced columns.
   for (int col = 0; col <= model.numCol; col++)
@@ -108,17 +88,17 @@ int fillInIpxData(const HModel &model, ipx::Int &num_col,
   }
   for (int k = 0; k < nnz; k++)
   {
-    Ai[k] = truncated_row_index[model.Aindex[k]];
+    Ai[k] = model.Aindex[k];
     Ax[k] = model.Avalue[k];
   }
-  for (int k = 0; k < (int)general_bounded_rows.size(); k++)
+  for (int k = 0; k < num_slack; k++)
   {
     Ai[nnz + k] = (ipx::Int)general_bounded_rows[k];
-    Ax[nnz + k] = 1;
+    Ax[nnz + k] = -1;
   }
 
   // Column bound vectors.
-  col_lb.reserve(num_col);
+  col_lb.resize(num_col);
   col_ub.resize(num_col);
   for (int col = 0; col < model.numCol; col++)
   {
@@ -132,7 +112,7 @@ int fillInIpxData(const HModel &model, ipx::Int &num_col,
     else
       col_ub[col] = model.colUpper[col];
   }
-  for (int slack = 0; slack < (int)general_bounded_rows.size(); slack++)
+  for (int slack = 0; slack < num_slack; slack++)
   {
     const int row = general_bounded_rows[slack];
     col_lb[model.numCol + slack] = model.rowLower[row];
@@ -140,7 +120,7 @@ int fillInIpxData(const HModel &model, ipx::Int &num_col,
   }
 
   obj = model.colCost;
-
+  obj.insert(obj.end(), num_slack, 0);
   return 0;
 }
 
