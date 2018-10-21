@@ -96,8 +96,8 @@ int fillInIpxData(const HModel &model, ipx::Int &num_col,
   // Copy Astart and Aindex to ipx::Int array.
   int nnz = model.Aindex.size();
   Ap.resize(num_col + 1);
-  Ai.resize(nnz);
-  Ax.resize(nnz);
+  Ai.resize(nnz + general_bounded_rows.size());
+  Ax.resize(nnz + general_bounded_rows.size());
 
   // Set starting points of original and newly introduced columns.
   for (int col = 0; col <= model.numCol; col++)
