@@ -4,7 +4,6 @@
 #include "HWrappers.h"
 int solveIpx(const char* filename);
 int solveIpxWithPresolve(const char* filename);
-int solveModelWithIpx(HModel& model);
 #endif
 
 using namespace std;

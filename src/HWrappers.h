@@ -1,7 +1,6 @@
 #ifndef HWRAPPERS_H_
 #define HWRAPPERS_H_
 
-
 #include "HModel.h"
 #include "HConst.h"
 
@@ -10,23 +9,17 @@
 #endif
 
 #ifdef IPX
-int solveModelWithIpx(HModel &model)
+
+int fillInIpxData(const HModel &model, ipx::Int &num_col,
+                  std::vector<double> &obj, std::vector<double> &col_lb,
+                  std::vector<double> &col_ub, ipx::Int &num_row,
+                  std::vector<ipx::Int> &Ap,
+                  std::vector<ipx::Int> &Ai, std::vector<double> &Ax,
+                  std::vector<double> &rhs,
+                  std::vector<char> &constraint_type)
 {
-  int debug = 0;
-
-#ifdef CMAKE_BUILD_TYPE
-  debug = 1;
-#endif
-
-  ipx::LpSolver lps;
-  ipx::Parameters parameters;
-
-  // parameters.crossover = 1; by default
-  if (debug)
-    parameters.debug = 1;
-
-  ipx::Int num_col = model.numCol;
-  ipx::Int num_row = model.numRow;
+  num_col = model.numCol;
+  num_row = model.numRow;
 
   // For each row with both a lower and an upper bound introduce one new column
   // so num_col may increase. Ignore each free row so num_row may decrease.
@@ -47,8 +40,6 @@ int solveModelWithIpx(HModel &model)
 
   // For each row (excluding free rows) add entry to char array and set up rhs
   // vector
-  std::vector<double> rhs;
-  std::vector<char> constraint_type;
   rhs.reserve(num_row);
   constraint_type.reserve(num_row);
 
@@ -81,9 +72,11 @@ int solveModelWithIpx(HModel &model)
   std::vector<int> truncated_row_index(num_row);
   if (free_rows.size() == 0)
   {
-    for (int row = 0; row < num_row; row++) 
+    for (int row = 0; row < num_row; row++)
       truncated_row_index[row] = row;
-  } else {
+  }
+  else
+  {
     truncated_row_index.assign(num_row, -1);
     int current = 0;
     int index = 0;
@@ -102,9 +95,9 @@ int solveModelWithIpx(HModel &model)
 
   // Copy Astart and Aindex to ipx::Int array.
   int nnz = model.Aindex.size();
-  std::vector<ipx::Int> Ap(num_col + 1);
-  std::vector<ipx::Int> Ai(nnz);
-  std::vector<double> Av(nnz);
+  Ap.resize(num_col + 1);
+  Ai.resize(nnz);
+  Ax.resize(nnz);
 
   // Set starting points of original and newly introduced columns.
   for (int col = 0; col <= model.numCol; col++)
@@ -116,17 +109,17 @@ int solveModelWithIpx(HModel &model)
   for (int k = 0; k < nnz; k++)
   {
     Ai[k] = truncated_row_index[model.Aindex[k]];
-    Av[k] = model.Avalue[k];
+    Ax[k] = model.Avalue[k];
   }
   for (int k = 0; k < (int)general_bounded_rows.size(); k++)
   {
     Ai[nnz + k] = (ipx::Int)general_bounded_rows[k];
-    Av[nnz + k] = 1;
+    Ax[nnz + k] = 1;
   }
 
   // Column bound vectors.
-  std::vector<double> col_lb(num_col);
-  std::vector<double> col_ub(num_col);
+  col_lb.reserve(num_col);
+  col_ub.resize(num_col);
   for (int col = 0; col < model.numCol; col++)
   {
     if (model.colLower[col] == -HSOL_CONST_INF)
@@ -146,49 +139,39 @@ int solveModelWithIpx(HModel &model)
     col_ub[model.numCol + slack] = model.rowUpper[row];
   }
 
-  // Copy row bounds and truncate if needed.
-  std::vector<double> row_lb;
-  std::vector<double> row_ub;
+  obj = model.colCost;
 
-  row_lb.reserve(num_row);
-  row_ub.reserve(num_row);
-  int current = 0;
-  int num_free = free_rows.size();
-  for (int row = 0; row < model.numRow; row++)
-  {
-    if (current == num_free ||
-        (current < num_free && row != free_rows[current]))
-    {
-      // Row is not free.
-      if (model.rowLower[row] == -HSOL_CONST_INF)
-      {
-        row_lb.push_back(-INFINITY);
-        row_ub.push_back(model.rowUpper[row]);
-      }
-      else if (model.rowUpper[row] == HSOL_CONST_INF)
-      {
-        row_lb.push_back(model.rowLower[row]);
-        row_ub.push_back(INFINITY);
-      }
-      else
-      {
-        // Row is general bounded. Bounds are transfered onto slack.
-        row_lb.push_back(0);
-        row_ub.push_back(0);
-      }
-    }
-    else if (row == free_rows[current])
-    {
-      current++;
-    }
-  }
+  return 0;
+}
+
+int solveModelWithIpx(HModel model)
+{
+  int debug = 0;
+
+#ifdef CMAKE_BUILD_TYPE
+  debug = 1;
+#endif
+
+  ipx::LpSolver lps;
+  ipx::Parameters parameters;
+
+  // parameters.crossover = 1; by default
+  if (debug)
+    parameters.debug = 1;
+
+  ipx::Int num_col, num_row;
+  std::vector<ipx::Int> Ap, Ai;
+  std::vector<double> objective, col_lb, col_ub, Av, rhs;
+  std::vector<char> constraint_type;
+  fillInIpxData(model, num_col, objective, col_lb, col_ub, num_row, Ap, Ai, Av,
+                rhs, constraint_type);
 
   ipx::Int status = lps.Solve(
       num_col,
-      &model.colCost[0],
-      &model.colLower[0],
-      &model.colUpper[0],
-      model.numRow,
+      &objective[0],
+      &col_lb[0],
+      &col_ub[0],
+      num_row,
       &Ap[0],
       &Ai[0],
       &Av[0],
