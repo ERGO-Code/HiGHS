@@ -103,8 +103,8 @@ int solveModelWithIpx(HModel &model)
   // Copy Astart and Aindex to ipx::Int array.
   int nnz = model.Aindex.size();
   std::vector<ipx::Int> Ap(num_col + 1);
-  std::vector<ipx::Int> Ai(nnz);
-  std::vector<double> Av(nnz);
+  std::vector<ipx::Int> Ai(nnz + general_bounded_rows.size());
+  std::vector<double> Av(nnz + general_bounded_rows.size());
 
   // Set starting points of original and newly introduced columns.
   for (int col = 0; col <= model.numCol; col++)
