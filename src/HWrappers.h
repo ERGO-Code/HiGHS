@@ -1,6 +1,7 @@
 #ifndef HWRAPPERS_H_
 #define HWRAPPERS_H_
 
+
 #include "HModel.h"
 #include "HConst.h"
 
@@ -76,16 +77,23 @@ int solveModelWithIpx(HModel &model)
     }
   }
 
-  std::vector<int> truncated_row_index(num_row, -1);
-  int current = 0;
-  int index = 0;
-  // num_row is still not decreased so the criterion below is OK.
-  for (int row = 0; row < num_row; row++)
+  // num_row is still not decreased so it can be used as below.
+  std::vector<int> truncated_row_index(num_row);
+  if (free_rows.size() == 0)
   {
-    if (row != free_rows[current])
+    for (int row = 0; row < num_row; row++) 
+      truncated_row_index[row] = row;
+  } else {
+    truncated_row_index.assign(num_row, -1);
+    int current = 0;
+    int index = 0;
+    for (int row = 0; row < num_row; row++)
     {
-      truncated_row_index[row] = index;
-      index++;
+      if (row != free_rows[current])
+      {
+        truncated_row_index[row] = index;
+        index++;
+      }
     }
   }
 
@@ -121,17 +129,17 @@ int solveModelWithIpx(HModel &model)
   std::vector<double> col_ub(num_col);
   for (int col = 0; col < model.numCol; col++)
   {
-    if (model.colLower == -HSOL_CONST_INF)
+    if (model.colLower[col] == -HSOL_CONST_INF)
       col_lb[col] = -INFINITY;
     else
       col_lb[col] = model.colLower[col];
 
-    if (model.colUpper == HSOL_CONST_INF)
+    if (model.colUpper[col] == HSOL_CONST_INF)
       col_ub[col] = INFINITY;
     else
       col_ub[col] = model.colUpper[col];
   }
-  for (int slack = 0; slack < general_bounded_rows.size(); slack++)
+  for (int slack = 0; slack < (int)general_bounded_rows.size(); slack++)
   {
     const int row = general_bounded_rows[slack];
     col_lb[model.numCol + slack] = model.rowLower[row];
@@ -142,44 +150,36 @@ int solveModelWithIpx(HModel &model)
   std::vector<double> row_lb;
   std::vector<double> row_ub;
 
-  if (free_rows.size() == 0)
+  row_lb.reserve(num_row);
+  row_ub.reserve(num_row);
+  int current = 0;
+  int num_free = free_rows.size();
+  for (int row = 0; row < model.numRow; row++)
   {
-    row_lb = model.rowLower;
-    row_ub = model.rowUpper;
-  }
-  else
-  {
-    // There is free rows to remove.
-    row_lb.reserve(num_row);
-    row_ub.reserve(num_row);
-    int current = 0;
-    int num_free = free_rows.size();
-    for (int i = 0; i < model.numRow; i++)
+    if (current == num_free ||
+        (current < num_free && row != free_rows[current]))
     {
-        if (current == num_free || 
-            (current < num_free && i != free_rows[current])
-        {
-        // Row is not free.
-        if (row_lb == -HSOL_CONST_INF)
-        {
-          row_lb.push_back(-INFINITY);
-          row_ub.push_back(model.rowUpper[i]);
-        }
-        else if (row_ub == HSOL_CONST_INF)
-        {
-          row_lb.push_back(model.rowLower[i]);
-          row_ub.push_back(INFINITY);
-        }
-        else
-        {
-          // Row is general bounded. Bounds are transfered onto slack.
-          row_lb.push_back(0);;
-          row_ub.push_back(0);;
-        }
-        } if (i == free_rows[current])
-        {
-        current++;
-        }
+      // Row is not free.
+      if (model.rowLower[row] == -HSOL_CONST_INF)
+      {
+        row_lb.push_back(-INFINITY);
+        row_ub.push_back(model.rowUpper[row]);
+      }
+      else if (model.rowUpper[row] == HSOL_CONST_INF)
+      {
+        row_lb.push_back(model.rowLower[row]);
+        row_ub.push_back(INFINITY);
+      }
+      else
+      {
+        // Row is general bounded. Bounds are transfered onto slack.
+        row_lb.push_back(0);
+        row_ub.push_back(0);
+      }
+    }
+    else if (row == free_rows[current])
+    {
+      current++;
     }
   }
 
