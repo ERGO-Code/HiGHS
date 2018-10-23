@@ -47,7 +47,7 @@ public:
       if (Astart[i] > Astart[i+1]) 
         return LpError::matrix_start;
 
-
+    
     
 
   }
