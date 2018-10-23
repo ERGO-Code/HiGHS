@@ -8,33 +8,33 @@
 #ifndef HCRASH_H_
 #define HCRASH_H_
 
-#include "HModel.h"
-#include "HMatrix.h"
 #include <vector>
+#include "HMatrix.h"
+#include "HModel.h"
 using namespace std;
 
-//LTSSF scalar parameters
+// LTSSF scalar parameters
 
 const int crsh_vr_st_no_act = 0;
 const int crsh_vr_st_act = 1;
 
-//Crash variable types
-//Basis-preserving crash:
+// Crash variable types
+// Basis-preserving crash:
 const int crsh_vr_ty_non_bc = 0;
 const int crsh_vr_ty_bc = 1;
-//Standard crash:
+// Standard crash:
 const int crsh_vr_ty_fx = 0;
 const int crsh_vr_ty_2_sd = 1;
 const int crsh_vr_ty_1_sd = 2;
 const int crsh_vr_ty_fr = 3;
 
-//Null header for linked lists
+// Null header for linked lists
 const int no_lk = -1;
 
-//Null value for chosen row/column index
+// Null value for chosen row/column index
 const int no_ix = no_lk;
 
-//LTSSF scalar control parameters
+// LTSSF scalar control parameters
 const double tl_crsh_abs_pv_v = 1e-4;
 const double tl_crsh_rlv_pv_v = 1e-2;
 //   	Switches for LTSSF data structures, checking and reporting
@@ -46,9 +46,8 @@ const bool Rp_TwoD_da = false;
 const bool Rp_Bixby_Ps = false;
 #endif
 
-class HCrash
-{
-public:
+class HCrash {
+ public:
   void crash(HModel *ptr_model, int Crash_Mode);
   void bixby(HModel *ptr_model, int Crash_Mode);
   bool bixby_iz_da(HModel *ptr_model);
@@ -138,15 +137,14 @@ public:
   vector<int> bixby_r_k;
   //	vector<int> bixby_ze_r_k;
 
-  //LTSSF scalar identifiers
+  // LTSSF scalar identifiers
   //	int crsh_mode;
   int crsh_f_vr_ty;
   int crsh_l_vr_ty;
 
-  int crsh_mn_pri_v;// = 0;
-  int crsh_mx_pri_v;// = 3;
-  int crsh_no_act_pri_v;// = crsh_mn_pri_v;
-
+  int crsh_mn_pri_v;      // = 0;
+  int crsh_mx_pri_v;      // = 3;
+  int crsh_no_act_pri_v;  // = crsh_mn_pri_v;
 
   int crsh_fn_cf_pri_v;
   int crsh_fn_cf_k;
@@ -156,7 +154,7 @@ public:
   double bixby_mu_a;
   double bixby_mu_b;
 
-  //LTSSF scalar identifiers
+  // LTSSF scalar identifiers
   int n_crsh_ps;
   int n_crsh_bs_cg;
   int n_vr_in_r;

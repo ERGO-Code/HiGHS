@@ -12,9 +12,8 @@ using namespace std;
  * and some update primal/weight tasks
  */
 
-class HDualRHS
-{
-public:
+class HDualRHS {
+ public:
   void setup(HModel *model);
   void setup_partition(const char *filename);
 
