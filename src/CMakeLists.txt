@@ -1,48 +1,48 @@
 
 set(sources
-    HAPI.cpp
-    HDual.cpp
-    HDualRHS.cpp
-    HDualRow.cpp
-    HDualMulti.cpp
-    HFactor.cpp
-    HMatrix.cpp
-    HModel.cpp
-    HPrimal.cpp
-    HTester.cpp
-    HVector.cpp
-    HCrash.cpp
+    simplex/HAPI.cpp
+    simplex/HDual.cpp
+    simplex/HDualRHS.cpp
+    simplex/HDualRow.cpp
+    simplex/HDualMulti.cpp
+    simplex/HFactor.cpp
+    simplex/HMatrix.cpp
+    simplex/HModel.cpp
+    simplex/HPrimal.cpp
+    simplex/HTester.cpp
+    simplex/HVector.cpp
+    simplex/HCrash.cpp
     presolve/HPresolve.cpp
     lp_data/HPreData.cpp
-    HinOut.cpp
+    io/HinOut.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
-    HMPSIO.cpp
-    HToyIO.cpp
+    io/HMPSIO.cpp
+    io/HToyIO.cpp
 )
 
 set(headers
-    HConst.h
-    HDual.h
-    HDualRow.h
-    HDualRHS.h
-    HFactor.h
-    HMatrix.h
-    HModel.h
-    HPrimal.h
-    HTester.h
-    HVector.h
-    HCrash.h
-    HRandom.h
+    simplex/HConst.h
+    simplex/HDual.h
+    simplex/HDualRow.h
+    simplex/HDualRHS.h
+    simplex/HFactor.h
+    simplex/HMatrix.h
+    simplex/HModel.h
+    simplex/HPrimal.h
+    simplex/HTester.h
+    simplex/HVector.h
+    simplex/HCrash.h
+    simplex/HRandom.h
     presolve/HPresolve.h
     lp_data/HPreData.h
-    HinOut.h
-    HTimer.h
-    HTimerPre.h
+    io/HinOut.h
+    simplex/HTimer.h
+    simplex/HTimerPre.h
     test/KktCheck.h
     test/KktChStep.h
-    HMPSIO.h
-    HMpsFF.h
+    io/HMPSIO.h
+    io/HMpsFF.h
 )
 
 
