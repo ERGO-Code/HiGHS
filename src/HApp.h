@@ -83,4 +83,6 @@ void printHelp(std::string execName) {
   return;
 }
 
+Status loadLpDataFromFile(const string& filename, LpData& lp);
+
 #endif

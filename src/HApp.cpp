@@ -2,16 +2,100 @@
 
 using namespace std;
 
-int main(int argc, char **argv) {
-  int opt, filename = 0, presolve = 0, crash = 0, edgeWeight = 0, price = 0,
-           pami = 0, sip = 0, scip = 0, timeLimit = 0;
+
+// move two below to HApp.h
+struct Options {
+  string filename = "";
+  int presolve = 0,
+  int crash = 0;
+  int edgeWeight = 0;
+  int price = 0;
+  int pami = 0;
+  int sip = 0;
+  int scip = 0;
+  int timeLimit = 0;
   double cut = 0;
   const char *fileName = "";
   const char *presolveMode = "";
   const char *edWtMode = "";
   const char *priceMode = "";
   const char *crashMode = "";
-  const char *partitionFile = 0;
+}
+
+enum Status {
+  OK,
+  InputError,
+  FileNotFound,
+  ParseError,
+  Presolved,
+  ReducedSolution,
+  Postsolved,
+  SimplexCleanUpFinished
+};
+
+void printStatus(Status status) {
+  switch (status) {
+    case Status::OK:
+      std::cout << "OK";
+      break;
+    case Status::FileNotFound:
+      std::cout << "Error: File not found.";
+      break;
+    case Status::ParseError:
+      std::cout << "Parse error.";
+      break;
+    case Status::Presolved:
+      std::cout << "Presolve finished."
+      break;
+    case Status::ReducedSolution:
+      std::cout << "Reduced problem solved";
+      break;
+    case Status::Postsolved:
+      std::cout << "Postsolved";
+      break;
+  }
+}
+
+checkStatus(Status status)
+{
+  if (status != Status::OK) {
+    printStatus(status);
+    if (status == Status::InputError)
+      printHelp(argv[0]);
+    exit(0);
+  }
+}
+
+
+
+
+Status loadOptions
+
+int main(int argc, char **argv) {
+
+  Options options;
+  loadOptions(options);
+
+
+Status loadOptions(Options options_) {
+
+  int& filename = options_.filename;
+  int& presolve = options_.presolve; 
+  int& crash = options_.crash;
+  int& edgeWeight = options_.edgeWeight;
+  int& price = options_.price;
+  int& pami = options_.pami;
+  int& sip = options_.sip;
+  int& scip = options_.scip; 
+  int& timeLimit = options_.timeLimit ;
+
+  double& cut = options_.cut;
+  const char *fileName = options_.fileName;
+  const char *presolveMode = options_.presolveMode;
+  const char *edWtMode = options_.edWtMode;
+  const char *priceMode = options_.priceMode;
+  const char *crashMode = options_.crashMode;
+  const char *partitionFile = options_.partitionFile;
   double TimeLimit_ArgV = HSOL_CONST_INF;
   std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
             << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
@@ -167,15 +251,12 @@ int main(int argc, char **argv) {
     printf("Setting default value filenameMode = %s\n", fileName);
 #else
     std::cout << "No file specified. " << std::endl;
-    printHelp(argv[0]);
     return 0;
 #endif
   }
   // Check if file exists
   else if (access(fileName, F_OK) == -1) {
-    std::cout << "Error: File Not Found.\n" << std::endl;
-    printHelp(argv[0]);
-    return 0;
+    return Status::FileNotFound;
   }
 
   if (!presolve) {
