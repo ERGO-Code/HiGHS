@@ -1,3 +1,4 @@
+
 set(sources
     HAPI.cpp
     HDual.cpp
@@ -11,11 +12,11 @@ set(sources
     HTester.cpp
     HVector.cpp
     HCrash.cpp
-    HPresolve.cpp
-    HPreData.cpp
+    presolve/HPresolve.cpp
+    lp_data/HPreData.cpp
     HinOut.cpp
-    KktCheck.cpp
-    KktChStep.cpp
+    test/KktCheck.cpp
+    test/KktChStep.cpp
     HMPSIO.cpp
     HToyIO.cpp
 )
@@ -33,13 +34,13 @@ set(headers
     HVector.h
     HCrash.h
     HRandom.h
-    HPresolve.h
+    presolve/HPresolve.h
     lp_data/HPreData.h
     HinOut.h
     HTimer.h
     HTimerPre.h
-    KktCheck.h
-    KktChStep.h
+    test/KktCheck.h
+    test/KktChStep.h
     HMPSIO.h
     HMpsFF.h
 )
