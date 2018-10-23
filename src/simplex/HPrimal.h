@@ -4,9 +4,9 @@
 #include "HModel.h"
 
 class HPrimal {
-public:
-    void solvePhase2(HModel *ptr_model);
-    double TimeLimitValue;
+ public:
+  void solvePhase2(HModel *ptr_model);
+  double TimeLimitValue;
 
 #ifdef HiGHSDEV
   // Analysis of rebuilds
@@ -15,32 +15,31 @@ public:
   double totalRebuildTime;
 #endif
 
-private:
-    void primalRebuild();
-    void primalChooseColumn();
-    void primalChooseRow();
-    void primalUpdate();
+ private:
+  void primalRebuild();
+  void primalChooseColumn();
+  void primalChooseRow();
+  void primalUpdate();
 
-    // Model pointer
-    HModel *model;
-    int numCol;
-    int numRow;
-    int numTot;
+  // Model pointer
+  HModel *model;
+  int numCol;
+  int numRow;
+  int numTot;
 
-    // Pivot related
-    int limitUpdate;
-    int countUpdate;
-    int invertHint;
-    int columnIn;
-    int rowOut;
+  // Pivot related
+  int limitUpdate;
+  int countUpdate;
+  int invertHint;
+  int columnIn;
+  int rowOut;
 
-   // Solve buffer
-    HVector row_ep;
-    HVector row_ap;
-    HVector column;
-    double row_epDensity;
-    double columnDensity;
-  
+  // Solve buffer
+  HVector row_ep;
+  HVector row_ap;
+  HVector column;
+  double row_epDensity;
+  double columnDensity;
 };
 
 #endif /* HPRIMAL_H_ */

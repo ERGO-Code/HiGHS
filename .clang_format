@@ -1,3 +1,4 @@
 ﻿---
 BasedOnStyle: Google
 ...
+ColumnLength:80
