@@ -27,10 +27,16 @@ enum Status {
   InputError,
   FileNotFound,
   ParseError,
+  ProblemReduced,
+  ProblemReducedToEmpty,
   Presolved,
   ReducedSolution,
   Postsolved,
-  SimplexCleanUpFinished
+  SimplexCleanUpFinished,
+  Unknown,
+  Infeasible,
+  Unbounded,
+  Optimal
 };
 
 void printStatus(Status status) {
@@ -1017,6 +1023,40 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV,
 #endif
   return 0;
 }
+
+Status presolve(const LpData& lp, LpData& reduced_lp) {
+  HPresolve *pre = new HPresolve();
+  mod.copy_fromHModelToHPresolve(pre);
+  int status = pre->presolve();
+  switch (status) {
+    case HPresolve::Infeasible:
+      return Status::Infeasible;
+    case HPresolve::Unbounded:
+      return Status::Unbounded;
+    case HPresolve::Empty:
+      return 
+  }
+  
+  
+  if (status == HPresolve::Unset) {
+    // todo: change this to load the reduced_problem LpData
+    // mod.load_fromPresolve(pre);
+    } else if (status == HPresolve::Infeasible) {
+
+      
+      mod.problemStatus = LP_Status_Infeasible;
+    else if (status == HPresolve::Unbounded)
+      mod.problemStatus = LP_Status_Unbounded;
+    else {
+      std::cout << "Unknown, status=" << status << std::endl;
+      return Status::Unknown;
+
+  } else if (status == HPresolve::Empty) {
+
+
+
+}
+
 
 double presolve(HModel &mod, double &time) {
   cout << "------\n";
