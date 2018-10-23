@@ -11,7 +11,6 @@
 #include <set>
 #include <vector>
 
-#include "LpData.h"
 #include "HAPI.h"
 #include "HConfig.h"
 #include "HConst.h"
@@ -19,6 +18,7 @@
 #include "HPresolve.h"
 #include "HTester.h"
 #include "HTimer.h"
+#include "LpData.h"
 //#include "HCrash.h"
 
 //#include "HinOut.h"
@@ -84,9 +84,9 @@ void printHelp(std::string execName) {
   return;
 }
 
-Status loadLpDataFromFile(const string& filename, LpData& lp);
+Status loadLpDataFromFile(const string &filename, LpData &lp);
 
-Status runSolver(const Options& options, const LpData& lp, Solution& solution) {
+Status runSolver(const Options &options, const LpData &lp, Solution &solution) {
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be

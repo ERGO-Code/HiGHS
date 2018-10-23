@@ -37,18 +37,3 @@ int main_(int argc, char **argv) {
     status = runSolver(options, lp, solution);
     checkStatus(status);
   }
-
-  // Solve
-  Solution solution;
-#ifndef IPX
-  // HiGHS
-  // todo: Without the presolve part, so will be
-  //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solve_simplex(options, lp, solution);
-#else
-  // IPX
-  status = solve_ipx(options, lp, solution);
-  // If ipx crossover did not find optimality set up simplex.
-
-#endif
-}
