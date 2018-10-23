@@ -12,4 +12,6 @@ const double HSOL_CONST_INF = HIGHS_CONST_INF;
 const double HSOL_CONST_TINY = HIGHS_CONST_TINY;
 const double HSOL_CONST_ZERO = HIGHS_CONST_ZERO;
 
+constexpr double kBoundTolerance = 1e-8;
+
 #endif /* HCONST_H_ */
