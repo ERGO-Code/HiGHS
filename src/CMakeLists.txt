@@ -34,7 +34,7 @@ set(headers
     HCrash.h
     HRandom.h
     HPresolve.h
-    HPreData.h
+    lp_data/HPreData.h
     HinOut.h
     HTimer.h
     HTimerPre.h
