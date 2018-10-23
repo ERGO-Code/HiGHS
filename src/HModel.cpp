@@ -63,17 +63,13 @@ int HModel::load_fromMPS(const char *filename)
   //setup_loadMPS(filename);
   // Here differentiate between parsers!
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
-#ifdef HiGHSDEV
   bool mps_ff = true;
-#endif
   int RtCd = readMPS_FF(filename,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
                      colCost, colLower, colUpper, rowLower, rowUpper);
 #else
-#ifdef HiGHSDEV
   bool mps_ff = false;
-#endif
   int RtCd = readMPS(filename, -1, -1,
                      numRow, numCol, objSense, objOffset,
                      Astart, Aindex, Avalue,
@@ -84,10 +80,10 @@ int HModel::load_fromMPS(const char *filename)
     totalTime += timer.getTime();
     return RtCd;
   }
+  int numInt = 0;
+  if (!mps_ff) for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numInt++;}
 #ifdef HiGHSDEV
-  int numIntegerColumn = 0;
-  if (!mps_ff) for (int c_n = 0; c_n < numCol; c_n++) {if (integerColumn[c_n]) numIntegerColumn++;}
-  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+  if (numInt) printf("MPS file has %d integer variables\n", numInt);
 #endif
   numTot = numCol + numRow;
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";  util_reportModelDa(ModelDaFileName);
@@ -195,10 +191,11 @@ int HModel::load_fromToy(const char *filename)
     rowLower[r_n] = b[r_n];
     rowUpper[r_n] = b[r_n];
   }
+
+  numInt = 0;
+  for (int c_n = 0; c_n < numCol; c_n++) { if (integerColumn[c_n]) numInt++;}
 #ifdef HiGHSDEV
-  int numIntegerColumn = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) { if (integerColumn[c_n]) numIntegerColumn++;}
-  if (numIntegerColumn) printf("MPS file has %d integer variables\n", numIntegerColumn);
+  if (numInt) printf("MPS file has %d integer variables\n", numInt);
 #endif
 
   numTot = numCol + numRow;
@@ -775,16 +772,16 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow, int
   int local_newNumRow = max(local_oldNumRow, lastrow + 1);
   int local_newNumTot = local_newNumCol + local_newNumRow;
 
-  printf("extendWithLogicalBasis\n");
-  cout << flush;
-  printf("numCol/Row/Tot = %d/%d/%d\n", numCol, numRow, numTot);
-  cout << flush;
+#ifdef SCIPDEV
+  printf("extendWithLogicalBasis\n"); 
+  printf("numCol/Row/Tot = %d/%d/%d\n", numCol, numRow, numTot); 
   printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol, local_newNumRow, local_newNumTot);
   cout << flush;
+#endif
+  //ToDo: Replace references to local_newNum* by references to num* from here on
   assert(local_newNumCol == numCol);
   assert(local_newNumRow == numRow);
   assert(local_newNumTot == numTot);
-  //ToDo: Replace references to local_newNum* by references to num* from here on
 
 #ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid basis.
@@ -901,9 +898,14 @@ void HModel::clearModel()
   numRow = 0;
   numCol = 0;
   numTot = 0;
+  numInt = 0;
   problemStatus = LP_Status_Unset;
   objSense = 0;
   objOffset = 0.0;
+  costScale = 1;
+#ifdef HiGHSDEV
+  numLargeCo = 0;
+#endif
   Astart.clear();
   Aindex.clear();
   Avalue.clear();
@@ -1260,9 +1262,7 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK()
     }
   }
   //ok must be true if we reach here
-#ifdef HiGHSDEBUG
   assert(ok);
-#endif
   return ok;
 }
 
@@ -1558,7 +1558,7 @@ void HModel::scaleModel()
   }
 
   // Allow a switch to/from the original scaling rules
-  bool originalScaling = false;
+  bool originalScaling = true;
   bool alwCostScaling = true;
   if (originalScaling) alwCostScaling = false;
 
@@ -1765,9 +1765,9 @@ void HModel::scaleCosts()
     printf("   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n", tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
     for (int iCol = 0; iCol < numCol; iCol++) {if (largeCostFlag[iCol]) {colCost[iCol]/=largeCostScale;}}
   }
-#endif
   printf("After cost scaling\n");
   util_anVecV("Column costs", numCol, colCost, false);
+#endif
 }
 
 void HModel::setup_tightenBound()
@@ -2084,7 +2084,9 @@ void HModel::initScale()
   colScale.assign(numCol, 1);
   rowScale.assign(numRow, 1);
   costScale = 1;
+#ifdef HiGHSDEV
   largeCostScale = 1;
+#endif
 }
 
 void HModel::initBasicIndex()
@@ -2594,23 +2596,33 @@ double HModel::computePrObj()
     if (nonbasicFlag[col])
       prObj += workValue[col] * colCost[col];
   prObj *= costScale;  
-  printf("Scaling by %11.4g in computePrObj\n", costScale);
   return prObj;
 }
 
 // Compute the (dual) objective via nonbasic primal values (current bound) and dual values
 void HModel::computeDuObj(int phase)
 {
+  //JAJH10/10 double currentObjective = objective;
   objective = 0;
-  for (int i = 0; i < numTot; i++)
-    if (nonbasicFlag[i])
+  for (int i = 0; i < numTot; i++) {
+    if (nonbasicFlag[i]) {
       objective += workValue[i] * workDual[i];
-  //    double sv_objective = objective;
+      //JAJH10/10
+  /*  double dlObjective = workValue[i] * workDual[i];
+      printf("Column %2d: workValue = %11.4g; workDual = %11.4g; dlObjective = %11.4g; objective = %11.4g\n", 
+      	     i, workValue[i], workDual[i], dlObjective, objective); 
+  */
+    }
+  }
   if (phase != 1) {
     objective *= costScale;
     objective -= objOffset;
   }
-  //    printf("Phase %1d: sv_objective = %g; objOffset = %g; Objective = %g\n", phase, sv_objective, objOffset, objective);
+  //JAJH10/10
+  /*  double objectiveError = abs(objective-currentObjective)/max(1.0, abs(objective));
+  if (objectiveError > 1e-8) printf("Phase %1d: currentObjective = %11.4g; Objective = %11.4g; Error = %11.4g\n",
+	   phase, currentObjective, objective, objectiveError);
+  */
 }
 
 int HModel::handleRankDeficiency()
@@ -2806,6 +2818,36 @@ void HModel::check_load_fromPostsolve()
 }
 #endif
 
+int HModel::writeToMPS(const char *filename) {
+  vector<double> unsclAvalue = Avalue;
+  vector<double> unsclColCost = colCost;
+  vector<double> unsclColLower = colLower;
+  vector<double> unsclColUpper = colUpper;
+  vector<double> unsclRowLower = rowLower;
+  vector<double> unsclRowUpper = rowUpper;
+  
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    unsclRowLower[r_n] = (hsol_isInfinity(-rowLower[r_n]) ? rowLower[r_n]: rowLower[r_n] / rowScale[r_n]);
+    unsclRowUpper[r_n] = (hsol_isInfinity( rowUpper[r_n]) ? rowUpper[r_n]: rowUpper[r_n] / rowScale[r_n]);
+  }
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    unsclColCost[c_n] = colCost[c_n]/colScale[c_n];
+    unsclColLower[c_n] = (hsol_isInfinity(-colLower[c_n]) ? colLower[c_n]: colLower[c_n] * colScale[c_n]);
+    unsclColUpper[c_n] = (hsol_isInfinity( colUpper[c_n]) ? colUpper[c_n]: colUpper[c_n] * colScale[c_n]);
+    for (int el_n = Astart[c_n]; el_n < Astart[c_n+1]; el_n++) {
+      int r_n = Aindex[el_n];
+      unsclAvalue[el_n] = Avalue[el_n]/(colScale[c_n] * rowScale[r_n]);
+    }
+  }
+  int rtCd = writeMPS(filename,
+		      numRow, numCol, numInt, objSense, objOffset,
+		      Astart, Aindex, unsclAvalue,
+		      unsclColCost, unsclColLower, unsclColUpper,
+		      unsclRowLower, unsclRowUpper,
+		      integerColumn);
+  return rtCd;
+}
+
 //>->->->->->->->->->->->->->->->->->->->->->-
 // Esoterica!
 // Initialise the random vectors required by hsol
@@ -2947,11 +2989,9 @@ void HModel::util_getColBounds(int firstcol, int lastcol, double *XcolLower, dou
   for (int col = firstcol; col <= lastcol; ++col)
   {
     if (XcolLower != NULL)
-      XcolLower[col - firstcol] = (hsol_isInfinity(-colLower[col]) ? colLower[col]
-                                                                   : colLower[col] * colScale[col]);
+      XcolLower[col - firstcol] = (hsol_isInfinity(-colLower[col]) ? colLower[col] : colLower[col] * colScale[col]);
     if (XcolUpper != NULL)
-      XcolUpper[col - firstcol] = (hsol_isInfinity(colUpper[col]) ? colUpper[col]
-                                                                  : colUpper[col] * colScale[col]);
+      XcolUpper[col - firstcol] = (hsol_isInfinity( colUpper[col]) ? colUpper[col] : colUpper[col] * colScale[col]);
   }
 }
 
@@ -2964,11 +3004,9 @@ void HModel::util_getRowBounds(int firstrow, int lastrow, double *XrowLower, dou
   for (int row = firstrow; row <= lastrow; ++row)
   {
     if (XrowLower != NULL)
-      XrowLower[row - firstrow] = (hsol_isInfinity(-rowLower[row]) ? rowLower[row]
-                                                                   : rowLower[row] * rowScale[row]);
+      XrowLower[row - firstrow] = (hsol_isInfinity(-rowLower[row]) ? rowLower[row] : rowLower[row] / rowScale[row]);
     if (XrowUpper != NULL)
-      XrowUpper[row - firstrow] = (hsol_isInfinity(rowUpper[row]) ? rowUpper[row]
-                                                                  : rowUpper[row] * rowScale[row]);
+      XrowUpper[row - firstrow] = (hsol_isInfinity( rowUpper[row]) ? rowUpper[row] : rowUpper[row] / rowScale[row]);
   }
 }
 
@@ -3226,6 +3264,8 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat)
       printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
              row, rstat[row], rowLower[row], rowUpper[row]);
 #endif
+      printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
+             row, rstat[row], rowLower[row], rowUpper[row]);
       return -(row + 1);
     }
     printf("convertBaseStatToWorking: row=%d, rstat=%d, lower=%g, upper=%g, nonbasicMove=%d\n",
@@ -3274,9 +3314,10 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       }
       else if (nonbasicMove[var] == NONBASIC_MOVE_ZE)
       {
+	//	printf("Var %d Move = %d [%g, %g]\n", var, nonbasicMove[var], colLower[col], colUpper[col]);
         if (colLower[col] == colUpper[col])
         {
-#ifndef HiGHSDEV
+#ifdef HiGHSDEV
           if (!hsol_isInfinity(colUpper[col]))
 #endif
           {
@@ -3286,8 +3327,8 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef HiGHSDEV
-          if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colLower[col]))
+#ifdef HiGHSDEV
+          if (hsol_isInfinity(-colLower[col]) && hsol_isInfinity(colUpper[col]))
 #endif
           {
             cstat[col] = HSOL_BASESTAT_ZERO;
@@ -3339,7 +3380,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
       {
         if (rowLower[row] == rowUpper[row])
         {
-#ifndef HiGHSDEV
+#ifdef HiGHSDEV
           if (!hsol_isInfinity(rowUpper[row]))
 #endif
           {
@@ -3349,8 +3390,8 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat)
         }
         else
         {
-#ifndef HiGHSDEV
-          if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowLower[row]))
+#ifdef HiGHSDEV
+          if (hsol_isInfinity(-rowLower[row]) && hsol_isInfinity(rowUpper[row]))
 #endif
           {
             rstat[row] = HSOL_BASESTAT_ZERO;
@@ -3412,13 +3453,11 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     colLower[numCol + col] = XcolLower[col];
     colUpper[numCol + col] = XcolUpper[col];
     colScale[numCol + col] = 1.0;
-    printf("In HModel::util_addCols: column %d: setting Astart[numCol+col+1] = %d \n", col, Astart[numCol]);
-    cout << flush;
+    //    printf("In HModel::util_addCols: column %d: setting Astart[numCol+col+1] = %d \n", col, Astart[numCol]); cout << flush;
     Astart[numCol + col + 1] = Astart[numCol];
   }
 
-  printf("In HModel::util_addCols: nnonz = %d; cuNnonz = %d\n", nnonz, Astart[numCol]);
-  cout << flush;
+  //  printf("In HModel::util_addCols: nnonz = %d; cuNnonz = %d\n", nnonz, Astart[numCol]); cout << flush;
   if (nnonz > 0)
   {
     //Determine the current number of nonzeros
@@ -3433,22 +3472,19 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
     //Add the new columns
     for (int col = 0; col < ncols; col++)
     {
-      printf("In HModel::util_addCols: column %d: setting Astart[numCol+col] = %d = %d + %d\n",
-             col, XAstart[col] + cuNnonz, XAstart[col], cuNnonz);
-      cout << flush;
+      //      printf("In HModel::util_addCols: column %d: setting Astart[numCol+col] = %d = %d + %d\n",
+      //             col, XAstart[col] + cuNnonz, XAstart[col], cuNnonz); cout << flush;
       Astart[numCol + col] = XAstart[col] + cuNnonz;
     }
-    printf("In HModel::util_addCols: setting Astart[numCol+ncols] = %d\n", nwNnonz);
+    //    printf("In HModel::util_addCols: setting Astart[numCol+ncols] = %d\n", nwNnonz);
     cout << flush;
     Astart[numCol + ncols] = nwNnonz;
 
     for (int el = 0; el < nnonz; el++)
     {
       int row = XAindex[el];
-#ifdef HiGHSDEBUG
       assert(row >= 0);
       assert(row < numRow);
-#endif
       Aindex[cuNnonz + el] = row;
       Avalue[cuNnonz + el] = XAvalue[el];
     }
@@ -3457,7 +3493,7 @@ void HModel::util_addCols(int ncols, const double *XcolCost, const double *XcolL
   numCol += ncols;
   numTot += ncols;
 
-  printf("In HModel::util_addCols: Model now has Astart[%d] = %d nonzeros\n", numCol, Astart[numCol]);
+  //  printf("In HModel::util_addCols: Model now has Astart[%d] = %d nonzeros\n", numCol, Astart[numCol]);
   cout << flush;
 
   //Update the basis and work vectors correponding to new nonbasic columns
@@ -3474,29 +3510,44 @@ void HModel::util_deleteCols(int firstcol, int lastcol)
   printf("Called model.util_deleteCols(firstcol=%d, lastcol=%d)\n", firstcol, lastcol);
   cout << flush;
 #endif
+  // Trivial cases are
+  //
+  // colStep = 0, in which case no columns are removed
+  //
+  // lastcol = numCol-1, in which case no columns need be
+  // shifted. However, this implies numCol-colStep=firstcol, in which
+  // case the loop is vacuous
   int colStep = lastcol - firstcol + 1;
-  for (int col = firstcol; col < numCol - colStep; col++)
-  {
-    //    printf("Copy from colCost[%d] to colCost[%d]\n", col+colStep, col);cout << flush;
-    colCost[col] = colCost[col + colStep];
-    colLower[col] = colLower[col + colStep];
-    colUpper[col] = colUpper[col + colStep];
-    colScale[col] = colScale[col + colStep];
+  if (colStep) {
+    for (int col = firstcol; col < numCol - colStep; col++)
+      {
+	colCost[col] = colCost[col + colStep];
+	colLower[col] = colLower[col + colStep];
+	colUpper[col] = colUpper[col + colStep];
+	colScale[col] = colScale[col + colStep];
+      }
   }
-  int elOs = Astart[firstcol];
-  int elStep = Astart[lastcol + 1] - elOs;
-  //    printf("El loop over cols %2d [%2d] to %2d [%2d]\n", lastcol+1, Astart[lastcol+1], numCol+1, Astart[numCol]-1);
-  for (int el = Astart[lastcol + 1]; el < Astart[numCol]; el++)
-  {
-    //        printf("Over-write entry %3d [%3d] by entry %3d [%3d]\n", el-elStep, Aindex[el-elStep], el, Aindex[el]);
-    Aindex[el - elStep] = Aindex[el];
-    Avalue[el - elStep] = Avalue[el];
-  }
-
-  for (int col = firstcol; col <= numCol - colStep; col++)
-  {
-    //    printf("Over-write start %3d [%3d] by entry %3d [%3d]\n", col, Astart[col], col+colStep,  Astart[col+colStep]-elStep);
-    Astart[col] = Astart[col + colStep] - elStep;
+  // Trivial cases are
+  // 
+  // colstep = 0, in which case no columns are removed so elStep = 0
+  //
+  // lastcol = numCol-1, in which case no columns need be
+  // shifted and the loops are vacuous
+  if (colStep) {
+    int elOs = Astart[firstcol];
+    int elStep = Astart[lastcol + 1] - elOs;
+    //    printf("El loop over cols %2d [%2d] to %2d [%2d]\n", lastcol+1, Astart[lastcol+1], numCol+1, Astart[numCol]-1);
+    for (int el = Astart[lastcol + 1]; el < Astart[numCol]; el++)
+      {
+	//        printf("Over-write entry %3d [%3d] by entry %3d [%3d]\n", el-elStep, Aindex[el-elStep], el, Aindex[el]);
+	Aindex[el - elStep] = Aindex[el];
+	Avalue[el - elStep] = Avalue[el];
+      }
+    for (int col = firstcol; col <= numCol - colStep; col++)
+      {
+	//    printf("Over-write start %3d [%3d] by entry %3d [%3d]\n", col, Astart[col], col+colStep,  Astart[col+colStep]-elStep);
+	Astart[col] = Astart[col + colStep] - elStep;
+      }
   }
 
   //Reduce the number of columns and total number of variables in the model
@@ -3587,10 +3638,8 @@ void HModel::util_addRows(int nrows, const double *XrowLower, const double *Xrow
     {
       int col = XARindex[el];
       //      printf("El %2d: adding entry in column %2d\n", el, col); cout << flush;
-#ifdef HiGHSDEBUG
       assert(col >= 0);
       assert(col < numCol);
-#endif
       Alength[col]++;
     }
     //Determine the new number of nonzeros and resize the column-wise matrix arrays
@@ -3657,38 +3706,54 @@ void HModel::util_deleteRows(int firstrow, int lastrow)
   printf("Called model.util_deleteRows(firstrow=%d, lastrow=%d)\n", firstrow, lastrow);
   cout << flush;
 #endif
+  // Trivial cases are
+  //
+  // rowStep = 0, in which case no rows are removed
+  //
+  // lastrow = numRow-1, in which case no rows need be
+  // shifted. However, this implies numRow-rowStep=firstrow, in which
+  // case the loop is vacuous. However, they still have to be removed
+  // from the matrix unless all rows are to be removed
   int rowStep = lastrow - firstrow + 1;
-  for (int row = firstrow; row < lastrow; row++)
-  {
-    rowLower[row] = rowLower[rowStep + row];
-    rowUpper[row] = rowUpper[rowStep + row];
-    //    rowScale[row] = rowScale[rowStep+row];
-  }
-
-  int nnz = 0;
-  for (int col = 0; col < numCol; col++)
-  {
-    int fmEl = Astart[col];
-    Astart[col] = nnz;
-    for (int el = fmEl; el < Astart[col + 1]; el++)
-    {
-      int row = Aindex[el];
-      if (row < firstrow || row > lastrow)
+  bool allRows = rowStep == numRow;
+#ifdef HiGHSDEV
+  if (allRows) printf("In model.util_deleteRows, aa rows are being removed)\n");
+#endif
+  if (rowStep) {
+    // Was: for (int row = firstrow; row < lastrow; row++) - surely wrong!
+    for (int row = firstrow; row < numRow - rowStep; row++)
       {
-        if (row < firstrow)
-        {
-          Aindex[nnz] = row;
-        }
-        else
-        {
-          Aindex[nnz] = row - rowStep;
-        }
-        Avalue[nnz] = Avalue[el];
-        nnz++;
+	rowLower[row] = rowLower[row + rowStep];
+	rowUpper[row] = rowUpper[row + rowStep];
+	//    rowScale[row] = rowScale[row + rowStep];
       }
+    if (!allRows) {
+      int nnz = 0;
+      for (int col = 0; col < numCol; col++)
+	{
+	  int fmEl = Astart[col];
+	  Astart[col] = nnz;
+	  for (int el = fmEl; el < Astart[col + 1]; el++)
+	    {
+	      int row = Aindex[el];
+	      if (row < firstrow || row > lastrow)
+		{
+		  if (row < firstrow)
+		    {
+		      Aindex[nnz] = row;
+		    }
+		  else
+		    {
+		      Aindex[nnz] = row - rowStep;
+		    }
+		  Avalue[nnz] = Avalue[el];
+		  nnz++;
+		}
+	    }
+	}
+      Astart[numCol] = nnz;
     }
   }
-  Astart[numCol] = nnz;
 
   //Reduce the number of rows and total number of variables in the model
   numRow -= rowStep;
@@ -3817,7 +3882,6 @@ void HModel::util_deleteRowset(int *dstat)
 #ifdef SCIP_DEV
     // Check that basis is valid basis.
     basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
-    cout << flush;
     assert(basisOK);
     //    printf("util_deleteRowset: all rows removed are basic slacks so basisOK\n"); cout<<flush;
 #endif
@@ -3826,10 +3890,9 @@ void HModel::util_deleteRowset(int *dstat)
   }
   else
   {
-#ifdef SCIP_DEV
     assert(basisOK);
+#ifdef SCIP_DEV
     printf("util_deleteRowset: not all rows removed are basic slacks\n");
-    cout << flush;
 #endif
     //Determine consequences for basis when deleting rows to leave no basis
     mlFg_Update(mlFg_action_DelRows);
@@ -4006,7 +4069,7 @@ void HModel::util_reportSolverOutcome(const char *message)
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal = abs(prObjVal-objective)/max(abs(objective), max(abs(prObjVal), 1.0));
-  printf("%16s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
+  printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f", modelName.c_str(),
          prObjVal, objective, dlObjVal, numberIteration, totalTime);
 #else
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(),
@@ -4405,6 +4468,7 @@ void HModel::util_reportColMtx(int ncol, vector<int> &XAstart, vector<int> &XAin
   printf("       Start %8d\n", XAstart[ncol]);
 }
 
+#ifdef HiGHSDEV
 void HModel::util_anPrDuDgn()
 {
   double normPrAct = 0;
@@ -4451,6 +4515,7 @@ void HModel::util_anPrDuDgn()
   printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n",
          modelName.c_str(), normPrAct, numDgnPrAct, numRow, normDuAct, numDgnDuAct, numCol);
 }
+#endif
 
 void HModel::util_reportModelDa(const char *filename)
 {
@@ -4735,8 +4800,9 @@ void HModel::util_anMlLargeCo(const char *message) {
 }
 
 void HModel::util_anMlSol() {
+  //  const char *fileName = "OutMl.mps"; writeToMPS(fileName);
   if (problemStatus != LP_Status_Optimal) return;
-  printf("\nAnalysing the model solution\n");
+  printf("\nAnalysing the model solution\n");fflush(stdout);
   const double inf = HSOL_CONST_INF;
   const double tlValueEr = 1e-8;
   const double tlPrRsduEr = 1e-8;
@@ -4782,7 +4848,7 @@ void HModel::util_anMlSol() {
   }
 
   // Look for column residual errors and infeasibilities - primal and dual
-  if (objOffset != 0.) printf("Primal objective offset is %11.4g\n", objOffset);
+  if (objOffset) printf("Primal objective offset is %11.4g\n", objOffset);
   double lcPrObjV = 0;
   double lcPrObjV_LargeCo = 0;
   double lcPrObjV_OtherCo = 0;
@@ -4842,16 +4908,16 @@ void HModel::util_anMlSol() {
 	  sclColDuIfs = 0;
 	} else {
 	  // Free
-	  bool freeEr = false;
+	  //	  bool freeEr = false;
 	  if (!hsol_isInfinity(-colLower[iCol])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeColEr< maxRpFreeColEr) {
 	      numRpFreeColEr++;
 	      printf("Column %7d supposed to be free but has lower bound of %g\n", iCol, colLower[iCol]);
 	    }
 	  }
 	  if (!hsol_isInfinity(colUpper[iCol])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeColEr< maxRpFreeColEr) {
 	      numRpFreeColEr++;
 	      printf("Column %7d supposed to be free but has upper bound of %g\n", iCol, colUpper[iCol]);
@@ -4876,9 +4942,14 @@ void HModel::util_anMlSol() {
 
     double prObjTerm = sclColValue*colCost[iCol];
     lcPrObjV += prObjTerm;
-    if (largeCostFlag[iCol]) {
-      lcPrObjV_LargeCo += prObjTerm;
-      lcValue_LargeCo += sclColValue;
+    if (numLargeCo) {
+      if (largeCostFlag[iCol]) {
+	lcPrObjV_LargeCo += prObjTerm;
+	lcValue_LargeCo += sclColValue;
+      } else {
+	lcPrObjV_OtherCo += prObjTerm;
+	lcValue_OtherCo += sclColValue;
+      }
     } else {
       lcPrObjV_OtherCo += prObjTerm;
       lcValue_OtherCo += sclColValue;
@@ -4970,6 +5041,7 @@ void HModel::util_anMlSol() {
 	     unsclColLower, unsclColValue, unsclColUpper, colPrIfs, colDuIfs, colDuRsduEr);
     }
   }
+
   printf("Found %6d   scaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs);
   printf("Found %6d unscaled column primal infeasibilities: sum %11.4g; max %11.4g\n",  numColPrIfs, sumColPrIfs, maxColPrIfs);
   printf("Found %6d   scaled column   dual infeasibilities: sum %11.4g; max %11.4g\n",  numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs);
@@ -5033,16 +5105,16 @@ void HModel::util_anMlSol() {
 	  sclRowDuIfs = 0.;
 	} else {
 	  // Free
-	  bool freeEr = false;
+	  //	  bool freeEr = false;
 	  if (!hsol_isInfinity(-rowLower[iRow])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeRowEr< maxRpFreeRowEr) {
 	      numRpFreeRowEr++;
 	      printf("Row    %7d supposed to be free but has lower bound of %g\n", iRow, rowLower[iRow]);
 	    }
 	  }
 	  if (!hsol_isInfinity(rowUpper[iRow])) {
-	    freeEr = true;
+	    //freeEr = true;
 	    if (numRpFreeRowEr< maxRpFreeRowEr) {
 	      numRpFreeRowEr++;
 	      printf("Row    %7d supposed to be free but has upper bound of %g\n", iRow, rowUpper[iRow]);

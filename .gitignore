@@ -225,11 +225,5 @@ pip-log.txt
 .nfs*
 *~
 
-SolveMl
-hsol.ou
-libhsol.a
-lpi_h2gmp.cpp
-
-buildOpt/
+#Virtual Studio directory
 .vscode/
-vscodeSetup

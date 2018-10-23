@@ -13,10 +13,14 @@ int main(int argc, char **argv)
   const char *crashMode = "";
   const char *partitionFile = 0;
   double TimeLimit_ArgV = HSOL_CONST_INF;
-
-
-  std::cout << "Running HiGHS\nCopyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
-#if defined(HiGHSDEV) || defined(HiGHSDEBUG)
+  std::cout << "Running HiGHS "
+	    << HIGHS_VERSION_MAJOR << "."
+	    << HIGHS_VERSION_MINOR << "."
+	    << HIGHS_VERSION_PATCH
+       << " [date: " << HIGHS_COMPILATION_DATE
+       << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
+	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+#ifdef HiGHSDEV
   //Report on preprocessing macros
 
 std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
@@ -25,6 +29,12 @@ std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
   std::cout << "OLD_PARSER       is     defined" << std::endl;
 #else
   std::cout << "OLD_PARSER       is not defined" << std::endl;
+#endif
+
+#ifdef OPENMP
+  std::cout << "OPENMP           is     defined" << std::endl;
+#else
+  std::cout << "OPENMP           is not defined" << std::endl;
 #endif
 
 #ifdef SCIP_DEV
@@ -39,10 +49,10 @@ std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
   std::cout << "HiGHSDEV         is not defined" << std::endl;
 #endif
 
-#ifdef HiGHSDEBUG
-  std::cout << "HiGHSDEBUG       is     defined" << std::endl;
+#ifdef HiGHSRELEASE
+  std::cout << "HiGHSRELEASE     is     defined" << std::endl;
 #else
-  std::cout << "HiGHSDEBUG       is not defined" << std::endl;
+  std::cout << "HiGHSRELEASE     is not defined" << std::endl;
 #endif
 
 #endif
@@ -273,6 +283,7 @@ int solvePlain(const char *filename)
 {
   HModel model;
   model.intOption[INTOPT_PRINT_FLAG] = 1;
+  //  model.intOption[INTOPT_PRINT_FLAG] = 4;//JAJH10/10
   int RtCd = model.load_fromMPS(filename);
   //  int RtCd = model.load_fromToy(filename);
   if (RtCd) return RtCd;

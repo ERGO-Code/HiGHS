@@ -16,7 +16,7 @@ using namespace std;
 
 void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 {
-  //  printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
+  //    printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
@@ -662,10 +662,13 @@ void HDual::solve_phase2()
 	  //invertHint can be true for various reasons see HModel.h
 	  if (invertHint) break;
 	  // Need the dual objective value to check for exceeding the
-	  // upper bound, but can't afford to compute it every
-	  // iteration!
-	  //      model->computeDuObj();
+	  // upper bound set by SCIP, but can't afford to compute it
+	  // every iteration!
+	  // Killer line for speed of HiGHS on hyper-sparse LPs!
+	  // Comment out when not working with SCIP!!
+	  model->computeDuObj();
 #ifdef HiGHSDEV
+	  //      model->computeDuObj();
 	  //      double pr_obj_v = model->computePrObj();
 	  //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj = %.11g\n",
 	  //	     model->numberIteration, pr_obj_v, model->objective);
@@ -673,7 +676,7 @@ void HDual::solve_phase2()
 	  if (model->objective > model->dblOption[DBLOPT_OBJ_UB])
 	    {
 #ifdef SCIP_DEV
-	      //printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+	      printf("HDual::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
 	      model->problemStatus = LP_Status_ObjUB;
 	      SolveBailout = true;
@@ -1153,6 +1156,7 @@ void HDual::iterateRp() {
   if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
   int numIter = model->numberIteration;
   bool header= numIter % 10 == 1;
+  header=true;//JAJH10/10
   if (header) iterateRpFull(header);
   iterateRpFull(false);
 }
@@ -1160,20 +1164,23 @@ void HDual::iterateRp() {
 void HDual::iterateRpFull(bool header) {
   if (header) {
     iterateRpIterPh(true);
-    iterateRpDuObj(true);
+    //    iterateRpDuObj(true);//JAJH10/10
 #ifdef HiGHSDEV
     iterateRpIterDa(true);
     iterateRpDsty(true);
-    printf(" FreeLsZ\n");
+    printf(" FreeLsZ");
 #endif
+    printf("\n");
   } else {
     iterateRpIterPh(false);
-    iterateRpDuObj(false);
+    //    iterateRpDuObj(false);//JAJH10/10
 #ifdef HiGHSDEV
     iterateRpIterDa(false);
     iterateRpDsty(false);
-    printf(" %7d\n", dualRow.freeListSize);
+    printf(" %7d", dualRow.freeListSize);
 #endif
+    printf("\n");
+    iterateRpDuObj(false);//JAJH10/10
   }
 }
 

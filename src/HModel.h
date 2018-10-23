@@ -219,7 +219,7 @@ public:
     void check_load_fromArrays();
     void check_load_fromPostsolve();
 #endif
-    
+    int writeToMPS(const char *filename);
     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     // Esoterica!
     // Initialise the random vectors required by hsol
@@ -420,6 +420,7 @@ public:
     int numCol;
     int numRow;
     int numTot;
+    int numInt;
     int problemStatus;
     int objSense; //+1 => min; -1 => max
     double objOffset;
