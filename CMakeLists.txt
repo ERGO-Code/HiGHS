@@ -79,7 +79,8 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.h)
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src 
+    ${CMAKE_SOURCE_DIR}/src/external)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)

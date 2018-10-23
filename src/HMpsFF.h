@@ -15,8 +15,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "HConst.h"
-#include "ext/Hash.hpp"
-#include "ext/pdqsort.h"
+#include "Hash.hpp"
+#include "pdqsort.h"
 #include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/dynamic_bitset.hpp>
