@@ -13,7 +13,7 @@ set(sources
     simplex/HVector.cpp
     simplex/HCrash.cpp
     presolve/HPresolve.cpp
-    lp_data/HPreData.cpp
+    presolve/HPreData.cpp
     io/HinOut.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
