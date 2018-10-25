@@ -126,6 +126,14 @@ string toString(Status status) {
   return "";
 }
 
+// If debug this method terminates the program when the status is not OK. If
+// standard build it only prints a message.
+void checkStatus(Status status) {
+  assert(status == Status::OK);
+  if (status != Status::OK)
+    std::cout << "Unexpected status: " << toString(status);
+}
+
 LpError checkLp(const LpData& lp) {
   // Check dimensions.
   if (lp.numCol <= 0 || lp.numRow <= 0) return LpError::matrix_dimensions;

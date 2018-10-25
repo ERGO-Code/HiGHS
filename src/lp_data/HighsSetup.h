@@ -8,35 +8,33 @@
 
 // Class to set parameters and run HiGHS
 class Highs {
+ public:
+  Highs() {}
+  explicit Highs(const Options& opt) : options(opt){};
+
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   Status run(const LpData& lp, Solution& solution) const;
-  explicit Highs(const Options& opt) : options(opt){};
 
-  void setAllOptions(const Options& opt) { options = opt }
+  void setAllOptions(const Options& opt) { options = opt; }
   // todo: implement string based options
-  void setOption(const std::string& option);
-  int getOption(const std::string& option);
-  double getOption(const std::string& option);
-  std::string getOption(const std::string& option);
+  void setOption(const std::string& option, int value);
+  void setOption(const std::string& option, double value);
+  void setOption(const std::string& option, string value);
+
+  int getIntOption(const std::string& option);
+  double getDoubleOption(const std::string& option);
+  std::string getStringOption(const std::string& option);
 
  private:
   Options options;
   Status runSolver(const LpData& lp, Solution& solution) const;
 };
 
-// If debug this method terminates the program when the status is not OK. If
-// standard build it only prints a message.
-void checkStatus(Status status) {
-  assert(status == Status::OK);
-  if (status != Status::OK)
-    std::cout << "Unexpected status: " << toString(status);
-}
-
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 Status Highs::run(const LpData& lp, Solution& solution) const {
-  if (!options_.presolve) {
+  if (!options.presolve) {
     Solution solution;
     return runSolver(lp, solution);
   }
@@ -78,9 +76,10 @@ Status Highs::run(const LpData& lp, Solution& solution) const {
 
 // The method below runs simplex or ipx solver on the lp.
 
-Status Highs::runSolver(lp, solution) {
-  checkLp(lp);
+Status Highs::runSolver(const LpData& lp, Solution& solution) const {
+  assert(checkLp(lp) == LpError::none);
 
+  Status status;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
@@ -125,7 +124,8 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   int pami = 0;
   int sip = 0;
   int scip = 0;
-  int timeLimit = 0;;
+  int timeLimit = 0;
+  ;
 
   double cut = 0;
   const char* fileName = "";
@@ -182,7 +182,7 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;
     printHelp(argv[0]);
-    return 0;
+    return Status::InputError;
   }
 
   if (argc == 4 && strcmp(argv[1], "-repeat") == 0) {
@@ -191,15 +191,14 @@ Status loadOptions(int argc, char** argv, Options& options_) {
     tester.setup(argv[2]);
     tester.testUpdate(atoi(argv[3]));
 #endif
-    return 0;
+    return Status::OK;
   }
 
+  char opt;
   if (argc == 2) {
     filename = 1;
     fileName = argv[1];
-  }
-
-  else {
+  } else {
     while ((opt = getopt(argc, argv, "p:c:e:P:sSm::t:T:df:")) != EOF)
       switch (opt) {
         case 'f':
@@ -332,7 +331,7 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   options_.pami = pami;
   options_.sip = sip;
   options_.scip = scip;
-  options_.timeLimit = timeLimit_ArgV;
+  options_.timeLimit = TimeLimit_ArgV;
 
   options_.cut = cut;
   options_.fileName = fileName;

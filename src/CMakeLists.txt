@@ -1,6 +1,7 @@
 
 set(sources
     RunHighs.cpp
+    HApp.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -23,6 +24,7 @@ set(sources
 )
 
 set(headers
+    HApp.h
     simplex/HConst.h
     simplex/HDual.h
     simplex/HDualRow.h
@@ -37,6 +39,8 @@ set(headers
     simplex/HRandom.h
     presolve/HPresolve.h
     lp_data/HPreData.h
+    lp_data/LpData.h
+    lp_data/HighsSetup.h
     io/HinOut.h
     io/HMPSIO.h
     io/HMpsFF.h
