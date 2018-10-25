@@ -2,32 +2,24 @@
 
 using namespace std;
 
-// move two below to HApp.h
-// For now, but later change so HiGHS properties are string based so that new
-// options (for debug and testing too) can be added easily
-
-
-
+Status solveSimplex(const Options& opt, const LpData& lp, Solution& solution) {
     cout << "=================================================================="
             "=="
             "================"
          << endl;
-
-
-Status solveSimplex(options, LP, solution);
     // parallel
-    if (sip) {
+    if (opt.sip) {
       cout << "Running solveTasks" << endl;
       solveTasks(fileName);
     }
-    if (scip) {
+    if (opt.scip) {
       cout << "Running solveSCIP" << endl;
       solveSCIP(fileName);
-    } else if (pami) {
+    } else if (opt.pami) {
       if (partitionFile) {
         cout << "Running solveMulti" << endl;
-        solveMulti(fileName, partitionFile);
-      } else if (cut) {
+        solveMulti(opt.fileName, opt.partitionFile);
+      } else if (opt.cut) {
         HModel model;
         model.intOption[INTOPT_PRINT_FLAG] = 1;
         model.intOption[INTOPT_PERMUTE_FLAG] = 1;
@@ -49,7 +41,7 @@ Status solveSimplex(options, LP, solution);
     }
     // serial
     else {
-      if (!presolve && !crash && !edgeWeight && !price && !timeLimit) {
+      if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price && !opt.timeLimit) {
         cout << "Running solvePlain" << endl;
         int RtCod =
             // solvePlainAPI(fileName);
@@ -57,7 +49,8 @@ Status solveSimplex(options, LP, solution);
         if (RtCod != 0) {
           printf("solvePlain(API) return code is %d\n", RtCod);
         }
-      } else if (presolve && !crash && !edgeWeight && !price && !timeLimit) {
+      }   // todo: remove case below, presolve handled elsewhere
+      else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price && !opt.timeLimit) {
         if (presolve == 1) {
           cout << "Running solvePlainWithPresolve" << endl;
           solvePlainWithPresolve(fileName);
@@ -76,8 +69,9 @@ Status solveSimplex(options, LP, solution);
                        TimeLimit_ArgV);
       }
     }
-
-    return 0;
+    
+    // todo: check what the solver outcome is and return corresponding status
+    return Status::OK;
   }
 
   int solvePlain(const char *filename) {

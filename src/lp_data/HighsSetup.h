@@ -8,11 +8,10 @@
 
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
-enum class MpsParserType {
-  free,
-  fixed
-}
+enum class MpsParserType { free, fixed };
 
+// For now, but later change so HiGHS properties are string based so that new
+// options (for debug and testing too) can be added easily.
 struct Options {
   string filename = "";
   int presolve = 0, int crash = 0;
@@ -24,15 +23,16 @@ struct Options {
   int timeLimit = 0;
   double cut = 0;
 
-  MpsParserType parser_type;
+  MpsParserType parser_type = MpsParserType::new;
 
   const char* fileName = "";
   const char* presolveMode = "";
   const char* edWtMode = "";
   const char* priceMode = "";
   const char* crashMode = "";
-}
+};
 
+// HiGHS status
 enum Status {
   OK,
   InputError,
@@ -40,11 +40,9 @@ enum Status {
   ParseError,
   ProblemReduced,
   ProblemReducedToEmpty,
-  Presolved,
   ReducedSolution,
   Postsolved,
   SimplexCleanUpFinished,
-  Unknown,
   Infeasible,
   Unbounded,
   Optimal,
@@ -67,38 +65,54 @@ class Highs {
 
  private:
   Options options;
-  Status runSolver(const LpData& lp,
-                   Solution& solution) const;
+  Status runSolver(const LpData& lp, Solution& solution) const;
 };
 
-void printStatus(Status status) {
+// Return a string representation of status.
+string toString(Status status) {
   switch (status) {
     case Status::OK:
-      std::cout << "OK";
+      return "OK.";
       break;
     case Status::FileNotFound:
-      std::cout << "Error: File not found.";
+      return "Error: File not found.";
       break;
     case Status::ParseError:
-      std::cout << "Parse error.";
+      return "Parse error.";
       break;
-    case Status::Presolved:
-      std::cout << "Presolve finished." break;
+    case Status::ProblemReduced:
+      return "Problem reduced.";
+      break;
+    case Status::ProblemReducedToEmpty:
+      return "Problem reduced to empty.";
+      break;
     case Status::ReducedSolution:
-      std::cout << "Reduced problem solved";
+      return "Reduced problem solved.";
       break;
     case Status::Postsolved:
-      std::cout << "Postsolved";
+      return "Postsolved.";
+      break;
+    case Status::Infeasible:
+      return "Infeasible.";
+      break;
+    case Status::Unbounded:
+      return "Unbounded.";
+      break;
+    case Status::Optimal:
+      return "Optimal.";
+      break;
+    case Status::NotImplemented:
+      return "Not implemented.";
       break;
   }
 }
 
-checkStatus(Status status) {
-  if (status != Status::OK) {
-    printStatus(status);
-    if (status == Status::InputError) printHelp(argv[0]);
-    exit(0);
-  }
+// If debug this method terminates the program when the status is not OK. If
+// standard build it only prints a message.
+void checkStatus(Status status) {
+  assert(status == Status::OK);
+  if (status != Status::OK)
+    std::cout << "Unexpected status: " << toString(status);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -183,9 +197,7 @@ Status loadLpFromFile(const Options& options, LpData& lp) {
   return Status::OK;
 }
 
-
-Status
-loadOptions(int argc, char** argv, Options& options_) {
+Status loadOptions(int argc, char** argv, Options& options_) {
   int& filename = options_.filename;
   int& presolve = options_.presolve;
   int& crash = options_.crash;
