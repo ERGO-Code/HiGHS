@@ -31,75 +31,7 @@ class LpData {
   std::vector<double> colUpper;
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
-
-  static LpError checkLp(const LpData& lp) const;
 };
-
-
-struct Options {
-  string filename = "";
-  int presolve = 0, int crash = 0;
-  int edgeWeight = 0;
-  int price = 0;
-  int pami = 0;
-  int sip = 0;
-  int scip = 0;
-  int timeLimit = 0;
-  double cut = 0;
-  const char *fileName = "";
-  const char *presolveMode = "";
-  const char *edWtMode = "";
-  const char *priceMode = "";
-  const char *crashMode = "";
-}
-
-enum Status {
-  OK,
-  InputError,
-  FileNotFound,
-  ParseError,
-  ProblemReduced,
-  ProblemReducedToEmpty,
-  Presolved,
-  ReducedSolution,
-  Postsolved,
-  SimplexCleanUpFinished,
-  Unknown,
-  Infeasible,
-  Unbounded,
-  Optimal,
-  NotImplemented
-};
-
-void printStatus(Status status) {
-  switch (status) {
-    case Status::OK:
-      std::cout << "OK";
-      break;
-    case Status::FileNotFound:
-      std::cout << "Error: File not found.";
-      break;
-    case Status::ParseError:
-      std::cout << "Parse error.";
-      break;
-    case Status::Presolved:
-      std::cout << "Presolve finished." break;
-    case Status::ReducedSolution:
-      std::cout << "Reduced problem solved";
-      break;
-    case Status::Postsolved:
-      std::cout << "Postsolved";
-      break;
-  }
-}
-
-checkStatus(Status status) {
-  if (status != Status::OK) {
-    printStatus(status);
-    if (status == Status::InputError) printHelp(argv[0]);
-    exit(0);
-  }
-}
 
 LpError checkLp(const LpData& lp) const {
   // Check dimensions.
