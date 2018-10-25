@@ -6,49 +6,6 @@
 #include "HApp.h"
 #include "LpData.h"
 
-// The free parser also reads fixed format MPS files but the fixed
-// parser does not read free mps files.
-enum class MpsParserType { free, fixed };
-
-// For now, but later change so HiGHS properties are string based so that new
-// options (for debug and testing too) can be added easily.
-struct Options {
-  string filename = "";
-  int presolve = 0, int crash = 0;
-  int edgeWeight = 0;
-  int price = 0;
-  int pami = 0;
-  int sip = 0;
-  int scip = 0;
-  int timeLimit = 0;
-  double cut = 0;
-
-  MpsParserType parser_type = MpsParserType::new;
-
-  const char* fileName = "";
-  const char* presolveMode = "";
-  const char* edWtMode = "";
-  const char* priceMode = "";
-  const char* crashMode = "";
-};
-
-// HiGHS status
-enum Status {
-  OK,
-  InputError,
-  FileNotFound,
-  ParseError,
-  ProblemReduced,
-  ProblemReducedToEmpty,
-  ReducedSolution,
-  Postsolved,
-  SimplexCleanUpFinished,
-  Infeasible,
-  Unbounded,
-  Optimal,
-  NotImplemented
-};
-
 // Class to set parameters and run HiGHS
 class Highs {
   // The public method run(lp, solution) calls runSolver to solve problem before
@@ -67,45 +24,6 @@ class Highs {
   Options options;
   Status runSolver(const LpData& lp, Solution& solution) const;
 };
-
-// Return a string representation of status.
-string toString(Status status) {
-  switch (status) {
-    case Status::OK:
-      return "OK.";
-      break;
-    case Status::FileNotFound:
-      return "Error: File not found.";
-      break;
-    case Status::ParseError:
-      return "Parse error.";
-      break;
-    case Status::ProblemReduced:
-      return "Problem reduced.";
-      break;
-    case Status::ProblemReducedToEmpty:
-      return "Problem reduced to empty.";
-      break;
-    case Status::ReducedSolution:
-      return "Reduced problem solved.";
-      break;
-    case Status::Postsolved:
-      return "Postsolved.";
-      break;
-    case Status::Infeasible:
-      return "Infeasible.";
-      break;
-    case Status::Unbounded:
-      return "Unbounded.";
-      break;
-    case Status::Optimal:
-      return "Optimal.";
-      break;
-    case Status::NotImplemented:
-      return "Not implemented.";
-      break;
-  }
-}
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.
@@ -198,23 +116,25 @@ Status loadLpFromFile(const Options& options, LpData& lp) {
 }
 
 Status loadOptions(int argc, char** argv, Options& options_) {
-  int& filename = options_.filename;
-  int& presolve = options_.presolve;
-  int& crash = options_.crash;
-  int& edgeWeight = options_.edgeWeight;
-  int& price = options_.price;
-  int& pami = options_.pami;
-  int& sip = options_.sip;
-  int& scip = options_.scip;
-  int& timeLimit = options_.timeLimit;
+  // todo: replace references with options_.*
+  int filename = 0;
+  int presolve = 0;
+  int crash = 0;
+  int edgeWeight = 0;
+  int price = 0;
+  int pami = 0;
+  int sip = 0;
+  int scip = 0;
+  int timeLimit = 0;;
 
-  double& cut = options_.cut;
-  const char* fileName = options_.fileName;
-  const char* presolveMode = options_.presolveMode;
-  const char* edWtMode = options_.edWtMode;
-  const char* priceMode = options_.priceMode;
-  const char* crashMode = options_.crashMode;
-  const char* partitionFile = options_.partitionFile;
+  double cut = 0;
+  const char* fileName = "";
+  const char* presolveMode = "";
+  const char* edWtMode = "";
+  const char* priceMode = "";
+  const char* crashMode = "";
+  const char* partitionFile = "";
+
   double TimeLimit_ArgV = HSOL_CONST_INF;
   std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
             << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
@@ -403,6 +323,24 @@ Status loadOptions(int argc, char** argv, Options& options_) {
       "edgeWeight = %d; price = %d; timeLimit = %d\n",
       sip, scip, pami, presolve, crash, edgeWeight, price, timeLimit);
 #endif
+
+  options_.filename = filename;
+  options_.presolve = presolve;
+  options_.crash = crash;
+  options_.edgeWeight = edgeWeight;
+  options_.price = price;
+  options_.pami = pami;
+  options_.sip = sip;
+  options_.scip = scip;
+  options_.timeLimit = timeLimit_ArgV;
+
+  options_.cut = cut;
+  options_.fileName = fileName;
+  options_.presolveMode = presolveMode;
+  options_.edWtMode = edWtMode;
+  options_.priceMode = priceMode;
+  options_.crashMode = crashMode;
+  options_.partitionFile = partitionFile;
 
   return Status::OK;
 }

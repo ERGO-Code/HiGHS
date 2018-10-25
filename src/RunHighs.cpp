@@ -1,6 +1,6 @@
-#include "HApp.cpp"
+#include "HApp.h"
 
-int main_(int argc, char **argv) {
+int main(int argc, char **argv) {
   // Load user options.
   Options options;
   Status init_status = loadOptions(options);
@@ -10,7 +10,7 @@ int main_(int argc, char **argv) {
     return 0;
   }
   checkStatus(init_status);
-  
+
   // Read LpData from a file.
   LpData lp;
   Status read_status = loadLpDataFromFile(options_.filename, lp);
@@ -22,7 +22,5 @@ int main_(int argc, char **argv) {
   Status run_status = highs.run();
   checkStatus(run_status);
 
-
-  
   return 0;
 }
