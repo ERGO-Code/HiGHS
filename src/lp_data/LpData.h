@@ -1,6 +1,7 @@
 #ifndef LP_DATA_H
 #define LP_DATA_H
 
+#include <string>
 #include <vector>
 
 #include "HConst.h"
@@ -31,49 +32,117 @@ class LpData {
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
 
-  LpError checkLp();
+  static LpError checkLp(const LpData& lp) const;
 };
 
-LpError LpData::checkLp() {
 
+struct Options {
+  string filename = "";
+  int presolve = 0, int crash = 0;
+  int edgeWeight = 0;
+  int price = 0;
+  int pami = 0;
+  int sip = 0;
+  int scip = 0;
+  int timeLimit = 0;
+  double cut = 0;
+  const char *fileName = "";
+  const char *presolveMode = "";
+  const char *edWtMode = "";
+  const char *priceMode = "";
+  const char *crashMode = "";
+}
+
+enum Status {
+  OK,
+  InputError,
+  FileNotFound,
+  ParseError,
+  ProblemReduced,
+  ProblemReducedToEmpty,
+  Presolved,
+  ReducedSolution,
+  Postsolved,
+  SimplexCleanUpFinished,
+  Unknown,
+  Infeasible,
+  Unbounded,
+  Optimal,
+  NotImplemented
+};
+
+void printStatus(Status status) {
+  switch (status) {
+    case Status::OK:
+      std::cout << "OK";
+      break;
+    case Status::FileNotFound:
+      std::cout << "Error: File not found.";
+      break;
+    case Status::ParseError:
+      std::cout << "Parse error.";
+      break;
+    case Status::Presolved:
+      std::cout << "Presolve finished." break;
+    case Status::ReducedSolution:
+      std::cout << "Reduced problem solved";
+      break;
+    case Status::Postsolved:
+      std::cout << "Postsolved";
+      break;
+  }
+}
+
+checkStatus(Status status) {
+  if (status != Status::OK) {
+    printStatus(status);
+    if (status == Status::InputError) printHelp(argv[0]);
+    exit(0);
+  }
+}
+
+LpError checkLp(const LpData& lp) const {
   // Check dimensions.
-  if (numCol <= 0 || numRow <= 0) return LpError::matrix_dimensions;
+  if (lp.numCol <= 0 || lp.numRow <= 0) return LpError::matrix_dimensions;
 
   // Check vectors.
-  if (colCost.size() != numCol) return LpError::objective;
+  if (lp.colCost.size() != lp.numCol) return LpError::objective;
 
-  if (colLower.size() != numCol || colUpper.size() != numCol)
+  if (lp.colLower.size() != lp.numCol || lp.colUpper.size() != lp.numCol)
     return LpError::col_bounds;
-  if (rowLower.size() != numRow || rowUpper.size() != numRow)
+  if (lp.rowLower.size() != lp.numRow || lp.rowUpper.size() != lp.numRow)
     return LpError::row_bounds;
 
   for (int i = 0; i < numRow; i++)
-    if (rowLower[i] < -HSOL_CONST_INF || rowUpper[i] > HSOL_CONST_INF)
+    if (lp.rowLower[i] < -HSOL_CONST_INF || lp.rowUpper[i] > HSOL_CONST_INF)
       return LpError::row_bounds;
 
   for (int j = 0; j < numCol; j++) {
-    if (colCost[j] < -HSOL_CONST_INF || colCost[j] > HSOL_CONST_INF)
+    if (lp.colCost[j] < -HSOL_CONST_INF || lp.colCost[j] > HSOL_CONST_INF)
       return LpError::objective;
 
-    if (colLower[j] < -HSOL_CONST_INF || colUpper[j] > HSOL_CONST_INF)
+    if (lp.colLower[j] < -HSOL_CONST_INF || lp.colUpper[j] > HSOL_CONST_INF)
       return LpError::col_bounds;
-    if (colLower[j] > colUpper[j] + kBoundTolerance) return LpError::col_bounds;
+    if (lp.colLower[j] > lp.colUpper[j] + kBoundTolerance)
+      return LpError::col_bounds;
   }
 
   // Check matrix.
-  const int nnz = Avalue.size();
+  const int nnz = lp.Avalue.size();
   if (nnz <= 0) return LpError::matrix_value;
-  if (Aindex.size() != nnz) return LpError::matrix_indices;
+  if (lp.Aindex.size() != nnz) return LpError::matrix_indices;
 
-  if (Astart.size() != numCol + 1) return LpError::matrix_start;
+  if (lp.Astart.size() != numCol + 1) return LpError::matrix_start;
   for (int i = 0; i < numCol; i++) {
-    if (Astart[i] > Astart[i + 1] || Astart[i] >= nnz || Astart[i] < 0)
+    if (lp.Astart[i] > lp.Astart[i + 1] || lp.Astart[i] >= nnz ||
+        lp.Astart[i] < 0)
       return LpError::matrix_start;
   }
 
   for (int k = 0; k < nnz; k++) {
-    if (Aindex[k] < 0 || Aindex[k] >= numRow) return LpError::matrix_indices;
-    if (Avalue[k] < -HSOL_CONST_INF || Avalue[k] > HSOL_CONST_INF)
+    if (lp.Aindex[k] < 0 || lp.Aindex[k] >= lp.numRow)
+      return LpError::matrix_indices;
+    if (lp.Avalue[k] < -HSOL_CONST_INF || lp.Avalue[k] > HSOL_CONST_INF)
       return LpError::matrix_value;
   }
 

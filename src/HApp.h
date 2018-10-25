@@ -84,19 +84,4 @@ void printHelp(std::string execName) {
   return;
 }
 
-Status loadLpDataFromFile(const string &filename, LpData &lp);
-
-Status runSolver(const Options &options, const LpData &lp, Solution &solution) {
-#ifndef IPX
-  // HiGHS
-  // todo: Without the presolve part, so will be
-  //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solve_simplex(options, lp, solution);
-#else
-  // IPX
-  status = solve_ipx(options, lp, solution);
-  // If ipx crossover did not find optimality set up simplex.
-
-#endif
-}
 #endif

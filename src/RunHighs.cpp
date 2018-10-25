@@ -11,7 +11,12 @@ int main_(int argc, char **argv) {
   status = loadLpDataFromFile(options_.filename, lp);
   checkStatus(status);
 
-  if (options_.presolve) {
+
+  if (!options_.presolve) {
+    Solution solution;
+    status = runSolver(options, lp, solution);
+    checkStatus(status);
+  } else {
     // LpData reduced_lp;
     // status = presolve(lp, reduced_lp);
     // checkStatus(status);
@@ -32,8 +37,7 @@ int main_(int argc, char **argv) {
 
     // Postsolve
     // If needed set up clean up with simplex.
-  } else {
-    Solution solution;
-    status = runSolver(options, lp, solution);
-    checkStatus(status);
   }
+
+  return 0;
+}

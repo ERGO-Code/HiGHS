@@ -3,6 +3,9 @@
 using namespace std;
 
 // move two below to HApp.h
+// For now, but later change so HiGHS properties are string based so that new
+// options (for debug and testing too) can be added easily
+
 struct Options {
   string filename = "";
   int presolve = 0, int crash = 0;
@@ -67,14 +70,8 @@ checkStatus(Status status) {
   }
 }
 
-Status loadOptions
+Status loadOptions(int argc, char** argv, Options& options_) {
 
-    int
-    main(int argc, char **argv) {
-  Options options;
-  loadOptions(options);
-
-  Status loadOptions(Options options_) {
     int &filename = options_.filename;
     int &presolve = options_.presolve;
     int &crash = options_.crash;
@@ -289,6 +286,8 @@ Status loadOptions
             "================"
          << endl;
 
+
+Status solveSimplex(options, LP, solution);
     // parallel
     if (sip) {
       cout << "Running solveTasks" << endl;
@@ -1175,6 +1174,9 @@ Status loadOptions
         HModel model;
         model.intOption[INTOPT_PRINT_FLAG] = 1;
         model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+
+        // here want model.load_fromMPS (which will still work after) to be 
+        // replaced by HModel.load_fromLpData
         int RtCd = model.load_fromMPS(filename);
         if (RtCd) return RtCd;
 
