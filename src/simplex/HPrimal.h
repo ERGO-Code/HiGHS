@@ -1,5 +1,5 @@
-#ifndef HPRIMAL_H_
-#define HPRIMAL_H_
+#ifndef SIMPLEX_HPRIMAL_H_
+#define SIMPLEX_HPRIMAL_H_
 
 #include "HModel.h"
 

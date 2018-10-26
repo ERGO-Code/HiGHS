@@ -1,5 +1,5 @@
-#ifndef HMATRIX_H_
-#define HMATRIX_H_
+#ifndef SIMPLEX_HMATRIX_H_
+#define SIMPLEX_HMATRIX_H_
 
 #include "HVector.h"
 

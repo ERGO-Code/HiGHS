@@ -84,4 +84,6 @@ void printHelp(std::string execName) {
   return;
 }
 
+Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution);
+
 #endif

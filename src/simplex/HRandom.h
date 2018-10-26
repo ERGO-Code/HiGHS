@@ -1,5 +1,5 @@
-#ifndef HRANDOM_H_
-#define HRANDOM_H_
+#ifndef SIMPLEX_HRANDOM_H_
+#define SIMPLEX_HRANDOM_H_
 
 class HRandom {
  public:

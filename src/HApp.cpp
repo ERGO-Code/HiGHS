@@ -10,6 +10,7 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
   // parallel
   if (opt.sip) {
     cout << "Running solveTasks" << endl;
+    
     solveTasks(opt.fileName);
   }
   if (opt.scip) {

@@ -1,5 +1,5 @@
-#ifndef HMPSIO_H_
-#define HMPSIO_H_
+#ifndef IO_HMPSIO_H_
+#define IO_HMPSIO_H_
 
 #include <cmath>
 #include <cstdio>

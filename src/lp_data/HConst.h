@@ -1,5 +1,5 @@
-#ifndef HCONST_H_
-#define HCONST_H_
+#ifndef LP_DATA_HCONST_H_
+#define LP_DATA_HCONST_H_
 
 const int HIGHS_CONST_I_INF = 32767;
 const double HIGHS_CONST_INF = 1e200;

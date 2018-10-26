@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "HApp.h"
 #include "LpData.h"
+#include "HApp.h"
 
 // Class to set parameters and run HiGHS
 class Highs {
@@ -93,8 +93,10 @@ Status Highs::runSolver(const LpData& lp, Solution& solution) const {
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
-
-  assert(KktSatisfied(lp, solution));
+  
+  // todo: 
+  // assert(KktSatisfied(lp, solution));
+  
   return status;
 }
 
@@ -110,7 +112,7 @@ Status loadLpFromFile(const Options& options, LpData& lp) {
 
   // call MPSParser::loadProblem(arrays of LpData object)
 
-  assert(LpData::checkLp(lp) == LpError::none);
+  assert(checkLp(lp) == LpError::none);
   return Status::OK;
 }
 

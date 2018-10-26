@@ -1,5 +1,5 @@
-#ifndef LP_DATA_H
-#define LP_DATA_H
+#ifndef LP_DATA_LP_DATA_H
+#define LP_DATA_LP_DATA_H
 
 #include <string>
 #include <vector>

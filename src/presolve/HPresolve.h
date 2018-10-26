@@ -1,5 +1,5 @@
-#ifndef HPRESOLVE_H_
-#define HPRESOLVE_H_
+#ifndef PRESOLVE_HPRESOLVE_H_
+#define PRESOLVE_HPRESOLVE_H_
 
 #include <list>
 #include <stack>

@@ -1,5 +1,5 @@
-#ifndef HAPI_H_
-#define HAPI_H_
+#ifndef SIMPLEX_HAPI_H_
+#define SIMPLEX_HAPI_H_
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
                             const int XnumCol, const int XnumRow,

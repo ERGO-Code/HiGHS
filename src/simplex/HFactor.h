@@ -1,5 +1,5 @@
-#ifndef HFACTOR_H_
-#define HFACTOR_H_
+#ifndef SIMPLEX_HFACTOR_H_
+#define SIMPLEX_HFACTOR_H_
 
 #include <algorithm>
 #include <cmath>

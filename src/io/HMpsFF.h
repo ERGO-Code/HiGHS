@@ -1,5 +1,5 @@
-#ifndef HMPSFF_H_
-#define HMPSFF_H_
+#ifndef IO_HMPSFF_H_
+#define IO_HMPSFF_H_
 
 #include <cassert>
 #include <cmath>

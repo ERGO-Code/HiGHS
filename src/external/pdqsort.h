@@ -20,8 +20,8 @@
 */
 
 
-#ifndef PDQSORT_H
-#define PDQSORT_H
+#ifndef EXTERNAL_PDQSORT_H
+#define EXTERNAL_PDQSORT_H
 
 #include <algorithm>
 #include <cstddef>

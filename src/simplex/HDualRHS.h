@@ -1,5 +1,5 @@
-#ifndef HDUALRHS_H_
-#define HDUALRHS_H_
+#ifndef SIMPLEX_HDUALRHS_H_
+#define SIMPLEX_HDUALRHS_H_
 
 #include <vector>
 using namespace std;

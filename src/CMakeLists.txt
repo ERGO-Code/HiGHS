@@ -1,7 +1,6 @@
 
 set(sources
     RunHighs.cpp
-    HApp.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
