@@ -1,9 +1,8 @@
-#ifndef HIGHS_SETUP_
-#define HIGHS_SETUP_
+#ifndef LP_DATA_HIGHS_SETUP_
+#define LP_DATA_HIGHS_SETUP_
 
 #include <iostream>
 
-#include "LpData.h"
 #include "HApp.h"
 
 // Class to set parameters and run HiGHS
@@ -18,9 +17,9 @@ class Highs {
 
   void setAllOptions(const Options& opt) { options = opt; }
   // todo: implement string based options
-  void setOption(const std::string& option, int value);
-  void setOption(const std::string& option, double value);
-  void setOption(const std::string& option, string value);
+  // void setIntOption(const std::string& option, int value);
+  // void setDoubleOption(const std::string& option, double value);
+  // void setStringOption(const std::string& option, std::string value);
 
   int getIntOption(const std::string& option);
   double getDoubleOption(const std::string& option);
@@ -343,6 +342,83 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   options_.crashMode = crashMode;
   options_.partitionFile = partitionFile;
 
+  return Status::OK;
+}
+
+Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
+  cout << "=================================================================="
+          "=="
+          "================"
+       << endl;
+  // parallel
+  if (opt.sip) {
+    cout << "Running solveTasks" << endl;
+    
+    solveTasks(opt.fileName);
+  }
+  if (opt.scip) {
+    cout << "Running solveSCIP" << endl;
+    solveSCIP(opt.fileName);
+  } else if (opt.pami) {
+    if (opt.partitionFile) {
+      cout << "Running solveMulti" << endl;
+      solveMulti(opt.fileName, opt.partitionFile);
+    } else if (opt.cut) {
+      HModel model;
+      model.intOption[INTOPT_PRINT_FLAG] = 1;
+      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
+
+      // todo: replace with load from LpData
+      int RtCd = model.load_fromMPS(opt.fileName);
+      if (RtCd) return Status::InputError;
+
+      model.scaleModel();
+
+      HDual solver;
+      cout << "Running solveCut" << endl;
+      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+
+      model.util_reportSolverOutcome("Cut");
+    } else {
+      cout << "Running solvemulti" << endl;
+      solveMulti(opt.fileName);
+    }
+  }
+  // serial
+  else {
+    if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
+        !opt.timeLimit) {
+      cout << "Running solvePlain" << endl;
+      int RtCod =
+          // solvePlainAPI(fileName);
+          solvePlain(opt.fileName);
+      if (RtCod != 0) {
+        printf("solvePlain(API) return code is %d\n", RtCod);
+      }
+    }  // todo: remove case below, presolve handled elsewhere
+    else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
+             !opt.timeLimit) {
+      if (opt.presolve == 1) {
+        cout << "Running solvePlainWithPresolve" << endl;
+        solvePlainWithPresolve(opt.fileName);
+        // solvePlainExperiments(fileName);
+        // testIO("fileIO");
+      }
+#ifdef EXT_PRESOLVE
+      else if (presolve == 2) {
+        cout << "Running solveExternalPresolve" << endl;
+        solveExternalPresolve(fileName);
+      }
+#endif
+    } else {
+      cout << "Running solvePlainJAJH" << endl;
+      solvePlainJAJH(opt.priceMode, opt.edWtMode, opt.crashMode,
+                     opt.presolveMode, opt.fileName, opt.timeLimit);
+    }
+  }
+
+  // todo: check what the solver outcome is and return corresponding status
   return Status::OK;
 }
 

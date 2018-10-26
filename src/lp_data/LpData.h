@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <cassert>
 
 #include "HConst.h"
 // The free parser also reads fixed format MPS files but the fixed
@@ -10,9 +11,10 @@
 enum class MpsParserType { free, fixed };
 
 // For now, but later change so HiGHS properties are string based so that new
-// options (for debug and testing too) can be added easily.
+// options (for debug and testing too) can be added easily. The options below
+// are just what has been used to parse options from argv.
 struct Options {
-  string filename = "";
+  int filename = 0;
   int presolve = 0;
   int crash = 0;
   int edgeWeight = 0;
@@ -84,7 +86,7 @@ struct Solution {
 };
 
 // Return a string representation of status.
-string toString(Status status) {
+std::string toString(Status status) {
   switch (status) {
     case Status::OK:
       return "OK.";
