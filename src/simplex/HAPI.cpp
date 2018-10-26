@@ -1,5 +1,4 @@
 #include "HAPI.h"
-#include "HApp.h"
 #include "HDual.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
