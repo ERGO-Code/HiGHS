@@ -210,7 +210,9 @@ public:
     void updateMatrix(int columnIn, int columnOut);
     void updatePivots(int columnIn, int rowOut, int sourceOut);
     // Changes the update method, but only used in HTester.cpp
+#ifdef HiGHSDEV
     void changeUpdate(int updateMethod);
+#endif
     void setProblemStatus(int status);
 
     // Checking methods
