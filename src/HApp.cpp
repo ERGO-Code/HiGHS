@@ -2,7 +2,8 @@
 
 using namespace std;
 
-int solvePlain(HModel& model) {
+int solvePlain(HModel &model) {
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
   if (model.intOption[INTOPT_PRINT_FLAG]) model.util_reportModelBrief();
 #ifdef HiGHSDEV
     //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" <<
@@ -27,7 +28,7 @@ int solvePlain(HModel& model) {
   return 0;
 }
 
-int solvePlainAPI(HModel& model) {
+int solvePlainAPI(HModel &model) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   int RpRtVec = 0;
   printf("\nUsing SolvePlainAPI\n\n");
@@ -146,7 +147,7 @@ int solvePlainAPI(HModel& model) {
 }
 
 // Ivet
-int solvePlainWithPresolve(HModel& model) {
+int solvePlainWithPresolve(HModel &model) {
   double time1;
 
   double obj1 = presolve(model, time1);
@@ -226,7 +227,7 @@ int solvePlainWithPresolve(HModel& model) {
 }
 
 // Julian
-int solveSCIP(HModel& model) {
+int solveSCIP(HModel &model) {
   printf("Called solveSCIP\n");
   cout << flush;
   //  model.util_reportModel();
@@ -398,7 +399,7 @@ int solveSCIP(HModel& model) {
   return 0;
 }
 
-int solvePlainJAJH(HModel& model, const char *Price_ArgV, const char *EdWt_ArgV,
+int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
                    const char *Crash_ArgV, const char *Presolve_ArgV,
                    double TimeLimit_ArgV) {
   double setupTime = 0;
@@ -578,7 +579,6 @@ int solvePlainJAJH(HModel& model, const char *Price_ArgV, const char *EdWt_ArgV,
 #endif
     }
   } else {
-
     setupTime += model.timer.getTime();
     if (solver.Crash_Mode > 0) {
       HCrash crash;
@@ -768,7 +768,7 @@ int solvePlainExperiments(const char *filename) {
   return 0;
 }
 
-int solveTasks(HModel& model) {
+int solveTasks(HModel &model) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   model.intOption[INTOPT_PERMUTE_FLAG] = 1;
 
@@ -783,7 +783,7 @@ int solveTasks(HModel& model) {
   return 0;
 }
 
-int solveMulti(HModel& model, const char *partitionfile) {
+int solveMulti(HModel &model, const char *partitionfile) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   model.intOption[INTOPT_PERMUTE_FLAG] = 1;
   if (partitionfile) {
