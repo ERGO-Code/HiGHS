@@ -76,7 +76,7 @@ Status Highs::run(const LpData& lp, Solution& solution) const {
 // The method below runs simplex or ipx solver on the lp.
 
 Status Highs::runSolver(const LpData& lp, Solution& solution) const {
-  //assert(checkLp(lp) == LpError::none);
+  // assert(checkLp(lp) == LpError::none);
 
   Status status;
 #ifndef IPX
@@ -92,10 +92,10 @@ Status Highs::runSolver(const LpData& lp, Solution& solution) const {
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
-  
-  // todo: 
+
+  // todo:
   // assert(KktSatisfied(lp, solution));
-  
+
   return status;
 }
 
@@ -126,7 +126,6 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   int sip = 0;
   int scip = 0;
   int timeLimit = 0;
-
 
   double cut = 0;
   const char* fileName = "";
@@ -345,16 +344,15 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   return Status::OK;
 }
 
-Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
-
-
+Status solveSimplex(const Options& opt, const LpData& lp, Solution& solution) {
   // until parsers work with LpData
   HModel model;
   int RtCd = model.load_fromMPS(opt.fileName);
 
-// make sure old tests pass before you start work on the 
-// parsers. Then remove traces of read_fromMPS from below and replace the code above with 
-//HModel model = LpDataToHModel(lp);
+  // make sure old tests pass before you start work on the
+  // parsers. Then remove traces of read_fromMPS from below and replace the code
+  // above with
+  // HModel model = LpDataToHModel(lp);
 
   cout << "=================================================================="
           "=="
@@ -363,7 +361,7 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
   // parallel
   if (opt.sip) {
     cout << "Running solveTasks" << endl;
-    
+
     solveTasks(model);
   }
   if (opt.scip) {
@@ -391,33 +389,30 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
     }
   }
   // serial
-  else {
-    if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-        !opt.timeLimit) {
-      cout << "Running solvePlain" << endl;
-      int RtCod =
-          solvePlain(model);
-      if (RtCod != 0) {
-        printf("solvePlain(API) return code is %d\n", RtCod);
-      }
-    }  // todo: remove case below, presolve handled elsewhere
-    else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-             !opt.timeLimit) {
-      if (opt.presolve == 1) {
-        cout << "Running solvePlainWithPresolve" << endl;
-        solvePlainWithPresolve(model);
-      }
-#ifdef EXT_PRESOLVE
-      else if (presolve == 2) {
-        cout << "Running solveExternalPresolve" << endl;
-        solveExternalPresolve(fileName);
-      }
-#endif
-    } else {
-      cout << "Running solvePlainJAJH" << endl;
-      solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
-                     opt.presolveMode, opt.timeLimit);
+  else if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
+           opt.timeLimit == HSOL_CONST_INF) {
+    cout << "Running solvePlain" << endl;
+    int RtCod = solvePlain(model);
+    if (RtCod != 0) {
+      printf("solvePlain(API) return code is %d\n", RtCod);
     }
+  }  // todo: remove case below, presolve handled elsewhere
+  else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
+           opt.timeLimit == HSOL_CONST_INF) {
+    if (opt.presolve == 1) {
+      cout << "Running solvePlainWithPresolve" << endl;
+      solvePlainWithPresolve(model);
+    }
+#ifdef EXT_PRESOLVE
+    else if (presolve == 2) {
+      cout << "Running solveExternalPresolve" << endl;
+      solveExternalPresolve(fileName);
+    }
+#endif
+  } else {
+    cout << "Running solvePlainJAJH" << endl;
+    solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
+                   opt.presolveMode, opt.timeLimit);
   }
 
   // todo: check what the solver outcome is and return corresponding status
