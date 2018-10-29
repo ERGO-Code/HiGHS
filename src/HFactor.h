@@ -1,3 +1,7 @@
+/**@file  HFactor.h
+ * @brief Basis matrix factorization, update and solves for HiGHS
+ * @author Qi Hunagfu and Julian Hall
+ */
 #ifndef HFACTOR_H_
 #define HFACTOR_H_
 
@@ -14,42 +18,161 @@ enum UPDATE_METHOD {
     UPDATE_METHOD_MPF = 3,
     UPDATE_METHOD_APF = 4
 };
-
+/**
+ * Necessary threshholds for historical density to trigger
+ * hyper-sparse TRANs,
+ */
 const double hyperFTRANL = 0.15;
 const double hyperFTRANU = 0.10;
 const double hyperBTRANL = 0.10;
 const double hyperBTRANU = 0.15;
+/**
+ * Necessary threshhold for RHS density to trigger hyper-sparse TRANs,
+ */
 const double hyperCANCEL = 0.05;
+/**
+ * Threshhold for result density for it to be considered as
+ * hyper-sparse - only for reporting
+ */
 const double hyperRESULT = 0.10;
-
+/**
+ * Class for the following
+ *
+ * Basis matrix factorization \f$PBQ=LU\f$
+ *
+ * Update according to \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
+ *
+ * Solves \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN) and \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
+ */
 class HFactor {
 public:
-  void copyFrom(const HFactor *from);
-  void setup(int numCol, int numRow, int *Astart, int *Aindex, double *Avalue, int *baseIndex,
-	     int updateMethod = UPDATE_METHOD_FT);
-  void change(int updateMethod);
-  int build();
-  void ftran(HVector& vector, double hist_dsty) const;
-  void btran(HVector& vector, double hist_dsty) const;
-  void update(HVector *aq, HVector *ep, int *iRow, int *hint);
-  int pseudoTick;
-  int BtotalX;
-  int FtotalX;
+/**
+ * @brief Copy data from an HFactor instance this instance: NOTUSED
+ */
+  void copyFrom(
+		const HFactor *from /**< Source of copy */
+		);
+/**
+ * @brief Copy pointers of constraint matrix and set up space for INVERT
+ * 
+ * Copy problem size and pointers to coefficient matrix, allocate
+ * working buffer for INVERT, allocate space for basis matrix, L, U
+ * factor and Update buffer, allocated space for Markowitz matrices,
+ * count-link-list, L factor and U factor
+ */
+  void setup(
+	     int numCol,     /**< Number of columns */
+	     int numRow,     /**< Number of rows */
+	     int *Astart,    /**< Column starts of constraint matrix */
+	     int *Aindex,    /**< Row indices of constraint matrix */
+	     double *Avalue, /**< Row values of constraint matrix */
+	     int *baseIndex, /**< Indices of basic variables */
+	     int updateMethod = UPDATE_METHOD_FT /**< Default update method is Forrest Tomlin */
+	     );
 
+#ifdef HiGHSDEV
+/**
+ * @brief Change the update method
+ * 
+ * Change the update method: only called in HModel::changeUpdate,
+ * which is only called in HTester.cpp
+ */
+  void change(
+	      int updateMethod /**< New update method */
+	      );
+#endif
+
+/**
+ * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank deficiency.
+ * 
+ * @return 0 if successful, otherwise rankDeficiency>0
+ * 
+ */
+  int build();
+
+/**
+ * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
+ */
+  void ftran(
+	     HVector& vector, /**< RHS vector \mathbf{b}*/
+	     double hist_dsty /**< Historical density of the result */
+	     ) const;
+
+/**
+ * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
+ */
+  void btran(
+	     HVector& vector, /**< RHS vector \mathbf{b}*/
+	     double hist_dsty /**< Historical density of the result */
+	     ) const;
+
+/**
+ * @brief Update according to \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
+ */
+  void update(
+	      HVector *aq, /**< Vector \f$B^{-1}\mathbf{a}_q\f$ */
+	      HVector *ep, /**< Vector \f$B^{-T}\mathbf{e}_q\f$ */
+	      int *iRow,   /**< Index of pivotal row */
+	      int *hint    /**< Reinversion status */
+	      );
+/**
+ * @brief The synthetic clock for INVERT
+ */
+  int pseudoTick;
+
+#ifdef HiGHSDEV
+/**
+ * @brief Data used for reporting in HTester.cpp
+ */
+  int BtotalX;
+/**
+ * @brief Data used for reporting in HTester.cpp
+ */
+  int FtotalX;
+#endif
+
+/**
+ * @brief Wall clock time for INVERT
+ */
   double realTick;
+/**
+ * @brief Another synthetic clock for INVERT
+ * 
+ * TODO Eliminate fakeTick
+ */
   double fakeTick;
 
   // Rank deficiency information
+/**
+ * @brief Degree of rank deficiency in \f$B\f$ 
+ */
   int rankDeficiency;
+/**
+ * @brief Rows not pivoted on
+ */
   vector<int> noPvR;
+/**
+ * @brief Columns not pivoted on
+ */
   vector<int> noPvC;
+/**
+ * @brief Gets noPvR when HFactor.h cannot be included
+ */
   vector<int>& getNoPvR() {return noPvR;}
   //TODO Understand why handling noPvC and noPvR in what seem to be
   //different ways ends up equivalent.
   //  vector<int>& getNoPvC() {return noPvC;}
+/**
+ * @brief Gets noPvC when HFactor.h cannot be included
+ */
   const int *getNoPvC() const {return &noPvC[0];}
     
+#ifdef HiGHSDEV
+/**
+ * @brief Checks \f$B^{-1}\mathbf{a}_i=\mathbf{e}_i\f$ for each column \f$i\f$ 
+ */
   void checkInvert();
+#endif
 
 private:
     /**

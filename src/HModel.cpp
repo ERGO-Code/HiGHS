@@ -2646,7 +2646,9 @@ int HModel::handleRankDeficiency()
       updateMatrix(columnIn, columnOut);
     }
     //    printf("After  - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
+#ifdef HiGHSDEV
     factor.checkInvert();
+#endif
     return 0;
 }
 
@@ -2759,10 +2761,12 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
   timer.recordFinish(HTICK_UPDATE_PIVOTS);
 }
 
+#ifdef HiGHSDEV
 void HModel::changeUpdate(int updateMethod)
 {
   factor.change(updateMethod);
 }
+#endif
 
 void HModel::setProblemStatus(int status)
 {

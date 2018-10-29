@@ -1,3 +1,6 @@
+/**@file  HFactor.cpp
+ * @brief Types of solution classes
+ */
 #include "HFactor.h"
 #include "HConst.h"
 #include "HTimer.h"
@@ -208,16 +211,16 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
         BlimitX += i * iwork[i], counted += iwork[i];
     BlimitX += numRow;
 
-    // Allocate spaces for basis matrix, L, U factor and Update buffer
+    // Allocate space for basis matrix, L, U factor and Update buffer
     Bstart.resize(numRow + 1, 0);
     Bindex.resize(BlimitX);
     Bvalue.resize(BlimitX);
 
-    // Allocate spaces for pivot records
+    // Allocate space for pivot records
     //    permute.resize(numRow);
     permute.assign(numRow, -1);
 
-    // Allocate spaces for Markowitz matrices
+    // Allocate space for Markowitz matrices
     MCstart.resize(numRow);
     MCcountA.resize(numRow);
     MCcountN.resize(numRow);
@@ -236,7 +239,7 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
     McolumnIndex.resize(numRow);
     McolumnArray.assign(numRow, 0);
 
-    // Allocate spaces for count-link-list
+    // Allocate space for count-link-list
     clinkFirst.assign(numRow + 1, -1);
     clinkNext.resize(numRow);
     clinkLast.resize(numRow);
@@ -245,7 +248,7 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
     rlinkNext.resize(numRow);
     rlinkLast.resize(numRow);
 
-    // Allocate spaces for L factor
+    // Allocate space for L factor
     LpivotLookup.resize(numRow);
     LpivotIndex.reserve(numRow);
     Lstart.reserve(numRow + 1);
@@ -256,7 +259,7 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
     LRindex.reserve(BlimitX * 3);
     LRvalue.reserve(BlimitX * 3);
 
-    // Allocate spaces for U factor
+    // Allocate space for U factor
     UpivotLookup.resize(numRow);
     UpivotIndex.reserve(numRow + 1000);
     UpivotValue.reserve(numRow + 1000);
@@ -280,9 +283,11 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
     PFvalue.reserve(BlimitX * 4);
 }
 
+#ifdef HiGHSDEV
 void HFactor::change(int updateMethod_) {
     updateMethod = updateMethod_;
 }
+#endif
 
 int HFactor::build() {
     pseudoTick = 0;
@@ -347,6 +352,7 @@ void HFactor::update(HVector *aq, HVector *ep, int *iRow, int *hint) {
         updateAPF(aq, ep, *iRow, hint);
 }
 
+#ifdef HiGHSDEV
 void HFactor::checkInvert() {
   HVector column;
   column.setup(numRow);
@@ -388,6 +394,7 @@ void HFactor::checkInvert() {
   if (invertEr0 > tlInvertEr0) printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
   else printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
 }
+#endif
 
 void HFactor::buildSimple() {
     /**
@@ -461,7 +468,9 @@ void HFactor::buildSimple() {
       }
       Bstart[iCol + 1] = BcountX;
     }
+#ifdef HiGHSDEV
     BtotalX = numRow - nwork + BcountX;
+#endif
     pseudoTick += (numRow - nwork) * 2;
     pseudoTick += BcountX * 1.5;
 
@@ -1165,7 +1174,9 @@ void HFactor::buildFinish() {
         baseIndex[permute[i]] = iwork[i];
 
     pseudoTick += LcountX + UcountX + numRow;
+#ifdef HiGHSDEV
     FtotalX = LcountX + UcountX + numRow;
+#endif
 
     fakeTick += numRow * 80 + (LcountX + UcountX) * 60;
 }
@@ -1779,7 +1790,9 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
             }
         }
         PFpivotIndex.push_back(iRow[cp]);
+#ifdef HiGHSDEV
         FtotalX += PFindex.size() - PFstart.back() + 1;
+#endif
         UtotalX += PFindex.size() - PFstart.back();
         PFstart.push_back(PFindex.size());
 
@@ -1793,7 +1806,9 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
         // 1. Delete pivotal row from U
         int cIndex = iRow[cp];
         int cLogic = pLogic[cp];
+#ifdef HiGHSDEV
         FtotalX -= URlastp[cLogic] - URstart[cLogic];
+#endif
         UtotalX -= URlastp[cLogic] - URstart[cLogic];
         for (int k = URstart[cLogic]; k < URlastp[cLogic]; k++) {
             // Find the pivotal position
@@ -1809,7 +1824,9 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
         }
 
         // 2. Delete pivotal column from UR
+#ifdef HiGHSDEV
         FtotalX -= Ulastp[cLogic] - Ustart[cLogic];
+#endif
         UtotalX -= Ulastp[cLogic] - Ustart[cLogic];
         for (int k = Ustart[cLogic]; k < Ulastp[cLogic]; k++) {
             // Find the pivotal position
@@ -1828,7 +1845,9 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
         // 3. Insert the (stored) partial FTRAN to the row matrix
         int UstartX = Tstart[cp];
         int UendX = Tstart[cp + 1];
+#ifdef HiGHSDEV
         FtotalX += UendX - UstartX + 1;
+#endif
         UtotalX += UendX - UstartX;
         // Store column as UR elements
         for (int k = UstartX; k < UendX; k++) {
@@ -1895,7 +1914,9 @@ void HFactor::updateFT(HVector *aq, HVector *ep, int iRow, int *hint) {
     UpivotIndex[pLogic] = -1;
 
     // Delete pivotal row from U
+#ifdef HiGHSDEV
     FtotalX -= URlastp[pLogic] - URstart[pLogic];
+#endif
     for (int k = URstart[pLogic]; k < URlastp[pLogic]; k++) {
         // Find the pivotal position
         int iLogic = UpivotLookup[URindex[k]];
@@ -1910,7 +1931,9 @@ void HFactor::updateFT(HVector *aq, HVector *ep, int iRow, int *hint) {
     }
 
     // Delete pivotal column from UR
+#ifdef HiGHSDEV
     FtotalX -= Ulastp[pLogic] - Ustart[pLogic];
+#endif
     for (int k = Ustart[pLogic]; k < Ulastp[pLogic]; k++) {
         // Find the pivotal position
         int iLogic = UpivotLookup[Uindex[k]];
@@ -1936,7 +1959,9 @@ void HFactor::updateFT(HVector *aq, HVector *ep, int iRow, int *hint) {
     int UstartX = Ustart.back();
     int UendX = Ulastp.back();
     UtotalX += UendX - UstartX + 1;
+#ifdef HiGHSDEV
     FtotalX += UendX - UstartX + 1;
+#endif
 
     // Store column as UR elements
     for (int k = UstartX; k < UendX; k++) {
@@ -1993,7 +2018,9 @@ void HFactor::updateFT(HVector *aq, HVector *ep, int iRow, int *hint) {
         }
     }
     UtotalX += PFindex.size() - PFstart.back();
+#ifdef HiGHSDEV
     FtotalX += PFindex.size() - PFstart.back() + 1;
+#endif
 
     // Store R matrix pivot
     PFpivotIndex.push_back(iRow);
@@ -2033,11 +2060,15 @@ void HFactor::updatePF(HVector *aq, HVector *ep, int iRow, int *hint) {
     UtotalX += aq->packCount;
     if (UtotalX > UmeritX)
         *hint = 1;
+#ifdef HiGHSDEV
     FtotalX += aq->packCount;
+#endif
 }
 
 void HFactor::updateMPF(HVector *aq, HVector *ep, int iRow, int *hint) {
+#ifdef HiGHSDEV
     int PFcountX0 = PFindex.size();
+#endif
 
     // Store elements
     for (int i = 0; i < aq->packCount; i++) {
@@ -2066,13 +2097,17 @@ void HFactor::updateMPF(HVector *aq, HVector *ep, int iRow, int *hint) {
 
     // Refactor or not
     UtotalX += aq->packCount + ep->packCount;
+#ifdef HiGHSDEV
     FtotalX += PFindex.size() - PFcountX0;
+#endif
     if (UtotalX > UmeritX)
         *hint = 1;
 }
 
 void HFactor::updateAPF(HVector *aq, HVector *ep, int iRow, int *hint) {
+#ifdef HiGHSDEV
     int PFcountX0 = PFindex.size();
+#endif
 
     // Store elements
     for (int i = 0; i < aq->packCount; i++) {
@@ -2097,7 +2132,9 @@ void HFactor::updateAPF(HVector *aq, HVector *ep, int iRow, int *hint) {
         PFvalue.push_back(ep->packValue[i]);
     }
     PFstart.push_back(PFindex.size());
+#ifdef HiGHSDEV
     FtotalX += PFindex.size() - PFcountX0;
+#endif
 
     // Store pivot
     PFpivotValue.push_back(aq->array[iRow]);
