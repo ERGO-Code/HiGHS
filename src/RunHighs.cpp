@@ -11,11 +11,13 @@ int main(int argc, char **argv) {
   }
   checkStatus(init_status);
 
+  // todo:
   // Read LpData from a file.
   LpData lp;
-
+/*
   Status read_status = loadLpFromFile(options, lp);
   checkStatus(read_status);
+*/
 
   Highs highs(options);
   Solution solution;

@@ -2,90 +2,7 @@
 
 using namespace std;
 
-Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
-  cout << "=================================================================="
-          "=="
-          "================"
-       << endl;
-  // parallel
-  if (opt.sip) {
-    cout << "Running solveTasks" << endl;
-    
-    solveTasks(opt.fileName);
-  }
-  if (opt.scip) {
-    cout << "Running solveSCIP" << endl;
-    solveSCIP(opt.fileName);
-  } else if (opt.pami) {
-    if (opt.partitionFile) {
-      cout << "Running solveMulti" << endl;
-      solveMulti(opt.fileName, opt.partitionFile);
-    } else if (opt.cut) {
-      HModel model;
-      model.intOption[INTOPT_PRINT_FLAG] = 1;
-      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-
-      // todo: replace with load from LpData
-      int RtCd = model.load_fromMPS(opt.fileName);
-      if (RtCd) return Status::InputError;
-
-      model.scaleModel();
-
-      HDual solver;
-      cout << "Running solveCut" << endl;
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-
-      model.util_reportSolverOutcome("Cut");
-    } else {
-      cout << "Running solvemulti" << endl;
-      solveMulti(opt.fileName);
-    }
-  }
-  // serial
-  else {
-    if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-        !opt.timeLimit) {
-      cout << "Running solvePlain" << endl;
-      int RtCod =
-          // solvePlainAPI(fileName);
-          solvePlain(opt.fileName);
-      if (RtCod != 0) {
-        printf("solvePlain(API) return code is %d\n", RtCod);
-      }
-    }  // todo: remove case below, presolve handled elsewhere
-    else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-             !opt.timeLimit) {
-      if (opt.presolve == 1) {
-        cout << "Running solvePlainWithPresolve" << endl;
-        solvePlainWithPresolve(opt.fileName);
-        // solvePlainExperiments(fileName);
-        // testIO("fileIO");
-      }
-#ifdef EXT_PRESOLVE
-      else if (presolve == 2) {
-        cout << "Running solveExternalPresolve" << endl;
-        solveExternalPresolve(fileName);
-      }
-#endif
-    } else {
-      cout << "Running solvePlainJAJH" << endl;
-      solvePlainJAJH(opt.priceMode, opt.edWtMode, opt.crashMode,
-                     opt.presolveMode, opt.fileName, opt.timeLimit);
-    }
-  }
-
-  // todo: check what the solver outcome is and return corresponding status
-  return Status::OK;
-}
-
-int solvePlain(const char *filename) {
-  HModel model;
-  model.intOption[INTOPT_PRINT_FLAG] = 1;
-  //  model.intOption[INTOPT_PRINT_FLAG] = 4;//JAJH10/10
-  int RtCd = model.load_fromMPS(filename);
-  //  int RtCd = model.load_fromToy(filename);
-  if (RtCd) return RtCd;
+int solvePlain(HModel& model) {
   if (model.intOption[INTOPT_PRINT_FLAG]) model.util_reportModelBrief();
 #ifdef HiGHSDEV
     //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" <<
@@ -110,15 +27,11 @@ int solvePlain(const char *filename) {
   return 0;
 }
 
-int solvePlainAPI(const char *filename) {
-  HModel model;
+int solvePlainAPI(HModel& model) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   int RpRtVec = 0;
   printf("\nUsing SolvePlainAPI\n\n");
   //  model.intOption[INTOPT_PRINT_FLAG] = 1;
-  int RtCd = model.load_fromMPS(filename);
-  //  int RtCd = model.load_fromToy(filename);
-  if (RtCd) return RtCd;
 
   // Use the arrays read from an MPS file to test the routine to
   // solve a model passed by arrays. First copy the data.
@@ -233,10 +146,7 @@ int solvePlainAPI(const char *filename) {
 }
 
 // Ivet
-int solvePlainWithPresolve(const char *filename) {
-  HModel model;
-  int RtCd = model.load_fromMPS(filename);
-  if (RtCd) return RtCd;
+int solvePlainWithPresolve(HModel& model) {
   double time1;
 
   double obj1 = presolve(model, time1);
@@ -316,12 +226,9 @@ int solvePlainWithPresolve(const char *filename) {
 }
 
 // Julian
-int solveSCIP(const char *filename) {
-  HModel model;
+int solveSCIP(HModel& model) {
   printf("Called solveSCIP\n");
   cout << flush;
-  int RtCd = model.load_fromMPS(filename);
-  if (RtCd) return RtCd;
   //  model.util_reportModel();
 
   // Extract columns numCol-3..numCol-1
@@ -491,9 +398,9 @@ int solveSCIP(const char *filename) {
   return 0;
 }
 
-int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV,
+int solvePlainJAJH(HModel& model, const char *Price_ArgV, const char *EdWt_ArgV,
                    const char *Crash_ArgV, const char *Presolve_ArgV,
-                   const char *filename, double TimeLimit_ArgV) {
+                   double TimeLimit_ArgV) {
   double setupTime = 0;
   double presolve1Time = 0;
   double crashTime = 0;
@@ -510,7 +417,6 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV,
   int solvePrIt = 0;
 #endif
   double lcSolveTime;
-  HModel model;
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   HDual solver;
 
@@ -538,8 +444,6 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV,
 
   printf("solvePlainJAJH: with_presolve = %d\n", with_presolve);
   if (with_presolve) {
-    int RtCd = model.load_fromMPS(filename);
-    if (RtCd) return RtCd;
     // Check size
     if (model.numRow == 0) return 1;
     HPresolve *pre = new HPresolve();
@@ -674,8 +578,6 @@ int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV,
 #endif
     }
   } else {
-    int RtCd = model.load_fromMPS(filename);
-    if (RtCd) return RtCd;
 
     setupTime += model.timer.getTime();
     if (solver.Crash_Mode > 0) {
@@ -866,15 +768,9 @@ int solvePlainExperiments(const char *filename) {
   return 0;
 }
 
-int solveTasks(const char *filename) {
-  HModel model;
+int solveTasks(HModel& model) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-
-  // here want model.load_fromMPS (which will still work after) to be
-  // replaced by HModel.load_fromLpData
-  int RtCd = model.load_fromMPS(filename);
-  if (RtCd) return RtCd;
 
   model.scaleModel();
   HDual solver;
@@ -887,15 +783,12 @@ int solveTasks(const char *filename) {
   return 0;
 }
 
-int solveMulti(const char *filename, const char *partitionfile) {
-  HModel model;
+int solveMulti(HModel& model, const char *partitionfile) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   model.intOption[INTOPT_PERMUTE_FLAG] = 1;
   if (partitionfile) {
     model.strOption[STROPT_PARTITION_FILE] = partitionfile;
   }
-  int RtCd = model.load_fromMPS(filename);
-  if (RtCd) return RtCd;
 
   model.scaleModel();
   HDual solver;

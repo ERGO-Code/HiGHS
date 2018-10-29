@@ -19,34 +19,23 @@
 #include "HTester.h"
 #include "HTimer.h"
 #include "LpData.h"
-//#include "HCrash.h"
-
-//#include "HinOut.h"
-// Just to write out boxed model
-
-// new mps reader
-//#include "HMpsFF.h"
-
-// old mps reader
-//#include "HMPSIO.h"
 
 #ifdef EXT_PRESOLVE
 #include "core/Presolve.hpp"
 #endif
 
-int solvePlain(const char *filename);
-int solvePlainAPI(const char *filename);
-int solveSCIP(const char *filename);
-int solveTasks(const char *filename);
-int solveMulti(const char *filename, const char *partitionfile = 0);
-int solvePlainWithPresolve(const char *filename);
-int solvePlainExperiments(const char *filename);
-int solvePlainJAJH(const char *Price_ArgV, const char *EdWt_ArgV,
+int solvePlain(HModel &model);
+int solvePlainAPI(HModel &model);
+int solveSCIP(HModel &model);
+int solveTasks(HModel &model);
+int solveMulti(HModel &model, const char *partitionfile = 0);
+int solvePlainWithPresolve(HModel &model);
+int solvePlainExperiments(HModel &model);
+int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
                    const char *Crash_ArgV, const char *Presolve_ArgV,
-                   const char *filename, double TimeLimit_ArgV);
-int solveExternalPresolve(const char *fileName);
+                   double TimeLimit_ArgV);
+int solveExternalPresolve(HModel &model);
 double presolve(HModel &mod, double &time);
-// int testIO(const char *filename);
 
 void printHelp(std::string execName) {
   fprintf(stderr, "Usage: %s [options] -f fileName \n\n", execName.c_str());

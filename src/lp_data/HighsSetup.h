@@ -76,7 +76,7 @@ Status Highs::run(const LpData& lp, Solution& solution) const {
 // The method below runs simplex or ipx solver on the lp.
 
 Status Highs::runSolver(const LpData& lp, Solution& solution) const {
-  assert(checkLp(lp) == LpError::none);
+  //assert(checkLp(lp) == LpError::none);
 
   Status status;
 #ifndef IPX
@@ -126,7 +126,7 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   int sip = 0;
   int scip = 0;
   int timeLimit = 0;
-  ;
+
 
   double cut = 0;
   const char* fileName = "";
@@ -346,6 +346,16 @@ Status loadOptions(int argc, char** argv, Options& options_) {
 }
 
 Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
+
+
+  // until parsers work with LpData
+  HModel model;
+  int RtCd = model.load_fromMPS(opt.fileName);
+
+// make sure old tests pass before you start work on the 
+// parsers. Then remove traces of read_fromMPS from below and replace the code above with 
+//HModel model = LpDataToHModel(lp);
+
   cout << "=================================================================="
           "=="
           "================"
@@ -354,24 +364,19 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
   if (opt.sip) {
     cout << "Running solveTasks" << endl;
     
-    solveTasks(opt.fileName);
+    solveTasks(model);
   }
   if (opt.scip) {
     cout << "Running solveSCIP" << endl;
-    solveSCIP(opt.fileName);
+    solveSCIP(model);
   } else if (opt.pami) {
     if (opt.partitionFile) {
       cout << "Running solveMulti" << endl;
-      solveMulti(opt.fileName, opt.partitionFile);
+      solveMulti(model, opt.partitionFile);
     } else if (opt.cut) {
-      HModel model;
       model.intOption[INTOPT_PRINT_FLAG] = 1;
       model.intOption[INTOPT_PERMUTE_FLAG] = 1;
       model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-
-      // todo: replace with load from LpData
-      int RtCd = model.load_fromMPS(opt.fileName);
-      if (RtCd) return Status::InputError;
 
       model.scaleModel();
 
@@ -382,7 +387,7 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
       model.util_reportSolverOutcome("Cut");
     } else {
       cout << "Running solvemulti" << endl;
-      solveMulti(opt.fileName);
+      solveMulti(model);
     }
   }
   // serial
@@ -391,8 +396,7 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
         !opt.timeLimit) {
       cout << "Running solvePlain" << endl;
       int RtCod =
-          // solvePlainAPI(fileName);
-          solvePlain(opt.fileName);
+          solvePlain(model);
       if (RtCod != 0) {
         printf("solvePlain(API) return code is %d\n", RtCod);
       }
@@ -401,9 +405,7 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
              !opt.timeLimit) {
       if (opt.presolve == 1) {
         cout << "Running solvePlainWithPresolve" << endl;
-        solvePlainWithPresolve(opt.fileName);
-        // solvePlainExperiments(fileName);
-        // testIO("fileIO");
+        solvePlainWithPresolve(model);
       }
 #ifdef EXT_PRESOLVE
       else if (presolve == 2) {
@@ -413,13 +415,49 @@ Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution) {
 #endif
     } else {
       cout << "Running solvePlainJAJH" << endl;
-      solvePlainJAJH(opt.priceMode, opt.edWtMode, opt.crashMode,
-                     opt.presolveMode, opt.fileName, opt.timeLimit);
+      solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
+                     opt.presolveMode, opt.timeLimit);
     }
   }
 
   // todo: check what the solver outcome is and return corresponding status
   return Status::OK;
+}
+
+LpData HModelToLpData(const HModel& model) {
+  LpData lp;
+
+  lp.numCol = model.numCol;
+  lp.numRow = model.numRow;
+
+  lp.Astart = model.Astart;
+  lp.Aindex = model.Aindex;
+  lp.Avalue = model.Avalue;
+  lp.colCost = model.colCost;
+  lp.colLower = model.colLower;
+  lp.colUpper = model.colUpper;
+  lp.rowLower = model.rowLower;
+  lp.rowUpper = model.rowUpper;
+
+  return lp;
+}
+
+HModel LpDataToHModel(const LpData& lp) {
+  HModel model;
+
+  model.numCol = lp.numCol;
+  model.numRow = lp.numRow;
+
+  model.Astart = lp.Astart;
+  model.Aindex = lp.Aindex;
+  model.Avalue = lp.Avalue;
+  model.colCost = lp.colCost;
+  model.colLower = lp.colLower;
+  model.colUpper = lp.colUpper;
+  model.rowLower = lp.rowLower;
+  model.rowUpper = lp.rowUpper;
+
+  return model;
 }
 
 #endif
