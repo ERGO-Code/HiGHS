@@ -1,3 +1,7 @@
+/**@file  HDual.h
+ * @brief Dual simplex solver for HiGHS
+ * @author Qi Hunagfu and Julian Hall
+ */
 #ifndef HDUAL_H_
 #define HDUAL_H_
 
@@ -14,19 +18,31 @@
 #include <vector>
 using namespace std;
 
+/**
+ * Limit on number of threads used to dimension many identifiers
+ */
 const int HSOL_THREAD_LIMIT = 32;
+/**
+ * Limit on the number of column slices for parallel calculations
+ */
 const int HSOL_SLICED_LIMIT = 100;
 
-//Define the EdWt modes
+/**
+ * Possible edge weight mode values used to test EdWt_Mode
+ */
 const int EdWt_Mode_DSE = 0;
 const int EdWt_Mode_Dvx = 1;
 const int EdWt_Mode_Dan = 2;
 
-//Define the Price modes
+/**
+ * Possible pricing mode values used to test Price_Mode
+ */
 const int Price_Mode_Row = 0;
 const int Price_Mode_Col = 1;
 
-//Define the Crash modes
+/**
+ * Possible crash mode values used to test Crash_Mode
+ */
 const int Crash_Mode_No = 0;
 const int Crash_Mode_LTSSF_k = 1;
 const int Crash_Mode_LTSSF_pri = 2;
@@ -41,24 +57,40 @@ const int Crash_Mode_TsSing = 9;
 #endif
 const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
 
-//Define the Presolve modes
+/**
+ * Possible presolve mode values used to test Presolve_Mode
+ */
 const int Presolve_Mode_Off = 0;
 const int Presolve_Mode_On = 1;
 
-//Define the Devex status flags
-//Using 1 and 0 allows dvx_ix to be used as a multiplier to save a conditional branch
+/**
+ * Devex status flags. Each column has a Devex flag which is used as a
+ * multiplier to save a conditional branch
+ */
 const int dvx_in_R = 1;
 const int dvx_not_in_R = 0;
 
-//Define the parameters controlling number of Devex iterations
-const int mn_n_dvx_it = 25;
-const double nw_dvx_fwk_fq = 1e-2;
-const double tl_dvx_wt = 3.0;
+/**
+ * Parameters controlling number of Devex iterations. 
+ * 
+ * There is a new Devex framework if either
+ *
+ * 1) The weight inaccuracy ratio exceeds maxAllowedDevexWeightRatio 
+ *
+ * 2) There have been max(minAbsNumberDevexIterations, numRow/minRlvNumberDevexIterations) devex iterations
+ */
+const int minAbsNumberDevexIterations = 25;
+const double minRlvNumberDevexIterations = 1e-2;
+const double maxAllowedDevexWeightRatio = 3.0;
 
+/**
+ * Multiplier used in running average calculations
+ */
 const double runningAverageMu = 0.05;
 
-const bool noInvertWhenOptimal = false;
-
+/**
+ * Logicals used to determine what's reported for hsol and dvx. TODO delete these!
+ */
 //Set limits on problem size for reporting
 const bool rp_hsol = false;
 const bool rp_dvx = false;
@@ -76,30 +108,133 @@ enum HDUAL_VARIANT
 class HDual
 {
 public:
-  void solve(HModel *model, int variant = 0, int num_threads = 1);
+/**
+ * @brief Solve a model instance with a dual simplex variant and given number of threads
+ */
+  void solve(
+	     HModel *model,      //!< Instance of HModel class to be solved
+	     int variant = 0,    //!< Default dual simplex variant is "PLAIN" (serial)
+	     int num_threads = 1 //!< Default number of threads is 1
+	     );
 
 public:
-  void init(int num_threads);
-  void init_slice(int init_sliced_num);
+/**
+ * @brief Initialise a dual simplex instance
+ *
+ * Copy dimensions and pointers to matrix, factor and solver-related
+ * model data, plus tolerances. Sets up local vectors (columnDSE,
+ * columnBFRT, column, row_ep and row_ap), scalars for their average
+ * density and buffers for dualRow and dualRHS. Also sets up data
+ * structures for SIP or PAMI (if necessary).
+ */
+  void init(
+	    int num_threads //!< Number of threads for initialisation
+	    );
 
+/**
+ * @brief Initialise matrix slices and slices of row_ap or dualRow for SIP or PAMI
+ *
+ * TODO generalise call slice_matrix[i].setup_lgBs so slice can be
+ * used with non-logical initial basis
+ */
+  void init_slice(
+		  int init_sliced_num //!< Ideal number of slices - true number is modified in light of limits
+		  );
+
+/**
+ * @brief Perform Phase 1 dual simplex iterations
+ */
   void solve_phase1();
+
+/**
+ * @brief Perform Phase 2 dual simplex iterations
+ */
   void solve_phase2();
 
+/**
+ * @brief Reinvert if INVERT not fresh, then recompute dual and primal values
+ *
+ * Also collects primal infeasibilities and computes the dual objective value
+ */
+
   void rebuild();
+
+/**
+ * @brief Remove perturbation and recompute the dual solution
+ *
+ * Also collects primal infeasibilities and computes the dual objective value
+ */
   void cleanup();
 
+/**
+ * @brief Perform a single serial dual simplex iteration
+ *
+ * All the methods it calls have as their first line "if (invertHint)
+ * return;", where invertHint is, for example, set to 1 when CHUZR
+ * finds no candidate. This causes a break from the inner loop of
+ * solve_phase% and, hence, a call to rebuild().
+ */
   void iterate();
+
+/**
+ * @brief Perform a single SIP dual simplex iteration
+ */
   void iterate_tasks();
+
+/**
+ * @brief Perform a single PAMI dual simplex iteration - source code in HDualMulti.cpp
+ */
   void iterate_multi();// in HDualMulti.cpp
+
+/**
+ * @brief Initialise the iteration analysis
+ */
   void iterateIzAn();
+
+/**
+ * @brief Perform the iteration analysis
+ */
   void iterateAn();
+
+/**
+ * @brief Report on the iteration using iterateRpFull, possibly using it to write out column headers
+ */
   void iterateRp();
-  void iterateRpFull(bool header);
-  void iterateRpBrief(bool header);
-  void iterateRpInvert(int i_v);
-  void iterateRpIterPh(bool header);
-  void iterateRpDuObj(bool header);
-  double uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density); 
+
+/**
+ * @brief Report full iteration headers or data according to value of <tt>header</tt>
+ */
+  void iterateRpFull(
+		     bool header //!< Logic to determine whether to write out column headers or data
+		     );
+/**
+ * @brief Report iteration number and LP phase headers or data according to value of <tt>header</tt>
+ */
+  void iterateRpIterPh(
+		     bool header //!< Logic to determine whether to write out column headers or data
+		     );
+/**
+ * @brief Report dual objective value header or data according to value of <tt>header</tt>
+ */
+  void iterateRpDuObj(
+		     bool header //!< Logic to determine whether to write out column header or data
+		     );
+/**
+ * @brief Single line report after INVERT
+ */
+  void iterateRpInvert(
+		       int i_v //!< Integer value to be reported - generally invertHint
+		       );
+
+/**
+ * @brief Update a density record for BTRAN, an FTRAN or PRICE
+ */
+  double uOpRsDensityRec(
+			 double lc_OpRsDensity,     //!< Recent density of the operation
+			 double* opRsDensity,       //!< Historical density of the operation
+			 double* opRsAvDensity,     //!< 
+			 double* opRsAvLog10Density //!< 
+			 ); 
 
   void chooseRow();
 
@@ -147,8 +282,12 @@ public:
   void major_rollback();
 
 #ifdef HiGHSDEV
-  void iterateRpIterDa(bool header);
-  void iterateRpDsty(bool header);
+  void iterateRpIterDa(
+		     bool header //!< Logic to determine whether to write out column headers or data
+		     );
+  void iterateRpDsty(
+		     bool header //!< Logic to determine whether to write out column headers or data
+		     );
   int intLog10(double v);
   void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);

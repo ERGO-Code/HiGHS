@@ -1133,19 +1133,6 @@ void HDual::iterateAn() {
 	lcAnIter->AnIterTraceAux0 = 0;
       }
       lcAnIter->AnIterTraceEdWt_Mode = EdWt_Mode;
-      /*
-	if (AnIterTraceIterDl > 10) {
-	//	int reportList[] = { HTICK_INVERT, HTICK_CHUZR1, HTICK_BTRAN,
-	//			     HTICK_PRICE, HTICK_CHUZC0, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3, HTICK_CHUZC4,
-	//			     HTICK_DEVEX, HTICK_FTRAN, HTICK_FTRAN_DSE,
-	//			     HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
-	//			     HTICK_UPDATE_FACTOR };
-	//	int reportCount = sizeof(reportList) / sizeof(int);
-	//	model->timer.report(reportCount, reportList, 1.0);
-        iterateRpBrief(true);
-        iterateRpBrief(false);
-	}
-      */
     }
   }
   AnIterPrevIt = AnIterCuIt;
@@ -1184,21 +1171,20 @@ void HDual::iterateRpFull(bool header) {
   }
 }
 
-void HDual::iterateRpBrief(bool header) {
+void HDual::iterateRpIterPh(bool header) {
   if (header) {
-    iterateRpIterPh(true);
-    iterateRpDuObj(true);
-#ifdef HiGHSDEV
-    iterateRpDsty(true);
-    printf(" FreeLsZ\n");
-#endif
+    printf(" Iteration Ph");
   } else {
-    iterateRpIterPh(false);
-    iterateRpDuObj(false);
-#ifdef HiGHSDEV
-    iterateRpDsty(false);
-    printf(" %7d\n", dualRow.freeListSize);
-#endif
+    int numIter = model->numberIteration;
+    printf(" %9d %2d", numIter, solvePhase);
+  }
+}
+void HDual::iterateRpDuObj(bool header) {
+  if (header) {
+    printf("    DualObjective    ");
+  } else {
+    model->computeDuObj(solvePhase);
+    printf(" %20.10e", model->objective);
   }
 }
 
@@ -1216,22 +1202,7 @@ void HDual::iterateRpInvert(int i_v) {
   printf("\n");
   
 }
-void HDual::iterateRpIterPh(bool header) {
-  if (header) {
-    printf(" Iteration Ph");
-  } else {
-    int numIter = model->numberIteration;
-    printf(" %9d %2d", numIter, solvePhase);
-  }
-}
-void HDual::iterateRpDuObj(bool header) {
-  if (header) {
-    printf("    DualObjective    ");
-  } else {
-    model->computeDuObj(solvePhase);
-    printf(" %20.10e", model->objective);
-  }
-}
+
 double HDual::uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density) {
   double log10_lc_OpRsDensity;
   if (lc_OpRsDensity <= 0) {
@@ -1315,8 +1286,10 @@ void HDual::chooseRow()
   else
     deltaPrimal = baseValue[rowOut] - baseUpper[rowOut];
   sourceOut = deltaPrimal < 0 ? -1 : 1;
+  // double lc_OpRsDensity = (double) row_ep.count / numRow;
   double lc_OpRsDensity = 1.0 * row_ep.count / numRow;
   row_epDensity = uOpRsDensityRec(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
+  //  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, row_epDensity, row_epAvDensity, row_epAvLog10Density); 
   //row_epDensity = (1-runningAverageMu) * row_epDensity + runningAverageMu * (1.0 * row_ep.count / numRow);
 }
 
@@ -1499,13 +1472,13 @@ void HDual::chooseColumn(HVector *row_ep)
       //Analyse the Devex weight to determine whether a new framework should be set up
       double dvx_rao = max(og_dvx_wt_o_rowOut / tru_dvx_wt_o_rowOut,
 			   tru_dvx_wt_o_rowOut / og_dvx_wt_o_rowOut);
-      int i_te = numRow / nw_dvx_fwk_fq;
+      int i_te = numRow / minRlvNumberDevexIterations;
       if (rp_dvx)
 	printf("i_te = %d; %d: dvx_rao = %8.2g\n", i_te,
-	       max(mn_n_dvx_it, i_te), dvx_rao);
-      i_te = max(mn_n_dvx_it, i_te);
-      //		Square tl_dvx_wt due to keeping squared weights
-      nw_dvx_fwk = dvx_rao > tl_dvx_wt * tl_dvx_wt || n_dvx_it > i_te;
+	       max(minAbsNumberDevexIterations, i_te), dvx_rao);
+      i_te = max(minAbsNumberDevexIterations, i_te);
+      //		Square maxAllowedDevexWeightRatio due to keeping squared weights
+      nw_dvx_fwk = dvx_rao > maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio || n_dvx_it > i_te;
       if (nw_dvx_fwk)
 	if (rp_dvx)
 	  printf("!!NEW DEVEX FRAMEWORK!!\n");

@@ -50,10 +50,11 @@ public:
  * @brief Copy data from an HFactor instance this instance: NOTUSED
  */
   void copyFrom(
-		const HFactor *from /**< Source of copy */
+		const HFactor *from //!< Source of copy
 		);
 /**
- * @brief Copy pointers of constraint matrix and set up space for INVERT
+ * @brief Copy problem size and pointers of constraint matrix, and set
+ * up space for INVERT
  * 
  * Copy problem size and pointers to coefficient matrix, allocate
  * working buffer for INVERT, allocate space for basis matrix, L, U
@@ -61,26 +62,24 @@ public:
  * count-link-list, L factor and U factor
  */
   void setup(
-	     int numCol,     /**< Number of columns */
-	     int numRow,     /**< Number of rows */
-	     int *Astart,    /**< Column starts of constraint matrix */
-	     int *Aindex,    /**< Row indices of constraint matrix */
-	     double *Avalue, /**< Row values of constraint matrix */
-	     int *baseIndex, /**< Indices of basic variables */
-	     int updateMethod = UPDATE_METHOD_FT /**< Default update method is Forrest Tomlin */
+	     int numCol,     //!< Number of columns
+	     int numRow,     //!< Number of rows
+	     int *Astart,    //!< Column starts of constraint matrix
+	     int *Aindex,    //!< Row indices of constraint matrix
+	     double *Avalue, //!< Row values of constraint matrix
+	     int *baseIndex, //!< Indices of basic variables
+	     int updateMethod = UPDATE_METHOD_FT //!< Default update method is Forrest Tomlin
 	     );
 
-#ifdef HiGHSDEV
 /**
  * @brief Change the update method
  * 
- * Change the update method: only called in HModel::changeUpdate,
- * which is only called in HTester.cpp
+ * Only called in HModel::changeUpdate, which is only called in
+ * HTester.cpp Should only be compiled when HiGHSDEV=on
  */
   void change(
-	      int updateMethod /**< New update method */
+	      int updateMethod //!< New update method
 	      );
-#endif
 
 /**
  * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank deficiency.
@@ -94,85 +93,91 @@ public:
  * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
  */
   void ftran(
-	     HVector& vector, /**< RHS vector \mathbf{b}*/
-	     double hist_dsty /**< Historical density of the result */
+	     HVector& vector, //!< RHS vector \f$\mathbf{b}\f$
+	     double hist_dsty //!< Historical density of the result
 	     ) const;
 
 /**
  * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
  */
   void btran(
-	     HVector& vector, /**< RHS vector \mathbf{b}*/
-	     double hist_dsty /**< Historical density of the result */
+	     HVector& vector, //!< RHS vector \f$\mathbf{b}\f$
+	     double hist_dsty //!< Historical density of the result
 	     ) const;
 
 /**
  * @brief Update according to \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
  */
   void update(
-	      HVector *aq, /**< Vector \f$B^{-1}\mathbf{a}_q\f$ */
-	      HVector *ep, /**< Vector \f$B^{-T}\mathbf{e}_q\f$ */
-	      int *iRow,   /**< Index of pivotal row */
-	      int *hint    /**< Reinversion status */
+	      HVector *aq, //!< Vector \f$B^{-1}\mathbf{a}_q\f$
+	      HVector *ep, //!< Vector \f$B^{-T}\mathbf{e}_q\f$
+	      int *iRow,   //!< Index of pivotal row
+	      int *hint    //!< Reinversion status
 	      );
 /**
  * @brief The synthetic clock for INVERT
  */
   int pseudoTick;
 
-#ifdef HiGHSDEV
 /**
- * @brief Data used for reporting in HTester.cpp
+ * @brief Data used for reporting in HTester.cpp. Should only be
+ * compiled when HiGHSDEV=on
  */
   int BtotalX;
+
 /**
- * @brief Data used for reporting in HTester.cpp
+ * @brief Data used for reporting in HTester.cpp. Should only be
+ * compiled when HiGHSDEV=on
  */
   int FtotalX;
-#endif
 
 /**
  * @brief Wall clock time for INVERT
  */
   double realTick;
+
 /**
- * @brief Another synthetic clock for INVERT
- * 
- * TODO Eliminate fakeTick
+ * @brief Another synthetic clock for INVERT. TODO Eliminate fakeTick
  */
   double fakeTick;
 
-  // Rank deficiency information
+// Rank deficiency information
+
 /**
  * @brief Degree of rank deficiency in \f$B\f$ 
  */
   int rankDeficiency;
+
 /**
  * @brief Rows not pivoted on
  */
   vector<int> noPvR;
+
 /**
  * @brief Columns not pivoted on
  */
   vector<int> noPvC;
+
 /**
  * @brief Gets noPvR when HFactor.h cannot be included
  */
   vector<int>& getNoPvR() {return noPvR;}
-  //TODO Understand why handling noPvC and noPvR in what seem to be
-  //different ways ends up equivalent.
-  //  vector<int>& getNoPvC() {return noPvC;}
+
 /**
  * @brief Gets noPvC when HFactor.h cannot be included
  */
   const int *getNoPvC() const {return &noPvC[0];}
     
-#ifdef HiGHSDEV
+  //TODO Understand why handling noPvC and noPvR in what seem to be
+  //different ways ends up equivalent.
+  //  vector<int>& getNoPvC() {return noPvC;}
+
 /**
  * @brief Checks \f$B^{-1}\mathbf{a}_i=\mathbf{e}_i\f$ for each column \f$i\f$ 
+ *
+ * Should only be compiled when HiGHSDEV=on
  */
   void checkInvert();
-#endif
 
 private:
     /**
