@@ -5,8 +5,8 @@
  *      Author: Julian
  */
 
-#ifndef HCRASH_H_
-#define HCRASH_H_
+#ifndef SIMPLEX_HCRASH_H_
+#define SIMPLEX_HCRASH_H_
 
 #include <vector>
 #include "HMatrix.h"

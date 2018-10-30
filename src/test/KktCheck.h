@@ -1,5 +1,5 @@
-#ifndef KKTCHECK_H_
-#define KKTCHECK_H_
+#ifndef TEST_KKTCHECK_H_
+#define TEST_KKTCHECK_H_
 
 #include <cmath>
 #include <fstream>

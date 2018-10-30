@@ -1,5 +1,5 @@
-#ifndef HMODEL_H_
-#define HMODEL_H_
+#ifndef SIMPLEX_HMODEL_H_
+#define SIMPLEX_HMODEL_H_
 
 #include "HConfig.h"
 #include "HConst.h"
@@ -10,6 +10,7 @@
 #include "HRandom.h"
 #include "HTimer.h"
 #include "HVector.h"
+//#include "LpData.h"
 
 #include <sstream>
 #include <string>

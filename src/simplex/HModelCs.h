@@ -1,5 +1,5 @@
-#ifndef HMODELCS_H_
-#define HMODELCS_H_
+#ifndef SIMPLEX_HMODELCS_H_
+#define SIMPLEX_HMODELCS_H_
 
 const int OBJSENSE_MINIMIZE = 1;
 const int OBJSENSE_MAXIMIZE = -1;

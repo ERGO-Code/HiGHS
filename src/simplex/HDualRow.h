@@ -1,5 +1,5 @@
-#ifndef HDUALROW_H_
-#define HDUALROW_H_
+#ifndef SIMPLEX_HDUALROW_H_
+#define SIMPLEX_HDUALROW_H_
 
 #include "HModel.h"
 #include "HVector.h"

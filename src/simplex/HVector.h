@@ -1,5 +1,5 @@
-#ifndef HVECTOR_H_
-#define HVECTOR_H_
+#ifndef SIMPLEX_HVECTOR_H_
+#define SIMPLEX_HVECTOR_H_
 
 #include <map>
 #include <vector>

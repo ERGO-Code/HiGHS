@@ -5,8 +5,8 @@
  *      Author: s1131817
  */
 
-#ifndef HINOUT_H_
-#define HINOUT_H_
+#ifndef IO_HINOUT_H_
+#define IO_HINOUT_H_
 
 #include <cstring>
 #include "HModel.h"

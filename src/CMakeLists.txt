@@ -1,5 +1,6 @@
 
 set(sources
+    RunHighs.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -15,13 +16,14 @@ set(sources
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
     io/HinOut.cpp
-    test/KktCheck.cpp
-    test/KktChStep.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
+    test/KktCheck.cpp
+    test/KktChStep.cpp
 )
 
 set(headers
+    HApp.h
     simplex/HConst.h
     simplex/HDual.h
     simplex/HDualRow.h
@@ -36,13 +38,15 @@ set(headers
     simplex/HRandom.h
     presolve/HPresolve.h
     lp_data/HPreData.h
+    lp_data/LpData.h
+    lp_data/HighsSetup.h
     io/HinOut.h
+    io/HMPSIO.h
+    io/HMpsFF.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     test/KktCheck.h
     test/KktChStep.h
-    io/HMPSIO.h
-    io/HMpsFF.h
 )
 
 

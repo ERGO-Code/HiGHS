@@ -1,5 +1,5 @@
-#ifndef HPREDATA_H_
-#define HPREDATA_H_
+#ifndef PRESOLVE_HPREDATA_H_
+#define PRESOLVE_HPREDATA_H_
 
 #include <cstring>
 #include <list>

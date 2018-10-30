@@ -1,5 +1,5 @@
-#ifndef HDUAL_H_
-#define HDUAL_H_
+#ifndef SIMPLEX_HDUAL_H_
+#define SIMPLEX_HDUAL_H_
 
 #include "HCrash.h"
 #include "HDualRHS.h"

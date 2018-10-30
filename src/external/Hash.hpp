@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef _MISC_HASHER_HPP_
-#define _MISC_HASHER_HPP_
+#ifndef _EXTERNAL_HASH_HPP_
+#define _EXTERNAL_HASH_HPP_
 
 #include "tessil/hopscotch_map.h"
 #include "tessil/hopscotch_set.h"

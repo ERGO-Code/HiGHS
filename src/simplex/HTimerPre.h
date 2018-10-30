@@ -1,5 +1,5 @@
-#ifndef HTIMERPRE_H_
-#define HTIMERPRE_H_
+#ifndef SIMPLEX_HTIMERPRE_H_
+#define SIMPLEX_HTIMERPRE_H_
 
 #include <sys/time.h>
 #include <cstdio>

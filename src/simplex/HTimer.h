@@ -1,5 +1,5 @@
-#ifndef HTIMER_H_
-#define HTIMER_H_
+#ifndef SIMPLEX_HTIMER_H_
+#define SIMPLEX_HTIMER_H_
 
 #include <sys/time.h>
 #include <cassert>

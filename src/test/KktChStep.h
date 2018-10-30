@@ -1,5 +1,5 @@
-#ifndef KKTCHSTEP_H_
-#define KKTCHSTEP_H_
+#ifndef TEST_KKTCHSTEP_H_
+#define TEST_KKTCHSTEP_H_
 
 #include <cmath>
 #include <fstream>
