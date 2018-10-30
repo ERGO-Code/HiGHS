@@ -18,7 +18,7 @@
 #include "HPresolve.h"
 #include "HTester.h"
 #include "HTimer.h"
-#include "LpData.h"
+#include "HighsLp.h"
 
 #ifdef EXT_PRESOLVE
 #include "core/Presolve.hpp"
@@ -61,6 +61,6 @@ void printHelp(std::string execName) {
   return;
 }
 
-Status solveSimplex(const Options &opt, const LpData &lp, Solution &solution);
+Status solveSimplex(const Options &opt, const HighsLp &lp, Solution &solution);
 
 #endif

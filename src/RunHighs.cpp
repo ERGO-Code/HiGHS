@@ -12,8 +12,9 @@ int main(int argc, char **argv) {
   checkStatus(init_status);
 
   // todo:
-  // Read LpData from a file.
-  LpData lp;
+  // Read Lp from a file.
+  HighsLp lp;
+
 /*
   Status read_status = loadLpFromFile(options, lp);
   checkStatus(read_status);

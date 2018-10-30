@@ -47,7 +47,7 @@ enum class LpError {
   objective
 };
 
-class LpData {
+class HighsLp {
  public:
   // Model data
   int numCol;
@@ -136,7 +136,7 @@ void checkStatus(Status status) {
     std::cout << "Unexpected status: " << toString(status);
 }
 
-LpError checkLp(const LpData& lp) {
+LpError checkLp(const HighsLp& lp) {
   // Check dimensions.
   if (lp.numCol <= 0 || lp.numRow <= 0) return LpError::matrix_dimensions;
 

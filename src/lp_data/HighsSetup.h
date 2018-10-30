@@ -13,7 +13,7 @@ class Highs {
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  Status run(const LpData& lp, Solution& solution) const;
+  Status run(const HighsLp& lp, Solution& solution) const;
 
   void setAllOptions(const Options& opt) { options = opt; }
   // todo: implement string based options
@@ -27,12 +27,12 @@ class Highs {
 
  private:
   Options options;
-  Status runSolver(const LpData& lp, Solution& solution) const;
+  Status runSolver(const HighsLp& lp, Solution& solution) const;
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-Status Highs::run(const LpData& lp, Solution& solution) const {
+Status Highs::run(const HighsLp& lp, Solution& solution) const {
   if (!options.presolve) {
     Solution solution;
     return runSolver(lp, solution);
@@ -42,7 +42,7 @@ Status Highs::run(const LpData& lp, Solution& solution) const {
   return Status::NotImplemented;
 
   /*
-   LpData reduced_lp;
+   HighsLp reduced_lp;
 
    // presolve(..) method below should use HPresolve now but should be
    // possible to use external presolve too. Link with ZIB presolve so clp
@@ -75,7 +75,7 @@ Status Highs::run(const LpData& lp, Solution& solution) const {
 
 // The method below runs simplex or ipx solver on the lp.
 
-Status Highs::runSolver(const LpData& lp, Solution& solution) const {
+Status Highs::runSolver(const HighsLp& lp, Solution& solution) const {
   // assert(checkLp(lp) == LpError::none);
 
   Status status;
@@ -101,7 +101,7 @@ Status Highs::runSolver(const LpData& lp, Solution& solution) const {
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
-Status loadLpFromFile(const Options& options, LpData& lp) {
+Status loadLpFromFile(const Options& options, HighsLp& lp) {
   // Check file exists.
 
   // Which parser
@@ -109,7 +109,7 @@ Status loadLpFromFile(const Options& options, LpData& lp) {
 
   // Initialize arrays
 
-  // call MPSParser::loadProblem(arrays of LpData object)
+  // call MPSParser::loadProblem(arrays of HighsLp object)
 
   assert(checkLp(lp) == LpError::none);
   return Status::OK;
@@ -344,15 +344,15 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   return Status::OK;
 }
 
-Status solveSimplex(const Options& opt, const LpData& lp, Solution& solution) {
-  // until parsers work with LpData
+Status solveSimplex(const Options& opt, const HighsLp& lp, Solution& solution) {
+  // until parsers work with HighsLp
   HModel model;
   int RtCd = model.load_fromMPS(opt.fileName);
 
   // make sure old tests pass before you start work on the
   // parsers. Then remove traces of read_fromMPS from below and replace the code
   // above with
-  // HModel model = LpDataToHModel(lp);
+  // HModel model = HighsLpToHModel(lp);
 
   cout << "=================================================================="
           "=="
@@ -419,8 +419,8 @@ Status solveSimplex(const Options& opt, const LpData& lp, Solution& solution) {
   return Status::OK;
 }
 
-LpData HModelToLpData(const HModel& model) {
-  LpData lp;
+HighsLp HModelToHighsLp(const HModel& model) {
+  HighsLp lp;
 
   lp.numCol = model.numCol;
   lp.numRow = model.numRow;
@@ -437,7 +437,7 @@ LpData HModelToLpData(const HModel& model) {
   return lp;
 }
 
-HModel LpDataToHModel(const LpData& lp) {
+HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
 
   model.numCol = lp.numCol;
