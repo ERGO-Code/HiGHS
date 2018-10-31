@@ -9,37 +9,39 @@
 class Highs {
  public:
   Highs() {}
-  explicit Highs(const Options& opt) : options(opt){};
+  explicit Highs(const HighsOptions& opt) : options_(opt){};
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  Status run(const HighsLp& lp, Solution& solution) const;
+  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
 
-  void setAllOptions(const Options& opt) { options = opt; }
+  void setAllOptions(const HighsOptions& opt) { options_ = opt; }
   // todo: implement string based options
-  // void setIntOption(const std::string& option, int value);
-  // void setDoubleOption(const std::string& option, double value);
-  // void setStringOption(const std::string& option, std::string value);
+  // void setOption(const std::string& option, int value);
+  // void setOption(const std::string& option, double value);
+  // void setOption(const std::string& option, std::string value);
 
   int getIntOption(const std::string& option);
   double getDoubleOption(const std::string& option);
   std::string getStringOption(const std::string& option);
 
  private:
-  Options options;
-  Status runSolver(const HighsLp& lp, Solution& solution) const;
+  HighsOptions options_;
+  HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-Status Highs::run(const HighsLp& lp, Solution& solution) const {
-  if (!options.presolve) {
-    Solution solution;
-    return runSolver(lp, solution);
-  }
+HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
+  return runSolver(lp, solution);
 
   // todo
-  return Status::NotImplemented;
+  //
+  //if (!options_.presolve) {
+  //  HighsSolution solution;
+  //  return runSolver(lp, solution);
+  //}
+  //return HighsStatus::NotImplemented;
 
   /*
    HighsLp reduced_lp;
@@ -70,25 +72,25 @@ Status Highs::run(const HighsLp& lp, Solution& solution) const {
    // If needed set up clean up with simplex.
    */
 
-  return Status::OK;
+  return HighsStatus::OK;
 }
 
 // The method below runs simplex or ipx solver on the lp.
 
-Status Highs::runSolver(const HighsLp& lp, Solution& solution) const {
+HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   // assert(checkLp(lp) == LpError::none);
 
-  Status status;
+  HighsStatus status;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveSimplex(options, lp, solution);
+  status = solveSimplex(options_, lp, solution);
 #else
   // IPX
   // todo:Check options for simplex-specific options
 
-  status = solveIpx(options, lp, solution);
+  status = solveIpx(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
@@ -101,8 +103,13 @@ Status Highs::runSolver(const HighsLp& lp, Solution& solution) const {
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
-Status loadLpFromFile(const Options& options, HighsLp& lp) {
-  // Check file exists.
+HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
+  // Check if file exists
+  if (options.fileName && access(options.fileName, F_OK) == -1) {
+    return HighsInputStatus::FileNotFound;
+  } else if (!options.fileName) {
+    return HighsInputStatus::FileNotFound;
+  }
 
   // Which parser
   // will be (options.getValue("parser") == MpsParser::new)
@@ -111,11 +118,10 @@ Status loadLpFromFile(const Options& options, HighsLp& lp) {
 
   // call MPSParser::loadProblem(arrays of HighsLp object)
 
-  assert(checkLp(lp) == LpError::none);
-  return Status::OK;
+  return checkLp(lp);
 }
 
-Status loadOptions(int argc, char** argv, Options& options_) {
+HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   // todo: replace references with options_.*
   int filename = 0;
   int presolve = 0;
@@ -182,7 +188,7 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;
     printHelp(argv[0]);
-    return Status::InputError;
+    return HighsStatus::OptionsError;
   }
 
   if (argc == 4 && strcmp(argv[1], "-repeat") == 0) {
@@ -191,7 +197,7 @@ Status loadOptions(int argc, char** argv, Options& options_) {
     tester.setup(argv[2]);
     tester.testUpdate(atoi(argv[3]));
 #endif
-    return Status::OK;
+    return HighsStatus::OK;
   }
 
   char opt;
@@ -284,17 +290,8 @@ Status loadOptions(int argc, char** argv, Options& options_) {
 
   // Set defaults
   if (!filename) {
-#ifdef HiGHSDEV
-    fileName = "ml.mps";
-    printf("Setting default value filenameMode = %s\n", fileName);
-#else
     std::cout << "No file specified. " << std::endl;
-    return Status::FileNotFound;
-#endif
-  }
-  // Check if file exists
-  else if (access(fileName, F_OK) == -1) {
-    return Status::FileNotFound;
+    return HighsStatus::OptionsError;
   }
 
   if (!presolve) {
@@ -341,10 +338,11 @@ Status loadOptions(int argc, char** argv, Options& options_) {
   options_.crashMode = crashMode;
   options_.partitionFile = partitionFile;
 
-  return Status::OK;
+  return HighsStatus::OK;
 }
 
-Status solveSimplex(const Options& opt, const HighsLp& lp, Solution& solution) {
+HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
+                         HighsSolution& solution) {
   // until parsers work with HighsLp
   HModel model;
   int RtCd = model.load_fromMPS(opt.fileName);
@@ -416,23 +414,23 @@ Status solveSimplex(const Options& opt, const HighsLp& lp, Solution& solution) {
   }
 
   // todo: check what the solver outcome is and return corresponding status
-  return Status::OK;
+  return HighsStatus::OK;
 }
 
 HighsLp HModelToHighsLp(const HModel& model) {
   HighsLp lp;
 
-  lp.numCol = model.numCol;
-  lp.numRow = model.numRow;
+  lp.numCol_ = model.numCol;
+  lp.numRow_ = model.numRow;
 
-  lp.Astart = model.Astart;
-  lp.Aindex = model.Aindex;
-  lp.Avalue = model.Avalue;
-  lp.colCost = model.colCost;
-  lp.colLower = model.colLower;
-  lp.colUpper = model.colUpper;
-  lp.rowLower = model.rowLower;
-  lp.rowUpper = model.rowUpper;
+  lp.Astart_ = model.Astart;
+  lp.Aindex_ = model.Aindex;
+  lp.Avalue_ = model.Avalue;
+  lp.colCost_ = model.colCost;
+  lp.colLower_ = model.colLower;
+  lp.colUpper_ = model.colUpper;
+  lp.rowLower_ = model.rowLower;
+  lp.rowUpper_ = model.rowUpper;
 
   return lp;
 }
@@ -440,17 +438,17 @@ HighsLp HModelToHighsLp(const HModel& model) {
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
 
-  model.numCol = lp.numCol;
-  model.numRow = lp.numRow;
+  model.numCol = lp.numCol_;
+  model.numRow = lp.numRow_;
 
-  model.Astart = lp.Astart;
-  model.Aindex = lp.Aindex;
-  model.Avalue = lp.Avalue;
-  model.colCost = lp.colCost;
-  model.colLower = lp.colLower;
-  model.colUpper = lp.colUpper;
-  model.rowLower = lp.rowLower;
-  model.rowUpper = lp.rowUpper;
+  model.Astart = lp.Astart_;
+  model.Aindex = lp.Aindex_;
+  model.Avalue = lp.Avalue_;
+  model.colCost = lp.colCost_;
+  model.colLower = lp.colLower_;
+  model.colUpper = lp.colUpper_;
+  model.rowLower = lp.rowLower_;
+  model.rowUpper = lp.rowUpper_;
 
   return model;
 }

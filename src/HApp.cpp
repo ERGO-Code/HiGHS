@@ -649,8 +649,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
   return 0;
 }
 
-Status presolve(const HighsLp &lp, HighsLp &reduced_lp) {
-  return Status::NotImplemented;
+HighsStatus presolve(const HighsLp &lp, HighsLp &reduced_lp) {
+  return HighsStatus::NotImplemented;
 }
 
 double presolve(HModel &mod, double &time) {

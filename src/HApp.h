@@ -61,6 +61,7 @@ void printHelp(std::string execName) {
   return;
 }
 
-Status solveSimplex(const Options &opt, const HighsLp &lp, Solution &solution);
+HighsStatus solveSimplex(const HighsOptions &opt, const HighsLp &lp,
+                         HighsSolution &solution);
 
 #endif
