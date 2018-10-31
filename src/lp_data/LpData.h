@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <iostream>
 
 #include "HConst.h"
 // The free parser also reads fixed format MPS files but the fixed

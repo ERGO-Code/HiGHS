@@ -1,5 +1,5 @@
-#ifndef LP_DATA_HIGHS_SETUP_
-#define LP_DATA_HIGHS_SETUP_
+#ifndef LP_DATA_HIGHS_SETUP_H_
+#define LP_DATA_HIGHS_SETUP_H_
 
 #include <iostream>
 

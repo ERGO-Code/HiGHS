@@ -1,5 +1,5 @@
-#ifndef FILEREADER_H
-#define FILEREADER_H
+#ifndef IO_FILEREADER_H_
+#define IO_FILEREADER_H_
 
 #include "../lp_data/LpData.h"
 
