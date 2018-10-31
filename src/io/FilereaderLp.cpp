@@ -1,13 +1,9 @@
 #include "FilereaderLp.h"
 
-
-
-
-
 FilereaderRetcode FilereaderLp::readModelFromFile(
-        const char filename,
-        LpData& model
-    ) 
+        const char filename//,
+        //HighsLp& model
+    )
     {
 
 

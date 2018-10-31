@@ -1,6 +1,5 @@
 
 set(sources
-    RunHighs.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -21,6 +20,7 @@ set(sources
     io/FilereaderLp.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    RunHighs.cpp
 )
 
 set(headers

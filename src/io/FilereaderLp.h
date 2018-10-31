@@ -6,8 +6,8 @@
 class FilereaderLp: public Filereader{
 public:
     FilereaderRetcode readModelFromFile(
-        const char filename,
-        LpData& model
+        const char filename//,
+       // HighsLp& model
     );
 
 };

@@ -1,7 +1,7 @@
 #ifndef IO_FILEREADER_H_
 #define IO_FILEREADER_H_
 
-#include "../lp_data/LpData.h"
+#include "HighsLp.h"
 
 enum class FilereaderRetcode {
     OKAY = 0,
@@ -12,9 +12,9 @@ enum class FilereaderRetcode {
 class Filereader {
     public:
     virtual FilereaderRetcode readModelFromFile(
-        const char filename,
-        LpData& model
-    );
+        const char filename//,
+        //HighsLp& model
+    ) = 0;
 };
 
 
