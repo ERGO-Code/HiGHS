@@ -1,6 +1,6 @@
 /**@file  HDual.h
  * @brief Dual simplex solver for HiGHS
- * @author Qi Hunagfu and Julian Hall
+ * @author Qi Huangfu and Julian Hall
  */
 #ifndef HDUAL_H_
 #define HDUAL_H_
@@ -229,11 +229,17 @@ public:
 /**
  * @brief Update a density record for BTRAN, an FTRAN or PRICE
  */
-  double uOpRsDensityRec(
+  double uOpRsDensityRecOl(
 			 double lc_OpRsDensity,     //!< Recent density of the operation
 			 double* opRsDensity,       //!< Historical density of the operation
 			 double* opRsAvDensity,     //!< 
 			 double* opRsAvLog10Density //!< 
+			 ); 
+
+  void uOpRsDensityRec(
+			 double lc_OpRsDensity,    //!< Recent density of the operation
+			 double& opRsAvDensity,     //!< 
+			 double& opRsAvLog10Density //!< 
 			 ); 
 
   void chooseRow();

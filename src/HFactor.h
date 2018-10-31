@@ -1,6 +1,6 @@
 /**@file  HFactor.h
  * @brief Basis matrix factorization, update and solves for HiGHS
- * @author Qi Hunagfu and Julian Hall
+ * @author Qi Huangfu and Julian Hall
  */
 #ifndef HFACTOR_H_
 #define HFACTOR_H_

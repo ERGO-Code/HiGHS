@@ -17,6 +17,11 @@ using namespace std;
 void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 {
   //    printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
+#ifdef HiGHSDEV
+    printf("HiGHSDEV set in solve()\n");
+#else
+    printf("HiGHSDEV not set in solve()\n");
+#endif
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
@@ -133,9 +138,10 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	  row_ep.packFlag = false;
 	  factor->btran(row_ep, row_epDensity);
 	  dualRHS.workEdWt[i] = row_ep.norm2();
-	  double lc_OpRsDensity = 1.0 * row_ep.count / numRow;
-	  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
-	  //row_epDensity = (1-runningAverageMu) * row_epDensity + runningAverageMu * (1.0 * row_ep.count / numRow);
+	  double lc_OpRsDensity = (double) row_ep.count / numRow;
+	  uOpRsDensityRec(lc_OpRsDensity, row_epDensity, row_epAvLog10Density);
+	  //	  double lc_OpRsDensity = 1.0 * row_ep.count / numRow;
+	  //	  row_epDensity = uOpRsDensityRecOl(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
 	}
 #ifdef HiGHSDEV
 	IzDseEdWtTT = model->timer.getTime() - IzDseEdWtTT;
@@ -1203,7 +1209,7 @@ void HDual::iterateRpInvert(int i_v) {
   
 }
 
-double HDual::uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density) {
+double HDual::uOpRsDensityRecOl(double lc_OpRsDensity, double* opRsDensity, double* opRsAvDensity, double* opRsAvLog10Density) {
   double log10_lc_OpRsDensity;
   if (lc_OpRsDensity <= 0) {
     log10_lc_OpRsDensity = -20;
@@ -1216,6 +1222,17 @@ double HDual::uOpRsDensityRec(double lc_OpRsDensity, double* opRsDensity, double
   rtV = (*opRsAvDensity);
   //  rtV = pow(10.0, *opRsAvLog10Density);  
   return rtV;
+}
+
+void HDual::uOpRsDensityRec(double lc_OpRsDensity, double& opRsAvDensity, double& opRsAvLog10Density) {
+  double log10_lc_OpRsDensity;
+  if (lc_OpRsDensity <= 0) {
+    log10_lc_OpRsDensity = -20;
+  } else {
+    log10_lc_OpRsDensity = log(lc_OpRsDensity)/log(10.0);
+  }
+  opRsAvDensity = (1-runningAverageMu)*(opRsAvDensity) + runningAverageMu*lc_OpRsDensity;
+  opRsAvLog10Density = (1-runningAverageMu)*(opRsAvLog10Density) + runningAverageMu*log10_lc_OpRsDensity;
 }
 
 void HDual::chooseRow()
@@ -1287,9 +1304,29 @@ void HDual::chooseRow()
     deltaPrimal = baseValue[rowOut] - baseUpper[rowOut];
   sourceOut = deltaPrimal < 0 ? -1 : 1;
   // double lc_OpRsDensity = (double) row_ep.count / numRow;
-  double lc_OpRsDensity = 1.0 * row_ep.count / numRow;
-  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, &row_epDensity, &row_epAvDensity, &row_epAvLog10Density); 
-  //  row_epDensity = uOpRsDensityRec(lc_OpRsDensity, row_epDensity, row_epAvDensity, row_epAvLog10Density); 
+
+  double ck_lc_OpRsDensity = 1.0 * row_ep.count / numRow;
+  double ck_row_epDensity = row_epDensity;
+  double ck_row_epAvDensity = row_epAvDensity;
+  double ck_row_epAvLog10Density = row_epAvLog10Density;
+  ck_row_epDensity = uOpRsDensityRecOl(ck_lc_OpRsDensity, &ck_row_epDensity, &ck_row_epAvDensity, &ck_row_epAvLog10Density); 
+
+  double lc_OpRsDensity = (double) row_ep.count / numRow;
+  uOpRsDensityRec(lc_OpRsDensity, row_epDensity, row_epAvLog10Density);
+  row_epAvDensity = row_epDensity;
+  if (lc_OpRsDensity != ck_lc_OpRsDensity) {
+    printf("%11.4g = lc_OpRsDensity != ck_lc_OpRsDensity = %11.4g, |Dl| = %11.4g\n",
+	   lc_OpRsDensity, ck_lc_OpRsDensity, abs(lc_OpRsDensity - ck_lc_OpRsDensity));
+  }
+  if (row_epDensity != ck_row_epDensity) {
+    printf("%11.4g = row_epDensity != ck_row_epDensity = %11.4g, |Dl| = %11.4g\n",
+	   row_epDensity, ck_row_epDensity, abs(row_epDensity - ck_row_epDensity));
+  }
+  if (row_epAvLog10Density != ck_row_epAvLog10Density) {
+    printf("%11.4g = row_epAvLog10Density != ck_row_epAvLog10Density = %11.4g, |Dl| = %11.4g\n",
+	   row_epAvLog10Density, ck_row_epAvLog10Density, abs(row_epAvLog10Density - ck_row_epAvLog10Density));
+  }
+  
   //row_epDensity = (1-runningAverageMu) * row_epDensity + runningAverageMu * (1.0 * row_ep.count / numRow);
 }
 
@@ -1384,9 +1421,11 @@ void HDual::chooseColumn(HVector *row_ep)
     matrix->price_er_ck(row_ap, *row_ep);
     //    if (!price_er) printf("No PRICE error\n");
   }
-  double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
-  row_apDensity = uOpRsDensityRec(lc_OpRsDensity, &row_apDensity, &row_apAvDensity, &row_apAvLog10Density); 
-  //row_apDensity = (1-runningAverageMu) * row_apDensity + runningAverageMu * (1.0 * row_ap.count / numCol);
+  //  double lc_OpRsDensity = 1.0 * row_ap.count / numCol;
+  //  row_apDensity = uOpRsDensityRecOl(lc_OpRsDensity, &row_apDensity, &row_apAvDensity, &row_apAvLog10Density); 
+  double lc_OpRsDensity = (double) row_ap.count / numCol;
+  uOpRsDensityRec(lc_OpRsDensity, row_apDensity, row_apAvLog10Density);
+  row_apAvDensity = row_apDensity;
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_Price, row_ap);
 #endif
@@ -1687,13 +1726,17 @@ void HDual::updatePrimal(HVector *DSE_Vector)
   
   if (EdWt_Mode == EdWt_Mode_DSE)
     {
-      double lc_OpRsDensity = 1.0 * DSE_Vector->count / numRow;
-      rowdseDensity = uOpRsDensityRec(lc_OpRsDensity, &rowdseDensity, &rowdseAvDensity, &rowdseAvLog10Density); 
-      //rowdseDensity = (1-runningAverageMu) * rowdseDensity + runningAverageMu * (1.0 * DSE_Vector->count / numRow);
+      //      double lc_OpRsDensity = 1.0 * DSE_Vector->count / numRow;
+      //      rowdseDensity = uOpRsDensityRecOl(lc_OpRsDensity, &rowdseDensity, &rowdseAvDensity, &rowdseAvLog10Density); 
+      double lc_OpRsDensity = (double) DSE_Vector->count / numRow;
+      uOpRsDensityRec(lc_OpRsDensity, rowdseDensity, rowdseAvLog10Density);
+      rowdseAvDensity = rowdseDensity;
     }
-  double lc_OpRsDensity = 1.0 * column.count / numRow;
-  columnDensity = uOpRsDensityRec(lc_OpRsDensity, &columnDensity, &columnAvDensity, &columnAvLog10Density); 
-  //columnDensity = (1-runningAverageMu) * columnDensity + runningAverageMu * (1.0 * column.count / numRow);
+  //  double lc_OpRsDensity = 1.0 * column.count / numRow;
+  //  columnDensity = uOpRsDensityRecOl(lc_OpRsDensity, &columnDensity, &columnAvDensity, &columnAvLog10Density); 
+  double lc_OpRsDensity = (double) column.count / numRow;
+  uOpRsDensityRec(lc_OpRsDensity, columnDensity, columnAvLog10Density);
+  columnAvDensity = columnDensity;
   
   total_fake += column.fakeTick;
   if (EdWt_Mode == EdWt_Mode_DSE)

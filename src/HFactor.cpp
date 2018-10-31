@@ -289,6 +289,11 @@ void HFactor::change(int updateMethod_) {
 
 int HFactor::build() {
     pseudoTick = 0;
+#ifdef HiGHSDEV
+    printf("HiGHSDEV set in build()\n");
+#else
+    printf("HiGHSDEV not set in build()\n");
+#endif
 
     HTimer timer;
     timer.reset();
