@@ -1,4 +1,5 @@
 #include "HighsSetup.h"
+#include "LoadProblem.h"
 
 int main(int argc, char **argv) {
   // Load user options.
@@ -14,10 +15,10 @@ int main(int argc, char **argv) {
   // Read Lp from a file.
   HighsLp lp;
 
-  /*
-    Status read_status = loadLpFromFile(options, lp);
-    checkStatus(read_status);
-  */
+  HighsInputStatus read_status = loadLpFromFile(options, lp);
+  // if (read_status != HighsInputStatus::OK) {
+  //  return (int) HighsStatus::LpError;
+  // }
 
   Highs highs(options);
   HighsSolution solution;
