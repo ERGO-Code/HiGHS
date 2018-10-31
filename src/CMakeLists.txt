@@ -21,6 +21,7 @@ set(sources
 )
 
 set(headers
+    HiGHSRun.h
     HConst.h
     HDual.h
     HDualRow.h

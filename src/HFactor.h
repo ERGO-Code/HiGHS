@@ -47,12 +47,6 @@ const double hyperRESULT = 0.10;
 class HFactor {
 public:
 /**
- * @brief Copy data from an HFactor instance this instance: NOTUSED
- */
-  void copyFrom(
-		const HFactor *from //!< Source of copy
-		);
-/**
  * @brief Copy problem size and pointers of constraint matrix, and set
  * up space for INVERT
  * 

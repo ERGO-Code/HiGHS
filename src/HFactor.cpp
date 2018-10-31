@@ -1,6 +1,7 @@
 /**@file  HFactor.cpp
  * @brief Types of solution classes
  */
+//#include "HiGHSRun.h" //For HiGHSRun()
 #include "HFactor.h"
 #include "HConst.h"
 #include "HTimer.h"
@@ -10,50 +11,6 @@
 #include <iostream>
 #include <stdexcept>
 using namespace std;
-
-void HFactor::copyFrom(const HFactor *from) {
-    numRow = from->numRow;
-    numCol = from->numCol;
-    Astart = from->Astart;
-    Aindex = from->Aindex;
-    Avalue = from->Avalue;
-    baseIndex = from->baseIndex;
-    updateMethod = from->updateMethod;
-
-    nwork = from->nwork;
-    iwork = from->iwork;
-    dwork = from->dwork;
-
-    LpivotLookup = from->LpivotLookup;
-    LpivotIndex = from->LpivotIndex;
-    Lstart = from->Lstart;
-    Lindex = from->Lindex;
-    Lvalue = from->Lvalue;
-    LRstart = from->LRstart;
-    LRindex = from->LRindex;
-    LRvalue = from->LRvalue;
-
-    UpivotLookup = from->UpivotLookup;
-    UpivotIndex = from->UpivotIndex;
-    UpivotValue = from->UpivotValue;
-    UmeritX = from->UmeritX;
-    UtotalX = from->UtotalX;
-    Ustart = from->Ustart;
-    Ulastp = from->Ulastp;
-    Uindex = from->Uindex;
-    Uvalue = from->Uvalue;
-    URstart = from->URstart;
-    URlastp = from->URlastp;
-    URspace = from->URspace;
-    URindex = from->URindex;
-    URvalue = from->URvalue;
-
-    PFpivotValue = from->PFpivotValue;
-    PFpivotIndex = from->PFpivotIndex;
-    PFstart = from->PFstart;
-    PFindex = from->PFindex;
-    PFvalue = from->PFvalue;
-}
 
 void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
         const int Yend, const int *Tindex, const double *Tvalue,
@@ -290,11 +247,10 @@ void HFactor::change(int updateMethod_) {
 int HFactor::build() {
     pseudoTick = 0;
 #ifdef HiGHSDEV
-    printf("HiGHSDEV set in build()\n");
+    //    printf("HiGHSDEV set in build()\n");
 #else
-    printf("HiGHSDEV not set in build()\n");
+    //    printf("HiGHSDEV not set in build()\n");
 #endif
-
     HTimer timer;
     timer.reset();
     //    printf("\nbuild1:"); printf("\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i); printf("\nBaseI  "); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]); printf("\n"); 

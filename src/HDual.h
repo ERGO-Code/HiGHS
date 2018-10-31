@@ -229,17 +229,10 @@ public:
 /**
  * @brief Update a density record for BTRAN, an FTRAN or PRICE
  */
-  double uOpRsDensityRecOl(
-			 double lc_OpRsDensity,     //!< Recent density of the operation
-			 double* opRsDensity,       //!< Historical density of the operation
-			 double* opRsAvDensity,     //!< 
-			 double* opRsAvLog10Density //!< 
-			 ); 
-
   void uOpRsDensityRec(
-			 double lc_OpRsDensity,    //!< Recent density of the operation
-			 double& opRsAvDensity,     //!< 
-			 double& opRsAvLog10Density //!< 
+			 double lc_OpRsDensity,   //!< Recent density of the operation
+			 double& opRsDensity,     //!< Historical average density
+			 double& opRsLog10Density //!< Historical average log10 density
 			 ); 
 
   void chooseRow();
@@ -391,14 +384,10 @@ public:
   double row_epDensity;
   double row_apDensity;
   double rowdseDensity;
-  double columnAvLog10Density;
-  double row_epAvLog10Density;
-  double row_apAvLog10Density;
-  double rowdseAvLog10Density;
-  double columnAvDensity;
-  double row_epAvDensity;
-  double row_apAvDensity;
-  double rowdseAvDensity;
+  double columnLog10Density;
+  double row_epLog10Density;
+  double row_apLog10Density;
+  double rowdseLog10Density;
 
   HDualRow dualRow;
 
