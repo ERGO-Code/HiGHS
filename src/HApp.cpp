@@ -150,6 +150,7 @@ int solvePlainAPI(HModel &model) {
 int solvePlainWithPresolve(HModel &model) {
   double time1;
 
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
   double obj1 = presolve(model, time1);
   (void)obj1;
 
