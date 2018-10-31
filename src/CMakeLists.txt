@@ -18,6 +18,7 @@ set(sources
     io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
+    io/Filereader.cpp
     io/FilereaderLp.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp

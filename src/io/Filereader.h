@@ -1,21 +1,17 @@
 #ifndef FILEREADER_H
 #define FILEREADER_H
 
-#include "../lp_data/LpData.h"
+#include <stdio.h>
 
-enum class FilereaderRetcode {
-    OKAY = 0,
-    FILENOTFOUND = 1,
-    PARSERERROR = 2
-};
+#include "../lp_data/HighsLp.h"
+
+enum class FilereaderRetcode { OKAY = 0, FILENOTFOUND = 1, PARSERERROR = 2 };
 
 class Filereader {
-    public:
-    virtual FilereaderRetcode readModelFromFile(
-        const char filename,
-        LpData& model
-    );
+ public:
+  virtual FilereaderRetcode readModelFromFile(const char* filename,
+                                              HighsLp& model);
+  static void readLineFromFile(FILE* file, char* buffer, int buffersize);
 };
-
 
 #endif
