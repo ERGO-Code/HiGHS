@@ -101,26 +101,6 @@ HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   return status;
 }
 
-// Parses the file in options.filename using the parser specified in
-// options.parser
-HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
-  // Check if file exists
-  if (options.fileName && access(options.fileName, F_OK) == -1) {
-    return HighsInputStatus::FileNotFound;
-  } else if (!options.fileName) {
-    return HighsInputStatus::FileNotFound;
-  }
-
-  // Which parser
-  // will be (options.getValue("parser") == MpsParser::new)
-
-  // Initialize arrays
-
-  // call MPSParser::loadProblem(arrays of HighsLp object)
-
-  return checkLp(lp);
-}
-
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   // todo: replace references with options_.*
   int filename = 0;

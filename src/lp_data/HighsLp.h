@@ -2,9 +2,9 @@
 #define LP_DATA_LP_DATA_H
 
 #include <cassert>
+#include <iostream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "HConst.h"
 // The free parser also reads fixed format MPS files but the fixed
