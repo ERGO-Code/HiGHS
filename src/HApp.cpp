@@ -150,6 +150,7 @@ int solvePlainAPI(HModel &model) {
 int solvePlainWithPresolve(HModel &model) {
   double time1;
 
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
   double obj1 = presolve(model, time1);
   (void)obj1;
 
@@ -649,8 +650,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
   return 0;
 }
 
-Status presolve(const LpData &lp, LpData &reduced_lp) {
-  return Status::NotImplemented;
+HighsStatus presolve(const HighsLp &lp, HighsLp &reduced_lp) {
+  return HighsStatus::NotImplemented;
 }
 
 double presolve(HModel &mod, double &time) {
