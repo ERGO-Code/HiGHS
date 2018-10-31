@@ -16,9 +16,9 @@ int main(int argc, char **argv) {
   HighsLp lp;
 
   HighsInputStatus read_status = loadLpFromFile(options, lp);
-  if (read_status != HighsInputStatus::OK) {
-    return (int) HighsStatus::LpError;
-  }
+  // if (read_status != HighsInputStatus::OK) {
+  //  return (int) HighsStatus::LpError;
+  // }
 
   Highs highs(options);
   HighsSolution solution;
