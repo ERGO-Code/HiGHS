@@ -18,6 +18,7 @@ set(sources
     io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
+    io/FilereaderLp.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
 )
@@ -43,6 +44,8 @@ set(headers
     io/HinOut.h
     io/HMPSIO.h
     io/HMpsFF.h
+    io/Filereader.h
+    io/FilereaderLp.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     test/KktCheck.h
