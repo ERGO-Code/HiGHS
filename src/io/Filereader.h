@@ -5,7 +5,7 @@
 
 #include "../lp_data/HighsLp.h"
 
-enum class FilereaderRetcode { OKAY = 0, FILENOTFOUND = 1, PARSERERROR = 2 };
+enum class FilereaderRetcode { OKAY, FILENOTFOUND, PARSERERROR };
 
 class Filereader {
  public:
