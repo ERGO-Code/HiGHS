@@ -1,6 +1,6 @@
 #include "FilereaderMps.h"
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char filename,
+FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
                                                   HighsLp& model) {
 
   // todo
