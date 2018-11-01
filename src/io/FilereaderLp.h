@@ -1,5 +1,5 @@
-#ifndef FILEREADER_LP
-#define FILEREADER_LP
+#ifndef IO_FILEREADER_LP_H_
+#define IO_FILEREADER_LP_H_
 
 #include "Filereader.h"
 

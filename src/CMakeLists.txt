@@ -1,6 +1,5 @@
-
 set(sources
-    RunHighs.cpp
+    lp_data/HighsLp.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -20,8 +19,10 @@ set(sources
     io/HToyIO.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
+    io/FilereaderMps.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    RunHighs.cpp
 )
 
 set(headers
@@ -39,14 +40,13 @@ set(headers
     simplex/HCrash.h
     simplex/HRandom.h
     presolve/HPresolve.h
-    lp_data/HPreData.h
-    lp_data/LpData.h
-    lp_data/HighsSetup.h
     io/HinOut.h
     io/HMPSIO.h
     io/HMpsFF.h
     io/Filereader.h
     io/FilereaderLp.h
+    io/FilereaderMps.h
+    io/LoadProblem.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     test/KktCheck.h
