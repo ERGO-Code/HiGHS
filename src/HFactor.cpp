@@ -246,10 +246,35 @@ void HFactor::change(int updateMethod_) {
 
 int HFactor::build() {
     pseudoTick = 0;
-#ifdef HiGHSDEV
-    //    printf("HiGHSDEV set in build()\n");
+#ifdef CMAKE_BUILD_TYPE
+    printf("CMAKE_BUILD_TYPE     set in HFactor::build()\n");
 #else
-    //    printf("HiGHSDEV not set in build()\n");
+    printf("CMAKE_BUILD_TYPE not set in HFactor::build()\n");
+#endif
+#ifdef OLD_PARSER
+    printf("OLD_PARSER           set in HFactor::build()\n");
+#else
+    printf("OLD_PARSER       not set in HFactor::build()\n");
+#endif
+#ifdef OPENMP
+    printf("OPENMP               set in HFactor::build()\n");
+#else
+    printf("OPENMP           not set in HFactor::build()\n");
+#endif
+#ifdef SCIP_DEV
+    printf("SCIP_DEV             set in HFactor::build()\n");
+#else
+    printf("SCIP_DEV         not set in HFactor::build()\n");
+#endif
+#ifdef HiGHSDEV
+    printf("HiGHSDEV             set in HFactor::build()\n");
+#else
+    printf("HiGHSDEV         not set in HFactor::build()\n");
+#endif
+#ifdef HiGHSRELEASE
+    printf("HiGHSRELEASE         set in HFactor::build()\n");
+#else
+    printf("HiGHSRELEASE     not set in HFactor::build()\n");
 #endif
     HTimer timer;
     timer.reset();

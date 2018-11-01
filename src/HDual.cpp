@@ -17,10 +17,35 @@ using namespace std;
 void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 {
   //    printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
-#ifdef HiGHSDEV
-    printf("HiGHSDEV set in solve()\n");
+#ifdef CMAKE_BUILD_TYPE
+    printf("CMAKE_BUILD_TYPE     set in HDual::solve()\n");
 #else
-    printf("HiGHSDEV not set in solve()\n");
+    printf("CMAKE_BUILD_TYPE not set in HDual::solve()\n");
+#endif
+#ifdef OLD_PARSER
+    printf("OLD_PARSER           set in HDual::solve()\n");
+#else
+    printf("OLD_PARSER       not set in HDual::solve()\n");
+#endif
+#ifdef OPENMP
+    printf("OPENMP               set in HDual::solve()\n");
+#else
+    printf("OPENMP           not set in HDual::solve()\n");
+#endif
+#ifdef SCIP_DEV
+    printf("SCIP_DEV             set in HDual::solve()\n");
+#else
+    printf("SCIP_DEV         not set in HDual::solve()\n");
+#endif
+#ifdef HiGHSDEV
+    printf("HiGHSDEV             set in HDual::solve()\n");
+#else
+    printf("HiGHSDEV         not set in HDual::solve()\n");
+#endif
+#ifdef HiGHSRELEASE
+    printf("HiGHSRELEASE         set in HDual::solve()\n");
+#else
+    printf("HiGHSRELEASE     not set in HDual::solve()\n");
 #endif
   assert(ptr_model != NULL);
   dual_variant = variant;
