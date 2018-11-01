@@ -1464,8 +1464,6 @@ void HDual::chooseColumn(HVector *row_ep) {
       model->timer.recordStart(HTICK_DEVEX_WT);
       // Determine the exact Devex weight
       double og_dvx_wt_o_rowOut = dualRHS.workEdWt[rowOut];
-      int vr_t_lv_bs = model->getBaseIndex()[rowOut];
-      int dvx_ix_o_vr_t_lv_bs = dvx_ix[vr_t_lv_bs];
       double tru_dvx_wt_o_rowOut = 0;
       // Loop over [row_ap; row_ep] using the packed values
       for (int el_n = 0; el_n < dualRow.packCount; el_n++)
@@ -1727,62 +1725,37 @@ void HDual::updatePrimal(HVector *DSE_Vector)
 }
 
 void HDual::updatePivots() {
+  // UPDATE
+  //
   // If reinversion is needed then skip this method
   if (invertHint) return;
   
-  // Update - pivots
+  // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
+  // Update the iteration count and store the basis change if HiGHSDEV
+  // is defined
   model->recordPivots(columnIn, columnOut, alpha);
+  // Update the invertible representation of the basis matrix
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+  // Update the row-wise representation of the nonbasic columns
   model->updateMatrix(columnIn, columnOut);
+  // Delete Freelist entry for columnIn
   dualRow.delete_Freelist(columnIn);
+  // Update the primal value for the row where the basis change has
+  // occurred, and set the corresponding squared primal infeasibility
+  // value in dualRHS.workArray
   dualRHS.update_pivots(rowOut,
 			model->getWorkValue()[columnIn] + thetaPrimal);
-  
-  bool reinvert_pseudoClock = total_fake >= factor->fakeTick;
-  
-  //	reinvert_pseudoClock = 2*total_fake >= factor->fakeTick;
-  if (reinvert_pseudoClock && model->countUpdate >= 50) {
-    //        cout << total_fake << "\t" << factor->fakeTick << endl;
-    //        printf(
-    //                "%10d   %10.2e  %10.2e  %10.4f          %10.2e  %10.2e  %10.4f\n",
-    //                model->countUpdate, total_INVERT_TICK, total_FT_inc_TICK,
-    //                total_FT_inc_TICK / total_INVERT_TICK, factor->fakeTick,
-    //                total_fake, total_fake / factor->fakeTick);
-    invertHint = invertHint_pseudoClockSaysInvert; // Was 1
-  }
-#ifdef HiGHSDEV
-  //  if (invertHint) {printf("HDual::updatePivots: invertHint = %d\n", invertHint);}
-#endif
-  
-}
-
-void HDual::handleRankDeficiency() {
-  int *baseIndex = model->getBaseIndex();
-  bool rp = true;
-  if (rp) rp = numRow<100;
-  if (rp) {
-    printf("handleRankDeficiency:\nBaseI  "); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]);
-    printf("\n");
-  }
-  for (int i = 0; i < numRow; i++) {
-    if (baseIndex[i] < 0) {
-      columnOut = -baseIndex[i]-1;
-      baseIndex[i] = columnOut;
-      rowOut = i;
-      columnIn = numCol + rowOut;
-      sourceOut = model->setSourceOutFmBd(columnOut);
-      printf("handleRankDeficiency: columnOut=%d, columnIn=%d, rowOut=%d\n", columnOut, columnIn, rowOut);
-      model->updatePivots(columnIn, rowOut, sourceOut);
-      model->recordPivots(columnIn, columnOut, alpha);
-      model->updateMatrix(columnIn, columnOut);
-    }
+  // Determine whether to reinvert based on the synthetic clock
+  bool reinvert_syntheticClock = total_fake >= factor->fakeTick;
+  if (reinvert_syntheticClock && model->countUpdate >= 50) {
+    invertHint = invertHint_syntheticClockSaysInvert;
   }
 }
 
-void HDual::iz_dvx_fwk()
-{
-  //Initialise the Devex framework: reference set is all basic variables
+void HDual::iz_dvx_fwk() {
+  // Initialise the Devex framework: reference set is all basic
+  // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
   const int *NonbasicFlag = model->getNonbasicFlag();
   for (int vr_n = 0; vr_n < numTot; vr_n++)
@@ -1803,14 +1776,11 @@ void HDual::iz_dvx_fwk()
       //
       int dvx_ix_o_vr = 1-NonbasicFlag[vr_n]*NonbasicFlag[vr_n];
       dvx_ix[vr_n] = dvx_ix_o_vr;
-      //      if (dvx_ix[vr_n] != dvx_ix_o_vr) printf("%1d = dvx_ix[%6d] != dvx_ix_o_vr = %1d\n", dvx_ix[vr_n], vr_n, dvx_ix_o_vr);
-      
     }
-  //  for (int i = 0; i < numRow; i++) dualRHS.workEdWt[i] = 1.0;
-  dualRHS.workEdWt.assign(numRow, 1.0);
-  n_dvx_it = 0;
-  n_dvx_fwk += 1;
-  nw_dvx_fwk = false;
+  dualRHS.workEdWt.assign(numRow, 1.0); // Set all initial weights to 1
+  n_dvx_it = 0; // Zero the count of iterations with this Devex framework
+  n_dvx_fwk += 1; // Increment the number of Devex frameworks
+  nw_dvx_fwk = false; // Indicate that there's no need for a new Devex framework
   model->timer.recordFinish(HTICK_DEVEX_IZ);
 }
 
@@ -2195,7 +2165,7 @@ void HDual::iterateRpAn() {
     printf("\nInvert    performed %7d times: average frequency = %d\n", NumInvert, AnIterNumIter/NumInvert);
     lcNumInvert = AnIterNumInvert[invertHint_updateLimitReached];
     if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to update limit reached\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_pseudoClockSaysInvert];
+    lcNumInvert = AnIterNumInvert[invertHint_syntheticClockSaysInvert];
     if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to pseudo-clock\n", lcNumInvert, (100*lcNumInvert)/NumInvert);
     lcNumInvert = AnIterNumInvert[invertHint_possiblyOptimal];
     if (lcNumInvert > 0) printf("%7d (%3d%%) Invert operations due to possibly optimal\n", lcNumInvert, (100*lcNumInvert)/NumInvert);

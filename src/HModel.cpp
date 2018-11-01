@@ -2745,8 +2745,7 @@ void HModel::updateMatrix(int columnIn, int columnOut)
 
 void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
 {
-  //  printf("Called updatePivots(%d, %d, %d)\n", columnIn, rowOut, sourceOut);cout<<flush;
-    timer.recordStart(HTICK_UPDATE_PIVOTS);
+  timer.recordStart(HTICK_UPDATE_PIVOTS);
   int columnOut = basicIndex[rowOut];
 
   // Incoming variable
@@ -2774,15 +2773,12 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut)
     nonbasicMove[columnOut] = -1;
   }
 
-  //  printf("In updatePivots before countUpdate++\n");cout<<flush;
   countUpdate++;
-  //  printf("In updatePivots after countUpdate++\n");cout<<flush;
-  //Update the number of basic logicals
-  if (columnOut < numCol)
-    numBasicLogicals -= 1;
-  if (columnIn < numCol)
-    numBasicLogicals += 1;
-  //No longer have a representation of B^{-1}, and certainly not fresh!
+  // Update the number of basic logicals
+  if (columnOut < numCol) numBasicLogicals -= 1;
+  if (columnIn < numCol) numBasicLogicals += 1;
+  // No longer have a representation of B^{-1}, and certainly not
+  // fresh!
   mlFg_haveInvert = 0;
   mlFg_haveFreshInvert = 0;
   //Data are no longer fresh from rebuild

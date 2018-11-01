@@ -434,6 +434,10 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut)
 
 void HDualRHS::update_pivots(int iRow, double value)
 {
+  // Update the primal value for the row (iRow) where the basis change
+  // has occurred, and set the corresponding squared primal
+  // infeasibility value in workArray
+  //
   const double *baseLower = workModel->getBaseLower();
   const double *baseUpper = workModel->getBaseUpper();
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];

@@ -275,20 +275,63 @@ public:
 		    HVector *DSE_Vector //!< FTRANned pivotal column
 		    );
 
+/**
+ * @brief Update the basic and nonbasic variables, iteration count,
+ * invertible representation of the basis matrix and row-wise
+ * representation of the nonbasic columns, delete the Freelist entry
+ * for the entering column, update the primal value for the row where
+ * the basis change has occurred, and set the corresponding squared
+ * primal infeasibility value in dualRHS.workArray, and then determine
+ * whether to reinvert according to the synthetic clock
+ */
   void updatePivots();
 
-  void handleRankDeficiency();
+/**
+ * @brief Initialise a Devex framework: reference set is all basic
+ * variables
+ */
   void iz_dvx_fwk();
+
+/**
+ * @brief Sets a run-time parameter. TODO: handle this otherwise
+ */
   void setCrash(const char *CrashMode);
+
+/**
+ * @brief Set a run-time parameter. TODO: handle this otherwise
+ */
   void setPrice(const char *PriceMode);
+
+/**
+ * @brief Set a run-time parameter. TODO: handle this otherwise
+ */
   void setEdWt(const char *EdWtMode);
+
+/**
+ * @brief Set a run-time parameter. TODO: handle this otherwise
+ */
   void setTimeLimit(double TimeLimit_ArgV);
+
+/**
+ * @brief Set a run-time parameter. TODO: handle this otherwise
+ */
   void setPresolve(const char *PresolveMode);
 
-  // Utility to get a row of the inverse of B for SCIP
-  int util_getBasisInvRow(int r, double *coef, int *inds, int *ninds);
-
-  double an_bs_cond(HModel *ptr_model);
+/**
+ * @brief Get a row of the inverse of the basis matrix for SCIP
+ */
+  int util_getBasisInvRow(
+			  int r,        //!< Index of row required
+			  double *coef, //!< Value of entries in row required
+			  int *inds,    //!< Indices of entries in row required
+			  int *ninds    //!< Number of indices in row required
+			  );
+/**
+ * @brief Get the Hager condition number estimate for the basis matrix of a model
+ */
+  double an_bs_cond(
+		    HModel *ptr_model //!< Model for which basis condition is required
+		    );
 
   void major_chooseRow();
   void major_chooseRowBtran();

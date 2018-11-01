@@ -41,7 +41,6 @@ public:
 
     void compute_vecT_matB(const double *vec, const int *base, HVector *res);
     void compute_matB_vec(const double *vec, const int *base, HVector *res);
-    void rp_mtx();
     const double price_by_row_sw_dsty = 0.1;
     const double hyperPRICE = 0.10;
     const double densityRunningAverageMu = 0.05;

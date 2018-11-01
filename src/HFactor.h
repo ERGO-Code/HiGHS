@@ -109,7 +109,7 @@ public:
 	      int *hint    //!< Reinversion status
 	      );
 /**
- * @brief The synthetic clock for INVERT
+ * @brief Another synthetic clock for INVERT. TODO Eliminate pseudoTick
  */
   int pseudoTick;
 
@@ -131,7 +131,7 @@ public:
   double realTick;
 
 /**
- * @brief Another synthetic clock for INVERT. TODO Eliminate fakeTick
+ * @brief The synthetic clock for INVERT
  */
   double fakeTick;
 

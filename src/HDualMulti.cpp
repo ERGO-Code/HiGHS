@@ -782,7 +782,7 @@ void HDual::major_updateFactor()
                         iRows, &invertHint);
 
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
-    invertHint = invertHint_pseudoClockSaysInvert; // Was 1
+    invertHint = invertHint_syntheticClockSaysInvert;
 }
 
 void HDual::major_rollback()
