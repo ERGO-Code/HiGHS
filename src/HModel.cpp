@@ -448,7 +448,7 @@ void HModel::copy_savedBoundsToModelBounds()
 
 void HModel::mlFg_Clear()
 {
-#ifdef CMAKE_BUILD_TYPE
+  /*#ifdef CMAKE_BUILD_TYPE
     printf("CMAKE_BUILD_TYPE     set in HModel::mlFg_Clear()()\n");
 #else
     printf("CMAKE_BUILD_TYPE not set in HModel::mlFg_Clear()()\n");
@@ -478,6 +478,7 @@ void HModel::mlFg_Clear()
 #else
     printf("HiGHSRELEASE     not set in HModel::mlFg_Clear()()\n");
 #endif
+  */
   mlFg_transposedLP = 0;
   mlFg_scaledLP = 0;
   mlFg_shuffledLP = 0;

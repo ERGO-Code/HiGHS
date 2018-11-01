@@ -71,9 +71,9 @@ void HDualRow::choose_makepack(const HVector *row, const int offset)
 void HDualRow::choose_possible()
 {
   /**
-     * Will determine the possible variables
-     * Can be parallel.
-     */
+   * Determine the possible variables - candidates for CHUZC - Can be parallel.
+   * TODO: Check with Qi what this is doing
+   */
   const double Ta = workModel->countUpdate < 10 ? 1e-9 : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
   const int sourceOut = workDelta < 0 ? -1 : 1;
@@ -260,9 +260,13 @@ bool HDualRow::choose_final()
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
   if (workDual[workPivot] * workMove[workPivot] > 0)
-    workTheta = workDual[workPivot] / workAlpha;
+    {
+      workTheta = workDual[workPivot] / workAlpha;
+    }
   else
-    workTheta = 0;
+    {
+      workTheta = 0;
+    }
 
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;
@@ -338,6 +342,7 @@ void HDualRow::create_Freelist()
 
 void HDualRow::create_Freemove(HVector *row_ep)
 {
+  // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty())
   {
     double Ta = workModel->countUpdate < 10 ? 1e-9 : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
@@ -397,31 +402,4 @@ void HDualRow::delete_Freelist(int iColumn)
     if (freeListSize > 0)
       printf("!! STRANGE: Empty Freelist has size %d\n", freeListSize);
   }
-}
-void HDualRow::rp_hsol_pv_r()
-{
-  //Set limits on problem size for reporting
-  const int mx_rp_numTot = 20;
-  int numTot = workModel->getNumTot();
-  if (numTot > mx_rp_numTot)
-    return;
-  vector<double> dse_pv_r;
-  dse_pv_r.assign(numTot, 0);
-  for (int i = 0; i < packCount; i++)
-  {
-    int c_n = packIndex[i];
-    dse_pv_r[c_n] = packValue[i];
-  }
-  printf("PvR: Ix  ");
-  for (int i = 0; i < numTot; i++)
-  {
-    printf(" %4d", i);
-  }
-  printf("\n");
-  printf("      V  ");
-  for (int i = 0; i < numTot; i++)
-  {
-    printf(" %4.1g", dse_pv_r[i]);
-  }
-  printf("\n");
 }

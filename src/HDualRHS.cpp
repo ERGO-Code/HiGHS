@@ -402,7 +402,6 @@ void HDualRHS::update_weight(HVector *column, double devex, double Kai,
 //This is the Devex update weight
 void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut)
 {
-  const bool rp_dvx = false;
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
   const int numRow = workModel->getNumRow();
@@ -417,9 +416,6 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut)
     {
       double aa_iRow = columnArray[iRow];
       double nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut * aa_iRow * aa_iRow);
-      if (abs(nw_wt - workEdWt[iRow]) > 1e-1)
-        if (rp_dvx)
-          printf("Row %2d: Edge weight changes from %g to %g\n", iRow, workEdWt[iRow], nw_wt);
       workEdWt[iRow] = nw_wt;
     }
   }
@@ -430,9 +426,6 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut)
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
       double nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut * aa_iRow * aa_iRow);
-      if (abs(nw_wt - workEdWt[iRow]) > 1e-1)
-        if (rp_dvx)
-          printf("Row %2d: Edge weight changes from %g to %g\n", iRow, workEdWt[iRow], nw_wt);
       workEdWt[iRow] = nw_wt;
     }
   }

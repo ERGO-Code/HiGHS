@@ -100,6 +100,7 @@ void HMatrix::setup_lgBs(int numCol_, int numRow_, const int *Astart_,
   //columns before the basic columns for a logical basis
   //
   //Copy A
+    /*
 #ifdef CMAKE_BUILD_TYPE
     printf("CMAKE_BUILD_TYPE     set in HMatrix::setup_lgBs()\n");
 #else
@@ -130,6 +131,7 @@ void HMatrix::setup_lgBs(int numCol_, int numRow_, const int *Astart_,
 #else
     printf("HiGHSRELEASE     not set in HMatrix::setup_lgBs()\n");
 #endif
+    */
   numCol = numCol_;
   numRow = numRow_;
   Astart.assign(Astart_, Astart_ + numCol_ + 1);

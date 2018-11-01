@@ -30,7 +30,6 @@ public:
     void create_Freemove(HVector *row_ep);
     void delete_Freemove();
     void delete_Freelist(int iColumn);
-    void rp_hsol_pv_r();
 
     HModel *workModel;
     int workSize;

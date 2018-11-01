@@ -88,16 +88,6 @@ const double maxAllowedDevexWeightRatio = 3.0;
  */
 const double runningAverageMu = 0.05;
 
-/**
- * Logicals used to determine what's reported for hsol and dvx. TODO delete these!
- */
-//Set limits on problem size for reporting
-const bool rp_hsol = false;
-const bool rp_dvx = false;
-//const bool rp_hsol = true;
-//const bool rp_dvx = true;
-const int mx_rp_numTot = 20;
-
 enum HDUAL_VARIANT
 {
   HDUAL_VARIANT_PLAIN = 0,
@@ -227,25 +217,64 @@ public:
 		       );
 
 /**
- * @brief Update a density record for BTRAN, an FTRAN or PRICE
+ * @brief Update an average density record for BTRAN, an FTRAN or PRICE
  */
   void uOpRsDensityRec(
-			 double lc_OpRsDensity,   //!< Recent density of the operation
-			 double& opRsDensity,     //!< Historical average density
-			 double& opRsLog10Density //!< Historical average log10 density
+			 double lc_OpRsDensity, //!< Recent density of the operation
+			 double& opRsDensity    //!< Average density of the operation
 			 ); 
-
+/**
+ * @brief Choose the index of a row to leave the basis (CHUZR)
+ */
   void chooseRow();
 
+/**
+ * @brief Compute pivot row (PRICE) and choose the index of a column to enter the basis (CHUZC)
+ */
   void chooseColumn(HVector *row_ep);
+
+/**
+ * @brief Choose the index of a column to enter the basis (CHUZC) by
+ * exploiting slices of the pivotal row - for SIP and PAMI
+ */
   void chooseColumn_slice(HVector *row_ep);
 
+/**
+ * @brief Compute the pivotal column (FTRAN)
+ */
   void updateFtran();
+
+/**
+ * @brief Compute the RHS changes corresponding to the BFRT
+ * (FTRAN-BFRT)
+ */
   void updateFtranBFRT();
-  void updateFtranDSE(HVector *DSE_Vector);
+
+/**
+ * @brief Compute the vector required to update DSE weights - being
+ * FTRAN applied to the pivotal column (FTRAN-DSE)
+ */
+  void updateFtranDSE(
+		      HVector *DSE_Vector //!< Pivotal column as RHS for FTRAN
+		      );
+/**
+ * @brief Compare the pivot value computed row-wise and column-wise
+ * and determine whether reinversion is advisable
+ */
   void updateVerify();
+
+/**
+ * @brief Update the dual values
+ */
   void updateDual();
-  void updatePrimal(HVector *DSE_Vector);
+
+/**
+ * @brief Update the primal values and any edge weights
+ */
+  void updatePrimal(
+		    HVector *DSE_Vector //!< FTRANned pivotal column
+		    );
+
   void updatePivots();
 
   void handleRankDeficiency();
@@ -291,10 +320,6 @@ public:
   void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);
   void iterateRpAn();
-  void rp_hsol_da_str();
-  //void rp_hsol_si_it();
-  void rp_hsol_pv_c(HVector *column) const;
-  void rp_hsol_sol(HModel *ptr_model);
   void an_iz_vr_v();
 #endif
 
@@ -332,7 +357,6 @@ public:
   // DSE scalars
   bool iz_DSE_wt;
   bool alw_DSE2Dvx_sw = true;
-  int n_wg_DSE_wt;
   int AnIterNumCostlyDseIt;
   int AnIterPrevRpNumCostlyDseIt;
   double AnIterCostlyDseFq;
@@ -341,6 +365,9 @@ public:
   const double AnIterFracNumTot_ItBfSw = 0.1;
   const double AnIterFracNumCostlyDseItbfSw = 0.05;
   double AnIterCostlyDseMeasure;
+#ifdef HiGHSDEV
+  int n_wg_DSE_wt;
+#endif
 
   // Model
   HModel *model;
@@ -384,10 +411,6 @@ public:
   double row_epDensity;
   double row_apDensity;
   double rowdseDensity;
-  double columnLog10Density;
-  double row_epLog10Density;
-  double row_apLog10Density;
-  double rowdseLog10Density;
 
   HDualRow dualRow;
 

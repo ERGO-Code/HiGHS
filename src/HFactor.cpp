@@ -246,6 +246,7 @@ void HFactor::change(int updateMethod_) {
 
 int HFactor::build() {
     pseudoTick = 0;
+    /*
 #ifdef CMAKE_BUILD_TYPE
     printf("CMAKE_BUILD_TYPE     set in HFactor::build()\n");
 #else
@@ -276,6 +277,7 @@ int HFactor::build() {
 #else
     printf("HiGHSRELEASE     not set in HFactor::build()\n");
 #endif
+    */
     HTimer timer;
     timer.reset();
     //    printf("\nbuild1:"); printf("\nIndex  "); for (int i = 0; i < numRow; i++) printf(" %2d", i); printf("\nBaseI  "); for (int i = 0; i < numRow; i++) printf(" %2d", baseIndex[i]); printf("\n"); 

@@ -17,6 +17,7 @@ using namespace std;
 void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 {
   //    printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
+    /*
 #ifdef CMAKE_BUILD_TYPE
     printf("CMAKE_BUILD_TYPE     set in HDual::solve()\n");
 #else
@@ -47,6 +48,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 #else
     printf("HiGHSRELEASE     not set in HDual::solve()\n");
 #endif
+    */
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
@@ -164,7 +166,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 	  factor->btran(row_ep, row_epDensity);
 	  dualRHS.workEdWt[i] = row_ep.norm2();
 	  double lc_OpRsDensity = (double) row_ep.count / numRow;
-	  uOpRsDensityRec(lc_OpRsDensity, row_epDensity, row_epLog10Density);
+	  uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
 	}
 #ifdef HiGHSDEV
 	IzDseEdWtTT = model->timer.getTime() - IzDseEdWtTT;
@@ -231,7 +233,6 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
   //  assert(ok);
   
 #ifdef HiGHSDEV
-  //  rp_hsol_sol(ptr_model);
   //  Analyse the initial values of primal and dual variables
   //  an_iz_vr_v();
 #endif
@@ -362,7 +363,6 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
     double bs_cond = an_bs_cond(ptr_model);
     printf("Optimal basis condition estimate is %g\n", bs_cond);
     }
-  //  rp_hsol_sol(ptr_model);
 #endif
 #ifdef HiGHSDEV
   //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve(): solvePhase = %d\n", solvePhase);cout<<flush;}
@@ -553,8 +553,7 @@ void HDual::solve_phase1()
 	      iterate_multi();
 	      break;
 	    }
-	  if (invertHint)
-	    break;
+	  if (invertHint) break;
 	  //printf("HDual::solve_phase1: Iter = %d; Objective = %g\n", model->numberIteration, model->objective);
 	  /*
 	  if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
@@ -695,7 +694,7 @@ void HDual::solve_phase2()
 	  // every iteration!
 	  // Killer line for speed of HiGHS on hyper-sparse LPs!
 	  // Comment out when not working with SCIP!!
-	  model->computeDuObj();
+	  //	  model->computeDuObj();
 #ifdef HiGHSDEV
 	  //      model->computeDuObj();
 	  //      double pr_obj_v = model->computePrObj();
@@ -906,29 +905,17 @@ void HDual::iterate()
   // solve_phase% and, hence, a call to rebuild()
 
 //	Reporting:
-//	hsol data structures [NonBcFg; DvxIx; BcIx; DvxV] in rp_hsol_da_str();
-//	hsol pivotal row in rp_hsol_pv_r();
-//	hsol simplex iteration [rowOut; coumnOut; columnIn] in rp_hsol_si_it();
 //	hsol row-wise matrix after update in updateMatrix(columnIn, columnOut);
-#ifdef HiGHSDEV
-  if (rp_hsol) rp_hsol_da_str();
-#endif
   model->timer.recordStart(HTICK_ITERATE_CHUZR);
   chooseRow();
   model->timer.recordFinish(HTICK_ITERATE_CHUZR);
   model->timer.recordStart(HTICK_ITERATE_CHUZC);
   chooseColumn(&row_ep);
   model->timer.recordFinish(HTICK_ITERATE_CHUZC);
-#ifdef HiGHSDEV
-  if (rp_hsol && rowOut >= 0) {printf("\nPvR: Row %2d\n", rowOut); dualRow.rp_hsol_pv_r();} cout<<flush;
-#endif
   model->timer.recordStart(HTICK_ITERATE_FTRAN);
   updateFtranBFRT();
   // updateFtran(); computes the pivotal column in the data structure "column"
   updateFtran();
-#ifdef HiGHSDEV
-  if (rp_hsol) rp_hsol_pv_c(&column);
- #endif
  
   //updateFtranDSE performs the DSE FTRAN on pi_p
   if (EdWt_Mode == EdWt_Mode_DSE) updateFtranDSE(&row_ep);
@@ -1232,33 +1219,32 @@ void HDual::iterateRpInvert(int i_v) {
   
 }
 
-void HDual::uOpRsDensityRec(double lc_OpRsDensity, double& opRsDensity, double& opRsLog10Density) {
-  double log10_lc_OpRsDensity;
-  if (lc_OpRsDensity <= 0) {
-    log10_lc_OpRsDensity = -20;
-  } else {
-    log10_lc_OpRsDensity = log(lc_OpRsDensity)/log(10.0);
-  }
+void HDual::uOpRsDensityRec(double lc_OpRsDensity, double& opRsDensity) {
+  // Update an average density record for BTRAN, an FTRAN or PRICE
   opRsDensity = (1-runningAverageMu)*(opRsDensity) + runningAverageMu*lc_OpRsDensity;
-  opRsLog10Density = (1-runningAverageMu)*(opRsLog10Density) + runningAverageMu*log10_lc_OpRsDensity;
 }
 
-void HDual::chooseRow()
-{
-  if (invertHint)
-    return;
+void HDual::chooseRow() {
+  // Choose the index of a row to leave the basis (CHUZR)
+  //
+  // If reinversion is needed then skip this method
+  if (invertHint) return;
+  // Choose candidates repeatedly until candidate is OK or optimality is detected
   for (;;)
     {
-      // Choose row
+      // Choose the index of a good row to leave the basis
       dualRHS.choose_normal(&rowOut);
       if (rowOut == -1)
 	{
-	  invertHint = invertHint_possiblyOptimal; // Was 1
+	  // No index found so may be dual optimal. By setting
+	  // invertHint>0 all subsequent methods in the iteration will
+	  // be skipped until reinversion and rebuild have taken place
+	  invertHint = invertHint_possiblyOptimal;
 	  return;
 	}
-      
-      // Verify weight
+      // Compute pi_p = B^{-T}e_p in row_ep
       model->timer.recordStart(HTICK_BTRAN);
+      // Set up RHS for BTRAN
       row_ep.clear();
       row_ep.count = 1;
       row_ep.index[0] = rowOut;
@@ -1267,242 +1253,237 @@ void HDual::chooseRow()
 #ifdef HiGHSDEV
       if (AnIterLg) iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif      
+      // Call BTRAN
       factor->btran(row_ep, row_epDensity);
 #ifdef HiGHSDEV
       if (AnIterLg) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
 #endif      
       model->timer.recordFinish(HTICK_BTRAN);
+      // Verify DSE weight
       if (EdWt_Mode == EdWt_Mode_DSE)
 	{
-	  //For DSE compute the correct weight c_weight and use if to see how
-	  //accurate the updated weight is.
+	  // For DSE, see how accurate the updated weight is
+	  // Save the updated weight
 	  double u_weight = dualRHS.workEdWt[rowOut];
+	  // Compute the weight from row_ep and over-write the updated weight
 	  double c_weight = dualRHS.workEdWt[rowOut] = row_ep.norm2();
-	  //For DSE compute the correct weight c_weight and use if to see how
-	  //accurate the updated weight is.
+	  // If the weight error is acceptable then break out of the
+	  // loop. All we worry about is accepting rows with weights
+	  // which are not too small, since this can make the row look
+	  // unreasonably attractive
+	  if (u_weight >= 0.25 * c_weight) break;
 #ifdef HiGHSDEV
-	  //			double DSE_wt_er = abs((u_weight - c_weight) / max(u_weight, c_weight));
-	  //if (DSE_wt_er > 1e-2)
-	  //			  printf(
-	  //	 " !! JAJH RARE PRINT: Iter %d: DSE_wt_er = %8g = (%8g - %8g)/max(u_weight,c_weight)\n",
-	  //	 model->numberIteration, DSE_wt_er, u_weight, c_weight);
-#endif
-	  if (u_weight >= 0.25 * c_weight)
-	    break;
-#ifdef HiGHSDEV
-	  //printf(
-	  //       " !! JAJH RARE PRINT: Iter %d: DSE_wt_er = %8g from %8g, %8g with u_weight/c_weight = %g < 0.25\n",
-	  //       model->numberIteration, DSE_wt_er, u_weight, c_weight,
-	  //       u_weight / c_weight);
+	  // Count the number of wrong DSE weights for reporting 
 	  n_wg_DSE_wt += 1;
 #endif
+	  // Weight error is unacceptable so look for another
+	  // candidate. Of course, it's possible that the same
+	  // candidate is chosen, but the weight will be correct (so
+	  // no infinite loop).
 	}
       else
 	{
-	  //If not using DSE then accept the row by breaking out of the loop
+	  // If not using DSE then accept the row by breaking out of
+	  // the loop
 	  break;
 	}
     }
-  
-  // Assign basic info
+  // Index of row to leave the basis has been found
+  //
+  // Assign basic info:
+  //
+  // Record the column (variable) associated with the leaving row
   columnOut = model->getBaseIndex()[rowOut];
+  // Record the change in primal variable associated with the move to the bound being violated
   if (baseValue[rowOut] < baseLower[rowOut])
+    {
+      // Below the lower bound so set deltaPrimal = value - LB < 0
     deltaPrimal = baseValue[rowOut] - baseLower[rowOut];
+    }
   else
+    {
+      // Above the upper bound so set deltaPrimal = value - UB > 0
     deltaPrimal = baseValue[rowOut] - baseUpper[rowOut];
+    }
+  // Set sourceOut to be -1 if deltaPrimal<0, otherwise +1 (since deltaPrimal>0)
   sourceOut = deltaPrimal < 0 ? -1 : 1;
+  // Update the record of average row_ep (pi_p) density. This ignores
+  // any BTRANs done for skipped candidates
   double lc_OpRsDensity = (double) row_ep.count / numRow;
-  uOpRsDensityRec(lc_OpRsDensity, row_epDensity, row_epLog10Density);
+  uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
 }
 
-void HDual::chooseColumn(HVector *row_ep)
-{
-  
-  if (invertHint)
-    return;
-  
-  // Compute pivot row
+void HDual::chooseColumn(HVector *row_ep) {
+  // Compute pivot row (PRICE) and choose the index of a column to enter the basis (CHUZC)
+  //
+  // If reinversion is needed then skip this method
+  if (invertHint) return;
+  //
+  // PRICE
+  //
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
   
+#ifdef HiGHSDEV
   bool anPriceEr = false;
   bool useUltraPrice = alw_price_ultra
     && row_apDensity*numCol*10 < row_ap.ilP2
 				 && row_apDensity < 1e-3;
-#ifdef HiGHSDEV
-  //  bool rpPriceTy = false;
-  //  int lc_numIt = model->numberIteration;
-  //  if (lc_numIt<1 || rpPriceTy) printf("Iteration %d: Before PRICE: Mode = %d; ByColSw = %d; ByRowSw = %d; Ultra = %d\n",
-  //	   lc_numIt, Price_Mode, alw_price_by_col_sw, alw_price_by_row_sw, alw_price_ultra);
 #endif
   if (Price_Mode == Price_Mode_Col) {
     //Column-wise PRICE
 #ifdef HiGHSDEV
-    //    if (lc_numIt<1 || rpPriceTy) printf("Using column price\n");
     if (AnIterLg) {
       iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
       AnIterNumColPrice++;
     }
 #endif
+    // Perform column-wise PRICE
     matrix->price_by_col(row_ap, *row_ep);
   } else {
-    //Row-wise PRICE
-    double lc_dsty = 1.0 * (*row_ep).count/numRow;
+    // By default, use row-wise PRICE, but possibly use column-wise
+    // PRICE if the density of row_ep is too high
+    double lc_dsty = (double) (*row_ep).count / numRow;
     if (alw_price_by_col_sw && (lc_dsty > dstyColPriceSw)) {
-      //Avoid row price due to density of row_ep
+      // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
-      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By column, %d\n", numCol);
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
 	AnIterNumColPrice++;
       }
 #endif
+    // Perform column-wise PRICE
       matrix->price_by_col(row_ap, *row_ep);
+      // Zero the components of row_ap corresponding to basic variables (nonbasicFlag[*]=0)
       for (int col = 0; col < numCol; col++) {
 	row_ap.array[col] = model->nonbasicFlag[col]*row_ap.array[col];
       }
-      
-    } else if (useUltraPrice) {
 #ifdef HiGHSDEV
-      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - ultra\n");
+      // Ultra-sparse PRICE is in development
+    } else if (useUltraPrice) {
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
 	AnIterNumRowPriceUltra++;
       }
-#endif
+    // Perform ultra-sparse row-wise PRICE
       matrix->price_by_row_ultra(row_ap, *row_ep);
       if (anPriceEr) {
 	bool price_er;
 	price_er = matrix->price_er_ck(row_ap, *row_ep);
 	if (!price_er) printf("No ultra PRICE error\n");
       }
+#endif
     } else if (alw_price_by_row_sw) {
-      //Avoid Hyper Price on current density of result or switch if
-      //the density of this Price becomes extreme
+      // Avoid hyper-sparse PRICE on current density of result or
+      // switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
-      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - switch\n");
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
 	AnIterNumRowPriceWSw++;
       }
 #endif
+      // Set the value of the density of row_ap at which the switch to
+      // sparse row-wise PRICE should be made
       const double sw_dsty = matrix->price_by_row_sw_dsty;
+      // Perform hyper-sparse row-wise PRICE with switching
       matrix->price_by_row_w_sw(row_ap, *row_ep, row_apDensity, 0, sw_dsty);
     } else {
-      //No avoiding Hyper Price on current density of result or
-      //switching if the density of this Price becomes extreme
+      // No avoiding hyper-sparse PRICE on current density of result
+      // or switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
-      //      if (lc_numIt<1 || rpPriceTy) printf("PRICE By row - vanilla\n");
       if (AnIterLg) {
 	iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
 	AnIterNumRowPrice++;
       }
 #endif
+      // Perform hyper-sparse row-wise PRICE
       matrix->price_by_row(row_ap, *row_ep);
     }
   }
+#ifdef HiGHSDEV
+  // Possibly analyse the error in the result of PRICE
   if (anPriceEr) {
-    //    bool price_er =
     matrix->price_er_ck(row_ap, *row_ep);
-    //    if (!price_er) printf("No PRICE error\n");
   }
+#endif
+  // Update the record of average row_ap density
   double lc_OpRsDensity = (double) row_ap.count / numCol;
-  uOpRsDensityRec(lc_OpRsDensity, row_apDensity, row_apLog10Density);
+  uOpRsDensityRec(lc_OpRsDensity, row_apDensity);
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_Price, row_ap);
 #endif
   model->timer.recordFinish(HTICK_PRICE);
-  
-  // Choose column - possible
+  //
+  // CHUZC
+  //
+  // Section 0: Clear data and call create_Freemove to set a value of
+  // nonbasicMove for all free columns to prevent their dual values
+  // from being changed. 
   model->timer.recordStart(HTICK_CHUZC0);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
   model->timer.recordFinish(HTICK_CHUZC0);
+  //
+  // Section 1: Pack row_ap and row_ep, then determine the possible
+  // variables - candidates for CHUZC
   model->timer.recordStart(HTICK_CHUZC1);
-  dualRow.choose_makepack(&row_ap, 0);
-  dualRow.choose_makepack(row_ep, numCol);
-  dualRow.choose_possible();
+  dualRow.choose_makepack(&row_ap, 0); // Pack row_ap into the packIndex/Value of HDualRow
+  dualRow.choose_makepack(row_ep, numCol); // Pack row_ep into the packIndex/Value of HDualRow
+  dualRow.choose_possible(); // Determine the possible variables - candidates for CHUZC
   model->timer.recordFinish(HTICK_CHUZC1);
-  
-  // Choose column - check problem
+  //
+  // Take action if the step to an expanded bound is not positive, or
+  // there are no candidates for CHUZC
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0)
     {
       invertHint = invertHint_possiblyDualUnbounded; // Was 1
       return;
     }
-  
-  // Choose column - final
+  //
+  // Sections 2 and 3: Perform (bound-flipping) ratio test. This can
+  // fail if the dual values are excessively large
   bool chooseColumnFail = dualRow.choose_final();
   if (chooseColumnFail) {
     invertHint = invertHint_chooseColumnFail;
     return;
   }
+  //
+  // Section 4: Reset the nonbasicMove values for free columns
   model->timer.recordStart(HTICK_CHUZC4);
   dualRow.delete_Freemove();
   model->timer.recordFinish(HTICK_CHUZC4);
+  // Record values for basis change, checking for numerical problems and update of dual variables
+  columnIn = dualRow.workPivot; // Index of the column entering the basis
+  alphaRow = dualRow.workAlpha; // Pivot value computed row-wise - used for numerical chacking
+  thetaDual = dualRow.workTheta;// Dual step length
   
-  columnIn = dualRow.workPivot;
-  alphaRow = dualRow.workAlpha;
-  thetaDual = dualRow.workTheta;
-  
-#ifdef HiGHSDEV
-  if (rp_hsol && rowOut >= 0) {printf("\nPvR: Row %2d\n", rowOut); dualRow.rp_hsol_pv_r();}
-#endif
   if (EdWt_Mode == EdWt_Mode_Dvx)
     {
       model->timer.recordStart(HTICK_DEVEX_WT);
-      //
-      //Determine the exact Devex weight
-      //
-      //    	int dvx_ix_o_columnIn = dvx_ix[columnIn];
-      //    	int si_it_n = model->numberIteration;
+      // Determine the exact Devex weight
       double og_dvx_wt_o_rowOut = dualRHS.workEdWt[rowOut];
       int vr_t_lv_bs = model->getBaseIndex()[rowOut];
       int dvx_ix_o_vr_t_lv_bs = dvx_ix[vr_t_lv_bs];
-      if (vr_t_lv_bs < numCol)
-	{
-	  //    		Structural leaving the basis
-	  if (rp_dvx)
-	    printf("\n DvxIt %d; RowOut %d; VrOut %d Str: DvxIx %d\n",
-		   n_dvx_it, rowOut, vr_t_lv_bs, dvx_ix_o_vr_t_lv_bs);
-	}
-      else
-	{
-	  //    		Logical leaving the basis
-	  if (rp_dvx)
-	    printf("\n DvxIt %d; RowOut %d; VrOut %d  Lg: DvxIx %d\n",
-		   n_dvx_it, rowOut, vr_t_lv_bs, dvx_ix_o_vr_t_lv_bs);
-	}
       double tru_dvx_wt_o_rowOut = 0;
-      //    	Have to loop over [row_ap; row_ep]
+      // Loop over [row_ap; row_ep] using the packed values
       for (int el_n = 0; el_n < dualRow.packCount; el_n++)
 	{
 	  int vr_n = dualRow.packIndex[el_n];
 	  double pv = dvx_ix[vr_n] * dualRow.packValue[el_n];
 	  tru_dvx_wt_o_rowOut += pv * pv;
 	}
-      if (rp_dvx)
-	printf("Sum of squares for Devex weight = %g\n",
-	       tru_dvx_wt_o_rowOut);
       tru_dvx_wt_o_rowOut = max(1.0, tru_dvx_wt_o_rowOut);
-      if (rp_dvx)
-	printf("tru_dvx_wt_o_rowOut = %g; alphaRow = %g\n",
-	       tru_dvx_wt_o_rowOut, alphaRow);
-      //Analyse the Devex weight to determine whether a new framework should be set up
+      // Analyse the Devex weight to determine whether a new framework
+      // should be set up
       double dvx_rao = max(og_dvx_wt_o_rowOut / tru_dvx_wt_o_rowOut,
 			   tru_dvx_wt_o_rowOut / og_dvx_wt_o_rowOut);
       int i_te = numRow / minRlvNumberDevexIterations;
-      if (rp_dvx)
-	printf("i_te = %d; %d: dvx_rao = %8.2g\n", i_te,
-	       max(minAbsNumberDevexIterations, i_te), dvx_rao);
       i_te = max(minAbsNumberDevexIterations, i_te);
-      //		Square maxAllowedDevexWeightRatio due to keeping squared weights
+      // Square maxAllowedDevexWeightRatio due to keeping squared
+      // weights
       nw_dvx_fwk = dvx_rao > maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio || n_dvx_it > i_te;
-      if (nw_dvx_fwk)
-	if (rp_dvx)
-	  printf("!!NEW DEVEX FRAMEWORK!!\n");
       dualRHS.workEdWt[rowOut] = tru_dvx_wt_o_rowOut;
       model->timer.recordFinish(HTICK_DEVEX_WT);
     }
@@ -1511,8 +1492,11 @@ void HDual::chooseColumn(HVector *row_ep)
 
 void HDual::chooseColumn_slice(HVector *row_ep)
 {
-  if (invertHint)
-    return;
+  // Choose the index of a column to enter the basis (CHUZC) by
+  // exploiting slices of the pivotal row - for SIP and PAMI
+  //
+  // If reinversion is needed then skip this method
+  if (invertHint) return;
   
   model->timer.recordStart(HTICK_CHUZC1);
   dualRow.clear();
@@ -1567,24 +1551,35 @@ void HDual::chooseColumn_slice(HVector *row_ep)
 
 void HDual::updateFtran()
 {
+  // Compute the pivotal column (FTRAN)
+  // 
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   model->timer.recordStart(HTICK_FTRAN);
+  // Clear the picotal column and indicate that its values should be packed
   column.clear();
   column.packFlag = true;
+  // Get the constraint matrix column by combining just one column
+  // with unit multiplier
   matrix->collect_aj(column, columnIn, 1);
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
 #endif
+  // Perform FTRAN
   factor->ftran(column, columnDensity);
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_Ftran, column);
 #endif
+  // Save the pivot value computed column-wise - used for numerical chacking
   alpha = column.array[rowOut];
   model->timer.recordFinish(HTICK_FTRAN);
 }
 
 void HDual::updateFtranBFRT()
 {
+  // Compute the RHS changes corresponding to the BFRT (FTRAN-BFRT)
+  // 
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   
   // Only time updateFtranBFRT if dualRow.workCount > 0;
@@ -1610,6 +1605,10 @@ void HDual::updateFtranBFRT()
 
 void HDual::updateFtranDSE(HVector *DSE_Vector)
 {
+  // Compute the vector required to update DSE weights - being FTRAN
+  // applied to the pivotal column (FTRAN-DSE)
+  // 
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   model->timer.recordStart(HTICK_FTRAN_DSE);
 #ifdef HiGHSDEV
@@ -1623,48 +1622,46 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
 }
 
 void HDual::updateVerify() {
+  // Compare the pivot value computed row-wise and column-wise and
+  // determine whether reinversion is advisable
+  // 
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   
-  // The alpha
+  // Look at the relative difference between the absolute values of the two pivot values
   double aCol = fabs(alpha);
   double aRow = fabs(alphaRow);
   double aDiff = fabs(aCol - aRow);
   numericalTrouble = aDiff / min(aCol, aRow);
+  // Reinvert if the relative difference is large enough, and updates hav ebeen performed
   if (numericalTrouble > 1e-7 && model->countUpdate > 0) {
-    invertHint = invertHint_possiblySingularBasis; // Was 1
+    invertHint = invertHint_possiblySingularBasis;
   }
-  
-  // We get this thing, but it is not actived by default.
-  //    // The dual reduced cost
-  //    double dualin_u = workDual[columnIn];
-  //    double dualin_c = model->getWorkCost()[columnIn];
-  //    for (int i = 0; i < column.count; i++) {
-  //        int iRow = column.index[i];
-  //        int iCol = model->getBaseIndex()[iRow];
-  //        double value = column.array[iRow];
-  //        double cost = model->getWorkCost()[iCol] + model->getWorkShift()[iCol];
-  //        dualin_c -= cost * value;
-  //    }
-  //    double dualin_diff = fabs(dualin_c - dualin_u);
-  ////    if (dualin_diff > Td) {
-  ////        cout << dualin_c << "\t" << dualin_u << "\t" << dualin_diff << endl;
-  ////        invertHint = invertHint_possiblySingularBasis; // Was 1
-  ////    }
 }
 
 void HDual::updateDual()
 {
+  // Update the dual values
+  //
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   
   // Update - dual (shift and back)
   if (thetaDual == 0)
+    // Little to do if thetaDual is zero
     model->shiftCost(columnIn, -workDual[columnIn]);
   else
     {
+      // Update the dual values (if packCount>0)
       dualRow.update_dual(thetaDual);
       if (dual_variant != HDUAL_VARIANT_PLAIN && slice_PRICE)
+	{
+	  // Update the dual variables slice-by-slice [presumably
+	  // nothing is done in the previous call to
+	  // dualRow.update_dual. TODO: Check with Qi
 	for (int i = 0; i < slice_num; i++)
 	  slice_dualRow[i].update_dual(thetaDual);
+	}
     }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
@@ -1673,6 +1670,9 @@ void HDual::updateDual()
 
 void HDual::updatePrimal(HVector *DSE_Vector)
 {
+  // Update the primal values and any edge weights
+  // 
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   // NB DSE_Vector is only computed if EdWt_Mode == EdWt_Mode_DSE
   // Update - primal and weight
@@ -1709,10 +1709,10 @@ void HDual::updatePrimal(HVector *DSE_Vector)
   if (EdWt_Mode == EdWt_Mode_DSE)
     {
       double lc_OpRsDensity = (double) DSE_Vector->count / numRow;
-      uOpRsDensityRec(lc_OpRsDensity, rowdseDensity, rowdseLog10Density);
+      uOpRsDensityRec(lc_OpRsDensity, rowdseDensity);
     }
   double lc_OpRsDensity = (double) column.count / numRow;
-  uOpRsDensityRec(lc_OpRsDensity, columnDensity, columnLog10Density);
+  uOpRsDensityRec(lc_OpRsDensity, columnDensity);
   
   total_fake += column.fakeTick;
   if (EdWt_Mode == EdWt_Mode_DSE)
@@ -1727,6 +1727,7 @@ void HDual::updatePrimal(HVector *DSE_Vector)
 }
 
 void HDual::updatePivots() {
+  // If reinversion is needed then skip this method
   if (invertHint) return;
   
   // Update - pivots
@@ -2279,65 +2280,6 @@ void HDual::iterateRpAn() {
     }
     printf("\n");
   }
-}
-
-void HDual::rp_hsol_da_str()
-{
-  printf("\nIteration %d\n", model->numberIteration);
-  if (numTot > mx_rp_numTot) return;
-  
-  printf("\nData structures\n");
-  printf("         ");
-  for (int i = 0; i < numTot; i++) printf(" %4d", i); 
-  printf("\n");
-  printf("NonBcFg: "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicFlag()[i]); 
-  printf("\n");
-  printf("WorkMv:  "); for (int i = 0; i < numTot; i++) printf(" %4d", model->getNonbasicMove()[i]); 
-  printf("\n");
-  printf("DvxIx:   "); for (int i = 0; i < numTot; i++) printf(" %4d", dvx_ix[i]); 
-  printf("\n");
-  printf("BcIx:    "); for (int i = 0; i < numRow; i++) printf(" %4d", model->getBaseIndex()[i]); 
-  printf("\n");
-  printf("DvxV:    "); for (int i = 0; i < numRow; i++) printf(" %4.1g", dualRHS.workEdWt[i]); 
-  printf("\n");
-}
-void HDual::rp_hsol_pv_c(HVector *column) const
-{
-  const double *columnArray = &column->array[0];
-  // Alias
-  //Set limits on problem size for reporting
-  //	const int mx_rp_numTot = 20;
-  if (numCol > mx_rp_numTot)
-    return;
-  printf("\nPvC: %2d  \n", columnIn);
-  for (int i = 0; i < numRow; i++)
-    {
-      if (abs(columnArray[i]) > 1e-3)
-	printf(" %2d: %4.1g\n", i, columnArray[i]);
-    }
-  printf("\n");
-}
-
-void HDual::rp_hsol_sol(HModel *ptr_model)
-{
-  const double *colCost = model->getcolCost();
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
-  const double *rowLower = model->getrowLower();
-  const double *rowUpper = model->getrowUpper();
-  const int *nonbasicFlag = model->getNonbasicFlag();
-  printf(" Column      Pr Act      Du Act   NonBc    Lower Bd    Upper Bd        Cost\n");
-  for (int c_n = 0; c_n < numCol; c_n++)
-    {
-      int vr_n = c_n;
-      printf("%7d %11.4g %11.4g %7d %11.4g %11.4g %11.4g\n", c_n, workValue[vr_n], workDual[vr_n], nonbasicFlag[vr_n], colLower[c_n], colUpper[c_n], colCost[c_n]);
-    }
-  printf("    Row      Pr Act      Du Act   NonBc    Lower Bd    Upper Bd\n");
-  for (int r_n = 0; r_n < numRow; r_n++)
-    {
-      int vr_n = numCol + r_n;
-      printf("%7d %11.4g %11.4g %7d %11.4g %11.4g\n", r_n, workValue[vr_n], workDual[vr_n], nonbasicFlag[vr_n], rowLower[r_n], rowUpper[r_n]);
-    }
 }
 
 //TODO Put this in the right place - try to identify when workValue is set [nonbasic primals are set to the right bound for dual feasibility?]
