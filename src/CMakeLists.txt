@@ -1,6 +1,5 @@
 set(sources
     lp_data/HighsLp.cpp
-    lp_data/HighsModelBuilder.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -55,7 +54,6 @@ set(headers
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
-    lp_data/HighsModelBuilder.h
 )
 
 
