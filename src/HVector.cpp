@@ -57,7 +57,8 @@ void HVector::clear() {
     }
     packFlag = false;
     count = 0;
-    fakeTick = 0;
+    //    fakeTick = 0;
+    syntheticTick = 0;
     next = 0;
     pWd = dfSparseDaStr;
 }
@@ -99,7 +100,8 @@ void HVector::pack() {
 
 void HVector::copy(const HVector *from) {
     clear();
-    fakeTick = from->fakeTick;
+    //    fakeTick = from->fakeTick;
+    syntheticTick = from->syntheticTick;
     const int fromCount = count = from->count;
     const int *fromIndex = &from->index[0];
     const double *fromArray = &from->array[0];

@@ -124,12 +124,12 @@ public:
 /**
  * @brief Wall clock time for INVERT
  */
-  double realTick;
+  double build_realTick;
 
 /**
  * @brief The synthetic clock for INVERT
  */
-  double fakeTick;
+  double build_syntheticTick;
 
 // Rank deficiency information
 

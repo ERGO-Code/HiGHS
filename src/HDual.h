@@ -527,7 +527,10 @@ public:
     MChoice multi_choice[HSOL_THREAD_LIMIT];
     MFinish multi_finish[HSOL_THREAD_LIMIT];
 
+    double total_syntheticTick;
+#ifdef HiGHSDEV
     double total_fake;
+#endif
     double total_INVERT_TICK;
     double total_FT_inc_TICK;
 

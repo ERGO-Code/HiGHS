@@ -33,8 +33,9 @@ public:
     vector<unsigned char> valueP1;   // 1-byte pointers
     vector<unsigned short> valueP2;   // 2-byte pointers
 
-    int pseudoTick;
-    double fakeTick;
+    //    int pseudoTick;
+    //    double fakeTick;
+    double syntheticTick;
 
     // For update
     vector<char> cwork; // char working buffer

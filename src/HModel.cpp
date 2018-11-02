@@ -448,37 +448,6 @@ void HModel::copy_savedBoundsToModelBounds()
 
 void HModel::mlFg_Clear()
 {
-  /*#ifdef CMAKE_BUILD_TYPE
-    printf("CMAKE_BUILD_TYPE     set in HModel::mlFg_Clear()()\n");
-#else
-    printf("CMAKE_BUILD_TYPE not set in HModel::mlFg_Clear()()\n");
-#endif
-#ifdef OLD_PARSER
-    printf("OLD_PARSER           set in HModel::mlFg_Clear()()\n");
-#else
-    printf("OLD_PARSER       not set in HModel::mlFg_Clear()()\n");
-#endif
-#ifdef OPENMP
-    printf("OPENMP               set in HModel::mlFg_Clear()()\n");
-#else
-    printf("OPENMP           not set in HModel::mlFg_Clear()()\n");
-#endif
-#ifdef SCIP_DEV
-    printf("SCIP_DEV             set in HModel::mlFg_Clear()()\n");
-#else
-    printf("SCIP_DEV         not set in HModel::mlFg_Clear()()\n");
-#endif
-#ifdef HiGHSDEV
-    printf("HiGHSDEV             set in HModel::mlFg_Clear()()\n");
-#else
-    printf("HiGHSDEV         not set in HModel::mlFg_Clear()()\n");
-#endif
-#ifdef HiGHSRELEASE
-    printf("HiGHSRELEASE         set in HModel::mlFg_Clear()()\n");
-#else
-    printf("HiGHSRELEASE     not set in HModel::mlFg_Clear()()\n");
-#endif
-  */
   mlFg_transposedLP = 0;
   mlFg_scaledLP = 0;
   mlFg_shuffledLP = 0;

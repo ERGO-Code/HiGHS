@@ -833,9 +833,12 @@ void HDual::rebuild()
   iterateRpInvert(sv_invertHint);
   model->timer.recordFinish(HTICK_REPORT_INVERT);
   
-  total_INVERT_TICK = factor->fakeTick;// Was factor->pseudoTick
+  total_INVERT_TICK = factor->build_syntheticTick;// Was factor->pseudoTick
   total_FT_inc_TICK = 0;
+#ifdef HiGHSDEV
   total_fake = 0;
+#endif
+  total_syntheticTick = 0;
   
 #ifdef HiGHSDEV
   if (anRebuildTime) {
@@ -1682,15 +1685,17 @@ void HDual::updatePrimal(HVector *DSE_Vector)
   double lc_OpRsDensity = (double) column.count / numRow;
   uOpRsDensityRec(lc_OpRsDensity, columnDensity);
   
-  total_fake += column.fakeTick;
+  //  total_fake += column.fakeTick;
+  total_syntheticTick += column.syntheticTick;
   if (EdWt_Mode == EdWt_Mode_DSE)
     {
-      total_fake += DSE_Vector->fakeTick;
+      //      total_fake += DSE_Vector->fakeTick;
+      total_syntheticTick += DSE_Vector->syntheticTick;
     }
-  total_FT_inc_TICK += column.fakeTick; // Was .pseudoTick
+  total_FT_inc_TICK += column.syntheticTick; // Was .pseudoTick
   if (EdWt_Mode == EdWt_Mode_DSE)
     {
-      total_FT_inc_TICK += DSE_Vector->fakeTick; // Was .pseudoTick
+      total_FT_inc_TICK += DSE_Vector->syntheticTick; // Was .pseudoTick
     }
 }
 
@@ -1717,7 +1722,8 @@ void HDual::updatePivots() {
   dualRHS.update_pivots(rowOut,
 			model->getWorkValue()[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
-  bool reinvert_syntheticClock = total_fake >= factor->fakeTick;
+  bool reinvert_syntheticClock = total_syntheticTick >= factor->build_syntheticTick;
+  //  bool reinvert_syntheticClock = total_fake >= factor->build_syntheticTick;
   if (reinvert_syntheticClock && model->countUpdate >= 50) {
     invertHint = invertHint_syntheticClockSaysInvert;
   }

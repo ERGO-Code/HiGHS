@@ -100,38 +100,6 @@ void HMatrix::setup_lgBs(int numCol_, int numRow_, const int *Astart_,
   //columns before the basic columns for a logical basis
   //
   //Copy A
-    /*
-#ifdef CMAKE_BUILD_TYPE
-    printf("CMAKE_BUILD_TYPE     set in HMatrix::setup_lgBs()\n");
-#else
-    printf("CMAKE_BUILD_TYPE not set in HMatrix::setup_lgBs()\n");
-#endif
-#ifdef OLD_PARSER
-    printf("OLD_PARSER           set in HMatrix::setup_lgBs()\n");
-#else
-    printf("OLD_PARSER       not set in HMatrix::setup_lgBs()\n");
-#endif
-#ifdef OPENMP
-    printf("OPENMP               set in HMatrix::setup_lgBs()\n");
-#else
-    printf("OPENMP           not set in HMatrix::setup_lgBs()\n");
-#endif
-#ifdef SCIP_DEV
-    printf("SCIP_DEV             set in HMatrix::setup_lgBs()\n");
-#else
-    printf("SCIP_DEV         not set in HMatrix::setup_lgBs()\n");
-#endif
-#ifdef HiGHSDEV
-    printf("HiGHSDEV             set in HMatrix::setup_lgBs()\n");
-#else
-    printf("HiGHSDEV         not set in HMatrix::setup_lgBs()\n");
-#endif
-#ifdef HiGHSRELEASE
-    printf("HiGHSRELEASE         set in HMatrix::setup_lgBs()\n");
-#else
-    printf("HiGHSRELEASE     not set in HMatrix::setup_lgBs()\n");
-#endif
-    */
   numCol = numCol_;
   numRow = numRow_;
   Astart.assign(Astart_, Astart_ + numCol_ + 1);
