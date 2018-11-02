@@ -224,17 +224,17 @@ public:
 			 double& opRsDensity    //!< Average density of the operation
 			 ); 
 /**
- * @brief Choose the index of a row to leave the basis (CHUZR)
+ * @brief Choose the index of a good row to leave the basis (CHUZR)
  */
   void chooseRow();
 
 /**
- * @brief Compute pivot row (PRICE) and choose the index of a column to enter the basis (CHUZC)
+ * @brief Compute pivot row (PRICE) and choose the index of a good column to enter the basis (CHUZC)
  */
   void chooseColumn(HVector *row_ep);
 
 /**
- * @brief Choose the index of a column to enter the basis (CHUZC) by
+ * @brief Choose the index of a good column to enter the basis (CHUZC) by
  * exploiting slices of the pivotal row - for SIP and PAMI
  */
   void chooseColumn_slice(HVector *row_ep);
@@ -333,23 +333,87 @@ public:
 		    HModel *ptr_model //!< Model for which basis condition is required
 		    );
 
+/**
+ * @brief PAMI: Choose the indices of a good set of rows to leave the
+ * basis (CHUZR)
+ */
   void major_chooseRow();
+
+/**
+ * @brief PAMI: Perform multiple BTRAN
+ */
   void major_chooseRowBtran();
+
+/**
+ * @brief PAMI: Choose the index (from the set of indices) of a good
+ * row to leave the basis (CHUZR-MI)
+ */
   void minor_chooseRow();
 
+/**
+ * @brief PAMI: Update the data during minor iterations
+ */
   void minor_update();
+
+/**
+ * @brief PAMI: Update the dual values during minor iterations
+ */
   void minor_updateDual();
+
+/**
+ * @brief PAMI: Update the primal values during minor iterations
+ */
   void minor_updatePrimal();
+
+/**
+ * @brief PAMI: Perform a basis change during minor iterations
+ */
   void minor_updatePivots();
+
+/**
+ * @brief PAMI: Update the tableau rows during minor iterations
+ */
   void minor_updateRows();
 
+/**
+ * @brief PAMI: Perform updates after a set of minor iterations
+ */
   void major_update();
+
+/**
+ * @brief PAMI: Prepare for the FTRANs after a set of minor iterations
+ */
   void major_updateFtranPrepare();
+
+/**
+ * @brief PAMI: Perform the parallel part of multiple FTRANs after a
+ * set of minor iterations
+ */
   void major_updateFtranParallel();
+
+/**
+ * @brief PAMI: Perform the final part of multiple FTRANs after a set
+ * of minor iterations
+ */
   void major_updateFtranFinal();
+
+/**
+ * @brief PAMI: Update the primal values after a set of minor
+ * iterations
+ */
   void major_updatePrimal();
+
+/**
+ * @brief PAMI: Update the invertible representation of the basis
+ * matrix after a set of minor iterations
+ */
   void major_updateFactor();
 
+/**
+ * @brief PAMI: Roll back some iterations if numerical trouble
+ * detected when updating the invertible representation of the basis
+ * matrix after a set of minor iterations
+ */
   void major_rollback();
 
 #ifdef HiGHSDEV
@@ -366,16 +430,13 @@ public:
   void an_iz_vr_v();
 #endif
 
-
-  // Variant choice
-  int dual_variant = 0;
-  int Price_Mode = 0; //Row-wise PRICE
-  int EdWt_Mode = 0; //DSE
-  int Crash_Mode = 0; //No crash
-  int Presolve_Mode = 0; //No presolve
-
-  bool SolveBailout;
-  double TimeLimitValue = 0;
+  int dual_variant = 0;      //!< Dual simplex variant choice. TODO: handle this otherwise
+  int Price_Mode = 0;        //!< Pricing mode. TODO: handle this otherwise
+  int EdWt_Mode = 0;         //!< Edge weight mode. TODO: handle this otherwise
+  int Crash_Mode = 0;        //!< Crash mode. TODO: handle this otherwise
+  int Presolve_Mode = 0;     //!< Presolve mode. TODO: handle this otherwise
+  bool SolveBailout;         //!< Set true if control is to be returned immediately to calling function
+  double TimeLimitValue = 0; //!< Value of time limit. TODO: handle this otherwise
 
 #ifdef HiGHSDEV
   // Analysis of rebuilds
@@ -385,29 +446,32 @@ public:
 #endif
 
   // Devex scalars
-  int n_dvx_fwk;
-  int n_dvx_it;
-  bool nw_dvx_fwk;
+  int n_dvx_fwk;   //!< Number of Devex frameworks used
+  int n_dvx_it;    //!< Number of Devex iterations with the current framework
+  bool nw_dvx_fwk; //!< Set a new Devex framework
   // Devex vector
-  vector<int> dvx_ix;
+  vector<int> dvx_ix; //!< Vector of Devex indices
 
   // Price scalars
-  bool alw_price_by_col_sw = true; //By default allow switch to column PRICE if results sufficiently dense
-  bool alw_price_by_row_sw = true; //By default allow switch to standard row-wise PRICE if result is sufficiently dense
-  bool alw_price_ultra = false; //By default don't allow ultra-sparse PRICE
-  const double dstyColPriceSw = 0.75;
+  bool alw_price_by_col_sw = true; //!< By default allow switch to column PRICE if results sufficiently dense
+  bool alw_price_by_row_sw = true; //!< By default allow switch to standard row-wise PRICE if result is sufficiently dense
+  bool alw_price_ultra = false; //!< By default don't allow ultra-sparse PRICE
+  const double dstyColPriceSw = 0.75; //!< By default switch to column PRICE when pi_p has at least this density
 
   // DSE scalars
-  bool iz_DSE_wt;
-  bool alw_DSE2Dvx_sw = true;
-  int AnIterNumCostlyDseIt;
-  int AnIterPrevRpNumCostlyDseIt;
-  double AnIterCostlyDseFq;
-  const double AnIterCostlyDseMeasureLimit = 1000.0;
-  const double AnIterCostlyDseMnDensity = 0.01;
-  const double AnIterFracNumTot_ItBfSw = 0.1;
-  const double AnIterFracNumCostlyDseItbfSw = 0.05;
+  bool iz_DSE_wt;                 //!< By default initialise DSE weights if initial basis matrix is not an identity
+  bool alw_DSE2Dvx_sw = true;     //!< By default allow switch to Devex from DSE 
+  int AnIterNumCostlyDseIt;       //!< Number of iterations when DSE is costly
+  double AnIterCostlyDseFq;       //!< Frequency of iterations when DSE is costly
+  const double AnIterCostlyDseMeasureLimit = 1000.0; //!< 
+  const double AnIterCostlyDseMnDensity = 0.01;      //!< 
+  const double AnIterFracNumTot_ItBfSw = 0.1;        //!< 
+  const double AnIterFracNumCostlyDseItbfSw = 0.05;  //!< 
   double AnIterCostlyDseMeasure;
+#ifdef HiGHSDEV
+  int AnIterPrevRpNumCostlyDseIt; //!< Number of costly DSE iterations when previously reported
+#endif
+
 #ifdef HiGHSDEV
   int n_wg_DSE_wt;
 #endif

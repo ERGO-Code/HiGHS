@@ -965,8 +965,8 @@ void HDual::iterate_tasks()
 void HDual::iterateIzAn() {
   AnIterIt0 = model->numberIteration;
   AnIterCostlyDseFq = 0;
-  AnIterPrevRpNumCostlyDseIt = 0;
 #ifdef HiGHSDEV
+  AnIterPrevRpNumCostlyDseIt = 0;
   AnIterPrevIt = 0;
   AnIterOpRec *AnIter;
   AnIter = &AnIterOp[AnIterOpTy_Btran]; AnIter->AnIterOpName = "Btran";
@@ -1027,14 +1027,12 @@ void HDual::iterateAn() {
     //    AnIterCostlyDseMeasureDen = row_epDensity*columnDensity;
     AnIterCostlyDseMeasureDen = max(max(row_epDensity, columnDensity), row_apDensity);
     if (AnIterCostlyDseMeasureDen > 0) {
-      //      AnIterCostlyDseMeasure = rowdseDensity*rowdseDensity/AnIterCostlyDseMeasureDen;
       AnIterCostlyDseMeasure = rowdseDensity/AnIterCostlyDseMeasureDen;
       AnIterCostlyDseMeasure = AnIterCostlyDseMeasure*AnIterCostlyDseMeasure;
     } else {
       AnIterCostlyDseMeasure = 0;
     }
     bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-      //      rowdseDensity*rowdseDensity > AnIterCostlyDseMeasureLimit*row_epDensity*columnDensity &&
       rowdseDensity > AnIterCostlyDseMnDensity;
     AnIterCostlyDseFq = (1-runningAverageMu)*AnIterCostlyDseFq;
     if (CostlyDseIt) {
@@ -1723,7 +1721,9 @@ void HDual::updatePivots() {
 			model->getWorkValue()[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock = total_syntheticTick >= factor->build_syntheticTick;
-  //  bool reinvert_syntheticClock = total_fake >= factor->build_syntheticTick;
+#ifdef HiGHSDEV
+  //    bool reinvert_syntheticClock = total_fake >= factor->build_syntheticTick;
+#endif
   if (reinvert_syntheticClock && model->countUpdate >= 50) {
     invertHint = invertHint_syntheticClockSaysInvert;
   }

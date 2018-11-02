@@ -209,8 +209,10 @@ public:
     void updateFactor(HVector *column, HVector *row_ep, int *iRow, int *hint);
     void updateMatrix(int columnIn, int columnOut);
     void updatePivots(int columnIn, int rowOut, int sourceOut);
+#ifdef HiGHSDEV
     // Changes the update method, but only used in HTester.cpp
     void changeUpdate(int updateMethod);
+#endif
     void setProblemStatus(int status);
 
     // Checking methods

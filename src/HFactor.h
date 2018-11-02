@@ -10,6 +10,7 @@
 #include <algorithm>
 using namespace std;
 
+#include "HConfig.h"
 #include "HVector.h"
 
 enum UPDATE_METHOD {
@@ -65,6 +66,7 @@ public:
 	     int updateMethod = UPDATE_METHOD_FT //!< Default update method is Forrest Tomlin
 	     );
 
+#ifdef HiGHSDEV
 /**
  * @brief Change the update method
  * 
@@ -74,6 +76,7 @@ public:
   void change(
 	      int updateMethod //!< New update method
 	      );
+#endif
 
 /**
  * @brief Form \f$PBQ=LU\f$ for basis matrix \f$B\f$ or report degree of rank deficiency.
@@ -109,6 +112,7 @@ public:
 	      int *hint    //!< Reinversion status
 	      );
 
+#ifdef HiGHSDEV
 /**
  * @brief Data used for reporting in HTester.cpp. Should only be
  * compiled when HiGHSDEV=on
@@ -120,6 +124,7 @@ public:
  * compiled when HiGHSDEV=on
  */
   int FtotalX;
+#endif 
 
 /**
  * @brief Wall clock time for INVERT
@@ -162,12 +167,14 @@ public:
   //different ways ends up equivalent.
   //  vector<int>& getNoPvC() {return noPvC;}
 
+#ifdef HiGHSDEV
 /**
  * @brief Checks \f$B^{-1}\mathbf{a}_i=\mathbf{e}_i\f$ for each column \f$i\f$ 
  *
  * Should only be compiled when HiGHSDEV=on
  */
   void checkInvert();
+#endif
 
 private:
     /**

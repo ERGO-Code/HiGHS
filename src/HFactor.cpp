@@ -241,9 +241,11 @@ void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_, double
     PFvalue.reserve(BlimitX * 4);
 }
 
+#ifdef HiGHSDEV
 void HFactor::change(int updateMethod_) {
     updateMethod = updateMethod_;
 }
+#endif
 
 int HFactor::build() {
     HTimer timer;
@@ -301,6 +303,7 @@ void HFactor::update(HVector *aq, HVector *ep, int *iRow, int *hint) {
         updateAPF(aq, ep, *iRow, hint);
 }
 
+#ifdef HiGHSDEV
 void HFactor::checkInvert() {
   HVector column;
   column.setup(numRow);
@@ -342,6 +345,7 @@ void HFactor::checkInvert() {
   if (invertEr0 > tlInvertEr0) printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
   else printf("Checking INVERT: ||B^{-1}B-I||_F = %g\n", invertEr0);
 }
+#endif
 
 void HFactor::buildSimple() {
     /**
