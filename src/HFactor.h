@@ -108,10 +108,6 @@ public:
 	      int *iRow,   //!< Index of pivotal row
 	      int *hint    //!< Reinversion status
 	      );
-/**
- * @brief Another synthetic clock for INVERT. TODO Eliminate pseudoTick
- */
-  int pseudoTick;
 
 /**
  * @brief Data used for reporting in HTester.cpp. Should only be

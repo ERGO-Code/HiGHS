@@ -16,39 +16,6 @@ using namespace std;
 
 void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 {
-  //    printf("\nEntering solve(HModel *ptr_model, int variant, int num_threads)\n");cout<<flush;
-    /*
-#ifdef CMAKE_BUILD_TYPE
-    printf("CMAKE_BUILD_TYPE     set in HDual::solve()\n");
-#else
-    printf("CMAKE_BUILD_TYPE not set in HDual::solve()\n");
-#endif
-#ifdef OLD_PARSER
-    printf("OLD_PARSER           set in HDual::solve()\n");
-#else
-    printf("OLD_PARSER       not set in HDual::solve()\n");
-#endif
-#ifdef OPENMP
-    printf("OPENMP               set in HDual::solve()\n");
-#else
-    printf("OPENMP           not set in HDual::solve()\n");
-#endif
-#ifdef SCIP_DEV
-    printf("SCIP_DEV             set in HDual::solve()\n");
-#else
-    printf("SCIP_DEV         not set in HDual::solve()\n");
-#endif
-#ifdef HiGHSDEV
-    printf("HiGHSDEV             set in HDual::solve()\n");
-#else
-    printf("HiGHSDEV         not set in HDual::solve()\n");
-#endif
-#ifdef HiGHSRELEASE
-    printf("HiGHSRELEASE         set in HDual::solve()\n");
-#else
-    printf("HiGHSRELEASE     not set in HDual::solve()\n");
-#endif
-    */
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
@@ -866,7 +833,7 @@ void HDual::rebuild()
   iterateRpInvert(sv_invertHint);
   model->timer.recordFinish(HTICK_REPORT_INVERT);
   
-  total_INVERT_TICK = factor->pseudoTick;
+  total_INVERT_TICK = factor->fakeTick;// Was factor->pseudoTick
   total_FT_inc_TICK = 0;
   total_fake = 0;
   
@@ -1212,10 +1179,7 @@ void HDual::iterateRpInvert(int i_v) {
   iterateRpDsty(false);
 #endif
   iterateRpDuObj(false);
-  printf(" %2d", i_v);
-  //  printf(" %10.0f; %6.4f; %6.4f",
-  //	 factor->realTick, (factor->realTick)/(factor->fakeTick), factor->pseudoTick/(factor->fakeTick));
-  printf("\n");
+  printf(" %2d\n", i_v);
   
 }
 
@@ -1253,7 +1217,8 @@ void HDual::chooseRow() {
 #ifdef HiGHSDEV
       if (AnIterLg) iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif      
-      // Call BTRAN
+      // Perform BTRAN
+      //      printf("\nBTRAN\n");
       factor->btran(row_ep, row_epDensity);
 #ifdef HiGHSDEV
       if (AnIterLg) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
@@ -1564,6 +1529,7 @@ void HDual::updateFtran()
   if (AnIterLg) iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
 #endif
   // Perform FTRAN
+  //  printf("\nFTRAN\n");
   factor->ftran(column, columnDensity);
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_Ftran, column);
@@ -1593,6 +1559,8 @@ void HDual::updateFtranBFRT()
 #ifdef HiGHSDEV
     if (AnIterLg) iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
 #endif
+    // Perform FTRAN BFRT
+    //    printf("\nFTRAN BFRT\n");
     factor->ftran(columnBFRT, columnDensity);
 #ifdef HiGHSDEV
     if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
@@ -1612,6 +1580,8 @@ void HDual::updateFtranDSE(HVector *DSE_Vector)
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
 #endif
+  // Perform FTRAN DSE
+  //  printf("\nFTRAN DSE\n");
   factor->ftran(*DSE_Vector, rowdseDensity);
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
@@ -1717,10 +1687,10 @@ void HDual::updatePrimal(HVector *DSE_Vector)
     {
       total_fake += DSE_Vector->fakeTick;
     }
-  total_FT_inc_TICK += column.pseudoTick;
+  total_FT_inc_TICK += column.fakeTick; // Was .pseudoTick
   if (EdWt_Mode == EdWt_Mode_DSE)
     {
-      total_FT_inc_TICK += DSE_Vector->pseudoTick;
+      total_FT_inc_TICK += DSE_Vector->fakeTick; // Was .pseudoTick
     }
 }
 

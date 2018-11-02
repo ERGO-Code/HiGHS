@@ -588,8 +588,8 @@ void HDual::major_updateFtranParallel()
     MFinish *Fin = &multi_finish[iFn];
     HVector *Col = Fin->column;
     HVector *Row = Fin->row_ep;
-    total_FT_inc_TICK += Col->pseudoTick;
-    total_FT_inc_TICK += Row->pseudoTick;
+    total_FT_inc_TICK += Col->fakeTick; // Was .pseudoTick
+    total_FT_inc_TICK += Row->fakeTick; // Was .pseudoTick
   }
 
   // Update rates
