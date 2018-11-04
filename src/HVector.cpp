@@ -6,6 +6,9 @@
 #include <cassert>
 
 void HVector::setup(int size_) {
+  /*
+   * Initialise an HVector instance
+   */
     size = size_;
     count = 0;
     index.resize(size);
@@ -24,29 +27,36 @@ void HVector::setup(int size_) {
 }
 
 void HVector::clear() {
-  //  printf("HVector::clear with pWd = %d\n", pWd);
+  /*
+   * Clear an HVector instance 
+   */
     if (pWd == dfSparseDaStr) {
       //Standard HVector to clear
       int clearVector_inDense = count < 0 || count > size * 0.3;
       if (clearVector_inDense) {
+	// Treat the array as full if there are no indices or too many indices
         array.assign(size, 0);
       } else {
-        for (int i = 0; i < count; i++) array[index[i]] = 0;
+	// Zero according to the indices of (possible) nonzeros
+        for (int i = 0; i < count; i++) {
+	  array[index[i]] = 0;
+	}
       }
     } else if (pWd == p0SparseDaStr) {
-      //map to clear
-      //      printf("HVector::clear calling packMap.clear()\n");
+      // Clear a value-index map data structure
       packMap.clear();
     } else if (pWd == p1SparseDaStr) {
-      //1-byte pointer to clear
-        for (int i = 0; i < count; i++) valueP1[index[i]] = ilP1;
-    } else if (pWd == p2SparseDaStr) {
-      //2-byte pointer to clear
+      // Clear the 1-byte pointers to packed values
       for (int i = 0; i < count; i++) {
-	//	printf("Clearing %2d: valueP2[%5d]\n", i, index[i]);
+	valueP1[index[i]] = ilP1;
+      }
+    } else if (pWd == p2SparseDaStr) {
+      // Clear the 2-byte pointers to packed values
+      for (int i = 0; i < count; i++) {
 	valueP2[index[i]] = ilP2;
       }
     }
+    // Possibly check that the vector is cleared
     bool ckClear = false;
     if (ckClear) {
       for (int i = 0; i < size; i++) {
@@ -55,15 +65,28 @@ void HVector::clear() {
 	if (valueP2[i] != ilP2) {printf("Error: cleared valueP2[%d]=%d\n", i, valueP2[i]);fflush(stdout);}
       }
     }
+    // Reset the flag to indicate when to pack
     packFlag = false;
+    // Zero the number of stored indices
     count = 0;
+
+    // fakeTick is soon to be deleted
     //    fakeTick = 0;
+
+    // Zero the synthetic clock for operations with this vector
     syntheticTick = 0;
+
+    // Initialise the next value
     next = 0;
+
+    // Set the data structure type to the default value
     pWd = dfSparseDaStr;
 }
 
 void HVector::tight() {
+  /*
+   * Packing: Zero values in Vector.array which exceed HSOL_CONST_TINY in magnitude
+   */
     if (pWd != dfSparseDaStr) {printf("ERROR: HVector::tight() not implemented for pWd=%d\n", pWd);}
     int totalCount = 0;
     for (int i = 0; i < count; i++) {
@@ -79,6 +102,11 @@ void HVector::tight() {
 }
 
 void HVector::pack() {
+  /*
+   * Packing (if packFlag set): Pack values/indices in Vector.array
+   * into packValue/Index when using default data structure, just
+   * indices when using the 1-byte pointer ultra-sparse representation
+   */
     if (packFlag) {
         packFlag = false;
 	packCount = 0;
@@ -99,6 +127,9 @@ void HVector::pack() {
 }
 
 void HVector::copy(const HVector *from) {
+  /*
+   * Copy from another HVector structure to this instance
+   */
     clear();
     //    fakeTick = from->fakeTick;
     syntheticTick = from->syntheticTick;
@@ -119,7 +150,6 @@ void HVector::copy(const HVector *from) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
         const int valueP = fromValueP1[iFrom];
-	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
         const double xFrom = fromPackValue[valueP];
         index[i] = iFrom;
         array[iFrom] = xFrom;
@@ -130,7 +160,6 @@ void HVector::copy(const HVector *from) {
       for (int i = 0; i < fromCount; i++) {
         const int iFrom = fromIndex[i];
         const int valueP = fromValueP2[iFrom];
-	//	if (valueP != i) printf("Ultra Copying: %d = valueP != i = %d\n", valueP, i);
         const double xFrom = fromPackValue[valueP];
         index[i] = iFrom;
         array[iFrom] = xFrom;
@@ -139,6 +168,9 @@ void HVector::copy(const HVector *from) {
 }
 
 double HVector::norm2() {
+  /*
+   * Compute the squared 2-norm of the vector
+   */
     const int workCount = count;
     const int *workIndex = &index[0];
     const double *workArray = &array[0];
@@ -153,6 +185,10 @@ double HVector::norm2() {
 }
 
 void HVector::saxpy(const double pivotX, const HVector *pivot) {
+  /*
+   * Add a multiple pivotX of *pivot into this vector, maintaining
+   * indices of nonzeros but not tracking cancellation
+   */
     int workCount = count;
     int *workIndex = &index[0];
     double *workArray = &array[0];

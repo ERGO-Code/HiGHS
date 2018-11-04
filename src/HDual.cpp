@@ -1702,18 +1702,23 @@ void HDual::updatePivots() {
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
-  
+  //
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
+  //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
   model->recordPivots(columnIn, columnOut, alpha);
+  //
   // Update the invertible representation of the basis matrix
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+  //
   // Update the row-wise representation of the nonbasic columns
   model->updateMatrix(columnIn, columnOut);
+  //
   // Delete Freelist entry for columnIn
   dualRow.delete_Freelist(columnIn);
+  //
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding squared primal infeasibility
   // value in dualRHS.workArray
