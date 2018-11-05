@@ -1422,7 +1422,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   model->timer.recordFinish(HTICK_CHUZC4);
   // Record values for basis change, checking for numerical problems and update of dual variables
   columnIn = dualRow.workPivot; // Index of the column entering the basis
-  alphaRow = dualRow.workAlpha; // Pivot value computed row-wise - used for numerical chacking
+  alphaRow = dualRow.workAlpha; // Pivot value computed row-wise - used for numerical checking
   thetaDual = dualRow.workTheta;// Dual step length
   
   if (EdWt_Mode == EdWt_Mode_Dvx)
@@ -1535,7 +1535,7 @@ void HDual::updateFtran()
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_Ftran, column);
 #endif
-  // Save the pivot value computed column-wise - used for numerical chacking
+  // Save the pivot value computed column-wise - used for numerical checking
   alpha = column.array[rowOut];
   model->timer.recordFinish(HTICK_FTRAN);
 }

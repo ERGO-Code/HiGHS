@@ -40,9 +40,10 @@ void HDualRow::clear()
 void HDualRow::choose_makepack(const HVector *row, const int offset)
 {
   /**
-     * Pack the index array to the row
-     * Can be parallel
-     */
+   * Pack the indices and values for the row
+   *
+   * Offset of numCol is used when packing row_ep
+   */
   const int rowCount = row->count;
   const int *rowIndex = &row->index[0];
   const double *rowArray = &row->array[0];
@@ -71,7 +72,7 @@ void HDualRow::choose_makepack(const HVector *row, const int offset)
 void HDualRow::choose_possible()
 {
   /**
-   * Determine the possible variables - candidates for CHUZC - Can be parallel.
+   * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
    */
   const double Ta = workModel->countUpdate < 10 ? 1e-9 : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
@@ -97,9 +98,9 @@ void HDualRow::choose_possible()
 void HDualRow::choose_joinpack(const HDualRow *otherRow)
 {
   /**
-     * Will join the possible pack
-     * Must be sequentail
-     */
+   * Join pack of possible candidates in this row with possible
+   * candidates in otherRow
+   */
   const int otherCount = otherRow->workCount;
   const pair<int, double> *otherData = &otherRow->workData[0];
   copy(otherData, otherData + otherCount, &workData[workCount]);
@@ -110,18 +111,19 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow)
 bool HDualRow::choose_final()
 {
   /**
-     * This routine choose the dual entering variable by
-     * BFRT and EXPAND. (In sequential)
-     *
-     * It will
-     * (1) reduce the candidates as a small collection
-     * (2) choose by BFRT by going over break points
-     * (3) choose final by alpha
-     * (4) determine final flip variables
-     */
+   * Chooses the entering variable via BFRT and EXPAND
+   *
+   * It will
+   * (1) reduce the candidates as a small collection
+   * (2) choose by BFRT by going over break points
+   * (3) choose final by alpha
+   * (4) determine final flip variables
+   */
 
+#ifdef HiGHSDEV
   bool rp_Choose_final = false;
   //   rp_Choose_final = true;
+#endif
   // 1. Reduce by large step BFRT
   workModel->timer.recordStart(HTICK_CHUZC2);
   int fullCount = workCount;
@@ -148,7 +150,9 @@ bool HDualRow::choose_final()
   }
   workModel->timer.recordFinish(HTICK_CHUZC2);
 
-  if (rp_Choose_final) printf("Completed  choose_final 1\n"); 
+#ifdef HiGHSDEV
+  if (rp_Choose_final) printf("Completed  choose_final 1\n");
+#endif
   // 2. Choose by small step BFRT
   workModel->timer.recordStart(HTICK_CHUZC3);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
@@ -165,15 +169,21 @@ bool HDualRow::choose_final()
   while (selectTheta < 1e18)
   {
     double remainTheta = iz_remainTheta;
+#ifdef HiGHSDEV
     if (rp_Choose_final) printf("Performing choose_final 2; selectTheta = %11.4g; workCount=%d; fullCount=%d\n", selectTheta, workCount, fullCount);
+#endif
     for (int i = workCount; i < fullCount; i++)
     {
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
+#ifdef HiGHSDEV
       if (rp_Choose_final) printf("iCol=%4d; v=%11.4g; d=%11.4g |", iCol, value, dual);
+#endif
       // Tight satisfy
+#ifdef HiGHSDEV
       if (rp_Choose_final) printf(" %11.4g = dual ?<=? sTh * v = %11.4g; workCount=%2d", dual, selectTheta * value, workCount);
+#endif
       if (dual <= selectTheta * value)
       {
         swap(workData[workCount++], workData[i]);
@@ -183,7 +193,9 @@ bool HDualRow::choose_final()
       {
         remainTheta = (dual + Td) / value;
       }
+#ifdef HiGHSDEV
       if (rp_Choose_final) printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
+#endif
     }
     workGroup.push_back(workCount);
     // Update selectTheta with the value of remainTheta;
@@ -216,7 +228,9 @@ bool HDualRow::choose_final()
       break;
   }
 
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 2\n");
+#endif
   // 3. Choose large alpha
   double finalCompare = 0;
   for (int i = 0; i < workCount; i++)
@@ -255,7 +269,9 @@ bool HDualRow::choose_final()
     }
   }
 
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 3\n");
+#endif
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
@@ -281,7 +297,9 @@ bool HDualRow::choose_final()
     workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
   workModel->timer.recordFinish(HTICK_CHUZC3);
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 4\n");
+#endif
   return false;
 }
 

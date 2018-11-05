@@ -1,12 +1,28 @@
+/**@file  HDual.h
+ * @brief Phase 2 primal simplex solver for HiGHS
+ * @author Qi Huangfu
+ */
 #ifndef HPRIMAL_H_
 #define HPRIMAL_H_
 
 #include "HModel.h"
 
+/**
+ * @brief Phase 2 primal simplex solver for HiGHS
+ *
+ * Not an efficient primal simplex solver: just a way of tidying up
+ * dual infeasibilities when dual optimality (primal feasibility) has
+ * been acheived with the dual simplex method
+ */
 class HPrimal {
 public:
-    void solvePhase2(HModel *ptr_model);
-    double TimeLimitValue;
+/**
+ * @brief Perform Phase 2 primal simplex iterations
+ */
+    void solvePhase2(
+		     HModel *ptr_model //!< Model for which Phase 2 primal simplex iterations should be performed
+		     );
+    double TimeLimitValue; //!< Time limit
 
 #ifdef HiGHSDEV
   // Analysis of rebuilds

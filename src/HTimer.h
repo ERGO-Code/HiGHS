@@ -54,7 +54,7 @@ enum HTickItem {
   HTICK_DEVEX_IZ,         //!< Initialisation of new Devex framework
   HTICK_UPDATE_WEIGHT,    //!< Update of DSE or Devex weights
   HTICK_UPDATE_PIVOTS,    //!< Update indices of basic and nonbasic after basis change
-  HTICK_UPDATE_FACTOR,    //!< Update the representation of B^{-1}
+  HTICK_UPDATE_FACTOR,    //!< Update the representation of \f$B^{-1}\f$
   HTICK_UPDATE_MATRIX,    //!< Update the row-wise copy of the constraint matrix for nonbasic columns
   HTICK_UPDATE_ROW_EP,    //!< Update the tableau rows in PAMI
   HTICK_ITEMS_COUNT       //!< Total number of clocks
