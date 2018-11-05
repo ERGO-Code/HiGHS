@@ -728,7 +728,7 @@ void HDual::major_updatePrimal()
       HVector *Col = Fin->column;
       HVector *Row = Fin->row_ep;
       double Kai = -2 / Fin->alphaRow;
-      dualRHS.update_weight(Col, Fin->EdWt, Kai, &Row->array[0]);
+      dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
       dualRHS.update_infeasList(Col);
     }
   }

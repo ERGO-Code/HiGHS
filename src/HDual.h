@@ -552,21 +552,25 @@ public:
   HVector slice_row_ap[HSOL_SLICED_LIMIT];
   HDualRow slice_dualRow[HSOL_SLICED_LIMIT];
 
-
-  // Multiple price data
+/**
+ * @brief Multiple CHUZR data
+ */
     struct MChoice {
-        int rowOut;
-        double baseValue;
-        double baseLower;
-        double baseUpper;
-        double infeasValue;
-        double infeasEdWt;
-        double infeasLimit;
-        HVector row_ep;
-        HVector column;
-        HVector columnBFRT;
+      int rowOut;
+      double baseValue;
+      double baseLower;
+      double baseUpper;
+      double infeasValue;
+      double infeasEdWt;
+      double infeasLimit;
+      HVector row_ep;
+      HVector column;
+      HVector columnBFRT;
     };
 
+/**
+ * @brief Multiple minor iteration data
+ */
     struct MFinish {
         int moveIn;
         double shiftOut;

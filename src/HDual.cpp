@@ -424,11 +424,11 @@ void HDual::init(int num_threads)
     init_slice(multi_num - 1);
   }
   multi_iteration = 0;
-  string partitionFile = model->strOption[STROPT_PARTITION_FILE];
-  if (partitionFile.size())
-  {
-    dualRHS.setup_partition(partitionFile.c_str());
-  }
+  //  string partitionFile = model->strOption[STROPT_PARTITION_FILE];
+  //  if (partitionFile.size())
+  //  {
+  //    dualRHS.setup_partition(partitionFile.c_str());
+  //  }
 }
 
 void HDual::init_slice(int init_sliced_num)
@@ -1655,8 +1655,8 @@ void HDual::updatePrimal(HVector *DSE_Vector)
   if (EdWt_Mode == EdWt_Mode_DSE)
     {
       double thisEdWt = dualRHS.workEdWt[rowOut] / (alpha * alpha);
-      dualRHS.update_weight(&column, thisEdWt, -2 / alpha,
-			    &DSE_Vector->array[0]);
+      dualRHS.update_weight_DSE(&column, thisEdWt, -2 / alpha,
+				&DSE_Vector->array[0]);
       dualRHS.workEdWt[rowOut] = thisEdWt;
     }
   else if (EdWt_Mode == EdWt_Mode_Dvx)

@@ -19,24 +19,6 @@ void HDualRHS::setup(HModel *model)
   partSwitch = 0;
 }
 
-void HDualRHS::setup_partition(const char *filename)
-{
-  ifstream reader(filename);
-  reader >> partNum >> partNumRow >> partNumCol >> partNumCut;
-  if (partNumRow != workModel->getNumRow())
-  {
-    partNum = 0;
-    workModel->util_reportMessage("wrong-partition-file");
-    reader.close();
-    return;
-  }
-  workPartition.assign(workModel->getNumRow(), 0);
-  for (int i = 0; i < partNumRow; i++)
-    reader >> workPartition[i];
-  reader.close();
-  partSwitch = 1;
-}
-
 void HDualRHS::choose_normal(int *chIndex)
 {
   // Moved the following to the top to avoid starting the clock for a trivial call.
@@ -363,10 +345,9 @@ void HDualRHS::update_primal(HVector *column, double theta)
   workModel->timer.recordFinish(HTICK_UPDATE_PRIMAL);
 }
 
-//This is the DSE update weight, but keep its name unchanged, just to be safe.
-//Could do with changing the name "devex", though!
-void HDualRHS::update_weight(HVector *column, double devex, double Kai,
-                             double *dseArray)
+// Update the DSE weights
+void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut, double Kai,
+				 double *dseArray)
 {
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
@@ -381,7 +362,7 @@ void HDualRHS::update_weight(HVector *column, double devex, double Kai,
     for (int iRow = 0; iRow < numRow; iRow++)
     {
       const double val = columnArray[iRow];
-      workEdWt[iRow] += val * (devex * val + Kai * dseArray[iRow]);
+      workEdWt[iRow] += val * (DSE_wt_o_rowOut * val + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < 1e-4)
         workEdWt[iRow] = 1e-4;
     }
@@ -392,14 +373,14 @@ void HDualRHS::update_weight(HVector *column, double devex, double Kai,
     {
       const int iRow = columnIndex[i];
       const double val = columnArray[iRow];
-      workEdWt[iRow] += val * (devex * val + Kai * dseArray[iRow]);
+      workEdWt[iRow] += val * (DSE_wt_o_rowOut * val + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < 1e-4)
         workEdWt[iRow] = 1e-4;
     }
   }
   workModel->timer.recordFinish(HTICK_UPDATE_WEIGHT);
 }
-//This is the Devex update weight
+// Update the Devex weights
 void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut)
 {
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
