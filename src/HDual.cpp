@@ -275,7 +275,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 			 HTICK_PRICE, HTICK_CHUZC1, HTICK_CHUZC2, HTICK_CHUZC3,
 			 HTICK_DEVEX_WT, HTICK_FTRAN, HTICK_FTRAN_BFRT, HTICK_FTRAN_DSE,
 			 HTICK_UPDATE_DUAL, HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,
-			 HTICK_UPDATE_FACTOR, HTICK_GROUP1, HTICK_GROUP2 };
+			 HTICK_UPDATE_FACTOR, HTICK_GROUP1};
     int reportCount = sizeof(reportList) / sizeof(int);
     model->timer.report(reportCount, reportList, 1.0);
   }

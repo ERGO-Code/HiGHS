@@ -10,11 +10,11 @@
 using namespace std;
 
 /**
- * Class for the vector structure for HiGHS
- *
+ * @brief Class for the vector structure for HiGHS
  */
 class HVector {
 public:
+
 /**
  * @brief Initialise a vector
  * 

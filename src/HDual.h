@@ -95,8 +95,10 @@ enum HDUAL_VARIANT
   HDUAL_VARIANT_MULTI,
 };
 
-class HDual
-{
+/**
+ * @brief Dual simplex solver for HiGHS
+ */
+class HDual {
 public:
 /**
  * @brief Solve a model instance with a dual simplex variant and given number of threads

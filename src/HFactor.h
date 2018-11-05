@@ -37,6 +37,8 @@ const double hyperCANCEL = 0.05;
  */
 const double hyperRESULT = 0.10;
 /**
+ * @brief Basis matrix factorization, update and solves for HiGHS
+ *
  * Class for the following
  *
  * Basis matrix factorization \f$PBQ=LU\f$

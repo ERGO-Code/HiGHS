@@ -1,3 +1,7 @@
+/**@file  HTimer.h
+ * @brief Profiling facility for computational components in HiGHS
+ * @author Qi Huangfu and Julian Hall
+ */
 #ifndef HTIMER_H_
 #define HTIMER_H_
 
@@ -8,76 +12,64 @@
 #include <string>
 using namespace std;
 
+/**
+ * Define the indices of clocks used to time computation
+ */
 enum HTickItem {
-    // Predefined groups
-    HTICK_GROUP1 = 0,
-    HTICK_GROUP2,
-    HTICK_GROUP3,
-    HTICK_GROUP4,
-    HTICK_GROUP5,
-    HTICK_GROUP6,
-    HTICK_GROUP7,
-    HTICK_GROUP8,
-    HTICK_GROUP9,
-
-    // Simplex method related items
-    HTICK_ITERATE,
-    HTICK_ITERATE_REBUILD,
-    HTICK_ITERATE_CHUZR,
-    HTICK_ITERATE_CHUZC,
-    HTICK_ITERATE_FTRAN,
-    HTICK_ITERATE_VERIFY,
-    HTICK_ITERATE_DUAL,
-    HTICK_ITERATE_PRIMAL,
-    HTICK_ITERATE_DEVEX_IZ,
-    HTICK_ITERATE_PIVOTS,
-
-    HTICK_INVERT,
-    HTICK_PERM_WT,
-    HTICK_COMPUTE_DUAL,
-    HTICK_CORRECT_DUAL,
-    HTICK_COLLECT_PR_IFS,
-    HTICK_COMPUTE_PRIMAL,
-    HTICK_COMPUTE_DUOBJ,
-    HTICK_REPORT_INVERT,
-    HTICK_CHUZR1,
-    HTICK_CHUZC0,
-    HTICK_CHUZC1,
-    HTICK_CHUZC2,
-    HTICK_CHUZC3,
-    HTICK_CHUZC4,
-    HTICK_DEVEX_WT,
-    HTICK_FTRAN,
-    HTICK_BTRAN,
-    HTICK_PRICE,
-    HTICK_FTRAN_DSE,
-    HTICK_FTRAN_MIX,
-    HTICK_FTRAN_BFRT,
-    HTICK_UPDATE_DUAL,
-    HTICK_UPDATE_PRIMAL,
-    HTICK_DEVEX_IZ,
-    HTICK_UPDATE_WEIGHT,
-    HTICK_UPDATE_PIVOTS,
-    HTICK_UPDATE_FACTOR,
-    HTICK_UPDATE_MATRIX,
-    HTICK_UPDATE_ROW_EP,
-
-    // The total count
-    HTICK_ITEMS_COUNT
+  HTICK_GROUP1 = 0,       //!< Group for SIP
+  HTICK_ITERATE,          //!< Top level timing of HDual::solve_phase1() and HDual::solve_phase2()
+  HTICK_ITERATE_REBUILD,  //!< Second level timing of rebuild()
+  HTICK_ITERATE_CHUZR,    //!< Second level timing of CHUZR
+  HTICK_ITERATE_CHUZC,    //!< Second level timing of CHUZC
+  HTICK_ITERATE_FTRAN,    //!< Second level timing of FTRAN
+  HTICK_ITERATE_VERIFY,   //!< Second level timing of numerical check
+  HTICK_ITERATE_DUAL,     //!< Second level timing of dual update
+  HTICK_ITERATE_PRIMAL,   //!< Second level timing of primal update
+  HTICK_ITERATE_DEVEX_IZ, //!< Second level timing of initialise Devex
+  HTICK_ITERATE_PIVOTS,   //!< Second level timing of pivoting
+  
+  HTICK_INVERT,           //!< INVERT in rebuild()
+  HTICK_PERM_WT,          //!< Permutation of SED weights each side of INVERT in rebuild()
+  HTICK_COMPUTE_DUAL,     //!< Computation of dual values in rebuild()
+  HTICK_CORRECT_DUAL,     //!< Correction of dual values in rebuild()
+  HTICK_COLLECT_PR_IFS,   //!< Identification of primal infeasibilities in rebuild()
+  HTICK_COMPUTE_PRIMAL,   //!< Computation of primal values in rebuild()
+  HTICK_COMPUTE_DUOBJ,    //!< Computation of dual objective value in rebuild()
+  HTICK_REPORT_INVERT,    //!< Reporting of log line in rebuild()
+  HTICK_CHUZR1,           //!< CHUZR
+  HTICK_CHUZC0,           //!< CHUZC - stage 0
+  HTICK_CHUZC1,           //!< CHUZC - stage 1
+  HTICK_CHUZC2,           //!< CHUZC - stage 2
+  HTICK_CHUZC3,           //!< CHUZC - stage 3
+  HTICK_CHUZC4,           //!< CHUZC - stage 4
+  HTICK_DEVEX_WT,         //!< Calculation of Devex weight of entering variable
+  HTICK_FTRAN,            //!< FTRAN - pivotal column
+  HTICK_BTRAN,            //!< BTRAN
+  HTICK_PRICE,            //!< PRICE
+  HTICK_FTRAN_DSE,        //!< FTRAN for DSE weights
+  HTICK_FTRAN_MIX,        //!< FTRAN for PAMI
+  HTICK_FTRAN_BFRT,       //!< FTRAN for BFRT
+  HTICK_UPDATE_DUAL,      //!< Update of dual values  
+  HTICK_UPDATE_PRIMAL,    //!< Update of primal values
+  HTICK_DEVEX_IZ,         //!< Initialisation of new Devex framework
+  HTICK_UPDATE_WEIGHT,    //!< Update of DSE or Devex weights
+  HTICK_UPDATE_PIVOTS,    //!< Update indices of basic and nonbasic after basis change
+  HTICK_UPDATE_FACTOR,    //!< Update the representation of B^{-1}
+  HTICK_UPDATE_MATRIX,    //!< Update the row-wise copy of the constraint matrix for nonbasic columns
+  HTICK_UPDATE_ROW_EP,    //!< Update the tableau rows in PAMI
+  HTICK_ITEMS_COUNT       //!< Total number of clocks
 };
 
+/**
+ * @brief Class for profiling facility for computational components in HiGHS
+ */
 class HTimer {
 public:
+/**
+ * @brief Set up full and 3-character names for each clock
+ */
   HTimer() {
     itemNames[HTICK_GROUP1] = "GROUP1"; itemCh3Names[HTICK_GROUP1] = "GP1";
-    itemNames[HTICK_GROUP2] = "GROUP2"; itemCh3Names[HTICK_GROUP2] = "GP2";
-    itemNames[HTICK_GROUP3] = "GROUP3"; itemCh3Names[HTICK_GROUP3] = "GP3";
-    itemNames[HTICK_GROUP4] = "GROUP4"; itemCh3Names[HTICK_GROUP4] = "GP4";
-    itemNames[HTICK_GROUP5] = "GROUP5"; itemCh3Names[HTICK_GROUP5] = "GP5";
-    itemNames[HTICK_GROUP6] = "GROUP6"; itemCh3Names[HTICK_GROUP6] = "GP6";
-    itemNames[HTICK_GROUP7] = "GROUP7"; itemCh3Names[HTICK_GROUP7] = "GP7";
-    itemNames[HTICK_GROUP8] = "GROUP8"; itemCh3Names[HTICK_GROUP8] = "GP8";
-    itemNames[HTICK_GROUP9] = "GROUP9"; itemCh3Names[HTICK_GROUP9] = "GP9";
 
     itemNames[HTICK_ITERATE] = "ITERATE"; itemCh3Names[HTICK_ITERATE] = "ITR";
     itemNames[HTICK_ITERATE_REBUILD] = "REBUILD"; itemCh3Names[HTICK_ITERATE_REBUILD] = "INV";
@@ -123,7 +115,9 @@ public:
     reset();
   }
 
-  // Reset the timer
+/**
+ * @brief Reset the data for all clocks
+ */
   void reset() {
     for (int i = 0; i < HTICK_ITEMS_COUNT; i++) {
       itemNumCall[i] = 0;
@@ -134,10 +128,14 @@ public:
     startTick = getWallTick();
   }
 
-  // Record tick of one item
-  void recordStart(int itemKey) {
-    // Check that the clock's been stopped: should be set to
-    // getWallTick() >= 0 [or initialised to initialItemStart > 0]
+/**
+ * @brief Start the clock for an item
+ */
+  void recordStart(
+		   int itemKey //!< Index of the clock to be started
+		   ) {
+    // Check that the clock's been stopped. It should be set to
+    // getWallTick() >= 0 (or initialised to initialItemStart > 0)
 #ifdef HiGHSDEV
     if (itemStart[itemKey]<0) {
       printf("recordStart [%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
@@ -150,8 +148,14 @@ public:
     // the clock's been started in recordFinish
     itemStart[itemKey] = -getWallTick();
   }
-  void recordFinish(int itemKey) {
-    // Check that the clock's been started: should be set to
+
+/**
+ * @brief Stop the clock for an item
+ */
+  void recordFinish(
+		   int itemKey //!< Index of the clock to be stopped
+		    ) {
+    // Check that the clock's been started. It should be set to
     // -getWallTick() <= 0
 #ifdef HiGHSDEV
     if (itemStart[itemKey]>0)
@@ -167,8 +171,17 @@ public:
     itemStart[itemKey] = wallTick;
   }
 
-  // Report specific items in the list
-  void report(int itemCount, int *itemList, double tlPerCentReport) {
+/**
+ * @brief Report timing information for the clock indices in the list
+ */
+  void report(
+	      int itemCount,         //!< Number of indices to report
+	      int *itemList,         //!< List of indices to report
+	      double tlPerCentReport //!< Threshhold of percentage of
+				     //!overall time for a clock to be
+				     //!reported in detail
+	      ) {
+    // Report in one line the per-mille contribution from each clock
     double totalTick = getTick();
     printf("txt-profile-name ");
     for (int i = 0; i < itemCount; i++)
@@ -178,14 +191,16 @@ public:
     double suPerMille=0;
     for (int i = 0; i < itemCount; i++) {
       double perMille = 1000.0 * itemTicks[itemList[i]] / totalTick;
-      int int_PerMille = (perMille+0.5); //Forcing proper rounding
+      int int_PerMille = (perMille+0.5); // Forcing proper rounding
       printf(" %3d", int_PerMille);
       suPerMille += perMille;
     }
     int int_suPerMille = suPerMille;
     printf(" per mille: Sum = %d", int_suPerMille);
     printf("\n");
+    // Report one line per clock, the time, number of calls and time per call
     printf("txt-profile-time ID: Operation       :    Time            :   Calls   Time/Call\n");
+    // Convert approximate seconds
     double tick2sec = 3.6e-10;
     double suTick=0;
     double suTi=0;
@@ -206,7 +221,7 @@ public:
     double perCent = 100.0 * suTick / totalTick;
     printf("txt-profile-time   : SUM             : %11.4e (%4.1f%%)\n", suTi, perCent);
     printf("txt-profile-time   : TOTAL           : %11.4e\n", tick2sec*totalTick);
-    //Report for Excel
+    // Repeat reporting for Excel
     printf("grep_excel-profile-name");
     for (int i = 0; i < itemCount; i++) printf(",%s", itemNames[itemList[i]].c_str());
     printf(",SumTime");
@@ -220,30 +235,34 @@ public:
     printf("\n");
   }
   
-  // Current eclipsed time
+
+/**
+ * @brief Return the elapsed time since the clocks were reset
+ */
   double getTime() {
     return getWallTime() - startTime;
   }
   
-  // Current eclipsed CPU tick
+/**
+ * @brief Return the CPU ticks since the clocks were reset
+ */
   double getTick() {
     return getWallTick() - startTick;
   }
   
-  // private:
-  // The start tick and time
-  double startTime;
-  double startTick;
+  double startTime; //!< Elapsed time when the clocks were reset
+  double startTick; //!< CPU ticks when the clocks were reset
 
-  // The items tick and name
-  const double initialItemStart = 1.0;
-  int itemNumCall[HTICK_ITEMS_COUNT];
-  double itemStart[HTICK_ITEMS_COUNT];
-  double itemTicks[HTICK_ITEMS_COUNT];
-  string itemNames[HTICK_ITEMS_COUNT];
-  string itemCh3Names[HTICK_ITEMS_COUNT];
+  const double initialItemStart = 1.0; //!< Dummy positive start time for clocks - so they can be checked as having been stopped
+  int itemNumCall[HTICK_ITEMS_COUNT];     //!< Number of times each clock has been run
+  double itemStart[HTICK_ITEMS_COUNT];    //!< When running: negation of start time. When not running: WallTick when stopped
+  double itemTicks[HTICK_ITEMS_COUNT];    //!< Total number of CPU ticks for each clock
+  string itemNames[HTICK_ITEMS_COUNT];    //!< Full name of each clock
+  string itemCh3Names[HTICK_ITEMS_COUNT]; //!< 3-character name for each clock
   
-  // Current wall time
+/**
+ * @brief Return the current wall-clock time
+ */
   double getWallTime() {
     double walltime;
     struct timeval tv;
@@ -253,7 +272,9 @@ public:
     return walltime;
   }
   
-  // Current wall tick
+/**
+ * @brief Return the current CPU ticks
+ */
   double getWallTick() {
     unsigned a, d;
     asm volatile("rdtsc" : "=a" (a), "=d" (d));
