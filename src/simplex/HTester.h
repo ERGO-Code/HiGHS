@@ -3,18 +3,18 @@
 
 #include "HConfig.h"
 #ifdef HiGHSDEV
-#include "HModel.h"
 #include <string>
 #include <vector>
+#include "HModel.h"
 using namespace std;
 
 class HTester {
-public:
+ public:
   void setup(const char *pivotFile);
   void testUpdate(int item);
   void testCFT();
 
-private:
+ private:
   double solveTime;
   string modelName;
   int numPivot;

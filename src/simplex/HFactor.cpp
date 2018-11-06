@@ -485,7 +485,7 @@ void HFactor::buildSimple() {
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
         //		printf("Found row singleton (Row, Col) = (%d, %d)\n",
-        //iRow, iCol);
+        // iRow, iCol);
       } else if (count == 1) {
         // 2.3 Deal with column singleton
         for (int k = start; k < pivot_k; k++) {
@@ -506,7 +506,7 @@ void HFactor::buildSimple() {
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
         //		printf("Found col singleton (Row, Col) = (%d, %d)\n",
-        //iRow, iCol);
+        // iRow, iCol);
       } else {
         iwork[nwork++] = iCol;
       }
@@ -696,7 +696,7 @@ int HFactor::buildKernel() {
 
     // 1.4. If we found nothing: tell singular
     //	printf("Stage%3d: foundpivot = %1d, (Row, Col) = (%d, %d)\n", nwork,
-    //foundPivot, iRowPivot, jColPivot);
+    // foundPivot, iRowPivot, jColPivot);
     if (!foundPivot) {
       //            throw runtime_error("singular-basis-matrix");
       rankDeficiency = nwork + 1;

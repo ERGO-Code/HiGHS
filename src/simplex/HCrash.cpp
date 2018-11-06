@@ -246,7 +246,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
     int columnOut = numCol + r_n;
     int sourceOut = model->setSourceOutFmBd(columnOut);
     //			Update the basic/nonbasic variable info and the row-wise
-    //copy of the matrix
+    // copy of the matrix
     model->updatePivots(columnIn, rowOut, sourceOut);
     if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
     int vr_ty = crsh_r_ty[cz_r_n];
@@ -1632,8 +1632,8 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
             (crsh_r_pri_mn_r_k[pri_v] == r_k)) {
           // This was the only row of minimum row count so look for the next row
           // count with non-null header
-          //					Set crsh_r_pri_mn_r_k to numCol +
-          //1 in case r_k=numCol so priority is cleared
+          //					Set crsh_r_pri_mn_r_k to numCol
+          //+ 1 in case r_k=numCol so priority is cleared
           crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
           for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
             int hdr_ix = pri_v * (numCol + 1) + qy_k;
@@ -1643,7 +1643,7 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
             }
           }
           //					if (crsh_r_pri_mn_r_k[pri_v] ==
-          //numCol
+          // numCol
           //+ 1) printf("Priority %d now has no rows\n", pri_v);
         }
         //     Reduce the number of active entries in this row by one and...

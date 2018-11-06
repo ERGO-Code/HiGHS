@@ -99,18 +99,18 @@ enum HDUAL_VARIANT {
  * @brief Dual simplex solver for HiGHS
  */
 class HDual {
-public:
+ public:
   /**
    * @brief Solve a model instance with a dual simplex variant and given number
    * of threads
    */
-  void
-  solve(HModel *model,   //!< Instance of HModel class to be solved
-        int variant = 0, //!< Default dual simplex variant is "PLAIN" (serial)
-        int num_threads = 1 //!< Default number of threads is 1
+  void solve(
+      HModel *model,       //!< Instance of HModel class to be solved
+      int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
+      int num_threads = 1  //!< Default number of threads is 1
   );
 
-public:
+ public:
   /**
    * @brief Initialise a dual simplex instance
    *
@@ -120,7 +120,7 @@ public:
    * density and buffers for dualRow and dualRHS. Also sets up data
    * structures for SIP or PAMI (if necessary).
    */
-  void init(int num_threads //!< Number of threads for initialisation
+  void init(int num_threads  //!< Number of threads for initialisation
   );
 
   /**
@@ -130,8 +130,8 @@ public:
    * TODO generalise call slice_matrix[i].setup_lgBs so slice can be
    * used with non-logical initial basis
    */
-  void init_slice(int init_sliced_num //!< Ideal number of slices - true number
-                                      //!< is modified in light of limits
+  void init_slice(int init_sliced_num  //!< Ideal number of slices - true number
+                                       //!< is modified in light of limits
   );
 
   /**
@@ -178,7 +178,7 @@ public:
    * @brief Perform a single PAMI dual simplex iteration - source code in
    * HDualMulti.cpp
    */
-  void iterate_multi(); // in HDualMulti.cpp
+  void iterate_multi();  // in HDualMulti.cpp
 
   /**
    * @brief Initialise the iteration analysis
@@ -200,36 +200,36 @@ public:
    * @brief Report full iteration headers or data according to value of
    * <tt>header</tt>
    */
-  void iterateRpFull(bool header //!< Logic to determine whether to write out
-                                 //!< column headers or data
+  void iterateRpFull(bool header  //!< Logic to determine whether to write out
+                                  //!< column headers or data
   );
   /**
    * @brief Report iteration number and LP phase headers or data according to
    * value of <tt>header</tt>
    */
-  void iterateRpIterPh(bool header //!< Logic to determine whether to write out
-                                   //!< column headers or data
+  void iterateRpIterPh(bool header  //!< Logic to determine whether to write out
+                                    //!< column headers or data
   );
   /**
    * @brief Report dual objective value header or data according to value of
    * <tt>header</tt>
    */
-  void iterateRpDuObj(bool header //!< Logic to determine whether to write out
-                                  //!< column header or data
+  void iterateRpDuObj(bool header  //!< Logic to determine whether to write out
+                                   //!< column header or data
   );
   /**
    * @brief Single line report after INVERT
    */
   void iterateRpInvert(
-      int i_v //!< Integer value to be reported - generally invertHint
+      int i_v  //!< Integer value to be reported - generally invertHint
   );
 
   /**
    * @brief Update an average density record for BTRAN, an FTRAN or PRICE
    */
-  void
-  uOpRsDensityRec(double lc_OpRsDensity, //!< Recent density of the operation
-                  double &opRsDensity    //!< Average density of the operation
+  void uOpRsDensityRec(
+      double lc_OpRsDensity,  //!< Recent density of the operation
+      double &opRsDensity     //!< Average density of the operation
   );
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -263,7 +263,7 @@ public:
    * @brief Compute the vector required to update DSE weights - being
    * FTRAN applied to the pivotal column (FTRAN-DSE)
    */
-  void updateFtranDSE(HVector *DSE_Vector //!< Pivotal column as RHS for FTRAN
+  void updateFtranDSE(HVector *DSE_Vector  //!< Pivotal column as RHS for FTRAN
   );
   /**
    * @brief Compare the pivot value computed row-wise and column-wise
@@ -279,7 +279,7 @@ public:
   /**
    * @brief Update the primal values and any edge weights
    */
-  void updatePrimal(HVector *DSE_Vector //!< FTRANned pivotal column
+  void updatePrimal(HVector *DSE_Vector  //!< FTRANned pivotal column
   );
 
   /**
@@ -327,17 +327,17 @@ public:
   /**
    * @brief Get a row of the inverse of the basis matrix for SCIP
    */
-  int util_getBasisInvRow(int r,        //!< Index of row required
-                          double *coef, //!< Value of entries in row required
-                          int *inds,    //!< Indices of entries in row required
-                          int *ninds    //!< Number of indices in row required
+  int util_getBasisInvRow(int r,         //!< Index of row required
+                          double *coef,  //!< Value of entries in row required
+                          int *inds,     //!< Indices of entries in row required
+                          int *ninds     //!< Number of indices in row required
   );
   /**
    * @brief Get the Hager condition number estimate for the basis matrix of a
    * model
    */
-  double
-  an_bs_cond(HModel *ptr_model //!< Model for which basis condition is required
+  double an_bs_cond(
+      HModel *ptr_model  //!< Model for which basis condition is required
   );
 
   /**
@@ -424,11 +424,11 @@ public:
   void major_rollback();
 
 #ifdef HiGHSDEV
-  void iterateRpIterDa(bool header //!< Logic to determine whether to write out
-                                   //!< column headers or data
+  void iterateRpIterDa(bool header  //!< Logic to determine whether to write out
+                                    //!< column headers or data
   );
-  void iterateRpDsty(bool header //!< Logic to determine whether to write out
-                                 //!< column headers or data
+  void iterateRpDsty(bool header  //!< Logic to determine whether to write out
+                                  //!< column headers or data
   );
   int intLog10(double v);
   void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
@@ -438,15 +438,15 @@ public:
 #endif
 
   int dual_variant =
-      0; //!< Dual simplex variant choice. TODO: handle this otherwise
-  int Price_Mode = 0;    //!< Pricing mode. TODO: handle this otherwise
-  int EdWt_Mode = 0;     //!< Edge weight mode. TODO: handle this otherwise
-  int Crash_Mode = 0;    //!< Crash mode. TODO: handle this otherwise
-  int Presolve_Mode = 0; //!< Presolve mode. TODO: handle this otherwise
-  bool SolveBailout; //!< Set true if control is to be returned immediately to
-                     //!< calling function
+      0;  //!< Dual simplex variant choice. TODO: handle this otherwise
+  int Price_Mode = 0;     //!< Pricing mode. TODO: handle this otherwise
+  int EdWt_Mode = 0;      //!< Edge weight mode. TODO: handle this otherwise
+  int Crash_Mode = 0;     //!< Crash mode. TODO: handle this otherwise
+  int Presolve_Mode = 0;  //!< Presolve mode. TODO: handle this otherwise
+  bool SolveBailout;  //!< Set true if control is to be returned immediately to
+                      //!< calling function
   double TimeLimitValue =
-      0; //!< Value of time limit. TODO: handle this otherwise
+      0;  //!< Value of time limit. TODO: handle this otherwise
 
 #ifdef HiGHSDEV
   // Analysis of rebuilds
@@ -456,36 +456,36 @@ public:
 #endif
 
   // Devex scalars
-  int n_dvx_fwk;   //!< Number of Devex frameworks used
-  int n_dvx_it;    //!< Number of Devex iterations with the current framework
-  bool nw_dvx_fwk; //!< Set a new Devex framework
+  int n_dvx_fwk;    //!< Number of Devex frameworks used
+  int n_dvx_it;     //!< Number of Devex iterations with the current framework
+  bool nw_dvx_fwk;  //!< Set a new Devex framework
   // Devex vector
-  vector<int> dvx_ix; //!< Vector of Devex indices
+  vector<int> dvx_ix;  //!< Vector of Devex indices
 
   // Price scalars
-  bool alw_price_by_col_sw = true; //!< By default allow switch to column PRICE
-                                   //!< if results sufficiently dense
+  bool alw_price_by_col_sw = true;  //!< By default allow switch to column PRICE
+                                    //!< if results sufficiently dense
   bool alw_price_by_row_sw =
-      true; //!< By default allow switch to standard row-wise PRICE if result
-            //!< is sufficiently dense
-  bool alw_price_ultra = false; //!< By default don't allow ultra-sparse PRICE
-  const double dstyColPriceSw = 0.75; //!< By default switch to column PRICE
-                                      //!< when pi_p has at least this density
+      true;  //!< By default allow switch to standard row-wise PRICE if result
+             //!< is sufficiently dense
+  bool alw_price_ultra = false;  //!< By default don't allow ultra-sparse PRICE
+  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
+                                       //!< when pi_p has at least this density
 
   // DSE scalars
-  bool iz_DSE_wt; //!< By default initialise DSE weights if initial basis
-                  //!< matrix is not an identity
-  bool alw_DSE2Dvx_sw = true; //!< By default allow switch to Devex from DSE
-  int AnIterNumCostlyDseIt;   //!< Number of iterations when DSE is costly
-  double AnIterCostlyDseFq;   //!< Frequency of iterations when DSE is costly
-  const double AnIterCostlyDseMeasureLimit = 1000.0; //!<
-  const double AnIterCostlyDseMnDensity = 0.01;      //!<
-  const double AnIterFracNumTot_ItBfSw = 0.1;        //!<
-  const double AnIterFracNumCostlyDseItbfSw = 0.05;  //!<
+  bool iz_DSE_wt;  //!< By default initialise DSE weights if initial basis
+                   //!< matrix is not an identity
+  bool alw_DSE2Dvx_sw = true;  //!< By default allow switch to Devex from DSE
+  int AnIterNumCostlyDseIt;    //!< Number of iterations when DSE is costly
+  double AnIterCostlyDseFq;    //!< Frequency of iterations when DSE is costly
+  const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
+  const double AnIterCostlyDseMnDensity = 0.01;       //!<
+  const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
+  const double AnIterFracNumCostlyDseItbfSw = 0.05;   //!<
   double AnIterCostlyDseMeasure;
 #ifdef HiGHSDEV
-  int AnIterPrevRpNumCostlyDseIt; //!< Number of costly DSE iterations when
-                                  //!< previously reported
+  int AnIterPrevRpNumCostlyDseIt;  //!< Number of costly DSE iterations when
+                                   //!< previously reported
 #endif
 
 #ifdef HiGHSDEV
@@ -494,8 +494,8 @@ public:
 
   // Model
   HModel *model;
-  double Tp; // Tolerance for primal
-  double Td; // Tolerance for dual
+  double Tp;  // Tolerance for primal
+  double Td;  // Tolerance for dual
 
   int numCol;
   int numRow;
@@ -545,7 +545,7 @@ public:
   // Simplex pivotal information
   int rowOut;
   int columnOut;
-  int sourceOut; // -1 from small to lower, +1 to upper
+  int sourceOut;  // -1 from small to lower, +1 to upper
   int columnIn;
   double deltaPrimal;
   double thetaDual;
@@ -660,17 +660,17 @@ public:
   const int AnIterTraceMxNumRec = 20;
   int AnIterTraceNumRec;
   int AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[22]; // How can this be 1+AnIterTraceMxNumRec+1;
+  AnIterTraceRec AnIterTrace[22];  // How can this be 1+AnIterTraceMxNumRec+1;
 
   const int AnIterNumInvertHint = 7;
-  int AnIterNumInvert[8]; // How can this be AnIterNumInvertHint+1
+  int AnIterNumInvert[8];  // How can this be AnIterNumInvertHint+1
   int AnIterNumColPrice;
   int AnIterNumRowPrice;
   int AnIterNumRowPriceWSw;
   int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[3]; // How can this be EdWt_Mode_Dan+1
+  int AnIterNumEdWtIt[3];  // How can this be EdWt_Mode_Dan+1
 #endif
 };
 

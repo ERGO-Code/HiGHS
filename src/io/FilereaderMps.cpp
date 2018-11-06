@@ -1,8 +1,7 @@
 #include "FilereaderMps.h"
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const char filename,
-                                                  HighsLp& model) {
-
+                                                   HighsLp& model) {
   // todo
 
   // Which parser
