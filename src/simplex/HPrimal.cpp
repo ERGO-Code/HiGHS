@@ -14,8 +14,8 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
   numTot = model->getNumTot();
 
 #ifdef HiGHSDEV
-  printf("************************************\n")
-      printf("Performing primal simplex iterations\n");
+  printf("************************************\n");
+  printf("Performing primal simplex iterations\n");
   printf("************************************\n");
 #endif
   // Setup update limits
