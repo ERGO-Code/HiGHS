@@ -2416,6 +2416,10 @@ int HModel::handleRankDeficiency() {
              columnOut);
       fflush(stdout);
     }
+      int sourceOut = setSourceOutFmBd(columnOut);
+      updatePivots(columnIn, rowOut, sourceOut);
+      updateMatrix(columnIn, columnOut);
+    }
     //    printf("After  - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
 #ifdef HiGHSDEV
     factor.checkInvert();

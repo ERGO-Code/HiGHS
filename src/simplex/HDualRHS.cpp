@@ -317,10 +317,11 @@ void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut, double
       if (workEdWt[iRow] < 1e-4)
         workEdWt[iRow] = 1e-4;
     }
+  }
+  workModel->timer.recordFinish(HTICK_UPDATE_WEIGHT);
+}
 // Update the Devex weights
 void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
-  const bool rp_dvx = false;
->>>>>>> master:src/simplex/HDualRHS.cpp
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
   const int numRow = workModel->getNumRow();
