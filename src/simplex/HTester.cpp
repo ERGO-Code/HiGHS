@@ -105,7 +105,8 @@ void HTester::testUpdate(int item) {
       double tick1 = timer.getTick();
       model.computeFactor();
       invTick += timer.getTick() - tick1;
-      for (int i = 0; i < model.getNumRow(); i++) look[base[i]] = i;
+      for (int i = 0; i < model.getNumRow(); i++)
+        look[base[i]] = i;
 
       double myRate =
           1.0 * model.getFactor()->FtotalX / model.getFactor()->BtotalX;
@@ -175,16 +176,15 @@ void HTester::testUpdate(int item) {
   totalTick = timer.getTick() - totalTick;
   double totalTime = timer.getTime();
   double rate = exp(sumLnRate / countRate);
-  printf(
-      "Model=%-16s  item=%-3s  fill=%f  interval=%d FTRAN=%10f  BTRAN=%10f  "
-      "Fpack=%10.9f  Bpack=%10.9f  Ffull=%10.9f  Bfull=%10.9f  inv=%f  "
-      "sol=%f\n",
-      modelName.c_str(), itemCh3Names[item].c_str(), rate,
-      (int)(1.0 * totalUpdate / (totalInvert - 1)),
-      100.0 * countFTRAN / countTotal, 100.0 * countBTRAN / countTotal,
-      sumFTRANpack / countSolve, sumBTRANpack / countSolve,
-      sumFTRANfull / countSolve, sumBTRANfull / countSolve,
-      totalTime * invTick / totalTick, totalTime * solTick / totalTick);
+  printf("Model=%-16s  item=%-3s  fill=%f  interval=%d FTRAN=%10f  BTRAN=%10f  "
+         "Fpack=%10.9f  Bpack=%10.9f  Ffull=%10.9f  Bfull=%10.9f  inv=%f  "
+         "sol=%f\n",
+         modelName.c_str(), itemCh3Names[item].c_str(), rate,
+         (int)(1.0 * totalUpdate / (totalInvert - 1)),
+         100.0 * countFTRAN / countTotal, 100.0 * countBTRAN / countTotal,
+         sumFTRANpack / countSolve, sumBTRANpack / countSolve,
+         sumFTRANfull / countSolve, sumBTRANfull / countSolve,
+         totalTime * invTick / totalTick, totalTime * solTick / totalTick);
 }
 
 void HTester::testCFT() {
@@ -236,7 +236,8 @@ void HTester::testCFT() {
       double tick1 = timer.getTick();
       model.computeFactor();
       invTick += timer.getTick() - tick1;
-      for (int i = 0; i < model.getNumRow(); i++) look[base[i]] = i;
+      for (int i = 0; i < model.getNumRow(); i++)
+        look[base[i]] = i;
 
       double myRate =
           1.0 * model.getFactor()->FtotalX / model.getFactor()->BtotalX;
@@ -264,8 +265,10 @@ void HTester::testCFT() {
       // Check this columnOut != any ColumnIn since startp
       bool checkOK = true;
       for (int kp = startp; kp < endp; kp++)
-        if (historyIn[kp] == historyOut[endp]) checkOK = false;
-      if (!checkOK) break;
+        if (historyIn[kp] == historyOut[endp])
+          checkOK = false;
+      if (!checkOK)
+        break;
       endp++;
     }
     for (int ip = startp; ip < endp; ip++)
@@ -358,12 +361,11 @@ void HTester::testCFT() {
   totalTick = timer.getTick() - totalTick;
   double totalTime = timer.getTime();
   double rate = exp(sumLnRate / countRate);
-  printf(
-      "Model=%-16s  item=CFT  fill=%-6.2f  FTRAN=%-3.0f  BTRAN=%-3.0f  "
-      "inv=%-8.2f  sol=%-8.2f\n",
-      modelName.c_str(), rate, 100.0 * countFTRAN / countTotal,
-      100.0 * countBTRAN / countTotal, totalTime * invTick / totalTick,
-      totalTime * solTick / totalTick);
+  printf("Model=%-16s  item=CFT  fill=%-6.2f  FTRAN=%-3.0f  BTRAN=%-3.0f  "
+         "inv=%-8.2f  sol=%-8.2f\n",
+         modelName.c_str(), rate, 100.0 * countFTRAN / countTotal,
+         100.0 * countBTRAN / countTotal, totalTime * invTick / totalTick,
+         totalTime * solTick / totalTick);
 }
 
 #endif

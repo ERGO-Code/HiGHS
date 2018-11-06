@@ -48,7 +48,7 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   //      presolve
   model->usingImpliedBoundsPresolve = false;
   if (HaveImpliedBounds && Crash_Mode == Crash_Mode_Dev) {
-  //		Overwrite the true bounds by the implied bounds
+    //		Overwrite the true bounds by the implied bounds
 #ifdef HiGHSDEV
     printf("Over-writing bounds with implied bounds\n");
 #endif
@@ -103,7 +103,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
   //	bixby_rp_mrt(ptr_model);
 
   //	These multipliers are in Step 2(a) and Step 2(b) of the paper: default
-  //values 0.99 and 0.01
+  // values 0.99 and 0.01
   bixby_mu_a = 0.99;
   bixby_mu_b = 0.01;
 
@@ -138,7 +138,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
              ps_n, c_n, c_mx_abs_v, aa, aa / c_mx_abs_v);
 #endif
     //		Scale aa by the max |entry| in the column since CPLEX assumes
-    //the 		matrix is scaled so the max entry in each column is 1
+    // the 		matrix is scaled so the max entry in each column is 1
     aa /= c_mx_abs_v;
     bool nx_ps = false;
     if (aa >= bixby_mu_a) {
@@ -147,14 +147,14 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
       int pv_c_n = c_n;
       int pv_r_n = r_o_mx_aa;
       //			printf(" ** Type a: c_n = %d; pv_c_n = %d ** ",
-      //c_n, pv_c_n);
+      // c_n, pv_c_n);
       bixby_pv_in_r[pv_r_n] = 1;
       bixby_vr_in_r[pv_r_n] = pv_c_n;
       bixby_pseudo_pv_v[pv_r_n] = aa;
       for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
         //				int r_n = Aindex[el_n];
         //				printf("\n Row %3d: value %g", r_n,
-        //Avalue[el_n]);
+        // Avalue[el_n]);
         bixby_r_k[Aindex[el_n]] += 1;
       }
       bixby_n_cdd_r -= 1;
@@ -164,15 +164,15 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
 #endif
       nx_ps = true;
     } else {
-    //			Find out if there is some row l for which |entry| > bixby_mu_b *
-    //v_l
+      //			Find out if there is some row l for which
+      //|entry| > bixby_mu_b * v_l
 #ifdef HiGHSDEV
       double rp_v;
 #endif
       for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
         int r_n = Aindex[el_n];
-        //				If this value in the column would give an
-        //unacceptable multiplier then continue to next pass
+        //				If this value in the column would give
+        // an unacceptable multiplier then continue to next pass
         nx_ps = abs(Avalue[el_n]) >
                 bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
         if (nx_ps) {
@@ -187,8 +187,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
         printf(": Unacceptable multiplier of %g > %g\n", rp_v, bixby_mu_b);
 #endif
     }
-    //		Some value in the column would give an unacceptable multiplier so
-    //continue to next pass
+    //		Some value in the column would give an unacceptable multiplier
+    // so continue to next pass
     if (nx_ps) continue;
     //		Find out whether there is an entry in a row with no pivot
     aa = 0;
@@ -203,8 +203,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
         }
       }
     }
-    //		If there is no entry in a row with no pivot then continue to next
-    //pass
+    //		If there is no entry in a row with no pivot then continue to
+    // next pass
     if (r_o_mx_aa == no_ix) {
 #ifdef HiGHSDEV
       if (Rp_Bixby_Ps) printf(": No entry in a row with no pivot\n");
@@ -212,7 +212,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
       continue;
     }
     //		Scale aa by the max |entry| in the column since CPLEX assumes
-    //the 		matrix is scaled so the max entry in each column is 1
+    // the 		matrix is scaled so the max entry in each column is 1
     aa /= c_mx_abs_v;
     //		Column pv_c_n becomes basic in row pv_r_n
     int pv_c_n = c_n;
@@ -224,7 +224,7 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       //			int r_n = Aindex[el_n];
       //			printf("\n Row %3d: value %g", r_n,
-      //Avalue[el_n]);
+      // Avalue[el_n]);
       bixby_r_k[Aindex[el_n]] += 1;
     }
     bixby_n_cdd_r -= 1;
@@ -235,8 +235,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
     if (bixby_n_cdd_r == 0) break;
   }
   for (int r_n = 0; r_n < numRow; r_n++) {
-    //		printf("Bixby vr in row %3d is %3d: Qy %d\n", r_n, bixby_vr_in_r[r_n],
-    //numCol+r_n);
+    //		printf("Bixby vr in row %3d is %3d: Qy %d\n", r_n,
+    // bixby_vr_in_r[r_n], numCol+r_n);
     if (bixby_vr_in_r[r_n] == no_ix) continue;
     if (bixby_vr_in_r[r_n] == numCol + r_n) continue;
     int cz_r_n = r_n;
@@ -245,8 +245,8 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
     int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
     int sourceOut = model->setSourceOutFmBd(columnOut);
-    //			Update the basic/nonbasic variable info and the row-wise copy of the
-    //matrix
+    //			Update the basic/nonbasic variable info and the row-wise
+    //copy of the matrix
     model->updatePivots(columnIn, rowOut, sourceOut);
     if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
     int vr_ty = crsh_r_ty[cz_r_n];
@@ -351,12 +351,12 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
 
   //	Initialise the arrays required for the Bixby crash
   //	bixby_pseudo_pv_v: 	"v" in the paper: this is a pseudo pivot value
-  //for each row 	bixby_pv_in_r: 		"I" in the paper: this is a
-  //0/1 flag to indicate whether there is a basic variable in each row
-  //	bixby_vr_in_r:		"B" is the paper: this is the basic variable in a
-  //particular row
-  //	bixby_r_k:			"r" in the paper: this is the number of entries in
-  //each row of the basis matrix
+  // for each row 	bixby_pv_in_r: 		"I" in the paper: this is a
+  // 0/1 flag to indicate whether there is a basic variable in each row
+  //	bixby_vr_in_r:		"B" is the paper: this is the basic variable in
+  // a particular row
+  //	bixby_r_k:			"r" in the paper: this is the number of
+  // entries in each row of the basis matrix
   bixby_n_cdd_r = numRow;
   for (int r_n = 0; r_n < numRow; r_n++) {
     bixby_pseudo_pv_v[r_n] = HSOL_CONST_INF;
@@ -383,7 +383,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
           max(abs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
     }
     //		printf("Column %3d has max |entry| = %g\n", c_n,
-    //crsh_mtx_c_mx_abs_v[c_n]);
+    // crsh_mtx_c_mx_abs_v[c_n]);
     double sense_col_cost = objSense * colCost[c_n];
     mx_co_v = max(abs(sense_col_cost), mx_co_v);
   }
@@ -417,7 +417,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
 #ifdef HiGHSDEV
   printf("%5d Free    cols (%1d)\n", n_en, crsh_vr_ty_fr);
   //	printf("%5d Free    cols (%1d): from %5d to %5d\n", n_en, crsh_vr_ty_fr,
-  //os-n_en, os-1);
+  // os-n_en, os-1);
 #endif
 
   // 1-sided columns
@@ -447,7 +447,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
 #ifdef HiGHSDEV
   printf("%5d 1-sided cols (%1d)\n", n_en, crsh_vr_ty_1_sd);
   //	printf("%5d 1-sided cols (%1d): from %5d to %5d\n", n_en,
-  //crsh_vr_ty_1_sd, os-n_en, os-1);
+  // crsh_vr_ty_1_sd, os-n_en, os-1);
 #endif
 
   // 2-sided columns
@@ -474,7 +474,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
 #ifdef HiGHSDEV
   printf("%5d 2-sided cols (%1d)\n", n_en, crsh_vr_ty_2_sd);
   //	printf("%5d 2-sided cols (%1d): from %5d to %5d\n", n_en,
-  //crsh_vr_ty_2_sd, os-n_en, os-1);
+  // crsh_vr_ty_2_sd, os-n_en, os-1);
 #endif
 
   // Fixed columns - impossible after presolve
@@ -500,7 +500,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
 #ifdef HiGHSDEV
   printf("%5d Fixed   cols (%1d)\n", n_en, crsh_vr_ty_fx);
   //	printf("%5d Fixed   cols (%1d): from %5d to %5d\n", n_en, crsh_vr_ty_fx,
-  //os-n_en, os-1);
+  // os-n_en, os-1);
 
   //	printf("Last Bixby index touched is %d of %d\n", os, numCol);
 #endif
@@ -847,35 +847,31 @@ void HCrash::crsh_ck_an_impl_bd() {
   //		printf("\nReporting bounds and corresponding implied bounds\n");
   //		for (int c_n = 0; c_n < numCol; c_n++) {
   //			printf(
-  //					"Col %5d has primal bounds [%12.4e,%12.4e] and implied
-  //primal bounds [%12.4e,%12.4e]\n",
-  //					c_n, colLower[c_n], colUpper[c_n],
-  //					primalColLowerImplied[c_n],
-  //primalColUpperImplied[c_n]);
+  //					"Col %5d has primal bounds
+  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
+  // c_n, colLower[c_n], colUpper[c_n],
+  // primalColLowerImplied[c_n], primalColUpperImplied[c_n]);
   //		}
   //		for (int c_n = 0; c_n < numCol; c_n++) {
   //			printf(
-  //					"Col %5d has primal bounds [%12.4e,%12.4e] and implied
-  //dual bounds [%12.4e,%12.4e]\n",
-  //					c_n, colLower[c_n], colUpper[c_n],
-  //					dualColLowerImplied[c_n],
-  //dualColUpperImplied[c_n]);
+  //					"Col %5d has primal bounds
+  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
+  // c_n, colLower[c_n], colUpper[c_n],
+  // dualColLowerImplied[c_n], dualColUpperImplied[c_n]);
   //		}
   //		for (int r_n = 0; r_n < numRow; r_n++) {
   //			printf(
-  //					"Row %5d has primal bounds [%12.4e,%12.4e] and implied
-  //primal bounds [%12.4e,%12.4e]\n",
-  //					r_n, rowLower[r_n], rowUpper[r_n],
-  //					primalRowLowerImplied[r_n],
-  //primalRowUpperImplied[r_n]);
+  //					"Row %5d has primal bounds
+  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
+  // r_n, rowLower[r_n], rowUpper[r_n],
+  // primalRowLowerImplied[r_n], primalRowUpperImplied[r_n]);
   //		}
   //		for (int r_n = 0; r_n < numRow; r_n++) {
   //			printf(
-  //					"Row %5d has primal bounds [%12.4e,%12.4e] and implied
-  //dual bounds [%12.4e,%12.4e]\n",
-  //					r_n, rowLower[r_n], rowUpper[r_n],
-  //					dualRowLowerImplied[r_n],
-  //dualRowUpperImplied[r_n]);
+  //					"Row %5d has primal bounds
+  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
+  // r_n, rowLower[r_n], rowUpper[r_n],
+  // dualRowLowerImplied[r_n], dualRowUpperImplied[r_n]);
   //		}
   //	}
   printf("\nAnalysing bounds and corresponding implied bounds\n");
@@ -914,13 +910,13 @@ void HCrash::crsh_ck_an_impl_bd() {
   for (int c_n = 0; c_n < numCol; c_n++) {
     if (colLower[c_n] > -HSOL_CONST_INF) {
       //			Col lower >  -inf so dualColUpperImplied < inf
-      //is tighter
+      // is tighter
       if (dualColUpperImplied[c_n] < HSOL_CONST_INF) {
         numTighterDualColUpper += 1;
       }
     } else {
       //			Col lower <= -inf so dualColUpperImplied should
-      //be at most zero
+      // be at most zero
       if (dualColUpperImplied[c_n] > 0) {
         numSlackerDualColUpper += 1;
         printf(
@@ -932,13 +928,13 @@ void HCrash::crsh_ck_an_impl_bd() {
     }
     if (colUpper[c_n] < HSOL_CONST_INF) {
       //			Col upper <   inf so dualColLowerImplied > -inf
-      //is tighter
+      // is tighter
       if (dualColLowerImplied[c_n] > -HSOL_CONST_INF) {
         numTighterDualColLower += 1;
       }
     } else {
       //			Col upper >=  inf so dualRowLowerImplied should
-      //be at least zero
+      // be at least zero
       if (dualColLowerImplied[c_n] < 0) {
         numSlackerDualColLower += 1;
         printf(
@@ -984,13 +980,13 @@ void HCrash::crsh_ck_an_impl_bd() {
   for (int r_n = 0; r_n < numRow; r_n++) {
     if (rowLower[r_n] > -HSOL_CONST_INF) {
       //			Row lower >  -inf so dualRowUpperImplied < inf
-      //is tighter
+      // is tighter
       if (dualRowUpperImplied[r_n] < HSOL_CONST_INF) {
         numTighterDualRowUpper += 1;
       }
     } else {
       //			Row lower <= -inf so dualRowUpperImplied should
-      //be at most zero
+      // be at most zero
       if (dualRowUpperImplied[r_n] > 0) {
         numSlackerDualRowUpper += 1;
         printf(
@@ -1002,13 +998,13 @@ void HCrash::crsh_ck_an_impl_bd() {
     }
     if (rowUpper[r_n] < HSOL_CONST_INF) {
       //			Row upper <   inf so dualColLowerImplied > -inf
-      //is tighter
+      // is tighter
       if (dualRowLowerImplied[r_n] > -HSOL_CONST_INF) {
         numTighterDualRowLower += 1;
       }
     } else {
       //			Row upper >=  inf so dualColLowerImplied should
-      //be at least zero
+      // be at least zero
       if (dualRowLowerImplied[r_n] < 0) {
         numSlackerDualRowLower += 1;
         printf(
@@ -1171,22 +1167,24 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
 
   //	for (int r_n = 0; r_n < numRow; r_n++)
   //		printf(
-  //				"Row: %d; BaseIndex = %d; Work[L,V,U] = [%g,%g,%g];
-  //Base[L,V,U] = [%g,%g,%g]\n", 				r_n,
-  //model->getBaseIndex()[r_n], model->getWorkLower()[r_n],
+  //				"Row: %d; BaseIndex = %d; Work[L,V,U] =
+  //[%g,%g,%g]; Base[L,V,U] = [%g,%g,%g]\n", 				r_n,
+  // model->getBaseIndex()[r_n], model->getWorkLower()[r_n],
   //				model->getWorkValue()[r_n],
-  //model->getWorkUpper()[r_n],
+  // model->getWorkUpper()[r_n],
   //				model->getBaseLower()[r_n],
-  //model->getBaseValue()[r_n],
+  // model->getBaseValue()[r_n],
   //				model->getBaseUpper()[r_n]);
   //	for (int vr_n = 0; vr_n < numTot; vr_n++)
-  //		printf("Var: %d; NonbasicFlag = %d; NonbasicMove = %d; Work[L,V,U] =
+  //		printf("Var: %d; NonbasicFlag = %d; NonbasicMove = %d;
+  // Work[L,V,U]
+  //=
   //[%g,%g,%g]\n", vr_n,
   //				model->getNonbasicFlag()[vr_n],
   //				model->getNonbasicMove()[vr_n],
-  //model->getWorkLower()[vr_n],
+  // model->getWorkLower()[vr_n],
   //				model->getWorkValue()[vr_n],
-  //model->getWorkUpper()[vr_n]);
+  // model->getWorkUpper()[vr_n]);
 
   //	  const double *colCost = model->getcolCost();
   //    const double *colLower = model->getcolLower();
@@ -1225,11 +1223,11 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
     // Save the solved results
     return;
   }
-    //	for (int r_n = 0; r_n < numRow; r_n++) {
-    //		if (crsh_act_r[r_n] != 0)
-    //			printf("Row %2d , Pri = %1d; K = %2d\n", r_n,
-    //crsh_r_ty_pri_v[crsh_r_ty[r_n]], crsh_r_k[r_n]);
-    //	}
+  //	for (int r_n = 0; r_n < numRow; r_n++) {
+  //		if (crsh_act_r[r_n] != 0)
+  //			printf("Row %2d , Pri = %1d; K = %2d\n", r_n,
+  // crsh_r_ty_pri_v[crsh_r_ty[r_n]], crsh_r_k[r_n]);
+  //	}
 #ifdef HiGHSDEV
   if (ltssf_ck_fq > 0) {
     printf("\nCHECKING LTSSF DATA NOW AND EVERY %d PASS(ES)!!\n\n",
@@ -1305,12 +1303,12 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
       int columnOut = numCol + cz_r_n;
       int sourceOut = model->setSourceOutFmBd(columnOut);
       //			Update the basic/nonbasic variable info and the
-      //row-wise copy of the matrix
+      // row-wise copy of the matrix
       model->updatePivots(columnIn, rowOut, sourceOut);
       if (model->mlFg_haveMatrixRowWise)
         model->updateMatrix(columnIn, columnOut);
       //		    Update the count of this type of removal and
-      //addition
+      // addition
       int vr_ty = crsh_r_ty[cz_r_n];
       crsh_vr_ty_rm_n_r[vr_ty] += 1;
       vr_ty = crsh_c_ty[cz_c_n];
@@ -1337,7 +1335,7 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
 #endif
     if (TwoD_hdr) {
       //			Determine whether the are still rows worth
-      //removing
+      // removing
       mx_r_pri = crsh_mn_pri_v - 1;
       for (int pri_v = crsh_mx_pri_v; pri_v > crsh_mn_pri_v; pri_v--) {
         if (crsh_r_pri_mn_r_k[pri_v] < numCol + 1) {
@@ -1510,7 +1508,7 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
       mn_co = sense_col_cost;
     } else if (c_pri_fn_v == mx_c_pri_fn_v) {
       //				Matches the best column so far: possibly
-      //break tie on cost
+      // break tie on cost
       double sense_col_cost = objSense * colCost[c_n];
       if (mn_co_tie_bk && (sense_col_cost < mn_co)) {
         cz_c_n = c_n;
@@ -1530,7 +1528,7 @@ void HCrash::ltssf_u_da(HModel *ptr_model) {
     ltssf_u_da_af_no_bs_cg();
   }
   //	     If there are no more rows with the current maximum row priority
-  //then get the new maximum row priority value
+  // then get the new maximum row priority value
   if (OneD_hdr) {
     if ((crsh_r_pri_hdr[cz_r_pri_v] == no_lk) && (cz_r_pri_v == mx_r_pri_v)) {
       mx_r_pri_v = -HSOL_CONST_I_INF;
@@ -1634,8 +1632,8 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
             (crsh_r_pri_mn_r_k[pri_v] == r_k)) {
           // This was the only row of minimum row count so look for the next row
           // count with non-null header
-          //					Set crsh_r_pri_mn_r_k to numCol + 1 in case
-          //r_k=numCol so priority is cleared
+          //					Set crsh_r_pri_mn_r_k to numCol +
+          //1 in case r_k=numCol so priority is cleared
           crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
           for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
             int hdr_ix = pri_v * (numCol + 1) + qy_k;
@@ -1644,15 +1642,16 @@ void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
               break;
             }
           }
-          //					if (crsh_r_pri_mn_r_k[pri_v] == numCol + 1)
-          //printf("Priority %d now has no rows\n", pri_v);
+          //					if (crsh_r_pri_mn_r_k[pri_v] ==
+          //numCol
+          //+ 1) printf("Priority %d now has no rows\n", pri_v);
         }
         //     Reduce the number of active entries in this row by one and...
         r_k -= 1;
         crsh_r_k[r_n] = r_k;
         if (r_k > 0) {
-        //     ... either add the row as the header of the list with one fewer
-        //     number of active entries...
+          //     ... either add the row as the header of the list with one fewer
+          //     number of active entries...
 #ifdef HiGHSDEV
           if (Rp_TwoD_da) {
             ltssf_rp_pri_k_da();
@@ -1710,7 +1709,7 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
   }
   int r_n = cz_r_n;
   //	     Remove the row from the linked list with this number of active
-  //entries
+  // entries
   if (OneD_hdr) {
     int r_k = crsh_r_k[r_n];
     int prev_r_n;
@@ -1737,7 +1736,7 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
   }
   if (TwoD_hdr) {
     //	     Remove the row from the linked list with this priority and number
-    //of active entries
+    // of active entries
     crsh_act_r[r_n] = crsh_vr_st_no_act;
     int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
     int r_k = crsh_r_k[r_n];
@@ -1884,7 +1883,7 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
     int pri_v = crsh_r_ty_pri_v[vr_ty];
     if (pri_v == crsh_no_act_pri_v) {
       //	Rows with no priority value are free - and should be removed by
-      //presolve 	They will be basic
+      // presolve 	They will be basic
       crsh_act_r[r_n] = crsh_vr_st_no_act;
     } else {
       crsh_act_r[r_n] = crsh_vr_st_act;
@@ -1901,7 +1900,7 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
     int c_n_en = Astart[c_n + 1] - Astart[c_n];
     if ((pri_v == crsh_no_act_pri_v) || (c_n_en == 0)) {
       //	Columns with no priority value are fixed or zero - and should be
-      //removed by presolve 	They will be nonbasic
+      // removed by presolve 	They will be nonbasic
       crsh_act_c[c_n] = crsh_vr_st_no_act;
     } else {
       crsh_act_c[c_n] = crsh_vr_st_act;
@@ -1910,16 +1909,16 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
     if (crsh_act_c[c_n] == crsh_vr_st_act) {
       //			The column is active: count the active rows and
       //			update the number of active entries in those
-      //rows
+      // rows
       //
       //			Initialise the count of active entries in the
-      //row
+      // row
       crsh_c_k[c_n] = 0;
       for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
         int r_n = Aindex[el_n];
         if (crsh_act_r[r_n] != crsh_vr_st_no_act) {
-          //			The row is active so increase the number of active
-          //entries in the column and row
+          //			The row is active so increase the number of
+          // active entries in the column and row
           crsh_c_k[c_n] += 1;
           crsh_r_k[r_n] += 1;
         }
@@ -1934,8 +1933,8 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
   //	for (int r_n = 0; r_n < numRow; r_n++) {
   //		int vr_ty = crsh_r_ty[r_n];
   //		int pri_v = crsh_r_ty_pri_v[vr_ty];
-  //		printf("Row %d [%10g,%10g] has type %d; priority %d; count = %d\n",
-  //r_n, rowLower[r_n], rowUpper[r_n], vr_ty, pri_v, crsh_r_k[r_n]);
+  //		printf("Row %d [%10g,%10g] has type %d; priority %d; count =
+  //%d\n", r_n, rowLower[r_n], rowUpper[r_n], vr_ty, pri_v, crsh_r_k[r_n]);
   //	}
 
   if (TwoD_hdr) {
@@ -1956,7 +1955,7 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
       int nx_r_n = crsh_r_pri_hdr[pri_v];
 
       //		printf("Row %2d; Ty = %1d; Pri = %1d; Nx = %2d\n", r_n,
-      //crsh_r_ty[r_n], pri_v, nx_r_n);
+      // crsh_r_ty[r_n], pri_v, nx_r_n);
       crsh_r_pri_hdr[pri_v] = r_n;
       crsh_r_pri_lkb[r_n] = no_lk;
       crsh_r_pri_lkf[r_n] = nx_r_n;
@@ -1975,7 +1974,7 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
     }
     if (OneD_hdr) {
       //		Add as the header of the appropriate list of rows with a
-      //given count
+      // given count
 
       int nx_r_n = crsh_r_k_hdr[r_k];
       crsh_r_k_hdr[r_k] = r_n;
@@ -1999,8 +1998,8 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
       int r_n = Aindex[el_n];
       //	    	printf("Col %d; Row %d: Activity %d;  CrshARstart =
       //%d; |Value| = %g Max = %g\n", c_n, r_n,
-      //crsh_act_r[r_n],CrshARstart[r_n], abs(Avalue[el_n]),
-      //crsh_mtx_c_mx_abs_v[c_n]);
+      // crsh_act_r[r_n],CrshARstart[r_n], abs(Avalue[el_n]),
+      // crsh_mtx_c_mx_abs_v[c_n]);
       crsh_mtx_c_mx_abs_v[c_n] =
           max(abs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
       if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
@@ -2016,8 +2015,8 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
   //	printf("\nCol-wise matrix:\n");
   //	for (int c_n = 0; c_n < numCol; c_n++) {
   //		printf("Col %2d (%3d->-%3d): ", c_n, Astart[c_n], Astart[c_n +
-  //1]-1); 		for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1];
-  //el_n++) { 			int r_n = Aindex[el_n];
+  // 1]-1); 		for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1];
+  // el_n++) { 			int r_n = Aindex[el_n];
   //			printf("%2d ", r_n);
   //		}
   //		printf("\n");
@@ -2025,9 +2024,9 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
   //	printf("\nRow-wise matrix:\n");
   //	for (int r_n = 0; r_n < numRow; r_n++) {
   //		printf("Row %2d (%3d->-%3d): ", r_n, CrshARstart[r_n],
-  //CrshARstart[r_n + 1]-1); 		for (int el_n = CrshARstart[r_n]; el_n <
-  //CrshARstart[r_n + 1]; el_n++) { 			int c_n =
-  //CrshARindex[el_n]; 			printf("%2d ", c_n);
+  // CrshARstart[r_n + 1]-1); 		for (int el_n = CrshARstart[r_n]; el_n <
+  // CrshARstart[r_n + 1]; el_n++) { 			int c_n =
+  // CrshARindex[el_n]; 			printf("%2d ", c_n);
   //		}
   //		printf("\n");
   //	}
@@ -2141,7 +2140,7 @@ void HCrash::ltssf_ck_da() {
             }
           }
           //					Update the true minimum row
-          //count
+          // count
           mn_r_k = min(k, mn_r_k);
           r_n = nx_r_n;
         } while (r_n != no_lk);
@@ -2251,7 +2250,7 @@ void HCrash::ltssf_rp_pri_k_da() {
       int hdr_ix = pri_v * (numCol + 1) + k;
       int r_n = crsh_r_pri_k_hdr[hdr_ix];
       //			printf("Pri = %1d; k = %1d: hdr = %d\n", pri_v,
-      //k, r_n);
+      // k, r_n);
       if (r_n == no_lk) continue;
       int nx_r_n = crsh_r_pri_k_lkf[r_n];
       printf("Pri = %1d; k = %1d: %3d %3d <-  ", pri_v, k, r_n, nx_r_n);

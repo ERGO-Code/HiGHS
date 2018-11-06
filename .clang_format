@@ -2,3 +2,5 @@
 BasedOnStyle: Google
 ...
 ColumnLength:80
+DerivePointerAlignment: false
+PointerAlignment: Left

@@ -135,7 +135,7 @@ pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
   }
 
   //	if (nzCol.at(y) == 1 && nzCol.at(x) == 1) { //two singletons case
-  //handled elsewhere 		colIndex.second = -1; 		return colIndex;
+  // handled elsewhere 		colIndex.second = -1; 		return colIndex;
   //	}
 
   colIndex.first = x;
@@ -2285,8 +2285,8 @@ void HPresolve::postsolve() {
       }
       case SING_ROW: {
         // valuePrimal is already set for this one, colDual also, we need
-        // rowDual. AR copy keeps full matrix.  col dual maybe infeasible, we need
-        // to check.  recover old bounds and see
+        // rowDual. AR copy keeps full matrix.  col dual maybe infeasible, we
+        // need to check.  recover old bounds and see
         getDualsSingletonRow(c.row, c.col);
 
         if (iKKTcheck == 1) {

@@ -1171,7 +1171,7 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
   //	 var, numTot, workLower[var], workUpper[var], nonbasicMove[var]);
-  //cout<<flush;
+  // cout<<flush;
   assert(var >= 0);
   assert(var < numTot);
   // Make sure we're not checking a basic variable
@@ -1453,7 +1453,7 @@ void HModel::scaleModel() {
     max0 = max(max0, value);
   }
   if (min0 >= 0.2 && max0 <= 5) {
-  // No matrix scaling, but possible cost scaling
+    // No matrix scaling, but possible cost scaling
 #ifdef HiGHSDEV
     printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName.c_str());
 #endif
@@ -2134,7 +2134,7 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
       //      if (abs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
       //      %8g; %8g] Du = %8g; DlPr = %8g\n",
       //					var, workLower[var],
-      //workValue[var], workUpper[var], workDual[var], dl_pr_act);
+      // workValue[var], workUpper[var], workDual[var], dl_pr_act);
     } else {
       // Basic variable
       nonbasicMove[var] = NONBASIC_MOVE_ZE;
@@ -2416,15 +2416,16 @@ int HModel::handleRankDeficiency() {
              columnOut);
       fflush(stdout);
     }
-      int sourceOut = setSourceOutFmBd(columnOut);
-      updatePivots(columnIn, rowOut, sourceOut);
-      updateMatrix(columnIn, columnOut);
-    }
-    //    printf("After  - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++) printf(" %2d", basicIndex[iRow]); printf("\n");
+    int sourceOut = setSourceOutFmBd(columnOut);
+    updatePivots(columnIn, rowOut, sourceOut);
+    updateMatrix(columnIn, columnOut);
+  }
+  //    printf("After  - basicIndex:"); for (int iRow=0; iRow<numRow; iRow++)
+  //    printf(" %2d", basicIndex[iRow]); printf("\n");
 #ifdef HiGHSDEV
-    factor.checkInvert();
+  factor.checkInvert();
 #endif
-    return 0;
+  return 0;
 }
 
 int HModel::setSourceOutFmBd(const int columnOut) {
@@ -2525,10 +2526,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
 }
 
 #ifdef HiGHSDEV
-void HModel::changeUpdate(int updateMethod)
-{
-  factor.change(updateMethod);
-}
+void HModel::changeUpdate(int updateMethod) { factor.change(updateMethod); }
 #endif
 
 void HModel::setProblemStatus(int status) { problemStatus = status; }
@@ -3032,7 +3030,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         }
       } else if (nonbasicMove[var] == NONBASIC_MOVE_ZE) {
         //	printf("Var %d Move = %d [%g, %g]\n", var, nonbasicMove[var],
-        //colLower[col], colUpper[col]);
+        // colLower[col], colUpper[col]);
         if (colLower[col] == colUpper[col]) {
 #ifdef HiGHSDEV
           if (!hsol_isInfinity(colUpper[col]))
@@ -3576,7 +3574,7 @@ void HModel::util_deleteRowset(int *dstat) {
   }
 
   if (basisOK) {
-  // All rows removed had basic slacks so basis should be OK
+    // All rows removed had basic slacks so basis should be OK
 #ifdef SCIP_DEV
     // Check that basis is valid basis.
     basisOK = nonbasicFlagBasicIndex_OK(numCol, numRow);
@@ -3617,7 +3615,7 @@ void HModel::util_extractRows(int firstrow, int lastrow, double *XrowLower,
     XrowUpper[row - firstrow] = rowUpper[row];
     // printf("Extracted row %d from %d with bounds [%g, %g]\n",
     //	   row-firstrow, row, XrowLower[row-firstrow],
-    //XrowUpper[row-firstrow]);cout << flush;
+    // XrowUpper[row-firstrow]);cout << flush;
   }
   // Determine how many entries are in each row to be extracted
   vector<int> XARlength;
@@ -4624,7 +4622,7 @@ void HModel::util_anMlSol() {
           sclColValue = value[iCol];
           sclColDuIfs = abs(dual[iCol]);
           //	  if (!freeEr) {printf("Column %7d is free with value %g\n",
-          //iCol ,sclColValue);}
+          // iCol ,sclColValue);}
         }
       }
       double valueEr = abs(sclColValue - value[iCol]);
@@ -4854,7 +4852,7 @@ void HModel::util_anMlSol() {
           sclRowValue = -value[numCol + iRow];
           sclRowDuIfs = abs(dual[numCol + iRow]);
           //	  if (!freeEr) {printf("Row    %7d is free with value %g\n",
-          //iRow, sclRowValue);}
+          // iRow, sclRowValue);}
         }
       }
       double valueEr = abs(sclRowValue + value[numCol + iRow]);

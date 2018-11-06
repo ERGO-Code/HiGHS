@@ -1,10 +1,10 @@
 #ifndef SIMPLEX_HTIMERPRE_H_
 #define SIMPLEX_HTIMERPRE_H_
 
-#include <sys/time.h>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <sys/time.h>
 using namespace std;
 
 enum HTickItemPre {
@@ -40,7 +40,7 @@ enum HTickItemPre {
 };
 
 class HTimerPre {
- public:
+public:
   HTimerPre() {
     itemNames.resize(HTICK_ITEMS_COUNT_PRE);
 
@@ -65,7 +65,8 @@ class HTimerPre {
 
   // Reset the timer
   void reset() {
-    for (int i = 0; i < HTICK_ITEMS_COUNT_PRE; i++) itemTicks[i] = 0;
+    for (int i = 0; i < HTICK_ITEMS_COUNT_PRE; i++)
+      itemTicks[i] = 0;
     startTime = getWallTime();
     startTick = getWallTick();
   }
@@ -100,7 +101,7 @@ class HTimerPre {
   double itemTicks[HTICK_ITEMS_COUNT_PRE];
   vector<string> itemNames;
 
- private:
+private:
   // The start tick and time
   double startTime;
   double startTick;

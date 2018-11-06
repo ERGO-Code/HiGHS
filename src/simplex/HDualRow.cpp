@@ -70,7 +70,9 @@ void HDualRow::choose_possible() {
    * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
    */
-  const double Ta = workModel->countUpdate < 10 ? 1e-9 : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
+  const double Ta = workModel->countUpdate < 10
+                        ? 1e-9
+                        : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
   const int sourceOut = workDelta < 0 ? -1 : 1;
   workTheta = HSOL_CONST_INF;
@@ -155,29 +157,35 @@ bool HDualRow::choose_final() {
   while (selectTheta < 1e18) {
     double remainTheta = iz_remainTheta;
 #ifdef HiGHSDEV
-    if (rp_Choose_final) printf("Performing choose_final 2; selectTheta = %11.4g; workCount=%d; fullCount=%d\n", selectTheta, workCount, fullCount);
+    if (rp_Choose_final)
+      printf(
+          "Performing choose_final 2; selectTheta = %11.4g; workCount=%d; "
+          "fullCount=%d\n",
+          selectTheta, workCount, fullCount);
 #endif
-    for (int i = workCount; i < fullCount; i++)
-    {
+    for (int i = workCount; i < fullCount; i++) {
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
 #ifdef HiGHSDEV
-      if (rp_Choose_final) printf("iCol=%4d; v=%11.4g; d=%11.4g |", iCol, value, dual);
+      if (rp_Choose_final)
+        printf("iCol=%4d; v=%11.4g; d=%11.4g |", iCol, value, dual);
 #endif
-      // Tight satisfy
+        // Tight satisfy
 #ifdef HiGHSDEV
-      if (rp_Choose_final) printf(" %11.4g = dual ?<=? sTh * v = %11.4g; workCount=%2d", dual, selectTheta * value, workCount);
+      if (rp_Choose_final)
+        printf(" %11.4g = dual ?<=? sTh * v = %11.4g; workCount=%2d", dual,
+               selectTheta * value, workCount);
 #endif
-      if (dual <= selectTheta * value)
-      {
+      if (dual <= selectTheta * value) {
         swap(workData[workCount++], workData[i]);
         totalChange += value * (workRange[iCol]);
       } else if (dual + Td < remainTheta * value) {
         remainTheta = (dual + Td) / value;
       }
 #ifdef HiGHSDEV
-      if (rp_Choose_final) printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
+      if (rp_Choose_final)
+        printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
 #endif
     }
     workGroup.push_back(workCount);
@@ -253,14 +261,11 @@ bool HDualRow::choose_final() {
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
-  if (workDual[workPivot] * workMove[workPivot] > 0)
-    {
-      workTheta = workDual[workPivot] / workAlpha;
-    }
-  else
-    {
-      workTheta = 0;
-    }
+  if (workDual[workPivot] * workMove[workPivot] > 0) {
+    workTheta = workDual[workPivot] / workAlpha;
+  } else {
+    workTheta = 0;
+  }
 
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;
@@ -331,12 +336,12 @@ void HDualRow::create_Freelist() {
   //  freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
 }
 
-void HDualRow::create_Freemove(HVector *row_ep)
-{
+void HDualRow::create_Freemove(HVector *row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
-  if (!freeList.empty())
-  {
-    double Ta = workModel->countUpdate < 10 ? 1e-9 : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
+  if (!freeList.empty()) {
+    double Ta = workModel->countUpdate < 10
+                    ? 1e-9
+                    : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
     int sourceOut = workDelta < 0 ? -1 : 1;
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {

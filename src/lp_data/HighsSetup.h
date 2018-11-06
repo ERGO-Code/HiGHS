@@ -37,11 +37,11 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
   // todo
   //
-  //if (!options_.presolve) {
+  // if (!options_.presolve) {
   //  HighsSolution solution;
   //  return runSolver(lp, solution);
   //}
-  //return HighsStatus::NotImplemented;
+  // return HighsStatus::NotImplemented;
 
   /*
    HighsLp reduced_lp;
