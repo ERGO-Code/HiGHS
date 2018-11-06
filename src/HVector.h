@@ -17,7 +17,6 @@ public:
 
 /**
  * @brief Initialise a vector
- * 
  */
     void setup(
 	       int size_ //!< Dimension of the vector to be initialised

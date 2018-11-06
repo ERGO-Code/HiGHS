@@ -1,18 +1,36 @@
+/**@file  HRandom.h
+ * @brief Random number generator for HiGHS
+ * @author Qi Huangfu
+ */
 #ifndef HRANDOM_H_
 #define HRANDOM_H_
 
+/**
+ * @brief Class for the random number generator for HiGHS
+ */
 class HRandom {
 public:
+/**
+ * @brief Initialise the two seeds
+ */
     HRandom() {
         random_mw = 1985;
         random_mz = 2012;
     }
+
+/**
+ * @brief Return a random integer between 0 and 2147483647
+ */
     int intRandom() {
         random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
         random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
         unsigned result = (random_mz << 16) + random_mw;
         return result >> 1;
     }
+
+/**
+ * @brief Return a random real in (0, 1)
+ */
     double dblRandom() {
         random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
         random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
