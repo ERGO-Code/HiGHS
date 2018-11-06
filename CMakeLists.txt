@@ -66,7 +66,7 @@ message(STATUS "OpenMP: " ${OPENMP})
 option(SCIP_DEV "SCIP  development" OFF)
 message(STATUS "SCIP  development: " ${SCIP_DEV})
 
-option(HiGHSDEV "HiGHS development" ON)
+option(HiGHSDEV "HiGHS development" OFF)
 message(STATUS "HiGHS development: " ${HiGHSDEV})
 
 # whether to use shared or static libraries
@@ -84,7 +84,12 @@ endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.h)
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src)
+
+include_directories(${CMAKE_SOURCE_DIR}/src/external  ${CMAKE_SOURCE_DIR}/src/io
+    ${CMAKE_SOURCE_DIR}/src/ipx ${CMAKE_SOURCE_DIR}/src/lp_data
+    ${CMAKE_SOURCE_DIR}/src/presolve ${CMAKE_SOURCE_DIR}/src/simplex 
+    ${CMAKE_SOURCE_DIR}/src/test ${CMAKE_SOURCE_DIR}/src/wrappers)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
