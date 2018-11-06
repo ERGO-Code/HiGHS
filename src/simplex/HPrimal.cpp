@@ -14,8 +14,8 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
   numTot = model->getNumTot();
 
 #ifdef HiGHSDEV
-  printf("************************************\n")
-      printf("Performing primal simplex iterations\n");
+  printf("************************************\n");
+  printf("Performing primal simplex iterations\n");
   printf("************************************\n");
 #endif
   // Setup update limits
@@ -61,7 +61,7 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
         break;
       }
       //	    printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      //model->numberIteration, model->objective);
+      // model->numberIteration, model->objective);
       if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf(
