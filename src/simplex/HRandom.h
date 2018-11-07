@@ -1,9 +1,18 @@
-/**@file  HRandom.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HRandom.h
  * @brief Random number generator for HiGHS
- * @author Qi Huangfu
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef HRANDOM_H_
-#define HRANDOM_H_
+#ifndef SIMPLEX_HRANDOM_H_
+#define SIMPLEX_HRANDOM_H_
 
 /**
  * @brief Class for the random number generator for HiGHS
@@ -44,4 +53,4 @@ class HRandom {
   unsigned random_mz;
 };
 
-#endif /* HRANDOM_H_ */
+#endif /* SIMPLEX_HRANDOM_H_ */

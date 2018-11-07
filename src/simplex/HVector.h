@@ -1,9 +1,18 @@
-/**@file  HVector.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HVector.h
  * @brief Vector structure for HiGHS
- * @author Qi Huangfu and Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef HVECTOR_H_
-#define HVECTOR_H_
+#ifndef SIMPLEX_HVECTOR_H_
+#define SIMPLEX_HVECTOR_H_
 
 #include <map>
 #include <vector>
@@ -128,4 +137,4 @@ class HVector {
 
 typedef HVector *HVector_ptr;
 
-#endif /* HVECTOR_H_ */
+#endif /* SIMPLEX_HVECTOR_H_ */

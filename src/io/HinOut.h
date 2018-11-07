@@ -1,10 +1,16 @@
-/*
- * HinOut.h
- *
- *  Created on: 16 Jan 2017
- *      Author: s1131817
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HinOut.h
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-
 #ifndef IO_HINOUT_H_
 #define IO_HINOUT_H_
 
@@ -47,4 +53,4 @@ class HinOut : public HPreData {
   int oAcountX;
 };
 
-#endif /* HINOUT_H_ */
+#endif /* IO_HINOUT_H_ */

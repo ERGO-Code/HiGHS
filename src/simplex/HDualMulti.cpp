@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HDualMulti.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HConst.h"
 #include "HDual.h"
 #include "HPrimal.h"
@@ -416,19 +429,17 @@ void HDual::major_update() {
     double alphaR = fabs(iFinish->alphaRow);
     double compare = min(alphaC, alphaR);
     double alphaDiff = fabs(alphaC - alphaR);
-    //        int startUpdate = model->countUpdate - multi_nFinish;
+    // int startUpdate = model->countUpdate - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
       cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
-      invertHint = invertHint_possiblySingularBasis;  // Was 1
-                                                      //            if
-                                                      //            (startUpdate
-                                                      //            > 0) {
+      invertHint = invertHint_possiblySingularBasis;
+	// if (startUpdate > 0) {
       major_rollback();
       return;
-      //            }
+      // }
     }
   }
 

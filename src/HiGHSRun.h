@@ -1,4 +1,4 @@
-/**@file  HiGHSRun.h
+/**@file HiGHSRun.h
  * @brief Run statment for HiGHS
  * @author Julian Hall
  */

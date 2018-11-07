@@ -1,10 +1,16 @@
-/*
- * HPreData.cpp
- *
- *  Created on: 8 Jan 2017
- *      Author: ivet
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file presolve/HPreData.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-
 #include "HPreData.h"
 
 HPreData::HPreData() {}

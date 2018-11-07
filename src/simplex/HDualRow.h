@@ -1,9 +1,18 @@
-/**@file  HDual.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HDualRow.h
  * @brief Dual simplex ratio test for HiGHS
- * @author Qi Huangfu and Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef HDUALROW_H_
-#define HDUALROW_H_
+#ifndef SIMPLEX_HDUALROW_H_
+#define SIMPLEX_HDUALROW_H_
 
 #include "HModel.h"
 #include "HVector.h"
@@ -132,4 +141,4 @@ class HDualRow {
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 };
 
-#endif /* HDUALROW_H_ */
+#endif /* SIMPLEX_HDUALROW_H_ */

@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HMPSIO.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HMPSIO.h"
 #include "HConst.h"
 #include "HModelCs.h"
@@ -95,9 +108,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
       int iRow = rowIndex[data[2]];
       RHS[iRow] = data[0];
     } else {
-      //        	Strictly, if there is a RHS entry for the N row, it is
-      //        an objective offset 	However, the reported objective values
-      //        for problems (eg e226) ignore this
+      // Strictly, if there is a RHS entry for the N row, it is an
+      // objective offset. However, the reported objective values for
+      // problems (eg e226) ignore this
 #ifdef HiGHSDEV
       printf(
           "RHS for N-row in MPS file implies objective offset of %g: ignoring "

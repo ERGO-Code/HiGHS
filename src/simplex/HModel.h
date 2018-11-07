@@ -1,5 +1,18 @@
-#ifndef HMODEL_H_
-#define HMODEL_H_
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HModel.h
+ * @brief LP model representation and management for HiGHS
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
+#ifndef SIMPLEX_HMODEL_H_
+#define SIMPLEX_HMODEL_H_
 
 #include "HConfig.h"
 #include "HConst.h"
@@ -601,4 +614,4 @@ class HModel {
   double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
   int* getWorkIntBreak() { return &intBreak[0]; }
 };
-#endif /* HMODEL_H_ */
+#endif /* SIMPLEX_HMODEL_H_ */

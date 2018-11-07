@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HToyIO.h
+ * @brief Read an LP or MIP model in toy format
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef IO_HTOYIO_H_
 #define IO_HTOYIO_H_
 
@@ -17,4 +30,4 @@ int readToy_MIP_cpp(const char* filename, int* numRow_p, int* numCol_p,
                     double** rhs_p, double** cost_p, double** lb_p,
                     double** ub_p, int** integerColumn);
 
-#endif
+#endif /* IO_HTOYIO_H_ */

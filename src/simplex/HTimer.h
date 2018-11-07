@@ -1,9 +1,18 @@
-/**@file  HTimer.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HTimer.h
  * @brief Profiling facility for computational components in HiGHS
- * @author Qi Huangfu and Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef HTIMER_H_
-#define HTIMER_H_
+#ifndef SIMPLEX_HTIMER_H_
+#define SIMPLEX_HTIMER_H_
 
 #include <sys/time.h>
 #include <cassert>
@@ -334,4 +343,4 @@ class HTimer {
   }
 };
 
-#endif /* HTIMER_H_ */
+#endif /* SIMPLEX_HTIMER_H_ */

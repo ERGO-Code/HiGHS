@@ -1,10 +1,16 @@
-/*
- * HCrash.h
- *
- *  Created on: 20 Oct 2016
- *      Author: Julian
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HCrash.h
+ * @brief Maros-style crash for the HiGHS dual simplex solver
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-
 #ifndef SIMPLEX_HCRASH_H_
 #define SIMPLEX_HCRASH_H_
 
@@ -176,4 +182,4 @@ class HCrash {
   bool bixby_no_nz_c_co;
 };
 
-#endif /* HCRASH_H_ */
+#endif /* SIMPLEX_HCRASH_H_ */

@@ -1,5 +1,18 @@
-#ifndef HMATRIX_H_
-#define HMATRIX_H_
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HMatrix.h
+ * @brief Simplex basis matrix representation for HiGHS
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
+#ifndef SIMPLEX_HMATRIX_H_
+#define SIMPLEX_HMATRIX_H_
 
 #include "HVector.h"
 
@@ -53,4 +66,4 @@ class HMatrix {
   vector<double> ARvalue;
 };
 
-#endif /* HMATRIX_H_ */
+#endif /* SIMPLEX_HMATRIX_H_ */

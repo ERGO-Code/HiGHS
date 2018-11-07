@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file presolve/HPresolve.h
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef PRESOLVE_HPRESOLVE_H_
 #define PRESOLVE_HPRESOLVE_H_
 
@@ -186,4 +199,4 @@ class HPresolve : public HPreData {
   string countsFile;
 };
 
-#endif /* HPRESOLVE_H_ */
+#endif /* PRESOLVE_HPRESOLVE_H_ */
