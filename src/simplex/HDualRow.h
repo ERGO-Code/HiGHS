@@ -1,6 +1,15 @@
-/**@file  HDualRow.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HDualRow.h
  * @brief Dual simplex ratio test for HiGHS
- * @author Qi Huangfu and Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HDUALROW_H_
 #define SIMPLEX_HDUALROW_H_

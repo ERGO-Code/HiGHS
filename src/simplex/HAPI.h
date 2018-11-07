@@ -1,6 +1,15 @@
-/**@file HAPI.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HAPI.h
  * @brief API for HiGHS
- * @author Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HAPI_H_
 #define SIMPLEX_HAPI_H_

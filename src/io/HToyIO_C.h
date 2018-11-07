@@ -1,6 +1,15 @@
-/**@file HToyIO_C.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HToyIO_C.h
  * @brief C wrapper to read an LP model in toy format
- * @author Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IO_HTOYIO_C_H_
 #define IO_HTOYIO_C_H_

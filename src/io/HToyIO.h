@@ -1,6 +1,15 @@
-/**@file HToyIO.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HToyIO.h
  * @brief Read an LP or MIP model in toy format
- * @author Julian Hall
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IO_HTOYIO_H_
 #define IO_HTOYIO_H_

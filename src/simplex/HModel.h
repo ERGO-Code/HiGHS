@@ -1,6 +1,15 @@
-/**@file HModel.h
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HModel.h
  * @brief LP model representation and management for HiGHS
- * @author Julian Hall, Ivet Galabova, Qu Huangfu and Michael Feldmeier
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HMODEL_H_
 #define SIMPLEX_HMODEL_H_

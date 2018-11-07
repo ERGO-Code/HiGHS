@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file presolve/HPreData.h
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef PRESOLVE_HPREDATA_H_
 #define PRESOLVE_HPREDATA_H_
 
