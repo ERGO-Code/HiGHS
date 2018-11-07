@@ -1,3 +1,7 @@
+/**@file HAPI.h
+ * @brief API for HiGHS
+ * @author Julian Hall
+ */
 #ifndef SIMPLEX_HAPI_H_
 #define SIMPLEX_HAPI_H_
 
@@ -32,4 +36,4 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                       const double *XAvalue, double *colPrimalValues,
                       double *colDualValues, double *rowPrimalValues,
                       double *rowDualValues, int *basicVariables);
-#endif
+#endif /* SIMPLEX_HAPI_H_ */

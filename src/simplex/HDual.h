@@ -1,4 +1,4 @@
-/**@file  HDual.h
+/**@file HDual.h
  * @brief Dual simplex solver for HiGHS
  * @author Qi Huangfu and Julian Hall
  */
@@ -663,15 +663,15 @@ class HDual {
   AnIterTraceRec AnIterTrace[22];  // How can this be 1+AnIterTraceMxNumRec+1;
 
   const int AnIterNumInvertHint = 7;
-  int AnIterNumInvert[8];  // How can this be AnIterNumInvertHint+1
+  int AnIterNumInvert[8];  // TODO: How can this be AnIterNumInvertHint+1
   int AnIterNumColPrice;
   int AnIterNumRowPrice;
   int AnIterNumRowPriceWSw;
   int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[3];  // How can this be EdWt_Mode_Dan+1
+  int AnIterNumEdWtIt[3];  // TODO: How can this be EdWt_Mode_Dan+1
 #endif
 };
 
-#endif /* HDUAL_H_ */
+#endif /* SIMPLEX_HDUAL_H_ */

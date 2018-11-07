@@ -186,4 +186,4 @@ class HPresolve : public HPreData {
   string countsFile;
 };
 
-#endif /* HPRESOLVE_H_ */
+#endif /* PRESOLVE_HPRESOLVE_H_ */

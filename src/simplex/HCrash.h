@@ -1,10 +1,7 @@
-/*
- * HCrash.h
- *
- *  Created on: 20 Oct 2016
- *      Author: Julian
+/**@file HCrash.h
+ * @brief Maros-style crash for the HiGHS dual simplex solver
+ * @author Julian Hall
  */
-
 #ifndef SIMPLEX_HCRASH_H_
 #define SIMPLEX_HCRASH_H_
 
@@ -176,4 +173,4 @@ class HCrash {
   bool bixby_no_nz_c_co;
 };
 
-#endif /* HCRASH_H_ */
+#endif /* SIMPLEX_HCRASH_H_ */

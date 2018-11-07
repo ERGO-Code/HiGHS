@@ -1,4 +1,4 @@
-/**@file  HDual.h
+/**@file  HDualRHS.h
  * @brief Dual simplex optimality test for HiGHS
  * @author Qi Huangfu and Julian Hall
  */
@@ -136,4 +136,4 @@ class HDualRHS {
   vector<int> workPartition;
 };
 
-#endif /* HDUALRHS_H_ */
+#endif /* SIMPLEX_HDUALRHS_H_ */

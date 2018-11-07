@@ -1,9 +1,9 @@
-/**@file  HDual.h
+/**@file  HDualRow.h
  * @brief Dual simplex ratio test for HiGHS
  * @author Qi Huangfu and Julian Hall
  */
-#ifndef HDUALROW_H_
-#define HDUALROW_H_
+#ifndef SIMPLEX_HDUALROW_H_
+#define SIMPLEX_HDUALROW_H_
 
 #include "HModel.h"
 #include "HVector.h"
@@ -132,4 +132,4 @@ class HDualRow {
       workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 };
 
-#endif /* HDUALROW_H_ */
+#endif /* SIMPLEX_HDUALROW_H_ */

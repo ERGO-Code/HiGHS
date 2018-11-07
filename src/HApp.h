@@ -1,3 +1,7 @@
+/**@file HApp.h
+ * @brief Drivers and help message for for HiGHS
+ * @author Julian Hall, Ivet Galabova, Qu Huangfu and Michael Feldmeier
+ */
 #ifndef HAPP_H_
 #define HAPP_H_
 
@@ -64,4 +68,4 @@ void printHelp(std::string execName) {
 HighsStatus solveSimplex(const HighsOptions &opt, const HighsLp &lp,
                          HighsSolution &solution);
 
-#endif
+#endif /* HAPP_H_ */

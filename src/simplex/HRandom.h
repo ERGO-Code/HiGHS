@@ -1,9 +1,9 @@
-/**@file  HRandom.h
+/**@file HRandom.h
  * @brief Random number generator for HiGHS
  * @author Qi Huangfu
  */
-#ifndef HRANDOM_H_
-#define HRANDOM_H_
+#ifndef SIMPLEX_HRANDOM_H_
+#define SIMPLEX_HRANDOM_H_
 
 /**
  * @brief Class for the random number generator for HiGHS
@@ -44,4 +44,4 @@ class HRandom {
   unsigned random_mz;
 };
 
-#endif /* HRANDOM_H_ */
+#endif /* SIMPLEX_HRANDOM_H_ */

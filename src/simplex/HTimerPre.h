@@ -1,3 +1,7 @@
+/**@file HTimerPre.h
+ * @brief Profiling facility for presolve in HiGHS
+ * @author Ivet Galabova
+ */
 #ifndef SIMPLEX_HTIMERPRE_H_
 #define SIMPLEX_HTIMERPRE_H_
 
@@ -126,4 +130,4 @@ class HTimerPre {
   }
 };
 
-#endif /* HTIMERPRE_H_ */
+#endif /* SIMPLEX_HTIMERPRE_H_ */

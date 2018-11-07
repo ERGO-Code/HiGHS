@@ -1,9 +1,9 @@
-/**@file  HVector.h
+/**@file HVector.h
  * @brief Vector structure for HiGHS
  * @author Qi Huangfu and Julian Hall
  */
-#ifndef HVECTOR_H_
-#define HVECTOR_H_
+#ifndef SIMPLEX_HVECTOR_H_
+#define SIMPLEX_HVECTOR_H_
 
 #include <map>
 #include <vector>
@@ -128,4 +128,4 @@ class HVector {
 
 typedef HVector *HVector_ptr;
 
-#endif /* HVECTOR_H_ */
+#endif /* SIMPLEX_HVECTOR_H_ */

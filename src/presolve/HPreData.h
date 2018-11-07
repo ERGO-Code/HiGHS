@@ -95,4 +95,4 @@ class HPreData {
   void writeNewFormat(string fileName);
 };
 
-#endif /* HPREDATA_H_ */
+#endif /* PRESOLVE_HPREDATA_H_ */

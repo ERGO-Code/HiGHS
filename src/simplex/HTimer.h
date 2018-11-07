@@ -1,9 +1,9 @@
-/**@file  HTimer.h
+/**@file HTimer.h
  * @brief Profiling facility for computational components in HiGHS
  * @author Qi Huangfu and Julian Hall
  */
-#ifndef HTIMER_H_
-#define HTIMER_H_
+#ifndef SIMPLEX_HTIMER_H_
+#define SIMPLEX_HTIMER_H_
 
 #include <sys/time.h>
 #include <cassert>
@@ -334,4 +334,4 @@ class HTimer {
   }
 };
 
-#endif /* HTIMER_H_ */
+#endif /* SIMPLEX_HTIMER_H_ */

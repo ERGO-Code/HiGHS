@@ -1,5 +1,9 @@
-#ifndef HMODEL_H_
-#define HMODEL_H_
+/**@file HModel.h
+ * @brief LP model representation and management for HiGHS
+ * @author Julian Hall, Ivet Galabova, Qu Huangfu and Michael Feldmeier
+ */
+#ifndef SIMPLEX_HMODEL_H_
+#define SIMPLEX_HMODEL_H_
 
 #include "HConfig.h"
 #include "HConst.h"
@@ -601,4 +605,4 @@ class HModel {
   double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
   int* getWorkIntBreak() { return &intBreak[0]; }
 };
-#endif /* HMODEL_H_ */
+#endif /* SIMPLEX_HMODEL_H_ */

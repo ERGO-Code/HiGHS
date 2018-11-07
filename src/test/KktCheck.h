@@ -1,3 +1,7 @@
+/**@file HKktChStep.h
+ * @brief 
+ * @author Ivet Galabova
+ */
 #ifndef TEST_KKTCHECK_H_
 #define TEST_KKTCHECK_H_
 
@@ -67,4 +71,4 @@ class KktCheck {
                          const vector<double>& rowUpper_,
                          const vector<double>& cost);
 };
-#endif /* KKTCHECK_H_ */
+#endif /* TEST_KKTCHECK_H_ */

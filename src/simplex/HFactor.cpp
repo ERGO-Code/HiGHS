@@ -1,7 +1,7 @@
 /**@file  HFactor.cpp
  * @brief Types of solution classes
+ * @author Qi Huangfu
  */
-//#include "HiGHSRun.h" //For HiGHSRun()
 #include "HFactor.h"
 #include "HConst.h"
 #include "HTimer.h"
@@ -264,18 +264,12 @@ int HFactor::build() {
 }
 
 void HFactor::ftran(HVector &vector, double hist_dsty) const {
-  // printf("FTRAN:\n");
-  //  printf("FTRAN_L:\n");
   ftranL(vector, hist_dsty);
-  //  printf("FTRAN_U:\n");
   ftranU(vector, hist_dsty);
 }
 
 void HFactor::btran(HVector &vector, double hist_dsty) const {
-  //  printf("BTRAN:\n");
-  //  printf("BTRAN_U:\n");
   btranU(vector, hist_dsty);
-  //  printf("BTRAN_L:\n");
   btranL(vector, hist_dsty);
 }
 
@@ -404,7 +398,6 @@ void HFactor::buildSimple() {
 
     if (iRow >= 0) {
       // 1.3 Record unit column
-      // printf("Found unit column (Row, Col) = (%d, %d)\n", Lindex.size(),
       // Uindex.size());
       permute[iCol] = iRow;
       Lstart.push_back(Lindex.size());
@@ -412,7 +405,6 @@ void HFactor::buildSimple() {
       UpivotValue.push_back(1);
       Ustart.push_back(Uindex.size());
       MRcountb4[iRow] = -numRow;
-      // printf("Found unit column (Row, Col) = (%d, %d)\n", iRow, iCol);
     }
     Bstart[iCol + 1] = BcountX;
   }
@@ -484,8 +476,6 @@ void HFactor::buildSimple() {
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
-        //		printf("Found row singleton (Row, Col) = (%d, %d)\n",
-        // iRow, iCol);
       } else if (count == 1) {
         // 2.3 Deal with column singleton
         for (int k = start; k < pivot_k; k++) {
@@ -505,8 +495,6 @@ void HFactor::buildSimple() {
         UpivotIndex.push_back(iRow);
         UpivotValue.push_back(Bvalue[pivot_k]);
         Ustart.push_back(Uindex.size());
-        //		printf("Found col singleton (Row, Col) = (%d, %d)\n",
-        // iRow, iCol);
       } else {
         iwork[nwork++] = iCol;
       }
@@ -549,7 +537,6 @@ void HFactor::buildSimple() {
   int MCcountX = 0;
   for (int i = 0; i < nwork; i++) {
     int iCol = iwork[i];
-    //	printf("Preparing kernel: column iwork[%1d]= %2d\n", i, iCol);
     MCstart[iCol] = MCcountX;
     MCspace[iCol] = (Bstart[iCol + 1] - Bstart[iCol]) * 2;
     MCcountX += MCspace[iCol];
@@ -695,10 +682,7 @@ int HFactor::buildKernel() {
     }
 
     // 1.4. If we found nothing: tell singular
-    //	printf("Stage%3d: foundpivot = %1d, (Row, Col) = (%d, %d)\n", nwork,
-    // foundPivot, iRowPivot, jColPivot);
     if (!foundPivot) {
-      //            throw runtime_error("singular-basis-matrix");
       rankDeficiency = nwork + 1;
       return rankDeficiency;
     }

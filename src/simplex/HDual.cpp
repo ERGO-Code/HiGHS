@@ -223,16 +223,14 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // The major solving loop
 
   // Initialise the iteration analysis. Necessary for strategy, but
-  // much is for development and only switched on with HiHGSDEV
+  // much is for development and only switched on with HiGHSDEV
   iterateIzAn();
 
   while (solvePhase) {
 #ifdef HiGHSDEV
     int it0 = model->numberIteration;
-    //    printf("HDual::solve Phase %d: Iteration %d; totalTime = %g;
-    //    timer.getTime = %g\n",
-    //	   solvePhase, model->numberIteration, model->totalTime,
-    // model->timer.getTime());cout<<flush;
+    // printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n",
+    // solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
 #endif
     switch (solvePhase) {
       case 1:
@@ -1658,18 +1656,18 @@ void HDual::updatePrimal(HVector *DSE_Vector) {
                               &DSE_Vector->array[0]);
     dualRHS.workEdWt[rowOut] = thisEdWt;
   } else if (EdWt_Mode == EdWt_Mode_Dvx) {
-    //	Pivotal row is for the current basis: weights are required for the next
-    // basis
-    //  so have to divide the current (exact) weight by the pivotal value
+    // Pivotal row is for the current basis: weights are required for
+    // the next basis so have to divide the current (exact) weight by
+    // the pivotal value
     double thisEdWt = dualRHS.workEdWt[rowOut] / (alpha * alpha);
     double dvx_wt_o_rowOut = max(1.0, thisEdWt);
-    //       	      nw_wt  is max(workEdWt[iRow],
-    //       NewExactWeight*columnArray[iRow]^2);
-    //				But NewExactWeight is dvx_wt_o_rowOut = max(1.0,
-    // dualRHS.workEdWt[rowOut] / (alpha * alpha)) so
-    //       	      nw_wt = max(workEdWt[iRow],
-    //       dvx_wt_o_rowOut*columnArray[iRow]^2);
-    //	Update rest of weights
+    // nw_wt is max(workEdWt[iRow], NewExactWeight*columnArray[iRow]^2);
+    //
+    // But NewExactWeight is dvx_wt_o_rowOut = max(1.0, dualRHS.workEdWt[rowOut] / (alpha * alpha))
+    //
+    // so nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut*columnArray[iRow]^2);
+    //
+    // Update rest of weights
     dualRHS.update_weight_Dvx(&column, dvx_wt_o_rowOut);
     dualRHS.workEdWt[rowOut] = dvx_wt_o_rowOut;
     n_dvx_it += 1;
@@ -2057,13 +2055,6 @@ void HDual::iterateOpRecAf(int opTy, HVector &vector) {
   double rsDsty = 1.0 * vector.count / AnIter->AnIterOpRsDim;
   if (rsDsty <= hyperRESULT) AnIter->AnIterOpNumHyperRs++;
   AnIter->AnIterOpRsMxNNZ = max(vector.count, AnIter->AnIterOpRsMxNNZ);
-  if (opTy == AnIterOpTy_Ftran) {
-    //    printf("FTRAN: Iter %7d, NCa = %7d; NHS = %7d; RsDsty = %6.4f; AvgDsty
-    //    = %6.4f\n",
-    //	   model->numberIteration,
-    //	   AnIter->AnIterOpNumCa, AnIter->AnIterOpNumHyperRs, rsDsty,
-    // columnDensity);
-  }
   if (rsDsty > 0) {
     AnIter->AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
   } else {

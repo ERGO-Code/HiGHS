@@ -1,3 +1,7 @@
+/**@file HTester.h
+ * @brief NLA testing environmant for HiGHS
+ * @author Qi Huangfu
+ */
 #ifndef SIMPLEX_HTESTER_H_
 #define SIMPLEX_HTESTER_H_
 
@@ -26,4 +30,4 @@ class HTester {
   HModel model;
 };
 #endif
-#endif /* HTESTER_H_ */
+#endif /* SIMPLEX_HTESTER_H_ */

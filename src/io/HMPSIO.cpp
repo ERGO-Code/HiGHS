@@ -95,9 +95,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
       int iRow = rowIndex[data[2]];
       RHS[iRow] = data[0];
     } else {
-      //        	Strictly, if there is a RHS entry for the N row, it is
-      //        an objective offset 	However, the reported objective values
-      //        for problems (eg e226) ignore this
+      // Strictly, if there is a RHS entry for the N row, it is an
+      // objective offset. However, the reported objective values for
+      // problems (eg e226) ignore this
 #ifdef HiGHSDEV
       printf(
           "RHS for N-row in MPS file implies objective offset of %g: ignoring "

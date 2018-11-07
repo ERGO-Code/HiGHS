@@ -1,8 +1,6 @@
-/*
- * HinOut.h
- *
- *  Created on: 16 Jan 2017
- *      Author: s1131817
+/**@file HinOut.h
+ * @brief 
+ * @author Ivet Galabova
  */
 
 #ifndef IO_HINOUT_H_
@@ -47,4 +45,4 @@ class HinOut : public HPreData {
   int oAcountX;
 };
 
-#endif /* HINOUT_H_ */
+#endif /* IO_HINOUT_H_ */

@@ -60,14 +60,12 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
       if (invertHint) {
         break;
       }
-      //	    printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
+      // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
       // model->numberIteration, model->objective);
       if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
-        printf(
-            "HPrimal::solve_phase2: Objective = %g > %g = \
-          dblOption[DBLOPT_OBJ_UB]\n",
-            model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+        printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n",
+	       model->objective, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;

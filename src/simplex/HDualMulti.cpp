@@ -416,19 +416,17 @@ void HDual::major_update() {
     double alphaR = fabs(iFinish->alphaRow);
     double compare = min(alphaC, alphaR);
     double alphaDiff = fabs(alphaC - alphaR);
-    //        int startUpdate = model->countUpdate - multi_nFinish;
+    // int startUpdate = model->countUpdate - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
       cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
-      invertHint = invertHint_possiblySingularBasis;  // Was 1
-                                                      //            if
-                                                      //            (startUpdate
-                                                      //            > 0) {
+      invertHint = invertHint_possiblySingularBasis;
+	// if (startUpdate > 0) {
       major_rollback();
       return;
-      //            }
+      // }
     }
   }
 

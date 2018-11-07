@@ -1,10 +1,3 @@
-/*
- * HPreData.cpp
- *
- *  Created on: 8 Jan 2017
- *      Author: ivet
- */
-
 #include "HPreData.h"
 
 HPreData::HPreData() {}

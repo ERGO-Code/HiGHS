@@ -1,3 +1,7 @@
+/**@file HConst.h
+ * @brief Constants for HiGHS
+ * @author Qi Huangfu and Julian Hall
+ */
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
@@ -14,4 +18,4 @@ const double HSOL_CONST_ZERO = HIGHS_CONST_ZERO;
 
 constexpr double kBoundTolerance = 1e-8;
 
-#endif /* HCONST_H_ */
+#endif /* LP_DATA_HCONST_H_ */

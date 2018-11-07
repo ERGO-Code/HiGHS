@@ -1,10 +1,3 @@
-/*
- * HinOut.cpp
- *
- *  Created on: 16 Jan 2017
- *      Author: s1131817
- */
-
 #include "HinOut.h"
 
 void HinOut::HinOutTestRead(HModel& ptr) {

@@ -1,3 +1,7 @@
+/**@file HToyIO.h
+ * @brief Read an LP or MIP model in toy format
+ * @author Julian Hall
+ */
 #ifndef IO_HTOYIO_H_
 #define IO_HTOYIO_H_
 
@@ -17,4 +21,4 @@ int readToy_MIP_cpp(const char* filename, int* numRow_p, int* numCol_p,
                     double** rhs_p, double** cost_p, double** lb_p,
                     double** ub_p, int** integerColumn);
 
-#endif
+#endif /* IO_HTOYIO_H_ */

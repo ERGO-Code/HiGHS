@@ -32,4 +32,4 @@ char* fgets(char* str, int num, FILE* stream);
 
 inline const char* const BoolToString(bool b);
 
-#endif
+#endif /* IO_HMPSIO_H_ */

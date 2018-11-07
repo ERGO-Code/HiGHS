@@ -1,9 +1,9 @@
-/**@file  HDual.h
+/**@file HPrimal.h
  * @brief Phase 2 primal simplex solver for HiGHS
  * @author Qi Huangfu
  */
-#ifndef HPRIMAL_H_
-#define HPRIMAL_H_
+#ifndef SIMPLEX_HPRIMAL_H_
+#define SIMPLEX_HPRIMAL_H_
 
 #include "HModel.h"
 
@@ -59,4 +59,4 @@ class HPrimal {
   double columnDensity;
 };
 
-#endif /* HPRIMAL_H_ */
+#endif /* SIMPLEX_HPRIMAL_H_ */

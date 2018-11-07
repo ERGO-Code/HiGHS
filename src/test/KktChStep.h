@@ -1,3 +1,7 @@
+/**@file HKktChStep.h
+ * @brief 
+ * @author Ivet Galabova
+ */
 #ifndef TEST_KKTCHSTEP_H_
 #define TEST_KKTCHSTEP_H_
 
@@ -83,4 +87,4 @@ class KktChStep {
   void resizeProblemMatrix(KktCheck& checker);
   void addCost(int col, double value);
 };
-#endif /* KKTCHSTEP_H_ */
+#endif /* TEST_KKTCHSTEP_H_ */
