@@ -152,7 +152,7 @@ void HDual::major_chooseRowBtran() {
     }
   }
 
-    // 4.2 Perform BTRAN
+  // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
   for (int i = 0; i < multi_ntasks; i++) {
     const int iRow = multi_iRow[i];
@@ -366,7 +366,7 @@ void HDual::minor_updateRows() {
       }
     }
 
-      // Perform tasks
+    // Perform tasks
 #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < multi_nTasks; i++) {
       HVector_ptr nextEp = multi_vector[i];
@@ -497,7 +497,7 @@ void HDual::major_updateFtranParallel() {
     multi_ntasks++;
   }
 
-    // Perform FTRAN
+  // Perform FTRAN
 #pragma omp parallel for schedule(dynamic, 1)
   for (int i = 0; i < multi_ntasks; i++) {
     HVector_ptr rhs = multi_vector[i];
@@ -510,8 +510,8 @@ void HDual::major_updateFtranParallel() {
     MFinish *Fin = &multi_finish[iFn];
     HVector *Col = Fin->column;
     HVector *Row = Fin->row_ep;
-    total_FT_inc_TICK += Col->pseudoTick;
-    total_FT_inc_TICK += Row->pseudoTick;
+    total_FT_inc_TICK += Col->syntheticTick;  // Was .pseudoTick
+    total_FT_inc_TICK += Row->syntheticTick;  // Was .pseudoTick
   }
 
   // Update rates
@@ -626,7 +626,7 @@ void HDual::major_updatePrimal() {
       HVector *Col = Fin->column;
       HVector *Row = Fin->row_ep;
       double Kai = -2 / Fin->alphaRow;
-      dualRHS.update_weight(Col, Fin->EdWt, Kai, &Row->array[0]);
+      dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
       dualRHS.update_infeasList(Col);
     }
   }
@@ -674,7 +674,7 @@ void HDual::major_updateFactor() {
                         &invertHint);
 
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
-    invertHint = invertHint_pseudoClockSaysInvert;  // Was 1
+    invertHint = invertHint_syntheticClockSaysInvert;
 }
 
 void HDual::major_rollback() {

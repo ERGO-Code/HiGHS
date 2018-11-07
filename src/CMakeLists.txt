@@ -26,6 +26,7 @@ set(sources
 )
 
 set(headers
+    HiGHSRun.h
     HApp.h
     lp_data/HighsModelBuilder.h
     simplex/HConst.h

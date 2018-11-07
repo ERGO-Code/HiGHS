@@ -1,5 +1,5 @@
-#ifndef SIMPLEX_HMODEL_H_
-#define SIMPLEX_HMODEL_H_
+#ifndef HMODEL_H_
+#define HMODEL_H_
 
 #include "HConfig.h"
 #include "HConst.h"
@@ -10,7 +10,6 @@
 #include "HRandom.h"
 #include "HTimer.h"
 #include "HVector.h"
-//#include "LpData.h"
 
 #include <sstream>
 #include <string>
@@ -28,7 +27,7 @@ const int LP_Status_OutOfTime = 6;
 
 const int invertHint_no = 0;
 const int invertHint_updateLimitReached = 1;
-const int invertHint_pseudoClockSaysInvert = 2;
+const int invertHint_syntheticClockSaysInvert = 2;
 const int invertHint_possiblyOptimal = 3;
 const int invertHint_possiblyPrimalUnbounded = 4;
 const int invertHint_possiblyDualUnbounded = 5;
@@ -209,8 +208,10 @@ class HModel {
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updateMatrix(int columnIn, int columnOut);
   void updatePivots(int columnIn, int rowOut, int sourceOut);
+#ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void changeUpdate(int updateMethod);
+#endif
   void setProblemStatus(int status);
 
   // Checking methods

@@ -90,7 +90,10 @@ struct HighsSolution {
   std::vector<double> colValue;
   std::vector<double> colDual;
   std::vector<double> rowValue;
+  std::vector<double> rowDual;
 };
+
+bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
 
 // Return a string representation of SolutionStatus.
 // Capitalized because it is ClassNameToString for the following three methods.
