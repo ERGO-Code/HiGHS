@@ -97,6 +97,11 @@ class LpComparisonToken : public LpToken {
 const char LP_INDICATOR_COMMENT = '\\';
 const char* const LP_INDICATOR_SPLIT = ":+-<>=[]*";
 
+// reads .lp files according to https://www.ibm.com/support/knowledgecenter/SSSA5P_12.5.0/ilog.odms.cplex.help/CPLEX/FileFormats/topics/LP.html#File_formats_reference.uss_reffileformatscplex.162381__File_formats_reference.uss_reffileformatscplex.177305
+// as it is not immedialy clear from the format, here are some of its limitations:
+// 1) keywords ("min", "max", etc) can also be constraint/variable identifiers (judged from context)
+// 2) quadratic constraints or objective funstions are not yet supported
+// 3) integer, binary, sos, semi continuous variables are not yet supported
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
@@ -104,7 +109,7 @@ class FilereaderLp : public Filereader {
   ~FilereaderLp();
 
  private:
-  std::list<LpToken> tokenQueue;
+  std::list<LpToken*> tokenQueue;
   FILE* file;
   char fileBuffer[BUFFERSIZE];
   char stringBuffer[BUFFERSIZE];
