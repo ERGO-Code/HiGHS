@@ -17,6 +17,7 @@ char* strClone(const char* str) {
 
   char* cpy = new char[n];
   strcpy(cpy, str);
+  return cpy;
 }
 
 int strIsWhitespace(const char* str) {

@@ -33,14 +33,95 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
     hasAnotherToken = this->tryReadNextToken();
   }
   while (hasAnotherToken);
+
+  LpSectionKeyword section;
+  do {
+    section = this->getSectionTokens(LpSectionKeyword::NOKEYWORD);
+  } while(section != LpSectionKeyword::END);
   
+
+  HighsPrintMessage(HighsMessageType::INFO, "\nObjective Tokens:\n");
+  while(!this->objectiveSection.empty()) {
+    LpToken* token = this->objectiveSection.front();
+    this->objectiveSection.pop_front();
+    token->print();
+  }
+
+  HighsPrintMessage(HighsMessageType::INFO, "\nConstraint Tokens:\n");
+  while(!this->constraintSection.empty()) {
+    LpToken* token = this->constraintSection.front();
+    this->constraintSection.pop_front();
+    token->print();
+  }
+  
+  HighsPrintMessage(HighsMessageType::INFO, "\nRemaining Tokens:\n");
   while(!this->tokenQueue.empty()) {
     LpToken* token = this->tokenQueue.front();
     this->tokenQueue.pop_front();
     token->print();
   }
-
+  
   return FilereaderRetcode::OKAY;
+}
+
+
+LpSectionKeyword FilereaderLp::getSectionTokens(LpSectionKeyword expectedSection) {
+  LpToken* next = this->tokenQueue.front();
+  assert(next != NULL);
+  
+  // skip all initial new lines
+  while(next->type == LpTokenType::LINEEND) {
+    this->tokenQueue.pop_front();
+    next = this->tokenQueue.front();
+    assert(next != NULL);
+  }
+  assert(next->type == LpTokenType::KEYWORD);
+  LpKeywordToken* token = (LpKeywordToken*)next;
+
+  if(expectedSection != LpSectionKeyword::NOKEYWORD && expectedSection != token->keyword) {
+    HighsPrintMessage(HighsMessageType::ERROR, "Unexpected Section in .lp file. Expected '%s' Found '%s'\n", LpSectionKeywordString[expectedSection], LpSectionKeywordString[token->keyword]);
+  }
+  
+  std::list<LpToken*>* sectionList;
+  switch(token->keyword){
+    case LpSectionKeyword::MAX:
+    case LpSectionKeyword::MIN:
+      sectionList = &this->objectiveSection;
+      break;
+    case LpSectionKeyword::ST:
+      sectionList = &this->constraintSection;
+      break;
+    case LpSectionKeyword::BOUNDS:
+      sectionList = &this->boundsSection;
+      break;
+    case LpSectionKeyword::BIN:
+      sectionList = &this->binSection;
+      break;
+    case LpSectionKeyword::GEN:
+      sectionList = &this->generalSection;
+      break;
+    case LpSectionKeyword::SEMI:
+      sectionList = &this->semiSection;
+      break;
+    case LpSectionKeyword::SOS:
+      sectionList = &this->sosSection;
+      break;
+    case LpSectionKeyword::END:
+      return LpSectionKeyword::END;
+  }
+
+  sectionList->push_back(next);
+  this->tokenQueue.pop_front();
+  next = this->tokenQueue.front();
+  assert(next != NULL);
+  //now put all token onto objective queue until next keyword is found
+  while(next->type != LpTokenType::KEYWORD) {
+    sectionList->push_back(next);
+    this->tokenQueue.pop_front();
+    next = this->tokenQueue.front();
+    assert(next != NULL);
+  }
+  return token->keyword;
 }
 
 bool FilereaderLp::tryReadNextToken() {
@@ -57,14 +138,8 @@ bool FilereaderLp::tryReadNextToken() {
     this->readingPosition = this->fileBuffer;
     HighsPrintMessage(HighsMessageType::INFO, "Now reading '%s'\n", this->fileBuffer);
   }
-  bool isKeyword; LpSectionKeyword keyword; int charactersConsumedKeyword;
-  bool isComment; 
-  bool isIdentifier; char identifierBuffer[BUFFERSIZE]; int charactersConsumedIdentifier;
-  bool isConstant; double constantBuffer; int charactersConsumedConstant;
-  bool isSign;  int sign; int charactersConsumedSign;
-  bool isComparison; LpComparisonIndicator comparision; int charactersConsumedComparision;
-  bool isWhitespace; int charactersConsumedWhitespace;
-  bool isLineEnd;
+  bool isKeyword; LpSectionKeyword keyword; 
+  double constantBuffer; int charactersConsumedConstant;
 
   int charactersConsumed;
   int nread;
@@ -113,6 +188,8 @@ bool FilereaderLp::tryReadNextToken() {
     HighsPrintMessage(HighsMessageType::INFO, "Next string to analyze for token: '%s'\n", this->stringBuffer);
     // can be a keyword, a constant, a name, a constant and a name
     isKeyword = tryParseSectionKeyword(this->stringBuffer, &keyword);
+    LpSpecialKeyword specialKeyword;
+    bool isSpecialKeyword = tryParseSpecialKeyword(this->stringBuffer, &specialKeyword);
     // is it a keyword on a new line with no colon following?
     if(isKeyword && previousToken->type == LpTokenType::LINEEND && *(this->readingPosition+charactersConsumed) != ':') {
       HighsPrintMessage(HighsMessageType::INFO, "\tToken was keyword '%s'\n", this->stringBuffer);
@@ -121,6 +198,16 @@ bool FilereaderLp::tryReadNextToken() {
       LpKeywordToken* newToken = new LpKeywordToken();
       newToken->keyword = keyword;
       newToken->type = LpTokenType::KEYWORD;
+      this->tokenQueue.push_back(newToken);
+
+      return true;
+    } else if(isSpecialKeyword) {
+      HighsPrintMessage(HighsMessageType::INFO, "\tToken was special keyword '%s'\n", this->stringBuffer);
+      this->readingPosition += charactersConsumed;
+
+      LpSpecialKeywordToken* newToken = new LpSpecialKeywordToken();
+      newToken->keyword = specialKeyword;
+      newToken->type = LpTokenType::SPECIAL;
       this->tokenQueue.push_back(newToken);
 
       return true;
@@ -263,12 +350,26 @@ bool FilereaderLp::isKeyword(const char* str, const char* const* keywords,
   return false;
 }
 
+bool FilereaderLp::tryParseSpecialKeyword(const char* str,
+                                          LpSpecialKeyword* keyword) {
+  *keyword = LpSpecialKeyword::NONE;
+  strToLower((char*)str);
+                                              // inf?
+  if (isKeyword(str, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
+    *keyword = LpSpecialKeyword::INF;
+  }
+
+  // free?
+  if (isKeyword(str, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
+    *keyword = LpSpecialKeyword::FREE;
+  }
+                                          }
+
 bool FilereaderLp::tryParseSectionKeyword(const char* str,
                                           LpSectionKeyword* keyword) {
-  strTrim((char*)str);
   strToLower((char*)str);
 
-  *keyword = LpSectionKeyword::NONE;
+  *keyword = LpSectionKeyword::NOKEYWORD;
 
   // min?
   if (isKeyword(str, LP_KEYWORD_MIN, LP_KEYWORD_MIN_N)) {
@@ -288,16 +389,6 @@ bool FilereaderLp::tryParseSectionKeyword(const char* str,
   // bounds?
   if (isKeyword(str, LP_KEYWORD_BOUNDS, LP_KEYWORD_BOUNDS_N)) {
     *keyword = LpSectionKeyword::BOUNDS;
-  }
-
-  // inf?
-  if (isKeyword(str, LP_KEYWORD_INF, LP_KEYWORD_INF_N)) {
-    *keyword = LpSectionKeyword::INF;
-  }
-
-  // free?
-  if (isKeyword(str, LP_KEYWORD_FREE, LP_KEYWORD_FREE_N)) {
-    *keyword = LpSectionKeyword::FREE;
   }
 
   // gen?
@@ -325,5 +416,5 @@ bool FilereaderLp::tryParseSectionKeyword(const char* str,
     *keyword = LpSectionKeyword::END;
   }
 
-  return *keyword != LpSectionKeyword::NONE;
+  return *keyword != LpSectionKeyword::NOKEYWORD;
 }

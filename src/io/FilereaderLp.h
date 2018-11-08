@@ -31,14 +31,12 @@ const int LP_KEYWORD_SEMI_N = 3;
 const int LP_KEYWORD_SOS_N = 1;
 const int LP_KEYWORD_END_N = 1;
 
-enum class LpSectionKeyword {
-  NONE,
+enum LpSectionKeyword {
+  NOKEYWORD,
   MIN,
   MAX,
   ST,
   BOUNDS,
-  INF,
-  FREE,
   GEN,
   BIN,
   SEMI,
@@ -46,12 +44,19 @@ enum class LpSectionKeyword {
   END
 };
 
+enum class LpSpecialKeyword {
+  NONE,
+  INF,
+  FREE
+};
+
 enum class LpComparisonIndicator { LEQ, L, EQ, G, GEQ };
 
 enum LpTokenType {
-  NONE,
+  NOTOKEN,
   IDENTIFIER,
   KEYWORD,
+  SPECIAL,
   CONSTANT,
   SIGN,
   COLON,
@@ -60,7 +65,8 @@ enum LpTokenType {
   FILEEND
 };
 
-const char * const LpTokenTypeString[] = {"NONE", "IDENTIFIER", "KEYWORD", "CONSTANT", "SIGN", "COLON", "SENSE", "LINEEND", "FILEEND"};
+const char * const LpTokenTypeString[] = {"NONE", "IDENTIFIER", "KEYWORD", "SPECIAL", "CONSTANT", "SIGN", "COLON", "SENSE", "LINEEND", "FILEEND"};
+const char* const LpSectionKeywordString[] = {"NONE", "MIN", "MAX", "ST", "BOUNDS", "GEN", "BIN", "SEMI", "SOS", "END"};
 
 class LpToken {
  public:
@@ -71,12 +77,16 @@ class LpToken {
 class LpIdentifierToken : public LpToken {
  public:
   char identifier[BUFFERSIZE];
-  void print() { }
 };
 
 class LpKeywordToken : public LpToken {
  public:
   LpSectionKeyword keyword;
+};
+
+class LpSpecialKeywordToken : public LpToken {
+ public:
+  LpSpecialKeyword keyword;
 };
 
 class LpConstantToken : public LpToken {
@@ -100,8 +110,10 @@ const char* const LP_INDICATOR_SPLIT = ":+-<>=[]*";
 // reads .lp files according to https://www.ibm.com/support/knowledgecenter/SSSA5P_12.5.0/ilog.odms.cplex.help/CPLEX/FileFormats/topics/LP.html#File_formats_reference.uss_reffileformatscplex.162381__File_formats_reference.uss_reffileformatscplex.177305
 // as it is not immedialy clear from the format, here are some of its limitations:
 // 1) keywords ("min", "max", etc) can also be constraint/variable identifiers (judged from context)
-// 2) quadratic constraints or objective funstions are not yet supported
-// 3) integer, binary, sos, semi continuous variables are not yet supported
+// 1.5) special keywords (inf, free) can not be constraint/variable identifiers
+// 2) quadratic constraints or objective funstions are not yet supported //not necessary now
+// 3) integer, binary, sos, semi continuous variables are not yet supported //not necessary now
+// 4) Line continueing after keyword not yet supported //TODO
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
@@ -109,7 +121,18 @@ class FilereaderLp : public Filereader {
   ~FilereaderLp();
 
  private:
+  // list of all tokens after initial scan of file
   std::list<LpToken*> tokenQueue;
+
+  // tokens split according to their section
+  std::list<LpToken*> objectiveSection;
+  std::list<LpToken*> constraintSection;
+  std::list<LpToken*> boundsSection;
+  std::list<LpToken*> binSection;
+  std::list<LpToken*> generalSection;
+  std::list<LpToken*> sosSection;
+  std::list<LpToken*> semiSection;
+
   FILE* file;
   char fileBuffer[BUFFERSIZE];
   char stringBuffer[BUFFERSIZE];
@@ -117,11 +140,14 @@ class FilereaderLp : public Filereader {
 
   bool isFileBufferFullyRead;
 
+  LpSectionKeyword getSectionTokens(LpSectionKeyword expectedSection);
+
   bool tryReadNextToken();
 
   bool isKeyword(const char* str, const char* const* keywords,
                  const int nkeywords);
   bool tryParseSectionKeyword(const char* str, LpSectionKeyword* keyword);
+  bool tryParseSpecialKeyword(const char* str, LpSpecialKeyword* keyword);
 
 };
 
