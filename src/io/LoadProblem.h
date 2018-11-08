@@ -13,10 +13,10 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
     return HighsInputStatus::FileNotFound;
   }
 
-  Filereader* filereader = Filereader::getFilereader(options.fileName);
-  filereader->readModelFromFile(options.fileName, lp);
-  delete filereader;
-  exit(0);
+  //Filereader* filereader = Filereader::getFilereader(options.fileName);
+  //filereader->readModelFromFile(options.fileName, lp);
+  //delete filereader;
+  //exit(0);
 
   return checkLp(lp);
 }
