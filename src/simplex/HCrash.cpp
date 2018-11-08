@@ -28,8 +28,8 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   numRow = model->getNumRow();
   numCol = model->getNumCol();
   numTot = model->getNumTot();
-#ifdef HiGHSDEV
   const int objSense = model->getObjSense();
+#ifdef HiGHSDEV
   if (abs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
     cout << flush;
