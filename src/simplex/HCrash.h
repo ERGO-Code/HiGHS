@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HCrash.h
- * @brief Maros-style crash for the HiGHS dual simplex solver
+ * @brief Bixby and Maros-style crash for the HiGHS dual simplex solver
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HCRASH_H_
@@ -20,7 +20,6 @@
 using namespace std;
 
 // LTSSF scalar parameters
-
 const int crsh_vr_st_no_act = 0;
 const int crsh_vr_st_act = 1;
 
@@ -43,18 +42,17 @@ const int no_ix = no_lk;
 // LTSSF scalar control parameters
 const double tl_crsh_abs_pv_v = 1e-4;
 const double tl_crsh_rlv_pv_v = 1e-2;
-//   	Switches for LTSSF data structures, checking and reporting
-const bool OneD_hdr = false;
-const bool TwoD_hdr = true;
-const int ltssf_ck_fq = 0;
+// Switches for LTSSF checking and reporting
+const int ltssf_ck_fq = 10;
 #ifdef HiGHSDEV
-const bool Rp_TwoD_da = false;
-const bool Rp_Bixby_Ps = false;
+const bool reportCrashData = false;
+const bool reportBixbyPass = false;
 #endif
 
 class HCrash {
  public:
   void crash(HModel *ptr_model, int Crash_Mode);
+ private:
   void bixby(HModel *ptr_model, int Crash_Mode);
   bool bixby_iz_da(HModel *ptr_model);
   void bixby_rp_mrt(HModel *ptr_model);
@@ -81,9 +79,9 @@ class HCrash {
   void ltssf_rp_r_k();
   void ltssf_rp_r_pri();
   void ltssf_rp_pri_k_da();
-  void build_maxheap(double *heap_v, int *heap_i, int n);
-  void heapsort(double *heap_v, int *heap_i, int n);
-  void max_heapify(double *heap_v, int *heap_i, int i, int n);
+  //  void build_maxheap(double *heap_v, int *heap_i, int n);
+  //  void heapsort(double *heap_v, int *heap_i, int n);
+  //  void max_heapify(double *heap_v, int *heap_i, int i, int n);
 #ifdef HiGHSDEV
   void tsSing(HModel *ptr_model);
 #endif
@@ -141,10 +139,10 @@ class HCrash {
   vector<int> bixby_pv_in_r;
   vector<int> bixby_vr_in_r;
   vector<int> bixby_r_k;
-  //	vector<int> bixby_ze_r_k;
+  // vector<int> bixby_ze_r_k;
 
   // LTSSF scalar identifiers
-  //	int crsh_mode;
+  // int crsh_mode;
   int crsh_f_vr_ty;
   int crsh_l_vr_ty;
 
