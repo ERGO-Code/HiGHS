@@ -2,14 +2,17 @@
 #define IO_FILEREADER_LP_H_
 
 #include "Filereader.h"
+#include "HighsModelBuilder.h"
+#include "HighsIO.h"
 
-#define BUFFERSIZE 256
+#define BUFFERSIZE 561
 
 const char* const LP_KEYWORD_MIN[] = {"minimize", "min", "minimum"};
 const char* const LP_KEYWORD_MAX[] = {"maximize", "max", "maximum"};
 const char* const LP_KEYWORD_ST[] = {"subject to", "such that", "st", "s.t."};
 const char* const LP_KEYWORD_BOUNDS[] = {"bounds", "bound"};
 const char* const LP_KEYWORD_INF[] = {"infinity", "inf"};
+const char* const LP_KEYWORD_FREE[] = {"free"};
 const char* const LP_KEYWORD_GEN[] = {"general", "generals", "gen"};
 const char* const LP_KEYWORD_BIN[] = {"binary", "binaries", "bin"};
 const char* const LP_KEYWORD_SEMI[] = {"semi-continuous", "semi", "semis"};
@@ -21,6 +24,7 @@ const int LP_KEYWORD_MAX_N = 3;
 const int LP_KEYWORD_ST_N = 4;
 const int LP_KEYWORD_BOUNDS_N = 2;
 const int LP_KEYWORD_INF_N = 2;
+const int LP_KEYWORD_FREE_N = 1;
 const int LP_KEYWORD_GEN_N = 3;
 const int LP_KEYWORD_BIN_N = 3;
 const int LP_KEYWORD_SEMI_N = 3;
@@ -34,6 +38,7 @@ enum class LpSectionKeyword {
   ST,
   BOUNDS,
   INF,
+  FREE,
   GEN,
   BIN,
   SEMI,
@@ -41,36 +46,78 @@ enum class LpSectionKeyword {
   END
 };
 
-const char* const LP_INDICATOR_COMMENT = "\\";
+enum class LpComparisonIndicator { LEQ, L, EQ, G, GEQ };
 
-class HighsVar {
- public:
-  double objectiveCoefficient;
-  char* name;
-  double lowerBound;
-  double upperBound;
+enum LpTokenType {
+  NONE,
+  IDENTIFIER,
+  KEYWORD,
+  CONSTANT,
+  SIGN,
+  COLON,
+  SENSE,
+  LINEEND,
+  FILEEND
 };
 
-class HighsCons {
+const char * const LpTokenTypeString[] = {"NONE", "IDENTIFIER", "KEYWORD", "CONSTANT", "SIGN", "COLON", "SENSE", "LINEEND", "FILEEND"};
+
+class LpToken {
  public:
- // list of coefficients (HighsVar + coef)
-  char* name;
-  double lowerBound;
-  double upperBound;
+  LpTokenType type;
+  virtual void print() { HighsPrintMessage(HighsMessageType::INFO, "%s ", LpTokenTypeString[type]);}
 };
+
+class LpIdentifierToken : public LpToken {
+ public:
+  char identifier[BUFFERSIZE];
+  void print() { }
+};
+
+class LpKeywordToken : public LpToken {
+ public:
+  LpSectionKeyword keyword;
+};
+
+class LpConstantToken : public LpToken {
+ public:
+  double constant;
+};
+
+class LpSignToken : public LpToken {
+ public:
+  int sign;
+};
+
+class LpComparisonToken : public LpToken {
+ public:
+  LpComparisonIndicator comparison;
+};
+
+const char LP_INDICATOR_COMMENT = '\\';
+const char* const LP_INDICATOR_SPLIT = ":+-<>=[]*";
 
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderLp();
+  ~FilereaderLp();
 
  private:
-  void readNextInputLine(FILE* file, char* buffer);
+  std::list<LpToken> tokenQueue;
+  FILE* file;
+  char fileBuffer[BUFFERSIZE];
+  char stringBuffer[BUFFERSIZE];
+  char* readingPosition;
 
-  LpSectionKeyword parseStrKeyword(const char* str);
-  int isStrComment(const char* str);
+  bool isFileBufferFullyRead;
 
-  void readObjectiveSense(FILE* file, char* buffer);
-  void readLinearConstraint(FILE* file, char* buffer);
+  bool tryReadNextToken();
+
+  bool isKeyword(const char* str, const char* const* keywords,
+                 const int nkeywords);
+  bool tryParseSectionKeyword(const char* str, LpSectionKeyword* keyword);
+
 };
 
 #endif

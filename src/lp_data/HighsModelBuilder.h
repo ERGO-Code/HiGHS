@@ -3,7 +3,14 @@
 
 #include "HighsLp.h"
 
+#include <string.h>
 #include <list>
+#include <map>
+
+enum class HighsObjSense {
+  MIN,
+  MAX
+};
 
 class HighsVar {
   char* name;
@@ -38,6 +45,13 @@ class HighsQuadraticCons : public HighsLinearCons {
 
 class HighsModelBuilder {
  public:
+  HighsObjSense objectiveSense;
+
+
+  
+  void HighsCreateVar(HighsVar* var, const char* name, double lowerBound,
+                      double UpperBound);
+
   void HighsAddVar(HighsVar& var);
   void HighsAddCons(HighsCons& cons);
   void HighsCreateLp(HighsLp& lp);
@@ -45,7 +59,16 @@ class HighsModelBuilder {
  private:
   std::list<HighsCons> constraints;
   std::list<HighsVar> variables;
+
+  struct cmp_str {
+    bool operator()(char const* a, char const* b) const {
+      return strcmp(a, b) < 0;
+    }
+  };
+
+  std::map<char*, HighsVar, cmp_str> variableStore;
   HighsCons objective;
+  
 };
 
 #endif

@@ -1,8 +1,7 @@
 #ifndef IO_LOAD_PROBLEM_H_
 #define IO_LOAD_PROBLEM_H_
 
-#include "FilereaderLp.h"
-#include "FilereaderMps.h"
+#include "Filereader.h"
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
@@ -14,12 +13,12 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
     return HighsInputStatus::FileNotFound;
   }
 
-  // todo: check file name extenion 
-  // if (mps) use FilereaderMps
+  Filereader* filereader = Filereader::getFilereader(options.fileName);
+  filereader->readModelFromFile(options.fileName, lp);
+  delete filereader;
+  exit(0);
 
-  // else if (lp) use FilereaderLp
-
-  return checkLp(lp); 
+  return checkLp(lp);
 }
 
 #endif

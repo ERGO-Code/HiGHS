@@ -9,3 +9,6 @@ void HighsModelBuilder::HighsAddCons(HighsCons& cons) {
 }
 
 void HighsModelBuilder::HighsCreateLp(HighsLp& lp) {}
+
+void HighsModelBuilder::HighsCreateVar(HighsVar* var, const char* name,
+                                       double lowerBound, double UpperBound) {}
