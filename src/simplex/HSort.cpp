@@ -13,14 +13,19 @@
  */
 #include "HSort.h"
 
-void HSort::build_maxheap(double *heap_v, int *heap_i, int n) {
+void maxheapsort(double *heap_v, int *heap_i, int n) {
+  build_maxheap(heap_v, heap_i, n);
+  max_heapsort(heap_v, heap_i, n);
+}
+
+void build_maxheap(double *heap_v, int *heap_i, int n) {
   int i;
   for (i = n / 2; i >= 1; i--) {
     max_heapify(heap_v, heap_i, i, n);
   }
 }
 
-void HSort::heapsort(double *heap_v, int *heap_i, int n) {
+void max_heapsort(double *heap_v, int *heap_i, int n) {
   double temp_v;
   int i, temp_i;
   for (i = n; i >= 2; i--) {
@@ -34,7 +39,7 @@ void HSort::heapsort(double *heap_v, int *heap_i, int n) {
   }
 }
 
-void HSort::max_heapify(double *heap_v, int *heap_i, int i, int n) {
+void max_heapify(double *heap_v, int *heap_i, int i, int n) {
   double temp_v;
   int j, temp_i;
   temp_v = heap_v[i];

@@ -16,12 +16,15 @@
 
 using namespace std;
 /**
- * @brief Sorting routines for HiGHS
+ * @brief Sort values[1..n] of an array by increasing value with corresponding indices
  */
-class HSort {
- public:
+  void maxheapsort(
+		     double *heap_v, //!< Values to be sorted
+		     int *heap_i,    //!< Indices corrresponding to (sorted) values
+		     int n           //!< Number of values to be sorted
+		     );
 /**
- * @brief Build a value-index heap for sorting values[1..n] of an array by max value
+ * @brief Build a value-index heap for sorting values[1..n] of an array by increasing value
  */
   void build_maxheap(
 		     double *heap_v, //!< Values to be sorted
@@ -29,15 +32,17 @@ class HSort {
 		     int n           //!< Number of values to be sorted
 		     );
 /**
- * @brief Perform a heap sort for values[1..n] of an array
+ * @brief Sort by increasing value a heap built with build_maxheap
  */
-  void heapsort(
+  void max_heapsort(
 		double *heap_v, //!< Values to be sorted
 		int *heap_i,    //!< Indices corrresponding to (sorted) values
 		int n           //!< Number of values to be sorted
 		);
- private:
+/**
+ * @brief Heapify function for sorting by increasing value
+ */
   void max_heapify(double *heap_v, int *heap_i, int i, int n);
-};
+//};
 
 #endif /* SIMPLEX_HSORT_H_ */
