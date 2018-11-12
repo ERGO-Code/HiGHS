@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRow.h"
+#include "HDual.h"//For update_dual
 #include "HConst.h"
 #include "HModel.h"
 
@@ -298,34 +299,46 @@ bool HDualRow::choose_final() {
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
+  workModel->checkDualObjectiveValue("Before update_flip");
+  double *workDual = workModel->getWorkDual();//
+  //  double *workLower = workModel->getWorkLower();
+  //  double *workUpper = workModel->getWorkUpper();
+  //  double *workValue = workModel->getWorkValue();
+  double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
     const int iCol = workData[i].first;
     const double change = workData[i].second;
+
+    double lcDualObjectiveValueChange = change*workDual[iCol];
+    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
+    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
+    dualObjectiveValueChange += lcDualObjectiveValueChange;
     workModel->flipBound(iCol);
     workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
   }
+  workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
+  workModel->checkDualObjectiveValue("After  update_flip");
 }
 
 void HDualRow::update_dual(double theta) {
+  workModel->checkDualObjectiveValue("Before update_dual");
   workModel->timer.recordStart(HTICK_UPDATE_DUAL);
   double *workDual = workModel->getWorkDual();
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
-    // JAJH10/10
-    /*
     int iCol = packIndex[i];
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->workValue[iCol];
     double dlDuObj = -iColWorkValue * dlDual;
-    //    dlDuObj *= costScale;
-    workModel->objective += dlDuObj;
-    printf("Column %2d: Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g;
-    dlDuObj = %11.4g: DuObj = %11.4g\n", iCol, workModel->nonbasicFlag[i],
-    dlDual, iColWorkValue, dlDuObj, workModel->objective);
-    */
+    dlDuObj *= workModel->costScale;
+    workModel->updatedDualObjectiveValue += dlDuObj;
+    //    if (iCol == columnIn || iCol == columnOut)
+    //      printf("Column %2d: Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g; dlDuObj = %11.4g: DuObj = %11.4g\n", 
+    //	     iCol, workModel->nonbasicFlag[i], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);
   }
+  workModel->checkDualObjectiveValue("After  update_dual");
   workModel->timer.recordFinish(HTICK_UPDATE_DUAL);
 }
 

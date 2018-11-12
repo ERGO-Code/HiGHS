@@ -554,12 +554,12 @@ void HDual::solve_phase1() {
       }
       if (invertHint) break;
       // printf("HDual::solve_phase1: Iter = %d; Objective = %g\n",
-      // model->numberIteration, model->objective);
+      // model->numberIteration, model->dualObjectiveValue);
       /*
-      if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf("HDual::solve_phase1: %g = Objective >
-dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
@@ -588,7 +588,7 @@ dblOption[DBLOPT_OBJ_UB]\n", model->objective, model->dblOption[DBLOPT_OBJ_UB]);
   if (rowOut == -1) {
     model->util_reportMessage("dual-phase-1-optimal");
     // Go to phase 2
-    if (model->objective == 0) {
+    if (model->dualObjectiveValue == 0) {
       solvePhase = 2;
     } else {
       // We still have dual infeasible
@@ -672,20 +672,20 @@ void HDual::solve_phase2() {
         // every iteration!
         // Killer line for speed of HiGHS on hyper-sparse LPs!
         // Comment out when not working with SCIP!!
-        //	  model->computeDuObj();
+        //	  model->computeDualObjectiveValue();
 #ifdef HiGHSDEV
-        //      model->computeDuObj();
+        //      model->computeDualObjectiveValue();
         //      double pr_obj_v = model->computePrObj();
         //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj
         //      = %.11g\n",
-        //	     model->numberIteration, pr_obj_v, model->objective);
+        //	     model->numberIteration, pr_obj_v, model->dualObjectiveValue);
 #endif
-      if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf(
             "HDual::solve_phase2: Objective = %g > %g = "
             "dblOption[DBLOPT_OBJ_UB]\n",
-            model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+            model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;
@@ -827,7 +827,8 @@ void HDual::rebuild() {
 
   // Compute the objective value
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
-  model->computeDuObj(solvePhase);
+  model->computeDualObjectiveValue(solvePhase);
+  model->updatedDualObjectiveValue = model->dualObjectiveValue;
   model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
@@ -864,7 +865,7 @@ void HDual::cleanup() {
   model->initCost();
   model->initBound();
   model->computeDual();
-  model->computeDuObj(solvePhase);
+  model->computeDualObjectiveValue(solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);
   iterateRpInvert(-1);
 
@@ -883,9 +884,11 @@ void HDual::iterate() {
   model->timer.recordStart(HTICK_ITERATE_CHUZR);
   chooseRow();
   model->timer.recordFinish(HTICK_ITERATE_CHUZR);
+
   model->timer.recordStart(HTICK_ITERATE_CHUZC);
   chooseColumn(&row_ep);
   model->timer.recordFinish(HTICK_ITERATE_CHUZC);
+
   model->timer.recordStart(HTICK_ITERATE_FTRAN);
   updateFtranBFRT();
   // updateFtran(); computes the pivotal column in the data structure "column"
@@ -1152,7 +1155,7 @@ void HDual::iterateRp() {
 void HDual::iterateRpFull(bool header) {
   if (header) {
     iterateRpIterPh(true);
-    //    iterateRpDuObj(true);//JAJH10/10
+    iterateRpDuObj(true);
 #ifdef HiGHSDEV
     iterateRpIterDa(true);
     iterateRpDsty(true);
@@ -1161,14 +1164,13 @@ void HDual::iterateRpFull(bool header) {
     printf("\n");
   } else {
     iterateRpIterPh(false);
-    //    iterateRpDuObj(false);//JAJH10/10
+    iterateRpDuObj(false);
 #ifdef HiGHSDEV
     iterateRpIterDa(false);
     iterateRpDsty(false);
     printf(" %7d", dualRow.freeListSize);
 #endif
     printf("\n");
-    iterateRpDuObj(false);  // JAJH10/10
   }
 }
 
@@ -1184,8 +1186,8 @@ void HDual::iterateRpDuObj(bool header) {
   if (header) {
     printf("    DualObjective    ");
   } else {
-    model->computeDuObj(solvePhase);
-    printf(" %20.10e", model->objective);
+    model->computeDualObjectiveValue(solvePhase);
+    printf(" %20.10e", model->dualObjectiveValue);
   }
 }
 
@@ -1714,6 +1716,7 @@ void HDual::updatePivots() {
   //
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
+  model->checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined

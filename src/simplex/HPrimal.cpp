@@ -74,11 +74,11 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
         break;
       }
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      // model->numberIteration, model->objective);
-      if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+      // model->numberIteration, model->dualObjectiveValue);
+      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n",
-	       model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+	       model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
@@ -140,7 +140,7 @@ void HPrimal::primalRebuild() {
   }
   model->computeDual();
   model->computePrimal();
-  model->computeDuObj();
+  model->computeDualObjectiveValue();
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV

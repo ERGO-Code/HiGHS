@@ -2379,31 +2379,38 @@ double HModel::computePrObj() {
 
 // Compute the (dual) objective via nonbasic primal values (current bound) and
 // dual values
-void HModel::computeDuObj(int phase) {
-  // JAJH10/10 double currentObjective = objective;
-  objective = 0;
+void HModel::computeDualObjectiveValue(int phase) {
+  dualObjectiveValue = 0;
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i]) {
-      objective += workValue[i] * workDual[i];
-      // JAJH10/10
-      /*  double dlObjective = workValue[i] * workDual[i];
-          printf("Column %2d: workValue = %11.4g; workDual = %11.4g; dlObjective
-         = %11.4g; objective = %11.4g\n", i, workValue[i], workDual[i],
-         dlObjective, objective);
-      */
+      dualObjectiveValue += workValue[i] * workDual[i];
     }
   }
   if (phase != 1) {
-    objective *= costScale;
-    objective -= objOffset;
+    dualObjectiveValue *= costScale;
+    dualObjectiveValue -= objOffset;
   }
-  // JAJH10/10
-  /*  double objectiveError = abs(objective-currentObjective)/max(1.0,
-  abs(objective)); if (objectiveError > 1e-8) printf("Phase %1d:
-  currentObjective = %11.4g; Objective = %11.4g; Error = %11.4g\n", phase,
-  currentObjective, objective, objectiveError);
-  */
 }
+
+#ifdef HiGHSDEV
+void HModel::checkDualObjectiveValue(const char *message, int phase) {
+  computeDualObjectiveValue(phase);
+  double changeInUpdatedDualObjectiveValue = abs(updatedDualObjectiveValue-previousUpdatedDualObjectiveValue);
+  double changeInDualObjectiveValue = abs(dualObjectiveValue-previousDualObjectiveValue);
+  double updatedDualObjectiveError = abs(dualObjectiveValue-updatedDualObjectiveValue);
+  double rlvUpdatedDualObjectiveError = abs(dualObjectiveValue-updatedDualObjectiveValue)/max(1.0, abs(dualObjectiveValue));
+  if (rlvUpdatedDualObjectiveError > 1e-12)
+    printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Abs(Rel) Error = %11.4g (%11.4g) |%s\n",
+	   phase,
+	   dualObjectiveValue, changeInDualObjectiveValue,
+	   updatedDualObjectiveValue, changeInUpdatedDualObjectiveValue,
+	   updatedDualObjectiveError, rlvUpdatedDualObjectiveError,
+	   message);
+  previousDualObjectiveValue = dualObjectiveValue;
+  previousUpdatedDualObjectiveValue = dualObjectiveValue;
+  updatedDualObjectiveValue = dualObjectiveValue;
+}
+#endif
 
 int HModel::handleRankDeficiency() {
   int rankDeficiency = factor.rankDeficiency;
@@ -2514,17 +2521,30 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
 
   // Outgoing variable
   nonbasicFlag[columnOut] = 1;
+  //  double dlValue;
+  //  double vrLb = workLower[columnOut];
+  //  double vrV = workValue[columnOut];
+  //  double vrUb = workUpper[columnOut];
   if (workLower[columnOut] == workUpper[columnOut]) {
+    //    dlValue = workLower[columnOut]-workValue[columnOut];
     workValue[columnOut] = workLower[columnOut];
     nonbasicMove[columnOut] = 0;
   } else if (sourceOut == -1) {
+    //    dlValue = workLower[columnOut]-workValue[columnOut];
     workValue[columnOut] = workLower[columnOut];
     nonbasicMove[columnOut] = 1;
   } else {
+    //    dlValue = workUpper[columnOut]-workValue[columnOut];
     workValue[columnOut] = workUpper[columnOut];
     nonbasicMove[columnOut] = -1;
   }
-
+  double nwValue = workValue[columnOut];
+  double vrDual = workDual[columnOut];
+  double dlDualObjectiveValue = nwValue*vrDual;
+  //  if (abs(nwValue))
+  //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
+  //			   columnOut, nonbasicMove[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
+  updatedDualObjectiveValue += dlDualObjectiveValue;
   countUpdate++;
   // Update the number of basic logicals
   if (columnOut < numCol) numBasicLogicals -= 1;
@@ -2654,7 +2674,7 @@ bool HModel::hsol_isInfinity(double val) {
 }
 
 void HModel::shiftObjectiveValue(double shift) {
-  objective = objective + shift;
+  dualObjectiveValue = dualObjectiveValue + shift;
 }
 
 void HModel::recordPivots(int columnIn, int columnOut, double alpha) {
@@ -2686,7 +2706,7 @@ void HModel::writePivots(const char *suffix) {
 
 // Methods to get objective, solution and basis: all just copy what's there with
 // no re-evaluation! Return the current value of ther objective
-double HModel::util_getObjectiveValue() { return objective; }
+double HModel::util_getObjectiveValue() { return dualObjectiveValue; }
 
 // Get the column and row (primal) values and dual (values)
 void HModel::util_getPrimalDualValues(vector<double> &colValue,
@@ -3759,8 +3779,8 @@ void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
   if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4)
     return;
   // Suppress i_v so inverHint isn't reported for output comparison with hsol1.0
-  //  printf("%10d  %20.10e  %2d\n", numberIteration, objective, i_v);
-  printf("%10d  %20.10e\n", numberIteration, objective);
+  //  printf("%10d  %20.10e  %2d\n", numberIteration, dualObjectiveValue, i_v);
+  printf("%10d  %20.10e\n", numberIteration, dualObjectiveValue);
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
@@ -3772,12 +3792,12 @@ void HModel::util_reportSolverOutcome(const char *message) {
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal =
-      abs(prObjVal - objective) / max(abs(objective), max(abs(prObjVal), 1.0));
+      abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
-         modelName.c_str(), prObjVal, objective, dlObjVal, numberIteration,
+         modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
          totalTime);
 #else
-  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), objective,
+  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
          numberIteration, totalTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
@@ -3787,7 +3807,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
     util_reportModelStatus();
   }
   // Greppable report line added
-  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", objective, numberIteration,
+  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
          totalTime, problemStatus, modelName.c_str());
 }
 
@@ -3799,8 +3819,8 @@ void HModel::util_reportSolverProgress() {
   static double nextReport = 0;
   double currentTime = timer.getTime();
   if (currentTime >= nextReport) {
-    computeDuObj();
-    printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), objective,
+    computeDualObjectiveValue();
+    printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveValue,
            numberIteration, timer.getTime());
     if (currentTime < 50) {
       nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
@@ -5012,11 +5032,11 @@ void HModel::util_anMlSol() {
   lcPrObjV_LargeCo *= costScale;
   lcPrObjV_OtherCo *= costScale;
   if (largeCostScale == 1.0) {
-    double ObjEr = abs(objective - lcPrObjV) / max(1.0, abs(objective));
+    double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, abs(dualObjectiveValue));
     //    if (ObjEr > 1e-8)
     printf(
-        "Relative objective error of %11.4g: objective = %g; lcPrObjV = %g\n",
-        ObjEr, objective, lcPrObjV);
+        "Relative objective error of %11.4g: dualObjectiveValue = %g; lcPrObjV = %g\n",
+        ObjEr, dualObjectiveValue, lcPrObjV);
   }
   if (numLargeCo > 0) {
     printf("Objective offset = %11.4g\n", objOffset);
