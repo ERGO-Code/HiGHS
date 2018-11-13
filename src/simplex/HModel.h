@@ -398,10 +398,10 @@ class HModel {
   // Scalar solution output
   // Essentials
   int numberIteration;
-  // Dual objective value TODO Change this to dualObjectiveValue!
+  // Dual objective value
   double dualObjectiveValue;
-#ifdef HiGHSDEV
   double updatedDualObjectiveValue;
+#ifdef HiGHSDEV
   double previousUpdatedDualObjectiveValue;
   double previousDualObjectiveValue;
 #endif

@@ -829,7 +829,9 @@ void HDual::rebuild() {
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
   model->computeDualObjectiveValue(solvePhase);
 
+#ifdef HiGHSDEV
   model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+#endif
 
   model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
