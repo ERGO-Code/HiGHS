@@ -1,4 +1,5 @@
 #include "HApp.h"
+#include "HSensitivity.h"
 
 using namespace std;
 
@@ -24,6 +25,22 @@ int solvePlain(HModel &model) {
   // Possibly analyse the degeneracy of the primal and dual activities
   // model.util_anPrDuDgn();
   // model.util_reportModelSolution();
+#endif
+#ifdef HiGHSDEV
+  //  cout << "\n Using solvePlain() - Calling sensitivity.getSensitivityData(&model)\n" <<
+  //  endl;
+#endif
+  HSensitivity sensitivity;
+  int returnCode;
+  returnCode = sensitivity.getSensitivityData(&model);
+#ifdef HiGHSDEV
+  cout << "Return code " << returnCode << " from sensitivity.getSensitivityData\n" << endl;
+#endif
+  if (returnCode) return 0;
+  // Check the sensitivity data
+  returnCode = sensitivity.checkSensitivityData(&model);
+#ifdef HiGHSDEV
+  cout << "Return code " << returnCode << " from sensitivity.checkSensitivityData\n" << endl;
 #endif
   return 0;
 }
