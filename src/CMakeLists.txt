@@ -13,6 +13,7 @@ set(sources
     simplex/HTester.cpp
     simplex/HVector.cpp
     simplex/HCrash.cpp
+    simplex/HSort.cpp
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
     io/HinOut.cpp
@@ -41,6 +42,7 @@ set(headers
     simplex/HVector.h
     simplex/HCrash.h
     simplex/HRandom.h
+    simplex/HSort.h
     presolve/HPresolve.h
     io/HinOut.h
     io/HMPSIO.h

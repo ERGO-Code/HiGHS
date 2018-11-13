@@ -50,23 +50,6 @@ const int Price_Mode_Row = 0;
 const int Price_Mode_Col = 1;
 
 /**
- * Possible crash mode values used to test Crash_Mode
- */
-const int Crash_Mode_No = 0;
-const int Crash_Mode_LTSSF_k = 1;
-const int Crash_Mode_LTSSF_pri = 2;
-const int Crash_Mode_LTSF_k = 3;
-const int Crash_Mode_LTSF_pri = 4;
-const int Crash_Mode_LTSF = 5;
-const int Crash_Mode_Bixby = 6;
-const int Crash_Mode_Dev = 7;
-const int Crash_Mode_Bs = 8;
-#ifdef HiGHSDEV
-const int Crash_Mode_TsSing = 9;
-#endif
-const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
-
-/**
  * Possible presolve mode values used to test Presolve_Mode
  */
 const int Presolve_Mode_Off = 0;

@@ -1795,7 +1795,7 @@ void HDual::setCrash(const char *Crash_ArgV) {
   else if (strcmp(Crash_ArgV, "LTSSF6") == 0)
     Crash_Mode = Crash_Mode_Bixby;
   else if (strcmp(Crash_ArgV, "LTSSF7") == 0)
-    Crash_Mode = Crash_Mode_Dev;
+    Crash_Mode = Crash_Mode_BixbyNoNzCCo;
   else if (strcmp(Crash_ArgV, "Bs") == 0)
     Crash_Mode = Crash_Mode_Bs;
 #ifdef HiGHSDEV
