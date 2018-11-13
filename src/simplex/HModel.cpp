@@ -2393,14 +2393,15 @@ void HModel::computeDualObjectiveValue(int phase) {
 }
 
 #ifdef HiGHSDEV
-void HModel::checkDualObjectiveValue(const char *message, int phase) {
+double HModel::checkDualObjectiveValue(const char *message, int phase) {
   computeDualObjectiveValue(phase);
-  double changeInUpdatedDualObjectiveValue = abs(updatedDualObjectiveValue-previousUpdatedDualObjectiveValue);
-  double changeInDualObjectiveValue = abs(dualObjectiveValue-previousDualObjectiveValue);
-  double updatedDualObjectiveError = abs(dualObjectiveValue-updatedDualObjectiveValue);
-  double rlvUpdatedDualObjectiveError = abs(dualObjectiveValue-updatedDualObjectiveValue)/max(1.0, abs(dualObjectiveValue));
-  if (rlvUpdatedDualObjectiveError > 1e-12)
-    printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Abs(Rel) Error = %11.4g (%11.4g) |%s\n",
+  double changeInUpdatedDualObjectiveValue = updatedDualObjectiveValue - previousUpdatedDualObjectiveValue;
+  double changeInDualObjectiveValue = dualObjectiveValue - previousDualObjectiveValue;
+  double updatedDualObjectiveError = dualObjectiveValue - updatedDualObjectiveValue;
+  double rlvUpdatedDualObjectiveError = abs(updatedDualObjectiveError)/max(1.0, abs(dualObjectiveValue));
+  bool erFd = rlvUpdatedDualObjectiveError > 1e-8;
+  if (erFd)
+    printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
 	   phase,
 	   dualObjectiveValue, changeInDualObjectiveValue,
 	   updatedDualObjectiveValue, changeInUpdatedDualObjectiveValue,
@@ -2409,6 +2410,7 @@ void HModel::checkDualObjectiveValue(const char *message, int phase) {
   previousDualObjectiveValue = dualObjectiveValue;
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
   updatedDualObjectiveValue = dualObjectiveValue;
+  return updatedDualObjectiveError;
 }
 #endif
 

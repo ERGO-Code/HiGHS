@@ -33,8 +33,9 @@ class HDualRow {
    * @brief Calls setupSlice to set up the packed indices and values for
    * the dual ratio test
    */
-  void setup(HModel *model  //!< Model for which setup is performed
-  );
+  void setup(
+	     HModel *model  //!< Model for which setup is performed
+	     );
   /**
    * @brief Set up the packed indices and values for the dual ratio test
    *
@@ -43,12 +44,12 @@ class HDualRow {
    */
   void setupSlice(HModel *model,  //!< Model for which setupSlice is performed
                   int size        //!< Dimension of slice
-  );
+		  );
   /**
    * @brief Clear the packed data by zeroing packCount and workCount
    */
   void clear();
-
+  
   /**
    * @brief Pack the indices and values for the row.
    *
@@ -56,21 +57,21 @@ class HDualRow {
    */
   void choose_makepack(const HVector *row,  //!< Row to be packed
                        const int offset     //!< Offset for indices
-  );
+		       );
   /**
    * @brief Determine the possible variables - candidates for CHUZC
    *
    * TODO: Check with Qi what this is doing
    */
   void choose_possible();
-
+  
   /**
    * @brief Join pack of possible candidates in this row with possible
    * candidates in otherRow
    */
   void choose_joinpack(
-      const HDualRow *otherRow  //!< Other row to join with this
-  );
+		       const HDualRow *otherRow  //!< Other row to join with this
+		       );
   /**
    * @brief Chooses the entering variable via BFRT and EXPAND
    *
@@ -78,41 +79,45 @@ class HDualRow {
    * perturbation not being relatively too small
    */
   bool choose_final();
-
+  
   /**
    * @brief Update bounds when flips have occurred, and accumulate the
    * RHS for the FTRAN required to update the primal values after BFRT
    */
-  void update_flip(HVector *bfrtColumn  //!< RHS for FTRAN BFRT
-  );
+  void update_flip(
+		   HVector *bfrtColumn  //!< RHS for FTRAN BFRT
+		   );
   /**
    * @brief Update the dual values
    */
   void update_dual(
-      double theta  //!< Multiple of pivotal row to add int to duals
-  );
+		   double theta,  //!< Multiple of pivotal row to add int to duals
+		   int columnOut  //!< Index of leaving column
+		   );
   /**
    * @brief Create a list of nonbasic free columns
    */
   void create_Freelist();
-
+  
   /**
    * @brief Set a value of nonbasicMove for all free columns to
    * prevent their dual values from being changed
    */
-  void create_Freemove(HVector *row_ep  //!< Row of \f$B^{-1}\f$ to be used to
-                                        //!< compute pivotal row entry
-  );
+  void create_Freemove(
+		       HVector *row_ep  //!< Row of \f$B^{-1}\f$ to be used to compute pivotal row entry
+		       );
   /**
    * @brief Reset the nonbasicMove values for free columns
    */
   void delete_Freemove();
-
+  
   /**
    * @brief Delete the list of nonbasic free columns
    */
-  void delete_Freelist(int iColumn);
-
+  void delete_Freelist(
+		       int iColumn //!< Index of column to remove from Freelist
+		       );
+  
   HModel *workModel;        //!< Local copy of pointer to model
   int workSize;             //!< Size of the HDualRow slice
   const int *workRand;      //!< Value of model->getWorkIntBreak();

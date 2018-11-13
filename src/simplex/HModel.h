@@ -206,7 +206,7 @@ class HModel {
   void computePrimal();
   void computeDualObjectiveValue(int phase = 2);
 #ifdef HiGHSDEV
-  void checkDualObjectiveValue(const char *message, int phase = 2);
+  double checkDualObjectiveValue(const char *message, int phase = 2);
 #endif
   double computePrObj();
   double computePh2Objective(vector<double>& colPrAct);

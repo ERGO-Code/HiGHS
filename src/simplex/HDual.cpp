@@ -1637,13 +1637,13 @@ void HDual::updateDual() {
     model->shiftCost(columnIn, -workDual[columnIn]);
   else {
     // Update the dual values (if packCount>0)
-    dualRow.update_dual(thetaDual);
+    dualRow.update_dual(thetaDual, columnOut);
     if (dual_variant != HDUAL_VARIANT_PLAIN && slice_PRICE) {
       // Update the dual variables slice-by-slice [presumably
       // nothing is done in the previous call to
       // dualRow.update_dual. TODO: Check with Qi
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].update_dual(thetaDual);
+        slice_dualRow[i].update_dual(thetaDual, columnOut);
     }
   }
   workDual[columnIn] = 0;
@@ -1716,7 +1716,8 @@ void HDual::updatePivots() {
   //
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
-  model->checkDualObjectiveValue("After  model->updatePivots");
+  bool erFd;
+  erFd = model->checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
