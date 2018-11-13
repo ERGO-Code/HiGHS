@@ -298,7 +298,7 @@ bool HDualRow::choose_final() {
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
-  workModel->checkDualObjectiveValue("Before update_flip");
+  //  workModel->checkDualObjectiveValue("Before update_flip");
   double *workDual = workModel->getWorkDual();//
   //  double *workLower = workModel->getWorkLower();
   //  double *workUpper = workModel->getWorkUpper();
@@ -317,25 +317,26 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
   }
   workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
-  workModel->checkDualObjectiveValue("After  update_flip");
+  //  workModel->checkDualObjectiveValue("After  update_flip");
 }
 
 void HDualRow::update_dual(double theta, int columnOut) {
-  workModel->checkDualObjectiveValue("Before update_dual");
+  //  workModel->checkDualObjectiveValue("Before update_dual");
   workModel->timer.recordStart(HTICK_UPDATE_DUAL);
   double *workDual = workModel->getWorkDual();
-  int columnOut_i = -1;
+  //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
     int iCol = packIndex[i];
-    if (iCol == columnOut) columnOut_i = i;
+    //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->workValue[iCol];
     double dlDuObj = workModel->nonbasicFlag[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workModel->costScale;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
+  /*
   // Apply correction because the updated dual objective value may
   // contain a rogue contribution corresponding to the leaving column
   double duObjCorrection = 0;
@@ -371,6 +372,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
 	       iCol, packValue[i], workModel->nonbasicFlag[iCol], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);
     }
   }
+  */
   workModel->timer.recordFinish(HTICK_UPDATE_DUAL);
 }
 

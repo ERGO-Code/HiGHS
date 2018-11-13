@@ -828,7 +828,9 @@ void HDual::rebuild() {
   // Compute the objective value
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
   model->computeDualObjectiveValue(solvePhase);
-  model->updatedDualObjectiveValue = model->dualObjectiveValue;
+
+  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+
   model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
@@ -1716,8 +1718,7 @@ void HDual::updatePivots() {
   //
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
-  bool erFd;
-  erFd = model->checkDualObjectiveValue("After  model->updatePivots");
+  //  model->checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
