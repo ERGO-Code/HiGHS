@@ -204,7 +204,10 @@ class HModel {
   void computeDualInfeasInPrimal(int* dualInfeasCount);
   void correctDual(int* freeInfeasCount);
   void computePrimal();
-  void computeDuObj(int phase = 2);
+  void computeDualObjectiveValue(int phase = 2);
+#ifdef HiGHSDEV
+  double checkDualObjectiveValue(const char *message, int phase = 2);
+#endif
   double computePrObj();
   double computePh2Objective(vector<double>& colPrAct);
   int handleRankDeficiency();
@@ -395,7 +398,13 @@ class HModel {
   // Scalar solution output
   // Essentials
   int numberIteration;
-  double objective;
+  // Dual objective value
+  double dualObjectiveValue;
+  double updatedDualObjectiveValue;
+#ifdef HiGHSDEV
+  double previousUpdatedDualObjectiveValue;
+  double previousDualObjectiveValue;
+#endif
 #ifdef HiGHSDEV
   // Analysis of INVERT
   const bool anInvertTime = false;

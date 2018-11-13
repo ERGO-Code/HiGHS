@@ -298,34 +298,81 @@ bool HDualRow::choose_final() {
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
+  //  workModel->checkDualObjectiveValue("Before update_flip");
+  double *workDual = workModel->getWorkDual();//
+  //  double *workLower = workModel->getWorkLower();
+  //  double *workUpper = workModel->getWorkUpper();
+  //  double *workValue = workModel->getWorkValue();
+  double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
     const int iCol = workData[i].first;
     const double change = workData[i].second;
+
+    double lcDualObjectiveValueChange = change*workDual[iCol];
+    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
+    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
+    dualObjectiveValueChange += lcDualObjectiveValueChange;
     workModel->flipBound(iCol);
     workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
   }
+  workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
+  //  workModel->checkDualObjectiveValue("After  update_flip");
 }
 
-void HDualRow::update_dual(double theta) {
+void HDualRow::update_dual(double theta, int columnOut) {
+  //  workModel->checkDualObjectiveValue("Before update_dual");
   workModel->timer.recordStart(HTICK_UPDATE_DUAL);
   double *workDual = workModel->getWorkDual();
+  //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
-    // JAJH10/10
-    /*
     int iCol = packIndex[i];
+    //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->workValue[iCol];
-    double dlDuObj = -iColWorkValue * dlDual;
-    //    dlDuObj *= costScale;
-    workModel->objective += dlDuObj;
-    printf("Column %2d: Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g;
-    dlDuObj = %11.4g: DuObj = %11.4g\n", iCol, workModel->nonbasicFlag[i],
-    dlDual, iColWorkValue, dlDuObj, workModel->objective);
-    */
+    double dlDuObj = workModel->nonbasicFlag[iCol] * (-iColWorkValue * dlDual);
+    dlDuObj *= workModel->costScale;
+    workModel->updatedDualObjectiveValue += dlDuObj;
   }
+  /*
+  // Apply correction because the updated dual objective value may
+  // contain a rogue contribution corresponding to the leaving column
+  double duObjCorrection = 0;
+  if (columnOut_i >= 0) {
+    //    double nonUnitPackValue = abs(packValue[columnOut_i] - 1.0);
+    //    if (nonUnitPackValue > 1e-8) printf("STRANGE: packValue[columnOut_i] = %11.4g has nonUnitPackValue = %11.4g\n", packValue[columnOut_i], nonUnitPackValue);
+    int iCol = columnOut;
+    double dlDual = theta * packValue[columnOut_i];
+    double iColWorkValue = workModel->workValue[iCol];
+    double dlDuObj = -iColWorkValue * dlDual;
+    duObjCorrection = dlDuObj;
+    //    if (abs(duObjCorrection)>1e-8) printf("Dual objective correction (columnOut_i>=0) = %11.4g\n", duObjCorrection);
+  }
+  
+  double duObjEr = workModel->checkDualObjectiveValue("After  update_dual");
+  double rlvErDen = max(1.0, abs(workModel->dualObjectiveValue));
+  double rlvDuObjEr = abs(duObjEr)/rlvErDen;
+  if (rlvDuObjEr > 1e-8) {
+    if (columnOut_i < 0) printf("ERROR: columnOut_i = %d in update_dual\n", columnOut_i);
+    double nwDuObjEr = duObjEr+duObjCorrection;
+    printf("theta = %11.4g, duObjEr = %11.4g; duObjCorrection = %11.4g; nwDuObjEr = %11.4g\n",
+	   theta, duObjEr, duObjCorrection, nwDuObjEr);
+    if (abs(nwDuObjEr)/rlvErDen > 1e-12)
+      printf("ERROR:  duObjEr+duObjCorrection = %11.4g + %11.4g = %11.4g\n", duObjEr, duObjCorrection, nwDuObjEr);
+    for (int i = 0; i < packCount; i++) {
+      int iCol = packIndex[i];
+      double dlDual = theta * packValue[i];
+      double iColWorkValue = workModel->workValue[iCol];
+      double dlDuObj = -iColWorkValue * dlDual;
+      dlDuObj *= workModel->costScale;
+      if (!workModel->nonbasicFlag[iCol])
+	printf("Column %5d: packValue = %11.4g Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g; dlDuObj = %11.4g: DuObj = %11.4g\n", 
+	       iCol, packValue[i], workModel->nonbasicFlag[iCol], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);
+    }
+  }
+  */
   workModel->timer.recordFinish(HTICK_UPDATE_DUAL);
 }
 

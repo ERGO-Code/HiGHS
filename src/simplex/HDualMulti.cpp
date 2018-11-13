@@ -274,10 +274,10 @@ void HDual::minor_updateDual() {
   if (thetaDual == 0) {
     model->shiftCost(columnIn, -workDual[columnIn]);
   } else {
-    dualRow.update_dual(thetaDual);
+    dualRow.update_dual(thetaDual, columnOut);
     if (slice_PRICE) {
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].update_dual(thetaDual);
+        slice_dualRow[i].update_dual(thetaDual, columnOut);
     }
   }
   workDual[columnIn] = 0;
