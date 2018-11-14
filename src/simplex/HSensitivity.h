@@ -17,6 +17,7 @@
 #include <vector>
 using namespace std;
 
+// LP model size
 int numCol;
 int numRow;
 int numTotal;
