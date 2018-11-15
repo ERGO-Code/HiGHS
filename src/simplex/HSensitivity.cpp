@@ -11,9 +11,8 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConst.h"
 #include "HModel.h"
-//#include "HMatrix.h"
+#include "HDual.h"
 #include "HSensitivity.h"
 #include <cstdio>
 using namespace std;
@@ -80,7 +79,6 @@ int HSensitivity::getSensitivityData(HModel *model) {
   HVector column;
   column.setup(numRow);
   printf("\n About to start computing sensitivity and ranging information\n");
-  return 1;
 
   // >>>> Verbatim from rgda/HModel
 
@@ -257,5 +255,162 @@ int HSensitivity::getSensitivityData(HModel *model) {
 int HSensitivity::checkSensitivityData(HModel *model) {
   printf("In checkSensitivityData: problemStatus = %d\n", model->problemStatus);
   if (model->problemStatus != LP_Status_Optimal) {return 1;}
+  
+  model->intOption[INTOPT_PRINT_FLAG] = 0;
+
+  vector<int> Nflag = model->nonbasicFlag;
+  vector<int> Nmove = model->nonbasicMove;
+  vector<double> colValue(numCol), colDual(numCol);
+  vector<double> rowValue(numRow), rowDual(numRow);
+  model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
+
+  // Show all rowwise data
+  printf(" --- Row bounds ranging ---\n");
+  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
+	 "verify^", "bound_", "object_", "verify_");
+  for (int i = 0; i < numRow; i++) {
+    double solved_up = 0;
+    double solved_dn = 0;
+    double svRowLower = model->rowLower[i];
+    double svRowUpper = model->rowUpper[i];
+    {
+      if (Nflag[i + numCol]) {
+	if (Nmove[i + numCol] == 0) {
+	  model->rowLower[i] = b_dn_b[i + numCol];
+	  model->rowUpper[i] = b_dn_b[i + numCol];
+	} else if (Nmove[i + numCol] == -1) {
+	  model->rowLower[i] = b_dn_b[i + numCol];
+	} else {
+	  model->rowUpper[i] = b_dn_b[i + numCol];
+	}
+      } else {
+	model->rowUpper[i] = b_dn_b[i + numCol];
+      }
+      //			model->scale();
+      HDual solver;
+      solver.solve(model);
+      solved_dn = model->dualObjectiveValue;
+    }
+
+    {
+      if (Nflag[i + numCol]) {
+	if (Nmove[i + numCol] == 0) {
+	  model->rowLower[i] = b_up_b[i + numCol];
+	  model->rowUpper[i] = b_up_b[i + numCol];
+	} else if (Nmove[i + numCol] == -1) {
+	  model->rowLower[i] = b_up_b[i + numCol];
+	} else {
+	  model->rowUpper[i] = b_up_b[i + numCol];
+	}
+      } else {
+	model->rowLower[i] = b_up_b[i + numCol];
+      }
+      //			model->scaleModel();
+      HDual solver;
+      solver.solve(model);
+      solved_up = model->dualObjectiveValue;
+    }
+    model->rowLower[i] = svRowLower;
+    model->rowUpper[i] = svRowUpper;
+    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+	   i, model->rowLower[i], model->rowUpper[i], rowValue[i], 0.0, rowDual[i],
+	   b_up_b[i + numCol], b_up_f[i + numCol], solved_up, b_dn_b[i + numCol], b_dn_f[i + numCol],
+	   solved_dn);
+  }
+  printf("\n\n");
+
+  printf(" --- Column bounds ranging ---\n");
+  printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
+	 "verify^", "bound_", "object_", "verify_");
+  for (int i = 0; i < numCol; i++) {
+    double solved_up = 0;
+    double solved_dn = 0;
+    double svColLower = model->colLower[i];
+    double svColUpper = model->colUpper[i];
+    {
+      if (Nflag[i]) {
+	if (Nmove[i] == 0) {
+	  model->colLower[i] = b_dn_b[i];
+	  model->colUpper[i] = b_dn_b[i];
+	} else if (Nmove[i] == 1) {
+	  model->colLower[i] = b_dn_b[i];
+	} else {
+	  model->colUpper[i] = b_dn_b[i];
+	}
+      } else {
+	model->colUpper[i] = b_dn_b[i];
+      }
+      //			model->scale();
+      HDual solver;
+      solver.solve(model);
+      solved_dn = model->dualObjectiveValue;
+    }
+    
+    {
+      
+      if (Nflag[i]) {
+	if (Nmove[i] == 0) {
+	  model->colLower[i] = b_up_b[i];
+	  model->colUpper[i] = b_up_b[i];
+	} else if (Nmove[i] == 1) {
+	  model->colLower[i] = b_up_b[i];
+	} else {
+	  model->colUpper[i] = b_up_b[i];
+	}
+      } else {
+	model->colLower[i] = b_up_b[i];
+      }
+      //			model->scale();
+      HDual solver;
+      solver.solve(model);
+      solved_up = model->dualObjectiveValue;
+    }
+    model->colLower[i] = svColLower;
+    model->colUpper[i] = svColUpper;
+    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+	   i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
+	   b_up_b[i], b_up_f[i], solved_up, b_dn_b[i], b_dn_f[i],
+	   solved_dn);
+  }
+  printf("\n\n");
+
+  printf("--- Column cost ranging ---\n");
+  
+  printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	 "lower", "upper", "value", "cost", "dual", "cost^", "object^",
+	 "verify^", "cost_", "object_", "verify_");
+  for (int i = 0; i < numCol; i++) {
+    double solved_up = 0;
+    double solved_dn = 0;
+    double svColCost = model->colCost[i];
+    {
+      if (fabs(c_dn_c[i]) < 1e30)
+	model->colCost[i] = c_dn_c[i];
+      //			model->scale();
+      HDual solver;
+      solver.solve(model);
+      solved_dn = model->dualObjectiveValue;
+    }
+    
+    {
+      
+      if (fabs(c_up_c[i]) < 1e30)
+	model->colCost[i] = c_up_c[i];
+      //			model->scale();
+      HDual solver;
+      solver.solve(model);
+      solved_up = model->dualObjectiveValue;
+    }
+    model->colCost[i] = svColCost;
+    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+	   i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
+	   c_up_c[i], c_up_f[i], solved_up, c_dn_c[i], c_dn_f[i],
+	   solved_dn);
+  }
+  printf("\n\n");
+  
+  cout << endl;
   return 0;
 }
