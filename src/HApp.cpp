@@ -10,7 +10,9 @@ int solvePlain(HModel &model) {
     //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" <<
     //  endl;
 #endif
-  model.scaleModel();
+  //
+  printf("!!!! NOT SCALING MODEL !!!!\n");
+  //  model.scaleModel();
   HDual solver;
 #ifdef HiGHSDEV
   //  cout << "\n Using solvePlain() - Calling solver.solve(&model)\n" <<
