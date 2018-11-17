@@ -18,8 +18,8 @@
 using namespace std;
 
 int HSensitivity::getSensitivityData(HModel *model) {
-  printf("In getSensitivityData: problemStatus = %d\n", model->problemStatus);
-  if (model->problemStatus != LP_Status_Optimal) {return 1;}
+  // Make sure that the model solution is optimal 
+  if (model->problemStatus != LP_Status_Optimal) return 1;
 
   numCol = model->numCol;
   numRow = model->numRow;
@@ -41,8 +41,6 @@ int HSensitivity::getSensitivityData(HModel *model) {
   // negated relative to the original model
   vector<double> cost_ = model->colCost;
   vector<double> lower_ = model->colLower;
-  //  value_.resize(numTotal);
-  //  dual_.resize(numTotal);
 
   lower_.resize(numTotal);
   for (int iRow = 0; iRow < numRow; iRow++) {
@@ -62,10 +60,6 @@ int HSensitivity::getSensitivityData(HModel *model) {
     dual_[model->basicIndex[iRow]] = 0;
   }
  
-  //  Blower_.resize(numRow);
-  //  Bupper_.resize(numRow);
-  //  Bvalue_.resize(numRow);
-
   vector<double> Blower_ = model->baseLower;
   vector<double> Bupper_ = model->baseUpper;
   vector<double> Bvalue_ = model->baseValue;
@@ -73,6 +67,25 @@ int HSensitivity::getSensitivityData(HModel *model) {
   vector<int> Nflag_ = model->nonbasicFlag;
   vector<int> Nmove_ = model->nonbasicMove;
   vector<int> Bindex_ = model->basicIndex;
+
+  b_up_b.resize(numTotal);
+  b_dn_b.resize(numTotal);
+  b_up_f.resize(numTotal);
+  b_dn_f.resize(numTotal);
+  b_up_e.resize(numTotal);
+  b_dn_e.resize(numTotal);
+  b_up_l.resize(numTotal);
+  b_dn_l.resize(numTotal);
+
+  c_up_c.resize(numCol);
+  c_dn_c.resize(numCol);
+  c_up_f.resize(numCol);
+  c_dn_f.resize(numCol);
+  c_up_e.resize(numCol);
+  c_dn_e.resize(numCol);
+  c_up_l.resize(numCol);
+  c_dn_l.resize(numCol);
+
 
   vector<int> iWork_;
   vector<double> dWork_;
@@ -82,7 +95,6 @@ int HSensitivity::getSensitivityData(HModel *model) {
 
   HVector column;
   column.setup(numRow);
-  printf("\n About to start computing sensitivity and ranging information\n");
 
   // >>>> Verbatim from rgda/HModel
 
@@ -252,24 +264,9 @@ int HSensitivity::getSensitivityData(HModel *model) {
 		}
 	}
 
-	printf("\n j      txj_inc      axj_inc      txj_dec      axj_dec      tci_inc      aci_inc      tci_dec      aci_dec\n");
-	for (int j = 0; j < numCol; j++) {
-	  printf("%2d %12g %12g %12g %12g \n",
-		 j, txj_inc[j], axj_inc[j], txj_dec[j], axj_dec[j]);
-	}
-	for (int j = numCol; j < numTotal; j++) {
-	  printf("%2d %12g %12g %12g %12g %12g %12g %12g %12g \n",
-		 j, txj_inc[j], axj_inc[j], txj_dec[j], axj_dec[j], tci_inc[j-numCol], aci_inc[j-numCol], tci_dec[j-numCol], aci_dec[j-numCol]);
-	}
 	/*
 	 * Ranging 2. cost ranging
-	 */
-	vector<double> c_up_c(numTotal), c_dn_c(numTotal);
-	vector<double> c_up_f(numTotal), c_dn_f(numTotal);
-	vector<int> c_up_e(numTotal), c_dn_e(numTotal);
-	vector<int> c_up_l(numTotal), c_dn_l(numTotal);
-
-	/*
+	 *
 	 * Ranging 2.1. non-basic cost ranging
 	 */
 	for (int j = 0; j < numCol; j++) {
@@ -347,13 +344,7 @@ int HSensitivity::getSensitivityData(HModel *model) {
 
 	/*
 	 * Ranging 3. bounds ranging
-	 */
-	vector<double> b_up_b(numTotal), b_dn_b(numTotal);
-	vector<double> b_up_f(numTotal), b_dn_f(numTotal);
-	vector<int> b_up_e(numTotal), b_dn_e(numTotal);
-	vector<int> b_up_l(numTotal), b_dn_l(numTotal);
-
-	/*
+	 *
 	 * Ranging 3.1. non-basic bounds ranging
 	 */
 	for (int j = 0; j < numTotal; j++) {
@@ -541,56 +532,20 @@ int HSensitivity::getSensitivityData(HModel *model) {
     b_up_f[i] =  sv_f;
   }
 
-  vector<double> colValue(numCol), colDual(numCol);
-  vector<double> rowValue(numRow), rowDual(numRow);
-  model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
-
-  printf(" --- Row bounds ranging ---\n");
-  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
-	 "verify^", "bound_", "object_", "verify_");fflush(stdout);
-
-  for (int i = 0; i < numRow; i++) {
-    printf("%3d %12g %12g %12g %12g %12g%12g %12g %12g %12g %12g %12g\n",
-	   i, model->rowLower[i], model->rowUpper[i], rowValue[i], 0.0, rowDual[i],
-	   b_up_b[i + numCol], b_up_f[i + numCol], -99.99, b_dn_b[i + numCol], b_dn_f[i + numCol],
-	   -99.99);
-  }
-
-  printf("\n\n");
-
-  printf(" --- Column bounds ranging ---\n");
-  printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
-	 "verify^", "bound_", "object_", "verify_");
-  for (int i = 0; i < numCol; i++) {
-    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-	   i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
-	   b_up_b[i], b_up_f[i], -99.99, b_dn_b[i], b_dn_f[i],
-	   -99.99);
-  }
-
-  printf("\n\n");
-
-  printf("--- Column cost ranging ---\n");
-  
-  printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "cost^", "object^",
-	 "verify^", "cost_", "object_", "verify_");
-  for (int i = 0; i < numCol; i++) {
-    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-	   i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
-	   c_up_c[i], c_up_f[i], -99.99, c_dn_c[i], c_dn_f[i],
-	   -99.99);
-  }
-
   return 0;
 }
 
 int HSensitivity::checkSensitivityData(HModel *model) {
-  printf("In checkSensitivityData: problemStatus = %d\n", model->problemStatus);
-  if (model->problemStatus != LP_Status_Optimal) {return 1;}
-  
+  // Make sure that the model solution is optimal 
+  if (model->problemStatus != LP_Status_Optimal) return 1;
+  double totalSensitivityDataError = 0;
+  const double toleranceRelativeTotalError = 1e-12;
+  bool reportSensitivityDataCheck = numTotal < 100;
+#ifdef HiGHSDEV
+  bool reportSensitivityDataCheck = false
+  const double relativeErrorDenominator = max(1.0, abs(model->dualObjectiveValue));
+  const double toleranceRelativeError = 1e-12;
+#endif
   model->intOption[INTOPT_PRINT_FLAG] = 0;
 
   vector<int> Nflag = model->nonbasicFlag;
@@ -600,152 +555,224 @@ int HSensitivity::checkSensitivityData(HModel *model) {
   model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
 
   // Show all rowwise data
-  printf(" --- Row bounds ranging ---\n");
-  printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
-	 "verify^", "bound_", "object_", "verify_");
+  if (reportSensitivityDataCheck) {
+    printf(" --- Row bounds ranging ---\n");
+    printf("Row %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	   "lower", "upper", "value", "cost", "dual", "bound^", "object^", "verify^", "bound_", "object_", "verify_");
+  }
   for (int i = 0; i < numRow; i++) {
     double solved_up = 0;
     double solved_dn = 0;
     double svRowLower = model->rowLower[i];
     double svRowUpper = model->rowUpper[i];
     {
+      double changeRowLower = svRowLower;
+      double changeRowUpper = svRowUpper;
       if (Nflag[i + numCol]) {
 	if (Nmove[i + numCol] == 0) {
-	  model->rowLower[i] = b_dn_b[i + numCol];
-	  model->rowUpper[i] = b_dn_b[i + numCol];
+	  changeRowLower = b_dn_b[i + numCol];
+	  changeRowUpper = b_dn_b[i + numCol];
 	} else if (Nmove[i + numCol] == -1) {
-	  model->rowLower[i] = b_dn_b[i + numCol];
+	  changeRowLower = b_dn_b[i + numCol];
 	} else {
-	  model->rowUpper[i] = b_dn_b[i + numCol];
+	  changeRowUpper = b_dn_b[i + numCol];
 	}
       } else {
-	model->rowUpper[i] = b_dn_b[i + numCol];
+	changeRowUpper = b_dn_b[i + numCol];
       }
       //			model->scale();
       HDual solver;
+      model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
       solver.solve(model);
       solved_dn = model->dualObjectiveValue;
+      double error = abs(solved_dn-b_dn_f[i + numCol]);
+      totalSensitivityDataError += error;
+#ifdef HiGHSDEV
+      double relativeError = error/relativeErrorDenominator;
+      if (relativeError > toleranceRelativeError) {
+	printf("Row bound down ranging error: Row %2d; solved_dn = %12g; b_dn_f = %12g; relativeError = %12g\n",
+	       i, solved_dn, b_dn_f[i + numCol], relativeError);
+      }
+#endif
     }
 
     {
+      double changeRowLower = svRowLower;
+      double changeRowUpper = svRowUpper;
       if (Nflag[i + numCol]) {
 	if (Nmove[i + numCol] == 0) {
-	  model->rowLower[i] = b_up_b[i + numCol];
-	  model->rowUpper[i] = b_up_b[i + numCol];
+	  changeRowLower = b_up_b[i + numCol];
+	  changeRowUpper = b_up_b[i + numCol];
 	} else if (Nmove[i + numCol] == -1) {
-	  model->rowLower[i] = b_up_b[i + numCol];
+	  changeRowLower = b_up_b[i + numCol];
 	} else {
-	  model->rowUpper[i] = b_up_b[i + numCol];
+	  changeRowUpper = b_up_b[i + numCol];
 	}
       } else {
-	model->rowLower[i] = b_up_b[i + numCol];
+	changeRowLower = b_up_b[i + numCol];
       }
       //			model->scaleModel();
       HDual solver;
+      model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
       solver.solve(model);
       solved_up = model->dualObjectiveValue;
+      double error = abs(solved_up-b_up_f[i + numCol]);
+      totalSensitivityDataError += error;
+#ifdef HiGHSDEV
+      double relativeError = error/relativeErrorDenominator;
+      if (relativeError > toleranceRelativeError) {
+	printf("Row bound   up ranging error: Row %2d; solved_up = %12g; b_up_f = %12g; relativeError = %12g\n",
+	       i, solved_up, b_up_f[i + numCol], relativeError);
+      }
+#endif
     }
-    model->rowLower[i] = svRowLower;
-    model->rowUpper[i] = svRowUpper;
-    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-	   i, model->rowLower[i], model->rowUpper[i], rowValue[i], 0.0, rowDual[i],
-	   b_up_b[i + numCol], b_up_f[i + numCol], solved_up, b_dn_b[i + numCol], b_dn_f[i + numCol],
-	   solved_dn);
+    model->util_chgRowBoundsSet(1, &i, &svRowLower, &svRowUpper);
+    if (reportSensitivityDataCheck) {
+      printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+	     i, model->rowLower[i], model->rowUpper[i], rowValue[i], 0.0, rowDual[i],
+	     b_up_b[i + numCol], b_up_f[i + numCol], solved_up, b_dn_b[i + numCol], b_dn_f[i + numCol], solved_dn);
+    }
   }
-  printf("\n\n");
-
-  printf(" --- Column bounds ranging ---\n");
-  printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "bound^", "object^",
-	 "verify^", "bound_", "object_", "verify_");
+  if (reportSensitivityDataCheck) {
+    printf("\n\n");
+    printf(" --- Column bounds ranging ---\n");
+    printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	   "lower", "upper", "value", "cost", "dual", "bound^", "object^", "verify^", "bound_", "object_", "verify_");
+  }
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
     double svColLower = model->colLower[i];
     double svColUpper = model->colUpper[i];
     {
+      double changeColLower = svColLower;
+      double changeColUpper = svColUpper;
       if (Nflag[i]) {
 	if (Nmove[i] == 0) {
-	  model->colLower[i] = b_dn_b[i];
-	  model->colUpper[i] = b_dn_b[i];
+	  changeColLower = b_dn_b[i];
+	  changeColUpper = b_dn_b[i];
 	} else if (Nmove[i] == 1) {
-	  model->colLower[i] = b_dn_b[i];
+	  changeColLower = b_dn_b[i];
 	} else {
-	  model->colUpper[i] = b_dn_b[i];
+	  changeColUpper = b_dn_b[i];
 	}
       } else {
-	model->colUpper[i] = b_dn_b[i];
+	changeColUpper = b_dn_b[i];
       }
       //			model->scale();
       HDual solver;
+      model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
       solver.solve(model);
       solved_dn = model->dualObjectiveValue;
+      double error = abs(solved_dn-b_dn_f[i]);
+      totalSensitivityDataError += error;
+#ifdef HiGHSDEV
+      double relativeError = error/relativeErrorDenominator;
+      if (relativeError > toleranceRelativeError) {
+	printf("Col bound down ranging error: Col %2d; solved_dn = %12g; b_dn_f = %12g; relativeError = %12g\n",
+	       i, solved_dn, b_dn_f[i], relativeError);
+      }
+#endif
     }
     
     {
-      
+      double changeColLower = svColLower;
+      double changeColUpper = svColUpper;
       if (Nflag[i]) {
 	if (Nmove[i] == 0) {
-	  model->colLower[i] = b_up_b[i];
-	  model->colUpper[i] = b_up_b[i];
+	  changeColLower = b_up_b[i];
+	  changeColUpper = b_up_b[i];
 	} else if (Nmove[i] == 1) {
-	  model->colLower[i] = b_up_b[i];
+	  changeColLower = b_up_b[i];
 	} else {
-	  model->colUpper[i] = b_up_b[i];
+	  changeColUpper = b_up_b[i];
 	}
       } else {
-	model->colLower[i] = b_up_b[i];
+	changeColLower = b_up_b[i];
       }
       //			model->scale();
       HDual solver;
+      model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
       solver.solve(model);
       solved_up = model->dualObjectiveValue;
+      double error = abs(solved_up-b_up_f[i]);
+      totalSensitivityDataError += error;
+#ifdef HiGHSDEV
+      double relativeError = error/relativeErrorDenominator;
+      if (relativeError > toleranceRelativeError) {
+	printf("Col bound   up ranging error: Col %2d; solved_up = %12g; b_up_f = %12g; relativeError = %12g\n",
+	       i, solved_up, b_up_f[i], relativeError);
+      }
+#endif
     }
-    model->colLower[i] = svColLower;
-    model->colUpper[i] = svColUpper;
-    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-	   i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
-	   b_up_b[i], b_up_f[i], solved_up, b_dn_b[i], b_dn_f[i],
-	   solved_dn);
+    model->util_chgColBoundsSet(1, &i, &svColLower, &svColUpper);
+    if (reportSensitivityDataCheck) {
+      printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+	     i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
+	     b_up_b[i], b_up_f[i], solved_up, b_dn_b[i], b_dn_f[i], solved_dn);
+    }
   }
-  printf("\n\n");
-
-  printf("--- Column cost ranging ---\n");
-  
-  printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
-	 "lower", "upper", "value", "cost", "dual", "cost^", "object^",
-	 "verify^", "cost_", "object_", "verify_");
+  if (reportSensitivityDataCheck) {
+    printf("\n\n");
+    printf("--- Column cost ranging ---\n");
+    printf("Col %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n",
+	   "lower", "upper", "value", "cost", "dual", "cost^", "object^", "verify^", "cost_", "object_", "verify_");
+  }
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
     double svColCost = model->colCost[i];
     {
+      double changeColCost = svColCost;
       if (fabs(c_dn_c[i]) < 1e30)
-	model->colCost[i] = c_dn_c[i];
+	changeColCost = c_dn_c[i];
       //			model->scale();
       HDual solver;
+      model->util_chgCostsSet(1, &i, &changeColCost);
       solver.solve(model);
       solved_dn = model->dualObjectiveValue;
+      double error = abs(solved_dn-c_dn_f[i]);
+      totalSensitivityDataError += error;
+#ifdef HiGHSDEV
+      double relativeError = error/relativeErrorDenominator;
+      if (relativeError > toleranceRelativeError) {
+	printf("Col  cost down ranging error: Col %2d; solved_dn = %12g; c_dn_f = %12g; relativeError = %12g\n",
+	       i, solved_dn, c_dn_f[i], relativeError);
+      }
+#endif
     }
     
     {
-      
+      double changeColCost = svColCost;
       if (fabs(c_up_c[i]) < 1e30)
-	model->colCost[i] = c_up_c[i];
+	changeColCost = c_up_c[i];
       //			model->scale();
       HDual solver;
+      model->util_chgCostsSet(1, &i, &changeColCost);
       solver.solve(model);
       solved_up = model->dualObjectiveValue;
+      double error = abs(solved_up-c_up_f[i]);
+      totalSensitivityDataError += error;
+#ifdef HiGHSDEV
+      double relativeError = error/relativeErrorDenominator;
+      if (relativeError > toleranceRelativeError) {
+	printf("Col  cost   up ranging error: Col %2d; solved_up = %12g; c_up_f = %12g; relativeError = %12g\n",
+	       i, solved_up, c_up_f[i], relativeError);
+      }
+#endif
     }
-    model->colCost[i] = svColCost;
-    printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-	   i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
-	   c_up_c[i], c_up_f[i], solved_up, c_dn_c[i], c_dn_f[i],
-	   solved_dn);
+    model->util_chgCostsSet(1, &i, &svColCost);
+    if (reportSensitivityDataCheck) {
+      printf("%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
+	     i, model->colLower[i], model->colUpper[i], colValue[i], model->colCost[i], colDual[i],
+	     c_up_c[i], c_up_f[i], solved_up, c_dn_c[i], c_dn_f[i], solved_dn);
+    }
   }
-  printf("\n\n");
-  
-  cout << endl;
+  if (reportSensitivityDataCheck) {
+    printf("\n\n");
+  }
+  if (totalSensitivityDataError > toleranceRelativeTotalError) {
+    printf("WARNING totalSensitivityDataError = %12g\n", totalSensitivityDataError);
+  }
   return 0;
 }
