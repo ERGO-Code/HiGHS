@@ -112,11 +112,13 @@ const char* const LP_INDICATOR_SPLIT = ":+-<>=[]*";
 // 1) keywords ("min", "max", etc) can also be constraint/variable identifiers (judged from context)
 // 1.5) special keywords (inf, free) can not be constraint/variable identifiers
 // 2) quadratic constraints or objective funstions are not yet supported //not necessary now
-// 3) integer, binary, sos, semi continuous variables are not yet supported //not necessary now
-// 4) Line continueing after keyword not yet supported //TODO
+// 3) integer, binary, semi continuous variables are not yet supported // TODO
+// 4) sos variables not yet supported // Not necessary now
+// 5) Line continueing after keyword not yet supported //TODO
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderRetcode writeModelToFile(const char* filename, HighsLp model);
   FilereaderLp();
   ~FilereaderLp();
 
