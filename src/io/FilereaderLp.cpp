@@ -8,6 +8,8 @@
 FilereaderLp::FilereaderLp() {
   HighsPrintMessage(HighsMessageType::INFO, "Instantiated .lp file reader\n");
   this->isFileBufferFullyRead = true;  // nothing to read
+  this->readingPosition = NULL;
+  this->file = NULL;
 }
 
 FilereaderLp::~FilereaderLp() {
@@ -30,7 +32,18 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename, HighsLp m
   // write constraint section
   fprintf(this->file, "%s\n", LP_KEYWORD_ST[0]);
   for(int row=0; row<model.numRow_; row++) {
-    if(model.rowLower_[row] >= -10E10) {
+    if(model.rowLower_[row] == model.rowUpper_[row] ) {
+      // equality constraint
+      fprintf(this->file, " con%d: ", (row+1));
+      for(int var=0; var<model.numCol_; var++) {
+        for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
+          if(model.Aindex_[idx] == row) {
+            fprintf(this->file, "%+lf x%d ", model.Avalue_[idx], (var+1));
+          }
+        }
+      }
+      fprintf(this->file, "= %+lf\n", model.rowLower_[row]);
+    } else if(model.rowLower_[row] >= -10E10) {
       //has a lower bounds
       fprintf(this->file, " con%dlo: ", (row+1));
       for(int var=0; var<model.numCol_; var++) {
@@ -43,10 +56,19 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename, HighsLp m
 
       fprintf(this->file, ">= %+lf\n", model.rowLower_[row]);
 
-    }
-    if(model.rowUpper_[row] <= 10E10) {
+    } else if(model.rowUpper_[row] <= 10E10) {
       //has an upper bounds
-      fprintf(this->file, " con%dup:  <= %+lf\n", (row+1), model.rowUpper_[row]);
+      fprintf(this->file, " con%dup: ", (row+1));
+      for(int var=0; var<model.numCol_; var++) {
+        for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
+          if(model.Aindex_[idx] == row) {
+            fprintf(this->file, "%+lf x%d ", model.Avalue_[idx], (var+1));
+          }
+        }
+      }
+
+      fprintf(this->file, "<= %+lf\n", model.rowLower_[row]);
+
     }
   }
 
@@ -54,7 +76,16 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename, HighsLp m
   fprintf(this->file, "%s\n", LP_KEYWORD_BOUNDS[0]);
   for(int i=0; i<model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free 
-    fprintf(this->file, " %+lf <= x%d <= %+lf\n", model.colLower_[i], (i+1), model.colUpper_[i]);
+    if(model.colLower_[i] >= -10E10 && model.colUpper_[i] <= 10E10){
+      fprintf(this->file, " %+lf <= x%d <= %+lf\n", model.colLower_[i], (i+1), model.colUpper_[i]);
+    } else if(model.colLower_[i] < -10E10 && model.colUpper_[i] <= 10E10) {
+      fprintf(this->file, " -inf <= x%d <= %+lf\n", (i+1), model.colUpper_[i]);
+    } else if(model.colLower_[i] >= -10E10 && model.colUpper_[i] > 10E10) {
+      fprintf(this->file, " %+lf <= x%d <= +inf\n", model.colLower_[i], (i+1));
+    } else {
+      fprintf(this->file, " x%d free\n", model.colLower_[i], (i+1), model.colUpper_[i]);
+    }
+    
   }
 
   // write binary section
@@ -210,43 +241,45 @@ bool FilereaderLp::tryReadNextToken() {
   bool isKeyword;
   LpSectionKeyword keyword;
   double constantBuffer;
-  int charactersConsumedConstant;
+  int charactersConsumedConstant = 0;
 
-  int charactersConsumed;
+  int charactersConsumed = 0;
   int nread;
 
   // zeroth, check if a comment starts at the current position
   if (*this->readingPosition == LP_INDICATOR_COMMENT) {
     HighsPrintMessage(HighsMessageType::INFO, "Ignored comment '%s'\n",
                       this->readingPosition);
-    *this->readingPosition = '\n';
-    *(this->readingPosition + 1) = '\0';
+    this->readingPosition[0] = '\n';
+    this->readingPosition[1] = '\0';
   }
 
   // first, check if the current position matches a keyword containing one space
   nread = sscanf(this->readingPosition, "%[^\t\n:+<>=-]%n", this->stringBuffer,
                  &charactersConsumed);  // probably won't work if the line
                                         // continues after the keyword
-  isKeyword = tryParseSectionKeyword(this->stringBuffer, &keyword);
+  if(nread == 1) {
+  isKeyword = tryParseSectionKeyword(&(this->stringBuffer[0]), &keyword);
   // check if it is a keyword on a new line AND there is no colon following
-  if (nread == 1 && isKeyword && previousToken->type == LpTokenType::LINEEND &&
-      *(this->readingPosition + charactersConsumed) != ':') {
-    HighsPrintMessage(HighsMessageType::INFO, "Token was keyword: '%s'\n",
-                      this->stringBuffer);
-    this->readingPosition += charactersConsumed;
+    if (isKeyword && previousToken->type == LpTokenType::LINEEND &&
+        *(this->readingPosition + charactersConsumed) != ':') {
+      HighsPrintMessage(HighsMessageType::INFO, "Token was keyword: '%s'\n",
+                        this->stringBuffer);
+      this->readingPosition += charactersConsumed;
 
-    LpKeywordToken* newToken = new LpKeywordToken();
-    newToken->keyword = keyword;
-    newToken->type = LpTokenType::KEYWORD;
-    this->tokenQueue.push_back(newToken);
-    return true;
+      LpKeywordToken* newToken = new LpKeywordToken();
+      newToken->keyword = keyword;
+      newToken->type = LpTokenType::KEYWORD;
+      this->tokenQueue.push_back(newToken);
+      return true;
+    }
   }
-
   // check all other cases (which don't allow for tokens to contain a
   // whitespace) is it a constant?
   nread = sscanf(this->readingPosition, "%lf%n", &constantBuffer,
                  &charactersConsumedConstant);  // does not properly recognize
                                                 // all constants, e.g. E-5
+  
   if (nread == 1) {
     HighsPrintMessage(HighsMessageType::INFO, "\tToken was constant '%lf'\n",
                       constantBuffer);
@@ -259,7 +292,7 @@ bool FilereaderLp::tryReadNextToken() {
 
     return true;
   }
-
+  HighsPrintMessage(HighsMessageType::INFO, "TEST after constant\n");
   // is it a string?
   nread = sscanf(this->readingPosition, "%[^\t\n:+<>=\ -]%n",
                  this->stringBuffer, &charactersConsumed);
@@ -471,6 +504,7 @@ bool FilereaderLp::tryParseSpecialKeyword(const char* str,
 
 bool FilereaderLp::tryParseSectionKeyword(const char* str,
                                           LpSectionKeyword* keyword) {
+  //char* str = strClone(orig);
   strToLower((char*)str);
 
   *keyword = LpSectionKeyword::NOKEYWORD;
