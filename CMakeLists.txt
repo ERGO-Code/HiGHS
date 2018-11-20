@@ -113,4 +113,4 @@ endif()
 add_subdirectory(src)
 
 enable_testing()
-add_subdirectory(check)
+add_subdirectory(src/test)

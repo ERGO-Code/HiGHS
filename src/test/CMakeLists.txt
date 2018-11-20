@@ -75,8 +75,11 @@ foreach(instance ${${instances}})
         # specify the instance and the settings load command
         set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
         # add a test and test properties
-        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} -f ${inst})
-        set_tests_properties (${name}${setting} PROPERTIES PASS_REGULAR_EXPRESSION "(Solve plain|multi|Presolve|Postsolve): ${solutionstatus}")
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+              -f ${inst})
+        set_tests_properties (${name}${setting} PROPERTIES 
+              PASS_REGULAR_EXPRESSION 
+              "(Solve plain|multi|Presolve|Postsolve): ${solutionstatus}")
     endforeach(setting)
 endforeach(instance)
 endmacro(add_instancetests)
@@ -91,8 +94,12 @@ endmacro(add_instancetests)
 set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/external/)
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
+target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 
 # Make test executable
-set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp ${CMAKE_CURRENT_SOURCE_DIR}/TestOptions.cpp)
+set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp 
+      ${CMAKE_CURRENT_SOURCE_DIR}/TestOptions.cpp
+      ${CMAKE_SOURCE_DIR/src/lp_data/HighsLp.cpp})
 add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests Catch)
