@@ -82,7 +82,17 @@ endforeach(instance)
 endmacro(add_instancetests)
 
 # add tests for success and fail instances
-add_instancetests(successInstances "OPTIMAL")
-add_instancetests(failInstances "NOT-OPT")
-add_instancetests(infeasibleInstances "NOT-OPT")
-add_instancetests(unboundedInstances "NOT-OPT")
+#add_instancetests(successInstances "OPTIMAL")
+#add_instancetests(failInstances "NOT-OPT")
+#add_instancetests(infeasibleInstances "NOT-OPT")
+#add_instancetests(unboundedInstances "NOT-OPT")
+
+# prepare Catch library
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/external/)
+add_library(Catch INTERFACE)
+target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
+
+# Make test executable
+set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp ${CMAKE_CURRENT_SOURCE_DIR}/TestOptions.cpp)
+add_executable(tests ${TEST_SOURCES})
+target_link_libraries(tests Catch)
