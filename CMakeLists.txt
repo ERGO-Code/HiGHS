@@ -23,6 +23,21 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
+find_program(GIT git)
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git))
+    execute_process(
+        COMMAND ${GIT} describe --always --dirty
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+else()
+    set(GITHASH "n/a")
+endif()
+message(STATUS "Git hash: " ${GITHASH})
+
+string(TIMESTAMP TODAY "%Y-%m-%d")
+message(STATUS "compilation date: " ${TODAY})
+
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
     message(STATUS "External presolve: " ${EXT_PRESOLVE_DIR})
@@ -42,6 +57,8 @@ if(OPENMP)
     find_package(OpenMP)
     if(OPENMP_FOUND)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    else()
+        set(OPENMP OFF)
     endif()
 endif()
 message(STATUS "OpenMP: " ${OPENMP})
@@ -52,9 +69,6 @@ message(STATUS "SCIP  development: " ${SCIP_DEV})
 option(HiGHSDEV "HiGHS development" OFF)
 message(STATUS "HiGHS development: " ${HiGHSDEV})
 
-option(HiGHSDEBUG "HiGHS debug" OFF)
-message(STATUS "HiGHS debug: " ${HiGHSDEBUG})
-
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
@@ -64,10 +78,18 @@ message(STATUS "Build shared libraries: " ${SHARED})
 if(CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE Release)
 endif()
+if(CMAKE_BUILD_TYPE STREQUAL Release)
+    set(HiGHSRELEASE ON)
+endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.h)
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src)
+
+include_directories(${CMAKE_SOURCE_DIR}/src/external  ${CMAKE_SOURCE_DIR}/src/io
+    ${CMAKE_SOURCE_DIR}/src/ipx ${CMAKE_SOURCE_DIR}/src/lp_data
+    ${CMAKE_SOURCE_DIR}/src/presolve ${CMAKE_SOURCE_DIR}/src/simplex 
+    ${CMAKE_SOURCE_DIR}/src/test ${CMAKE_SOURCE_DIR}/src/wrappers)
 
 # use interior point solver
 set(IPX_DIR "" CACHE STRING "Path to IPX folder.")
