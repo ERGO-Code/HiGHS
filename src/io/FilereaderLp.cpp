@@ -1,8 +1,10 @@
+#include <stdarg.h>
+#include <assert.h>
+
 #include "FilereaderLp.h"
 
 #include "../util/stringutil.h"
 
-#include <assert.h>
 #include "HighsIO.h"
 
 FilereaderLp::FilereaderLp() {
@@ -10,96 +12,133 @@ FilereaderLp::FilereaderLp() {
   this->isFileBufferFullyRead = true;  // nothing to read
   this->readingPosition = NULL;
   this->file = NULL;
+  this->linelength = 0;
 }
 
 FilereaderLp::~FilereaderLp() {
   HighsPrintMessage(HighsMessageType::INFO, "Destroyed .lp file reader\n");
 }
 
+void FilereaderLp::writeToFile(const char* format, ...) {
+  va_list argptr;
+  va_start(argptr, format);
+  int tokenlength = vsprintf(this->stringBuffer, format, argptr);
+  if(this->linelength + tokenlength >= LP_MAX_LINE_LENGTH) {
+    fprintf(this->file, "\n");
+    fprintf(this->file, "%s", this->stringBuffer);
+    this->linelength = tokenlength;
+  } else {
+    fprintf(this->file, "%s", this->stringBuffer);
+    this->linelength += tokenlength;
+  }
+}
+
+void FilereaderLp::writeToFileLineend() {
+  fprintf(this->file, "\n");
+  this->linelength = 0;
+}
+
 FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename, HighsLp model) {
   this->file = fopen(filename, "w");
-  HighsPrintMessage(HighsMessageType::INFO, "Hello from filewriter\n");
-  fprintf(this->file, "\\ File written by Highs .lp filereader\n");
-  
-  // write objective section
-  fprintf(this->file, "%s\n", LP_KEYWORD_MIN[0]);
-  fprintf(this->file, " obj: ");
-  for(int i=0; i<model.numCol_; i++) {
-    fprintf(this->file, "%+lf x%d ", model.colCost_[i], (i+1));
-  }
-  fprintf(this->file, "\n");
 
-  // write constraint section
-  fprintf(this->file, "%s\n", LP_KEYWORD_ST[0]);
+  // write comment at the start of the file
+  this->writeToFile("\\ %s", LP_COMMENT_FILESTART);
+  this->writeToFileLineend();
+  
+  // write objective (standard is minimization)
+  this->writeToFile("%s", LP_KEYWORD_MIN[0]);
+  this->writeToFileLineend();
+  this->writeToFile(" obj: ");
+  for(int i=0; i<model.numCol_; i++) {
+    this->writeToFile("%+g x%d ", model.colCost_[i], (i+1));
+  }
+  this->writeToFileLineend();
+
+  // write constraint section, lower & upper bounds are one constraint each
+  this->writeToFile("%s", LP_KEYWORD_ST[0]);
+  this->writeToFileLineend();
   for(int row=0; row<model.numRow_; row++) {
     if(model.rowLower_[row] == model.rowUpper_[row] ) {
       // equality constraint
-      fprintf(this->file, " con%d: ", (row+1));
+      this->writeToFile(" con%d: ", row+1);
       for(int var=0; var<model.numCol_; var++) {
         for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
           if(model.Aindex_[idx] == row) {
-            fprintf(this->file, "%+lf x%d ", model.Avalue_[idx], (var+1));
+            this->writeToFile("%+g x%d ", model.Avalue_[idx], var+1);
           }
         }
       }
-      fprintf(this->file, "= %+lf\n", model.rowLower_[row]);
-    } else if(model.rowLower_[row] >= -10E10) {
+      this->writeToFile("= %+g", model.rowLower_[row]);
+      this->writeToFileLineend();
+    } else {
+      if(model.rowLower_[row] >= -10E10) {
       //has a lower bounds
-      fprintf(this->file, " con%dlo: ", (row+1));
-      for(int var=0; var<model.numCol_; var++) {
-        for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
-          if(model.Aindex_[idx] == row) {
-            fprintf(this->file, "%+lf x%d ", model.Avalue_[idx], (var+1));
+      this->writeToFile(" con%dlo: ", row+1);
+        for(int var=0; var<model.numCol_; var++) {
+         for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
+            if(model.Aindex_[idx] == row) {
+              this->writeToFile("%+g x%d ", model.Avalue_[idx], var+1);
+            }
           }
         }
-      }
-
-      fprintf(this->file, ">= %+lf\n", model.rowLower_[row]);
-
-    } else if(model.rowUpper_[row] <= 10E10) {
-      //has an upper bounds
-      fprintf(this->file, " con%dup: ", (row+1));
-      for(int var=0; var<model.numCol_; var++) {
-        for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
-          if(model.Aindex_[idx] == row) {
-            fprintf(this->file, "%+lf x%d ", model.Avalue_[idx], (var+1));
+        this->writeToFile(">= %+g", model.rowLower_[row]);
+        this->writeToFileLineend();
+      } else if(model.rowUpper_[row] <= 10E10) {
+        //has an upper bounds
+        this->writeToFile(" con%dup: ", row+1);
+        for(int var=0; var<model.numCol_; var++) {
+          for(int idx=model.Astart_[var]; idx<model.Astart_[var+1]; idx++) {
+            if(model.Aindex_[idx] == row) {
+              this->writeToFile("%+g x%d ", model.Avalue_[idx], var+1);
+            }
           }
         }
+        this->writeToFile("<= %+g", model.rowLower_[row]);
+        this->writeToFileLineend();
+      } else {
+        // constraint has infinite lower & upper bounds so not a proper constraint, does not get written
       }
-
-      fprintf(this->file, "<= %+lf\n", model.rowLower_[row]);
-
     }
   }
 
   // write bounds section
-  fprintf(this->file, "%s\n", LP_KEYWORD_BOUNDS[0]);
+  this->writeToFile("%s", LP_KEYWORD_BOUNDS[0]);
+  this->writeToFileLineend();
   for(int i=0; i<model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free 
     if(model.colLower_[i] >= -10E10 && model.colUpper_[i] <= 10E10){
-      fprintf(this->file, " %+lf <= x%d <= %+lf\n", model.colLower_[i], (i+1), model.colUpper_[i]);
-    } else if(model.colLower_[i] < -10E10 && model.colUpper_[i] <= 10E10) {
-      fprintf(this->file, " -inf <= x%d <= %+lf\n", (i+1), model.colUpper_[i]);
+      this->writeToFile(" %+g <= x%d <= %+g", model.colLower_[i], i+1, model.colUpper_[i]);
+      this->writeToFileLineend();
+    } else if(model.colLower_[i] < -10E10 && model.colUpper_[i] <= 10E10) {      
+      this->writeToFile(" -inf <= x%d <= %+g", i+1, model.colUpper_[i]);
+      this->writeToFileLineend();
+
     } else if(model.colLower_[i] >= -10E10 && model.colUpper_[i] > 10E10) {
-      fprintf(this->file, " %+lf <= x%d <= +inf\n", model.colLower_[i], (i+1));
+      this->writeToFile(" %+g <= x%d <= +inf", model.colLower_[i], i+1);
+      this->writeToFileLineend();
     } else {
-      fprintf(this->file, " x%d free\n", model.colLower_[i], (i+1), model.colUpper_[i]);
+      this->writeToFile(" x%d %s", i+1, LP_KEYWORD_FREE[0]);
+      this->writeToFileLineend();
     }
-    
   }
 
   // write binary section
-  fprintf(this->file, "%s\n", LP_KEYWORD_BIN[0]);
+  this->writeToFile("%s", LP_KEYWORD_BIN[0]);
+  this->writeToFileLineend();
 
   // write general section
-  fprintf(this->file, "%s\n", LP_KEYWORD_GEN[0]);
+  this->writeToFile("%s", LP_KEYWORD_GEN[0]);
+  this->writeToFileLineend();
 
   // write semi section
-  fprintf(this->file, "%s\n", LP_KEYWORD_SEMI[0]);
+  this->writeToFile("%s", LP_KEYWORD_SEMI[0]);
+  this->writeToFileLineend();
 
 
   // write end
-  fprintf(this->file, "%s\n", LP_KEYWORD_END[0]);
+  this->writeToFile("%s", LP_KEYWORD_END[0]);
+  this->writeToFileLineend();
+
   fclose(this->file);
   return FilereaderRetcode::OKAY;
 }
@@ -292,7 +331,6 @@ bool FilereaderLp::tryReadNextToken() {
 
     return true;
   }
-  HighsPrintMessage(HighsMessageType::INFO, "TEST after constant\n");
   // is it a string?
   nread = sscanf(this->readingPosition, "%[^\t\n:+<>=\ -]%n",
                  this->stringBuffer, &charactersConsumed);

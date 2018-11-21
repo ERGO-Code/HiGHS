@@ -6,6 +6,10 @@
 #include "HighsIO.h"
 
 #define BUFFERSIZE 561
+#define LP_MAX_LINE_LENGTH 560
+#define LP_MAX_NAME_LENGTH 255
+
+#define LP_COMMENT_FILESTART ("File written by Highs .lp filereader")
 
 const char* const LP_KEYWORD_MIN[] = {"minimize", "min", "minimum"};
 const char* const LP_KEYWORD_MAX[] = {"maximize", "max", "maximum"};
@@ -141,7 +145,9 @@ class FilereaderLp : public Filereader {
   char* readingPosition;
 
   bool isFileBufferFullyRead;
-
+  int linelength;
+  void writeToFile(const char* format, ...);
+  void writeToFileLineend();
   LpSectionKeyword getSectionTokens(LpSectionKeyword expectedSection);
 
   bool tryReadNextToken();
