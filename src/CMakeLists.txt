@@ -1,6 +1,6 @@
 set(sources
     lp_data/HighsLp.cpp
-    lp_data/HighsModelBuilder.cpp
+    lp_data/HighsModel.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -29,7 +29,7 @@ set(sources
 set(headers
     HiGHSRun.h
     HApp.h
-    lp_data/HighsModelBuilder.h
+    lp_data/HighsModel.h
     simplex/HConst.h
     simplex/HDual.h
     simplex/HDualRow.h
