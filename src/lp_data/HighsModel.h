@@ -61,6 +61,7 @@ class HighsLinearCons : public HighsCons {
 
 typedef std::map<const char*, HighsLinearCons*, char_cmp> ConsMap;
 typedef std::map<HighsVar*, std::list<HighsLinearCons*>*> VarConsMap;
+typedef std::map<HighsLinearConsCoef*, HighsLinearCons*> CoefConsMap;
 
 class HighsModel {
  public:
@@ -85,8 +86,9 @@ class HighsModel {
   void HighsDestroyLinearCons();
 
   // conversion from/to technical Lp representation
+  HighsModel() {};
   HighsModel(HighsLp* lp);
-  void HighsBuildModel(HighsLp* lp);
+  void HighsBuildTechnicalModel(HighsLp* lp);
 
  private:
   // major data structures
@@ -98,6 +100,7 @@ class HighsModel {
   ConsMap constraintMap;
   VarConsMap variableConstraintMap;
   VarConsCoefsMap variableConstraintCoefficientMap;
+  CoefConsMap coefficientConstraintMap;
 };
 
 #endif

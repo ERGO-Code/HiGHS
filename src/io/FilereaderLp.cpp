@@ -66,7 +66,7 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename, HighsLp m
     this->writeToFile("%+g x%d ", model.colCost_[i], (i+1));
   }
   this->writeToFileLineend();
-
+  
   // write constraint section, lower & upper bounds are one constraint each
   this->writeToFile("%s", LP_KEYWORD_ST[0]);
   this->writeToFileLineend();

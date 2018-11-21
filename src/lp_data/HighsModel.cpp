@@ -1,4 +1,5 @@
 #include "HighsModel.h"
+#include "HighsIO.h"
 
 #pragma region HighsVar
 HighsVar::HighsVar(const char* name, double lo, double hi, double obj,
@@ -95,11 +96,13 @@ void HighsModel::HighsCreateVar(const char* name, double lo, double hi,
   // create the new variable and add it to the model
   *var = new HighsVar(name, lo, hi, obj, type);
   this->variables.push_back(*var);
-  this->variableMap.insert(VarMap::value_type(name, *var));
+  if(name != NULL) {
+    this->variableMap.insert(VarMap::value_type(name, *var));
+  }
 }
 
 void HighsModel::HighsCreateVar(const char* name, HighsVar** var) {
-  this->HighsCreateVar(name, var);
+  this->HighsCreateVar(name, -__DBL_MAX__, __DBL_MAX__, 0.0, HighsVarType::CONT, var);
 }
 
 void HighsModel::HighsCreateVar(HighsVar** var) {
@@ -154,7 +157,10 @@ void HighsModel::HighsCreateLinearCons(const char* name, double lo, double hi,
   // create the new constraint and add it to the model
   *cons = new HighsLinearCons(name, lo, hi);
   this->linearConstraints.push_back(*cons);
-  this->constraintMap.insert(ConsMap::value_type(name, *cons));
+  if(name != NULL) {
+    this->constraintMap.insert(ConsMap::value_type(name, *cons));
+  }
+  
 }
 
 void HighsModel::HighsCreateLinearCons(const char* name,
@@ -192,6 +198,7 @@ void HighsModel::HighsAddLinearConsCoefToCons(HighsLinearCons* cons, HighsLinear
   if (it != cons->linearCoefs.end()) {
     // constraint already has a coefficient for this variable
   } else {
+    coefficientConstraintMap.insert(CoefConsMap::value_type(coef, cons));
     cons->linearCoefs.insert(VarConsCoefMap::value_type(coef->var, coef));
     VarConsMap::iterator it = this->variableConstraintMap.find(coef->var);
     if(it != this->variableConstraintMap.end()) {
@@ -207,4 +214,77 @@ void HighsModel::HighsAddLinearConsCoefToCons(HighsLinearCons* cons, HighsLinear
 
 #pragma endregion
 
+
+void HighsModel::HighsBuildTechnicalModel(HighsLp* lp) {
+  lp->numCol_ = this->variables.size();
+  lp->numRow_ = this->linearConstraints.size();
+  
+  // determine order of variables 
+  HighsVar** variables = new HighsVar*[lp->numCol_];
+  for(int i=0; i<lp->numCol_; i++) {
+    HighsVar* front = this->variables.front();
+    this->variables.pop_front();
+    this->variables.push_back(front);
+    variables[i] = front;
+    lp->colCost_.push_back(front->obj);
+    lp->colLower_.push_back(front->lowerBound);
+    lp->colUpper_.push_back(front->upperBound);
+  }
+  
+  // determine order of constraints
+  HighsLinearCons** constraints = new HighsLinearCons*[lp->numRow_];
+  for(int i=0; i<lp->numRow_; i++) {
+    HighsLinearCons* front = this->linearConstraints.front();
+    this->linearConstraints.pop_front();
+    this->linearConstraints.push_back(front);
+    constraints[i] = front;
+    lp->rowLower_.push_back(front->lowerBound);
+    lp->rowUpper_.push_back(front->upperBound);
+  }
+  
+  // handle constraints
+  lp->Astart_.clear();
+  lp->Astart_.push_back(0);
+  HighsPrintMessage(HighsMessageType::INFO, "Handle constraints\n");
+  for(int var=0; var<lp->numCol_; var++) {
+    HighsPrintMessage(HighsMessageType::INFO, "Handle Coefficients of variable %d\n", var);
+    VarConsCoefsMap::iterator iter = this->variableConstraintCoefficientMap.find(variables[var]);
+    if(iter != this->variableConstraintCoefficientMap.end()) {
+      std::list<HighsLinearConsCoef*>* coefs = iter->second;
+      int numberOfCoefficients = coefs->size();
+      HighsPrintMessage(HighsMessageType::INFO, "%d coefficients found\n", numberOfCoefficients);
+
+      lp->Astart_.push_back(lp->Astart_[var] + numberOfCoefficients);
+
+      for(int coef=0; coef<numberOfCoefficients; coef++) {
+        HighsLinearConsCoef* front = coefs->front();
+        coefs->pop_front();
+        coefs->push_back(front);
+        lp->Avalue_.push_back(front->coef);
+        CoefConsMap::iterator it = this->coefficientConstraintMap.find(front);
+        if(it != this->coefficientConstraintMap.end()){
+          // find index of constraint
+          HighsCons* currentCons = it->second;
+          for(int cons=0; cons<lp->numRow_; cons++) {
+            if(constraints[cons] == currentCons) {
+              lp->Aindex_.push_back(cons);
+              break;
+            }
+          }
+        } else {
+          //ERROR
+        }
+      }
+    }
+  }
+
+
+
+  delete variables;
+}
+
+
+
 #pragma endregion
+
+

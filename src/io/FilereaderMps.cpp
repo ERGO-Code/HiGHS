@@ -46,5 +46,15 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
 
 FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
                                                   HighsLp model) {
+  std::vector<int> integerColumn;
+  int numint = 0;
+  int objsense = 1;
+  double objoffset = 0;
+  writeMPS(filename,model.numRow_, model.numCol_, numint,
+             objsense, objoffset, model.Astart_,
+             model.Aindex_, model.Avalue_,
+             model.colCost_, model.colLower_,
+             model.colUpper_, model.rowLower_,
+             model.rowUpper_, integerColumn);
   return FilereaderRetcode::OKAY;
 }
