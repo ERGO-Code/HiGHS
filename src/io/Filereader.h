@@ -10,10 +10,11 @@ class Filereader {
   virtual FilereaderRetcode readModelFromFile(const char* filename,
                                               HighsLp& model) = 0;
   virtual FilereaderRetcode writeModelToFile(const char* filename,
-                                              HighsLp model) = 0;
-  static void readLineFromFile(FILE* file, char* buffer, int buffersize);
-
+                                             HighsLp model) = 0;
   static Filereader* getFilereader(const char* filename);
+
+ private:
+  static void readLineFromFile(FILE* file, char* buffer, int buffersize);
 };
 
 #endif
