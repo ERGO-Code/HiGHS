@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HMatrix.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HMatrix.h"
 #include <cassert>
 #include <cmath>
@@ -67,8 +80,8 @@ void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
       }
     }
   }
-    // Initialise the density of the Price result
-    //  row_apDensity = 0;
+  // Initialise the density of the Price result
+  //  row_apDensity = 0;
 #ifdef HiGHSDEV
   assert(setup_ok(nonbasicFlag_));
 #endif
@@ -158,7 +171,6 @@ void HMatrix::update(int columnIn, int columnOut) {
       swap(ARvalue[iFind], ARvalue[iSwap]);
     }
   }
-  // rp_mtx();
 }
 
 double HMatrix::compute_dot(HVector &vector, int iCol) const {
@@ -1051,31 +1063,4 @@ void HMatrix::compute_matB_vec(const double *vec, const int *base,
     }
   }
   result->count = resultCount;
-}
-
-void HMatrix::rp_mtx() {
-  if (numRow + numCol > 20) return;
-  vector<double> rp_mtx_r;
-  rp_mtx_r.assign(numCol, 0);
-
-  printf("\nRow-wise matrix\n");
-  printf("         ");
-  for (int i = 0; i < numCol; i++) {
-    printf(" %8d", i);
-  }
-  printf("\n");
-
-  for (int i = 0; i < numRow; i++) {
-    printf(" Row %2d: ", i);
-    for (int k = ARstart[i]; k < AR_Nend[i]; k++) {
-      rp_mtx_r[ARindex[k]] = ARvalue[k];
-    }
-    for (int k = 0; k < numCol; k++) {
-      printf(" %8g", rp_mtx_r[k]);
-    }
-    printf("\n");
-    for (int k = ARstart[i]; k < AR_Nend[i]; k++) {
-      rp_mtx_r[ARindex[k]] = 0;
-    }
-  }
 }

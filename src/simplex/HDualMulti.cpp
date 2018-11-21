@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HDualMulti.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HConst.h"
 #include "HDual.h"
 #include "HPrimal.h"
@@ -152,7 +165,7 @@ void HDual::major_chooseRowBtran() {
     }
   }
 
-    // 4.2 Perform BTRAN
+  // 4.2 Perform BTRAN
 #pragma omp parallel for schedule(static, 1)
   for (int i = 0; i < multi_ntasks; i++) {
     const int iRow = multi_iRow[i];
@@ -261,10 +274,10 @@ void HDual::minor_updateDual() {
   if (thetaDual == 0) {
     model->shiftCost(columnIn, -workDual[columnIn]);
   } else {
-    dualRow.update_dual(thetaDual);
+    dualRow.update_dual(thetaDual, columnOut);
     if (slice_PRICE) {
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].update_dual(thetaDual);
+        slice_dualRow[i].update_dual(thetaDual, columnOut);
     }
   }
   workDual[columnIn] = 0;
@@ -366,7 +379,7 @@ void HDual::minor_updateRows() {
       }
     }
 
-      // Perform tasks
+    // Perform tasks
 #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < multi_nTasks; i++) {
       HVector_ptr nextEp = multi_vector[i];
@@ -416,19 +429,17 @@ void HDual::major_update() {
     double alphaR = fabs(iFinish->alphaRow);
     double compare = min(alphaC, alphaR);
     double alphaDiff = fabs(alphaC - alphaR);
-    //        int startUpdate = model->countUpdate - multi_nFinish;
+    // int startUpdate = model->countUpdate - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
       cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
-      invertHint = invertHint_possiblySingularBasis;  // Was 1
-                                                      //            if
-                                                      //            (startUpdate
-                                                      //            > 0) {
+      invertHint = invertHint_possiblySingularBasis;
+	// if (startUpdate > 0) {
       major_rollback();
       return;
-      //            }
+      // }
     }
   }
 
@@ -497,7 +508,7 @@ void HDual::major_updateFtranParallel() {
     multi_ntasks++;
   }
 
-    // Perform FTRAN
+  // Perform FTRAN
 #pragma omp parallel for schedule(dynamic, 1)
   for (int i = 0; i < multi_ntasks; i++) {
     HVector_ptr rhs = multi_vector[i];
@@ -510,8 +521,8 @@ void HDual::major_updateFtranParallel() {
     MFinish *Fin = &multi_finish[iFn];
     HVector *Col = Fin->column;
     HVector *Row = Fin->row_ep;
-    total_FT_inc_TICK += Col->pseudoTick;
-    total_FT_inc_TICK += Row->pseudoTick;
+    total_FT_inc_TICK += Col->syntheticTick;  // Was .pseudoTick
+    total_FT_inc_TICK += Row->syntheticTick;  // Was .pseudoTick
   }
 
   // Update rates
@@ -626,7 +637,7 @@ void HDual::major_updatePrimal() {
       HVector *Col = Fin->column;
       HVector *Row = Fin->row_ep;
       double Kai = -2 / Fin->alphaRow;
-      dualRHS.update_weight(Col, Fin->EdWt, Kai, &Row->array[0]);
+      dualRHS.update_weight_DSE(Col, Fin->EdWt, Kai, &Row->array[0]);
       dualRHS.update_infeasList(Col);
     }
   }
@@ -674,7 +685,7 @@ void HDual::major_updateFactor() {
                         &invertHint);
 
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
-    invertHint = invertHint_pseudoClockSaysInvert;  // Was 1
+    invertHint = invertHint_syntheticClockSaysInvert;
 }
 
 void HDual::major_rollback() {

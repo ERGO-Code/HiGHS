@@ -494,7 +494,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
         model.getPrStatus(), model.modelName.c_str(), model.numRow,
-        model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+        model.numCol, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -523,7 +523,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
             model.getPrStatus(), model.modelName.c_str(), model.numRow,
-            model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+            model.numCol, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
             solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
@@ -574,7 +574,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
           "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
           "%10.3f,%20.10e,%10d,%10d,%10d\n",
           model.getPrStatus(), model.modelName.c_str(), model.numRow,
-          model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+          model.numCol, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
           solver.n_ph2_du_it, solver.n_pr_it);
       cout << flush;
 #endif
@@ -642,7 +642,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
         model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV, Crash_ArgV,
         EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime, presolve1Time,
         crashTime, crossoverTime, presolve2Time, solveTime, postsolveTime,
-        model.objective, model.numberIteration, model.totalTime,
+        model.dualObjectiveValue, model.numberIteration, model.totalTime,
         solver.n_wg_DSE_wt);
     cout << flush;
   }

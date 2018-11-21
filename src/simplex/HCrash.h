@@ -1,20 +1,41 @@
-/*
- * HCrash.h
- *
- *  Created on: 20 Oct 2016
- *      Author: Julian
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HCrash.h
+ * @brief Bixby and Maros-style crash for the HiGHS simplex solver
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-
 #ifndef SIMPLEX_HCRASH_H_
 #define SIMPLEX_HCRASH_H_
 
 #include <vector>
-#include "HMatrix.h"
 #include "HModel.h"
 using namespace std;
 
-// LTSSF scalar parameters
+/**
+ * Possible crash mode values used to test Crash_Mode
+ */
+const int Crash_Mode_No = 0;
+const int Crash_Mode_LTSSF_k = 1;
+const int Crash_Mode_LTSSF_pri = 2;
+const int Crash_Mode_LTSF_k = 3;
+const int Crash_Mode_LTSF_pri = 4;
+const int Crash_Mode_LTSF = 5;
+const int Crash_Mode_Bixby = 6;
+const int Crash_Mode_BixbyNoNzCCo = 7;
+const int Crash_Mode_Bs = 8;
+#ifdef HiGHSDEV
+const int Crash_Mode_TsSing = 9;
+#endif
+const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
 
+// LTSSF scalar parameters
 const int crsh_vr_st_no_act = 0;
 const int crsh_vr_st_act = 1;
 
@@ -37,29 +58,30 @@ const int no_ix = no_lk;
 // LTSSF scalar control parameters
 const double tl_crsh_abs_pv_v = 1e-4;
 const double tl_crsh_rlv_pv_v = 1e-2;
-//   	Switches for LTSSF data structures, checking and reporting
-const bool OneD_hdr = false;
-const bool TwoD_hdr = true;
+// Switches for LTSSF checking and reporting
 const int ltssf_ck_fq = 0;
 #ifdef HiGHSDEV
-const bool Rp_TwoD_da = false;
-const bool Rp_Bixby_Ps = false;
+const bool reportCrashData = false;
+const bool reportBixbyPass = false;
 #endif
 
+/**
+ * @brief Bixby and Maros-style crash for the HiGHS simplex solver
+ */
 class HCrash {
  public:
-  void crash(HModel *ptr_model, int Crash_Mode);
+/**
+ * @brief Determine a particular crash basis for a given model instance
+ */
+  void crash(
+	     HModel *ptr_model, //!< The model instance to be crashed
+	     int Crash_Mode     //!< The crash mode to be used
+	     );
+ private:
   void bixby(HModel *ptr_model, int Crash_Mode);
   bool bixby_iz_da(HModel *ptr_model);
   void bixby_rp_mrt(HModel *ptr_model);
   void crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode);
-  void crsh_an_c_co(HModel *ptr_model);
-  void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
-  void crsh_rp_r_c_st(int mode, int Crash_Mode);
-  string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
-#ifdef HiGHSDEV
-  void crsh_ck_an_impl_bd();
-#endif
   void ltssf(HModel *ptr_model, int Crash_Mode);
   void ltssf_iz_mode(int Crash_Mode);
   void ltssf_iz_da(HModel *ptr_model, int Crash_Mode);
@@ -72,14 +94,16 @@ class HCrash {
 #endif
   void ltssf_cz_r();
   void ltssf_cz_c(HModel *ptr_model);
+#ifdef HiGHSDEV
+  void tsSing(HModel *ptr_model);
+  void crsh_an_c_co(HModel *ptr_model);
+  string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
+  void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
+  void crsh_rp_r_c_st(int mode, int Crash_Mode);
+  void crsh_ck_an_impl_bd();
   void ltssf_rp_r_k();
   void ltssf_rp_r_pri();
   void ltssf_rp_pri_k_da();
-  void build_maxheap(double *heap_v, int *heap_i, int n);
-  void heapsort(double *heap_v, int *heap_i, int n);
-  void max_heapify(double *heap_v, int *heap_i, int i, int n);
-#ifdef HiGHSDEV
-  void tsSing(HModel *ptr_model);
 #endif
   // Model
   HModel *model;
@@ -110,6 +134,7 @@ class HCrash {
   vector<int> crsh_r_k_lkb;
   vector<int> crsh_r_k_lkf;
 
+#ifdef HiGHSDEV
   vector<int> crsh_vr_ty_og_n_r;
   vector<int> crsh_vr_ty_rm_n_r;
   vector<int> crsh_vr_ty_og_n_c;
@@ -119,6 +144,7 @@ class HCrash {
   vector<int> crsh_bs_vr_ty_n_c;
   vector<int> crsh_nonbc_vr_ty_n_r;
   vector<int> crsh_nonbc_vr_ty_n_c;
+#endif
 
   vector<double> crsh_mtx_c_mx_abs_v;
   vector<double> CrshARvalue;
@@ -135,10 +161,10 @@ class HCrash {
   vector<int> bixby_pv_in_r;
   vector<int> bixby_vr_in_r;
   vector<int> bixby_r_k;
-  //	vector<int> bixby_ze_r_k;
+  // vector<int> bixby_ze_r_k;
 
   // LTSSF scalar identifiers
-  //	int crsh_mode;
+  // int crsh_mode;
   int crsh_f_vr_ty;
   int crsh_l_vr_ty;
 
@@ -176,4 +202,4 @@ class HCrash {
   bool bixby_no_nz_c_co;
 };
 
-#endif /* HCRASH_H_ */
+#endif /* SIMPLEX_HCRASH_H_ */

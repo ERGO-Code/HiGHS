@@ -1,12 +1,38 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HPrimal.h
+ * @brief Phase 2 primal simplex solver for HiGHS
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef SIMPLEX_HPRIMAL_H_
 #define SIMPLEX_HPRIMAL_H_
 
 #include "HModel.h"
 
+/**
+ * @brief Phase 2 primal simplex solver for HiGHS
+ *
+ * Not an efficient primal simplex solver: just a way of tidying up
+ * dual infeasibilities when dual optimality (primal feasibility) has
+ * been acheived with the dual simplex method
+ */
 class HPrimal {
  public:
-  void solvePhase2(HModel *ptr_model);
-  double TimeLimitValue;
+  /**
+   * @brief Perform Phase 2 primal simplex iterations
+   */
+  void solvePhase2(
+      HModel *ptr_model  //!< Model for which Phase 2 primal simplex iterations
+                         //!< should be performed
+  );
+  double TimeLimitValue;  //!< Time limit
 
 #ifdef HiGHSDEV
   // Analysis of rebuilds
@@ -42,4 +68,4 @@ class HPrimal {
   double columnDensity;
 };
 
-#endif /* HPRIMAL_H_ */
+#endif /* SIMPLEX_HPRIMAL_H_ */

@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file lp_data/HighsSetup.h
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef LP_DATA_HIGHS_SETUP_H_
 #define LP_DATA_HIGHS_SETUP_H_
 
@@ -37,11 +50,11 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
   // todo
   //
-  //if (!options_.presolve) {
+  // if (!options_.presolve) {
   //  HighsSolution solution;
   //  return runSolver(lp, solution);
   //}
-  //return HighsStatus::NotImplemented;
+  // return HighsStatus::NotImplemented;
 
   /*
    HighsLp reduced_lp;

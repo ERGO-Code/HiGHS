@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HModel.h
+ * @brief LP model representation and management for HiGHS
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef SIMPLEX_HMODEL_H_
 #define SIMPLEX_HMODEL_H_
 
@@ -10,7 +23,6 @@
 #include "HRandom.h"
 #include "HTimer.h"
 #include "HVector.h"
-//#include "LpData.h"
 
 #include <sstream>
 #include <string>
@@ -28,7 +40,7 @@ const int LP_Status_OutOfTime = 6;
 
 const int invertHint_no = 0;
 const int invertHint_updateLimitReached = 1;
-const int invertHint_pseudoClockSaysInvert = 2;
+const int invertHint_syntheticClockSaysInvert = 2;
 const int invertHint_possiblyOptimal = 3;
 const int invertHint_possiblyPrimalUnbounded = 4;
 const int invertHint_possiblyDualUnbounded = 5;
@@ -192,7 +204,10 @@ class HModel {
   void computeDualInfeasInPrimal(int* dualInfeasCount);
   void correctDual(int* freeInfeasCount);
   void computePrimal();
-  void computeDuObj(int phase = 2);
+  void computeDualObjectiveValue(int phase = 2);
+#ifdef HiGHSDEV
+  double checkDualObjectiveValue(const char *message, int phase = 2);
+#endif
   double computePrObj();
   double computePh2Objective(vector<double>& colPrAct);
   int handleRankDeficiency();
@@ -209,8 +224,10 @@ class HModel {
   void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updateMatrix(int columnIn, int columnOut);
   void updatePivots(int columnIn, int rowOut, int sourceOut);
+#ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void changeUpdate(int updateMethod);
+#endif
   void setProblemStatus(int status);
 
   // Checking methods
@@ -381,7 +398,13 @@ class HModel {
   // Scalar solution output
   // Essentials
   int numberIteration;
-  double objective;
+  // Dual objective value
+  double dualObjectiveValue;
+  double updatedDualObjectiveValue;
+#ifdef HiGHSDEV
+  double previousUpdatedDualObjectiveValue;
+  double previousDualObjectiveValue;
+#endif
 #ifdef HiGHSDEV
   // Analysis of INVERT
   const bool anInvertTime = false;
@@ -600,4 +623,4 @@ class HModel {
   double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
   int* getWorkIntBreak() { return &intBreak[0]; }
 };
-#endif /* HMODEL_H_ */
+#endif /* SIMPLEX_HMODEL_H_ */

@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file presolve/HPresolve.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HPresolve.h"
 #include "HConst.h"
 
@@ -135,7 +148,7 @@ pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
   }
 
   //	if (nzCol.at(y) == 1 && nzCol.at(x) == 1) { //two singletons case
-  //handled elsewhere 		colIndex.second = -1; 		return colIndex;
+  // handled elsewhere 		colIndex.second = -1; 		return colIndex;
   //	}
 
   colIndex.first = x;
@@ -2285,8 +2298,8 @@ void HPresolve::postsolve() {
       }
       case SING_ROW: {
         // valuePrimal is already set for this one, colDual also, we need
-        // rowDual. AR copy keeps full matrix.  col dual maybe infeasible, we need
-        // to check.  recover old bounds and see
+        // rowDual. AR copy keeps full matrix.  col dual maybe infeasible, we
+        // need to check.  recover old bounds and see
         getDualsSingletonRow(c.row, c.col);
 
         if (iKKTcheck == 1) {

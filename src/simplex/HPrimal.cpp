@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HPrimal.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HPrimal.h"
 #include "HConst.h"
 
@@ -14,8 +27,8 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
   numTot = model->getNumTot();
 
 #ifdef HiGHSDEV
-  printf("************************************\n")
-      printf("Performing primal simplex iterations\n");
+  printf("************************************\n");
+  printf("Performing primal simplex iterations\n");
   printf("************************************\n");
 #endif
   // Setup update limits
@@ -60,14 +73,12 @@ void HPrimal::solvePhase2(HModel *ptr_model) {
       if (invertHint) {
         break;
       }
-      //	    printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      //model->numberIteration, model->objective);
-      if (model->objective > model->dblOption[DBLOPT_OBJ_UB]) {
+      // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
+      // model->numberIteration, model->dualObjectiveValue);
+      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
-        printf(
-            "HPrimal::solve_phase2: Objective = %g > %g = \
-          dblOption[DBLOPT_OBJ_UB]\n",
-            model->objective, model->dblOption[DBLOPT_OBJ_UB]);
+        printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n",
+	       model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
@@ -129,7 +140,7 @@ void HPrimal::primalRebuild() {
   }
   model->computeDual();
   model->computePrimal();
-  model->computeDuObj();
+  model->computeDualObjectiveValue();
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV

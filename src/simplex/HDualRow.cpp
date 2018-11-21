@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HDualRow.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HDualRow.h"
 #include "HConst.h"
 #include "HModel.h"
@@ -36,8 +49,9 @@ void HDualRow::clear() {
 
 void HDualRow::choose_makepack(const HVector *row, const int offset) {
   /**
-   * Pack the index array to the row
-   * Can be parallel
+   * Pack the indices and values for the row
+   *
+   * Offset of numCol is used when packing row_ep
    */
   const int rowCount = row->count;
   const int *rowIndex = &row->index[0];
@@ -66,8 +80,8 @@ void HDualRow::choose_makepack(const HVector *row, const int offset) {
 
 void HDualRow::choose_possible() {
   /**
-   * Will determine the possible variables
-   * Can be parallel.
+   * Determine the possible variables - candidates for CHUZC
+   * TODO: Check with Qi what this is doing
    */
   const double Ta = workModel->countUpdate < 10
                         ? 1e-9
@@ -90,8 +104,8 @@ void HDualRow::choose_possible() {
 
 void HDualRow::choose_joinpack(const HDualRow *otherRow) {
   /**
-   * Will join the possible pack
-   * Must be sequentail
+   * Join pack of possible candidates in this row with possible
+   * candidates in otherRow
    */
   const int otherCount = otherRow->workCount;
   const pair<int, double> *otherData = &otherRow->workData[0];
@@ -102,8 +116,7 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow) {
 
 bool HDualRow::choose_final() {
   /**
-   * This routine choose the dual entering variable by
-   * BFRT and EXPAND. (In sequential)
+   * Chooses the entering variable via BFRT and EXPAND
    *
    * It will
    * (1) reduce the candidates as a small collection
@@ -112,8 +125,10 @@ bool HDualRow::choose_final() {
    * (4) determine final flip variables
    */
 
+#ifdef HiGHSDEV
   bool rp_Choose_final = false;
   //   rp_Choose_final = true;
+#endif
   // 1. Reduce by large step BFRT
   workModel->timer.recordStart(HTICK_CHUZC2);
   int fullCount = workCount;
@@ -136,7 +151,9 @@ bool HDualRow::choose_final() {
   }
   workModel->timer.recordFinish(HTICK_CHUZC2);
 
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 1\n");
+#endif
   // 2. Choose by small step BFRT
   workModel->timer.recordStart(HTICK_CHUZC3);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
@@ -152,29 +169,37 @@ bool HDualRow::choose_final() {
   double prev_selectTheta = selectTheta;
   while (selectTheta < 1e18) {
     double remainTheta = iz_remainTheta;
+#ifdef HiGHSDEV
     if (rp_Choose_final)
       printf(
           "Performing choose_final 2; selectTheta = %11.4g; workCount=%d; "
           "fullCount=%d\n",
           selectTheta, workCount, fullCount);
+#endif
     for (int i = workCount; i < fullCount; i++) {
       int iCol = workData[i].first;
       double value = workData[i].second;
       double dual = workMove[iCol] * workDual[iCol];
+#ifdef HiGHSDEV
       if (rp_Choose_final)
         printf("iCol=%4d; v=%11.4g; d=%11.4g |", iCol, value, dual);
-      // Tight satisfy
+#endif
+        // Tight satisfy
+#ifdef HiGHSDEV
       if (rp_Choose_final)
         printf(" %11.4g = dual ?<=? sTh * v = %11.4g; workCount=%2d", dual,
                selectTheta * value, workCount);
+#endif
       if (dual <= selectTheta * value) {
         swap(workData[workCount++], workData[i]);
         totalChange += value * (workRange[iCol]);
       } else if (dual + Td < remainTheta * value) {
         remainTheta = (dual + Td) / value;
       }
+#ifdef HiGHSDEV
       if (rp_Choose_final)
         printf(": totCg=%11.4g; rmTh=%11.4g\n", totalChange, remainTheta);
+#endif
     }
     workGroup.push_back(workCount);
     // Update selectTheta with the value of remainTheta;
@@ -209,7 +234,9 @@ bool HDualRow::choose_final() {
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
 
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 2\n");
+#endif
   // 3. Choose large alpha
   double finalCompare = 0;
   for (int i = 0; i < workCount; i++)
@@ -241,14 +268,17 @@ bool HDualRow::choose_final() {
     }
   }
 
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 3\n");
+#endif
   int sourceOut = workDelta < 0 ? -1 : 1;
   workPivot = workData[breakIndex].first;
   workAlpha = workData[breakIndex].second * sourceOut * workMove[workPivot];
-  if (workDual[workPivot] * workMove[workPivot] > 0)
+  if (workDual[workPivot] * workMove[workPivot] > 0) {
     workTheta = workDual[workPivot] / workAlpha;
-  else
+  } else {
     workTheta = 0;
+  }
 
   // 4. Determine BFRT flip index: flip all
   fullCount = breakIndex;
@@ -261,39 +291,88 @@ bool HDualRow::choose_final() {
   if (workTheta == 0) workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
   workModel->timer.recordFinish(HTICK_CHUZC3);
+#ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 4\n");
+#endif
   return false;
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
+  //  workModel->checkDualObjectiveValue("Before update_flip");
+  double *workDual = workModel->getWorkDual();//
+  //  double *workLower = workModel->getWorkLower();
+  //  double *workUpper = workModel->getWorkUpper();
+  //  double *workValue = workModel->getWorkValue();
+  double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
     const int iCol = workData[i].first;
     const double change = workData[i].second;
+
+    double lcDualObjectiveValueChange = change*workDual[iCol];
+    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
+    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
+    dualObjectiveValueChange += lcDualObjectiveValueChange;
     workModel->flipBound(iCol);
     workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
   }
+  workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
+  //  workModel->checkDualObjectiveValue("After  update_flip");
 }
 
-void HDualRow::update_dual(double theta) {
+void HDualRow::update_dual(double theta, int columnOut) {
+  //  workModel->checkDualObjectiveValue("Before update_dual");
   workModel->timer.recordStart(HTICK_UPDATE_DUAL);
   double *workDual = workModel->getWorkDual();
+  //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
     // Identify the change to the dual objective
-    // JAJH10/10
-    /*
     int iCol = packIndex[i];
+    //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->workValue[iCol];
-    double dlDuObj = -iColWorkValue * dlDual;
-    //    dlDuObj *= costScale;
-    workModel->objective += dlDuObj;
-    printf("Column %2d: Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g;
-    dlDuObj = %11.4g: DuObj = %11.4g\n", iCol, workModel->nonbasicFlag[i],
-    dlDual, iColWorkValue, dlDuObj, workModel->objective);
-    */
+    double dlDuObj = workModel->nonbasicFlag[iCol] * (-iColWorkValue * dlDual);
+    dlDuObj *= workModel->costScale;
+    workModel->updatedDualObjectiveValue += dlDuObj;
   }
+  /*
+  // Apply correction because the updated dual objective value may
+  // contain a rogue contribution corresponding to the leaving column
+  double duObjCorrection = 0;
+  if (columnOut_i >= 0) {
+    //    double nonUnitPackValue = abs(packValue[columnOut_i] - 1.0);
+    //    if (nonUnitPackValue > 1e-8) printf("STRANGE: packValue[columnOut_i] = %11.4g has nonUnitPackValue = %11.4g\n", packValue[columnOut_i], nonUnitPackValue);
+    int iCol = columnOut;
+    double dlDual = theta * packValue[columnOut_i];
+    double iColWorkValue = workModel->workValue[iCol];
+    double dlDuObj = -iColWorkValue * dlDual;
+    duObjCorrection = dlDuObj;
+    //    if (abs(duObjCorrection)>1e-8) printf("Dual objective correction (columnOut_i>=0) = %11.4g\n", duObjCorrection);
+  }
+  
+  double duObjEr = workModel->checkDualObjectiveValue("After  update_dual");
+  double rlvErDen = max(1.0, abs(workModel->dualObjectiveValue));
+  double rlvDuObjEr = abs(duObjEr)/rlvErDen;
+  if (rlvDuObjEr > 1e-8) {
+    if (columnOut_i < 0) printf("ERROR: columnOut_i = %d in update_dual\n", columnOut_i);
+    double nwDuObjEr = duObjEr+duObjCorrection;
+    printf("theta = %11.4g, duObjEr = %11.4g; duObjCorrection = %11.4g; nwDuObjEr = %11.4g\n",
+	   theta, duObjEr, duObjCorrection, nwDuObjEr);
+    if (abs(nwDuObjEr)/rlvErDen > 1e-12)
+      printf("ERROR:  duObjEr+duObjCorrection = %11.4g + %11.4g = %11.4g\n", duObjEr, duObjCorrection, nwDuObjEr);
+    for (int i = 0; i < packCount; i++) {
+      int iCol = packIndex[i];
+      double dlDual = theta * packValue[i];
+      double iColWorkValue = workModel->workValue[iCol];
+      double dlDuObj = -iColWorkValue * dlDual;
+      dlDuObj *= workModel->costScale;
+      if (!workModel->nonbasicFlag[iCol])
+	printf("Column %5d: packValue = %11.4g Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g; dlDuObj = %11.4g: DuObj = %11.4g\n", 
+	       iCol, packValue[i], workModel->nonbasicFlag[iCol], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);
+    }
+  }
+  */
   workModel->timer.recordFinish(HTICK_UPDATE_DUAL);
 }
 
@@ -318,6 +397,7 @@ void HDualRow::create_Freelist() {
 }
 
 void HDualRow::create_Freemove(HVector *row_ep) {
+  // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
     double Ta = workModel->countUpdate < 10
                     ? 1e-9
@@ -371,26 +451,4 @@ void HDualRow::delete_Freelist(int iColumn) {
     if (freeListSize > 0)
       printf("!! STRANGE: Empty Freelist has size %d\n", freeListSize);
   }
-}
-void HDualRow::rp_hsol_pv_r() {
-  // Set limits on problem size for reporting
-  const int mx_rp_numTot = 20;
-  int numTot = workModel->getNumTot();
-  if (numTot > mx_rp_numTot) return;
-  vector<double> dse_pv_r;
-  dse_pv_r.assign(numTot, 0);
-  for (int i = 0; i < packCount; i++) {
-    int c_n = packIndex[i];
-    dse_pv_r[c_n] = packValue[i];
-  }
-  printf("PvR: Ix  ");
-  for (int i = 0; i < numTot; i++) {
-    printf(" %4d", i);
-  }
-  printf("\n");
-  printf("      V  ");
-  for (int i = 0; i < numTot; i++) {
-    printf(" %4.1g", dse_pv_r[i]);
-  }
-  printf("\n");
 }

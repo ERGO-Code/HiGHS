@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file simplex/HDualRHS.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HDualRHS.h"
 #include "HConst.h"
 
@@ -16,21 +29,6 @@ void HDualRHS::setup(HModel *model) {
   workEdWtFull.resize(workModel->getNumTot());
   partNum = 0;
   partSwitch = 0;
-}
-
-void HDualRHS::setup_partition(const char *filename) {
-  ifstream reader(filename);
-  reader >> partNum >> partNumRow >> partNumCol >> partNumCut;
-  if (partNumRow != workModel->getNumRow()) {
-    partNum = 0;
-    workModel->util_reportMessage("wrong-partition-file");
-    reader.close();
-    return;
-  }
-  workPartition.assign(workModel->getNumRow(), 0);
-  for (int i = 0; i < partNumRow; i++) reader >> workPartition[i];
-  reader.close();
-  partSwitch = 1;
 }
 
 void HDualRHS::choose_normal(int *chIndex) {
@@ -305,10 +303,9 @@ void HDualRHS::update_primal(HVector *column, double theta) {
   workModel->timer.recordFinish(HTICK_UPDATE_PRIMAL);
 }
 
-// This is the DSE update weight, but keep its name unchanged, just to be safe.
-// Could do with changing the name "devex", though!
-void HDualRHS::update_weight(HVector *column, double devex, double Kai,
-                             double *dseArray) {
+// Update the DSE weights
+void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut,
+                                 double Kai, double *dseArray) {
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
   const int numRow = workModel->getNumRow();
@@ -320,22 +317,21 @@ void HDualRHS::update_weight(HVector *column, double devex, double Kai,
   if (updateWeight_inDense) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       const double val = columnArray[iRow];
-      workEdWt[iRow] += val * (devex * val + Kai * dseArray[iRow]);
+      workEdWt[iRow] += val * (DSE_wt_o_rowOut * val + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < 1e-4) workEdWt[iRow] = 1e-4;
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
       const int iRow = columnIndex[i];
       const double val = columnArray[iRow];
-      workEdWt[iRow] += val * (devex * val + Kai * dseArray[iRow]);
+      workEdWt[iRow] += val * (DSE_wt_o_rowOut * val + Kai * dseArray[iRow]);
       if (workEdWt[iRow] < 1e-4) workEdWt[iRow] = 1e-4;
     }
   }
   workModel->timer.recordFinish(HTICK_UPDATE_WEIGHT);
 }
-// This is the Devex update weight
+// Update the Devex weights
 void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
-  const bool rp_dvx = false;
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
   const int numRow = workModel->getNumRow();
@@ -348,10 +344,6 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       double aa_iRow = columnArray[iRow];
       double nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut * aa_iRow * aa_iRow);
-      if (abs(nw_wt - workEdWt[iRow]) > 1e-1)
-        if (rp_dvx)
-          printf("Row %2d: Edge weight changes from %g to %g\n", iRow,
-                 workEdWt[iRow], nw_wt);
       workEdWt[iRow] = nw_wt;
     }
   } else {
@@ -359,10 +351,6 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
       int iRow = columnIndex[i];
       double aa_iRow = columnArray[iRow];
       double nw_wt = max(workEdWt[iRow], dvx_wt_o_rowOut * aa_iRow * aa_iRow);
-      if (abs(nw_wt - workEdWt[iRow]) > 1e-1)
-        if (rp_dvx)
-          printf("Row %2d: Edge weight changes from %g to %g\n", iRow,
-                 workEdWt[iRow], nw_wt);
       workEdWt[iRow] = nw_wt;
     }
   }
@@ -370,6 +358,10 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
 }
 
 void HDualRHS::update_pivots(int iRow, double value) {
+  // Update the primal value for the row (iRow) where the basis change
+  // has occurred, and set the corresponding squared primal
+  // infeasibility value in workArray
+  //
   const double *baseLower = workModel->getBaseLower();
   const double *baseUpper = workModel->getBaseUpper();
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];

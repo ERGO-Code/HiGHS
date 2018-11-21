@@ -1,6 +1,6 @@
 set(sources
     lp_data/HighsLp.cpp
-    lp_data/HighsModelBuilder.cpp
+    lp_data/HighsModel.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -13,6 +13,7 @@ set(sources
     simplex/HTester.cpp
     simplex/HVector.cpp
     simplex/HCrash.cpp
+    simplex/HSort.cpp
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
     io/HinOut.cpp
@@ -28,8 +29,9 @@ set(sources
 )
 
 set(headers
+    HiGHSRun.h
     HApp.h
-    lp_data/HighsModelBuilder.h
+    lp_data/HighsModel.h
     simplex/HConst.h
     simplex/HDual.h
     simplex/HDualRow.h
@@ -42,6 +44,7 @@ set(headers
     simplex/HVector.h
     simplex/HCrash.h
     simplex/HRandom.h
+    simplex/HSort.h
     presolve/HPresolve.h
     io/HinOut.h
     io/HMPSIO.h

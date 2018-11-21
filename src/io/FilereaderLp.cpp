@@ -1,6 +1,19 @@
 #include <stdarg.h>
 #include <assert.h>
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/FilereaderLp.cpp
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "FilereaderLp.h"
 
 #include "../util/stringutil.h"
@@ -149,7 +162,6 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   if (file == NULL) {
     return FilereaderRetcode::FILENOTFOUND;
   }
-  HighsModelBuilder* modelBuilder = new HighsModelBuilder();
 
   // add extra new line
   LpToken* newToken = new LpToken();

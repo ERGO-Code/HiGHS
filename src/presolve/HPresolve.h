@@ -1,18 +1,30 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file presolve/HPresolve.h
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef PRESOLVE_HPRESOLVE_H_
 #define PRESOLVE_HPRESOLVE_H_
 
 #include <list>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <stdexcept>
 #include "HFactor.h"
+#include "HPreData.h"
 #include "HTimerPre.h"
 #include "KktChStep.h"
-
-#include "HPreData.h"
 
 using namespace std;
 
@@ -162,11 +174,11 @@ class HPresolve : public HPreData {
   void fillStackRowBounds(int col);
   void setKKTcheckerData();
 
-  void getBoundOnLByZj(int row, int j, double* lo, double* up, double colLow,
+  void getBoundOnLByZj(int row, int j, double *lo, double *up, double colLow,
                        double colUpp);
   double getRowDualPost(int row, int col);
   double getColumnDualPost(int col);
-  string getDualsForcingRow(int row, vector<int>& fRjs);
+  string getDualsForcingRow(int row, vector<int> &fRjs);
   void getDualsSingletonRow(int row, int col);
   void getDualsDoubletonEquation(int row, int col);
   void recordCounts(const string fileName);
@@ -187,4 +199,4 @@ class HPresolve : public HPreData {
   string countsFile;
 };
 
-#endif /* HPRESOLVE_H_ */
+#endif /* PRESOLVE_HPRESOLVE_H_ */

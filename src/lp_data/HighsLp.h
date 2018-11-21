@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file lp_data/HighsLp.h
+ * @brief 
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef LP_DATA_HIGHS_LP_H_
 #define LP_DATA_HIGHS_LP_H_
 
@@ -90,7 +103,10 @@ struct HighsSolution {
   std::vector<double> colValue;
   std::vector<double> colDual;
   std::vector<double> rowValue;
+  std::vector<double> rowDual;
 };
+
+bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
 
 // Return a string representation of SolutionStatus.
 // Capitalized because it is ClassNameToString for the following three methods.
