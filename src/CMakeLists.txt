@@ -55,6 +55,7 @@ set(headers
     simplex/HTimerPre.h
     test/KktCheck.h
     test/KktChStep.h
+    HighsOptions.h
 )
 
 
