@@ -38,7 +38,7 @@ class HighsLinearConsCoef {
   double coef;
 
   HighsLinearConsCoef(HighsVar* var, double coef);
-  ~HighsLinearConsCoef();  
+  ~HighsLinearConsCoef();
 };
 
 struct char_cmp {
@@ -61,6 +61,7 @@ class HighsLinearCons : public HighsCons {
 
 typedef std::map<const char*, HighsLinearCons*, char_cmp> ConsMap;
 typedef std::map<HighsVar*, std::list<HighsLinearCons*>*> VarConsMap;
+typedef std::map<HighsLinearConsCoef*, HighsLinearCons*> CoefConsMap;
 
 class HighsModel {
  public:
@@ -73,9 +74,11 @@ class HighsModel {
   void HighsGetVarByName(const char* name, HighsVar** var);
   void HighsRemoveVar(HighsVar* var);
 
-  void HighsCreateLinearConsCoef(HighsVar* var, double coef, HighsLinearConsCoef** consCoef);
-  void HighsAddLinearConsCoefToCons(HighsLinearCons* cons, HighsLinearConsCoef* coef);
-  //void HighsDestroyLinearConsCoef();
+  void HighsCreateLinearConsCoef(HighsVar* var, double coef,
+                                 HighsLinearConsCoef** consCoef);
+  void HighsAddLinearConsCoefToCons(HighsLinearCons* cons,
+                                    HighsLinearConsCoef* coef);
+  // void HighsDestroyLinearConsCoef();
 
   void HighsCreateLinearCons(const char* name, double lo, double hi,
                              HighsLinearCons** cons);
@@ -85,8 +88,9 @@ class HighsModel {
   void HighsDestroyLinearCons();
 
   // conversion from/to technical Lp representation
+  HighsModel(){};
   HighsModel(HighsLp* lp);
-  void HighsBuildModel(HighsLp* lp);
+  void HighsBuildTechnicalModel(HighsLp* lp);
 
  private:
   // major data structures
@@ -98,6 +102,7 @@ class HighsModel {
   ConsMap constraintMap;
   VarConsMap variableConstraintMap;
   VarConsCoefsMap variableConstraintCoefficientMap;
+  CoefConsMap coefficientConstraintMap;
 };
 
 #endif
