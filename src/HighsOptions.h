@@ -12,7 +12,7 @@ struct char_cmp {
 
 std::map<char*, double, char_cmp> doubleOptions;
 std::map<char*, int, char_cmp> intOptions;
-std::map<char*, bool, char_cmp> isDoubleOption;
+std::map<char*, bool, char_cmp> boolOptions;
 
 class HighsStringOptions {
  public:
@@ -22,19 +22,16 @@ class HighsStringOptions {
       T t;
       return t;
     }
-    std::map<char*, bool, char_cmp>::iterator it = isDoubleOption.find(key);
-    if (it == isDoubleOption.end()) {
-      // ERROR, key not found.
-      return 0;
-    } else {
-      if (it->second) {
-        std::map<char*, double, char_cmp>::iterator iter =
-            doubleOptions.find(key);
-        return iter->second;
-      } else {
-        std::map<char*, int, char_cmp>::iterator iter = intOptions.find(key);
-        return iter->second;
-      }
+    if (typeid(T) == typeid(double)) {
+      std::map<char*, double, char_cmp>::iterator iter =
+          doubleOptions.find(key);
+      return iter->second;
+    } else if (typeid(T) == typeid(int)) {
+      std::map<char*, int, char_cmp>::iterator iter = intOptions.find(key);
+      return iter->second;
+    } else if (typeid(T) == typeid(bool)) {
+      std::map<char*, bool, char_cmp>::iterator iter = boolOptions.find(key);
+      return iter->second;
     }
   }
 
@@ -44,13 +41,11 @@ class HighsStringOptions {
     if (typeid(value) == typeid(double)) {
       doubleOptions.insert(
           std::map<char*, double, char_cmp>::value_type(key, value));
-      isDoubleOption.insert(
-          std::map<char*, bool, char_cmp>::value_type(key, true));
-
     } else if (typeid(value) == typeid(int)) {
       intOptions.insert(std::map<char*, int, char_cmp>::value_type(key, value));
-      isDoubleOption.insert(
-          std::map<char*, bool, char_cmp>::value_type(key, false));
+    } else if (typeid(value) == typeid(bool)) {
+      boolOptions.insert(
+          std::map<char*, bool, char_cmp>::value_type(key, value));
     }
   }
 };
