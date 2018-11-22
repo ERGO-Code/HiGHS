@@ -38,7 +38,7 @@ class HighsLinearConsCoef {
   double coef;
 
   HighsLinearConsCoef(HighsVar* var, double coef);
-  ~HighsLinearConsCoef();  
+  ~HighsLinearConsCoef();
 };
 
 struct char_cmp {
@@ -74,9 +74,11 @@ class HighsModel {
   void HighsGetVarByName(const char* name, HighsVar** var);
   void HighsRemoveVar(HighsVar* var);
 
-  void HighsCreateLinearConsCoef(HighsVar* var, double coef, HighsLinearConsCoef** consCoef);
-  void HighsAddLinearConsCoefToCons(HighsLinearCons* cons, HighsLinearConsCoef* coef);
-  //void HighsDestroyLinearConsCoef();
+  void HighsCreateLinearConsCoef(HighsVar* var, double coef,
+                                 HighsLinearConsCoef** consCoef);
+  void HighsAddLinearConsCoefToCons(HighsLinearCons* cons,
+                                    HighsLinearConsCoef* coef);
+  // void HighsDestroyLinearConsCoef();
 
   void HighsCreateLinearCons(const char* name, double lo, double hi,
                              HighsLinearCons** cons);
