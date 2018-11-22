@@ -11,12 +11,13 @@ struct char_cmp {
   }
 };
 
-std::map<char*, double, char_cmp> HighsDoubleOptions;
-std::map<char*, int, char_cmp> HighsIntOptions;
-std::map<char*, bool, char_cmp> HighsBoolOptions;
-std::map<char*, FILE*, char_cmp> HighsFileOptions;
-
 class HighsStringOptions {
+ private:
+  static std::map<char*, double, char_cmp> doubleOptions;
+  static std::map<char*, int, char_cmp> intOptions;
+  static std::map<char*, bool, char_cmp> boolOptions;
+  static std::map<char*, FILE*, char_cmp> fileOptions;
+
  public:
   template <class T>
   static void getValue(char* key, T* ret) {
@@ -25,31 +26,32 @@ class HighsStringOptions {
     }
     if (typeid(T) == typeid(double)) {
       std::map<char*, double, char_cmp>::iterator iter =
-          HighsDoubleOptions.find(key);
-      if (iter != HighsDoubleOptions.end()) {
+          HighsStringOptions::doubleOptions.find(key);
+      if (iter != HighsStringOptions::doubleOptions.end()) {
         *ret = *(T*)((void*)&iter->second);
       } else {
         *ret = NULL;
       }
     } else if (typeid(T) == typeid(int)) {
-      std::map<char*, int, char_cmp>::iterator iter = HighsIntOptions.find(key);
-      if (iter != HighsIntOptions.end()) {
+      std::map<char*, int, char_cmp>::iterator iter =
+          HighsStringOptions::intOptions.find(key);
+      if (iter != HighsStringOptions::intOptions.end()) {
         *ret = *(T*)((void*)&iter->second);
       } else {
         *ret = NULL;
       }
     } else if (typeid(T) == typeid(bool)) {
       std::map<char*, bool, char_cmp>::iterator iter =
-          HighsBoolOptions.find(key);
-      if (iter != HighsBoolOptions.end()) {
+          HighsStringOptions::boolOptions.find(key);
+      if (iter != HighsStringOptions::boolOptions.end()) {
         *ret = *(T*)((void*)&iter->second);
       } else {
         *ret = NULL;
       }
     } else if (typeid(T) == typeid(FILE*)) {
       std::map<char*, FILE*, char_cmp>::iterator iter =
-          HighsFileOptions.find(key);
-      if (iter != HighsFileOptions.end()) {
+          HighsStringOptions::fileOptions.find(key);
+      if (iter != HighsStringOptions::fileOptions.end()) {
         *ret = *(T*)((void*)&iter->second);
       } else {
         *ret = NULL;
@@ -61,25 +63,27 @@ class HighsStringOptions {
   static void setValue(char* key, T value) {
     if (typeid(value) == typeid(double)) {
       std::map<char*, double, char_cmp>::iterator it =
-          HighsDoubleOptions.find(key);
-      if (it == HighsDoubleOptions.end()) {
-        HighsDoubleOptions.insert(
+          HighsStringOptions::doubleOptions.find(key);
+      if (it == HighsStringOptions::doubleOptions.end()) {
+        HighsStringOptions::doubleOptions.insert(
             std::map<char*, double, char_cmp>::value_type(key, value));
       } else {
         it->second = value;
       }
     } else if (typeid(value) == typeid(int)) {
-      std::map<char*, int, char_cmp>::iterator it = HighsIntOptions.find(key);
-      if (it == HighsIntOptions.end()) {
-        HighsIntOptions.insert(
+      std::map<char*, int, char_cmp>::iterator it =
+          HighsStringOptions::intOptions.find(key);
+      if (it == HighsStringOptions::intOptions.end()) {
+        HighsStringOptions::intOptions.insert(
             std::map<char*, int, char_cmp>::value_type(key, value));
       } else {
         it->second = value;
       }
     } else if (typeid(value) == typeid(bool)) {
-      std::map<char*, bool, char_cmp>::iterator it = HighsBoolOptions.find(key);
-      if (it == HighsBoolOptions.end()) {
-        HighsBoolOptions.insert(
+      std::map<char*, bool, char_cmp>::iterator it =
+          HighsStringOptions::boolOptions.find(key);
+      if (it == HighsStringOptions::boolOptions.end()) {
+        HighsStringOptions::boolOptions.insert(
             std::map<char*, bool, char_cmp>::value_type(key, value));
       } else {
         it->second = value;
@@ -91,9 +95,9 @@ class HighsStringOptions {
   static void setPtrValue(char* key, T value) {
     if (typeid(value) == typeid(FILE*)) {
       std::map<char*, FILE*, char_cmp>::iterator it =
-          HighsFileOptions.find(key);
-      if (it == HighsFileOptions.end()) {
-        HighsFileOptions.insert(
+          HighsStringOptions::fileOptions.find(key);
+      if (it == HighsStringOptions::fileOptions.end()) {
+        HighsStringOptions::fileOptions.insert(
             std::map<char*, FILE*, char_cmp>::value_type(key, value));
       } else {
         it->second = value;
@@ -101,4 +105,10 @@ class HighsStringOptions {
     }
   }
 };
+
+std::map<char*, double, char_cmp> HighsStringOptions::doubleOptions;
+std::map<char*, int, char_cmp> HighsStringOptions::intOptions;
+std::map<char*, bool, char_cmp> HighsStringOptions::boolOptions;
+std::map<char*, FILE*, char_cmp> HighsStringOptions::fileOptions;
+
 #endif
