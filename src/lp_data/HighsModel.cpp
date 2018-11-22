@@ -1,5 +1,4 @@
 #include "HighsModel.h"
-#include "HighsIO.h"
 
 #pragma region HighsVar
 HighsVar::HighsVar(const char* name, double lo, double hi, double obj,
@@ -245,14 +244,11 @@ void HighsModel::HighsBuildTechnicalModel(HighsLp* lp) {
   // handle constraints
   lp->Astart_.clear();
   lp->Astart_.push_back(0);
-  HighsPrintMessage(HighsMessageType::INFO, "Handle constraints\n");
   for(int var=0; var<lp->numCol_; var++) {
-    HighsPrintMessage(HighsMessageType::INFO, "Handle Coefficients of variable %d\n", var);
     VarConsCoefsMap::iterator iter = this->variableConstraintCoefficientMap.find(variables[var]);
     if(iter != this->variableConstraintCoefficientMap.end()) {
       std::list<HighsLinearConsCoef*>* coefs = iter->second;
       int numberOfCoefficients = coefs->size();
-      HighsPrintMessage(HighsMessageType::INFO, "%d coefficients found\n", numberOfCoefficients);
 
       lp->Astart_.push_back(lp->Astart_[var] + numberOfCoefficients);
 
