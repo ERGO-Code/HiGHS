@@ -1,6 +1,16 @@
+# Define library.
+
 set(sources
+    HApp.cpp
+    io/FilereaderLp.cpp
+    io/FilereaderMps.cpp
+    io/HinOut.cpp
+    io/HMPSIO.cpp
+    io/HToyIO.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsModelBuilder.cpp
+    presolve/HPresolve.cpp
+    presolve/HPreData.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -14,21 +24,24 @@ set(sources
     simplex/HVector.cpp
     simplex/HCrash.cpp
     simplex/HSort.cpp
-    presolve/HPresolve.cpp
-    presolve/HPreData.cpp
-    io/HinOut.cpp
-    io/HMPSIO.cpp
-    io/HToyIO.cpp
-    io/FilereaderLp.cpp
-    io/FilereaderMps.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
-    RunHighs.cpp
 )
 
 set(headers
-    HiGHSRun.h
     HApp.h
+    HiGHSRun.h
+    io/Filereader.h
+    io/FilereaderLp.h
+    io/FilereaderMps.h
+    io/HinOut.h
+    io/HMpsFF.h
+    io/HMPSIO.h
+    io/HToyIO_C.h
+    io/HToyIO.h
+    io/LoadProblem.h
+    lp_data/HConst.h
+    lp_data/HighsLp.h
     lp_data/HighsModelBuilder.h
     simplex/HConst.h
     simplex/HDual.h
@@ -44,13 +57,6 @@ set(headers
     simplex/HRandom.h
     simplex/HSort.h
     presolve/HPresolve.h
-    io/HinOut.h
-    io/HMPSIO.h
-    io/HMpsFF.h
-    io/Filereader.h
-    io/FilereaderLp.h
-    io/FilereaderMps.h
-    io/LoadProblem.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     test/KktCheck.h
@@ -58,25 +64,11 @@ set(headers
 )
 
 
-include(CheckCXXCompilerFlag)
-
-function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-        check_cxx_compiler_flag("${flag}" flag_supported)
-        if(flag_supported)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-        endif()
-        unset(flag_supported CACHE)
-    endif()
-endfunction()
-
-# example usage
-#enable_cxx_compiler_flag_if_supported("-Wall")
-#enable_cxx_compiler_flag_if_supported("-Wextra")
-#enable_cxx_compiler_flag_if_supported("-pedantic")
-
 add_library(libhighs ${sources})
+
+if (Boost_FOUND)
+    target_link_libraries(libhighs ${Boost_LIBRARIES})
+endif()
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
@@ -89,22 +81,9 @@ else()
         POSITION_INDEPENDENT_CODE on)
 endif()
 
-if (UNIX)
-  find_package(Boost COMPONENTS iostreams)
-  if (Boost_FOUND)
-    add_definitions(-DBoost_FOUND)
-    # include_directories(${Boost_INCLUDE_DIRS} "/home/s1131817/Programs/boost_1_61_0/")
-    target_link_libraries(libhighs ${Boost_LIBRARIES})
-
-  endif()
-endif()
-
-# create highs binary using library without pic
-add_executable(highs HApp.cpp)
-target_link_libraries(highs libhighs)
-
 # set the install rpath to the installed destination
 set_target_properties(highs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
@@ -114,7 +93,7 @@ set_target_properties(libhighs PROPERTIES
 install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
-install(TARGETS highs libhighs EXPORT highs-targets
+install(TARGETS libhighs EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
@@ -126,12 +105,12 @@ export(TARGETS libhighs
 
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
-configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
-configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
 # install the targets of the highs export group and the config file so that other projects
