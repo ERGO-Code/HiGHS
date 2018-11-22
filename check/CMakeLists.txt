@@ -97,9 +97,12 @@ target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 
+
+
 # Make test executable
-set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp 
-      ${CMAKE_CURRENT_SOURCE_DIR}/TestOptions.cpp
-      ${CMAKE_SOURCE_DIR/src/lp_data/HighsLp.cpp})
+set(TEST_SOURCES 
+    ${CMAKE_SOURCE_DIR}/check/TestMain.cpp 
+    ${CMAKE_SOURCE_DIR}/check/TestOptions.cpp)
+   #   ${CMAKE_SOURCE_DIR/src/lp_data/HighsLp.cpp})
 add_executable(tests ${TEST_SOURCES})
-target_link_libraries(tests Catch)
+target_link_libraries(tests Catch libhighs)
