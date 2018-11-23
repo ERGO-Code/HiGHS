@@ -80,19 +80,19 @@ HighsInputStatus checkLp(const HighsLp& lp) {
 std::string HighsSolutionStatusToString(HighsSolutionStatus status) {
   switch (status) {
     case HighsSolutionStatus::Unset:
-      return "Unset.";
+      return "Unset";
       break;
     case HighsSolutionStatus::Unbounded:
-      return "Unbounded.";
+      return "Unbounded";
       break;
     case HighsSolutionStatus::Infeasible:
-      return "Infeasible.";
+      return "Infeasible";
       break;
     case HighsSolutionStatus::Feasible:
-      return "Feasible.";
+      return "Feasible";
       break;
     case HighsSolutionStatus::Optimal:
-      return "Optimal.";
+      return "Optimal";
       break;
   }
   return "";
@@ -102,25 +102,25 @@ std::string HighsSolutionStatusToString(HighsSolutionStatus status) {
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::OK:
-      return "OK.";
+      return "OK";
       break;
     case HighsStatus::LpError:
-      return "Lp Error.";
+      return "Lp Error";
       break;
     case HighsStatus::OptionsError:
-      return "Options Error.";
+      return "Options Error";
       break;
     case HighsStatus::PresolveError:
-      return "Presolve Error.";
+      return "Presolve Error";
       break;
     case HighsStatus::SolutionError:
-      return "Solution Error.";
+      return "Solution Error";
       break;
     case HighsStatus::PostsolveError:
-      return "PostsolveError.";
+      return "PostsolveError";
       break;
     case HighsStatus::NotImplemented:
-      return "Not implemented.";
+      return "Not implemented";
       break;
   }
   return "";
@@ -130,10 +130,10 @@ std::string HighsStatusToString(HighsStatus status) {
 std::string HighsInputStatusToString(HighsInputStatus status) {
   switch (status) {
     case HighsInputStatus::OK:
-      return "OK.";
+      return "OK";
       break;
     case HighsInputStatus::FileNotFound:
-      return "Error: File not found.";
+      return "Error: File not found";
       break;
     case HighsInputStatus::ErrorMatrixDimensions:
       return "Error Matrix Dimensions";
