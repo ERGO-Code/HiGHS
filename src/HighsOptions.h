@@ -11,6 +11,7 @@ struct char_cmp {
   }
 };
 
+// TODO: rename to HighsOptions once everything in HighsOptions has been moved here
 class HighsStringOptions {
  private:
   static std::map<char*, double, char_cmp> doubleOptions;
