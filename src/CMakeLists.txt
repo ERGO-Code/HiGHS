@@ -12,8 +12,8 @@ set(sources
     lp_data/HighsModelBuilder.cpp
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
-    simplex/HSensitivity.cpp
     simplex/HAPI.cpp
+    simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
     simplex/HDualRow.cpp
@@ -22,10 +22,10 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HModel.cpp
     simplex/HPrimal.cpp
+    simplex/HSensitivity.cpp
+    simplex/HSort.cpp
     simplex/HTester.cpp
     simplex/HVector.cpp
-    simplex/HCrash.cpp
-    simplex/HSort.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
 )
@@ -48,6 +48,7 @@ set(headers
     presolve/HPresolve.h
     presolve/HPreData.h
     simplex/HConst.h
+    simplex/HCrash.h
     simplex/HDual.h
     simplex/HDualRow.h
     simplex/HDualRHS.h
@@ -55,14 +56,13 @@ set(headers
     simplex/HMatrix.h
     simplex/HModel.h
     simplex/HPrimal.h
-    simplex/HTester.h
-    simplex/HVector.h
-    simplex/HCrash.h
-    simplex/HSort.h
     simplex/HRandom.h
     simplex/HSensitivity.h
+    simplex/HSort.h
+    simplex/HTester.h
     simplex/HTimer.h
     simplex/HTimerPre.h
+    simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     HighsOptions.h
