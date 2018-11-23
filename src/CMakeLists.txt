@@ -21,6 +21,7 @@ set(sources
     io/HToyIO.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
+    io/HighsIO.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
     RunHighs.cpp
@@ -50,6 +51,7 @@ set(headers
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderMps.h
+    io/HighsIO.h
     io/LoadProblem.h
     simplex/HTimer.h
     simplex/HTimerPre.h
