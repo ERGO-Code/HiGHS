@@ -46,7 +46,7 @@ set_tests_properties(unit_tests_all
 # catch_discover_tests(unit_test)
 
 # --------------------------------------
-# Run instance tests if unit tests have passed
+# Run instance tests.
 #
 # define the set of feasible instances
 set(successInstances
