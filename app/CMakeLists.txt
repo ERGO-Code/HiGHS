@@ -3,5 +3,5 @@ add_executable(highs RunHighs.cpp)
 target_link_libraries(highs libhighs)
 
 # install the binary
-install(TARGETS highs EXPORT highs-bin
+install(TARGETS highs EXPORT highs-targets
         RUNTIME DESTINATION bin)

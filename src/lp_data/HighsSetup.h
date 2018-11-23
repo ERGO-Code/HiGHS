@@ -114,38 +114,18 @@ HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   return status;
 }
 
-HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
-  // todo: replace references with options_.*
-  int filename = 0;
-  int presolve = 0;
-  int crash = 0;
-  int edgeWeight = 0;
-  int price = 0;
-  int pami = 0;
-  int sip = 0;
-  int scip = 0;
-  int timeLimit = 0;
-
-  double cut = 0;
-  const char* fileName = "";
-  const char* presolveMode = "";
-  const char* edWtMode = "";
-  const char* priceMode = "";
-  const char* crashMode = "";
-  const char* partitionFile = "";
-
-  double TimeLimit_ArgV = HSOL_CONST_INF;
-  std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
-            << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
-            << " [date: " << HIGHS_COMPILATION_DATE
-            << ", git hash: " << HIGHS_GITHASH << "]"
-            << "\n"
-            << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+void HiGHSRun(const char *message) {
+  std::cout << "Running HiGHS "
+	    << HIGHS_VERSION_MAJOR << "."
+	    << HIGHS_VERSION_MINOR << "."
+	    << HIGHS_VERSION_PATCH
+	    << " [date: " << HIGHS_COMPILATION_DATE
+	    << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
+	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #ifdef HiGHSDEV
-  // Report on preprocessing macros
-
+  //Report on preprocessing macros
+  std::cout << "In " << message << std::endl;
   std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
-
 #ifdef OLD_PARSER
   std::cout << "OLD_PARSER       is     defined" << std::endl;
 #else
@@ -177,6 +157,31 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 #endif
 
 #endif
+  
+};
+
+
+HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
+  // todo: replace references with options_.*
+  int filename = 0;
+  int presolve = 0;
+  int crash = 0;
+  int edgeWeight = 0;
+  int price = 0;
+  int pami = 0;
+  int sip = 0;
+  int scip = 0;
+  int timeLimit = 0;
+
+  double cut = 0;
+  const char* fileName = "";
+  const char* presolveMode = "";
+  const char* edWtMode = "";
+  const char* priceMode = "";
+  const char* crashMode = "";
+  const char* partitionFile = "";
+
+  double TimeLimit_ArgV = HSOL_CONST_INF;
 
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;
