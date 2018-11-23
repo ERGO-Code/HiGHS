@@ -525,7 +525,7 @@ int HSensitivity::checkSensitivityData(HModel *model) {
   if (model->problemStatus != LP_Status_Optimal) return 1;
   
   const double infiniteBoundOrCost = 0.1*HIGHS_CONST_INF;
-  
+  const bool useTestModel = true;
   double error_dn;
   double error_up;
   double totalSensitivityDataError = 0;
@@ -575,11 +575,17 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	  changeRowUpper = b_dn_b[i + numCol];
 	}
 	//			model->scale();
-	testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
 	printf("\n!!!!!!!\nChanging bounds for row %2d from [%12g, %12g] to [%12g, %12g]\n",
 	       i, svRowLower, svRowUpper, changeRowLower, changeRowUpper);
-	checkSensitivityDataSolve(&testModel);
-	solved_dn = testModel.dualObjectiveValue;
+	if (useTestModel) {
+	  testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  checkSensitivityDataSolve(&testModel);
+	  solved_dn = testModel.dualObjectiveValue;
+	} else {
+	  model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  checkSensitivityDataSolve(model);
+	  solved_dn = model->dualObjectiveValue;
+	}
       } else {
 	solved_dn = b_dn_f[i + numCol];
       }
@@ -809,9 +815,9 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 
 void HSensitivity::checkSensitivityDataSolve(HModel *model) {
   HDual solver;
-  model->intOption[INTOPT_PRINT_FLAG] = 0;
-  model->util_reportModel();
+  model->intOption[INTOPT_PRINT_FLAG] = 4;
+  //  model->util_reportModel();
   solver.solve(model);
-  model->util_reportModelSolution();
+  //  model->util_reportModelSolution();
   //  printf("checkSensitivityDataSolve: numberIteration = %d\n", model->numberIteration);
 }

@@ -831,6 +831,8 @@ void HDual::rebuild() {
 
 #ifdef HiGHSDEV
   model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  printf("Checking INVERT in rebuild()\n");
+  model->factor.checkInvert();
 #endif
 
   model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
