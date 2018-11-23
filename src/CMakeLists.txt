@@ -12,6 +12,7 @@ set(sources
     lp_data/HighsModelBuilder.cpp
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
+    simplex/HSensitivity.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -25,7 +26,6 @@ set(sources
     simplex/HVector.cpp
     simplex/HCrash.cpp
     simplex/HSort.cpp
-    simplex/HSensitivity.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
 )
