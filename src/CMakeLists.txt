@@ -4,6 +4,7 @@ set(sources
     HApp.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
+    io/HighsIO.cpp
     io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
@@ -57,10 +58,22 @@ set(headers
     simplex/HRandom.h
     simplex/HSort.h
     presolve/HPresolve.h
+<<<<<<< HEAD
+=======
+    io/HinOut.h
+    io/HMPSIO.h
+    io/HMpsFF.h
+    io/Filereader.h
+    io/FilereaderLp.h
+    io/FilereaderMps.h
+    io/HighsIO.h
+    io/LoadProblem.h
+>>>>>>> master
     simplex/HTimer.h
     simplex/HTimerPre.h
     test/KktCheck.h
     test/KktChStep.h
+    HighsOptions.h
 )
 
 
