@@ -60,7 +60,10 @@ class HSensitivity {
   int checkSensitivityData(
 		      HModel *model //!< Instance of HModel class for which sensitivity and ranging data are to be generated
 		      );
-
+ private:
+  void checkSensitivityDataSolve(
+				 HModel *model //!< Instance of HModel class for which sensitivity and ranging data are to be generated
+				 );
 };
 
 #endif /* SIMPLEX_HSENSITIVITY_H_ */
