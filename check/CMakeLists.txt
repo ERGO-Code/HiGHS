@@ -8,18 +8,18 @@ target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 
 # Make test executable
-set(TEST_SOURCES 
-    TestMain.cpp 
+set(TEST_SOURCES
+    TestMain.cpp
     TestSetup.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
 
-# Check whether test executable builds OK. 
+# Check whether test executable builds OK.
 add_test(NAME unit-test-build
-         COMMAND ${CMAKE_COMMAND} 
-                 --build ${CMAKE_BINARY_DIR} 
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${CMAKE_BINARY_DIR}
                  --target unit_tests
          )
 
@@ -125,10 +125,10 @@ foreach(instance ${${instances}})
         # add a test and test properties
         add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
               -f ${inst})
-        set_tests_properties (${name}${setting} PROPERTIES 
-              PASS_REGULAR_EXPRESSION 
+        set_tests_properties (${name}${setting} PROPERTIES
+              PASS_REGULAR_EXPRESSION
               "(Solve plain|multi|Presolve|Postsolve): ${solutionstatus}")
-        set_tests_properties (${name}${setting} PROPERTIES 
+        set_tests_properties (${name}${setting} PROPERTIES
               DEPENDS unit_tests_all)
     endforeach(setting)
 endforeach(instance)
