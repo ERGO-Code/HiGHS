@@ -91,18 +91,50 @@ endmacro(add_instancetests)
 #add_instancetests(unboundedInstances "NOT-OPT")
 
 # prepare Catch library
-set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/external/)
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/external/catch)
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 
-
-
 # Make test executable
 set(TEST_SOURCES 
-    ${CMAKE_SOURCE_DIR}/check/TestMain.cpp 
-    ${CMAKE_SOURCE_DIR}/check/TestOptions.cpp)
-   #   ${CMAKE_SOURCE_DIR/src/lp_data/HighsLp.cpp})
-add_executable(tests ${TEST_SOURCES})
-target_link_libraries(tests Catch libhighs)
+    TestMain.cpp 
+    TestOptions.cpp)
+
+add_executable(unit_tests ${TEST_SOURCES})
+target_link_libraries(unit_tests libhighs Catch)
+
+install(TARGETS unit_tests
+        RUNTIME DESTINATION bin)
+
+add_test(test_all check/unit_tests)
+#set(unit_tests correct-print wrong-print)
+#foreach(test ${${unit_tests}})
+#    message(STATUS unit_test)
+#endforeach()
+
+# Check whether test executable builds OK. 
+#add_test(NAME unit-test-build
+#        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target unit_tests
+#        )
+# avoid that several build jobs try to concurretly build
+#set_tests_properties(unit-test-build
+#                     PROPERTIES
+#                     RESOURCE_LOCK unittestbin)
+
+# catch_discover_tests(unit_test)
+# needs a script from github repo and a Catch2 installation. So add tests
+# manually if there is no build issues.
+
+add_test(NAME "correct-print-test" COMMAND unit_tests "correct-print")
+
+
+#set(unit_tests "correct-print" "wrong-print")
+#foreach(test ${${unit_tests}})
+#    add_test(NAME unit-test-${test} COMMAND unit_test ${test} )
+#
+#   set_tests_properties(unit-test-${test}
+#                        PROPERTIES
+#                        DEPENDS unit-test-build)
+#endforeach()

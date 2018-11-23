@@ -96,7 +96,6 @@ install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 install(TARGETS libhighs EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
         INCLUDES DESTINATION include)
 
 # Add library targets to the build-tree export set
