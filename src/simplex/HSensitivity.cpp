@@ -557,8 +557,6 @@ int HSensitivity::checkSensitivityData(HModel *model) {
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i + numCol] > -infiniteBoundOrCost) {
-	HModel testModel = *model;
-
 	recoverOriginalBounds = true;
 	double changeRowLower = svRowLower;
 	double changeRowUpper = svRowUpper;
@@ -575,9 +573,11 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	  changeRowUpper = b_dn_b[i + numCol];
 	}
 	//			model->scale();
-	printf("\n!!!!!!!\nChanging bounds for row %2d from [%12g, %12g] to [%12g, %12g]\n",
-	       i, svRowLower, svRowUpper, changeRowLower, changeRowUpper);
 	if (useTestModel) {
+	  HModel testModel = *model;
+	  testModel.mlFg_haveMatrixColWise = 0;
+	  testModel.mlFg_haveMatrixRowWise = 0;
+	  testModel.mlFg_haveFactorArrays = 0;
 	  testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
 	  checkSensitivityDataSolve(&testModel);
 	  solved_dn = testModel.dualObjectiveValue;
@@ -618,9 +618,19 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	  changeRowLower = b_up_b[i + numCol];
 	}
 	//			model->scaleModel();
-	model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
-	checkSensitivityDataSolve(model);
-	solved_up = model->dualObjectiveValue;
+	if (useTestModel) {
+	  HModel testModel = *model;
+	  testModel.mlFg_haveMatrixColWise = 0;
+	  testModel.mlFg_haveMatrixRowWise = 0;
+	  testModel.mlFg_haveFactorArrays = 0;
+	  testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  checkSensitivityDataSolve(&testModel);
+	  solved_up = testModel.dualObjectiveValue;
+	} else {
+	  model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  checkSensitivityDataSolve(model);
+	  solved_up = model->dualObjectiveValue;
+	}
       } else {
 	solved_up = b_up_f[i + numCol];
       }
@@ -674,9 +684,19 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	  changeColUpper = b_dn_b[i];
 	}
 	//			model->scale();
-	model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
-	checkSensitivityDataSolve(model);
-	solved_dn = model->dualObjectiveValue;
+	if (useTestModel) {
+	  HModel testModel = *model;
+	  testModel.mlFg_haveMatrixColWise = 0;
+	  testModel.mlFg_haveMatrixRowWise = 0;
+	  testModel.mlFg_haveFactorArrays = 0;
+	  testModel.util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  checkSensitivityDataSolve(&testModel);
+	  solved_dn = testModel.dualObjectiveValue;
+	} else {
+	  model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  checkSensitivityDataSolve(model);
+	  solved_dn = model->dualObjectiveValue;
+	}
       } else {
 	solved_dn = b_dn_f[i];
       }
@@ -709,9 +729,19 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	  changeColLower = b_up_b[i];
 	}
 	//			model->scale();
-	model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
-	checkSensitivityDataSolve(model);
-	solved_up = model->dualObjectiveValue;
+	if (useTestModel) {
+	  HModel testModel = *model;
+	  testModel.mlFg_haveMatrixColWise = 0;
+	  testModel.mlFg_haveMatrixRowWise = 0;
+	  testModel.mlFg_haveFactorArrays = 0;
+	  testModel.util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  checkSensitivityDataSolve(&testModel);
+	  solved_up = testModel.dualObjectiveValue;
+	} else {
+	  model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  checkSensitivityDataSolve(model);
+	  solved_up = model->dualObjectiveValue;
+	}
       } else {
 	solved_up = b_up_f[i];
       }	
@@ -752,9 +782,19 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	double changeColCost = svColCost;
 	changeColCost = c_dn_c[i];
 	//			model->scale();
-	model->util_chgCostsSet(1, &i, &changeColCost);
-	checkSensitivityDataSolve(model);
-	solved_dn = model->dualObjectiveValue;
+	if (useTestModel) {
+	  HModel testModel = *model;
+	  testModel.mlFg_haveMatrixColWise = 0;
+	  testModel.mlFg_haveMatrixRowWise = 0;
+	  testModel.mlFg_haveFactorArrays = 0;
+	  testModel.util_chgCostsSet(1, &i, &changeColCost);
+	  checkSensitivityDataSolve(&testModel);
+	  solved_dn = testModel.dualObjectiveValue;
+	} else {
+	  model->util_chgCostsSet(1, &i, &changeColCost);
+	  checkSensitivityDataSolve(model);
+	  solved_dn = model->dualObjectiveValue;
+	}
       } else {
 	solved_dn = c_dn_f[i];
       }
@@ -775,9 +815,19 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 	double changeColCost = svColCost;
 	changeColCost = c_up_c[i];
 	//			model->scale();
-	model->util_chgCostsSet(1, &i, &changeColCost);
-	checkSensitivityDataSolve(model);
-	solved_up = model->dualObjectiveValue;
+	if (useTestModel) {
+	  HModel testModel = *model;
+	  testModel.mlFg_haveMatrixColWise = 0;
+	  testModel.mlFg_haveMatrixRowWise = 0;
+	  testModel.mlFg_haveFactorArrays = 0;
+	  testModel.util_chgCostsSet(1, &i, &changeColCost);
+	  checkSensitivityDataSolve(&testModel);
+	  solved_up = testModel.dualObjectiveValue;
+	} else {
+	  model->util_chgCostsSet(1, &i, &changeColCost);
+	  checkSensitivityDataSolve(model);
+	  solved_up = model->dualObjectiveValue;
+	}
       } else {
 	solved_up = c_up_f[i];
       }
@@ -815,7 +865,7 @@ int HSensitivity::checkSensitivityData(HModel *model) {
 
 void HSensitivity::checkSensitivityDataSolve(HModel *model) {
   HDual solver;
-  model->intOption[INTOPT_PRINT_FLAG] = 4;
+  model->intOption[INTOPT_PRINT_FLAG] = 0;
   //  model->util_reportModel();
   solver.solve(model);
   //  model->util_reportModelSolution();

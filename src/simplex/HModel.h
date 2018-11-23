@@ -348,7 +348,8 @@ class HModel {
                             vector<double>& XcolDual, vector<int>& XcolStatus);
   void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex,
                          vector<double>& XAvalue);
-
+  
+  void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
   void util_anPrDuDgn();
   void util_anMl(const char* message);

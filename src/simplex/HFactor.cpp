@@ -255,6 +255,8 @@ int HFactor::build() {
   build_syntheticTick = 0;
   build_realTick = timer.getTick();
   // Build the L, U factor
+  // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
+  // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
   rankDeficiency = buildKernel();
   if (rankDeficiency > 0) {

@@ -789,6 +789,8 @@ void HDual::rebuild() {
     model->timer.recordFinish(HTICK_PERM_WT);
 
     model->timer.recordStart(HTICK_INVERT);
+
+    // Call computeFactor to perform INVERT
     int rankDeficiency = model->computeFactor();
     model->timer.recordFinish(HTICK_INVERT);
 

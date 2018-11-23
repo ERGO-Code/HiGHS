@@ -4157,6 +4157,14 @@ void HModel::util_reportColMtx(int ncol, vector<int> &XAstart,
   printf("       Start %8d\n", XAstart[ncol]);
 }
 
+void HModel::util_reportBasicIndex(const char *message, int numRow, vector<int> &basicIndex) {
+  printf("%s: Model has %d basic indices: ", message, numRow);
+  for (int i=0; i<numRow; i++){
+    printf(" %d", basicIndex[i]);
+  }
+  printf("\n");
+}
+
 #ifdef HiGHSDEV
 void HModel::util_anPrDuDgn() {
   double normPrAct = 0;
