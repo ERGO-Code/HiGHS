@@ -1,7 +1,8 @@
 #include "catch.hpp"
 #include "HighsLp.h"
 
-TEST_CASE("wrong-print", "[highs_data]") {
+// No commas in test case name.
+TEST_CASE("correct-print", "[highs_data]") {
   std::string str = HighsInputStatusToString(HighsInputStatus::OK);
-  REQUIRE(str != "OK");
+  REQUIRE(str == "OK.");
 }

@@ -100,16 +100,30 @@ target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 # Make test executable
 set(TEST_SOURCES 
     TestMain.cpp 
-    TestOptions.cpp)
+    TestSetup.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
-install(TARGETS unit_tests
-        RUNTIME DESTINATION bin)
-
+# create a binary running all the tests in the executable
 add_test(NAME units COMMAND unit_tests)
+
+# Individual tests can be added with
+# add_test(NAME "correct-print-test" COMMAND unit_tests "correct-print")
+
+# --------------------------------------
+
+# Another way of adding the tests. Needs a script from github repo and a
+# Catch2 installation. So add tests manually if there is no build issues.
+# catch_discover_tests(unit_test)
+
+# --------------------------------------
+
+# Below based on ZIB code but not ideal
+
+#set(unit_tests "correct-print" "wrong-print")
 #set(unit_tests correct-print wrong-print)
+
 #foreach(test ${${unit_tests}})
 #    message(STATUS unit_test)
 #endforeach()
@@ -118,21 +132,13 @@ add_test(NAME units COMMAND unit_tests)
 #add_test(NAME unit-test-build
 #        COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target unit_tests
 #        )
-# avoid that several build jobs try to concurretly build
+# Avoid that several build jobs try to concurretly build.
 #set_tests_properties(unit-test-build
 #                     PROPERTIES
 #                     RESOURCE_LOCK unittestbin)
 
-# catch_discover_tests(unit_test)
-# needs a script from github repo and a Catch2 installation. So add tests
-# manually if there is no build issues.
-
-add_test(NAME "correct-print-test" COMMAND unit_tests "correct-print")
-
-
-#set(unit_tests "correct-print" "wrong-print")
 #foreach(test ${${unit_tests}})
-#    add_test(NAME unit-test-${test} COMMAND unit_test ${test} )
+#   add_test(NAME unit-test-${test} COMMAND unit_tests ${test} )
 #
 #   set_tests_properties(unit-test-${test}
 #                        PROPERTIES
