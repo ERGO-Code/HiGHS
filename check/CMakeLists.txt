@@ -108,7 +108,7 @@ target_link_libraries(unit_tests libhighs Catch)
 install(TARGETS unit_tests
         RUNTIME DESTINATION bin)
 
-add_test(test_all check/unit_tests)
+add_test(NAME units COMMAND unit_tests)
 #set(unit_tests correct-print wrong-print)
 #foreach(test ${${unit_tests}})
 #    message(STATUS unit_test)
