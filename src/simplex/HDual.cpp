@@ -85,12 +85,12 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
     }
 #ifdef HiGHSDEV
     double bsCond = an_bs_cond(model);
-    printf("Initial basis condition estimate of %11.4g is", bsCond);
+    HighsPrintMessage(HighsMessageType::INFO, "Initial basis condition estimate of %11.4g is", bsCond);
     if (bsCond > 1e12) {
-      printf(" excessive\n");
+      HighsPrintMessage(HighsMessageType::INFO, " excessive\n");
       return;
     } else {
-      printf(" OK\n");
+      HighsPrintMessage(HighsMessageType::INFO, " OK\n");
     }
 #endif
   }
