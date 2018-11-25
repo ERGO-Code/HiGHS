@@ -18,6 +18,10 @@
 #include "HPrimal.h"
 #include "HTimer.h"
 
+//#include "HighsSetup.h"
+#include "HighsLp.h"
+#include "HighsIO.h"
+
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -31,23 +35,12 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
-#ifdef HiGHSDEV
-  //  printf("model->mlFg_Report() 1\n"); cout << flush; model->mlFg_Report();
-  //  cout << flush;
-#endif
   // Setup two work buffers in model required for solve()
   model->buffer.setup(model->numRow);
   model->bufferLong.setup(model->numCol);
-
-  //  printf("model->mlFg_haveEdWt 0 = %d\n", model->mlFg_haveEdWt);cout<<flush;
-
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
-  //  printf("HDual::solve - Calling model->setup_for_solve()\n");cout<<flush;
   model->setup_for_solve();
-
-  //  printf("model->mlFg_haveEdWt 1 = %d\n", model->mlFg_haveEdWt);cout<<flush;
-
   model->problemStatus = LP_Status_Unset;
   model->numberIteration = 0;
 #ifdef HiGHSDEV
@@ -57,12 +50,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   model->totalInverts = 0;
   model->totalInvertTime = 0;
 #endif
-  // Cannot solve box-constrained LPs
+  // Cannot solve box-constrained LPs TODO: Fix this
   if (model->numRow == 0) return;
-#ifdef HiGHSDEV
-    //  printf("model->mlFg_Report() 2\n"); cout << flush; model->mlFg_Report();
-    //  cout << flush;
-#endif
 
   model->timer.reset();
 
@@ -72,10 +61,14 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
   SolveBailout = false;
+
+  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", option.timeLimit);
+
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
 #ifdef HiGHSDEV
-    printf("Setting TimeLimitValue = %g\n", TimeLimitValue);
+    HighsPrintMessage(HighsMessageType::WARNING, "Changing TimeLimitValue from 0 to %g\n", TimeLimitValue);
 #endif
   }
 
