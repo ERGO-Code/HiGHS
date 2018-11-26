@@ -18,9 +18,9 @@
 #include "HPrimal.h"
 #include "HTimer.h"
 
-//#include "HighsSetup.h"
 #include "HighsLp.h"
 #include "HighsIO.h"
+#include "HighsOptions.h"
 
 #include <cassert>
 #include <cmath>
@@ -63,7 +63,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   SolveBailout = false;
 
   HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
-  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", option.timeLimit);
+
+  HighsOptions options;
+  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", options.timeLimit);
 
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
