@@ -1465,7 +1465,10 @@ void HModel::scaleModel() {
     min0 = min(min0, value);
     max0 = max(max0, value);
   }
-  if (min0 >= 0.2 && max0 <= 5) {
+  bool noScaling = min0 >= 0.2 && max0 <= 5;
+  printf("!!!! FORCE SCALING !!!!\n");
+  noScaling = false;
+  if (noScaling) {
     // No matrix scaling, but possible cost scaling
 #ifdef HiGHSDEV
     printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName.c_str());
@@ -2710,6 +2713,17 @@ void HModel::writePivots(const char *suffix) {
 // no re-evaluation! Return the current value of ther objective
 double HModel::util_getObjectiveValue() { return dualObjectiveValue; }
 
+// Get the column costs and bounds
+void HModel::util_getColVec(vector<double> &XcolCost, vector<double> &XcolLower, vector<double> &XcolUpper) {
+   for (int iCol = 0; iCol < numCol; iCol++) {
+     XcolCost[iCol] = colCost[iCol]/colScale[iCol]
+     XcolLower[iCol] = (hsol_isInfinity(-colLower[iCol]) ? colLower[iCol]
+			: colLower[iCol]*colScale[iCol]);
+     XcolUpper[iCol] = (hsol_isInfinity( colUpper[iCol]) ? colUpper[iCol]
+			: colUpper[iCol]*colScale[iCol]);
+   }
+}
+
 // Get the column and row (primal) values and dual (values)
 void HModel::util_getPrimalDualValues(vector<double> &colValue,
                                       vector<double> &colDual,
@@ -3839,9 +3853,20 @@ void HModel::util_reportSolverProgress() {
 // Report the whole model
 void HModel::util_reportModel() {
   util_reportModelBrief();
-  util_reportColVec(numCol, colCost, colLower, colUpper);
-  util_reportRowVec(numRow, rowLower, rowUpper);
-  util_reportColMtx(numCol, Astart, Aindex, Avalue);
+  int numNZ = Astart[numCol];
+  vector<double> XcolCost(numCol);
+  vector<double> XcolLower(numCol);
+  vector<double> XcolUpper(numCol);
+  vector<double> XrowLower(numRow);
+  vector<double> XrowUpper(numRow);
+  vector<double> XAvalue(numNZ);
+  
+  util_getColVec(XcolCost, XcolLower, XcolUpper);
+  util_getRowVec(XrowLower, XrowUpper);
+  util_getColMtxValue(XAvalue);
+  util_reportColVec(numCol, XcolCost, XcolLower, XcolUpper);
+  util_reportRowVec(numRow, XrowLower, XrowUpper);
+  util_reportColMtx(numCol, Astart, Aindex, XAvalue);
 }
 
 // Report the model solution
@@ -3850,17 +3875,24 @@ void HModel::util_reportModelSolution() {
   util_reportModelStatus();
   assert(numCol > 0);
   assert(numRow > 0);
+  vector<double> XcolCost(numCol);
+  vector<double> XcolLower(numCol);
+  vector<double> XcolUpper(numCol);
+  vector<double> XrowLower(numRow);
+  vector<double> XrowUpper(numRow);
   vector<double> colPrimal(numCol);
   vector<double> colDual(numCol);
   vector<int> colStatus(numCol);
   vector<double> rowPrimal(numRow);
   vector<double> rowDual(numRow);
   vector<int> rowStatus(numRow);
+  util_getColVec(XcolCost, XcolLower, XcolUpper);
+  util_getRowVec(XrowLower, XrowUpper);
   util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
   if (util_convertWorkingToBaseStat(&colStatus[0], &rowStatus[0])) return;
-  util_reportColVecSol(numCol, colCost, colLower, colUpper, colPrimal, colDual,
+  util_reportColVecSol(numCol, XcolCost, XcolLower, XcolUpper, colPrimal, colDual,
                        colStatus);
-  util_reportRowVecSol(numRow, rowLower, rowUpper, rowPrimal, rowDual,
+  util_reportRowVecSol(numRow, XrowLower, XrowUpper, rowPrimal, rowDual,
                        rowStatus);
 }
 

@@ -62,10 +62,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // calling function
   SolveBailout = false;
 
-  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
-
-  HighsOptions options;
-  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", options.timeLimit);
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
+  //  HighsOptions options;
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", options.timeLimit);
 
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
