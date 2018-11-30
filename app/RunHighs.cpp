@@ -6,6 +6,9 @@ int main(int argc, char **argv) {
   HighsOptions options;
   HighsStatus init_status = loadOptions(argc, argv, options);
 
+  HighsStringOptions options_;
+  HighsStatus init_status_ = loadOptions(argc, argv, options_);
+
   if (init_status != HighsStatus::OK) {
     printHelp(argv[0]);
     return 0;
