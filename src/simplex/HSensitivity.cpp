@@ -441,7 +441,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
           j_leave = j_out;
         } else {
           // Primal ratio test failed - change unlimitedly
-          // While still limited by it's own bounds
+          // While still limited by its own bounds
           // It's own bounds could just be inf
           newx = dir == -1 ? lower_[j] : upper_[j];
           newf = model->dualObjectiveValue;
@@ -460,7 +460,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
 
   /*
    * Ranging 4.1. Scale back
-   */
+   * These are internal ranging data values - which are retained with scaling
   for (int j = 0; j < numCol; j++) {
     c_up_c[j] /= (c_up_c[j] == +H_INF) ? 1 : model->colScale[j];
     c_dn_c[j] /= (c_dn_c[j] == -H_INF) ? 1 : model->colScale[j];
@@ -471,6 +471,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
     b_up_b[j] /= (b_up_b[j] == +H_INF) ? 1 : model->rowScale[i];
     b_dn_b[j] /= (b_dn_b[j] == +H_INF) ? 1 : model->rowScale[i];
   }
+   */
 
   /*
    * Ranging 4.1.1 Trim small value to zero
@@ -548,8 +549,6 @@ int HSensitivity::checkSensitivityData(HModel* model) {
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i + numCol] > -infiniteBoundOrCost) {
-	if (i == 0) rpSolution = true;
-        recoverOriginalBounds = true;
         double changeRowLower = svRowLower;
         double changeRowUpper = svRowUpper;
         if (Nflag[i + numCol]) {
@@ -564,25 +563,21 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         } else {
           changeRowUpper = b_dn_b[i + numCol];
         }
-	double toChangeRowLower = changeRowLower;
-	double toChangeRowUpper = changeRowUpper;
-	toChangeRowLower *= (changeRowLower == +HIGHS_CONST_INF) ? 1 : model->rowScale[i];
-	toChangeRowUpper *= (changeRowUpper == +HIGHS_CONST_INF) ? 1 : model->rowScale[i];
-	printf("Scaling changeRowLower from %12g to %12g\n", changeRowLower, toChangeRowLower);
-	printf("Scaling changeRowUpper from %12g to %12g\n", changeRowUpper, toChangeRowUpper);
-	changeRowLower = toChangeRowLower;//model->rowScale[i];
-	changeRowUpper = toChangeRowUpper;//model->rowScale[i];
         if (useTestModel) {
           HModel testModel = *model;
           testModel.mlFg_haveMatrixColWise = 0;
           testModel.mlFg_haveMatrixRowWise = 0;
           testModel.mlFg_haveFactorArrays = 0;
-          testModel.util_chgRowBoundsSet(1, &i, &changeRowLower,
-                                         &changeRowUpper);
+	  printf("Row %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
+	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
+          testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkSensitivityDataSolve(&testModel, rpSolution);
 	  rpSolution = false;
           solved_dn = testModel.dualObjectiveValue;
         } else {
+	  recoverOriginalBounds = true;
+	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkSensitivityDataSolve(model, rpSolution);
           solved_dn = model->dualObjectiveValue;
@@ -605,7 +600,6 @@ int HSensitivity::checkSensitivityData(HModel* model) {
 
     {
       if (b_up_b[i + numCol] < infiniteBoundOrCost) {
-        recoverOriginalBounds = true;
         double changeRowLower = svRowLower;
         double changeRowUpper = svRowUpper;
         if (Nflag[i + numCol]) {
@@ -620,17 +614,20 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         } else {
           changeRowLower = b_up_b[i + numCol];
         }
-        //			model->scaleModel();
         if (useTestModel) {
           HModel testModel = *model;
           testModel.mlFg_haveMatrixColWise = 0;
           testModel.mlFg_haveMatrixRowWise = 0;
           testModel.mlFg_haveFactorArrays = 0;
-          testModel.util_chgRowBoundsSet(1, &i, &changeRowLower,
-                                         &changeRowUpper);
+	  printf("Row %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
+	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
+          testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkSensitivityDataSolve(&testModel, rpSolution);
           solved_up = testModel.dualObjectiveValue;
         } else {
+	  recoverOriginalBounds = true;
+	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkSensitivityDataSolve(model, rpSolution);
           solved_up = model->dualObjectiveValue;
@@ -651,6 +648,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
       //#endif
     }
     if (recoverOriginalBounds) {
+      model->util_unscaleRowBoundValue(i, &svRowLower, &svRowUpper);
       model->util_chgRowBoundsSet(1, &i, &svRowLower, &svRowUpper);
     }
     if (reportSensitivityDataCheck) {
@@ -678,8 +676,6 @@ int HSensitivity::checkSensitivityData(HModel* model) {
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i] > -infiniteBoundOrCost) {
-        if (i == 1) rpSolution = true;
-        recoverOriginalBounds = true;
         double changeColLower = svColLower;
         double changeColUpper = svColUpper;
         if (Nflag[i]) {
@@ -694,18 +690,21 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         } else {
           changeColUpper = b_dn_b[i];
         }
-        //			model->scale();
         if (useTestModel) {
           HModel testModel = *model;
           testModel.mlFg_haveMatrixColWise = 0;
           testModel.mlFg_haveMatrixRowWise = 0;
           testModel.mlFg_haveFactorArrays = 0;
-          testModel.util_chgColBoundsSet(1, &i, &changeColLower,
-                                         &changeColUpper);
+	  printf("Col %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+		 i, changeColLower, changeColUpper, svColLower, svColUpper);
+	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
+          testModel.util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
           checkSensitivityDataSolve(&testModel, rpSolution);
           solved_dn = testModel.dualObjectiveValue;
         } else {
-          model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  recoverOriginalBounds = true;
+  	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
+	  model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
           checkSensitivityDataSolve(model, rpSolution);
 	  rpSolution = false;
 	  solved_dn = model->dualObjectiveValue;
@@ -729,7 +728,6 @@ int HSensitivity::checkSensitivityData(HModel* model) {
     {
       if (b_up_b[i] < infiniteBoundOrCost) {
 	//        if (i == 81) rpSolution = true;
-        recoverOriginalBounds = true;
         double changeColLower = svColLower;
         double changeColUpper = svColUpper;
         if (Nflag[i]) {
@@ -744,23 +742,22 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         } else {
           changeColLower = b_up_b[i];
         }
-        //			model->scale();
         if (useTestModel) {
           HModel testModel = *model;
           testModel.mlFg_haveMatrixColWise = 0;
           testModel.mlFg_haveMatrixRowWise = 0;
           testModel.mlFg_haveFactorArrays = 0;
-          if (rpSolution) {
-            changeColLower = 300;
-            printf("Changing bounds from [%12g, %12g] to [%12g, %12g]\n",
-                   svColLower, svColUpper, changeColLower, changeColUpper);
-          }
+	  printf("Col %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+		 i, changeColLower, changeColUpper, svColLower, svColUpper);
+	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
           testModel.util_chgColBoundsSet(1, &i, &changeColLower,
                                          &changeColUpper);
           checkSensitivityDataSolve(&testModel, rpSolution);
           rpSolution = false;
           solved_up = testModel.dualObjectiveValue;
         } else {
+	  recoverOriginalBounds = true;
+  	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
           model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
           checkSensitivityDataSolve(model, rpSolution);
           solved_up = model->dualObjectiveValue;
@@ -781,6 +778,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
       //#endif
     }
     if (recoverOriginalBounds) {
+      model->util_unscaleColBoundValue(i, &svColLower, &svColUpper);
       model->util_chgColBoundsSet(1, &i, &svColLower, &svColUpper);
     }
     if (reportSensitivityDataCheck) {
@@ -807,19 +805,20 @@ int HSensitivity::checkSensitivityData(HModel* model) {
     bool recoverOriginalCost = false;
     {
       if (fabs(c_dn_c[i]) < infiniteBoundOrCost) {
-        recoverOriginalCost = true;
         double changeColCost = svColCost;
         changeColCost = c_dn_c[i];
-        //			model->scale();
         if (useTestModel) {
           HModel testModel = *model;
           testModel.mlFg_haveMatrixColWise = 0;
           testModel.mlFg_haveMatrixRowWise = 0;
           testModel.mlFg_haveFactorArrays = 0;
+          testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkSensitivityDataSolve(&testModel, rpSolution);
           solved_dn = testModel.dualObjectiveValue;
         } else {
+	  recoverOriginalCost = true;
+          model->util_unscaleColCostValue(i, &changeColCost);
           model->util_chgCostsSet(1, &i, &changeColCost);
           checkSensitivityDataSolve(model, rpSolution);
           solved_dn = model->dualObjectiveValue;
@@ -842,7 +841,6 @@ int HSensitivity::checkSensitivityData(HModel* model) {
 
     {
       if (fabs(c_up_c[i]) < infiniteBoundOrCost) {
-        recoverOriginalCost = true;
         double changeColCost = svColCost;
         changeColCost = c_up_c[i];
         //			model->scale();
@@ -851,10 +849,13 @@ int HSensitivity::checkSensitivityData(HModel* model) {
           testModel.mlFg_haveMatrixColWise = 0;
           testModel.mlFg_haveMatrixRowWise = 0;
           testModel.mlFg_haveFactorArrays = 0;
+          testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkSensitivityDataSolve(&testModel, rpSolution);
           solved_up = testModel.dualObjectiveValue;
         } else {
+	  recoverOriginalCost = true;
+          model->util_unscaleColCostValue(i, &changeColCost);
           model->util_chgCostsSet(1, &i, &changeColCost);
           checkSensitivityDataSolve(model, rpSolution);
           solved_up = model->dualObjectiveValue;
@@ -875,6 +876,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
       //#endif
     }
     if (recoverOriginalCost) {
+      model->util_unscaleColCostValue(i, &svColCost);
       model->util_chgCostsSet(1, &i, &svColCost);
     }
     if (reportSensitivityDataCheck) {

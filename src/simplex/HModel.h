@@ -260,12 +260,22 @@ class HModel {
   // Utilities to get objective, solution and basis: all just copy what's there
   // with no re-evaluation!
   double util_getObjectiveValue();
+  
   void util_getPrimalDualValues(vector<double>& colValue,
                                 vector<double>& colDual,
                                 vector<double>& rowValue,
                                 vector<double>& rowDual);
   void util_getBasicIndexNonbasicFlag(vector<int>& bi, vector<int>& nbf);
-
+  // Utilities to get LP data with scaling removed
+  void util_getColCostBounds(vector<double> &XcolCost, vector<double> &XcolLower, vector<double> &XcolUpper);
+  void util_getRowBounds(vector<double> &XrowLower, vector<double> &XrowUpper);
+  void util_getMtxValue(vector<double> &XAvalue);
+  void util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
+  void util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
+  void util_scaleColCostValue(int iCol, double* XcolCostValue);
+  void util_unscaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
+  void util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
+  void util_unscaleColCostValue(int iCol, double* XcolCostValue);
   // Utilities to get/change costs and bounds
   void util_getCosts(int firstcol, int lastcol, double* XcolCost);
   void util_getColBounds(int firstcol, int lastcol, double* XcolLower,

@@ -2713,16 +2713,78 @@ void HModel::writePivots(const char *suffix) {
 // no re-evaluation! Return the current value of ther objective
 double HModel::util_getObjectiveValue() { return dualObjectiveValue; }
 
-// Get the column costs and bounds
-void HModel::util_getColVec(vector<double> &XcolCost, vector<double> &XcolLower, vector<double> &XcolUpper) {
+// Get the column costs and bounds - removing any scaling
+void HModel::util_getColCostBounds(vector<double> &XcolCost, vector<double> &XcolLower, vector<double> &XcolUpper) {
+  util_getCosts(0, numCol-1, &XcolCost[0]);
+  util_getColBounds(0, numCol-1, &XcolLower[0], &XcolUpper[0]);
+  /*
    for (int iCol = 0; iCol < numCol; iCol++) {
-     XcolCost[iCol] = colCost[iCol]/colScale[iCol]
+     XcolCost[iCol] = colCost[iCol]/colScale[iCol];
      XcolLower[iCol] = (hsol_isInfinity(-colLower[iCol]) ? colLower[iCol]
 			: colLower[iCol]*colScale[iCol]);
      XcolUpper[iCol] = (hsol_isInfinity( colUpper[iCol]) ? colUpper[iCol]
 			: colUpper[iCol]*colScale[iCol]);
    }
+  */
 }
+
+// Get the row bounds - removing any scaling
+void HModel::util_getRowBounds(vector<double> &XrowLower, vector<double> &XrowUpper) {
+  util_getRowBounds(0, numRow-1, &XrowLower[0], &XrowUpper[0]);
+  /*
+   for (int iRow = 0; iRow < numRow; iRow++) {
+     XrowLower[iRow] = (hsol_isInfinity(-rowLower[iRow]) ? rowLower[iRow]
+			: rowLower[iRow]/rowScale[iRow]);
+     XrowUpper[iRow] = (hsol_isInfinity( rowUpper[iRow]) ? rowUpper[iRow]
+			: rowUpper[iRow]/rowScale[iRow]);
+   }
+  */
+}
+
+// Get the matrix row bounds - removing any scaling
+void HModel::util_getMtxValue(vector<double> &XAvalue) {
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    for (int ix = Astart[iCol]; ix < Astart[iCol+1]; ix++) {
+      int iRow = Aindex[ix];
+      XAvalue[ix] = Avalue[ix]/(colScale[iCol] * rowScale[iRow]);
+    }
+  }
+}
+
+// Scale a pair of row bound values
+void HModel::util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue) {
+  (*XrowLowerValue) = (hsol_isInfinity(-(*XrowLowerValue)) ? (*XrowLowerValue): (*XrowLowerValue)*rowScale[iRow]);
+  (*XrowUpperValue) = (hsol_isInfinity( (*XrowUpperValue)) ? (*XrowUpperValue): (*XrowUpperValue)*rowScale[iRow]);
+}
+
+// Scale a pair of column bound values
+void HModel::util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue) {
+  (*XcolLowerValue) = (hsol_isInfinity(-(*XcolLowerValue)) ? (*XcolLowerValue): (*XcolLowerValue)/colScale[iCol]);
+  (*XcolUpperValue) = (hsol_isInfinity( (*XcolUpperValue)) ? (*XcolUpperValue): (*XcolUpperValue)/colScale[iCol]);
+}
+
+// Scale a column cost
+void HModel::util_scaleColCostValue(int iCol, double* XcolCostValue) {
+  (*XcolCostValue) = (*XcolCostValue)*colScale[iCol];
+}
+
+// Unscale a pair of row bound values
+void HModel::util_unscaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue) {
+  (*XrowLowerValue) = (hsol_isInfinity(-(*XrowLowerValue)) ? (*XrowLowerValue): (*XrowLowerValue)/rowScale[iRow]);
+  (*XrowUpperValue) = (hsol_isInfinity( (*XrowUpperValue)) ? (*XrowUpperValue): (*XrowUpperValue)/rowScale[iRow]);
+}
+
+// Unscale a pair of column bound values
+void HModel::util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue) {
+  (*XcolLowerValue) = (hsol_isInfinity(-(*XcolLowerValue)) ? (*XcolLowerValue): (*XcolLowerValue)*colScale[iCol]);
+  (*XcolUpperValue) = (hsol_isInfinity( (*XcolUpperValue)) ? (*XcolUpperValue): (*XcolUpperValue)*colScale[iCol]);
+}
+
+// Unscale a column cost
+void HModel::util_unscaleColCostValue(int iCol, double* XcolCostValue) {
+  (*XcolCostValue) = (*XcolCostValue)/colScale[iCol];
+}
+
 
 // Get the column and row (primal) values and dual (values)
 void HModel::util_getPrimalDualValues(vector<double> &colValue,
@@ -2929,8 +2991,8 @@ int HModel::util_chgRowBoundsAll(const double *XrowLower,
     if (hsol_isInfinity(lower)) return row + 1;
     // Check that the lower bound is not being set to +Inf
     if (hsol_isInfinity(-upper)) return -(row + 1);
-    rowLower[row] = (hsol_isInfinity(-lower) ? lower : lower / rowScale[row]);
-    rowUpper[row] = (hsol_isInfinity(upper) ? upper : upper / rowScale[row]);
+    rowLower[row] = (hsol_isInfinity(-lower) ? lower : lower * rowScale[row]);
+    rowUpper[row] = (hsol_isInfinity( upper) ? upper : upper * rowScale[row]);
   }
   // Deduce the consequences of new bounds
   mlFg_Update(mlFg_action_NewBounds);
@@ -2957,8 +3019,8 @@ int HModel::util_chgRowBoundsSet(int nrows, const int *XrowBoundIndex,
     if (hsol_isInfinity(lower)) return row + 1;
     // Check that the lower bound is not being set to +Inf
     if (hsol_isInfinity(-upper)) return -(row + 1);
-    rowLower[row] = (hsol_isInfinity(-lower) ? lower : lower / rowScale[row]);
-    rowUpper[row] = (hsol_isInfinity(upper) ? upper : upper / rowScale[row]);
+    rowLower[row] = (hsol_isInfinity(-lower) ? lower : lower * rowScale[row]);
+    rowUpper[row] = (hsol_isInfinity( upper) ? upper : upper * rowScale[row]);
     //    printf("Bounds for row %2d are now [%11g, %11g]\n", row,
     //    rowLower[row], rowUpper[row]);
   }
@@ -3861,9 +3923,9 @@ void HModel::util_reportModel() {
   vector<double> XrowUpper(numRow);
   vector<double> XAvalue(numNZ);
   
-  util_getColVec(XcolCost, XcolLower, XcolUpper);
-  util_getRowVec(XrowLower, XrowUpper);
-  util_getColMtxValue(XAvalue);
+  util_getColCostBounds(XcolCost, XcolLower, XcolUpper);
+  util_getRowBounds(XrowLower, XrowUpper);
+  util_getMtxValue(XAvalue);
   util_reportColVec(numCol, XcolCost, XcolLower, XcolUpper);
   util_reportRowVec(numRow, XrowLower, XrowUpper);
   util_reportColMtx(numCol, Astart, Aindex, XAvalue);
@@ -3886,8 +3948,8 @@ void HModel::util_reportModelSolution() {
   vector<double> rowPrimal(numRow);
   vector<double> rowDual(numRow);
   vector<int> rowStatus(numRow);
-  util_getColVec(XcolCost, XcolLower, XcolUpper);
-  util_getRowVec(XrowLower, XrowUpper);
+  util_getColCostBounds(XcolCost, XcolLower, XcolUpper);
+  util_getRowBounds(XrowLower, XrowUpper);
   util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
   if (util_convertWorkingToBaseStat(&colStatus[0], &rowStatus[0])) return;
   util_reportColVecSol(numCol, XcolCost, XcolLower, XcolUpper, colPrimal, colDual,
