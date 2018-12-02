@@ -8,12 +8,7 @@ int main(int argc, char **argv) {
 
   // Use to replace old HighsOptions.
   HighsStringOptions options_;
-  HighsStatus init_status_ = loadOptions(argc, argv, options_);
-
-  if (init_status_ != HighsStatus::OK) {
-    printHelp(argv[0]);
-    return 0;
-  }
+  loadOptions(argc, argv, options_);
 
   HighsLp lp;
   HighsInputStatus read_status = loadLpFromFile(options, lp);
