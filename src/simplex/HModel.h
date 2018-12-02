@@ -470,23 +470,12 @@ class HModel {
  public:
   // The original model
   HighsLp lp;
- // int numCol;
- // int numRow;
+
   int numTot;
   int numInt;
   int problemStatus;
- // int objSense;  //+1 => min; -1 => max
- // double objOffset;
   string modelName;
- /* vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper; */
   vector<double> colScale;
-  //vector<double> rowLower;
-  //vector<double> rowUpper;
   vector<double> rowScale;
   vector<int> integerColumn;
   vector<int> basicIndex;
