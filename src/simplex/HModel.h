@@ -23,6 +23,7 @@
 #include "HRandom.h"
 #include "HTimer.h"
 #include "HVector.h"
+#include "HighsLp.h"
 
 #include <sstream>
 #include <string>
@@ -266,10 +267,7 @@ class HModel {
                                 vector<double>& rowValue,
                                 vector<double>& rowDual);
   void util_getBasicIndexNonbasicFlag(vector<int>& bi, vector<int>& nbf);
-  // Utilities to get LP data with scaling removed
-  void util_getColCostBounds(vector<double> &XcolCost, vector<double> &XcolLower, vector<double> &XcolUpper);
-  void util_getRowBounds(vector<double> &XrowLower, vector<double> &XrowUpper);
-  void util_getMtxValue(vector<double> &XAvalue);
+  // Utilities to scale or unscale bounds and costs
   void util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
   void util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
   void util_scaleColCostValue(int iCol, double* XcolCostValue);
@@ -479,23 +477,13 @@ class HModel {
 
  public:
   // The original model
-  int numCol;
-  int numRow;
+  HighsLp lp;
+
   int numTot;
   int numInt;
   int problemStatus;
-  int objSense;  //+1 => min; -1 => max
-  double objOffset;
   string modelName;
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper;
   vector<double> colScale;
-  vector<double> rowLower;
-  vector<double> rowUpper;
   vector<double> rowScale;
   vector<int> integerColumn;
   vector<int> basicIndex;
@@ -599,18 +587,18 @@ class HModel {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  int getNumRow() { return numRow; }
-  int getNumCol() { return numCol; }
+  int getNumRow() { return lp.numRow_; }
+  int getNumCol() { return lp.numCol_; }
   int getNumTot() { return numTot; }
   int getPrStatus() { return problemStatus; }
-  int getObjSense() { return objSense; }
+  int getObjSense() { return lp.sense_; }
   const HMatrix* getMatrix() { return &matrix; }
   const HFactor* getFactor() { return &factor; }
-  double* getcolCost() { return &colCost[0]; }
-  double* getcolLower() { return &colLower[0]; }
-  double* getcolUpper() { return &colUpper[0]; }
-  double* getrowLower() { return &rowLower[0]; }
-  double* getrowUpper() { return &rowUpper[0]; }
+  double* getcolCost() { return &lp.colCost_[0]; }
+  double* getcolLower() { return &lp.colLower_[0]; }
+  double* getcolUpper() { return &lp.colUpper_[0]; }
+  double* getrowLower() { return &lp.rowLower_[0]; }
+  double* getrowUpper() { return &lp.rowUpper_[0]; }
   int* getBaseIndex() { return &basicIndex[0]; }
   int* getNonbasicFlag() { return &nonbasicFlag[0]; }
   int* getNonbasicMove() { return &nonbasicMove[0]; }

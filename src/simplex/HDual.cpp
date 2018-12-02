@@ -36,8 +36,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   dual_variant = variant;
   model = ptr_model;
   // Setup two work buffers in model required for solve()
-  model->buffer.setup(model->numRow);
-  model->bufferLong.setup(model->numCol);
+  model->buffer.setup(model->lp.numRow_);
+  model->bufferLong.setup(model->lp.numCol_);
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
   model->setup_for_solve();
@@ -50,9 +50,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   model->totalInverts = 0;
   model->totalInvertTime = 0;
 #endif
-  // Cannot solve box-constrained LPs TODO: Fix this
-  if (model->numRow == 0) return;
-
+  // Cannot solve box-constrained LPs
+  if (model->lp.numRow_ == 0) return;
   model->timer.reset();
 
   n_ph1_du_it = 0;

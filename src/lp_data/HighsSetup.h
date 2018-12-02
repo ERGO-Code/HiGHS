@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSetup.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_SETUP_H_
@@ -17,29 +17,29 @@
 #include <iostream>
 
 #include "HApp.h"
+#include "HighsOptions.h"
+#include "cxxopts.hpp"
+
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
 
 // Class to set parameters and run HiGHS
 class Highs {
  public:
   Highs() {}
   explicit Highs(const HighsOptions& opt) : options_(opt){};
+  explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
 
-  void setAllOptions(const HighsOptions& opt) { options_ = opt; }
-  // todo: implement string based options
-  // void setOption(const std::string& option, int value);
-  // void setOption(const std::string& option, double value);
-  // void setOption(const std::string& option, std::string value);
-
-  int getIntOption(const std::string& option);
-  double getDoubleOption(const std::string& option);
-  std::string getStringOption(const std::string& option);
-
  private:
+  // delete.
   HighsOptions options_;
+  // use HighsStringOptions instead for now. Then rename to HighsOptions, once
+  // previous one is gone.
+  HighsStringOptions options__;
   HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
 };
 
@@ -114,16 +114,15 @@ HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   return status;
 }
 
-void HiGHSRun(const char *message) {
-  std::cout << "Running HiGHS "
-	    << HIGHS_VERSION_MAJOR << "."
-	    << HIGHS_VERSION_MINOR << "."
-	    << HIGHS_VERSION_PATCH
-	    << " [date: " << HIGHS_COMPILATION_DATE
-	    << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
-	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+void HiGHSRun(const char* message) {
+  std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
+            << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
+            << " [date: " << HIGHS_COMPILATION_DATE
+            << ", git hash: " << HIGHS_GITHASH << "]"
+            << "\n"
+            << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #ifdef HiGHSDEV
-  //Report on preprocessing macros
+  // Report on preprocessing macros
   std::cout << "In " << message << std::endl;
   std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 #ifdef OLD_PARSER
@@ -157,9 +156,47 @@ void HiGHSRun(const char *message) {
 #endif
 
 #endif
-  
 };
 
+HighsStatus loadOptions(int argc, char** argv,
+                        HighsStringOptions& highs_options) {
+  try {
+    cxxopts::Options cxx_options(argv[0], "HiGHS options");
+    cxx_options.positional_help("[optional args]").show_positional_help();
+
+    cxx_options.add_options()("p, presolve", "presolve",
+                              cxxopts::value<bool>())(
+        "f, filename", "Filename(s) of LPs to solve",
+        cxxopts::value<std::vector<std::string>>())("help", "Print help.");
+
+    cxx_options.parse_positional("file");
+
+    auto result = cxx_options.parse(argc, argv);
+
+    if (result.count("help")) {
+      std::cout << cxx_options.help({""}) << std::endl;
+      exit(0);
+    }
+
+    if (result.count("filename")) {
+      std::cout << "filename = {";
+      auto& v = result["filename"].as<std::vector<std::string>>();
+      for (const auto& s : v) {
+        std::cout << s << ", ";
+      }
+      std::cout << "}" << std::endl;
+    }
+
+    if (result.count("presolve")) {
+      highs_options.setValue("presolve", true);
+      std::cout << "Presolve is set to on through cxx options.";
+    }
+
+  } catch (const cxxopts::OptionException& e) {
+    std::cout << "error parsing options: " << e.what() << std::endl;
+    return HighsStatus::OptionsError;
+  }
+}
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   // todo: replace references with options_.*
@@ -341,14 +378,11 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
-  // until parsers work with HighsLp
   HModel model;
-  int RtCd = model.load_fromMPS(opt.fileName);
-
-  // make sure old tests pass before you start work on the
-  // parsers. Then remove traces of read_fromMPS from below and replace the code
-  // above with
-  // HModel model = HighsLpToHModel(lp);
+  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
+                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
+                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
+                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
 
   cout << "=================================================================="
           "=="
@@ -415,38 +449,22 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) {
-  HighsLp lp;
-
-  lp.numCol_ = model.numCol;
-  lp.numRow_ = model.numRow;
-
-  lp.Astart_ = model.Astart;
-  lp.Aindex_ = model.Aindex;
-  lp.Avalue_ = model.Avalue;
-  lp.colCost_ = model.colCost;
-  lp.colLower_ = model.colLower;
-  lp.colUpper_ = model.colUpper;
-  lp.rowLower_ = model.rowLower;
-  lp.rowUpper_ = model.rowUpper;
-
-  return lp;
-}
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
 
-  model.numCol = lp.numCol_;
-  model.numRow = lp.numRow_;
+  model.lp.numCol_ = lp.numCol_;
+  model.lp.numRow_ = lp.numRow_;
 
-  model.Astart = lp.Astart_;
-  model.Aindex = lp.Aindex_;
-  model.Avalue = lp.Avalue_;
-  model.colCost = lp.colCost_;
-  model.colLower = lp.colLower_;
-  model.colUpper = lp.colUpper_;
-  model.rowLower = lp.rowLower_;
-  model.rowUpper = lp.rowUpper_;
+  model.lp.Astart_ = lp.Astart_;
+  model.lp.Aindex_ = lp.Aindex_;
+  model.lp.Avalue_ = lp.Avalue_;
+  model.lp.colCost_ = lp.colCost_;
+  model.lp.colLower_ = lp.colLower_;
+  model.lp.colUpper_ = lp.colUpper_;
+  model.lp.rowLower_ = lp.rowLower_;
+  model.lp.rowUpper_ = lp.rowUpper_;
 
   return model;
 }
