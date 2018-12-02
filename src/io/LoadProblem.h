@@ -33,6 +33,7 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   int RtCd = model_in.load_fromMPS(options.fileName);
 
   lp = HModelToHighsLp(model_in);
+  lp.nnz_ = lp.Avalue_.size();
 
   // make sure old tests pass before you start work on the
   // parsers. Then remove traces of read_fromMPS from below and replace the code
