@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSetup.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_SETUP_H_
@@ -114,16 +114,15 @@ HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   return status;
 }
 
-void HiGHSRun(const char *message) {
-  std::cout << "Running HiGHS "
-	    << HIGHS_VERSION_MAJOR << "."
-	    << HIGHS_VERSION_MINOR << "."
-	    << HIGHS_VERSION_PATCH
-	    << " [date: " << HIGHS_COMPILATION_DATE
-	    << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
-	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+void HiGHSRun(const char* message) {
+  std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
+            << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
+            << " [date: " << HIGHS_COMPILATION_DATE
+            << ", git hash: " << HIGHS_GITHASH << "]"
+            << "\n"
+            << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #ifdef HiGHSDEV
-  //Report on preprocessing macros
+  // Report on preprocessing macros
   std::cout << "In " << message << std::endl;
   std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 #ifdef OLD_PARSER
@@ -157,9 +156,7 @@ void HiGHSRun(const char *message) {
 #endif
 
 #endif
-  
 };
-
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   // todo: replace references with options_.*
@@ -415,38 +412,22 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) {
-  HighsLp lp;
-
-  lp.numCol_ = model.numCol;
-  lp.numRow_ = model.numRow;
-
-  lp.Astart_ = model.Astart;
-  lp.Aindex_ = model.Aindex;
-  lp.Avalue_ = model.Avalue;
-  lp.colCost_ = model.colCost;
-  lp.colLower_ = model.colLower;
-  lp.colUpper_ = model.colUpper;
-  lp.rowLower_ = model.rowLower;
-  lp.rowUpper_ = model.rowUpper;
-
-  return lp;
-}
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
 
-  model.numCol = lp.numCol_;
-  model.numRow = lp.numRow_;
+  model.lp.numCol_ = lp.numCol_;
+  model.lp.numRow_ = lp.numRow_;
 
-  model.Astart = lp.Astart_;
-  model.Aindex = lp.Aindex_;
-  model.Avalue = lp.Avalue_;
-  model.colCost = lp.colCost_;
-  model.colLower = lp.colLower_;
-  model.colUpper = lp.colUpper_;
-  model.rowLower = lp.rowLower_;
-  model.rowUpper = lp.rowUpper_;
+  model.lp.Astart_ = lp.Astart_;
+  model.lp.Aindex_ = lp.Aindex_;
+  model.lp.Avalue_ = lp.Avalue_;
+  model.lp.colCost_ = lp.colCost_;
+  model.lp.colLower_ = lp.colLower_;
+  model.lp.colUpper_ = lp.colUpper_;
+  model.lp.rowLower_ = lp.rowLower_;
+  model.lp.rowUpper_ = lp.rowUpper_;
 
   return model;
 }
