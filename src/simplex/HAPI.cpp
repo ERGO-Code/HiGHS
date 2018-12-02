@@ -93,12 +93,12 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                                  XrowPrimalValues, XrowDualValues);
 
   memcpy(colPrimalValues, &(XcolPrimalValues[0]),
-         sizeof(double) * model.numCol);
+         sizeof(double) * model.lp.numCol_);
   memcpy(rowPrimalValues, &(XrowPrimalValues[0]),
-         sizeof(double) * model.numRow);
-  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double) * model.numCol);
-  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double) * model.numRow);
-  memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int) * model.numRow);
+         sizeof(double) * model.lp.numRow_);
+  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double) * model.lp.numCol_);
+  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double) * model.lp.numRow_);
+  memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int) * model.lp.numRow_);
   LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef HiGHSDEV

@@ -36,8 +36,8 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   //  cout << flush;
 #endif
   // Setup two work buffers in model required for solve()
-  model->buffer.setup(model->numRow);
-  model->bufferLong.setup(model->numCol);
+  model->buffer.setup(model->lp.numRow_);
+  model->bufferLong.setup(model->lp.numCol_);
 
   //  printf("model->mlFg_haveEdWt 0 = %d\n", model->mlFg_haveEdWt);cout<<flush;
 
@@ -58,7 +58,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   model->totalInvertTime = 0;
 #endif
   // Cannot solve box-constrained LPs
-  if (model->numRow == 0) return;
+  if (model->lp.numRow_ == 0) return;
 #ifdef HiGHSDEV
     //  printf("model->mlFg_Report() 2\n"); cout << flush; model->mlFg_Report();
     //  cout << flush;

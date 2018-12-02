@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsSetup.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_SETUP_H_
@@ -114,16 +114,15 @@ HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   return status;
 }
 
-void HiGHSRun(const char *message) {
-  std::cout << "Running HiGHS "
-	    << HIGHS_VERSION_MAJOR << "."
-	    << HIGHS_VERSION_MINOR << "."
-	    << HIGHS_VERSION_PATCH
-	    << " [date: " << HIGHS_COMPILATION_DATE
-	    << ", git hash: " << HIGHS_GITHASH << "]" << "\n"
-	    << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
+void HiGHSRun(const char* message) {
+  std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
+            << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
+            << " [date: " << HIGHS_COMPILATION_DATE
+            << ", git hash: " << HIGHS_GITHASH << "]"
+            << "\n"
+            << "Copyright (c) 2018 ERGO-Code under MIT licence terms\n\n";
 #ifdef HiGHSDEV
-  //Report on preprocessing macros
+  // Report on preprocessing macros
   std::cout << "In " << message << std::endl;
   std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 #ifdef OLD_PARSER
@@ -157,9 +156,7 @@ void HiGHSRun(const char *message) {
 #endif
 
 #endif
-  
 };
-
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   // todo: replace references with options_.*
@@ -342,13 +339,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
   // until parsers work with HighsLp
-  HModel model.lp.
-  int RtCd = model.lp.load_fromMPS(opt.fileName);
+  HModel model;
+  int RtCd = model.load_fromMPS(opt.fileName);
 
   // make sure old tests pass before you start work on the
   // parsers. Then remove traces of read_fromMPS from below and replace the code
   // above with
-  // HModel model.lp.= HighsLpToHModel(lp);
+  // HModel model = HighsLpToHModel(lp);
 
   cout << "=================================================================="
           "=="
@@ -358,37 +355,37 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   if (opt.sip) {
     cout << "Running solveTasks" << endl;
 
-    solveTasks(model.lp.;
+    solveTasks(model);
   }
   if (opt.scip) {
     cout << "Running solveSCIP" << endl;
-    solveSCIP(model.lp.;
+    solveSCIP(model);
   } else if (opt.pami) {
     if (opt.partitionFile) {
       cout << "Running solveMulti" << endl;
-      solveMulti(model.lp. opt.partitionFile);
+      solveMulti(model, opt.partitionFile);
     } else if (opt.cut) {
-      model.lp.intOption[INTOPT_PRINT_FLAG] = 1;
-      model.lp.intOption[INTOPT_PERMUTE_FLAG] = 1;
-      model.lp.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
+      model.intOption[INTOPT_PRINT_FLAG] = 1;
+      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
 
-      model.lp.scaleModel();
+      model.scaleModel();
 
       HDual solver;
       cout << "Running solveCut" << endl;
-      solver.solve(&model.lp. HDUAL_VARIANT_MULTI, 8);
+      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 
-      model.lp.util_reportSolverOutcome("Cut");
+      model.util_reportSolverOutcome("Cut");
     } else {
       cout << "Running solvemulti" << endl;
-      solveMulti(model.lp.;
+      solveMulti(model);
     }
   }
   // serial
   else if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
            opt.timeLimit == HSOL_CONST_INF) {
     cout << "Running solvePlain" << endl;
-    int RtCod = solvePlain(model.lp.;
+    int RtCod = solvePlain(model);
     if (RtCod != 0) {
       printf("solvePlain(API) return code is %d\n", RtCod);
     }
@@ -397,7 +394,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
            opt.timeLimit == HSOL_CONST_INF) {
     if (opt.presolve == 1) {
       cout << "Running solvePlainWithPresolve" << endl;
-      solvePlainWithPresolve(model.lp.;
+      solvePlainWithPresolve(model);
     }
 #ifdef EXT_PRESOLVE
     else if (presolve == 2) {
@@ -407,7 +404,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
 #endif
   } else {
     cout << "Running solvePlainJAJH" << endl;
-    solvePlainJAJH(model.lp. opt.priceMode, opt.edWtMode, opt.crashMode,
+    solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
                    opt.presolveMode, opt.timeLimit);
   }
 
@@ -415,40 +412,24 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model.lp. {
-  HighsLp lp;
-
-  lp.numCol_ = model.lp.numCol;
-  lp.numRow_ = model.lp.numRow;
-
-  lp.Astart_ = model.lp.Astart;
-  lp.Aindex_ = model.lp.Aindex;
-  lp.Avalue_ = model.lp.Avalue;
-  lp.colCost_ = model.lp.colCost;
-  lp.colLower_ = model.lp.colLower;
-  lp.colUpper_ = model.lp.colUpper;
-  lp.rowLower_ = model.lp.rowLower;
-  lp.rowUpper_ = model.lp.rowUpper;
-
-  return lp;
-}
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
-  HModel model.lp.
+  HModel model;
 
-  model.lp.numCol = lp.numCol_;
-  model.lp.numRow = lp.numRow_;
+  model.lp.numCol_ = lp.numCol_;
+  model.lp.numRow_ = lp.numRow_;
 
-  model.lp.Astart = lp.Astart_;
-  model.lp.Aindex = lp.Aindex_;
-  model.lp.Avalue = lp.Avalue_;
-  model.lp.colCost = lp.colCost_;
-  model.lp.colLower = lp.colLower_;
-  model.lp.colUpper = lp.colUpper_;
-  model.lp.rowLower = lp.rowLower_;
-  model.lp.rowUpper = lp.rowUpper_;
+  model.lp.Astart_ = lp.Astart_;
+  model.lp.Aindex_ = lp.Aindex_;
+  model.lp.Avalue_ = lp.Avalue_;
+  model.lp.colCost_ = lp.colCost_;
+  model.lp.colLower_ = lp.colLower_;
+  model.lp.colUpper_ = lp.colUpper_;
+  model.lp.rowLower_ = lp.rowLower_;
+  model.lp.rowUpper_ = lp.rowUpper_;
 
-  return model.lp.
+  return model;
 }
 
 #endif
