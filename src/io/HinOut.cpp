@@ -160,33 +160,33 @@ void HinOut::writeDataColumnWise() {
 }
 
 void HinOut::getData(HModel& ptr_model) {
-  onumCol = ptr_model.numCol;
-  onumRow = ptr_model.numRow;
-  onumTot = ptr_model.numCol + ptr_model.numRow;
-  oAstart = ptr_model.Astart;
-  oAindex = ptr_model.Aindex;
-  oAvalue = ptr_model.Avalue;
-  ocolCost = ptr_model.colCost;
-  ocolLower = ptr_model.colLower;
-  ocolUpper = ptr_model.colUpper;
-  orowLower = ptr_model.rowLower;
-  orowUpper = ptr_model.rowUpper;
+  onumCol = ptr_model.lp.numCol_;
+  onumRow = ptr_model.lp.numRow_;
+  onumTot = ptr_model.lp.numCol_ + ptr_model.lp.numRow_;
+  oAstart = ptr_model.lp.Astart_;
+  oAindex = ptr_model.lp.Aindex_;
+  oAvalue = ptr_model.lp.Avalue_;
+  ocolCost = ptr_model.lp.colCost_;
+  ocolLower = ptr_model.lp.colLower_;
+  ocolUpper = ptr_model.lp.colUpper_;
+  orowLower = ptr_model.lp.rowLower_;
+  orowUpper = ptr_model.lp.rowUpper_;
 
   oAcountX = oAvalue.size();
 }
 
 void HinOut::readDataPostsolve(HModel& ptr_model) {
-  numCol = ptr_model.numCol;
-  numRow = ptr_model.numRow;
-  numTot = ptr_model.numCol + ptr_model.numRow;
-  Astart = ptr_model.Astart;
-  Aindex = ptr_model.Aindex;
-  Avalue = ptr_model.Avalue;
-  colCost = ptr_model.colCost;
-  colLower = ptr_model.colLower;
-  colUpper = ptr_model.colUpper;
-  rowLower = ptr_model.rowLower;
-  rowUpper = ptr_model.rowUpper;
+  numCol = ptr_model.lp.numCol_;
+  numRow = ptr_model.lp.numRow_;
+  numTot = ptr_model.lp.numCol_ + ptr_model.lp.numRow_;
+  Astart = ptr_model.lp.Astart_;
+  Aindex = ptr_model.lp.Aindex_;
+  Avalue = ptr_model.lp.Avalue_;
+  colCost = ptr_model.lp.colCost_;
+  colLower = ptr_model.lp.colLower_;
+  colUpper = ptr_model.lp.colUpper_;
+  rowLower = ptr_model.lp.rowLower_;
+  rowUpper = ptr_model.lp.rowUpper_;
 
   AcountX = oAvalue.size();
 }
@@ -266,17 +266,17 @@ void HinOut::compareData(int lvl) {
 }
 
 void HinOut::setData(HModel& ptr_model) {
-  ptr_model.numCol = numCol;
-  ptr_model.numRow = numRow;
+  ptr_model.lp.numCol_ = numCol;
+  ptr_model.lp.numRow_ = numRow;
   ptr_model.numTot = numCol + numRow;
-  ptr_model.Astart = Astart;
-  ptr_model.Aindex = Aindex;
-  ptr_model.Avalue = Avalue;
-  ptr_model.colCost = colCost;
-  ptr_model.colLower = colLower;
-  ptr_model.colUpper = colUpper;
-  ptr_model.rowLower = rowLower;
-  ptr_model.rowUpper = rowUpper;
+  ptr_model.lp.Astart_ = Astart;
+  ptr_model.lp.Aindex_ = Aindex;
+  ptr_model.lp.Avalue_ = Avalue;
+  ptr_model.lp.colCost_ = colCost;
+  ptr_model.lp.colLower_ = colLower;
+  ptr_model.lp.colUpper_ = colUpper;
+  ptr_model.lp.rowLower_ = rowLower;
+  ptr_model.lp.rowUpper_ = rowUpper;
 }
 
 HinOut::HinOut(string filenameIn, string filenameOut) {

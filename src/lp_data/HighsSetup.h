@@ -449,39 +449,22 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) {
-  HighsLp lp;
-
-  lp.numCol_ = model.numCol;
-  lp.numRow_ = model.numRow;
-  lp.nnz_ = model.Avalue.size();
-
-  lp.Astart_ = model.Astart;
-  lp.Aindex_ = model.Aindex;
-  lp.Avalue_ = model.Avalue;
-  lp.colCost_ = model.colCost;
-  lp.colLower_ = model.colLower;
-  lp.colUpper_ = model.colUpper;
-  lp.rowLower_ = model.rowLower;
-  lp.rowUpper_ = model.rowUpper;
-
-  return lp;
-}
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
 
-  model.numCol = lp.numCol_;
-  model.numRow = lp.numRow_;
+  model.lp.numCol_ = lp.numCol_;
+  model.lp.numRow_ = lp.numRow_;
 
-  model.Astart = lp.Astart_;
-  model.Aindex = lp.Aindex_;
-  model.Avalue = lp.Avalue_;
-  model.colCost = lp.colCost_;
-  model.colLower = lp.colLower_;
-  model.colUpper = lp.colUpper_;
-  model.rowLower = lp.rowLower_;
-  model.rowUpper = lp.rowUpper_;
+  model.lp.Astart_ = lp.Astart_;
+  model.lp.Aindex_ = lp.Aindex_;
+  model.lp.Avalue_ = lp.Avalue_;
+  model.lp.colCost_ = lp.colCost_;
+  model.lp.colLower_ = lp.colLower_;
+  model.lp.colUpper_ = lp.colUpper_;
+  model.lp.rowLower_ = lp.rowLower_;
+  model.lp.rowUpper_ = lp.rowUpper_;
 
   return model;
 }
