@@ -52,20 +52,20 @@ HighsInputStatus checkLp(const HighsLp& lp) {
   }
 
   // Check matrix.
-  const int nnz = lp.Avalue_.size();
-  if (nnz <= 0) return HighsInputStatus::ErrorMatrixValue;
-  if ((int)lp.Aindex_.size() != nnz)
+  if (lp.nnz_ != lp.Avalue_.size()) return HighsInputStatus::ErrorMatrixValue;
+  if (lp.nnz_ <= 0) return HighsInputStatus::ErrorMatrixValue;
+  if ((int)lp.Aindex_.size() != lp.nnz_)
     return HighsInputStatus::ErrorMatrixIndices;
 
   if ((int)lp.Astart_.size() != lp.numCol_ + 1)
     return HighsInputStatus::ErrorMatrixStart;
   for (int i = 0; i < lp.numCol_; i++) {
-    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] >= nnz ||
+    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] >= lp.nnz_ ||
         lp.Astart_[i] < 0)
       return HighsInputStatus::ErrorMatrixStart;
   }
 
-  for (int k = 0; k < nnz; k++) {
+  for (int k = 0; k < lp.nnz_; k++) {
     if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
       return HighsInputStatus::ErrorMatrixIndices;
     if (lp.Avalue_[k] < -HSOL_CONST_INF || lp.Avalue_[k] > HSOL_CONST_INF)

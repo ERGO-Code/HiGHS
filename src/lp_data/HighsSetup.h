@@ -20,6 +20,9 @@
 #include "HighsOptions.h"
 #include "cxxopts.hpp"
 
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
+
 // Class to set parameters and run HiGHS
 class Highs {
  public:
@@ -375,14 +378,11 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
-  // until parsers work with HighsLp
   HModel model;
-  int RtCd = model.load_fromMPS(opt.fileName);
-
-  // make sure old tests pass before you start work on the
-  // parsers. Then remove traces of read_fromMPS from below and replace the code
-  // above with
-  // HModel model = HighsLpToHModel(lp);
+  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0], &lp.colLower_[0],
+                        &lp.colUpper_[0], lp.numRow_, &lp.rowLower_[0],
+                        &lp.rowUpper_[0], lp.nnz_, &lp.Astart_[0],
+                        &lp.Aindex_[0], &lp.Avalue_[0]);
 
   cout << "=================================================================="
           "=="
@@ -454,6 +454,7 @@ HighsLp HModelToHighsLp(const HModel& model) {
 
   lp.numCol_ = model.numCol;
   lp.numRow_ = model.numRow;
+  lp.nnz_ = model.Avalue.size();
 
   lp.Astart_ = model.Astart;
   lp.Aindex_ = model.Aindex;

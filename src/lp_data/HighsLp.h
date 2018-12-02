@@ -57,6 +57,7 @@ class HighsLp {
   // Model data
   int numCol_;
   int numRow_;
+  int nnz_;
 
   std::vector<int> Astart_;
   std::vector<int> Aindex_;
@@ -66,6 +67,10 @@ class HighsLp {
   std::vector<double> colUpper_;
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
+
+  // 1 is default, -1 is maximize
+  int sense_ = 1;
+  double offset_ = 0;
 };
 
 // HiGHS status
