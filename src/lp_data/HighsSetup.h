@@ -210,12 +210,15 @@ HighsStatus loadOptions(int argc, char** argv,
     }
 
     if (result.count("filename")) {
+      std::string filenames = "";
       std::cout << "filename = {";
       auto& v = result["filename"].as<std::vector<std::string>>();
       for (const auto& s : v) {
         std::cout << s << ", ";
+        filenames = filenames + " " + s;
       }
       std::cout << "}" << std::endl;
+      highs_options.setValue("filenames", filenames);
     }
 
     if (result.count("crash")) {
@@ -236,8 +239,40 @@ HighsStatus loadOptions(int argc, char** argv,
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
+      highs_options.setValue("crash", data);
+      std::cout << "Crash is set to " << data << ".\n";
+    }
+
+    if (result.count("edge-weight")) {
+      std::string data = result["edge-weight"].as<std::string>();
+      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
+      if (data != "dan" && 
+          data != "dvx" &&
+          data != "dse" &&
+          data != "dse0" &&
+          data != "dse2dvx") {
+        std::cout << "Wrong value specified for edge-weight." << std::endl;
+        std::cout << cxx_options.help({""}) << std::endl;
+        exit(0);
+      }
+      highs_options.setValue("edge-weight", data);
+      std::cout << "Edge weight is set to " << data << ".\n";
+    }
+
+    if (result.count("price")) {
+      std::string data = result["price"].as<std::string>();
+      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
+      if (data != "row" && 
+          data != "col" &&
+          data != "rowsw" &&
+          data != "rowswcolsw" &&
+          data != "rowultra") {
+        std::cout << "Wrong value specified for price." << std::endl;
+        std::cout << cxx_options.help({""}) << std::endl;
+        exit(0);
+      }
+      highs_options.setValue("price", data);
+      std::cout << "Price is set to " << data << ".\n";
     }
 
     if (result.count("presolve")) {
@@ -248,47 +283,23 @@ HighsStatus loadOptions(int argc, char** argv,
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      highs_options.setValue("presolve", true);
+      if (data == "off") highs_options.setValue("presolve", false);
+      else highs_options.setValue("presolve", true);
       std::cout << "Presolve is set to " << data << ".\n";
     }
 
-    if (result.count("presolve")) {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
+    if (result.count("time-limit")) {
+      double time_limit = result["time-limit"].as<double>();
+      if (time_limit <= 0) {
+        std::cout << "Time limit must be positive." << std::endl;
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
+      highs_options.setValue("time-limit", time_limit);
+      std::cout << "Time limit is set to " << time_limit << ".\n";
     }
 
-    if (result.count("presolve")) {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
-    }
-
-    if (result.count("presolve")) {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
-    }
-
-    if (result.count("presolve")) {
+    if (result.count("partition")) {
       std::string data = result["presolve"].as<std::string>();
       std::transform(data.begin(), data.end(), data.begin(), ::tolower);
       if (data != "on" && data != "off") {
