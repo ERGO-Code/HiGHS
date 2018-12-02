@@ -162,17 +162,17 @@ HighsStatus loadOptions(int argc, char** argv,
                         HighsStringOptions& highs_options) {
   try {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
-    cxx_options.positional_help("[optional args]").show_positional_help();
+  //  cxx_options.positional_help("[optional args]").show_positional_help();
 
-    cxx_options.add_options()("p, presolve", "presolve",
-                              cxxopts::value<bool>())(
-        "f, filename", "Filename(s) of LPs to solve",
-        cxxopts::value<std::vector<std::string>>())("help", "Print help.");
+    cxx_options.add_options()
+    ("p, presolve", "presolve", cxxopts::value<bool>());
+//    ("f, filename", "Filename(s) of LPs to solve",
+//        cxxopts::value<std::vector<std::string>>())("help", "Print help.");
 
-    cxx_options.parse_positional("file");
+//    cxx_options.parse_positional("file");
 
     auto result = cxx_options.parse(argc, argv);
-
+/*
     if (result.count("help")) {
       std::cout << cxx_options.help({""}) << std::endl;
       exit(0);
@@ -186,16 +186,18 @@ HighsStatus loadOptions(int argc, char** argv,
       }
       std::cout << "}" << std::endl;
     }
-
+*/
     if (result.count("presolve")) {
       highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to on through cxx options.";
+      std::cout << "Presolve is set to on through cxx options.\n";
     }
 
   } catch (const cxxopts::OptionException& e) {
     std::cout << "error parsing options: " << e.what() << std::endl;
     return HighsStatus::OptionsError;
   }
+
+  exit(0);
 }
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
