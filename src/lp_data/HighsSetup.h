@@ -342,13 +342,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
   // until parsers work with HighsLp
-  HModel model;
-  int RtCd = model.load_fromMPS(opt.fileName);
+  HModel model.lp.
+  int RtCd = model.lp.load_fromMPS(opt.fileName);
 
   // make sure old tests pass before you start work on the
   // parsers. Then remove traces of read_fromMPS from below and replace the code
   // above with
-  // HModel model = HighsLpToHModel(lp);
+  // HModel model.lp.= HighsLpToHModel(lp);
 
   cout << "=================================================================="
           "=="
@@ -358,37 +358,37 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   if (opt.sip) {
     cout << "Running solveTasks" << endl;
 
-    solveTasks(model);
+    solveTasks(model.lp.;
   }
   if (opt.scip) {
     cout << "Running solveSCIP" << endl;
-    solveSCIP(model);
+    solveSCIP(model.lp.;
   } else if (opt.pami) {
     if (opt.partitionFile) {
       cout << "Running solveMulti" << endl;
-      solveMulti(model, opt.partitionFile);
+      solveMulti(model.lp. opt.partitionFile);
     } else if (opt.cut) {
-      model.intOption[INTOPT_PRINT_FLAG] = 1;
-      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
+      model.lp.intOption[INTOPT_PRINT_FLAG] = 1;
+      model.lp.intOption[INTOPT_PERMUTE_FLAG] = 1;
+      model.lp.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
 
-      model.scaleModel();
+      model.lp.scaleModel();
 
       HDual solver;
       cout << "Running solveCut" << endl;
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+      solver.solve(&model.lp. HDUAL_VARIANT_MULTI, 8);
 
-      model.util_reportSolverOutcome("Cut");
+      model.lp.util_reportSolverOutcome("Cut");
     } else {
       cout << "Running solvemulti" << endl;
-      solveMulti(model);
+      solveMulti(model.lp.;
     }
   }
   // serial
   else if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
            opt.timeLimit == HSOL_CONST_INF) {
     cout << "Running solvePlain" << endl;
-    int RtCod = solvePlain(model);
+    int RtCod = solvePlain(model.lp.;
     if (RtCod != 0) {
       printf("solvePlain(API) return code is %d\n", RtCod);
     }
@@ -397,7 +397,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
            opt.timeLimit == HSOL_CONST_INF) {
     if (opt.presolve == 1) {
       cout << "Running solvePlainWithPresolve" << endl;
-      solvePlainWithPresolve(model);
+      solvePlainWithPresolve(model.lp.;
     }
 #ifdef EXT_PRESOLVE
     else if (presolve == 2) {
@@ -407,7 +407,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
 #endif
   } else {
     cout << "Running solvePlainJAJH" << endl;
-    solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
+    solvePlainJAJH(model.lp. opt.priceMode, opt.edWtMode, opt.crashMode,
                    opt.presolveMode, opt.timeLimit);
   }
 
@@ -415,40 +415,40 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) {
+HighsLp HModelToHighsLp(const HModel& model.lp. {
   HighsLp lp;
 
-  lp.numCol_ = model.numCol;
-  lp.numRow_ = model.numRow;
+  lp.numCol_ = model.lp.numCol;
+  lp.numRow_ = model.lp.numRow;
 
-  lp.Astart_ = model.Astart;
-  lp.Aindex_ = model.Aindex;
-  lp.Avalue_ = model.Avalue;
-  lp.colCost_ = model.colCost;
-  lp.colLower_ = model.colLower;
-  lp.colUpper_ = model.colUpper;
-  lp.rowLower_ = model.rowLower;
-  lp.rowUpper_ = model.rowUpper;
+  lp.Astart_ = model.lp.Astart;
+  lp.Aindex_ = model.lp.Aindex;
+  lp.Avalue_ = model.lp.Avalue;
+  lp.colCost_ = model.lp.colCost;
+  lp.colLower_ = model.lp.colLower;
+  lp.colUpper_ = model.lp.colUpper;
+  lp.rowLower_ = model.lp.rowLower;
+  lp.rowUpper_ = model.lp.rowUpper;
 
   return lp;
 }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
-  HModel model;
+  HModel model.lp.
 
-  model.numCol = lp.numCol_;
-  model.numRow = lp.numRow_;
+  model.lp.numCol = lp.numCol_;
+  model.lp.numRow = lp.numRow_;
 
-  model.Astart = lp.Astart_;
-  model.Aindex = lp.Aindex_;
-  model.Avalue = lp.Avalue_;
-  model.colCost = lp.colCost_;
-  model.colLower = lp.colLower_;
-  model.colUpper = lp.colUpper_;
-  model.rowLower = lp.rowLower_;
-  model.rowUpper = lp.rowUpper_;
+  model.lp.Astart = lp.Astart_;
+  model.lp.Aindex = lp.Aindex_;
+  model.lp.Avalue = lp.Avalue_;
+  model.lp.colCost = lp.colCost_;
+  model.lp.colLower = lp.colLower_;
+  model.lp.colUpper = lp.colUpper_;
+  model.lp.rowLower = lp.rowLower_;
+  model.lp.rowUpper = lp.rowUpper_;
 
-  return model;
+  return model.lp.
 }
 
 #endif

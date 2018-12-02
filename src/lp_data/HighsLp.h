@@ -66,6 +66,11 @@ class HighsLp {
   std::vector<double> colUpper_;
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
+
+  // sense 1 = minimize, -1 = maximize
+  int sense_ = 1;
+  double offset_ = 0;
+  std::string model_name_ = "";
 };
 
 // HiGHS status
