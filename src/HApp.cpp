@@ -36,11 +36,11 @@ int solvePlainAPI(HModel &model) {
 
   // Use the arrays read from an MPS file to test the routine to
   // solve a model passed by arrays. First copy the data.
-  int XnumCol = model.numCol;
-  int XnumRow = model.numRow;
-  int XnumNz = model.Astart[model.numCol];
-  int XobjSense = model.objSense;
-  int XobjOffset = model.objOffset;
+  int XnumCol = model.lp.numCol_;
+  int XnumRow = model.lp.numRow_;
+  int XnumNz = model.lp.Astart_[model.lp.numCol_];
+  int XobjSense = model.lp.sense_;
+  int XobjOffset = model.lp.offset_;
   double *XcolCost;
   double *XcolLower;
   double *XcolUpper;
@@ -59,14 +59,14 @@ int solvePlainAPI(HModel &model) {
   XAindex = (int *)malloc(sizeof(int) * XnumNz);
   XAvalue = (double *)malloc(sizeof(double) * XnumNz);
 
-  memcpy(XcolCost, &(model.colCost[0]), sizeof(double) * model.numCol);
-  memcpy(XcolLower, &(model.colLower[0]), sizeof(double) * model.numCol);
-  memcpy(XcolUpper, &(model.colUpper[0]), sizeof(double) * model.numCol);
-  memcpy(XrowLower, &(model.rowLower[0]), sizeof(double) * model.numRow);
-  memcpy(XrowUpper, &(model.rowUpper[0]), sizeof(double) * model.numRow);
-  memcpy(XAstart, &(model.Astart[0]), sizeof(int) * (XnumCol + 1));
-  memcpy(XAindex, &(model.Aindex[0]), sizeof(int) * XnumNz);
-  memcpy(XAvalue, &(model.Avalue[0]), sizeof(double) * XnumNz);
+  memcpy(XcolCost, &(model.lp.colCost_[0]), sizeof(double) * model.lp.numCol_);
+  memcpy(XcolLower, &(model.lp.colLower_[0]), sizeof(double) * model.lp.numCol_);
+  memcpy(XcolUpper, &(model.lp.colUpper_[0]), sizeof(double) * model.lp.numCol_);
+  memcpy(XrowLower, &(model.lp.rowLower_[0]), sizeof(double) * model.lp.numRow_);
+  memcpy(XrowUpper, &(model.lp.rowUpper_[0]), sizeof(double) * model.lp.numRow_);
+  memcpy(XAstart, &(model.lp.Astart_[0]), sizeof(int) * (XnumCol + 1));
+  memcpy(XAindex, &(model.lp.Aindex_[0]), sizeof(int) * XnumNz);
+  memcpy(XAvalue, &(model.lp.Avalue_[0]), sizeof(double) * XnumNz);
 
   model.clearModel();
 
@@ -234,8 +234,8 @@ int solveSCIP(HModel &model) {
   //  model.util_reportModel();
 
   // Extract columns numCol-3..numCol-1
-  int FmCol = model.numCol - 3;
-  int ToCol = model.numCol - 1;
+  int FmCol = model.lp.numCol_ - 3;
+  int ToCol = model.lp.numCol_ - 1;
   int numExtractCols = ToCol - FmCol + 1;
   vector<double> XcolCost;
   vector<double> XcolLower;
@@ -255,8 +255,8 @@ int solveSCIP(HModel &model) {
   //  model.util_reportModel();
 
   // Extract rows numRow-3..numRow-1
-  int FmRow = model.numRow - 3;
-  int ToRow = model.numRow - 1;
+  int FmRow = model.lp.numRow_ - 3;
+  int ToRow = model.lp.numRow_ - 1;
   int numExtractRows = ToRow - FmRow + 1;
   vector<double> XrowLower;
   vector<double> XrowUpper;
@@ -277,7 +277,7 @@ int solveSCIP(HModel &model) {
 
   // Extract all remaining rows
   FmRow = 0;
-  ToRow = model.numRow - 1;
+  ToRow = model.lp.numRow_ - 1;
   int num0ExtractRows = ToRow - FmRow + 1;
   vector<double> X0rowLower;
   vector<double> X0rowUpper;
@@ -296,7 +296,7 @@ int solveSCIP(HModel &model) {
 
   // Extract all remaining columns
   FmCol = 0;
-  ToCol = model.numCol - 1;
+  ToCol = model.lp.numCol_ - 1;
   int num0ExtractCols = ToCol - FmCol + 1;
   vector<double> X0colCost;
   vector<double> X0colLower;
@@ -332,24 +332,24 @@ int solveSCIP(HModel &model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  model.numTot = model.numCol + model.numRow;
+  model.numTot = model.lp.numCol_ + model.lp.numRow_;
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
   model.util_reportModelSolution();
   model.util_reportSolverOutcome("SCIP 1");
 
-  vector<double> colPrimal(model.numCol);
-  vector<double> colDual(model.numCol);
-  vector<double> colLower(model.numCol);
-  vector<double> colUpper(model.numCol);
-  vector<double> rowPrimal(model.numRow);
-  vector<double> rowDual(model.numRow);
-  vector<double> rowLower(model.numRow);
-  vector<double> rowUpper(model.numRow);
+  vector<double> colPrimal(model.lp.numCol_);
+  vector<double> colDual(model.lp.numCol_);
+  vector<double> colLower(model.lp.numCol_);
+  vector<double> colUpper(model.lp.numCol_);
+  vector<double> rowPrimal(model.lp.numRow_);
+  vector<double> rowDual(model.lp.numRow_);
+  vector<double> rowLower(model.lp.numRow_);
+  vector<double> rowUpper(model.lp.numRow_);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(0, model.numCol - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(0, model.numRow - 1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(0, model.lp.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(0, model.lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -358,7 +358,7 @@ int solveSCIP(HModel &model) {
   double nw_colUpper;
 
   int num_resolve = 0;
-  for (int col = 0; col < model.numCol; col++) {
+  for (int col = 0; col < model.lp.numCol_; col++) {
     model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
@@ -447,7 +447,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
   printf("solvePlainJAJH: with_presolve = %d\n", with_presolve);
   if (with_presolve) {
     // Check size
-    if (model.numRow == 0) return 1;
+    if (model.lp.numRow_ == 0) return 1;
     HPresolve *pre = new HPresolve();
     model.copy_fromHModelToHPresolve(pre);
     setupTime += model.timer.getTime();
@@ -735,7 +735,7 @@ int solvePlainExperiments(const char *filename) {
   RtCd = model.load_fromMPS(filename);
   if (RtCd) return RtCd;
   // Check size
-  if (model.numRow == 0) return 1;
+  if (model.lp.numRow_ == 0) return 1;
 
   double time1;
   double obj1 = presolve(model, time1);
