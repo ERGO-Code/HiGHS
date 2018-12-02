@@ -379,10 +379,10 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
   HModel model;
-  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0], &lp.colLower_[0],
-                        &lp.colUpper_[0], lp.numRow_, &lp.rowLower_[0],
-                        &lp.rowUpper_[0], lp.nnz_, &lp.Astart_[0],
-                        &lp.Aindex_[0], &lp.Avalue_[0]);
+  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
+                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
+                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
+                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
 
   cout << "=================================================================="
           "=="
