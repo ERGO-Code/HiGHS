@@ -16,6 +16,7 @@
 
 #include "FilereaderLp.h"
 #include "FilereaderMps.h"
+#include "HModel.h"
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
@@ -27,7 +28,16 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
     return HighsInputStatus::FileNotFound;
   }
 
-  // todo: check file name extenion 
+  // todo: check file name extenion // until parsers work with HighsLp
+  HModel model_in;
+  int RtCd = model_in.load_fromMPS(options.fileName);
+
+  lp = HModelToHighsLp(model_in);
+  lp.nnz_ = lp.Avalue_.size();
+
+  // make sure old tests pass before you start work on the
+  // parsers. Then remove traces of read_fromMPS from below and replace the code
+  // above with
   // if (mps) use FilereaderMps
 
   // else if (lp) use FilereaderLp
