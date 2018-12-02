@@ -192,12 +192,9 @@ HighsStatus loadOptions(int argc, char** argv,
         "t, partition",
         "Use pami with partition file: filename",
         cxxopts::value<std::string>())(
-        "t, time-limit",
+        "T, time-limit",
         "Use time limit.",
-        cxxopts::value<double>());
-        
-        
-        
+        cxxopts::value<double>())
         ("help", "Print help.");
 
     cxx_options.parse_positional("filename");
@@ -218,7 +215,8 @@ HighsStatus loadOptions(int argc, char** argv,
         filenames = filenames + " " + s;
       }
       std::cout << "}" << std::endl;
-      highs_options.setValue("filenames", filenames);
+      const char* filenames_ptr = filenames.c_str();
+//      highs_options.setPtrValue("filenames", filenames_ptr);
     }
 
     if (result.count("crash")) {
@@ -239,7 +237,7 @@ HighsStatus loadOptions(int argc, char** argv,
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      highs_options.setValue("crash", data);
+//      highs_options.setValue("crash", data);
       std::cout << "Crash is set to " << data << ".\n";
     }
 
@@ -255,7 +253,7 @@ HighsStatus loadOptions(int argc, char** argv,
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      highs_options.setValue("edge-weight", data);
+//      highs_options.setValue("edge-weight", data);
       std::cout << "Edge weight is set to " << data << ".\n";
     }
 
@@ -271,7 +269,7 @@ HighsStatus loadOptions(int argc, char** argv,
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      highs_options.setValue("price", data);
+//      highs_options.setValue("price", data);
       std::cout << "Price is set to " << data << ".\n";
     }
 
@@ -300,40 +298,26 @@ HighsStatus loadOptions(int argc, char** argv,
     }
 
     if (result.count("partition")) {
-      std::string data = result["presolve"].as<std::string>();
+      std::string data = result["partition"].as<std::string>();
       std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
+//      highs_options.setValue("partition", data);
+      std::cout << "Partition is set to " << data << ".\n";
     }
 
-    if (result.count("presolve")) {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
+    if (result.count("sip")) {
+      highs_options.setValue("sip", true);
+      std::cout << "Option sip enabled." << ".\n";
     }
 
-    if (result.count("presolve")) {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      highs_options.setValue("presolve", true);
-      std::cout << "Presolve is set to " << data << ".\n";
+    if (result.count("scip")) {
+      highs_options.setValue("scip", true);
+      std::cout << "Option scip enabled." << ".\n";
     }
+
+    // "Note: "
+    // ""The default parser reads fixed format MPS files. If a boost "
+    // ""installation is present\n"
+    // ""free format MPS and .GZ (MPS) files can also be processed.\n");
 
   } catch (const cxxopts::OptionException& e) {
     std::cout << "error parsing options: " << e.what() << std::endl;
