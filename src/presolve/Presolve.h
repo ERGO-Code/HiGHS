@@ -25,6 +25,7 @@
 #include "HPreData.h"
 #include "HTimerPre.h"
 #include "KktChStep.h"
+#include "HighsLp.h"
 
 using namespace std;
 
@@ -41,16 +42,20 @@ class PresolveInfo {
 
  
  private:
+  std::unique_ptr<HighsSolution> reduced_solution_;
+  std::unique_ptr<HighsSolution> original_solution_;
   std::unique_ptr<Presolve>  presolve_;
+
+  // Original problem.
   HighsLp *  lp_;
 };
 
 enum class HighsPresolveStatus {
-    Unset = 0,
-    Infeasible = 1,
-    Unbounded = 2,
-    Empty = 3,
-    Optimal = 4,
+    NotReduced,
+    Infeasible,
+    Unbounded,
+    Empty,
+    Reduced
 };
 
 class Presolve : public HPreData {

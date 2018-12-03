@@ -46,17 +46,19 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   Highs.init();
   // todo: handle printing messages with HighsPrintMessage
 
-  // Case when the presolve option is disabled are also handled by runPresolve
+  // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
 
+  // Run solver.
   switch (presolve_status) {
+    case HighsPresolveStatus::NotReduced: {
+      runSolver(lp, solution);
+    }
     case HighsPresolveStatus::Reduced: {
       HighsLp reduced_lp = presolve_info.presolve_.getReducedProblem();
-      runSolver(reduced_lp, solution);
-    }
-    case HighsPresolveStatus::Unchanged: {
-      runSolver(lp, solution);
+      
+      runSolver(reduced_lp, presolve_info.reduced_solution_);
     }
     case HighsPresolveStatus::ReducedToEmpty: {
       // Proceed to postsolve.
@@ -71,52 +73,13 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
     }
   }
 
+  // Postsolve. Does nothing if there were no reductions during presolve.
   HighsPostsolveStatus postsolve_status = runPostsolve(postsolve_info);
   if (postsolve_status == HighsPostsolveStatus::RecoveredSolution) {
     // todo: add finishing simplex iterations
   } else {
     // todo: handle postsolve errors.
   }
-
-
-
-
-  // todo
-  //
-  // if (!options_.presolve) {
-  //  HighsSolution solution;
-  //  return runSolver(lp, solution);
-  //}
-  // return HighsStatus::NotImplemented;
-
-  /*
-   HighsLp reduced_lp;
-
-   // presolve(..) method below should use HPresolve now but should be
-   // possible to use external presolve too. Link with ZIB presolve so clp
-   // is possible later.
-   status = presolve(lp, reduced_lp);
-   checkStatus(status);
-
-   switch (status) {
-      case Status::ProblemReduced: {
-         // Solution reduced_solution;
-         // status = runSolver(reduced_lp, reduced_solution);
-         // checkStatus(status);
-         break;
-      }
-      case Status::ProblemReducedToEmpty:
-         // Problem was reduced to empty so we proceed to postsolve
-         break;
-      default:
-         checkStatus(status);
-   }
-
-   // Postsolve
-   status = postsolve(lp, solution)
-
-   // If needed set up clean up with simplex.
-   */
 
   return HighsStatus::OK;
 }
