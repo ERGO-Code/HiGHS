@@ -21,33 +21,33 @@ int HSensitivity::getSensitivityData(HModel* model) {
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  numCol = model->numCol;
-  numRow = model->numRow;
-  numTotal = model->numTot;
+  int numCol = model->lp.numCol_;
+  int numRow = model->lp.numRow_;
+  int numTot = numCol + numRow;
   double H_INF = HIGHS_CONST_INF;
   const double H_TT = 1e-13;
 
   //  HMatrix matrix;
-  model->matrix.setup(numCol, numRow, &model->Astart[0], &model->Aindex[0],
-                      &model->Avalue[0], &model->nonbasicFlag[0]);
+  model->matrix.setup(numCol, numRow, &model->lp.Astart_[0], &model->lp.Aindex_[0],
+                      &model->lp.Avalue_[0], &model->nonbasicFlag[0]);
 
-  model->factor.setup(numCol, numRow, &model->Astart[0], &model->Aindex[0],
-                      &model->Avalue[0], &model->basicIndex[0]);
+  model->factor.setup(numCol, numRow, &model->lp.Astart_[0], &model->lp.Aindex_[0],
+                      &model->lp.Avalue_[0], &model->basicIndex[0]);
   model->factor.build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
   // negated relative to the original model
-  vector<double> cost_ = model->colCost;
-  vector<double> lower_ = model->colLower;
+  vector<double> cost_ = model->lp.colCost_;
+  vector<double> lower_ = model->lp.colLower_;
+  vector<double> upper_ = model->lp.colUpper_;
 
-  lower_.resize(numTotal);
+  lower_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    lower_[numCol + iRow] = -model->rowUpper[iRow];
+    lower_[numCol + iRow] = -model->lp.rowUpper_[iRow];
   }
-  vector<double> upper_ = model->colUpper;
-  upper_.resize(numTotal);
+  upper_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    upper_[numCol + iRow] = -model->rowLower[iRow];
+    upper_[numCol + iRow] = -model->lp.rowLower_[iRow];
   }
   vector<double> value_ = model->workValue;
   for (int iRow = 0; iRow < numRow; iRow++) {
@@ -74,29 +74,48 @@ int HSensitivity::getSensitivityData(HModel* model) {
   vector<int> Nmove_ = model->nonbasicMove;
   vector<int> Bindex_ = model->basicIndex;
 
-  b_up_b.resize(numTotal);
-  b_dn_b.resize(numTotal);
-  b_up_f.resize(numTotal);
-  b_dn_f.resize(numTotal);
-  b_up_e.resize(numTotal);
-  b_dn_e.resize(numTotal);
-  b_up_l.resize(numTotal);
-  b_dn_l.resize(numTotal);
+  HighsSensitivity& s = model->sensitivity;
+  s.rowBoundRangeUpValue_.resize(numTot);
+  s.rowBoundRangeDnValue_.resize(numTot);
+  s.rowBoundRangeUpObjective_.resize(numTot);
+  s.rowBoundRangeDnObjective_.resize(numTot);
+  s.rowBoundRangeUpInCol_.resize(numTot);
+  s.rowBoundRangeDnInCol_.resize(numTot);
+  s.rowBoundRangeUpOutCol_.resize(numTot);
+  s.rowBoundRangeDnOutCol_.resize(numTot);
 
-  c_up_c.resize(numCol);
-  c_dn_c.resize(numCol);
-  c_up_f.resize(numCol);
-  c_dn_f.resize(numCol);
-  c_up_e.resize(numCol);
-  c_dn_e.resize(numCol);
-  c_up_l.resize(numCol);
-  c_dn_l.resize(numCol);
+  s.colCostRangeUpValue_.resize(numCol);
+  s.colCostRangeDnValue_.resize(numCol);
+  s.colCostRangeUpObjective_.resize(numCol);
+  s.colCostRangeDnObjective_.resize(numCol);
+  s.colCostRangeUpInCol_.resize(numCol);
+  s.colCostRangeDnInCol_.resize(numCol);
+  s.colCostRangeUpOutCol_.resize(numCol);
+  s.colCostRangeDnOutCol_.resize(numCol);
+
+  std::vector<double>& b_up_b = s.rowBoundRangeUpValue_;
+  std::vector<double>& b_dn_b = s.rowBoundRangeDnValue_;
+  std::vector<double>& b_up_f = s.rowBoundRangeUpObjective_;
+  std::vector<double>& b_dn_f = s.rowBoundRangeDnObjective_;
+  std::vector<int>& b_up_e = s.rowBoundRangeUpInCol_;
+  std::vector<int>& b_dn_e = s.rowBoundRangeDnInCol_;
+  std::vector<int>& b_up_l = s.rowBoundRangeUpOutCol_;
+  std::vector<int>& b_dn_l = s.rowBoundRangeDnOutCol_;
+
+  std::vector<double>& c_up_c = s.colCostRangeUpValue_;
+  std::vector<double>& c_dn_c = s.colCostRangeDnValue_;
+  std::vector<double>& c_up_f = s.colCostRangeUpObjective_;
+  std::vector<double>& c_dn_f = s.colCostRangeDnObjective_;
+  std::vector<int>& c_up_e = s.colCostRangeUpInCol_;
+  std::vector<int>& c_dn_e = s.colCostRangeDnInCol_;
+  std::vector<int>& c_up_l = s.colCostRangeUpOutCol_;
+  std::vector<int>& c_dn_l = s.colCostRangeDnOutCol_;
 
   vector<int> iWork_;
   vector<double> dWork_;
 
-  iWork_.resize(8 * numTotal);
-  dWork_.resize(8 * numTotal);
+  iWork_.resize(8 * numTot);
+  dWork_.resize(8 * numTot);
 
   HVector column;
   column.setup(numRow);
@@ -108,7 +127,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
   }
 
   vector<double> dj = dual_;
-  for (int j = 0; j < numTotal; j++) {
+  for (int j = 0; j < numTot; j++) {
     if (Nflag_[j] && (lower_[j] != upper_[j])) {
       if (value_[j] == lower_[j]) dj[j] = max(dj[j], 0.0);
       if (value_[j] == upper_[j]) dj[j] = min(dj[j], 0.0);
@@ -126,9 +145,9 @@ int HSensitivity::getSensitivityData(HModel* model) {
     dxi_dec[i] = Blower_[i] - xi[i];
   }
 
-  vector<double> ddj_inc(numTotal);
-  vector<double> ddj_dec(numTotal);
-  for (int j = 0; j < numTotal; j++) {
+  vector<double> ddj_inc(numTot);
+  vector<double> ddj_dec(numTot);
+  for (int j = 0; j < numTot; j++) {
     if (Nflag_[j]) {
       ddj_inc[j] = (value_[j] == lower_[j]) ? +H_INF : -dj[j];
       ddj_dec[j] = (value_[j] == upper_[j]) ? -H_INF : -dj[j];
@@ -141,17 +160,17 @@ int HSensitivity::getSensitivityData(HModel* model) {
   const double tol_a = 1e-9;
   const double THETA_INF = H_INF / 1e40;
 
-  vector<double> txj_inc(numTotal, +THETA_INF);  // theta
-  vector<double> axj_inc(numTotal, 0);           // alpha
-  vector<int> ixj_inc(numTotal, -1);             // i-out
-  vector<int> wxj_inc(numTotal, 0);              // which bound is limiting
-  vector<int> jxj_inc(numTotal, -1);             // j = n(i), (with bound flip)
+  vector<double> txj_inc(numTot, +THETA_INF);  // theta
+  vector<double> axj_inc(numTot, 0);           // alpha
+  vector<int> ixj_inc(numTot, -1);             // i-out
+  vector<int> wxj_inc(numTot, 0);              // which bound is limiting
+  vector<int> jxj_inc(numTot, -1);             // j = n(i), (with bound flip)
 
-  vector<double> txj_dec(numTotal, -THETA_INF);
-  vector<double> axj_dec(numTotal, 0);
-  vector<int> ixj_dec(numTotal, -1);
-  vector<int> wxj_dec(numTotal, 0);
-  vector<int> jxj_dec(numTotal, -1);
+  vector<double> txj_dec(numTot, -THETA_INF);
+  vector<double> axj_dec(numTot, 0);
+  vector<int> ixj_dec(numTot, -1);
+  vector<int> wxj_dec(numTot, 0);
+  vector<int> jxj_dec(numTot, -1);
 
   vector<double> tci_inc(numRow, +THETA_INF);  // theta
   vector<double> aci_inc(numRow, 0);           // alpha
@@ -162,7 +181,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
   vector<int> jci_dec(numRow, -1);
 
   // Major "theta" loop
-  for (int j = 0; j < numTotal; j++) {
+  for (int j = 0; j < numTot; j++) {
     // Skip basic column
     if (!Nflag_[j]) continue;
 
@@ -229,7 +248,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
   }
 
   // Additional j-out for primal ratio test (considering bound flip)
-  for (int j = 0; j < numTotal; j++) {
+  for (int j = 0; j < numTot; j++) {
     if (Nflag_[j]) {
       // J-out for x_j = l_j
       if (Nmove_[j] == +1) {
@@ -340,7 +359,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
    *
    * Ranging 3.1. non-basic bounds ranging
    */
-  for (int j = 0; j < numTotal; j++) {
+  for (int j = 0; j < numTot; j++) {
     if (Nflag_[j]) {
       // FREE variable
       if (lower_[j] == -H_INF && upper_[j] == H_INF) {
@@ -497,7 +516,7 @@ int HSensitivity::getSensitivityData(HModel* model) {
   // Consequently, the row bound ranging bound are now flipped and
   // negated, and the objective values are flipped
 
-  for (int i = numCol; i < numTotal; i++) {
+  for (int i = numCol; i < numTot; i++) {
     double sv_b = b_dn_b[i];
     double sv_f = b_dn_f[i];
     b_dn_b[i] = -b_up_b[i];
@@ -513,6 +532,10 @@ int HSensitivity::checkSensitivityData(HModel* model) {
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
+  int numCol = model->lp.numCol_;
+  int numRow = model->lp.numRow_;
+  int numTot = numCol + numRow;
+
   const double infiniteBoundOrCost = 0.1 * HIGHS_CONST_INF;
   const bool useTestModel = true;
   bool rpSolution = false;
@@ -525,7 +548,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
   const double toleranceRelativeError = toleranceRelativeTotalError;
   const double relativeErrorDenominator =
       max(1.0, abs(model->dualObjectiveValue));
-  reportSensitivityDataCheck = numTotal < 250;
+  reportSensitivityDataCheck = numTot < 250;
   //#endif
   model->util_reportModelSolution();
   vector<int> Nflag = model->nonbasicFlag;
@@ -533,6 +556,17 @@ int HSensitivity::checkSensitivityData(HModel* model) {
   vector<double> colValue(numCol), colDual(numCol);
   vector<double> rowValue(numRow), rowDual(numRow);
   model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
+
+  HighsSensitivity& s = model->sensitivity;
+  std::vector<double>& b_up_b = s.rowBoundRangeUpValue_;
+  std::vector<double>& b_dn_b = s.rowBoundRangeDnValue_;
+  std::vector<double>& b_up_f = s.rowBoundRangeUpObjective_;
+  std::vector<double>& b_dn_f = s.rowBoundRangeDnObjective_;
+
+  std::vector<double>& c_up_c = s.colCostRangeUpValue_;
+  std::vector<double>& c_dn_c = s.colCostRangeDnValue_;
+  std::vector<double>& c_up_f = s.colCostRangeUpObjective_;
+  std::vector<double>& c_dn_f = s.colCostRangeDnObjective_;
 
   // Show all rowwise data
   if (reportSensitivityDataCheck) {
@@ -544,8 +578,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
   for (int i = 0; i < numRow; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svRowLower = model->rowLower[i];
-    double svRowUpper = model->rowUpper[i];
+    double svRowLower = model->lp.rowLower_[i];
+    double svRowUpper = model->lp.rowUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i + numCol] > -infiniteBoundOrCost) {
@@ -656,7 +690,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->rowLower[i], model->rowUpper[i], rowValue[i], 0.0,
+          i, model->lp.rowLower_[i], model->lp.rowUpper_[i], rowValue[i], 0.0,
           rowDual[i], b_up_b[i + numCol], b_up_f[i + numCol], solved_up,
           b_dn_b[i + numCol], b_dn_f[i + numCol], solved_dn, maxRelativeError);
     }
@@ -671,8 +705,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColLower = model->colLower[i];
-    double svColUpper = model->colUpper[i];
+    double svColLower = model->lp.colLower_[i];
+    double svColUpper = model->lp.colUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i] > -infiniteBoundOrCost) {
@@ -786,8 +820,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->colLower[i], model->colUpper[i], colValue[i],
-          model->colCost[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
+          i, model->lp.colLower_[i], model->lp.colUpper_[i], colValue[i],
+          model->lp.colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
           b_dn_b[i], b_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -801,7 +835,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColCost = model->colCost[i];
+    double svColCost = model->lp.colCost_[i];
     bool recoverOriginalCost = false;
     {
       if (fabs(c_dn_c[i]) < infiniteBoundOrCost) {
@@ -884,8 +918,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->colLower[i], model->colUpper[i], colValue[i],
-          model->colCost[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
+          i, model->lp.colLower_[i], model->lp.colUpper_[i], colValue[i],
+          model->lp.colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
           c_dn_c[i], c_dn_f[i], solved_dn, maxRelativeError);
     }
   }

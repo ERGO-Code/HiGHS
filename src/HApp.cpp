@@ -1,4 +1,5 @@
 #include "HApp.h"
+#include "HSensitivity.h"
 
 using namespace std;
 
@@ -10,7 +11,12 @@ int solvePlain(HModel &model) {
     //  endl;
 #endif
   //
-  model.scaleModel();
+  bool useScaling = false;
+  if (useScaling) {
+    model.scaleModel();
+  } else {
+    printf("!!!NOT SCALING MODEL!!!\n");
+  }
   HDual solver;
 #ifdef HiGHSDEV
   //  cout << "\n Using solvePlain() - Calling solver.solve(&model)\n" <<

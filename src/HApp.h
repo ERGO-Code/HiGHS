@@ -23,7 +23,6 @@
 #include "HTester.h"
 #include "HTimer.h"
 #include "HighsLp.h"
-#include "HSensitivity.h"
 
 #ifdef EXT_PRESOLVE
 #include "core/Presolve.hpp"

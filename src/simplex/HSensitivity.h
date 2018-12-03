@@ -37,39 +37,16 @@ class HSensitivity {
    */
   int checkSensitivityData(
       HModel *model  //!< Instance of HModel class for which sensitivity and
-                     //!< ranging data are to be generated
+                     //!< ranging data are to be checked
   );
 
  private:
   void checkSensitivityDataSolve(
-      HModel *model,  //!< Instance of HModel class for which sensitivity and
-                      //!< ranging data are to be generated
-      bool rp);
-
-  // LP model size
-  int numCol;
-  int numRow;
-  int numTotal;
-
-  // SOBJ data
-  vector<double> c_up_c;
-  vector<double> c_up_f;
-  vector<int> c_up_e;
-  vector<int> c_up_l;
-  vector<double> c_dn_c;
-  vector<double> c_dn_f;
-  vector<int> c_dn_e;
-  vector<int> c_dn_l;
-
-  // SBND data
-  vector<double> b_up_b;
-  vector<double> b_up_f;
-  vector<int> b_up_e;
-  vector<int> b_up_l;
-  vector<double> b_dn_b;
-  vector<double> b_dn_f;
-  vector<int> b_dn_e;
-  vector<int> b_dn_l;
+      HModel *model,  //!< Instance of HModel class for which test
+                      //!< problem is to be solved when checking
+                      //!< sensitivity and ranging data
+      bool rp //!< Report when model is tested
+				 );
 };
 
 #endif /* SIMPLEX_HSENSITIVITY_H_ */
