@@ -2,6 +2,7 @@
 
 set(sources
     HApp.cpp
+    io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
