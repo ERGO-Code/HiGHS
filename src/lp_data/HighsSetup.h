@@ -27,17 +27,9 @@ class Highs {
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
-
-  void setAllOptions(const HighsOptions& opt) { options_ = opt; }
-  // todo: implement string based options
-  // void setOption(const std::string& option, int value);
-  // void setOption(const std::string& option, double value);
-  // void setOption(const std::string& option, std::string value);
-
-  int getIntOption(const std::string& option);
-  double getDoubleOption(const std::string& option);
-  std::string getStringOption(const std::string& option);
-
+  
+  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
+  
  private:
   HighsOptions options_;
   HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
@@ -46,6 +38,11 @@ class Highs {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
+ 
+  // todo: handle printing messages with HighsPrintMessage
+  
+  HighsPresolveStatus presolve(lp);
+  
   return runSolver(lp, solution);
 
   // todo
@@ -87,6 +84,17 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
   return HighsStatus::OK;
 }
+
+
+HighsPresolveStatus Presolve::runPresolve() {
+    
+  if (options_.presolve) {
+    HighsLp reduced_lp;
+    HighsPresolveStatus status = presolve(reduced_lp);  
+  } 
+
+}
+
 
 // The method below runs simplex or ipx solver on the lp.
 
