@@ -27,7 +27,10 @@
 using namespace std;
 
 HighsLp Presolve::getReducedProblem() {
-  HighsLp reduced_lp;
+
+  if (stat == )
+  // Initialize an object to return and populate it with the reduced problem
+  HighsLp lp;
   
   // Move vectors so no copying happens. presolve does not need that memory
   // any more.
@@ -44,7 +47,7 @@ HighsLp Presolve::getReducedProblem() {
 
   lp.sense_ = 1;
 
-  return reduced_lp;
+  return lp;
 }
 
 int Presolve::presolve(int print) {
@@ -486,6 +489,7 @@ void Presolve::trimA() {
 }
 
 void Presolve::resizeProblem() {
+  status = stat::Reduced;
   int i, j, k;
 
   int nz = 0;

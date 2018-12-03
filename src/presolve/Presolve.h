@@ -28,6 +28,23 @@
 
 using namespace std;
 
+// Class for easy communication between Presolve and Highs
+class PresolveInfo {
+  PresolveInfo() {}
+  // option_presolve : 0 means don't presolve.
+  PresolveInfo(int option_presolve, HighsLp& lp) {
+     if (option_presolve) {
+       lp_ = &lp;
+       presolve_ =  std::make_unique<Presolve>();
+     }
+   }
+
+ 
+ private:
+  std::unique_ptr<Presolve>  presolve_;
+  HighsLp *  lp_;
+};
+
 enum class HighsPresolveStatus {
     Unset = 0,
     Infeasible = 1,
@@ -83,6 +100,7 @@ class Presolve : public HPreData {
     Unbounded = 2,
     Empty = 3,
     Optimal = 4,
+    Reduced = 5,
   };
 
  private:

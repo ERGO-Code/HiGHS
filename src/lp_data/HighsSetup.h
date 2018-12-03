@@ -28,22 +28,58 @@ class Highs {
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
   
+  // Function to call just presolve. This method does not modify anything 
   HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
   
  private:
   HighsOptions options_;
   HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
+
+  // Methods below are option dependent and modify something inside the Highs class.
+  HighsPresolveStatus runPresolve(const HighsLp& lp, PresolveInfo& presolve_info);
+  HighsPostsolveTtatus runPostsolve(const HighsLp& lp, PresolveInfo& presolve_info);
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
- 
+  Highs.init();
   // todo: handle printing messages with HighsPrintMessage
-  
-  HighsPresolveStatus presolve(lp);
-  
-  return runSolver(lp, solution);
+
+  // Case when the presolve option is disabled are also handled by runPresolve
+  PresolveInfo presolve_info(options_.presolve, lp);
+  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+
+  switch (presolve_status) {
+    case HighsPresolveStatus::Reduced: {
+      HighsLp reduced_lp = presolve_info.presolve_.getReducedProblem();
+      runSolver(reduced_lp, solution);
+    }
+    case HighsPresolveStatus::Unchanged: {
+      runSolver(lp, solution);
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      // Proceed to postsolve.
+    }
+    case HighsPresolveStatus::Infeasible:
+    case HighsPresolveStatus::Unbounded: {
+      // todo: report solver outcome.
+    }
+    default: {
+      // case HighsPresolveStatus::Error:
+      // todo: handle error.
+    }
+  }
+
+  HighsPostsolveStatus postsolve_status = runPostsolve(postsolve_info);
+  if (postsolve_status == HighsPostsolveStatus::RecoveredSolution) {
+    // todo: add finishing simplex iterations
+  } else {
+    // todo: handle postsolve errors.
+  }
+
+
+
 
   // todo
   //
@@ -88,9 +124,16 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
 HighsPresolveStatus Presolve::runPresolve() {
     
+  // todo: have highs option problem_reduced;
   if (options_.presolve) {
     HighsLp reduced_lp;
-    HighsPresolveStatus status = presolve(reduced_lp);  
+
+    HPresolve *pre = new HPresolve();
+    HighsPresolveStatus status = pre->presolve(reduced_lp);
+
+    if (status = HighsPresolveStatus::Reduced) {
+      presolve.status == 
+      HighsSolution reduced_solution;
   } 
 
 }
