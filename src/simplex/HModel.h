@@ -19,7 +19,7 @@
 #include "HFactor.h"
 #include "HMatrix.h"
 #include "HModelCs.h"
-#include "HPresolve.h"
+#include "Presolve.h"
 #include "HRandom.h"
 #include "HTimer.h"
 #include "HVector.h"

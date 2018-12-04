@@ -10,7 +10,7 @@ set(sources
     io/HToyIO.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsModelBuilder.cpp
-    presolve/HPresolve.cpp
+    presolve/Presolve.cpp
     presolve/HPreData.cpp
     simplex/HAPI.cpp
     simplex/HDual.cpp
@@ -40,6 +40,7 @@ set(headers
     io/HMPSIO.h
     io/HToyIO_C.h
     io/HToyIO.h
+    io/HighsIO.h
     io/LoadProblem.h
     lp_data/HConst.h
     lp_data/HighsLp.h
@@ -57,18 +58,7 @@ set(headers
     simplex/HCrash.h
     simplex/HRandom.h
     simplex/HSort.h
-    presolve/HPresolve.h
-<<<<<<< HEAD
-=======
-    io/HinOut.h
-    io/HMPSIO.h
-    io/HMpsFF.h
-    io/Filereader.h
-    io/FilereaderLp.h
-    io/FilereaderMps.h
-    io/HighsIO.h
-    io/LoadProblem.h
->>>>>>> master
+    presolve/Presolve.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     test/KktCheck.h
