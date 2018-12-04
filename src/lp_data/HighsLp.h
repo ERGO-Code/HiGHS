@@ -111,6 +111,7 @@ struct HighsSolution {
   std::vector<double> rowDual;
 };
 
+// Make sure the dimensions of solution are the same as numRow_ and numCol_.
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
 
 // Return a string representation of SolutionStatus.

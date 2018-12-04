@@ -26,28 +26,49 @@
 
 using namespace std;
 
-HighsLp Presolve::getReducedProblem() {
+const HighsLp& PresolveInfo::getReducedProblem() {
+  if (presolve_ == nullptr) {
+    std::cout << "Error during presolve. No presolve initialized." << std::endl;
+    return;
+  }
 
-  if (stat == )
-  // Initialize an object to return and populate it with the reduced problem
-  HighsLp lp;
-  
-  // Move vectors so no copying happens. presolve does not need that memory
-  // any more.
-  lp.numCol_ = numCol;
-  lp.numRow_ = numRow;
-  lp.Astart_ = Astart;
-  lp.Aindex_ = Aindex;
-  lp.Avalue_ = Avalue;
-  lp.colCost_ = colCost;
-  lp.colLower_ = colLower;
-  lp.colUpper_ = colUpper;
-  lp.rowLower_ = rowLower;
-  lp.rowUpper_ = rowUpper;
+  if ((presolve_)->status) {
+    std::cout << "Error during presolve. No reduced LP. status: "
+              << presolve_->status << std::endl;
+  }
 
-  lp.sense_ = 1;
+  if (status_ == HighsPresolveStatus::NotReduced ||
+      status_ == HighsPresolveStatus::Empty) {
+    // Clear out reduced_lp_structure.
+    HighsLp lp;
+    reduced_lp_ = std::move(lp);
+    return reduced_lp_;
+  }
 
-  return lp;
+  if (status_ == HighsPresolveStatus::Reduced) {
+    if (presolve_.numRow == 0 && presolve_.numCol == 0) {
+      // Reduced problem has been already moved to this.reduced_lp_;
+      return reduced_lp_;
+    } else {
+      // Move vectors so no copying happens. presolve does not need that lp
+      // any more.
+      reduced_lp_.numCol_ = numCol;
+      reduced_lp_.numRow_ = numRow;
+      reduced_lp_.Astart_ = std::move(Astart);
+      reduced_lp_.Aindex_ = std::move(Aindex);
+      reduced_lp_.Avalue_ = std::move(Avalue);
+      reduced_lp_.colCost_ = std::move(colCost);
+      reduced_lp_.colLower_ = std::move(colLower);
+      reduced_lp_.colUpper_ = std::move(colUpper);
+      reduced_lp_.rowLower_ = std::move(rowLower);
+      reduced_lp_.rowUpper_ = std::move(rowUpper);
+
+      reduced_lp_.sense_ = 1;
+    }
+    return reduced_lp_;
+  }
+
+  return ;
 }
 
 int Presolve::presolve(int print) {
@@ -123,7 +144,22 @@ int Presolve::presolve(int print) {
   return status;
 }
 
-int Presolve::presolve() { return presolve(0); }
+HighsPresolveStatus Presolve::presolve() { 
+  int result = presolve(0); 
+  switch (result) {
+    case stat::Unbounded:
+      return HighsPresolveStatus::Unbounded;
+    case stat::Infeasible:
+      return HighsPresolveStatus::Infeasible;
+    case stat::Reduced:
+      return HighsPresolveStatus::Reduced;
+    case stat::Empty:
+      return HighsPresolveStatus::Empty;
+    case stat::Optimal: 
+      // reduced problem solution indicated as optimal by
+      // the solver.
+  }
+}
 
 /**
  * returns <x, y>
@@ -489,7 +525,6 @@ void Presolve::trimA() {
 }
 
 void Presolve::resizeProblem() {
-  status = stat::Reduced;
   int i, j, k;
 
   int nz = 0;

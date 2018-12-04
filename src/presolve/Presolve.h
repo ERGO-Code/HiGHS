@@ -29,25 +29,41 @@
 
 using namespace std;
 
-// Class for easy communication between Presolve and Highs
+// Class for easy communication between Presolve and Highs. A single
+// instance of PresolveInfo handles a single presolve execution on one
+// LP.
 class PresolveInfo {
   PresolveInfo() {}
   // option_presolve : 0 means don't presolve.
   PresolveInfo(int option_presolve, HighsLp& lp) {
      if (option_presolve) {
        lp_ = &lp;
-       presolve_ =  std::make_unique<Presolve>();
+       presolve_ =  new Presolve();
      }
    }
 
+  const HighsLp& getReducedProblem();
+  HighsPresolveStatus status_;
+
+  ~PresolveInfo() {
+    delete presolve_;
+  }
  
  private:
-  std::unique_ptr<HighsSolution> reduced_solution_;
-  std::unique_ptr<HighsSolution> original_solution_;
-  std::unique_ptr<Presolve>  presolve_;
+  HighsSolution reduced_solution_;
+  HighsSolution recovered_solution_;
+  Presolve * presolve_;
 
-  // Original problem.
-  HighsLp *  lp_;
+  // Original problem is lp_.
+  HighsLp * lp_;
+  HighsLp reduced_lp_;
+};
+
+enum class HighsPostsolveStatus {
+  ReducedSolutionEmpty,
+  ReducedSolutionDimenionsError,
+  SolutionRecovered,
+  LpOrPresolveObjectMissing
 };
 
 enum class HighsPresolveStatus {
@@ -62,7 +78,6 @@ class Presolve : public HPreData {
  public:
   Presolve();
   HighsPresolveStatus presolve();
-  HighsLp getReducedProblem();
 
  // todo: clear the public from below. 
  private: 
@@ -111,6 +126,7 @@ class Presolve : public HPreData {
  private:
   bool hasChange;
   int status = 0;  // 0 is unassigned, see enum stat
+  friend class PresolveInfo;
 
   list<int> singRow;  // singleton rows
   list<int> singCol;  // singleton columns

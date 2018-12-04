@@ -27,23 +27,24 @@ class Highs {
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
-  
-  // Function to call just presolve. This method does not modify anything 
+
+  // Function to call just presolve. This method does not modify anything
   HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
-  
+
  private:
   HighsOptions options_;
   HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
 
-  // Methods below are option dependent and modify something inside the Highs class.
-  HighsPresolveStatus runPresolve(const HighsLp& lp, PresolveInfo& presolve_info);
-  HighsPostsolveTtatus runPostsolve(const HighsLp& lp, PresolveInfo& presolve_info);
+  // Methods below are option dependent and modify something inside the Highs
+  // class.
+  HighsPresolveStatus runPresolve(const HighsLp& lp,
+                                  PresolveInfo& presolve_info);
+  HighsPostsolveTtatus runPostsolve(const HighsLp& lp,
+                                    PresolveInfo& presolve_info);
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
-  Highs.init();
   // todo: handle printing messages with HighsPrintMessage
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
@@ -56,8 +57,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
       runSolver(lp, solution);
     }
     case HighsPresolveStatus::Reduced: {
-      HighsLp reduced_lp = presolve_info.presolve_.getReducedProblem();
-      
+      HighsLp& reduced_lp = presolve_info.presolve_.getReducedProblem();
       runSolver(reduced_lp, presolve_info.reduced_solution_);
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -75,8 +75,8 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
   // Postsolve. Does nothing if there were no reductions during presolve.
   HighsPostsolveStatus postsolve_status = runPostsolve(postsolve_info);
-  if (postsolve_status == HighsPostsolveStatus::RecoveredSolution) {
-    // todo: add finishing simplex iterations
+  if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+    // todo: add finishing simplex iterations if needed.
   } else {
     // todo: handle postsolve errors.
   }
@@ -84,26 +84,42 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   return HighsStatus::OK;
 }
 
+HighsPresolveStatus Presolve::runPresolve(PresolveInfo& info) {
+/*  if (info.presolve_ != nullptr)
+    delete info.presolve_;
 
-HighsPresolveStatus Presolve::runPresolve() {
-    
-  // todo: have highs option problem_reduced;
-  if (options_.presolve) {
-    HighsLp reduced_lp;
-
-    HPresolve *pre = new HPresolve();
+  if (lp_ != nullptr) {
+    // Initialize a new presolve class instance for the LP given in presolve info
+    HPresolve* pre = new HPresolve();
     HighsPresolveStatus status = pre->presolve(reduced_lp);
 
     if (status = HighsPresolveStatus::Reduced) {
-      presolve.status == 
-      HighsSolution reduced_solution;
-  } 
-
+      presolve.status == HighsSolution reduced_solution;
+    }
+  } else {
+    return HighsPresolveStatus::NotReduced;
+  }
+  return status; */
 }
 
+HighsPostsolveStatus Presolve::runPostsolve(PresolveInfo& info) {
+
+  if (info.presolve_ != nullptr && lp_ != nullptr) 
+  {
+    if (info.reduced_solution_.size() == 0)
+      return HighsPostsolveStatus::ReducedSolutionEmpty; 
+    if (!isSolutionConsistent(*info.lp_, info.reduced_solution_)
+      return HighsPostsolveStatus::ReducedSolutionDimenionsError;
+    
+    // todo: error handling + see todo in run()
+    pre->postsolve();
+
+    return HighsPostsolveStatus::SolutionRecovered;
+  }
+  return HighsPostsolveStatus:LpOrPresolveObjectMissing;
+}
 
 // The method below runs simplex or ipx solver on the lp.
-
 HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   // assert(checkLp(lp) == LpError::none);
 
