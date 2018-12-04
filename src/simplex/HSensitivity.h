@@ -41,6 +41,11 @@ class HSensitivity {
   );
 
  private:
+  void checkSensitivityZeroMlFg(
+      HModel *model   //!< Instance of HModel class for which model
+		      //!< flags are to be zeroed
+				 );
+
   void checkSensitivityDataSolve(
       HModel *model,  //!< Instance of HModel class for which test
                       //!< problem is to be solved when checking

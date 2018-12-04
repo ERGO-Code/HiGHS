@@ -525,6 +525,8 @@ int HSensitivity::getSensitivityData(HModel* model) {
     b_up_f[i] = sv_f;
   }
 
+  // Indicate that the model now has ranging data
+  model->mlFg_haveRangingData = 1;
   return 0;
 }
 
@@ -599,10 +601,9 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          testModel.mlFg_haveMatrixColWise = 0;
-          testModel.mlFg_haveMatrixRowWise = 0;
-          testModel.mlFg_haveFactorArrays = 0;
-	  printf("Row %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+          checkSensitivityZeroMlFg(&testModel);
+          checkSensitivityZeroMlFg(&testModel);
+          printf("Row %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
 	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
@@ -650,10 +651,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          testModel.mlFg_haveMatrixColWise = 0;
-          testModel.mlFg_haveMatrixRowWise = 0;
-          testModel.mlFg_haveFactorArrays = 0;
-	  printf("Row %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+          checkSensitivityZeroMlFg(&testModel);
+          printf("Row %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
 	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
@@ -726,10 +725,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          testModel.mlFg_haveMatrixColWise = 0;
-          testModel.mlFg_haveMatrixRowWise = 0;
-          testModel.mlFg_haveFactorArrays = 0;
-	  printf("Col %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+          checkSensitivityZeroMlFg(&testModel);
+          printf("Col %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeColLower, changeColUpper, svColLower, svColUpper);
 	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
           testModel.util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
@@ -778,10 +775,8 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          testModel.mlFg_haveMatrixColWise = 0;
-          testModel.mlFg_haveMatrixRowWise = 0;
-          testModel.mlFg_haveFactorArrays = 0;
-	  printf("Col %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
+          checkSensitivityZeroMlFg(&testModel);
+          printf("Col %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeColLower, changeColUpper, svColLower, svColUpper);
 	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
           testModel.util_chgColBoundsSet(1, &i, &changeColLower,
@@ -843,9 +838,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         changeColCost = c_dn_c[i];
         if (useTestModel) {
           HModel testModel = *model;
-          testModel.mlFg_haveMatrixColWise = 0;
-          testModel.mlFg_haveMatrixRowWise = 0;
-          testModel.mlFg_haveFactorArrays = 0;
+          checkSensitivityZeroMlFg(&testModel);
           testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkSensitivityDataSolve(&testModel, rpSolution);
@@ -880,9 +873,7 @@ int HSensitivity::checkSensitivityData(HModel* model) {
         //			model->scale();
         if (useTestModel) {
           HModel testModel = *model;
-          testModel.mlFg_haveMatrixColWise = 0;
-          testModel.mlFg_haveMatrixRowWise = 0;
-          testModel.mlFg_haveFactorArrays = 0;
+          checkSensitivityZeroMlFg(&testModel);
           testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkSensitivityDataSolve(&testModel, rpSolution);
@@ -934,6 +925,21 @@ int HSensitivity::checkSensitivityData(HModel* model) {
     printf("OK totalSensitivityDataError = %12g\n", totalSensitivityDataError);
   }
   return 0;
+}
+
+void HSensitivity::checkSensitivityZeroMlFg(HModel* model) {
+  model->mlFg_haveMatrixColWise = 0;
+  model->mlFg_haveMatrixRowWise = 0;
+  model->mlFg_haveFactorArrays = 0;
+  model->mlFg_haveEdWt = 0;
+  model->mlFg_haveInvert = 0;
+  model->mlFg_haveFreshInvert = 0;
+  model->mlFg_haveNonbasicDuals = 0;
+  model->mlFg_haveBasicPrimals = 0;
+  model->mlFg_haveDualObjectiveValue = 0;
+  model->mlFg_haveFreshRebuild = 0;
+  model->mlFg_haveRangingData = 0;
+  model->mlFg_haveSavedBounds = 0;
 }
 
 void HSensitivity::checkSensitivityDataSolve(HModel* model, bool rp) {

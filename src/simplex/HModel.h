@@ -262,11 +262,15 @@ class HModel {
   // with no re-evaluation!
   double util_getObjectiveValue();
   
-  void util_getPrimalDualValues(vector<double>& colValue,
-                                vector<double>& colDual,
-                                vector<double>& rowValue,
-                                vector<double>& rowDual);
-  void util_getBasicIndexNonbasicFlag(vector<int>& bi, vector<int>& nbf);
+  void util_getPrimalDualValues(vector<double>& XcolValue,
+                                vector<double>& XcolDual,
+                                vector<double>& XrowValue,
+                                vector<double>& XrowDual
+				);
+  void util_getBasicIndexNonbasicFlag(
+				      vector<int> &XbasicIndex,
+				      vector<int> &XnonbasicFlag
+				      );
   // Utilities to scale or unscale bounds and costs
   void util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
   void util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
@@ -469,8 +473,14 @@ class HModel {
   int mlFg_haveNonbasicDuals;
   int mlFg_haveBasicPrimals;
   //
+  // The dual objective function value is known
+  int mlFg_haveDualObjectiveValue;
+  //
   // The data are fresh from rebuild
   int mlFg_haveFreshRebuild;
+  //
+  // The ranging information is known
+  int mlFg_haveRangingData;
   //
   // Need to know of any saved bounds in the event of scaling being performed
   int mlFg_haveSavedBounds;

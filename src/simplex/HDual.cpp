@@ -820,17 +820,31 @@ void HDual::rebuild() {
   dualRHS.create_infeasList(columnDensity);
   model->timer.recordFinish(HTICK_COLLECT_PR_IFS);
 
+  // Check the objective value maintained by updating against the
+  // value when computed exactly - so long as there is a value to
+  // check against
+  bool checkDualObjectiveValue = model->mlFg_haveDualObjectiveValue;
   // Compute the objective value
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
   model->computeDualObjectiveValue(solvePhase);
+  model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
+
+  if (checkDualObjectiveValue) {
+    double absDualObjectiveError = abs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
+    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, abs(model->dualObjectiveValue));
+    if (rlvDualObjectiveError > 1e-8) {
+      HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
+			absDualObjectiveError, rlvDualObjectiveError);
+    }
+  }
+  model->updatedDualObjectiveValue = model->dualObjectiveValue;
 
 #ifdef HiGHSDEV
-  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  //  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
   printf("Checking INVERT in rebuild()\n");
   model->factor.checkInvert();
 #endif
 
-  model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
   model->timer.recordStart(HTICK_REPORT_INVERT);

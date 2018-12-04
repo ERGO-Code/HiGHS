@@ -440,7 +440,9 @@ void HModel::mlFg_Clear() {
   mlFg_haveFreshInvert = 0;
   mlFg_haveNonbasicDuals = 0;
   mlFg_haveBasicPrimals = 0;
+  mlFg_haveDualObjectiveValue = 0;
   mlFg_haveFreshRebuild = 0;
+  mlFg_haveRangingData = 0;
   mlFg_haveSavedBounds = 0;
 }
 
@@ -466,6 +468,10 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveInvert = 0;
     mlFg_haveFreshInvert = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveNonbasicDuals = 0;
+    mlFg_haveBasicPrimals = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
 
     populate_WorkArrays();
   } else if (mlFg_action == mlFg_action_ShuffleLP) {
@@ -480,6 +486,11 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveInvert = 0;
     mlFg_haveFreshInvert = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveNonbasicDuals = 0;
+    mlFg_haveBasicPrimals = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_NewBounds) {
     // New bounds have been defined
     problemStatus = LP_Status_Unset;
@@ -487,12 +498,18 @@ void HModel::mlFg_Update(int mlFg_action) {
     initValue();
     mlFg_haveBasicPrimals = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_NewCosts) {
     // New costs have been defined
     problemStatus = LP_Status_Unset;
     initCost();
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_NewBasis) {
     // A new basis has been defined
     problemStatus = LP_Status_Unset;
@@ -506,6 +523,9 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_NewCols) {
     // New columns have been added as nonbasic
     problemStatus = LP_Status_Unset;
@@ -518,6 +538,9 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveFreshInvert = 0;
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_NewRows) {
     // New rows have been added as basic
     problemStatus = LP_Status_Unset;
@@ -531,7 +554,10 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
-  } else if (mlFg_action == mlFg_action_DelCols) {
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
+} else if (mlFg_action == mlFg_action_DelCols) {
     // Columns have been deleted
     problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 0;
@@ -543,6 +569,9 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveFreshInvert = 0;
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_DelRows) {
     // Rows have been deleted
     problemStatus = LP_Status_Unset;
@@ -556,6 +585,9 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else if (mlFg_action == mlFg_action_DelRowsBasisOK) {
     // Rows have been deleted
     problemStatus = LP_Status_Unset;
@@ -569,6 +601,9 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
+    mlFg_haveDualObjectiveValue = 0;
+    mlFg_haveRangingData = 0;
+
   } else {
     printf("Unrecognised mlFg_action = %d\n", mlFg_action);
   }
@@ -577,22 +612,24 @@ void HModel::mlFg_Update(int mlFg_action) {
 #ifdef HiGHSDEV
 void HModel::mlFg_Report() {
   printf("\nReporting model/solver status and flags:\n\n");
-  printf("problemStatus =          %2d\n", problemStatus);
-  printf("numberIteration =        %2d\n\n", numberIteration);
-  printf("mlFg_transposedLP =      %2d\n", mlFg_transposedLP);
-  printf("mlFg_scaledLP =          %2d\n", mlFg_scaledLP);
-  printf("mlFg_shuffledLP =        %2d\n", mlFg_shuffledLP);
-  printf("mlFg_haveBasis =         %2d\n", mlFg_haveBasis);
-  printf("mlFg_haveMatrixColWise = %2d\n", mlFg_haveMatrixColWise);
-  printf("mlFg_haveMatrixRowWise = %2d\n", mlFg_haveMatrixRowWise);
-  printf("mlFg_haveFactorArrays =  %2d\n", mlFg_haveFactorArrays);
-  printf("mlFg_haveEdWt =          %2d\n", mlFg_haveEdWt);
-  printf("mlFg_haveInvert =        %2d\n", mlFg_haveInvert);
-  printf("mlFg_haveFreshInvert =   %2d\n", mlFg_haveFreshInvert);
-  printf("mlFg_haveNonbasicDuals = %2d\n", mlFg_haveNonbasicDuals);
-  printf("mlFg_haveBasicPrimals =  %2d\n", mlFg_haveBasicPrimals);
-  printf("mlFg_haveFreshRebuild =  %2d\n", mlFg_haveFreshRebuild);
-  printf("mlFg_haveSavedBounds =   %2d\n\n", mlFg_haveSavedBounds);
+  printf("problemStatus =                %2d\n", problemStatus);
+  printf("numberIteration =              %2d\n\n", numberIteration);
+  printf("mlFg_transposedLP =            %2d\n", mlFg_transposedLP);
+  printf("mlFg_scaledLP =                %2d\n", mlFg_scaledLP);
+  printf("mlFg_shuffledLP =              %2d\n", mlFg_shuffledLP);
+  printf("mlFg_haveBasis =               %2d\n", mlFg_haveBasis);
+  printf("mlFg_haveMatrixColWise =       %2d\n", mlFg_haveMatrixColWise);
+  printf("mlFg_haveMatrixRowWise =       %2d\n", mlFg_haveMatrixRowWise);
+  printf("mlFg_haveFactorArrays =        %2d\n", mlFg_haveFactorArrays);
+  printf("mlFg_haveEdWt =                %2d\n", mlFg_haveEdWt);
+  printf("mlFg_haveInvert =              %2d\n", mlFg_haveInvert);
+  printf("mlFg_haveFreshInvert =         %2d\n", mlFg_haveFreshInvert);
+  printf("mlFg_haveNonbasicDuals =       %2d\n", mlFg_haveNonbasicDuals);
+  printf("mlFg_haveBasicPrimals =        %2d\n", mlFg_haveBasicPrimals);
+  printf("mlFg_haveDualObjectiveValue =  %2d\n", mlFg_haveDualObjectiveValue);
+  printf("mlFg_haveFreshRebuild =        %2d\n", mlFg_haveFreshRebuild);
+  printf("mlFg_haveRangingData =         %2d\n", mlFg_haveRangingData);
+  printf("mlFg_haveSavedBounds =         %2d\n\n", mlFg_haveSavedBounds);
   cout << flush;
 }
 #endif
@@ -2261,7 +2298,7 @@ void HModel::computeDual() {
     }
   }
 
-  // Now have a nonbasic duals
+  // Now have nonbasic duals
   mlFg_haveNonbasicDuals = 1;
 }
 
@@ -2353,7 +2390,7 @@ void HModel::computePrimal() {
     baseLower[i] = workLower[iCol];
     baseUpper[i] = workUpper[iCol];
   }
-  // Now have a basic primals
+  // Now have basic primals
   mlFg_haveBasicPrimals = 1;
 }
 
@@ -2393,6 +2430,8 @@ void HModel::computeDualObjectiveValue(int phase) {
     dualObjectiveValue *= costScale;
     dualObjectiveValue -= lp.offset_;
   }
+  // Now have dual objective value
+  mlFg_haveDualObjectiveValue = 1;
 }
 
 #ifdef HiGHSDEV
@@ -2413,6 +2452,8 @@ double HModel::checkDualObjectiveValue(const char *message, int phase) {
   previousDualObjectiveValue = dualObjectiveValue;
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
   updatedDualObjectiveValue = dualObjectiveValue;
+  // Now have dual objective value
+  mlFg_haveDualObjectiveValue = 1;
   return updatedDualObjectiveError;
 }
 #endif
@@ -2749,10 +2790,11 @@ void HModel::util_unscaleColCostValue(int iCol, double* XcolCostValue) {
 
 
 // Get the column and row (primal) values and dual (values)
-void HModel::util_getPrimalDualValues(vector<double> &colValue,
-                                      vector<double> &colDual,
-                                      vector<double> &rowValue,
-                                      vector<double> &rowDual) {
+void HModel::util_getPrimalDualValues(vector<double> &XcolValue,
+                                      vector<double> &XcolDual,
+                                      vector<double> &XrowValue,
+                                      vector<double> &XrowDual
+				      ) {
   // Take primal solution
   vector<double> value = workValue;
   for (int iRow = 0; iRow < lp.numRow_; iRow++)
@@ -2772,26 +2814,27 @@ void HModel::util_getPrimalDualValues(vector<double> &colValue,
 
   //************** part 2: gepr and gedu
   // Now we can get the solution
-  colValue.resize(lp.numCol_);
-  colDual.resize(lp.numCol_);
-  rowValue.resize(lp.numRow_);
-  rowDual.resize(lp.numRow_);
+  XcolValue.resize(lp.numCol_);
+  XcolDual.resize(lp.numCol_);
+  XrowValue.resize(lp.numRow_);
+  XrowDual.resize(lp.numRow_);
 
   double *valuePtr = &value[0];
-  for (int i = 0; i < lp.numRow_; i++) rowValue[i] = -valuePtr[i + lp.numCol_];
-  for (int i = 0; i < lp.numCol_; i++) colValue[i] = valuePtr[i];
-  for (int i = 0; i < lp.numRow_; i++) rowDual[i] = lp.sense_ * dual[i + lp.numCol_];
-  for (int i = 0; i < lp.numCol_; i++) colDual[i] = lp.sense_ * dual[i];
+  for (int i = 0; i < lp.numRow_; i++) XrowValue[i] = -valuePtr[i + lp.numCol_];
+  for (int i = 0; i < lp.numCol_; i++) XcolValue[i] = valuePtr[i];
+  for (int i = 0; i < lp.numRow_; i++) XrowDual[i] = lp.sense_ * dual[i + lp.numCol_];
+  for (int i = 0; i < lp.numCol_; i++) XcolDual[i] = lp.sense_ * dual[i];
 }
 
-void HModel::util_getBasicIndexNonbasicFlag(vector<int> &basicIndex_,
-                                            vector<int> &nonbasicFlag_) {
-  basicIndex_.resize(lp.numRow_);
-  nonbasicFlag_.resize(nonbasicFlag.size());
+void HModel::util_getBasicIndexNonbasicFlag(vector<int> &XbasicIndex,
+                                            vector<int> &XnonbasicFlag
+					    ) {
+  XbasicIndex.resize(lp.numRow_);
+  XnonbasicFlag.resize(nonbasicFlag.size());
   int basicIndexSz = basicIndex.size();
-  for (int i = 0; i < basicIndexSz; i++) basicIndex_[i] = basicIndex[i];
+  for (int i = 0; i < basicIndexSz; i++) XbasicIndex[i] = basicIndex[i];
   int nonbasicFlagSz = nonbasicFlag.size();
-  for (int i = 0; i < nonbasicFlagSz; i++) nonbasicFlag_[i] = nonbasicFlag[i];
+  for (int i = 0; i < nonbasicFlagSz; i++) XnonbasicFlag[i] = nonbasicFlag[i];
 }
 
 // Utilities to get/change costs and bounds
@@ -2803,6 +2846,7 @@ void HModel::util_getCosts(int firstcol, int lastcol, double *XcolCost) {
   for (int col = firstcol; col <= lastcol; ++col)
     XcolCost[col - firstcol] = lp.colCost_[col] / colScale[col];
 }
+
 // Get the bounds for a contiguous set of columns
 void HModel::util_getColBounds(int firstcol, int lastcol, double *colLower,
                                double *XcolUpper) {
