@@ -67,21 +67,26 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
       runSolver(lp, solution);
+      break;
     }
     case HighsPresolveStatus::Reduced: {
       const HighsLp& reduced_lp = presolve_info.getReducedProblem();
       runSolver(reduced_lp, presolve_info.reduced_solution_);
+      break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
       // Proceed to postsolve.
+      break;
     }
     case HighsPresolveStatus::Infeasible:
     case HighsPresolveStatus::Unbounded: {
       // todo: report solver outcome.
+      break;
     }
     default: {
       // case HighsPresolveStatus::Error:
       // todo: handle error.
+      break;
     }
   }
 
