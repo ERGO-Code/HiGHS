@@ -5027,24 +5027,4 @@ void HModel::util_anMlSol() {
   }
 }
 
-HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
-
-HModel HighsLpToHModel(const HighsLp& lp) {
-  HModel model;
-
-  model.lp.numCol_ = lp.numCol_;
-  model.lp.numRow_ = lp.numRow_;
-
-  model.lp.Astart_ = lp.Astart_;
-  model.lp.Aindex_ = lp.Aindex_;
-  model.lp.Avalue_ = lp.Avalue_;
-  model.lp.colCost_ = lp.colCost_;
-  model.lp.colLower_ = lp.colLower_;
-  model.lp.colUpper_ = lp.colUpper_;
-  model.lp.rowLower_ = lp.rowLower_;
-  model.lp.rowUpper_ = lp.rowUpper_;
-
-  return model;
-}
-
 #endif

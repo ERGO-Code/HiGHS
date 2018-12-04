@@ -55,9 +55,9 @@ struct HighsOptions {
 class HighsLp {
  public:
   // Model data
-  int numCol_;
-  int numRow_;
-  int nnz_;
+  int numCol_ = 0;
+  int numRow_ = 0;
+  int nnz_ = 0;
 
   std::vector<int> Astart_;
   std::vector<int> Aindex_;

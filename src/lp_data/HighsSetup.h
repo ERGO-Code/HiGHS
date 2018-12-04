@@ -16,10 +16,14 @@
 
 #include <iostream>
 
+#include "HApp.h"
 #include "HighsLp.h"
 #include "HighsOptions.h"
 #include "Presolve.h"
 #include "cxxopts.hpp"
+
+HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
+                         HighsSolution& solution);
 
 // Class to set parameters and run HiGHS
 class Highs {
@@ -28,12 +32,11 @@ class Highs {
   explicit Highs(const HighsOptions& opt) : options_(opt){};
   explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
-  // The public method run(lp, solution) calls runSolver to solve problem before
-  // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
-
   // Function to call just presolve. This method does not modify anything
   HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
+
+  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
+  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
 
  private:
   // delete.
@@ -43,10 +46,11 @@ class Highs {
   HighsStringOptions options__;
   HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
 
-  // Methods below are option dependent and modify something inside the Highs
-  // class.
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+ public:
+  // The public method run(lp, solution) calls runSolver to solve problem before
+  // or after presolve (or crash later?) depending on the specified options.
+  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
+
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -56,7 +60,8 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
-  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+//  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+  HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
 
   // Run solver.
   switch (presolve_status) {
@@ -64,7 +69,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
       runSolver(lp, solution);
     }
     case HighsPresolveStatus::Reduced: {
-      const HighsLp& reduced_lp = presolve_info.presolve_->getReducedProblem();
+      const HighsLp& reduced_lp = presolve_info.getReducedProblem();
       runSolver(reduced_lp, presolve_info.reduced_solution_);
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -81,7 +86,8 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   }
 
   // Postsolve. Does nothing if there were no reductions during presolve.
-  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+//  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+  HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
   if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
     // todo: add finishing simplex iterations if needed.
   } else {
@@ -91,7 +97,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   return HighsStatus::OK;
 }
 
-HighsPresolveStatus Presolve::runPresolve(PresolveInfo& info) {
+HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   if (info.presolve_ == nullptr || info.lp_ == nullptr)
     return HighsPresolveStatus::NullError;
 /*
@@ -117,7 +123,7 @@ HighsPresolveStatus Presolve::runPresolve(PresolveInfo& info) {
   return info.presolve_status_;
 }
 
-HighsPostsolveStatus Presolve::runPostsolve(PresolveInfo& info) {
+HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 /*
   if (info.presolve_ != nullptr && lp_ != nullptr) 
   {
@@ -242,6 +248,7 @@ HighsStatus loadOptions(int argc, char** argv,
     std::cout << "error parsing options: " << e.what() << std::endl;
     return HighsStatus::OptionsError;
   }
+  return HighsStatus::OK;
 }
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
@@ -361,8 +368,8 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
                     "Option -%c requires an argument. Current options: Row Col "
                     "RowSw RowSwColSw\n",
                     opt);
-          else
-            printHelp(argv[0]);
+          //else
+          //  printHelp(argv[0]);
         default:
           cout << endl;
           abort();
@@ -425,7 +432,8 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 // If you want to call solveSimplex use a Highs instance.
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
-  return solveLpWithSimplex(opt, lp, solution); 
+  HighsStatus result = solveLpWithSimplex(opt, lp, solution); 
+  return result;
 }
 
 

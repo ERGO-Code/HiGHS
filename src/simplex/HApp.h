@@ -20,9 +20,13 @@
 #include "HTimer.h"
 #include "HighsLp.h"
 
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
+
 // Single function to solve an lp according to options and fill
-// solution in solution. 
-HighsStatus solveLpWithSimplex(opt, lp, solution) {
+// solution in solution.
+HighsStatus solveLpWithSimplex(const HighsOptions& opt, const HighsLp& lp,
+                               HighsSolution& solution) {
   HModel model;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
@@ -33,6 +37,27 @@ HighsStatus solveLpWithSimplex(opt, lp, solution) {
           "=="
           "================"
        << endl;
+
+  // Compact solve so the presolve logic can be tested when finished.
+  model.intOption[INTOPT_PRINT_FLAG] = 1;
+  model.scaleModel();
+  HDual solver;
+  solver.solve(&model);
+  model.util_reportSolverOutcome("Solve plain");
+
+// Start Simplex part:
+/*
+- set up model
+- run, test
+- use crash if needed
+- disassemble rest of jajhall
+- deal with any other options left in jajhall
+-------
+solveMulti
+solveTasks
+*/
+/* // Previous short version of HApp: start from extended.
+   // Use code below just to check at the end.
   // parallel
   if (opt.sip) {
     cout << "Running solveTasks" << endl;
@@ -89,9 +114,29 @@ HighsStatus solveLpWithSimplex(opt, lp, solution) {
     solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
                    opt.presolveMode, opt.timeLimit);
   }
-
+*/
   // todo: check what the solver outcome is and return corresponding status
   return HighsStatus::OK;
+}
+
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
+
+HModel HighsLpToHModel(const HighsLp& lp) {
+  HModel model;
+
+  model.lp.numCol_ = lp.numCol_;
+  model.lp.numRow_ = lp.numRow_;
+
+  model.lp.Astart_ = lp.Astart_;
+  model.lp.Aindex_ = lp.Aindex_;
+  model.lp.Avalue_ = lp.Avalue_;
+  model.lp.colCost_ = lp.colCost_;
+  model.lp.colLower_ = lp.colLower_;
+  model.lp.colUpper_ = lp.colUpper_;
+  model.lp.rowLower_ = lp.rowLower_;
+  model.lp.rowUpper_ = lp.rowUpper_;
+
+  return model;
 }
 
 #endif

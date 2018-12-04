@@ -239,7 +239,7 @@ class PresolveInfo {
      }
    }
 
-  const HighsLp& getReducedProblem();
+  HighsLp& getReducedProblem();
   HighsPresolveStatus presolve_status_;
   HighsPostsolveStatus postsolve_status_;
 
@@ -249,7 +249,7 @@ class PresolveInfo {
 
  public: 
   // Original problem is lp_.
-  HighsLp * lp_;
+  const  HighsLp * lp_;
   Presolve * presolve_;
   HighsLp reduced_lp_;
 

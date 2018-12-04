@@ -26,7 +26,7 @@
 
 using namespace std;
 
-const HighsLp& PresolveInfo::getReducedProblem() {
+HighsLp& PresolveInfo::getReducedProblem() {
   if (presolve_ == nullptr) {
     std::cout << "Error during presolve. No presolve initialized." << std::endl;
   } else if ((presolve_)->status) {

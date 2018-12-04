@@ -614,7 +614,4 @@ class HModel {
   int* getWorkIntBreak() { return &intBreak[0]; }
 };
 
-HModel HighsLpToHModel(const HighsLp& lp);
-HighsLp HModelToHighsLp(const HModel& model);
-
 #endif /* SIMPLEX_HMODEL_H_ */
