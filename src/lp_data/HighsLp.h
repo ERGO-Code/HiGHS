@@ -112,7 +112,7 @@ struct HighsSolution {
   std::vector<double> rowDual_;
 };
 
-struct HighsSensitivity {
+struct HighsRanging {
   std::vector<double> colCostRangeUpValue_;
   std::vector<double> colCostRangeUpObjective_;
   std::vector<int>    colCostRangeUpInCol_;

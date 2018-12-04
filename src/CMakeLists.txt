@@ -22,7 +22,7 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HModel.cpp
     simplex/HPrimal.cpp
-    simplex/HSensitivity.cpp
+    simplex/HRanging.cpp
     simplex/HSort.cpp
     simplex/HTester.cpp
     simplex/HVector.cpp
@@ -57,7 +57,7 @@ set(headers
     simplex/HModel.h
     simplex/HPrimal.h
     simplex/HRandom.h
-    simplex/HSensitivity.h
+    simplex/HRanging.h
     simplex/HSort.h
     simplex/HTester.h
     simplex/HTimer.h

@@ -488,7 +488,7 @@ class HModel {
  public:
   // The original model
   HighsLp lp;
-  HighsSensitivity sensitivity;
+  HighsRanging ranging;
 
   int numTot;
   int numInt;

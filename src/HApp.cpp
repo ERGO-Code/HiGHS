@@ -1,5 +1,5 @@
 #include "HApp.h"
-#include "HSensitivity.h"
+#include "HRanging.h"
 
 using namespace std;
 
@@ -33,20 +33,20 @@ int solvePlain(HModel &model) {
   // model.util_reportModelSolution();
 #endif
 #ifdef HiGHSDEV
-  //  cout << "\n Using solvePlain() - Calling sensitivity.getSensitivityData(&model)\n" <<
+  //  cout << "\n Using solvePlain() - Calling ranging.getRangingData(&model)\n" <<
   //  endl;
 #endif
-  HSensitivity sensitivity;
+  HRanging ranging;
   int returnCode;
-  returnCode = sensitivity.getSensitivityData(&model);
+  returnCode = ranging.computeData(&model);
 #ifdef HiGHSDEV
-  cout << "Return code " << returnCode << " from sensitivity.getSensitivityData\n" << endl;
+  cout << "Return code " << returnCode << " from ranging.computeData\n" << endl;
 #endif
   if (returnCode) return 0;
-  // Check the sensitivity data
-  returnCode = sensitivity.checkSensitivityData(&model);
+  // Check the ranging data
+  returnCode = ranging.checkData(&model);
 #ifdef HiGHSDEV
-  cout << "Return code " << returnCode << " from sensitivity.checkSensitivityData\n" << endl;
+  cout << "Return code " << returnCode << " from ranging.checkData\n" << endl;
 #endif
   return 0;
 }
