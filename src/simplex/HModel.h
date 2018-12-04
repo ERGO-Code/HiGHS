@@ -125,10 +125,9 @@ class HModel {
                        int XnumRow, const double* XrowLower,
                        const double* XrowUpper, int XnumNz, const int* XAstart,
                        const int* XAindex, const double* XAvalue);
-  void load_fromPresolve(HPresolve* ptr_model);
-  void load_fromPresolve(HPresolve& ptr_model);
-  void load_fromPostsolve(HPresolve* ptr_model);
-  void load_fromPostsolve(HPresolve& ptr_model);
+
+  void loadfromPresolveInfo(const PresolveInfo& info,
+                            const bool postsolve);
 
   // Methods which initialise the basis then allocate and populate
   // (where possible) work* arrays and allocate basis* arrays
@@ -152,13 +151,13 @@ class HModel {
   void setup_shuffleColumn();
 
   // Methods to copy between a HModel instance and a HPresolve instance
-  void copy_fromHModelToHPresolve(HPresolve* ptr_model);
-  void copy_fromHPresolveToHModel(HPresolve* ptr_model);
-  void copy_fromHPresolveToHModel(HPresolve& ptr_model);
-  void copy_fromHPresolveToHModelImplied(HPresolve* ptr_model);
-  void copy_fromHPresolveToHModelImplied(HPresolve& ptr_model);
-  void copy_basisFromPostsolve(HPresolve* mod);
-  void copy_basisFromPostsolve(HPresolve& mod);
+  void copy_fromHModelToHPresolve(Presolve* ptr_model);
+  void copy_fromHPresolveToHModel(Presolve* ptr_model);
+  void copy_fromHPresolveToHModel(Presolve& ptr_model);
+  void copy_fromHPresolveToHModelImplied(Presolve* ptr_model);
+  void copy_fromHPresolveToHModelImplied(Presolve& ptr_model);
+  void copy_basisFromPostsolve(Presolve* mod);
+  void copy_basisFromPostsolve(Presolve& mod);
 
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
@@ -614,4 +613,8 @@ class HModel {
   double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
   int* getWorkIntBreak() { return &intBreak[0]; }
 };
+
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
+
 #endif /* SIMPLEX_HMODEL_H_ */

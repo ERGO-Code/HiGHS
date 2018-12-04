@@ -14,7 +14,7 @@
 #include "HModel.h"
 #include "HConst.h"
 #include "HMPSIO.h"
-#include "HPresolve.h"
+#include "Presolve.h"
 #include "HTimer.h"
 #ifdef Boost_FOUND
 #include "HMpsFF.h"
@@ -258,45 +258,23 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   totalTime += timer.getTime();
 }
 
-void HModel::load_fromPresolve(HPresolve *ptr_model) {
+void HModel::loadfromPresolveInfo(const PresolveInfo& info,
+                                  const bool postsolve) {
   clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
+  
+  copy_fromHPresolveToHModel(info.presolve_);
   initScale();
   initWithLogicalBasis();
-  copy_fromHPresolveToHModelImplied(ptr_model);
-}
-
-void HModel::load_fromPresolve(HPresolve &ptr_model) {
-  clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
-  initScale();
-  initWithLogicalBasis();
-  copy_fromHPresolveToHModelImplied(ptr_model);
-}
-
-void HModel::load_fromPostsolve(HPresolve *ptr_model) {
-  clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
-  initScale();
-  copy_basisFromPostsolve(ptr_model);
-  initFromNonbasic();
+  if (!postsolve) {
+    copy_fromHPresolveToHModelImplied(info.presolve_);
+  } else {
 #ifdef HiGHSDEV
-  check_load_fromPostsolve();
-#endif
+    check_load_fromPostsolve();
+#endif 
+  }
 }
 
-void HModel::load_fromPostsolve(HPresolve &ptr_model) {
-  clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
-  initScale();
-  copy_basisFromPostsolve(ptr_model);
-  initFromNonbasic();
-#ifdef HiGHSDEV
-  check_load_fromPostsolve();
-#endif
-}
-
-void HModel::copy_fromHModelToHPresolve(HPresolve *ptr_model) {
+void HModel::copy_fromHModelToHPresolve(Presolve *ptr_model) {
   ptr_model->numCol = lp.numCol_;
   ptr_model->numRow = lp.numRow_;
   ptr_model->numTot = numTot;
@@ -1857,19 +1835,19 @@ void HModel::setup_shuffleColumn() {
   mlFg_Update(mlFg_action_ShuffleLP);
 }
 
-void HModel::copy_basisFromPostsolve(HPresolve &ptr_model) {
+void HModel::copy_basisFromPostsolve(Presolve &ptr_model) {
   basicIndex = ptr_model.basicIndex;
   nonbasicFlag = ptr_model.nonbasicFlag;
   nonbasicMove = ptr_model.nonbasicMove;
 }
 
-void HModel::copy_basisFromPostsolve(HPresolve *ptr_model) {
+void HModel::copy_basisFromPostsolve(Presolve *ptr_model) {
   basicIndex = ptr_model->basicIndex;
   nonbasicFlag = ptr_model->nonbasicFlag;
   nonbasicMove = ptr_model->nonbasicMove;
 }
 
-void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model) {
+void HModel::copy_fromHPresolveToHModel(Presolve &ptr_model) {
   lp.numCol_ = ptr_model.numCol;
   lp.numRow_ = ptr_model.numRow;
   numTot = ptr_model.numCol + ptr_model.numRow;
@@ -1885,7 +1863,7 @@ void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model) {
   lp.sense_ = 1;
 }
 
-void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model) {
+void HModel::copy_fromHPresolveToHModel(Presolve *ptr_model) {
   lp.numCol_ = ptr_model->numCol;
   lp.numRow_ = ptr_model->numRow;
   numTot = ptr_model->numCol + ptr_model->numRow;
@@ -1901,7 +1879,7 @@ void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model) {
   lp.sense_ = 1;
 }
 
-void HModel::copy_fromHPresolveToHModelImplied(HPresolve &ptr_model) {
+void HModel::copy_fromHPresolveToHModelImplied(Presolve &ptr_model) {
   impliedBoundsPresolve = true;
   primalColLowerImplied = ptr_model.implColLower;
   primalColUpperImplied = ptr_model.implColUpper;
@@ -1913,7 +1891,7 @@ void HModel::copy_fromHPresolveToHModelImplied(HPresolve &ptr_model) {
   dualRowUpperImplied = ptr_model.implRowDualUpper;
 }
 
-void HModel::copy_fromHPresolveToHModelImplied(HPresolve *ptr_model) {
+void HModel::copy_fromHPresolveToHModelImplied(Presolve *ptr_model) {
   impliedBoundsPresolve = true;
   primalColLowerImplied = ptr_model->implColLower;
   primalColUpperImplied = ptr_model->implColUpper;
@@ -5048,4 +5026,25 @@ void HModel::util_anMlSol() {
     printf("Other values = %11.4g\n", lcValue_OtherCo);
   }
 }
+
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
+
+HModel HighsLpToHModel(const HighsLp& lp) {
+  HModel model;
+
+  model.lp.numCol_ = lp.numCol_;
+  model.lp.numRow_ = lp.numRow_;
+
+  model.lp.Astart_ = lp.Astart_;
+  model.lp.Aindex_ = lp.Aindex_;
+  model.lp.Avalue_ = lp.Avalue_;
+  model.lp.colCost_ = lp.colCost_;
+  model.lp.colLower_ = lp.colLower_;
+  model.lp.colUpper_ = lp.colUpper_;
+  model.lp.rowLower_ = lp.rowLower_;
+  model.lp.rowUpper_ = lp.rowUpper_;
+
+  return model;
+}
+
 #endif

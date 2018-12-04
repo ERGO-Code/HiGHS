@@ -16,11 +16,10 @@
 
 #include <iostream>
 
+#include "HighsLp.h"
 #include "HighsOptions.h"
+#include "Presolve.h"
 #include "cxxopts.hpp"
-
-HModel HighsLpToHModel(const HighsLp& lp);
-HighsLp HModelToHighsLp(const HModel& model);
 
 // Class to set parameters and run HiGHS
 class Highs {
@@ -46,14 +45,13 @@ class Highs {
 
   // Methods below are option dependent and modify something inside the Highs
   // class.
-  HighsPresolveStatus runPresolve(const HighsLp& lp,
-                                  PresolveInfo& presolve_info);
-  HighsPostsolveTtatus runPostsolve(const HighsLp& lp,
-                                    PresolveInfo& presolve_info);
+  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
+  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
+HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   // todo: handle printing messages with HighsPrintMessage
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
@@ -66,7 +64,7 @@ class Highs {
       runSolver(lp, solution);
     }
     case HighsPresolveStatus::Reduced: {
-      HighsLp& reduced_lp = presolve_info.presolve_.getReducedProblem();
+      const HighsLp& reduced_lp = presolve_info.presolve_->getReducedProblem();
       runSolver(reduced_lp, presolve_info.reduced_solution_);
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -83,7 +81,7 @@ class Highs {
   }
 
   // Postsolve. Does nothing if there were no reductions during presolve.
-  HighsPostsolveStatus postsolve_status = runPostsolve(postsolve_info);
+  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
   if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
     // todo: add finishing simplex iterations if needed.
   } else {
@@ -116,7 +114,7 @@ HighsPresolveStatus Presolve::runPresolve(PresolveInfo& info) {
       break;
   }
 */
-  return info.status_;
+  return info.presolve_status_;
 }
 
 HighsPostsolveStatus Presolve::runPostsolve(PresolveInfo& info) {
@@ -270,7 +268,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;
-    printHelp(argv[0]);
+    //printHelp(argv[0]);
     return HighsStatus::OptionsError;
   }
 
@@ -430,24 +428,6 @@ HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
   return solveLpWithSimplex(opt, lp, solution); 
 }
 
-HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
 
-HModel HighsLpToHModel(const HighsLp& lp) {
-  HModel model;
-
-  model.lp.numCol_ = lp.numCol_;
-  model.lp.numRow_ = lp.numRow_;
-
-  model.lp.Astart_ = lp.Astart_;
-  model.lp.Aindex_ = lp.Aindex_;
-  model.lp.Avalue_ = lp.Avalue_;
-  model.lp.colCost_ = lp.colCost_;
-  model.lp.colLower_ = lp.colLower_;
-  model.lp.colUpper_ = lp.colUpper_;
-  model.lp.rowLower_ = lp.rowLower_;
-  model.lp.rowUpper_ = lp.rowUpper_;
-
-  return model;
-}
 
 #endif

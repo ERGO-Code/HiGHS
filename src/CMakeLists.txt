@@ -1,7 +1,6 @@
 # Define library.
 
 set(sources
-    HApp.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
@@ -30,7 +29,6 @@ set(sources
 )
 
 set(headers
-    HApp.h
     HiGHSRun.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -45,6 +43,7 @@ set(headers
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsModelBuilder.h
+    simplex/HApp.h
     simplex/HConst.h
     simplex/HDual.h
     simplex/HDualRow.h

@@ -29,36 +29,6 @@
 
 using namespace std;
 
-// Class for easy communication between Presolve and Highs. A single
-// instance of PresolveInfo handles a single presolve execution on one
-// LP.
-class PresolveInfo {
-  PresolveInfo() {}
-  // option_presolve : 0 means don't presolve.
-  PresolveInfo(int option_presolve, HighsLp& lp) {
-     if (option_presolve) {
-       lp_ = &lp;
-       presolve_ =  new Presolve();
-     }
-   }
-
-  const HighsLp& getReducedProblem();
-  HighsPresolveStatus status_;
-
-  ~PresolveInfo() {
-    delete presolve_;
-  }
- 
- private:
-  HighsSolution reduced_solution_;
-  HighsSolution recovered_solution_;
-  Presolve * presolve_;
-
-  // Original problem is lp_.
-  HighsLp * lp_;
-  HighsLp reduced_lp_;
-};
-
 enum class HighsPostsolveStatus {
   ReducedSolutionEmpty,
   ReducedSolutionDimenionsError,
@@ -72,8 +42,10 @@ enum class HighsPresolveStatus {
     Unbounded,
     Empty,
     Reduced,
+    ReducedToEmpty,
     NullError
 };
+
 
 class Presolve : public HPreData {
  public:
@@ -81,8 +53,9 @@ class Presolve : public HPreData {
   HighsPresolveStatus presolve();
 
  // todo: clear the public from below. 
- private: 
   string modelName;
+
+ private: 
 
   int iPrint;
   int iKKTcheck;
@@ -95,6 +68,7 @@ class Presolve : public HPreData {
   void setProblemStatus(const int s);
   void reportTimes();
 
+  friend class HModel;
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
   vector<double> implColUpper;
@@ -249,6 +223,38 @@ class Presolve : public HPreData {
   //
 
   string countsFile;
+};
+
+// Class for easy communication between Presolve and Highs. A single
+// instance of PresolveInfo handles a single presolve execution on one
+// LP.
+class PresolveInfo {
+ public:
+  PresolveInfo() {}
+  // option_presolve : 0 means don't presolve.
+  PresolveInfo(int option_presolve, const HighsLp& lp) {
+     if (option_presolve) {
+       lp_ = &lp;
+       presolve_ =  new Presolve();
+     }
+   }
+
+  const HighsLp& getReducedProblem();
+  HighsPresolveStatus presolve_status_;
+  HighsPostsolveStatus postsolve_status_;
+
+  ~PresolveInfo() {
+    delete presolve_;
+  }
+
+ public: 
+  // Original problem is lp_.
+  HighsLp * lp_;
+  Presolve * presolve_;
+  HighsLp reduced_lp_;
+
+  HighsSolution reduced_solution_;
+  HighsSolution recovered_solution_;
 };
 
 #endif /* PRESOLVE_HPRESOLVE_H_ */

@@ -1,6 +1,25 @@
 #ifndef SIMPLEX_HAPP_H_
 #define SIMPLX_HAPP_H_
 
+// todo: clear includes.
+#include <getopt.h>
+#include <unistd.h>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <set>
+#include <vector>
+
+#include "HAPI.h"
+#include "HConfig.h"
+#include "HConst.h"
+#include "HDual.h"
+#include "HTester.h"
+#include "HTimer.h"
+#include "HighsLp.h"
+
 // Single function to solve an lp according to options and fill
 // solution in solution. 
 HighsStatus solveLpWithSimplex(opt, lp, solution) {
