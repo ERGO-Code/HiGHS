@@ -1,6 +1,7 @@
 #ifndef HIGHSOPTIONS_H
 #define HIGHSOPTIONS_H
 
+#include <typeinfo>
 #include <stdio.h>
 #include <string.h>
 #include <map>

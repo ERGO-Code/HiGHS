@@ -16,13 +16,18 @@
 
 #include <iostream>
 
-#include "HApp.h"
+#include "HighsOptions.h"
+#include "cxxopts.hpp"
+
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
 
 // Class to set parameters and run HiGHS
 class Highs {
  public:
   Highs() {}
   explicit Highs(const HighsOptions& opt) : options_(opt){};
+  explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
@@ -32,7 +37,11 @@ class Highs {
   HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
 
  private:
+  // delete.
   HighsOptions options_;
+  // use HighsStringOptions instead for now. Then rename to HighsOptions, once
+  // previous one is gone.
+  HighsStringOptions options__;
   HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
 
   // Methods below are option dependent and modify something inside the Highs
@@ -196,6 +205,46 @@ void HiGHSRun(const char* message) {
 
 #endif
 };
+
+HighsStatus loadOptions(int argc, char** argv,
+                        HighsStringOptions& highs_options) {
+  try {
+    cxxopts::Options cxx_options(argv[0], "HiGHS options");
+    cxx_options.positional_help("[optional args]").show_positional_help();
+
+    cxx_options.add_options()("p, presolve", "presolve",
+                              cxxopts::value<bool>())(
+        "f, filename", "Filename(s) of LPs to solve",
+        cxxopts::value<std::vector<std::string>>())("help", "Print help.");
+
+    cxx_options.parse_positional("file");
+
+    auto result = cxx_options.parse(argc, argv);
+
+    if (result.count("help")) {
+      std::cout << cxx_options.help({""}) << std::endl;
+      exit(0);
+    }
+
+    if (result.count("filename")) {
+      std::cout << "filename = {";
+      auto& v = result["filename"].as<std::vector<std::string>>();
+      for (const auto& s : v) {
+        std::cout << s << ", ";
+      }
+      std::cout << "}" << std::endl;
+    }
+
+    if (result.count("presolve")) {
+      highs_options.setValue("presolve", true);
+      std::cout << "Presolve is set to on through cxx options.";
+    }
+
+  } catch (const cxxopts::OptionException& e) {
+    std::cout << "error parsing options: " << e.what() << std::endl;
+    return HighsStatus::OptionsError;
+  }
+}
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   // todo: replace references with options_.*
@@ -374,81 +423,11 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
   return HighsStatus::OK;
 }
-
+// solveLpWithSimplex defined in HApp.h. Only called from here.
+// If you want to call solveSimplex use a Highs instance.
 HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
                          HighsSolution& solution) {
-  // until parsers work with HighsLp
-  HModel model;
-  int RtCd = model.load_fromMPS(opt.fileName);
-
-  // make sure old tests pass before you start work on the
-  // parsers. Then remove traces of read_fromMPS from below and replace the code
-  // above with
-  // HModel model = HighsLpToHModel(lp);
-
-  cout << "=================================================================="
-          "=="
-          "================"
-       << endl;
-  // parallel
-  if (opt.sip) {
-    cout << "Running solveTasks" << endl;
-
-    solveTasks(model);
-  }
-  if (opt.scip) {
-    cout << "Running solveSCIP" << endl;
-    solveSCIP(model);
-  } else if (opt.pami) {
-    if (opt.partitionFile) {
-      cout << "Running solveMulti" << endl;
-      solveMulti(model, opt.partitionFile);
-    } else if (opt.cut) {
-      model.intOption[INTOPT_PRINT_FLAG] = 1;
-      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-
-      model.scaleModel();
-
-      HDual solver;
-      cout << "Running solveCut" << endl;
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-
-      model.util_reportSolverOutcome("Cut");
-    } else {
-      cout << "Running solvemulti" << endl;
-      solveMulti(model);
-    }
-  }
-  // serial
-  else if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-           opt.timeLimit == HSOL_CONST_INF) {
-    cout << "Running solvePlain" << endl;
-    int RtCod = solvePlain(model);
-    if (RtCod != 0) {
-      printf("solvePlain(API) return code is %d\n", RtCod);
-    }
-  }  // todo: remove case below, presolve handled elsewhere
-  else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-           opt.timeLimit == HSOL_CONST_INF) {
-    if (opt.presolve == 1) {
-      cout << "Running solvePlainWithPresolve" << endl;
-      solvePlainWithPresolve(model);
-    }
-#ifdef EXT_PRESOLVE
-    else if (presolve == 2) {
-      cout << "Running solveExternalPresolve" << endl;
-      solveExternalPresolve(fileName);
-    }
-#endif
-  } else {
-    cout << "Running solvePlainJAJH" << endl;
-    solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
-                   opt.presolveMode, opt.timeLimit);
-  }
-
-  // todo: check what the solver outcome is and return corresponding status
-  return HighsStatus::OK;
+  return solveLpWithSimplex(opt, lp, solution); 
 }
 
 HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
