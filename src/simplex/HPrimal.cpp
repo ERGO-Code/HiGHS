@@ -169,6 +169,7 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = model->getWorkUpper();
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
+  const int numTot = model->getNumTot();
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free

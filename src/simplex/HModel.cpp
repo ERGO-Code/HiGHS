@@ -97,7 +97,7 @@ int HModel::load_fromMPS(const char *filename) {
 #ifdef HiGHSDEV
   if (numInt) printf("MPS file has %d integer variables\n", numInt);
 #endif
-  numTot = lp.numCol_ + lp.numRow_;
+  //  numTot = lp.numCol_ + lp.numRow_;
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";
   //  util_reportModelDa(ModelDaFileName);
 #ifdef HiGHSDEV
@@ -200,7 +200,7 @@ int HModel::load_fromToy(const char *filename) {
   if (numInt) printf("MPS file has %d integer variables\n", numInt);
 #endif
 
-  numTot = lp.numCol_ + lp.numRow_;
+  //  numTot = lp.numCol_ + lp.numRow_;
 
 #ifdef HiGHSDEV
   // Use this next line to check the loading of a model from arrays
@@ -246,7 +246,7 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   lp.Astart_.assign(&XAstart[0], &XAstart[0] + lp.numCol_ + 1);
   lp.Aindex_.assign(&XAindex[0], &XAindex[0] + numNz);
   lp.Avalue_.assign(&XAvalue[0], &XAvalue[0] + numNz);
-  numTot = lp.numCol_ + lp.numRow_;
+  //  numTot = lp.numCol_ + lp.numRow_;
 
   // Assign and initialise the scaling factors
   initScale();
@@ -299,7 +299,7 @@ void HModel::load_fromPostsolve(HPresolve &ptr_model) {
 void HModel::copy_fromHModelToHPresolve(HPresolve *ptr_model) {
   ptr_model->numCol = lp.numCol_;
   ptr_model->numRow = lp.numRow_;
-  ptr_model->numTot = numTot;
+  //  ptr_model->numTot = numTot;
   ptr_model->Astart = lp.Astart_;
   ptr_model->Aindex = lp.Aindex_;
   ptr_model->Avalue = lp.Avalue_;
@@ -657,6 +657,7 @@ void HModel::replaceWithNewBasis(const int *XbasicIndex) {
   // work* arrays
 
   //  printf("replaceWithNewBasis: \n");
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; var++) {
     nonbasicFlag[var] = NONBASIC_FLAG_TRUE;
   }
@@ -700,6 +701,7 @@ void HModel::initWithLogicalBasis() {
   // possible) work* arrays and allocate basis* arrays
   basicIndex.resize(lp.numRow_);
   for (int row = 0; row < lp.numRow_; row++) basicIndex[row] = lp.numCol_ + row;
+  const int numTot = getNumTot();
   nonbasicFlag.assign(numTot, 0);
   nonbasicMove.resize(numTot);
   for (int col = 0; col < lp.numCol_; col++) nonbasicFlag[col] = 1;
@@ -753,6 +755,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   int local_newNumRow = max(local_oldNumRow, lastrow + 1);
   int local_newNumTot = local_newNumCol + local_newNumRow;
 
+  const int numTot = getNumTot();
 #ifdef SCIPDEV
   printf("extendWithLogicalBasis\n");
   printf("lp.numCol_/Row/Tot = %d/%d/%d\n", lp.numCol_, lp.numRow_, numTot);
@@ -880,7 +883,6 @@ void HModel::clearModel() {
   // Clears all model data
   lp.numRow_ = 0;
   lp.numCol_ = 0;
-  numTot = 0;
   numInt = 0;
   problemStatus = LP_Status_Unset;
   lp.sense_ = 0;
@@ -1020,6 +1022,7 @@ bool HModel::OKtoSolve(int level, int phase) {
 #endif
     return ok;
   }
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; ++var) {
     if (nonbasicFlag[var]) {
       // Nonbasic variable
@@ -1087,6 +1090,7 @@ void HModel::rp_basis() {
 }
 
 int HModel::get_nonbasicMove(int var) {
+  const int numTot = getNumTot();
   //  printf("Calling get_nonbasicMove with var = %2d; numTot = %2d\n", var,
   //  numTot); cout<<flush;
   assert(var >= 0);
@@ -1159,6 +1163,7 @@ bool HModel::workArrays_OK(int phase) {
       }
     }
   }
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; ++var) {
     ok = workRange[var] == (workUpper[var] - workLower[var]);
     if (!ok) {
@@ -1197,6 +1202,7 @@ bool HModel::workArrays_OK(int phase) {
 
 bool HModel::allNonbasicMoveVsWorkArrays_OK() {
   bool ok;
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; ++var) {
     printf("NonbasicMoveVsWorkArrays: var = %2d; nonbasicFlag[var] = %2d\n",
            var, nonbasicFlag[var]);
@@ -1218,6 +1224,7 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK() {
 }
 
 bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
+  const int numTot = getNumTot();
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
   //	 var, numTot, workLower[var], workUpper[var], nonbasicMove[var]);
@@ -1912,7 +1919,6 @@ void HModel::copy_basisFromPostsolve(HPresolve *ptr_model) {
 void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model) {
   lp.numCol_ = ptr_model.numCol;
   lp.numRow_ = ptr_model.numRow;
-  numTot = ptr_model.numCol + ptr_model.numRow;
   lp.Astart_ = ptr_model.Astart;
   lp.Aindex_ = ptr_model.Aindex;
   lp.Avalue_ = ptr_model.Avalue;
@@ -1928,7 +1934,6 @@ void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model) {
 void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model) {
   lp.numCol_ = ptr_model->numCol;
   lp.numRow_ = ptr_model->numRow;
-  numTot = ptr_model->numCol + ptr_model->numRow;
   lp.Astart_ = ptr_model->Astart;
   lp.Aindex_ = ptr_model->Aindex;
   lp.Avalue_ = ptr_model->Avalue;
@@ -1984,6 +1989,7 @@ void HModel::initScale() {
 
 void HModel::initBasicIndex() {
   int numBasic = 0;
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; var++) {
     if (!nonbasicFlag[var]) {
       assert(numBasic < lp.numRow_);
@@ -1996,6 +2002,7 @@ void HModel::initBasicIndex() {
 
 void HModel::allocate_WorkAndBaseArrays() {
   // Allocate bounds and solution spaces
+  const int numTot = getNumTot();
   workCost.resize(numTot);
   workDual.resize(numTot);
   // Was workShift.assign(numTot, 0); but shift is populated by call to
@@ -2035,6 +2042,7 @@ void HModel::initCost(int perturb) {
 
   // If there's few boxed variables, we will just use Simple perturbation
   double boxedRate = 0;
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) boxedRate += (workRange[i] < 1e30);
   boxedRate /= numTot;
   if (boxedRate < 0.01) bigc = min(bigc, 1.0);
@@ -2077,6 +2085,7 @@ void HModel::initBound(int phase) {
 
   // In Phase 1: change to dual phase 1 bound
   const double inf = HSOL_CONST_INF;
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
     if (workLower[i] == -inf && workUpper[i] == inf) {
       // Won't change for row variables: they should never become
@@ -2094,7 +2103,7 @@ void HModel::initBound(int phase) {
   }
 }
 
-void HModel::initValue() { initValueFromNonbasic(0, numTot - 1); }
+void HModel::initValue() { initValueFromNonbasic(0, getNumTot() - 1); }
 
 void HModel::initPh2ColCost(int firstcol, int lastcol) {
   // Copy the Phase 2 cost and zero the shift
@@ -2142,6 +2151,7 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
   assert(firstvar >= 0);
+  const int numTot = getNumTot();
   assert(lastvar < numTot);
   // double dl_pr_act, norm_dl_pr_act;
   // norm_dl_pr_act = 0.0;
@@ -2272,6 +2282,7 @@ void HModel::computeDual() {
   for (int i = 0; i < lp.numCol_; i++) {
     workDual[i] = workCost[i] - bufferLong.array[i];
   }
+  const int numTot = getNumTot();
   for (int i = lp.numCol_; i < numTot; i++) {
     workDual[i] = workCost[i] - buffer.array[i - lp.numCol_];
   }
@@ -2307,6 +2318,7 @@ void HModel::computeDualInfeasInDual(int *dualInfeasCount) {
   int workCount = 0;
   const double inf = HSOL_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
     if (!nonbasicFlag[i]) continue;
@@ -2325,6 +2337,7 @@ void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
   int workCount = 0;
   const double inf = HSOL_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
     if (!nonbasicFlag[i]) continue;
@@ -2342,6 +2355,7 @@ void HModel::correctDual(int *freeInfeasCount) {
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
   const double inf = HSOL_CONST_INF;
   int workCount = 0;
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i]) {
       if (workLower[i] == -inf && workUpper[i] == inf) {
@@ -2379,6 +2393,7 @@ void HModel::correctDual(int *freeInfeasCount) {
 // of basic variables
 void HModel::computePrimal() {
   buffer.clear();
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++)
     if (nonbasicFlag[i] && workValue[i] != 0)
       matrix.collect_aj(buffer, i, workValue[i]);
@@ -2421,6 +2436,7 @@ double HModel::computePrObj() {
 // dual values
 void HModel::computeDualObjectiveValue(int phase) {
   dualObjectiveValue = 0;
+  const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i]) {
       dualObjectiveValue += workValue[i] * workDual[i];
@@ -2464,6 +2480,7 @@ int HModel::handleRankDeficiency() {
   printf("Returned %d = factor.build();\n", rankDeficiency);
   fflush(stdout);
   vector<int> basicRows;
+  const int numTot = getNumTot();
   basicRows.resize(numTot);
   //    printf("Before - basicIndex:"); for (int iRow=0; iRow<lp.numRow_; iRow++)
   //    printf(" %2d", basicIndex[iRow]); printf("\n");
@@ -2703,6 +2720,7 @@ int HModel::writeToMPS(const char *filename) {
 // Esoterica!
 // Initialise the random vectors required by hsol
 void HModel::initRandomVec() {
+  const int numTot = getNumTot();
   intBreak.resize(numTot);
   for (int i = 0; i < numTot; i++) intBreak[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
@@ -2888,6 +2906,7 @@ int HModel::util_chgObjSense(const int Xsense) {
   if ((Xsense == OBJSENSE_MINIMIZE) != (lp.sense_ == OBJSENSE_MINIMIZE)) {
     // Flip the objective sense
     lp.sense_ = Xsense;
+    const int numTot = getNumTot();
     for (int var = 0; var < numTot; var++) {
       workDual[var] = -workDual[var];
       workCost[var] = -workCost[var];
@@ -3320,7 +3339,7 @@ void HModel::util_addCols(int ncols, const double *XcolCost,
   }
   // Increase the number of columns and total number of variables in the model
   lp.numCol_ += ncols;
-  numTot += ncols;
+  //  numTot += ncols;
 
   //  printf("In HModel::util_addCols: Model now has lp.Astart_[%d] = %d
   //  nonzeros\n", lp.numCol_, lp.Astart_[lp.numCol_]);
@@ -3382,7 +3401,7 @@ void HModel::util_deleteCols(int firstcol, int lastcol) {
 
   // Reduce the number of columns and total number of variables in the model
   lp.numCol_ -= colStep;
-  numTot -= colStep;
+  //  numTot -= colStep;
 
   // ToDo Determine consequences for basis when deleting columns
   // Invalidate matrix copies
@@ -3519,7 +3538,7 @@ void HModel::util_addRows(int nrows, const double *XrowLower,
   }
   // Increase the number of rows and total number of variables in the model
   lp.numRow_ += nrows;
-  numTot += nrows;
+  //  numTot += nrows;
 
   // Update the basis and work vectors correponding to new basic rows
   extendWithLogicalBasis(lp.numCol_, -1, lp.numRow_ - nrows, lp.numRow_ - 1);
@@ -3579,7 +3598,7 @@ void HModel::util_deleteRows(int firstrow, int lastrow) {
 
   // Reduce the number of rows and total number of variables in the model
   lp.numRow_ -= rowStep;
-  numTot -= rowStep;
+  //  numTot -= rowStep;
 
   // Determine consequences for basis when deleting rows
   mlFg_Update(mlFg_action_DelRows);
@@ -3661,13 +3680,14 @@ void HModel::util_deleteRowset(int *dstat) {
            newRow);
 #endif
   lp.numRow_ -= dlNumRow;
-  numTot -= dlNumRow;
+  //  numTot -= dlNumRow;
 
   // Count the remaining basic variables: if there are as many as
   // there are (now) rows then the basis is OK. If there are more then some
   // columns have to be made nonbasic - but which?
   int numBasic = 0;
   bool basisOK = true;
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; var++) {
     if (!nonbasicFlag[var]) {
       basicIndex[numBasic] = var;
@@ -4272,6 +4292,7 @@ void HModel::util_anPrDuDgn() {
   double pctDgnPrAct = numDgnPrAct;
   pctDgnPrAct = 100 * pctDgnPrAct / lp.numRow_;
 
+  const int numTot = getNumTot();
   for (int var = 0; var < numTot; var++) {
     if (nonbasicFlag[var] == NONBASIC_FLAG_TRUE) {
       double duAct = workDual[var];

@@ -113,6 +113,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
+      const int numTot = model->getNumTot();
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -187,6 +188,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
+  const int numTot = model->getNumTot();
   for (int i = 0; i < numTot; i++) {
     if (model->getNonbasicFlag()[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
@@ -1066,6 +1068,7 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
+      const int numTot = model->getNumTot();
       if (alw_DSE2Dvx_sw &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
@@ -1767,6 +1770,7 @@ void HDual::iz_dvx_fwk() {
   // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
   const int *NonbasicFlag = model->getNonbasicFlag();
+  const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     //      if (model->getNonbasicFlag()[vr_n])
     //      if (NonbasicFlag[vr_n])
@@ -2279,6 +2283,7 @@ void HDual::an_iz_vr_v() {
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
+  const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     if (model->getNonbasicFlag()[vr_n]) {
       double pr_act_v = model->getWorkValue()[vr_n];

@@ -490,7 +490,7 @@ class HModel {
   HighsLp lp;
   HighsRanging ranging;
 
-  int numTot;
+  //  int numTot;
   int numInt;
   int problemStatus;
   string modelName;
@@ -600,7 +600,7 @@ class HModel {
   // structures in the instance of a model
   int getNumRow() { return lp.numRow_; }
   int getNumCol() { return lp.numCol_; }
-  int getNumTot() { return numTot; }
+  int getNumTot() { return lp.numCol_ + lp.numRow_; }//numTot; }
   int getPrStatus() { return problemStatus; }
   int getObjSense() { return lp.sense_; }
   const HMatrix* getMatrix() { return &matrix; }

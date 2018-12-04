@@ -355,7 +355,7 @@ int solveSCIP(HModel &model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  model.numTot = model.lp.numCol_ + model.lp.numRow_;
+  //  model.numTot = model.lp.numCol_ + model.lp.numRow_;
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
