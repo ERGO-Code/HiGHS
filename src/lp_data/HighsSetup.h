@@ -85,25 +85,33 @@ class Highs {
 }
 
 HighsPresolveStatus Presolve::runPresolve(PresolveInfo& info) {
-/*  if (info.presolve_ != nullptr)
-    delete info.presolve_;
+  if (info.presolve_ == nullptr || info.lp_ == nullptr)
+    return HighsPresolveStatus::NullError;
+/*
+  // Initialize a new presolve class instance for the LP given in presolve info
+  HPresolve* pre = new HPresolve();
+  int status = pre->presolve();
 
-  if (lp_ != nullptr) {
-    // Initialize a new presolve class instance for the LP given in presolve info
-    HPresolve* pre = new HPresolve();
-    HighsPresolveStatus status = pre->presolve(reduced_lp);
-
-    if (status = HighsPresolveStatus::Reduced) {
-      presolve.status == HighsSolution reduced_solution;
-    }
-  } else {
-    return HighsPresolveStatus::NotReduced;
+  switch(status) {
+    case presolve_.stat::Empty:
+      info.status_ = HighsPresolveStatus::Empty;
+      break;
+    case presolve_.stat::Infeasible:
+      info.status_ = HighsPresolveStatus::Infeasible;
+      break;
+    case presolve_.stat::Unbounded:
+      info.status_ = HighsPresolveStatus::Unbounded;
+      break;
+    case presolve_.stat::Unset:
+      info.status_ = HighsPresolveStatus::NotReduced;
+      break;
   }
-  return status; */
+*/
+  return info.status_;
 }
 
 HighsPostsolveStatus Presolve::runPostsolve(PresolveInfo& info) {
-
+/*
   if (info.presolve_ != nullptr && lp_ != nullptr) 
   {
     if (info.reduced_solution_.size() == 0)
@@ -117,6 +125,7 @@ HighsPostsolveStatus Presolve::runPostsolve(PresolveInfo& info) {
     return HighsPostsolveStatus::SolutionRecovered;
   }
   return HighsPostsolveStatus:LpOrPresolveObjectMissing;
+*/
 }
 
 // The method below runs simplex or ipx solver on the lp.

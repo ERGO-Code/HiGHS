@@ -71,7 +71,8 @@ enum class HighsPresolveStatus {
     Infeasible,
     Unbounded,
     Empty,
-    Reduced
+    Reduced,
+    NullError
 };
 
 class Presolve : public HPreData {
