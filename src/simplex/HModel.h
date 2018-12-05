@@ -497,9 +497,12 @@ class HModel {
   vector<double> colScale;
   vector<double> rowScale;
   vector<int> integerColumn;
+
+struct HighsBasis {
   vector<int> basicIndex;
   vector<int> nonbasicFlag;
   vector<int> nonbasicMove;
+};
 
   // Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;
@@ -569,8 +572,7 @@ class HModel {
   // initiated
   HMatrix matrix;
   HFactor factor;
-  HVector buffer;
-  HVector bufferLong;
+  HighsBasis basis;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;
@@ -610,9 +612,9 @@ class HModel {
   double* getcolUpper() { return &lp.colUpper_[0]; }
   double* getrowLower() { return &lp.rowLower_[0]; }
   double* getrowUpper() { return &lp.rowUpper_[0]; }
-  int* getBaseIndex() { return &basicIndex[0]; }
-  int* getNonbasicFlag() { return &nonbasicFlag[0]; }
-  int* getNonbasicMove() { return &nonbasicMove[0]; }
+  int* getBaseIndex() { return &basis.basicIndex[0]; }
+  int* getNonbasicFlag() { return &basis.nonbasicFlag[0]; }
+  int* getNonbasicMove() { return &basis.nonbasicMove[0]; }
   double* getWorkCost() { return &workCost[0]; }
   double* getWorkDual() { return &workDual[0]; }
   double* getWorkShift() { return &workShift[0]; }

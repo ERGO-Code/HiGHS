@@ -385,7 +385,7 @@ int solveSCIP(HModel &model) {
     model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
-    if (model.nonbasicFlag[col]) {
+    if (model.basis.nonbasicFlag[col]) {
       printf(": nonbasic so don't branch\n");
       continue;
     } else {

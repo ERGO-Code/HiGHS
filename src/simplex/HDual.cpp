@@ -35,9 +35,6 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
-  // Setup two work buffers in model required for solve()
-  model->buffer.setup(model->lp.numRow_);
-  model->bufferLong.setup(model->lp.numCol_);
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
   model->setup_for_solve();
@@ -1353,8 +1350,10 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
+      const int *nonbasicFlag = model->getNonbasicFlag();
       for (int col = 0; col < numCol; col++) {
-        row_ap.array[col] = model->nonbasicFlag[col] * row_ap.array[col];
+        row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+	//        row_ap.array[col] = model->basis.nonbasicFlag[col] * row_ap.array[col];
       }
 #ifdef HiGHSDEV
       // Ultra-sparse PRICE is in development
