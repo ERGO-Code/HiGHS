@@ -23,9 +23,6 @@
 #include "HighsModelObject.h"
 #include "cxxopts.hpp"
 
-HighsStatus solveSimplex(const HighsOptions& opt, 
-                         HighsModelObject& highs_model);
-
 // Class to set parameters and run HiGHS
 class Highs {
  public:
@@ -450,14 +447,6 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   options_.partitionFile = partitionFile;
 
   return HighsStatus::OK;
-}
-
-// solveLpWithSimplex defined in HApp.h. Only called from here.
-// If you want to call solveSimplex use a Highs instance.
-HighsStatus solveSimplex(const HighsOptions& opt, 
-                         HighsModelObject& highs_model) {
-  HighsStatus result = solveLpWithSimplex(opt, highs_model); 
-  return result;
 }
 
 #endif
