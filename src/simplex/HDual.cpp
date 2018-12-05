@@ -1353,7 +1353,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       const int *nonbasicFlag = model->getNonbasicFlag();
       for (int col = 0; col < numCol; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
-	//        row_ap.array[col] = model->basis.nonbasicFlag[col] * row_ap.array[col];
+	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
       }
 #ifdef HiGHSDEV
       // Ultra-sparse PRICE is in development

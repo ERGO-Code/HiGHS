@@ -29,10 +29,10 @@ int HRanging::computeData(HModel* model) {
 
   //  HMatrix matrix;
   model->matrix.setup(numCol, numRow, &model->lp.Astart_[0], &model->lp.Aindex_[0],
-                      &model->lp.Avalue_[0], &model->basis.nonbasicFlag[0]);
+                      &model->lp.Avalue_[0], &model->basis.nonbasicFlag_[0]);
 
   model->factor.setup(numCol, numRow, &model->lp.Astart_[0], &model->lp.Aindex_[0],
-                      &model->lp.Avalue_[0], &model->basis.basicIndex[0]);
+                      &model->lp.Avalue_[0], &model->basis.basicIndex_[0]);
   model->factor.build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
@@ -51,11 +51,11 @@ int HRanging::computeData(HModel* model) {
   }
   vector<double> value_ = model->workValue;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    value_[model->basis.basicIndex[iRow]] = model->baseValue[iRow];
+    value_[model->basis.basicIndex_[iRow]] = model->baseValue[iRow];
   }
   vector<double> dual_ = model->workDual;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    dual_[model->basis.basicIndex[iRow]] = 0;
+    dual_[model->basis.basicIndex_[iRow]] = 0;
   }
 
 
@@ -70,9 +70,9 @@ int HRanging::computeData(HModel* model) {
   vector<double> Bupper_ = model->baseUpper;
   vector<double> Bvalue_ = model->baseValue;
 
-  vector<int> Nflag_ = model->basis.nonbasicFlag;
-  vector<int> Nmove_ = model->basis.nonbasicMove;
-  vector<int> Bindex_ = model->basis.basicIndex;
+  vector<int> Nflag_ = model->basis.nonbasicFlag_;
+  vector<int> Nmove_ = model->basis.nonbasicMove_;
+  vector<int> Bindex_ = model->basis.basicIndex_;
 
   HighsRanging& ranging = model->ranging;
   ranging.rowBoundRangeUpValue_.resize(numTot);
@@ -553,8 +553,8 @@ int HRanging::checkData(HModel* model) {
   reportRangingDataCheck = numTot < 250;
   //#endif
   model->util_reportModelSolution();
-  vector<int> Nflag = model->basis.nonbasicFlag;
-  vector<int> Nmove = model->basis.nonbasicMove;
+  vector<int> Nflag = model->basis.nonbasicFlag_;
+  vector<int> Nmove = model->basis.nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
   vector<double> rowValue(numRow), rowDual(numRow);
   model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);

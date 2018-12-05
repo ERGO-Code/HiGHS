@@ -499,9 +499,9 @@ class HModel {
   vector<int> integerColumn;
 
 struct HighsBasis {
-  vector<int> basicIndex;
-  vector<int> nonbasicFlag;
-  vector<int> nonbasicMove;
+  vector<int> basicIndex_;
+  vector<int> nonbasicFlag_;
+  vector<int> nonbasicMove_;
 };
 
   // Limits on scaling factors
@@ -612,9 +612,9 @@ struct HighsBasis {
   double* getcolUpper() { return &lp.colUpper_[0]; }
   double* getrowLower() { return &lp.rowLower_[0]; }
   double* getrowUpper() { return &lp.rowUpper_[0]; }
-  int* getBaseIndex() { return &basis.basicIndex[0]; }
-  int* getNonbasicFlag() { return &basis.nonbasicFlag[0]; }
-  int* getNonbasicMove() { return &basis.nonbasicMove[0]; }
+  int* getBaseIndex() { return &basis.basicIndex_[0]; }
+  int* getNonbasicFlag() { return &basis.nonbasicFlag_[0]; }
+  int* getNonbasicMove() { return &basis.nonbasicMove_[0]; }
   double* getWorkCost() { return &workCost[0]; }
   double* getWorkDual() { return &workDual[0]; }
   double* getWorkShift() { return &workShift[0]; }
