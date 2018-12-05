@@ -13,6 +13,7 @@ set(sources
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
     simplex/HAPI.cpp
+    simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
     simplex/HDualRow.cpp
@@ -21,10 +22,10 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HModel.cpp
     simplex/HPrimal.cpp
+    simplex/HRanging.cpp
+    simplex/HSort.cpp
     simplex/HTester.cpp
     simplex/HVector.cpp
-    simplex/HCrash.cpp
-    simplex/HSort.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
 )
@@ -44,7 +45,10 @@ set(headers
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsModelBuilder.h
+    presolve/HPresolve.h
+    presolve/HPreData.h
     simplex/HConst.h
+    simplex/HCrash.h
     simplex/HDual.h
     simplex/HDualRow.h
     simplex/HDualRHS.h
@@ -52,25 +56,13 @@ set(headers
     simplex/HMatrix.h
     simplex/HModel.h
     simplex/HPrimal.h
-    simplex/HTester.h
-    simplex/HVector.h
-    simplex/HCrash.h
     simplex/HRandom.h
+    simplex/HRanging.h
     simplex/HSort.h
-    presolve/HPresolve.h
-<<<<<<< HEAD
-=======
-    io/HinOut.h
-    io/HMPSIO.h
-    io/HMpsFF.h
-    io/Filereader.h
-    io/FilereaderLp.h
-    io/FilereaderMps.h
-    io/HighsIO.h
-    io/LoadProblem.h
->>>>>>> master
+    simplex/HTester.h
     simplex/HTimer.h
     simplex/HTimerPre.h
+    simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     HighsOptions.h

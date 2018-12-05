@@ -1,4 +1,5 @@
 #include "HApp.h"
+#include "HRanging.h"
 
 using namespace std;
 
@@ -9,7 +10,13 @@ int solvePlain(HModel &model) {
     //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" <<
     //  endl;
 #endif
-  model.scaleModel();
+  //
+  bool useScaling = false;
+  if (useScaling) {
+    model.scaleModel();
+  } else {
+    printf("!!!NOT SCALING MODEL!!!\n");
+  }
   HDual solver;
 #ifdef HiGHSDEV
   //  cout << "\n Using solvePlain() - Calling solver.solve(&model)\n" <<
@@ -24,6 +31,22 @@ int solvePlain(HModel &model) {
   // Possibly analyse the degeneracy of the primal and dual activities
   // model.util_anPrDuDgn();
   // model.util_reportModelSolution();
+#endif
+#ifdef HiGHSDEV
+  //  cout << "\n Using solvePlain() - Calling ranging.getRangingData(&model)\n" <<
+  //  endl;
+#endif
+  HRanging ranging;
+  int returnCode;
+  returnCode = ranging.computeData(&model);
+#ifdef HiGHSDEV
+  cout << "Return code " << returnCode << " from ranging.computeData\n" << endl;
+#endif
+  if (returnCode) return 0;
+  // Check the ranging data
+  returnCode = ranging.checkData(&model);
+#ifdef HiGHSDEV
+  cout << "Return code " << returnCode << " from ranging.checkData\n" << endl;
 #endif
   return 0;
 }
@@ -332,7 +355,7 @@ int solveSCIP(HModel &model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  model.numTot = model.lp.numCol_ + model.lp.numRow_;
+  //  model.numTot = model.lp.numCol_ + model.lp.numRow_;
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
@@ -362,7 +385,7 @@ int solveSCIP(HModel &model) {
     model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
-    if (model.nonbasicFlag[col]) {
+    if (model.basis.nonbasicFlag_[col]) {
       printf(": nonbasic so don't branch\n");
       continue;
     } else {
@@ -493,8 +516,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.getPrStatus(), model.modelName.c_str(), model.numRow,
-        model.numCol, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+        model.getPrStatus(), model.modelName.c_str(), model.lp.numRow_,
+        model.lp.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -522,8 +545,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.getPrStatus(), model.modelName.c_str(), model.numRow,
-            model.numCol, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+            model.getPrStatus(), model.modelName.c_str(), model.lp.numRow_,
+            model.lp.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
             solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
@@ -573,8 +596,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
       printf(
           "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
           "%10.3f,%20.10e,%10d,%10d,%10d\n",
-          model.getPrStatus(), model.modelName.c_str(), model.numRow,
-          model.numCol, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+          model.getPrStatus(), model.modelName.c_str(), model.lp.numRow_,
+          model.lp.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
           solver.n_ph2_du_it, solver.n_pr_it);
       cout << flush;
 #endif
@@ -631,8 +654,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
 #ifdef HiGHSDEV
   bool rpBnchmk = false;
   if (rpBnchmk) {
-    int numCol = model.numCol;
-    int numRow = model.numRow;
+    int numCol = model.lp.numCol_;
+    int numRow = model.lp.numRow_;
     printf(
         "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
         "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
@@ -859,8 +882,8 @@ int solveExternalPresolve(const char *fileName) {
   // Now we got a loaded model that we will pass to external presolve
   // set up data
   SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0],
-                                         &model.Aindex[0], model.numCol,
-                                         model.numRow, model.Avalue.size());
+                                         &model.Aindex[0], model.lp.numCol_,
+                                         model.lp.numRow_, model.Avalue.size());
 
   // code below makes a row wise copy and passes that
   // HPresolve *pre = new HPresolve();
@@ -868,7 +891,7 @@ int solveExternalPresolve(const char *fileName) {
   // pre->makeARCopy();
   // SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0],
   // &pre->ARindex[0],
-  //                            model.numRow, model.numCol,
+  //                            model.lp.numRow_, model.lp.numCol_,
   //                            model.Avalue.size());
   // problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
 

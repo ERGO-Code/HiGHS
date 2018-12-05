@@ -261,12 +261,23 @@ class HModel {
   // Utilities to get objective, solution and basis: all just copy what's there
   // with no re-evaluation!
   double util_getObjectiveValue();
-  void util_getPrimalDualValues(vector<double>& colValue,
-                                vector<double>& colDual,
-                                vector<double>& rowValue,
-                                vector<double>& rowDual);
-  void util_getBasicIndexNonbasicFlag(vector<int>& bi, vector<int>& nbf);
-
+  
+  void util_getPrimalDualValues(vector<double>& XcolValue,
+                                vector<double>& XcolDual,
+                                vector<double>& XrowValue,
+                                vector<double>& XrowDual
+				);
+  void util_getBasicIndexNonbasicFlag(
+				      vector<int> &XbasicIndex,
+				      vector<int> &XnonbasicFlag
+				      );
+  // Utilities to scale or unscale bounds and costs
+  void util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
+  void util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
+  void util_scaleColCostValue(int iCol, double* XcolCostValue);
+  void util_unscaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
+  void util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
+  void util_unscaleColCostValue(int iCol, double* XcolCostValue);
   // Utilities to get/change costs and bounds
   void util_getCosts(int firstcol, int lastcol, double* XcolCost);
   void util_getColBounds(int firstcol, int lastcol, double* XcolLower,
@@ -349,7 +360,8 @@ class HModel {
                             vector<double>& XcolDual, vector<int>& XcolStatus);
   void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex,
                          vector<double>& XAvalue);
-
+  
+  void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
   void util_anPrDuDgn();
   void util_anMl(const char* message);
@@ -461,8 +473,14 @@ class HModel {
   int mlFg_haveNonbasicDuals;
   int mlFg_haveBasicPrimals;
   //
+  // The dual objective function value is known
+  int mlFg_haveDualObjectiveValue;
+  //
   // The data are fresh from rebuild
   int mlFg_haveFreshRebuild;
+  //
+  // The ranging information is known
+  int mlFg_haveRangingData;
   //
   // Need to know of any saved bounds in the event of scaling being performed
   int mlFg_haveSavedBounds;
@@ -470,17 +488,21 @@ class HModel {
  public:
   // The original model
   HighsLp lp;
+  HighsRanging ranging;
 
-  int numTot;
+  //  int numTot;
   int numInt;
   int problemStatus;
   string modelName;
   vector<double> colScale;
   vector<double> rowScale;
   vector<int> integerColumn;
-  vector<int> basicIndex;
-  vector<int> nonbasicFlag;
-  vector<int> nonbasicMove;
+
+struct HighsBasis {
+  vector<int> basicIndex_;
+  vector<int> nonbasicFlag_;
+  vector<int> nonbasicMove_;
+};
 
   // Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;
@@ -550,8 +572,7 @@ class HModel {
   // initiated
   HMatrix matrix;
   HFactor factor;
-  HVector buffer;
-  HVector bufferLong;
+  HighsBasis basis;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;
@@ -581,7 +602,7 @@ class HModel {
   // structures in the instance of a model
   int getNumRow() { return lp.numRow_; }
   int getNumCol() { return lp.numCol_; }
-  int getNumTot() { return numTot; }
+  int getNumTot() { return lp.numCol_ + lp.numRow_; }//numTot; }
   int getPrStatus() { return problemStatus; }
   int getObjSense() { return lp.sense_; }
   const HMatrix* getMatrix() { return &matrix; }
@@ -591,9 +612,9 @@ class HModel {
   double* getcolUpper() { return &lp.colUpper_[0]; }
   double* getrowLower() { return &lp.rowLower_[0]; }
   double* getrowUpper() { return &lp.rowUpper_[0]; }
-  int* getBaseIndex() { return &basicIndex[0]; }
-  int* getNonbasicFlag() { return &nonbasicFlag[0]; }
-  int* getNonbasicMove() { return &nonbasicMove[0]; }
+  int* getBaseIndex() { return &basis.basicIndex_[0]; }
+  int* getNonbasicFlag() { return &basis.nonbasicFlag_[0]; }
+  int* getNonbasicMove() { return &basis.nonbasicMove_[0]; }
   double* getWorkCost() { return &workCost[0]; }
   double* getWorkDual() { return &workDual[0]; }
   double* getWorkShift() { return &workShift[0]; }

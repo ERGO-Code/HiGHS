@@ -268,7 +268,7 @@ void HinOut::compareData(int lvl) {
 void HinOut::setData(HModel& ptr_model) {
   ptr_model.lp.numCol_ = numCol;
   ptr_model.lp.numRow_ = numRow;
-  ptr_model.numTot = numCol + numRow;
+  //  ptr_model.numTot = numCol + numRow;
   ptr_model.lp.Astart_ = Astart;
   ptr_model.lp.Aindex_ = Aindex;
   ptr_model.lp.Avalue_ = Avalue;

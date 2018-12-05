@@ -18,6 +18,10 @@
 #include "HPrimal.h"
 #include "HTimer.h"
 
+#include "HighsLp.h"
+#include "HighsIO.h"
+#include "HighsOptions.h"
+
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -31,23 +35,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
-#ifdef HiGHSDEV
-  //  printf("model->mlFg_Report() 1\n"); cout << flush; model->mlFg_Report();
-  //  cout << flush;
-#endif
-  // Setup two work buffers in model required for solve()
-  model->buffer.setup(model->lp.numRow_);
-  model->bufferLong.setup(model->lp.numCol_);
-
-  //  printf("model->mlFg_haveEdWt 0 = %d\n", model->mlFg_haveEdWt);cout<<flush;
-
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
-  //  printf("HDual::solve - Calling model->setup_for_solve()\n");cout<<flush;
   model->setup_for_solve();
-
-  //  printf("model->mlFg_haveEdWt 1 = %d\n", model->mlFg_haveEdWt);cout<<flush;
-
   model->problemStatus = LP_Status_Unset;
   model->numberIteration = 0;
 #ifdef HiGHSDEV
@@ -59,11 +49,6 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 #endif
   // Cannot solve box-constrained LPs
   if (model->lp.numRow_ == 0) return;
-#ifdef HiGHSDEV
-    //  printf("model->mlFg_Report() 2\n"); cout << flush; model->mlFg_Report();
-    //  cout << flush;
-#endif
-
   model->timer.reset();
 
   n_ph1_du_it = 0;
@@ -72,10 +57,15 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
   SolveBailout = false;
+
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
+  //  HighsOptions options;
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", options.timeLimit);
+
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
 #ifdef HiGHSDEV
-    printf("Setting TimeLimitValue = %g\n", TimeLimitValue);
+    HighsPrintMessage(HighsMessageType::WARNING, "Changing TimeLimitValue from 0 to %g\n", TimeLimitValue);
 #endif
   }
 
@@ -92,12 +82,12 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
     }
 #ifdef HiGHSDEV
     double bsCond = an_bs_cond(model);
-    printf("Initial basis condition estimate of %11.4g is", bsCond);
+    HighsPrintMessage(HighsMessageType::INFO, "Initial basis condition estimate of %11.4g is", bsCond);
     if (bsCond > 1e12) {
-      printf(" excessive\n");
+      HighsPrintMessage(HighsMessageType::INFO, " excessive\n");
       return;
     } else {
-      printf(" OK\n");
+      HighsPrintMessage(HighsMessageType::INFO, " OK\n");
     }
 #endif
   }
@@ -120,6 +110,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
+      const int numTot = model->getNumTot();
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -194,6 +185,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
+  const int numTot = model->getNumTot();
   for (int i = 0; i < numTot; i++) {
     if (model->getNonbasicFlag()[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
@@ -245,6 +237,11 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
     // printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n",
     // solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
 #endif
+    // When starting a new phase the (updated) dual objective function
+    // value isn't known. Indicate this so that when the value
+    // computed from scratch in build() isn't checked against the the
+    // updated value
+    model->mlFg_haveDualObjectiveValue = 0;
     switch (solvePhase) {
       case 1:
         solve_phase1();
@@ -667,25 +664,18 @@ void HDual::solve_phase2() {
       }
       // invertHint can be true for various reasons see HModel.h
       if (invertHint) break;
-        // Need the dual objective value to check for exceeding the
-        // upper bound set by SCIP, but can't afford to compute it
-        // every iteration!
-        // Killer line for speed of HiGHS on hyper-sparse LPs!
-        // Comment out when not working with SCIP!!
-        //	  model->computeDualObjectiveValue();
 #ifdef HiGHSDEV
-        //      model->computeDualObjectiveValue();
         //      double pr_obj_v = model->computePrObj();
         //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj
         //      = %.11g\n",
         //	     model->numberIteration, pr_obj_v, model->dualObjectiveValue);
 #endif
-      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      if (model->updatedDualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf(
             "HDual::solve_phase2: Objective = %g > %g = "
             "dblOption[DBLOPT_OBJ_UB]\n",
-            model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+            model->updatedDualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;
@@ -789,6 +779,8 @@ void HDual::rebuild() {
     model->timer.recordFinish(HTICK_PERM_WT);
 
     model->timer.recordStart(HTICK_INVERT);
+
+    // Call computeFactor to perform INVERT
     int rankDeficiency = model->computeFactor();
     model->timer.recordFinish(HTICK_INVERT);
 
@@ -825,15 +817,30 @@ void HDual::rebuild() {
   dualRHS.create_infeasList(columnDensity);
   model->timer.recordFinish(HTICK_COLLECT_PR_IFS);
 
+  // Check the objective value maintained by updating against the
+  // value when computed exactly - so long as there is a value to
+  // check against
+  bool checkDualObjectiveValue = model->mlFg_haveDualObjectiveValue;
   // Compute the objective value
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
   model->computeDualObjectiveValue(solvePhase);
+  model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
+
+  if (checkDualObjectiveValue) {
+    double absDualObjectiveError = abs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
+    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, abs(model->dualObjectiveValue));
+    if (rlvDualObjectiveError > 1e-8) {
+      HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
+			absDualObjectiveError, rlvDualObjectiveError);
+    }
+  }
+  model->updatedDualObjectiveValue = model->dualObjectiveValue;
 
 #ifdef HiGHSDEV
-  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  //  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
-  model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
   model->timer.recordStart(HTICK_REPORT_INVERT);
@@ -1055,6 +1062,7 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
+      const int numTot = model->getNumTot();
       if (alw_DSE2Dvx_sw &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
@@ -1342,8 +1350,10 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
+      const int *nonbasicFlag = model->getNonbasicFlag();
       for (int col = 0; col < numCol; col++) {
-        row_ap.array[col] = model->nonbasicFlag[col] * row_ap.array[col];
+        row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
       }
 #ifdef HiGHSDEV
       // Ultra-sparse PRICE is in development
@@ -1756,6 +1766,7 @@ void HDual::iz_dvx_fwk() {
   // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
   const int *NonbasicFlag = model->getNonbasicFlag();
+  const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     //      if (model->getNonbasicFlag()[vr_n])
     //      if (NonbasicFlag[vr_n])
@@ -2268,6 +2279,7 @@ void HDual::an_iz_vr_v() {
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
+  const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     if (model->getNonbasicFlag()[vr_n]) {
       double pr_act_v = model->getWorkValue()[vr_n];
