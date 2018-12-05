@@ -486,18 +486,15 @@ class HModel {
   int mlFg_haveSavedBounds;
 
  public:
-  // The original model
-  HighsLp lp;
-  HighsRanging ranging;
-
-  //  int numTot;
-  int numInt;
   int problemStatus;
   string modelName;
-  vector<double> colScale;
-  vector<double> rowScale;
-  vector<int> integerColumn;
-
+  // Cost column and row scaling factors
+struct HighsScale {
+  double cost_;
+  vector<double> col_;
+  vector<double> row_;
+};
+  
 struct HighsBasis {
   vector<int> basicIndex_;
   vector<int> nonbasicFlag_;
@@ -512,8 +509,6 @@ struct HighsBasis {
   const double maxAlwColScale = maxAlwScale;
   const double minAlwRowScale = minAlwScale;
   const double maxAlwRowScale = maxAlwScale;
-  // Cost scaling factor
-  double costScale;
 
 #ifdef HiGHSDEV
   // Information on large costs
@@ -568,11 +563,15 @@ struct HighsBasis {
   vector<int> intBreak;
   vector<double> dblXpert;
 
+  // The scaled model
+  HighsLp lp;
+  HighsRanging ranging;
   // Part of working model which is only required and populated once a solve is
   // initiated
   HMatrix matrix;
   HFactor factor;
   HighsBasis basis;
+  HighsScale scale;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

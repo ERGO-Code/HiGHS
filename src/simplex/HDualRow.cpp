@@ -333,7 +333,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->workValue[iCol];
     double dlDuObj = workModel->basis.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
-    dlDuObj *= workModel->costScale;
+    dlDuObj *= workModel->scale.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
   /*
@@ -366,7 +366,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
       double dlDual = theta * packValue[i];
       double iColWorkValue = workModel->workValue[iCol];
       double dlDuObj = -iColWorkValue * dlDual;
-      dlDuObj *= workModel->costScale;
+      dlDuObj *= workModel->scale.cost_;
       if (!workModel->nonbasicFlag[iCol])
 	printf("Column %5d: packValue = %11.4g Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g; dlDuObj = %11.4g: DuObj = %11.4g\n", 
 	       iCol, packValue[i], workModel->nonbasicFlag[iCol], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);

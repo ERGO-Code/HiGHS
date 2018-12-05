@@ -60,10 +60,10 @@ int HRanging::computeData(HModel* model) {
 
 
   for (int iRow = 0; iRow < numRow; iRow++) {
-    printf("Row %2d has scale factor %12g\n", iRow, model->rowScale[iRow]);
+    printf("Row %2d has scale factor %12g\n", iRow, model->scale.row_[iRow]);
   }
   for (int iCol = 0; iCol < numCol; iCol++) {
-    printf("Col %2d has scale factor %12g\n", iCol, model->colScale[iCol]);
+    printf("Col %2d has scale factor %12g\n", iCol, model->scale.col_[iCol]);
   }
 
   vector<double> Blower_ = model->baseLower;
@@ -481,14 +481,14 @@ int HRanging::computeData(HModel* model) {
    * Ranging 4.1. Scale back
    * These are internal ranging data values - which are retained with scaling
   for (int j = 0; j < numCol; j++) {
-    c_up_c[j] /= (c_up_c[j] == +H_INF) ? 1 : model->colScale[j];
-    c_dn_c[j] /= (c_dn_c[j] == -H_INF) ? 1 : model->colScale[j];
-    b_up_b[j] *= (b_up_b[j] == +H_INF) ? 1 : model->colScale[j];
-    b_dn_b[j] *= (b_dn_b[j] == +H_INF) ? 1 : model->colScale[j];
+    c_up_c[j] /= (c_up_c[j] == +H_INF) ? 1 : model->scale.col_[j];
+    c_dn_c[j] /= (c_dn_c[j] == -H_INF) ? 1 : model->scale.col_[j];
+    b_up_b[j] *= (b_up_b[j] == +H_INF) ? 1 : model->scale.col_[j];
+    b_dn_b[j] *= (b_dn_b[j] == +H_INF) ? 1 : model->scale.col_[j];
   }
   for (int i = 0, j = numCol; i < numRow; i++, j++) {
-    b_up_b[j] /= (b_up_b[j] == +H_INF) ? 1 : model->rowScale[i];
-    b_dn_b[j] /= (b_dn_b[j] == +H_INF) ? 1 : model->rowScale[i];
+    b_up_b[j] /= (b_up_b[j] == +H_INF) ? 1 : model->scale.row_[i];
+    b_dn_b[j] /= (b_dn_b[j] == +H_INF) ? 1 : model->scale.row_[i];
   }
    */
 
