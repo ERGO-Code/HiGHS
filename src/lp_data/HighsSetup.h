@@ -18,6 +18,7 @@
 
 #include "HApp.h"
 #include "HighsOptions.h"
+#include "HighsModelObject.h"
 #include "cxxopts.hpp"
 
 HModel HighsLpToHModel(const HighsLp& lp);
@@ -32,21 +33,33 @@ class Highs {
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
+  HighsStatus run(const HighsLp& lp, HighsSolution& solution);
 
  private:
+  // each HighsModelObject holds a const ref to its lp_
+  std::vector<HighsModelObject> lps_;
+
   // delete.
   HighsOptions options_;
   // use HighsStringOptions instead for now. Then rename to HighsOptions, once
   // previous one is gone.
   HighsStringOptions options__;
-  HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
+  HighsStatus runSolver(HighsModelObject& model);
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
-  return runSolver(lp, solution);
+HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
+  // Make sure lp is being solved for the first time.
+  if (lps_.size() > 0)
+    return HighsStatus::NotImplemented;
+
+  // Not solved before, so create an instance of HighsModelObject.
+  lps_.push_back(HighsModelObject(lp));
+
+  return runSolver(lps_[0]);
+
+
 
   // todo
   //
@@ -90,7 +103,8 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 
 // The method below runs simplex or ipx solver on the lp.
 
-HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
+HighsStatus Highs::runSolver(HighsModelObject& model) {
+
   // assert(checkLp(lp) == LpError::none);
 
   HighsStatus status;
@@ -98,7 +112,7 @@ HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveSimplex(options_, lp, solution);
+  status = solveSimplex(options_, model);
 #else
   // IPX
   // todo:Check options for simplex-specific options
@@ -376,8 +390,8 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   return HighsStatus::OK;
 }
 
-HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
-                         HighsSolution& solution) {
+HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model) {
+  const HighsLp& lp = highs_model.lp_;
   HModel model;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
@@ -468,5 +482,6 @@ HModel HighsLpToHModel(const HighsLp& lp) {
 
   return model;
 }
+
 
 #endif
