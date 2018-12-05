@@ -15,11 +15,13 @@
 #define LP_DATA_HIGHS_SETUP_H_
 
 #include <iostream>
+#include <memory>
 
 #include "HApp.h"
 #include "HighsOptions.h"
 #include "HighsModelObject.h"
 #include "cxxopts.hpp"
+
 
 HModel HighsLpToHModel(const HighsLp& lp);
 HighsLp HModelToHighsLp(const HModel& model);
@@ -56,49 +58,9 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
 
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
+  lps_[0].hmodel_.push_back(HModel());
 
   return runSolver(lps_[0]);
-
-
-
-  // todo
-  //
-  // if (!options_.presolve) {
-  //  HighsSolution solution;
-  //  return runSolver(lp, solution);
-  //}
-  // return HighsStatus::NotImplemented;
-
-  /*
-   HighsLp reduced_lp;
-
-   // presolve(..) method below should use HPresolve now but should be
-   // possible to use external presolve too. Link with ZIB presolve so clp
-   // is possible later.
-   status = presolve(lp, reduced_lp);
-   checkStatus(status);
-
-   switch (status) {
-      case Status::ProblemReduced: {
-         // Solution reduced_solution;
-         // status = runSolver(reduced_lp, reduced_solution);
-         // checkStatus(status);
-         break;
-      }
-      case Status::ProblemReducedToEmpty:
-         // Problem was reduced to empty so we proceed to postsolve
-         break;
-      default:
-         checkStatus(status);
-   }
-
-   // Postsolve
-   status = postsolve(lp, solution)
-
-   // If needed set up clean up with simplex.
-   */
-
-  return HighsStatus::OK;
 }
 
 // The method below runs simplex or ipx solver on the lp.
@@ -392,7 +354,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
 HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model) {
   const HighsLp& lp = highs_model.lp_;
-  HModel model;
+  HModel& model = highs_model.hmodel_[0];
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
                         &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
