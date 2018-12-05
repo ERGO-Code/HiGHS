@@ -126,8 +126,8 @@ class HModel {
                        const double* XrowUpper, int XnumNz, const int* XAstart,
                        const int* XAindex, const double* XAvalue);
 
-  void loadfromPresolveInfo(const PresolveInfo& info,
-                            const bool postsolve);
+  //void loadfromPresolveInfo(PresolveInfo& info,
+  //                          const bool postsolve);
 
   // Methods which initialise the basis then allocate and populate
   // (where possible) work* arrays and allocate basis* arrays
@@ -154,8 +154,10 @@ class HModel {
   void copy_fromHModelToHPresolve(Presolve* ptr_model);
   void copy_fromHPresolveToHModel(Presolve* ptr_model);
   void copy_fromHPresolveToHModel(Presolve& ptr_model);
+  void copy_fromHPresolveToHModel(const Presolve& ptr_model);
   void copy_fromHPresolveToHModelImplied(Presolve* ptr_model);
   void copy_fromHPresolveToHModelImplied(Presolve& ptr_model);
+  void copy_fromHPresolveToHModelImplied(const Presolve& ptr_model);
   void copy_basisFromPostsolve(Presolve* mod);
   void copy_basisFromPostsolve(Presolve& mod);
 

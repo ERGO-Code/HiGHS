@@ -49,19 +49,19 @@ class Highs {
  public:
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
+  HighsStatus run(const HighsLp& lp, HighsSolution& solution);
 
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
+HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   // todo: handle printing messages with HighsPrintMessage
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
-//  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-  HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
+  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+  //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
 
   // Run solver.
   switch (presolve_status) {
@@ -91,8 +91,8 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   }
 
   // Postsolve. Does nothing if there were no reductions during presolve.
-//  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-  HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
+  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+  //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
   if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
     // todo: add finishing simplex iterations if needed.
   } else {
@@ -103,47 +103,27 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
-  if (info.presolve_ == nullptr || info.lp_ == nullptr)
-    return HighsPresolveStatus::NullError;
-/*
-  // Initialize a new presolve class instance for the LP given in presolve info
-  HPresolve* pre = new HPresolve();
-  int status = pre->presolve();
 
-  switch(status) {
-    case presolve_.stat::Empty:
-      info.status_ = HighsPresolveStatus::Empty;
-      break;
-    case presolve_.stat::Infeasible:
-      info.status_ = HighsPresolveStatus::Infeasible;
-      break;
-    case presolve_.stat::Unbounded:
-      info.status_ = HighsPresolveStatus::Unbounded;
-      break;
-    case presolve_.stat::Unset:
-      info.status_ = HighsPresolveStatus::NotReduced;
-      break;
-  }
-*/
-  return info.presolve_status_;
+  if (info.presolve_.size() == 0 || info.lp_ == nullptr)
+    return HighsPresolveStatus::NullError;
+
+  // Initialize a new presolve class instance for the LP given in presolve info
+  return info.presolve_[0].presolve();
 }
 
 HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
-/*
-  if (info.presolve_ != nullptr && lp_ != nullptr) 
+  if (info.presolve_.size() != 0 && info.lp_ != nullptr) 
   {
-    if (info.reduced_solution_.size() == 0)
-      return HighsPostsolveStatus::ReducedSolutionEmpty; 
-    if (!isSolutionConsistent(*info.lp_, info.reduced_solution_)
+    bool solution_ok = isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
+    if (!solution_ok)
       return HighsPostsolveStatus::ReducedSolutionDimenionsError;
     
     // todo: error handling + see todo in run()
-    pre->postsolve();
+    info.presolve_[0].postsolve();
 
     return HighsPostsolveStatus::SolutionRecovered;
   }
-  return HighsPostsolveStatus:LpOrPresolveObjectMissing;
-*/
+  return HighsPostsolveStatus::LpOrPresolveObjectMissing;
 }
 
 // The method below runs simplex or ipx solver on the lp.

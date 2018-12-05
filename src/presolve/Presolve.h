@@ -33,7 +33,8 @@ enum class HighsPostsolveStatus {
   ReducedSolutionEmpty,
   ReducedSolutionDimenionsError,
   SolutionRecovered,
-  LpOrPresolveObjectMissing
+  LpOrPresolveObjectMissing,
+  NoPostsolve
 };
 
 enum class HighsPresolveStatus {
@@ -51,6 +52,7 @@ class Presolve : public HPreData {
  public:
   Presolve();
   HighsPresolveStatus presolve();
+  HighsPostsolveStatus postsolve();
 
  // todo: clear the public from below. 
   string modelName;
@@ -61,7 +63,6 @@ class Presolve : public HPreData {
   int iKKTcheck;
   int presolve(int print);
 
-  void postsolve();
 
   double objShift;
   void initializeVectors();
@@ -225,6 +226,8 @@ class Presolve : public HPreData {
   string countsFile;
 };
 
+// comment out whole class and see what the issue is.
+
 // Class for easy communication between Presolve and Highs. A single
 // instance of PresolveInfo handles a single presolve execution on one
 // LP.
@@ -233,28 +236,22 @@ class PresolveInfo {
   PresolveInfo() {}
   // option_presolve : 0 means don't presolve.
   PresolveInfo(int option_presolve, const HighsLp& lp) {
-     if (option_presolve) {
-       lp_ = &lp;
-       presolve_ =  new Presolve();
+    if (option_presolve) {
+      lp_ = &lp;
+      presolve_.push_back(Presolve());
      }
    }
 
   HighsLp& getReducedProblem();
   HighsPresolveStatus presolve_status_;
   HighsPostsolveStatus postsolve_status_;
-
-  ~PresolveInfo() {
-    delete presolve_;
-  }
-
  public: 
   // Original problem is lp_.
   const  HighsLp * lp_;
-  Presolve * presolve_;
+  std::vector<Presolve> presolve_;
   HighsLp reduced_lp_;
 
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
 };
-
 #endif /* PRESOLVE_HPRESOLVE_H_ */

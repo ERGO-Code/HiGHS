@@ -27,11 +27,11 @@
 using namespace std;
 
 HighsLp& PresolveInfo::getReducedProblem() {
-  if (presolve_ == nullptr) {
+  if (presolve_.size() == 0) {
     std::cout << "Error during presolve. No presolve initialized." << std::endl;
-  } else if ((presolve_)->status) {
+  } else if (presolve_[0].status) {
     std::cout << "Error during presolve. No reduced LP. status: "
-              << presolve_->status << std::endl;
+              << presolve_[0].status << std::endl;
   } else if (presolve_status_ == HighsPresolveStatus::NotReduced ||
              presolve_status_ == HighsPresolveStatus::Empty) {
     // Clear out reduced_lp_structure.
@@ -39,22 +39,22 @@ HighsLp& PresolveInfo::getReducedProblem() {
     reduced_lp_ = std::move(lp);
     return reduced_lp_;
   } else if (presolve_status_ == HighsPresolveStatus::Reduced) {
-    if (presolve_->numRow == 0 && presolve_->numCol == 0) {
+    if (presolve_[0].numRow == 0 && presolve_[0].numCol == 0) {
       // Reduced problem has been already moved to this.reduced_lp_;
       return reduced_lp_;
     } else {
       // Move vectors so no copying happens. presolve does not need that lp
       // any more.
-      reduced_lp_.numCol_ = presolve_->numCol;
-      reduced_lp_.numRow_ = presolve_->numRow;
-      reduced_lp_.Astart_ = std::move(presolve_->Astart);
-      reduced_lp_.Aindex_ = std::move(presolve_->Aindex);
-      reduced_lp_.Avalue_ = std::move(presolve_->Avalue);
-      reduced_lp_.colCost_ = std::move(presolve_->colCost);
-      reduced_lp_.colLower_ = std::move(presolve_->colLower);
-      reduced_lp_.colUpper_ = std::move(presolve_->colUpper);
-      reduced_lp_.rowLower_ = std::move(presolve_->rowLower);
-      reduced_lp_.rowUpper_ = std::move(presolve_->rowUpper);
+      reduced_lp_.numCol_ = presolve_[0].numCol;
+      reduced_lp_.numRow_ = presolve_[0].numRow;
+      reduced_lp_.Astart_ = std::move(presolve_[0].Astart);
+      reduced_lp_.Aindex_ = std::move(presolve_[0].Aindex);
+      reduced_lp_.Avalue_ = std::move(presolve_[0].Avalue);
+      reduced_lp_.colCost_ = std::move(presolve_[0].colCost);
+      reduced_lp_.colLower_ = std::move(presolve_[0].colLower);
+      reduced_lp_.colUpper_ = std::move(presolve_[0].colUpper);
+      reduced_lp_.rowLower_ = std::move(presolve_[0].rowLower);
+      reduced_lp_.rowUpper_ = std::move(presolve_[0].rowUpper);
 
       reduced_lp_.sense_ = 1;
     }
@@ -2143,7 +2143,8 @@ void Presolve::testAnAR(int post) {
   }
 }
 
-void Presolve::postsolve() {
+// todo: error reporting.
+HighsPostsolveStatus Presolve::postsolve() {
   if (noPostSolve) {
     // set valuePrimal
     for (int i = 0; i < numCol; ++i) {
@@ -2157,7 +2158,7 @@ void Presolve::postsolve() {
       chk.makeKKTCheck();
     }
     // testBasisMatrixSingularity();
-    return;
+    return HighsPostsolveStatus::NoPostsolve;
   }
 
   // For KKT check: first check solver results before we do any postsolve
@@ -2746,6 +2747,7 @@ void Presolve::postsolve() {
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
+  return HighsPostsolveStatus::SolutionRecovered;
 }
 
 void Presolve::setBasisElement(change c) {

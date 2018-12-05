@@ -257,23 +257,23 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
 
   totalTime += timer.getTime();
 }
-
+/*
 void HModel::loadfromPresolveInfo(const PresolveInfo& info,
                                   const bool postsolve) {
   clearModel();
   
-  copy_fromHPresolveToHModel(info.presolve_);
+  copy_fromHPresolveToHModel(info.presolve_[0]);
   initScale();
   initWithLogicalBasis();
   if (!postsolve) {
-    copy_fromHPresolveToHModelImplied(info.presolve_);
+    copy_fromHPresolveToHModelImplied(info.presolve_[0]);
   } else {
 #ifdef HiGHSDEV
     check_load_fromPostsolve();
 #endif 
   }
 }
-
+*/
 void HModel::copy_fromHModelToHPresolve(Presolve *ptr_model) {
   ptr_model->numCol = lp.numCol_;
   ptr_model->numRow = lp.numRow_;
@@ -1877,6 +1877,18 @@ void HModel::copy_fromHPresolveToHModel(Presolve *ptr_model) {
   lp.rowUpper_ = ptr_model->rowUpper;
 
   lp.sense_ = 1;
+}
+
+void HModel::copy_fromHPresolveToHModelImplied(const Presolve &ptr_model) {
+  impliedBoundsPresolve = true;
+  primalColLowerImplied = ptr_model.implColLower;
+  primalColUpperImplied = ptr_model.implColUpper;
+  primalRowLowerImplied = ptr_model.implRowValueLower;
+  primalRowUpperImplied = ptr_model.implRowValueUpper;
+  dualColLowerImplied = ptr_model.implColDualLower;
+  dualColUpperImplied = ptr_model.implColDualUpper;
+  dualRowLowerImplied = ptr_model.implRowDualLower;
+  dualRowUpperImplied = ptr_model.implRowDualUpper;
 }
 
 void HModel::copy_fromHPresolveToHModelImplied(Presolve &ptr_model) {
