@@ -23,6 +23,7 @@
 #include "HTester.h"
 #include "HTimer.h"
 #include "HighsLp.h"
+#include "HighsModelObject.h"
 
 #ifdef EXT_PRESOLVE
 #include "core/Presolve.hpp"
@@ -65,7 +66,6 @@ void printHelp(std::string execName) {
   return;
 }
 
-HighsStatus solveSimplex(const HighsOptions &opt, const HighsLp &lp,
-                         HighsSolution &solution);
+HighsStatus solveSimplex(const HighsOptions &opt, HighsModelObject& highs_model);
 
 #endif /* HAPP_H_ */
