@@ -19,14 +19,15 @@
 #include "HTester.h"
 #include "HTimer.h"
 #include "HighsLp.h"
+#include "HighsModelObject.h"
 
 HModel HighsLpToHModel(const HighsLp& lp);
 HighsLp HModelToHighsLp(const HModel& model);
 
 // Single function to solve an lp according to options and fill
 // solution in solution.
-HighsStatus solveLpWithSimplex(const HighsOptions& opt, const HighsLp& lp,
-                               HighsSolution& solution) {
+HighsStatus solveLpWithSimplex(const HighsOptions& opt, HighsModelObject& highs_model) {
+  const HighsLp& lp = highs_model.lp_;
   HModel model;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
