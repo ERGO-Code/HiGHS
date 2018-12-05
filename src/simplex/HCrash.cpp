@@ -1342,7 +1342,7 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
 
 void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
   model = ptr_model;
-  const int *Astart = &model->Astart[0];
+  const int *Astart = &model->lp.Astart_[0];
   for (int k = 0; k < numRow; k++) {
     int vr_n = model->getBaseIndex()[k];
     if (vr_n < numCol) {

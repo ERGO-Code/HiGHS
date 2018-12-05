@@ -240,6 +240,11 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
     // printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n",
     // solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
 #endif
+    // When starting a new phase the (updated) dual objective function
+    // value isn't known. Indicate this so that when the value
+    // computed from scratch in build() isn't checked against the the
+    // updated value
+    model->mlFg_haveDualObjectiveValue = 0;
     switch (solvePhase) {
       case 1:
         solve_phase1();
@@ -662,25 +667,18 @@ void HDual::solve_phase2() {
       }
       // invertHint can be true for various reasons see HModel.h
       if (invertHint) break;
-        // Need the dual objective value to check for exceeding the
-        // upper bound set by SCIP, but can't afford to compute it
-        // every iteration!
-        // Killer line for speed of HiGHS on hyper-sparse LPs!
-        // Comment out when not working with SCIP!!
-        //	  model->computeDualObjectiveValue();
 #ifdef HiGHSDEV
-        //      model->computeDualObjectiveValue();
         //      double pr_obj_v = model->computePrObj();
         //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj
         //      = %.11g\n",
         //	     model->numberIteration, pr_obj_v, model->dualObjectiveValue);
 #endif
-      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      if (model->updatedDualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf(
             "HDual::solve_phase2: Objective = %g > %g = "
             "dblOption[DBLOPT_OBJ_UB]\n",
-            model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+            model->updatedDualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;
@@ -843,8 +841,7 @@ void HDual::rebuild() {
 
 #ifdef HiGHSDEV
   //  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
-  printf("Checking INVERT in rebuild()\n");
-  model->factor.checkInvert();
+  //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);

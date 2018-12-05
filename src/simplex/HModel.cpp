@@ -4017,8 +4017,8 @@ void HModel::util_reportModelDense() {
   cout << "\n-----cost-----\n";
 
   char buff[16];
-  int lp.colCost_Sz = lp.colCost_.size();
-  for (int i = 0; i < lp.colCost_Sz; i++) {
+  int colCost_Sz = lp.colCost_.size();
+  for (int i = 0; i < colCost_Sz; i++) {
     sprintf(buff, "%2.1g ", lp.colCost_[i]);
     cout << buff;
   }
@@ -4571,8 +4571,8 @@ void HModel::util_anMlLargeCo(const char *message) {
     if (abs(iColCo) > tlLargeCo) {
       numLargeCo++;
       largeCostFlag[iCol] = 1;
-      int lp.numCol_NZ = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
-      if (lp.numCol_NZ == 1) {
+      int numCol_NZ = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
+      if (numCol_NZ == 1) {
         mxLargeSlackCo = max(abs(iColCo), mxLargeSlackCo);
         if (iColLower == 0 && hsol_isInfinity(iColUpper)) {
           numZeInfLargeCoSlack++;
@@ -4587,7 +4587,7 @@ void HModel::util_anMlLargeCo(const char *message) {
           printf(
               "Large cost %6d is %11.4g for column %6d with bounds [%11.4g, "
               "%11.4g] and %2d nonzeros",
-              numLargeCo, iColCo, iCol, iColLower, iColUpper, lp.numCol_NZ);
+              numLargeCo, iColCo, iCol, iColLower, iColUpper, numCol_NZ);
           int elN = lp.Astart_[iCol];
           printf(": Matrix entry %11.4g in row %6d\n", lp.Avalue_[elN],
                  lp.Aindex_[elN]);
@@ -4601,7 +4601,7 @@ void HModel::util_anMlLargeCo(const char *message) {
           printf(
               "Large cost %6d is %11.4g for column %6d with bounds [%11.4g, "
               "%11.4g] and %2d nonzeros\n",
-              numLargeCo, iColCo, iCol, iColLower, iColUpper, lp.numCol_NZ);
+              numLargeCo, iColCo, iCol, iColLower, iColUpper, numCol_NZ);
         }
       }
     }
@@ -4667,17 +4667,17 @@ void HModel::util_anMlSol() {
     double lcColDuAct = -(lp.colCost_[iCol] * costScale) / colScale[iCol];
     for (int en = lp.Astart_[iCol]; en < lp.Astart_[iCol + 1]; en++) {
       int iRow = lp.Aindex_[en];
-      double lp.Avalue_En = lp.Avalue_[en];
-      double unscllp.Avalue_En = lp.Avalue_En / (colScale[iCol] * rowScale[iRow]);
-      sclRowPrAct[iRow] += lp.Avalue_En * value[iCol];
-      rowPrAct[iRow] += unscllp.Avalue_En * value[iCol] * colScale[iCol];
-      //      double lcSum = lcSclColDuAct - lp.Avalue_En*dual[lp.numCol_+iRow];
+      double Avalue_En = lp.Avalue_[en];
+      double unsclAvalue_En = Avalue_En / (colScale[iCol] * rowScale[iRow]);
+      sclRowPrAct[iRow] += Avalue_En * value[iCol];
+      rowPrAct[iRow] += unsclAvalue_En * value[iCol] * colScale[iCol];
+      //      double lcSum = lcSclColDuAct - Avalue_En*dual[lp.numCol_+iRow];
       //      printf("Row %2d: %11.4g - (%11.4g*%11.4g=%11.4g) = %11.4g\n",
-      //      iRow, lcSclColDuAct, lp.Avalue_En, dual[lp.numCol_+iRow],
-      //      lp.Avalue_En*dual[lp.numCol_+iRow], lcSum);
-      lcSclColDuAct -= lp.Avalue_En * dual[lp.numCol_ + iRow];
+      //      iRow, lcSclColDuAct, Avalue_En, dual[lp.numCol_+iRow],
+      //      Avalue_En*dual[lp.numCol_+iRow], lcSum);
+      lcSclColDuAct -= Avalue_En * dual[lp.numCol_ + iRow];
       lcColDuAct -=
-          unscllp.Avalue_En * dual[lp.numCol_ + iRow] * costScale * rowScale[iRow];
+          unsclAvalue_En * dual[lp.numCol_ + iRow] * costScale * rowScale[iRow];
     }
     sclColDuAct[iCol] = lcSclColDuAct;
     colDuAct[iCol] = lcColDuAct;
@@ -4700,19 +4700,19 @@ void HModel::util_anMlSol() {
   int numRpCol = 0;
   int mxRpCol = 100;
   bool rpNoCol = false;
-  int lp.numCol_PrIfs = 0;
+  int numColPrIfs = 0;
   double maxColPrIfs = 0;
   double sumColPrIfs = 0;
   int numSclColPrIfs = 0;
   double maxSclColPrIfs = 0;
   double sumSclColPrIfs = 0;
-  int lp.numCol_DuIfs = 0;
+  int numColDuIfs = 0;
   double maxColDuIfs = 0;
   double sumColDuIfs = 0;
   int numSclColDuIfs = 0;
   double maxSclColDuIfs = 0;
   double sumSclColDuIfs = 0;
-  int lp.numCol_DuRsduEr = 0;
+  int numColDuRsduEr = 0;
   double sumColDuRsduEr = 0;
   double maxColDuRsduEr = 0;
   int numSclColDuRsduEr = 0;
@@ -4817,7 +4817,7 @@ void HModel::util_anMlSol() {
     double colPrIfs = max(
         max(unsclColLower - unsclColValue, unsclColValue - unsclColUpper), 0.0);
     if (colPrIfs > tlPrIfs) {
-      lp.numCol_PrIfs++;
+      numColPrIfs++;
       sumColPrIfs += colPrIfs;
     }
     maxColPrIfs = max(colPrIfs, maxColPrIfs);
@@ -4832,7 +4832,7 @@ void HModel::util_anMlSol() {
     // In unscaled values
     double colDuIfs = sclColDuIfs * costScale / colScale[iCol];
     if (colDuIfs > tlDuIfs) {
-      lp.numCol_DuIfs++;
+      numColDuIfs++;
       sumColDuIfs += colDuIfs;
     }
     maxColDuIfs = max(colDuIfs, maxColDuIfs);
@@ -4868,7 +4868,7 @@ void HModel::util_anMlSol() {
       colDuAct[iCol], -colDual);
       }
       */
-      lp.numCol_DuRsduEr++;
+      numColDuRsduEr++;
       sumColDuRsduEr += colDuRsduEr;
     }
     maxColDuRsduEr = max(colDuRsduEr, maxColDuRsduEr);
@@ -4901,7 +4901,7 @@ void HModel::util_anMlSol() {
   printf(
       "Found %6d unscaled column primal infeasibilities: sum %11.4g; max "
       "%11.4g\n",
-      lp.numCol_PrIfs, sumColPrIfs, maxColPrIfs);
+      numColPrIfs, sumColPrIfs, maxColPrIfs);
   printf(
       "Found %6d   scaled column   dual infeasibilities: sum %11.4g; max "
       "%11.4g\n",
@@ -4909,7 +4909,7 @@ void HModel::util_anMlSol() {
   printf(
       "Found %6d unscaled column   dual infeasibilities: sum %11.4g; max "
       "%11.4g\n",
-      lp.numCol_DuIfs, sumColDuIfs, maxColDuIfs);
+      numColDuIfs, sumColDuIfs, maxColDuIfs);
   printf(
       "Found %6d   scaled column   dual residual errors: sum %11.4g; max "
       "%11.4g\n",
@@ -4917,33 +4917,33 @@ void HModel::util_anMlSol() {
   printf(
       "Found %6d unscaled column   dual residual errors: sum %11.4g; max "
       "%11.4g\n",
-      lp.numCol_DuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
+      numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
 
   printf(
       "grep_AnMlSolIfsRsduEr,Col,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%"
       "d,%g,%g\n",
-      numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs, lp.numCol_PrIfs, sumColPrIfs,
-      maxColPrIfs, numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs, lp.numCol_DuIfs,
+      numSclColPrIfs, sumSclColPrIfs, maxSclColPrIfs, numColPrIfs, sumColPrIfs,
+      maxColPrIfs, numSclColDuIfs, sumSclColDuIfs, maxSclColDuIfs, numColDuIfs,
       sumColDuIfs, maxColDuIfs, numSclColDuRsduEr, sumSclColDuRsduEr,
-      maxSclColDuRsduEr, lp.numCol_DuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
+      maxSclColDuRsduEr, numColDuRsduEr, sumColDuRsduEr, maxColDuRsduEr);
 
   bool rpAllRow = false;
   int numRpRow = 0;
   int mxRpRow = 100;
   bool rpNoRow = false;
-  int lp.numRow_PrIfs = 0;
+  int numRowPrIfs = 0;
   double sumRowPrIfs = 0;
   double maxRowPrIfs = 0;
   int numSclRowPrIfs = 0;
   double sumSclRowPrIfs = 0;
   double maxSclRowPrIfs = 0;
-  int lp.numRow_DuIfs = 0;
+  int numRowDuIfs = 0;
   double maxRowDuIfs = 0;
   double sumRowDuIfs = 0;
   int numSclRowDuIfs = 0;
   double maxSclRowDuIfs = 0;
   double sumSclRowDuIfs = 0;
-  int lp.numRow_PrRsduEr = 0;
+  int numRowPrRsduEr = 0;
   double sumRowPrRsduEr = 0;
   double maxRowPrRsduEr = 0;
   int numSclRowPrRsduEr = 0;
@@ -5031,7 +5031,7 @@ void HModel::util_anMlSol() {
     double rowPrIfs = max(
         max(unsclRowLower - unsclRowValue, unsclRowValue - unsclRowUpper), 0.0);
     if (rowPrIfs > tlPrIfs) {
-      lp.numRow_PrIfs++;
+      numRowPrIfs++;
       sumRowPrIfs += rowPrIfs;
     }
     maxRowPrIfs = max(rowPrIfs, maxRowPrIfs);
@@ -5046,7 +5046,7 @@ void HModel::util_anMlSol() {
     // In unscaled values
     double rowDuIfs = sclRowDuIfs * costScale / rowScale[iRow];
     if (rowDuIfs > tlDuIfs) {
-      lp.numRow_DuIfs++;
+      numRowDuIfs++;
       sumRowDuIfs += rowDuIfs;
     }
     maxRowDuIfs = max(rowDuIfs, maxRowDuIfs);
@@ -5081,7 +5081,7 @@ void HModel::util_anMlSol() {
       rowPrAct[iRow], rowValue);
       }
       */
-      lp.numRow_PrRsduEr++;
+      numRowPrRsduEr++;
       sumRowPrRsduEr += rowPrRsduEr;
     }
     maxRowPrRsduEr = max(rowPrRsduEr, maxRowPrRsduEr);
@@ -5114,7 +5114,7 @@ void HModel::util_anMlSol() {
   printf(
       "Found %6d unscaled    row primal infeasibilities: sum %11.4g; max "
       "%11.4g\n",
-      lp.numRow_PrIfs, sumRowPrIfs, maxRowPrIfs);
+      numRowPrIfs, sumRowPrIfs, maxRowPrIfs);
   printf(
       "Found %6d   scaled    row   dual infeasibilities: sum %11.4g; max "
       "%11.4g\n",
@@ -5122,7 +5122,7 @@ void HModel::util_anMlSol() {
   printf(
       "Found %6d unscaled    row   dual infeasibilities: sum %11.4g; max "
       "%11.4g\n",
-      lp.numRow_DuIfs, sumRowDuIfs, maxRowDuIfs);
+      numRowDuIfs, sumRowDuIfs, maxRowDuIfs);
   printf(
       "Found %6d   scaled    row primal residual errors: sum %11.4g; max "
       "%11.4g\n",
@@ -5130,15 +5130,15 @@ void HModel::util_anMlSol() {
   printf(
       "Found %6d unscaled    row primal residual errors: sum %11.4g; max "
       "%11.4g\n",
-      lp.numRow_PrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
+      numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
 
   printf(
       "grep_AnMlSolIfsRsduEr,Row,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%"
       "d,%g,%g\n",
-      numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs, lp.numRow_PrIfs, sumRowPrIfs,
-      maxRowPrIfs, numSclRowDuIfs, sumSclRowDuIfs, maxSclRowDuIfs, lp.numRow_DuIfs,
+      numSclRowPrIfs, sumSclRowPrIfs, maxSclRowPrIfs, numRowPrIfs, sumRowPrIfs,
+      maxRowPrIfs, numSclRowDuIfs, sumSclRowDuIfs, maxSclRowDuIfs, numRowDuIfs,
       sumRowDuIfs, maxRowDuIfs, numSclRowPrRsduEr, sumSclRowPrRsduEr,
-      maxSclRowPrRsduEr, lp.numRow_PrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
+      maxSclRowPrRsduEr, numRowPrRsduEr, sumRowPrRsduEr, maxRowPrRsduEr);
 
   lcPrObjV *= costScale;
   lcPrObjV += lp.offset_;
