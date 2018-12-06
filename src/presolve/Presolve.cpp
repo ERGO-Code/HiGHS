@@ -26,6 +26,22 @@
 
 using namespace std;
 
+void Presolve::load(const HighsLp& lp) {
+  numCol = lp.numCol_;
+  numRow = lp.numRow_;
+  numTot = numTot;
+  Astart = lp.Astart_;
+  Aindex = lp.Aindex_;
+  Avalue = lp.Avalue_;
+  colCost = lp.colCost_;
+  colLower = lp.colLower_;
+  colUpper = lp.colUpper_;
+  rowLower = lp.rowLower_;
+  rowUpper = lp.rowUpper_;
+
+  modelName = &modelName[0];
+}
+
 HighsLp& PresolveInfo::getReducedProblem() {
   if (presolve_.size() == 0) {
     std::cout << "Error during presolve. No presolve initialized." << std::endl;

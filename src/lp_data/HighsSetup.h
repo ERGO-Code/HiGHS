@@ -123,6 +123,8 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   if (info.presolve_.size() == 0)
     return HighsPresolveStatus::NotReduced;
 
+  info.presolve_[0].load(*(info.lp_));
+
   // Initialize a new presolve class instance for the LP given in presolve info
   return info.presolve_[0].presolve();
 }

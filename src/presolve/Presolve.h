@@ -54,6 +54,7 @@ class Presolve : public HPreData {
   HighsPresolveStatus presolve();
   HighsPostsolveStatus postsolve();
 
+  void load(const HighsLp& lp);
  // todo: clear the public from below. 
   string modelName;
 
