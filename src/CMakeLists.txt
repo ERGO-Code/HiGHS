@@ -43,6 +43,7 @@ set(headers
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsModelBuilder.h
+    lp_data/HighsModelObject.h
     simplex/HApp.h
     simplex/HConst.h
     simplex/HDual.h

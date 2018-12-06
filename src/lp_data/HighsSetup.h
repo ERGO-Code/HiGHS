@@ -15,15 +15,18 @@
 #define LP_DATA_HIGHS_SETUP_H_
 
 #include <iostream>
+#include <memory>
 
 #include "HApp.h"
 #include "HighsLp.h"
 #include "HighsOptions.h"
 #include "Presolve.h"
+#include "HighsModelObject.h"
 #include "cxxopts.hpp"
 
-HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
-                         HighsSolution& solution);
+
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
 
 // Class to set parameters and run HiGHS
 class Highs {
@@ -32,31 +35,39 @@ class Highs {
   explicit Highs(const HighsOptions& opt) : options_(opt){};
   explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
-  // Function to call just presolve. This method does not modify anything
-  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
+  // Function to call just presolve. 
+  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) {
+    // todo: implement, from user's side.
+    return HighsPresolveStatus::NullError;
+  };
 
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
-
- private:
-  // delete.
-  HighsOptions options_;
-  // use HighsStringOptions instead for now. Then rename to HighsOptions, once
-  // previous one is gone.
-  HighsStringOptions options__;
-  HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
-
- public:
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(const HighsLp& lp, HighsSolution& solution);
 
+  // delete.
+  HighsOptions options_;
+
+ private:
+  // each HighsModelObject holds a const ref to its lp_
+  std::vector<HighsModelObject> lps_;
+
+  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
+  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+  HighsStatus runSolver(HighsModelObject& model);
+
+  // use HighsStringOptions instead for now. Then rename to HighsOptions, once
+  // previous one is gone.
+  HighsStringOptions options__;
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   // todo: handle printing messages with HighsPrintMessage
+
+  // Not solved before, so create an instance of HighsModelObject.
+  lps_.push_back(HighsModelObject(lp));
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
@@ -66,12 +77,15 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   // Run solver.
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
-      runSolver(lp, solution);
+      return runSolver(lps_[0]);
       break;
     }
     case HighsPresolveStatus::Reduced: {
       const HighsLp& reduced_lp = presolve_info.getReducedProblem();
-      runSolver(reduced_lp, presolve_info.reduced_solution_);
+      // Add reduced lp object to vector of HighsModelObject,
+      // so the last one in lp_ is the presolved one.
+      lps_.push_back(HighsModelObject(reduced_lp));
+      runSolver(lps_[lps_.size() - 1]);
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -98,14 +112,16 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   } else {
     // todo: handle postsolve errors.
   }
-
   return HighsStatus::OK;
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
 
-  if (info.presolve_.size() == 0 || info.lp_ == nullptr)
+  if (info.lp_ == nullptr)
     return HighsPresolveStatus::NullError;
+
+  if (info.presolve_.size() == 0)
+    return HighsPresolveStatus::NotReduced;
 
   // Initialize a new presolve class instance for the LP given in presolve info
   return info.presolve_[0].presolve();
@@ -127,15 +143,16 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 }
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
-  // assert(checkLp(lp) == LpError::none);
+HighsStatus Highs::runSolver(HighsModelObject& model) {
+
+  assert(checkLp(model.lp_) == HighsInputStatus::OK);
 
   HighsStatus status;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveSimplex(options_, lp, solution);
+  status = solveSimplex(options_, model);
 #else
   // IPX
   // todo:Check options for simplex-specific options
@@ -413,14 +430,5 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
   return HighsStatus::OK;
 }
-// solveLpWithSimplex defined in HApp.h. Only called from here.
-// If you want to call solveSimplex use a Highs instance.
-HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
-                         HighsSolution& solution) {
-  HighsStatus result = solveLpWithSimplex(opt, lp, solution); 
-  return result;
-}
-
-
 
 #endif
