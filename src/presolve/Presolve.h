@@ -52,7 +52,8 @@ class Presolve : public HPreData {
  public:
   Presolve();
   HighsPresolveStatus presolve();
-  HighsPostsolveStatus postsolve();
+  HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
+                                 HighsSolution& recovered_solution);
 
   void load(const HighsLp& lp);
  // todo: clear the public from below. 
@@ -241,7 +242,7 @@ class PresolveInfo {
       lp_ = &lp;
       presolve_.push_back(Presolve());
      }
-   }
+  }
 
   HighsLp& getReducedProblem();
   HighsPresolveStatus presolve_status_;
@@ -252,6 +253,7 @@ class PresolveInfo {
   std::vector<Presolve> presolve_;
   HighsLp reduced_lp_;
 
+  // todo: make reduced one const.
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
 };

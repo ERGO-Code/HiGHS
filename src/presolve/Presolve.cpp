@@ -45,16 +45,10 @@ void Presolve::load(const HighsLp& lp) {
 HighsLp& PresolveInfo::getReducedProblem() {
   if (presolve_.size() == 0) {
     std::cout << "Error during presolve. No presolve initialized." << std::endl;
-  } else if (presolve_[0].status) {
+  } else if (presolve_[0].status != presolve_[0].stat::Reduced) {
     std::cout << "Error during presolve. No reduced LP. status: "
               << presolve_[0].status << std::endl;
-  } else if (presolve_status_ == HighsPresolveStatus::NotReduced ||
-             presolve_status_ == HighsPresolveStatus::Empty) {
-    // Clear out reduced_lp_structure.
-    HighsLp lp;
-    reduced_lp_ = std::move(lp);
-    return reduced_lp_;
-  } else if (presolve_status_ == HighsPresolveStatus::Reduced) {
+  } else {
     if (presolve_[0].numRow == 0 && presolve_[0].numCol == 0) {
       // Reduced problem has been already moved to this.reduced_lp_;
       return reduced_lp_;
@@ -73,6 +67,7 @@ HighsLp& PresolveInfo::getReducedProblem() {
       reduced_lp_.rowUpper_ = std::move(presolve_[0].rowUpper);
 
       reduced_lp_.sense_ = 1;
+      reduced_lp_.nnz_ = reduced_lp_.Avalue_.size();
     }
   }
   return reduced_lp_;
@@ -158,12 +153,16 @@ HighsPresolveStatus Presolve::presolve() {
   switch (result) {
     case stat::Unbounded:
       presolve_status = HighsPresolveStatus::Unbounded;
+      break;
     case stat::Infeasible:
       presolve_status = HighsPresolveStatus::Infeasible;
+      break;
     case stat::Reduced:
       presolve_status = HighsPresolveStatus::Reduced;
+      break;
     case stat::Empty:
       presolve_status = HighsPresolveStatus::Empty;
+      break;
     case stat::Optimal: 
       // reduced problem solution indicated as optimal by
       // the solver.
@@ -1907,6 +1906,7 @@ void Presolve::checkForChanges(int iteration) {
     }
   }
   resizeProblem();
+  status = stat::Reduced;
 }
 
 void Presolve::reportTimes() {
@@ -2160,7 +2160,16 @@ void Presolve::testAnAR(int post) {
 }
 
 // todo: error reporting.
-HighsPostsolveStatus Presolve::postsolve() {
+HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
+                                         HighsSolution& recovered_solution) {
+  colValue = reduced_solution.colValue;
+  colDual = reduced_solution.colDual;
+  rowDual = reduced_solution.rowDual;
+
+  // todo: add nonbasic flag to Solution.
+  // todo: change to new basis info structure later or keep.
+  // basis info and solution should be somehow connected to each other.
+
   if (noPostSolve) {
     // set valuePrimal
     for (int i = 0; i < numCol; ++i) {

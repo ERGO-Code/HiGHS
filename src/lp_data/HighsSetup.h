@@ -73,11 +73,12 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   PresolveInfo presolve_info(options_.presolve, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
   //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
-
+ 
   // Run solver.
+  HighsStatus solve_status;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
-      return runSolver(lps_[0]);
+      solve_status = runSolver(lps_[0]);
       break;
     }
     case HighsPresolveStatus::Reduced: {
@@ -85,7 +86,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
       lps_.push_back(HighsModelObject(reduced_lp));
-      runSolver(lps_[lps_.size() - 1]);
+      solve_status = runSolver(lps_[1]);
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -105,13 +106,21 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   }
 
   // Postsolve. Does nothing if there were no reductions during presolve.
-  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-  //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
-  if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-    // todo: add finishing simplex iterations if needed.
+  if (solve_status == HighsStatus::OK) {
+    presolve_info.reduced_solution_ = lps_[1].solution_;
+    HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+    //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
+    if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+      // todo: add finishing simplex iterations if needed.
+    } else {
+      // todo: handle postsolve errors.
+    }
   } else {
-    // todo: handle postsolve errors.
+    // todo: handle infesible | unbounded instances and solver errors.
+    // either here or at end of runSolver(..)
+    return HighsStatus::NotImplemented;
   }
+  
   return HighsStatus::OK;
 }
 
@@ -137,7 +146,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
       return HighsPostsolveStatus::ReducedSolutionDimenionsError;
     
     // todo: error handling + see todo in run()
-    info.presolve_[0].postsolve();
+    info.presolve_[0].postsolve(info.reduced_solution_, info.recovered_solution_);
 
     return HighsPostsolveStatus::SolutionRecovered;
   }
@@ -158,11 +167,16 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 #else
   // IPX
   // todo:Check options for simplex-specific options
-
+  // use model.lp_, model.solution_ and model.hmodel_ remains empty.
   status = solveIpx(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
+
+  // Check.
+  if (!isSolutionConsistent(model.lp_, model.solution_)) {
+    std::cout << "Error: Inconsistent solution returned from solver.";
+  }
 
   // todo:
   // assert(KktSatisfied(lp, solution));

@@ -22,10 +22,10 @@ void checkStatus(HighsStatus status) {
 }
 
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
-    if (solution.colDual.size() != lp.numCol_ ||
-        solution.colValue.size() > lp.numCol_ ||
-        solution.rowDual.size() > lp.numRow_ ||
-        solution.rowValue.size() > lp.numRow_) return true;
+    if (solution.colDual.size() == lp.numCol_ ||
+        solution.colValue.size() == lp.numCol_ ||
+        solution.rowDual.size() == lp.numRow_ ||
+        solution.rowValue.size() == lp.numRow_) return true;
     return false;
 }
 

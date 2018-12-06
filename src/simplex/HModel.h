@@ -616,4 +616,6 @@ class HModel {
   int* getWorkIntBreak() { return &intBreak[0]; }
 };
 
+void getSolutionFromHModel(const HModel& model, HighsSolution& solution);
+
 #endif /* SIMPLEX_HMODEL_H_ */

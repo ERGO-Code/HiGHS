@@ -5039,4 +5039,13 @@ void HModel::util_anMlSol() {
   }
 }
 
+// Rename appropriately when HModel is split.
+void getSolutionFromHModel(const HModel& model, HighsSolution& solution) {
+  model.util_getPrimalDualValues()
+  model.util_getPrimalDualValues(solution.colPrimal,
+                           solution.colDual,
+                           soltuion.rowPrimal, 
+                           solution.rowDual);
+}
+
 #endif

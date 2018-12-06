@@ -27,8 +27,13 @@ HighsLp HModelToHighsLp(const HModel& model);
 // Single function to solve an lp according to options and fill
 // solution in solution.
 HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model) {
+  // When solveSimplex is called initialize an instance of HModel inside the
+  // HighsModelObject.
+  highs_model.hmodel_.push_back(HModel());
+
+  HModel& model = highs_model.hmodel_[0];
   const HighsLp& lp = highs_model.lp_;
-  HModel model;
+
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
                         &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
@@ -46,10 +51,17 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   solver.solve(&model);
   model.util_reportSolverOutcome("Solve plain");
 
+  // HighsSolution set
+  HighsSolution& solution = highs_model.solution_;
+  highs_model.hmodel_[0].util_getPrimalDualValues(solution.colValue,
+                                                  solution.colDual, 
+                                                  solution.rowValue,
+                                                  solution.rowDual);
 // Start Simplex part:
 /*
 - set up model
 - run, test
+- scaling separately?
 - use crash if needed
 - disassemble rest of jajhall
 - deal with any other options left in jajhall
