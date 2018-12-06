@@ -48,7 +48,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   model->totalInvertTime = 0;
 #endif
   // Cannot solve box-constrained LPs
-  if (model->lp.numRow_ == 0) return;
+  if (model->lpScaled.numRow_ == 0) return;
   model->timer.reset();
 
   n_ph1_du_it = 0;

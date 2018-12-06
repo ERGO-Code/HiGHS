@@ -97,9 +97,9 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
 
 void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
   model = ptr_model;
-  const int *Astart = &model->lp.Astart_[0];
-  const int *Aindex = &model->lp.Aindex_[0];
-  const double *Avalue = &model->lp.Avalue_[0];
+  const int *Astart = &model->lpScaled.Astart_[0];
+  const int *Aindex = &model->lpScaled.Aindex_[0];
+  const double *Avalue = &model->lpScaled.Avalue_[0];
 
   bixby_no_nz_c_co = Crash_Mode == Crash_Mode_BixbyNoNzCCo;
   bixby_no_nz_c_co = false;
@@ -311,8 +311,8 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
 
 bool HCrash::bixby_iz_da(HModel *ptr_model) {
   model = ptr_model;
-  const int *Astart = &model->lp.Astart_[0];
-  const double *Avalue = &model->lp.Avalue_[0];
+  const int *Astart = &model->lpScaled.Astart_[0];
+  const double *Avalue = &model->lpScaled.Avalue_[0];
   const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
@@ -784,8 +784,8 @@ void HCrash::ltssf_u_da(HModel *ptr_model) {
 
 void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
   model = ptr_model;
-  const int *Astart = &model->lp.Astart_[0];
-  const int *Aindex = &model->lp.Aindex_[0];
+  const int *Astart = &model->lpScaled.Astart_[0];
+  const int *Aindex = &model->lpScaled.Aindex_[0];
   // ltssf_rp_r_k();
   for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1]; r_el_n++) {
     int c_n = CrshARindex[r_el_n];
@@ -923,9 +923,9 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
   model = ptr_model;
-  const int *Astart = &model->lp.Astart_[0];
-  const int *Aindex = &model->lp.Aindex_[0];
-  const double *Avalue = &model->lp.Avalue_[0];
+  const int *Astart = &model->lpScaled.Astart_[0];
+  const int *Aindex = &model->lpScaled.Aindex_[0];
+  const double *Avalue = &model->lpScaled.Avalue_[0];
   ;
   int numEl = Astart[numCol];
   // const double *primalColLowerImplied = model->getprimalColLowerImplied();
@@ -1342,7 +1342,7 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
 
 void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
   model = ptr_model;
-  const int *Astart = &model->lp.Astart_[0];
+  const int *Astart = &model->lpScaled.Astart_[0];
   for (int k = 0; k < numRow; k++) {
     int vr_n = model->getBaseIndex()[k];
     if (vr_n < numCol) {

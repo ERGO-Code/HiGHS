@@ -425,22 +425,22 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
+HighsLp HModelToHighsLp(const HModel& model) { return model.lpScaled; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
+  printf("YOU DON'T WANT TO DO THIS!!!\n");
+  model.lpScaled.numCol_ = lp.numCol_;
+  model.lpScaled.numRow_ = lp.numRow_;
 
-  model.lp.numCol_ = lp.numCol_;
-  model.lp.numRow_ = lp.numRow_;
-
-  model.lp.Astart_ = lp.Astart_;
-  model.lp.Aindex_ = lp.Aindex_;
-  model.lp.Avalue_ = lp.Avalue_;
-  model.lp.colCost_ = lp.colCost_;
-  model.lp.colLower_ = lp.colLower_;
-  model.lp.colUpper_ = lp.colUpper_;
-  model.lp.rowLower_ = lp.rowLower_;
-  model.lp.rowUpper_ = lp.rowUpper_;
+  model.lpScaled.Astart_ = lp.Astart_;
+  model.lpScaled.Aindex_ = lp.Aindex_;
+  model.lpScaled.Avalue_ = lp.Avalue_;
+  model.lpScaled.colCost_ = lp.colCost_;
+  model.lpScaled.colLower_ = lp.colLower_;
+  model.lpScaled.colUpper_ = lp.colUpper_;
+  model.lpScaled.rowLower_ = lp.rowLower_;
+  model.lpScaled.rowUpper_ = lp.rowUpper_;
 
   return model;
 }

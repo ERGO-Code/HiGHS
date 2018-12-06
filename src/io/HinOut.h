@@ -38,7 +38,6 @@ class HinOut : public HPreData {
   // data we are getting and printing
   int onumCol;
   int onumRow;
-  int onumTot;
 
   vector<int> oAstart;
   vector<int> oAindex;

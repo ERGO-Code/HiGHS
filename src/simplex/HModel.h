@@ -278,10 +278,10 @@ class HModel {
   void util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
   void util_unscaleColCostValue(int iCol, double* XcolCostValue);
   // Utilities to get/change costs and bounds
-  void util_getCosts(int firstcol, int lastcol, double* XcolCost);
-  void util_getColBounds(int firstcol, int lastcol, double* XcolLower,
+  void util_getCosts(HighsLp lp, int firstcol, int lastcol, double* XcolCost);
+  void util_getColBounds(HighsLp lp, int firstcol, int lastcol, double* XcolLower,
                          double* XcolUpper);
-  void util_getRowBounds(int firstrow, int lastrow, double* XrowLower,
+  void util_getRowBounds(HighsLp lp, int firstrow, int lastrow, double* XrowLower,
                          double* XrowUpper);
   int util_chgObjSense(int Xobjense);
   int util_chgCostsAll(const double* XcolCost);
@@ -320,7 +320,7 @@ class HModel {
                         double* XrowUpper, int* nnonz, int* XARstart,
                         int* XARindex, double* XARvalue);
   void util_changeCoeff(int row, int col, const double newval);
-  void util_getCoeff(int row, int col, double* val);
+  void util_getCoeff(HighsLp lp, int row, int col, double* val);
 
   // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
   // is false
@@ -331,16 +331,15 @@ class HModel {
 
   // Methods for reporting the model, its solution, row and column data and
   // matrix
-  void util_reportModelDa(const char* filename);
-  void util_reportModel();
-  void util_reportModelSolution();
-  void util_reportModelBrief();
-  void util_reportModelDimensions();
-  void util_reportModelObjSense();
+  void util_reportModelDa(HighsLp lp, const char* filename);
+  void util_reportModel(HighsLp lp);
+  void util_reportModelSolution(HighsLp lp);
+  void util_reportModelBrief(HighsLp lp);
+  void util_reportModelDimensions(HighsLp lp);
+  void util_reportModelObjSense(HighsLp lp);
   void util_reportModelStatus();
 #ifdef HiGHSDEV
-  void util_reportModelDense();
-  void util_reportModelMPS(const char* filename);
+  void util_reportModelDense(HighsLp lp);
 #endif
   void util_reportRowVec(int nrow, vector<double>& XrowLower,
                          vector<double>& XrowUpper);
@@ -562,7 +561,7 @@ struct HighsBasis {
   vector<double> dblXpert;
 
   // The scaled model
-  HighsLp lp;
+  HighsLp lpScaled;
   HighsRanging ranging;
   // Part of working model which is only required and populated once a solve is
   // initiated
@@ -597,18 +596,18 @@ struct HighsBasis {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  int getNumRow() { return lp.numRow_; }
-  int getNumCol() { return lp.numCol_; }
-  int getNumTot() { return lp.numCol_ + lp.numRow_; }//numTot; }
+  int getNumRow() { return lpScaled.numRow_; }
+  int getNumCol() { return lpScaled.numCol_; }
+  int getNumTot() { return lpScaled.numCol_ + lpScaled.numRow_; }
   int getPrStatus() { return problemStatus; }
-  int getObjSense() { return lp.sense_; }
+  int getObjSense() { return lpScaled.sense_; }
   const HMatrix* getMatrix() { return &matrix; }
   const HFactor* getFactor() { return &factor; }
-  double* getcolCost() { return &lp.colCost_[0]; }
-  double* getcolLower() { return &lp.colLower_[0]; }
-  double* getcolUpper() { return &lp.colUpper_[0]; }
-  double* getrowLower() { return &lp.rowLower_[0]; }
-  double* getrowUpper() { return &lp.rowUpper_[0]; }
+  double* getcolCost() { return &lpScaled.colCost_[0]; }
+  double* getcolLower() { return &lpScaled.colLower_[0]; }
+  double* getcolUpper() { return &lpScaled.colUpper_[0]; }
+  double* getrowLower() { return &lpScaled.rowLower_[0]; }
+  double* getrowUpper() { return &lpScaled.rowUpper_[0]; }
   int* getBaseIndex() { return &basis.basicIndex_[0]; }
   int* getNonbasicFlag() { return &basis.nonbasicFlag_[0]; }
   int* getNonbasicMove() { return &basis.nonbasicMove_[0]; }

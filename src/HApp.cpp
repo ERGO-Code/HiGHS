@@ -5,7 +5,7 @@ using namespace std;
 
 int solvePlain(HModel &model) {
   model.intOption[INTOPT_PRINT_FLAG] = 1;
-  if (model.intOption[INTOPT_PRINT_FLAG]) model.util_reportModelBrief();
+  if (model.intOption[INTOPT_PRINT_FLAG]) model.util_reportModelBrief(model.lpScaled);
 #ifdef HiGHSDEV
     //  cout << "\n Using solvePlain() - Calling model.scaleModel()\n" <<
     //  endl;
@@ -59,11 +59,11 @@ int solvePlainAPI(HModel &model) {
 
   // Use the arrays read from an MPS file to test the routine to
   // solve a model passed by arrays. First copy the data.
-  int XnumCol = model.lp.numCol_;
-  int XnumRow = model.lp.numRow_;
-  int XnumNz = model.lp.Astart_[model.lp.numCol_];
-  int XobjSense = model.lp.sense_;
-  int XobjOffset = model.lp.offset_;
+  int XnumCol = model.lpScaled.numCol_;
+  int XnumRow = model.lpScaled.numRow_;
+  int XnumNz = model.lpScaled.Astart_[model.lpScaled.numCol_];
+  int XobjSense = model.lpScaled.sense_;
+  int XobjOffset = model.lpScaled.offset_;
   double *XcolCost;
   double *XcolLower;
   double *XcolUpper;
@@ -82,14 +82,14 @@ int solvePlainAPI(HModel &model) {
   XAindex = (int *)malloc(sizeof(int) * XnumNz);
   XAvalue = (double *)malloc(sizeof(double) * XnumNz);
 
-  memcpy(XcolCost, &(model.lp.colCost_[0]), sizeof(double) * model.lp.numCol_);
-  memcpy(XcolLower, &(model.lp.colLower_[0]), sizeof(double) * model.lp.numCol_);
-  memcpy(XcolUpper, &(model.lp.colUpper_[0]), sizeof(double) * model.lp.numCol_);
-  memcpy(XrowLower, &(model.lp.rowLower_[0]), sizeof(double) * model.lp.numRow_);
-  memcpy(XrowUpper, &(model.lp.rowUpper_[0]), sizeof(double) * model.lp.numRow_);
-  memcpy(XAstart, &(model.lp.Astart_[0]), sizeof(int) * (XnumCol + 1));
-  memcpy(XAindex, &(model.lp.Aindex_[0]), sizeof(int) * XnumNz);
-  memcpy(XAvalue, &(model.lp.Avalue_[0]), sizeof(double) * XnumNz);
+  memcpy(XcolCost, &(model.lpScaled.colCost_[0]), sizeof(double) * model.lpScaled.numCol_);
+  memcpy(XcolLower, &(model.lpScaled.colLower_[0]), sizeof(double) * model.lpScaled.numCol_);
+  memcpy(XcolUpper, &(model.lpScaled.colUpper_[0]), sizeof(double) * model.lpScaled.numCol_);
+  memcpy(XrowLower, &(model.lpScaled.rowLower_[0]), sizeof(double) * model.lpScaled.numRow_);
+  memcpy(XrowUpper, &(model.lpScaled.rowUpper_[0]), sizeof(double) * model.lpScaled.numRow_);
+  memcpy(XAstart, &(model.lpScaled.Astart_[0]), sizeof(int) * (XnumCol + 1));
+  memcpy(XAindex, &(model.lpScaled.Aindex_[0]), sizeof(int) * XnumNz);
+  memcpy(XAvalue, &(model.lpScaled.Avalue_[0]), sizeof(double) * XnumNz);
 
   model.clearModel();
 
@@ -258,8 +258,8 @@ int solveSCIP(HModel &model) {
   HighsUtils utils;
 
   // Extract columns numCol-3..numCol-1
-  int FmCol = model.lp.numCol_ - 3;
-  int ToCol = model.lp.numCol_ - 1;
+  int FmCol = model.lpScaled.numCol_ - 3;
+  int ToCol = model.lpScaled.numCol_ - 1;
   int numExtractCols = ToCol - FmCol + 1;
   vector<double> XcolCost;
   vector<double> XcolLower;
@@ -279,8 +279,8 @@ int solveSCIP(HModel &model) {
   //  model.util_reportModel();
 
   // Extract rows numRow-3..numRow-1
-  int FmRow = model.lp.numRow_ - 3;
-  int ToRow = model.lp.numRow_ - 1;
+  int FmRow = model.lpScaled.numRow_ - 3;
+  int ToRow = model.lpScaled.numRow_ - 1;
   int numExtractRows = ToRow - FmRow + 1;
   vector<double> XrowLower;
   vector<double> XrowUpper;
@@ -301,7 +301,7 @@ int solveSCIP(HModel &model) {
 
   // Extract all remaining rows
   FmRow = 0;
-  ToRow = model.lp.numRow_ - 1;
+  ToRow = model.lpScaled.numRow_ - 1;
   int num0ExtractRows = ToRow - FmRow + 1;
   vector<double> X0rowLower;
   vector<double> X0rowUpper;
@@ -320,7 +320,7 @@ int solveSCIP(HModel &model) {
 
   // Extract all remaining columns
   FmCol = 0;
-  ToCol = model.lp.numCol_ - 1;
+  ToCol = model.lpScaled.numCol_ - 1;
   int num0ExtractCols = ToCol - FmCol + 1;
   vector<double> X0colCost;
   vector<double> X0colLower;
@@ -356,24 +356,24 @@ int solveSCIP(HModel &model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  //  model.numTot = model.lp.numCol_ + model.lp.numRow_;
+  //  model.numTot = model.lpScaled.numCol_ + model.lpScaled.numRow_;
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
-  model.util_reportModelSolution();
+  model.util_reportModelSolution(model.lpScaled);
   model.util_reportSolverOutcome("SCIP 1");
 
-  vector<double> colPrimal(model.lp.numCol_);
-  vector<double> colDual(model.lp.numCol_);
-  vector<double> colLower(model.lp.numCol_);
-  vector<double> colUpper(model.lp.numCol_);
-  vector<double> rowPrimal(model.lp.numRow_);
-  vector<double> rowDual(model.lp.numRow_);
-  vector<double> rowLower(model.lp.numRow_);
-  vector<double> rowUpper(model.lp.numRow_);
+  vector<double> colPrimal(model.lpScaled.numCol_);
+  vector<double> colDual(model.lpScaled.numCol_);
+  vector<double> colLower(model.lpScaled.numCol_);
+  vector<double> colUpper(model.lpScaled.numCol_);
+  vector<double> rowPrimal(model.lpScaled.numRow_);
+  vector<double> rowDual(model.lpScaled.numRow_);
+  vector<double> rowLower(model.lpScaled.numRow_);
+  vector<double> rowUpper(model.lpScaled.numRow_);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(0, model.lp.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(0, model.lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(model.lpScaled, 0, model.lpScaled.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(model.lpScaled, 0, model.lpScaled.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -382,8 +382,8 @@ int solveSCIP(HModel &model) {
   double nw_colUpper;
 
   int num_resolve = 0;
-  for (int col = 0; col < model.lp.numCol_; col++) {
-    model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
+  for (int col = 0; col < model.lpScaled.numCol_; col++) {
+    model.util_getColBounds(model.lpScaled, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
     if (model.basis.nonbasicFlag_[col]) {
@@ -471,7 +471,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
   printf("solvePlainJAJH: with_presolve = %d\n", with_presolve);
   if (with_presolve) {
     // Check size
-    if (model.lp.numRow_ == 0) return 1;
+    if (model.lpScaled.numRow_ == 0) return 1;
     HPresolve *pre = new HPresolve();
     model.copy_fromHModelToHPresolve(pre);
     setupTime += model.timer.getTime();
@@ -517,8 +517,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.getPrStatus(), model.modelName.c_str(), model.lp.numRow_,
-        model.lp.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+        model.getPrStatus(), model.modelName.c_str(), model.lpScaled.numRow_,
+        model.lpScaled.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -546,8 +546,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.getPrStatus(), model.modelName.c_str(), model.lp.numRow_,
-            model.lp.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+            model.getPrStatus(), model.modelName.c_str(), model.lpScaled.numRow_,
+            model.lpScaled.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
             solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
@@ -577,7 +577,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
       // Save the solved results
       model.totalTime += model.timer.getTime();
 #ifdef HiGHSDEV
-      model.util_reportModelSolution();
+      model.util_reportModelSolution(model.lpScaled);
 #endif
 
 #ifdef HiGHSDEV
@@ -597,8 +597,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
       printf(
           "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
           "%10.3f,%20.10e,%10d,%10d,%10d\n",
-          model.getPrStatus(), model.modelName.c_str(), model.lp.numRow_,
-          model.lp.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+          model.getPrStatus(), model.modelName.c_str(), model.lpScaled.numRow_,
+          model.lpScaled.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
           solver.n_ph2_du_it, solver.n_pr_it);
       cout << flush;
 #endif
@@ -655,8 +655,8 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
 #ifdef HiGHSDEV
   bool rpBnchmk = false;
   if (rpBnchmk) {
-    int numCol = model.lp.numCol_;
-    int numRow = model.lp.numRow_;
+    int numCol = model.lpScaled.numCol_;
+    int numRow = model.lpScaled.numRow_;
     printf(
         "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
         "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
@@ -759,7 +759,7 @@ int solvePlainExperiments(const char *filename) {
   RtCd = model.load_fromMPS(filename);
   if (RtCd) return RtCd;
   // Check size
-  if (model.lp.numRow_ == 0) return 1;
+  if (model.lpScaled.numRow_ == 0) return 1;
 
   double time1;
   double obj1 = presolve(model, time1);
@@ -883,8 +883,8 @@ int solveExternalPresolve(const char *fileName) {
   // Now we got a loaded model that we will pass to external presolve
   // set up data
   SparseStorage<double> matrix_transpose(&model.Avalue[0], &model.Astart[0],
-                                         &model.Aindex[0], model.lp.numCol_,
-                                         model.lp.numRow_, model.Avalue.size());
+                                         &model.Aindex[0], model.lpScaled.numCol_,
+                                         model.lpScaled.numRow_, model.Avalue.size());
 
   // code below makes a row wise copy and passes that
   // HPresolve *pre = new HPresolve();
@@ -892,7 +892,7 @@ int solveExternalPresolve(const char *fileName) {
   // pre->makeARCopy();
   // SparseStorage<double> matrix(&pre->ARvalue[0], &pre->ARstart[0],
   // &pre->ARindex[0],
-  //                            model.lp.numRow_, model.lp.numCol_,
+  //                            model.lpScaled.numRow_, model.lpScaled.numCol_,
   //                            model.Avalue.size());
   // problem.setConstraintMatrix(matrix, model.rowLower, model.rowUpper);
 
