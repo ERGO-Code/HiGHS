@@ -2,6 +2,7 @@
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
 #include "HighsLp.h"
+#include "HModel.h"
 // include Sensitivity(or Ranging) header
 
 // Class to communicate data between the simplex solver and the class
@@ -13,6 +14,10 @@ public:
 
   const HighsLp& lp_;
   HighsSolution solution_;
+
+  // the vector below either contains one vector or zero.
+  std::vector<HModel> hmodel_;
+
 };
 
 #endif // LP_DATA_HIGHS_MODEL_OBJECT_H_

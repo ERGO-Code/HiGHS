@@ -15,6 +15,7 @@
 #define LP_DATA_HIGHS_SETUP_H_
 
 #include <iostream>
+#include <memory>
 
 #include "HApp.h"
 #include "HighsLp.h"
@@ -23,6 +24,10 @@
 #include "HighsModelObject.h"
 #include "cxxopts.hpp"
 
+
+HModel HighsLpToHModel(const HighsLp& lp);
+HighsLp HModelToHighsLp(const HModel& model);
+
 // Class to set parameters and run HiGHS
 class Highs {
  public:
@@ -30,11 +35,12 @@ class Highs {
   explicit Highs(const HighsOptions& opt) : options_(opt){};
   explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
-  // Function to call just presolve. This method does not modify anything
-  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) const;
+  // Function to call just presolve. 
+  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) {
+    // todo: implement, from user's side.
+    return HighsPresolveStatus::NullError;
+  };
 
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(const HighsLp& lp, HighsSolution& solution);
@@ -45,29 +51,28 @@ class Highs {
 
   // delete.
   HighsOptions options_;
+
+ public:
+  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
+  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+  HighsStatus runSolver(HighsModelObject& model);
+
   // use HighsStringOptions instead for now. Then rename to HighsOptions, once
   // previous one is gone.
   HighsStringOptions options__;
-
- public:
-  // The public method run(lp, solution) calls runSolver to solve problem before
-  // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
-
-  HighsStatus runSolver(HighsModelObject& model);
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
+HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   // Make sure lp is being solved for the first time.
   if (lps_.size() > 0)
     return HighsStatus::NotImplemented;
 
   // todo: handle printing messages with HighsPrintMessage
-/*
+
   // Not solved before, so create an instance of HighsModelObject.
-  lps_.push_back(HighsModelObject(lps));
+  lps_.push_back(HighsModelObject(lp));
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
@@ -77,15 +82,15 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   // Run solver.
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
-      return runSolver(lp_[0]);
+      return runSolver(lps_[0]);
       break;
     }
     case HighsPresolveStatus::Reduced: {
       const HighsLp& reduced_lp = presolve_info.getReducedProblem();
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
-      lp_.push_back(HighsModelObject(reduced_lp));
-      runSolver(lp_[lp._.size() - 1], presolve_info.reduced_solution_);
+      lps_.push_back(HighsModelObject(reduced_lp));
+      runSolver(lps_[lps_.size() - 1]);
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -112,7 +117,6 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
   } else {
     // todo: handle postsolve errors.
   }
-*/
   return HighsStatus::OK;
 }
 
