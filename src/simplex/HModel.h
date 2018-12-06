@@ -24,6 +24,7 @@
 #include "HTimer.h"
 #include "HVector.h"
 #include "HighsLp.h"
+#include "HSimplexInfo.h"
 
 #include <sstream>
 #include <string>
@@ -559,7 +560,6 @@ struct HighsBasis {
   vector<double> baseValue;
 
   // Associated data of original model
-  vector<int> workRowPart;  // Row partition
   vector<int> intBreak;
   vector<double> dblXpert;
 
