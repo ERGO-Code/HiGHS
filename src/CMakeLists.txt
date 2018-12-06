@@ -10,6 +10,7 @@ set(sources
     io/HToyIO.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsModelBuilder.cpp
+    lp_data/HighsUtils.cpp
     presolve/HPresolve.cpp
     presolve/HPreData.cpp
     simplex/HAPI.cpp
@@ -45,6 +46,7 @@ set(headers
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsModelBuilder.h
+    lp_data/HighsUtils.h
     presolve/HPresolve.h
     presolve/HPreData.h
     simplex/HConst.h
@@ -58,6 +60,7 @@ set(headers
     simplex/HPrimal.h
     simplex/HRandom.h
     simplex/HRanging.h
+    simplex/HSimplex.h
     simplex/HSort.h
     simplex/HTester.h
     simplex/HTimer.h

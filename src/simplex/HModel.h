@@ -24,7 +24,8 @@
 #include "HTimer.h"
 #include "HVector.h"
 #include "HighsLp.h"
-#include "HSimplexInfo.h"
+#include "HighsUtils.h"
+#include "HSimplex.h"
 
 #include <sstream>
 #include <string>
@@ -243,9 +244,6 @@ class HModel {
   // Esoterica!
   // Initialise the random vectors required by hsol
   void initRandomVec();
-
-  // Logical check of double being +Infinity
-  bool hsol_isInfinity(double val);
 
   // Shift the objective
   void shiftObjectiveValue(double shift);

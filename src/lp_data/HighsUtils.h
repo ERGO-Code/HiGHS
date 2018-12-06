@@ -7,18 +7,20 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HSimplex.h
+/**@file lp_data/HUtils.h
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HSIMPLEX_H_
-#define SIMPLEX_HSIMPLEX_H_
+#ifndef LP_DATA_HIGHSUTILS_H_
+#define LP_DATA_HIGHSUTILS_H_
 
-#include <vector>
+#include "HConst.h"
 
-class HSimplex {
+class HighsUtils {
  public:
 
+  // Logical check of double being +Infinity
+  bool highs_isInfinity(double val);
 
 };
-#endif // SIMPLEX_HSIMPLEX_H_
+#endif // LP_DATA_HIGHSUTILS_H_

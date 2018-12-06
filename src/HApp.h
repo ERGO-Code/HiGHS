@@ -23,6 +23,7 @@
 #include "HTester.h"
 #include "HTimer.h"
 #include "HighsLp.h"
+#include "HighsUtils.h"
 #include "HighsModelObject.h"
 
 #ifdef EXT_PRESOLVE

@@ -7,18 +7,13 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HSimplex.h
- * @brief 
+/**@file lp_data/HighsUtils.cpp
+ * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HSIMPLEX_H_
-#define SIMPLEX_HSIMPLEX_H_
+#include "HighsUtils.h"
 
-#include <vector>
-
-class HSimplex {
- public:
-
-
-};
-#endif // SIMPLEX_HSIMPLEX_H_
+bool HighsUtils::highs_isInfinity(double val) {
+  if (val >= HIGHS_CONST_INF) return true;
+  return false;
+}

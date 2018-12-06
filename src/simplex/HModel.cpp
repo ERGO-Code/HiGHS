@@ -1066,13 +1066,14 @@ void HModel::rp_basis() {
 }
 
 int HModel::get_nonbasicMove(int var) {
+  HighsUtils utils;
   const int numTot = getNumTot();
   //  printf("Calling get_nonbasicMove with var = %2d; numTot = %2d\n", var,
   //  numTot); cout<<flush;
   assert(var >= 0);
   assert(var < numTot);
-  if (!hsol_isInfinity(-workLower[var])) {
-    if (!hsol_isInfinity(workUpper[var])) {
+  if (!utils.highs_isInfinity(-workLower[var])) {
+    if (!utils.highs_isInfinity(workUpper[var])) {
       // Finite lower and upper bounds so nonbasic move depends on whether they
       // are equal
       if (workLower[var] == workUpper[var])
@@ -1087,7 +1088,7 @@ int HModel::get_nonbasicMove(int var) {
   } else
       // Infinite lower bound so nonbasic move depends on whether the upper
       // bound is finite
-      if (!hsol_isInfinity(workUpper[var]))
+      if (!utils.highs_isInfinity(workUpper[var]))
     // Finite upper bound so nonbasic move is down (from upper bound)
     return NONBASIC_MOVE_DN;
   // Infinite upper bound so free variable: nonbasic move is zero
@@ -1095,6 +1096,7 @@ int HModel::get_nonbasicMove(int var) {
 }
 
 bool HModel::workArrays_OK(int phase) {
+  HighsUtils utils;
   //  printf("Called workArrays_OK(%d)\n", phase);cout << flush;
   bool ok = true;
   // Only check phase 2 bounds: others will have been set by solve() so can be
@@ -1102,7 +1104,7 @@ bool HModel::workArrays_OK(int phase) {
   if (phase == 2) {
     for (int col = 0; col < lp.numCol_; ++col) {
       int var = col;
-      if (!hsol_isInfinity(-workLower[var])) {
+      if (!utils.highs_isInfinity(-workLower[var])) {
         ok = workLower[var] == lp.colLower_[col];
         if (!ok) {
           printf("For col %d, workLower should be %g but is %g\n", col,
@@ -1110,7 +1112,7 @@ bool HModel::workArrays_OK(int phase) {
           return ok;
         }
       }
-      if (!hsol_isInfinity(workUpper[var])) {
+      if (!utils.highs_isInfinity(workUpper[var])) {
         ok = workUpper[var] == lp.colUpper_[col];
         if (!ok) {
           printf("For col %d, workUpper should be %g but is %g\n", col,
@@ -1121,7 +1123,7 @@ bool HModel::workArrays_OK(int phase) {
     }
     for (int row = 0; row < lp.numRow_; ++row) {
       int var = lp.numCol_ + row;
-      if (!hsol_isInfinity(-workLower[var])) {
+      if (!utils.highs_isInfinity(-workLower[var])) {
         ok = workLower[var] == -lp.rowUpper_[row];
         if (!ok) {
           printf("For row %d, workLower should be %g but is %g\n", row,
@@ -1129,7 +1131,7 @@ bool HModel::workArrays_OK(int phase) {
           return ok;
         }
       }
-      if (!hsol_isInfinity(workUpper[var])) {
+      if (!utils.highs_isInfinity(workUpper[var])) {
         ok = workUpper[var] == -lp.rowLower_[row];
         if (!ok) {
           printf("For row %d, workUpper should be %g but is %g\n", row,
@@ -1200,6 +1202,7 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK() {
 }
 
 bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
+  HighsUtils utils;
   const int numTot = getNumTot();
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
@@ -1210,8 +1213,8 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
   // Make sure we're not checking a basic variable
   if (!basis.nonbasicFlag_[var]) return true;
   bool ok;
-  if (!hsol_isInfinity(-workLower[var])) {
-    if (!hsol_isInfinity(workUpper[var])) {
+  if (!utils.highs_isInfinity(-workLower[var])) {
+    if (!utils.highs_isInfinity(workUpper[var])) {
       // Finite lower and upper bounds so nonbasic move depends on whether they
       // are equal
       if (workLower[var] == workUpper[var]) {
@@ -1288,7 +1291,7 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
     }
   } else {
     // Infinite lower bound
-    if (!hsol_isInfinity(workUpper[var])) {
+    if (!utils.highs_isInfinity(workUpper[var])) {
       ok = basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
         printf(
@@ -1468,6 +1471,7 @@ void HModel::scaleModel() {
     return;
   }
 
+  HighsUtils utils;
   // Allow a switch to/from the original scaling rules
   bool originalScaling = true;
   bool alwCostScaling = true;
@@ -1620,12 +1624,12 @@ void HModel::scaleModel() {
     // Model has saved bounds which must also be scaled so they are consistent
     // when recovered
     for (int col = 0; col < lp.numCol_; col++) {
-      if (!hsol_isInfinity(-SvColLower[col])) SvColLower[col] *= scale.col_[col];
-      if (!hsol_isInfinity(SvColUpper[col])) SvColUpper[col] *= scale.col_[col];
+      if (!utils.highs_isInfinity(-SvColLower[col])) SvColLower[col] *= scale.col_[col];
+      if (!utils.highs_isInfinity(SvColUpper[col])) SvColUpper[col] *= scale.col_[col];
     }
     for (int row = 0; row < lp.numRow_; row++) {
-      if (!hsol_isInfinity(-SvRowLower[row])) SvRowLower[row] *= scale.row_[row];
-      if (!hsol_isInfinity(SvRowUpper[row])) SvRowUpper[row] *= scale.row_[row];
+      if (!utils.highs_isInfinity(-SvRowLower[row])) SvRowLower[row] *= scale.row_[row];
+      if (!utils.highs_isInfinity(SvRowUpper[row])) SvRowUpper[row] *= scale.row_[row];
     }
   }
   // Deduce the consequences of scaling the LP
@@ -2123,6 +2127,7 @@ void HModel::initPh2RowBound(int firstrow, int lastrow) {
 }
 
 void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
+  HighsUtils utils;
   // Initialise workValue and nonbasicMove from nonbasicFlag and
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
@@ -2139,9 +2144,9 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
         // Fixed
         workValue[var] = workLower[var];
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
-      } else if (!hsol_isInfinity(-workLower[var])) {
+      } else if (!utils.highs_isInfinity(-workLower[var])) {
         // Finite lower bound so boxed or lower
-        if (!hsol_isInfinity(workUpper[var])) {
+        if (!utils.highs_isInfinity(workUpper[var])) {
           // Finite upper bound so boxed
           if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
             // Set at lower
@@ -2159,7 +2164,7 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
           workValue[var] = workLower[var];
           basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
         }
-      } else if (!hsol_isInfinity(workUpper[var])) {
+      } else if (!utils.highs_isInfinity(workUpper[var])) {
         // Upper
         workValue[var] = workUpper[var];
         basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
@@ -2497,9 +2502,10 @@ int HModel::handleRankDeficiency() {
 }
 
 int HModel::setSourceOutFmBd(const int columnOut) {
+  HighsUtils utils;
   int sourceOut = 0;
   if (workLower[columnOut] != workUpper[columnOut]) {
-    if (!hsol_isInfinity(-workLower[columnOut])) {
+    if (!utils.highs_isInfinity(-workLower[columnOut])) {
       // Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
       sourceOut = -1;
       //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
@@ -2508,7 +2514,7 @@ int HModel::setSourceOutFmBd(const int columnOut) {
     } else {
       // Infinite LB so sourceOut = 1 ensures value set to UB
       sourceOut = 1;
-      if (!hsol_isInfinity(workUpper[columnOut])) {
+      if (!utils.highs_isInfinity(workUpper[columnOut])) {
         // Free variable => trouble!
         printf("TROUBLE: variable %d leaving the basis is free!\n", columnOut);
       }
@@ -2666,6 +2672,7 @@ void HModel::check_load_fromPostsolve() {
 #endif
 
 int HModel::writeToMPS(const char *filename) {
+  HighsUtils utils;
   vector<double> unsclAvalue_ = lp.Avalue_;
   vector<double> unsclColCost = lp.colCost_;
   vector<double> unsclColLower = lp.colLower_;
@@ -2675,19 +2682,19 @@ int HModel::writeToMPS(const char *filename) {
 
   for (int r_n = 0; r_n < lp.numRow_; r_n++) {
     unsclRowLower[r_n] =
-        (hsol_isInfinity(-lp.rowLower_[r_n]) ? lp.rowLower_[r_n]
+        (utils.highs_isInfinity(-lp.rowLower_[r_n]) ? lp.rowLower_[r_n]
                                          : lp.rowLower_[r_n] / scale.row_[r_n]);
     unsclRowUpper[r_n] =
-        (hsol_isInfinity(lp.rowUpper_[r_n]) ? lp.rowUpper_[r_n]
+        (utils.highs_isInfinity(lp.rowUpper_[r_n]) ? lp.rowUpper_[r_n]
                                         : lp.rowUpper_[r_n] / scale.row_[r_n]);
   }
   for (int c_n = 0; c_n < lp.numCol_; c_n++) {
     unsclColCost[c_n] = lp.colCost_[c_n] / scale.col_[c_n];
     unsclColLower[c_n] =
-        (hsol_isInfinity(-lp.colLower_[c_n]) ? lp.colLower_[c_n]
+        (utils.highs_isInfinity(-lp.colLower_[c_n]) ? lp.colLower_[c_n]
                                          : lp.colLower_[c_n] * scale.col_[c_n]);
     unsclColUpper[c_n] =
-        (hsol_isInfinity(lp.colUpper_[c_n]) ? lp.colUpper_[c_n]
+        (utils.highs_isInfinity(lp.colUpper_[c_n]) ? lp.colUpper_[c_n]
                                         : lp.colUpper_[c_n] * scale.col_[c_n]);
     for (int el_n = lp.Astart_[c_n]; el_n < lp.Astart_[c_n + 1]; el_n++) {
       int r_n = lp.Aindex_[el_n];
@@ -2716,12 +2723,6 @@ void HModel::initRandomVec() {
   }
   dblXpert.resize(numTot);
   for (int i = 0; i < numTot; i++) dblXpert[i] = random.dblRandom();
-}
-
-// Logical check of double being +Infinity
-bool HModel::hsol_isInfinity(double val) {
-  if (val >= HSOL_CONST_INF) return true;
-  return false;
 }
 
 void HModel::shiftObjectiveValue(double shift) {
@@ -2761,14 +2762,16 @@ double HModel::util_getObjectiveValue() { return dualObjectiveValue; }
 
 // Scale a pair of row bound values
 void HModel::util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue) {
-  (*XrowLowerValue) = (hsol_isInfinity(-(*XrowLowerValue)) ? (*XrowLowerValue): (*XrowLowerValue)*scale.row_[iRow]);
-  (*XrowUpperValue) = (hsol_isInfinity( (*XrowUpperValue)) ? (*XrowUpperValue): (*XrowUpperValue)*scale.row_[iRow]);
+  HighsUtils utils;
+  (*XrowLowerValue) = (utils.highs_isInfinity(-(*XrowLowerValue)) ? (*XrowLowerValue): (*XrowLowerValue)*scale.row_[iRow]);
+  (*XrowUpperValue) = (utils.highs_isInfinity( (*XrowUpperValue)) ? (*XrowUpperValue): (*XrowUpperValue)*scale.row_[iRow]);
 }
 
 // Scale a pair of column bound values
 void HModel::util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue) {
-  (*XcolLowerValue) = (hsol_isInfinity(-(*XcolLowerValue)) ? (*XcolLowerValue): (*XcolLowerValue)/scale.col_[iCol]);
-  (*XcolUpperValue) = (hsol_isInfinity( (*XcolUpperValue)) ? (*XcolUpperValue): (*XcolUpperValue)/scale.col_[iCol]);
+  HighsUtils utils;
+  (*XcolLowerValue) = (utils.highs_isInfinity(-(*XcolLowerValue)) ? (*XcolLowerValue): (*XcolLowerValue)/scale.col_[iCol]);
+  (*XcolUpperValue) = (utils.highs_isInfinity( (*XcolUpperValue)) ? (*XcolUpperValue): (*XcolUpperValue)/scale.col_[iCol]);
 }
 
 // Scale a column cost
@@ -2778,14 +2781,16 @@ void HModel::util_scaleColCostValue(int iCol, double* XcolCostValue) {
 
 // Unscale a pair of row bound values
 void HModel::util_unscaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue) {
-  (*XrowLowerValue) = (hsol_isInfinity(-(*XrowLowerValue)) ? (*XrowLowerValue): (*XrowLowerValue)/scale.row_[iRow]);
-  (*XrowUpperValue) = (hsol_isInfinity( (*XrowUpperValue)) ? (*XrowUpperValue): (*XrowUpperValue)/scale.row_[iRow]);
+  HighsUtils utils;
+  (*XrowLowerValue) = (utils.highs_isInfinity(-(*XrowLowerValue)) ? (*XrowLowerValue): (*XrowLowerValue)/scale.row_[iRow]);
+  (*XrowUpperValue) = (utils.highs_isInfinity( (*XrowUpperValue)) ? (*XrowUpperValue): (*XrowUpperValue)/scale.row_[iRow]);
 }
 
 // Unscale a pair of column bound values
 void HModel::util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue) {
-  (*XcolLowerValue) = (hsol_isInfinity(-(*XcolLowerValue)) ? (*XcolLowerValue): (*XcolLowerValue)*scale.col_[iCol]);
-  (*XcolUpperValue) = (hsol_isInfinity( (*XcolUpperValue)) ? (*XcolUpperValue): (*XcolUpperValue)*scale.col_[iCol]);
+  HighsUtils utils;
+  (*XcolLowerValue) = (utils.highs_isInfinity(-(*XcolLowerValue)) ? (*XcolLowerValue): (*XcolLowerValue)*scale.col_[iCol]);
+  (*XcolUpperValue) = (utils.highs_isInfinity( (*XcolUpperValue)) ? (*XcolUpperValue): (*XcolUpperValue)*scale.col_[iCol]);
 }
 
 // Unscale a column cost
@@ -2855,17 +2860,18 @@ void HModel::util_getCosts(int firstcol, int lastcol, double *XcolCost) {
 // Get the bounds for a contiguous set of columns
 void HModel::util_getColBounds(int firstcol, int lastcol, double *colLower,
                                double *XcolUpper) {
+  HighsUtils utils;
   assert(0 <= firstcol);
   assert(firstcol <= lastcol);
   assert(lastcol < lp.numCol_);
   for (int col = firstcol; col <= lastcol; ++col) {
     if (colLower != NULL)
       colLower[col - firstcol] =
-          (hsol_isInfinity(-lp.colLower_[col]) ? lp.colLower_[col]
+          (utils.highs_isInfinity(-lp.colLower_[col]) ? lp.colLower_[col]
                                            : lp.colLower_[col] * scale.col_[col]);
     if (XcolUpper != NULL)
       XcolUpper[col - firstcol] =
-          (hsol_isInfinity(lp.colUpper_[col]) ? lp.colUpper_[col]
+          (utils.highs_isInfinity(lp.colUpper_[col]) ? lp.colUpper_[col]
                                           : lp.colUpper_[col] * scale.col_[col]);
   }
 }
@@ -2873,17 +2879,18 @@ void HModel::util_getColBounds(int firstcol, int lastcol, double *colLower,
 // Get the bounds for a contiguous set of rows
 void HModel::util_getRowBounds(int firstrow, int lastrow, double *XrowLower,
                                double *XrowUpper) {
+  HighsUtils utils;
   assert(0 <= firstrow);
   assert(firstrow <= lastrow);
   assert(lastrow < lp.numRow_);
   for (int row = firstrow; row <= lastrow; ++row) {
     if (XrowLower != NULL)
       XrowLower[row - firstrow] =
-          (hsol_isInfinity(-lp.rowLower_[row]) ? lp.rowLower_[row]
+          (utils.highs_isInfinity(-lp.rowLower_[row]) ? lp.rowLower_[row]
                                            : lp.rowLower_[row] / scale.row_[row]);
     if (XrowUpper != NULL)
       XrowUpper[row - firstrow] =
-          (hsol_isInfinity(lp.rowUpper_[row]) ? lp.rowUpper_[row]
+          (utils.highs_isInfinity(lp.rowUpper_[row]) ? lp.rowUpper_[row]
                                           : lp.rowUpper_[row] / scale.row_[row]);
   }
 }
@@ -2936,18 +2943,19 @@ int HModel::util_chgCostsSet(int ncols, const int *XcolCostIndex,
 // to -Inf for column -k-1
 int HModel::util_chgColBoundsAll(const double *colLower,
                                  const double *XcolUpper) {
+  HighsUtils utils;
   assert(colLower != NULL);
   assert(XcolUpper != NULL);
   for (int col = 0; col < lp.numCol_; ++col) {
     double lower = colLower[col];
     double upper = XcolUpper[col];
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(lower)) return col + 1;
+    if (utils.highs_isInfinity(lower)) return col + 1;
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(-upper)) return -(col + 1);
+    if (utils.highs_isInfinity(-upper)) return -(col + 1);
     assert(lower <= upper);
-    lp.colLower_[col] = (hsol_isInfinity(-lower) ? lower : lower / scale.col_[col]);
-    lp.colUpper_[col] = (hsol_isInfinity(upper) ? upper : upper / scale.col_[col]);
+    lp.colLower_[col] = (utils.highs_isInfinity(-lower) ? lower : lower / scale.col_[col]);
+    lp.colUpper_[col] = (utils.highs_isInfinity(upper) ? upper : upper / scale.col_[col]);
     //    printf("[LB; Pr; UB] for column %2d are now [%11g, %11g, %11g] Dual =
     //    %g\n", col, lp.colLower_[col], workValue[col], lp.colUpper_[col],
     //    workDual[col]);
@@ -2964,6 +2972,7 @@ int HModel::util_chgColBoundsAll(const double *colLower,
 int HModel::util_chgColBoundsSet(int ncols, const int *XcolBoundIndex,
                                  const double *colLowerValues,
                                  const double *XcolUpperValues) {
+  HighsUtils utils;
   assert(XcolBoundIndex != NULL);
   assert(colLowerValues != NULL);
   assert(XcolUpperValues != NULL);
@@ -2974,12 +2983,12 @@ int HModel::util_chgColBoundsSet(int ncols, const int *XcolBoundIndex,
     double lower = colLowerValues[ix];
     double upper = XcolUpperValues[ix];
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(lower)) return col + 1;
+    if (utils.highs_isInfinity(lower)) return col + 1;
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(-upper)) return -(col + 1);
+    if (utils.highs_isInfinity(-upper)) return -(col + 1);
     assert(lower <= upper);
-    lp.colLower_[col] = (hsol_isInfinity(-lower) ? lower : lower / scale.col_[col]);
-    lp.colUpper_[col] = (hsol_isInfinity(upper) ? upper : upper / scale.col_[col]);
+    lp.colLower_[col] = (utils.highs_isInfinity(-lower) ? lower : lower / scale.col_[col]);
+    lp.colUpper_[col] = (utils.highs_isInfinity(upper) ? upper : upper / scale.col_[col]);
     //    printf("Bounds for column %2d are now [%11g, %11g] Scale = %g\n", col,
     //    lp.colLower_[col], lp.colUpper_[col], scale.col_[col]);
   }
@@ -2994,17 +3003,18 @@ int HModel::util_chgColBoundsSet(int ncols, const int *XcolBoundIndex,
 // -Inf for row -k-1
 int HModel::util_chgRowBoundsAll(const double *XrowLower,
                                  const double *XrowUpper) {
+  HighsUtils utils;
   assert(XrowLower != NULL);
   assert(XrowUpper != NULL);
   for (int row = 0; row < lp.numRow_; ++row) {
     double lower = XrowLower[row];
     double upper = XrowUpper[row];
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(lower)) return row + 1;
+    if (utils.highs_isInfinity(lower)) return row + 1;
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(-upper)) return -(row + 1);
-    lp.rowLower_[row] = (hsol_isInfinity(-lower) ? lower : lower * scale.row_[row]);
-    lp.rowUpper_[row] = (hsol_isInfinity(upper) ? upper : upper * scale.row_[row]);
+    if (utils.highs_isInfinity(-upper)) return -(row + 1);
+    lp.rowLower_[row] = (utils.highs_isInfinity(-lower) ? lower : lower * scale.row_[row]);
+    lp.rowUpper_[row] = (utils.highs_isInfinity(upper) ? upper : upper * scale.row_[row]);
   }
   // Deduce the consequences of new bounds
   mlFg_Update(mlFg_action_NewBounds);
@@ -3018,6 +3028,7 @@ int HModel::util_chgRowBoundsAll(const double *XrowLower,
 int HModel::util_chgRowBoundsSet(int nrows, const int *XrowBoundIndex,
                                  const double *XrowLowerValues,
                                  const double *XrowUpperValues) {
+  HighsUtils utils;
   assert(XrowBoundIndex != NULL);
   assert(XrowLowerValues != NULL);
   assert(XrowUpperValues != NULL);
@@ -3028,11 +3039,11 @@ int HModel::util_chgRowBoundsSet(int nrows, const int *XrowBoundIndex,
     double lower = XrowLowerValues[ix];
     double upper = XrowUpperValues[ix];
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(lower)) return row + 1;
+    if (utils.highs_isInfinity(lower)) return row + 1;
     // Check that the lower bound is not being set to +Inf
-    if (hsol_isInfinity(-upper)) return -(row + 1);
-    lp.rowLower_[row] = (hsol_isInfinity(-lower) ? lower : lower * scale.row_[row]);
-    lp.rowUpper_[row] = (hsol_isInfinity(upper) ? upper : upper * scale.row_[row]);
+    if (utils.highs_isInfinity(-upper)) return -(row + 1);
+    lp.rowLower_[row] = (utils.highs_isInfinity(-lower) ? lower : lower * scale.row_[row]);
+    lp.rowUpper_[row] = (utils.highs_isInfinity(upper) ? upper : upper * scale.row_[row]);
     //    printf("Bounds for row %2d are now [%11g, %11g]\n", row,
     //    lp.rowLower_[row], lp.rowUpper_[row]);
   }
@@ -3129,6 +3140,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
 // Postive  return value k implies invalid basis status for column k-1
 // Negative return value k implies invalid basis status for row   -k-1
 int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
+  HighsUtils utils;
   if (cstat != NULL) {
     for (int col = 0; col < lp.numCol_; col++) {
       int var = col;
@@ -3137,7 +3149,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         continue;
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
 #ifdef HiGHSDEV
-        if (!hsol_isInfinity(-lp.colLower_[col]))
+        if (!utils.highs_isInfinity(-lp.colLower_[col]))
 #endif
         {
           cstat[col] = HSOL_BASESTAT_LOWER;
@@ -3145,7 +3157,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
 #ifdef HiGHSDEV
-        if (!hsol_isInfinity(lp.colUpper_[col]))
+        if (!utils.highs_isInfinity(lp.colUpper_[col]))
 #endif
         {
           cstat[col] = HSOL_BASESTAT_UPPER;
@@ -3156,7 +3168,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         // lp.colLower_[col], lp.colUpper_[col]);
         if (lp.colLower_[col] == lp.colUpper_[col]) {
 #ifdef HiGHSDEV
-          if (!hsol_isInfinity(lp.colUpper_[col]))
+          if (!utils.highs_isInfinity(lp.colUpper_[col]))
 #endif
           {
             cstat[col] = HSOL_BASESTAT_LOWER;
@@ -3164,7 +3176,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
           }
         } else {
 #ifdef HiGHSDEV
-          if (hsol_isInfinity(-lp.colLower_[col]) && hsol_isInfinity(lp.colUpper_[col]))
+          if (utils.highs_isInfinity(-lp.colLower_[col]) && utils.highs_isInfinity(lp.colUpper_[col]))
 #endif
           {
             cstat[col] = HSOL_BASESTAT_ZERO;
@@ -3195,7 +3207,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
       // Free to move only down from -lp.rowLower_[row]
       {
 #ifdef HiGHSDEV
-        if (!hsol_isInfinity(-lp.rowLower_[row]))
+        if (!utils.highs_isInfinity(-lp.rowLower_[row]))
 #endif
         {
           rstat[row] = HSOL_BASESTAT_LOWER;
@@ -3205,7 +3217,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
       // Free to move only up from -lp.rowUpper_[row]
       {
 #ifdef HiGHSDEV
-        if (!hsol_isInfinity(lp.rowUpper_[row]))
+        if (!utils.highs_isInfinity(lp.rowUpper_[row]))
 #endif
         {
           rstat[row] = HSOL_BASESTAT_UPPER;
@@ -3214,7 +3226,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
         if (lp.rowLower_[row] == lp.rowUpper_[row]) {
 #ifdef HiGHSDEV
-          if (!hsol_isInfinity(lp.rowUpper_[row]))
+          if (!utils.highs_isInfinity(lp.rowUpper_[row]))
 #endif
           {
             rstat[row] = HSOL_BASESTAT_LOWER;
@@ -3222,7 +3234,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
           }
         } else {
 #ifdef HiGHSDEV
-          if (hsol_isInfinity(-lp.rowLower_[row]) && hsol_isInfinity(lp.rowUpper_[row]))
+          if (utils.highs_isInfinity(-lp.rowLower_[row]) && utils.highs_isInfinity(lp.rowUpper_[row]))
 #endif
           {
             rstat[row] = HSOL_BASESTAT_ZERO;
@@ -4367,6 +4379,7 @@ void HModel::util_anMl(const char *message) {
 
 void HModel::util_anMlBd(const char *message, int numBd, vector<double> &lower,
                          vector<double> &upper) {
+  HighsUtils utils;
   if (numBd == 0) return;
   int numFr = 0;
   int numLb = 0;
@@ -4374,9 +4387,9 @@ void HModel::util_anMlBd(const char *message, int numBd, vector<double> &lower,
   int numBx = 0;
   int numFx = 0;
   for (int ix = 0; ix < numBd; ix++) {
-    if (hsol_isInfinity(-lower[ix])) {
+    if (utils.highs_isInfinity(-lower[ix])) {
       // Infinite lower bound
-      if (hsol_isInfinity(upper[ix])) {
+      if (utils.highs_isInfinity(upper[ix])) {
         // Infinite lower bound and infinite upper bound: Fr
         numFr++;
       } else {
@@ -4385,7 +4398,7 @@ void HModel::util_anMlBd(const char *message, int numBd, vector<double> &lower,
       }
     } else {
       // Finite lower bound
-      if (hsol_isInfinity(upper[ix])) {
+      if (utils.highs_isInfinity(upper[ix])) {
         // Finite lower bound and infinite upper bound: Lb
         numLb++;
       } else {
@@ -4418,6 +4431,7 @@ void HModel::util_anMlBd(const char *message, int numBd, vector<double> &lower,
 
 void HModel::util_anVecV(const char *message, int vecDim, vector<double> &vec,
                          bool anVLs) {
+  HighsUtils utils;
   if (vecDim == 0) return;
   double log10 = log(10.0);
   const int nVK = 20;
@@ -4449,10 +4463,10 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double> &vec,
     if (absV > 0) {
       // Nonzero value
       nNz++;
-      if (hsol_isInfinity(-v)) {
+      if (utils.highs_isInfinity(-v)) {
         //-Inf value
         nNegInfV++;
-      } else if (hsol_isInfinity(v)) {
+      } else if (utils.highs_isInfinity(v)) {
         //+Inf value
         nPosInfV++;
       } else {
@@ -4538,6 +4552,7 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double> &vec,
 }
 
 void HModel::util_anMlLargeCo(const char *message) {
+  HighsUtils utils;
   numLargeCo = 0;
   largeCostFlag.assign(lp.numCol_, 0);
   double mxLargeCo = 0;
@@ -4561,9 +4576,9 @@ void HModel::util_anMlLargeCo(const char *message) {
       int numCol_NZ = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
       if (numCol_NZ == 1) {
         mxLargeSlackCo = max(abs(iColCo), mxLargeSlackCo);
-        if (iColLower == 0 && hsol_isInfinity(iColUpper)) {
+        if (iColLower == 0 && utils.highs_isInfinity(iColUpper)) {
           numZeInfLargeCoSlack++;
-        } else if (hsol_isInfinity(-iColLower) && iColUpper == 0) {
+        } else if (utils.highs_isInfinity(-iColLower) && iColUpper == 0) {
           numInfZeLargeCoSlack++;
         } else {
           numLargeCoSlack++;
@@ -4734,7 +4749,7 @@ void HModel::util_anMlSol() {
         } else {
           // Free
           //	  bool freeEr = false;
-          if (!hsol_isInfinity(-lp.colLower_[iCol])) {
+          if (!utils.highs_isInfinity(-lp.colLower_[iCol])) {
             // freeEr = true;
             if (numRpFreeColEr < maxRpFreeColEr) {
               numRpFreeColEr++;
@@ -4743,7 +4758,7 @@ void HModel::util_anMlSol() {
                   iCol, lp.colLower_[iCol]);
             }
           }
-          if (!hsol_isInfinity(lp.colUpper_[iCol])) {
+          if (!utils.highs_isInfinity(lp.colUpper_[iCol])) {
             // freeEr = true;
             if (numRpFreeColEr < maxRpFreeColEr) {
               numRpFreeColEr++;
@@ -4789,8 +4804,8 @@ void HModel::util_anMlSol() {
     }
 
     double unsclColValue = sclColValue * scale.col_[iCol];
-    //      assert(hsol_isInfinity(-sclColValue));
-    //      assert(hsol_isInfinity(sclColValue));
+    //      assert(utils.highs_isInfinity(-sclColValue));
+    //      assert(utils.highs_isInfinity(sclColValue));
     // Assess primal infeasibility
     // For scaled values
     double sclColPrIfs = max(
@@ -4964,7 +4979,7 @@ void HModel::util_anMlSol() {
         } else {
           // Free
           //	  bool freeEr = false;
-          if (!hsol_isInfinity(-lp.rowLower_[iRow])) {
+          if (!utils.highs_isInfinity(-lp.rowLower_[iRow])) {
             // freeEr = true;
             if (numRpFreeRowEr < maxRpFreeRowEr) {
               numRpFreeRowEr++;
@@ -4973,7 +4988,7 @@ void HModel::util_anMlSol() {
                   iRow, lp.rowLower_[iRow]);
             }
           }
-          if (!hsol_isInfinity(lp.rowUpper_[iRow])) {
+          if (!utils.highs_isInfinity(lp.rowUpper_[iRow])) {
             // freeEr = true;
             if (numRpFreeRowEr < maxRpFreeRowEr) {
               numRpFreeRowEr++;
@@ -5001,8 +5016,8 @@ void HModel::util_anMlSol() {
       sclRowValue = -value[lp.numCol_ + iRow];
       sclRowDuIfs = abs(dual[lp.numCol_ + iRow]);
     }
-    //      assert(hsol_isInfinity(-sclRowValue));
-    //      assert(hsol_isInfinity(sclRowValue));
+    //      assert(utils.highs_isInfinity(-sclRowValue));
+    //      assert(utils.highs_isInfinity(sclRowValue));
     double unsclRowValue = sclRowValue * scale.row_[iRow];
 
     // Assess primal infeasibility
