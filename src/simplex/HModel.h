@@ -499,7 +499,49 @@ struct HighsBasis {
   vector<int> nonbasicMove_;
 };
 
-  // Limits on scaling factors
+struct HighsSimplexInfo {
+  // Part of working model which assigned and populated as much as
+  // possible when a model is being defined
+
+  // workCost: Originally just costs from the model but, in solve(), may
+  // be perturbed or set to alternative values in Phase I??
+  //
+  // workDual: Values of the dual variables corresponding to
+  // workCost. Not known until solve() is called since B^{-1} is
+  // required to compute them. Knowledge of them is indicated by
+  // mlFg_haveNonbasicDuals.
+  //
+  // workShift: WTF
+  //
+  vector<double> workCost_;
+  vector<double> workDual_;
+  vector<double> workShift_;
+
+  // workLower/workUpper: Originally just lower (upper) bounds from
+  // the model but, in solve(), may be perturbed or set to
+  // alternative values in Phase I??
+  //
+  // workRange: Distance between lower and upper bounds
+  //
+  // workValue: Values of the nonbasic variables corresponding to
+  // workLower/workUpper and the basis. Always known.
+  //
+  vector<double> workLower_;
+  vector<double> workUpper_;
+  vector<double> workRange_;
+  vector<double> workValue_;
+
+  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
+  // basic variables and their values. Not known until solve() is
+  // called since B^{-1} is required to compute them. Knowledge of
+  // them is indicated by mlFg_haveBasicPrimals.
+  //
+  vector<double> baseLower_;
+  vector<double> baseUpper_;
+  vector<double> baseValue_;
+};
+
+// Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;
   const double maxAlwScale = 1024.0;
   const double maxAlwCostScale = maxAlwScale;
@@ -516,49 +558,9 @@ struct HighsBasis {
   double largeCostScale;
 #endif
 
-  // Part of working model which assigned and populated as much as
-  // possible when a model is being defined
-
-  // workCost: Originally just costs from the model but, in solve(), may
-  // be perturbed or set to alternative values in Phase I??
-  //
-  // workDual: Values of the dual variables corresponding to
-  // workCost. Not known until solve() is called since B^{-1} is
-  // required to compute them. Knowledge of them is indicated by
-  // mlFg_haveNonbasicDuals.
-  //
-  // workShift: WTF
-  //
-  vector<double> workCost;
-  vector<double> workDual;
-  vector<double> workShift;
-
-  // workLower/workUpper: Originally just lower (upper) bounds from
-  // the model but, in solve(), may be perturbed or set to
-  // alternative values in Phase I??
-  //
-  // workRange: Distance between lower and upper bounds
-  //
-  // workValue: Values of the nonbasic variables corresponding to
-  // workLower/workUpper and the basis. Always known.
-  //
-  vector<double> workLower;
-  vector<double> workUpper;
-  vector<double> workRange;
-  vector<double> workValue;
-
-  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
-  // basic variables and their values. Not known until solve() is
-  // called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by mlFg_haveBasicPrimals;
-  //
-  vector<double> baseLower;
-  vector<double> baseUpper;
-  vector<double> baseValue;
-
   // Associated data of original model
-  vector<int> intBreak;
-  vector<double> dblXpert;
+  vector<int> colPermutation;
+  vector<double> colRandomValue;
 
   // The scaled model
   HighsLp lpScaled;
@@ -568,6 +570,7 @@ struct HighsBasis {
   HMatrix matrix;
   HFactor factor;
   HighsBasis basis;
+  HighsSimplexInfo simplex;
   HighsScale scale;
 
 #ifdef HiGHSDEV
@@ -611,16 +614,16 @@ struct HighsBasis {
   int* getBaseIndex() { return &basis.basicIndex_[0]; }
   int* getNonbasicFlag() { return &basis.nonbasicFlag_[0]; }
   int* getNonbasicMove() { return &basis.nonbasicMove_[0]; }
-  double* getWorkCost() { return &workCost[0]; }
-  double* getWorkDual() { return &workDual[0]; }
-  double* getWorkShift() { return &workShift[0]; }
-  double* getWorkLower() { return &workLower[0]; }
-  double* getWorkUpper() { return &workUpper[0]; }
-  double* getWorkRange() { return &workRange[0]; }
-  double* getWorkValue() { return &workValue[0]; }
-  double* getBaseLower() { return &baseLower[0]; }
-  double* getBaseUpper() { return &baseUpper[0]; }
-  double* getBaseValue() { return &baseValue[0]; }
+  double* getWorkCost() { return &simplex.workCost_[0]; }
+  double* getWorkDual() { return &simplex.workDual_[0]; }
+  double* getWorkShift() { return &simplex.workShift_[0]; }
+  double* getWorkLower() { return &simplex.workLower_[0]; }
+  double* getWorkUpper() { return &simplex.workUpper_[0]; }
+  double* getWorkRange() { return &simplex.workRange_[0]; }
+  double* getWorkValue() { return &simplex.workValue_[0]; }
+  double* getBaseLower() { return &simplex.baseLower_[0]; }
+  double* getBaseUpper() { return &simplex.baseUpper_[0]; }
+  double* getBaseValue() { return &simplex.baseValue_[0]; }
   double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
   double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
   double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
@@ -629,6 +632,6 @@ struct HighsBasis {
   double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
   double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
   double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  int* getWorkIntBreak() { return &intBreak[0]; }
+  int* getColPermutation() { return &colPermutation[0]; }
 };
 #endif /* SIMPLEX_HMODEL_H_ */

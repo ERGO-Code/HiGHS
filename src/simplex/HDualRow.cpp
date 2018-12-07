@@ -39,7 +39,7 @@ void HDualRow::setupSlice(HModel *model, int size) {
 void HDualRow::setup(HModel *model) {
   // Setup common vectors
   setupSlice(model, model->getNumTot());
-  workRand = model->getWorkIntBreak();
+  workColPermutation = model->getColPermutation();
 }
 
 void HDualRow::clear() {
@@ -255,7 +255,7 @@ bool HDualRow::choose_final() {
       } else if (dMaxFinal == workData[i].second) {
         int jCol = workData[iMaxFinal].first;
         int iCol = workData[i].first;
-        if (workRand[iCol] < workRand[jCol]) {
+        if (workColPermutation[iCol] < workColPermutation[jCol]) {
           iMaxFinal = i;
         }
       }
@@ -331,7 +331,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     int iCol = packIndex[i];
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
-    double iColWorkValue = workModel->workValue[iCol];
+    double iColWorkValue = workModel->simplex.workValue_[iCol];
     double dlDuObj = workModel->basis.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workModel->scale.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
