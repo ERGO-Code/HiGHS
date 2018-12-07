@@ -55,10 +55,10 @@ class Presolve : public HPreData {
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
                                  HighsSolution& recovered_solution);
 
+  void setBasisInfo(const std::vector<int>& info, const std::vector<int>& nbf);
   void load(const HighsLp& lp);
  // todo: clear the public from below. 
   string modelName;
-
  private: 
 
   int iPrint;
@@ -257,4 +257,5 @@ class PresolveInfo {
   HighsSolution reduced_solution_;
   HighsSolution recovered_solution_;
 };
+
 #endif /* PRESOLVE_HPRESOLVE_H_ */

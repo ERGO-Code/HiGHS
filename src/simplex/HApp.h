@@ -57,6 +57,9 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
                                                   solution.colDual, 
                                                   solution.rowValue,
                                                   solution.rowDual);
+  model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
+                                       highs_model.basis_info_.nonbasic_flag);
+
 // Start Simplex part:
 /*
 - set up model

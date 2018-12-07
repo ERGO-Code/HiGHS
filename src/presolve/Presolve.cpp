@@ -73,6 +73,10 @@ HighsLp& PresolveInfo::getReducedProblem() {
   return reduced_lp_;
 }
 
+void Presolve::setBasisInfo(const std::vector<int>& info, const std::vector<int>& nbf) {
+  basicIndex = info;
+  nonbasicFlag = nbf;
+}
 
 int Presolve::presolve(int print) {
   iPrint = print;

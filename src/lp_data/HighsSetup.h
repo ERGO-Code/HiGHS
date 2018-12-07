@@ -107,20 +107,24 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
 
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::OK) {
+    if (presolve_status == HighsPresolveStatus::Reduced) {
     presolve_info.reduced_solution_ = lps_[1].solution_;
+    presolve_info.presolve_[0].setBasisInfo(lps_[1].basis_info_.basis_index,
+                               lps_[1].basis_info_.nonbasic_flag);
+    }
+
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
     //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
       // todo: add finishing simplex iterations if needed.
-    } else {
-      // todo: handle postsolve errors.
+      std::cout << "Postsolve finished.\n";
     }
   } else {
     // todo: handle infesible | unbounded instances and solver errors.
     // either here or at end of runSolver(..)
     return HighsStatus::NotImplemented;
   }
-  
+
   return HighsStatus::OK;
 }
 
@@ -139,7 +143,7 @@ HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
 }
 
 HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
-  if (info.presolve_.size() != 0 && info.lp_ != nullptr) 
+  if (info.presolve_.size() != 0)
   {
     bool solution_ok = isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
     if (!solution_ok)
@@ -149,8 +153,9 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
     info.presolve_[0].postsolve(info.reduced_solution_, info.recovered_solution_);
 
     return HighsPostsolveStatus::SolutionRecovered;
+  } else {
+    return HighsPostsolveStatus::NoPostsolve;
   }
-  return HighsPostsolveStatus::LpOrPresolveObjectMissing;
 }
 
 // The method below runs simplex or ipx solver on the lp.
