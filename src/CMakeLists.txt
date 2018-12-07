@@ -58,7 +58,6 @@ set(headers
     simplex/HMatrix.h
     simplex/HModel.h
     simplex/HPrimal.h
-    simplex/HRandom.h
     simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSort.h

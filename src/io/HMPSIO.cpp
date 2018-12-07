@@ -310,7 +310,6 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
 #ifdef HiGHSDEV
   printf("writeMPS: Opened file  OK\n");
 #endif
-  HighsUtils utils;
   vector<int> r_ty;
   vector<double> rhs, ranges;
   bool have_rhs = false;
@@ -324,15 +323,15 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
       // Equality constraint - Type E - range = 0
       r_ty[r_n] = MPS_ROW_TY_E;
       rhs[r_n] = rowLower[r_n];
-    } else if (!utils.highs_isInfinity(rowUpper[r_n])) {
+    } else if (!highs_isInfinity(rowUpper[r_n])) {
       // Upper bounded constraint - Type L
       r_ty[r_n] = MPS_ROW_TY_L;
       rhs[r_n] = rowUpper[r_n];
-      if (!utils.highs_isInfinity(-rowLower[r_n])) {
+      if (!highs_isInfinity(-rowLower[r_n])) {
         // Boxed constraint - range = u-l
         ranges[r_n] = rowUpper[r_n] - rowLower[r_n];
       }
-    } else if (!utils.highs_isInfinity(-rowLower[r_n])) {
+    } else if (!highs_isInfinity(-rowLower[r_n])) {
       // Lower bounded constraint - Type G
       r_ty[r_n] = MPS_ROW_TY_G;
       rhs[r_n] = rowLower[r_n];
@@ -360,7 +359,7 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
       have_bounds = true;
       break;
     }
-    if (!utils.highs_isInfinity(colUpper[c_n])) {
+    if (!highs_isInfinity(colUpper[c_n])) {
       have_bounds = true;
       break;
     }
@@ -443,11 +442,11 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
       if (lb == ub) {
         fprintf(file, " FX BOUND     C%-7d  %.15g\n", c_n + 1, lb);
       } else {
-        if (!utils.highs_isInfinity(ub)) {
+        if (!highs_isInfinity(ub)) {
           // Upper bounded variable
           fprintf(file, " UP BOUND     C%-7d  %.15g\n", c_n + 1, ub);
         }
-        if (!utils.highs_isInfinity(-lb)) {
+        if (!highs_isInfinity(-lb)) {
           // Lower bounded variable - default is 0
           if (lb) {
             fprintf(file, " LO BOUND     C%-7d  %.15g\n", c_n + 1, lb);

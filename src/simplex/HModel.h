@@ -20,7 +20,6 @@
 #include "HMatrix.h"
 #include "HModelCs.h"
 #include "HPresolve.h"
-#include "HRandom.h"
 #include "HTimer.h"
 #include "HVector.h"
 #include "HighsLp.h"
@@ -362,11 +361,6 @@ class HModel {
   void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
   void util_anPrDuDgn();
-  void util_anMl(HighsLp lp, const char* message);
-  void util_anMlBd(const char* message, int numBd, vector<double>& lower,
-                   vector<double>& upper);
-  void util_anVecV(const char* message, int vecDim, vector<double>& vec,
-                   bool anVLs);
   void util_anMlLargeCo(HighsLp lp, const char* message);
   void util_anMlSol();
 #endif
@@ -378,8 +372,8 @@ class HModel {
   double dblOption[DBLOPT_COUNT];
   string strOption[STROPT_COUNT];
 
-  // Random generator
-  HRandom random;
+  // Utilities, including random number generator
+  HighsUtils utils;
 
   // The time and timer
   HTimer timer;

@@ -255,7 +255,6 @@ int solveSCIP(HModel &model) {
   printf("Called solveSCIP\n");
   cout << flush;
   //  model.util_reportModel();
-  HighsUtils utils;
 
   // Extract columns numCol-3..numCol-1
   int FmCol = model.lpScaled.numCol_ - 3;
@@ -399,7 +398,7 @@ int solveSCIP(HModel &model) {
       printf(": basic with rsdu = %11g so branch\n\n", rsdu);
       num_resolve++;
       colBoundIndex = col;
-      if (utils.highs_isInfinity(og_colUpper))
+      if (highs_isInfinity(og_colUpper))
         nw_colLower = colPrimal[col] + 1;
       else
         nw_colLower = og_colUpper;
