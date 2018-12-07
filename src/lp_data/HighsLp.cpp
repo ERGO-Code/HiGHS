@@ -38,14 +38,14 @@ HighsInputStatus checkLp(const HighsLp& lp) {
     return HighsInputStatus::ErrorRowBounds;
 
   for (int i = 0; i < lp.numRow_; i++)
-    if (lp.rowLower_[i] < -HSOL_CONST_INF || lp.rowUpper_[i] > HSOL_CONST_INF)
+    if (lp.rowLower_[i] < -HIGHS_CONST_INF || lp.rowUpper_[i] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorRowBounds;
 
   for (int j = 0; j < lp.numCol_; j++) {
-    if (lp.colCost_[j] < -HSOL_CONST_INF || lp.colCost_[j] > HSOL_CONST_INF)
+    if (lp.colCost_[j] < -HIGHS_CONST_INF || lp.colCost_[j] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorObjective;
 
-    if (lp.colLower_[j] < -HSOL_CONST_INF || lp.colUpper_[j] > HSOL_CONST_INF)
+    if (lp.colLower_[j] < -HIGHS_CONST_INF || lp.colUpper_[j] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorColBounds;
     if (lp.colLower_[j] > lp.colUpper_[j] + kBoundTolerance)
       return HighsInputStatus::ErrorColBounds;
@@ -68,7 +68,7 @@ HighsInputStatus checkLp(const HighsLp& lp) {
   for (int k = 0; k < lp.nnz_; k++) {
     if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
       return HighsInputStatus::ErrorMatrixIndices;
-    if (lp.Avalue_[k] < -HSOL_CONST_INF || lp.Avalue_[k] > HSOL_CONST_INF)
+    if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorRowBounds;
   }
 

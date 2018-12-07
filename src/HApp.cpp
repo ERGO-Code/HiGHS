@@ -149,10 +149,10 @@ int solvePlainAPI(HModel &model) {
   for (int col = 0; col < XnumCol; col++) {
     //    printf("Col %3d has (%11.4g, %11.4g, %11.4g)", col, XcolLower[col],
   colPrimalValues[col], XcolUpper[col]); if (-XcolLower[col] >=
-  HSOL_CONST_INF) { XcolLower[col] = colPrimalValues[col] - 0.1*fmax(1,
+  HIGHS_CONST_INF) { XcolLower[col] = colPrimalValues[col] - 0.1*fmax(1,
   fabs(colPrimalValues[col]));
     }
-    if (XcolUpper[col] >= HSOL_CONST_INF) {
+    if (XcolUpper[col] >= HIGHS_CONST_INF) {
       XcolUpper[col] = colPrimalValues[col] + 0.1*fmax(1,
   fabs(colPrimalValues[col]));
     }
@@ -515,7 +515,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
     solvePh2DuIt += solver.n_ph2_du_it;
     solvePrIt += solver.n_pr_it;
     printf(
-        "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
+        "\nBnchmkHiGHS01 After presolve        ,HiGHS,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
         model.getPrStatus(), model.modelName.c_str(), model.lpScaled.numRow_,
         model.lpScaled.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
@@ -544,7 +544,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
         solvePh2DuIt += solver.n_ph2_du_it;
         solvePrIt += solver.n_pr_it;
         printf(
-            "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
+            "\nBnchmkHiGHS02 After restoring bounds,HiGHS,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
             model.getPrStatus(), model.modelName.c_str(), model.lpScaled.numRow_,
             model.lpScaled.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
@@ -595,7 +595,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
       solvePh2DuIt += solver.n_ph2_du_it;
       solvePrIt += solver.n_pr_it;
       printf(
-          "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
+          "\nBnchmkHiGHS03 After postsolve       ,HiGHS,%3d,%16s, %d,%d,"
           "%10.3f,%20.10e,%10d,%10d,%10d\n",
           model.getPrStatus(), model.modelName.c_str(), model.lpScaled.numRow_,
           model.lpScaled.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
@@ -658,7 +658,7 @@ int solvePlainJAJH(HModel &model, const char *Price_ArgV, const char *EdWt_ArgV,
     int numCol = model.lpScaled.numCol_;
     int numRow = model.lpScaled.numRow_;
     printf(
-        "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
+        "\nBnchmkHiGHS99,HiGHS,%3d,%16s,Presolve %s,"
         "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
         "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
         "%20.10e,%10d,%10.3f,"
@@ -902,7 +902,7 @@ int solveExternalPresolve(const char *fileName) {
   problem.setConstraintMatrix(matrix_transpose, model.rowLower, model.rowUpper,
                               true);
   problem.setVariableDomainsLP(model.colLower, model.colUpper);
-  problem.fixInfiniteBounds(HSOL_CONST_INF);
+  problem.fixInfiniteBounds(HIGHS_CONST_INF);
 
   // presolve
   Presolve<double> presolve;
@@ -954,13 +954,13 @@ int solveExternalPresolve(const char *fileName) {
   int nRows = problem.getNRows();
 
   for (int i = 0; i < nCols; i++) {
-    if (colLower.at(i) <= -HSOL_CONST_INF) colLower.at(i) = -HSOL_CONST_INF;
-    if (colUpper.at(i) >= HSOL_CONST_INF) colUpper.at(i) = HSOL_CONST_INF;
+    if (colLower.at(i) <= -HIGHS_CONST_INF) colLower.at(i) = -HIGHS_CONST_INF;
+    if (colUpper.at(i) >= HIGHS_CONST_INF) colUpper.at(i) = HIGHS_CONST_INF;
   }
 
   for (int i = 0; i < nRows; i++) {
-    if (rowLower.at(i) <= -HSOL_CONST_INF) rowLower.at(i) = -HSOL_CONST_INF;
-    if (rowUpper.at(i) >= HSOL_CONST_INF) rowUpper.at(i) = HSOL_CONST_INF;
+    if (rowLower.at(i) <= -HIGHS_CONST_INF) rowLower.at(i) = -HIGHS_CONST_INF;
+    if (rowUpper.at(i) >= HIGHS_CONST_INF) rowUpper.at(i) = HIGHS_CONST_INF;
   }
 
   if (!Aindex_p) Aindex_p = &Aindex[0];

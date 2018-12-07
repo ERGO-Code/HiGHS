@@ -194,7 +194,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   const char* crashMode = "";
   const char* partitionFile = "";
 
-  double TimeLimit_ArgV = HSOL_CONST_INF;
+  double TimeLimit_ArgV = HIGHS_CONST_INF;
 
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;
@@ -396,7 +396,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   }
   // serial
   else if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-           opt.timeLimit == HSOL_CONST_INF) {
+           opt.timeLimit == HIGHS_CONST_INF) {
     cout << "Running solvePlain" << endl;
     int RtCod = solvePlain(model);
     if (RtCod != 0) {
@@ -404,7 +404,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
     }
   }  // todo: remove case below, presolve handled elsewhere
   else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-           opt.timeLimit == HSOL_CONST_INF) {
+           opt.timeLimit == HIGHS_CONST_INF) {
     if (opt.presolve == 1) {
       cout << "Running solvePlainWithPresolve" << endl;
       solvePlainWithPresolve(model);

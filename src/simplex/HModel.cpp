@@ -1349,7 +1349,7 @@ void HModel::setup_transposeLP() {
   }
 
   // Convert primal cost to dual bound
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   vector<double> dualRowLower(lpScaled.numCol_);
   vector<double> dualRowUpper(lpScaled.numCol_);
   for (int j = 0; j < lpScaled.numCol_; j++) {
@@ -1484,7 +1484,7 @@ void HModel::scaleModel() {
 
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   double min0 = inf, max0 = 0;
   for (int k = 0, AnX = lpScaled.Astart_[lpScaled.numCol_]; k < AnX; k++) {
     double value = fabs(lpScaled.Avalue_[k]);
@@ -1779,8 +1779,8 @@ void HModel::setup_tightenBound() {
         int iCol = ARindex[k];
         double col_L = lpScaled.colLower_[iCol];
         double col_U = lpScaled.colUpper_[iCol];
-        double new_L = -HSOL_CONST_INF;
-        double new_U = +HSOL_CONST_INF;
+        double new_L = -HIGHS_CONST_INF;
+        double new_U = +HIGHS_CONST_INF;
 
         if (value > 0.0) {
           if (row_L > -big_B && ninfU <= 1 && (ninfU == 0 || col_U > +big_B))
@@ -2040,11 +2040,11 @@ void HModel::initCost(int perturb) {
     double lower = lpScaled.colLower_[i];
     double upper = lpScaled.colUpper_[i];
     double xpert = (fabs(simplex.workCost_[i]) + 1) * base * (1 + colRandomValue[i]);
-    if (lower == -HSOL_CONST_INF && upper == HSOL_CONST_INF) {
+    if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
-    } else if (upper == HSOL_CONST_INF) {  // Lower
+    } else if (upper == HIGHS_CONST_INF) {  // Lower
       simplex.workCost_[i] += xpert;
-    } else if (lower == -HSOL_CONST_INF) {  // Upper
+    } else if (lower == -HIGHS_CONST_INF) {  // Upper
       simplex.workCost_[i] += -xpert;
     } else if (lower != upper) {  // Boxed
       simplex.workCost_[i] += (simplex.workCost_[i] >= 0) ? xpert : -xpert;
@@ -2066,7 +2066,7 @@ void HModel::initBound(int phase) {
   if (phase == 2) return;
 
   // In Phase 1: change to dual phase 1 bound
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
     if (simplex.workLower_[i] == -inf && simplex.workUpper_[i] == inf) {
@@ -2305,7 +2305,7 @@ void HModel::computeDual() {
 // Compute the number of dual infeasibilities for the dual algorithm
 void HModel::computeDualInfeasInDual(int *dualInfeasCount) {
   int workCount = 0;
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
   const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
@@ -2324,7 +2324,7 @@ void HModel::computeDualInfeasInDual(int *dualInfeasCount) {
 // Compute the number of dual infeasibilities for the primal?? algorithm
 void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
   int workCount = 0;
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
   const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
@@ -2342,7 +2342,7 @@ void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
 // Correct dual values
 void HModel::correctDual(int *freeInfeasCount) {
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   int workCount = 0;
   const int numTot = getNumTot();
   for (int i = 0; i < numTot; i++) {
@@ -2685,7 +2685,7 @@ int HModel::writeToMPS(const char *filename) {
 
 //>->->->->->->->->->->->->->->->->->->->->->-
 // Esoterica!
-// Initialise the random vectors required by hsol
+// Initialise the random vectors required by HiGHS
 void HModel::initRandomVec() {
   const int numTot = getNumTot();
   colPermutation.resize(numTot);
@@ -3018,7 +3018,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
   int numBasic = 0;
   for (int col = 0; col < lpScaled.numCol_; col++) {
     int var = col;
-    if (cstat[col] == HSOL_BASESTAT_BASIC) {
+    if (cstat[col] == HIGHS_BASESTAT_BASIC) {
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       basis.basicIndex_[numBasic] = var;
@@ -3026,8 +3026,8 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
       continue;
     }
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    if (cstat[col] == HSOL_BASESTAT_LOWER) {
-      // HSOL_BASESTAT_LOWER includes fixed variables
+    if (cstat[col] == HIGHS_BASESTAT_LOWER) {
+      // HIGHS_BASESTAT_LOWER includes fixed variables
       if (lpScaled.colLower_[col] == lpScaled.colUpper_[col]) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
         continue;
@@ -3035,10 +3035,10 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
         continue;
       }
-    } else if (cstat[col] == HSOL_BASESTAT_UPPER) {
+    } else if (cstat[col] == HIGHS_BASESTAT_UPPER) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
       continue;
-    } else if (cstat[col] == HSOL_BASESTAT_ZERO) {
+    } else if (cstat[col] == HIGHS_BASESTAT_ZERO) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       continue;
     } else {
@@ -3051,7 +3051,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
   }
   for (int row = 0; row < lpScaled.numRow_; row++) {
     int var = lpScaled.numCol_ + row;
-    if (rstat[row] == HSOL_BASESTAT_BASIC) {
+    if (rstat[row] == HIGHS_BASESTAT_BASIC) {
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       basis.basicIndex_[numBasic] = var;
@@ -3059,8 +3059,8 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
       continue;
     }
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    if (rstat[row] == HSOL_BASESTAT_LOWER) {
-      // HSOL_BASESTAT_LOWER includes fixed variables
+    if (rstat[row] == HIGHS_BASESTAT_LOWER) {
+      // HIGHS_BASESTAT_LOWER includes fixed variables
       if (lpScaled.rowLower_[row] == lpScaled.rowUpper_[row]) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
         continue;
@@ -3068,10 +3068,10 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
         continue;
       }
-    } else if (rstat[row] == HSOL_BASESTAT_UPPER) {
+    } else if (rstat[row] == HIGHS_BASESTAT_UPPER) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
       continue;
-    } else if (rstat[row] == HSOL_BASESTAT_ZERO) {
+    } else if (rstat[row] == HIGHS_BASESTAT_ZERO) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       continue;
     } else {
@@ -3103,14 +3103,14 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
     for (int col = 0; col < lpScaled.numCol_; col++) {
       int var = col;
       if (!basis.nonbasicFlag_[var]) {
-        cstat[col] = HSOL_BASESTAT_BASIC;
+        cstat[col] = HIGHS_BASESTAT_BASIC;
         continue;
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
 #ifdef HiGHSDEV
         if (!utils.highs_isInfinity(-lpScaled.colLower_[col]))
 #endif
         {
-          cstat[col] = HSOL_BASESTAT_LOWER;
+          cstat[col] = HIGHS_BASESTAT_LOWER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
@@ -3118,7 +3118,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         if (!utils.highs_isInfinity(lpScaled.colUpper_[col]))
 #endif
         {
-          cstat[col] = HSOL_BASESTAT_UPPER;
+          cstat[col] = HIGHS_BASESTAT_UPPER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
@@ -3129,7 +3129,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
           if (!utils.highs_isInfinity(lpScaled.colUpper_[col]))
 #endif
           {
-            cstat[col] = HSOL_BASESTAT_LOWER;
+            cstat[col] = HIGHS_BASESTAT_LOWER;
             continue;
           }
         } else {
@@ -3137,7 +3137,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
           if (utils.highs_isInfinity(-lpScaled.colLower_[col]) && utils.highs_isInfinity(lpScaled.colUpper_[col]))
 #endif
           {
-            cstat[col] = HSOL_BASESTAT_ZERO;
+            cstat[col] = HIGHS_BASESTAT_ZERO;
             continue;
           }
         }
@@ -3156,7 +3156,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
     for (int row = 0; row < lpScaled.numRow_; row++) {
       int var = lpScaled.numCol_ + row;
       if (!basis.nonbasicFlag_[var]) {
-        rstat[row] = HSOL_BASESTAT_BASIC;
+        rstat[row] = HIGHS_BASESTAT_BASIC;
         continue;
       }
       // NB nonbasicMove for rows refers to the solver's view where the bounds
@@ -3168,7 +3168,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         if (!utils.highs_isInfinity(-lpScaled.rowLower_[row]))
 #endif
         {
-          rstat[row] = HSOL_BASESTAT_LOWER;
+          rstat[row] = HIGHS_BASESTAT_LOWER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP)
@@ -3178,7 +3178,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
         if (!utils.highs_isInfinity(lpScaled.rowUpper_[row]))
 #endif
         {
-          rstat[row] = HSOL_BASESTAT_UPPER;
+          rstat[row] = HIGHS_BASESTAT_UPPER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
@@ -3187,7 +3187,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
           if (!utils.highs_isInfinity(lpScaled.rowUpper_[row]))
 #endif
           {
-            rstat[row] = HSOL_BASESTAT_LOWER;
+            rstat[row] = HIGHS_BASESTAT_LOWER;
             continue;
           }
         } else {
@@ -3195,7 +3195,7 @@ int HModel::util_convertWorkingToBaseStat(int *cstat, int *rstat) {
           if (utils.highs_isInfinity(-lpScaled.rowLower_[row]) && utils.highs_isInfinity(lpScaled.rowUpper_[row]))
 #endif
           {
-            rstat[row] = HSOL_BASESTAT_ZERO;
+            rstat[row] = HIGHS_BASESTAT_ZERO;
             continue;
           }
         }
@@ -3839,9 +3839,7 @@ void HModel::util_reportMessage(const char *message) {
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
   if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4)
     return;
-  // Suppress i_v so inverHint isn't reported for output comparison with hsol1.0
-  //  printf("%10d  %20.10e  %2d\n", numberIteration, dualObjectiveValue, i_v);
-  printf("%10d  %20.10e\n", numberIteration, dualObjectiveValue);
+  printf("%10d  %20.10e  %2d\n", numberIteration, dualObjectiveValue, i_v);
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
@@ -3997,7 +3995,7 @@ void HModel::util_reportModelDense(HighsLp lp) {
   }
   cout << "------LB------\n";
   for (int i = 0; i < lp.numRow_; i++) {
-    if (lp.rowLower_[i] > -HSOL_CONST_INF)
+    if (lp.rowLower_[i] > -HIGHS_CONST_INF)
       sprintf(buff, "%2.1g ", lp.rowLower_[i]);
     else
       sprintf(buff, "-inf");
@@ -4006,7 +4004,7 @@ void HModel::util_reportModelDense(HighsLp lp) {
   cout << endl;
   cout << "------UB------\n";
   for (int i = 0; i < lp.numRow_; i++) {
-    if (lp.rowUpper_[i] < HSOL_CONST_INF)
+    if (lp.rowUpper_[i] < HIGHS_CONST_INF)
       sprintf(buff, "%2.1g ", lp.rowUpper_[i]);
     else
       sprintf(buff, "inf");
@@ -4039,16 +4037,16 @@ void HModel::util_reportRowVecSol(int nrow, vector<double> &XrowLower,
   if (nrow <= 0) return;
   printf("Row    St      Primal       Lower       Upper        Dual\n");
   for (int row = 0; row < nrow; row++) {
-    if (XrowStatus[row] == HSOL_BASESTAT_BASIC)
+    if (XrowStatus[row] == HIGHS_BASESTAT_BASIC)
       printf("%6d BC", row);
-    else if (XrowStatus[row] == HSOL_BASESTAT_ZERO)
+    else if (XrowStatus[row] == HIGHS_BASESTAT_ZERO)
       printf("%6d FR", row);
-    else if (XrowStatus[row] == HSOL_BASESTAT_LOWER) {
+    else if (XrowStatus[row] == HIGHS_BASESTAT_LOWER) {
       if (XrowLower[row] == XrowUpper[row])
         printf("%6d FX", row);
       else
         printf("%6d LB", row);
-    } else if (XrowStatus[row] == HSOL_BASESTAT_UPPER)
+    } else if (XrowStatus[row] == HIGHS_BASESTAT_UPPER)
       printf("%6d UB", row);
     else
       printf("%6d ??", row);
@@ -4097,16 +4095,16 @@ void HModel::util_reportColVecSol(int ncol, vector<double> &XcolCost,
       "Col    St      Primal       Lower       Upper        Dual        "
       "Cost\n");
   for (int col = 0; col < ncol; col++) {
-    if (XcolStatus[col] == HSOL_BASESTAT_BASIC)
+    if (XcolStatus[col] == HIGHS_BASESTAT_BASIC)
       printf("%6d BC", col);
-    else if (XcolStatus[col] == HSOL_BASESTAT_ZERO)
+    else if (XcolStatus[col] == HIGHS_BASESTAT_ZERO)
       printf("%6d FR", col);
-    else if (XcolStatus[col] == HSOL_BASESTAT_LOWER) {
+    else if (XcolStatus[col] == HIGHS_BASESTAT_LOWER) {
       if (colLower[col] == XcolUpper[col])
         printf("%6d FX", col);
       else
         printf("%6d LB", col);
-    } else if (XcolStatus[col] == HSOL_BASESTAT_UPPER)
+    } else if (XcolStatus[col] == HIGHS_BASESTAT_UPPER)
       printf("%6d UB", col);
     else
       printf("%6d ??", col);
@@ -4505,7 +4503,7 @@ void HModel::util_anMlSol() {
   if (problemStatus != LP_Status_Optimal) return;
   printf("\nAnalysing the model solution\n");
   fflush(stdout);
-  const double inf = HSOL_CONST_INF;
+  const double inf = HIGHS_CONST_INF;
   const double tlValueEr = 1e-8;
   const double tlPrRsduEr = 1e-8;
   const double tlDuRsduEr = 1e-8;

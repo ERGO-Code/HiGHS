@@ -453,7 +453,7 @@ void HDual::init(int num_threads) {
   if (dual_variant == HDUAL_VARIANT_MULTI) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
-    if (multi_num > HSOL_THREAD_LIMIT) multi_num = HSOL_THREAD_LIMIT;
+    if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
     for (int i = 0; i < multi_num; i++) {
       multi_choice[i].row_ep.setup(numRow);
       multi_choice[i].column.setup(numRow);
@@ -473,7 +473,7 @@ void HDual::init_slice(int init_sliced_num) {
   // Number of slices
   slice_num = init_sliced_num;
   if (slice_num < 1) slice_num = 1;
-  if (slice_num > HSOL_SLICED_LIMIT) slice_num = HSOL_SLICED_LIMIT;
+  if (slice_num > HIGHS_SLICED_LIMIT) slice_num = HIGHS_SLICED_LIMIT;
 
   // Alias to the matrix
   const int *Astart = matrix->getAstart();
@@ -890,8 +890,8 @@ void HDual::iterate() {
   // candidate. This causes a break from the inner loop of
   // solve_phase% and, hence, a call to rebuild()
 
-  //	Reporting:
-  //	hsol row-wise matrix after update in updateMatrix(columnIn, columnOut);
+  // Reporting:
+  // Row-wise matrix after update in updateMatrix(columnIn, columnOut);
   model->timer.recordStart(HTICK_ITERATE_CHUZR);
   chooseRow();
   model->timer.recordFinish(HTICK_ITERATE_CHUZR);

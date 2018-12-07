@@ -543,7 +543,7 @@ void KktChStep::printA() {
   }
   cout << "------l------\n";
   for (int i = 0; i < numCol; i++) {
-    if (colLower[i] > -HSOL_CONST_INF)
+    if (colLower[i] > -HIGHS_CONST_INF)
       cout << colLower[i] << " ";
     else
       cout << "-inf ";
@@ -552,7 +552,7 @@ void KktChStep::printA() {
   cout << endl;
   cout << "------u------\n";
   for (int i = 0; i < numCol; i++) {
-    if (colUpper[i] < HSOL_CONST_INF)
+    if (colUpper[i] < HIGHS_CONST_INF)
       cout << colUpper[i] << " ";
     else
       cout << "inf ";

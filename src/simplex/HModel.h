@@ -52,16 +52,16 @@ const int invertHint_primalInfeasibleInPrimalSimplex = 7;
 const int invertHint_chooseColumnFail = 8;
 
 /** SCIP-like basis status for columns and rows */
-enum HSOL_BaseStat {
-  HSOL_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
+enum HIGHS_BaseStat {
+  HIGHS_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
                               [including fixed variables]*/
-  HSOL_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
-  HSOL_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
-  HSOL_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
+  HIGHS_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
+  HIGHS_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
+  HIGHS_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
 };
-typedef enum HSOL_BaseStat HSOL_BASESTAT;
+typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
 
-/** SCIP/HSOL Objective sense */
+/** SCIP/HiGHS Objective sense */
 /*enum objSense
 {
   OBJSENSE_MINIMIZE = 1,
@@ -69,13 +69,13 @@ typedef enum HSOL_BaseStat HSOL_BASESTAT;
 };
 */
 
-/** HSOL nonbasicFlag status for columns and rows */
+/** HiGHS nonbasicFlag status for columns and rows */
 enum nonbasicFlagStat {
   NONBASIC_FLAG_TRUE = 1,  // Nonbasic
   NONBASIC_FLAG_FALSE = 0  // Basic
 };
 
-/** HSOL nonbasicMove status for columns and rows */
+/** HiGHS nonbasicMove status for columns and rows */
 enum nonbasicMoveStat {
   NONBASIC_MOVE_UP = 1,   // Free to move (only) up
   NONBASIC_MOVE_DN = -1,  // Free to move (only) down
@@ -85,7 +85,7 @@ enum nonbasicMoveStat {
 // For INT, DBL and STR options, ensure that ***OPT_COUNT is last since
 // this is the number of options and used to dimension as
 //***Option[***OPT_COUNT]
-enum HSOL_INT_OPTIONS {
+enum HIGHS_INT_OPTIONS {
   INTOPT_PRINT_FLAG = 0,  // 0/>=1 = none/do-print
   // If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
   // If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
@@ -99,7 +99,7 @@ enum HSOL_INT_OPTIONS {
   INTOPT_COUNT
 };
 
-enum HSOL_DBL_OPTIONS {
+enum HIGHS_DBL_OPTIONS {
   DBLOPT_TIME_LIMIT = 0,
   DBLOPT_PRIMAL_TOL,
   DBLOPT_DUAL_TOL,
@@ -109,7 +109,7 @@ enum HSOL_DBL_OPTIONS {
   DBLOPT_COUNT
 };
 
-enum HSOL_STR_OPTIONS {
+enum HIGHS_STR_OPTIONS {
   STROPT_PARTITION_FILE = 0,  // name of row partition file
   STROPT_COUNT
 };
@@ -242,7 +242,7 @@ class HModel {
   int writeToMPS(const char* filename);
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Esoterica!
-  // Initialise the random vectors required by hsol
+  // Initialise the random vectors required by HiGHS
   void initRandomVec();
 
   // Shift the objective
@@ -507,8 +507,8 @@ struct HighsSimplexInfo {
   // be perturbed or set to alternative values in Phase I??
   //
   // workDual: Values of the dual variables corresponding to
-  // workCost. Not known until solve() is called since B^{-1} is
-  // required to compute them. Knowledge of them is indicated by
+  // workCost. Latter not known until solve() is called since B^{-1}
+  // is required to compute them. Knowledge of them is indicated by
   // mlFg_haveNonbasicDuals.
   //
   // workShift: WTF
@@ -532,8 +532,8 @@ struct HighsSimplexInfo {
   vector<double> workValue_;
 
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
-  // basic variables and their values. Not known until solve() is
-  // called since B^{-1} is required to compute them. Knowledge of
+  // basic variables and their values. Latter not known until solve()
+  // is called since B^{-1} is required to compute them. Knowledge of
   // them is indicated by mlFg_haveBasicPrimals.
   //
   vector<double> baseLower_;

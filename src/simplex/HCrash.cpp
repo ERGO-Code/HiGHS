@@ -265,15 +265,15 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
-  double mx_co_v = -HSOL_CONST_INF;
+  double mx_co_v = -HIGHS_CONST_INF;
   for (int c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
     mx_co_v = max(abs(sense_col_cost), mx_co_v);
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  double prev_mrt_v0 = -HSOL_CONST_INF;
-  double prev_mrt_v = -HSOL_CONST_INF;
+  double prev_mrt_v0 = -HIGHS_CONST_INF;
+  double prev_mrt_v = -HIGHS_CONST_INF;
   bool rp_c;
   bool rp_al_c = false;
   int n_mrt_v = 0;
@@ -291,8 +291,8 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
     else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
              (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
       rp_c = true;
-      prev_mrt_v = -HSOL_CONST_INF;
-      prev_mrt_v0 = -HSOL_CONST_INF;
+      prev_mrt_v = -HIGHS_CONST_INF;
+      prev_mrt_v0 = -HIGHS_CONST_INF;
     } else if (rp_al_c)
       rp_c = true;
     else
@@ -359,7 +359,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   // each row of the basis matrix
   bixby_n_cdd_r = numRow;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    bixby_pseudo_pv_v[r_n] = HSOL_CONST_INF;
+    bixby_pseudo_pv_v[r_n] = HIGHS_CONST_INF;
     if (crsh_r_ty[r_n] == crsh_vr_ty_fx) {
       bixby_pv_in_r[r_n] = 0;
       bixby_vr_in_r[r_n] = no_ix;
@@ -374,7 +374,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     }
   }
   if (bixby_n_cdd_r == 0) return false;
-  double mx_co_v = -HSOL_CONST_INF;
+  double mx_co_v = -HIGHS_CONST_INF;
   for (int c_n = 0; c_n < numCol; c_n++) {
     // Find largest |entry| in each column
     crsh_mtx_c_mx_abs_v[c_n] = 0.0;
@@ -422,7 +422,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     double sense_col_cost = objSense * colCost[c_n];
     if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    if (colUpper[c_n] >= HSOL_CONST_INF) {
+    if (colUpper[c_n] >= HIGHS_CONST_INF) {
       bixby_mrt_v[os + n_en] = colLower[c_n] + sense_col_cost / co_v_mu;
     } else {
       bixby_mrt_v[os + n_en] = -colUpper[c_n] + sense_col_cost / co_v_mu;
@@ -473,7 +473,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     double sense_col_cost = objSense * colCost[c_n];
     if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    bixby_mrt_v[os + n_en] = HSOL_CONST_INF;
+    bixby_mrt_v[os + n_en] = HIGHS_CONST_INF;
     bixby_mrt_ix[os + n_en] = c_n;
   }
   if (n_en > 0) {
@@ -516,13 +516,13 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
     }
   } else {
     for (int r_n = 0; r_n < numRow; r_n++) {
-      if (rowUpper[r_n] >= HSOL_CONST_INF) {
-        if (rowLower[r_n] <= -HSOL_CONST_INF)
+      if (rowUpper[r_n] >= HIGHS_CONST_INF) {
+        if (rowLower[r_n] <= -HIGHS_CONST_INF)
           crsh_r_ty[r_n] = crsh_vr_ty_fr;  // Free row
         else
           crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) row
       } else {
-        if (rowLower[r_n] <= -HSOL_CONST_INF)
+        if (rowLower[r_n] <= -HIGHS_CONST_INF)
           crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) row
         else {
           // Two-sided row - maybe fixed (equality)
@@ -535,13 +535,13 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
     }
     // Set up the column variable types for crash
     for (int c_n = 0; c_n < numCol; c_n++) {
-      if (colUpper[c_n] >= HSOL_CONST_INF) {
-        if (colLower[c_n] <= -HSOL_CONST_INF)
+      if (colUpper[c_n] >= HIGHS_CONST_INF) {
+        if (colLower[c_n] <= -HIGHS_CONST_INF)
           crsh_c_ty[c_n] = crsh_vr_ty_fr;  // Free column
         else
           crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) column
       } else {
-        if (colLower[c_n] <= -HSOL_CONST_INF)
+        if (colLower[c_n] <= -HIGHS_CONST_INF)
           crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) column
         else {
           // Two-sided row - maybe fixed (equality)
@@ -776,7 +776,7 @@ void HCrash::ltssf_u_da(HModel *ptr_model) {
   // then get the new maximum row priority value TODO Surely this is
   // not necessary with 2-d headers
   if ((crsh_r_pri_mn_r_k[cz_r_pri_v] > numCol) && (cz_r_pri_v == mx_r_pri_v)) {
-    mx_r_pri_v = -HSOL_CONST_I_INF;
+    mx_r_pri_v = -HIGHS_CONST_I_INF;
     for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++)
       if (crsh_r_pri_mn_r_k[pri_v] <= numCol) mx_r_pri_v = pri_v;
   }
@@ -1002,8 +1002,8 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
       crsh_r_pri_k_hdr[pri_v * (numCol + 1) + c_n] = no_lk;
     }
   }
-  mn_abs_pv_v = HSOL_CONST_INF;
-  mn_rlv_pv_v = HSOL_CONST_INF;
+  mn_abs_pv_v = HIGHS_CONST_INF;
+  mn_rlv_pv_v = HIGHS_CONST_INF;
   n_abs_pv_no_ok = 0;
   n_rlv_pv_no_ok = 0;
   // Determine the status and type of each row
@@ -1228,8 +1228,8 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
 
   n_eqv_c = 0;
   pv_v = 0.0;
-  double mn_co = HSOL_CONST_INF;
-  int mx_c_pri_fn_v = -HSOL_CONST_I_INF;
+  double mn_co = HIGHS_CONST_INF;
+  int mx_c_pri_fn_v = -HIGHS_CONST_I_INF;
   for (int el_n = CrshARstart[cz_r_n]; el_n < CrshARstart[cz_r_n + 1]; el_n++) {
     int c_n = CrshARindex[el_n];
     if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
@@ -1316,15 +1316,15 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
       n_fs_c_co += 1;
       continue;
     }
-    if (colUpper[c_n] >= HSOL_CONST_INF) {
+    if (colUpper[c_n] >= HIGHS_CONST_INF) {
       // Free column: nonzero cost cannot be feasible
-      if (colLower[c_n] > -HSOL_CONST_INF) {
+      if (colLower[c_n] > -HIGHS_CONST_INF) {
         // Lower-bounded (1-sided) column: non-negative cost is feasible
         double sense_col_cost = objSense * colCost[c_n];
         if (sense_col_cost >= 0.0) n_fs_c_co += 1;
       }
     } else {
-      if (colLower[c_n] <= -HSOL_CONST_INF) {
+      if (colLower[c_n] <= -HIGHS_CONST_INF) {
         // Upper-bonded (1-sided) column: non-positive cost is feasible
         double sense_col_cost = objSense * colCost[c_n];
         if (sense_col_cost <= 0.0) n_fs_c_co += 1;
@@ -1594,9 +1594,9 @@ void HCrash::crsh_ck_an_impl_bd() {
   int numSlackerDualColLower = 0;
   int numSlackerDualColUpper = 0;
   for (int c_n = 0; c_n < numCol; c_n++) {
-    if (colLower[c_n] > -HSOL_CONST_INF) {
+    if (colLower[c_n] > -HIGHS_CONST_INF) {
       // Col lower > -inf so dualColUpperImplied < inf is tighter
-      if (dualColUpperImplied[c_n] < HSOL_CONST_INF) {
+      if (dualColUpperImplied[c_n] < HIGHS_CONST_INF) {
         numTighterDualColUpper += 1;
       }
     } else {
@@ -1610,9 +1610,9 @@ void HCrash::crsh_ck_an_impl_bd() {
             dualColUpperImplied[c_n]);
       }
     }
-    if (colUpper[c_n] < HSOL_CONST_INF) {
+    if (colUpper[c_n] < HIGHS_CONST_INF) {
       // Col upper <   inf so dualColLowerImplied > -inf is tighter
-      if (dualColLowerImplied[c_n] > -HSOL_CONST_INF) {
+      if (dualColLowerImplied[c_n] > -HIGHS_CONST_INF) {
         numTighterDualColLower += 1;
       }
     } else {
@@ -1660,9 +1660,9 @@ void HCrash::crsh_ck_an_impl_bd() {
   int numSlackerDualRowLower = 0;
   int numSlackerDualRowUpper = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    if (rowLower[r_n] > -HSOL_CONST_INF) {
+    if (rowLower[r_n] > -HIGHS_CONST_INF) {
       // Row lower > -inf so dualRowUpperImplied < inf is tighter
-      if (dualRowUpperImplied[r_n] < HSOL_CONST_INF) {
+      if (dualRowUpperImplied[r_n] < HIGHS_CONST_INF) {
         numTighterDualRowUpper += 1;
       }
     } else {
@@ -1676,9 +1676,9 @@ void HCrash::crsh_ck_an_impl_bd() {
             dualRowUpperImplied[r_n]);
       }
     }
-    if (rowUpper[r_n] < HSOL_CONST_INF) {
+    if (rowUpper[r_n] < HIGHS_CONST_INF) {
       // Row upper <   inf so dualColLowerImplied > -inf is tighter
-      if (dualRowLowerImplied[r_n] > -HSOL_CONST_INF) {
+      if (dualRowLowerImplied[r_n] > -HIGHS_CONST_INF) {
         numTighterDualRowLower += 1;
       }
     } else {

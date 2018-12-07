@@ -88,7 +88,7 @@ void HDualRow::choose_possible() {
                         : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
   const int sourceOut = workDelta < 0 ? -1 : 1;
-  workTheta = HSOL_CONST_INF;
+  workTheta = HIGHS_CONST_INF;
   workCount = 0;
   for (int i = 0; i < packCount; i++) {
     const int iCol = packIndex[i];
@@ -381,7 +381,7 @@ void HDualRow::create_Freelist() {
   const int *nonbasicFlag = workModel->getNonbasicFlag();
   int ckFreeListSize = 0;
   for (int i = 0; i < workModel->getNumTot(); i++) {
-    if (nonbasicFlag[i] && workRange[i] > 1.5 * HSOL_CONST_INF) {
+    if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
       freeList.insert(i);
       ckFreeListSize++;
     }

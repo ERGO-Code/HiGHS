@@ -97,7 +97,7 @@ class HVector {
   HVector *next;       //!< Allows vectors to be linked for PAMI
 
   /**
-   * @brief Packing: Zero values in Vector.array which exceed HSOL_CONST_TINY in
+   * @brief Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY in
    * magnitude
    *
    */

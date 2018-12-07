@@ -64,8 +64,8 @@ void HinOut::readDataColumnWise() {
   colUpper.reserve(numCol);
 
   colCost.assign(numCol, 0);
-  colLower.assign(numCol, -HSOL_CONST_INF);
-  colUpper.assign(numCol, HSOL_CONST_INF);
+  colLower.assign(numCol, -HIGHS_CONST_INF);
+  colUpper.assign(numCol, HIGHS_CONST_INF);
 
   for (i = 0; i < numCol; i++) {
     f >> colCost[i];
@@ -83,8 +83,8 @@ void HinOut::readDataColumnWise() {
 
   rowLower.reserve(numRow);
   rowUpper.reserve(numRow);
-  rowLower.assign(numRow, -HSOL_CONST_INF);
-  rowUpper.assign(numRow, HSOL_CONST_INF);
+  rowLower.assign(numRow, -HIGHS_CONST_INF);
+  rowUpper.assign(numRow, HIGHS_CONST_INF);
 
   for (i = 0; i < numRow; i++) {
     f >> rowLower[i];

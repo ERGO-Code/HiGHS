@@ -147,20 +147,20 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   for (int iRow = 0; iRow < numRow; iRow++) {
     switch (rowType[iRow]) {
       case 'L':
-        rowLower[iRow] = -HSOL_CONST_INF;
+        rowLower[iRow] = -HIGHS_CONST_INF;
         rowUpper[iRow] = RHS[iRow];
         break;
       case 'G':
         rowLower[iRow] = RHS[iRow];
-        rowUpper[iRow] = +HSOL_CONST_INF;
+        rowUpper[iRow] = +HIGHS_CONST_INF;
         break;
       case 'E':
         rowLower[iRow] = RHS[iRow];
         rowUpper[iRow] = RHS[iRow];
         break;
       case 'N':
-        rowLower[iRow] = -HSOL_CONST_INF;
-        rowUpper[iRow] = +HSOL_CONST_INF;
+        rowLower[iRow] = -HIGHS_CONST_INF;
+        rowUpper[iRow] = +HIGHS_CONST_INF;
         break;
       case 'X':
         break;
@@ -172,7 +172,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 
   // Load BOUNDS
   colLower.assign(numCol, 0);
-  colUpper.assign(numCol, HSOL_CONST_INF);
+  colUpper.assign(numCol, HIGHS_CONST_INF);
 
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
@@ -183,23 +183,23 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
           colLower[iCol] = data[0];
           break;
         case 'I': /*MI*/
-          colLower[iCol] = -HSOL_CONST_INF;
+          colLower[iCol] = -HIGHS_CONST_INF;
           break;
         case 'L': /*PL*/
-          colUpper[iCol] = HSOL_CONST_INF;
+          colUpper[iCol] = HIGHS_CONST_INF;
           break;
         case 'X': /*FX*/
           colLower[iCol] = data[0];
           colUpper[iCol] = data[0];
           break;
         case 'R': /*FR*/
-          colLower[iCol] = -HSOL_CONST_INF;
-          colUpper[iCol] = HSOL_CONST_INF;
+          colLower[iCol] = -HIGHS_CONST_INF;
+          colUpper[iCol] = HIGHS_CONST_INF;
           break;
         case 'P': /*UP*/
           colUpper[iCol] = data[0];
           if (colLower[iCol] == 0 && data[0] < 0)
-            colLower[iCol] = -HSOL_CONST_INF;
+            colLower[iCol] = -HIGHS_CONST_INF;
           break;
       }
     }
@@ -207,7 +207,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   // Set bounds of [0,1] for integer variables without bounds
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
-      if (colUpper[iCol] == HSOL_CONST_INF) colUpper[iCol] = 1;
+      if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
 #ifdef HiGHSDEV

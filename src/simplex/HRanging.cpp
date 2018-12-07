@@ -58,7 +58,6 @@ int HRanging::computeData(HModel* model) {
     dual_[model->basis.basicIndex_[iRow]] = 0;
   }
 
-
   for (int iRow = 0; iRow < numRow; iRow++) {
     printf("Row %2d has scale factor %12g\n", iRow, model->scale.row_[iRow]);
   }
@@ -510,7 +509,7 @@ int HRanging::computeData(HModel* model) {
    * Ranging 4.2. Put to output buffer
    */
   // Row bound ranging values (up/down bounds and up/down objective)
-  // correspond to the internal hsol model whose row bounds are
+  // correspond to the internal simplex data whose row bounds are
   // flipped and negated relative to the original model.
   //
   // Consequently, the row bound ranging bound are now flipped and
