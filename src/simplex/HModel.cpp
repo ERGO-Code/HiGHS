@@ -20,6 +20,7 @@
 #include "HMpsFF.h"
 #endif
 #include "HToyIO.h"
+#include "HighsUtils.h"
 
 #include <algorithm>
 #include <cassert>
@@ -92,7 +93,7 @@ int HModel::load_fromMPS(const char *filename) {
   //  util_reportModelDa(model.lpScaled, ModelDaFileName);
 #ifdef HiGHSDEV
   //  util_reportModelDa(model.lpScaled, filename);
-  util_anMl("Unscaled");
+  util_anMl(lpScaled, "Unscaled");
 #endif
 
 #ifdef HiGHSDEV
@@ -1637,7 +1638,7 @@ void HModel::scaleModel() {
   mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
   // Analyse the scaled model
-  util_anMl("Scaled");
+  util_anMl(lpScaled, "Scaled");
 #endif
   // Possibly scale the costs
   if (!originalScaling && alwCostScaling) scaleCosts();
@@ -2831,7 +2832,6 @@ void HModel::util_getCosts(HighsLp lp, int firstcol, int lastcol, double *XcolCo
 // Get the bounds for a contiguous set of columns
 void HModel::util_getColBounds(HighsLp lp, int firstcol, int lastcol, double *XcolLower,
                                double *XcolUpper) {
-  HighsUtils utils;
   assert(0 <= firstcol);
   assert(firstcol <= lastcol);
   assert(lastcol < lp.numCol_);
@@ -2844,7 +2844,6 @@ void HModel::util_getColBounds(HighsLp lp, int firstcol, int lastcol, double *Xc
 // Get the bounds for a contiguous set of rows
 void HModel::util_getRowBounds(HighsLp lp, int firstrow, int lastrow, double *XrowLower,
                                double *XrowUpper) {
-  HighsUtils utils;
   assert(0 <= firstrow);
   assert(firstrow <= lastrow);
   assert(lastrow < lp.numRow_);
@@ -4232,7 +4231,7 @@ void HModel::util_reportModelDa(HighsLp lp, const char *filename) {
 }
 
 #ifdef HiGHSDEV
-void HModel::util_anMl(const char *message) {
+void HModel::util_anMl(HighsLp lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
   util_anVecV("Column costs", lp.numCol_, lp.colCost_, false);
   util_anVecV("Column lower bounds", lp.numCol_, lp.colLower_, false);
@@ -4246,7 +4245,7 @@ void HModel::util_anMl(const char *message) {
   }
   util_anMlBd("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
   util_anMlBd("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
-  util_anMlLargeCo(message);
+  util_anMlLargeCo(lp, message);
 }
 
 void HModel::util_anMlBd(const char *message, int numBd, vector<double> &lower,
@@ -4423,7 +4422,7 @@ void HModel::util_anVecV(const char *message, int vecDim, vector<double> &vec,
   }
 }
 
-void HModel::util_anMlLargeCo(const char *message) {
+void HModel::util_anMlLargeCo(HighsLp lp, const char *message) {
   HighsUtils utils;
   numLargeCo = 0;
   largeCostFlag.assign(lp.numCol_, 0);
@@ -4501,6 +4500,7 @@ void HModel::util_anMlLargeCo(const char *message) {
 }
 
 void HModel::util_anMlSol() {
+  HighsUtils utils;
   //  const char *fileName = "OutMl.mps"; writeToMPS(fileName);
   if (problemStatus != LP_Status_Optimal) return;
   printf("\nAnalysing the model solution\n");

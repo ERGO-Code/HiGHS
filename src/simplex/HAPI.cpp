@@ -102,7 +102,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef HiGHSDEV
-  model.util_reportModelDense();
+  model.util_reportModelDense(model.lpScaled);
 #endif
   //  model.util_reportModel();
   //  model.util_reportModelSolution();
