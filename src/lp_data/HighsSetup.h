@@ -68,7 +68,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
 
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
-
+  
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
@@ -129,6 +129,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
+  if (!options_.presolve) return HighsPresolveStatus::NotReduced;
 
   if (info.lp_ == nullptr)
     return HighsPresolveStatus::NullError;

@@ -1,6 +1,7 @@
 # Define library.
 
 set(sources
+    io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp

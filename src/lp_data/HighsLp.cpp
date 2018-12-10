@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsLp.h"
@@ -23,11 +23,12 @@ void checkStatus(HighsStatus status) {
 }
 
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
-    if (solution.colDual_.size() == lp.numCol_ ||
-        solution.colValue_.size() == lp.numCol_ ||
-        solution.rowDual_.size() == lp.numRow_ ||
-        solution.rowValue_.size() == lp.numRow_) return true;
-    return false;
+  if (solution.colDual_.size() == (size_t)lp.numCol_ ||
+      solution.colValue_.size() == (size_t)lp.numCol_ ||
+      solution.rowDual_.size() == (size_t)lp.numRow_ ||
+      solution.rowValue_.size() == (size_t)lp.numRow_)
+    return true;
+  return false;
 }
 
 HighsInputStatus checkLp(const HighsLp& lp) {
@@ -61,7 +62,8 @@ HighsInputStatus checkLp(const HighsLp& lp) {
   }
 
   // Check matrix.
-  if (lp.nnz_ != lp.Avalue_.size()) return HighsInputStatus::ErrorMatrixValue;
+  if ((size_t)lp.nnz_ != lp.Avalue_.size())
+    return HighsInputStatus::ErrorMatrixValue;
   if (lp.nnz_ <= 0) return HighsInputStatus::ErrorMatrixValue;
   if ((int)lp.Aindex_.size() != lp.nnz_)
     return HighsInputStatus::ErrorMatrixIndices;
@@ -187,8 +189,9 @@ void HighsLp::reportLpBrief() {
 
 // Report the LP dimensions
 void HighsLp::reportLpDimensions() {
-  HighsPrintMessage(HighsMessageType::INFO, "LP %s has %d columns, %d rows and %d nonzeros\n",
-         model_name_.c_str(), numCol_, numRow_, Astart_[numCol_]);
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "LP %s has %d columns, %d rows and %d nonzeros\n",
+                    model_name_.c_str(), numCol_, numRow_, Astart_[numCol_]);
 }
 
 // Report the LP objective sense
@@ -198,39 +201,45 @@ void HighsLp::reportLpObjSense() {
   else if (sense_ == OBJSENSE_MAXIMIZE)
     HighsPrintMessage(HighsMessageType::INFO, "Objective sense is maximize\n");
   else
-    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is ill-defined as %d\n", sense_);
+    HighsPrintMessage(HighsMessageType::INFO,
+                      "Objective sense is ill-defined as %d\n", sense_);
 }
 
 // Report the vectors of LP column data
 void HighsLp::reportLpColVec() {
   if (numCol_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO, "  Column        Lower        Upper         Cost\n");
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "  Column        Lower        Upper         Cost\n");
   for (int iCol = 0; iCol < numCol_; iCol++) {
-    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g %12g\n", iCol, colLower_[iCol], colUpper_[iCol], colCost_[iCol]);
+    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g %12g\n", iCol,
+                      colLower_[iCol], colUpper_[iCol], colCost_[iCol]);
   }
 }
 
 // Report the vectors of LP row data
 void HighsLp::reportLpRowVec() {
   if (numRow_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO, "     Row        Lower        Upper\n");
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "     Row        Lower        Upper\n");
   for (int iRow = 0; iRow < numRow_; iRow++) {
-    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g\n", iRow, rowLower_[iRow], rowUpper_[iRow]);
+    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g\n", iRow,
+                      rowLower_[iRow], rowUpper_[iRow]);
   }
 }
 
-// Report the LP column-wise matrix 
+// Report the LP column-wise matrix
 void HighsLp::reportLpColMtx() {
   if (numCol_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO, "Column Index              Value\n");
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "Column Index              Value\n");
   for (int iCol = 0; iCol < numCol_; iCol++) {
-    HighsPrintMessage(HighsMessageType::INFO, "    %8d Start   %10d\n", iCol, Astart_[iCol]);
+    HighsPrintMessage(HighsMessageType::INFO, "    %8d Start   %10d\n", iCol,
+                      Astart_[iCol]);
     for (int el = Astart_[iCol]; el < Astart_[iCol + 1]; el++) {
-      HighsPrintMessage(HighsMessageType::INFO, "          %8d %12g\n", Aindex_[el], Avalue_[el]);
+      HighsPrintMessage(HighsMessageType::INFO, "          %8d %12g\n",
+                        Aindex_[el], Avalue_[el]);
     }
   }
-  HighsPrintMessage(HighsMessageType::INFO, "             Start   %10d\n", Astart_[numCol_]);
+  HighsPrintMessage(HighsMessageType::INFO, "             Start   %10d\n",
+                    Astart_[numCol_]);
 }
-
-
-

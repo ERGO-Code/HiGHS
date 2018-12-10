@@ -13,7 +13,10 @@
  */
 #include "FilereaderLp.h"
 
-FilereaderRetcode FilereaderLp::readModelFromFile(const char filename,
-                                                  HighsLp& model) {
-  return FilereaderRetcode::OKAY;
+FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename, HighsLp& model) {
+  return FilereaderRetcode::PARSERERROR;
+}
+
+FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename, HighsLp& model) {
+  return FilereaderRetcode::PARSERERROR;
 }
