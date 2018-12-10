@@ -55,9 +55,9 @@ struct HighsOptions {
 class HighsLp {
  public:
   // Model data
-  int numCol_;
-  int numRow_;
-  int nnz_;
+  int numCol_ = 0;
+  int numRow_ = 0;
+  int nnz_ = 0;
 
   std::vector<int> Astart_;
   std::vector<int> Aindex_;
@@ -131,6 +131,7 @@ struct HighsRanging {
   std::vector<int>    rowBoundRangeDnOutCol_;
 };
 
+// Make sure the dimensions of solution are the same as numRow_ and numCol_.
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
 
 // Return a string representation of SolutionStatus.

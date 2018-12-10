@@ -21,6 +21,14 @@ void checkStatus(HighsStatus status) {
     std::cout << "Unexpected status: " << HighsStatusToString(status);
 }
 
+bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
+    if (solution.colDual_.size() == lp.numCol_ ||
+        solution.colValue_.size() == lp.numCol_ ||
+        solution.rowDual_.size() == lp.numRow_ ||
+        solution.rowValue_.size() == lp.numRow_) return true;
+    return false;
+}
+
 HighsInputStatus checkLp(const HighsLp& lp) {
   // Check dimensions.
   if (lp.numCol_ <= 0 || lp.numRow_ <= 0)

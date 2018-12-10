@@ -11,8 +11,8 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef PRESOLVE_HPRESOLVE_H_
-#define PRESOLVE_HPRESOLVE_H_
+#ifndef PRESOLVE_PRESOLVE_H_
+#define PRESOLVE_PRESOLVE_H_
 
 #include <list>
 #include <stack>
@@ -25,26 +25,53 @@
 #include "HPreData.h"
 #include "HTimerPre.h"
 #include "KktChStep.h"
+#include "HighsLp.h"
 
 using namespace std;
 
-class HPresolve : public HPreData {
+enum class HighsPostsolveStatus {
+  ReducedSolutionEmpty,
+  ReducedSolutionDimenionsError,
+  SolutionRecovered,
+  LpOrPresolveObjectMissing,
+  NoPostsolve
+};
+
+enum class HighsPresolveStatus {
+    NotReduced,
+    Infeasible,
+    Unbounded,
+    Empty,
+    Reduced,
+    ReducedToEmpty,
+    NullError
+};
+
+
+class Presolve : public HPreData {
  public:
-  HPresolve();
+  Presolve();
+  HighsPresolveStatus presolve();
+  HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
+                                 HighsSolution& recovered_solution);
+
+  void setBasisInfo(const std::vector<int>& info, const std::vector<int>& nbf);
+  void load(const HighsLp& lp);
+ // todo: clear the public from below. 
   string modelName;
+ private: 
 
   int iPrint;
   int iKKTcheck;
   int presolve(int print);
-  int presolve();
 
-  void postsolve();
 
   double objShift;
   void initializeVectors();
   void setProblemStatus(const int s);
   void reportTimes();
 
+  friend class HModel;
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
   vector<double> implColUpper;
@@ -71,11 +98,13 @@ class HPresolve : public HPreData {
     Unbounded = 2,
     Empty = 3,
     Optimal = 4,
+    Reduced = 5,
   };
 
  private:
   bool hasChange;
   int status = 0;  // 0 is unassigned, see enum stat
+  friend class PresolveInfo;
 
   list<int> singRow;  // singleton rows
   list<int> singCol;  // singleton columns
@@ -197,6 +226,36 @@ class HPresolve : public HPreData {
   //
 
   string countsFile;
+};
+
+// comment out whole class and see what the issue is.
+
+// Class for easy communication between Presolve and Highs. A single
+// instance of PresolveInfo handles a single presolve execution on one
+// LP.
+class PresolveInfo {
+ public:
+  PresolveInfo() {}
+  // option_presolve : 0 means don't presolve.
+  PresolveInfo(int option_presolve, const HighsLp& lp) {
+    if (option_presolve) {
+      lp_ = &lp;
+      presolve_.push_back(Presolve());
+     }
+  }
+
+  HighsLp& getReducedProblem();
+  HighsPresolveStatus presolve_status_;
+  HighsPostsolveStatus postsolve_status_;
+ public: 
+  // Original problem is lp_.
+  const  HighsLp * lp_;
+  std::vector<Presolve> presolve_;
+  HighsLp reduced_lp_;
+
+  // todo: make reduced one const.
+  HighsSolution reduced_solution_;
+  HighsSolution recovered_solution_;
 };
 
 #endif /* PRESOLVE_HPRESOLVE_H_ */

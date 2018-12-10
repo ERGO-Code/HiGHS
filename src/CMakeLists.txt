@@ -1,7 +1,6 @@
 # Define library.
 
 set(sources
-    HApp.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
@@ -11,7 +10,7 @@ set(sources
     lp_data/HighsLp.cpp
     lp_data/HighsModelBuilder.cpp
     lp_data/HighsUtils.cpp
-    presolve/HPresolve.cpp
+    presolve/Presolve.cpp
     presolve/HPreData.cpp
     simplex/HAPI.cpp
     simplex/HCrash.cpp
@@ -32,7 +31,6 @@ set(sources
 )
 
 set(headers
-    HApp.h
     HiGHSRun.h
     io/Filereader.h
     io/FilereaderLp.h
@@ -42,13 +40,14 @@ set(headers
     io/HMPSIO.h
     io/HToyIO_C.h
     io/HToyIO.h
+    io/HighsIO.h
     io/LoadProblem.h
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsModelBuilder.h
     lp_data/HighsUtils.h
-    presolve/HPresolve.h
-    presolve/HPreData.h
+    lp_data/HighsModelObject.h
+    simplex/HApp.h
     simplex/HConst.h
     simplex/HCrash.h
     simplex/HDual.h
@@ -61,7 +60,8 @@ set(headers
     simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSort.h
-    simplex/HTester.h
+#    simplex/HTester.h
+    presolve/Presolve.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     simplex/HVector.h
