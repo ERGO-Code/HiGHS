@@ -24,6 +24,14 @@
 // parser does not read free mps files.
 enum class HighsMpsParserType { free, fixed };
 
+/** SCIP/HiGHS Objective sense */
+enum objSense
+{
+  OBJSENSE_MINIMIZE = 1,
+  OBJSENSE_MAXIMIZE = -1
+};
+
+
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
 // are just what has been used to parse options from argv.
@@ -72,6 +80,16 @@ class HighsLp {
   int sense_ = 1;
   double offset_ = 0;
   std::string model_name_ = "";
+
+void reportLp();
+void reportLpBrief();
+void reportLpDimensions();
+void reportLpObjSense();
+void reportLpColVec();
+void reportLpRowVec();
+void reportLpColMtx();
+
+
 };
 
 // HiGHS status

@@ -60,14 +60,6 @@ enum HIGHS_BaseStat {
 };
 typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
 
-/** SCIP/HiGHS Objective sense */
-/*enum objSense
-{
-  OBJSENSE_MINIMIZE = 1,
-  OBJSENSE_MAXIMIZE = -1
-};
-*/
-
 /** HiGHS nonbasicFlag status for columns and rows */
 enum nonbasicFlagStat {
   NONBASIC_FLAG_TRUE = 1,  // Nonbasic
@@ -173,7 +165,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void printSolution();
   void copy_impliedBoundsToModelBounds();
   void copy_savedBoundsToModelBounds();
   void mlFg_Clear();
@@ -331,33 +322,23 @@ class HModel {
   // Methods for reporting the model, its solution, row and column data and
   // matrix
   void util_reportModelDa(HighsLp lp, const char* filename);
-  void util_reportModel(HighsLp lp);
   void util_reportModelSolution(HighsLp lp);
-  void util_reportModelBrief(HighsLp lp);
-  void util_reportModelDimensions(HighsLp lp);
-  void util_reportModelObjSense(HighsLp lp);
-  void util_reportModelStatus();
+  void util_reportModelStatus(HighsLp lp);
 #ifdef HiGHSDEV
   void util_reportModelDense(HighsLp lp);
 #endif
-  void util_reportRowVec(int nrow, vector<double>& XrowLower,
-                         vector<double>& XrowUpper);
   void util_reportRowVecSol(int nrow, vector<double>& XrowLower,
                             vector<double>& XrowUpper,
                             vector<double>& XrowPrimal,
                             vector<double>& XrowDual, vector<int>& XrowStatus);
   void util_reportRowMtx(int nrow, vector<int>& XARstart, vector<int>& XARindex,
                          vector<double>& XARvalue);
-  void util_reportColVec(int ncol, vector<double>& XcolCost,
-                         vector<double>& XcolLower, vector<double>& XcolUpper);
   void util_reportColVecSol(int ncol, vector<double>& XcolCost,
                             vector<double>& XcolLower,
                             vector<double>& XcolUpper,
                             vector<double>& XcolPrimal,
                             vector<double>& XcolDual, vector<int>& XcolStatus);
-  void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex,
-                         vector<double>& XAvalue);
-  
+
   void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
   void util_anPrDuDgn();

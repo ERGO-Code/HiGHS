@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsLp.h"
+#include "HighsIO.h"
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.
@@ -167,3 +168,69 @@ std::string HighsInputStatusToString(HighsInputStatus status) {
   }
   return "";
 }
+
+// Methods for reporting an LP, including its row and column data and matrix
+//
+// Report the whole LP
+void HighsLp::reportLp() {
+  reportLpBrief();
+  reportLpColVec();
+  reportLpRowVec();
+  reportLpColMtx();
+}
+
+// Report the LP briefly
+void HighsLp::reportLpBrief() {
+  reportLpDimensions();
+  reportLpObjSense();
+}
+
+// Report the LP dimensions
+void HighsLp::reportLpDimensions() {
+  HighsPrintMessage(HighsMessageType::INFO, "LP %s has %d columns, %d rows and %d nonzeros\n",
+         model_name_.c_str(), numCol_, numRow_, Astart_[numCol_]);
+}
+
+// Report the LP objective sense
+void HighsLp::reportLpObjSense() {
+  if (sense_ == OBJSENSE_MINIMIZE)
+    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is minimize\n");
+  else if (sense_ == OBJSENSE_MAXIMIZE)
+    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is maximize\n");
+  else
+    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is ill-defined as %d\n", sense_);
+}
+
+// Report the vectors of LP column data
+void HighsLp::reportLpColVec() {
+  if (numCol_ <= 0) return;
+  HighsPrintMessage(HighsMessageType::INFO, "  Column        Lower        Upper         Cost\n");
+  for (int iCol = 0; iCol < numCol_; iCol++) {
+    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g %12g\n", iCol, colLower_[iCol], colUpper_[iCol], colCost_[iCol]);
+  }
+}
+
+// Report the vectors of LP row data
+void HighsLp::reportLpRowVec() {
+  if (numRow_ <= 0) return;
+  HighsPrintMessage(HighsMessageType::INFO, "     Row        Lower        Upper\n");
+  for (int iRow = 0; iRow < numRow_; iRow++) {
+    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g\n", iRow, rowLower_[iRow], rowUpper_[iRow]);
+  }
+}
+
+// Report the LP column-wise matrix 
+void HighsLp::reportLpColMtx() {
+  if (numCol_ <= 0) return;
+  HighsPrintMessage(HighsMessageType::INFO, "Column Index              Value\n");
+  for (int iCol = 0; iCol < numCol_; iCol++) {
+    HighsPrintMessage(HighsMessageType::INFO, "    %8d Start   %10d\n", iCol, Astart_[iCol]);
+    for (int el = Astart_[iCol]; el < Astart_[iCol + 1]; el++) {
+      HighsPrintMessage(HighsMessageType::INFO, "          %8d %12g\n", Aindex_[el], Avalue_[el]);
+    }
+  }
+  HighsPrintMessage(HighsMessageType::INFO, "             Start   %10d\n", Astart_[numCol_]);
+}
+
+
+

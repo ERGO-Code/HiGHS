@@ -88,6 +88,7 @@ int HModel::load_fromMPS(const char *filename) {
     totalTime += timer.getTime();
     return RtCd;
   }
+  //  lpScaled.reportLp();
   //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";
   //  util_reportModelDa(model.lpScaled, ModelDaFileName);
 #ifdef HiGHSDEV
@@ -268,94 +269,6 @@ void HModel::copy_fromHModelToHPresolve(Presolve *ptr_model) {
   ptr_model->rowUpper = lp.rowUpper_;
   */
   ptr_model->modelName = &modelName[0];
-}
-
-void HModel::printSolution() {
-  //*************** part 1 : in .solve()
-  // Take primal solution
-  int numRow = lpScaled.numRow_;
-  int numCol = lpScaled.numCol_;
-  vector<double> value = simplex.workValue_;
-  for (int iRow = 0; iRow < numRow; iRow++)
-    value[basis.basicIndex_[iRow]] = simplex.baseValue_[iRow];
-
-  // Take dual solution
-  vector<double> dual = simplex.workDual_;
-  for (int iRow = 0; iRow < numRow; iRow++) dual[basis.basicIndex_[iRow]] = 0;
-
-  // Take non basic flag and move don't need those?
-  // houtput.Nflag = Nflag_;
-  // houtput.Nmove = Nmove_;
-
-  // Scale back
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    value[iCol] *= scale.col_[iCol];
-    dual[iCol] /= scale.col_[iCol];
-  }
-  for (int iRow = 0, iTot = numCol; iRow < numRow; iRow++, iTot++) {
-    value[iTot] /= scale.row_[iRow];
-    dual[iTot] *= scale.row_[iRow];
-  }
-
-  //************** part 2: gepr and gedu
-
-  // Now we can get the solution
-  vector<double> colValue(numCol), colDual(numCol);
-  vector<double> rowValue(numRow), rowDual(numRow);
-
-  // hems_gepr hems_gedu after model has been solved
-  // always call that function with numRow + 1 for rowListSize and same for col
-  // hems_gepr(&returnCode, 0, numRow + 1), numCol + 1, 0, 0, &rowValue[0],
-  // &colValue[0]);
-  double *valuePtr = &value[0];
-  //    if (rowListSize > numRow) {
-  for (int i = 0; i < numRow; i++) rowValue[i] = -valuePtr[i + numCol];
-  //    } else {
-  //        for (int i = 0; i < rowListSize; i++)
-  //            rowValue[i] = -valuePtr[rowList[i] + numCol - 1];
-  //    }
-  //    if (colListSize > numCol) {
-  for (int i = 0; i < numCol; i++) colValue[i] = valuePtr[i];
-  //    } else {
-  //       for (int i = 0; i < colListSize; i++)
-  //          colValue[i] = valuePtr[colList[i] - 1];
-  // }
-
-  // hems_gedu(&returnCode, 0, numRow + 1, numCol + 1, 0, 0, &rowDual[0],
-  // &colDual[0]);
-
-  //    if (rowListSize > numRow) {
-  for (int i = 0; i < numRow; i++) rowDual[i] = dual[i + numCol];
-  //    } else {
-  //      for (int i = 0; i < rowListSize; i++)
-  //         rowDual[i] = dual[rowList[i] + numCol - 1];
-  // }
-
-  //   if (colListSize > numCol) {
-  for (int i = 0; i < numCol; i++) colDual[i] = dual[i];
-  //   } else {
-  //      for (int i = 0; i < colListSize; i++)
-  //         colDual[i] = dual[colList[i] - 1];
-  // }
-  //*rtcod = 0;*/
-
-  cout << endl << "Col value: ";
-  for (int i = 0; i < numCol; i++) {
-    cout << colValue[i] << " ";
-  }
-  cout << endl << "Col dual:  ";
-  for (int i = 0; i < numCol; i++) {
-    cout << colDual[i] << " ";
-  }  // cout<< colDual[i] <<" ";
-  cout << endl << "Row value: ";
-  for (int i = 0; i < numRow; i++) {
-    cout << rowValue[i] << " ";
-  }  // cout<< rowValue[i] <<" ";
-  cout << endl << "Row dual:  ";
-  for (int i = 0; i < numRow; i++) {
-    cout << rowDual[i] << " ";
-  }  // cout<< rowDual[i] <<" ";
-  cout << endl << endl;
 }
 
 void HModel::copy_impliedBoundsToModelBounds() {
@@ -3556,7 +3469,7 @@ void HModel::util_deleteRowset(int *dstat) {
     cout << flush;
     printf("Before\n");
   }
-  //  util_reportModel();
+  //  lpScaled.reportLp();
 
   int newRow = 0;
   // Look through the rows removing any being deleted and shifting data
@@ -3749,7 +3662,7 @@ void HModel::util_changeCoeff(int row, int col, const double newval) {
   //  printf("\n\nCalled model.util_changeCoeff(row=%d, col=%d, newval=%g)\n\n",
   //  row, col, newval);cout << flush;
 
-  //  util_reportModel();
+  //  lpScaled.reportLp();
   int cg_el = -1;
   for (int el = lpScaled.Astart_[col]; el < lpScaled.Astart_[col + 1]; el++) {
     //    printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el,
@@ -3780,7 +3693,7 @@ void HModel::util_changeCoeff(int row, int col, const double newval) {
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if
   mlFg_Update(mlFg_action_NewRows);
-  //  util_reportModel(model.lpScaled);
+  //  lpScaled.reportLp();
 }
 
 // Get a single coefficient from the matrix
@@ -3850,7 +3763,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
     printf("\n");
   } else {
     printf(" ");
-    util_reportModelStatus();
+    util_reportModelStatus(lpScaled);
   }
   // Greppable report line added
   printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
@@ -3880,18 +3793,10 @@ void HModel::util_reportSolverProgress() {
 
 // Methods for reporting the model, its solution, row and column data and matrix
 //
-// Report the whole model
-void HModel::util_reportModel(HighsLp lp) {
-  util_reportModelBrief(lp);
-  util_reportColVec(lp.numCol_, lp.colCost_, lp.colLower_, lp.colUpper_);
-  util_reportRowVec(lp.numRow_, lp.rowLower_, lp.rowUpper_);
-  util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
-}
-
 // Report the model solution
 void HModel::util_reportModelSolution(HighsLp lp) {
-  util_reportModelBrief(lp);
-  util_reportModelStatus();
+  lp.reportLpBrief();
+  util_reportModelStatus(lp);
   assert(lp.numCol_ > 0);
   assert(lp.numRow_ > 0);
   vector<double> colPrimal(lp.numCol_);
@@ -3908,29 +3813,8 @@ void HModel::util_reportModelSolution(HighsLp lp) {
                        rowStatus);
 }
 
-void HModel::util_reportModelBrief(HighsLp lp) {
-  util_reportModelDimensions(lp);
-  util_reportModelObjSense(lp);
-}
-
-// Report the model dimensions
-void HModel::util_reportModelDimensions(HighsLp lp) {
-  printf("Model %s has %d columns, %d rows and %d nonzeros\n",
-         modelName.c_str(), lp.numCol_, lp.numRow_, lp.Astart_[lp.numCol_]);
-}
-
-// Report the model objective sense
-void HModel::util_reportModelObjSense(HighsLp lp) {
-  if (lp.sense_ == OBJSENSE_MINIMIZE)
-    printf("Objective sense is minimize\n");
-  else if (lp.sense_ == OBJSENSE_MAXIMIZE)
-    printf("Objective sense is maximize\n");
-  else
-    printf("Objective sense is ill-defined as %d\n", lp.sense_);
-}
-
 // Report the model status
-void HModel::util_reportModelStatus() {
+void HModel::util_reportModelStatus(HighsLp lp) {
   printf("LP status is %2d: ", problemStatus);
   if (problemStatus == LP_Status_Unset)
     printf("Unset\n");
@@ -4001,19 +3885,9 @@ void HModel::util_reportModelDense(HighsLp lp) {
 }
 #endif
 // The remaining routines are wholly independent of any classes, merely
-// printing what's passed inthe parameter lists.
+// printing what's passed in the parameter lists.
 //
 // ToDo: Consider putting them in a separate class.
-void HModel::util_reportRowVec(int nrow, vector<double> &XrowLower,
-                               vector<double> &XrowUpper) {
-  // Report the LP row data passed to the method
-  if (nrow <= 0) return;
-  printf("Row          Lower       Upper\n");
-  for (int row = 0; row < nrow; row++) {
-    printf("%6d %11g %11g\n", row, XrowLower[row], XrowUpper[row]);
-  }
-}
-
 void HModel::util_reportRowVecSol(int nrow, vector<double> &XrowLower,
                                   vector<double> &XrowUpper,
                                   vector<double> &XrowPrimal,
@@ -4057,18 +3931,6 @@ void HModel::util_reportRowMtx(int nrow, vector<int> &XARstart,
   printf("       Start %8d\n", XARstart[nrow]);
 }
 
-void HModel::util_reportColVec(int ncol, vector<double> &XcolCost,
-                               vector<double> &colLower,
-                               vector<double> &XcolUpper) {
-  // Report the LP column data passed to the method
-  if (ncol <= 0) return;
-  printf("Column       Lower       Upper        Cost\n");
-  for (int col = 0; col < ncol; col++) {
-    printf("%6d %11g %11g %11g\n", col, colLower[col], XcolUpper[col],
-           XcolCost[col]);
-  }
-}
-
 void HModel::util_reportColVecSol(int ncol, vector<double> &XcolCost,
                                   vector<double> &colLower,
                                   vector<double> &XcolUpper,
@@ -4098,20 +3960,6 @@ void HModel::util_reportColVecSol(int ncol, vector<double> &XcolCost,
     printf(" %11g %11g %11g %11g %11g\n", XcolPrimal[col], colLower[col],
            XcolUpper[col], XcolDual[col], XcolCost[col]);
   }
-}
-
-void HModel::util_reportColMtx(int ncol, vector<int> &XAstart,
-                               vector<int> &XAindex, vector<double> &XAvalue) {
-  // Report the column-wise matrix passed to the method
-  if (ncol <= 0) return;
-  printf("Column Index       Value\n");
-  for (int col = 0; col < ncol; col++) {
-    printf("%6d Start %8d\n", col, XAstart[col]);
-    for (int el = XAstart[col]; el < XAstart[col + 1]; el++) {
-      printf("      %6d %11g\n", XAindex[el], XAvalue[el]);
-    }
-  }
-  printf("       Start %8d\n", XAstart[ncol]);
 }
 
 void HModel::util_reportBasicIndex(const char *message, int numRow, vector<int> &basicIndex) {

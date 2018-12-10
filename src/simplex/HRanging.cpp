@@ -950,10 +950,10 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   } else {
     model->intOption[INTOPT_PRINT_FLAG] = 0;
   }
-  //  model->util_reportModel(model->lpScaled);
+  //  model->lpScaled.reportLp();
   solver.solve(model);
   if (rp) {
-    model->util_reportModel(model->lpScaled);
+    model->lpScaled.reportLp();
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }

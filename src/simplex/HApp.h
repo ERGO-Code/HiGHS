@@ -49,7 +49,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
-  model.util_reportSolverOutcome("Solve plain");
+  model.util_reportSolverOutcome("Solve");
 
   // HighsSolution set
   HighsSolution& solution = highs_model.solution_;
