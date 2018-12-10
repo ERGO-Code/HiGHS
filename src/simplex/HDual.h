@@ -21,6 +21,7 @@
 #include "HMatrix.h"
 #include "HModel.h"
 #include "HVector.h"
+#include "HighsModelObject.h"
 
 #include <set>
 #include <string>
@@ -30,11 +31,11 @@ using namespace std;
 /**
  * Limit on number of threads used to dimension many identifiers
  */
-const int HSOL_THREAD_LIMIT = 32;
+const int HIGHS_THREAD_LIMIT = 32;
 /**
  * Limit on the number of column slices for parallel calculations
  */
-const int HSOL_SLICED_LIMIT = 100;
+const int HIGHS_SLICED_LIMIT = 100;
 
 /**
  * Possible edge weight mode values used to test EdWt_Mode
@@ -97,7 +98,8 @@ class HDual {
    * of threads
    */
   void solve(
-      HModel *model,       //!< Instance of HModel class to be solved
+  HModel *model,       //!< Instance of HModel class to be solved
+  //HighsModelObject *highs_model,       //!< Instance of HModel class to be solved
       int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
       int num_threads = 1  //!< Default number of threads is 1
   );
@@ -553,10 +555,10 @@ class HDual {
   // Partitioned coefficient matrix
   int slice_num;
   int slice_PRICE;
-  int slice_start[HSOL_SLICED_LIMIT + 1];
-  HMatrix slice_matrix[HSOL_SLICED_LIMIT];
-  HVector slice_row_ap[HSOL_SLICED_LIMIT];
-  HDualRow slice_dualRow[HSOL_SLICED_LIMIT];
+  int slice_start[HIGHS_SLICED_LIMIT + 1];
+  HMatrix slice_matrix[HIGHS_SLICED_LIMIT];
+  HVector slice_row_ap[HIGHS_SLICED_LIMIT];
+  HDualRow slice_dualRow[HIGHS_SLICED_LIMIT];
 
   /**
    * @brief Multiple CHUZR data
@@ -600,8 +602,8 @@ class HDual {
   int multi_nFinish;
   int multi_iteration;
   int multi_chooseAgain;
-  MChoice multi_choice[HSOL_THREAD_LIMIT];
-  MFinish multi_finish[HSOL_THREAD_LIMIT];
+  MChoice multi_choice[HIGHS_THREAD_LIMIT];
+  MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
   double total_syntheticTick;
 #ifdef HiGHSDEV

@@ -153,7 +153,7 @@ void HPreData::print(int k) {
   }
   cout << "------l------\n";
   for (size_t i = 0; i < colLower.size(); i++) {
-    if (colLower[i] > -HSOL_CONST_INF)
+    if (colLower[i] > -HIGHS_CONST_INF)
       cout << colLower[i];
     else
       cout << "-inf";
@@ -161,7 +161,7 @@ void HPreData::print(int k) {
   cout << endl;
   cout << "------u------\n";
   for (size_t i = 0; i < colUpper.size(); i++) {
-    if (colUpper[i] < HSOL_CONST_INF)
+    if (colUpper[i] < HIGHS_CONST_INF)
       cout << colUpper[i];
     else
       cout << "inf";
@@ -197,7 +197,7 @@ void HPreData::printAR(int i) {
   }
   cout << "------l------\n";
   for (int i = 0; i < cols; i++) {
-    if (colLower[i] > -HSOL_CONST_INF)
+    if (colLower[i] > -HIGHS_CONST_INF)
       cout << colLower[i] << " ";
     else
       cout << "-inf";
@@ -205,7 +205,7 @@ void HPreData::printAR(int i) {
   cout << endl;
   cout << "------u------\n";
   for (int i = 0; i < cols; i++) {
-    if (colUpper[i] < HSOL_CONST_INF)
+    if (colUpper[i] < HIGHS_CONST_INF)
       cout << colUpper[i] << " ";
     else
       cout << "inf ";

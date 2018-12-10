@@ -24,6 +24,14 @@
 // parser does not read free mps files.
 enum class HighsMpsParserType { free, fixed };
 
+/** SCIP/HiGHS Objective sense */
+enum objSense
+{
+  OBJSENSE_MINIMIZE = 1,
+  OBJSENSE_MAXIMIZE = -1
+};
+
+
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
 // are just what has been used to parse options from argv.
@@ -72,6 +80,16 @@ class HighsLp {
   int sense_ = 1;
   double offset_ = 0;
   std::string model_name_ = "";
+
+void reportLp();
+void reportLpBrief();
+void reportLpDimensions();
+void reportLpObjSense();
+void reportLpColVec();
+void reportLpRowVec();
+void reportLpColMtx();
+
+
 };
 
 // HiGHS status
@@ -106,10 +124,29 @@ enum class HighsInputStatus {
 };
 
 struct HighsSolution {
-  std::vector<double> colValue;
-  std::vector<double> colDual;
-  std::vector<double> rowValue;
-  std::vector<double> rowDual;
+  std::vector<double> colValue_;
+  std::vector<double> colDual_;
+  std::vector<double> rowValue_;
+  std::vector<double> rowDual_;
+};
+
+struct HighsRanging {
+  std::vector<double> colCostRangeUpValue_;
+  std::vector<double> colCostRangeUpObjective_;
+  std::vector<int>    colCostRangeUpInCol_;
+  std::vector<int>    colCostRangeUpOutCol_;
+  std::vector<double> colCostRangeDnValue_;
+  std::vector<double> colCostRangeDnObjective_;
+  std::vector<int>    colCostRangeDnInCol_;
+  std::vector<int>    colCostRangeDnOutCol_;
+  std::vector<double> rowBoundRangeUpValue_;
+  std::vector<double> rowBoundRangeUpObjective_;
+  std::vector<int>    rowBoundRangeUpInCol_;
+  std::vector<int>    rowBoundRangeUpOutCol_;
+  std::vector<double> rowBoundRangeDnValue_;
+  std::vector<double> rowBoundRangeDnObjective_;
+  std::vector<int>    rowBoundRangeDnInCol_;
+  std::vector<int>    rowBoundRangeDnOutCol_;
 };
 
 // Make sure the dimensions of solution are the same as numRow_ and numCol_.

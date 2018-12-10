@@ -47,7 +47,7 @@
 
 using Triplet = std::tuple<int, int, double>;
 
-const double infinity() { return HSOL_CONST_INF; }
+const double infinity() { return HIGHS_CONST_INF; }
 
 class MpsParser {
  private:

@@ -39,7 +39,7 @@ void HDualRow::setupSlice(HModel *model, int size) {
 void HDualRow::setup(HModel *model) {
   // Setup common vectors
   setupSlice(model, model->getNumTot());
-  workRand = model->getWorkIntBreak();
+  workColPermutation = model->getColPermutation();
 }
 
 void HDualRow::clear() {
@@ -88,7 +88,7 @@ void HDualRow::choose_possible() {
                         : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
   const int sourceOut = workDelta < 0 ? -1 : 1;
-  workTheta = HSOL_CONST_INF;
+  workTheta = HIGHS_CONST_INF;
   workCount = 0;
   for (int i = 0; i < packCount; i++) {
     const int iCol = packIndex[i];
@@ -255,7 +255,7 @@ bool HDualRow::choose_final() {
       } else if (dMaxFinal == workData[i].second) {
         int jCol = workData[iMaxFinal].first;
         int iCol = workData[i].first;
-        if (workRand[iCol] < workRand[jCol]) {
+        if (workColPermutation[iCol] < workColPermutation[jCol]) {
           iMaxFinal = i;
         }
       }
@@ -331,9 +331,9 @@ void HDualRow::update_dual(double theta, int columnOut) {
     int iCol = packIndex[i];
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
-    double iColWorkValue = workModel->workValue[iCol];
-    double dlDuObj = workModel->nonbasicFlag[iCol] * (-iColWorkValue * dlDual);
-    dlDuObj *= workModel->costScale;
+    double iColWorkValue = workModel->simplex.workValue_[iCol];
+    double dlDuObj = workModel->basis.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
+    dlDuObj *= workModel->scale.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
   /*
@@ -366,7 +366,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
       double dlDual = theta * packValue[i];
       double iColWorkValue = workModel->workValue[iCol];
       double dlDuObj = -iColWorkValue * dlDual;
-      dlDuObj *= workModel->costScale;
+      dlDuObj *= workModel->scale.cost_;
       if (!workModel->nonbasicFlag[iCol])
 	printf("Column %5d: packValue = %11.4g Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g; dlDuObj = %11.4g: DuObj = %11.4g\n", 
 	       iCol, packValue[i], workModel->nonbasicFlag[iCol], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);
@@ -381,7 +381,7 @@ void HDualRow::create_Freelist() {
   const int *nonbasicFlag = workModel->getNonbasicFlag();
   int ckFreeListSize = 0;
   for (int i = 0; i < workModel->getNumTot(); i++) {
-    if (nonbasicFlag[i] && workRange[i] > 1.5 * HSOL_CONST_INF) {
+    if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
       freeList.insert(i);
       ckFreeListSize++;
     }

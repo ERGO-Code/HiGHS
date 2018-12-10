@@ -7,24 +7,47 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HRandom.h
- * @brief Random number generator for HiGHS
+/**@file lp_data/HUtils.h
+ * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HRANDOM_H_
-#define SIMPLEX_HRANDOM_H_
+#ifndef LP_DATA_HIGHSUTILS_H_
+#define LP_DATA_HIGHSUTILS_H_
+
+#include "HConfig.h"
+#include "HighsLp.h"
+#include "HConst.h"
+
+// Logical check of double being +Infinity
+bool highs_isInfinity(double val);
 
 /**
- * @brief Class for the random number generator for HiGHS
+ * @brief Class for HiGHS utilities
  */
-class HRandom {
+
+const int initial_random_mw = 1985;
+const int initial_random_mz = 2012;
+
+class HighsUtils {
  public:
+
+  /**
+   * @brief Initialisations
+   */
+  HighsUtils() {
   /**
    * @brief Initialise the two seeds
    */
-  HRandom() {
-    random_mw = 1985;
-    random_mz = 2012;
+    random_mw = initial_random_mw;
+    random_mz = initial_random_mz;
+  }
+
+  /**
+   * @brief (Re-)initialise the random number generator
+   */
+  void initialiseRandom() {
+    random_mw = initial_random_mw;
+    random_mz = initial_random_mz;
   }
 
   /**
@@ -48,9 +71,14 @@ class HRandom {
     return returnValue;
   }
 
+#ifdef HiGHSDEV
+  void util_anMl(HighsLp lp, const char* message);
+  void util_anMlBd(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
+  void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
+#endif
  private:
   unsigned random_mw;
   unsigned random_mz;
-};
 
-#endif /* SIMPLEX_HRANDOM_H_ */
+};
+#endif // LP_DATA_HIGHSUTILS_H_

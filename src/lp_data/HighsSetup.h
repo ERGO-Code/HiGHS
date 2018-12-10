@@ -295,7 +295,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   const char* crashMode = "";
   const char* partitionFile = "";
 
-  double TimeLimit_ArgV = HSOL_CONST_INF;
+  double TimeLimit_ArgV = HIGHS_CONST_INF;
 
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;

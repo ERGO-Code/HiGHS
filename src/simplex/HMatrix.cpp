@@ -192,7 +192,7 @@ void HMatrix::collect_aj(HVector &vector, int iCol, double multi) const {
       double value1 = value0 + multi * Avalue[k];
       if (value0 == 0) vector.index[vector.count++] = index;
       vector.array[index] =
-          (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
     }
   } else {
     int index = iCol - numCol;
@@ -200,7 +200,7 @@ void HMatrix::collect_aj(HVector &vector, int iCol, double multi) const {
     double value1 = value0 + multi;
     if (value0 == 0) vector.index[vector.count++] = index;
     vector.array[index] =
-        (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+        (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
   }
 }
 
@@ -216,7 +216,7 @@ void HMatrix::price_by_col(HVector &row_ap, HVector &row_ep) const {
     for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
       value += ep_array[Aindex[k]] * Avalue[k];
     }
-    if (fabs(value) > HSOL_CONST_TINY) {
+    if (fabs(value) > HIGHS_CONST_TINY) {
       ap_array[iCol] = value;
       ap_index[ap_count++] = iCol;
     }
@@ -287,7 +287,7 @@ void HMatrix::price_by_row_w_sw(HVector &row_ap, HVector &row_ep,
           printf(" value0 = %11.4g; value1 = %11.4g\n", value0, value1);
         }
         ap_array[index] =
-            (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
       }
       nx_i = i + 1;
     }
@@ -307,7 +307,7 @@ void HMatrix::price_by_row_w_sw(HVector &row_ap, HVector &row_ep,
     for (int i = 0; i < apcount1; i++) {
       const int index = ap_index[i];
       const double value = ap_array[index];
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         ap_index[ap_count++] = index;
       } else {
         ap_array[index] = 0;
@@ -354,14 +354,14 @@ void HMatrix::price_by_row_no_index(HVector &row_ap, HVector &row_ep,
         fflush(stdout);
       }
       ap_array[index] =
-          (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
     }
   }
   // Determine indices of nonzeros in Price result
   int ap_count = 0;
   for (int index = 0; index < numCol; index++) {
     double value1 = ap_array[index];
-    if (fabs(value1) < HSOL_CONST_TINY) {
+    if (fabs(value1) < HIGHS_CONST_TINY) {
       ap_array[index] = 0;
     } else {
       ap_index[ap_count++] = index;
@@ -503,7 +503,7 @@ void HMatrix::price_by_row_ultra0(HVector &row_ap, HVector &row_ep,
         }
       }
       value1 = value0 + multi * ARvalue[k];
-      value1 = (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+      value1 = (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
       if (rpOps) {
         printf(" ckPMZ=%6d; v0 = %11.4g; v1 = %11.4g", ckPackMapZ, value0,
                value1);
@@ -655,7 +655,7 @@ void HMatrix::price_by_row_ultra12(HVector &row_ap, HVector &row_ep,
       // TODO Unlikely, but possible for ap_count to reach numCol
       //      assert(ap_count<numCol);
       ap_packValue[valueP] =
-          (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
     }
     nx_i = i + 1;
   }
@@ -724,7 +724,7 @@ void HMatrix::price_by_row_ultra12(HVector &row_ap, HVector &row_ep,
         // TODO Unlikely, but possible for ap_count to reach numCol
         assert(ap_count < numCol);
         ap_packValue[valueP] =
-            (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
       }
       nx_i = i + 1;
     }
@@ -782,7 +782,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
     for (int i = 0; i < apcount1; i++) {
       const int index = ap_index[i];
       const double value = ap_array[index];
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         ap_index[ap_count++] = index;
       } else {
         ap_array[index] = 0;
@@ -796,7 +796,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
          ++itPackMap) {
       int index = itPackMap->first;
       double value = itPackMap->second;
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         ap_packValue[ap_count] = value;
         ap_index[ap_count++] = index;
       }
@@ -808,7 +808,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
       const int index = ap_index[i];
       valueP = ap_valueP1[index];
       const double value = ap_packValue[valueP];
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         ap_valueP1[index] = ap_count;
         ap_packValue[ap_count] = value;
         ap_index[ap_count++] = index;
@@ -847,7 +847,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
         printf(" value=%g\n", value);
         fflush(stdout);
       }
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         ap_valueP2[index] = ap_count;
         ap_packValue[ap_count] = value;
         ap_index[ap_count++] = index;
@@ -938,8 +938,8 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
   for (int index = 0; index < numCol; index++) {
     double PriceV = ap_array[index];
     double lcPriceV = lc_ap_array[index];
-    if ((fabs(PriceV) > HSOL_CONST_TINY && fabs(lcPriceV) <= HSOL_CONST_TINY) ||
-        (fabs(lcPriceV) > HSOL_CONST_TINY && fabs(PriceV) <= HSOL_CONST_TINY)) {
+    if ((fabs(PriceV) > HIGHS_CONST_TINY && fabs(lcPriceV) <= HIGHS_CONST_TINY) ||
+        (fabs(lcPriceV) > HIGHS_CONST_TINY && fabs(PriceV) <= HIGHS_CONST_TINY)) {
       double TinyVEr = max(fabs(PriceV), fabs(lcPriceV));
       mxTinyVEr = max(TinyVEr, mxTinyVEr);
       if (TinyVEr > 1e-4) {
@@ -1027,7 +1027,7 @@ void HMatrix::compute_vecT_matB(const double *vec, const int *base,
     } else {
       value = vec[iCol - numCol];
     }
-    if (fabs(value) > HSOL_CONST_TINY) {
+    if (fabs(value) > HIGHS_CONST_TINY) {
       resultArray[i] = value;
       resultIndex[resultCount++] = i;
     }
@@ -1045,7 +1045,7 @@ void HMatrix::compute_matB_vec(const double *vec, const int *base,
   for (int i = 0; i < numRow; i++) {
     int iCol = base[i];
     double value = vec[i];
-    if (fabs(value) > HSOL_CONST_TINY) {
+    if (fabs(value) > HIGHS_CONST_TINY) {
       if (iCol < numCol) {
         for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
           resultArray[Aindex[k]] += value * Avalue[k];
@@ -1056,7 +1056,7 @@ void HMatrix::compute_matB_vec(const double *vec, const int *base,
   }
 
   for (int i = 0; i < numRow; i++) {
-    if (fabs(resultArray[i]) > HSOL_CONST_TINY) {
+    if (fabs(resultArray[i]) > HIGHS_CONST_TINY) {
       resultIndex[resultCount++] = i;
     } else {
       resultArray[i] = 0;

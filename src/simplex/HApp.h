@@ -48,15 +48,16 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   model.scaleModel();
   HDual solver;
-  solver.solve(&model);
-  model.util_reportSolverOutcome("Solve plain");
+  //solver.solve(&highs_model);
+    solver.solve(&model);
+  model.util_reportSolverOutcome("Solve");
 
   // HighsSolution set
   HighsSolution& solution = highs_model.solution_;
-  highs_model.hmodel_[0].util_getPrimalDualValues(solution.colValue,
-                                                  solution.colDual, 
-                                                  solution.rowValue,
-                                                  solution.rowDual);
+  highs_model.hmodel_[0].util_getPrimalDualValues(solution.colValue_,
+                                                  solution.colDual_, 
+                                                  solution.rowValue_,
+                                                  solution.rowDual_);
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
 
@@ -135,12 +136,13 @@ solveTasks
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
+HighsLp HModelToHighsLp(const HModel& model) { return model.lpScaled; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;
 
-  model.lp.numCol_ = lp.numCol_;
+  /*
+    model.lp.numCol_ = lp.numCol_;
   model.lp.numRow_ = lp.numRow_;
 
   model.lp.Astart_ = lp.Astart_;
@@ -151,7 +153,7 @@ HModel HighsLpToHModel(const HighsLp& lp) {
   model.lp.colUpper_ = lp.colUpper_;
   model.lp.rowLower_ = lp.rowLower_;
   model.lp.rowUpper_ = lp.rowUpper_;
-
+  */
   return model;
 }
 

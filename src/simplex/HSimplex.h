@@ -7,18 +7,18 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HModelCs.h
- * @brief Constants for reading MPS files
+/**@file lp_data/HSimplex.h
+ * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HMODELCS_H_
-#define SIMPLEX_HMODELCS_H_
+#ifndef SIMPLEX_HSIMPLEX_H_
+#define SIMPLEX_HSIMPLEX_H_
 
-//const int OBJSENSE_MINIMIZE = 1;
-//const int OBJSENSE_MAXIMIZE = -1;
+#include <vector>
 
-const int MPS_ROW_TY_N = 0;
-const int MPS_ROW_TY_E = 1;
-const int MPS_ROW_TY_L = 2;
-const int MPS_ROW_TY_G = 3;
-#endif /* SIMPLEX_HMODELCS_H_ */
+class HSimplex {
+ public:
+
+
+};
+#endif // SIMPLEX_HSIMPLEX_H_

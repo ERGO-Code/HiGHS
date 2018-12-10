@@ -36,7 +36,7 @@ void HDualRHS::choose_normal(int *chIndex) {
   // call. NB Must still call intRandom to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
   // call!!
-  int random = workModel->random.intRandom();
+  int random = workModel->utils.intRandom();
   if (workCount == 0) {
     *chIndex = -1;
     return;
@@ -57,7 +57,7 @@ void HDualRHS::choose_normal(int *chIndex) {
       const int start = (section == 0) ? randomStart : 0;
       const int end = (section == 0) ? numRow : randomStart;
       for (int iRow = start; iRow < end; iRow++) {
-        if (workArray[iRow] > HSOL_CONST_ZERO) {
+        if (workArray[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = workArray[iRow];
           const double myWeight = workEdWt[iRow];
           if (bestMerit * myWeight < myInfeas) {
@@ -86,7 +86,7 @@ void HDualRHS::choose_normal(int *chIndex) {
       const int end = (section == 0) ? workCount : randomStart;
       for (int i = start; i < end; i++) {
         int iRow = workIndex[i];
-        if (workArray[iRow] > HSOL_CONST_ZERO) {
+        if (workArray[iRow] > HIGHS_CONST_ZERO) {
           const double myInfeas = workArray[iRow];
           const double myWeight = workEdWt[iRow];
           if (bestMerit * myWeight < myInfeas) {
@@ -128,7 +128,7 @@ void HDualRHS::choose_multi_global(int *chIndex, int *chCount, int chLimit) {
     const int numRow = -workCount;
     double cutoffMerit = 0;
     for (int iRow = 0; iRow < numRow; iRow++) {
-      if (workArray[iRow] > HSOL_CONST_ZERO) {
+      if (workArray[iRow] > HIGHS_CONST_ZERO) {
         const double myInfeas = workArray[iRow];
         const double myWeight = workEdWt[iRow];
         if (cutoffMerit * myWeight < myInfeas) {
@@ -148,7 +148,7 @@ void HDualRHS::choose_multi_global(int *chIndex, int *chCount, int chLimit) {
     double cutoffMerit = 0;
     for (int i = 0; i < workCount; i++) {
       int iRow = workIndex[i];
-      if (workArray[iRow] > HSOL_CONST_ZERO) {
+      if (workArray[iRow] > HIGHS_CONST_ZERO) {
         const double myInfeas = workArray[iRow];
         const double myWeight = workEdWt[iRow];
         if (cutoffMerit * myWeight < myInfeas) {
@@ -196,7 +196,7 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
   *chCount = 0;
 
-  int random = workModel->random.intRandom();
+  int random = workModel->utils.intRandom();
   if (workCount < 0) {
     // DENSE mode
     const int numRow = -workCount;
@@ -207,7 +207,7 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
       const int start = (section == 0) ? randomStart : 0;
       const int end = (section == 0) ? numRow : randomStart;
       for (int iRow = start; iRow < end; iRow++) {
-        if (workArray[iRow] > HSOL_CONST_ZERO) {
+        if (workArray[iRow] > HIGHS_CONST_ZERO) {
           int iPart = workPartition[iRow];
           const double myInfeas = workArray[iRow];
           const double myWeight = workEdWt[iRow];
@@ -240,7 +240,7 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
       const int end = (section == 0) ? workCount : randomStart;
       for (int i = start; i < end; i++) {
         int iRow = workIndex[i];
-        if (workArray[iRow] > HSOL_CONST_ZERO) {
+        if (workArray[iRow] > HIGHS_CONST_ZERO) {
           int iPart = workPartition[iRow];
           const double myInfeas = workArray[iRow];
           const double myWeight = workEdWt[iRow];

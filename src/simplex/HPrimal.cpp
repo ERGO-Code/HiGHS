@@ -169,13 +169,14 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = model->getWorkUpper();
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
+  const int numTot = model->getNumTot();
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free
       // TODO: if we found free,
       // Then deal with it in dual phase 1
-      if (workLower[iCol] == -HSOL_CONST_INF &&
-          workUpper[iCol] == HSOL_CONST_INF) {
+      if (workLower[iCol] == -HIGHS_CONST_INF &&
+          workUpper[iCol] == HIGHS_CONST_INF) {
         columnIn = iCol;
         break;
       }

@@ -120,7 +120,7 @@ class HDualRow {
   
   HModel *workModel;        //!< Local copy of pointer to model
   int workSize;             //!< Size of the HDualRow slice
-  const int *workRand;      //!< Value of model->getWorkIntBreak();
+  const int *workColPermutation;  //!< Value of model->getColPermutation();
   const int *workMove;      //!< Value of model->getNonbasicMove();
   const double *workDual;   //!< Value of model->getWorkDual();
   const double *workRange;  //!< Value of model->getWorkRange();
