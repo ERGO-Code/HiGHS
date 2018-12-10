@@ -81,7 +81,8 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   }
 
   HDual solver;
-  solver.solve(&model);
+  printf("HAPI.cpp no longer solves!\n");
+  //  solver.solve(&model);
 
   vector<double> XcolPrimalValues;
   vector<double> XcolDualValues;

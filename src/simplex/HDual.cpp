@@ -21,6 +21,7 @@
 #include "HighsLp.h"
 #include "HighsIO.h"
 #include "HighsOptions.h"
+#include "HighsModelObject.h"
 
 #include <cassert>
 #include <cmath>
@@ -35,6 +36,12 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   assert(ptr_model != NULL);
   dual_variant = variant;
   model = ptr_model;
+
+//void HDual::solve(HighsModelObject *highs_model_object, int variant, int num_threads) {
+//  assert(highs_model_object != NULL);
+//  dual_variant = variant;
+//  model = highs_model_object->hmodel_;
+  
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
   model->setup_for_solve();
