@@ -22,10 +22,10 @@ void checkStatus(HighsStatus status) {
 }
 
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
-    if (solution.colDual.size() == lp.numCol_ ||
-        solution.colValue.size() == lp.numCol_ ||
-        solution.rowDual.size() == lp.numRow_ ||
-        solution.rowValue.size() == lp.numRow_) return true;
+    if (solution.colDual.size() == (size_t) lp.numCol_ ||
+        solution.colValue.size() == (size_t)lp.numCol_ ||
+        solution.rowDual.size() == (size_t) lp.numRow_ ||
+        solution.rowValue.size() == (size_t) lp.numRow_) return true;
     return false;
 }
 
@@ -60,7 +60,7 @@ HighsInputStatus checkLp(const HighsLp& lp) {
   }
 
   // Check matrix.
-  if (lp.nnz_ != lp.Avalue_.size()) return HighsInputStatus::ErrorMatrixValue;
+  if ((size_t) lp.nnz_ != lp.Avalue_.size()) return HighsInputStatus::ErrorMatrixValue;
   if (lp.nnz_ <= 0) return HighsInputStatus::ErrorMatrixValue;
   if ((int)lp.Aindex_.size() != lp.nnz_)
     return HighsInputStatus::ErrorMatrixIndices;

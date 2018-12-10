@@ -16,9 +16,6 @@
 #include "HMPSIO.h"
 #include "Presolve.h"
 #include "HTimer.h"
-#ifdef Boost_FOUND
-#include "HMpsFF.h"
-#endif
 #include "HToyIO.h"
 
 #include <algorithm>
@@ -60,65 +57,6 @@ HModel::HModel() {
 
   // Initialise the total runtine for this model
   totalTime = 0;
-}
-
-int HModel::load_fromMPS(const char *filename) {
-  // Remove any current model
-  clearModel();
-
-  // Initialise the total runtine for this model
-  totalTime = 0;
-
-  // Load the model, timing the process
-  timer.reset();
-  modelName = filename;
-  // setup_loadMPS(filename);
-  // Here differentiate between parsers!
-#if defined(Boost_FOUND) && !defined(OLD_PARSER)
-  bool mps_ff = true;
-  int RtCd =
-      readMPS_FF(filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_, lp.Astart_, lp.Aindex_,
-                 lp.Avalue_, lp.colCost_, lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_);
-#else
-  bool mps_ff = false;
-  int RtCd = readMPS(filename, -1, -1, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
-                     lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_, lp.colUpper_,
-                     lp.rowLower_, lp.rowUpper_, integerColumn);
-#endif
-  if (RtCd) {
-    totalTime += timer.getTime();
-    return RtCd;
-  }
-  int numInt = 0;
-  if (!mps_ff)
-    for (int c_n = 0; c_n < lp.numCol_; c_n++) {
-      if (integerColumn[c_n]) numInt++;
-    }
-#ifdef HiGHSDEV
-  if (numInt) printf("MPS file has %d integer variables\n", numInt);
-#endif
-  numTot = lp.numCol_ + lp.numRow_;
-  //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";
-  //  util_reportModelDa(ModelDaFileName);
-#ifdef HiGHSDEV
-  //  util_reportModelDa(filename);
-  util_anMl("Unscaled");
-#endif
-
-#ifdef HiGHSDEV
-  // Use this next line to check the loading of a model from arrays
-  // check_load_fromArrays(); return;
-#endif
-
-  // Assign and initialise unit scaling factors
-  initScale();
-
-  // Initialise with a logical basis then allocate and populate (where
-  // possible) work* arrays and allocate basis* arrays
-  initWithLogicalBasis();
-
-  totalTime += timer.getTime();
-  return RtCd;
 }
 
 int HModel::load_fromToy(const char *filename) {
