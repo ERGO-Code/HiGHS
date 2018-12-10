@@ -14,11 +14,8 @@
 #include "HModel.h"
 #include "HConst.h"
 #include "HMPSIO.h"
-#include "HPresolve.h"
+#include "Presolve.h"
 #include "HTimer.h"
-#ifdef Boost_FOUND
-#include "HMpsFF.h"
-#endif
 #include "HToyIO.h"
 
 #include <algorithm>
@@ -60,65 +57,6 @@ HModel::HModel() {
 
   // Initialise the total runtine for this model
   totalTime = 0;
-}
-
-int HModel::load_fromMPS(const char *filename) {
-  // Remove any current model
-  clearModel();
-
-  // Initialise the total runtine for this model
-  totalTime = 0;
-
-  // Load the model, timing the process
-  timer.reset();
-  modelName = filename;
-  // setup_loadMPS(filename);
-  // Here differentiate between parsers!
-#if defined(Boost_FOUND) && !defined(OLD_PARSER)
-  bool mps_ff = true;
-  int RtCd =
-      readMPS_FF(filename, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_, lp.Astart_, lp.Aindex_,
-                 lp.Avalue_, lp.colCost_, lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_);
-#else
-  bool mps_ff = false;
-  int RtCd = readMPS(filename, -1, -1, lp.numRow_, lp.numCol_, lp.sense_, lp.offset_,
-                     lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_, lp.colUpper_,
-                     lp.rowLower_, lp.rowUpper_, integerColumn);
-#endif
-  if (RtCd) {
-    totalTime += timer.getTime();
-    return RtCd;
-  }
-  int numInt = 0;
-  if (!mps_ff)
-    for (int c_n = 0; c_n < lp.numCol_; c_n++) {
-      if (integerColumn[c_n]) numInt++;
-    }
-#ifdef HiGHSDEV
-  if (numInt) printf("MPS file has %d integer variables\n", numInt);
-#endif
-  numTot = lp.numCol_ + lp.numRow_;
-  //  const char *ModelDaFileName = "HiGHS_ModelDa.txt";
-  //  util_reportModelDa(ModelDaFileName);
-#ifdef HiGHSDEV
-  //  util_reportModelDa(filename);
-  util_anMl("Unscaled");
-#endif
-
-#ifdef HiGHSDEV
-  // Use this next line to check the loading of a model from arrays
-  // check_load_fromArrays(); return;
-#endif
-
-  // Assign and initialise unit scaling factors
-  initScale();
-
-  // Initialise with a logical basis then allocate and populate (where
-  // possible) work* arrays and allocate basis* arrays
-  initWithLogicalBasis();
-
-  totalTime += timer.getTime();
-  return RtCd;
 }
 
 int HModel::load_fromToy(const char *filename) {
@@ -257,46 +195,24 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
 
   totalTime += timer.getTime();
 }
-
-void HModel::load_fromPresolve(HPresolve *ptr_model) {
+/*
+void HModel::loadfromPresolveInfo(const PresolveInfo& info,
+                                  const bool postsolve) {
   clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
+  
+  copy_fromHPresolveToHModel(info.presolve_[0]);
   initScale();
   initWithLogicalBasis();
-  copy_fromHPresolveToHModelImplied(ptr_model);
-}
-
-void HModel::load_fromPresolve(HPresolve &ptr_model) {
-  clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
-  initScale();
-  initWithLogicalBasis();
-  copy_fromHPresolveToHModelImplied(ptr_model);
-}
-
-void HModel::load_fromPostsolve(HPresolve *ptr_model) {
-  clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
-  initScale();
-  copy_basisFromPostsolve(ptr_model);
-  initFromNonbasic();
+  if (!postsolve) {
+    copy_fromHPresolveToHModelImplied(info.presolve_[0]);
+  } else {
 #ifdef HiGHSDEV
-  check_load_fromPostsolve();
-#endif
+    check_load_fromPostsolve();
+#endif 
+  }
 }
-
-void HModel::load_fromPostsolve(HPresolve &ptr_model) {
-  clearModel();
-  copy_fromHPresolveToHModel(ptr_model);
-  initScale();
-  copy_basisFromPostsolve(ptr_model);
-  initFromNonbasic();
-#ifdef HiGHSDEV
-  check_load_fromPostsolve();
-#endif
-}
-
-void HModel::copy_fromHModelToHPresolve(HPresolve *ptr_model) {
+*/
+void HModel::copy_fromHModelToHPresolve(Presolve *ptr_model) {
   ptr_model->numCol = lp.numCol_;
   ptr_model->numRow = lp.numRow_;
   ptr_model->numTot = numTot;
@@ -1857,19 +1773,19 @@ void HModel::setup_shuffleColumn() {
   mlFg_Update(mlFg_action_ShuffleLP);
 }
 
-void HModel::copy_basisFromPostsolve(HPresolve &ptr_model) {
+void HModel::copy_basisFromPostsolve(Presolve &ptr_model) {
   basicIndex = ptr_model.basicIndex;
   nonbasicFlag = ptr_model.nonbasicFlag;
   nonbasicMove = ptr_model.nonbasicMove;
 }
 
-void HModel::copy_basisFromPostsolve(HPresolve *ptr_model) {
+void HModel::copy_basisFromPostsolve(Presolve *ptr_model) {
   basicIndex = ptr_model->basicIndex;
   nonbasicFlag = ptr_model->nonbasicFlag;
   nonbasicMove = ptr_model->nonbasicMove;
 }
 
-void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model) {
+void HModel::copy_fromHPresolveToHModel(Presolve &ptr_model) {
   lp.numCol_ = ptr_model.numCol;
   lp.numRow_ = ptr_model.numRow;
   numTot = ptr_model.numCol + ptr_model.numRow;
@@ -1885,7 +1801,7 @@ void HModel::copy_fromHPresolveToHModel(HPresolve &ptr_model) {
   lp.sense_ = 1;
 }
 
-void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model) {
+void HModel::copy_fromHPresolveToHModel(Presolve *ptr_model) {
   lp.numCol_ = ptr_model->numCol;
   lp.numRow_ = ptr_model->numRow;
   numTot = ptr_model->numCol + ptr_model->numRow;
@@ -1901,7 +1817,7 @@ void HModel::copy_fromHPresolveToHModel(HPresolve *ptr_model) {
   lp.sense_ = 1;
 }
 
-void HModel::copy_fromHPresolveToHModelImplied(HPresolve &ptr_model) {
+void HModel::copy_fromHPresolveToHModelImplied(const Presolve &ptr_model) {
   impliedBoundsPresolve = true;
   primalColLowerImplied = ptr_model.implColLower;
   primalColUpperImplied = ptr_model.implColUpper;
@@ -1913,7 +1829,19 @@ void HModel::copy_fromHPresolveToHModelImplied(HPresolve &ptr_model) {
   dualRowUpperImplied = ptr_model.implRowDualUpper;
 }
 
-void HModel::copy_fromHPresolveToHModelImplied(HPresolve *ptr_model) {
+void HModel::copy_fromHPresolveToHModelImplied(Presolve &ptr_model) {
+  impliedBoundsPresolve = true;
+  primalColLowerImplied = ptr_model.implColLower;
+  primalColUpperImplied = ptr_model.implColUpper;
+  primalRowLowerImplied = ptr_model.implRowValueLower;
+  primalRowUpperImplied = ptr_model.implRowValueUpper;
+  dualColLowerImplied = ptr_model.implColDualLower;
+  dualColUpperImplied = ptr_model.implColDualUpper;
+  dualRowLowerImplied = ptr_model.implRowDualLower;
+  dualRowUpperImplied = ptr_model.implRowDualUpper;
+}
+
+void HModel::copy_fromHPresolveToHModelImplied(Presolve *ptr_model) {
   impliedBoundsPresolve = true;
   primalColLowerImplied = ptr_model->implColLower;
   primalColUpperImplied = ptr_model->implColUpper;
@@ -5048,4 +4976,14 @@ void HModel::util_anMlSol() {
     printf("Other values = %11.4g\n", lcValue_OtherCo);
   }
 }
+
+// Rename appropriately when HModel is split.
+void getSolutionFromHModel(const HModel& model, HighsSolution& solution) {
+  model.util_getPrimalDualValues()
+  model.util_getPrimalDualValues(solution.colPrimal,
+                           solution.colDual,
+                           soltuion.rowPrimal,
+                           solution.rowDual);
+}
+
 #endif

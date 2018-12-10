@@ -11,7 +11,7 @@ int main(int argc, char **argv) {
   // HighsStatus init_status_ = loadOptions(argc, argv, options_);
 
   if (init_status != HighsStatus::OK) {
-    printHelp(argv[0]);
+//    printHelp(argv[0]);
     return 0;
   }
 

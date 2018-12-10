@@ -15,10 +15,15 @@
 #define LP_DATA_HIGHS_SETUP_H_
 
 #include <iostream>
+#include <memory>
 
 #include "HApp.h"
+#include "HighsLp.h"
 #include "HighsOptions.h"
+#include "Presolve.h"
+#include "HighsModelObject.h"
 #include "cxxopts.hpp"
+
 
 HModel HighsLpToHModel(const HighsLp& lp);
 HighsLp HModelToHighsLp(const HModel& model);
@@ -30,83 +35,154 @@ class Highs {
   explicit Highs(const HighsOptions& opt) : options_(opt){};
   explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
+  // Function to call just presolve. 
+  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) {
+    // todo: implement, from user's side.
+    return HighsPresolveStatus::NullError;
+  };
+
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(const HighsLp& lp, HighsSolution& solution) const;
+  HighsStatus run(const HighsLp& lp, HighsSolution& solution);
 
- private:
   // delete.
   HighsOptions options_;
+
+ private:
+  // each HighsModelObject holds a const ref to its lp_
+  std::vector<HighsModelObject> lps_;
+
+  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
+  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
+  HighsStatus runSolver(HighsModelObject& model);
+
   // use HighsStringOptions instead for now. Then rename to HighsOptions, once
   // previous one is gone.
   HighsStringOptions options__;
-  HighsStatus runSolver(const HighsLp& lp, HighsSolution& solution) const;
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) const {
-  return runSolver(lp, solution);
+HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
+  // todo: handle printing messages with HighsPrintMessage
 
-  // todo
-  //
-  // if (!options_.presolve) {
-  //  HighsSolution solution;
-  //  return runSolver(lp, solution);
-  //}
-  // return HighsStatus::NotImplemented;
+  // Not solved before, so create an instance of HighsModelObject.
+  lps_.push_back(HighsModelObject(lp));
+  
+  // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
+  PresolveInfo presolve_info(options_.presolve, lp);
+  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+  //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
+ 
+  // Run solver.
+  HighsStatus solve_status;
+  switch (presolve_status) {
+    case HighsPresolveStatus::NotReduced: {
+      solve_status = runSolver(lps_[0]);
+      break;
+    }
+    case HighsPresolveStatus::Reduced: {
+      const HighsLp& reduced_lp = presolve_info.getReducedProblem();
+      // Add reduced lp object to vector of HighsModelObject,
+      // so the last one in lp_ is the presolved one.
+      lps_.push_back(HighsModelObject(reduced_lp));
+      solve_status = runSolver(lps_[1]);
+      break;
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      // Proceed to postsolve.
+      break;
+    }
+    case HighsPresolveStatus::Infeasible:
+    case HighsPresolveStatus::Unbounded: {
+      // todo: report solver outcome.
+      break;
+    }
+    default: {
+      // case HighsPresolveStatus::Error:
+      // todo: handle error.
+      break;
+    }
+  }
 
-  /*
-   HighsLp reduced_lp;
+  // Postsolve. Does nothing if there were no reductions during presolve.
+  if (solve_status == HighsStatus::OK) {
+    if (presolve_status == HighsPresolveStatus::Reduced) {
+    presolve_info.reduced_solution_ = lps_[1].solution_;
+    presolve_info.presolve_[0].setBasisInfo(lps_[1].basis_info_.basis_index,
+                               lps_[1].basis_info_.nonbasic_flag);
+    }
 
-   // presolve(..) method below should use HPresolve now but should be
-   // possible to use external presolve too. Link with ZIB presolve so clp
-   // is possible later.
-   status = presolve(lp, reduced_lp);
-   checkStatus(status);
-
-   switch (status) {
-      case Status::ProblemReduced: {
-         // Solution reduced_solution;
-         // status = runSolver(reduced_lp, reduced_solution);
-         // checkStatus(status);
-         break;
-      }
-      case Status::ProblemReducedToEmpty:
-         // Problem was reduced to empty so we proceed to postsolve
-         break;
-      default:
-         checkStatus(status);
-   }
-
-   // Postsolve
-   status = postsolve(lp, solution)
-
-   // If needed set up clean up with simplex.
-   */
+    HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+    //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
+    if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+      // todo: add finishing simplex iterations if needed.
+      std::cout << "Postsolve finished.\n";
+    }
+  } else {
+    // todo: handle infesible | unbounded instances and solver errors.
+    // either here or at end of runSolver(..)
+    return HighsStatus::NotImplemented;
+  }
 
   return HighsStatus::OK;
 }
 
-// The method below runs simplex or ipx solver on the lp.
+HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
+  if (!options_.presolve) return HighsPresolveStatus::NotReduced;
 
-HighsStatus Highs::runSolver(const HighsLp& lp, HighsSolution& solution) const {
-  // assert(checkLp(lp) == LpError::none);
+  if (info.lp_ == nullptr)
+    return HighsPresolveStatus::NullError;
+
+  if (info.presolve_.size() == 0)
+    return HighsPresolveStatus::NotReduced;
+
+  info.presolve_[0].load(*(info.lp_));
+
+  // Initialize a new presolve class instance for the LP given in presolve info
+  return info.presolve_[0].presolve();
+}
+
+HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
+  if (info.presolve_.size() != 0)
+  {
+    bool solution_ok = isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
+    if (!solution_ok)
+      return HighsPostsolveStatus::ReducedSolutionDimenionsError;
+    
+    // todo: error handling + see todo in run()
+    info.presolve_[0].postsolve(info.reduced_solution_, info.recovered_solution_);
+
+    return HighsPostsolveStatus::SolutionRecovered;
+  } else {
+    return HighsPostsolveStatus::NoPostsolve;
+  }
+}
+
+// The method below runs simplex or ipx solver on the lp.
+HighsStatus Highs::runSolver(HighsModelObject& model) {
+
+  assert(checkLp(model.lp_) == HighsInputStatus::OK);
 
   HighsStatus status;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveSimplex(options_, lp, solution);
+  status = solveSimplex(options_, model);
 #else
   // IPX
   // todo:Check options for simplex-specific options
-
+  // use model.lp_, model.solution_ and model.hmodel_ remains empty.
   status = solveIpx(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
+
+  // Check.
+  if (!isSolutionConsistent(model.lp_, model.solution_)) {
+    std::cout << "Error: Inconsistent solution returned from solver.";
+  }
 
   // todo:
   // assert(KktSatisfied(lp, solution));
@@ -196,6 +272,7 @@ HighsStatus loadOptions(int argc, char** argv,
     std::cout << "error parsing options: " << e.what() << std::endl;
     return HighsStatus::OptionsError;
   }
+  return HighsStatus::OK;
 }
 
 HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
@@ -222,7 +299,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
 
   if (argc == 1) {
     std::cout << "Error: No file specified. \n" << std::endl;
-    printHelp(argv[0]);
+    //printHelp(argv[0]);
     return HighsStatus::OptionsError;
   }
 
@@ -315,8 +392,8 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
                     "Option -%c requires an argument. Current options: Row Col "
                     "RowSw RowSwColSw\n",
                     opt);
-          else
-            printHelp(argv[0]);
+          //else
+          //  printHelp(argv[0]);
         default:
           cout << endl;
           abort();
@@ -374,99 +451,6 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   options_.partitionFile = partitionFile;
 
   return HighsStatus::OK;
-}
-
-HighsStatus solveSimplex(const HighsOptions& opt, const HighsLp& lp,
-                         HighsSolution& solution) {
-  HModel model;
-  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
-                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
-                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
-                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
-
-  cout << "=================================================================="
-          "=="
-          "================"
-       << endl;
-  // parallel
-  if (opt.sip) {
-    cout << "Running solveTasks" << endl;
-
-    solveTasks(model);
-  }
-  if (opt.scip) {
-    cout << "Running solveSCIP" << endl;
-    solveSCIP(model);
-  } else if (opt.pami) {
-    if (opt.partitionFile) {
-      cout << "Running solveMulti" << endl;
-      solveMulti(model, opt.partitionFile);
-    } else if (opt.cut) {
-      model.intOption[INTOPT_PRINT_FLAG] = 1;
-      model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-
-      model.scaleModel();
-
-      HDual solver;
-      cout << "Running solveCut" << endl;
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-
-      model.util_reportSolverOutcome("Cut");
-    } else {
-      cout << "Running solvemulti" << endl;
-      solveMulti(model);
-    }
-  }
-  // serial
-  else if (!opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-           opt.timeLimit == HSOL_CONST_INF) {
-    cout << "Running solvePlain" << endl;
-    int RtCod = solvePlain(model);
-    if (RtCod != 0) {
-      printf("solvePlain(API) return code is %d\n", RtCod);
-    }
-  }  // todo: remove case below, presolve handled elsewhere
-  else if (opt.presolve && !opt.crash && !opt.edgeWeight && !opt.price &&
-           opt.timeLimit == HSOL_CONST_INF) {
-    if (opt.presolve == 1) {
-      cout << "Running solvePlainWithPresolve" << endl;
-      solvePlainWithPresolve(model);
-    }
-#ifdef EXT_PRESOLVE
-    else if (presolve == 2) {
-      cout << "Running solveExternalPresolve" << endl;
-      solveExternalPresolve(fileName);
-    }
-#endif
-  } else {
-    cout << "Running solvePlainJAJH" << endl;
-    solvePlainJAJH(model, opt.priceMode, opt.edWtMode, opt.crashMode,
-                   opt.presolveMode, opt.timeLimit);
-  }
-
-  // todo: check what the solver outcome is and return corresponding status
-  return HighsStatus::OK;
-}
-
-HighsLp HModelToHighsLp(const HModel& model) { return model.lp; }
-
-HModel HighsLpToHModel(const HighsLp& lp) {
-  HModel model;
-
-  model.lp.numCol_ = lp.numCol_;
-  model.lp.numRow_ = lp.numRow_;
-
-  model.lp.Astart_ = lp.Astart_;
-  model.lp.Aindex_ = lp.Aindex_;
-  model.lp.Avalue_ = lp.Avalue_;
-  model.lp.colCost_ = lp.colCost_;
-  model.lp.colLower_ = lp.colLower_;
-  model.lp.colUpper_ = lp.colUpper_;
-  model.lp.rowLower_ = lp.rowLower_;
-  model.lp.rowUpper_ = lp.rowUpper_;
-
-  return model;
 }
 
 #endif

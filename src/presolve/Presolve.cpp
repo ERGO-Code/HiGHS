@@ -7,12 +7,13 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file presolve/HPresolve.cpp
+/**@file presolve/Presolve.cpp
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HPresolve.h"
+#include "Presolve.h"
 #include "HConst.h"
+#include "HighsLp.h"
 
 #include <algorithm>
 #include <cmath>
@@ -25,7 +26,59 @@
 
 using namespace std;
 
-int HPresolve::presolve(int print) {
+void Presolve::load(const HighsLp& lp) {
+  numCol = lp.numCol_;
+  numRow = lp.numRow_;
+  numTot = numTot;
+  Astart = lp.Astart_;
+  Aindex = lp.Aindex_;
+  Avalue = lp.Avalue_;
+  colCost = lp.colCost_;
+  colLower = lp.colLower_;
+  colUpper = lp.colUpper_;
+  rowLower = lp.rowLower_;
+  rowUpper = lp.rowUpper_;
+
+  modelName = &modelName[0];
+}
+
+HighsLp& PresolveInfo::getReducedProblem() {
+  if (presolve_.size() == 0) {
+    std::cout << "Error during presolve. No presolve initialized." << std::endl;
+  } else if (presolve_[0].status != presolve_[0].stat::Reduced) {
+    std::cout << "Error during presolve. No reduced LP. status: "
+              << presolve_[0].status << std::endl;
+  } else {
+    if (presolve_[0].numRow == 0 && presolve_[0].numCol == 0) {
+      // Reduced problem has been already moved to this.reduced_lp_;
+      return reduced_lp_;
+    } else {
+      // Move vectors so no copying happens. presolve does not need that lp
+      // any more.
+      reduced_lp_.numCol_ = presolve_[0].numCol;
+      reduced_lp_.numRow_ = presolve_[0].numRow;
+      reduced_lp_.Astart_ = std::move(presolve_[0].Astart);
+      reduced_lp_.Aindex_ = std::move(presolve_[0].Aindex);
+      reduced_lp_.Avalue_ = std::move(presolve_[0].Avalue);
+      reduced_lp_.colCost_ = std::move(presolve_[0].colCost);
+      reduced_lp_.colLower_ = std::move(presolve_[0].colLower);
+      reduced_lp_.colUpper_ = std::move(presolve_[0].colUpper);
+      reduced_lp_.rowLower_ = std::move(presolve_[0].rowLower);
+      reduced_lp_.rowUpper_ = std::move(presolve_[0].rowUpper);
+
+      reduced_lp_.sense_ = 1;
+      reduced_lp_.nnz_ = reduced_lp_.Avalue_.size();
+    }
+  }
+  return reduced_lp_;
+}
+
+void Presolve::setBasisInfo(const std::vector<int>& info, const std::vector<int>& nbf) {
+  basicIndex = info;
+  nonbasicFlag = nbf;
+}
+
+int Presolve::presolve(int print) {
   iPrint = print;
   iKKTcheck = 0;
 
@@ -98,7 +151,29 @@ int HPresolve::presolve(int print) {
   return status;
 }
 
-int HPresolve::presolve() { return presolve(0); }
+HighsPresolveStatus Presolve::presolve() { 
+  HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
+  int result = presolve(0); 
+  switch (result) {
+    case stat::Unbounded:
+      presolve_status = HighsPresolveStatus::Unbounded;
+      break;
+    case stat::Infeasible:
+      presolve_status = HighsPresolveStatus::Infeasible;
+      break;
+    case stat::Reduced:
+      presolve_status = HighsPresolveStatus::Reduced;
+      break;
+    case stat::Empty:
+      presolve_status = HighsPresolveStatus::Empty;
+      break;
+    case stat::Optimal: 
+      // reduced problem solution indicated as optimal by
+      // the solver.
+      break;
+  }
+  return presolve_status;
+}
 
 /**
  * returns <x, y>
@@ -106,7 +181,7 @@ int HPresolve::presolve() { return presolve(0); }
  *
  * 		   row is of form akx_x + aky_y = b,
  */
-pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
+pair<int, int> Presolve::getXYDoubletonEquations(const int row) {
   pair<int, int> colIndex;
   // row is of form akx_x + aky_y = b, where k=row and y is present in fewer
   // constraints
@@ -156,7 +231,7 @@ pair<int, int> HPresolve::getXYDoubletonEquations(const int row) {
   return colIndex;
 }
 
-void HPresolve::processRowDoubletonEquation(const int row, const int x,
+void Presolve::processRowDoubletonEquation(const int row, const int x,
                                             const int y, const double akx,
                                             const double aky, const double b) {
   postValue.push(akx);
@@ -214,7 +289,7 @@ void HPresolve::processRowDoubletonEquation(const int row, const int x,
   if (!hasChange) hasChange = true;
 }
 
-void HPresolve::removeDoubletonEquations() {
+void Presolve::removeDoubletonEquations() {
   // flagCol should have one more element at end which is zero
   // needed for AR matrix manipulation
   if ((int)flagCol.size() == numCol) flagCol.push_back(0);
@@ -281,7 +356,7 @@ void HPresolve::removeDoubletonEquations() {
       }
 }
 
-void HPresolve::UpdateMatrixCoeffDoubletonEquationXzero(
+void Presolve::UpdateMatrixCoeffDoubletonEquationXzero(
     const int i, const int x, const int y, const double aiy, const double akx,
     const double aky) {
   // case x is zero initially
@@ -324,7 +399,7 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXzero(
   if (nzCol.at(x) == 2) singCol.remove(x);
 }
 
-void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
+void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     const int i, const int x, const int y, const double aiy, const double akx,
     const double aky) {
   int ind;
@@ -423,7 +498,7 @@ void HPresolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
   }
 }
 
-void HPresolve::trimA() {
+void Presolve::trimA() {
   int cntEl = 0;
   for (int j = 0; j < numCol; ++j)
     if (flagCol.at(j)) cntEl += nzCol.at(j);
@@ -463,7 +538,7 @@ void HPresolve::trimA() {
   Aindex.resize(iPut);
 }
 
-void HPresolve::resizeProblem() {
+void Presolve::resizeProblem() {
   int i, j, k;
 
   int nz = 0;
@@ -599,7 +674,7 @@ void HPresolve::resizeProblem() {
   }
 }
 
-void HPresolve::initializeVectors() {
+void Presolve::initializeVectors() {
   // copy original bounds
   colCostOriginal = colCost;
   rowUpperOriginal = rowUpper;
@@ -670,7 +745,7 @@ void HPresolve::initializeVectors() {
   rowUpperAtEl = rowUpper;
 }
 
-HPresolve::HPresolve() {
+Presolve::Presolve() {
   tol = 0.0000001;
   noPostSolve = false;
   objShift = 0;
@@ -680,7 +755,7 @@ HPresolve::HPresolve() {
   countsFile = "";
 }
 
-void HPresolve::removeIfFixed(int j) {
+void Presolve::removeIfFixed(int j) {
   if (colLower.at(j) == colUpper.at(j)) {
     setPrimalValue(j, colUpper.at(j));
     addChange(FIXED_COL, 0, j);
@@ -703,7 +778,7 @@ void HPresolve::removeIfFixed(int j) {
   }
 }
 
-void HPresolve::removeEmptyRow(int i) {
+void Presolve::removeEmptyRow(int i) {
   if (rowLower.at(i) <= tol && rowUpper.at(i) >= -tol) {
     if (iPrint > 0) cout << "PR: Empty row " << i << " removed. " << endl;
     flagRow.at(i) = 0;
@@ -716,7 +791,7 @@ void HPresolve::removeEmptyRow(int i) {
   }
 }
 
-void HPresolve::removeEmptyColumn(int j) {
+void Presolve::removeEmptyColumn(int j) {
   flagCol.at(j) = 0;
   singCol.remove(j);
   double value;
@@ -751,7 +826,7 @@ void HPresolve::removeEmptyColumn(int j) {
   countRemovedCols[EMPTY_COL]++;
 }
 
-void HPresolve::rowDualBoundsDominatedColumns() {
+void Presolve::rowDualBoundsDominatedColumns() {
   int col, i, k;
 
   // for each row calc yihat and yibar and store in implRowDualLower and
@@ -805,7 +880,7 @@ void HPresolve::rowDualBoundsDominatedColumns() {
     }
 }
 
-pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
+pair<double, double> Presolve::getImpliedColumnBounds(int j) {
   pair<double, double> out;
   double e = 0;
   double d = 0;
@@ -863,7 +938,7 @@ pair<double, double> HPresolve::getImpliedColumnBounds(int j) {
   return out;
 }
 
-void HPresolve::removeDominatedColumns() {
+void Presolve::removeDominatedColumns() {
   // for each column j calculate e and d and check:
   double e, d;
   pair<double, double> p;
@@ -918,7 +993,7 @@ void HPresolve::removeDominatedColumns() {
     }
 }
 
-void HPresolve::removeIfWeaklyDominated(const int j, const double d,
+void Presolve::removeIfWeaklyDominated(const int j, const double d,
                                         const double e) {
   int i;
 
@@ -994,7 +1069,7 @@ void HPresolve::removeIfWeaklyDominated(const int j, const double d,
   }
 }
 
-void HPresolve::setProblemStatus(const int s) {
+void Presolve::setProblemStatus(const int s) {
   if (s == Infeasible)
     cout << "NOT-OPT status = 1, returned from solver after presolve: Problem "
             "infeasible.\n";
@@ -1010,14 +1085,14 @@ void HPresolve::setProblemStatus(const int s) {
   status = s;
 }
 
-void HPresolve::setKKTcheckerData() {
+void Presolve::setKKTcheckerData() {
   // after initializing equations.
   chk.setMatrixAR(numCol, numRow, ARstart, ARindex, ARvalue);
   chk.setFlags(flagRow, flagCol);
   chk.setBoundsCostRHS(colUpper, colLower, colCost, rowLower, rowUpper);
 }
 
-pair<double, double> HPresolve::getNewBoundsDoubletonConstraint(int row,
+pair<double, double> Presolve::getNewBoundsDoubletonConstraint(int row,
                                                                 int col, int j,
                                                                 double aik,
                                                                 double aij) {
@@ -1051,7 +1126,7 @@ pair<double, double> HPresolve::getNewBoundsDoubletonConstraint(int row,
   return make_pair(low, upp);
 }
 
-void HPresolve::removeFreeColumnSingleton(const int col, const int row,
+void Presolve::removeFreeColumnSingleton(const int col, const int row,
                                           const int k) {
   timer.recordStart(FREE_SING_COL);
   if (iPrint > 0)
@@ -1086,7 +1161,7 @@ void HPresolve::removeFreeColumnSingleton(const int col, const int row,
   timer.recordFinish(FREE_SING_COL);
 }
 
-bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col,
+bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
                                                            const int i,
                                                            const int k) {
   // second column index j
@@ -1190,7 +1265,7 @@ bool HPresolve::removeColumnSingletonInDoubletonInequality(const int col,
   return true;
 }
 
-void HPresolve::removeSecondColumnSingletonInDoubletonRow(const int j,
+void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
                                                           const int i) {
   // case two singleton columns
   // when we get here bounds on xj are updated so we can choose low/upper one
@@ -1228,7 +1303,7 @@ void HPresolve::removeSecondColumnSingletonInDoubletonRow(const int j,
   singCol.remove(j);
 }
 
-void HPresolve::removeColumnSingletons() {
+void Presolve::removeColumnSingletons() {
   int i, k, col;
   list<int>::iterator it = singCol.begin();
 
@@ -1268,7 +1343,7 @@ void HPresolve::removeColumnSingletons() {
   }
 }
 
-pair<double, double> HPresolve::getBoundsImpliedFree(double lowInit,
+pair<double, double> Presolve::getBoundsImpliedFree(double lowInit,
                                                      double uppInit,
                                                      const int col, const int i,
                                                      const int k) {
@@ -1340,7 +1415,7 @@ pair<double, double> HPresolve::getBoundsImpliedFree(double lowInit,
   return make_pair(low, upp);
 }
 
-void HPresolve::removeImpliedFreeColumn(const int col, const int i,
+void Presolve::removeImpliedFreeColumn(const int col, const int i,
                                         const int k) {
   if (iPrint > 0)
     cout << "PR: Implied free column singleton " << col << " removed.  Row "
@@ -1372,7 +1447,7 @@ void HPresolve::removeImpliedFreeColumn(const int col, const int i,
   removeRow(i);
 }
 
-bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
+bool Presolve::removeIfImpliedFree(int col, int i, int k) {
   // first find which bound is active for row i
   // A'y + c = z so yi = -ci/aij
   double aij = getaij(i, col);
@@ -1427,7 +1502,7 @@ bool HPresolve::removeIfImpliedFree(int col, int i, int k) {
 }
 
 // used to remove column too, now possible to just modify bounds
-void HPresolve::removeRow(int i) {
+void Presolve::removeRow(int i) {
   hasChange = true;
   flagRow.at(i) = 0;
   for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k) {
@@ -1450,12 +1525,12 @@ void HPresolve::removeRow(int i) {
   }
 }
 
-void HPresolve::fillStackRowBounds(int row) {
+void Presolve::fillStackRowBounds(int row) {
   postValue.push(rowUpper.at(row));
   postValue.push(rowLower.at(row));
 }
 
-pair<double, double> HPresolve::getImpliedRowBounds(int row) {
+pair<double, double> Presolve::getImpliedRowBounds(int row) {
   double g = 0;
   double h = 0;
 
@@ -1504,7 +1579,7 @@ pair<double, double> HPresolve::getImpliedRowBounds(int row) {
   return make_pair(g, h);
 }
 
-void HPresolve::setVariablesToBoundForForcingRow(const int row,
+void Presolve::setVariablesToBoundForForcingRow(const int row,
                                                  const bool isLower) {
   int k, col;
   if (iPrint > 0)
@@ -1542,7 +1617,7 @@ void HPresolve::setVariablesToBoundForForcingRow(const int row,
   countRemovedRows[FORCING_ROW]++;
 }
 
-void HPresolve::dominatedConstraintProcedure(const int i, const double g,
+void Presolve::dominatedConstraintProcedure(const int i, const double g,
                                              const double h) {
   int j;
   double val;
@@ -1606,7 +1681,7 @@ void HPresolve::dominatedConstraintProcedure(const int i, const double g,
   }
 }
 
-void HPresolve::removeForcingConstraints(int mainIter) {
+void Presolve::removeForcingConstraints(int mainIter) {
   double g, h;
   pair<double, double> implBounds;
 
@@ -1655,7 +1730,7 @@ void HPresolve::removeForcingConstraints(int mainIter) {
     }
 }
 
-void HPresolve::removeRowSingletons() {
+void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
   int i;
   while (!(singRow.empty())) {
@@ -1759,7 +1834,7 @@ void HPresolve::removeRowSingletons() {
   timer.recordFinish(SING_ROW);
 }
 
-void HPresolve::addChange(int type, int row, int col) {
+void Presolve::addChange(int type, int row, int col) {
   change ch;
   ch.type = type;
   ch.row = row;
@@ -1769,7 +1844,7 @@ void HPresolve::addChange(int type, int row, int col) {
 
 // when setting a value to a primal variable and eliminating row update b,
 // singleton Rows linked list, number of nonzeros in rows
-void HPresolve::setPrimalValue(int j, double value) {
+void Presolve::setPrimalValue(int j, double value) {
   flagCol.at(j) = 0;
   if (!hasChange) hasChange = true;
   valuePrimal.at(j) = value;
@@ -1820,7 +1895,7 @@ void HPresolve::setPrimalValue(int j, double value) {
   }
 }
 
-void HPresolve::checkForChanges(int iteration) {
+void Presolve::checkForChanges(int iteration) {
   if (iteration <= 2) {
     // flagCol has one more element at end which is zero
     // from removeDoubletonEquatoins, needed for AR matrix manipulation
@@ -1835,9 +1910,10 @@ void HPresolve::checkForChanges(int iteration) {
     }
   }
   resizeProblem();
+  status = stat::Reduced;
 }
 
-void HPresolve::reportTimes() {
+void Presolve::reportTimes() {
   int reportList[] = {EMPTY_ROW,
                       FIXED_COL,
                       SING_ROW,
@@ -1869,7 +1945,7 @@ void HPresolve::reportTimes() {
   printf("\n");
 }
 
-void HPresolve::recordCounts(const string fileName) {
+void Presolve::recordCounts(const string fileName) {
   ofstream myfile;
   myfile.open(fileName.c_str(), ios::app);
   int reportList[] = {EMPTY_ROW,
@@ -1921,7 +1997,7 @@ void HPresolve::recordCounts(const string fileName) {
   myfile.close();
 }
 
-void HPresolve::resizeImpliedBounds() {
+void Presolve::resizeImpliedBounds() {
   // implied bounds for crashes
   // row duals
   vector<double> temp = implRowDualLower;
@@ -1983,7 +2059,7 @@ void HPresolve::resizeImpliedBounds() {
     }
 }
 
-int HPresolve::getSingRowElementIndexInAR(int i) {
+int Presolve::getSingRowElementIndexInAR(int i) {
   int k = ARstart.at(i);
   while (!flagCol.at(ARindex.at(k))) ++k;
   if (k >= ARstart.at(i + 1)) {
@@ -2001,7 +2077,7 @@ int HPresolve::getSingRowElementIndexInAR(int i) {
   return k;
 }
 
-int HPresolve::getSingColElementIndexInA(int j) {
+int Presolve::getSingColElementIndexInA(int j) {
   int k = Astart.at(j);
   while (!flagRow.at(Aindex.at(k))) ++k;
   if (k >= Aend.at(j)) {
@@ -2019,7 +2095,7 @@ int HPresolve::getSingColElementIndexInA(int j) {
   return k;
 }
 
-void HPresolve::testAnAR(int post) {
+void Presolve::testAnAR(int post) {
   int rows = numRow;
   int cols = numCol;
   int i, j, k;
@@ -2087,7 +2163,17 @@ void HPresolve::testAnAR(int post) {
   }
 }
 
-void HPresolve::postsolve() {
+// todo: error reporting.
+HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
+                                         HighsSolution& recovered_solution) {
+  colValue = reduced_solution.colValue;
+  colDual = reduced_solution.colDual;
+  rowDual = reduced_solution.rowDual;
+
+  // todo: add nonbasic flag to Solution.
+  // todo: change to new basis info structure later or keep.
+  // basis info and solution should be somehow connected to each other.
+
   if (noPostSolve) {
     // set valuePrimal
     for (int i = 0; i < numCol; ++i) {
@@ -2101,7 +2187,7 @@ void HPresolve::postsolve() {
       chk.makeKKTCheck();
     }
     // testBasisMatrixSingularity();
-    return;
+    return HighsPostsolveStatus::NoPostsolve;
   }
 
   // For KKT check: first check solver results before we do any postsolve
@@ -2690,9 +2776,10 @@ void HPresolve::postsolve() {
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
+  return HighsPostsolveStatus::SolutionRecovered;
 }
 
-void HPresolve::setBasisElement(change c) {
+void Presolve::setBasisElement(change c) {
   // nonbasicFlag starts off as [numCol + numRow] and is already
   // increased to [numColOriginal + numRowOriginal] so fill in gaps
 
@@ -2750,7 +2837,7 @@ void HPresolve::setBasisElement(change c) {
 }
 
 /* testing and dev
-int HPresolve::testBasisMatrixSingularity() {
+int Presolve::testBasisMatrixSingularity() {
 
         HFactor factor;
 
@@ -2875,7 +2962,7 @@ int HPresolve::testBasisMatrixSingularity() {
  * lo and up refer to the place storing the current bounds on y_row
  *
  */
-void HPresolve::getBoundOnLByZj(int row, int j, double *lo, double *up,
+void Presolve::getBoundOnLByZj(int row, int j, double *lo, double *up,
                                 double colLow, double colUpp) {
   double cost = colCostAtEl.at(j);  // valueColDual.at(j);
   double x = -cost;
@@ -2913,7 +3000,7 @@ void HPresolve::getBoundOnLByZj(int row, int j, double *lo, double *up,
  * returns z_col
  * z = A'y + c
  */
-double HPresolve::getColumnDualPost(int col) {
+double Presolve::getColumnDualPost(int col) {
   int row;
   double z;
   double sum = 0;
@@ -2932,7 +3019,7 @@ double HPresolve::getColumnDualPost(int col) {
  * returns y_row = -(A'y      +   c   - z )/a_rowcol
  *               (except row)  (at el)
  */
-double HPresolve::getRowDualPost(int row, int col) {
+double Presolve::getRowDualPost(int row, int col) {
   double x = 0;
 
   for (int kk = Astart.at(col); kk < Aend.at(col); ++kk)
@@ -2945,7 +3032,7 @@ double HPresolve::getRowDualPost(int row, int col) {
   return -x / y;
 }
 
-string HPresolve::getDualsForcingRow(int row, vector<int> &fRjs) {
+string Presolve::getDualsForcingRow(int row, vector<int> &fRjs) {
   double z;
   stringstream ss;
   int j;
@@ -3007,7 +3094,7 @@ string HPresolve::getDualsForcingRow(int row, vector<int> &fRjs) {
   return ss.str();
 }
 
-void HPresolve::getDualsSingletonRow(int row, int col) {
+void Presolve::getDualsSingletonRow(int row, int col) {
   pair<int, vector<double>> bnd = oldBounds.top();
   oldBounds.pop();
 
@@ -3168,7 +3255,7 @@ void HPresolve::getDualsSingletonRow(int row, int col) {
     nonbasicFlag[numColOriginal + row] = 0;  // row becomes basic too
 }
 
-void HPresolve::getDualsDoubletonEquation(int row, int col) {
+void Presolve::getDualsDoubletonEquation(int row, int col) {
   // colDual already set. need valuePrimal from stack. maybe change rowDual
   // depending on bounds. old bounds kept in oldBounds. variables j,k : we
   // eliminated col(k)(c.col) and are left with changed bounds on j and no row.
