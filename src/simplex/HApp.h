@@ -35,24 +35,25 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   HModel& model = highs_model.hmodel_[0];
   const HighsLp& lp = highs_model.lp_;
 
+  bool crash_and_ranging = false;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
                         &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
                         &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
 
   cout << "=================================================================="
-          "=="
-          "================"
+          "=================="
        << endl;
 
   // Compact solve so the presolve logic can be tested when finished.
   model.intOption[INTOPT_PRINT_FLAG] = 1;
-  HCrash crash;
-  crash.crash(&model, 2);
+  if (crash_and_ranging) {
+    HCrash crash;
+    crash.crash(&model, 2);
+  }
   model.scaleModel();
   HDual solver;
   solver.solve(highs_model);
-  //    solver.solve(&model);
   model.util_reportSolverOutcome("Solve");
 
   // HighsSolution set
@@ -64,8 +65,10 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
 
-  HRanging ranging;
-  ranging.computeData(&model);
+  if (crash_and_ranging) {
+    HRanging ranging;
+    ranging.computeData(&model);
+  }
 // Start Simplex part:
 /*
 - set up model
