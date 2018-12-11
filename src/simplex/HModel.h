@@ -537,7 +537,7 @@ struct HighsSimplexInfo {
   // initiated
   HMatrix matrix;
   HFactor factor;
-  HighsBasis basis;
+  HighsBasis basis_;
   HighsSimplexInfo simplex;
   HighsScale scale;
 
@@ -579,9 +579,9 @@ struct HighsSimplexInfo {
   double* getcolUpper() { return &lpScaled.colUpper_[0]; }
   double* getrowLower() { return &lpScaled.rowLower_[0]; }
   double* getrowUpper() { return &lpScaled.rowUpper_[0]; }
-  int* getBaseIndex() { return &basis.basicIndex_[0]; }
-  int* getNonbasicFlag() { return &basis.nonbasicFlag_[0]; }
-  int* getNonbasicMove() { return &basis.nonbasicMove_[0]; }
+  int* getBaseIndex() { return &basis_.basicIndex_[0]; }
+  int* getNonbasicFlag() { return &basis_.nonbasicFlag_[0]; }
+  int* getNonbasicMove() { return &basis_.nonbasicMove_[0]; }
   double* getWorkCost() { return &simplex.workCost_[0]; }
   double* getWorkDual() { return &simplex.workDual_[0]; }
   double* getWorkShift() { return &simplex.workShift_[0]; }

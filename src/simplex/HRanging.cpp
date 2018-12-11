@@ -29,10 +29,10 @@ int HRanging::computeData(HModel* model) {
 
   //  HMatrix matrix;
   model->matrix.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis.nonbasicFlag_[0]);
+                      &model->lpScaled.Avalue_[0], &model->basis_.nonbasicFlag_[0]);
 
   model->factor.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis.basicIndex_[0]);
+                      &model->lpScaled.Avalue_[0], &model->basis_.basicIndex_[0]);
   model->factor.build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
@@ -51,27 +51,27 @@ int HRanging::computeData(HModel* model) {
   }
   vector<double> value_ = model->simplex.workValue_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    value_[model->basis.basicIndex_[iRow]] = model->simplex.baseValue_[iRow];
+    value_[model->basis_.basicIndex_[iRow]] = model->simplex.baseValue_[iRow];
   }
   vector<double> dual_ = model->simplex.workDual_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    dual_[model->basis.basicIndex_[iRow]] = 0;
+    dual_[model->basis_.basicIndex_[iRow]] = 0;
   }
 
-  for (int iRow = 0; iRow < numRow; iRow++) {
+  /*  for (int iRow = 0; iRow < numRow; iRow++) {
     printf("Row %2d has scale factor %12g\n", iRow, model->scale.row_[iRow]);
   }
   for (int iCol = 0; iCol < numCol; iCol++) {
     printf("Col %2d has scale factor %12g\n", iCol, model->scale.col_[iCol]);
   }
-
+  */
   vector<double> Blower_ = model->simplex.baseLower_;
   vector<double> Bupper_ = model->simplex.baseUpper_;
   vector<double> Bvalue_ = model->simplex.baseValue_;
 
-  vector<int> Nflag_ = model->basis.nonbasicFlag_;
-  vector<int> Nmove_ = model->basis.nonbasicMove_;
-  vector<int> Bindex_ = model->basis.basicIndex_;
+  vector<int> Nflag_ = model->basis_.nonbasicFlag_;
+  vector<int> Nmove_ = model->basis_.nonbasicMove_;
+  vector<int> Bindex_ = model->basis_.basicIndex_;
 
   HighsRanging& ranging = model->ranging;
   ranging.rowBoundRangeUpValue_.resize(numTot);
@@ -552,8 +552,8 @@ int HRanging::checkData(HModel* model) {
   reportRangingDataCheck = numTot < 250;
   //#endif
   model->util_reportModelSolution(model->lpScaled);
-  vector<int> Nflag = model->basis.nonbasicFlag_;
-  vector<int> Nmove = model->basis.nonbasicMove_;
+  vector<int> Nflag = model->basis_.nonbasicFlag_;
+  vector<int> Nmove = model->basis_.nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
   vector<double> rowValue(numRow), rowDual(numRow);
   model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);

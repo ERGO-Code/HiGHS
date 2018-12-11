@@ -19,6 +19,8 @@
 #include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
+#include "HCrash.h"
+#include "HRanging.h"
 
 HModel HighsLpToHModel(const HighsLp& lp);
 HighsLp HModelToHighsLp(const HModel& model);
@@ -45,6 +47,8 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
 
   // Compact solve so the presolve logic can be tested when finished.
   model.intOption[INTOPT_PRINT_FLAG] = 1;
+  HCrash crash;
+  crash.crash(&model, 2);
   model.scaleModel();
   HDual solver;
   solver.solve(highs_model);
@@ -60,6 +64,8 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
 
+  HRanging ranging;
+  ranging.computeData(&model);
 // Start Simplex part:
 /*
 - set up model

@@ -20,10 +20,12 @@ public:
   HighsLp& lp_;
   HighsSolution solution_;
   BasisInfo basis_info_;
+  HighsBasis basis_;
 
   // the vector below either contains one vector or zero.
   std::vector<HModel> hmodel_;
 
+  int* getBaseIndex() { return &basis_.basicIndex_[0]; }
 };
 
 #endif // LP_DATA_HIGHS_MODEL_OBJECT_H_

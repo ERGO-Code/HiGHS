@@ -1416,7 +1416,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode) {
     for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
       TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
       if (mode == 0) {
-        ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
+        if (ps_n == 0) ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
         int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
         if (ps_n == 0) {
           if (crsh_vr_ty_og_n_r[vr_ty] > 0)
@@ -1432,11 +1432,11 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode) {
                  TyNm.c_str(),
                  (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
       } else if (mode == 2) {
-        ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
-        ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
-        ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
-        ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
         if (ps_n == 0) {
+	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
+	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
+	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
+	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
           if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
             printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
                    crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),

@@ -332,7 +332,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->simplex.workValue_[iCol];
-    double dlDuObj = workModel->basis.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
+    double dlDuObj = workModel->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workModel->scale.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
