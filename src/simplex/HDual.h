@@ -14,6 +14,8 @@
 #ifndef SIMPLEX_HDUAL_H_
 #define SIMPLEX_HDUAL_H_
 
+#include "HighsLp.h"
+#include "HighsModelObject.h"
 #include "HCrash.h"
 #include "HDualRHS.h"
 #include "HDualRow.h"
@@ -21,7 +23,6 @@
 #include "HMatrix.h"
 #include "HModel.h"
 #include "HVector.h"
-#include "HighsModelObject.h"
 
 #include <set>
 #include <string>
@@ -98,10 +99,9 @@ class HDual {
    * of threads
    */
   void solve(
-  HModel *model,       //!< Instance of HModel class to be solved
-  //HighsModelObject *highs_model,       //!< Instance of HModel class to be solved
-      int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
-      int num_threads = 1  //!< Default number of threads is 1
+	     HighsModelObject &highs_model_object,       //!< Instance of HModel class to be solved
+	     int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
+	     int num_threads = 1  //!< Default number of threads is 1
   );
 
  public:

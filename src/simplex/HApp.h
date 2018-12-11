@@ -47,8 +47,8 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   model.scaleModel();
   HDual solver;
-  //solver.solve(&highs_model);
-    solver.solve(&model);
+  solver.solve(highs_model);
+  //    solver.solve(&model);
   model.util_reportSolverOutcome("Solve");
 
   // HighsSolution set

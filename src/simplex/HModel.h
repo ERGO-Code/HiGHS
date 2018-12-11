@@ -467,12 +467,6 @@ struct HighsScale {
   vector<double> row_;
 };
   
-struct HighsBasis {
-  vector<int> basicIndex_;
-  vector<int> nonbasicFlag_;
-  vector<int> nonbasicMove_;
-};
-
 struct HighsSimplexInfo {
   // Part of working model which assigned and populated as much as
   // possible when a model is being defined

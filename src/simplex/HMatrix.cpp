@@ -11,6 +11,7 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "HConfig.h"
 #include "HMatrix.h"
 #include <cassert>
 #include <cmath>
@@ -85,30 +86,6 @@ void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
 #ifdef HiGHSDEV
   assert(setup_ok(nonbasicFlag_));
 #endif
-}
-
-bool HMatrix::setup_ok(const int *nonbasicFlag_) {
-  printf("Checking row-wise matrix\n");
-  for (int row = 0; row < numRow; row++) {
-    for (int el = ARstart[row]; el < AR_Nend[row]; el++) {
-      int col = ARindex[el];
-      if (!nonbasicFlag_[col]) {
-        printf("Row-wise matrix error: col %d, (el = %d for row %d) is basic\n",
-               col, el, row);
-        return false;
-      }
-    }
-    for (int el = AR_Nend[row]; el < ARstart[row + 1]; el++) {
-      int col = ARindex[el];
-      if (nonbasicFlag_[col]) {
-        printf(
-            "Row-wise matrix error: col %d, (el = %d for row %d) is nonbasic\n",
-            col, el, row);
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 void HMatrix::setup_lgBs(int numCol_, int numRow_, const int *Astart_,
@@ -870,6 +847,30 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
   row_ap.count = ap_count;
 }
 
+#ifdef HiGHSDEV
+bool HMatrix::setup_ok(const int *nonbasicFlag_) {
+  printf("Checking row-wise matrix\n");
+  for (int row = 0; row < numRow; row++) {
+    for (int el = ARstart[row]; el < AR_Nend[row]; el++) {
+      int col = ARindex[el];
+      if (!nonbasicFlag_[col]) {
+        printf("Row-wise matrix error: col %d, (el = %d for row %d) is basic\n",
+               col, el, row);
+        return false;
+      }
+    }
+    for (int el = AR_Nend[row]; el < ARstart[row + 1]; el++) {
+      int col = ARindex[el];
+      if (nonbasicFlag_[col]) {
+        printf(
+            "Row-wise matrix error: col %d, (el = %d for row %d) is nonbasic\n",
+            col, el, row);
+        return false;
+      }
+    }
+  }
+  return true;
+}
 bool HMatrix::price_er_ck(HVector &row_ap, HVector &row_ep) const {
   // Alias
   int *ap_index = &row_ap.index[0];
@@ -1011,56 +1012,5 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
   }
   return price_er;
 }
+#endif
 
-void HMatrix::compute_vecT_matB(const double *vec, const int *base,
-                                HVector *result) {
-  result->clear();
-  int resultCount = 0;
-  int *resultIndex = &result->index[0];
-  double *resultArray = &result->array[0];
-  for (int i = 0; i < numRow; i++) {
-    int iCol = base[i];
-    double value = 0;
-    if (iCol < numCol) {
-      for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
-        value += vec[Aindex[k]] * Avalue[k];
-    } else {
-      value = vec[iCol - numCol];
-    }
-    if (fabs(value) > HIGHS_CONST_TINY) {
-      resultArray[i] = value;
-      resultIndex[resultCount++] = i;
-    }
-  }
-  result->count = resultCount;
-}
-
-void HMatrix::compute_matB_vec(const double *vec, const int *base,
-                               HVector *result) {
-  result->clear();
-  int resultCount = 0;
-  int *resultIndex = &result->index[0];
-  double *resultArray = &result->array[0];
-
-  for (int i = 0; i < numRow; i++) {
-    int iCol = base[i];
-    double value = vec[i];
-    if (fabs(value) > HIGHS_CONST_TINY) {
-      if (iCol < numCol) {
-        for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
-          resultArray[Aindex[k]] += value * Avalue[k];
-      } else {
-        resultArray[iCol - numCol] += value;
-      }
-    }
-  }
-
-  for (int i = 0; i < numRow; i++) {
-    if (fabs(resultArray[i]) > HIGHS_CONST_TINY) {
-      resultIndex[resultCount++] = i;
-    } else {
-      resultArray[i] = 0;
-    }
-  }
-  result->count = resultCount;
-}

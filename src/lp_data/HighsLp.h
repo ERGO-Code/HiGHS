@@ -123,6 +123,12 @@ enum class HighsInputStatus {
   ErrorObjective
 };
 
+struct HighsBasis {
+  std::vector<int> basicIndex_;
+  std::vector<int> nonbasicFlag_;
+  std::vector<int> nonbasicMove_;
+};
+
 struct HighsSolution {
   std::vector<double> colValue_;
   std::vector<double> colDual_;

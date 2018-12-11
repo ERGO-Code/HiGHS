@@ -15,9 +15,9 @@ struct BasisInfo {
 // include essential data.
 class HighsModelObject {
 public:
-  HighsModelObject(const HighsLp& lp) : lp_(lp) {}
+  HighsModelObject(HighsLp& lp) : lp_(lp) {}
 
-  const HighsLp& lp_;
+  HighsLp& lp_;
   HighsSolution solution_;
   BasisInfo basis_info_;
 

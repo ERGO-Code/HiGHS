@@ -32,15 +32,12 @@
 #include <stdexcept>
 using namespace std;
 
-void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
-  assert(ptr_model != NULL);
+void HDual::solve(HighsModelObject &highs_model_object, int variant, int num_threads) {
   dual_variant = variant;
-  model = ptr_model;
-
-//void HDual::solve(HighsModelObject *highs_model_object, int variant, int num_threads) {
-//  assert(highs_model_object != NULL);
-//  dual_variant = variant;
-//  model = highs_model_object->hmodel_;
+  model = &highs_model_object.hmodel_[0];
+  HighsLp& jajhlp = highs_model_object.lp_;
+  int   FREDnumCol = highs_model_object.lp_.numCol_;
+  //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
   
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
@@ -180,7 +177,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   //  printf("model->mlFg_haveEdWt 3 = %d\n", model->mlFg_haveEdWt);cout<<flush;
   bool rp_bs_cond = false;
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond(ptr_model);
+    double bs_cond = an_bs_cond(model);
     printf("Initial basis condition estimate is %g\n", bs_cond);
   }
 #endif
@@ -367,7 +364,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
            model->numberIteration / n_dvx_fwk);
   }
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond(ptr_model);
+    double bs_cond = an_bs_cond(model);
     printf("Optimal basis condition estimate is %g\n", bs_cond);
   }
 #endif
