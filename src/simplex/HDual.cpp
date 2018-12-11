@@ -32,8 +32,13 @@
 #include <stdexcept>
 using namespace std;
 
+//void HDual::solve(HModel *ptr_model, int variant, int num_threads)
+//{
+//  model = ptr_model;
+
 void HDual::solve(HighsModelObject &highs_model_object, int variant, int num_threads) {
   dual_variant = variant;
+  HModel *model;
   model = &highs_model_object.hmodel_[0];
   HighsLp& jajhlp = highs_model_object.lp_;
   int   FREDnumCol = highs_model_object.lp_.numCol_;
@@ -191,7 +196,7 @@ void HDual::solve(HighsModelObject &highs_model_object, int variant, int num_thr
   double largeDual = 0;
   const int numTot = model->getNumTot();
   for (int i = 0; i < numTot; i++) {
-    if (model->getNonbasicFlag()[i]) {
+    if (highs_model_object.getNonbasicFlag()[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -420,7 +425,7 @@ void HDual::init(int num_threads) {
   factor = model->getFactor();
 
   // Copy pointers
-  jMove = model->getNonbasicMove();
+  jMove = highs_model_object.getNonbasicMove();
   workDual = model->getWorkDual();
   //    JAJH: Only because I can't get this from HModel.h
   workValue = model->getWorkValue();
@@ -772,7 +777,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = model->getBaseIndex();
+    const int *baseIndex = highs_model_object.getBaseIndex();
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -1292,7 +1297,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = model->getBaseIndex()[rowOut];
+  columnOut = highs_model_object.getBaseIndex()[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -2021,7 +2026,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = model->getBaseIndex()[r_n];
+    int vr_n = highs_model_object.getBaseIndex()[r_n];
     double c_norm = 0.0;
     if (vr_n < numCol)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2277,7 +2282,7 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = model->getBaseIndex()[r_n];
+    int vr_n = highs_model_object.getBaseIndex()[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }

@@ -15,6 +15,7 @@
 #define SIMPLEX_HCRASH_H_
 
 #include <vector>
+#include "HighsModelObject.h"
 #include "HModel.h"
 using namespace std;
 
@@ -74,31 +75,31 @@ class HCrash {
  * @brief Determine a particular crash basis for a given model instance
  */
   void crash(
-	     HModel *ptr_model, //!< The model instance to be crashed
+	     HighsModelObject &highs_model_object,  //!< The HiGHS model object instance to be crashed
 	     int Crash_Mode     //!< The crash mode to be used
 	     );
  private:
-  void bixby(HModel *ptr_model, int Crash_Mode);
-  bool bixby_iz_da(HModel *ptr_model);
-  void bixby_rp_mrt(HModel *ptr_model);
-  void crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode);
-  void ltssf(HModel *ptr_model, int Crash_Mode);
+  void bixby(HighsModelObject &highs_model_object, int Crash_Mode);
+  bool bixby_iz_da(HighsModelObject &highs_model_object);
+  void bixby_rp_mrt(HighsModelObject &highs_model_object);
+  void crsh_iz_vr_ty(HighsModelObject &highs_model_object, int Crash_Mode);
+  void ltssf(HighsModelObject &highs_model_object, int Crash_Mode);
   void ltssf_iz_mode(int Crash_Mode);
-  void ltssf_iz_da(HModel *ptr_model, int Crash_Mode);
-  void ltssf_iterate(HModel *ptr_model);
-  void ltssf_u_da(HModel *ptr_model);
-  void ltssf_u_da_af_bs_cg(HModel *ptr_model);
+  void ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode);
+  void ltssf_iterate(HighsModelObject &highs_model_object);
+  void ltssf_u_da(HighsModelObject &highs_model_object);
+  void ltssf_u_da_af_bs_cg(HighsModelObject &highs_model_object);
   void ltssf_u_da_af_no_bs_cg();
 #ifdef HiGHSDEV
   void ltssf_ck_da();
 #endif
   void ltssf_cz_r();
-  void ltssf_cz_c(HModel *ptr_model);
+  void ltssf_cz_c(HighsModelObject &highs_model_object);
 #ifdef HiGHSDEV
-  void tsSing(HModel *ptr_model);
-  void crsh_an_c_co(HModel *ptr_model);
+  void tsSing(HighsModelObject &highs_model_object);
+  void crsh_an_c_co(HighsModelObject &highs_model_object);
   string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
-  void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
+  void crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode);
   void crsh_rp_r_c_st(int mode, int Crash_Mode);
   void crsh_ck_an_impl_bd();
   void ltssf_rp_r_k();

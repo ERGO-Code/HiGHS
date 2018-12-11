@@ -26,6 +26,8 @@ public:
   std::vector<HModel> hmodel_;
 
   int* getBaseIndex() { return &basis_.basicIndex_[0]; }
+  int* getNonbasicFlag() { return &basis_.nonbasicFlag_[0]; }
+  int* getNonbasicMove() { return &basis_.nonbasicMove_[0]; }
 };
 
 #endif // LP_DATA_HIGHS_MODEL_OBJECT_H_

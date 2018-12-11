@@ -21,8 +21,8 @@
 #include <vector>
 using namespace std;
 
-void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
+void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
+  model = &highs_model_object.hmodel_[0];
   if (model->getNumRow() == 0) return;
   model->timer.reset();
   numRow = model->getNumRow();
@@ -80,23 +80,23 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   if (Crash_Mode == Crash_Mode_Bixby ||
       Crash_Mode == Crash_Mode_BixbyNoNzCCo) {
     // Use the Bixby crash
-    bixby(ptr_model, Crash_Mode);
+    bixby(highs_model_object, Crash_Mode);
   }
 #ifdef HiGHSDEV
   else if (Crash_Mode == Crash_Mode_TsSing) {
     // Use the test singularity crash
-    tsSing(ptr_model);
+    tsSing(highs_model_object);
   }
 #endif
   else {
     // Use the LTSSF crash
-    ltssf(ptr_model, Crash_Mode);
+    ltssf(highs_model_object, Crash_Mode);
   }
   model->totalTime += model->timer.getTime();
 }
 
-void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
+void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
+  model = &highs_model_object.hmodel_[0];
   const int *Astart = &model->lpScaled.Astart_[0];
   const int *Aindex = &model->lpScaled.Aindex_[0];
   const double *Avalue = &model->lpScaled.Avalue_[0];
@@ -104,10 +104,10 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
   bixby_no_nz_c_co = Crash_Mode == Crash_Mode_BixbyNoNzCCo;
   bixby_no_nz_c_co = false;
 
-  bool perform_crash = bixby_iz_da(ptr_model);
+  bool perform_crash = bixby_iz_da(highs_model_object);
   if (!perform_crash) return;
 
-  // bixby_rp_mrt(ptr_model);
+  // bixby_rp_mrt(highs_model_object);
 
   // These multipliers are in Step 2(a) and Step 2(b) of the paper: default
   // values 0.99 and 0.01
@@ -255,12 +255,12 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
 #endif
   }
 #ifdef HiGHSDEV
-  crsh_an_r_c_st_af(ptr_model, Crash_Mode_Bixby);
+  crsh_an_r_c_st_af(highs_model_object, Crash_Mode_Bixby);
 #endif
 }
 
-void HCrash::bixby_rp_mrt(HModel *ptr_model) {
-  model = ptr_model;
+void HCrash::bixby_rp_mrt(HighsModelObject &highs_model_object) {
+  model = &highs_model_object.hmodel_[0];
   const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
@@ -309,8 +309,8 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
   printf("\n%6d different Bixby merits\n", n_mrt_v);
 }
 
-bool HCrash::bixby_iz_da(HModel *ptr_model) {
-  model = ptr_model;
+bool HCrash::bixby_iz_da(HighsModelObject &highs_model_object) {
+  model = &highs_model_object.hmodel_[0];
   const int *Astart = &model->lpScaled.Astart_[0];
   const double *Avalue = &model->lpScaled.Avalue_[0];
   const int objSense = model->getObjSense();
@@ -336,9 +336,9 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   // bixby_ze_r_k.resize(numRow);
 
 #ifdef HiGHSDEV
-  crsh_an_c_co(ptr_model);
+  crsh_an_c_co(highs_model_object);
 #endif
-  crsh_iz_vr_ty(ptr_model, Crash_Mode_Bixby);
+  crsh_iz_vr_ty(highs_model_object, Crash_Mode_Bixby);
 
 #ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode_Bixby);
@@ -491,13 +491,13 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   return true;
 }
 
-void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
+void HCrash::crsh_iz_vr_ty(HighsModelObject &highs_model_object, int Crash_Mode) {
+  model = &highs_model_object.hmodel_[0];
   const double *colLower = model->getcolLower();
   const double *colUpper = model->getcolUpper();
   const double *rowLower = model->getrowLower();
   const double *rowUpper = model->getrowUpper();
-  const int *nonbasicFlag = model->getNonbasicFlag();
+  const int *nonbasicFlag = highs_model_object.getNonbasicFlag();
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
@@ -580,9 +580,9 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
 #endif
 }
 
-void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
+void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
   printf("HCrash::ltssf Crash_Mode = %d\n", Crash_Mode);
-  model = ptr_model;
+  model = &highs_model_object.hmodel_[0];
   if (Crash_Mode == Crash_Mode_LTSSF_k) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
@@ -627,7 +627,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
   numTot = model->getNumTot();
 
   // Initialise the LTSSF data structures
-  ltssf_iz_da(ptr_model, Crash_Mode);
+  ltssf_iz_da(highs_model_object, Crash_Mode);
 #ifdef HiGHSDEV
   printf("\nLTSSF Crash\n");
   printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
@@ -667,7 +667,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
 #ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode);
 #endif
-  ltssf_iterate(ptr_model);
+  ltssf_iterate(highs_model_object);
 
 #ifdef HiGHSDEV
   printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
@@ -680,7 +680,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
       " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
       "value = %6.4e\n",
       tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
-  crsh_an_r_c_st_af(ptr_model, Crash_Mode);
+  crsh_an_r_c_st_af(highs_model_object, Crash_Mode);
 #endif
 }
 
@@ -692,7 +692,7 @@ void HCrash::ltssf_iz_mode(int Crash_Mode) {
   no_ck_pv = false;
 }
 
-void HCrash::ltssf_iterate(HModel *ptr_model) {
+void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
   // LTSSF Main loop
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
@@ -701,7 +701,7 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
     ltssf_cz_r();
     if (cz_r_n == no_ix) break;
     cz_r_pri_v = crsh_r_ty_pri_v[crsh_r_ty[cz_r_n]];
-    ltssf_cz_c(ptr_model);
+    ltssf_cz_c(highs_model_object);
     bool bs_cg = cz_c_n != no_ix;
     if (bs_cg) {
 #ifdef HiGHSDEV
@@ -739,7 +739,7 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
 #ifdef HiGHSDEV
     if (reportCrashData) ltssf_rp_pri_k_da();
 #endif
-    ltssf_u_da(ptr_model);
+    ltssf_u_da(highs_model_object);
     // Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
 #ifdef HiGHSDEV
     if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
@@ -766,9 +766,9 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
   }
 }
 
-void HCrash::ltssf_u_da(HModel *ptr_model) {
+void HCrash::ltssf_u_da(HighsModelObject &highs_model_object) {
   if ((cz_r_n != no_ix) && (cz_c_n != no_ix)) {
-    ltssf_u_da_af_bs_cg(ptr_model);
+    ltssf_u_da_af_bs_cg(highs_model_object);
   } else {
     ltssf_u_da_af_no_bs_cg();
   }
@@ -782,8 +782,8 @@ void HCrash::ltssf_u_da(HModel *ptr_model) {
   }
 }
 
-void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
-  model = ptr_model;
+void HCrash::ltssf_u_da_af_bs_cg(HighsModelObject &highs_model_object) {
+  model = &highs_model_object.hmodel_[0];
   const int *Astart = &model->lpScaled.Astart_[0];
   const int *Aindex = &model->lpScaled.Aindex_[0];
   // ltssf_rp_r_k();
@@ -918,11 +918,11 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
   }
 }
 
-void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
+void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
   printf("HCrash::ltssf_iz_da Crash_Mode = %d\n", Crash_Mode);
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
-  model = ptr_model;
+  model = &highs_model_object.hmodel_[0];
   const int *Astart = &model->lpScaled.Astart_[0];
   const int *Aindex = &model->lpScaled.Aindex_[0];
   const double *Avalue = &model->lpScaled.Avalue_[0];
@@ -979,7 +979,7 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
   crsh_act_r.resize(numRow);
   crsh_act_c.resize(numCol);
 
-  crsh_iz_vr_ty(ptr_model, Crash_Mode);
+  crsh_iz_vr_ty(highs_model_object, Crash_Mode);
 
   if (Crash_Mode == Crash_Mode_Bs) {
     // For the basis crash, once the row and column priorities have
@@ -1201,8 +1201,8 @@ void HCrash::ltssf_cz_r() {
   }
 }
 
-void HCrash::ltssf_cz_c(HModel *ptr_model) {
-  model = ptr_model;
+void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
+  model = &highs_model_object.hmodel_[0];
   const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
 
@@ -1278,8 +1278,8 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
 }
 
 #ifdef HiGHSDEV
-void HCrash::tsSing(HModel *ptr_model) {
-  model = ptr_model;
+void HCrash::tsSing(HighsModelObject &highs_model_object) {
+  model = &highs_model_object.hmodel_[0];
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
@@ -1299,8 +1299,8 @@ void HCrash::tsSing(HModel *ptr_model) {
   }
 }
 
-void HCrash::crsh_an_c_co(HModel *ptr_model) {
-  model = ptr_model;
+void HCrash::crsh_an_c_co(HighsModelObject &highs_model_object) {
+  model = &highs_model_object.hmodel_[0];
   const int objSense = model->getObjSense();
   const double *colCost = model->getcolCost();
   const double *colLower = model->getcolLower();
@@ -1340,11 +1340,11 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
          (100 * n_fs_c_co) / numCol);
 }
 
-void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
+void HCrash::crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode) {
+  model = &highs_model_object.hmodel_[0];
   const int *Astart = &model->lpScaled.Astart_[0];
   for (int k = 0; k < numRow; k++) {
-    int vr_n = model->getBaseIndex()[k];
+    int vr_n = highs_model_object.getBaseIndex()[k];
     if (vr_n < numCol) {
       int c_n = vr_n;
       crsh_bs_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
@@ -1355,7 +1355,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
   }
 
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (model->getNonbasicFlag()[vr_n] == 0) continue;
+    if (highs_model_object.getNonbasicFlag()[vr_n] == 0) continue;
     if (vr_n < numCol) {
       int c_n = vr_n;
       crsh_nonbc_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
@@ -1366,7 +1366,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
   }
   int bs_mtx_n_struc_el = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = model->getBaseIndex()[r_n];
+    int vr_n = highs_model_object.getBaseIndex()[r_n];
     if (vr_n < numCol) {
       int c_n_el = Astart[vr_n + 1] - Astart[vr_n];
       bs_mtx_n_struc_el += c_n_el;

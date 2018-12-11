@@ -13,7 +13,7 @@ set(sources
     lp_data/HighsUtils.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
-    simplex/HAPI.cpp
+#    simplex/HAPI.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp

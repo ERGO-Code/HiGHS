@@ -99,7 +99,7 @@ class HDual {
    * of threads
    */
   void solve(
-	     HighsModelObject &highs_model_object,       //!< Instance of HModel class to be solved
+	     HighsModelObject &highs_model_object,       //!< Instance of HiGHS model object to be solved
 	     int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
 	     int num_threads = 1  //!< Default number of threads is 1
   );
@@ -487,7 +487,8 @@ class HDual {
 #endif
 
   // Model
-  HModel *model;
+  //  HModel *model;
+  HighsModelObject highs_model_object;
   double Tp;  // Tolerance for primal
   double Td;  // Tolerance for dual
 

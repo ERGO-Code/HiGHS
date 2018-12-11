@@ -12,7 +12,7 @@
 #include <set>
 #include <vector>
 
-#include "HAPI.h"
+//#include "HAPI.h"
 #include "HConfig.h"
 #include "HConst.h"
 #include "HDual.h"
