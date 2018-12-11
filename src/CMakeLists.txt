@@ -25,7 +25,6 @@ set(sources
     simplex/HPrimal.cpp
     simplex/HRanging.cpp
     simplex/HSort.cpp
-    simplex/HTester.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -61,7 +60,6 @@ set(headers
     simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSort.h
-#    simplex/HTester.h
     presolve/Presolve.h
     simplex/HTimer.h
     simplex/HTimerPre.h

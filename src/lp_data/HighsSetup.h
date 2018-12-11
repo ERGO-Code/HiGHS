@@ -303,15 +303,6 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
     return HighsStatus::OptionsError;
   }
 
-  if (argc == 4 && strcmp(argv[1], "-repeat") == 0) {
-#ifdef HiGHSDEV
-    HTester tester;
-    tester.setup(argv[2]);
-    tester.testUpdate(atoi(argv[3]));
-#endif
-    return HighsStatus::OK;
-  }
-
   char opt;
   if (argc == 2) {
     filename = 1;

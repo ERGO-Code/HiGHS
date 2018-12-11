@@ -16,7 +16,6 @@
 #include "HConfig.h"
 #include "HConst.h"
 #include "HDual.h"
-#include "HTester.h"
 #include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
