@@ -460,12 +460,6 @@ class HModel {
  public:
   int problemStatus;
   string modelName;
-  // Cost column and row scaling factors
-struct HighsScale {
-  double cost_;
-  vector<double> col_;
-  vector<double> row_;
-};
   
 struct HighsSimplexInfo {
   // Part of working model which assigned and populated as much as
@@ -537,9 +531,9 @@ struct HighsSimplexInfo {
   // initiated
   HMatrix matrix;
   HFactor factor;
-  HighsBasis *basis_;
   HighsSimplexInfo simplex;
-  HighsScale scale;
+  HighsBasis *basis_;
+  HighsScale *scale_;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;
@@ -579,9 +573,6 @@ struct HighsSimplexInfo {
   double* getcolUpper() { return &lpScaled.colUpper_[0]; }
   double* getrowLower() { return &lpScaled.rowLower_[0]; }
   double* getrowUpper() { return &lpScaled.rowUpper_[0]; }
-  //  int* getBaseIndex() { return &basis_.basicIndex_[0]; }
-  //  int* getNonbasicFlag() { return &basis_.nonbasicFlag_[0]; }
-  //  int* getNonbasicMove() { return &basis_.nonbasicMove_[0]; }
   double* getWorkCost() { return &simplex.workCost_[0]; }
   double* getWorkDual() { return &simplex.workDual_[0]; }
   double* getWorkShift() { return &simplex.workShift_[0]; }

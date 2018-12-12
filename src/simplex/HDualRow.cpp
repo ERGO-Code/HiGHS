@@ -351,7 +351,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     double dlDual = theta * packValue[i];
     double iColWorkValue = workModel->simplex.workValue_[iCol];
     double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
-    dlDuObj *= workModel->scale.cost_;
+    dlDuObj *= workHMO->scale_.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
   /*

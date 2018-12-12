@@ -40,6 +40,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
   model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
+  model->scale_ = &ref_highs_model_object.scale_;
   dual_variant = variant;
   HighsLp& jajhlp = highs_model_object->lp_;
   int   FREDnumCol = highs_model_object->lp_.numCol_;

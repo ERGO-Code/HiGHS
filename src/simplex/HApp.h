@@ -42,6 +42,12 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   highs_model.basis_.nonbasicMove_.resize(numTot);
   model.basis_ = &highs_model.basis_;
 
+  // Allocate memory for the scaling, initialise the values set the pointer to it in model
+  highs_model.scale_.col_.assign(lp.numCol_, 1);
+  highs_model.scale_.row_.assign(lp.numRow_, 1);
+  highs_model.scale_.cost_ = 1;
+  model.scale_ = &highs_model.scale_;
+
   bool crash_and_ranging = true;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,

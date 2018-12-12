@@ -123,6 +123,13 @@ enum class HighsInputStatus {
   ErrorObjective
 };
 
+// Cost, column and row scaling factors
+struct HighsScale {
+  double cost_;
+  std::vector<double> col_;
+  std::vector<double> row_;
+};
+
 struct HighsBasis {
   std::vector<int> basicIndex_;
   std::vector<int> nonbasicFlag_;
