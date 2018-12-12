@@ -215,7 +215,7 @@ void HDual::minor_chooseRow() {
 
     // Assign useful variables
     rowOut = workChoice->rowOut;
-    columnOut = model->getBaseIndex()[rowOut];
+    columnOut = highs_model_object->getBaseIndex()[rowOut];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
@@ -239,7 +239,7 @@ void HDual::minor_chooseRow() {
 void HDual::minor_update() {
   // Minor update - store roll back data
   MFinish *Fin = &multi_finish[multi_nFinish];
-  Fin->moveIn = model->getNonbasicMove()[columnIn];
+  Fin->moveIn = highs_model_object->getNonbasicMove()[columnIn];
   Fin->shiftOut = model->getWorkShift()[columnOut];
   Fin->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
@@ -693,11 +693,11 @@ void HDual::major_rollback() {
     MFinish *Fin = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    model->getNonbasicMove()[Fin->columnIn] = Fin->moveIn;
-    model->getNonbasicFlag()[Fin->columnIn] = 1;
-    model->getNonbasicMove()[Fin->columnOut] = 0;
-    model->getNonbasicFlag()[Fin->columnOut] = 0;
-    model->getBaseIndex()[Fin->rowOut] = Fin->columnOut;
+    highs_model_object->getNonbasicMove()[Fin->columnIn] = Fin->moveIn;
+    highs_model_object->getNonbasicFlag()[Fin->columnIn] = 1;
+    highs_model_object->getNonbasicMove()[Fin->columnOut] = 0;
+    highs_model_object->getNonbasicFlag()[Fin->columnOut] = 0;
+    highs_model_object->getBaseIndex()[Fin->rowOut] = Fin->columnOut;
 
     // 2. Roll back matrix
     model->updateMatrix(Fin->columnOut, Fin->columnIn);

@@ -487,14 +487,8 @@ class HDual {
 #endif
 
   // Model
-  //  HModel *model;
-  HighsModelObject highs_model_object;
-  double Tp;  // Tolerance for primal
-  double Td;  // Tolerance for dual
-
-  int numCol;
-  int numRow;
-  int numTot;
+  HModel *model;
+  HighsModelObject *highs_model_object;
   const HMatrix *matrix;
   const HFactor *factor;
 
@@ -511,6 +505,12 @@ class HDual {
   double *rowLower;
   double *rowUpper;
   int *nonbasicFlag;
+
+  int numCol;
+  int numRow;
+  int numTot;
+  double Tp;  // Tolerance for primal
+  double Td;  // Tolerance for dual
 
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;

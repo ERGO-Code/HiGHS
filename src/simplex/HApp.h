@@ -35,7 +35,14 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   HModel& model = highs_model.hmodel_[0];
   const HighsLp& lp = highs_model.lp_;
 
-  bool crash_and_ranging = false;
+  // Allocate memory for the basis and set the pointer to it in model
+  const int numTot = lp.numCol_ + lp.numRow_;
+  highs_model.basis_.basicIndex_.resize(lp.numRow_);
+  highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
+  highs_model.basis_.nonbasicMove_.resize(numTot);
+  model.basis_ = &highs_model.basis_;
+
+  bool crash_and_ranging = true;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
                         &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
@@ -49,7 +56,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   model.intOption[INTOPT_PRINT_FLAG] = 1;
   if (crash_and_ranging) {
     HCrash crash;
-    crash.crash(&model, 2);
+    crash.crash(highs_model, 2);
   }
   model.scaleModel();
   HDual solver;
@@ -67,7 +74,7 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
 
   if (crash_and_ranging) {
     HRanging ranging;
-    ranging.computeData(&model);
+    ranging.computeData(highs_model);
   }
 // Start Simplex part:
 /*

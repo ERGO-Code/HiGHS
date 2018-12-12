@@ -36,14 +36,17 @@ using namespace std;
 //{
 //  model = ptr_model;
 
-void HDual::solve(HighsModelObject &highs_model_object, int variant, int num_threads) {
+void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num_threads) {
+  highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
+  model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
+  model->basis_ = &ref_highs_model_object.basis_;
   dual_variant = variant;
-  HModel *model;
-  model = &highs_model_object.hmodel_[0];
-  HighsLp& jajhlp = highs_model_object.lp_;
-  int   FREDnumCol = highs_model_object.lp_.numCol_;
+  HighsLp& jajhlp = highs_model_object->lp_;
+  int   FREDnumCol = highs_model_object->lp_.numCol_;
+  int   JOEnumCol = jajhlp.numCol_;
+ printf("\nHDual::solve: two copies of numCol are FREDnumCol = %d and JOEnumCol = %d\n", FREDnumCol, JOEnumCol);
   //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
-  
+
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
   model->setup_for_solve();
@@ -196,7 +199,7 @@ void HDual::solve(HighsModelObject &highs_model_object, int variant, int num_thr
   double largeDual = 0;
   const int numTot = model->getNumTot();
   for (int i = 0; i < numTot; i++) {
-    if (highs_model_object.getNonbasicFlag()[i]) {
+    if (highs_model_object->getNonbasicFlag()[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -344,7 +347,7 @@ void HDual::solve(HighsModelObject &highs_model_object, int variant, int num_thr
     if (solvePhase == 4) {
       HPrimal hPrimal;
       hPrimal.TimeLimitValue = TimeLimitValue;
-      hPrimal.solvePhase2(model);
+      hPrimal.solvePhase2(highs_model_object);
       // Add in the count and time for any primal rebuilds
 #ifdef HiGHSDEV
       totalRebuildTime += hPrimal.totalRebuildTime;
@@ -425,7 +428,7 @@ void HDual::init(int num_threads) {
   factor = model->getFactor();
 
   // Copy pointers
-  jMove = highs_model_object.getNonbasicMove();
+  jMove = highs_model_object->getNonbasicMove();
   workDual = model->getWorkDual();
   //    JAJH: Only because I can't get this from HModel.h
   workValue = model->getWorkValue();
@@ -450,7 +453,7 @@ void HDual::init(int num_threads) {
   row_apDensity = 0;
   rowdseDensity = 0;
   // Setup other buffers
-  dualRow.setup(model);
+  dualRow.setup(highs_model_object);
   dualRHS.setup(model);
 
   // Initialize for tasks
@@ -525,7 +528,7 @@ void HDual::init_slice(int init_sliced_num) {
 
     // The row_ap and its packages
     slice_row_ap[i].setup(mycount);
-    slice_dualRow[i].setupSlice(model, mycount);
+    slice_dualRow[i].setupSlice(highs_model_object, mycount);
   }
 }
 
@@ -777,7 +780,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = highs_model_object.getBaseIndex();
+    const int *baseIndex = highs_model_object->getBaseIndex();
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -1297,7 +1300,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = highs_model_object.getBaseIndex()[rowOut];
+  columnOut = highs_model_object->getBaseIndex()[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1359,7 +1362,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
-      const int *nonbasicFlag = model->getNonbasicFlag();
+      const int *nonbasicFlag = highs_model_object->getNonbasicFlag();
       for (int col = 0; col < numCol; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
 	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
@@ -1774,10 +1777,10 @@ void HDual::iz_dvx_fwk() {
   // Initialise the Devex framework: reference set is all basic
   // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
-  const int *NonbasicFlag = model->getNonbasicFlag();
+  const int *NonbasicFlag = highs_model_object->getNonbasicFlag();
   const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    //      if (model->getNonbasicFlag()[vr_n])
+    //      if (highs_model_object->getNonbasicFlag()[vr_n])
     //      if (NonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
     //	dvx_ix[vr_n] = dvx_not_in_R;
@@ -2026,7 +2029,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object.getBaseIndex()[r_n];
+    int vr_n = highs_model_object->getBaseIndex()[r_n];
     double c_norm = 0.0;
     if (vr_n < numCol)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2282,7 +2285,7 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object.getBaseIndex()[r_n];
+    int vr_n = highs_model_object->getBaseIndex()[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
@@ -2290,7 +2293,7 @@ void HDual::an_iz_vr_v() {
   double norm_nonbc_du_vr = 0;
   const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (model->getNonbasicFlag()[vr_n]) {
+    if (highs_model_object->getNonbasicFlag()[vr_n]) {
       double pr_act_v = model->getWorkValue()[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];

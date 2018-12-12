@@ -19,9 +19,11 @@
 #include <iostream>
 using namespace std;
 
-void HPrimal::solvePhase2(HModel *ptr_model) {
+void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   // Copy size
-  model = ptr_model;
+  highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
+  model = &highs_model_object->hmodel_[0];
+  //  model->basis_ = &highs_model_object->basis_;
   numCol = model->getNumCol();
   numRow = model->getNumRow();
   numTot = model->getNumTot();
@@ -162,8 +164,8 @@ void HPrimal::primalRebuild() {
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = model->getNonbasicFlag();
-  const int *jMove = model->getNonbasicMove();
+  const int *jFlag = highs_model_object->getNonbasicFlag();
+  const int *jMove = highs_model_object->getNonbasicMove();
   double *workDual = model->getWorkDual();
   const double *workLower = model->getWorkLower();
   const double *workUpper = model->getWorkUpper();
@@ -209,7 +211,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = countUpdate < 10 ? 1e-9 : countUpdate < 20 ? 1e-8 : 1e-7;
-  const int *jMove = model->getNonbasicMove();
+  const int *jMove = highs_model_object->getNonbasicMove();
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -255,7 +257,7 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = model->getNonbasicMove();
+  int *jMove = highs_model_object->getNonbasicMove();
   double *workDual = model->getWorkDual();
   const double *workLower = model->getWorkLower();
   const double *workUpper = model->getWorkUpper();
@@ -267,7 +269,7 @@ void HPrimal::primalUpdate() {
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = model->getBaseIndex()[rowOut];
+  int columnOut = highs_model_object->getBaseIndex()[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {

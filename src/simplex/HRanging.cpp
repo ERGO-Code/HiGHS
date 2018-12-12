@@ -17,7 +17,15 @@
 #include "HModel.h"
 using namespace std;
 
-int HRanging::computeData(HModel* model) {
+int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
+
+  HighsModelObject *highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
+  HModel *model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
+  model->basis_ = &ref_highs_model_object.basis_;
+
+
+
+
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
@@ -29,10 +37,10 @@ int HRanging::computeData(HModel* model) {
 
   //  HMatrix matrix;
   model->matrix.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis_.nonbasicFlag_[0]);
+                      &model->lpScaled.Avalue_[0], &model->basis_->nonbasicFlag_[0]);
 
   model->factor.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis_.basicIndex_[0]);
+                      &model->lpScaled.Avalue_[0], &model->basis_->basicIndex_[0]);
   model->factor.build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
@@ -51,11 +59,11 @@ int HRanging::computeData(HModel* model) {
   }
   vector<double> value_ = model->simplex.workValue_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    value_[model->basis_.basicIndex_[iRow]] = model->simplex.baseValue_[iRow];
+    value_[model->basis_->basicIndex_[iRow]] = model->simplex.baseValue_[iRow];
   }
   vector<double> dual_ = model->simplex.workDual_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    dual_[model->basis_.basicIndex_[iRow]] = 0;
+    dual_[model->basis_->basicIndex_[iRow]] = 0;
   }
 
   /*  for (int iRow = 0; iRow < numRow; iRow++) {
@@ -69,9 +77,9 @@ int HRanging::computeData(HModel* model) {
   vector<double> Bupper_ = model->simplex.baseUpper_;
   vector<double> Bvalue_ = model->simplex.baseValue_;
 
-  vector<int> Nflag_ = model->basis_.nonbasicFlag_;
-  vector<int> Nmove_ = model->basis_.nonbasicMove_;
-  vector<int> Bindex_ = model->basis_.basicIndex_;
+  vector<int> Nflag_ = model->basis_->nonbasicFlag_;
+  vector<int> Nmove_ = model->basis_->nonbasicMove_;
+  vector<int> Bindex_ = model->basis_->basicIndex_;
 
   HighsRanging& ranging = model->ranging;
   ranging.rowBoundRangeUpValue_.resize(numTot);
@@ -552,8 +560,8 @@ int HRanging::checkData(HModel* model) {
   reportRangingDataCheck = numTot < 250;
   //#endif
   model->util_reportModelSolution(model->lpScaled);
-  vector<int> Nflag = model->basis_.nonbasicFlag_;
-  vector<int> Nmove = model->basis_.nonbasicMove_;
+  vector<int> Nflag = model->basis_->nonbasicFlag_;
+  vector<int> Nmove = model->basis_->nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
   vector<double> rowValue(numRow), rowDual(numRow);
   model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);

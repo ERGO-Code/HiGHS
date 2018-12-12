@@ -537,7 +537,7 @@ struct HighsSimplexInfo {
   // initiated
   HMatrix matrix;
   HFactor factor;
-  //  HighsBasis basis_;
+  HighsBasis *basis_;
   HighsSimplexInfo simplex;
   HighsScale scale;
 
