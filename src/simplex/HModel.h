@@ -526,7 +526,6 @@ struct HighsSimplexInfo {
 
   // The scaled model
   HighsLp lpScaled;
-  HighsRanging ranging;
   // Part of working model which is only required and populated once a solve is
   // initiated
   HMatrix matrix;
@@ -534,6 +533,7 @@ struct HighsSimplexInfo {
   HighsSimplexInfo simplex;
   HighsBasis *basis_;
   HighsScale *scale_;
+  HighsRanging *ranging_;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

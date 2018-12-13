@@ -19,6 +19,7 @@ public:
 
   HighsLp& lp_;
   HighsSolution solution_;
+  HighsRanging ranging_;
   BasisInfo basis_info_;
   HighsBasis basis_;
   HighsScale scale_;

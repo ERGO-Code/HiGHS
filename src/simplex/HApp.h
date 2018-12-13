@@ -81,6 +81,8 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   if (crash_and_ranging) {
     HRanging ranging;
     ranging.computeData(highs_model);
+    // Can't check data since solve argument is now a HMO
+    //    ranging.checkData(highs_model);
   }
 // Start Simplex part:
 /*
