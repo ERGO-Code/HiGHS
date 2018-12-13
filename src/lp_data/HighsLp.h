@@ -97,6 +97,7 @@ void reportLpColMtx();
 // HiGHS status
 enum class HighsStatus {
   OK,
+  Init,
   LpError,
   OptionsError,
   PresolveError,

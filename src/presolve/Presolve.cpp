@@ -2101,7 +2101,8 @@ void Presolve::testAnAR(int post) {
   int cols = numCol;
   int i, j, k;
 
-  double valueA, valueAR;
+  double valueA = 0;
+  double valueAR = 0;
   bool hasValueA, hasValueAR;
 
   if (post) {

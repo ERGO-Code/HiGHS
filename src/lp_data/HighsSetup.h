@@ -75,7 +75,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
  
   // Run solver.
-  HighsStatus solve_status;
+  HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
       solve_status = runSolver(lps_[0]);

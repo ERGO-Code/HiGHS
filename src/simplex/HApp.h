@@ -86,8 +86,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 
     HDual solver;
 
-    const bool presolveNoScale = false;
-
     vector<double> colPrAct;
     vector<double> colDuAct;
     vector<double> rowPrAct;
@@ -191,7 +189,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     //  model.util_getPrimalDualValues(colPrAct, colDuAct, rowPrAct, rowDuAct);
     //  double Ph2Objective = model.computePh2Objective(colPrAct);
     //  printf("Computed Phase 2 objective = %g\n", Ph2Objective);
-    model.util_reportSolverOutcome("Final:           ");
+    model.util_reportSolverOutcome("Final");
 #ifdef HiGHSDEV
     bool rpBnchmk = false;
     if (rpBnchmk) {
@@ -432,7 +430,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   
   highs_model.basis_info_.nonbasic_move = model.basis.nonbasicMove_;
 
-  cout << "==================================================================";
+  cout << "==================================================================\n";
 
   return result;
 }
