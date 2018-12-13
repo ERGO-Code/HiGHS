@@ -169,12 +169,12 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveSimplex(options_, model);
+  status = runSimplexSolver(options_, model);
 #else
   // IPX
   // todo:Check options for simplex-specific options
   // use model.lp_, model.solution_ and model.hmodel_ remains empty.
-  status = solveIpx(options_, lp, solution);
+  status = runIpxSolver(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
