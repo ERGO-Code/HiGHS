@@ -8,6 +8,7 @@
 struct BasisInfo {
   std::vector<int> basis_index;
   std::vector<int> nonbasic_flag;
+  std::vector<int> nonbasic_move;
 };
 
 // Class to communicate data between the simplex solver and the class

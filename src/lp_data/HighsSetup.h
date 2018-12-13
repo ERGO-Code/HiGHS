@@ -114,8 +114,17 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
     }
 
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-    //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+      // Set solution and basis info for simplex clean up.
+      // Original LP is in lp_[0] so we set the basis information there.
+      lps_[0].basis_info_.basis_index = presolve_info.presolve_[0].getBasisIndex();
+      lps_[0].basis_info_.nonbasic_flag = presolve_info.presolve_[0].getNonbasicFlag();
+      lps_[0].basis_info_.nonbasic_move = presolve_info.presolve_[0].getNonbasicMove();
+
+      // Make new instance of HighsModelObject for this purpose.
+      lps_.push_back(HighsModelObject(lp));
+
+      afterPostsolve(options_, lps_[0]);
       // todo: add finishing simplex iterations if needed.
       std::cout << "Postsolve finished.\n";
     }

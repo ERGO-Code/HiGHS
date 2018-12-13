@@ -24,8 +24,21 @@ HighsStatus solveSimplex(const HighsOptions& opt,
                          HighsModelObject& highs_model) {
   HModel& model = highs_model.hmodel_[0];
 
-  // todo: cange with Julian's HighsModelObject parameter.
+  // Initialize solver.
   HDual solver;
+  solver.setCrash(opt.crashMode);
+
+  // Crash, if HighsModelObject has basis information.
+  if (opt.crash) {
+    HCrash crash;
+    crash.crash(&model, solver.Crash_Mode);
+  }
+
+  // See if advanced start is used, like when setting up after postsolve.
+  if (highs_model.basis_info_.basis_index.size()) {
+    assert(!opt.sip && !opt.scip && !opt.pami);
+    model.initFromNonbasic();
+  }
 
   // Solve, depending on the options.
   // Parallel.
@@ -76,12 +89,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     vector<double> rowPrAct;
     vector<double> rowDuAct;
 
-    //	printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n",
-    //model.intOption[INTOPT_PRINT_FLAG]);
-    solver.setPresolve(opt.presolveMode);
     solver.setPrice(opt.priceMode);
     solver.setEdWt(opt.edWtMode);
-    solver.setCrash(opt.crashMode);
     solver.setTimeLimit(opt.timeLimit);
 
     model.timer.reset();
@@ -91,104 +100,76 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     //  bool EightThreads = true;
     bool EightThreads = false;
 
-    printf("solvePlainJAJH: with_presolve = %d\n", with_presolve);
-    if (with_presolve) {
-      if (solver.Crash_Mode > 0) {
-        HCrash crash;
-        crash.crash(&model, solver.Crash_Mode);
-        crashTime += model.timer.getTime();
-      }
+    if (FourThreads)
+      solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
+    else if (EightThreads)
+      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+    else
+      solver.solve(&model);
 
-      if (FourThreads)
-        solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
-      else if (EightThreads)
-        solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-      else
-        solver.solve(&model);
-
-      lcSolveTime = model.timer.getTime();
-      solveTime += lcSolveTime;
-      solveIt += model.numberIteration;
+    lcSolveTime = model.timer.getTime();
+    solveTime += lcSolveTime;
+    solveIt += model.numberIteration;
 
 #ifdef HiGHSDEV
-      solvePh1DuIt += solver.n_ph1_du_it;
-      solvePh2DuIt += solver.n_ph2_du_it;
-      solvePrIt += solver.n_pr_it;
-      printf(
-          "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
-          "%10.3f,%20.10e,%10d,%10d,%10d\n",
-          model.getPrStatus(), model.modelName.c_str(), model.numRow,
-          model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
-          solver.n_ph2_du_it, solver.n_pr_it);
+    solvePh1DuIt += solver.n_ph1_du_it;
+    solvePh2DuIt += solver.n_ph2_du_it;
+    solvePrIt += solver.n_pr_it;
+    printf(
+        "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
+        "%10.3f,%20.10e,%10d,%10d,%10d\n",
+        model.getPrStatus(), model.modelName.c_str(), model.numRow,
+        model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+        solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
-      // Possibly recover bounds after presolve (after using bounds tightened by
-      // presolve)
-      if (model.usingImpliedBoundsPresolve) {
-        //		Recover the true bounds overwritten by the implied
-        //bounds
+    // Possibly recover bounds after presolve (after using bounds tightened by
+    // presolve)
+    if (model.usingImpliedBoundsPresolve) {
+      //		Recover the true bounds overwritten by the implied
+      // bounds
 #ifdef HiGHSDEV
-        printf(
-            "\nRecovering bounds after using implied bounds and resolving\n");
+      printf("\nRecovering bounds after using implied bounds and resolving\n");
 #endif
-        if (model.problemStatus != LP_Status_OutOfTime) {
-          model.copy_savedBoundsToModelBounds();
-
-          model.timer.reset();
-          solver.solve(&model);
-          lcSolveTime = model.timer.getTime();
-          solveTime += lcSolveTime;
-          solveIt += model.numberIteration;
-          model.util_reportSolverOutcome("After recover:   ");
-#ifdef HiGHSDEV
-          solvePh1DuIt += solver.n_ph1_du_it;
-          solvePh2DuIt += solver.n_ph2_du_it;
-          solvePrIt += solver.n_pr_it;
-          printf(
-              "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
-              "%10.3f,%20.10e,%10d,%10d,%10d\n",
-              model.getPrStatus(), model.modelName.c_str(), model.numRow,
-              model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
-              solver.n_ph2_du_it, solver.n_pr_it);
-#endif
-        }
-      }
-
       if (model.problemStatus != LP_Status_OutOfTime) {
-        // Perform postsolve
-      }
-    } else {
-      setupTime += model.timer.getTime();
-      if (solver.Crash_Mode > 0) {
-        HCrash crash;
-        //      printf("Calling crash.crash(&model,
-        //      solver.Crash_Mode);\n");cout<<flush;
-        crash.crash(&model, solver.Crash_Mode);
-        // printf("Called  crash.crash(&model,
-        // solver.Crash_Mode);\n");cout<<flush;
-        crashTime += model.timer.getTime();
-      }
-      //		printf("model.intOption[INTOPT_PRINT_FLAG] = %d\n",
-      //model.intOption[INTOPT_PRINT_FLAG]);
-      model.scaleModel();
-      if (FourThreads)
-        solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
-      else if (EightThreads)
-        solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-      else
+        model.copy_savedBoundsToModelBounds();
+
+        model.timer.reset();
         solver.solve(&model);
-      solveTime += model.timer.getTime();
-      int problemStatus = model.getPrStatus();
-      //    printf("After solve() model status is %d\n", problemStatus);
-      if (problemStatus == LP_Status_Unset) {
-        HCrash crash;
-        crash.crash(&model, Crash_Mode_Bs);
-        solver.solve(&model);
-        solveTime += model.timer.getTime();
-        //   int problemStatus = model.getPrStatus(); printf("After solve()
-        //   model status is %d\n", problemStatus);
+        lcSolveTime = model.timer.getTime();
+        solveTime += lcSolveTime;
+        solveIt += model.numberIteration;
+        model.util_reportSolverOutcome("After recover:   ");
+#ifdef HiGHSDEV
+        solvePh1DuIt += solver.n_ph1_du_it;
+        solvePh2DuIt += solver.n_ph2_du_it;
+        solvePrIt += solver.n_pr_it;
+        printf(
+            "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
+            "%10.3f,%20.10e,%10d,%10d,%10d\n",
+            model.getPrStatus(), model.modelName.c_str(), model.numRow,
+            model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+            solver.n_ph2_du_it, solver.n_pr_it);
+#endif
       }
     }
+
+    switch (model.problemStatus) {
+      case LP_Status_OutOfTime:
+        return HighsStatus::Timeout;
+      case LP_Status_Failed:
+        return HighsStatus::SolutionError;
+      case LP_Status_Infeasible:
+        return HighsStatus::Infeasible;
+      case LP_Status_Unbounded:
+        return HighsStatus::Unbounded;
+      case LP_Status_Optimal:
+        // If optimal execute code below.
+        break;
+      default:
+        return HighsStatus::NotImplemented;
+    }
+
 #ifdef HiGHSDEV
     double sumTime =
         setupTime + presolve1Time + crashTime + solveTime + postsolveTime;
@@ -201,6 +182,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     double errTime = abs(sumTime - model.totalTime);
     if (errTime > 1e-3) printf("!! Sum-Total time error of %g\n", errTime);
 #endif
+
     // TODO Reinstate this once solve after postsolve is performed
     //  model.util_getPrimalDualValues(colPrAct, colDuAct, rowPrAct, rowDuAct);
     //  double Ph2Objective = model.computePh2Objective(colPrAct);
@@ -226,43 +208,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     }
 #endif
   }
-  return HighsStatus::OK;
-}
-
-HighsStatus afterPostsolve(const HighsOptions& opt, HighsModelObject& model) {
-  // Extract the model from what's recreated in postsolve
-  // printf("\nload_fromPostsolve\n");
-  model.load_fromPostsolve(pre);
-  model.shiftObjectiveValue(pre->objShift);
-  postsolveTime += model.timer.getTime();
-  // Save the solved results
-  model.totalTime += model.timer.getTime();
-#ifdef HiGHSDEV
-  model.util_reportModelSolution();
-#endif
-
-#ifdef HiGHSDEV
-  printf("\nBefore solve after Postsolve\n");
-  cout << flush;
-#endif
-  model.timer.reset();
-  solver.solve(&model);
-  lcSolveTime = model.timer.getTime();
-  solveTime += lcSolveTime;
-  solveIt += model.numberIteration;
-  model.util_reportSolverOutcome("After postsolve: ");
-#ifdef HiGHSDEV
-  solvePh1DuIt += solver.n_ph1_du_it;
-  solvePh2DuIt += solver.n_ph2_du_it;
-  solvePrIt += solver.n_pr_it;
-  printf(
-      "\nBnchmkHsol03 After postsolve       ,hsol,%3d,%16s, %d,%d,"
-      "%10.3f,%20.10e,%10d,%10d,%10d\n",
-      model.getPrStatus(), model.modelName.c_str(), model.numRow, model.numCol,
-      lcSolveTime, model.objective, solver.n_ph1_du_it, solver.n_ph2_du_it,
-      solver.n_pr_it);
-  cout << flush;
-#endif
   return HighsStatus::OK;
 }
 
