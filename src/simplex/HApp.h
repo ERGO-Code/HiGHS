@@ -64,17 +64,14 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   } else {
     // Serial. Based on previous solvePlainJAJH.
 
-// Do timings elsewhere
-/*
-    double setupTime = 0;
-    double presolve1Time = 0;
-    double crashTime = 0;
+// todo: do setup and presolve timings elsewhere.
+
+    double crashTime = 0; 
 #ifdef HiGHSDEV
     double crossoverTime = 0;
     double presolve2Time = 0;
 #endif
     double solveTime = 0;
-    double postsolveTime = 0;
     int solveIt = 0;
 #ifdef HiGHSDEV
     int solvePh1DuIt = 0;
@@ -82,7 +79,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     int solvePrIt = 0;
 #endif
     double lcSolveTime;
-*/
 
     HDual solver;
 
@@ -108,11 +104,11 @@ HighsStatus solveSimplex(const HighsOptions& opt,
       solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
     else
       solver.solve(&model);
-/*
+
     lcSolveTime = model.timer.getTime();
     solveTime += lcSolveTime;
     solveIt += model.numberIteration;
-*/
+
 #ifdef HiGHSDEV
     solvePh1DuIt += solver.n_ph1_du_it;
     solvePh2DuIt += solver.n_ph2_du_it;
@@ -120,8 +116,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.getPrStatus(), model.modelName.c_str(), model.numRow,
-        model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+        model.getPrStatus(), model.modelName.c_str(), model.getNumRow(),
+        model.getNumCol(), lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -149,8 +145,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.getPrStatus(), model.modelName.c_str(), model.numRow,
-            model.numCol, lcSolveTime, model.objective, solver.n_ph1_du_it,
+            model.getPrStatus(), model.modelName.c_str(), model.getNumRow(),
+            model.getNumCol(), lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
             solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
@@ -172,9 +168,11 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         return HighsStatus::NotImplemented;
     }
 
+/* todo: do elsewhere once timing is added.
 #ifdef HiGHSDEV
     double sumTime =
-        setupTime + presolve1Time + crashTime + solveTime + postsolveTime;
+        crashTime + solveTime;
+        // setupTime + presolve1Time + crashTime + solveTime + postsolveTime;
     printf(
         "Time: setup = %10.3f; presolve = %10.3f; crash = %10.3f; solve = "
         "%10.3f; postsolve = %10.3f; sum = %10.3f; total = %10.3f\n",
@@ -184,17 +182,19 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     double errTime = abs(sumTime - model.totalTime);
     if (errTime > 1e-3) printf("!! Sum-Total time error of %g\n", errTime);
 #endif
+*/
 
     // TODO Reinstate this once solve after postsolve is performed
     //  model.util_getPrimalDualValues(colPrAct, colDuAct, rowPrAct, rowDuAct);
     //  double Ph2Objective = model.computePh2Objective(colPrAct);
     //  printf("Computed Phase 2 objective = %g\n", Ph2Objective);
-    model.util_reportSolverOutcome("Final");
+
+/* todo: do elsewhere once timing is added.
 #ifdef HiGHSDEV
     bool rpBnchmk = false;
     if (rpBnchmk) {
-      int numCol = model.numCol;
-      int numRow = model.numRow;
+      int numCol = model.getNumCol();
+      int numRow = model.getNumRow();
       printf(
           "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
           "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
@@ -204,11 +204,13 @@ HighsStatus solveSimplex(const HighsOptions& opt,
           model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
           Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
           presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
-          postsolveTime, model.objective, model.numberIteration,
+          postsolveTime, model.dualObjective, model.numberIteration,
           model.totalTime, solver.n_wg_DSE_wt);
       cout << flush;
     }
 #endif
+*/
+
   }
   return HighsStatus::Optimal;
 }
@@ -408,7 +410,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
                         &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
                         &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
 
-  model.intOption[INTOPT_PRINT_FLAG] = 1;
 
   // Scaling: Separate from simplex.
   model.scaleModel();

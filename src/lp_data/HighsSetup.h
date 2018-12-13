@@ -124,25 +124,31 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
       lps_[0].basis_info_.nonbasic_flag = presolve_info.presolve_[0].getNonbasicFlag();
       lps_[0].basis_info_.nonbasic_move = presolve_info.presolve_[0].getNonbasicMove();
 
-      // Make new instance of HighsModelObject for this purpose.
-      lps_.push_back(HighsModelObject(lp));
-      
       options_.clean_up = true;
+
       solve_status = solveSimplex(options_, lps_[0]);
     }
   }
+
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
       if (options_.presolve) {
         std::cout << "Reduced problem status: "
                   << HighsStatusToString(solve_status);
+        // todo: handle case. Try to solve again with no presolve?
+        return HighsStatus::NotImplemented;
       } else {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
-        lps_[0].hmodel_[0].util_reportSolverOutcome("Solve");
+        lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
+        lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
       }
     }
+  } else {
+    // Report in old way so tests pass.
+    lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
+    lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 
   return HighsStatus::OK;

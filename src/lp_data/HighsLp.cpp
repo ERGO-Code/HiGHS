@@ -92,6 +92,9 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::OK:
       return "OK";
       break;
+    case HighsStatus::Init:
+      return "Init";
+      break;
     case HighsStatus::LpError:
       return "Lp Error";
       break;

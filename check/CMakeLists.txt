@@ -127,7 +127,7 @@ foreach(instance ${${instances}})
               -f ${inst})
         set_tests_properties (${name}${setting} PROPERTIES
               PASS_REGULAR_EXPRESSION
-              "(Solve|multi|Presolve|Postsolve|Final): ${solutionstatus}")
+              "(Run): ${solutionstatus}")
         set_tests_properties (${name}${setting} PROPERTIES
               DEPENDS unit_tests_all)
     endforeach(setting)
