@@ -130,13 +130,19 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
       options_.clean_up = true;
       solve_status = solveSimplex(options_, lps_[0]);
     }
-  } 
+  }
   if (solve_status != HighsStatus::Optimal) {
-    std::cout << "Solver terminated with a non-optimal status: "
-              << HighsStatusToString(solve_status);
-    // todo: handle infesible | unbounded instances and solver errors.
-    // either here or at end of runSolver(..)
-    return HighsStatus::NotImplemented;
+    if (solve_status == HighsStatus::Infeasible ||
+        solve_status == HighsStatus::Unbounded) {
+      if (options_.presolve) {
+        std::cout << "Reduced problem status: "
+                  << HighsStatusToString(solve_status);
+      } else {
+        std::cout << "Solver terminated with a non-optimal status: "
+                  << HighsStatusToString(solve_status) << std::endl;
+        lps_[0].hmodel_[0].util_reportSolverOutcome("Solve");
+      }
+    }
   }
 
   return HighsStatus::OK;
@@ -178,7 +184,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 
   assert(checkLp(model.lp_) == HighsInputStatus::OK);
 
-  HighsStatus status;
+  HighsStatus status = HighsStatus::Init;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
@@ -193,9 +199,11 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 
 #endif
 
+  if (status != HighsStatus::Optimal) return status;
+
   // Check.
   if (!isSolutionConsistent(model.lp_, model.solution_)) {
-    std::cout << "Error: Inconsistent solution returned from solver.";
+    std::cout << "Error: Inconsistent solution returned from solver.\n";
   }
 
   // todo:
