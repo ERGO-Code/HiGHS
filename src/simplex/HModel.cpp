@@ -1314,7 +1314,7 @@ void HModel::scaleModel() {
   double *rowScale = &scale_->row_[0];
   double *colScale = &scale_->col_[0];
   int numCol = lpScaled.numCol_;
-  int numRow = numRow;
+  int numRow = lpScaled.numRow_;
 
   // Allow a switch to/from the original scaling rules
   bool originalScaling = true;
