@@ -48,6 +48,10 @@ HighsStatus solveSimplex(const HighsOptions& opt, HighsModelObject& highs_model)
   highs_model.scale_.cost_ = 1;
   model.scale_ = &highs_model.scale_;
 
+  // Allocate memory for the simplex information
+  model.simplex_ = &highs_model.simplex_;
+
+
   bool crash_and_ranging = true;
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,

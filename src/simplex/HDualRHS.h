@@ -19,6 +19,7 @@ using namespace std;
 
 #include "HModel.h"
 #include "HVector.h"
+#include "HighsModelObject.h"
 
 /**
  * @brief Dual simplex optimality test for HiGHS
@@ -35,7 +36,8 @@ class HDualRHS {
    * EdWt (for gathered DSE weights)
    * EdWtFull (for scattered SED weights)
    */
-  void setup(HModel *model  //!< Model for which setup is performed
+  void setup(
+	     HighsModelObject *highs_model_object  //!< Model for which setup is performed
   );
   /**
    * @brief Choose the row index of a good variable to leave the basis (CHUZR)
@@ -123,6 +125,7 @@ class HDualRHS {
    */
   void create_infeasArray();
 
+  HighsModelObject *workHMO;        //!< Local copy of pointer to model
   HModel *workModel;  //!< Copy of pointer to model
 
   double workCutoff;      //!< Limit for row to be in list with greatest primal

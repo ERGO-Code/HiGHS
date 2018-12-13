@@ -13,6 +13,7 @@
  */
 #include "HDualRHS.h"
 #include "HConst.h"
+#include "HighsModelObject.h"
 
 #include <algorithm>
 #include <fstream>
@@ -20,7 +21,12 @@
 #include <set>
 using namespace std;
 
-void HDualRHS::setup(HModel *model) {
+void HDualRHS::setup(HighsModelObject *highs_model_object
+		     //		     HModel *model
+		     ) {
+  workHMO = highs_model_object;
+  HModel *model;
+  model = &highs_model_object->hmodel_[0];
   workModel = model;
   workMark.resize(workModel->getNumRow());
   workIndex.resize(workModel->getNumRow());
@@ -271,11 +277,11 @@ void HDualRHS::update_primal(HVector *column, double theta) {
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
 
-  const double *baseLower = workModel->getBaseLower();
-  const double *baseUpper = workModel->getBaseUpper();
+  const double *baseLower = workHMO->getBaseLower();
+  const double *baseUpper = workHMO->getBaseUpper();
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
 
-  double *baseValue = workModel->getBaseValue();
+  double *baseValue = workHMO->getBaseValue();
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
 
@@ -362,10 +368,10 @@ void HDualRHS::update_pivots(int iRow, double value) {
   // has occurred, and set the corresponding squared primal
   // infeasibility value in workArray
   //
-  const double *baseLower = workModel->getBaseLower();
-  const double *baseUpper = workModel->getBaseUpper();
+  const double *baseLower = workHMO->getBaseLower();
+  const double *baseUpper = workHMO->getBaseUpper();
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
-  double *baseValue = workModel->getBaseValue();
+  double *baseValue = workHMO->getBaseValue();
   baseValue[iRow] = value;
   double pivotInfeas = 0;
   if (baseValue[iRow] < baseLower[iRow] - Tp)
@@ -413,9 +419,9 @@ void HDualRHS::update_infeasList(HVector *column) {
 
 void HDualRHS::create_infeasArray() {
   int numRow = workModel->getNumRow();
-  const double *baseValue = workModel->getBaseValue();
-  const double *baseLower = workModel->getBaseLower();
-  const double *baseUpper = workModel->getBaseUpper();
+  const double *baseValue = workHMO->getBaseValue();
+  const double *baseLower = workHMO->getBaseLower();
+  const double *baseUpper = workHMO->getBaseUpper();
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
   for (int i = 0; i < numRow; i++) {
     const double value = baseValue[i];

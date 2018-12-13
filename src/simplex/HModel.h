@@ -461,48 +461,6 @@ class HModel {
   int problemStatus;
   string modelName;
   
-struct HighsSimplexInfo {
-  // Part of working model which assigned and populated as much as
-  // possible when a model is being defined
-
-  // workCost: Originally just costs from the model but, in solve(), may
-  // be perturbed or set to alternative values in Phase I??
-  //
-  // workDual: Values of the dual variables corresponding to
-  // workCost. Latter not known until solve() is called since B^{-1}
-  // is required to compute them. Knowledge of them is indicated by
-  // mlFg_haveNonbasicDuals.
-  //
-  // workShift: WTF
-  //
-  vector<double> workCost_;
-  vector<double> workDual_;
-  vector<double> workShift_;
-
-  // workLower/workUpper: Originally just lower (upper) bounds from
-  // the model but, in solve(), may be perturbed or set to
-  // alternative values in Phase I??
-  //
-  // workRange: Distance between lower and upper bounds
-  //
-  // workValue: Values of the nonbasic variables corresponding to
-  // workLower/workUpper and the basis. Always known.
-  //
-  vector<double> workLower_;
-  vector<double> workUpper_;
-  vector<double> workRange_;
-  vector<double> workValue_;
-
-  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
-  // basic variables and their values. Latter not known until solve()
-  // is called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by mlFg_haveBasicPrimals.
-  //
-  vector<double> baseLower_;
-  vector<double> baseUpper_;
-  vector<double> baseValue_;
-};
-
 // Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;
   const double maxAlwScale = 1024.0;
@@ -530,7 +488,7 @@ struct HighsSimplexInfo {
   // initiated
   HMatrix matrix;
   HFactor factor;
-  HighsSimplexInfo simplex;
+  HighsSimplexInfo *simplex_;
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
@@ -573,16 +531,6 @@ struct HighsSimplexInfo {
   double* getcolUpper() { return &lpScaled.colUpper_[0]; }
   double* getrowLower() { return &lpScaled.rowLower_[0]; }
   double* getrowUpper() { return &lpScaled.rowUpper_[0]; }
-  double* getWorkCost() { return &simplex.workCost_[0]; }
-  double* getWorkDual() { return &simplex.workDual_[0]; }
-  double* getWorkShift() { return &simplex.workShift_[0]; }
-  double* getWorkLower() { return &simplex.workLower_[0]; }
-  double* getWorkUpper() { return &simplex.workUpper_[0]; }
-  double* getWorkRange() { return &simplex.workRange_[0]; }
-  double* getWorkValue() { return &simplex.workValue_[0]; }
-  double* getBaseLower() { return &simplex.baseLower_[0]; }
-  double* getBaseUpper() { return &simplex.baseUpper_[0]; }
-  double* getBaseValue() { return &simplex.baseValue_[0]; }
   double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
   double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
   double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }

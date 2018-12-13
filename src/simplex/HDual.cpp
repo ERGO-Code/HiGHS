@@ -107,7 +107,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   // Consider initialising edge weights
   //
   // NB workEdWt is assigned and initialised to 1s in
-  // dualRHS.setup(model) so that CHUZR is well defined, even for
+  // dualRHS.setup(highs_model_object) so that CHUZR is well defined, even for
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
@@ -430,13 +430,13 @@ void HDual::init(int num_threads) {
 
   // Copy pointers
   jMove = highs_model_object->getNonbasicMove();
-  workDual = model->getWorkDual();
+  workDual = highs_model_object->getWorkDual();
   //    JAJH: Only because I can't get this from HModel.h
-  workValue = model->getWorkValue();
-  workRange = model->getWorkRange();
-  baseLower = model->getBaseLower();
-  baseUpper = model->getBaseUpper();
-  baseValue = model->getBaseValue();
+  workValue = highs_model_object->getWorkValue();
+  workRange = highs_model_object->getWorkRange();
+  baseLower = highs_model_object->getBaseLower();
+  baseUpper = highs_model_object->getBaseUpper();
+  baseValue = highs_model_object->getBaseValue();
 
   // Copy tolerances
   Tp = model->dblOption[DBLOPT_PRIMAL_TOL];
@@ -455,7 +455,7 @@ void HDual::init(int num_threads) {
   rowdseDensity = 0;
   // Setup other buffers
   dualRow.setup(highs_model_object);
-  dualRHS.setup(model);
+  dualRHS.setup(highs_model_object);
 
   // Initialize for tasks
   if (dual_variant == HDUAL_VARIANT_TASKS) {
@@ -1761,7 +1761,7 @@ void HDual::updatePivots() {
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding squared primal infeasibility
   // value in dualRHS.workArray
-  dualRHS.update_pivots(rowOut, model->getWorkValue()[columnIn] + thetaPrimal);
+  dualRHS.update_pivots(rowOut, highs_model_object->getWorkValue()[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock =
       total_syntheticTick >= factor->build_syntheticTick;
@@ -2295,7 +2295,7 @@ void HDual::an_iz_vr_v() {
   const int numTot = model->getNumTot();
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     if (highs_model_object->getNonbasicFlag()[vr_n]) {
-      double pr_act_v = model->getWorkValue()[vr_n];
+      double pr_act_v = highs_model_object->getWorkValue()[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];
     }

@@ -166,9 +166,9 @@ void HPrimal::primalChooseColumn() {
   double bestInfeas = 0;
   const int *jFlag = highs_model_object->getNonbasicFlag();
   const int *jMove = highs_model_object->getNonbasicMove();
-  double *workDual = model->getWorkDual();
-  const double *workLower = model->getWorkLower();
-  const double *workUpper = model->getWorkUpper();
+  double *workDual = highs_model_object->getWorkDual();
+  const double *workLower = highs_model_object->getWorkLower();
+  const double *workUpper = highs_model_object->getWorkUpper();
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
   const int numTot = model->getNumTot();
@@ -194,9 +194,9 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  const double *baseLower = model->getBaseLower();
-  const double *baseUpper = model->getBaseUpper();
-  double *baseValue = model->getBaseValue();
+  const double *baseLower = highs_model_object->getBaseLower();
+  const double *baseUpper = highs_model_object->getBaseUpper();
+  double *baseValue = highs_model_object->getBaseValue();
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute pivot column
@@ -258,13 +258,13 @@ void HPrimal::primalChooseRow() {
 
 void HPrimal::primalUpdate() {
   int *jMove = highs_model_object->getNonbasicMove();
-  double *workDual = model->getWorkDual();
-  const double *workLower = model->getWorkLower();
-  const double *workUpper = model->getWorkUpper();
-  const double *baseLower = model->getBaseLower();
-  const double *baseUpper = model->getBaseUpper();
-  double *workValue = model->getWorkValue();
-  double *baseValue = model->getBaseValue();
+  double *workDual = highs_model_object->getWorkDual();
+  const double *workLower = highs_model_object->getWorkLower();
+  const double *workUpper = highs_model_object->getWorkUpper();
+  const double *baseLower = highs_model_object->getBaseLower();
+  const double *baseUpper = highs_model_object->getBaseUpper();
+  double *workValue = highs_model_object->getWorkValue();
+  double *baseValue = highs_model_object->getBaseValue();
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute thetaPrimal

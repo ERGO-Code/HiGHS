@@ -80,11 +80,11 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   for (int iRow = 0; iRow < numRow; iRow++) {
     upper_[numCol + iRow] = -model->lpScaled.rowLower_[iRow];
   }
-  vector<double> value_ = model->simplex.workValue_;
+  vector<double> value_ = highs_model_object->simplex_.workValue_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    value_[model->basis_->basicIndex_[iRow]] = model->simplex.baseValue_[iRow];
+    value_[model->basis_->basicIndex_[iRow]] = highs_model_object->simplex_.baseValue_[iRow];
   }
-  vector<double> dual_ = model->simplex.workDual_;
+  vector<double> dual_ = highs_model_object->simplex_.workDual_;
   for (int iRow = 0; iRow < numRow; iRow++) {
     dual_[model->basis_->basicIndex_[iRow]] = 0;
   }
@@ -96,9 +96,9 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
     printf("Col %2d has scale factor %12g\n", iCol, model->scale.col_[iCol]);
   }
   */
-  vector<double> Blower_ = model->simplex.baseLower_;
-  vector<double> Bupper_ = model->simplex.baseUpper_;
-  vector<double> Bvalue_ = model->simplex.baseValue_;
+  vector<double> Blower_ = highs_model_object->simplex_.baseLower_;
+  vector<double> Bupper_ = highs_model_object->simplex_.baseUpper_;
+  vector<double> Bvalue_ = highs_model_object->simplex_.baseValue_;
 
   vector<int> Nflag_ = model->basis_->nonbasicFlag_;
   vector<int> Nmove_ = model->basis_->nonbasicMove_;

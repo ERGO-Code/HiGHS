@@ -28,8 +28,8 @@ void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
   workModel = model;
   workSize = size;
   workMove = workHMO->getNonbasicMove();
-  workDual = model->getWorkDual();
-  workRange = model->getWorkRange();
+  workDual = workHMO->getWorkDual();
+  workRange = workHMO->getWorkRange();
 
   // Allocate spaces
   packCount = 0;
@@ -317,10 +317,10 @@ bool HDualRow::choose_final() {
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
   //  workModel->checkDualObjectiveValue("Before update_flip");
-  double *workDual = workModel->getWorkDual();//
-  //  double *workLower = workModel->getWorkLower();
-  //  double *workUpper = workModel->getWorkUpper();
-  //  double *workValue = workModel->getWorkValue();
+  double *workDual = workHMO->getWorkDual();//
+  //  double *workLower = workHMO->getWorkLower();
+  //  double *workUpper = workHMO->getWorkUpper();
+  //  double *workValue = workHMO->getWorkValue();
   double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
@@ -341,7 +341,7 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
 void HDualRow::update_dual(double theta, int columnOut) {
   //  workModel->checkDualObjectiveValue("Before update_dual");
   workModel->timer.recordStart(HTICK_UPDATE_DUAL);
-  double *workDual = workModel->getWorkDual();
+  double *workDual = workHMO->getWorkDual();
   //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
@@ -349,7 +349,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     int iCol = packIndex[i];
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
-    double iColWorkValue = workModel->simplex.workValue_[iCol];
+    double iColWorkValue = workHMO->simplex_.workValue_[iCol];
     double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO->scale_.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
