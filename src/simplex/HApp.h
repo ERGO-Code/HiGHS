@@ -223,8 +223,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   //  model.util_reportModel();
 
   // Extract columns numCol-3..numCol-1
-  int FmCol = model.scaled_lp_.numCol_ - 3;
-  int ToCol = model.scaled_lp_.numCol_ - 1;
+  int FmCol = model.lpScaled.numCol_ - 3;
+  int ToCol = model.lpScaled.numCol_ - 1;
   int numExtractCols = ToCol - FmCol + 1;
   vector<double> XcolCost;
   vector<double> XcolLower;
@@ -244,8 +244,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   //  model.util_reportModel();
 
   // Extract rows numRow-3..numRow-1
-  int FmRow = model.lp.numRow_ - 3;
-  int ToRow = model.lp.numRow_ - 1;
+  int FmRow = model.lpScaled.numRow_ - 3;
+  int ToRow = model.lpScaled.numRow_ - 1;
   int numExtractRows = ToRow - FmRow + 1;
   vector<double> XrowLower;
   vector<double> XrowUpper;
@@ -266,7 +266,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   // Extract all remaining rows
   FmRow = 0;
-  ToRow = model.lp.numRow_ - 1;
+  ToRow = model.lpScaled.numRow_ - 1;
   int num0ExtractRows = ToRow - FmRow + 1;
   vector<double> X0rowLower;
   vector<double> X0rowUpper;
@@ -285,7 +285,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   // Extract all remaining columns
   FmCol = 0;
-  ToCol = model.lp.numCol_ - 1;
+  ToCol = model.lpScaled.numCol_ - 1;
   int num0ExtractCols = ToCol - FmCol + 1;
   vector<double> X0colCost;
   vector<double> X0colLower;
@@ -321,24 +321,23 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  model.numTot = model.lp.numCol_ + model.lp.numRow_;
   model.scaleModel();
   HDual solver;
   solver.solve(&model);
-  model.util_reportModelSolution();
+  model.util_reportModelSolution(model.lpScaled);
   model.util_reportSolverOutcome("SCIP 1");
 
-  vector<double> colPrimal(model.lp.numCol_);
-  vector<double> colDual(model.lp.numCol_);
-  vector<double> colLower(model.lp.numCol_);
-  vector<double> colUpper(model.lp.numCol_);
-  vector<double> rowPrimal(model.lp.numRow_);
-  vector<double> rowDual(model.lp.numRow_);
-  vector<double> rowLower(model.lp.numRow_);
-  vector<double> rowUpper(model.lp.numRow_);
+  vector<double> colPrimal(model.lpScaled.numCol_);
+  vector<double> colDual(model.lpScaled.numCol_);
+  vector<double> colLower(model.lpScaled.numCol_);
+  vector<double> colUpper(model.lpScaled.numCol_);
+  vector<double> rowPrimal(model.lpScaled.numRow_);
+  vector<double> rowDual(model.lpScaled.numRow_);
+  vector<double> rowLower(model.lpScaled.numRow_);
+  vector<double> rowUpper(model.lpScaled.numRow_);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(0, model.lp.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(0, model.lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(model.lpScaled, 0, model.lpScaled.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(model.lpScaled, 0, model.lpScaled.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -347,11 +346,11 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   double nw_colUpper;
 
   int num_resolve = 0;
-  for (int col = 0; col < model.lp.numCol_; col++) {
-    model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
+  for (int col = 0; col < model.lpScaled.numCol_; col++) {
+    model.util_getColBounds(model.lpScaled, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
-    if (model.nonbasicFlag[col]) {
+    if (model.basis.nonbasicFlag_[col]) {
       printf(": nonbasic so don't branch\n");
       continue;
     } else {
@@ -364,7 +363,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       printf(": basic with rsdu = %11g so branch\n\n", rsdu);
       num_resolve++;
       colBoundIndex = col;
-      if (model.hsol_isInfinity(og_colUpper))
+      if (highs_isInfinity(og_colUpper))
         nw_colLower = colPrimal[col] + 1;
       else
         nw_colLower = og_colUpper;
@@ -386,7 +385,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   }
   printf("Returning from solveSCIP\n");
   cout << flush;
-  return 0;
+  return HighsStatus::OK;
 }
 
 // Single function to solve an lp according to options and fill
@@ -431,7 +430,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
   
-  highs_model.basis_info_.nonbasic_move = model.nonbasicMove;
+  highs_model.basis_info_.nonbasic_move = model.basis.nonbasicMove_;
 
   cout << "==================================================================";
 
