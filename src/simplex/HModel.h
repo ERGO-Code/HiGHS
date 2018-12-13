@@ -483,7 +483,7 @@ class HModel {
   vector<double> colRandomValue;
 
   // The scaled model
-  HighsLp lpScaled;
+  HighsLp lp_scaled_;
   // Part of working model which is only required and populated once a solve is
   // initiated
   HMatrix matrix;
@@ -519,18 +519,15 @@ class HModel {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  //  int getNumRow() { return lpScaled.numRow_; }
-  //  int getNumCol() { return lpScaled.numCol_; }
-  //  int getNumTot() { return lpScaled.numCol_ + lpScaled.numRow_; }
   int getPrStatus() { return problemStatus; }
-  int getObjSense() { return lpScaled.sense_; }
+  int getObjSense() { return lp_scaled_.sense_; }
   const HMatrix* getMatrix() { return &matrix; }
   const HFactor* getFactor() { return &factor; }
-  double* getcolCost() { return &lpScaled.colCost_[0]; }
-  double* getcolLower() { return &lpScaled.colLower_[0]; }
-  double* getcolUpper() { return &lpScaled.colUpper_[0]; }
-  double* getrowLower() { return &lpScaled.rowLower_[0]; }
-  double* getrowUpper() { return &lpScaled.rowUpper_[0]; }
+  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
+  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
+  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
+  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
+  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
   double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
   double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
   double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }

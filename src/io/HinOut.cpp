@@ -159,31 +159,31 @@ void HinOut::writeDataColumnWise() {
 }
 
 void HinOut::getData(HModel& ptr_model) {
-  onumCol = ptr_model.lpScaled.numCol_;
-  onumRow = ptr_model.lpScaled.numRow_;
-  oAstart = ptr_model.lpScaled.Astart_;
-  oAindex = ptr_model.lpScaled.Aindex_;
-  oAvalue = ptr_model.lpScaled.Avalue_;
-  ocolCost = ptr_model.lpScaled.colCost_;
-  ocolLower = ptr_model.lpScaled.colLower_;
-  ocolUpper = ptr_model.lpScaled.colUpper_;
-  orowLower = ptr_model.lpScaled.rowLower_;
-  orowUpper = ptr_model.lpScaled.rowUpper_;
+  onumCol = ptr_model.lp_scaled_.numCol_;
+  onumRow = ptr_model.lp_scaled_.numRow_;
+  oAstart = ptr_model.lp_scaled_.Astart_;
+  oAindex = ptr_model.lp_scaled_.Aindex_;
+  oAvalue = ptr_model.lp_scaled_.Avalue_;
+  ocolCost = ptr_model.lp_scaled_.colCost_;
+  ocolLower = ptr_model.lp_scaled_.colLower_;
+  ocolUpper = ptr_model.lp_scaled_.colUpper_;
+  orowLower = ptr_model.lp_scaled_.rowLower_;
+  orowUpper = ptr_model.lp_scaled_.rowUpper_;
 
   oAcountX = oAvalue.size();
 }
 
 void HinOut::readDataPostsolve(HModel& ptr_model) {
-  numCol = ptr_model.lpScaled.numCol_;
-  numRow = ptr_model.lpScaled.numRow_;
-  Astart = ptr_model.lpScaled.Astart_;
-  Aindex = ptr_model.lpScaled.Aindex_;
-  Avalue = ptr_model.lpScaled.Avalue_;
-  colCost = ptr_model.lpScaled.colCost_;
-  colLower = ptr_model.lpScaled.colLower_;
-  colUpper = ptr_model.lpScaled.colUpper_;
-  rowLower = ptr_model.lpScaled.rowLower_;
-  rowUpper = ptr_model.lpScaled.rowUpper_;
+  numCol = ptr_model.lp_scaled_.numCol_;
+  numRow = ptr_model.lp_scaled_.numRow_;
+  Astart = ptr_model.lp_scaled_.Astart_;
+  Aindex = ptr_model.lp_scaled_.Aindex_;
+  Avalue = ptr_model.lp_scaled_.Avalue_;
+  colCost = ptr_model.lp_scaled_.colCost_;
+  colLower = ptr_model.lp_scaled_.colLower_;
+  colUpper = ptr_model.lp_scaled_.colUpper_;
+  rowLower = ptr_model.lp_scaled_.rowLower_;
+  rowUpper = ptr_model.lp_scaled_.rowUpper_;
 
   AcountX = oAvalue.size();
 }
@@ -263,16 +263,16 @@ void HinOut::compareData(int lvl) {
 }
 
 void HinOut::setData(HModel& ptr_model) {
-  ptr_model.lpScaled.numCol_ = numCol;
-  ptr_model.lpScaled.numRow_ = numRow;
-  ptr_model.lpScaled.Astart_ = Astart;
-  ptr_model.lpScaled.Aindex_ = Aindex;
-  ptr_model.lpScaled.Avalue_ = Avalue;
-  ptr_model.lpScaled.colCost_ = colCost;
-  ptr_model.lpScaled.colLower_ = colLower;
-  ptr_model.lpScaled.colUpper_ = colUpper;
-  ptr_model.lpScaled.rowLower_ = rowLower;
-  ptr_model.lpScaled.rowUpper_ = rowUpper;
+  ptr_model.lp_scaled_.numCol_ = numCol;
+  ptr_model.lp_scaled_.numRow_ = numRow;
+  ptr_model.lp_scaled_.Astart_ = Astart;
+  ptr_model.lp_scaled_.Aindex_ = Aindex;
+  ptr_model.lp_scaled_.Avalue_ = Avalue;
+  ptr_model.lp_scaled_.colCost_ = colCost;
+  ptr_model.lp_scaled_.colLower_ = colLower;
+  ptr_model.lp_scaled_.colUpper_ = colUpper;
+  ptr_model.lp_scaled_.rowLower_ = rowLower;
+  ptr_model.lp_scaled_.rowUpper_ = rowUpper;
 }
 
 HinOut::HinOut(string filenameIn, string filenameOut) {

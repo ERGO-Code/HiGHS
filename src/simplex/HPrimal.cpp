@@ -24,9 +24,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
   model = &highs_model_object->hmodel_[0];
   //  model->basis_ = &highs_model_object->basis_;
-  numCol = model->lpScaled.numCol_;
-  numRow = model->lpScaled.numRow_;
-  numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  numCol = model->lp_scaled_.numCol_;
+  numRow = model->lp_scaled_.numRow_;
+  numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
 
 #ifdef HiGHSDEV
   printf("************************************\n");
@@ -164,14 +164,14 @@ void HPrimal::primalRebuild() {
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = highs_model_object->getNonbasicFlag();
-  const int *jMove = highs_model_object->getNonbasicMove();
-  double *workDual = highs_model_object->getWorkDual();
-  const double *workLower = highs_model_object->getWorkLower();
-  const double *workUpper = highs_model_object->getWorkUpper();
+  const int *jFlag = &highs_model_object->basis_.nonbasicFlag_[0];
+  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  double *workDual = &highs_model_object->simplex_.workDual_[0];
+  const double *workLower = &highs_model_object->simplex_.workLower_[0];
+  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
-  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free
@@ -194,9 +194,9 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  const double *baseLower = highs_model_object->getBaseLower();
-  const double *baseUpper = highs_model_object->getBaseUpper();
-  double *baseValue = highs_model_object->getBaseValue();
+  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
+  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
+  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute pivot column
@@ -211,7 +211,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = countUpdate < 10 ? 1e-9 : countUpdate < 20 ? 1e-8 : 1e-7;
-  const int *jMove = highs_model_object->getNonbasicMove();
+  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -257,19 +257,19 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = highs_model_object->getNonbasicMove();
-  double *workDual = highs_model_object->getWorkDual();
-  const double *workLower = highs_model_object->getWorkLower();
-  const double *workUpper = highs_model_object->getWorkUpper();
-  const double *baseLower = highs_model_object->getBaseLower();
-  const double *baseUpper = highs_model_object->getBaseUpper();
-  double *workValue = highs_model_object->getWorkValue();
-  double *baseValue = highs_model_object->getBaseValue();
+  int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  double *workDual = &highs_model_object->simplex_.workDual_[0];
+  const double *workLower = &highs_model_object->simplex_.workLower_[0];
+  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
+  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
+  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
+  double *workValue = &highs_model_object->simplex_.workValue_[0];
+  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = highs_model_object->getBaseIndex()[rowOut];
+  int columnOut = highs_model_object->basis_.basicIndex_[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {

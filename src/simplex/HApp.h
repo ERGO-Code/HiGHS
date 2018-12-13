@@ -163,7 +163,7 @@ solveTasks
   return HighsStatus::OK;
 }
 
-HighsLp HModelToHighsLp(const HModel& model) { return model.lpScaled; }
+HighsLp HModelToHighsLp(const HModel& model) { return model.lp_scaled_; }
 
 HModel HighsLpToHModel(const HighsLp& lp) {
   HModel model;

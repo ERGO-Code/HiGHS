@@ -61,7 +61,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model->totalInvertTime = 0;
 #endif
   // Cannot solve box-constrained LPs
-  if (model->lpScaled.numRow_ == 0) return;
+  if (model->lp_scaled_.numRow_ == 0) return;
   model->timer.reset();
 
   n_ph1_du_it = 0;
@@ -123,7 +123,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
-      const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+      const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -198,9 +198,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
-  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (highs_model_object->getNonbasicFlag()[i]) {
+    if (highs_model_object->basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -422,21 +422,21 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
-  numCol = model->lpScaled.numCol_;
-  numRow = model->lpScaled.numRow_;
-  numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  numCol = model->lp_scaled_.numCol_;
+  numRow = model->lp_scaled_.numRow_;
+  numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
   matrix = model->getMatrix();
   factor = model->getFactor();
 
   // Copy pointers
-  jMove = highs_model_object->getNonbasicMove();
-  workDual = highs_model_object->getWorkDual();
+  jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  workDual = &highs_model_object->simplex_.workDual_[0];
   //    JAJH: Only because I can't get this from HModel.h
-  workValue = highs_model_object->getWorkValue();
-  workRange = highs_model_object->getWorkRange();
-  baseLower = highs_model_object->getBaseLower();
-  baseUpper = highs_model_object->getBaseUpper();
-  baseValue = highs_model_object->getBaseValue();
+  workValue = &highs_model_object->simplex_.workValue_[0];
+  workRange = &highs_model_object->simplex_.workRange_[0];
+  baseLower = &highs_model_object->simplex_.baseLower_[0];
+  baseUpper = &highs_model_object->simplex_.baseUpper_[0];
+  baseValue = &highs_model_object->simplex_.baseValue_[0];
 
   // Copy tolerances
   Tp = model->dblOption[DBLOPT_PRIMAL_TOL];
@@ -781,7 +781,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = highs_model_object->getBaseIndex();
+    const int *baseIndex = &highs_model_object->basis_.basicIndex_[0];
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -1075,7 +1075,7 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
-      const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+      const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
       if (alw_DSE2Dvx_sw &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
@@ -1301,7 +1301,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = highs_model_object->getBaseIndex()[rowOut];
+  columnOut = highs_model_object->basis_.basicIndex_[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1363,7 +1363,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
-      const int *nonbasicFlag = highs_model_object->getNonbasicFlag();
+      const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
       for (int col = 0; col < numCol; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
 	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
@@ -1761,7 +1761,7 @@ void HDual::updatePivots() {
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding squared primal infeasibility
   // value in dualRHS.workArray
-  dualRHS.update_pivots(rowOut, highs_model_object->getWorkValue()[columnIn] + thetaPrimal);
+  dualRHS.update_pivots(rowOut, highs_model_object->simplex_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock =
       total_syntheticTick >= factor->build_syntheticTick;
@@ -1778,25 +1778,25 @@ void HDual::iz_dvx_fwk() {
   // Initialise the Devex framework: reference set is all basic
   // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
-  const int *NonbasicFlag = highs_model_object->getNonbasicFlag();
-  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
+  const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    //      if (highs_model_object->getNonbasicFlag()[vr_n])
-    //      if (NonbasicFlag[vr_n])
+    //      if (highs_model_object->basis_.nonbasicFlag_[vr_n])
+    //      if (nonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
     //	dvx_ix[vr_n] = dvx_not_in_R;
     //      else
     //			Basic variables in reference set
     //	dvx_ix[vr_n] = dvx_in_R;
     //
-    // Assume all nonbasic variables have |NonbasicFlag[vr_n]|=1
+    // Assume all nonbasic variables have |nonbasicFlag[vr_n]|=1
     //
-    // NonbasicFlag[vr_n]*NonbasicFlag[vr_n] evaluates faster than
-    // abs(NonbasicFlag[vr_n])
+    // nonbasicFlag[vr_n]*nonbasicFlag[vr_n] evaluates faster than
+    // abs(nonbasicFlag[vr_n])
     //
-    // int dvx_ix_o_vr = 1-abs(NonbasicFlag[vr_n]);
+    // int dvx_ix_o_vr = 1-abs(nonbasicFlag[vr_n]);
     //
-    int dvx_ix_o_vr = 1 - NonbasicFlag[vr_n] * NonbasicFlag[vr_n];
+    int dvx_ix_o_vr = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
     dvx_ix[vr_n] = dvx_ix_o_vr;
   }
   dualRHS.workEdWt.assign(numRow, 1.0);  // Set all initial weights to 1
@@ -2030,7 +2030,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object->getBaseIndex()[r_n];
+    int vr_n = highs_model_object->basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < numCol)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2286,16 +2286,16 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object->getBaseIndex()[r_n];
+    int vr_n = highs_model_object->basis_.basicIndex_[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
-  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (highs_model_object->getNonbasicFlag()[vr_n]) {
-      double pr_act_v = highs_model_object->getWorkValue()[vr_n];
+    if (highs_model_object->basis_.nonbasicFlag_[vr_n]) {
+      double pr_act_v = highs_model_object->simplex_.workValue_[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];
     }

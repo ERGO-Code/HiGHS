@@ -27,8 +27,8 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  int numCol = model->lpScaled.numCol_;
-  int numRow = model->lpScaled.numRow_;
+  int numCol = model->lp_scaled_.numCol_;
+  int numRow = model->lp_scaled_.numRow_;
   int numTot = numCol + numRow;
 
   HighsRanging* ranging = &ref_highs_model_object.ranging_;
@@ -59,26 +59,26 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   const double H_TT = 1e-13;
 
   //  HMatrix matrix;
-  model->matrix.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis_->nonbasicFlag_[0]);
+  model->matrix.setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
+                      &model->lp_scaled_.Avalue_[0], &model->basis_->nonbasicFlag_[0]);
 
-  model->factor.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis_->basicIndex_[0]);
+  model->factor.setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
+                      &model->lp_scaled_.Avalue_[0], &model->basis_->basicIndex_[0]);
   model->factor.build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
   // negated relative to the original model
-  vector<double> cost_ = model->lpScaled.colCost_;
-  vector<double> lower_ = model->lpScaled.colLower_;
-  vector<double> upper_ = model->lpScaled.colUpper_;
+  vector<double> cost_ = model->lp_scaled_.colCost_;
+  vector<double> lower_ = model->lp_scaled_.colLower_;
+  vector<double> upper_ = model->lp_scaled_.colUpper_;
 
   lower_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    lower_[numCol + iRow] = -model->lpScaled.rowUpper_[iRow];
+    lower_[numCol + iRow] = -model->lp_scaled_.rowUpper_[iRow];
   }
   upper_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    upper_[numCol + iRow] = -model->lpScaled.rowLower_[iRow];
+    upper_[numCol + iRow] = -model->lp_scaled_.rowLower_[iRow];
   }
   vector<double> value_ = highs_model_object->simplex_.workValue_;
   for (int iRow = 0; iRow < numRow; iRow++) {
@@ -551,8 +551,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  int numCol = model->lpScaled.numCol_;
-  int numRow = model->lpScaled.numRow_;
+  int numCol = model->lp_scaled_.numCol_;
+  int numRow = model->lp_scaled_.numRow_;
   int numTot = numCol + numRow;
 
   HighsRanging* ranging = model->ranging_;
@@ -580,7 +580,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
       max(1.0, abs(model->dualObjectiveValue));
   reportRangingDataCheck = numTot < 250;
   //#endif
-  model->util_reportModelSolution(model->lpScaled);
+  model->util_reportModelSolution(model->lp_scaled_);
   vector<int> Nflag = model->basis_->nonbasicFlag_;
   vector<int> Nmove = model->basis_->nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
@@ -597,8 +597,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   for (int i = 0; i < numRow; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svRowLower = model->lpScaled.rowLower_[i];
-    double svRowUpper = model->lpScaled.rowUpper_[i];
+    double svRowLower = model->lp_scaled_.rowLower_[i];
+    double svRowUpper = model->lp_scaled_.rowUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i + numCol] > -infiniteBoundOrCost) {
@@ -706,7 +706,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lpScaled.rowLower_[i], model->lpScaled.rowUpper_[i], rowValue[i], 0.0,
+          i, model->lp_scaled_.rowLower_[i], model->lp_scaled_.rowUpper_[i], rowValue[i], 0.0,
           rowDual[i], b_up_b[i + numCol], b_up_f[i + numCol], solved_up,
           b_dn_b[i + numCol], b_dn_f[i + numCol], solved_dn, maxRelativeError);
     }
@@ -721,8 +721,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColLower = model->lpScaled.colLower_[i];
-    double svColUpper = model->lpScaled.colUpper_[i];
+    double svColLower = model->lp_scaled_.colLower_[i];
+    double svColUpper = model->lp_scaled_.colUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i] > -infiniteBoundOrCost) {
@@ -832,8 +832,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lpScaled.colLower_[i], model->lpScaled.colUpper_[i], colValue[i],
-          model->lpScaled.colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
+          i, model->lp_scaled_.colLower_[i], model->lp_scaled_.colUpper_[i], colValue[i],
+          model->lp_scaled_.colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
           b_dn_b[i], b_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -847,7 +847,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColCost = model->lpScaled.colCost_[i];
+    double svColCost = model->lp_scaled_.colCost_[i];
     bool recoverOriginalCost = false;
     {
       if (fabs(c_dn_c[i]) < infiniteBoundOrCost) {
@@ -926,8 +926,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lpScaled.colLower_[i], model->lpScaled.colUpper_[i], colValue[i],
-          model->lpScaled.colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
+          i, model->lp_scaled_.colLower_[i], model->lp_scaled_.colUpper_[i], colValue[i],
+          model->lp_scaled_.colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
           c_dn_c[i], c_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -968,11 +968,11 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   } else {
     model->intOption[INTOPT_PRINT_FLAG] = 0;
   }
-  //  model->lpScaled.reportLp();
+  //  model->lp_scaled_.reportLp();
   printf("HRanging.cpp no longer solves!\n");
   //  solver.solve(model);
   if (rp) {
-    model->lpScaled.reportLp();
+    model->lp_scaled_.reportLp();
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }
