@@ -23,11 +23,11 @@ using namespace std;
 
 void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
   model = &highs_model_object.hmodel_[0];
-  if (model->getNumRow() == 0) return;
+  if (model->lpScaled.numRow_ == 0) return;
   model->timer.reset();
-  numRow = model->getNumRow();
-  numCol = model->getNumCol();
-  numTot = model->getNumTot();
+  numRow = model->lpScaled.numRow_;
+  numCol = model->lpScaled.numCol_;
+  numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
   const int objSense = model->getObjSense();
 #ifdef HiGHSDEV
   if (abs(objSense) != 1) {
@@ -622,9 +622,9 @@ void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
   }
 
   mn_co_tie_bk = false;
-  numRow = model->getNumRow();
-  numCol = model->getNumCol();
-  numTot = model->getNumTot();
+  numRow = model->lpScaled.numRow_;
+  numCol = model->lpScaled.numCol_;
+  numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
 
   // Initialise the LTSSF data structures
   ltssf_iz_da(highs_model_object, Crash_Mode);

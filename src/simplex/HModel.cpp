@@ -173,7 +173,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   lpScaled.Astart_.assign(&XAstart[0], &XAstart[0] + lpScaled.numCol_ + 1);
   lpScaled.Aindex_.assign(&XAindex[0], &XAindex[0] + numNz);
   lpScaled.Avalue_.assign(&XAvalue[0], &XAvalue[0] + numNz);
-  //  numTot = lpScaled.numCol_ + lpScaled.numRow_;
 
   // Assign and initialise the scaling factors
   initScale();
@@ -476,7 +475,7 @@ void HModel::replaceWithNewBasis(const int *XbasicIndex) {
   // work* arrays
 
   //  printf("replaceWithNewBasis: \n");
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; var++) {
     basis_->nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
   }
@@ -521,7 +520,7 @@ void HModel::initWithLogicalBasis() {
 
   //  basis_->basicIndex_.resize(lpScaled.numRow_); //Now set up in solveSimplex
   for (int row = 0; row < lpScaled.numRow_; row++) basis_->basicIndex_[row] = lpScaled.numCol_ + row;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   //  basis_->nonbasicFlag_.assign(numTot, 0); //Now set up in solveSimplex
   //  basis_->nonbasicMove_.resize(numTot); //Now set up in solveSimplex
   for (int col = 0; col < lpScaled.numCol_; col++) basis_->nonbasicFlag_[col] = 1;
@@ -575,7 +574,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   int local_newNumRow = max(local_oldNumRow, lastrow + 1);
   int local_newNumTot = local_newNumCol + local_newNumRow;
 
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
 #ifdef SCIPDEV
   printf("extendWithLogicalBasis\n");
   printf("lpScaled.numCol_/Row/Tot = %d/%d/%d\n", lpScaled.numCol_, lpScaled.numRow_, numTot);
@@ -842,7 +841,7 @@ bool HModel::OKtoSolve(int level, int phase) {
 #endif
     return ok;
   }
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; ++var) {
     if (basis_->nonbasicFlag_[var]) {
       // Nonbasic variable
@@ -910,7 +909,7 @@ void HModel::rp_basis() {
 }
 
 int HModel::get_nonbasicMove(int var) {
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   //  printf("Calling get_nonbasicMove with var = %2d; numTot = %2d\n", var,
   //  numTot); cout<<flush;
   assert(var >= 0);
@@ -983,7 +982,7 @@ bool HModel::workArrays_OK(int phase) {
       }
     }
   }
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; ++var) {
     ok = simplex_->workRange_[var] == (simplex_->workUpper_[var] - simplex_->workLower_[var]);
     if (!ok) {
@@ -1022,7 +1021,7 @@ bool HModel::workArrays_OK(int phase) {
 
 bool HModel::allNonbasicMoveVsWorkArrays_OK() {
   bool ok;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; ++var) {
     printf("NonbasicMoveVsWorkArrays: var = %2d; basis_->nonbasicFlag_[var] = %2d\n",
            var, basis_->nonbasicFlag_[var]);
@@ -1044,7 +1043,7 @@ bool HModel::allNonbasicMoveVsWorkArrays_OK() {
 }
 
 bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
   //	 var, numTot, simplex_->workLower_[var], simplex_->workUpper_[var], basis_->nonbasicMove_[var]);
@@ -1833,7 +1832,7 @@ void HModel::initScale() {
 
 void HModel::initBasicIndex() {
   int numBasic = 0;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; var++) {
     if (!basis_->nonbasicFlag_[var]) {
       assert(numBasic < lpScaled.numRow_);
@@ -1846,7 +1845,7 @@ void HModel::initBasicIndex() {
 
 void HModel::allocate_WorkAndBaseArrays() {
   // Allocate bounds and solution spaces
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   simplex_->workCost_.resize(numTot);
   simplex_->workDual_.resize(numTot);
   // Was workShift.assign(numTot, 0); but shift is populated by call to
@@ -1886,7 +1885,7 @@ void HModel::initCost(int perturb) {
 
   // If there's few boxed variables, we will just use Simple perturbation
   double boxedRate = 0;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) boxedRate += (simplex_->workRange_[i] < 1e30);
   boxedRate /= numTot;
   if (boxedRate < 0.01) bigc = min(bigc, 1.0);
@@ -1929,7 +1928,7 @@ void HModel::initBound(int phase) {
 
   // In Phase 1: change to dual phase 1 bound
   const double inf = HIGHS_CONST_INF;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (simplex_->workLower_[i] == -inf && simplex_->workUpper_[i] == inf) {
       // Won't change for row variables: they should never become
@@ -1947,7 +1946,10 @@ void HModel::initBound(int phase) {
   }
 }
 
-void HModel::initValue() { initValueFromNonbasic(0, getNumTot() - 1); }
+void HModel::initValue() {
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
+  initValueFromNonbasic(0, numTot - 1);
+}
 
 void HModel::initPh2ColCost(int firstcol, int lastcol) {
   // Copy the Phase 2 cost and zero the shift
@@ -1995,7 +1997,7 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
   assert(firstvar >= 0);
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   assert(lastvar < numTot);
   // double dl_pr_act, norm_dl_pr_act;
   // norm_dl_pr_act = 0.0;
@@ -2132,7 +2134,7 @@ void HModel::computeDual() {
   for (int i = 0; i < lpScaled.numCol_; i++) {
     simplex_->workDual_[i] = simplex_->workCost_[i] - bufferLong.array[i];
   }
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = lpScaled.numCol_; i < numTot; i++) {
     simplex_->workDual_[i] = simplex_->workCost_[i] - buffer.array[i - lpScaled.numCol_];
   }
@@ -2168,7 +2170,7 @@ void HModel::computeDualInfeasInDual(int *dualInfeasCount) {
   int workCount = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
     if (!basis_->nonbasicFlag_[i]) continue;
@@ -2187,7 +2189,7 @@ void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
   int workCount = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
     if (!basis_->nonbasicFlag_[i]) continue;
@@ -2205,7 +2207,7 @@ void HModel::correctDual(int *freeInfeasCount) {
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
   const double inf = HIGHS_CONST_INF;
   int workCount = 0;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (basis_->nonbasicFlag_[i]) {
       if (simplex_->workLower_[i] == -inf && simplex_->workUpper_[i] == inf) {
@@ -2246,7 +2248,7 @@ void HModel::computePrimal() {
   HVector buffer;
   buffer.setup(lpScaled.numRow_);
   buffer.clear();
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++)
     if (basis_->nonbasicFlag_[i] && simplex_->workValue_[i] != 0)
       matrix.collect_aj(buffer, i, simplex_->workValue_[i]);
@@ -2289,7 +2291,7 @@ double HModel::computePrObj() {
 // dual values
 void HModel::computeDualObjectiveValue(int phase) {
   dualObjectiveValue = 0;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (basis_->nonbasicFlag_[i]) {
       dualObjectiveValue += simplex_->workValue_[i] * simplex_->workDual_[i];
@@ -2333,7 +2335,7 @@ int HModel::handleRankDeficiency() {
   printf("Returned %d = factor.build();\n", rankDeficiency);
   fflush(stdout);
   vector<int> basicRows;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   basicRows.resize(numTot);
   //    printf("Before - basis_->basicIndex_:"); for (int iRow=0; iRow<lpScaled.numRow_; iRow++)
   //    printf(" %2d", basis_->basicIndex_[iRow]); printf("\n");
@@ -2547,7 +2549,7 @@ int HModel::writeToMPS(const char *filename) {
 // Esoterica!
 // Initialise the random vectors required by HiGHS
 void HModel::initRandomVec() {
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   colPermutation.resize(numTot);
   for (int i = 0; i < numTot; i++) colPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
@@ -2714,7 +2716,7 @@ int HModel::util_chgObjSense(const int Xsense) {
   if ((Xsense == OBJSENSE_MINIMIZE) != (lpScaled.sense_ == OBJSENSE_MINIMIZE)) {
     // Flip the objective sense
     lpScaled.sense_ = Xsense;
-    const int numTot = getNumTot();
+    const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
     for (int var = 0; var < numTot; var++) {
       simplex_->workDual_[var] = -simplex_->workDual_[var];
       simplex_->workCost_[var] = -simplex_->workCost_[var];
@@ -3495,7 +3497,7 @@ void HModel::util_deleteRowset(int *dstat) {
   // columns have to be made nonbasic - but which?
   int numBasic = 0;
   bool basisOK = true;
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; var++) {
     if (!basis_->nonbasicFlag_[var]) {
       basis_->basicIndex_[numBasic] = var;
@@ -3946,7 +3948,7 @@ void HModel::util_anPrDuDgn() {
   double pctDgnPrAct = numDgnPrAct;
   pctDgnPrAct = 100 * pctDgnPrAct / lpScaled.numRow_;
 
-  const int numTot = getNumTot();
+  const int numTot = lpScaled.numCol_ + lpScaled.numRow_;
   for (int var = 0; var < numTot; var++) {
     if (basis_->nonbasicFlag_[var] == NONBASIC_FLAG_TRUE) {
       double duAct = simplex_->workDual_[var];

@@ -123,7 +123,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
-      const int numTot = model->getNumTot();
+      const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -198,7 +198,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
-  const int numTot = model->getNumTot();
+  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (highs_model_object->getNonbasicFlag()[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
@@ -422,9 +422,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
-  numCol = model->getNumCol();
-  numRow = model->getNumRow();
-  numTot = model->getNumTot();
+  numCol = model->lpScaled.numCol_;
+  numRow = model->lpScaled.numRow_;
+  numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
   matrix = model->getMatrix();
   factor = model->getFactor();
 
@@ -1075,7 +1075,7 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
-      const int numTot = model->getNumTot();
+      const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
       if (alw_DSE2Dvx_sw &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
@@ -1779,7 +1779,7 @@ void HDual::iz_dvx_fwk() {
   // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
   const int *NonbasicFlag = highs_model_object->getNonbasicFlag();
-  const int numTot = model->getNumTot();
+  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     //      if (highs_model_object->getNonbasicFlag()[vr_n])
     //      if (NonbasicFlag[vr_n])
@@ -2292,7 +2292,7 @@ void HDual::an_iz_vr_v() {
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
-  const int numTot = model->getNumTot();
+  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     if (highs_model_object->getNonbasicFlag()[vr_n]) {
       double pr_act_v = highs_model_object->getWorkValue()[vr_n];

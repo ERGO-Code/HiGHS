@@ -519,9 +519,9 @@ class HModel {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  int getNumRow() { return lpScaled.numRow_; }
-  int getNumCol() { return lpScaled.numCol_; }
-  int getNumTot() { return lpScaled.numCol_ + lpScaled.numRow_; }
+  //  int getNumRow() { return lpScaled.numRow_; }
+  //  int getNumCol() { return lpScaled.numCol_; }
+  //  int getNumTot() { return lpScaled.numCol_ + lpScaled.numRow_; }
   int getPrStatus() { return problemStatus; }
   int getObjSense() { return lpScaled.sense_; }
   const HMatrix* getMatrix() { return &matrix; }

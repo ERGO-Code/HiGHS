@@ -44,7 +44,8 @@ void HDualRow::setup(HighsModelObject *highs_model_object) {
   // Setup common vectors
   HModel *model;
   model = &highs_model_object->hmodel_[0];
-  setupSlice(highs_model_object, model->getNumTot());
+  const int numTot = model->lpScaled.numCol_ + model->lpScaled.numRow_;
+  setupSlice(highs_model_object, numTot);
   workColPermutation = model->getColPermutation();
 
   
@@ -398,7 +399,8 @@ void HDualRow::create_Freelist() {
   freeList.clear();
   const int *nonbasicFlag = workHMO->getNonbasicFlag();
   int ckFreeListSize = 0;
-  for (int i = 0; i < workModel->getNumTot(); i++) {
+  const int numTot = workModel->lpScaled.numCol_ + workModel->lpScaled.numRow_;
+  for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
       freeList.insert(i);
       ckFreeListSize++;
@@ -410,8 +412,9 @@ void HDualRow::create_Freelist() {
   if (freeListSize != ckFreeListSize) {
     printf("!! STRANGE: freeListSize != ckFreeListSize\n");
   }
+  // const int numTot = workModel->lpScaled.numCol_ + workModel->lpScaled.numRow_;
   //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-  //  freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
+  //  freeListE, freeListSize, 100*freeListSize/numTot);
 }
 
 void HDualRow::create_Freemove(HVector *row_ep) {
@@ -424,7 +427,7 @@ void HDualRow::create_Freemove(HVector *row_ep) {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workModel->getNumCol());
+      assert(iCol < workModel->lpScaled.numCol_);
       double alpha = workModel->getMatrix()->compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * sourceOut > 0)
@@ -440,7 +443,7 @@ void HDualRow::delete_Freemove() {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workModel->getNumCol());
+      assert(iCol < workModel->lpScaled.numCol_);
       workHMO->getNonbasicMove()[iCol] = 0;
     }
   }
@@ -458,8 +461,9 @@ void HDualRow::delete_Freelist(int iColumn) {
     if (freeListSize != ckFreeListSize) {
       printf("!! STRANGE: freeListSize != ckFreeListSize\n");
     }
+    // const int numTot = workModel->lpScaled.numCol_ + workModel->lpScaled.numRow_;
     //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-    //  freeListE, freeListSize, 100*freeListSize/workModel->getNumTot()); if
+    //  freeListE, freeListSize, 100*freeListSize/numTot); if
     //  (freeList.empty()) {
     //    printf("Empty  Freelist\n");
     //  } else {
