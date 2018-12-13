@@ -126,7 +126,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
 
       options_.clean_up = true;
 
-      solve_status = solveSimplex(options_, lps_[0]);
+      solve_status = runSolver(lps_[0]);
     }
   }
 

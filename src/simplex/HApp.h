@@ -20,16 +20,36 @@
 #include "HighsLp.h"
 #include "HighsModelObject.h"
 
+HighsStatus LpStatusToHighsStatus(const int lp_status) {
+  switch (lp_status) {
+    case LP_Status_OutOfTime:
+      return HighsStatus::Timeout;
+    case LP_Status_Failed:
+      return HighsStatus::SolutionError;
+    case LP_Status_Infeasible:
+      return HighsStatus::Infeasible;
+    case LP_Status_Unbounded:
+      return HighsStatus::Unbounded;
+    case LP_Status_Optimal:
+      return HighsStatus::Optimal;
+    default:
+      return HighsStatus::NotImplemented;
+  }
+}
+
 HighsStatus solveSimplex(const HighsOptions& opt,
                          HighsModelObject& highs_model) {
   HModel& model = highs_model.hmodel_[0];
 
   // Initialize solver.
   HDual solver;
-  
+
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
     model.initFromNonbasic();
+
+    solver.solve(&model);
+    return LpStatusToHighsStatus(model.problemStatus);
   }
 
   solver.setCrash(opt.crashMode);
@@ -45,7 +65,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   if (opt.sip) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
     solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
-    model.util_reportSolverOutcome("Solve tasks");
   } else if (opt.pami) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
     if (opt.partitionFile) {
@@ -55,7 +74,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
       model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
     } else {
       solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-      model.util_reportSolverOutcome("multi");
     }
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
@@ -152,21 +170,9 @@ HighsStatus solveSimplex(const HighsOptions& opt,
       }
     }
 
-    switch (model.problemStatus) {
-      case LP_Status_OutOfTime:
-        return HighsStatus::Timeout;
-      case LP_Status_Failed:
-        return HighsStatus::SolutionError;
-      case LP_Status_Infeasible:
-        return HighsStatus::Infeasible;
-      case LP_Status_Unbounded:
-        return HighsStatus::Unbounded;
-      case LP_Status_Optimal:
-        // If optimal execute code below.
-        break;
-      default:
-        return HighsStatus::NotImplemented;
-    }
+    HighsStatus result = LpStatusToHighsStatus(model.problemStatus);
+    if (result != HighsStatus::Optimal) return result;
+
 
 /* todo: do elsewhere once timing is added.
 #ifdef HiGHSDEV
@@ -428,7 +434,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       solution.rowDual_);
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
-  
+
   highs_model.basis_info_.nonbasic_move = model.basis.nonbasicMove_;
 
   cout << "==================================================================\n";

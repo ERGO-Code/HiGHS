@@ -372,7 +372,7 @@ class HModel {
   // presolve and that original bounds have been over-written with
   // them
   bool impliedBoundsPresolve;
-  bool usingImpliedBoundsPresolve;
+  bool usingImpliedBoundsPresolve = false;
 
   // Solving result
   int limitUpdate;
