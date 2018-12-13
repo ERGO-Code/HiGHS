@@ -26,18 +26,18 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 
   // Initialize solver.
   HDual solver;
+  
+  // If after postsolve. todo: advanced basis start here.
+  if (opt.clean_up) {
+    model.initFromNonbasic();
+  }
+
   solver.setCrash(opt.crashMode);
 
   // Crash, if HighsModelObject has basis information.
   if (opt.crash) {
     HCrash crash;
     crash.crash(&model, solver.Crash_Mode);
-  }
-
-  // See if advanced start is used, like when setting up after postsolve.
-  if (highs_model.basis_info_.basis_index.size()) {
-    assert(!opt.sip && !opt.scip && !opt.pami);
-    model.initFromNonbasic();
   }
 
   // Solve, depending on the options.
@@ -64,6 +64,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   } else {
     // Serial. Based on previous solvePlainJAJH.
 
+// Do timings elsewhere
+/*
     double setupTime = 0;
     double presolve1Time = 0;
     double crashTime = 0;
@@ -80,6 +82,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     int solvePrIt = 0;
 #endif
     double lcSolveTime;
+*/
+
     HDual solver;
 
     const bool presolveNoScale = false;
@@ -94,7 +98,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.setTimeLimit(opt.timeLimit);
 
     model.timer.reset();
-    bool with_presolve = solver.Presolve_Mode == Presolve_Mode_On;
+
     //  bool FourThreads = true;
     bool FourThreads = false;
     //  bool EightThreads = true;
@@ -106,11 +110,11 @@ HighsStatus solveSimplex(const HighsOptions& opt,
       solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
     else
       solver.solve(&model);
-
+/*
     lcSolveTime = model.timer.getTime();
     solveTime += lcSolveTime;
     solveIt += model.numberIteration;
-
+*/
 #ifdef HiGHSDEV
     solvePh1DuIt += solver.n_ph1_du_it;
     solvePh2DuIt += solver.n_ph2_du_it;
@@ -136,9 +140,9 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 
         model.timer.reset();
         solver.solve(&model);
-        lcSolveTime = model.timer.getTime();
+ /*       lcSolveTime = model.timer.getTime();
         solveTime += lcSolveTime;
-        solveIt += model.numberIteration;
+        solveIt += model.numberIteration;  */
         model.util_reportSolverOutcome("After recover:   ");
 #ifdef HiGHSDEV
         solvePh1DuIt += solver.n_ph1_du_it;
@@ -208,10 +212,182 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     }
 #endif
   }
-  return HighsStatus::OK;
+  return HighsStatus::Optimal;
 }
 
-HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {}
+HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
+  printf("Called solveScip.\n");
+
+  HModel& model = highs_model.hmodel_[0];
+  cout << flush;
+  //  model.util_reportModel();
+
+  // Extract columns numCol-3..numCol-1
+  int FmCol = model.scaled_lp_.numCol_ - 3;
+  int ToCol = model.scaled_lp_.numCol_ - 1;
+  int numExtractCols = ToCol - FmCol + 1;
+  vector<double> XcolCost;
+  vector<double> XcolLower;
+  vector<double> XcolUpper;
+  vector<int> XAstart;
+  vector<int> XAindex;
+  vector<double> XAvalue;
+  //  model.util_extractCols(FmCol, ToCol, XcolCost, XcolLower, XcolUpper,
+  //			 XAstart, XAindex, XAvalue);
+
+  //  printf("Returned from model.util_extractCols with\n");
+  //  model.util_reportColVec(numExtractCols, XcolCost, XcolLower, XcolUpper);
+  //  model.util_reportColMtx(numExtractCols, XAstart, XAindex, XAvalue);
+
+  // Delete the columns just extracted
+  model.util_deleteCols(FmCol, ToCol);
+  //  model.util_reportModel();
+
+  // Extract rows numRow-3..numRow-1
+  int FmRow = model.lp.numRow_ - 3;
+  int ToRow = model.lp.numRow_ - 1;
+  int numExtractRows = ToRow - FmRow + 1;
+  vector<double> XrowLower;
+  vector<double> XrowUpper;
+  vector<int> XARstart;
+  vector<int> XARindex;
+  vector<double> XARvalue;
+  //  model.util_extractRows(FmRow, ToRow, &(*XrowLower.begin()),
+  //  &(*XrowUpper.begin()),
+  // &(*XARstart.begin()), &(*XARindex.begin()), &(*XARvalue.begin()));
+
+  //  printf("Returned from model.util_extractRows with\n");
+  //  model.util_reportRowVec(numExtractRows, XrowLower, XrowUpper);
+  //  model.util_reportRowMtx(numExtractRows, XARstart, XARindex, XARvalue);
+
+  // Delete the rows just extracted
+  model.util_deleteRows(FmRow, ToRow);
+  //  model.util_reportModel();
+
+  // Extract all remaining rows
+  FmRow = 0;
+  ToRow = model.lp.numRow_ - 1;
+  int num0ExtractRows = ToRow - FmRow + 1;
+  vector<double> X0rowLower;
+  vector<double> X0rowUpper;
+  vector<int> X0ARstart;
+  vector<int> X0ARindex;
+  vector<double> X0ARvalue;
+
+  // model.util_extractRows(FmRow, ToRow, &(*X0rowLower.begin()),
+  // &(*X0rowUpper.begin()),
+  //			 &(*X0ARstart.begin()), &(*X0ARindex.begin()),
+  //&(*X0ARvalue.begin()));
+
+  // Delete the rows just extracted
+  model.util_deleteRows(FmRow, ToRow);
+  //  model.util_reportModel();
+
+  // Extract all remaining columns
+  FmCol = 0;
+  ToCol = model.lp.numCol_ - 1;
+  int num0ExtractCols = ToCol - FmCol + 1;
+  vector<double> X0colCost;
+  vector<double> X0colLower;
+  vector<double> X0colUpper;
+  vector<int> X0Astart;
+  vector<int> X0Aindex;
+  vector<double> X0Avalue;
+  //  model.util_extractCols(FmCol, ToCol, X0colCost, X0colLower, X0colUpper,
+  //			 X0Astart, X0Aindex, X0Avalue);
+
+  // Delete the columns just extracted
+  model.util_deleteCols(FmCol, ToCol);
+  //  model.util_reportModel();
+
+  int nnonz = 0;
+  model.util_addCols(num0ExtractCols, &X0colCost[0], &X0colLower[0],
+                     &X0colUpper[0], nnonz, &X0Astart[0], &X0Aindex[0],
+                     &X0Avalue[0]);
+  //  model.util_reportModel();
+
+  nnonz = X0ARstart[num0ExtractRows];
+  model.util_addRows(num0ExtractRows, &X0rowLower[0], &X0rowUpper[0], nnonz,
+                     &X0ARstart[0], &X0ARindex[0], &X0ARvalue[0]);
+  //  model.util_reportModel();
+
+  nnonz = XARstart[numExtractRows];
+  model.util_addRows(numExtractRows, &XrowLower[0], &XrowUpper[0], nnonz,
+                     &XARstart[0], &XARindex[0], &XARvalue[0]);
+  //  model.util_reportModel();
+
+  nnonz = XAstart[numExtractCols];
+  model.util_addCols(numExtractCols, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+                     nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
+  //  model.util_reportModel();
+
+  model.numTot = model.lp.numCol_ + model.lp.numRow_;
+  model.scaleModel();
+  HDual solver;
+  solver.solve(&model);
+  model.util_reportModelSolution();
+  model.util_reportSolverOutcome("SCIP 1");
+
+  vector<double> colPrimal(model.lp.numCol_);
+  vector<double> colDual(model.lp.numCol_);
+  vector<double> colLower(model.lp.numCol_);
+  vector<double> colUpper(model.lp.numCol_);
+  vector<double> rowPrimal(model.lp.numRow_);
+  vector<double> rowDual(model.lp.numRow_);
+  vector<double> rowLower(model.lp.numRow_);
+  vector<double> rowUpper(model.lp.numRow_);
+  model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
+  model.util_getColBounds(0, model.lp.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(0, model.lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+
+  double og_colLower;
+  double og_colUpper;
+  int colBoundIndex;
+  double nw_colLower;
+  double nw_colUpper;
+
+  int num_resolve = 0;
+  for (int col = 0; col < model.lp.numCol_; col++) {
+    model.util_getColBounds(col, col, &og_colLower, &og_colUpper);
+    printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
+           colPrimal[col], og_colLower, og_colUpper);
+    if (model.nonbasicFlag[col]) {
+      printf(": nonbasic so don't branch\n");
+      continue;
+    } else {
+      double rsdu =
+          min(colPrimal[col] - og_colLower, og_colUpper - colPrimal[col]);
+      if (rsdu < 0.1) {
+        printf(": basic but rsdu = %11g so don't branch\n", rsdu);
+        continue;
+      }
+      printf(": basic with rsdu = %11g so branch\n\n", rsdu);
+      num_resolve++;
+      colBoundIndex = col;
+      if (model.hsol_isInfinity(og_colUpper))
+        nw_colLower = colPrimal[col] + 1;
+      else
+        nw_colLower = og_colUpper;
+      nw_colUpper = og_colUpper;
+      printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex,
+             nw_colLower, nw_colUpper);
+      model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
+      printf("Calling model.scaleModel()\n");
+      model.scaleModel();
+      //      printf("Calling solver.solve(&model)\n");
+      solver.solve(&model);
+      //      printf("Called solver.solve(&model)\n");
+      model.util_reportSolverOutcome("SCIP 2");
+      // Was &nw_colLower, &nw_colUpper); and might be more interesting for
+      // avgas
+      model.util_chgColBoundsSet(1, &colBoundIndex, &og_colLower, &og_colUpper);
+      if (num_resolve >= 10) break;
+    }
+  }
+  printf("Returning from solveSCIP\n");
+  cout << flush;
+  return 0;
+}
 
 // Single function to solve an lp according to options and fill
 // solution in solution.
@@ -245,7 +421,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HighsStatus result = solveSimplex(opt, highs_model);
 
   // todo uncomment line below.
-  // if (result == optimal)
+  if (result != HighsStatus::Optimal) return result;
+
   // HighsSolution set values in highs_model.
   HighsSolution& solution = highs_model.solution_;
   highs_model.hmodel_[0].util_getPrimalDualValues(
@@ -253,6 +430,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       solution.rowDual_);
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
+  
+  highs_model.basis_info_.nonbasic_move = model.nonbasicMove;
 
   cout << "==================================================================";
 

@@ -106,15 +106,18 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   }
 
   // Postsolve. Does nothing if there were no reductions during presolve.
-  if (solve_status == HighsStatus::OK) {
+  if (solve_status == HighsStatus::Optimal) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
     presolve_info.reduced_solution_ = lps_[1].solution_;
     presolve_info.presolve_[0].setBasisInfo(lps_[1].basis_info_.basis_index,
-                               lps_[1].basis_info_.nonbasic_flag);
+                               lps_[1].basis_info_.nonbasic_flag, 
+                               lps_[1].basis_info_.nonbasic_move);
     }
 
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+      std::cout << "Postsolve finished.\n";
+
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.
       lps_[0].basis_info_.basis_index = presolve_info.presolve_[0].getBasisIndex();
@@ -123,12 +126,14 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
 
       // Make new instance of HighsModelObject for this purpose.
       lps_.push_back(HighsModelObject(lp));
-
-      afterPostsolve(options_, lps_[0]);
-      // todo: add finishing simplex iterations if needed.
-      std::cout << "Postsolve finished.\n";
+      
+      options_.clean_up = true;
+      solve_status = solveSimplex(options_, lps_[0]);
     }
-  } else {
+  } 
+  if (solve_status != HighsStatus::Optimal) {
+    std::cout << "Solver terminated with a non-optimal status: "
+              << HighsStatusToString(solve_status);
     // todo: handle infesible | unbounded instances and solver errors.
     // either here or at end of runSolver(..)
     return HighsStatus::NotImplemented;

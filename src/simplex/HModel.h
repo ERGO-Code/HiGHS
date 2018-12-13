@@ -255,6 +255,7 @@ class HModel {
                                 vector<double>& XrowValue,
                                 vector<double>& XrowDual
 				);
+  void util_getNonbasicMove( vector<int> &XnonbasicMove);
   void util_getBasicIndexNonbasicFlag(
 				      vector<int> &XbasicIndex,
 				      vector<int> &XnonbasicFlag

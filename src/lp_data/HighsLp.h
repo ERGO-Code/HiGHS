@@ -58,6 +58,8 @@ struct HighsOptions {
   const char* priceMode = "";
   const char* crashMode = "";
   const char* partitionFile = "";
+
+  bool clean_up = false;
 };
 
 class HighsLp {

@@ -2660,6 +2660,10 @@ void HModel::util_getPrimalDualValues(vector<double> &XcolValue,
   for (int i = 0; i < lpScaled.numCol_; i++) XcolDual[i] = lpScaled.sense_ * dual[i];
 }
 
+void HModel::util_getNonbasicMove(vector<int> &XnonbasicMove) {
+  XnonbasicMove = basis.nonbasicMove_;
+}
+
 void HModel::util_getBasicIndexNonbasicFlag(vector<int> &XbasicIndex,
                                             vector<int> &XnonbasicFlag
 					    ) {
