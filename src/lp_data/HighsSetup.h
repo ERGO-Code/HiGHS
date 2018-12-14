@@ -75,7 +75,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
  
   // Run solver.
-  HighsStatus solve_status;
+  HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
       solve_status = runSolver(lps_[0]);
@@ -106,23 +106,49 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
   }
 
   // Postsolve. Does nothing if there were no reductions during presolve.
-  if (solve_status == HighsStatus::OK) {
+  if (solve_status == HighsStatus::Optimal) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
     presolve_info.reduced_solution_ = lps_[1].solution_;
     presolve_info.presolve_[0].setBasisInfo(lps_[1].basis_info_.basis_index,
-                               lps_[1].basis_info_.nonbasic_flag);
+                               lps_[1].basis_info_.nonbasic_flag, 
+                               lps_[1].basis_info_.nonbasic_move);
     }
 
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-    //HighsPostsolveStatus postsolve_status = HighsPostsolveStatus::SolutionRecovered;
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-      // todo: add finishing simplex iterations if needed.
       std::cout << "Postsolve finished.\n";
+
+      // Set solution and basis info for simplex clean up.
+      // Original LP is in lp_[0] so we set the basis information there.
+      lps_[0].basis_info_.basis_index = presolve_info.presolve_[0].getBasisIndex();
+      lps_[0].basis_info_.nonbasic_flag = presolve_info.presolve_[0].getNonbasicFlag();
+      lps_[0].basis_info_.nonbasic_move = presolve_info.presolve_[0].getNonbasicMove();
+
+      options_.clean_up = true;
+
+      solve_status = runSolver(lps_[0]);
+    }
+  }
+
+  if (solve_status != HighsStatus::Optimal) {
+    if (solve_status == HighsStatus::Infeasible ||
+        solve_status == HighsStatus::Unbounded) {
+      if (options_.presolve) {
+        std::cout << "Reduced problem status: "
+                  << HighsStatusToString(solve_status);
+        // todo: handle case. Try to solve again with no presolve?
+        return HighsStatus::NotImplemented;
+      } else {
+        std::cout << "Solver terminated with a non-optimal status: "
+                  << HighsStatusToString(solve_status) << std::endl;
+        lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
+        lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
+      }
     }
   } else {
-    // todo: handle infesible | unbounded instances and solver errors.
-    // either here or at end of runSolver(..)
-    return HighsStatus::NotImplemented;
+    // Report in old way so tests pass.
+    lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
+    lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 
   return HighsStatus::OK;
@@ -164,24 +190,26 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 
   assert(checkLp(model.lp_) == HighsInputStatus::OK);
 
-  HighsStatus status;
+  HighsStatus status = HighsStatus::Init;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveSimplex(options_, model);
+  status = runSimplexSolver(options_, model);
 #else
   // IPX
   // todo:Check options for simplex-specific options
   // use model.lp_, model.solution_ and model.hmodel_ remains empty.
-  status = solveIpx(options_, lp, solution);
+  status = runIpxSolver(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
 
+  if (status != HighsStatus::Optimal) return status;
+
   // Check.
   if (!isSolutionConsistent(model.lp_, model.solution_)) {
-    std::cout << "Error: Inconsistent solution returned from solver.";
+    std::cout << "Error: Inconsistent solution returned from solver.\n";
   }
 
   // todo:

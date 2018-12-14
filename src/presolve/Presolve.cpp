@@ -73,9 +73,10 @@ HighsLp& PresolveInfo::getReducedProblem() {
   return reduced_lp_;
 }
 
-void Presolve::setBasisInfo(const std::vector<int>& info, const std::vector<int>& nbf) {
-  basicIndex = info;
+void Presolve::setBasisInfo(const std::vector<int>& index, const std::vector<int>& nbf, const std::vector<int>& nbm) {
+  basicIndex = index;
   nonbasicFlag = nbf;
+  nonbasicMove = nbm;
 }
 
 int Presolve::presolve(int print) {
@@ -2100,7 +2101,8 @@ void Presolve::testAnAR(int post) {
   int cols = numCol;
   int i, j, k;
 
-  double valueA, valueAR;
+  double valueA = 0;
+  double valueAR = 0;
   bool hasValueA, hasValueAR;
 
   if (post) {

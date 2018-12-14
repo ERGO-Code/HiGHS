@@ -55,7 +55,11 @@ class Presolve : public HPreData {
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
                                  HighsSolution& recovered_solution);
 
-  void setBasisInfo(const std::vector<int>& info, const std::vector<int>& nbf);
+  void setBasisInfo(const std::vector<int>& index, const std::vector<int>& nbf, const std::vector<int>& nbm);
+  const std::vector<int>& getBasisIndex() { return basicIndex; }
+  const std::vector<int>& getNonbasicFlag() { return nonbasicFlag; }
+  const std::vector<int>& getNonbasicMove() { return nonbasicMove; }
+
   void load(const HighsLp& lp);
  // todo: clear the public from below. 
   string modelName;
