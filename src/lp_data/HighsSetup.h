@@ -299,13 +299,14 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
       exit(0);
     }
 
+    // Currently works for only one filename at a time.
     if (result.count("filename")) {
       std::string filenames = "";
       std::cout << "filename = {";
       auto& v = result["filename"].as<std::vector<std::string>>();
       for (const auto& s : v) {
         std::cout << s << ", ";
-        filenames = filenames + " " + s;
+        filenames = filenames + s;
       }
       std::cout << "}" << std::endl;
       options.filenames = filenames;
