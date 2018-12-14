@@ -118,9 +118,6 @@ class HModel {
                        const double* XrowUpper, int XnumNz, const int* XAstart,
                        const int* XAindex, const double* XAvalue);
 
-  //void loadfromPresolveInfo(PresolveInfo& info,
-  //                          const bool postsolve);
-
   // Methods which initialise the basis then allocate and populate
   // (where possible) work* arrays and allocate basis* arrays
   void initWithLogicalBasis();
@@ -255,6 +252,7 @@ class HModel {
                                 vector<double>& XrowValue,
                                 vector<double>& XrowDual
 				);
+  void util_getNonbasicMove( vector<int> &XnonbasicMove);
   void util_getBasicIndexNonbasicFlag(
 				      vector<int> &XbasicIndex,
 				      vector<int> &XnonbasicFlag
@@ -374,7 +372,7 @@ class HModel {
   // presolve and that original bounds have been over-written with
   // them
   bool impliedBoundsPresolve;
-  bool usingImpliedBoundsPresolve;
+  bool usingImpliedBoundsPresolve = false;
 
   // Solving result
   int limitUpdate;

@@ -86,34 +86,14 @@ HighsInputStatus checkLp(const HighsLp& lp) {
   return HighsInputStatus::OK;
 }
 
-// Return a string representation of SolutionStatus.
-// Capitalized because it is ClassNameToString for the following three methods.
-std::string HighsSolutionStatusToString(HighsSolutionStatus status) {
-  switch (status) {
-    case HighsSolutionStatus::Unset:
-      return "Unset";
-      break;
-    case HighsSolutionStatus::Unbounded:
-      return "Unbounded";
-      break;
-    case HighsSolutionStatus::Infeasible:
-      return "Infeasible";
-      break;
-    case HighsSolutionStatus::Feasible:
-      return "Feasible";
-      break;
-    case HighsSolutionStatus::Optimal:
-      return "Optimal";
-      break;
-  }
-  return "";
-}
-
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::OK:
       return "OK";
+      break;
+    case HighsStatus::Init:
+      return "Init";
       break;
     case HighsStatus::LpError:
       return "Lp Error";
@@ -128,10 +108,25 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Solution Error";
       break;
     case HighsStatus::PostsolveError:
-      return "PostsolveError";
+      return "Postsolve Error";
       break;
     case HighsStatus::NotImplemented:
       return "Not implemented";
+      break;
+    case HighsStatus::Unbounded:
+      return "Unbounded";
+      break;
+    case HighsStatus::Infeasible:
+      return "Infeasible";
+      break;
+    case HighsStatus::Feasible:
+      return "Feasible";
+      break;
+    case HighsStatus::Optimal:
+      return "Optimal";
+      break;
+    case HighsStatus::Timeout:
+      return "Timeout";
       break;
   }
   return "";

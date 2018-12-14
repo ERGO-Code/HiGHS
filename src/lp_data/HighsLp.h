@@ -58,6 +58,8 @@ struct HighsOptions {
   const char* priceMode = "";
   const char* crashMode = "";
   const char* partitionFile = "";
+
+  bool clean_up = false;
 };
 
 class HighsLp {
@@ -95,20 +97,18 @@ void reportLpColMtx();
 // HiGHS status
 enum class HighsStatus {
   OK,
+  Init,
   LpError,
   OptionsError,
   PresolveError,
   SolutionError,
   PostsolveError,
-  NotImplemented
-};
-
-enum class HighsSolutionStatus {
-  Unset,
+  NotImplemented,
   Unbounded,
   Infeasible,
   Feasible,
   Optimal,
+  Timeout
 };
 
 enum class HighsInputStatus {
@@ -206,10 +206,6 @@ struct HighsRanging {
 
 // Make sure the dimensions of solution are the same as numRow_ and numCol_.
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
-
-// Return a string representation of SolutionStatus.
-// Capitalized because it is ClassNameToString for the following three methods.
-std::string HighsSolutionStatusToString(HighsSolutionStatus status);
 
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status);
