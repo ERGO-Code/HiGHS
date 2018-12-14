@@ -152,10 +152,10 @@ void HDual::major_chooseRowBtran() {
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
-  int multi_iRow[HSOL_THREAD_LIMIT];
-  int multi_iwhich[HSOL_THREAD_LIMIT];
-  double multi_EdWt[HSOL_THREAD_LIMIT];
-  HVector_ptr multi_vector[HSOL_THREAD_LIMIT];
+  int multi_iRow[HIGHS_THREAD_LIMIT];
+  int multi_iwhich[HIGHS_THREAD_LIMIT];
+  double multi_EdWt[HIGHS_THREAD_LIMIT];
+  HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
   for (int ich = 0; ich < multi_num; ich++) {
     if (multi_choice[ich].rowOut >= 0) {
       multi_iRow[multi_ntasks] = multi_choice[ich].rowOut;
@@ -356,9 +356,9 @@ void HDual::minor_updateRows() {
   int updateRows_inDense = (Row->count < 0) || (Row->count > 0.1 * numRow);
   if (updateRows_inDense) {
     int multi_nTasks = 0;
-    int multi_iwhich[HSOL_THREAD_LIMIT];
-    double multi_xpivot[HSOL_THREAD_LIMIT];
-    HVector_ptr multi_vector[HSOL_THREAD_LIMIT];
+    int multi_iwhich[HIGHS_THREAD_LIMIT];
+    double multi_xpivot[HIGHS_THREAD_LIMIT];
+    HVector_ptr multi_vector[HIGHS_THREAD_LIMIT];
 
     /*
      * Dense mode
@@ -371,7 +371,7 @@ void HDual::minor_updateRows() {
       if (multi_choice[ich].rowOut >= 0) {
         HVector *next_ep = &multi_choice[ich].row_ep;
         double pivotX = matrix->compute_dot(*next_ep, columnIn);
-        if (fabs(pivotX) < HSOL_CONST_TINY) continue;
+        if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
         multi_vector[multi_nTasks] = next_ep;
         multi_xpivot[multi_nTasks] = -pivotX / alphaRow;
         multi_iwhich[multi_nTasks] = ich;
@@ -398,7 +398,7 @@ void HDual::minor_updateRows() {
       if (multi_choice[ich].rowOut >= 0) {
         HVector *next_ep = &multi_choice[ich].row_ep;
         double pivotX = matrix->compute_dot(*next_ep, columnIn);
-        if (fabs(pivotX) < HSOL_CONST_TINY) continue;
+        if (fabs(pivotX) < HIGHS_CONST_TINY) continue;
         next_ep->saxpy(-pivotX / alphaRow, Row);
         next_ep->tight();
         multi_choice[ich].infeasEdWt = next_ep->norm2();
@@ -465,7 +465,7 @@ void HDual::major_updateFtranPrepare() {
         int iRow = Vec->index[k];
         pivotX += Vec->array[iRow] * jRow_epArray[iRow];
       }
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= jFinish->alphaRow;
         matrix->collect_aj(*Vec, jFinish->columnIn, -pivotX);
         matrix->collect_aj(*Vec, jFinish->columnOut, pivotX);
@@ -489,8 +489,8 @@ void HDual::major_updateFtranParallel() {
 
   // Prepare buffers
   int multi_ntasks = 0;
-  double multi_density[HSOL_THREAD_LIMIT * 2 + 1];
-  HVector_ptr multi_vector[HSOL_THREAD_LIMIT * 2 + 1];
+  double multi_density[HIGHS_THREAD_LIMIT * 2 + 1];
+  HVector_ptr multi_vector[HIGHS_THREAD_LIMIT * 2 + 1];
   // BFRT first
   multi_density[multi_ntasks] = columnDensity;
   multi_vector[multi_ntasks] = &columnBFRT;
@@ -553,14 +553,14 @@ void HDual::major_updateFtranFinal() {
         double pivotX2 = myRow[pivotRow];
 
         // The FTRAN regular buffer
-        if (fabs(pivotX1) > HSOL_CONST_TINY) {
+        if (fabs(pivotX1) > HIGHS_CONST_TINY) {
           const double pivot = pivotX1 / pivotAlpha;
 #pragma omp parallel for
           for (int i = 0; i < numRow; i++) myCol[i] -= pivot * pivotArray[i];
           myCol[pivotRow] = pivot;
         }
         // The FTRAN-DSE buffer
-        if (fabs(pivotX2) > HSOL_CONST_TINY) {
+        if (fabs(pivotX2) > HIGHS_CONST_TINY) {
           const double pivot = pivotX2 / pivotAlpha;
 #pragma omp parallel for
           for (int i = 0; i < numRow; i++) myRow[i] -= pivot * pivotArray[i];
@@ -578,14 +578,14 @@ void HDual::major_updateFtranFinal() {
         int pivotRow = jFinish->rowOut;
         double pivotX1 = Col->array[pivotRow];
         // The FTRAN regular buffer
-        if (fabs(pivotX1) > HSOL_CONST_TINY) {
+        if (fabs(pivotX1) > HIGHS_CONST_TINY) {
           pivotX1 /= jFinish->alphaRow;
           Col->saxpy(-pivotX1, jFinish->column);
           Col->array[pivotRow] = pivotX1;
         }
         // The FTRAN-DSE buffer
         double pivotX2 = Row->array[pivotRow];
-        if (fabs(pivotX2) > HSOL_CONST_TINY) {
+        if (fabs(pivotX2) > HIGHS_CONST_TINY) {
           pivotX2 /= jFinish->alphaRow;
           Row->saxpy(-pivotX2, jFinish->column);
           Row->array[pivotRow] = pivotX2;

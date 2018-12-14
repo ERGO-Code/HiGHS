@@ -40,7 +40,7 @@ void KktCheck::printAR() {
   cout << endl;
   cout << "------l------\n";
   for (int i = 0; i < numCol; i++) {
-    if (colLower[i] > -HSOL_CONST_INF)
+    if (colLower[i] > -HIGHS_CONST_INF)
       cout << colLower[i] << " ";
     else
       cout << "-inf ";
@@ -48,7 +48,7 @@ void KktCheck::printAR() {
   cout << endl;
   cout << "------u------\n";
   for (int i = 0; i < numCol; i++) {
-    if (colUpper[i] < HSOL_CONST_INF)
+    if (colUpper[i] < HIGHS_CONST_INF)
       cout << colUpper[i] << " ";
     else
       cout << "inf ";
@@ -133,7 +133,7 @@ void KktCheck::chDualFeas() {
   // check values of z_j are dual feasible
   for (i = 0; i < numCol; i++) {
     // j not in L or U
-    if (colLower[i] == -HSOL_CONST_INF && colUpper[i] == HSOL_CONST_INF) {
+    if (colLower[i] == -HIGHS_CONST_INF && colUpper[i] == HIGHS_CONST_INF) {
       if (abs(colDual[i]) > tol) {
         if (print == 1)
           cout << "Dual feasibility fail: l=-inf, x[" << cIndexRev[i]
@@ -234,7 +234,7 @@ void KktCheck::chComplementarySlackness() {
   bool istrue = true;
 
   for (i = 0; i < numCol; i++) {
-    if (colLower[i] > -HSOL_CONST_INF)
+    if (colLower[i] > -HIGHS_CONST_INF)
       if (abs((colValue[i] - colLower[i]) * (colDual[i])) > tol &&
           colValue[i] != colUpper[i] && abs(colDual[i]) > tol) {
         if (print == 1)
@@ -246,7 +246,7 @@ void KktCheck::chComplementarySlackness() {
         // x["<<i<<"]="<<colValue[i]<<", z["<<i<<"]="<<colDual[i]<<endl;
         istrue = false;
       }
-    if (colUpper[i] < HSOL_CONST_INF)
+    if (colUpper[i] < HIGHS_CONST_INF)
       if (abs((colUpper[i] - colValue[i]) * (colDual[i])) > tol &&
           colValue[i] != colLower[i] && abs(colDual[i]) > tol) {
         if (print == 1)

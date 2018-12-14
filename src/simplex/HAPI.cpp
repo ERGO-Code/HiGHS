@@ -81,7 +81,8 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   }
 
   HDual solver;
-  solver.solve(&model);
+  printf("HAPI.cpp no longer solves!\n");
+  //  solver.solve(&model);
 
   vector<double> XcolPrimalValues;
   vector<double> XcolDualValues;
@@ -93,16 +94,16 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                                  XrowPrimalValues, XrowDualValues);
 
   memcpy(colPrimalValues, &(XcolPrimalValues[0]),
-         sizeof(double) * model.lp.numCol_);
+         sizeof(double) * model.lpScaled.numCol_);
   memcpy(rowPrimalValues, &(XrowPrimalValues[0]),
-         sizeof(double) * model.lp.numRow_);
-  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double) * model.lp.numCol_);
-  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double) * model.lp.numRow_);
-  memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int) * model.lp.numRow_);
+         sizeof(double) * model.lpScaled.numRow_);
+  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double) * model.lpScaled.numCol_);
+  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double) * model.lpScaled.numRow_);
+  memcpy(basicVariables, &(model.basis.basicIndex_[0]), sizeof(int) * model.lpScaled.numRow_);
   LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef HiGHSDEV
-  model.util_reportModelDense();
+  model.util_reportModelDense(model.lpScaled);
 #endif
   //  model.util_reportModel();
   //  model.util_reportModelSolution();

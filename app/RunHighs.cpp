@@ -4,11 +4,9 @@
 int main(int argc, char **argv) {
   // Load user options.
   HighsOptions options;
- // HighsStatus init_status = loadOptions(argc, argv, options);
+  HighsStatus init_status = loadOptions(argc, argv, options);
 
-  // Use to replace old HighsOptions.
-  HighsStringOptions options_;
-  loadOptions(argc, argv, options_);
+  if (init_status != HighsStatus::OK) return 0;
 
   HighsLp lp;
   HighsInputStatus read_status = loadLpFromFile(options, lp);

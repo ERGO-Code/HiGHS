@@ -8,10 +8,11 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsLp.h"
+#include "HighsIO.h"
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.
@@ -19,6 +20,15 @@ void checkStatus(HighsStatus status) {
   assert(status == HighsStatus::OK);
   if (status != HighsStatus::OK)
     std::cout << "Unexpected status: " << HighsStatusToString(status);
+}
+
+bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
+  if (solution.colDual_.size() == (size_t)lp.numCol_ ||
+      solution.colValue_.size() == (size_t)lp.numCol_ ||
+      solution.rowDual_.size() == (size_t)lp.numRow_ ||
+      solution.rowValue_.size() == (size_t)lp.numRow_)
+    return true;
+  return false;
 }
 
 HighsInputStatus checkLp(const HighsLp& lp) {
@@ -38,21 +48,22 @@ HighsInputStatus checkLp(const HighsLp& lp) {
     return HighsInputStatus::ErrorRowBounds;
 
   for (int i = 0; i < lp.numRow_; i++)
-    if (lp.rowLower_[i] < -HSOL_CONST_INF || lp.rowUpper_[i] > HSOL_CONST_INF)
+    if (lp.rowLower_[i] < -HIGHS_CONST_INF || lp.rowUpper_[i] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorRowBounds;
 
   for (int j = 0; j < lp.numCol_; j++) {
-    if (lp.colCost_[j] < -HSOL_CONST_INF || lp.colCost_[j] > HSOL_CONST_INF)
+    if (lp.colCost_[j] < -HIGHS_CONST_INF || lp.colCost_[j] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorObjective;
 
-    if (lp.colLower_[j] < -HSOL_CONST_INF || lp.colUpper_[j] > HSOL_CONST_INF)
+    if (lp.colLower_[j] < -HIGHS_CONST_INF || lp.colUpper_[j] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorColBounds;
     if (lp.colLower_[j] > lp.colUpper_[j] + kBoundTolerance)
       return HighsInputStatus::ErrorColBounds;
   }
 
   // Check matrix.
-  if (lp.nnz_ != lp.Avalue_.size()) return HighsInputStatus::ErrorMatrixValue;
+  if ((size_t)lp.nnz_ != lp.Avalue_.size())
+    return HighsInputStatus::ErrorMatrixValue;
   if (lp.nnz_ <= 0) return HighsInputStatus::ErrorMatrixValue;
   if ((int)lp.Aindex_.size() != lp.nnz_)
     return HighsInputStatus::ErrorMatrixIndices;
@@ -68,34 +79,11 @@ HighsInputStatus checkLp(const HighsLp& lp) {
   for (int k = 0; k < lp.nnz_; k++) {
     if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
       return HighsInputStatus::ErrorMatrixIndices;
-    if (lp.Avalue_[k] < -HSOL_CONST_INF || lp.Avalue_[k] > HSOL_CONST_INF)
+    if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorRowBounds;
   }
 
   return HighsInputStatus::OK;
-}
-
-// Return a string representation of SolutionStatus.
-// Capitalized because it is ClassNameToString for the following three methods.
-std::string HighsSolutionStatusToString(HighsSolutionStatus status) {
-  switch (status) {
-    case HighsSolutionStatus::Unset:
-      return "Unset";
-      break;
-    case HighsSolutionStatus::Unbounded:
-      return "Unbounded";
-      break;
-    case HighsSolutionStatus::Infeasible:
-      return "Infeasible";
-      break;
-    case HighsSolutionStatus::Feasible:
-      return "Feasible";
-      break;
-    case HighsSolutionStatus::Optimal:
-      return "Optimal";
-      break;
-  }
-  return "";
 }
 
 // Return a string representation of HighsStatus.
@@ -103,6 +91,9 @@ std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::OK:
       return "OK";
+      break;
+    case HighsStatus::Init:
+      return "Init";
       break;
     case HighsStatus::LpError:
       return "Lp Error";
@@ -117,10 +108,25 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Solution Error";
       break;
     case HighsStatus::PostsolveError:
-      return "PostsolveError";
+      return "Postsolve Error";
       break;
     case HighsStatus::NotImplemented:
       return "Not implemented";
+      break;
+    case HighsStatus::Unbounded:
+      return "Unbounded";
+      break;
+    case HighsStatus::Infeasible:
+      return "Infeasible";
+      break;
+    case HighsStatus::Feasible:
+      return "Feasible";
+      break;
+    case HighsStatus::Optimal:
+      return "Optimal";
+      break;
+    case HighsStatus::Timeout:
+      return "Timeout";
       break;
   }
   return "";
@@ -158,4 +164,77 @@ std::string HighsInputStatusToString(HighsInputStatus status) {
       break;
   }
   return "";
+}
+
+// Methods for reporting an LP, including its row and column data and matrix
+//
+// Report the whole LP
+void HighsLp::reportLp() {
+  reportLpBrief();
+  reportLpColVec();
+  reportLpRowVec();
+  reportLpColMtx();
+}
+
+// Report the LP briefly
+void HighsLp::reportLpBrief() {
+  reportLpDimensions();
+  reportLpObjSense();
+}
+
+// Report the LP dimensions
+void HighsLp::reportLpDimensions() {
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "LP %s has %d columns, %d rows and %d nonzeros\n",
+                    model_name_.c_str(), numCol_, numRow_, Astart_[numCol_]);
+}
+
+// Report the LP objective sense
+void HighsLp::reportLpObjSense() {
+  if (sense_ == OBJSENSE_MINIMIZE)
+    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is minimize\n");
+  else if (sense_ == OBJSENSE_MAXIMIZE)
+    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is maximize\n");
+  else
+    HighsPrintMessage(HighsMessageType::INFO,
+                      "Objective sense is ill-defined as %d\n", sense_);
+}
+
+// Report the vectors of LP column data
+void HighsLp::reportLpColVec() {
+  if (numCol_ <= 0) return;
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "  Column        Lower        Upper         Cost\n");
+  for (int iCol = 0; iCol < numCol_; iCol++) {
+    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g %12g\n", iCol,
+                      colLower_[iCol], colUpper_[iCol], colCost_[iCol]);
+  }
+}
+
+// Report the vectors of LP row data
+void HighsLp::reportLpRowVec() {
+  if (numRow_ <= 0) return;
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "     Row        Lower        Upper\n");
+  for (int iRow = 0; iRow < numRow_; iRow++) {
+    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g\n", iRow,
+                      rowLower_[iRow], rowUpper_[iRow]);
+  }
+}
+
+// Report the LP column-wise matrix
+void HighsLp::reportLpColMtx() {
+  if (numCol_ <= 0) return;
+  HighsPrintMessage(HighsMessageType::INFO,
+                    "Column Index              Value\n");
+  for (int iCol = 0; iCol < numCol_; iCol++) {
+    HighsPrintMessage(HighsMessageType::INFO, "    %8d Start   %10d\n", iCol,
+                      Astart_[iCol]);
+    for (int el = Astart_[iCol]; el < Astart_[iCol + 1]; el++) {
+      HighsPrintMessage(HighsMessageType::INFO, "          %8d %12g\n",
+                        Aindex_[el], Avalue_[el]);
+    }
+  }
+  HighsPrintMessage(HighsMessageType::INFO, "             Start   %10d\n",
+                    Astart_[numCol_]);
 }

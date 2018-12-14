@@ -22,23 +22,13 @@
 // options.parser
 HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   // Check if file exists
-  if (options.fileName && access(options.fileName, F_OK) == -1) {
+  if (options.filenames.size() == 0 || access(options.filenames.c_str(), F_OK) == -1)
     return HighsInputStatus::FileNotFound;
-  } else if (!options.fileName) {
-    return HighsInputStatus::FileNotFound;
-  }
 
-  // todo: check file name extenion // until parsers work with HighsLp
-  HModel model_in;
-  int RtCd = model_in.load_fromMPS(options.fileName);
-
-  lp = HModelToHighsLp(model_in);
-  lp.nnz_ = lp.Avalue_.size();
-
-  // make sure old tests pass before you start work on the
-  // parsers. Then remove traces of read_fromMPS from below and replace the code
-  // above with
   // if (mps) use FilereaderMps
+  FilereaderMps reader;
+  reader.readModelFromFile(options.filenames.c_str(), lp);
+  lp.nnz_ = lp.Avalue_.size();
 
   // else if (lp) use FilereaderLp
 
