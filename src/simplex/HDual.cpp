@@ -41,12 +41,8 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
   model->scale_ = &ref_highs_model_object.scale_;
-  dual_variant = variant;
-  HighsLp& jajhlp = highs_model_object->lp_;
-  int   FREDnumCol = highs_model_object->lp_.numCol_;
-  int   JOEnumCol = jajhlp.numCol_;
- printf("\nHDual::solve: two copies of numCol are FREDnumCol = %d and JOEnumCol = %d\n", FREDnumCol, JOEnumCol);
   //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
+  dual_variant = variant;
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
