@@ -69,11 +69,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    if (opt.cut) {
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-    } else {
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-    }
+    solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
     if (opt.sip) model.writePivots("tasks");

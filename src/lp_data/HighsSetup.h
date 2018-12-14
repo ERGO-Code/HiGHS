@@ -278,17 +278,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
                                        cxxopts::value<bool>())(
         "S, scip", "Use option SCIP (to test utilities)",
         cxxopts::value<bool>())("m, pami",
-                                "Use pami. Cutoff optional double value.",
+                                "Use parallel solve.",
                                 cxxopts::value<double>())(
         "t, partition", "Use pami with partition file: filename",
         cxxopts::value<bool>())("i, ipx", "Use interior point solver.",
                                 cxxopts::value<std::string>())(
-        "r, parser",
-        "Parser: free | fixed (format mps). Note, that the free format parser "
-        "requires a boost installation.",
-        cxxopts::value<double>())("T, time-limit", "Use time limit.",
-                                  cxxopts::value<double>())("help",
-                                                            "Print help.");
+        "T, time-limit", "Use time limit.", cxxopts::value<double>())(
+        "help", "Print help.");
 
     cxx_options.parse_positional("filename");
 
@@ -381,15 +377,20 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
 
     if (result.count("sip")) {
       options.sip = true;
-      std::cout << "Option sip enabled." << ".\n";
+      std::cout << "Option sip enabled."
+                << ".\n";
     }
 
     if (result.count("scip")) {
       options.scip = true;
-      std::cout << "Option scip enabled." << ".\n";
+      std::cout << "Option scip enabled."
+                << ".\n";
     }
 
-    // todo: pami - cutoff optional, see how to add option above.
+    if (result.count("pami")) {
+      options.pami = true;
+      std::cout << "Option pami enabled (parallel solve).\n";
+    }
 
   } catch (const cxxopts::OptionException& e) {
     std::cout << "error parsing options: " << e.what() << std::endl;

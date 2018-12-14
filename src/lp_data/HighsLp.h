@@ -45,7 +45,6 @@ struct HighsOptions {
   bool scip = 0;
 
   double timeLimit = 0;
-  double cut = 0;
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
