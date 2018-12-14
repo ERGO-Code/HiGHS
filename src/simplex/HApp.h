@@ -51,11 +51,10 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.solve(&model);
     return LpStatusToHighsStatus(model.problemStatus);
   }
-
-  solver.setCrash(opt.crashMode);
-
+ 
   // Crash, if HighsModelObject has basis information.
-  if (opt.crash) {
+  if (opt.crashMode.size() > 0) {
+    solver.setCrash(opt.crashMode.c_str());
     HCrash crash;
     crash.crash(&model, solver.Crash_Mode);
   }
@@ -67,7 +66,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
   } else if (opt.pami) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    if (opt.partitionFile) {
+    if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
     if (opt.cut) {
@@ -105,8 +104,10 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     vector<double> rowPrAct;
     vector<double> rowDuAct;
 
-    solver.setPrice(opt.priceMode);
-    solver.setEdWt(opt.edWtMode);
+    if (opt.priceMode.size() > 0)
+      solver.setPrice(opt.priceMode.c_str());
+    if (opt.edWtMode.size() > 0)
+    solver.setEdWt(opt.edWtMode.c_str());
     solver.setTimeLimit(opt.timeLimit);
 
     model.timer.reset();

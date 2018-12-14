@@ -190,7 +190,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = runSolver(model);
+  status = runSimplexSolver(options_, model);
 #else
   // IPX
   // todo:Check options for simplex-specific options
@@ -302,13 +302,10 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     // Currently works for only one filename at a time.
     if (result.count("filename")) {
       std::string filenames = "";
-      std::cout << "filename = {";
       auto& v = result["filename"].as<std::vector<std::string>>();
       for (const auto& s : v) {
-        std::cout << s << ", ";
         filenames = filenames + s;
       }
-      std::cout << "}" << std::endl;
       options.filenames = filenames;
     }
 
