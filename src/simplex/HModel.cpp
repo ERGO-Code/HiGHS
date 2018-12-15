@@ -2684,7 +2684,7 @@ void HModel::util_getBasicIndexNonbasicFlag(vector<int> &XbasicIndex,
 
 // Utilities to get/change costs and bounds
 // Get the costs for a contiguous set of columns
-void HModel::util_getCosts(HighsLp lp, int firstcol, int lastcol, double *XcolCost) {
+void HModel::util_getCosts(HighsLp& lp, int firstcol, int lastcol, double *XcolCost) {
   assert(0 <= firstcol);
   assert(firstcol <= lastcol);
   assert(lastcol < lp.numCol_);
@@ -2692,7 +2692,7 @@ void HModel::util_getCosts(HighsLp lp, int firstcol, int lastcol, double *XcolCo
 }
 
 // Get the bounds for a contiguous set of columns
-void HModel::util_getColBounds(HighsLp lp, int firstcol, int lastcol, double *XcolLower,
+void HModel::util_getColBounds(HighsLp& lp, int firstcol, int lastcol, double *XcolLower,
                                double *XcolUpper) {
   assert(0 <= firstcol);
   assert(firstcol <= lastcol);
@@ -2704,7 +2704,7 @@ void HModel::util_getColBounds(HighsLp lp, int firstcol, int lastcol, double *Xc
 }
 
 // Get the bounds for a contiguous set of rows
-void HModel::util_getRowBounds(HighsLp lp, int firstrow, int lastrow, double *XrowLower,
+void HModel::util_getRowBounds(HighsLp& lp, int firstrow, int lastrow, double *XrowLower,
                                double *XrowUpper) {
   assert(0 <= firstrow);
   assert(firstrow <= lastrow);

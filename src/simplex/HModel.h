@@ -265,10 +265,10 @@ class HModel {
   void util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
   void util_unscaleColCostValue(int iCol, double* XcolCostValue);
   // Utilities to get/change costs and bounds
-  void util_getCosts(HighsLp lp, int firstcol, int lastcol, double* XcolCost);
-  void util_getColBounds(HighsLp lp, int firstcol, int lastcol, double* XcolLower,
+  void util_getCosts(HighsLp& lp, int firstcol, int lastcol, double* XcolCost);
+  void util_getColBounds(HighsLp& lp, int firstcol, int lastcol, double* XcolLower,
                          double* XcolUpper);
-  void util_getRowBounds(HighsLp lp, int firstrow, int lastrow, double* XrowLower,
+  void util_getRowBounds(HighsLp& lp, int firstrow, int lastrow, double* XrowLower,
                          double* XrowUpper);
   int util_chgObjSense(int Xobjense);
   int util_chgCostsAll(const double* XcolCost);
