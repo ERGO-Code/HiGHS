@@ -333,7 +333,7 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
     dualObjectiveValueChange += lcDualObjectiveValueChange;
     workModel->flipBound(iCol);
-    workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
+    workModel->matrix_->collect_aj(*bfrtColumn, iCol, change);
   }
   workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
   //  workModel->checkDualObjectiveValue("After  update_flip");
@@ -428,7 +428,7 @@ void HDualRow::create_Freemove(HVector *row_ep) {
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
       assert(iCol < workModel->lp_scaled_.numCol_);
-      double alpha = workModel->getMatrix()->compute_dot(*row_ep, iCol);
+      double alpha = workModel->matrix_->compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * sourceOut > 0)
           workHMO->basis_.nonbasicMove_[iCol] = 1;

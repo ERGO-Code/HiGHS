@@ -202,7 +202,7 @@ void HPrimal::primalChooseRow() {
   // Compute pivot column
   column.clear();
   column.packFlag = true;
-  model->getMatrix()->collect_aj(column, columnIn, 1);
+  model->matrix_->collect_aj(column, columnIn, 1);
   model->getFactor()->ftran(column, columnDensity);
   columnDensity = 0.95 * columnDensity + 0.05 * column.count / numRow;
 
@@ -336,7 +336,7 @@ void HPrimal::primalUpdate() {
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
   model->getFactor()->btran(row_ep, row_epDensity);
-  model->getMatrix()->price_by_row(row_ap, row_ep);
+  model->matrix_->price_by_row(row_ap, row_ep);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / numRow;
 
   double thetaDual = workDual[columnIn] / alpha;

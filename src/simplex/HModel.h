@@ -484,7 +484,7 @@ class HModel {
   HighsLp lp_scaled_;
   // Part of working model which is only required and populated once a solve is
   // initiated
-  HMatrix matrix;
+  HMatrix *matrix_;
   HFactor factor;
   HighsSimplexInfo *simplex_;
   HighsBasis *basis_;
@@ -519,7 +519,7 @@ class HModel {
   // structures in the instance of a model
   int getPrStatus() { return problemStatus; }
   int getObjSense() { return lp_scaled_.sense_; }
-  const HMatrix* getMatrix() { return &matrix; }
+  //  const HMatrix* getMatrix() { return &matrix; }
   const HFactor* getFactor() { return &factor; }
   double* getcolCost() { return &lp_scaled_.colCost_[0]; }
   double* getcolLower() { return &lp_scaled_.colLower_[0]; }

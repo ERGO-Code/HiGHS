@@ -421,7 +421,7 @@ void HDual::init(int num_threads) {
   numCol = model->lp_scaled_.numCol_;
   numRow = model->lp_scaled_.numRow_;
   numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
-  matrix = model->getMatrix();
+  matrix = model->matrix_;
   factor = model->getFactor();
 
   // Copy pointers
@@ -1946,7 +1946,7 @@ int HDual::util_getBasisInvRow(int r, double *coef, int *inds, int *ninds) {
 double HDual::an_bs_cond(HModel *ptr_model) {
   model = ptr_model;
   // Alias to the matrix
-  matrix = model->getMatrix();
+  matrix = model->matrix_;
   const int *Astart = matrix->getAstart();
   const double *Avalue = matrix->getAvalue();
   // Compute the Hager condition number estimate for the basis matrix

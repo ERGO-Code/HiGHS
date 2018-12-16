@@ -59,7 +59,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   const double H_TT = 1e-13;
 
   //  HMatrix matrix;
-  model->matrix.setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
+  model->matrix_->setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
                       &model->lp_scaled_.Avalue_[0], &model->basis_->nonbasicFlag_[0]);
 
   model->factor.setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
@@ -198,7 +198,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
 
     // Form updated column
     column.clear();
-    model->matrix.collect_aj(column, j, 1);
+    model->matrix_->collect_aj(column, j, 1);
     model->factor.ftran(column, 0);
     int nWork = 0;
     for (int k = 0; k < column.count; k++) {

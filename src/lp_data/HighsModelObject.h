@@ -28,11 +28,14 @@ public:
   int postsolveClock;
 
   //  HighsTimer timer_;
+  //  HighsLp lp_scaled_;
   HighsSimplexInfo simplex_;
   HighsSolution solution_;
   HighsRanging ranging_;
   HighsBasis basis_;
   HighsScale scale_;
+  HMatrix matrix_;
+  //  HFactor factor_;
 
   BasisInfo basis_info_;
 

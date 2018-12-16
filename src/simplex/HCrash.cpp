@@ -985,7 +985,7 @@ void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
     model->replaceWithLogicalBasis();
-    model->matrix.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
+    highs_model_object.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
     model->mlFg_haveMatrixColWise = 1;
     model->mlFg_haveMatrixRowWise = 1;
   }

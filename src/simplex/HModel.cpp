@@ -767,15 +767,15 @@ void HModel::setup_for_solve() {
   if (!(mlFg_haveMatrixColWise && mlFg_haveMatrixRowWise)) {
     // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
     if (numBasicLogicals == lp_scaled_.numRow_) {
-      matrix.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_, &lp_scaled_.Astart_[0], &lp_scaled_.Aindex_[0], &lp_scaled_.Avalue_[0]);
-      //      printf("Called matrix.setup_lgBs\n");cout<<flush;
+      matrix_->setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_, &lp_scaled_.Astart_[0], &lp_scaled_.Aindex_[0], &lp_scaled_.Avalue_[0]);
+      //      printf("Called matrix_->setup_lgBs\n");cout<<flush;
     } else {
-      matrix.setup(lp_scaled_.numCol_, lp_scaled_.numRow_, &lp_scaled_.Astart_[0], &lp_scaled_.Aindex_[0], &lp_scaled_.Avalue_[0],
+      matrix_->setup(lp_scaled_.numCol_, lp_scaled_.numRow_, &lp_scaled_.Astart_[0], &lp_scaled_.Aindex_[0], &lp_scaled_.Avalue_[0],
                    &basis_->nonbasicFlag_[0]);
-      //      printf("Called matrix.setup\n");cout<<flush;
+      //      printf("Called matrix_->setup\n");cout<<flush;
     }
     // Indicate that there is a colum-wise and row-wise copy of the
-    // matrix: can't be done in matrix.setup_lgBs
+    // matrix: can't be done in matrix_->setup_lgBs
     mlFg_haveMatrixColWise = 1;
     mlFg_haveMatrixRowWise = 1;
   }
@@ -2130,7 +2130,7 @@ void HModel::computeDual() {
   HVector bufferLong;
   bufferLong.setup(lp_scaled_.numCol_);
   bufferLong.clear();
-  matrix.price_by_col(bufferLong, buffer);
+  matrix_->price_by_col(bufferLong, buffer);
   for (int i = 0; i < lp_scaled_.numCol_; i++) {
     simplex_->workDual_[i] = simplex_->workCost_[i] - bufferLong.array[i];
   }
@@ -2251,7 +2251,7 @@ void HModel::computePrimal() {
   const int numTot = lp_scaled_.numCol_ + lp_scaled_.numRow_;
   for (int i = 0; i < numTot; i++)
     if (basis_->nonbasicFlag_[i] && simplex_->workValue_[i] != 0)
-      matrix.collect_aj(buffer, i, simplex_->workValue_[i]);
+      matrix_->collect_aj(buffer, i, simplex_->workValue_[i]);
   factor.ftran(buffer, 1);
 
   for (int i = 0; i < lp_scaled_.numRow_; i++) {
@@ -2408,7 +2408,7 @@ void HModel::flipBound(int iCol) {
 }
 
 // The major model updates. Factor calls factor.update; Matrix
-// calls matrix.update; updatePivots does everything---and is
+// calls matrix_->update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
 void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
                           int *hint) {
@@ -2422,7 +2422,7 @@ void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
 
 void HModel::updateMatrix(int columnIn, int columnOut) {
   timer.recordStart(HTICK_UPDATE_MATRIX);
-  matrix.update(columnIn, columnOut);
+  matrix_->update(columnIn, columnOut);
   timer.recordFinish(HTICK_UPDATE_MATRIX);
 }
 
