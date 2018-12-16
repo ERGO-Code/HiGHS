@@ -68,8 +68,18 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
   
+  //Define clocks
+  /*
+  lps_[0].timer_.presolveClock = lps_[0].timer_.clockDef("Presolve", "Pre");
+  lps_[0].timer_.scaleClock = lps_[0].timer_.clockDef("Scale", "Scl");
+  lps_[0].timer_.crashClock = lps_[0].timer_.clockDef("Crash", "Csh");
+  lps_[0].timer_.solveClock = lps_[0].timer_.clockDef("Solve", "Slv");
+  lps_[0].timer_.postsolveClock = lps_[0].timer_.clockDef("Postsolve", "Pst");
+  */
+
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   PresolveInfo presolve_info(options_.presolve, lp);
+
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
   //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
  

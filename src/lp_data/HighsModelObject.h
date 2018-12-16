@@ -2,6 +2,7 @@
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
 #include "HighsLp.h"
+//#include "HighsTimer.h"
 #include "HModel.h"
 // include Sensitivity(or Ranging) header
 
@@ -19,6 +20,14 @@ public:
   HighsModelObject(HighsLp& lp) : lp_(lp) {}
 
   HighsLp& lp_;
+
+  int presolveClock;
+  int scaleClock;
+  int crashClock;
+  int solveClock;
+  int postsolveClock;
+
+  //  HighsTimer timer_;
   HighsSimplexInfo simplex_;
   HighsSolution solution_;
   HighsRanging ranging_;
