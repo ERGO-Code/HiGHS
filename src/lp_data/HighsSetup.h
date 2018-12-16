@@ -25,7 +25,7 @@
 #include "cxxopts.hpp"
 
 
-HighsLp CopyHighsLp(const HighsLp& from_highs_lp);
+HighsLp copyHighsLp(const HighsLp& from_highs_lp);
 
 // Class to set parameters and run HiGHS
 class Highs {
@@ -43,7 +43,7 @@ class Highs {
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(HighsLp& lp, HighsSolution& solution);
-
+ 
   // delete.
   HighsOptions options_;
 
@@ -481,7 +481,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   return HighsStatus::OK;
 }
 
-HighsLp CopyHighsLp(const HighsLp& from_lp) {
+HighsLp copyHighsLp(const HighsLp& from_lp) {
   int numCol = from_lp.numCol_;
   int numRow = from_lp.numRow_;
   assert(numCol > 0);

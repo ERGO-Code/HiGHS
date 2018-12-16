@@ -413,17 +413,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HModel& model = highs_model.hmodel_[0];
   const HighsLp& lp_ = highs_model.lp_;
 
-  // Allocate memory for the basis and set the pointer to it in model
+  // Allocate memory for the basis
+  // assignBasis();
   const int numTot = highs_model.lp_.numCol_ + highs_model.lp_.numRow_;
   highs_model.basis_.basicIndex_.resize(highs_model.lp_.numRow_);
   highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
   highs_model.basis_.nonbasicMove_.resize(numTot);
+
+  // Set pointers within HModel for the basis, scaling data structure and simplex information data structure
   model.basis_ = &highs_model.basis_;
-
-  // Set the pointer to the scaling data structure
   model.scale_ = &highs_model.scale_;
-
-  // Set the pointer to the simplex information data structure 
   model.simplex_ = &highs_model.simplex_;
 
   model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
