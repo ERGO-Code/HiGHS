@@ -61,6 +61,7 @@ set(headers
     simplex/HSimplex.h
     simplex/HSort.h
     presolve/Presolve.h
+    simplex/HighsTimer.h
     simplex/HTimer.h
     simplex/HTimerPre.h
     simplex/HVector.h

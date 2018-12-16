@@ -25,8 +25,7 @@
 #include "cxxopts.hpp"
 
 
-HModel HighsLpToHModel(const HighsLp& lp);
-HighsLp HModelToHighsLp(const HModel& model);
+HighsLp CopyHighsLp(const HighsLp& from_highs_lp);
 
 // Class to set parameters and run HiGHS
 class Highs {
@@ -472,4 +471,26 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   return HighsStatus::OK;
 }
 
+HighsLp CopyHighsLp(const HighsLp& from_lp) {
+  int numCol = from_lp.numCol_;
+  int numRow = from_lp.numRow_;
+  assert(numCol > 0);
+  assert(numRow > 0);
+  int numNz = from_lp.Astart_[numCol];
+
+  HighsLp to_lp;
+  to_lp.numCol_ = numCol;
+  to_lp.numRow_ = numRow;
+  to_lp.sense_ = from_lp.sense_;
+  to_lp.colCost_.assign(&from_lp.colCost_[0], &from_lp.colCost_[0] + numCol);
+  to_lp.colLower_.assign(&from_lp.colLower_[0], &from_lp.colLower_[0] + numCol);
+  to_lp.colUpper_.assign(&from_lp.colUpper_[0], &from_lp.colUpper_[0] + numCol);
+  to_lp.rowLower_.assign(&from_lp.rowLower_[0], &from_lp.rowLower_[0] + numRow);
+  to_lp.rowUpper_.assign(&from_lp.rowUpper_[0], &from_lp.rowUpper_[0] + numRow);
+  to_lp.Astart_.assign(&from_lp.Astart_[0], &from_lp.Astart_[0] + numCol + 1);
+  to_lp.Aindex_.assign(&from_lp.Aindex_[0], &from_lp.Aindex_[0] + numNz);
+  to_lp.Avalue_.assign(&from_lp.Avalue_[0], &from_lp.Avalue_[0] + numNz);
+  return to_lp;
+
+}
 #endif
