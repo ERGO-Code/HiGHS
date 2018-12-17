@@ -51,7 +51,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.solve(&model);
     return LpStatusToHighsStatus(model.problemStatus);
   }
- 
+
   // Crash, if HighsModelObject has basis information.
   if (opt.crashMode.size() > 0) {
     solver.setCrash(opt.crashMode.c_str());
