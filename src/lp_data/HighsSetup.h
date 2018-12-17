@@ -279,10 +279,10 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         "S, scip", "Use option SCIP (to test utilities)",
         cxxopts::value<bool>())("m, pami",
                                 "Use parallel solve.",
-                                cxxopts::value<double>())(
+                                cxxopts::value<bool>())(
         "t, partition", "Use pami with partition file: filename",
-        cxxopts::value<bool>())("i, ipx", "Use interior point solver.",
-                                cxxopts::value<std::string>())(
+        cxxopts::value<std::string>())("i, ipx", "Use interior point solver.",
+                                cxxopts::value<bool>())(
         "T, time-limit", "Use time limit.", cxxopts::value<double>())(
         "help", "Print help.");
 
@@ -299,6 +299,10 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     if (result.count("filename")) {
       std::string filenames = "";
       auto& v = result["filename"].as<std::vector<std::string>>();
+      if (v.size() > 1) {
+        std::cout << "Multiple files not implemented yet.\n";
+        return HighsStatus::LpError;
+      }
       for (const auto& s : v) {
         filenames = filenames + s;
       }
