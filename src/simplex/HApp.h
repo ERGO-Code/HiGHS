@@ -21,6 +21,7 @@
 #include "HighsModelObject.h"
 #include "HCrash.h"
 #include "HRanging.h"
+#include "Scaling.h"
 
 HighsStatus LpStatusToHighsStatus(const int lp_status) {
   switch (lp_status) {
@@ -426,13 +427,22 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.scale_ = &highs_model.scale_;
   model.simplex_ = &highs_model.simplex_;
 
-  model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
-                        &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
-                        &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
-                        &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
+  bool load_fromArrays = false;
+  if (load_fromArrays) {
+    model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
+			  &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
+			  &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
+			  &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
+    // Scaling: Separate from simplex.
+    model.scaleModel();
 
-  // Scaling: Separate from simplex.
-  model.scaleModel();
+  } else {
+    // Copy the LP to the structure to be scaled and then scale it
+    scaleHighsModel(highs_model);
+    model.lp_scaled_ = highs_model.lp_scaled_;
+    model.initWithLogicalBasis();
+
+  }
 
   const HighsLp& lp_scaled_ = model.lp_scaled_;
   highs_model.matrix_.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_,
