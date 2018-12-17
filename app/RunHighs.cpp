@@ -2,6 +2,8 @@
 #include "LoadProblem.h"
 
 int main(int argc, char **argv) {
+  HiGHSRun();
+
   // Load user options.
   HighsOptions options;
   HighsStatus init_status = loadOptions(argc, argv, options);
