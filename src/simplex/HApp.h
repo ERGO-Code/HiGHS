@@ -420,6 +420,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
   highs_model.basis_.nonbasicMove_.resize(numTot);
 
+  // Set pointers within HModel for the basis, scaling data structure and simplex information data structure
+  model.basis_ = &highs_model.basis_;
+  model.scale_ = &highs_model.scale_;
+  model.simplex_ = &highs_model.simplex_;
+
   model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
                         &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
                         &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
@@ -434,10 +439,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 				  &lp_scaled_.Aindex_[0],
 				  &lp_scaled_.Avalue_[0]);
 
-  // Set pointers within HModel for the basis, scaling data structure and simplex information data structure
-  model.basis_ = &highs_model.basis_;
-  model.scale_ = &highs_model.scale_;
-  model.simplex_ = &highs_model.simplex_;
+  // Set pointers within HModel for the matrix data structure
   model.matrix_ = &highs_model.matrix_;
 
 
