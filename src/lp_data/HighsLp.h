@@ -48,7 +48,6 @@ struct HighsOptions {
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  std::string fileName = "";
   std::string presolveMode = "";
   std::string edWtMode = "";
   std::string priceMode = "";

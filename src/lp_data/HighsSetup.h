@@ -396,6 +396,12 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     std::cout << "error parsing options: " << e.what() << std::endl;
     return HighsStatus::OptionsError;
   }
+
+  if (options.filenames.size() == 0) {
+    std::cout << "Please specify filename in .mps or .gz format.\n";
+    return HighsStatus::LpError;
+  }
+
   return HighsStatus::OK;
 }
 
