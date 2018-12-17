@@ -18,16 +18,19 @@
 #include "HighsLp.h"
 #include "HConst.h"
 
-// Logical check of double being +Infinity
-bool highs_isInfinity(double val);
-
 /**
- * @brief Class for HiGHS utilities
+ * @brief Logical check of double being +Infinity
  */
+bool highs_isInfinity(
+		      double val //!< Value being tested against +Infinity
+		      );
 
 const int initial_random_mw = 1985;
 const int initial_random_mz = 2012;
 
+/**
+ * @brief Class for HiGHS utilities
+ */
 class HighsUtils {
  public:
 
@@ -36,7 +39,7 @@ class HighsUtils {
    */
   HighsUtils() {
   /**
-   * @brief Initialise the two seeds
+   * @brief Initialise the two seeds to default values
    */
     random_mw = initial_random_mw;
     random_mz = initial_random_mz;

@@ -439,8 +439,15 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 				  &lp_scaled_.Aindex_[0],
 				  &lp_scaled_.Avalue_[0]);
 
-  // Set pointers within HModel for the matrix data structure
+  highs_model.factor_.setup(lp_scaled_.numCol_, lp_scaled_.numRow_,
+			   &lp_scaled_.Astart_[0],
+			   &lp_scaled_.Aindex_[0],
+			   &lp_scaled_.Avalue_[0],
+			   &highs_model.basis_.basicIndex_[0]);
+
+  // Set pointers within HModel for the matrix and factor data structure
   model.matrix_ = &highs_model.matrix_;
+  model.factor_ = &highs_model.factor_;
 
 
   // Crash, if needed.

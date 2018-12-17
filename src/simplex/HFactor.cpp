@@ -150,8 +150,12 @@ void solveHyper(const int Hsize, const int *Hlookup, const int *HpivotIndex,
   }
 }
 
-void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_,
-                    double *Avalue_, int *baseIndex_, int updateMethod_) {
+void HFactor::setup(int numCol_, int numRow_,
+		    const int *Astart_,
+		    const int *Aindex_,
+                    const double *Avalue_,
+		    int *baseIndex_,
+		    int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;

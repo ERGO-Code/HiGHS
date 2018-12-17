@@ -24,19 +24,6 @@
  */
 class HighsTimer {
  public:
-  double startTime;  //!< Elapsed time when the clocks were reset
-  double startTick;  //!< CPU ticks when the clocks were reset
-
-  const double initialClockStart = 1.0; //!< Dummy positive start time
-					//!for clocks - so they can be
-					//!checked as having been
-					//!stopped
-  int numClock;
-  std::vector<int> clockNumCall;
-  std::vector<double> clockStart;
-  std::vector<double> clockTicks;
-  std::vector<string> clockNames;
-  std::vector<string> clockCh3Names;
 
   HighsTimer() {
     startTime = getWallTime();
@@ -132,6 +119,8 @@ class HighsTimer {
     const bool reportForExcel = false;
     int numClockListEntries = sizeof(clockList) / sizeof(int);
     double tlPerCentReport = 0.1;
+
+    printf("report: clockList[] = {"); for (int i = 0; i < numClockListEntries; i++) {printf(" %d", clockList[i]);} printf("}\n");
 
     // Report in one line the per-mille contribution from each clock
     double totalTick = getTick();
@@ -238,6 +227,21 @@ class HighsTimer {
     asm volatile("rdtsc" : "=a"(a), "=d"(d));
     return ((unsigned long long)a) | (((unsigned long long)d) << 32);
   }
+
+ private: 
+  double startTime;  //!< Elapsed time when the clocks were reset
+  double startTick;  //!< CPU ticks when the clocks were reset
+
+  const double initialClockStart = 1.0; //!< Dummy positive start time
+					//!for clocks - so they can be
+					//!checked as having been
+					//!stopped
+  int numClock;
+  std::vector<int> clockNumCall;
+  std::vector<double> clockStart;
+  std::vector<double> clockTicks;
+  std::vector<std::string> clockNames;
+  std::vector<std::string> clockCh3Names;
 };
 
 #endif /* SIMPLEX_HIGHSTIMER_H_ */

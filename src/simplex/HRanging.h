@@ -29,26 +29,17 @@ class HRanging {
    * @brief Compute ranging information
    */
   int computeData(
-		  HighsModelObject &highs_model_object  //!< Instance
-							//!of HModel
-							//!class for
-							//!which
-							//!ranging
-							//!data are to
-							//!be
-							//!generated
+		  HighsModelObject &highs_model_object  //!< Instance of HModelObject class for which 
+							//!< ranging data are to be generated
   );
 
   /**
    * @brief Check ranging information
    */
   int checkData(
-		HighsModelObject &highs_model_object  //!< Instance of
-						      //!HModel class
-						      //!for which
-						      //!ranging data
-						      //!are to be
-						      //!checked
+		HighsModelObject &highs_model_object  //!< Instance of HModelObject class for which 
+						      //!< ranging data are to be checked
+
   );
 
  private:

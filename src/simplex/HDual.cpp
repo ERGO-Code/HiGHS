@@ -422,7 +422,7 @@ void HDual::init(int num_threads) {
   numRow = model->lp_scaled_.numRow_;
   numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
   matrix = model->matrix_;
-  factor = model->getFactor();
+  factor = model->factor_;
 
   // Copy pointers
   jMove = &highs_model_object->basis_.nonbasicMove_[0];

@@ -25,8 +25,6 @@
 #include "cxxopts.hpp"
 
 
-HighsLp copyHighsLp(const HighsLp& from_highs_lp);
-
 // Class to set parameters and run HiGHS
 class Highs {
  public:
@@ -69,21 +67,24 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   lps_.push_back(HighsModelObject(lp));
   
   //Define clocks
-  /*
-  lps_[0].timer_.presolveClock = lps_[0].timer_.clockDef("Presolve", "Pre");
-  lps_[0].timer_.scaleClock = lps_[0].timer_.clockDef("Scale", "Scl");
-  lps_[0].timer_.crashClock = lps_[0].timer_.clockDef("Crash", "Csh");
-  lps_[0].timer_.solveClock = lps_[0].timer_.clockDef("Solve", "Slv");
-  lps_[0].timer_.postsolveClock = lps_[0].timer_.clockDef("Postsolve", "Pst");
-  */
+  HighsTimer timer;
+  int presolveClock = timer.clockDef("Presolve", "Pre");
+  int scaleClock = timer.clockDef("Scale", "Scl");
+  int crashClock = timer.clockDef("Crash", "Csh");
+  int solveClock = timer.clockDef("Solve", "Slv");
+  int postsolveClock = timer.clockDef("Postsolve", "Pst");
+  timer.reset();
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
+  timer.start(presolveClock);
   PresolveInfo presolve_info(options_.presolve, lp);
 
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
   //HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
+  timer.stop(presolveClock);
  
   // Run solver.
+  timer.start(solveClock);
   HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
@@ -113,7 +114,9 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       break;
     }
   }
+  timer.stop(solveClock);
 
+  timer.start(postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::Optimal) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
@@ -138,6 +141,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       solve_status = runSolver(lps_[0]);
     }
   }
+  timer.stop(postsolveClock);
 
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
@@ -159,6 +163,10 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
+  // Report times
+  printf("clockList[] = {%d %d %d %d %d}\n", presolveClock, scaleClock, crashClock, solveClock, postsolveClock);
+  int clockList[] = {presolveClock, scaleClock, crashClock, solveClock, postsolveClock};
+  timer.report(clockList);
 
   return HighsStatus::OK;
 }
@@ -481,26 +489,4 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options_) {
   return HighsStatus::OK;
 }
 
-HighsLp copyHighsLp(const HighsLp& from_lp) {
-  int numCol = from_lp.numCol_;
-  int numRow = from_lp.numRow_;
-  assert(numCol > 0);
-  assert(numRow > 0);
-  int numNz = from_lp.Astart_[numCol];
-
-  HighsLp to_lp;
-  to_lp.numCol_ = numCol;
-  to_lp.numRow_ = numRow;
-  to_lp.sense_ = from_lp.sense_;
-  to_lp.colCost_.assign(&from_lp.colCost_[0], &from_lp.colCost_[0] + numCol);
-  to_lp.colLower_.assign(&from_lp.colLower_[0], &from_lp.colLower_[0] + numCol);
-  to_lp.colUpper_.assign(&from_lp.colUpper_[0], &from_lp.colUpper_[0] + numCol);
-  to_lp.rowLower_.assign(&from_lp.rowLower_[0], &from_lp.rowLower_[0] + numRow);
-  to_lp.rowUpper_.assign(&from_lp.rowUpper_[0], &from_lp.rowUpper_[0] + numRow);
-  to_lp.Astart_.assign(&from_lp.Astart_[0], &from_lp.Astart_[0] + numCol + 1);
-  to_lp.Aindex_.assign(&from_lp.Aindex_[0], &from_lp.Aindex_[0] + numNz);
-  to_lp.Avalue_.assign(&from_lp.Avalue_[0], &from_lp.Avalue_[0] + numNz);
-  return to_lp;
-
-}
 #endif

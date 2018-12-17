@@ -62,9 +62,9 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   model->matrix_->setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
                       &model->lp_scaled_.Avalue_[0], &model->basis_->nonbasicFlag_[0]);
 
-  model->factor.setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
+  model->factor_->setup(numCol, numRow, &model->lp_scaled_.Astart_[0], &model->lp_scaled_.Aindex_[0],
                       &model->lp_scaled_.Avalue_[0], &model->basis_->basicIndex_[0]);
-  model->factor.build();
+  model->factor_->build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
   // negated relative to the original model
@@ -199,7 +199,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
     // Form updated column
     column.clear();
     model->matrix_->collect_aj(column, j, 1);
-    model->factor.ftran(column, 0);
+    model->factor_->ftran(column, 0);
     int nWork = 0;
     for (int k = 0; k < column.count; k++) {
       int iRow = column.index[k];

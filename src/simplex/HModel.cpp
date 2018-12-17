@@ -783,7 +783,7 @@ void HModel::setup_for_solve() {
   if (!mlFg_haveFactorArrays) {
     // Initialise factor arrays, passing &basis_->basicIndex_[0] so that its
     // address can be copied to the internal Factor pointer
-    factor.setup(lp_scaled_.numCol_, lp_scaled_.numRow_, &lp_scaled_.Astart_[0], &lp_scaled_.Aindex_[0], &lp_scaled_.Avalue_[0],
+    factor_->setup(lp_scaled_.numCol_, lp_scaled_.numRow_, &lp_scaled_.Astart_[0], &lp_scaled_.Aindex_[0], &lp_scaled_.Avalue_[0],
                  &basis_->basicIndex_[0]);
     // Indicate that the model has factor arrays: can't be done in factor.setup
     mlFg_haveFactorArrays = 1;
@@ -2064,7 +2064,7 @@ int HModel::computeFactor() {
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
-  int rankDeficiency = factor.build();
+  int rankDeficiency = factor_->build();
   if (rankDeficiency) {
     handleRankDeficiency();
     //    problemStatus = LP_Status_Singular;
@@ -2119,7 +2119,7 @@ void HModel::computeDual() {
     btranRHS_norm2 = sqrt(btranRHS_norm2);
   }
   //  printf("computeDual: Before BTRAN\n");cout<<flush;
-  factor.btran(buffer, 1);
+  factor_->btran(buffer, 1);
   //  printf("computeDual: After  BTRAN\n");cout<<flush;
   if (an_computeDual_norm2) {
     btranSol_norm2 = buffer.norm2();
@@ -2252,7 +2252,7 @@ void HModel::computePrimal() {
   for (int i = 0; i < numTot; i++)
     if (basis_->nonbasicFlag_[i] && simplex_->workValue_[i] != 0)
       matrix_->collect_aj(buffer, i, simplex_->workValue_[i]);
-  factor.ftran(buffer, 1);
+  factor_->ftran(buffer, 1);
 
   for (int i = 0; i < lp_scaled_.numRow_; i++) {
     int iCol = basis_->basicIndex_[i];
@@ -2330,9 +2330,9 @@ double HModel::checkDualObjectiveValue(const char *message, int phase) {
 #endif
 
 int HModel::handleRankDeficiency() {
-  int rankDeficiency = factor.rankDeficiency;
-  const int *noPvC = factor.getNoPvC();
-  printf("Returned %d = factor.build();\n", rankDeficiency);
+  int rankDeficiency = factor_->rankDeficiency;
+  const int *noPvC = factor_->getNoPvC();
+  printf("Returned %d = factor_->build();\n", rankDeficiency);
   fflush(stdout);
   vector<int> basicRows;
   const int numTot = lp_scaled_.numCol_ + lp_scaled_.numRow_;
@@ -2341,9 +2341,9 @@ int HModel::handleRankDeficiency() {
   //    printf(" %2d", basis_->basicIndex_[iRow]); printf("\n");
   for (int iRow = 0; iRow < lp_scaled_.numRow_; iRow++) basicRows[basis_->basicIndex_[iRow]] = iRow;
   for (int k = 0; k < rankDeficiency; k++) {
-    //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
+    //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor_->noPvR[k],
     //      k, noPvC[k]);fflush(stdout);
-    int columnIn = lp_scaled_.numCol_ + factor.noPvR[k];
+    int columnIn = lp_scaled_.numCol_ + factor_->noPvR[k];
     int columnOut = noPvC[k];
     int rowOut = basicRows[columnOut];
     //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
@@ -2361,7 +2361,7 @@ int HModel::handleRankDeficiency() {
   //    printf("After  - basis_->basicIndex_:"); for (int iRow=0; iRow<lp_scaled_.numRow_; iRow++)
   //    printf(" %2d", basis_->basicIndex_[iRow]); printf("\n");
 #ifdef HiGHSDEV
-  factor.checkInvert();
+  factor_->checkInvert();
 #endif
   return 0;
 }
@@ -2407,13 +2407,13 @@ void HModel::flipBound(int iCol) {
   simplex_->workValue_[iCol] = move == 1 ? simplex_->workLower_[iCol] : simplex_->workUpper_[iCol];
 }
 
-// The major model updates. Factor calls factor.update; Matrix
+// The major model updates. Factor calls factor_->update; Matrix
 // calls matrix_->update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
 void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
                           int *hint) {
   timer.recordStart(HTICK_UPDATE_FACTOR);
-  factor.update(column, row_ep, iRow, hint);
+  factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   mlFg_haveInvert = 1;
   if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
@@ -2477,7 +2477,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
 }
 
 #ifdef HiGHSDEV
-void HModel::changeUpdate(int updateMethod) { factor.change(updateMethod); }
+void HModel::changeUpdate(int updateMethod) { factor_->change(updateMethod); }
 #endif
 
 void HModel::setProblemStatus(int status) { problemStatus = status; }

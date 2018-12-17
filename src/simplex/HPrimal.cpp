@@ -203,7 +203,7 @@ void HPrimal::primalChooseRow() {
   column.clear();
   column.packFlag = true;
   model->matrix_->collect_aj(column, columnIn, 1);
-  model->getFactor()->ftran(column, columnDensity);
+  model->factor_->ftran(column, columnDensity);
   columnDensity = 0.95 * columnDensity + 0.05 * column.count / numRow;
 
   // Initialize
@@ -335,7 +335,7 @@ void HPrimal::primalUpdate() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  model->getFactor()->btran(row_ep, row_epDensity);
+  model->factor_->btran(row_ep, row_epDensity);
   model->matrix_->price_by_row(row_ap, row_ep);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / numRow;
 
