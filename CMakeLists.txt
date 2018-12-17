@@ -98,8 +98,8 @@ configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.
 include_directories(
     ${CMAKE_BINARY_DIR}
     ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_SOURCE_DIR}/external
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/external
     ${CMAKE_SOURCE_DIR}/src/io
     ${CMAKE_SOURCE_DIR}/src/ipx
     ${CMAKE_SOURCE_DIR}/src/lp_data
