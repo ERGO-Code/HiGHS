@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HRanging.cpp
- * @brief
+ * @brief Compute and test LP ranging data for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HRanging.h"
@@ -961,6 +961,7 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
 
 void HRanging::checkDataSolve(HModel* model, bool rp) {
   HDual solver;
+  HighsUtils utils;
   if (rp) {
     model->intOption[INTOPT_PRINT_FLAG] = 4;
     const char* fileName = "OutMl.mps";
@@ -972,7 +973,7 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   printf("HRanging.cpp no longer solves!\n");
   //  solver.solve(model);
   if (rp) {
-    model->lp_scaled_.reportLp();
+    utils.reportLp(model->lp_scaled_);
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }

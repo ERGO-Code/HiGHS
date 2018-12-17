@@ -3752,7 +3752,8 @@ void HModel::util_reportSolverProgress() {
 //
 // Report the model solution
 void HModel::util_reportModelSolution(HighsLp lp) {
-  lp.reportLpBrief();
+  HighsUtils utils;
+  utils.reportLpBrief(lp);
   util_reportModelStatus(lp);
   assert(lp.numCol_ > 0);
   assert(lp.numRow_ > 0);

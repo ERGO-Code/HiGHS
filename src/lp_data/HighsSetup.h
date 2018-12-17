@@ -73,7 +73,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   int crashClock = timer.clockDef("Crash", "Csh");
   int solveClock = timer.clockDef("Solve", "Slv");
   int postsolveClock = timer.clockDef("Postsolve", "Pst");
-  timer.reset();
+  //  timer.reset();
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(presolveClock);

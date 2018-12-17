@@ -171,7 +171,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 #endif
       }
     }
-
+    //    HighsUtils utils; utils.reportLp(highs_model.lp_);
+    //    utils.reportLpSolution(highs_model);
     HighsStatus result = LpStatusToHighsStatus(model.problemStatus);
     if (result != HighsStatus::Optimal) return result;
 

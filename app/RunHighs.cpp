@@ -5,9 +5,9 @@
 int main(int argc, char **argv) {
   // Initialise timer
   HighsTimer timer;
-  int loadClock = timer.clockDef("Load", "Ld ");
+  int loadClock = timer.clockDef("Load", " Ld");
   int runClock = timer.clockDef("Run", "Run");
-  timer.reset();
+  //  timer.reset();
 
   // Load user options.
   HighsOptions options;

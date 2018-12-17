@@ -146,7 +146,7 @@ class HighsTimer {
     printf("\n");
     // Report one line per clock, the time, number of calls and time per call
     printf(
-	   "txt-profile-time ID: Operation       :    Time            :   Calls   "
+	   "txt-profile-time ID: Operation       :    Time             :   Calls   "
 	   "Time/Call\n");
     // Convert approximate seconds
     double tick2sec = 3.6e-10;
@@ -160,7 +160,7 @@ class HighsTimer {
       double tiPerCall = 0;
       if (clockNumCall[iClock] > 0) tiPerCall = ti / clockNumCall[iClock];
       if (perCent >= tlPerCentReport) {
-        printf("txt-profile-time %2d: %-16s: %11.4e (%4.1f%%): %7d %11.4e\n",
+        printf("txt-profile-time %2d: %-16s: %11.4e (%5.1f%%): %7d %11.4e\n",
                iClock, clockNames[iClock].c_str(), ti, perCent, clockNumCall[iClock],
                tiPerCall);
       }
@@ -168,7 +168,7 @@ class HighsTimer {
       suTick += tick;
     }
     double perCent = 100.0 * suTick / totalTick;
-    printf("txt-profile-time   : SUM             : %11.4e (%4.1f%%)\n", suTi,
+    printf("txt-profile-time   : SUM             : %11.4e (%5.1f%%)\n", suTi,
            perCent);
     printf("txt-profile-time   : TOTAL           : %11.4e\n",
            tick2sec * totalTick);

@@ -83,15 +83,6 @@ class HighsLp {
   double offset_ = 0;
   std::string model_name_ = "";
 
-void reportLp();
-void reportLpBrief();
-void reportLpDimensions();
-void reportLpObjSense();
-void reportLpColVec();
-void reportLpRowVec();
-void reportLpColMtx();
-
-
 };
 
 // HiGHS status
