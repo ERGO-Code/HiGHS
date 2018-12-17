@@ -38,26 +38,21 @@ enum objSense
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
 struct HighsOptions {
-  int filename = 0;
-  int presolve = 0;
-  int crash = 0;
-  int edgeWeight = 0;
-  int price = 0;
-  int pami = 0;
-  int sip = 0;
-  int scip = 0;
+  std::string filenames = "";
+
+  bool pami = 0;
+  bool sip = 0;
+  bool scip = 0;
 
   double timeLimit = 0;
-  double cut = 0;
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  const char* fileName = "";
-  const char* presolveMode = "";
-  const char* edWtMode = "";
-  const char* priceMode = "";
-  const char* crashMode = "";
-  const char* partitionFile = "";
+  std::string presolveMode = "";
+  std::string edWtMode = "";
+  std::string priceMode = "";
+  std::string crashMode = "";
+  std::string partitionFile = "";
 
   bool clean_up = false;
 };

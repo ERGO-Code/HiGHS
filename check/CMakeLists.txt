@@ -103,7 +103,7 @@ set(failInstances
 
 # define settings
 set(settings
-    " "
+    ""
     "-m"
     #"-pOn"
     )
