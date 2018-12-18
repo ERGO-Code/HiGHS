@@ -24,9 +24,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
   model = &highs_model_object->hmodel_[0];
   //  model->basis_ = &highs_model_object->basis_;
-  numCol = model->lp_scaled_.numCol_;
-  numRow = model->lp_scaled_.numRow_;
-  numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
+  numCol = model->lp_scaled_->numCol_;
+  numRow = model->lp_scaled_->numRow_;
+  numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
 
 #ifdef HiGHSDEV
   printf("************************************\n");
@@ -171,7 +171,7 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
-  const int numTot = model->lp_scaled_.numCol_ + model->lp_scaled_.numRow_;
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free

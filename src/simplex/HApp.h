@@ -137,7 +137,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.getPrStatus(), model.modelName.c_str(), highs_model.lp_.numRow_,
+        model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
         highs_model.lp_.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
@@ -166,7 +166,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.getPrStatus(), model.modelName.c_str(), highs_model.lp_.numRow_,
+            model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
             highs_model.lp_.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
             solver.n_ph2_du_it, solver.n_pr_it);
 #endif
@@ -226,6 +226,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 }
 
 HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
+  HighsUtils utils;
   printf("Called solveScip.\n");
 
   HModel& model = highs_model.hmodel_[0];
@@ -334,7 +335,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   model.scaleModel();
   HDual solver;
   solver.solve(highs_model);
-  model.util_reportModelSolution(model.lp_scaled_);
+  //  utils.reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
   vector<double> colPrimal(highs_model.lp_.numCol_);
@@ -346,8 +347,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   vector<double> rowLower(highs_model.lp_.numRow_);
   vector<double> rowUpper(highs_model.lp_.numRow_);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(model.lp_scaled_, 0, highs_model.lp_.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(model.lp_scaled_, 0, highs_model.lp_.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(highs_model.lp_scaled_, 0, highs_model.lp_.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(highs_model.lp_scaled_, 0, highs_model.lp_.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -357,7 +358,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   int num_resolve = 0;
   for (int col = 0; col < highs_model.lp_.numCol_; col++) {
-    model.util_getColBounds(model.lp_scaled_, col, col, &og_colLower, &og_colUpper);
+    //    model.util_getColBounds(model.lp_scaled_, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
     if (model.basis_->nonbasicFlag_[col]) {
@@ -439,12 +440,12 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   } else {
     // Copy the LP to the structure to be scaled and then scale it
     scaleHighsModel(highs_model);
-    model.lp_scaled_ = highs_model.lp_scaled_;
+    //    model.lp_scaled_ = highs_model.lp_scaled_;
     model.initWithLogicalBasis();
 
   }
 
-  const HighsLp& lp_scaled_ = model.lp_scaled_;
+  const HighsLp& lp_scaled_ = highs_model.lp_scaled_;
   highs_model.matrix_.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_,
 				  &lp_scaled_.Astart_[0],
 				  &lp_scaled_.Aindex_[0],

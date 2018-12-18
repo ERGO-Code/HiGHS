@@ -5,7 +5,7 @@ set(sources
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
-    io/HinOut.cpp
+#    io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
     lp_data/HighsLp.cpp
@@ -35,7 +35,7 @@ set(headers
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderMps.h
-    io/HinOut.h
+#    io/HinOut.h
     io/HMpsFF.h
     io/HMPSIO.h
     io/HToyIO_C.h
@@ -60,6 +60,7 @@ set(headers
     simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSort.h
+    simplex/Scaling.h
     presolve/Presolve.h
     simplex/HighsTimer.h
     simplex/HTimer.h

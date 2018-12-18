@@ -319,8 +319,7 @@ class HModel {
   // Methods for reporting the model, its solution, row and column data and
   // matrix
   void util_reportModelDa(HighsLp lp, const char* filename);
-  void util_reportModelSolution(HighsLp lp);
-  void util_reportModelStatus(HighsLp lp);
+  void util_reportModelStatus();
 #ifdef HiGHSDEV
   void util_reportModelDense(HighsLp lp);
 #endif
@@ -481,7 +480,7 @@ class HModel {
   vector<double> colRandomValue;
 
   // The scaled model
-  HighsLp lp_scaled_;
+  HighsLp *lp_scaled_;
   // Part of working model which is only required and populated once a solve is
   // initiated
   HMatrix *matrix_;
@@ -517,24 +516,24 @@ class HModel {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  int getPrStatus() { return problemStatus; }
-  int getObjSense() { return lp_scaled_.sense_; }
+  //  int getPrStatus() { return problemStatus; }
+  //  int getObjSense() { return lp_scaled_.sense_; }
   //  const HMatrix* getMatrix() { return &matrix; }
   //  const HFactor* getFactor() { return &factor; }
-  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
-  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
-  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
-  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
-  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
-  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
-  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
-  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
-  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
-  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
-  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
-  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
-  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  int* getColPermutation() { return &colPermutation[0]; }
+  //  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
+  //  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
+  //  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
+  //  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
+  //  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
+  //  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
+  //  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
+  //  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
+  //  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
+  //  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
+  //  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
+  //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
+  //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
+  //  int* getColPermutation() { return &colPermutation[0]; }
 };
 
 /*

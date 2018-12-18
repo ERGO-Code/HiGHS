@@ -101,18 +101,18 @@ class HCrash {
   string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
   void crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode);
   void crsh_rp_r_c_st(int mode, int Crash_Mode);
-  void crsh_ck_an_impl_bd();
   void ltssf_rp_r_k();
   void ltssf_rp_r_pri();
   void ltssf_rp_pri_k_da();
 #endif
   // Model
-  HModel *model;
-
   int numCol;
   int numRow;
   int numTot;
-  const HMatrix *matrix;
+  const HighsLp *lp_;
+  const HighsBasis *basis_;
+  const HMatrix *matrix_;
+  HModel *model_;
 
   //    LTSSF arrays
   vector<int> crsh_r_ty_pri_v;
