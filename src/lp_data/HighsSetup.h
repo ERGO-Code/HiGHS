@@ -19,7 +19,6 @@
 
 #include "HApp.h"
 #include "HighsLp.h"
-#include "HighsOptions.h"
 #include "Presolve.h"
 #include "HighsModelObject.h"
 #include "cxxopts.hpp"
@@ -33,7 +32,6 @@ class Highs {
  public:
   Highs() {}
   explicit Highs(const HighsOptions& opt) : options_(opt){};
-  explicit Highs(const HighsStringOptions& opt) : options__(opt){};
 
   // Function to call just presolve. 
   HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) {
@@ -55,10 +53,6 @@ class Highs {
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
   HighsStatus runSolver(HighsModelObject& model);
-
-  // use HighsStringOptions instead for now. Then rename to HighsOptions, once
-  // previous one is gone.
-  HighsStringOptions options__;
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -95,13 +89,17 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
     }
     case HighsPresolveStatus::Infeasible:
     case HighsPresolveStatus::Unbounded: {
-      // todo: report solver outcome.
-      break;
+      HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
+               HighsStatus::Infeasible : HighsStatus::Unbounded;
+
+      std::cout << "Problem status detected on presolve: "
+                << HighsStatusToString(result);
+      return result;
     }
     default: {
-      // case HighsPresolveStatus::Error:
-      // todo: handle error.
-      break;
+      // case HighsPresolveStatus::Error:a
+      std::cout << "Error during presolve.";
+      return HighsStatus::PresolveError;
     }
   }
 
