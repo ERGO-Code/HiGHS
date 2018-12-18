@@ -21,6 +21,9 @@ public:
 
   HighsLp& lp_;
 
+  int problemStatus;
+  string modelName;
+  
   HighsLp lp_scaled_;
   HighsSimplexInfo simplex_;
   HighsSolution solution_;

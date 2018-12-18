@@ -498,7 +498,6 @@ class HDual {
   const double *baseUpper;
   double *baseValue;
   double *workDual;
-  //    JAJH: Only because I can't get these from HModel.h
   double *workValue;
   double *colLower;
   double *colUpper;

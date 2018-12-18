@@ -434,11 +434,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.scale_ = &highs_model.scale_;
   model.simplex_ = &highs_model.simplex_;
 
-  bool load_fromArrays = true;
+  bool load_fromArrays = false;
   if (load_fromArrays) {
     highs_model.lp_scaled_ = highs_model.lp_;
     model.lp_scaled_ = &highs_model.lp_scaled_;
-        model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
+    model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
     			  &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
     			  &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
     			  &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
@@ -448,12 +448,12 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   } else {
     // Copy the LP to the structure to be scaled and then scale it
     scaleHighsModel(highs_model);
-    //    model.lp_scaled_ = highs_model.lp_scaled_;
     model.initWithLogicalBasis();
 
   }
 
-  const HighsLp& lp_scaled_ = highs_model.lp_scaled_;
+  //  HighsLp lp_scaled_ = highs_model.lp_scaled_;
+  HighsLp lp_scaled_ = *(&highs_model.lp_scaled_);
   highs_model.matrix_.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_,
 				  &lp_scaled_.Astart_[0],
 				  &lp_scaled_.Aindex_[0],

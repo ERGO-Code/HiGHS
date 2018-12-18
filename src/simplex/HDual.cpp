@@ -427,7 +427,6 @@ void HDual::init(int num_threads) {
   // Copy pointers
   jMove = &highs_model_object->basis_.nonbasicMove_[0];
   workDual = &highs_model_object->simplex_.workDual_[0];
-  //    JAJH: Only because I can't get this from HModel.h
   workValue = &highs_model_object->simplex_.workValue_[0];
   workRange = &highs_model_object->simplex_.workRange_[0];
   baseLower = &highs_model_object->simplex_.baseLower_[0];
