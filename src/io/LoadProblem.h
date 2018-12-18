@@ -14,7 +14,6 @@
 #ifndef IO_LOAD_PROBLEM_H_
 #define IO_LOAD_PROBLEM_H_
 
-#include "FilereaderLp.h"
 #include "FilereaderMps.h"
 #include "HModel.h"
 

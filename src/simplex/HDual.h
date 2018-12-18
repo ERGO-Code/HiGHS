@@ -14,18 +14,20 @@
 #ifndef SIMPLEX_HDUAL_H_
 #define SIMPLEX_HDUAL_H_
 
-#include "HCrash.h"
 #include "HDualRHS.h"
 #include "HDualRow.h"
-#include "HFactor.h"
 #include "HMatrix.h"
-#include "HModel.h"
 #include "HVector.h"
 #include "HighsModelObject.h"
 
 #include <set>
 #include <string>
 #include <vector>
+
+#include "HFactor.h"
+#include "HModel.h"
+#include "HCrash.h"
+
 using namespace std;
 
 /**

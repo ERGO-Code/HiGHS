@@ -13,7 +13,6 @@
  */
 #include "Presolve.h"
 #include "HConst.h"
-#include "HighsLp.h"
 
 #include <algorithm>
 #include <cmath>
