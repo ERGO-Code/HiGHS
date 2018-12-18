@@ -114,10 +114,10 @@ class HighsTimer {
    * @brief Report timing information for the clock indices in the list
    */
   void report(
-	      int *clockList          //!< List of indices to report
+	      std::vector<int>&clockList          //!< List of indices to report
   ) {
     const bool reportForExcel = false;
-    int numClockListEntries = sizeof(clockList) / sizeof(int);
+    int numClockListEntries = clockList.size();
     double tlPerCentReport = 0.1;
 
     printf("report: clockList[] = {"); for (int i = 0; i < numClockListEntries; i++) {printf(" %d", clockList[i]);} printf("}\n");

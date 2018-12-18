@@ -1485,7 +1485,7 @@ void HModel::scaleModel() {
   mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
   // Analyse the scaled model
-  //  utils.util_anMl(lp_scaled_, "Scaled");
+    utils.util_anMl(*lp_scaled_, "Scaled");
   //  if (mlFg_scaledLP) {
   //  utils.util_anVecV("Column scaling factors", numCol, colScale, false);
   //  utils.util_anVecV("Row scaling factors", numRow, rowScale, false);
