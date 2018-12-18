@@ -8,19 +8,13 @@ int main(int argc, char **argv) {
   int loadClock = timer.clockDef("Load", " Ld");
   int runClock = timer.clockDef("Run", "Run");
   //  timer.reset();
+  HiGHSRun();
 
   // Load user options.
   HighsOptions options;
   HighsStatus init_status = loadOptions(argc, argv, options);
 
-  // Use to replace old HighsOptions.
-  // HighsStringOptions options_;
-  // HighsStatus init_status_ = loadOptions(argc, argv, options_);
-
-  if (init_status != HighsStatus::OK) {
-//    printHelp(argv[0]);
-    return 0;
-  }
+  if (init_status != HighsStatus::OK) return 0;
 
   HighsLp lp;
   timer.start(loadClock);

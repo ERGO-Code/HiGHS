@@ -56,9 +56,9 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     return LpStatusToHighsStatus(model.problemStatus);
   }
 
-  solver.setCrash(opt.crashMode);
   // Crash, if HighsModelObject has basis information.
-  if (opt.crash) {
+  if (opt.crashMode.size() > 0) {
+    solver.setCrash(opt.crashMode.c_str());
     HCrash crash;
     crash.crash(highs_model, solver.Crash_Mode);
   }
@@ -70,22 +70,16 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.solve(highs_model, HDUAL_VARIANT_TASKS, 8);
   } else if (opt.pami) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    if (opt.partitionFile) {
+    if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    if (opt.cut) {
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-    } else {
-      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
-    }
+    solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
     if (opt.sip) model.writePivots("tasks");
 #endif
   } else {
     // Serial. Based on previous solvePlainJAJH.
-
-// todo: do setup and presolve timings elsewhere.
 
     double crashTime = 0; 
 #ifdef HiGHSDEV
@@ -108,8 +102,10 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     vector<double> rowPrAct;
     vector<double> rowDuAct;
 
-    solver.setPrice(opt.priceMode);
-    solver.setEdWt(opt.edWtMode);
+    if (opt.priceMode.size() > 0)
+      solver.setPrice(opt.priceMode.c_str());
+    if (opt.edWtMode.size() > 0)
+    solver.setEdWt(opt.edWtMode.c_str());
     solver.setTimeLimit(opt.timeLimit);
 
     model.timer.reset();
@@ -229,9 +225,19 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   HighsUtils utils;
   printf("Called solveScip.\n");
 
-  HModel& model = highs_model.hmodel_[0];
-  cout << flush;
-  //  model.util_reportModel();
+  // This happens locally for now because I am not sure how it is used. Later
+  // HModel will disappear and we'll see what the best way is.
+  HModel model;
+  const HighsLp& lp = highs_model.lp_;
+
+  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
+                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
+                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
+                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
+
+
+  // Scaling: Separate from simplex.
+  model.scaleModel();
 
   // Extract columns numCol-3..numCol-1
   int FmCol = highs_model.lp_.numCol_ - 3;
@@ -428,14 +434,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.scale_ = &highs_model.scale_;
   model.simplex_ = &highs_model.simplex_;
 
-  bool load_fromArrays = false;
+  bool load_fromArrays = true;
   if (load_fromArrays) {
-    model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
-			  &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
-			  &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
-			  &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
+    highs_model.lp_scaled_ = highs_model.lp_;
+    model.lp_scaled_ = &highs_model.lp_scaled_;
+        model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
+    			  &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
+    			  &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
+    			  &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
     // Scaling: Separate from simplex.
-    model.scaleModel();
+   model.scaleModel();
 
   } else {
     // Copy the LP to the structure to be scaled and then scale it

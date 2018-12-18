@@ -161,19 +161,25 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   // Load the model, timing the process
   timer.reset();
 
+  /*
   lp_scaled_->numCol_ = XnumCol;
   lp_scaled_->numRow_ = XnumRow;
   lp_scaled_->sense_ = Xsense;
   int numNz = XnumNz;
   lp_scaled_->colCost_.assign(&XcolCost[0], &XcolCost[0] + lp_scaled_->numCol_);
   lp_scaled_->colLower_.assign(&XcolLower[0], &XcolLower[0] + lp_scaled_->numCol_);
+  lp_scaled_->colUpper_.resize(XnumCol);
+  printf("XnumCol = %d\n", XnumCol);
+  for (int iCol=0;iCol<XnumCol;iCol++) {
+    printf("ColUpper[%2d]=%g\n",iCol,XcolUpper[iCol]);
+  }
   lp_scaled_->colUpper_.assign(&XcolUpper[0], &XcolUpper[0] + lp_scaled_->numCol_);
   lp_scaled_->rowLower_.assign(&XrowLower[0], &XrowLower[0] + lp_scaled_->numRow_);
   lp_scaled_->rowUpper_.assign(&XrowUpper[0], &XrowUpper[0] + lp_scaled_->numRow_);
   lp_scaled_->Astart_.assign(&XAstart[0], &XAstart[0] + lp_scaled_->numCol_ + 1);
   lp_scaled_->Aindex_.assign(&XAindex[0], &XAindex[0] + numNz);
   lp_scaled_->Avalue_.assign(&XAvalue[0], &XAvalue[0] + numNz);
-
+  */
   // Assign and initialise the scaling factors
   initScale();
 
@@ -700,24 +706,24 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
 
 void HModel::clearModel() {
   // Clears all model data
-  lp_scaled_->numRow_ = 0;
-  lp_scaled_->numCol_ = 0;
+  //  lp_scaled_->numRow_ = 0;
+  //  lp_scaled_->numCol_ = 0;
   problemStatus = LP_Status_Unset;
-  lp_scaled_->sense_ = 0;
-  lp_scaled_->offset_ = 0.0;
+  //  lp_scaled_->sense_ = 0;
+  //  lp_scaled_->offset_ = 0.0;
   //  scale.cost_ = 1;
 #ifdef HiGHSDEV
   numLargeCo = 0;
 #endif
-  lp_scaled_->Astart_.clear();
-  lp_scaled_->Aindex_.clear();
-  lp_scaled_->Avalue_.clear();
-  lp_scaled_->colCost_.clear();
-  lp_scaled_->colLower_.clear();
-  lp_scaled_->colUpper_.clear();
+  //  lp_scaled_->Astart_.clear();
+  //  lp_scaled_->Aindex_.clear();
+  //  lp_scaled_->Avalue_.clear();
+  //  lp_scaled_->colCost_.clear();
+  //  lp_scaled_->colLower_.clear();
+  //  lp_scaled_->colUpper_.clear();
   //  scale.col_.clear();
-  lp_scaled_->rowLower_.clear();
-  lp_scaled_->rowUpper_.clear();
+  //  lp_scaled_->rowLower_.clear();
+  //  lp_scaled_->rowUpper_.clear();
   //  scale.row_.clear();
   //  basis_->basicIndex_.clear();
   //  basis_->nonbasicFlag_.clear();
@@ -735,7 +741,7 @@ void HModel::clearModel() {
   // lp_scaled_->Astart_.push_back(0) added since this is the start of the
   // non-existent 1st column when there are no columns. Important in
   // util_addCols()
-  lp_scaled_->Astart_.push_back(0);
+  //  lp_scaled_->Astart_.push_back(0);
 
   impliedBoundsPresolve = false;
 
