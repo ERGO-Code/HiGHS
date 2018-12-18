@@ -82,64 +82,60 @@ bool highs_isInfinity(
 		      double val //!< Value being tested against +Infinity
 		      );
 
-#ifdef HiGHSDEV
-  // Analyse the values of a vector, assessing how many are in each power of ten
-  void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
-#endif
-
-  // Methods taking HighsLp as an argument
-  /**
-   * @brief Report the data of an LP
-   */
-  void reportLp(
-		HighsLp &lp //!< LP whose data are to be reported
-		);
-  /**
-   * @brief Report the brief data of an LP 
-   */
-  void reportLpBrief(
-		     HighsLp &lp //!< LP whose data are to be reported
-		     );
-  /**
-   * @brief Report the data of an LP
-   */
-  void reportLpDimensions(
-			  HighsLp &lp //!< LP whose data are to be reported
-			  );
-  /**
-   * @brief Report the data of an LP
-   */
-  void reportLpObjSense(
+// Methods taking HighsLp as an argument
+/**
+ * @brief Report the data of an LP
+ */
+void reportLp(
+	      HighsLp &lp //!< LP whose data are to be reported
+	      );
+/**
+ * @brief Report the brief data of an LP 
+ */
+void reportLpBrief(
+		   HighsLp &lp //!< LP whose data are to be reported
+		   );
+/**
+ * @brief Report the data of an LP
+ */
+void reportLpDimensions(
 			HighsLp &lp //!< LP whose data are to be reported
 			);
-  /**
-   * @brief Report the data of an LP
-   */
-  void reportLpColVec(
+/**
+ * @brief Report the data of an LP
+ */
+void reportLpObjSense(
 		      HighsLp &lp //!< LP whose data are to be reported
 		      );
-  /**
-   * @brief Report the data of an LP
-   */
-  void reportLpRowVec(
-		      HighsLp &lp //!< LP whose data are to be reported
-		      );
-  /**
-   * @brief Report the data of an LP
-   */
-  void reportLpColMtx(
-		      HighsLp &lp //!< LP whose data are to be reported
-		      );
+/**
+ * @brief Report the data of an LP
+ */
+void reportLpColVec(
+		    HighsLp &lp //!< LP whose data are to be reported
+		    );
+/**
+ * @brief Report the data of an LP
+ */
+void reportLpRowVec(
+		    HighsLp &lp //!< LP whose data are to be reported
+		    );
+/**
+ * @brief Report the data of an LP
+ */
+void reportLpColMtx(
+		    HighsLp &lp //!< LP whose data are to be reported
+		    );
 
 
 /*
   void reportLpSolution(
-			HighsModelObject &highs_model //!< Model object whose LP solution is to be reported
-			);
+  HighsModelObject &highs_model //!< Model object whose LP solution is to be reported
+  );
 */
 #ifdef HiGHSDEV
-  
-  void util_anMl(HighsLp &lp, const char* message);
-  void util_anMlBd(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
+// Analyse the values of a vector, assessing how many are in each power of ten
+void util_anMl(HighsLp &lp, const char* message);
+void util_anMlBd(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
+void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
 #endif
 #endif // LP_DATA_HIGHSUTILS_H_
