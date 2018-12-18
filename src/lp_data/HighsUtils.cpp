@@ -12,9 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "HConfig.h"
 #include "HighsLp.h"
 #include "HighsUtils.h"
+#include "HConst.h"
 
 #include <cmath>
 

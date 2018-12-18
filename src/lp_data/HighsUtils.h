@@ -15,8 +15,8 @@
 #define LP_DATA_HIGHSUTILS_H_
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HConst.h"
+
+class HighsLp;
 
 // Logical check of double being +Infinity
 bool highs_isInfinity(double val);

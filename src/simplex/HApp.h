@@ -52,10 +52,9 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     return LpStatusToHighsStatus(model.problemStatus);
   }
 
-  solver.setCrash(opt.crashMode);
-
   // Crash, if HighsModelObject has basis information.
-  if (opt.crash) {
+  if (opt.crashMode.size() > 0) {
+    solver.setCrash(opt.crashMode.c_str());
     HCrash crash;
     crash.crash(&model, solver.Crash_Mode);
   }
@@ -67,14 +66,10 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
   } else if (opt.pami) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    if (opt.partitionFile) {
+    if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    if (opt.cut) {
-      model.dblOption[DBLOPT_PAMI_CUTOFF] = opt.cut;
-    } else {
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
-    }
+    solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
     if (opt.sip) model.writePivots("tasks");
@@ -105,8 +100,10 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     vector<double> rowPrAct;
     vector<double> rowDuAct;
 
-    solver.setPrice(opt.priceMode);
-    solver.setEdWt(opt.edWtMode);
+    if (opt.priceMode.size() > 0)
+      solver.setPrice(opt.priceMode.c_str());
+    if (opt.edWtMode.size() > 0)
+    solver.setEdWt(opt.edWtMode.c_str());
     solver.setTimeLimit(opt.timeLimit);
 
     model.timer.reset();
@@ -224,9 +221,19 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   printf("Called solveScip.\n");
 
-  HModel& model = highs_model.hmodel_[0];
-  cout << flush;
-  //  model.util_reportModel();
+  // This happens locally for now because I am not sure how it is used. Later
+  // HModel will disappear and we'll see what the best way is.
+  HModel model;
+  const HighsLp& lp = highs_model.lp_;
+
+  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
+                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
+                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
+                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
+
+
+  // Scaling: Separate from simplex.
+  model.scaleModel();
 
   // Extract columns numCol-3..numCol-1
   int FmCol = model.lpScaled.numCol_ - 3;

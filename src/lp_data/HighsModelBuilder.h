@@ -14,7 +14,7 @@
 #ifndef HIGHS_MODEL_BUILDER_H
 #define HIGHS_MODEL_BUILDER_H
 
-#include "HighsLp.h"
+class HighsLp;
 
 #include <list>
 
