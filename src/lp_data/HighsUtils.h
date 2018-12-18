@@ -18,7 +18,7 @@
 #include "HighsLp.h"
 #include "HConst.h"
 //#include "HModel.h"
-#include "HighsModelObject.h"
+//#include "HighsModelObject.h"
 
 const int initial_random_mw = 1985;
 const int initial_random_mz = 2012;
@@ -132,10 +132,11 @@ bool highs_isInfinity(
 		      );
 
 
+/*
   void reportLpSolution(
 			HighsModelObject &highs_model //!< Model object whose LP solution is to be reported
 			);
-
+*/
 #ifdef HiGHSDEV
   
   void util_anMl(HighsLp &lp, const char* message);

@@ -25,7 +25,7 @@ bool highs_isInfinity(double val) {
 }
 
 #ifdef HiGHSDEV
-void HighsUtils::util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
+void util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
                          bool anVLs) {
   if (vecDim == 0) return;
   double log10 = log(10.0);
@@ -220,6 +220,7 @@ void reportLpColMtx(HighsLp &lp) {
                     lp.Astart_[lp.numCol_]);
 }
 
+/*
 void reportLpSolution(HighsModelObject &highs_model) {
   HighsLp lp = highs_model.lp_scaled_;
   reportLpBrief(lp);
@@ -237,6 +238,7 @@ void reportLpSolution(HighsModelObject &highs_model) {
   //  util_reportColVecSol(lp.numCol_, lp.colCost_, lp.colLower_, lp.colUpper_, colPrimal, colDual, colStatus);
   //  util_reportRowVecSol(lp.numRow_, lp.rowLower_, lp.rowUpper_, rowPrimal, rowDual, rowStatus);
 }
+*/
 
 #ifdef HiGHSDEV
 void util_anMl(HighsLp &lp, const char *message) {
