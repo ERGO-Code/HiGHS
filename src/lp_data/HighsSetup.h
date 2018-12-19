@@ -163,7 +163,6 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
   // Report times
-  printf("clockList[] = {%d %d %d %d %d}\n", presolveClock, scaleClock, crashClock, solveClock, postsolveClock);
   std::vector<int> clockList{presolveClock, scaleClock, crashClock, solveClock, postsolveClock};
   timer.report(clockList);
 

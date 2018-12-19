@@ -524,11 +524,7 @@ void HModel::initWithLogicalBasis() {
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
 
-  //  basis_->basicIndex_.resize(lp_scaled_->numRow_); //Now set up in solveSimplex
   for (int row = 0; row < lp_scaled_->numRow_; row++) basis_->basicIndex_[row] = lp_scaled_->numCol_ + row;
-  //  const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
-  //  basis_->nonbasicFlag_.assign(numTot, 0); //Now set up in solveSimplex
-  //  basis_->nonbasicMove_.resize(numTot); //Now set up in solveSimplex
   for (int col = 0; col < lp_scaled_->numCol_; col++) basis_->nonbasicFlag_[col] = 1;
   numBasicLogicals = lp_scaled_->numRow_;
 

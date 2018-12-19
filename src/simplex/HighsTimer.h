@@ -120,8 +120,6 @@ class HighsTimer {
     int numClockListEntries = clockList.size();
     double tlPerCentReport = 0.1;
 
-    printf("report: clockList[] = {"); for (int i = 0; i < numClockListEntries; i++) {printf(" %d", clockList[i]);} printf("}\n");
-
     // Report in one line the per-mille contribution from each clock
     double totalTick = getTick();
     printf("txt-profile-name  ");

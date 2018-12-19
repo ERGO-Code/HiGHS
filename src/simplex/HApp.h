@@ -449,8 +449,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     // Copy the LP to the structure to be scaled and then scale it
     scaleHighsModel(highs_model);
     model.initWithLogicalBasis();
-
   }
+    printf("numBasicLogicals = %d\n", model.numBasicLogicals);
+    printf("basis_->basicIndex_[0] = %d\n", highs_model.basis_.basicIndex_[0]);
+    printf("basis_->nonbasicFlag_[0] = %d\n", highs_model.basis_.nonbasicFlag_[0]);
 
   //  HighsLp lp_scaled_ = highs_model.lp_scaled_;
   HighsLp lp_scaled_ = *(&highs_model.lp_scaled_);
