@@ -8,10 +8,13 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HAPI.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HAPI.h"
+
+#include <cstring>
+
 #include "HDual.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
@@ -97,9 +100,12 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
          sizeof(double) * model.lpScaled.numCol_);
   memcpy(rowPrimalValues, &(XrowPrimalValues[0]),
          sizeof(double) * model.lpScaled.numRow_);
-  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double) * model.lpScaled.numCol_);
-  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double) * model.lpScaled.numRow_);
-  memcpy(basicVariables, &(model.basis.basicIndex_[0]), sizeof(int) * model.lpScaled.numRow_);
+  memcpy(colDualValues, &(XcolDualValues[0]),
+         sizeof(double) * model.lpScaled.numCol_);
+  memcpy(rowDualValues, &(XrowDualValues[0]),
+         sizeof(double) * model.lpScaled.numRow_);
+  memcpy(basicVariables, &(model.basis.basicIndex_[0]),
+         sizeof(int) * model.lpScaled.numRow_);
   LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef HiGHSDEV

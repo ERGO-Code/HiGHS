@@ -184,38 +184,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
 
   totalTime += timer.getTime();
 }
-/*
-void HModel::loadfromPresolveInfo(const PresolveInfo& info,
-                                  const bool postsolve) {
-  clearModel();
-  
-  copy_fromHPresolveToHModel(info.presolve_[0]);
-  initScale();
-  initWithLogicalBasis();
-  if (!postsolve) {
-    copy_fromHPresolveToHModelImplied(info.presolve_[0]);
-  } else {
-#ifdef HiGHSDEV
-    check_load_fromPostsolve();
-#endif 
-  }
-}
-*/
-void HModel::copy_fromHModelToHPresolve(Presolve *ptr_model) {
-  /*
-  ptr_model->numCol = lp.numCol_;
-  ptr_model->numRow = lp.numRow_;
-  ptr_model->Astart = lp.Astart_;
-  ptr_model->Aindex = lp.Aindex_;
-  ptr_model->Avalue = lp.Avalue_;
-  ptr_model->colCost = lp.colCost_;
-  ptr_model->colLower = lp.colLower_;
-  ptr_model->colUpper = lp.colUpper_;
-  ptr_model->rowLower = lp.rowLower_;
-  ptr_model->rowUpper = lp.rowUpper_;
-  */
-  ptr_model->modelName = &modelName[0];
-}
 
 void HModel::copy_impliedBoundsToModelBounds() {
   // Save copies of the current model bounds
@@ -1726,88 +1694,6 @@ void HModel::setup_shuffleColumn() {
   mlFg_Update(mlFg_action_ShuffleLP);
 }
 
-void HModel::copy_basisFromPostsolve(Presolve &ptr_model) {
-  basis.basicIndex_ = ptr_model.basicIndex;
-  basis.nonbasicFlag_ = ptr_model.nonbasicFlag;
-  basis.nonbasicMove_ = ptr_model.nonbasicMove;
-}
-
-void HModel::copy_basisFromPostsolve(Presolve *ptr_model) {
-  basis.basicIndex_ = ptr_model->basicIndex;
-  basis.nonbasicFlag_ = ptr_model->nonbasicFlag;
-  basis.nonbasicMove_ = ptr_model->nonbasicMove;
-}
-
-void HModel::copy_fromHPresolveToHModel(Presolve &ptr_model) {
-  /*
-  lp.numCol_ = ptr_model.numCol;
-  lp.numRow_ = ptr_model.numRow;
-  lp.Astart_ = ptr_model.Astart;
-  lp.Aindex_ = ptr_model.Aindex;
-  lp.Avalue_ = ptr_model.Avalue;
-  lp.colCost_ = ptr_model.colCost;
-  lp.colLower_ = ptr_model.colLower;
-  lp.colUpper_ = ptr_model.colUpper;
-  lp.rowLower_ = ptr_model.rowLower;
-  lp.rowUpper_ = ptr_model.rowUpper;
-
-  lp.sense_ = 1;
-  */
-
-}
-
-void HModel::copy_fromHPresolveToHModel(Presolve *ptr_model) {
-  /*
-  lp.numCol_ = ptr_model->numCol;
-  lp.numRow_ = ptr_model->numRow;
-  lp.Astart_ = ptr_model->Astart;
-  lp.Aindex_ = ptr_model->Aindex;
-  lp.Avalue_ = ptr_model->Avalue;
-  lp.colCost_ = ptr_model->colCost;
-  lp.colLower_ = ptr_model->colLower;
-  lp.colUpper_ = ptr_model->colUpper;
-  lp.rowLower_ = ptr_model->rowLower;
-  lp.rowUpper_ = ptr_model->rowUpper;
-
-  lp.sense_ = 1;
-  */
-}
-
-void HModel::copy_fromHPresolveToHModelImplied(const Presolve &ptr_model) {
-  impliedBoundsPresolve = true;
-  primalColLowerImplied = ptr_model.implColLower;
-  primalColUpperImplied = ptr_model.implColUpper;
-  primalRowLowerImplied = ptr_model.implRowValueLower;
-  primalRowUpperImplied = ptr_model.implRowValueUpper;
-  dualColLowerImplied = ptr_model.implColDualLower;
-  dualColUpperImplied = ptr_model.implColDualUpper;
-  dualRowLowerImplied = ptr_model.implRowDualLower;
-  dualRowUpperImplied = ptr_model.implRowDualUpper;
-}
-
-void HModel::copy_fromHPresolveToHModelImplied(Presolve &ptr_model) {
-  impliedBoundsPresolve = true;
-  primalColLowerImplied = ptr_model.implColLower;
-  primalColUpperImplied = ptr_model.implColUpper;
-  primalRowLowerImplied = ptr_model.implRowValueLower;
-  primalRowUpperImplied = ptr_model.implRowValueUpper;
-  dualColLowerImplied = ptr_model.implColDualLower;
-  dualColUpperImplied = ptr_model.implColDualUpper;
-  dualRowLowerImplied = ptr_model.implRowDualLower;
-  dualRowUpperImplied = ptr_model.implRowDualUpper;
-}
-
-void HModel::copy_fromHPresolveToHModelImplied(Presolve *ptr_model) {
-  impliedBoundsPresolve = true;
-  primalColLowerImplied = ptr_model->implColLower;
-  primalColUpperImplied = ptr_model->implColUpper;
-  dualColLowerImplied = ptr_model->implColDualLower;
-  dualColUpperImplied = ptr_model->implColDualUpper;
-  primalRowLowerImplied = ptr_model->implRowValueLower;
-  primalRowUpperImplied = ptr_model->implRowValueUpper;
-  dualRowLowerImplied = ptr_model->implRowDualLower;
-  dualRowUpperImplied = ptr_model->implRowDualUpper;
-}
 
 void HModel::setup_numBasicLogicals() {
   numBasicLogicals = 0;

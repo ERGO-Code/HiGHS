@@ -33,7 +33,7 @@ void HinOut::HinOutTestIO(HModel& ptr) {
 }
 
 void HinOut::readDataColumnWise() {
-  ifstream f;
+  std::ifstream f;
   int i;
 
   f.open(fileIn, ios::in);

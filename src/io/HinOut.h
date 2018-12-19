@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include "HModel.h"
+#include "Presolve.h"
 
 class HinOut : public HPreData {
  public:

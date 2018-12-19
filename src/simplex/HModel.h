@@ -19,12 +19,11 @@
 #include "HFactor.h"
 #include "HMatrix.h"
 #include "HModelCs.h"
-#include "Presolve.h"
 #include "HTimer.h"
-#include "HVector.h"
 #include "HighsLp.h"
 #include "HighsUtils.h"
-#include "HSimplex.h"
+
+class HVector;
 
 #include <sstream>
 #include <string>
@@ -138,17 +137,6 @@ class HModel {
   void setup_transposeLP();
   void setup_tightenBound();
   void setup_shuffleColumn();
-
-  // Methods to copy between a HModel instance and a HPresolve instance
-  void copy_fromHModelToHPresolve(Presolve* ptr_model);
-  void copy_fromHPresolveToHModel(Presolve* ptr_model);
-  void copy_fromHPresolveToHModel(Presolve& ptr_model);
-  void copy_fromHPresolveToHModel(const Presolve& ptr_model);
-  void copy_fromHPresolveToHModelImplied(Presolve* ptr_model);
-  void copy_fromHPresolveToHModelImplied(Presolve& ptr_model);
-  void copy_fromHPresolveToHModelImplied(const Presolve& ptr_model);
-  void copy_basisFromPostsolve(Presolve* mod);
-  void copy_basisFromPostsolve(Presolve& mod);
 
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
