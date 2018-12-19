@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HinOut.h"
+#include "HConst.h"
 
 void HinOut::HinOutTestRead(HModel& ptr) {
   readDataColumnWise();

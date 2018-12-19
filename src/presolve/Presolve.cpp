@@ -14,6 +14,9 @@
 #include "Presolve.h"
 #include "HConst.h"
 
+#include "HFactor.h"
+#include "KktChStep.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>

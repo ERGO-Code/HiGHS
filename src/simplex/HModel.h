@@ -15,10 +15,8 @@
 #define SIMPLEX_HMODEL_H_
 
 #include "HConfig.h"
-#include "HConst.h"
 #include "HFactor.h"
 #include "HMatrix.h"
-#include "HModelCs.h"
 #include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsUtils.h"

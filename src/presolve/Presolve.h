@@ -27,7 +27,8 @@
 #include "KktChStep.h"
 #include "HighsLp.h"
 
-using namespace std;
+class HFactor;
+class KktChStep;
 
 enum class HighsPostsolveStatus {
   ReducedSolutionEmpty,

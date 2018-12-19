@@ -20,7 +20,7 @@
 using namespace std;
 
 #include "HConfig.h"
-#include "HVector.h"
+class HVector;
 
 enum UPDATE_METHOD {
   UPDATE_METHOD_FT = 1,

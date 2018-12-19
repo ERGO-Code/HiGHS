@@ -15,9 +15,7 @@
 #include "HConst.h"
 #include "HMPSIO.h"
 #include "Presolve.h"
-#include "HTimer.h"
 #include "HToyIO.h"
-#include "HighsUtils.h"
 
 #include <algorithm>
 #include <cassert>
@@ -1694,6 +1692,42 @@ void HModel::setup_shuffleColumn() {
   mlFg_Update(mlFg_action_ShuffleLP);
 }
 
+/*
+void HModel::copy_fromHPresolveToHModelImplied(const Presolve &ptr_model) {
+  impliedBoundsPresolve = true;
+  primalColLowerImplied = ptr_model.implColLower;
+  primalColUpperImplied = ptr_model.implColUpper;
+  primalRowLowerImplied = ptr_model.implRowValueLower;
+  primalRowUpperImplied = ptr_model.implRowValueUpper;
+  dualColLowerImplied = ptr_model.implColDualLower;
+  dualColUpperImplied = ptr_model.implColDualUpper;
+  dualRowLowerImplied = ptr_model.implRowDualLower;
+  dualRowUpperImplied = ptr_model.implRowDualUpper;
+}
+
+void HModel::copy_fromHPresolveToHModelImplied(Presolve &ptr_model) {
+  impliedBoundsPresolve = true;
+  primalColLowerImplied = ptr_model.implColLower;
+  primalColUpperImplied = ptr_model.implColUpper;
+  primalRowLowerImplied = ptr_model.implRowValueLower;
+  primalRowUpperImplied = ptr_model.implRowValueUpper;
+  dualColLowerImplied = ptr_model.implColDualLower;
+  dualColUpperImplied = ptr_model.implColDualUpper;
+  dualRowLowerImplied = ptr_model.implRowDualLower;
+  dualRowUpperImplied = ptr_model.implRowDualUpper;
+}
+
+void HModel::copy_fromHPresolveToHModelImplied(Presolve *ptr_model) {
+  impliedBoundsPresolve = true;
+  primalColLowerImplied = ptr_model->implColLower;
+  primalColUpperImplied = ptr_model->implColUpper;
+  dualColLowerImplied = ptr_model->implColDualLower;
+  dualColUpperImplied = ptr_model->implColDualUpper;
+  primalRowLowerImplied = ptr_model->implRowValueLower;
+  primalRowUpperImplied = ptr_model->implRowValueUpper;
+  dualRowLowerImplied = ptr_model->implRowDualLower;
+  dualRowUpperImplied = ptr_model->implRowDualUpper;
+}*/
 
 void HModel::setup_numBasicLogicals() {
   numBasicLogicals = 0;
