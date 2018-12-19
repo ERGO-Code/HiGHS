@@ -32,6 +32,7 @@ public:
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
+  HighsTimer timer_;
 
   BasisInfo basis_info_;
 

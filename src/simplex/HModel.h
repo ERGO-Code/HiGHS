@@ -534,50 +534,6 @@ class HModel {
   //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
   //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
   //  int* getColPermutation() { return &colPermutation[0]; }
-
-  // Clocks for profiling the dual simplex solver
-  int Group1Clock;            //!< Group for SIP
-  int IterateClock;           //!< Top level timing of HDual::solve_phase1() and HDual::solve_phase2()
-  int IterateRebuildClock;   //!< Second level timing of rebuild()
-  int IterateChuzrClock;     //!< Second level timing of CHUZR
-  int IterateChuzcClock;     //!< Second level timing of CHUZC
-  int IterateFtranClock;     //!< Second level timing of FTRAN
-  int IterateVerifyClock;    //!< Second level timing of numerical check
-  int IterateDualClock;      //!< Second level timing of dual update
-  int IteratePrimalClock;    //!< Second level timing of primal update
-  int IterateDevexIzClock;  //!< Second level timing of initialise Devex
-  int IteratePivotsClock;    //!< Second level timing of pivoting
-  int InvertClock;          //!< Invert in rebuild()
-  int PermWtClock;         //!< Permutation of SED weights each side of INVERT in rebuild()
-  int ComputeDualClock;    //!< Computation of dual values in rebuild()
-  int CorrectDualClock;    //!< Correction of dual values in rebuild()
-  int CollectPrIfsClock;  //!< Identification of primal infeasibilities in rebuild()
-  int ComputePrimalClock;  //!< Computation of primal values in rebuild()
-  int ComputeDuobjClock;   //!< Computation of dual objective value in rebuild()
-  int ReportInvertClock;   //!< Reporting of log line in rebuild()
-  int Chuzr1Clock;          //!< CHUZR
-  int Chuzc0Clock;          //!< CHUZC - stage 0
-  int Chuzc1Clock;          //!< CHUZC - stage 1
-  int Chuzc2Clock;          //!< CHUZC - stage 2
-  int Chuzc3Clock;          //!< CHUZC - stage 3
-  int Chuzc4Clock;          //!< CHUZC - stage 4
-  int DevexWtClock;        //!< Calculation of Devex weight of entering variable
-  int FtranClock;           //!< FTRAN - pivotal column
-  int BtranClock;           //!< BTRAN
-  int PriceClock;           //!< PRICE
-  int FtranDseClock;       //!< FTRAN for DSE weights
-  int FtranMixClock;       //!< FTRAN for PAMI
-  int FtranBfrtClock;      //!< FTRAN for BFRT
-  int UpdateDualClock;     //!< Update of dual values
-  int UpdatePrimalClock;   //!< Update of primal values
-  int DevexIzClock;        //!< Initialisation of new Devex framework
-  int UpdateWeightClock;   //!< Update of DSE or Devex weights
-  int UpdatePivotsClock;   //!< Update indices of basic and nonbasic after basis change
-  int UpdateFactorClock;   //!< Update the representation of \f$B^{-1}\f$
-  int UpdateMatrixClock;   //!< Update the row-wise copy of the constraint matrix for nonbasic columns
-  int UpdateRowEpClock;   //!< Update the tableau rows in PAMI
-
-
 };
 
 /*

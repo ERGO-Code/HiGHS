@@ -131,12 +131,16 @@ class HDual {
   /**
    * @brief Perform Phase 1 dual simplex iterations
    */
-  void solve_phase1();
+  void solve_phase1(
+		    HighsModelObject &highs_model_object //!< Model object for phase 1 iterations
+		    );
 
   /**
    * @brief Perform Phase 2 dual simplex iterations
    */
-  void solve_phase2();
+  void solve_phase2(
+		    HighsModelObject &highs_model_object //!< Model object for phase 2 iterations
+		    );
 
   /**
    * @brief Reinvert if INVERT not fresh, then recompute dual and primal values
@@ -161,7 +165,9 @@ class HDual {
    * finds no candidate. This causes a break from the inner loop of
    * solve_phase% and, hence, a call to rebuild().
    */
-  void iterate();
+  void iterate(
+	       HighsModelObject &highs_model_object //!< Model object for iterations
+	       );
 
   /**
    * @brief Perform a single SIP dual simplex iteration
