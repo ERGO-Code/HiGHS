@@ -17,7 +17,7 @@
 #include "HConfig.h"
 #include "HighsModelObject.h"
 #include <cassert>
-#include <vector>
+//#include <vector>
 #include <iostream>
 
 // Limits on scaling factors
@@ -106,8 +106,8 @@ void scaleCosts(HighsModelObject &highs_model) {
 #endif
 }
 
-void scaleHighsModel(HighsModelObject &highs_model) {
-  highs_model.lp_scaled_ = highs_model.lp_;
+void scaleLp(HighsModelObject &highs_model) {
+  // Scale the LP highs_model.lp_scaled_, assuming all data are in place
   // Reset all scaling to 1
   scaleHighsModelInit(highs_model);
   double *colScale = &highs_model.scale_.col_[0];

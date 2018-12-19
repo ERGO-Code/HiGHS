@@ -429,30 +429,18 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
   highs_model.basis_.nonbasicMove_.resize(numTot);
 
-  // Set pointers within HModel for the basis, scaling data structure and simplex information data structure
+  // Set pointers within HModel
   model.basis_ = &highs_model.basis_;
   model.scale_ = &highs_model.scale_;
   model.simplex_ = &highs_model.simplex_;
+  model.lp_scaled_ = &highs_model.lp_scaled_;
+  model.matrix_ = &highs_model.matrix_;
+  model.factor_ = &highs_model.factor_;
 
-  bool load_fromArrays = false;
-  if (load_fromArrays) {
-    highs_model.lp_scaled_ = highs_model.lp_;
-    model.lp_scaled_ = &highs_model.lp_scaled_;
-    model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
-    			  &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
-    			  &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
-    			  &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
-    // Scaling: Separate from simplex.
-   model.scaleModel();
-
-  } else {
-    // Copy the LP to the structure to be scaled and then scale it
-    scaleHighsModel(highs_model);
-    model.initWithLogicalBasis();
-  }
-    printf("numBasicLogicals = %d\n", model.numBasicLogicals);
-    printf("basis_->basicIndex_[0] = %d\n", highs_model.basis_.basicIndex_[0]);
-    printf("basis_->nonbasicFlag_[0] = %d\n", highs_model.basis_.nonbasicFlag_[0]);
+  // Copy the LP to the structure to be scaled and then scale it
+  highs_model.lp_scaled_ = highs_model.lp_;
+  scaleLp(highs_model);
+  model.initWithLogicalBasis();
 
   //  HighsLp lp_scaled_ = highs_model.lp_scaled_;
   HighsLp lp_scaled_ = *(&highs_model.lp_scaled_);
@@ -468,8 +456,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 			   &highs_model.basis_.basicIndex_[0]);
 
   // Set pointers within HModel for the matrix and factor data structure
-  model.matrix_ = &highs_model.matrix_;
-  model.factor_ = &highs_model.factor_;
+  //  model.matrix_ = &highs_model.matrix_;
+  //  model.factor_ = &highs_model.factor_;
 
 
   // Crash, if needed.

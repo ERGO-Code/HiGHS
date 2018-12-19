@@ -24,7 +24,7 @@
 #include "HVector.h"
 #include "HighsLp.h"
 #include "HighsUtils.h"
-#include "HSimplex.h"
+//#include "HSimplex.h"
 
 #include <sstream>
 #include <string>
