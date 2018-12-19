@@ -14,6 +14,7 @@
 #include "KktChStep.h"
 
 #include "HConst.h"
+#include "KktCheck.h"
 
 #include <utility>
 using namespace std;

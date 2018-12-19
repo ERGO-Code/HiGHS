@@ -20,8 +20,9 @@
 #include <iostream>
 #include <stack>
 #include <string>
+#include <vector>
 
-#include "KktCheck.h"
+class KktCheck;
 
 class KktChStep {
   // model: full matrix in AR (row-wise) and working copy(column-wise)
