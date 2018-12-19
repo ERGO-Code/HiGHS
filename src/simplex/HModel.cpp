@@ -16,6 +16,7 @@
 #include "HMPSIO.h"
 #include "Presolve.h"
 #include "HToyIO.h"
+#include "HVector.h"
 
 #include <algorithm>
 #include <cassert>
