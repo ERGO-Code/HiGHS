@@ -21,10 +21,8 @@
 #include <utility>
 #include <vector>
 
-#include "HFactor.h"
 #include "HPreData.h"
 #include "HTimerPre.h"
-#include "KktChStep.h"
 #include "HighsLp.h"
 
 class HFactor;
