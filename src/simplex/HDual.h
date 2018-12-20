@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "HConfig.h"
 #include "HDualRHS.h"
 #include "HDualRow.h"
 #include "HVector.h"
@@ -422,8 +423,8 @@ class HDual {
                                   //!< column headers or data
   );
   int intLog10(double v);
-  void iterateOpRecBf(int opTy, HVector &std::vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector &std::vector);
+  void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
+  void iterateOpRecAf(int opTy, HVector &vector);
   void iterateRpAn();
   void an_iz_vr_v();
 #endif

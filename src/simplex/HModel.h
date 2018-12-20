@@ -14,7 +14,6 @@
 #ifndef SIMPLEX_HMODEL_H_
 #define SIMPLEX_HMODEL_H_
 
-#include "HConfig.h"
 #include "HFactor.h"
 #include "HMatrix.h"
 #include "HTimer.h"
