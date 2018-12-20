@@ -25,9 +25,6 @@
 #include "HTimerPre.h"
 #include "HighsLp.h"
 
-class HFactor;
-class KktChStep;
-
 enum class HighsPostsolveStatus {
   ReducedSolutionEmpty,
   ReducedSolutionDimenionsError,
