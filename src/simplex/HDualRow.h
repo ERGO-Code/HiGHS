@@ -14,12 +14,11 @@
 #ifndef SIMPLEX_HDUALROW_H_
 #define SIMPLEX_HDUALROW_H_
 
-#include "HModel.h"
-#include "HVector.h"
+class HModel;
+class HVector;
 
 #include <set>
 #include <vector>
-using namespace std;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -126,13 +125,13 @@ class HDualRow {
   const double *workRange;  //!< Value of model->getWorkRange();
 
   // Freelist:
-  set<int> freeList;  //!< Freelist itself
+  std::set<int> freeList;  //!< Freelist itself
   int freeListSize;   //!< Number of entries in freeList
 
   // packed data:
   int packCount;             //!< number of packed indices/values
-  vector<int> packIndex;     //!< Packed indices
-  vector<double> packValue;  //!< Packed values
+  std::vector<int> packIndex;     //!< Packed indices
+  std::vector<double> packValue;  //!< Packed values
 
   double workDelta;  //!< Local copy of dual.deltaPrimal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
@@ -141,9 +140,8 @@ class HDualRow {
   int workPivot;     //!< Index of the column entering the basis
   int workCount;     //!< Number of BFRT flips
 
-  vector<pair<int, double> > workData;  //!< Index-Value pairs for ratio test
-  vector<int>
-      workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
+  std::vector<std::pair<int, double> > workData;  //!< Index-Value pairs for ratio test
+  std::vector<int> workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 };
 
 #endif /* SIMPLEX_HDUALROW_H_ */
