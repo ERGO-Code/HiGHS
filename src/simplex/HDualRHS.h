@@ -15,10 +15,9 @@
 #define SIMPLEX_HDUALRHS_H_
 
 #include <vector>
-using namespace std;
 
-#include "HModel.h"
-#include "HVector.h"
+class HModel;
+class HVector;
 
 /**
  * @brief Dual simplex optimality test for HiGHS
@@ -72,7 +71,7 @@ class HDualRHS {
   );
 
   /**
-   * @brief Update the primal values by adding a multiple of a given vector
+   * @brief Update the primal values by adding a multiple of a given std::vector
    */
   void update_primal(
       HVector *column,  //!< Column to add into primal values
@@ -86,7 +85,7 @@ class HDualRHS {
       HVector *column,         //!< Pivotal column
       double DSE_wt_o_rowOut,  //!< (Edge weight of leaving row)/alpha^2
       double Kai,              //!< -2/alpha
-      double *dse              //!< DSE vector
+      double *dse              //!< DSE std::vector
   );
   /**
    * @brief Update the Devex weights
@@ -116,7 +115,7 @@ class HDualRHS {
    */
   void create_infeasList(double columnDensity);
   /**
-   * @brief Create the vector of primal infeasibilities
+   * @brief Create the std::vector of primal infeasibilities
    *
    * TODO: Change the name of "workArray" to something clearer like
    * workInfeasArray!
@@ -129,12 +128,12 @@ class HDualRHS {
                           //!< infeasibilities
   int workCount;          //!< Number of rows in list with greatest primal
                           //!< infeasibilities
-  vector<char> workMark;  //!< Flag set if row is in list of those with greatest
+  std::vector<char> workMark;  //!< Flag set if row is in list of those with greatest
                           //!< primal infeasibilities
-  vector<int> workIndex;  //!< List of rows with greatest primal infeasibilities
-  vector<double> workArray;     //!< Vector of all primal infeasiblities
-  vector<double> workEdWt;      //!< DSE or Dvx weight
-  vector<double> workEdWtFull;  //!< Full-length vector where weights are
+  std::vector<int> workIndex;  //!< List of rows with greatest primal infeasibilities
+  std::vector<double> workArray;     //!< Vector of all primal infeasiblities
+  std::vector<double> workEdWt;      //!< DSE or Dvx weight
+  std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights are
                                 //!< scattered during INVERT
 
   int partNum;
@@ -142,7 +141,7 @@ class HDualRHS {
   int partNumCol;
   int partNumCut;
   int partSwitch;
-  vector<int> workPartition;
+  std::vector<int> workPartition;
 };
 
 #endif /* SIMPLEX_HDUALRHS_H_ */

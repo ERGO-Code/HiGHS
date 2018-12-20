@@ -11,8 +11,10 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HMPSIO.h"
 #include "FilereaderMps.h"
+
+#include "HMPSIO.h"
+#include "HighsLp.h"
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
 #include "HMpsFF.h"
 #endif

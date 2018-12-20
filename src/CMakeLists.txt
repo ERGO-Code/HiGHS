@@ -31,7 +31,7 @@ set(sources
 )
 
 set(headers
-    HiGHSRun.h
+    #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderMps.h
@@ -66,7 +66,6 @@ set(headers
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
-    HighsOptions.h
 )
 
 

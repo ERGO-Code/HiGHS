@@ -14,10 +14,9 @@
 #ifndef SIMPLEX_HMATRIX_H_
 #define SIMPLEX_HMATRIX_H_
 
-#include "HVector.h"
-
 #include <vector>
-using namespace std;
+
+class HVector;
 
 class HMatrix {
  public:
@@ -56,14 +55,14 @@ class HMatrix {
  private:
   int numCol;
   int numRow;
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
+  std::vector<int> Astart;
+  std::vector<int> Aindex;
+  std::vector<double> Avalue;
 
-  vector<int> ARstart;
-  vector<int> AR_Nend;
-  vector<int> ARindex;
-  vector<double> ARvalue;
+  std::vector<int> ARstart;
+  std::vector<int> AR_Nend;
+  std::vector<int> ARindex;
+  std::vector<double> ARvalue;
 };
 
 #endif /* SIMPLEX_HMATRIX_H_ */

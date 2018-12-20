@@ -14,6 +14,7 @@
 #include "HConst.h"
 #include "HDual.h"
 #include "HPrimal.h"
+#include "HModel.h"
 #include "HTimer.h"
 
 #include <cassert>
@@ -22,7 +23,6 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
-using namespace std;
 
 void HDual::iterate_multi() {
   slice_PRICE = 1;

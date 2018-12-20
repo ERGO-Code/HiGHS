@@ -12,11 +12,14 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRow.h"
-#include "HConst.h"
-#include "HModel.h"
 
 #include <cassert>
 #include <iostream>
+
+#include "HConst.h"
+#include "HModel.h"
+#include "HVector.h"
+
 using namespace std;
 
 void HDualRow::setupSlice(HModel *model, int size) {

@@ -15,8 +15,12 @@
 #define SIMPLEX_HCRASH_H_
 
 #include <vector>
-#include "HModel.h"
-using namespace std;
+#include <string>
+
+#include "HConfig.h"
+
+class HModel;
+class HMatrix;
 
 /**
  * Possible crash mode values used to test Crash_Mode
@@ -97,7 +101,7 @@ class HCrash {
 #ifdef HiGHSDEV
   void tsSing(HModel *ptr_model);
   void crsh_an_c_co(HModel *ptr_model);
-  string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
+  std::string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
   void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
   void crsh_rp_r_c_st(int mode, int Crash_Mode);
   void crsh_ck_an_impl_bd();
@@ -114,54 +118,54 @@ class HCrash {
   const HMatrix *matrix;
 
   //    LTSSF arrays
-  vector<int> crsh_r_ty_pri_v;
-  vector<int> crsh_c_ty_pri_v;
-  vector<int> crsh_r_ty;
-  vector<int> crsh_c_ty;
-  vector<int> crsh_r_k;
-  vector<int> crsh_c_k;
+  std::vector<int> crsh_r_ty_pri_v;
+  std::vector<int> crsh_c_ty_pri_v;
+  std::vector<int> crsh_r_ty;
+  std::vector<int> crsh_c_ty;
+  std::vector<int> crsh_r_k;
+  std::vector<int> crsh_c_k;
 
-  vector<int> crsh_r_pri_k_hdr;
-  vector<int> crsh_r_pri_k_lkf;
-  vector<int> crsh_r_pri_k_lkb;
-  vector<int> crsh_r_pri_mn_r_k;
+  std::vector<int> crsh_r_pri_k_hdr;
+  std::vector<int> crsh_r_pri_k_lkf;
+  std::vector<int> crsh_r_pri_k_lkb;
+  std::vector<int> crsh_r_pri_mn_r_k;
 
-  vector<int> crsh_r_pri_hdr;
-  vector<int> crsh_r_pri_lkb;
-  vector<int> crsh_r_pri_lkf;
+  std::vector<int> crsh_r_pri_hdr;
+  std::vector<int> crsh_r_pri_lkb;
+  std::vector<int> crsh_r_pri_lkf;
 
-  vector<int> crsh_r_k_hdr;
-  vector<int> crsh_r_k_lkb;
-  vector<int> crsh_r_k_lkf;
+  std::vector<int> crsh_r_k_hdr;
+  std::vector<int> crsh_r_k_lkb;
+  std::vector<int> crsh_r_k_lkf;
 
 #ifdef HiGHSDEV
-  vector<int> crsh_vr_ty_og_n_r;
-  vector<int> crsh_vr_ty_rm_n_r;
-  vector<int> crsh_vr_ty_og_n_c;
-  vector<int> crsh_vr_ty_add_n_c;
+  std::vector<int> crsh_vr_ty_og_n_r;
+  std::vector<int> crsh_vr_ty_rm_n_r;
+  std::vector<int> crsh_vr_ty_og_n_c;
+  std::vector<int> crsh_vr_ty_add_n_c;
 
-  vector<int> crsh_bs_vr_ty_n_r;
-  vector<int> crsh_bs_vr_ty_n_c;
-  vector<int> crsh_nonbc_vr_ty_n_r;
-  vector<int> crsh_nonbc_vr_ty_n_c;
+  std::vector<int> crsh_bs_vr_ty_n_r;
+  std::vector<int> crsh_bs_vr_ty_n_c;
+  std::vector<int> crsh_nonbc_vr_ty_n_r;
+  std::vector<int> crsh_nonbc_vr_ty_n_c;
 #endif
 
-  vector<double> crsh_mtx_c_mx_abs_v;
-  vector<double> CrshARvalue;
-  vector<int> CrshARindex;
-  vector<int> CrshARstart;
-  vector<int> crsh_act_r;
-  vector<int> crsh_act_c;
+  std::vector<double> crsh_mtx_c_mx_abs_v;
+  std::vector<double> CrshARvalue;
+  std::vector<int> CrshARindex;
+  std::vector<int> CrshARstart;
+  std::vector<int> crsh_act_r;
+  std::vector<int> crsh_act_c;
 
-  vector<double> bixby_mrt_v;
-  vector<double> heap_v;
-  vector<double> bixby_pseudo_pv_v;
-  vector<int> bixby_mrt_ix;
-  vector<int> heap_ix;
-  vector<int> bixby_pv_in_r;
-  vector<int> bixby_vr_in_r;
-  vector<int> bixby_r_k;
-  // vector<int> bixby_ze_r_k;
+  std::vector<double> bixby_mrt_v;
+  std::vector<double> heap_v;
+  std::vector<double> bixby_pseudo_pv_v;
+  std::vector<int> bixby_mrt_ix;
+  std::vector<int> heap_ix;
+  std::vector<int> bixby_pv_in_r;
+  std::vector<int> bixby_vr_in_r;
+  std::vector<int> bixby_r_k;
+  // std::vector<int> bixby_ze_r_k;
 
   // LTSSF scalar identifiers
   // int crsh_mode;

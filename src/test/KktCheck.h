@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file test/KktCheck.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef TEST_KKTCHECK_H_
@@ -20,42 +20,39 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "HConst.h"
-
-using namespace std;
 
 class KktCheck {
   // model
   int numCol;
   int numRow;
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper;
-  vector<double> rowLower;
-  vector<double> rowUpper;
+  std::vector<int> Astart;
+  std::vector<int> Aindex;
+  std::vector<double> Avalue;
+  std::vector<double> colCost;
+  std::vector<double> colLower;
+  std::vector<double> colUpper;
+  std::vector<double> rowLower;
+  std::vector<double> rowUpper;
 
   // Row wise
-  vector<int> ARstart;
-  vector<int> ARindex;
-  vector<double> ARvalue;
+  std::vector<int> ARstart;
+  std::vector<int> ARindex;
+  std::vector<double> ARvalue;
   int i, j, k;
   double tol;
 
   bool istrueGlb;
 
-  // index vectors
-  vector<int> rIndexRev;
-  vector<int> cIndexRev;
+  // index std::vectors
+  std::vector<int> rIndexRev;
+  std::vector<int> cIndexRev;
 
  public:
   int print;
   // solution
-  vector<double> colValue;
-  vector<double> colDual;  // lambda
-  vector<double> rowDual;  // mu
+  std::vector<double> colValue;
+  std::vector<double> colDual;  // lambda
+  std::vector<double> rowDual;  // mu
 
   void printAR();
   void makeARCopy();
@@ -68,16 +65,20 @@ class KktCheck {
 
   void checkKKT();
   void printSol();
-  void setIndexVectors(vector<int>& rows, vector<int>& cols);
+  void setIndexVectors(std::vector<int>& rows, std::vector<int>& cols);
 
-  void passSolution(const vector<double>& colVal, const vector<double>& colDu,
-                    const vector<double>& rDu);
-  void setMatrix(const vector<int>& Astart_, const vector<int>& Aindex_,
-                 const vector<double>& Avalue_);
-  void setBounds(const vector<double>& colUpper_,
-                 const vector<double>& colLower_);
-  void setNumbersCostRHS(int nCol, int nRow, const vector<double>& rowLower_,
-                         const vector<double>& rowUpper_,
-                         const vector<double>& cost);
+  void passSolution(const std::vector<double>& colVal,
+
+                    const std::vector<double>& colDu,
+                    const std::vector<double>& rDu);
+  void setMatrix(const std::vector<int>& Astart_,
+                 const std::vector<int>& Aindex_,
+                 const std::vector<double>& Avalue_);
+  void setBounds(const std::vector<double>& colUpper_,
+                 const std::vector<double>& colLower_);
+  void setNumbersCostRHS(int nCol, int nRow,
+                         const std::vector<double>& rowLower_,
+                         const std::vector<double>& rowUpper_,
+                         const std::vector<double>& cost);
 };
 #endif /* TEST_KKTCHECK_H_ */

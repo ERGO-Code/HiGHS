@@ -12,11 +12,9 @@
 #include <set>
 #include <vector>
 
-#include "HAPI.h"
 #include "HConfig.h"
-#include "HConst.h"
+#include "HCrash.h"
 #include "HDual.h"
-#include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
 

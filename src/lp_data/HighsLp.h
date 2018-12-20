@@ -19,7 +19,6 @@
 #include <string>
 #include <vector>
 
-#include "HConst.h"
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
 enum class HighsMpsParserType { free, fixed };

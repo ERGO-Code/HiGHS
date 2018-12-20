@@ -14,6 +14,7 @@
 #include "HFactor.h"
 #include "HConst.h"
 #include "HTimer.h"
+#include "HVector.h"
 
 #include <cassert>
 #include <cmath>

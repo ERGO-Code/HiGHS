@@ -15,8 +15,8 @@
 #define LP_DATA_HIGHSUTILS_H_
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HConst.h"
+
+class HighsLp;
 
 // Logical check of double being +Infinity
 bool highs_isInfinity(double val);
@@ -72,10 +72,11 @@ class HighsUtils {
   }
 
 #ifdef HiGHSDEV
-  void util_anMl(HighsLp lp, const char* message);
+  void util_anMl(HighsLp& lp, const char* message);
   void util_anMlBd(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
   void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
 #endif
+
  private:
   unsigned random_mw;
   unsigned random_mz;

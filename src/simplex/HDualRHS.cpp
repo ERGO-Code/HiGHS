@@ -8,17 +8,19 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HDualRHS.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRHS.h"
-#include "HConst.h"
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <set>
-using namespace std;
+
+#include "HConst.h"
+#include "HModel.h"
+#include "HVector.h"
 
 void HDualRHS::setup(HModel *model) {
   workModel = model;

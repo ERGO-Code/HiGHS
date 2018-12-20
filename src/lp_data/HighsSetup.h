@@ -21,7 +21,6 @@
 #include "HApp.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
-#include "HighsOptions.h"
 #include "Presolve.h"
 #include "cxxopts.hpp"
 
@@ -89,13 +88,17 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
     }
     case HighsPresolveStatus::Infeasible:
     case HighsPresolveStatus::Unbounded: {
-      // todo: report solver outcome.
-      break;
+      HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
+               HighsStatus::Infeasible : HighsStatus::Unbounded;
+
+      std::cout << "Problem status detected on presolve: "
+                << HighsStatusToString(result);
+      return result;
     }
     default: {
-      // case HighsPresolveStatus::Error:
-      // todo: handle error.
-      break;
+      // case HighsPresolveStatus::Error:a
+      std::cout << "Error during presolve.";
+      return HighsStatus::PresolveError;
     }
   }
 
@@ -258,7 +261,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
 
     cxx_options.add_options()(
         "f, filename",
-        "Filename(s) of LPs to solve. The option specifier is not required.",
+        "Filename of LP to solve.",
         cxxopts::value<std::vector<std::string>>())(
         "p, presolve", "Presolve: on | off. On by default.",
         cxxopts::value<std::string>())(
@@ -278,7 +281,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         cxxopts::value<std::string>())("i, ipx", "Use interior point solver.",
                                 cxxopts::value<bool>())(
         "T, time-limit", "Use time limit.", cxxopts::value<double>())(
-        "help", "Print help.");
+        "h, help", "Print help.");
 
     cxx_options.parse_positional("filename");
 

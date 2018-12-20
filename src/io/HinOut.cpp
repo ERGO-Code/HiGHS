@@ -12,6 +12,8 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HinOut.h"
+#include "HConst.h"
+#include "HModel.h"
 
 void HinOut::HinOutTestRead(HModel& ptr) {
   readDataColumnWise();
@@ -33,7 +35,7 @@ void HinOut::HinOutTestIO(HModel& ptr) {
 }
 
 void HinOut::readDataColumnWise() {
-  ifstream f;
+  std::ifstream f;
   int i;
 
   f.open(fileIn, ios::in);

@@ -16,8 +16,7 @@
 
 #include <vector>
 
-#include "HModel.h"
-//#using namespace std;
+class HModel;
 
 /**
  * @brief Compute and check ranging information for HiGHS
