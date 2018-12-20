@@ -25,6 +25,8 @@ class Filereader {
   virtual FilereaderRetcode writeModelToFile(const char* filename,
                                              HighsLp& model) = 0;
   static Filereader* getFilereader(const char* filename);
+
+  virtual ~Filereader() {}
 };
 
 #endif
