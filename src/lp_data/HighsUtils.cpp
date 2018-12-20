@@ -24,7 +24,7 @@ bool highs_isInfinity(double val) {
 }
 
 #ifdef HiGHSDEV
-void HighsUtils::util_anMl(HighsLp lp, const char *message) {
+void HighsUtils::util_anMl(HighsLp& lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
   util_anVecV("Column costs", lp.numCol_, lp.colCost_, false);
   util_anVecV("Column lower bounds", lp.numCol_, lp.colLower_, false);

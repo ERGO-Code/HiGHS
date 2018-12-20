@@ -15,6 +15,9 @@
 #define SIMPLEX_HCRASH_H_
 
 #include <vector>
+#include <string>
+
+#include "HConfig.h"
 
 class HModel;
 class HMatrix;
@@ -98,7 +101,7 @@ class HCrash {
 #ifdef HiGHSDEV
   void tsSing(HModel *ptr_model);
   void crsh_an_c_co(HModel *ptr_model);
-  string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
+  std::string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
   void crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode);
   void crsh_rp_r_c_st(int mode, int Crash_Mode);
   void crsh_ck_an_impl_bd();

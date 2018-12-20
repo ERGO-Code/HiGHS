@@ -24,6 +24,252 @@
 #include <vector>
 using namespace std;
 
+void HCrash::crsh_ck_an_impl_bd() {
+  const double *colLower = model->getcolLower();
+  const double *colUpper = model->getcolUpper();
+  const double *rowLower = model->getrowLower();
+  const double *rowUpper = model->getrowUpper();
+
+  const double *primalColLowerImplied = model->getprimalColLowerImplied();
+  const double *primalColUpperImplied = model->getprimalColUpperImplied();
+  const double *primalRowLowerImplied = model->getprimalRowLowerImplied();
+  const double *primalRowUpperImplied = model->getprimalRowUpperImplied();
+
+  const double *dualColLowerImplied = model->getdualColLowerImplied();
+  const double *dualColUpperImplied = model->getdualColUpperImplied();
+  const double *dualRowLowerImplied = model->getdualRowLowerImplied();
+  const double *dualRowUpperImplied = model->getdualRowUpperImplied();
+
+  // if (numTot < 100) {
+  //  printf("\nReporting bounds and corresponding implied bounds\n");
+  //  for (int c_n = 0; c_n < numCol; c_n++) {
+  //   printf(
+  //     "Col %5d has primal bounds
+  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
+  // c_n, colLower[c_n], colUpper[c_n],
+  // primalColLowerImplied[c_n], primalColUpperImplied[c_n]);
+  //  }
+  //  for (int c_n = 0; c_n < numCol; c_n++) {
+  //   printf(
+  //     "Col %5d has primal bounds
+  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
+  // c_n, colLower[c_n], colUpper[c_n],
+  // dualColLowerImplied[c_n], dualColUpperImplied[c_n]);
+  //  }
+  //  for (int r_n = 0; r_n < numRow; r_n++) {
+  //   printf(
+  //     "Row %5d has primal bounds
+  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
+  // r_n, rowLower[r_n], rowUpper[r_n],
+  // primalRowLowerImplied[r_n], primalRowUpperImplied[r_n]);
+  //  }
+  //  for (int r_n = 0; r_n < numRow; r_n++) {
+  //   printf(
+  //     "Row %5d has primal bounds
+  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
+  // r_n, rowLower[r_n], rowUpper[r_n],
+  // dualRowLowerImplied[r_n], dualRowUpperImplied[r_n]);
+  //  }
+  // }
+  printf("\nAnalysing bounds and corresponding implied bounds\n");
+  int numTighterPrimalColLower = 0;
+  int numTighterPrimalColUpper = 0;
+  int numSlackerPrimalColLower = 0;
+  int numSlackerPrimalColUpper = 0;
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    if (primalColLowerImplied[c_n] > colLower[c_n]) {
+      numTighterPrimalColLower += 1;
+    }
+    if (primalColLowerImplied[c_n] < colLower[c_n]) {
+      numSlackerPrimalColLower += 1;
+      printf(
+          "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+          "primal bounds  [%12.4e,%12.4e] Query lower\n",
+          c_n, colLower[c_n], colUpper[c_n], primalColLowerImplied[c_n],
+          primalColUpperImplied[c_n]);
+    }
+    if (primalColUpperImplied[c_n] < colUpper[c_n]) {
+      numTighterPrimalColUpper += 1;
+    }
+    if (primalColUpperImplied[c_n] > colUpper[c_n]) {
+      numSlackerPrimalColUpper += 1;
+      printf(
+          "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+          "primal bounds  [%12.4e,%12.4e] Query upper\n",
+          c_n, colLower[c_n], colUpper[c_n], primalColLowerImplied[c_n],
+          primalColUpperImplied[c_n]);
+    }
+  }
+  int numTighterDualColLower = 0;
+  int numTighterDualColUpper = 0;
+  int numSlackerDualColLower = 0;
+  int numSlackerDualColUpper = 0;
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    if (colLower[c_n] > -HIGHS_CONST_INF) {
+      // Col lower > -inf so dualColUpperImplied < inf is tighter
+      if (dualColUpperImplied[c_n] < HIGHS_CONST_INF) {
+        numTighterDualColUpper += 1;
+      }
+    } else {
+      // Col lower <= -inf so dualColUpperImplied should be at most zero
+      if (dualColUpperImplied[c_n] > 0) {
+        numSlackerDualColUpper += 1;
+        printf(
+            "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+            "dual bounds  [%12.4e,%12.4e] Query upper\n",
+            c_n, colLower[c_n], colUpper[c_n], dualColLowerImplied[c_n],
+            dualColUpperImplied[c_n]);
+      }
+    }
+    if (colUpper[c_n] < HIGHS_CONST_INF) {
+      // Col upper <   inf so dualColLowerImplied > -inf is tighter
+      if (dualColLowerImplied[c_n] > -HIGHS_CONST_INF) {
+        numTighterDualColLower += 1;
+      }
+    } else {
+      // Col upper >=  inf so dualRowLowerImplied should be at least zero
+      if (dualColLowerImplied[c_n] < 0) {
+        numSlackerDualColLower += 1;
+        printf(
+            "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+            "dual bounds  [%12.4e,%12.4e] Query lower\n",
+            c_n, colLower[c_n], colUpper[c_n], dualColLowerImplied[c_n],
+            dualColUpperImplied[c_n]);
+      }
+    }
+  }
+  int numTighterPrimalRowLower = 0;
+  int numTighterPrimalRowUpper = 0;
+  int numSlackerPrimalRowLower = 0;
+  int numSlackerPrimalRowUpper = 0;
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    if (primalRowLowerImplied[r_n] > rowLower[r_n]) {
+      numTighterPrimalRowLower += 1;
+    }
+    if (primalRowLowerImplied[r_n] < rowLower[r_n]) {
+      numSlackerPrimalRowLower += 1;
+      printf(
+          "row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+          "primal bounds  [%12.4e,%12.4e] Query lower\n",
+          r_n, rowLower[r_n], rowUpper[r_n], primalRowLowerImplied[r_n],
+          primalRowUpperImplied[r_n]);
+    }
+    if (primalRowUpperImplied[r_n] < rowUpper[r_n]) {
+      numTighterPrimalRowUpper += 1;
+    }
+    if (primalRowUpperImplied[r_n] > rowUpper[r_n]) {
+      numSlackerPrimalRowUpper += 1;
+      printf(
+          "row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+          "primal bounds  [%12.4e,%12.4e] Query upper\n",
+          r_n, rowLower[r_n], rowUpper[r_n], primalRowLowerImplied[r_n],
+          primalRowUpperImplied[r_n]);
+    }
+  }
+  int numTighterDualRowLower = 0;
+  int numTighterDualRowUpper = 0;
+  int numSlackerDualRowLower = 0;
+  int numSlackerDualRowUpper = 0;
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    if (rowLower[r_n] > -HIGHS_CONST_INF) {
+      // Row lower > -inf so dualRowUpperImplied < inf is tighter
+      if (dualRowUpperImplied[r_n] < HIGHS_CONST_INF) {
+        numTighterDualRowUpper += 1;
+      }
+    } else {
+      // Row lower <= -inf so dualRowUpperImplied should be at most zero
+      if (dualRowUpperImplied[r_n] > 0) {
+        numSlackerDualRowUpper += 1;
+        printf(
+            "Row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+            "dual bounds  [%12.4e,%12.4e] Query upper\n",
+            r_n, rowLower[r_n], rowUpper[r_n], dualRowLowerImplied[r_n],
+            dualRowUpperImplied[r_n]);
+      }
+    }
+    if (rowUpper[r_n] < HIGHS_CONST_INF) {
+      // Row upper <   inf so dualColLowerImplied > -inf is tighter
+      if (dualRowLowerImplied[r_n] > -HIGHS_CONST_INF) {
+        numTighterDualRowLower += 1;
+      }
+    } else {
+      // Row upper >=  inf so dualColLowerImplied should be at least zero
+      if (dualRowLowerImplied[r_n] < 0) {
+        numSlackerDualRowLower += 1;
+        printf(
+            "Row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
+            "dual bounds  [%12.4e,%12.4e] Query lower\n",
+            r_n, rowLower[r_n], rowUpper[r_n], dualRowLowerImplied[r_n],
+            dualRowUpperImplied[r_n]);
+      }
+    }
+  }
+  int numTighter = numTighterPrimalColLower + numTighterPrimalColUpper +
+                   numTighterDualColLower + numTighterDualColUpper +
+                   numTighterPrimalRowLower + numTighterPrimalRowUpper +
+                   numTighterDualRowLower + numTighterDualRowUpper;
+  if (numTighter > 0) {
+    printf("Model has %5d/%5d (%3d%%) tighter implied primal column lower bounds\n",
+        numTighterPrimalColLower, numCol,
+        (100 * numTighterPrimalColLower) / numCol);
+    printf("Model has %5d/%5d (%3d%%) tighter implied primal column upper bounds\n",
+        numTighterPrimalColUpper, numCol,
+        (100 * numTighterPrimalColUpper) / numCol);
+    printf("Model has %5d/%5d (%3d%%) tighter implied dual   column lower bounds\n",
+        numTighterDualColLower, numCol,
+        (100 * numTighterDualColLower) / numCol);
+    printf("Model has %5d/%5d (%3d%%) tighter implied dual   column upper bounds\n",
+        numTighterDualColUpper, numCol,
+        (100 * numTighterDualColUpper) / numCol);
+    printf("Model has %5d/%5d (%3d%%) tighter implied primal row    lower bounds\n",
+        numTighterPrimalRowLower, numRow,
+        (100 * numTighterPrimalRowLower) / numRow);
+    printf("Model has %5d/%5d (%3d%%) tighter implied primal row    upper bounds\n",
+        numTighterPrimalRowUpper, numRow,
+        (100 * numTighterPrimalRowUpper) / numRow);
+    printf("Model has %5d/%5d (%3d%%) tighter implied dual   row    lower bounds\n",
+        numTighterDualRowLower, numRow,
+        (100 * numTighterDualRowLower) / numRow);
+    printf("Model has %5d/%5d (%3d%%) tighter implied dual   row    upper bounds\n",
+        numTighterDualRowUpper, numRow,
+        (100 * numTighterDualRowUpper) / numRow);
+  } else {
+    printf("\nModel has no tighter implied bounds\n");
+  }
+  int numSlacker = numSlackerPrimalColLower + numSlackerPrimalColUpper +
+                   numSlackerDualColLower + numSlackerDualColUpper +
+                   numSlackerPrimalRowLower + numSlackerPrimalRowUpper +
+                   numSlackerDualRowLower + numSlackerDualRowUpper;
+  if (numSlacker > 0) {
+    printf("Model has %5d/%5d (%3d%%) slacker implied primal column lower bounds\n",
+        numSlackerPrimalColLower, numCol,
+        (100 * numSlackerPrimalColLower) / numCol);
+    printf("Model has %5d/%5d (%3d%%) slacker implied primal column upper bounds\n",
+        numSlackerPrimalColUpper, numCol,
+        (100 * numSlackerPrimalColUpper) / numCol);
+    printf("Model has %5d/%5d (%3d%%) slacker implied dual   column lower bounds\n",
+        numSlackerDualColLower, numCol,
+        (100 * numSlackerDualColLower) / numCol);
+    printf("Model has %5d/%5d (%3d%%) slacker implied dual   column upper bounds\n",
+        numSlackerDualColUpper, numCol,
+        (100 * numSlackerDualColUpper) / numCol);
+    printf("Model has %5d/%5d (%3d%%) slacker implied primal row    lower bounds\n",
+        numSlackerPrimalRowLower, numRow,
+        (100 * numSlackerPrimalRowLower) / numRow);
+    printf("Model has %5d/%5d (%3d%%) slacker implied primal row    upper bounds\n",
+        numSlackerPrimalRowUpper, numRow,
+        (100 * numSlackerPrimalRowUpper) / numRow);
+    printf("Model has %5d/%5d (%3d%%) slacker implied dual   row    lower bounds\n",
+        numSlackerDualRowLower, numRow,
+        (100 * numSlackerDualRowLower) / numRow);
+    printf("Model has %5d/%5d (%3d%%) slacker implied dual   row    upper bounds\n",
+        numSlackerDualRowUpper, numRow,
+        (100 * numSlackerDualRowUpper) / numRow);
+  } else {
+    printf("\nModel has no slacker implied bounds\n\n");
+  }
+}
+
 void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   model = ptr_model;
   if (model->getNumRow() == 0) return;
@@ -1516,251 +1762,6 @@ string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode) {
   return TyNm;
 }
 
-void HCrash::crsh_ck_an_impl_bd() {
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
-  const double *rowLower = model->getrowLower();
-  const double *rowUpper = model->getrowUpper();
-
-  const double *primalColLowerImplied = model->getprimalColLowerImplied();
-  const double *primalColUpperImplied = model->getprimalColUpperImplied();
-  const double *primalRowLowerImplied = model->getprimalRowLowerImplied();
-  const double *primalRowUpperImplied = model->getprimalRowUpperImplied();
-
-  const double *dualColLowerImplied = model->getdualColLowerImplied();
-  const double *dualColUpperImplied = model->getdualColUpperImplied();
-  const double *dualRowLowerImplied = model->getdualRowLowerImplied();
-  const double *dualRowUpperImplied = model->getdualRowUpperImplied();
-
-  // if (numTot < 100) {
-  //  printf("\nReporting bounds and corresponding implied bounds\n");
-  //  for (int c_n = 0; c_n < numCol; c_n++) {
-  //   printf(
-  //     "Col %5d has primal bounds
-  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
-  // c_n, colLower[c_n], colUpper[c_n],
-  // primalColLowerImplied[c_n], primalColUpperImplied[c_n]);
-  //  }
-  //  for (int c_n = 0; c_n < numCol; c_n++) {
-  //   printf(
-  //     "Col %5d has primal bounds
-  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
-  // c_n, colLower[c_n], colUpper[c_n],
-  // dualColLowerImplied[c_n], dualColUpperImplied[c_n]);
-  //  }
-  //  for (int r_n = 0; r_n < numRow; r_n++) {
-  //   printf(
-  //     "Row %5d has primal bounds
-  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
-  // r_n, rowLower[r_n], rowUpper[r_n],
-  // primalRowLowerImplied[r_n], primalRowUpperImplied[r_n]);
-  //  }
-  //  for (int r_n = 0; r_n < numRow; r_n++) {
-  //   printf(
-  //     "Row %5d has primal bounds
-  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
-  // r_n, rowLower[r_n], rowUpper[r_n],
-  // dualRowLowerImplied[r_n], dualRowUpperImplied[r_n]);
-  //  }
-  // }
-  printf("\nAnalysing bounds and corresponding implied bounds\n");
-  int numTighterPrimalColLower = 0;
-  int numTighterPrimalColUpper = 0;
-  int numSlackerPrimalColLower = 0;
-  int numSlackerPrimalColUpper = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    if (primalColLowerImplied[c_n] > colLower[c_n]) {
-      numTighterPrimalColLower += 1;
-    }
-    if (primalColLowerImplied[c_n] < colLower[c_n]) {
-      numSlackerPrimalColLower += 1;
-      printf(
-          "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query lower\n",
-          c_n, colLower[c_n], colUpper[c_n], primalColLowerImplied[c_n],
-          primalColUpperImplied[c_n]);
-    }
-    if (primalColUpperImplied[c_n] < colUpper[c_n]) {
-      numTighterPrimalColUpper += 1;
-    }
-    if (primalColUpperImplied[c_n] > colUpper[c_n]) {
-      numSlackerPrimalColUpper += 1;
-      printf(
-          "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query upper\n",
-          c_n, colLower[c_n], colUpper[c_n], primalColLowerImplied[c_n],
-          primalColUpperImplied[c_n]);
-    }
-  }
-  int numTighterDualColLower = 0;
-  int numTighterDualColUpper = 0;
-  int numSlackerDualColLower = 0;
-  int numSlackerDualColUpper = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    if (colLower[c_n] > -HIGHS_CONST_INF) {
-      // Col lower > -inf so dualColUpperImplied < inf is tighter
-      if (dualColUpperImplied[c_n] < HIGHS_CONST_INF) {
-        numTighterDualColUpper += 1;
-      }
-    } else {
-      // Col lower <= -inf so dualColUpperImplied should be at most zero
-      if (dualColUpperImplied[c_n] > 0) {
-        numSlackerDualColUpper += 1;
-        printf(
-            "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query upper\n",
-            c_n, colLower[c_n], colUpper[c_n], dualColLowerImplied[c_n],
-            dualColUpperImplied[c_n]);
-      }
-    }
-    if (colUpper[c_n] < HIGHS_CONST_INF) {
-      // Col upper <   inf so dualColLowerImplied > -inf is tighter
-      if (dualColLowerImplied[c_n] > -HIGHS_CONST_INF) {
-        numTighterDualColLower += 1;
-      }
-    } else {
-      // Col upper >=  inf so dualRowLowerImplied should be at least zero
-      if (dualColLowerImplied[c_n] < 0) {
-        numSlackerDualColLower += 1;
-        printf(
-            "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query lower\n",
-            c_n, colLower[c_n], colUpper[c_n], dualColLowerImplied[c_n],
-            dualColUpperImplied[c_n]);
-      }
-    }
-  }
-  int numTighterPrimalRowLower = 0;
-  int numTighterPrimalRowUpper = 0;
-  int numSlackerPrimalRowLower = 0;
-  int numSlackerPrimalRowUpper = 0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
-    if (primalRowLowerImplied[r_n] > rowLower[r_n]) {
-      numTighterPrimalRowLower += 1;
-    }
-    if (primalRowLowerImplied[r_n] < rowLower[r_n]) {
-      numSlackerPrimalRowLower += 1;
-      printf(
-          "row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query lower\n",
-          r_n, rowLower[r_n], rowUpper[r_n], primalRowLowerImplied[r_n],
-          primalRowUpperImplied[r_n]);
-    }
-    if (primalRowUpperImplied[r_n] < rowUpper[r_n]) {
-      numTighterPrimalRowUpper += 1;
-    }
-    if (primalRowUpperImplied[r_n] > rowUpper[r_n]) {
-      numSlackerPrimalRowUpper += 1;
-      printf(
-          "row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query upper\n",
-          r_n, rowLower[r_n], rowUpper[r_n], primalRowLowerImplied[r_n],
-          primalRowUpperImplied[r_n]);
-    }
-  }
-  int numTighterDualRowLower = 0;
-  int numTighterDualRowUpper = 0;
-  int numSlackerDualRowLower = 0;
-  int numSlackerDualRowUpper = 0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
-    if (rowLower[r_n] > -HIGHS_CONST_INF) {
-      // Row lower > -inf so dualRowUpperImplied < inf is tighter
-      if (dualRowUpperImplied[r_n] < HIGHS_CONST_INF) {
-        numTighterDualRowUpper += 1;
-      }
-    } else {
-      // Row lower <= -inf so dualRowUpperImplied should be at most zero
-      if (dualRowUpperImplied[r_n] > 0) {
-        numSlackerDualRowUpper += 1;
-        printf(
-            "Row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query upper\n",
-            r_n, rowLower[r_n], rowUpper[r_n], dualRowLowerImplied[r_n],
-            dualRowUpperImplied[r_n]);
-      }
-    }
-    if (rowUpper[r_n] < HIGHS_CONST_INF) {
-      // Row upper <   inf so dualColLowerImplied > -inf is tighter
-      if (dualRowLowerImplied[r_n] > -HIGHS_CONST_INF) {
-        numTighterDualRowLower += 1;
-      }
-    } else {
-      // Row upper >=  inf so dualColLowerImplied should be at least zero
-      if (dualRowLowerImplied[r_n] < 0) {
-        numSlackerDualRowLower += 1;
-        printf(
-            "Row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query lower\n",
-            r_n, rowLower[r_n], rowUpper[r_n], dualRowLowerImplied[r_n],
-            dualRowUpperImplied[r_n]);
-      }
-    }
-  }
-  int numTighter = numTighterPrimalColLower + numTighterPrimalColUpper +
-                   numTighterDualColLower + numTighterDualColUpper +
-                   numTighterPrimalRowLower + numTighterPrimalRowUpper +
-                   numTighterDualRowLower + numTighterDualRowUpper;
-  if (numTighter > 0) {
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal column lower bounds\n",
-        numTighterPrimalColLower, numCol,
-        (100 * numTighterPrimalColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal column upper bounds\n",
-        numTighterPrimalColUpper, numCol,
-        (100 * numTighterPrimalColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   column lower bounds\n",
-        numTighterDualColLower, numCol,
-        (100 * numTighterDualColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   column upper bounds\n",
-        numTighterDualColUpper, numCol,
-        (100 * numTighterDualColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal row    lower bounds\n",
-        numTighterPrimalRowLower, numRow,
-        (100 * numTighterPrimalRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal row    upper bounds\n",
-        numTighterPrimalRowUpper, numRow,
-        (100 * numTighterPrimalRowUpper) / numRow);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   row    lower bounds\n",
-        numTighterDualRowLower, numRow,
-        (100 * numTighterDualRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   row    upper bounds\n",
-        numTighterDualRowUpper, numRow,
-        (100 * numTighterDualRowUpper) / numRow);
-  } else {
-    printf("\nModel has no tighter implied bounds\n");
-  }
-  int numSlacker = numSlackerPrimalColLower + numSlackerPrimalColUpper +
-                   numSlackerDualColLower + numSlackerDualColUpper +
-                   numSlackerPrimalRowLower + numSlackerPrimalRowUpper +
-                   numSlackerDualRowLower + numSlackerDualRowUpper;
-  if (numSlacker > 0) {
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal column lower bounds\n",
-        numSlackerPrimalColLower, numCol,
-        (100 * numSlackerPrimalColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal column upper bounds\n",
-        numSlackerPrimalColUpper, numCol,
-        (100 * numSlackerPrimalColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   column lower bounds\n",
-        numSlackerDualColLower, numCol,
-        (100 * numSlackerDualColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   column upper bounds\n",
-        numSlackerDualColUpper, numCol,
-        (100 * numSlackerDualColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal row    lower bounds\n",
-        numSlackerPrimalRowLower, numRow,
-        (100 * numSlackerPrimalRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal row    upper bounds\n",
-        numSlackerPrimalRowUpper, numRow,
-        (100 * numSlackerPrimalRowUpper) / numRow);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   row    lower bounds\n",
-        numSlackerDualRowLower, numRow,
-        (100 * numSlackerDualRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   row    upper bounds\n",
-        numSlackerDualRowUpper, numRow,
-        (100 * numSlackerDualRowUpper) / numRow);
-  } else {
-    printf("\nModel has no slacker implied bounds\n\n");
-  }
-}
 
 void HCrash::ltssf_rp_r_k() {
   printf("\n        : ");
