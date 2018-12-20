@@ -13,6 +13,7 @@
  */
 #include "HinOut.h"
 #include "HConst.h"
+#include "HModel.h"
 
 void HinOut::HinOutTestRead(HModel& ptr) {
   readDataColumnWise();

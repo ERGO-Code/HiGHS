@@ -27,7 +27,6 @@
 #include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsIO.h"
-#include "HighsOptions.h"
 #include "HighsModelObject.h"
 
 void HDual::solve(HModel *ptr_model, int variant, int num_threads) {

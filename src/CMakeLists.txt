@@ -31,7 +31,7 @@ set(sources
 )
 
 set(headers
-    HighsOptions.h
+    #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderMps.h
