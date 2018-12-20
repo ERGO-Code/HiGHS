@@ -442,8 +442,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   scaleLp(highs_model);
   model.initWithLogicalBasis();
 
-  //  HighsLp lp_scaled_ = highs_model.lp_scaled_;
-  HighsLp lp_scaled_ = *(&highs_model.lp_scaled_);
+  HighsLp &lp_scaled_ = highs_model.lp_scaled_;
   highs_model.matrix_.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_,
 				  &lp_scaled_.Astart_[0],
 				  &lp_scaled_.Aindex_[0],

@@ -94,6 +94,7 @@ enum HDUAL_VARIANT {
  */
 class HDual {
  public:
+  // HDual(HighsModelObject& model_object) : highs_model_object(model_object) {}
   /**
    * @brief Solve a model instance with a dual simplex variant and given number
    * of threads

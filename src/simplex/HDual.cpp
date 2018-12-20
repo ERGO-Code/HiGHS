@@ -273,7 +273,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   }
 
 #ifdef HiGHSDEV
-  HighsTimer timer_ = *(&ref_highs_model_object.timer_);
+  HighsTimer &timer_ = ref_highs_model_object.timer_;
   if (AnIterLg) iterateRpAn();
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
@@ -288,13 +288,13 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
         HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT,  HTICK_DEVEX_IZ,
         HTICK_UPDATE_PIVOTS, HTICK_UPDATE_FACTOR,  HTICK_UPDATE_MATRIX};
     int reportCount = sizeof(reportList) / sizeof(int);
-    model->timer.report(reportCount, reportList, 1.0);
+    model->timer.report(reportCount, reportList, 0.0);
     timer_.reportDualSimplexInnerClock();
-    bool rpIterate = false;
+    bool rpIterate = true;
     if (rpIterate) {
       int reportList[] = {HTICK_ITERATE};
       int reportCount = sizeof(reportList) / sizeof(int);
-      model->timer.report(reportCount, reportList, 1.0);
+      model->timer.report(reportCount, reportList, 0.0);
       timer_.reportDualSimplexIterateClock();
     }
     if (rpIterate) {
@@ -303,7 +303,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
           HTICK_ITERATE_FTRAN,   HTICK_ITERATE_VERIFY,   HTICK_ITERATE_DUAL,
           HTICK_ITERATE_PRIMAL,  HTICK_ITERATE_DEVEX_IZ, HTICK_ITERATE_PIVOTS};
       int reportCount = sizeof(reportList) / sizeof(int);
-      model->timer.report(reportCount, reportList, 1.0);
+      model->timer.report(reportCount, reportList, 0.0);
       timer_.reportDualSimplexOuterClock();
     }
   }
@@ -317,7 +317,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
         HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
         HTICK_GROUP1};
     int reportCount = sizeof(reportList) / sizeof(int);
-    model->timer.report(reportCount, reportList, 1.0);
+    model->timer.report(reportCount, reportList, 0.0);
   }
 
   if (dual_variant == HDUAL_VARIANT_MULTI) {
@@ -329,7 +329,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
         HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
         HTICK_UPDATE_ROW_EP};
     int reportCount = sizeof(reportList) / sizeof(int);
-    model->timer.report(reportCount, reportList, 1.0);
+    model->timer.report(reportCount, reportList, 0.0);
     printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
            model->modelName.c_str(), model->dblOption[DBLOPT_PAMI_CUTOFF],
            model->numberIteration / (1.0 + multi_iteration));
@@ -539,7 +539,7 @@ void HDual::solve_phase1(HighsModelObject &highs_model_object) {
   // %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
   // Main solving structure
-  HighsTimer timer_ = *(&highs_model_object.timer_);
+  HighsTimer &timer_ = highs_model_object.timer_;
   timer_.start(timer_.IterateClock);
   model->timer.recordStart(HTICK_ITERATE);
   for (;;) {
@@ -651,7 +651,7 @@ void HDual::solve_phase2(HighsModelObject &highs_model_object) {
   //  %d\n", lc_totalTime, lc_totalTime_rp_n);
 #endif
   // Main solving structure
-  HighsTimer timer_ = *(&highs_model_object.timer_);
+  HighsTimer &timer_ = highs_model_object.timer_;
   timer_.start(timer_.IterateClock);
   model->timer.recordStart(HTICK_ITERATE);
   for (;;) {
@@ -928,7 +928,7 @@ void HDual::iterate(HighsModelObject &highs_model_object) {
 
   // Reporting:
   // Row-wise matrix after update in updateMatrix(columnIn, columnOut);
-  HighsTimer timer_ = *(&highs_model_object.timer_);
+  HighsTimer &timer_ = highs_model_object.timer_;
   timer_.start(timer_.IterateChuzrClock);
   model->timer.recordStart(HTICK_ITERATE_CHUZR);
   chooseRow();
@@ -994,6 +994,7 @@ void HDual::iterate(HighsModelObject &highs_model_object) {
 }
 
 void HDual::iterate_tasks() {
+//  HighsTimer &timer = highs_model_object.timer_;
   slice_PRICE = 1;
 
   // Group 1
@@ -1002,7 +1003,7 @@ void HDual::iterate_tasks() {
   // Disable slice when too sparse
   if (1.0 * row_ep.count / numRow < 0.01) slice_PRICE = 0;
 
-  //  timer_.start();
+//  timer_.start(timer_.Group1Clock);
   model->timer.recordStart(HTICK_GROUP1);
 #pragma omp parallel
 #pragma omp single
@@ -1025,7 +1026,7 @@ void HDual::iterate_tasks() {
 #pragma omp taskwait
     }
   }
-  //  timer_.stop();
+  //  timer_.stop(timer_.Group1Clock);
   model->timer.recordFinish(HTICK_GROUP1);
 
   updateVerify();
@@ -1278,6 +1279,7 @@ void HDual::uOpRsDensityRec(double lc_OpRsDensity, double &opRsDensity) {
 }
 
 void HDual::chooseRow() {
+//  HighsTimer &timer = highs_model_object.timer_;
   // Choose the index of a row to leave the basis (CHUZR)
   //
   // If reinversion is needed then skip this method
@@ -1295,7 +1297,7 @@ void HDual::chooseRow() {
       return;
     }
     // Compute pi_p = B^{-T}e_p in row_ep
-    //    timer_.start();
+  //  timer_.start(timer_.BtranClock);
     model->timer.recordStart(HTICK_BTRAN);
     // Set up RHS for BTRAN
     row_ep.clear();
@@ -1312,7 +1314,7 @@ void HDual::chooseRow() {
 #ifdef HiGHSDEV
     if (AnIterLg) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
 #endif
-    //    timer_.stop();
+    //  timer_.stop(timer_.BtranClock);
     model->timer.recordFinish(HTICK_BTRAN);
     // Verify DSE weight
     if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -1364,6 +1366,7 @@ void HDual::chooseRow() {
 }
 
 void HDual::chooseColumn(HVector *row_ep) {
+//  HighsTimer &timer = highs_model_object.timer_;
   // Compute pivot row (PRICE) and choose the index of a column to enter the
   // basis (CHUZC)
   //
@@ -1372,7 +1375,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   //
   // PRICE
   //
-  //  timer_.start();
+//  timer_.start(timer_.PriceClock);
   model->timer.recordStart(HTICK_PRICE);
   row_ap.clear();
 
@@ -1467,7 +1470,7 @@ void HDual::chooseColumn(HVector *row_ep) {
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_Price, row_ap);
 #endif
-  //  timer_.stop();
+  //  timer_.stop(timer_.PriceClock);
   model->timer.recordFinish(HTICK_PRICE);
   //
   // CHUZC
@@ -1475,17 +1478,17 @@ void HDual::chooseColumn(HVector *row_ep) {
   // Section 0: Clear data and call create_Freemove to set a value of
   // nonbasicMove for all free columns to prevent their dual values
   // from being changed.
-  //  timer_.start();
+//  timer_.start(timer_.Chuzc0Clock);
   model->timer.recordStart(HTICK_CHUZC0);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
-  //  timer_.stop();
+  //  timer_.stop(timer_.Chuzc0Clock);
   model->timer.recordFinish(HTICK_CHUZC0);
   //
   // Section 1: Pack row_ap and row_ep, then determine the possible
   // variables - candidates for CHUZC
-  //  timer_.start();
+//  timer_.start(timer_.Chuzc1Clock);
   model->timer.recordStart(HTICK_CHUZC1);
   dualRow.choose_makepack(
       &row_ap, 0);  // Pack row_ap into the packIndex/Value of HDualRow
@@ -1493,7 +1496,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       row_ep, numCol);  // Pack row_ep into the packIndex/Value of HDualRow
   dualRow.choose_possible();  // Determine the possible variables - candidates
                               // for CHUZC
-  //  timer_.stop();
+  //  timer_.stop(timer_.Chuzc1Clock);
   model->timer.recordFinish(HTICK_CHUZC1);
   //
   // Take action if the step to an expanded bound is not positive, or
@@ -1513,10 +1516,10 @@ void HDual::chooseColumn(HVector *row_ep) {
   }
   //
   // Section 4: Reset the nonbasicMove values for free columns
-  //  timer_.start();
+//  timer_.start(timer_.Chuzc4Clock);
   model->timer.recordStart(HTICK_CHUZC4);
   dualRow.delete_Freemove();
-  //  timer_.stop();
+  //  timer_.stop(timer_.Chuzc4Clock);
   model->timer.recordFinish(HTICK_CHUZC4);
   // Record values for basis change, checking for numerical problems and update
   // of dual variables
@@ -1526,7 +1529,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   thetaDual = dualRow.workTheta;  // Dual step length
 
   if (EdWt_Mode == EdWt_Mode_Dvx) {
-    //    timer_.start();
+  //  timer_.start(timer_.DevexWtClock);
     model->timer.recordStart(HTICK_DEVEX_WT);
     // Determine the exact Devex weight
     double og_dvx_wt_o_rowOut = dualRHS.workEdWt[rowOut];
@@ -1550,20 +1553,21 @@ void HDual::chooseColumn(HVector *row_ep) {
         dvx_rao > maxAllowedDevexWeightRatio * maxAllowedDevexWeightRatio ||
         n_dvx_it > i_te;
     dualRHS.workEdWt[rowOut] = tru_dvx_wt_o_rowOut;
-    //    timer_.stop();
+    //  timer_.stop(timer_.DevexWtClock);
     model->timer.recordFinish(HTICK_DEVEX_WT);
   }
   return;
 }
 
 void HDual::chooseColumn_slice(HVector *row_ep) {
+//  HighsTimer &timer = highs_model_object.timer_;
   // Choose the index of a column to enter the basis (CHUZC) by
   // exploiting slices of the pivotal row - for SIP and PAMI
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
 
-  //  timer_.start();
+//  timer_.start(timer_.Chuzr1Clock);
   model->timer.recordStart(HTICK_CHUZC1);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
@@ -1599,11 +1603,11 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = invertHint_possiblyDualUnbounded;  // Was 1
-    //    timer_.stop();
+    //  timer_.stop(timer_.Chuzr1Clock);
     model->timer.recordFinish(HTICK_CHUZC1);
     return;
   }
-  //  timer_.stop();
+  //  timer_.stop(timer_.Chuzr1Clock);
   model->timer.recordFinish(HTICK_CHUZC1);
 
   // Choose column 2, This only happens if didn't go out
@@ -1615,11 +1619,12 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
 }
 
 void HDual::updateFtran() {
+//  HighsTimer &timer = highs_model_object.timer_;
   // Compute the pivotal column (FTRAN)
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
-  //  timer_.start();
+//  timer_.start(timer_.FtranClock);
   model->timer.recordStart(HTICK_FTRAN);
   // Clear the picotal column and indicate that its values should be packed
   column.clear();
@@ -1638,11 +1643,12 @@ void HDual::updateFtran() {
 #endif
   // Save the pivot value computed column-wise - used for numerical checking
   alpha = column.array[rowOut];
-  //  timer_.stop();
+  //  timer_.stop(timer_.FtranClock);
   model->timer.recordFinish(HTICK_FTRAN);
 }
 
 void HDual::updateFtranBFRT() {
+//  HighsTimer &timer = highs_model_object.timer_;
   // Compute the RHS changes corresponding to the BFRT (FTRAN-BFRT)
   //
   // If reinversion is needed then skip this method
@@ -1653,7 +1659,7 @@ void HDual::updateFtranBFRT() {
   // merely clears columnBFRT so no FTRAN is performed
   bool time_updateFtranBFRT = dualRow.workCount > 0;
 
-  //  timer_.start();
+//  timer_.start(timer_.FtranBfrtClock);
   if (time_updateFtranBFRT) model->timer.recordStart(HTICK_FTRAN_BFRT);
 
   dualRow.update_flip(&columnBFRT);
@@ -1670,17 +1676,18 @@ void HDual::updateFtranBFRT() {
     if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
 #endif
   }
-  //  timer_.stop();
+  //  timer_.stop(timer_.FtranBfrtClock);
   if (time_updateFtranBFRT) model->timer.recordFinish(HTICK_FTRAN_BFRT);
 }
 
 void HDual::updateFtranDSE(HVector *DSE_Vector) {
+//  HighsTimer &timer = highs_model_object.timer_;
   // Compute the vector required to update DSE weights - being FTRAN
   // applied to the pivotal column (FTRAN-DSE)
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
-  //  timer_.start();
+//  timer_.start(timer_.FtranDseClock);
   model->timer.recordStart(HTICK_FTRAN_DSE);
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
@@ -1691,7 +1698,7 @@ void HDual::updateFtranDSE(HVector *DSE_Vector) {
 #ifdef HiGHSDEV
   if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
 #endif
-  //  timer_.stop();
+  //  timer_.stop(timer_.FtranDseClock);
   model->timer.recordFinish(HTICK_FTRAN_DSE);
 }
 
@@ -1868,7 +1875,7 @@ void HDual::iz_dvx_fwk() {
   n_dvx_fwk += 1;  // Increment the number of Devex frameworks
   nw_dvx_fwk =
       false;  // Indicate that there's no need for a new Devex framework
-  //  timer_.stop();
+  //  timer_.stop(timer_.);
   model->timer.recordFinish(HTICK_DEVEX_IZ);
 }
 

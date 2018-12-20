@@ -130,7 +130,7 @@ class HighsTimer {
 
     // Report in one line the per-mille contribution from each clock
     double totalTick = getTick();
-    printf("txt-profile-name  ");
+    printf("TXT-PROFILE-name  ");
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
       assert(iClock >= 0);
@@ -138,7 +138,7 @@ class HighsTimer {
       printf(" %-3s", clockCh3Names[iClock].c_str());
     }
     printf("\n");
-    printf("txt-profile-clock ");
+    printf("TXT-PROFILE-clock ");
     double suPerMille = 0;
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
@@ -155,7 +155,7 @@ class HighsTimer {
     printf(" per mille: Sum = %d", int_suPerMille);
     printf("\n");
     // Report one line per clock, the time, number of calls and time per call
-    printf("txt-profile-time ");
+    printf("TXT-PROFILE-time ");
 #ifdef HiGHSDEV
     printf("ID: ");
 #endif
@@ -170,26 +170,28 @@ class HighsTimer {
       double ti = tick2sec * tick;
       double perCent = 100.0 * tick / totalTick;
       double tiPerCall = 0;
-      if (clockNumCall[iClock] > 0) tiPerCall = ti / clockNumCall[iClock];
-      if (perCent >= tlPerCentReport) {
-        printf("txt-profile-time ");
+      if (clockNumCall[iClock] > 0) {
+	tiPerCall = ti / clockNumCall[iClock];
+	if (perCent >= tlPerCentReport) {
+	  printf("TXT-PROFILE-time ");
 #ifdef HiGHSDEV
-	printf("%2d: ", iClock);
+	  printf("%2d: ", iClock);
 #endif
-	printf("%-16s: %11.4e (%5.1f%%): %7d %11.4e\n",
-               clockNames[iClock].c_str(), ti, perCent, clockNumCall[iClock],
-               tiPerCall);
+	  printf("%-16s: %11.4e (%5.1f%%): %7d %11.4e\n",
+		 clockNames[iClock].c_str(), ti, perCent, clockNumCall[iClock],
+		 tiPerCall);
+	}
       }
       suTi += ti;
       suTick += tick;
     }
     double perCent = 100.0 * suTick / totalTick;
-    printf("txt-profile-time ");
+    printf("TXT-PROFILE-time ");
 #ifdef HiGHSDEV
     printf("    ");
 #endif
     printf("SUM             : %11.4e (%5.1f%%)\n", suTi, perCent);
-    printf("txt-profile-time ");
+    printf("TXT-PROFILE-time ");
 #ifdef HiGHSDEV
     printf("    ");
 #endif
@@ -219,9 +221,9 @@ class HighsTimer {
     }
   }
 
-  void reportDualSimplexInnerClock() {report_tl(dualSimplexInnerClockList, 1.0);}
-  void reportDualSimplexOuterClock() {report_tl(dualSimplexOuterClockList, 1.0);}
-  void reportDualSimplexIterateClock() {report_tl(dualSimplexIterateClockList, 1.0);}
+  void reportDualSimplexInnerClock() {report_tl(dualSimplexInnerClockList, 0.0);}
+  void reportDualSimplexOuterClock() {report_tl(dualSimplexOuterClockList, 0.0);}
+  void reportDualSimplexIterateClock() {report_tl(dualSimplexIterateClockList, 0.0);}
   /**
    * @brief Return the wall-clock time since the clocks were reset
    */
@@ -295,7 +297,7 @@ class HighsTimer {
   int UpdateMatrixClock;   //!< Update the row-wise copy of the constraint matrix for nonbasic columns
   int UpdateRowEpClock;   //!< Update the tableau rows in PAMI
 
- private: 
+  // private: 
   double startTime;  //!< Elapsed time when the clocks were reset
   double startTick;  //!< CPU ticks when the clocks were reset
 
