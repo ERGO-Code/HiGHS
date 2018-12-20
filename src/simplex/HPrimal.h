@@ -14,8 +14,11 @@
 #ifndef SIMPLEX_HPRIMAL_H_
 #define SIMPLEX_HPRIMAL_H_
 
-#include "HModel.h"
 #include "HighsModelObject.h"
+#include "HVector.h"
+#include "HConfig.h"
+
+class HModel;
 
 /**
  * @brief Phase 2 primal simplex solver for HiGHS

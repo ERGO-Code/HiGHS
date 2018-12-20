@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HPrimal.h"
+#include "HModel.h"
 #include "HConst.h"
 
 #include <cassert>

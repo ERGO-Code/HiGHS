@@ -12,12 +12,15 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRow.h"
-#include "HConst.h"
-#include "HModel.h"
 #include "HighsModelObject.h"
 
 #include <cassert>
 #include <iostream>
+
+#include "HConst.h"
+#include "HModel.h"
+#include "HVector.h"
+
 using namespace std;
 
 void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {

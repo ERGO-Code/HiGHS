@@ -39,8 +39,8 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
 
 bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
                   double* data);
-int isspace(int c);
-char* fgets(char* str, int num, FILE* stream);
+// int isspace(int c);
+// char* fgets(char* str, int num, FILE* stream);
 
 inline const char* const BoolToString(bool b);
 

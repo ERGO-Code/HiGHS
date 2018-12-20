@@ -13,11 +13,13 @@
  */
 #include "HConfig.h"
 #include "HMatrix.h"
+
 #include <cassert>
 #include <cmath>
-#include "HConst.h"
-// For printf
 #include <cstdio>
+
+#include "HConst.h"
+#include "HVector.h"
 
 void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
                     const int *Aindex_, const double *Avalue_,
@@ -36,7 +38,7 @@ void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
   Avalue.assign(Avalue_, Avalue_ + AcountX);
 
   // Build row copy - pointers
-  vector<int> AR_Bend;
+  std::vector<int> AR_Bend;
   ARstart.resize(numRow + 1);
   AR_Nend.assign(numRow, 0);
   AR_Bend.assign(numRow, 0);

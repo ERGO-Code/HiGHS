@@ -8,18 +8,20 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HDualRHS.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRHS.h"
-#include "HConst.h"
-#include "HighsModelObject.h"
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <set>
-using namespace std;
+
+#include "HConst.h"
+#include "HModel.h"
+#include "HVector.h"
+#include "HighsModelObject.h"
 
 void HDualRHS::setup(HighsModelObject *highs_model_object
 		     //		     HModel *model

@@ -15,10 +15,11 @@
 #define LP_DATA_HIGHSUTILS_H_
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HConst.h"
-//#include "HModel.h"
-//#include "HighsModelObject.h"
+
+class HighsLp;
+
+// Logical check of double being +Infinity
+bool highs_isInfinity(double val);
 
 /**
  * @brief Logical check of double being +Infinity
@@ -77,6 +78,7 @@ class HighsUtils {
   }
 
 #ifdef HiGHSDEV
+<<<<<<< HEAD
   // Analyse the values of a vector, assessing how many are in each power of ten
   void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
 #endif
@@ -135,8 +137,12 @@ void reportLpSolution(
 #ifdef HiGHSDEV
   
   void util_anMl(HighsLp lp, const char* message);
+=======
+  void util_anMl(HighsLp& lp, const char* message);
+>>>>>>> tidy-up-includes
   void util_anMlBd(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
 #endif
+
  private:
   unsigned random_mw;
   unsigned random_mz;
