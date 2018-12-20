@@ -16,6 +16,7 @@
 #include <cstring>
 
 #include "HDual.h"
+#include "HModel.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
                             const int XnumCol, const int XnumRow,

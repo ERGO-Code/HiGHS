@@ -13,6 +13,7 @@
  */
 #include "HCrash.h"
 #include "HMatrix.h"
+#include "HModel.h"
 #include "HSort.h"
 #include "HConst.h"
 

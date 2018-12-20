@@ -15,7 +15,6 @@
 #define IO_LOAD_PROBLEM_H_
 
 #include "FilereaderMps.h"
-#include "HModel.h"
 
 // Parses the file in options.filename using the parser specified in
 // options.parser

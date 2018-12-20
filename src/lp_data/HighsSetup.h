@@ -21,7 +21,6 @@
 #include "HApp.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
-#include "HighsOptions.h"
 #include "Presolve.h"
 #include "cxxopts.hpp"
 
