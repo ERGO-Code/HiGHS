@@ -12,9 +12,10 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "KktCheck.h"
-#include "HConst.h"
 
 #include <vector>
+
+#include "HConst.h"
 
 void KktCheck::printAR() {
   std::cout << "N=" << numCol << ",  M=" << numRow << ",  NZ= " << ARstart[numRow]

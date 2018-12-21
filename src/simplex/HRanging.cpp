@@ -12,10 +12,12 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HRanging.h"
+
 #include <cstdio>
+
+#include "HConst.h"
 #include "HDual.h"
 #include "HModel.h"
-#include "HConst.h"
 
 int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
 

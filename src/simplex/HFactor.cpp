@@ -12,20 +12,21 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HFactor.h"
-#include "HConst.h"
-#include "HTimer.h"
-#include "HVector.h"
 
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
 
-using std::fill_n;
+#include "HConst.h"
+#include "HTimer.h"
+#include "HVector.h"
+
 using std::copy;
-using std::vector;
-using std::pair;
+using std::fill_n;
 using std::make_pair;
+using std::pair;
+using std::vector;
 
 void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
                   const int Yend, const int *Tindex, const double *Tvalue,

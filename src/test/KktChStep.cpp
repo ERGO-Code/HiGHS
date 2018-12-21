@@ -13,17 +13,17 @@
  */
 #include "KktChStep.h"
 
+#include <utility>
+
 #include "HConst.h"
 #include "KktCheck.h"
 
-#include <utility>
-
 using std::cout;
 using std::endl;
+using std::get;
 using std::pair;
 using std::setw;
 using std::vector;
-using std::get;
 
 void KktChStep::passSolution(const vector<double>& colVal,
                              const vector<double>& colDu,

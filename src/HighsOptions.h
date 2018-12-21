@@ -1,10 +1,10 @@
 #ifndef HIGHSOPTIONS_H
 #define HIGHSOPTIONS_H
 
-#include <typeinfo>
+#include <map>
 #include <stdio.h>
 #include <string.h>
-#include <map>
+#include <typeinfo>
 
 struct char_cmp {
   bool operator()(const char* a, const char* b) const {

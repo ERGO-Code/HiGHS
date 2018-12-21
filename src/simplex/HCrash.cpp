@@ -12,22 +12,23 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HCrash.h"
-#include "HMatrix.h"
-#include "HModel.h"
-#include "HSort.h"
-#include "HConst.h"
 
 #include <cassert>
 #include <set>
 #include <string>
 #include <vector>
 
-using std::vector;
-using std::string;
-using std::max;
+#include "HConst.h"
+#include "HMatrix.h"
+#include "HModel.h"
+#include "HSort.h"
+
 using std::abs;
 using std::cout;
 using std::flush;
+using std::max;
+using std::string;
+using std::vector;
 
 void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
   lp_ = &highs_model_object.lp_scaled_;

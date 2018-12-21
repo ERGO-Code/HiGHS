@@ -12,11 +12,12 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HVector.h"
-#include "HConst.h"
 
 #include <cassert>
 #include <cmath>
 #include "stdio.h"  //Just for temporary printf
+
+#include "HConst.h"
 
 void HVector::setup(int size_) {
   /*

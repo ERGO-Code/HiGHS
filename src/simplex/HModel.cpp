@@ -12,11 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HModel.h"
-#include "HConst.h"
-#include "HMPSIO.h"
-#include "Presolve.h"
-#include "HToyIO.h"
-#include "HVector.h"
 
 #include <algorithm>
 #include <cassert>
@@ -31,6 +26,12 @@
 #include <map>
 #include <set>
 #include <stdexcept>
+
+#include "HConst.h"
+#include "HMPSIO.h"
+#include "HToyIO.h"
+#include "HVector.h"
+#include "Presolve.h"
 
 using std::cout;
 using std::endl;

@@ -12,13 +12,13 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRow.h"
-#include "HighsModelObject.h"
 
 #include <cassert>
 #include <iostream>
 
 #include "HConst.h"
 #include "HModel.h"
+#include "HighsModelObject.h"
 #include "HVector.h"
 
 using std::make_pair;

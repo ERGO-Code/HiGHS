@@ -22,9 +22,9 @@
 #include "HCrash.h"
 #include "HDualRHS.h"
 #include "HDualRow.h"
-#include "HighsModelObject.h"
-#include "HVector.h"
 #include "HMatrix.h"
+#include "HVector.h"
+#include "HighsModelObject.h"
 
 class HFactor;
 

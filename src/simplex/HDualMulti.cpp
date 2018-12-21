@@ -11,11 +11,7 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConst.h"
 #include "HDual.h"
-#include "HPrimal.h"
-#include "HModel.h"
-#include "HTimer.h"
 
 #include <cassert>
 #include <cmath>
@@ -23,6 +19,11 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
+
+#include "HConst.h"
+#include "HModel.h"
+#include "HPrimal.h"
+#include "HTimer.h"
 
 using std::cout;
 using std::endl;

@@ -25,15 +25,15 @@
 #include "HCrash.h"
 #include "HPrimal.h"
 #include "HTimer.h"
-#include "HighsLp.h"
 #include "HighsIO.h"
+#include "HighsLp.h"
 #include "HighsModelObject.h"
 
-using std::runtime_error;
 using std::cout;
 using std::endl;
-using std::flush;
 using std::fabs;
+using std::flush;
+using std::runtime_error;
 
 void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num_threads) {
   highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h

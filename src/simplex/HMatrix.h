@@ -14,8 +14,9 @@
 #ifndef SIMPLEX_HMATRIX_H_
 #define SIMPLEX_HMATRIX_H_
 
-#include "HConfig.h"
 #include <vector>
+
+#include "HConfig.h"
 
 class HVector;
 

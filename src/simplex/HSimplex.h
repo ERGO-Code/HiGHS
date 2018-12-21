@@ -14,12 +14,12 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
-#include "HConfig.h"
-#include "HighsModelObject.h"
 #include <cassert>
 //#include <vector>
 //#include <iostream>
 
+#include "HConfig.h"
+#include "HighsModelObject.h"
 
 //void simplexAllocateWorkAndBaseArrays(std::string& highs_model) {HighsModelObject obj;}
 

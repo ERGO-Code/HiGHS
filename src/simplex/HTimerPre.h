@@ -14,10 +14,10 @@
 #ifndef SIMPLEX_HTIMERPRE_H_
 #define SIMPLEX_HTIMERPRE_H_
 
-#include <sys/time.h>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <sys/time.h>
 
 using std::string;
 

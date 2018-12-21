@@ -11,13 +11,13 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConfig.h"
 #include "HMatrix.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 
+#include "HConfig.h"
 #include "HConst.h"
 #include "HVector.h"
 

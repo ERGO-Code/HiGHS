@@ -14,11 +14,11 @@
 #ifndef SIMPLEX_HTIMER_H_
 #define SIMPLEX_HTIMER_H_
 
-#include <sys/time.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <sys/time.h>
 
 using std::string;
 

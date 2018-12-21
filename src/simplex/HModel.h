@@ -14,16 +14,17 @@
 #ifndef SIMPLEX_HMODEL_H_
 #define SIMPLEX_HMODEL_H_
 
+#include <sstream>
+#include <string>
+#include <vector>
+
 #include "HFactor.h"
 #include "HMatrix.h"
 #include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsUtils.h"
-class HVector;
 
-#include <sstream>
-#include <string>
-#include <vector>
+class HVector;
 
 const int LP_Status_Unset = -1;
 const int LP_Status_Optimal = 0;
