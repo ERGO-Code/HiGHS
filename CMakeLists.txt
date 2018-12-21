@@ -118,11 +118,6 @@ set(IPX_DIR "${CMAKE_SOURCE_DIR}/interior_point" CACHE STRING "Path to IPX folde
 #    link_directories("${IPX_DIR}/lib")
 #endif()
 
-add_custom_target(
-    basiclu
-    COMMAND make
-    WORKING_DIRECTORY "${IPX_DIR}/basiclu"
- )
 # add_executable(myexecutable myexcutable.c)
 # target_link_libraries(myexecutable full_path_to_generated_library)
 # add_dependencies(myexecutable extern_lib)

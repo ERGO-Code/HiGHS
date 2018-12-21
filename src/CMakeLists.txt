@@ -73,8 +73,15 @@ set(headers
 
 add_library(libhighs ${sources})
 
+add_custom_target(
+    basiclu
+    COMMAND make
+    WORKING_DIRECTORY "${IPX_DIR}/basiclu"
+ )
+
 # Use interior point solver option. Assuming it's already been made.
-if (IPX_DIR)
+if (0)
+#if (IPX_DIR)
     link_directories("${IPX_DIR}/ipx/lib")
   find_library(IPX_LIB NAMES ipx PATHS "${IPX_DIR}/ipx/lib")
   if(NOT IPX_LIB)
