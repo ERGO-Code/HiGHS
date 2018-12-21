@@ -577,7 +577,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   //#ifdef HiGHSDEV
   const double toleranceRelativeError = toleranceRelativeTotalError;
   const double relativeErrorDenominator =
-      max(1.0, abs(model->dualObjectiveValue));
+      max(1.0, fabs(model->dualObjectiveValue));
   reportRangingDataCheck = numTot < 250;
   //#endif
   //  utils.reportModelSolution(ref_highs_model_object);

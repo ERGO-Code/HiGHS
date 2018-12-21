@@ -19,7 +19,6 @@
 //#include <cstdio>
 //#include <fstream>
 //#include <iostream>
-// using namespace std;
 
 int readToy_LP_cpp(const char* filename, int* m_p, int* n_p, int* maxmin,
                    double* offset, double** A, double** b, double** c,

@@ -18,7 +18,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-using namespace std;
+
+using std::string;
 
 enum HTickItemPre {
   // Presolve items

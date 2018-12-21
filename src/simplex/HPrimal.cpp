@@ -18,7 +18,8 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
-using namespace std;
+
+using std::runtime_error;
 
 void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   // Copy size

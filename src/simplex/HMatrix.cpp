@@ -21,6 +21,10 @@
 #include "HConst.h"
 #include "HVector.h"
 
+using std::swap;
+using std::fabs;
+using std::max;
+
 void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
                     const int *Aindex_, const double *Avalue_,
                     const int *nonbasicFlag_) {
@@ -943,7 +947,7 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
     double lcPriceV = lc_ap_array[index];
     if ((fabs(PriceV) > HIGHS_CONST_TINY && fabs(lcPriceV) <= HIGHS_CONST_TINY) ||
         (fabs(lcPriceV) > HIGHS_CONST_TINY && fabs(PriceV) <= HIGHS_CONST_TINY)) {
-      double TinyVEr = max(fabs(PriceV), fabs(lcPriceV));
+      double TinyVEr = std::max(fabs(PriceV), fabs(lcPriceV));
       mxTinyVEr = max(TinyVEr, mxTinyVEr);
       if (TinyVEr > 1e-4) {
         numTinyVEr++;

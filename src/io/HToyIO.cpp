@@ -18,7 +18,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-using namespace std;
+using std::string;
 #endif
 
 // Includes for C compiler [C++ compiler ignores them]

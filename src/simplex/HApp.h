@@ -21,6 +21,10 @@
 #include "HRanging.h"
 #include "Scaling.h"
 
+using std::cout;
+using std::endl;
+using std::flush;
+
 HighsStatus LpStatusToHighsStatus(const int lp_status) {
   switch (lp_status) {
     case LP_Status_OutOfTime:

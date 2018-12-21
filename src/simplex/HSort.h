@@ -14,7 +14,6 @@
 #ifndef SIMPLEX_HSORT_H_
 #define SIMPLEX_HSORT_H_
 
-using namespace std;
 /**
  * @brief Sort values[1..n] of an array by increasing value with corresponding indices
  */

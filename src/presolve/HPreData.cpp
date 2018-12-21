@@ -14,6 +14,10 @@
 #include "HPreData.h"
 #include "HConst.h"
 
+using std::cout;
+using std::setw;
+using std::endl;
+
 HPreData::HPreData() {}
 
 double HPreData::getRowValue(int i) {

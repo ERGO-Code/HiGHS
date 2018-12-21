@@ -22,7 +22,10 @@
 
 #include "KktChStep.h"
 
-using namespace std;
+using std::vector;
+using std::stack;
+using std::string;
+using std::pair;
 
 struct change {
   int type;

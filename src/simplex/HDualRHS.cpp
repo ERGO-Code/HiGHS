@@ -23,6 +23,11 @@
 #include "HVector.h"
 #include "HighsModelObject.h"
 
+using std::pair;
+using std::make_pair;
+using std::fill_n;
+using std::nth_element;
+
 void HDualRHS::setup(HighsModelObject *highs_model_object
 		     //		     HModel *model
 		     ) {

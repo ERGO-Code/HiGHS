@@ -21,7 +21,9 @@
 #include "HModel.h"
 #include "HVector.h"
 
-using namespace std;
+using std::make_pair;
+using std::pair;
+using std::set;
 
 void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
   // Copy pointer

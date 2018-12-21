@@ -17,7 +17,13 @@
 #include "KktCheck.h"
 
 #include <utility>
-using namespace std;
+
+using std::cout;
+using std::endl;
+using std::pair;
+using std::setw;
+using std::vector;
+using std::get;
 
 void KktChStep::passSolution(const vector<double>& colVal,
                              const vector<double>& colDu,
