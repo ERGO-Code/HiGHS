@@ -2,6 +2,7 @@
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
 #include "HighsLp.h"
+#include "HighsTimer.h"
 #include "HModel.h"
 // include Sensitivity(or Ranging) header
 
@@ -16,10 +17,19 @@ struct BasisInfo {
 // include essential data.
 class HighsModelObject {
 public:
-  HighsModelObject(const HighsLp& lp) : lp_(lp) {}
+  HighsModelObject(HighsLp& lp) : lp_(lp) {}
 
-  const HighsLp& lp_;
+  HighsLp& lp_;
+
+  HighsLp lp_scaled_;
+  HighsSimplexInfo simplex_;
   HighsSolution solution_;
+  HighsRanging ranging_;
+  HighsBasis basis_;
+  HighsScale scale_;
+  HMatrix matrix_;
+  HFactor factor_;
+
   BasisInfo basis_info_;
 
   // the vector below either contains one vector or zero.

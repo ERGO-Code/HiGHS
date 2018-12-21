@@ -17,6 +17,9 @@
 #include "HDual.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
+#include "HCrash.h"
+#include "HRanging.h"
+#include "Scaling.h"
 
 HighsStatus LpStatusToHighsStatus(const int lp_status) {
   switch (lp_status) {
@@ -39,6 +42,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
                          HighsModelObject& highs_model) {
   HModel& model = highs_model.hmodel_[0];
 
+  bool ranging = true;
   // Initialize solver.
   HDual solver;
 
@@ -46,7 +50,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   if (opt.clean_up) {
     model.initFromNonbasic();
 
-    solver.solve(&model);
+    solver.solve(highs_model);
     return LpStatusToHighsStatus(model.problemStatus);
   }
 
@@ -54,28 +58,26 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   if (opt.crashMode.size() > 0) {
     solver.setCrash(opt.crashMode.c_str());
     HCrash crash;
-    crash.crash(&model, solver.Crash_Mode);
+    crash.crash(highs_model, solver.Crash_Mode);
   }
 
   // Solve, depending on the options.
   // Parallel.
   if (opt.sip) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    solver.solve(&model, HDUAL_VARIANT_TASKS, 8);
+    solver.solve(highs_model, HDUAL_VARIANT_TASKS, 8);
   } else if (opt.pami) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
     if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+    solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
     if (opt.sip) model.writePivots("tasks");
 #endif
   } else {
     // Serial. Based on previous solvePlainJAJH.
-
-// todo: do setup and presolve timings elsewhere.
 
     double crashTime = 0; 
 #ifdef HiGHSDEV
@@ -112,11 +114,11 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     bool EightThreads = false;
 
     if (FourThreads)
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 4);
+      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 4);
     else if (EightThreads)
-      solver.solve(&model, HDUAL_VARIANT_MULTI, 8);
+      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
     else
-      solver.solve(&model);
+      solver.solve(highs_model);
 
     lcSolveTime = model.timer.getTime();
     solveTime += lcSolveTime;
@@ -129,8 +131,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.getPrStatus(), model.modelName.c_str(), model.getNumRow(),
-        model.getNumCol(), lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+        model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
+        highs_model.lp_.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -146,7 +148,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         model.copy_savedBoundsToModelBounds();
 
         model.timer.reset();
-        solver.solve(&model);
+        solver.solve(highs_model);
  /*       lcSolveTime = model.timer.getTime();
         solveTime += lcSolveTime;
         solveIt += model.numberIteration;  */
@@ -158,13 +160,14 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.getPrStatus(), model.modelName.c_str(), model.getNumRow(),
-            model.getNumCol(), lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+            model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
+            highs_model.lp_.numCol_, lcSolveTime, model.dualObjectiveValue, solver.n_ph1_du_it,
             solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
     }
-
+    //    HighsUtils utils; utils.reportLp(highs_model.lp_);
+    //    utils.reportLpSolution(highs_model);
     HighsStatus result = LpStatusToHighsStatus(model.problemStatus);
     if (result != HighsStatus::Optimal) return result;
 
@@ -194,8 +197,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 #ifdef HiGHSDEV
     bool rpBnchmk = false;
     if (rpBnchmk) {
-      int numCol = model.getNumCol();
-      int numRow = model.getNumRow();
+      int numCol = highs_model.lp_.numCol_;
+      int numRow = highs_model.lp_.numRow_;
       printf(
           "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
           "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
@@ -217,6 +220,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 }
 
 HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
+  HighsUtils utils;
   printf("Called solveScip.\n");
 
   // This happens locally for now because I am not sure how it is used. Later
@@ -234,8 +238,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   model.scaleModel();
 
   // Extract columns numCol-3..numCol-1
-  int FmCol = model.lpScaled.numCol_ - 3;
-  int ToCol = model.lpScaled.numCol_ - 1;
+  int FmCol = highs_model.lp_.numCol_ - 3;
+  int ToCol = highs_model.lp_.numCol_ - 1;
   int numExtractCols = ToCol - FmCol + 1;
   vector<double> XcolCost;
   vector<double> XcolLower;
@@ -255,8 +259,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   //  model.util_reportModel();
 
   // Extract rows numRow-3..numRow-1
-  int FmRow = model.lpScaled.numRow_ - 3;
-  int ToRow = model.lpScaled.numRow_ - 1;
+  int FmRow = highs_model.lp_.numRow_ - 3;
+  int ToRow = highs_model.lp_.numRow_ - 1;
   int numExtractRows = ToRow - FmRow + 1;
   vector<double> XrowLower;
   vector<double> XrowUpper;
@@ -277,7 +281,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   // Extract all remaining rows
   FmRow = 0;
-  ToRow = model.lpScaled.numRow_ - 1;
+  ToRow = highs_model.lp_.numRow_ - 1;
   int num0ExtractRows = ToRow - FmRow + 1;
   vector<double> X0rowLower;
   vector<double> X0rowUpper;
@@ -296,7 +300,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   // Extract all remaining columns
   FmCol = 0;
-  ToCol = model.lpScaled.numCol_ - 1;
+  ToCol = highs_model.lp_.numCol_ - 1;
   int num0ExtractCols = ToCol - FmCol + 1;
   vector<double> X0colCost;
   vector<double> X0colLower;
@@ -334,21 +338,21 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   model.scaleModel();
   HDual solver;
-  solver.solve(&model);
-  model.util_reportModelSolution(model.lpScaled);
+  solver.solve(highs_model);
+  //  utils.reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
-  vector<double> colPrimal(model.lpScaled.numCol_);
-  vector<double> colDual(model.lpScaled.numCol_);
-  vector<double> colLower(model.lpScaled.numCol_);
-  vector<double> colUpper(model.lpScaled.numCol_);
-  vector<double> rowPrimal(model.lpScaled.numRow_);
-  vector<double> rowDual(model.lpScaled.numRow_);
-  vector<double> rowLower(model.lpScaled.numRow_);
-  vector<double> rowUpper(model.lpScaled.numRow_);
+  vector<double> colPrimal(highs_model.lp_.numCol_);
+  vector<double> colDual(highs_model.lp_.numCol_);
+  vector<double> colLower(highs_model.lp_.numCol_);
+  vector<double> colUpper(highs_model.lp_.numCol_);
+  vector<double> rowPrimal(highs_model.lp_.numRow_);
+  vector<double> rowDual(highs_model.lp_.numRow_);
+  vector<double> rowLower(highs_model.lp_.numRow_);
+  vector<double> rowUpper(highs_model.lp_.numRow_);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(model.lpScaled, 0, model.lpScaled.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(model.lpScaled, 0, model.lpScaled.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(highs_model.lp_scaled_, 0, highs_model.lp_.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(highs_model.lp_scaled_, 0, highs_model.lp_.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -357,11 +361,11 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   double nw_colUpper;
 
   int num_resolve = 0;
-  for (int col = 0; col < model.lpScaled.numCol_; col++) {
-    model.util_getColBounds(model.lpScaled, col, col, &og_colLower, &og_colUpper);
+  for (int col = 0; col < highs_model.lp_.numCol_; col++) {
+    //    model.util_getColBounds(model.lp_scaled_, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
-    if (model.basis.nonbasicFlag_[col]) {
+    if (model.basis_->nonbasicFlag_[col]) {
       printf(": nonbasic so don't branch\n");
       continue;
     } else {
@@ -384,9 +388,9 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
       printf("Calling model.scaleModel()\n");
       model.scaleModel();
-      //      printf("Calling solver.solve(&model)\n");
-      solver.solve(&model);
-      //      printf("Called solver.solve(&model)\n");
+      //      printf("Calling solver.solve(highs_model)\n");
+      solver.solve(highs_model);
+      //      printf("Called solver.solve(highs_model)\n");
       model.util_reportSolverOutcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
       // avgas
@@ -406,7 +410,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   cout << "=================================================================="
        << endl;
 
-  // For the mo ent handle scip case separately.
+  // For the moment handle scip case separately.
   if (opt.scip) return solveScip(opt, highs_model);
 
   // When runSimplexSolver is called initialize an instance of HModel inside the
@@ -414,16 +418,55 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   highs_model.hmodel_.push_back(HModel());
 
   HModel& model = highs_model.hmodel_[0];
-  const HighsLp& lp = highs_model.lp_;
+  const HighsLp& lp_ = highs_model.lp_;
 
-  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
-                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
-                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
-                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
+  // Allocate memory for the basis
+  // assignBasis();
+  const int numTot = highs_model.lp_.numCol_ + highs_model.lp_.numRow_;
+  highs_model.basis_.basicIndex_.resize(highs_model.lp_.numRow_);
+  highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
+  highs_model.basis_.nonbasicMove_.resize(numTot);
 
+  // Set pointers within HModel for the basis, scaling data structure and simplex information data structure
+  model.basis_ = &highs_model.basis_;
+  model.scale_ = &highs_model.scale_;
+  model.simplex_ = &highs_model.simplex_;
 
-  // Scaling: Separate from simplex.
-  model.scaleModel();
+  bool load_fromArrays = true;
+  if (load_fromArrays) {
+    highs_model.lp_scaled_ = highs_model.lp_;
+    model.lp_scaled_ = &highs_model.lp_scaled_;
+        model.load_fromArrays(lp_.numCol_, lp_.sense_, &lp_.colCost_[0],
+    			  &lp_.colLower_[0], &lp_.colUpper_[0], lp_.numRow_,
+    			  &lp_.rowLower_[0], &lp_.rowUpper_[0], lp_.nnz_,
+    			  &lp_.Astart_[0], &lp_.Aindex_[0], &lp_.Avalue_[0]);
+    // Scaling: Separate from simplex.
+   model.scaleModel();
+
+  } else {
+    // Copy the LP to the structure to be scaled and then scale it
+    scaleHighsModel(highs_model);
+    //    model.lp_scaled_ = highs_model.lp_scaled_;
+    model.initWithLogicalBasis();
+
+  }
+
+  const HighsLp& lp_scaled_ = highs_model.lp_scaled_;
+  highs_model.matrix_.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_,
+				  &lp_scaled_.Astart_[0],
+				  &lp_scaled_.Aindex_[0],
+				  &lp_scaled_.Avalue_[0]);
+
+  highs_model.factor_.setup(lp_scaled_.numCol_, lp_scaled_.numRow_,
+			   &lp_scaled_.Astart_[0],
+			   &lp_scaled_.Aindex_[0],
+			   &lp_scaled_.Avalue_[0],
+			   &highs_model.basis_.basicIndex_[0]);
+
+  // Set pointers within HModel for the matrix and factor data structure
+  model.matrix_ = &highs_model.matrix_;
+  model.factor_ = &highs_model.factor_;
+
 
   // Crash, if needed.
 
@@ -440,7 +483,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.util_getBasicIndexNonbasicFlag(highs_model.basis_info_.basis_index,
                                        highs_model.basis_info_.nonbasic_flag);
 
-  highs_model.basis_info_.nonbasic_move = model.basis.nonbasicMove_;
+  highs_model.basis_info_.nonbasic_move = model.basis_->nonbasicMove_;
 
   cout << "==================================================================\n";
 

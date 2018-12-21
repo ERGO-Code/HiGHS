@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDualRow.h"
+#include "HighsModelObject.h"
 
 #include <cassert>
 #include <iostream>
@@ -22,13 +23,16 @@
 
 using namespace std;
 
-void HDualRow::setupSlice(HModel *model, int size) {
+void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
   // Copy pointer
+  workHMO = highs_model_object;
+  HModel *model;
+  model = &workHMO->hmodel_[0];
   workModel = model;
   workSize = size;
-  workMove = model->getNonbasicMove();
-  workDual = model->getWorkDual();
-  workRange = model->getWorkRange();
+  workMove = &workHMO->basis_.nonbasicMove_[0];
+  workDual = &workHMO->simplex_.workDual_[0];
+  workRange = &workHMO->simplex_.workRange_[0];
 
   // Allocate spaces
   packCount = 0;
@@ -39,10 +43,25 @@ void HDualRow::setupSlice(HModel *model, int size) {
   workData.resize(workSize);
 }
 
-void HDualRow::setup(HModel *model) {
+void HDualRow::setup(HighsModelObject *highs_model_object) {
   // Setup common vectors
-  setupSlice(model, model->getNumTot());
-  workColPermutation = model->getColPermutation();
+  HModel *model;
+  model = &highs_model_object->hmodel_[0];
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  setupSlice(highs_model_object, numTot);
+  workColPermutation = &model->colPermutation[0];
+
+  
+ // delete_Freelist() is being called in Phase 1 and Phase 2 since
+ // it's in updatePivots(), but create_Freelist() is only called in
+ // Phase 2. Hence freeList and freeListSize are not initialised when
+ // freeList.empty() is used to identify that freeListSize should be
+ // tested for zero. Suddenly freeListSize is 1212631365 rather than
+ // zero when uninitialised, triggering a warning. So, let's set
+ // clear freeList and set freeListSize = 0.
+  freeList.clear();
+  freeListSize = 0;
+
 }
 
 void HDualRow::clear() {
@@ -302,10 +321,10 @@ bool HDualRow::choose_final() {
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
   //  workModel->checkDualObjectiveValue("Before update_flip");
-  double *workDual = workModel->getWorkDual();//
-  //  double *workLower = workModel->getWorkLower();
-  //  double *workUpper = workModel->getWorkUpper();
-  //  double *workValue = workModel->getWorkValue();
+  double *workDual = &workHMO->simplex_.workDual_[0];//
+  //  double *workLower = &workHMO->simplex_.workLower_[0];
+  //  double *workUpper = &workHMO->simplex_.workUpper_[0];
+  //  double *workValue = &workHMO->simplex_.workValue_[0];
   double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
@@ -317,7 +336,7 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
     dualObjectiveValueChange += lcDualObjectiveValueChange;
     workModel->flipBound(iCol);
-    workModel->getMatrix()->collect_aj(*bfrtColumn, iCol, change);
+    workModel->matrix_->collect_aj(*bfrtColumn, iCol, change);
   }
   workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
   //  workModel->checkDualObjectiveValue("After  update_flip");
@@ -326,7 +345,7 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
 void HDualRow::update_dual(double theta, int columnOut) {
   //  workModel->checkDualObjectiveValue("Before update_dual");
   workModel->timer.recordStart(HTICK_UPDATE_DUAL);
-  double *workDual = workModel->getWorkDual();
+  double *workDual = &workHMO->simplex_.workDual_[0];
   //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
@@ -334,9 +353,9 @@ void HDualRow::update_dual(double theta, int columnOut) {
     int iCol = packIndex[i];
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
-    double iColWorkValue = workModel->simplex.workValue_[iCol];
-    double dlDuObj = workModel->basis.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
-    dlDuObj *= workModel->scale.cost_;
+    double iColWorkValue = workHMO->simplex_.workValue_[iCol];
+    double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
+    dlDuObj *= workHMO->scale_.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
   /*
@@ -381,9 +400,10 @@ void HDualRow::update_dual(double theta, int columnOut) {
 
 void HDualRow::create_Freelist() {
   freeList.clear();
-  const int *nonbasicFlag = workModel->getNonbasicFlag();
+  const int *nonbasicFlag = &workHMO->basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
-  for (int i = 0; i < workModel->getNumTot(); i++) {
+  const int numTot = workModel->lp_scaled_->numCol_ + workModel->lp_scaled_->numRow_;
+  for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
       freeList.insert(i);
       ckFreeListSize++;
@@ -395,8 +415,9 @@ void HDualRow::create_Freelist() {
   if (freeListSize != ckFreeListSize) {
     printf("!! STRANGE: freeListSize != ckFreeListSize\n");
   }
+  // const int numTot = workModel->lp_scaled_->numCol_ + workModel->lp_scaled_->numRow_;
   //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-  //  freeListE, freeListSize, 100*freeListSize/workModel->getNumTot());
+  //  freeListE, freeListSize, 100*freeListSize/numTot);
 }
 
 void HDualRow::create_Freemove(HVector *row_ep) {
@@ -409,13 +430,13 @@ void HDualRow::create_Freemove(HVector *row_ep) {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workModel->getNumCol());
-      double alpha = workModel->getMatrix()->compute_dot(*row_ep, iCol);
+      assert(iCol < workModel->lp_scaled_->numCol_);
+      double alpha = workModel->matrix_->compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * sourceOut > 0)
-          workModel->getNonbasicMove()[iCol] = 1;
+          workHMO->basis_.nonbasicMove_[iCol] = 1;
         else
-          workModel->getNonbasicMove()[iCol] = -1;
+          workHMO->basis_.nonbasicMove_[iCol] = -1;
       }
     }
   }
@@ -425,8 +446,8 @@ void HDualRow::delete_Freemove() {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workModel->getNumCol());
-      workModel->getNonbasicMove()[iCol] = 0;
+      assert(iCol < workModel->lp_scaled_->numCol_);
+      workHMO->basis_.nonbasicMove_[iCol] = 0;
     }
   }
 }
@@ -443,8 +464,9 @@ void HDualRow::delete_Freelist(int iColumn) {
     if (freeListSize != ckFreeListSize) {
       printf("!! STRANGE: freeListSize != ckFreeListSize\n");
     }
+    // const int numTot = workModel->lp_scaled_->numCol_ + workModel->lp_scaled_->numRow_;
     //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-    //  freeListE, freeListSize, 100*freeListSize/workModel->getNumTot()); if
+    //  freeListE, freeListSize, 100*freeListSize/numTot); if
     //  (freeList.empty()) {
     //    printf("Empty  Freelist\n");
     //  } else {

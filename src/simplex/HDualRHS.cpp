@@ -21,14 +21,22 @@
 #include "HConst.h"
 #include "HModel.h"
 #include "HVector.h"
+#include "HighsModelObject.h"
 
-void HDualRHS::setup(HModel *model) {
+void HDualRHS::setup(HighsModelObject *highs_model_object
+		     //		     HModel *model
+		     ) {
+  workHMO = highs_model_object;
+  HModel *model;
+  model = &highs_model_object->hmodel_[0];
   workModel = model;
-  workMark.resize(workModel->getNumRow());
-  workIndex.resize(workModel->getNumRow());
-  workArray.resize(workModel->getNumRow());
-  workEdWt.assign(workModel->getNumRow(), 1);
-  workEdWtFull.resize(workModel->getNumTot());
+  const int numRow = model->lp_scaled_->numRow_;
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  workMark.resize(numRow);
+  workIndex.resize(numRow);
+  workArray.resize(numRow);
+  workEdWt.assign(numRow, 1);
+  workEdWtFull.resize(numTot);
   partNum = 0;
   partSwitch = 0;
 }
@@ -268,16 +276,16 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
 void HDualRHS::update_primal(HVector *column, double theta) {
   workModel->timer.recordStart(HTICK_UPDATE_PRIMAL);
 
-  const int numRow = workModel->getNumRow();
+  const int numRow = workModel->lp_scaled_->numRow_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
 
-  const double *baseLower = workModel->getBaseLower();
-  const double *baseUpper = workModel->getBaseUpper();
+  const double *baseLower = &workHMO->simplex_.baseLower_[0];
+  const double *baseUpper = &workHMO->simplex_.baseUpper_[0];
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
 
-  double *baseValue = workModel->getBaseValue();
+  double *baseValue = &workHMO->simplex_.baseValue_[0];
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
 
@@ -310,7 +318,7 @@ void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut,
                                  double Kai, double *dseArray) {
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
-  const int numRow = workModel->getNumRow();
+  const int numRow = workModel->lp_scaled_->numRow_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
@@ -336,7 +344,7 @@ void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut,
 void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
   workModel->timer.recordStart(HTICK_UPDATE_WEIGHT);
 
-  const int numRow = workModel->getNumRow();
+  const int numRow = workModel->lp_scaled_->numRow_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
@@ -364,10 +372,10 @@ void HDualRHS::update_pivots(int iRow, double value) {
   // has occurred, and set the corresponding squared primal
   // infeasibility value in workArray
   //
-  const double *baseLower = workModel->getBaseLower();
-  const double *baseUpper = workModel->getBaseUpper();
+  const double *baseLower = &workHMO->simplex_.baseLower_[0];
+  const double *baseUpper = &workHMO->simplex_.baseUpper_[0];
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
-  double *baseValue = workModel->getBaseValue();
+  double *baseValue = &workHMO->simplex_.baseValue_[0];
   baseValue[iRow] = value;
   double pivotInfeas = 0;
   if (baseValue[iRow] < baseLower[iRow] - Tp)
@@ -414,10 +422,10 @@ void HDualRHS::update_infeasList(HVector *column) {
 }
 
 void HDualRHS::create_infeasArray() {
-  int numRow = workModel->getNumRow();
-  const double *baseValue = workModel->getBaseValue();
-  const double *baseLower = workModel->getBaseLower();
-  const double *baseUpper = workModel->getBaseUpper();
+  int numRow = workModel->lp_scaled_->numRow_;
+  const double *baseValue = &workHMO->simplex_.baseValue_[0];
+  const double *baseLower = &workHMO->simplex_.baseLower_[0];
+  const double *baseUpper = &workHMO->simplex_.baseUpper_[0];
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
   for (int i = 0; i < numRow; i++) {
     const double value = baseValue[i];
@@ -429,7 +437,7 @@ void HDualRHS::create_infeasArray() {
 }
 
 void HDualRHS::create_infeasList(double columnDensity) {
-  int numRow = workModel->getNumRow();
+  int numRow = workModel->lp_scaled_->numRow_;
   double *dwork = &workEdWtFull[0];
 
   // 1. Build the full list

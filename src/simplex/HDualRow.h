@@ -14,11 +14,13 @@
 #ifndef SIMPLEX_HDUALROW_H_
 #define SIMPLEX_HDUALROW_H_
 
-class HModel;
-class HVector;
-
 #include <set>
 #include <vector>
+
+#include "HighsModelObject.h"
+
+class HModel;
+class HVector;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -33,7 +35,7 @@ class HDualRow {
    * the dual ratio test
    */
   void setup(
-	     HModel *model  //!< Model for which setup is performed
+	     HighsModelObject *highs_model_object  //!< Model for which setup is performed
 	     );
   /**
    * @brief Set up the packed indices and values for the dual ratio test
@@ -41,7 +43,8 @@ class HDualRow {
    * Done either for the whole pivotal row (see HDualRow::setup), or
    * just for a slice (see HDual::init_slice)
    */
-  void setupSlice(HModel *model,  //!< Model for which setupSlice is performed
+  void setupSlice(
+		  HighsModelObject *highs_model_object,  //!< Model for which setupSlice is performed
                   int size        //!< Dimension of slice
 		  );
   /**
@@ -117,12 +120,13 @@ class HDualRow {
 		       int iColumn //!< Index of column to remove from Freelist
 		       );
   
+  HighsModelObject *workHMO;        //!< Local copy of pointer to model
   HModel *workModel;        //!< Local copy of pointer to model
   int workSize;             //!< Size of the HDualRow slice
-  const int *workColPermutation;  //!< Value of model->getColPermutation();
-  const int *workMove;      //!< Value of model->getNonbasicMove();
-  const double *workDual;   //!< Value of model->getWorkDual();
-  const double *workRange;  //!< Value of model->getWorkRange();
+  const int *workColPermutation;  //!< Pointer to model->getColPermutation();
+  const int *workMove;      //!< Pointer to model->basis_->nonbasicMove_;
+  const double *workDual;   //!< Pointer to model->simplex_->workDual_;
+  const double *workRange;  //!< Pointer to model->simplex_->workRange_;
 
   // Freelist:
   std::set<int> freeList;  //!< Freelist itself

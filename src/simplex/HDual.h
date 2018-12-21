@@ -19,8 +19,10 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "HCrash.h"
 #include "HDualRHS.h"
 #include "HDualRow.h"
+#include "HighsModelObject.h"
 #include "HVector.h"
 #include "HMatrix.h"
 
@@ -96,10 +98,9 @@ class HDual {
    * of threads
    */
   void solve(
-  HModel *model,       //!< Instance of HModel class to be solved
-  //HighsModelObject *highs_model,       //!< Instance of HModel class to be solved
-      int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
-      int num_threads = 1  //!< Default number of threads is 1
+	     HighsModelObject &highs_model_object,       //!< Instance of HiGHS model object to be solved
+	     int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
+	     int num_threads = 1  //!< Default number of threads is 1
   );
 
  public:
@@ -486,12 +487,7 @@ class HDual {
 
   // Model
   HModel *model;
-  double Tp;  // Tolerance for primal
-  double Td;  // Tolerance for dual
-
-  int numCol;
-  int numRow;
-  int numTot;
+  HighsModelObject *highs_model_object;
   const HMatrix *matrix;
   const HFactor *factor;
 
@@ -509,10 +505,16 @@ class HDual {
   double *rowUpper;
   int *nonbasicFlag;
 
-  std::vector<double> bs_cond_x;
-  std::vector<double> bs_cond_y;
-  std::vector<double> bs_cond_z;
-  std::vector<double> bs_cond_w;
+  int numCol;
+  int numRow;
+  int numTot;
+  double Tp;  // Tolerance for primal
+  double Td;  // Tolerance for dual
+
+  vector<double> bs_cond_x;
+  vector<double> bs_cond_y;
+  vector<double> bs_cond_z;
+  vector<double> bs_cond_w;
 
   int solvePhase;
   int invertHint;

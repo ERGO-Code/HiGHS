@@ -16,6 +16,8 @@
 
 #include <vector>
 
+#include "HighsModelObject.h"
+
 class HModel;
 
 /**
@@ -27,16 +29,17 @@ class HRanging {
    * @brief Compute ranging information
    */
   int computeData(
-		  HModel *model  //!< Instance of HModel class for which ranging
-		                 //!< data are to be generated
+		  HighsModelObject &highs_model_object  //!< Instance of HModelObject class for which 
+							//!< ranging data are to be generated
   );
 
   /**
    * @brief Check ranging information
    */
   int checkData(
-      HModel *model  //!< Instance of HModel class for which ranging
-		     //!< data are to be checked
+		HighsModelObject &highs_model_object  //!< Instance of HModelObject class for which 
+						      //!< ranging data are to be checked
+
   );
 
  private:

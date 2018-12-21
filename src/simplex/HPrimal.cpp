@@ -20,12 +20,14 @@
 #include <iostream>
 using namespace std;
 
-void HPrimal::solvePhase2(HModel *ptr_model) {
+void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   // Copy size
-  model = ptr_model;
-  numCol = model->getNumCol();
-  numRow = model->getNumRow();
-  numTot = model->getNumTot();
+  highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
+  model = &highs_model_object->hmodel_[0];
+  //  model->basis_ = &highs_model_object->basis_;
+  numCol = model->lp_scaled_->numCol_;
+  numRow = model->lp_scaled_->numRow_;
+  numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
 
 #ifdef HiGHSDEV
   printf("************************************\n");
@@ -163,14 +165,14 @@ void HPrimal::primalRebuild() {
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = model->getNonbasicFlag();
-  const int *jMove = model->getNonbasicMove();
-  double *workDual = model->getWorkDual();
-  const double *workLower = model->getWorkLower();
-  const double *workUpper = model->getWorkUpper();
+  const int *jFlag = &highs_model_object->basis_.nonbasicFlag_[0];
+  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  double *workDual = &highs_model_object->simplex_.workDual_[0];
+  const double *workLower = &highs_model_object->simplex_.workLower_[0];
+  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
-  const int numTot = model->getNumTot();
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free
@@ -193,16 +195,16 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  const double *baseLower = model->getBaseLower();
-  const double *baseUpper = model->getBaseUpper();
-  double *baseValue = model->getBaseValue();
+  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
+  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
+  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute pivot column
   column.clear();
   column.packFlag = true;
-  model->getMatrix()->collect_aj(column, columnIn, 1);
-  model->getFactor()->ftran(column, columnDensity);
+  model->matrix_->collect_aj(column, columnIn, 1);
+  model->factor_->ftran(column, columnDensity);
   columnDensity = 0.95 * columnDensity + 0.05 * column.count / numRow;
 
   // Initialize
@@ -210,7 +212,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = countUpdate < 10 ? 1e-9 : countUpdate < 20 ? 1e-8 : 1e-7;
-  const int *jMove = model->getNonbasicMove();
+  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -256,19 +258,19 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = model->getNonbasicMove();
-  double *workDual = model->getWorkDual();
-  const double *workLower = model->getWorkLower();
-  const double *workUpper = model->getWorkUpper();
-  const double *baseLower = model->getBaseLower();
-  const double *baseUpper = model->getBaseUpper();
-  double *workValue = model->getWorkValue();
-  double *baseValue = model->getBaseValue();
+  int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  double *workDual = &highs_model_object->simplex_.workDual_[0];
+  const double *workLower = &highs_model_object->simplex_.workLower_[0];
+  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
+  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
+  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
+  double *workValue = &highs_model_object->simplex_.workValue_[0];
+  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = model->getBaseIndex()[rowOut];
+  int columnOut = highs_model_object->basis_.basicIndex_[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {
@@ -334,8 +336,8 @@ void HPrimal::primalUpdate() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  model->getFactor()->btran(row_ep, row_epDensity);
-  model->getMatrix()->price_by_row(row_ap, row_ep);
+  model->factor_->btran(row_ep, row_epDensity);
+  model->matrix_->price_by_row(row_ap, row_ep);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / numRow;
 
   double thetaDual = workDual[columnIn] / alpha;

@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HRanging.cpp
- * @brief
+ * @brief Compute and test LP ranging data for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HRanging.h"
@@ -17,98 +17,110 @@
 #include "HModel.h"
 #include "HConst.h"
 
-int HRanging::computeData(HModel* model) {
+int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
+
+  HighsModelObject *highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
+  HModel *model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
+  model->basis_ = &ref_highs_model_object.basis_;
+  model->ranging_ = &ref_highs_model_object.ranging_;
+
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  int numCol = model->lpScaled.numCol_;
-  int numRow = model->lpScaled.numRow_;
+  int numCol = model->lp_scaled_->numCol_;
+  int numRow = model->lp_scaled_->numRow_;
   int numTot = numCol + numRow;
+
+  HighsRanging* ranging = &ref_highs_model_object.ranging_;
+  ranging->rowBoundRangeUpValue_.resize(numTot);
+  ranging->rowBoundRangeDnValue_.resize(numTot);
+  ranging->rowBoundRangeUpObjective_.resize(numTot);
+  ranging->rowBoundRangeDnObjective_.resize(numTot);
+  ranging->rowBoundRangeUpInCol_.resize(numTot);
+  ranging->rowBoundRangeDnInCol_.resize(numTot);
+  ranging->rowBoundRangeUpOutCol_.resize(numTot);
+  ranging->rowBoundRangeDnOutCol_.resize(numTot);
+
+  ranging->colCostRangeUpValue_.resize(numCol);
+  ranging->colCostRangeDnValue_.resize(numCol);
+  ranging->colCostRangeUpObjective_.resize(numCol);
+  ranging->colCostRangeDnObjective_.resize(numCol);
+  ranging->colCostRangeUpInCol_.resize(numCol);
+  ranging->colCostRangeDnInCol_.resize(numCol);
+  ranging->colCostRangeUpOutCol_.resize(numCol);
+  ranging->colCostRangeDnOutCol_.resize(numCol);
+
+
+
+
+
+
   double H_INF = HIGHS_CONST_INF;
   const double H_TT = 1e-13;
 
   //  HMatrix matrix;
-  model->matrix.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis.nonbasicFlag_[0]);
+  model->matrix_->setup(numCol, numRow, &model->lp_scaled_->Astart_[0], &model->lp_scaled_->Aindex_[0],
+                      &model->lp_scaled_->Avalue_[0], &model->basis_->nonbasicFlag_[0]);
 
-  model->factor.setup(numCol, numRow, &model->lpScaled.Astart_[0], &model->lpScaled.Aindex_[0],
-                      &model->lpScaled.Avalue_[0], &model->basis.basicIndex_[0]);
-  model->factor.build();
+  model->factor_->setup(numCol, numRow, &model->lp_scaled_->Astart_[0], &model->lp_scaled_->Aindex_[0],
+                      &model->lp_scaled_->Avalue_[0], &model->basis_->basicIndex_[0]);
+  model->factor_->build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
   // negated relative to the original model
-  vector<double> cost_ = model->lpScaled.colCost_;
-  vector<double> lower_ = model->lpScaled.colLower_;
-  vector<double> upper_ = model->lpScaled.colUpper_;
+  vector<double> cost_ = model->lp_scaled_->colCost_;
+  vector<double> lower_ = model->lp_scaled_->colLower_;
+  vector<double> upper_ = model->lp_scaled_->colUpper_;
 
   lower_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    lower_[numCol + iRow] = -model->lpScaled.rowUpper_[iRow];
+    lower_[numCol + iRow] = -model->lp_scaled_->rowUpper_[iRow];
   }
   upper_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    upper_[numCol + iRow] = -model->lpScaled.rowLower_[iRow];
+    upper_[numCol + iRow] = -model->lp_scaled_->rowLower_[iRow];
   }
-  vector<double> value_ = model->simplex.workValue_;
+  vector<double> value_ = highs_model_object->simplex_.workValue_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    value_[model->basis.basicIndex_[iRow]] = model->simplex.baseValue_[iRow];
+    value_[model->basis_->basicIndex_[iRow]] = highs_model_object->simplex_.baseValue_[iRow];
   }
-  vector<double> dual_ = model->simplex.workDual_;
+  vector<double> dual_ = highs_model_object->simplex_.workDual_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    dual_[model->basis.basicIndex_[iRow]] = 0;
+    dual_[model->basis_->basicIndex_[iRow]] = 0;
   }
 
-  for (int iRow = 0; iRow < numRow; iRow++) {
+  /*  for (int iRow = 0; iRow < numRow; iRow++) {
     printf("Row %2d has scale factor %12g\n", iRow, model->scale.row_[iRow]);
   }
   for (int iCol = 0; iCol < numCol; iCol++) {
     printf("Col %2d has scale factor %12g\n", iCol, model->scale.col_[iCol]);
   }
+  */
+  vector<double> Blower_ = highs_model_object->simplex_.baseLower_;
+  vector<double> Bupper_ = highs_model_object->simplex_.baseUpper_;
+  vector<double> Bvalue_ = highs_model_object->simplex_.baseValue_;
 
-  vector<double> Blower_ = model->simplex.baseLower_;
-  vector<double> Bupper_ = model->simplex.baseUpper_;
-  vector<double> Bvalue_ = model->simplex.baseValue_;
+  vector<int> Nflag_ = model->basis_->nonbasicFlag_;
+  vector<int> Nmove_ = model->basis_->nonbasicMove_;
+  vector<int> Bindex_ = model->basis_->basicIndex_;
 
-  vector<int> Nflag_ = model->basis.nonbasicFlag_;
-  vector<int> Nmove_ = model->basis.nonbasicMove_;
-  vector<int> Bindex_ = model->basis.basicIndex_;
+  std::vector<double>& b_up_b = ranging->rowBoundRangeUpValue_;
+  std::vector<double>& b_dn_b = ranging->rowBoundRangeDnValue_;
+  std::vector<double>& b_up_f = ranging->rowBoundRangeUpObjective_;
+  std::vector<double>& b_dn_f = ranging->rowBoundRangeDnObjective_;
+  std::vector<int>& b_up_e = ranging->rowBoundRangeUpInCol_;
+  std::vector<int>& b_dn_e = ranging->rowBoundRangeDnInCol_;
+  std::vector<int>& b_up_l = ranging->rowBoundRangeUpOutCol_;
+  std::vector<int>& b_dn_l = ranging->rowBoundRangeDnOutCol_;
 
-  HighsRanging& ranging = model->ranging;
-  ranging.rowBoundRangeUpValue_.resize(numTot);
-  ranging.rowBoundRangeDnValue_.resize(numTot);
-  ranging.rowBoundRangeUpObjective_.resize(numTot);
-  ranging.rowBoundRangeDnObjective_.resize(numTot);
-  ranging.rowBoundRangeUpInCol_.resize(numTot);
-  ranging.rowBoundRangeDnInCol_.resize(numTot);
-  ranging.rowBoundRangeUpOutCol_.resize(numTot);
-  ranging.rowBoundRangeDnOutCol_.resize(numTot);
-
-  ranging.colCostRangeUpValue_.resize(numCol);
-  ranging.colCostRangeDnValue_.resize(numCol);
-  ranging.colCostRangeUpObjective_.resize(numCol);
-  ranging.colCostRangeDnObjective_.resize(numCol);
-  ranging.colCostRangeUpInCol_.resize(numCol);
-  ranging.colCostRangeDnInCol_.resize(numCol);
-  ranging.colCostRangeUpOutCol_.resize(numCol);
-  ranging.colCostRangeDnOutCol_.resize(numCol);
-
-  std::vector<double>& b_up_b = ranging.rowBoundRangeUpValue_;
-  std::vector<double>& b_dn_b = ranging.rowBoundRangeDnValue_;
-  std::vector<double>& b_up_f = ranging.rowBoundRangeUpObjective_;
-  std::vector<double>& b_dn_f = ranging.rowBoundRangeDnObjective_;
-  std::vector<int>& b_up_e = ranging.rowBoundRangeUpInCol_;
-  std::vector<int>& b_dn_e = ranging.rowBoundRangeDnInCol_;
-  std::vector<int>& b_up_l = ranging.rowBoundRangeUpOutCol_;
-  std::vector<int>& b_dn_l = ranging.rowBoundRangeDnOutCol_;
-
-  std::vector<double>& c_up_c = ranging.colCostRangeUpValue_;
-  std::vector<double>& c_dn_c = ranging.colCostRangeDnValue_;
-  std::vector<double>& c_up_f = ranging.colCostRangeUpObjective_;
-  std::vector<double>& c_dn_f = ranging.colCostRangeDnObjective_;
-  std::vector<int>& c_up_e = ranging.colCostRangeUpInCol_;
-  std::vector<int>& c_dn_e = ranging.colCostRangeDnInCol_;
-  std::vector<int>& c_up_l = ranging.colCostRangeUpOutCol_;
-  std::vector<int>& c_dn_l = ranging.colCostRangeDnOutCol_;
+  std::vector<double>& c_up_c = ranging->colCostRangeUpValue_;
+  std::vector<double>& c_dn_c = ranging->colCostRangeDnValue_;
+  std::vector<double>& c_up_f = ranging->colCostRangeUpObjective_;
+  std::vector<double>& c_dn_f = ranging->colCostRangeDnObjective_;
+  std::vector<int>& c_up_e = ranging->colCostRangeUpInCol_;
+  std::vector<int>& c_dn_e = ranging->colCostRangeDnInCol_;
+  std::vector<int>& c_up_l = ranging->colCostRangeUpOutCol_;
+  std::vector<int>& c_dn_l = ranging->colCostRangeDnOutCol_;
 
   vector<int> iWork_;
   vector<double> dWork_;
@@ -186,8 +198,8 @@ int HRanging::computeData(HModel* model) {
 
     // Form updated column
     column.clear();
-    model->matrix.collect_aj(column, j, 1);
-    model->factor.ftran(column, 0);
+    model->matrix_->collect_aj(column, j, 1);
+    model->factor_->ftran(column, 0);
     int nWork = 0;
     for (int k = 0; k < column.count; k++) {
       int iRow = column.index[k];
@@ -529,13 +541,30 @@ int HRanging::computeData(HModel* model) {
   return 0;
 }
 
-int HRanging::checkData(HModel* model) {
+int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
+  HighsUtils utils;
+  HighsModelObject *highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
+  HModel *model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
+  model->basis_ = &ref_highs_model_object.basis_;
+  model->ranging_ = &ref_highs_model_object.ranging_;
+
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  int numCol = model->lpScaled.numCol_;
-  int numRow = model->lpScaled.numRow_;
+  int numCol = model->lp_scaled_->numCol_;
+  int numRow = model->lp_scaled_->numRow_;
   int numTot = numCol + numRow;
+
+  HighsRanging* ranging = model->ranging_;
+  std::vector<double>& b_up_b = ranging->rowBoundRangeUpValue_;
+  std::vector<double>& b_dn_b = ranging->rowBoundRangeDnValue_;
+  std::vector<double>& b_up_f = ranging->rowBoundRangeUpObjective_;
+  std::vector<double>& b_dn_f = ranging->rowBoundRangeDnObjective_;
+
+  std::vector<double>& c_up_c = ranging->colCostRangeUpValue_;
+  std::vector<double>& c_dn_c = ranging->colCostRangeDnValue_;
+  std::vector<double>& c_up_f = ranging->colCostRangeUpObjective_;
+  std::vector<double>& c_dn_f = ranging->colCostRangeDnObjective_;
 
   const double infiniteBoundOrCost = 0.1 * HIGHS_CONST_INF;
   const bool useTestModel = true;
@@ -551,23 +580,12 @@ int HRanging::checkData(HModel* model) {
       max(1.0, abs(model->dualObjectiveValue));
   reportRangingDataCheck = numTot < 250;
   //#endif
-  model->util_reportModelSolution(model->lpScaled);
-  vector<int> Nflag = model->basis.nonbasicFlag_;
-  vector<int> Nmove = model->basis.nonbasicMove_;
+  //  utils.reportModelSolution(ref_highs_model_object);
+  vector<int> Nflag = model->basis_->nonbasicFlag_;
+  vector<int> Nmove = model->basis_->nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
   vector<double> rowValue(numRow), rowDual(numRow);
   model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
-
-  HighsRanging& ranging = model->ranging;
-  std::vector<double>& b_up_b = ranging.rowBoundRangeUpValue_;
-  std::vector<double>& b_dn_b = ranging.rowBoundRangeDnValue_;
-  std::vector<double>& b_up_f = ranging.rowBoundRangeUpObjective_;
-  std::vector<double>& b_dn_f = ranging.rowBoundRangeDnObjective_;
-
-  std::vector<double>& c_up_c = ranging.colCostRangeUpValue_;
-  std::vector<double>& c_dn_c = ranging.colCostRangeDnValue_;
-  std::vector<double>& c_up_f = ranging.colCostRangeUpObjective_;
-  std::vector<double>& c_dn_f = ranging.colCostRangeDnObjective_;
 
   // Show all rowwise data
   if (reportRangingDataCheck) {
@@ -579,8 +597,8 @@ int HRanging::checkData(HModel* model) {
   for (int i = 0; i < numRow; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svRowLower = model->lpScaled.rowLower_[i];
-    double svRowUpper = model->lpScaled.rowUpper_[i];
+    double svRowLower = model->lp_scaled_->rowLower_[i];
+    double svRowUpper = model->lp_scaled_->rowUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i + numCol] > -infiniteBoundOrCost) {
@@ -688,7 +706,7 @@ int HRanging::checkData(HModel* model) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lpScaled.rowLower_[i], model->lpScaled.rowUpper_[i], rowValue[i], 0.0,
+          i, model->lp_scaled_->rowLower_[i], model->lp_scaled_->rowUpper_[i], rowValue[i], 0.0,
           rowDual[i], b_up_b[i + numCol], b_up_f[i + numCol], solved_up,
           b_dn_b[i + numCol], b_dn_f[i + numCol], solved_dn, maxRelativeError);
     }
@@ -703,8 +721,8 @@ int HRanging::checkData(HModel* model) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColLower = model->lpScaled.colLower_[i];
-    double svColUpper = model->lpScaled.colUpper_[i];
+    double svColLower = model->lp_scaled_->colLower_[i];
+    double svColUpper = model->lp_scaled_->colUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i] > -infiniteBoundOrCost) {
@@ -814,8 +832,8 @@ int HRanging::checkData(HModel* model) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lpScaled.colLower_[i], model->lpScaled.colUpper_[i], colValue[i],
-          model->lpScaled.colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
+          i, model->lp_scaled_->colLower_[i], model->lp_scaled_->colUpper_[i], colValue[i],
+          model->lp_scaled_->colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
           b_dn_b[i], b_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -829,7 +847,7 @@ int HRanging::checkData(HModel* model) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColCost = model->lpScaled.colCost_[i];
+    double svColCost = model->lp_scaled_->colCost_[i];
     bool recoverOriginalCost = false;
     {
       if (fabs(c_dn_c[i]) < infiniteBoundOrCost) {
@@ -908,8 +926,8 @@ int HRanging::checkData(HModel* model) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lpScaled.colLower_[i], model->lpScaled.colUpper_[i], colValue[i],
-          model->lpScaled.colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
+          i, model->lp_scaled_->colLower_[i], model->lp_scaled_->colUpper_[i], colValue[i],
+          model->lp_scaled_->colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
           c_dn_c[i], c_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -943,6 +961,7 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
 
 void HRanging::checkDataSolve(HModel* model, bool rp) {
   HDual solver;
+  HighsUtils utils;
   if (rp) {
     model->intOption[INTOPT_PRINT_FLAG] = 4;
     const char* fileName = "OutMl.mps";
@@ -950,11 +969,11 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   } else {
     model->intOption[INTOPT_PRINT_FLAG] = 0;
   }
-  //  model->lpScaled.reportLp();
+  //  model->lp_scaled_->reportLp(model->lp_scaled_);
   printf("HRanging.cpp no longer solves!\n");
   //  solver.solve(model);
   if (rp) {
-    model->lpScaled.reportLp();
+    //    utils.reportLp(model->lp_scaled_);
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }

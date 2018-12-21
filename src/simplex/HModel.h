@@ -250,10 +250,10 @@ class HModel {
   void util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
   void util_unscaleColCostValue(int iCol, double* XcolCostValue);
   // Utilities to get/change costs and bounds
-  void util_getCosts(HighsLp lp, int firstcol, int lastcol, double* XcolCost);
-  void util_getColBounds(HighsLp lp, int firstcol, int lastcol, double* XcolLower,
+  void util_getCosts(HighsLp& lp, int firstcol, int lastcol, double* XcolCost);
+  void util_getColBounds(HighsLp& lp, int firstcol, int lastcol, double* XcolLower,
                          double* XcolUpper);
-  void util_getRowBounds(HighsLp lp, int firstrow, int lastrow, double* XrowLower,
+  void util_getRowBounds(HighsLp& lp, int firstrow, int lastrow, double* XrowLower,
                          double* XrowUpper);
   int util_chgObjSense(int Xobjense);
   int util_chgCostsAll(const double* XcolCost);
@@ -304,8 +304,7 @@ class HModel {
   // Methods for reporting the model, its solution, row and column data and
   // matrix
   void util_reportModelDa(HighsLp lp, const char* filename);
-  void util_reportModelSolution(HighsLp lp);
-  void util_reportModelStatus(HighsLp lp);
+  void util_reportModelStatus();
 #ifdef HiGHSDEV
   void util_reportModelDense(HighsLp lp);
 #endif
@@ -443,61 +442,7 @@ class HModel {
  public:
   int problemStatus;
   string modelName;
-  // Cost column and row scaling factors
-struct HighsScale {
-  double cost_;
-  vector<double> col_;
-  vector<double> row_;
-};
   
-struct HighsBasis {
-  vector<int> basicIndex_;
-  vector<int> nonbasicFlag_;
-  vector<int> nonbasicMove_;
-};
-
-struct HighsSimplexInfo {
-  // Part of working model which assigned and populated as much as
-  // possible when a model is being defined
-
-  // workCost: Originally just costs from the model but, in solve(), may
-  // be perturbed or set to alternative values in Phase I??
-  //
-  // workDual: Values of the dual variables corresponding to
-  // workCost. Latter not known until solve() is called since B^{-1}
-  // is required to compute them. Knowledge of them is indicated by
-  // mlFg_haveNonbasicDuals.
-  //
-  // workShift: WTF
-  //
-  vector<double> workCost_;
-  vector<double> workDual_;
-  vector<double> workShift_;
-
-  // workLower/workUpper: Originally just lower (upper) bounds from
-  // the model but, in solve(), may be perturbed or set to
-  // alternative values in Phase I??
-  //
-  // workRange: Distance between lower and upper bounds
-  //
-  // workValue: Values of the nonbasic variables corresponding to
-  // workLower/workUpper and the basis. Always known.
-  //
-  vector<double> workLower_;
-  vector<double> workUpper_;
-  vector<double> workRange_;
-  vector<double> workValue_;
-
-  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
-  // basic variables and their values. Latter not known until solve()
-  // is called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by mlFg_haveBasicPrimals.
-  //
-  vector<double> baseLower_;
-  vector<double> baseUpper_;
-  vector<double> baseValue_;
-};
-
 // Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;
   const double maxAlwScale = 1024.0;
@@ -520,15 +465,15 @@ struct HighsSimplexInfo {
   vector<double> colRandomValue;
 
   // The scaled model
-  HighsLp lpScaled;
-  HighsRanging ranging;
+  HighsLp *lp_scaled_;
   // Part of working model which is only required and populated once a solve is
   // initiated
-  HMatrix matrix;
-  HFactor factor;
-  HighsBasis basis;
-  HighsSimplexInfo simplex;
-  HighsScale scale;
+  HMatrix *matrix_;
+  HFactor *factor_;
+  HighsSimplexInfo *simplex_;
+  HighsBasis *basis_;
+  HighsScale *scale_;
+  HighsRanging *ranging_;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;
@@ -556,40 +501,24 @@ struct HighsSimplexInfo {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  int getNumRow() { return lpScaled.numRow_; }
-  int getNumCol() { return lpScaled.numCol_; }
-  int getNumTot() { return lpScaled.numCol_ + lpScaled.numRow_; }
-  int getPrStatus() { return problemStatus; }
-  int getObjSense() { return lpScaled.sense_; }
-  const HMatrix* getMatrix() { return &matrix; }
-  const HFactor* getFactor() { return &factor; }
-  double* getcolCost() { return &lpScaled.colCost_[0]; }
-  double* getcolLower() { return &lpScaled.colLower_[0]; }
-  double* getcolUpper() { return &lpScaled.colUpper_[0]; }
-  double* getrowLower() { return &lpScaled.rowLower_[0]; }
-  double* getrowUpper() { return &lpScaled.rowUpper_[0]; }
-  int* getBaseIndex() { return &basis.basicIndex_[0]; }
-  int* getNonbasicFlag() { return &basis.nonbasicFlag_[0]; }
-  int* getNonbasicMove() { return &basis.nonbasicMove_[0]; }
-  double* getWorkCost() { return &simplex.workCost_[0]; }
-  double* getWorkDual() { return &simplex.workDual_[0]; }
-  double* getWorkShift() { return &simplex.workShift_[0]; }
-  double* getWorkLower() { return &simplex.workLower_[0]; }
-  double* getWorkUpper() { return &simplex.workUpper_[0]; }
-  double* getWorkRange() { return &simplex.workRange_[0]; }
-  double* getWorkValue() { return &simplex.workValue_[0]; }
-  double* getBaseLower() { return &simplex.baseLower_[0]; }
-  double* getBaseUpper() { return &simplex.baseUpper_[0]; }
-  double* getBaseValue() { return &simplex.baseValue_[0]; }
-  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
-  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
-  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
-  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
-  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
-  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
-  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
-  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  int* getColPermutation() { return &colPermutation[0]; }
+  //  int getPrStatus() { return problemStatus; }
+  //  int getObjSense() { return lp_scaled_.sense_; }
+  //  const HMatrix* getMatrix() { return &matrix; }
+  //  const HFactor* getFactor() { return &factor; }
+  //  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
+  //  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
+  //  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
+  //  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
+  //  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
+  //  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
+  //  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
+  //  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
+  //  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
+  //  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
+  //  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
+  //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
+  //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
+  //  int* getColPermutation() { return &colPermutation[0]; }
 };
 
 /*

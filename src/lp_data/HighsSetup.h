@@ -41,8 +41,7 @@ class Highs {
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(const HighsLp& lp, HighsSolution& solution);
-
+  HighsStatus run(HighsLp& lp, HighsSolution& solution);
   HighsOptions options_;
 
  private:
@@ -56,18 +55,31 @@ class Highs {
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
+HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // todo: handle printing messages with HighsPrintMessage
 
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
 
+  //Define clocks
+  HighsTimer timer;
+  int presolveClock = timer.clockDef("Presolve", "Pre");
+  int scaleClock = timer.clockDef("Scale", "Scl");
+  int crashClock = timer.clockDef("Crash", "Csh");
+  int solveClock = timer.clockDef("Solve", "Slv");
+  int postsolveClock = timer.clockDef("Postsolve", "Pst");
+  //  timer.reset();
+
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
+  timer.start(presolveClock);
+
   PresolveInfo presolve_info(options_.presolveMode, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-  // HighsPresolveStatus presolve_status = HighsPresolveStatus::NotReduced;
 
+  timer.stop(presolveClock);
+ 
   // Run solver.
+  timer.start(solveClock);
   HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
@@ -75,7 +87,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
       break;
     }
     case HighsPresolveStatus::Reduced: {
-      const HighsLp& reduced_lp = presolve_info.getReducedProblem();
+      HighsLp& reduced_lp = presolve_info.getReducedProblem();
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
       lps_.push_back(HighsModelObject(reduced_lp));
@@ -101,7 +113,9 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
       return HighsStatus::PresolveError;
     }
   }
+  timer.stop(solveClock);
 
+  timer.start(postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::Optimal) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
@@ -129,6 +143,7 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
       solve_status = runSolver(lps_[0]);
     }
   }
+  timer.stop(postsolveClock);
 
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
@@ -150,6 +165,10 @@ HighsStatus Highs::run(const HighsLp& lp, HighsSolution& solution) {
     lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
+  // Report times
+  printf("clockList[] = {%d %d %d %d %d}\n", presolveClock, scaleClock, crashClock, solveClock, postsolveClock);
+  int clockList[] = {presolveClock, scaleClock, crashClock, solveClock, postsolveClock};
+  timer.report(clockList);
 
   return HighsStatus::OK;
 }

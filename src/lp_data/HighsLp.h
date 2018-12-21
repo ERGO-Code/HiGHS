@@ -77,15 +77,6 @@ class HighsLp {
   double offset_ = 0;
   std::string model_name_ = "";
 
-void reportLp();
-void reportLpBrief();
-void reportLpDimensions();
-void reportLpObjSense();
-void reportLpColVec();
-void reportLpRowVec();
-void reportLpColMtx();
-
-
 };
 
 // HiGHS status
@@ -115,6 +106,61 @@ enum class HighsInputStatus {
   ErrorColBounds,
   ErrorRowBounds,
   ErrorObjective
+};
+
+// Cost, column and row scaling factors
+struct HighsScale {
+  double cost_;
+  std::vector<double> col_;
+  std::vector<double> row_;
+};
+
+struct HighsBasis {
+  std::vector<int> basicIndex_;
+  std::vector<int> nonbasicFlag_;
+  std::vector<int> nonbasicMove_;
+};
+
+struct HighsSimplexInfo {
+  // Part of working model which assigned and populated as much as
+  // possible when a model is being defined
+
+  // workCost: Originally just costs from the model but, in solve(), may
+  // be perturbed or set to alternative values in Phase I??
+  //
+  // workDual: Values of the dual variables corresponding to
+  // workCost. Latter not known until solve() is called since B^{-1}
+  // is required to compute them. Knowledge of them is indicated by
+  // mlFg_haveNonbasicDuals.
+  //
+  // workShift: WTF
+  //
+  std::vector<double> workCost_;
+  std::vector<double> workDual_;
+  std::vector<double> workShift_;
+
+  // workLower/workUpper: Originally just lower (upper) bounds from
+  // the model but, in solve(), may be perturbed or set to
+  // alternative values in Phase I??
+  //
+  // workRange: Distance between lower and upper bounds
+  //
+  // workValue: Values of the nonbasic variables corresponding to
+  // workLower/workUpper and the basis. Always known.
+  //
+  std::vector<double> workLower_;
+  std::vector<double> workUpper_;
+  std::vector<double> workRange_;
+  std::vector<double> workValue_;
+
+  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
+  // basic variables and their values. Latter not known until solve()
+  // is called since B^{-1} is required to compute them. Knowledge of
+  // them is indicated by mlFg_haveBasicPrimals.
+  //
+  std::vector<double> baseLower_;
+  std::vector<double> baseUpper_;
+  std::vector<double> baseValue_;
 };
 
 struct HighsSolution {
