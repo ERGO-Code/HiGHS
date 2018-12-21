@@ -5,15 +5,15 @@ set(sources
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
-#    io/HinOut.cpp
+ #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
     lp_data/HighsLp.cpp
-    lp_data/HighsModelBuilder.cpp
+    lp_data/HighsModel.cpp
+ #   simplex/HAPI.cpp
     lp_data/HighsUtils.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
-#    simplex/HAPI.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -25,6 +25,13 @@ set(sources
     simplex/HPrimal.cpp
     simplex/HRanging.cpp
     simplex/HSort.cpp
+ #   io/HinOut.cpp
+    io/HMPSIO.cpp
+    io/HToyIO.cpp
+    io/Filereader.cpp
+    io/FilereaderLp.cpp
+    io/FilereaderMps.cpp
+    io/HighsIO.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -68,6 +75,7 @@ set(headers
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
+    util/stringutil.h
 )
 
 
