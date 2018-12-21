@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HPreData.h"
+#include "HConst.h"
 
 HPreData::HPreData() {}
 

@@ -12,16 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDual.h"
-#include "HConst.h"
-#include "HCrash.h"
-#include "HMatrix.h"
-#include "HPrimal.h"
-#include "HTimer.h"
-
-#include "HighsLp.h"
-#include "HighsIO.h"
-#include "HighsOptions.h"
-#include "HighsModelObject.h"
 
 #include <cassert>
 #include <cmath>
@@ -30,7 +20,14 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
-using namespace std;
+
+#include "HConst.h"
+#include "HCrash.h"
+#include "HPrimal.h"
+#include "HTimer.h"
+#include "HighsLp.h"
+#include "HighsIO.h"
+#include "HighsModelObject.h"
 
 void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num_threads) {
   highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h

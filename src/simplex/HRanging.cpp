@@ -15,7 +15,7 @@
 #include <cstdio>
 #include "HDual.h"
 #include "HModel.h"
-using namespace std;
+#include "HConst.h"
 
 int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
 

@@ -15,10 +15,11 @@
 #define LP_DATA_HIGHSUTILS_H_
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HConst.h"
-//#include "HModel.h"
-//#include "HighsModelObject.h"
+
+class HighsLp;
+
+// Logical check of double being +Infinity
+bool highs_isInfinity(double val);
 
 const int initial_random_mw = 1985;
 const int initial_random_mz = 2012;

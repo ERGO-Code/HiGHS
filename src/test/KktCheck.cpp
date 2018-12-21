@@ -12,54 +12,55 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "KktCheck.h"
+#include "HConst.h"
 
 #include <vector>
 
 void KktCheck::printAR() {
-  cout << "N=" << numCol << ",  M=" << numRow << ",  NZ= " << ARstart[numRow]
+  std::cout << "N=" << numCol << ",  M=" << numRow << ",  NZ= " << ARstart[numRow]
        << '\n';
 
-  cout << "\n-----cost-----\n";
+  std::cout << "\n-----cost-----\n";
   for (size_t i = 0; i < colCost.size(); i++) {
-    cout << colCost[i] << " ";
+    std::cout << colCost[i] << " ";
   }
-  cout << endl;
-  cout << "------AR | b----KktCheck-\n";
+  std::cout << std::endl;
+  std::cout << "------AR | b----KktCheck-\n";
   for (i = 0; i < numRow; i++) {
     for (j = 0; j < numCol; j++) {
       int ind = ARstart[i];
       while (ARindex[ind] != j && ind < ARstart[i + 1]) ind++;
       // if a_ij is nonzero print
       if (ARindex[ind] == j && ind < ARstart[i + 1]) {
-        cout << ARvalue[ind] << " ";
+        std::cout << ARvalue[ind] << " ";
       } else
-        cout << "   ";
+        std::cout << "   ";
     }
-    cout << "  |   " << rowLower[i] << " < < " << rowUpper[i] << endl;
+    std::cout << "  |   " << rowLower[i] << " < < " << rowUpper[i] << std::endl;
   }
-  cout << endl;
-  cout << "------l------\n";
+  std::cout << std::endl;
+  std::cout << "------l------\n";
   for (int i = 0; i < numCol; i++) {
     if (colLower[i] > -HIGHS_CONST_INF)
-      cout << colLower[i] << " ";
+      std::cout << colLower[i] << " ";
     else
-      cout << "-inf ";
+      std::cout << "-inf ";
   }
-  cout << endl;
-  cout << "------u------\n";
+  std::cout << std::endl;
+  std::cout << "------u------\n";
   for (int i = 0; i < numCol; i++) {
     if (colUpper[i] < HIGHS_CONST_INF)
-      cout << colUpper[i] << " ";
+      std::cout << colUpper[i] << " ";
     else
-      cout << "inf ";
+      std::cout << "inf ";
   }
-  cout << endl;
+  std::cout << std::endl;
 }
 
 void KktCheck::makeARCopy() {
   tol = 0.00001;
   // Make a AR copy
-  vector<int> iwork(numRow, 0);
+  std::vector<int> iwork(numRow, 0);
   ARstart.resize(numRow + 1, 0);
   int AcountX = Aindex.size();
   ARindex.resize(AcountX);
@@ -82,10 +83,10 @@ void KktCheck::chPrimalBounds() {
     if ((colLower[i] - colValue[i] > tol) ||
         (colValue[i] - colUpper[i] > tol)) {
       if (print == 1)
-        cout << "Variable " << cIndexRev[i] << " infeasible: lb=" << colLower[i]
-             << ", vaule=" << colValue[i] << ",  ub=" << colUpper[i] << endl;
-      // cout<<"Variable "<<i<<" infeasible: lb="<<colLower[i]<<",
-      // vaule="<<colValue[i]<<",  ub="<<colUpper[i]<<endl;
+        std::cout << "Variable " << cIndexRev[i] << " infeasible: lb=" << colLower[i]
+             << ", vaule=" << colValue[i] << ",  ub=" << colUpper[i] << std::endl;
+      // std::cout<<"Variable "<<i<<" infeasible: lb="<<colLower[i]<<",
+      // vaule="<<colValue[i]<<",  ub="<<colUpper[i]<<std::endl;
       istrueGlb = true;
     }
   }
@@ -102,27 +103,27 @@ void KktCheck::chPrimalFeas() {
 
     if (((rowV - rowLower[i]) < 0) && (abs(rowV - rowLower[i]) > tol)) {
       if (print == 1)
-        cout << "Row " << rIndexRev[i] << " infeasible: Row value=" << rowV
-             << "  L=" << rowLower[i] << "  U=" << rowUpper[i] << endl;
-      // cout<<"Row "<<i<<" infeasible: Row value="<<rowV<<"
-      // L="<<rowLower[i]<<"  U="<<rowUpper[i]<<endl;
+        std::cout << "Row " << rIndexRev[i] << " infeasible: Row value=" << rowV
+             << "  L=" << rowLower[i] << "  U=" << rowUpper[i] << std::endl;
+      // std::cout<<"Row "<<i<<" infeasible: Row value="<<rowV<<"
+      // L="<<rowLower[i]<<"  U="<<rowUpper[i]<<std::endl;
       istrue = false;
     }
 
     if (((rowV - rowUpper[i]) > 0) && (abs(rowV - rowUpper[i]) > tol)) {
       if (print == 1)
-        cout << "Row " << rIndexRev[i] << " infeasible: Row value=" << rowV
-             << "  L=" << rowLower[i] << "  U=" << rowUpper[i] << endl;
-      // cout<<"Row "<<i<<" infeasible: Row value="<<rowV<<"
-      // L="<<rowLower[i]<<"  U="<<rowUpper[i]<<endl;
+        std::cout << "Row " << rIndexRev[i] << " infeasible: Row value=" << rowV
+             << "  L=" << rowLower[i] << "  U=" << rowUpper[i] << std::endl;
+      // std::cout<<"Row "<<i<<" infeasible: Row value="<<rowV<<"
+      // L="<<rowLower[i]<<"  U="<<rowUpper[i]<<std::endl;
       istrue = false;
     }
   }
 
   if (istrue) {
-    if (print == 1) cout << "Primal feasible.\n";
+    if (print == 1) std::cout << "Primal feasible.\n";
   } else {
-    if (print == 1) cout << "KKT check error: Primal infeasible.\n";
+    if (print == 1) std::cout << "KKT check error: Primal infeasible.\n";
     istrueGlb = true;
   }
 }
@@ -136,11 +137,11 @@ void KktCheck::chDualFeas() {
     if (colLower[i] == -HIGHS_CONST_INF && colUpper[i] == HIGHS_CONST_INF) {
       if (abs(colDual[i]) > tol) {
         if (print == 1)
-          cout << "Dual feasibility fail: l=-inf, x[" << cIndexRev[i]
+          std::cout << "Dual feasibility fail: l=-inf, x[" << cIndexRev[i]
                << "]=" << colValue[i] << ", u=inf, z[" << i
-               << "]=" << colDual[i] << endl;
-        // cout<<"Dual feasibility fail: l=-inf, x["<<i<<"]="<<colValue[i]<<",
-        // u=inf, z["<<i<<"]="<<colDual[i]<<endl;
+               << "]=" << colDual[i] << std::endl;
+        // std::cout<<"Dual feasibility fail: l=-inf, x["<<i<<"]="<<colValue[i]<<",
+        // u=inf, z["<<i<<"]="<<colDual[i]<<std::endl;
         istrue = false;
       }
     }
@@ -148,12 +149,12 @@ void KktCheck::chDualFeas() {
     else if (colValue[i] == colLower[i] && colLower[i] < colUpper[i]) {
       if (colDual[i] < 0 && abs(colDual[i]) > tol) {
         if (print == 1)
-          cout << "Dual feasibility fail: l[" << cIndexRev[i]
+          std::cout << "Dual feasibility fail: l[" << cIndexRev[i]
                << "]=" << colLower[i] << " = x[" << cIndexRev[i]
                << "]=" << colValue[i] << ", z[" << cIndexRev[i]
-               << "]=" << colDual[i] << endl;
-        // cout<<"Dual feasibility fail: l["<<i<<"]="<<colLower[i]<<" =
-        // x["<<i<<"]="<<colValue[i]<<", z["<<i<<"]="<<colDual[i]<<endl;
+               << "]=" << colDual[i] << std::endl;
+        // std::cout<<"Dual feasibility fail: l["<<i<<"]="<<colLower[i]<<" =
+        // x["<<i<<"]="<<colValue[i]<<", z["<<i<<"]="<<colDual[i]<<std::endl;
         istrue = false;
       }
     }
@@ -161,12 +162,12 @@ void KktCheck::chDualFeas() {
     else if (colValue[i] == colUpper[i] && colLower[i] < colUpper[i]) {
       if (colDual[i] > tol) {
         if (print == 1)
-          cout << "Dual feasibility fail: x[" << cIndexRev[i]
+          std::cout << "Dual feasibility fail: x[" << cIndexRev[i]
                << "]=" << colValue[i] << "=u[" << cIndexRev[i] << "], z["
-               << cIndexRev[i] << "]=" << colDual[i] << endl;
-        // cout<<"Dual feasibility fail:
+               << cIndexRev[i] << "]=" << colDual[i] << std::endl;
+        // std::cout<<"Dual feasibility fail:
         // x["<<i<<"]="<<colValue[i]<<"=u["<<i<<"],
-        // z["<<i<<"]="<<colDual[i]<<endl;
+        // z["<<i<<"]="<<colDual[i]<<std::endl;
         istrue = false;
       }
     }
@@ -185,25 +186,25 @@ void KktCheck::chDualFeas() {
     else if (abs(rowLower[i] - rowV) < tol && rowV < rowUpper[i]) {
       if (rowDual[i] > tol) {
         if (print == 1)
-          cout << "Dual feasibility fail for row " << rIndexRev[i]
+          std::cout << "Dual feasibility fail for row " << rIndexRev[i]
                << ": L= " << rowLower[i] << ", Ax=" << rowV
-               << ", U=" << rowUpper[i] << ", y=" << rowDual[i] << endl;
-        // cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
-        // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<endl;
+               << ", U=" << rowUpper[i] << ", y=" << rowDual[i] << std::endl;
+        // std::cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
+        // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<std::endl;
         istrue = false;
       }
     }
     // L < Ax = U
     else if (rowLower[i] < rowV && abs(rowV - rowUpper[i]) < tol) {
-      // cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
-      // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<endl;
+      // std::cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
+      // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<std::endl;
       if (rowDual[i] < -tol) {
         if (print == 1)
-          cout << "Dual feasibility fail for row " << rIndexRev[i]
+          std::cout << "Dual feasibility fail for row " << rIndexRev[i]
                << ": L= " << rowLower[i] << ", Ax=" << rowV
-               << ", U=" << rowUpper[i] << ", y=" << rowDual[i] << endl;
-        // cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
-        // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<endl;
+               << ", U=" << rowUpper[i] << ", y=" << rowDual[i] << std::endl;
+        // std::cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
+        // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<std::endl;
         istrue = false;
       }
     }
@@ -211,11 +212,11 @@ void KktCheck::chDualFeas() {
     else if ((rowLower[i] < (rowV + tol)) && (rowV < (rowUpper[i] + tol))) {
       if (abs(rowDual[i]) > tol) {
         if (print == 1)
-          cout << "Dual feasibility fail for row " << rIndexRev[i]
+          std::cout << "Dual feasibility fail for row " << rIndexRev[i]
                << ": L= " << rowLower[i] << ", Ax=" << rowV
-               << ", U=" << rowUpper[i] << ", y=" << rowDual[i] << endl;
-        // cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
-        // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<endl;istrue =
+               << ", U=" << rowUpper[i] << ", y=" << rowDual[i] << std::endl;
+        // std::cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
+        // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<std::endl;istrue =
         // false;
         istrue = false;
       }
@@ -223,9 +224,9 @@ void KktCheck::chDualFeas() {
   }
 
   if (istrue) {
-    if (print == 1) cout << "Dual feasible.\n";
+    if (print == 1) std::cout << "Dual feasible.\n";
   } else {
-    if (print == 1) cout << "KKT check error: Dual feasibility fail.\n";
+    if (print == 1) std::cout << "KKT check error: Dual feasibility fail.\n";
     istrueGlb = true;
   }
 }
@@ -238,58 +239,58 @@ void KktCheck::chComplementarySlackness() {
       if (abs((colValue[i] - colLower[i]) * (colDual[i])) > tol &&
           colValue[i] != colUpper[i] && abs(colDual[i]) > tol) {
         if (print == 1)
-          cout << "Comp. slackness fail: "
+          std::cout << "Comp. slackness fail: "
                << "l[" << cIndexRev[i] << "]=" << colLower[i] << ", x[" << i
                << "]=" << colValue[i] << ", z[" << i << "]=" << colDual[i]
-               << endl;
-        // cout<<"Comp. slackness fail: "<<"l["<<i<<"]="<<colLower[i]<<",
-        // x["<<i<<"]="<<colValue[i]<<", z["<<i<<"]="<<colDual[i]<<endl;
+               << std::endl;
+        // std::cout<<"Comp. slackness fail: "<<"l["<<i<<"]="<<colLower[i]<<",
+        // x["<<i<<"]="<<colValue[i]<<", z["<<i<<"]="<<colDual[i]<<std::endl;
         istrue = false;
       }
     if (colUpper[i] < HIGHS_CONST_INF)
       if (abs((colUpper[i] - colValue[i]) * (colDual[i])) > tol &&
           colValue[i] != colLower[i] && abs(colDual[i]) > tol) {
         if (print == 1)
-          cout << "Comp. slackness fail: x[" << cIndexRev[i]
+          std::cout << "Comp. slackness fail: x[" << cIndexRev[i]
                << "]=" << colValue[i] << ", u[" << i << "]=" << colUpper[i]
-               << ", z[" << i << "]=" << colDual[i] << endl;
-        // cout<<"Comp. slackness fail: x["<<i<<"]="<<colValue[i]<<",
-        // u["<<i<<"]="<<colUpper[i]<<", z["<<i<<"]="<<colDual[i]<<endl;
+               << ", z[" << i << "]=" << colDual[i] << std::endl;
+        // std::cout<<"Comp. slackness fail: x["<<i<<"]="<<colValue[i]<<",
+        // u["<<i<<"]="<<colUpper[i]<<", z["<<i<<"]="<<colDual[i]<<std::endl;
         istrue = false;
       }
   }
 
   if (istrue) {
-    if (print == 1) cout << "Complementary Slackness.\n";
+    if (print == 1) std::cout << "Complementary Slackness.\n";
   } else {
-    if (print == 1) cout << "KKT check error: Comp slackness fail.\n";
+    if (print == 1) std::cout << "KKT check error: Comp slackness fail.\n";
     istrueGlb = true;
   }
 }
 
 void KktCheck::printSol() {
   char buff[10];
-  cout << endl << "Col value: ";
+  std::cout << std::endl << "Col value: ";
   for (size_t i = 0; i < colValue.size(); i++) {
     sprintf(buff, "%2.2f ", colValue[i]);
-    cout << setw(5) << buff;
+    std::cout << std::setw(5) << buff;
   }
-  cout << endl << "Col dual:  ";
+  std::cout << std::endl << "Col dual:  ";
   for (size_t i = 0; i < colDual.size(); i++) {
     sprintf(buff, "%2.2f ", colDual[i]);
-    cout << setw(5) << buff;
+    std::cout << std::setw(5) << buff;
   }
-  /*	cout<<endl<<"Row value: ";
+  /*	cout<<std::endl<<"Row value: ";
           for (i=0;i<numRow;i++) {
                   sprintf(buff, "%2.2f ", rowValue[i]);
-                  cout<<setw(5)<<buff;
+                  std::cout<<setw(5)<<buff;
                   }*/
-  cout << endl << "Row dual:  ";
+  std::cout << std::endl << "Row dual:  ";
   for (size_t i = 0; i < rowDual.size(); i++) {
     sprintf(buff, "%2.2f ", rowDual[i]);
-    cout << setw(5) << buff;
+    std::cout << std::setw(5) << buff;
   }
-  cout << endl << endl;
+  std::cout << std::endl << std::endl;
 }
 
 void KktCheck::chStOfLagrangian() {
@@ -303,19 +304,19 @@ void KktCheck::chStOfLagrangian() {
 
     if (abs(lagrV) > tol) {
       if (print == 1)
-        cout << "Column " << cIndexRev[j]
+        std::cout << "Column " << cIndexRev[j]
              << " fails stationary of Lagrangian: dL/dx" << j << " = " << lagrV
-             << ", rather than zero." << endl;
-      // cout<<"Column "<<j<<" fails stationary of Lagrangian: dL/dx"<<j<<" =
-      // "<<lagrV<<", rather than zero."<<endl;
+             << ", rather than zero." << std::endl;
+      // std::cout<<"Column "<<j<<" fails stationary of Lagrangian: dL/dx"<<j<<" =
+      // "<<lagrV<<", rather than zero."<<std::endl;
       istrue = false;
     }
   }
 
   if (istrue) {
-    if (print == 1) cout << "Stationarity of Lagrangian.\n";
+    if (print == 1) std::cout << "Stationarity of Lagrangian.\n";
   } else {
-    if (print == 1) cout << "KKT check error: Lagrangian is not stationary.\n";
+    if (print == 1) std::cout << "KKT check error: Lagrangian is not stationary.\n";
     istrueGlb = true;
   }
 }
@@ -334,8 +335,8 @@ void KktCheck::checkKKT() {
   chStOfLagrangian();
 
   if (print == 2) {
-    ofstream myfile;
-    myfile.open("../experiments/out", ios::app);
+    std::ofstream myfile;
+    myfile.open("../experiments/out", std::ios::app);
     if (istrueGlb)
       myfile << "           KKT fail      ";
     else
@@ -344,31 +345,31 @@ void KktCheck::checkKKT() {
   }
 }
 
-void KktCheck::passSolution(const vector<double>& colVal,
-                            const vector<double>& colDu,
-                            const vector<double>& rDu) {
+void KktCheck::passSolution(const std::vector<double>& colVal,
+                            const std::vector<double>& colDu,
+                            const std::vector<double>& rDu) {
   colValue = colVal;
   colDual = colDu;
   rowDual = rDu;
 }
 // get DATA
-void KktCheck::setMatrix(const vector<int>& Astart_, const vector<int>& Aindex_,
-                         const vector<double>& Avalue_) {
+void KktCheck::setMatrix(const std::vector<int>& Astart_, const std::vector<int>& Aindex_,
+                         const std::vector<double>& Avalue_) {
   Astart = Astart_;
   Aindex = Aindex_;
   Avalue = Avalue_;
 }
 
-void KktCheck::setBounds(const vector<double>& colUpper_,
-                         const vector<double>& colLower_) {
+void KktCheck::setBounds(const std::vector<double>& colUpper_,
+                         const std::vector<double>& colLower_) {
   colLower = colLower_;
   colUpper = colUpper_;
 }
 
 void KktCheck::setNumbersCostRHS(int nCol, int nRow,
-                                 const vector<double>& rowLower_,
-                                 const vector<double>& rowUpper_,
-                                 const vector<double>& cost) {
+                                 const std::vector<double>& rowLower_,
+                                 const std::vector<double>& rowUpper_,
+                                 const std::vector<double>& cost) {
   numCol = nCol;
   numRow = nRow;
   colCost = cost;
@@ -376,7 +377,7 @@ void KktCheck::setNumbersCostRHS(int nCol, int nRow,
   rowUpper = rowUpper_;
 }
 
-void KktCheck::setIndexVectors(vector<int>& rIndex, vector<int>& cIndex) {
+void KktCheck::setIndexVectors(std::vector<int>& rIndex, std::vector<int>& cIndex) {
   rIndexRev.clear();
   cIndexRev.clear();
 

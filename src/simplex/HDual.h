@@ -14,20 +14,19 @@
 #ifndef SIMPLEX_HDUAL_H_
 #define SIMPLEX_HDUAL_H_
 
-#include "HighsLp.h"
-#include "HighsModelObject.h"
-#include "HCrash.h"
-#include "HDualRHS.h"
-#include "HDualRow.h"
-#include "HFactor.h"
-#include "HMatrix.h"
-#include "HModel.h"
-#include "HVector.h"
-
 #include <set>
 #include <string>
 #include <vector>
-using namespace std;
+
+#include "HConfig.h"
+#include "HCrash.h"
+#include "HDualRHS.h"
+#include "HDualRow.h"
+#include "HighsModelObject.h"
+#include "HVector.h"
+#include "HMatrix.h"
+
+class HFactor;
 
 /**
  * Limit on number of threads used to dimension many identifiers
@@ -110,7 +109,7 @@ class HDual {
    * @brief Initialise a dual simplex instance
    *
    * Copy dimensions and pointers to matrix, factor and solver-related
-   * model data, plus tolerances. Sets up local vectors (columnDSE,
+   * model data, plus tolerances. Sets up local std::vectors (columnDSE,
    * columnBFRT, column, row_ep and row_ap), scalars for their average
    * density and buffers for dualRow and dualRHS. Also sets up data
    * structures for SIP or PAMI (if necessary).
@@ -261,7 +260,7 @@ class HDual {
   void updateFtranBFRT();
 
   /**
-   * @brief Compute the vector required to update DSE weights - being
+   * @brief Compute the std::vector required to update DSE weights - being
    * FTRAN applied to the pivotal column (FTRAN-DSE)
    */
   void updateFtranDSE(HVector *DSE_Vector  //!< Pivotal column as RHS for FTRAN
@@ -460,8 +459,8 @@ class HDual {
   int n_dvx_fwk;    //!< Number of Devex frameworks used
   int n_dvx_it;     //!< Number of Devex iterations with the current framework
   bool nw_dvx_fwk;  //!< Set a new Devex framework
-  // Devex vector
-  vector<int> dvx_ix;  //!< Vector of Devex indices
+  // Devex std::vector
+  std::vector<int> dvx_ix;  //!< Vector of Devex indices
 
   // Price scalars
   bool alw_price_by_col_sw = true;  //!< By default allow switch to column PRICE
@@ -589,7 +588,7 @@ class HDual {
   struct MFinish {
     int moveIn;
     double shiftOut;
-    vector<int> flipList;
+    std::vector<int> flipList;
 
     int rowOut;
     int columnOut;

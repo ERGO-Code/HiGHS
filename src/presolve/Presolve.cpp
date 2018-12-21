@@ -13,7 +13,9 @@
  */
 #include "Presolve.h"
 #include "HConst.h"
-#include "HighsLp.h"
+
+#include "HFactor.h"
+#include "KktChStep.h"
 
 #include <algorithm>
 #include <cmath>

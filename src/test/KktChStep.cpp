@@ -12,6 +12,10 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "KktChStep.h"
+
+#include "HConst.h"
+#include "KktCheck.h"
+
 #include <utility>
 using namespace std;
 

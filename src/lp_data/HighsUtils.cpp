@@ -16,6 +16,7 @@
 #include "HighsLp.h"
 #include "HighsIO.h"
 #include "HighsUtils.h"
+#include "HConst.h"
 
 #include <cmath>
 

@@ -15,6 +15,7 @@
 #define LP_DATA_SCALING_H_
 
 #include "HConfig.h"
+#include "HConst.h"
 #include "HighsModelObject.h"
 #include <cassert>
 //#include <vector>
