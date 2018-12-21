@@ -1,16 +1,9 @@
 #ifndef SIMPLEX_HAPP_H_
 #define SIMPLX_HAPP_H_
 
-// todo: clear includes.
-#include <getopt.h>
-#include <unistd.h>
-#include <cstring>
-#include <fstream>
+// clear unnecessary ones.
 #include <iomanip>
 #include <iostream>
-#include <map>
-#include <set>
-#include <vector>
 
 #include "HConfig.h"
 #include "HCrash.h"

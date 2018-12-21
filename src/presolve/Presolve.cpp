@@ -12,10 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "Presolve.h"
-#include "HConst.h"
-
-#include "HFactor.h"
-#include "KktChStep.h"
 
 #include <algorithm>
 #include <cmath>
@@ -25,6 +21,10 @@
 #include <iterator>
 #include <queue>
 #include <sstream>
+
+#include "HConst.h"
+#include "HFactor.h"
+#include "KktChStep.h"
 
 using std::ios;
 using std::max;
