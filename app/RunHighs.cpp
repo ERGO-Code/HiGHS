@@ -21,7 +21,8 @@ int main(int argc, char **argv) {
   HighsInputStatus read_status = loadLpFromFile(options, lp);
   timer.stop(loadClock);
   if (read_status != HighsInputStatus::OK) {
-    return (int) HighsStatus::LpError;
+    HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
+    return (int)HighsStatus::LpError;
   }
 
   Highs highs(options);

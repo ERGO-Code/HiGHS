@@ -12,6 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "FilereaderMps.h"
+#if defined(Boost_FOUND) && !defined(OLD_PARSER)
+#include "HMpsFF.h"
+#endif
 
 #include "HMPSIO.h"
 #include "HighsLp.h"
@@ -58,4 +61,9 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
            model.colLower_, model.colUpper_, model.rowLower_, model.rowUpper_,
            integerColumn);
   return FilereaderRetcode::OKAY;
+}
+
+FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
+                                                   HighsModel& model) {
+  return FilereaderRetcode::PARSERERROR;
 }
