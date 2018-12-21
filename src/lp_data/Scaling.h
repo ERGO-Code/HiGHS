@@ -14,12 +14,12 @@
 #ifndef LP_DATA_SCALING_H_
 #define LP_DATA_SCALING_H_
 
+#include <cassert>
+#include <iostream>
+
 #include "HConfig.h"
 #include "HConst.h"
 #include "HighsModelObject.h"
-#include <cassert>
-//#include <vector>
-#include <iostream>
 
 // Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;

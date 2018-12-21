@@ -14,9 +14,9 @@
 #ifndef HIGHS_MODEL_BUILDER_H
 #define HIGHS_MODEL_BUILDER_H
 
-class HighsLp;
-
 #include <list>
+
+class HighsLp;
 
 class HighsVar {
   char* name;

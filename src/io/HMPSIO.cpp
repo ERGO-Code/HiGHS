@@ -12,10 +12,11 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HMPSIO.h"
+
 #include "HConst.h"
 #include "HModelCs.h"
-#include "HighsUtils.h"
 #include "HighsLp.h"
+#include "HighsUtils.h"
 
 using std::map;
 

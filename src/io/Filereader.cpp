@@ -1,9 +1,10 @@
 #include "Filereader.h"
+
+#include <stdexcept>
+#include <string.h>
+
 #include "FilereaderLp.h"
 #include "FilereaderMps.h"
-
-#include <string.h>
-#include <stdexcept>
 
 static __inline__ const char* getFilenameExt(const char* filename) {
   const char* dot = strrchr(filename, '.');

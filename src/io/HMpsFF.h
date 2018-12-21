@@ -11,36 +11,37 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+// Original licence from zib
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 #ifndef IO_HMPSFF_H_
 #define IO_HMPSFF_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <limits>
 #include <map>
+#include <memory>
+#include <tuple>
+#include <utility>
 #include <vector>
 
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-#include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/utility/string_ref.hpp>
-#include <iterator>
-#include <limits>
-#include <memory>
-#include <tuple>
-#include <utility>
-#include "HConst.h"
+
 #include "Hash.hpp"
+#include "HConst.h"
 #include "pdqsort.h"
 
 using Triplet = std::tuple<int, int, double>;

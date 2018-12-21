@@ -12,8 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsLp.h"
-#include "HighsIO.h"
+
 #include "HConst.h"
+#include "HighsIO.h"
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.

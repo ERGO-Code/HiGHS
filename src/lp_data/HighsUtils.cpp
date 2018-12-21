@@ -13,10 +13,10 @@
  */
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HighsIO.h"
-#include "HighsUtils.h"
 #include "HConst.h"
+#include "HighsIO.h"
+#include "HighsLp.h"
+#include "HighsUtils.h"
 
 #include <cmath>
 

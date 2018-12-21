@@ -1,9 +1,9 @@
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
+#include "HModel.h"
 #include "HighsLp.h"
 #include "HighsTimer.h"
-#include "HModel.h"
 // include Sensitivity(or Ranging) header
 
 struct BasisInfo {
