@@ -17,9 +17,13 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
-using namespace std;
 
 #include "HConfig.h"
+
+using std::vector;
+using std::max;
+using std::min;
+
 class HVector;
 
 enum UPDATE_METHOD {

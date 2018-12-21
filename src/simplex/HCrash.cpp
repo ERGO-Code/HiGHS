@@ -21,7 +21,9 @@
 #include <set>
 #include <string>
 #include <vector>
-using namespace std;
+
+using std::vector;
+using std::string;
 
 void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
   lp_ = &highs_model_object.lp_scaled_;

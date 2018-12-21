@@ -26,7 +26,9 @@
 #include <queue>
 #include <sstream>
 
-using namespace std;
+using std::ios;
+using std::max;
+using std::min;
 
 void Presolve::load(const HighsLp& lp) {
   numCol = lp.numCol_;

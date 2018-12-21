@@ -16,6 +16,9 @@
 #include "HModelCs.h"
 #include "HighsUtils.h"
 #include "HighsLp.h"
+
+using std::map;
+
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //

@@ -20,7 +20,6 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
-using namespace std;
 
 void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
                   const int Yend, const int *Tindex, const double *Tvalue,

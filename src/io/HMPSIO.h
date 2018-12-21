@@ -21,7 +21,8 @@
 #include <iostream>
 #include <map>
 #include <vector>
-using namespace std;
+
+using std::vector;
 
 int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
             int& numCol, int& objSense, double& objOffset, vector<int>& Astart,
