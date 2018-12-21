@@ -8,20 +8,25 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/Filereader.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IO_FILEREADER_H_
 #define IO_FILEREADER_H_
 
-#include "HighsLp.h"
+class HighsLp;
 
 enum class FilereaderRetcode { OKAY = 0, FILENOTFOUND = 1, PARSERERROR = 2 };
 
 class Filereader {
  public:
-  virtual FilereaderRetcode readModelFromFile(const char filename,
+  virtual FilereaderRetcode readModelFromFile(const char* filename,
                                               HighsLp& model) = 0;
+  virtual FilereaderRetcode writeModelToFile(const char* filename,
+                                             HighsLp& model) = 0;
+  static Filereader* getFilereader(const char* filename);
+
+  virtual ~Filereader() {}
 };
 
 #endif

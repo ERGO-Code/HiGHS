@@ -14,8 +14,8 @@
 #ifndef SIMPLEX_HMODELCS_H_
 #define SIMPLEX_HMODELCS_H_
 
-const int OBJSENSE_MINIMIZE = 1;
-const int OBJSENSE_MAXIMIZE = -1;
+//const int OBJSENSE_MINIMIZE = 1;
+//const int OBJSENSE_MAXIMIZE = -1;
 
 const int MPS_ROW_TY_N = 0;
 const int MPS_ROW_TY_E = 1;

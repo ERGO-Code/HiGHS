@@ -7,36 +7,18 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HTester.h
- * @brief NLA testing environmant for HiGHS
+/**@file lp_data/Scaling.h
+ * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HTESTER_H_
-#define SIMPLEX_HTESTER_H_
+#ifndef LP_DATA_SCALING_H_
+#define LP_DATA_SCALING_H_
 
-#include "HConfig.h"
-#ifdef HiGHSDEV
-#include <string>
+#include "HighsModelObject.h"
+#include <cassert>
 #include <vector>
-#include "HModel.h"
-using namespace std;
 
-class HTester {
- public:
-  void setup(const char *pivotFile);
-  void testUpdate(int item);
-  void testCFT();
-
- private:
-  double solveTime;
-  string modelName;
-  int numPivot;
-
-  vector<int> historyIn;
-  vector<int> historyOut;
-  vector<double> historyAlpha;
-
-  HModel model;
-};
+void scaleHighsModel(HighsModelObject highs_model) {
+  highs_model.lp_scaled_ = highs_model.lp_;
+}
 #endif
-#endif /* SIMPLEX_HTESTER_H_ */

@@ -21,9 +21,8 @@
 #include <stack>
 #include <string>
 #include <vector>
-#include "HConst.h"
 
-#include "KktCheck.h"
+class KktCheck;
 
 class KktChStep {
   // model: full matrix in AR (row-wise) and working copy(column-wise)
@@ -32,21 +31,21 @@ class KktChStep {
   int RnumRow;
 
  public:
-  vector<int> ARstart;
-  vector<int> ARindex;
-  vector<double> ARvalue;
+  std::vector<int> ARstart;
+  std::vector<int> ARindex;
+  std::vector<double> ARvalue;
 
  private:
-  // the 4 vectors below always of full length
-  vector<double> RcolCost;
-  vector<double> RcolLower;
-  vector<double> RcolUpper;
-  // vector<double> Rb;
-  vector<double> RrowLower;
-  vector<double> RrowUpper;
+  // the 4 std::vectors below always of full length
+  std::vector<double> RcolCost;
+  std::vector<double> RcolLower;
+  std::vector<double> RcolUpper;
+  // std::vector<double> Rb;
+  std::vector<double> RrowLower;
+  std::vector<double> RrowUpper;
 
-  vector<int> flagCol;
-  vector<int> flagRow;
+  std::vector<int> flagCol;
+  std::vector<int> flagRow;
 
   // testing
   void printA();
@@ -56,42 +55,42 @@ class KktChStep {
   // data for actual check
   int numCol;
   int numRow;
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper;
-  vector<double> rowLower;
-  vector<double> rowUpper;
+  std::vector<int> Astart;
+  std::vector<int> Aindex;
+  std::vector<double> Avalue;
+  std::vector<double> colCost;
+  std::vector<double> colLower;
+  std::vector<double> colUpper;
+  std::vector<double> rowLower;
+  std::vector<double> rowUpper;
   int print;
 
   // solution
-  vector<double> colValue;
-  vector<double> colDual;
-  vector<double> rowDual;
+  std::vector<double> colValue;
+  std::vector<double> colDual;
+  std::vector<double> rowDual;
 
-  // stack<vector<double> > bs;
-  stack<vector<pair<int, double> > > rLowers;
-  stack<vector<pair<int, double> > > rUppers;
-  stack<vector<pair<int, double> > > cLowers;
-  stack<vector<pair<int, double> > > cUppers;
-  stack<vector<pair<int, double> > > costs;
-  // stack<double> M;
+  // std::stack<std::vector<double> > bs;
+  std::stack<std::vector<std::pair<int, double> > > rLowers;
+  std::stack<std::vector<std::pair<int, double> > > rUppers;
+  std::stack<std::vector<std::pair<int, double> > > cLowers;
+  std::stack<std::vector<std::pair<int, double> > > cUppers;
+  std::stack<std::vector<std::pair<int, double> > > costs;
+  // std::stack<double> M;
 
-  void passSolution(const vector<double>& colVal, const vector<double>& colDu,
-                    const vector<double>& rDu);
+  void passSolution(const std::vector<double>& colVal, const std::vector<double>& colDu,
+                    const std::vector<double>& rDu);
   // full matrix
-  void setMatrixAR(int nCol, int nRow, const vector<int>& ARstart_,
-                   const vector<int>& ARindex_, const vector<double>& ARvalue_);
-  void setBoundsCostRHS(const vector<double>& colUpper_,
-                        const vector<double>& colLower_,
-                        const vector<double>& cost,
-                        const vector<double>& rowLower_,
-                        const vector<double>& rowUpper_);
+  void setMatrixAR(int nCol, int nRow, const std::vector<int>& ARstart_,
+                   const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_);
+  void setBoundsCostRHS(const std::vector<double>& colUpper_,
+                        const std::vector<double>& colLower_,
+                        const std::vector<double>& cost,
+                        const std::vector<double>& rowLower_,
+                        const std::vector<double>& rowUpper_);
   void addChange(int type, int row, int col, double valC, double dualC,
                  double dualR);
-  void setFlags(vector<int>& r, vector<int>& c);
+  void setFlags(std::vector<int>& r, std::vector<int>& c);
   void makeKKTCheck();
   void resizeProblemMatrix(KktCheck& checker);
   void addCost(int col, double value);

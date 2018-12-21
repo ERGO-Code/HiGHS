@@ -12,6 +12,8 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HinOut.h"
+#include "HConst.h"
+#include "HModel.h"
 
 void HinOut::HinOutTestRead(HModel& ptr) {
   readDataColumnWise();
@@ -33,7 +35,7 @@ void HinOut::HinOutTestIO(HModel& ptr) {
 }
 
 void HinOut::readDataColumnWise() {
-  ifstream f;
+  std::ifstream f;
   int i;
 
   f.open(fileIn, ios::in);
@@ -64,8 +66,8 @@ void HinOut::readDataColumnWise() {
   colUpper.reserve(numCol);
 
   colCost.assign(numCol, 0);
-  colLower.assign(numCol, -HSOL_CONST_INF);
-  colUpper.assign(numCol, HSOL_CONST_INF);
+  colLower.assign(numCol, -HIGHS_CONST_INF);
+  colUpper.assign(numCol, HIGHS_CONST_INF);
 
   for (i = 0; i < numCol; i++) {
     f >> colCost[i];
@@ -83,8 +85,8 @@ void HinOut::readDataColumnWise() {
 
   rowLower.reserve(numRow);
   rowUpper.reserve(numRow);
-  rowLower.assign(numRow, -HSOL_CONST_INF);
-  rowUpper.assign(numRow, HSOL_CONST_INF);
+  rowLower.assign(numRow, -HIGHS_CONST_INF);
+  rowUpper.assign(numRow, HIGHS_CONST_INF);
 
   for (i = 0; i < numRow; i++) {
     f >> rowLower[i];
@@ -100,7 +102,6 @@ void HinOut::readDataColumnWise() {
 void HinOut::clearData() {
   numRow = 0;
   numCol = 0;
-  numTot = 0;
   Astart.clear();
   Aindex.clear();
   Avalue.clear();
@@ -160,33 +161,31 @@ void HinOut::writeDataColumnWise() {
 }
 
 void HinOut::getData(HModel& ptr_model) {
-  onumCol = ptr_model.numCol;
-  onumRow = ptr_model.numRow;
-  onumTot = ptr_model.numCol + ptr_model.numRow;
-  oAstart = ptr_model.Astart;
-  oAindex = ptr_model.Aindex;
-  oAvalue = ptr_model.Avalue;
-  ocolCost = ptr_model.colCost;
-  ocolLower = ptr_model.colLower;
-  ocolUpper = ptr_model.colUpper;
-  orowLower = ptr_model.rowLower;
-  orowUpper = ptr_model.rowUpper;
+  onumCol = ptr_model.lpScaled.numCol_;
+  onumRow = ptr_model.lpScaled.numRow_;
+  oAstart = ptr_model.lpScaled.Astart_;
+  oAindex = ptr_model.lpScaled.Aindex_;
+  oAvalue = ptr_model.lpScaled.Avalue_;
+  ocolCost = ptr_model.lpScaled.colCost_;
+  ocolLower = ptr_model.lpScaled.colLower_;
+  ocolUpper = ptr_model.lpScaled.colUpper_;
+  orowLower = ptr_model.lpScaled.rowLower_;
+  orowUpper = ptr_model.lpScaled.rowUpper_;
 
   oAcountX = oAvalue.size();
 }
 
 void HinOut::readDataPostsolve(HModel& ptr_model) {
-  numCol = ptr_model.numCol;
-  numRow = ptr_model.numRow;
-  numTot = ptr_model.numCol + ptr_model.numRow;
-  Astart = ptr_model.Astart;
-  Aindex = ptr_model.Aindex;
-  Avalue = ptr_model.Avalue;
-  colCost = ptr_model.colCost;
-  colLower = ptr_model.colLower;
-  colUpper = ptr_model.colUpper;
-  rowLower = ptr_model.rowLower;
-  rowUpper = ptr_model.rowUpper;
+  numCol = ptr_model.lpScaled.numCol_;
+  numRow = ptr_model.lpScaled.numRow_;
+  Astart = ptr_model.lpScaled.Astart_;
+  Aindex = ptr_model.lpScaled.Aindex_;
+  Avalue = ptr_model.lpScaled.Avalue_;
+  colCost = ptr_model.lpScaled.colCost_;
+  colLower = ptr_model.lpScaled.colLower_;
+  colUpper = ptr_model.lpScaled.colUpper_;
+  rowLower = ptr_model.lpScaled.rowLower_;
+  rowUpper = ptr_model.lpScaled.rowUpper_;
 
   AcountX = oAvalue.size();
 }
@@ -266,17 +265,16 @@ void HinOut::compareData(int lvl) {
 }
 
 void HinOut::setData(HModel& ptr_model) {
-  ptr_model.numCol = numCol;
-  ptr_model.numRow = numRow;
-  ptr_model.numTot = numCol + numRow;
-  ptr_model.Astart = Astart;
-  ptr_model.Aindex = Aindex;
-  ptr_model.Avalue = Avalue;
-  ptr_model.colCost = colCost;
-  ptr_model.colLower = colLower;
-  ptr_model.colUpper = colUpper;
-  ptr_model.rowLower = rowLower;
-  ptr_model.rowUpper = rowUpper;
+  ptr_model.lpScaled.numCol_ = numCol;
+  ptr_model.lpScaled.numRow_ = numRow;
+  ptr_model.lpScaled.Astart_ = Astart;
+  ptr_model.lpScaled.Aindex_ = Aindex;
+  ptr_model.lpScaled.Avalue_ = Avalue;
+  ptr_model.lpScaled.colCost_ = colCost;
+  ptr_model.lpScaled.colLower_ = colLower;
+  ptr_model.lpScaled.colUpper_ = colUpper;
+  ptr_model.lpScaled.rowLower_ = rowLower;
+  ptr_model.lpScaled.rowUpper_ = rowUpper;
 }
 
 HinOut::HinOut(string filenameIn, string filenameOut) {

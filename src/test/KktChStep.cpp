@@ -12,6 +12,10 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "KktChStep.h"
+
+#include "HConst.h"
+#include "KktCheck.h"
+
 #include <utility>
 using namespace std;
 
@@ -543,7 +547,7 @@ void KktChStep::printA() {
   }
   cout << "------l------\n";
   for (int i = 0; i < numCol; i++) {
-    if (colLower[i] > -HSOL_CONST_INF)
+    if (colLower[i] > -HIGHS_CONST_INF)
       cout << colLower[i] << " ";
     else
       cout << "-inf ";
@@ -552,7 +556,7 @@ void KktChStep::printA() {
   cout << endl;
   cout << "------u------\n";
   for (int i = 0; i < numCol; i++) {
-    if (colUpper[i] < HSOL_CONST_INF)
+    if (colUpper[i] < HIGHS_CONST_INF)
       cout << colUpper[i] << " ";
     else
       cout << "inf ";

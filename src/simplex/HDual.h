@@ -14,27 +14,28 @@
 #ifndef SIMPLEX_HDUAL_H_
 #define SIMPLEX_HDUAL_H_
 
-#include "HCrash.h"
-#include "HDualRHS.h"
-#include "HDualRow.h"
-#include "HFactor.h"
-#include "HMatrix.h"
-#include "HModel.h"
-#include "HVector.h"
-
 #include <set>
 #include <string>
 #include <vector>
-using namespace std;
+
+#include "HConfig.h"
+#include "HCrash.h"
+#include "HDualRHS.h"
+#include "HDualRow.h"
+#include "HighsModelObject.h"
+#include "HVector.h"
+#include "HMatrix.h"
+
+class HFactor;
 
 /**
  * Limit on number of threads used to dimension many identifiers
  */
-const int HSOL_THREAD_LIMIT = 32;
+const int HIGHS_THREAD_LIMIT = 32;
 /**
  * Limit on the number of column slices for parallel calculations
  */
-const int HSOL_SLICED_LIMIT = 100;
+const int HIGHS_SLICED_LIMIT = 100;
 
 /**
  * Possible edge weight mode values used to test EdWt_Mode
@@ -97,9 +98,9 @@ class HDual {
    * of threads
    */
   void solve(
-      HModel *model,       //!< Instance of HModel class to be solved
-      int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
-      int num_threads = 1  //!< Default number of threads is 1
+	     HighsModelObject &highs_model_object,       //!< Instance of HiGHS model object to be solved
+	     int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
+	     int num_threads = 1  //!< Default number of threads is 1
   );
 
  public:
@@ -107,7 +108,7 @@ class HDual {
    * @brief Initialise a dual simplex instance
    *
    * Copy dimensions and pointers to matrix, factor and solver-related
-   * model data, plus tolerances. Sets up local vectors (columnDSE,
+   * model data, plus tolerances. Sets up local std::vectors (columnDSE,
    * columnBFRT, column, row_ep and row_ap), scalars for their average
    * density and buffers for dualRow and dualRHS. Also sets up data
    * structures for SIP or PAMI (if necessary).
@@ -252,7 +253,7 @@ class HDual {
   void updateFtranBFRT();
 
   /**
-   * @brief Compute the vector required to update DSE weights - being
+   * @brief Compute the std::vector required to update DSE weights - being
    * FTRAN applied to the pivotal column (FTRAN-DSE)
    */
   void updateFtranDSE(HVector *DSE_Vector  //!< Pivotal column as RHS for FTRAN
@@ -451,8 +452,8 @@ class HDual {
   int n_dvx_fwk;    //!< Number of Devex frameworks used
   int n_dvx_it;     //!< Number of Devex iterations with the current framework
   bool nw_dvx_fwk;  //!< Set a new Devex framework
-  // Devex vector
-  vector<int> dvx_ix;  //!< Vector of Devex indices
+  // Devex std::vector
+  std::vector<int> dvx_ix;  //!< Vector of Devex indices
 
   // Price scalars
   bool alw_price_by_col_sw = true;  //!< By default allow switch to column PRICE
@@ -486,12 +487,7 @@ class HDual {
 
   // Model
   HModel *model;
-  double Tp;  // Tolerance for primal
-  double Td;  // Tolerance for dual
-
-  int numCol;
-  int numRow;
-  int numTot;
+  HighsModelObject *highs_model_object;
   const HMatrix *matrix;
   const HFactor *factor;
 
@@ -508,6 +504,12 @@ class HDual {
   double *rowLower;
   double *rowUpper;
   int *nonbasicFlag;
+
+  int numCol;
+  int numRow;
+  int numTot;
+  double Tp;  // Tolerance for primal
+  double Td;  // Tolerance for dual
 
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
@@ -553,10 +555,10 @@ class HDual {
   // Partitioned coefficient matrix
   int slice_num;
   int slice_PRICE;
-  int slice_start[HSOL_SLICED_LIMIT + 1];
-  HMatrix slice_matrix[HSOL_SLICED_LIMIT];
-  HVector slice_row_ap[HSOL_SLICED_LIMIT];
-  HDualRow slice_dualRow[HSOL_SLICED_LIMIT];
+  int slice_start[HIGHS_SLICED_LIMIT + 1];
+  HMatrix slice_matrix[HIGHS_SLICED_LIMIT];
+  HVector slice_row_ap[HIGHS_SLICED_LIMIT];
+  HDualRow slice_dualRow[HIGHS_SLICED_LIMIT];
 
   /**
    * @brief Multiple CHUZR data
@@ -580,7 +582,7 @@ class HDual {
   struct MFinish {
     int moveIn;
     double shiftOut;
-    vector<int> flipList;
+    std::vector<int> flipList;
 
     int rowOut;
     int columnOut;
@@ -600,8 +602,8 @@ class HDual {
   int multi_nFinish;
   int multi_iteration;
   int multi_chooseAgain;
-  MChoice multi_choice[HSOL_THREAD_LIMIT];
-  MFinish multi_finish[HSOL_THREAD_LIMIT];
+  MChoice multi_choice[HIGHS_THREAD_LIMIT];
+  MFinish multi_finish[HIGHS_THREAD_LIMIT];
 
   double total_syntheticTick;
 #ifdef HiGHSDEV

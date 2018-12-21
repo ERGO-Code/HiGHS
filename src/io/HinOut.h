@@ -15,7 +15,10 @@
 #define IO_HINOUT_H_
 
 #include <cstring>
-#include "HModel.h"
+
+#include "HPreData.h"
+
+class HModel;
 
 class HinOut : public HPreData {
  public:
@@ -38,17 +41,16 @@ class HinOut : public HPreData {
   // data we are getting and printing
   int onumCol;
   int onumRow;
-  int onumTot;
 
-  vector<int> oAstart;
-  vector<int> oAindex;
-  vector<double> oAvalue;
+  std::vector<int> oAstart;
+  std::vector<int> oAindex;
+  std::vector<double> oAvalue;
 
-  vector<double> ocolCost;
-  vector<double> ocolLower;
-  vector<double> ocolUpper;
-  vector<double> orowLower;
-  vector<double> orowUpper;
+  std::vector<double> ocolCost;
+  std::vector<double> ocolLower;
+  std::vector<double> ocolUpper;
+  std::vector<double> orowLower;
+  std::vector<double> orowUpper;
 
   int oAcountX;
 };

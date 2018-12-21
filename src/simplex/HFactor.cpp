@@ -14,6 +14,7 @@
 #include "HFactor.h"
 #include "HConst.h"
 #include "HTimer.h"
+#include "HVector.h"
 
 #include <cassert>
 #include <cmath>
@@ -30,7 +31,7 @@ void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
   for (int k = Xstart; k < Xend; k++) pivotX += Tvalue[k] * RHSarray[Tindex[k]];
 
   // Scatter by Y
-  if (fabs(pivotX) > HSOL_CONST_TINY) {
+  if (fabs(pivotX) > HIGHS_CONST_TINY) {
     int workCount = *RHScount;
 
     pivotX /= Tpivot;
@@ -40,7 +41,7 @@ void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
       const double value1 = value0 - pivotX * Tvalue[k];
       if (value0 == 0) RHSindex[workCount++] = index;
       RHSarray[index] =
-          (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
     }
 
     *RHScount = workCount;
@@ -114,7 +115,7 @@ void solveHyper(const int Hsize, const int *Hlookup, const int *HpivotIndex,
       listMark[i] = 0;
       int pivotRow = HpivotIndex[i];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         RHSindex[RHScount++] = pivotRow;
         const int start = Hstart[i];
         const int end = Hend[i];
@@ -133,7 +134,7 @@ void solveHyper(const int Hsize, const int *Hlookup, const int *HpivotIndex,
       listMark[i] = 0;
       int pivotRow = HpivotIndex[i];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= HpivotValue[i];
         RHSarray[pivotRow] = pivotX;
         RHSindex[RHScount++] = pivotRow;
@@ -150,8 +151,12 @@ void solveHyper(const int Hsize, const int *Hlookup, const int *HpivotIndex,
   }
 }
 
-void HFactor::setup(int numCol_, int numRow_, int *Astart_, int *Aindex_,
-                    double *Avalue_, int *baseIndex_, int updateMethod_) {
+void HFactor::setup(int numCol_, int numRow_,
+		    const int *Astart_,
+		    const int *Aindex_,
+                    const double *Avalue_,
+		    int *baseIndex_,
+		    int updateMethod_) {
   // Copy Problem size and (pointer to) coefficient matrix
   numRow = numRow_;
   numCol = numCol_;
@@ -255,6 +260,8 @@ int HFactor::build() {
   build_syntheticTick = 0;
   build_realTick = timer.getTick();
   // Build the L, U factor
+  // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
+  // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
   rankDeficiency = buildKernel();
   if (rankDeficiency > 0) {
@@ -758,7 +765,7 @@ int HFactor::buildKernel() {
           McolumnMark[iRow] = 0;
           nFillin--;
           value -= my_pivot * McolumnArray[iRow];
-          if (fabs(value) < HSOL_CONST_TINY) {
+          if (fabs(value) < HIGHS_CONST_TINY) {
             value = 0;
             nCancel++;
           }
@@ -1139,7 +1146,7 @@ void HFactor::ftranL(HVector &rhs, double hist_dsty) const {
     for (int i = 0; i < numRow; i++) {
       int pivotRow = LpivotIndex[i];
       const double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         RHSindex[RHScount++] = pivotRow;
         const int start = Lstart[i];
         const int end = Lstart[i + 1];
@@ -1177,7 +1184,7 @@ void HFactor::btranL(HVector &rhs, double hist_dsty) const {
     for (int i = numRow - 1; i >= 0; i--) {
       int pivotRow = LpivotIndex[i];
       const double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
         const int start = LRstart[i];
@@ -1244,7 +1251,7 @@ void HFactor::ftranU(HVector &rhs, double hist_dsty) const {
       // Normal part
       const int pivotRow = UpivotIndex[iLogic];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= UpivotValue[iLogic];
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
@@ -1313,7 +1320,7 @@ void HFactor::btranU(HVector &rhs, double hist_dsty) const {
       // Normal part
       const int pivotRow = UpivotIndex[iLogic];
       double pivotX = RHSarray[pivotRow];
-      if (fabs(pivotX) > HSOL_CONST_TINY) {
+      if (fabs(pivotX) > HIGHS_CONST_TINY) {
         pivotX /= UpivotValue[iLogic];
         RHSindex[RHScount++] = pivotRow;
         RHSarray[pivotRow] = pivotX;
@@ -1384,7 +1391,7 @@ void HFactor::ftranFT(HVector &vector) const {
     if (value0 || value1) {
       if (value0 == 0) RHSindex[RHScount++] = iRow;
       RHSarray[iRow] =
-          (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+          (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
     }
   }
 
@@ -1431,7 +1438,7 @@ void HFactor::btranFT(HVector &vector) const {
         double value1 = value0 - pivotX * PFvalue[k];
         if (value0 == 0) RHSindex[RHScount++] = iRow;
         RHSarray[iRow] =
-            (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
       }
     }
   }
@@ -1463,7 +1470,7 @@ void HFactor::ftranPF(HVector &vector) const {
   for (int i = 0; i < PFpivotCount; i++) {
     int pivotRow = PFpivotIndex[i];
     double pivotX = RHSarray[pivotRow];
-    if (fabs(pivotX) > HSOL_CONST_TINY) {
+    if (fabs(pivotX) > HIGHS_CONST_TINY) {
       pivotX /= PFpivotValue[i];
       RHSarray[pivotRow] = pivotX;
       for (int k = PFstart[i]; k < PFstart[i + 1]; k++) {
@@ -1472,7 +1479,7 @@ void HFactor::ftranPF(HVector &vector) const {
         const double value1 = value0 - pivotX * PFvalue[k];
         if (value0 == 0) RHSindex[RHScount++] = index;
         RHSarray[index] =
-            (fabs(value1) < HSOL_CONST_TINY) ? HSOL_CONST_ZERO : value1;
+            (fabs(value1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : value1;
       }
     }
   }
@@ -1504,7 +1511,7 @@ void HFactor::btranPF(HVector &vector) const {
     pivotX /= PFpivotValue[i];
 
     if (RHSarray[pivotRow] == 0) RHSindex[RHScount++] = pivotRow;
-    RHSarray[pivotRow] = (fabs(pivotX) < HSOL_CONST_TINY) ? 1e-100 : pivotX;
+    RHSarray[pivotRow] = (fabs(pivotX) < HIGHS_CONST_TINY) ? 1e-100 : pivotX;
   }
 
   // Save count
@@ -1653,7 +1660,7 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
       int index = iwork[i];
       double value = dwork[index];
       dwork[index] = 0;  // This effectively removes all duplication
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         Uindex.push_back(index);
         Uvalue.push_back(value);
       }
@@ -1676,7 +1683,7 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
       int pp = sorted_pp[isort].second;
       int pRow = iRow[pp];
       double multiplier = -pValue[pp] * dwork[pRow];
-      if (fabs(dwork[pRow]) > HSOL_CONST_TINY) {
+      if (fabs(dwork[pRow]) > HIGHS_CONST_TINY) {
         for (int i = 0; i < epWork[pp]->packCount; i++) {
           int index = epWork[pp]->packIndex[i];
           double value = epWork[pp]->packValue[i];
@@ -1714,7 +1721,7 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
       int index = iwork[i];
       double value = dwork[index];
       dwork[index] = 0;
-      if (fabs(value) > HSOL_CONST_TINY) {
+      if (fabs(value) > HIGHS_CONST_TINY) {
         PFindex.push_back(index);
         PFvalue.push_back(value * pivotX);
       }

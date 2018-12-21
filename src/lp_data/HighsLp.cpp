@@ -8,10 +8,12 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsLp.h"
+#include "HighsIO.h"
+#include "HConst.h"
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.
@@ -19,6 +21,15 @@ void checkStatus(HighsStatus status) {
   assert(status == HighsStatus::OK);
   if (status != HighsStatus::OK)
     std::cout << "Unexpected status: " << HighsStatusToString(status);
+}
+
+bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
+  if (solution.colDual_.size() == (size_t)lp.numCol_ ||
+      solution.colValue_.size() == (size_t)lp.numCol_ ||
+      solution.rowDual_.size() == (size_t)lp.numRow_ ||
+      solution.rowValue_.size() == (size_t)lp.numRow_)
+    return true;
+  return false;
 }
 
 HighsInputStatus checkLp(const HighsLp& lp) {
@@ -38,89 +49,85 @@ HighsInputStatus checkLp(const HighsLp& lp) {
     return HighsInputStatus::ErrorRowBounds;
 
   for (int i = 0; i < lp.numRow_; i++)
-    if (lp.rowLower_[i] < -HSOL_CONST_INF || lp.rowUpper_[i] > HSOL_CONST_INF)
+    if (lp.rowLower_[i] < -HIGHS_CONST_INF || lp.rowUpper_[i] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorRowBounds;
 
   for (int j = 0; j < lp.numCol_; j++) {
-    if (lp.colCost_[j] < -HSOL_CONST_INF || lp.colCost_[j] > HSOL_CONST_INF)
+    if (lp.colCost_[j] < -HIGHS_CONST_INF || lp.colCost_[j] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorObjective;
 
-    if (lp.colLower_[j] < -HSOL_CONST_INF || lp.colUpper_[j] > HSOL_CONST_INF)
+    if (lp.colLower_[j] < -HIGHS_CONST_INF || lp.colUpper_[j] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorColBounds;
     if (lp.colLower_[j] > lp.colUpper_[j] + kBoundTolerance)
       return HighsInputStatus::ErrorColBounds;
   }
 
   // Check matrix.
-  const int nnz = lp.Avalue_.size();
-  if (nnz <= 0) return HighsInputStatus::ErrorMatrixValue;
-  if ((int)lp.Aindex_.size() != nnz)
+  if ((size_t)lp.nnz_ != lp.Avalue_.size())
+    return HighsInputStatus::ErrorMatrixValue;
+  if (lp.nnz_ <= 0) return HighsInputStatus::ErrorMatrixValue;
+  if ((int)lp.Aindex_.size() != lp.nnz_)
     return HighsInputStatus::ErrorMatrixIndices;
 
   if ((int)lp.Astart_.size() != lp.numCol_ + 1)
     return HighsInputStatus::ErrorMatrixStart;
   for (int i = 0; i < lp.numCol_; i++) {
-    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] >= nnz ||
+    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] >= lp.nnz_ ||
         lp.Astart_[i] < 0)
       return HighsInputStatus::ErrorMatrixStart;
   }
 
-  for (int k = 0; k < nnz; k++) {
+  for (int k = 0; k < lp.nnz_; k++) {
     if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
       return HighsInputStatus::ErrorMatrixIndices;
-    if (lp.Avalue_[k] < -HSOL_CONST_INF || lp.Avalue_[k] > HSOL_CONST_INF)
+    if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
       return HighsInputStatus::ErrorRowBounds;
   }
 
   return HighsInputStatus::OK;
 }
 
-// Return a string representation of SolutionStatus.
-// Capitalized because it is ClassNameToString for the following three methods.
-std::string HighsSolutionStatusToString(HighsSolutionStatus status) {
-  switch (status) {
-    case HighsSolutionStatus::Unset:
-      return "Unset.";
-      break;
-    case HighsSolutionStatus::Unbounded:
-      return "Unbounded.";
-      break;
-    case HighsSolutionStatus::Infeasible:
-      return "Infeasible.";
-      break;
-    case HighsSolutionStatus::Feasible:
-      return "Feasible.";
-      break;
-    case HighsSolutionStatus::Optimal:
-      return "Optimal.";
-      break;
-  }
-  return "";
-}
-
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
     case HighsStatus::OK:
-      return "OK.";
+      return "OK";
+      break;
+    case HighsStatus::Init:
+      return "Init";
       break;
     case HighsStatus::LpError:
-      return "Lp Error.";
+      return "Lp Error";
       break;
     case HighsStatus::OptionsError:
-      return "Options Error.";
+      return "Options Error";
       break;
     case HighsStatus::PresolveError:
-      return "Presolve Error.";
+      return "Presolve Error";
       break;
     case HighsStatus::SolutionError:
-      return "Solution Error.";
+      return "Solution Error";
       break;
     case HighsStatus::PostsolveError:
-      return "PostsolveError.";
+      return "Postsolve Error";
       break;
     case HighsStatus::NotImplemented:
-      return "Not implemented.";
+      return "Not implemented";
+      break;
+    case HighsStatus::Unbounded:
+      return "Unbounded";
+      break;
+    case HighsStatus::Infeasible:
+      return "Infeasible";
+      break;
+    case HighsStatus::Feasible:
+      return "Feasible";
+      break;
+    case HighsStatus::Optimal:
+      return "Optimal";
+      break;
+    case HighsStatus::Timeout:
+      return "Timeout";
       break;
   }
   return "";
@@ -130,10 +137,10 @@ std::string HighsStatusToString(HighsStatus status) {
 std::string HighsInputStatusToString(HighsInputStatus status) {
   switch (status) {
     case HighsInputStatus::OK:
-      return "OK.";
+      return "OK";
       break;
     case HighsInputStatus::FileNotFound:
-      return "Error: File not found.";
+      return "Error: File not found";
       break;
     case HighsInputStatus::ErrorMatrixDimensions:
       return "Error Matrix Dimensions";

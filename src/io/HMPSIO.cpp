@@ -14,6 +14,8 @@
 #include "HMPSIO.h"
 #include "HConst.h"
 #include "HModelCs.h"
+#include "HighsUtils.h"
+#include "HighsLp.h"
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
@@ -146,20 +148,20 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   for (int iRow = 0; iRow < numRow; iRow++) {
     switch (rowType[iRow]) {
       case 'L':
-        rowLower[iRow] = -HSOL_CONST_INF;
+        rowLower[iRow] = -HIGHS_CONST_INF;
         rowUpper[iRow] = RHS[iRow];
         break;
       case 'G':
         rowLower[iRow] = RHS[iRow];
-        rowUpper[iRow] = +HSOL_CONST_INF;
+        rowUpper[iRow] = +HIGHS_CONST_INF;
         break;
       case 'E':
         rowLower[iRow] = RHS[iRow];
         rowUpper[iRow] = RHS[iRow];
         break;
       case 'N':
-        rowLower[iRow] = -HSOL_CONST_INF;
-        rowUpper[iRow] = +HSOL_CONST_INF;
+        rowLower[iRow] = -HIGHS_CONST_INF;
+        rowUpper[iRow] = +HIGHS_CONST_INF;
         break;
       case 'X':
         break;
@@ -171,7 +173,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 
   // Load BOUNDS
   colLower.assign(numCol, 0);
-  colUpper.assign(numCol, HSOL_CONST_INF);
+  colUpper.assign(numCol, HIGHS_CONST_INF);
 
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
@@ -182,23 +184,23 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
           colLower[iCol] = data[0];
           break;
         case 'I': /*MI*/
-          colLower[iCol] = -HSOL_CONST_INF;
+          colLower[iCol] = -HIGHS_CONST_INF;
           break;
         case 'L': /*PL*/
-          colUpper[iCol] = HSOL_CONST_INF;
+          colUpper[iCol] = HIGHS_CONST_INF;
           break;
         case 'X': /*FX*/
           colLower[iCol] = data[0];
           colUpper[iCol] = data[0];
           break;
         case 'R': /*FR*/
-          colLower[iCol] = -HSOL_CONST_INF;
-          colUpper[iCol] = HSOL_CONST_INF;
+          colLower[iCol] = -HIGHS_CONST_INF;
+          colUpper[iCol] = HIGHS_CONST_INF;
           break;
         case 'P': /*UP*/
           colUpper[iCol] = data[0];
           if (colLower[iCol] == 0 && data[0] < 0)
-            colLower[iCol] = -HSOL_CONST_INF;
+            colLower[iCol] = -HIGHS_CONST_INF;
           break;
       }
     }
@@ -206,7 +208,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   // Set bounds of [0,1] for integer variables without bounds
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
-      if (colUpper[iCol] == HSOL_CONST_INF) colUpper[iCol] = 1;
+      if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
 #ifdef HiGHSDEV
@@ -322,15 +324,15 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
       // Equality constraint - Type E - range = 0
       r_ty[r_n] = MPS_ROW_TY_E;
       rhs[r_n] = rowLower[r_n];
-    } else if (!hsol_isInfinity(rowUpper[r_n])) {
+    } else if (!highs_isInfinity(rowUpper[r_n])) {
       // Upper bounded constraint - Type L
       r_ty[r_n] = MPS_ROW_TY_L;
       rhs[r_n] = rowUpper[r_n];
-      if (!hsol_isInfinity(-rowLower[r_n])) {
+      if (!highs_isInfinity(-rowLower[r_n])) {
         // Boxed constraint - range = u-l
         ranges[r_n] = rowUpper[r_n] - rowLower[r_n];
       }
-    } else if (!hsol_isInfinity(-rowLower[r_n])) {
+    } else if (!highs_isInfinity(-rowLower[r_n])) {
       // Lower bounded constraint - Type G
       r_ty[r_n] = MPS_ROW_TY_G;
       rhs[r_n] = rowLower[r_n];
@@ -358,7 +360,7 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
       have_bounds = true;
       break;
     }
-    if (!hsol_isInfinity(colUpper[c_n])) {
+    if (!highs_isInfinity(colUpper[c_n])) {
       have_bounds = true;
       break;
     }
@@ -441,11 +443,11 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
       if (lb == ub) {
         fprintf(file, " FX BOUND     C%-7d  %.15g\n", c_n + 1, lb);
       } else {
-        if (!hsol_isInfinity(ub)) {
+        if (!highs_isInfinity(ub)) {
           // Upper bounded variable
           fprintf(file, " UP BOUND     C%-7d  %.15g\n", c_n + 1, ub);
         }
-        if (!hsol_isInfinity(-lb)) {
+        if (!highs_isInfinity(-lb)) {
           // Lower bounded variable - default is 0
           if (lb) {
             fprintf(file, " LO BOUND     C%-7d  %.15g\n", c_n + 1, lb);
@@ -460,12 +462,6 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
   fprintf(file, "ENDATA\n");
   fclose(file);
   return 0;
-}
-
-// Logical check of double being +Infinity
-bool hsol_isInfinity(double val) {
-  if (val >= HSOL_CONST_INF) return true;
-  return false;
 }
 
 inline const char* const BoolToString(bool b) { return b ? "True" : "False"; }

@@ -20,7 +20,7 @@
 using namespace std;
 
 #include "HConfig.h"
-#include "HVector.h"
+class HVector;
 
 enum UPDATE_METHOD {
   UPDATE_METHOD_FT = 1,
@@ -70,9 +70,9 @@ class HFactor {
    */
   void setup(int numCol,      //!< Number of columns
              int numRow,      //!< Number of rows
-             int *Astart,     //!< Column starts of constraint matrix
-             int *Aindex,     //!< Row indices of constraint matrix
-             double *Avalue,  //!< Row values of constraint matrix
+             const int *Astart,     //!< Column starts of constraint matrix
+             const int *Aindex,     //!< Row indices of constraint matrix
+             const double *Avalue,  //!< Row values of constraint matrix
              int *baseIndex,  //!< Indices of basic variables
              int updateMethod =
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin

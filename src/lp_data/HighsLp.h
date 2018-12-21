@@ -19,10 +19,17 @@
 #include <string>
 #include <vector>
 
-#include "HConst.h"
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
 enum class HighsMpsParserType { free, fixed };
+
+/** SCIP/HiGHS Objective sense */
+enum objSense
+{
+  OBJSENSE_MINIMIZE = 1,
+  OBJSENSE_MAXIMIZE = -1
+};
+
 
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
@@ -30,33 +37,31 @@ enum class HighsMpsParserType { free, fixed };
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
 struct HighsOptions {
-  int filename = 0;
-  int presolve = 0;
-  int crash = 0;
-  int edgeWeight = 0;
-  int price = 0;
-  int pami = 0;
-  int sip = 0;
-  int scip = 0;
+  std::string filenames = "";
+
+  bool pami = 0;
+  bool sip = 0;
+  bool scip = 0;
 
   double timeLimit = 0;
-  double cut = 0;
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  const char* fileName = "";
-  const char* presolveMode = "";
-  const char* edWtMode = "";
-  const char* priceMode = "";
-  const char* crashMode = "";
-  const char* partitionFile = "";
+  std::string presolveMode = "";
+  std::string edWtMode = "";
+  std::string priceMode = "";
+  std::string crashMode = "";
+  std::string partitionFile = "";
+
+  bool clean_up = false;
 };
 
 class HighsLp {
  public:
   // Model data
-  int numCol_;
-  int numRow_;
+  int numCol_ = 0;
+  int numRow_ = 0;
+  int nnz_ = 0;
 
   std::vector<int> Astart_;
   std::vector<int> Aindex_;
@@ -66,25 +71,29 @@ class HighsLp {
   std::vector<double> colUpper_;
   std::vector<double> rowLower_;
   std::vector<double> rowUpper_;
+
+  // sense 1 = minimize, -1 = maximize
+  int sense_ = 1;
+  double offset_ = 0;
+  std::string model_name_ = "";
+
 };
 
 // HiGHS status
 enum class HighsStatus {
   OK,
+  Init,
   LpError,
   OptionsError,
   PresolveError,
   SolutionError,
   PostsolveError,
-  NotImplemented
-};
-
-enum class HighsSolutionStatus {
-  Unset,
+  NotImplemented,
   Unbounded,
   Infeasible,
   Feasible,
   Optimal,
+  Timeout
 };
 
 enum class HighsInputStatus {
@@ -99,18 +108,89 @@ enum class HighsInputStatus {
   ErrorObjective
 };
 
-struct HighsSolution {
-  std::vector<double> colValue;
-  std::vector<double> colDual;
-  std::vector<double> rowValue;
-  std::vector<double> rowDual;
+// Cost, column and row scaling factors
+struct HighsScale {
+  double cost_;
+  std::vector<double> col_;
+  std::vector<double> row_;
 };
 
-bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
+struct HighsBasis {
+  std::vector<int> basicIndex_;
+  std::vector<int> nonbasicFlag_;
+  std::vector<int> nonbasicMove_;
+};
 
-// Return a string representation of SolutionStatus.
-// Capitalized because it is ClassNameToString for the following three methods.
-std::string HighsSolutionStatusToString(HighsSolutionStatus status);
+struct HighsSimplexInfo {
+  // Part of working model which assigned and populated as much as
+  // possible when a model is being defined
+
+  // workCost: Originally just costs from the model but, in solve(), may
+  // be perturbed or set to alternative values in Phase I??
+  //
+  // workDual: Values of the dual variables corresponding to
+  // workCost. Latter not known until solve() is called since B^{-1}
+  // is required to compute them. Knowledge of them is indicated by
+  // mlFg_haveNonbasicDuals.
+  //
+  // workShift: WTF
+  //
+  std::vector<double> workCost_;
+  std::vector<double> workDual_;
+  std::vector<double> workShift_;
+
+  // workLower/workUpper: Originally just lower (upper) bounds from
+  // the model but, in solve(), may be perturbed or set to
+  // alternative values in Phase I??
+  //
+  // workRange: Distance between lower and upper bounds
+  //
+  // workValue: Values of the nonbasic variables corresponding to
+  // workLower/workUpper and the basis. Always known.
+  //
+  std::vector<double> workLower_;
+  std::vector<double> workUpper_;
+  std::vector<double> workRange_;
+  std::vector<double> workValue_;
+
+  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
+  // basic variables and their values. Latter not known until solve()
+  // is called since B^{-1} is required to compute them. Knowledge of
+  // them is indicated by mlFg_haveBasicPrimals.
+  //
+  std::vector<double> baseLower_;
+  std::vector<double> baseUpper_;
+  std::vector<double> baseValue_;
+};
+
+struct HighsSolution {
+  std::vector<double> colValue_;
+  std::vector<double> colDual_;
+  std::vector<double> rowValue_;
+  std::vector<double> rowDual_;
+};
+
+struct HighsRanging {
+  std::vector<double> colCostRangeUpValue_;
+  std::vector<double> colCostRangeUpObjective_;
+  std::vector<int>    colCostRangeUpInCol_;
+  std::vector<int>    colCostRangeUpOutCol_;
+  std::vector<double> colCostRangeDnValue_;
+  std::vector<double> colCostRangeDnObjective_;
+  std::vector<int>    colCostRangeDnInCol_;
+  std::vector<int>    colCostRangeDnOutCol_;
+  std::vector<double> rowBoundRangeUpValue_;
+  std::vector<double> rowBoundRangeUpObjective_;
+  std::vector<int>    rowBoundRangeUpInCol_;
+  std::vector<int>    rowBoundRangeUpOutCol_;
+  std::vector<double> rowBoundRangeDnValue_;
+  std::vector<double> rowBoundRangeDnObjective_;
+  std::vector<int>    rowBoundRangeDnInCol_;
+  std::vector<int>    rowBoundRangeDnOutCol_;
+};
+
+// Make sure the dimensions of solution are the same as numRow_ and numCol_.
+bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
 
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status);
