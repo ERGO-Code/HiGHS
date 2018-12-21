@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include "HConfig.h"
 #include "HighsLp.h"
 #include "HighsIO.h"
 #include "HighsUtils.h"

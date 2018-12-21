@@ -77,12 +77,6 @@ class HighsUtils {
     return returnValue;
   }
 
-#ifdef HiGHSDEV
-<<<<<<< HEAD
-  // Analyse the values of a vector, assessing how many are in each power of ten
-  void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
-#endif
-
   // Methods taking HighsLp as an argument
   /**
    * @brief Report the data of an LP
@@ -135,13 +129,12 @@ void reportLpSolution(
   */
 
 #ifdef HiGHSDEV
-  
   void util_anMl(HighsLp lp, const char* message);
-=======
-  void util_anMl(HighsLp& lp, const char* message);
->>>>>>> tidy-up-includes
   void util_anMlBd(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
+  // Analyse the values of a vector, assessing how many are in each power of ten
+  void util_anVecV(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
 #endif
+
 
  private:
   unsigned random_mw;
