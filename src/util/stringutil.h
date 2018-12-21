@@ -15,7 +15,7 @@ char* strClone(const char* str) {
   size_t n;
   n = strlen(str);
 
-  char* cpy = new char[n];
+  char* cpy = new char[n + 1];
   strcpy(cpy, str);
   return cpy;
 }

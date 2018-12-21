@@ -7,10 +7,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/FilereaderLp.h
- * @brief 
+/**@file io/FilereaderLp.cpp
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+
 #ifndef IO_FILEREADER_LP_H_
 #define IO_FILEREADER_LP_H_
 
@@ -22,6 +23,12 @@
 #define BUFFERSIZE 561
 #define LP_MAX_LINE_LENGTH 560
 #define LP_MAX_NAME_LENGTH 255
+
+enum class LP_FILEREADER_STATUS {
+  NONE,
+  SUCCESS,
+  ERROR
+};
 
 #define LP_COMMENT_FILESTART ("File written by Highs .lp filereader")
 
@@ -49,11 +56,10 @@ const int LP_KEYWORD_SEMI_N = 3;
 const int LP_KEYWORD_SOS_N = 1;
 const int LP_KEYWORD_END_N = 1;
 
-enum LpSectionKeyword {
-  NOKEYWORD,
-  MIN,
-  MAX,
-  ST,
+enum class LpSectionKeyword {
+  NONE,
+  OBJ,
+  CON,
   BOUNDS,
   GEN,
   BIN,
@@ -62,81 +68,171 @@ enum LpSectionKeyword {
   END
 };
 
-enum class LpSpecialKeyword {
-  NONE,
-  INF,
-  FREE
-};
+enum class LpObjectiveSectionKeywordType { NONE, MIN, MAX };
 
 enum class LpComparisonIndicator { LEQ, L, EQ, G, GEQ };
 
 enum LpTokenType {
-  NOTOKEN,
-  IDENTIFIER,
-  KEYWORD,
-  SPECIAL,
+  NONE,
+  VARIDENTIFIER,
+  CONSIDENTIFIER,
+  SECTIONKEYWORD,
+  FREE,
   CONSTANT,
   SIGN,
   COLON,
-  SENSE,
+  BRACKETOPEN,
+  BRACKETCLOSE,
+  COMPARISON,
   LINEEND,
   FILEEND
 };
 
-const char * const LpTokenTypeString[] = {"NONE", "IDENTIFIER", "KEYWORD", "SPECIAL", "CONSTANT", "SIGN", "COLON", "SENSE", "LINEEND", "FILEEND"};
-const char* const LpSectionKeywordString[] = {"NONE", "MIN", "MAX", "ST", "BOUNDS", "GEN", "BIN", "SEMI", "SOS", "END"};
+const char* const LpTokenTypeString[] = {
+    "NONE",        "VARIDENTIFIER", "CONSIDENTIFIER", "SECTIONKEYWORD",
+    "FREE",        "CONSTANT",      "SIGN",           "COLON",
+    "BRACKETOPEN", "BRACKETCLOSE",  "COMPARISON",     "LINEEND",
+    "FILEEND"};
+
+const char* const LpSectionKeywordString[] = {
+    "NONE", "OBJ", "ST", "BOUNDS", "GEN", "BIN", "SEMI", "SOS", "END"};
+
+const char* const LpObjectiveSectionKeywordString[] = {"NONE", "MIN", "MAX"};
 
 class LpToken {
  public:
   LpTokenType type;
-  virtual void print() { HighsPrintMessage(HighsMessageType::INFO, "%s ", LpTokenTypeString[type]);}
+  virtual void print() {
+    HighsLogMessage(HighsMessageType::INFO, "%s ", LpTokenTypeString[type]);
+  }
+
+  virtual ~LpToken() {;}
+
+  LpToken(LpTokenType t) { this->type = t; }
 };
 
-class LpIdentifierToken : public LpToken {
+class LpTokenVarIdentifier : public LpToken {
  public:
-  char identifier[BUFFERSIZE];
+  char* value;
+
+  LpTokenVarIdentifier(char* v) : LpToken(LpTokenType::VARIDENTIFIER) {
+    int len;
+    len = strlen(v);
+    this->value = new char[len + 1];
+    strcpy(this->value, v);
+  }
+
+  ~LpTokenVarIdentifier() { delete[] this->value; }
 };
 
-class LpKeywordToken : public LpToken {
+class LpTokenConsIdentifier : public LpToken {
  public:
-  LpSectionKeyword keyword;
+  char* value;
+
+  LpTokenConsIdentifier(char* v) : LpToken(LpTokenType::CONSIDENTIFIER) {
+    int len;
+    len = strlen(v);
+    this->value = new char[len + 1];
+    strcpy(this->value, v);
+  }
+
+  ~LpTokenConsIdentifier() { delete[] this->value; }
 };
 
-class LpSpecialKeywordToken : public LpToken {
+class LpTokenSectionKeyword : public LpToken {
  public:
-  LpSpecialKeyword keyword;
+  LpSectionKeyword section;
+  LpTokenSectionKeyword(LpSectionKeyword k)
+      : LpToken(LpTokenType::SECTIONKEYWORD) {
+    this->type = LpTokenType::SECTIONKEYWORD;
+    this->section = k;
+  }
 };
 
-class LpConstantToken : public LpToken {
+class LpTokenObjectiveSectionKeyword : public LpTokenSectionKeyword {
  public:
-  double constant;
+  LpObjectiveSectionKeywordType objectiveType =
+      LpObjectiveSectionKeywordType::MIN;
+  LpTokenObjectiveSectionKeyword()
+      : LpTokenSectionKeyword(LpSectionKeyword::OBJ) {}
+  LpTokenObjectiveSectionKeyword(LpObjectiveSectionKeywordType t)
+      : LpTokenSectionKeyword(LpSectionKeyword::OBJ) {
+    this->objectiveType = t;
+  }
 };
 
-class LpSignToken : public LpToken {
+class LpTokenConstant : public LpToken {
+ public:
+  double value;
+  bool isPositiveInfinity;
+  bool isNegativeInfinity;
+
+  LpTokenConstant(double v) : LpToken(LpTokenType::CONSTANT) {
+    this->value = v;
+  }
+};
+
+class LpTokenSign : public LpToken {
  public:
   int sign;
+  LpTokenSign(int s) : LpToken(LpTokenType::SIGN) { this->sign = s; }
 };
 
-class LpComparisonToken : public LpToken {
+class LpTokenComparison : public LpToken {
  public:
   LpComparisonIndicator comparison;
+
+  LpTokenComparison(LpComparisonIndicator c)
+      : LpToken(LpTokenType::COMPARISON) {
+    this->comparison = c;
+  }
+
+  void upgrade(LpComparisonIndicator c) {
+    switch (this->comparison) {
+      case LpComparisonIndicator::G:
+        if (c == LpComparisonIndicator::EQ) {
+          this->comparison = LpComparisonIndicator::GEQ;
+        } else {
+          // error
+          HighsLogMessage(HighsMessageType::ERROR,
+                            "Invalid comparison indicator.\n");
+        }
+        break;
+      case LpComparisonIndicator::L:
+        if (c == LpComparisonIndicator::EQ) {
+          this->comparison = LpComparisonIndicator::LEQ;
+        } else {
+          // error
+          HighsLogMessage(HighsMessageType::ERROR,
+                            "Invalid comparison indicator.\n");
+        }
+        break;
+      case LpComparisonIndicator::EQ:
+        if (c == LpComparisonIndicator::EQ) {
+          // do nothing
+        } else if (c == LpComparisonIndicator::G) {
+          this->comparison = LpComparisonIndicator::GEQ;
+        } else if (c == LpComparisonIndicator::L) {
+          this->comparison = LpComparisonIndicator::LEQ;
+        } else {
+          // error
+          HighsLogMessage(HighsMessageType::ERROR,
+                            "Invalid comparison indicator.\n");
+        }
+        break;
+      default:
+        // error
+        HighsLogMessage(HighsMessageType::ERROR,
+                          "Invalid comparison indicator.\n");
+    }
+  }
 };
 
-const char LP_INDICATOR_COMMENT = '\\';
-const char* const LP_INDICATOR_SPLIT = ":+-<>=[]*";
-
-// reads .lp files according to https://www.ibm.com/support/knowledgecenter/SSSA5P_12.5.0/ilog.odms.cplex.help/CPLEX/FileFormats/topics/LP.html#File_formats_reference.uss_reffileformatscplex.162381__File_formats_reference.uss_reffileformatscplex.177305
-// as it is not immedialy clear from the format, here are some of its limitations:
-// 1) keywords ("min", "max", etc) can also be constraint/variable identifiers (judged from context)
-// 1.5) special keywords (inf, free) can not be constraint/variable identifiers
-// 2) quadratic constraints or objective funstions are not yet supported //not necessary now
-// 3) integer, binary, semi continuous variables are not yet supported // TODO
-// 4) sos variables not yet supported // Not necessary now
-// 5) Line continueing after keyword not yet supported //TODO
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
-  FilereaderRetcode writeModelToFile(const char* filename, HighsLp model);
+  FilereaderRetcode readModelFromFile(const char* filename, HighsModel& model);
+  FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
 
@@ -156,20 +252,36 @@ class FilereaderLp : public Filereader {
   FILE* file;
   char fileBuffer[BUFFERSIZE];
   char stringBuffer[BUFFERSIZE];
+  char stringBuffer2[BUFFERSIZE];
   char* readingPosition;
-
   bool isFileBufferFullyRead;
+  double constantBuffer;
+
+  // functions to read files
+  bool isKeyword(const char* str, const char* const* keywords,
+                 const int nkeywords);
+  LpSectionKeyword tryParseLongSectionKeyword(const char* str, int* characters);
+  LpSectionKeyword tryParseSectionKeyword(const char* str);
+  LpObjectiveSectionKeywordType parseObjectiveSectionKeyword(const char* str);
+
+  FilereaderRetcode tokenizeInput();
+  bool readNextToken();
+  void splitTokens();
+
+  void handleObjectiveSection(HighsModel& model);
+  void handleConstraintSection(HighsModel& model);
+  void handleBoundsSection(HighsModel& model);
+  void handleBinarySection(HighsModel& model);
+  void handleGeneralSection(HighsModel& model);
+  void handleSemiSection(HighsModel& model);
+  void handleSosSection(HighsModel& model);
+
+  LP_FILEREADER_STATUS status;
+
+  // functions to write files
   int linelength;
   void writeToFile(const char* format, ...);
   void writeToFileLineend();
-  LpSectionKeyword getSectionTokens(LpSectionKeyword expectedSection);
-
-  bool tryReadNextToken();
-
-  bool isKeyword(const char* str, const char* const* keywords,
-                 const int nkeywords);
-  bool tryParseSectionKeyword(const char* str, LpSectionKeyword* keyword);
-  bool tryParseSpecialKeyword(const char* str, LpSpecialKeyword* keyword);
 
 };
 

@@ -1,5 +1,58 @@
 #include "HighsModel.h"
 
+HighsModel::~HighsModel() {
+  while (this->variables.size() > 0) {
+    HighsVar* variable;
+    variable = this->variables.front();
+    this->variables.pop_front();
+
+    // find all coefficients corresponding to the variable
+    VarConsCoefsMap::iterator it =
+        this->variableConstraintCoefficientMap.find(variable);
+    if (it != this->variableConstraintCoefficientMap.end()) {
+      std::list<HighsLinearConsCoef*>* coefficients = it->second;
+
+      while(coefficients->size() > 0) {
+        HighsLinearConsCoef* coef = coefficients->front();
+        coefficients->pop_front();
+        // remove coefficient from constraint
+        
+        CoefConsMap::iterator iter = this->coefficientConstraintMap.find(coef);
+        assert(iter != this->coefficientConstraintMap.end());
+        HighsLinearCons* constraint = iter->second;
+        VarConsCoefMap::iterator iterator = constraint->linearCoefs.find(variable);
+        assert(iterator != constraint->linearCoefs.end());
+        constraint->linearCoefs.erase(iterator);
+        this->coefficientConstraintMap.erase(iter);
+
+       
+
+        delete coef;
+      }
+      VarConsMap::iterator iter = this->variableConstraintMap.find(variable);
+      if(iter != variableConstraintMap.end()) {
+        std::list<HighsLinearCons*>* conslist = iter->second;
+        assert(conslist->empty());
+        this->variableConstraintMap.erase(iter);
+        delete conslist;
+      }
+
+      this->variableConstraintCoefficientMap.erase(it);
+      delete coefficients;
+    }
+
+    delete variable;
+  }
+
+  while (this->linearConstraints.size() > 0) {
+    HighsLinearCons* constraint;
+    constraint = this->linearConstraints.front();
+    this->linearConstraints.pop_front();
+
+    delete constraint;
+  }
+}
+
 #pragma region HighsVar
 HighsVar::HighsVar(const char* name, double lo, double hi, double obj,
                    HighsVarType type) {
@@ -91,13 +144,19 @@ void HighsModel::HighsCreateVar(const char* name, double lo, double hi,
   *var = new HighsVar(name, lo, hi, obj, type);
   this->variables.push_back(*var);
   if (name != NULL) {
-    this->variableMap.insert(VarMap::value_type(name, *var));
+    this->variableMap.insert(VarMap::value_type((*var)->name, *var));
   }
 }
 
 void HighsModel::HighsCreateVar(const char* name, HighsVar** var) {
-  this->HighsCreateVar(name, -__DBL_MAX__, __DBL_MAX__, 0.0, HighsVarType::CONT,
-                       var);
+  this->HighsCreateVar(name, 0.0, __DBL_MAX__, 0.0, HighsVarType::CONT, var);
+}
+
+void HighsModel::HighsGetOrCreateVarByName(const char* name, HighsVar** var) {
+  this->HighsGetVarByName(name, var);
+  if (*var == NULL) {
+    this->HighsCreateVar(name, var);
+  }
 }
 
 void HighsModel::HighsCreateVar(HighsVar** var) {
@@ -153,7 +212,7 @@ void HighsModel::HighsCreateLinearCons(const char* name, double lo, double hi,
   *cons = new HighsLinearCons(name, lo, hi);
   this->linearConstraints.push_back(*cons);
   if (name != NULL) {
-    this->constraintMap.insert(ConsMap::value_type(name, *cons));
+    this->constraintMap.insert(ConsMap::value_type((*cons)->name, *cons));
   }
 }
 
@@ -225,7 +284,7 @@ void HighsModel::HighsBuildTechnicalModel(HighsLp* lp) {
     this->variables.pop_front();
     this->variables.push_back(front);
     variables[i] = front;
-    lp->colCost_.push_back(front->obj);
+    lp->colCost_.push_back(this->objSense * front->obj);
     lp->colLower_.push_back(front->lowerBound);
     lp->colUpper_.push_back(front->upperBound);
   }
@@ -275,8 +334,8 @@ void HighsModel::HighsBuildTechnicalModel(HighsLp* lp) {
     }
   }
 
-  delete variables;
-  delete constraints;
+  delete[] variables;
+  delete[] constraints;
 }
 
 #pragma endregion
