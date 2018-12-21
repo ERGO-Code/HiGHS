@@ -37,6 +37,10 @@ using std::endl;
 using std::flush;
 using std::vector;
 using std::swap;
+using std::fabs;
+using std::ofstream;
+using std::setprecision;
+using std::setw;
 
 // Methods which load whole models, initialise the basis then
 // allocate and populate (where possible) work* arrays and
@@ -2243,7 +2247,7 @@ double HModel::checkDualObjectiveValue(const char *message, int phase) {
   double changeInUpdatedDualObjectiveValue = updatedDualObjectiveValue - previousUpdatedDualObjectiveValue;
   double changeInDualObjectiveValue = dualObjectiveValue - previousDualObjectiveValue;
   double updatedDualObjectiveError = dualObjectiveValue - updatedDualObjectiveValue;
-  double rlvUpdatedDualObjectiveError = abs(updatedDualObjectiveError)/max(1.0, abs(dualObjectiveValue));
+  double rlvUpdatedDualObjectiveError = fabs(updatedDualObjectiveError)/max(1.0, fabs(dualObjectiveValue));
   bool erFd = rlvUpdatedDualObjectiveError > 1e-8;
   if (erFd)
     printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
@@ -3950,13 +3954,13 @@ void HModel::util_anMlLargeCo(HighsLp lp, const char *message) {
     double iColCo = lp.colCost_[iCol];
     double iColLower = lp.colLower_[iCol];
     double iColUpper = lp.colUpper_[iCol];
-    mxLargeCo = max(abs(iColCo), mxLargeCo);
+    mxLargeCo = max(fabs(iColCo), mxLargeCo);
     if (abs(iColCo) > tlLargeCo) {
       numLargeCo++;
       largeCostFlag[iCol] = 1;
       int numCol_NZ = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
       if (numCol_NZ == 1) {
-        mxLargeSlackCo = max(abs(iColCo), mxLargeSlackCo);
+        mxLargeSlackCo = max(fabs(iColCo), mxLargeSlackCo);
         if (iColLower == 0 && highs_isInfinity(iColUpper)) {
           numZeInfLargeCoSlack++;
         } else if (highs_isInfinity(-iColLower) && iColUpper == 0) {
@@ -3976,7 +3980,7 @@ void HModel::util_anMlLargeCo(HighsLp lp, const char *message) {
                  lp.Aindex_[elN]);
         }
       } else {
-        mxLargeStrucCo = max(abs(iColCo), mxLargeStrucCo);
+        mxLargeStrucCo = max(fabs(iColCo), mxLargeStrucCo);
         numLargeCoStruc++;
         bool rpC = rpStrucC && numRp < 100;
         if (rpC) {
@@ -4528,7 +4532,7 @@ void HModel::util_anMlSol() {
   lcPrObjV_LargeCo *= scale_->cost_;
   lcPrObjV_OtherCo *= scale_->cost_;
   if (largeCostScale == 1.0) {
-    double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, abs(dualObjectiveValue));
+    double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
     //    if (ObjEr > 1e-8)
     printf(
         "Relative objective error of %11.4g: dualObjectiveValue = %g; lcPrObjV = %g\n",
