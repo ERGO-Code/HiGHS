@@ -16,7 +16,9 @@
 
 #include <map>
 #include <vector>
-using namespace std;
+
+using std::vector;
+using std::map;
 
 /**
  * @brief Class for the vector structure for HiGHS

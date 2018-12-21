@@ -25,6 +25,9 @@
 #include "HTimerPre.h"
 #include "HighsLp.h"
 
+using std::list;
+using std::string;
+
 enum class HighsPostsolveStatus {
   ReducedSolutionEmpty,
   ReducedSolutionDimenionsError,

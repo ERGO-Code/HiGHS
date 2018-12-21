@@ -16,7 +16,6 @@
 #include "HPrimal.h"
 #include "HModel.h"
 #include "HTimer.h"
-//#include "HighsModelObject.h"
 
 #include <cassert>
 #include <cmath>
@@ -24,6 +23,9 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
+
+using std::cout;
+using std::endl;
 
 void HDual::iterate_multi() {
   slice_PRICE = 1;

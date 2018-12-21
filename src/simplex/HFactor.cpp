@@ -21,6 +21,12 @@
 #include <iostream>
 #include <stdexcept>
 
+using std::fill_n;
+using std::copy;
+using std::vector;
+using std::pair;
+using std::make_pair;
+
 void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
                   const int Yend, const int *Tindex, const double *Tvalue,
                   const double Tpivot, int *RHScount, int *RHSindex,

@@ -29,6 +29,16 @@
 using std::ios;
 using std::max;
 using std::min;
+using std::cout;
+using std::endl;
+using std::setw;
+using std::get;
+using std::list;
+using std::make_pair;
+using std::ofstream;
+using std::flush;
+using std::setprecision;
+using std::stringstream;
 
 void Presolve::load(const HighsLp& lp) {
   numCol = lp.numCol_;

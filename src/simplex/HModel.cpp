@@ -31,7 +31,12 @@
 #include <map>
 #include <set>
 #include <stdexcept>
-using namespace std;
+
+using std::cout;
+using std::endl;
+using std::flush;
+using std::vector;
+using std::swap;
 
 // Methods which load whole models, initialise the basis then
 // allocate and populate (where possible) work* arrays and

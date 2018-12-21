@@ -29,6 +29,12 @@
 #include "HighsIO.h"
 #include "HighsModelObject.h"
 
+using std::runtime_error;
+using std::cout;
+using std::endl;
+using std::flush;
+using std::fabs;
+
 //void HDual::solve(HModel *ptr_model, int variant, int num_threads)
 //{
 //  model = ptr_model;
@@ -833,8 +839,8 @@ void HDual::rebuild() {
   model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
 
   if (checkDualObjectiveValue) {
-    double absDualObjectiveError = abs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
-    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, abs(model->dualObjectiveValue));
+    double absDualObjectiveError = fabs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
+    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(model->dualObjectiveValue));
     if (rlvDualObjectiveError > 1e-8) {
       HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
 			absDualObjectiveError, rlvDualObjectiveError);

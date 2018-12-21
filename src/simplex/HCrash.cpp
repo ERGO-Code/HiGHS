@@ -24,6 +24,8 @@
 
 using std::vector;
 using std::string;
+using std::max;
+using std::abs;
 
 void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
   lp_ = &highs_model_object.lp_scaled_;

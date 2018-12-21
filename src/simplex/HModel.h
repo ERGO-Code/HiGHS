@@ -25,7 +25,6 @@ class HVector;
 #include <sstream>
 #include <string>
 #include <vector>
-using namespace std;
 
 const int LP_Status_Unset = -1;
 const int LP_Status_Optimal = 0;

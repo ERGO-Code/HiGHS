@@ -19,7 +19,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-using namespace std;
+
+using std::string;
 
 /**
  * Define the indices of clocks used to time computation

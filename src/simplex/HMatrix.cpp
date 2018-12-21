@@ -21,6 +21,8 @@
 #include "HConst.h"
 #include "HVector.h"
 
+using std::swap;
+
 void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
                     const int *Aindex_, const double *Avalue_,
                     const int *nonbasicFlag_) {
