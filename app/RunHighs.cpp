@@ -1,6 +1,6 @@
 #include "HighsSetup.h"
-#include "LoadProblem.h"
 #include "HighsTimer.h"
+#include "LoadProblem.h"
 
 int main(int argc, char **argv) {
   // Initialise timer
