@@ -1,7 +1,20 @@
+# Define library.
+
 set(sources
+    io/Filereader.cpp
+    io/FilereaderLp.cpp
+    io/FilereaderMps.cpp
+    io/HighsIO.cpp
+ #   io/HinOut.cpp
+    io/HMPSIO.cpp
+    io/HToyIO.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsModel.cpp
-    simplex/HAPI.cpp
+ #   simplex/HAPI.cpp
+    lp_data/HighsUtils.cpp
+    presolve/Presolve.cpp
+    presolve/HPreData.cpp
+    simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
     simplex/HDualRow.cpp
@@ -10,29 +23,46 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HModel.cpp
     simplex/HPrimal.cpp
-    simplex/HTester.cpp
-    simplex/HVector.cpp
-    simplex/HCrash.cpp
+    simplex/HRanging.cpp
     simplex/HSort.cpp
-    presolve/HPresolve.cpp
-    presolve/HPreData.cpp
-    io/HinOut.cpp
+ #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
+    simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
-    RunHighs.cpp
 )
 
 set(headers
+<<<<<<< HEAD
     HiGHSRun.h
     HApp.h
     lp_data/HighsModel.h
+=======
+    #HighsOptions.h  # not using at the moment.
+    io/Filereader.h
+    io/FilereaderLp.h
+    io/FilereaderMps.h
+#    io/HinOut.h
+    io/HMpsFF.h
+    io/HMPSIO.h
+    io/HToyIO_C.h
+    io/HToyIO.h
+    io/HighsIO.h
+    io/LoadProblem.h
+    lp_data/HConst.h
+    lp_data/HighsLp.h
+    lp_data/HighsModelBuilder.h
+    lp_data/HighsUtils.h
+    lp_data/HighsModelObject.h
+    simplex/HApp.h
+>>>>>>> 2184c5c87df7126d6bdf5d0fc001f9f203dccde1
     simplex/HConst.h
+    simplex/HCrash.h
     simplex/HDual.h
     simplex/HDualRow.h
     simplex/HDualRHS.h
@@ -40,11 +70,10 @@ set(headers
     simplex/HMatrix.h
     simplex/HModel.h
     simplex/HPrimal.h
-    simplex/HTester.h
-    simplex/HVector.h
-    simplex/HCrash.h
-    simplex/HRandom.h
+    simplex/HRanging.h
+    simplex/HSimplex.h
     simplex/HSort.h
+<<<<<<< HEAD
     presolve/HPresolve.h
     io/HinOut.h
     io/HMPSIO.h
@@ -54,33 +83,25 @@ set(headers
     io/FilereaderMps.h
     io/LoadProblem.h
     io/HighsIO.h
+=======
+    simplex/Scaling.h
+    presolve/Presolve.h
+    simplex/HighsTimer.h
+>>>>>>> 2184c5c87df7126d6bdf5d0fc001f9f203dccde1
     simplex/HTimer.h
     simplex/HTimerPre.h
+    simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
 )
 
 
-include(CheckCXXCompilerFlag)
-
-function(enable_cxx_compiler_flag_if_supported flag)
-    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
-    if(flag_already_set EQUAL -1)
-        check_cxx_compiler_flag("${flag}" flag_supported)
-        if(flag_supported)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
-        endif()
-        unset(flag_supported CACHE)
-    endif()
-endfunction()
-
-# example usage
-#enable_cxx_compiler_flag_if_supported("-Wall")
-#enable_cxx_compiler_flag_if_supported("-Wextra")
-#enable_cxx_compiler_flag_if_supported("-pedantic")
-
 add_library(libhighs ${sources})
+
+if (Boost_FOUND)
+    target_link_libraries(libhighs ${Boost_LIBRARIES})
+endif()
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
@@ -93,22 +114,9 @@ else()
         POSITION_INDEPENDENT_CODE on)
 endif()
 
-if (UNIX)
-  find_package(Boost COMPONENTS iostreams)
-  if (Boost_FOUND)
-    add_definitions(-DBoost_FOUND)
-    # include_directories(${Boost_INCLUDE_DIRS} "/home/s1131817/Programs/boost_1_61_0/")
-    target_link_libraries(libhighs ${Boost_LIBRARIES})
-
-  endif()
-endif()
-
-# create highs binary using library without pic
-add_executable(highs HApp.cpp)
-target_link_libraries(highs libhighs)
-
 # set the install rpath to the installed destination
 set_target_properties(highs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
@@ -118,10 +126,9 @@ set_target_properties(libhighs PROPERTIES
 install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 
 # install the binary and the library to appropriate lcoations and add them to an export group
-install(TARGETS highs libhighs EXPORT highs-targets
+install(TARGETS libhighs EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
-        RUNTIME DESTINATION bin
         INCLUDES DESTINATION include)
 
 # Add library targets to the build-tree export set
@@ -130,12 +137,12 @@ export(TARGETS libhighs
 
 #configure the config file for the build tree
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
-configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
-configure_file(${PROJECT_SOURCE_DIR}/highs-config.cmake.in
+configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
 # install the targets of the highs export group and the config file so that other projects

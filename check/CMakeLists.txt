@@ -1,5 +1,53 @@
 include(CTest)
 
+# prepare Catch library
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/external/catch)
+add_library(Catch INTERFACE)
+target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
+target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
+
+# Make test executable
+set(TEST_SOURCES
+    TestMain.cpp
+    TestSetup.cpp)
+
+add_executable(unit_tests ${TEST_SOURCES})
+target_link_libraries(unit_tests libhighs Catch)
+
+
+# Check whether test executable builds OK.
+add_test(NAME unit-test-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${CMAKE_BINARY_DIR}
+                 --target unit_tests
+         )
+
+# Avoid that several build jobs try to concurretly build.
+set_tests_properties(unit-test-build
+                     PROPERTIES
+                     RESOURCE_LOCK unittestbin)
+
+# create a binary running all the tests in the executable
+add_test(NAME unit_tests_all COMMAND unit_tests --success)
+set_tests_properties(unit_tests_all
+                    PROPERTIES
+                    DEPENDS unit-test-build)
+
+# An individual test can be added with the command below but the approach
+# above with a single add_test for all the unit tests automatically detects all
+# TEST_CASEs in the source files specified in TEST_SOURCES. Do not define any
+# tests in TestMain.cpp and do not define CATCH_CONFIG_MAIN anywhere else.
+# add_test(NAME correct-print-test COMMAND unit_tests correct-print)
+
+# --------------------------------------
+# Another way of adding the tests. Needs a script from github repo and a
+# Catch2 installation. So add tests manually if there is no build issues.
+# catch_discover_tests(unit_test)
+
+# --------------------------------------
+# Run instance tests.
+#
 # define the set of feasible instances
 set(successInstances
     "adlittle\;         0.2254949631e6"
@@ -55,7 +103,7 @@ set(failInstances
 
 # define settings
 set(settings
-    " "
+    ""
     "-m"
     #"-pOn"
     )
@@ -75,8 +123,13 @@ foreach(instance ${${instances}})
         # specify the instance and the settings load command
         set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
         # add a test and test properties
-        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting} -f ${inst})
-        set_tests_properties (${name}${setting} PROPERTIES PASS_REGULAR_EXPRESSION "(Solve plain|multi|Presolve|Postsolve): ${solutionstatus}")
+        add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
+              -f ${inst})
+        set_tests_properties (${name}${setting} PROPERTIES
+              PASS_REGULAR_EXPRESSION
+              "(Run): ${solutionstatus}")
+        set_tests_properties (${name}${setting} PROPERTIES
+              DEPENDS unit_tests_all)
     endforeach(setting)
 endforeach(instance)
 endmacro(add_instancetests)

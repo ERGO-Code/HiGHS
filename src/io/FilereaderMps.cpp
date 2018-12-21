@@ -16,6 +16,12 @@
 #include "HMpsFF.h"
 #endif
 
+#include "HMPSIO.h"
+#include "HighsLp.h"
+#if defined(Boost_FOUND) && !defined(OLD_PARSER)
+#include "HMpsFF.h"
+#endif
+
 FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
                                                    HighsLp& model) {
   // todo

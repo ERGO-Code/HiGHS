@@ -15,21 +15,23 @@
 #define IO_LOAD_PROBLEM_H_
 
 #include "Filereader.h"
+#include "HighsIO.h"
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
 HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   // Check if file exists
-  if (options.fileName && access(options.fileName, F_OK) == -1) {
+  if (options.filenames.size() == 0 || access(options.filenames.c_str(), F_OK) == -1)
     return HighsInputStatus::FileNotFound;
-  } else if (!options.fileName) {
-    return HighsInputStatus::FileNotFound;
-  }
 
-  //Filereader* filereader = Filereader::getFilereader(options.fileName);
-  //filereader->readModelFromFile(options.fileName, lp);
-  //delete filereader;
-  //exit(0);
+  Filereader* reader = Filereader::getFilereader(options.filenames.c_str());
+  FilereaderRetcode success =  reader->readModelFromFile(options.filenames.c_str(), lp);
+  delete reader;
+  lp.nnz_ = lp.Avalue_.size();
+
+  if(success != FilereaderRetcode::OKAY) {
+    HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
+  }
 
   return checkLp(lp);
 }

@@ -8,11 +8,15 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HAPI.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HAPI.h"
+
+#include <cstring>
+
 #include "HDual.h"
+#include "HModel.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
                             const int XnumCol, const int XnumRow,
@@ -81,7 +85,8 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   }
 
   HDual solver;
-  solver.solve(&model);
+  printf("HAPI.cpp no longer solves!\n");
+  //  solver.solve(&model);
 
   vector<double> XcolPrimalValues;
   vector<double> XcolDualValues;
@@ -93,16 +98,19 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                                  XrowPrimalValues, XrowDualValues);
 
   memcpy(colPrimalValues, &(XcolPrimalValues[0]),
-         sizeof(double) * model.numCol);
+         sizeof(double) * model.lpScaled.numCol_);
   memcpy(rowPrimalValues, &(XrowPrimalValues[0]),
-         sizeof(double) * model.numRow);
-  memcpy(colDualValues, &(XcolDualValues[0]), sizeof(double) * model.numCol);
-  memcpy(rowDualValues, &(XrowDualValues[0]), sizeof(double) * model.numRow);
-  memcpy(basicVariables, &(model.basicIndex[0]), sizeof(int) * model.numRow);
+         sizeof(double) * model.lpScaled.numRow_);
+  memcpy(colDualValues, &(XcolDualValues[0]),
+         sizeof(double) * model.lpScaled.numCol_);
+  memcpy(rowDualValues, &(XrowDualValues[0]),
+         sizeof(double) * model.lpScaled.numRow_);
+  memcpy(basicVariables, &(model.basis.basicIndex_[0]),
+         sizeof(int) * model.lpScaled.numRow_);
   LcBasisStatus = HiGHS_basisStatus_yes;
   model.util_reportSolverOutcome("Solve plain API");
 #ifdef HiGHSDEV
-  model.util_reportModelDense();
+  model.util_reportModelDense(model.lpScaled);
 #endif
   //  model.util_reportModel();
   //  model.util_reportModelSolution();

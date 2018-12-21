@@ -13,7 +13,9 @@
  */
 #include "HCrash.h"
 #include "HMatrix.h"
+#include "HModel.h"
 #include "HSort.h"
+#include "HConst.h"
 
 #include <cassert>
 #include <set>
@@ -21,14 +23,16 @@
 #include <vector>
 using namespace std;
 
-void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
-  if (model->getNumRow() == 0) return;
-  model->timer.reset();
-  numRow = model->getNumRow();
-  numCol = model->getNumCol();
-  numTot = model->getNumTot();
-  const int objSense = model->getObjSense();
+void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
+  lp_ = &highs_model_object.lp_scaled_;
+  basis_ = &highs_model_object.basis_;
+  matrix_ = &highs_model_object.matrix_;
+  model_ = &highs_model_object.hmodel_[0];
+  if (lp_->numRow_ == 0) return;
+  numRow = lp_->numRow_;
+  numCol = lp_->numCol_;
+  numTot = lp_->numCol_ + lp_->numRow_;
+  const int objSense = lp_->sense_;
 #ifdef HiGHSDEV
   if (abs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
@@ -36,24 +40,6 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   }
 #endif
   assert(abs(objSense) == 1);
-  bool HaveImpliedBounds = model->impliedBoundsPresolve;
-  // bool HaveImpliedBounds = Presolve_Mode == Presolve_Mode_On;
-  // printf("HaveImpliedBounds = %d\n", HaveImpliedBounds);
-#ifdef HiGHSDEV
-  if (HaveImpliedBounds) {
-    crsh_ck_an_impl_bd();
-  }
-#endif
-  // Indicate that we are not currently using the implied bounds from
-  // presolve
-  model->usingImpliedBoundsPresolve = false;
-  if (HaveImpliedBounds && Crash_Mode == Crash_Mode_BixbyNoNzCCo) {
-    // Overwrite the true bounds by the implied bounds
-#ifdef HiGHSDEV
-    printf("Over-writing bounds with implied bounds\n");
-#endif
-    model->copy_impliedBoundsToModelBounds();
-  }
 
   if (Crash_Mode == Crash_Mode_Bs
 #ifdef HiGHSDEV
@@ -80,34 +66,32 @@ void HCrash::crash(HModel *ptr_model, int Crash_Mode) {
   if (Crash_Mode == Crash_Mode_Bixby ||
       Crash_Mode == Crash_Mode_BixbyNoNzCCo) {
     // Use the Bixby crash
-    bixby(ptr_model, Crash_Mode);
+    bixby(highs_model_object, Crash_Mode);
   }
 #ifdef HiGHSDEV
   else if (Crash_Mode == Crash_Mode_TsSing) {
     // Use the test singularity crash
-    tsSing(ptr_model);
+    tsSing(highs_model_object);
   }
 #endif
   else {
     // Use the LTSSF crash
-    ltssf(ptr_model, Crash_Mode);
+    ltssf(highs_model_object, Crash_Mode);
   }
-  model->totalTime += model->timer.getTime();
 }
 
-void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
-  const int *Astart = &model->Astart[0];
-  const int *Aindex = &model->Aindex[0];
-  const double *Avalue = &model->Avalue[0];
+void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
+  const int *Astart = &lp_->Astart_[0];
+  const int *Aindex = &lp_->Aindex_[0];
+  const double *Avalue = &lp_->Avalue_[0];
 
   bixby_no_nz_c_co = Crash_Mode == Crash_Mode_BixbyNoNzCCo;
   bixby_no_nz_c_co = false;
 
-  bool perform_crash = bixby_iz_da(ptr_model);
+  bool perform_crash = bixby_iz_da(highs_model_object);
   if (!perform_crash) return;
 
-  // bixby_rp_mrt(ptr_model);
+  // bixby_rp_mrt(highs_model_object);
 
   // These multipliers are in Step 2(a) and Step 2(b) of the paper: default
   // values 0.99 and 0.01
@@ -242,11 +226,11 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
     int columnIn = cz_c_n;
     int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = model->setSourceOutFmBd(columnOut);
+    int sourceOut = model_->setSourceOutFmBd(columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy
     // of the matrix
-    model->updatePivots(columnIn, rowOut, sourceOut);
-    if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
+    model_->updatePivots(columnIn, rowOut, sourceOut);
+    if (model_->mlFg_haveMatrixRowWise) model_->updateMatrix(columnIn, columnOut);
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -255,25 +239,24 @@ void HCrash::bixby(HModel *ptr_model, int Crash_Mode) {
 #endif
   }
 #ifdef HiGHSDEV
-  crsh_an_r_c_st_af(ptr_model, Crash_Mode_Bixby);
+  crsh_an_r_c_st_af(highs_model_object, Crash_Mode_Bixby);
 #endif
 }
 
-void HCrash::bixby_rp_mrt(HModel *ptr_model) {
-  model = ptr_model;
-  const int objSense = model->getObjSense();
-  const double *colCost = model->getcolCost();
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
-  double mx_co_v = -HSOL_CONST_INF;
+void HCrash::bixby_rp_mrt(HighsModelObject &highs_model_object) {
+  const int objSense = lp_->sense_;
+  const double *colCost = &lp_->colCost_[0];
+  const double *colLower = &lp_->colLower_[0];
+  const double *colUpper = &lp_->colUpper_[0];
+  double mx_co_v = -HIGHS_CONST_INF;
   for (int c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
     mx_co_v = max(abs(sense_col_cost), mx_co_v);
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  double prev_mrt_v0 = -HSOL_CONST_INF;
-  double prev_mrt_v = -HSOL_CONST_INF;
+  double prev_mrt_v0 = -HIGHS_CONST_INF;
+  double prev_mrt_v = -HIGHS_CONST_INF;
   bool rp_c;
   bool rp_al_c = false;
   int n_mrt_v = 0;
@@ -291,8 +274,8 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
     else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
              (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
       rp_c = true;
-      prev_mrt_v = -HSOL_CONST_INF;
-      prev_mrt_v0 = -HSOL_CONST_INF;
+      prev_mrt_v = -HIGHS_CONST_INF;
+      prev_mrt_v0 = -HIGHS_CONST_INF;
     } else if (rp_al_c)
       rp_c = true;
     else
@@ -309,20 +292,19 @@ void HCrash::bixby_rp_mrt(HModel *ptr_model) {
   printf("\n%6d different Bixby merits\n", n_mrt_v);
 }
 
-bool HCrash::bixby_iz_da(HModel *ptr_model) {
-  model = ptr_model;
-  const int *Astart = &model->Astart[0];
-  const double *Avalue = &model->Avalue[0];
-  const int objSense = model->getObjSense();
-  const double *colCost = model->getcolCost();
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
+bool HCrash::bixby_iz_da(HighsModelObject &highs_model_object) {
+  const int *Astart = &lp_->Astart_[0];
+  const double *Avalue = &lp_->Avalue_[0];
+  const int objSense = lp_->sense_;
+  const double *colCost = &lp_->colCost_[0];
+  const double *colLower = &lp_->colLower_[0];
+  const double *colUpper = &lp_->colUpper_[0];
 
-  // const double *primalColLowerImplied = model->getprimalColLowerImplied();
-  // const double *primalColUpperImplied = model->getprimalColUpperImplied();
+  // const double *primalColLowerImplied = lp_->primalColLowerImplied_;
+  // const double *primalColUpperImplied = lp_->primalColUpperImplied_;
   //
-  // const double *dualColLowerImplied = model->getdualColLowerImplied();
-  // const double *dualColUpperImplied = model->getdualColUpperImplied();
+  // const double *dualColLowerImplied = lp_->dualColLowerImplied_;
+  // const double *dualColUpperImplied = lp_->dualColUpperImplied_;
 
   // Allocate the arrays required for crash
   crsh_mtx_c_mx_abs_v.resize(numCol);
@@ -336,9 +318,9 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   // bixby_ze_r_k.resize(numRow);
 
 #ifdef HiGHSDEV
-  crsh_an_c_co(ptr_model);
+  crsh_an_c_co(highs_model_object);
 #endif
-  crsh_iz_vr_ty(ptr_model, Crash_Mode_Bixby);
+  crsh_iz_vr_ty(highs_model_object, Crash_Mode_Bixby);
 
 #ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode_Bixby);
@@ -359,7 +341,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   // each row of the basis matrix
   bixby_n_cdd_r = numRow;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    bixby_pseudo_pv_v[r_n] = HSOL_CONST_INF;
+    bixby_pseudo_pv_v[r_n] = HIGHS_CONST_INF;
     if (crsh_r_ty[r_n] == crsh_vr_ty_fx) {
       bixby_pv_in_r[r_n] = 0;
       bixby_vr_in_r[r_n] = no_ix;
@@ -374,7 +356,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     }
   }
   if (bixby_n_cdd_r == 0) return false;
-  double mx_co_v = -HSOL_CONST_INF;
+  double mx_co_v = -HIGHS_CONST_INF;
   for (int c_n = 0; c_n < numCol; c_n++) {
     // Find largest |entry| in each column
     crsh_mtx_c_mx_abs_v[c_n] = 0.0;
@@ -422,7 +404,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     double sense_col_cost = objSense * colCost[c_n];
     if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    if (colUpper[c_n] >= HSOL_CONST_INF) {
+    if (colUpper[c_n] >= HIGHS_CONST_INF) {
       bixby_mrt_v[os + n_en] = colLower[c_n] + sense_col_cost / co_v_mu;
     } else {
       bixby_mrt_v[os + n_en] = -colUpper[c_n] + sense_col_cost / co_v_mu;
@@ -473,7 +455,7 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
     double sense_col_cost = objSense * colCost[c_n];
     if (bixby_no_nz_c_co && sense_col_cost != 0.0) continue;
     n_en += 1;
-    bixby_mrt_v[os + n_en] = HSOL_CONST_INF;
+    bixby_mrt_v[os + n_en] = HIGHS_CONST_INF;
     bixby_mrt_ix[os + n_en] = c_n;
   }
   if (n_en > 0) {
@@ -491,13 +473,12 @@ bool HCrash::bixby_iz_da(HModel *ptr_model) {
   return true;
 }
 
-void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
-  const double *rowLower = model->getrowLower();
-  const double *rowUpper = model->getrowUpper();
-  const int *nonbasicFlag = model->getNonbasicFlag();
+void HCrash::crsh_iz_vr_ty(HighsModelObject &highs_model_object, int Crash_Mode) {
+  const double *colLower = &lp_->colLower_[0];
+  const double *colUpper = &lp_->colUpper_[0];
+  const double *rowLower = &lp_->rowLower_[0];
+  const double *rowUpper = &lp_->rowUpper_[0];
+  const int *nonbasicFlag = &highs_model_object.basis_.nonbasicFlag_[0];
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
@@ -516,13 +497,13 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
     }
   } else {
     for (int r_n = 0; r_n < numRow; r_n++) {
-      if (rowUpper[r_n] >= HSOL_CONST_INF) {
-        if (rowLower[r_n] <= -HSOL_CONST_INF)
+      if (rowUpper[r_n] >= HIGHS_CONST_INF) {
+        if (rowLower[r_n] <= -HIGHS_CONST_INF)
           crsh_r_ty[r_n] = crsh_vr_ty_fr;  // Free row
         else
           crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) row
       } else {
-        if (rowLower[r_n] <= -HSOL_CONST_INF)
+        if (rowLower[r_n] <= -HIGHS_CONST_INF)
           crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) row
         else {
           // Two-sided row - maybe fixed (equality)
@@ -535,13 +516,13 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
     }
     // Set up the column variable types for crash
     for (int c_n = 0; c_n < numCol; c_n++) {
-      if (colUpper[c_n] >= HSOL_CONST_INF) {
-        if (colLower[c_n] <= -HSOL_CONST_INF)
+      if (colUpper[c_n] >= HIGHS_CONST_INF) {
+        if (colLower[c_n] <= -HIGHS_CONST_INF)
           crsh_c_ty[c_n] = crsh_vr_ty_fr;  // Free column
         else
           crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) column
       } else {
-        if (colLower[c_n] <= -HSOL_CONST_INF)
+        if (colLower[c_n] <= -HIGHS_CONST_INF)
           crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) column
         else {
           // Two-sided row - maybe fixed (equality)
@@ -580,9 +561,8 @@ void HCrash::crsh_iz_vr_ty(HModel *ptr_model, int Crash_Mode) {
 #endif
 }
 
-void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
+void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
   printf("HCrash::ltssf Crash_Mode = %d\n", Crash_Mode);
-  model = ptr_model;
   if (Crash_Mode == Crash_Mode_LTSSF_k) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
@@ -622,12 +602,12 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
   }
 
   mn_co_tie_bk = false;
-  numRow = model->getNumRow();
-  numCol = model->getNumCol();
-  numTot = model->getNumTot();
+  numRow = lp_->numRow_;
+  numCol = lp_->numCol_;
+  numTot = lp_->numCol_ + lp_->numRow_;
 
   // Initialise the LTSSF data structures
-  ltssf_iz_da(ptr_model, Crash_Mode);
+  ltssf_iz_da(highs_model_object, Crash_Mode);
 #ifdef HiGHSDEV
   printf("\nLTSSF Crash\n");
   printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
@@ -667,7 +647,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
 #ifdef HiGHSDEV
   crsh_rp_r_c_st(0, Crash_Mode);
 #endif
-  ltssf_iterate(ptr_model);
+  ltssf_iterate(highs_model_object);
 
 #ifdef HiGHSDEV
   printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
@@ -680,7 +660,7 @@ void HCrash::ltssf(HModel *ptr_model, int Crash_Mode) {
       " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
       "value = %6.4e\n",
       tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
-  crsh_an_r_c_st_af(ptr_model, Crash_Mode);
+  crsh_an_r_c_st_af(highs_model_object, Crash_Mode);
 #endif
 }
 
@@ -692,7 +672,7 @@ void HCrash::ltssf_iz_mode(int Crash_Mode) {
   no_ck_pv = false;
 }
 
-void HCrash::ltssf_iterate(HModel *ptr_model) {
+void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
   // LTSSF Main loop
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
@@ -701,7 +681,7 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
     ltssf_cz_r();
     if (cz_r_n == no_ix) break;
     cz_r_pri_v = crsh_r_ty_pri_v[crsh_r_ty[cz_r_n]];
-    ltssf_cz_c(ptr_model);
+    ltssf_cz_c(highs_model_object);
     bool bs_cg = cz_c_n != no_ix;
     if (bs_cg) {
 #ifdef HiGHSDEV
@@ -717,12 +697,12 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
       int columnIn = cz_c_n;
       int rowOut = cz_r_n;
       int columnOut = numCol + cz_r_n;
-      int sourceOut = model->setSourceOutFmBd(columnOut);
+      int sourceOut = model_->setSourceOutFmBd(columnOut);
       // Update the basic/nonbasic variable info and the row-wise copy
       // of the matrix
-      model->updatePivots(columnIn, rowOut, sourceOut);
-      if (model->mlFg_haveMatrixRowWise)
-        model->updateMatrix(columnIn, columnOut);
+      model_->updatePivots(columnIn, rowOut, sourceOut);
+      if (model_->mlFg_haveMatrixRowWise)
+        model_->updateMatrix(columnIn, columnOut);
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -739,7 +719,7 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
 #ifdef HiGHSDEV
     if (reportCrashData) ltssf_rp_pri_k_da();
 #endif
-    ltssf_u_da(ptr_model);
+    ltssf_u_da(highs_model_object);
     // Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
 #ifdef HiGHSDEV
     if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
@@ -766,9 +746,9 @@ void HCrash::ltssf_iterate(HModel *ptr_model) {
   }
 }
 
-void HCrash::ltssf_u_da(HModel *ptr_model) {
+void HCrash::ltssf_u_da(HighsModelObject &highs_model_object) {
   if ((cz_r_n != no_ix) && (cz_c_n != no_ix)) {
-    ltssf_u_da_af_bs_cg(ptr_model);
+    ltssf_u_da_af_bs_cg(highs_model_object);
   } else {
     ltssf_u_da_af_no_bs_cg();
   }
@@ -776,16 +756,15 @@ void HCrash::ltssf_u_da(HModel *ptr_model) {
   // then get the new maximum row priority value TODO Surely this is
   // not necessary with 2-d headers
   if ((crsh_r_pri_mn_r_k[cz_r_pri_v] > numCol) && (cz_r_pri_v == mx_r_pri_v)) {
-    mx_r_pri_v = -HSOL_CONST_I_INF;
+    mx_r_pri_v = -HIGHS_CONST_I_INF;
     for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++)
       if (crsh_r_pri_mn_r_k[pri_v] <= numCol) mx_r_pri_v = pri_v;
   }
 }
 
-void HCrash::ltssf_u_da_af_bs_cg(HModel *ptr_model) {
-  model = ptr_model;
-  const int *Astart = &model->Astart[0];
-  const int *Aindex = &model->Aindex[0];
+void HCrash::ltssf_u_da_af_bs_cg(HighsModelObject &highs_model_object) {
+  const int *Astart = &lp_->Astart_[0];
+  const int *Aindex = &lp_->Aindex_[0];
   // ltssf_rp_r_k();
   for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1]; r_el_n++) {
     int c_n = CrshARindex[r_el_n];
@@ -918,25 +897,24 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
   }
 }
 
-void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
+void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
   printf("HCrash::ltssf_iz_da Crash_Mode = %d\n", Crash_Mode);
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
-  model = ptr_model;
-  const int *Astart = &model->Astart[0];
-  const int *Aindex = &model->Aindex[0];
-  const double *Avalue = &model->Avalue[0];
+  const int *Astart = &lp_->Astart_[0];
+  const int *Aindex = &lp_->Aindex_[0];
+  const double *Avalue = &lp_->Avalue_[0];
   ;
   int numEl = Astart[numCol];
-  // const double *primalColLowerImplied = model->getprimalColLowerImplied();
-  // const double *primalColUpperImplied = model->getprimalColUpperImplied();
-  // const double *primalRowLowerImplied = model->getprimalRowLowerImplied();
-  // const double *primalRowUpperImplied = model->getprimalRowUpperImplied();
+  // const double *primalColLowerImplied = lp_->primalColLowerImplied_;
+  // const double *primalColUpperImplied = lp_->primalColUpperImplied_;
+  // const double *primalRowLowerImplied = lp_->primalRowLowerImplied_;
+  // const double *primalRowUpperImplied = lp_->primalRowUpperImplied_;
   //
-  // const double *dualColLowerImplied = model->getdualColLowerImplied();
-  // const double *dualColUpperImplied = model->getdualColUpperImplied();
-  // const double *dualRowLowerImplied = model->getdualRowLowerImplied();
-  // const double *dualRowUpperImplied = model->getdualRowUpperImplied();
+  // const double *dualColLowerImplied = lp_->dualColLowerImplied_;
+  // const double *dualColUpperImplied = lp_->dualColUpperImplied_;
+  // const double *dualRowLowerImplied = lp_->dualRowLowerImplied_;
+  // const double *dualRowUpperImplied = lp_->dualRowUpperImplied_;
 
   // Allocate the crash variable type arrays
   crsh_r_ty_pri_v.resize(crsh_l_vr_ty);
@@ -979,15 +957,15 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
   crsh_act_r.resize(numRow);
   crsh_act_c.resize(numCol);
 
-  crsh_iz_vr_ty(ptr_model, Crash_Mode);
+  crsh_iz_vr_ty(highs_model_object, Crash_Mode);
 
   if (Crash_Mode == Crash_Mode_Bs) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
-    model->replaceWithLogicalBasis();
-    model->matrix.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
-    model->mlFg_haveMatrixColWise = 1;
-    model->mlFg_haveMatrixRowWise = 1;
+    model_->replaceWithLogicalBasis();
+    highs_model_object.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
+    model_->mlFg_haveMatrixColWise = 1;
+    model_->mlFg_haveMatrixRowWise = 1;
   }
   mx_r_pri = crsh_mn_pri_v;
   for (int r_n = 0; r_n < numRow; r_n++) {
@@ -1002,8 +980,8 @@ void HCrash::ltssf_iz_da(HModel *ptr_model, int Crash_Mode) {
       crsh_r_pri_k_hdr[pri_v * (numCol + 1) + c_n] = no_lk;
     }
   }
-  mn_abs_pv_v = HSOL_CONST_INF;
-  mn_rlv_pv_v = HSOL_CONST_INF;
+  mn_abs_pv_v = HIGHS_CONST_INF;
+  mn_rlv_pv_v = HIGHS_CONST_INF;
   n_abs_pv_no_ok = 0;
   n_rlv_pv_no_ok = 0;
   // Determine the status and type of each row
@@ -1201,10 +1179,9 @@ void HCrash::ltssf_cz_r() {
   }
 }
 
-void HCrash::ltssf_cz_c(HModel *ptr_model) {
-  model = ptr_model;
-  const int objSense = model->getObjSense();
-  const double *colCost = model->getcolCost();
+void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
+  const int objSense = lp_->sense_;
+  const double *colCost = &lp_->colCost_[0];
 
   cz_c_n = no_ix;
   int su_r_c_pri_v_lm = crsh_mx_pri_v;
@@ -1228,8 +1205,8 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
 
   n_eqv_c = 0;
   pv_v = 0.0;
-  double mn_co = HSOL_CONST_INF;
-  int mx_c_pri_fn_v = -HSOL_CONST_I_INF;
+  double mn_co = HIGHS_CONST_INF;
+  int mx_c_pri_fn_v = -HIGHS_CONST_I_INF;
   for (int el_n = CrshARstart[cz_r_n]; el_n < CrshARstart[cz_r_n + 1]; el_n++) {
     int c_n = CrshARindex[el_n];
     if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
@@ -1278,8 +1255,7 @@ void HCrash::ltssf_cz_c(HModel *ptr_model) {
 }
 
 #ifdef HiGHSDEV
-void HCrash::tsSing(HModel *ptr_model) {
-  model = ptr_model;
+void HCrash::tsSing(HighsModelObject &highs_model_object) {
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
@@ -1289,22 +1265,21 @@ void HCrash::tsSing(HModel *ptr_model) {
     int columnIn = c_n;
     int rowOut = r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = model->setSourceOutFmBd(columnOut);
+    int sourceOut = model_->setSourceOutFmBd(columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy of the
     // matrix
-    model->updatePivots(columnIn, rowOut, sourceOut);
-    if (model->mlFg_haveMatrixRowWise) model->updateMatrix(columnIn, columnOut);
+    model_->updatePivots(columnIn, rowOut, sourceOut);
+    if (model_->mlFg_haveMatrixRowWise) model_->updateMatrix(columnIn, columnOut);
     nBcVr++;
     if (nBcVr == numRow) break;
   }
 }
 
-void HCrash::crsh_an_c_co(HModel *ptr_model) {
-  model = ptr_model;
-  const int objSense = model->getObjSense();
-  const double *colCost = model->getcolCost();
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
+void HCrash::crsh_an_c_co(HighsModelObject &highs_model_object) {
+  const int objSense = lp_->sense_;
+  const double *colCost = &lp_->colCost_[0];
+  const double *colLower = &lp_->colLower_[0];
+  const double *colUpper = &lp_->colUpper_[0];
 
   int n_ze_c_co = 0;
   int n_fs_c_co = 0;
@@ -1316,15 +1291,15 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
       n_fs_c_co += 1;
       continue;
     }
-    if (colUpper[c_n] >= HSOL_CONST_INF) {
+    if (colUpper[c_n] >= HIGHS_CONST_INF) {
       // Free column: nonzero cost cannot be feasible
-      if (colLower[c_n] > -HSOL_CONST_INF) {
+      if (colLower[c_n] > -HIGHS_CONST_INF) {
         // Lower-bounded (1-sided) column: non-negative cost is feasible
         double sense_col_cost = objSense * colCost[c_n];
         if (sense_col_cost >= 0.0) n_fs_c_co += 1;
       }
     } else {
-      if (colLower[c_n] <= -HSOL_CONST_INF) {
+      if (colLower[c_n] <= -HIGHS_CONST_INF) {
         // Upper-bonded (1-sided) column: non-positive cost is feasible
         double sense_col_cost = objSense * colCost[c_n];
         if (sense_col_cost <= 0.0) n_fs_c_co += 1;
@@ -1340,11 +1315,10 @@ void HCrash::crsh_an_c_co(HModel *ptr_model) {
          (100 * n_fs_c_co) / numCol);
 }
 
-void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
-  model = ptr_model;
-  const int *Astart = &model->Astart[0];
+void HCrash::crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode) {
+  const int *Astart = &lp_->Astart_[0];
   for (int k = 0; k < numRow; k++) {
-    int vr_n = model->getBaseIndex()[k];
+    int vr_n = highs_model_object.basis_.basicIndex_[k];
     if (vr_n < numCol) {
       int c_n = vr_n;
       crsh_bs_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
@@ -1355,7 +1329,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
   }
 
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (model->getNonbasicFlag()[vr_n] == 0) continue;
+    if (highs_model_object.basis_.nonbasicFlag_[vr_n] == 0) continue;
     if (vr_n < numCol) {
       int c_n = vr_n;
       crsh_nonbc_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
@@ -1366,7 +1340,7 @@ void HCrash::crsh_an_r_c_st_af(HModel *ptr_model, int Crash_Mode) {
   }
   int bs_mtx_n_struc_el = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = model->getBaseIndex()[r_n];
+    int vr_n = highs_model_object.basis_.basicIndex_[r_n];
     if (vr_n < numCol) {
       int c_n_el = Astart[vr_n + 1] - Astart[vr_n];
       bs_mtx_n_struc_el += c_n_el;
@@ -1416,7 +1390,7 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode) {
     for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
       TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
       if (mode == 0) {
-        ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
+        if (ps_n == 0) ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
         int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
         if (ps_n == 0) {
           if (crsh_vr_ty_og_n_r[vr_ty] > 0)
@@ -1432,11 +1406,11 @@ void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode) {
                  TyNm.c_str(),
                  (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
       } else if (mode == 2) {
-        ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
-        ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
-        ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
-        ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
         if (ps_n == 0) {
+	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
+	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
+	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
+	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
           if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
             printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
                    crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
@@ -1511,252 +1485,6 @@ string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode) {
       printf("Unrecognised type %d\n", vr_ty);
   }
   return TyNm;
-}
-
-void HCrash::crsh_ck_an_impl_bd() {
-  const double *colLower = model->getcolLower();
-  const double *colUpper = model->getcolUpper();
-  const double *rowLower = model->getrowLower();
-  const double *rowUpper = model->getrowUpper();
-
-  const double *primalColLowerImplied = model->getprimalColLowerImplied();
-  const double *primalColUpperImplied = model->getprimalColUpperImplied();
-  const double *primalRowLowerImplied = model->getprimalRowLowerImplied();
-  const double *primalRowUpperImplied = model->getprimalRowUpperImplied();
-
-  const double *dualColLowerImplied = model->getdualColLowerImplied();
-  const double *dualColUpperImplied = model->getdualColUpperImplied();
-  const double *dualRowLowerImplied = model->getdualRowLowerImplied();
-  const double *dualRowUpperImplied = model->getdualRowUpperImplied();
-
-  // if (numTot < 100) {
-  //  printf("\nReporting bounds and corresponding implied bounds\n");
-  //  for (int c_n = 0; c_n < numCol; c_n++) {
-  //   printf(
-  //     "Col %5d has primal bounds
-  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
-  // c_n, colLower[c_n], colUpper[c_n],
-  // primalColLowerImplied[c_n], primalColUpperImplied[c_n]);
-  //  }
-  //  for (int c_n = 0; c_n < numCol; c_n++) {
-  //   printf(
-  //     "Col %5d has primal bounds
-  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
-  // c_n, colLower[c_n], colUpper[c_n],
-  // dualColLowerImplied[c_n], dualColUpperImplied[c_n]);
-  //  }
-  //  for (int r_n = 0; r_n < numRow; r_n++) {
-  //   printf(
-  //     "Row %5d has primal bounds
-  //[%12.4e,%12.4e] and implied primal bounds [%12.4e,%12.4e]\n",
-  // r_n, rowLower[r_n], rowUpper[r_n],
-  // primalRowLowerImplied[r_n], primalRowUpperImplied[r_n]);
-  //  }
-  //  for (int r_n = 0; r_n < numRow; r_n++) {
-  //   printf(
-  //     "Row %5d has primal bounds
-  //[%12.4e,%12.4e] and implied dual bounds [%12.4e,%12.4e]\n",
-  // r_n, rowLower[r_n], rowUpper[r_n],
-  // dualRowLowerImplied[r_n], dualRowUpperImplied[r_n]);
-  //  }
-  // }
-  printf("\nAnalysing bounds and corresponding implied bounds\n");
-  int numTighterPrimalColLower = 0;
-  int numTighterPrimalColUpper = 0;
-  int numSlackerPrimalColLower = 0;
-  int numSlackerPrimalColUpper = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    if (primalColLowerImplied[c_n] > colLower[c_n]) {
-      numTighterPrimalColLower += 1;
-    }
-    if (primalColLowerImplied[c_n] < colLower[c_n]) {
-      numSlackerPrimalColLower += 1;
-      printf(
-          "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query lower\n",
-          c_n, colLower[c_n], colUpper[c_n], primalColLowerImplied[c_n],
-          primalColUpperImplied[c_n]);
-    }
-    if (primalColUpperImplied[c_n] < colUpper[c_n]) {
-      numTighterPrimalColUpper += 1;
-    }
-    if (primalColUpperImplied[c_n] > colUpper[c_n]) {
-      numSlackerPrimalColUpper += 1;
-      printf(
-          "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query upper\n",
-          c_n, colLower[c_n], colUpper[c_n], primalColLowerImplied[c_n],
-          primalColUpperImplied[c_n]);
-    }
-  }
-  int numTighterDualColLower = 0;
-  int numTighterDualColUpper = 0;
-  int numSlackerDualColLower = 0;
-  int numSlackerDualColUpper = 0;
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    if (colLower[c_n] > -HSOL_CONST_INF) {
-      // Col lower > -inf so dualColUpperImplied < inf is tighter
-      if (dualColUpperImplied[c_n] < HSOL_CONST_INF) {
-        numTighterDualColUpper += 1;
-      }
-    } else {
-      // Col lower <= -inf so dualColUpperImplied should be at most zero
-      if (dualColUpperImplied[c_n] > 0) {
-        numSlackerDualColUpper += 1;
-        printf(
-            "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query upper\n",
-            c_n, colLower[c_n], colUpper[c_n], dualColLowerImplied[c_n],
-            dualColUpperImplied[c_n]);
-      }
-    }
-    if (colUpper[c_n] < HSOL_CONST_INF) {
-      // Col upper <   inf so dualColLowerImplied > -inf is tighter
-      if (dualColLowerImplied[c_n] > -HSOL_CONST_INF) {
-        numTighterDualColLower += 1;
-      }
-    } else {
-      // Col upper >=  inf so dualRowLowerImplied should be at least zero
-      if (dualColLowerImplied[c_n] < 0) {
-        numSlackerDualColLower += 1;
-        printf(
-            "Col %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query lower\n",
-            c_n, colLower[c_n], colUpper[c_n], dualColLowerImplied[c_n],
-            dualColUpperImplied[c_n]);
-      }
-    }
-  }
-  int numTighterPrimalRowLower = 0;
-  int numTighterPrimalRowUpper = 0;
-  int numSlackerPrimalRowLower = 0;
-  int numSlackerPrimalRowUpper = 0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
-    if (primalRowLowerImplied[r_n] > rowLower[r_n]) {
-      numTighterPrimalRowLower += 1;
-    }
-    if (primalRowLowerImplied[r_n] < rowLower[r_n]) {
-      numSlackerPrimalRowLower += 1;
-      printf(
-          "row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query lower\n",
-          r_n, rowLower[r_n], rowUpper[r_n], primalRowLowerImplied[r_n],
-          primalRowUpperImplied[r_n]);
-    }
-    if (primalRowUpperImplied[r_n] < rowUpper[r_n]) {
-      numTighterPrimalRowUpper += 1;
-    }
-    if (primalRowUpperImplied[r_n] > rowUpper[r_n]) {
-      numSlackerPrimalRowUpper += 1;
-      printf(
-          "row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-          "primal bounds  [%12.4e,%12.4e] Query upper\n",
-          r_n, rowLower[r_n], rowUpper[r_n], primalRowLowerImplied[r_n],
-          primalRowUpperImplied[r_n]);
-    }
-  }
-  int numTighterDualRowLower = 0;
-  int numTighterDualRowUpper = 0;
-  int numSlackerDualRowLower = 0;
-  int numSlackerDualRowUpper = 0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
-    if (rowLower[r_n] > -HSOL_CONST_INF) {
-      // Row lower > -inf so dualRowUpperImplied < inf is tighter
-      if (dualRowUpperImplied[r_n] < HSOL_CONST_INF) {
-        numTighterDualRowUpper += 1;
-      }
-    } else {
-      // Row lower <= -inf so dualRowUpperImplied should be at most zero
-      if (dualRowUpperImplied[r_n] > 0) {
-        numSlackerDualRowUpper += 1;
-        printf(
-            "Row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query upper\n",
-            r_n, rowLower[r_n], rowUpper[r_n], dualRowLowerImplied[r_n],
-            dualRowUpperImplied[r_n]);
-      }
-    }
-    if (rowUpper[r_n] < HSOL_CONST_INF) {
-      // Row upper <   inf so dualColLowerImplied > -inf is tighter
-      if (dualRowLowerImplied[r_n] > -HSOL_CONST_INF) {
-        numTighterDualRowLower += 1;
-      }
-    } else {
-      // Row upper >=  inf so dualColLowerImplied should be at least zero
-      if (dualRowLowerImplied[r_n] < 0) {
-        numSlackerDualRowLower += 1;
-        printf(
-            "Row %5d has primal bounds [%12.4e,%12.4e] and slacker implied "
-            "dual bounds  [%12.4e,%12.4e] Query lower\n",
-            r_n, rowLower[r_n], rowUpper[r_n], dualRowLowerImplied[r_n],
-            dualRowUpperImplied[r_n]);
-      }
-    }
-  }
-  int numTighter = numTighterPrimalColLower + numTighterPrimalColUpper +
-                   numTighterDualColLower + numTighterDualColUpper +
-                   numTighterPrimalRowLower + numTighterPrimalRowUpper +
-                   numTighterDualRowLower + numTighterDualRowUpper;
-  if (numTighter > 0) {
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal column lower bounds\n",
-        numTighterPrimalColLower, numCol,
-        (100 * numTighterPrimalColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal column upper bounds\n",
-        numTighterPrimalColUpper, numCol,
-        (100 * numTighterPrimalColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   column lower bounds\n",
-        numTighterDualColLower, numCol,
-        (100 * numTighterDualColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   column upper bounds\n",
-        numTighterDualColUpper, numCol,
-        (100 * numTighterDualColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal row    lower bounds\n",
-        numTighterPrimalRowLower, numRow,
-        (100 * numTighterPrimalRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) tighter implied primal row    upper bounds\n",
-        numTighterPrimalRowUpper, numRow,
-        (100 * numTighterPrimalRowUpper) / numRow);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   row    lower bounds\n",
-        numTighterDualRowLower, numRow,
-        (100 * numTighterDualRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) tighter implied dual   row    upper bounds\n",
-        numTighterDualRowUpper, numRow,
-        (100 * numTighterDualRowUpper) / numRow);
-  } else {
-    printf("\nModel has no tighter implied bounds\n");
-  }
-  int numSlacker = numSlackerPrimalColLower + numSlackerPrimalColUpper +
-                   numSlackerDualColLower + numSlackerDualColUpper +
-                   numSlackerPrimalRowLower + numSlackerPrimalRowUpper +
-                   numSlackerDualRowLower + numSlackerDualRowUpper;
-  if (numSlacker > 0) {
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal column lower bounds\n",
-        numSlackerPrimalColLower, numCol,
-        (100 * numSlackerPrimalColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal column upper bounds\n",
-        numSlackerPrimalColUpper, numCol,
-        (100 * numSlackerPrimalColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   column lower bounds\n",
-        numSlackerDualColLower, numCol,
-        (100 * numSlackerDualColLower) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   column upper bounds\n",
-        numSlackerDualColUpper, numCol,
-        (100 * numSlackerDualColUpper) / numCol);
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal row    lower bounds\n",
-        numSlackerPrimalRowLower, numRow,
-        (100 * numSlackerPrimalRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) slacker implied primal row    upper bounds\n",
-        numSlackerPrimalRowUpper, numRow,
-        (100 * numSlackerPrimalRowUpper) / numRow);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   row    lower bounds\n",
-        numSlackerDualRowLower, numRow,
-        (100 * numSlackerDualRowLower) / numRow);
-    printf("Model has %5d/%5d (%3d%%) slacker implied dual   row    upper bounds\n",
-        numSlackerDualRowUpper, numRow,
-        (100 * numSlackerDualRowUpper) / numRow);
-  } else {
-    printf("\nModel has no slacker implied bounds\n\n");
-  }
 }
 
 void HCrash::ltssf_rp_r_k() {

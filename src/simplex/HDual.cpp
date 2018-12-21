@@ -12,11 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HDual.h"
-#include "HConst.h"
-#include "HCrash.h"
-#include "HMatrix.h"
-#include "HPrimal.h"
-#include "HTimer.h"
 
 #include <cassert>
 #include <cmath>
@@ -25,29 +20,30 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
-using namespace std;
 
-void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
-  assert(ptr_model != NULL);
+#include "HConst.h"
+#include "HCrash.h"
+#include "HPrimal.h"
+#include "HTimer.h"
+#include "HighsLp.h"
+#include "HighsIO.h"
+#include "HighsModelObject.h"
+
+//void HDual::solve(HModel *ptr_model, int variant, int num_threads)
+//{
+//  model = ptr_model;
+
+void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num_threads) {
+  highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
+  model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
+  model->basis_ = &ref_highs_model_object.basis_;
+  model->scale_ = &ref_highs_model_object.scale_;
+  //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
   dual_variant = variant;
-  model = ptr_model;
-#ifdef HiGHSDEV
-  //  printf("model->mlFg_Report() 1\n"); cout << flush; model->mlFg_Report();
-  //  cout << flush;
-#endif
-  // Setup two work buffers in model required for solve()
-  model->buffer.setup(model->numRow);
-  model->bufferLong.setup(model->numCol);
-
-  //  printf("model->mlFg_haveEdWt 0 = %d\n", model->mlFg_haveEdWt);cout<<flush;
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
-  //  printf("HDual::solve - Calling model->setup_for_solve()\n");cout<<flush;
   model->setup_for_solve();
-
-  //  printf("model->mlFg_haveEdWt 1 = %d\n", model->mlFg_haveEdWt);cout<<flush;
-
   model->problemStatus = LP_Status_Unset;
   model->numberIteration = 0;
 #ifdef HiGHSDEV
@@ -58,12 +54,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   model->totalInvertTime = 0;
 #endif
   // Cannot solve box-constrained LPs
-  if (model->numRow == 0) return;
-#ifdef HiGHSDEV
-    //  printf("model->mlFg_Report() 2\n"); cout << flush; model->mlFg_Report();
-    //  cout << flush;
-#endif
-
+  if (model->lp_scaled_->numRow_ == 0) return;
   model->timer.reset();
 
   n_ph1_du_it = 0;
@@ -72,10 +63,15 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
   SolveBailout = false;
+
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
+  //  HighsOptions options;
+  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", options.timeLimit);
+
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
 #ifdef HiGHSDEV
-    printf("Setting TimeLimitValue = %g\n", TimeLimitValue);
+    HighsPrintMessage(HighsMessageType::WARNING, "Changing TimeLimitValue from 0 to %g\n", TimeLimitValue);
 #endif
   }
 
@@ -104,7 +100,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   // Consider initialising edge weights
   //
   // NB workEdWt is assigned and initialised to 1s in
-  // dualRHS.setup(model) so that CHUZR is well defined, even for
+  // dualRHS.setup(highs_model_object) so that CHUZR is well defined, even for
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
@@ -120,6 +116,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
+      const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -182,7 +179,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
   //  printf("model->mlFg_haveEdWt 3 = %d\n", model->mlFg_haveEdWt);cout<<flush;
   bool rp_bs_cond = false;
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond(ptr_model);
+    double bs_cond = an_bs_cond(model);
     printf("Initial basis condition estimate is %g\n", bs_cond);
   }
 #endif
@@ -194,8 +191,9 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (model->getNonbasicFlag()[i]) {
+    if (highs_model_object->basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -245,6 +243,11 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
     // printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n",
     // solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
 #endif
+    // When starting a new phase the (updated) dual objective function
+    // value isn't known. Indicate this so that when the value
+    // computed from scratch in build() isn't checked against the the
+    // updated value
+    model->mlFg_haveDualObjectiveValue = 0;
     switch (solvePhase) {
       case 1:
         solve_phase1();
@@ -338,7 +341,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
     if (solvePhase == 4) {
       HPrimal hPrimal;
       hPrimal.TimeLimitValue = TimeLimitValue;
-      hPrimal.solvePhase2(model);
+      hPrimal.solvePhase2(highs_model_object);
       // Add in the count and time for any primal rebuilds
 #ifdef HiGHSDEV
       totalRebuildTime += hPrimal.totalRebuildTime;
@@ -363,7 +366,7 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
            model->numberIteration / n_dvx_fwk);
   }
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond(ptr_model);
+    double bs_cond = an_bs_cond(model);
     printf("Optimal basis condition estimate is %g\n", bs_cond);
   }
 #endif
@@ -412,21 +415,21 @@ void HDual::solve(HModel *ptr_model, int variant, int num_threads) {
 
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
-  numCol = model->getNumCol();
-  numRow = model->getNumRow();
-  numTot = model->getNumTot();
-  matrix = model->getMatrix();
-  factor = model->getFactor();
+  numCol = model->lp_scaled_->numCol_;
+  numRow = model->lp_scaled_->numRow_;
+  numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  matrix = model->matrix_;
+  factor = model->factor_;
 
   // Copy pointers
-  jMove = model->getNonbasicMove();
-  workDual = model->getWorkDual();
+  jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  workDual = &highs_model_object->simplex_.workDual_[0];
   //    JAJH: Only because I can't get this from HModel.h
-  workValue = model->getWorkValue();
-  workRange = model->getWorkRange();
-  baseLower = model->getBaseLower();
-  baseUpper = model->getBaseUpper();
-  baseValue = model->getBaseValue();
+  workValue = &highs_model_object->simplex_.workValue_[0];
+  workRange = &highs_model_object->simplex_.workRange_[0];
+  baseLower = &highs_model_object->simplex_.baseLower_[0];
+  baseUpper = &highs_model_object->simplex_.baseUpper_[0];
+  baseValue = &highs_model_object->simplex_.baseValue_[0];
 
   // Copy tolerances
   Tp = model->dblOption[DBLOPT_PRIMAL_TOL];
@@ -444,8 +447,8 @@ void HDual::init(int num_threads) {
   row_apDensity = 0;
   rowdseDensity = 0;
   // Setup other buffers
-  dualRow.setup(model);
-  dualRHS.setup(model);
+  dualRow.setup(highs_model_object);
+  dualRHS.setup(highs_model_object);
 
   // Initialize for tasks
   if (dual_variant == HDUAL_VARIANT_TASKS) {
@@ -456,7 +459,7 @@ void HDual::init(int num_threads) {
   if (dual_variant == HDUAL_VARIANT_MULTI) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
-    if (multi_num > HSOL_THREAD_LIMIT) multi_num = HSOL_THREAD_LIMIT;
+    if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
     for (int i = 0; i < multi_num; i++) {
       multi_choice[i].row_ep.setup(numRow);
       multi_choice[i].column.setup(numRow);
@@ -476,7 +479,7 @@ void HDual::init_slice(int init_sliced_num) {
   // Number of slices
   slice_num = init_sliced_num;
   if (slice_num < 1) slice_num = 1;
-  if (slice_num > HSOL_SLICED_LIMIT) slice_num = HSOL_SLICED_LIMIT;
+  if (slice_num > HIGHS_SLICED_LIMIT) slice_num = HIGHS_SLICED_LIMIT;
 
   // Alias to the matrix
   const int *Astart = matrix->getAstart();
@@ -519,7 +522,7 @@ void HDual::init_slice(int init_sliced_num) {
 
     // The row_ap and its packages
     slice_row_ap[i].setup(mycount);
-    slice_dualRow[i].setupSlice(model, mycount);
+    slice_dualRow[i].setupSlice(highs_model_object, mycount);
   }
 }
 
@@ -667,25 +670,18 @@ void HDual::solve_phase2() {
       }
       // invertHint can be true for various reasons see HModel.h
       if (invertHint) break;
-        // Need the dual objective value to check for exceeding the
-        // upper bound set by SCIP, but can't afford to compute it
-        // every iteration!
-        // Killer line for speed of HiGHS on hyper-sparse LPs!
-        // Comment out when not working with SCIP!!
-        //	  model->computeDualObjectiveValue();
 #ifdef HiGHSDEV
-        //      model->computeDualObjectiveValue();
         //      double pr_obj_v = model->computePrObj();
         //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj
         //      = %.11g\n",
         //	     model->numberIteration, pr_obj_v, model->dualObjectiveValue);
 #endif
-      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      if (model->updatedDualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf(
             "HDual::solve_phase2: Objective = %g > %g = "
             "dblOption[DBLOPT_OBJ_UB]\n",
-            model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+            model->updatedDualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;
@@ -778,7 +774,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = model->getBaseIndex();
+    const int *baseIndex = &highs_model_object->basis_.basicIndex_[0];
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -789,6 +785,8 @@ void HDual::rebuild() {
     model->timer.recordFinish(HTICK_PERM_WT);
 
     model->timer.recordStart(HTICK_INVERT);
+
+    // Call computeFactor to perform INVERT
     int rankDeficiency = model->computeFactor();
     model->timer.recordFinish(HTICK_INVERT);
 
@@ -825,15 +823,30 @@ void HDual::rebuild() {
   dualRHS.create_infeasList(columnDensity);
   model->timer.recordFinish(HTICK_COLLECT_PR_IFS);
 
+  // Check the objective value maintained by updating against the
+  // value when computed exactly - so long as there is a value to
+  // check against
+  bool checkDualObjectiveValue = model->mlFg_haveDualObjectiveValue;
   // Compute the objective value
   model->timer.recordStart(HTICK_COMPUTE_DUOBJ);
   model->computeDualObjectiveValue(solvePhase);
+  model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
+
+  if (checkDualObjectiveValue) {
+    double absDualObjectiveError = abs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
+    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, abs(model->dualObjectiveValue));
+    if (rlvDualObjectiveError > 1e-8) {
+      HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
+			absDualObjectiveError, rlvDualObjectiveError);
+    }
+  }
+  model->updatedDualObjectiveValue = model->dualObjectiveValue;
 
 #ifdef HiGHSDEV
-  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  //  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
-  model->timer.recordFinish(HTICK_COMPUTE_DUOBJ);
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
   model->timer.recordStart(HTICK_REPORT_INVERT);
@@ -883,8 +896,8 @@ void HDual::iterate() {
   // candidate. This causes a break from the inner loop of
   // solve_phase% and, hence, a call to rebuild()
 
-  //	Reporting:
-  //	hsol row-wise matrix after update in updateMatrix(columnIn, columnOut);
+  // Reporting:
+  // Row-wise matrix after update in updateMatrix(columnIn, columnOut);
   model->timer.recordStart(HTICK_ITERATE_CHUZR);
   chooseRow();
   model->timer.recordFinish(HTICK_ITERATE_CHUZR);
@@ -1055,6 +1068,7 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
+      const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
       if (alw_DSE2Dvx_sw &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
@@ -1280,7 +1294,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = model->getBaseIndex()[rowOut];
+  columnOut = highs_model_object->basis_.basicIndex_[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1342,8 +1356,10 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
+      const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
       for (int col = 0; col < numCol; col++) {
-        row_ap.array[col] = model->nonbasicFlag[col] * row_ap.array[col];
+        row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
+	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
       }
 #ifdef HiGHSDEV
       // Ultra-sparse PRICE is in development
@@ -1738,7 +1754,7 @@ void HDual::updatePivots() {
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding squared primal infeasibility
   // value in dualRHS.workArray
-  dualRHS.update_pivots(rowOut, model->getWorkValue()[columnIn] + thetaPrimal);
+  dualRHS.update_pivots(rowOut, highs_model_object->simplex_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock =
       total_syntheticTick >= factor->build_syntheticTick;
@@ -1755,24 +1771,25 @@ void HDual::iz_dvx_fwk() {
   // Initialise the Devex framework: reference set is all basic
   // variables
   model->timer.recordStart(HTICK_DEVEX_IZ);
-  const int *NonbasicFlag = model->getNonbasicFlag();
+  const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    //      if (model->getNonbasicFlag()[vr_n])
-    //      if (NonbasicFlag[vr_n])
+    //      if (highs_model_object->basis_.nonbasicFlag_[vr_n])
+    //      if (nonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
     //	dvx_ix[vr_n] = dvx_not_in_R;
     //      else
     //			Basic variables in reference set
     //	dvx_ix[vr_n] = dvx_in_R;
     //
-    // Assume all nonbasic variables have |NonbasicFlag[vr_n]|=1
+    // Assume all nonbasic variables have |nonbasicFlag[vr_n]|=1
     //
-    // NonbasicFlag[vr_n]*NonbasicFlag[vr_n] evaluates faster than
-    // abs(NonbasicFlag[vr_n])
+    // nonbasicFlag[vr_n]*nonbasicFlag[vr_n] evaluates faster than
+    // abs(nonbasicFlag[vr_n])
     //
-    // int dvx_ix_o_vr = 1-abs(NonbasicFlag[vr_n]);
+    // int dvx_ix_o_vr = 1-abs(nonbasicFlag[vr_n]);
     //
-    int dvx_ix_o_vr = 1 - NonbasicFlag[vr_n] * NonbasicFlag[vr_n];
+    int dvx_ix_o_vr = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
     dvx_ix[vr_n] = dvx_ix_o_vr;
   }
   dualRHS.workEdWt.assign(numRow, 1.0);  // Set all initial weights to 1
@@ -1926,7 +1943,7 @@ int HDual::util_getBasisInvRow(int r, double *coef, int *inds, int *ninds) {
 double HDual::an_bs_cond(HModel *ptr_model) {
   model = ptr_model;
   // Alias to the matrix
-  matrix = model->getMatrix();
+  matrix = model->matrix_;
   const int *Astart = matrix->getAstart();
   const double *Avalue = matrix->getAvalue();
   // Compute the Hager condition number estimate for the basis matrix
@@ -2006,7 +2023,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = model->getBaseIndex()[r_n];
+    int vr_n = highs_model_object->basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < numCol)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2262,15 +2279,16 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = model->getBaseIndex()[r_n];
+    int vr_n = highs_model_object->basis_.basicIndex_[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
+  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (model->getNonbasicFlag()[vr_n]) {
-      double pr_act_v = model->getWorkValue()[vr_n];
+    if (highs_model_object->basis_.nonbasicFlag_[vr_n]) {
+      double pr_act_v = highs_model_object->simplex_.workValue_[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];
     }

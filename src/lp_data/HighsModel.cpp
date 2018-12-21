@@ -1,5 +1,8 @@
 #include "HighsModel.h"
 
+#include "HConst.h"
+#include "math.h"
+
 HighsModel::~HighsModel() {
   while (this->variables.size() > 0) {
     HighsVar* variable;
@@ -24,9 +27,6 @@ HighsModel::~HighsModel() {
         assert(iterator != constraint->linearCoefs.end());
         constraint->linearCoefs.erase(iterator);
         this->coefficientConstraintMap.erase(iter);
-
-       
-
         delete coef;
       }
       VarConsMap::iterator iter = this->variableConstraintMap.find(variable);
@@ -66,8 +66,8 @@ HighsVar::HighsVar(const char* name, double lo, double hi, double obj,
   }
 
   // copy all remaining data
-  this->lowerBound = lo;
-  this->upperBound = hi;
+  this->lowerBound = fmax(-HIGHS_CONST_INF, lo);
+  this->upperBound = fmin(HIGHS_CONST_INF, hi);
   this->obj = obj;
   this->type = type;
 }
@@ -149,7 +149,7 @@ void HighsModel::HighsCreateVar(const char* name, double lo, double hi,
 }
 
 void HighsModel::HighsCreateVar(const char* name, HighsVar** var) {
-  this->HighsCreateVar(name, 0.0, __DBL_MAX__, 0.0, HighsVarType::CONT, var);
+  this->HighsCreateVar(name, 0.0, HIGHS_CONST_INF, 0.0, HighsVarType::CONT, var);
 }
 
 void HighsModel::HighsGetOrCreateVarByName(const char* name, HighsVar** var) {
@@ -218,7 +218,7 @@ void HighsModel::HighsCreateLinearCons(const char* name, double lo, double hi,
 
 void HighsModel::HighsCreateLinearCons(const char* name,
                                        HighsLinearCons** cons) {
-  this->HighsCreateLinearCons(name, -__DBL_MAX__, __DBL_MAX__, cons);
+  this->HighsCreateLinearCons(name, -HIGHS_CONST_INF, HIGHS_CONST_INF, cons);
 }
 
 void HighsModel::HighsCreateLinearCons(HighsLinearCons** cons) {

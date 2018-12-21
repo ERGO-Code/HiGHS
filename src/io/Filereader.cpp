@@ -22,10 +22,9 @@ Filereader* Filereader::getFilereader(const char* filename) {
     reader = new FilereaderMps();
   } else if (strcmp(extension, "lp") == 0) {
     reader = new FilereaderLp();
-  } else if (strcmp(extension, "gz") == 0) {
-    // unzip the file, remove ".gz" from filename, call this function again
   } else {
-    throw std::invalid_argument("No suitable filereader found.");
+    // use .mps filereader by default
+    reader = new FilereaderMps();
   }
   return reader;
 }

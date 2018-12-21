@@ -208,7 +208,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
   // Set up default values of lower bounds, upper bounds and integer information
   for (int c_n = 0; c_n < n; c_n++) {
     (*lb)[c_n] = 0;
-    (*ub)[c_n] = HSOL_CONST_INF;
+    (*ub)[c_n] = HIGHS_CONST_INF;
     (*integerColumn)[c_n] = 0;
   }
 

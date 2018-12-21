@@ -14,12 +14,13 @@
 #ifndef SIMPLEX_HDUALROW_H_
 #define SIMPLEX_HDUALROW_H_
 
-#include "HModel.h"
-#include "HVector.h"
-
 #include <set>
 #include <vector>
-using namespace std;
+
+#include "HighsModelObject.h"
+
+class HModel;
+class HVector;
 
 /**
  * @brief Dual simplex ratio test for HiGHS
@@ -34,7 +35,7 @@ class HDualRow {
    * the dual ratio test
    */
   void setup(
-	     HModel *model  //!< Model for which setup is performed
+	     HighsModelObject *highs_model_object  //!< Model for which setup is performed
 	     );
   /**
    * @brief Set up the packed indices and values for the dual ratio test
@@ -42,7 +43,8 @@ class HDualRow {
    * Done either for the whole pivotal row (see HDualRow::setup), or
    * just for a slice (see HDual::init_slice)
    */
-  void setupSlice(HModel *model,  //!< Model for which setupSlice is performed
+  void setupSlice(
+		  HighsModelObject *highs_model_object,  //!< Model for which setupSlice is performed
                   int size        //!< Dimension of slice
 		  );
   /**
@@ -118,21 +120,22 @@ class HDualRow {
 		       int iColumn //!< Index of column to remove from Freelist
 		       );
   
+  HighsModelObject *workHMO;        //!< Local copy of pointer to model
   HModel *workModel;        //!< Local copy of pointer to model
   int workSize;             //!< Size of the HDualRow slice
-  const int *workRand;      //!< Value of model->getWorkIntBreak();
-  const int *workMove;      //!< Value of model->getNonbasicMove();
-  const double *workDual;   //!< Value of model->getWorkDual();
-  const double *workRange;  //!< Value of model->getWorkRange();
+  const int *workColPermutation;  //!< Pointer to model->getColPermutation();
+  const int *workMove;      //!< Pointer to model->basis_->nonbasicMove_;
+  const double *workDual;   //!< Pointer to model->simplex_->workDual_;
+  const double *workRange;  //!< Pointer to model->simplex_->workRange_;
 
   // Freelist:
-  set<int> freeList;  //!< Freelist itself
-  int freeListSize;   //!< Number of entries in freeList
+  std::set<int> freeList;  //!< Freelist itself
+  int freeListSize = 0;   //!< Number of entries in freeList
 
   // packed data:
   int packCount;             //!< number of packed indices/values
-  vector<int> packIndex;     //!< Packed indices
-  vector<double> packValue;  //!< Packed values
+  std::vector<int> packIndex;     //!< Packed indices
+  std::vector<double> packValue;  //!< Packed values
 
   double workDelta;  //!< Local copy of dual.deltaPrimal
   double workAlpha;  //!< Original copy of pivotal computed row-wise
@@ -141,9 +144,8 @@ class HDualRow {
   int workPivot;     //!< Index of the column entering the basis
   int workCount;     //!< Number of BFRT flips
 
-  vector<pair<int, double> > workData;  //!< Index-Value pairs for ratio test
-  vector<int>
-      workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
+  std::vector<std::pair<int, double> > workData;  //!< Index-Value pairs for ratio test
+  std::vector<int> workGroup;  //!< Pointers into workData for degenerate nodes in BFRT
 };
 
 #endif /* SIMPLEX_HDUALROW_H_ */

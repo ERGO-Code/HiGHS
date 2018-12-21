@@ -14,15 +14,13 @@
 #ifndef SIMPLEX_HMODEL_H_
 #define SIMPLEX_HMODEL_H_
 
-#include "HConfig.h"
-#include "HConst.h"
 #include "HFactor.h"
 #include "HMatrix.h"
-#include "HModelCs.h"
-#include "HPresolve.h"
-#include "HRandom.h"
 #include "HTimer.h"
-#include "HVector.h"
+#include "HighsLp.h"
+#include "HighsUtils.h"
+
+class HVector;
 
 #include <sstream>
 #include <string>
@@ -49,30 +47,22 @@ const int invertHint_primalInfeasibleInPrimalSimplex = 7;
 const int invertHint_chooseColumnFail = 8;
 
 /** SCIP-like basis status for columns and rows */
-enum HSOL_BaseStat {
-  HSOL_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
+enum HIGHS_BaseStat {
+  HIGHS_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
                               [including fixed variables]*/
-  HSOL_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
-  HSOL_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
-  HSOL_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
+  HIGHS_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
+  HIGHS_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
+  HIGHS_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
 };
-typedef enum HSOL_BaseStat HSOL_BASESTAT;
+typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
 
-/** SCIP/HSOL Objective sense */
-/*enum objSense
-{
-  OBJSENSE_MINIMIZE = 1,
-  OBJSENSE_MAXIMIZE = -1
-};
-*/
-
-/** HSOL nonbasicFlag status for columns and rows */
+/** HiGHS nonbasicFlag status for columns and rows */
 enum nonbasicFlagStat {
   NONBASIC_FLAG_TRUE = 1,  // Nonbasic
   NONBASIC_FLAG_FALSE = 0  // Basic
 };
 
-/** HSOL nonbasicMove status for columns and rows */
+/** HiGHS nonbasicMove status for columns and rows */
 enum nonbasicMoveStat {
   NONBASIC_MOVE_UP = 1,   // Free to move (only) up
   NONBASIC_MOVE_DN = -1,  // Free to move (only) down
@@ -82,7 +72,7 @@ enum nonbasicMoveStat {
 // For INT, DBL and STR options, ensure that ***OPT_COUNT is last since
 // this is the number of options and used to dimension as
 //***Option[***OPT_COUNT]
-enum HSOL_INT_OPTIONS {
+enum HIGHS_INT_OPTIONS {
   INTOPT_PRINT_FLAG = 0,  // 0/>=1 = none/do-print
   // If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
   // If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
@@ -96,7 +86,7 @@ enum HSOL_INT_OPTIONS {
   INTOPT_COUNT
 };
 
-enum HSOL_DBL_OPTIONS {
+enum HIGHS_DBL_OPTIONS {
   DBLOPT_TIME_LIMIT = 0,
   DBLOPT_PRIMAL_TOL,
   DBLOPT_DUAL_TOL,
@@ -106,7 +96,7 @@ enum HSOL_DBL_OPTIONS {
   DBLOPT_COUNT
 };
 
-enum HSOL_STR_OPTIONS {
+enum HIGHS_STR_OPTIONS {
   STROPT_PARTITION_FILE = 0,  // name of row partition file
   STROPT_COUNT
 };
@@ -117,17 +107,12 @@ class HModel {
   // Methods which load whole models, initialise the basis then
   // allocate and populate (where possible) work* arrays and
   // allocate basis* arrays
-  int load_fromMPS(const char* filename);
   int load_fromToy(const char* filename);
   void load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost,
                        const double* XcolLower, const double* XcolUpper,
                        int XnumRow, const double* XrowLower,
                        const double* XrowUpper, int XnumNz, const int* XAstart,
                        const int* XAindex, const double* XAvalue);
-  void load_fromPresolve(HPresolve* ptr_model);
-  void load_fromPresolve(HPresolve& ptr_model);
-  void load_fromPostsolve(HPresolve* ptr_model);
-  void load_fromPostsolve(HPresolve& ptr_model);
 
   // Methods which initialise the basis then allocate and populate
   // (where possible) work* arrays and allocate basis* arrays
@@ -150,20 +135,10 @@ class HModel {
   void setup_tightenBound();
   void setup_shuffleColumn();
 
-  // Methods to copy between a HModel instance and a HPresolve instance
-  void copy_fromHModelToHPresolve(HPresolve* ptr_model);
-  void copy_fromHPresolveToHModel(HPresolve* ptr_model);
-  void copy_fromHPresolveToHModel(HPresolve& ptr_model);
-  void copy_fromHPresolveToHModelImplied(HPresolve* ptr_model);
-  void copy_fromHPresolveToHModelImplied(HPresolve& ptr_model);
-  void copy_basisFromPostsolve(HPresolve* mod);
-  void copy_basisFromPostsolve(HPresolve& mod);
-
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
   void initScale();
-  void setup_loadMPS(const char* filename);
   bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
   bool workArrays_OK(int phase);
   bool allNonbasicMoveVsWorkArrays_OK();
@@ -171,7 +146,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void printSolution();
   void copy_impliedBoundsToModelBounds();
   void copy_savedBoundsToModelBounds();
   void mlFg_Clear();
@@ -239,11 +213,8 @@ class HModel {
   int writeToMPS(const char* filename);
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Esoterica!
-  // Initialise the random vectors required by hsol
+  // Initialise the random vectors required by HiGHS
   void initRandomVec();
-
-  // Logical check of double being +Infinity
-  bool hsol_isInfinity(double val);
 
   // Shift the objective
   void shiftObjectiveValue(double shift);
@@ -260,17 +231,29 @@ class HModel {
   // Utilities to get objective, solution and basis: all just copy what's there
   // with no re-evaluation!
   double util_getObjectiveValue();
-  void util_getPrimalDualValues(vector<double>& colValue,
-                                vector<double>& colDual,
-                                vector<double>& rowValue,
-                                vector<double>& rowDual);
-  void util_getBasicIndexNonbasicFlag(vector<int>& bi, vector<int>& nbf);
-
+  
+  void util_getPrimalDualValues(vector<double>& XcolValue,
+                                vector<double>& XcolDual,
+                                vector<double>& XrowValue,
+                                vector<double>& XrowDual
+				);
+  void util_getNonbasicMove( vector<int> &XnonbasicMove);
+  void util_getBasicIndexNonbasicFlag(
+				      vector<int> &XbasicIndex,
+				      vector<int> &XnonbasicFlag
+				      );
+  // Utilities to scale or unscale bounds and costs
+  void util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
+  void util_scaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
+  void util_scaleColCostValue(int iCol, double* XcolCostValue);
+  void util_unscaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue);
+  void util_unscaleColBoundValue(int iCol, double* XcolLowerValue, double* XcolUpperValue);
+  void util_unscaleColCostValue(int iCol, double* XcolCostValue);
   // Utilities to get/change costs and bounds
-  void util_getCosts(int firstcol, int lastcol, double* XcolCost);
-  void util_getColBounds(int firstcol, int lastcol, double* XcolLower,
+  void util_getCosts(HighsLp& lp, int firstcol, int lastcol, double* XcolCost);
+  void util_getColBounds(HighsLp& lp, int firstcol, int lastcol, double* XcolLower,
                          double* XcolUpper);
-  void util_getRowBounds(int firstrow, int lastrow, double* XrowLower,
+  void util_getRowBounds(HighsLp& lp, int firstrow, int lastrow, double* XrowLower,
                          double* XrowUpper);
   int util_chgObjSense(int Xobjense);
   int util_chgCostsAll(const double* XcolCost);
@@ -309,7 +292,7 @@ class HModel {
                         double* XrowUpper, int* nnonz, int* XARstart,
                         int* XARindex, double* XARvalue);
   void util_changeCoeff(int row, int col, const double newval);
-  void util_getCoeff(int row, int col, double* val);
+  void util_getCoeff(HighsLp lp, int row, int col, double* val);
 
   // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
   // is false
@@ -320,43 +303,27 @@ class HModel {
 
   // Methods for reporting the model, its solution, row and column data and
   // matrix
-  void util_reportModelDa(const char* filename);
-  void util_reportModel();
-  void util_reportModelSolution();
-  void util_reportModelBrief();
-  void util_reportModelDimensions();
-  void util_reportModelObjSense();
+  void util_reportModelDa(HighsLp lp, const char* filename);
   void util_reportModelStatus();
 #ifdef HiGHSDEV
-  void util_reportModelDense();
-  void util_reportModelMPS(const char* filename);
+  void util_reportModelDense(HighsLp lp);
 #endif
-  void util_reportRowVec(int nrow, vector<double>& XrowLower,
-                         vector<double>& XrowUpper);
   void util_reportRowVecSol(int nrow, vector<double>& XrowLower,
                             vector<double>& XrowUpper,
                             vector<double>& XrowPrimal,
                             vector<double>& XrowDual, vector<int>& XrowStatus);
   void util_reportRowMtx(int nrow, vector<int>& XARstart, vector<int>& XARindex,
                          vector<double>& XARvalue);
-  void util_reportColVec(int ncol, vector<double>& XcolCost,
-                         vector<double>& XcolLower, vector<double>& XcolUpper);
   void util_reportColVecSol(int ncol, vector<double>& XcolCost,
                             vector<double>& XcolLower,
                             vector<double>& XcolUpper,
                             vector<double>& XcolPrimal,
                             vector<double>& XcolDual, vector<int>& XcolStatus);
-  void util_reportColMtx(int ncol, vector<int>& XAstart, vector<int>& XAindex,
-                         vector<double>& XAvalue);
 
+  void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
   void util_anPrDuDgn();
-  void util_anMl(const char* message);
-  void util_anMlBd(const char* message, int numBd, vector<double>& lower,
-                   vector<double>& upper);
-  void util_anVecV(const char* message, int vecDim, vector<double>& vec,
-                   bool anVLs);
-  void util_anMlLargeCo(const char* message);
+  void util_anMlLargeCo(HighsLp lp, const char* message);
   void util_anMlSol();
 #endif
 
@@ -367,8 +334,8 @@ class HModel {
   double dblOption[DBLOPT_COUNT];
   string strOption[STROPT_COUNT];
 
-  // Random generator
-  HRandom random;
+  // Utilities, including random number generator
+  HighsUtils utils;
 
   // The time and timer
   HTimer timer;
@@ -389,7 +356,7 @@ class HModel {
   // presolve and that original bounds have been over-written with
   // them
   bool impliedBoundsPresolve;
-  bool usingImpliedBoundsPresolve;
+  bool usingImpliedBoundsPresolve = false;
 
   // Solving result
   int limitUpdate;
@@ -460,38 +427,23 @@ class HModel {
   int mlFg_haveNonbasicDuals;
   int mlFg_haveBasicPrimals;
   //
+  // The dual objective function value is known
+  int mlFg_haveDualObjectiveValue;
+  //
   // The data are fresh from rebuild
   int mlFg_haveFreshRebuild;
+  //
+  // The ranging information is known
+  int mlFg_haveRangingData;
   //
   // Need to know of any saved bounds in the event of scaling being performed
   int mlFg_haveSavedBounds;
 
  public:
-  // The original model
-  int numCol;
-  int numRow;
-  int numTot;
-  int numInt;
   int problemStatus;
-  int objSense;  //+1 => min; -1 => max
-  double objOffset;
   string modelName;
-  vector<int> Astart;
-  vector<int> Aindex;
-  vector<double> Avalue;
-  vector<double> colCost;
-  vector<double> colLower;
-  vector<double> colUpper;
-  vector<double> colScale;
-  vector<double> rowLower;
-  vector<double> rowUpper;
-  vector<double> rowScale;
-  vector<int> integerColumn;
-  vector<int> basicIndex;
-  vector<int> nonbasicFlag;
-  vector<int> nonbasicMove;
-
-  // Limits on scaling factors
+  
+// Limits on scaling factors
   const double minAlwScale = 1 / 1024.0;
   const double maxAlwScale = 1024.0;
   const double maxAlwCostScale = maxAlwScale;
@@ -499,8 +451,6 @@ class HModel {
   const double maxAlwColScale = maxAlwScale;
   const double minAlwRowScale = minAlwScale;
   const double maxAlwRowScale = maxAlwScale;
-  // Cost scaling factor
-  double costScale;
 
 #ifdef HiGHSDEV
   // Information on large costs
@@ -510,57 +460,20 @@ class HModel {
   double largeCostScale;
 #endif
 
-  // Part of working model which assigned and populated as much as
-  // possible when a model is being defined
-
-  // workCost: Originally just costs from the model but, in solve(), may
-  // be perturbed or set to alternative values in Phase I??
-  //
-  // workDual: Values of the dual variables corresponding to
-  // workCost. Not known until solve() is called since B^{-1} is
-  // required to compute them. Knowledge of them is indicated by
-  // mlFg_haveNonbasicDuals.
-  //
-  // workShift: WTF
-  //
-  vector<double> workCost;
-  vector<double> workDual;
-  vector<double> workShift;
-
-  // workLower/workUpper: Originally just lower (upper) bounds from
-  // the model but, in solve(), may be perturbed or set to
-  // alternative values in Phase I??
-  //
-  // workRange: Distance between lower and upper bounds
-  //
-  // workValue: Values of the nonbasic variables corresponding to
-  // workLower/workUpper and the basis. Always known.
-  //
-  vector<double> workLower;
-  vector<double> workUpper;
-  vector<double> workRange;
-  vector<double> workValue;
-
-  // baseLower/baseUpper/baseValue: Lower and upper bounds on the
-  // basic variables and their values. Not known until solve() is
-  // called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by mlFg_haveBasicPrimals;
-  //
-  vector<double> baseLower;
-  vector<double> baseUpper;
-  vector<double> baseValue;
-
   // Associated data of original model
-  vector<int> workRowPart;  // Row partition
-  vector<int> intBreak;
-  vector<double> dblXpert;
+  vector<int> colPermutation;
+  vector<double> colRandomValue;
 
+  // The scaled model
+  HighsLp *lp_scaled_;
   // Part of working model which is only required and populated once a solve is
   // initiated
-  HMatrix matrix;
-  HFactor factor;
-  HVector buffer;
-  HVector bufferLong;
+  HMatrix *matrix_;
+  HFactor *factor_;
+  HighsSimplexInfo *simplex_;
+  HighsBasis *basis_;
+  HighsScale *scale_;
+  HighsRanging *ranging_;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;
@@ -588,39 +501,28 @@ class HModel {
 
   // Methods to get scalars and pointers to arrays and other data
   // structures in the instance of a model
-  int getNumRow() { return numRow; }
-  int getNumCol() { return numCol; }
-  int getNumTot() { return numTot; }
-  int getPrStatus() { return problemStatus; }
-  int getObjSense() { return objSense; }
-  const HMatrix* getMatrix() { return &matrix; }
-  const HFactor* getFactor() { return &factor; }
-  double* getcolCost() { return &colCost[0]; }
-  double* getcolLower() { return &colLower[0]; }
-  double* getcolUpper() { return &colUpper[0]; }
-  double* getrowLower() { return &rowLower[0]; }
-  double* getrowUpper() { return &rowUpper[0]; }
-  int* getBaseIndex() { return &basicIndex[0]; }
-  int* getNonbasicFlag() { return &nonbasicFlag[0]; }
-  int* getNonbasicMove() { return &nonbasicMove[0]; }
-  double* getWorkCost() { return &workCost[0]; }
-  double* getWorkDual() { return &workDual[0]; }
-  double* getWorkShift() { return &workShift[0]; }
-  double* getWorkLower() { return &workLower[0]; }
-  double* getWorkUpper() { return &workUpper[0]; }
-  double* getWorkRange() { return &workRange[0]; }
-  double* getWorkValue() { return &workValue[0]; }
-  double* getBaseLower() { return &baseLower[0]; }
-  double* getBaseUpper() { return &baseUpper[0]; }
-  double* getBaseValue() { return &baseValue[0]; }
-  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
-  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
-  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
-  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
-  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
-  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
-  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
-  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  int* getWorkIntBreak() { return &intBreak[0]; }
+  //  int getPrStatus() { return problemStatus; }
+  //  int getObjSense() { return lp_scaled_.sense_; }
+  //  const HMatrix* getMatrix() { return &matrix; }
+  //  const HFactor* getFactor() { return &factor; }
+  //  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
+  //  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
+  //  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
+  //  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
+  //  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
+  //  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
+  //  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
+  //  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
+  //  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
+  //  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
+  //  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
+  //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
+  //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
+  //  int* getColPermutation() { return &colPermutation[0]; }
 };
+
+/*
+void getSolutionFromHModel(const HModel& model, HighsSolution& solution);
+*/
+
 #endif /* SIMPLEX_HMODEL_H_ */

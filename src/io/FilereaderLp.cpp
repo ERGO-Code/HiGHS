@@ -14,7 +14,7 @@
 
 #include "FilereaderLp.h"
 #include "../util/stringutil.h"
-
+#include "HConst.h"
 #include <stdarg.h>
 
 FilereaderLp::FilereaderLp() {
@@ -49,7 +49,6 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   HighsModel m;
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
-
   return FilereaderRetcode::OKAY;
 }
 
@@ -196,8 +195,8 @@ void FilereaderLp::handleBoundsSection(HighsModel& model) {
       HighsVar* variable;
       model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)current)->value,
                                       &variable);
-      variable->lowerBound = -__DBL_MAX__;
-      variable->upperBound = __DBL_MAX__;
+      variable->lowerBound = -HIGHS_CONST_INF;
+      variable->upperBound = HIGHS_CONST_INF;
       delete current;
       delete next;
     } else if (current->type == LpTokenType::CONSTANT) {
@@ -557,6 +556,9 @@ bool FilereaderLp::readNextToken() {
   int nread = sscanf(this->readingPosition, "%lf%n", &this->constantBuffer,
                      &charactersConsumed);
   if (nread == 1) {
+    if(this->constantBuffer >= HIGHS_CONST_INF) {
+      this->constantBuffer = HIGHS_CONST_INF;
+    }
     int multiplier = 1;
     if (previousToken->type == LpTokenType::SIGN) {
       this->tokenQueue.pop_back();
@@ -610,7 +612,7 @@ bool FilereaderLp::readNextToken() {
         this->tokenQueue.pop_back();
         multiplier = ((LpTokenSign*)previousToken)->sign;
       }
-      LpTokenConstant* newToken = new LpTokenConstant(__DBL_MAX__ * multiplier);
+      LpTokenConstant* newToken = new LpTokenConstant(HIGHS_CONST_INF * multiplier);
       if (previousTokenWasLineEnd) {
         this->tokenQueue.pop_back();
         delete previousToken;
@@ -983,15 +985,15 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFileLineend();
   for (int i = 0; i < model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (model.colLower_[i] >= -10E10 && model.colUpper_[i] <= 10E10) {
+    if (model.colLower_[i] >= -HIGHS_CONST_INF && model.colUpper_[i] <= HIGHS_CONST_INF) {
       this->writeToFile(" %+g <= x%d <= %+g", model.colLower_[i], i + 1,
                         model.colUpper_[i]);
       this->writeToFileLineend();
-    } else if (model.colLower_[i] < -10E10 && model.colUpper_[i] <= 10E10) {
+    } else if (model.colLower_[i] < -HIGHS_CONST_INF && model.colUpper_[i] <= HIGHS_CONST_INF) {
       this->writeToFile(" -inf <= x%d <= %+g", i + 1, model.colUpper_[i]);
       this->writeToFileLineend();
 
-    } else if (model.colLower_[i] >= -10E10 && model.colUpper_[i] > 10E10) {
+    } else if (model.colLower_[i] >= -HIGHS_CONST_INF && model.colUpper_[i] > HIGHS_CONST_INF) {
       this->writeToFile(" %+g <= x%d <= +inf", model.colLower_[i], i + 1);
       this->writeToFileLineend();
     } else {
