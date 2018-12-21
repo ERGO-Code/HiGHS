@@ -28,6 +28,9 @@ class HVector;
  */
 class HDualRHS {
  public:
+  HDualRHS(HighsModelObject* hmo) : workHMO(hmo) {}
+  HDualRHS() {}
+
   /**
    * @brief Defines space for Mark, Index and Array, EdWt and EdWtFull
    *

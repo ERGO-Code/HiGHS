@@ -30,6 +30,9 @@ class HVector;
  */
 class HDualRow {
  public:
+  HDualRow(HighsModelObject* hmo) : workHMO(hmo) {}
+  HDualRow() {}
+
   /**
    * @brief Calls setupSlice to set up the packed indices and values for
    * the dual ratio test
