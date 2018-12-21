@@ -38,11 +38,6 @@ set(sources
 )
 
 set(headers
-<<<<<<< HEAD
-    HiGHSRun.h
-    HApp.h
-    lp_data/HighsModel.h
-=======
     #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
@@ -60,7 +55,6 @@ set(headers
     lp_data/HighsUtils.h
     lp_data/HighsModelObject.h
     simplex/HApp.h
->>>>>>> 2184c5c87df7126d6bdf5d0fc001f9f203dccde1
     simplex/HConst.h
     simplex/HCrash.h
     simplex/HDual.h
@@ -73,21 +67,9 @@ set(headers
     simplex/HRanging.h
     simplex/HSimplex.h
     simplex/HSort.h
-<<<<<<< HEAD
-    presolve/HPresolve.h
-    io/HinOut.h
-    io/HMPSIO.h
-    io/HMpsFF.h
-    io/Filereader.h
-    io/FilereaderLp.h
-    io/FilereaderMps.h
-    io/LoadProblem.h
-    io/HighsIO.h
-=======
     simplex/Scaling.h
     presolve/Presolve.h
     simplex/HighsTimer.h
->>>>>>> 2184c5c87df7126d6bdf5d0fc001f9f203dccde1
     simplex/HTimer.h
     simplex/HTimerPre.h
     simplex/HVector.h

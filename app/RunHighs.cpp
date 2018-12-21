@@ -1,6 +1,6 @@
 #include "HighsSetup.h"
-#include "LoadProblem.h"
 #include "HighsTimer.h"
+#include "LoadProblem.h"
 
 int main(int argc, char **argv) {
   // Initialise timer
@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
   timer.stop(loadClock);
   if (read_status != HighsInputStatus::OK) {
     HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
-    return (int) HighsStatus::LpError;
+    return (int)HighsStatus::LpError;
   }
 
   Highs highs(options);

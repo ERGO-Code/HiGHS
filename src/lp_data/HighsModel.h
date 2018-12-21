@@ -66,7 +66,7 @@ typedef std::map<HighsLinearConsCoef*, HighsLinearCons*> CoefConsMap;
 class HighsModel {
  public:
   double objOffset;
-  int objSense = 1; //1: minimize, -1: maximize
+  int objSense = 1;  // 1: minimize, -1: maximize
 
   void HighsCreateVar(const char* name, double lo, double hi, double obj,
                       HighsVarType type, HighsVar** var);
@@ -90,7 +90,7 @@ class HighsModel {
   void HighsDestroyLinearCons();
 
   // conversion from/to technical Lp representation
-  HighsModel() {};
+  HighsModel(){};
   HighsModel(HighsLp* lp);
   ~HighsModel();
   void HighsBuildTechnicalModel(HighsLp* lp);

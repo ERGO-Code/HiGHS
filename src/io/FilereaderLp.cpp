@@ -13,9 +13,9 @@
  */
 
 #include "FilereaderLp.h"
+#include <stdarg.h>
 #include "../util/stringutil.h"
 #include "HConst.h"
-#include <stdarg.h>
 
 FilereaderLp::FilereaderLp() {
   this->isFileBufferFullyRead = true;
@@ -60,8 +60,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   }
 
   this->tokenizeInput();
-  if (this->status != LP_FILEREADER_STATUS::ERROR) 
-    this->splitTokens();
+  if (this->status != LP_FILEREADER_STATUS::ERROR) this->splitTokens();
   if (this->status != LP_FILEREADER_STATUS::ERROR)
     this->handleObjectiveSection(model);
   if (this->status != LP_FILEREADER_STATUS::ERROR)
@@ -556,7 +555,7 @@ bool FilereaderLp::readNextToken() {
   int nread = sscanf(this->readingPosition, "%lf%n", &this->constantBuffer,
                      &charactersConsumed);
   if (nread == 1) {
-    if(this->constantBuffer >= HIGHS_CONST_INF) {
+    if (this->constantBuffer >= HIGHS_CONST_INF) {
       this->constantBuffer = HIGHS_CONST_INF;
     }
     int multiplier = 1;
@@ -612,7 +611,8 @@ bool FilereaderLp::readNextToken() {
         this->tokenQueue.pop_back();
         multiplier = ((LpTokenSign*)previousToken)->sign;
       }
-      LpTokenConstant* newToken = new LpTokenConstant(HIGHS_CONST_INF * multiplier);
+      LpTokenConstant* newToken =
+          new LpTokenConstant(HIGHS_CONST_INF * multiplier);
       if (previousTokenWasLineEnd) {
         this->tokenQueue.pop_back();
         delete previousToken;
@@ -891,8 +891,6 @@ LpSectionKeyword FilereaderLp::tryParseSectionKeyword(const char* str) {
   return LpSectionKeyword::NONE;
 }
 
-
-
 void FilereaderLp::writeToFile(const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
@@ -985,15 +983,18 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFileLineend();
   for (int i = 0; i < model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (model.colLower_[i] >= -HIGHS_CONST_INF && model.colUpper_[i] <= HIGHS_CONST_INF) {
+    if (model.colLower_[i] >= -HIGHS_CONST_INF &&
+        model.colUpper_[i] <= HIGHS_CONST_INF) {
       this->writeToFile(" %+g <= x%d <= %+g", model.colLower_[i], i + 1,
                         model.colUpper_[i]);
       this->writeToFileLineend();
-    } else if (model.colLower_[i] < -HIGHS_CONST_INF && model.colUpper_[i] <= HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] < -HIGHS_CONST_INF &&
+               model.colUpper_[i] <= HIGHS_CONST_INF) {
       this->writeToFile(" -inf <= x%d <= %+g", i + 1, model.colUpper_[i]);
       this->writeToFileLineend();
 
-    } else if (model.colLower_[i] >= -HIGHS_CONST_INF && model.colUpper_[i] > HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] >= -HIGHS_CONST_INF &&
+               model.colUpper_[i] > HIGHS_CONST_INF) {
       this->writeToFile(" %+g <= x%d <= +inf", model.colLower_[i], i + 1);
       this->writeToFileLineend();
     } else {

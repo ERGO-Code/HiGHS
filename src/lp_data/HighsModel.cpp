@@ -15,22 +15,23 @@ HighsModel::~HighsModel() {
     if (it != this->variableConstraintCoefficientMap.end()) {
       std::list<HighsLinearConsCoef*>* coefficients = it->second;
 
-      while(coefficients->size() > 0) {
+      while (coefficients->size() > 0) {
         HighsLinearConsCoef* coef = coefficients->front();
         coefficients->pop_front();
         // remove coefficient from constraint
-        
+
         CoefConsMap::iterator iter = this->coefficientConstraintMap.find(coef);
         assert(iter != this->coefficientConstraintMap.end());
         HighsLinearCons* constraint = iter->second;
-        VarConsCoefMap::iterator iterator = constraint->linearCoefs.find(variable);
+        VarConsCoefMap::iterator iterator =
+            constraint->linearCoefs.find(variable);
         assert(iterator != constraint->linearCoefs.end());
         constraint->linearCoefs.erase(iterator);
         this->coefficientConstraintMap.erase(iter);
         delete coef;
       }
       VarConsMap::iterator iter = this->variableConstraintMap.find(variable);
-      if(iter != variableConstraintMap.end()) {
+      if (iter != variableConstraintMap.end()) {
         std::list<HighsLinearCons*>* conslist = iter->second;
         assert(conslist->empty());
         this->variableConstraintMap.erase(iter);
@@ -149,7 +150,8 @@ void HighsModel::HighsCreateVar(const char* name, double lo, double hi,
 }
 
 void HighsModel::HighsCreateVar(const char* name, HighsVar** var) {
-  this->HighsCreateVar(name, 0.0, HIGHS_CONST_INF, 0.0, HighsVarType::CONT, var);
+  this->HighsCreateVar(name, 0.0, HIGHS_CONST_INF, 0.0, HighsVarType::CONT,
+                       var);
 }
 
 void HighsModel::HighsGetOrCreateVarByName(const char* name, HighsVar** var) {
