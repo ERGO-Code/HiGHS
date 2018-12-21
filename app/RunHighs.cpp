@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   checkStatus(run_status);
 
   // Report times
-  int clockList[] = {loadClock, runClock};
+  std::vector<int> clockList{loadClock, runClock};
   timer.report(clockList);
   return 0;
 }

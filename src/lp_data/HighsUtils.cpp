@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include "HConfig.h"
 #include "HighsLp.h"
 #include "HighsIO.h"
 #include "HighsUtils.h"
@@ -25,7 +26,7 @@ bool highs_isInfinity(double val) {
 }
 
 #ifdef HiGHSDEV
-void HighsUtils::util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
+void util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
                          bool anVLs) {
   if (vecDim == 0) return;
   double log10 = log(10.0);
@@ -150,7 +151,7 @@ void HighsUtils::util_anVecV(const char *message, int vecDim, std::vector<double
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
-void HighsUtils::reportLp(HighsLp lp) {
+void reportLp(HighsLp &lp) {
   reportLpBrief(lp);
   reportLpColVec(lp);
   reportLpRowVec(lp);
@@ -158,20 +159,20 @@ void HighsUtils::reportLp(HighsLp lp) {
 }
 
 // Report the LP briefly
-void HighsUtils::reportLpBrief(HighsLp lp) {
+void reportLpBrief(HighsLp &lp) {
   reportLpDimensions(lp);
   reportLpObjSense(lp);
 }
 
 // Report the LP dimensions
-void HighsUtils::reportLpDimensions(HighsLp lp) {
+void reportLpDimensions(HighsLp &lp) {
   HighsPrintMessage(HighsMessageType::INFO,
                     "LP has %d columns, %d rows and %d nonzeros\n",
                     lp.numCol_, lp.numRow_, lp.Astart_[lp.numCol_]);
 }
 
 // Report the LP objective sense
-void HighsUtils::reportLpObjSense(HighsLp lp) {
+void reportLpObjSense(HighsLp &lp) {
   if (lp.sense_ == OBJSENSE_MINIMIZE)
     HighsPrintMessage(HighsMessageType::INFO, "Objective sense is minimize\n");
   else if (lp.sense_ == OBJSENSE_MAXIMIZE)
@@ -182,7 +183,7 @@ void HighsUtils::reportLpObjSense(HighsLp lp) {
 }
 
 // Report the vectors of LP column data
-void HighsUtils::reportLpColVec(HighsLp lp) {
+void reportLpColVec(HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   HighsPrintMessage(HighsMessageType::INFO,
                     "  Column        Lower        Upper         Cost\n");
@@ -193,7 +194,7 @@ void HighsUtils::reportLpColVec(HighsLp lp) {
 }
 
 // Report the vectors of LP row data
-void HighsUtils::reportLpRowVec(HighsLp lp) {
+void reportLpRowVec(HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
   HighsPrintMessage(HighsMessageType::INFO,
                     "     Row        Lower        Upper\n");
@@ -204,7 +205,7 @@ void HighsUtils::reportLpRowVec(HighsLp lp) {
 }
 
 // Report the LP column-wise matrix
-void HighsUtils::reportLpColMtx(HighsLp lp) {
+void reportLpColMtx(HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   HighsPrintMessage(HighsMessageType::INFO,
                     "Column Index              Value\n");
@@ -221,7 +222,7 @@ void HighsUtils::reportLpColMtx(HighsLp lp) {
 }
 
 /*
-void HighsUtils::reportLpSolution(HighsModelObject highs_model) {
+void reportLpSolution(HighsModelObject &highs_model) {
   HighsLp lp = highs_model.lp_scaled_;
   reportLpBrief(lp);
   //  model->util_reportModelStatus(lp);
@@ -241,7 +242,7 @@ void HighsUtils::reportLpSolution(HighsModelObject highs_model) {
 */
 
 #ifdef HiGHSDEV
-void HighsUtils::util_anMl(HighsLp lp, const char *message) {
+void util_anMl(HighsLp &lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
   util_anVecV("Column costs", lp.numCol_, lp.colCost_, false);
   util_anVecV("Column lower bounds", lp.numCol_, lp.colLower_, false);
@@ -253,7 +254,7 @@ void HighsUtils::util_anMl(HighsLp lp, const char *message) {
   util_anMlBd("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 
-void HighsUtils::util_anMlBd(const char *message, int numBd, std::vector<double> &lower,
+void util_anMlBd(const char *message, int numBd, std::vector<double> &lower,
                          std::vector<double> &upper) {
   if (numBd == 0) return;
   int numFr = 0;
