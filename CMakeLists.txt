@@ -109,14 +109,23 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include)
 
 # use interior point solver
-set(IPX_DIR "${CMAKE_SOURCE_DIR}/src/ipx" CACHE STRING "Path to IPX folder.")
+set(IPX_DIR "${CMAKE_SOURCE_DIR}/interior_point" CACHE STRING "Path to IPX folder.")
 #if(IPX_DIR)
 #    add_compile_options(-D IPX=ON)
 #    message(STATUS "Using interior point solver.")
-    include_directories("${IPX_DIR}/src")
-    include_directories("${IPX_DIR}/include")
+#    include_directories("${IPX_DIR}/src")
+#    include_directories("${IPX_DIR}/include")
 #    link_directories("${IPX_DIR}/lib")
 #endif()
+
+add_custom_target(
+    basiclu
+    COMMAND make
+    WORKING_DIRECTORY "${IPX_DIR}/basiclu"
+ )
+# add_executable(myexecutable myexcutable.c)
+# target_link_libraries(myexecutable full_path_to_generated_library)
+# add_dependencies(myexecutable extern_lib)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)

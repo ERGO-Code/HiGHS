@@ -73,10 +73,10 @@ set(headers
 
 add_library(libhighs ${sources})
 
-# Use interior point solver option.
+# Use interior point solver option. Assuming it's already been made.
 if (IPX_DIR)
-    link_directories("${IPX_DIR}/lib")
-  find_library(IPX_LIB NAMES ipx PATHS "${IPX_DIR}/lib")
+    link_directories("${IPX_DIR}/ipx/lib")
+  find_library(IPX_LIB NAMES ipx PATHS "${IPX_DIR}/ipx/lib")
   if(NOT IPX_LIB)
     message(FATAL_ERROR "ipx library not found.")
   endif()
