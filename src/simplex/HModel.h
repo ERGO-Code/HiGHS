@@ -19,7 +19,6 @@
 #include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsUtils.h"
-
 class HVector;
 
 #include <sstream>

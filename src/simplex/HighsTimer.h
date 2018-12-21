@@ -29,6 +29,7 @@ class HighsTimer {
     startTime = getWallTime();
     startTick = getWallTick();
     numClock = 0;
+    initialiseDualSimplexClocks();
   }
 
   /**
@@ -114,17 +115,22 @@ class HighsTimer {
    * @brief Report timing information for the clock indices in the list
    */
   void report(
-	      int *clockList          //!< List of indices to report
+	      std::vector<int>&clockList          //!< List of indices to report
+  ) {
+    double tlPerCentReport = 1.0;
+    report_tl(clockList, tlPerCentReport);
+  }
+
+  void report_tl(
+		 std::vector<int>&clockList,          //!< List of indices to report
+		 double tlPerCentReport
   ) {
     const bool reportForExcel = false;
-    int numClockListEntries = sizeof(clockList) / sizeof(int);
-    double tlPerCentReport = 0.1;
-
-    printf("report: clockList[] = {"); for (int i = 0; i < numClockListEntries; i++) {printf(" %d", clockList[i]);} printf("}\n");
+    int numClockListEntries = clockList.size();
 
     // Report in one line the per-mille contribution from each clock
     double totalTick = getTick();
-    printf("txt-profile-name  ");
+    printf("TXT-PROFILE-name  ");
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
       assert(iClock >= 0);
@@ -132,22 +138,28 @@ class HighsTimer {
       printf(" %-3s", clockCh3Names[iClock].c_str());
     }
     printf("\n");
-    printf("txt-profile-clock ");
+    printf("TXT-PROFILE-clock ");
     double suPerMille = 0;
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
       double perMille = 1000.0 * clockTicks[iClock] / totalTick;
       int int_PerMille = (perMille + 0.5);  // Forcing proper rounding
-      printf(" %3d", int_PerMille);
+      if (int_PerMille>0) {
+	printf("%4d", int_PerMille); // Just in case one time is 1000!
+      } else {
+	printf("    "); // Just in case one time is 1000!
+      }
       suPerMille += perMille;
     }
-    int int_suPerMille = suPerMille;
+    int int_suPerMille = (suPerMille + 0.5);  // Forcing proper rounding
     printf(" per mille: Sum = %d", int_suPerMille);
     printf("\n");
     // Report one line per clock, the time, number of calls and time per call
-    printf(
-	   "txt-profile-time ID: Operation       :    Time             :   Calls   "
-	   "Time/Call\n");
+    printf("TXT-PROFILE-time ");
+#ifdef HiGHSDEV
+    printf("ID: ");
+#endif
+    printf("Operation       :    Time             :   Calls   Time/Call\n");
     // Convert approximate seconds
     double tick2sec = 3.6e-10;
     double suTick = 0;
@@ -158,20 +170,32 @@ class HighsTimer {
       double ti = tick2sec * tick;
       double perCent = 100.0 * tick / totalTick;
       double tiPerCall = 0;
-      if (clockNumCall[iClock] > 0) tiPerCall = ti / clockNumCall[iClock];
-      if (perCent >= tlPerCentReport) {
-        printf("txt-profile-time %2d: %-16s: %11.4e (%5.1f%%): %7d %11.4e\n",
-               iClock, clockNames[iClock].c_str(), ti, perCent, clockNumCall[iClock],
-               tiPerCall);
+      if (clockNumCall[iClock] > 0) {
+	tiPerCall = ti / clockNumCall[iClock];
+	if (perCent >= tlPerCentReport) {
+	  printf("TXT-PROFILE-time ");
+#ifdef HiGHSDEV
+	  printf("%2d: ", iClock);
+#endif
+	  printf("%-16s: %11.4e (%5.1f%%): %7d %11.4e\n",
+		 clockNames[iClock].c_str(), ti, perCent, clockNumCall[iClock],
+		 tiPerCall);
+	}
       }
       suTi += ti;
       suTick += tick;
     }
     double perCent = 100.0 * suTick / totalTick;
-    printf("txt-profile-time   : SUM             : %11.4e (%5.1f%%)\n", suTi,
-           perCent);
-    printf("txt-profile-time   : TOTAL           : %11.4e\n",
-           tick2sec * totalTick);
+    printf("TXT-PROFILE-time ");
+#ifdef HiGHSDEV
+    printf("    ");
+#endif
+    printf("SUM             : %11.4e (%5.1f%%)\n", suTi, perCent);
+    printf("TXT-PROFILE-time ");
+#ifdef HiGHSDEV
+    printf("    ");
+#endif
+    printf("TOTAL           : %11.4e\n", tick2sec * totalTick);
     if (reportForExcel) {
       // Repeat reporting for Excel
       printf("grep_excel-profile-name");
@@ -197,6 +221,9 @@ class HighsTimer {
     }
   }
 
+  void reportDualSimplexInnerClock() {report_tl(dualSimplexInnerClockList, 0.0);}
+  void reportDualSimplexOuterClock() {report_tl(dualSimplexOuterClockList, 0.0);}
+  void reportDualSimplexIterateClock() {report_tl(dualSimplexIterateClockList, 0.0);}
   /**
    * @brief Return the wall-clock time since the clocks were reset
    */
@@ -228,7 +255,49 @@ class HighsTimer {
     return ((unsigned long long)a) | (((unsigned long long)d) << 32);
   }
 
- private: 
+  // Clocks for profiling the dual simplex solver
+  int Group1Clock;            //!< Group for SIP
+  int IterateClock;           //!< Top level timing of HDual::solve_phase1() and HDual::solve_phase2()
+  int IterateRebuildClock;   //!< Second level timing of rebuild()
+  int IterateChuzrClock;     //!< Second level timing of CHUZR
+  int IterateChuzcClock;     //!< Second level timing of CHUZC
+  int IterateFtranClock;     //!< Second level timing of FTRAN
+  int IterateVerifyClock;    //!< Second level timing of numerical check
+  int IterateDualClock;      //!< Second level timing of dual update
+  int IteratePrimalClock;    //!< Second level timing of primal update
+  int IterateDevexIzClock;  //!< Second level timing of initialise Devex
+  int IteratePivotsClock;    //!< Second level timing of pivoting
+  int InvertClock;          //!< Invert in rebuild()
+  int PermWtClock;         //!< Permutation of SED weights each side of INVERT in rebuild()
+  int ComputeDualClock;    //!< Computation of dual values in rebuild()
+  int CorrectDualClock;    //!< Correction of dual values in rebuild()
+  int CollectPrIfsClock;  //!< Identification of primal infeasibilities in rebuild()
+  int ComputePrimalClock;  //!< Computation of primal values in rebuild()
+  int ComputeDuobjClock;   //!< Computation of dual objective value in rebuild()
+  int ReportInvertClock;   //!< Reporting of log line in rebuild()
+  int Chuzr1Clock;          //!< CHUZR
+  int Chuzc0Clock;          //!< CHUZC - stage 0
+  int Chuzc1Clock;          //!< CHUZC - stage 1
+  int Chuzc2Clock;          //!< CHUZC - stage 2
+  int Chuzc3Clock;          //!< CHUZC - stage 3
+  int Chuzc4Clock;          //!< CHUZC - stage 4
+  int DevexWtClock;        //!< Calculation of Devex weight of entering variable
+  int FtranClock;           //!< FTRAN - pivotal column
+  int BtranClock;           //!< BTRAN
+  int PriceClock;           //!< PRICE
+  int FtranDseClock;       //!< FTRAN for DSE weights
+  int FtranMixClock;       //!< FTRAN for PAMI
+  int FtranBfrtClock;      //!< FTRAN for BFRT
+  int UpdateDualClock;     //!< Update of dual values
+  int UpdatePrimalClock;   //!< Update of primal values
+  int DevexIzClock;        //!< Initialisation of new Devex framework
+  int UpdateWeightClock;   //!< Update of DSE or Devex weights
+  int UpdatePivotsClock;   //!< Update indices of basic and nonbasic after basis change
+  int UpdateFactorClock;   //!< Update the representation of \f$B^{-1}\f$
+  int UpdateMatrixClock;   //!< Update the row-wise copy of the constraint matrix for nonbasic columns
+  int UpdateRowEpClock;   //!< Update the tableau rows in PAMI
+
+  // private: 
   double startTime;  //!< Elapsed time when the clocks were reset
   double startTick;  //!< CPU ticks when the clocks were reset
 
@@ -242,6 +311,76 @@ class HighsTimer {
   std::vector<double> clockTicks;
   std::vector<std::string> clockNames;
   std::vector<std::string> clockCh3Names;
-};
+  std::vector<int> dualSimplexInnerClockList;
+  std::vector<int> dualSimplexOuterClockList;
+  std::vector<int> dualSimplexIterateClockList;
 
+  /**
+   * @brief Return the current CPU ticks
+   */
+  double initialiseDualSimplexClocks() {
+    Group1Clock = clockDef("GROUP1", "GP1");
+    IterateClock = clockDef("ITERATE", "ITR");
+    IterateRebuildClock = clockDef("REBUILD", "INV");
+    IterateChuzrClock = clockDef("CHUZR", "CZR");
+    IterateChuzcClock = clockDef("CHUZC", "CZC");
+    IterateFtranClock = clockDef("FTRAN", "FTR");
+    IterateVerifyClock = clockDef("VERIFY", "VRF");
+    IterateDualClock = clockDef("DUAL", "UDU");
+    IteratePrimalClock = clockDef("PRIMAL", "UPR");
+    IterateDevexIzClock = clockDef("DEVEX_IZ", "DIZ");
+    IteratePivotsClock = clockDef("PIVOTS", "PIV");
+    InvertClock = clockDef("INVERT", "INV");
+    PermWtClock = clockDef("PERM_WT", "PWT");
+    ComputeDualClock = clockDef("COMPUTE_DUAL", "CPD");
+    CorrectDualClock = clockDef("CORRECT_DUAL", "CRD");
+    CollectPrIfsClock = clockDef("COMPUTE_PRIMAL", "CPP");
+    ComputePrimalClock = clockDef("COLLECT_PR_IFS", "IFS");
+    ComputeDuobjClock = clockDef("COMPUTE_DUOBJ", "DOB");
+    ReportInvertClock = clockDef("REPORT_INVERT", "RPI");
+    Chuzr1Clock = clockDef("CHUZR1", "CR1");
+    Chuzc0Clock = clockDef("CHUZC0", "CC0");
+    Chuzc1Clock = clockDef("CHUZC1", "CC1");
+    Chuzc2Clock = clockDef("CHUZC2", "CC2");
+    Chuzc3Clock = clockDef("CHUZC3", "CC3");
+    Chuzc4Clock = clockDef("CHUZC4", "CC4");
+    DevexWtClock = clockDef("DEVEX_WT", "DWT");
+    FtranClock = clockDef("FTRAN", "COL");
+    BtranClock = clockDef("BTRAN", "REP");
+    PriceClock = clockDef("PRICE", "RAP");
+    FtranDseClock = clockDef("FTRAN_DSE", "DSE");
+    FtranMixClock = clockDef("FTRAN_MIX", "MIX");
+    FtranBfrtClock = clockDef("FTRAN_BFRT", "BFR");
+    UpdateDualClock = clockDef("UPDATE_DUAL", "UPD");
+    UpdatePrimalClock = clockDef("UPDATE_PRIMAL", "UPP");
+    DevexIzClock = clockDef("UPDATE_WEIGHT", "UPW");
+    UpdateWeightClock = clockDef("DEVEX_IZ", "DIZ");
+    UpdatePivotsClock = clockDef("UPDATE_PIVOTS", "UPP");
+    UpdateFactorClock = clockDef("UPDATE_FACTOR", "UPF");
+    UpdateMatrixClock = clockDef("UPDATE_MATRIX", "UPM");
+    UpdateRowEpClock = clockDef("UPDATE_ROW_EP", "UPR");
+
+    dualSimplexInnerClockList = {
+      InvertClock, PermWtClock, ComputeDualClock, 
+	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
+	ComputeDuobjClock, ReportInvertClock, Chuzr1Clock, 
+	BtranClock, PriceClock, Chuzc0Clock, 
+	Chuzc1Clock, Chuzc2Clock, Chuzc3Clock, 
+	Chuzc4Clock, DevexWtClock, FtranClock, 
+	FtranBfrtClock, FtranDseClock, UpdateDualClock, 
+	UpdatePrimalClock, UpdateWeightClock, DevexIzClock, 
+	UpdatePivotsClock, UpdateFactorClock, UpdateMatrixClock
+	};
+
+    dualSimplexOuterClockList = {
+      IterateRebuildClock, IterateChuzrClock, IterateChuzcClock,
+	IterateFtranClock, IterateVerifyClock, IterateDualClock,
+	IteratePrimalClock, IterateDevexIzClock, IteratePivotsClock};
+
+    dualSimplexIterateClockList = {
+      IterateClock
+	};
+
+  }
+};
 #endif /* SIMPLEX_HIGHSTIMER_H_ */
