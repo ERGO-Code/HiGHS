@@ -30,9 +30,6 @@ class Filereader {
   static Filereader* getFilereader(const char* filename);
 
   virtual ~Filereader() {};
-
- private:
-  static void readLineFromFile(FILE* file, char* buffer, int buffersize);
 };
 
 #endif

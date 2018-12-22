@@ -579,7 +579,7 @@ bool FilereaderLp::readNextToken() {
 
   // read string, check if it is a keyword, a variable name, a constraint name,
   // 'free', or infinity (constant)
-  nread = sscanf(this->readingPosition, "%[^][\t\n:+<>=\ -]%n",
+  nread = sscanf(this->readingPosition, "%[^][\t\n:+<>= -]%n",
                  this->stringBuffer, &charactersConsumed);
   if (nread == 1) {
     // check if it is a section keyword
