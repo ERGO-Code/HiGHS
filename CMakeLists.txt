@@ -106,6 +106,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src/presolve
     ${CMAKE_SOURCE_DIR}/src/simplex
     ${CMAKE_SOURCE_DIR}/src/test
+    ${CMAKE_SOURCE_DIR}/src/util
     ${CMAKE_SOURCE_DIR}/src/wrappers
     ${CMAKE_SOURCE_DIR}/include)
 

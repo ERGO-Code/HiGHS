@@ -16,6 +16,11 @@
 
 #include "Filereader.h"
 
+#include "HMPSIO.h"
+//#ifdef Boost_FOUND
+//  #include "HMpsFF.h"
+//#endif
+
 class FilereaderMps : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);

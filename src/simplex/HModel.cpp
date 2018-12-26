@@ -18,6 +18,8 @@
 #include "HToyIO.h"
 #include "HVector.h"
 
+#include "SimplexTimer.h" // For timer
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -80,13 +82,13 @@ int HModel::load_fromToy(const char *filename) {
   totalTime = 0;
 
   // Load the model, timing the process
-  timer.reset();
+  //  timer.reset();
   modelName = filename;
 
   int RtCd = readToy_MIP_cpp(filename, &lp_scaled_->numRow_, &lp_scaled_->numCol_, &lp_scaled_->sense_, &lp_scaled_->offset_,
                              &A, &b, &c, &lb, &ub, &intColumn);
   if (RtCd) {
-    totalTime += timer.getTime();
+    //    totalTime += timer.getTime();
     return RtCd;
   }
   printf("Model has %3d rows and %3d cols\n", lp_scaled_->numRow_, lp_scaled_->numCol_);
@@ -149,7 +151,7 @@ int HModel::load_fromToy(const char *filename) {
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
 
-  totalTime += timer.getTime();
+  //  totalTime += timer.getTime();
   return RtCd;
 }
 
@@ -167,7 +169,7 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   // Initialise the total runtine for this model
   totalTime = 0;
   // Load the model, timing the process
-  timer.reset();
+  //  timer.reset();
 
   /*
   lp_scaled_->numCol_ = XnumCol;
@@ -195,7 +197,7 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
 
-  totalTime += timer.getTime();
+  //  totalTime += timer.getTime();
 }
 
 void HModel::copy_impliedBoundsToModelBounds() {
@@ -721,7 +723,7 @@ void HModel::clearModel() {
 }
 
 void HModel::setup_for_solve() {
-  timer.reset();
+  //  timer.reset();
   if (lp_scaled_->numRow_ == 0) return;
 
   // (Re-)initialise the random number generator and initialise the
@@ -769,7 +771,7 @@ void HModel::setup_for_solve() {
   }
 
   // Save the input time
-  totalTime += timer.getTime();
+  //  totalTime += timer.getTime();
 }
 
 bool HModel::OKtoSolve(int level, int phase) {
@@ -1992,7 +1994,7 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
 int HModel::computeFactor() {
 #ifdef HiGHSDEV
   double tt0 = 0;
-  if (anInvertTime) tt0 = timer.getTime();
+  if (anInvertTime) tt0 = timer_->getTime();
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -2011,7 +2013,7 @@ int HModel::computeFactor() {
 
 #ifdef HiGHSDEV
   if (anInvertTime) {
-    double invertTime = timer.getTime() - tt0;
+    double invertTime = timer_->getTime() - tt0;
     totalInverts++;
     totalInvertTime += invertTime;
     printf(
@@ -2344,22 +2346,25 @@ void HModel::flipBound(int iCol) {
 // called from the likes of HDual::updatePivots
 void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
                           int *hint) {
-  timer.recordStart(HTICK_UPDATE_FACTOR);
+  //  HighsTimer &timer = highs_model_object->timer_;
+  //HighsSimplexInfo &simplex = highs_model_object->simplex_;
+  timer_->start(simplex_->clock_[UpdateFactorClock]);
+  
   factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   mlFg_haveInvert = 1;
   if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
-  timer.recordFinish(HTICK_UPDATE_FACTOR);
+  timer_->stop(simplex_->clock_[UpdateFactorClock]);
 }
 
 void HModel::updateMatrix(int columnIn, int columnOut) {
-  timer.recordStart(HTICK_UPDATE_MATRIX);
+  timer_->start(simplex_->clock_[UpdateMatrixClock]);
   matrix_->update(columnIn, columnOut);
-  timer.recordFinish(HTICK_UPDATE_MATRIX);
+  timer_->stop(simplex_->clock_[UpdateMatrixClock]);
 }
 
 void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
-  timer.recordStart(HTICK_UPDATE_PIVOTS);
+  timer_->start(simplex_->clock_[UpdatePivotsClock]);
   int columnOut = basis_->basicIndex_[rowOut];
 
   // Incoming variable
@@ -2405,7 +2410,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   mlFg_haveFreshInvert = 0;
   // Data are no longer fresh from rebuild
   mlFg_haveFreshRebuild = 0;
-  timer.recordFinish(HTICK_UPDATE_PIVOTS);
+  timer_->stop(simplex_->clock_[UpdatePivotsClock]);
 }
 
 #ifdef HiGHSDEV
@@ -3665,11 +3670,11 @@ void HModel::util_reportSolverProgress() {
   // Reports every 5.0 seconds thereafter
   if (intOption[INTOPT_PRINT_FLAG] != 2) return;
   static double nextReport = 0;
-  double currentTime = timer.getTime();
+  double currentTime = timer_->getTime();
   if (currentTime >= nextReport) {
     computeDualObjectiveValue();
     printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveValue,
-           numberIteration, timer.getTime());
+           numberIteration, timer_->getTime());
     if (currentTime < 50) {
       nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
     } else if (currentTime < 500) {

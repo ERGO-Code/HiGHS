@@ -11,6 +11,7 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+/*
 #ifndef IO_HMPSFF_H_
 #define IO_HMPSFF_H_
 
@@ -27,6 +28,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+/*
 #include <algorithm>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/dynamic_bitset.hpp>
@@ -106,6 +108,7 @@ class MpsParser {
    * data for mps problem
    */
 
+/*
   std::vector<Triplet> entries;
   std::vector<std::pair<int, double>> coeffobj;
   std::vector<double> rowlhs;
@@ -834,3 +837,4 @@ MpsParser::parsekey MpsParser::parseRanges(
 }
 
 #endif /* IO_HMPSFF_H_ */
+*/

@@ -15,7 +15,7 @@
 #include "HDual.h"
 #include "HPrimal.h"
 #include "HModel.h"
-#include "HTimer.h"
+//#include "HTimer.h"
 
 #include <cassert>
 #include <cmath>
@@ -151,7 +151,7 @@ void HDual::major_chooseRow() {
 }
 
 void HDual::major_chooseRowBtran() {
-  model->timer.recordStart(HTICK_BTRAN);
+  //  model->timer.recordStart(HTICK_BTRAN);
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
@@ -185,7 +185,7 @@ void HDual::major_chooseRowBtran() {
   // 4.3 Put back edge weights
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
-  model->timer.recordFinish(HTICK_BTRAN);
+  //  model->timer.recordFinish(HTICK_BTRAN);
 }
 
 void HDual::minor_chooseRow() {
@@ -354,7 +354,7 @@ void HDual::minor_updatePivots() {
 }
 
 void HDual::minor_updateRows() {
-  model->timer.recordStart(HTICK_UPDATE_ROW_EP);
+  //  model->timer.recordStart(HTICK_UPDATE_ROW_EP);
   const HVector *Row = multi_finish[multi_nFinish].row_ep;
   int updateRows_inDense = (Row->count < 0) || (Row->count > 0.1 * numRow);
   if (updateRows_inDense) {
@@ -408,7 +408,7 @@ void HDual::minor_updateRows() {
       }
     }
   }
-  model->timer.recordFinish(HTICK_UPDATE_ROW_EP);
+  //  model->timer.recordFinish(HTICK_UPDATE_ROW_EP);
 }
 
 void HDual::major_update() {
@@ -488,7 +488,7 @@ void HDual::major_updateFtranPrepare() {
 }
 
 void HDual::major_updateFtranParallel() {
-  model->timer.recordStart(HTICK_FTRAN_MIX);
+  //  model->timer.recordStart(HTICK_FTRAN_MIX);
 
   // Prepare buffers
   int multi_ntasks = 0;
@@ -536,11 +536,11 @@ void HDual::major_updateFtranParallel() {
     columnDensity = 0.95 * columnDensity + 0.05 * Col->count / numRow;
     rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / numRow;
   }
-  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  //  model->timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::major_updateFtranFinal() {
-  model->timer.recordStart(HTICK_FTRAN_MIX);
+  //  model->timer.recordStart(HTICK_FTRAN_MIX);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -596,7 +596,7 @@ void HDual::major_updateFtranFinal() {
       }
     }
   }
-  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  //  model->timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::major_updatePrimal() {

@@ -16,14 +16,18 @@
 
 #include "HFactor.h"
 #include "HMatrix.h"
-#include "HTimer.h"
+//#include "HTimer.h"
 #include "HighsLp.h"
+#include "HighsTimer.h" //For timer_
 #include "HighsUtils.h"
 class HVector;
 
 #include <sstream>
 #include <string>
 #include <vector>
+
+// After removing HTimer.h add the following
+using std::string;
 
 const int LP_Status_Unset = -1;
 const int LP_Status_Optimal = 0;
@@ -336,7 +340,7 @@ class HModel {
   HighsUtils utils;
 
   // The time and timer
-  HTimer timer;
+  //  HTimer timer;
   double totalTime;
 
   // Perturbation flag
@@ -472,6 +476,7 @@ class HModel {
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
+  HighsTimer *timer_;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

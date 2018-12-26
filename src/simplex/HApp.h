@@ -110,7 +110,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.setEdWt(opt.edWtMode.c_str());
     solver.setTimeLimit(opt.timeLimit);
 
-    model.timer.reset();
+    //    model.timer.reset();
 
     //  bool FourThreads = true;
     bool FourThreads = false;
@@ -124,8 +124,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     else
       solver.solve(highs_model);
 
-    lcSolveTime = model.timer.getTime();
-    solveTime += lcSolveTime;
+    //    lcSolveTime = model.timer.getTime();
+    //    solveTime += lcSolveTime;
     solveIt += model.numberIteration;
 
 #ifdef HiGHSDEV
@@ -151,7 +151,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
       if (model.problemStatus != LP_Status_OutOfTime) {
         model.copy_savedBoundsToModelBounds();
 
-        model.timer.reset();
+	//        model.timer.reset();
         solver.solve(highs_model);
  /*       lcSolveTime = model.timer.getTime();
         solveTime += lcSolveTime;
