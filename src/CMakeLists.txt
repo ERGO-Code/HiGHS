@@ -69,13 +69,13 @@ set(headers
     simplex/HSort.h
     simplex/Scaling.h
     presolve/Presolve.h
-    simplex/HighsTimer.h
-    simplex/HTimer.h
+#    simplex/HTimer.h
     simplex/HTimerPre.h
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsTimer.h
 )
 
 
