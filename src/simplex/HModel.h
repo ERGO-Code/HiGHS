@@ -16,7 +16,6 @@
 
 #include "HFactor.h"
 #include "HMatrix.h"
-//#include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsTimer.h" //For timer_
 #include "HighsUtils.h"
@@ -340,8 +339,7 @@ class HModel {
   HighsUtils utils;
 
   // The time and timer
-  //  HTimer timer;
-  double totalTime;
+  //  double totalTime;
 
   // Perturbation flag
   int problemPerturbed;
@@ -477,6 +475,7 @@ class HModel {
   HighsScale *scale_;
   HighsRanging *ranging_;
   HighsTimer *timer_;
+  int modelTotalClock;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

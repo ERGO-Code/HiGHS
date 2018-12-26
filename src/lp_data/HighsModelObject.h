@@ -33,6 +33,9 @@ public:
   HMatrix matrix_;
   HFactor factor_;
   HighsTimer timer_;
+  int modelTotalClock;
+  double modelTotalInvertTime;
+  double modelTotalRebuildTime;
 
   BasisInfo basis_info_;
 

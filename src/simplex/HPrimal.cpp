@@ -56,7 +56,8 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 
   model->util_reportMessage("primal-start");
 
-  double lc_totalTime = model->totalTime + model->timer_->getTime();
+  HighsTimer &timer = *(model->timer_);
+  double lc_totalTime = timer.read(model->modelTotalClock);
 
   // Main solving structure
   for (;;) {
@@ -89,7 +90,7 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
       }
     }
 
-    lc_totalTime = model->totalTime + model->timer_->getTime();
+    lc_totalTime = timer.read(model->modelTotalClock);
     //	printf("Primal Ph2: lc_totalTime = %5.2f\n", lc_totalTime);
     if (lc_totalTime > TimeLimitValue) {
       model->problemStatus = LP_Status_OutOfTime;

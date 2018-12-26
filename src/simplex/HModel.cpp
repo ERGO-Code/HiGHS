@@ -65,9 +65,6 @@ HModel::HModel() {
   strOption[STROPT_PARTITION_FILE] = "";
 
   clearModel();
-
-  // Initialise the total runtine for this model
-  totalTime = 0;
 }
 
 int HModel::load_fromToy(const char *filename) {
@@ -78,9 +75,6 @@ int HModel::load_fromToy(const char *filename) {
   // Remove any current model
   clearModel();
 
-  // Initialise the total runtine for this model
-  totalTime = 0;
-
   // Load the model, timing the process
   //  timer.reset();
   modelName = filename;
@@ -88,7 +82,6 @@ int HModel::load_fromToy(const char *filename) {
   int RtCd = readToy_MIP_cpp(filename, &lp_scaled_->numRow_, &lp_scaled_->numCol_, &lp_scaled_->sense_, &lp_scaled_->offset_,
                              &A, &b, &c, &lb, &ub, &intColumn);
   if (RtCd) {
-    //    totalTime += timer.getTime();
     return RtCd;
   }
   printf("Model has %3d rows and %3d cols\n", lp_scaled_->numRow_, lp_scaled_->numCol_);
@@ -151,7 +144,6 @@ int HModel::load_fromToy(const char *filename) {
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
 
-  //  totalTime += timer.getTime();
   return RtCd;
 }
 
@@ -165,11 +157,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   //  XnumCol, XnumRow, XnumNz);
   assert(XnumCol > 0);
   assert(XnumRow > 0);
-
-  // Initialise the total runtine for this model
-  totalTime = 0;
-  // Load the model, timing the process
-  //  timer.reset();
 
   /*
   lp_scaled_->numCol_ = XnumCol;
@@ -196,8 +183,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
-
-  //  totalTime += timer.getTime();
 }
 
 void HModel::copy_impliedBoundsToModelBounds() {
@@ -769,9 +754,6 @@ void HModel::setup_for_solve() {
     mlFg_haveFactorArrays = 1;
     limitUpdate = 5000;
   }
-
-  // Save the input time
-  //  totalTime += timer.getTime();
 }
 
 bool HModel::OKtoSolve(int level, int phase) {
@@ -2516,7 +2498,8 @@ void HModel::writePivots(const char *suffix) {
   string filename = "z-" + modelName + "-" + suffix;
   ofstream output(filename.c_str());
   int count = historyColumnIn.size();
-  output << modelName << " " << count << "\t" << totalTime << endl;
+  double modelTotalTime = timer_->read(modelTotalClock);
+  output << modelName << " " << count << "\t" << modelTotalTime << endl;
   output << setprecision(12);
   for (int i = 0; i < count; i++) {
     output << historyColumnIn[i] << "\t";
@@ -3648,10 +3631,11 @@ void HModel::util_reportSolverOutcome(const char *message) {
       abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
          modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
-         totalTime);
+         modelTotalTime);
 #else
+  double modelTotalTime = timer_->read(modelTotalClock);
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
-         numberIteration, totalTime);
+         numberIteration, modelTotalTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
     printf("\n");
@@ -3661,7 +3645,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
   }
   // Greppable report line added
   printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
-         totalTime, problemStatus, modelName.c_str());
+         modelTotalTime, problemStatus, modelName.c_str());
 }
 
 void HModel::util_reportSolverProgress() {
