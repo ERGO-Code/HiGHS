@@ -18,7 +18,12 @@
 
 // Clocks for profiling the dual simplex solver
 enum iClockSimplex {
-  Group1Clock = 0,            //!< Group for SIP
+  SimplexTotalClock = 0, //!< Total time for simplex
+  SimplexIzDseWtClock, //!< Total time to initialise DSE weights
+  SimplexDualPhase1Clock, //!< Total time for dual simplex phase 1
+  SimplexDualPhase2Clock, //!< Total time for dual simplex phase 2
+  SimplexPrimalPhase2Clock, //!< Total time for primal simplex phase 2
+  Group1Clock,            //!< Group for SIP
   IterateClock,           //!< Top level timing of HDual::solve_phase1() and HDual::solve_phase2()
   IterateRebuildClock,   //!< Second level timing of rebuild()
   IterateChuzrClock,     //!< Second level timing of CHUZR
@@ -67,6 +72,11 @@ class SimplexTimer {
   HighsTimer & timer = model_object.timer_;
   HighsSimplexInfo & simplex = model_object.simplex_;
   simplex.clock_.resize(SimplexNumClock);
+  simplex.clock_[SimplexTotalClock] = timer.clockDef("Simplex total", "STT");
+  simplex.clock_[SimplexIzDseWtClock] = timer.clockDef("Iz DSE Wt", "IWT");
+  simplex.clock_[SimplexDualPhase1Clock] = timer.clockDef("Dual Phase 1", "DP1");
+  simplex.clock_[SimplexDualPhase2Clock] = timer.clockDef("Dual Phase 2", "DP2");
+  simplex.clock_[SimplexPrimalPhase2Clock] = timer.clockDef("Primal Phase 2", "PP2");
   simplex.clock_[Group1Clock] = timer.clockDef("GROUP1", "GP1");
   simplex.clock_[IterateClock] = timer.clockDef("ITERATE", "ITR");
   simplex.clock_[IterateRebuildClock] = timer.clockDef("REBUILD", "INV");
@@ -119,6 +129,21 @@ void reportSimplexClockList(std::vector<int> simplexClockList, HighsModelObject 
     clockList[en] = simplex.clock_[simplexClockList[en]];
   }
   timer.report_tl(clockList, 0.0);
+};
+
+void reportSimplexTotalClock(HighsModelObject & model_object) {
+  std::vector<int> simplexClockList{
+    SimplexTotalClock
+      };
+  reportSimplexClockList(simplexClockList, model_object);
+};
+
+void reportSimplexPhasesClock(HighsModelObject & model_object) {
+  std::vector<int> simplexClockList{
+    SimplexIzDseWtClock,
+      SimplexDualPhase1Clock, SimplexDualPhase2Clock, SimplexPrimalPhase2Clock
+      };
+  reportSimplexClockList(simplexClockList, model_object);
 };
 
 void reportDualSimplexIterateClock(HighsModelObject & model_object) {

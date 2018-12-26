@@ -111,6 +111,25 @@ class HighsTimer {
   }
 
   /**
+   * @brief Read a clock
+   */
+  double read(
+	    int iClock  //!< Index of the clock to be read
+  ) {
+    assert(iClock >= 0);
+    assert(iClock < numClock);
+    double readTick;
+    if (clockStart[iClock] < 0) {
+      // The clock's been started, so find the current time
+      double wallTick = getWallTick();
+      readTick = wallTick + clockStart[iClock];
+    } else {
+      readTick = clockTicks[iClock];
+    }
+    return readTick;
+  }
+
+  /**
    * @brief Report timing information for the clock indices in the list
    */
   void report(
@@ -141,6 +160,19 @@ class HighsTimer {
     double suPerMille = 0;
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
+      assert(iClock >= 0);
+      assert(iClock < numClock);
+      // Check that the clock's not still running. It should be set to
+      // getWallTick() >= 0 (or initialised to initialClockStart > 0)
+#ifdef HiGHSDEV
+      if (clockStart[iClock] <= 0) {
+	printf("Clock %2d is still running: Start = %11.4g: Ticks = %11.4g: NumCall = %d\n",
+	       iClock, clockStart[iClock], clockTicks[iClock],
+	       clockNumCall[iClock]);
+	fflush(stdout);
+      }
+#endif
+      assert(clockStart[iClock] > 0);
       double perMille = 1000.0 * clockTicks[iClock] / totalTick;
       int int_PerMille = (perMille + 0.5);  // Forcing proper rounding
       if (int_PerMille>0) {

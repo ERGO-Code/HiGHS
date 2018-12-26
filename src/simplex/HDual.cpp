@@ -24,7 +24,6 @@
 #include "HConst.h"
 #include "HCrash.h"
 #include "HPrimal.h"
-//#include "HTimer.h"
 #include "HighsLp.h"
 #include "HighsIO.h"
 #include "HighsModelObject.h"
@@ -41,6 +40,8 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
   model->scale_ = &ref_highs_model_object.scale_;
+
+  HighsSimplexInfo &simplex = ref_highs_model_object.simplex_;
   HighsTimer &timer = ref_highs_model_object.timer_;
   model->timer_ = &timer;
   //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
@@ -63,18 +64,13 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 #endif
   // Cannot solve box-constrained LPs
   if (model->lp_scaled_->numRow_ == 0) return;
-  //  model->timer.reset();
-
+  timer.start(simplex.clock_[SimplexTotalClock]);
   n_ph1_du_it = 0;
   n_ph2_du_it = 0;
   n_pr_it = 0;
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
   SolveBailout = false;
-
-  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report TimeLimitValue   on entry to HDual::solve() as %12g\n", TimeLimitValue);
-  //  HighsOptions options;
-  //  HighsPrintMessage(HighsMessageType::INFO, "Using HighsPrintMessage to report option.timeLimit on entry to HDual::solve() as %12g\n", options.timeLimit);
 
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
@@ -142,8 +138,8 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
         // Basis is not logical and DSE weights are to be initialised
 #ifdef HiGHSDEV
         printf("Compute exact DSE weights\n");  // int RpI = 1;
-	double IzDseEdWtTT = timer.getTime();
-	printf("IzDseEdWtTT = %g\n", IzDseEdWtTT); fflush(stdout);
+	int iClock = simplex.clock_[SimplexIzDseWtClock];
+	timer.start(iClock);
 #endif
         for (int i = 0; i < numRow; i++) {
 #ifdef HiGHSDEV
@@ -161,14 +157,15 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
           uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
         }
 #ifdef HiGHSDEV
-        IzDseEdWtTT = timer.getTime() - IzDseEdWtTT;
-        printf("Computed %d initial DSE weights in %gs\n", numRow, IzDseEdWtTT);
+	timer.stop(iClock);
+        double IzDseWtTT = timer.read(iClock);
+        printf("Computed %d initial DSE weights in %gs\n", numRow, IzDseWtTT);
         if (model->intOption[INTOPT_PRINT_FLAG])
           printf(
               "solve:: %d basic structurals: computed %d initial DSE weights "
               "in %gs, %d, %d, %g\n",
-              numBasicStructurals, numRow, IzDseEdWtTT, numBasicStructurals,
-              numRow, IzDseEdWtTT);
+              numBasicStructurals, numRow, IzDseWtTT, numBasicStructurals,
+              numRow, IzDseWtTT);
 #endif
       }
 #ifdef HiGHSDEV
@@ -248,8 +245,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   while (solvePhase) {
 #ifdef HiGHSDEV
     int it0 = model->numberIteration;
-    // printf("HDual::solve Phase %d: Iteration %d; totalTime = %g; timer.getTime = %g\n",
-    // solvePhase, model->numberIteration, model->totalTime, model->timer.getTime());cout<<flush;
+    double simplexTotalTime = timer.read(simplex.clock_[SimplexTotalClock]);
+    // printf("HDual::solve Phase %d: Iteration %d; simplexTotalTime = %g\n",
+    // solvePhase, model->numberIteration, simplexTotalTime);cout<<flush;
 #endif
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
@@ -258,13 +256,17 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     model->mlFg_haveDualObjectiveValue = 0;
     switch (solvePhase) {
       case 1:
+	timer.start(simplex.clock_[SimplexDualPhase1Clock]);
         solve_phase1();
+	timer.stop(simplex.clock_[SimplexDualPhase1Clock]);
 #ifdef HiGHSDEV
         n_ph1_du_it += (model->numberIteration - it0);
 #endif
         break;
       case 2:
+	timer.start(simplex.clock_[SimplexDualPhase2Clock]);
         solve_phase2();
+	timer.stop(simplex.clock_[SimplexDualPhase2Clock]);
 #ifdef HiGHSDEV
         n_ph2_du_it += (model->numberIteration - it0);
 #endif
@@ -330,7 +332,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     if (solvePhase == 4) {
       HPrimal hPrimal;
       hPrimal.TimeLimitValue = TimeLimitValue;
+      timer.start(simplex.clock_[SimplexPrimalPhase2Clock]);
       hPrimal.solvePhase2(highs_model_object);
+      timer.stop(simplex.clock_[SimplexPrimalPhase2Clock]);
       // Add in the count and time for any primal rebuilds
 #ifdef HiGHSDEV
       totalRebuildTime += hPrimal.totalRebuildTime;
@@ -342,8 +346,6 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 #endif
   }
   // Save the solved results
-  //  model->totalTime += model->timer.getTime();
-
 #ifdef HiGHSDEV
   if (n_ph1_du_it + n_ph2_du_it + n_pr_it != model->numberIteration) {
     printf("Iteration total error \n");
@@ -373,6 +375,14 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   //  printf("model->mlFg_Report() 9\n");cout<<flush;
   //  model->mlFg_Report();cout<<flush;
 #endif
+  timer.stop(simplex.clock_[SimplexTotalClock]);
+  double simplexTotalTime = timer.read(simplex.clock_[SimplexTotalClock]);
+
+  bool rpSimplexPhasesClock = true;
+  if (rpSimplexPhasesClock) {
+    simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
+    simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
+  }
 
 #ifdef HiGHSDEV
   if (model->anInvertTime) {
