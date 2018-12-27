@@ -2498,7 +2498,7 @@ void HModel::writePivots(const char *suffix) {
   string filename = "z-" + modelName + "-" + suffix;
   ofstream output(filename.c_str());
   int count = historyColumnIn.size();
-  double modelTotalTime = timer_->read(modelTotalClock);
+  double modelTotalTime = 0;//timer_->read(modelTotalClock);
   output << modelName << " " << count << "\t" << modelTotalTime << endl;
   output << setprecision(12);
   for (int i = 0; i < count; i++) {
@@ -3633,7 +3633,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
          modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
          modelTotalTime);
 #else
-  double modelTotalTime = timer_->read(modelTotalClock);
+  double modelTotalTime = 0;//timer_->read(modelTotalClock);
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
          numberIteration, modelTotalTime);
 #endif

@@ -386,7 +386,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
 #ifdef HiGHSDEV
   if (model->anInvertTime) {
-    double modelTotalTime = timer.read(ref_highs_model_object.modelTotalClock);
+    double modelTotalTime = 0;//timer.read(ref_highs_model_object.modelTotalClock);
     printf(
         "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
         "= %11.4g",
@@ -532,7 +532,7 @@ void HDual::solve_phase1() {
   // Switch to dual phase 1 bounds
   model->initBound(1);
   model->initValue();
-  double lc_totalTime = timer.read(highs_model_object->modelTotalClock);
+  double lc_totalTime = 0;//timer.read(highs_model_object->modelTotalClock);
 #ifdef HiGHSDEV
   // int lc_totalTime_rp_n = 0; printf("DualPh1: lc_totalTime = %5.2f; Record
   // %d\n", lc_totalTime, lc_totalTime_rp_n);
@@ -641,7 +641,7 @@ void HDual::solve_phase2() {
 
   // Collect free variables
   dualRow.create_Freelist();
-  double lc_totalTime = timer.read(highs_model_object->modelTotalClock);
+  double lc_totalTime = 0;//timer.read(highs_model_object->modelTotalClock);
 #ifdef HiGHSDEV
   //  int lc_totalTime_rp_n = 0; printf("DualPh2: lc_totalTime = %5.2f; Record
   //  %d\n", lc_totalTime, lc_totalTime_rp_n);
