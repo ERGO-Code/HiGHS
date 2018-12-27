@@ -111,7 +111,7 @@ class HighsTimer {
   }
 
   /**
-   * @brief Read a clock
+   * @brief Read the time of a clock
    */
   double read(
 	    int iClock  //!< Index of the clock to be read
@@ -126,7 +126,8 @@ class HighsTimer {
     } else {
       readTick = clockTicks[iClock];
     }
-    return readTick;
+    double readTime = readTick*tick2sec;
+    return readTime;
   }
 
   /**
@@ -192,7 +193,6 @@ class HighsTimer {
 #endif
     printf("Operation       :    Time             :   Calls   Time/Call\n");
     // Convert approximate seconds
-    double tick2sec = 3.6e-10;
     double suTick = 0;
     double suTi = 0;
     for (int i = 0; i < numClockListEntries; i++) {
@@ -297,5 +297,6 @@ class HighsTimer {
   std::vector<double> clockTicks;
   std::vector<std::string> clockNames;
   std::vector<std::string> clockCh3Names;
+  const double tick2sec = 3.6e-10;
 };
 #endif /* UTIL_HIGHSTIMER_H_ */
