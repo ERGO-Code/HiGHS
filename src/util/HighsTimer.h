@@ -30,7 +30,7 @@ class HighsTimer {
     startTick = getWallTick();
     numClock = 0;
     int iClock = clockDef("HiGHS Run","Run");
-    assert(iClock==0);
+    assert(iClock == 0);
     runClockTime = 0;
     runClockStartTime = initialClockStart;
   }
@@ -87,14 +87,17 @@ class HighsTimer {
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
     clockStart[iClock] = -getWallTick();
-    if (iClock = 0) {
+    if (iClock == 0) {
       assert(runClockStartTime > 0);
       // The HiGHS run clock's being started
       double wallTime = getWallTime();
       // Set the HiGHS run clock start to be the negation of WallTime to check that the clock's been
       // started when it's next stopped
       runClockStartTime = -wallTime;
+      printf("Set runClockStartTime = %g\n", runClockStartTime);
     }
+    if (iClock == 0) printf("start() iClock = 0 - clockTicks = %g; clockStart = %g, runClockStartTime = %g\n",
+			    clockTicks[0], clockStart[0], runClockStartTime);
   }
 
   /**
@@ -120,7 +123,7 @@ class HighsTimer {
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
     clockStart[iClock] = wallTick;
-    if (iClock = 0) {
+    if (iClock == 0) {
       // The HiGHS run clock's being stopped: get the wall time to update tick2sec
       double wallTime = getWallTime();
       runClockTime += (wallTime + runClockStartTime);
@@ -132,6 +135,8 @@ class HighsTimer {
       // stopped when it's next started
       runClockStartTime = wallTime;
     }
+    if (iClock == 0) printf("stop() iClock = 0 - clockTicks = %g; clockStart = %g, runClockStartTime = %g\n",
+			    clockTicks[0], clockStart[0], runClockStartTime);
   }
 
   /**
@@ -148,7 +153,7 @@ class HighsTimer {
       // The clock's been started, so find the current time
       wallTick = getWallTick();
       readTick = wallTick + clockStart[iClock];
-      if (iClock = 0) {
+      if (iClock == 0) {
 	// The HiGHS run clock's being read: get the wall time to update tick2sec
 	double wallTime = getWallTime();
 	double currentRunClockTime = runClockTime + (wallTime + runClockStartTime);
@@ -163,6 +168,8 @@ class HighsTimer {
     }
     double readTime = readTick*tick2sec;
     return readTime;
+    if (iClock == 0) printf("read() iClock = 0 - clockTicks = %g; clockStart = %g, runClockStartTime = %g\n",
+			    clockTicks[0], clockStart[0], runClockStartTime);
   }
 
   /**
