@@ -425,7 +425,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   const HighsLp& lp_ = highs_model.lp_;
 
   // Give model the HiGHS Model Object run clock for timeout purposes
-  model.modelTotalClock = highs_model.modelTotalClock;
+  //  model.modelTotalClock = highs_model.modelTotalClock;
 
   // Allocate memory for the basis
   // assignBasis();

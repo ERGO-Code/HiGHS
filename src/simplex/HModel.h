@@ -475,7 +475,7 @@ class HModel {
   HighsScale *scale_;
   HighsRanging *ranging_;
   HighsTimer *timer_;
-  int modelTotalClock;
+  //  int modelTotalClock;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

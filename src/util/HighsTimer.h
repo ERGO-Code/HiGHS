@@ -29,6 +29,10 @@ class HighsTimer {
     startTime = getWallTime();
     startTick = getWallTick();
     numClock = 0;
+    int iClock = clockDef("HiGHS Run","Run");
+    assert(iClock==0);
+    runClockTime = 0;
+    runClockStartTime = initialClockStart;
   }
 
   /**
@@ -65,7 +69,7 @@ class HighsTimer {
    * @brief Start a clock
    */
   void start(
-	     int iClock  //!< Index of the clock to be started
+	     int iClock = 0 //!< Index of the clock to be started (Default being HiGHS run clock)
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
@@ -81,15 +85,23 @@ class HighsTimer {
 #endif
     assert(clockStart[iClock] > 0);
     // Set the start to be the negation of the WallTick to check that
-    // the clock's been started in recordFinish
+    // the clock's been started when it's next stopped
     clockStart[iClock] = -getWallTick();
+    if (iClock = 0) {
+      assert(runClockStartTime > 0);
+      // The HiGHS run clock's being started
+      double wallTime = getWallTime();
+      // Set the HiGHS run clock start to be the negation of WallTime to check that the clock's been
+      // started when it's next stopped
+      runClockStartTime = -wallTime;
+    }
   }
 
   /**
    * @brief Stop a clock
    */
   void stop(
-	    int iClock  //!< Index of the clock to be stopped
+	    int iClock = 0 //!< Index of the clock to be stopped (Default being HiGHS run clock)
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
@@ -106,24 +118,47 @@ class HighsTimer {
     clockTicks[iClock] += (wallTick + clockStart[iClock]);
     clockNumCall[iClock]++;
     // Set the start to be the WallTick to check that the clock's been
-    // stopped in recordStart
+    // stopped when it's next started
     clockStart[iClock] = wallTick;
+    if (iClock = 0) {
+      // The HiGHS run clock's being stopped: get the wall time to update tick2sec
+      double wallTime = getWallTime();
+      runClockTime += (wallTime + runClockStartTime);
+      if (runClockTime > 1e-2) {
+	double NWtick2sec = runClockTime/clockTicks[0];
+	printf("Updating tick2sec = %12g to %12g\n", tick2sec, NWtick2sec);
+      }
+      // Set the HiGHS run clock start to be the WallTime to check that the clock's been
+      // stopped when it's next started
+      runClockStartTime = wallTime;
+    }
   }
 
   /**
    * @brief Read the time of a clock
    */
   double read(
-	    int iClock  //!< Index of the clock to be read
+	    int iClock = 0 //!< Index of the clock to be read (Default being HiGHS run clock)
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
     double readTick;
+    double wallTick;
     if (clockStart[iClock] < 0) {
       // The clock's been started, so find the current time
-      double wallTick = getWallTick();
+      wallTick = getWallTick();
       readTick = wallTick + clockStart[iClock];
+      if (iClock = 0) {
+	// The HiGHS run clock's being read: get the wall time to update tick2sec
+	double wallTime = getWallTime();
+	double currentRunClockTime = runClockTime + (wallTime + runClockStartTime);
+	if (currentRunClockTime > 1e-2) {
+	  double NWtick2sec = currentRunClockTime/readTick;
+	  printf("Updating tick2sec = %12g to %12g\n", tick2sec, NWtick2sec);
+	}
+      }
     } else {
+      // The clock is currently stopped, so read the current time
       readTick = clockTicks[iClock];
     }
     double readTime = readTick*tick2sec;
@@ -286,17 +321,17 @@ class HighsTimer {
   // private: 
   double startTime;  //!< Elapsed time when the clocks were reset
   double startTick;  //!< CPU ticks when the clocks were reset
+  double runClockTime; //!< HiGHS run time - used to scale ticks to time
+  double runClockStartTime; //!< HiGHS run start time - used to compute HiGHS run time
 
-  const double initialClockStart = 1.0; //!< Dummy positive start time
-					//!for clocks - so they can be
-					//!checked as having been
-					//!stopped
+  const double initialClockStart = 1.0; //!< Dummy positive start ticks for clocks - so they can be
+					//!checked as having been stopped
   int numClock;
   std::vector<int> clockNumCall;
   std::vector<double> clockStart;
   std::vector<double> clockTicks;
   std::vector<std::string> clockNames;
   std::vector<std::string> clockCh3Names;
-  const double tick2sec = 3.6e-10;
+  double tick2sec = 3.6e-10;
 };
 #endif /* UTIL_HIGHSTIMER_H_ */
