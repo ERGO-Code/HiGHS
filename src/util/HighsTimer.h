@@ -29,10 +29,11 @@ class HighsTimer {
     startTime = getWallTime();
     startTick = getWallTick();
     numClock = 0;
-    int iClock = clockDef("HiGHS Run","Run");
+    int iClock = clockDef("Run HiGHS","RnH");
     assert(iClock == 0);
-    runClockTime = 0;
-    runClockStartTime = initialClockStart;
+    runHighsClock = iClock;
+    runHighsClockTime = 0;
+    runHighsClockStartTime = initialClockStart;
   }
 
   /**
@@ -69,7 +70,7 @@ class HighsTimer {
    * @brief Start a clock
    */
   void start(
-	     int iClock = 0 //!< Index of the clock to be started (Default being HiGHS run clock)
+	     int iClock //!< Index of the clock to be started
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
@@ -87,34 +88,25 @@ class HighsTimer {
     // Set the start to be the negation of the WallTick to check that
     // the clock's been started when it's next stopped
     clockStart[iClock] = -getWallTick();
-    if (iClock == 0) {
-      assert(runClockStartTime > 0);
-      // The HiGHS run clock's being started
-      double wallTime = getWallTime();
-      // Set the HiGHS run clock start to be the negation of WallTime to check that the clock's been
-      // started when it's next stopped
-      runClockStartTime = -wallTime;
-      printf("Set runClockStartTime = %g\n", runClockStartTime);
-    }
-    if (iClock == 0) printf("start() iClock = 0 - clockTicks = %g; clockStart = %g, runClockStartTime = %g\n",
-			    clockTicks[0], clockStart[0], runClockStartTime);
   }
 
   /**
    * @brief Stop a clock
    */
   void stop(
-	    int iClock = 0 //!< Index of the clock to be stopped (Default being HiGHS run clock)
+	    int iClock //!< Index of the clock to be stopped
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
     // Check that the clock's been started. It should be set to
     // -getWallTick() <= 0
 #ifdef HiGHSDEV
-    if (clockStart[iClock] > 0)
+    if (clockStart[iClock] > 0) {
       printf("recordFinish[%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
              iClock, clockStart[iClock], clockTicks[iClock],
              clockNumCall[iClock]);
+      fflush(stdout);
+    }
 #endif
     assert(clockStart[iClock] < 0);
     double wallTick = getWallTick();
@@ -123,27 +115,13 @@ class HighsTimer {
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
     clockStart[iClock] = wallTick;
-    if (iClock == 0) {
-      // The HiGHS run clock's being stopped: get the wall time to update tick2sec
-      double wallTime = getWallTime();
-      runClockTime += (wallTime + runClockStartTime);
-      if (runClockTime > 1e-2) {
-	double NWtick2sec = runClockTime/clockTicks[0];
-	printf("Updating tick2sec = %12g to %12g\n", tick2sec, NWtick2sec);
-      }
-      // Set the HiGHS run clock start to be the WallTime to check that the clock's been
-      // stopped when it's next started
-      runClockStartTime = wallTime;
-    }
-    if (iClock == 0) printf("stop() iClock = 0 - clockTicks = %g; clockStart = %g, runClockStartTime = %g\n",
-			    clockTicks[0], clockStart[0], runClockStartTime);
   }
 
   /**
    * @brief Read the time of a clock
    */
   double read(
-	    int iClock = 0 //!< Index of the clock to be read (Default being HiGHS run clock)
+	    int iClock //!< Index of the clock to be read
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
@@ -153,24 +131,83 @@ class HighsTimer {
       // The clock's been started, so find the current time
       wallTick = getWallTick();
       readTick = wallTick + clockStart[iClock];
-      if (iClock == 0) {
-	// The HiGHS run clock's being read: get the wall time to update tick2sec
-	double wallTime = getWallTime();
-	double currentRunClockTime = runClockTime + (wallTime + runClockStartTime);
-	if (currentRunClockTime > 1e-2) {
-	  double NWtick2sec = currentRunClockTime/readTick;
-	  printf("Updating tick2sec = %12g to %12g\n", tick2sec, NWtick2sec);
-	}
-      }
     } else {
       // The clock is currently stopped, so read the current time
       readTick = clockTicks[iClock];
     }
     double readTime = readTick*tick2sec;
     return readTime;
-    if (iClock == 0) printf("read() iClock = 0 - clockTicks = %g; clockStart = %g, runClockStartTime = %g\n",
-			    clockTicks[0], clockStart[0], runClockStartTime);
   }
+
+  /**
+   * @brief Start the RunHighs clock
+   */
+  void startRunHighsClock() {
+    start(runHighsClock);
+    assert(runHighsClockStartTime > 0);
+    double wallTime = getWallTime();
+    // Set the clock start to be the negation of WallTime to check that the clock's been
+    // started when it's next stopped
+    runHighsClockStartTime = -wallTime;
+    //    printf("Set runHighsClockStartTime = %g\n", runHighsClockStartTime);
+    //    printf("startRunHighsClock() clockTicks = %g; clockStart = %g, runHighsClockStartTime = %g\n",
+    //	   clockTicks[runHighsClock], clockStart[runHighsClock], runHighsClockStartTime);
+  }
+
+  /**
+   * @brief Stop the RunHighs clock
+   */
+  void stopRunHighsClock() {
+    stop(runHighsClock);
+    // Get the wall time to update tick2sec
+    double wallTime = getWallTime();
+    runHighsClockTime += (wallTime + runHighsClockStartTime);
+    if (runHighsClockTime > 1e-2) {
+      double NWtick2sec = runHighsClockTime/clockTicks[runHighsClock];
+      //      printf("Updating tick2sec = %12g to %12g\n", tick2sec, NWtick2sec);
+      tick2sec = NWtick2sec;
+    }
+    // Set the clock start to be the WallTime to check that the clock's been
+    // stopped when it's next started
+    runHighsClockStartTime = wallTime;
+    //    printf("stopRunHighsClock() clockTicks = %g; clockStart = %g, runHighsClockStartTime = %g\n",
+    //	   clockTicks[runHighsClock], clockStart[runHighsClock], runHighsClockStartTime);
+  }
+
+  /**
+   * @brief Read the RunHighs clock
+   */
+  double readRunHighsClock() {
+    int iClock = runHighsClock;
+    double readTick;
+    double wallTick;
+    if (clockStart[iClock] < 0) {
+      // The clock's been started, so find the current time
+      wallTick = getWallTick();
+      readTick = wallTick + clockStart[iClock];
+
+      // Get the wall time to update tick2sec
+      double wallTime = getWallTime();
+      double currentRunClockTime = runHighsClockTime + (wallTime + runHighsClockStartTime);
+      if (currentRunClockTime > 1e-2) {
+	double NWtick2sec = currentRunClockTime/readTick;
+	//	printf("Updating tick2sec = %12g to %12g/%12g = %12g\n", tick2sec, currentRunClockTime, readTick, NWtick2sec);
+	tick2sec = NWtick2sec;
+      }
+    } else {
+      // The clock is currently stopped, so read the current time
+      readTick = clockTicks[iClock];
+    }
+    double readTime = readTick*tick2sec;
+    //    printf("readRunHighsClock() clockTicks = %g; clockStart = %g, runHighsClockStartTime = %g\n",
+    //	   clockTicks[runHighsClock], clockStart[runHighsClock], runHighsClockStartTime);
+    return readTime;
+  }
+
+  /**
+   * @brief Test whether the RunHighs clock is running
+   */
+  bool runningRunHighsClock() {return clockStart[runHighsClock] < 0;}
 
   /**
    * @brief Report timing information for the clock indices in the list
@@ -190,7 +227,9 @@ class HighsTimer {
     int numClockListEntries = clockList.size();
 
     // Report in one line the per-mille contribution from each clock
-    double totalTick = getTick();
+    int iClock = runHighsClock;
+    double currentRunHighsTime = readRunHighsClock();
+    double currentRunHighsTick = currentRunHighsTime / tick2sec;
     printf("txt-profile-name  ");
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
@@ -216,7 +255,7 @@ class HighsTimer {
       }
 #endif
       assert(clockStart[iClock] > 0);
-      double perMille = 1000.0 * clockTicks[iClock] / totalTick;
+      double perMille = 1000.0 * clockTicks[iClock] / currentRunHighsTick;
       int int_PerMille = (perMille + 0.5);  // Forcing proper rounding
       if (int_PerMille>0) {
 	printf("%4d", int_PerMille); // Just in case one time is 1000!
@@ -241,7 +280,7 @@ class HighsTimer {
       int iClock = clockList[i];
       double tick = clockTicks[iClock];
       double ti = tick2sec * tick;
-      double perCent = 100.0 * tick / totalTick;
+      double perCent = 100.0 * tick / currentRunHighsTick;
       double tiPerCall = 0;
       if (clockNumCall[iClock] > 0) {
 	tiPerCall = ti / clockNumCall[iClock];
@@ -258,7 +297,7 @@ class HighsTimer {
       suTi += ti;
       suTick += tick;
     }
-    double perCent = 100.0 * suTick / totalTick;
+    double perCent = 100.0 * suTick / currentRunHighsTick;
     printf("txt-profile-time ");
 #ifdef HiGHSDEV
     printf("    ");
@@ -268,7 +307,7 @@ class HighsTimer {
 #ifdef HiGHSDEV
     printf("    ");
 #endif
-    printf("TOTAL           : %11.4e\n", tick2sec * totalTick);
+    printf("TOTAL           : %11.4e\n", tick2sec * currentRunHighsTick);
     if (reportForExcel) {
       // Repeat reporting for Excel
       printf("grep_excel-profile-name");
@@ -284,7 +323,7 @@ class HighsTimer {
 	printf(",%e", tick2sec * clockTicks[iClock]);
       }
       printf(",%e", suTi);
-      printf(",%e\n", tick2sec * totalTick);
+      printf(",%e\n", tick2sec * currentRunHighsTick);
       printf("grep_excel-profile-calls");
       for (int i = 0; i < numClockListEntries; i++) {
 	int iClock = clockList[i];
@@ -328,8 +367,9 @@ class HighsTimer {
   // private: 
   double startTime;  //!< Elapsed time when the clocks were reset
   double startTick;  //!< CPU ticks when the clocks were reset
-  double runClockTime; //!< HiGHS run time - used to scale ticks to time
-  double runClockStartTime; //!< HiGHS run start time - used to compute HiGHS run time
+  int runHighsClock; //!< The index of the RunHighsClock - should always be 0
+  double runHighsClockTime; //!< HiGHS run time - used to scale ticks to time
+  double runHighsClockStartTime; //!< HiGHS run start time - used to compute HiGHS run time
 
   const double initialClockStart = 1.0; //!< Dummy positive start ticks for clocks - so they can be
 					//!checked as having been stopped

@@ -2498,8 +2498,8 @@ void HModel::writePivots(const char *suffix) {
   string filename = "z-" + modelName + "-" + suffix;
   ofstream output(filename.c_str());
   int count = historyColumnIn.size();
-  double modelTotalTime = timer_->read();
-  output << modelName << " " << count << "\t" << modelTotalTime << endl;
+  double currentRunHighsTime = timer_->readRunHighsClock();
+  output << modelName << " " << count << "\t" << currentRunHighsTime << endl;
   output << setprecision(12);
   for (int i = 0; i < count; i++) {
     output << historyColumnIn[i] << "\t";
@@ -3631,11 +3631,11 @@ void HModel::util_reportSolverOutcome(const char *message) {
       abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
          modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
-         modelTotalTime);
+         currentRunHighsTime);
 #else
-  double modelTotalTime = timer_->read();
+  double currentRunHighsTime = timer_->readRunHighsClock();
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
-         numberIteration, modelTotalTime);
+         numberIteration, currentRunHighsTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
     printf("\n");
@@ -3645,7 +3645,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
   }
   // Greppable report line added
   printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
-         modelTotalTime, problemStatus, modelName.c_str());
+         currentRunHighsTime, problemStatus, modelName.c_str());
 }
 
 void HModel::util_reportSolverProgress() {

@@ -126,8 +126,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 
     //    lcSolveTime = model.timer.getTime();
     //    solveTime += lcSolveTime;
-    printf("Calling highs_model.timer_.read();\n");
-    lcSolveTime = highs_model.timer_.read();
+    lcSolveTime = highs_model.timer_.readRunHighsClock();
     solveIt += model.numberIteration;
 
 #ifdef HiGHSDEV

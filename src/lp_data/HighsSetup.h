@@ -63,7 +63,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 
   //Define clocks
   HighsTimer &timer = lps_[0].timer_;
-  timer.start();
+  timer.startRunHighsClock();
 
   int presolveClock = timer.clockDef("Presolve", "Pre");
   int scaleClock = timer.clockDef("Scale", "Scl");
@@ -169,10 +169,10 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // Report times
   std::vector<int> clockList{presolveClock, scaleClock, crashClock, solveClock, postsolveClock};
   timer.report(clockList);
-  printf("Calling timer.stop();\n");
-  timer.stop();
+  timer.stopRunHighsClock();
+  double currentRunHighsTime = timer.readRunHighsClock();
   printf("Run time with model is %g from %d calls\n",
-	 timer.tick2sec*timer.clockTicks[0], timer.clockNumCall[0]);
+	 currentRunHighsTime, timer.clockNumCall[timer.runHighsClock]);
 
   return HighsStatus::OK;
 }

@@ -7,7 +7,8 @@ int main(int argc, char **argv) {
   HighsTimer timer;
   int loadClock = timer.clockDef("Load", " Ld");
   int runClock = timer.clockDef("Run", "Run");
-  //  timer.reset();
+  timer.startRunHighsClock();
+
   HiGHSRun();
 
   // Load user options.

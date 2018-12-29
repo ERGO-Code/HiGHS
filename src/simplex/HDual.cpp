@@ -386,13 +386,13 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
 #ifdef HiGHSDEV
   if (model->anInvertTime) {
-    double modelTotalTime = timer.read();
+    double currentRunHighsTime = timer.readRunHighsClock();
     printf(
         "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
         "= %11.4g",
-        model->totalInverts, ref_highs_model_object.modelTotalInvertTime, modelTotalTime);
-    if (modelTotalTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalInvertTime) / modelTotalTime);
+        model->totalInverts, ref_highs_model_object.modelTotalInvertTime, currentRunHighsTime);
+    if (currentRunHighsTime > 0.001) {
+      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalInvertTime) / currentRunHighsTime);
     } else {
       printf("\n");
     }
@@ -400,9 +400,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     printf(
         "Time: Total rebuilds = %4d; Total rebuild time = %11.4g of Total time "
         "= %11.4g",
-        totalRebuilds, ref_highs_model_object.modelTotalRebuildTime, modelTotalTime);
-    if (modelTotalTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalRebuildTime) / modelTotalTime);
+        totalRebuilds, ref_highs_model_object.modelTotalRebuildTime, currentRunHighsTime);
+    if (currentRunHighsTime > 0.001) {
+      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalRebuildTime) / currentRunHighsTime);
     } else {
       printf("\n");
     }
@@ -532,10 +532,10 @@ void HDual::solve_phase1() {
   // Switch to dual phase 1 bounds
   model->initBound(1);
   model->initValue();
-  double lc_totalTime = timer.read();
+  double currentRunHighsTime = timer.readRunHighsClock();
 #ifdef HiGHSDEV
-  // int lc_totalTime_rp_n = 0; printf("DualPh1: lc_totalTime = %5.2f; Record
-  // %d\n", lc_totalTime, lc_totalTime_rp_n);
+  // int currentRunHighsTime_rp_n = 0; printf("DualPh1: currentRunHighsTime = %5.2f; Record
+  // %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
 #endif
   // Main solving structure
   timer.start(simplex.clock_[IterateClock]);
@@ -570,12 +570,12 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
       }
       */
     }
-    //      lc_totalTime = timer.read();
+    //      currentRunHighsTime = timer.readRunHighsClock();
 #ifdef HiGHSDEV
-    //      lc_totalTime_rp_n += 1; printf("DualPh1: lc_totalTime = %5.2f;
-    //      Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+    //      currentRunHighsTime_rp_n += 1; printf("DualPh1: currentRunHighsTime = %5.2f;
+    //      Record %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
 #endif
-    if (lc_totalTime > TimeLimitValue) {
+    if (currentRunHighsTime > TimeLimitValue) {
       SolveBailout = true;
       model->problemStatus = LP_Status_OutOfTime;
       break;
@@ -641,10 +641,10 @@ void HDual::solve_phase2() {
 
   // Collect free variables
   dualRow.create_Freelist();
-  double lc_totalTime = timer.read();
+  double currentRunHighsTime = timer.readRunHighsClock();
 #ifdef HiGHSDEV
-  //  int lc_totalTime_rp_n = 0; printf("DualPh2: lc_totalTime = %5.2f; Record
-  //  %d\n", lc_totalTime, lc_totalTime_rp_n);
+  //  int currentRunHighsTime_rp_n = 0; printf("DualPh2: currentRunHighsTime = %5.2f; Record
+  //  %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
 #endif
   // Main solving structure
   timer.start(simplex.clock_[IterateClock]);
@@ -691,16 +691,16 @@ void HDual::solve_phase2() {
         break;
       }
     }
-    //    lc_totalTime = model->totalTime + timer.getTime();
+    //    currentRunHighsTime = timer.readRunHighsClock();
     if (model->problemStatus == LP_Status_ObjUB) {
       SolveBailout = true;
       break;
     }
 #ifdef HiGHSDEV
-    //      lc_totalTime_rp_n += 1; printf("DualPh2: lc_totalTime = %5.2f;
-    //      Record %d\n", lc_totalTime, lc_totalTime_rp_n);
+    //      currentRunHighsTime_rp_n += 1; printf("DualPh2: currentRunHighsTime = %5.2f;
+    //      Record %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
 #endif
-    if (lc_totalTime > TimeLimitValue) {
+    if (currentRunHighsTime > TimeLimitValue) {
       model->problemStatus = LP_Status_OutOfTime;
       SolveBailout = true;
       break;
