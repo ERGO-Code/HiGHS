@@ -126,9 +126,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
       // Using dual steepest edge (DSE) weights
       int numBasicStructurals = numRow - model->numBasicLogicals;
+      bool computeExactDseWeights = numBasicStructurals > 0 && iz_DSE_wt;
 #ifdef HiGHSDEV
       n_wg_DSE_wt = 0;
-      bool computeExactDseWeights = numBasicStructurals > 0 && iz_DSE_wt;
       if (computeExactDseWeights) {
 	printf("If (0<numBasicStructurals = %d) && %d = iz_DSE_wt: Compute exact "
 	       "DSE weights\n", numBasicStructurals, iz_DSE_wt);
