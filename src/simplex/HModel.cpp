@@ -19,6 +19,7 @@
 #include "HVector.h"
 
 #include "SimplexTimer.h" // For timer
+#include "HighsLpUtils.h" // For util_anMl
 
 #include <algorithm>
 #include <cassert>

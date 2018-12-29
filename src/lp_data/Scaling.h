@@ -17,8 +17,8 @@
 #include "HConfig.h"
 #include "HConst.h"
 #include "HighsModelObject.h"
+#include "HighsLpUtils.h"
 #include <cassert>
-//#include <vector>
 #include <iostream>
 
 // Limits on scaling factors
