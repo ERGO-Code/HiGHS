@@ -18,7 +18,8 @@
 #include "HMatrix.h"
 #include "HighsLp.h"
 #include "HighsTimer.h" //For timer_
-#include "HighsUtils.h"
+//#include "HighsUtils.h"
+#include "HighsRandom.h"
 class HVector;
 
 #include <sstream>
@@ -335,8 +336,8 @@ class HModel {
   double dblOption[DBLOPT_COUNT];
   string strOption[STROPT_COUNT];
 
-  // Utilities, including random number generator
-  HighsUtils utils;
+  // Random number generator
+  HighsRandom random;
 
   // The time and timer
   //  double totalTime;

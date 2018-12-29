@@ -17,6 +17,7 @@
 #include "HDual.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
+#include "HighsUtils.h"
 #include "HCrash.h"
 #include "HRanging.h"
 #include "Scaling.h"
@@ -171,8 +172,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 #endif
       }
     }
-    //    HighsUtils utils; utils.reportLp(highs_model.lp_);
-    //    utils.reportLpSolution(highs_model);
+    //    reportLp(highs_model.lp_);
+    //    reportLpSolution(highs_model);
     HighsStatus result = LpStatusToHighsStatus(model.problemStatus);
     if (result != HighsStatus::Optimal) return result;
 
@@ -225,7 +226,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 }
 
 HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
-  HighsUtils utils;
   printf("Called solveScip.\n");
 
   // This happens locally for now because I am not sure how it is used. Later
@@ -344,7 +344,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   model.scaleModel();
   HDual solver;
   solver.solve(highs_model);
-  //  utils.reportLpSolution(highs_model);
+  //  reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
   vector<double> colPrimal(highs_model.lp_.numCol_);

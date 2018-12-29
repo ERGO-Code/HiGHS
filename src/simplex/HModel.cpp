@@ -20,6 +20,7 @@
 
 #include "SimplexTimer.h" // For timer
 #include "HighsLpUtils.h" // For util_anMl
+#include "HighsUtils.h" // For highs_isInfinity
 
 #include <algorithm>
 #include <cassert>
@@ -714,7 +715,7 @@ void HModel::setup_for_solve() {
 
   // (Re-)initialise the random number generator and initialise the
   // real and integer random vectors
-  utils.initialiseRandom();
+  random.initialiseRandom();
   initRandomVec();
 
   //  mlFg_Report();cout<<flush;
@@ -1641,11 +1642,11 @@ void HModel::setup_shuffleColumn() {
   if (intOption[INTOPT_PERMUTE_FLAG] == 0) return;
 
   // 1. Shuffle the column index
-  for (int i = 0; i < 10; i++) utils.intRandom();
+  for (int i = 0; i < 10; i++) random.intRandom();
   vector<int> iFrom(lp_scaled_->numCol_);
   for (int i = 0; i < lp_scaled_->numCol_; i++) iFrom[i] = i;
   for (int i = lp_scaled_->numCol_ - 1; i >= 1; i--) {
-    int j = utils.intRandom() % (i + 1);
+    int j = random.intRandom() % (i + 1);
     swap(iFrom[i], iFrom[j]);
   }
 
@@ -2138,14 +2139,14 @@ void HModel::correctDual(int *freeInfeasCount) {
           // Other variable = shift
           problemPerturbed = 1;
           if (basis_->nonbasicMove_[i] == 1) {
-            double random_v = utils.dblRandom();
+            double random_v = random.dblRandom();
             double dual = (1 + random_v) * tau_d;
-            //            double dual = (1 + utils.dblRandom()) * tau_d;
+            //            double dual = (1 + random.dblRandom()) * tau_d;
             double shift = dual - simplex_->workDual_[i];
             simplex_->workDual_[i] = dual;
             simplex_->workCost_[i] = simplex_->workCost_[i] + shift;
           } else {
-            double dual = -(1 + utils.dblRandom()) * tau_d;
+            double dual = -(1 + random.dblRandom()) * tau_d;
             double shift = dual - simplex_->workDual_[i];
             simplex_->workDual_[i] = dual;
             simplex_->workCost_[i] = simplex_->workCost_[i] + shift;
@@ -2473,11 +2474,11 @@ void HModel::initRandomVec() {
   colPermutation.resize(numTot);
   for (int i = 0; i < numTot; i++) colPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
-    int j = utils.intRandom() % (i + 1);
+    int j = random.intRandom() % (i + 1);
     swap(colPermutation[i], colPermutation[j]);
   }
   colRandomValue.resize(numTot);
-  for (int i = 0; i < numTot; i++) colRandomValue[i] = utils.dblRandom();
+  for (int i = 0; i < numTot; i++) colRandomValue[i] = random.dblRandom();
 }
 
 void HModel::shiftObjectiveValue(double shift) {

@@ -24,7 +24,6 @@ set(sources
     simplex/HModel.cpp
     simplex/HPrimal.cpp
     simplex/HRanging.cpp
-    simplex/HSort.cpp
  #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
@@ -35,6 +34,7 @@ set(sources
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    util/HighsSort.cpp
     util/HighsUtils.cpp
 )
 
@@ -67,7 +67,6 @@ set(headers
     simplex/HPrimal.h
     simplex/HRanging.h
     simplex/HSimplex.h
-    simplex/HSort.h
     simplex/Scaling.h
     presolve/Presolve.h
     simplex/HTimerPre.h
@@ -75,6 +74,7 @@ set(headers
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
 )
