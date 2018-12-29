@@ -34,6 +34,13 @@ class HighsTimer {
     runHighsClock = iClock;
     runHighsClockTime = 0;
     runHighsClockStartTime = initialClockStart;
+
+    presolveClock = clockDef("Presolve", "Pre");
+    scaleClock = clockDef("Scale", "Scl");
+    crashClock = clockDef("Crash", "Csh");
+    solveClock = clockDef("Solve", "Slv");
+    postsolveClock = clockDef("Postsolve", "Pst");
+
   }
 
   /**
@@ -380,5 +387,15 @@ class HighsTimer {
   std::vector<std::string> clockNames;
   std::vector<std::string> clockCh3Names;
   double tick2sec = 3.6e-10;
+
+  // Fundamental Highs clocks
+  int presolveClock;
+  int scaleClock;
+  int crashClock;
+  int solveClock;
+  int postsolveClock;
 };
+
+
+
 #endif /* UTIL_HIGHSTIMER_H_ */
