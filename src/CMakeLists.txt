@@ -51,7 +51,6 @@ set(headers
     io/LoadProblem.h
     lp_data/HConst.h
     lp_data/HighsLp.h
-    lp_data/HighsModelBuilder.h
     lp_data/HighsUtils.h
     lp_data/HighsModelObject.h
     simplex/HApp.h
