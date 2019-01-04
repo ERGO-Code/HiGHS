@@ -56,7 +56,8 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 
   model->util_reportMessage("primal-start");
 
-  double lc_totalTime = model->totalTime + model->timer.getTime();
+  HighsTimer &timer = *(model->timer_);
+  double currentRunHighsTime = timer.readRunHighsClock();
 
   // Main solving structure
   for (;;) {
@@ -89,9 +90,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
       }
     }
 
-    lc_totalTime = model->totalTime + model->timer.getTime();
-    //	printf("Primal Ph2: lc_totalTime = %5.2f\n", lc_totalTime);
-    if (lc_totalTime > TimeLimitValue) {
+    currentRunHighsTime = timer.readRunHighsClock();
+    //	printf("Primal Ph2: currentRunHighsTime = %5.2f\n", currentRunHighsTime);
+    if (currentRunHighsTime > TimeLimitValue) {
       model->problemStatus = LP_Status_OutOfTime;
       break;
     }
@@ -120,7 +121,7 @@ void HPrimal::primalRebuild() {
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
 #ifdef HiGHSDEV
   double tt0 = 0;
-  if (anRebuildTime) tt0 = model->timer.getTime();
+  if (anRebuildTime) tt0 = model->timer_->getTime();
 #endif
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
@@ -149,7 +150,7 @@ void HPrimal::primalRebuild() {
 
 #ifdef HiGHSDEV
   if (anRebuildTime) {
-    double rebuildTime = model->timer.getTime() - tt0;
+    double rebuildTime = model->timer_->getTime() - tt0;
     totalRebuilds++;
     totalRebuildTime += rebuildTime;
     printf(

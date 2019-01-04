@@ -17,6 +17,7 @@
 #include "HDual.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
+#include "HighsUtils.h"
 #include "HCrash.h"
 #include "HRanging.h"
 #include "Scaling.h"
@@ -110,7 +111,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     solver.setEdWt(opt.edWtMode.c_str());
     solver.setTimeLimit(opt.timeLimit);
 
-    model.timer.reset();
+    //    model.timer.reset();
 
     //  bool FourThreads = true;
     bool FourThreads = false;
@@ -124,8 +125,9 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     else
       solver.solve(highs_model);
 
-    lcSolveTime = model.timer.getTime();
-    solveTime += lcSolveTime;
+    //    lcSolveTime = model.timer.getTime();
+    //    solveTime += lcSolveTime;
+    lcSolveTime = highs_model.timer_.readRunHighsClock();
     solveIt += model.numberIteration;
 
 #ifdef HiGHSDEV
@@ -151,7 +153,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
       if (model.problemStatus != LP_Status_OutOfTime) {
         model.copy_savedBoundsToModelBounds();
 
-        model.timer.reset();
+	//        model.timer.reset();
         solver.solve(highs_model);
  /*       lcSolveTime = model.timer.getTime();
         solveTime += lcSolveTime;
@@ -170,8 +172,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 #endif
       }
     }
-    //    HighsUtils utils; utils.reportLp(highs_model.lp_);
-    //    utils.reportLpSolution(highs_model);
+    //    reportLp(highs_model.lp_);
+    //    reportLpSolution(highs_model);
     HighsStatus result = LpStatusToHighsStatus(model.problemStatus);
     if (result != HighsStatus::Optimal) return result;
 
@@ -224,7 +226,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 }
 
 HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
-  HighsUtils utils;
   printf("Called solveScip.\n");
 
   // This happens locally for now because I am not sure how it is used. Later
@@ -343,7 +344,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   model.scaleModel();
   HDual solver;
   solver.solve(highs_model);
-  //  utils.reportLpSolution(highs_model);
+  //  reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
   vector<double> colPrimal(highs_model.lp_.numCol_);
@@ -411,9 +412,6 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 // solution in solution.
 HighsStatus runSimplexSolver(const HighsOptions& opt,
                              HighsModelObject& highs_model) {
-  cout << "=================================================================="
-       << endl;
-
   // For the moment handle scip case separately.
   if (opt.scip) return solveScip(opt, highs_model);
 
@@ -423,6 +421,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   HModel& model = highs_model.hmodel_[0];
   const HighsLp& lp_ = highs_model.lp_;
+
+  // Give model the HiGHS Model Object run clock for timeout purposes
+  //  model.modelTotalClock = highs_model.modelTotalClock;
 
   // Allocate memory for the basis
   // assignBasis();
@@ -477,8 +478,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
                                        highs_model.basis_info_.nonbasic_flag);
 
   highs_model.basis_info_.nonbasic_move = model.basis_->nonbasicMove_;
-
-  cout << "==================================================================\n";
 
   return result;
 }

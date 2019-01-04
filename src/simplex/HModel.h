@@ -16,14 +16,18 @@
 
 #include "HFactor.h"
 #include "HMatrix.h"
-#include "HTimer.h"
 #include "HighsLp.h"
-#include "HighsUtils.h"
+#include "HighsTimer.h" //For timer_
+//#include "HighsUtils.h"
+#include "HighsRandom.h"
 class HVector;
 
 #include <sstream>
 #include <string>
 #include <vector>
+
+// After removing HTimer.h add the following
+using std::string;
 
 const int LP_Status_Unset = -1;
 const int LP_Status_Optimal = 0;
@@ -332,12 +336,11 @@ class HModel {
   double dblOption[DBLOPT_COUNT];
   string strOption[STROPT_COUNT];
 
-  // Utilities, including random number generator
-  HighsUtils utils;
+  // Random number generator
+  HighsRandom random;
 
   // The time and timer
-  HTimer timer;
-  double totalTime;
+  //  double totalTime;
 
   // Perturbation flag
   int problemPerturbed;
@@ -472,6 +475,8 @@ class HModel {
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
+  HighsTimer *timer_;
+  //  int modelTotalClock;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 
+#include "HConfig.h"
 #include "HApp.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
@@ -62,24 +63,19 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   lps_.push_back(HighsModelObject(lp));
 
   //Define clocks
-  HighsTimer timer;
-  int presolveClock = timer.clockDef("Presolve", "Pre");
-  int scaleClock = timer.clockDef("Scale", "Scl");
-  int crashClock = timer.clockDef("Crash", "Csh");
-  int solveClock = timer.clockDef("Solve", "Slv");
-  int postsolveClock = timer.clockDef("Postsolve", "Pst");
-  //  timer.reset();
+  HighsTimer &timer = lps_[0].timer_;
+  timer.startRunHighsClock();
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
-  timer.start(presolveClock);
+  timer.start(timer.presolveClock);
 
   PresolveInfo presolve_info(options_.presolveMode, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
 
-  timer.stop(presolveClock);
+  timer.stop(timer.presolveClock);
  
   // Run solver.
-  timer.start(solveClock);
+  timer.start(timer.solveClock);
   HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
@@ -113,9 +109,9 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       return HighsStatus::PresolveError;
     }
   }
-  timer.stop(solveClock);
+  timer.stop(timer.solveClock);
 
-  timer.start(postsolveClock);
+  timer.start(timer.postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::Optimal) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
@@ -143,7 +139,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       solve_status = runSolver(lps_[0]);
     }
   }
-  timer.stop(postsolveClock);
+  timer.stop(timer.postsolveClock);
 
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
@@ -165,9 +161,13 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
+
+#ifdef HiGHSDEV
   // Report times
-  std::vector<int> clockList{presolveClock, scaleClock, crashClock, solveClock, postsolveClock};
+  std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
   timer.report(clockList);
+#endif
+  timer.stopRunHighsClock();
 
   return HighsStatus::OK;
 }
@@ -240,7 +240,7 @@ void HiGHSRun(const char* message = nullptr) {
             << " [date: " << HIGHS_COMPILATION_DATE
             << ", git hash: " << HIGHS_GITHASH << "]"
             << "\n"
-            << "Copyright (c) 2018 ERGO-Code under MIT licence terms.\n\n";
+            << "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n\n";
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   std::cout << "In " << message << std::endl;

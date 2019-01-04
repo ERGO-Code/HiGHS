@@ -18,6 +18,10 @@
 #include "HToyIO.h"
 #include "HVector.h"
 
+#include "SimplexTimer.h" // For timer
+#include "HighsLpUtils.h" // For util_anMl
+#include "HighsUtils.h" // For highs_isInfinity
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -63,9 +67,6 @@ HModel::HModel() {
   strOption[STROPT_PARTITION_FILE] = "";
 
   clearModel();
-
-  // Initialise the total runtine for this model
-  totalTime = 0;
 }
 
 int HModel::load_fromToy(const char *filename) {
@@ -76,17 +77,13 @@ int HModel::load_fromToy(const char *filename) {
   // Remove any current model
   clearModel();
 
-  // Initialise the total runtine for this model
-  totalTime = 0;
-
   // Load the model, timing the process
-  timer.reset();
+  //  timer.reset();
   modelName = filename;
 
   int RtCd = readToy_MIP_cpp(filename, &lp_scaled_->numRow_, &lp_scaled_->numCol_, &lp_scaled_->sense_, &lp_scaled_->offset_,
                              &A, &b, &c, &lb, &ub, &intColumn);
   if (RtCd) {
-    totalTime += timer.getTime();
     return RtCd;
   }
   printf("Model has %3d rows and %3d cols\n", lp_scaled_->numRow_, lp_scaled_->numCol_);
@@ -149,7 +146,6 @@ int HModel::load_fromToy(const char *filename) {
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
 
-  totalTime += timer.getTime();
   return RtCd;
 }
 
@@ -163,11 +159,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   //  XnumCol, XnumRow, XnumNz);
   assert(XnumCol > 0);
   assert(XnumRow > 0);
-
-  // Initialise the total runtine for this model
-  totalTime = 0;
-  // Load the model, timing the process
-  timer.reset();
 
   /*
   lp_scaled_->numCol_ = XnumCol;
@@ -194,8 +185,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
   initWithLogicalBasis();
-
-  totalTime += timer.getTime();
 }
 
 void HModel::copy_impliedBoundsToModelBounds() {
@@ -721,12 +710,12 @@ void HModel::clearModel() {
 }
 
 void HModel::setup_for_solve() {
-  timer.reset();
+  //  timer.reset();
   if (lp_scaled_->numRow_ == 0) return;
 
   // (Re-)initialise the random number generator and initialise the
   // real and integer random vectors
-  utils.initialiseRandom();
+  random.initialiseRandom();
   initRandomVec();
 
   //  mlFg_Report();cout<<flush;
@@ -767,9 +756,6 @@ void HModel::setup_for_solve() {
     mlFg_haveFactorArrays = 1;
     limitUpdate = 5000;
   }
-
-  // Save the input time
-  totalTime += timer.getTime();
 }
 
 bool HModel::OKtoSolve(int level, int phase) {
@@ -1656,11 +1642,11 @@ void HModel::setup_shuffleColumn() {
   if (intOption[INTOPT_PERMUTE_FLAG] == 0) return;
 
   // 1. Shuffle the column index
-  for (int i = 0; i < 10; i++) utils.intRandom();
+  for (int i = 0; i < 10; i++) random.intRandom();
   vector<int> iFrom(lp_scaled_->numCol_);
   for (int i = 0; i < lp_scaled_->numCol_; i++) iFrom[i] = i;
   for (int i = lp_scaled_->numCol_ - 1; i >= 1; i--) {
-    int j = utils.intRandom() % (i + 1);
+    int j = random.intRandom() % (i + 1);
     swap(iFrom[i], iFrom[j]);
   }
 
@@ -1992,7 +1978,7 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
 int HModel::computeFactor() {
 #ifdef HiGHSDEV
   double tt0 = 0;
-  if (anInvertTime) tt0 = timer.getTime();
+  if (anInvertTime) tt0 = timer_->getTime();
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -2011,7 +1997,7 @@ int HModel::computeFactor() {
 
 #ifdef HiGHSDEV
   if (anInvertTime) {
-    double invertTime = timer.getTime() - tt0;
+    double invertTime = timer_->getTime() - tt0;
     totalInverts++;
     totalInvertTime += invertTime;
     printf(
@@ -2153,14 +2139,14 @@ void HModel::correctDual(int *freeInfeasCount) {
           // Other variable = shift
           problemPerturbed = 1;
           if (basis_->nonbasicMove_[i] == 1) {
-            double random_v = utils.dblRandom();
+            double random_v = random.dblRandom();
             double dual = (1 + random_v) * tau_d;
-            //            double dual = (1 + utils.dblRandom()) * tau_d;
+            //            double dual = (1 + random.dblRandom()) * tau_d;
             double shift = dual - simplex_->workDual_[i];
             simplex_->workDual_[i] = dual;
             simplex_->workCost_[i] = simplex_->workCost_[i] + shift;
           } else {
-            double dual = -(1 + utils.dblRandom()) * tau_d;
+            double dual = -(1 + random.dblRandom()) * tau_d;
             double shift = dual - simplex_->workDual_[i];
             simplex_->workDual_[i] = dual;
             simplex_->workCost_[i] = simplex_->workCost_[i] + shift;
@@ -2344,22 +2330,25 @@ void HModel::flipBound(int iCol) {
 // called from the likes of HDual::updatePivots
 void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
                           int *hint) {
-  timer.recordStart(HTICK_UPDATE_FACTOR);
+  //  HighsTimer &timer = highs_model_object->timer_;
+  //HighsSimplexInfo &simplex = highs_model_object->simplex_;
+  timer_->start(simplex_->clock_[UpdateFactorClock]);
+  
   factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   mlFg_haveInvert = 1;
   if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
-  timer.recordFinish(HTICK_UPDATE_FACTOR);
+  timer_->stop(simplex_->clock_[UpdateFactorClock]);
 }
 
 void HModel::updateMatrix(int columnIn, int columnOut) {
-  timer.recordStart(HTICK_UPDATE_MATRIX);
+  timer_->start(simplex_->clock_[UpdateMatrixClock]);
   matrix_->update(columnIn, columnOut);
-  timer.recordFinish(HTICK_UPDATE_MATRIX);
+  timer_->stop(simplex_->clock_[UpdateMatrixClock]);
 }
 
 void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
-  timer.recordStart(HTICK_UPDATE_PIVOTS);
+  timer_->start(simplex_->clock_[UpdatePivotsClock]);
   int columnOut = basis_->basicIndex_[rowOut];
 
   // Incoming variable
@@ -2405,7 +2394,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   mlFg_haveFreshInvert = 0;
   // Data are no longer fresh from rebuild
   mlFg_haveFreshRebuild = 0;
-  timer.recordFinish(HTICK_UPDATE_PIVOTS);
+  timer_->stop(simplex_->clock_[UpdatePivotsClock]);
 }
 
 #ifdef HiGHSDEV
@@ -2485,11 +2474,11 @@ void HModel::initRandomVec() {
   colPermutation.resize(numTot);
   for (int i = 0; i < numTot; i++) colPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
-    int j = utils.intRandom() % (i + 1);
+    int j = random.intRandom() % (i + 1);
     swap(colPermutation[i], colPermutation[j]);
   }
   colRandomValue.resize(numTot);
-  for (int i = 0; i < numTot; i++) colRandomValue[i] = utils.dblRandom();
+  for (int i = 0; i < numTot; i++) colRandomValue[i] = random.dblRandom();
 }
 
 void HModel::shiftObjectiveValue(double shift) {
@@ -2511,7 +2500,8 @@ void HModel::writePivots(const char *suffix) {
   string filename = "z-" + modelName + "-" + suffix;
   ofstream output(filename.c_str());
   int count = historyColumnIn.size();
-  output << modelName << " " << count << "\t" << totalTime << endl;
+  double currentRunHighsTime = timer_->readRunHighsClock();
+  output << modelName << " " << count << "\t" << currentRunHighsTime << endl;
   output << setprecision(12);
   for (int i = 0; i < count; i++) {
     output << historyColumnIn[i] << "\t";
@@ -3643,10 +3633,11 @@ void HModel::util_reportSolverOutcome(const char *message) {
       abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
          modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
-         totalTime);
+         currentRunHighsTime);
 #else
+  double currentRunHighsTime = timer_->readRunHighsClock();
   printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
-         numberIteration, totalTime);
+         numberIteration, currentRunHighsTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
     printf("\n");
@@ -3656,7 +3647,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
   }
   // Greppable report line added
   printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
-         totalTime, problemStatus, modelName.c_str());
+         currentRunHighsTime, problemStatus, modelName.c_str());
 }
 
 void HModel::util_reportSolverProgress() {
@@ -3665,11 +3656,11 @@ void HModel::util_reportSolverProgress() {
   // Reports every 5.0 seconds thereafter
   if (intOption[INTOPT_PRINT_FLAG] != 2) return;
   static double nextReport = 0;
-  double currentTime = timer.getTime();
+  double currentTime = timer_->getTime();
   if (currentTime >= nextReport) {
     computeDualObjectiveValue();
     printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveValue,
-           numberIteration, timer.getTime());
+           numberIteration, timer_->getTime());
     if (currentTime < 50) {
       nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
     } else if (currentTime < 500) {

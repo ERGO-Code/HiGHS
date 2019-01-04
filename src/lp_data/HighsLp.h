@@ -161,6 +161,8 @@ struct HighsSimplexInfo {
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
+  // Values of iClock for simplex timing clocks
+  std::vector<int> clock_;
 };
 
 struct HighsSolution {

@@ -9,9 +9,9 @@ set(sources
     io/HMPSIO.cpp
     io/HToyIO.cpp
     lp_data/HighsLp.cpp
+    lp_data/HighsLpUtils.cpp
     lp_data/HighsModel.cpp
  #   simplex/HAPI.cpp
-    lp_data/HighsUtils.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -24,7 +24,6 @@ set(sources
     simplex/HModel.cpp
     simplex/HPrimal.cpp
     simplex/HRanging.cpp
-    simplex/HSort.cpp
  #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
@@ -35,6 +34,8 @@ set(sources
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    util/HighsSort.cpp
+    util/HighsUtils.cpp
 )
 
 set(headers
@@ -51,7 +52,7 @@ set(headers
     io/LoadProblem.h
     lp_data/HConst.h
     lp_data/HighsLp.h
-    lp_data/HighsUtils.h
+    lp_data/HighsLpUtils.h
     lp_data/HighsModelObject.h
     simplex/HApp.h
     simplex/HConst.h
@@ -65,16 +66,16 @@ set(headers
     simplex/HPrimal.h
     simplex/HRanging.h
     simplex/HSimplex.h
-    simplex/HSort.h
     simplex/Scaling.h
     presolve/Presolve.h
-    simplex/HighsTimer.h
-    simplex/HTimer.h
     simplex/HTimerPre.h
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsSort.h
+    util/HighsTimer.h
+    util/HighsUtils.h
 )
 
 
