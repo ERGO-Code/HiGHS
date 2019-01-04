@@ -34,18 +34,18 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
   // call MPSParser::loadProblem(arrays of HighsLp object)
   int objSense;
   double objOffset;
-  #if defined(Boost_FOUND) && !defined(OLD_PARSER)
-    int RtCd = readMPS_FF(filename, model.numRow_, model.numCol_, objSense,
-                          objOffset, model.Astart_, model.Aindex_, model.Avalue_,
-                          model.colCost_, model.colLower_, model.colUpper_,
-                          model.rowLower_, model.rowUpper_);
-  #else
+#if defined(Boost_FOUND) && !defined(OLD_PARSER)
+  int RtCd = readMPS_FF(filename, model.numRow_, model.numCol_, objSense,
+			objOffset, model.Astart_, model.Aindex_, model.Avalue_,
+			model.colCost_, model.colLower_, model.colUpper_,
+			model.rowLower_, model.rowUpper_);
+#else
   std::vector<int> integerColumn;
   int RtCs = readMPS(filename, -1, -1, model.numRow_, model.numCol_, objSense,
                      objOffset, model.Astart_, model.Aindex_, model.Avalue_,
                      model.colCost_, model.colLower_, model.colUpper_,
                      model.rowLower_, model.rowUpper_, integerColumn);
-  #endif
+#endif
 
   return FilereaderRetcode::OKAY;
 }
