@@ -5,10 +5,6 @@
 #include <string.h>
 #include <stdexcept>
 
-void Filereader::readLineFromFile(FILE* file, char* buffer, int buffersize) {
-  fgets(buffer, buffersize, file);
-}
-
 static __inline__ const char* getFilenameExt(const char* filename) {
   const char* dot = strrchr(filename, '.');
   if (!dot || dot == filename) return "";
