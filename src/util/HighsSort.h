@@ -7,12 +7,12 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HSort.h
+/**@file util/HighsSort.h
  * @brief Sorting routines for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HSORT_H_
-#define SIMPLEX_HSORT_H_
+#ifndef UTIL_HIGHSSORT_H_
+#define UTIL_HIGHSSORT_H_
 
 /**
  * @brief Sort values[1..n] of an array by increasing value with corresponding indices
@@ -44,4 +44,4 @@
   void max_heapify(double *heap_v, int *heap_i, int i, int n);
 //};
 
-#endif /* SIMPLEX_HSORT_H_ */
+#endif /* UTIL_HIGHSSORT_H_ */

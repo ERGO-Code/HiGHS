@@ -542,7 +542,6 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
 }
 
 int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
-  HighsUtils utils;
   HighsModelObject *highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
   HModel *model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
@@ -580,7 +579,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
       max(1.0, fabs(model->dualObjectiveValue));
   reportRangingDataCheck = numTot < 250;
   //#endif
-  //  utils.reportModelSolution(ref_highs_model_object);
+  //  reportModelSolution(ref_highs_model_object);
   vector<int> Nflag = model->basis_->nonbasicFlag_;
   vector<int> Nmove = model->basis_->nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
@@ -961,7 +960,6 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
 
 void HRanging::checkDataSolve(HModel* model, bool rp) {
   HDual solver;
-  HighsUtils utils;
   if (rp) {
     model->intOption[INTOPT_PRINT_FLAG] = 4;
     const char* fileName = "OutMl.mps";
@@ -973,7 +971,7 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   printf("HRanging.cpp no longer solves!\n");
   //  solver.solve(model);
   if (rp) {
-    //    utils.reportLp(model->lp_scaled_);
+    //    reportLp(model->lp_scaled_);
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }

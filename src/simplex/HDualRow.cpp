@@ -19,6 +19,7 @@
 
 #include "HConst.h"
 #include "HModel.h"
+#include "SimplexTimer.h"
 #include "HVector.h"
 
 using std::make_pair;
@@ -139,6 +140,8 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow) {
 }
 
 bool HDualRow::choose_final() {
+  HighsTimer &timer = workHMO->timer_;
+  HighsSimplexInfo &simplex = workHMO->simplex_;
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -154,7 +157,7 @@ bool HDualRow::choose_final() {
   //   rp_Choose_final = true;
 #endif
   // 1. Reduce by large step BFRT
-  workModel->timer.recordStart(HTICK_CHUZC2);
+  timer.start(simplex.clock_[Chuzc2Clock]);
   int fullCount = workCount;
   workCount = 0;
   double totalChange = 0;
@@ -173,13 +176,13 @@ bool HDualRow::choose_final() {
     selectTheta *= 10;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  workModel->timer.recordFinish(HTICK_CHUZC2);
+  timer.stop(simplex.clock_[Chuzc2Clock]);
 
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 1\n");
 #endif
   // 2. Choose by small step BFRT
-  workModel->timer.recordStart(HTICK_CHUZC3);
+  timer.start(simplex.clock_[Chuzc3Clock]);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
   fullCount = workCount;
   workCount = 0;
@@ -314,7 +317,7 @@ bool HDualRow::choose_final() {
   }
   if (workTheta == 0) workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
-  workModel->timer.recordFinish(HTICK_CHUZC3);
+  timer.stop(simplex.clock_[Chuzc3Clock]);
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 4\n");
 #endif
@@ -345,8 +348,10 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
 }
 
 void HDualRow::update_dual(double theta, int columnOut) {
+  HighsTimer &timer = workHMO->timer_;
+  HighsSimplexInfo &simplex = workHMO->simplex_;
   //  workModel->checkDualObjectiveValue("Before update_dual");
-  workModel->timer.recordStart(HTICK_UPDATE_DUAL);
+  timer.start(simplex.clock_[UpdateDualClock]);
   double *workDual = &workHMO->simplex_.workDual_[0];
   //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
@@ -397,7 +402,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     }
   }
   */
-  workModel->timer.recordFinish(HTICK_UPDATE_DUAL);
+  timer.stop(simplex.clock_[UpdateDualClock]);
 }
 
 void HDualRow::create_Freelist() {

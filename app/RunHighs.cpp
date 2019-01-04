@@ -18,9 +18,8 @@
 int main(int argc, char **argv) {
   // Initialise timer
   HighsTimer timer;
-  int loadClock = timer.clockDef("Load", " Ld");
-  int runClock = timer.clockDef("Run", "Run");
-  //  timer.reset();
+  double start_time = timer.getWallTime();
+
   HiGHSRun();
 
   // Load user options.
@@ -30,9 +29,7 @@ int main(int argc, char **argv) {
   if (init_status != HighsStatus::OK) return 0;
 
   HighsLp lp;
-  timer.start(loadClock);
   HighsInputStatus read_status = loadLpFromFile(options, lp);
-  timer.stop(loadClock);
   if (read_status != HighsInputStatus::OK) {
     HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
     return (int)HighsStatus::LpError;
@@ -41,14 +38,13 @@ int main(int argc, char **argv) {
   Highs highs(options);
   HighsSolution solution;
 
-  timer.start(runClock);
   HighsStatus run_status = highs.run(lp, solution);
-  timer.stop(runClock);
 
+  double end_time = timer.getWallTime();
+  HighsLogMessage(HighsMessageType::INFO, "HiGHS run ended after %12g seconds\n", end_time-start_time);
+  
   checkStatus(run_status);
 
-  // Report times
-  std::vector<int> clockList{loadClock, runClock};
-  timer.report(clockList);
+  
   return 0;
 }

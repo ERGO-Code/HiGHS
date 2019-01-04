@@ -14,7 +14,7 @@
 #include "HCrash.h"
 #include "HMatrix.h"
 #include "HModel.h"
-#include "HSort.h"
+#include "HighsSort.h"
 #include "HConst.h"
 
 #include <cassert>

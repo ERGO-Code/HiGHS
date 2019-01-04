@@ -7,11 +7,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HSort.cpp
+/**@file util/HighsSort.cpp
  * @brief Sorting routines for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HSort.h"
+#include "HighsSort.h"
 
 void maxheapsort(double *heap_v, int *heap_i, int n) {
   build_maxheap(heap_v, heap_i, n);
