@@ -110,6 +110,8 @@ void scaleCosts(HighsModelObject &highs_model) {
 void scaleLp(HighsModelObject &highs_model) {
   // Scale the LP highs_model.lp_scaled_, assuming all data are in place
   // Reset all scaling to 1
+  HighsTimer &timer = highs_model.timer_;
+  timer.start(timer.scaleClock);
   scaleHighsModelInit(highs_model);
   double *colScale = &highs_model.scale_.col_[0];
   double *rowScale = &highs_model.scale_.row_[0];
@@ -250,6 +252,7 @@ void scaleLp(HighsModelObject &highs_model) {
 #endif
   // Possibly scale the costs
   if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
+  timer.stop(timer.scaleClock);
 }
 
 #endif

@@ -222,7 +222,7 @@ class HighsTimer {
   void report(
 	      std::vector<int>&clockList          //!< List of indices to report
   ) {
-    double tlPerCentReport = 1.0;
+    double tlPerCentReport = 0.0;//1.0;
     report_tl(clockList, tlPerCentReport);
   }
 

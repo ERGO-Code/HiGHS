@@ -75,7 +75,6 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   timer.stop(timer.presolveClock);
  
   // Run solver.
-  timer.start(timer.solveClock);
   HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
@@ -109,7 +108,6 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       return HighsStatus::PresolveError;
     }
   }
-  timer.stop(timer.solveClock);
 
   timer.start(timer.postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
@@ -166,6 +164,26 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // Report times
   std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
   timer.report(clockList);
+/* todo: do elsewhere once timing is added.
+    bool rpBnchmk = false;
+    if (rpBnchmk) {
+      int numCol = highs_model.lp_.numCol_;
+      int numRow = highs_model.lp_.numRow_;
+      printf(
+          "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
+          "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
+          "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
+          "%20.10e,%10d,%10.3f,"
+          "%d\n",
+          model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
+          Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
+          presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
+          postsolveTime, model.dualObjective, model.numberIteration,
+          model.totalTime, solver.n_wg_DSE_wt);
+      cout << flush;
+    }
+*/
+
 #endif
   timer.stopRunHighsClock();
 
