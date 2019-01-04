@@ -132,8 +132,7 @@ void scaleLp(HighsModelObject &highs_model) {
     max0 = max(max0, value);
   }
   bool noScaling = min0 >= 0.2 && max0 <= 5;
-  printf("!!!! FORCE SCALING !!!!\n");
-  noScaling = false;
+  //   noScaling = false; printf("!!!! FORCE SCALING !!!!\n");
   if (noScaling) {
     // No matrix scaling, but possible cost scaling
 #ifdef HiGHSDEV

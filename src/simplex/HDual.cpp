@@ -378,13 +378,13 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   timer.stop(simplex.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex.clock_[SimplexTotalClock]);
 
+#ifdef HiGHSDEV
   bool rpSimplexPhasesClock = true;
   if (rpSimplexPhasesClock) {
     simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
     simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
   }
 
-#ifdef HiGHSDEV
   if (model->anInvertTime) {
     double currentRunHighsTime = timer.readRunHighsClock();
     printf(

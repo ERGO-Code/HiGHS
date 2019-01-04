@@ -233,20 +233,7 @@ class HighsTimer {
     const bool reportForExcel = false;
     int numClockListEntries = clockList.size();
 
-    // Report in one line the per-mille contribution from each clock
-    int iClock = runHighsClock;
-    double currentRunHighsTime = readRunHighsClock();
-    double currentRunHighsTick = currentRunHighsTime / tick2sec;
-    printf("txt-profile-name  ");
-    for (int i = 0; i < numClockListEntries; i++) {
-      int iClock = clockList[i];
-      assert(iClock >= 0);
-      assert(iClock < numClock);
-      printf(" %-3s", clockCh3Names[iClock].c_str());
-    }
-    printf("\n");
-    printf("txt-profile-clock ");
-    double suPerMille = 0;
+    // Check validity of the clock list and check no clocks are still running
     for (int i = 0; i < numClockListEntries; i++) {
       int iClock = clockList[i];
       assert(iClock >= 0);
@@ -262,24 +249,56 @@ class HighsTimer {
       }
 #endif
       assert(clockStart[iClock] > 0);
-      double perMille = 1000.0 * clockTicks[iClock] / currentRunHighsTick;
-      int int_PerMille = (perMille + 0.5);  // Forcing proper rounding
-      if (int_PerMille>0) {
-	printf("%4d", int_PerMille); // Just in case one time is 1000!
-      } else {
-	printf("    "); // Just in case one time is 1000!
-      }
-      suPerMille += perMille;
     }
-    int int_suPerMille = (suPerMille + 0.5);  // Forcing proper rounding
-    printf(" per mille: Sum = %d", int_suPerMille);
+
+    // Report in one line the per-mille contribution from each clock
+    // First give the 3-character clock names as column headers
+    printf("txt-profile-name  ");
+    for (int i = 0; i < numClockListEntries; i++) {
+      printf(" %-3s", clockCh3Names[clockList[i]].c_str());
+    }
     printf("\n");
+
+
+    // Then give the per-mille contribution relative to the total
+    // HiGHS run time, and then relative to the sum of ticks for these
+    // clocks
+    double currentRunHighsTime = readRunHighsClock();
+    double currentRunHighsTick = currentRunHighsTime / tick2sec;
+    double suClockTicks = 0;
+    for (int passNum = 0; passNum < 2; passNum++) {
+      double suPerMille = 0;
+      printf("txt-profile-clock ");
+      for (int i = 0; i < numClockListEntries; i++) {
+	int iClock = clockList[i];
+	double perMille;
+	if (passNum == 0) {
+	  perMille = 1000.0 * clockTicks[iClock] / currentRunHighsTick;
+	} else {
+	  perMille = 1000.0 * clockTicks[iClock] / suClockTicks;
+	}
+	int int_PerMille = (perMille + 0.5);  // Forcing proper rounding
+	if (int_PerMille>0) {
+	  printf("%4d", int_PerMille); // Just in case one time is 1000!
+	} else {
+	  printf("    "); // Just in case one time is 1000!
+	}
+	suPerMille += perMille;
+	if (passNum == 0) {
+	  suClockTicks += clockTicks[iClock];
+	}
+      }
+      int int_suPerMille = (suPerMille + 0.5);  // Forcing proper rounding
+      printf(" per mille: Sum = %4d", int_suPerMille);
+      printf("\n");
+    }
+
     // Report one line per clock, the time, number of calls and time per call
     printf("txt-profile-time ");
 #ifdef HiGHSDEV
     printf("ID: ");
 #endif
-    printf("Operation       :    Time             :   Calls   Time/Call\n");
+    printf("Operation       :    Time                     :   Calls   Time/Call\n");
     // Convert approximate seconds
     double suTick = 0;
     double suTi = 0;
@@ -287,29 +306,31 @@ class HighsTimer {
       int iClock = clockList[i];
       double tick = clockTicks[iClock];
       double ti = tick2sec * tick;
-      double perCent = 100.0 * tick / currentRunHighsTick;
+      double perCentRunHighs = 100.0 * tick / currentRunHighsTick;
+      double perCentSumClockTicks = 100.0 * tick / suClockTicks;
       double tiPerCall = 0;
       if (clockNumCall[iClock] > 0) {
 	tiPerCall = ti / clockNumCall[iClock];
-	if (perCent >= tlPerCentReport) {
+	if (perCentSumClockTicks >= tlPerCentReport) {
 	  printf("txt-profile-time ");
 #ifdef HiGHSDEV
 	  printf("%2d: ", iClock);
 #endif
-	  printf("%-16s: %11.4e (%5.1f%%): %7d %11.4e\n",
-		 clockNames[iClock].c_str(), ti, perCent, clockNumCall[iClock],
+	  printf("%-16s: %11.4e (%5.1f%%; %5.1f%%): %7d %11.4e\n",
+		 clockNames[iClock].c_str(), ti, perCentSumClockTicks, perCentRunHighs, clockNumCall[iClock],
 		 tiPerCall);
 	}
       }
       suTi += ti;
       suTick += tick;
     }
-    double perCent = 100.0 * suTick / currentRunHighsTick;
+    double perCentRunHighs = 100.0 * suTick / currentRunHighsTick;
+    double perCentSumClockTicks = 100.0;
     printf("txt-profile-time ");
 #ifdef HiGHSDEV
     printf("    ");
 #endif
-    printf("SUM             : %11.4e (%5.1f%%)\n", suTi, perCent);
+    printf("SUM             : %11.4e (%5.1f%%; %5.1f%%)\n", suTi, perCentSumClockTicks, perCentRunHighs);
     printf("txt-profile-time ");
 #ifdef HiGHSDEV
     printf("    ");

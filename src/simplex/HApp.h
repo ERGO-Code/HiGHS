@@ -412,9 +412,6 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 // solution in solution.
 HighsStatus runSimplexSolver(const HighsOptions& opt,
                              HighsModelObject& highs_model) {
-  cout << "=================================================================="
-       << endl;
-
   // For the moment handle scip case separately.
   if (opt.scip) return solveScip(opt, highs_model);
 
@@ -481,8 +478,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
                                        highs_model.basis_info_.nonbasic_flag);
 
   highs_model.basis_info_.nonbasic_move = model.basis_->nonbasicMove_;
-
-  cout << "==================================================================\n";
 
   return result;
 }

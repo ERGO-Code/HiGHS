@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 
+#include "HConfig.h"
 #include "HApp.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
@@ -160,13 +161,13 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
+
+#ifdef HiGHSDEV
   // Report times
   std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
   timer.report(clockList);
+#endif
   timer.stopRunHighsClock();
-  double currentRunHighsTime = timer.readRunHighsClock();
-  int currentRunHighsCalls =  timer.clockNumCall[timer.runHighsClock];
-  printf("Run time with model is %g from %d calls\n", currentRunHighsTime, currentRunHighsCalls);
 
   return HighsStatus::OK;
 }
@@ -239,7 +240,7 @@ void HiGHSRun(const char* message = nullptr) {
             << " [date: " << HIGHS_COMPILATION_DATE
             << ", git hash: " << HIGHS_GITHASH << "]"
             << "\n"
-            << "Copyright (c) 2018 ERGO-Code under MIT licence terms.\n\n";
+            << "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n\n";
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   std::cout << "In " << message << std::endl;
