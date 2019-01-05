@@ -22,6 +22,10 @@
 #include "HighsLpUtils.h" // For util_anMl
 #include "HighsUtils.h" // For highs_isInfinity
 
+// For compute dual objective alt value
+#include "HighsModelObject.h"
+#include "HSimplex.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -3660,7 +3664,7 @@ void HModel::util_reportSolverProgress() {
   if (currentTime >= nextReport) {
     computeDualObjectiveValue();
     printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveValue,
-           numberIteration, timer_->getTime());
+           numberIteration, currentTime);
     if (currentTime < 50) {
       nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
     } else if (currentTime < 500) {

@@ -20,6 +20,10 @@
 #include "HighsTimer.h" //For timer_
 //#include "HighsUtils.h"
 #include "HighsRandom.h"
+
+// For compute dual objective alt value
+//#include "HighsModelObject.h"
+//#include "HSimplex.h"
 class HVector;
 
 #include <sstream>
@@ -476,7 +480,6 @@ class HModel {
   HighsScale *scale_;
   HighsRanging *ranging_;
   HighsTimer *timer_;
-  //  int modelTotalClock;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;

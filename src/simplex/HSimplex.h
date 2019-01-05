@@ -20,6 +20,55 @@
 //#include <vector>
 //#include <iostream>
 
+/**
+ * @brief Class for simplex utilities
+ */
+class HSimplex {
+ public:
+
+  void computeDualObjectiveAltValue(HighsModelObject *ptr_highs_model, int phase = 2) {
+    HighsLp &lp_ = ptr_highs_model->lp_scaled_;
+    HighsSimplexInfo &simplex_ = ptr_highs_model->simplex_;
+    
+    simplex_.dualObjectiveAltValue = 0;
+    const int numTot = lp_.numCol_ + lp_.numRow_;
+    for (int i = 0; i < numTot; i++) {
+      if (ptr_highs_model->basis_.nonbasicFlag_[i]) {
+	simplex_.dualObjectiveAltValue += simplex_.workValue_[i] * simplex_.workDual_[i];
+      }
+    }
+    if (phase != 1) {
+      simplex_.dualObjectiveAltValue *= ptr_highs_model->scale_.cost_;
+      simplex_.dualObjectiveAltValue -= lp_.offset_;
+    }
+    // Now have dual objective value
+    //  mlFg_haveDualObjectiveValue = 1;
+  }
+
+  void reportSolverProgress(HighsModelObject *ptr_highs_model, int phase = 2) {
+    // Reports every 0.2 seconds until 50 seconds
+    // Reports every 1.0 second until 500 seconds
+    // Reports every 5.0 seconds thereafter
+    //    if (intOption[INTOPT_PRINT_FLAG] != 2) return;
+    static double nextReport = 0;
+    double currentTime = ptr_highs_model->timer_.readRunHighsClock();
+    if (currentTime >= nextReport) {
+      computeDualObjectiveAltValue(ptr_highs_model, phase);
+      double dualObjectiveAltValue = ptr_highs_model->simplex_.dualObjectiveAltValue;
+      std::string modelName = ptr_highs_model->lp_.model_name_;
+      int numberIteration = 0;//ptr_highs_model->simplex_.dualObjectiveAltValue
+      printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveAltValue,
+	     numberIteration, currentTime);
+      if (currentTime < 50) {
+	nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
+      } else if (currentTime < 500) {
+	nextReport = ((int)(currentTime + 1)) - 0.00001;
+      } else {
+	nextReport = ((int)(0.2 * currentTime + 1)) / 0.2 - 0.00001;
+      }
+    }
+  }
+};
 
 //void simplexAllocateWorkAndBaseArrays(std::string& highs_model) {HighsModelObject obj;}
 

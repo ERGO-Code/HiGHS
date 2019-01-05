@@ -14,6 +14,7 @@
 #include "HPrimal.h"
 #include "HModel.h"
 #include "HConst.h"
+#include "HSimplex.h"
 
 #include <cassert>
 #include <cstdio>
@@ -78,12 +79,14 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
       if (invertHint) {
         break;
       }
+      //      double dualObjectiveCurrentValue = model->dualObjectiveValue
+      double dualObjectiveCurrentValue = highs_model_object->simplex_.dualObjectiveAltValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      // model->numberIteration, model->dualObjectiveValue);
-      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      // model->numberIteration, dualObjectiveCurrentValue);
+      if (dualObjectiveCurrentValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n",
-	       model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+	       dualObjectiveCurrentValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
@@ -146,6 +149,7 @@ void HPrimal::primalRebuild() {
   model->computeDual();
   model->computePrimal();
   model->computeDualObjectiveValue();
+  h_simplex_.computeDualObjectiveAltValue(highs_model_object);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV

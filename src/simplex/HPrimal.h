@@ -14,9 +14,10 @@
 #ifndef SIMPLEX_HPRIMAL_H_
 #define SIMPLEX_HPRIMAL_H_
 
+#include "HConfig.h"
 #include "HighsModelObject.h"
 #include "HVector.h"
-#include "HConfig.h"
+#include "HSimplex.h"
 
 class HModel;
 
@@ -54,6 +55,8 @@ class HPrimal {
   // Model pointer
   HModel *model;
   HighsModelObject *highs_model_object;
+  HSimplex h_simplex_;
+  
   int numCol;
   int numRow;
   int numTot;

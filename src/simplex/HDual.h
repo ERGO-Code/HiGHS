@@ -25,6 +25,7 @@
 #include "HighsModelObject.h"
 #include "HVector.h"
 #include "HMatrix.h"
+#include "HSimplex.h"
 
 class HFactor;
 
@@ -496,6 +497,7 @@ class HDual {
   HighsModelObject *highs_model_object;
   const HMatrix *matrix;
   const HFactor *factor;
+  HSimplex h_simplex_;
 
   const int *jMove;
   const double *workRange;
@@ -552,6 +554,13 @@ class HDual {
   double alpha;
   double alphaRow;
   double numericalTrouble;
+
+  // Value of dual objective that is updated in dual simplex solver
+  double updatedDualObjectiveAltValue;
+#ifdef HiGHSDEV
+  double previousUpdatedDualObjectiveAltValue;
+  double previousDualObjectiveAltValue;
+#endif
 
   // Iteration counts
   int n_ph1_du_it;

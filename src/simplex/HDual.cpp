@@ -28,6 +28,7 @@
 #include "HighsIO.h"
 #include "HighsModelObject.h"
 #include "SimplexTimer.h"
+#include "HSimplex.h"
 
 using std::runtime_error;
 using std::cout;
@@ -835,7 +836,16 @@ void HDual::rebuild() {
   // Compute the objective value
   timer.start(simplex.clock_[ComputeDuobjClock]);
   model->computeDualObjectiveValue(solvePhase);
+  h_simplex_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
   timer.stop(simplex.clock_[ComputeDuobjClock]);
+
+  double dualObjectiveAltValue = simplex.dualObjectiveAltValue;
+  double absDualObjectiveError = fabs(model->dualObjectiveValue - dualObjectiveAltValue);
+  double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(model->dualObjectiveValue));
+  if (rlvDualObjectiveError >= 0) {//1e-8) {
+      HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
+			absDualObjectiveError, rlvDualObjectiveError);
+    }
 
   if (checkDualObjectiveValue) {
     double absDualObjectiveError = fabs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
@@ -848,7 +858,7 @@ void HDual::rebuild() {
   model->updatedDualObjectiveValue = model->dualObjectiveValue;
 
 #ifdef HiGHSDEV
-  //  model->checkDualObjectiveValue("After model->computeDualObjectiveValue");
+  //  model->checkDualObjectiveValue("After computing dual objective value");
   //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
@@ -888,6 +898,7 @@ void HDual::cleanup() {
   model->initBound();
   model->computeDual();
   model->computeDualObjectiveValue(solvePhase);
+  h_simplex_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);
   iterateRpInvert(-1);
 
@@ -1212,11 +1223,13 @@ void HDual::iterateRpIterPh(bool header) {
   }
 }
 void HDual::iterateRpDuObj(bool header) {
+  HighsSimplexInfo &simplex = highs_model_object->simplex_;
   if (header) {
     printf("    DualObjective    ");
   } else {
     model->computeDualObjectiveValue(solvePhase);
-    printf(" %20.10e", model->dualObjectiveValue);
+    h_simplex_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
+    printf(" %20.10e", simplex.dualObjectiveAltValue);//model->dualObjectiveValue);
   }
 }
 
