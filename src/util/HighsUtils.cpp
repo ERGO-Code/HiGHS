@@ -54,7 +54,7 @@ void util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
 
   for (int ix = 0; ix < vecDim; ix++) {
     double v = vec[ix];
-    double absV = abs(v);
+    double absV = std::fabs(v);
     int log10V;
     if (absV > 0) {
       // Nonzero value
