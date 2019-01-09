@@ -1955,6 +1955,31 @@ void HDual::setPresolve(const char *Presolve_ArgV) {
   }
 }
 
+  void HDual::reportSolverProgress(HighsModelObject *ptr_highs_model, int phase = 2) {
+    // Reports every 0.2 seconds until 50 seconds
+    // Reports every 1.0 second until 500 seconds
+    // Reports every 5.0 seconds thereafter
+    //    if (intOption[INTOPT_PRINT_FLAG] != 2) return;
+    static double nextReport = 0;
+    double currentTime = ptr_highs_model->timer_.readRunHighsClock();
+    if (currentTime >= nextReport) {
+      h_simplex_.computeDualObjectiveAltValue(ptr_highs_model, phase);
+      double dualObjectiveAltValue = ptr_highs_model->simplex_.dualObjectiveAltValue;
+      std::string modelName = ptr_highs_model->lp_.model_name_;
+      int numberIteration = 0;//ptr_highs_model->simplex_.dualObjectiveAltValue
+      printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveAltValue,
+	     numberIteration, currentTime);
+      if (currentTime < 50) {
+	nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
+      } else if (currentTime < 500) {
+	nextReport = ((int)(currentTime + 1)) - 0.00001;
+      } else {
+	nextReport = ((int)(0.2 * currentTime + 1)) / 0.2 - 0.00001;
+      }
+    }
+  }
+
+
 // Utility to get a row of the inverse of B for SCIP
 int HDual::util_getBasisInvRow(int r, double *coef, int *inds, int *ninds) {
   row_ep.clear();

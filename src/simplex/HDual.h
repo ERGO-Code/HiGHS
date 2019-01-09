@@ -325,6 +325,12 @@ class HDual {
   void setPresolve(const char *PresolveMode);
 
   /**
+   * @brief Report on progress of the dual simplex solver
+   */
+  void reportSolverProgress(HighsModelObject *ptr_highs_model, int phase);
+
+
+  /**
    * @brief Get a row of the inverse of the basis matrix for SCIP
    */
   int util_getBasisInvRow(int r,         //!< Index of row required
