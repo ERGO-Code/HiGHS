@@ -42,7 +42,7 @@ class HSimplex {
       simplex_info_.dualObjectiveAltValue -= lp_.offset_;
     }
     // Now have dual objective value
-    //  mlFg_haveDualObjectiveValue = 1;
+    ptr_highs_model->haveDualObjectiveValue = 1;
   }
 
 };

@@ -826,7 +826,7 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = highs_model_object->haveDualObjectiveValue;
+  bool checkDualObjectiveValue = true;//highs_model_object->haveDualObjectiveValue;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
   simplex_method_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
@@ -844,7 +844,7 @@ void HDual::rebuild() {
   simplex_info.updatedDualObjectiveAltValue = dualObjectiveAltValue;
 
 #ifdef HiGHSDEV
-  checkDualObjectiveAltValue(highs_model_object, "After computing dual objective value");
+  //  checkDualObjectiveAltValue(highs_model_object, "After computing dual objective value");
   //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
