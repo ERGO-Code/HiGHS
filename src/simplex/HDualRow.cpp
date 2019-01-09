@@ -325,7 +325,7 @@ bool HDualRow::choose_final() {
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
-  //  workModel->checkDualObjectiveValue("Before update_flip");
+  //  &workHMO->simplex_method_->checkDualObjectiveValue("Before update_flip");
   double *workDual = &workHMO->simplex_info_.workDual_[0];//
   //  double *workLower = &workHMO->simplex_info_.workLower_[0];
   //  double *workUpper = &workHMO->simplex_info_.workUpper_[0];
@@ -343,15 +343,14 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     workModel->flipBound(iCol);
     workModel->matrix_->collect_aj(*bfrtColumn, iCol, change);
   }
-  workModel->updatedDualObjectiveValue += dualObjectiveValueChange;
   workHMO->simplex_info_.updatedDualObjectiveAltValue += dualObjectiveValueChange;
-  //  workModel->checkDualObjectiveValue("After  update_flip");
+  //  &workHMO->simplex_method_->checkDualObjectiveValue("After  update_flip");
 }
 
 void HDualRow::update_dual(double theta, int columnOut) {
   HighsTimer &timer = workHMO->timer_;
   HighsSimplexInfo &simplex_info = workHMO->simplex_info_;
-  //  workModel->checkDualObjectiveValue("Before update_dual");
+  //  &workHMO->simplex_method_->checkDualObjectiveValue("Before update_dual");
   timer.start(simplex_info.clock_[UpdateDualClock]);
   double *workDual = &workHMO->simplex_info_.workDual_[0];
   //  int columnOut_i = -1;
@@ -364,46 +363,8 @@ void HDualRow::update_dual(double theta, int columnOut) {
     double iColWorkValue = workHMO->simplex_info_.workValue_[iCol];
     double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO->scale_.cost_;
-    workModel->updatedDualObjectiveValue += dlDuObj;
     workHMO->simplex_info_.updatedDualObjectiveAltValue += dlDuObj;
   }
-  /*
-  // Apply correction because the updated dual objective value may
-  // contain a rogue contribution corresponding to the leaving column
-  double duObjCorrection = 0;
-  if (columnOut_i >= 0) {
-    //    double nonUnitPackValue = abs(packValue[columnOut_i] - 1.0);
-    //    if (nonUnitPackValue > 1e-8) printf("STRANGE: packValue[columnOut_i] = %11.4g has nonUnitPackValue = %11.4g\n", packValue[columnOut_i], nonUnitPackValue);
-    int iCol = columnOut;
-    double dlDual = theta * packValue[columnOut_i];
-    double iColWorkValue = workModel->workValue[iCol];
-    double dlDuObj = -iColWorkValue * dlDual;
-    duObjCorrection = dlDuObj;
-    //    if (abs(duObjCorrection)>1e-8) printf("Dual objective correction (columnOut_i>=0) = %11.4g\n", duObjCorrection);
-  }
-  
-  double duObjEr = workModel->checkDualObjectiveValue("After  update_dual");
-  double rlvErDen = max(1.0, abs(workModel->dualObjectiveValue));
-  double rlvDuObjEr = abs(duObjEr)/rlvErDen;
-  if (rlvDuObjEr > 1e-8) {
-    if (columnOut_i < 0) printf("ERROR: columnOut_i = %d in update_dual\n", columnOut_i);
-    double nwDuObjEr = duObjEr+duObjCorrection;
-    printf("theta = %11.4g, duObjEr = %11.4g; duObjCorrection = %11.4g; nwDuObjEr = %11.4g\n",
-	   theta, duObjEr, duObjCorrection, nwDuObjEr);
-    if (abs(nwDuObjEr)/rlvErDen > 1e-12)
-      printf("ERROR:  duObjEr+duObjCorrection = %11.4g + %11.4g = %11.4g\n", duObjEr, duObjCorrection, nwDuObjEr);
-    for (int i = 0; i < packCount; i++) {
-      int iCol = packIndex[i];
-      double dlDual = theta * packValue[i];
-      double iColWorkValue = workModel->workValue[iCol];
-      double dlDuObj = -iColWorkValue * dlDual;
-      dlDuObj *= workModel->scale.cost_;
-      if (!workModel->nonbasicFlag[iCol])
-	printf("Column %5d: packValue = %11.4g Fg = %2d; dlDual = %11.4g; iColWorkValue = %11.4g; dlDuObj = %11.4g: DuObj = %11.4g\n", 
-	       iCol, packValue[i], workModel->nonbasicFlag[iCol], dlDual, iColWorkValue, dlDuObj, workModel->dualObjectiveValue);
-    }
-  }
-  */
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 }
 

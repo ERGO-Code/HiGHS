@@ -214,6 +214,15 @@ class HFactor {
   void checkInvert();
 #endif
 
+
+  // Properties of data held in HFactor.h. To "have" them means that
+  // they are assigned.
+  int haveArrays;
+  // The representation of B^{-1} corresponds to the current basis
+  int haveInvert;
+  // The representation of B^{-1} corresponds to the current basis and is fresh
+  int haveFreshInvert;
+
  private:
   /**
    * Data of the factor
@@ -227,8 +236,6 @@ class HFactor {
   const double *Avalue;
   int *baseIndex;
   int updateMethod;
-
-  // Count of elements
 
   // Working buffer
   int nwork;

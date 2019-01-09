@@ -139,7 +139,8 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
         model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
-        highs_model.lp_.numCol_, currentRunHighsTime, model.dualObjectiveValue, solver.n_ph1_du_it,
+        highs_model.lp_.numCol_, currentRunHighsTime,
+	highs_model.simplex_info_.dualObjectiveAltValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -167,8 +168,9 @@ HighsStatus solveSimplex(const HighsOptions& opt,
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
             model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
-            highs_model.lp_.numCol_, currentRunHighsTime, model.dualObjectiveValue, solver.n_ph1_du_it,
-            solver.n_ph2_du_it, solver.n_pr_it);
+            highs_model.lp_.numCol_, currentRunHighsTime,
+	    highs_model.simplex_info_.dualObjectiveAltValue,
+	    solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
     }

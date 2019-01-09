@@ -184,10 +184,6 @@ class HModel {
   void computeDualInfeasInPrimal(int* dualInfeasCount);
   void correctDual(int* freeInfeasCount);
   void computePrimal();
-  void computeDualObjectiveValue(int phase = 2);
-#ifdef HiGHSDEV
-  double checkDualObjectiveValue(const char *message, int phase = 2);
-#endif
   double computePrObj();
   double computePh2Objective(vector<double>& colPrAct);
   int handleRankDeficiency();
@@ -234,10 +230,6 @@ class HModel {
 #endif
   //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  // Utilities to get objective, solution and basis: all just copy what's there
-  // with no re-evaluation!
-  double util_getObjectiveValue();
-  
   void util_getPrimalDualValues(vector<double>& XcolValue,
                                 vector<double>& XcolDual,
                                 vector<double>& XrowValue,
@@ -305,7 +297,6 @@ class HModel {
   void util_reportMessage(const char* message);
   void util_reportNumberIterationObjectiveValue(int i_v);
   void util_reportSolverOutcome(const char* message);
-  void util_reportSolverProgress();
 
   // Methods for reporting the model, its solution, row and column data and
   // matrix
@@ -367,13 +358,6 @@ class HModel {
   // Scalar solution output
   // Essentials
   int numberIteration;
-  // Dual objective value
-  double dualObjectiveValue;
-  double updatedDualObjectiveValue;
-#ifdef HiGHSDEV
-  double previousUpdatedDualObjectiveValue;
-  double previousDualObjectiveValue;
-#endif
 #ifdef HiGHSDEV
   // Analysis of INVERT
   const bool anInvertTime = false;
@@ -430,7 +414,7 @@ class HModel {
   int mlFg_haveBasicPrimals;
   //
   // The dual objective function value is known
-  int mlFg_haveDualObjectiveValue;
+  //  int mlFg_haveDualObjectiveValue;
   //
   // The data are fresh from rebuild
   int mlFg_haveFreshRebuild;

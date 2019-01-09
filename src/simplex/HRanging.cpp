@@ -952,7 +952,7 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
   model->mlFg_haveFreshInvert = 0;
   model->mlFg_haveNonbasicDuals = 0;
   model->mlFg_haveBasicPrimals = 0;
-  model->mlFg_haveDualObjectiveValue = 0;
+  //  model->mlFg_haveDualObjectiveValue = 0;
   model->mlFg_haveFreshRebuild = 0;
   model->mlFg_haveRangingData = 0;
   model->mlFg_haveSavedBounds = 0;

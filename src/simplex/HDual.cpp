@@ -254,7 +254,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
     // updated value
-    model->mlFg_haveDualObjectiveValue = 0;
+    highs_model_object->haveDualObjectiveValue = 0;
     switch (solvePhase) {
       case 1:
 	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
@@ -593,7 +593,7 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
   if (rowOut == -1) {
     model->util_reportMessage("dual-phase-1-optimal");
     // Go to phase 2
-    if (model->dualObjectiveValue == 0) {
+    if (simplex_info.dualObjectiveAltValue == 0) {
       solvePhase = 2;
     } else {
       // We still have dual infeasible
@@ -659,7 +659,7 @@ void HDual::solve_phase2() {
     for (;;) {
       // Inner loop of solve_phase2()
       // Performs one iteration in case HDUAL_VARIANT_PLAIN:
-      model->util_reportSolverProgress();
+      reportSolverProgress(highs_model_object);
       switch (dual_variant) {
         default:
         case HDUAL_VARIANT_PLAIN:
@@ -674,18 +674,12 @@ void HDual::solve_phase2() {
       }
       // invertHint can be true for various reasons see HModel.h
       if (invertHint) break;
-#ifdef HiGHSDEV
-        //      double pr_obj_v = model->computePrObj();
-        //      printf("HDual::solve_phase2: Iter = %4d; Pr Obj = %.11g; Du Obj
-        //      = %.11g\n",
-        //	     model->numberIteration, pr_obj_v, model->dualObjectiveValue);
-#endif
-      if (model->updatedDualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      if (simplex_info.updatedDualObjectiveAltValue > model->dblOption[DBLOPT_OBJ_UB]) {
 #ifdef SCIP_DEV
         printf(
             "HDual::solve_phase2: Objective = %g > %g = "
             "dblOption[DBLOPT_OBJ_UB]\n",
-            updatedDualObjectiveAltValue, model->dblOption[DBLOPT_OBJ_UB]);
+            simplex_info->updatedDualObjectiveAltValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;
@@ -832,35 +826,25 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = model->mlFg_haveDualObjectiveValue;
+  bool checkDualObjectiveValue = highs_model_object->haveDualObjectiveValue;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
-  model->computeDualObjectiveValue(solvePhase);
   simplex_method_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuobjClock]);
 
   double dualObjectiveAltValue = simplex_info.dualObjectiveAltValue;
-  double absDualObjectiveError = fabs(model->dualObjectiveValue - dualObjectiveAltValue);
-  double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(model->dualObjectiveValue));
-  if (rlvDualObjectiveError >= 0) {//1e-8) {
-      HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
-			absDualObjectiveError, rlvDualObjectiveError);
-    }
-
   if (checkDualObjectiveValue) {
-    double absDualObjectiveError = fabs(model->dualObjectiveValue - model->updatedDualObjectiveValue);
-    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(model->dualObjectiveValue));
-    if (rlvDualObjectiveError > 1e-8) {
+    double absDualObjectiveError = fabs(simplex_info.updatedDualObjectiveAltValue - dualObjectiveAltValue);
+    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(dualObjectiveAltValue));
+    if (rlvDualObjectiveError >= 1e-8) {
       HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
 			absDualObjectiveError, rlvDualObjectiveError);
     }
   }
-  model->updatedDualObjectiveValue = model->dualObjectiveValue;
   simplex_info.updatedDualObjectiveAltValue = dualObjectiveAltValue;
 
 #ifdef HiGHSDEV
   checkDualObjectiveAltValue(highs_model_object, "After computing dual objective value");
-  //  model->checkDualObjectiveValue("After computing dual objective value");
   //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
@@ -899,7 +883,6 @@ void HDual::cleanup() {
   model->initCost();
   model->initBound();
   model->computeDual();
-  model->computeDualObjectiveValue(solvePhase);
   simplex_method_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);
   iterateRpInvert(-1);
@@ -1229,9 +1212,8 @@ void HDual::iterateRpDuObj(bool header) {
   if (header) {
     printf("    DualObjective    ");
   } else {
-    model->computeDualObjectiveValue(solvePhase);
     simplex_method_.computeDualObjectiveAltValue(highs_model_object, solvePhase);
-    printf(" %20.10e", simplex_info.dualObjectiveAltValue);//model->dualObjectiveValue);
+    printf(" %20.10e", simplex_info.dualObjectiveAltValue);
   }
 }
 
@@ -1779,7 +1761,6 @@ void HDual::updatePivots() {
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
   //  checkDualObjectiveAltValue(highs_model_object, "After  model->updatePivots");
-  //  model->checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
@@ -2006,7 +1987,7 @@ double HDual::checkDualObjectiveAltValue(HighsModelObject *ptr_highs_model, cons
   previousUpdatedDualObjectiveAltValue = dualObjectiveAltValue;
   ptr_highs_model->simplex_info_.updatedDualObjectiveAltValue = dualObjectiveAltValue;
   // Now have dual objective value
-  //  mlFg_haveDualObjectiveAltValue = 1;
+  highs_model_object->haveDualObjectiveValue = 1;
   return updatedDualObjectiveError;
 }
 #endif

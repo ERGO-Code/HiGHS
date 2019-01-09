@@ -148,7 +148,6 @@ void HPrimal::primalRebuild() {
   }
   model->computeDual();
   model->computePrimal();
-  model->computeDualObjectiveValue();
   simplex_method_.computeDualObjectiveAltValue(highs_model_object);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 

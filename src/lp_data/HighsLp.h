@@ -176,7 +176,6 @@ struct HighsSimplexInfo {
   // need to put this in lower level header, but can't go into Dual.h
   double updatedDualObjectiveAltValue;
 
-  //
   // Number of simplex iterations: total and constituent counts
   int numberAltIteration;
   int numberAltPhase1DualIteration;

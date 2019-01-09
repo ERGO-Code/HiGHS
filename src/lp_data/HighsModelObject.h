@@ -45,6 +45,21 @@ public:
   //  int modelTotalClock;
   double modelTotalInvertTime;
   double modelTotalRebuildTime;
+  //
+  // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To
+  // have them means that they correspond to a consistent basis
+  // logically, but B is not necessarily nonsingular.
+  int haveBasis;
+  // This refers to workEdWt, which is held in HDualRHS.h and is
+  // assigned and initialised to 1s in dualRHS.setup(model). To
+  // "have" the edge weights means that they are correct.
+  int haveSteepestEdgeWeights;
+  // The nonbasic dual and basic primal values are known
+  int haveNonbasicDualValues;
+  int haveBasicPrimalValues;
+  //
+  // The dual objective function value is known
+  int haveDualObjectiveValue;
 
   BasisInfo basis_info_;
 

@@ -233,7 +233,7 @@ void HModel::mlFg_Clear() {
   mlFg_haveFreshInvert = 0;
   mlFg_haveNonbasicDuals = 0;
   mlFg_haveBasicPrimals = 0;
-  mlFg_haveDualObjectiveValue = 0;
+  //  mlFg_haveDualObjectiveValue = 0;
   mlFg_haveFreshRebuild = 0;
   mlFg_haveRangingData = 0;
   mlFg_haveSavedBounds = 0;
@@ -263,7 +263,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveFreshRebuild = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveBasicPrimals = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
     populate_WorkArrays();
@@ -281,7 +281,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveFreshRebuild = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveBasicPrimals = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_NewBounds) {
@@ -291,7 +291,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     initValue();
     mlFg_haveBasicPrimals = 0;
     mlFg_haveFreshRebuild = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_NewCosts) {
@@ -300,7 +300,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     initCost();
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_NewBasis) {
@@ -316,7 +316,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_NewCols) {
@@ -331,7 +331,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveFreshInvert = 0;
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_NewRows) {
@@ -347,7 +347,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
 } else if (mlFg_action == mlFg_action_DelCols) {
@@ -362,7 +362,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveFreshInvert = 0;
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_DelRows) {
@@ -378,7 +378,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else if (mlFg_action == mlFg_action_DelRowsBasisOK) {
@@ -394,7 +394,7 @@ void HModel::mlFg_Update(int mlFg_action) {
     mlFg_haveBasicPrimals = 0;
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
-    mlFg_haveDualObjectiveValue = 0;
+    //    mlFg_haveDualObjectiveValue = 0;
     mlFg_haveRangingData = 0;
 
   } else {
@@ -419,7 +419,7 @@ void HModel::mlFg_Report() {
   printf("mlFg_haveFreshInvert =         %2d\n", mlFg_haveFreshInvert);
   printf("mlFg_haveNonbasicDuals =       %2d\n", mlFg_haveNonbasicDuals);
   printf("mlFg_haveBasicPrimals =        %2d\n", mlFg_haveBasicPrimals);
-  printf("mlFg_haveDualObjectiveValue =  %2d\n", mlFg_haveDualObjectiveValue);
+  //  printf("mlFg_haveDualObjectiveValue =  %2d\n", mlFg_haveDualObjectiveValue);
   printf("mlFg_haveFreshRebuild =        %2d\n", mlFg_haveFreshRebuild);
   printf("mlFg_haveRangingData =         %2d\n", mlFg_haveRangingData);
   printf("mlFg_haveSavedBounds =         %2d\n\n", mlFg_haveSavedBounds);
@@ -2209,48 +2209,6 @@ double HModel::computePrObj() {
   return prObj;
 }
 
-// Compute the (dual) objective via nonbasic primal values (current bound) and
-// dual values
-void HModel::computeDualObjectiveValue(int phase) {
-  dualObjectiveValue = 0;
-  const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
-  for (int i = 0; i < numTot; i++) {
-    if (basis_->nonbasicFlag_[i]) {
-      dualObjectiveValue += simplex_info_->workValue_[i] * simplex_info_->workDual_[i];
-    }
-  }
-  if (phase != 1) {
-    dualObjectiveValue *= scale_->cost_;
-    dualObjectiveValue -= lp_scaled_->offset_;
-  }
-  // Now have dual objective value
-  mlFg_haveDualObjectiveValue = 1;
-}
-
-#ifdef HiGHSDEV
-double HModel::checkDualObjectiveValue(const char *message, int phase) {
-  computeDualObjectiveValue(phase);
-  double changeInUpdatedDualObjectiveValue = updatedDualObjectiveValue - previousUpdatedDualObjectiveValue;
-  double changeInDualObjectiveValue = dualObjectiveValue - previousDualObjectiveValue;
-  double updatedDualObjectiveError = dualObjectiveValue - updatedDualObjectiveValue;
-  double rlvUpdatedDualObjectiveError = fabs(updatedDualObjectiveError)/max(1.0, fabs(dualObjectiveValue));
-  bool erFd = rlvUpdatedDualObjectiveError > 1e-8;
-  if (erFd)
-    printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
-	   phase,
-	   dualObjectiveValue, changeInDualObjectiveValue,
-	   updatedDualObjectiveValue, changeInUpdatedDualObjectiveValue,
-	   updatedDualObjectiveError, rlvUpdatedDualObjectiveError,
-	   message);
-  previousDualObjectiveValue = dualObjectiveValue;
-  previousUpdatedDualObjectiveValue = dualObjectiveValue;
-  updatedDualObjectiveValue = dualObjectiveValue;
-  // Now have dual objective value
-  mlFg_haveDualObjectiveValue = 1;
-  return updatedDualObjectiveError;
-}
-#endif
-
 int HModel::handleRankDeficiency() {
   int rankDeficiency = factor_->rankDeficiency;
   const int *noPvC = factor_->getNoPvC();
@@ -2387,7 +2345,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   //  if (abs(nwValue))
   //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
   //			   columnOut, basis_->nonbasicMove_[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
-  updatedDualObjectiveValue += dlDualObjectiveValue;
+  simplex_info_->updatedDualObjectiveAltValue += dlDualObjectiveValue;
   countUpdate++;
   // Update the number of basic logicals
   if (columnOut < lp_scaled_->numCol_) numBasicLogicals -= 1;
@@ -2486,7 +2444,7 @@ void HModel::initRandomVec() {
 }
 
 void HModel::shiftObjectiveValue(double shift) {
-  dualObjectiveValue = dualObjectiveValue + shift;
+  simplex_info_->dualObjectiveAltValue += shift;
 }
 
 void HModel::recordPivots(int columnIn, int columnOut, double alpha) {
@@ -2516,10 +2474,6 @@ void HModel::writePivots(const char *suffix) {
 }
 #endif
 //<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-
-
-// Methods to get objective, solution and basis: all just copy what's there with
-// no re-evaluation! Return the current value of ther objective
-double HModel::util_getObjectiveValue() { return dualObjectiveValue; }
 
 // Scale a pair of row bound values
 void HModel::util_scaleRowBoundValue(int iRow, double* XrowLowerValue, double* XrowUpperValue) {
@@ -3622,7 +3576,7 @@ void HModel::util_reportMessage(const char *message) {
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
   if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4)
     return;
-  printf("%10d  %20.10e  %2d\n", numberIteration, dualObjectiveValue, i_v);
+  printf("%10d  %20.10e  %2d\n", numberIteration, simplex_info_->dualObjectiveAltValue, i_v);
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
@@ -3631,16 +3585,17 @@ void HModel::util_reportSolverOutcome(const char *message) {
     printf("%s: OPTIMAL", message);
   else
     printf("%s: NOT-OPT", message);
+  double dualObjectiveAltValue = simplex_info_->dualObjectiveAltValue;
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal =
-      abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
+      abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveAltValue), max(abs(prObjVal), 1.0));
   printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
-         modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
+         modelName.c_str(), prObjVal, dualObjectiveAltValue, dlObjVal, numberIteration,
          currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
-  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
+  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveAltValue,
          numberIteration, currentRunHighsTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
@@ -3650,29 +3605,8 @@ void HModel::util_reportSolverOutcome(const char *message) {
     util_reportModelStatus();
   }
   // Greppable report line added
-  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
+  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveAltValue, numberIteration,
          currentRunHighsTime, problemStatus, modelName.c_str());
-}
-
-void HModel::util_reportSolverProgress() {
-  // Reports every 0.2 seconds until 50 seconds
-  // Reports every 1.0 second until 500 seconds
-  // Reports every 5.0 seconds thereafter
-  if (intOption[INTOPT_PRINT_FLAG] != 2) return;
-  static double nextReport = 0;
-  double currentTime = timer_->getTime();
-  if (currentTime >= nextReport) {
-    computeDualObjectiveValue();
-    printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveValue,
-           numberIteration, currentTime);
-    if (currentTime < 50) {
-      nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
-    } else if (currentTime < 500) {
-      nextReport = ((int)(currentTime + 1)) - 0.00001;
-    } else {
-      nextReport = ((int)(0.2 * currentTime + 1)) / 0.2 - 0.00001;
-    }
-  }
 }
 
 // Methods for reporting the model, its solution, row and column data and matrix
@@ -4522,6 +4456,7 @@ void HModel::util_anMlSol() {
   lcPrObjV += lp_scaled_->offset_;
   lcPrObjV_LargeCo *= scale_->cost_;
   lcPrObjV_OtherCo *= scale_->cost_;
+  double dualObjectiveValue = simplex_info_->dualObjectiveAltValue;
   if (largeCostScale == 1.0) {
     double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
     //    if (ObjEr > 1e-8)
