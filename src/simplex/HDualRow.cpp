@@ -343,7 +343,7 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     workModel->flipBound(iCol);
     workModel->matrix_->collect_aj(*bfrtColumn, iCol, change);
   }
-  workHMO->simplex_info_.updatedDualObjectiveAltValue += dualObjectiveValueChange;
+  workHMO->simplex_info_.updatedDualObjectiveValue += dualObjectiveValueChange;
   //  &workHMO->simplex_method_->checkDualObjectiveValue("After  update_flip");
 }
 
@@ -363,7 +363,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     double iColWorkValue = workHMO->simplex_info_.workValue_[iCol];
     double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO->scale_.cost_;
-    workHMO->simplex_info_.updatedDualObjectiveAltValue += dlDuObj;
+    workHMO->simplex_info_.updatedDualObjectiveValue += dlDuObj;
   }
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 }

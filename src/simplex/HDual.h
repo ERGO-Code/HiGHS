@@ -329,7 +329,7 @@ class HDual {
    */
   void reportSolverProgress(HighsModelObject *ptr_highs_model, int phase = 2);
 #ifdef HiGHSDEV
-  double checkDualObjectiveAltValue(HighsModelObject *ptr_highs_model, const char *message, int phase = 2);
+  double checkDualObjectiveValue(HighsModelObject *ptr_highs_model, const char *message, int phase = 2);
 #endif
 
 

@@ -26,20 +26,20 @@
 class HSimplex {
  public:
 
-  void computeDualObjectiveAltValue(HighsModelObject *ptr_highs_model, int phase = 2) {
+  void computeDualObjectiveValue(HighsModelObject *ptr_highs_model, int phase = 2) {
     HighsLp &lp_ = ptr_highs_model->lp_scaled_;
     HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
     
-    simplex_info_.dualObjectiveAltValue = 0;
+    simplex_info_.dualObjectiveValue = 0;
     const int numTot = lp_.numCol_ + lp_.numRow_;
     for (int i = 0; i < numTot; i++) {
       if (ptr_highs_model->basis_.nonbasicFlag_[i]) {
-	simplex_info_.dualObjectiveAltValue += simplex_info_.workValue_[i] * simplex_info_.workDual_[i];
+	simplex_info_.dualObjectiveValue += simplex_info_.workValue_[i] * simplex_info_.workDual_[i];
       }
     }
     if (phase != 1) {
-      simplex_info_.dualObjectiveAltValue *= ptr_highs_model->scale_.cost_;
-      simplex_info_.dualObjectiveAltValue -= lp_.offset_;
+      simplex_info_.dualObjectiveValue *= ptr_highs_model->scale_.cost_;
+      simplex_info_.dualObjectiveValue -= lp_.offset_;
     }
     // Now have dual objective value
     ptr_highs_model->haveDualObjectiveValue = 1;

@@ -80,7 +80,7 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
         break;
       }
       //      double dualObjectiveCurrentValue = model->dualObjectiveValue
-      double dualObjectiveCurrentValue = highs_model_object->simplex_info_.dualObjectiveAltValue;
+      double dualObjectiveCurrentValue = highs_model_object->simplex_info_.dualObjectiveValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
       // model->numberIteration, dualObjectiveCurrentValue);
       if (dualObjectiveCurrentValue > model->dblOption[DBLOPT_OBJ_UB]) {
@@ -148,7 +148,7 @@ void HPrimal::primalRebuild() {
   }
   model->computeDual();
   model->computePrimal();
-  simplex_method_.computeDualObjectiveAltValue(highs_model_object);
+  simplex_method_.computeDualObjectiveValue(highs_model_object);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV

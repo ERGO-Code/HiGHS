@@ -171,10 +171,10 @@ struct HighsSimplexInfo {
   std::vector<int> clock_;
   //
   // Value of dual objective
-  double dualObjectiveAltValue;
+  double dualObjectiveValue;
   // Value of dual objective that is updated in dual simplex solver -
   // need to put this in lower level header, but can't go into Dual.h
-  double updatedDualObjectiveAltValue;
+  double updatedDualObjectiveValue;
 
   // Number of simplex iterations: total and constituent counts
   int numberAltIteration;

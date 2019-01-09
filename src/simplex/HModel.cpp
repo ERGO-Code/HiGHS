@@ -2345,7 +2345,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   //  if (abs(nwValue))
   //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
   //			   columnOut, basis_->nonbasicMove_[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
-  simplex_info_->updatedDualObjectiveAltValue += dlDualObjectiveValue;
+  simplex_info_->updatedDualObjectiveValue += dlDualObjectiveValue;
   countUpdate++;
   // Update the number of basic logicals
   if (columnOut < lp_scaled_->numCol_) numBasicLogicals -= 1;
@@ -2444,7 +2444,7 @@ void HModel::initRandomVec() {
 }
 
 void HModel::shiftObjectiveValue(double shift) {
-  simplex_info_->dualObjectiveAltValue += shift;
+  simplex_info_->dualObjectiveValue += shift;
 }
 
 void HModel::recordPivots(int columnIn, int columnOut, double alpha) {
@@ -3576,7 +3576,7 @@ void HModel::util_reportMessage(const char *message) {
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
   if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4)
     return;
-  printf("%10d  %20.10e  %2d\n", numberIteration, simplex_info_->dualObjectiveAltValue, i_v);
+  printf("%10d  %20.10e  %2d\n", numberIteration, simplex_info_->dualObjectiveValue, i_v);
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
@@ -3585,17 +3585,17 @@ void HModel::util_reportSolverOutcome(const char *message) {
     printf("%s: OPTIMAL", message);
   else
     printf("%s: NOT-OPT", message);
-  double dualObjectiveAltValue = simplex_info_->dualObjectiveAltValue;
+  double dualObjectiveValue = simplex_info_->dualObjectiveValue;
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal =
-      abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveAltValue), max(abs(prObjVal), 1.0));
+      abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
-         modelName.c_str(), prObjVal, dualObjectiveAltValue, dlObjVal, numberIteration,
+         modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
          currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
-  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveAltValue,
+  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
          numberIteration, currentRunHighsTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
@@ -3605,7 +3605,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
     util_reportModelStatus();
   }
   // Greppable report line added
-  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveAltValue, numberIteration,
+  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
          currentRunHighsTime, problemStatus, modelName.c_str());
 }
 
@@ -4456,7 +4456,7 @@ void HModel::util_anMlSol() {
   lcPrObjV += lp_scaled_->offset_;
   lcPrObjV_LargeCo *= scale_->cost_;
   lcPrObjV_OtherCo *= scale_->cost_;
-  double dualObjectiveValue = simplex_info_->dualObjectiveAltValue;
+  double dualObjectiveValue = simplex_info_->dualObjectiveValue;
   if (largeCostScale == 1.0) {
     double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
     //    if (ObjEr > 1e-8)

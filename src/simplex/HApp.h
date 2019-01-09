@@ -140,7 +140,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
         model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
         highs_model.lp_.numCol_, currentRunHighsTime,
-	highs_model.simplex_info_.dualObjectiveAltValue, solver.n_ph1_du_it,
+	highs_model.simplex_info_.dualObjectiveValue, solver.n_ph1_du_it,
         solver.n_ph2_du_it, solver.n_pr_it);
 #endif
 
@@ -169,7 +169,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
             model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
             highs_model.lp_.numCol_, currentRunHighsTime,
-	    highs_model.simplex_info_.dualObjectiveAltValue,
+	    highs_model.simplex_info_.dualObjectiveValue,
 	    solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
 #endif
       }
