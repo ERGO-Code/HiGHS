@@ -34,7 +34,7 @@ public:
   string modelName;
   
   HighsLp lp_scaled_;
-  HighsSimplexInfo simplex_;
+  HighsSimplexInfo simplex_info_;
   HighsSolution solution_;
   HighsRanging ranging_;
   HighsBasis basis_;

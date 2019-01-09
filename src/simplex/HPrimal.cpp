@@ -80,7 +80,7 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
         break;
       }
       //      double dualObjectiveCurrentValue = model->dualObjectiveValue
-      double dualObjectiveCurrentValue = highs_model_object->simplex_.dualObjectiveAltValue;
+      double dualObjectiveCurrentValue = highs_model_object->simplex_info_.dualObjectiveAltValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
       // model->numberIteration, dualObjectiveCurrentValue);
       if (dualObjectiveCurrentValue > model->dblOption[DBLOPT_OBJ_UB]) {
@@ -149,7 +149,7 @@ void HPrimal::primalRebuild() {
   model->computeDual();
   model->computePrimal();
   model->computeDualObjectiveValue();
-  h_simplex_.computeDualObjectiveAltValue(highs_model_object);
+  simplex_method_.computeDualObjectiveAltValue(highs_model_object);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV
@@ -173,9 +173,9 @@ void HPrimal::primalChooseColumn() {
   double bestInfeas = 0;
   const int *jFlag = &highs_model_object->basis_.nonbasicFlag_[0];
   const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  double *workDual = &highs_model_object->simplex_.workDual_[0];
-  const double *workLower = &highs_model_object->simplex_.workLower_[0];
-  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
+  double *workDual = &highs_model_object->simplex_info_.workDual_[0];
+  const double *workLower = &highs_model_object->simplex_info_.workLower_[0];
+  const double *workUpper = &highs_model_object->simplex_info_.workUpper_[0];
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
   const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
@@ -201,9 +201,9 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
-  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
-  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
+  const double *baseLower = &highs_model_object->simplex_info_.baseLower_[0];
+  const double *baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
+  double *baseValue = &highs_model_object->simplex_info_.baseValue_[0];
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute pivot column
@@ -265,13 +265,13 @@ void HPrimal::primalChooseRow() {
 
 void HPrimal::primalUpdate() {
   int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  double *workDual = &highs_model_object->simplex_.workDual_[0];
-  const double *workLower = &highs_model_object->simplex_.workLower_[0];
-  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
-  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
-  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
-  double *workValue = &highs_model_object->simplex_.workValue_[0];
-  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
+  double *workDual = &highs_model_object->simplex_info_.workDual_[0];
+  const double *workLower = &highs_model_object->simplex_info_.workLower_[0];
+  const double *workUpper = &highs_model_object->simplex_info_.workUpper_[0];
+  const double *baseLower = &highs_model_object->simplex_info_.baseLower_[0];
+  const double *baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
+  double *workValue = &highs_model_object->simplex_info_.workValue_[0];
+  double *baseValue = &highs_model_object->simplex_info_.baseValue_[0];
   const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
 
   // Compute thetaPrimal

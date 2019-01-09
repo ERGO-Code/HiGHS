@@ -403,7 +403,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Set pointers within HModel
   model.basis_ = &highs_model.basis_;
   model.scale_ = &highs_model.scale_;
-  model.simplex_ = &highs_model.simplex_;
+  model.simplex_info_ = &highs_model.simplex_info_;
   model.lp_scaled_ = &highs_model.lp_scaled_;
   model.matrix_ = &highs_model.matrix_;
   model.factor_ = &highs_model.factor_;

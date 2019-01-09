@@ -34,8 +34,8 @@ void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
   workModel = model;
   workSize = size;
   workMove = &workHMO->basis_.nonbasicMove_[0];
-  workDual = &workHMO->simplex_.workDual_[0];
-  workRange = &workHMO->simplex_.workRange_[0];
+  workDual = &workHMO->simplex_info_.workDual_[0];
+  workRange = &workHMO->simplex_info_.workRange_[0];
 
   // Allocate spaces
   packCount = 0;
@@ -141,7 +141,7 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow) {
 
 bool HDualRow::choose_final() {
   HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsSimplexInfo &simplex_info = workHMO->simplex_info_;
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -157,7 +157,7 @@ bool HDualRow::choose_final() {
   //   rp_Choose_final = true;
 #endif
   // 1. Reduce by large step BFRT
-  timer.start(simplex.clock_[Chuzc2Clock]);
+  timer.start(simplex_info.clock_[Chuzc2Clock]);
   int fullCount = workCount;
   workCount = 0;
   double totalChange = 0;
@@ -176,13 +176,13 @@ bool HDualRow::choose_final() {
     selectTheta *= 10;
     if (totalChange >= totalDelta || workCount == fullCount) break;
   }
-  timer.stop(simplex.clock_[Chuzc2Clock]);
+  timer.stop(simplex_info.clock_[Chuzc2Clock]);
 
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 1\n");
 #endif
   // 2. Choose by small step BFRT
-  timer.start(simplex.clock_[Chuzc3Clock]);
+  timer.start(simplex_info.clock_[Chuzc3Clock]);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
   fullCount = workCount;
   workCount = 0;
@@ -317,7 +317,7 @@ bool HDualRow::choose_final() {
   }
   if (workTheta == 0) workCount = 0;
   sort(workData.begin(), workData.begin() + workCount);
-  timer.stop(simplex.clock_[Chuzc3Clock]);
+  timer.stop(simplex_info.clock_[Chuzc3Clock]);
 #ifdef HiGHSDEV
   if (rp_Choose_final) printf("Completed  choose_final 4\n");
 #endif
@@ -326,10 +326,10 @@ bool HDualRow::choose_final() {
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
   //  workModel->checkDualObjectiveValue("Before update_flip");
-  double *workDual = &workHMO->simplex_.workDual_[0];//
-  //  double *workLower = &workHMO->simplex_.workLower_[0];
-  //  double *workUpper = &workHMO->simplex_.workUpper_[0];
-  //  double *workValue = &workHMO->simplex_.workValue_[0];
+  double *workDual = &workHMO->simplex_info_.workDual_[0];//
+  //  double *workLower = &workHMO->simplex_info_.workLower_[0];
+  //  double *workUpper = &workHMO->simplex_info_.workUpper_[0];
+  //  double *workValue = &workHMO->simplex_info_.workValue_[0];
   double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
@@ -349,10 +349,10 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
 
 void HDualRow::update_dual(double theta, int columnOut) {
   HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsSimplexInfo &simplex_info = workHMO->simplex_info_;
   //  workModel->checkDualObjectiveValue("Before update_dual");
-  timer.start(simplex.clock_[UpdateDualClock]);
-  double *workDual = &workHMO->simplex_.workDual_[0];
+  timer.start(simplex_info.clock_[UpdateDualClock]);
+  double *workDual = &workHMO->simplex_info_.workDual_[0];
   //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
@@ -360,7 +360,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     int iCol = packIndex[i];
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
-    double iColWorkValue = workHMO->simplex_.workValue_[iCol];
+    double iColWorkValue = workHMO->simplex_info_.workValue_[iCol];
     double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO->scale_.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
@@ -402,7 +402,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     }
   }
   */
-  timer.stop(simplex.clock_[UpdateDualClock]);
+  timer.stop(simplex_info.clock_[UpdateDualClock]);
 }
 
 void HDualRow::create_Freelist() {

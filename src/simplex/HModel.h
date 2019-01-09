@@ -475,7 +475,7 @@ class HModel {
   // initiated
   HMatrix *matrix_;
   HFactor *factor_;
-  HighsSimplexInfo *simplex_;
+  HighsSimplexInfo *simplex_info_;
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;

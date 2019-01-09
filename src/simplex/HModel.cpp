@@ -573,22 +573,22 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   if (lp_scaled_->numRow_ > local_oldNumRow) {
     basis_->basicIndex_.resize(lp_scaled_->numRow_);
 
-    simplex_->baseLower_.resize(lp_scaled_->numRow_);
-    simplex_->baseUpper_.resize(lp_scaled_->numRow_);
-    simplex_->baseValue_.resize(lp_scaled_->numRow_);
+    simplex_info_->baseLower_.resize(lp_scaled_->numRow_);
+    simplex_info_->baseUpper_.resize(lp_scaled_->numRow_);
+    simplex_info_->baseValue_.resize(lp_scaled_->numRow_);
   }
   if (numTot > local_oldNumTot) {
     basis_->nonbasicFlag_.resize(numTot);
     basis_->nonbasicMove_.resize(numTot);
 
-    simplex_->workCost_.resize(numTot);
-    simplex_->workDual_.resize(numTot);
-    simplex_->workShift_.resize(numTot);
+    simplex_info_->workCost_.resize(numTot);
+    simplex_info_->workDual_.resize(numTot);
+    simplex_info_->workShift_.resize(numTot);
 
-    simplex_->workLower_.resize(numTot);
-    simplex_->workUpper_.resize(numTot);
-    simplex_->workRange_.resize(numTot);
-    simplex_->workValue_.resize(numTot);
+    simplex_info_->workLower_.resize(numTot);
+    simplex_info_->workUpper_.resize(numTot);
+    simplex_info_->workRange_.resize(numTot);
+    simplex_info_->workValue_.resize(numTot);
   }
 
   // Shift the row data in basicIndex, nonbasicFlag and nonbasicMove if
@@ -603,14 +603,14 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
       basis_->nonbasicFlag_[lp_scaled_->numCol_ + row] = basis_->nonbasicFlag_[local_oldNumCol + row];
       basis_->nonbasicMove_[lp_scaled_->numCol_ + row] = basis_->nonbasicMove_[local_oldNumCol + row];
 
-      simplex_->workCost_[lp_scaled_->numCol_ + row] = simplex_->workCost_[local_oldNumCol + row];
-      simplex_->workDual_[lp_scaled_->numCol_ + row] = simplex_->workDual_[local_oldNumCol + row];
-      simplex_->workShift_[lp_scaled_->numCol_ + row] = simplex_->workShift_[local_oldNumCol + row];
+      simplex_info_->workCost_[lp_scaled_->numCol_ + row] = simplex_info_->workCost_[local_oldNumCol + row];
+      simplex_info_->workDual_[lp_scaled_->numCol_ + row] = simplex_info_->workDual_[local_oldNumCol + row];
+      simplex_info_->workShift_[lp_scaled_->numCol_ + row] = simplex_info_->workShift_[local_oldNumCol + row];
 
-      simplex_->workLower_[lp_scaled_->numCol_ + row] = simplex_->workLower_[local_oldNumCol + row];
-      simplex_->workUpper_[lp_scaled_->numCol_ + row] = simplex_->workUpper_[local_oldNumCol + row];
-      simplex_->workRange_[lp_scaled_->numCol_ + row] = simplex_->workRange_[local_oldNumCol + row];
-      simplex_->workValue_[lp_scaled_->numCol_ + row] = simplex_->workValue_[local_oldNumCol + row];
+      simplex_info_->workLower_[lp_scaled_->numCol_ + row] = simplex_info_->workLower_[local_oldNumCol + row];
+      simplex_info_->workUpper_[lp_scaled_->numCol_ + row] = simplex_info_->workUpper_[local_oldNumCol + row];
+      simplex_info_->workRange_[lp_scaled_->numCol_ + row] = simplex_info_->workRange_[local_oldNumCol + row];
+      simplex_info_->workValue_[lp_scaled_->numCol_ + row] = simplex_info_->workValue_[local_oldNumCol + row];
 
       // printf("Setting basicIndex[%2d] = %2d; basis_->nonbasicFlag_[%2d] = %2d;
       // basis_->nonbasicMove_[%2d] = %2d\n",
@@ -882,11 +882,11 @@ int HModel::get_nonbasicMove(int var) {
   //  numTot); cout<<flush;
   assert(var >= 0);
   assert(var < numTot);
-  if (!highs_isInfinity(-simplex_->workLower_[var])) {
-    if (!highs_isInfinity(simplex_->workUpper_[var])) {
+  if (!highs_isInfinity(-simplex_info_->workLower_[var])) {
+    if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
       // Finite lower and upper bounds so nonbasic move depends on whether they
       // are equal
-      if (simplex_->workLower_[var] == simplex_->workUpper_[var])
+      if (simplex_info_->workLower_[var] == simplex_info_->workUpper_[var])
         // Fixed variable so nonbasic move is zero
         return NONBASIC_MOVE_ZE;
       // Boxed variable so nonbasic move is up (from lower bound)
@@ -898,7 +898,7 @@ int HModel::get_nonbasicMove(int var) {
   } else
       // Infinite lower bound so nonbasic move depends on whether the upper
       // bound is finite
-      if (!highs_isInfinity(simplex_->workUpper_[var]))
+      if (!highs_isInfinity(simplex_info_->workUpper_[var]))
     // Finite upper bound so nonbasic move is down (from upper bound)
     return NONBASIC_MOVE_DN;
   // Infinite upper bound so free variable: nonbasic move is zero
@@ -913,38 +913,38 @@ bool HModel::workArrays_OK(int phase) {
   if (phase == 2) {
     for (int col = 0; col < lp_scaled_->numCol_; ++col) {
       int var = col;
-      if (!highs_isInfinity(-simplex_->workLower_[var])) {
-        ok = simplex_->workLower_[var] == lp_scaled_->colLower_[col];
+      if (!highs_isInfinity(-simplex_info_->workLower_[var])) {
+        ok = simplex_info_->workLower_[var] == lp_scaled_->colLower_[col];
         if (!ok) {
-          printf("For col %d, simplex_->workLower_ should be %g but is %g\n", col,
-                 lp_scaled_->colLower_[col], simplex_->workLower_[var]);
+          printf("For col %d, simplex_info_->workLower_ should be %g but is %g\n", col,
+                 lp_scaled_->colLower_[col], simplex_info_->workLower_[var]);
           return ok;
         }
       }
-      if (!highs_isInfinity(simplex_->workUpper_[var])) {
-        ok = simplex_->workUpper_[var] == lp_scaled_->colUpper_[col];
+      if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
+        ok = simplex_info_->workUpper_[var] == lp_scaled_->colUpper_[col];
         if (!ok) {
-          printf("For col %d, simplex_->workUpper_ should be %g but is %g\n", col,
-                 lp_scaled_->colUpper_[col], simplex_->workUpper_[var]);
+          printf("For col %d, simplex_info_->workUpper_ should be %g but is %g\n", col,
+                 lp_scaled_->colUpper_[col], simplex_info_->workUpper_[var]);
           return ok;
         }
       }
     }
     for (int row = 0; row < lp_scaled_->numRow_; ++row) {
       int var = lp_scaled_->numCol_ + row;
-      if (!highs_isInfinity(-simplex_->workLower_[var])) {
-        ok = simplex_->workLower_[var] == -lp_scaled_->rowUpper_[row];
+      if (!highs_isInfinity(-simplex_info_->workLower_[var])) {
+        ok = simplex_info_->workLower_[var] == -lp_scaled_->rowUpper_[row];
         if (!ok) {
-          printf("For row %d, simplex_->workLower_ should be %g but is %g\n", row,
-                 -lp_scaled_->rowUpper_[row], simplex_->workLower_[var]);
+          printf("For row %d, simplex_info_->workLower_ should be %g but is %g\n", row,
+                 -lp_scaled_->rowUpper_[row], simplex_info_->workLower_[var]);
           return ok;
         }
       }
-      if (!highs_isInfinity(simplex_->workUpper_[var])) {
-        ok = simplex_->workUpper_[var] == -lp_scaled_->rowLower_[row];
+      if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
+        ok = simplex_info_->workUpper_[var] == -lp_scaled_->rowLower_[row];
         if (!ok) {
-          printf("For row %d, simplex_->workUpper_ should be %g but is %g\n", row,
-                 -lp_scaled_->rowLower_[row], simplex_->workUpper_[var]);
+          printf("For row %d, simplex_info_->workUpper_ should be %g but is %g\n", row,
+                 -lp_scaled_->rowLower_[row], simplex_info_->workUpper_[var]);
           return ok;
         }
       }
@@ -952,11 +952,11 @@ bool HModel::workArrays_OK(int phase) {
   }
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int var = 0; var < numTot; ++var) {
-    ok = simplex_->workRange_[var] == (simplex_->workUpper_[var] - simplex_->workLower_[var]);
+    ok = simplex_info_->workRange_[var] == (simplex_info_->workUpper_[var] - simplex_info_->workLower_[var]);
     if (!ok) {
-      printf("For variable %d, simplex_->workRange_ should be %g = %g - %g but is %g\n",
-             var, simplex_->workUpper_[var] - simplex_->workLower_[var], simplex_->workUpper_[var],
-             simplex_->workLower_[var], simplex_->workRange_[var]);
+      printf("For variable %d, simplex_info_->workRange_ should be %g = %g - %g but is %g\n",
+             var, simplex_info_->workUpper_[var] - simplex_info_->workLower_[var], simplex_info_->workUpper_[var],
+             simplex_info_->workLower_[var], simplex_info_->workRange_[var]);
       return ok;
     }
   }
@@ -965,19 +965,19 @@ bool HModel::workArrays_OK(int phase) {
   if (!problemPerturbed) {
     for (int col = 0; col < lp_scaled_->numCol_; ++col) {
       int var = col;
-      ok = simplex_->workCost_[var] == lp_scaled_->sense_ * lp_scaled_->colCost_[col];
+      ok = simplex_info_->workCost_[var] == lp_scaled_->sense_ * lp_scaled_->colCost_[col];
       if (!ok) {
-        printf("For col %d, simplex_->workLower_ should be %g but is %g\n", col,
-               lp_scaled_->colLower_[col], simplex_->workCost_[var]);
+        printf("For col %d, simplex_info_->workLower_ should be %g but is %g\n", col,
+               lp_scaled_->colLower_[col], simplex_info_->workCost_[var]);
         return ok;
       }
     }
     for (int row = 0; row < lp_scaled_->numRow_; ++row) {
       int var = lp_scaled_->numCol_ + row;
-      ok = simplex_->workCost_[var] == 0.;
+      ok = simplex_info_->workCost_[var] == 0.;
       if (!ok) {
-        printf("For row %d, simplex_->workCost_ should be zero but is %g\n", row,
-               simplex_->workCost_[var]);
+        printf("For row %d, simplex_info_->workCost_ should be zero but is %g\n", row,
+               simplex_info_->workCost_[var]);
         return ok;
       }
     }
@@ -1014,34 +1014,34 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
-  //	 var, numTot, simplex_->workLower_[var], simplex_->workUpper_[var], basis_->nonbasicMove_[var]);
+  //	 var, numTot, simplex_info_->workLower_[var], simplex_info_->workUpper_[var], basis_->nonbasicMove_[var]);
   // cout<<flush;
   assert(var >= 0);
   assert(var < numTot);
   // Make sure we're not checking a basic variable
   if (!basis_->nonbasicFlag_[var]) return true;
   bool ok;
-  if (!highs_isInfinity(-simplex_->workLower_[var])) {
-    if (!highs_isInfinity(simplex_->workUpper_[var])) {
+  if (!highs_isInfinity(-simplex_info_->workLower_[var])) {
+    if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
       // Finite lower and upper bounds so nonbasic move depends on whether they
       // are equal
-      if (simplex_->workLower_[var] == simplex_->workUpper_[var]) {
+      if (simplex_info_->workLower_[var] == simplex_info_->workUpper_[var]) {
         // Fixed variable
         ok = basis_->nonbasicMove_[var] == NONBASIC_MOVE_ZE;
         if (!ok) {
           printf(
               "Fixed variable %d (lp_scaled_->numCol_ = %d) [%11g, %11g, %11g] so nonbasic "
               "move should be zero but is %d\n",
-              var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var], simplex_->workUpper_[var],
+              var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var], simplex_info_->workUpper_[var],
               basis_->nonbasicMove_[var]);
           return ok;
         }
-        ok = simplex_->workValue_[var] == simplex_->workLower_[var];
+        ok = simplex_info_->workValue_[var] == simplex_info_->workLower_[var];
         if (!ok) {
           printf(
-              "Fixed variable %d (lp_scaled_->numCol_ = %d) so simplex_->work value should be %g but "
+              "Fixed variable %d (lp_scaled_->numCol_ = %d) so simplex_info_->work value should be %g but "
               "is %g\n",
-              var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var]);
+              var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var]);
           return ok;
         }
       } else {
@@ -1052,26 +1052,26 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
           printf(
               "Boxed variable %d (lp_scaled_->numCol_ = %d) [%11g, %11g, %11g] range %g so "
               "nonbasic move should be up/down but is  %d\n",
-              var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var], simplex_->workUpper_[var],
-              simplex_->workUpper_[var] - simplex_->workLower_[var], basis_->nonbasicMove_[var]);
+              var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var], simplex_info_->workUpper_[var],
+              simplex_info_->workUpper_[var] - simplex_info_->workLower_[var], basis_->nonbasicMove_[var]);
           return ok;
         }
         if (basis_->nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-          ok = simplex_->workValue_[var] == simplex_->workLower_[var];
+          ok = simplex_info_->workValue_[var] == simplex_info_->workLower_[var];
           if (!ok) {
             printf(
                 "Boxed variable %d (lp_scaled_->numCol_ = %d) with NONBASIC_MOVE_UP so work "
                 "value should be %g but is %g\n",
-                var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var]);
+                var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var]);
             return ok;
           }
         } else {
-          ok = simplex_->workValue_[var] == simplex_->workUpper_[var];
+          ok = simplex_info_->workValue_[var] == simplex_info_->workUpper_[var];
           if (!ok) {
             printf(
                 "Boxed variable %d (lp_scaled_->numCol_ = %d) with NONBASIC_MOVE_DN so work "
                 "value should be %g but is %g\n",
-                var, lp_scaled_->numCol_, simplex_->workUpper_[var], simplex_->workValue_[var]);
+                var, lp_scaled_->numCol_, simplex_info_->workUpper_[var], simplex_info_->workValue_[var]);
             return ok;
           }
         }
@@ -1084,38 +1084,38 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
             "Finite lower bound and infinite upper bound variable %d (lp_scaled_->numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be up=%2d but is  "
             "%d\n",
-            var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var], simplex_->workUpper_[var],
+            var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var], simplex_info_->workUpper_[var],
             NONBASIC_MOVE_UP, basis_->nonbasicMove_[var]);
         return ok;
       }
-      ok = simplex_->workValue_[var] == simplex_->workLower_[var];
+      ok = simplex_info_->workValue_[var] == simplex_info_->workLower_[var];
       if (!ok) {
         printf(
             "Finite lower bound and infinite upper bound variable %d (lp_scaled_->numCol_ = "
             "%d) so work value should be %g but is %g\n",
-            var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var]);
+            var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var]);
         return ok;
       }
     }
   } else {
     // Infinite lower bound
-    if (!highs_isInfinity(simplex_->workUpper_[var])) {
+    if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
       ok = basis_->nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
         printf(
             "Finite upper bound and infinite lower bound variable %d (lp_scaled_->numCol_ = "
             "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
             "%d\n",
-            var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var], simplex_->workUpper_[var],
+            var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var], simplex_info_->workUpper_[var],
             basis_->nonbasicMove_[var]);
         return ok;
       }
-      ok = simplex_->workValue_[var] == simplex_->workUpper_[var];
+      ok = simplex_info_->workValue_[var] == simplex_info_->workUpper_[var];
       if (!ok) {
         printf(
             "Finite upper bound and infinite lower bound variable %d (lp_scaled_->numCol_ = "
             "%d) so work value should be %g but is %g\n",
-            var, lp_scaled_->numCol_, simplex_->workUpper_[var], simplex_->workValue_[var]);
+            var, lp_scaled_->numCol_, simplex_info_->workUpper_[var], simplex_info_->workValue_[var]);
         return ok;
       }
     } else {
@@ -1125,16 +1125,16 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
         printf(
             "Free variable %d (lp_scaled_->numCol_ = %d) [%11g, %11g, %11g] so nonbasic "
             "move should be zero but is  %d\n",
-            var, lp_scaled_->numCol_, simplex_->workLower_[var], simplex_->workValue_[var], simplex_->workUpper_[var],
+            var, lp_scaled_->numCol_, simplex_info_->workLower_[var], simplex_info_->workValue_[var], simplex_info_->workUpper_[var],
             basis_->nonbasicMove_[var]);
         return ok;
       }
-      ok = simplex_->workValue_[var] == 0.0;
+      ok = simplex_info_->workValue_[var] == 0.0;
       if (!ok) {
         printf(
             "Free variable %d (lp_scaled_->numCol_ = %d) so work value should be zero but "
             "is %g\n",
-            var, lp_scaled_->numCol_, simplex_->workValue_[var]);
+            var, lp_scaled_->numCol_, simplex_info_->workValue_[var]);
         return ok;
       }
     }
@@ -1768,20 +1768,20 @@ void HModel::initBasicIndex() {
 void HModel::allocate_WorkAndBaseArrays() {
   // Allocate bounds and solution spaces
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
-  simplex_->workCost_.resize(numTot);
-  simplex_->workDual_.resize(numTot);
+  simplex_info_->workCost_.resize(numTot);
+  simplex_info_->workDual_.resize(numTot);
   // Was workShift.assign(numTot, 0); but shift is populated by call to
   // initCost()
-  simplex_->workShift_.resize(numTot);
+  simplex_info_->workShift_.resize(numTot);
 
-  simplex_->workLower_.resize(numTot);
-  simplex_->workUpper_.resize(numTot);
-  simplex_->workRange_.resize(numTot);
-  simplex_->workValue_.resize(numTot);
+  simplex_info_->workLower_.resize(numTot);
+  simplex_info_->workUpper_.resize(numTot);
+  simplex_info_->workRange_.resize(numTot);
+  simplex_info_->workValue_.resize(numTot);
 
-  simplex_->baseLower_.resize(lp_scaled_->numRow_);
-  simplex_->baseUpper_.resize(lp_scaled_->numRow_);
-  simplex_->baseValue_.resize(lp_scaled_->numRow_);
+  simplex_info_->baseLower_.resize(lp_scaled_->numRow_);
+  simplex_info_->baseUpper_.resize(lp_scaled_->numRow_);
+  simplex_info_->baseValue_.resize(lp_scaled_->numRow_);
 }
 
 void HModel::populate_WorkArrays() {
@@ -1802,13 +1802,13 @@ void HModel::initCost(int perturb) {
 
   // Perturb the original costs, scale down if is too big
   double bigc = 0;
-  for (int i = 0; i < lp_scaled_->numCol_; i++) bigc = max(bigc, fabs(simplex_->workCost_[i]));
+  for (int i = 0; i < lp_scaled_->numCol_; i++) bigc = max(bigc, fabs(simplex_info_->workCost_[i]));
   if (bigc > 100) bigc = sqrt(sqrt(bigc));
 
   // If there's few boxed variables, we will just use Simple perturbation
   double boxedRate = 0;
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
-  for (int i = 0; i < numTot; i++) boxedRate += (simplex_->workRange_[i] < 1e30);
+  for (int i = 0; i < numTot; i++) boxedRate += (simplex_info_->workRange_[i] < 1e30);
   boxedRate /= numTot;
   if (boxedRate < 0.01) bigc = min(bigc, 1.0);
   if (bigc < 1) {
@@ -1822,22 +1822,22 @@ void HModel::initCost(int perturb) {
   for (int i = 0; i < lp_scaled_->numCol_; i++) {
     double lower = lp_scaled_->colLower_[i];
     double upper = lp_scaled_->colUpper_[i];
-    double xpert = (fabs(simplex_->workCost_[i]) + 1) * base * (1 + colRandomValue[i]);
+    double xpert = (fabs(simplex_info_->workCost_[i]) + 1) * base * (1 + colRandomValue[i]);
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper == HIGHS_CONST_INF) {  // Lower
-      simplex_->workCost_[i] += xpert;
+      simplex_info_->workCost_[i] += xpert;
     } else if (lower == -HIGHS_CONST_INF) {  // Upper
-      simplex_->workCost_[i] += -xpert;
+      simplex_info_->workCost_[i] += -xpert;
     } else if (lower != upper) {  // Boxed
-      simplex_->workCost_[i] += (simplex_->workCost_[i] >= 0) ? xpert : -xpert;
+      simplex_info_->workCost_[i] += (simplex_info_->workCost_[i] >= 0) ? xpert : -xpert;
     } else {
       // Fixed - no perturb
     }
   }
 
   for (int i = lp_scaled_->numCol_; i < numTot; i++) {
-    simplex_->workCost_[i] += (0.5 - colRandomValue[i]) * 1e-12;
+    simplex_info_->workCost_[i] += (0.5 - colRandomValue[i]) * 1e-12;
   }
 }
 
@@ -1852,19 +1852,19 @@ void HModel::initBound(int phase) {
   const double inf = HIGHS_CONST_INF;
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (simplex_->workLower_[i] == -inf && simplex_->workUpper_[i] == inf) {
+    if (simplex_info_->workLower_[i] == -inf && simplex_info_->workUpper_[i] == inf) {
       // Won't change for row variables: they should never become
       // non basic
       if (i >= lp_scaled_->numCol_) continue;
-      simplex_->workLower_[i] = -1000, simplex_->workUpper_[i] = 1000;  // FREE
-    } else if (simplex_->workLower_[i] == -inf) {
-      simplex_->workLower_[i] = -1, simplex_->workUpper_[i] = 0;  // UPPER
-    } else if (simplex_->workUpper_[i] == inf) {
-      simplex_->workLower_[i] = 0, simplex_->workUpper_[i] = 1;  // LOWER
+      simplex_info_->workLower_[i] = -1000, simplex_info_->workUpper_[i] = 1000;  // FREE
+    } else if (simplex_info_->workLower_[i] == -inf) {
+      simplex_info_->workLower_[i] = -1, simplex_info_->workUpper_[i] = 0;  // UPPER
+    } else if (simplex_info_->workUpper_[i] == inf) {
+      simplex_info_->workLower_[i] = 0, simplex_info_->workUpper_[i] = 1;  // LOWER
     } else {
-      simplex_->workLower_[i] = 0, simplex_->workUpper_[i] = 0;  // BOXED or FIXED
+      simplex_info_->workLower_[i] = 0, simplex_info_->workUpper_[i] = 0;  // BOXED or FIXED
     }
-    simplex_->workRange_[i] = simplex_->workUpper_[i] - simplex_->workLower_[i];
+    simplex_info_->workRange_[i] = simplex_info_->workUpper_[i] - simplex_info_->workLower_[i];
   }
 }
 
@@ -1877,8 +1877,8 @@ void HModel::initPh2ColCost(int firstcol, int lastcol) {
   // Copy the Phase 2 cost and zero the shift
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
-    simplex_->workCost_[var] = lp_scaled_->sense_ * lp_scaled_->colCost_[col];
-    simplex_->workShift_[var] = 0.;
+    simplex_info_->workCost_[var] = lp_scaled_->sense_ * lp_scaled_->colCost_[col];
+    simplex_info_->workShift_[var] = 0.;
   }
 }
 
@@ -1886,8 +1886,8 @@ void HModel::initPh2RowCost(int firstrow, int lastrow) {
   // Zero the cost and shift
   for (int row = firstrow; row <= lastrow; row++) {
     int var = lp_scaled_->numCol_ + row;
-    simplex_->workCost_[var] = 0;
-    simplex_->workShift_[var] = 0.;
+    simplex_info_->workCost_[var] = 0;
+    simplex_info_->workShift_[var] = 0.;
   }
 }
 
@@ -1896,9 +1896,9 @@ void HModel::initPh2ColBound(int firstcol, int lastcol) {
   assert(firstcol >= 0);
   assert(lastcol < lp_scaled_->numCol_);
   for (int col = firstcol; col <= lastcol; col++) {
-    simplex_->workLower_[col] = lp_scaled_->colLower_[col];
-    simplex_->workUpper_[col] = lp_scaled_->colUpper_[col];
-    simplex_->workRange_[col] = simplex_->workUpper_[col] - simplex_->workLower_[col];
+    simplex_info_->workLower_[col] = lp_scaled_->colLower_[col];
+    simplex_info_->workUpper_[col] = lp_scaled_->colUpper_[col];
+    simplex_info_->workRange_[col] = simplex_info_->workUpper_[col] - simplex_info_->workLower_[col];
   }
 }
 
@@ -1908,9 +1908,9 @@ void HModel::initPh2RowBound(int firstrow, int lastrow) {
   assert(lastrow < lp_scaled_->numRow_);
   for (int row = firstrow; row <= lastrow; row++) {
     int var = lp_scaled_->numCol_ + row;
-    simplex_->workLower_[var] = -lp_scaled_->rowUpper_[row];
-    simplex_->workUpper_[var] = -lp_scaled_->rowLower_[row];
-    simplex_->workRange_[var] = simplex_->workUpper_[var] - simplex_->workLower_[var];
+    simplex_info_->workLower_[var] = -lp_scaled_->rowUpper_[row];
+    simplex_info_->workUpper_[var] = -lp_scaled_->rowLower_[row];
+    simplex_info_->workRange_[var] = simplex_info_->workUpper_[var] - simplex_info_->workLower_[var];
   }
 }
 
@@ -1926,46 +1926,46 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
   for (int var = firstvar; var <= lastvar; var++) {
     if (basis_->nonbasicFlag_[var]) {
       // Nonbasic variable
-      // double prev_pr_act = simplex_->workValue_[var];
-      if (simplex_->workLower_[var] == simplex_->workUpper_[var]) {
+      // double prev_pr_act = simplex_info_->workValue_[var];
+      if (simplex_info_->workLower_[var] == simplex_info_->workUpper_[var]) {
         // Fixed
-        simplex_->workValue_[var] = simplex_->workLower_[var];
+        simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
         basis_->nonbasicMove_[var] = NONBASIC_MOVE_ZE;
-      } else if (!highs_isInfinity(-simplex_->workLower_[var])) {
+      } else if (!highs_isInfinity(-simplex_info_->workLower_[var])) {
         // Finite lower bound so boxed or lower
-        if (!highs_isInfinity(simplex_->workUpper_[var])) {
+        if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
           // Finite upper bound so boxed
           if (basis_->nonbasicMove_[var] == NONBASIC_MOVE_UP) {
             // Set at lower
-            simplex_->workValue_[var] = simplex_->workLower_[var];
+            simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
           } else if (basis_->nonbasicMove_[var] == NONBASIC_MOVE_DN) {
             // Set at upper
-            simplex_->workValue_[var] = simplex_->workUpper_[var];
+            simplex_info_->workValue_[var] = simplex_info_->workUpper_[var];
           } else {
             // Invalid nonbasicMove: correct and set value at lower
             basis_->nonbasicMove_[var] = NONBASIC_MOVE_UP;
-            simplex_->workValue_[var] = simplex_->workLower_[var];
+            simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
           }
         } else {
           // Lower
-          simplex_->workValue_[var] = simplex_->workLower_[var];
+          simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
           basis_->nonbasicMove_[var] = NONBASIC_MOVE_UP;
         }
-      } else if (!highs_isInfinity(simplex_->workUpper_[var])) {
+      } else if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
         // Upper
-        simplex_->workValue_[var] = simplex_->workUpper_[var];
+        simplex_info_->workValue_[var] = simplex_info_->workUpper_[var];
         basis_->nonbasicMove_[var] = NONBASIC_MOVE_DN;
       } else {
         // FREE
-        simplex_->workValue_[var] = 0;
+        simplex_info_->workValue_[var] = 0;
         basis_->nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       }
-      // dl_pr_act = simplex_->workValue_[var] - prev_pr_act;
+      // dl_pr_act = simplex_info_->workValue_[var] - prev_pr_act;
       // norm_dl_pr_act += dl_pr_act*dl_pr_act;
       //      if (abs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
       //      %8g; %8g] Du = %8g; DlPr = %8g\n",
-      //					var, simplex_->workLower_[var],
-      // simplex_->workValue_[var], simplex_->workUpper_[var], simplex_->workDual_[var], dl_pr_act);
+      //					var, simplex_info_->workLower_[var],
+      // simplex_info_->workValue_[var], simplex_info_->workUpper_[var], simplex_info_->workDual_[var], dl_pr_act);
     } else {
       // Basic variable
       basis_->nonbasicMove_[var] = NONBASIC_MOVE_ZE;
@@ -2033,7 +2033,7 @@ void HModel::computeDual() {
   for (int iRow = 0; iRow < lp_scaled_->numRow_; iRow++) {
     buffer.index[iRow] = iRow;
     buffer.array[iRow] =
-        simplex_->workCost_[basis_->basicIndex_[iRow]] + simplex_->workShift_[basis_->basicIndex_[iRow]];
+        simplex_info_->workCost_[basis_->basicIndex_[iRow]] + simplex_info_->workShift_[basis_->basicIndex_[iRow]];
   }
   buffer.count = lp_scaled_->numRow_;
   if (an_computeDual_norm2) {
@@ -2054,17 +2054,17 @@ void HModel::computeDual() {
   bufferLong.clear();
   matrix_->price_by_col(bufferLong, buffer);
   for (int i = 0; i < lp_scaled_->numCol_; i++) {
-    simplex_->workDual_[i] = simplex_->workCost_[i] - bufferLong.array[i];
+    simplex_info_->workDual_[i] = simplex_info_->workCost_[i] - bufferLong.array[i];
   }
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int i = lp_scaled_->numCol_; i < numTot; i++) {
-    simplex_->workDual_[i] = simplex_->workCost_[i] - buffer.array[i - lp_scaled_->numCol_];
+    simplex_info_->workDual_[i] = simplex_info_->workCost_[i] - buffer.array[i - lp_scaled_->numCol_];
   }
 
   if (an_computeDual_norm2) {
     workDual_norm2 = 0;
     for (int i = 0; i < numTot; i++)
-      workDual_norm2 += simplex_->workDual_[i] * simplex_->workDual_[i];
+      workDual_norm2 += simplex_info_->workDual_[i] * simplex_info_->workDual_[i];
     workDual_norm2 = sqrt(workDual_norm2);
     //  printf("computeDual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
     //  ||pi^TA-c||=%11.4g\n", btranRHS_norm2, btranSol_norm2, workDual_norm2);
@@ -2097,11 +2097,11 @@ void HModel::computeDualInfeasInDual(int *dualInfeasCount) {
     // Only for non basic variables
     if (!basis_->nonbasicFlag_[i]) continue;
     // Free
-    if (simplex_->workLower_[i] == -inf && simplex_->workUpper_[i] == inf)
-      workCount += (fabs(simplex_->workDual_[i]) >= tau_d);
+    if (simplex_info_->workLower_[i] == -inf && simplex_info_->workUpper_[i] == inf)
+      workCount += (fabs(simplex_info_->workDual_[i]) >= tau_d);
     // In dual, assuming that boxed variables will be flipped
-    if (simplex_->workLower_[i] == -inf || simplex_->workUpper_[i] == inf)
-      workCount += (basis_->nonbasicMove_[i] * simplex_->workDual_[i] <= -tau_d);
+    if (simplex_info_->workLower_[i] == -inf || simplex_info_->workUpper_[i] == inf)
+      workCount += (basis_->nonbasicMove_[i] * simplex_info_->workDual_[i] <= -tau_d);
   }
   *dualInfeasCount = workCount;
 }
@@ -2116,10 +2116,10 @@ void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
     // Only for non basic variables
     if (!basis_->nonbasicFlag_[i]) continue;
     // Free
-    if (simplex_->workLower_[i] == -inf && simplex_->workUpper_[i] == inf)
-      workCount += (fabs(simplex_->workDual_[i]) >= tau_d);
+    if (simplex_info_->workLower_[i] == -inf && simplex_info_->workUpper_[i] == inf)
+      workCount += (fabs(simplex_info_->workDual_[i]) >= tau_d);
     // In primal don't assume flip
-    workCount += (basis_->nonbasicMove_[i] * simplex_->workDual_[i] <= -tau_d);
+    workCount += (basis_->nonbasicMove_[i] * simplex_info_->workDual_[i] <= -tau_d);
   }
   *dualInfeasCount = workCount;
 }
@@ -2132,11 +2132,11 @@ void HModel::correctDual(int *freeInfeasCount) {
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int i = 0; i < numTot; i++) {
     if (basis_->nonbasicFlag_[i]) {
-      if (simplex_->workLower_[i] == -inf && simplex_->workUpper_[i] == inf) {
+      if (simplex_info_->workLower_[i] == -inf && simplex_info_->workUpper_[i] == inf) {
         // FREE variable
-        workCount += (fabs(simplex_->workDual_[i]) >= tau_d);
-      } else if (basis_->nonbasicMove_[i] * simplex_->workDual_[i] <= -tau_d) {
-        if (simplex_->workLower_[i] != -inf && simplex_->workUpper_[i] != inf) {
+        workCount += (fabs(simplex_info_->workDual_[i]) >= tau_d);
+      } else if (basis_->nonbasicMove_[i] * simplex_info_->workDual_[i] <= -tau_d) {
+        if (simplex_info_->workLower_[i] != -inf && simplex_info_->workUpper_[i] != inf) {
           // Boxed variable = flip
           flipBound(i);
         } else {
@@ -2146,14 +2146,14 @@ void HModel::correctDual(int *freeInfeasCount) {
             double random_v = random.dblRandom();
             double dual = (1 + random_v) * tau_d;
             //            double dual = (1 + random.dblRandom()) * tau_d;
-            double shift = dual - simplex_->workDual_[i];
-            simplex_->workDual_[i] = dual;
-            simplex_->workCost_[i] = simplex_->workCost_[i] + shift;
+            double shift = dual - simplex_info_->workDual_[i];
+            simplex_info_->workDual_[i] = dual;
+            simplex_info_->workCost_[i] = simplex_info_->workCost_[i] + shift;
           } else {
             double dual = -(1 + random.dblRandom()) * tau_d;
-            double shift = dual - simplex_->workDual_[i];
-            simplex_->workDual_[i] = dual;
-            simplex_->workCost_[i] = simplex_->workCost_[i] + shift;
+            double shift = dual - simplex_info_->workDual_[i];
+            simplex_info_->workDual_[i] = dual;
+            simplex_info_->workCost_[i] = simplex_info_->workCost_[i] + shift;
           }
         }
       }
@@ -2172,15 +2172,15 @@ void HModel::computePrimal() {
   buffer.clear();
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int i = 0; i < numTot; i++)
-    if (basis_->nonbasicFlag_[i] && simplex_->workValue_[i] != 0)
-      matrix_->collect_aj(buffer, i, simplex_->workValue_[i]);
+    if (basis_->nonbasicFlag_[i] && simplex_info_->workValue_[i] != 0)
+      matrix_->collect_aj(buffer, i, simplex_info_->workValue_[i]);
   factor_->ftran(buffer, 1);
 
   for (int i = 0; i < lp_scaled_->numRow_; i++) {
     int iCol = basis_->basicIndex_[i];
-    simplex_->baseValue_[i] = -buffer.array[i];
-    simplex_->baseLower_[i] = simplex_->workLower_[iCol];
-    simplex_->baseUpper_[i] = simplex_->workUpper_[iCol];
+    simplex_info_->baseValue_[i] = -buffer.array[i];
+    simplex_info_->baseLower_[i] = simplex_info_->workLower_[iCol];
+    simplex_info_->baseUpper_[i] = simplex_info_->workUpper_[iCol];
   }
   // Now have basic primals
   mlFg_haveBasicPrimals = 1;
@@ -2201,10 +2201,10 @@ double HModel::computePrObj() {
   double prObj = 0;
   for (int row = 0; row < lp_scaled_->numRow_; row++) {
     int var = basis_->basicIndex_[row];
-    if (var < lp_scaled_->numCol_) prObj += simplex_->baseValue_[row] * lp_scaled_->colCost_[var];
+    if (var < lp_scaled_->numCol_) prObj += simplex_info_->baseValue_[row] * lp_scaled_->colCost_[var];
   }
   for (int col = 0; col < lp_scaled_->numCol_; col++)
-    if (basis_->nonbasicFlag_[col]) prObj += simplex_->workValue_[col] * lp_scaled_->colCost_[col];
+    if (basis_->nonbasicFlag_[col]) prObj += simplex_info_->workValue_[col] * lp_scaled_->colCost_[col];
   prObj *= scale_->cost_;
   return prObj;
 }
@@ -2216,7 +2216,7 @@ void HModel::computeDualObjectiveValue(int phase) {
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int i = 0; i < numTot; i++) {
     if (basis_->nonbasicFlag_[i]) {
-      dualObjectiveValue += simplex_->workValue_[i] * simplex_->workDual_[i];
+      dualObjectiveValue += simplex_info_->workValue_[i] * simplex_info_->workDual_[i];
     }
   }
   if (phase != 1) {
@@ -2269,8 +2269,8 @@ int HModel::handleRankDeficiency() {
     int columnOut = noPvC[k];
     int rowOut = basicRows[columnOut];
     //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
-    //      %11.4g]\n", columnIn, columnOut, rowOut, simplex_->workLower_[columnOut],
-    //      simplex_->workUpper_[columnOut]);
+    //      %11.4g]\n", columnIn, columnOut, rowOut, simplex_info_->workLower_[columnOut],
+    //      simplex_info_->workUpper_[columnOut]);
     if (basis_->basicIndex_[rowOut] != columnOut) {
       printf("%d = basis_->basicIndex_[rowOut] != noPvC[k] = %d\n", basis_->basicIndex_[rowOut],
              columnOut);
@@ -2290,17 +2290,17 @@ int HModel::handleRankDeficiency() {
 
 int HModel::setSourceOutFmBd(const int columnOut) {
   int sourceOut = 0;
-  if (simplex_->workLower_[columnOut] != simplex_->workUpper_[columnOut]) {
-    if (!highs_isInfinity(-simplex_->workLower_[columnOut])) {
+  if (simplex_info_->workLower_[columnOut] != simplex_info_->workUpper_[columnOut]) {
+    if (!highs_isInfinity(-simplex_info_->workLower_[columnOut])) {
       // Finite LB so sourceOut = -1 ensures value set to LB if LB < UB
       sourceOut = -1;
       //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
-      //      so setting sourceOut = -1\n", columnOut, simplex_->workLower_[columnOut],
-      //      simplex_->workUpper_[columnOut]);
+      //      so setting sourceOut = -1\n", columnOut, simplex_info_->workLower_[columnOut],
+      //      simplex_info_->workUpper_[columnOut]);
     } else {
       // Infinite LB so sourceOut = 1 ensures value set to UB
       sourceOut = 1;
-      if (!highs_isInfinity(simplex_->workUpper_[columnOut])) {
+      if (!highs_isInfinity(simplex_info_->workUpper_[columnOut])) {
         // Free variable => trouble!
         printf("TROUBLE: variable %d leaving the basis is free!\n", columnOut);
       }
@@ -2313,20 +2313,20 @@ int HModel::setSourceOutFmBd(const int columnOut) {
 // Record the shift in the cost of a particular column
 void HModel::shiftCost(int iCol, double amount) {
   problemPerturbed = 1;
-  assert(simplex_->workShift_[iCol] == 0);
-  simplex_->workShift_[iCol] = amount;
+  assert(simplex_info_->workShift_[iCol] == 0);
+  simplex_info_->workShift_[iCol] = amount;
 }
 
 // Undo the shift in the cost of a particular column
 void HModel::shiftBack(int iCol) {
-  simplex_->workDual_[iCol] -= simplex_->workShift_[iCol];
-  simplex_->workShift_[iCol] = 0;
+  simplex_info_->workDual_[iCol] -= simplex_info_->workShift_[iCol];
+  simplex_info_->workShift_[iCol] = 0;
 }
 
 // Flip a primal bound
 void HModel::flipBound(int iCol) {
   const int move = basis_->nonbasicMove_[iCol] = -basis_->nonbasicMove_[iCol];
-  simplex_->workValue_[iCol] = move == 1 ? simplex_->workLower_[iCol] : simplex_->workUpper_[iCol];
+  simplex_info_->workValue_[iCol] = move == 1 ? simplex_info_->workLower_[iCol] : simplex_info_->workUpper_[iCol];
 }
 
 // The major model updates. Factor calls factor_->update; Matrix
@@ -2335,54 +2335,54 @@ void HModel::flipBound(int iCol) {
 void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
                           int *hint) {
   //  HighsTimer &timer = highs_model_object->timer_;
-  //HighsSimplexInfo &simplex = highs_model_object->simplex_;
-  timer_->start(simplex_->clock_[UpdateFactorClock]);
+  //HighsSimplexInfo &simplex = highs_model_object->simplex_info_;
+  timer_->start(simplex_info_->clock_[UpdateFactorClock]);
   
   factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   mlFg_haveInvert = 1;
   if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
-  timer_->stop(simplex_->clock_[UpdateFactorClock]);
+  timer_->stop(simplex_info_->clock_[UpdateFactorClock]);
 }
 
 void HModel::updateMatrix(int columnIn, int columnOut) {
-  timer_->start(simplex_->clock_[UpdateMatrixClock]);
+  timer_->start(simplex_info_->clock_[UpdateMatrixClock]);
   matrix_->update(columnIn, columnOut);
-  timer_->stop(simplex_->clock_[UpdateMatrixClock]);
+  timer_->stop(simplex_info_->clock_[UpdateMatrixClock]);
 }
 
 void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
-  timer_->start(simplex_->clock_[UpdatePivotsClock]);
+  timer_->start(simplex_info_->clock_[UpdatePivotsClock]);
   int columnOut = basis_->basicIndex_[rowOut];
 
   // Incoming variable
   basis_->basicIndex_[rowOut] = columnIn;
   basis_->nonbasicFlag_[columnIn] = 0;
   basis_->nonbasicMove_[columnIn] = 0;
-  simplex_->baseLower_[rowOut] = simplex_->workLower_[columnIn];
-  simplex_->baseUpper_[rowOut] = simplex_->workUpper_[columnIn];
+  simplex_info_->baseLower_[rowOut] = simplex_info_->workLower_[columnIn];
+  simplex_info_->baseUpper_[rowOut] = simplex_info_->workUpper_[columnIn];
 
   // Outgoing variable
   basis_->nonbasicFlag_[columnOut] = 1;
   //  double dlValue;
-  //  double vrLb = simplex_->workLower_[columnOut];
-  //  double vrV = simplex_->workValue_[columnOut];
-  //  double vrUb = simplex_->workUpper_[columnOut];
-  if (simplex_->workLower_[columnOut] == simplex_->workUpper_[columnOut]) {
-    //    dlValue = simplex_->workLower_[columnOut]-simplex_->workValue_[columnOut];
-    simplex_->workValue_[columnOut] = simplex_->workLower_[columnOut];
+  //  double vrLb = simplex_info_->workLower_[columnOut];
+  //  double vrV = simplex_info_->workValue_[columnOut];
+  //  double vrUb = simplex_info_->workUpper_[columnOut];
+  if (simplex_info_->workLower_[columnOut] == simplex_info_->workUpper_[columnOut]) {
+    //    dlValue = simplex_info_->workLower_[columnOut]-simplex_info_->workValue_[columnOut];
+    simplex_info_->workValue_[columnOut] = simplex_info_->workLower_[columnOut];
     basis_->nonbasicMove_[columnOut] = 0;
   } else if (sourceOut == -1) {
-    //    dlValue = simplex_->workLower_[columnOut]-simplex_->workValue_[columnOut];
-    simplex_->workValue_[columnOut] = simplex_->workLower_[columnOut];
+    //    dlValue = simplex_info_->workLower_[columnOut]-simplex_info_->workValue_[columnOut];
+    simplex_info_->workValue_[columnOut] = simplex_info_->workLower_[columnOut];
     basis_->nonbasicMove_[columnOut] = 1;
   } else {
-    //    dlValue = simplex_->workUpper_[columnOut]-simplex_->workValue_[columnOut];
-    simplex_->workValue_[columnOut] = simplex_->workUpper_[columnOut];
+    //    dlValue = simplex_info_->workUpper_[columnOut]-simplex_info_->workValue_[columnOut];
+    simplex_info_->workValue_[columnOut] = simplex_info_->workUpper_[columnOut];
     basis_->nonbasicMove_[columnOut] = -1;
   }
-  double nwValue = simplex_->workValue_[columnOut];
-  double vrDual = simplex_->workDual_[columnOut];
+  double nwValue = simplex_info_->workValue_[columnOut];
+  double vrDual = simplex_info_->workDual_[columnOut];
   double dlDualObjectiveValue = nwValue*vrDual;
   //  if (abs(nwValue))
   //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
@@ -2398,7 +2398,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   mlFg_haveFreshInvert = 0;
   // Data are no longer fresh from rebuild
   mlFg_haveFreshRebuild = 0;
-  timer_->stop(simplex_->clock_[UpdatePivotsClock]);
+  timer_->stop(simplex_info_->clock_[UpdatePivotsClock]);
 }
 
 #ifdef HiGHSDEV
@@ -2563,11 +2563,11 @@ void HModel::util_getPrimalDualValues(vector<double> &XcolValue,
                                       vector<double> &XrowDual
 				      ) {
   // Take primal solution
-  vector<double> value = simplex_->workValue_;
+  vector<double> value = simplex_info_->workValue_;
   for (int iRow = 0; iRow < lp_scaled_->numRow_; iRow++)
-    value[basis_->basicIndex_[iRow]] = simplex_->baseValue_[iRow];
+    value[basis_->basicIndex_[iRow]] = simplex_info_->baseValue_[iRow];
   // Take dual solution
-  vector<double> dual = simplex_->workDual_;
+  vector<double> dual = simplex_info_->workDual_;
   for (int iRow = 0; iRow < lp_scaled_->numRow_; iRow++) dual[basis_->basicIndex_[iRow]] = 0;
   // Scale back
   for (int iCol = 0; iCol < lp_scaled_->numCol_; iCol++) {
@@ -2648,8 +2648,8 @@ int HModel::util_chgObjSense(const int Xsense) {
     lp_scaled_->sense_ = Xsense;
     const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
     for (int var = 0; var < numTot; var++) {
-      simplex_->workDual_[var] = -simplex_->workDual_[var];
-      simplex_->workCost_[var] = -simplex_->workCost_[var];
+      simplex_info_->workDual_[var] = -simplex_info_->workDual_[var];
+      simplex_info_->workCost_[var] = -simplex_info_->workCost_[var];
     }
     problemStatus = LP_Status_Unset;
   }
@@ -2702,8 +2702,8 @@ int HModel::util_chgColBoundsAll(const double *XcolLower,
     lp_scaled_->colLower_[col] = (highs_isInfinity(-lower) ? lower : lower / scale_->col_[col]);
     lp_scaled_->colUpper_[col] = (highs_isInfinity(upper) ? upper : upper / scale_->col_[col]);
     //    printf("[LB; Pr; UB] for column %2d are now [%11g, %11g, %11g] Dual =
-    //    %g\n", col, lp_scaled_->colLower_[col], simplex_->workValue_[col], lp_scaled_->colUpper_[col],
-    //    simplex_->workDual_[col]);
+    //    %g\n", col, lp_scaled_->colLower_[col], simplex_info_->workValue_[col], lp_scaled_->colUpper_[col],
+    //    simplex_info_->workDual_[col]);
   }
   // Deduce the consequences of new bounds
   mlFg_Update(mlFg_action_NewBounds);
@@ -3368,12 +3368,12 @@ void HModel::util_deleteRowset(int *dstat) {
       //    scale_->row_[row] = scale_->row_[rowStep+row];
       basis_->nonbasicFlag_[newVar] = basis_->nonbasicFlag_[var];
       basis_->nonbasicMove_[newVar] = basis_->nonbasicMove_[var];
-      simplex_->workCost_[newVar] = simplex_->workCost_[var];
-      simplex_->workShift_[newVar] = simplex_->workShift_[var];
-      simplex_->workLower_[newVar] = simplex_->workLower_[var];
-      simplex_->workUpper_[newVar] = simplex_->workUpper_[var];
-      simplex_->workRange_[newVar] = simplex_->workRange_[var];
-      simplex_->workValue_[newVar] = simplex_->workValue_[var];
+      simplex_info_->workCost_[newVar] = simplex_info_->workCost_[var];
+      simplex_info_->workShift_[newVar] = simplex_info_->workShift_[var];
+      simplex_info_->workLower_[newVar] = simplex_info_->workLower_[var];
+      simplex_info_->workUpper_[newVar] = simplex_info_->workUpper_[var];
+      simplex_info_->workRange_[newVar] = simplex_info_->workRange_[var];
+      simplex_info_->workValue_[newVar] = simplex_info_->workValue_[var];
       if (rp)
         printf(
             "   Row %4d: dstat = %2d: Variable %2d becomes %2d; [%11g, %11g]; "
@@ -3843,16 +3843,16 @@ void HModel::util_anPrDuDgn() {
   double TlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
   double TlDuIfs = dblOption[DBLOPT_DUAL_TOL];
   for (int row = 0; row < lp_scaled_->numRow_; row++) {
-    double prAct = simplex_->baseValue_[row];
+    double prAct = simplex_info_->baseValue_[row];
     normPrAct += prAct * prAct;
-    double rsdu = max(simplex_->baseLower_[row] - prAct, prAct - simplex_->baseUpper_[row]);
+    double rsdu = max(simplex_info_->baseLower_[row] - prAct, prAct - simplex_info_->baseUpper_[row]);
     if (abs(rsdu) < TlPrIfs) {
       numDgnPrAct++;
     }
     printf(
         "Basic variable %7d is %7d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g; "
         "numDgnPrAct = %7d\n",
-        row, basis_->basicIndex_[row], simplex_->baseLower_[row], prAct, simplex_->baseUpper_[row], rsdu,
+        row, basis_->basicIndex_[row], simplex_info_->baseLower_[row], prAct, simplex_info_->baseUpper_[row], rsdu,
         numDgnPrAct);
   }
   normPrAct = sqrt(normPrAct);
@@ -3862,7 +3862,7 @@ void HModel::util_anPrDuDgn() {
   const int numTot = lp_scaled_->numCol_ + lp_scaled_->numRow_;
   for (int var = 0; var < numTot; var++) {
     if (basis_->nonbasicFlag_[var] == NONBASIC_FLAG_TRUE) {
-      double duAct = simplex_->workDual_[var];
+      double duAct = simplex_info_->workDual_[var];
       normDuAct += duAct * duAct;
       if (abs(duAct) < TlDuIfs) {
         numDgnDuAct++;
@@ -4018,13 +4018,13 @@ void HModel::util_anMlSol() {
 
   // Copy the values of (nonbasic) primal variables and scatter values of primal
   // variables which are basic
-  vector<double> value = simplex_->workValue_;
+  vector<double> value = simplex_info_->workValue_;
   for (int iRow = 0; iRow < lp_scaled_->numRow_; iRow++)
-    value[basis_->basicIndex_[iRow]] = simplex_->baseValue_[iRow];
+    value[basis_->basicIndex_[iRow]] = simplex_info_->baseValue_[iRow];
 
   // Copy the values of (nonbasic) dual variables and zero values of dual
   // variables which are basic
-  vector<double> dual = simplex_->workDual_;
+  vector<double> dual = simplex_info_->workDual_;
   for (int iRow = 0; iRow < lp_scaled_->numRow_; iRow++) dual[basis_->basicIndex_[iRow]] = 0;
 
   // Allocate and zero values of row primal activites and column dual activities

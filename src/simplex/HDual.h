@@ -503,7 +503,7 @@ class HDual {
   HighsModelObject *highs_model_object;
   const HMatrix *matrix;
   const HFactor *factor;
-  HSimplex h_simplex_;
+  HSimplex simplex_method_;
 
   const int *jMove;
   const double *workRange;

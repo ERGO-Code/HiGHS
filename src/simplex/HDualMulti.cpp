@@ -243,7 +243,7 @@ void HDual::minor_update() {
   // Minor update - store roll back data
   MFinish *Fin = &multi_finish[multi_nFinish];
   Fin->moveIn = highs_model_object->basis_.nonbasicMove_[columnIn];
-  Fin->shiftOut = highs_model_object->simplex_.workShift_[columnOut];
+  Fin->shiftOut = highs_model_object->simplex_info_.workShift_[columnOut];
   Fin->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
     Fin->flipList.push_back(dualRow.workData[i].first);
@@ -346,7 +346,7 @@ void HDual::minor_updatePivots() {
   MFinish *Fin = &multi_finish[multi_nFinish];
   model->updatePivots(columnIn, rowOut, sourceOut);
   Fin->EdWt /= (alphaRow * alphaRow);
-  Fin->basicValue = highs_model_object->simplex_.workValue_[columnIn] + thetaPrimal;
+  Fin->basicValue = highs_model_object->simplex_info_.workValue_[columnIn] + thetaPrimal;
   model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
@@ -710,8 +710,8 @@ void HDual::major_rollback() {
       model->flipBound(Fin->flipList[i]);
 
     // 4. Roll back cost
-    highs_model_object->simplex_.workShift_[Fin->columnIn] = 0;
-    highs_model_object->simplex_.workShift_[Fin->columnOut] = Fin->shiftOut;
+    highs_model_object->simplex_info_.workShift_[Fin->columnIn] = 0;
+    highs_model_object->simplex_info_.workShift_[Fin->columnOut] = Fin->shiftOut;
 
     // 5. The iteration count
     model->numberIteration--;

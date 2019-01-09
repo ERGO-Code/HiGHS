@@ -55,7 +55,7 @@ class HPrimal {
   // Model pointer
   HModel *model;
   HighsModelObject *highs_model_object;
-  HSimplex h_simplex_;
+  HSimplex simplex_method_;
   
   int numCol;
   int numRow;
