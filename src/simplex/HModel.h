@@ -343,9 +343,6 @@ class HModel {
   // Random number generator
   HighsRandom random;
 
-  // The time and timer
-  //  double totalTime;
-
   // Perturbation flag
   int problemPerturbed;
 
@@ -505,26 +502,6 @@ class HModel {
   vector<double> SvRowLower;
   vector<double> SvRowUpper;
 
-  // Methods to get scalars and pointers to arrays and other data
-  // structures in the instance of a model
-  //  int getPrStatus() { return problemStatus; }
-  //  int getObjSense() { return lp_scaled_.sense_; }
-  //  const HMatrix* getMatrix() { return &matrix; }
-  //  const HFactor* getFactor() { return &factor; }
-  //  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
-  //  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
-  //  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
-  //  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
-  //  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
-  //  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
-  //  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
-  //  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
-  //  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
-  //  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
-  //  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
-  //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
-  //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  //  int* getColPermutation() { return &colPermutation[0]; }
 };
 
 /*

@@ -122,7 +122,12 @@ struct HighsBasis {
 };
 
 struct HighsSimplexInfo {
-  // Part of working model which assigned and populated as much as
+  // Simplex information regarding primal and dual solution, objective
+  // and iteration counts for this Highs Model Object. This is
+  // information which should be retained from one run to the next in
+  // order to provide hot starts.
+  //
+  // Part of working model which are assigned and populated as much as
   // possible when a model is being defined
 
   // workCost: Originally just costs from the model but, in solve(), may
@@ -161,10 +166,22 @@ struct HighsSimplexInfo {
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
+  //
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
+  //
   // Value of dual objective
   double dualObjectiveAltValue;
+  // Value of dual objective that is updated in dual simplex solver -
+  // need to put this in lower level header, but can't go into Dual.h
+  double updatedDualObjectiveAltValue;
+
+  //
+  // Number of simplex iterations: total and constituent counts
+  int numberAltIteration;
+  int numberAltPhase1DualIteration;
+  int numberAltPhase2DualIteration;
+  int numberAltPrimalIteration;
 };
 
 struct HighsSolution {

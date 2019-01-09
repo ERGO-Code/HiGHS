@@ -60,6 +60,30 @@ const double hyperRESULT = 0.10;
  *
  * Solves \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN) and
  * \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
+ *
+ * HFactor is initialised using HFactor::setup, which takes copies of
+ * the pointers to the constraint matrix starts, indices, values and
+ * basic column indices. 
+ *
+ * Forming \f$PBQ=LU\f$ (INVERT) is performed using HFactor::build
+ *
+ * Solving \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN) is performed using
+ * HFactor::ftran
+ *
+ * Solving \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN) is performed using
+ * HFactor::btran
+ *
+ * Updating the invertible representation of the basis matrix
+ * according to \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
+ * is performed by HFactor::update. UPDATE requires vectors
+ * \f$B^{-1}\mathbf{a}_q\f$ and \f$B^{-T}\mathbf{e}_q\f$, together
+ * with the index of the pivotal row.
+ *
+ * HFactor assumes that the basic column indices are kept up-to-date
+ * externally as basis changes take place. INVERT permutes the basic
+ * column indices, since these define the order of the solution values
+ * after FTRAN, and the assumed order of the RHS before BTRAN
+ *
  */
 class HFactor {
  public:

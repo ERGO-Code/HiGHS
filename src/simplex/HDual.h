@@ -327,7 +327,10 @@ class HDual {
   /**
    * @brief Report on progress of the dual simplex solver
    */
-  void reportSolverProgress(HighsModelObject *ptr_highs_model, int phase);
+  void reportSolverProgress(HighsModelObject *ptr_highs_model, int phase = 2);
+#ifdef HiGHSDEV
+  double checkDualObjectiveAltValue(HighsModelObject *ptr_highs_model, const char *message, int phase = 2);
+#endif
 
 
   /**
@@ -560,13 +563,6 @@ class HDual {
   double alpha;
   double alphaRow;
   double numericalTrouble;
-
-  // Value of dual objective that is updated in dual simplex solver
-  double updatedDualObjectiveAltValue;
-#ifdef HiGHSDEV
-  double previousUpdatedDualObjectiveAltValue;
-  double previousDualObjectiveAltValue;
-#endif
 
   // Iteration counts
   int n_ph1_du_it;

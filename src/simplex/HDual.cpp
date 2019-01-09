@@ -685,7 +685,7 @@ void HDual::solve_phase2() {
         printf(
             "HDual::solve_phase2: Objective = %g > %g = "
             "dblOption[DBLOPT_OBJ_UB]\n",
-            model->updatedDualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+            updatedDualObjectiveAltValue, model->dblOption[DBLOPT_OBJ_UB]);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;
@@ -856,8 +856,10 @@ void HDual::rebuild() {
     }
   }
   model->updatedDualObjectiveValue = model->dualObjectiveValue;
+  simplex_info.updatedDualObjectiveAltValue = dualObjectiveAltValue;
 
 #ifdef HiGHSDEV
+  checkDualObjectiveAltValue(highs_model_object, "After computing dual objective value");
   //  model->checkDualObjectiveValue("After computing dual objective value");
   //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
@@ -1776,6 +1778,7 @@ void HDual::updatePivots() {
   //
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
+  //  checkDualObjectiveAltValue(highs_model_object, "After  model->updatePivots");
   //  model->checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
@@ -1955,7 +1958,7 @@ void HDual::setPresolve(const char *Presolve_ArgV) {
   }
 }
 
-  void HDual::reportSolverProgress(HighsModelObject *ptr_highs_model, int phase = 2) {
+  void HDual::reportSolverProgress(HighsModelObject *ptr_highs_model, int phase) {
     // Reports every 0.2 seconds until 50 seconds
     // Reports every 1.0 second until 500 seconds
     // Reports every 5.0 seconds thereafter
@@ -1979,6 +1982,34 @@ void HDual::setPresolve(const char *Presolve_ArgV) {
     }
   }
 
+
+#ifdef HiGHSDEV
+double HDual::checkDualObjectiveAltValue(HighsModelObject *ptr_highs_model, const char *message, int phase) {
+  static double previousUpdatedDualObjectiveAltValue = 0;
+  static double previousDualObjectiveAltValue = 0;
+  simplex_method_.computeDualObjectiveAltValue(ptr_highs_model, phase);
+  double updatedDualObjectiveAltValue = ptr_highs_model->simplex_info_.updatedDualObjectiveAltValue;
+  double dualObjectiveAltValue = ptr_highs_model->simplex_info_.dualObjectiveAltValue;
+  double changeInUpdatedDualObjectiveAltValue = updatedDualObjectiveAltValue - previousUpdatedDualObjectiveAltValue;
+  double changeInDualObjectiveAltValue = dualObjectiveAltValue - previousDualObjectiveAltValue;
+  double updatedDualObjectiveError = dualObjectiveAltValue - updatedDualObjectiveAltValue;
+  double rlvUpdatedDualObjectiveError = fabs(updatedDualObjectiveError)/max(1.0, fabs(dualObjectiveAltValue));
+  bool erFd = rlvUpdatedDualObjectiveError > 1e-8;
+  if (erFd)
+    printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
+	   phase,
+	   dualObjectiveAltValue, changeInDualObjectiveAltValue,
+	   updatedDualObjectiveAltValue, changeInUpdatedDualObjectiveAltValue,
+	   updatedDualObjectiveError, rlvUpdatedDualObjectiveError,
+	   message);
+  previousDualObjectiveAltValue = dualObjectiveAltValue;
+  previousUpdatedDualObjectiveAltValue = dualObjectiveAltValue;
+  ptr_highs_model->simplex_info_.updatedDualObjectiveAltValue = dualObjectiveAltValue;
+  // Now have dual objective value
+  //  mlFg_haveDualObjectiveAltValue = 1;
+  return updatedDualObjectiveError;
+}
+#endif
 
 // Utility to get a row of the inverse of B for SCIP
 int HDual::util_getBasisInvRow(int r, double *coef, int *inds, int *ninds) {

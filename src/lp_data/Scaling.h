@@ -142,6 +142,7 @@ void scaleLp(HighsModelObject &highs_model) {
 #endif
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
+    timer.stop(timer.scaleClock);
     return;
   }
   // See if we want to include cost include if minimum nonzero cost is less than

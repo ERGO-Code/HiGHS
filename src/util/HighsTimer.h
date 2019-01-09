@@ -85,8 +85,8 @@ class HighsTimer {
     // getWallTick() >= 0 (or initialised to initialClockStart > 0)
 #ifdef HiGHSDEV
     if (clockStart[iClock] <= 0) {
-      printf("recordStart [%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
-             iClock, clockStart[iClock], clockTicks[iClock],
+      printf("recordStart [%2d] (%s) is %11.4g: Ticks = %11.4g: NumCall = %d\n",
+             iClock, clockNames[iClock].c_str(), clockStart[iClock], clockTicks[iClock],
              clockNumCall[iClock]);
       fflush(stdout);
     }
@@ -109,8 +109,8 @@ class HighsTimer {
     // -getWallTick() <= 0
 #ifdef HiGHSDEV
     if (clockStart[iClock] > 0) {
-      printf("recordFinish[%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
-             iClock, clockStart[iClock], clockTicks[iClock],
+      printf("recordFinish[%2d] (%s) is %11.4g: Ticks = %11.4g: NumCall = %d\n",
+             iClock, clockNames[iClock].c_str(), clockStart[iClock], clockTicks[iClock],
              clockNumCall[iClock]);
       fflush(stdout);
     }
@@ -242,8 +242,8 @@ class HighsTimer {
       // getWallTick() >= 0 (or initialised to initialClockStart > 0)
 #ifdef HiGHSDEV
       if (clockStart[iClock] <= 0) {
-	printf("Clock %2d is still running: Start = %11.4g: Ticks = %11.4g: NumCall = %d\n",
-	       iClock, clockStart[iClock], clockTicks[iClock],
+	printf("Clock %2d (%s) is still running: Start = %11.4g: Ticks = %11.4g: NumCall = %d\n",
+	       iClock, clockNames[iClock].c_str(), clockStart[iClock], clockTicks[iClock],
 	       clockNumCall[iClock]);
 	fflush(stdout);
       }
