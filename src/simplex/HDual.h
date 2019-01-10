@@ -112,6 +112,10 @@ class HDual {
 
  public:
   /**
+   * @brief Set solver options from simplex options
+   */
+  void options(); 
+  /**
    * @brief Initialise a dual simplex instance
    *
    * Copy dimensions and pointers to matrix, factor and solver-related
@@ -456,13 +460,6 @@ class HDual {
                       //!< calling function
   double TimeLimitValue =
       0;  //!< Value of time limit. TODO: handle this otherwise
-
-#ifdef HiGHSDEV
-  // Analysis of rebuilds
-  const bool anRebuildTime = false;
-  int totalRebuilds;
-  double totalRebuildTime;
-#endif
 
   // Devex scalars
   int n_dvx_fwk;    //!< Number of Devex frameworks used

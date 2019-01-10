@@ -39,13 +39,6 @@ class HPrimal {
   );
   double TimeLimitValue;  //!< Time limit
 
-#ifdef HiGHSDEV
-  // Analysis of rebuilds
-  const bool anRebuildTime = false;
-  int totalRebuilds;
-  double totalRebuildTime;
-#endif
-
  private:
   void primalRebuild();
   void primalChooseColumn();

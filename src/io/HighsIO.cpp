@@ -7,6 +7,10 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HighsIO.cpp
+ * @brief IO methods for HiGHS - currently just print/log messages
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HighsIO.h"
 
 #include <stdarg.h>
@@ -15,7 +19,7 @@
 
 void HighsPrintMessage(unsigned int level, const char* format, ...) {
   FILE* output = stdout; // TODO: read from options
-  int messageLevel = 1; // TODO: read from options
+  int messageLevel = 1+2+4; // TODO: read from options
 
   if (messageLevel & level) {
     va_list argptr;

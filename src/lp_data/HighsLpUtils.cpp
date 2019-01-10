@@ -35,7 +35,7 @@ void reportLpBrief(HighsLp &lp) {
 
 // Report the LP dimensions
 void reportLpDimensions(HighsLp &lp) {
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_MINIMAL,
                     "LP has %d columns, %d rows and %d nonzeros\n",
                     lp.numCol_, lp.numRow_, lp.Astart_[lp.numCol_]);
 }
@@ -43,21 +43,21 @@ void reportLpDimensions(HighsLp &lp) {
 // Report the LP objective sense
 void reportLpObjSense(HighsLp &lp) {
   if (lp.sense_ == OBJSENSE_MINIMIZE)
-    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is minimize\n");
+    HighsPrintMessage(ML_MINIMAL, "Objective sense is minimize\n");
   else if (lp.sense_ == OBJSENSE_MAXIMIZE)
-    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is maximize\n");
+    HighsPrintMessage(ML_MINIMAL, "Objective sense is maximize\n");
   else
-    HighsPrintMessage(HighsMessageType::INFO,
+    HighsPrintMessage(ML_MINIMAL,
                       "Objective sense is ill-defined as %d\n", lp.sense_);
 }
 
 // Report the vectors of LP column data
 void reportLpColVec(HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_VERBOSE,
                     "  Column        Lower        Upper         Cost\n");
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g %12g\n", iCol,
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g\n", iCol,
                       lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol]);
   }
 }
@@ -65,10 +65,10 @@ void reportLpColVec(HighsLp &lp) {
 // Report the vectors of LP row data
 void reportLpRowVec(HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_VERBOSE,
                     "     Row        Lower        Upper\n");
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g\n", iRow,
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g\n", iRow,
                       lp.rowLower_[iRow], lp.rowUpper_[iRow]);
   }
 }
@@ -76,17 +76,17 @@ void reportLpRowVec(HighsLp &lp) {
 // Report the LP column-wise matrix
 void reportLpColMtx(HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_VERBOSE,
                     "Column Index              Value\n");
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(HighsMessageType::INFO, "    %8d Start   %10d\n", iCol,
+    HighsPrintMessage(ML_VERBOSE, "    %8d Start   %10d\n", iCol,
                       lp.Astart_[iCol]);
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
-      HighsPrintMessage(HighsMessageType::INFO, "          %8d %12g\n",
+      HighsPrintMessage(ML_VERBOSE, "          %8d %12g\n",
                         lp.Aindex_[el], lp.Avalue_[el]);
     }
   }
-  HighsPrintMessage(HighsMessageType::INFO, "             Start   %10d\n",
+  HighsPrintMessage(ML_VERBOSE, "             Start   %10d\n",
                     lp.Astart_[lp.numCol_]);
 }
 

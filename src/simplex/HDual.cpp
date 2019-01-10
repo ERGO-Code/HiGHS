@@ -42,8 +42,8 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model->basis_ = &ref_highs_model_object.basis_;
   model->scale_ = &ref_highs_model_object.scale_;
 
-  HighsSimplexInfo &simplex_info = ref_highs_model_object.simplex_info_;
-  HighsTimer &timer = ref_highs_model_object.timer_;
+  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = highs_model_object->timer_;
   model->timer_ = &timer;
   //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
   dual_variant = variant;
@@ -56,13 +56,6 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model->setup_for_solve();
   model->problemStatus = LP_Status_Unset;
   model->numberIteration = 0;
-#ifdef HiGHSDEV
-  // Initialise numbers and times of rebuilds and inverts.
-  totalRebuilds = 0;
-  totalRebuildTime = 0;
-  model->totalInverts = 0;
-  model->totalInvertTime = 0;
-#endif
   // Cannot solve box-constrained LPs
   if (model->lp_scaled_->numRow_ == 0) return;
   timer.start(simplex_info.clock_[SimplexTotalClock]);
@@ -76,7 +69,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   if (TimeLimitValue == 0) {
     TimeLimitValue = 1000000.0;
 #ifdef HiGHSDEV
-    HighsPrintMessage(HighsMessageType::WARNING, "Changing TimeLimitValue from 0 to %g\n", TimeLimitValue);
+    HighsPrintMessage(ML_MINIMAL, "Changing TimeLimitValue from 0 to %g\n", TimeLimitValue);
 #endif
   }
 
@@ -285,13 +278,14 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   }
 
 #ifdef HiGHSDEV
-  if (AnIterLg) iterateRpAn();
+  if (simplex_info.analyseSimplexIterations) iterateRpAn();
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
-    simplex_timer.reportDualSimplexInnerClock(ref_highs_model_object);
+    if (simplex_info.reportSimplexInnerClock) {
+      simplex_timer.reportDualSimplexInnerClock(ref_highs_model_object);
+    }
 
-    bool rpIterate = true;
-    if (rpIterate) {
+    if (simplex_info.reportSimplexOuterClock) {
       simplex_timer.reportDualSimplexIterateClock(ref_highs_model_object);
       simplex_timer.reportDualSimplexOuterClock(ref_highs_model_object);
     }
@@ -336,11 +330,6 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
       hPrimal.solvePhase2(highs_model_object);
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-      // Add in the count and time for any primal rebuilds
-#ifdef HiGHSDEV
-      totalRebuildTime += hPrimal.totalRebuildTime;
-      totalRebuilds += hPrimal.totalRebuilds;
-#endif
     }
 #ifdef HiGHSDEV
     n_pr_it += (model->numberIteration - it0);
@@ -380,13 +369,12 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
 #ifdef HiGHSDEV
-  bool rpSimplexPhasesClock = true;
-  if (rpSimplexPhasesClock) {
+  if (simplex_info.reportSimplexPhasesClock) {
     simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
     simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
   }
 
-  if (model->anInvertTime) {
+  if (simplex_info.analyseInvertTime) {
     double currentRunHighsTime = timer.readRunHighsClock();
     printf(
         "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
@@ -397,21 +385,27 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     } else {
       printf("\n");
     }
-    cout << flush;
+  }
+  if (simplex_info.analyseRebuildTime) {
+    double currentRunHighsTime = timer.readRunHighsClock();
+    int totalRebuilds = 0;
+    double totalRebuildTime = 0;
     printf(
-        "Time: Total rebuilds = %4d; Total rebuild time = %11.4g of Total time "
-        "= %11.4g",
-        totalRebuilds, ref_highs_model_object.modelTotalRebuildTime, currentRunHighsTime);
+        "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
+        totalRebuildTime, totalRebuilds, currentRunHighsTime);
     if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalRebuildTime) / currentRunHighsTime);
+      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / currentRunHighsTime);
     } else {
       printf("\n");
     }
-    cout << flush;
   }
   model->util_anMlSol();
 
 #endif
+}
+
+void HDual::options() {
+  // Set solver options from simplex options
 }
 
 void HDual::init(int num_threads) {
@@ -541,9 +535,9 @@ void HDual::solve_phase1() {
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
-    timer.start(simplex_info.clock_[IterateRebuildClock]);
+    timer.start(simplex_info.clock_[IterateDualRebuildClock]);
     rebuild();
-    timer.stop(simplex_info.clock_[IterateRebuildClock]);
+    timer.stop(simplex_info.clock_[IterateDualRebuildClock]);
     for (;;) {
       switch (dual_variant) {
         default:
@@ -652,9 +646,9 @@ void HDual::solve_phase2() {
   for (;;) {
     // Outer loop of solve_phase2()
     // Rebuild all values, reinverting B if updates have been performed
-    timer.start(simplex_info.clock_[IterateRebuildClock]);
+    timer.start(simplex_info.clock_[IterateDualRebuildClock]);
     rebuild();
-    timer.stop(simplex_info.clock_[IterateRebuildClock]);
+    timer.stop(simplex_info.clock_[IterateDualRebuildClock]);
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solve_phase2()
@@ -756,10 +750,6 @@ void HDual::rebuild() {
   HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
   // Save history information
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
-#ifdef HiGHSDEV
-  double tt0 = 0;
-  if (anRebuildTime) tt0 = timer.getTime();
-#endif
   int sv_invertHint = invertHint;
   invertHint = invertHint_no;  // Was 0
 
@@ -837,7 +827,7 @@ void HDual::rebuild() {
     double absDualObjectiveError = fabs(simplex_info.updatedDualObjectiveValue - dualObjectiveValue);
     double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(dualObjectiveValue));
     if (rlvDualObjectiveError >= 1e-8) {
-      HighsPrintMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)\n",
+      HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)",
 			absDualObjectiveError, rlvDualObjectiveError);
     }
   }
@@ -862,15 +852,13 @@ void HDual::rebuild() {
   total_syntheticTick = 0;
 
 #ifdef HiGHSDEV
-  if (anRebuildTime) {
-    double rebuildTime = timer.getTime() - tt0;
-    totalRebuilds++;
-    totalRebuildTime += rebuildTime;
+  if (simplex_info.analyseRebuildTime) {
+    int iClock = simplex_info.clock_[IterateDualRebuildClock];
+    int totalRebuilds = timer.clockNumCall[iClock];
+    double totalRebuildTime = timer.read(iClock);
     printf(
-        "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Rebuild time = "
-        "%11.4g; Total rebuild time = %11.4g\n",
-        solvePhase, totalRebuilds, sv_invertHint, model->numberIteration,
-        rebuildTime, totalRebuildTime);
+	   "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = %11.4g\n",
+	   solvePhase, totalRebuilds, sv_invertHint, model->numberIteration, totalRebuildTime);
   }
 #endif
   // Data are fresh from rebuild

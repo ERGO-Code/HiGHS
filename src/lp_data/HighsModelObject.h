@@ -42,6 +42,9 @@ public:
   HMatrix matrix_;
   HFactor factor_;
   HighsTimer timer_;
+
+  bool reportModelOperationsClock = true;
+
   //  int modelTotalClock;
   double modelTotalInvertTime;
   double modelTotalRebuildTime;

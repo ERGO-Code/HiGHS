@@ -163,7 +163,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 #ifdef HiGHSDEV
   // Report times
   std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
-  timer.report(clockList);
+  timer.report("ModelOperations", clockList);
 /* todo: do elsewhere once timing is added.
     bool rpBnchmk = false;
     if (rpBnchmk) {

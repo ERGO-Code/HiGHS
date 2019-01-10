@@ -29,6 +29,7 @@
 #include "HighsUtils.h"
 #include "HCrash.h"
 #include "HRanging.h"
+#include "HSimplex.h"
 #include "Scaling.h"
 
 using std::cout;
@@ -55,13 +56,19 @@ HighsStatus LpStatusToHighsStatus(const int lp_status) {
 HighsStatus solveSimplex(const HighsOptions& opt,
                          HighsModelObject& highs_model) {
   HighsTimer &timer = highs_model.timer_;
+  HSimplex simplex_method_;
   HModel& model = highs_model.hmodel_[0];
 
   timer.start(timer.solveClock);
   bool ranging = true;
-  // Initialize solver.
-  HDual solver;
 
+  // Set Simplex options from HiGHS options
+  simplex_method_.options(&highs_model, opt);
+
+  // Initialize solver and set solver options from simplex options
+  HDual solver;
+  solver.options();
+  
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
     model.initFromNonbasic();

@@ -26,7 +26,27 @@
 class HSimplex {
  public:
 
-  void computeDualObjectiveValue(HighsModelObject *ptr_highs_model, int phase = 2) {
+  void options(
+	       HighsModelObject *ptr_highs_model,
+	       const HighsOptions& opt  //!< HiGHS options
+	       ) {
+    printf("Calling HSimplex::options\n");
+    
+    HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
+    // Options for reporting timing
+    simplex_info_.reportSimplexInnerClock = false;
+    simplex_info_.reportSimplexOuterClock = false;
+    simplex_info_.reportSimplexPhasesClock = false;
+    // Option for analysing simplex iterations
+    simplex_info_.analyseSimplexIterations = false;
+    simplex_info_.analyseInvertTime = false;
+    simplex_info_.analyseRebuildTime = false;
+    
+  }
+
+  void computeDualObjectiveValue(
+				 HighsModelObject *ptr_highs_model,
+				 int phase = 2) {
     HighsLp &lp_ = ptr_highs_model->lp_scaled_;
     HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
     

@@ -15,6 +15,7 @@
 #include "HModel.h"
 #include "HConst.h"
 #include "HSimplex.h"
+#include "SimplexTimer.h"
 
 #include <cassert>
 #include <cstdio>
@@ -27,6 +28,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
   model = &highs_model_object->hmodel_[0];
   //  model->basis_ = &highs_model_object->basis_;
+
+  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+
   numCol = model->lp_scaled_->numCol_;
   numRow = model->lp_scaled_->numRow_;
   numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
@@ -47,12 +51,6 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   columnDensity = 0;
   row_epDensity = 0;
 
-#ifdef HiGHSDEV
-  // Initialise rebuild count and time
-  totalRebuildTime = 0;
-  totalRebuilds = 0;
-#endif
-
   // Setup other buffers
 
   model->util_reportMessage("primal-start");
@@ -62,7 +60,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 
   // Main solving structure
   for (;;) {
+    timer.start(simplex_info.clock_[IteratePrimalRebuildClock]);
     primalRebuild();
+    timer.stop(simplex_info.clock_[IteratePrimalRebuildClock]);
 
     for (;;) {
       primalChooseColumn();
@@ -80,7 +80,7 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
         break;
       }
       //      double dualObjectiveCurrentValue = model->dualObjectiveValue
-      double dualObjectiveCurrentValue = highs_model_object->simplex_info_.dualObjectiveValue;
+      double dualObjectiveCurrentValue = simplex_info.dualObjectiveValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
       // model->numberIteration, dualObjectiveCurrentValue);
       if (dualObjectiveCurrentValue > model->dblOption[DBLOPT_OBJ_UB]) {
@@ -121,11 +121,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 }
 
 void HPrimal::primalRebuild() {
+  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = highs_model_object->timer_;
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
-#ifdef HiGHSDEV
-  double tt0 = 0;
-  if (anRebuildTime) tt0 = model->timer_->getTime();
-#endif
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
   invertHint = invertHint_no;  // Was 0
@@ -152,15 +150,13 @@ void HPrimal::primalRebuild() {
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV
-  if (anRebuildTime) {
-    double rebuildTime = model->timer_->getTime() - tt0;
-    totalRebuilds++;
-    totalRebuildTime += rebuildTime;
+  if (simplex_info.analyseRebuildTime) {
+    int iClock = simplex_info.clock_[IteratePrimalRebuildClock];
+    int totalRebuilds = timer.clockNumCall[iClock];
+    double totalRebuildTime = timer.read(iClock);
     printf(
-        "Primal     rebuild %d (%1d) on iteration %9d: Rebuild time = %g; "
-        "Total rebuild time %g\n",
-        totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime,
-        totalRebuildTime);
+        "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
+        totalRebuilds, sv_invertHint, model->numberIteration, totalRebuildTime);
   }
 #endif
   // Data are fresh from rebuild

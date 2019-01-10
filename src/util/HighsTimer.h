@@ -220,15 +220,17 @@ class HighsTimer {
    * @brief Report timing information for the clock indices in the list
    */
   void report(
-	      std::vector<int>&clockList          //!< List of indices to report
+	      const char *grepStamp,     //!< Character string used to extract output using grep
+	      std::vector<int>&clockList //!< List of indices to report
   ) {
     double tlPerCentReport = 0.0;//1.0;
-    report_tl(clockList, tlPerCentReport);
+    report_tl(grepStamp, clockList, tlPerCentReport);
   }
 
   void report_tl(
-		 std::vector<int>&clockList,          //!< List of indices to report
-		 double tlPerCentReport
+		 const char *grepStamp,      //!< Character string used to extract output using grep 
+		 std::vector<int>&clockList, //!< List of indices to report
+		 double tlPerCentReport      //!< Lower bound on percentage of total time before an individual clock is reported
   ) {
     const bool reportForExcel = false;
     int numClockListEntries = clockList.size();
@@ -253,7 +255,7 @@ class HighsTimer {
 
     // Report in one line the per-mille contribution from each clock
     // First give the 3-character clock names as column headers
-    printf("txt-profile-name  ");
+    printf("%s-name  ", grepStamp);
     for (int i = 0; i < numClockListEntries; i++) {
       printf(" %-3s", clockCh3Names[clockList[i]].c_str());
     }
@@ -268,7 +270,11 @@ class HighsTimer {
     double suClockTicks = 0;
     for (int passNum = 0; passNum < 2; passNum++) {
       double suPerMille = 0;
-      printf("txt-profile-clock ");
+      if (passNum == 0) {
+	printf("%s-total ", grepStamp);
+      } else {
+	printf("%s-local ", grepStamp);
+      }
       for (int i = 0; i < numClockListEntries; i++) {
 	int iClock = clockList[i];
 	double perMille;
@@ -294,11 +300,7 @@ class HighsTimer {
     }
 
     // Report one line per clock, the time, number of calls and time per call
-    printf("txt-profile-time ");
-#ifdef HiGHSDEV
-    printf("ID: ");
-#endif
-    printf("Operation       :    Time                     :   Calls   Time/Call\n");
+    printf("%s-time  Operation       :    Time                     :   Calls   Time/Call\n", grepStamp);
     // Convert approximate seconds
     double suTick = 0;
     double suTi = 0;
@@ -312,13 +314,10 @@ class HighsTimer {
       if (clockNumCall[iClock] > 0) {
 	tiPerCall = ti / clockNumCall[iClock];
 	if (perCentSumClockTicks >= tlPerCentReport) {
-	  printf("txt-profile-time ");
-#ifdef HiGHSDEV
-	  printf("%2d: ", iClock);
-#endif
-	  printf("%-16s: %11.4e (%5.1f%%; %5.1f%%): %7d %11.4e\n",
-		 clockNames[iClock].c_str(), ti, perCentSumClockTicks, perCentRunHighs, clockNumCall[iClock],
-		 tiPerCall);
+	  printf("%s-time  %-16s: %11.4e (%5.1f%%; %5.1f%%): %7d %11.4e\n", grepStamp,
+		 clockNames[iClock].c_str(),
+		 ti, perCentSumClockTicks, perCentRunHighs, 
+		 clockNumCall[iClock], tiPerCall);
 	}
       }
       suTi += ti;
@@ -326,16 +325,10 @@ class HighsTimer {
     }
     double perCentRunHighs = 100.0 * suTick / currentRunHighsTick;
     double perCentSumClockTicks = 100.0;
-    printf("txt-profile-time ");
-#ifdef HiGHSDEV
-    printf("    ");
-#endif
-    printf("SUM             : %11.4e (%5.1f%%; %5.1f%%)\n", suTi, perCentSumClockTicks, perCentRunHighs);
-    printf("txt-profile-time ");
-#ifdef HiGHSDEV
-    printf("    ");
-#endif
-    printf("TOTAL           : %11.4e\n", tick2sec * currentRunHighsTick);
+    printf("%s-time  SUM             : %11.4e (%5.1f%%; %5.1f%%)\n", grepStamp,
+	   suTi, perCentSumClockTicks, perCentRunHighs);
+    printf("%s-time  TOTAL           : %11.4e\n", grepStamp,
+	   tick2sec * currentRunHighsTick);
     if (reportForExcel) {
       // Repeat reporting for Excel
       printf("grep_excel-profile-name");

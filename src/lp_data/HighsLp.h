@@ -53,6 +53,14 @@ struct HighsOptions {
   std::string crashMode = "";
   std::string partitionFile = "";
 
+  // Options not passed through the command line
+
+  // Options for HighsPrintMessage and HighsLogMessage
+  // TODO: Use these to set values for use in HighsPrintMessage and HighsLogMessage  
+  FILE* output = stdout;
+  int messageLevel = 1;
+  FILE* logfile = stdout;
+
   bool clean_up = false;
 };
 
@@ -181,6 +189,16 @@ struct HighsSimplexInfo {
   int numberAltPhase1DualIteration;
   int numberAltPhase2DualIteration;
   int numberAltPrimalIteration;
+
+  // Options for reporting timing
+  bool reportSimplexInnerClock;
+  bool reportSimplexOuterClock;
+  bool reportSimplexPhasesClock;
+  // Option for analysing simplex iterations, INVERT time and rebuild time
+  bool analyseSimplexIterations;
+  bool analyseInvertTime;
+  bool analyseRebuildTime;
+
 };
 
 struct HighsSolution {
