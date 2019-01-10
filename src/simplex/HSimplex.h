@@ -36,11 +36,15 @@ class HSimplex {
     // Options for reporting timing
     simplex_info_.reportSimplexInnerClock = false;
     simplex_info_.reportSimplexOuterClock = false;
+#ifdef HiGHSDEV
     simplex_info_.reportSimplexPhasesClock = false;
     // Option for analysing simplex iterations
+    simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = false;
+    simplex_info_.analyseLpSolution = false;
     simplex_info_.analyseInvertTime = false;
     simplex_info_.analyseRebuildTime = false;
+#endif
     
   }
 
@@ -73,7 +77,7 @@ class HSimplex {
 void simplexAllocateWorkAndBaseArrays(HighsModelObject &highs_model) {
   // Allocate bounds and solution spaces
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   const int numTot = lp_->numCol_ + lp_->numRow_;
   simplex_->workCost_.resize(numTot);
   simplex_->workDual_.resize(numTot);
@@ -94,7 +98,7 @@ void simplexAllocateWorkAndBaseArrays(HighsModelObject &highs_model) {
 void simplexInitPh2ColCost(HighsModelObject &highs_model, int firstcol, int lastcol) {
   // Copy the Phase 2 cost and zero the shift
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
     simplex_->workCost_[var] = lp_->sense_ * lp_->colCost_[col];
@@ -105,7 +109,7 @@ void simplexInitPh2ColCost(HighsModelObject &highs_model, int firstcol, int last
 void simplexInitPh2RowCost(HighsModelObject &highs_model, int firstrow, int lastrow) {
   // Zero the cost and shift
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   for (int row = firstrow; row <= lastrow; row++) {
     int var = lp_->numCol_ + row;
     simplex_->workCost_[var] = 0;
@@ -116,7 +120,7 @@ void simplexInitPh2RowCost(HighsModelObject &highs_model, int firstrow, int last
 void simplexInitCost(HighsModelObject &highs_model, int perturb) {
   // Copy the cost
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   simplexInitPh2ColCost(highs_model, 0, lp_->numCol_ - 1);
   simplexInitPh2RowCost(highs_model, 0, lp_->numRow_ - 1);
   // See if we want to skip perturbation
@@ -168,7 +172,7 @@ void simplexInitCost(HighsModelObject &highs_model, int perturb) {
 void simplexInitPh2ColBound(HighsModelObject &highs_model, int firstcol, int lastcol) {
   // Copy bounds and compute ranges
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   assert(firstcol >= 0);
   assert(lastcol < lp_->numCol_);
   for (int col = firstcol; col <= lastcol; col++) {
@@ -181,7 +185,7 @@ void simplexInitPh2ColBound(HighsModelObject &highs_model, int firstcol, int las
 void simplexInitPh2RowBound(HighsModelObject &highs_model, int firstrow, int lastrow) {
   // Copy bounds and compute ranges
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   assert(firstrow >= 0);
   assert(lastrow < lp_->numRow_);
   for (int row = firstrow; row <= lastrow; row++) {
@@ -196,7 +200,7 @@ void SimplexInitBound(HighsModelObject &highs_model, int phase) {
   // Initialise the Phase 2 bounds (and ranges). NB Phase 2 bounds
   // necessary to compute Phase 1 bounds
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   SimplexInitPh2ColBound(highs_model, 0, lp_->numCol_ - 1);
   SimplexInitPh2RowBound(highs_model, 0, lp_->numRow_ - 1);
   if (phase == 2) return;
@@ -226,7 +230,7 @@ void simplexInitValueFromNonbasic(HighsModelObject &highs_model, int firstvar, i
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   assert(firstvar >= 0);
   const int numTot = lp_->numCol_ + lp_->numRow_;
   assert(lastvar < numTot);
@@ -302,7 +306,7 @@ void simplexInitWithLogicalBasis(HighsModelObject &highs_model) {
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
   HighsLp *lp_ = &highs_model.lp_scaled_;
-  HighsSimplexInfo *simplex_ = &highs_model.simplex_;
+  HighsSimplexInfo *simplex_info_ = &highs_model.simplex_info_;
   for (int row = 0; row < lp_->numRow_; row++) basis_->basicIndex_[row] = lp_->numCol_ + row;
   for (int col = 0; col < lp_->numCol_; col++) basis_->nonbasicFlag_[col] = 1;
   numBasicLogicals = lp_->numRow_;

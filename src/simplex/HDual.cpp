@@ -27,6 +27,7 @@
 #include "HighsLp.h"
 #include "HighsIO.h"
 #include "HighsModelObject.h"
+#include "HighsTimer.h"
 #include "SimplexTimer.h"
 #include "HSimplex.h"
 
@@ -86,12 +87,12 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     }
 #ifdef HiGHSDEV
     double bsCond = an_bs_cond(model);
-    printf("Initial basis condition estimate of %11.4g is", bsCond);
+    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
     if (bsCond > 1e12) {
-      printf(" excessive\n");
+      HighsPrintMessage(ML_MINIMAL, " excessive\n");
       return;
     } else {
-      printf(" OK\n");
+      HighsPrintMessage(ML_MINIMAL, " OK\n");
     }
 #endif
   }
@@ -153,7 +154,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 #ifdef HiGHSDEV
 	timer.stop(iClock);
         double IzDseWtTT = timer.read(iClock);
-        printf("Computed %d initial DSE weights in %gs\n", numRow, IzDseWtTT);
+        HighsPrintMessage(ML_DETAILED, "Computed %d initial DSE weights in %gs\n", numRow, IzDseWtTT);
         if (model->intOption[INTOPT_PRINT_FLAG])
           printf(
               "solve:: %d basic structurals: computed %d initial DSE weights "
@@ -368,26 +369,36 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
-#ifdef HiGHSDEV
   if (simplex_info.reportSimplexPhasesClock) {
     simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
     simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
   }
 
+#ifdef HiGHSDEV
+  if (simplex_info.analyseLpSolution) {
+    model->util_analyseLpSolution();
+  }
   if (simplex_info.analyseInvertTime) {
     double currentRunHighsTime = timer.readRunHighsClock();
+    int iClock = simplex_info.clock_[InvertClock];
+    int totalInverts = timer.clockNumCall[iClock];
+    double totalInvertTime = timer.clockTime[iClock];
+    
     printf(
-        "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
-        "= %11.4g",
-        model->totalInverts, ref_highs_model_object.modelTotalInvertTime, currentRunHighsTime);
+	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
+	   totalInverts, totalInvertTime, currentRunHighsTime);
     if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalInvertTime) / currentRunHighsTime);
+      printf(" (%6.2f%%)\n", (100 * totalInvertTime) / currentRunHighsTime);
     } else {
       printf("\n");
     }
   }
   if (simplex_info.analyseRebuildTime) {
     double currentRunHighsTime = timer.readRunHighsClock();
+    //    HighsClockRecord totalRebuildClock;
+    //    timer.clockInit(totalRebuildClock);
+    //    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
+    //    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
     int totalRebuilds = 0;
     double totalRebuildTime = 0;
     printf(
@@ -399,7 +410,6 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
       printf("\n");
     }
   }
-  model->util_anMlSol();
 
 #endif
 }
@@ -523,7 +533,7 @@ void HDual::init_slice(int init_sliced_num) {
 void HDual::solve_phase1() {
   HighsTimer &timer = highs_model_object->timer_;
   HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
-  model->util_reportMessage("dual-phase-1-start");
+  HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   model->initBound(1);
   model->initValue();
@@ -585,7 +595,7 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
   if (SolveBailout) return;
 
   if (rowOut == -1) {
-    model->util_reportMessage("dual-phase-1-optimal");
+    HighsPrintMessage(ML_DETAILED, "dual-phase-1-optimal\n");
     // Go to phase 2
     if (simplex_info.dualObjectiveValue == 0) {
       solvePhase = 2;
@@ -598,7 +608,7 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
       } else {
         // Report dual infeasible
         solvePhase = -1;
-        model->util_reportMessage("dual-infeasible");
+        HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
         model->setProblemStatus(LP_Status_Unbounded);
       }
     }
@@ -606,11 +616,11 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
-    model->util_reportMessage("dual-phase-1-not-solved");
+    HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
     model->setProblemStatus(LP_Status_Failed);
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
-    model->util_reportMessage("dual-phase-1-unbounded");
+    HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
     if (model->problemPerturbed) {
       // Clean up perturbation and go on
       cleanup();
@@ -618,7 +628,7 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
     } else {
       // Report strange issues
       solvePhase = -1;
-      model->util_reportMessage("dual-phase-1-not-solved");
+      HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
       model->setProblemStatus(LP_Status_Failed);
     }
   }
@@ -632,7 +642,7 @@ dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_
 void HDual::solve_phase2() {
   HighsTimer &timer = highs_model_object->timer_;
   HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
-  model->util_reportMessage("dual-phase-2-start");
+  HighsPrintMessage(ML_DETAILED, "dual-phase-2-start\n");
 
   // Collect free variables
   dualRow.create_Freelist();
@@ -706,11 +716,11 @@ void HDual::solve_phase2() {
   }
   if (dualInfeasCount > 0) {
     // There are dual infeasiblities so switch to Phase 1 and return
-    model->util_reportMessage("dual-phase-2-found-free");
+    HighsPrintMessage(ML_DETAILED, "dual-phase-2-found-free\n");
     solvePhase = 1;
   } else if (rowOut == -1) {
     // There is no candidate in CHUZR, even after rebuild so probably optimal
-    model->util_reportMessage("dual-phase-2-optimal");
+    HighsPrintMessage(ML_DETAILED, "dual-phase-2-optimal\n");
     //		printf("Rebuild: cleanup()\n");
     cleanup();
     if (dualInfeasCount > 0) {
@@ -720,18 +730,18 @@ void HDual::solve_phase2() {
     } else {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
-      model->util_reportMessage("problem-optimal");
+      HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
       model->setProblemStatus(LP_Status_Optimal);
     }
   } else if (invertHint == invertHint_chooseColumnFail) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
-    model->util_reportMessage("dual-phase-2-not-solved");
+    HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
     model->setProblemStatus(LP_Status_Failed);
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
-    model->util_reportMessage("dual-phase-2-unbounded");
+    HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
     if (model->problemPerturbed) {
       // If the costs have been perturbed, clean up and return
       cleanup();
@@ -739,7 +749,7 @@ void HDual::solve_phase2() {
       // If the costs have not been perturbed, so dual unbounded---and hence
       // primal infeasible
       solvePhase = -1;
-      model->util_reportMessage("problem-infeasible");
+      HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
       model->setProblemStatus(LP_Status_Infeasible);
     }
   }
@@ -867,7 +877,7 @@ void HDual::rebuild() {
 
 void HDual::cleanup() {
   // Remove perturbation and recompute the dual solution
-  model->util_reportMessage("dual-cleanup-shift");
+  HighsPrintMessage(ML_DETAILED, "dual-cleanup-shift\n");
   model->initCost();
   model->initBound();
   model->computeDual();
@@ -1252,13 +1262,13 @@ void HDual::chooseRow() {
     row_ep.array[rowOut] = 1;
     row_ep.packFlag = true;
 #ifdef HiGHSDEV
-    if (AnIterLg) iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
+    if (simplex_info.analyseSimplexIterations) iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif
     // Perform BTRAN
     //      printf("\nBTRAN\n");
     factor->btran(row_ep, row_epDensity);
 #ifdef HiGHSDEV
-    if (AnIterLg) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
+    if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
     // Verify DSE weight
@@ -1333,7 +1343,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   if (Price_Mode == Price_Mode_Col) {
     // Column-wise PRICE
 #ifdef HiGHSDEV
-    if (AnIterLg) {
+    if (simplex_info.analyseSimplexIterations) {
       iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
       AnIterNumColPrice++;
     }
@@ -1347,7 +1357,7 @@ void HDual::chooseColumn(HVector *row_ep) {
     if (alw_price_by_col_sw && (lc_dsty > dstyColPriceSw)) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
-      if (AnIterLg) {
+      if (simplex_info.analyseSimplexIterations) {
         iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
         AnIterNumColPrice++;
       }
@@ -1364,7 +1374,7 @@ void HDual::chooseColumn(HVector *row_ep) {
 #ifdef HiGHSDEV
       // Ultra-sparse PRICE is in development
     } else if (useUltraPrice) {
-      if (AnIterLg) {
+      if (simplex_info.analyseSimplexIterations) {
         iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
         AnIterNumRowPriceUltra++;
       }
@@ -1380,7 +1390,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       // Avoid hyper-sparse PRICE on current density of result or
       // switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
-      if (AnIterLg) {
+      if (simplex_info.analyseSimplexIterations) {
         iterateOpRecBf(AnIterOpTy_Price, *row_ep, row_apDensity);
         AnIterNumRowPriceWSw++;
       }
@@ -1394,7 +1404,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       // No avoiding hyper-sparse PRICE on current density of result
       // or switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
-      if (AnIterLg) {
+      if (simplex_info.analyseSimplexIterations) {
         iterateOpRecBf(AnIterOpTy_Price, *row_ep, 0.0);
         AnIterNumRowPrice++;
       }
@@ -1413,7 +1423,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   double lc_OpRsDensity = (double)row_ap.count / numCol;
   uOpRsDensityRec(lc_OpRsDensity, row_apDensity);
 #ifdef HiGHSDEV
-  if (AnIterLg) iterateOpRecAf(AnIterOpTy_Price, row_ap);
+  if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_Price, row_ap);
 #endif
   timer.stop(simplex_info.clock_[PriceClock]);
   //
@@ -1567,13 +1577,13 @@ void HDual::updateFtran() {
   // with unit multiplier
   matrix->collect_aj(column, columnIn, 1);
 #ifdef HiGHSDEV
-  if (AnIterLg) iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
+  if (simplex_info.analyseSimplexIterations) iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
 #endif
   // Perform FTRAN
   //  printf("\nFTRAN\n");
   factor->ftran(column, columnDensity);
 #ifdef HiGHSDEV
-  if (AnIterLg) iterateOpRecAf(AnIterOpTy_Ftran, column);
+  if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_Ftran, column);
 #endif
   // Save the pivot value computed column-wise - used for numerical checking
   alpha = column.array[rowOut];
@@ -1601,14 +1611,14 @@ void HDual::updateFtranBFRT() {
 
   if (columnBFRT.count) {
 #ifdef HiGHSDEV
-    if (AnIterLg)
+    if (simplex_info.analyseSimplexIterations)
       iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
 #endif
     // Perform FTRAN BFRT
     //    printf("\nFTRAN BFRT\n");
     factor->ftran(columnBFRT, columnDensity);
 #ifdef HiGHSDEV
-    if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
+    if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
 #endif
   }
   if (time_updateFtranBFRT) {
@@ -1626,13 +1636,13 @@ void HDual::updateFtranDSE(HVector *DSE_Vector) {
   if (invertHint) return;
   timer.start(simplex_info.clock_[FtranDseClock]);
 #ifdef HiGHSDEV
-  if (AnIterLg) iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
+  if (simplex_info.analyseSimplexIterations) iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
 #endif
   // Perform FTRAN DSE
   //  printf("\nFTRAN DSE\n");
   factor->ftran(*DSE_Vector, rowdseDensity);
 #ifdef HiGHSDEV
-  if (AnIterLg) iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
+  if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
 #endif
   timer.stop(simplex_info.clock_[FtranDseClock]);
 }

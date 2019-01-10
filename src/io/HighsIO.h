@@ -21,7 +21,7 @@ enum HighsMessageType { INFO, WARNING, ERROR };
 const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
 
 unsigned const int ML_VERBOSE = 1;
-unsigned const int ML_DETAILLED = 2;
+unsigned const int ML_DETAILED = 2;
 unsigned const int ML_MINIMAL = 4;
 
 /**

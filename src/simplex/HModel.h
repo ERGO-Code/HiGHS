@@ -294,7 +294,6 @@ class HModel {
 
   // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
   // is false
-  void util_reportMessage(const char* message);
   void util_reportNumberIterationObjectiveValue(int i_v);
   void util_reportSolverOutcome(const char* message);
 
@@ -321,7 +320,7 @@ class HModel {
 #ifdef HiGHSDEV
   void util_anPrDuDgn();
   void util_anMlLargeCo(HighsLp lp, const char* message);
-  void util_anMlSol();
+  void util_analyseLpSolution();
 #endif
 
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

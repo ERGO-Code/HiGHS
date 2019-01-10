@@ -160,10 +160,12 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 
+  if (lps_[0].reportModelOperationsClock) {
+    // Report times
+    std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
+    timer.report("ModelOperations", clockList);
+  }
 #ifdef HiGHSDEV
-  // Report times
-  std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
-  timer.report("ModelOperations", clockList);
 /* todo: do elsewhere once timing is added.
     bool rpBnchmk = false;
     if (rpBnchmk) {
@@ -183,8 +185,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       cout << flush;
     }
 */
-
 #endif
+
   timer.stopRunHighsClock();
 
   return HighsStatus::OK;

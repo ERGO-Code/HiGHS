@@ -14,6 +14,7 @@
 #include "HPrimal.h"
 #include "HModel.h"
 #include "HConst.h"
+#include "HighsIO.h"
 #include "HSimplex.h"
 #include "SimplexTimer.h"
 
@@ -53,7 +54,7 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 
   // Setup other buffers
 
-  model->util_reportMessage("primal-start");
+  HighsPrintMessage(ML_DETAILED, "primal-start\n");
 
   HighsTimer &timer = *(model->timer_);
   double currentRunHighsTime = timer.readRunHighsClock();
@@ -111,11 +112,11 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
     return;
 
   if (columnIn == -1) {
-    model->util_reportMessage("primal-optimal");
-    model->util_reportMessage("problem-optimal");
+    HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
+    HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
     model->setProblemStatus(LP_Status_Optimal);
   } else {
-    model->util_reportMessage("primal-unbounded");
+    HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
     model->setProblemStatus(LP_Status_Unbounded);
   }
 }

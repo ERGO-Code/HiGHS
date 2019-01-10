@@ -14,6 +14,7 @@
 #ifndef LP_DATA_HIGHS_LP_H_
 #define LP_DATA_HIGHS_LP_H_
 
+#include "HConfig.h"
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -194,11 +195,14 @@ struct HighsSimplexInfo {
   bool reportSimplexInnerClock;
   bool reportSimplexOuterClock;
   bool reportSimplexPhasesClock;
+#ifdef HiGHSDEV
   // Option for analysing simplex iterations, INVERT time and rebuild time
+  bool analyseLp;
   bool analyseSimplexIterations;
+  bool analyseLpSolution;
   bool analyseInvertTime;
   bool analyseRebuildTime;
-
+#endif
 };
 
 struct HighsSolution {

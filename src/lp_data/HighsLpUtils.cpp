@@ -111,20 +111,20 @@ void reportLpSolution(HighsModelObject &highs_model) {
 */
 
 #ifdef HiGHSDEV
-void util_anMl(HighsLp &lp, const char *message) {
+void util_analyseModel(HighsLp &lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
-  util_anVecV("Column costs", lp.numCol_, lp.colCost_, false);
-  util_anVecV("Column lower bounds", lp.numCol_, lp.colLower_, false);
-  util_anVecV("Column upper bounds", lp.numCol_, lp.colUpper_, false);
-  util_anVecV("Row lower bounds", lp.numRow_, lp.rowLower_, false);
-  util_anVecV("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
-  util_anVecV("Matrix entries", lp.Astart_[lp.numCol_], lp.Avalue_, true);
-  util_anMlBd("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
-  util_anMlBd("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
+  util_analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
+  util_analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
+  util_analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
+  util_analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
+  util_analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
+  util_analyseVectorValues("Matrix entries", lp.Astart_[lp.numCol_], lp.Avalue_, true);
+  util_analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
+  util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 
-void util_anMlBd(const char *message, int numBd, std::vector<double> &lower,
-                         std::vector<double> &upper) {
+void util_analyseModelBounds(const char *message, int numBd, std::vector<double> &lower,
+			     std::vector<double> &upper) {
   if (numBd == 0) return;
   int numFr = 0;
   int numLb = 0;

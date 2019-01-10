@@ -627,7 +627,6 @@ class HDual {
 
   int AnIterIt0;
 #ifdef HiGHSDEV
-  const bool AnIterLg = true;
   int AnIterPrevIt;
   // Major operation analysis struct
   enum AnIterOpTy {

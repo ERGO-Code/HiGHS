@@ -145,7 +145,7 @@ class HFactor {
    * \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
    */
   void update(HVector *aq,  //!< Vector \f$B^{-1}\mathbf{a}_q\f$
-              HVector *ep,  //!< Vector \f$B^{-T}\mathbf{e}_q\f$
+              HVector *ep,  //!< Vector \f$B^{-T}\mathbf{e}_p\f$
               int *iRow,    //!< Index of pivotal row
               int *hint     //!< Reinversion status
   );

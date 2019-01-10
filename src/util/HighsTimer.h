@@ -44,6 +44,18 @@ class HighsTimer {
   }
 
   /**
+   * @brief Clock record structure
+   */
+  struct HighsClockRecord {
+    int calls;
+    double start;
+    double ticks;
+    double time;
+    std::string name;
+    std::string ch3Name;
+  };
+    
+  /**
    * @brief Define a clock
    */
   int clockDef(
@@ -54,10 +66,40 @@ class HighsTimer {
     clockNumCall.push_back(0);
     clockStart.push_back(initialClockStart);
     clockTicks.push_back(0);
+    clockTime.push_back(0);
     clockNames.push_back(name);
     clockCh3Names.push_back(ch3name);
     numClock++;
     return iClock;
+  }
+
+  /**
+   * @brief Zero an external clock record
+   */
+  int clockInit(
+	       HighsClockRecord Xclock   //!< Record for the external clock
+		) {
+    Xclock.calls = 0;
+    Xclock.start = 0;
+    Xclock.ticks = 0;
+    Xclock.time = 0;
+    Xclock.name = "";
+    Xclock.ch3Name = "";
+  }
+
+  /**
+   * @brief Add to an external clock record
+   */
+  int clockAdd(
+		HighsClockRecord Xclock,   //!< Record for the external clock
+		int iClock                 //!< Clock of record to be added
+		) {
+    assert(iClock >= 0);
+    assert(iClock < numClock);
+    Xclock.calls += clockNumCall[iClock];
+    Xclock.start = initialClockStart;
+    Xclock.ticks += clockTicks[iClock];
+    Xclock.time += clockTime[iClock];
   }
 
   /**
@@ -67,6 +109,7 @@ class HighsTimer {
     for (int i = 0; i < numClock; i++) {
       clockNumCall[i] = 0;
       clockStart[i] = initialClockStart;
+      clockTime[i] = 0;
       clockTicks[i] = 0;
     }
     startTime = getWallTime();
@@ -117,7 +160,9 @@ class HighsTimer {
 #endif
     assert(clockStart[iClock] < 0);
     double wallTick = getWallTick();
-    clockTicks[iClock] += (wallTick + clockStart[iClock]);
+    double callClockTicks = wallTick + clockStart[iClock];
+    clockTicks[iClock] += callClockTicks;
+    clockTime[iClock] += callClockTicks*tick2sec;
     clockNumCall[iClock]++;
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
@@ -132,17 +177,16 @@ class HighsTimer {
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
-    double readTick;
-    double wallTick;
+    double readTime;
     if (clockStart[iClock] < 0) {
       // The clock's been started, so find the current time
-      wallTick = getWallTick();
-      readTick = wallTick + clockStart[iClock];
+      double wallTick = getWallTick();
+      double readTick = wallTick + clockStart[iClock];
+      readTime = readTick*tick2sec;
     } else {
       // The clock is currently stopped, so read the current time
-      readTick = clockTicks[iClock];
+      readTime = clockTime[iClock];
     }
-    double readTime = readTick*tick2sec;
     return readTime;
   }
 
@@ -398,6 +442,7 @@ class HighsTimer {
   std::vector<int> clockNumCall;
   std::vector<double> clockStart;
   std::vector<double> clockTicks;
+  std::vector<double> clockTime;
   std::vector<std::string> clockNames;
   std::vector<std::string> clockCh3Names;
   double tick2sec = 3.6e-10;

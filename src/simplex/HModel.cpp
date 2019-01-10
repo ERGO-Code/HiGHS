@@ -1447,10 +1447,10 @@ void HModel::scaleModel() {
   mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
   // Analyse the scaled model
-  util_anMl(*lp_scaled_, "Scaled");
+  util_analyseModel(*lp_scaled_, "Scaled");
   //  if (mlFg_scaledLP) {
-  //  utils.util_anVecV("Column scaling factors", numCol, colScale, false);
-  //  utils.util_anVecV("Row scaling factors", numRow, rowScale, false);
+  //  utils.util_analyseVectorValues("Column scaling factors", numCol, colScale, false);
+  //  utils.util_analyseVectorValues("Row scaling factors", numRow, rowScale, false);
   //  }
 #endif
   // Possibly scale the costs
@@ -1508,7 +1508,7 @@ void HModel::scaleCosts() {
     }
   }
   printf("After cost scaling\n");
-  //  utils.util_anVecV("Column costs", lp_scaled_->numCol_, lp_scaled_->colCost_, false);
+  //  utils.util_analyseVectorValues("Column costs", lp_scaled_->numCol_, lp_scaled_->colCost_, false);
 #endif
 }
 
@@ -3568,11 +3568,6 @@ void HModel::util_getCoeff(HighsLp lp, int row, int col, double *val) {
 
 // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
 // is false
-void HModel::util_reportMessage(const char *message) {
-  if (!intOption[INTOPT_PRINT_FLAG]) return;
-  printf("%s\n", message);
-}
-
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
   if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4)
     return;
@@ -3938,8 +3933,7 @@ void HModel::util_anMlLargeCo(HighsLp lp, const char *message) {
          numLargeCoSlack, numLargeCoStruc);
 }
 
-void HModel::util_anMlSol() {
-  //  const char *fileName = "OutMl.mps"; writeToMPS(fileName);
+void HModel::util_analyseLpSolution() {
   if (problemStatus != LP_Status_Optimal) return;
   printf("\nAnalysing the model solution\n");
   fflush(stdout);

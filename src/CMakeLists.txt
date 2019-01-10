@@ -118,6 +118,8 @@ export(TARGETS libhighs
   FILE "${CMAKE_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree
+#Either list all the src/* directories here, or put explicit paths in all the #include statements
+#M reckons that the latter is more transparent, and I'm incliuned to agree.
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)

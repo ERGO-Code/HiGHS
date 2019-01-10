@@ -103,13 +103,14 @@ void scaleCosts(HighsModelObject &highs_model) {
   }
   */
   printf("After cost scaling\n");
-  //  utils.util_anVecV("Column costs", highs_model.lp_scaled_.numCol_, highs_model.lp_scaled_.colCost_, false);
+  //  utils.util_analyseVectorValues("Column costs", highs_model.lp_scaled_.numCol_, highs_model.lp_scaled_.colCost_, false);
 #endif
 }
 
 void scaleLp(HighsModelObject &highs_model) {
   // Scale the LP highs_model.lp_scaled_, assuming all data are in place
   // Reset all scaling to 1
+  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
   HighsTimer &timer = highs_model.timer_;
   timer.start(timer.scaleClock);
   scaleHighsModelInit(highs_model);
@@ -244,11 +245,13 @@ void scaleLp(HighsModelObject &highs_model) {
   // Deduce the consequences of scaling the LP
   //  mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
-  // Analyse the scaled model
-  util_anMl(highs_model.lp_scaled_, "Scaled");
+  // Analyse the scaled LP
+  //  if (simplex_info.analyse_lp) {
+  //    util_analyseLp(highs_model.lp_scaled_, "Scaled");
+  //  }
   //  if (mlFg_scaledLP) {
-  //  utils.util_anVecV("Column scaling factors", numCol, colScale, false);
-  //  utils.util_anVecV("Row scaling factors", numRow, rowScale, false);
+  //  utils.util_analyseVectorValues("Column scaling factors", numCol, colScale, false);
+  //  utils.util_analyseVectorValues("Row scaling factors", numRow, rowScale, false);
   //  }
 #endif
   // Possibly scale the costs

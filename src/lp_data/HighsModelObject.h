@@ -43,11 +43,8 @@ public:
   HFactor factor_;
   HighsTimer timer_;
 
-  bool reportModelOperationsClock = true;
+  bool reportModelOperationsClock = false;
 
-  //  int modelTotalClock;
-  double modelTotalInvertTime;
-  double modelTotalRebuildTime;
   //
   // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To
   // have them means that they correspond to a consistent basis

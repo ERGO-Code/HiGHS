@@ -62,9 +62,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   timer.start(timer.solveClock);
   bool ranging = true;
 
-  // Set Simplex options from HiGHS options
-  simplex_method_.options(&highs_model, opt);
-
   // Initialize solver and set solver options from simplex options
   HDual solver;
   solver.options();
@@ -120,8 +117,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     if (opt.edWtMode.size() > 0)
     solver.setEdWt(opt.edWtMode.c_str());
     solver.setTimeLimit(opt.timeLimit);
-
-    //    model.timer.reset();
 
     //  bool FourThreads = true;
     bool FourThreads = false;
@@ -391,6 +386,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   if (opt.scip) return solveScip(opt, highs_model);
 
   HighsTimer &timer = highs_model.timer_;
+  HSimplex simplex_method_;
+
+  // Set simplex options from HiGHS options
+  simplex_method_.options(&highs_model, opt);
 
   // When runSimplexSolver is called initialize an instance of HModel inside the
   // HighsModelObject. This will then be passed to HDual.
