@@ -416,6 +416,18 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
 void HDual::options() {
   // Set solver options from simplex options
+
+  HighsSimplexInfo &simplex_info_ = highs_model_object->simplex_info_;
+
+  // Copy values of simplex solver options to dual simplex options
+  primalFeasibilityTolerance = simplex_info_.primalFeasibilityTolerance;
+  dualFeasibilityTolerance = simplex_info_.dualFeasibilityTolerance;
+  //  perturbCosts = simplex_info_.perturbCosts;
+  //  iterationLimit = simplex_info_.iterationLimit;
+  //  dualObjectiveValueUpperBound = simplex_info_.dualObjectiveValueUpperBound;
+
+  // Set values of internal options
+  pamiCutoff = 0.95;
 }
 
 void HDual::init(int num_threads) {

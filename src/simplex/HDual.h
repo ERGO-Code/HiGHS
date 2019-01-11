@@ -522,7 +522,10 @@ class HDual {
   int numRow;
   int numTot;
   double Tp;  // Tolerance for primal
+  double primalFeasibilityTolerance;
   double Td;  // Tolerance for dual
+  double dualFeasibilityTolerance;
+  double pamiCutoff;
 
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;

@@ -53,45 +53,51 @@ HighsStatus LpStatusToHighsStatus(const int lp_status) {
   }
 }
 
-HighsStatus solveSimplex(const HighsOptions& opt,
-                         HighsModelObject& highs_model) {
+HighsStatus solveSimplex(
+			 const HighsOptions& opt,
+                         HighsModelObject& highs_model
+			 ) {
+  // Just solves the LP in highs_model.scaled_lp_
   HighsTimer &timer = highs_model.timer_;
+  // Set simplex options from HiGHS options
   HSimplex simplex_method_;
+  simplex_method_.options(&highs_model, opt);
+
   HModel& model = highs_model.hmodel_[0];
 
   timer.start(timer.solveClock);
   bool ranging = true;
 
-  // Initialize solver and set solver options from simplex options
-  HDual solver;
-  solver.options();
+  // Initialize solver and set dual solver options from simplex options
+  HDual dual_solver(highs_model);
+  dual_solver.options();
   
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
     model.initFromNonbasic();
 
-    solver.solve(highs_model);
+    dual_solver.solve(highs_model);
     return LpStatusToHighsStatus(model.problemStatus);
   }
 
   // Crash, if HighsModelObject has basis information.
   if (opt.crashMode.size() > 0) {
-    solver.setCrash(opt.crashMode.c_str());
+    dual_solver.setCrash(opt.crashMode.c_str());
     HCrash crash;
-    crash.crash(highs_model, solver.Crash_Mode);
+    crash.crash(highs_model, dual_solver.Crash_Mode);
   }
 
   // Solve, depending on the options.
   // Parallel.
   if (opt.sip) {
-    model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    solver.solve(highs_model, HDUAL_VARIANT_TASKS, 8);
+    //    model.intOption[INTOPT_PERMUTE_FLAG] = 1; Now forced in loadOptions
+    dual_solver.solve(highs_model, HDUAL_VARIANT_TASKS, 8);
   } else if (opt.pami) {
-    model.intOption[INTOPT_PERMUTE_FLAG] = 1;
+    //    model.intOption[INTOPT_PERMUTE_FLAG] = 1; Now forced in loadOptions
     if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
+    dual_solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
     if (opt.sip) model.writePivots("tasks");
@@ -105,7 +111,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     int solvePh2DuIt = 0;
     int solvePrIt = 0;
 #endif
-    HDual solver;
+    HDual dual_solver;
 
     vector<double> colPrAct;
     vector<double> colDuAct;
@@ -113,10 +119,10 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     vector<double> rowDuAct;
 
     if (opt.priceMode.size() > 0)
-      solver.setPrice(opt.priceMode.c_str());
+      dual_solver.setPrice(opt.priceMode.c_str());
     if (opt.edWtMode.size() > 0)
-    solver.setEdWt(opt.edWtMode.c_str());
-    solver.setTimeLimit(opt.timeLimit);
+    dual_solver.setEdWt(opt.edWtMode.c_str());
+    dual_solver.setTimeLimit(opt.timeLimit);
 
     //  bool FourThreads = true;
     bool FourThreads = false;
@@ -124,26 +130,26 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     bool EightThreads = false;
 
     if (FourThreads)
-      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 4);
+      dual_solver.solve(highs_model, HDUAL_VARIANT_MULTI, 4);
     else if (EightThreads)
-      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
+      dual_solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
     else
-      solver.solve(highs_model);
+      dual_solver.solve(highs_model);
 
     solveIt += model.numberIteration;
 
 #ifdef HiGHSDEV
     double currentRunHighsTime = highs_model.timer_.readRunHighsClock();
-    solvePh1DuIt += solver.n_ph1_du_it;
-    solvePh2DuIt += solver.n_ph2_du_it;
-    solvePrIt += solver.n_pr_it;
+    solvePh1DuIt += dual_solver.n_ph1_du_it;
+    solvePh2DuIt += dual_solver.n_ph2_du_it;
+    solvePrIt += dual_solver.n_pr_it;
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
         model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
         highs_model.lp_.numCol_, currentRunHighsTime,
-	highs_model.simplex_info_.dualObjectiveValue, solver.n_ph1_du_it,
-        solver.n_ph2_du_it, solver.n_pr_it);
+	highs_model.simplex_info_.dualObjectiveValue, dual_solver.n_ph1_du_it,
+        dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
 #endif
 
     // Possibly recover bounds after presolve (after using bounds tightened by
@@ -158,21 +164,21 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         model.copy_savedBoundsToModelBounds();
 
 	//        model.timer.reset();
-        solver.solve(highs_model);
+        dual_solver.solve(highs_model);
 	// solveIt += model.numberIteration;
         model.util_reportSolverOutcome("After recover:   ");
 #ifdef HiGHSDEV
 	currentRunHighsTime = highs_model.timer_.readRunHighsClock();
-        solvePh1DuIt += solver.n_ph1_du_it;
-        solvePh2DuIt += solver.n_ph2_du_it;
-        solvePrIt += solver.n_pr_it;
+        solvePh1DuIt += dual_solver.n_ph1_du_it;
+        solvePh2DuIt += dual_solver.n_ph2_du_it;
+        solvePrIt += dual_solver.n_pr_it;
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
             model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
             highs_model.lp_.numCol_, currentRunHighsTime,
 	    highs_model.simplex_info_.dualObjectiveValue,
-	    solver.n_ph1_du_it, solver.n_ph2_du_it, solver.n_pr_it);
+	    dual_solver.n_ph1_du_it, dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
 #endif
       }
     }
@@ -312,8 +318,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   //  model.util_reportModel();
 
   model.scaleModel();
-  HDual solver;
-  solver.solve(highs_model);
+  HDual dual_solver;
+  dual_solver.solve(highs_model);
   //  reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
@@ -363,9 +369,9 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
       printf("Calling model.scaleModel()\n");
       model.scaleModel();
-      //      printf("Calling solver.solve(highs_model)\n");
-      solver.solve(highs_model);
-      //      printf("Called solver.solve(highs_model)\n");
+      //      printf("Calling dual_solver.solve(highs_model)\n");
+      dual_solver.solve(highs_model);
+      //      printf("Called dual_solver.solve(highs_model)\n");
       model.util_reportSolverOutcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
       // avgas
@@ -386,10 +392,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   if (opt.scip) return solveScip(opt, highs_model);
 
   HighsTimer &timer = highs_model.timer_;
-  HSimplex simplex_method_;
-
-  // Set simplex options from HiGHS options
-  simplex_method_.options(&highs_model, opt);
 
   // When runSimplexSolver is called initialize an instance of HModel inside the
   // HighsModelObject. This will then be passed to HDual.
@@ -401,13 +403,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Give model the HiGHS Model Object run clock for timeout purposes
   //  model.modelTotalClock = highs_model.modelTotalClock;
 
-  // Allocate memory for the basis
-  // assignBasis();
-  const int numTot = highs_model.lp_.numCol_ + highs_model.lp_.numRow_;
-  highs_model.basis_.basicIndex_.resize(highs_model.lp_.numRow_);
-  highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
-  highs_model.basis_.nonbasicMove_.resize(numTot);
-
   // Set pointers within HModel
   model.basis_ = &highs_model.basis_;
   model.scale_ = &highs_model.scale_;
@@ -416,10 +411,39 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.matrix_ = &highs_model.matrix_;
   model.factor_ = &highs_model.factor_;
 
-  // Copy the LP to the structure to be scaled and then scale it
+  // Copy the LP to the structure to be used by the solver
   highs_model.lp_scaled_ = highs_model.lp_;
 
-  scaleLp(highs_model);
+  // Possibly transpose the LP to be solved. This will change the
+  // numbers of rows and columns in the LP to be solved
+  //  if (opt.transposeLp) transposeLp(highs_model);
+
+  // Now that the numbers of rows and columns in the LP to be solved
+  // are fixed, initialise the real and integer random vectors
+  HSimplex simplex_method_;
+  simplex_method_.initialiseColRandomVectors(&highs_model);
+  //
+  // Allocate memory for the basis
+  // assignBasis();
+  const int numTot = highs_model.lp_.numCol_ + highs_model.lp_.numRow_;
+  highs_model.basis_.basicIndex_.resize(highs_model.lp_.numRow_);
+  highs_model.basis_.nonbasicFlag_.assign(numTot, 0);
+  highs_model.basis_.nonbasicMove_.resize(numTot);
+  //
+  // Possibly scale the LP to be used by the solver
+  //
+  // Initialise unit scaling factors, to simplify things is no scaling
+  // is performed
+  scaleHighsModelInit(highs_model);
+  if (opt.scaleLp) scaleLp(highs_model);
+  //
+  // Possibly permute the columns of the LP to be used by the solver. 
+  //  if (opt.permuteLp) permuteLp(highs_model);
+  //
+  // Possibly tighten the bounds of LP to be used by the solver. 
+  //  if (opt.tightenLp) tightenLp(highs_model);
+  //
+
 
   model.initWithLogicalBasis();
 

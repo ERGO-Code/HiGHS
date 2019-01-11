@@ -17,7 +17,7 @@
 #include "HConfig.h"
 #include "HighsModelObject.h"
 #include <cassert>
-//#include <vector>
+#include <vector>
 //#include <iostream>
 
 /**
@@ -33,6 +33,17 @@ class HSimplex {
     printf("Calling HSimplex::options\n");
     
     HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
+
+    // Copy values of HighsOptions for the simplex solver
+    simplex_info_.primalFeasibilityTolerance = opt.primalFeasibilityTolerance;
+    simplex_info_.dualFeasibilityTolerance = opt.dualFeasibilityTolerance;
+    simplex_info_.perturbCosts = opt.perturbCostsSimplex;
+    simplex_info_.iterationLimit = opt.iterationLimitSimplex;
+    simplex_info_.dualObjectiveValueUpperBound = opt.dualObjectiveValueUpperBound;
+
+    // Set values of internal options
+    simplex_info_.pamiCutoff = 0.95;
+
     // Options for reporting timing
     simplex_info_.reportSimplexInnerClock = false;
     simplex_info_.reportSimplexOuterClock = false;
@@ -69,6 +80,30 @@ class HSimplex {
     ptr_highs_model->haveDualObjectiveValue = 1;
   }
 
+  void initialiseColRandomVectors(
+				  HighsModelObject *ptr_highs_model
+				  ) {
+    HighsLp &lp_ = ptr_highs_model->lp_scaled_;
+    HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
+    const int numTot = lp_.numCol_ + lp_.numRow_;
+    // Instantiate and (re-)initialise the random number generator
+    HighsRandom random;
+    random.initialiseRandom();
+    // Generate a random permutation of the column indices
+    simplex_info_.colPermutation_.resize(numTot);
+    int *colPermutation = &simplex_info_.colPermutation_[0];
+    for (int i = 0; i < numTot; i++) colPermutation[i] = i;
+    for (int i = numTot - 1; i >= 1; i--) {
+      int j = random.intRandom() % (i + 1);
+      std::swap(colPermutation[i], colPermutation[j]);
+    }
+    // Generate a vector of random reals numbers 
+    simplex_info_.colRandomValue_.resize(numTot);
+    double *colRandomValue = &simplex_info_.colRandomValue_[0];
+    for (int i = 0; i < numTot; i++) {
+      colRandomValue[i] = random.dblRandom();
+    }
+  }
 };
 
 //void simplexAllocateWorkAndBaseArrays(std::string& highs_model) {HighsModelObject obj;}

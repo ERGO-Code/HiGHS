@@ -44,6 +44,7 @@ struct HighsOptions {
   bool sip = 0;
   bool scip = 0;
 
+  // HiGHS run time limit (s): default = 100000? - DBLOPT_TIME_LIMIT
   double timeLimit = 0;
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
@@ -59,8 +60,38 @@ struct HighsOptions {
   // Options for HighsPrintMessage and HighsLogMessage
   // TODO: Use these to set values for use in HighsPrintMessage and HighsLogMessage  
   FILE* output = stdout;
-  int messageLevel = 1;
+  // HighsPrintMessage level: default = 0 - INTOPT_PRINT_FLAG
+  int messageLevel = 0;
   FILE* logfile = stdout;
+
+  // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
+  //
+  // For an LP model
+  //
+  // Try to solve the dual of the LP: INTOPT_TRANSPOSE_FLAG
+  bool transposeLp = false;
+  // Perform LP scaling: INTOPT_SCALE_FLAG
+  bool scaleLp = true;
+  // Perform LP bound tightening: INTOPT_TIGHT_FLAG
+  bool tightenLp = false;
+  // Permute the columns of the LP randomly to aid load distribution in block parallelism: INTOPT_PERMUTE_FLAG
+  bool permuteLp = false;
+  //
+  // For any solver
+  //
+  // primal feasibility (dual optimality) tolerance: DBLOPT_PRIMAL_TOL
+  double primalFeasibilityTolerance = 1e-7;
+  // dual feasibility (primal optimality) tolerance: DBLOPT_DUAL_TOL
+  double dualFeasibilityTolerance = 1e-7;
+  //
+  // For the simplex solver
+  //
+  // Perturb the original costs: INTOPT_PERTURB_FLAG
+  bool perturbCostsSimplex = true;
+  // Maximum number of simplex iterations: INTOPT_LPITLIM
+  int iterationLimitSimplex = 999999;
+  // Upper bound on dual objective value: DBLOPT_OBJ_UB
+  double dualObjectiveValueUpperBound = 1e+200;
 
   bool clean_up = false;
 };
@@ -176,6 +207,12 @@ struct HighsSimplexInfo {
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
   //
+  // Vectors of random reals for column cost perturbation, and a
+  // random permutation of column indices for shuffling the columns
+  // and CHUZR
+  std::vector<double> colRandomValue_;
+  std::vector<int> colPermutation_;
+
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
   //
@@ -190,6 +227,16 @@ struct HighsSimplexInfo {
   int numberAltPhase1DualIteration;
   int numberAltPhase2DualIteration;
   int numberAltPrimalIteration;
+
+  // Options from HighsOptions for the simplex solver
+  double primalFeasibilityTolerance;
+  double dualFeasibilityTolerance;
+  bool perturbCosts;
+  int iterationLimit;
+  double dualObjectiveValueUpperBound;
+  
+  // Internal options - can't be changed externally
+  double pamiCutoff;
 
   // Options for reporting timing
   bool reportSimplexInnerClock;

@@ -441,6 +441,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     return HighsStatus::LpError;
   }
 
+  // Force column permutation of the LP to be used by the solver if
+  // parallel code is to be used
+  if (options.pami || options.sip) {
+    options.permuteLp = true;
+  }
+
+
   return HighsStatus::OK;
 }
 
