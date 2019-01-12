@@ -52,7 +52,7 @@ void HDualRow::setup(HighsModelObject *highs_model_object) {
   model = &highs_model_object->hmodel_[0];
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   setupSlice(highs_model_object, numTot);
-  workColPermutation = &model->colPermutation[0];
+  workNumTotPermutation = &model->numTotPermutation[0];
 
   
  // delete_Freelist() is being called in Phase 1 and Phase 2 since
@@ -282,7 +282,7 @@ bool HDualRow::choose_final() {
       } else if (dMaxFinal == workData[i].second) {
         int jCol = workData[iMaxFinal].first;
         int iCol = workData[i].first;
-        if (workColPermutation[iCol] < workColPermutation[jCol]) {
+        if (workNumTotPermutation[iCol] < workNumTotPermutation[jCol]) {
           iMaxFinal = i;
         }
       }

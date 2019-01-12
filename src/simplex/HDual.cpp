@@ -59,7 +59,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model->numberIteration = 0;
   // Cannot solve box-constrained LPs
   if (model->solver_lp_->numRow_ == 0) return;
+#ifdef HiGHSDEV
   timer.start(simplex_info.clock_[SimplexTotalClock]);
+#endif
   n_ph1_du_it = 0;
   n_ph2_du_it = 0;
   n_pr_it = 0;
@@ -365,7 +367,6 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 #ifdef HiGHSDEV
   //  printf("model->mlFg_Report() 9\n");cout<<flush;
   //  model->mlFg_Report();cout<<flush;
-#endif
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
@@ -373,6 +374,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
     simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
   }
+#endif
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseLpSolution) {

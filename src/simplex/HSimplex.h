@@ -80,27 +80,28 @@ class HSimplex {
     ptr_highs_model->haveDualObjectiveValue = 1;
   }
 
-  void initialiseColRandomVectors(
+  void initialiseHighsModelObjectRandomVectors(
 				  HighsModelObject &highs_model
 				  ) {
     HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-    const int numTot = highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
+    const int numCol = highs_model.solver_lp_.numCol_;
     // Instantiate and (re-)initialise the random number generator
     HighsRandom random;
     random.initialise();
     // Generate a random permutation of the column indices
-    simplex_info_.colPermutation_.resize(numTot);
-    int *colPermutation = &simplex_info_.colPermutation_[0];
-    for (int i = 0; i < numTot; i++) colPermutation[i] = i;
-    for (int i = numTot - 1; i >= 1; i--) {
+    simplex_info_.numColPermutation_.resize(numCol);
+    int *numColPermutation = &simplex_info_.numColPermutation_[0];
+    for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
+    for (int i = numCol - 1; i >= 1; i--) {
       int j = random.integer() % (i + 1);
-      std::swap(colPermutation[i], colPermutation[j]);
+      std::swap(numColPermutation[i], numColPermutation[j]);
     }
     // Generate a vector of random reals numbers 
-    simplex_info_.colRandomValue_.resize(numTot);
-    double *colRandomValue = &simplex_info_.colRandomValue_[0];
+    const int numTot = highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
+    simplex_info_.numTotRandomValue_.resize(numTot);
+    double *numTotRandomValue = &simplex_info_.numTotRandomValue_[0];
     for (int i = 0; i < numTot; i++) {
-      colRandomValue[i] = random.fraction();
+      numTotRandomValue[i] = random.fraction();
     }
   }
 };
@@ -184,7 +185,7 @@ void simplexInitCost(HighsModelObject &highs_model, int perturb) {
   for (int i = 0; i < lp_->numCol_; i++) {
     double lower = lp_->colLower_[i];
     double upper = lp_->colUpper_[i];
-    double xpert = (fabs(simplex_->workCost_[i]) + 1) * base * (1 + colRandomValue[i]);
+    double xpert = (fabs(simplex_->workCost_[i]) + 1) * base * (1 + numTotRandomValue[i]);
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper == HIGHS_CONST_INF) {  // Lower
@@ -199,7 +200,7 @@ void simplexInitCost(HighsModelObject &highs_model, int perturb) {
   }
 
   for (int i = lp_->numCol_; i < numTot; i++) {
-    simplex_->workCost_[i] += (0.5 - colRandomValue[i]) * 1e-12;
+    simplex_->workCost_[i] += (0.5 - numTotRandomValue[i]) * 1e-12;
   }
 }
 

@@ -1729,7 +1729,7 @@ void HModel::initCost(int perturb) {
   for (int i = 0; i < solver_lp_->numCol_; i++) {
     double lower = solver_lp_->colLower_[i];
     double upper = solver_lp_->colUpper_[i];
-    double xpert = (fabs(simplex_info_->workCost_[i]) + 1) * base * (1 + colRandomValue[i]);
+    double xpert = (fabs(simplex_info_->workCost_[i]) + 1) * base * (1 + numTotRandomValue[i]);
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper == HIGHS_CONST_INF) {  // Lower
@@ -1744,7 +1744,7 @@ void HModel::initCost(int perturb) {
   }
 
   for (int i = solver_lp_->numCol_; i < numTot; i++) {
-    simplex_info_->workCost_[i] += (0.5 - colRandomValue[i]) * 1e-12;
+    simplex_info_->workCost_[i] += (0.5 - numTotRandomValue[i]) * 1e-12;
   }
 }
 
@@ -2340,14 +2340,14 @@ int HModel::writeToMPS(const char *filename) {
 // Initialise the random vectors required by HiGHS
 void HModel::initRandomVec() {
   const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  colPermutation.resize(numTot);
-  for (int i = 0; i < numTot; i++) colPermutation[i] = i;
+  numTotPermutation.resize(numTot);
+  for (int i = 0; i < numTot; i++) numTotPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
     int j = random.integer() % (i + 1);
-    swap(colPermutation[i], colPermutation[j]);
+    swap(numTotPermutation[i], numTotPermutation[j]);
   }
-  colRandomValue.resize(numTot);
-  for (int i = 0; i < numTot; i++) colRandomValue[i] = random.fraction();
+  numTotRandomValue.resize(numTot);
+  for (int i = 0; i < numTot; i++) numTotRandomValue[i] = random.fraction();
 }
 
 void HModel::shiftObjectiveValue(double shift) {

@@ -72,10 +72,10 @@ struct HighsOptions {
   bool transposeLp = false;
   // Perform LP scaling: INTOPT_SCALE_FLAG
   bool scaleLp = true;
-  // Perform LP bound tightening: INTOPT_TIGHT_FLAG
-  bool tightenLp = false;
   // Permute the columns of the LP randomly to aid load distribution in block parallelism: INTOPT_PERMUTE_FLAG
-  bool permuteLp = true;// Default is false;
+  bool permuteLp = false;
+  // Perform LP bound tightening: INTOPT_TIGHT_FLAG
+  bool tightenLp = true;// Default is false;
   //
   // For any solver
   //
@@ -210,8 +210,8 @@ struct HighsSimplexInfo {
   // Vectors of random reals for column cost perturbation, and a
   // random permutation of column indices for shuffling the columns
   // and CHUZR
-  std::vector<double> colRandomValue_;
-  std::vector<int> colPermutation_;
+  std::vector<double> numTotRandomValue_;
+  std::vector<int> numColPermutation_;
 
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;

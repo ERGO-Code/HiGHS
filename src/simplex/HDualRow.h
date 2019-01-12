@@ -126,7 +126,7 @@ class HDualRow {
   HighsModelObject *workHMO;        //!< Local copy of pointer to model
   HModel *workModel;        //!< Local copy of pointer to model
   int workSize;             //!< Size of the HDualRow slice
-  const int *workColPermutation;  //!< Pointer to model->getColPermutation();
+  const int *workNumTotPermutation;  //!< Pointer to model->numTotPermutation();
   const int *workMove;      //!< Pointer to model->basis_->nonbasicMove_;
   const double *workDual;   //!< Pointer to model->simplex_->workDual_;
   const double *workRange;  //!< Pointer to model->simplex_->workRange_;

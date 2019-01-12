@@ -445,8 +445,8 @@ class HModel {
 #endif
 
   // Associated data of original model
-  vector<int> colPermutation;
-  vector<double> colRandomValue;
+  vector<int> numTotPermutation;
+  vector<double> numTotRandomValue;
 
   // The scaled model
   HighsLp *solver_lp_;
