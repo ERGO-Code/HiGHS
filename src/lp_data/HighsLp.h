@@ -75,7 +75,7 @@ struct HighsOptions {
   // Perform LP bound tightening: INTOPT_TIGHT_FLAG
   bool tightenLp = false;
   // Permute the columns of the LP randomly to aid load distribution in block parallelism: INTOPT_PERMUTE_FLAG
-  bool permuteLp = false;
+  bool permuteLp = true;// Default is false;
   //
   // For any solver
   //

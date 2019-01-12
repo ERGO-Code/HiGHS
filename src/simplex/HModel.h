@@ -139,7 +139,6 @@ class HModel {
   void scaleCosts();
   void setup_transposeLP();
   void setup_tightenBound();
-  void setup_shuffleColumn();
 
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);

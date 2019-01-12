@@ -719,7 +719,7 @@ void HModel::setup_for_solve() {
 
   // (Re-)initialise the random number generator and initialise the
   // real and integer random vectors
-  random.initialiseRandom();
+  random.initialise();
   initRandomVec();
 
   //  mlFg_Report();cout<<flush;
@@ -1642,99 +1642,6 @@ void HModel::setup_tightenBound() {
   }
 }
 
-void HModel::setup_shuffleColumn() {
-  if (intOption[INTOPT_PERMUTE_FLAG] == 0) return;
-
-  // 1. Shuffle the column index
-  for (int i = 0; i < 10; i++) random.intRandom();
-  vector<int> iFrom(solver_lp_->numCol_);
-  for (int i = 0; i < solver_lp_->numCol_; i++) iFrom[i] = i;
-  for (int i = solver_lp_->numCol_ - 1; i >= 1; i--) {
-    int j = random.intRandom() % (i + 1);
-    swap(iFrom[i], iFrom[j]);
-  }
-
-  // 2. Save original copy
-  vector<int> saveAstart = solver_lp_->Astart_;
-  vector<int> saveAindex = solver_lp_->Aindex_;
-  vector<double> saveAvalue = solver_lp_->Avalue_;
-  vector<double> saveColLower = solver_lp_->colLower_;
-  vector<double> saveColUpper = solver_lp_->colUpper_;
-  vector<double> saveColCost = solver_lp_->colCost_;
-  vector<int> ibreak = colPermutation;
-  vector<double> saveColRandomValue = colRandomValue;
-
-  // 3. Generate the permuted matrix
-  int countX = 0;
-  for (int i = 0; i < solver_lp_->numCol_; i++) {
-    int ifrom = iFrom[i];
-    solver_lp_->Astart_[i] = countX;
-    for (int k = saveAstart[ifrom]; k < saveAstart[ifrom + 1]; k++) {
-      solver_lp_->Aindex_[countX] = saveAindex[k];
-      solver_lp_->Avalue_[countX] = saveAvalue[k];
-      countX++;
-    }
-    solver_lp_->colLower_[i] = saveColLower[ifrom];
-    solver_lp_->colUpper_[i] = saveColUpper[ifrom];
-    solver_lp_->colCost_[i] = saveColCost[ifrom];
-    colPermutation[i] = ibreak[ifrom];
-    colRandomValue[i] = saveColRandomValue[ifrom];
-  }
-  if (impliedBoundsPresolve) {
-    vector<double> savePrimalColLowerImplied = primalColLowerImplied;
-    vector<double> savePrimalColUpperImplied = primalColUpperImplied;
-    vector<double> saveDualColUpperImplied = dualColUpperImplied;
-    vector<double> saveDualColLowerImplied = dualColLowerImplied;
-    for (int i = 0; i < solver_lp_->numCol_; i++) {
-      int ifrom = iFrom[i];
-      primalColLowerImplied[i] = savePrimalColLowerImplied[ifrom];
-      primalColUpperImplied[i] = savePrimalColUpperImplied[ifrom];
-      dualColUpperImplied[i] = saveDualColUpperImplied[ifrom];
-      dualColLowerImplied[i] = saveDualColLowerImplied[ifrom];
-    }
-  }
-  assert(solver_lp_->Astart_[solver_lp_->numCol_] == countX);
-  // Deduce the consequences of shuffling the LP
-  mlFg_Update(mlFg_action_ShuffleLP);
-}
-
-/*
-void HModel::copy_fromHPresolveToHModelImplied(const Presolve &ptr_model) {
-  impliedBoundsPresolve = true;
-  primalColLowerImplied = ptr_model.implColLower;
-  primalColUpperImplied = ptr_model.implColUpper;
-  primalRowLowerImplied = ptr_model.implRowValueLower;
-  primalRowUpperImplied = ptr_model.implRowValueUpper;
-  dualColLowerImplied = ptr_model.implColDualLower;
-  dualColUpperImplied = ptr_model.implColDualUpper;
-  dualRowLowerImplied = ptr_model.implRowDualLower;
-  dualRowUpperImplied = ptr_model.implRowDualUpper;
-}
-
-void HModel::copy_fromHPresolveToHModelImplied(Presolve &ptr_model) {
-  impliedBoundsPresolve = true;
-  primalColLowerImplied = ptr_model.implColLower;
-  primalColUpperImplied = ptr_model.implColUpper;
-  primalRowLowerImplied = ptr_model.implRowValueLower;
-  primalRowUpperImplied = ptr_model.implRowValueUpper;
-  dualColLowerImplied = ptr_model.implColDualLower;
-  dualColUpperImplied = ptr_model.implColDualUpper;
-  dualRowLowerImplied = ptr_model.implRowDualLower;
-  dualRowUpperImplied = ptr_model.implRowDualUpper;
-}
-
-void HModel::copy_fromHPresolveToHModelImplied(Presolve *ptr_model) {
-  impliedBoundsPresolve = true;
-  primalColLowerImplied = ptr_model->implColLower;
-  primalColUpperImplied = ptr_model->implColUpper;
-  dualColLowerImplied = ptr_model->implColDualLower;
-  dualColUpperImplied = ptr_model->implColDualUpper;
-  primalRowLowerImplied = ptr_model->implRowValueLower;
-  primalRowUpperImplied = ptr_model->implRowValueUpper;
-  dualRowLowerImplied = ptr_model->implRowDualLower;
-  dualRowUpperImplied = ptr_model->implRowDualUpper;
-}*/
-
 void HModel::setup_numBasicLogicals() {
   numBasicLogicals = 0;
   for (int i = 0; i < solver_lp_->numRow_; i++)
@@ -2143,14 +2050,14 @@ void HModel::correctDual(int *freeInfeasCount) {
           // Other variable = shift
           problemPerturbed = 1;
           if (basis_->nonbasicMove_[i] == 1) {
-            double random_v = random.dblRandom();
+            double random_v = random.fraction();
             double dual = (1 + random_v) * tau_d;
-            //            double dual = (1 + random.dblRandom()) * tau_d;
+            //            double dual = (1 + random.fraction()) * tau_d;
             double shift = dual - simplex_info_->workDual_[i];
             simplex_info_->workDual_[i] = dual;
             simplex_info_->workCost_[i] = simplex_info_->workCost_[i] + shift;
           } else {
-            double dual = -(1 + random.dblRandom()) * tau_d;
+            double dual = -(1 + random.fraction()) * tau_d;
             double shift = dual - simplex_info_->workDual_[i];
             simplex_info_->workDual_[i] = dual;
             simplex_info_->workCost_[i] = simplex_info_->workCost_[i] + shift;
@@ -2436,11 +2343,11 @@ void HModel::initRandomVec() {
   colPermutation.resize(numTot);
   for (int i = 0; i < numTot; i++) colPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
-    int j = random.intRandom() % (i + 1);
+    int j = random.integer() % (i + 1);
     swap(colPermutation[i], colPermutation[j]);
   }
   colRandomValue.resize(numTot);
-  for (int i = 0; i < numTot; i++) colRandomValue[i] = random.dblRandom();
+  for (int i = 0; i < numTot; i++) colRandomValue[i] = random.fraction();
 }
 
 void HModel::shiftObjectiveValue(double shift) {

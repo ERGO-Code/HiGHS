@@ -37,7 +37,7 @@ class HighsRandom {
   /**
    * @brief (Re-)initialise the random number generator
    */
-  void initialiseRandom() {
+  void initialise() {
     random_mw = initial_random_mw;
     random_mz = initial_random_mz;
   }
@@ -45,7 +45,7 @@ class HighsRandom {
   /**
    * @brief Return a random integer between 0 and 2147483647
    */
-  int intRandom() {
+  int integer() {
     random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
     random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
     unsigned result = (random_mz << 16) + random_mw;
@@ -53,9 +53,9 @@ class HighsRandom {
   }
 
   /**
-   * @brief Return a random real in (0, 1)
+   * @brief Return a random fraction - real in (0, 1)
    */
-  double dblRandom() {
+  double fraction() {
     random_mz = 36969 * (random_mz & 65535) + (random_mz >> 16);
     random_mw = 18000 * (random_mw & 65535) + (random_mw >> 16);
     unsigned result = (random_mz << 16) + random_mw;

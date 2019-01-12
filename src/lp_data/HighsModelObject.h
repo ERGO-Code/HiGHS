@@ -43,6 +43,12 @@ public:
   HFactor factor_;
   HighsTimer timer_;
 
+  // Record of operations performed on the solver LP
+  bool transposedLp = false;
+  bool scaledLp = false;
+  bool permutedLp = false;
+  bool tightenedLp = false;
+
   bool reportModelOperationsClock = false;
 
   //

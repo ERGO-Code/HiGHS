@@ -26,11 +26,11 @@
 #include "HDual.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
+#include "HighsModelObjectUtils.h"
 #include "HighsUtils.h"
 #include "HCrash.h"
 #include "HRanging.h"
 #include "HSimplex.h"
-#include "Scaling.h"
 
 using std::cout;
 using std::endl;
@@ -416,12 +416,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // Possibly transpose the LP to be solved. This will change the
   // numbers of rows and columns in the LP to be solved
-  //  if (opt.transposeLp) transposeLp(highs_model);
+  if (opt.transposeLp) transposeLp(highs_model);
 
   // Now that the numbers of rows and columns in the LP to be solved
   // are fixed, initialise the real and integer random vectors
-  HSimplex simplex_method_;
-  simplex_method_.initialiseColRandomVectors(&highs_model);
+  //  HSimplex simplex_method_; simplex_method_.initialiseColRandomVectors(highs_model);
   //
   // Allocate memory for the basis
   // assignBasis();
@@ -438,10 +437,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   if (opt.scaleLp) scaleLp(highs_model);
   //
   // Possibly permute the columns of the LP to be used by the solver. 
-  //  if (opt.permuteLp) permuteLp(highs_model);
+  if (opt.permuteLp) permuteLp(highs_model);
   //
   // Possibly tighten the bounds of LP to be used by the solver. 
-  //  if (opt.tightenLp) tightenLp(highs_model);
+  if (opt.tightenLp) tightenLp(highs_model);
   //
 
 

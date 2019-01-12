@@ -81,27 +81,26 @@ class HSimplex {
   }
 
   void initialiseColRandomVectors(
-				  HighsModelObject *ptr_highs_model
+				  HighsModelObject &highs_model
 				  ) {
-    HighsLp &lp_ = ptr_highs_model->solver_lp_;
-    HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
-    const int numTot = lp_.numCol_ + lp_.numRow_;
+    HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+    const int numTot = highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
     // Instantiate and (re-)initialise the random number generator
     HighsRandom random;
-    random.initialiseRandom();
+    random.initialise();
     // Generate a random permutation of the column indices
     simplex_info_.colPermutation_.resize(numTot);
     int *colPermutation = &simplex_info_.colPermutation_[0];
     for (int i = 0; i < numTot; i++) colPermutation[i] = i;
     for (int i = numTot - 1; i >= 1; i--) {
-      int j = random.intRandom() % (i + 1);
+      int j = random.integer() % (i + 1);
       std::swap(colPermutation[i], colPermutation[j]);
     }
     // Generate a vector of random reals numbers 
     simplex_info_.colRandomValue_.resize(numTot);
     double *colRandomValue = &simplex_info_.colRandomValue_[0];
     for (int i = 0; i < numTot; i++) {
-      colRandomValue[i] = random.dblRandom();
+      colRandomValue[i] = random.fraction();
     }
   }
 };

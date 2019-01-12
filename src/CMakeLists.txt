@@ -54,6 +54,7 @@ set(headers
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelObject.h
+    lp_data/HighsModelObjectUtil.h
     simplex/HApp.h
     simplex/HConst.h
     simplex/HCrash.h
@@ -66,7 +67,6 @@ set(headers
     simplex/HPrimal.h
     simplex/HRanging.h
     simplex/HSimplex.h
-    simplex/Scaling.h
     presolve/Presolve.h
     simplex/HTimerPre.h
     simplex/HVector.h
