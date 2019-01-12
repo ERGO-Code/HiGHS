@@ -25,8 +25,136 @@
 // TRANSPOSE:
 
 void transposeLp(HighsModelObject &highs_model) {
+#ifdef HiGHSDEV
   printf("Called transposeLp: highs_model.transposedLp = %d\n", highs_model.transposedLp);
+#endif
   if (highs_model.transposedLp) return;
+  HighsLp *solver_lp_ = &highs_model.solver_lp_;
+
+  int transposeCancelled = 0;
+  if (1.0 * solver_lp_->numCol_ / solver_lp_->numRow_ > 0.2) {
+    //        cout << "transpose-cancelled-by-ratio" << endl;
+    transposeCancelled = 1;
+    return;
+  }
+
+  // Convert primal cost to dual bound
+  const double inf = HIGHS_CONST_INF;
+  vector<double> dualRowLower(solver_lp_->numCol_);
+  vector<double> dualRowUpper(solver_lp_->numCol_);
+  for (int j = 0; j < solver_lp_->numCol_; j++) {
+    double lower = solver_lp_->colLower_[j];
+    double upper = solver_lp_->colUpper_[j];
+
+    /*
+     * Primal      Dual
+     * Free        row = c
+     * x > 0       row < c
+     * x < 0       row > c
+     * x = 0       row free
+     * other       cancel
+     */
+
+    if (lower == -inf && upper == inf) {
+      dualRowLower[j] = solver_lp_->colCost_[j];
+      dualRowUpper[j] = solver_lp_->colCost_[j];
+    } else if (lower == 0 && upper == inf) {
+      dualRowLower[j] = -inf;
+      dualRowUpper[j] = solver_lp_->colCost_[j];
+    } else if (lower == -inf && upper == 0) {
+      dualRowLower[j] = solver_lp_->colCost_[j];
+      dualRowUpper[j] = +inf;
+    } else if (lower == 0 && upper == 0) {
+      dualRowLower[j] = -inf;
+      dualRowUpper[j] = +inf;
+    } else {
+      transposeCancelled = 1;
+      break;
+    }
+  }
+
+  // Check flag
+  if (transposeCancelled == 1) {
+    //        cout << "transpose-cancelled-by-column" << endl;
+    return;
+  }
+
+  // Convert primal row bound to dual variable cost
+  vector<double> dualColLower(solver_lp_->numRow_);
+  vector<double> dualColUpper(solver_lp_->numRow_);
+  vector<double> dualCost(solver_lp_->numRow_);
+  for (int i = 0; i < solver_lp_->numRow_; i++) {
+    double lower = solver_lp_->rowLower_[i];
+    double upper = solver_lp_->rowUpper_[i];
+
+    /*
+     * Primal      Dual
+     * row = b     Free
+     * row < b     y < 0
+     * row > b     y > 0
+     * row free    y = 0
+     * other       cancel
+     */
+
+    if (lower == upper) {
+      dualColLower[i] = -inf;
+      dualColUpper[i] = +inf;
+      dualCost[i] = -lower;
+    } else if (lower == -inf && upper != inf) {
+      dualColLower[i] = -inf;
+      dualColUpper[i] = 0;
+      dualCost[i] = -upper;
+    } else if (lower != -inf && upper == inf) {
+      dualColLower[i] = 0;
+      dualColUpper[i] = +inf;
+      dualCost[i] = -lower;
+    } else if (lower == -inf && upper == inf) {
+      dualColLower[i] = 0;
+      dualColUpper[i] = 0;
+      dualCost[i] = 0;
+    } else {
+      transposeCancelled = 1;
+      break;
+    }
+  }
+
+  // Check flag
+  if (transposeCancelled == 1) {
+    //        cout << "transpose-cancelled-by-row" << endl;
+    return;
+  }
+
+  // We can now really transpose things
+  vector<int> iwork(solver_lp_->numRow_, 0);
+  vector<int> ARstart(solver_lp_->numRow_ + 1, 0);
+  int AcountX = solver_lp_->Aindex_.size();
+  vector<int> ARindex(AcountX);
+  vector<double> ARvalue(AcountX);
+  for (int k = 0; k < AcountX; k++) iwork[solver_lp_->Aindex_[k]]++;
+  for (int i = 1; i <= solver_lp_->numRow_; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
+  for (int i = 0; i < solver_lp_->numRow_; i++) iwork[i] = ARstart[i];
+  for (int iCol = 0; iCol < solver_lp_->numCol_; iCol++) {
+    for (int k = solver_lp_->Astart_[iCol]; k < solver_lp_->Astart_[iCol + 1]; k++) {
+      int iRow = solver_lp_->Aindex_[k];
+      int iPut = iwork[iRow]++;
+      ARindex[iPut] = iCol;
+      ARvalue[iPut] = solver_lp_->Avalue_[k];
+    }
+  }
+
+  // Transpose the problem!
+  std::swap(solver_lp_->numRow_, solver_lp_->numCol_);
+  solver_lp_->Astart_.swap(ARstart);
+  solver_lp_->Aindex_.swap(ARindex);
+  solver_lp_->Avalue_.swap(ARvalue);
+  solver_lp_->colLower_.swap(dualColLower);
+  solver_lp_->colUpper_.swap(dualColUpper);
+  solver_lp_->rowLower_.swap(dualRowLower);
+  solver_lp_->rowUpper_.swap(dualRowUpper);
+  solver_lp_->colCost_.swap(dualCost);
+  //    cout << "problem-transposed" << endl;
+  // Deduce the consequences of transposing the LP
+  //  mlFg_Update(mlFg_action_TransposeLP);
 }
 
 // SCALING:
@@ -116,7 +244,9 @@ void scaleCosts(HighsModelObject &highs_model) {
 }
 
 void scaleLp(HighsModelObject &highs_model) {
+#ifdef HiGHSDEV
   printf("Called scaleLp: highs_model.scaledLp = %d\n", highs_model.scaledLp);
+#endif
   if (highs_model.scaledLp) return;
   // Scale the LP highs_model.solver_lp_, assuming all data are in place
   // Reset all scaling to 1
@@ -281,7 +411,9 @@ void scaleLp(HighsModelObject &highs_model) {
 // PERMUTE:
 
 void permuteLp(HighsModelObject &highs_model) {
+#ifdef HiGHSDEV
   printf("Called permuteLp: highs_model.permutedLp = %d\n", highs_model.permutedLp);
+#endif
   if (highs_model.permutedLp) return;
   //  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
   HSimplex simplex_method_;
@@ -309,9 +441,7 @@ void permuteLp(HighsModelObject &highs_model) {
   // 3. Generate the permuted matrix and corresponding vectors of column data
   int countX = 0;
   for (int i = 0; i < numCol; i++) {
-    printf("permuteLp: Loop %d\n", i);
     int fromCol = numColPermutation[i];
-    printf("permuteLp: Loop %d: fromCol = %d\n", i, fromCol);
     Astart[i] = countX;
     for (int k = saveAstart[fromCol]; k < saveAstart[fromCol + 1]; k++) {
       Aindex[countX] = saveAindex[k];
@@ -326,17 +456,155 @@ void permuteLp(HighsModelObject &highs_model) {
   assert(Astart[numCol] == countX);
   // Deduce the consequences of shuffling the LP
   //  mlFg_Update(mlFg_action_ShuffleLP);
-  printf("permuteLp: Successfully completed\n"); fflush(stdout);
   highs_model.permutedLp = true;
-  printf("permuteLp: Returning\n"); fflush(stdout);
 }
 
 // TIGHTEN:
 
 void tightenLp(HighsModelObject &highs_model) {
+#ifdef HiGHSDEV
   printf("Called tightenLp: highs_model.tightenedLp = %d\n", highs_model.tightenedLp);
+#endif
   if (highs_model.tightenedLp) return;
   HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
+
+  int numCol = highs_model.solver_lp_.numCol_;
+  int numRow = highs_model.solver_lp_.numRow_;
+  int *Astart = &highs_model.solver_lp_.Astart_[0];
+  int *Aindex = &highs_model.solver_lp_.Aindex_[0];
+  double *Avalue = &highs_model.solver_lp_.Avalue_[0];
+  double *colCost = &highs_model.solver_lp_.colCost_[0];
+  double *colLower = &highs_model.solver_lp_.colLower_[0];
+  double *colUpper = &highs_model.solver_lp_.colUpper_[0];
+  double *rowLower = &highs_model.solver_lp_.rowLower_[0];
+  double *rowUpper = &highs_model.solver_lp_.rowUpper_[0];
+
+
+  vector<int> iwork(numRow, 0);
+  vector<int> ARstart(numRow + 1, 0);
+  int AcountX = highs_model.solver_lp_.Aindex_.size();
+  vector<int> ARindex(AcountX);
+  vector<double> ARvalue(AcountX);
+  for (int k = 0; k < AcountX; k++) iwork[Aindex[k]]++;
+  for (int i = 1; i <= numRow; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
+  for (int i = 0; i < numRow; i++) iwork[i] = ARstart[i];
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
+      int iRow = Aindex[k];
+      int iPut = iwork[iRow]++;
+      ARindex[iPut] = iCol;
+      ARvalue[iPut] = Avalue[k];
+    }
+  }
+
+  // Save column bounds
+  vector<double> colLower_0 = highs_model.solver_lp_.colLower_;
+  vector<double> colUpper_0 = highs_model.solver_lp_.colUpper_;
+
+  double big_B = 1e10;
+  int iPass = 0;
+  for (;;) {
+    int numberChanged = 0;
+    for (int iRow = 0; iRow < numRow; iRow++) {
+      // SKIP free rows
+      if (rowLower[iRow] < -big_B && rowUpper[iRow] > big_B) continue;
+
+      // possible row
+      int ninfU = 0;
+      int ninfL = 0;
+      double xmaxU = 0.0;
+      double xminL = 0.0;
+      int myStart = ARstart[iRow];
+      int myEnd = ARstart[iRow + 1];
+      // Compute possible lower and upper ranges
+
+      for (int k = myStart; k < myEnd; ++k) {
+        int iCol = ARindex[k];
+        double value = ARvalue[k];
+        double upper = value > 0 ? colUpper[iCol] : -colLower[iCol];
+        double lower = value > 0 ? colLower[iCol] : -colUpper[iCol];
+        value = fabs(value);
+        if (upper < big_B)
+          xmaxU += upper * value;
+        else
+          ++ninfU;
+        if (lower > -big_B)
+          xminL += lower * value;
+        else
+          ++ninfL;
+      }
+
+      // Build in a margin of error
+      xmaxU += 1.0e-8 * fabs(xmaxU);
+      xminL -= 1.0e-8 * fabs(xminL);
+
+      double xminLmargin = (fabs(xminL) > 1.0e8) ? 1e-12 * fabs(xminL) : 0;
+      double xmaxUmargin = (fabs(xmaxU) > 1.0e8) ? 1e-12 * fabs(xmaxU) : 0;
+
+      // Skip redundant row : also need to consider U < L  case
+      double comp_U = xmaxU + ninfU * 1.0e31;
+      double comp_L = xminL - ninfL * 1.0e31;
+      if (comp_U <= rowUpper[iRow] + 1e-7 && comp_L >= rowLower[iRow] - 1e-7)
+        continue;
+
+      double row_L = rowLower[iRow];
+      double row_U = rowUpper[iRow];
+
+      // Now see if we can tighten column bounds
+      for (int k = myStart; k < myEnd; ++k) {
+        double value = ARvalue[k];
+        int iCol = ARindex[k];
+        double col_L = colLower[iCol];
+        double col_U = colUpper[iCol];
+        double new_L = -HIGHS_CONST_INF;
+        double new_U = +HIGHS_CONST_INF;
+
+        if (value > 0.0) {
+          if (row_L > -big_B && ninfU <= 1 && (ninfU == 0 || col_U > +big_B))
+            new_L = (row_L - xmaxU) / value + (1 - ninfU) * col_U - xmaxUmargin;
+          if (row_U < +big_B && ninfL <= 1 && (ninfL == 0 || col_L < -big_B))
+            new_U = (row_U - xminL) / value + (1 - ninfL) * col_L + xminLmargin;
+        } else {
+          if (row_L > -big_B && ninfU <= 1 && (ninfU == 0 || col_L < -big_B))
+            new_U = (row_L - xmaxU) / value + (1 - ninfU) * col_L + xmaxUmargin;
+          if (row_U < +big_B && ninfL <= 1 && (ninfL == 0 || col_U > +big_B))
+            new_L = (row_U - xminL) / value + (1 - ninfL) * col_U - xminLmargin;
+        }
+
+        if (new_U < col_U - 1.0e-12 && new_U < big_B) {
+          colUpper[iCol] = max(new_U, col_L);
+          numberChanged++;
+        }
+        if (new_L > col_L + 1.0e-12 && new_L > -big_B) {
+          colLower[iCol] = min(new_L, col_U);
+          numberChanged++;
+        }
+      }
+    }
+
+    if (numberChanged == 0) break;
+    iPass++;
+    if (iPass > 10) break;
+  }
+
+  double useTolerance = 1.0e-3;
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    if (colUpper_0[iCol] > colLower_0[iCol] + useTolerance) {
+      const double relax = 100.0 * useTolerance;
+      if (colUpper[iCol] - colLower[iCol] < useTolerance + 1.0e-8) {
+        colLower[iCol] = max(colLower_0[iCol], colLower[iCol] - relax);
+        colUpper[iCol] = min(colUpper_0[iCol], colUpper[iCol] + relax);
+      } else {
+        if (colUpper[iCol] < colUpper_0[iCol]) {
+          colUpper[iCol] = min(colUpper[iCol] + relax, colUpper_0[iCol]);
+        }
+        if (colLower[iCol] > colLower_0[iCol]) {
+          colLower[iCol] = min(colLower[iCol] - relax, colLower_0[iCol]);
+        }
+      }
+    }
+  }
+  highs_model.tightenedLp = true;
 }
 
 #endif

@@ -137,8 +137,6 @@ class HModel {
   // Methods to modify the current model. Only scaleModel is currently in use
   void scaleModel();
   void scaleCosts();
-  void setup_transposeLP();
-  void setup_tightenBound();
 
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);

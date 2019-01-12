@@ -68,10 +68,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(timer.presolveClock);
-
   PresolveInfo presolve_info(options_.presolveMode, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-
   timer.stop(timer.presolveClock);
  
   // Run solver.

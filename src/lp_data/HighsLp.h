@@ -49,10 +49,10 @@ struct HighsOptions {
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  std::string presolveMode = "";
-  std::string edWtMode = "";
-  std::string priceMode = "";
-  std::string crashMode = "";
+  std::string presolveMode = "off";
+  std::string crashMode = "off";
+  std::string edWtMode = "dse2dvx";
+  std::string priceMode = "rowswcolsw";
   std::string partitionFile = "";
 
   // Options not passed through the command line
@@ -229,6 +229,10 @@ struct HighsSimplexInfo {
   int numberAltPrimalIteration;
 
   // Options from HighsOptions for the simplex solver
+  int crashStrategy;
+  int dualEdgeWeightStrategy;
+  int priceStrategy;
+
   double primalFeasibilityTolerance;
   double dualFeasibilityTolerance;
   bool perturbCosts;
