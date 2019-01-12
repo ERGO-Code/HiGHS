@@ -92,7 +92,7 @@ void reportLpColMtx(HighsLp &lp) {
 
 /*
 void reportLpSolution(HighsModelObject &highs_model) {
-  HighsLp lp = highs_model.lp_scaled_;
+  HighsLp lp = highs_model.solver_lp_;
   reportLpBrief(lp);
   //  model->util_reportModelStatus(lp);
   assert(lp.numCol_ > 0);

@@ -33,7 +33,7 @@ public:
   int problemStatus;
   string modelName;
   
-  HighsLp lp_scaled_;
+  HighsLp solver_lp_;
   HighsSimplexInfo simplex_info_;
   HighsSolution solution_;
   HighsRanging ranging_;

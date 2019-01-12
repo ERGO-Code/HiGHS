@@ -39,8 +39,8 @@
 #endif
 
 void scaleHighsModelInit(HighsModelObject &highs_model) {
-  highs_model.scale_.col_.assign(highs_model.lp_scaled_.numCol_, 1);
-  highs_model.scale_.row_.assign(highs_model.lp_scaled_.numRow_, 1);
+  highs_model.scale_.col_.assign(highs_model.solver_lp_.numCol_, 1);
+  highs_model.scale_.row_.assign(highs_model.solver_lp_.numRow_, 1);
   highs_model.scale_.cost_ = 1;
 #ifdef HiGHSDEV
   //  largeCostScale = 1;
@@ -51,9 +51,9 @@ void scaleCosts(HighsModelObject &highs_model) {
   // Scale the costs by no less than minAlwCostScale
   double costScale = highs_model.scale_.cost_;
   double maxNzCost = 0;
-  for (int iCol = 0; iCol < highs_model.lp_scaled_.numCol_; iCol++) {
-    if (highs_model.lp_scaled_.colCost_[iCol]) {
-      maxNzCost = max(fabs(highs_model.lp_scaled_.colCost_[iCol]), maxNzCost);
+  for (int iCol = 0; iCol < highs_model.solver_lp_.numCol_; iCol++) {
+    if (highs_model.solver_lp_.colCost_[iCol]) {
+      maxNzCost = max(fabs(highs_model.solver_lp_.colCost_[iCol]), maxNzCost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -78,8 +78,8 @@ void scaleCosts(HighsModelObject &highs_model) {
   if (costScale == 1) return;
   // Scale the costs (and record of maxNzCost) by costScale, being at most
   // maxAlwCostScale
-  for (int iCol = 0; iCol < highs_model.lp_scaled_.numCol_; iCol++) {
-    highs_model.lp_scaled_.colCost_[iCol] /= costScale;
+  for (int iCol = 0; iCol < highs_model.solver_lp_.numCol_; iCol++) {
+    highs_model.solver_lp_.colCost_[iCol] /= costScale;
   }
   maxNzCost /= costScale;
 
@@ -95,20 +95,20 @@ void scaleCosts(HighsModelObject &highs_model) {
     printf(
         "   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n",
         tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
-    for (int iCol = 0; iCol < highs_model.lp_scaled_.numCol_; iCol++) {
+    for (int iCol = 0; iCol < highs_model.solver_lp_.numCol_; iCol++) {
       if (largeCostFlag[iCol]) {
-        highs_model.lp_scaled_.colCost_[iCol] /= largeCostScale;
+        highs_model.solver_lp_.colCost_[iCol] /= largeCostScale;
       }
     }
   }
   */
   printf("After cost scaling\n");
-  //  utils.util_analyseVectorValues("Column costs", highs_model.lp_scaled_.numCol_, highs_model.lp_scaled_.colCost_, false);
+  //  utils.util_analyseVectorValues("Column costs", highs_model.solver_lp_.numCol_, highs_model.solver_lp_.colCost_, false);
 #endif
 }
 
 void scaleLp(HighsModelObject &highs_model) {
-  // Scale the LP highs_model.lp_scaled_, assuming all data are in place
+  // Scale the LP highs_model.solver_lp_, assuming all data are in place
   // Reset all scaling to 1
   HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
   HighsTimer &timer = highs_model.timer_;
@@ -116,8 +116,8 @@ void scaleLp(HighsModelObject &highs_model) {
   scaleHighsModelInit(highs_model);
   double *colScale = &highs_model.scale_.col_[0];
   double *rowScale = &highs_model.scale_.row_[0];
-  int numCol = highs_model.lp_scaled_.numCol_;
-  int numRow = highs_model.lp_scaled_.numRow_;
+  int numCol = highs_model.solver_lp_.numCol_;
+  int numRow = highs_model.solver_lp_.numRow_;
 
   // Allow a switch to/from the original scaling rules
   bool originalScaling = true;
@@ -129,8 +129,8 @@ void scaleLp(HighsModelObject &highs_model) {
   // |values| are in [0.2, 5]
   const double inf = HIGHS_CONST_INF;
   double min0 = inf, max0 = 0;
-  for (int k = 0, AnX = highs_model.lp_scaled_.Astart_[numCol]; k < AnX; k++) {
-    double value = fabs(highs_model.lp_scaled_.Avalue_[k]);
+  for (int k = 0, AnX = highs_model.solver_lp_.Astart_[numCol]; k < AnX; k++) {
+    double value = fabs(highs_model.solver_lp_.Avalue_[k]);
     min0 = min(min0, value);
     max0 = max(max0, value);
   }
@@ -150,7 +150,7 @@ void scaleLp(HighsModelObject &highs_model) {
   // 0.1
   double minNzCost = inf;
   for (int i = 0; i < numCol; i++) {
-    if (highs_model.lp_scaled_.colCost_[i]) minNzCost = min(fabs(highs_model.lp_scaled_.colCost_[i]), minNzCost);
+    if (highs_model.solver_lp_.colCost_[i]) minNzCost = min(fabs(highs_model.solver_lp_.colCost_[i]), minNzCost);
   }
   bool includeCost = false;
   //  if (originalScaling)
@@ -165,11 +165,11 @@ void scaleLp(HighsModelObject &highs_model) {
       // For column scale (find)
       double colMin = inf;
       double colMax = 1 / inf;
-      double myCost = fabs(highs_model.lp_scaled_.colCost_[iCol]);
+      double myCost = fabs(highs_model.solver_lp_.colCost_[iCol]);
       if (includeCost && myCost != 0)
         colMin = min(colMin, myCost), colMax = max(colMax, myCost);
-      for (int k = highs_model.lp_scaled_.Astart_[iCol]; k < highs_model.lp_scaled_.Astart_[iCol + 1]; k++) {
-        double value = fabs(highs_model.lp_scaled_.Avalue_[k]) * rowScale[highs_model.lp_scaled_.Aindex_[k]];
+      for (int k = highs_model.solver_lp_.Astart_[iCol]; k < highs_model.solver_lp_.Astart_[iCol + 1]; k++) {
+        double value = fabs(highs_model.solver_lp_.Avalue_[k]) * rowScale[highs_model.solver_lp_.Aindex_[k]];
         colMin = min(colMin, value), colMax = max(colMax, value);
       }
       colScale[iCol] = 1 / sqrt(colMin * colMax);
@@ -179,9 +179,9 @@ void scaleLp(HighsModelObject &highs_model) {
             min(max(minAlwColScale, colScale[iCol]), maxAlwColScale);
       }
       // For row scale (only collect)
-      for (int k = highs_model.lp_scaled_.Astart_[iCol]; k < highs_model.lp_scaled_.Astart_[iCol + 1]; k++) {
-        int iRow = highs_model.lp_scaled_.Aindex_[k];
-        double value = fabs(highs_model.lp_scaled_.Avalue_[k]) * colScale[iCol];
+      for (int k = highs_model.solver_lp_.Astart_[iCol]; k < highs_model.solver_lp_.Astart_[iCol + 1]; k++) {
+        int iRow = highs_model.solver_lp_.Aindex_[k];
+        double value = fabs(highs_model.solver_lp_.Avalue_[k]) * colScale[iCol];
         rowMin[iRow] = min(rowMin[iRow], value);
         rowMax[iRow] = max(rowMax[iRow], value);
       }
@@ -230,24 +230,24 @@ void scaleLp(HighsModelObject &highs_model) {
 
   // Apply scaling to matrix and bounds
   for (int iCol = 0; iCol < numCol; iCol++)
-    for (int k = highs_model.lp_scaled_.Astart_[iCol]; k < highs_model.lp_scaled_.Astart_[iCol + 1]; k++)
-      highs_model.lp_scaled_.Avalue_[k] *= (colScale[iCol] * rowScale[highs_model.lp_scaled_.Aindex_[k]]);
+    for (int k = highs_model.solver_lp_.Astart_[iCol]; k < highs_model.solver_lp_.Astart_[iCol + 1]; k++)
+      highs_model.solver_lp_.Avalue_[k] *= (colScale[iCol] * rowScale[highs_model.solver_lp_.Aindex_[k]]);
 
   for (int iCol = 0; iCol < numCol; iCol++) {
-    highs_model.lp_scaled_.colLower_[iCol] /= highs_model.lp_scaled_.colLower_[iCol] == -inf ? 1 : colScale[iCol];
-    highs_model.lp_scaled_.colUpper_[iCol] /= highs_model.lp_scaled_.colUpper_[iCol] == +inf ? 1 : colScale[iCol];
-    highs_model.lp_scaled_.colCost_[iCol] *= colScale[iCol];
+    highs_model.solver_lp_.colLower_[iCol] /= highs_model.solver_lp_.colLower_[iCol] == -inf ? 1 : colScale[iCol];
+    highs_model.solver_lp_.colUpper_[iCol] /= highs_model.solver_lp_.colUpper_[iCol] == +inf ? 1 : colScale[iCol];
+    highs_model.solver_lp_.colCost_[iCol] *= colScale[iCol];
   }
   for (int iRow = 0; iRow < numRow; iRow++) {
-    highs_model.lp_scaled_.rowLower_[iRow] *= highs_model.lp_scaled_.rowLower_[iRow] == -inf ? 1 : rowScale[iRow];
-    highs_model.lp_scaled_.rowUpper_[iRow] *= highs_model.lp_scaled_.rowUpper_[iRow] == +inf ? 1 : rowScale[iRow];
+    highs_model.solver_lp_.rowLower_[iRow] *= highs_model.solver_lp_.rowLower_[iRow] == -inf ? 1 : rowScale[iRow];
+    highs_model.solver_lp_.rowUpper_[iRow] *= highs_model.solver_lp_.rowUpper_[iRow] == +inf ? 1 : rowScale[iRow];
   }
   // Deduce the consequences of scaling the LP
   //  mlFg_Update(mlFg_action_ScaleLP);
 #ifdef HiGHSDEV
   // Analyse the scaled LP
   //  if (simplex_info.analyse_lp) {
-  //    util_analyseLp(highs_model.lp_scaled_, "Scaled");
+  //    util_analyseLp(highs_model.solver_lp_, "Scaled");
   //  }
   //  if (mlFg_scaledLP) {
   //  utils.util_analyseVectorValues("Column scaling factors", numCol, colScale, false);

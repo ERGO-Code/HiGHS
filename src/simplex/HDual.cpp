@@ -58,7 +58,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   model->problemStatus = LP_Status_Unset;
   model->numberIteration = 0;
   // Cannot solve box-constrained LPs
-  if (model->lp_scaled_->numRow_ == 0) return;
+  if (model->solver_lp_->numRow_ == 0) return;
   timer.start(simplex_info.clock_[SimplexTotalClock]);
   n_ph1_du_it = 0;
   n_ph2_du_it = 0;
@@ -115,7 +115,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
-      const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+      const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
     } else if (EdWt_Mode == EdWt_Mode_DSE) {
@@ -191,7 +191,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
-  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int i = 0; i < numTot; i++) {
     if (highs_model_object->basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
@@ -432,9 +432,9 @@ void HDual::options() {
 
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
-  numCol = model->lp_scaled_->numCol_;
-  numRow = model->lp_scaled_->numRow_;
-  numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  numCol = model->solver_lp_->numCol_;
+  numRow = model->solver_lp_->numRow_;
+  numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   matrix = model->matrix_;
   factor = model->factor_;
 
@@ -1085,7 +1085,7 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
-      const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+      const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
       if (alw_DSE2Dvx_sw &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
@@ -1808,7 +1808,7 @@ void HDual::iz_dvx_fwk() {
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
   const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
-  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     //      if (highs_model_object->basis_.nonbasicFlag_[vr_n])
     //      if (nonbasicFlag[vr_n])
@@ -2375,7 +2375,7 @@ void HDual::an_iz_vr_v() {
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
-  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
     if (highs_model_object->basis_.nonbasicFlag_[vr_n]) {
       double pr_act_v = highs_model_object->simplex_info_.workValue_[vr_n];

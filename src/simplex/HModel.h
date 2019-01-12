@@ -450,7 +450,7 @@ class HModel {
   vector<double> colRandomValue;
 
   // The scaled model
-  HighsLp *lp_scaled_;
+  HighsLp *solver_lp_;
   // Part of working model which is only required and populated once a solve is
   // initiated
   HMatrix *matrix_;

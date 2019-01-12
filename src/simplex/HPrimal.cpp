@@ -32,9 +32,9 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 
   HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
 
-  numCol = model->lp_scaled_->numCol_;
-  numRow = model->lp_scaled_->numRow_;
-  numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  numCol = model->solver_lp_->numCol_;
+  numRow = model->solver_lp_->numRow_;
+  numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
 
 #ifdef HiGHSDEV
   printf("************************************\n");
@@ -174,7 +174,7 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = &highs_model_object->simplex_info_.workUpper_[0];
   const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
 
-  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free

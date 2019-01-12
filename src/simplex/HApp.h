@@ -332,8 +332,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   vector<double> rowLower(highs_model.lp_.numRow_);
   vector<double> rowUpper(highs_model.lp_.numRow_);
   model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(highs_model.lp_scaled_, 0, highs_model.lp_.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(highs_model.lp_scaled_, 0, highs_model.lp_.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  model.util_getColBounds(highs_model.solver_lp_, 0, highs_model.lp_.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(highs_model.solver_lp_, 0, highs_model.lp_.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -343,7 +343,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
   int num_resolve = 0;
   for (int col = 0; col < highs_model.lp_.numCol_; col++) {
-    //    model.util_getColBounds(model.lp_scaled_, col, col, &og_colLower, &og_colUpper);
+    //    model.util_getColBounds(model.solver_lp_, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
     if (model.basis_->nonbasicFlag_[col]) {
@@ -407,12 +407,12 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.basis_ = &highs_model.basis_;
   model.scale_ = &highs_model.scale_;
   model.simplex_info_ = &highs_model.simplex_info_;
-  model.lp_scaled_ = &highs_model.lp_scaled_;
+  model.solver_lp_ = &highs_model.solver_lp_;
   model.matrix_ = &highs_model.matrix_;
   model.factor_ = &highs_model.factor_;
 
   // Copy the LP to the structure to be used by the solver
-  highs_model.lp_scaled_ = highs_model.lp_;
+  highs_model.solver_lp_ = highs_model.lp_;
 
   // Possibly transpose the LP to be solved. This will change the
   // numbers of rows and columns in the LP to be solved
@@ -447,16 +447,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   model.initWithLogicalBasis();
 
-  HighsLp &lp_scaled_ = highs_model.lp_scaled_;
-  highs_model.matrix_.setup_lgBs(lp_scaled_.numCol_, lp_scaled_.numRow_,
-				  &lp_scaled_.Astart_[0],
-				  &lp_scaled_.Aindex_[0],
-				  &lp_scaled_.Avalue_[0]);
+  HighsLp &solver_lp_ = highs_model.solver_lp_;
+  highs_model.matrix_.setup_lgBs(solver_lp_.numCol_, solver_lp_.numRow_,
+				  &solver_lp_.Astart_[0],
+				  &solver_lp_.Aindex_[0],
+				  &solver_lp_.Avalue_[0]);
 
-  highs_model.factor_.setup(lp_scaled_.numCol_, lp_scaled_.numRow_,
-			   &lp_scaled_.Astart_[0],
-			   &lp_scaled_.Aindex_[0],
-			   &lp_scaled_.Avalue_[0],
+  highs_model.factor_.setup(solver_lp_.numCol_, solver_lp_.numRow_,
+			   &solver_lp_.Astart_[0],
+			   &solver_lp_.Aindex_[0],
+			   &solver_lp_.Avalue_[0],
 			   &highs_model.basis_.basicIndex_[0]);
 
   // Set pointers within HModel for the matrix and factor data structure
