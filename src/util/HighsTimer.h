@@ -20,6 +20,18 @@
 #include <cstdlib>
 #include <string>
 /**
+ * @brief Clock record structure
+ */
+struct HighsClockRecord {
+  int calls;
+  double start;
+  double ticks;
+  double time;
+  std::string name;
+  std::string ch3Name;
+};
+    
+/**
  * @brief Class for profiling facility for computational components in HiGHS
  */
 class HighsTimer {
@@ -44,18 +56,6 @@ class HighsTimer {
   }
 
   /**
-   * @brief Clock record structure
-   */
-  struct HighsClockRecord {
-    int calls;
-    double start;
-    double ticks;
-    double time;
-    std::string name;
-    std::string ch3Name;
-  };
-    
-  /**
    * @brief Define a clock
    */
   int clockDef(
@@ -77,7 +77,7 @@ class HighsTimer {
    * @brief Zero an external clock record
    */
   int clockInit(
-	       HighsClockRecord Xclock   //!< Record for the external clock
+	       HighsClockRecord &Xclock   //!< Record for the external clock
 		) {
     Xclock.calls = 0;
     Xclock.start = 0;

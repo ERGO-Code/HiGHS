@@ -28,7 +28,6 @@
 #include "HighsModelObject.h"
 #include "HighsModelObjectUtils.h"
 #include "HighsUtils.h"
-#include "HCrash.h"
 #include "HRanging.h"
 #include "HSimplex.h"
 
@@ -81,10 +80,10 @@ HighsStatus solveSimplex(
   }
 
   // Crash, if HighsModelObject has basis information.
-  if (opt.crashMode.size() > 0) {
-    dual_solver.setCrash(opt.crashMode.c_str());
+  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  if (simplex_info_.crashStrategy > 0) {
     HCrash crash;
-    crash.crash(highs_model, dual_solver.Crash_Mode);
+    crash.crash(highs_model, simplex_info_.crashStrategy);
   }
 
   // Solve, depending on the options.

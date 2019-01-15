@@ -397,10 +397,10 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   }
   if (simplex_info.analyseRebuildTime) {
     double currentRunHighsTime = timer.readRunHighsClock();
-    //    HighsClockRecord totalRebuildClock;
-    //    timer.clockInit(totalRebuildClock);
-    //    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
-    //    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
+    HighsClockRecord totalRebuildClock;
+    timer.clockInit(totalRebuildClock);
+    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
+    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
     int totalRebuilds = 0;
     double totalRebuildTime = 0;
     printf(

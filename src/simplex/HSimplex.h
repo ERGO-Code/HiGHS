@@ -20,72 +20,72 @@
 #include <vector>
 #include <cstring> // For strcmp
 
+enum SIMPLEX_CRASH_STRATEGY {
+  SIMPLEX_CRASH_STRATEGY_OFF,
+  SIMPLEX_CRASH_STRATEGY_DF,
+  SIMPLEX_CRASH_STRATEGY_LTSSF_K,
+  SIMPLEX_CRASH_STRATEGY_LTSSF_PRI,
+  SIMPLEX_CRASH_STRATEGY_LTSF_K,
+  SIMPLEX_CRASH_STRATEGY_LTSF_PRI,
+  SIMPLEX_CRASH_STRATEGY_LTSF,
+  SIMPLEX_CRASH_STRATEGY_BIXBY,
+  SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS,
+  SIMPLEX_CRASH_STRATEGY_BASIC,
+  SIMPLEX_CRASH_STRATEGY_TEST_SING
+};
+
+enum SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY {
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH
+};
+
+enum SIMPLEX_PRICE_STRATEGY {
+  SIMPLEX_PRICE_STRATEGY_COL,
+  SIMPLEX_PRICE_STRATEGY_ROW,
+  SIMPLEX_PRICE_STRATEGY_ROW_SWITCH,
+  SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
+  SIMPLEX_PRICE_STRATEGY_ROW_ULTRA
+};
+
 /**
  * @brief Class for simplex utilities
  */
 class HSimplex {
  public:
 
-  enum SIMPLEX_CRASH_STRATEGY {
-    simplex_crash_strategy_off,
-    simplex_crash_strategy_df,
-    simplex_crash_strategy_ltssf_k,
-    simplex_crash_strategy_ltssf_pri,
-    simplex_crash_strategy_ltsf_k,
-    simplex_crash_strategy_ltsf_pri,
-    simplex_crash_strategy_ltsf,
-    simplex_crash_strategy_bixby,
-    simplex_crash_strategy_bixby_no_nonzero_col_costs,
-    simplex_crash_strategy_basic,
-    simplex_crash_strategy_test_sing
-  };
-
-  enum SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY {
-    simplex_dual_edge_weight_strategy_dantzig,
-    simplex_dual_edge_weight_strategy_devex,
-    simplex_dual_edge_weight_strategy_steepest_edge,
-    simplex_dual_edge_weight_strategy_steepest_edge_unit_initial,
-    simplex_dual_edge_weight_strategy_steepest_edge_to_devex_switch
-  };
-
-  enum SIMPLEX_PRICE_STRATEGY {
-    simplex_price_strategy_col,
-    simplex_price_strategy_row,
-    simplex_price_strategy_row_switch,
-    simplex_price_strategy_row_switch_col_switch,
-    simplex_price_strategy_row_ultra
-  };
-
   int crash_strategy(const char *crashMode) {
     printf("crashMode = %s\n", crashMode);
     int crashStrategy;
     if (strcmp(crashMode, "off") == 0)
-      crashStrategy = simplex_crash_strategy_off;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_OFF;
     else if (strcmp(crashMode, "ltssf") == 0)
-      crashStrategy = simplex_crash_strategy_df;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_DF;
     else if (strcmp(crashMode, "ltssf1") == 0)
-      crashStrategy = simplex_crash_strategy_ltssf_k;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSSF_K;
     else if (strcmp(crashMode, "ltssf2") == 0)
-      crashStrategy = simplex_crash_strategy_ltssf_pri;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSSF_PRI;
     else if (strcmp(crashMode, "ltssf3") == 0)
-      crashStrategy = simplex_crash_strategy_ltsf_k;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSF_K;
     else if (strcmp(crashMode, "ltssf4") == 0)
-      crashStrategy = simplex_crash_strategy_ltsf_pri;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSF_PRI;
     else if (strcmp(crashMode, "ltssf5") == 0)
-      crashStrategy = simplex_crash_strategy_ltsf;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSF;
     else if (strcmp(crashMode, "ltssf6") == 0)
-      crashStrategy = simplex_crash_strategy_bixby;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_BIXBY;
     else if (strcmp(crashMode, "ltssf7") == 0)
-      crashStrategy = simplex_crash_strategy_bixby_no_nonzero_col_costs;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS;
     else if (strcmp(crashMode, "bs") == 0)
-      crashStrategy = simplex_crash_strategy_basic;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_BASIC;
 #ifdef HiGHSDEV
     else if (strcmp(crashMode, "tssing") == 0)
-      crashStrategy = simplex_crash_strategy_test_sing;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_TEST_SING;
 #endif
     else {
       printf("crash_strategy unrecognised crashMode = %s - using No crash\n", crashMode);
-      crashStrategy = simplex_crash_strategy_off;
+      crashStrategy = SIMPLEX_CRASH_STRATEGY_OFF;
     }
     return crashStrategy;
   }
@@ -94,18 +94,18 @@ class HSimplex {
     printf("edWtMode = %s\n", edWtMode);
     int dualEdgeWeightStrategy;
     if (strcmp(edWtMode, "dan") == 0)
-      dualEdgeWeightStrategy = simplex_dual_edge_weight_strategy_dantzig;
+      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
     else if (strcmp(edWtMode, "dvx") == 0)
-      dualEdgeWeightStrategy = simplex_dual_edge_weight_strategy_devex;
+      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
     else if (strcmp(edWtMode, "sed") == 0)
-      dualEdgeWeightStrategy = simplex_dual_edge_weight_strategy_steepest_edge;
+      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE;
     else if (strcmp(edWtMode, "sed0") == 0)
-      dualEdgeWeightStrategy = simplex_dual_edge_weight_strategy_steepest_edge_unit_initial;
+      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL;
     else if (strcmp(edWtMode, "dse2dvx") == 0)
-      dualEdgeWeightStrategy = simplex_dual_edge_weight_strategy_steepest_edge_to_devex_switch;
+      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
     else {
       printf("edWt_strategy unrecognised edWtMode = %s - using using DSE with possible switch to Devex\n", edWtMode);
-      dualEdgeWeightStrategy = simplex_dual_edge_weight_strategy_steepest_edge_to_devex_switch;
+      dualEdgeWeightStrategy =SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
     }
     return dualEdgeWeightStrategy;
   }
@@ -114,18 +114,18 @@ class HSimplex {
     printf("priceMode = %s\n", priceMode);
     int priceStrategy;
     if (strcmp(priceMode, "col") == 0)
-      priceStrategy = simplex_price_strategy_col;
+      priceStrategy = SIMPLEX_PRICE_STRATEGY_COL;
     else if (strcmp(priceMode, "row") == 0)
-      priceStrategy = simplex_price_strategy_row;
+      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW;
     else if (strcmp(priceMode, "rowsw") == 0)
-      priceStrategy = simplex_price_strategy_row_switch;
+      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH;
     else if (strcmp(priceMode, "rowswcolsw") == 0)
-      priceStrategy = simplex_price_strategy_row_switch_col_switch;
+      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
     else if (strcmp(priceMode, "ultra") == 0)
-      priceStrategy = simplex_price_strategy_row_ultra;
+      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_ULTRA;
     else {
       printf("price_strategy unrecognised priceMode = %s - using row Price with switch or colump price switch\n", priceMode);
-      priceStrategy = simplex_price_strategy_row_switch_col_switch;
+      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
     }
     return priceStrategy;
   }

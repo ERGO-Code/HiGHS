@@ -29,22 +29,46 @@ void transposeLp(HighsModelObject &highs_model) {
   printf("Called transposeLp: highs_model.transposedLp = %d\n", highs_model.transposedLp);
 #endif
   if (highs_model.transposedLp) return;
-  HighsLp *solver_lp_ = &highs_model.solver_lp_;
+  HighsLp& primal_lp = highs_model.lp_;
+
+  int primalNumCol = primal_lp.numCol_;
+  int primalNumRow = primal_lp.numRow_;
 
   int transposeCancelled = 0;
-  if (1.0 * solver_lp_->numCol_ / solver_lp_->numRow_ > 0.2) {
+  if (1.0 * primalNumCol / primalNumRow > 0.2) {
     //        cout << "transpose-cancelled-by-ratio" << endl;
     transposeCancelled = 1;
     return;
   }
 
+  vector<int>& primalAstart = primal_lp.Astart_;
+  vector<int>& primalAindex = primal_lp.Aindex_;
+  vector<double>& primalAvalue = primal_lp.Avalue_;
+  vector<double>& primalColCost = primal_lp.colCost_;
+  vector<double>& primalColLower = primal_lp.colLower_;
+  vector<double>& primalColUpper = primal_lp.colUpper_;
+  vector<double>& primalRowLower = primal_lp.rowLower_;
+  vector<double>& primalRowUpper = primal_lp.rowUpper_;
+
+  HighsLp& dual_lp = highs_model.solver_lp_;
+  /*
+  vector<int>& dualAstart = dual_lp.Astart_;
+  vector<int>& dualAindex = dual_lp.Aindex_;
+  vector<double>& dualAvalue = dual_lp.Avalue_;
+  vector<double>& dualColCost = dual_lp.colCost_;
+  vector<double>& dualColLower = dual_lp.colLower_;
+  vector<double>& dualColUpper = dual_lp.colUpper_;
+  vector<double>& dualRowLower = dual_lp.rowLower_;
+  vector<double>& dualRowUpper = dual_lp.rowUpper_;
+  */
+  
   // Convert primal cost to dual bound
   const double inf = HIGHS_CONST_INF;
-  vector<double> dualRowLower(solver_lp_->numCol_);
-  vector<double> dualRowUpper(solver_lp_->numCol_);
-  for (int j = 0; j < solver_lp_->numCol_; j++) {
-    double lower = solver_lp_->colLower_[j];
-    double upper = solver_lp_->colUpper_[j];
+  vector<double> dualRowLower(primalNumCol);
+  vector<double> dualRowUpper(primalNumCol);
+  for (int j = 0; j < primalNumCol; j++) {
+    double lower = primalColLower[j];
+    double upper = primalColUpper[j];
 
     /*
      * Primal      Dual
@@ -56,13 +80,13 @@ void transposeLp(HighsModelObject &highs_model) {
      */
 
     if (lower == -inf && upper == inf) {
-      dualRowLower[j] = solver_lp_->colCost_[j];
-      dualRowUpper[j] = solver_lp_->colCost_[j];
+      dualRowLower[j] = primalColCost[j];
+      dualRowUpper[j] = primalColCost[j];
     } else if (lower == 0 && upper == inf) {
       dualRowLower[j] = -inf;
-      dualRowUpper[j] = solver_lp_->colCost_[j];
+      dualRowUpper[j] = primalColCost[j];
     } else if (lower == -inf && upper == 0) {
-      dualRowLower[j] = solver_lp_->colCost_[j];
+      dualRowLower[j] = primalColCost[j];
       dualRowUpper[j] = +inf;
     } else if (lower == 0 && upper == 0) {
       dualRowLower[j] = -inf;
@@ -80,12 +104,12 @@ void transposeLp(HighsModelObject &highs_model) {
   }
 
   // Convert primal row bound to dual variable cost
-  vector<double> dualColLower(solver_lp_->numRow_);
-  vector<double> dualColUpper(solver_lp_->numRow_);
-  vector<double> dualCost(solver_lp_->numRow_);
-  for (int i = 0; i < solver_lp_->numRow_; i++) {
-    double lower = solver_lp_->rowLower_[i];
-    double upper = solver_lp_->rowUpper_[i];
+  vector<double> dualColLower(primalNumRow);
+  vector<double> dualColUpper(primalNumRow);
+  vector<double> dualCost(primalNumRow);
+  for (int i = 0; i < primalNumRow; i++) {
+    double lower = primalRowLower[i];
+    double upper = primalRowUpper[i];
 
     /*
      * Primal      Dual
@@ -125,33 +149,33 @@ void transposeLp(HighsModelObject &highs_model) {
   }
 
   // We can now really transpose things
-  vector<int> iwork(solver_lp_->numRow_, 0);
-  vector<int> ARstart(solver_lp_->numRow_ + 1, 0);
-  int AcountX = solver_lp_->Aindex_.size();
+  vector<int> iwork(primalNumRow, 0);
+  vector<int> ARstart(primalNumRow + 1, 0);
+  int AcountX = primalAindex.size();
   vector<int> ARindex(AcountX);
   vector<double> ARvalue(AcountX);
-  for (int k = 0; k < AcountX; k++) iwork[solver_lp_->Aindex_[k]]++;
-  for (int i = 1; i <= solver_lp_->numRow_; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
-  for (int i = 0; i < solver_lp_->numRow_; i++) iwork[i] = ARstart[i];
-  for (int iCol = 0; iCol < solver_lp_->numCol_; iCol++) {
-    for (int k = solver_lp_->Astart_[iCol]; k < solver_lp_->Astart_[iCol + 1]; k++) {
-      int iRow = solver_lp_->Aindex_[k];
+  for (int k = 0; k < AcountX; k++) iwork[primalAindex[k]]++;
+  for (int i = 1; i <= primalNumRow; i++) ARstart[i] = ARstart[i - 1] + iwork[i - 1];
+  for (int i = 0; i < primalNumRow; i++) iwork[i] = ARstart[i];
+  for (int iCol = 0; iCol < primalNumCol; iCol++) {
+    for (int k = primalAstart[iCol]; k < primalAstart[iCol + 1]; k++) {
+      int iRow = primalAindex[k];
       int iPut = iwork[iRow]++;
       ARindex[iPut] = iCol;
-      ARvalue[iPut] = solver_lp_->Avalue_[k];
+      ARvalue[iPut] = primalAvalue[k];
     }
   }
 
   // Transpose the problem!
-  std::swap(solver_lp_->numRow_, solver_lp_->numCol_);
-  solver_lp_->Astart_.swap(ARstart);
-  solver_lp_->Aindex_.swap(ARindex);
-  solver_lp_->Avalue_.swap(ARvalue);
-  solver_lp_->colLower_.swap(dualColLower);
-  solver_lp_->colUpper_.swap(dualColUpper);
-  solver_lp_->rowLower_.swap(dualRowLower);
-  solver_lp_->rowUpper_.swap(dualRowUpper);
-  solver_lp_->colCost_.swap(dualCost);
+  std::swap(primalNumRow, primalNumCol);
+  dual_lp.Astart_.swap(ARstart);
+  dual_lp.Aindex_.swap(ARindex);
+  dual_lp.Avalue_.swap(ARvalue);
+  dual_lp.colLower_.swap(dualColLower);
+  dual_lp.colUpper_.swap(dualColUpper);
+  dual_lp.rowLower_.swap(dualRowLower);
+  dual_lp.rowUpper_.swap(dualRowUpper);
+  dual_lp.colCost_.swap(dualCost);
   //    cout << "problem-transposed" << endl;
   // Deduce the consequences of transposing the LP
   //  mlFg_Update(mlFg_action_TransposeLP);
@@ -420,14 +444,14 @@ void permuteLp(HighsModelObject &highs_model) {
   simplex_method_.initialiseHighsModelObjectRandomVectors(highs_model);
 
   int numCol = highs_model.solver_lp_.numCol_;
-  int *numColPermutation = &highs_model.simplex_info_.numColPermutation_[0];
-  int *Astart = &highs_model.solver_lp_.Astart_[0];
-  int *Aindex = &highs_model.solver_lp_.Aindex_[0];
-  double *Avalue = &highs_model.solver_lp_.Avalue_[0];
-  double *colCost = &highs_model.solver_lp_.colCost_[0];
-  double *colLower = &highs_model.solver_lp_.colLower_[0];
-  double *colUpper = &highs_model.solver_lp_.colUpper_[0];
-  double *colScale = &highs_model.scale_.col_[0];
+  vector<int>& numColPermutation = highs_model.simplex_info_.numColPermutation_;
+  vector<int>& Astart = highs_model.solver_lp_.Astart_;
+  vector<int>& Aindex = highs_model.solver_lp_.Aindex_;
+  vector<double>& Avalue = highs_model.solver_lp_.Avalue_;
+  vector<double>& colCost = highs_model.solver_lp_.colCost_;
+  vector<double>& colLower = highs_model.solver_lp_.colLower_;
+  vector<double>& colUpper = highs_model.solver_lp_.colUpper_;
+  vector<double>& colScale = highs_model.scale_.col_;
   
   // 2. Duplicate the original data to copy from
   vector<int> saveAstart = highs_model.solver_lp_.Astart_;
@@ -470,19 +494,19 @@ void tightenLp(HighsModelObject &highs_model) {
 
   int numCol = highs_model.solver_lp_.numCol_;
   int numRow = highs_model.solver_lp_.numRow_;
-  int *Astart = &highs_model.solver_lp_.Astart_[0];
-  int *Aindex = &highs_model.solver_lp_.Aindex_[0];
-  double *Avalue = &highs_model.solver_lp_.Avalue_[0];
-  double *colCost = &highs_model.solver_lp_.colCost_[0];
-  double *colLower = &highs_model.solver_lp_.colLower_[0];
-  double *colUpper = &highs_model.solver_lp_.colUpper_[0];
-  double *rowLower = &highs_model.solver_lp_.rowLower_[0];
-  double *rowUpper = &highs_model.solver_lp_.rowUpper_[0];
+  vector<int>& Astart = highs_model.solver_lp_.Astart_;
+  vector<int>& Aindex = highs_model.solver_lp_.Aindex_;
+  vector<double>& Avalue = highs_model.solver_lp_.Avalue_;
+  vector<double>& colCost = highs_model.solver_lp_.colCost_;
+  vector<double>& colLower = highs_model.solver_lp_.colLower_;
+  vector<double>& colUpper = highs_model.solver_lp_.colUpper_;
+  vector<double>& rowLower = highs_model.solver_lp_.rowLower_;
+  vector<double>& rowUpper = highs_model.solver_lp_.rowUpper_;
 
 
   vector<int> iwork(numRow, 0);
   vector<int> ARstart(numRow + 1, 0);
-  int AcountX = highs_model.solver_lp_.Aindex_.size();
+  int AcountX = Aindex.size();
   vector<int> ARindex(AcountX);
   vector<double> ARvalue(AcountX);
   for (int k = 0; k < AcountX; k++) iwork[Aindex[k]]++;
