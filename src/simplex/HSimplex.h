@@ -57,7 +57,9 @@ class HSimplex {
  public:
 
   int crash_strategy(const char *crashMode) {
+#ifdef HiGHSDEV
     printf("crashMode = %s\n", crashMode);
+#endif
     int crashStrategy;
     if (strcmp(crashMode, "off") == 0)
       crashStrategy = SIMPLEX_CRASH_STRATEGY_OFF;
@@ -91,7 +93,9 @@ class HSimplex {
   }
   
   int dual_edge_weight_strategy(const char *edWtMode) {
+#ifdef HiGHSDEV
     printf("edWtMode = %s\n", edWtMode);
+#endif
     int dualEdgeWeightStrategy;
     if (strcmp(edWtMode, "dan") == 0)
       dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
@@ -111,7 +115,9 @@ class HSimplex {
   }
 
   int price_strategy(const char *priceMode) {
+#ifdef HiGHSDEV
     printf("priceMode = %s\n", priceMode);
+#endif
     int priceStrategy;
     if (strcmp(priceMode, "col") == 0)
       priceStrategy = SIMPLEX_PRICE_STRATEGY_COL;
@@ -140,18 +146,24 @@ class HSimplex {
     HighsSimplexInfo &simplex_info_ = ptr_highs_model->simplex_info_;
 
     // Deduce values of options from HighsOptions strings
+#ifdef HiGHSDEV
     printf("presolveMode = %s\n", opt.presolveMode.c_str());
+#endif
 
     simplex_info_.crashStrategy = crash_strategy(opt.crashMode.c_str());
+#ifdef HiGHSDEV
     printf("crashMode =    %s: Strategy = %d\n", opt.crashMode.c_str(), simplex_info_.crashStrategy);
-  
+#endif  
+
     simplex_info_.dualEdgeWeightStrategy = dual_edge_weight_strategy(opt.edWtMode.c_str());
+#ifdef HiGHSDEV
     printf("edWtMode =     %s: Strategy = %d\n", opt.edWtMode.c_str(), simplex_info_.dualEdgeWeightStrategy);
+#endif
 
     simplex_info_.priceStrategy = price_strategy(opt.priceMode.c_str());
+#ifdef HiGHSDEV
     printf("priceMode =    %s: Strategy = %d\n", opt.priceMode.c_str(), simplex_info_.priceStrategy);
-
-    //    if (strcmp(EdWt_ArgV, "Dan") == 0)
+#endif
 
     // Copy values of HighsOptions for the simplex solver
     simplex_info_.primalFeasibilityTolerance = opt.primalFeasibilityTolerance;

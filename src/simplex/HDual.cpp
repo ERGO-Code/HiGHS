@@ -1880,18 +1880,18 @@ void HDual::setPrice(const char *Price_ArgV) {
   alw_price_by_col_sw = false;
   alw_price_by_row_sw = false;
   alw_price_ultra = false;
-  if (strcmp(Price_ArgV, "Col") == 0) {
+  if (strcmp(Price_ArgV, "col") == 0) {
     Price_Mode = Price_Mode_Col;
-  } else if (strcmp(Price_ArgV, "Row") == 0) {
+  } else if (strcmp(Price_ArgV, "row") == 0) {
     Price_Mode = Price_Mode_Row;
-  } else if (strcmp(Price_ArgV, "RowSw") == 0) {
+  } else if (strcmp(Price_ArgV, "rowsw") == 0) {
     Price_Mode = Price_Mode_Row;
     alw_price_by_row_sw = true;
-  } else if (strcmp(Price_ArgV, "RowSwColSw") == 0) {
+  } else if (strcmp(Price_ArgV, "rowswcolsw") == 0) {
     Price_Mode = Price_Mode_Row;
     alw_price_by_col_sw = true;
     alw_price_by_row_sw = true;
-  } else if (strcmp(Price_ArgV, "RowUltra") == 0) {
+  } else if (strcmp(Price_ArgV, "rowultra") == 0) {
     Price_Mode = Price_Mode_Row;
     alw_price_by_col_sw = true;
     alw_price_by_row_sw = true;
@@ -1909,17 +1909,17 @@ void HDual::setEdWt(const char *EdWt_ArgV) {
   //	cout<<"HDual::setEdWt EdWt_ArgV = "<<EdWt_ArgV<<endl;
   if (strcmp(EdWt_ArgV, "Dan") == 0)
     EdWt_Mode = EdWt_Mode_Dan;
-  else if (strcmp(EdWt_ArgV, "Dvx") == 0)
+  else if (strcmp(EdWt_ArgV, "dvx") == 0)
     EdWt_Mode = EdWt_Mode_Dvx;
-  else if (strcmp(EdWt_ArgV, "DSE") == 0) {
+  else if (strcmp(EdWt_ArgV, "dse") == 0) {
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = true;
     alw_DSE2Dvx_sw = false;
-  } else if (strcmp(EdWt_ArgV, "DSE0") == 0) {
+  } else if (strcmp(EdWt_ArgV, "dse0") == 0) {
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = false;
     alw_DSE2Dvx_sw = false;
-  } else if (strcmp(EdWt_ArgV, "DSE2Dvx") == 0) {
+  } else if (strcmp(EdWt_ArgV, "dse2dvx") == 0) {
     EdWt_Mode = EdWt_Mode_DSE;
     iz_DSE_wt = true;
     alw_DSE2Dvx_sw = true;

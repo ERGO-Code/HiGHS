@@ -117,10 +117,8 @@ HighsStatus solveSimplex(
     vector<double> rowPrAct;
     vector<double> rowDuAct;
 
-    if (opt.priceMode.size() > 0)
-      dual_solver.setPrice(opt.priceMode.c_str());
-    if (opt.edWtMode.size() > 0)
-    dual_solver.setEdWt(opt.edWtMode.c_str());
+    if (opt.priceMode.size() > 0) dual_solver.setPrice(opt.priceMode.c_str());
+    if (opt.edWtMode.size() > 0) dual_solver.setEdWt(opt.edWtMode.c_str());
     dual_solver.setTimeLimit(opt.timeLimit);
 
     //  bool FourThreads = true;
