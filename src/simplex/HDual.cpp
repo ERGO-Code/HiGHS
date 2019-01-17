@@ -35,20 +35,19 @@ using std::endl;
 using std::flush;
 using std::fabs;
 
-void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num_threads) {
-  highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
-  model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
-  model->basis_ = &ref_highs_model_object.basis_;
-  model->scale_ = &ref_highs_model_object.scale_;
+void HDual::solve(int variant, int num_threads) {
+  model = &highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
+  model->basis_ = &highs_model_object.basis_;
+  model->scale_ = &highs_model_object.scale_;
 
-  HighsSimplexInfo &simplex = ref_highs_model_object.simplex_;
-  HighsTimer &timer = ref_highs_model_object.timer_;
+  HighsSimplexInfo &simplex = highs_model_object.simplex_;
+  HighsTimer &timer = highs_model_object.timer_;
   model->timer_ = &timer;
   //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
   dual_variant = variant;
 
   SimplexTimer simplex_timer;
-  simplex_timer.initialiseDualSimplexClocks(ref_highs_model_object);
+  simplex_timer.initialiseDualSimplexClocks(highs_model_object);
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
@@ -287,12 +286,12 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   if (AnIterLg) iterateRpAn();
   // Report the ticks before primal
   if (dual_variant == HDUAL_VARIANT_PLAIN) {
-    simplex_timer.reportDualSimplexInnerClock(ref_highs_model_object);
+    simplex_timer.reportDualSimplexInnerClock(highs_model_object);
 
     bool rpIterate = true;
     if (rpIterate) {
-      simplex_timer.reportDualSimplexIterateClock(ref_highs_model_object);
-      simplex_timer.reportDualSimplexOuterClock(ref_highs_model_object);
+      simplex_timer.reportDualSimplexIterateClock(highs_model_object);
+      simplex_timer.reportDualSimplexOuterClock(highs_model_object);
     }
   }
 
@@ -333,7 +332,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
       HPrimal hPrimal;
       hPrimal.TimeLimitValue = TimeLimitValue;
       timer.start(simplex.clock_[SimplexPrimalPhase2Clock]);
-      hPrimal.solvePhase2(highs_model_object);
+      hPrimal.solvePhase2(&highs_model_object);
       timer.stop(simplex.clock_[SimplexPrimalPhase2Clock]);
       // Add in the count and time for any primal rebuilds
 #ifdef HiGHSDEV
@@ -381,8 +380,8 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 #ifdef HiGHSDEV
   bool rpSimplexPhasesClock = true;
   if (rpSimplexPhasesClock) {
-    simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
-    simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
+    simplex_timer.reportSimplexTotalClock(highs_model_object);
+    simplex_timer.reportSimplexPhasesClock(highs_model_object);
   }
 
   if (model->anInvertTime) {
@@ -390,9 +389,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     printf(
         "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
         "= %11.4g",
-        model->totalInverts, ref_highs_model_object.modelTotalInvertTime, currentRunHighsTime);
+        model->totalInverts, highs_model_object.modelTotalInvertTime, currentRunHighsTime);
     if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalInvertTime) / currentRunHighsTime);
+      printf(" (%6.2f%%)\n", (100 * highs_model_object.modelTotalInvertTime) / currentRunHighsTime);
     } else {
       printf("\n");
     }
@@ -400,9 +399,9 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     printf(
         "Time: Total rebuilds = %4d; Total rebuild time = %11.4g of Total time "
         "= %11.4g",
-        totalRebuilds, ref_highs_model_object.modelTotalRebuildTime, currentRunHighsTime);
+        totalRebuilds, highs_model_object.modelTotalRebuildTime, currentRunHighsTime);
     if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * ref_highs_model_object.modelTotalRebuildTime) / currentRunHighsTime);
+      printf(" (%6.2f%%)\n", (100 * highs_model_object.modelTotalRebuildTime) / currentRunHighsTime);
     } else {
       printf("\n");
     }
@@ -446,8 +445,8 @@ void HDual::init(int num_threads) {
   row_apDensity = 0;
   rowdseDensity = 0;
   // Setup other buffers
-  dualRow.setup(highs_model_object);
-  dualRHS.setup(highs_model_object);
+  dualRow.setup();
+  dualRHS.setup();
 
   // Initialize for tasks
   if (dual_variant == HDUAL_VARIANT_TASKS) {

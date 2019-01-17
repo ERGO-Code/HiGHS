@@ -93,18 +93,18 @@ enum HDUAL_VARIANT {
  */
 class HDual {
  public:
-  HDual(HighsModelObject& model_object) : highs_model_object(&model_object) {
-    dualRow.setup(&model_object);
-    dualRHS.setup(&model_object);
+  HDual(HighsModelObject& model_object) : highs_model_object(model_object),
+                                          dualRow(model_object),
+                                          dualRHS(model_object) {
+    dualRow.setup();
+    dualRHS.setup();
   }
-  HDual() {}
 
   /**
    * @brief Solve a model instance with a dual simplex variant and given number
    * of threads
    */
   void solve(
-	     HighsModelObject &highs_model_object,       //!< Instance of HiGHS model object to be solved
 	     int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
 	     int num_threads = 1  //!< Default number of threads is 1
   );
@@ -493,7 +493,7 @@ class HDual {
 
   // Model
   HModel *model;
-  HighsModelObject *highs_model_object;
+  HighsModelObject &highs_model_object;
   const HMatrix *matrix;
   const HFactor *factor;
 

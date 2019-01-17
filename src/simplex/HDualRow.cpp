@@ -26,7 +26,7 @@ using std::make_pair;
 using std::pair;
 using std::set;
 
-void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
+void HDualRow::setupSlice(HighsModelObject& highs_model_object, int size) {
   // Copy pointer
   workHMO = highs_model_object;
   HModel *model;
@@ -46,7 +46,7 @@ void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
   workData.resize(workSize);
 }
 
-void HDualRow::setup(HighsModelObject *highs_model_object) {
+void HDualRow::setup() {
   // Setup common vectors
   HModel *model;
   model = &highs_model_object->hmodel_[0];
