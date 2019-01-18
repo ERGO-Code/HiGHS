@@ -20,8 +20,15 @@
 #include <vector>
 #include <cstring> // For strcmp
 
+enum SIMPLEX_STRATEGY {
+  SIMPLEX_STRATEGY_DUAL_PLAIN = 0,
+  SIMPLEX_STRATEGY_DUAL_TASKS,
+  SIMPLEX_STRATEGY_DUAL_MULTI,
+  SIMPLEX_STRATEGY_PRIMAL
+};
+  
 enum SIMPLEX_CRASH_STRATEGY {
-  SIMPLEX_CRASH_STRATEGY_OFF,
+  SIMPLEX_CRASH_STRATEGY_OFF = 0,
   SIMPLEX_CRASH_STRATEGY_DF,
   SIMPLEX_CRASH_STRATEGY_LTSSF_K,
   SIMPLEX_CRASH_STRATEGY_LTSSF_PRI,
@@ -35,7 +42,7 @@ enum SIMPLEX_CRASH_STRATEGY {
 };
 
 enum SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY {
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG = 0,
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX,
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE,
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL,
@@ -43,7 +50,7 @@ enum SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY {
 };
 
 enum SIMPLEX_PRICE_STRATEGY {
-  SIMPLEX_PRICE_STRATEGY_COL,
+  SIMPLEX_PRICE_STRATEGY_COL = 0,
   SIMPLEX_PRICE_STRATEGY_ROW,
   SIMPLEX_PRICE_STRATEGY_ROW_SWITCH,
   SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
@@ -60,80 +67,80 @@ class HSimplex {
 #ifdef HiGHSDEV
     printf("crashMode = %s\n", crashMode);
 #endif
-    int crashStrategy;
+    int crash_strategy;
     if (strcmp(crashMode, "off") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_OFF;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_OFF;
     else if (strcmp(crashMode, "ltssf") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_DF;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_DF;
     else if (strcmp(crashMode, "ltssf1") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSSF_K;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_LTSSF_K;
     else if (strcmp(crashMode, "ltssf2") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSSF_PRI;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_LTSSF_PRI;
     else if (strcmp(crashMode, "ltssf3") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSF_K;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_LTSF_K;
     else if (strcmp(crashMode, "ltssf4") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSF_PRI;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_LTSF_PRI;
     else if (strcmp(crashMode, "ltssf5") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_LTSF;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_LTSF;
     else if (strcmp(crashMode, "ltssf6") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_BIXBY;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_BIXBY;
     else if (strcmp(crashMode, "ltssf7") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS;
     else if (strcmp(crashMode, "bs") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_BASIC;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_BASIC;
 #ifdef HiGHSDEV
     else if (strcmp(crashMode, "tssing") == 0)
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_TEST_SING;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_TEST_SING;
 #endif
     else {
       printf("crash_strategy unrecognised crashMode = %s - using No crash\n", crashMode);
-      crashStrategy = SIMPLEX_CRASH_STRATEGY_OFF;
+      crash_strategy = SIMPLEX_CRASH_STRATEGY_OFF;
     }
-    return crashStrategy;
+    return crash_strategy;
   }
   
   int dual_edge_weight_strategy(const char *edWtMode) {
 #ifdef HiGHSDEV
     printf("edWtMode = %s\n", edWtMode);
 #endif
-    int dualEdgeWeightStrategy;
+    int dual_edge_weight_strategy;
     if (strcmp(edWtMode, "dan") == 0)
-      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
+      dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
     else if (strcmp(edWtMode, "dvx") == 0)
-      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
-    else if (strcmp(edWtMode, "sed") == 0)
-      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE;
-    else if (strcmp(edWtMode, "sed0") == 0)
-      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL;
+      dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX;
+    else if (strcmp(edWtMode, "dse") == 0)
+      dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE;
+    else if (strcmp(edWtMode, "dse0") == 0)
+      dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL;
     else if (strcmp(edWtMode, "dse2dvx") == 0)
-      dualEdgeWeightStrategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
+      dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
     else {
       printf("edWt_strategy unrecognised edWtMode = %s - using using DSE with possible switch to Devex\n", edWtMode);
-      dualEdgeWeightStrategy =SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
+      dual_edge_weight_strategy =SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH;
     }
-    return dualEdgeWeightStrategy;
+    return dual_edge_weight_strategy;
   }
 
   int price_strategy(const char *priceMode) {
 #ifdef HiGHSDEV
     printf("priceMode = %s\n", priceMode);
 #endif
-    int priceStrategy;
+    int price_strategy;
     if (strcmp(priceMode, "col") == 0)
-      priceStrategy = SIMPLEX_PRICE_STRATEGY_COL;
+      price_strategy = SIMPLEX_PRICE_STRATEGY_COL;
     else if (strcmp(priceMode, "row") == 0)
-      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW;
+      price_strategy = SIMPLEX_PRICE_STRATEGY_ROW;
     else if (strcmp(priceMode, "rowsw") == 0)
-      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH;
+      price_strategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH;
     else if (strcmp(priceMode, "rowswcolsw") == 0)
-      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+      price_strategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
     else if (strcmp(priceMode, "ultra") == 0)
-      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_ULTRA;
+      price_strategy = SIMPLEX_PRICE_STRATEGY_ROW_ULTRA;
     else {
       printf("price_strategy unrecognised priceMode = %s - using row Price with switch or colump price switch\n", priceMode);
-      priceStrategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
+      price_strategy = SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH;
     }
-    return priceStrategy;
+    return price_strategy;
   }
 
   void options(
@@ -150,19 +157,21 @@ class HSimplex {
     printf("presolveMode = %s\n", opt.presolveMode.c_str());
 #endif
 
-    simplex_info_.crashStrategy = crash_strategy(opt.crashMode.c_str());
+    simplex_info_.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
+
+    simplex_info_.crash_strategy = crash_strategy(opt.crashMode.c_str());
 #ifdef HiGHSDEV
-    printf("crashMode =    %s: Strategy = %d\n", opt.crashMode.c_str(), simplex_info_.crashStrategy);
+    printf("crashMode =    %s: strategy = %d\n", opt.crashMode.c_str(), simplex_info_.crash_strategy);
 #endif  
 
-    simplex_info_.dualEdgeWeightStrategy = dual_edge_weight_strategy(opt.edWtMode.c_str());
+    simplex_info_.dual_edge_weight_strategy = dual_edge_weight_strategy(opt.edWtMode.c_str());
 #ifdef HiGHSDEV
-    printf("edWtMode =     %s: Strategy = %d\n", opt.edWtMode.c_str(), simplex_info_.dualEdgeWeightStrategy);
+    printf("edWtMode =     %s: strategy = %d\n", opt.edWtMode.c_str(), simplex_info_.dual_edge_weight_strategy);
 #endif
 
-    simplex_info_.priceStrategy = price_strategy(opt.priceMode.c_str());
+    simplex_info_.price_strategy = price_strategy(opt.priceMode.c_str());
 #ifdef HiGHSDEV
-    printf("priceMode =    %s: Strategy = %d\n", opt.priceMode.c_str(), simplex_info_.priceStrategy);
+    printf("priceMode =    %s: strategy = %d\n", opt.priceMode.c_str(), simplex_info_.price_strategy);
 #endif
 
     // Copy values of HighsOptions for the simplex solver
@@ -182,7 +191,7 @@ class HSimplex {
     simplex_info_.reportSimplexPhasesClock = false;
     // Option for analysing simplex iterations
     simplex_info_.analyseLp = false;
-    simplex_info_.analyseSimplexIterations = false;
+    simplex_info_.analyseSimplexIterations = true;//false;
     simplex_info_.analyseLpSolution = false;
     simplex_info_.analyseInvertTime = false;
     simplex_info_.analyseRebuildTime = false;

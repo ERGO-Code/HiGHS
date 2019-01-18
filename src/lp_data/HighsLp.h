@@ -229,9 +229,10 @@ struct HighsSimplexInfo {
   int numberAltPrimalIteration;
 
   // Options from HighsOptions for the simplex solver
-  int crashStrategy;
-  int dualEdgeWeightStrategy;
-  int priceStrategy;
+  int simplex_strategy;
+  int crash_strategy;
+  int dual_edge_weight_strategy;
+  int price_strategy;
 
   double primalFeasibilityTolerance;
   double dualFeasibilityTolerance;

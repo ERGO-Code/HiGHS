@@ -421,6 +421,10 @@ void HDual::options() {
 
   HighsSimplexInfo &simplex_info_ = highs_model_object->simplex_info_;
 
+  dual_simplex_mode = simplex_info_.simplex_strategy;
+  interpret_dual_edge_weight_strategy(simplex_info_.dual_edge_weight_strategy);
+  interpret_price_strategy(simplex_info_.price_strategy);
+
   // Copy values of simplex solver options to dual simplex options
   primalFeasibilityTolerance = simplex_info_.primalFeasibilityTolerance;
   dualFeasibilityTolerance = simplex_info_.dualFeasibilityTolerance;
@@ -1875,33 +1879,28 @@ void HDual::setCrash(const char *Crash_ArgV) {
   //		cout<<"HDual::setCrash Crash_Mode = " << Crash_Mode << endl;
 }
 
-void HDual::setPrice(const char *Price_ArgV) {
-  //  cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
-  alw_price_by_col_sw = false;
-  alw_price_by_row_sw = false;
-  alw_price_ultra = false;
-  if (strcmp(Price_ArgV, "col") == 0) {
-    Price_Mode = Price_Mode_Col;
-  } else if (strcmp(Price_ArgV, "row") == 0) {
-    Price_Mode = Price_Mode_Row;
-  } else if (strcmp(Price_ArgV, "rowsw") == 0) {
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_row_sw = true;
-  } else if (strcmp(Price_ArgV, "rowswcolsw") == 0) {
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
-  } else if (strcmp(Price_ArgV, "rowultra") == 0) {
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
-    alw_price_ultra = true;
+void HDual::interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy) {
+  if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
+    dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_DANTZIG;
+  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX) {
+    dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_DEVEX;
+  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE) {
+    dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
+    iz_DSE_wt = true;
+    alw_DSE2Dvx_sw = false;
+  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
+    dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
+    iz_DSE_wt = false;
+    alw_DSE2Dvx_sw = false;
+  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+    dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
+    iz_DSE_wt = true;
+    alw_DSE2Dvx_sw = true;
   } else {
-    cout << "HDual::setPrice unrecognised PriceArgV = " << Price_ArgV
-         << " - using row Price with switch or colump price switch" << endl;
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
+    printf("HDual::interpret_dual_edge_weight_strategy: unrecognised simplex_dual_edge_weight_strategy = %d - using dual steepest edge with possible switch to Devex\n", simplex_dual_edge_weight_strategy);
+    dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
+    iz_DSE_wt = true;
+    alw_DSE2Dvx_sw = true;
   }
 }
 
@@ -1933,22 +1932,67 @@ void HDual::setEdWt(const char *EdWt_ArgV) {
   //	cout<<"HDual::setEdWt iz_DSE_wt = " << iz_DSE_wt << endl;
 }
 
+void HDual::interpret_price_strategy(int simplex_price_strategy) {
+  alw_price_by_col_sw = false;
+  alw_price_by_row_sw = false;
+  alw_price_ultra = false;
+  if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
+    price_mode = PRICE_MODE_COL;
+  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
+    price_mode = PRICE_MODE_ROW;
+  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
+    price_mode = PRICE_MODE_ROW;
+    alw_price_by_row_sw = true;
+  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
+    price_mode = PRICE_MODE_ROW;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_ULTRA) {
+    price_mode = PRICE_MODE_ROW;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+    alw_price_ultra = true;
+  } else {
+    printf("HDual::interpret_price_strategy: unrecognised simplex_price_strategy = %d - using row Price with switch or colump price switch\n", simplex_price_strategy);
+    price_mode = PRICE_MODE_ROW;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+  }
+}
+
+void HDual::setPrice(const char *Price_ArgV) {
+  //  cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
+  alw_price_by_col_sw = false;
+  alw_price_by_row_sw = false;
+  alw_price_ultra = false;
+  if (strcmp(Price_ArgV, "col") == 0) {
+    Price_Mode = Price_Mode_Col;
+  } else if (strcmp(Price_ArgV, "row") == 0) {
+    Price_Mode = Price_Mode_Row;
+  } else if (strcmp(Price_ArgV, "rowsw") == 0) {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_row_sw = true;
+  } else if (strcmp(Price_ArgV, "rowswcolsw") == 0) {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+  } else if (strcmp(Price_ArgV, "rowultra") == 0) {
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+    alw_price_ultra = true;
+  } else {
+    cout << "HDual::setPrice unrecognised PriceArgV = " << Price_ArgV
+         << " - using row Price with switch or colump price switch" << endl;
+    Price_Mode = Price_Mode_Row;
+    alw_price_by_col_sw = true;
+    alw_price_by_row_sw = true;
+  }
+}
+
 void HDual::setTimeLimit(double TimeLimit_ArgV) {
   //	cout<<"HDual::setTimeLimit TimeLimit_ArgV = "<<TimeLimit_ArgV<<endl;
   TimeLimitValue = TimeLimit_ArgV;
-}
-
-void HDual::setPresolve(const char *Presolve_ArgV) {
-  //	cout<<"HDual::setPresolve Presolve_ArgV = "<<Presolve_ArgV<<endl;
-  if (strcmp(Presolve_ArgV, "Off") == 0)
-    Presolve_Mode = Presolve_Mode_Off;
-  else if (strcmp(Presolve_ArgV, "On") == 0)
-    Presolve_Mode = Presolve_Mode_On;
-  else {
-    cout << "HDual::setPresolve unrecognised PresolveArgV = " << Presolve_ArgV
-         << " - setting presolve off" << endl;
-    Presolve_Mode = Presolve_Mode_Off;
-  }
 }
 
   void HDual::reportSolverProgress(HighsModelObject *ptr_highs_model, int phase) {

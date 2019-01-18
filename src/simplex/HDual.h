@@ -29,6 +29,29 @@
 
 class HFactor;
 
+enum DUAL_MODE {
+  DUAL_MODE_PLAIN = 0,
+  DUAL_MODE_TASKS,
+  DUAL_MODE_MULTI,
+};
+
+enum HDUAL_VARIANT {
+  HDUAL_VARIANT_PLAIN = 0,
+  HDUAL_VARIANT_TASKS,
+  HDUAL_VARIANT_MULTI,
+};
+
+enum DUAL_EDGE_WEIGHT_MODE {
+  DUAL_EDGE_WEIGHT_MODE_DANTZIG = 0,
+  DUAL_EDGE_WEIGHT_MODE_DEVEX,
+  DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE
+};
+
+enum PRICE_MODE {
+  PRICE_MODE_ROW = 0,
+  PRICE_MODE_COL
+};
+
 /**
  * Limit on number of threads used to dimension many identifiers
  */
@@ -50,12 +73,6 @@ const int EdWt_Mode_Dan = 2;
  */
 const int Price_Mode_Row = 0;
 const int Price_Mode_Col = 1;
-
-/**
- * Possible presolve mode values used to test Presolve_Mode
- */
-const int Presolve_Mode_Off = 0;
-const int Presolve_Mode_On = 1;
 
 /**
  * Devex status flags. Each column has a Devex flag which is used as a
@@ -82,12 +99,6 @@ const double maxAllowedDevexWeightRatio = 3.0;
  * Multiplier used in running average calculations
  */
 const double runningAverageMu = 0.05;
-
-enum HDUAL_VARIANT {
-  HDUAL_VARIANT_PLAIN = 0,
-  HDUAL_VARIANT_TASKS,
-  HDUAL_VARIANT_MULTI,
-};
 
 /**
  * @brief Dual simplex solver for HiGHS
@@ -311,22 +322,19 @@ class HDual {
   /**
    * @brief Set a run-time parameter. TODO: handle this otherwise
    */
-  void setPrice(const char *PriceMode);
-
-  /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
-   */
+  void interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy);
   void setEdWt(const char *EdWtMode);
 
   /**
    * @brief Set a run-time parameter. TODO: handle this otherwise
    */
-  void setTimeLimit(double TimeLimit_ArgV);
+  void interpret_price_strategy(int simplex_price_strategy);
+  void setPrice(const char *PriceMode);
 
   /**
    * @brief Set a run-time parameter. TODO: handle this otherwise
    */
-  void setPresolve(const char *PresolveMode);
+  void setTimeLimit(double TimeLimit_ArgV);
 
   /**
    * @brief Report on progress of the dual simplex solver
@@ -450,16 +458,9 @@ class HDual {
   void an_iz_vr_v();
 #endif
 
-  int dual_variant =
-      0;  //!< Dual simplex variant choice. TODO: handle this otherwise
-  int Price_Mode = 0;     //!< Pricing mode. TODO: handle this otherwise
-  int EdWt_Mode = 0;      //!< Edge weight mode. TODO: handle this otherwise
   int Crash_Mode = 0;     //!< Crash mode. TODO: handle this otherwise
-  int Presolve_Mode = 0;  //!< Presolve mode. TODO: handle this otherwise
   bool SolveBailout;  //!< Set true if control is to be returned immediately to
                       //!< calling function
-  double TimeLimitValue =
-      0;  //!< Value of time limit. TODO: handle this otherwise
 
   // Devex scalars
   int n_dvx_fwk;    //!< Number of Devex frameworks used
@@ -469,19 +470,7 @@ class HDual {
   std::vector<int> dvx_ix;  //!< Vector of Devex indices
 
   // Price scalars
-  bool alw_price_by_col_sw = true;  //!< By default allow switch to column PRICE
-                                    //!< if results sufficiently dense
-  bool alw_price_by_row_sw =
-      true;  //!< By default allow switch to standard row-wise PRICE if result
-             //!< is sufficiently dense
-  bool alw_price_ultra = false;  //!< By default don't allow ultra-sparse PRICE
-  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
-                                       //!< when pi_p has at least this density
-
   // DSE scalars
-  bool iz_DSE_wt;  //!< By default initialise DSE weights if initial basis
-                   //!< matrix is not an identity
-  bool alw_DSE2Dvx_sw = true;  //!< By default allow switch to Devex from DSE
   int AnIterNumCostlyDseIt;    //!< Number of iterations when DSE is costly
   double AnIterCostlyDseFq;    //!< Frequency of iterations when DSE is costly
   const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
@@ -521,10 +510,37 @@ class HDual {
   int numCol;
   int numRow;
   int numTot;
+
+  // Options
+  int dual_variant =      0;  //!< Dual simplex variant choice. TODO: handle this otherwise
+  int dual_simplex_mode;
+
+  int EdWt_Mode = 0;      //!< Edge weight mode. TODO: handle this otherwise
+  int dual_edge_weight_mode;
+  bool iz_DSE_wt;  //!< By default initialise DSE weights if initial basis
+                   //!< matrix is not an identity
+  bool alw_DSE2Dvx_sw = true;  //!< By default allow switch to Devex from DSE
+
+  int Price_Mode = 0;     //!< Pricing mode. TODO: handle this otherwise
+  int price_mode;
+  bool alw_price_by_col_sw = true;  //!< By default allow switch to column PRICE
+                                    //!< if results sufficiently dense
+  bool alw_price_by_row_sw =
+      true;  //!< By default allow switch to standard row-wise PRICE if result
+             //!< is sufficiently dense
+  bool alw_price_ultra = false;  //!< By default don't allow ultra-sparse PRICE
+  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
+                                       //!< when pi_p has at least this density
+
+  double TimeLimitValue = 0;  //!< Value of time limit. TODO: handle this otherwise
+  double time_limit_value;
+
   double Tp;  // Tolerance for primal
   double primalFeasibilityTolerance;
+
   double Td;  // Tolerance for dual
   double dualFeasibilityTolerance;
+
   double pamiCutoff;
 
   vector<double> bs_cond_x;

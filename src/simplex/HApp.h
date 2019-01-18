@@ -81,9 +81,9 @@ HighsStatus solveSimplex(
 
   // Crash, if HighsModelObject has basis information.
   HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  if (simplex_info_.crashStrategy > 0) {
+  if (simplex_info_.crash_strategy > 0) {
     HCrash crash;
-    crash.crash(highs_model, simplex_info_.crashStrategy);
+    crash.crash(highs_model, simplex_info_.crash_strategy);
   }
 
   // Solve, depending on the options.
