@@ -199,28 +199,50 @@ class HDual {
    * @brief Report full iteration headers or data according to value of
    * <tt>header</tt>
    */
-  void iterateRpFull(bool header  //!< Logic to determine whether to write out
-                                  //!< column headers or data
+  void iterateRpFull(
+		     bool header  //!< Logic to determine whether to write out column headers or data
   );
+
   /**
-   * @brief Report iteration number and LP phase headers or data according to
-   * value of <tt>header</tt>
+   * @brief Report iteration number and LP phase headers or data according to value of <tt>header</tt>
    */
-  void iterateRpIterPh(bool header  //!< Logic to determine whether to write out
-                                    //!< column headers or data
+  void iterateRpIterPh(
+		       int iterate_log_level, //!< Iteration logging level
+		       bool header            //!< Logic to determine whether to write out column headers or data
   );
+
   /**
-   * @brief Report dual objective value header or data according to value of
-   * <tt>header</tt>
+   * @brief Report dual objective value header or data according to value of <tt>header</tt>
    */
-  void iterateRpDuObj(bool header  //!< Logic to determine whether to write out
-                                   //!< column header or data
+  void iterateRpDuObj(
+		      int iterate_log_level, //!< Iteration logging level
+		      bool header            //!< Logic to determine whether to write out column header or data
   );
+
+  /**
+   * @brief Report dual iteration data header or data according to value of <tt>header</tt>
+   */
+  void iterateRpIterDa(
+		       int iterate_log_level, //!< Iteration logging level
+		       bool header            //!< Logic to determine whether to write out column headers or data
+  );
+
+  /**
+   * @brief Report dual iteration operation density header or data according to value of <tt>header</tt>
+   */
+  void iterateRpDsty(
+		     int iterate_log_level, //!< Iteration logging level
+		     bool header            //!< Logic to determine whether to write out column headers or data
+  );
+  int intLog10(double v);
+
+
+
   /**
    * @brief Single line report after INVERT
    */
   void iterateRpInvert(
-      int i_v  //!< Integer value to be reported - generally invertHint
+		       int i_v  //!< Integer value to be reported - generally invertHint
   );
 
   /**
@@ -318,10 +340,6 @@ class HDual {
    */
   void setTimeLimit(double TimeLimit_ArgV);
 
-  /**
-   * @brief Report on progress of the dual simplex solver
-   */
-  void reportSolverProgress(HighsModelObject *ptr_highs_model, int phase = 2);
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(HighsModelObject *ptr_highs_model, const char *message, int phase = 2);
 #endif
@@ -427,13 +445,6 @@ class HDual {
   void major_rollback();
 
 #ifdef HiGHSDEV
-  void iterateRpIterDa(bool header  //!< Logic to determine whether to write out
-                                    //!< column headers or data
-  );
-  void iterateRpDsty(bool header  //!< Logic to determine whether to write out
-                                  //!< column headers or data
-  );
-  int intLog10(double v);
   void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector &vector);
   void iterateRpAn();

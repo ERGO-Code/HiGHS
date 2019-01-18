@@ -14,6 +14,7 @@
 #include "HModel.h"
 #include "HConst.h"
 #include "HMPSIO.h"
+#include "HighsIO.h"
 #include "Presolve.h"
 #include "HToyIO.h"
 #include "HVector.h"
@@ -54,13 +55,6 @@ using std::setw;
 // allocate and populate (where possible) work* arrays and
 // allocate basis* arrays
 HModel::HModel() {
-  intOption[INTOPT_PRINT_FLAG] = 0;      // no print
-  intOption[INTOPT_TRANSPOSE_FLAG] = 0;  // no transpose
-  intOption[INTOPT_SCALE_FLAG] = 1;      // do scale
-  intOption[INTOPT_TIGHT_FLAG] = 1;      // do tight
-  intOption[INTOPT_PERMUTE_FLAG] = 0;    // no permute
-  intOption[INTOPT_LPITLIM] =
-      999999;  // Set iteration limit to frig SCIP call to SCIPlpiGetIntpar
 
   dblOption[DBLOPT_PRIMAL_TOL] = 1e-7;
   dblOption[DBLOPT_DUAL_TOL] = 1e-7;
@@ -1143,10 +1137,6 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
 }
 
 void HModel::scaleModel() {
-  if (intOption[INTOPT_SCALE_FLAG] == 0) {
-    //    printf("NOT SCALING MATRIX\n");
-    return;
-  }
   double *rowScale = &scale_->row_[0];
   double *colScale = &scale_->col_[0];
   int numCol = solver_lp_->numCol_;
@@ -3212,41 +3202,38 @@ void HModel::util_getCoeff(HighsLp lp, int row, int col, double *val) {
   }
 }
 
-// Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
+// Methods for brief reports
 // is false
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
-  if (intOption[INTOPT_PRINT_FLAG] != 1 && intOption[INTOPT_PRINT_FLAG] != 4)
-    return;
-  printf("%10d  %20.10e  %2d\n", numberIteration, simplex_info_->dualObjectiveValue, i_v);
+  HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", numberIteration, simplex_info_->dualObjectiveValue, i_v);
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
-  if (!intOption[INTOPT_PRINT_FLAG]) return;
   if (problemStatus == LP_Status_Optimal)
-    printf("%s: OPTIMAL", message);
+    HighsPrintMessage(ML_MINIMAL, "%s: OPTIMAL", message);
   else
-    printf("%s: NOT-OPT", message);
+    HighsPrintMessage(ML_MINIMAL, "%s: NOT-OPT", message);
   double dualObjectiveValue = simplex_info_->dualObjectiveValue;
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
   double dlObjVal =
       abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
-  printf("%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
+  HighsPrintMessage(ML_MINIMAL, "%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
          modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
          currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
-  printf("%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
+  HighsPrintMessage(ML_MINIMAL, "%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
          numberIteration, currentRunHighsTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
-    printf("\n");
+    HighsPrintMessage(ML_MINIMAL, "\n");
   } else {
-    printf(" ");
+    HighsPrintMessage(ML_MINIMAL, " ");
     util_reportModelStatus();
   }
   // Greppable report line added
-  printf("grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
+  HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
          currentRunHighsTime, problemStatus, modelName.c_str());
 }
 
@@ -3254,23 +3241,23 @@ void HModel::util_reportSolverOutcome(const char *message) {
 //
 // Report the model status
 void HModel::util_reportModelStatus() {
-  printf("LP status is %2d: ", problemStatus);
+  HighsPrintMessage(ML_MINIMAL, "LP status is %2d: ", problemStatus);
   if (problemStatus == LP_Status_Unset)
-    printf("Unset\n");
+    HighsPrintMessage(ML_MINIMAL, "Unset\n");
   else if (problemStatus == LP_Status_Optimal)
-    printf("Optimal\n");
+    HighsPrintMessage(ML_MINIMAL, "Optimal\n");
   else if (problemStatus == LP_Status_Infeasible)
-    printf("Infeasible\n");
+    HighsPrintMessage(ML_MINIMAL, "Infeasible\n");
   else if (problemStatus == LP_Status_Unbounded)
-    printf("Primal unbounded\n");
+    HighsPrintMessage(ML_MINIMAL, "Primal unbounded\n");
   else if (problemStatus == LP_Status_Singular)
-    printf("Singular basis\n");
+    HighsPrintMessage(ML_MINIMAL, "Singular basis\n");
   else if (problemStatus == LP_Status_Failed)
-    printf("Failed\n");
+    HighsPrintMessage(ML_MINIMAL, "Failed\n");
   else if (problemStatus == LP_Status_OutOfTime)
-    printf("Time limit exceeded\n");
+    HighsPrintMessage(ML_MINIMAL, "Time limit exceeded\n");
   else
-    printf("Unrecognised\n");
+    HighsPrintMessage(ML_MINIMAL, "Unrecognised\n");
 }
 
 #ifdef HiGHSDEV

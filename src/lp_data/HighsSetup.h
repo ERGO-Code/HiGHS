@@ -148,13 +148,11 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       } else {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
-        lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
         lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
       }
     }
   } else {
     // Report in old way so tests pass.
-    lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 

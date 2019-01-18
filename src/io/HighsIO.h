@@ -40,7 +40,7 @@ void HighsPrintMessage(
  */
 void HighsLogMessage(
 		     HighsMessageType type, //!< The message type
-		     const char* format,    //!< Printing format
+		     const char* format,    //!< Printing format: must not contain "\n", even at the end of format 
 		     ...
 		     );  
 

@@ -60,7 +60,7 @@ struct HighsOptions {
   // Options for HighsPrintMessage and HighsLogMessage
   // TODO: Use these to set values for use in HighsPrintMessage and HighsLogMessage  
   FILE* output = stdout;
-  // HighsPrintMessage level: default = 0 - INTOPT_PRINT_FLAG
+  // HighsPrintMessage level: default = 0
   int messageLevel = 0;
   FILE* logfile = stdout;
 
@@ -68,13 +68,13 @@ struct HighsOptions {
   //
   // For an LP model
   //
-  // Try to solve the dual of the LP: INTOPT_TRANSPOSE_FLAG
+  // Try to solve the dual of the LP
   bool transposeLp = false;
-  // Perform LP scaling: INTOPT_SCALE_FLAG
+  // Perform LP scaling
   bool scaleLp = true;
-  // Permute the columns of the LP randomly to aid load distribution in block parallelism: INTOPT_PERMUTE_FLAG
+  // Permute the columns of the LP randomly to aid load distribution in block parallelism
   bool permuteLp = false;
-  // Perform LP bound tightening: INTOPT_TIGHT_FLAG
+  // Perform LP bound tightening
   bool tightenLp = false;
   //
   // For any solver
@@ -87,7 +87,7 @@ struct HighsOptions {
   // For the simplex solver
   //
   bool perturb_costs_simplex = true;
-  // Maximum number of simplex iterations: INTOPT_LPITLIM
+  // Maximum number of simplex iterations
   int iteration_limit_simplex = 999999;
   // Upper bound on dual objective value: DBLOPT_OBJ_UB
   double dual_objective_value_upper_bound = 1e+200;

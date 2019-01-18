@@ -155,22 +155,14 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
 #ifdef HiGHSDEV
 	timer.stop(iClock);
         double IzDseWtTT = timer.read(iClock);
-        HighsPrintMessage(ML_DETAILED, "Computed %d initial DSE weights in %gs\n", numRow, IzDseWtTT);
-        if (model->intOption[INTOPT_PRINT_FLAG])
-          printf(
-              "solve:: %d basic structurals: computed %d initial DSE weights "
-              "in %gs, %d, %d, %g\n",
-              numBasicStructurals, numRow, IzDseWtTT, numBasicStructurals,
-              numRow, IzDseWtTT);
+        HighsPrintMessage(ML_DETAILED, "Computed %d initial DSE weights in %gs\n",
+			  numRow, IzDseWtTT);
 #endif
       }
 #ifdef HiGHSDEV
       else {
-        if (model->intOption[INTOPT_PRINT_FLAG])
-          printf(
-              "solve:: %d basic structurals: starting from B=I so unit initial "
-              "DSE weights\n",
-              numBasicStructurals);
+	HighsPrintMessage(ML_DETAILED, "solve:: %d basic structurals: starting from B=I so unit initial DSE weights\n",
+			  numBasicStructurals);
       }
 #endif
     }
@@ -679,7 +671,6 @@ void HDual::solve_phase2() {
     for (;;) {
       // Inner loop of solve_phase2()
       // Performs one iteration in case DUAL_SIMPLEX_MODE_PLAIN:
-      reportSolverProgress(highs_model_object);
       switch (dual_simplex_mode) {
         default:
         case DUAL_SIMPLEX_MODE_PLAIN:
@@ -1119,8 +1110,8 @@ void HDual::iterateAn() {
     int lc_NumCostlyDseIt = AnIterNumCostlyDseIt - AnIterPrevRpNumCostlyDseIt;
     AnIterPrevRpNumCostlyDseIt = AnIterNumCostlyDseIt;
     printf("Iter %10d: ", AnIterCuIt);
-    iterateRpDsty(true);
-    iterateRpDsty(false);
+    iterateRpDsty(ML_MINIMAL, true);
+    iterateRpDsty(ML_MINIMAL, false);
     if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
       int lc_pct = (100 * AnIterNumCostlyDseIt) / (AnIterCuIt - AnIterIt0);
       printf("| Fq = %4.2f; Su =%5d (%3d%%)", AnIterCostlyDseFq,
@@ -1183,7 +1174,6 @@ void HDual::iterateAn() {
 }
 
 void HDual::iterateRp() {
-  if (model->intOption[INTOPT_PRINT_FLAG] != 4) return;
   int numIter = model->numberIteration;
   bool header = numIter % 10 == 1;
   header = true;  // JAJH10/10
@@ -1193,55 +1183,86 @@ void HDual::iterateRp() {
 
 void HDual::iterateRpFull(bool header) {
   if (header) {
-    iterateRpIterPh(true);
-    iterateRpDuObj(true);
+    iterateRpIterPh(ML_DETAILED, true);
+    iterateRpDuObj(ML_DETAILED, true);
 #ifdef HiGHSDEV
-    iterateRpIterDa(true);
-    iterateRpDsty(true);
-    printf(" FreeLsZ");
+    iterateRpIterDa(ML_DETAILED, true);
+    iterateRpDsty(ML_DETAILED, true);
+    HighsPrintMessage(ML_DETAILED, " FreeLsZ");
 #endif
-    printf("\n");
+    HighsPrintMessage(ML_DETAILED, "\n");
   } else {
-    iterateRpIterPh(false);
-    iterateRpDuObj(false);
+    iterateRpIterPh(ML_DETAILED, false);
+    iterateRpDuObj(ML_DETAILED, false);
 #ifdef HiGHSDEV
-    iterateRpIterDa(false);
-    iterateRpDsty(false);
-    printf(" %7d", dualRow.freeListSize);
+    iterateRpIterDa(ML_DETAILED, false);
+    iterateRpDsty(ML_DETAILED, false);
+    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
 #endif
-    printf("\n");
+    HighsPrintMessage(ML_DETAILED, "\n");
   }
 }
 
-void HDual::iterateRpIterPh(bool header) {
+void HDual::iterateRpIterPh(int iterate_log_level, bool header) {
   if (header) {
-    printf(" Iteration Ph");
+    HighsPrintMessage(iterate_log_level, " Iteration Ph");
   } else {
     int numIter = model->numberIteration;
-    printf(" %9d %2d", numIter, solvePhase);
+    HighsPrintMessage(iterate_log_level, " %9d %2d", numIter, solvePhase);
   }
 }
-void HDual::iterateRpDuObj(bool header) {
+void HDual::iterateRpDuObj(int iterate_log_level, bool header) {
   HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
   if (header) {
-    printf("    DualObjective    ");
+    HighsPrintMessage(iterate_log_level, "    DualObjective    ");
   } else {
     simplex_method_.computeDualObjectiveValue(highs_model_object, solvePhase);
-    printf(" %20.10e", simplex_info.dualObjectiveValue);
+    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.dualObjectiveValue);
+  }
+}
+
+void HDual::iterateRpIterDa(int iterate_log_level, bool header) {
+  if (header) {
+    HighsPrintMessage(iterate_log_level, " Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu        ThPr          Aa");
+  } else {
+    HighsPrintMessage(iterate_log_level, " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g", 
+		      invertHint, numericalTrouble, rowOut, columnOut, columnIn, deltaPrimal,
+		      thetaDual, thetaPrimal, alpha);
+  }
+}
+
+void HDual::iterateRpDsty(int iterate_log_level, bool header) {
+  if (header) {
+    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap  DSE");
+  } else {
+    int l10ColDse = intLog10(columnDensity);
+    int l10REpDse = intLog10(row_epDensity);
+    int l10RapDse = intLog10(row_apDensity);
+    double lc_rowdseDensity;
+    if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
+      lc_rowdseDensity = rowdseDensity;
+    } else {
+      lc_rowdseDensity = 0;
+    }
+    int l10DseDse = intLog10(lc_rowdseDensity);
+    HighsPrintMessage(iterate_log_level, " %4d %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse, l10DseDse);
   }
 }
 
 void HDual::iterateRpInvert(int i_v) {
-  if (model->intOption[INTOPT_PRINT_FLAG] != 1 &&
-      model->intOption[INTOPT_PRINT_FLAG] != 4)
-    return;
-  printf("Iter %10d:", model->numberIteration);
+  HighsPrintMessage(ML_MINIMAL, "Iter %10d:", model->numberIteration);
 #ifdef HiGHSDEV
-  iterateRpDsty(true);
-  iterateRpDsty(false);
+  iterateRpDsty(ML_MINIMAL, true);
+  iterateRpDsty(ML_MINIMAL, false);
 #endif
-  iterateRpDuObj(false);
-  printf(" %2d\n", i_v);
+  iterateRpDuObj(ML_MINIMAL, false);
+  HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
+}
+
+int HDual::intLog10(double v) {
+  int intLog10V = -99;
+  if (v > 0) intLog10V = log(v) / log(10.0);
+  return intLog10V;
 }
 
 void HDual::uOpRsDensityRec(double lc_OpRsDensity, double &opRsDensity) {
@@ -1281,7 +1302,6 @@ void HDual::chooseRow() {
     if (simplex_info.analyseSimplexIterations) iterateOpRecBf(AnIterOpTy_Btran, row_ep, row_epDensity);
 #endif
     // Perform BTRAN
-    //      printf("\nBTRAN\n");
     factor->btran(row_ep, row_epDensity);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_Btran, row_ep);
@@ -1399,7 +1419,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       if (anPriceEr) {
         bool price_er;
         price_er = matrix->price_er_ck(row_ap, *row_ep);
-        if (!price_er) printf("No ultra PRICE error\n");
+        if (!price_er) HighsPrintMessage(ML_VERBOSE, "No ultra PRICE error\n");
       }
 #endif
     } else if (allow_price_by_row_switch) {
@@ -1596,7 +1616,6 @@ void HDual::updateFtran() {
   if (simplex_info.analyseSimplexIterations) iterateOpRecBf(AnIterOpTy_Ftran, column, columnDensity);
 #endif
   // Perform FTRAN
-  //  printf("\nFTRAN\n");
   factor->ftran(column, columnDensity);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_Ftran, column);
@@ -1631,7 +1650,6 @@ void HDual::updateFtranBFRT() {
       iterateOpRecBf(AnIterOpTy_FtranBFRT, columnBFRT, columnDensity);
 #endif
     // Perform FTRAN BFRT
-    //    printf("\nFTRAN BFRT\n");
     factor->ftran(columnBFRT, columnDensity);
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_FtranBFRT, columnBFRT);
@@ -1655,7 +1673,6 @@ void HDual::updateFtranDSE(HVector *DSE_Vector) {
   if (simplex_info.analyseSimplexIterations) iterateOpRecBf(AnIterOpTy_FtranDSE, *DSE_Vector, rowdseDensity);
 #endif
   // Perform FTRAN DSE
-  //  printf("\nFTRAN DSE\n");
   factor->ftran(*DSE_Vector, rowdseDensity);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_FtranDSE, *DSE_Vector);
@@ -1895,7 +1912,7 @@ void HDual::interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_str
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
   } else {
-    printf("HDual::interpret_dual_edge_weight_strategy: unrecognised simplex_dual_edge_weight_strategy = %d - using dual steepest edge with possible switch to Devex\n", simplex_dual_edge_weight_strategy);
+   HighsPrintMessage(ML_MINIMAL, "HDual::interpret_dual_edge_weight_strategy: unrecognised simplex_dual_edge_weight_strategy = %d - using dual steepest edge with possible switch to Devex\n", simplex_dual_edge_weight_strategy);
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
@@ -1923,7 +1940,7 @@ void HDual::interpret_price_strategy(int simplex_price_strategy) {
     allow_price_by_row_switch = true;
     allow_price_ultra = true;
   } else {
-    printf("HDual::interpret_price_strategy: unrecognised simplex_price_strategy = %d - using row Price with switch or colump price switch\n", simplex_price_strategy);
+    HighsPrintMessage(ML_MINIMAL, "HDual::interpret_price_strategy: unrecognised simplex_price_strategy = %d - using row Price with switch or colump price switch\n", simplex_price_strategy);
     price_mode = PRICE_MODE_ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
@@ -1934,31 +1951,6 @@ void HDual::setTimeLimit(double TimeLimit_ArgV) {
   //	cout<<"HDual::setTimeLimit TimeLimit_ArgV = "<<TimeLimit_ArgV<<endl;
   TimeLimitValue = TimeLimit_ArgV;
 }
-
-  void HDual::reportSolverProgress(HighsModelObject *ptr_highs_model, int phase) {
-    // Reports every 0.2 seconds until 50 seconds
-    // Reports every 1.0 second until 500 seconds
-    // Reports every 5.0 seconds thereafter
-    //    if (intOption[INTOPT_PRINT_FLAG] != 2) return;
-    static double nextReport = 0;
-    double currentTime = ptr_highs_model->timer_.readRunHighsClock();
-    if (currentTime >= nextReport) {
-      simplex_method_.computeDualObjectiveValue(ptr_highs_model, phase);
-      double dualObjectiveValue = ptr_highs_model->simplex_info_.dualObjectiveValue;
-      std::string modelName = ptr_highs_model->lp_.model_name_;
-      int numberIteration = 0;//ptr_highs_model->simplex_info_.dualObjectiveValue
-      printf("PROGRESS %16s %20.10e %10d %10.3f\n", modelName.c_str(), dualObjectiveValue,
-	     numberIteration, currentTime);
-      if (currentTime < 50) {
-	nextReport = ((int)(5 * currentTime + 1)) / 5.0 - 0.00001;
-      } else if (currentTime < 500) {
-	nextReport = ((int)(currentTime + 1)) - 0.00001;
-      } else {
-	nextReport = ((int)(0.2 * currentTime + 1)) / 0.2 - 0.00001;
-      }
-    }
-  }
-
 
 #ifdef HiGHSDEV
 double HDual::checkDualObjectiveValue(HighsModelObject *ptr_highs_model, const char *message, int phase) {
@@ -2114,42 +2106,6 @@ double HDual::an_bs_cond(HModel *ptr_model) {
 }
 
 #ifdef HiGHSDEV
-void HDual::iterateRpIterDa(bool header) {
-  if (header) {
-    printf(
-        " Inv       NumCk     LvR     LvC     EnC        DlPr        ThDu      "
-        "  ThPr          Aa");
-  } else {
-    printf(" %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g", invertHint,
-           numericalTrouble, rowOut, columnOut, columnIn, deltaPrimal,
-           thetaDual, thetaPrimal, alpha);
-  }
-}
-
-void HDual::iterateRpDsty(bool header) {
-  if (header) {
-    printf("  Col R_Ep R_Ap  DSE");
-  } else {
-    int l10ColDse = intLog10(columnDensity);
-    int l10REpDse = intLog10(row_epDensity);
-    int l10RapDse = intLog10(row_apDensity);
-    double lc_rowdseDensity;
-    if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
-      lc_rowdseDensity = rowdseDensity;
-    } else {
-      lc_rowdseDensity = 0;
-    }
-    int l10DseDse = intLog10(lc_rowdseDensity);
-    printf(" %4d %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse, l10DseDse);
-  }
-}
-
-int HDual::intLog10(double v) {
-  int intLog10V = -99;
-  if (v > 0) intLog10V = log(v) / log(10.0);
-  return intLog10V;
-}
-
 void HDual::iterateOpRecBf(int opTy, HVector &vector, double hist_dsty) {
   AnIterOpRec *AnIter = &AnIterOp[opTy];
   AnIter->AnIterOpNumCa++;

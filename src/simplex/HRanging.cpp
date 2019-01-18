@@ -961,11 +961,11 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
 void HRanging::checkDataSolve(HModel* model, bool rp) {
   HDual solver;
   if (rp) {
-    model->intOption[INTOPT_PRINT_FLAG] = 4;
+    //    messageLevel = 7;// TODO Fix this
     const char* fileName = "OutMl.mps";
     model->writeToMPS(fileName);
   } else {
-    model->intOption[INTOPT_PRINT_FLAG] = 0;
+    //    messageLevel = 0;// TODO Fix this
   }
   //  model->solver_lp_->reportLp(model->solver_lp_);
   printf("HRanging.cpp no longer solves!\n");

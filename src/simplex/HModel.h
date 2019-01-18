@@ -78,18 +78,6 @@ enum nonbasicMoveStat {
 // For INT, DBL and STR options, ensure that ***OPT_COUNT is last since
 // this is the number of options and used to dimension as
 //***Option[***OPT_COUNT]
-enum HIGHS_INT_OPTIONS {
-  INTOPT_PRINT_FLAG = 0,  // 0/>=1 = none/do-print
-  // If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
-  // If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
-  // If 4\in INTOPT_PRINT_FLAG print iteration log line
-  INTOPT_TRANSPOSE_FLAG,  // 0/1 = none/do-transpose if possible
-  INTOPT_SCALE_FLAG,      // 0/1 = none/do-scale
-  INTOPT_TIGHT_FLAG,      // 0/1 = none/do-tight
-  INTOPT_PERMUTE_FLAG,    // 0/1 = none/do-permute
-  INTOPT_LPITLIM,         // iteration limit
-  INTOPT_COUNT
-};
 
 enum HIGHS_DBL_OPTIONS {
   DBLOPT_TIME_LIMIT = 0,
@@ -286,8 +274,7 @@ class HModel {
   void util_changeCoeff(int row, int col, const double newval);
   void util_getCoeff(HighsLp lp, int row, int col, double* val);
 
-  // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
-  // is false
+  // Methods for brief reports
   void util_reportNumberIterationObjectiveValue(int i_v);
   void util_reportSolverOutcome(const char* message);
 
@@ -320,7 +307,6 @@ class HModel {
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Solving options and scalar solution data section: Sort it out!
   // Solving options
-  int intOption[INTOPT_COUNT];
   double dblOption[DBLOPT_COUNT];
   string strOption[STROPT_COUNT];
 
