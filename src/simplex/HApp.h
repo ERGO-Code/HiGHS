@@ -58,7 +58,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 
   bool ranging = true;
   // Initialize solver.
-  HDual solver;
+  HDual solver(highs_model);
 
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {

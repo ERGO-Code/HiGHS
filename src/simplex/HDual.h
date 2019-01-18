@@ -93,10 +93,11 @@ enum HDUAL_VARIANT {
  */
 class HDual {
  public:
-  HDual(HighsModelObject& model_object) : highs_model_object(model_object),
+  HDual(HighsModelObject& model_object) : workHMO(model_object),
                                           dualRow(model_object),
                                           dualRHS(model_object) {
     dualRow.setup();
+    for (int i=0; i<HIGHS_SLICED_LIMIT; i++) slice_dualRow.push_back(HDualRow(model_object));
     dualRHS.setup();
   }
 
@@ -493,7 +494,7 @@ class HDual {
 
   // Model
   HModel *model;
-  HighsModelObject &highs_model_object;
+  HighsModelObject &workHMO;
   const HMatrix *matrix;
   const HFactor *factor;
 
@@ -563,7 +564,7 @@ class HDual {
   int slice_start[HIGHS_SLICED_LIMIT + 1];
   HMatrix slice_matrix[HIGHS_SLICED_LIMIT];
   HVector slice_row_ap[HIGHS_SLICED_LIMIT];
-  HDualRow slice_dualRow[HIGHS_SLICED_LIMIT];
+  std::vector<HDualRow> slice_dualRow;
 
   /**
    * @brief Multiple CHUZR data

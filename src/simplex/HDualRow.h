@@ -44,9 +44,7 @@ class HDualRow {
    * Done either for the whole pivotal row (see HDualRow::setup), or
    * just for a slice (see HDual::init_slice)
    */
-  void setupSlice(
-		  HighsModelObject& highs_model_object,  //!< Model for which setupSlice is performed
-                  int size        //!< Dimension of slice
+  void setupSlice( int size        //!< Dimension of slice
 		  );
   /**
    * @brief Clear the packed data by zeroing packCount and workCount
