@@ -80,18 +80,17 @@ struct HighsOptions {
   // For any solver
   //
   // primal feasibility (dual optimality) tolerance: DBLOPT_PRIMAL_TOL
-  double primalFeasibilityTolerance = 1e-7;
+  double primal_feasibility_tolerance = 1e-7;
   // dual feasibility (primal optimality) tolerance: DBLOPT_DUAL_TOL
-  double dualFeasibilityTolerance = 1e-7;
+  double dual_feasibility_tolerance = 1e-7;
   //
   // For the simplex solver
   //
-  // Perturb the original costs: INTOPT_PERTURB_FLAG
-  bool perturbCostsSimplex = true;
+  bool perturb_costs_simplex = true;
   // Maximum number of simplex iterations: INTOPT_LPITLIM
-  int iterationLimitSimplex = 999999;
+  int iteration_limit_simplex = 999999;
   // Upper bound on dual objective value: DBLOPT_OBJ_UB
-  double dualObjectiveValueUpperBound = 1e+200;
+  double dual_objective_value_upper_bound = 1e+200;
 
   bool clean_up = false;
 };
@@ -234,14 +233,13 @@ struct HighsSimplexInfo {
   int dual_edge_weight_strategy;
   int price_strategy;
 
-  double primalFeasibilityTolerance;
-  double dualFeasibilityTolerance;
-  bool perturbCosts;
-  int iterationLimit;
-  double dualObjectiveValueUpperBound;
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  bool perturb_costs;
+  int iteration_limit;
+  double dual_objective_value_upper_bound;
   
   // Internal options - can't be changed externally
-  double pamiCutoff;
 
   // Options for reporting timing
   bool reportSimplexInnerClock;

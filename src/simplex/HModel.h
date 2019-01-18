@@ -87,7 +87,6 @@ enum HIGHS_INT_OPTIONS {
   INTOPT_SCALE_FLAG,      // 0/1 = none/do-scale
   INTOPT_TIGHT_FLAG,      // 0/1 = none/do-tight
   INTOPT_PERMUTE_FLAG,    // 0/1 = none/do-permute
-  INTOPT_PERTURB_FLAG,    // 0/1 = none/do-perturb
   INTOPT_LPITLIM,         // iteration limit
   INTOPT_COUNT
 };
@@ -96,8 +95,6 @@ enum HIGHS_DBL_OPTIONS {
   DBLOPT_TIME_LIMIT = 0,
   DBLOPT_PRIMAL_TOL,
   DBLOPT_DUAL_TOL,
-  DBLOPT_PERTURB_BASE, // Not used
-  DBLOPT_PAMI_CUTOFF,
   DBLOPT_OBJ_UB,  // For SCIP
   DBLOPT_COUNT
 };

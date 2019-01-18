@@ -29,16 +29,10 @@
 
 class HFactor;
 
-enum DUAL_MODE {
-  DUAL_MODE_PLAIN = 0,
-  DUAL_MODE_TASKS,
-  DUAL_MODE_MULTI,
-};
-
-enum HDUAL_VARIANT {
-  HDUAL_VARIANT_PLAIN = 0,
-  HDUAL_VARIANT_TASKS,
-  HDUAL_VARIANT_MULTI,
+enum DUAL_SIMPLEX_MODE {
+  DUAL_SIMPLEX_MODE_PLAIN = 0,
+  DUAL_SIMPLEX_MODE_TASKS,
+  DUAL_SIMPLEX_MODE_MULTI,
 };
 
 enum DUAL_EDGE_WEIGHT_MODE {
@@ -88,6 +82,11 @@ const double maxAllowedDevexWeightRatio = 3.0;
 const double runningAverageMu = 0.05;
 
 /**
+ * Candidate persistence cut-off in PAMI
+ */
+const double pami_cutoff = 0.95;
+
+/**
  * @brief Dual simplex solver for HiGHS
  */
 class HDual {
@@ -99,12 +98,10 @@ class HDual {
   HDual() {}
 
   /**
-   * @brief Solve a model instance with a dual simplex variant and given number
-   * of threads
+   * @brief Solve a model instance with a given number of threads
    */
   void solve(
 	     HighsModelObject &highs_model_object,       //!< Instance of HiGHS model object to be solved
-	     int variant = 0,     //!< Default dual simplex variant is "PLAIN" (serial)
 	     int num_threads = 1  //!< Default number of threads is 1
   );
 
@@ -497,7 +494,6 @@ class HDual {
   int numTot;
 
   // Options
-  int dual_variant =      0;  //!< Dual simplex variant choice. TODO: handle this otherwise
   int dual_simplex_mode;
 
   int dual_edge_weight_mode;
@@ -514,12 +510,10 @@ class HDual {
   double time_limit_value;
 
   double Tp;  // Tolerance for primal
-  double primalFeasibilityTolerance;
+  double primal_feasibility_tolerance;
 
   double Td;  // Tolerance for dual
-  double dualFeasibilityTolerance;
-
-  double pamiCutoff;
+  double dual_feasibility_tolerance;
 
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;

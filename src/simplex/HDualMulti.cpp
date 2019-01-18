@@ -131,7 +131,7 @@ void HDual::major_chooseRow() {
   }
 
   // 6. Take other info associated with choices
-  double pamiCutoff = model->dblOption[DBLOPT_PAMI_CUTOFF];
+  double pami_cutoff = 0.95;
   for (int i = 0; i < multi_num; i++) {
     const int iRow = multi_choice[i].rowOut;
     if (iRow < 0) continue;
@@ -143,7 +143,7 @@ void HDual::major_chooseRow() {
     multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit =
         dualRHS.workArray[iRow] / dualRHS.workEdWt[iRow];
-    multi_choice[i].infeasLimit *= pamiCutoff;
+    multi_choice[i].infeasLimit *= pami_cutoff;
   }
 
   // 6. Finish count

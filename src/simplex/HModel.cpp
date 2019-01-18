@@ -59,13 +59,11 @@ HModel::HModel() {
   intOption[INTOPT_SCALE_FLAG] = 1;      // do scale
   intOption[INTOPT_TIGHT_FLAG] = 1;      // do tight
   intOption[INTOPT_PERMUTE_FLAG] = 0;    // no permute
-  intOption[INTOPT_PERTURB_FLAG] = 1;    // do perturb
   intOption[INTOPT_LPITLIM] =
       999999;  // Set iteration limit to frig SCIP call to SCIPlpiGetIntpar
 
   dblOption[DBLOPT_PRIMAL_TOL] = 1e-7;
   dblOption[DBLOPT_DUAL_TOL] = 1e-7;
-  dblOption[DBLOPT_PAMI_CUTOFF] = 0.95;
   dblOption[DBLOPT_OBJ_UB] = 1e+200;
 
   strOption[STROPT_PARTITION_FILE] = "";
@@ -1445,7 +1443,7 @@ void HModel::initCost(int perturb) {
   initPh2RowCost(0, solver_lp_->numRow_ - 1);
   // See if we want to skip perturbation
   problemPerturbed = 0;
-  if (perturb == 0 || intOption[INTOPT_PERTURB_FLAG] == 0) return;
+  if (perturb == 0 || simplex_info_->perturb_costs == 0) return;
   problemPerturbed = 1;
 
   // Perturb the original costs, scale down if is too big

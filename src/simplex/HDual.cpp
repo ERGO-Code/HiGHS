@@ -37,7 +37,7 @@ using std::endl;
 using std::flush;
 using std::fabs;
 
-void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num_threads) {
+void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
   highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
   model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
@@ -47,7 +47,6 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   HighsTimer &timer = highs_model_object->timer_;
   model->timer_ = &timer;
   //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
-  dual_variant = variant;
 
   SimplexTimer simplex_timer;
   simplex_timer.initialiseDualSimplexClocks(ref_highs_model_object);
@@ -283,7 +282,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateRpAn();
   // Report the ticks before primal
-  if (dual_variant == HDUAL_VARIANT_PLAIN) {
+  if (dual_simplex_mode == DUAL_SIMPLEX_MODE_PLAIN) {
     if (simplex_info.reportSimplexInnerClock) {
       simplex_timer.reportDualSimplexInnerClock(ref_highs_model_object);
     }
@@ -294,7 +293,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
     }
   }
 
-  //  if (dual_variant == HDUAL_VARIANT_TASKS) {
+  //  if (dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -306,7 +305,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   //    model->timer.report(reportCount, reportList, 0.0);
   //  }
 
-  if (dual_variant == HDUAL_VARIANT_MULTI) {
+  if (dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -317,7 +316,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   //    int reportCount = sizeof(reportList) / sizeof(int);
   //    model->timer.report(reportCount, reportList, 0.0);
       printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
-             model->modelName.c_str(), model->dblOption[DBLOPT_PAMI_CUTOFF],
+             model->modelName.c_str(), pami_cutoff,
              model->numberIteration / (1.0 + multi_iteration));
     }
 #endif
@@ -426,14 +425,13 @@ void HDual::options() {
   interpret_price_strategy(simplex_info_.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
-  primalFeasibilityTolerance = simplex_info_.primalFeasibilityTolerance;
-  dualFeasibilityTolerance = simplex_info_.dualFeasibilityTolerance;
-  //  perturbCosts = simplex_info_.perturbCosts;
+  primal_feasibility_tolerance = simplex_info_.primal_feasibility_tolerance;
+  dual_feasibility_tolerance = simplex_info_.dual_feasibility_tolerance;
+  //  perturb_costs = simplex_info_.perturb_costs;
   //  iterationLimit = simplex_info_.iterationLimit;
   //  dualObjectiveValueUpperBound = simplex_info_.dualObjectiveValueUpperBound;
 
   // Set values of internal options
-  pamiCutoff = 0.95;
 }
 
 void HDual::init(int num_threads) {
@@ -473,12 +471,12 @@ void HDual::init(int num_threads) {
   dualRHS.setup(highs_model_object);
 
   // Initialize for tasks
-  if (dual_variant == HDUAL_VARIANT_TASKS) {
+  if (dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
     init_slice(num_threads - 2);
   }
 
   // Initialize for multi
-  if (dual_variant == HDUAL_VARIANT_MULTI) {
+  if (dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
     if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
@@ -567,15 +565,15 @@ void HDual::solve_phase1() {
     rebuild();
     timer.stop(simplex_info.clock_[IterateDualRebuildClock]);
     for (;;) {
-      switch (dual_variant) {
+      switch (dual_simplex_mode) {
         default:
-        case HDUAL_VARIANT_PLAIN:
+        case DUAL_SIMPLEX_MODE_PLAIN:
           iterate();
           break;
-        case HDUAL_VARIANT_TASKS:
+        case DUAL_SIMPLEX_MODE_TASKS:
           iterate_tasks();
           break;
-        case HDUAL_VARIANT_MULTI:
+        case DUAL_SIMPLEX_MODE_MULTI:
           iterate_multi();
           break;
       }
@@ -680,17 +678,17 @@ void HDual::solve_phase2() {
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solve_phase2()
-      // Performs one iteration in case HDUAL_VARIANT_PLAIN:
+      // Performs one iteration in case DUAL_SIMPLEX_MODE_PLAIN:
       reportSolverProgress(highs_model_object);
-      switch (dual_variant) {
+      switch (dual_simplex_mode) {
         default:
-        case HDUAL_VARIANT_PLAIN:
+        case DUAL_SIMPLEX_MODE_PLAIN:
           iterate();
           break;
-        case HDUAL_VARIANT_TASKS:
+        case DUAL_SIMPLEX_MODE_TASKS:
           iterate_tasks();
           break;
-        case HDUAL_VARIANT_MULTI:
+        case DUAL_SIMPLEX_MODE_MULTI:
           iterate_multi();
           break;
       }
@@ -1698,7 +1696,7 @@ void HDual::updateDual() {
   else {
     // Update the dual values (if packCount>0)
     dualRow.update_dual(thetaDual, columnOut);
-    if (dual_variant != HDUAL_VARIANT_PLAIN && slice_PRICE) {
+    if (dual_simplex_mode != DUAL_SIMPLEX_MODE_PLAIN && slice_PRICE) {
       // Update the dual variables slice-by-slice [presumably
       // nothing is done in the previous call to
       // dualRow.update_dual. TODO: Check with Qi

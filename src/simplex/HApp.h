@@ -88,18 +88,16 @@ HighsStatus solveSimplex(
 
   // Solve, depending on the options.
   // Parallel.
-  if (opt.sip) {
-    //    model.intOption[INTOPT_PERMUTE_FLAG] = 1; Now forced in loadOptions
-    dual_solver.solve(highs_model, HDUAL_VARIANT_TASKS, 8);
-  } else if (opt.pami) {
-    //    model.intOption[INTOPT_PERMUTE_FLAG] = 1; Now forced in loadOptions
+  if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
+    dual_solver.solve(highs_model, 8);
+  } else if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) {
     if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    dual_solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
+    dual_solver.solve(highs_model, 8);
 #ifdef HiGHSDEV
-    if (opt.pami) model.writePivots("multi");
-    if (opt.sip) model.writePivots("tasks");
+    if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) model.writePivots("multi");
+    if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) model.writePivots("tasks");
 #endif
   } else {
     // Serial. Based on previous solvePlainJAJH.
@@ -125,9 +123,9 @@ HighsStatus solveSimplex(
     bool EightThreads = false;
 
     if (FourThreads)
-      dual_solver.solve(highs_model, HDUAL_VARIANT_MULTI, 4);
+      dual_solver.solve(highs_model, 4);
     else if (EightThreads)
-      dual_solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
+      dual_solver.solve(highs_model, 8);
     else
       dual_solver.solve(highs_model);
 
