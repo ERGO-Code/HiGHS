@@ -62,19 +62,6 @@ const int HIGHS_THREAD_LIMIT = 32;
 const int HIGHS_SLICED_LIMIT = 100;
 
 /**
- * Possible edge weight mode values used to test EdWt_Mode
- */
-const int EdWt_Mode_DSE = 0;
-const int EdWt_Mode_Dvx = 1;
-const int EdWt_Mode_Dan = 2;
-
-/**
- * Possible pricing mode values used to test Price_Mode
- */
-const int Price_Mode_Row = 0;
-const int Price_Mode_Col = 1;
-
-/**
  * Devex status flags. Each column has a Devex flag which is used as a
  * multiplier to save a conditional branch
  */
@@ -323,13 +310,11 @@ class HDual {
    * @brief Set a run-time parameter. TODO: handle this otherwise
    */
   void interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy);
-  void setEdWt(const char *EdWtMode);
 
   /**
    * @brief Set a run-time parameter. TODO: handle this otherwise
    */
   void interpret_price_strategy(int simplex_price_strategy);
-  void setPrice(const char *PriceMode);
 
   /**
    * @brief Set a run-time parameter. TODO: handle this otherwise
@@ -515,22 +500,15 @@ class HDual {
   int dual_variant =      0;  //!< Dual simplex variant choice. TODO: handle this otherwise
   int dual_simplex_mode;
 
-  int EdWt_Mode = 0;      //!< Edge weight mode. TODO: handle this otherwise
   int dual_edge_weight_mode;
-  bool iz_DSE_wt;  //!< By default initialise DSE weights if initial basis
-                   //!< matrix is not an identity
-  bool alw_DSE2Dvx_sw = true;  //!< By default allow switch to Devex from DSE
+  bool initialise_dual_steepest_edge_weights;
+  bool allow_dual_steepest_edge_to_devex_switch;
 
-  int Price_Mode = 0;     //!< Pricing mode. TODO: handle this otherwise
   int price_mode;
-  bool alw_price_by_col_sw = true;  //!< By default allow switch to column PRICE
-                                    //!< if results sufficiently dense
-  bool alw_price_by_row_sw =
-      true;  //!< By default allow switch to standard row-wise PRICE if result
-             //!< is sufficiently dense
-  bool alw_price_ultra = false;  //!< By default don't allow ultra-sparse PRICE
-  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
-                                       //!< when pi_p has at least this density
+  bool allow_price_by_col_switch;
+  bool allow_price_by_row_switch;
+  bool allow_price_ultra;
+  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE when pi_p has at least this density
 
   double TimeLimitValue = 0;  //!< Value of time limit. TODO: handle this otherwise
   double time_limit_value;
@@ -679,7 +657,7 @@ class HDual {
     double AnIterTraceDsty[NumAnIterOpTy];
     double AnIterTraceAux0;
     int AnIterTraceIter;
-    int AnIterTraceEdWt_Mode;
+    int AnIterTrace_dual_edge_weight_mode;
   };
 
   const int AnIterTraceMxNumRec = 20;
@@ -695,7 +673,7 @@ class HDual {
   int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[3];  // TODO: How can this be EdWt_Mode_Dan+1
+  int AnIterNumEdWtIt[3];  // TODO: How can this be DUAL_EDGE_WEIGHT_MODE_DANTZIG+1
 #endif
 };
 

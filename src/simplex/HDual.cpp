@@ -105,30 +105,30 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
-  //  printf("model->mlFg_haveEdWt 2 = %d; EdWt_Mode = %d; EdWt_Mode_DSE =
+  //  printf("model->mlFg_haveEdWt 2 = %d; dual_edge_weight_mode = %d; DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE =
   //  %d\n",
-  //	 model->mlFg_haveEdWt, EdWt_Mode, EdWt_Mode_DSE);cout<<flush;
+  //	 model->mlFg_haveEdWt, dual_edge_weight_mode, DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE);cout<<flush;
   //  printf("Edge weights known? %d\n", !model->mlFg_haveEdWt);cout<<flush;
 #endif
   if (!model->mlFg_haveEdWt) {
     // Edge weights are not known
-    // Set up edge weights according to EdWt_Mode and iz_DSE_wt
-    if (EdWt_Mode == EdWt_Mode_Dvx) {
+    // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
+    if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DEVEX) {
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
       const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
       dvx_ix.assign(numTot, 0);
       iz_dvx_fwk();
-    } else if (EdWt_Mode == EdWt_Mode_DSE) {
+    } else if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
       // Using dual steepest edge (DSE) weights
       int numBasicStructurals = numRow - model->numBasicLogicals;
-      bool computeExactDseWeights = numBasicStructurals > 0 && iz_DSE_wt;
+      bool computeExactDseWeights = numBasicStructurals > 0 && initialise_dual_steepest_edge_weights;
 #ifdef HiGHSDEV
       n_wg_DSE_wt = 0;
       if (computeExactDseWeights) {
-	printf("If (0<numBasicStructurals = %d) && %d = iz_DSE_wt: Compute exact "
-	       "DSE weights\n", numBasicStructurals, iz_DSE_wt);
+	printf("If (0<numBasicStructurals = %d) && %d = initialise_dual_steepest_edge_weights: Compute exact "
+	       "DSE weights\n", numBasicStructurals, initialise_dual_steepest_edge_weights);
       }
 #endif
       if (computeExactDseWeights) {
@@ -345,7 +345,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int variant, int num
   }
   printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n", n_ph1_du_it,
          n_ph2_du_it, n_pr_it, model->numberIteration);
-  if (EdWt_Mode == EdWt_Mode_Dvx) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DEVEX) {
     printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
            model->numberIteration / n_dvx_fwk);
   }
@@ -931,7 +931,7 @@ void HDual::iterate() {
   updateFtran();
 
   // updateFtranDSE performs the DSE FTRAN on pi_p
-  if (EdWt_Mode == EdWt_Mode_DSE) updateFtranDSE(&row_ep);
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) updateFtranDSE(&row_ep);
   timer.stop(simplex_info.clock_[IterateFtranClock]);
 
   // updateVerify() Checks row-wise pivot against column-wise pivot for
@@ -950,7 +950,7 @@ void HDual::iterate() {
   updatePrimal(&row_ep);
   timer.stop(simplex_info.clock_[IteratePrimalClock]);
 
-  if ((EdWt_Mode == EdWt_Mode_Dvx) && (nw_dvx_fwk)) {
+  if ((dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DEVEX) && (nw_dvx_fwk)) {
     timer.start(simplex_info.clock_[IterateDevexIzClock]);
     iz_dvx_fwk();
     timer.stop(simplex_info.clock_[IterateDevexIzClock]);
@@ -1057,7 +1057,7 @@ void HDual::iterateIzAn() {
   AnIterNumRowPrice = 0;
   AnIterNumRowPriceWSw = 0;
   AnIterNumRowPriceUltra = 0;
-  for (int k = 0; k <= EdWt_Mode_Dan; k++) AnIterNumEdWtIt[k] = 0;
+  for (int k = 0; k <= DUAL_EDGE_WEIGHT_MODE_DANTZIG; k++) AnIterNumEdWtIt[k] = 0;
   AnIterNumCostlyDseIt = 0;
   AnIterTraceNumRec = 0;
   AnIterTraceIterDl = 1;
@@ -1073,7 +1073,7 @@ void HDual::iterateAn() {
   iterateRp();
 
   // Possibly switch from DSE to Dvx
-  if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
     double AnIterCostlyDseMeasureDen;
     //    AnIterCostlyDseMeasureDen = row_epDensity*columnDensity;
     AnIterCostlyDseMeasureDen =
@@ -1092,7 +1092,7 @@ void HDual::iterateAn() {
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = model->numberIteration - AnIterIt0;
       const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-      if (alw_DSE2Dvx_sw &&
+      if (allow_dual_steepest_edge_to_devex_switch &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
           (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
         // At least 5% of the (at least) 0.1NumTot iterations have been costly
@@ -1104,7 +1104,7 @@ void HDual::iterateAn() {
             AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,
             columnDensity);
 #endif
-        EdWt_Mode = EdWt_Mode_Dvx;
+        dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_DEVEX;
         // Zero the number of Devex frameworks used and set up the first one
         n_dvx_fwk = 0;
         dvx_ix.assign(numTot, 0);
@@ -1123,7 +1123,7 @@ void HDual::iterateAn() {
     printf("Iter %10d: ", AnIterCuIt);
     iterateRpDsty(true);
     iterateRpDsty(false);
-    if (EdWt_Mode == EdWt_Mode_DSE) {
+    if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
       int lc_pct = (100 * AnIterNumCostlyDseIt) / (AnIterCuIt - AnIterIt0);
       printf("| Fq = %4.2f; Su =%5d (%3d%%)", AnIterCostlyDseFq,
              AnIterNumCostlyDseIt, lc_pct);
@@ -1150,7 +1150,7 @@ void HDual::iterateAn() {
   if (thetaDual <= 0) AnIterNumDuDgnIt++;
   if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
   if (AnIterCuIt > AnIterPrevIt)
-    AnIterNumEdWtIt[EdWt_Mode] += (AnIterCuIt - AnIterPrevIt);
+    AnIterNumEdWtIt[dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
 
   AnIterTraceRec *lcAnIter = &AnIterTrace[AnIterTraceNumRec];
   //  if (model->numberIteration ==
@@ -1170,14 +1170,14 @@ void HDual::iterateAn() {
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = columnDensity;
-      if (EdWt_Mode == EdWt_Mode_DSE) {
+      if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
         lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = rowdseDensity;
         lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
       } else {
         lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
         lcAnIter->AnIterTraceAux0 = 0;
       }
-      lcAnIter->AnIterTraceEdWt_Mode = EdWt_Mode;
+      lcAnIter->AnIterTrace_dual_edge_weight_mode = dual_edge_weight_mode;
     }
   }
   AnIterPrevIt = AnIterCuIt;
@@ -1290,7 +1290,7 @@ void HDual::chooseRow() {
 #endif
     timer.stop(simplex_info.clock_[BtranClock]);
     // Verify DSE weight
-    if (EdWt_Mode == EdWt_Mode_DSE) {
+    if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
       // For DSE, see how accurate the updated weight is
       // Save the updated weight
       double u_weight = dualRHS.workEdWt[rowOut];
@@ -1354,11 +1354,11 @@ void HDual::chooseColumn(HVector *row_ep) {
 
 #ifdef HiGHSDEV
   bool anPriceEr = false;
-  bool useUltraPrice = alw_price_ultra &&
+  bool useUltraPrice = allow_price_ultra &&
                        row_apDensity * numCol * 10 < row_ap.ilP2 &&
                        row_apDensity < 1e-3;
 #endif
-  if (Price_Mode == Price_Mode_Col) {
+  if (price_mode == PRICE_MODE_COL) {
     // Column-wise PRICE
 #ifdef HiGHSDEV
     if (simplex_info.analyseSimplexIterations) {
@@ -1372,7 +1372,7 @@ void HDual::chooseColumn(HVector *row_ep) {
     // By default, use row-wise PRICE, but possibly use column-wise
     // PRICE if the density of row_ep is too high
     double lc_dsty = (double)(*row_ep).count / numRow;
-    if (alw_price_by_col_sw && (lc_dsty > dstyColPriceSw)) {
+    if (allow_price_by_col_switch && (lc_dsty > dstyColPriceSw)) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
       if (simplex_info.analyseSimplexIterations) {
@@ -1404,7 +1404,7 @@ void HDual::chooseColumn(HVector *row_ep) {
         if (!price_er) printf("No ultra PRICE error\n");
       }
 #endif
-    } else if (alw_price_by_row_sw) {
+    } else if (allow_price_by_row_switch) {
       // Avoid hyper-sparse PRICE on current density of result or
       // switch if the density of row_ap becomes extreme
 #ifdef HiGHSDEV
@@ -1494,7 +1494,7 @@ void HDual::chooseColumn(HVector *row_ep) {
                                   // numerical checking
   thetaDual = dualRow.workTheta;  // Dual step length
 
-  if (EdWt_Mode == EdWt_Mode_Dvx) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DEVEX) {
     timer.start(simplex_info.clock_[DevexWtClock]);
     // Determine the exact Devex weight
     double og_dvx_wt_o_rowOut = dualRHS.workEdWt[rowOut];
@@ -1716,7 +1716,7 @@ void HDual::updatePrimal(HVector *DSE_Vector) {
   //
   // If reinversion is needed then skip this method
   if (invertHint) return;
-  // NB DSE_Vector is only computed if EdWt_Mode == EdWt_Mode_DSE
+  // NB DSE_Vector is only computed if dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE
   // Update - primal and weight
   dualRHS.update_primal(&columnBFRT, 1);
   dualRHS.update_infeasList(&columnBFRT);
@@ -1725,12 +1725,12 @@ void HDual::updatePrimal(HVector *DSE_Vector) {
   double u_out = baseUpper[rowOut];
   thetaPrimal = (x_out - (deltaPrimal < 0 ? l_out : u_out)) / alpha;
   dualRHS.update_primal(&column, thetaPrimal);
-  if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
     double thisEdWt = dualRHS.workEdWt[rowOut] / (alpha * alpha);
     dualRHS.update_weight_DSE(&column, thisEdWt, -2 / alpha,
                               &DSE_Vector->array[0]);
     dualRHS.workEdWt[rowOut] = thisEdWt;
-  } else if (EdWt_Mode == EdWt_Mode_Dvx) {
+  } else if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DEVEX) {
     // Pivotal row is for the current basis: weights are required for
     // the next basis so have to divide the current (exact) weight by
     // the pivotal value
@@ -1749,7 +1749,7 @@ void HDual::updatePrimal(HVector *DSE_Vector) {
   }
   dualRHS.update_infeasList(&column);
 
-  if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
     double lc_OpRsDensity = (double)DSE_Vector->count / numRow;
     uOpRsDensityRec(lc_OpRsDensity, rowdseDensity);
   }
@@ -1758,12 +1758,12 @@ void HDual::updatePrimal(HVector *DSE_Vector) {
 
   //  total_fake += column.fakeTick;
   total_syntheticTick += column.syntheticTick;
-  if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
     //      total_fake += DSE_Vector->fakeTick;
     total_syntheticTick += DSE_Vector->syntheticTick;
   }
   total_FT_inc_TICK += column.syntheticTick;  // Was .pseudoTick
-  if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
     total_FT_inc_TICK += DSE_Vector->syntheticTick;  // Was .pseudoTick
   }
 }
@@ -1886,107 +1886,49 @@ void HDual::interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_str
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_DEVEX;
   } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE) {
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
-    iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = false;
+    initialise_dual_steepest_edge_weights = true;
+    allow_dual_steepest_edge_to_devex_switch = false;
   } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
-    iz_DSE_wt = false;
-    alw_DSE2Dvx_sw = false;
+    initialise_dual_steepest_edge_weights = false;
+    allow_dual_steepest_edge_to_devex_switch = false;
   } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
-    iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = true;
+    initialise_dual_steepest_edge_weights = true;
+    allow_dual_steepest_edge_to_devex_switch = true;
   } else {
     printf("HDual::interpret_dual_edge_weight_strategy: unrecognised simplex_dual_edge_weight_strategy = %d - using dual steepest edge with possible switch to Devex\n", simplex_dual_edge_weight_strategy);
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE;
-    iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = true;
+    initialise_dual_steepest_edge_weights = true;
+    allow_dual_steepest_edge_to_devex_switch = true;
   }
-}
-
-void HDual::setEdWt(const char *EdWt_ArgV) {
-  //	cout<<"HDual::setEdWt EdWt_ArgV = "<<EdWt_ArgV<<endl;
-  if (strcmp(EdWt_ArgV, "Dan") == 0)
-    EdWt_Mode = EdWt_Mode_Dan;
-  else if (strcmp(EdWt_ArgV, "dvx") == 0)
-    EdWt_Mode = EdWt_Mode_Dvx;
-  else if (strcmp(EdWt_ArgV, "dse") == 0) {
-    EdWt_Mode = EdWt_Mode_DSE;
-    iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = false;
-  } else if (strcmp(EdWt_ArgV, "dse0") == 0) {
-    EdWt_Mode = EdWt_Mode_DSE;
-    iz_DSE_wt = false;
-    alw_DSE2Dvx_sw = false;
-  } else if (strcmp(EdWt_ArgV, "dse2dvx") == 0) {
-    EdWt_Mode = EdWt_Mode_DSE;
-    iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = true;
-  } else {
-    cout << "HDual::setEdWt unrecognised EdWtArgV = " << EdWt_ArgV
-         << " - using DSE with possible switch to Devex" << endl;
-    EdWt_Mode = EdWt_Mode_DSE;
-    iz_DSE_wt = true;
-    alw_DSE2Dvx_sw = true;
-  }
-  //	cout<<"HDual::setEdWt iz_DSE_wt = " << iz_DSE_wt << endl;
 }
 
 void HDual::interpret_price_strategy(int simplex_price_strategy) {
-  alw_price_by_col_sw = false;
-  alw_price_by_row_sw = false;
-  alw_price_ultra = false;
+  allow_price_by_col_switch = false;
+  allow_price_by_row_switch = false;
+  allow_price_ultra = false;
   if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
     price_mode = PRICE_MODE_COL;
   } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
     price_mode = PRICE_MODE_ROW;
   } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
     price_mode = PRICE_MODE_ROW;
-    alw_price_by_row_sw = true;
+    allow_price_by_row_switch = true;
   } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
     price_mode = PRICE_MODE_ROW;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
+    allow_price_by_col_switch = true;
+    allow_price_by_row_switch = true;
   } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_ULTRA) {
     price_mode = PRICE_MODE_ROW;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
-    alw_price_ultra = true;
+    allow_price_by_col_switch = true;
+    allow_price_by_row_switch = true;
+    allow_price_ultra = true;
   } else {
     printf("HDual::interpret_price_strategy: unrecognised simplex_price_strategy = %d - using row Price with switch or colump price switch\n", simplex_price_strategy);
     price_mode = PRICE_MODE_ROW;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
-  }
-}
-
-void HDual::setPrice(const char *Price_ArgV) {
-  //  cout<<"HDual::setPrice Price_ArgV = "<<Price_ArgV<<endl;
-  alw_price_by_col_sw = false;
-  alw_price_by_row_sw = false;
-  alw_price_ultra = false;
-  if (strcmp(Price_ArgV, "col") == 0) {
-    Price_Mode = Price_Mode_Col;
-  } else if (strcmp(Price_ArgV, "row") == 0) {
-    Price_Mode = Price_Mode_Row;
-  } else if (strcmp(Price_ArgV, "rowsw") == 0) {
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_row_sw = true;
-  } else if (strcmp(Price_ArgV, "rowswcolsw") == 0) {
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
-  } else if (strcmp(Price_ArgV, "rowultra") == 0) {
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
-    alw_price_ultra = true;
-  } else {
-    cout << "HDual::setPrice unrecognised PriceArgV = " << Price_ArgV
-         << " - using row Price with switch or colump price switch" << endl;
-    Price_Mode = Price_Mode_Row;
-    alw_price_by_col_sw = true;
-    alw_price_by_row_sw = true;
+    allow_price_by_col_switch = true;
+    allow_price_by_row_switch = true;
   }
 }
 
@@ -2194,7 +2136,7 @@ void HDual::iterateRpDsty(bool header) {
     int l10REpDse = intLog10(row_epDensity);
     int l10RapDse = intLog10(row_apDensity);
     double lc_rowdseDensity;
-    if (EdWt_Mode == EdWt_Mode_DSE) {
+    if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
       lc_rowdseDensity = rowdseDensity;
     } else {
       lc_rowdseDensity = 0;
@@ -2248,15 +2190,15 @@ void HDual::iterateRpAn() {
          AnIterIt0 + 1, model->numberIteration);
   if (AnIterNumIter <= 0) return;
   int lc_EdWtNumIter;
-  lc_EdWtNumIter = AnIterNumEdWtIt[EdWt_Mode_DSE];
+  lc_EdWtNumIter = AnIterNumEdWtIt[DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE];
   if (lc_EdWtNumIter > 0)
     printf("DSE for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[EdWt_Mode_Dvx];
+  lc_EdWtNumIter = AnIterNumEdWtIt[DUAL_EDGE_WEIGHT_MODE_DEVEX];
   if (lc_EdWtNumIter > 0)
     printf("Dvx for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[EdWt_Mode_Dan];
+  lc_EdWtNumIter = AnIterNumEdWtIt[DUAL_EDGE_WEIGHT_MODE_DANTZIG];
   if (lc_EdWtNumIter > 0)
     printf("Dan for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
@@ -2356,14 +2298,14 @@ void HDual::iterateRpAn() {
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
   lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
   lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranBFRT] = columnDensity;
-  if (EdWt_Mode == EdWt_Mode_DSE) {
+  if (dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE) {
     lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = rowdseDensity;
     lcAnIter->AnIterTraceAux0 = AnIterCostlyDseMeasure;
   } else {
     lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
     lcAnIter->AnIterTraceAux0 = 0;
   }
-  lcAnIter->AnIterTraceEdWt_Mode = EdWt_Mode;
+  lcAnIter->AnIterTrace_dual_edge_weight_mode = dual_edge_weight_mode;
 
   if (AnIterTraceIterDl >= 100) {
     printf("\n Iteration speed analysis\n");
@@ -2384,24 +2326,24 @@ void HDual::iterateRpAn() {
       double dlTime = toTime - fmTime;
       int iterSpeed = 0;
       if (dlTime > 0) iterSpeed = dlIter / dlTime;
-      int lcEdWt_Mode = lcAnIter->AnIterTraceEdWt_Mode;
+      int lc_dual_edge_weight_mode = lcAnIter->AnIterTrace_dual_edge_weight_mode;
       int l10ColDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran]);
       int l10REpDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran]);
       int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Price]);
       int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
       int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
-      string strEdWt_Mode;
-      if (lcEdWt_Mode == EdWt_Mode_DSE)
-        strEdWt_Mode = "DSE";
-      else if (lcEdWt_Mode == EdWt_Mode_Dvx)
-        strEdWt_Mode = "Dvx";
-      else if (lcEdWt_Mode == EdWt_Mode_Dan)
-        strEdWt_Mode = "Dan";
+      string str_dual_edge_weight_mode;
+      if (lc_dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE)
+        str_dual_edge_weight_mode = "DSE";
+      else if (lc_dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DEVEX)
+        str_dual_edge_weight_mode = "Dvx";
+      else if (lc_dual_edge_weight_mode == DUAL_EDGE_WEIGHT_MODE_DANTZIG)
+        str_dual_edge_weight_mode = "Dan";
       else
-        strEdWt_Mode = "XXX";
+        str_dual_edge_weight_mode = "XXX";
       printf("%7d (%7d:%7d) %8.4f  %7d | %4d %4d %4d %4d |  %3s | %4d\n",
              dlIter, fmIter, toIter, dlTime, iterSpeed, l10ColDse, l10REpDse,
-             l10RapDse, l10DseDse, strEdWt_Mode.c_str(), l10Aux0);
+             l10RapDse, l10DseDse, str_dual_edge_weight_mode.c_str(), l10Aux0);
       fmIter = toIter;
       fmTime = toTime;
     }

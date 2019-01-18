@@ -110,15 +110,13 @@ HighsStatus solveSimplex(
     int solvePh2DuIt = 0;
     int solvePrIt = 0;
 #endif
-    HDual dual_solver;
+    //    HDual dual_solver;
 
     vector<double> colPrAct;
     vector<double> colDuAct;
     vector<double> rowPrAct;
     vector<double> rowDuAct;
 
-    if (opt.priceMode.size() > 0) dual_solver.setPrice(opt.priceMode.c_str());
-    if (opt.edWtMode.size() > 0) dual_solver.setEdWt(opt.edWtMode.c_str());
     dual_solver.setTimeLimit(opt.timeLimit);
 
     //  bool FourThreads = true;
