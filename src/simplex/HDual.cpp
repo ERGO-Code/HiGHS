@@ -419,9 +419,9 @@ void HDual::options() {
   // Copy values of simplex solver options to dual simplex options
   primal_feasibility_tolerance = simplex_info_.primal_feasibility_tolerance;
   dual_feasibility_tolerance = simplex_info_.dual_feasibility_tolerance;
+  dual_objective_value_upper_bound = simplex_info_.dual_objective_value_upper_bound;
   //  perturb_costs = simplex_info_.perturb_costs;
   //  iterationLimit = simplex_info_.iterationLimit;
-  //  dualObjectiveValueUpperBound = simplex_info_.dualObjectiveValueUpperBound;
 
   // Set values of internal options
 }
@@ -444,12 +444,8 @@ void HDual::init(int num_threads) {
   baseValue = &highs_model_object->simplex_info_.baseValue_[0];
 
   // Copy tolerances
-  Tp = model->dblOption[DBLOPT_PRIMAL_TOL];
-  Td = model->dblOption[DBLOPT_DUAL_TOL];
-  if (Tp != primal_feasibility_tolerance) {
-    printf("Tp != primal_feasibility_tolerance %g %g\n", Tp, primal_feasibility_tolerance);}
-  if (Td != dual_feasibility_tolerance) {
-    printf("Td != dual_feasibility_tolerance %g %g\n", Td, dual_feasibility_tolerance);}
+  Tp = primal_feasibility_tolerance;
+  Td = dual_feasibility_tolerance;
 
   // Setup local vectors
   columnDSE.setup(numRow);
@@ -576,16 +572,15 @@ void HDual::solve_phase1() {
       if (invertHint) break;
       // printf("HDual::solve_phase1: Iter = %d; Objective = %g\n",
       // model->numberIteration, model->dualObjectiveValue);
-      /*
-      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
+      if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
-        printf("HDual::solve_phase1: %g = Objective >
-dblOption[DBLOPT_OBJ_UB]\n", model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+        printf("HDual::solve_phase1: %12g = Objective > ObjectiveUB\n",
+	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
       }
-      */
     }
     //      currentRunHighsTime = timer.readRunHighsClock();
 #ifdef HiGHSDEV
@@ -689,12 +684,11 @@ void HDual::solve_phase2() {
       }
       // invertHint can be true for various reasons see HModel.h
       if (invertHint) break;
-      if (simplex_info.updatedDualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
+      if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
-        printf(
-            "HDual::solve_phase2: Objective = %g > %g = "
-            "dblOption[DBLOPT_OBJ_UB]\n",
-            simplex_info->updatedDualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+        printf("HDual::solve_phase2: %12g = Objective > ObjectiveUB\n",
+	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         SolveBailout = true;

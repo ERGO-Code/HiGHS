@@ -91,9 +91,7 @@ HighsStatus solveSimplex(
   if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
     dual_solver.solve(highs_model, 8);
   } else if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) {
-    if (opt.partitionFile.size() > 0) {
-      model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
-    }
+    //    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
     dual_solver.solve(highs_model, 8);
 #ifdef HiGHSDEV
     if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) model.writePivots("multi");

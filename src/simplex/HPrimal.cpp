@@ -80,14 +80,13 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
       if (invertHint) {
         break;
       }
-      //      double dualObjectiveCurrentValue = model->dualObjectiveValue
-      double dualObjectiveCurrentValue = simplex_info.dualObjectiveValue;
+      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      // model->numberIteration, dualObjectiveCurrentValue);
-      if (dualObjectiveCurrentValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      // model->numberIteration, current_dual_objective_value);
+      if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
-        printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n",
-	       dualObjectiveCurrentValue, model->dblOption[DBLOPT_OBJ_UB]);
+        printf("HPrimal::solve_phase2: %12g = Objective > ObjectiveUB\n",
+	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
@@ -172,10 +171,7 @@ void HPrimal::primalChooseColumn() {
   double *workDual = &highs_model_object->simplex_info_.workDual_[0];
   const double *workLower = &highs_model_object->simplex_info_.workLower_[0];
   const double *workUpper = &highs_model_object->simplex_info_.workUpper_[0];
-  const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
-  const double dual_feasibility_tolerance = highs_model_object->simplex_info_.dual_feasibility_tolerance;
-  if (dualTolerance != dual_feasibility_tolerance) {
-    printf("dualTolerance != dual_feasibility_tolerance %g %g\n", dualTolerance, dual_feasibility_tolerance);}
+  const double dualTolerance = highs_model_object->simplex_info_.dual_feasibility_tolerance;
 
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
@@ -203,10 +199,7 @@ void HPrimal::primalChooseRow() {
   const double *baseLower = &highs_model_object->simplex_info_.baseLower_[0];
   const double *baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
   double *baseValue = &highs_model_object->simplex_info_.baseValue_[0];
-  const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
-  const double primal_feasibility_tolerance = highs_model_object->simplex_info_.primal_feasibility_tolerance;
-  if (primalTolerance != primal_feasibility_tolerance) {
-    printf("primalTolerance != primal_feasibility_tolerance %g %g\n", primalTolerance, primal_feasibility_tolerance);}
+  const double primalTolerance = highs_model_object->simplex_info_.primal_feasibility_tolerance;
 
   // Compute pivot column
   column.clear();
@@ -274,10 +267,7 @@ void HPrimal::primalUpdate() {
   const double *baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
   double *workValue = &highs_model_object->simplex_info_.workValue_[0];
   double *baseValue = &highs_model_object->simplex_info_.baseValue_[0];
-  const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
-  const double primal_feasibility_tolerance = highs_model_object->simplex_info_.primal_feasibility_tolerance;
-  if (primalTolerance != primal_feasibility_tolerance) {
-    printf("primalTolerance != primal_feasibility_tolerance %g %g\n", primalTolerance, primal_feasibility_tolerance);}
+  const double primalTolerance = highs_model_object->simplex_info_.primal_feasibility_tolerance;
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];

@@ -79,17 +79,17 @@ struct HighsOptions {
   //
   // For any solver
   //
-  // primal feasibility (dual optimality) tolerance: DBLOPT_PRIMAL_TOL
-  double primal_feasibility_tolerance = 1.0001e-7;
-  // dual feasibility (primal optimality) tolerance: DBLOPT_DUAL_TOL
-  double dual_feasibility_tolerance = 1.0002e-7;
+  // primal feasibility (dual optimality) tolerance
+  double primal_feasibility_tolerance = 1e-7;
+  // dual feasibility (primal optimality) tolerance
+  double dual_feasibility_tolerance = 1e-7;
   //
   // For the simplex solver
   //
   bool perturb_costs_simplex = true;
   // Maximum number of simplex iterations
   int iteration_limit_simplex = 999999;
-  // Upper bound on dual objective value: DBLOPT_OBJ_UB
+  // Upper bound on dual objective value
   double dual_objective_value_upper_bound = 1e+200;
 
   bool clean_up = false;

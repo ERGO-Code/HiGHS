@@ -75,23 +75,6 @@ enum nonbasicMoveStat {
   NONBASIC_MOVE_ZE = 0    // Fixed or free to move up and down
 };
 
-// For INT, DBL and STR options, ensure that ***OPT_COUNT is last since
-// this is the number of options and used to dimension as
-//***Option[***OPT_COUNT]
-
-enum HIGHS_DBL_OPTIONS {
-  DBLOPT_TIME_LIMIT = 0,
-  DBLOPT_PRIMAL_TOL,
-  DBLOPT_DUAL_TOL,
-  DBLOPT_OBJ_UB,  // For SCIP
-  DBLOPT_COUNT
-};
-
-enum HIGHS_STR_OPTIONS {
-  STROPT_PARTITION_FILE = 0,  // name of row partition file
-  STROPT_COUNT
-};
-
 class HModel {
  public:
   HModel();
@@ -304,10 +287,7 @@ class HModel {
 #endif
 
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  // Solving options and scalar solution data section: Sort it out!
-  // Solving options
-  double dblOption[DBLOPT_COUNT];
-  string strOption[STROPT_COUNT];
+  // Scalar solution data section: Sort it out!
 
   // Random number generator
   HighsRandom random;

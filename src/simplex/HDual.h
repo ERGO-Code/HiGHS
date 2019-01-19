@@ -525,7 +525,8 @@ class HDual {
 
   double Td;  // Tolerance for dual
   double dual_feasibility_tolerance;
-
+  double dual_objective_value_upper_bound;
+  
   vector<double> bs_cond_x;
   vector<double> bs_cond_y;
   vector<double> bs_cond_z;
