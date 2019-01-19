@@ -833,7 +833,7 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = true;//highs_model_object->haveDualObjectiveValue;
+  bool checkDualObjectiveValue = highs_model_object->haveDualObjectiveValue;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
   simplex_method_.computeDualObjectiveValue(highs_model_object, solvePhase);
@@ -1176,7 +1176,7 @@ void HDual::iterateAn() {
 void HDual::iterateRp() {
   int numIter = model->numberIteration;
   bool header = numIter % 10 == 1;
-  header = true;  // JAJH10/10
+  //  header = true;  // JAJH10/10
   if (header) iterateRpFull(header);
   iterateRpFull(false);
 }
@@ -1216,8 +1216,7 @@ void HDual::iterateRpDuObj(int iterate_log_level, bool header) {
   if (header) {
     HighsPrintMessage(iterate_log_level, "    DualObjective    ");
   } else {
-    simplex_method_.computeDualObjectiveValue(highs_model_object, solvePhase);
-    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.dualObjectiveValue);
+    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.updatedDualObjectiveValue);
   }
 }
 
