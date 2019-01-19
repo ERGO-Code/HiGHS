@@ -37,19 +37,18 @@ using std::endl;
 using std::flush;
 using std::fabs;
 
-void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
-  highs_model_object = &ref_highs_model_object; // Pointer to highs_model_object: defined in HDual.h
-  model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
-  model->basis_ = &ref_highs_model_object.basis_;
-  model->scale_ = &ref_highs_model_object.scale_;
+void HDual::solve(int num_threads) {
+  model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
+  model->basis_ = &workHMO.basis_;
+  model->scale_ = &workHMO.scale_;
 
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
-  HighsTimer &timer = highs_model_object->timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
   model->timer_ = &timer;
-  //  model = highs_model_object.hmodel_[0];// works with primitive types but not sure about class types.
+  //  model = workHMO.hmodel_[0];// works with primitive types but not sure about class types.
 
   SimplexTimer simplex_timer;
-  simplex_timer.initialiseDualSimplexClocks(ref_highs_model_object);
+  simplex_timer.initialiseDualSimplexClocks(workHMO);
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
@@ -100,7 +99,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
   // Consider initialising edge weights
   //
   // NB workEdWt is assigned and initialised to 1s in
-  // dualRHS.setup(highs_model_object) so that CHUZR is well defined, even for
+  // dualRHS.setup(workHMO) so that CHUZR is well defined, even for
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
@@ -186,7 +185,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
   double largeDual = 0;
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (highs_model_object->basis_.nonbasicFlag_[i]) {
+    if (workHMO.basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -241,7 +240,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
     // updated value
-    highs_model_object->haveDualObjectiveValue = 0;
+    workHMO.haveDualObjectiveValue = 0;
     switch (solvePhase) {
       case 1:
 	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
@@ -276,12 +275,11 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
   // Report the ticks before primal
   if (dual_simplex_mode == DUAL_SIMPLEX_MODE_PLAIN) {
     if (simplex_info.reportSimplexInnerClock) {
-      simplex_timer.reportDualSimplexInnerClock(ref_highs_model_object);
+      simplex_timer.reportDualSimplexInnerClock(workHMO);
     }
-
     if (simplex_info.reportSimplexOuterClock) {
-      simplex_timer.reportDualSimplexIterateClock(ref_highs_model_object);
-      simplex_timer.reportDualSimplexOuterClock(ref_highs_model_object);
+      simplex_timer.reportDualSimplexIterateClock(workHMO);
+      simplex_timer.reportDualSimplexOuterClock(workHMO);
     }
   }
 
@@ -321,9 +319,11 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
     if (solvePhase == 4) {
       HPrimal hPrimal;
       hPrimal.TimeLimitValue = TimeLimitValue;
+
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-      hPrimal.solvePhase2(highs_model_object);
+      hPrimal.solvePhase2(&workHMO);
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+
     }
 #ifdef HiGHSDEV
     n_pr_it += (model->numberIteration - it0);
@@ -362,8 +362,8 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
   if (simplex_info.reportSimplexPhasesClock) {
-    simplex_timer.reportSimplexTotalClock(ref_highs_model_object);
-    simplex_timer.reportSimplexPhasesClock(ref_highs_model_object);
+    simplex_timer.reportSimplexTotalClock(workHMO);
+    simplex_timer.reportSimplexPhasesClock(workHMO);
   }
 #endif
 
@@ -410,7 +410,7 @@ void HDual::solve(HighsModelObject &ref_highs_model_object, int num_threads) {
 void HDual::options() {
   // Set solver options from simplex options
 
-  HighsSimplexInfo &simplex_info_ = highs_model_object->simplex_info_;
+  HighsSimplexInfo &simplex_info_ = workHMO.simplex_info_;
 
   dual_simplex_mode = simplex_info_.simplex_strategy;
   interpret_dual_edge_weight_strategy(simplex_info_.dual_edge_weight_strategy);
@@ -435,13 +435,13 @@ void HDual::init(int num_threads) {
   factor = model->factor_;
 
   // Copy pointers
-  jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  workDual = &highs_model_object->simplex_info_.workDual_[0];
-  workValue = &highs_model_object->simplex_info_.workValue_[0];
-  workRange = &highs_model_object->simplex_info_.workRange_[0];
-  baseLower = &highs_model_object->simplex_info_.baseLower_[0];
-  baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
-  baseValue = &highs_model_object->simplex_info_.baseValue_[0];
+  jMove = &workHMO.basis_.nonbasicMove_[0];
+  workDual = &workHMO.simplex_info_.workDual_[0];
+  workValue = &workHMO.simplex_info_.workValue_[0];
+  workRange = &workHMO.simplex_info_.workRange_[0];
+  baseLower = &workHMO.simplex_info_.baseLower_[0];
+  baseUpper = &workHMO.simplex_info_.baseUpper_[0];
+  baseValue = &workHMO.simplex_info_.baseValue_[0];
 
   // Copy tolerances
   Tp = primal_feasibility_tolerance;
@@ -459,8 +459,8 @@ void HDual::init(int num_threads) {
   row_apDensity = 0;
   rowdseDensity = 0;
   // Setup other buffers
-  dualRow.setup(highs_model_object);
-  dualRHS.setup(highs_model_object);
+  dualRow.setup();
+  dualRHS.setup();
 
   // Initialize for tasks
   if (dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
@@ -534,13 +534,13 @@ void HDual::init_slice(int init_sliced_num) {
 
     // The row_ap and its packages
     slice_row_ap[i].setup(mycount);
-    slice_dualRow[i].setupSlice(highs_model_object, mycount);
+    slice_dualRow[i].setupSlice(mycount);
   }
 }
 
 void HDual::solve_phase1() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   model->initBound(1);
@@ -647,8 +647,8 @@ void HDual::solve_phase1() {
 }
 
 void HDual::solve_phase2() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-2-start\n");
 
   // Collect free variables
@@ -761,8 +761,8 @@ void HDual::solve_phase2() {
 }
 
 void HDual::rebuild() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Save history information
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
   int sv_invertHint = invertHint;
@@ -779,7 +779,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = &highs_model_object->basis_.basicIndex_[0];
+    const int *baseIndex = &workHMO.basis_.basicIndex_[0];
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -831,10 +831,10 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = highs_model_object->haveDualObjectiveValue;
+  bool checkDualObjectiveValue = workHMO.haveDualObjectiveValue;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
-  simplex_method_.computeDualObjectiveValue(highs_model_object, solvePhase);
+  simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuobjClock]);
 
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
@@ -849,7 +849,7 @@ void HDual::rebuild() {
   simplex_info.updatedDualObjectiveValue = dualObjectiveValue;
 
 #ifdef HiGHSDEV
-  //  checkDualObjectiveValue(highs_model_object, "After computing dual objective value");
+  //  checkDualObjectiveValue("After computing dual objective value");
   //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
 #endif
 
@@ -886,7 +886,7 @@ void HDual::cleanup() {
   model->initCost();
   model->initBound();
   model->computeDual();
-  simplex_method_.computeDualObjectiveValue(highs_model_object, solvePhase);
+  simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);
   iterateRpInvert(-1);
 
@@ -902,8 +902,8 @@ void HDual::iterate() {
 
   // Reporting:
   // Row-wise matrix after update in updateMatrix(columnIn, columnOut);
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[IterateChuzrClock]);
   chooseRow();
   timer.stop(simplex_info.clock_[IterateChuzrClock]);
@@ -953,8 +953,8 @@ void HDual::iterate() {
 }
 
 void HDual::iterate_tasks() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   slice_PRICE = 1;
 
   // Group 1
@@ -994,7 +994,7 @@ void HDual::iterate_tasks() {
 }
 
 void HDual::iterateIzAn() {
-  HighsTimer &timer = highs_model_object->timer_;
+  HighsTimer &timer = workHMO.timer_;
   AnIterIt0 = model->numberIteration;
   AnIterCostlyDseFq = 0;
 #ifdef HiGHSDEV
@@ -1055,7 +1055,7 @@ void HDual::iterateIzAn() {
 }
 
 void HDual::iterateAn() {
-  HighsTimer &timer = highs_model_object->timer_;
+  HighsTimer &timer = workHMO.timer_;
   // Possibly report on the iteration
   iterateRp();
 
@@ -1210,7 +1210,7 @@ void HDual::iterateRpIterPh(int iterate_log_level, bool header) {
   }
 }
 void HDual::iterateRpDuObj(int iterate_log_level, bool header) {
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   if (header) {
     HighsPrintMessage(iterate_log_level, "    DualObjective    ");
   } else {
@@ -1269,8 +1269,8 @@ void HDual::uOpRsDensityRec(double lc_OpRsDensity, double &opRsDensity) {
 }
 
 void HDual::chooseRow() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Choose the index of a row to leave the basis (CHUZR)
   //
   // If reinversion is needed then skip this method
@@ -1335,7 +1335,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = highs_model_object->basis_.basicIndex_[rowOut];
+  columnOut = workHMO.basis_.basicIndex_[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1354,8 +1354,8 @@ void HDual::chooseRow() {
 }
 
 void HDual::chooseColumn(HVector *row_ep) {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Compute pivot row (PRICE) and choose the index of a column to enter the
   // basis (CHUZC)
   //
@@ -1399,7 +1399,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
-      const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
+      const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
       for (int col = 0; col < numCol; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
 	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
@@ -1539,8 +1539,8 @@ void HDual::chooseColumn(HVector *row_ep) {
 }
 
 void HDual::chooseColumn_slice(HVector *row_ep) {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Choose the index of a column to enter the basis (CHUZC) by
   // exploiting slices of the pivotal row - for SIP and PAMI
   //
@@ -1596,8 +1596,8 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
 }
 
 void HDual::updateFtran() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Compute the pivotal column (FTRAN)
   //
   // If reinversion is needed then skip this method
@@ -1623,8 +1623,8 @@ void HDual::updateFtran() {
 }
 
 void HDual::updateFtranBFRT() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Compute the RHS changes corresponding to the BFRT (FTRAN-BFRT)
   //
   // If reinversion is needed then skip this method
@@ -1658,8 +1658,8 @@ void HDual::updateFtranBFRT() {
 }
 
 void HDual::updateFtranDSE(HVector *DSE_Vector) {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Compute the vector required to update DSE weights - being FTRAN
   // applied to the pivotal column (FTRAN-DSE)
   //
@@ -1788,7 +1788,7 @@ void HDual::updatePivots() {
   //
   // Update the sets of indices of basic and nonbasic variables
   model->updatePivots(columnIn, rowOut, sourceOut);
-  //  checkDualObjectiveValue(highs_model_object, "After  model->updatePivots");
+  //  checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
@@ -1806,7 +1806,7 @@ void HDual::updatePivots() {
   // Update the primal value for the row where the basis change has
   // occurred, and set the corresponding squared primal infeasibility
   // value in dualRHS.workArray
-  dualRHS.update_pivots(rowOut, highs_model_object->simplex_info_.workValue_[columnIn] + thetaPrimal);
+  dualRHS.update_pivots(rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock
   bool reinvert_syntheticClock =
       total_syntheticTick >= factor->build_syntheticTick;
@@ -1820,15 +1820,15 @@ void HDual::updatePivots() {
 }
 
 void HDual::iz_dvx_fwk() {
-  HighsTimer &timer = highs_model_object->timer_;
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Initialise the Devex framework: reference set is all basic
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
-  const int *nonbasicFlag = &highs_model_object->basis_.nonbasicFlag_[0];
+  const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    //      if (highs_model_object->basis_.nonbasicFlag_[vr_n])
+    //      if (workHMO.basis_.nonbasicFlag_[vr_n])
     //      if (nonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
     //	dvx_ix[vr_n] = dvx_not_in_R;
@@ -1950,12 +1950,12 @@ void HDual::setTimeLimit(double TimeLimit_ArgV) {
 }
 
 #ifdef HiGHSDEV
-double HDual::checkDualObjectiveValue(HighsModelObject *ptr_highs_model, const char *message, int phase) {
+double HDual::checkDualObjectiveValue(const char *message, int phase) {
   static double previousUpdatedDualObjectiveValue = 0;
   static double previousDualObjectiveValue = 0;
-  simplex_method_.computeDualObjectiveValue(ptr_highs_model, phase);
-  double updatedDualObjectiveValue = ptr_highs_model->simplex_info_.updatedDualObjectiveValue;
-  double dualObjectiveValue = ptr_highs_model->simplex_info_.dualObjectiveValue;
+  simplex_method_.computeDualObjectiveValue(workHMO, phase);
+  double updatedDualObjectiveValue = workHMO.simplex_info_.updatedDualObjectiveValue;
+  double dualObjectiveValue = workHMO.simplex_info_.dualObjectiveValue;
   double changeInUpdatedDualObjectiveValue = updatedDualObjectiveValue - previousUpdatedDualObjectiveValue;
   double changeInDualObjectiveValue = dualObjectiveValue - previousDualObjectiveValue;
   double updatedDualObjectiveError = dualObjectiveValue - updatedDualObjectiveValue;
@@ -1970,9 +1970,9 @@ double HDual::checkDualObjectiveValue(HighsModelObject *ptr_highs_model, const c
 	   message);
   previousDualObjectiveValue = dualObjectiveValue;
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
-  ptr_highs_model->simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
+  workHMO.simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
   // Now have dual objective value
-  highs_model_object->haveDualObjectiveValue = 1;
+  workHMO.haveDualObjectiveValue = 1;
   return updatedDualObjectiveError;
 }
 #endif
@@ -2087,7 +2087,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object->basis_.basicIndex_[r_n];
+    int vr_n = workHMO.basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < numCol)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2135,7 +2135,7 @@ void HDual::iterateOpRecAf(int opTy, HVector &vector) {
 }
 
 void HDual::iterateRpAn() {
-  HighsTimer &timer = highs_model_object->timer_;
+  HighsTimer &timer = workHMO.timer_;
   int AnIterNumIter = model->numberIteration - AnIterIt0;
   printf("\nAnalysis of %d iterations (%d to %d)\n", AnIterNumIter,
          AnIterIt0 + 1, model->numberIteration);
@@ -2308,7 +2308,7 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object->basis_.basicIndex_[r_n];
+    int vr_n = workHMO.basis_.basicIndex_[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
@@ -2316,8 +2316,8 @@ void HDual::an_iz_vr_v() {
   double norm_nonbc_du_vr = 0;
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (highs_model_object->basis_.nonbasicFlag_[vr_n]) {
-      double pr_act_v = highs_model_object->simplex_info_.workValue_[vr_n];
+    if (workHMO.basis_.nonbasicFlag_[vr_n]) {
+      double pr_act_v = workHMO.simplex_info_.workValue_[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];
     }

@@ -66,7 +66,6 @@ HighsStatus solveSimplex(
 
   timer.start(timer.solveClock);
   bool ranging = true;
-
   // Initialize solver and set dual solver options from simplex options
   HDual dual_solver(highs_model);
   dual_solver.options();
@@ -74,8 +73,7 @@ HighsStatus solveSimplex(
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
     model.initFromNonbasic();
-
-    dual_solver.solve(highs_model);
+    dual_solver.solve();
     return LpStatusToHighsStatus(model.problemStatus);
   }
 
@@ -89,10 +87,10 @@ HighsStatus solveSimplex(
   // Solve, depending on the options.
   // Parallel.
   if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
-    dual_solver.solve(highs_model, 8);
+    dual_solver.solve(8);
   } else if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) {
     //    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-    dual_solver.solve(highs_model, 8);
+    dual_solver.solve(8);
 #ifdef HiGHSDEV
     if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) model.writePivots("multi");
     if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) model.writePivots("tasks");
@@ -106,7 +104,7 @@ HighsStatus solveSimplex(
     int solvePh2DuIt = 0;
     int solvePrIt = 0;
 #endif
-    //    HDual dual_solver;
+    //    double lcSolveTime;
 
     vector<double> colPrAct;
     vector<double> colDuAct;
@@ -121,11 +119,11 @@ HighsStatus solveSimplex(
     bool EightThreads = false;
 
     if (FourThreads)
-      dual_solver.solve(highs_model, 4);
+      dual_solver.solve(4);
     else if (EightThreads)
-      dual_solver.solve(highs_model, 8);
+      dual_solver.solve(8);
     else
-      dual_solver.solve(highs_model);
+      dual_solver.solve();
 
     solveIt += model.numberIteration;
 
@@ -155,7 +153,7 @@ HighsStatus solveSimplex(
         model.copy_savedBoundsToModelBounds();
 
 	//        model.timer.reset();
-        dual_solver.solve(highs_model);
+        dual_solver.solve();
 	// solveIt += model.numberIteration;
         model.util_reportSolverOutcome("After recover:   ");
 #ifdef HiGHSDEV
@@ -309,8 +307,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   //  model.util_reportModel();
 
   model.scaleModel();
-  HDual dual_solver;
-  dual_solver.solve(highs_model);
+  HDual dual_solver(highs_model);
+  dual_solver.solve();
   //  reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
@@ -360,9 +358,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
       printf("Calling model.scaleModel()\n");
       model.scaleModel();
-      //      printf("Calling dual_solver.solve(highs_model)\n");
-      dual_solver.solve(highs_model);
-      //      printf("Called dual_solver.solve(highs_model)\n");
+      dual_solver.solve();
       model.util_reportSolverOutcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
       // avgas

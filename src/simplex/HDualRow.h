@@ -30,25 +30,21 @@ class HVector;
  */
 class HDualRow {
  public:
-  HDualRow(HighsModelObject* hmo) : workHMO(hmo) {}
-  HDualRow() {}
+  HDualRow(HighsModelObject& hmo) : workHMO(hmo) {}
 
   /**
    * @brief Calls setupSlice to set up the packed indices and values for
    * the dual ratio test
    */
-  void setup(
-	     HighsModelObject *highs_model_object  //!< Model for which setup is performed
-	     );
+  void setup();
+
   /**
    * @brief Set up the packed indices and values for the dual ratio test
    *
    * Done either for the whole pivotal row (see HDualRow::setup), or
    * just for a slice (see HDual::init_slice)
    */
-  void setupSlice(
-		  HighsModelObject *highs_model_object,  //!< Model for which setupSlice is performed
-                  int size        //!< Dimension of slice
+  void setupSlice( int size        //!< Dimension of slice
 		  );
   /**
    * @brief Clear the packed data by zeroing packCount and workCount
@@ -123,7 +119,7 @@ class HDualRow {
 		       int iColumn //!< Index of column to remove from Freelist
 		       );
   
-  HighsModelObject *workHMO;        //!< Local copy of pointer to model
+  HighsModelObject& workHMO;        //!< Local copy of pointer to model
   HModel *workModel;        //!< Local copy of pointer to model
   int workSize;             //!< Size of the HDualRow slice
   const int *workNumTotPermutation;  //!< Pointer to model->numTotPermutation();
