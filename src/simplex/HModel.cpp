@@ -56,8 +56,8 @@ using std::setw;
 // allocate basis* arrays
 HModel::HModel() {
 
-  dblOption[DBLOPT_PRIMAL_TOL] = 1e-7;
-  dblOption[DBLOPT_DUAL_TOL] = 1e-7;
+  dblOption[DBLOPT_PRIMAL_TOL] = 1.0001e-7;
+  dblOption[DBLOPT_DUAL_TOL] = 1.0002e-7;
   dblOption[DBLOPT_OBJ_UB] = 1e+200;
 
   strOption[STROPT_PARTITION_FILE] = "";
@@ -1705,6 +1705,9 @@ void HModel::computeDual() {
     //  printf("computeDual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
     //  ||pi^TA-c||=%11.4g\n", btranRHS_norm2, btranSol_norm2, workDual_norm2);
     double cuTlDuIfs = dblOption[DBLOPT_DUAL_TOL];
+    const double dual_feasibility_tolerance = simplex_info_->dual_feasibility_tolerance;
+    if (cuTlDuIfs != dual_feasibility_tolerance) {
+    printf("cuTlDuIfs != dual_feasibility_tolerance %g %g\n", cuTlDuIfs, dual_feasibility_tolerance);}
     double nwTlDuIfs = workDual_norm2 / 1e16;
     if (nwTlDuIfs > 1e-1) {
       printf(
@@ -1728,6 +1731,9 @@ void HModel::computeDualInfeasInDual(int *dualInfeasCount) {
   int workCount = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
+  const double dual_feasibility_tolerance = simplex_info_->dual_feasibility_tolerance;
+  if (tau_d != dual_feasibility_tolerance) {
+    printf("tau_d != dual_feasibility_tolerance %g %g\n", tau_d, dual_feasibility_tolerance);}
   const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
@@ -1747,6 +1753,9 @@ void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
   int workCount = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
+  const double dual_feasibility_tolerance = simplex_info_->dual_feasibility_tolerance;
+  if (tau_d != dual_feasibility_tolerance) {
+    printf("tau_d != dual_feasibility_tolerance %g %g\n", tau_d, dual_feasibility_tolerance);}
   const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
@@ -1763,6 +1772,9 @@ void HModel::computeDualInfeasInPrimal(int *dualInfeasCount) {
 // Correct dual values
 void HModel::correctDual(int *freeInfeasCount) {
   const double tau_d = dblOption[DBLOPT_DUAL_TOL];
+  const double dual_feasibility_tolerance = simplex_info_->dual_feasibility_tolerance;
+  if (tau_d != dual_feasibility_tolerance) {
+    printf("tau_d != dual_feasibility_tolerance %g %g\n", tau_d, dual_feasibility_tolerance);}
   const double inf = HIGHS_CONST_INF;
   int workCount = 0;
   const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
@@ -3396,57 +3408,6 @@ void HModel::util_reportBasicIndex(const char *message, int numRow, vector<int> 
   printf("\n");
 }
 
-#ifdef HiGHSDEV
-void HModel::util_anPrDuDgn() {
-  double normPrAct = 0;
-  int numDgnPrAct = 0;
-  double normDuAct = 0;
-  int numDgnDuAct = 0;
-  double TlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
-  double TlDuIfs = dblOption[DBLOPT_DUAL_TOL];
-  for (int row = 0; row < solver_lp_->numRow_; row++) {
-    double prAct = simplex_info_->baseValue_[row];
-    normPrAct += prAct * prAct;
-    double rsdu = max(simplex_info_->baseLower_[row] - prAct, prAct - simplex_info_->baseUpper_[row]);
-    if (abs(rsdu) < TlPrIfs) {
-      numDgnPrAct++;
-    }
-    printf(
-        "Basic variable %7d is %7d: [%11.4g, %11.4g, %11.4g] Rsdu = %11.4g; "
-        "numDgnPrAct = %7d\n",
-        row, basis_->basicIndex_[row], simplex_info_->baseLower_[row], prAct, simplex_info_->baseUpper_[row], rsdu,
-        numDgnPrAct);
-  }
-  normPrAct = sqrt(normPrAct);
-  double pctDgnPrAct = numDgnPrAct;
-  pctDgnPrAct = 100 * pctDgnPrAct / solver_lp_->numRow_;
-
-  const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  for (int var = 0; var < numTot; var++) {
-    if (basis_->nonbasicFlag_[var] == NONBASIC_FLAG_TRUE) {
-      double duAct = simplex_info_->workDual_[var];
-      normDuAct += duAct * duAct;
-      if (abs(duAct) < TlDuIfs) {
-        numDgnDuAct++;
-      }
-      printf("Variable %7d is nonbasic: %11.4g; numDgnDuAct = %7d\n", var,
-             duAct, numDgnDuAct);
-    }
-  }
-  normDuAct = sqrt(normDuAct);
-  double pctDgnDuAct = numDgnDuAct;
-  pctDgnDuAct = 100 * pctDgnDuAct / solver_lp_->numCol_;
-
-  printf(
-      "anPrDuDgn: model %s: ||BcPrAct|| = %g; numDgnPrAct = %d of %d "
-      "(%7.2f%%); ||NonBcDuAct|| = %g; numDgnDuAct = %d of %d (%7.2f%%)\n",
-      modelName.c_str(), normPrAct, numDgnPrAct, solver_lp_->numRow_, pctDgnPrAct, normDuAct,
-      numDgnDuAct, solver_lp_->numCol_, pctDgnDuAct);
-  printf("GrepAnPrDuDgn,%s,%g,%d,%d,%g,%d,%d\n", modelName.c_str(), normPrAct,
-         numDgnPrAct, solver_lp_->numRow_, normDuAct, numDgnDuAct, solver_lp_->numCol_);
-}
-#endif
-
 void HModel::util_reportModelDa(HighsLp lp, const char *filename) {
   vector<double> wkDseCol;
   wkDseCol.resize(lp.numRow_);
@@ -3575,7 +3536,13 @@ void HModel::util_analyseLpSolution() {
   const double tlPrRsduEr = 1e-8;
   const double tlDuRsduEr = 1e-8;
   const double tlPrIfs = dblOption[DBLOPT_PRIMAL_TOL];
+  const double primal_feasibility_tolerance = simplex_info_->primal_feasibility_tolerance;
   const double tlDuIfs = dblOption[DBLOPT_DUAL_TOL];
+  const double dual_feasibility_tolerance = simplex_info_->dual_feasibility_tolerance;
+  if (tlPrIfs != primal_feasibility_tolerance) {
+    printf("tlPrIfs != primal_feasibility_tolerance %g %g\n", tlPrIfs, primal_feasibility_tolerance);}
+  if (tlDuIfs != dual_feasibility_tolerance) {
+    printf("tlDuIfs != dual_feasibility_tolerance %g %g\n", tlDuIfs, dual_feasibility_tolerance);}
 
   // Copy the values of (nonbasic) primal variables and scatter values of primal
   // variables which are basic

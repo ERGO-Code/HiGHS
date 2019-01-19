@@ -112,6 +112,9 @@ void HDualRow::choose_possible() {
                         ? 1e-9
                         : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
+  const double dual_feasibility_tolerance = workHMO->simplex_info_.dual_feasibility_tolerance;
+  if (Td != dual_feasibility_tolerance) {
+    printf("Td != dual_feasibility_tolerance %g %g\n", Td, dual_feasibility_tolerance);}
   const int sourceOut = workDelta < 0 ? -1 : 1;
   workTheta = HIGHS_CONST_INF;
   workCount = 0;
@@ -184,6 +187,9 @@ bool HDualRow::choose_final() {
   // 2. Choose by small step BFRT
   timer.start(simplex_info.clock_[Chuzc3Clock]);
   const double Td = workModel->dblOption[DBLOPT_DUAL_TOL];
+  const double dual_feasibility_tolerance = workHMO->simplex_info_.dual_feasibility_tolerance;
+  if (Td != dual_feasibility_tolerance) {
+    printf("Td != dual_feasibility_tolerance %g %g\n", Td, dual_feasibility_tolerance);}
   fullCount = workCount;
   workCount = 0;
   totalChange = 1e-12;

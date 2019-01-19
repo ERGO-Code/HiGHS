@@ -446,6 +446,10 @@ void HDual::init(int num_threads) {
   // Copy tolerances
   Tp = model->dblOption[DBLOPT_PRIMAL_TOL];
   Td = model->dblOption[DBLOPT_DUAL_TOL];
+  if (Tp != primal_feasibility_tolerance) {
+    printf("Tp != primal_feasibility_tolerance %g %g\n", Tp, primal_feasibility_tolerance);}
+  if (Td != dual_feasibility_tolerance) {
+    printf("Td != dual_feasibility_tolerance %g %g\n", Td, dual_feasibility_tolerance);}
 
   // Setup local vectors
   columnDSE.setup(numRow);

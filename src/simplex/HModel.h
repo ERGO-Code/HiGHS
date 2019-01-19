@@ -299,7 +299,6 @@ class HModel {
 
   void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
-  void util_anPrDuDgn();
   void util_anMlLargeCo(HighsLp lp, const char* message);
   void util_analyseLpSolution();
 #endif
