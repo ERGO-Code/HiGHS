@@ -68,14 +68,11 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(timer.presolveClock);
-
   PresolveInfo presolve_info(options_.presolveMode, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-
   timer.stop(timer.presolveClock);
  
   // Run solver.
-  timer.start(timer.solveClock);
   HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
@@ -109,7 +106,6 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       return HighsStatus::PresolveError;
     }
   }
-  timer.stop(timer.solveClock);
 
   timer.start(timer.postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
@@ -152,21 +148,41 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       } else {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
-        lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
         lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
       }
     }
   } else {
     // Report in old way so tests pass.
-    lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 
+  if (lps_[0].reportModelOperationsClock) {
+    // Report times
+    std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
+    timer.report("ModelOperations", clockList);
+  }
 #ifdef HiGHSDEV
-  // Report times
-  std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
-  timer.report(clockList);
+/* todo: do elsewhere once timing is added.
+    bool rpBnchmk = false;
+    if (rpBnchmk) {
+      int numCol = highs_model.lp_.numCol_;
+      int numRow = highs_model.lp_.numRow_;
+      printf(
+          "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
+          "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
+          "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
+          "%20.10e,%10d,%10.3f,"
+          "%d\n",
+          model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
+          Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
+          presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
+          postsolveTime, model.dualObjective, model.numberIteration,
+          model.totalTime, solver.n_wg_DSE_wt);
+      cout << flush;
+    }
+*/
 #endif
+
   timer.stopRunHighsClock();
 
   return HighsStatus::OK;
@@ -420,6 +436,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     std::cout << "Please specify filename in .mps or .gz format.\n";
     return HighsStatus::LpError;
   }
+
+  // Force column permutation of the LP to be used by the solver if
+  // parallel code is to be used
+  if (options.pami || options.sip) {
+    options.permuteLp = true;
+  }
+
 
   return HighsStatus::OK;
 }

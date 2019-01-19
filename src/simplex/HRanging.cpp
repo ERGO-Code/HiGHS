@@ -27,8 +27,8 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  int numCol = model->lp_scaled_->numCol_;
-  int numRow = model->lp_scaled_->numRow_;
+  int numCol = model->solver_lp_->numCol_;
+  int numRow = model->solver_lp_->numRow_;
   int numTot = numCol + numRow;
 
   HighsRanging* ranging = &ref_highs_model_object.ranging_;
@@ -59,32 +59,32 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   const double H_TT = 1e-13;
 
   //  HMatrix matrix;
-  model->matrix_->setup(numCol, numRow, &model->lp_scaled_->Astart_[0], &model->lp_scaled_->Aindex_[0],
-                      &model->lp_scaled_->Avalue_[0], &model->basis_->nonbasicFlag_[0]);
+  model->matrix_->setup(numCol, numRow, &model->solver_lp_->Astart_[0], &model->solver_lp_->Aindex_[0],
+                      &model->solver_lp_->Avalue_[0], &model->basis_->nonbasicFlag_[0]);
 
-  model->factor_->setup(numCol, numRow, &model->lp_scaled_->Astart_[0], &model->lp_scaled_->Aindex_[0],
-                      &model->lp_scaled_->Avalue_[0], &model->basis_->basicIndex_[0]);
+  model->factor_->setup(numCol, numRow, &model->solver_lp_->Astart_[0], &model->solver_lp_->Aindex_[0],
+                      &model->solver_lp_->Avalue_[0], &model->basis_->basicIndex_[0]);
   model->factor_->build();
 
   // NB For rows, values in rowLower and rowUpper are flipped and
   // negated relative to the original model
-  vector<double> cost_ = model->lp_scaled_->colCost_;
-  vector<double> lower_ = model->lp_scaled_->colLower_;
-  vector<double> upper_ = model->lp_scaled_->colUpper_;
+  vector<double> cost_ = model->solver_lp_->colCost_;
+  vector<double> lower_ = model->solver_lp_->colLower_;
+  vector<double> upper_ = model->solver_lp_->colUpper_;
 
   lower_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    lower_[numCol + iRow] = -model->lp_scaled_->rowUpper_[iRow];
+    lower_[numCol + iRow] = -model->solver_lp_->rowUpper_[iRow];
   }
   upper_.resize(numTot);
   for (int iRow = 0; iRow < numRow; iRow++) {
-    upper_[numCol + iRow] = -model->lp_scaled_->rowLower_[iRow];
+    upper_[numCol + iRow] = -model->solver_lp_->rowLower_[iRow];
   }
-  vector<double> value_ = highs_model_object->simplex_.workValue_;
+  vector<double> value_ = highs_model_object->simplex_info_.workValue_;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    value_[model->basis_->basicIndex_[iRow]] = highs_model_object->simplex_.baseValue_[iRow];
+    value_[model->basis_->basicIndex_[iRow]] = highs_model_object->simplex_info_.baseValue_[iRow];
   }
-  vector<double> dual_ = highs_model_object->simplex_.workDual_;
+  vector<double> dual_ = highs_model_object->simplex_info_.workDual_;
   for (int iRow = 0; iRow < numRow; iRow++) {
     dual_[model->basis_->basicIndex_[iRow]] = 0;
   }
@@ -96,9 +96,9 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
     printf("Col %2d has scale factor %12g\n", iCol, model->scale.col_[iCol]);
   }
   */
-  vector<double> Blower_ = highs_model_object->simplex_.baseLower_;
-  vector<double> Bupper_ = highs_model_object->simplex_.baseUpper_;
-  vector<double> Bvalue_ = highs_model_object->simplex_.baseValue_;
+  vector<double> Blower_ = highs_model_object->simplex_info_.baseLower_;
+  vector<double> Bupper_ = highs_model_object->simplex_info_.baseUpper_;
+  vector<double> Bvalue_ = highs_model_object->simplex_info_.baseValue_;
 
   vector<int> Nflag_ = model->basis_->nonbasicFlag_;
   vector<int> Nmove_ = model->basis_->nonbasicMove_;
@@ -301,12 +301,12 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // Increase c_j
       if (ddj_inc[j] != H_INF) {
         c_up_c[j] = cost_[j] + ddj_inc[j];
-        c_up_f[j] = model->dualObjectiveValue + value * ddj_inc[j];
+        c_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + value * ddj_inc[j];
         c_up_e[j] = j;
         c_up_l[j] = jxj_dec[j];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = model->dualObjectiveValue + vsign * H_INF;
+        c_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -314,12 +314,12 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // Decrease c_j
       if (ddj_dec[j] != H_INF) {
         c_dn_c[j] = cost_[j] + ddj_dec[j];
-        c_dn_f[j] = model->dualObjectiveValue + value * ddj_dec[j];
+        c_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + value * ddj_dec[j];
         c_dn_e[j] = j;
         c_dn_l[j] = jxj_inc[j];
       } else {
         c_up_c[j] = -H_INF;
-        c_up_f[j] = model->dualObjectiveValue - vsign * H_INF;
+        c_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue - vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -340,12 +340,12 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // Increase c_i
       if (jci_inc[i] != -1) {
         c_up_c[j] = cost_[j] + tci_inc[i];
-        c_up_f[j] = model->dualObjectiveValue + value * tci_inc[i];
+        c_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + value * tci_inc[i];
         c_up_e[j] = je = jci_inc[i];
         c_up_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_up_c[j] = H_INF;
-        c_up_f[j] = model->dualObjectiveValue + vsign * H_INF;
+        c_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + vsign * H_INF;
         c_up_e[j] = -1;
         c_up_l[j] = -1;
       }
@@ -353,12 +353,12 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // Decrease c_i
       if (jci_dec[i] != -1) {
         c_dn_c[j] = cost_[j] + tci_dec[i];
-        c_dn_f[j] = model->dualObjectiveValue + value * tci_dec[i];
+        c_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + value * tci_dec[i];
         c_dn_e[j] = je = jci_dec[i];
         c_dn_l[j] = Nmove_[je] > 0 ? jxj_inc[je] : jxj_dec[je];
       } else {
         c_dn_c[j] = -H_INF;
-        c_dn_f[j] = model->dualObjectiveValue - H_INF * vsign;
+        c_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue - H_INF * vsign;
         c_dn_e[j] = -1;
         c_dn_l[j] = -1;
       }
@@ -375,11 +375,11 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // FREE variable
       if (lower_[j] == -H_INF && upper_[j] == H_INF) {
         b_up_b[j] = H_INF;
-        b_up_f[j] = model->dualObjectiveValue;
+        b_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue;
         b_up_e[j] = -1;
         b_up_l[j] = -1;
         b_dn_b[j] = -H_INF;
-        b_dn_f[j] = model->dualObjectiveValue;
+        b_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue;
         b_dn_e[j] = -1;
         b_dn_l[j] = -1;
         continue;
@@ -393,12 +393,12 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       if (ixj_inc[j] != -1) {
         int i = ixj_inc[j];
         b_up_b[j] = value_[j] + txj_inc[j];
-        b_up_f[j] = model->dualObjectiveValue + txj_inc[j] * dualv;
+        b_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + txj_inc[j] * dualv;
         b_up_e[j] = wxj_inc[j] > 0 ? jci_inc[i] : jci_dec[i];
         b_up_l[j] = Bindex_[i];
       } else {
         b_up_b[j] = H_INF;
-        b_up_f[j] = model->dualObjectiveValue + H_INF * dsign;
+        b_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + H_INF * dsign;
         b_up_e[j] = -1;
         b_up_l[j] = -1;
       }
@@ -406,7 +406,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // Check if b_up_b > upper
       if (value_[j] != upper_[j] && b_up_b[j] > upper_[j]) {
         b_up_b[j] = upper_[j];
-        b_up_f[j] = model->dualObjectiveValue + (upper_[j] - lower_[j]) * dualv;
+        b_up_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + (upper_[j] - lower_[j]) * dualv;
         b_up_e[j] = j;
         b_up_l[j] = j;
       }
@@ -415,12 +415,12 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       if (ixj_dec[j] != -1) {
         int i = ixj_dec[j];
         b_dn_b[j] = value_[j] + txj_dec[j];
-        b_dn_f[j] = model->dualObjectiveValue + txj_dec[j] * dualv;
+        b_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + txj_dec[j] * dualv;
         b_dn_e[j] = wxj_dec[j] > 0 ? jci_inc[i] : jci_dec[i];
         b_dn_l[j] = Bindex_[i];
       } else {
         b_dn_b[j] = -H_INF;
-        b_dn_f[j] = model->dualObjectiveValue - H_INF * dsign;
+        b_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue - H_INF * dsign;
         b_dn_e[j] = -1;
         b_dn_l[j] = -1;
       }
@@ -428,7 +428,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
       // Check if b_dn_b < lower
       if (value_[j] != lower_[j] && b_dn_b[j] < lower_[j]) {
         b_dn_b[j] = lower_[j];
-        b_dn_f[j] = model->dualObjectiveValue + (lower_[j] - upper_[j]) * dualv;
+        b_dn_f[j] = highs_model_object->simplex_info_.dualObjectiveValue + (lower_[j] - upper_[j]) * dualv;
         b_dn_e[j] = j;
         b_dn_l[j] = j;
       }
@@ -458,7 +458,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
           // Bound flip
           double delta = jmove * (upper_[j_in] - lower_[j_in]);
           newx = xi[i] - delta * a_in;
-          newf = model->dualObjectiveValue + delta * dual_[j_in];
+          newf = highs_model_object->simplex_info_.dualObjectiveValue + delta * dual_[j_in];
           j_enter = j_in;
           j_leave = j_out;
         } else if (j_out != -1) {
@@ -466,7 +466,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
           double delta = w_out > 0 ? dxi_inc[i_out] : dxi_dec[i_out];
           double a_out = jmove > 0 ? axj_inc[j_in] : axj_dec[j_in];
           newx = xi[i] + delta * a_in / a_out;
-          newf = model->dualObjectiveValue + tt * dual_[j_in];
+          newf = highs_model_object->simplex_info_.dualObjectiveValue + tt * dual_[j_in];
           j_enter = j_in;
           j_leave = j_out;
         } else {
@@ -474,14 +474,14 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
           // While still limited by its own bounds
           // It's own bounds could just be inf
           newx = dir == -1 ? lower_[j] : upper_[j];
-          newf = model->dualObjectiveValue;
+          newf = highs_model_object->simplex_info_.dualObjectiveValue;
           j_enter = -1;
           j_leave = -1;
         }
       } else {
         // Dual ratio test failed - just stay
         newx = xi[i];
-        newf = model->dualObjectiveValue;
+        newf = highs_model_object->simplex_info_.dualObjectiveValue;
         j_enter = -1;
         j_leave = -1;
       }
@@ -550,8 +550,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   // Make sure that the model solution is optimal
   if (model->problemStatus != LP_Status_Optimal) return 1;
 
-  int numCol = model->lp_scaled_->numCol_;
-  int numRow = model->lp_scaled_->numRow_;
+  int numCol = model->solver_lp_->numCol_;
+  int numRow = model->solver_lp_->numRow_;
   int numTot = numCol + numRow;
 
   HighsRanging* ranging = model->ranging_;
@@ -576,7 +576,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   //#ifdef HiGHSDEV
   const double toleranceRelativeError = toleranceRelativeTotalError;
   const double relativeErrorDenominator =
-      max(1.0, fabs(model->dualObjectiveValue));
+      max(1.0, fabs(highs_model_object->simplex_info_.dualObjectiveValue));
   reportRangingDataCheck = numTot < 250;
   //#endif
   //  reportModelSolution(ref_highs_model_object);
@@ -596,8 +596,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   for (int i = 0; i < numRow; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svRowLower = model->lp_scaled_->rowLower_[i];
-    double svRowUpper = model->lp_scaled_->rowUpper_[i];
+    double svRowLower = model->solver_lp_->rowLower_[i];
+    double svRowUpper = model->solver_lp_->rowUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i + numCol] > -infiniteBoundOrCost) {
@@ -625,13 +625,13 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(&testModel, rpSolution);
 	  rpSolution = false;
-          solved_dn = testModel.dualObjectiveValue;
+          solved_dn = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
 	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(model, rpSolution);
-          solved_dn = model->dualObjectiveValue;
+          solved_dn = highs_model_object->simplex_info_.dualObjectiveValue;
         }
       } else {
         solved_dn = b_dn_f[i + numCol];
@@ -673,13 +673,13 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
 	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(&testModel, rpSolution);
-          solved_up = testModel.dualObjectiveValue;
+          solved_up = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
 	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
           model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(model, rpSolution);
-          solved_up = model->dualObjectiveValue;
+          solved_up = highs_model_object->simplex_info_.dualObjectiveValue;
         }
       } else {
         solved_up = b_up_f[i + numCol];
@@ -705,7 +705,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lp_scaled_->rowLower_[i], model->lp_scaled_->rowUpper_[i], rowValue[i], 0.0,
+          i, model->solver_lp_->rowLower_[i], model->solver_lp_->rowUpper_[i], rowValue[i], 0.0,
           rowDual[i], b_up_b[i + numCol], b_up_f[i + numCol], solved_up,
           b_dn_b[i + numCol], b_dn_f[i + numCol], solved_dn, maxRelativeError);
     }
@@ -720,8 +720,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColLower = model->lp_scaled_->colLower_[i];
-    double svColUpper = model->lp_scaled_->colUpper_[i];
+    double svColLower = model->solver_lp_->colLower_[i];
+    double svColUpper = model->solver_lp_->colUpper_[i];
     bool recoverOriginalBounds = false;
     {
       if (b_dn_b[i] > -infiniteBoundOrCost) {
@@ -747,14 +747,14 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
 	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
           testModel.util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
           checkDataSolve(&testModel, rpSolution);
-          solved_dn = testModel.dualObjectiveValue;
+          solved_dn = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
   	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
 	  model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
           checkDataSolve(model, rpSolution);
 	  rpSolution = false;
-	  solved_dn = model->dualObjectiveValue;
+	  solved_dn = highs_model_object->simplex_info_.dualObjectiveValue;
         }
       } else {
         solved_dn = b_dn_f[i];
@@ -799,13 +799,13 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
                                          &changeColUpper);
           checkDataSolve(&testModel, rpSolution);
           rpSolution = false;
-          solved_up = testModel.dualObjectiveValue;
+          solved_up = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
   	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
           model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
           checkDataSolve(model, rpSolution);
-          solved_up = model->dualObjectiveValue;
+          solved_up = highs_model_object->simplex_info_.dualObjectiveValue;
         }
       } else {
         solved_up = b_up_f[i];
@@ -831,8 +831,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lp_scaled_->colLower_[i], model->lp_scaled_->colUpper_[i], colValue[i],
-          model->lp_scaled_->colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
+          i, model->solver_lp_->colLower_[i], model->solver_lp_->colUpper_[i], colValue[i],
+          model->solver_lp_->colCost_[i], colDual[i], b_up_b[i], b_up_f[i], solved_up,
           b_dn_b[i], b_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -846,7 +846,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   for (int i = 0; i < numCol; i++) {
     double solved_up = 0;
     double solved_dn = 0;
-    double svColCost = model->lp_scaled_->colCost_[i];
+    double svColCost = model->solver_lp_->colCost_[i];
     bool recoverOriginalCost = false;
     {
       if (fabs(c_dn_c[i]) < infiniteBoundOrCost) {
@@ -858,13 +858,13 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkDataSolve(&testModel, rpSolution);
-          solved_dn = testModel.dualObjectiveValue;
+          solved_dn = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalCost = true;
           model->util_unscaleColCostValue(i, &changeColCost);
           model->util_chgCostsSet(1, &i, &changeColCost);
           checkDataSolve(model, rpSolution);
-          solved_dn = model->dualObjectiveValue;
+          solved_dn = highs_model_object->simplex_info_.dualObjectiveValue;
         }
       } else {
         solved_dn = c_dn_f[i];
@@ -893,13 +893,13 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkDataSolve(&testModel, rpSolution);
-          solved_up = testModel.dualObjectiveValue;
+          solved_up = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalCost = true;
           model->util_unscaleColCostValue(i, &changeColCost);
           model->util_chgCostsSet(1, &i, &changeColCost);
           checkDataSolve(model, rpSolution);
-          solved_up = model->dualObjectiveValue;
+          solved_up = highs_model_object->simplex_info_.dualObjectiveValue;
         }
       } else {
         solved_up = c_up_f[i];
@@ -925,8 +925,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           max(error_up, error_dn) / relativeErrorDenominator;
       printf(
           "%3d %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g %12g\n",
-          i, model->lp_scaled_->colLower_[i], model->lp_scaled_->colUpper_[i], colValue[i],
-          model->lp_scaled_->colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
+          i, model->solver_lp_->colLower_[i], model->solver_lp_->colUpper_[i], colValue[i],
+          model->solver_lp_->colCost_[i], colDual[i], c_up_c[i], c_up_f[i], solved_up,
           c_dn_c[i], c_dn_f[i], solved_dn, maxRelativeError);
     }
   }
@@ -952,7 +952,7 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
   model->mlFg_haveFreshInvert = 0;
   model->mlFg_haveNonbasicDuals = 0;
   model->mlFg_haveBasicPrimals = 0;
-  model->mlFg_haveDualObjectiveValue = 0;
+  //  model->mlFg_haveDualObjectiveValue = 0;
   model->mlFg_haveFreshRebuild = 0;
   model->mlFg_haveRangingData = 0;
   model->mlFg_haveSavedBounds = 0;
@@ -964,17 +964,17 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   /*
   HDual solver;
   if (rp) {
-    model->intOption[INTOPT_PRINT_FLAG] = 4;
+    //    messageLevel = 7;// TODO Fix this
     const char* fileName = "OutMl.mps";
     model->writeToMPS(fileName);
   } else {
-    model->intOption[INTOPT_PRINT_FLAG] = 0;
+    //    messageLevel = 0;// TODO Fix this
   }
-  //  model->lp_scaled_->reportLp(model->lp_scaled_);
+  //  model->solver_lp_->reportLp(model->solver_lp_);
   printf("HRanging.cpp no longer solves!\n");
   //  solver.solve(model);
   if (rp) {
-    //    reportLp(model->lp_scaled_);
+    //    reportLp(model->solver_lp_);
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }

@@ -14,9 +14,10 @@
 #ifndef SIMPLEX_HPRIMAL_H_
 #define SIMPLEX_HPRIMAL_H_
 
+#include "HConfig.h"
 #include "HighsModelObject.h"
 #include "HVector.h"
-#include "HConfig.h"
+#include "HSimplex.h"
 
 class HModel;
 
@@ -38,13 +39,6 @@ class HPrimal {
   );
   double TimeLimitValue;  //!< Time limit
 
-#ifdef HiGHSDEV
-  // Analysis of rebuilds
-  const bool anRebuildTime = false;
-  int totalRebuilds;
-  double totalRebuildTime;
-#endif
-
  private:
   void primalRebuild();
   void primalChooseColumn();
@@ -54,6 +48,8 @@ class HPrimal {
   // Model pointer
   HModel *model;
   HighsModelObject *highs_model_object;
+  HSimplex simplex_method_;
+  
   int numCol;
   int numRow;
   int numTot;

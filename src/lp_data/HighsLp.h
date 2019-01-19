@@ -14,6 +14,7 @@
 #ifndef LP_DATA_HIGHS_LP_H_
 #define LP_DATA_HIGHS_LP_H_
 
+#include "HConfig.h"
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -43,15 +44,53 @@ struct HighsOptions {
   bool sip = 0;
   bool scip = 0;
 
+  // HiGHS run time limit (s): default = 100000? - DBLOPT_TIME_LIMIT
   double timeLimit = 0;
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  std::string presolveMode = "";
-  std::string edWtMode = "";
-  std::string priceMode = "";
-  std::string crashMode = "";
+  std::string presolveMode = "off";
+  std::string crashMode = "off";
+  std::string edWtMode = "dse2dvx";
+  std::string priceMode = "rowswcolsw";
   std::string partitionFile = "";
+
+  // Options not passed through the command line
+
+  // Options for HighsPrintMessage and HighsLogMessage
+  // TODO: Use these to set values for use in HighsPrintMessage and HighsLogMessage  
+  FILE* output = stdout;
+  // HighsPrintMessage level: default = 0
+  int messageLevel = 0;
+  FILE* logfile = stdout;
+
+  // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
+  //
+  // For an LP model
+  //
+  // Try to solve the dual of the LP
+  bool transposeLp = false;
+  // Perform LP scaling
+  bool scaleLp = true;
+  // Permute the columns of the LP randomly to aid load distribution in block parallelism
+  bool permuteLp = false;
+  // Perform LP bound tightening
+  bool tightenLp = false;
+  //
+  // For any solver
+  //
+  // primal feasibility (dual optimality) tolerance
+  double primal_feasibility_tolerance = 1e-7;
+  // dual feasibility (primal optimality) tolerance
+  double dual_feasibility_tolerance = 1e-7;
+  //
+  // For the simplex solver
+  //
+  bool perturb_costs_simplex = true;
+  // Maximum number of simplex iterations
+  int iteration_limit_simplex = 999999;
+  // Upper bound on dual objective value
+  double dual_objective_value_upper_bound = 1e+200;
 
   bool clean_up = false;
 };
@@ -122,7 +161,12 @@ struct HighsBasis {
 };
 
 struct HighsSimplexInfo {
-  // Part of working model which assigned and populated as much as
+  // Simplex information regarding primal and dual solution, objective
+  // and iteration counts for this Highs Model Object. This is
+  // information which should be retained from one run to the next in
+  // order to provide hot starts.
+  //
+  // Part of working model which are assigned and populated as much as
   // possible when a model is being defined
 
   // workCost: Originally just costs from the model but, in solve(), may
@@ -161,8 +205,54 @@ struct HighsSimplexInfo {
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
+  //
+  // Vectors of random reals for column cost perturbation, and a
+  // random permutation of column indices for shuffling the columns
+  // and CHUZR
+  std::vector<double> numTotRandomValue_;
+  std::vector<int> numColPermutation_;
+
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
+  //
+  // Value of dual objective
+  double dualObjectiveValue;
+  // Value of dual objective that is updated in dual simplex solver -
+  // need to put this in lower level header, but can't go into Dual.h
+  double updatedDualObjectiveValue;
+
+  // Number of simplex iterations: total and constituent counts
+  int numberAltIteration;
+  int numberAltPhase1DualIteration;
+  int numberAltPhase2DualIteration;
+  int numberAltPrimalIteration;
+
+  // Options from HighsOptions for the simplex solver
+  int simplex_strategy;
+  int crash_strategy;
+  int dual_edge_weight_strategy;
+  int price_strategy;
+
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  bool perturb_costs;
+  int iteration_limit;
+  double dual_objective_value_upper_bound;
+  
+  // Internal options - can't be changed externally
+
+  // Options for reporting timing
+  bool reportSimplexInnerClock;
+  bool reportSimplexOuterClock;
+  bool reportSimplexPhasesClock;
+#ifdef HiGHSDEV
+  // Option for analysing simplex iterations, INVERT time and rebuild time
+  bool analyseLp;
+  bool analyseSimplexIterations;
+  bool analyseLpSolution;
+  bool analyseInvertTime;
+  bool analyseRebuildTime;
+#endif
 };
 
 struct HighsSolution {

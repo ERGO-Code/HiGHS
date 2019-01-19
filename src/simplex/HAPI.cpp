@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HAPI.h"
+#include "HighsLpUtils.h"
 
 #include <cstring>
 
@@ -112,7 +113,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
 #ifdef HiGHSDEV
   model.util_reportModelDense(model.lpScaled);
 #endif
-  //  model.util_reportModel();
+  reportLp(model.lpScaled);
   //  model.util_reportModelSolution();
 
   //  printf("model.problemStatus = %d\n", model.problemStatus);

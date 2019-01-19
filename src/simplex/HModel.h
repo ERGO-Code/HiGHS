@@ -20,6 +20,10 @@
 #include "HighsTimer.h" //For timer_
 //#include "HighsUtils.h"
 #include "HighsRandom.h"
+
+// For compute dual objective alt value
+//#include "HighsModelObject.h"
+//#include "HSimplex.h"
 class HVector;
 
 #include <sstream>
@@ -71,38 +75,6 @@ enum nonbasicMoveStat {
   NONBASIC_MOVE_ZE = 0    // Fixed or free to move up and down
 };
 
-// For INT, DBL and STR options, ensure that ***OPT_COUNT is last since
-// this is the number of options and used to dimension as
-//***Option[***OPT_COUNT]
-enum HIGHS_INT_OPTIONS {
-  INTOPT_PRINT_FLAG = 0,  // 0/>=1 = none/do-print
-  // If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
-  // If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
-  // If 4\in INTOPT_PRINT_FLAG print iteration log line
-  INTOPT_TRANSPOSE_FLAG,  // 0/1 = none/do-transpose if possible
-  INTOPT_SCALE_FLAG,      // 0/1 = none/do-scale
-  INTOPT_TIGHT_FLAG,      // 0/1 = none/do-tight
-  INTOPT_PERMUTE_FLAG,    // 0/1 = none/do-permute
-  INTOPT_PERTURB_FLAG,    // 0/1 = none/do-perturb
-  INTOPT_LPITLIM,         // iteration limit
-  INTOPT_COUNT
-};
-
-enum HIGHS_DBL_OPTIONS {
-  DBLOPT_TIME_LIMIT = 0,
-  DBLOPT_PRIMAL_TOL,
-  DBLOPT_DUAL_TOL,
-  DBLOPT_PERTURB_BASE,
-  DBLOPT_PAMI_CUTOFF,
-  DBLOPT_OBJ_UB,  // For SCIP
-  DBLOPT_COUNT
-};
-
-enum HIGHS_STR_OPTIONS {
-  STROPT_PARTITION_FILE = 0,  // name of row partition file
-  STROPT_COUNT
-};
-
 class HModel {
  public:
   HModel();
@@ -133,9 +105,6 @@ class HModel {
   // Methods to modify the current model. Only scaleModel is currently in use
   void scaleModel();
   void scaleCosts();
-  void setup_transposeLP();
-  void setup_tightenBound();
-  void setup_shuffleColumn();
 
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
@@ -180,10 +149,6 @@ class HModel {
   void computeDualInfeasInPrimal(int* dualInfeasCount);
   void correctDual(int* freeInfeasCount);
   void computePrimal();
-  void computeDualObjectiveValue(int phase = 2);
-#ifdef HiGHSDEV
-  double checkDualObjectiveValue(const char *message, int phase = 2);
-#endif
   double computePrObj();
   double computePh2Objective(vector<double>& colPrAct);
   int handleRankDeficiency();
@@ -230,10 +195,6 @@ class HModel {
 #endif
   //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  // Utilities to get objective, solution and basis: all just copy what's there
-  // with no re-evaluation!
-  double util_getObjectiveValue();
-  
   void util_getPrimalDualValues(vector<double>& XcolValue,
                                 vector<double>& XcolDual,
                                 vector<double>& XrowValue,
@@ -296,12 +257,9 @@ class HModel {
   void util_changeCoeff(int row, int col, const double newval);
   void util_getCoeff(HighsLp lp, int row, int col, double* val);
 
-  // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
-  // is false
-  void util_reportMessage(const char* message);
+  // Methods for brief reports
   void util_reportNumberIterationObjectiveValue(int i_v);
   void util_reportSolverOutcome(const char* message);
-  void util_reportSolverProgress();
 
   // Methods for reporting the model, its solution, row and column data and
   // matrix
@@ -324,23 +282,15 @@ class HModel {
 
   void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
-  void util_anPrDuDgn();
   void util_anMlLargeCo(HighsLp lp, const char* message);
-  void util_anMlSol();
+  void util_analyseLpSolution();
 #endif
 
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  // Solving options and scalar solution data section: Sort it out!
-  // Solving options
-  int intOption[INTOPT_COUNT];
-  double dblOption[DBLOPT_COUNT];
-  string strOption[STROPT_COUNT];
+  // Scalar solution data section: Sort it out!
 
   // Random number generator
   HighsRandom random;
-
-  // The time and timer
-  //  double totalTime;
 
   // Perturbation flag
   int problemPerturbed;
@@ -366,13 +316,6 @@ class HModel {
   // Scalar solution output
   // Essentials
   int numberIteration;
-  // Dual objective value
-  double dualObjectiveValue;
-  double updatedDualObjectiveValue;
-#ifdef HiGHSDEV
-  double previousUpdatedDualObjectiveValue;
-  double previousDualObjectiveValue;
-#endif
 #ifdef HiGHSDEV
   // Analysis of INVERT
   const bool anInvertTime = false;
@@ -429,7 +372,7 @@ class HModel {
   int mlFg_haveBasicPrimals;
   //
   // The dual objective function value is known
-  int mlFg_haveDualObjectiveValue;
+  //  int mlFg_haveDualObjectiveValue;
   //
   // The data are fresh from rebuild
   int mlFg_haveFreshRebuild;
@@ -462,21 +405,20 @@ class HModel {
 #endif
 
   // Associated data of original model
-  vector<int> colPermutation;
-  vector<double> colRandomValue;
+  vector<int> numTotPermutation;
+  vector<double> numTotRandomValue;
 
   // The scaled model
-  HighsLp *lp_scaled_;
+  HighsLp *solver_lp_;
   // Part of working model which is only required and populated once a solve is
   // initiated
   HMatrix *matrix_;
   HFactor *factor_;
-  HighsSimplexInfo *simplex_;
+  HighsSimplexInfo *simplex_info_;
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
   HighsTimer *timer_;
-  //  int modelTotalClock;
 
 #ifdef HiGHSDEV
   vector<int> historyColumnIn;
@@ -502,26 +444,6 @@ class HModel {
   vector<double> SvRowLower;
   vector<double> SvRowUpper;
 
-  // Methods to get scalars and pointers to arrays and other data
-  // structures in the instance of a model
-  //  int getPrStatus() { return problemStatus; }
-  //  int getObjSense() { return lp_scaled_.sense_; }
-  //  const HMatrix* getMatrix() { return &matrix; }
-  //  const HFactor* getFactor() { return &factor; }
-  //  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
-  //  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
-  //  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
-  //  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
-  //  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
-  //  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
-  //  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
-  //  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
-  //  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
-  //  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
-  //  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
-  //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
-  //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  //  int* getColPermutation() { return &colPermutation[0]; }
 };
 
 /*

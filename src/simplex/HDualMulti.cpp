@@ -131,7 +131,7 @@ void HDual::major_chooseRow() {
   }
 
   // 6. Take other info associated with choices
-  double pamiCutoff = model->dblOption[DBLOPT_PAMI_CUTOFF];
+  double pami_cutoff = 0.95;
   for (int i = 0; i < multi_num; i++) {
     const int iRow = multi_choice[i].rowOut;
     if (iRow < 0) continue;
@@ -143,7 +143,7 @@ void HDual::major_chooseRow() {
     multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit =
         dualRHS.workArray[iRow] / dualRHS.workEdWt[iRow];
-    multi_choice[i].infeasLimit *= pamiCutoff;
+    multi_choice[i].infeasLimit *= pami_cutoff;
   }
 
   // 6. Finish count
@@ -243,7 +243,7 @@ void HDual::minor_update() {
   // Minor update - store roll back data
   MFinish *Fin = &multi_finish[multi_nFinish];
   Fin->moveIn = workHMO.basis_.nonbasicMove_[columnIn];
-  Fin->shiftOut = workHMO.simplex_.workShift_[columnOut];
+  Fin->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
   Fin->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
     Fin->flipList.push_back(dualRow.workData[i].first);
@@ -346,7 +346,7 @@ void HDual::minor_updatePivots() {
   MFinish *Fin = &multi_finish[multi_nFinish];
   model->updatePivots(columnIn, rowOut, sourceOut);
   Fin->EdWt /= (alphaRow * alphaRow);
-  Fin->basicValue = workHMO.simplex_.workValue_[columnIn] + thetaPrimal;
+  Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
   model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
@@ -710,8 +710,8 @@ void HDual::major_rollback() {
       model->flipBound(Fin->flipList[i]);
 
     // 4. Roll back cost
-    workHMO.simplex_.workShift_[Fin->columnIn] = 0;
-    workHMO.simplex_.workShift_[Fin->columnOut] = Fin->shiftOut;
+    workHMO.simplex_info_.workShift_[Fin->columnIn] = 0;
+    workHMO.simplex_info_.workShift_[Fin->columnOut] = Fin->shiftOut;
 
     // 5. The iteration count
     model->numberIteration--;

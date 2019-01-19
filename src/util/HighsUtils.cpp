@@ -26,8 +26,8 @@ bool highs_isInfinity(double val) {
 }
 
 #ifdef HiGHSDEV
-void util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
-                         bool anVLs) {
+void util_analyseVectorValues(const char *message, int vecDim, std::vector<double> &vec,
+			      bool anVLs) {
   if (vecDim == 0) return;
   double log10 = log(10.0);
   const int nVK = 20;
@@ -54,7 +54,7 @@ void util_anVecV(const char *message, int vecDim, std::vector<double> &vec,
 
   for (int ix = 0; ix < vecDim; ix++) {
     double v = vec[ix];
-    double absV = abs(v);
+    double absV = std::fabs(v);
     int log10V;
     if (absV > 0) {
       // Nonzero value

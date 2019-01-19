@@ -35,7 +35,7 @@ void reportLpBrief(HighsLp &lp) {
 
 // Report the LP dimensions
 void reportLpDimensions(HighsLp &lp) {
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_MINIMAL,
                     "LP has %d columns, %d rows and %d nonzeros\n",
                     lp.numCol_, lp.numRow_, lp.Astart_[lp.numCol_]);
 }
@@ -43,21 +43,21 @@ void reportLpDimensions(HighsLp &lp) {
 // Report the LP objective sense
 void reportLpObjSense(HighsLp &lp) {
   if (lp.sense_ == OBJSENSE_MINIMIZE)
-    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is minimize\n");
+    HighsPrintMessage(ML_MINIMAL, "Objective sense is minimize\n");
   else if (lp.sense_ == OBJSENSE_MAXIMIZE)
-    HighsPrintMessage(HighsMessageType::INFO, "Objective sense is maximize\n");
+    HighsPrintMessage(ML_MINIMAL, "Objective sense is maximize\n");
   else
-    HighsPrintMessage(HighsMessageType::INFO,
+    HighsPrintMessage(ML_MINIMAL,
                       "Objective sense is ill-defined as %d\n", lp.sense_);
 }
 
 // Report the vectors of LP column data
 void reportLpColVec(HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_VERBOSE,
                     "  Column        Lower        Upper         Cost\n");
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g %12g\n", iCol,
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g\n", iCol,
                       lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol]);
   }
 }
@@ -65,10 +65,10 @@ void reportLpColVec(HighsLp &lp) {
 // Report the vectors of LP row data
 void reportLpRowVec(HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_VERBOSE,
                     "     Row        Lower        Upper\n");
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    HighsPrintMessage(HighsMessageType::INFO, "%8d %12g %12g\n", iRow,
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g\n", iRow,
                       lp.rowLower_[iRow], lp.rowUpper_[iRow]);
   }
 }
@@ -76,23 +76,23 @@ void reportLpRowVec(HighsLp &lp) {
 // Report the LP column-wise matrix
 void reportLpColMtx(HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(HighsMessageType::INFO,
+  HighsPrintMessage(ML_VERBOSE,
                     "Column Index              Value\n");
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(HighsMessageType::INFO, "    %8d Start   %10d\n", iCol,
+    HighsPrintMessage(ML_VERBOSE, "    %8d Start   %10d\n", iCol,
                       lp.Astart_[iCol]);
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
-      HighsPrintMessage(HighsMessageType::INFO, "          %8d %12g\n",
+      HighsPrintMessage(ML_VERBOSE, "          %8d %12g\n",
                         lp.Aindex_[el], lp.Avalue_[el]);
     }
   }
-  HighsPrintMessage(HighsMessageType::INFO, "             Start   %10d\n",
+  HighsPrintMessage(ML_VERBOSE, "             Start   %10d\n",
                     lp.Astart_[lp.numCol_]);
 }
 
 /*
 void reportLpSolution(HighsModelObject &highs_model) {
-  HighsLp lp = highs_model.lp_scaled_;
+  HighsLp lp = highs_model.solver_lp_;
   reportLpBrief(lp);
   //  model->util_reportModelStatus(lp);
   assert(lp.numCol_ > 0);
@@ -111,20 +111,20 @@ void reportLpSolution(HighsModelObject &highs_model) {
 */
 
 #ifdef HiGHSDEV
-void util_anMl(HighsLp &lp, const char *message) {
+void util_analyseModel(HighsLp &lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
-  util_anVecV("Column costs", lp.numCol_, lp.colCost_, false);
-  util_anVecV("Column lower bounds", lp.numCol_, lp.colLower_, false);
-  util_anVecV("Column upper bounds", lp.numCol_, lp.colUpper_, false);
-  util_anVecV("Row lower bounds", lp.numRow_, lp.rowLower_, false);
-  util_anVecV("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
-  util_anVecV("Matrix entries", lp.Astart_[lp.numCol_], lp.Avalue_, true);
-  util_anMlBd("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
-  util_anMlBd("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
+  util_analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
+  util_analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
+  util_analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
+  util_analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
+  util_analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
+  util_analyseVectorValues("Matrix entries", lp.Astart_[lp.numCol_], lp.Avalue_, true);
+  util_analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
+  util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 
-void util_anMlBd(const char *message, int numBd, std::vector<double> &lower,
-                         std::vector<double> &upper) {
+void util_analyseModelBounds(const char *message, int numBd, std::vector<double> &lower,
+			     std::vector<double> &upper) {
   if (numBd == 0) return;
   int numFr = 0;
   int numLb = 0;
