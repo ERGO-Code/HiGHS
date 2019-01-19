@@ -205,7 +205,7 @@ class HSimplex {
   }
 
   void computeDualObjectiveValue(
-				 HighsModelObject highs_model_object,
+				 HighsModelObject &highs_model_object,
 				 int phase = 2) {
     HighsLp &lp_ = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
