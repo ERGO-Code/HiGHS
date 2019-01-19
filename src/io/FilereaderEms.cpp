@@ -15,18 +15,18 @@
 #include "FilereaderEms.h"
 #include "HConst.h"
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
                                                    HighsLp& model) {
   return FilereaderRetcode::OKAY;
 }
 
 
-FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
+FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
                                                   HighsLp& model) {
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
                                                    HighsModel& model) {
   return FilereaderRetcode::OKAY;
 }
