@@ -317,7 +317,7 @@ void HDual::solve(int num_threads) {
     int it0 = model->numberIteration;
 #endif
     if (solvePhase == 4) {
-      HPrimal hPrimal;
+      HPrimal hPrimal(workHMO);
       hPrimal.TimeLimitValue = TimeLimitValue;
 
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
