@@ -3,6 +3,7 @@
 set(sources
     io/Filereader.cpp
     io/FilereaderLp.cpp
+    io/FilereaderEms.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
  #   io/HinOut.cpp
@@ -42,6 +43,7 @@ set(headers
     #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
+    io/FilereaderEms.h
     io/FilereaderMps.h
 #    io/HinOut.h
     io/HMpsFF.h
