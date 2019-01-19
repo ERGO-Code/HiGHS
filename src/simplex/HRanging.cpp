@@ -958,7 +958,10 @@ void HRanging::checkDataZeroMlFg(HModel* model) {
   model->mlFg_haveSavedBounds = 0;
 }
 
+
+// No longer works because HDual need a HighsModelObject
 void HRanging::checkDataSolve(HModel* model, bool rp) {
+  /*
   HDual solver;
   if (rp) {
     model->intOption[INTOPT_PRINT_FLAG] = 4;
@@ -975,4 +978,5 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
     printf("checkDataSolve: numberIteration = %d\n",
            model->numberIteration);
   }
+  */
 }

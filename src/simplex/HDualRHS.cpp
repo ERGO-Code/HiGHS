@@ -29,12 +29,9 @@ using std::make_pair;
 using std::fill_n;
 using std::nth_element;
 
-void HDualRHS::setup(HighsModelObject *highs_model_object
-		     //		     HModel *model
-		     ) {
-  workHMO = highs_model_object;
+void HDualRHS::setup() {
   HModel *model;
-  model = &highs_model_object->hmodel_[0];
+  model = &workHMO.hmodel_[0];
   workModel = model;
   const int numRow = model->lp_scaled_->numRow_;
   const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
@@ -48,8 +45,8 @@ void HDualRHS::setup(HighsModelObject *highs_model_object
 }
 
 void HDualRHS::choose_normal(int *chIndex) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   // Moved the following to the top to avoid starting the clock for a trivial
   // call. NB Must still call intRandom to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
@@ -137,8 +134,8 @@ void HDualRHS::choose_normal(int *chIndex) {
 }
 
 void HDualRHS::choose_multi_global(int *chIndex, int *chCount, int chLimit) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   timer.start(simplex.clock_[Chuzr1Clock]);
 
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
@@ -206,8 +203,8 @@ void HDualRHS::choose_multi_HGauto(int *chIndex, int *chCount, int chLimit) {
 }
 
 void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   timer.start(simplex.clock_[Chuzr1Clock]);
 
   // Force to use partition method, unless doesn't exist
@@ -290,8 +287,8 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
 }
 
 void HDualRHS::update_primal(HVector *column, double theta) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   timer.start(simplex.clock_[UpdatePrimalClock]);
 
   const int numRow = workModel->lp_scaled_->numRow_;
@@ -299,11 +296,11 @@ void HDualRHS::update_primal(HVector *column, double theta) {
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
 
-  const double *baseLower = &workHMO->simplex_.baseLower_[0];
-  const double *baseUpper = &workHMO->simplex_.baseUpper_[0];
+  const double *baseLower = &workHMO.simplex_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_.baseUpper_[0];
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
 
-  double *baseValue = &workHMO->simplex_.baseValue_[0];
+  double *baseValue = &workHMO.simplex_.baseValue_[0];
 
   bool updatePrimal_inDense = columnCount < 0 || columnCount > 0.4 * numRow;
 
@@ -334,8 +331,8 @@ void HDualRHS::update_primal(HVector *column, double theta) {
 // Update the DSE weights
 void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut,
                                  double Kai, double *dseArray) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   timer.start(simplex.clock_[UpdateWeightClock]);
 
   const int numRow = workModel->lp_scaled_->numRow_;
@@ -362,8 +359,8 @@ void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut,
 }
 // Update the Devex weights
 void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   timer.start(simplex.clock_[UpdateWeightClock]);
 
   const int numRow = workModel->lp_scaled_->numRow_;
@@ -394,10 +391,10 @@ void HDualRHS::update_pivots(int iRow, double value) {
   // has occurred, and set the corresponding squared primal
   // infeasibility value in workArray
   //
-  const double *baseLower = &workHMO->simplex_.baseLower_[0];
-  const double *baseUpper = &workHMO->simplex_.baseUpper_[0];
+  const double *baseLower = &workHMO.simplex_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_.baseUpper_[0];
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
-  double *baseValue = &workHMO->simplex_.baseValue_[0];
+  double *baseValue = &workHMO.simplex_.baseValue_[0];
   baseValue[iRow] = value;
   double pivotInfeas = 0;
   if (baseValue[iRow] < baseLower[iRow] - Tp)
@@ -408,8 +405,8 @@ void HDualRHS::update_pivots(int iRow, double value) {
 }
 
 void HDualRHS::update_infeasList(HVector *column) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
 
@@ -447,9 +444,9 @@ void HDualRHS::update_infeasList(HVector *column) {
 
 void HDualRHS::create_infeasArray() {
   int numRow = workModel->lp_scaled_->numRow_;
-  const double *baseValue = &workHMO->simplex_.baseValue_[0];
-  const double *baseLower = &workHMO->simplex_.baseLower_[0];
-  const double *baseUpper = &workHMO->simplex_.baseUpper_[0];
+  const double *baseValue = &workHMO.simplex_.baseValue_[0];
+  const double *baseLower = &workHMO.simplex_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_.baseUpper_[0];
   const double Tp = workModel->dblOption[DBLOPT_PRIMAL_TOL];
   for (int i = 0; i < numRow; i++) {
     const double value = baseValue[i];

@@ -26,16 +26,14 @@ using std::make_pair;
 using std::pair;
 using std::set;
 
-void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
-  // Copy pointer
-  workHMO = highs_model_object;
+void HDualRow::setupSlice(int size) {
   HModel *model;
-  model = &workHMO->hmodel_[0];
+  model = &workHMO.hmodel_[0];
   workModel = model;
   workSize = size;
-  workMove = &workHMO->basis_.nonbasicMove_[0];
-  workDual = &workHMO->simplex_.workDual_[0];
-  workRange = &workHMO->simplex_.workRange_[0];
+  workMove = &workHMO.basis_.nonbasicMove_[0];
+  workDual = &workHMO.simplex_.workDual_[0];
+  workRange = &workHMO.simplex_.workRange_[0];
 
   // Allocate spaces
   packCount = 0;
@@ -46,12 +44,12 @@ void HDualRow::setupSlice(HighsModelObject *highs_model_object, int size) {
   workData.resize(workSize);
 }
 
-void HDualRow::setup(HighsModelObject *highs_model_object) {
+void HDualRow::setup() {
   // Setup common vectors
   HModel *model;
-  model = &highs_model_object->hmodel_[0];
+  model = &workHMO.hmodel_[0];
   const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
-  setupSlice(highs_model_object, numTot);
+  setupSlice(numTot);
   workColPermutation = &model->colPermutation[0];
 
   
@@ -140,8 +138,8 @@ void HDualRow::choose_joinpack(const HDualRow *otherRow) {
 }
 
 bool HDualRow::choose_final() {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -326,10 +324,10 @@ bool HDualRow::choose_final() {
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
   //  workModel->checkDualObjectiveValue("Before update_flip");
-  double *workDual = &workHMO->simplex_.workDual_[0];//
-  //  double *workLower = &workHMO->simplex_.workLower_[0];
-  //  double *workUpper = &workHMO->simplex_.workUpper_[0];
-  //  double *workValue = &workHMO->simplex_.workValue_[0];
+  double *workDual = &workHMO.simplex_.workDual_[0];//
+  //  double *workLower = &workHMO.simplex_.workLower_[0];
+  //  double *workUpper = &workHMO.simplex_.workUpper_[0];
+  //  double *workValue = &workHMO.simplex_.workValue_[0];
   double dualObjectiveValueChange = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
@@ -348,11 +346,11 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
 }
 
 void HDualRow::update_dual(double theta, int columnOut) {
-  HighsTimer &timer = workHMO->timer_;
-  HighsSimplexInfo &simplex = workHMO->simplex_;
+  HighsTimer &timer = workHMO.timer_;
+  HighsSimplexInfo &simplex = workHMO.simplex_;
   //  workModel->checkDualObjectiveValue("Before update_dual");
   timer.start(simplex.clock_[UpdateDualClock]);
-  double *workDual = &workHMO->simplex_.workDual_[0];
+  double *workDual = &workHMO.simplex_.workDual_[0];
   //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
@@ -360,9 +358,9 @@ void HDualRow::update_dual(double theta, int columnOut) {
     int iCol = packIndex[i];
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
-    double iColWorkValue = workHMO->simplex_.workValue_[iCol];
-    double dlDuObj = workHMO->basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
-    dlDuObj *= workHMO->scale_.cost_;
+    double iColWorkValue = workHMO.simplex_.workValue_[iCol];
+    double dlDuObj = workHMO.basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
+    dlDuObj *= workHMO.scale_.cost_;
     workModel->updatedDualObjectiveValue += dlDuObj;
   }
   /*
@@ -407,7 +405,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
 
 void HDualRow::create_Freelist() {
   freeList.clear();
-  const int *nonbasicFlag = &workHMO->basis_.nonbasicFlag_[0];
+  const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
   const int numTot = workModel->lp_scaled_->numCol_ + workModel->lp_scaled_->numRow_;
   for (int i = 0; i < numTot; i++) {
@@ -441,9 +439,9 @@ void HDualRow::create_Freemove(HVector *row_ep) {
       double alpha = workModel->matrix_->compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * sourceOut > 0)
-          workHMO->basis_.nonbasicMove_[iCol] = 1;
+          workHMO.basis_.nonbasicMove_[iCol] = 1;
         else
-          workHMO->basis_.nonbasicMove_[iCol] = -1;
+          workHMO.basis_.nonbasicMove_[iCol] = -1;
       }
     }
   }
@@ -454,7 +452,7 @@ void HDualRow::delete_Freemove() {
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
       assert(iCol < workModel->lp_scaled_->numCol_);
-      workHMO->basis_.nonbasicMove_[iCol] = 0;
+      workHMO.basis_.nonbasicMove_[iCol] = 0;
     }
   }
 }
