@@ -57,14 +57,14 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   HModel& model = highs_model.hmodel_[0];
 
   bool ranging = true;
+
   // Initialize solver.
   HDual solver(highs_model);
 
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
     model.initFromNonbasic();
-
-    solver.solve(highs_model);
+    solver.solve();
     return LpStatusToHighsStatus(model.problemStatus);
   }
 
@@ -79,13 +79,13 @@ HighsStatus solveSimplex(const HighsOptions& opt,
   // Parallel.
   if (opt.sip) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
-    solver.solve(highs_model, HDUAL_VARIANT_TASKS, 8);
+    solver.solve(HDUAL_VARIANT_TASKS, 8);
   } else if (opt.pami) {
     model.intOption[INTOPT_PERMUTE_FLAG] = 1;
     if (opt.partitionFile.size() > 0) {
       model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;
     }
-    solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
+    solver.solve(HDUAL_VARIANT_MULTI, 8);
 #ifdef HiGHSDEV
     if (opt.pami) model.writePivots("multi");
     if (opt.sip) model.writePivots("tasks");
@@ -107,8 +107,6 @@ HighsStatus solveSimplex(const HighsOptions& opt,
 #endif
     double lcSolveTime;
 
-    HDual solver;
-
     vector<double> colPrAct;
     vector<double> colDuAct;
     vector<double> rowPrAct;
@@ -128,11 +126,11 @@ HighsStatus solveSimplex(const HighsOptions& opt,
     bool EightThreads = false;
 
     if (FourThreads)
-      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 4);
+      solver.solve(HDUAL_VARIANT_MULTI, 4);
     else if (EightThreads)
-      solver.solve(highs_model, HDUAL_VARIANT_MULTI, 8);
+      solver.solve(HDUAL_VARIANT_MULTI, 8);
     else
-      solver.solve(highs_model);
+      solver.solve();
 
     //    lcSolveTime = model.timer.getTime();
     //    solveTime += lcSolveTime;
@@ -163,7 +161,7 @@ HighsStatus solveSimplex(const HighsOptions& opt,
         model.copy_savedBoundsToModelBounds();
 
 	//        model.timer.reset();
-        solver.solve(highs_model);
+        solver.solve();
  /*       lcSolveTime = model.timer.getTime();
         solveTime += lcSolveTime;
         solveIt += model.numberIteration;  */
@@ -351,8 +349,9 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   //  model.util_reportModel();
 
   model.scaleModel();
-  HDual solver;
-  solver.solve(highs_model);
+
+  HDual solver(highs_model);
+  solver.solve();
   //  reportLpSolution(highs_model);
   model.util_reportSolverOutcome("SCIP 1");
 
@@ -403,7 +402,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       printf("Calling model.scaleModel()\n");
       model.scaleModel();
       //      printf("Calling solver.solve(highs_model)\n");
-      solver.solve(highs_model);
+      solver.solve();
       //      printf("Called solver.solve(highs_model)\n");
       model.util_reportSolverOutcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
