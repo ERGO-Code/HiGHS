@@ -21,7 +21,7 @@
 
 FILE* logfile = stdout;
 FILE* output = stdout;
-unsigned int messageLevel = ML_NONE;
+unsigned int messageLevel = ML_MINIMAL;
 
 void HighsPrintMessage(unsigned int level, const char* format, ...) {
   if (messageLevel & level) {

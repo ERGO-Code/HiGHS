@@ -61,7 +61,7 @@ struct HighsOptions {
   // TODO: Use these to set values for use in HighsPrintMessage and HighsLogMessage  
   FILE* output = stdout;
   // HighsPrintMessage level: default = 0
-  unsigned int messageLevel = 0;
+  unsigned int messageLevel = 4;
   FILE* logfile = stdout;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
