@@ -321,7 +321,7 @@ void HDual::solve(int num_threads) {
       hPrimal.TimeLimitValue = TimeLimitValue;
 
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-      hPrimal.solvePhase2(&workHMO);
+      hPrimal.solvePhase2();
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
 
     }

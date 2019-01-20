@@ -24,13 +24,8 @@
 
 using std::runtime_error;
 
-void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
-  // Copy size
-  highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
-  //  model = &highs_model_object->hmodel_[0];
+void HPrimal::solvePhase2() {
   model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
-  //  model->basis_ = &highs_model_object->basis_;
-
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
   numCol = model->solver_lp_->numCol_;

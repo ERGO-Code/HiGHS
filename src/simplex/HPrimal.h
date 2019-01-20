@@ -35,10 +35,7 @@ class HPrimal {
   /**
    * @brief Perform Phase 2 primal simplex iterations
    */
-  void solvePhase2(
-      HighsModelObject *ptr_highs_model_object  //!< Model for which Phase 2 primal simplex iterations
-                         //!< should be performed
-  );
+  void solvePhase2();
   double TimeLimitValue;  //!< Time limit
 
  private:
@@ -50,7 +47,6 @@ class HPrimal {
   // Model pointer
   HModel *model;
   HighsModelObject &workHMO;
-  HighsModelObject *highs_model_object;
   HSimplex simplex_method_;
   
   int numCol;
