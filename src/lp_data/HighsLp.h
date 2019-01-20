@@ -55,14 +55,8 @@ struct HighsOptions {
 
   std::string presolveMode = "off";
   PRESOLVE_STRATEGY presolve_strategy = PRESOLVE_STRATEGY::PRESOLVE_STRATEGY_DEFAULT;
-
-  std::string crashMode = "off";
   CRASH_STRATEGY crash_strategy = CRASH_STRATEGY::CRASH_STRATEGY_DEFAULT;
-
-  std::string edWtMode = "dse2dvx";
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY simplex_dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY::SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEFAULT;
-
-  std::string priceMode = "rowswcolsw";
   SIMPLEX_PRICE_STRATEGY simplex_price_strategy = SIMPLEX_PRICE_STRATEGY::SIMPLEX_PRICE_STRATEGY_DEFAULT;
 
   // Options not passed through the command line

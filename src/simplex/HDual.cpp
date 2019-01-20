@@ -1828,43 +1828,6 @@ void HDual::iz_dvx_fwk() {
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
-void HDual::setCrash(const char *Crash_ArgV) {
-  //	cout << "HDual::setCrash Crash_ArgV = " << Crash_ArgV << endl;
-  if (strcmp(Crash_ArgV, "Off") == 0)
-    Crash_Mode = Crash_Mode_No;
-  else if (strcmp(Crash_ArgV, "LTSSF") == 0)
-    Crash_Mode = Crash_Mode_Df;
-  else if (strcmp(Crash_ArgV, "LTSSF1") == 0)
-    Crash_Mode = Crash_Mode_LTSSF_k;
-  else if (strcmp(Crash_ArgV, "LTSSF2") == 0)
-    Crash_Mode = Crash_Mode_LTSSF_pri;
-  else if (strcmp(Crash_ArgV, "LTSSF3") == 0)
-    Crash_Mode = Crash_Mode_LTSF_k;
-  else if (strcmp(Crash_ArgV, "LTSSF4") == 0)
-    Crash_Mode = Crash_Mode_LTSF_pri;
-  else if (strcmp(Crash_ArgV, "LTSSF5") == 0)
-    Crash_Mode = Crash_Mode_LTSF;
-  else if (strcmp(Crash_ArgV, "LTSSF6") == 0)
-    Crash_Mode = Crash_Mode_Bixby;
-  else if (strcmp(Crash_ArgV, "LTSSF7") == 0)
-    Crash_Mode = Crash_Mode_BixbyNoNzCCo;
-  else if (strcmp(Crash_ArgV, "Bs") == 0)
-    Crash_Mode = Crash_Mode_Bs;
-#ifdef HiGHSDEV
-  else if (strcmp(Crash_ArgV, "TsSing") == 0)
-    Crash_Mode = Crash_Mode_TsSing;
-#endif
-  else {
-    cout << "HDual::setCrash unrecognised CrashArgV = " << Crash_ArgV
-         << " - using No crash" << endl;
-    Crash_Mode = Crash_Mode_No;
-  }
-  //	if (Crash_Mode == Crash_Mode_LTSSF) {
-  //		crash.ltssf_iz_mode(Crash_Mode);
-  //	}
-  //		cout<<"HDual::setCrash Crash_Mode = " << Crash_Mode << endl;
-}
-
 void HDual::interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy) {
   if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
     dual_edge_weight_mode = DUAL_EDGE_WEIGHT_MODE_DANTZIG;

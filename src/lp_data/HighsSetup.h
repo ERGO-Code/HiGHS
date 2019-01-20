@@ -340,21 +340,6 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
       options.filenames = filenames;
     }
 
-    if (result.count("crash")) {
-      std::string data = result["crash"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "off" && data != "ltssf" && data != "ltssf1" &&
-          data != "ltssf2" && data != "ltssf3" && data != "ltssf4" &&
-          data != "ltssf5" && data != "ltssf6" && data != "ltssf7" &&
-          data != "bs" && data != "singts") {
-        std::cout << "Wrong value specified for crash." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.crashMode = data;
-      std::cout << "Crash is set to " << data << ".\n";
-    }
-
     if (result.count("presolve")) {
       std::string data = result["presolve"].as<std::string>();
       std::transform(data.begin(), data.end(), data.begin(), ::tolower);

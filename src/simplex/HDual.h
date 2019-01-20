@@ -322,11 +322,6 @@ class HDual {
   void iz_dvx_fwk();
 
   /**
-   * @brief Sets a run-time parameter. TODO: handle this otherwise
-   */
-  void setCrash(const char *CrashMode);
-
-  /**
    * @brief Set a run-time parameter. TODO: handle this otherwise
    */
   void interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy);

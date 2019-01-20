@@ -28,8 +28,8 @@ class HSimplex {
  public:
 
   void options(
-	       HighsModelObject & highs_model_object,
-	       const HighsOptions& opt  //!< HiGHS options
+	       HighsModelObject & highs_model_object, //!< Model object in which simplex options are to be set
+	       const HighsOptions& opt                //!< HiGHS options
 	       ) {
     HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
 
@@ -53,7 +53,7 @@ class HSimplex {
 #ifdef HiGHSDEV
     simplex_info_.reportSimplexPhasesClock = false;
     // Option for analysing simplex iterations
-    simplex_info_.analyseLp = true;//false;
+    simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = false;
     simplex_info_.analyseLpSolution = false;
     simplex_info_.analyseInvertTime = false;
@@ -64,7 +64,8 @@ class HSimplex {
 
   void computeDualObjectiveValue(
 				 HighsModelObject &highs_model_object,
-				 int phase = 2) {
+				 int phase = 2
+				 ) {
     HighsLp &lp_ = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
     
