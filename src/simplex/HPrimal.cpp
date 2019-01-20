@@ -53,7 +53,6 @@ void HPrimal::solvePhase2() {
   HighsPrintMessage(ML_DETAILED, "primal-start\n");
 
   HighsTimer &timer = *(model->timer_);
-  double currentRunHighsTime = timer.readRunHighsClock();
 
   // Main solving structure
   for (;;) {
@@ -89,9 +88,8 @@ void HPrimal::solvePhase2() {
       }
     }
 
-    currentRunHighsTime = timer.readRunHighsClock();
-    //	printf("Primal Ph2: currentRunHighsTime = %5.2f\n", currentRunHighsTime);
-    if (currentRunHighsTime > TimeLimitValue) {
+    double currentRunHighsTime = timer.readRunHighsClock();
+    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
       model->problemStatus = LP_Status_OutOfTime;
       break;
     }

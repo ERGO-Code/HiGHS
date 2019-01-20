@@ -60,7 +60,7 @@ HighsStatus solveSimplex(
   HighsTimer &timer = highs_model.timer_;
   // Set simplex options from HiGHS options
   HSimplex simplex_method_;
-  simplex_method_.options(&highs_model, opt);
+  simplex_method_.options(highs_model, opt);
 
   HModel& model = highs_model.hmodel_[0];
 
@@ -110,8 +110,6 @@ HighsStatus solveSimplex(
     vector<double> colDuAct;
     vector<double> rowPrAct;
     vector<double> rowDuAct;
-
-    dual_solver.setTimeLimit(opt.timeLimit);
 
     //  bool FourThreads = true;
     bool FourThreads = false;

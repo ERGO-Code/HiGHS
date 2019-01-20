@@ -20,6 +20,9 @@
 #include <string>
 #include <vector>
 
+#include "HConst.h" // For HiGHS strategy options
+#include "SimplexConst.h" // For simplex strategy options
+
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
 enum class HighsMpsParserType { free, fixed };
@@ -31,7 +34,6 @@ enum objSense
   OBJSENSE_MAXIMIZE = -1
 };
 
-
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
 // are just what has been used to parse options from argv.
@@ -40,20 +42,28 @@ enum objSense
 struct HighsOptions {
   std::string filenames = "";
 
+  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+
+  PARALLEL_STRATEGY parallel_strategy = PARALLEL_STRATEGY::PARALLEL_STRATEGY_DEFAULT;
+
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
-
-  // HiGHS run time limit (s): default = 100000? - DBLOPT_TIME_LIMIT
-  double timeLimit = 0;
+  SIMPLEX_STRATEGY simplex_strategy = SIMPLEX_STRATEGY::SIMPLEX_STRATEGY_DEFAULT;
 
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
   std::string presolveMode = "off";
+  PRESOLVE_STRATEGY presolve_strategy = PRESOLVE_STRATEGY::PRESOLVE_STRATEGY_DEFAULT;
+
   std::string crashMode = "off";
+  CRASH_STRATEGY crash_strategy = CRASH_STRATEGY::CRASH_STRATEGY_DEFAULT;
+
   std::string edWtMode = "dse2dvx";
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY simplex_dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY::SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEFAULT;
+
   std::string priceMode = "rowswcolsw";
-  std::string partitionFile = "";
+  SIMPLEX_PRICE_STRATEGY simplex_price_strategy = SIMPLEX_PRICE_STRATEGY::SIMPLEX_PRICE_STRATEGY_DEFAULT;
 
   // Options not passed through the command line
 
@@ -80,17 +90,19 @@ struct HighsOptions {
   // For any solver
   //
   // primal feasibility (dual optimality) tolerance
-  double primal_feasibility_tolerance = 1e-7;
+  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
   // dual feasibility (primal optimality) tolerance
-  double dual_feasibility_tolerance = 1e-7;
+  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
+
+
+  // Upper bound on dual objective value
+  double dual_objective_value_upper_bound = 1e+200;
   //
   // For the simplex solver
   //
-  bool perturb_costs_simplex = true;
+  bool simplex_perturb_costs = true;
   // Maximum number of simplex iterations
-  int iteration_limit_simplex = 999999;
-  // Upper bound on dual objective value
-  double dual_objective_value_upper_bound = 1e+200;
+  int simplex_iteration_limit = 999999;
 
   bool clean_up = false;
 };
@@ -228,6 +240,7 @@ struct HighsSimplexInfo {
   int numberAltPrimalIteration;
 
   // Options from HighsOptions for the simplex solver
+  double highs_run_time_limit;
   int simplex_strategy;
   int crash_strategy;
   int dual_edge_weight_strategy;

@@ -67,13 +67,6 @@ void HDual::solve(int num_threads) {
   // calling function
   SolveBailout = false;
 
-  if (TimeLimitValue == 0) {
-    TimeLimitValue = 1000000.0;
-#ifdef HiGHSDEV
-    HighsPrintMessage(ML_MINIMAL, "Changing TimeLimitValue from 0 to %g\n", TimeLimitValue);
-#endif
-  }
-
   // Initialise working environment
   // Does LOTS, including initialisation of edge weights. Should only
   // be called if model dimension changes
@@ -318,7 +311,6 @@ void HDual::solve(int num_threads) {
 #endif
     if (solvePhase == 4) {
       HPrimal hPrimal(workHMO);
-      hPrimal.TimeLimitValue = TimeLimitValue;
 
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
       hPrimal.solvePhase2();
@@ -545,11 +537,6 @@ void HDual::solve_phase1() {
   // Switch to dual phase 1 bounds
   model->initBound(1);
   model->initValue();
-  double currentRunHighsTime = timer.readRunHighsClock();
-#ifdef HiGHSDEV
-  // int currentRunHighsTime_rp_n = 0; printf("DualPh1: currentRunHighsTime = %5.2f; Record
-  // %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
-#endif
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
@@ -582,12 +569,8 @@ void HDual::solve_phase1() {
         break;
       }
     }
-    //      currentRunHighsTime = timer.readRunHighsClock();
-#ifdef HiGHSDEV
-    //      currentRunHighsTime_rp_n += 1; printf("DualPh1: currentRunHighsTime = %5.2f;
-    //      Record %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
-#endif
-    if (currentRunHighsTime > TimeLimitValue) {
+    double currentRunHighsTime = timer.readRunHighsClock();
+    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
       SolveBailout = true;
       model->problemStatus = LP_Status_OutOfTime;
       break;
@@ -653,11 +636,6 @@ void HDual::solve_phase2() {
 
   // Collect free variables
   dualRow.create_Freelist();
-  double currentRunHighsTime = timer.readRunHighsClock();
-#ifdef HiGHSDEV
-  //  int currentRunHighsTime_rp_n = 0; printf("DualPh2: currentRunHighsTime = %5.2f; Record
-  //  %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
-#endif
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
@@ -695,16 +673,12 @@ void HDual::solve_phase2() {
         break;
       }
     }
-    //    currentRunHighsTime = timer.readRunHighsClock();
     if (model->problemStatus == LP_Status_ObjUB) {
       SolveBailout = true;
       break;
     }
-#ifdef HiGHSDEV
-    //      currentRunHighsTime_rp_n += 1; printf("DualPh2: currentRunHighsTime = %5.2f;
-    //      Record %d\n", currentRunHighsTime, currentRunHighsTime_rp_n);
-#endif
-    if (currentRunHighsTime > TimeLimitValue) {
+    double currentRunHighsTime = timer.readRunHighsClock();
+    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
       model->problemStatus = LP_Status_OutOfTime;
       SolveBailout = true;
       break;
@@ -1942,11 +1916,6 @@ void HDual::interpret_price_strategy(int simplex_price_strategy) {
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
   }
-}
-
-void HDual::setTimeLimit(double TimeLimit_ArgV) {
-  //	cout<<"HDual::setTimeLimit TimeLimit_ArgV = "<<TimeLimit_ArgV<<endl;
-  TimeLimitValue = TimeLimit_ArgV;
 }
 
 #ifdef HiGHSDEV

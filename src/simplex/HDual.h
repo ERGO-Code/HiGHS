@@ -336,11 +336,6 @@ class HDual {
    */
   void interpret_price_strategy(int simplex_price_strategy);
 
-  /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
-   */
-  void setTimeLimit(double TimeLimit_ArgV);
-
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char *message, int phase = 2);
 #endif
@@ -517,9 +512,6 @@ class HDual {
   bool allow_price_by_row_switch;
   bool allow_price_ultra;
   const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE when pi_p has at least this density
-
-  double TimeLimitValue = 0;  //!< Value of time limit. TODO: handle this otherwise
-  double time_limit_value;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;

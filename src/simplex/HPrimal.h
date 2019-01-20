@@ -36,7 +36,6 @@ class HPrimal {
    * @brief Perform Phase 2 primal simplex iterations
    */
   void solvePhase2();
-  double TimeLimitValue;  //!< Time limit
 
  private:
   void primalRebuild();

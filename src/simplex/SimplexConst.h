@@ -1,0 +1,58 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file lp_data/SimplexConst.h
+ * @brief Constants for HiGHS simplex solvers
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
+#ifndef SIMPLEX_SIMPLEXCONST_H_
+#define SIMPLEX_SIMPLEXCONST_H_
+
+enum SIMPLEX_STRATEGY {
+  SIMPLEX_STRATEGY_DUAL_PLAIN = 0,
+  SIMPLEX_STRATEGY_DUAL_TASKS,
+  SIMPLEX_STRATEGY_DUAL_MULTI,
+  SIMPLEX_STRATEGY_PRIMAL,
+  SIMPLEX_STRATEGY_DEFAULT = SIMPLEX_STRATEGY_PRIMAL
+};
+  
+enum SIMPLEX_CRASH_STRATEGY {
+  SIMPLEX_CRASH_STRATEGY_OFF = 0,
+  SIMPLEX_CRASH_STRATEGY_DF,
+  SIMPLEX_CRASH_STRATEGY_LTSSF_K,
+  SIMPLEX_CRASH_STRATEGY_LTSSF_PRI,
+  SIMPLEX_CRASH_STRATEGY_LTSF_K,
+  SIMPLEX_CRASH_STRATEGY_LTSF_PRI,
+  SIMPLEX_CRASH_STRATEGY_LTSF,
+  SIMPLEX_CRASH_STRATEGY_BIXBY,
+  SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS,
+  SIMPLEX_CRASH_STRATEGY_BASIC,
+  SIMPLEX_CRASH_STRATEGY_TEST_SING,
+  SIMPLEX_CRASH_STRATEGY_DEFAULT = SIMPLEX_CRASH_STRATEGY_OFF
+};
+
+enum SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY {
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG = 0,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
+  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEFAULT = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH
+};
+
+enum SIMPLEX_PRICE_STRATEGY {
+  SIMPLEX_PRICE_STRATEGY_COL = 0,
+  SIMPLEX_PRICE_STRATEGY_ROW,
+  SIMPLEX_PRICE_STRATEGY_ROW_SWITCH,
+  SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
+  SIMPLEX_PRICE_STRATEGY_ROW_ULTRA,
+  SIMPLEX_PRICE_STRATEGY_DEFAULT = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH
+};
+
+#endif /* SIMPLEX_SIMPLEXCONST_H_ */

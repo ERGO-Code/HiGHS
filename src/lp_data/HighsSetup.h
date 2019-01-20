@@ -355,32 +355,6 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
       std::cout << "Crash is set to " << data << ".\n";
     }
 
-    if (result.count("edge-weight")) {
-      std::string data = result["edge-weight"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "dan" && data != "dvx" && data != "dse" && data != "dse0" &&
-          data != "dse2dvx") {
-        std::cout << "Wrong value specified for edge-weight." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.edWtMode = data;
-      std::cout << "Edge weight is set to " << data << ".\n";
-    }
-
-    if (result.count("price")) {
-      std::string data = result["price"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "row" && data != "col" && data != "rowsw" &&
-          data != "rowswcolsw" && data != "rowultra") {
-        std::cout << "Wrong value specified for price." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.priceMode = data;
-      std::cout << "Price is set to " << data << ".\n";
-    }
-
     if (result.count("presolve")) {
       std::string data = result["presolve"].as<std::string>();
       std::transform(data.begin(), data.end(), data.begin(), ::tolower);
@@ -400,31 +374,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      options.timeLimit = time_limit;
-    }
-
-    if (result.count("partition")) {
-      std::string data = result["partition"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      //      highs_options.setValue("partition", data);
-      std::cout << "Partition is set to " << data << ".\n";
-    }
-
-    if (result.count("sip")) {
-      options.sip = true;
-      std::cout << "Option sip enabled."
-                << ".\n";
-    }
-
-    if (result.count("scip")) {
-      options.scip = true;
-      std::cout << "Option scip enabled."
-                << ".\n";
-    }
-
-    if (result.count("pami")) {
-      options.pami = true;
-      std::cout << "Option pami enabled (parallel solve).\n";
+      options.highs_run_time_limit = time_limit;
     }
 
   } catch (const cxxopts::OptionException& e) {
@@ -439,9 +389,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
 
   // Force column permutation of the LP to be used by the solver if
   // parallel code is to be used
-  if (options.pami || options.sip) {
-    options.permuteLp = true;
-  }
+  //  if (options.pami || options.sip) {options.permuteLp = true;}
 
 
   return HighsStatus::OK;
