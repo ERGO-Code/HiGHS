@@ -24,13 +24,9 @@
 
 using std::runtime_error;
 
-void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
-  // Copy size
-  highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
-  model = &highs_model_object->hmodel_[0];
-  //  model->basis_ = &highs_model_object->basis_;
-
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
+void HPrimal::solvePhase2() {
+  model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
   numCol = model->solver_lp_->numCol_;
   numRow = model->solver_lp_->numRow_;
@@ -121,8 +117,8 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
 }
 
 void HPrimal::primalRebuild() {
-  HighsSimplexInfo &simplex_info = highs_model_object->simplex_info_;
-  HighsTimer &timer = highs_model_object->timer_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
@@ -146,7 +142,7 @@ void HPrimal::primalRebuild() {
   }
   model->computeDual();
   model->computePrimal();
-  simplex_method_.computeDualObjectiveValue(*highs_model_object);
+  simplex_method_.computeDualObjectiveValue(workHMO);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV
@@ -166,12 +162,12 @@ void HPrimal::primalRebuild() {
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = &highs_model_object->basis_.nonbasicFlag_[0];
-  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  double *workDual = &highs_model_object->simplex_info_.workDual_[0];
-  const double *workLower = &highs_model_object->simplex_info_.workLower_[0];
-  const double *workUpper = &highs_model_object->simplex_info_.workUpper_[0];
-  const double dualTolerance = highs_model_object->simplex_info_.dual_feasibility_tolerance;
+  const int *jFlag = &workHMO.basis_.nonbasicFlag_[0];
+  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  double *workDual = &workHMO.simplex_info_.workDual_[0];
+  const double *workLower = &workHMO.simplex_info_.workLower_[0];
+  const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
+  const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
 
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
@@ -196,10 +192,10 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  const double *baseLower = &highs_model_object->simplex_info_.baseLower_[0];
-  const double *baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
-  double *baseValue = &highs_model_object->simplex_info_.baseValue_[0];
-  const double primalTolerance = highs_model_object->simplex_info_.primal_feasibility_tolerance;
+  const double *baseLower = &workHMO.simplex_info_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
+  double *baseValue = &workHMO.simplex_info_.baseValue_[0];
+  const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
 
   // Compute pivot column
   column.clear();
@@ -213,7 +209,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = countUpdate < 10 ? 1e-9 : countUpdate < 20 ? 1e-8 : 1e-7;
-  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -259,19 +255,19 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  double *workDual = &highs_model_object->simplex_info_.workDual_[0];
-  const double *workLower = &highs_model_object->simplex_info_.workLower_[0];
-  const double *workUpper = &highs_model_object->simplex_info_.workUpper_[0];
-  const double *baseLower = &highs_model_object->simplex_info_.baseLower_[0];
-  const double *baseUpper = &highs_model_object->simplex_info_.baseUpper_[0];
-  double *workValue = &highs_model_object->simplex_info_.workValue_[0];
-  double *baseValue = &highs_model_object->simplex_info_.baseValue_[0];
-  const double primalTolerance = highs_model_object->simplex_info_.primal_feasibility_tolerance;
+  int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  double *workDual = &workHMO.simplex_info_.workDual_[0];
+  const double *workLower = &workHMO.simplex_info_.workLower_[0];
+  const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
+  const double *baseLower = &workHMO.simplex_info_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
+  double *workValue = &workHMO.simplex_info_.workValue_[0];
+  double *baseValue = &workHMO.simplex_info_.baseValue_[0];
+  const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = highs_model_object->basis_.basicIndex_[rowOut];
+  int columnOut = workHMO.basis_.basicIndex_[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {

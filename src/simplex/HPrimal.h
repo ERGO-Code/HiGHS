@@ -19,7 +19,7 @@
 #include "HVector.h"
 #include "HSimplex.h"
 
-class HModel;
+//class HModel;
 
 /**
  * @brief Phase 2 primal simplex solver for HiGHS
@@ -30,13 +30,12 @@ class HModel;
  */
 class HPrimal {
  public:
+ HPrimal(HighsModelObject& model_object) : workHMO(model_object)
+   {  }
   /**
    * @brief Perform Phase 2 primal simplex iterations
    */
-  void solvePhase2(
-      HighsModelObject *ptr_highs_model_object  //!< Model for which Phase 2 primal simplex iterations
-                         //!< should be performed
-  );
+  void solvePhase2();
   double TimeLimitValue;  //!< Time limit
 
  private:
@@ -47,7 +46,7 @@ class HPrimal {
 
   // Model pointer
   HModel *model;
-  HighsModelObject *highs_model_object;
+  HighsModelObject &workHMO;
   HSimplex simplex_method_;
   
   int numCol;
