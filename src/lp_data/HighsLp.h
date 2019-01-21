@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "HConst.h" // For HiGHS strategy options
+//#include "HighsIO.h" // For HiGHS IO options
 #include "SimplexConst.h" // For simplex strategy options
 
 // The free parser also reads fixed format MPS files but the fixed
@@ -62,11 +63,9 @@ struct HighsOptions {
   // Options not passed through the command line
 
   // Options for HighsPrintMessage and HighsLogMessage
-  // TODO: Use these to set values for use in HighsPrintMessage and HighsLogMessage  
-  FILE* output = stdout;
-  // HighsPrintMessage level: default = 0
-  unsigned int messageLevel = 4;
   FILE* logfile = stdout;
+  FILE* output = stdout;
+  unsigned int messageLevel = 0;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
   //

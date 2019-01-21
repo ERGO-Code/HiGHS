@@ -62,6 +62,12 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
 
+  // Options for HighsPrintMessage and HighsLogMessage
+  options_.logfile = stdout;//fopen("HiGHS.log", "w");
+  options_.output = stdout;
+  options_.messageLevel = ML_MINIMAL;
+  HighsSetIO(options_);
+
   //Define clocks
   HighsTimer &timer = lps_[0].timer_;
   timer.startRunHighsClock();
