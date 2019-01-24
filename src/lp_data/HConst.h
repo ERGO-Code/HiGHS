@@ -21,24 +21,39 @@ const double HIGHS_CONST_ZERO = 1e-50;
 
 constexpr double kBoundTolerance = 1e-8;
 
-enum PARALLEL_STRATEGY {
-  PARALLEL_STRATEGY_OFF = 0,
-  PARALLEL_STRATEGY_ON,
-  PARALLEL_STRATEGY_DEFAULT = PARALLEL_STRATEGY_OFF
+enum ModelLogLevel {
+  ML_NONE = 0,
+    ML_VERBOSE = 1,
+    ML_DETAILED = 2,
+    ML_MINIMAL = 4,
+    ML_DEFAULT = ML_VERBOSE
+    };
+  
+
+enum class ParallelOption {
+  OFF = 0,
+  ON,
+  DEFAULT = OFF
 };
 
-enum PRESOLVE_STRATEGY {
-  PRESOLVE_STRATEGY_OFF = 0,
-  PRESOLVE_STRATEGY_ON,
-  PRESOLVE_STRATEGY_DEFAULT = PRESOLVE_STRATEGY_OFF
+enum class PresolveOption {
+  OFF = 0,
+  ON,
+  DEFAULT = OFF
 };
 
-enum CRASH_STRATEGY {
-  CRASH_STRATEGY_OFF = 0,
-  CRASH_STRATEGY_ON,
-  CRASH_STRATEGY_DEFAULT = CRASH_STRATEGY_OFF
+enum CrashOption {
+  OFF = 0,
+  ON,
+  DEFAULT = OFF
 };
   
+enum class SimplexOption {
+  OFF = 0,
+  ON,
+  DEFAULT = OFF
+};
+
 const double HIGHS_RUN_TIME_LIMIT_DEFAULT = HIGHS_CONST_INF;
 const double PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
 const double DUAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;

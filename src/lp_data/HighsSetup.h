@@ -74,7 +74,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(timer.presolveClock);
-  PresolveInfo presolve_info(options_.presolveMode, lp);
+  PresolveInfo presolve_info(options_.presolve_option, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
   timer.stop(timer.presolveClock);
  
@@ -146,7 +146,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
-      if (options_.presolveMode == "on") {
+      if (options_.presolve_option == PresolveOption::ON) {
         std::cout << "Reduced problem status: "
                   << HighsStatusToString(solve_status);
         // todo: handle case. Try to solve again with no presolve?
@@ -195,7 +195,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
-  if (options_.presolveMode != "on") return HighsPresolveStatus::NotReduced;
+  if (options_.presolve_option != PresolveOption::ON)
+    return HighsPresolveStatus::NotReduced;
 
   if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;
 
@@ -354,7 +355,11 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      options.presolveMode = data;
+      if (data == "on") {
+	options.presolve_option = PresolveOption::ON;
+      } else {
+	options.presolve_option = PresolveOption::OFF;
+      }
       std::cout << "Presolve is set to " << data << ".\n";
     }
 

@@ -29,21 +29,15 @@
 
 class HFactor;
 
-enum DUAL_SIMPLEX_MODE {
-  DUAL_SIMPLEX_MODE_PLAIN = 0,
-  DUAL_SIMPLEX_MODE_TASKS,
-  DUAL_SIMPLEX_MODE_MULTI,
+enum class DualEdgeWeightMode {
+  DANTZIG = 0,
+  DEVEX,
+  STEEPEST_EDGE
 };
 
-enum DUAL_EDGE_WEIGHT_MODE {
-  DUAL_EDGE_WEIGHT_MODE_DANTZIG = 0,
-  DUAL_EDGE_WEIGHT_MODE_DEVEX,
-  DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE
-};
-
-enum PRICE_MODE {
-  PRICE_MODE_ROW = 0,
-  PRICE_MODE_COL
+enum class PriceMode {
+  ROW = 0,
+  COL
 };
 
 /**
@@ -496,13 +490,11 @@ class HDual {
   int numTot;
 
   // Options
-  int dual_simplex_mode;
-
-  int dual_edge_weight_mode;
+  DualEdgeWeightMode dual_edge_weight_mode;
   bool initialise_dual_steepest_edge_weights;
   bool allow_dual_steepest_edge_to_devex_switch;
 
-  int price_mode;
+  PriceMode price_mode;
   bool allow_price_by_col_switch;
   bool allow_price_by_row_switch;
   bool allow_price_ultra;

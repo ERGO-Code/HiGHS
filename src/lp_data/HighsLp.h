@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "HConst.h" // For HiGHS strategy options
-//#include "HighsIO.h" // For HiGHS IO options
 #include "SimplexConst.h" // For simplex strategy options
 
 // The free parser also reads fixed format MPS files but the fixed
@@ -45,18 +44,19 @@ struct HighsOptions {
 
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
 
-  PARALLEL_STRATEGY parallel_strategy = PARALLEL_STRATEGY::PARALLEL_STRATEGY_DEFAULT;
+  ParallelOption parallel_option = ParallelOption::DEFAULT;
+  PresolveOption presolve_option = PresolveOption::DEFAULT;
+  CrashOption crash_option = CrashOption::DEFAULT;
+  SimplexOption simplex_option = SimplexOption::DEFAULT;
 
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
-  SIMPLEX_STRATEGY simplex_strategy = SIMPLEX_STRATEGY::SIMPLEX_STRATEGY_DEFAULT;
-
+  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
+  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  std::string presolveMode = "off";
-  PRESOLVE_STRATEGY presolve_strategy = PRESOLVE_STRATEGY::PRESOLVE_STRATEGY_DEFAULT;
-  CRASH_STRATEGY crash_strategy = CRASH_STRATEGY::CRASH_STRATEGY_DEFAULT;
+
   SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY simplex_dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY::SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEFAULT;
   SIMPLEX_PRICE_STRATEGY simplex_price_strategy = SIMPLEX_PRICE_STRATEGY::SIMPLEX_PRICE_STRATEGY_DEFAULT;
 
@@ -234,8 +234,8 @@ struct HighsSimplexInfo {
 
   // Options from HighsOptions for the simplex solver
   double highs_run_time_limit;
-  int simplex_strategy;
-  int crash_strategy;
+  SimplexStrategy simplex_strategy;
+  SimplexCrashStrategy crash_strategy;
   int dual_edge_weight_strategy;
   int price_strategy;
 

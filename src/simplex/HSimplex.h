@@ -34,8 +34,9 @@ class HSimplex {
     HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
 
     // Copy values of HighsOptions for the simplex solver
+    // TODO: Get this right with proper simplex strategy
     simplex_info_.simplex_strategy = opt.simplex_strategy;
-    simplex_info_.crash_strategy = opt.crash_strategy;
+    simplex_info_.crash_strategy = opt.simplex_crash_strategy;
     simplex_info_.dual_edge_weight_strategy = opt.simplex_dual_edge_weight_strategy;
     simplex_info_.price_strategy = opt.simplex_price_strategy;
     simplex_info_.primal_feasibility_tolerance = opt.primal_feasibility_tolerance;

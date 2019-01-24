@@ -79,21 +79,21 @@ HighsStatus solveSimplex(
 
   // Crash, if HighsModelObject has basis information.
   HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  if (simplex_info_.crash_strategy > 0) {
+  if (simplex_info_.crash_strategy != SimplexCrashStrategy::OFF) {
     HCrash crash;
-    crash.crash(highs_model, simplex_info_.crash_strategy);
+    crash.crash(highs_model, 0);
   }
 
   // Solve, depending on the options.
   // Parallel.
-  if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) {
+  if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
     dual_solver.solve(8);
-  } else if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) {
+  } else if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
     //    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
     dual_solver.solve(8);
 #ifdef HiGHSDEV
-    if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_MULTI) model.writePivots("multi");
-    if (dual_solver.dual_simplex_mode == DUAL_SIMPLEX_MODE_TASKS) model.writePivots("tasks");
+    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) model.writePivots("multi");
+    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) model.writePivots("tasks");
 #endif
   } else {
     // Serial. Based on previous solvePlainJAJH.

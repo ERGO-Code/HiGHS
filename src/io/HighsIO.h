@@ -22,11 +22,6 @@
 enum HighsMessageType { INFO, WARNING, ERROR };
 const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
 
-unsigned const int ML_NONE = 0;
-unsigned const int ML_VERBOSE = 1;
-unsigned const int ML_DETAILED = 2;
-unsigned const int ML_MINIMAL = 4;
-
 /**
  * @brief Used to direct printed output to FILE* output, according
  * to whether the level bit is set in messageLevel
