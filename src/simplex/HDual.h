@@ -316,12 +316,12 @@ class HDual {
   void iz_dvx_fwk();
 
   /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
+   * @brief Interpret the dualE edge weight strategy as setting of a mode and other actions
    */
-  void interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy);
+  void interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy);
 
   /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
+   * @brief Interpret the dualE edge weight strategy as setting of a mode and other actions
    */
   void interpret_price_strategy(int simplex_price_strategy);
 

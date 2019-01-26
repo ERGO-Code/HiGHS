@@ -56,8 +56,7 @@ struct HighsOptions {
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-
-  SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY simplex_dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY::SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEFAULT;
+  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
   SIMPLEX_PRICE_STRATEGY simplex_price_strategy = SIMPLEX_PRICE_STRATEGY::SIMPLEX_PRICE_STRATEGY_DEFAULT;
 
   // Options not passed through the command line

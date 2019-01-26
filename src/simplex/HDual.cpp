@@ -1827,20 +1827,20 @@ void HDual::iz_dvx_fwk() {
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
-void HDual::interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy) {
-  if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
+void HDual::interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy) {
+  if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DANTZIG) {
     dual_edge_weight_mode = DualEdgeWeightMode::DANTZIG;
-  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX) {
+  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DEVEX) {
     dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE) {
+  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
-  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
+  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;
-  } else if (simplex_dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
