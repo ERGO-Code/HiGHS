@@ -235,7 +235,7 @@ struct HighsSimplexInfo {
   double highs_run_time_limit;
   SimplexStrategy simplex_strategy;
   SimplexCrashStrategy crash_strategy;
-  int dual_edge_weight_strategy;
+  SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
   int price_strategy;
 
   double primal_feasibility_tolerance;
