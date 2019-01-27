@@ -671,7 +671,6 @@ void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
 }
 
 void HCrash::ltssf_iz_mode(int Crash_Mode) {
-  // TODO Would be good to be able to call this from HDual::setCrash
   crsh_fn_cf_pri_v = 1;
   crsh_fn_cf_k = 10;
   alw_al_bs_cg = false;

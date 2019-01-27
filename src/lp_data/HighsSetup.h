@@ -62,13 +62,19 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
 
+  // Options for HighsPrintMessage and HighsLogMessage
+  options_.logfile = stdout;//fopen("HiGHS.log", "w");
+  options_.output = stdout;
+  options_.messageLevel = ML_MINIMAL;
+  HighsSetIO(options_);
+
   //Define clocks
   HighsTimer &timer = lps_[0].timer_;
   timer.startRunHighsClock();
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(timer.presolveClock);
-  PresolveInfo presolve_info(options_.presolveMode, lp);
+  PresolveInfo presolve_info(options_.presolve_option, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
   timer.stop(timer.presolveClock);
  
@@ -140,7 +146,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
-      if (options_.presolveMode == "on") {
+      if (options_.presolve_option == PresolveOption::ON) {
         std::cout << "Reduced problem status: "
                   << HighsStatusToString(solve_status);
         // todo: handle case. Try to solve again with no presolve?
@@ -189,7 +195,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
-  if (options_.presolveMode != "on") return HighsPresolveStatus::NotReduced;
+  if (options_.presolve_option != PresolveOption::ON)
+    return HighsPresolveStatus::NotReduced;
 
   if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;
 
@@ -340,47 +347,6 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
       options.filenames = filenames;
     }
 
-    if (result.count("crash")) {
-      std::string data = result["crash"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "off" && data != "ltssf" && data != "ltssf1" &&
-          data != "ltssf2" && data != "ltssf3" && data != "ltssf4" &&
-          data != "ltssf5" && data != "ltssf6" && data != "ltssf7" &&
-          data != "bs" && data != "singts") {
-        std::cout << "Wrong value specified for crash." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.crashMode = data;
-      std::cout << "Crash is set to " << data << ".\n";
-    }
-
-    if (result.count("edge-weight")) {
-      std::string data = result["edge-weight"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "dan" && data != "dvx" && data != "dse" && data != "dse0" &&
-          data != "dse2dvx") {
-        std::cout << "Wrong value specified for edge-weight." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.edWtMode = data;
-      std::cout << "Edge weight is set to " << data << ".\n";
-    }
-
-    if (result.count("price")) {
-      std::string data = result["price"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "row" && data != "col" && data != "rowsw" &&
-          data != "rowswcolsw" && data != "rowultra") {
-        std::cout << "Wrong value specified for price." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.priceMode = data;
-      std::cout << "Price is set to " << data << ".\n";
-    }
-
     if (result.count("presolve")) {
       std::string data = result["presolve"].as<std::string>();
       std::transform(data.begin(), data.end(), data.begin(), ::tolower);
@@ -389,7 +355,11 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      options.presolveMode = data;
+      if (data == "on") {
+	options.presolve_option = PresolveOption::ON;
+      } else {
+	options.presolve_option = PresolveOption::OFF;
+      }
       std::cout << "Presolve is set to " << data << ".\n";
     }
 
@@ -400,31 +370,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      options.timeLimit = time_limit;
-    }
-
-    if (result.count("partition")) {
-      std::string data = result["partition"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      //      highs_options.setValue("partition", data);
-      std::cout << "Partition is set to " << data << ".\n";
-    }
-
-    if (result.count("sip")) {
-      options.sip = true;
-      std::cout << "Option sip enabled."
-                << ".\n";
-    }
-
-    if (result.count("scip")) {
-      options.scip = true;
-      std::cout << "Option scip enabled."
-                << ".\n";
-    }
-
-    if (result.count("pami")) {
-      options.pami = true;
-      std::cout << "Option pami enabled (parallel solve).\n";
+      options.highs_run_time_limit = time_limit;
     }
 
   } catch (const cxxopts::OptionException& e) {
@@ -439,9 +385,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
 
   // Force column permutation of the LP to be used by the solver if
   // parallel code is to be used
-  if (options.pami || options.sip) {
-    options.permuteLp = true;
-  }
+  //  if (options.pami || options.sip) {options.permuteLp = true;}
 
 
   return HighsStatus::OK;

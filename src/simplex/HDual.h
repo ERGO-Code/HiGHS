@@ -29,21 +29,15 @@
 
 class HFactor;
 
-enum DUAL_SIMPLEX_MODE {
-  DUAL_SIMPLEX_MODE_PLAIN = 0,
-  DUAL_SIMPLEX_MODE_TASKS,
-  DUAL_SIMPLEX_MODE_MULTI,
+enum class DualEdgeWeightMode {
+  DANTZIG = 0,
+  DEVEX,
+  STEEPEST_EDGE
 };
 
-enum DUAL_EDGE_WEIGHT_MODE {
-  DUAL_EDGE_WEIGHT_MODE_DANTZIG = 0,
-  DUAL_EDGE_WEIGHT_MODE_DEVEX,
-  DUAL_EDGE_WEIGHT_MODE_STEEPEST_EDGE
-};
-
-enum PRICE_MODE {
-  PRICE_MODE_ROW = 0,
-  PRICE_MODE_COL
+enum class PriceMode {
+  ROW = 0,
+  COL
 };
 
 /**
@@ -322,24 +316,14 @@ class HDual {
   void iz_dvx_fwk();
 
   /**
-   * @brief Sets a run-time parameter. TODO: handle this otherwise
+   * @brief Interpret the dual edge weight strategy as setting of a mode and other actions
    */
-  void setCrash(const char *CrashMode);
+  void interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy);
 
   /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
+   * @brief Interpret the PRICE strategy as setting of a mode and other actions
    */
-  void interpret_dual_edge_weight_strategy(int simplex_dual_edge_weight_strategy);
-
-  /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
-   */
-  void interpret_price_strategy(int simplex_price_strategy);
-
-  /**
-   * @brief Set a run-time parameter. TODO: handle this otherwise
-   */
-  void setTimeLimit(double TimeLimit_ArgV);
+  void interpret_price_strategy(SimplexPriceStrategy simplex_price_strategy);
 
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char *message, int phase = 2);
@@ -506,20 +490,15 @@ class HDual {
   int numTot;
 
   // Options
-  int dual_simplex_mode;
-
-  int dual_edge_weight_mode;
+  DualEdgeWeightMode dual_edge_weight_mode;
   bool initialise_dual_steepest_edge_weights;
   bool allow_dual_steepest_edge_to_devex_switch;
 
-  int price_mode;
+  PriceMode price_mode;
   bool allow_price_by_col_switch;
   bool allow_price_by_row_switch;
   bool allow_price_ultra;
   const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE when pi_p has at least this density
-
-  double TimeLimitValue = 0;  //!< Value of time limit. TODO: handle this otherwise
-  double time_limit_value;
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;
