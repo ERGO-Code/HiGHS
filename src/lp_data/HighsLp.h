@@ -42,12 +42,14 @@ enum objSense
 struct HighsOptions {
   std::string filenames = "";
 
-  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+  // Options passed through the command line
 
   ParallelOption parallel_option = ParallelOption::DEFAULT;
   PresolveOption presolve_option = PresolveOption::DEFAULT;
   CrashOption crash_option = CrashOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
+  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+
 
   bool pami = 0;
   bool sip = 0;
@@ -57,7 +59,7 @@ struct HighsOptions {
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
-  SIMPLEX_PRICE_STRATEGY simplex_price_strategy = SIMPLEX_PRICE_STRATEGY::SIMPLEX_PRICE_STRATEGY_DEFAULT;
+  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
   // Options not passed through the command line
 
@@ -88,13 +90,13 @@ struct HighsOptions {
 
 
   // Upper bound on dual objective value
-  double dual_objective_value_upper_bound = 1e+200;
+  double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
   //
   // For the simplex solver
   //
   bool simplex_perturb_costs = true;
   // Maximum number of simplex iterations
-  int simplex_iteration_limit = 999999;
+  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
 
   bool clean_up = false;
 };
@@ -236,7 +238,7 @@ struct HighsSimplexInfo {
   SimplexStrategy simplex_strategy;
   SimplexCrashStrategy crash_strategy;
   SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
-  int price_strategy;
+  SimplexPriceStrategy price_strategy;
 
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;

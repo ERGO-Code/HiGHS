@@ -316,14 +316,14 @@ class HDual {
   void iz_dvx_fwk();
 
   /**
-   * @brief Interpret the dualE edge weight strategy as setting of a mode and other actions
+   * @brief Interpret the dual edge weight strategy as setting of a mode and other actions
    */
   void interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy);
 
   /**
-   * @brief Interpret the dualE edge weight strategy as setting of a mode and other actions
+   * @brief Interpret the PRICE strategy as setting of a mode and other actions
    */
-  void interpret_price_strategy(int simplex_price_strategy);
+  void interpret_price_strategy(SimplexPriceStrategy simplex_price_strategy);
 
 #ifdef HiGHSDEV
   double checkDualObjectiveValue(const char *message, int phase = 2);

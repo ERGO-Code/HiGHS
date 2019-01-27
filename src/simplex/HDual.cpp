@@ -1827,53 +1827,53 @@ void HDual::iz_dvx_fwk() {
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
-void HDual::interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy) {
-  if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DANTZIG) {
+void HDual::interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy dual_edge_weight_strategy) {
+  if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DANTZIG) {
     dual_edge_weight_mode = DualEdgeWeightMode::DANTZIG;
-  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DEVEX) {
+  } else if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DEVEX) {
     dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) {
+  } else if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
-  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL) {
+  } else if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;
-  } else if (simplex_dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+  } else if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
   } else {
-   HighsPrintMessage(ML_MINIMAL, "HDual::interpret_dual_edge_weight_strategy: unrecognised simplex_dual_edge_weight_strategy = %d - using dual steepest edge with possible switch to Devex\n", simplex_dual_edge_weight_strategy);
+   HighsPrintMessage(ML_MINIMAL, "HDual::interpret_dual_edge_weight_strategy: unrecognised dual_edge_weight_strategy = %d - using dual steepest edge with possible switch to Devex\n", dual_edge_weight_strategy);
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
   }
 }
 
-void HDual::interpret_price_strategy(int simplex_price_strategy) {
+void HDual::interpret_price_strategy(SimplexPriceStrategy price_strategy) {
   allow_price_by_col_switch = false;
   allow_price_by_row_switch = false;
   allow_price_ultra = false;
-  if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
+  if (price_strategy == SimplexPriceStrategy::COL) {
     price_mode = PriceMode::COL;
-  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
+  } else if (price_strategy == SimplexPriceStrategy::ROW) {
     price_mode = PriceMode::ROW;
-  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
+  } else if (price_strategy == SimplexPriceStrategy::ROW_SWITCH) {
     price_mode = PriceMode::ROW;
     allow_price_by_row_switch = true;
-  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
+  } else if (price_strategy == SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
-  } else if (simplex_price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_ULTRA) {
+  } else if (price_strategy == SimplexPriceStrategy::ROW_ULTRA) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
     allow_price_ultra = true;
   } else {
-    HighsPrintMessage(ML_MINIMAL, "HDual::interpret_price_strategy: unrecognised simplex_price_strategy = %d - using row Price with switch or colump price switch\n", simplex_price_strategy);
+    HighsPrintMessage(ML_MINIMAL, "HDual::interpret_price_strategy: unrecognised price_strategy = %d - using row Price with switch or colump price switch\n", price_strategy);
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
