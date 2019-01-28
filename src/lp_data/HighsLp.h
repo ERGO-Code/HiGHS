@@ -122,6 +122,20 @@ class HighsLp {
   double offset_ = 0;
   std::string model_name_ = "";
 
+  bool operator==(const HighsLp& lp) {
+    if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || nnz_ != lp.nnz_ ||
+        sense_ != lp.sense_ || offset_ != lp.offset_ ||
+        model_name_ != lp.model_name_)
+      return false;
+
+    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ ||
+        Avalue_ != lp.Avalue_ || colCost_ != lp.colCost_ ||
+        colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
+        rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
+      return false;
+
+    return true;
+  }
 };
 
 // HiGHS status
