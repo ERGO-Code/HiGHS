@@ -42,38 +42,7 @@ const int LP_Status_Failed = 4;
 const int LP_Status_ObjUB = 5;
 const int LP_Status_OutOfTime = 6;
 
-const int invertHint_no = 0;
-const int invertHint_updateLimitReached = 1;
-const int invertHint_syntheticClockSaysInvert = 2;
-const int invertHint_possiblyOptimal = 3;
-const int invertHint_possiblyPrimalUnbounded = 4;
-const int invertHint_possiblyDualUnbounded = 5;
-const int invertHint_possiblySingularBasis = 6;
-const int invertHint_primalInfeasibleInPrimalSimplex = 7;
-const int invertHint_chooseColumnFail = 8;
-
-/** SCIP-like basis status for columns and rows */
-enum HIGHS_BaseStat {
-  HIGHS_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
-                              [including fixed variables]*/
-  HIGHS_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
-  HIGHS_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
-  HIGHS_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
-};
-typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
-
-/** HiGHS nonbasicFlag status for columns and rows */
-enum nonbasicFlagStat {
-  NONBASIC_FLAG_TRUE = 1,  // Nonbasic
-  NONBASIC_FLAG_FALSE = 0  // Basic
-};
-
-/** HiGHS nonbasicMove status for columns and rows */
-enum nonbasicMoveStat {
-  NONBASIC_MOVE_UP = 1,   // Free to move (only) up
-  NONBASIC_MOVE_DN = -1,  // Free to move (only) down
-  NONBASIC_MOVE_ZE = 0    // Fixed or free to move up and down
-};
+//typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
 
 class HModel {
  public:
@@ -102,14 +71,9 @@ class HModel {
   // Method to clear the current model
   void clearModel();
 
-  // Methods to modify the current model. Only scaleModel is currently in use
-  void scaleModel();
-  void scaleCosts();
-
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
-  void initScale();
   bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
   bool workArrays_OK(int phase);
   bool allNonbasicMoveVsWorkArrays_OK();
@@ -265,9 +229,6 @@ class HModel {
   // matrix
   void util_reportModelDa(HighsLp lp, const char* filename);
   void util_reportModelStatus();
-#ifdef HiGHSDEV
-  void util_reportModelDense(HighsLp lp);
-#endif
   void util_reportRowVecSol(int nrow, vector<double>& XrowLower,
                             vector<double>& XrowUpper,
                             vector<double>& XrowPrimal,
@@ -385,16 +346,16 @@ class HModel {
 
  public:
   int problemStatus;
-  string modelName;
   
 // Limits on scaling factors
-  const double minAlwScale = 1 / 1024.0;
+/*  const double minAlwScale = 1 / 1024.0;
   const double maxAlwScale = 1024.0;
   const double maxAlwCostScale = maxAlwScale;
   const double minAlwColScale = minAlwScale;
   const double maxAlwColScale = maxAlwScale;
   const double minAlwRowScale = minAlwScale;
   const double maxAlwRowScale = maxAlwScale;
+*/
 
 #ifdef HiGHSDEV
   // Information on large costs

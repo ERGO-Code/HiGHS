@@ -133,7 +133,7 @@ HighsStatus solveSimplex(
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
+        model.problemStatus, highs_model.lp_.model_name_.c_str(), highs_model.lp_.numRow_,
         highs_model.lp_.numCol_, currentRunHighsTime,
 	highs_model.simplex_info_.dualObjectiveValue, dual_solver.n_ph1_du_it,
         dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
@@ -162,7 +162,7 @@ HighsStatus solveSimplex(
         printf(
             "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
             "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.problemStatus, model.modelName.c_str(), highs_model.lp_.numRow_,
+            model.problemStatus, highs_model.lp_.model_name_.c_str(), highs_model.lp_.numRow_,
             highs_model.lp_.numCol_, currentRunHighsTime,
 	    highs_model.simplex_info_.dualObjectiveValue,
 	    dual_solver.n_ph1_du_it, dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
@@ -203,7 +203,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
 
 
   // Scaling: Separate from simplex.
-  model.scaleModel();
+  scaleLp(highs_model);
 
   // Extract columns numCol-3..numCol-1
   int FmCol = highs_model.lp_.numCol_ - 3;
@@ -304,7 +304,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  model.scaleModel();
+  scaleLp(highs_model);
   HDual dual_solver(highs_model);
   dual_solver.solve();
   //  reportLpSolution(highs_model);
@@ -354,8 +354,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex,
              nw_colLower, nw_colUpper);
       model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
-      printf("Calling model.scaleModel()\n");
-      model.scaleModel();
+      printf("Calling scaleLp(highs_model)\n");
+      scaleLp(highs_model);
       dual_solver.solve();
       model.util_reportSolverOutcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for

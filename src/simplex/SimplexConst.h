@@ -54,4 +54,14 @@ enum class SimplexPriceStrategy {
   DEFAULT = ROW_SWITCH_COL_SWITCH
 };
 
+const int invertHint_no = 0;
+const int invertHint_updateLimitReached = 1;
+const int invertHint_syntheticClockSaysInvert = 2;
+const int invertHint_possiblyOptimal = 3;
+const int invertHint_possiblyPrimalUnbounded = 4;
+const int invertHint_possiblyDualUnbounded = 5;
+const int invertHint_possiblySingularBasis = 6;
+const int invertHint_primalInfeasibleInPrimalSimplex = 7;
+const int invertHint_chooseColumnFail = 8;
+
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

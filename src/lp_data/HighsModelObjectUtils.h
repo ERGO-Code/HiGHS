@@ -311,7 +311,7 @@ void scaleLp(HighsModelObject &highs_model) {
   if (noScaling) {
     // No matrix scaling, but possible cost scaling
 #ifdef HiGHSDEV
-    HighsPrintMessage(ML_MINIMAL, "grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", highs_model.modelName.c_str());
+    HighsPrintMessage(ML_MINIMAL, "grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", highs_model.lp_.model_name_.c_str());
 #endif
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
@@ -395,7 +395,7 @@ void scaleLp(HighsModelObject &highs_model) {
       (minRowScale < minAlwRowScale) || (maxRowScale > maxAlwRowScale);
 
   HighsPrintMessage(ML_MINIMAL, "grep_Scaling,%s,%d,%d,Obj,%g,%d,Row,%g,%g,Col,%g,%g,%d\n",
-		    highs_model.modelName.c_str(), originalScaling, alwCostScaling, minNzCost,
+		    highs_model.lp_.model_name_.c_str(), originalScaling, alwCostScaling, minNzCost,
 		    includeCost, minColScale, maxColScale, minRowScale, maxRowScale,
 		    excessScaling);
 #endif

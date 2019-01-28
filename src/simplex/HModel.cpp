@@ -58,86 +58,6 @@ HModel::HModel() {
   clearModel();
 }
 
-int HModel::load_fromToy(const char *filename) {
-  //  int m, n, maxmin;
-  // double offset;
-  double *A, *b, *c, *lb, *ub;
-  int *intColumn;
-  // Remove any current model
-  clearModel();
-
-  // Load the model, timing the process
-  //  timer.reset();
-  modelName = filename;
-
-  int RtCd = readToy_MIP_cpp(filename, &solver_lp_->numRow_, &solver_lp_->numCol_, &solver_lp_->sense_, &solver_lp_->offset_,
-                             &A, &b, &c, &lb, &ub, &intColumn);
-  if (RtCd) {
-    return RtCd;
-  }
-  printf("Model has %3d rows and %3d cols\n", solver_lp_->numRow_, solver_lp_->numCol_);
-  printf("Model has Objective sense is %d; Objective offset is %g\n", solver_lp_->sense_,
-         solver_lp_->offset_);
-  int numNz = 0;
-  for (int c_n = 0; c_n < solver_lp_->numCol_; c_n++) {
-    for (int r_n = 0; r_n < solver_lp_->numRow_; r_n++) {
-      double r_v = A[r_n + c_n * solver_lp_->numRow_];
-      if (r_v != 0) numNz++;
-    }
-  }
-  printf("Model has %d nonzeros\n", numNz);
-  cout << flush;
-  solver_lp_->Astart_.resize(solver_lp_->numCol_ + 1);
-  solver_lp_->Aindex_.resize(numNz);
-  solver_lp_->Avalue_.resize(numNz);
-  solver_lp_->Astart_[0] = 0;
-  for (int c_n = 0; c_n < solver_lp_->numCol_; c_n++) {
-    int el_n = solver_lp_->Astart_[c_n];
-    for (int r_n = 0; r_n < solver_lp_->numRow_; r_n++) {
-      double r_v = A[r_n + c_n * solver_lp_->numRow_];
-      if (r_v != 0) {
-        solver_lp_->Aindex_[el_n] = r_n;
-        solver_lp_->Avalue_[el_n] = r_v;
-        el_n++;
-      }
-    }
-    solver_lp_->Astart_[c_n + 1] = el_n;
-  }
-  printf("Model has sparse matrix\n");
-  cout << flush;
-  solver_lp_->colCost_.resize(solver_lp_->numCol_);
-  solver_lp_->colLower_.resize(solver_lp_->numCol_);
-  solver_lp_->colUpper_.resize(solver_lp_->numCol_);
-  solver_lp_->rowLower_.resize(solver_lp_->numRow_);
-  solver_lp_->rowUpper_.resize(solver_lp_->numRow_);
-
-  for (int c_n = 0; c_n < solver_lp_->numCol_; c_n++) {
-    solver_lp_->colCost_[c_n] = c[c_n];
-    solver_lp_->colLower_[c_n] = lb[c_n];
-    solver_lp_->colUpper_[c_n] = ub[c_n];
-  }
-  printf("Model has column data\n");
-  cout << flush;
-  for (int r_n = 0; r_n < solver_lp_->numRow_; r_n++) {
-    solver_lp_->rowLower_[r_n] = b[r_n];
-    solver_lp_->rowUpper_[r_n] = b[r_n];
-  }
-
-#ifdef HiGHSDEV
-  // Use this next line to check the loading of a model from arrays
-  // check_load_fromArrays(); return;
-#endif
-
-  // Assign and initialise the scaling factors
-  initScale();
-
-  // Initialise with a logical basis then allocate and populate (where
-  // possible) work* arrays and allocate basis* arrays
-  initWithLogicalBasis();
-
-  return RtCd;
-}
-
 void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
                              const double *XcolLower, const double *XcolUpper,
                              int XnumRow, const double *XrowLower,
@@ -167,13 +87,11 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   solver_lp_->Astart_.assign(&XAstart[0], &XAstart[0] + solver_lp_->numCol_ + 1);
   solver_lp_->Aindex_.assign(&XAindex[0], &XAindex[0] + numNz);
   solver_lp_->Avalue_.assign(&XAvalue[0], &XAvalue[0] + numNz);
-  */
   // Assign and initialise the scaling factors
-  initScale();
 
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
-  initWithLogicalBasis();
+  */
 }
 
 void HModel::copy_impliedBoundsToModelBounds() {
@@ -1129,256 +1047,12 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
   return ok;
 }
 
-void HModel::scaleModel() {
-  double *rowScale = &scale_->row_[0];
-  double *colScale = &scale_->col_[0];
-  int numCol = solver_lp_->numCol_;
-  int numRow = solver_lp_->numRow_;
-
-  // Allow a switch to/from the original scaling rules
-  bool originalScaling = true;
-  bool alwCostScaling = true;
-  if (originalScaling) alwCostScaling = false;
-
-  // Reset all scaling to 1
-  initScale();
-
-  // Find out range of matrix values and skip matrix scaling if all
-  // |values| are in [0.2, 5]
-  const double inf = HIGHS_CONST_INF;
-  double min0 = inf, max0 = 0;
-  for (int k = 0, AnX = solver_lp_->Astart_[numCol]; k < AnX; k++) {
-    double value = fabs(solver_lp_->Avalue_[k]);
-    min0 = min(min0, value);
-    max0 = max(max0, value);
-  }
-  bool noScaling = min0 >= 0.2 && max0 <= 5;
-  printf("!!!! FORCE SCALING !!!!\n");
-  noScaling = false;
-  if (noScaling) {
-    // No matrix scaling, but possible cost scaling
-#ifdef HiGHSDEV
-    printf("grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n", modelName.c_str());
-#endif
-    // Possibly scale the costs
-    if (!originalScaling && alwCostScaling) scaleCosts();
-    return;
-  }
-  // See if we want to include cost include if minimum nonzero cost is less than
-  // 0.1
-  double minNzCost = inf;
-  for (int i = 0; i < numCol; i++) {
-    if (solver_lp_->colCost_[i]) minNzCost = min(fabs(solver_lp_->colCost_[i]), minNzCost);
-  }
-  bool includeCost = false;
-  //  if (originalScaling)
-  includeCost = minNzCost < 0.1;
-
-  // Search up to 6 times
-  vector<double> rowMin(numRow, inf);
-  vector<double> rowMax(numRow, 1 / inf);
-  for (int search_count = 0; search_count < 6; search_count++) {
-    // Find column scale, prepare row data
-    for (int iCol = 0; iCol < numCol; iCol++) {
-      // For column scale (find)
-      double colMin = inf;
-      double colMax = 1 / inf;
-      double myCost = fabs(solver_lp_->colCost_[iCol]);
-      if (includeCost && myCost != 0)
-        colMin = min(colMin, myCost), colMax = max(colMax, myCost);
-      for (int k = solver_lp_->Astart_[iCol]; k < solver_lp_->Astart_[iCol + 1]; k++) {
-        double value = fabs(solver_lp_->Avalue_[k]) * rowScale[solver_lp_->Aindex_[k]];
-        colMin = min(colMin, value), colMax = max(colMax, value);
-      }
-      colScale[iCol] = 1 / sqrt(colMin * colMax);
-      if (!originalScaling) {
-        // Ensure that column scale factor is not excessively large or small
-        colScale[iCol] =
-            min(max(minAlwColScale, colScale[iCol]), maxAlwColScale);
-      }
-      // For row scale (only collect)
-      for (int k = solver_lp_->Astart_[iCol]; k < solver_lp_->Astart_[iCol + 1]; k++) {
-        int iRow = solver_lp_->Aindex_[k];
-        double value = fabs(solver_lp_->Avalue_[k]) * colScale[iCol];
-        rowMin[iRow] = min(rowMin[iRow], value);
-        rowMax[iRow] = max(rowMax[iRow], value);
-      }
-    }
-
-    // For row scale (find)
-    for (int iRow = 0; iRow < numRow; iRow++) {
-      rowScale[iRow] = 1 / sqrt(rowMin[iRow] * rowMax[iRow]);
-      if (!originalScaling) {
-        // Ensure that row scale factor is not excessively large or small
-        rowScale[iRow] =
-            min(max(minAlwRowScale, rowScale[iRow]), maxAlwRowScale);
-      }
-    }
-    rowMin.assign(numRow, inf);
-    rowMax.assign(numRow, 1 / inf);
-  }
-
-  // Make it numerical better
-  // Also determine the max and min row and column scaling factors
-  double minColScale = inf;
-  double maxColScale = 1 / inf;
-  double minRowScale = inf;
-  double maxRowScale = 1 / inf;
-  const double ln2 = log(2.0);
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / ln2 + 0.5));
-    minColScale = min(colScale[iCol], minColScale);
-    maxColScale = max(colScale[iCol], maxColScale);
-  }
-  for (int iRow = 0; iRow < numRow; iRow++) {
-    rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / ln2 + 0.5));
-    minRowScale = min(rowScale[iRow], minRowScale);
-    maxRowScale = max(rowScale[iRow], maxRowScale);
-  }
-#ifdef HiGHSDEV
-  bool excessScaling =
-      (minColScale < minAlwColScale) || (maxColScale > maxAlwColScale) ||
-      (minRowScale < minAlwRowScale) || (maxRowScale > maxAlwRowScale);
-
-  printf("grep_Scaling,%s,%d,%d,Obj,%g,%d,Row,%g,%g,Col,%g,%g,%d\n",
-         modelName.c_str(), originalScaling, alwCostScaling, minNzCost,
-         includeCost, minColScale, maxColScale, minRowScale, maxRowScale,
-         excessScaling);
-#endif
-
-  // Apply scaling to matrix and bounds
-  for (int iCol = 0; iCol < numCol; iCol++)
-    for (int k = solver_lp_->Astart_[iCol]; k < solver_lp_->Astart_[iCol + 1]; k++)
-      solver_lp_->Avalue_[k] *= (colScale[iCol] * rowScale[solver_lp_->Aindex_[k]]);
-
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    solver_lp_->colLower_[iCol] /= solver_lp_->colLower_[iCol] == -inf ? 1 : colScale[iCol];
-    solver_lp_->colUpper_[iCol] /= solver_lp_->colUpper_[iCol] == +inf ? 1 : colScale[iCol];
-    solver_lp_->colCost_[iCol] *= colScale[iCol];
-  }
-  for (int iRow = 0; iRow < numRow; iRow++) {
-    solver_lp_->rowLower_[iRow] *= solver_lp_->rowLower_[iRow] == -inf ? 1 : rowScale[iRow];
-    solver_lp_->rowUpper_[iRow] *= solver_lp_->rowUpper_[iRow] == +inf ? 1 : rowScale[iRow];
-  }
-  if (impliedBoundsPresolve) {
-    for (int iCol = 0; iCol < numCol; iCol++) {
-      primalColLowerImplied[iCol] /=
-          primalColLowerImplied[iCol] == -inf ? 1 : colScale[iCol];
-      primalColUpperImplied[iCol] /=
-          primalColUpperImplied[iCol] == +inf ? 1 : colScale[iCol];
-      dualColLowerImplied[iCol] *=
-          dualColLowerImplied[iCol] == -inf ? 1 : colScale[iCol];
-      dualColUpperImplied[iCol] *=
-          dualColUpperImplied[iCol] == +inf ? 1 : colScale[iCol];
-    }
-    for (int iRow = 0; iRow < numRow; iRow++) {
-      primalRowLowerImplied[iRow] *=
-          primalRowLowerImplied[iRow] == -inf ? 1 : rowScale[iRow];
-      primalRowUpperImplied[iRow] *=
-          primalRowUpperImplied[iRow] == +inf ? 1 : rowScale[iRow];
-      dualRowLowerImplied[iRow] /=
-          dualRowLowerImplied[iRow] == -inf ? 1 : rowScale[iRow];
-      dualRowUpperImplied[iRow] /=
-          dualRowUpperImplied[iRow] == +inf ? 1 : rowScale[iRow];
-    }
-  }
-
-  if (mlFg_haveSavedBounds) {
-    // Model has saved bounds which must also be scaled so they are consistent
-    // when recovered
-    for (int col = 0; col < numCol; col++) {
-      if (!highs_isInfinity(-SvColLower[col])) SvColLower[col] *= colScale[col];
-      if (!highs_isInfinity(SvColUpper[col])) SvColUpper[col] *= colScale[col];
-    }
-    for (int row = 0; row < numRow; row++) {
-      if (!highs_isInfinity(-SvRowLower[row])) SvRowLower[row] *= rowScale[row];
-      if (!highs_isInfinity(SvRowUpper[row])) SvRowUpper[row] *= rowScale[row];
-    }
-  }
-  // Deduce the consequences of scaling the LP
-  mlFg_Update(mlFg_action_ScaleLP);
-#ifdef HiGHSDEV
-  // Analyse the scaled model
-  util_analyseModel(*solver_lp_, "Scaled");
-  //  if (mlFg_scaledLP) {
-  //  utils.util_analyseVectorValues("Column scaling factors", numCol, colScale, false);
-  //  utils.util_analyseVectorValues("Row scaling factors", numRow, rowScale, false);
-  //  }
-#endif
-  // Possibly scale the costs
-  if (!originalScaling && alwCostScaling) scaleCosts();
-}
-
-void HModel::scaleCosts() {
-  // Scale the costs by no less than minAlwCostScale
-  double maxNzCost = 0;
-  for (int iCol = 0; iCol < solver_lp_->numCol_; iCol++) {
-    if (solver_lp_->colCost_[iCol]) {
-      maxNzCost = max(fabs(solver_lp_->colCost_[iCol]), maxNzCost);
-    }
-  }
-  // Scaling the costs up effectively increases the dual tolerance to
-  // which the problem is solved - so, if the max cost is small the
-  // scaling factor pushes it up by a power of 2 so it's close to 1
-  // Scaling the costs down effectively decreases the dual tolerance
-  // to which the problem is solved - so this can't be done too much
-  scale_->cost_ = 1;
-  const double ln2 = log(2.0);
-  // Scale the costs if the max cost is positive and outside the range [1/16,
-  // 16]
-  if ((maxNzCost > 0) && ((maxNzCost < (1.0 / 16)) || (maxNzCost > 16))) {
-    scale_->cost_ = maxNzCost;
-    scale_->cost_ = pow(2.0, floor(log(scale_->cost_) / ln2 + 0.5));
-    scale_->cost_ = min(scale_->cost_, maxAlwCostScale);
-  }
-#ifdef HiGHSDEV
-  printf(
-      "MaxNzCost = %11.4g: scaling all costs by %11.4g\ngrep_CostScale,%g,%g\n",
-      maxNzCost, scale_->cost_, maxNzCost, scale_->cost_);
-#endif
-  if (scale_->cost_ == 1) return;
-  // Scale the costs (and record of maxNzCost) by scale_->cost_, being at most
-  // maxAlwCostScale
-  for (int iCol = 0; iCol < solver_lp_->numCol_; iCol++) solver_lp_->colCost_[iCol] /= scale_->cost_;
-  maxNzCost /= scale_->cost_;
-
-#ifdef HiGHSDEV
-  bool alwLargeCostScaling = false;
-  if (alwLargeCostScaling && (numLargeCo > 0)) {
-    // Scale any large costs by largeCostScale, being at most (a further)
-    // maxAlwCostScale
-    largeCostScale = maxNzCost;
-    largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
-    largeCostScale = min(largeCostScale, maxAlwCostScale);
-    printf(
-        "   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n",
-        tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
-    for (int iCol = 0; iCol < solver_lp_->numCol_; iCol++) {
-      if (largeCostFlag[iCol]) {
-        solver_lp_->colCost_[iCol] /= largeCostScale;
-      }
-    }
-  }
-  printf("After cost scaling\n");
-  //  utils.util_analyseVectorValues("Column costs", solver_lp_->numCol_, solver_lp_->colCost_, false);
-#endif
-}
-
 void HModel::setup_numBasicLogicals() {
   numBasicLogicals = 0;
   for (int i = 0; i < solver_lp_->numRow_; i++)
     if (basis_->basicIndex_[i] >= solver_lp_->numCol_) numBasicLogicals += 1;
   //  printf("Determined numBasicLogicals = %d of %d\n", numBasicLogicals,
   //  solver_lp_->numRow_);
-}
-
-void HModel::initScale() {
-  scale_->col_.assign(solver_lp_->numCol_, 1);
-  scale_->row_.assign(solver_lp_->numRow_, 1);
-  scale_->cost_ = 1;
-#ifdef HiGHSDEV
-  largeCostScale = 1;
-#endif
 }
 
 void HModel::initBasicIndex() {
@@ -2085,11 +1759,11 @@ void HModel::recordPivots(int columnIn, int columnOut, double alpha) {
 
 #ifdef HiGHSDEV
 void HModel::writePivots(const char *suffix) {
-  string filename = "z-" + modelName + "-" + suffix;
+  string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
   ofstream output(filename.c_str());
   int count = historyColumnIn.size();
   double currentRunHighsTime = timer_->readRunHighsClock();
-  output << modelName << " " << count << "\t" << currentRunHighsTime << endl;
+  output << solver_lp_->model_name_ << " " << count << "\t" << currentRunHighsTime << endl;
   output << setprecision(12);
   for (int i = 0; i < count; i++) {
     output << historyColumnIn[i] << "\t";
@@ -3209,11 +2883,11 @@ void HModel::util_reportSolverOutcome(const char *message) {
   double dlObjVal =
       abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   HighsPrintMessage(ML_MINIMAL, "%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
-         modelName.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
+         solver_lp_->model_name_.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
          currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
-  HighsPrintMessage(ML_MINIMAL, "%32s %20.10e %10d %10.3f", modelName.c_str(), dualObjectiveValue,
+  HighsPrintMessage(ML_MINIMAL, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
          numberIteration, currentRunHighsTime);
 #endif
   if (problemStatus == LP_Status_Optimal) {
@@ -3224,7 +2898,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
   }
   // Greppable report line added
   HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
-         currentRunHighsTime, problemStatus, modelName.c_str());
+         currentRunHighsTime, problemStatus, solver_lp_->model_name_.c_str());
 }
 
 // Methods for reporting the model, its solution, row and column data and matrix
@@ -3250,56 +2924,6 @@ void HModel::util_reportModelStatus() {
     HighsPrintMessage(ML_MINIMAL, "Unrecognised\n");
 }
 
-#ifdef HiGHSDEV
-// Report the whole model in Ivet's dense format: useful for toy examples
-void HModel::util_reportModelDense(HighsLp lp) {
-  cout << "N=" << lp.numCol_ << ",  M=" << lp.numRow_ << ",  NZ= " << lp.Astart_[lp.numCol_]
-       << '\n';
-  if (lp.numCol_ > 10 || lp.numRow_ > 100) return;
-  cout << "\n-----cost-----\n";
-
-  char buff[16];
-  int colCost_Sz = lp.colCost_.size();
-  for (int i = 0; i < colCost_Sz; i++) {
-    sprintf(buff, "%2.1g ", lp.colCost_[i]);
-    cout << buff;
-  }
-  cout << endl;
-  cout << "------A------\n";
-  for (int i = 0; i < lp.numRow_; i++) {
-    for (int j = 0; j < lp.numCol_; j++) {
-      int ind = lp.Astart_[j];
-      while (lp.Aindex_[ind] != i && ind < lp.Astart_[j + 1]) ind++;
-
-      // if a_ij is nonzero print
-      if (lp.Aindex_[ind] == i && ind < lp.Astart_[j + 1]) {
-        sprintf(buff, "%2.1g ", lp.Avalue_[ind]);
-        cout << setw(5) << buff;
-      } else
-        cout << setw(5) << " ";
-    }
-    cout << endl;
-  }
-  cout << "------LB------\n";
-  for (int i = 0; i < lp.numRow_; i++) {
-    if (lp.rowLower_[i] > -HIGHS_CONST_INF)
-      sprintf(buff, "%2.1g ", lp.rowLower_[i]);
-    else
-      sprintf(buff, "-inf");
-    cout << setw(5) << buff;
-  }
-  cout << endl;
-  cout << "------UB------\n";
-  for (int i = 0; i < lp.numRow_; i++) {
-    if (lp.rowUpper_[i] < HIGHS_CONST_INF)
-      sprintf(buff, "%2.1g ", lp.rowUpper_[i]);
-    else
-      sprintf(buff, "inf");
-    cout << setw(5) << buff;
-  }
-  cout << endl;
-}
-#endif
 // The remaining routines are wholly independent of any classes, merely
 // printing what's passed in the parameter lists.
 //

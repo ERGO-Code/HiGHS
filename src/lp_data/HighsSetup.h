@@ -179,7 +179,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
           "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
           "%20.10e,%10d,%10.3f,"
           "%d\n",
-          model.getPrStatus(), model.modelName.c_str(), Presolve_ArgV,
+          model.getPrStatus(), highs_model.lp_->model_name_.c_str(), Presolve_ArgV,
           Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
           presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
           postsolveTime, model.dualObjective, model.numberIteration,

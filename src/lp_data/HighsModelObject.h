@@ -31,7 +31,6 @@ public:
   HighsLp& lp_;
 
   int problemStatus;
-  string modelName;
   
   HighsLp solver_lp_;
   HighsSimplexInfo simplex_info_;

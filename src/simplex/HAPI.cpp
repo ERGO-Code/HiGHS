@@ -74,7 +74,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   model.load_fromArrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
                         XnumRow, XrowLower, XrowUpper, XnumNz, XAstart, XAindex,
                         XAvalue);
-  model.scaleModel();
+  //  scaleLp(highs_model);
 
   int LcBasisStatus = (*basisStatus);
   // printf("solve_fromArrays: LcBasisStatus = %d\n",

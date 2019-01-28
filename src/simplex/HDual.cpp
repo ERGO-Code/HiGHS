@@ -266,7 +266,7 @@ void HDual::solve(int num_threads) {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateRpAn();
   // Report the ticks before primal
-  if (simplex_info.simplex_stratgy == SimplexStrategy::DUAL_PLAIN) {
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
     if (simplex_info.reportSimplexInnerClock) {
       simplex_timer.reportDualSimplexInnerClock(workHMO);
     }
@@ -276,7 +276,7 @@ void HDual::solve(int num_threads) {
     }
   }
 
-  //  if (simplex_info.simplex_stratgy == SimplexStrategy::DUAL_TASKS) {
+  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -288,7 +288,7 @@ void HDual::solve(int num_threads) {
   //    model->timer.report(reportCount, reportList, 0.0);
   //  }
 
-  if (simplex_info.simplex_stratgy == SimplexStrategy::DUAL_MULTI) {
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -299,7 +299,7 @@ void HDual::solve(int num_threads) {
   //    int reportCount = sizeof(reportList) / sizeof(int);
   //    model->timer.report(reportCount, reportList, 0.0);
       printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
-             model->modelName.c_str(), pami_cutoff,
+             workHMO.lp_.model_name_.c_str(), pami_cutoff,
              model->numberIteration / (1.0 + multi_iteration));
     }
 #endif

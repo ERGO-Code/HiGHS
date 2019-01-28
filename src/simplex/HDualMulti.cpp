@@ -434,7 +434,7 @@ void HDual::major_update() {
     double alphaDiff = fabs(alphaC - alphaR);
     // int startUpdate = model->countUpdate - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
-      cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
+      cout << "REPORT " << workHMO.solver_lp_.model_name_ << " NEED-ROLL-BACK   ";
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
