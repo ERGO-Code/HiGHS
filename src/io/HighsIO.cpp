@@ -7,16 +7,23 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file io/HighsIO.cpp
+ * @brief IO methods for HiGHS - currently just print/log messages
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #include "HighsIO.h"
 
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
 
-void HighsPrintMessage(unsigned int level, const char* format, ...) {
-  FILE* output = stdout; // TODO: read from options
-  int messageLevel = 1; // TODO: read from options
+#include "HighsLp.h"
 
+FILE* logfile = stdout;
+FILE* output = stdout;
+unsigned int messageLevel = ML_MINIMAL;
+
+void HighsPrintMessage(unsigned int level, const char* format, ...) {
   if (messageLevel & level) {
     va_list argptr;
     va_start(argptr, format);
@@ -26,7 +33,6 @@ void HighsPrintMessage(unsigned int level, const char* format, ...) {
 }
 
 void HighsLogMessage(HighsMessageType type, const char* format, ...) {
-  FILE* logfile = stdout; // TODO: read from options
   time_t rawtime;
   struct tm* timeinfo;
 
@@ -41,4 +47,22 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
   fprintf(logfile, "\n");
 
   va_end(argptr);
+}
+
+void HighsSetLogfile(FILE* lf) {
+  logfile = lf;
+}
+
+void HighsSetOutput(FILE* op) {
+  output = op;
+}
+
+void HighsSetMessagelevel(unsigned int level) {
+  messageLevel = level;
+}
+
+void HighsSetIO(HighsOptions& options) {
+  logfile = options.logfile;
+  output = options.output;
+  messageLevel = options.messageLevel;
 }

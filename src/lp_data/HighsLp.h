@@ -14,10 +14,14 @@
 #ifndef LP_DATA_HIGHS_LP_H_
 #define LP_DATA_HIGHS_LP_H_
 
+#include "HConfig.h"
 #include <cassert>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "HConst.h" // For HiGHS strategy options
+#include "SimplexConst.h" // For simplex strategy options
 
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
@@ -30,7 +34,6 @@ enum objSense
   OBJSENSE_MAXIMIZE = -1
 };
 
-
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
 // are just what has been used to parse options from argv.
@@ -39,19 +42,61 @@ enum objSense
 struct HighsOptions {
   std::string filenames = "";
 
+  // Options passed through the command line
+
+  ParallelOption parallel_option = ParallelOption::DEFAULT;
+  PresolveOption presolve_option = PresolveOption::DEFAULT;
+  CrashOption crash_option = CrashOption::DEFAULT;
+  SimplexOption simplex_option = SimplexOption::DEFAULT;
+  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+
+
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
-
-  double timeLimit = 0;
-
+  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
+  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   HighsMpsParserType parser_type = HighsMpsParserType::free;
 
-  std::string presolveMode = "";
-  std::string edWtMode = "";
-  std::string priceMode = "";
-  std::string crashMode = "";
-  std::string partitionFile = "";
+  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
+  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
+
+  // Options not passed through the command line
+
+  // Options for HighsPrintMessage and HighsLogMessage
+  FILE* logfile = stdout;
+  FILE* output = stdout;
+  unsigned int messageLevel = 0;
+
+  // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
+  //
+  // For an LP model
+  //
+  // Try to solve the dual of the LP
+  bool transposeLp = false;
+  // Perform LP scaling
+  bool scaleLp = true;
+  // Permute the columns of the LP randomly to aid load distribution in block parallelism
+  bool permuteLp = false;
+  // Perform LP bound tightening
+  bool tightenLp = false;
+  //
+  // For any solver
+  //
+  // primal feasibility (dual optimality) tolerance
+  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
+  // dual feasibility (primal optimality) tolerance
+  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
+
+
+  // Upper bound on dual objective value
+  double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
+  //
+  // For the simplex solver
+  //
+  bool simplex_perturb_costs = true;
+  // Maximum number of simplex iterations
+  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
 
   bool clean_up = false;
 };
@@ -122,7 +167,12 @@ struct HighsBasis {
 };
 
 struct HighsSimplexInfo {
-  // Part of working model which assigned and populated as much as
+  // Simplex information regarding primal and dual solution, objective
+  // and iteration counts for this Highs Model Object. This is
+  // information which should be retained from one run to the next in
+  // order to provide hot starts.
+  //
+  // Part of working model which are assigned and populated as much as
   // possible when a model is being defined
 
   // workCost: Originally just costs from the model but, in solve(), may
@@ -161,8 +211,55 @@ struct HighsSimplexInfo {
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
+  //
+  // Vectors of random reals for column cost perturbation, and a
+  // random permutation of column indices for shuffling the columns
+  // and CHUZR
+  std::vector<double> numTotRandomValue_;
+  std::vector<int> numColPermutation_;
+
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
+  //
+  // Value of dual objective
+  double dualObjectiveValue;
+  // Value of dual objective that is updated in dual simplex solver -
+  // need to put this in lower level header, but can't go into Dual.h
+  double updatedDualObjectiveValue;
+
+  // Number of simplex iterations: total and constituent counts
+  int numberAltIteration;
+  int numberAltPhase1DualIteration;
+  int numberAltPhase2DualIteration;
+  int numberAltPrimalIteration;
+
+  // Options from HighsOptions for the simplex solver
+  double highs_run_time_limit;
+  SimplexStrategy simplex_strategy;
+  SimplexCrashStrategy crash_strategy;
+  SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
+  SimplexPriceStrategy price_strategy;
+
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  bool perturb_costs;
+  int iteration_limit;
+  double dual_objective_value_upper_bound;
+  
+  // Internal options - can't be changed externally
+
+  // Options for reporting timing
+  bool reportSimplexInnerClock;
+  bool reportSimplexOuterClock;
+  bool reportSimplexPhasesClock;
+#ifdef HiGHSDEV
+  // Option for analysing simplex iterations, INVERT time and rebuild time
+  bool analyseLp;
+  bool analyseSimplexIterations;
+  bool analyseLpSolution;
+  bool analyseInvertTime;
+  bool analyseRebuildTime;
+#endif
 };
 
 struct HighsSolution {

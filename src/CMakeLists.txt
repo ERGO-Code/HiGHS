@@ -56,6 +56,7 @@ set(headers
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelObject.h
+    lp_data/HighsModelObjectUtil.h
     simplex/HApp.h
     simplex/HConst.h
     simplex/HCrash.h
@@ -68,7 +69,7 @@ set(headers
     simplex/HPrimal.h
     simplex/HRanging.h
     simplex/HSimplex.h
-    simplex/Scaling.h
+    simplex/SimplexConst.h
     presolve/Presolve.h
     simplex/HTimerPre.h
     simplex/HVector.h
@@ -120,6 +121,8 @@ export(TARGETS libhighs
   FILE "${CMAKE_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree
+#Either list all the src/* directories here, or put explicit paths in all the #include statements
+#M reckons that the latter is more transparent, and I'm incliuned to agree.
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)

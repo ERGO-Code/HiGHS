@@ -14,6 +14,9 @@
 #include "HPrimal.h"
 #include "HModel.h"
 #include "HConst.h"
+#include "HighsIO.h"
+#include "HSimplex.h"
+#include "SimplexTimer.h"
 
 #include <cassert>
 #include <cstdio>
@@ -21,14 +24,13 @@
 
 using std::runtime_error;
 
-void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
-  // Copy size
-  highs_model_object = ptr_highs_model_object; // Pointer to highs_model_object: defined in HPrimal.h
-  model = &highs_model_object->hmodel_[0];
-  //  model->basis_ = &highs_model_object->basis_;
-  numCol = model->lp_scaled_->numCol_;
-  numRow = model->lp_scaled_->numRow_;
-  numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+void HPrimal::solvePhase2() {
+  model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+
+  numCol = model->solver_lp_->numCol_;
+  numRow = model->solver_lp_->numRow_;
+  numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
 
 #ifdef HiGHSDEV
   printf("************************************\n");
@@ -46,22 +48,17 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
   columnDensity = 0;
   row_epDensity = 0;
 
-#ifdef HiGHSDEV
-  // Initialise rebuild count and time
-  totalRebuildTime = 0;
-  totalRebuilds = 0;
-#endif
-
   // Setup other buffers
 
-  model->util_reportMessage("primal-start");
+  HighsPrintMessage(ML_DETAILED, "primal-start\n");
 
   HighsTimer &timer = *(model->timer_);
-  double currentRunHighsTime = timer.readRunHighsClock();
 
   // Main solving structure
   for (;;) {
+    timer.start(simplex_info.clock_[IteratePrimalRebuildClock]);
     primalRebuild();
+    timer.stop(simplex_info.clock_[IteratePrimalRebuildClock]);
 
     for (;;) {
       primalChooseColumn();
@@ -78,21 +75,21 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
       if (invertHint) {
         break;
       }
+      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      // model->numberIteration, model->dualObjectiveValue);
-      if (model->dualObjectiveValue > model->dblOption[DBLOPT_OBJ_UB]) {
+      // model->numberIteration, current_dual_objective_value);
+      if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
-        printf("HPrimal::solve_phase2: Objective = %g > %g = dblOption[DBLOPT_OBJ_UB]\n",
-	       model->dualObjectiveValue, model->dblOption[DBLOPT_OBJ_UB]);
+        printf("HPrimal::solve_phase2: %12g = Objective > ObjectiveUB\n",
+	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
         model->problemStatus = LP_Status_ObjUB;
         break;
       }
     }
 
-    currentRunHighsTime = timer.readRunHighsClock();
-    //	printf("Primal Ph2: currentRunHighsTime = %5.2f\n", currentRunHighsTime);
-    if (currentRunHighsTime > TimeLimitValue) {
+    double currentRunHighsTime = timer.readRunHighsClock();
+    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
       model->problemStatus = LP_Status_OutOfTime;
       break;
     }
@@ -108,21 +105,19 @@ void HPrimal::solvePhase2(HighsModelObject *ptr_highs_model_object) {
     return;
 
   if (columnIn == -1) {
-    model->util_reportMessage("primal-optimal");
-    model->util_reportMessage("problem-optimal");
+    HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
+    HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
     model->setProblemStatus(LP_Status_Optimal);
   } else {
-    model->util_reportMessage("primal-unbounded");
+    HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
     model->setProblemStatus(LP_Status_Unbounded);
   }
 }
 
 void HPrimal::primalRebuild() {
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsTimer &timer = workHMO.timer_;
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
-#ifdef HiGHSDEV
-  double tt0 = 0;
-  if (anRebuildTime) tt0 = model->timer_->getTime();
-#endif
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
   invertHint = invertHint_no;  // Was 0
@@ -145,19 +140,17 @@ void HPrimal::primalRebuild() {
   }
   model->computeDual();
   model->computePrimal();
-  model->computeDualObjectiveValue();
+  simplex_method_.computeDualObjectiveValue(workHMO);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV
-  if (anRebuildTime) {
-    double rebuildTime = model->timer_->getTime() - tt0;
-    totalRebuilds++;
-    totalRebuildTime += rebuildTime;
+  if (simplex_info.analyseRebuildTime) {
+    int iClock = simplex_info.clock_[IteratePrimalRebuildClock];
+    int totalRebuilds = timer.clockNumCall[iClock];
+    double totalRebuildTime = timer.read(iClock);
     printf(
-        "Primal     rebuild %d (%1d) on iteration %9d: Rebuild time = %g; "
-        "Total rebuild time %g\n",
-        totalRebuilds, sv_invertHint, model->numberIteration, rebuildTime,
-        totalRebuildTime);
+        "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
+        totalRebuilds, sv_invertHint, model->numberIteration, totalRebuildTime);
   }
 #endif
   // Data are fresh from rebuild
@@ -167,14 +160,14 @@ void HPrimal::primalRebuild() {
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = &highs_model_object->basis_.nonbasicFlag_[0];
-  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  double *workDual = &highs_model_object->simplex_.workDual_[0];
-  const double *workLower = &highs_model_object->simplex_.workLower_[0];
-  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
-  const double dualTolerance = model->dblOption[DBLOPT_DUAL_TOL];
+  const int *jFlag = &workHMO.basis_.nonbasicFlag_[0];
+  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  double *workDual = &workHMO.simplex_info_.workDual_[0];
+  const double *workLower = &workHMO.simplex_info_.workLower_[0];
+  const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
+  const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
 
-  const int numTot = model->lp_scaled_->numCol_ + model->lp_scaled_->numRow_;
+  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   for (int iCol = 0; iCol < numTot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free
@@ -197,10 +190,10 @@ void HPrimal::primalChooseColumn() {
 }
 
 void HPrimal::primalChooseRow() {
-  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
-  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
-  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
-  const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
+  const double *baseLower = &workHMO.simplex_info_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
+  double *baseValue = &workHMO.simplex_info_.baseValue_[0];
+  const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
 
   // Compute pivot column
   column.clear();
@@ -214,7 +207,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = countUpdate < 10 ? 1e-9 : countUpdate < 20 ? 1e-8 : 1e-7;
-  const int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
+  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -260,19 +253,19 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = &highs_model_object->basis_.nonbasicMove_[0];
-  double *workDual = &highs_model_object->simplex_.workDual_[0];
-  const double *workLower = &highs_model_object->simplex_.workLower_[0];
-  const double *workUpper = &highs_model_object->simplex_.workUpper_[0];
-  const double *baseLower = &highs_model_object->simplex_.baseLower_[0];
-  const double *baseUpper = &highs_model_object->simplex_.baseUpper_[0];
-  double *workValue = &highs_model_object->simplex_.workValue_[0];
-  double *baseValue = &highs_model_object->simplex_.baseValue_[0];
-  const double primalTolerance = model->dblOption[DBLOPT_PRIMAL_TOL];
+  int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  double *workDual = &workHMO.simplex_info_.workDual_[0];
+  const double *workLower = &workHMO.simplex_info_.workLower_[0];
+  const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
+  const double *baseLower = &workHMO.simplex_info_.baseLower_[0];
+  const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
+  double *workValue = &workHMO.simplex_info_.workValue_[0];
+  double *baseValue = &workHMO.simplex_info_.baseValue_[0];
+  const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = highs_model_object->basis_.basicIndex_[rowOut];
+  int columnOut = workHMO.basis_.basicIndex_[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {

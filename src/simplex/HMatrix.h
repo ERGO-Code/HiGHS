@@ -196,6 +196,13 @@ class HMatrix {
   std::vector<int> AR_Nend;
   std::vector<int> ARindex;
   std::vector<double> ARvalue;
+
+  // Properties of data held in HMatrix.h: MatrixColWise is the copy
+  // of the constraint matrix, NOT the model's constraint matrix. To
+  // "have" them means that they are correct.
+  int haveMatrixColumnWise;
+  int haveMatrixRowWise;
+
 };
 
 #endif /* SIMPLEX_HMATRIX_H_ */

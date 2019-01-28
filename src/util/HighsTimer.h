@@ -20,6 +20,18 @@
 #include <cstdlib>
 #include <string>
 /**
+ * @brief Clock record structure
+ */
+struct HighsClockRecord {
+  int calls;
+  double start;
+  double ticks;
+  double time;
+  std::string name;
+  std::string ch3Name;
+};
+    
+/**
  * @brief Class for profiling facility for computational components in HiGHS
  */
 class HighsTimer {
@@ -54,10 +66,40 @@ class HighsTimer {
     clockNumCall.push_back(0);
     clockStart.push_back(initialClockStart);
     clockTicks.push_back(0);
+    clockTime.push_back(0);
     clockNames.push_back(name);
     clockCh3Names.push_back(ch3name);
     numClock++;
     return iClock;
+  }
+
+  /**
+   * @brief Zero an external clock record
+   */
+  int clockInit(
+	       HighsClockRecord &Xclock   //!< Record for the external clock
+		) {
+    Xclock.calls = 0;
+    Xclock.start = 0;
+    Xclock.ticks = 0;
+    Xclock.time = 0;
+    Xclock.name = "";
+    Xclock.ch3Name = "";
+  }
+
+  /**
+   * @brief Add to an external clock record
+   */
+  int clockAdd(
+		HighsClockRecord Xclock,   //!< Record for the external clock
+		int iClock                 //!< Clock of record to be added
+		) {
+    assert(iClock >= 0);
+    assert(iClock < numClock);
+    Xclock.calls += clockNumCall[iClock];
+    Xclock.start = initialClockStart;
+    Xclock.ticks += clockTicks[iClock];
+    Xclock.time += clockTime[iClock];
   }
 
   /**
@@ -67,6 +109,7 @@ class HighsTimer {
     for (int i = 0; i < numClock; i++) {
       clockNumCall[i] = 0;
       clockStart[i] = initialClockStart;
+      clockTime[i] = 0;
       clockTicks[i] = 0;
     }
     startTime = getWallTime();
@@ -85,8 +128,8 @@ class HighsTimer {
     // getWallTick() >= 0 (or initialised to initialClockStart > 0)
 #ifdef HiGHSDEV
     if (clockStart[iClock] <= 0) {
-      printf("recordStart [%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
-             iClock, clockStart[iClock], clockTicks[iClock],
+      printf("recordStart [%2d] (%s) is %11.4g: Ticks = %11.4g: NumCall = %d\n",
+             iClock, clockNames[iClock].c_str(), clockStart[iClock], clockTicks[iClock],
              clockNumCall[iClock]);
       fflush(stdout);
     }
@@ -109,15 +152,17 @@ class HighsTimer {
     // -getWallTick() <= 0
 #ifdef HiGHSDEV
     if (clockStart[iClock] > 0) {
-      printf("recordFinish[%2d] is %11.4g: Ticks = %11.4g: NumCall = %d\n",
-             iClock, clockStart[iClock], clockTicks[iClock],
+      printf("recordFinish[%2d] (%s) is %11.4g: Ticks = %11.4g: NumCall = %d\n",
+             iClock, clockNames[iClock].c_str(), clockStart[iClock], clockTicks[iClock],
              clockNumCall[iClock]);
       fflush(stdout);
     }
 #endif
     assert(clockStart[iClock] < 0);
     double wallTick = getWallTick();
-    clockTicks[iClock] += (wallTick + clockStart[iClock]);
+    double callClockTicks = wallTick + clockStart[iClock];
+    clockTicks[iClock] += callClockTicks;
+    clockTime[iClock] += callClockTicks*tick2sec;
     clockNumCall[iClock]++;
     // Set the start to be the WallTick to check that the clock's been
     // stopped when it's next started
@@ -132,17 +177,16 @@ class HighsTimer {
   ) {
     assert(iClock >= 0);
     assert(iClock < numClock);
-    double readTick;
-    double wallTick;
+    double readTime;
     if (clockStart[iClock] < 0) {
       // The clock's been started, so find the current time
-      wallTick = getWallTick();
-      readTick = wallTick + clockStart[iClock];
+      double wallTick = getWallTick();
+      double readTick = wallTick + clockStart[iClock];
+      readTime = readTick*tick2sec;
     } else {
       // The clock is currently stopped, so read the current time
-      readTick = clockTicks[iClock];
+      readTime = clockTime[iClock];
     }
-    double readTime = readTick*tick2sec;
     return readTime;
   }
 
@@ -220,15 +264,17 @@ class HighsTimer {
    * @brief Report timing information for the clock indices in the list
    */
   void report(
-	      std::vector<int>&clockList          //!< List of indices to report
+	      const char *grepStamp,     //!< Character string used to extract output using grep
+	      std::vector<int>&clockList //!< List of indices to report
   ) {
-    double tlPerCentReport = 1.0;
-    report_tl(clockList, tlPerCentReport);
+    double tlPerCentReport = 0.0;//1.0;
+    report_tl(grepStamp, clockList, tlPerCentReport);
   }
 
   void report_tl(
-		 std::vector<int>&clockList,          //!< List of indices to report
-		 double tlPerCentReport
+		 const char *grepStamp,      //!< Character string used to extract output using grep 
+		 std::vector<int>&clockList, //!< List of indices to report
+		 double tlPerCentReport      //!< Lower bound on percentage of total time before an individual clock is reported
   ) {
     const bool reportForExcel = false;
     int numClockListEntries = clockList.size();
@@ -242,8 +288,8 @@ class HighsTimer {
       // getWallTick() >= 0 (or initialised to initialClockStart > 0)
 #ifdef HiGHSDEV
       if (clockStart[iClock] <= 0) {
-	printf("Clock %2d is still running: Start = %11.4g: Ticks = %11.4g: NumCall = %d\n",
-	       iClock, clockStart[iClock], clockTicks[iClock],
+	printf("Clock %2d (%s) is still running: Start = %11.4g: Ticks = %11.4g: NumCall = %d\n",
+	       iClock, clockNames[iClock].c_str(), clockStart[iClock], clockTicks[iClock],
 	       clockNumCall[iClock]);
 	fflush(stdout);
       }
@@ -253,7 +299,7 @@ class HighsTimer {
 
     // Report in one line the per-mille contribution from each clock
     // First give the 3-character clock names as column headers
-    printf("txt-profile-name  ");
+    printf("%s-name  ", grepStamp);
     for (int i = 0; i < numClockListEntries; i++) {
       printf(" %-3s", clockCh3Names[clockList[i]].c_str());
     }
@@ -268,7 +314,11 @@ class HighsTimer {
     double suClockTicks = 0;
     for (int passNum = 0; passNum < 2; passNum++) {
       double suPerMille = 0;
-      printf("txt-profile-clock ");
+      if (passNum == 0) {
+	printf("%s-total ", grepStamp);
+      } else {
+	printf("%s-local ", grepStamp);
+      }
       for (int i = 0; i < numClockListEntries; i++) {
 	int iClock = clockList[i];
 	double perMille;
@@ -294,11 +344,7 @@ class HighsTimer {
     }
 
     // Report one line per clock, the time, number of calls and time per call
-    printf("txt-profile-time ");
-#ifdef HiGHSDEV
-    printf("ID: ");
-#endif
-    printf("Operation       :    Time                     :   Calls   Time/Call\n");
+    printf("%s-time  Operation       :    Time                     :   Calls   Time/Call\n", grepStamp);
     // Convert approximate seconds
     double suTick = 0;
     double suTi = 0;
@@ -312,13 +358,10 @@ class HighsTimer {
       if (clockNumCall[iClock] > 0) {
 	tiPerCall = ti / clockNumCall[iClock];
 	if (perCentSumClockTicks >= tlPerCentReport) {
-	  printf("txt-profile-time ");
-#ifdef HiGHSDEV
-	  printf("%2d: ", iClock);
-#endif
-	  printf("%-16s: %11.4e (%5.1f%%; %5.1f%%): %7d %11.4e\n",
-		 clockNames[iClock].c_str(), ti, perCentSumClockTicks, perCentRunHighs, clockNumCall[iClock],
-		 tiPerCall);
+	  printf("%s-time  %-16s: %11.4e (%5.1f%%; %5.1f%%): %7d %11.4e\n", grepStamp,
+		 clockNames[iClock].c_str(),
+		 ti, perCentSumClockTicks, perCentRunHighs, 
+		 clockNumCall[iClock], tiPerCall);
 	}
       }
       suTi += ti;
@@ -326,16 +369,10 @@ class HighsTimer {
     }
     double perCentRunHighs = 100.0 * suTick / currentRunHighsTick;
     double perCentSumClockTicks = 100.0;
-    printf("txt-profile-time ");
-#ifdef HiGHSDEV
-    printf("    ");
-#endif
-    printf("SUM             : %11.4e (%5.1f%%; %5.1f%%)\n", suTi, perCentSumClockTicks, perCentRunHighs);
-    printf("txt-profile-time ");
-#ifdef HiGHSDEV
-    printf("    ");
-#endif
-    printf("TOTAL           : %11.4e\n", tick2sec * currentRunHighsTick);
+    printf("%s-time  SUM             : %11.4e (%5.1f%%; %5.1f%%)\n", grepStamp,
+	   suTi, perCentSumClockTicks, perCentRunHighs);
+    printf("%s-time  TOTAL           : %11.4e\n", grepStamp,
+	   tick2sec * currentRunHighsTick);
     if (reportForExcel) {
       // Repeat reporting for Excel
       printf("grep_excel-profile-name");
@@ -405,6 +442,7 @@ class HighsTimer {
   std::vector<int> clockNumCall;
   std::vector<double> clockStart;
   std::vector<double> clockTicks;
+  std::vector<double> clockTime;
   std::vector<std::string> clockNames;
   std::vector<std::string> clockCh3Names;
   double tick2sec = 3.6e-10;
