@@ -102,7 +102,7 @@ class HCrash {
 #ifdef HiGHSDEV
   void tsSing(HighsModelObject &highs_model_object);
   void crsh_an_c_co(HighsModelObject &highs_model_object);
-  string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
+  std::string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
   void crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode);
   void crsh_rp_r_c_st(int mode, int Crash_Mode);
   void ltssf_rp_r_k();

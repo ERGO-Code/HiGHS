@@ -34,7 +34,7 @@ void HDual::iterate_multi() {
   major_chooseRow();
   minor_chooseRow();
   if (rowOut == -1) {
-    invertHint = invertHint_possiblyOptimal;  // Was 1
+    invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
     return;
   }
 
@@ -438,7 +438,7 @@ void HDual::major_update() {
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
-      invertHint = invertHint_possiblySingularBasis;
+      invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 	// if (startUpdate > 0) {
       major_rollback();
       return;
@@ -688,7 +688,7 @@ void HDual::major_updateFactor() {
                         &invertHint);
 
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
-    invertHint = invertHint_syntheticClockSaysInvert;
+    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
 
 void HDual::major_rollback() {

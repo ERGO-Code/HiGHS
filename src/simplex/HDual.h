@@ -635,7 +635,7 @@ class HDual {
     int AnIterOpSuNumCa;
     int AnIterOpSuNumHyperOp;
     int AnIterOpSuNumHyperRs;
-    string AnIterOpName;
+    std::string AnIterOpName;
   };
   AnIterOpRec AnIterOp[NumAnIterOpTy];
 
@@ -652,8 +652,8 @@ class HDual {
   int AnIterTraceIterDl;
   AnIterTraceRec AnIterTrace[22];  // How can this be 1+AnIterTraceMxNumRec+1;
 
-  const int AnIterNumInvertHint = 7;
-  int AnIterNumInvert[8];  // TODO: How can this be AnIterNumInvertHint+1
+  const int AnIterNumInvertHint = InvertHint::INVERT_HINT_Count;
+  int AnIterNumInvert[InvertHint::INVERT_HINT_Count];
   int AnIterNumColPrice;
   int AnIterNumRowPrice;
   int AnIterNumRowPriceWSw;

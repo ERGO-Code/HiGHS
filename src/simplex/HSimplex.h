@@ -55,7 +55,7 @@ class HSimplex {
     simplex_info_.reportSimplexPhasesClock = false;
     // Option for analysing simplex iterations
     simplex_info_.analyseLp = false;
-    simplex_info_.analyseSimplexIterations = false;
+    simplex_info_.analyseSimplexIterations = true;//false
     simplex_info_.analyseLpSolution = false;
     simplex_info_.analyseInvertTime = false;
     simplex_info_.analyseRebuildTime = false;

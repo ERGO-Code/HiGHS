@@ -18,12 +18,8 @@
 #include "HMatrix.h"
 #include "HighsLp.h"
 #include "HighsTimer.h" //For timer_
-//#include "HighsUtils.h"
 #include "HighsRandom.h"
 
-// For compute dual objective alt value
-//#include "HighsModelObject.h"
-//#include "HSimplex.h"
 class HVector;
 
 #include <sstream>
@@ -31,7 +27,6 @@ class HVector;
 #include <vector>
 
 // After removing HTimer.h add the following
-using std::string;
 
 const int LP_Status_Unset = -1;
 const int LP_Status_Optimal = 0;
@@ -41,8 +36,6 @@ const int LP_Status_Singular = 3;
 const int LP_Status_Failed = 4;
 const int LP_Status_ObjUB = 5;
 const int LP_Status_OutOfTime = 6;
-
-//typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
 
 class HModel {
  public:
@@ -347,24 +340,6 @@ class HModel {
  public:
   int problemStatus;
   
-// Limits on scaling factors
-/*  const double minAlwScale = 1 / 1024.0;
-  const double maxAlwScale = 1024.0;
-  const double maxAlwCostScale = maxAlwScale;
-  const double minAlwColScale = minAlwScale;
-  const double maxAlwColScale = maxAlwScale;
-  const double minAlwRowScale = minAlwScale;
-  const double maxAlwRowScale = maxAlwScale;
-*/
-
-#ifdef HiGHSDEV
-  // Information on large costs
-  const double tlLargeCo = 1e5;
-  int numLargeCo;
-  vector<int> largeCostFlag;
-  double largeCostScale;
-#endif
-
   // Associated data of original model
   vector<int> numTotPermutation;
   vector<double> numTotRandomValue;

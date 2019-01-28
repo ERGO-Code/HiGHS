@@ -54,16 +54,19 @@ enum class SimplexPriceStrategy {
   DEFAULT = ROW_SWITCH_COL_SWITCH
 };
 
-const int invertHint_no = 0;
-const int invertHint_updateLimitReached = 1;
-const int invertHint_syntheticClockSaysInvert = 2;
-const int invertHint_possiblyOptimal = 3;
-const int invertHint_possiblyPrimalUnbounded = 4;
-const int invertHint_possiblyDualUnbounded = 5;
-const int invertHint_possiblySingularBasis = 6;
-const int invertHint_primalInfeasibleInPrimalSimplex = 7;
-const int invertHint_chooseColumnFail = 8;
-
+// Not an enum class since invert_hint is used in so many places
+enum InvertHint {
+  INVERT_HINT_NO = 0,
+    INVERT_HINT_UPDATE_LIMIT_REACHED,
+    INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT,
+    INVERT_HINT_POSSIBLY_OPTIMAL,
+    INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED,
+    INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED,
+    INVERT_HINT_POSSIBLY_SINGULAR_BASIS,
+    INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX,
+    INVERT_HINT_CHOOSE_COLUMN_FAIL,
+    INVERT_HINT_Count
+};
 
 
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

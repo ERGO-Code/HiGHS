@@ -580,9 +580,6 @@ void HModel::clearModel() {
   //  solver_lp_->sense_ = 0;
   //  solver_lp_->offset_ = 0.0;
   //  scale.cost_ = 1;
-#ifdef HiGHSDEV
-  numLargeCo = 0;
-#endif
   //  solver_lp_->Astart_.clear();
   //  solver_lp_->Aindex_.clear();
   //  solver_lp_->Avalue_.clear();
@@ -1599,7 +1596,7 @@ void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
   factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   mlFg_haveInvert = 1;
-  if (countUpdate >= limitUpdate) *hint = invertHint_updateLimitReached;
+  if (countUpdate >= limitUpdate) *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   timer_->stop(simplex_info_->clock_[UpdateFactorClock]);
 }
 
@@ -3053,82 +3050,6 @@ void HModel::util_reportModelDa(HighsLp lp, const char *filename) {
 }
 
 #ifdef HiGHSDEV
-void HModel::util_anMlLargeCo(HighsLp lp, const char *message) {
-  numLargeCo = 0;
-  largeCostFlag.assign(lp.numCol_, 0);
-  double mxLargeCo = 0;
-  double mxLargeStrucCo = 0;
-  double mxLargeSlackCo = 0;
-  int numRp = 0;
-  int numZeInfLargeCoSlack = 0;
-  int numInfZeLargeCoSlack = 0;
-  int numLargeCoSlack = 0;
-  int numLargeCoStruc = 0;
-  bool rpSlackC = false;
-  bool rpStrucC = true;
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    double iColCo = lp.colCost_[iCol];
-    double iColLower = lp.colLower_[iCol];
-    double iColUpper = lp.colUpper_[iCol];
-    mxLargeCo = max(fabs(iColCo), mxLargeCo);
-    if (abs(iColCo) > tlLargeCo) {
-      numLargeCo++;
-      largeCostFlag[iCol] = 1;
-      int numCol_NZ = lp.Astart_[iCol + 1] - lp.Astart_[iCol];
-      if (numCol_NZ == 1) {
-        mxLargeSlackCo = max(fabs(iColCo), mxLargeSlackCo);
-        if (iColLower == 0 && highs_isInfinity(iColUpper)) {
-          numZeInfLargeCoSlack++;
-        } else if (highs_isInfinity(-iColLower) && iColUpper == 0) {
-          numInfZeLargeCoSlack++;
-        } else {
-          numLargeCoSlack++;
-        }
-        bool rpC = rpSlackC && numRp < 100;
-        if (rpC) {
-          numRp++;
-          printf(
-              "Large cost %6d is %11.4g for column %6d with bounds [%11.4g, "
-              "%11.4g] and %2d nonzeros",
-              numLargeCo, iColCo, iCol, iColLower, iColUpper, numCol_NZ);
-          int elN = lp.Astart_[iCol];
-          printf(": Matrix entry %11.4g in row %6d\n", lp.Avalue_[elN],
-                 lp.Aindex_[elN]);
-        }
-      } else {
-        mxLargeStrucCo = max(fabs(iColCo), mxLargeStrucCo);
-        numLargeCoStruc++;
-        bool rpC = rpStrucC && numRp < 100;
-        if (rpC) {
-          numRp++;
-          printf(
-              "Large cost %6d is %11.4g for column %6d with bounds [%11.4g, "
-              "%11.4g] and %2d nonzeros\n",
-              numLargeCo, iColCo, iCol, iColLower, iColUpper, numCol_NZ);
-        }
-      }
-    }
-  }
-  printf(
-      "Found %7d |cost| > %11.4g: largest is %11.4g\nMax large slack cost is "
-      "%11.4g\nMax large struc cost is %11.4g\n",
-      numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo, mxLargeStrucCo);
-  if (numLargeCo > 0) {
-    printf("   %7d such columns are slacks with bounds [0,  Inf] (%3d%%)\n",
-           numZeInfLargeCoSlack, (100 * numZeInfLargeCoSlack) / numLargeCo);
-    printf("   %7d such columns are slacks with bounds [-Inf, 0] (%3d%%)\n",
-           numInfZeLargeCoSlack, (100 * numInfZeLargeCoSlack) / numLargeCo);
-    printf("   %7d such columns are slacks with other bounds     (%3d%%)\n",
-           numLargeCoSlack, (100 * numLargeCoSlack) / numLargeCo);
-    printf("   %7d such columns are strucs                       (%3d%%)\n",
-           numLargeCoStruc, (100 * numLargeCoStruc) / numLargeCo);
-  }
-  printf("grep_LargeCostData,%s,%d,%d,%g,%g,%g,%g,%d,%d,%d,%d\n", message,
-         lp.numCol_, numLargeCo, tlLargeCo, mxLargeCo, mxLargeSlackCo,
-         mxLargeStrucCo, numZeInfLargeCoSlack, numInfZeLargeCoSlack,
-         numLargeCoSlack, numLargeCoStruc);
-}
-
 void HModel::util_analyseLpSolution() {
   if (problemStatus != LP_Status_Optimal) return;
   printf("\nAnalysing the model solution\n");
@@ -3188,10 +3109,7 @@ void HModel::util_analyseLpSolution() {
   // Look for column residual errors and infeasibilities - primal and dual
   if (solver_lp_->offset_) printf("Primal objective offset is %11.4g\n", solver_lp_->offset_);
   double lcPrObjV = 0;
-  double lcPrObjV_LargeCo = 0;
-  double lcPrObjV_OtherCo = 0;
-  double lcValue_LargeCo = 0;
-  double lcValue_OtherCo = 0;
+  double lcValue = 0;
 
   int numRpFreeRowEr = 0;
   int maxRpFreeRowEr = 100;
@@ -3288,20 +3206,7 @@ void HModel::util_analyseLpSolution() {
       sclColDuIfs = abs(dual[iCol]);
     }
 
-    double prObjTerm = sclColValue * solver_lp_->colCost_[iCol];
-    lcPrObjV += prObjTerm;
-    if (numLargeCo) {
-      if (largeCostFlag[iCol]) {
-        lcPrObjV_LargeCo += prObjTerm;
-        lcValue_LargeCo += sclColValue;
-      } else {
-        lcPrObjV_OtherCo += prObjTerm;
-        lcValue_OtherCo += sclColValue;
-      }
-    } else {
-      lcPrObjV_OtherCo += prObjTerm;
-      lcValue_OtherCo += sclColValue;
-    }
+    lcPrObjV += sclColValue * solver_lp_->colCost_[iCol];
 
     double unsclColValue = sclColValue * scale_->col_[iCol];
     //      assert(highs_isInfinity(-sclColValue));
@@ -3644,23 +3549,11 @@ void HModel::util_analyseLpSolution() {
 
   lcPrObjV *= scale_->cost_;
   lcPrObjV += solver_lp_->offset_;
-  lcPrObjV_LargeCo *= scale_->cost_;
-  lcPrObjV_OtherCo *= scale_->cost_;
   double dualObjectiveValue = simplex_info_->dualObjectiveValue;
-  if (largeCostScale == 1.0) {
-    double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
-    //    if (ObjEr > 1e-8)
-    printf(
-        "Relative objective error of %11.4g: dualObjectiveValue = %g; lcPrObjV = %g\n",
-        ObjEr, dualObjectiveValue, lcPrObjV);
-  }
-  if (numLargeCo > 0) {
-    printf("Objective offset = %11.4g\n", solver_lp_->offset_);
-    printf("Large cost terms = %11.4g\n", lcPrObjV_LargeCo);
-    printf("Other cost terms = %11.4g\n", lcPrObjV_OtherCo);
-    printf("Large values = %11.4g\n", lcValue_LargeCo);
-    printf("Other values = %11.4g\n", lcValue_OtherCo);
-  }
+  double ObjEr = abs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
+  printf(
+	 "Relative objective error of %11.4g: dualObjectiveValue = %g; lcPrObjV = %g\n",
+	 ObjEr, dualObjectiveValue, lcPrObjV);
 }
 
 /*

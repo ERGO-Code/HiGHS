@@ -83,7 +83,7 @@ struct HighsOptions {
   //
   // For any solver
   //
-  // primal feasibility (dual optimality) tolerance
+ // primal feasibility (dual optimality) tolerance
   double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
   // dual feasibility (primal optimality) tolerance
   double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;

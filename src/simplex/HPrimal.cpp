@@ -63,12 +63,12 @@ void HPrimal::solvePhase2() {
     for (;;) {
       primalChooseColumn();
       if (columnIn == -1) {
-        invertHint = invertHint_possiblyOptimal;
+        invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
       }
       primalChooseRow();
       if (rowOut == -1) {
-        invertHint = invertHint_possiblyPrimalUnbounded;
+        invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
       }
       primalUpdate();
@@ -120,13 +120,13 @@ void HPrimal::primalRebuild() {
   model->recordPivots(-1, -1, 0);  // Indicate REINVERT
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
-  invertHint = invertHint_no;  // Was 0
+  invertHint = INVERT_HINT_NO;  // Was 0
   // Possibly Rebuild model->factor
   bool reInvert = model->countUpdate > 0;
   if (!model->InvertIfRowOutNeg) {
     // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
-    // invertHint_possiblyOptimal]
-    if (sv_invertHint == invertHint_possiblyOptimal) {
+    // INVERT_HINT_POSSIBLY_OPTIMAL]
+    if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
       assert(columnIn == -1);
       reInvert = false;
     }
@@ -318,9 +318,9 @@ void HPrimal::primalUpdate() {
   // Check for any possible infeasible
   for (int iRow = 0; iRow < numRow; iRow++) {
     if (baseValue[iRow] < baseLower[iRow] - primalTolerance) {
-      invertHint = invertHint_primalInfeasibleInPrimalSimplex;  // Was 1
+      invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     } else if (baseValue[iRow] > baseUpper[iRow] + primalTolerance) {
-      invertHint = invertHint_primalInfeasibleInPrimalSimplex;  // Was 1
+      invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     }
   }
 
@@ -354,7 +354,7 @@ void HPrimal::primalUpdate() {
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   model->updateMatrix(columnIn, columnOut);
   if (++countUpdate >= limitUpdate)
-    invertHint = invertHint_updateLimitReached;  // Was true;
+    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;  // Was true;
 
   model->recordPivots(columnIn, columnOut, alpha);
 }
