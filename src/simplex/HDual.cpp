@@ -1017,7 +1017,7 @@ void HDual::iterateIzAn() {
   AnIterNumRowPrice = 0;
   AnIterNumRowPriceWSw = 0;
   AnIterNumRowPriceUltra = 0;
-  for (int k = 0; k <= DualEdgeWeightMode::DANTZIG; k++) AnIterNumEdWtIt[k] = 0;
+  for (int k = 0; k <= (int) DualEdgeWeightMode::DANTZIG; k++) AnIterNumEdWtIt[k] = 0;
   AnIterNumCostlyDseIt = 0;
   AnIterTraceNumRec = 0;
   AnIterTraceIterDl = 1;
@@ -1110,7 +1110,7 @@ void HDual::iterateAn() {
   if (thetaDual <= 0) AnIterNumDuDgnIt++;
   if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
   if (AnIterCuIt > AnIterPrevIt)
-    AnIterNumEdWtIt[dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
+    AnIterNumEdWtIt[(int) dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
 
   AnIterTraceRec *lcAnIter = &AnIterTrace[AnIterTraceNumRec];
   //  if (model->numberIteration ==
@@ -1137,7 +1137,7 @@ void HDual::iterateAn() {
         lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
         lcAnIter->AnIterTraceAux0 = 0;
       }
-      lcAnIter->AnIterTrace_dual_edge_weight_mode = dual_edge_weight_mode;
+      lcAnIter->AnIterTrace_dual_edge_weight_mode = (int) dual_edge_weight_mode;
     }
   }
   AnIterPrevIt = AnIterCuIt;
@@ -2072,15 +2072,15 @@ void HDual::iterateRpAn() {
          AnIterIt0 + 1, model->numberIteration);
   if (AnIterNumIter <= 0) return;
   int lc_EdWtNumIter;
-  lc_EdWtNumIter = AnIterNumEdWtIt[DualEdgeWeightMode::STEEPEST_EDGE];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::STEEPEST_EDGE];
   if (lc_EdWtNumIter > 0)
     printf("DSE for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[DualEdgeWeightMode::DEVEX];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::DEVEX];
   if (lc_EdWtNumIter > 0)
     printf("Dvx for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[DualEdgeWeightMode::DANTZIG];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::DANTZIG];
   if (lc_EdWtNumIter > 0)
     printf("Dan for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
@@ -2187,7 +2187,7 @@ void HDual::iterateRpAn() {
     lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
     lcAnIter->AnIterTraceAux0 = 0;
   }
-  lcAnIter->AnIterTrace_dual_edge_weight_mode = dual_edge_weight_mode;
+  lcAnIter->AnIterTrace_dual_edge_weight_mode = (int) dual_edge_weight_mode;
 
   if (AnIterTraceIterDl >= 100) {
     printf("\n Iteration speed analysis\n");
@@ -2215,11 +2215,11 @@ void HDual::iterateRpAn() {
       int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
       int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
       string str_dual_edge_weight_mode;
-      if (lc_dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE)
+      if (lc_dual_edge_weight_mode == (int) DualEdgeWeightMode::STEEPEST_EDGE)
         str_dual_edge_weight_mode = "DSE";
-      else if (lc_dual_edge_weight_mode == DualEdgeWeightMode::DEVEX)
+      else if (lc_dual_edge_weight_mode == (int) DualEdgeWeightMode::DEVEX)
         str_dual_edge_weight_mode = "Dvx";
-      else if (lc_dual_edge_weight_mode == DualEdgeWeightMode::DANTZIG)
+      else if (lc_dual_edge_weight_mode == (int) DualEdgeWeightMode::DANTZIG)
         str_dual_edge_weight_mode = "Dan";
       else
         str_dual_edge_weight_mode = "XXX";

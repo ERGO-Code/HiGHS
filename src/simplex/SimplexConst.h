@@ -64,4 +64,6 @@ const int invertHint_possiblySingularBasis = 6;
 const int invertHint_primalInfeasibleInPrimalSimplex = 7;
 const int invertHint_chooseColumnFail = 8;
 
+
+
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

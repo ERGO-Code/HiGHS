@@ -31,8 +31,9 @@ class HFactor;
 
 enum class DualEdgeWeightMode {
   DANTZIG = 0,
-  DEVEX,
-  STEEPEST_EDGE
+    DEVEX,
+    STEEPEST_EDGE,
+    Count
 };
 
 enum class PriceMode {
@@ -659,7 +660,7 @@ class HDual {
   int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[3];  // TODO: How can this be DUAL_EDGE_WEIGHT_MODE_DANTZIG+1
+  int AnIterNumEdWtIt[(int) DualEdgeWeightMode::Count];
 #endif
 };
 

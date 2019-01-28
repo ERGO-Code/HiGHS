@@ -221,18 +221,6 @@ struct HighsSimplexInfo {
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
   //
-  // Value of dual objective
-  double dualObjectiveValue;
-  // Value of dual objective that is updated in dual simplex solver -
-  // need to put this in lower level header, but can't go into Dual.h
-  double updatedDualObjectiveValue;
-
-  // Number of simplex iterations: total and constituent counts
-  int numberAltIteration;
-  int numberAltPhase1DualIteration;
-  int numberAltPhase2DualIteration;
-  int numberAltPrimalIteration;
-
   // Options from HighsOptions for the simplex solver
   double highs_run_time_limit;
   SimplexStrategy simplex_strategy;
@@ -260,6 +248,23 @@ struct HighsSimplexInfo {
   bool analyseInvertTime;
   bool analyseRebuildTime;
 #endif
+  // Simplex status
+  int costs_perturbed;
+
+  // Simplex run information
+
+  // Value of dual objective
+  double dualObjectiveValue;
+  // Value of dual objective that is updated in dual simplex solver -
+  // need to put this in lower level header, but can't go into Dual.h
+  double updatedDualObjectiveValue;
+
+  // Number of simplex iterations: total and constituent counts
+  int numberAltIteration;
+  int numberAltPhase1DualIteration;
+  int numberAltPhase2DualIteration;
+  int numberAltPrimalIteration;
+
 };
 
 struct HighsSolution {
