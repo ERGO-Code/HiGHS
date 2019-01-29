@@ -10,6 +10,7 @@
 #include "Filereader.h"
 #include "FilereaderLp.h"
 #include "FilereaderMps.h"
+#include "FilereaderEms.h"
 
 #include <string.h>
 #include <stdexcept>

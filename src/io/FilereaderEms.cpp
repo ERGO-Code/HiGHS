@@ -127,3 +127,7 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
   f.close();
   return FilereaderRetcode::OKAY;
 }
+
+FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename, HighsModel& model) {
+  return FilereaderRetcode::NOT_IMPLEMENTED;
+}

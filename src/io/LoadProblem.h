@@ -21,11 +21,11 @@
 // options.parser
 HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   // Check if file exists
-  if (options.filenames.size() == 0 || access(options.filenames.c_str(), F_OK) == -1)
+  if (options.filename.size() == 0 || access(options.filename.c_str(), F_OK) == -1)
     return HighsInputStatus::FileNotFound;
 
-  Filereader* reader = Filereader::getFilereader(options.filenames.c_str());
-  FilereaderRetcode success =  reader->readModelFromFile(options.filenames.c_str(), lp);
+  Filereader* reader = Filereader::getFilereader(options.filename.c_str());
+  FilereaderRetcode success =  reader->readModelFromFile(options.filename.c_str(), lp);
   delete reader;
   lp.nnz_ = lp.Avalue_.size();
 

@@ -17,7 +17,12 @@
 #include "HighsLp.h"
 #include "HighsModel.h"
 
-enum class FilereaderRetcode { OKAY = 0, FILENOTFOUND = 1, PARSERERROR = 2 };
+enum class FilereaderRetcode {
+  OKAY = 0,
+  FILENOTFOUND = 1,
+  PARSERERROR = 2,
+  NOT_IMPLEMENTED = 3
+};
 
 class Filereader {
  public:
@@ -29,7 +34,7 @@ class Filereader {
                                              HighsLp& model) = 0;
   static Filereader* getFilereader(const char* filename);
 
-  virtual ~Filereader() {};
+  virtual ~Filereader(){};
 };
 
 #endif

@@ -335,16 +335,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
 
     // Currently works for only one filename at a time.
     if (result.count("filename")) {
-      std::string filenames = "";
+      std::string filename = "";
       auto& v = result["filename"].as<std::vector<std::string>>();
       if (v.size() > 1) {
-        std::cout << "Multiple files not implemented yet.\n";
+        std::cout << "Multiple files not implemented.\n";
         return HighsStatus::LpError;
       }
-      for (const auto& s : v) {
-        filenames = filenames + s;
-      }
-      options.filenames = filenames;
+      options.filename = v[0];
     }
 
     if (result.count("presolve")) {
@@ -378,8 +375,8 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     return HighsStatus::OptionsError;
   }
 
-  if (options.filenames.size() == 0) {
-    std::cout << "Please specify filename in .mps or .gz format.\n";
+  if (options.filename.size() == 0) {
+    std::cout << "Please specify filename in .mps|.lp|.ems|.gz format.\n";
     return HighsStatus::LpError;
   }
 

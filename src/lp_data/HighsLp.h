@@ -40,7 +40,7 @@ enum objSense
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
 struct HighsOptions {
-  std::string filenames = "";
+  std::string filename = "";
 
   // Options passed through the command line
 
