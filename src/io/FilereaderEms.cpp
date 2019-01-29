@@ -18,17 +18,44 @@
 #include "FilereaderEms.h"
 #include "HConst.h"
 
+std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+    str.erase(0, str.find_first_not_of(chars));
+    return str;
+}
+ 
+std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+    str.erase(str.find_last_not_of(chars) + 1);
+    return str;
+}
+ 
+std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+    return ltrim(rtrim(str, chars), chars);
+}
+
 FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
                                                    HighsLp& model) {
   std::ifstream f;
   int i;
 
   f.open(filename, std::ios::in);
+  std::string line;
   int numCol, numRow, AcountX;
 
   // counts
-  f >> numCol;
+  while (line != "n_rows") std::getline(f, line);
   f >> numRow;
+
+  std::getline(f, line);
+  while (trim(line) == "") std::getline(f, line);
+  if (line != "n_columns") return FilereaderRetcode::PARSERERROR;
+  f >> numCol;
+
+  std::getline(f, line);
+  while (trim(line) == "") std::getline(f, line);
+  if (line != "n_matrix_elements") return FilereaderRetcode::PARSERERROR;
   f >> AcountX;
 
   model.numCol_ = numCol;
@@ -36,6 +63,10 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
   model.nnz_ = AcountX;
 
   // matrix
+  std::getline(f, line);
+  while (trim(line) == "") std::getline(f, line);
+  if (line != "matrix") return FilereaderRetcode::PARSERERROR;
+
   model.Astart_.resize(numCol + 1);
   model.Aindex_.resize(AcountX);
   model.Avalue_.resize(AcountX);
@@ -47,17 +78,14 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
   for (i = 0; i < AcountX; i++) f >> model.Avalue_[i];
 
   // cost and bounds
-  model.colCost_.reserve(numCol);
+  std::getline(f, line);
+  while (trim(line) == "") std::getline(f, line);
+  if (line != "column_bounds") return FilereaderRetcode::PARSERERROR;
   model.colLower_.reserve(numCol);
   model.colUpper_.reserve(numCol);
 
-  model.colCost_.assign(numCol, 0);
   model.colLower_.assign(numCol, -HIGHS_CONST_INF);
   model.colUpper_.assign(numCol, HIGHS_CONST_INF);
-
-  for (i = 0; i < numCol; i++) {
-    f >> model.colCost_[i];
-  }
 
   for (i = 0; i < numCol; i++) {
     f >> model.colLower_[i];
@@ -67,6 +95,9 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
     f >> model.colUpper_[i];
   }
 
+  std::getline(f, line);
+  while (trim(line) == "") std::getline(f, line);
+  if (line != "row_bounds") return FilereaderRetcode::PARSERERROR;
   model.rowLower_.reserve(numRow);
   model.rowUpper_.reserve(numRow);
   model.rowLower_.assign(numRow, -HIGHS_CONST_INF);
@@ -80,6 +111,20 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
     f >> model.rowUpper_[i];
   }
 
+  std::getline(f, line);
+  while (trim(line) == "") std::getline(f, line);
+  if (line != "column_costs") return FilereaderRetcode::PARSERERROR;
+  model.colCost_.reserve(numCol);
+  model.colCost_.assign(numCol, 0);
+  for (i = 0; i < numCol; i++) {
+    f >> model.colCost_[i];
+  }
+
+  // todo:
+  // while (line != "integer_variables" && line != "names") std::getline(f,
+  // line);
+  // ...
+
   f.close();
   return FilereaderRetcode::OKAY;
 }
@@ -90,11 +135,15 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
   f.open(filename, std::ios::out);
 
   // counts
+  f << "n_rows" << std::endl;
   f << model.numCol_ << std::endl;
+  f << "n_columns" << std::endl;
   f << model.numRow_ << std::endl;
+  f << "n_matrix_elements" << std::endl;
   f << model.nnz_ << std::endl;
 
   // matrix
+  f << "matrix" << std::endl;
   for (int i = 0; i < model.numCol_ + 1; i++) f << model.Astart_[i] << " ";
   f << std::endl;
 
@@ -107,16 +156,15 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
 
   // cost and bounds
   f << std::setprecision(9);
-  for (int i = 0; i < model.numCol_; i++) f << model.colCost_[i] << " ";
 
-  f << std::endl;
-
+  f << "column_bounds" << std::endl;
   for (int i = 0; i < model.numCol_; i++) f << model.colLower_[i] << " ";
   f << std::endl;
 
   for (int i = 0; i < model.numCol_; i++) f << model.colUpper_[i] << " ";
   f << std::endl;
 
+  f << "row_bounds" << std::endl;
   f << std::setprecision(9);
   for (int i = 0; i < model.numRow_; i++) f << model.rowLower_[i] << " ";
   f << std::endl;
@@ -124,10 +172,16 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
   for (int i = 0; i < model.numRow_; i++) f << model.rowUpper_[i] << " ";
   f << std::endl;
 
+  f << "column_costs" << std::endl;
+  for (int i = 0; i < model.numCol_; i++) f << model.colCost_[i] << " ";
+  f << std::endl;
+
+  // todo: names & integer variables.
   f.close();
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename, HighsModel& model) {
+FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
+                                                   HighsModel& model) {
   return FilereaderRetcode::NOT_IMPLEMENTED;
 }
