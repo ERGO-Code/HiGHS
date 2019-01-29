@@ -11,7 +11,7 @@
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
   HighsOptions options;
   options.filename =
-      "./check/instances/adlittle.mps";  // todo: check how to specify path
+      "../../check/instances/adlittle.mps";  // todo: check how to specify path
 
   // Read mps.
   HighsLp lp_mps;
@@ -28,6 +28,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   HighsLp lp_ems;
   HighsInputStatus ems_read_status = loadLpFromFile(options, lp_ems);
+  REQUIRE(ems_read_status == HighsInputStatus::OK);
 
   bool are_the_same = lp_mps == lp_ems;
   REQUIRE(are_the_same);
