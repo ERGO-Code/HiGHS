@@ -45,6 +45,8 @@ void HDual::solve(int num_threads) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsTimer &timer = workHMO.timer_;
   model->timer_ = &timer;
+  model->random_ = &workHMO.random_;
+  invertHint = INVERT_HINT_NO;
   //  model = workHMO.hmodel_[0];// works with primitive types but not sure about class types.
 
   SimplexTimer simplex_timer;
@@ -1018,7 +1020,10 @@ void HDual::iterateIzAn() {
   AnIterNumRowPrice = 0;
   AnIterNumRowPriceWSw = 0;
   AnIterNumRowPriceUltra = 0;
-  for (int k = 0; k <= (int) DualEdgeWeightMode::DANTZIG; k++) AnIterNumEdWtIt[k] = 0;
+  int last_dual_edge_weight_mode = (int) DualEdgeWeightMode::STEEPEST_EDGE;
+  for (int k = 0; k <= last_dual_edge_weight_mode; k++) {
+    AnIterNumEdWtIt[k] = 0;
+  }
   AnIterNumCostlyDseIt = 0;
   AnIterTraceNumRec = 0;
   AnIterTraceIterDl = 1;
