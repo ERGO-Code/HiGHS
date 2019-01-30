@@ -1659,33 +1659,6 @@ int HModel::writeToMPS(const char *filename) {
 void HModel::shiftObjectiveValue(double shift) {
   simplex_info_->dualObjectiveValue += shift;
 }
-
-void HModel::recordPivots(int columnIn, int columnOut, double alpha) {
-  // NB This is where the iteration count is updated!
-  if (columnIn >= 0) numberIteration++;
-#ifdef HiGHSDEV
-  historyColumnIn.push_back(columnIn);
-  historyColumnOut.push_back(columnOut);
-  historyAlpha.push_back(alpha);
-#endif
-}
-
-#ifdef HiGHSDEV
-void HModel::writePivots(const char *suffix) {
-  string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
-  ofstream output(filename.c_str());
-  int count = historyColumnIn.size();
-  double currentRunHighsTime = timer_->readRunHighsClock();
-  output << solver_lp_->model_name_ << " " << count << "\t" << currentRunHighsTime << endl;
-  output << setprecision(12);
-  for (int i = 0; i < count; i++) {
-    output << historyColumnIn[i] << "\t";
-    output << historyColumnOut[i] << "\t";
-    output << historyAlpha[i] << endl;
-  }
-  output.close();
-}
-#endif
 //<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-
 
 // Scale a pair of row bound values

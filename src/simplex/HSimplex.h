@@ -746,6 +746,36 @@ class HSimplex {
     }
     simplex_info_.tightened_solver_lp = true;
   }
-  
+
+  /*
+  // Increment numberIteration (here!) and (possibly) store the pivots for
+  // debugging NLA
+  void record_pivots(int columnIn, int columnOut, double alpha) {
+    // NB This is where the iteration count is updated!
+    if (columnIn >= 0) numberIteration++;
+#ifdef HiGHSDEV
+    historyColumnIn.push_back(columnIn);
+    historyColumnOut.push_back(columnOut);
+    historyAlpha.push_back(alpha);
+#endif
+  }
+#ifdef HiGHSDEV
+  // Store and write out the pivots for debugging NLA
+  void writePivots(const char* suffix) {
+    string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
+    ofstream output(filename.c_str());
+    int count = historyColumnIn.size();
+    double currentRunHighsTime = timer_->readRunHighsClock();
+    output << solver_lp_->model_name_ << " " << count << "\t" << currentRunHighsTime << endl;
+    output << setprecision(12);
+    for (int i = 0; i < count; i++) {
+      output << historyColumnIn[i] << "\t";
+      output << historyColumnOut[i] << "\t";
+      output << historyAlpha[i] << endl;
+    }
+    output.close();
+  }
+#endif
+  */
 };
 #endif // SIMPLEX_HSIMPLEX_H_

@@ -739,10 +739,12 @@ void HDual::rebuild() {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Save history information
-  model->recordPivots(-1, -1, 0);  // Indicate REINVERT
-  int sv_invertHint = invertHint;
-  invertHint = INVERT_HINT_NO;  // Was 0
+  // Move this to Simplex class once it's created
+  //  HSimplex simplex_method_;
+  //  simplex_method_.record_pivots(-1, -1, 0);  // Indicate REINVERT
 
+  int sv_invertHint = invertHint;
+  invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
   bool reInvert = model->countUpdate > 0;
   if (!model->InvertIfRowOutNeg) {
@@ -1771,7 +1773,9 @@ void HDual::updatePivots() {
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
-  model->recordPivots(columnIn, columnOut, alpha);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  model->numberIteration++;
   //
   // Update the invertible representation of the basis matrix
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);

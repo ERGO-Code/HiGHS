@@ -117,14 +117,16 @@ void HPrimal::solvePhase2() {
 void HPrimal::primalRebuild() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsTimer &timer = workHMO.timer_;
-  model->recordPivots(-1, -1, 0);  // Indicate REINVERT
+  // Move this to Simplex class once it's created
+  //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
+
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
-  invertHint = INVERT_HINT_NO;  // Was 0
+  invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
   bool reInvert = model->countUpdate > 0;
   if (!model->InvertIfRowOutNeg) {
-    // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
+    // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
     if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
       assert(columnIn == -1);
@@ -356,5 +358,7 @@ void HPrimal::primalUpdate() {
   if (++countUpdate >= limitUpdate)
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;  // Was true;
 
-  model->recordPivots(columnIn, columnOut, alpha);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  model->numberIteration++;
 }

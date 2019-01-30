@@ -277,6 +277,13 @@ struct HighsSimplexInfo {
   int numberAltPhase2DualIteration;
   int numberAltPrimalIteration;
 
+#ifdef HiGHSDEV
+  // Move this to Simplex class once it's created
+  vector<int> historyColumnIn;
+  vector<int> historyColumnOut;
+  vector<double> historyAlpha;
+#endif
+
 };
 
 struct HighsSolution {

@@ -139,13 +139,6 @@ class HModel {
   // Shift the objective
   void shiftObjectiveValue(double shift);
 
-  // Increment numberIteration (here!) and (possibly) store the pivots for
-  // debugging NLA
-  void recordPivots(int columnIn, int columnOut, double alpha);
-#ifdef HiGHSDEV
-  // Store and write out the pivots for debugging NLA
-  void writePivots(const char* suffix);
-#endif
   //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   void util_getPrimalDualValues(vector<double>& XcolValue,
@@ -324,14 +317,8 @@ class HModel {
  public:
   int problemStatus;
   
-  // Associated data of original model
-  //  vector<int> numTotPermutation;
-  //  vector<double> numTotRandomValue;
-
   // The scaled model
   HighsLp *solver_lp_;
-  // Part of working model which is only required and populated once a solve is
-  // initiated
   HMatrix *matrix_;
   HFactor *factor_;
   HighsSimplexInfo *simplex_info_;
@@ -340,12 +327,6 @@ class HModel {
   HighsRanging *ranging_;
   HighsRandom *random_;
   HighsTimer *timer_;
-
-#ifdef HiGHSDEV
-  vector<int> historyColumnIn;
-  vector<int> historyColumnOut;
-  vector<double> historyAlpha;
-#endif
 
 };
 

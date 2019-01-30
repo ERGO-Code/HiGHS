@@ -350,7 +350,9 @@ void HDual::minor_updatePivots() {
   model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
-  model->recordPivots(columnIn, columnOut, alphaRow);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
+  model->numberIteration++;
 }
 
 void HDual::minor_updateRows() {
