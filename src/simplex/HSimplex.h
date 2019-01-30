@@ -100,8 +100,20 @@ class HSimplex {
     // Instantiate and (re-)initialise the random number generator
     HighsRandom random;
     random.initialise();
-    // Generate the random vectors in the same order as hsol to
-    // maintain repeatable performance
+    //
+    // Generate a random permutation of the column indices
+    simplex_info_.numColPermutation_.resize(numCol);
+    int *numColPermutation = &simplex_info_.numColPermutation_[0];
+    for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
+    for (int i = numCol - 1; i >= 1; i--) {
+      int j = random.integer() % (i + 1);
+      std::swap(numColPermutation[i], numColPermutation[j]);
+    }
+    
+    // Re-initialise the random number generator and generate the
+    // random vectors in the same order as hsol to maintain repeatable
+    // performance
+    random.initialise();
     //
     // Generate a random permutation of all the indices
     simplex_info_.numTotPermutation_.resize(numTot);
@@ -117,16 +129,6 @@ class HSimplex {
     double *numTotRandomValue = &simplex_info_.numTotRandomValue_[0];
     for (int i = 0; i < numTot; i++) {
       numTotRandomValue[i] = random.fraction();
-    }
-    
-    //
-    // Generate a random permutation of the column indices
-    simplex_info_.numColPermutation_.resize(numCol);
-    int *numColPermutation = &simplex_info_.numColPermutation_[0];
-    for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
-    for (int i = numCol - 1; i >= 1; i--) {
-      int j = random.integer() % (i + 1);
-      std::swap(numColPermutation[i], numColPermutation[j]);
     }
     
   }

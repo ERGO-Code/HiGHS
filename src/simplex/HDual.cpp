@@ -1010,7 +1010,8 @@ void HDual::iterateIzAn() {
     AnIter->AnIterOpSuNumHyperOp = 0;
     AnIter->AnIterOpSuNumHyperRs = 0;
   }
-  for (int k = 1; k <= INVERT_HINT_Count; k++) AnIterNumInvert[k] = 0;
+  int last_invert_hint = INVERT_HINT_Count-1;
+  for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
   AnIterNumPrDgnIt = 0;
   AnIterNumDuDgnIt = 0;
   AnIterNumColPrice = 0;
@@ -2110,7 +2111,8 @@ void HDual::iterateRpAn() {
   }
   int NumInvert = 0;
 
-  for (int k = 1; k <= INVERT_HINT_Count; k++) NumInvert += AnIterNumInvert[k];
+  int last_invert_hint = INVERT_HINT_Count-1;
+  for (int k = 1; k <= last_invert_hint; k++) NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
     int lcNumInvert = 0;
     printf("\nInvert    performed %7d times: average frequency = %d\n",

@@ -235,15 +235,11 @@ struct HighsSimplexInfo {
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
-  // Options for the LP to be solved, and whether they have been performed 
+  // Options for the LP to be solved
   bool transpose_solver_lp;
-  bool transposed_solver_lp;
   bool scale_solver_lp;
-  bool scaled_solver_lp;
   bool permute_solver_lp;
-  bool permuted_solver_lp;
   bool tighten_solver_lp;
-  bool tightened_solver_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing
@@ -258,8 +254,14 @@ struct HighsSimplexInfo {
   bool analyseInvertTime;
   bool analyseRebuildTime;
 #endif
+  // Solved LP status
+  bool transposed_solver_lp = false;
+  bool scaled_solver_lp = false;
+  bool permuted_solver_lp = false;
+  bool tightened_solver_lp = false;
+
   // Simplex status
-  int costs_perturbed;
+  int costs_perturbed = 0;
 
   // Simplex run information
 
