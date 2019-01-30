@@ -73,13 +73,13 @@ struct HighsOptions {
   // For an LP model
   //
   // Try to solve the dual of the LP
-  bool transposeLp = false;
+  bool transpose_solver_lp = false;
   // Perform LP scaling
-  bool scaleLp = true;
+  bool scale_solver_lp = true;
   // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permuteLp = false;
+  bool permute_solver_lp = false;
   // Perform LP bound tightening
-  bool tightenLp = false;
+  bool tighten_solver_lp = false;
   //
   // For any solver
   //
@@ -235,6 +235,15 @@ struct HighsSimplexInfo {
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
+  // Options for the LP to be solved, and whether they have been performed 
+  bool transpose_solver_lp;
+  bool transposed_solver_lp;
+  bool scale_solver_lp;
+  bool scaled_solver_lp;
+  bool permute_solver_lp;
+  bool permuted_solver_lp;
+  bool tighten_solver_lp;
+  bool tightened_solver_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing

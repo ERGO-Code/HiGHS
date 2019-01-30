@@ -26,7 +26,7 @@
 #include "HDual.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
-#include "HighsModelObjectUtils.h"
+//#include "HighsModelObjectUtils.h"
 #include "HighsUtils.h"
 #include "HRanging.h"
 #include "HSimplex.h"
@@ -58,9 +58,6 @@ HighsStatus solveSimplex(
 			 ) {
   // Just solves the LP in highs_model.scaled_lp_
   HighsTimer &timer = highs_model.timer_;
-  // Set simplex options from HiGHS options
-  HSimplex simplex_method_;
-  simplex_method_.options(highs_model, opt);
 
   HModel& model = highs_model.hmodel_[0];
 
@@ -163,7 +160,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
   // This happens locally for now because I am not sure how it is used. Later
   // HModel will disappear and we'll see what the best way is.
   HModel model;
-  const HighsLp& lp = highs_model.lp_;
+  const HighsLp &lp = highs_model.lp_;
 
   model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
                         &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
@@ -171,8 +168,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
                         &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
 
 
-  // Scaling: Separate from simplex.
-  scaleLp(highs_model);
+  HSimplex simplex_method_;
 
   // Extract columns numCol-3..numCol-1
   int FmCol = highs_model.lp_.numCol_ - 3;
@@ -273,7 +269,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  model.util_reportModel();
 
-  scaleLp(highs_model);
+  simplex_method_.scale_solver_lp(highs_model);
   HDual dual_solver(highs_model);
   dual_solver.solve();
   //  reportLpSolution(highs_model);
@@ -323,8 +319,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model) {
       printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex,
              nw_colLower, nw_colUpper);
       model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
-      printf("Calling scaleLp(highs_model)\n");
-      scaleLp(highs_model);
+      printf("Calling scale_solver_lp(highs_model)\n");
+      simplex_method_.scale_solver_lp(highs_model);
       dual_solver.solve();
       model.util_reportSolverOutcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
@@ -352,7 +348,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   highs_model.hmodel_.push_back(HModel());
 
   HModel& model = highs_model.hmodel_[0];
-  const HighsLp& lp_ = highs_model.lp_;
+  const HighsLp &lp_ = highs_model.lp_;
 
   // Give model the HiGHS Model Object run clock for timeout purposes
   //  model.modelTotalClock = highs_model.modelTotalClock;
@@ -365,17 +361,21 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.matrix_ = &highs_model.matrix_;
   model.factor_ = &highs_model.factor_;
 
+  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
   // Copy the LP to the structure to be used by the solver
   highs_model.solver_lp_ = highs_model.lp_;
 
+  // Set simplex options from HiGHS options
+  HSimplex simplex_method_;
+  simplex_method_.options(highs_model, opt);
+
   // Possibly transpose the LP to be solved. This will change the
   // numbers of rows and columns in the LP to be solved
-  if (opt.transposeLp) transposeLp(highs_model);
+  if (simplex_info_.transpose_solver_lp) simplex_method_.transpose_solver_lp(highs_model);
 
   // Now that the numbers of rows and columns in the LP to be solved
   // are fixed, initialise the real and integer random vectors
-  HSimplex simplex_method_;
-  simplex_method_.initialiseHighsModelObjectRandomVectors(highs_model);
+  simplex_method_.initialiseSolverLpRandomVectors(highs_model);
   //
   // Allocate memory for the basis
   // assignBasis();
@@ -388,14 +388,17 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //
   // Initialise unit scaling factors, to simplify things is no scaling
   // is performed
-  scaleHighsModelInit(highs_model);
-  if (opt.scaleLp) scaleLp(highs_model);
+  simplex_method_.scaleHighsModelInit(highs_model);
+  if (simplex_info_.scale_solver_lp)
+    simplex_method_.scale_solver_lp(highs_model);
   //
   // Possibly permute the columns of the LP to be used by the solver. 
-  if (opt.permuteLp) permuteLp(highs_model);
+  if (simplex_info_.permute_solver_lp)
+    simplex_method_.permute_solver_lp(highs_model);
   //
   // Possibly tighten the bounds of LP to be used by the solver. 
-  if (opt.tightenLp) tightenLp(highs_model);
+  if (simplex_info_.tighten_solver_lp)
+    simplex_method_.tighten_solver_lp(highs_model);
   //
 
 
