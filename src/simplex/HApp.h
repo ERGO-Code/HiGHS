@@ -374,7 +374,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // Now that the numbers of rows and columns in the LP to be solved
   // are fixed, initialise the real and integer random vectors
-  //  HSimplex simplex_method_; simplex_method_.initialiseColRandomVectors(highs_model);
+  HSimplex simplex_method_;
+  simplex_method_.initialiseHighsModelObjectRandomVectors(highs_model);
   //
   // Allocate memory for the basis
   // assignBasis();

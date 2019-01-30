@@ -86,13 +86,45 @@ class HSimplex {
   }
 
   void initialiseHighsModelObjectRandomVectors(
-				  HighsModelObject &highs_model
-				  ) {
+					       HighsModelObject &highs_model
+					       ) {
     HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
     const int numCol = highs_model.solver_lp_.numCol_;
+    const int numTot = highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
     // Instantiate and (re-)initialise the random number generator
     HighsRandom random;
     random.initialise();
+    // Generate the random vectors in the same order as hsol to
+    // maintain repeatable performance
+    //
+    // Generate a random permutation of all the indices
+    simplex_info_.numTotPermutation_.resize(numTot);
+    int *numTotPermutation = &simplex_info_.numTotPermutation_[0];
+    for (int i = 0; i < numTot; i++) numTotPermutation[i] = i;
+    for (int i = numTot - 1; i >= 1; i--) {
+      int j = random.integer() % (i + 1);
+      std::swap(numTotPermutation[i], numTotPermutation[j]);
+    }
+
+  printf("HSimplex::numTotPermutation:");
+  for (int i = 0; i < numTot; i++) {
+    printf(" %2d", numTotPermutation[i]);
+  }
+  printf("\n");
+
+    // Generate a vector of random reals 
+    simplex_info_.numTotRandomValue_.resize(numTot);
+    double *numTotRandomValue = &simplex_info_.numTotRandomValue_[0];
+    for (int i = 0; i < numTot; i++) {
+      numTotRandomValue[i] = random.fraction();
+    }
+
+  printf("HSimplex::numTotRandomValue:\n");
+  for (int i = 0; i < numTot; i++) {
+    printf(" %12g\n", numTotRandomValue[i]);
+  }
+
+    //
     // Generate a random permutation of the column indices
     simplex_info_.numColPermutation_.resize(numCol);
     int *numColPermutation = &simplex_info_.numColPermutation_[0];
@@ -101,13 +133,14 @@ class HSimplex {
       int j = random.integer() % (i + 1);
       std::swap(numColPermutation[i], numColPermutation[j]);
     }
-    // Generate a vector of random reals numbers 
-    const int numTot = highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
-    simplex_info_.numTotRandomValue_.resize(numTot);
-    double *numTotRandomValue = &simplex_info_.numTotRandomValue_[0];
-    for (int i = 0; i < numTot; i++) {
-      numTotRandomValue[i] = random.fraction();
-    }
+
+  printf("HSimplex::numColPermutation:");
+  for (int i = 0; i < numCol; i++) {
+    printf(" %2d", numColPermutation[i]);
+  }
+  printf("\n");
+
+
   }
 };
 

@@ -1671,8 +1671,21 @@ void HModel::initRandomVec() {
     int j = random.integer() % (i + 1);
     swap(numTotPermutation[i], numTotPermutation[j]);
   }
+
+  printf("HModel::numTotPermutation:");
+  for (int i = 0; i < numTot; i++) {
+    printf(" %2d", numTotPermutation[i]);
+  }
+  printf("\n");
+
   numTotRandomValue.resize(numTot);
   for (int i = 0; i < numTot; i++) numTotRandomValue[i] = random.fraction();
+
+  printf("HModel::numTotRandomValue:\n");
+  for (int i = 0; i < numTot; i++) {
+    printf(" %12g\n", numTotRandomValue[i]);
+  }
+
 }
 
 void HModel::shiftObjectiveValue(double shift) {

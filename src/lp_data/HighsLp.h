@@ -212,10 +212,11 @@ struct HighsSimplexInfo {
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
   //
-  // Vectors of random reals for column cost perturbation, and a
-  // random permutation of column indices for shuffling the columns
-  // and CHUZR
+  // Vectors of random reals for column cost perturbation, a random
+  // permutation of all indices for CHUZR and a random permutation of
+  // column indices for shuffling the columns
   std::vector<double> numTotRandomValue_;
+  std::vector<int> numTotPermutation_;
   std::vector<int> numColPermutation_;
 
   // Values of iClock for simplex timing clocks
