@@ -98,7 +98,7 @@ class HSimplex {
     const int numCol = highs_model.solver_lp_.numCol_;
     const int numTot = highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
     // Instantiate and (re-)initialise the random number generator
-    HighsRandom random;
+    HighsRandom &random = highs_model.random_;
     random.initialise();
     //
     // Generate a random permutation of the column indices
