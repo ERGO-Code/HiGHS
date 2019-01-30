@@ -74,8 +74,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void copy_impliedBoundsToModelBounds();
-  void copy_savedBoundsToModelBounds();
   void mlFg_Clear();
   void mlFg_Update(int mlFg_action);
 #ifdef HiGHSDEV
@@ -246,9 +244,6 @@ class HModel {
   // Random number generator
   HighsRandom random;
 
-  // Perturbation flag
-  int problemPerturbed;
-
   // Possibly prevent reinversion on optimality in phase 1 or phase 2
   const bool InvertIfRowOutNeg = true;
 
@@ -256,12 +251,6 @@ class HModel {
 
   // Number of basic logicals - allows logical basis to be deduced
   int numBasicLogicals;
-
-  // Booleans to indicate that there are valid implied bounds from
-  // presolve and that original bounds have been over-written with
-  // them
-  bool impliedBoundsPresolve;
-  bool usingImpliedBoundsPresolve = false;
 
   // Solving result
   int limitUpdate;
@@ -361,24 +350,6 @@ class HModel {
   vector<int> historyColumnOut;
   vector<double> historyAlpha;
 #endif
-
-  // Implied bounds from presolve
-  vector<double> primalColLowerImplied;
-  vector<double> primalColUpperImplied;
-  vector<double> primalRowLowerImplied;
-  vector<double> primalRowUpperImplied;
-
-  vector<double> dualRowLowerImplied;
-  vector<double> dualRowUpperImplied;
-  vector<double> dualColLowerImplied;
-  vector<double> dualColUpperImplied;
-
-  // Copy of original bounds when over-written using implied bounds
-  // from presolve
-  vector<double> SvColLower;
-  vector<double> SvColUpper;
-  vector<double> SvRowLower;
-  vector<double> SvRowUpper;
 
 };
 

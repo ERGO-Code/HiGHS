@@ -590,7 +590,7 @@ void HDual::solve_phase1() {
       solvePhase = 2;
     } else {
       // We still have dual infeasible
-      if (model->problemPerturbed) {
+      if (workHMO.simplex_info_.costs_perturbed) {
         // Clean up perturbation and go on
         cleanup();
         if (dualInfeasCount == 0) solvePhase = 2;
@@ -610,7 +610,7 @@ void HDual::solve_phase1() {
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
-    if (model->problemPerturbed) {
+    if (workHMO.simplex_info_.costs_perturbed) {
       // Clean up perturbation and go on
       cleanup();
       if (dualInfeasCount == 0) solvePhase = 2;
@@ -720,7 +720,7 @@ void HDual::solve_phase2() {
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
-    if (model->problemPerturbed) {
+    if (workHMO.simplex_info_.costs_perturbed) {
       // If the costs have been perturbed, clean up and return
       cleanup();
     } else {

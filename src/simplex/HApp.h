@@ -138,37 +138,6 @@ HighsStatus solveSimplex(
 	highs_model.simplex_info_.dualObjectiveValue, dual_solver.n_ph1_du_it,
         dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
 #endif
-
-    // Possibly recover bounds after presolve (after using bounds tightened by
-    // presolve)
-    if (model.usingImpliedBoundsPresolve) {
-      //		Recover the true bounds overwritten by the implied
-      // bounds
-#ifdef HiGHSDEV
-      printf("\nRecovering bounds after using implied bounds and resolving\n");
-#endif
-      if (model.problemStatus != LP_Status_OutOfTime) {
-        model.copy_savedBoundsToModelBounds();
-
-	//        model.timer.reset();
-        dual_solver.solve();
-	// solveIt += model.numberIteration;
-        model.util_reportSolverOutcome("After recover:   ");
-#ifdef HiGHSDEV
-	currentRunHighsTime = highs_model.timer_.readRunHighsClock();
-        solvePh1DuIt += dual_solver.n_ph1_du_it;
-        solvePh2DuIt += dual_solver.n_ph2_du_it;
-        solvePrIt += dual_solver.n_pr_it;
-        printf(
-            "\nBnchmkHsol02 After restoring bounds,hsol,%3d,%16s, %d,%d,"
-            "%10.3f,%20.10e,%10d,%10d,%10d\n",
-            model.problemStatus, highs_model.lp_.model_name_.c_str(), highs_model.lp_.numRow_,
-            highs_model.lp_.numCol_, currentRunHighsTime,
-	    highs_model.simplex_info_.dualObjectiveValue,
-	    dual_solver.n_ph1_du_it, dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
-#endif
-      }
-    }
     //    reportLp(highs_model.lp_);
     //    reportLpSolution(highs_model);
     HighsStatus result = LpStatusToHighsStatus(model.problemStatus);

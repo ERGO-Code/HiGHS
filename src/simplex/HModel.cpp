@@ -94,35 +94,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   */
 }
 
-void HModel::copy_impliedBoundsToModelBounds() {
-  // Save copies of the current model bounds
-  SvColLower.resize(solver_lp_->numCol_);
-  SvColUpper.resize(solver_lp_->numCol_);
-  SvRowLower.resize(solver_lp_->numRow_);
-  SvRowUpper.resize(solver_lp_->numRow_);
-  for (int i = 0; i < solver_lp_->numCol_; i++) {
-    SvColLower[i] = solver_lp_->colLower_[i];
-    SvColUpper[i] = solver_lp_->colUpper_[i];
-  }
-  for (int i = 0; i < solver_lp_->numRow_; i++) {
-    SvRowLower[i] = solver_lp_->rowLower_[i];
-    SvRowUpper[i] = solver_lp_->rowUpper_[i];
-  }
-  // Indicate that there are saved bounds - which must be scaled if the model is
-  // scaled
-  mlFg_haveSavedBounds = 1;
-  // Change to implied bounds
-  usingImpliedBoundsPresolve = true;
-  util_chgColBoundsAll(&primalColLowerImplied[0], &primalColUpperImplied[0]);
-  util_chgRowBoundsAll(&primalRowLowerImplied[0], &primalRowUpperImplied[0]);
-}
-
-void HModel::copy_savedBoundsToModelBounds() {
-  util_chgColBoundsAll(&SvColLower[0], &SvColUpper[0]);
-  util_chgRowBoundsAll(&SvRowLower[0], &SvRowUpper[0]);
-  usingImpliedBoundsPresolve = false;
-}
-
 void HModel::mlFg_Clear() {
   mlFg_transposedLP = 0;
   mlFg_scaledLP = 0;
@@ -573,43 +544,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
 }
 
 void HModel::clearModel() {
-  // Clears all model data
-  //  solver_lp_->numRow_ = 0;
-  //  solver_lp_->numCol_ = 0;
   problemStatus = LP_Status_Unset;
-  //  solver_lp_->sense_ = 0;
-  //  solver_lp_->offset_ = 0.0;
-  //  scale.cost_ = 1;
-  //  solver_lp_->Astart_.clear();
-  //  solver_lp_->Aindex_.clear();
-  //  solver_lp_->Avalue_.clear();
-  //  solver_lp_->colCost_.clear();
-  //  solver_lp_->colLower_.clear();
-  //  solver_lp_->colUpper_.clear();
-  //  scale.col_.clear();
-  //  solver_lp_->rowLower_.clear();
-  //  solver_lp_->rowUpper_.clear();
-  //  scale.row_.clear();
-  //  basis_->basicIndex_.clear();
-  //  basis_->nonbasicFlag_.clear();
-  //  basis_->nonbasicMove_.clear();
-  //  simplex_->workCost_.clear();
-  //  simplex_->workDual_.clear();
-  //  simplex_->workShift_.clear();
-  //  simplex_->workLower_.clear();
-  //  simplex_->workUpper_.clear();
-  //  simplex_->workRange_.clear();
-  //  simplex_->workValue_.clear();
-  //  simplex_->baseLower_.clear();
-  //  simplex_->baseUpper_.clear();
-  //  simplex_->baseValue_.clear();
-  // solver_lp_->Astart_.push_back(0) added since this is the start of the
-  // non-existent 1st column when there are no columns. Important in
-  // util_addCols()
-  //  solver_lp_->Astart_.push_back(0);
-
-  impliedBoundsPresolve = false;
-
   mlFg_Clear();
 }
 
@@ -862,7 +797,7 @@ bool HModel::workArrays_OK(int phase) {
   }
   // Don't check perturbed costs: these will have been set by solve() so can be
   // trusted
-  if (!problemPerturbed) {
+  if (!simplex_info_->costs_perturbed) {
     for (int col = 0; col < solver_lp_->numCol_; ++col) {
       int var = col;
       ok = simplex_info_->workCost_[var] == solver_lp_->sense_ * solver_lp_->colCost_[col];
@@ -1096,9 +1031,9 @@ void HModel::initCost(int perturb) {
   initPh2ColCost(0, solver_lp_->numCol_ - 1);
   initPh2RowCost(0, solver_lp_->numRow_ - 1);
   // See if we want to skip perturbation
-  problemPerturbed = 0;
+  simplex_info_->costs_perturbed = 0;
   if (perturb == 0 || simplex_info_->perturb_costs == 0) return;
-  problemPerturbed = 1;
+  simplex_info_->costs_perturbed = 1;
 
   // Perturb the original costs, scale down if is too big
   double bigc = 0;
@@ -1438,7 +1373,7 @@ void HModel::correctDual(int *freeInfeasCount) {
           flipBound(i);
         } else {
           // Other variable = shift
-          problemPerturbed = 1;
+          simplex_info_->costs_perturbed = 1;
           if (basis_->nonbasicMove_[i] == 1) {
             double random_v = random.fraction();
             double dual = (1 + random_v) * tau_d;
@@ -1567,7 +1502,7 @@ int HModel::setSourceOutFmBd(const int columnOut) {
 // Utilities for shifting costs and flipping bounds
 // Record the shift in the cost of a particular column
 void HModel::shiftCost(int iCol, double amount) {
-  problemPerturbed = 1;
+  simplex_info_->costs_perturbed = 1;
   assert(simplex_info_->workShift_[iCol] == 0);
   simplex_info_->workShift_[iCol] = amount;
 }
