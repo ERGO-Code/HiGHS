@@ -647,13 +647,12 @@ class HDual {
     int AnIterTrace_dual_edge_weight_mode;
   };
 
-  const int AnIterTraceMxNumRec = 20;
+  enum AnIterTraceMxNumRec {AN_ITER_TRACE_MX_NUM_REC = 20};
   int AnIterTraceNumRec;
   int AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[22];  // How can this be 1+AnIterTraceMxNumRec+1;
+  AnIterTraceRec AnIterTrace[1+AN_ITER_TRACE_MX_NUM_REC+1];
 
-  const int AnIterNumInvertHint = InvertHint::INVERT_HINT_Count;
-  int AnIterNumInvert[InvertHint::INVERT_HINT_Count];
+  int AnIterNumInvert[INVERT_HINT_Count];
   int AnIterNumColPrice;
   int AnIterNumRowPrice;
   int AnIterNumRowPriceWSw;

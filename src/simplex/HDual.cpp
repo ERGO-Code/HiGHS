@@ -1010,7 +1010,7 @@ void HDual::iterateIzAn() {
     AnIter->AnIterOpSuNumHyperOp = 0;
     AnIter->AnIterOpSuNumHyperRs = 0;
   }
-  for (int k = 1; k <= AnIterNumInvertHint; k++) AnIterNumInvert[k] = 0;
+  for (int k = 1; k <= INVERT_HINT_Count; k++) AnIterNumInvert[k] = 0;
   AnIterNumPrDgnIt = 0;
   AnIterNumDuDgnIt = 0;
   AnIterNumColPrice = 0;
@@ -1116,8 +1116,8 @@ void HDual::iterateAn() {
   //  if (model->numberIteration ==
   //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
   if (model->numberIteration == lcAnIter->AnIterTraceIter + AnIterTraceIterDl) {
-    if (AnIterTraceNumRec == AnIterTraceMxNumRec) {
-      for (int rec = 1; rec <= AnIterTraceMxNumRec / 2; rec++)
+    if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
+      for (int rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
         AnIterTrace[rec] = AnIterTrace[2 * rec];
       AnIterTraceNumRec = AnIterTraceNumRec / 2;
       AnIterTraceIterDl = AnIterTraceIterDl * 2;
@@ -2110,7 +2110,7 @@ void HDual::iterateRpAn() {
   }
   int NumInvert = 0;
 
-  for (int k = 1; k <= AnIterNumInvertHint; k++) NumInvert += AnIterNumInvert[k];
+  for (int k = 1; k <= INVERT_HINT_Count; k++) NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
     int lcNumInvert = 0;
     printf("\nInvert    performed %7d times: average frequency = %d\n",
@@ -2168,7 +2168,7 @@ void HDual::iterateRpAn() {
 
   //
   // Add a record for the final iterations: may end up with one more
-  // than AnIterTraceMxNumRec records, so ensure that there is enough
+  // than AN_ITER_TRACE_MX_NUM_REC records, so ensure that there is enough
   // space in the arrays
   //
   AnIterTraceNumRec++;
