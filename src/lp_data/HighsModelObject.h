@@ -12,6 +12,7 @@
 
 #include "HighsLp.h"
 #include "HighsTimer.h"
+#include "HighsRandom.h"
 #include "HModel.h"
 // include Sensitivity(or Ranging) header
 
@@ -41,6 +42,8 @@ public:
   HMatrix matrix_;
   HFactor factor_;
   HighsTimer timer_;
+  HighsRandom random_;
+
 
   // Record of operations performed on the solver LP
   bool transposedLp = false;

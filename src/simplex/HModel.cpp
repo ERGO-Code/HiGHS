@@ -552,11 +552,6 @@ void HModel::setup_for_solve() {
   //  timer.reset();
   if (solver_lp_->numRow_ == 0) return;
 
-  // (Re-)initialise the random number generator and initialise the
-  // real and integer random vectors
-  random.initialise();
-  initRandomVec();
-
   //  mlFg_Report();cout<<flush;
   //  printf("In setup_fromModelLgBs: mlFg_haveBasis = %d \n",
   //  mlFg_haveBasis);cout<<flush;
@@ -1057,7 +1052,7 @@ void HModel::initCost(int perturb) {
   for (int i = 0; i < solver_lp_->numCol_; i++) {
     double lower = solver_lp_->colLower_[i];
     double upper = solver_lp_->colUpper_[i];
-    double xpert = (fabs(simplex_info_->workCost_[i]) + 1) * base * (1 + numTotRandomValue[i]);
+    double xpert = (fabs(simplex_info_->workCost_[i]) + 1) * base * (1 + simplex_info_->numTotRandomValue_[i]);
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
     } else if (upper == HIGHS_CONST_INF) {  // Lower
@@ -1072,7 +1067,7 @@ void HModel::initCost(int perturb) {
   }
 
   for (int i = solver_lp_->numCol_; i < numTot; i++) {
-    simplex_info_->workCost_[i] += (0.5 - numTotRandomValue[i]) * 1e-12;
+    simplex_info_->workCost_[i] += (0.5 - simplex_info_->numTotRandomValue_[i]) * 1e-12;
   }
 }
 
@@ -1375,14 +1370,13 @@ void HModel::correctDual(int *freeInfeasCount) {
           // Other variable = shift
           simplex_info_->costs_perturbed = 1;
           if (basis_->nonbasicMove_[i] == 1) {
-            double random_v = random.fraction();
+            double random_v = random_->fraction();
             double dual = (1 + random_v) * tau_d;
-            //            double dual = (1 + random.fraction()) * tau_d;
             double shift = dual - simplex_info_->workDual_[i];
             simplex_info_->workDual_[i] = dual;
             simplex_info_->workCost_[i] = simplex_info_->workCost_[i] + shift;
           } else {
-            double dual = -(1 + random.fraction()) * tau_d;
+            double dual = -(1 + random_->fraction()) * tau_d;
             double shift = dual - simplex_info_->workDual_[i];
             simplex_info_->workDual_[i] = dual;
             simplex_info_->workCost_[i] = simplex_info_->workCost_[i] + shift;
@@ -1662,32 +1656,6 @@ int HModel::writeToMPS(const char *filename) {
 
 //>->->->->->->->->->->->->->->->->->->->->->-
 // Esoterica!
-// Initialise the random vectors required by HiGHS
-void HModel::initRandomVec() {
-  const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  numTotPermutation.resize(numTot);
-  for (int i = 0; i < numTot; i++) numTotPermutation[i] = i;
-  for (int i = numTot - 1; i >= 1; i--) {
-    int j = random.integer() % (i + 1);
-    swap(numTotPermutation[i], numTotPermutation[j]);
-  }
-
-  printf("HModel::numTotPermutation:");
-  for (int i = 0; i < numTot; i++) {
-    printf(" %2d", numTotPermutation[i]);
-  }
-  printf("\n");
-
-  numTotRandomValue.resize(numTot);
-  for (int i = 0; i < numTot; i++) numTotRandomValue[i] = random.fraction();
-
-  printf("HModel::numTotRandomValue:\n");
-  for (int i = 0; i < numTot; i++) {
-    printf(" %12g\n", numTotRandomValue[i]);
-  }
-
-}
-
 void HModel::shiftObjectiveValue(double shift) {
   simplex_info_->dualObjectiveValue += shift;
 }

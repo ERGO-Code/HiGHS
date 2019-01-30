@@ -135,8 +135,6 @@ class HModel {
   int writeToMPS(const char* filename);
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Esoterica!
-  // Initialise the random vectors required by HiGHS
-  void initRandomVec();
 
   // Shift the objective
   void shiftObjectiveValue(double shift);
@@ -241,9 +239,6 @@ class HModel {
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Scalar solution data section: Sort it out!
 
-  // Random number generator
-  HighsRandom random;
-
   // Possibly prevent reinversion on optimality in phase 1 or phase 2
   const bool InvertIfRowOutNeg = true;
 
@@ -330,8 +325,8 @@ class HModel {
   int problemStatus;
   
   // Associated data of original model
-  vector<int> numTotPermutation;
-  vector<double> numTotRandomValue;
+  //  vector<int> numTotPermutation;
+  //  vector<double> numTotRandomValue;
 
   // The scaled model
   HighsLp *solver_lp_;
@@ -343,6 +338,7 @@ class HModel {
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
+  HighsRandom *random_;
   HighsTimer *timer_;
 
 #ifdef HiGHSDEV
