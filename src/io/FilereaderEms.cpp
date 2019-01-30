@@ -136,9 +136,9 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
 
   // counts
   f << "n_rows" << std::endl;
-  f << model.numCol_ << std::endl;
-  f << "n_columns" << std::endl;
   f << model.numRow_ << std::endl;
+  f << "n_columns" << std::endl;
+  f << model.numCol_ << std::endl;
   f << "n_matrix_elements" << std::endl;
   f << model.nnz_ << std::endl;
 
