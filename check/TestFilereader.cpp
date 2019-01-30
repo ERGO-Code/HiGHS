@@ -1,4 +1,6 @@
+#include <unistd.h>
 #include <cstdio>
+#define GetCurrentDir getcwd
 
 #include "FilereaderEms.h"
 #include "HighsIO.h"
@@ -7,11 +9,21 @@
 #include "LoadProblem.h"
 #include "catch.hpp"
 
+std::string GetCurrentWorkingDir(void) {
+  char buff[FILENAME_MAX];
+  GetCurrentDir(buff, FILENAME_MAX);
+  std::string current_working_dir(buff);
+  return current_working_dir;
+}
+
 // No commas in test case name.
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
   HighsOptions options;
-  options.filename =
-      "../../check/instances/adlittle.mps";  // todo: check how to specify path
+  std::string dir = GetCurrentWorkingDir();
+  
+
+  std::cout << dir << std::endl;
+  options.filename = dir + "/../../check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_mps;
