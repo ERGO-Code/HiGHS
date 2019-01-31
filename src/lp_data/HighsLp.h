@@ -49,7 +49,8 @@ struct HighsOptions {
   CrashOption crash_option = CrashOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
-
+  double infinite_bound = INFINITE_BOUND_DEFAULT;
+  double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
 
   bool pami = 0;
   bool sip = 0;
