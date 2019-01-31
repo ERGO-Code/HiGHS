@@ -44,8 +44,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
 
   // counts
   std::getline(f, line);
-  if (line != "n_rows") {
-    while (line != "n_rows")
+  if (trim(line) != "n_rows") {
+    while (trim(line) != "n_rows")
       std::getline(f, line);
     indices_from_one = true;
   }
@@ -54,14 +54,14 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "n_columns")
+  if (trim(line) != "n_columns")
     return FilereaderRetcode::PARSERERROR;
   f >> numCol;
 
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "n_matrix_elements")
+  if (trim(line) != "n_matrix_elements")
     return FilereaderRetcode::PARSERERROR;
   f >> AcountX;
 
@@ -73,7 +73,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "matrix")
+  if (trim(line) != "matrix")
     return FilereaderRetcode::PARSERERROR;
 
   model.Astart_.resize(numCol + 1);
@@ -99,7 +99,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "column_bounds")
+  if (trim(line) != "column_bounds")
     return FilereaderRetcode::PARSERERROR;
   model.colLower_.reserve(numCol);
   model.colUpper_.reserve(numCol);
@@ -118,7 +118,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "row_bounds")
+  if (trim(line) != "row_bounds")
     return FilereaderRetcode::PARSERERROR;
   model.rowLower_.reserve(numRow);
   model.rowUpper_.reserve(numRow);
@@ -136,7 +136,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "column_costs")
+  if (trim(line) != "column_costs")
     return FilereaderRetcode::PARSERERROR;
   model.colCost_.reserve(numCol);
   model.colCost_.assign(numCol, 0);
@@ -147,18 +147,18 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   std::getline(f, line);
   while (trim(line) == "")
     std::getline(f, line);
-  if (line != "integer_variables" && line != "names")
+  if (trim(line) != "integer_columns" && trim(line) != "names")
     return FilereaderRetcode::PARSERERROR;
   if (line == "names") {
     // Ignore length since we support any length.
     std::getline(f, line);
-    if (line != "columns")
+    if (trim(line) != "columns")
       std::getline(f, line);
-    if (line != "columns")
+    if (trim(line) != "columns")
       return FilereaderRetcode::PARSERERROR;
 
-    model.row_names_.reserve(numRow);
-    model.col_names_.reserve(numCol);
+    model.row_names_.resize(numRow);
+    model.col_names_.resize(numCol);
 
     for (i = 0; i < numCol; i++) {
       std::getline(f, line);
@@ -166,7 +166,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
     }
 
     std::getline(f, line);
-    if (line != "rows")
+    if (trim(line) != "rows")
       return FilereaderRetcode::PARSERERROR;
 
     for (i = 0; i < numRow; i++) {
@@ -176,7 +176,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   }
 
   // todo:
-  // while (line != "integer_variables" && line != "names") std::getline(f,
+  // while (trim(line) != "integer_variables" && trim(line) != "names") std::getline(f,
   // line);
   // ...
 
