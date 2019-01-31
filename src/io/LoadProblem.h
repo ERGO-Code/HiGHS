@@ -24,6 +24,8 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   if (options.filename.size() == 0 || access(options.filename.c_str(), F_OK) == -1)
     return HighsInputStatus::FileNotFound;
 
+  // todo: set lp.model_name_ to trimmedoptions.filename.
+
   Filereader* reader = Filereader::getFilereader(options.filename.c_str());
   FilereaderRetcode success =  reader->readModelFromFile(options.filename.c_str(), lp);
   delete reader;
