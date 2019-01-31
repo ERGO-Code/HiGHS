@@ -45,5 +45,5 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   bool are_the_same = lp_mps == lp_ems;
   REQUIRE(are_the_same);
 
-  // std::remove(options.filename.c_str());
+  std::remove(options.filename.c_str());
 }
