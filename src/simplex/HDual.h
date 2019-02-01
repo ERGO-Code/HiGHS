@@ -31,8 +31,9 @@ class HFactor;
 
 enum class DualEdgeWeightMode {
   DANTZIG = 0,
-  DEVEX,
-  STEEPEST_EDGE
+    DEVEX,
+    STEEPEST_EDGE,
+    Count
 };
 
 enum class PriceMode {
@@ -634,7 +635,7 @@ class HDual {
     int AnIterOpSuNumCa;
     int AnIterOpSuNumHyperOp;
     int AnIterOpSuNumHyperRs;
-    string AnIterOpName;
+    std::string AnIterOpName;
   };
   AnIterOpRec AnIterOp[NumAnIterOpTy];
 
@@ -646,20 +647,19 @@ class HDual {
     int AnIterTrace_dual_edge_weight_mode;
   };
 
-  const int AnIterTraceMxNumRec = 20;
+  enum AnIterTraceMxNumRec {AN_ITER_TRACE_MX_NUM_REC = 20};
   int AnIterTraceNumRec;
   int AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[22];  // How can this be 1+AnIterTraceMxNumRec+1;
+  AnIterTraceRec AnIterTrace[1+AN_ITER_TRACE_MX_NUM_REC+1];
 
-  const int AnIterNumInvertHint = 7;
-  int AnIterNumInvert[8];  // TODO: How can this be AnIterNumInvertHint+1
+  int AnIterNumInvert[INVERT_HINT_Count];
   int AnIterNumColPrice;
   int AnIterNumRowPrice;
   int AnIterNumRowPriceWSw;
   int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[3];  // TODO: How can this be DUAL_EDGE_WEIGHT_MODE_DANTZIG+1
+  int AnIterNumEdWtIt[(int) DualEdgeWeightMode::Count];
 #endif
 };
 

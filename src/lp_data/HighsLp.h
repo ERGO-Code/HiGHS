@@ -49,7 +49,8 @@ struct HighsOptions {
   CrashOption crash_option = CrashOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
-
+  double infinite_bound = INFINITE_BOUND_DEFAULT;
+  double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
 
   bool pami = 0;
   bool sip = 0;
@@ -73,17 +74,17 @@ struct HighsOptions {
   // For an LP model
   //
   // Try to solve the dual of the LP
-  bool transposeLp = false;
+  bool transpose_solver_lp = false;
   // Perform LP scaling
-  bool scaleLp = true;
+  bool scale_solver_lp = true;
   // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permuteLp = false;
+  bool permute_solver_lp = false;
   // Perform LP bound tightening
-  bool tightenLp = false;
+  bool tighten_solver_lp = false;
   //
   // For any solver
   //
-  // primal feasibility (dual optimality) tolerance
+ // primal feasibility (dual optimality) tolerance
   double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
   // dual feasibility (primal optimality) tolerance
   double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
@@ -212,27 +213,16 @@ struct HighsSimplexInfo {
   std::vector<double> baseUpper_;
   std::vector<double> baseValue_;
   //
-  // Vectors of random reals for column cost perturbation, and a
-  // random permutation of column indices for shuffling the columns
-  // and CHUZR
+  // Vectors of random reals for column cost perturbation, a random
+  // permutation of all indices for CHUZR and a random permutation of
+  // column indices for shuffling the columns
   std::vector<double> numTotRandomValue_;
+  std::vector<int> numTotPermutation_;
   std::vector<int> numColPermutation_;
 
   // Values of iClock for simplex timing clocks
   std::vector<int> clock_;
   //
-  // Value of dual objective
-  double dualObjectiveValue;
-  // Value of dual objective that is updated in dual simplex solver -
-  // need to put this in lower level header, but can't go into Dual.h
-  double updatedDualObjectiveValue;
-
-  // Number of simplex iterations: total and constituent counts
-  int numberAltIteration;
-  int numberAltPhase1DualIteration;
-  int numberAltPhase2DualIteration;
-  int numberAltPrimalIteration;
-
   // Options from HighsOptions for the simplex solver
   double highs_run_time_limit;
   SimplexStrategy simplex_strategy;
@@ -246,6 +236,11 @@ struct HighsSimplexInfo {
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
+  // Options for the LP to be solved
+  bool transpose_solver_lp;
+  bool scale_solver_lp;
+  bool permute_solver_lp;
+  bool tighten_solver_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing
@@ -260,6 +255,36 @@ struct HighsSimplexInfo {
   bool analyseInvertTime;
   bool analyseRebuildTime;
 #endif
+  // Solved LP status
+  bool transposed_solver_lp = false;
+  bool scaled_solver_lp = false;
+  bool permuted_solver_lp = false;
+  bool tightened_solver_lp = false;
+
+  // Simplex status
+  int costs_perturbed = 0;
+
+  // Simplex run information
+
+  // Value of dual objective
+  double dualObjectiveValue;
+  // Value of dual objective that is updated in dual simplex solver -
+  // need to put this in lower level header, but can't go into Dual.h
+  double updatedDualObjectiveValue;
+
+  // Number of simplex iterations: total and constituent counts
+  int numberAltIteration;
+  int numberAltPhase1DualIteration;
+  int numberAltPhase2DualIteration;
+  int numberAltPrimalIteration;
+
+#ifdef HiGHSDEV
+  // Move this to Simplex class once it's created
+  vector<int> historyColumnIn;
+  vector<int> historyColumnOut;
+  vector<double> historyAlpha;
+#endif
+
 };
 
 struct HighsSolution {

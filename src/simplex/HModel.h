@@ -18,12 +18,8 @@
 #include "HMatrix.h"
 #include "HighsLp.h"
 #include "HighsTimer.h" //For timer_
-//#include "HighsUtils.h"
 #include "HighsRandom.h"
 
-// For compute dual objective alt value
-//#include "HighsModelObject.h"
-//#include "HSimplex.h"
 class HVector;
 
 #include <sstream>
@@ -31,7 +27,6 @@ class HVector;
 #include <vector>
 
 // After removing HTimer.h add the following
-using std::string;
 
 const int LP_Status_Unset = -1;
 const int LP_Status_Optimal = 0;
@@ -41,39 +36,6 @@ const int LP_Status_Singular = 3;
 const int LP_Status_Failed = 4;
 const int LP_Status_ObjUB = 5;
 const int LP_Status_OutOfTime = 6;
-
-const int invertHint_no = 0;
-const int invertHint_updateLimitReached = 1;
-const int invertHint_syntheticClockSaysInvert = 2;
-const int invertHint_possiblyOptimal = 3;
-const int invertHint_possiblyPrimalUnbounded = 4;
-const int invertHint_possiblyDualUnbounded = 5;
-const int invertHint_possiblySingularBasis = 6;
-const int invertHint_primalInfeasibleInPrimalSimplex = 7;
-const int invertHint_chooseColumnFail = 8;
-
-/** SCIP-like basis status for columns and rows */
-enum HIGHS_BaseStat {
-  HIGHS_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
-                              [including fixed variables]*/
-  HIGHS_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
-  HIGHS_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
-  HIGHS_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
-};
-typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
-
-/** HiGHS nonbasicFlag status for columns and rows */
-enum nonbasicFlagStat {
-  NONBASIC_FLAG_TRUE = 1,  // Nonbasic
-  NONBASIC_FLAG_FALSE = 0  // Basic
-};
-
-/** HiGHS nonbasicMove status for columns and rows */
-enum nonbasicMoveStat {
-  NONBASIC_MOVE_UP = 1,   // Free to move (only) up
-  NONBASIC_MOVE_DN = -1,  // Free to move (only) down
-  NONBASIC_MOVE_ZE = 0    // Fixed or free to move up and down
-};
 
 class HModel {
  public:
@@ -102,14 +64,9 @@ class HModel {
   // Method to clear the current model
   void clearModel();
 
-  // Methods to modify the current model. Only scaleModel is currently in use
-  void scaleModel();
-  void scaleCosts();
-
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
-  void initScale();
   bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
   bool workArrays_OK(int phase);
   bool allNonbasicMoveVsWorkArrays_OK();
@@ -117,8 +74,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void copy_impliedBoundsToModelBounds();
-  void copy_savedBoundsToModelBounds();
   void mlFg_Clear();
   void mlFg_Update(int mlFg_action);
 #ifdef HiGHSDEV
@@ -180,19 +135,10 @@ class HModel {
   int writeToMPS(const char* filename);
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Esoterica!
-  // Initialise the random vectors required by HiGHS
-  void initRandomVec();
 
   // Shift the objective
   void shiftObjectiveValue(double shift);
 
-  // Increment numberIteration (here!) and (possibly) store the pivots for
-  // debugging NLA
-  void recordPivots(int columnIn, int columnOut, double alpha);
-#ifdef HiGHSDEV
-  // Store and write out the pivots for debugging NLA
-  void writePivots(const char* suffix);
-#endif
   //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   void util_getPrimalDualValues(vector<double>& XcolValue,
@@ -265,9 +211,6 @@ class HModel {
   // matrix
   void util_reportModelDa(HighsLp lp, const char* filename);
   void util_reportModelStatus();
-#ifdef HiGHSDEV
-  void util_reportModelDense(HighsLp lp);
-#endif
   void util_reportRowVecSol(int nrow, vector<double>& XrowLower,
                             vector<double>& XrowUpper,
                             vector<double>& XrowPrimal,
@@ -289,12 +232,6 @@ class HModel {
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Scalar solution data section: Sort it out!
 
-  // Random number generator
-  HighsRandom random;
-
-  // Perturbation flag
-  int problemPerturbed;
-
   // Possibly prevent reinversion on optimality in phase 1 or phase 2
   const bool InvertIfRowOutNeg = true;
 
@@ -302,12 +239,6 @@ class HModel {
 
   // Number of basic logicals - allows logical basis to be deduced
   int numBasicLogicals;
-
-  // Booleans to indicate that there are valid implied bounds from
-  // presolve and that original bounds have been over-written with
-  // them
-  bool impliedBoundsPresolve;
-  bool usingImpliedBoundsPresolve = false;
 
   // Solving result
   int limitUpdate;
@@ -385,64 +316,17 @@ class HModel {
 
  public:
   int problemStatus;
-  string modelName;
   
-// Limits on scaling factors
-  const double minAlwScale = 1 / 1024.0;
-  const double maxAlwScale = 1024.0;
-  const double maxAlwCostScale = maxAlwScale;
-  const double minAlwColScale = minAlwScale;
-  const double maxAlwColScale = maxAlwScale;
-  const double minAlwRowScale = minAlwScale;
-  const double maxAlwRowScale = maxAlwScale;
-
-#ifdef HiGHSDEV
-  // Information on large costs
-  const double tlLargeCo = 1e5;
-  int numLargeCo;
-  vector<int> largeCostFlag;
-  double largeCostScale;
-#endif
-
-  // Associated data of original model
-  vector<int> numTotPermutation;
-  vector<double> numTotRandomValue;
-
   // The scaled model
   HighsLp *solver_lp_;
-  // Part of working model which is only required and populated once a solve is
-  // initiated
   HMatrix *matrix_;
   HFactor *factor_;
   HighsSimplexInfo *simplex_info_;
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
+  HighsRandom *random_;
   HighsTimer *timer_;
-
-#ifdef HiGHSDEV
-  vector<int> historyColumnIn;
-  vector<int> historyColumnOut;
-  vector<double> historyAlpha;
-#endif
-
-  // Implied bounds from presolve
-  vector<double> primalColLowerImplied;
-  vector<double> primalColUpperImplied;
-  vector<double> primalRowLowerImplied;
-  vector<double> primalRowUpperImplied;
-
-  vector<double> dualRowLowerImplied;
-  vector<double> dualRowUpperImplied;
-  vector<double> dualColLowerImplied;
-  vector<double> dualColUpperImplied;
-
-  // Copy of original bounds when over-written using implied bounds
-  // from presolve
-  vector<double> SvColLower;
-  vector<double> SvColUpper;
-  vector<double> SvRowLower;
-  vector<double> SvRowUpper;
 
 };
 

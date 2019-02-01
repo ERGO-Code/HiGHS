@@ -51,7 +51,7 @@ void HDualRHS::choose_normal(int *chIndex) {
   // call. NB Must still call int to maintain sequence of random numbers
   // for code reproducibility!! Never mind if we're not timing the random number
   // call!!
-  int random = workModel->random.integer();
+  int random = workHMO.random_.integer();
   if (workCount == 0) {
     *chIndex = -1;
     return;
@@ -219,7 +219,7 @@ void HDualRHS::choose_multi_HGpart(int *chIndex, int *chCount, int chLimit) {
   for (int i = 0; i < chLimit; i++) chIndex[i] = -1;
   *chCount = 0;
 
-  int random = workModel->random.integer();
+  int random = workHMO.random_.integer();
   if (workCount < 0) {
     // DENSE mode
     const int numRow = -workCount;

@@ -50,7 +50,7 @@ void HDualRow::setup() {
   model = &workHMO.hmodel_[0];
   const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
   setupSlice(numTot);
-  workNumTotPermutation = &model->numTotPermutation[0];
+  workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
   
  // delete_Freelist() is being called in Phase 1 and Phase 2 since
  // it's in updatePivots(), but create_Freelist() is only called in

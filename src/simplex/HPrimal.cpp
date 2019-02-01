@@ -63,12 +63,12 @@ void HPrimal::solvePhase2() {
     for (;;) {
       primalChooseColumn();
       if (columnIn == -1) {
-        invertHint = invertHint_possiblyOptimal;
+        invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
         break;
       }
       primalChooseRow();
       if (rowOut == -1) {
-        invertHint = invertHint_possiblyPrimalUnbounded;
+        invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
       }
       primalUpdate();
@@ -117,16 +117,18 @@ void HPrimal::solvePhase2() {
 void HPrimal::primalRebuild() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsTimer &timer = workHMO.timer_;
-  model->recordPivots(-1, -1, 0);  // Indicate REINVERT
+  // Move this to Simplex class once it's created
+  //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
+
   // Rebuild model->factor - only if we got updates
   int sv_invertHint = invertHint;
-  invertHint = invertHint_no;  // Was 0
+  invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
   bool reInvert = model->countUpdate > 0;
   if (!model->InvertIfRowOutNeg) {
-    // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
-    // invertHint_possiblyOptimal]
-    if (sv_invertHint == invertHint_possiblyOptimal) {
+    // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
+    // INVERT_HINT_POSSIBLY_OPTIMAL]
+    if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
       assert(columnIn == -1);
       reInvert = false;
     }
@@ -318,9 +320,9 @@ void HPrimal::primalUpdate() {
   // Check for any possible infeasible
   for (int iRow = 0; iRow < numRow; iRow++) {
     if (baseValue[iRow] < baseLower[iRow] - primalTolerance) {
-      invertHint = invertHint_primalInfeasibleInPrimalSimplex;  // Was 1
+      invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     } else if (baseValue[iRow] > baseUpper[iRow] + primalTolerance) {
-      invertHint = invertHint_primalInfeasibleInPrimalSimplex;  // Was 1
+      invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     }
   }
 
@@ -354,7 +356,9 @@ void HPrimal::primalUpdate() {
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   model->updateMatrix(columnIn, columnOut);
   if (++countUpdate >= limitUpdate)
-    invertHint = invertHint_updateLimitReached;  // Was true;
+    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;  // Was true;
 
-  model->recordPivots(columnIn, columnOut, alpha);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  model->numberIteration++;
 }

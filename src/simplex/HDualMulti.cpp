@@ -34,7 +34,7 @@ void HDual::iterate_multi() {
   major_chooseRow();
   minor_chooseRow();
   if (rowOut == -1) {
-    invertHint = invertHint_possiblyOptimal;  // Was 1
+    invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
     return;
   }
 
@@ -350,7 +350,9 @@ void HDual::minor_updatePivots() {
   model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
-  model->recordPivots(columnIn, columnOut, alphaRow);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
+  model->numberIteration++;
 }
 
 void HDual::minor_updateRows() {
@@ -434,11 +436,11 @@ void HDual::major_update() {
     double alphaDiff = fabs(alphaC - alphaR);
     // int startUpdate = model->countUpdate - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
-      cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
+      cout << "REPORT " << workHMO.solver_lp_.model_name_ << " NEED-ROLL-BACK   ";
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
-      invertHint = invertHint_possiblySingularBasis;
+      invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 	// if (startUpdate > 0) {
       major_rollback();
       return;
@@ -688,7 +690,7 @@ void HDual::major_updateFactor() {
                         &invertHint);
 
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
-    invertHint = invertHint_syntheticClockSaysInvert;
+    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
 
 void HDual::major_rollback() {

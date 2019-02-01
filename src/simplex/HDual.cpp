@@ -45,6 +45,8 @@ void HDual::solve(int num_threads) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsTimer &timer = workHMO.timer_;
   model->timer_ = &timer;
+  model->random_ = &workHMO.random_;
+  invertHint = INVERT_HINT_NO;
   //  model = workHMO.hmodel_[0];// works with primitive types but not sure about class types.
 
   SimplexTimer simplex_timer;
@@ -266,7 +268,7 @@ void HDual::solve(int num_threads) {
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateRpAn();
   // Report the ticks before primal
-  if (simplex_info.simplex_stratgy == SimplexStrategy::DUAL_PLAIN) {
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
     if (simplex_info.reportSimplexInnerClock) {
       simplex_timer.reportDualSimplexInnerClock(workHMO);
     }
@@ -276,7 +278,7 @@ void HDual::solve(int num_threads) {
     }
   }
 
-  //  if (simplex_info.simplex_stratgy == SimplexStrategy::DUAL_TASKS) {
+  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -288,7 +290,7 @@ void HDual::solve(int num_threads) {
   //    model->timer.report(reportCount, reportList, 0.0);
   //  }
 
-  if (simplex_info.simplex_stratgy == SimplexStrategy::DUAL_MULTI) {
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -299,7 +301,7 @@ void HDual::solve(int num_threads) {
   //    int reportCount = sizeof(reportList) / sizeof(int);
   //    model->timer.report(reportCount, reportList, 0.0);
       printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
-             model->modelName.c_str(), pami_cutoff,
+             workHMO.lp_.model_name_.c_str(), pami_cutoff,
              model->numberIteration / (1.0 + multi_iteration));
     }
 #endif
@@ -590,7 +592,7 @@ void HDual::solve_phase1() {
       solvePhase = 2;
     } else {
       // We still have dual infeasible
-      if (model->problemPerturbed) {
+      if (workHMO.simplex_info_.costs_perturbed) {
         // Clean up perturbation and go on
         cleanup();
         if (dualInfeasCount == 0) solvePhase = 2;
@@ -601,7 +603,7 @@ void HDual::solve_phase1() {
         model->setProblemStatus(LP_Status_Unbounded);
       }
     }
-  } else if (invertHint == invertHint_chooseColumnFail) {
+  } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
@@ -610,7 +612,7 @@ void HDual::solve_phase1() {
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
-    if (model->problemPerturbed) {
+    if (workHMO.simplex_info_.costs_perturbed) {
       // Clean up perturbation and go on
       cleanup();
       if (dualInfeasCount == 0) solvePhase = 2;
@@ -711,7 +713,7 @@ void HDual::solve_phase2() {
       HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
       model->setProblemStatus(LP_Status_Optimal);
     }
-  } else if (invertHint == invertHint_chooseColumnFail) {
+  } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
@@ -720,7 +722,7 @@ void HDual::solve_phase2() {
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
-    if (model->problemPerturbed) {
+    if (workHMO.simplex_info_.costs_perturbed) {
       // If the costs have been perturbed, clean up and return
       cleanup();
     } else {
@@ -737,16 +739,18 @@ void HDual::rebuild() {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   // Save history information
-  model->recordPivots(-1, -1, 0);  // Indicate REINVERT
-  int sv_invertHint = invertHint;
-  invertHint = invertHint_no;  // Was 0
+  // Move this to Simplex class once it's created
+  //  HSimplex simplex_method_;
+  //  simplex_method_.record_pivots(-1, -1, 0);  // Indicate REINVERT
 
+  int sv_invertHint = invertHint;
+  invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
   bool reInvert = model->countUpdate > 0;
   if (!model->InvertIfRowOutNeg) {
     // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
-    // invertHint_possiblyOptimal]
-    if (sv_invertHint == invertHint_possiblyOptimal) {
+    // INVERT_HINT_POSSIBLY_OPTIMAL]
+    if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {
       assert(rowOut == -1);
       reInvert = false;
     }
@@ -1010,14 +1014,18 @@ void HDual::iterateIzAn() {
     AnIter->AnIterOpSuNumHyperOp = 0;
     AnIter->AnIterOpSuNumHyperRs = 0;
   }
-  for (int k = 1; k <= AnIterNumInvertHint; k++) AnIterNumInvert[k] = 0;
+  int last_invert_hint = INVERT_HINT_Count-1;
+  for (int k = 1; k <= last_invert_hint; k++) AnIterNumInvert[k] = 0;
   AnIterNumPrDgnIt = 0;
   AnIterNumDuDgnIt = 0;
   AnIterNumColPrice = 0;
   AnIterNumRowPrice = 0;
   AnIterNumRowPriceWSw = 0;
   AnIterNumRowPriceUltra = 0;
-  for (int k = 0; k <= DualEdgeWeightMode::DANTZIG; k++) AnIterNumEdWtIt[k] = 0;
+  int last_dual_edge_weight_mode = (int) DualEdgeWeightMode::STEEPEST_EDGE;
+  for (int k = 0; k <= last_dual_edge_weight_mode; k++) {
+    AnIterNumEdWtIt[k] = 0;
+  }
   AnIterNumCostlyDseIt = 0;
   AnIterTraceNumRec = 0;
   AnIterTraceIterDl = 1;
@@ -1110,14 +1118,14 @@ void HDual::iterateAn() {
   if (thetaDual <= 0) AnIterNumDuDgnIt++;
   if (thetaPrimal <= 0) AnIterNumPrDgnIt++;
   if (AnIterCuIt > AnIterPrevIt)
-    AnIterNumEdWtIt[dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
+    AnIterNumEdWtIt[(int) dual_edge_weight_mode] += (AnIterCuIt - AnIterPrevIt);
 
   AnIterTraceRec *lcAnIter = &AnIterTrace[AnIterTraceNumRec];
   //  if (model->numberIteration ==
   //  AnIterTraceIterRec[AnIterTraceNumRec]+AnIterTraceIterDl) {
   if (model->numberIteration == lcAnIter->AnIterTraceIter + AnIterTraceIterDl) {
-    if (AnIterTraceNumRec == AnIterTraceMxNumRec) {
-      for (int rec = 1; rec <= AnIterTraceMxNumRec / 2; rec++)
+    if (AnIterTraceNumRec == AN_ITER_TRACE_MX_NUM_REC) {
+      for (int rec = 1; rec <= AN_ITER_TRACE_MX_NUM_REC / 2; rec++)
         AnIterTrace[rec] = AnIterTrace[2 * rec];
       AnIterTraceNumRec = AnIterTraceNumRec / 2;
       AnIterTraceIterDl = AnIterTraceIterDl * 2;
@@ -1137,7 +1145,7 @@ void HDual::iterateAn() {
         lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
         lcAnIter->AnIterTraceAux0 = 0;
       }
-      lcAnIter->AnIterTrace_dual_edge_weight_mode = dual_edge_weight_mode;
+      lcAnIter->AnIterTrace_dual_edge_weight_mode = (int) dual_edge_weight_mode;
     }
   }
   AnIterPrevIt = AnIterCuIt;
@@ -1257,7 +1265,7 @@ void HDual::chooseRow() {
       // No index found so may be dual optimal. By setting
       // invertHint>0 all subsequent methods in the iteration will
       // be skipped until reinversion and rebuild have taken place
-      invertHint = invertHint_possiblyOptimal;
+      invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
       return;
     }
     // Compute pi_p = B^{-T}e_p in row_ep
@@ -1459,7 +1467,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   // there are no candidates for CHUZC
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    invertHint = invertHint_possiblyDualUnbounded;  // Was 1
+    invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;  
     return;
   }
   //
@@ -1467,7 +1475,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   // fail if the dual values are excessively large
   bool chooseColumnFail = dualRow.choose_final();
   if (chooseColumnFail) {
-    invertHint = invertHint_chooseColumnFail;
+    invertHint = INVERT_HINT_CHOOSE_COLUMN_FAIL;
     return;
   }
   //
@@ -1554,7 +1562,7 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   // Infeasible we created before
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
-    invertHint = invertHint_possiblyDualUnbounded;  // Was 1
+    invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;  
     timer.stop(simplex_info.clock_[Chuzr1Clock]);
     return;
   }
@@ -1666,7 +1674,7 @@ void HDual::updateVerify() {
   // Reinvert if the relative difference is large enough, and updates hav ebeen
   // performed
   if (numericalTrouble > 1e-7 && model->countUpdate > 0) {
-    invertHint = invertHint_possiblySingularBasis;
+    invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
   }
 }
 
@@ -1765,7 +1773,9 @@ void HDual::updatePivots() {
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
-  model->recordPivots(columnIn, columnOut, alpha);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alpha);
+  model->numberIteration++;
   //
   // Update the invertible representation of the basis matrix
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
@@ -1788,7 +1798,7 @@ void HDual::updatePivots() {
   //    factor->build_syntheticTick;
 #endif
   if (reinvert_syntheticClock && model->countUpdate >= 50) {
-    invertHint = invertHint_syntheticClockSaysInvert;
+    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
   }
 }
 
@@ -2072,15 +2082,15 @@ void HDual::iterateRpAn() {
          AnIterIt0 + 1, model->numberIteration);
   if (AnIterNumIter <= 0) return;
   int lc_EdWtNumIter;
-  lc_EdWtNumIter = AnIterNumEdWtIt[DualEdgeWeightMode::STEEPEST_EDGE];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::STEEPEST_EDGE];
   if (lc_EdWtNumIter > 0)
     printf("DSE for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[DualEdgeWeightMode::DEVEX];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::DEVEX];
   if (lc_EdWtNumIter > 0)
     printf("Dvx for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
-  lc_EdWtNumIter = AnIterNumEdWtIt[DualEdgeWeightMode::DANTZIG];
+  lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::DANTZIG];
   if (lc_EdWtNumIter > 0)
     printf("Dan for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
@@ -2109,37 +2119,38 @@ void HDual::iterateRpAn() {
     }
   }
   int NumInvert = 0;
-  for (int k = 1; k <= AnIterNumInvertHint; k++)
-    NumInvert += AnIterNumInvert[k];
+
+  int last_invert_hint = INVERT_HINT_Count-1;
+  for (int k = 1; k <= last_invert_hint; k++) NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
     int lcNumInvert = 0;
     printf("\nInvert    performed %7d times: average frequency = %d\n",
            NumInvert, AnIterNumIter / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_updateLimitReached];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_UPDATE_LIMIT_REACHED];
     if (lcNumInvert > 0)
       printf("%7d (%3d%%) Invert operations due to update limit reached\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_syntheticClockSaysInvert];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT];
     if (lcNumInvert > 0)
       printf("%7d (%3d%%) Invert operations due to pseudo-clock\n", lcNumInvert,
              (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_possiblyOptimal];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_OPTIMAL];
     if (lcNumInvert > 0)
       printf("%7d (%3d%%) Invert operations due to possibly optimal\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_possiblyPrimalUnbounded];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED];
     if (lcNumInvert > 0)
       printf("%7d (%3d%%) Invert operations due to possibly primal unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_possiblyDualUnbounded];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED];
     if (lcNumInvert > 0)
       printf("%7d (%3d%%) Invert operations due to possibly dual unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_possiblySingularBasis];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_SINGULAR_BASIS];
     if (lcNumInvert > 0)
       printf("%7d (%3d%%) Invert operations due to possibly singular basis\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
-    lcNumInvert = AnIterNumInvert[invertHint_primalInfeasibleInPrimalSimplex];
+    lcNumInvert = AnIterNumInvert[INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX];
     if (lcNumInvert > 0)
       printf(
           "%7d (%3d%%) Invert operations due to primal infeasible in primal "
@@ -2168,7 +2179,7 @@ void HDual::iterateRpAn() {
 
   //
   // Add a record for the final iterations: may end up with one more
-  // than AnIterTraceMxNumRec records, so ensure that there is enough
+  // than AN_ITER_TRACE_MX_NUM_REC records, so ensure that there is enough
   // space in the arrays
   //
   AnIterTraceNumRec++;
@@ -2187,7 +2198,7 @@ void HDual::iterateRpAn() {
     lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE] = 0;
     lcAnIter->AnIterTraceAux0 = 0;
   }
-  lcAnIter->AnIterTrace_dual_edge_weight_mode = dual_edge_weight_mode;
+  lcAnIter->AnIterTrace_dual_edge_weight_mode = (int) dual_edge_weight_mode;
 
   if (AnIterTraceIterDl >= 100) {
     printf("\n Iteration speed analysis\n");
@@ -2214,12 +2225,12 @@ void HDual::iterateRpAn() {
       int l10RapDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_Price]);
       int l10DseDse = intLog10(lcAnIter->AnIterTraceDsty[AnIterOpTy_FtranDSE]);
       int l10Aux0 = intLog10(lcAnIter->AnIterTraceAux0);
-      string str_dual_edge_weight_mode;
-      if (lc_dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE)
+      std::string str_dual_edge_weight_mode;
+      if (lc_dual_edge_weight_mode == (int) DualEdgeWeightMode::STEEPEST_EDGE)
         str_dual_edge_weight_mode = "DSE";
-      else if (lc_dual_edge_weight_mode == DualEdgeWeightMode::DEVEX)
+      else if (lc_dual_edge_weight_mode == (int) DualEdgeWeightMode::DEVEX)
         str_dual_edge_weight_mode = "Dvx";
-      else if (lc_dual_edge_weight_mode == DualEdgeWeightMode::DANTZIG)
+      else if (lc_dual_edge_weight_mode == (int) DualEdgeWeightMode::DANTZIG)
         str_dual_edge_weight_mode = "Dan";
       else
         str_dual_edge_weight_mode = "XXX";
