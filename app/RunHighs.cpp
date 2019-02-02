@@ -31,7 +31,9 @@ int main(int argc, char **argv) {
   HighsLp lp;
   HighsInputStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsInputStatus::OK) {
-    HighsLogMessage(HighsMessageType::INFO, "Error when parsing file");
+    std::string message = "Error loading file: status = " +
+                          HighsInputStatusToString(read_status) + "\n";
+    HighsLogMessage(HighsMessageType::INFO, message.c_str());
     return (int)HighsStatus::LpError;
   }
 
@@ -41,10 +43,10 @@ int main(int argc, char **argv) {
   HighsStatus run_status = highs.run(lp, solution);
 
   double end_time = timer.getWallTime();
-  HighsLogMessage(HighsMessageType::INFO, "HiGHS run ended after %12g seconds", end_time-start_time);
-  
+  HighsLogMessage(HighsMessageType::INFO, "HiGHS run ended after %12g seconds",
+                  end_time - start_time);
+
   checkStatus(run_status);
 
-  
   return 0;
 }

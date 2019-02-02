@@ -40,7 +40,7 @@ enum objSense
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
 struct HighsOptions {
-  std::string filenames = "";
+  std::string filename = "";
 
   // Options passed through the command line
 
@@ -121,8 +121,29 @@ class HighsLp {
   // sense 1 = minimize, -1 = maximize
   int sense_ = 1;
   double offset_ = 0;
+
   std::string model_name_ = "";
 
+  std::vector<std::string> row_names_;
+  std::vector<std::string> col_names_;
+
+  bool operator==(const HighsLp& lp) {
+    if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || nnz_ != lp.nnz_ ||
+        sense_ != lp.sense_ || offset_ != lp.offset_ ||
+        model_name_ != lp.model_name_)
+      return false;
+
+    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ ||
+        Avalue_ != lp.Avalue_ || colCost_ != lp.colCost_ ||
+        colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
+        rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
+      return false;
+
+    if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)
+      return false;
+
+    return true;
+  }
 };
 
 // HiGHS status
