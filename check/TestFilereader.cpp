@@ -23,7 +23,10 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   
 
   std::cout << dir << std::endl;
-  options.filename = dir + "/../../check/instances/adlittle.mps";
+  
+  // For debugging use the latter.
+   options.filename = dir + "/../../check/instances/adlittle.mps";
+  // options.filename = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_mps;

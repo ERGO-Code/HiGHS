@@ -145,9 +145,9 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   }
 
   std::getline(f, line);
-  while (trim(line) == "")
+  while (trim(line) == "" && f)
     std::getline(f, line);
-  if (trim(line) != "integer_columns" && trim(line) != "names")
+  if (f && (trim(line) != "integer_columns" && trim(line) != "names"))
     return FilereaderRetcode::PARSERERROR;
   if (line == "names") {
     // Ignore length since we support any length.
@@ -252,6 +252,8 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char *filename,
   }
 
   // todo: integer variables.
+
+  f << std::endl;
   f.close();
   return FilereaderRetcode::OKAY;
 }
