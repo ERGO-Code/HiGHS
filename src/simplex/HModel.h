@@ -232,7 +232,6 @@ class HModel {
 
   // Scalar solution output
   // Essentials
-  int numberIteration;
 #ifdef HiGHSDEV
   // Analysis of INVERT
   const bool anInvertTime = false;

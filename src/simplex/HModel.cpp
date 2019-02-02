@@ -280,7 +280,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 void HModel::mlFg_Report() {
   printf("\nReporting model/solver status and flags:\n\n");
   //  printf("problemStatus =                %2d\n", problemStatus);
-  printf("numberIteration =              %2d\n\n", numberIteration);
+  //  printf("numberIteration =              %2d\n\n", numberIteration);
   printf("mlFg_transposedLP =            %2d\n", mlFg_transposedLP);
   printf("mlFg_scaledLP =                %2d\n", mlFg_scaledLP);
   printf("mlFg_shuffledLP =              %2d\n", mlFg_shuffledLP);
@@ -1224,7 +1224,7 @@ int HModel::computeFactor() {
 #endif
     //      return rankDeficiency;
   }
-  //    printf("INVERT: After %d iterations and %d updates\n", numberIteration,
+  //    printf("INVERT: After %d iterations and %d updates\n", simplex_info_->iteration_count,
   //    simplex_info_->update_count);
   simplex_info_->update_count = 0;
 
@@ -1236,7 +1236,7 @@ int HModel::computeFactor() {
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
         "Total INVERT  time = %11.4g\n",
-        totalInverts, numberIteration, invertTime, totalInvertTime);
+        totalInverts, simplex_info_->iteration_count, invertTime, totalInvertTime);
   }
 #endif
 
@@ -2751,7 +2751,7 @@ void HModel::util_getCoeff(HighsLp lp, int row, int col, double *val) {
 // Methods for brief reports
 // is false
 void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
-  HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", numberIteration, simplex_info_->dualObjectiveValue, i_v);
+  HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", simplex_info_->iteration_count, simplex_info_->dualObjectiveValue, i_v);
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
@@ -2765,12 +2765,12 @@ void HModel::util_reportSolverOutcome(const char *message) {
   double dlObjVal =
       abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
   HighsPrintMessage(ML_MINIMAL, "%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
-         solver_lp_->model_name_.c_str(), prObjVal, dualObjectiveValue, dlObjVal, numberIteration,
+         solver_lp_->model_name_.c_str(), prObjVal, dualObjectiveValue, dlObjVal, simplex_info_->iteration_count,
          currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
   HighsPrintMessage(ML_MINIMAL, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
-         numberIteration, currentRunHighsTime);
+         simplex_info_->iteration_count, currentRunHighsTime);
 #endif
   if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL) {
     HighsPrintMessage(ML_MINIMAL, "\n");
@@ -2779,7 +2779,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
     util_reportModelStatus();
   }
   // Greppable report line added
-  HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
+  HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, simplex_info_->iteration_count,
          currentRunHighsTime, simplex_info_->solution_status, solver_lp_->model_name_.c_str());
 }
 

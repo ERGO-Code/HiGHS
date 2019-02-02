@@ -53,10 +53,6 @@ class HPreData {
   vector<double> rowLower;
   vector<double> rowUpper;
 
-  // Solution data.
-  int numberIteration;
-  double solveTime;
-
   vector<double> colValue;
   vector<double> colDual;
   vector<double> rowValue;

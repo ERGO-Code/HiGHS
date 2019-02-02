@@ -77,7 +77,7 @@ void HPrimal::solvePhase2() {
       }
       double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
       // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
-      // model->numberIteration, current_dual_objective_value);
+      // simplex_info.iteration_count, current_dual_objective_value);
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
         printf("HPrimal::solve_phase2: %12g = Objective > ObjectiveUB\n",
@@ -152,7 +152,7 @@ void HPrimal::primalRebuild() {
     double totalRebuildTime = timer.read(iClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",
-        totalRebuilds, sv_invertHint, model->numberIteration, totalRebuildTime);
+        totalRebuilds, sv_invertHint, simplex_info.iteration_count, totalRebuildTime);
   }
 #endif
   // Data are fresh from rebuild
@@ -361,5 +361,5 @@ void HPrimal::primalUpdate() {
 
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
-  model->numberIteration++;
+  simplex_info.iteration_count++;
 }

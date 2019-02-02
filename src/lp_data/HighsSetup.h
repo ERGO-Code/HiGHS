@@ -182,7 +182,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
           model.getPrStatus(), highs_model.lp_->model_name_.c_str(), Presolve_ArgV,
           Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
           presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
-          postsolveTime, model.dualObjective, model.numberIteration,
+          postsolveTime, simplex_info_.dualObjectiveValue, simplex_info_.iteration_count,
           model.totalTime, solver.n_wg_DSE_wt);
       cout << flush;
     }

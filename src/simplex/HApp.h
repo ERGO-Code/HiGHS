@@ -100,12 +100,6 @@ HighsStatus solveSimplex(
   } else {
     // Serial. Based on previous solvePlainJAJH.
 
-    int solveIt = 0;
-#ifdef HiGHSDEV
-    int solvePh1DuIt = 0;
-    int solvePh2DuIt = 0;
-    int solvePrIt = 0;
-#endif
     //    double lcSolveTime;
 
     vector<double> colPrAct;
@@ -125,20 +119,20 @@ HighsStatus solveSimplex(
     else
       dual_solver.solve();
 
-    solveIt += model.numberIteration;
-
 #ifdef HiGHSDEV
     double currentRunHighsTime = highs_model.timer_.readRunHighsClock();
-    solvePh1DuIt += dual_solver.n_ph1_du_it;
-    solvePh2DuIt += dual_solver.n_ph2_du_it;
-    solvePrIt += dual_solver.n_pr_it;
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        simplex_info_.solution_status, highs_model.lp_.model_name_.c_str(), highs_model.lp_.numRow_,
-        highs_model.lp_.numCol_, currentRunHighsTime,
-	highs_model.simplex_info_.dualObjectiveValue, dual_solver.n_ph1_du_it,
-        dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
+        simplex_info_.solution_status,
+	highs_model.lp_.model_name_.c_str(),
+	highs_model.lp_.numRow_,
+        highs_model.lp_.numCol_,
+	currentRunHighsTime,
+	simplex_info_.dualObjectiveValue,
+	simplex_info_.dual_phase1_iteration_count,
+        simplex_info_.dual_phase2_iteration_count,
+	simplex_info_.primal_phase1_iteration_count);
 #endif
     //    reportLp(highs_model.lp_);
     //    reportLpSolution(highs_model);

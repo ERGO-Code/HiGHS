@@ -976,8 +976,8 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   //  solver.solve(model);
   if (rp) {
     //    reportLp(model->solver_lp_);
-    printf("checkDataSolve: numberIteration = %d\n",
-           model->numberIteration);
+    printf("checkDataSolve: iteration_count = %d\n",
+           simplex_info.iteration_count);
   }
   */
 }

@@ -269,7 +269,9 @@ struct HighsSimplexInfo {
   // Simplex runtime information
   SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
   int costs_perturbed = 0;
+  // Cumulative iteration count - updated in simplex solvers
   int iteration_count = 0;
+  // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
   int primal_phase1_iteration_count = 0;

@@ -749,11 +749,11 @@ class HSimplex {
   }
 
   /*
-  // Increment numberIteration (here!) and (possibly) store the pivots for
+  // Increment iteration count (here!) and (possibly) store the pivots for
   // debugging NLA
   void record_pivots(int columnIn, int columnOut, double alpha) {
     // NB This is where the iteration count is updated!
-    if (columnIn >= 0) numberIteration++;
+    if (columnIn >= 0) simplex_info_.iteration_count++;
 #ifdef HiGHSDEV
     historyColumnIn.push_back(columnIn);
     historyColumnOut.push_back(columnOut);

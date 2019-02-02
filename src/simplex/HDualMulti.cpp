@@ -352,7 +352,7 @@ void HDual::minor_updatePivots() {
   Fin->alphaRow = alphaRow;
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
-  model->numberIteration++;
+  workHMO.simplex_info_.iteration_count++;
 }
 
 void HDual::minor_updateRows() {
@@ -437,7 +437,7 @@ void HDual::major_update() {
     // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && workHMO.simplex_info_.update_count > 0) {
       cout << "REPORT " << workHMO.solver_lp_.model_name_ << " NEED-ROLL-BACK   ";
-      cout << model->numberIteration << " alpha = " << alphaC
+      cout << workHMO.simplex_info_.iteration_count << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
       invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
@@ -716,6 +716,6 @@ void HDual::major_rollback() {
     workHMO.simplex_info_.workShift_[Fin->columnOut] = Fin->shiftOut;
 
     // 5. The iteration count
-    model->numberIteration--;
+    workHMO.simplex_info_.iteration_count--;
   }
 }
