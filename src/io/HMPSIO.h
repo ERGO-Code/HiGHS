@@ -23,13 +23,15 @@
 #include <vector>
 
 using std::vector;
+using std::string;
 
-int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
-            int& numCol, int& objSense, double& objOffset, vector<int>& Astart,
-            vector<int>& Aindex, vector<double>& Avalue,
-            vector<double>& colCost, vector<double>& colLower,
-            vector<double>& colUpper, vector<double>& rowLower,
-            vector<double>& rowUpper, vector<int>& integerColumn);
+int readMPS(const char *filename, int mxNumRow, int mxNumCol, int &numRow,
+            int &numCol, int &objSense, double &objOffset, vector<int> &Astart,
+            vector<int> &Aindex, vector<double> &Avalue,
+            vector<double> &colCost, vector<double> &colLower,
+            vector<double> &colUpper, vector<double> &rowLower,
+            vector<double> &rowUpper, vector<int> &integerColumn,
+            vector<string>& row_names, vector<string> &col_names);
 
 int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
              int& objSense, double& objOffset, vector<int>& Astart,
