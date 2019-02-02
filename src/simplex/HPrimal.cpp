@@ -83,34 +83,34 @@ void HPrimal::solvePhase2() {
         printf("HPrimal::solve_phase2: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
-        model->problemStatus = LP_Status_ObjUB;
+        simplex_info.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
     }
 
     double currentRunHighsTime = timer.readRunHighsClock();
     if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
-      model->problemStatus = LP_Status_OutOfTime;
+      simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
     }
-    if (model->problemStatus == LP_Status_ObjUB) break;
+    if (simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (countUpdate == 0) break;
     if (model->mlFg_haveFreshRebuild) break;
   }
 
-  if (model->problemStatus == LP_Status_OutOfTime ||
-      model->problemStatus == LP_Status_ObjUB)
+  if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
+      simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND)
     return;
 
   if (columnIn == -1) {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-    model->setProblemStatus(LP_Status_Optimal);
+    simplex_info.solution_status = SimplexSolutionStatus::OPTIMAL;
   } else {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
-    model->setProblemStatus(LP_Status_Unbounded);
+    simplex_info.solution_status = SimplexSolutionStatus::UNBOUNDED;
   }
 }
 

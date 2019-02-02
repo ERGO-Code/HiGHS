@@ -23,9 +23,9 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   HModel *model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
   model->ranging_ = &ref_highs_model_object.ranging_;
-
+  HighsSimplexInfo &simplex_info = ref_highs_model_object.simplex_info_;
   // Make sure that the model solution is optimal
-  if (model->problemStatus != LP_Status_Optimal) return 1;
+  if (simplex_info.solution_status != SimplexSolutionStatus::OPTIMAL) return 1;
 
   int numCol = model->solver_lp_->numCol_;
   int numRow = model->solver_lp_->numRow_;
@@ -546,9 +546,10 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   HModel *model = &ref_highs_model_object.hmodel_[0]; // Pointer to model within highs_model_object: defined in HDual.h
   model->basis_ = &ref_highs_model_object.basis_;
   model->ranging_ = &ref_highs_model_object.ranging_;
+  HighsSimplexInfo &simplex_info = ref_highs_model_object.simplex_info_;
 
   // Make sure that the model solution is optimal
-  if (model->problemStatus != LP_Status_Optimal) return 1;
+  if (simplex_info.solution_status != SimplexSolutionStatus::OPTIMAL) return 1;
 
   int numCol = model->solver_lp_->numCol_;
   int numRow = model->solver_lp_->numRow_;

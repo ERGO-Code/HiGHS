@@ -116,8 +116,8 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   reportLp(model.lpScaled);
   //  model.util_reportModelSolution();
 
-  //  printf("model.problemStatus = %d\n", model.problemStatus);
-  (*probStatus) = model.problemStatus;
+  //  printf("simplex_info_.solution_status = %d\n", simplex_info_.solution_status);
+  //  (*probStatus) = simplex_info_.solution_status;
   (*basisStatus) = LcBasisStatus;
   // Remove any current model
   model.clearModel();

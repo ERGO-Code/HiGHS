@@ -135,6 +135,7 @@ enum class HighsStatus {
   SolutionError,
   PostsolveError,
   NotImplemented,
+  ReachedDualObjectiveUpperBound,
   Unbounded,
   Infeasible,
   Feasible,
@@ -233,6 +234,7 @@ struct HighsSimplexInfo {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   bool perturb_costs;
+  int update_limit;
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
@@ -262,28 +264,34 @@ struct HighsSimplexInfo {
   bool tightened_solver_lp = false;
 
   // Simplex status
+
+  // Simplex runtime information
+  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
   int costs_perturbed = 0;
+  int update_count = 0;
+  int iteration_count = 0;
+  int dual_phase1_iteration_count = 0;
+  int dual_phase2_iteration_count = 0;
+  int primal_phase1_iteration_count = 0;
+  int primal_phase2_iteration_count = 0;
 
-  // Simplex run information
-
-  // Value of dual objective
+  // Value of dual objective - only set when computed from scratch in rebuild()
   double dualObjectiveValue;
-  // Value of dual objective that is updated in dual simplex solver -
-  // need to put this in lower level header, but can't go into Dual.h
+
+
+  // Value of dual objective that is updated in dual simplex solver
   double updatedDualObjectiveValue;
+  // Number of logical variables in the basis 
+  int num_basic_logicals;
 
-  // Number of simplex iterations: total and constituent counts
-  int numberAltIteration;
-  int numberAltPhase1DualIteration;
-  int numberAltPhase2DualIteration;
-  int numberAltPrimalIteration;
-
+  /*
 #ifdef HiGHSDEV
   // Move this to Simplex class once it's created
   vector<int> historyColumnIn;
   vector<int> historyColumnOut;
   vector<double> historyAlpha;
 #endif
+  */
 
 };
 

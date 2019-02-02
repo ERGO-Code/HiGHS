@@ -122,11 +122,11 @@ void HModel::mlFg_Update(int mlFg_action) {
     assert(mlFg_scaledLP = 0);
     // Clear the model flags, but indicate that it's transposed
     mlFg_Clear();
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_transposedLP = 1;
   } else if (mlFg_action == mlFg_action_ScaleLP) {
     // The LP has just been scaled
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_scaledLP = 1;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -144,7 +144,7 @@ void HModel::mlFg_Update(int mlFg_action) {
   } else if (mlFg_action == mlFg_action_ShuffleLP) {
     // The LP has been shuffled
     // Indicate that the columns have been shuffled
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_shuffledLP = 1;
     mlFg_haveBasis = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -160,7 +160,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_NewBounds) {
     // New bounds have been defined
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     initBound();
     initValue();
     mlFg_haveBasicPrimals = 0;
@@ -170,7 +170,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_NewCosts) {
     // New costs have been defined
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     initCost();
     mlFg_haveNonbasicDuals = 0;
     mlFg_haveFreshRebuild = 0;
@@ -179,7 +179,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_NewBasis) {
     // A new basis has been defined
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 1;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -195,7 +195,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_NewCols) {
     // New columns have been added as nonbasic
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 1;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -210,7 +210,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_NewRows) {
     // New rows have been added as basic
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 1;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -226,7 +226,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
 } else if (mlFg_action == mlFg_action_DelCols) {
     // Columns have been deleted
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 0;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -241,7 +241,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_DelRows) {
     // Rows have been deleted
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 0;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -257,7 +257,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 
   } else if (mlFg_action == mlFg_action_DelRowsBasisOK) {
     // Rows have been deleted
-    problemStatus = LP_Status_Unset;
+//    problemStatus = LP_Status_Unset;
     mlFg_haveBasis = 1;
     mlFg_haveMatrixColWise = 0;
     mlFg_haveMatrixRowWise = 0;
@@ -279,7 +279,7 @@ void HModel::mlFg_Update(int mlFg_action) {
 #ifdef HiGHSDEV
 void HModel::mlFg_Report() {
   printf("\nReporting model/solver status and flags:\n\n");
-  printf("problemStatus =                %2d\n", problemStatus);
+  //  printf("problemStatus =                %2d\n", problemStatus);
   printf("numberIteration =              %2d\n\n", numberIteration);
   printf("mlFg_transposedLP =            %2d\n", mlFg_transposedLP);
   printf("mlFg_scaledLP =                %2d\n", mlFg_scaledLP);
@@ -544,7 +544,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
 }
 
 void HModel::clearModel() {
-  problemStatus = LP_Status_Unset;
+  //  problemStatus = LP_Status_Unset;
   mlFg_Clear();
 }
 
@@ -1219,7 +1219,7 @@ int HModel::computeFactor() {
   int rankDeficiency = factor_->build();
   if (rankDeficiency) {
     handleRankDeficiency();
-    //    problemStatus = LP_Status_Singular;
+    //    simplex_info_->solution_status = SimplexSolutionStatus::SINGULAR;
 #ifdef HiGHSDEV
     //    writePivots("failed");
 #endif
@@ -1589,8 +1589,6 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
 void HModel::changeUpdate(int updateMethod) { factor_->change(updateMethod); }
 #endif
 
-void HModel::setProblemStatus(int status) { problemStatus = status; }
-
 #ifdef HiGHSDEV
 // Checking methods Check loading of a model from arrays of data -
 // just loads using arrays from an MPS read so optimality is check
@@ -1791,7 +1789,7 @@ int HModel::util_chgObjSense(const int Xsense) {
       simplex_info_->workDual_[var] = -simplex_info_->workDual_[var];
       simplex_info_->workCost_[var] = -simplex_info_->workCost_[var];
     }
-    problemStatus = LP_Status_Unset;
+    simplex_info_->solution_status = SimplexSolutionStatus::UNSET;
   }
   return 0;
 }
@@ -2759,7 +2757,7 @@ void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
 }
 
 void HModel::util_reportSolverOutcome(const char *message) {
-  if (problemStatus == LP_Status_Optimal)
+  if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_MINIMAL, "%s: OPTIMAL", message);
   else
     HighsPrintMessage(ML_MINIMAL, "%s: NOT-OPT", message);
@@ -2776,7 +2774,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
   HighsPrintMessage(ML_MINIMAL, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
          numberIteration, currentRunHighsTime);
 #endif
-  if (problemStatus == LP_Status_Optimal) {
+  if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL) {
     HighsPrintMessage(ML_MINIMAL, "\n");
   } else {
     HighsPrintMessage(ML_MINIMAL, " ");
@@ -2784,27 +2782,27 @@ void HModel::util_reportSolverOutcome(const char *message) {
   }
   // Greppable report line added
   HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s\n", dualObjectiveValue, numberIteration,
-         currentRunHighsTime, problemStatus, solver_lp_->model_name_.c_str());
+         currentRunHighsTime, simplex_info_->solution_status, solver_lp_->model_name_.c_str());
 }
 
 // Methods for reporting the model, its solution, row and column data and matrix
 //
 // Report the model status
 void HModel::util_reportModelStatus() {
-  HighsPrintMessage(ML_MINIMAL, "LP status is %2d: ", problemStatus);
-  if (problemStatus == LP_Status_Unset)
+  HighsPrintMessage(ML_MINIMAL, "LP status is %2d: ", simplex_info_->solution_status);
+  if (simplex_info_->solution_status == SimplexSolutionStatus::UNSET)
     HighsPrintMessage(ML_MINIMAL, "Unset\n");
-  else if (problemStatus == LP_Status_Optimal)
+  else if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_MINIMAL, "Optimal\n");
-  else if (problemStatus == LP_Status_Infeasible)
+  else if (simplex_info_->solution_status == SimplexSolutionStatus::INFEASIBLE)
     HighsPrintMessage(ML_MINIMAL, "Infeasible\n");
-  else if (problemStatus == LP_Status_Unbounded)
+  else if (simplex_info_->solution_status == SimplexSolutionStatus::UNBOUNDED)
     HighsPrintMessage(ML_MINIMAL, "Primal unbounded\n");
-  else if (problemStatus == LP_Status_Singular)
+  else if (simplex_info_->solution_status == SimplexSolutionStatus::SINGULAR)
     HighsPrintMessage(ML_MINIMAL, "Singular basis\n");
-  else if (problemStatus == LP_Status_Failed)
+  else if (simplex_info_->solution_status == SimplexSolutionStatus::FAILED)
     HighsPrintMessage(ML_MINIMAL, "Failed\n");
-  else if (problemStatus == LP_Status_OutOfTime)
+  else if (simplex_info_->solution_status == SimplexSolutionStatus::OUT_OF_TIME)
     HighsPrintMessage(ML_MINIMAL, "Time limit exceeded\n");
   else
     HighsPrintMessage(ML_MINIMAL, "Unrecognised\n");
@@ -2940,7 +2938,7 @@ void HModel::util_reportModelDa(HighsLp lp, const char *filename) {
 
 #ifdef HiGHSDEV
 void HModel::util_analyseLpSolution() {
-  if (problemStatus != LP_Status_Optimal) return;
+  if (simplex_info_->solution_status != SimplexSolutionStatus::OPTIMAL) return;
   printf("\nAnalysing the model solution\n");
   fflush(stdout);
   const double inf = HIGHS_CONST_INF;

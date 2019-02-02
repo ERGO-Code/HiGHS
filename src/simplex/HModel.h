@@ -124,7 +124,6 @@ class HModel {
   // Changes the update method, but only used in HTester.cpp
   void changeUpdate(int updateMethod);
 #endif
-  void setProblemStatus(int status);
 
   // Checking methods
 #ifdef HiGHSDEV
@@ -315,7 +314,6 @@ class HModel {
   int mlFg_haveSavedBounds;
 
  public:
-  int problemStatus;
   
   // The scaled model
   HighsLp *solver_lp_;

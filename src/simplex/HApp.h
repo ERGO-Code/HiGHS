@@ -30,24 +30,29 @@
 #include "HighsUtils.h"
 #include "HRanging.h"
 #include "HSimplex.h"
+#include "SimplexConst.h"
 
 using std::cout;
 using std::endl;
 using std::flush;
 
-HighsStatus LpStatusToHighsStatus(const int lp_status) {
-  switch (lp_status) {
-    case LP_Status_OutOfTime:
+HighsStatus LpStatusToHighsStatus(SimplexSolutionStatus simplex_solution_status) {
+  switch (simplex_solution_status) {
+  case SimplexSolutionStatus::OUT_OF_TIME:
       return HighsStatus::Timeout;
-    case LP_Status_Failed:
+  case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+      return HighsStatus::ReachedDualObjectiveUpperBound;
+  case SimplexSolutionStatus::FAILED:
       return HighsStatus::SolutionError;
-    case LP_Status_Infeasible:
-      return HighsStatus::Infeasible;
-    case LP_Status_Unbounded:
+  case SimplexSolutionStatus::SINGULAR:
+      return HighsStatus::SolutionError;
+  case SimplexSolutionStatus::UNBOUNDED:
       return HighsStatus::Unbounded;
-    case LP_Status_Optimal:
+  case SimplexSolutionStatus::INFEASIBLE:
+      return HighsStatus::Infeasible;
+  case SimplexSolutionStatus::OPTIMAL:
       return HighsStatus::Optimal;
-    default:
+  default:
       return HighsStatus::NotImplemented;
   }
 }
@@ -60,6 +65,7 @@ HighsStatus solveSimplex(
   HighsTimer &timer = highs_model.timer_;
 
   HModel& model = highs_model.hmodel_[0];
+  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
 
   timer.start(timer.solveClock);
   bool ranging = true;
@@ -71,11 +77,10 @@ HighsStatus solveSimplex(
   if (opt.clean_up) {
     model.initFromNonbasic();
     dual_solver.solve();
-    return LpStatusToHighsStatus(model.problemStatus);
+    return LpStatusToHighsStatus(simplex_info_.solution_status);
   }
 
   // Crash, if HighsModelObject has basis information.
-  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
   if (simplex_info_.crash_strategy != SimplexCrashStrategy::OFF) {
     HCrash crash;
     crash.crash(highs_model, 0);
@@ -130,14 +135,14 @@ HighsStatus solveSimplex(
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        model.problemStatus, highs_model.lp_.model_name_.c_str(), highs_model.lp_.numRow_,
+        simplex_info_.solution_status, highs_model.lp_.model_name_.c_str(), highs_model.lp_.numRow_,
         highs_model.lp_.numCol_, currentRunHighsTime,
 	highs_model.simplex_info_.dualObjectiveValue, dual_solver.n_ph1_du_it,
         dual_solver.n_ph2_du_it, dual_solver.n_pr_it);
 #endif
     //    reportLp(highs_model.lp_);
     //    reportLpSolution(highs_model);
-    HighsStatus result = LpStatusToHighsStatus(model.problemStatus);
+    HighsStatus result = LpStatusToHighsStatus(simplex_info_.solution_status);
 
     timer.stop(timer.solveClock);
 
