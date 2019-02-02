@@ -24,13 +24,19 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   if (options.filename.size() == 0 || access(options.filename.c_str(), F_OK) == -1)
     return HighsInputStatus::FileNotFound;
 
-  // todo: set lp.model_name_ to trimmedoptions.filename.
 
   Filereader* reader = Filereader::getFilereader(options.filename.c_str());
   FilereaderRetcode success =  reader->readModelFromFile(options.filename.c_str(), lp);
   delete reader;
   lp.nnz_ = lp.Avalue_.size();
-  lp.model_name_ = options.filenames;
+
+  // Extract model name.
+  std::string name = options.filename;
+  std::size_t found = name.find_last_of("/\\");
+  name = name.substr(found + 1);
+  found = name.find_last_of(".");
+  name.erase(found, name.size() - found);
+  lp.model_name_ = name;
 
   if(success != FilereaderRetcode::OKAY) {
     HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");

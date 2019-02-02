@@ -1,5 +1,5 @@
-#include <unistd.h>
 #include <cstdio>
+#include <unistd.h>
 #define GetCurrentDir getcwd
 
 #include "FilereaderEms.h"
@@ -20,12 +20,11 @@ std::string GetCurrentWorkingDir(void) {
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
   HighsOptions options;
   std::string dir = GetCurrentWorkingDir();
-  
 
   std::cout << dir << std::endl;
-  
+
   // For debugging use the latter.
-   options.filename = dir + "/../../check/instances/adlittle.mps";
+  options.filename = dir + "/../../check/instances/adlittle.mps";
   // options.filename = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
@@ -35,11 +34,10 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   // Write ems.
   FilereaderEms ems;
-  ems.writeModelToFile("filereader-test-ems-file.ems", lp_mps);
+  ems.writeModelToFile("adlittle.ems", lp_mps);
 
   // Read ems and compare.
-  options.filename =
-      "filereader-test-ems-file.ems";  // todo: check how to specify path
+  options.filename = "adlittle.ems"; // todo: check how to specify path
 
   HighsLp lp_ems;
   HighsInputStatus ems_read_status = loadLpFromFile(options, lp_ems);
