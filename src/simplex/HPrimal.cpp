@@ -38,8 +38,8 @@ void HPrimal::solvePhase2() {
   printf("************************************\n");
 #endif
   // Setup update limits
-  limitUpdate = min(100 + numRow / 100, 1000);
-  countUpdate = 0;
+  simplex_info.update_limit = min(100 + numRow / 100, 1000); // TODO: Consider allowing the dual limit to be used
+  simplex_info.update_count = 0;
 
   // Setup local vectors
   column.setup(numRow);
@@ -96,7 +96,7 @@ void HPrimal::solvePhase2() {
     if (simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
-    // Was:	if (countUpdate == 0) break;
+    // Was:	if (simplex_info.update_count == 0) break;
     if (model->mlFg_haveFreshRebuild) break;
   }
 
@@ -124,7 +124,7 @@ void HPrimal::primalRebuild() {
   int sv_invertHint = invertHint;
   invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
-  bool reInvert = model->countUpdate > 0;
+  bool reInvert = simplex_info.update_count > 0;
   if (!model->InvertIfRowOutNeg) {
     // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
@@ -138,7 +138,7 @@ void HPrimal::primalRebuild() {
     if (rankDeficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");
     }
-    countUpdate = 0;
+    simplex_info.update_count = 0;
   }
   model->computeDual();
   model->computePrimal();
@@ -208,7 +208,7 @@ void HPrimal::primalChooseRow() {
   rowOut = -1;
 
   // Choose column pass 1
-  double alphaTol = countUpdate < 10 ? 1e-9 : countUpdate < 20 ? 1e-8 : 1e-7;
+  double alphaTol = workHMO.simplex_info_.update_count < 10 ? 1e-9 : workHMO.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
   const int *jMove = &workHMO.basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
@@ -264,6 +264,7 @@ void HPrimal::primalUpdate() {
   double *workValue = &workHMO.simplex_info_.workValue_[0];
   double *baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
@@ -355,7 +356,7 @@ void HPrimal::primalUpdate() {
   // Update model->factor basis
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   model->updateMatrix(columnIn, columnOut);
-  if (++countUpdate >= limitUpdate)
+  if (++simplex_info.update_count >= simplex_info.update_limit)
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;  // Was true;
 
   // Move this to Simplex class once it's created

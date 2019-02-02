@@ -578,7 +578,7 @@ void HDual::solve_phase1() {
     }
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
-    // Was:	if (model->countUpdate == 0) break;
+    // Was:	if (simplex_info.update_count == 0) break;
     if (model->mlFg_haveFreshRebuild) break;
   }
 
@@ -686,7 +686,7 @@ void HDual::solve_phase2() {
     }
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
-    // Was:	if (model->countUpdate == 0) break;
+    // Was:	if (simplex_info.update_count == 0) break;
     if (model->mlFg_haveFreshRebuild) break;
   }
   timer.stop(simplex_info.clock_[IterateClock]);
@@ -746,7 +746,7 @@ void HDual::rebuild() {
   int sv_invertHint = invertHint;
   invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
-  bool reInvert = model->countUpdate > 0;
+  bool reInvert = simplex_info.update_count > 0;
   if (!model->InvertIfRowOutNeg) {
     // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
@@ -1673,7 +1673,7 @@ void HDual::updateVerify() {
   numericalTrouble = aDiff / min(aCol, aRow);
   // Reinvert if the relative difference is large enough, and updates hav ebeen
   // performed
-  if (numericalTrouble > 1e-7 && model->countUpdate > 0) {
+  if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
   }
 }
@@ -1797,7 +1797,7 @@ void HDual::updatePivots() {
   //    bool reinvert_syntheticClock = total_fake >=
   //    factor->build_syntheticTick;
 #endif
-  if (reinvert_syntheticClock && model->countUpdate >= 50) {
+  if (reinvert_syntheticClock && workHMO.simplex_info_.update_count >= 50) {
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
   }
 }

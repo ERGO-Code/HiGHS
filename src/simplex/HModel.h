@@ -28,15 +28,6 @@ class HVector;
 
 // After removing HTimer.h add the following
 
-const int LP_Status_Unset = -1;
-const int LP_Status_Optimal = 0;
-const int LP_Status_Infeasible = 1;
-const int LP_Status_Unbounded = 2;
-const int LP_Status_Singular = 3;
-const int LP_Status_Failed = 4;
-const int LP_Status_ObjUB = 5;
-const int LP_Status_OutOfTime = 6;
-
 class HModel {
  public:
   HModel();
@@ -238,10 +229,6 @@ class HModel {
 
   // Number of basic logicals - allows logical basis to be deduced
   int numBasicLogicals;
-
-  // Solving result
-  int limitUpdate;
-  int countUpdate;
 
   // Scalar solution output
   // Essentials

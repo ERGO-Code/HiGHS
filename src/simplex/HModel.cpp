@@ -588,7 +588,6 @@ void HModel::setup_for_solve() {
                  &basis_->basicIndex_[0]);
     // Indicate that the model has factor arrays: can't be done in factor.setup
     mlFg_haveFactorArrays = 1;
-    limitUpdate = 5000;
   }
 }
 
@@ -1226,8 +1225,8 @@ int HModel::computeFactor() {
     //      return rankDeficiency;
   }
   //    printf("INVERT: After %d iterations and %d updates\n", numberIteration,
-  //    countUpdate);
-  countUpdate = 0;
+  //    simplex_info_->update_count);
+  simplex_info_->update_count = 0;
 
 #ifdef HiGHSDEV
   if (anInvertTime) {
@@ -1519,13 +1518,12 @@ void HModel::flipBound(int iCol) {
 void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
                           int *hint) {
   //  HighsTimer &timer = highs_model_object->timer_;
-  //HighsSimplexInfo &simplex = highs_model_object->simplex_info_;
   timer_->start(simplex_info_->clock_[UpdateFactorClock]);
   
   factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
   mlFg_haveInvert = 1;
-  if (countUpdate >= limitUpdate) *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+  if (simplex_info_->update_count >= simplex_info_->update_limit) *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   timer_->stop(simplex_info_->clock_[UpdateFactorClock]);
 }
 
@@ -1572,7 +1570,7 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
   //			   columnOut, basis_->nonbasicMove_[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
   simplex_info_->updatedDualObjectiveValue += dlDualObjectiveValue;
-  countUpdate++;
+  simplex_info_->update_count++;
   // Update the number of basic logicals
   if (columnOut < solver_lp_->numCol_) numBasicLogicals -= 1;
   if (columnIn < solver_lp_->numCol_) numBasicLogicals += 1;

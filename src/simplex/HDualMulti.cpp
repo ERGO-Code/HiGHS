@@ -63,7 +63,7 @@ void HDual::major_chooseRow() {
   /**
    * 0. Initial check to see if we need to do it again
    */
-  if (model->countUpdate == 0) multi_chooseAgain = 1;
+  if (workHMO.simplex_info_.update_count == 0) multi_chooseAgain = 1;
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
@@ -434,8 +434,8 @@ void HDual::major_update() {
     double alphaR = fabs(iFinish->alphaRow);
     double compare = min(alphaC, alphaR);
     double alphaDiff = fabs(alphaC - alphaR);
-    // int startUpdate = model->countUpdate - multi_nFinish;
-    if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
+    // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
+    if (alphaDiff / compare > 1e-8 && workHMO.simplex_info_.update_count > 0) {
       cout << "REPORT " << workHMO.solver_lp_.model_name_ << " NEED-ROLL-BACK   ";
       cout << model->numberIteration << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
@@ -689,7 +689,7 @@ void HDual::major_updateFactor() {
     model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows,
                         &invertHint);
 
-  if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
+  if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && workHMO.simplex_info_.update_count > 200)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
 

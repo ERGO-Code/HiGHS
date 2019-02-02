@@ -98,6 +98,7 @@ struct HighsOptions {
   bool simplex_perturb_costs = true;
   // Maximum number of simplex iterations
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
+  int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool clean_up = false;
 };
@@ -268,13 +269,14 @@ struct HighsSimplexInfo {
   // Simplex runtime information
   SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
   int costs_perturbed = 0;
-  int update_count = 0;
   int iteration_count = 0;
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
   int primal_phase1_iteration_count = 0;
   int primal_phase2_iteration_count = 0;
 
+  // Number of UPDATE operations performed - should be zeroed when INVERT is performed
+  int update_count;
   // Value of dual objective - only set when computed from scratch in rebuild()
   double dualObjectiveValue;
 

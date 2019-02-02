@@ -105,9 +105,9 @@ void HDualRow::choose_possible() {
    * Determine the possible variables - candidates for CHUZC
    * TODO: Check with Qi what this is doing
    */
-  const double Ta = workModel->countUpdate < 10
+  const double Ta = workHMO.simplex_info_.update_count < 10
                         ? 1e-9
-                        : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
+                        : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
   const double Td = workHMO.simplex_info_.dual_feasibility_tolerance;
   const int sourceOut = workDelta < 0 ? -1 : 1;
   workTheta = HIGHS_CONST_INF;
@@ -390,9 +390,9 @@ void HDualRow::create_Freelist() {
 void HDualRow::create_Freemove(HVector *row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
-    double Ta = workModel->countUpdate < 10
+    double Ta = workHMO.simplex_info_.update_count < 10
                     ? 1e-9
-                    : workModel->countUpdate < 20 ? 3e-8 : 1e-6;
+                    : workHMO.simplex_info_.update_count < 20 ? 3e-8 : 1e-6;
     int sourceOut = workDelta < 0 ? -1 : 1;
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {

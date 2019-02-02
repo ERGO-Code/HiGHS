@@ -45,6 +45,7 @@ class HSimplex {
     simplex_info_.dual_objective_value_upper_bound = opt.dual_objective_value_upper_bound;
     simplex_info_.perturb_costs = opt.simplex_perturb_costs;
     simplex_info_.iteration_limit = opt.simplex_iteration_limit;
+    simplex_info_.update_limit = opt.simplex_update_limit;
     simplex_info_.highs_run_time_limit = opt.highs_run_time_limit;
     
     simplex_info_.transpose_solver_lp = opt.transpose_solver_lp;
