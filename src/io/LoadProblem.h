@@ -30,6 +30,7 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   FilereaderRetcode success =  reader->readModelFromFile(options.filename.c_str(), lp);
   delete reader;
   lp.nnz_ = lp.Avalue_.size();
+  lp.model_name_ = options.filenames;
 
   if(success != FilereaderRetcode::OKAY) {
     HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
