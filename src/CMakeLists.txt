@@ -37,6 +37,7 @@ set(sources
     test/KktChStep.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
+    util/stringutil.cpp
 )
 
 set(headers

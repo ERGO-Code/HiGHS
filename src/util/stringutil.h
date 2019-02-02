@@ -3,53 +3,22 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <string>
 
-void strRemoveWhitespace(char* str) {
-  char* dest = str;
-  do
-    while (isspace(*str)) str++;
-  while (*dest++ = *str++);
-}
+void strRemoveWhitespace(char *str);
 
-char* strClone(const char* str) {
-  size_t n;
-  n = strlen(str);
+char *strClone(const char *str);
 
-  char* cpy = new char[n + 1];
-  strcpy(cpy, str);
-  return cpy;
-}
+int strIsWhitespace(const char *str);
 
-int strIsWhitespace(const char* str) {
-  while (*str != '\0') {
-    if (!isspace((unsigned char)*str)) {
-      return 0;
-    }
-    str++;
-  }
-  return 1;
-}
+void strToLower(char *str);
 
-void strToLower(char* str) {
-  int i;
-  for (i = 0; str[i] != '\0'; i++) {
-    str[i] = (char)tolower(str[i]);
-  }
-}
+void strTrim(char *str);
 
-void strTrim(char* str) {
-  int i;
-  int begin = 0;
-  int end = strlen(str) - 1;
+std::string &ltrim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 
-  while (isspace((unsigned char)str[begin])) begin++;
+std::string &rtrim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 
-  while ((end >= begin) && isspace((unsigned char)str[end])) end--;
-
-  // Shift all characters back to the start of the string array.
-  for (i = begin; i <= end; i++) str[i - begin] = str[i];
-
-  str[i - begin] = '\0';  // Null terminate string.
-}
+std::string &trim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 
 #endif

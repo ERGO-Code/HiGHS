@@ -33,9 +33,11 @@ HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   // Extract model name.
   std::string name = options.filename;
   std::size_t found = name.find_last_of("/\\");
-  name = name.substr(found + 1);
+  if (found < name.size())
+    name = name.substr(found + 1);
   found = name.find_last_of(".");
-  name.erase(found, name.size() - found);
+  if (found < name.size())
+    name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
   if(success != FilereaderRetcode::OKAY) {
