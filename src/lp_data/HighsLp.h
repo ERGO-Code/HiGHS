@@ -138,7 +138,7 @@ class HighsLp {
         colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
         rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
       return false;
-    
+
     if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)
       return false;
 
