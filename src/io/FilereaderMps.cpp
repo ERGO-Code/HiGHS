@@ -24,19 +24,19 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
 
   int status;
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
-  MpsParser parser{};
+  HMpsFF parser{};
   status = parser.loadProblem(filename, model);
 #else
   std::vector<int> integerColumn;
   status = readMPS(
-      filename, -1, -1, model.numRow_, model.numCol_, model.objSense_,
-      model.objOffset_, model.Astart_, model.Aindex_, model.Avalue_,
+      filename, -1, -1, model.numRow_, model.numCol_, model.sense_,
+      model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
       model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
       model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
 #endif
 
   if (status)
-    return FilereaderRetcode::PARSEERROR;
+    return FilereaderRetcode::PARSERERROR;
   return FilereaderRetcode::OKAY;
 }
 
