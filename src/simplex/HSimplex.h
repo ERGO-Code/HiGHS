@@ -64,7 +64,7 @@ class HSimplex {
     simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = true;//false
     simplex_info_.analyseLpSolution = false;
-    simplex_info_.analyseInvertTime = false;
+    simplex_info_.analyse_invert_time = false;
     simplex_info_.analyseRebuildTime = false;
 #endif
     

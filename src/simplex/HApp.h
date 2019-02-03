@@ -94,8 +94,9 @@ HighsStatus solveSimplex(
     //    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
     dual_solver.solve(8);
 #ifdef HiGHSDEV
-    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) model.writePivots("multi");
-    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) model.writePivots("tasks");
+    // Reinstate this once simplex::writePivots is written
+    //    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) writePivots("multi");
+    //    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) writePivots("tasks");
 #endif
   } else {
     // Serial. Based on previous solvePlainJAJH.
@@ -124,7 +125,7 @@ HighsStatus solveSimplex(
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        simplex_info_.solution_status,
+        (int) simplex_info_.solution_status,
 	highs_model.lp_.model_name_.c_str(),
 	highs_model.lp_.numRow_,
         highs_model.lp_.numCol_,

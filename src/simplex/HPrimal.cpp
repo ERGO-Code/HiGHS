@@ -125,7 +125,7 @@ void HPrimal::primalRebuild() {
   invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
   bool reInvert = simplex_info.update_count > 0;
-  if (!model->InvertIfRowOutNeg) {
+  if (!invert_if_row_out_negative) {
     // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
     if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {

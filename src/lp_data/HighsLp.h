@@ -255,7 +255,7 @@ struct HighsSimplexInfo {
   bool analyseLp;
   bool analyseSimplexIterations;
   bool analyseLpSolution;
-  bool analyseInvertTime;
+  bool analyse_invert_time;
   bool analyseRebuildTime;
 #endif
   // Solved LP status
@@ -287,6 +287,12 @@ struct HighsSimplexInfo {
   double updatedDualObjectiveValue;
   // Number of logical variables in the basis 
   int num_basic_logicals;
+
+#ifdef HiGHSDEV
+  // Analysis of INVERT
+  int total_inverts;
+  double total_invert_time;
+#endif
 
   /*
 #ifdef HiGHSDEV

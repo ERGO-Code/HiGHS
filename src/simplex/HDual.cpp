@@ -111,13 +111,13 @@ void HDual::solve(int num_threads) {
       iz_dvx_fwk();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // Using dual steepest edge (DSE) weights
-      int numBasicStructurals = numRow - model->numBasicLogicals;
-      bool computeExactDseWeights = numBasicStructurals > 0 && initialise_dual_steepest_edge_weights;
+      int num_basic_structurals = numRow - simplex_info.num_basic_logicals;
+      bool computeExactDseWeights = num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
 #ifdef HiGHSDEV
       n_wg_DSE_wt = 0;
       if (computeExactDseWeights) {
-	printf("If (0<numBasicStructurals = %d) && %d = initialise_dual_steepest_edge_weights: Compute exact "
-	       "DSE weights\n", numBasicStructurals, initialise_dual_steepest_edge_weights);
+	printf("If (0<num_basic_structurals = %d) && %d = initialise_dual_steepest_edge_weights: Compute exact "
+	       "DSE weights\n", num_basic_structurals, initialise_dual_steepest_edge_weights);
       }
 #endif
       if (computeExactDseWeights) {
@@ -152,7 +152,7 @@ void HDual::solve(int num_threads) {
 #ifdef HiGHSDEV
       else {
 	HighsPrintMessage(ML_DETAILED, "solve:: %d basic structurals: starting from B=I so unit initial DSE weights\n",
-			  numBasicStructurals);
+			  num_basic_structurals);
       }
 #endif
     }
@@ -364,17 +364,17 @@ void HDual::solve(int num_threads) {
   if (simplex_info.analyseLpSolution) {
     model->util_analyseLpSolution();
   }
-  if (simplex_info.analyseInvertTime) {
+  if (simplex_info.analyse_invert_time) {
     double currentRunHighsTime = timer.readRunHighsClock();
     int iClock = simplex_info.clock_[InvertClock];
-    int totalInverts = timer.clockNumCall[iClock];
-    double totalInvertTime = timer.clockTime[iClock];
+    simplex_info.total_inverts = timer.clockNumCall[iClock];
+    simplex_info.total_invert_time = timer.clockTime[iClock];
     
     printf(
 	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
-	   totalInverts, totalInvertTime, currentRunHighsTime);
+	   simplex_info.total_inverts, simplex_info.total_invert_time, currentRunHighsTime);
     if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * totalInvertTime) / currentRunHighsTime);
+      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / currentRunHighsTime);
     } else {
       printf("\n");
     }
@@ -746,7 +746,7 @@ void HDual::rebuild() {
   invertHint = INVERT_HINT_NO;
   // Possibly Rebuild model->factor
   bool reInvert = simplex_info.update_count > 0;
-  if (!model->InvertIfRowOutNeg) {
+  if (!invert_if_row_out_negative) {
     // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
     // INVERT_HINT_POSSIBLY_OPTIMAL]
     if (sv_invertHint == INVERT_HINT_POSSIBLY_OPTIMAL) {

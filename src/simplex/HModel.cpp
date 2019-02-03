@@ -311,7 +311,7 @@ void HModel::replaceWithLogicalBasis() {
   for (int col = 0; col < solver_lp_->numCol_; col++) {
     basis_->nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
   }
-  numBasicLogicals = solver_lp_->numRow_;
+  simplex_info_->num_basic_logicals = solver_lp_->numRow_;
 
   populate_WorkArrays();
 
@@ -328,10 +328,10 @@ void HModel::replaceWithNewBasis(const int *XbasicIndex) {
   for (int var = 0; var < numTot; var++) {
     basis_->nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
   }
-  numBasicLogicals = 0;
+  simplex_info_->num_basic_logicals = 0;
   for (int row = 0; row < solver_lp_->numRow_; row++) {
     int var = XbasicIndex[row];
-    if (var >= solver_lp_->numCol_) numBasicLogicals++;
+    if (var >= solver_lp_->numCol_) simplex_info_->num_basic_logicals++;
     basis_->basicIndex_[row] = var;
     basis_->nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
   }
@@ -369,7 +369,7 @@ void HModel::initWithLogicalBasis() {
 
   for (int row = 0; row < solver_lp_->numRow_; row++) basis_->basicIndex_[row] = solver_lp_->numCol_ + row;
   for (int col = 0; col < solver_lp_->numCol_; col++) basis_->nonbasicFlag_[col] = 1;
-  numBasicLogicals = solver_lp_->numRow_;
+  simplex_info_->num_basic_logicals = solver_lp_->numRow_;
 
   allocate_WorkAndBaseArrays();
   populate_WorkArrays();
@@ -534,7 +534,7 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   assert(basisOK);
 #endif
 
-  numBasicLogicals += numAddRow;
+  simplex_info_->num_basic_logicals += numAddRow;
 
   //  rp_basis();
 
@@ -567,7 +567,7 @@ void HModel::setup_for_solve() {
 
   if (!(mlFg_haveMatrixColWise && mlFg_haveMatrixRowWise)) {
     // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
-    if (numBasicLogicals == solver_lp_->numRow_) {
+    if (simplex_info_->num_basic_logicals == solver_lp_->numRow_) {
       matrix_->setup_lgBs(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0]);
       //      printf("Called matrix_->setup_lgBs\n");cout<<flush;
     } else {
@@ -974,10 +974,10 @@ bool HModel::oneNonbasicMoveVsWorkArrays_OK(int var) {
 }
 
 void HModel::setup_numBasicLogicals() {
-  numBasicLogicals = 0;
+  simplex_info_->num_basic_logicals = 0;
   for (int i = 0; i < solver_lp_->numRow_; i++)
-    if (basis_->basicIndex_[i] >= solver_lp_->numCol_) numBasicLogicals += 1;
-  //  printf("Determined numBasicLogicals = %d of %d\n", numBasicLogicals,
+    if (basis_->basicIndex_[i] >= solver_lp_->numCol_) simplex_info_->num_basic_logicals += 1;
+  //  printf("Determined simplex_info_->num_basic_logicals = %d of %d\n", simplex_info_->num_basic_logicals,
   //  solver_lp_->numRow_);
 }
 
@@ -1211,7 +1211,8 @@ void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
 int HModel::computeFactor() {
 #ifdef HiGHSDEV
   double tt0 = 0;
-  if (anInvertTime) tt0 = timer_->getTime();
+  int iClock = simplex_info_->clock_[InvertClock];
+  if (simplex_info_->analyse_invert_time) tt0 = timer_->clockTime[iClock];
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -1229,14 +1230,16 @@ int HModel::computeFactor() {
   simplex_info_->update_count = 0;
 
 #ifdef HiGHSDEV
-  if (anInvertTime) {
-    double invertTime = timer_->getTime() - tt0;
-    totalInverts++;
-    totalInvertTime += invertTime;
+  if (simplex_info_->analyse_invert_time) {
+    int iClock = simplex_info_->clock_[InvertClock];
+    simplex_info_->total_inverts = timer_->clockNumCall[iClock];
+    simplex_info_->total_invert_time = timer_->clockTime[iClock];
+    double invertTime = simplex_info_->total_invert_time - tt0;
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
         "Total INVERT  time = %11.4g\n",
-        totalInverts, simplex_info_->iteration_count, invertTime, totalInvertTime);
+        simplex_info_->total_inverts,
+	simplex_info_->iteration_count, invertTime, simplex_info_->total_invert_time);
   }
 #endif
 
@@ -1572,8 +1575,8 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   simplex_info_->updatedDualObjectiveValue += dlDualObjectiveValue;
   simplex_info_->update_count++;
   // Update the number of basic logicals
-  if (columnOut < solver_lp_->numCol_) numBasicLogicals -= 1;
-  if (columnIn < solver_lp_->numCol_) numBasicLogicals += 1;
+  if (columnOut < solver_lp_->numCol_) simplex_info_->num_basic_logicals -= 1;
+  if (columnIn < solver_lp_->numCol_) simplex_info_->num_basic_logicals += 1;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
   mlFg_haveInvert = 0;
