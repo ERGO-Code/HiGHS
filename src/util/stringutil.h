@@ -21,4 +21,8 @@ std::string &rtrim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 
 std::string &trim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 
+void &is_empty(std::string &str, const std::string &chars = "\t\n\v\f\r ");
+
+int first_word(std::string & str, int start);
+
 #endif

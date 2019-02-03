@@ -65,3 +65,18 @@ std::string &rtrim(std::string &str, const std::string &chars) {
 std::string &trim(std::string &str, const std::string &chars) {
   return ltrim(rtrim(str, chars), chars);
 }
+
+bool &is_empty(std::string &str) {
+  int pos = str.find_first_not_of(chars);
+  if (pos == str.size())
+    return true;
+  return false;
+}
+
+int first_word_end(std::string & str, int start)
+{
+  const std::string chars = "\t\n\v\f\r ";
+  int next_word_start = str.find_first_not_of(start, chars);
+  int next_word_end = str.find_first_of(end, chars);
+  return next_word_end;
+}
