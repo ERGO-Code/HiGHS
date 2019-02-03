@@ -12,47 +12,36 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "FilereaderMps.h"
-#if defined(Boost_FOUND) && !defined(OLD_PARSER)
-#include "HMpsFF.h"
-#endif
-
 #include "HMPSIO.h"
 #include "HighsLp.h"
+
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
 #include "HMpsFF.h"
 #endif
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
-                                                   HighsLp& model) {
-  // todo
+FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
+                                                   HighsLp &model) {
 
-  // Which parser
-  // will be (options.getValue("parser") == MpsParser::new)
-
-  // Initialize arrays
-
-  // call MPSParser::loadProblem(arrays of HighsLp object)
-  int objSense;
-  double objOffset;
+  int status;
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
-  int RtCd = readMPS_FF(filename, model.numRow_, model.numCol_, objSense,
-			objOffset, model.Astart_, model.Aindex_, model.Avalue_,
-			model.colCost_, model.colLower_, model.colUpper_,
-			model.rowLower_, model.rowUpper_);
+  MpsParser parser{};
+  status = parser.loadProblem(filename, model);
 #else
   std::vector<int> integerColumn;
-  int RtCs = readMPS(filename, -1, -1, model.numRow_, model.numCol_, objSense,
-                     objOffset, model.Astart_, model.Aindex_, model.Avalue_,
-                     model.colCost_, model.colLower_, model.colUpper_,
-                     model.rowLower_, model.rowUpper_, integerColumn,
-                     model.row_names_, model.col_names_);
+  status = readMPS(
+      filename, -1, -1, model.numRow_, model.numCol_, model.objSense_,
+      model.objOffset_, model.Astart_, model.Aindex_, model.Avalue_,
+      model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+      model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
 #endif
 
+  if (status)
+    return FilereaderRetcode::PARSEERROR;
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
-                                                  HighsLp& model) {
+FilereaderRetcode FilereaderMps::writeModelToFile(const char *filename,
+                                                  HighsLp &model) {
   std::vector<int> integerColumn;
   int numint = 0;
   int objsense = 1;
@@ -64,7 +53,7 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
-                                                   HighsModel& model) {
+FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
+                                                   HighsModel &model) {
   return FilereaderRetcode::PARSERERROR;
 }
