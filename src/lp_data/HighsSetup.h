@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -18,6 +18,7 @@
 #include <iostream>
 #include <memory>
 
+#include "HConfig.h"
 #include "HApp.h"
 #include "HighsLp.h"
 #include "HighsModelObject.h"
@@ -61,25 +62,23 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp));
 
+  // Options for HighsPrintMessage and HighsLogMessage
+  options_.logfile = stdout;//fopen("HiGHS.log", "w");
+  options_.output = stdout;
+  options_.messageLevel = ML_MINIMAL;
+  HighsSetIO(options_);
+
   //Define clocks
-  HighsTimer timer;
-  int presolveClock = timer.clockDef("Presolve", "Pre");
-  int scaleClock = timer.clockDef("Scale", "Scl");
-  int crashClock = timer.clockDef("Crash", "Csh");
-  int solveClock = timer.clockDef("Solve", "Slv");
-  int postsolveClock = timer.clockDef("Postsolve", "Pst");
-  //  timer.reset();
+  HighsTimer &timer = lps_[0].timer_;
+  timer.startRunHighsClock();
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
-  timer.start(presolveClock);
-
-  PresolveInfo presolve_info(options_.presolveMode, lp);
+  timer.start(timer.presolveClock);
+  PresolveInfo presolve_info(options_.presolve_option, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-
-  timer.stop(presolveClock);
+  timer.stop(timer.presolveClock);
  
   // Run solver.
-  timer.start(solveClock);
   HighsStatus solve_status = HighsStatus::Init;
   switch (presolve_status) {
     case HighsPresolveStatus::NotReduced: {
@@ -113,9 +112,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       return HighsStatus::PresolveError;
     }
   }
-  timer.stop(solveClock);
 
-  timer.start(postsolveClock);
+  timer.start(timer.postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::Optimal) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
@@ -143,12 +141,12 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       solve_status = runSolver(lps_[0]);
     }
   }
-  timer.stop(postsolveClock);
+  timer.stop(timer.postsolveClock);
 
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
-      if (options_.presolveMode == "on") {
+      if (options_.presolve_option == PresolveOption::ON) {
         std::cout << "Reduced problem status: "
                   << HighsStatusToString(solve_status);
         // todo: handle case. Try to solve again with no presolve?
@@ -156,24 +154,49 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       } else {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
-        lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
         lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
       }
     }
   } else {
     // Report in old way so tests pass.
-    lps_[0].hmodel_[0].intOption[INTOPT_PRINT_FLAG] = 1;
     lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
-  // Report times
-  std::vector<int> clockList{presolveClock, scaleClock, crashClock, solveClock, postsolveClock};
-  timer.report(clockList);
+
+  if (lps_[0].reportModelOperationsClock) {
+    // Report times
+    std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
+    timer.report("ModelOperations", clockList);
+  }
+#ifdef HiGHSDEV
+/* todo: do elsewhere once timing is added.
+    bool rpBnchmk = false;
+    if (rpBnchmk) {
+      int numCol = highs_model.lp_.numCol_;
+      int numRow = highs_model.lp_.numRow_;
+      printf(
+          "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
+          "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
+          "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
+          "%20.10e,%10d,%10.3f,"
+          "%d\n",
+          model.getPrStatus(), highs_model.lp_->model_name_.c_str(), Presolve_ArgV,
+          Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
+          presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
+          postsolveTime, simplex_info_.dualObjectiveValue, simplex_info_.iteration_count,
+          model.totalTime, solver.n_wg_DSE_wt);
+      cout << flush;
+    }
+*/
+#endif
+
+  timer.stopRunHighsClock();
 
   return HighsStatus::OK;
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
-  if (options_.presolveMode != "on") return HighsPresolveStatus::NotReduced;
+  if (options_.presolve_option != PresolveOption::ON)
+    return HighsPresolveStatus::NotReduced;
 
   if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;
 
@@ -240,7 +263,7 @@ void HiGHSRun(const char* message = nullptr) {
             << " [date: " << HIGHS_COMPILATION_DATE
             << ", git hash: " << HIGHS_GITHASH << "]"
             << "\n"
-            << "Copyright (c) 2018 ERGO-Code under MIT licence terms.\n\n";
+            << "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n\n";
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   std::cout << "In " << message << std::endl;
@@ -312,57 +335,13 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
 
     // Currently works for only one filename at a time.
     if (result.count("filename")) {
-      std::string filenames = "";
+      std::string filename = "";
       auto& v = result["filename"].as<std::vector<std::string>>();
       if (v.size() > 1) {
-        std::cout << "Multiple files not implemented yet.\n";
+        std::cout << "Multiple files not implemented.\n";
         return HighsStatus::LpError;
       }
-      for (const auto& s : v) {
-        filenames = filenames + s;
-      }
-      options.filenames = filenames;
-    }
-
-    if (result.count("crash")) {
-      std::string data = result["crash"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "off" && data != "ltssf" && data != "ltssf1" &&
-          data != "ltssf2" && data != "ltssf3" && data != "ltssf4" &&
-          data != "ltssf5" && data != "ltssf6" && data != "ltssf7" &&
-          data != "bs" && data != "singts") {
-        std::cout << "Wrong value specified for crash." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.crashMode = data;
-      std::cout << "Crash is set to " << data << ".\n";
-    }
-
-    if (result.count("edge-weight")) {
-      std::string data = result["edge-weight"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "dan" && data != "dvx" && data != "dse" && data != "dse0" &&
-          data != "dse2dvx") {
-        std::cout << "Wrong value specified for edge-weight." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.edWtMode = data;
-      std::cout << "Edge weight is set to " << data << ".\n";
-    }
-
-    if (result.count("price")) {
-      std::string data = result["price"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "row" && data != "col" && data != "rowsw" &&
-          data != "rowswcolsw" && data != "rowultra") {
-        std::cout << "Wrong value specified for price." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.priceMode = data;
-      std::cout << "Price is set to " << data << ".\n";
+      options.filename = v[0];
     }
 
     if (result.count("presolve")) {
@@ -373,7 +352,11 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      options.presolveMode = data;
+      if (data == "on") {
+	options.presolve_option = PresolveOption::ON;
+      } else {
+	options.presolve_option = PresolveOption::OFF;
+      }
       std::cout << "Presolve is set to " << data << ".\n";
     }
 
@@ -384,31 +367,7 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
         std::cout << cxx_options.help({""}) << std::endl;
         exit(0);
       }
-      options.timeLimit = time_limit;
-    }
-
-    if (result.count("partition")) {
-      std::string data = result["partition"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      //      highs_options.setValue("partition", data);
-      std::cout << "Partition is set to " << data << ".\n";
-    }
-
-    if (result.count("sip")) {
-      options.sip = true;
-      std::cout << "Option sip enabled."
-                << ".\n";
-    }
-
-    if (result.count("scip")) {
-      options.scip = true;
-      std::cout << "Option scip enabled."
-                << ".\n";
-    }
-
-    if (result.count("pami")) {
-      options.pami = true;
-      std::cout << "Option pami enabled (parallel solve).\n";
+      options.highs_run_time_limit = time_limit;
     }
 
   } catch (const cxxopts::OptionException& e) {
@@ -416,10 +375,15 @@ HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
     return HighsStatus::OptionsError;
   }
 
-  if (options.filenames.size() == 0) {
-    std::cout << "Please specify filename in .mps or .gz format.\n";
+  if (options.filename.size() == 0) {
+    std::cout << "Please specify filename in .mps|.lp|.ems|.gz format.\n";
     return HighsStatus::LpError;
   }
+
+  // Force column permutation of the LP to be used by the solver if
+  // parallel code is to be used
+  //  if (options.pami || options.sip) {options.permuteLp = true;}
+
 
   return HighsStatus::OK;
 }

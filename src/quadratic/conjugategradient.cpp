@@ -20,11 +20,11 @@ ConjugateGradient::ConjugateGradient(SparseMatrix& A, HVector& b, const HVector&
 }
 
 void printVector(HVector& vec, const char* name) {
-  HighsPrintMessage(ML_DETAILLED, "%s count: %d\n", name, vec.count);
+  HighsPrintMessage(ModelLogLevel::ML_DETAILED, "%s count: %d\n", name, vec.count);
   for(int i=0; i<vec.count; i++) {
-    HighsPrintMessage(ML_DETAILLED, "%d %lf \n", vec.index[i],vec.array[vec.index[i]]);
+    HighsPrintMessage(ModelLogLevel::ML_DETAILED, "%d %lf \n", vec.index[i],vec.array[vec.index[i]]);
   }
-  HighsPrintMessage(ML_DETAILLED, "norm: %lf\n", sqrt(vec.norm2()));
+  HighsPrintMessage(ModelLogLevel::ML_DETAILED, "norm: %lf\n", sqrt(vec.norm2()));
 }
 
 void ConjugateGradient::iterate() {

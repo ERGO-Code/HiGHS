@@ -2,23 +2,28 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*    Written and engineered 2008-2018 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HModelCs.h
- * @brief Constants for reading MPS files
+/**@file util/HUtils.h
+ * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HMODELCS_H_
-#define SIMPLEX_HMODELCS_H_
+#ifndef UTIL_HIGHSUTILS_H_
+#define UTIL_HIGHSUTILS_H_
 
-//const int OBJSENSE_MINIMIZE = 1;
-//const int OBJSENSE_MAXIMIZE = -1;
+#include "HConfig.h"
+#include <vector>
 
-const int MPS_ROW_TY_N = 0;
-const int MPS_ROW_TY_E = 1;
-const int MPS_ROW_TY_L = 2;
-const int MPS_ROW_TY_G = 3;
-#endif /* SIMPLEX_HMODELCS_H_ */
+/**
+ * @brief Logical check of double being +Infinity
+ */
+bool highs_isInfinity(
+		      double val //!< Value being tested against +Infinity
+		      );
+#ifdef HiGHSDEV
+void util_analyseVectorValues(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
+#endif
+#endif // UTIL_HIGHSUTILS_H_

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -52,10 +52,6 @@ class HPreData {
   vector<double> colUpper;
   vector<double> rowLower;
   vector<double> rowUpper;
-
-  // Solution data.
-  int numberIteration;
-  double solveTime;
 
   vector<double> colValue;
   vector<double> colDual;

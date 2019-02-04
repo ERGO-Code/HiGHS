@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -16,88 +16,17 @@
 
 #include "HFactor.h"
 #include "HMatrix.h"
-#include "HTimer.h"
 #include "HighsLp.h"
-#include "HighsUtils.h"
+#include "HighsTimer.h" //For timer_
+#include "HighsRandom.h"
+
 class HVector;
 
 #include <sstream>
 #include <string>
 #include <vector>
 
-const int LP_Status_Unset = -1;
-const int LP_Status_Optimal = 0;
-const int LP_Status_Infeasible = 1;
-const int LP_Status_Unbounded = 2;
-const int LP_Status_Singular = 3;
-const int LP_Status_Failed = 4;
-const int LP_Status_ObjUB = 5;
-const int LP_Status_OutOfTime = 6;
-
-const int invertHint_no = 0;
-const int invertHint_updateLimitReached = 1;
-const int invertHint_syntheticClockSaysInvert = 2;
-const int invertHint_possiblyOptimal = 3;
-const int invertHint_possiblyPrimalUnbounded = 4;
-const int invertHint_possiblyDualUnbounded = 5;
-const int invertHint_possiblySingularBasis = 6;
-const int invertHint_primalInfeasibleInPrimalSimplex = 7;
-const int invertHint_chooseColumnFail = 8;
-
-/** SCIP-like basis status for columns and rows */
-enum HIGHS_BaseStat {
-  HIGHS_BASESTAT_LOWER = 0, /**< (slack) variable is at its lower bound
-                              [including fixed variables]*/
-  HIGHS_BASESTAT_BASIC = 1, /**< (slack) variable is basic */
-  HIGHS_BASESTAT_UPPER = 2, /**< (slack) variable is at its upper bound */
-  HIGHS_BASESTAT_ZERO = 3   /**< free variable is non-basic and set to zero */
-};
-typedef enum HIGHS_BaseStat HIGHS_BASESTAT;
-
-/** HiGHS nonbasicFlag status for columns and rows */
-enum nonbasicFlagStat {
-  NONBASIC_FLAG_TRUE = 1,  // Nonbasic
-  NONBASIC_FLAG_FALSE = 0  // Basic
-};
-
-/** HiGHS nonbasicMove status for columns and rows */
-enum nonbasicMoveStat {
-  NONBASIC_MOVE_UP = 1,   // Free to move (only) up
-  NONBASIC_MOVE_DN = -1,  // Free to move (only) down
-  NONBASIC_MOVE_ZE = 0    // Fixed or free to move up and down
-};
-
-// For INT, DBL and STR options, ensure that ***OPT_COUNT is last since
-// this is the number of options and used to dimension as
-//***Option[***OPT_COUNT]
-enum HIGHS_INT_OPTIONS {
-  INTOPT_PRINT_FLAG = 0,  // 0/>=1 = none/do-print
-  // If 1\in INTOPT_PRINT_FLAG print all "logical" INTOPT_PRINT_FLAG messages
-  // If 2\in INTOPT_PRINT_FLAG print timed PROGRESS
-  // If 4\in INTOPT_PRINT_FLAG print iteration log line
-  INTOPT_TRANSPOSE_FLAG,  // 0/1 = none/do-transpose if possible
-  INTOPT_SCALE_FLAG,      // 0/1 = none/do-scale
-  INTOPT_TIGHT_FLAG,      // 0/1 = none/do-tight
-  INTOPT_PERMUTE_FLAG,    // 0/1 = none/do-permute
-  INTOPT_PERTURB_FLAG,    // 0/1 = none/do-perturb
-  INTOPT_LPITLIM,         // iteration limit
-  INTOPT_COUNT
-};
-
-enum HIGHS_DBL_OPTIONS {
-  DBLOPT_TIME_LIMIT = 0,
-  DBLOPT_PRIMAL_TOL,
-  DBLOPT_DUAL_TOL,
-  DBLOPT_PERTURB_BASE,
-  DBLOPT_PAMI_CUTOFF,
-  DBLOPT_OBJ_UB,  // For SCIP
-  DBLOPT_COUNT
-};
-
-enum HIGHS_STR_OPTIONS {
-  STROPT_PARTITION_FILE = 0,  // name of row partition file
-  STROPT_COUNT
-};
+// After removing HTimer.h add the following
 
 class HModel {
  public:
@@ -126,17 +55,9 @@ class HModel {
   // Method to clear the current model
   void clearModel();
 
-  // Methods to modify the current model. Only scaleModel is currently in use
-  void scaleModel();
-  void scaleCosts();
-  void setup_transposeLP();
-  void setup_tightenBound();
-  void setup_shuffleColumn();
-
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
-  void initScale();
   bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
   bool workArrays_OK(int phase);
   bool allNonbasicMoveVsWorkArrays_OK();
@@ -144,8 +65,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void copy_impliedBoundsToModelBounds();
-  void copy_savedBoundsToModelBounds();
   void mlFg_Clear();
   void mlFg_Update(int mlFg_action);
 #ifdef HiGHSDEV
@@ -176,10 +95,6 @@ class HModel {
   void computeDualInfeasInPrimal(int* dualInfeasCount);
   void correctDual(int* freeInfeasCount);
   void computePrimal();
-  void computeDualObjectiveValue(int phase = 2);
-#ifdef HiGHSDEV
-  double checkDualObjectiveValue(const char *message, int phase = 2);
-#endif
   double computePrObj();
   double computePh2Objective(vector<double>& colPrAct);
   int handleRankDeficiency();
@@ -200,7 +115,6 @@ class HModel {
   // Changes the update method, but only used in HTester.cpp
   void changeUpdate(int updateMethod);
 #endif
-  void setProblemStatus(int status);
 
   // Checking methods
 #ifdef HiGHSDEV
@@ -211,25 +125,12 @@ class HModel {
   int writeToMPS(const char* filename);
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Esoterica!
-  // Initialise the random vectors required by HiGHS
-  void initRandomVec();
 
   // Shift the objective
   void shiftObjectiveValue(double shift);
 
-  // Increment numberIteration (here!) and (possibly) store the pivots for
-  // debugging NLA
-  void recordPivots(int columnIn, int columnOut, double alpha);
-#ifdef HiGHSDEV
-  // Store and write out the pivots for debugging NLA
-  void writePivots(const char* suffix);
-#endif
   //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  // Utilities to get objective, solution and basis: all just copy what's there
-  // with no re-evaluation!
-  double util_getObjectiveValue();
-  
   void util_getPrimalDualValues(vector<double>& XcolValue,
                                 vector<double>& XcolDual,
                                 vector<double>& XrowValue,
@@ -292,20 +193,14 @@ class HModel {
   void util_changeCoeff(int row, int col, const double newval);
   void util_getCoeff(HighsLp lp, int row, int col, double* val);
 
-  // Methods for brief reports - all just return if intOption[INTOPT_PRINT_FLAG]
-  // is false
-  void util_reportMessage(const char* message);
+  // Methods for brief reports
   void util_reportNumberIterationObjectiveValue(int i_v);
   void util_reportSolverOutcome(const char* message);
-  void util_reportSolverProgress();
 
   // Methods for reporting the model, its solution, row and column data and
   // matrix
   void util_reportModelDa(HighsLp lp, const char* filename);
   void util_reportModelStatus();
-#ifdef HiGHSDEV
-  void util_reportModelDense(HighsLp lp);
-#endif
   void util_reportRowVecSol(int nrow, vector<double>& XrowLower,
                             vector<double>& XrowUpper,
                             vector<double>& XrowPrimal,
@@ -320,63 +215,9 @@ class HModel {
 
   void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
-  void util_anPrDuDgn();
   void util_anMlLargeCo(HighsLp lp, const char* message);
-  void util_anMlSol();
+  void util_analyseLpSolution();
 #endif
-
-  //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  // Solving options and scalar solution data section: Sort it out!
-  // Solving options
-  int intOption[INTOPT_COUNT];
-  double dblOption[DBLOPT_COUNT];
-  string strOption[STROPT_COUNT];
-
-  // Utilities, including random number generator
-  HighsUtils utils;
-
-  // The time and timer
-  HTimer timer;
-  double totalTime;
-
-  // Perturbation flag
-  int problemPerturbed;
-
-  // Possibly prevent reinversion on optimality in phase 1 or phase 2
-  const bool InvertIfRowOutNeg = true;
-
-  const bool forbidSuperBasic = true;
-
-  // Number of basic logicals - allows logical basis to be deduced
-  int numBasicLogicals;
-
-  // Booleans to indicate that there are valid implied bounds from
-  // presolve and that original bounds have been over-written with
-  // them
-  bool impliedBoundsPresolve;
-  bool usingImpliedBoundsPresolve = false;
-
-  // Solving result
-  int limitUpdate;
-  int countUpdate;
-
-  // Scalar solution output
-  // Essentials
-  int numberIteration;
-  // Dual objective value
-  double dualObjectiveValue;
-  double updatedDualObjectiveValue;
-#ifdef HiGHSDEV
-  double previousUpdatedDualObjectiveValue;
-  double previousDualObjectiveValue;
-#endif
-#ifdef HiGHSDEV
-  // Analysis of INVERT
-  const bool anInvertTime = false;
-  int totalInverts;
-  double totalInvertTime;
-#endif
-  //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
   // Model and solver status flags
   // First the actions---to be passed as parameters to update_mlFg
@@ -426,7 +267,7 @@ class HModel {
   int mlFg_haveBasicPrimals;
   //
   // The dual objective function value is known
-  int mlFg_haveDualObjectiveValue;
+  //  int mlFg_haveDualObjectiveValue;
   //
   // The data are fresh from rebuild
   int mlFg_haveFreshRebuild;
@@ -438,85 +279,18 @@ class HModel {
   int mlFg_haveSavedBounds;
 
  public:
-  int problemStatus;
-  string modelName;
   
-// Limits on scaling factors
-  const double minAlwScale = 1 / 1024.0;
-  const double maxAlwScale = 1024.0;
-  const double maxAlwCostScale = maxAlwScale;
-  const double minAlwColScale = minAlwScale;
-  const double maxAlwColScale = maxAlwScale;
-  const double minAlwRowScale = minAlwScale;
-  const double maxAlwRowScale = maxAlwScale;
-
-#ifdef HiGHSDEV
-  // Information on large costs
-  const double tlLargeCo = 1e5;
-  int numLargeCo;
-  vector<int> largeCostFlag;
-  double largeCostScale;
-#endif
-
-  // Associated data of original model
-  vector<int> colPermutation;
-  vector<double> colRandomValue;
-
   // The scaled model
-  HighsLp *lp_scaled_;
-  // Part of working model which is only required and populated once a solve is
-  // initiated
+  HighsLp *solver_lp_;
   HMatrix *matrix_;
   HFactor *factor_;
-  HighsSimplexInfo *simplex_;
+  HighsSimplexInfo *simplex_info_;
   HighsBasis *basis_;
   HighsScale *scale_;
   HighsRanging *ranging_;
+  HighsRandom *random_;
+  HighsTimer *timer_;
 
-#ifdef HiGHSDEV
-  vector<int> historyColumnIn;
-  vector<int> historyColumnOut;
-  vector<double> historyAlpha;
-#endif
-
-  // Implied bounds from presolve
-  vector<double> primalColLowerImplied;
-  vector<double> primalColUpperImplied;
-  vector<double> primalRowLowerImplied;
-  vector<double> primalRowUpperImplied;
-
-  vector<double> dualRowLowerImplied;
-  vector<double> dualRowUpperImplied;
-  vector<double> dualColLowerImplied;
-  vector<double> dualColUpperImplied;
-
-  // Copy of original bounds when over-written using implied bounds
-  // from presolve
-  vector<double> SvColLower;
-  vector<double> SvColUpper;
-  vector<double> SvRowLower;
-  vector<double> SvRowUpper;
-
-  // Methods to get scalars and pointers to arrays and other data
-  // structures in the instance of a model
-  //  int getPrStatus() { return problemStatus; }
-  //  int getObjSense() { return lp_scaled_.sense_; }
-  //  const HMatrix* getMatrix() { return &matrix; }
-  //  const HFactor* getFactor() { return &factor; }
-  //  double* getcolCost() { return &lp_scaled_.colCost_[0]; }
-  //  double* getcolLower() { return &lp_scaled_.colLower_[0]; }
-  //  double* getcolUpper() { return &lp_scaled_.colUpper_[0]; }
-  //  double* getrowLower() { return &lp_scaled_.rowLower_[0]; }
-  //  double* getrowUpper() { return &lp_scaled_.rowUpper_[0]; }
-  //  double* getprimalColLowerImplied() { return &primalColLowerImplied[0]; }
-  //  double* getprimalColUpperImplied() { return &primalColUpperImplied[0]; }
-  //  double* getdualRowUpperImplied() { return &dualRowUpperImplied[0]; }
-  //  double* getdualRowLowerImplied() { return &dualRowLowerImplied[0]; }
-  //  double* getprimalRowLowerImplied() { return &primalRowLowerImplied[0]; }
-  //  double* getprimalRowUpperImplied() { return &primalRowUpperImplied[0]; }
-  //  double* getdualColUpperImplied() { return &dualColUpperImplied[0]; }
-  //  double* getdualColLowerImplied() { return &dualColLowerImplied[0]; }
-  //  int* getColPermutation() { return &colPermutation[0]; }
 };
 
 /*

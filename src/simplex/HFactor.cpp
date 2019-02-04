@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -13,7 +13,7 @@
  */
 #include "HFactor.h"
 #include "HConst.h"
-#include "HTimer.h"
+#include "HighsTimer.h"
 #include "HVector.h"
 
 #include <cassert>
@@ -260,7 +260,7 @@ void HFactor::change(int updateMethod_) { updateMethod = updateMethod_; }
 #endif
 
 int HFactor::build() {
-  HTimer timer;
+  HighsTimer timer;
   timer.reset();
   build_syntheticTick = 0;
   build_realTick = timer.getTick();

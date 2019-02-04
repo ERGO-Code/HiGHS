@@ -10,6 +10,7 @@ target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 # Make test executable
 set(TEST_SOURCES
     TestMain.cpp
+    TestFilereader.cpp
     TestSetup.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})

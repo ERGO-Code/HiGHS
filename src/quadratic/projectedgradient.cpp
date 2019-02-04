@@ -191,7 +191,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     //printVector(projectedGradient, "Projected Gradient");
 
     double norm = projectedGradient.norm2();
-    HighsPrintMessage(ML_DETAILLED, "%d: norm %lf\n", iteration, norm);
+    HighsPrintMessage(ModelLogLevel::ML_DETAILED, "%d: norm %lf\n", iteration, norm);
     //if (norm < 10E-7) {
     //  break;
     //}

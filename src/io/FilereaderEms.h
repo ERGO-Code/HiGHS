@@ -7,18 +7,25 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HModelCs.h
- * @brief Constants for reading MPS files
+/**@file io/FilereaderEms.h
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HMODELCS_H_
-#define SIMPLEX_HMODELCS_H_
 
-//const int OBJSENSE_MINIMIZE = 1;
-//const int OBJSENSE_MAXIMIZE = -1;
+#ifndef IO_FILEREADER_EMS_H_
+#define IO_FILEREADER_EMS_H_
 
-const int MPS_ROW_TY_N = 0;
-const int MPS_ROW_TY_E = 1;
-const int MPS_ROW_TY_L = 2;
-const int MPS_ROW_TY_G = 3;
-#endif /* SIMPLEX_HMODELCS_H_ */
+#include <list>
+
+#include "Filereader.h"
+#include "HighsIO.h"  // For messages.
+
+class FilereaderEms : public Filereader {
+ public:
+  FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
+  FilereaderRetcode readModelFromFile(const char* filename, HighsModel& model);
+};
+
+#endif
+

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -17,7 +17,12 @@
 #include "HighsLp.h"
 #include "HighsModel.h"
 
-enum class FilereaderRetcode { OKAY = 0, FILENOTFOUND = 1, PARSERERROR = 2 };
+enum class FilereaderRetcode {
+  OKAY = 0,
+  FILENOTFOUND = 1,
+  PARSERERROR = 2,
+  NOT_IMPLEMENTED = 3
+};
 
 class Filereader {
  public:
@@ -29,10 +34,7 @@ class Filereader {
                                              HighsLp& model) = 0;
   static Filereader* getFilereader(const char* filename);
 
-  virtual ~Filereader() {};
-
- private:
-  static void readLineFromFile(FILE* file, char* buffer, int buffersize);
+  virtual ~Filereader(){};
 };
 
 #endif

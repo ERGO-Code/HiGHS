@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HAPI.h"
+#include "HighsLpUtils.h"
 
 #include <cstring>
 
@@ -73,7 +74,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   model.load_fromArrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
                         XnumRow, XrowLower, XrowUpper, XnumNz, XAstart, XAindex,
                         XAvalue);
-  model.scaleModel();
+  //  scaleLp(highs_model);
 
   int LcBasisStatus = (*basisStatus);
   // printf("solve_fromArrays: LcBasisStatus = %d\n",
@@ -81,7 +82,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   if (LcBasisStatus) {
     //    printf("Basis status is %d\n", LcBasisStatus);
     model.replaceWithNewBasis(basicVariables);
-    //    printf("Number of basic logicals is %d\n", model.numBasicLogicals);
+    //    printf("Number of basic logicals is %d\n", simplex_info_.num_basic_logicals);
   }
 
   HDual solver;
@@ -112,11 +113,11 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
 #ifdef HiGHSDEV
   model.util_reportModelDense(model.lpScaled);
 #endif
-  //  model.util_reportModel();
+  reportLp(model.lpScaled);
   //  model.util_reportModelSolution();
 
-  //  printf("model.problemStatus = %d\n", model.problemStatus);
-  (*probStatus) = model.problemStatus;
+  //  printf("simplex_info_.solution_status = %d\n", simplex_info_.solution_status);
+  //  (*probStatus) = simplex_info_.solution_status;
   (*basisStatus) = LcBasisStatus;
   // Remove any current model
   model.clearModel();

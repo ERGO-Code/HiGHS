@@ -7,18 +7,19 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file simplex/HModelCs.h
- * @brief Constants for reading MPS files
+/**@file lp_data/HighsModelObjectUtil.h
+ * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef SIMPLEX_HMODELCS_H_
-#define SIMPLEX_HMODELCS_H_
+#ifndef LP_DATA_HIGHSMODELOBJECTUTILS_H_
+#define LP_DATA_HIGHSMODELOBJECTUTILS_H_
 
-//const int OBJSENSE_MINIMIZE = 1;
-//const int OBJSENSE_MAXIMIZE = -1;
+#include "HConfig.h"
+#include "HConst.h"
+#include "HighsIO.h"
+#include "HighsModelObject.h"
+//#include "HighsLpUtils.h"
+#include <cassert>
+#include <iostream>
 
-const int MPS_ROW_TY_N = 0;
-const int MPS_ROW_TY_E = 1;
-const int MPS_ROW_TY_L = 2;
-const int MPS_ROW_TY_G = 3;
-#endif /* SIMPLEX_HMODELCS_H_ */
+#endif

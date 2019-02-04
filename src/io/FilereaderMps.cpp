@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -12,6 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "FilereaderMps.h"
+#if defined(Boost_FOUND) && !defined(OLD_PARSER)
+#include "HMpsFF.h"
+#endif
 
 #include "HMPSIO.h"
 #include "HighsLp.h"
@@ -33,15 +36,16 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
   double objOffset;
 #if defined(Boost_FOUND) && !defined(OLD_PARSER)
   int RtCd = readMPS_FF(filename, model.numRow_, model.numCol_, objSense,
-                        objOffset, model.Astart_, model.Aindex_, model.Avalue_,
-                        model.colCost_, model.colLower_, model.colUpper_,
-                        model.rowLower_, model.rowUpper_);
+			objOffset, model.Astart_, model.Aindex_, model.Avalue_,
+			model.colCost_, model.colLower_, model.colUpper_,
+			model.rowLower_, model.rowUpper_);
 #else
   std::vector<int> integerColumn;
   int RtCs = readMPS(filename, -1, -1, model.numRow_, model.numCol_, objSense,
                      objOffset, model.Astart_, model.Aindex_, model.Avalue_,
                      model.colCost_, model.colLower_, model.colUpper_,
-                     model.rowLower_, model.rowUpper_, integerColumn);
+                     model.rowLower_, model.rowUpper_, integerColumn,
+                     model.row_names_, model.col_names_);
 #endif
 
   return FilereaderRetcode::OKAY;

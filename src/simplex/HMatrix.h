@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -196,6 +196,13 @@ class HMatrix {
   std::vector<int> AR_Nend;
   std::vector<int> ARindex;
   std::vector<double> ARvalue;
+
+  // Properties of data held in HMatrix.h: MatrixColWise is the copy
+  // of the constraint matrix, NOT the model's constraint matrix. To
+  // "have" them means that they are correct.
+  int haveMatrixColumnWise;
+  int haveMatrixRowWise;
+
 };
 
 #endif /* SIMPLEX_HMATRIX_H_ */

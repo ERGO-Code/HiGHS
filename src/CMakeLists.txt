@@ -3,15 +3,16 @@
 set(sources
     io/Filereader.cpp
     io/FilereaderLp.cpp
+    io/FilereaderEms.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
  #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
     lp_data/HighsLp.cpp
+    lp_data/HighsLpUtils.cpp
     lp_data/HighsModel.cpp
  #   simplex/HAPI.cpp
-    lp_data/HighsUtils.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -24,7 +25,6 @@ set(sources
     simplex/HModel.cpp
     simplex/HPrimal.cpp
     simplex/HRanging.cpp
-    simplex/HSort.cpp
  #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
@@ -38,12 +38,16 @@ set(sources
     quadratic/projectedgradient.cpp
     quadratic/conjugategradient.cpp
     quadratic/SparseMatrix.cpp
+    util/HighsSort.cpp
+    util/HighsUtils.cpp
+    util/stringutil.cpp
 )
 
 set(headers
     #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
+    io/FilereaderEms.h
     io/FilereaderMps.h
 #    io/HinOut.h
     io/HMpsFF.h
@@ -54,9 +58,9 @@ set(headers
     io/LoadProblem.h
     lp_data/HConst.h
     lp_data/HighsLp.h
-    lp_data/HighsModelBuilder.h
-    lp_data/HighsUtils.h
+    lp_data/HighsLpUtils.h
     lp_data/HighsModelObject.h
+    lp_data/HighsModelObjectUtil.h
     simplex/HApp.h
     simplex/HConst.h
     simplex/HCrash.h
@@ -69,11 +73,8 @@ set(headers
     simplex/HPrimal.h
     simplex/HRanging.h
     simplex/HSimplex.h
-    simplex/HSort.h
-    simplex/Scaling.h
+    simplex/SimplexConst.h
     presolve/Presolve.h
-    simplex/HighsTimer.h
-    simplex/HTimer.h
     simplex/HTimerPre.h
     simplex/HVector.h
     test/KktCheck.h
@@ -83,6 +84,9 @@ set(headers
     quadratic/conjugategradient.h
     quadratic/HighsQp.h
     quadratic/SparseMatrix.h
+    util/HighsSort.h
+    util/HighsTimer.h
+    util/HighsUtils.h
 )
 
 
@@ -125,6 +129,8 @@ export(TARGETS libhighs
   FILE "${CMAKE_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree
+#Either list all the src/* directories here, or put explicit paths in all the #include statements
+#M reckons that the latter is more transparent, and I'm incliuned to agree.
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -16,6 +16,7 @@
 #include "HModelCs.h"
 #include "HighsUtils.h"
 #include "HighsLp.h"
+#include "stringutil.h"
 
 using std::map;
 
@@ -27,7 +28,8 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
             vector<int>& Aindex, vector<double>& Avalue,
             vector<double>& colCost, vector<double>& colLower,
             vector<double>& colUpper, vector<double>& rowLower,
-            vector<double>& rowUpper, vector<int>& integerColumn) {
+            vector<double>& rowUpper, vector<int>& integerColumn,
+            vector<string>& row_names, vector<string>& col_names) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -65,6 +67,8 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   printf("readMPS: Read NAME    OK\n");
 #endif
 
+  row_names.clear();
+  col_names.clear();
   vector<char> rowType;
   map<double, int> rowIndex;
   double objName = 0;
@@ -75,6 +79,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
       if (mxNumRow > 0 && numRow >= mxNumRow) return 2;
       rowType.push_back(flag[0]);
       rowIndex[data[1]] = numRow++;
+      std::string name(&line[4], &line[4] + 8);
+      name = trim(name);
+      row_names.push_back(name);
     }
   }
 #ifdef HiGHSDEV
@@ -92,6 +99,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
       colCost.push_back(0);
       Astart.push_back(Aindex.size());
       integerColumn.push_back(integerCol);
+      std::string name(&line[4], &line[4] + 8);
+      name = trim(name);
+      col_names.push_back(name);
     }
     if (data[2] == objName)  // Cost
       colCost.back() = data[0];

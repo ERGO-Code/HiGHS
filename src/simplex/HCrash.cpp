@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -14,7 +14,7 @@
 #include "HCrash.h"
 #include "HMatrix.h"
 #include "HModel.h"
-#include "HSort.h"
+#include "HighsSort.h"
 #include "HConst.h"
 
 #include <cassert>
@@ -30,7 +30,7 @@ using std::cout;
 using std::flush;
 
 void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
-  lp_ = &highs_model_object.lp_scaled_;
+  lp_ = &highs_model_object.solver_lp_;
   basis_ = &highs_model_object.basis_;
   matrix_ = &highs_model_object.matrix_;
   model_ = &highs_model_object.hmodel_[0];
@@ -671,7 +671,6 @@ void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
 }
 
 void HCrash::ltssf_iz_mode(int Crash_Mode) {
-  // TODO Would be good to be able to call this from HDual::setCrash
   crsh_fn_cf_pri_v = 1;
   crsh_fn_cf_k = 10;
   alw_al_bs_cg = false;
