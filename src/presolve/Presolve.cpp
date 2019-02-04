@@ -1028,7 +1028,8 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
       countRemovedCols[WEAKLY_DOMINATED_COLS]++;
       timer.recordFinish(WEAKLY_DOMINATED_COLS);
-    } else if (abs(colCost.at(j) - e) < tol &&
+    } else if (e > -HIGHS_CONST_INF &&
+               abs(colCost.at(j) - e) < tol &&
                colUpper.at(j) < HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colUpper.at(j));
