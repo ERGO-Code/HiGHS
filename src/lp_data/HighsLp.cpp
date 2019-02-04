@@ -70,11 +70,17 @@ HighsInputStatus checkLp(const HighsLp& lp) {
 
   if ((int)lp.Astart_.size() != lp.numCol_ + 1)
     return HighsInputStatus::ErrorMatrixStart;
+  // Was lp.Astart_[i] >= lp.nnz_ (below), but this is wrong when the
+  // last column is empty. Need to check as follows, and also check
+  // the entry lp.Astart_[lp.numCol_] > lp.nnz_
   for (int i = 0; i < lp.numCol_; i++) {
-    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] >= lp.nnz_ ||
+    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp.nnz_ ||
         lp.Astart_[i] < 0)
       return HighsInputStatus::ErrorMatrixStart;
   }
+  if (lp.Astart_[lp.numCol_] > lp.nnz_ ||
+      lp.Astart_[lp.numCol_] < 0)
+      return HighsInputStatus::ErrorMatrixStart;
 
   for (int k = 0; k < lp.nnz_; k++) {
     if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
