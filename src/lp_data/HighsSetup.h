@@ -114,9 +114,9 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     }
   }
 
-  timer.start(timer.postsolveClock);
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::Optimal) {
+    timer.start(timer.postsolveClock);
     if (presolve_status == HighsPresolveStatus::Reduced) {
       presolve_info.reduced_solution_ = lps_[1].solution_;
       presolve_info.presolve_[0].setBasisInfo(
@@ -127,6 +127,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
       std::cout << "Postsolve finished.\n";
+      timer.stop(timer.postsolveClock);
 
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.
@@ -142,7 +143,6 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       solve_status = runSolver(lps_[0]);
     }
   }
-  timer.stop(timer.postsolveClock);
 
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||

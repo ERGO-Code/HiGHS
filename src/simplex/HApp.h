@@ -67,7 +67,6 @@ HighsStatus solveSimplex(
   HModel& model = highs_model.hmodel_[0];
   HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
 
-  timer.start(timer.solveClock);
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
   HDual dual_solver(highs_model);
@@ -76,6 +75,7 @@ HighsStatus solveSimplex(
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
     model.initFromNonbasic();
+    timer.start(timer.solveClock);
     dual_solver.solve();
     timer.stop(timer.solveClock);
     return LpStatusToHighsStatus(simplex_info_.solution_status);
@@ -84,9 +84,12 @@ HighsStatus solveSimplex(
   // Crash, if HighsModelObject has basis information.
   if (simplex_info_.crash_strategy != SimplexCrashStrategy::OFF) {
     HCrash crash;
+    timer.start(timer.crashClock);
     crash.crash(highs_model, 0);
+    timer.stop(timer.crashClock);
   }
 
+  timer.start(timer.solveClock);
   // Solve, depending on the options.
   // Parallel.
   if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
