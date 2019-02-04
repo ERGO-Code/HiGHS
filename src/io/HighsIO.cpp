@@ -6,7 +6,7 @@
 
 void HighsPrintMessage(unsigned int level, const char* format, ...) {
   FILE* output = stdout; // TODO: read from options
-  int messageLevel = 1; // TODO: read from options
+  int messageLevel = 2; // TODO: read from options
 
   if (messageLevel & level) {
     va_list argptr;

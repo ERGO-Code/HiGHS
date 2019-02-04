@@ -35,6 +35,9 @@ set(sources
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    quadratic/projectedgradient.cpp
+    quadratic/conjugategradient.cpp
+    quadratic/SparseMatrix.cpp
 )
 
 set(headers
@@ -76,6 +79,10 @@ set(headers
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    quadratic/projectedgradient.h
+    quadratic/conjugategradient.h
+    quadratic/HighsQp.h
+    quadratic/SparseMatrix.h
 )
 
 

@@ -31,6 +31,12 @@ class HVector {
   void setup(int size_  //!< Dimension of the vector to be initialised
   );
 
+  HVector();
+
+  HVector(int length);
+
+  HVector(vector<double> vec, int length);
+
   /**
    * @brief Clear the vector
    *
@@ -127,6 +133,18 @@ class HVector {
    * @brief Compute the squared 2-norm of the vector
    */
   double norm2();
+
+  /**
+   * @brief Compute the scalar product with another vector
+   */
+  double scalarProduct(const HVector* other //!< other HVector to take scalar product with
+  );
+
+  /**
+   * @brief scales the vector by a constant factor
+   */
+  void scale(double factor //!< factor to scale vecto with
+  );
 
   /**
    * @brief Add a multiple pivotX of *pivot into this vector,
