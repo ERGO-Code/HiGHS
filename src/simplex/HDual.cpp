@@ -265,10 +265,10 @@ void HDual::solve(int num_threads) {
   if (simplex_info.analyseSimplexIterations) iterateRpAn();
   // Report the ticks before primal
   if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
-    if (simplex_info.reportSimplexInnerClock) {
+    if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportDualSimplexInnerClock(workHMO);
     }
-    if (simplex_info.reportSimplexOuterClock) {
+    if (simplex_info.report_simplex_outer_clock) {
       simplex_timer.reportDualSimplexIterateClock(workHMO);
       simplex_timer.reportDualSimplexOuterClock(workHMO);
     }
@@ -354,9 +354,9 @@ void HDual::solve(int num_threads) {
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
-  if (simplex_info.reportSimplexPhasesClock) {
+  if (simplex_info.report_simplex_phases_clock) {
     simplex_timer.reportSimplexTotalClock(workHMO);
-    simplex_timer.reportSimplexPhasesClock(workHMO);
+    simplex_timer.report_simplex_phases_clock(workHMO);
   }
 #endif
 
@@ -365,22 +365,22 @@ void HDual::solve(int num_threads) {
     model->util_analyseLpSolution();
   }
   if (simplex_info.analyse_invert_time) {
-    double currentRunHighsTime = timer.readRunHighsClock();
+    double current_run_highs_time = timer.readRunHighsClock();
     int iClock = simplex_info.clock_[InvertClock];
     simplex_info.total_inverts = timer.clock_num_call[iClock];
     simplex_info.total_invert_time = timer.clock_time[iClock];
     
     printf(
 	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
-	   simplex_info.total_inverts, simplex_info.total_invert_time, currentRunHighsTime);
-    if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / currentRunHighsTime);
+	   simplex_info.total_inverts, simplex_info.total_invert_time, current_run_highs_time);
+    if (current_run_highs_time > 0.001) {
+      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / current_run_highs_time);
     } else {
       printf("\n");
     }
   }
   if (simplex_info.analyseRebuildTime) {
-    double currentRunHighsTime = timer.readRunHighsClock();
+    double current_run_highs_time = timer.readRunHighsClock();
     HighsClockRecord totalRebuildClock;
     timer.clockInit(totalRebuildClock);
     timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
@@ -389,9 +389,9 @@ void HDual::solve(int num_threads) {
     double totalRebuildTime = 0;
     printf(
         "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
-        totalRebuildTime, totalRebuilds, currentRunHighsTime);
-    if (currentRunHighsTime > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / currentRunHighsTime);
+        totalRebuildTime, totalRebuilds, current_run_highs_time);
+    if (current_run_highs_time > 0.001) {
+      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
     } else {
       printf("\n");
     }
@@ -569,8 +569,8 @@ void HDual::solve_phase1() {
         break;
       }
     }
-    double currentRunHighsTime = timer.readRunHighsClock();
-    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
+    double current_run_highs_time = timer.readRunHighsClock();
+    if (current_run_highs_time > simplex_info.highs_run_time_limit) {
       SolveBailout = true;
       simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
@@ -677,8 +677,8 @@ void HDual::solve_phase2() {
       SolveBailout = true;
       break;
     }
-    double currentRunHighsTime = timer.readRunHighsClock();
-    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
+    double current_run_highs_time = timer.readRunHighsClock();
+    if (current_run_highs_time > simplex_info.highs_run_time_limit) {
       simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       SolveBailout = true;
       break;

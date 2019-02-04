@@ -56,10 +56,10 @@ class HSimplex {
     // Set values of internal options
     
     // Options for reporting timing
-    simplex_info_.reportSimplexInnerClock = true;//false;
-    simplex_info_.reportSimplexOuterClock = false;
+    simplex_info_.report_simplex_inner_clock = true;//false;
+    simplex_info_.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
-    simplex_info_.reportSimplexPhasesClock = true;//false;
+    simplex_info_.report_simplex_phases_clock = true;//false;
     // Option for analysing simplex iterations
     simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = true;//false
@@ -766,8 +766,8 @@ class HSimplex {
     string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
     ofstream output(filename.c_str());
     int count = historyColumnIn.size();
-    double currentRunHighsTime = timer_->readRunHighsClock();
-    output << solver_lp_->model_name_ << " " << count << "\t" << currentRunHighsTime << endl;
+    double current_run_highs_time = timer_->readRunHighsClock();
+    output << solver_lp_->model_name_ << " " << count << "\t" << current_run_highs_time << endl;
     output << setprecision(12);
     for (int i = 0; i < count; i++) {
       output << historyColumnIn[i] << "\t";

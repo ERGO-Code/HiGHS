@@ -125,51 +125,51 @@ class SimplexTimer {
     simplex_info.clock_[IteratePrimalRebuildClock] = timer.clock_def("PRIMAL REBUILD", "PRB");
   };
   
-  void reportSimplexClockList(const char *grepStamp, std::vector<int> simplexClockList, HighsModelObject & model_object) {
+  void report_simplex_clock_list(const char *grepStamp, std::vector<int> simplex_clock_list, HighsModelObject & model_object) {
     HighsTimer & timer = model_object.timer_;
     HighsSimplexInfo & simplex_info = model_object.simplex_info_;
-    int simplexClockListSize = simplexClockList.size();
+    int simplex_clock_list_size = simplex_clock_list.size();
     std::vector<int> clockList;
-    clockList.resize(simplexClockListSize);
-    for (int en=0; en<simplexClockListSize; en++) {
-      clockList[en] = simplex_info.clock_[simplexClockList[en]];
+    clockList.resize(simplex_clock_list_size);
+    for (int en=0; en<simplex_clock_list_size; en++) {
+      clockList[en] = simplex_info.clock_[simplex_clock_list[en]];
     }
     timer.report_tl(grepStamp, clockList, 0.0);
   };
   
   void reportSimplexTotalClock(HighsModelObject & model_object) {
-    std::vector<int> simplexClockList{
+    std::vector<int> simplex_clock_list{
       SimplexTotalClock
 	};
-    reportSimplexClockList("SimplexTotal", simplexClockList, model_object);
+    report_simplex_clock_list("SimplexTotal", simplex_clock_list, model_object);
   };
   
-  void reportSimplexPhasesClock(HighsModelObject & model_object) {
-    std::vector<int> simplexClockList{
+  void report_simplex_phases_clock(HighsModelObject & model_object) {
+    std::vector<int> simplex_clock_list{
       SimplexIzDseWtClock,
 	SimplexDualPhase1Clock, SimplexDualPhase2Clock, SimplexPrimalPhase2Clock
 	};
-    reportSimplexClockList("SimplexPhases", simplexClockList, model_object);
+    report_simplex_clock_list("SimplexPhases", simplex_clock_list, model_object);
   };
   
   void reportDualSimplexIterateClock(HighsModelObject & model_object) {
-    std::vector<int> simplexClockList{
+    std::vector<int> simplex_clock_list{
       IterateClock
 	};
-    reportSimplexClockList("SimplexIterate", simplexClockList, model_object);
+    report_simplex_clock_list("SimplexIterate", simplex_clock_list, model_object);
   };
   
   void reportDualSimplexOuterClock(HighsModelObject & model_object) {
-    std::vector<int> simplexClockList{
+    std::vector<int> simplex_clock_list{
       IterateDualRebuildClock, IterateChuzrClock, IterateChuzcClock,
 	IterateFtranClock, IterateVerifyClock, IterateDualClock,
 	IteratePrimalClock, IterateDevexIzClock, IteratePivotsClock
 	};
-    reportSimplexClockList("SimplexOuter", simplexClockList, model_object);
+    report_simplex_clock_list("SimplexOuter", simplex_clock_list, model_object);
   };
 
   void reportDualSimplexInnerClock(HighsModelObject & model_object) {
-    std::vector<int> simplexClockList{
+    std::vector<int> simplex_clock_list{
       InvertClock, PermWtClock, ComputeDualClock, 
 	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
 	ComputeDuobjClock, ReportInvertClock, Chuzr1Clock, 
@@ -180,7 +180,7 @@ class SimplexTimer {
 	UpdatePrimalClock, UpdateWeightClock, DevexIzClock, 
 	UpdatePivotsClock, UpdateFactorClock, UpdateMatrixClock
 	};
-    reportSimplexClockList("SimplexInner", simplexClockList, model_object);
+    report_simplex_clock_list("SimplexInner", simplex_clock_list, model_object);
   };
   
 };

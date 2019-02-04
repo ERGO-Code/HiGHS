@@ -268,9 +268,9 @@ struct HighsSimplexInfo {
   // Internal options - can't be changed externally
 
   // Options for reporting timing
-  bool reportSimplexInnerClock;
-  bool reportSimplexOuterClock;
-  bool reportSimplexPhasesClock;
+  bool report_simplex_inner_clock;
+  bool report_simplex_outer_clock;
+  bool report_simplex_phases_clock;
 #ifdef HiGHSDEV
   // Option for analysing simplex iterations, INVERT time and rebuild time
   bool analyseLp;

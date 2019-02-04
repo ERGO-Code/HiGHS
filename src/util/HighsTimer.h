@@ -267,7 +267,7 @@ class HighsTimer {
 	      const char *grep_stamp,     //!< Character string used to extract output using grep
 	      std::vector<int>&clock_list //!< List of indices to report
   ) {
-    double tl_per_cent_report = 0.0;//1.0;
+    double tl_per_cent_report = 1.0;
     report_tl(grep_stamp, clock_list, tl_per_cent_report);
   }
 
