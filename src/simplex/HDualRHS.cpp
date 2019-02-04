@@ -59,7 +59,7 @@ void HDualRHS::choose_normal(int *chIndex) {
 
   // Since choose_normal calls itself, only start the clock if it's not
   // currently running
-  bool keepTimerRunning = timer.clockStart[simplex_info.clock_[Chuzr1Clock]] < 0;
+  bool keepTimerRunning = timer.clock_start[simplex_info.clock_[Chuzr1Clock]] < 0;
   if (!keepTimerRunning) {
     timer.start(simplex_info.clock_[Chuzr1Clock]);
   }

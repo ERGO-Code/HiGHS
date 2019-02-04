@@ -391,7 +391,7 @@ class HSimplex {
     // Reset all scaling to 1
     HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
     HighsTimer &timer = highs_model.timer_;
-    timer.start(timer.scaleClock);
+    timer.start(timer.scale_clock);
     scaleHighsModelInit(highs_model);
     int numCol = highs_model.solver_lp_.numCol_;
     int numRow = highs_model.solver_lp_.numRow_;
@@ -430,7 +430,7 @@ class HSimplex {
 #endif
       // Possibly scale the costs
       if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
-      timer.stop(timer.scaleClock);
+      timer.stop(timer.scale_clock);
       simplex_info_.scaled_solver_lp = true;
       return;
     }
@@ -544,7 +544,7 @@ class HSimplex {
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
     simplex_info_.scaled_solver_lp = true;
-    timer.stop(timer.scaleClock);
+    timer.stop(timer.scale_clock);
   }
   
   // PERMUTE:

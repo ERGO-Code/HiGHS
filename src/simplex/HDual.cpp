@@ -367,8 +367,8 @@ void HDual::solve(int num_threads) {
   if (simplex_info.analyse_invert_time) {
     double currentRunHighsTime = timer.readRunHighsClock();
     int iClock = simplex_info.clock_[InvertClock];
-    simplex_info.total_inverts = timer.clockNumCall[iClock];
-    simplex_info.total_invert_time = timer.clockTime[iClock];
+    simplex_info.total_inverts = timer.clock_num_call[iClock];
+    simplex_info.total_invert_time = timer.clock_time[iClock];
     
     printf(
 	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
@@ -845,7 +845,7 @@ void HDual::rebuild() {
 #ifdef HiGHSDEV
   if (simplex_info.analyseRebuildTime) {
     int iClock = simplex_info.clock_[IterateDualRebuildClock];
-    int totalRebuilds = timer.clockNumCall[iClock];
+    int totalRebuilds = timer.clock_num_call[iClock];
     double totalRebuildTime = timer.read(iClock);
     printf(
 	   "Dual  Ph%-2d rebuild %4d (%1d) on iteration %9d: Total rebuild time = %11.4g\n",

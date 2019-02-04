@@ -74,10 +74,10 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   timer.startRunHighsClock();
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
-  timer.start(timer.presolveClock);
+  timer.start(timer.presolve_clock);
   PresolveInfo presolve_info(options_.presolve_option, lp);
   HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-  timer.stop(timer.presolveClock);
+  timer.stop(timer.presolve_clock);
  
   // Run solver.
   HighsStatus solve_status = HighsStatus::Init;
@@ -116,7 +116,6 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 
   // Postsolve. Does nothing if there were no reductions during presolve.
   if (solve_status == HighsStatus::Optimal) {
-    timer.start(timer.postsolveClock);
     if (presolve_status == HighsPresolveStatus::Reduced) {
       presolve_info.reduced_solution_ = lps_[1].solution_;
       presolve_info.presolve_[0].setBasisInfo(
@@ -124,10 +123,11 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
           lps_[1].basis_info_.nonbasic_move);
     }
 
+    timer.start(timer.postsolve_clock);
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+    timer.stop(timer.postsolve_clock);
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
       std::cout << "Postsolve finished.\n";
-      timer.stop(timer.postsolveClock);
 
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.
@@ -165,7 +165,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
 
   if (lps_[0].reportModelOperationsClock) {
     // Report times
-    std::vector<int> clockList{timer.presolveClock, timer.scaleClock, timer.crashClock, timer.solveClock, timer.postsolveClock};
+    std::vector<int> clockList{timer.presolve_clock, timer.scale_clock, timer.crash_clock, timer.solve_clock, timer.postsolve_clock};
     timer.report("ModelOperations", clockList);
   }
 #ifdef HiGHSDEV

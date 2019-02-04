@@ -148,7 +148,7 @@ void HPrimal::primalRebuild() {
 #ifdef HiGHSDEV
   if (simplex_info.analyseRebuildTime) {
     int iClock = simplex_info.clock_[IteratePrimalRebuildClock];
-    int totalRebuilds = timer.clockNumCall[iClock];
+    int totalRebuilds = timer.clock_num_call[iClock];
     double totalRebuildTime = timer.read(iClock);
     printf(
         "Primal     rebuild %d (%1d) on iteration %9d: Total rebuild time %g\n",

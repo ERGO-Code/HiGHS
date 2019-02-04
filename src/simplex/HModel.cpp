@@ -1212,7 +1212,7 @@ int HModel::computeFactor() {
 #ifdef HiGHSDEV
   double tt0 = 0;
   int iClock = simplex_info_->clock_[InvertClock];
-  if (simplex_info_->analyse_invert_time) tt0 = timer_->clockTime[iClock];
+  if (simplex_info_->analyse_invert_time) tt0 = timer_->clock_time[iClock];
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -1232,8 +1232,8 @@ int HModel::computeFactor() {
 #ifdef HiGHSDEV
   if (simplex_info_->analyse_invert_time) {
     int iClock = simplex_info_->clock_[InvertClock];
-    simplex_info_->total_inverts = timer_->clockNumCall[iClock];
-    simplex_info_->total_invert_time = timer_->clockTime[iClock];
+    simplex_info_->total_inverts = timer_->clock_num_call[iClock];
+    simplex_info_->total_invert_time = timer_->clock_time[iClock];
     double invertTime = simplex_info_->total_invert_time - tt0;
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
