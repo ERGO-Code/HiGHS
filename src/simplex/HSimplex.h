@@ -56,10 +56,10 @@ class HSimplex {
     // Set values of internal options
     
     // Options for reporting timing
-    simplex_info_.reportSimplexInnerClock = false;
+    simplex_info_.reportSimplexInnerClock = true;//false;
     simplex_info_.reportSimplexOuterClock = false;
 #ifdef HiGHSDEV
-    simplex_info_.reportSimplexPhasesClock = false;
+    simplex_info_.reportSimplexPhasesClock = true;//false;
     // Option for analysing simplex iterations
     simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = true;//false

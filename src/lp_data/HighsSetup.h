@@ -52,6 +52,7 @@ class Highs {
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
   HighsStatus runSolver(HighsModelObject& model);
+  HighsTimer timer;
 };
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -60,7 +61,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   // todo: handle printing messages with HighsPrintMessage
 
   // Not solved before, so create an instance of HighsModelObject.
-  lps_.push_back(HighsModelObject(lp));
+  lps_.push_back(HighsModelObject(lp, timer));
 
   // Options for HighsPrintMessage and HighsLogMessage
   options_.logfile = stdout;//fopen("HiGHS.log", "w");
@@ -89,7 +90,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       HighsLp& reduced_lp = presolve_info.getReducedProblem();
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
-      lps_.push_back(HighsModelObject(reduced_lp));
+      lps_.push_back(HighsModelObject(reduced_lp, timer));
       solve_status = runSolver(lps_[1]);
       break;
     }

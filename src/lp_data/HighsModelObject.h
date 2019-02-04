@@ -27,9 +27,11 @@ struct BasisInfo {
 // include essential data.
 class HighsModelObject {
 public:
-  HighsModelObject(HighsLp& lp) : lp_(lp) {}
+ HighsModelObject(HighsLp& lp, HighsTimer& timer) : lp_(lp),
+    timer_(timer) {}
 
   HighsLp& lp_;
+  HighsTimer& timer_;
 
   HighsLp solver_lp_;
   HighsSimplexInfo simplex_info_;
@@ -39,7 +41,6 @@ public:
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
-  HighsTimer timer_;
   HighsRandom random_;
 
 
@@ -49,7 +50,7 @@ public:
   bool permutedLp = false;
   bool tightenedLp = false;
 
-  bool reportModelOperationsClock = false;
+  bool reportModelOperationsClock = true;
 
   //
   // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To

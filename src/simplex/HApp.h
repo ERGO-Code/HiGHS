@@ -77,6 +77,7 @@ HighsStatus solveSimplex(
   if (opt.clean_up) {
     model.initFromNonbasic();
     dual_solver.solve();
+    timer.stop(timer.solveClock);
     return LpStatusToHighsStatus(simplex_info_.solution_status);
   }
 
