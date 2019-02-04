@@ -60,6 +60,7 @@ const double PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
 const double DUAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
 const double DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT = HIGHS_CONST_INF;
 const int SIMPLEX_ITERATION_LIMIT_DEFAULT = HIGHS_CONST_I_INF;
+const int SIMPLEX_UPDATE_LIMIT_DEFAULT = 5000;
 
 /** SCIP-like basis status for columns and rows. Don't use enum
     class since they are used in conditional statements */

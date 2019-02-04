@@ -45,6 +45,7 @@ class HSimplex {
     simplex_info_.dual_objective_value_upper_bound = opt.dual_objective_value_upper_bound;
     simplex_info_.perturb_costs = opt.simplex_perturb_costs;
     simplex_info_.iteration_limit = opt.simplex_iteration_limit;
+    simplex_info_.update_limit = opt.simplex_update_limit;
     simplex_info_.highs_run_time_limit = opt.highs_run_time_limit;
     
     simplex_info_.transpose_solver_lp = opt.transpose_solver_lp;
@@ -63,7 +64,7 @@ class HSimplex {
     simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = true;//false
     simplex_info_.analyseLpSolution = false;
-    simplex_info_.analyseInvertTime = false;
+    simplex_info_.analyse_invert_time = false;
     simplex_info_.analyseRebuildTime = false;
 #endif
     
@@ -748,11 +749,11 @@ class HSimplex {
   }
 
   /*
-  // Increment numberIteration (here!) and (possibly) store the pivots for
+  // Increment iteration count (here!) and (possibly) store the pivots for
   // debugging NLA
   void record_pivots(int columnIn, int columnOut, double alpha) {
     // NB This is where the iteration count is updated!
-    if (columnIn >= 0) numberIteration++;
+    if (columnIn >= 0) simplex_info_.iteration_count++;
 #ifdef HiGHSDEV
     historyColumnIn.push_back(columnIn);
     historyColumnOut.push_back(columnOut);
