@@ -356,9 +356,13 @@ void HPrimal::primalUpdate() {
   // Update model->factor basis
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   model->updateMatrix(columnIn, columnOut);
-  if (++simplex_info.update_count >= simplex_info.update_limit)
+  // Used to be ++countUpdate because, previously HModel::countUpdate
+  // was updated in updatePivots, leaving HPrimal::countUpdate
+  // unchanged. Now everything based on simplex_info.update_count, the
+  // increment here is wrong.
+  if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;  // Was true;
-
+  }
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   simplex_info.iteration_count++;
