@@ -10,6 +10,7 @@
 #include "Filereader.h"
 #include "FilereaderLp.h"
 #include "FilereaderMps.h"
+#include "FilereaderEms.h"
 
 #include <string.h>
 #include <stdexcept>
@@ -27,6 +28,8 @@ Filereader* Filereader::getFilereader(const char* filename) {
     reader = new FilereaderMps();
   } else if (strcmp(extension, "lp") == 0) {
     reader = new FilereaderLp();
+  } else if (strcmp(extension, "ems") == 0) {
+    reader = new FilereaderEms();
   } else {
     // use .mps filereader by default
     reader = new FilereaderMps();

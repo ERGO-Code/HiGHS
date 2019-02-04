@@ -7,34 +7,25 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/Filereader.h
+/**@file io/FilereaderEms.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef IO_FILEREADER_H_
-#define IO_FILEREADER_H_
 
-#include "HighsLp.h"
-#include "HighsModel.h"
+#ifndef IO_FILEREADER_EMS_H_
+#define IO_FILEREADER_EMS_H_
 
-enum class FilereaderRetcode {
-  OKAY = 0,
-  FILENOTFOUND = 1,
-  PARSERERROR = 2,
-  NOT_IMPLEMENTED = 3
-};
+#include <list>
 
-class Filereader {
+#include "Filereader.h"
+#include "HighsIO.h"  // For messages.
+
+class FilereaderEms : public Filereader {
  public:
-  virtual FilereaderRetcode readModelFromFile(const char* filename,
-                                              HighsLp& model) = 0;
-  virtual FilereaderRetcode readModelFromFile(const char* filename,
-                                              HighsModel& model) = 0;
-  virtual FilereaderRetcode writeModelToFile(const char* filename,
-                                             HighsLp& model) = 0;
-  static Filereader* getFilereader(const char* filename);
-
-  virtual ~Filereader(){};
+  FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
+  FilereaderRetcode readModelFromFile(const char* filename, HighsModel& model);
 };
 
 #endif
+
