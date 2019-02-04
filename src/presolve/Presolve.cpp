@@ -316,7 +316,9 @@ void Presolve::removeDoubletonEquations() {
   for (int row = 0; row < numRow; row++)
     if (flagRow.at(row))
       if (nzRow.at(row) == 2 &&
-          abs(rowLower.at(row) - rowUpper.at(row)) < tol) {
+          rowLower[row] > -HIGHS_CONST_INF &&
+          rowUpper[row] < HIGHS_CONST_INF &&
+          abs(rowLower[row] - rowUpper[row]) < tol) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -1014,7 +1016,9 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
-    if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HIGHS_CONST_INF) {
+    if (d < HIGHS_CONST_INF &&
+        abs(colCost.at(j) - d) < tol &&
+        colLower.at(j) > -HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colLower.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
