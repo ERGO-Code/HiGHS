@@ -53,8 +53,6 @@ class HPrimal {
   int numTot;
 
   // Pivot related
-  int limitUpdate;
-  int countUpdate;
   int invertHint;
   int columnIn;
   int rowOut;

@@ -545,10 +545,6 @@ class HDual {
   double alphaRow;
   double numericalTrouble;
 
-  // Iteration counts
-  int n_ph1_du_it;
-  int n_ph2_du_it;
-  int n_pr_it;
   // Partitioned coefficient matrix
   int slice_num;
   int slice_PRICE;
