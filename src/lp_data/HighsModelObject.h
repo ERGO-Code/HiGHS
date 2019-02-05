@@ -50,7 +50,7 @@ public:
   bool permutedLp = false;
   bool tightenedLp = false;
 
-  bool reportModelOperationsClock = true;
+  bool reportModelOperationsClock = false;
 
   //
   // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To

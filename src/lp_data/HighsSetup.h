@@ -107,8 +107,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       return result;
     }
     default: {
-      // case HighsPresolveStatus::Error:a
-      std::cout << "Error during presolve.";
+      // case HighsPresolveStatus::Error
+      HighsLogMessage(HighsMessageType::ERROR, "Presolve failed.");
       return HighsStatus::PresolveError;
     }
   }
@@ -126,7 +126,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
     timer.stop(timer.postsolve_clock);
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-      std::cout << "Postsolve finished.\n";
+       HighsLogMessage(HighsMessageType::INFO, "Postsolve finished.");
 
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.

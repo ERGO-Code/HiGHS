@@ -13,6 +13,7 @@
  */
 #include "Presolve.h"
 #include "HConst.h"
+#include "HighsIO.h"
 
 #include "HFactor.h"
 #include "KktChStep.h"
@@ -106,7 +107,7 @@ int Presolve::presolve(int print) {
     }
   }
 
-  iPrint = 1;
+  // iPrint = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -586,16 +587,12 @@ void Presolve::resizeProblem() {
   numCol = nC;
   numTot = nR + nC;
 
-  if (1) {
-    // if (iPrint == -1) {
-    cout << "Presolve m=" << setw(2) << numRow << "(-" << setw(2)
-         << numRowOriginal - numRow << ") ";
-    cout << "n=" << setw(2) << numCol << "(-" << setw(2)
-         << numColOriginal - numCol << ") ";
-    cout << "nz=" << setw(4) << nz << "(-" << setw(4) << ARindex.size() - nz
-         << ") ";
-    cout << endl;
-  }
+  std::stringstream ss;
+  ss << "Problem reduced: ";
+  ss << "rows " << numRow << "(-" << numRowOriginal - numRow << "), ";
+  ss << "columns " << numCol << "(-" << numColOriginal - numCol << "), ";
+  ss << "nonzeros " << nz << "(-" << ARindex.size() - nz << ") ";
+  HighsLogMessage(HighsMessageType::INFO, ss.str().c_str()); 
 
   if (nR + nC == 0) {
     status = Empty;
