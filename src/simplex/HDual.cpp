@@ -231,7 +231,7 @@ void HDual::solve(int num_threads) {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
     // updated value
-    workHMO.haveDualObjectiveValue = 0;
+    simplex_info.solver_lp_has_dual_objective_value = 0;
     switch (solvePhase) {
       case 1:
 	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
@@ -807,7 +807,7 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = workHMO.haveDualObjectiveValue;
+  bool checkDualObjectiveValue = simplex_info.solver_lp_has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
   simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
@@ -1912,7 +1912,7 @@ double HDual::checkDualObjectiveValue(const char *message, int phase) {
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
   workHMO.simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
   // Now have dual objective value
-  workHMO.haveDualObjectiveValue = 1;
+  workHMO.simplex_info_.solver_lp_has_dual_objective_value = true;
   return updatedDualObjectiveError;
 }
 #endif

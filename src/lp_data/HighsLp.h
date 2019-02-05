@@ -280,10 +280,23 @@ struct HighsSimplexInfo {
   bool analyseRebuildTime;
 #endif
   // Solved LP status
-  bool transposed_solver_lp = false;
-  bool scaled_solver_lp = false;
-  bool permuted_solver_lp = false;
-  bool tightened_solver_lp = false;
+  bool solver_lp_is_transposed = false;
+  bool solver_lp_is_scaled = false;
+  bool solver_lp_is_permuted = false;
+  bool solver_lp_is_tightened = false;
+  bool solver_lp_has_matrix_col_wise = false;
+  bool solver_lp_has_matrix_row_wise = false;
+  // This refers to workEdWt, which is held in HDualRHS.h and is
+  // assigned and initialised to 1s in dualRHS.setup(model). To
+  // "have" the edge weights means that they are correct.
+  bool solver_lp_has_dual_steepest_edge_weights = false;
+ // The nonbasic dual and basic primal values are known
+  bool solver_lp_has_nonbasic_dual_values = false;
+  bool solver_lp_has_basic_primal_value = false;
+  bool solver_lp_has_invert = false;
+  bool solver_lp_has_fresh_invert = false;
+  bool solver_lp_has_fresh_rebuild = false;
+  bool solver_lp_has_dual_objective_value = false;
 
   // Simplex status
 

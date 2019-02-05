@@ -89,7 +89,7 @@ class HSimplex {
       simplex_info_.dualObjectiveValue -= lp_.offset_;
     }
     // Now have dual objective value
-    highs_model_object.haveDualObjectiveValue = 1;
+    simplex_info_.solver_lp_has_dual_objective_value = true;
   }
   
   void initialiseSolverLpRandomVectors(
@@ -139,9 +139,9 @@ class HSimplex {
   void transpose_solver_lp(HighsModelObject &highs_model) {
     HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
 #ifdef HiGHSDEV
-    printf("Called transpose_solver_lp: simplex_info_.transposed_solver_lp = %d\n", simplex_info_.transposed_solver_lp);
+    printf("Called transpose_solver_lp: simplex_info_.solver_lp_is_transposed = %d\n", simplex_info_.solver_lp_is_transposed);
 #endif
-    if (simplex_info_.transposed_solver_lp) return;
+    if (simplex_info_.solver_lp_is_transposed) return;
     HighsLp& primal_lp = highs_model.lp_;
     
     int primalNumCol = primal_lp.numCol_;
@@ -292,7 +292,7 @@ class HSimplex {
     //    cout << "problem-transposed" << endl;
     // Deduce the consequences of transposing the LP
     //  mlFg_Update(mlFg_action_TransposeLP);
-    simplex_info_.transposed_solver_lp = true;
+    simplex_info_.solver_lp_is_transposed = true;
   }
   
   // SCALING:
@@ -384,9 +384,9 @@ class HSimplex {
   void scale_solver_lp(HighsModelObject &highs_model) {
     HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
 #ifdef HiGHSDEV
-    printf("Called scale_solver_lp: simplex_info_.scaled_solver_lp = %d\n", simplex_info_.scaled_solver_lp);
+    printf("Called scale_solver_lp: simplex_info_.solver_lp_is_scaled = %d\n", simplex_info_.solver_lp_is_scaled);
 #endif
-    if (simplex_info_.scaled_solver_lp) return;
+    if (simplex_info_.solver_lp_is_scaled) return;
     // Scale the LP highs_model.solver_lp_, assuming all data are in place
     // Reset all scaling to 1
     HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
@@ -431,7 +431,7 @@ class HSimplex {
       // Possibly scale the costs
       if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
       timer.stop(timer.scaleClock);
-      simplex_info_.scaled_solver_lp = true;
+      simplex_info_.solver_lp_is_scaled = true;
       return;
     }
     // See if we want to include cost include if minimum nonzero cost is less than
@@ -543,7 +543,7 @@ class HSimplex {
 #endif
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
-    simplex_info_.scaled_solver_lp = true;
+    simplex_info_.solver_lp_is_scaled = true;
     timer.stop(timer.scaleClock);
   }
   
@@ -552,9 +552,9 @@ class HSimplex {
   void permute_solver_lp(HighsModelObject &highs_model) {
     HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
 #ifdef HiGHSDEV
-    printf("Called permute_solver_lp: simplex_info_.permuted_solver_lp = %d\n", simplex_info_.permuted_solver_lp);
+    printf("Called permute_solver_lp: simplex_info_.solver_lp_is_permuted = %d\n", simplex_info_.solver_lp_is_permuted);
 #endif
-    if (simplex_info_.permuted_solver_lp) return;
+    if (simplex_info_.solver_lp_is_permuted) return;
     //  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
     HSimplex simplex_method_;
     simplex_method_.initialiseSolverLpRandomVectors(highs_model);
@@ -596,7 +596,7 @@ class HSimplex {
     assert(Astart[numCol] == countX);
     // Deduce the consequences of shuffling the LP
     //  mlFg_Update(mlFg_action_ShuffleLP);
-    simplex_info_.permuted_solver_lp = true;
+    simplex_info_.solver_lp_is_permuted = true;
   }
   
   // TIGHTEN:
@@ -604,9 +604,9 @@ class HSimplex {
   void tighten_solver_lp(HighsModelObject &highs_model) {
     HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
 #ifdef HiGHSDEV
-    printf("Called tighten_solver_lp: simplex_info_.tightened_solver_lp = %d\n", simplex_info_.tightened_solver_lp);
+    printf("Called tighten_solver_lp: simplex_info_.solver_lp_is_tightened = %d\n", simplex_info_.solver_lp_is_tightened);
 #endif
-    if (simplex_info_.tightened_solver_lp) return;
+    if (simplex_info_.solver_lp_is_tightened) return;
     HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
     
     int numCol = highs_model.solver_lp_.numCol_;
@@ -745,7 +745,7 @@ class HSimplex {
 	}
       }
     }
-    simplex_info_.tightened_solver_lp = true;
+    simplex_info_.solver_lp_is_tightened = true;
   }
 
   /*
