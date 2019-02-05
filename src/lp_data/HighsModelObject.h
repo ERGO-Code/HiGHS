@@ -30,27 +30,20 @@ public:
   HighsModelObject(HighsLp& lp) : lp_(lp) {}
 
   HighsLp& lp_;
+  HighsBasis basis_;
+  HighsSolution solution_;
 
   HighsLp solver_lp_;
+  HighsBasis solver_basis_;
   HighsSimplexInfo simplex_info_;
-  HighsSolution solution_;
   HighsRanging ranging_;
-  HighsBasis basis_;
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
   HighsTimer timer_;
   HighsRandom random_;
 
-
   bool reportModelOperationsClock = false;
-
-  //
-  // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To
-  // have them means that they correspond to a consistent basis
-  // logically, but B is not necessarily nonsingular.
-  int has_basis;
-  int has_some_solver_lp_data;
 
   BasisInfo basis_info_;
 
