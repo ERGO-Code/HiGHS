@@ -104,6 +104,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
                HighsStatus::Infeasible : HighsStatus::Unbounded;
       std::string message = "Problem status detected on presolve: " + HighsStatusToString(result);
       HighsLogMessage(HighsMessageType::INFO, message.c_str());
+      // for tests
+      std::cout << "Run: NOT-OPT" << std::endl;
       return result;
     }
     default: {
@@ -147,8 +149,9 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
       if (options_.presolve_option == PresolveOption::ON) {
-        std::cout << "Reduced problem status: "
-                  << HighsStatusToString(solve_status);
+        std::stringstream ss;
+        ss << "Reduced problem status: " << HighsStatusToString(solve_status) << ".";
+        HighsLogMessage(HighsMessageType::ERROR,ss.str().c_str());
         // todo: handle case. Try to solve again with no presolve?
         return HighsStatus::NotImplemented;
       } else {
