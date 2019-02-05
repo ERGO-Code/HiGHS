@@ -106,7 +106,7 @@ int Presolve::presolve(int print) {
     }
   }
 
-  // iPrint = 1;
+  iPrint = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);

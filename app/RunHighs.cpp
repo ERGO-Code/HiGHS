@@ -45,8 +45,5 @@ int main(int argc, char **argv) {
   double end_time = timer.getWallTime();
   HighsLogMessage(HighsMessageType::INFO, "HiGHS run ended after %12g seconds",
                   end_time - start_time);
-
-  checkStatus(run_status);
-
   return 0;
 }

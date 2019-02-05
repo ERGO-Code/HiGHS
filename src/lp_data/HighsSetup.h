@@ -102,9 +102,8 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     case HighsPresolveStatus::Unbounded: {
       HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
                HighsStatus::Infeasible : HighsStatus::Unbounded;
-
-      std::cout << "Problem status detected on presolve: "
-                << HighsStatusToString(result);
+      std::string message = "Problem status detected on presolve: " + HighsStatusToString(result);
+      HighsLogMessage(HighsMessageType::INFO, message.c_str());
       return result;
     }
     default: {
@@ -258,13 +257,16 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   return status;
 }
 
-void HiGHSRun(const char* message = nullptr) {
-  std::cout << "Running HiGHS " << HIGHS_VERSION_MAJOR << "."
-            << HIGHS_VERSION_MINOR << "." << HIGHS_VERSION_PATCH
-            << " [date: " << HIGHS_COMPILATION_DATE
-            << ", git hash: " << HIGHS_GITHASH << "]"
-            << "\n"
-            << "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n\n";
+void HiGHSRun(const char *message = nullptr) {
+  std::stringstream ss;
+  ss << "Running HiGHS " << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR
+     << "." << HIGHS_VERSION_PATCH << " [date: " << HIGHS_COMPILATION_DATE
+     << ", git hash: " << HIGHS_GITHASH << "]";
+
+  HighsLogMessage(HighsMessageType::INFO, ss.str().c_str());
+  HighsLogMessage(HighsMessageType::INFO,
+                  "Copyright (c) 2019 ERGO-Code under MIT licence terms.");
+
 #ifdef HiGHSDEV
   // Report on preprocessing macros
   std::cout << "In " << message << std::endl;
