@@ -28,6 +28,27 @@
 class HSimplex {
  public:
   
+  void clear(
+	     HighsModelObject & highs_model_object //!< Model object in which simplex data is to be cleared
+	     ) {
+    HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+    // Once the solver LP has its own basis
+    //    highs_model_object.solver_basis_.valid_ = false;
+    simplex_info_.solver_lp_is_transposed = false;
+    simplex_info_.solver_lp_is_scaled = false;
+    simplex_info_.solver_lp_is_permuted = false;
+    simplex_info_.solver_lp_is_tightened = false;
+    simplex_info_.solver_lp_has_matrix_col_wise = false;
+    simplex_info_.solver_lp_has_matrix_row_wise = false;
+    simplex_info_.solver_lp_has_dual_steepest_edge_weights = false;
+    simplex_info_.solver_lp_has_nonbasic_dual_values = false;
+    simplex_info_.solver_lp_has_basic_primal_value = false;
+    simplex_info_.solver_lp_has_invert = false;
+    simplex_info_.solver_lp_has_fresh_invert = false;
+    simplex_info_.solver_lp_has_fresh_rebuild = false;
+    simplex_info_.solver_lp_has_dual_objective_value = false;
+  }
+  
   void options(
 	       HighsModelObject & highs_model_object, //!< Model object in which simplex options are to be set
 	       const HighsOptions& opt                //!< HiGHS options
