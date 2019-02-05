@@ -91,6 +91,12 @@ class HSimplex {
     
   }
   
+  void update_solver_lp_status_flags(
+				 HighsModelObject &highs_model_object,
+				 LpAction action
+				 ) {
+    
+  }
   void computeDualObjectiveValue(
 				 HighsModelObject &highs_model_object,
 				 int phase = 2

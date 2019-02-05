@@ -34,6 +34,22 @@ enum objSense
   OBJSENSE_MAXIMIZE = -1
 };
 
+enum class LpAction {
+  TRANSPOSE = 0,
+    SCALE,
+    PERMUTE,
+    TIGHTEN,
+    NEW_COSTS,
+    NEW_BOUNDS,
+    NEW_BASIS,
+    NEW_COLS,
+    NEW_ROWS,
+    DEL_COLS,
+    DEL_ROWS,
+    DEL_ROWS_BASIS_OK
+    };
+
+
 // For now, but later change so HiGHS properties are string based so that new
 // options (for debug and testing too) can be added easily. The options below
 // are just what has been used to parse options from argv.
