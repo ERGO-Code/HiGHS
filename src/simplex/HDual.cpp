@@ -832,13 +832,13 @@ void HDual::rebuild() {
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
   timer.start(simplex_info.clock_[ReportInvertClock]);
-  // iterateRpInvert(sv_invertHint);
+  iterateRpInvert(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportInvertClock]);
 
   total_INVERT_TICK = factor->build_syntheticTick;  // Was factor->pseudoTick
   total_FT_inc_TICK = 0;
 #ifdef HiGHSDEV
-  total_fake = 0;
+  total_fake = 0eML_MINIMAL
 #endif
   total_syntheticTick = 0;
 

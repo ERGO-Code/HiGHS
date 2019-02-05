@@ -58,15 +58,15 @@ class Highs {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
-  // todo: handle printing messages with HighsPrintMessage
+  HighsPrintMessage(HighsMessageType::INFO, "Solving %s", lp.model_name_.c_str());
 
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp, timer));
 
-  // Options for HighsPrintMessage and HighsLogMessage
+  // Options for HighsPrintMessage and HighsPrintMessage
   options_.logfile = stdout;//fopen("HiGHS.log", "w");
   options_.output = stdout;
-  options_.messageLevel = ML_MINIMAL;
+  options_.messageLevel = ML_DEFAULT;
   HighsSetIO(options_);
 
   //Define clocks
@@ -103,14 +103,14 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
                HighsStatus::Infeasible : HighsStatus::Unbounded;
       std::string message = "Problem status detected on presolve: " + HighsStatusToString(result);
-      HighsLogMessage(HighsMessageType::INFO, message.c_str());
+      HighsPrintMessage(HighsMessageType::INFO, message.c_str());
       // for tests
       std::cout << "Run: NOT-OPT" << std::endl;
       return result;
     }
     default: {
       // case HighsPresolveStatus::Error
-      HighsLogMessage(HighsMessageType::ERROR, "Presolve failed.");
+      HighsPrintMessage(HighsMessageType::ERROR, "Presolve failed.");
       return HighsStatus::PresolveError;
     }
   }
@@ -128,7 +128,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
     HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
     timer.stop(timer.postsolve_clock);
     if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-       HighsLogMessage(HighsMessageType::INFO, "Postsolve finished.");
+       HighsPrintMessage(HighsMessageType::INFO, "Postsolve finished.");
 
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.
@@ -151,7 +151,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
       if (options_.presolve_option == PresolveOption::ON) {
         std::stringstream ss;
         ss << "Reduced problem status: " << HighsStatusToString(solve_status) << ".";
-        HighsLogMessage(HighsMessageType::ERROR,ss.str().c_str());
+        HighsPrintMessage(HighsMessageType::ERROR,ss.str().c_str());
         // todo: handle case. Try to solve again with no presolve?
         return HighsStatus::NotImplemented;
       } else {
@@ -264,11 +264,10 @@ void HiGHSRun(const char *message = nullptr) {
   std::stringstream ss;
   ss << "Running HiGHS " << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR
      << "." << HIGHS_VERSION_PATCH << " [date: " << HIGHS_COMPILATION_DATE
-     << ", git hash: " << HIGHS_GITHASH << "]";
+     << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
 
-  HighsLogMessage(HighsMessageType::INFO, ss.str().c_str());
-  HighsLogMessage(HighsMessageType::INFO,
-                  "Copyright (c) 2019 ERGO-Code under MIT licence terms.");
+  HighsPrintMessage(7, ss.str().c_str());
+  HighsPrintMessage(7, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
 
 #ifdef HiGHSDEV
   // Report on preprocessing macros
