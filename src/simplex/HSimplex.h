@@ -77,10 +77,10 @@ class HSimplex {
     // Set values of internal options
     
     // Options for reporting timing
-    simplex_info_.reportSimplexInnerClock = false;
-    simplex_info_.reportSimplexOuterClock = false;
+    simplex_info_.report_simplex_inner_clock = true;//false;
+    simplex_info_.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
-    simplex_info_.reportSimplexPhasesClock = false;
+    simplex_info_.report_simplex_phases_clock = true;//false;
     // Option for analysing simplex iterations
     simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = true;//false
@@ -418,7 +418,7 @@ class HSimplex {
     // Reset all scaling to 1
     HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
     HighsTimer &timer = highs_model.timer_;
-    timer.start(timer.scaleClock);
+    timer.start(timer.scale_clock);
     scaleHighsModelInit(highs_model);
     int numCol = highs_model.solver_lp_.numCol_;
     int numRow = highs_model.solver_lp_.numRow_;
@@ -457,7 +457,7 @@ class HSimplex {
 #endif
       // Possibly scale the costs
       if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
-      timer.stop(timer.scaleClock);
+      timer.stop(timer.scale_clock);
       simplex_info_.solver_lp_is_scaled = true;
       return;
     }
@@ -571,7 +571,7 @@ class HSimplex {
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
     simplex_info_.solver_lp_is_scaled = true;
-    timer.stop(timer.scaleClock);
+    timer.stop(timer.scale_clock);
   }
   
   // PERMUTE:
@@ -793,8 +793,8 @@ class HSimplex {
     string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
     ofstream output(filename.c_str());
     int count = historyColumnIn.size();
-    double currentRunHighsTime = timer_->readRunHighsClock();
-    output << solver_lp_->model_name_ << " " << count << "\t" << currentRunHighsTime << endl;
+    double current_run_highs_time = timer_->readRunHighsClock();
+    output << solver_lp_->model_name_ << " " << count << "\t" << current_run_highs_time << endl;
     output << setprecision(12);
     for (int i = 0; i < count; i++) {
       output << historyColumnIn[i] << "\t";

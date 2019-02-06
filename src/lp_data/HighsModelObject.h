@@ -27,11 +27,13 @@ struct BasisInfo {
 // include essential data.
 class HighsModelObject {
 public:
-  HighsModelObject(HighsLp& lp) : lp_(lp) {}
+ HighsModelObject(HighsLp& lp, HighsTimer& timer) : lp_(lp),
+    timer_(timer) {}
 
   HighsLp& lp_;
   HighsBasis basis_;
   HighsSolution solution_;
+  HighsTimer& timer_;
 
   HighsLp solver_lp_;
   // Introduce a separate data structure for the basis information of
@@ -44,7 +46,6 @@ public:
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
-  HighsTimer timer_;
   HighsRandom random_;
 
   bool reportModelOperationsClock = false;
