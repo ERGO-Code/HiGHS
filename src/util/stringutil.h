@@ -16,8 +16,11 @@ std::string &rtrim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 std::string &trim(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 
 bool is_empty(std::string &str, const std::string &chars = "\t\n\v\f\r ");
+bool is_end(std::string &str, int end,
+            const std::string &chars = "\t\n\v\f\r ");
 
 std::string first_word(std::string &str, int start);
+// Combine this with the top method. only used in free format parser.
 int first_word_end(std::string &str, int start);
 
 #endif

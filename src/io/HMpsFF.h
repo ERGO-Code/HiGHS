@@ -397,7 +397,6 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
                   [](Triplet a, Triplet b) {
                     return std::get<1>(b) > std::get<1>(a);
                   });
-
         return key;
       }
 
@@ -450,18 +449,37 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       }
 
       assert(ncols > 0);
+  
+      // here marker is the row name and end marks its end
+      word = "";
+      word = first_word(strline, end);
+      if (word == "") {
+        HighsLogMessage(HighsMessageType::ERROR,
+                        "No coefficient given for column %s", marker.c_str());
+        return HMpsFF::parsekey::FAIL;
+      }
+      int end_coeff = first_word_end(strline, end);
+      parsename(marker); //rowidx set
+      double value = std::stof(word);
+      addtuple(word);      
 
-      // todo:(ig) parse line no boost
+      if (!is_end(strline, end) {
+        // parse second coefficient
+        marker = first_word(strline, end);
+        if (word == "") {
+          HighsLogMessage(HighsMessageType::ERROR,
+                          "No coefficient given for column %s", marker.c_str());
+          return HMpsFF::parsekey::FAIL;
+        }
+        end_coeff = first_word_end(strline, end);
+        assert(is_end(strline, end_coeff));
 
-      if (!qi::phrase_parse(
-              it, strline.end(),
-              +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-                qi::double_[(addtuple)]),
-              ascii::space))
-        return parsekey::FAIL;
-    }
+        parsename(marker); //rowidx set
+        double value = std::stof(word);
+        addtuple(word);      
+      }
+
   return parsekey::FAIL;
-
 }
 
 HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {

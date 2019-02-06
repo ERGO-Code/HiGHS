@@ -73,6 +73,13 @@ bool is_empty(std::string &str, const std::string &chars) {
   return false;
 }
 
+bool is_end(std::string &str, int end, const std::string &chars) {
+  int pos = str.find_first_not_of(chars, end);
+  if (pos == str.size())
+    return true;
+  return false;
+}
+
 int first_word_end(std::string &str, int start) {
   const std::string chars = "\t\n\v\f\r ";
   int next_word_start = str.find_first_not_of(chars, start);
