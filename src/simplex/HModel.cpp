@@ -1212,7 +1212,7 @@ int HModel::computeFactor() {
 #ifdef HiGHSDEV
   double tt0 = 0;
   int iClock = simplex_info_->clock_[InvertClock];
-  if (simplex_info_->analyse_invert_time) tt0 = timer_->clockTime[iClock];
+  if (simplex_info_->analyse_invert_time) tt0 = timer_->clock_time[iClock];
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -1232,8 +1232,8 @@ int HModel::computeFactor() {
 #ifdef HiGHSDEV
   if (simplex_info_->analyse_invert_time) {
     int iClock = simplex_info_->clock_[InvertClock];
-    simplex_info_->total_inverts = timer_->clockNumCall[iClock];
-    simplex_info_->total_invert_time = timer_->clockTime[iClock];
+    simplex_info_->total_inverts = timer_->clock_num_call[iClock];
+    simplex_info_->total_invert_time = timer_->clock_time[iClock];
     double invertTime = simplex_info_->total_invert_time - tt0;
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
@@ -2759,9 +2759,9 @@ void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
 
 void HModel::util_reportSolverOutcome(const char *message) {
   if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL)
-    HighsPrintMessage(ML_MINIMAL, "%s: OPTIMAL", message);
+    HighsPrintMessage(7, "%s: OPTIMAL", message);
   else
-    HighsPrintMessage(ML_MINIMAL, "%s: NOT-OPT", message);
+    HighsPrintMessage(7, "%s: NOT-OPT", message);
   double dualObjectiveValue = simplex_info_->dualObjectiveValue;
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
@@ -2772,13 +2772,13 @@ void HModel::util_reportSolverOutcome(const char *message) {
          currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
-  HighsPrintMessage(ML_MINIMAL, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
+  HighsPrintMessage(7, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
          simplex_info_->iteration_count, currentRunHighsTime);
 #endif
   if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL) {
-    HighsPrintMessage(ML_MINIMAL, "\n");
+    HighsPrintMessage(7, "\n");
   } else {
-    HighsPrintMessage(ML_MINIMAL, " ");
+    HighsPrintMessage(7, "\n");
     util_reportModelStatus();
   }
   // Greppable report line added
@@ -2790,23 +2790,23 @@ void HModel::util_reportSolverOutcome(const char *message) {
 //
 // Report the model status
 void HModel::util_reportModelStatus() {
-  HighsPrintMessage(ML_MINIMAL, "LP status is %2d: ", simplex_info_->solution_status);
+  HighsPrintMessage(7, "LP status is %2d: ", simplex_info_->solution_status);
   if (simplex_info_->solution_status == SimplexSolutionStatus::UNSET)
-    HighsPrintMessage(ML_MINIMAL, "Unset\n");
+    HighsPrintMessage(7, "Unset\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL)
-    HighsPrintMessage(ML_MINIMAL, "Optimal\n");
+    HighsPrintMessage(7, "Optimal\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::INFEASIBLE)
-    HighsPrintMessage(ML_MINIMAL, "Infeasible\n");
+    HighsPrintMessage(7, "Infeasible\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::UNBOUNDED)
-    HighsPrintMessage(ML_MINIMAL, "Primal unbounded\n");
+    HighsPrintMessage(7, "Primal unbounded\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::SINGULAR)
-    HighsPrintMessage(ML_MINIMAL, "Singular basis\n");
+    HighsPrintMessage(7, "Singular basis\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::FAILED)
-    HighsPrintMessage(ML_MINIMAL, "Failed\n");
+    HighsPrintMessage(7, "Failed\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::OUT_OF_TIME)
-    HighsPrintMessage(ML_MINIMAL, "Time limit exceeded\n");
+    HighsPrintMessage(7, "Time limit exceeded\n");
   else
-    HighsPrintMessage(ML_MINIMAL, "Unrecognised\n");
+    HighsPrintMessage(7, "Unrecognised\n");
 }
 
 // The remaining routines are wholly independent of any classes, merely

@@ -106,7 +106,7 @@ set(failInstances
 set(settings
     ""
     "-m"
-    #"-pOn"
+#    "--presolve=on"
     )
 
 # define a macro to add tests
@@ -140,3 +140,28 @@ add_instancetests(successInstances "OPTIMAL")
 add_instancetests(failInstances "NOT-OPT")
 add_instancetests(infeasibleInstances "NOT-OPT")
 add_instancetests(unboundedInstances "NOT-OPT")
+
+# manually add presolve tests until we fix presolve
+set(setting "--presolve=on")
+
+set(inst "${PROJECT_SOURCE_DIR}/check/instances/adlittle.mps")
+add_test(NAME "presolve-adlittle" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
+set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "(Run): OPTIMAL")
+set_tests_properties ("presolve-adlittle" PROPERTIES DEPENDS unit_tests_all)
+
+set(inst "${PROJECT_SOURCE_DIR}/check/instances/scrs8.mps")
+add_test(NAME "presolve-scrs8" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
+set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "(Run): OPTIMAL")
+set_tests_properties ("presolve-scrs8" PROPERTIES DEPENDS unit_tests_all)
+
+
+set(inst "${PROJECT_SOURCE_DIR}/check/instances/woodinfe.mps")
+add_test(NAME "presolve-woodinfe" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
+set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "(Run): NOT-OPT")
+set_tests_properties ("presolve-woodinfe" PROPERTIES DEPENDS unit_tests_all)
+
+
+set(inst "${PROJECT_SOURCE_DIR}/check/instances/gas11.mps")
+add_test(NAME "presolve-gas11" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
+set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "(Run): NOT-OPT")
+set_tests_properties ("presolve-gas11" PROPERTIES DEPENDS unit_tests_all)

@@ -43,10 +43,7 @@ int main(int argc, char **argv) {
   HighsStatus run_status = highs.run(lp, solution);
 
   double end_time = timer.getWallTime();
-  HighsLogMessage(HighsMessageType::INFO, "HiGHS run ended after %12g seconds",
+  HighsPrintMessage(7, "HiGHS run ended after %12g seconds\n",
                   end_time - start_time);
-
-  checkStatus(run_status);
-
   return 0;
 }
