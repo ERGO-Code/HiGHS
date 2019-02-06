@@ -344,7 +344,7 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
 
 typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
-  /*
+  
     std::string colname = "";
 
     std::string strline;
@@ -352,6 +352,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
     int ncols = 0;
     int colstart = 0;
     bool integral_cols = false;
+    
+    HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
     auto parsename = [&rowidx, this](std::string name) {
       auto mit = rowname2idx.find(name);
@@ -365,11 +367,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
         assert(-1 == rowidx || -2 == rowidx);
     };
 
-    auto addtuple = [&row_type, &rowidx, &ncols, this](double coeff) {
+    auto addtuple = [&rowidx, &ncols, this](double coeff) {
       if (rowidx >= 0)
         entries.push_back(std::make_tuple(ncols - 1, rowidx, coeff));
       else
-        coeffobj.push_back(std::make_pair(ncols - 1, coeff));
+        colCost.push_back(coeff);
     };
 
     while (getline(file, strline)) {
@@ -384,9 +386,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
         }
       if (empty) continue;
 
-      std::string::iterator it;
-      boost::string_ref word_ref;
-      HMpsFF::parsekey key = checkFirstWord(strline, it, word_ref);
+      std::string word;
+      int start, end;
+      HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
       // start of new section?
       if (key != parsekey::NONE) {
@@ -400,16 +402,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       }
 
       // check for integrality marker
-      std::string marker = "";  // todo use ref
-      std::string::iterator it2 = it;
-
-      qi::phrase_parse(it2, strline.end(), qi::lexeme[+qi::graph], ascii::space,
-                       marker);
+      std::string marker = first_word(strline, end);
 
       if (marker == "'MARKER'") {
-        marker = "";
-        qi::phrase_parse(it2, strline.end(), qi::lexeme[+qi::graph],
-    ascii::space, marker);
+        int end_marker = first_word_end(strline, end);
+        marker = first_word(strline, end_marker);
 
         if ((integral_cols && marker != "'INTEND'") ||
             (!integral_cols && marker != "'INTORG'")) {
@@ -422,10 +419,10 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       }
 
       // new column?
-      if (!(word_ref == colname)) {
-        colname = std::string(word_ref.begin(), word_ref.end());
+      if (!(word == colname)) {
+        colname = word;
         auto ret = colname2idx.emplace(colname, ncols++);
-        colnames.push_back(colname);
+        col_names.push_back(colname);
 
         if (!ret.second) {
           std::cerr << "duplicate column " << std::endl;
@@ -436,10 +433,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
         // initialize with default bounds
         if (integral_cols) {
-          lb4cols.push_back(0.0);        ub4cols.push_back(1.0);
+          colLower.push_back(0.0);
+          colUpper.push_back(1.0);
         } else {
-          lb4cols.push_back(0.0);
-          ub4cols.push_back(HSIGHS_CONST_INF());
+          colLower.push_back(0.0);
+          colUpper.push_back(HIGHS_CONST_INF());
         }
 
         if (ncols > 1)
@@ -453,6 +451,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
       assert(ncols > 0);
 
+      // todo:(ig) parse line no boost
+
       if (!qi::phrase_parse(
               it, strline.end(),
               +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
@@ -460,8 +460,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
               ascii::space))
         return parsekey::FAIL;
     }
-  */
   return parsekey::FAIL;
+
 }
 
 HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
