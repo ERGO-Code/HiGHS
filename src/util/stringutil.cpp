@@ -68,14 +68,14 @@ std::string &trim(std::string &str, const std::string &chars) {
 
 bool is_empty(std::string &str, const std::string &chars) {
   int pos = str.find_first_not_of(chars);
-  if (pos == str.size())
+  if (pos == -1 || pos == str.size())
     return true;
   return false;
 }
 
 bool is_end(std::string &str, int end, const std::string &chars) {
   int pos = str.find_first_not_of(chars, end);
-  if (pos == str.size())
+  if (pos == -1 || pos == str.size())
     return true;
   return false;
 }
@@ -93,5 +93,5 @@ std::string first_word(std::string &str, int start) {
   const std::string chars = "\t\n\v\f\r ";
   int next_word_start = str.find_first_not_of(chars, start);
   int next_word_end = str.find_first_of(chars, next_word_start);
-  return str.substr(next_word_start, next_word_end);
+  return str.substr(next_word_start, next_word_end - next_word_start);
 }

@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "HConst.h"
+#include "HighsIO.h"
 #include "pdqsort.h"
 #include "stringutil.h"
 
@@ -62,6 +63,8 @@ private:
 
   std::vector<std::string> rowNames;
   std::vector<std::string> colNames;
+
+  std::vector<int> col_integrality;
 
   /// load LP from MPS file as transposed triplet matrix
   int parseFile(std::string filename);
@@ -133,8 +136,8 @@ int HMpsFF::loadProblem(const std::string filename, HighsLp &lp) {
   lp.rowLower_ = std::move(rowLower);
   lp.rowUpper_ = std::move(rowUpper);
 
-  lp.row_names_ = std::move(colNames);
-  lp.col_names_ = std::move(rowNames);
+  lp.row_names_ = std::move(rowNames);
+  lp.col_names_ = std::move(colNames);
 
   return status;
 }
@@ -230,7 +233,7 @@ HMpsFF::parsekey HMpsFF::checkFirstWord(std::string &strline, int &start,
   start = strline.find_first_not_of(" ");
   end = first_word_end(strline, start + 1);
 
-  word = strline.substr(start, end);
+  word = strline.substr(start, end - start);
 
   if (word.front() == 'R') {
     if (word == "ROWS")
@@ -301,6 +304,7 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
     } else if (strline[start] == 'N') {
       if (objectiveName == "") {
         isobj = true;
+        hasobj = true;
       } else {
         isFreeRow = true;
       }
@@ -343,17 +347,12 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
 }
 
 typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
-
-  
     std::string colname = "";
-
-    std::string strline;
-    int rowidx;
+    std::string strline, word;
+    int rowidx, start, end;
     int ncols = 0;
     int colstart = 0;
     bool integral_cols = false;
-    
-    HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
     auto parsename = [&rowidx, this](std::string name) {
       auto mit = rowname2idx.find(name);
@@ -375,19 +374,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
     };
 
     while (getline(file, strline)) {
+      trim(strline);
       if (strline.size() == 0) continue;
 
-      bool empty = true;
-      for (unsigned int i = 0; i < strline.size(); i++)
-        if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-            strline.at(i) != '\n') {
-          empty = false;
-          break;
-        }
-      if (empty) continue;
-
-      std::string word;
-      int start, end;
       HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
       // start of new section?
@@ -402,9 +391,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
       // check for integrality marker
       std::string marker = first_word(strline, end);
+      int end_marker = first_word_end(strline, end);
 
       if (marker == "'MARKER'") {
-        int end_marker = first_word_end(strline, end);
         marker = first_word(strline, end_marker);
 
         if ((integral_cols && marker != "'INTEND'") ||
@@ -421,14 +410,14 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       if (!(word == colname)) {
         colname = word;
         auto ret = colname2idx.emplace(colname, ncols++);
-        col_names.push_back(colname);
+        colNames.push_back(colname);
 
         if (!ret.second) {
           std::cerr << "duplicate column " << std::endl;
           return parsekey::FAIL;
         }
 
-        col_integrality.push_back(integral_cols);
+        col_integrality.push_back((int) integral_cols);
 
         // initialize with default bounds
         if (integral_cols) {
@@ -436,7 +425,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
           colUpper.push_back(1.0);
         } else {
           colLower.push_back(0.0);
-          colUpper.push_back(HIGHS_CONST_INF());
+          colUpper.push_back(HIGHS_CONST_INF);
         }
 
         if (ncols > 1)
@@ -452,18 +441,19 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   
       // here marker is the row name and end marks its end
       word = "";
-      word = first_word(strline, end);
+      word = first_word(strline, end_marker);
+      end = first_word_end(strline, end_marker);
+
       if (word == "") {
         HighsLogMessage(HighsMessageType::ERROR,
                         "No coefficient given for column %s", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
-      int end_coeff = first_word_end(strline, end);
       parsename(marker); //rowidx set
       double value = std::stof(word);
-      addtuple(word);      
+      addtuple(value);      
 
-      if (!is_end(strline, end) {
+      if (!is_end(strline, end)) {
         // parse second coefficient
         marker = first_word(strline, end);
         if (word == "") {
@@ -471,13 +461,21 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
                           "No coefficient given for column %s", marker.c_str());
           return HMpsFF::parsekey::FAIL;
         }
-        end_coeff = first_word_end(strline, end);
-        assert(is_end(strline, end_coeff));
+        end_marker = first_word_end(strline, end);
+
+        // here marker is the row name and end marks its end
+        word = "";
+        end_marker++;
+        word = first_word(strline, end_marker);
+        end = first_word_end(strline, end_marker);
+
+        assert(is_end(strline, end));
 
         parsename(marker); //rowidx set
         double value = std::stof(word);
-        addtuple(word);      
+        addtuple(value);      
       }
+    }
 
   return parsekey::FAIL;
 }

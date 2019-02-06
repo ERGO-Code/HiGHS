@@ -19,8 +19,9 @@ bool is_empty(std::string &str, const std::string &chars = "\t\n\v\f\r ");
 bool is_end(std::string &str, int end,
             const std::string &chars = "\t\n\v\f\r ");
 
+// todo: replace with pair of references rather than string ret value to avoid copy
+// and also using function below. or do it properly with iterators.
 std::string first_word(std::string &str, int start);
-// Combine this with the top method. only used in free format parser.
 int first_word_end(std::string &str, int start);
 
 #endif
