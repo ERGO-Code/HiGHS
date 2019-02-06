@@ -20,7 +20,7 @@ class ProjectedGradient {
   void computeBreakpoints(HVector& gradient, HVector& x, HVector& u, HVector& l, std::vector<double>& t, std::vector<double>& tbar);
   void computeProjectedGradient(HVector& gradient, std::vector<double>& t, std::vector<double>& tbar, int bp, int numCol, HVector& projectedGradient);
   
-  void projectGradient(HVector& gradient, HVector& x, HVector& l, HVector& u, int numCol, HVector& result);
+  void projectGradient(double sign, HVector& gradient, HVector& x, HVector& l, HVector& u, int numCol, HVector& result);
   void projectIterate(HVector& x, HVector& l, HVector& u, int numCol);
 };
 
