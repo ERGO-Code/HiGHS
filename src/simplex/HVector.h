@@ -153,6 +153,11 @@ class HVector {
   void saxpy(const double pivotX,  //!< The multiple of *pivot to be added
              const HVector *pivot  //!< The vector whose multiple is to be added
   );
+
+  /**
+   * @brief Prints a few nonzero elements of the vector
+   */
+  void peak();
 };
 
 typedef HVector *HVector_ptr;

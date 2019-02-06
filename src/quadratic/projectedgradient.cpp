@@ -8,42 +8,6 @@
 
 void printVector(HVector& vec, const char* name);
 
-void ProjectedGradient::projectIterate(HVector& x, HVector& l, HVector& u,
-                                       int numCol) {
-  int nz = 0;
-  for (int i = 0; i < numCol; i++) {
-    if (x.array[i] <= l.array[i] + HIGHS_CONST_TINY) {
-      // variable at or under lower bound
-      if (fabs(l.array[i]) < HIGHS_CONST_TINY) {
-        x.array[i] = HIGHS_CONST_ZERO;
-      } else {
-        x.array[i] = l.array[i];
-        x.index[nz] = i;
-        nz++;
-      }
-      //} else if (x.array[i] >= u.array[i] - HIGHS_CONST_TINY) {
-      //   // variable is at or above upper bound
-      //   if (fabs(u.array[i]) < HIGHS_CONST_TINY) {
-      //      x.array[i] = 0.0;
-      //   } else {
-      //     x.array[i] = u.array[i];
-      //     x.index[nz] = i;
-      //     nz++;
-      //   }
-    } else {
-      // variable is between bounds
-      if (fabs(x.array[i]) < HIGHS_CONST_TINY) {
-        x.array[i] = HIGHS_CONST_ZERO;
-      } else {
-        x.index[nz] = i;
-        nz++;
-      }
-    }
-  }
-
-  x.count = nz;
-}
-
 void ProjectedGradient::projectGradient(double sign, HVector& gradient,
                                         HVector& x, HVector& l, HVector& u,
                                         int numCol, HVector& result) {
@@ -170,34 +134,24 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
   // temp variables
   HVector gradientConstant(lp.numCol_);
   HVector gradient(lp.numCol_);
-  HVector breakpoints(lp.numCol_ + 1);
 
   this->computeGradientConstantPart(c, A, mu, b, gradientConstant);
 
-  // printVector(gradientConstant, "constant gradient");
-
   int iteration = 0;
   while (iteration < 200) {
-    // this->projectIterate(x, l, u, lp.numCol_);
-    HighsPrintMessage(ML_MINIMAL, "Iteration %d\n", iteration);
     // compute search direction
     gradient.setup(lp.numCol_);
     this->computeGradient(gradientConstant, mu, A, x, gradient);
-    // printVector(gradient, "gradient");
 
     // project gradient?
     HVector projectedGradient(lp.numCol_);
     this->projectGradient(1.0, gradient, x, l, u, lp.numCol_,
                           projectedGradient);
-    // printVector(projectedGradient, "Projected Gradient");
-
     double norm = projectedGradient.norm2();
-    HighsPrintMessage(ModelLogLevel::ML_MINIMAL, "%d: norm %lf\n", iteration,
-                      norm);
-    // if (norm < 10E-7) {
-    //  break;
-    //}
-    if (projectedGradient.count == 0) {
+    HighsPrintMessage(ModelLogLevel::ML_MINIMAL, "%d: gradient norm %lf\n",
+                      iteration, norm);
+    // TODO: make that a global constant, HIGHS_CONST_TINY is too small
+    if (norm < 10E-7) {
       break;
     }
 
@@ -218,7 +172,6 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
 
       // compute fd
       double fd = gradientConstant.scalarProduct(&p) + x.scalarProduct(&Hp_vec);
-      HighsPrintMessage(ML_MINIMAL, "fd: %lf\n", fd);
 
       if (fd > HIGHS_CONST_TINY) {
         // first local minimum is at the current iterate.
@@ -226,14 +179,12 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
       } else {
         // compute fdd
         double fdd = p.scalarProduct(&Hp_vec);
-        HighsPrintMessage(ML_MINIMAL, "fdd: %lf\n", fdd);
 
         if (fabs(fdd) < HIGHS_CONST_TINY) {
           break;
         }
 
         double t_star = -fd / fdd;
-        HighsPrintMessage(ML_MINIMAL, "tstar: %lf\n", t_star);
         if (t_star < t[bp + 1] - t[bp]) {
           // x.saxpy(t_star, &p);
           break;
@@ -250,17 +201,12 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     // l <= x <= u
 
     // SPECULATIVE CODE START
-    HighsPrintMessage(ML_MINIMAL, "Running conjugate gradient..\n");
-    printVector(x, "x before running CGM");
 
     this->computeGradient(gradientConstant, mu, A, x, gradient);
-    printVector(gradient, "Gradient");
-    this->projectGradient(1.0, gradient, x, l, u, lp.numCol_, projectedGradient);
-    printVector(projectedGradient, "Projected Gradient");
+    this->projectGradient(1.0, gradient, x, l, u, lp.numCol_, gradient);
 
     HVector sk(lp.numCol_);
-    sk.saxpy(-1.0, &projectedGradient);
-    printVector(sk, "sk");
+    sk.saxpy(-1.0, &gradient);
 
     int cgIteration = 0;
     while (cgIteration < lp.numCol_) {
@@ -272,11 +218,8 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
       HVector w(lp.numRow_);
       A.mat_vec_prod(sk, &w);
       w.tight();
-      printVector(w, "w");
       double q1 = mu * w.norm2();
       double q2 = sk.scalarProduct(&gradient);
-      HighsPrintMessage(ML_MINIMAL, "q1, q2: %lf, %lf\n", q1, q2);
-
 
       if (fabs(q1) < HIGHS_CONST_TINY) {
         break;
@@ -287,22 +230,16 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
         break;
       }
 
-      HighsPrintMessage(ML_MINIMAL, "alpha: %lf\n", alpha);
-
       x.tight();
       x.saxpy(alpha, &sk);
-      printVector(x, "x before projecting");
       // project x on bounds
       for (int i = 0; i < lp.numCol_; i++) {
         x.array[i] = fmin(fmax(l.array[i], x.array[i]), u.array[i]);
       }
-      printVector(x, "x after projecting");
 
       double norm_gk = gradient.norm2();
       this->computeGradient(gradientConstant, mu, A, x, gradient);
-      printVector(gradient, "new gradient");
       this->projectGradient(1.0, gradient, x, l, u, lp.numCol_, gradient);
-      printVector(gradient, "new projected gradient");
 
       double norm_gkp1 = gradient.norm2();
       if (norm_gkp1 < HIGHS_CONST_TINY) {
@@ -325,11 +262,9 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
 
       cgIteration++;
     }
-    printVector(x, "x after running CGM");
 
     // SPECULATIVE CODE END
-
-    printVector(x, "x");
     iteration++;
   }
+  x.peak();
 }

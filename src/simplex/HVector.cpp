@@ -278,3 +278,14 @@ void HVector::saxpy(const double pivotX, const HVector *pivot) {
   }
   count = workCount;
 }
+
+void HVector::peak() {
+  int num = this->count;
+  if (num > 5) {
+    num = 5;
+  }
+  for (int i=0; i<num; i++) {
+    printf("%d %lf ", this->index[i], this->array[this->index[i]]);
+  }
+  printf("\n");
+}

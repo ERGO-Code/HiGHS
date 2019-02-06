@@ -21,7 +21,6 @@ class ProjectedGradient {
   void computeProjectedGradient(HVector& gradient, std::vector<double>& t, std::vector<double>& tbar, int bp, int numCol, HVector& projectedGradient);
   
   void projectGradient(double sign, HVector& gradient, HVector& x, HVector& l, HVector& u, int numCol, HVector& result);
-  void projectIterate(HVector& x, HVector& l, HVector& u, int numCol);
 };
 
 
