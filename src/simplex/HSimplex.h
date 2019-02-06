@@ -45,6 +45,7 @@ class HSimplex {
     simplex_info_.dual_objective_value_upper_bound = opt.dual_objective_value_upper_bound;
     simplex_info_.perturb_costs = opt.simplex_perturb_costs;
     simplex_info_.iteration_limit = opt.simplex_iteration_limit;
+    simplex_info_.update_limit = opt.simplex_update_limit;
     simplex_info_.highs_run_time_limit = opt.highs_run_time_limit;
     
     simplex_info_.transpose_solver_lp = opt.transpose_solver_lp;
@@ -55,15 +56,15 @@ class HSimplex {
     // Set values of internal options
     
     // Options for reporting timing
-    simplex_info_.reportSimplexInnerClock = false;
-    simplex_info_.reportSimplexOuterClock = false;
+    simplex_info_.report_simplex_inner_clock = true;//false;
+    simplex_info_.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
-    simplex_info_.reportSimplexPhasesClock = false;
+    simplex_info_.report_simplex_phases_clock = true;//false;
     // Option for analysing simplex iterations
     simplex_info_.analyseLp = false;
     simplex_info_.analyseSimplexIterations = true;//false
     simplex_info_.analyseLpSolution = false;
-    simplex_info_.analyseInvertTime = false;
+    simplex_info_.analyse_invert_time = false;
     simplex_info_.analyseRebuildTime = false;
 #endif
     
@@ -390,7 +391,7 @@ class HSimplex {
     // Reset all scaling to 1
     HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
     HighsTimer &timer = highs_model.timer_;
-    timer.start(timer.scaleClock);
+    timer.start(timer.scale_clock);
     scaleHighsModelInit(highs_model);
     int numCol = highs_model.solver_lp_.numCol_;
     int numRow = highs_model.solver_lp_.numRow_;
@@ -429,7 +430,7 @@ class HSimplex {
 #endif
       // Possibly scale the costs
       if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
-      timer.stop(timer.scaleClock);
+      timer.stop(timer.scale_clock);
       simplex_info_.scaled_solver_lp = true;
       return;
     }
@@ -543,7 +544,7 @@ class HSimplex {
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
     simplex_info_.scaled_solver_lp = true;
-    timer.stop(timer.scaleClock);
+    timer.stop(timer.scale_clock);
   }
   
   // PERMUTE:
@@ -748,11 +749,11 @@ class HSimplex {
   }
 
   /*
-  // Increment numberIteration (here!) and (possibly) store the pivots for
+  // Increment iteration count (here!) and (possibly) store the pivots for
   // debugging NLA
   void record_pivots(int columnIn, int columnOut, double alpha) {
     // NB This is where the iteration count is updated!
-    if (columnIn >= 0) numberIteration++;
+    if (columnIn >= 0) simplex_info_.iteration_count++;
 #ifdef HiGHSDEV
     historyColumnIn.push_back(columnIn);
     historyColumnOut.push_back(columnOut);
@@ -765,8 +766,8 @@ class HSimplex {
     string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
     ofstream output(filename.c_str());
     int count = historyColumnIn.size();
-    double currentRunHighsTime = timer_->readRunHighsClock();
-    output << solver_lp_->model_name_ << " " << count << "\t" << currentRunHighsTime << endl;
+    double current_run_highs_time = timer_->readRunHighsClock();
+    output << solver_lp_->model_name_ << " " << count << "\t" << current_run_highs_time << endl;
     output << setprecision(12);
     for (int i = 0; i < count; i++) {
       output << historyColumnIn[i] << "\t";

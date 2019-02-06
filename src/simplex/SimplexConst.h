@@ -14,6 +14,17 @@
 #ifndef SIMPLEX_SIMPLEXCONST_H_
 #define SIMPLEX_SIMPLEXCONST_H_
 
+enum class SimplexSolutionStatus {
+  UNSET = -1,
+    OPTIMAL,
+    INFEASIBLE,
+    UNBOUNDED,
+    SINGULAR,
+    FAILED,
+    REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
+    OUT_OF_TIME
+    };
+
 enum class SimplexStrategy {
   DUAL_PLAIN = 0,
   DUAL_TASKS,
@@ -68,5 +79,9 @@ enum InvertHint {
     INVERT_HINT_Count
 };
 
+// TODO: Set this false tactically to make mip interface more
+// efficient by preventing reinversion on optimality in phase 1 or
+// phase 2
+const bool invert_if_row_out_negative = true;
 
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

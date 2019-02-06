@@ -13,6 +13,7 @@
  */
 #include "Presolve.h"
 #include "HConst.h"
+#include "HighsIO.h"
 
 #include "HFactor.h"
 #include "KktChStep.h"
@@ -316,7 +317,9 @@ void Presolve::removeDoubletonEquations() {
   for (int row = 0; row < numRow; row++)
     if (flagRow.at(row))
       if (nzRow.at(row) == 2 &&
-          abs(rowLower.at(row) - rowUpper.at(row)) < tol) {
+          rowLower[row] > -HIGHS_CONST_INF &&
+          rowUpper[row] < HIGHS_CONST_INF &&
+          abs(rowLower[row] - rowUpper[row]) < tol) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -584,16 +587,12 @@ void Presolve::resizeProblem() {
   numCol = nC;
   numTot = nR + nC;
 
-  if (1) {
-    // if (iPrint == -1) {
-    cout << "Presolve m=" << setw(2) << numRow << "(-" << setw(2)
-         << numRowOriginal - numRow << ") ";
-    cout << "n=" << setw(2) << numCol << "(-" << setw(2)
-         << numColOriginal - numCol << ") ";
-    cout << "nz=" << setw(4) << nz << "(-" << setw(4) << ARindex.size() - nz
-         << ") ";
-    cout << endl;
-  }
+  std::stringstream ss;
+  ss << "Problem reduced: ";
+  ss << "rows " << numRow << "(-" << numRowOriginal - numRow << "), ";
+  ss << "columns " << numCol << "(-" << numColOriginal - numCol << "), ";
+  ss << "nonzeros " << nz << "(-" << ARindex.size() - nz << ") " << std::endl;
+  HighsPrintMessage(7, ss.str().c_str()); 
 
   if (nR + nC == 0) {
     status = Empty;
@@ -1014,7 +1013,9 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
-    if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HIGHS_CONST_INF) {
+    if (d < HIGHS_CONST_INF &&
+        abs(colCost.at(j) - d) < tol &&
+        colLower.at(j) > -HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colLower.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
@@ -1024,7 +1025,8 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
       countRemovedCols[WEAKLY_DOMINATED_COLS]++;
       timer.recordFinish(WEAKLY_DOMINATED_COLS);
-    } else if (abs(colCost.at(j) - e) < tol &&
+    } else if (e > -HIGHS_CONST_INF &&
+               abs(colCost.at(j) - e) < tol &&
                colUpper.at(j) < HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colUpper.at(j));

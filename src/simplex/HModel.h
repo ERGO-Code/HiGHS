@@ -28,15 +28,6 @@ class HVector;
 
 // After removing HTimer.h add the following
 
-const int LP_Status_Unset = -1;
-const int LP_Status_Optimal = 0;
-const int LP_Status_Infeasible = 1;
-const int LP_Status_Unbounded = 2;
-const int LP_Status_Singular = 3;
-const int LP_Status_Failed = 4;
-const int LP_Status_ObjUB = 5;
-const int LP_Status_OutOfTime = 6;
-
 class HModel {
  public:
   HModel();
@@ -124,7 +115,6 @@ class HModel {
   // Changes the update method, but only used in HTester.cpp
   void changeUpdate(int updateMethod);
 #endif
-  void setProblemStatus(int status);
 
   // Checking methods
 #ifdef HiGHSDEV
@@ -229,32 +219,6 @@ class HModel {
   void util_analyseLpSolution();
 #endif
 
-  //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  // Scalar solution data section: Sort it out!
-
-  // Possibly prevent reinversion on optimality in phase 1 or phase 2
-  const bool InvertIfRowOutNeg = true;
-
-  const bool forbidSuperBasic = true;
-
-  // Number of basic logicals - allows logical basis to be deduced
-  int numBasicLogicals;
-
-  // Solving result
-  int limitUpdate;
-  int countUpdate;
-
-  // Scalar solution output
-  // Essentials
-  int numberIteration;
-#ifdef HiGHSDEV
-  // Analysis of INVERT
-  const bool anInvertTime = false;
-  int totalInverts;
-  double totalInvertTime;
-#endif
-  //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
   // Model and solver status flags
   // First the actions---to be passed as parameters to update_mlFg
   const int mlFg_action_TransposeLP = 0;
@@ -315,7 +279,6 @@ class HModel {
   int mlFg_haveSavedBounds;
 
  public:
-  int problemStatus;
   
   // The scaled model
   HighsLp *solver_lp_;

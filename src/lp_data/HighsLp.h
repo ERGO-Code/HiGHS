@@ -98,6 +98,7 @@ struct HighsOptions {
   bool simplex_perturb_costs = true;
   // Maximum number of simplex iterations
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
+  int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool clean_up = false;
 };
@@ -156,6 +157,7 @@ enum class HighsStatus {
   SolutionError,
   PostsolveError,
   NotImplemented,
+  ReachedDualObjectiveUpperBound,
   Unbounded,
   Infeasible,
   Feasible,
@@ -254,6 +256,7 @@ struct HighsSimplexInfo {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   bool perturb_costs;
+  int update_limit;
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
@@ -265,15 +268,15 @@ struct HighsSimplexInfo {
   // Internal options - can't be changed externally
 
   // Options for reporting timing
-  bool reportSimplexInnerClock;
-  bool reportSimplexOuterClock;
-  bool reportSimplexPhasesClock;
+  bool report_simplex_inner_clock;
+  bool report_simplex_outer_clock;
+  bool report_simplex_phases_clock;
 #ifdef HiGHSDEV
   // Option for analysing simplex iterations, INVERT time and rebuild time
   bool analyseLp;
   bool analyseSimplexIterations;
   bool analyseLpSolution;
-  bool analyseInvertTime;
+  bool analyse_invert_time;
   bool analyseRebuildTime;
 #endif
   // Solved LP status
@@ -283,28 +286,43 @@ struct HighsSimplexInfo {
   bool tightened_solver_lp = false;
 
   // Simplex status
+
+  // Simplex runtime information
+  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
   int costs_perturbed = 0;
+  // Cumulative iteration count - updated in simplex solvers
+  int iteration_count = 0;
+  // Records of cumulative iteration counts - updated at the end of a phase
+  int dual_phase1_iteration_count = 0;
+  int dual_phase2_iteration_count = 0;
+  int primal_phase1_iteration_count = 0;
+  int primal_phase2_iteration_count = 0;
 
-  // Simplex run information
-
-  // Value of dual objective
+  // Number of UPDATE operations performed - should be zeroed when INVERT is performed
+  int update_count;
+  // Value of dual objective - only set when computed from scratch in rebuild()
   double dualObjectiveValue;
-  // Value of dual objective that is updated in dual simplex solver -
-  // need to put this in lower level header, but can't go into Dual.h
+
+
+  // Value of dual objective that is updated in dual simplex solver
   double updatedDualObjectiveValue;
+  // Number of logical variables in the basis 
+  int num_basic_logicals;
 
-  // Number of simplex iterations: total and constituent counts
-  int numberAltIteration;
-  int numberAltPhase1DualIteration;
-  int numberAltPhase2DualIteration;
-  int numberAltPrimalIteration;
+#ifdef HiGHSDEV
+  // Analysis of INVERT
+  int total_inverts;
+  double total_invert_time;
+#endif
 
+  /*
 #ifdef HiGHSDEV
   // Move this to Simplex class once it's created
   vector<int> historyColumnIn;
   vector<int> historyColumnOut;
   vector<double> historyAlpha;
 #endif
+  */
 
 };
 
