@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 
 #include "HConst.h"
 #include "HVector.h"
