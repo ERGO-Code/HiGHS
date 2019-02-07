@@ -25,6 +25,7 @@
 #include "HCrash.h"
 #include "HDual.h"
 #include "HighsLp.h"
+#include "HighsStatus.h"
 #include "HighsModelObject.h"
 //#include "HighsModelObjectUtils.h"
 #include "HighsUtils.h"

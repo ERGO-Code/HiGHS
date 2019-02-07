@@ -14,6 +14,8 @@
 #ifndef IO_LOAD_PROBLEM_H_
 #define IO_LOAD_PROBLEM_H_
 
+#include <unistd.h>
+
 #include "Filereader.h"
 #include "HighsIO.h"
 

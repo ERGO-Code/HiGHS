@@ -9,9 +9,11 @@ set(sources
  #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
+    lp_data/Highs.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
     lp_data/HighsModel.cpp
+    lp_data/HighsStatus.cpp
  #   simplex/HAPI.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
@@ -41,7 +43,6 @@ set(sources
 )
 
 set(headers
-    #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -58,6 +59,9 @@ set(headers
     lp_data/HighsLpUtils.h
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtil.h
+    lp_data/HighsOptions.h
+    lp_data/HighsRuntimeOptions.h
+    lp_data/HighsStatus.h
     simplex/HApp.h
     simplex/HConst.h
     simplex/HCrash.h
@@ -80,6 +84,7 @@ set(headers
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
+    Highs.h
 )
 
 

@@ -49,4 +49,9 @@ class Filereader {
   virtual ~Filereader(){};
 };
 
+// Return a string representation of ParseStatus.
+std::string HighsInputStatusToString(HighsInputStatus status);
+
+HighsInputStatus checkLp(const HighsLp& lp);
+
 #endif

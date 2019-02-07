@@ -5,7 +5,7 @@
 #include "FilereaderEms.h"
 #include "HighsIO.h"
 #include "HighsLp.h"
-#include "HighsSetup.h"
+#include "Highs.h"
 #include "LoadProblem.h"
 #include "catch.hpp"
 
