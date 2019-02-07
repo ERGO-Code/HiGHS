@@ -14,11 +14,12 @@
 #ifndef UTIL_HIGHSTIMER_H_
 #define UTIL_HIGHSTIMER_H_
 
-#include <sys/time.h>
+#include <chrono>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+
 /**
  * @brief Clock record structure
  */
@@ -38,7 +39,7 @@ class HighsTimer {
  public:
 
   HighsTimer() {
-    start_time = getWallTime();
+    start_time = wall_clock::now();
     start_tick = getWallTick();
     num_clock = 0;
     int i_clock = clock_def("Run HiGHS","RnH");
@@ -112,7 +113,7 @@ class HighsTimer {
       clock_time[i] = 0;
       clock_ticks[i] = 0;
     }
-    start_time = getWallTime();
+    start_time = wall_clock::now();
     start_tick = getWallTick();
   }
 
@@ -401,7 +402,11 @@ class HighsTimer {
   /**
    * @brief Return the wall-clock time since the clocks were reset
    */
-  double getTime() { return getWallTime() - start_time; }
+  double getTime() {
+    using namespace std::chrono;
+    return duration_cast<duration<double>>(wall_clock::now() - start_time)
+        .count();
+  }
 
   /**
    * @brief Return the CPU ticks since the clocks were reset
@@ -412,12 +417,9 @@ class HighsTimer {
    * @brief Return the current wall-clock time
    */
   double getWallTime() {
-    double walltime;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    walltime = tv.tv_sec;
-    walltime += (double)tv.tv_usec / 1000000.0;
-    return walltime;
+    using namespace std::chrono;
+    return duration_cast<duration<double>>(wall_clock::now().time_since_epoch())
+        .count();
   }
 
   /**
@@ -430,7 +432,10 @@ class HighsTimer {
   }
 
   // private: 
-  double start_time;  //!< Elapsed time when the clocks were reset
+  using wall_clock = std::chrono::high_resolution_clock;
+  using time_point = wall_clock::time_point;
+
+  time_point start_time; //!< Elapsed time when the clocks were reset
   double start_tick;  //!< CPU ticks when the clocks were reset
   int run_highs_clock; //!< The index of the RunHighsClock - should always be 0
   double run_highs_clock_time; //!< HiGHS run time - used to scale ticks to time
