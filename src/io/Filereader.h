@@ -17,6 +17,18 @@
 #include "HighsLp.h"
 #include "HighsModel.h"
 
+enum class HighsInputStatus {
+  OK,
+  FileNotFound,
+  ErrorMatrixDimensions,
+  ErrorMatrixIndices,
+  ErrorMatrixStart,
+  ErrorMatrixValue,
+  ErrorColBounds,
+  ErrorRowBounds,
+  ErrorObjective
+};
+
 enum class FilereaderRetcode {
   OKAY = 0,
   FILENOTFOUND = 1,

@@ -24,36 +24,11 @@
 #include "HighsModelObject.h"
 #include "Presolve.h"
 #include "cxxopts.hpp"
+#include "Highs.h"
 
 HModel HighsLpToHModel(const HighsLp& lp);
 HighsLp HModelToHighsLp(const HModel& model);
 
-// Class to set parameters and run HiGHS
-class Highs {
- public:
-  Highs() {}
-  explicit Highs(const HighsOptions& opt) : options_(opt){};
-
-  // Function to call just presolve.
-  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) {
-    // todo: implement, from user's side.
-    return HighsPresolveStatus::NullError;
-  };
-
-  // The public method run(lp, solution) calls runSolver to solve problem before
-  // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(HighsLp& lp, HighsSolution& solution);
-  HighsOptions options_;
-
- private:
-  // each HighsModelObject holds a const ref to its lp_
-  std::vector<HighsModelObject> lps_;
-
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
-  HighsStatus runSolver(HighsModelObject& model);
-  HighsTimer timer;
-};
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
