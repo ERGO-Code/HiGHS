@@ -65,6 +65,6 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
 }
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
-                                                   HighsModel& model) {
+                                                   HighsModelBuilder& model) {
   return FilereaderRetcode::PARSERERROR;
 }

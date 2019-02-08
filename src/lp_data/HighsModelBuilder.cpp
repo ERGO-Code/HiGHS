@@ -7,12 +7,12 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include "HighsModel.h"
+#include "HighsModelBuilder.h"
 
 #include "HConst.h"
 #include "math.h"
 
-HighsModel::~HighsModel() {
+HighsModelBuilder::~HighsModelBuilder() {
   while (this->variables.size() > 0) {
     HighsVar* variable;
     variable = this->variables.front();
@@ -138,7 +138,7 @@ HighsLinearConsCoef::~HighsLinearConsCoef() {}
 #pragma region HighsModel
 #pragma region HighsModel Variables
 
-void HighsModel::HighsCreateVar(const char* name, double lo, double hi,
+void HighsModelBuilder::HighsCreateVar(const char* name, double lo, double hi,
                                 double obj, HighsVarType type, HighsVar** var) {
   if (name != NULL) {
     // make sure name is available
@@ -158,23 +158,23 @@ void HighsModel::HighsCreateVar(const char* name, double lo, double hi,
   }
 }
 
-void HighsModel::HighsCreateVar(const char* name, HighsVar** var) {
+void HighsModelBuilder::HighsCreateVar(const char* name, HighsVar** var) {
   this->HighsCreateVar(name, 0.0, HIGHS_CONST_INF, 0.0, HighsVarType::CONT,
                        var);
 }
 
-void HighsModel::HighsGetOrCreateVarByName(const char* name, HighsVar** var) {
+void HighsModelBuilder::HighsGetOrCreateVarByName(const char* name, HighsVar** var) {
   this->HighsGetVarByName(name, var);
   if (*var == NULL) {
     this->HighsCreateVar(name, var);
   }
 }
 
-void HighsModel::HighsCreateVar(HighsVar** var) {
+void HighsModelBuilder::HighsCreateVar(HighsVar** var) {
   this->HighsCreateVar(NULL, var);
 }
 
-void HighsModel::HighsGetVarByName(const char* name, HighsVar** var) {
+void HighsModelBuilder::HighsGetVarByName(const char* name, HighsVar** var) {
   VarMap::iterator it = this->variableMap.find(name);
   if (it != this->variableMap.end()) {
     *var = it->second;
@@ -185,7 +185,7 @@ void HighsModel::HighsGetVarByName(const char* name, HighsVar** var) {
   }
 }
 
-void HighsModel::HighsRemoveVar(HighsVar* var) {
+void HighsModelBuilder::HighsRemoveVar(HighsVar* var) {
   // check that variable is no longer used in any constraints
   // TODO
 
@@ -207,7 +207,7 @@ void HighsModel::HighsRemoveVar(HighsVar* var) {
 
 #pragma region HighsModel Constraints
 
-void HighsModel::HighsCreateLinearCons(const char* name, double lo, double hi,
+void HighsModelBuilder::HighsCreateLinearCons(const char* name, double lo, double hi,
                                        HighsLinearCons** cons) {
   if (name != NULL) {
     // make sure name is available
@@ -227,25 +227,25 @@ void HighsModel::HighsCreateLinearCons(const char* name, double lo, double hi,
   }
 }
 
-void HighsModel::HighsCreateLinearCons(const char* name,
+void HighsModelBuilder::HighsCreateLinearCons(const char* name,
                                        HighsLinearCons** cons) {
   this->HighsCreateLinearCons(name, -HIGHS_CONST_INF, HIGHS_CONST_INF, cons);
 }
 
-void HighsModel::HighsCreateLinearCons(HighsLinearCons** cons) {
+void HighsModelBuilder::HighsCreateLinearCons(HighsLinearCons** cons) {
   this->HighsCreateLinearCons(NULL, cons);
 }
 
-void HighsModel::HighsGetLinearConsByName(const char* name,
+void HighsModelBuilder::HighsGetLinearConsByName(const char* name,
                                           HighsLinearCons** cons) {}
 
-void HighsModel::HighsDestroyLinearCons() {}
+void HighsModelBuilder::HighsDestroyLinearCons() {}
 
 #pragma endregion
 
 #pragma region HighsModel Coefficients
 
-void HighsModel::HighsCreateLinearConsCoef(HighsVar* var, double coef,
+void HighsModelBuilder::HighsCreateLinearConsCoef(HighsVar* var, double coef,
                                            HighsLinearConsCoef** consCoef) {
   *consCoef = new HighsLinearConsCoef(var, coef);
   VarConsCoefsMap::iterator it =
@@ -262,7 +262,11 @@ void HighsModel::HighsCreateLinearConsCoef(HighsVar* var, double coef,
   }
 }
 
-void HighsModel::HighsAddLinearConsCoefToCons(HighsLinearCons* cons,
+int HighsModelBuilder::getNumberOfVariables() {
+  return this->variables.size();
+}
+
+void HighsModelBuilder::HighsAddLinearConsCoefToCons(HighsLinearCons* cons,
                                               HighsLinearConsCoef* coef) {
   VarConsCoefMap::iterator it = cons->linearCoefs.find(coef->var);
   if (it != cons->linearCoefs.end()) {
@@ -284,7 +288,7 @@ void HighsModel::HighsAddLinearConsCoefToCons(HighsLinearCons* cons,
 
 #pragma endregion
 
-void HighsModel::HighsBuildTechnicalModel(HighsLp* lp) {
+void HighsModelBuilder::HighsBuildTechnicalModel(HighsLp* lp) {
   lp->numCol_ = this->variables.size();
   lp->numRow_ = this->linearConstraints.size();
 

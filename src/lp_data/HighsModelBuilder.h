@@ -7,8 +7,8 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#ifndef HIGHS_MODEL_H
-#define HIGHS_MODEL_H
+#ifndef HIGHS_MODELBUILDER_H
+#define HIGHS_MODELBUILDER_H
 
 #include <string.h>
 #include <list>
@@ -72,7 +72,7 @@ typedef std::map<const char*, HighsLinearCons*, char_cmp> ConsMap;
 typedef std::map<HighsVar*, std::list<HighsLinearCons*>*> VarConsMap;
 typedef std::map<HighsLinearConsCoef*, HighsLinearCons*> CoefConsMap;
 
-class HighsModel {
+class HighsModelBuilder {
  public:
   double objOffset;
   int objSense = 1;  // 1: minimize, -1: maximize
@@ -99,10 +99,12 @@ class HighsModel {
   void HighsDestroyLinearCons();
 
   // conversion from/to technical Lp representation
-  HighsModel(){};
-  HighsModel(HighsLp* lp);
-  ~HighsModel();
+  HighsModelBuilder(){};
+  HighsModelBuilder(HighsLp* lp);
+  ~HighsModelBuilder();
   void HighsBuildTechnicalModel(HighsLp* lp);
+
+  int getNumberOfVariables();
 
  private:
   // major data structures
