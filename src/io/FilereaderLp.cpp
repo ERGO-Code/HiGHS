@@ -46,14 +46,14 @@ FilereaderLp::~FilereaderLp() {
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
                                                   HighsLp& model) {
-  HighsModel m;
+  HighsModelBuilder m;
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
   return FilereaderRetcode::OKAY;
 }
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
-                                                  HighsModel& model) {
+                                                  HighsModelBuilder& model) {
   this->file = fopen(filename, "r");
   if (file == NULL) {
     return FilereaderRetcode::FILENOTFOUND;
@@ -86,7 +86,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   }
 }
 
-void FilereaderLp::handleBinarySection(HighsModel& model) {
+void FilereaderLp::handleBinarySection(HighsModelBuilder& model) {
   if (this->binSection.size() == 0) {
     return;
   }
@@ -107,7 +107,7 @@ void FilereaderLp::handleBinarySection(HighsModel& model) {
   }
 }
 
-void FilereaderLp::handleGeneralSection(HighsModel& model) {
+void FilereaderLp::handleGeneralSection(HighsModelBuilder& model) {
   if (this->generalSection.size() == 0) {
     return;
   }
@@ -128,7 +128,7 @@ void FilereaderLp::handleGeneralSection(HighsModel& model) {
   }
 }
 
-void FilereaderLp::handleSemiSection(HighsModel& model) {
+void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
   if (this->semiSection.size() == 0) {
     return;
   }
@@ -149,7 +149,7 @@ void FilereaderLp::handleSemiSection(HighsModel& model) {
   }
 }
 
-void FilereaderLp::handleSosSection(HighsModel& model) {
+void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
   if (this->sosSection.size() == 0) {
     return;
   }
@@ -170,7 +170,7 @@ void FilereaderLp::handleSosSection(HighsModel& model) {
   }
 }
 
-void FilereaderLp::handleBoundsSection(HighsModel& model) {
+void FilereaderLp::handleBoundsSection(HighsModelBuilder& model) {
   if (this->boundsSection.size() == 0) {
     return;
   }
@@ -253,7 +253,7 @@ void FilereaderLp::handleBoundsSection(HighsModel& model) {
   }
 }
 
-void FilereaderLp::handleConstraintSection(HighsModel& model) {
+void FilereaderLp::handleConstraintSection(HighsModelBuilder& model) {
   assert(this->constraintSection.size() > 0);
 
   LpToken* token;
@@ -343,7 +343,7 @@ void FilereaderLp::handleConstraintSection(HighsModel& model) {
   }
 }
 
-void FilereaderLp::handleObjectiveSection(HighsModel& model) {
+void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
   assert(this->objectiveSection.size() > 0);
 
   LpToken* token;

@@ -20,6 +20,7 @@
 #include "HConfig.h"
 #include "HApp.h"
 #include "HighsLp.h"
+#include "HighsLpUtils.h"
 #include "HighsModelObject.h"
 #include "HighsStatus.h"
 #include "Presolve.h"
@@ -202,7 +203,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject& model) {
-  assert(checkLp(model.lp_) == HighsInputStatus::OK);
+  assert(checkLp(model.lp_) == HighsStatus::OK);
 
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX
