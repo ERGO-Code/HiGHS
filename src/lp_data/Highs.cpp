@@ -28,6 +28,20 @@
 HModel HighsLpToHModel(const HighsLp &lp);
 HighsLp HModelToHighsLp(const HModel &model);
 
+int Highs::HighsAddVariable(double obj, double lo, double hi) {
+  if (this->runSuccessful) {
+    // call Julian's methods in HighsModelObject
+    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
+    return 0; //TODO
+    
+  } else {
+    // build initial model using HighsModelBuilder
+    HighsVar* newVariable;
+    this->builder.HighsCreateVar(NULL, lo, hi, obj, HighsVarType::CONT, &newVariable);
+    return this->builder.getNumberOfVariables();
+  }
+}
+
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run(HighsLp& lp) {
