@@ -26,7 +26,8 @@ enum ModelLogLevel {
   ML_VERBOSE = 1,
   ML_DETAILED = 2,
   ML_MINIMAL = 4,
-  ML_DEFAULT = ML_VERBOSE
+  ML_DEFAULT = ML_VERBOSE,
+  ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL
 };
   
 enum class ParallelOption {
@@ -41,7 +42,7 @@ enum class PresolveOption {
   DEFAULT = OFF
 };
 
-enum CrashOption {
+enum class CrashOption {
   OFF = 0,
   ON,
   DEFAULT = OFF

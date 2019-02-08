@@ -1,4 +1,5 @@
 #include "HighsOptions.h"
+#include "HConst.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
@@ -6,26 +7,25 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
   {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[filename(s)]").show_positional_help();
-
-    bool presolve = false;
-    bool crash = false;
-    bool simplex = true;
-    bool ipm = false;
-    bool parallel = false;
+    
+    std::string presolve, crash, simplex, ipm, parallel;
 
     cxx_options.add_options()(
         "file",
         "Filename of LP to solve.",
         cxxopts::value<std::vector<std::string>>())(
         "presolve", "Use presolve: off by default.",
-        cxxopts::value<bool>())(
+        cxxopts::value<std::string>(presolve))(
         "crash", "Use crash to start simplex: off by default.",
-        cxxopts::value<bool>())(
+        cxxopts::value<std::string>(crash))(
         "simplex", "Use simplex solver: on by default.",
-        cxxopts::value<bool>())(
+        cxxopts::value<std::string>(simplex))(
         "ipm", "Use interior point method solver: off by default.",
-        cxxopts::value<bool>())(
-        "time-limit", "Use time limit.", cxxopts::value<double>())(
+        cxxopts::value<std::string>(ipm))(
+        "parallel", "Use parallel solve: off by default.",
+        cxxopts::value<std::string>(parallel))(
+        "time-limit", "Use time limit.",
+        cxxopts::value<double>())(
         "h, help", "Print help.");
 
     cxx_options.parse_positional("file");
@@ -53,13 +53,13 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
 
     if (result.count("presolve"))
     {
+      std::string value = result["presolve"].as<std::string>();
+      if (value == "on")
         options.presolve_option = PresolveOption::ON;
-      }
-      else
-      {
+      else if (value == "off")
         options.presolve_option = PresolveOption::OFF;
-      }
-      std::cout << "Presolve is set to " << data << ".\n";
+      else
+        HighsPrintMessage(ML_ALWAYS, "Unknown options for presovle: %s. Using default value.\n", value);
     }
 
     if (result.count("time-limit"))
