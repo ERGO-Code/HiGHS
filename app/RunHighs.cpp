@@ -24,8 +24,8 @@ void HiGHSRun(const char *message = nullptr) {
      << "." << HIGHS_VERSION_PATCH << " [date: " << HIGHS_COMPILATION_DATE
      << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
 
-  HighsPrintMessage(7, ss.str().c_str());
-  HighsPrintMessage(7, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
+  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+  HighsPrintMessage(ML_ALWAYS, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
 
 #ifdef HiGHSDEV
   // Report on preprocessing macros
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   HighsStatus run_status = highs.run(lp);
 
   double end_time = timer.getWallTime();
-  HighsPrintMessage(7, "HiGHS run ended after %12g seconds\n",
+  HighsPrintMessage(ML_ALWAYS, "HiGHS run ended after %12g seconds\n",
                   end_time - start_time);
   return 0;
 }

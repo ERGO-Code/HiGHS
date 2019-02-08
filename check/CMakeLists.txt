@@ -105,7 +105,7 @@ set(failInstances
 # define settings
 set(settings
     ""
-    "-m"
+    "--parallel=on"
 #    "--presolve=on"
     )
 
@@ -125,7 +125,7 @@ foreach(instance ${${instances}})
         set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
         # add a test and test properties
         add_test(NAME ${name}${setting} COMMAND $<TARGET_FILE:highs> ${setting}
-              -f ${inst})
+              ${inst})
         set_tests_properties (${name}${setting} PROPERTIES
               PASS_REGULAR_EXPRESSION
               "(Run): ${solutionstatus}")

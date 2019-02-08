@@ -1,4 +1,5 @@
 #include "HighsOptions.h"
+#include "HConst.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
@@ -7,31 +8,27 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[filename(s)]").show_positional_help();
 
+    std::string presolve, crash, simplex, ipm, parallel;
+
     cxx_options.add_options()(
-        "f, filename",
+        "file",
         "Filename of LP to solve.",
         cxxopts::value<std::vector<std::string>>())(
-        "p, presolve", "Presolve: on | off. On by default.",
-        cxxopts::value<std::string>())(
-        "c, crash",
-        "Crash mode: off | ltssf | ltssf1 | ... | ltssf7 | bs | singts.",
-        cxxopts::value<std::string>())(
-        "e, edge-weight", "Edge weight: Dan | Dvx | DSE | DSE0 | DSE2Dvx.",
-        cxxopts::value<std::string>())(
-        "P, price", "Price: Row | Col | RowSw | RowSwColSw | RowUltra. ",
-        cxxopts::value<std::string>())("s, sip", "Use option sip.",
-                                       cxxopts::value<bool>())(
-        "S, scip", "Use option SCIP (to test utilities)",
-        cxxopts::value<bool>())("m, pami",
-                                "Use parallel solve.",
-                                cxxopts::value<bool>())(
-        "t, partition", "Use pami with partition file: filename",
-        cxxopts::value<std::string>())("i, ipx", "Use interior point solver.",
-                                       cxxopts::value<bool>())(
-        "T, time-limit", "Use time limit.", cxxopts::value<double>())(
+        "presolve", "Use presolve: off by default.",
+        cxxopts::value<std::string>(presolve))(
+        "crash", "Use crash to start simplex: off by default.",
+        cxxopts::value<std::string>(crash))(
+        "simplex", "Use simplex solver: on by default.",
+        cxxopts::value<std::string>(simplex))(
+        "ipm", "Use interior point method solver: off by default.",
+        cxxopts::value<std::string>(ipm))(
+        "parallel", "Use parallel solve: off by default.",
+        cxxopts::value<std::string>(parallel))(
+        "time-limit", "Use time limit.",
+        cxxopts::value<double>())(
         "h, help", "Print help.");
 
-    cxx_options.parse_positional("filename");
+    cxx_options.parse_positional("file");
 
     auto result = cxx_options.parse(argc, argv);
 
@@ -42,10 +39,10 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     }
 
     // Currently works for only one filename at a time.
-    if (result.count("filename"))
+    if (result.count("file"))
     {
       std::string filename = "";
-      auto &v = result["filename"].as<std::vector<std::string>>();
+      auto &v = result["file"].as<std::vector<std::string>>();
       if (v.size() > 1)
       {
         std::cout << "Multiple files not implemented.\n";
@@ -56,23 +53,37 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
 
     if (result.count("presolve"))
     {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off")
-      {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      if (data == "on")
-      {
-        options.presolve_option = PresolveOption::ON;
-      }
-      else
-      {
-        options.presolve_option = PresolveOption::OFF;
-      }
-      std::cout << "Presolve is set to " << data << ".\n";
+      std::string value = result["presolve"].as<std::string>();
+      if (!setOptionValue(options, "presolve", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for presovle option: %s. Ignored.\n", value.c_str());
+    }
+
+    if (result.count("crash"))
+    {
+      std::string value = result["crash"].as<std::string>();
+      if (!setOptionValue(options, "crash", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for crash option: %s. Ignored.\n", value.c_str());
+    }
+    
+    if (result.count("parallel"))
+    {
+      std::string value = result["parallel"].as<std::string>();
+      if (!setOptionValue(options, "parallel", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for parallel option: %s. Ignored.\n", value.c_str());
+    }
+
+  if (result.count("simplex"))
+    {
+      std::string value = result["simplex"].as<std::string>();
+      if (!setOptionValue(options, "simplex", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for simplex option: %s. Ignored.\n", value.c_str());
+    }
+
+  if (result.count("ipm"))
+    {
+      std::string value = result["ipm"].as<std::string>();
+      if (setOptionValue(options, "ipm", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
     }
 
     if (result.count("time-limit"))

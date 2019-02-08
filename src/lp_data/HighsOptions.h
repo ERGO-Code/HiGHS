@@ -107,4 +107,6 @@ struct HighsOptions
   bool clean_up = false;
 };
 
+bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+
 #endif
