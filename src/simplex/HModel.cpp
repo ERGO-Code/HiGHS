@@ -2556,9 +2556,9 @@ void HModel::util_reportNumberIterationObjectiveValue(int i_v) {
 
 void HModel::util_reportSolverOutcome(const char *message) {
   if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL)
-    HighsPrintMessage(ML_ALL, "%s: OPTIMAL", message);
+    HighsPrintMessage(ML_ALWAYS, "%s: OPTIMAL", message);
   else
-    HighsPrintMessage(ML_ALL, "%s: NOT-OPT", message);
+    HighsPrintMessage(ML_ALWAYS, "%s: NOT-OPT", message);
   double dualObjectiveValue = simplex_info_->dualObjectiveValue;
 #ifdef SCIP_DEV
   double prObjVal = computePrObj();
@@ -2573,19 +2573,19 @@ void HModel::util_reportSolverOutcome(const char *message) {
 		    currentRunHighsTime);
 #else
   double currentRunHighsTime = timer_->readRunHighsClock();
-  HighsPrintMessage(ML_ALL, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
+  HighsPrintMessage(ML_ALWAYS, "%32s %20.10e %10d %10.3f", solver_lp_->model_name_.c_str(), dualObjectiveValue,
          simplex_info_->iteration_count, currentRunHighsTime);
 #endif
-  HighsPrintMessage(ML_ALL, " [Ph1 = %d; Ph2 = %d; Pr = %d]",
+  HighsPrintMessage(ML_ALWAYS, " [Ph1 = %d; Ph2 = %d; Pr = %d]",
 		    simplex_info_->dual_phase1_iteration_count,
 		    simplex_info_->dual_phase2_iteration_count,
 		    simplex_info_->primal_phase2_iteration_count
 		    );
   if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL) {
-    HighsPrintMessage(ML_ALL, "\n");
+    HighsPrintMessage(ML_ALWAYS, "\n");
   } else {
     util_reportModelStatus();
-    HighsPrintMessage(ML_ALL, "\n");
+    HighsPrintMessage(ML_ALWAYS, "\n");
   }
   // Greppable report line added
   HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s,%d,%d,%d\n",
@@ -2601,26 +2601,25 @@ void HModel::util_reportSolverOutcome(const char *message) {
 }
 
 // Methods for reporting the model, its solution, row and column data and matrix
-//
 // Report the model status
 void HModel::util_reportModelStatus() {
-  HighsPrintMessage(ML_ALL, "LP status is %2d: ", simplex_info_->solution_status);
+  HighsPrintMessage(ML_ALWAYS, "LP status is %2d: ", simplex_info_->solution_status);
   if (simplex_info_->solution_status == SimplexSolutionStatus::UNSET)
-    HighsPrintMessage(ML_ALL, "Unset");
+    HighsPrintMessage(ML_ALWAYS, "Unset\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::OPTIMAL)
-    HighsPrintMessage(ML_ALL, "Optimal");
+    HighsPrintMessage(ML_ALWAYS, "Optimal\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::INFEASIBLE)
-    HighsPrintMessage(ML_ALL, "Infeasible");
+    HighsPrintMessage(ML_ALWAYS, "Infeasible\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::UNBOUNDED)
-    HighsPrintMessage(ML_ALL, "Primal unbounded");
+    HighsPrintMessage(ML_ALWAYS, "Primal unbounded\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::SINGULAR)
-    HighsPrintMessage(ML_ALL, "Singular basis");
+    HighsPrintMessage(ML_ALWAYS, "Singular basis\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::FAILED)
-    HighsPrintMessage(ML_ALL, "Failed");
+    HighsPrintMessage(ML_ALWAYS, "Failed\n");
   else if (simplex_info_->solution_status == SimplexSolutionStatus::OUT_OF_TIME)
-    HighsPrintMessage(ML_ALL, "Time limit exceeded");
+    HighsPrintMessage(ML_ALWAYS, "Time limit exceeded\n");
   else
-    HighsPrintMessage(ML_ALL, "Unrecognised");
+    HighsPrintMessage(ML_ALWAYS, "Unrecognised\n");
 }
 
 // The remaining routines are wholly independent of any classes, merely

@@ -14,15 +14,18 @@
 #ifndef IO_LOAD_PROBLEM_H_
 #define IO_LOAD_PROBLEM_H_
 
+#include <unistd.h>
+
 #include "Filereader.h"
 #include "HighsIO.h"
+#include "HighsLpUtils.h"
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
-HighsInputStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
+HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   // Check if file exists
   if (options.filename.size() == 0 || access(options.filename.c_str(), F_OK) == -1)
-    return HighsInputStatus::FileNotFound;
+    return HighsStatus::LpError;
 
 
   Filereader* reader = Filereader::getFilereader(options.filename.c_str());

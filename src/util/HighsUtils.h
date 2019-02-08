@@ -14,8 +14,9 @@
 #ifndef UTIL_HIGHSUTILS_H_
 #define UTIL_HIGHSUTILS_H_
 
-#include "HConfig.h"
 #include <vector>
+
+#include "HConfig.h"
 
 /**
  * @brief Logical check of double being +Infinity

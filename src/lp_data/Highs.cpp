@@ -7,12 +7,11 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsSetup.h
+/**@file lp_data/Highs.cpp
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef LP_DATA_HIGHS_SETUP_H_
-#define LP_DATA_HIGHS_SETUP_H_
+#include "Highs.h"
 
 #include <algorithm>
 #include <iostream>
@@ -21,45 +20,32 @@
 #include "HConfig.h"
 #include "HApp.h"
 #include "HighsLp.h"
+#include "HighsLpUtils.h"
 #include "HighsModelObject.h"
+#include "HighsStatus.h"
 #include "Presolve.h"
-#include "cxxopts.hpp"
 
-HModel HighsLpToHModel(const HighsLp& lp);
-HighsLp HModelToHighsLp(const HModel& model);
+HModel HighsLpToHModel(const HighsLp &lp);
+HighsLp HModelToHighsLp(const HModel &model);
 
-// Class to set parameters and run HiGHS
-class Highs {
- public:
-  Highs() {}
-  explicit Highs(const HighsOptions& opt) : options_(opt){};
-
-  // Function to call just presolve.
-  HighsPresolveStatus presolve(const HighsLp& lp, HighsLp& reduced_lp) {
-    // todo: implement, from user's side.
-    return HighsPresolveStatus::NullError;
-  };
-
-  // The public method run(lp, solution) calls runSolver to solve problem before
-  // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(HighsLp& lp, HighsSolution& solution);
-  HighsOptions options_;
-
- private:
-  // each HighsModelObject holds a const ref to its lp_
-  std::vector<HighsModelObject> lps_;
-
-  HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
-  HighsPostsolveStatus runPostsolve(PresolveInfo& presolve_info);
-  HighsStatus runSolver(HighsModelObject& model);
-  HighsTimer timer;
-};
+int Highs::HighsAddVariable(double obj, double lo, double hi) {
+  if (this->runSuccessful) {
+    // call Julian's methods in HighsModelObject
+    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
+    return 0; //TODO
+    
+  } else {
+    // build initial model using HighsModelBuilder
+    HighsVar* newVariable;
+    this->builder.HighsCreateVar(NULL, lo, hi, obj, HighsVarType::CONT, &newVariable);
+    return this->builder.getNumberOfVariables();
+  }
+}
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
+HighsStatus Highs::run(HighsLp& lp) {
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s", lp.model_name_.c_str());
-
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp, timer));
 
@@ -72,6 +58,7 @@ HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
   //Define clocks
   HighsTimer &timer = lps_[0].timer_;
   timer.startRunHighsClock();
+
 
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(timer.presolve_clock);
@@ -230,7 +217,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject& model) {
-  assert(checkLp(model.lp_) == HighsInputStatus::OK);
+  assert(checkLp(model.lp_) == HighsStatus::OK);
 
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX
@@ -257,140 +244,8 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // todo:
   // assert(KktSatisfied(lp, solution));
 
+  solution_ = model.solution_;
   return status;
 }
 
-void HiGHSRun(const char *message = nullptr) {
-  std::stringstream ss;
-  ss << "Running HiGHS " << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR
-     << "." << HIGHS_VERSION_PATCH << " [date: " << HIGHS_COMPILATION_DATE
-     << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
 
-  HighsPrintMessage(7, ss.str().c_str());
-  HighsPrintMessage(7, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
-
-#ifdef HiGHSDEV
-  // Report on preprocessing macros
-  std::cout << "In " << message << std::endl;
-  std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
-#ifdef OLD_PARSER
-  std::cout << "OLD_PARSER       is     defined" << std::endl;
-#else
-  std::cout << "OLD_PARSER       is not defined" << std::endl;
-#endif
-
-#ifdef OPENMP
-  std::cout << "OPENMP           is     defined" << std::endl;
-#else
-  std::cout << "OPENMP           is not defined" << std::endl;
-#endif
-
-#ifdef SCIP_DEV
-  std::cout << "SCIP_DEV         is     defined" << std::endl;
-#else
-  std::cout << "SCIP_DEV         is not defined" << std::endl;
-#endif
-
-#ifdef HiGHSDEV
-  std::cout << "HiGHSDEV         is     defined" << std::endl;
-#else
-  std::cout << "HiGHSDEV         is not defined" << std::endl;
-#endif
-
-#endif
-};
-
-HighsStatus loadOptions(int argc, char** argv, HighsOptions& options) {
-  try {
-    cxxopts::Options cxx_options(argv[0], "HiGHS options");
-    cxx_options.positional_help("[filename(s)]").show_positional_help();
-
-    cxx_options.add_options()(
-        "f, filename",
-        "Filename of LP to solve.",
-        cxxopts::value<std::vector<std::string>>())(
-        "p, presolve", "Presolve: on | off. On by default.",
-        cxxopts::value<std::string>())(
-        "c, crash",
-        "Crash mode: off | ltssf | ltssf1 | ... | ltssf7 | bs | singts.",
-        cxxopts::value<std::string>())(
-        "e, edge-weight", "Edge weight: Dan | Dvx | DSE | DSE0 | DSE2Dvx.",
-        cxxopts::value<std::string>())(
-        "P, price", "Price: Row | Col | RowSw | RowSwColSw | RowUltra. ",
-        cxxopts::value<std::string>())("s, sip", "Use option sip.",
-                                       cxxopts::value<bool>())(
-        "S, scip", "Use option SCIP (to test utilities)",
-        cxxopts::value<bool>())("m, pami",
-                                "Use parallel solve.",
-                                cxxopts::value<bool>())(
-        "t, partition", "Use pami with partition file: filename",
-        cxxopts::value<std::string>())("i, ipx", "Use interior point solver.",
-                                cxxopts::value<bool>())(
-        "T, time-limit", "Use time limit.", cxxopts::value<double>())(
-        "h, help", "Print help.");
-
-    cxx_options.parse_positional("filename");
-
-    auto result = cxx_options.parse(argc, argv);
-
-    if (result.count("help")) {
-      std::cout << cxx_options.help({""}) << std::endl;
-      exit(0);
-    }
-
-    // Currently works for only one filename at a time.
-    if (result.count("filename")) {
-      std::string filename = "";
-      auto& v = result["filename"].as<std::vector<std::string>>();
-      if (v.size() > 1) {
-        std::cout << "Multiple files not implemented.\n";
-        return HighsStatus::LpError;
-      }
-      options.filename = v[0];
-    }
-
-    if (result.count("presolve")) {
-      std::string data = result["presolve"].as<std::string>();
-      std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-      if (data != "on" && data != "off") {
-        std::cout << "Wrong value specified for presolve." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      if (data == "on") {
-	options.presolve_option = PresolveOption::ON;
-      } else {
-	options.presolve_option = PresolveOption::OFF;
-      }
-      std::cout << "Presolve is set to " << data << ".\n";
-    }
-
-    if (result.count("time-limit")) {
-      double time_limit = result["time-limit"].as<double>();
-      if (time_limit <= 0) {
-        std::cout << "Time limit must be positive." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.highs_run_time_limit = time_limit;
-    }
-
-  } catch (const cxxopts::OptionException& e) {
-    std::cout << "error parsing options: " << e.what() << std::endl;
-    return HighsStatus::OptionsError;
-  }
-
-  if (options.filename.size() == 0) {
-    std::cout << "Please specify filename in .mps|.lp|.ems|.gz format.\n";
-    return HighsStatus::LpError;
-  }
-
-  // Force column permutation of the LP to be used by the solver if
-  // parallel code is to be used
-  //  if (options.pami || options.sip) {options.permuteLp = true;}
-
-
-  return HighsStatus::OK;
-}
-
-#endif
