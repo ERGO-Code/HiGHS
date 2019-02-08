@@ -29,7 +29,7 @@ HighsLp HModelToHighsLp(const HModel &model);
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
-HighsStatus Highs::run(HighsLp& lp, HighsSolution& solution) {
+HighsStatus Highs::run(HighsLp& lp) {
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s", lp.model_name_.c_str());
   // Not solved before, so create an instance of HighsModelObject.
   lps_.push_back(HighsModelObject(lp, timer));
@@ -229,6 +229,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // todo:
   // assert(KktSatisfied(lp, solution));
 
+  solution_ = model.solution_;
   return status;
 }
 

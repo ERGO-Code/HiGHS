@@ -15,13 +15,34 @@ public:
 
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(HighsLp &lp, HighsSolution &solution);
+  HighsStatus run(HighsLp &lp);
 
-  void setIntegerOption(const std::string& param, const int value);
-  void setDoubleOption(const std::string& param, const double value);
-  void setStringOption(const std::string& param, const std::string& value);
+  bool setIntegerOption(const std::string &param, const int value);
+  bool setDoubleOption(const std::string &param, const double value);
+  bool setStringOption(const std::string &param, const std::string &value);
+
+  bool getIntegerOption(const std::string &param, int &value);
+  bool getDoubleOption(const std::string &param, double &value);
+  bool getStringOption(const std::string &param, std::string &value);
+
+  // todo: Set warm/hot start methods
+
+  // No getters for LP members because the user has access to the HighsLp.
+
+  // todo: add methods to modify matrix within simplex
+  // addRow | add Col | change coeff (int row, int col) | ...
+  // ipx (not implemented)
+
+  // todo: getRangingInformation(..)
+
+  double getRowValue(int row);
+
+  double getObjectiveValue();
+
+  HighsSolution getSolution() const { return solution_; }
 
 private:
+  HighsSolution solution_;
   // each HighsModelObject holds a const ref to its lp_
   std::vector<HighsModelObject> lps_;
 

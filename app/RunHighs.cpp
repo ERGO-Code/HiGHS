@@ -81,9 +81,8 @@ int main(int argc, char **argv) {
   }
 
   Highs highs(options);
-  HighsSolution solution;
 
-  HighsStatus run_status = highs.run(lp, solution);
+  HighsStatus run_status = highs.run(lp);
 
   double end_time = timer.getWallTime();
   HighsPrintMessage(7, "HiGHS run ended after %12g seconds\n",
