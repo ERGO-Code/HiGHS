@@ -106,34 +106,46 @@ class HSimplex {
     HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
     switch (action) {
     case LpAction::TRANSPOSE:
+#ifdef HIGHSDEV
       printf(" LpAction::TRANSPOSE\n");
+#endif
       simplex_info_.solver_lp_is_transposed = true;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::SCALE:
+#ifdef HIGHSDEV
       printf(" LpAction::SCALE\n");
+#endif
       simplex_info_.solver_lp_is_scaled = true;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::PERMUTE:
+#ifdef HIGHSDEV
       printf(" LpAction::PERMUTE\n");
+#endif
       simplex_info_.solver_lp_is_permuted = true;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::TIGHTEN:
+#ifdef HIGHSDEV
       printf(" LpAction::TIGHTEN\n");
+#endif
       simplex_info_.solver_lp_is_tightened = true;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::NEW_COSTS:
+#ifdef HIGHSDEV
       printf(" LpAction::NEW_COSTS\n");
+#endif
       //      initCost();
       simplex_info_.solver_lp_has_nonbasic_dual_values = false;
       simplex_info_.solver_lp_has_fresh_rebuild = false;
       simplex_info_.solver_lp_has_dual_objective_value = false;
       break;
     case LpAction::NEW_BOUNDS:
+#ifdef HIGHSDEV
       printf(" LpAction::NEW_BOUNDS\n");
+#endif
       //      simplex_info_.solver_lp_ = true;
       //     initBound();
       //     initValue();
@@ -142,41 +154,55 @@ class HSimplex {
       simplex_info_.solver_lp_has_dual_objective_value = false;
       break;
     case LpAction::NEW_BASIS:
+#ifdef HIGHSDEV
       printf(" LpAction::NEW_BASIS\n");
+#endif
       highs_model_object.basis_.valid_ = true;
       //      highs_model_object.solver_basis_.valid_ = false;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::NEW_COLS:
+#ifdef HIGHSDEV
       printf(" LpAction::NEW_COLS\n");
+#endif
       highs_model_object.basis_.valid_ = true;
       //      highs_model_object.solver_basis_.valid_ = false;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::NEW_ROWS:
+#ifdef HIGHSDEV
       printf(" LpAction::NEW_ROWS\n");
+#endif
       highs_model_object.basis_.valid_ = true;
       //      highs_model_object.solver_basis_.valid_ = false;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::DEL_COLS:
+#ifdef HIGHSDEV
       printf(" LpAction::DEL_COLS\n");
+#endif
       highs_model_object.basis_.valid_ = false;
       //      highs_model_object.solver_basis_.valid_ = false;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::DEL_ROWS:
+#ifdef HIGHSDEV
       printf(" LpAction::DEL_ROWS\n");
+#endif
       highs_model_object.basis_.valid_ = false;
       //      highs_model_object.solver_basis_.valid_ = false;
       clear_solver_lp_data(highs_model_object);
       break;
     case LpAction::DEL_ROWS_BASIS_OK:
+#ifdef HIGHSDEV
       printf(" LpAction::DEL_ROWS_BASIS_OK\n");
+#endif
       //      simplex_info_.solver_lp_ = true;
       break;
     default:
+#ifdef HIGHSDEV
       printf(" Unrecognised LpAction::%d\n", (int) action);
+#endif
       break;
     }
   }
