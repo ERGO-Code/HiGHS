@@ -537,7 +537,7 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   }
 
   // Indicate that the model now has ranging data
-  model->mlFg_haveRangingData = 1;
+  //  model->mlFg_haveRangingData = 1;
   return 0;
 }
 
@@ -618,8 +618,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          checkDataZeroMlFg(&testModel);
-          checkDataZeroMlFg(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
           printf("Row %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
 	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
@@ -668,7 +668,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          checkDataZeroMlFg(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
           printf("Row %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
 	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
@@ -742,7 +742,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          checkDataZeroMlFg(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
           printf("Col %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeColLower, changeColUpper, svColLower, svColUpper);
 	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
@@ -792,7 +792,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         }
         if (useTestModel) {
           HModel testModel = *model;
-          checkDataZeroMlFg(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
           printf("Col %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeColLower, changeColUpper, svColLower, svColUpper);
 	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
@@ -855,7 +855,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         changeColCost = c_dn_c[i];
         if (useTestModel) {
           HModel testModel = *model;
-          checkDataZeroMlFg(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
           testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkDataSolve(&testModel, rpSolution);
@@ -890,7 +890,7 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         //			model->scale();
         if (useTestModel) {
           HModel testModel = *model;
-          checkDataZeroMlFg(&testModel);
+          check_data_clear_solver_lp_data(&testModel);
           testModel.util_unscaleColCostValue(i, &changeColCost);
           testModel.util_chgCostsSet(1, &i, &changeColCost);
           checkDataSolve(&testModel, rpSolution);
@@ -944,19 +944,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   return 0;
 }
 
-void HRanging::checkDataZeroMlFg(HModel* model) {
-  model->mlFg_haveMatrixColWise = 0;
-  model->mlFg_haveMatrixRowWise = 0;
-  model->mlFg_haveFactorArrays = 0;
-  model->mlFg_haveEdWt = 0;
-  model->mlFg_haveInvert = 0;
-  model->mlFg_haveFreshInvert = 0;
-  model->mlFg_haveNonbasicDuals = 0;
-  model->mlFg_haveBasicPrimals = 0;
-  //  model->mlFg_haveDualObjectiveValue = 0;
-  model->mlFg_haveFreshRebuild = 0;
-  model->mlFg_haveRangingData = 0;
-  model->mlFg_haveSavedBounds = 0;
+void HRanging::check_data_clear_solver_lp_data(HModel* model) {
+  //  clear_solver_lp_data(highs_model_object);
 }
 
 

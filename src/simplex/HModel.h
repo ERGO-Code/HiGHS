@@ -52,9 +52,6 @@ class HModel {
   void replaceWithLogicalBasis();
   void replaceWithNewBasis(const int* XbasicIndex);
 
-  // Method to clear the current model
-  void clearModel();
-
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
@@ -65,12 +62,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void mlFg_Clear();
-  void mlFg_Update(int mlFg_action);
-#ifdef HiGHSDEV
-  void mlFg_Report();
-#endif
-
   void initFromNonbasic();
   void replaceFromNonbasic();
   void initBasicIndex();
@@ -219,24 +210,6 @@ class HModel {
   void util_analyseLpSolution();
 #endif
 
-  // Model and solver status flags
-  // First the actions---to be passed as parameters to update_mlFg
-  const int mlFg_action_TransposeLP = 0;
-  const int mlFg_action_ScaleLP = 1;
-  const int mlFg_action_ShuffleLP = 2;
-  const int mlFg_action_NewCosts = 3;
-  const int mlFg_action_NewBounds = 4;
-  const int mlFg_action_NewBasis = 5;
-  const int mlFg_action_NewCols = 6;
-  const int mlFg_action_NewRows = 7;
-  const int mlFg_action_DelCols = 8;
-  const int mlFg_action_DelRows = 9;
-  const int mlFg_action_DelRowsBasisOK = 10;
-
-  int mlFg_transposedLP;
-  int mlFg_scaledLP;
-  int mlFg_shuffledLP;
-  //
   // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To
   // have them means that they correspond to a consistent basis
   // logically, but B is not necessarily nonsingular.

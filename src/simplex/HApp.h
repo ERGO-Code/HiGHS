@@ -405,6 +405,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     simplex_method_.tighten_solver_lp(highs_model);
   //
 
+  simplex_method_.report_solver_lp_status_flags(highs_model);
 
   model.initWithLogicalBasis();
 

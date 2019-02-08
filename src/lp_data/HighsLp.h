@@ -259,7 +259,7 @@ struct HighsSimplexInfo {
   //
   // Vectors of random reals for column cost perturbation, a random
   // permutation of all indices for CHUZR and a random permutation of
-  // column indices for shuffling the columns
+  // column indices for permuting the columns
   std::vector<double> numTotRandomValue_;
   std::vector<int> numTotPermutation_;
   std::vector<int> numColPermutation_;
@@ -313,7 +313,7 @@ struct HighsSimplexInfo {
   bool solver_lp_has_dual_steepest_edge_weights = false;
  // The nonbasic dual and basic primal values are known
   bool solver_lp_has_nonbasic_dual_values = false;
-  bool solver_lp_has_basic_primal_value = false;
+  bool solver_lp_has_basic_primal_values = false;
   bool solver_lp_has_invert = false;
   bool solver_lp_has_fresh_invert = false;
   bool solver_lp_has_fresh_rebuild = false;

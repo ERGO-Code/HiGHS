@@ -55,7 +55,7 @@ using std::setw;
 // allocate and populate (where possible) work* arrays and
 // allocate basis* arrays
 HModel::HModel() {
-  clearModel();
+//  clear_solver_lp(highs_model_object);
 }
 
 void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
@@ -94,212 +94,6 @@ void HModel::load_fromArrays(int XnumCol, int Xsense, const double *XcolCost,
   */
 }
 
-void HModel::mlFg_Clear() {
-  mlFg_transposedLP = 0;
-  mlFg_scaledLP = 0;
-  mlFg_shuffledLP = 0;
-  mlFg_haveBasis = 0;
-  mlFg_haveMatrixColWise = 0;
-  mlFg_haveMatrixRowWise = 0;
-  mlFg_haveFactorArrays = 0;
-  mlFg_haveEdWt = 0;
-  mlFg_haveInvert = 0;
-  mlFg_haveFreshInvert = 0;
-  mlFg_haveNonbasicDuals = 0;
-  mlFg_haveBasicPrimals = 0;
-  //  mlFg_haveDualObjectiveValue = 0;
-  mlFg_haveFreshRebuild = 0;
-  mlFg_haveRangingData = 0;
-  mlFg_haveSavedBounds = 0;
-}
-
-void HModel::mlFg_Update(int mlFg_action) {
-  //  switch(mlFg_action) {
-  if (mlFg_action == mlFg_action_TransposeLP) {
-    // The LP has just been transposed
-    // Want to clear all flags since model is totally different
-    // Should not clear flags if model is scaled
-    assert(mlFg_scaledLP = 0);
-    // Clear the model flags, but indicate that it's transposed
-    mlFg_Clear();
-//    problemStatus = LP_Status_Unset;
-    mlFg_transposedLP = 1;
-  } else if (mlFg_action == mlFg_action_ScaleLP) {
-    // The LP has just been scaled
-//    problemStatus = LP_Status_Unset;
-    mlFg_scaledLP = 1;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveFreshRebuild = 0;
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveBasicPrimals = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-    populate_WorkArrays();
-  } else if (mlFg_action == mlFg_action_ShuffleLP) {
-    // The LP has been shuffled
-    // Indicate that the columns have been shuffled
-//    problemStatus = LP_Status_Unset;
-    mlFg_shuffledLP = 1;
-    mlFg_haveBasis = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveFreshRebuild = 0;
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveBasicPrimals = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_NewBounds) {
-    // New bounds have been defined
-//    problemStatus = LP_Status_Unset;
-    initBound();
-    initValue();
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveFreshRebuild = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_NewCosts) {
-    // New costs have been defined
-//    problemStatus = LP_Status_Unset;
-    initCost();
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveFreshRebuild = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_NewBasis) {
-    // A new basis has been defined
-//    problemStatus = LP_Status_Unset;
-    mlFg_haveBasis = 1;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveFreshRebuild = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_NewCols) {
-    // New columns have been added as nonbasic
-//    problemStatus = LP_Status_Unset;
-    mlFg_haveBasis = 1;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveNonbasicDuals = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_NewRows) {
-    // New rows have been added as basic
-//    problemStatus = LP_Status_Unset;
-    mlFg_haveBasis = 1;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveFreshRebuild = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-} else if (mlFg_action == mlFg_action_DelCols) {
-    // Columns have been deleted
-//    problemStatus = LP_Status_Unset;
-    mlFg_haveBasis = 0;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveNonbasicDuals = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_DelRows) {
-    // Rows have been deleted
-//    problemStatus = LP_Status_Unset;
-    mlFg_haveBasis = 0;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveFreshRebuild = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else if (mlFg_action == mlFg_action_DelRowsBasisOK) {
-    // Rows have been deleted
-//    problemStatus = LP_Status_Unset;
-    mlFg_haveBasis = 1;
-    mlFg_haveMatrixColWise = 0;
-    mlFg_haveMatrixRowWise = 0;
-    mlFg_haveFactorArrays = 0;
-    mlFg_haveEdWt = 0;
-    mlFg_haveInvert = 0;
-    mlFg_haveFreshInvert = 0;
-    mlFg_haveBasicPrimals = 0;
-    mlFg_haveNonbasicDuals = 0;
-    mlFg_haveFreshRebuild = 0;
-    //    mlFg_haveDualObjectiveValue = 0;
-    mlFg_haveRangingData = 0;
-
-  } else {
-    printf("Unrecognised mlFg_action = %d\n", mlFg_action);
-  }
-}
-
-#ifdef HiGHSDEV
-void HModel::mlFg_Report() {
-  printf("\nReporting model/solver status and flags:\n\n");
-  //  printf("problemStatus =                %2d\n", problemStatus);
-  //  printf("numberIteration =              %2d\n\n", numberIteration);
-  printf("mlFg_transposedLP =            %2d\n", mlFg_transposedLP);
-  printf("mlFg_scaledLP =                %2d\n", mlFg_scaledLP);
-  printf("mlFg_shuffledLP =              %2d\n", mlFg_shuffledLP);
-  printf("mlFg_haveBasis =               %2d\n", mlFg_haveBasis);
-  printf("mlFg_haveMatrixColWise =       %2d\n", mlFg_haveMatrixColWise);
-  printf("mlFg_haveMatrixRowWise =       %2d\n", mlFg_haveMatrixRowWise);
-  printf("mlFg_haveFactorArrays =        %2d\n", mlFg_haveFactorArrays);
-  printf("mlFg_haveEdWt =                %2d\n", mlFg_haveEdWt);
-  printf("mlFg_haveInvert =              %2d\n", mlFg_haveInvert);
-  printf("mlFg_haveFreshInvert =         %2d\n", mlFg_haveFreshInvert);
-  printf("mlFg_haveNonbasicDuals =       %2d\n", mlFg_haveNonbasicDuals);
-  printf("mlFg_haveBasicPrimals =        %2d\n", mlFg_haveBasicPrimals);
-  //  printf("mlFg_haveDualObjectiveValue =  %2d\n", mlFg_haveDualObjectiveValue);
-  printf("mlFg_haveFreshRebuild =        %2d\n", mlFg_haveFreshRebuild);
-  printf("mlFg_haveRangingData =         %2d\n", mlFg_haveRangingData);
-  printf("mlFg_haveSavedBounds =         %2d\n\n", mlFg_haveSavedBounds);
-  cout << flush;
-}
-#endif
 void HModel::replaceWithLogicalBasis() {
   // Replace basis with a logical basis then populate (where possible)
   // work* arrays
@@ -316,7 +110,7 @@ void HModel::replaceWithLogicalBasis() {
   populate_WorkArrays();
 
   // Deduce the consequences of a new basis
-  mlFg_Update(mlFg_action_NewBasis);
+  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
 }
 
 void HModel::replaceWithNewBasis(const int *XbasicIndex) {
@@ -339,7 +133,7 @@ void HModel::replaceWithNewBasis(const int *XbasicIndex) {
   populate_WorkArrays();
 
   // Deduce the consequences of a new basis
-  mlFg_Update(mlFg_action_NewBasis);
+  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
 }
 
 void HModel::initFromNonbasic() {
@@ -350,7 +144,7 @@ void HModel::initFromNonbasic() {
   populate_WorkArrays();
 
   // Deduce the consequences of a new basis
-  mlFg_Update(mlFg_action_NewBasis);
+  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
 }
 
 void HModel::replaceFromNonbasic() {
@@ -360,7 +154,7 @@ void HModel::replaceFromNonbasic() {
   populate_WorkArrays();
 
   // Deduce the consequences of a new basis
-  mlFg_Update(mlFg_action_NewBasis);
+  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
 }
 
 void HModel::initWithLogicalBasis() {
@@ -375,7 +169,7 @@ void HModel::initWithLogicalBasis() {
   populate_WorkArrays();
 
   // Deduce the consequences of a new basis
-  mlFg_Update(mlFg_action_NewBasis);
+  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
 }
 
 void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
@@ -539,13 +333,8 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   //  rp_basis();
 
   // Deduce the consequences of adding new columns and/or rows
-  if (numAddCol) mlFg_Update(mlFg_action_NewCols);
-  if (numAddRow) mlFg_Update(mlFg_action_NewRows);
-}
-
-void HModel::clearModel() {
-  //  problemStatus = LP_Status_Unset;
-  mlFg_Clear();
+  //  if (numAddCol) update_solver_lp_status_flags(highs_model, LpAction::NEW_COLS);
+  //  if (numAddRow) update_solver_lp_status_flags(highs_model, LpAction::NEW_ROWS);
 }
 
 void HModel::setup_for_solve() {
@@ -553,9 +342,12 @@ void HModel::setup_for_solve() {
   if (solver_lp_->numRow_ == 0) return;
 
   //  mlFg_Report();cout<<flush;
-  //  printf("In setup_fromModelLgBs: mlFg_haveBasis = %d \n",
-  //  mlFg_haveBasis);cout<<flush;
-  if (mlFg_haveBasis) {
+  //  printf("In setup_fromModelLgBs: dummy_HMO_basis_valid = %d \n",
+  //  dummy_HMO_basis_valid);cout<<flush;
+  bool dummy_HMO_basis_valid = false;
+  bool dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise = false;
+  bool dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise = false;
+  if (dummy_HMO_basis_valid) {
     // Model has a basis so just count the number of basic logicals
     setup_numBasicLogicals();
   } else {
@@ -565,7 +357,7 @@ void HModel::setup_for_solve() {
     //    printf("Called replaceWithLogicalBasis\n");cout<<flush;
   }
 
-  if (!(mlFg_haveMatrixColWise && mlFg_haveMatrixRowWise)) {
+  if (!(dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise && dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise)) {
     // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
     if (simplex_info_->num_basic_logicals == solver_lp_->numRow_) {
       matrix_->setup_lgBs(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0]);
@@ -577,42 +369,55 @@ void HModel::setup_for_solve() {
     }
     // Indicate that there is a colum-wise and row-wise copy of the
     // matrix: can't be done in matrix_->setup_lgBs
-    mlFg_haveMatrixColWise = 1;
-    mlFg_haveMatrixRowWise = 1;
+    //    simplex_info_.solver_lp_has_matrix_col_wise = true;
+    //    simplex_info_.solver_lp_has_matrix_row_wise = true;
   }
 
-  if (!mlFg_haveFactorArrays) {
+    // TODO Put something in to skip factor_->setup
     // Initialise factor arrays, passing &basis_->basicIndex_[0] so that its
     // address can be copied to the internal Factor pointer
     factor_->setup(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0],
                  &basis_->basicIndex_[0]);
     // Indicate that the model has factor arrays: can't be done in factor.setup
-    mlFg_haveFactorArrays = 1;
-  }
+    //    simplex_info_.solver_lp_has_factor_arrays = true;
 }
 
 bool HModel::OKtoSolve(int level, int phase) {
   //  printf("Called OKtoSolve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
-  ok = mlFg_haveBasis && mlFg_haveMatrixColWise && mlFg_haveMatrixRowWise &&
-       mlFg_haveFactorArrays && mlFg_haveEdWt && mlFg_haveInvert;
+  bool dummy_HMO_basis_valid = true;
+  bool dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise = true;
+  bool dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise = true;
+  bool dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights = true;
+  bool dummy_HMO_simplex_info_solver_lp_has_invert = true;
+  bool dummy_HMO_simplex_info_solver_lp_has_factor_arrays = true;
+  ok =
+    dummy_HMO_basis_valid &&
+    dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise &&
+    dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise &&
+    dummy_HMO_simplex_info_solver_lp_has_factor_arrays &&
+    dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights &&
+    dummy_HMO_simplex_info_solver_lp_has_invert;
   if (!ok) {
-    if (!mlFg_haveBasis)
-      printf("Not OK to solve since mlFg_haveBasis = %d\n", mlFg_haveBasis);
-    if (!mlFg_haveMatrixColWise)
-      printf("Not OK to solve since mlFg_haveMatrixColWise = %d\n",
-             mlFg_haveMatrixColWise);
-    if (!mlFg_haveMatrixRowWise)
-      printf("Not OK to solve since mlFg_haveMatrixRowWise  = %d\n",
-             mlFg_haveMatrixRowWise);
-    if (!mlFg_haveFactorArrays)
-      printf("Not OK to solve since mlFg_haveFactorArrays = %d\n",
-             mlFg_haveFactorArrays);
-    if (!mlFg_haveEdWt)
-      printf("Not OK to solve since mlFg_haveEdWt = %d\n", mlFg_haveEdWt);
-    if (!mlFg_haveInvert)
-      printf("Not OK to solve since mlFg_haveInvert = %d\n", mlFg_haveInvert);
+    if (!dummy_HMO_basis_valid)
+      printf("Not OK to solve since dummy_HMO_basis_valid = %d\n",
+	     dummy_HMO_basis_valid);
+    if (!dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise)
+      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise = %d\n",
+             dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise);
+    if (!dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise)
+      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise = %d\n",
+             dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise);
+    if (!dummy_HMO_simplex_info_solver_lp_has_factor_arrays)
+      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_factor_arrays = %d\n",
+             dummy_HMO_simplex_info_solver_lp_has_factor_arrays);
+    if (!dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights)
+      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights = %d\n",
+	     dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights);
+    if (!dummy_HMO_simplex_info_solver_lp_has_invert)
+      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_invert = %d\n",
+	     dummy_HMO_simplex_info_solver_lp_has_invert);
     cout << flush;
   }
 #ifdef HiGHSDEV
@@ -1244,8 +1049,8 @@ int HModel::computeFactor() {
 #endif
 
   // Now have a representation of B^{-1}, and it is fresh!
-  mlFg_haveInvert = 1;
-  mlFg_haveFreshInvert = 1;
+  simplex_info_->solver_lp_has_invert = true;
+  simplex_info_->solver_lp_has_fresh_invert = true;
   return 0;
 }
 
@@ -1313,7 +1118,7 @@ void HModel::computeDual() {
   }
 
   // Now have nonbasic duals
-  mlFg_haveNonbasicDuals = 1;
+  simplex_info_->solver_lp_has_nonbasic_dual_values = true;
 }
 
 // Compute the number of dual infeasibilities for the dual algorithm
@@ -1411,7 +1216,7 @@ void HModel::computePrimal() {
     simplex_info_->baseUpper_[i] = simplex_info_->workUpper_[iCol];
   }
   // Now have basic primals
-  mlFg_haveBasicPrimals = 1;
+  simplex_info_->solver_lp_has_basic_primal_values = true;
 }
 
 // Compute the (primal) objective via primal values and costs
@@ -1525,7 +1330,7 @@ void HModel::updateFactor(HVector *column, HVector *row_ep, int *iRow,
   
   factor_->update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
-  mlFg_haveInvert = 1;
+  simplex_info_->solver_lp_has_invert = true;
   if (simplex_info_->update_count >= simplex_info_->update_limit) *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   timer_->stop(simplex_info_->clock_[UpdateFactorClock]);
 }
@@ -1579,10 +1384,10 @@ void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
   if (columnIn < solver_lp_->numCol_) simplex_info_->num_basic_logicals += 1;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
-  mlFg_haveInvert = 0;
-  mlFg_haveFreshInvert = 0;
+  simplex_info_->solver_lp_has_invert = false;
+  simplex_info_->solver_lp_has_fresh_invert = false;
   // Data are no longer fresh from rebuild
-  mlFg_haveFreshRebuild = 0;
+  simplex_info_->solver_lp_has_fresh_rebuild = false;
   timer_->stop(simplex_info_->clock_[UpdatePivotsClock]);
 }
 
@@ -1618,7 +1423,7 @@ void HModel::check_load_fromArrays() {
   XAindex.assign(&solver_lp_->Aindex_[0], &solver_lp_->Aindex_[0] + XnumNz);
   XAvalue.assign(&solver_lp_->Avalue_[0], &solver_lp_->Avalue_[0] + XnumNz);
 
-  clearModel();
+  //  clear_solver_lp(highs_model_object);
   load_fromArrays(XnumCol, Xsense, &XcolCost[0], &colLower[0],
                   &XcolUpper[0], XnumRow, &XrowLower[0], &XrowUpper[0], XnumNz,
                   &XAstart[0], &XAindex[0], &XAvalue[0]);
@@ -1802,7 +1607,7 @@ int HModel::util_chgCostsAll(const double *XcolCost) {
     solver_lp_->colCost_[col] = XcolCost[col] * scale_->col_[col];
   }
   // Deduce the consequences of new costs
-  mlFg_Update(mlFg_action_NewCosts);
+  //  update_solver_lp_status_flags(highs_model, LpAction::NEW_COSTS);
   return 0;
 }
 
@@ -1818,7 +1623,7 @@ int HModel::util_chgCostsSet(int ncols, const int *XcolCostIndex,
     solver_lp_->colCost_[col] = XcolCostValues[ix] * scale_->col_[col];
   }
   // Deduce the consequences of new costs
-  mlFg_Update(mlFg_action_NewCosts);
+  //  update_solver_lp_status_flags(highs_model, LpAction::NEW_COSTS);
   return 0;
 }
 
@@ -1845,7 +1650,7 @@ int HModel::util_chgColBoundsAll(const double *XcolLower,
     //    simplex_info_->workDual_[col]);
   }
   // Deduce the consequences of new bounds
-  mlFg_Update(mlFg_action_NewBounds);
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
   return 0;
 }
 
@@ -1876,7 +1681,7 @@ int HModel::util_chgColBoundsSet(int ncols, const int *XcolBoundIndex,
     //    solver_lp_->colLower_[col], solver_lp_->colUpper_[col], scale_->col_[col]);
   }
   // Deduce the consequences of new bounds
-  mlFg_Update(mlFg_action_NewBounds);
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
   return 0;
 }
 
@@ -1899,7 +1704,7 @@ int HModel::util_chgRowBoundsAll(const double *XrowLower,
     solver_lp_->rowUpper_[row] = (highs_isInfinity(upper) ? upper : upper * scale_->row_[row]);
   }
   // Deduce the consequences of new bounds
-  mlFg_Update(mlFg_action_NewBounds);
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
   return 0;
 }
 
@@ -1929,7 +1734,7 @@ int HModel::util_chgRowBoundsSet(int nrows, const int *XrowBoundIndex,
     //    solver_lp_->rowLower_[row], solver_lp_->rowUpper_[row]);
   }
   // Deduce the consequences of new bounds
-  mlFg_Update(mlFg_action_NewBounds);
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
   return 0;
 }
 
@@ -2013,7 +1818,7 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
   }
   assert(numBasic = solver_lp_->numRow_);
   populate_WorkArrays();
-  mlFg_Update(mlFg_action_NewBasis);
+  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
   return 0;
 }
 
@@ -2284,8 +2089,8 @@ void HModel::util_deleteCols(int firstcol, int lastcol) {
 
   // ToDo Determine consequences for basis when deleting columns
   // Invalidate matrix copies
-  mlFg_haveMatrixColWise = 0;
-  mlFg_haveMatrixRowWise = 0;
+  simplex_info_->solver_lp_has_matrix_col_wise = false;
+  simplex_info_->solver_lp_has_matrix_row_wise = false;
 }
 
 // Delete the model data for a set of columns
@@ -2480,7 +2285,7 @@ void HModel::util_deleteRows(int firstrow, int lastrow) {
   //  numTot -= rowStep;
 
   // Determine consequences for basis when deleting rows
-  mlFg_Update(mlFg_action_DelRows);
+  //  update_solver_lp_status_flags(highs_model, LpAction::DEL_ROWS);
 }
 
 // Delete the model data for a set of rows
@@ -2599,14 +2404,14 @@ void HModel::util_deleteRowset(int *dstat) {
     //    basisOK\n"); cout<<flush;
 #endif
     // Determine consequences for basis when deleting rows to leave an OK basis
-    mlFg_Update(mlFg_action_DelRowsBasisOK);
+    //  update_solver_lp_status_flags(highs_model, LpAction::DEL_ROWS_BASIS_OK);
   } else {
     assert(basisOK);
 #ifdef SCIP_DEV
     printf("util_deleteRowset: not all rows removed are basic slacks\n");
 #endif
     // Determine consequences for basis when deleting rows to leave no basis
-    mlFg_Update(mlFg_action_DelRows);
+  //  update_solver_lp_status_flags(highs_model, LpAction::DEL_ROWS);
   }
 }
 
@@ -2714,7 +2519,7 @@ void HModel::util_changeCoeff(int row, int col, const double newval) {
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if
-  mlFg_Update(mlFg_action_NewRows);
+  //  update_solver_lp_status_flags(highs_model, LpAction::NEW_ROWS);
   //  solver_lp_->reportLp();
 }
 
