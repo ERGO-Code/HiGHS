@@ -43,7 +43,7 @@ class HRanging {
   );
 
  private:
-  void checkDataZeroMlFg(
+  void check_data_clear_solver_lp_data(
 			 HModel *model   //!< Instance of HModel class for which model flags are to be zeroed
 			 );
 

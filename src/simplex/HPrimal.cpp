@@ -97,7 +97,7 @@ void HPrimal::solvePhase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (model->mlFg_haveFreshRebuild) break;
+    if (simplex_info.solver_lp_has_fresh_rebuild) break;
   }
 
   if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
@@ -156,7 +156,7 @@ void HPrimal::primalRebuild() {
   }
 #endif
   // Data are fresh from rebuild
-  model->mlFg_haveFreshRebuild = 1;
+  simplex_info.solver_lp_has_fresh_rebuild = true;
 }
 
 void HPrimal::primalChooseColumn() {

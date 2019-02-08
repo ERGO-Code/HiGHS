@@ -71,7 +71,7 @@ void HDual::solve(int num_threads) {
   init(num_threads);
 
   model->initCost(1);
-  if (!model->mlFg_haveFreshInvert) {
+  if (!simplex_info.solver_lp_has_fresh_invert) {
     int rankDeficiency = model->computeFactor();
     if (rankDeficiency) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
@@ -94,12 +94,12 @@ void HDual::solve(int num_threads) {
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
-  //  printf("model->mlFg_haveEdWt 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
+  //  printf("simplex_info.solver_lp_has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
   //  %d\n",
-  //	 model->mlFg_haveEdWt, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
-  //  printf("Edge weights known? %d\n", !model->mlFg_haveEdWt);cout<<flush;
+  //	 simplex_info.solver_lp_has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
+  //  printf("Edge weights known? %d\n", !simplex_info.solver_lp_has_dual_steepest_edge_weights);cout<<flush;
 #endif
-  if (!model->mlFg_haveEdWt) {
+  if (!simplex_info.solver_lp_has_dual_steepest_edge_weights) {
     // Edge weights are not known
     // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
     if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
@@ -157,7 +157,7 @@ void HDual::solve(int num_threads) {
 #endif
     }
     // Indicate that edge weights are known
-    model->mlFg_haveEdWt = 1;
+    simplex_info.solver_lp_has_dual_steepest_edge_weights = true;
   }
 
 #ifdef HiGHSDEV
@@ -221,8 +221,8 @@ void HDual::solve(int num_threads) {
   iterateIzAn();
 
   while (solvePhase) {
-#ifdef HiGHSDEV
     int it0 = simplex_info.iteration_count;
+#ifdef HiGHSDEV
     double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
     // printf("HDual::solve Phase %d: Iteration %d; simplexTotalTime = %g\n",
     // solvePhase, simplex_info.iteration_count, simplexTotalTime);cout<<flush;
@@ -231,23 +231,19 @@ void HDual::solve(int num_threads) {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
     // updated value
-    workHMO.haveDualObjectiveValue = 0;
+    simplex_info.solver_lp_has_dual_objective_value = 0;
     switch (solvePhase) {
       case 1:
 	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
         solve_phase1();
 	timer.stop(simplex_info.clock_[SimplexDualPhase1Clock]);
-#ifdef HiGHSDEV
         simplex_info.dual_phase1_iteration_count += (simplex_info.iteration_count - it0);
-#endif
         break;
       case 2:
 	timer.start(simplex_info.clock_[SimplexDualPhase2Clock]);
         solve_phase2();
 	timer.stop(simplex_info.clock_[SimplexDualPhase2Clock]);
-#ifdef HiGHSDEV
         simplex_info.dual_phase2_iteration_count += (simplex_info.iteration_count - it0);
-#endif
         break;
       case 4:
         break;
@@ -304,9 +300,7 @@ void HDual::solve(int num_threads) {
 
   if (simplex_info.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
     // Use primal to clean up if not out of time
-#ifdef HiGHSDEV
     int it0 = simplex_info.iteration_count;
-#endif
     if (solvePhase == 4) {
       HPrimal hPrimal(workHMO);
 
@@ -315,13 +309,14 @@ void HDual::solve(int num_threads) {
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
 
     }
-#ifdef HiGHSDEV
     simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
-#endif
   }
   // Save the solved results
 #ifdef HiGHSDEV
-  if (simplex_info.dual_phase1_iteration_count + simplex_info.dual_phase2_iteration_count + simplex_info.primal_phase2_iteration_count != simplex_info.iteration_count) {
+  if (simplex_info.dual_phase1_iteration_count +
+      simplex_info.dual_phase2_iteration_count +
+      simplex_info.primal_phase2_iteration_count !=
+      simplex_info.iteration_count) {
     printf("Iteration total error \n");
   }
   printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
@@ -349,8 +344,8 @@ void HDual::solve(int num_threads) {
   }
   //  assert(ok);
 #ifdef HiGHSDEV
-  //  printf("model->mlFg_Report() 9\n");cout<<flush;
-  //  model->mlFg_Report();cout<<flush;
+  //  printf("report_solver_lp_status_flags(workHMO) 9\n");cout<<flush;
+  //  report_solver_lp_status_flags(workHMO);cout<<flush;
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
@@ -578,7 +573,7 @@ void HDual::solve_phase1() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (model->mlFg_haveFreshRebuild) break;
+    if (simplex_info.solver_lp_has_fresh_rebuild) break;
   }
 
   timer.stop(simplex_info.clock_[IterateClock]);
@@ -686,7 +681,7 @@ void HDual::solve_phase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (model->mlFg_haveFreshRebuild) break;
+    if (simplex_info.solver_lp_has_fresh_rebuild) break;
   }
   timer.stop(simplex_info.clock_[IterateClock]);
 
@@ -807,7 +802,7 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = workHMO.haveDualObjectiveValue;
+  bool checkDualObjectiveValue = simplex_info.solver_lp_has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
   simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
@@ -838,7 +833,7 @@ void HDual::rebuild() {
   total_INVERT_TICK = factor->build_syntheticTick;  // Was factor->pseudoTick
   total_FT_inc_TICK = 0;
 #ifdef HiGHSDEV
-  total_fake = 0eML_MINIMAL
+  total_fake = 0;
 #endif
   total_syntheticTick = 0;
 
@@ -853,7 +848,7 @@ void HDual::rebuild() {
   }
 #endif
   // Data are fresh from rebuild
-  model->mlFg_haveFreshRebuild = 1;
+  simplex_info.solver_lp_has_fresh_rebuild = true;
 }
 
 void HDual::cleanup() {
@@ -1912,7 +1907,7 @@ double HDual::checkDualObjectiveValue(const char *message, int phase) {
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
   workHMO.simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
   // Now have dual objective value
-  workHMO.haveDualObjectiveValue = 1;
+  workHMO.simplex_info_.solver_lp_has_dual_objective_value = true;
   return updatedDualObjectiveError;
 }
 #endif
