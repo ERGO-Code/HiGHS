@@ -341,13 +341,9 @@ void HModel::setup_for_solve() {
   //  timer.reset();
   if (solver_lp_->numRow_ == 0) return;
 
-  //  mlFg_Report();cout<<flush;
-  //  printf("In setup_fromModelLgBs: dummy_HMO_basis_valid = %d \n",
-  //  dummy_HMO_basis_valid);cout<<flush;
-  bool dummy_HMO_basis_valid = false;
-  bool dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise = false;
-  bool dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise = false;
-  if (dummy_HMO_basis_valid) {
+  //  report_solver_lp_status_flags(highs_mode_object);cout<<flush;
+  //  printf("In setup_for_solve: basis_->valid_ = %d \n", basis_->valid_);cout<<flush;
+  if (basis_->valid_) {
     // Model has a basis so just count the number of basic logicals
     setup_numBasicLogicals();
   } else {
@@ -357,7 +353,7 @@ void HModel::setup_for_solve() {
     //    printf("Called replaceWithLogicalBasis\n");cout<<flush;
   }
 
-  if (!(dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise && dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise)) {
+  if (!(simplex_info_->solver_lp_has_matrix_col_wise && simplex_info_->solver_lp_has_matrix_row_wise)) {
     // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
     if (simplex_info_->num_basic_logicals == solver_lp_->numRow_) {
       matrix_->setup_lgBs(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0]);
@@ -369,8 +365,8 @@ void HModel::setup_for_solve() {
     }
     // Indicate that there is a colum-wise and row-wise copy of the
     // matrix: can't be done in matrix_->setup_lgBs
-    //    simplex_info_.solver_lp_has_matrix_col_wise = true;
-    //    simplex_info_.solver_lp_has_matrix_row_wise = true;
+    //    simplex_info_->solver_lp_has_matrix_col_wise = true;
+    //    simplex_info_->solver_lp_has_matrix_row_wise = true;
   }
 
     // TODO Put something in to skip factor_->setup
@@ -379,45 +375,41 @@ void HModel::setup_for_solve() {
     factor_->setup(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0],
                  &basis_->basicIndex_[0]);
     // Indicate that the model has factor arrays: can't be done in factor.setup
-    //    simplex_info_.solver_lp_has_factor_arrays = true;
+    //simplex_info_->solver_lp_has_factor_arrays = true;
 }
 
 bool HModel::OKtoSolve(int level, int phase) {
   //  printf("Called OKtoSolve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
-  bool dummy_HMO_basis_valid = true;
-  bool dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise = true;
-  bool dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise = true;
-  bool dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights = true;
-  bool dummy_HMO_simplex_info_solver_lp_has_invert = true;
-  bool dummy_HMO_simplex_info_solver_lp_has_factor_arrays = true;
   ok =
-    dummy_HMO_basis_valid &&
-    dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise &&
-    dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise &&
-    dummy_HMO_simplex_info_solver_lp_has_factor_arrays &&
-    dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights &&
-    dummy_HMO_simplex_info_solver_lp_has_invert;
+    basis_->valid_ &&
+    simplex_info_->solver_lp_has_matrix_col_wise &&
+    simplex_info_->solver_lp_has_matrix_row_wise &&
+    //    simplex_info_->solver_lp_has_factor_arrays &&
+    simplex_info_->solver_lp_has_dual_steepest_edge_weights &&
+    simplex_info_->solver_lp_has_invert;
+  // TODO: Eliminate the following line ASAP!!!
+  ok = true;
   if (!ok) {
-    if (!dummy_HMO_basis_valid)
-      printf("Not OK to solve since dummy_HMO_basis_valid = %d\n",
-	     dummy_HMO_basis_valid);
-    if (!dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise)
-      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise = %d\n",
-             dummy_HMO_simplex_info_solver_lp_has_matrix_col_wise);
-    if (!dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise)
-      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise = %d\n",
-             dummy_HMO_simplex_info_solver_lp_has_matrix_row_wise);
-    if (!dummy_HMO_simplex_info_solver_lp_has_factor_arrays)
-      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_factor_arrays = %d\n",
-             dummy_HMO_simplex_info_solver_lp_has_factor_arrays);
-    if (!dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights)
-      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights = %d\n",
-	     dummy_HMO_simplex_info_solver_lp_has_dual_steepest_edge_weights);
-    if (!dummy_HMO_simplex_info_solver_lp_has_invert)
-      printf("Not OK to solve since dummy_HMO_simplex_info_solver_lp_has_invert = %d\n",
-	     dummy_HMO_simplex_info_solver_lp_has_invert);
+    if (!basis_->valid_)
+      printf("Not OK to solve since basis_->valid_ = %d\n",
+	     basis_->valid_);
+    if (!simplex_info_->solver_lp_has_matrix_col_wise)
+      printf("Not OK to solve since simplex_info_->solver_lp_has_matrix_col_wise = %d\n",
+             simplex_info_->solver_lp_has_matrix_col_wise);
+    if (!simplex_info_->solver_lp_has_matrix_row_wise)
+      printf("Not OK to solve since simplex_info_->solver_lp_has_matrix_row_wise = %d\n",
+             simplex_info_->solver_lp_has_matrix_row_wise);
+    //    if (!simplex_info_->solver_lp_has_factor_arrays)
+    //      printf("Not OK to solve since simplex_info_->solver_lp_has_factor_arrays = %d\n",
+    //             simplex_info_->solver_lp_has_factor_arrays);
+    if (!simplex_info_->solver_lp_has_dual_steepest_edge_weights)
+      printf("Not OK to solve since simplex_info_->solver_lp_has_dual_steepest_edge_weights = %d\n",
+	     simplex_info_->solver_lp_has_dual_steepest_edge_weights);
+    if (!simplex_info_->solver_lp_has_invert)
+      printf("Not OK to solve since simplex_info_->solver_lp_has_invert = %d\n",
+	     simplex_info_->solver_lp_has_invert);
     cout << flush;
   }
 #ifdef HiGHSDEV

@@ -537,7 +537,6 @@ int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
   }
 
   // Indicate that the model now has ranging data
-  //  model->mlFg_haveRangingData = 1;
   return 0;
 }
 

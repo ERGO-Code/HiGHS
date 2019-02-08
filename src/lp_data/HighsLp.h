@@ -226,7 +226,7 @@ struct HighsSimplexInfo {
   // workDual: Values of the dual variables corresponding to
   // workCost. Latter not known until solve() is called since B^{-1}
   // is required to compute them. Knowledge of them is indicated by
-  // mlFg_haveNonbasicDuals.
+  // solver_lp_has_nonbasic_dual_values
   //
   // workShift: WTF
   //
@@ -251,7 +251,7 @@ struct HighsSimplexInfo {
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
   // is called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by mlFg_haveBasicPrimals.
+  // them is indicated by solver_lp_has_basic_primal_values
   //
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
@@ -307,6 +307,9 @@ struct HighsSimplexInfo {
   bool solver_lp_is_tightened = false;
   bool solver_lp_has_matrix_col_wise = false;
   bool solver_lp_has_matrix_row_wise = false;
+  // Properties of data held in HFactor.h. To "have" them means that
+  // they are assigned.
+  int solver_lp_has_factor_arrays = false;
   // This refers to workEdWt, which is held in HDualRHS.h and is
   // assigned and initialised to 1s in dualRHS.setup(model). To
   // "have" the edge weights means that they are correct.
@@ -314,9 +317,13 @@ struct HighsSimplexInfo {
  // The nonbasic dual and basic primal values are known
   bool solver_lp_has_nonbasic_dual_values = false;
   bool solver_lp_has_basic_primal_values = false;
+  // The representation of B^{-1} corresponds to the current basis
   bool solver_lp_has_invert = false;
+  // The representation of B^{-1} corresponds to the current basis and is fresh
   bool solver_lp_has_fresh_invert = false;
+  // The data are fresh from rebuild
   bool solver_lp_has_fresh_rebuild = false;
+  // The dual objective function value is known
   bool solver_lp_has_dual_objective_value = false;
 
   // Simplex status

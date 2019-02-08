@@ -210,47 +210,6 @@ class HModel {
   void util_analyseLpSolution();
 #endif
 
-  // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To
-  // have them means that they correspond to a consistent basis
-  // logically, but B is not necessarily nonsingular.
-  int mlFg_haveBasis;
-  //
-  // Properties of data held in HMatrix.h: MatrixColWise is the copy
-  // of the constraint matrix, NOT the model's constraint matrix. To
-  // "have" them means that they are correct.
-  int mlFg_haveMatrixColWise;
-  int mlFg_haveMatrixRowWise;
-  //
-  // Properties of data held in HFactor.h. To "have" them means that
-  // they are assigned.
-  int mlFg_haveFactorArrays;
-  //
-  // This refers to workEdWt, which is held in HDualRHS.h and is
-  // assigned and initialised to 1s in dualRHS.setup(model). To
-  // "have" the edge weights means that they are correct.
-  int mlFg_haveEdWt;
-  //
-  // The representation of B^{-1} corresponds to the current basis
-  int mlFg_haveInvert;
-  // The representation of B^{-1} corresponds to the current basis and is fresh
-  int mlFg_haveFreshInvert;
-  //
-  // The nonbasic dual and basic primal values are known
-  int mlFg_haveNonbasicDuals;
-  int mlFg_haveBasicPrimals;
-  //
-  // The dual objective function value is known
-  //  int mlFg_haveDualObjectiveValue;
-  //
-  // The data are fresh from rebuild
-  int mlFg_haveFreshRebuild;
-  //
-  // The ranging information is known
-  int mlFg_haveRangingData;
-  //
-  // Need to know of any saved bounds in the event of scaling being performed
-  int mlFg_haveSavedBounds;
-
  public:
   
   // The scaled model
