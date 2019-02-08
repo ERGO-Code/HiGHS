@@ -16,8 +16,11 @@
 
 #include "HConfig.h"
 #include "HighsLp.h"
+#include "HighsStatus.h"
 
 class HighsLp;
+
+HighsStatus checkLp(const HighsLp& lp);
 
 // Methods taking HighsLp as an argument
 /**

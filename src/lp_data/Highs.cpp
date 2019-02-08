@@ -20,12 +20,27 @@
 #include "HConfig.h"
 #include "HApp.h"
 #include "HighsLp.h"
+#include "HighsLpUtils.h"
 #include "HighsModelObject.h"
 #include "HighsStatus.h"
 #include "Presolve.h"
 
 HModel HighsLpToHModel(const HighsLp &lp);
 HighsLp HModelToHighsLp(const HModel &model);
+
+int Highs::HighsAddVariable(double obj, double lo, double hi) {
+  if (this->runSuccessful) {
+    // call Julian's methods in HighsModelObject
+    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
+    return 0; //TODO
+    
+  } else {
+    // build initial model using HighsModelBuilder
+    HighsVar* newVariable;
+    this->builder.HighsCreateVar(NULL, lo, hi, obj, HighsVarType::CONT, &newVariable);
+    return this->builder.getNumberOfVariables();
+  }
+}
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
@@ -202,7 +217,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject& model) {
-  assert(checkLp(model.lp_) == HighsInputStatus::OK);
+  assert(checkLp(model.lp_) == HighsStatus::OK);
 
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX

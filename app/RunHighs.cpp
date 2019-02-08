@@ -72,10 +72,9 @@ int main(int argc, char **argv) {
   if (!options_ok) return 0;
 
   HighsLp lp;
-  HighsInputStatus read_status = loadLpFromFile(options, lp);
-  if (read_status != HighsInputStatus::OK) {
-    std::string message = "Error loading file: status = " +
-                          HighsInputStatusToString(read_status) + "\n";
+  HighsStatus read_status = loadLpFromFile(options, lp);
+  if (read_status != HighsStatus::OK) {
+    std::string message = "Error loading file\n";
     HighsLogMessage(HighsMessageType::INFO, message.c_str());
     return (int)HighsStatus::LpError;
   }

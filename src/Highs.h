@@ -5,6 +5,7 @@
 #include "HighsTimer.h"
 #include "HighsLp.h"
 #include "HighsStatus.h"
+#include "HighsModelBuilder.h"
 
 // Class to set parameters and run HiGHS
 class Highs
@@ -16,6 +17,9 @@ public:
   // The public method run(lp, solution) calls runSolver to solve problem before
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(HighsLp &lp);
+  HighsStatus run();
+
+  int HighsAddVariable(double obj=0.0, double lo=0.0, double hi=HIGHS_CONST_INF); // TODO: name
 
   bool setIntegerOption(const std::string &param, const int value);
   bool setDoubleOption(const std::string &param, const double value);
@@ -46,6 +50,8 @@ private:
   // each HighsModelObject holds a const ref to its lp_
   std::vector<HighsModelObject> lps_;
 
+  bool runSuccessful;
+
   HighsPresolveStatus runPresolve(PresolveInfo &presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo &presolve_info);
   HighsStatus runSolver(HighsModelObject &model);
@@ -59,6 +65,8 @@ private:
   };
 
   HighsOptions options_;
+
+  HighsModelBuilder builder;
 };
 
 #endif

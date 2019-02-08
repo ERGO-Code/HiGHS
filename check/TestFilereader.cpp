@@ -29,8 +29,8 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   // Read mps.
   HighsLp lp_mps;
-  HighsInputStatus read_status = loadLpFromFile(options, lp_mps);
-  REQUIRE(read_status == HighsInputStatus::OK);
+  HighsStatus read_status = loadLpFromFile(options, lp_mps);
+  REQUIRE(read_status == HighsStatus::OK);
 
   // Write ems.
   FilereaderEms ems;
@@ -40,8 +40,8 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   options.filename = "adlittle.ems"; // todo: check how to specify path
 
   HighsLp lp_ems;
-  HighsInputStatus ems_read_status = loadLpFromFile(options, lp_ems);
-  REQUIRE(ems_read_status == HighsInputStatus::OK);
+  HighsStatus ems_read_status = loadLpFromFile(options, lp_ems);
+  REQUIRE(ems_read_status == HighsStatus::OK);
 
   bool are_the_same = lp_mps == lp_ems;
   REQUIRE(are_the_same);

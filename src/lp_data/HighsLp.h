@@ -67,7 +67,6 @@ class HighsLp {
   }
 };
 
-
 // Cost, column and row scaling factors
 struct HighsScale {
   double cost_;

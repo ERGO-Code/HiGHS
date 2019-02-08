@@ -16,6 +16,7 @@
 #include "HighsIO.h"
 #include "HighsLpUtils.h"
 #include "HighsUtils.h"
+#include "HighsStatus.h"
 
 // Methods for reporting an LP, including its row and column data and matrix
 //
@@ -109,6 +110,70 @@ void reportLpSolution(HighsModelObject &highs_model) {
   //  util_reportRowVecSol(lp.numRow_, lp.rowLower_, lp.rowUpper_, rowPrimal, rowDual, rowStatus);
 }
 */
+
+
+
+HighsStatus checkLp(const HighsLp& lp) {
+  // Check dimensions.
+  if (lp.numCol_ <= 0 || lp.numRow_ <= 0)
+    return HighsStatus::LpError;
+
+  // Check vectors.
+  if ((int)lp.colCost_.size() != lp.numCol_)
+    return HighsStatus::LpError;
+
+  if ((int)lp.colLower_.size() != lp.numCol_ ||
+      (int)lp.colUpper_.size() != lp.numCol_)
+    return HighsStatus::LpError;
+  if ((int)lp.rowLower_.size() != lp.numRow_ ||
+      (int)lp.rowUpper_.size() != lp.numRow_)
+    return HighsStatus::LpError;
+
+  for (int i = 0; i < lp.numRow_; i++)
+    if (lp.rowLower_[i] < -HIGHS_CONST_INF || lp.rowUpper_[i] > HIGHS_CONST_INF)
+      return HighsStatus::LpError;
+
+  for (int j = 0; j < lp.numCol_; j++) {
+    if (lp.colCost_[j] < -HIGHS_CONST_INF || lp.colCost_[j] > HIGHS_CONST_INF)
+      return HighsStatus::LpError;
+
+    if (lp.colLower_[j] < -HIGHS_CONST_INF || lp.colUpper_[j] > HIGHS_CONST_INF)
+      return HighsStatus::LpError;
+    if (lp.colLower_[j] > lp.colUpper_[j] + kBoundTolerance)
+      return HighsStatus::LpError;
+  }
+
+  // Check matrix.
+  if ((size_t)lp.nnz_ != lp.Avalue_.size())
+    return HighsStatus::LpError;
+  if (lp.nnz_ <= 0) return HighsStatus::LpError;
+  if ((int)lp.Aindex_.size() != lp.nnz_)
+    return HighsStatus::LpError;
+
+  if ((int)lp.Astart_.size() != lp.numCol_ + 1)
+    return HighsStatus::LpError;
+  // Was lp.Astart_[i] >= lp.nnz_ (below), but this is wrong when the
+  // last column is empty. Need to check as follows, and also check
+  // the entry lp.Astart_[lp.numCol_] > lp.nnz_
+  for (int i = 0; i < lp.numCol_; i++) {
+    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp.nnz_ ||
+        lp.Astart_[i] < 0)
+      return HighsStatus::LpError;
+  }
+  if (lp.Astart_[lp.numCol_] > lp.nnz_ ||
+      lp.Astart_[lp.numCol_] < 0)
+      return HighsStatus::LpError;
+
+  for (int k = 0; k < lp.nnz_; k++) {
+    if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
+      return HighsStatus::LpError;
+    if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
+      return HighsStatus::LpError;
+  }
+
+  return HighsStatus::OK;
+}
+
 
 #ifdef HiGHSDEV
 void util_analyseModel(HighsLp &lp, const char *message) {
