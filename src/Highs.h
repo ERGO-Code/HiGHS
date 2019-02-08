@@ -17,6 +17,10 @@ public:
   // or after presolve (or crash later?) depending on the specified options.
   HighsStatus run(HighsLp &lp, HighsSolution &solution);
 
+  void setIntegerOption(const std::string& param, const int value);
+  void setDoubleOption(const std::string& param, const double value);
+  void setStringOption(const std::string& param, const std::string& value);
+
 private:
   // each HighsModelObject holds a const ref to its lp_
   std::vector<HighsModelObject> lps_;
