@@ -7,7 +7,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
   {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[filename(s)]").show_positional_help();
-    
+
     std::string presolve, crash, simplex, ipm, parallel;
 
     cxx_options.add_options()(
@@ -54,12 +54,36 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     if (result.count("presolve"))
     {
       std::string value = result["presolve"].as<std::string>();
-      if (value == "on")
-        options.presolve_option = PresolveOption::ON;
-      else if (value == "off")
-        options.presolve_option = PresolveOption::OFF;
-      else
-        HighsPrintMessage(ML_ALWAYS, "Unknown options for presovle: %s. Using default value.\n", value);
+      if (!setOptionValue(options, "presolve", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for presovle option: %s. Ignored.\n", value);
+    }
+
+    if (result.count("crash"))
+    {
+      std::string value = result["crash"].as<std::string>();
+      if (!setOptionValue(options, "crash", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for crash option: %s. Ignored.\n", value);
+    }
+    
+    if (result.count("parallel"))
+    {
+      std::string value = result["parallel"].as<std::string>();
+      if (!setOptionValue(options, "parallel", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for parallel option: %s. Ignored.\n", value);
+    }
+
+  if (result.count("simplex"))
+    {
+      std::string value = result["simplex"].as<std::string>();
+      if (!setOptionValue(options, "simplex", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for simplex option: %s. Ignored.\n", value);
+    }
+
+  if (result.count("ipm"))
+    {
+      std::string value = result["ipm"].as<std::string>();
+      if (setOptionValue(options, "ipm", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value);
     }
 
     if (result.count("time-limit"))
