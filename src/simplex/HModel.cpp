@@ -493,7 +493,7 @@ void HModel::check_load_fromPostsolve() {
       "= %d\n",
       ok);
   assert(ok);
-  ok = allNonbasicMoveVsWorkArrays_OK();
+  ok = true;printf("Call all_nonbasic_move_vs_work_arrays_ok(highs_model_object);\n");
   printf(
       "HModel::check_load_fromPostsolve: return from "
       "allNonbasicMoveVsWorkArrays_OK = %d\n",

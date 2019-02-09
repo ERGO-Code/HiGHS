@@ -1468,6 +1468,27 @@ class HSimplex {
     
   }
 
+  bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    //    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    bool ok;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int var = 0; var < numTot; ++var) {
+      printf("NonbasicMoveVsWorkArrays: var = %2d; basis.nonbasicFlag_[var] = %2d\n",
+	     var, basis.nonbasicFlag_[var]);
+      if (!basis.nonbasicFlag_[var]) continue;
+      ok = one_nonbasic_move_vs_work_arrays_ok(highs_model_object, var);
+      if (!ok) {printf("Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n", var);
+	assert(ok);
+	return ok;
+      }
+    }
+    // ok must be true if we reach here
+    assert(ok);
+    return ok;
+  }
+
   bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
