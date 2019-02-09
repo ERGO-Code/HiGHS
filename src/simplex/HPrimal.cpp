@@ -134,15 +134,15 @@ void HPrimal::primalRebuild() {
     }
   }
   if (reInvert) {
-    int rankDeficiency = model->computeFactor();
+    int rankDeficiency = simplex_method_.compute_factor(workHMO);    //    int rankDeficiency = model->computeFactor();
     if (rankDeficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");
     }
     simplex_info.update_count = 0;
   }
-  model->computeDual();
-  model->computePrimal();
-  simplex_method_.computeDualObjectiveValue(workHMO);
+  simplex_method_.compute_dual(workHMO);//model->computeDual();
+  simplex_method_.compute_primal(workHMO);//model->computePrimal();
+  simplex_method_.compute_dual_objective_value(workHMO);
   model->util_reportNumberIterationObjectiveValue(sv_invertHint);
 
 #ifdef HiGHSDEV
@@ -313,7 +313,7 @@ void HPrimal::primalUpdate() {
 
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
-  model->updatePivots(columnIn, rowOut, sourceOut);
+  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
 
   baseValue[rowOut] = valueIn;
 
@@ -353,7 +353,7 @@ void HPrimal::primalUpdate() {
   workDual[columnOut] = -thetaDual;
 
   // Update workHMO.factor_ basis
-  model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+  simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);// model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   model->updateMatrix(columnIn, columnOut);
   // Used to be ++countUpdate because, previously HModel::countUpdate
   // was updated in updatePivots, leaving HPrimal::countUpdate

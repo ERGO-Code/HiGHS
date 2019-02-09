@@ -19,6 +19,7 @@
 #include "HighsIO.h"
 #include "HighsUtils.h"
 #include "HighsModelObject.h"
+#include "SimplexTimer.h"
 #include <cassert>
 #include <vector>
 #include <cstring> // For strcmp
@@ -257,7 +258,7 @@ class HSimplex {
     printf("  has_fresh_rebuild =              %d\n", simplex_info_.solver_lp_has_fresh_rebuild);
     printf("  has_dual_objective_value =       %d\n", simplex_info_.solver_lp_has_dual_objective_value);
   }
-  void computeDualObjectiveValue(
+  void compute_dual_objective_value(
 				 HighsModelObject &highs_model_object,
 				 int phase = 2
 				 ) {
@@ -1312,7 +1313,318 @@ class HSimplex {
   simplex_info.solver_lp_has_invert = true;
   simplex_info.solver_lp_has_fresh_invert = true;
   return 0;
-    
   }
+
+  void compute_primal(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HMatrix &matrix = highs_model_object.matrix_;
+    HFactor &factor = highs_model_object.factor_;
+    // Setup a local buffer for the values of basic variables
+    HVector buffer;
+    buffer.setup(solver_lp.numRow_);
+    buffer.clear();
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = 0; i < numTot; i++) {
+      if (basis.nonbasicFlag_[i] && simplex_info.workValue_[i] != 0) {
+	matrix.collect_aj(buffer, i, simplex_info.workValue_[i]);
+      }
+    }
+    factor.ftran(buffer, 1);
+    
+    for (int i = 0; i < solver_lp.numRow_; i++) {
+      int iCol = basis.basicIndex_[i];
+      simplex_info.baseValue_[i] = -buffer.array[i];
+      simplex_info.baseLower_[i] = simplex_info.workLower_[iCol];
+      simplex_info.baseUpper_[i] = simplex_info.workUpper_[iCol];
+    }
+    // Now have basic primals
+    simplex_info.solver_lp_has_basic_primal_values = true;
+  }
+
+  void compute_dual(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HMatrix &matrix = highs_model_object.matrix_;
+    HFactor &factor = highs_model_object.factor_;
+    bool an_compute_dual_norm2 = false;
+    double btran_rhs_norm2;
+    double btran_sol_norm2;
+    double work_dual_norm2;
+
+    // Create a local buffer for the pi vector
+    HVector buffer;
+    buffer.setup(solver_lp.numRow_);
+    buffer.clear(); 
+    for (int iRow = 0; iRow < solver_lp.numRow_; iRow++) {
+      buffer.index[iRow] = iRow;
+      buffer.array[iRow] =
+        simplex_info.workCost_[basis.basicIndex_[iRow]] + simplex_info.workShift_[basis.basicIndex_[iRow]];
+    }
+    buffer.count = solver_lp.numRow_;
+    if (an_compute_dual_norm2) {
+      btran_rhs_norm2 = buffer.norm2();
+      btran_rhs_norm2 = sqrt(btran_rhs_norm2);
+    }
+    //  printf("compute_dual: Before BTRAN\n");cout<<flush;
+    factor.btran(buffer, 1);
+    //  printf("compute_dual: After  BTRAN\n");cout<<flush;
+    if (an_compute_dual_norm2) {
+      btran_sol_norm2 = buffer.norm2();
+      btran_sol_norm2 = sqrt(btran_sol_norm2);
+    }
+    
+    // Create a local buffer for the values of reduced costs
+    HVector bufferLong;
+    bufferLong.setup(solver_lp.numCol_);
+    bufferLong.clear();
+    matrix.price_by_col(bufferLong, buffer);
+    for (int i = 0; i < solver_lp.numCol_; i++) {
+      simplex_info.workDual_[i] = simplex_info.workCost_[i] - bufferLong.array[i];
+    }
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = solver_lp.numCol_; i < numTot; i++) {
+      simplex_info.workDual_[i] = simplex_info.workCost_[i] - buffer.array[i - solver_lp.numCol_];
+    }
+    
+    if (an_compute_dual_norm2) {
+      work_dual_norm2 = 0;
+      for (int i = 0; i < numTot; i++)
+	work_dual_norm2 += simplex_info.workDual_[i] * simplex_info.workDual_[i];
+      work_dual_norm2 = sqrt(work_dual_norm2);
+      //  printf("compute_dual: B.pi=c_B has ||c_B||=%11.4g; ||pi||=%11.4g;
+      //  ||pi^TA-c||=%11.4g\n", btran_rhs_norm2, btran_sol_norm2, work_dual_norm2);
+      double current_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+      double new_dual_feasibility_tolerance = work_dual_norm2 / 1e16;
+      if (new_dual_feasibility_tolerance > 1e-1) {
+	printf(
+	       "Seriously: do you expect to solve an LP with ||pi^TA-c||=%11.4g?\n",
+	       work_dual_norm2);
+      } else if (new_dual_feasibility_tolerance > 10 * current_dual_feasibility_tolerance) {
+	printf(
+	       "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = %12g\n",
+	       work_dual_norm2, new_dual_feasibility_tolerance);
+	simplex_info.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+      }
+    }
+    
+    // Now have nonbasic duals
+    simplex_info.solver_lp_has_nonbasic_dual_values = true;
+  }
+
+  void correct_dual(HighsModelObject &highs_model_object, int* free_infeasibility_count) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsRandom &random = highs_model_object.random_;
+    const double tau_d = simplex_info.dual_feasibility_tolerance;
+    const double inf = HIGHS_CONST_INF;
+    int workCount = 0;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = 0; i < numTot; i++) {
+      if (basis.nonbasicFlag_[i]) {
+	if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf) {
+	  // FREE variable
+	  workCount += (fabs(simplex_info.workDual_[i]) >= tau_d);
+	} else if (basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d) {
+	  if (simplex_info.workLower_[i] != -inf && simplex_info.workUpper_[i] != inf) {
+	    // Boxed variable = flip
+	    flip_bound(highs_model_object, i);
+	  } else {
+	    // Other variable = shift
+	    simplex_info.costs_perturbed = 1;
+	    if (basis.nonbasicMove_[i] == 1) {
+	      double random_v = random.fraction();
+	      double dual = (1 + random_v) * tau_d;
+	      double shift = dual - simplex_info.workDual_[i];
+	      simplex_info.workDual_[i] = dual;
+	      simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
+	    } else {
+	      double dual = -(1 + random.fraction()) * tau_d;
+	      double shift = dual - simplex_info.workDual_[i];
+	      simplex_info.workDual_[i] = dual;
+	      simplex_info.workCost_[i] = simplex_info.workCost_[i] + shift;
+	    }
+	  }
+	}
+      }
+    }
+    *free_infeasibility_count = workCount;
+  }
+
+  void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object, int* dual_infeasibility_count) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    int work_count = 0;
+    const double inf = HIGHS_CONST_INF;
+    const double tau_d = simplex_info.dual_feasibility_tolerance;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = 0; i < numTot; i++) {
+      // Only for non basic variables
+      if (!basis.nonbasicFlag_[i]) continue;
+      // Free
+      if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
+	work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);
+      // In dual, assuming that boxed variables will be flipped
+      if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf)
+	work_count += (basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
+    }
+    *dual_infeasibility_count = work_count;
+  }
+
+  void compute_dual_infeasible_in_primal(HighsModelObject &highs_model_object, int* dual_infeasibility_count) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    int work_count = 0;
+    const double inf = HIGHS_CONST_INF;
+    const double tau_d = simplex_info.dual_feasibility_tolerance;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = 0; i < numTot; i++) {
+      // Only for non basic variables
+      if (!basis.nonbasicFlag_[i]) continue;
+      // Free
+      if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
+	work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);
+      // In primal don't assume flip
+      work_count += (basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
+    }
+    *dual_infeasibility_count = work_count;
+  }
+
+// Compute the primal values (in baseValue) and set the lower and upper bounds
+// of basic variables
+  int set_source_out_from_bound(HighsModelObject &highs_model_object, const int column_out) {
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    int source_out = 0;
+    if (simplex_info.workLower_[column_out] != simplex_info.workUpper_[column_out]) {
+      if (!highs_isInfinity(-simplex_info.workLower_[column_out])) {
+	// Finite LB so source_out = -1 ensures value set to LB if LB < UB
+	source_out = -1;
+	//      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
+	//      so setting source_out = -1\n", column_out, simplex_info.workLower_[column_out],
+	//      simplex_info.workUpper_[column_out]);
+      } else {
+	// Infinite LB so source_out = 1 ensures value set to UB
+	source_out = 1;
+	if (!highs_isInfinity(simplex_info.workUpper_[column_out])) {
+	  // Free variable => trouble!
+	  printf("TROUBLE: variable %d leaving the basis is free!\n", column_out);
+	}
+      }
+    }
+    return source_out;
+  }
+
+  double compute_primal_objective_function_value(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsScale &scale = highs_model_object.scale_;
+    double primal_objective_function_value = 0;
+    for (int row = 0; row < solver_lp.numRow_; row++) {
+      int var = basis.basicIndex_[row];
+      if (var < solver_lp.numCol_)
+	primal_objective_function_value += simplex_info.baseValue_[row] * solver_lp.colCost_[var];
+    }
+    for (int col = 0; col < solver_lp.numCol_; col++) {
+      if (basis.nonbasicFlag_[col])
+	primal_objective_function_value += simplex_info.workValue_[col] * solver_lp.colCost_[col];
+    }
+    primal_objective_function_value *= scale.cost_;
+    return primal_objective_function_value;
+  }
+
+// Record the shift in the cost of a particular column
+  double shift_cost(HighsModelObject &highs_model_object, int iCol, double amount) {
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    simplex_info.costs_perturbed = 1;
+    assert(simplex_info.workShift_[iCol] == 0);
+    simplex_info.workShift_[iCol] = amount;
+  }
+
+// Undo the shift in the cost of a particular column
+  double shift_back(HighsModelObject &highs_model_object, int iCol) {
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    simplex_info.workDual_[iCol] -= simplex_info.workShift_[iCol];
+    simplex_info.workShift_[iCol] = 0;
+  }
+
+  void update_factor(HighsModelObject &highs_model_object, 
+		     HVector *column,
+		     HVector *row_ep,
+		     int *iRow,
+		     int *hint) {
+    //    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HFactor &factor = highs_model_object.factor_;
+    HighsTimer &timer = highs_model_object.timer_;
+
+    timer.start(simplex_info.clock_[UpdateFactorClock]);
+    factor.update(column, row_ep, iRow, hint);
+    // Now have a representation of B^{-1}, but it is not fresh
+    simplex_info.solver_lp_has_invert = true;
+    if (simplex_info.update_count >= simplex_info.update_limit) *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
+    timer.stop(simplex_info.clock_[UpdateFactorClock]);
+  }
+  
+  void update_pivots(HighsModelObject &highs_model_object, int columnIn, int rowOut, int sourceOut) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsTimer &timer = highs_model_object.timer_;
+
+    timer.start(simplex_info.clock_[UpdatePivotsClock]);
+    int columnOut = basis.basicIndex_[rowOut];
+
+    // Incoming variable
+    basis.basicIndex_[rowOut] = columnIn;
+    basis.nonbasicFlag_[columnIn] = 0;
+    basis.nonbasicMove_[columnIn] = 0;
+    simplex_info.baseLower_[rowOut] = simplex_info.workLower_[columnIn];
+    simplex_info.baseUpper_[rowOut] = simplex_info.workUpper_[columnIn];
+    
+    // Outgoing variable
+    basis.nonbasicFlag_[columnOut] = 1;
+    //  double dlValue;
+    //  double vrLb = simplex_info.workLower_[columnOut];
+    //  double vrV = simplex_info.workValue_[columnOut];
+    //  double vrUb = simplex_info.workUpper_[columnOut];
+    if (simplex_info.workLower_[columnOut] == simplex_info.workUpper_[columnOut]) {
+      //    dlValue = simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
+      simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
+      basis.nonbasicMove_[columnOut] = 0;
+    } else if (sourceOut == -1) {
+      //    dlValue = simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
+      simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
+      basis.nonbasicMove_[columnOut] = 1;
+    } else {
+      //    dlValue = simplex_info.workUpper_[columnOut]-simplex_info.workValue_[columnOut];
+      simplex_info.workValue_[columnOut] = simplex_info.workUpper_[columnOut];
+      basis.nonbasicMove_[columnOut] = -1;
+    }
+    double nwValue = simplex_info.workValue_[columnOut];
+    double vrDual = simplex_info.workDual_[columnOut];
+    double dlDualObjectiveValue = nwValue*vrDual;
+    //  if (abs(nwValue))
+    //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
+    //			   columnOut, basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
+    simplex_info.updatedDualObjectiveValue += dlDualObjectiveValue;
+    simplex_info.update_count++;
+    // Update the number of basic logicals
+    if (columnOut < solver_lp.numCol_) simplex_info.num_basic_logicals -= 1;
+    if (columnIn < solver_lp.numCol_) simplex_info.num_basic_logicals += 1;
+    // No longer have a representation of B^{-1}, and certainly not
+    // fresh!
+    simplex_info.solver_lp_has_invert = false;
+    simplex_info.solver_lp_has_fresh_invert = false;
+    // Data are no longer fresh from rebuild
+    simplex_info.solver_lp_has_fresh_rebuild = false;
+    timer.stop(simplex_info.clock_[UpdatePivotsClock]);
+  }
+  
 };
 #endif // SIMPLEX_HSIMPLEX_H_

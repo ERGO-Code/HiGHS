@@ -16,6 +16,7 @@
 #include "HModel.h"
 #include "HighsSort.h"
 #include "HConst.h"
+//#include "HSimplex.h"
 
 #include <cassert>
 #include <set>
@@ -88,6 +89,7 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
 
 void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  //  HSimplex simplex_method_;
 
   const int *Astart = &lp_->Astart_[0];
   const int *Aindex = &lp_->Aindex_[0];
@@ -234,10 +236,10 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
     int columnIn = cz_c_n;
     int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = model_->setSourceOutFmBd(columnOut);
+    int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(highs_model_object, columnOut);\n"); //model_->setSourceOutFmBd(columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy
     // of the matrix
-    model_->updatePivots(columnIn, rowOut, sourceOut);
+    printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n");//model_->updatePivots(columnIn, rowOut, sourceOut);
     if (simplex_info_.solver_lp_has_matrix_row_wise) model_->updateMatrix(columnIn, columnOut);
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
@@ -682,6 +684,7 @@ void HCrash::ltssf_iz_mode(int Crash_Mode) {
 void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
   // LTSSF Main loop
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  //  HSimplex simplex_method_;
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
   bool ltssf_stop = false;
@@ -705,10 +708,10 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
       int columnIn = cz_c_n;
       int rowOut = cz_r_n;
       int columnOut = numCol + cz_r_n;
-      int sourceOut = model_->setSourceOutFmBd(columnOut);
+      int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(highs_model_object, columnOut);\n");//model_->setSourceOutFmBd(columnOut);
       // Update the basic/nonbasic variable info and the row-wise copy
       // of the matrix
-      model_->updatePivots(columnIn, rowOut, sourceOut);
+      printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n"); //model_->updatePivots(columnIn, rowOut, sourceOut);
       if (simplex_info_.solver_lp_has_matrix_row_wise)
         model_->updateMatrix(columnIn, columnOut);
       // Update the count of this type of removal and addition
@@ -1267,6 +1270,7 @@ void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
 #ifdef HiGHSDEV
 void HCrash::tsSing(HighsModelObject &highs_model_object) {
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  //  HSimplex simplex_method_;
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
@@ -1276,10 +1280,10 @@ void HCrash::tsSing(HighsModelObject &highs_model_object) {
     int columnIn = c_n;
     int rowOut = r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = model_->setSourceOutFmBd(columnOut);
+    int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(highs_model_object, columnOut);\n");// model_->setSourceOutFmBd(columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy of the
     // matrix
-    model_->updatePivots(columnIn, rowOut, sourceOut);
+    printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n");//model_->updatePivots(columnIn, rowOut, sourceOut);
     if (simplex_info_.solver_lp_has_matrix_row_wise) model_->updateMatrix(columnIn, columnOut);
     nBcVr++;
     if (nBcVr == numRow) break;

@@ -71,26 +71,10 @@ class HModel {
   // ???? Housekeeping done from here down ????
   // For the solver:
   // Call INVERT and form dual and primal activities
-  int computeFactor();
-  void computeDual();
-  void computeDualInfeasInDual(int* dualInfeasCount);
-  void computeDualInfeasInPrimal(int* dualInfeasCount);
-  void correctDual(int* freeInfeasCount);
-  void computePrimal();
-  double computePrObj();
-  double computePh2Objective(vector<double>& colPrAct);
-  int handleRankDeficiency();
-  int setSourceOutFmBd(const int columnOut);
-
-  // Utilities for shifting costs and flipping bounds
-  void shiftCost(int iCol, double amount);
-  void shiftBack(int iCol);
-  void flipBound(int iCol);
 
   // The major model updates. Factor calls factor.update; Matrix
   // calls matrix.update; updatePivots does everything---and is
   // called from the likes of HDual::updatePivots
-  void updateFactor(HVector* column, HVector* row_ep, int* iRow, int* hint);
   void updateMatrix(int columnIn, int columnOut);
   void updatePivots(int columnIn, int rowOut, int sourceOut);
 #ifdef HiGHSDEV

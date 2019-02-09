@@ -273,8 +273,9 @@ void HDual::minor_updateDual() {
    * 1. Update the dual solution
    *    XXX Data parallel (depends on the ap partition before)
    */
+  HSimplex simplex_method_;
   if (thetaDual == 0) {
-    model->shiftCost(columnIn, -workDual[columnIn]);
+    simplex_method_.shift_cost(workHMO, columnIn, -workDual[columnIn]);//model->shiftCost(columnIn, -workDual[columnIn]);
   } else {
     dualRow.update_dual(thetaDual, columnOut);
     if (slice_PRICE) {
@@ -284,7 +285,7 @@ void HDual::minor_updateDual() {
   }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
-  model->shiftBack(columnOut);
+  simplex_method_.shift_back(workHMO, columnOut);//model->shiftBack(columnOut);
 
   /**
    * 2. Apply global bound flip
@@ -343,7 +344,7 @@ void HDual::minor_updatePrimal() {
 }
 void HDual::minor_updatePivots() {
   MFinish *Fin = &multi_finish[multi_nFinish];
-  model->updatePivots(columnIn, rowOut, sourceOut);
+  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
   Fin->EdWt /= (alphaRow * alphaRow);
   Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
   model->updateMatrix(columnIn, columnOut);
@@ -685,9 +686,7 @@ void HDual::major_updateFactor() {
   }
   iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
   if (multi_nFinish > 0)
-    model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows,
-                        &invertHint);
-
+    simplex_method_.update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);// model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && workHMO.simplex_info_.update_count > 200)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
@@ -709,8 +708,7 @@ void HDual::major_rollback() {
     // 3. Roll back flips
     HSimplex simplex_method_;
     for (unsigned i = 0; i < Fin->flipList.size(); i++) {
-      simplex_method_.flip_bound(workHMO, Fin->flipList[i]); 
-      //      model->flipBound(Fin->flipList[i]);
+      simplex_method_.flip_bound(workHMO, Fin->flipList[i]); //model->flipBound(Fin->flipList[i]);
     }
 
     // 4. Roll back cost

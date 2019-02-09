@@ -333,8 +333,7 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
     //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
     dualObjectiveValueChange += lcDualObjectiveValueChange;
-    //workModel->flipBound(iCol);
-    simplex_method_.flip_bound(workHMO, iCol);
+    simplex_method_.flip_bound(workHMO, iCol);//workModel->flipBound(iCol);
     workHMO.matrix_.collect_aj(*bfrtColumn, iCol, change);
   }
   workHMO.simplex_info_.updatedDualObjectiveValue += dualObjectiveValueChange;

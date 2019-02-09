@@ -59,8 +59,7 @@ void HDual::solve(int num_threads) {
   // left until now for efficiency reasons.
   HSimplex simplex_method_;
   printf("Calling simplex_method_.setup_for_solve(workHMO);\n");
-  simplex_method_.setup_for_solve(workHMO);
-  //  model->setup_for_solve();
+  simplex_method_.setup_for_solve(workHMO); //  model->setup_for_solve();
 #ifdef HiGHSDEV
   timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
@@ -73,10 +72,10 @@ void HDual::solve(int num_threads) {
   // be called if model dimension changes
   init(num_threads);
 
-  simplex_method_.init_cost(workHMO, 1);
-  //  model->initCost(1);
+  simplex_method_.init_cost(workHMO, 1); //  model->initCost(1);
   if (!simplex_info.solver_lp_has_fresh_invert) {
-    int rankDeficiency = model->computeFactor();
+    int rankDeficiency = simplex_method_.compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
+
     if (rankDeficiency) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
@@ -171,8 +170,8 @@ void HDual::solve(int num_threads) {
   }
 #endif
 
-  model->computeDual();
-  model->computeDualInfeasInDual(&dualInfeasCount);
+  simplex_method_.compute_dual(workHMO); //  model->computeDual();
+  simplex_method_.compute_dual_infeasible_in_dual(workHMO, &dualInfeasCount);//model->computeDualInfeasInDual(&dualInfeasCount);
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
@@ -535,10 +534,8 @@ void HDual::solve_phase1() {
   HSimplex simplex_method_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
-  simplex_method_.init_bound(workHMO, 1);
-    //model->initBound(1);
-  simplex_method_.init_value(workHMO);
-  //  model->initValue();
+  simplex_method_.init_bound(workHMO, 1); //model->initBound(1);
+  simplex_method_.init_value(workHMO); //  model->initValue();
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
@@ -626,10 +623,8 @@ void HDual::solve_phase1() {
   }
 
   if (solvePhase == 2) {
-    simplex_method_.init_bound(workHMO);
-    simplex_method_.init_value(workHMO);
-    //    model->initBound();
-    //    model->initValue();
+    simplex_method_.init_bound(workHMO);//    model->initBound();
+    simplex_method_.init_value(workHMO);//    model->initValue();
   }
 }
 
@@ -772,7 +767,7 @@ void HDual::rebuild() {
     timer.start(simplex_info.clock_[InvertClock]);
 
     // Call computeFactor to perform INVERT
-    int rankDeficiency = model->computeFactor();
+    int rankDeficiency = simplex_method_.compute_factor(workHMO); //    int rankDeficiency = model->computeFactor();
     timer.stop(simplex_info.clock_[InvertClock]);
 
     if (rankDeficiency)
@@ -790,16 +785,16 @@ void HDual::rebuild() {
 
   // Recompute dual solution
   timer.start(simplex_info.clock_[ComputeDualClock]);
-  model->computeDual();
+  simplex_method_.compute_dual(workHMO);  //  model->computeDual();
   timer.stop(simplex_info.clock_[ComputeDualClock]);
 
   timer.start(simplex_info.clock_[CorrectDualClock]);
-  model->correctDual(&dualInfeasCount);
+  simplex_method_.correct_dual(workHMO, &dualInfeasCount);  //model->correctDual(&dualInfeasCount);
   timer.stop(simplex_info.clock_[CorrectDualClock]);
 
   // Recompute primal solution
   timer.start(simplex_info.clock_[ComputePrimalClock]);
-  model->computePrimal();
+  simplex_method_.compute_primal(workHMO);//model->computePrimal();
   timer.stop(simplex_info.clock_[ComputePrimalClock]);
 
   // Collect primal infeasible as a list
@@ -814,7 +809,7 @@ void HDual::rebuild() {
   bool checkDualObjectiveValue = simplex_info.solver_lp_has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
-  simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
+  simplex_method_.compute_dual_objective_value(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuobjClock]);
 
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
@@ -864,16 +859,14 @@ void HDual::cleanup() {
   // Remove perturbation and recompute the dual solution
   HighsPrintMessage(ML_DETAILED, "dual-cleanup-shift\n");
   HSimplex simplex_method_;
-  simplex_method_.init_cost(workHMO);
-  simplex_method_.init_bound(workHMO);
-  //  model->initCost();
-  //  model->initBound();
-  model->computeDual();
-  simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
+  simplex_method_.init_cost(workHMO);  //  model->initCost();
+  simplex_method_.init_bound(workHMO);  //  model->initBound();
+  simplex_method_.compute_dual(workHMO);  //  model->computeDual();
+  simplex_method_.compute_dual_objective_value(workHMO, solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);
   iterateRpInvert(-1);
 
-  model->computeDualInfeasInPrimal(&dualInfeasCount);
+  simplex_method_.compute_dual_infeasible_in_primal(workHMO, &dualInfeasCount);//model->computeDualInfeasInPrimal(&dualInfeasCount);
 }
 
 void HDual::iterate() {
@@ -1689,9 +1682,10 @@ void HDual::updateDual() {
   if (invertHint) return;
 
   // Update - dual (shift and back)
+  HSimplex simplex_method_;
   if (thetaDual == 0)
     // Little to do if thetaDual is zero
-    model->shiftCost(columnIn, -workDual[columnIn]);
+    simplex_method_.shift_cost(workHMO, columnIn, -workDual[columnIn]);//model->shiftCost(columnIn, -workDual[columnIn]);
   else {
     // Update the dual values (if packCount>0)
     dualRow.update_dual(thetaDual, columnOut);
@@ -1705,7 +1699,7 @@ void HDual::updateDual() {
   }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
-  model->shiftBack(columnOut);
+  simplex_method_.shift_back(workHMO, columnOut);//model->shiftBack(columnOut);
 }
 
 void HDual::updatePrimal(HVector *DSE_Vector) {
@@ -1772,7 +1766,7 @@ void HDual::updatePivots() {
   if (invertHint) return;
   //
   // Update the sets of indices of basic and nonbasic variables
-  model->updatePivots(columnIn, rowOut, sourceOut);
+  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
   //  checkDualObjectiveValue("After  model->updatePivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
@@ -1782,7 +1776,7 @@ void HDual::updatePivots() {
   workHMO.simplex_info_.iteration_count++;
   //
   // Update the invertible representation of the basis matrix
-  model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+  simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);//model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   //
   // Update the row-wise representation of the nonbasic columns
   model->updateMatrix(columnIn, columnOut);
@@ -1897,7 +1891,7 @@ void HDual::interpret_price_strategy(SimplexPriceStrategy price_strategy) {
 double HDual::checkDualObjectiveValue(const char *message, int phase) {
   static double previousUpdatedDualObjectiveValue = 0;
   static double previousDualObjectiveValue = 0;
-  simplex_method_.computeDualObjectiveValue(workHMO, phase);
+  simplex_method_.compute_dual_objective_value(workHMO, phase);
   double updatedDualObjectiveValue = workHMO.simplex_info_.updatedDualObjectiveValue;
   double dualObjectiveValue = workHMO.simplex_info_.dualObjectiveValue;
   double changeInUpdatedDualObjectiveValue = updatedDualObjectiveValue - previousUpdatedDualObjectiveValue;
