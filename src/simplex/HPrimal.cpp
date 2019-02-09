@@ -28,9 +28,9 @@ void HPrimal::solvePhase2() {
   model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
-  numCol = model->solver_lp_->numCol_;
-  numRow = model->solver_lp_->numRow_;
-  numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
+  solver_num_col = workHMO.solver_lp_.numCol_;
+  solver_num_row = workHMO.solver_lp_.numRow_;
+  solver_num_tot = solver_num_col + solver_num_row;
 
 #ifdef HiGHSDEV
   printf("************************************\n");
@@ -38,13 +38,13 @@ void HPrimal::solvePhase2() {
   printf("************************************\n");
 #endif
   // Setup update limits
-  simplex_info.update_limit = min(100 + numRow / 100, 1000); // TODO: Consider allowing the dual limit to be used
+  simplex_info.update_limit = min(100 + solver_num_row / 100, 1000); // TODO: Consider allowing the dual limit to be used
   simplex_info.update_count = 0;
 
   // Setup local vectors
-  column.setup(numRow);
-  row_ep.setup(numRow);
-  row_ap.setup(numCol);
+  column.setup(solver_num_row);
+  row_ep.setup(solver_num_row);
+  row_ap.setup(solver_num_col);
   columnDensity = 0;
   row_epDensity = 0;
 
@@ -52,7 +52,7 @@ void HPrimal::solvePhase2() {
 
   HighsPrintMessage(ML_DETAILED, "primal-start\n");
 
-  HighsTimer &timer = *(model->timer_);
+  HighsTimer &timer = workHMO.timer_;
 
   // Main solving structure
   for (;;) {
@@ -120,10 +120,10 @@ void HPrimal::primalRebuild() {
   // Move this to Simplex class once it's created
   //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
 
-  // Rebuild model->factor - only if we got updates
+  // Rebuild workHMO.factor_ - only if we got updates
   int sv_invertHint = invertHint;
   invertHint = INVERT_HINT_NO;
-  // Possibly Rebuild model->factor
+  // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
     // Don't reinvert if columnIn is negative [equivalently, if sv_invertHint ==
@@ -169,8 +169,7 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
   const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
 
-  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-  for (int iCol = 0; iCol < numTot; iCol++) {
+  for (int iCol = 0; iCol < solver_num_tot; iCol++) {
     if (jFlag[iCol] && fabs(workDual[iCol]) > dualTolerance) {
       // Always take free
       // TODO: if we found free,
@@ -200,9 +199,9 @@ void HPrimal::primalChooseRow() {
   // Compute pivot column
   column.clear();
   column.packFlag = true;
-  model->matrix_->collect_aj(column, columnIn, 1);
-  model->factor_->ftran(column, columnDensity);
-  columnDensity = 0.95 * columnDensity + 0.05 * column.count / numRow;
+  workHMO.matrix_.collect_aj(column, columnIn, 1);
+  workHMO.factor_.ftran(column, columnDensity);
+  columnDensity = 0.95 * columnDensity + 0.05 * column.count / solver_num_row;
 
   // Initialize
   rowOut = -1;
@@ -319,7 +318,7 @@ void HPrimal::primalUpdate() {
   baseValue[rowOut] = valueIn;
 
   // Check for any possible infeasible
-  for (int iRow = 0; iRow < numRow; iRow++) {
+  for (int iRow = 0; iRow < solver_num_row; iRow++) {
     if (baseValue[iRow] < baseLower[iRow] - primalTolerance) {
       invertHint = INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX;
     } else if (baseValue[iRow] > baseUpper[iRow] + primalTolerance) {
@@ -334,9 +333,9 @@ void HPrimal::primalUpdate() {
   row_ep.index[0] = rowOut;
   row_ep.array[rowOut] = 1;
   row_ep.packFlag = true;
-  model->factor_->btran(row_ep, row_epDensity);
-  model->matrix_->price_by_row(row_ap, row_ep);
-  row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / numRow;
+  workHMO.factor_.btran(row_ep, row_epDensity);
+  workHMO.matrix_.price_by_row(row_ap, row_ep);
+  row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
 
   double thetaDual = workDual[columnIn] / alpha;
   for (int i = 0; i < row_ap.count; i++) {
@@ -345,7 +344,7 @@ void HPrimal::primalUpdate() {
   }
   for (int i = 0; i < row_ep.count; i++) {
     int iGet = row_ep.index[i];
-    int iCol = iGet + numCol;
+    int iCol = iGet + solver_num_col;
     workDual[iCol] -= thetaDual * row_ep.array[iGet];
   }
 
@@ -353,7 +352,7 @@ void HPrimal::primalUpdate() {
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
 
-  // Update model->factor basis
+  // Update workHMO.factor_ basis
   model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   model->updateMatrix(columnIn, columnOut);
   // Used to be ++countUpdate because, previously HModel::countUpdate
