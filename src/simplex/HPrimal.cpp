@@ -354,7 +354,7 @@ void HPrimal::primalUpdate() {
 
   // Update workHMO.factor_ basis
   simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);// model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
-  model->updateMatrix(columnIn, columnOut);
+  simplex_method_.update_matrix(workHMO, columnIn, columnOut); // model->updateMatrix(columnIn, columnOut);
   // Used to be ++countUpdate because, previously HModel::countUpdate
   // was updated in updatePivots, leaving HPrimal::countUpdate
   // unchanged. Now everything based on simplex_info.update_count, the

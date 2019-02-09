@@ -347,7 +347,7 @@ void HDual::minor_updatePivots() {
   simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
   Fin->EdWt /= (alphaRow * alphaRow);
   Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
-  model->updateMatrix(columnIn, columnOut);
+  simplex_method_.update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
   // Move this to Simplex class once it's created
@@ -703,7 +703,7 @@ void HDual::major_rollback() {
     workHMO.basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
 
     // 2. Roll back matrix
-    model->updateMatrix(Fin->columnOut, Fin->columnIn);
+    simplex_method_.update_matrix(workHMO, Fin->columnOut, Fin->columnIn);// model->updateMatrix(Fin->columnOut, Fin->columnIn);
 
     // 3. Roll back flips
     HSimplex simplex_method_;

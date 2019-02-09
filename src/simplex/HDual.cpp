@@ -1779,7 +1779,7 @@ void HDual::updatePivots() {
   simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);//model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
   //
   // Update the row-wise representation of the nonbasic columns
-  model->updateMatrix(columnIn, columnOut);
+  simplex_method_.update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
   //
   // Delete Freelist entry for columnIn
   dualRow.delete_Freelist(columnIn);

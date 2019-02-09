@@ -240,7 +240,7 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
     // Update the basic/nonbasic variable info and the row-wise copy
     // of the matrix
     printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n");//model_->updatePivots(columnIn, rowOut, sourceOut);
-    if (simplex_info_.solver_lp_has_matrix_row_wise) model_->updateMatrix(columnIn, columnOut);
+    if (simplex_info_.solver_lp_has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(columnIn, columnOut);\n"); //model_->updateMatrix(columnIn, columnOut);
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -712,8 +712,7 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
       // Update the basic/nonbasic variable info and the row-wise copy
       // of the matrix
       printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n"); //model_->updatePivots(columnIn, rowOut, sourceOut);
-      if (simplex_info_.solver_lp_has_matrix_row_wise)
-        model_->updateMatrix(columnIn, columnOut);
+      if (simplex_info_.solver_lp_has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(columnIn, columnOut);\n");// model_->updateMatrix(columnIn, columnOut);
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];

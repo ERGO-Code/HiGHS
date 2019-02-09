@@ -52,7 +52,6 @@ class HModel {
   void replaceWithLogicalBasis();
   void replaceWithNewBasis(const int* XbasicIndex);
 
-  void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
   bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
@@ -69,14 +68,6 @@ class HModel {
   void allocate_WorkAndBaseArrays();
 
   // ???? Housekeeping done from here down ????
-  // For the solver:
-  // Call INVERT and form dual and primal activities
-
-  // The major model updates. Factor calls factor.update; Matrix
-  // calls matrix.update; updatePivots does everything---and is
-  // called from the likes of HDual::updatePivots
-  void updateMatrix(int columnIn, int columnOut);
-  void updatePivots(int columnIn, int rowOut, int sourceOut);
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void changeUpdate(int updateMethod);

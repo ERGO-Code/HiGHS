@@ -337,47 +337,6 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   //  if (numAddRow) update_solver_lp_status_flags(highs_model, LpAction::NEW_ROWS);
 }
 
-void HModel::setup_for_solve() {
-  //  timer.reset();
-  if (solver_lp_->numRow_ == 0) return;
-
-  //  report_solver_lp_status_flags(highs_mode_object);cout<<flush;
-  //  printf("In setup_for_solve: basis_->valid_ = %d \n", basis_->valid_);cout<<flush;
-  if (basis_->valid_) {
-    // Model has a basis so just count the number of basic logicals
-    setup_numBasicLogicals();
-  } else {
-    // Model has no basis: set up a logical basis then populate (where
-    // possible) work* arrays
-    replaceWithLogicalBasis();
-    //    printf("Called replaceWithLogicalBasis\n");cout<<flush;
-  }
-
-  if (!(simplex_info_->solver_lp_has_matrix_col_wise && simplex_info_->solver_lp_has_matrix_row_wise)) {
-    // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
-    if (simplex_info_->num_basic_logicals == solver_lp_->numRow_) {
-      matrix_->setup_lgBs(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0]);
-      //      printf("Called matrix_->setup_lgBs\n");cout<<flush;
-    } else {
-      matrix_->setup(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0],
-                   &basis_->nonbasicFlag_[0]);
-      //      printf("Called matrix_->setup\n");cout<<flush;
-    }
-    // Indicate that there is a colum-wise and row-wise copy of the
-    // matrix: can't be done in matrix_->setup_lgBs
-    //    simplex_info_->solver_lp_has_matrix_col_wise = true;
-    //    simplex_info_->solver_lp_has_matrix_row_wise = true;
-  }
-
-    // TODO Put something in to skip factor_->setup
-    // Initialise factor arrays, passing &basis_->basicIndex_[0] so that its
-    // address can be copied to the internal Factor pointer
-    factor_->setup(solver_lp_->numCol_, solver_lp_->numRow_, &solver_lp_->Astart_[0], &solver_lp_->Aindex_[0], &solver_lp_->Avalue_[0],
-                 &basis_->basicIndex_[0]);
-    // Indicate that the model has factor arrays: can't be done in factor.setup
-    //simplex_info_->solver_lp_has_factor_arrays = true;
-}
-
 bool HModel::OKtoSolve(int level, int phase) {
   //  printf("Called OKtoSolve(%1d, %1d)\n", level, phase);
   bool ok;
@@ -811,65 +770,6 @@ void HModel::allocate_WorkAndBaseArrays() {
 // ???? Housekeeping done from here down ????
 // For the solver: methods to call INVERT and form dual and primal activities
 // Call INVERT
-
-// The major model updates. Factor calls factor_->update; Matrix
-// calls matrix_->update; updatePivots does everything---and is
-// called from the likes of HDual::updatePivots
-void HModel::updateMatrix(int columnIn, int columnOut) {
-  timer_->start(simplex_info_->clock_[UpdateMatrixClock]);
-  matrix_->update(columnIn, columnOut);
-  timer_->stop(simplex_info_->clock_[UpdateMatrixClock]);
-}
-
-void HModel::updatePivots(int columnIn, int rowOut, int sourceOut) {
-  timer_->start(simplex_info_->clock_[UpdatePivotsClock]);
-  int columnOut = basis_->basicIndex_[rowOut];
-
-  // Incoming variable
-  basis_->basicIndex_[rowOut] = columnIn;
-  basis_->nonbasicFlag_[columnIn] = 0;
-  basis_->nonbasicMove_[columnIn] = 0;
-  simplex_info_->baseLower_[rowOut] = simplex_info_->workLower_[columnIn];
-  simplex_info_->baseUpper_[rowOut] = simplex_info_->workUpper_[columnIn];
-
-  // Outgoing variable
-  basis_->nonbasicFlag_[columnOut] = 1;
-  //  double dlValue;
-  //  double vrLb = simplex_info_->workLower_[columnOut];
-  //  double vrV = simplex_info_->workValue_[columnOut];
-  //  double vrUb = simplex_info_->workUpper_[columnOut];
-  if (simplex_info_->workLower_[columnOut] == simplex_info_->workUpper_[columnOut]) {
-    //    dlValue = simplex_info_->workLower_[columnOut]-simplex_info_->workValue_[columnOut];
-    simplex_info_->workValue_[columnOut] = simplex_info_->workLower_[columnOut];
-    basis_->nonbasicMove_[columnOut] = 0;
-  } else if (sourceOut == -1) {
-    //    dlValue = simplex_info_->workLower_[columnOut]-simplex_info_->workValue_[columnOut];
-    simplex_info_->workValue_[columnOut] = simplex_info_->workLower_[columnOut];
-    basis_->nonbasicMove_[columnOut] = 1;
-  } else {
-    //    dlValue = simplex_info_->workUpper_[columnOut]-simplex_info_->workValue_[columnOut];
-    simplex_info_->workValue_[columnOut] = simplex_info_->workUpper_[columnOut];
-    basis_->nonbasicMove_[columnOut] = -1;
-  }
-  double nwValue = simplex_info_->workValue_[columnOut];
-  double vrDual = simplex_info_->workDual_[columnOut];
-  double dlDualObjectiveValue = nwValue*vrDual;
-  //  if (abs(nwValue))
-  //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
-  //			   columnOut, basis_->nonbasicMove_[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
-  simplex_info_->updatedDualObjectiveValue += dlDualObjectiveValue;
-  simplex_info_->update_count++;
-  // Update the number of basic logicals
-  if (columnOut < solver_lp_->numCol_) simplex_info_->num_basic_logicals -= 1;
-  if (columnIn < solver_lp_->numCol_) simplex_info_->num_basic_logicals += 1;
-  // No longer have a representation of B^{-1}, and certainly not
-  // fresh!
-  simplex_info_->solver_lp_has_invert = false;
-  simplex_info_->solver_lp_has_fresh_invert = false;
-  // Data are no longer fresh from rebuild
-  simplex_info_->solver_lp_has_fresh_rebuild = false;
-  timer_->stop(simplex_info_->clock_[UpdatePivotsClock]);
-}
 
 #ifdef HiGHSDEV
 void HModel::changeUpdate(int updateMethod) { factor_->change(updateMethod); }

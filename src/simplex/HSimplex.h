@@ -1553,6 +1553,9 @@ class HSimplex {
     simplex_info.workShift_[iCol] = 0;
   }
 
+// The major model updates. Factor calls factor_->update; Matrix
+// calls matrix_->update; updatePivots does everything---and is
+// called from the likes of HDual::updatePivots
   void update_factor(HighsModelObject &highs_model_object, 
 		     HVector *column,
 		     HVector *row_ep,
@@ -1625,6 +1628,17 @@ class HSimplex {
     simplex_info.solver_lp_has_fresh_rebuild = false;
     timer.stop(simplex_info.clock_[UpdatePivotsClock]);
   }
+  
+  void update_matrix(HighsModelObject &highs_model_object, int columnIn, int columnOut) {
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HMatrix &matrix = highs_model_object.matrix_;
+    HighsTimer &timer = highs_model_object.timer_;
+    
+    timer.start(simplex_info.clock_[UpdateMatrixClock]);
+    matrix.update(columnIn, columnOut);
+    timer.stop(simplex_info.clock_[UpdateMatrixClock]);
+  }
+
   
 };
 #endif // SIMPLEX_HSIMPLEX_H_
