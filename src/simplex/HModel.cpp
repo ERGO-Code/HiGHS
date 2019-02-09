@@ -2588,7 +2588,7 @@ void HModel::util_reportSolverOutcome(const char *message) {
     HighsPrintMessage(ML_ALWAYS, "\n");
   }
   // Greppable report line added
-  HighsPrintMessage(ML_MINIMAL, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s,%d,%d,%d\n",
+  HighsPrintMessage(ML_ALWAYS, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s,%d,%d,%d\n",
 		    dualObjectiveValue,
 		    simplex_info_->iteration_count,
 		    currentRunHighsTime,

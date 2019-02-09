@@ -58,6 +58,7 @@ void HDual::solve(int num_threads) {
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
   HSimplex simplex_method_;
+  printf("Calling simplex_method_.setup_for_solve(workHMO);\n");
   simplex_method_.setup_for_solve(workHMO);
   //  model->setup_for_solve();
 #ifdef HiGHSDEV
@@ -72,7 +73,8 @@ void HDual::solve(int num_threads) {
   // be called if model dimension changes
   init(num_threads);
 
-  model->initCost(1);
+  simplex_method_.init_cost(workHMO, 1);
+  //  model->initCost(1);
   if (!simplex_info.solver_lp_has_fresh_invert) {
     int rankDeficiency = model->computeFactor();
     if (rankDeficiency) {
