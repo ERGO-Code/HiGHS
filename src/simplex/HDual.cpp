@@ -532,10 +532,13 @@ void HDual::init_slice(int init_sliced_num) {
 void HDual::solve_phase1() {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HSimplex simplex_method_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
-  model->initBound(1);
-  model->initValue();
+  simplex_method_.init_bound(workHMO, 1);
+    //model->initBound(1);
+  simplex_method_.init_value(workHMO);
+  //  model->initValue();
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
@@ -623,8 +626,10 @@ void HDual::solve_phase1() {
   }
 
   if (solvePhase == 2) {
-    model->initBound();
-    model->initValue();
+    simplex_method_.init_bound(workHMO);
+    simplex_method_.init_value(workHMO);
+    //    model->initBound();
+    //    model->initValue();
   }
 }
 
@@ -858,8 +863,11 @@ void HDual::rebuild() {
 void HDual::cleanup() {
   // Remove perturbation and recompute the dual solution
   HighsPrintMessage(ML_DETAILED, "dual-cleanup-shift\n");
-  model->initCost();
-  model->initBound();
+  HSimplex simplex_method_;
+  simplex_method_.init_cost(workHMO);
+  simplex_method_.init_bound(workHMO);
+  //  model->initCost();
+  //  model->initBound();
   model->computeDual();
   simplex_method_.computeDualObjectiveValue(workHMO, solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);

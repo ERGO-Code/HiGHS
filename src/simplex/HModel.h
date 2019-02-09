@@ -67,15 +67,6 @@ class HModel {
   void initBasicIndex();
 
   void allocate_WorkAndBaseArrays();
-  void populate_WorkArrays();
-  void initCost(int perturb = 0);
-  void initPh2ColCost(int firstcol, int lastcol);
-  void initPh2RowCost(int firstrow, int lastrow);
-  void initBound(int phase = 2);
-  void initPh2ColBound(int firstcol, int lastcol);
-  void initPh2RowBound(int firstrow, int lastrow);
-  void initValue();
-  void initValueFromNonbasic(int firstvar, int lastvar);
 
   // ???? Housekeeping done from here down ????
   // For the solver:

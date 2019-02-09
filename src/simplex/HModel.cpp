@@ -107,7 +107,7 @@ void HModel::replaceWithLogicalBasis() {
   }
   simplex_info_->num_basic_logicals = solver_lp_->numRow_;
 
-  populate_WorkArrays();
+  printf("Call simplex_method_.populate_work_arrays();\n");
 
   // Deduce the consequences of a new basis
   // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
@@ -130,7 +130,7 @@ void HModel::replaceWithNewBasis(const int *XbasicIndex) {
     basis_->nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
   }
 
-  populate_WorkArrays();
+  printf("Call simplex_method_.populate_work_arrays();\n");
 
   // Deduce the consequences of a new basis
   // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
@@ -141,7 +141,7 @@ void HModel::initFromNonbasic() {
   // (where possible) work* arrays and allocate basis* arrays
   initBasicIndex();
   allocate_WorkAndBaseArrays();
-  populate_WorkArrays();
+  printf("Call simplex_method_.populate_work_arrays();\n");
 
   // Deduce the consequences of a new basis
   // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
@@ -151,7 +151,7 @@ void HModel::replaceFromNonbasic() {
   // Initialise basicIndex using nonbasic* then populate (where possible)
   // work* arrays
   initBasicIndex();
-  populate_WorkArrays();
+  printf("Call simplex_method_.populate_work_arrays();\n");
 
   // Deduce the consequences of a new basis
   // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
@@ -166,7 +166,7 @@ void HModel::initWithLogicalBasis() {
   simplex_info_->num_basic_logicals = solver_lp_->numRow_;
 
   allocate_WorkAndBaseArrays();
-  populate_WorkArrays();
+  printf("Call simplex_method_.populate_work_arrays();\n");
 
   // Deduce the consequences of a new basis
   // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
@@ -311,15 +311,15 @@ void HModel::extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
   }
 
   // Initialise costs for the new columns and rows
-  initPh2ColCost(firstcol, lastcol);
-  initPh2RowCost(firstrow, lastrow);
+  printf("init_Phase2_col_cost(firstcol, lastcol);\n");
+  printf("init_Phase2_row_cost(firstrow, lastrow);\n");
 
   // Initialise bounds for the new columns and rows
-  initPh2ColBound(firstcol, lastcol);
-  initPh2RowBound(firstrow, lastrow);
+  printf("init_Phase2_col_bound(firstcol, lastcol);\n");
+  printf("init_Phase2_row_bound(firstrow, lastrow);\n");
 
   // Initialise values (and nonbasicMove) for the new columns
-  initValueFromNonbasic(firstcol, lastcol);
+  printf("Call init_value_from_nonbasic(firstcol, lastcol);\n");
 
 #ifdef HiGHSDEV
   // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid
@@ -796,8 +796,6 @@ void HModel::allocate_WorkAndBaseArrays() {
   const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
   simplex_info_->workCost_.resize(numTot);
   simplex_info_->workDual_.resize(numTot);
-  // Was workShift.assign(numTot, 0); but shift is populated by call to
-  // initCost()
   simplex_info_->workShift_.resize(numTot);
 
   simplex_info_->workLower_.resize(numTot);
@@ -808,198 +806,6 @@ void HModel::allocate_WorkAndBaseArrays() {
   simplex_info_->baseLower_.resize(solver_lp_->numRow_);
   simplex_info_->baseUpper_.resize(solver_lp_->numRow_);
   simplex_info_->baseValue_.resize(solver_lp_->numRow_);
-}
-
-void HModel::populate_WorkArrays() {
-  // Initialize the values
-  initCost();
-  initBound();
-  initValue();
-}
-
-void HModel::initCost(int perturb) {
-  // Copy the cost
-  initPh2ColCost(0, solver_lp_->numCol_ - 1);
-  initPh2RowCost(0, solver_lp_->numRow_ - 1);
-  // See if we want to skip perturbation
-  simplex_info_->costs_perturbed = 0;
-  if (perturb == 0 || simplex_info_->perturb_costs == 0) return;
-  simplex_info_->costs_perturbed = 1;
-
-  // Perturb the original costs, scale down if is too big
-  double bigc = 0;
-  for (int i = 0; i < solver_lp_->numCol_; i++) bigc = max(bigc, fabs(simplex_info_->workCost_[i]));
-  if (bigc > 100) bigc = sqrt(sqrt(bigc));
-
-  // If there's few boxed variables, we will just use Simple perturbation
-  double boxedRate = 0;
-  const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  for (int i = 0; i < numTot; i++) boxedRate += (simplex_info_->workRange_[i] < 1e30);
-  boxedRate /= numTot;
-  if (boxedRate < 0.01) bigc = min(bigc, 1.0);
-  if (bigc < 1) {
-    //        bigc = sqrt(bigc);
-  }
-
-  // Determine the perturbation base
-  double base = 5e-7 * bigc;
-
-  // Now do the perturbation
-  for (int i = 0; i < solver_lp_->numCol_; i++) {
-    double lower = solver_lp_->colLower_[i];
-    double upper = solver_lp_->colUpper_[i];
-    double xpert = (fabs(simplex_info_->workCost_[i]) + 1) * base * (1 + simplex_info_->numTotRandomValue_[i]);
-    if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
-      // Free - no perturb
-    } else if (upper == HIGHS_CONST_INF) {  // Lower
-      simplex_info_->workCost_[i] += xpert;
-    } else if (lower == -HIGHS_CONST_INF) {  // Upper
-      simplex_info_->workCost_[i] += -xpert;
-    } else if (lower != upper) {  // Boxed
-      simplex_info_->workCost_[i] += (simplex_info_->workCost_[i] >= 0) ? xpert : -xpert;
-    } else {
-      // Fixed - no perturb
-    }
-  }
-
-  for (int i = solver_lp_->numCol_; i < numTot; i++) {
-    simplex_info_->workCost_[i] += (0.5 - simplex_info_->numTotRandomValue_[i]) * 1e-12;
-  }
-}
-
-void HModel::initBound(int phase) {
-  // Initialise the Phase 2 bounds (and ranges). NB Phase 2 bounds
-  // necessary to compute Phase 1 bounds
-  initPh2ColBound(0, solver_lp_->numCol_ - 1);
-  initPh2RowBound(0, solver_lp_->numRow_ - 1);
-  if (phase == 2) return;
-
-  // In Phase 1: change to dual phase 1 bound
-  const double inf = HIGHS_CONST_INF;
-  const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  for (int i = 0; i < numTot; i++) {
-    if (simplex_info_->workLower_[i] == -inf && simplex_info_->workUpper_[i] == inf) {
-      // Won't change for row variables: they should never become
-      // non basic
-      if (i >= solver_lp_->numCol_) continue;
-      simplex_info_->workLower_[i] = -1000, simplex_info_->workUpper_[i] = 1000;  // FREE
-    } else if (simplex_info_->workLower_[i] == -inf) {
-      simplex_info_->workLower_[i] = -1, simplex_info_->workUpper_[i] = 0;  // UPPER
-    } else if (simplex_info_->workUpper_[i] == inf) {
-      simplex_info_->workLower_[i] = 0, simplex_info_->workUpper_[i] = 1;  // LOWER
-    } else {
-      simplex_info_->workLower_[i] = 0, simplex_info_->workUpper_[i] = 0;  // BOXED or FIXED
-    }
-    simplex_info_->workRange_[i] = simplex_info_->workUpper_[i] - simplex_info_->workLower_[i];
-  }
-}
-
-void HModel::initValue() {
-  const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  initValueFromNonbasic(0, numTot - 1);
-}
-
-void HModel::initPh2ColCost(int firstcol, int lastcol) {
-  // Copy the Phase 2 cost and zero the shift
-  for (int col = firstcol; col <= lastcol; col++) {
-    int var = col;
-    simplex_info_->workCost_[var] = solver_lp_->sense_ * solver_lp_->colCost_[col];
-    simplex_info_->workShift_[var] = 0.;
-  }
-}
-
-void HModel::initPh2RowCost(int firstrow, int lastrow) {
-  // Zero the cost and shift
-  for (int row = firstrow; row <= lastrow; row++) {
-    int var = solver_lp_->numCol_ + row;
-    simplex_info_->workCost_[var] = 0;
-    simplex_info_->workShift_[var] = 0.;
-  }
-}
-
-void HModel::initPh2ColBound(int firstcol, int lastcol) {
-  // Copy bounds and compute ranges
-  assert(firstcol >= 0);
-  assert(lastcol < solver_lp_->numCol_);
-  for (int col = firstcol; col <= lastcol; col++) {
-    simplex_info_->workLower_[col] = solver_lp_->colLower_[col];
-    simplex_info_->workUpper_[col] = solver_lp_->colUpper_[col];
-    simplex_info_->workRange_[col] = simplex_info_->workUpper_[col] - simplex_info_->workLower_[col];
-  }
-}
-
-void HModel::initPh2RowBound(int firstrow, int lastrow) {
-  // Copy bounds and compute ranges
-  assert(firstrow >= 0);
-  assert(lastrow < solver_lp_->numRow_);
-  for (int row = firstrow; row <= lastrow; row++) {
-    int var = solver_lp_->numCol_ + row;
-    simplex_info_->workLower_[var] = -solver_lp_->rowUpper_[row];
-    simplex_info_->workUpper_[var] = -solver_lp_->rowLower_[row];
-    simplex_info_->workRange_[var] = simplex_info_->workUpper_[var] - simplex_info_->workLower_[var];
-  }
-}
-
-void HModel::initValueFromNonbasic(int firstvar, int lastvar) {
-  // Initialise workValue and nonbasicMove from nonbasicFlag and
-  // bounds, except for boxed variables when nonbasicMove is used to
-  // set workValue=workLower/workUpper
-  assert(firstvar >= 0);
-  const int numTot = solver_lp_->numCol_ + solver_lp_->numRow_;
-  assert(lastvar < numTot);
-  // double dl_pr_act, norm_dl_pr_act;
-  // norm_dl_pr_act = 0.0;
-  for (int var = firstvar; var <= lastvar; var++) {
-    if (basis_->nonbasicFlag_[var]) {
-      // Nonbasic variable
-      // double prev_pr_act = simplex_info_->workValue_[var];
-      if (simplex_info_->workLower_[var] == simplex_info_->workUpper_[var]) {
-        // Fixed
-        simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
-        basis_->nonbasicMove_[var] = NONBASIC_MOVE_ZE;
-      } else if (!highs_isInfinity(-simplex_info_->workLower_[var])) {
-        // Finite lower bound so boxed or lower
-        if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
-          // Finite upper bound so boxed
-          if (basis_->nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-            // Set at lower
-            simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
-          } else if (basis_->nonbasicMove_[var] == NONBASIC_MOVE_DN) {
-            // Set at upper
-            simplex_info_->workValue_[var] = simplex_info_->workUpper_[var];
-          } else {
-            // Invalid nonbasicMove: correct and set value at lower
-            basis_->nonbasicMove_[var] = NONBASIC_MOVE_UP;
-            simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
-          }
-        } else {
-          // Lower
-          simplex_info_->workValue_[var] = simplex_info_->workLower_[var];
-          basis_->nonbasicMove_[var] = NONBASIC_MOVE_UP;
-        }
-      } else if (!highs_isInfinity(simplex_info_->workUpper_[var])) {
-        // Upper
-        simplex_info_->workValue_[var] = simplex_info_->workUpper_[var];
-        basis_->nonbasicMove_[var] = NONBASIC_MOVE_DN;
-      } else {
-        // FREE
-        simplex_info_->workValue_[var] = 0;
-        basis_->nonbasicMove_[var] = NONBASIC_MOVE_ZE;
-      }
-      // dl_pr_act = simplex_info_->workValue_[var] - prev_pr_act;
-      // norm_dl_pr_act += dl_pr_act*dl_pr_act;
-      //      if (abs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
-      //      %8g; %8g] Du = %8g; DlPr = %8g\n",
-      //					var, simplex_info_->workLower_[var],
-      // simplex_info_->workValue_[var], simplex_info_->workUpper_[var], simplex_info_->workDual_[var], dl_pr_act);
-    } else {
-      // Basic variable
-      basis_->nonbasicMove_[var] = NONBASIC_MOVE_ZE;
-    }
-  }
-  //  norm_dl_pr_act = sqrt(norm_dl_pr_act);
-  //  printf("initValueFromNonbasic: ||Change in nonbasic variables||_2 is
-  //  %g\n", norm_dl_pr_act);
 }
 
 // ???? Housekeeping done from here down ????
@@ -1809,8 +1615,8 @@ int HModel::util_convertBaseStatToWorking(const int *cstat, const int *rstat) {
         row, rstat[row], solver_lp_->rowLower_[row], solver_lp_->rowUpper_[row], basis_->nonbasicMove_[var]);
   }
   assert(numBasic = solver_lp_->numRow_);
-  populate_WorkArrays();
-  // simplex.method_update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+  printf("Call simplex_method_.populate_work_arrays();\n");
+  // simplex_method.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
   return 0;
 }
 

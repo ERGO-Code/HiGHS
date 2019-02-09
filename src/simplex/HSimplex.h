@@ -29,6 +29,36 @@
 class HSimplex {
  public:
   
+  /*
+  // Increment iteration count (here!) and (possibly) store the pivots for
+  // debugging NLA
+  void record_pivots(int columnIn, int columnOut, double alpha) {
+    // NB This is where the iteration count is updated!
+    if (columnIn >= 0) simplex_info_.iteration_count++;
+#ifdef HiGHSDEV
+    historyColumnIn.push_back(columnIn);
+    historyColumnOut.push_back(columnOut);
+    historyAlpha.push_back(alpha);
+#endif
+  }
+#ifdef HiGHSDEV
+  // Store and write out the pivots for debugging NLA
+  void writePivots(const char* suffix) {
+    string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
+    ofstream output(filename.c_str());
+    int count = historyColumnIn.size();
+    double current_run_highs_time = timer_->readRunHighsClock();
+    output << solver_lp_->model_name_ << " " << count << "\t" << current_run_highs_time << endl;
+    output << setprecision(12);
+    for (int i = 0; i < count; i++) {
+      output << historyColumnIn[i] << "\t";
+      output << historyColumnOut[i] << "\t";
+      output << historyAlpha[i] << endl;
+    }
+    output.close();
+  }
+#endif
+  */
   void clear_solver_lp_data(
 	     HighsModelObject & highs_model_object //!< Model object in which data for LP to be solved is to be cleared
 	     ) {
@@ -1198,36 +1228,91 @@ class HSimplex {
     const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
     simplex_info.workValue_[iCol] = move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
   }
-
   /*
-  // Increment iteration count (here!) and (possibly) store the pivots for
-  // debugging NLA
-  void record_pivots(int columnIn, int columnOut, double alpha) {
-    // NB This is where the iteration count is updated!
-    if (columnIn >= 0) simplex_info_.iteration_count++;
-#ifdef HiGHSDEV
-    historyColumnIn.push_back(columnIn);
-    historyColumnOut.push_back(columnOut);
-    historyAlpha.push_back(alpha);
-#endif
-  }
-#ifdef HiGHSDEV
-  // Store and write out the pivots for debugging NLA
-  void writePivots(const char* suffix) {
-    string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
-    ofstream output(filename.c_str());
-    int count = historyColumnIn.size();
-    double current_run_highs_time = timer_->readRunHighsClock();
-    output << solver_lp_->model_name_ << " " << count << "\t" << current_run_highs_time << endl;
-    output << setprecision(12);
-    for (int i = 0; i < count; i++) {
-      output << historyColumnIn[i] << "\t";
-      output << historyColumnOut[i] << "\t";
-      output << historyAlpha[i] << endl;
+  int handle_rank_deficiency(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HFactor &factor = highs_model_object.factor_;
+    HighsBasis &basis = highs_model_object.basis_;
+    int rankDeficiency = factor.rankDeficiency;
+    const int *noPvC = factor.getNoPvC();
+    printf("Returned %d = factor.build();\n", rankDeficiency);
+    fflush(stdout);
+    vector<int> basicRows;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    basicRows.resize(numTot);
+    //    printf("Before - basis.basicIndex_:"); for (int iRow=0; iRow<solver_lp.numRow_; iRow++)
+    //    printf(" %2d", basis.basicIndex_[iRow]); printf("\n");
+    for (int iRow = 0; iRow < solver_lp.numRow_; iRow++) basicRows[basis.basicIndex_[iRow]] = iRow;
+    for (int k = 0; k < rankDeficiency; k++) {
+      //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
+      //      k, noPvC[k]);fflush(stdout);
+      int columnIn = solver_lp.numCol_ + factor.noPvR[k];
+      int columnOut = noPvC[k];
+      int rowOut = basicRows[columnOut];
+      //      printf("columnIn = %6d; columnOut = %6d; rowOut = %6d [%11.4g,
+      //      %11.4g]\n", columnIn, columnOut, rowOut, simplex_info.workLower_[columnOut],
+      //      simplex_info.workUpper_[columnOut]);
+      if (basis.basicIndex_[rowOut] != columnOut) {
+	printf("%d = basis.basicIndex_[rowOut] != noPvC[k] = %d\n", basis.basicIndex_[rowOut],
+	       columnOut);
+	fflush(stdout);
+      }
+      int sourceOut = setSourceOutFmBd(columnOut);
+      updatePivots(columnIn, rowOut, sourceOut);
+      updateMatrix(columnIn, columnOut);
     }
-    output.close();
+    //    printf("After  - basis.basicIndex_:"); for (int iRow=0; iRow<solver_lp.numRow_; iRow++)
+    //    printf(" %2d", basis.basicIndex_[iRow]); printf("\n");
+#ifdef HiGHSDEV
+    factor.checkInvert();
+#endif
+    return 0;
+  }
+  */
+  int compute_factor(HighsModelObject &highs_model_object) {
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HMatrix &matrix = highs_model_object.matrix_;
+    HFactor &factor = highs_model_object.factor_;
+#ifdef HiGHSDEV
+  double tt0 = 0;
+  int iClock = simplex_info.clock_[InvertClock];
+  if (simplex_info.analyse_invert_time) tt0 = timer.clock_time[iClock];
+#endif
+  // TODO Understand why handling noPvC and noPvR in what seem to be
+  // different ways ends up equivalent.
+  int rankDeficiency = factor.build();
+  if (rankDeficiency) {
+    //    handle_rank_deficiency();
+    //    simplex_info.solution_status = SimplexSolutionStatus::SINGULAR;
+#ifdef HiGHSDEV
+    //    writePivots("failed");
+#endif
+    //      return rankDeficiency;
+  }
+  //    printf("INVERT: After %d iterations and %d updates\n", simplex_info.iteration_count,
+  //    simplex_info.update_count);
+  simplex_info.update_count = 0;
+
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_invert_time) {
+    int iClock = simplex_info.clock_[InvertClock];
+    simplex_info.total_inverts = timer.clock_num_call[iClock];
+    simplex_info.total_invert_time = timer.clock_time[iClock];
+    double invertTime = simplex_info.total_invert_time - tt0;
+    printf(
+        "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
+        "Total INVERT  time = %11.4g\n",
+        simplex_info.total_inverts,
+	simplex_info.iteration_count, invertTime, simplex_info.total_invert_time);
   }
 #endif
-  */
+
+  // Now have a representation of B^{-1}, and it is fresh!
+  simplex_info.solver_lp_has_invert = true;
+  simplex_info.solver_lp_has_fresh_invert = true;
+  return 0;
+    
+  }
 };
 #endif // SIMPLEX_HSIMPLEX_H_
