@@ -1283,7 +1283,7 @@ void HCrash::tsSing(HighsModelObject &highs_model_object) {
     // Update the basic/nonbasic variable info and the row-wise copy of the
     // matrix
     printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n");//model_->updatePivots(columnIn, rowOut, sourceOut);
-    if (simplex_info_.solver_lp_has_matrix_row_wise) model_->updateMatrix(columnIn, columnOut);
+    if (simplex_info_.solver_lp_has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(highs_model_object, columnIn, columnOut);\n"); // model_->updateMatrix(columnIn, columnOut);
     nBcVr++;
     if (nBcVr == numRow) break;
   }

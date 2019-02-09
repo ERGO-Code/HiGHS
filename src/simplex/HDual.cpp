@@ -45,12 +45,7 @@ void HDual::solve(int num_threads) {
 
   HighsTimer &timer = workHMO.timer_;
   model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
-  model->basis_ = &workHMO.basis_;
-  model->scale_ = &workHMO.scale_;
-  model->timer_ = &timer;
-  model->random_ = &workHMO.random_;
   invertHint = INVERT_HINT_NO;
-  //  model = workHMO.hmodel_[0];// works with primitive types but not sure about class types.
 
   SimplexTimer simplex_timer;
   simplex_timer.initialiseDualSimplexClocks(workHMO);
@@ -203,12 +198,9 @@ void HDual::solve(int num_threads) {
   //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve():
   //  solvePhase = %d\n", solvePhase);cout<<flush;}
 #endif
-  bool ok = model->OKtoSolve(1, solvePhase);
-  if (!ok) {
-    printf("NOT OK TO SOLVE???\n");
-    cout << flush;
-  }
-  //  assert(ok);
+  bool ok = simplex_method_.ok_to_solve(workHMO, 1, solvePhase);//  model->OKtoSolve(1, solvePhase);
+  if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
+  assert(ok);
 
 #ifdef HiGHSDEV
   //  Analyse the initial values of primal and dual variables
@@ -338,12 +330,9 @@ void HDual::solve(int num_threads) {
   //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve():
   //  solvePhase = %d\n", solvePhase);cout<<flush;}
 #endif
-  ok = model->OKtoSolve(1, solvePhase);
-  if (!ok) {
-    printf("NOT OK After Solve???\n");
-    cout << flush;
-  }
-  //  assert(ok);
+  ok = simplex_method_.ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
+  if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
+  assert(ok);
 #ifdef HiGHSDEV
   //  printf("report_solver_lp_status_flags(workHMO) 9\n");cout<<flush;
   //  report_solver_lp_status_flags(workHMO);cout<<flush;
@@ -357,9 +346,7 @@ void HDual::solve(int num_threads) {
 #endif
 
 #ifdef HiGHSDEV
-  if (simplex_info.analyseLpSolution) {
-    model->util_analyseLpSolution();
-  }
+  if (simplex_info.analyseLpSolution) { simplex_method_.util_analyse_lp_solution(workHMO);}
   if (simplex_info.analyse_invert_time) {
     double current_run_highs_time = timer.readRunHighsClock();
     int iClock = simplex_info.clock_[InvertClock];

@@ -52,15 +52,9 @@ class HModel {
   void replaceWithLogicalBasis();
   void replaceWithNewBasis(const int* XbasicIndex);
 
-  bool OKtoSolve(int level, int phase);
-
   bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
-  bool workArrays_OK(int phase);
-  bool allNonbasicMoveVsWorkArrays_OK();
-  bool oneNonbasicMoveVsWorkArrays_OK(int var);
   void rp_basis();
   int get_nonbasicMove(int var);
-  void setup_numBasicLogicals();
   void initFromNonbasic();
   void replaceFromNonbasic();
   void initBasicIndex();
@@ -173,7 +167,6 @@ class HModel {
   void util_reportBasicIndex(const char *message, int nrow, vector<int> &basicIndex);
 #ifdef HiGHSDEV
   void util_anMlLargeCo(HighsLp lp, const char* message);
-  void util_analyseLpSolution();
 #endif
 
  public:

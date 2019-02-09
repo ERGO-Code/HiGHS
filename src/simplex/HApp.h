@@ -365,6 +365,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.solver_lp_ = &highs_model.solver_lp_;
   model.matrix_ = &highs_model.matrix_;
   model.factor_ = &highs_model.factor_;
+  model.timer_ = &highs_model.timer_;
+  model.random_ = &highs_model.random_;
 
   HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
   // Copy the LP to the structure to be used by the solver
@@ -380,7 +382,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // Now that the numbers of rows and columns in the LP to be solved
   // are fixed, initialise the real and integer random vectors
-  simplex_method_.initialiseSolverLpRandomVectors(highs_model);
+  simplex_method_.initialise_solver_lp_random_vectors(highs_model);
   //
   // Allocate memory for the basis
   // assignBasis();
