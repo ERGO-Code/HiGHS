@@ -902,6 +902,13 @@ class HSimplex {
     simplex_info_.solver_lp_is_tightened = true;
   }
 
+  void flip_bound(HighsModelObject highs_model_object, int iCol) {
+    int *nonbasicMove = &highs_model_object.basis_.nonbasicMove_[0];
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
+    simplex_info.workValue_[iCol] = move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
+  }
+
   /*
   // Increment iteration count (here!) and (possibly) store the pivots for
   // debugging NLA
