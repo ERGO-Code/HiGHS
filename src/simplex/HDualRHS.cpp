@@ -19,7 +19,6 @@
 #include <set>
 
 #include "HConst.h"
-#include "HModel.h"
 #include "HVector.h"
 #include "HighsModelObject.h"
 #include "SimplexTimer.h"
