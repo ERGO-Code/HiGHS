@@ -18,7 +18,6 @@
 
 #include "HighsModelObject.h"
 
-class HModel;
 class HVector;
 
 /**
@@ -127,7 +126,6 @@ class HDualRHS {
   void create_infeasArray();
 
   HighsModelObject& workHMO;        //!< Local copy of pointer to model
-  HModel *workModel;  //!< Copy of pointer to model
 
   double workCutoff;      //!< Limit for row to be in list with greatest primal
                           //!< infeasibilities

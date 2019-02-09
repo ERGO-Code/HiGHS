@@ -902,7 +902,7 @@ class HSimplex {
     simplex_info_.solver_lp_is_tightened = true;
   }
 
-  void flip_bound(HighsModelObject highs_model_object, int iCol) {
+  void flip_bound(HighsModelObject &highs_model_object, int iCol) {
     int *nonbasicMove = &highs_model_object.basis_.nonbasicMove_[0];
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
     const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];

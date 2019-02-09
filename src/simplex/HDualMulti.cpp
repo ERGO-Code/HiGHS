@@ -14,7 +14,6 @@
 #include "HConst.h"
 #include "HDual.h"
 #include "HPrimal.h"
-#include "HModel.h"
 //#include "HTimer.h"
 
 #include <cassert>
@@ -708,8 +707,11 @@ void HDual::major_rollback() {
     model->updateMatrix(Fin->columnOut, Fin->columnIn);
 
     // 3. Roll back flips
-    for (unsigned i = 0; i < Fin->flipList.size(); i++)
-      model->flipBound(Fin->flipList[i]);
+    HSimplex simplex_method_;
+    for (unsigned i = 0; i < Fin->flipList.size(); i++) {
+      simplex_method_.flip_bound(workHMO, Fin->flipList[i]); 
+      //      model->flipBound(Fin->flipList[i]);
+    }
 
     // 4. Roll back cost
     workHMO.simplex_info_.workShift_[Fin->columnIn] = 0;
