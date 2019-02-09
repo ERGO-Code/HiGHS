@@ -57,7 +57,9 @@ void HDual::solve(int num_threads) {
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
-  model->setup_for_solve();
+  HSimplex simplex_method_;
+  simplex_method_.setup_for_solve(workHMO);
+  //  model->setup_for_solve();
 #ifdef HiGHSDEV
   timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif

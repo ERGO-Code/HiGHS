@@ -17,6 +17,7 @@
 #include "HConfig.h"
 #include "SimplexConst.h" // For simplex strategy constants
 #include "HighsIO.h"
+#include "HighsUtils.h"
 #include "HighsModelObject.h"
 #include <cassert>
 #include <vector>
@@ -900,6 +901,295 @@ class HSimplex {
       }
     }
     simplex_info_.solver_lp_is_tightened = true;
+  }
+
+  void init_value_from_nonbasic(HighsModelObject &highs_model_object, int firstvar, int lastvar) {
+    // Initialise workValue and nonbasicMove from nonbasicFlag and
+    // bounds, except for boxed variables when nonbasicMove is used to
+    // set workValue=workLower/workUpper
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    assert(firstvar >= 0);
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    assert(lastvar < numTot);
+    // double dl_pr_act, norm_dl_pr_act;
+    // norm_dl_pr_act = 0.0;
+    for (int var = firstvar; var <= lastvar; var++) {
+      if (basis.nonbasicFlag_[var]) {
+	// Nonbasic variable
+	// double prev_pr_act = simplex_info.workValue_[var];
+	if (simplex_info.workLower_[var] == simplex_info.workUpper_[var]) {
+	  // Fixed
+	  simplex_info.workValue_[var] = simplex_info.workLower_[var];
+	  basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+	} else if (!highs_isInfinity(-simplex_info.workLower_[var])) {
+	  // Finite lower bound so boxed or lower
+	  if (!highs_isInfinity(simplex_info.workUpper_[var])) {
+	    // Finite upper bound so boxed
+	    if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+	      // Set at lower
+	      simplex_info.workValue_[var] = simplex_info.workLower_[var];
+	    } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+	      // Set at upper
+	      simplex_info.workValue_[var] = simplex_info.workUpper_[var];
+	    } else {
+	      // Invalid nonbasicMove: correct and set value at lower
+	      basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+	      simplex_info.workValue_[var] = simplex_info.workLower_[var];
+	    }
+	  } else {
+	    // Lower
+	    simplex_info.workValue_[var] = simplex_info.workLower_[var];
+	    basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+	  }
+	} else if (!highs_isInfinity(simplex_info.workUpper_[var])) {
+	  // Upper
+	  simplex_info.workValue_[var] = simplex_info.workUpper_[var];
+	  basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+	} else {
+	  // FREE
+	  simplex_info.workValue_[var] = 0;
+	  basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+	}
+	// dl_pr_act = simplex_info.workValue_[var] - prev_pr_act;
+	// norm_dl_pr_act += dl_pr_act*dl_pr_act;
+	//      if (abs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
+	//      %8g; %8g] Du = %8g; DlPr = %8g\n",
+	//					var, simplex_info.workLower_[var],
+	// simplex_info.workValue_[var], simplex_info.workUpper_[var], simplex_info.workDual_[var], dl_pr_act);
+      } else {
+	// Basic variable
+	basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      }
+    }
+    //  norm_dl_pr_act = sqrt(norm_dl_pr_act);
+    //  printf("initValueFromNonbasic: ||Change in nonbasic variables||_2 is
+    //  %g\n", norm_dl_pr_act);
+  }
+
+  void init_value(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    init_value_from_nonbasic(highs_model_object, 0, numTot - 1);
+  }
+
+  void init_phase2_col_bound(HighsModelObject &highs_model_object, int firstcol, int lastcol) {
+    // Copy bounds and compute ranges
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    assert(firstcol >= 0);
+    assert(lastcol < solver_lp.numCol_);
+    for (int col = firstcol; col <= lastcol; col++) {
+      simplex_info.workLower_[col] = solver_lp.colLower_[col];
+      simplex_info.workUpper_[col] = solver_lp.colUpper_[col];
+      simplex_info.workRange_[col] = simplex_info.workUpper_[col] - simplex_info.workLower_[col];
+    }
+  }
+
+  void init_phase2_row_bound(HighsModelObject &highs_model_object, int firstrow, int lastrow) {
+    // Copy bounds and compute ranges
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    assert(firstrow >= 0);
+    assert(lastrow < solver_lp.numRow_);
+    for (int row = firstrow; row <= lastrow; row++) {
+      int var = solver_lp.numCol_ + row;
+      simplex_info.workLower_[var] = -solver_lp.rowUpper_[row];
+      simplex_info.workUpper_[var] = -solver_lp.rowLower_[row];
+      simplex_info.workRange_[var] = simplex_info.workUpper_[var] - simplex_info.workLower_[var];
+    }
+  }
+
+  void init_bound(HighsModelObject &highs_model_object, int phase = 2) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    // Initialise the Phase 2 bounds (and ranges). NB Phase 2 bounds
+    // necessary to compute Phase 1 bounds
+    init_phase2_col_bound(highs_model_object, 0, solver_lp.numCol_ - 1);
+    init_phase2_row_bound(highs_model_object, 0, solver_lp.numRow_ - 1);
+    if (phase == 2) return;
+
+    // In Phase 1: change to dual phase 1 bound
+    const double inf = HIGHS_CONST_INF;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = 0; i < numTot; i++) {
+      if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf) {
+	// Won't change for row variables: they should never become
+	// non basic
+	if (i >= solver_lp.numCol_) continue;
+	simplex_info.workLower_[i] = -1000, simplex_info.workUpper_[i] = 1000;  // FREE
+      } else if (simplex_info.workLower_[i] == -inf) {
+	simplex_info.workLower_[i] = -1, simplex_info.workUpper_[i] = 0;  // UPPER
+      } else if (simplex_info.workUpper_[i] == inf) {
+	simplex_info.workLower_[i] = 0, simplex_info.workUpper_[i] = 1;  // LOWER
+      } else {
+	simplex_info.workLower_[i] = 0, simplex_info.workUpper_[i] = 0;  // BOXED or FIXED
+      }
+      simplex_info.workRange_[i] = simplex_info.workUpper_[i] - simplex_info.workLower_[i];
+    }
+  }
+
+  void init_phase2_col_cost(HighsModelObject &highs_model_object, int firstcol, int lastcol) {
+    // Copy the Phase 2 cost and zero the shift
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    for (int col = firstcol; col <= lastcol; col++) {
+      int var = col;
+      simplex_info.workCost_[var] = solver_lp.sense_ * solver_lp.colCost_[col];
+      simplex_info.workShift_[var] = 0.;
+    }
+  }
+  
+  void init_phase2_row_cost(HighsModelObject &highs_model_object, int firstrow, int lastrow) {
+    // Zero the cost and shift
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    for (int row = firstrow; row <= lastrow; row++) {
+      int var = solver_lp.numCol_ + row;
+      simplex_info.workCost_[var] = 0;
+      simplex_info.workShift_[var] = 0.;
+    }
+  }
+
+  void init_cost(HighsModelObject &highs_model_object, int perturb = 0) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    // Copy the cost
+    init_phase2_col_cost(highs_model_object, 0, solver_lp.numCol_ - 1);
+    init_phase2_row_cost(highs_model_object, 0, solver_lp.numRow_ - 1);
+    // See if we want to skip perturbation
+    simplex_info.costs_perturbed = 0;
+    if (perturb == 0 || simplex_info.perturb_costs == 0) return;
+    simplex_info.costs_perturbed = 1;
+
+    // Perturb the original costs, scale down if is too big
+    double bigc = 0;
+    for (int i = 0; i < solver_lp.numCol_; i++) bigc = max(bigc, fabs(simplex_info.workCost_[i]));
+    if (bigc > 100) bigc = sqrt(sqrt(bigc));
+
+    // If there's few boxed variables, we will just use Simple perturbation
+    double boxedRate = 0;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int i = 0; i < numTot; i++) boxedRate += (simplex_info.workRange_[i] < 1e30);
+    boxedRate /= numTot;
+    if (boxedRate < 0.01) bigc = min(bigc, 1.0);
+    if (bigc < 1) {
+      //        bigc = sqrt(bigc);
+    }
+
+    // Determine the perturbation base
+    double base = 5e-7 * bigc;
+
+    // Now do the perturbation
+    for (int i = 0; i < solver_lp.numCol_; i++) {
+      double lower = solver_lp.colLower_[i];
+      double upper = solver_lp.colUpper_[i];
+      double xpert = (fabs(simplex_info.workCost_[i]) + 1) * base * (1 + simplex_info.numTotRandomValue_[i]);
+      if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
+	// Free - no perturb
+      } else if (upper == HIGHS_CONST_INF) {  // Lower
+	simplex_info.workCost_[i] += xpert;
+      } else if (lower == -HIGHS_CONST_INF) {  // Upper
+	simplex_info.workCost_[i] += -xpert;
+      } else if (lower != upper) {  // Boxed
+	simplex_info.workCost_[i] += (simplex_info.workCost_[i] >= 0) ? xpert : -xpert;
+      } else {
+	// Fixed - no perturb
+      }
+    }
+    
+    for (int i = solver_lp.numCol_; i < numTot; i++) {
+      simplex_info.workCost_[i] += (0.5 - simplex_info.numTotRandomValue_[i]) * 1e-12;
+    }
+  }
+
+  void populate_work_arrays(HighsModelObject &highs_model_object) {
+    // Initialize the values
+    init_cost(highs_model_object);
+    init_bound(highs_model_object);
+    init_value(highs_model_object);
+  }
+
+  void replace_with_logical_basis(HighsModelObject &highs_model_object) {
+    // Replace basis with a logical basis then populate (where possible)
+    // work* arrays
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    for (int row = 0; row < solver_lp.numRow_; row++) {
+      int var = solver_lp.numCol_ + row;
+      basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+      basis.basicIndex_[row] = var;
+    }
+    for (int col = 0; col < solver_lp.numCol_; col++) {
+      basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+    }
+    simplex_info.num_basic_logicals = solver_lp.numRow_;
+    
+    populate_work_arrays(highs_model_object);
+
+    // Deduce the consequences of a new basis
+    update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+   
+  }
+
+  void setup_for_solve(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    int solver_num_row = solver_lp.numRow_;
+    int solver_num_col = solver_lp.numCol_;
+    if (solver_num_row == 0) return;
+
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HMatrix &matrix = highs_model_object.matrix_;
+    HFactor &factor = highs_model_object.factor_;
+    report_solver_lp_status_flags(highs_model_object);
+    bool basis_valid = highs_model_object.basis_.valid_;
+    printf("In setup_for_solve: basis_valid = %d \n", basis_valid);
+    if (basis_valid) {
+    // Model has a basis so just count the number of basic logicals
+      printf("Needs to call new version of setup_num_basic_logicals(highs_mode_object);\n");
+    } else {
+      // Model has no basis: set up a logical basis then populate (where
+      // possible) work* arrays
+      replace_with_logical_basis(highs_model_object);
+      printf("Called replaceWithLogicalBasis\n");
+  }
+
+  if (!(simplex_info.solver_lp_has_matrix_col_wise && simplex_info.solver_lp_has_matrix_row_wise)) {
+    // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
+    if (simplex_info.num_basic_logicals == solver_num_row) {
+      matrix.setup_lgBs(solver_num_col, solver_num_row,
+			  &solver_lp.Astart_[0],
+			  &solver_lp.Aindex_[0],
+			  &solver_lp.Avalue_[0]);
+      //      printf("Called matrix_->setup_lgBs\n");cout<<flush;
+    } else {
+      matrix.setup(solver_num_col, solver_num_row,
+		     &solver_lp.Astart_[0],
+		     &solver_lp.Aindex_[0],
+		     &solver_lp.Avalue_[0],
+		     &basis.nonbasicFlag_[0]);
+      //      printf("Called matrix_->setup\n");cout<<flush;
+    }
+    // Indicate that there is a colum-wise and row-wise copy of the
+    // matrix: can't be done in matrix_->setup_lgBs
+    //    simplex_info.solver_lp_has_matrix_col_wise = true;
+    //    simplex_info.solver_lp_has_matrix_row_wise = true;
+  }
+
+    // TODO Put something in to skip factor_->setup
+    // Initialise factor arrays, passing &basis.basicIndex_[0] so that its
+    // address can be copied to the internal Factor pointer
+    factor.setup(solver_num_col, solver_num_row,
+		   &solver_lp.Astart_[0],
+		   &solver_lp.Aindex_[0],
+		   &solver_lp.Avalue_[0],
+		   &basis.basicIndex_[0]);
+    // Indicate that the model has factor arrays: can't be done in factor.setup
+    //simplex_info.solver_lp_has_factor_arrays = true;
   }
 
   void flip_bound(HighsModelObject &highs_model_object, int iCol) {
