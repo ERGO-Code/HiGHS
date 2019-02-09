@@ -38,12 +38,15 @@ using std::flush;
 using std::fabs;
 
 void HDual::solve(int num_threads) {
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  simplex_info.solution_status = SimplexSolutionStatus::UNSET;
+  // Cannot solve box-constrained LPs
+  if (workHMO.solver_lp_.numRow_ == 0) return;
+
+  HighsTimer &timer = workHMO.timer_;
   model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
   model->basis_ = &workHMO.basis_;
   model->scale_ = &workHMO.scale_;
-
-  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsTimer &timer = workHMO.timer_;
   model->timer_ = &timer;
   model->random_ = &workHMO.random_;
   invertHint = INVERT_HINT_NO;
@@ -55,9 +58,6 @@ void HDual::solve(int num_threads) {
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
   model->setup_for_solve();
-  simplex_info.solution_status = SimplexSolutionStatus::UNSET;
-  // Cannot solve box-constrained LPs
-  if (model->solver_lp_->numRow_ == 0) return;
 #ifdef HiGHSDEV
   timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
@@ -77,7 +77,7 @@ void HDual::solve(int num_threads) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
 #ifdef HiGHSDEV
-    double bsCond = an_bs_cond(model);
+    double bsCond = an_bs_cond();
     HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
     if (bsCond > 1e12) {
       HighsPrintMessage(ML_MINIMAL, " excessive\n");
@@ -106,12 +106,11 @@ void HDual::solve(int num_threads) {
       // Using dual Devex edge weights
       // Zero the number of Devex frameworks used and set up the first one
       n_dvx_fwk = 0;
-      const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-      dvx_ix.assign(numTot, 0);
+      dvx_ix.assign(solver_num_tot, 0);
       iz_dvx_fwk();
     } else if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
       // Using dual steepest edge (DSE) weights
-      int num_basic_structurals = numRow - simplex_info.num_basic_logicals;
+      int num_basic_structurals = solver_num_row - simplex_info.num_basic_logicals;
       bool computeExactDseWeights = num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
 #ifdef HiGHSDEV
       n_wg_DSE_wt = 0;
@@ -127,7 +126,7 @@ void HDual::solve(int num_threads) {
 	int iClock = simplex_info.clock_[SimplexIzDseWtClock];
 	timer.start(iClock);
 #endif
-        for (int i = 0; i < numRow; i++) {
+        for (int i = 0; i < solver_num_row; i++) {
 #ifdef HiGHSDEV
           //	  if (i==RpI) {printf("Computing exact DSE weight %d\n", i); RpI
           //= RpI*2;}
@@ -139,14 +138,14 @@ void HDual::solve(int num_threads) {
           row_ep.packFlag = false;
           factor->btran(row_ep, row_epDensity);
           dualRHS.workEdWt[i] = row_ep.norm2();
-          double lc_OpRsDensity = (double)row_ep.count / numRow;
+          double lc_OpRsDensity = (double)row_ep.count / solver_num_row;
           uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
         }
 #ifdef HiGHSDEV
 	timer.stop(iClock);
         double IzDseWtTT = timer.read(iClock);
         HighsPrintMessage(ML_DETAILED, "Computed %d initial DSE weights in %gs\n",
-			  numRow, IzDseWtTT);
+			  solver_num_row, IzDseWtTT);
 #endif
       }
 #ifdef HiGHSDEV
@@ -163,7 +162,7 @@ void HDual::solve(int num_threads) {
 #ifdef HiGHSDEV
   bool rp_bs_cond = false;
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond(model);
+    double bs_cond = an_bs_cond();
     printf("Initial basis condition estimate is %g\n", bs_cond);
   }
 #endif
@@ -174,8 +173,7 @@ void HDual::solve(int num_threads) {
 
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
-  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-  for (int i = 0; i < numTot; i++) {
+  for (int i = 0; i < solver_num_tot; i++) {
     if (workHMO.basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
@@ -279,7 +277,7 @@ void HDual::solve(int num_threads) {
   //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
   //        HTICK_GROUP1};
   //    int reportCount = sizeof(reportList) / sizeof(int);
-  //    model->timer.report(reportCount, reportList, 0.0);
+  //    timer.report(reportCount, reportList, 0.0);
   //  }
 
   if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
@@ -291,7 +289,7 @@ void HDual::solve(int num_threads) {
   //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
   //        HTICK_UPDATE_ROW_EP};
   //    int reportCount = sizeof(reportList) / sizeof(int);
-  //    model->timer.report(reportCount, reportList, 0.0);
+  //    timer.report(reportCount, reportList, 0.0);
       printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
              workHMO.lp_.model_name_.c_str(), pami_cutoff,
              simplex_info.iteration_count / (1.0 + multi_iteration));
@@ -329,7 +327,7 @@ void HDual::solve(int num_threads) {
            simplex_info.iteration_count / n_dvx_fwk);
   }
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond(model);
+    double bs_cond = an_bs_cond();
     printf("Optimal basis condition estimate is %g\n", bs_cond);
   }
 #endif
@@ -415,11 +413,13 @@ void HDual::options() {
 
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
-  numCol = model->solver_lp_->numCol_;
-  numRow = model->solver_lp_->numRow_;
-  numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-  matrix = model->matrix_;
-  factor = model->factor_;
+
+  solver_num_col = workHMO.solver_lp_.numCol_;
+  solver_num_row = workHMO.solver_lp_.numRow_;
+  solver_num_tot = solver_num_col + solver_num_row;
+
+  matrix = &workHMO.matrix_;
+  factor = &workHMO.factor_;
 
   // Copy pointers
   jMove = &workHMO.basis_.nonbasicMove_[0];
@@ -435,12 +435,12 @@ void HDual::init(int num_threads) {
   Td = dual_feasibility_tolerance;
 
   // Setup local vectors
-  columnDSE.setup(numRow);
-  columnBFRT.setup(numRow);
-  column.setup(numRow);
-  row_ep.setup(numRow);
-  row_ap.setup(numCol);
-  //  row_ap_ultra.setup(numCol);
+  columnDSE.setup(solver_num_row);
+  columnBFRT.setup(solver_num_row);
+  column.setup(solver_num_row);
+  row_ep.setup(solver_num_row);
+  row_ap.setup(solver_num_col);
+  //  row_ap_ultra.setup(solver_num_col);
   columnDensity = 0;
   row_epDensity = 0;
   row_apDensity = 0;
@@ -460,9 +460,9 @@ void HDual::init(int num_threads) {
     if (multi_num < 1) multi_num = 1;
     if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
     for (int i = 0; i < multi_num; i++) {
-      multi_choice[i].row_ep.setup(numRow);
-      multi_choice[i].column.setup(numRow);
-      multi_choice[i].columnBFRT.setup(numRow);
+      multi_choice[i].row_ep.setup(solver_num_row);
+      multi_choice[i].column.setup(solver_num_row);
+      multi_choice[i].columnBFRT.setup(solver_num_row);
     }
     init_slice(multi_num - 1);
   }
@@ -484,7 +484,7 @@ void HDual::init_slice(int init_sliced_num) {
   const int *Astart = matrix->getAstart();
   const int *Aindex = matrix->getAindex();
   const double *Avalue = matrix->getAvalue();
-  const int AcountX = Astart[numCol];
+  const int AcountX = Astart[solver_num_col];
 
   // Figure out partition weight
   double sliced_countX = AcountX / slice_num;
@@ -497,12 +497,12 @@ void HDual::init_slice(int init_sliced_num) {
       endX = Astart[++endColumn];
     }
     slice_start[i + 1] = endColumn;
-    if (endColumn >= numCol) {
+    if (endColumn >= solver_num_col) {
       slice_num = i;  // SHRINK
       break;
     }
   }
-  slice_start[slice_num] = numCol;
+  slice_start[slice_num] = solver_num_col;
 
   // Partition the matrix, row_ap and related packet
   vector<int> sliced_Astart;
@@ -516,7 +516,7 @@ void HDual::init_slice(int init_sliced_num) {
       sliced_Astart[k] = Astart[k + mystart] - mystartX;
     // TODO generalise this call so slice can be used with non-logical initial
     // basis
-    slice_matrix[i].setup_lgBs(mycount, numRow, &sliced_Astart[0],
+    slice_matrix[i].setup_lgBs(mycount, solver_num_row, &sliced_Astart[0],
                                Aindex + mystartX, Avalue + mystartX);
 
     // The row_ap and its packages
@@ -553,7 +553,7 @@ void HDual::solve_phase1() {
       }
       if (invertHint) break;
       // printf("HDual::solve_phase1: Iter = %d; Objective = %g\n",
-      // simplex_info.iteration_count, model->dualObjectiveValue);
+      // simplex_info.iteration_count, simplex_info.dual_objective_value);
       double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
@@ -655,7 +655,7 @@ void HDual::solve_phase2() {
           iterate_multi();
           break;
       }
-      // invertHint can be true for various reasons see HModel.h
+      // invertHint can be true for various reasons see SimplexConst.h
       if (invertHint) break;
       double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
@@ -739,7 +739,7 @@ void HDual::rebuild() {
 
   int sv_invertHint = invertHint;
   invertHint = INVERT_HINT_NO;
-  // Possibly Rebuild model->factor
+  // Possibly Rebuild workHMO.factor_
   bool reInvert = simplex_info.update_count > 0;
   if (!invert_if_row_out_negative) {
     // Don't reinvert if rowOut is negative [equivalently, if sv_invertHint ==
@@ -756,7 +756,7 @@ void HDual::rebuild() {
 
     // permutation of baseIndex
     timer.start(simplex_info.clock_[PermWtClock]);
-    for (int i = 0; i < numRow; i++)
+    for (int i = 0; i < solver_num_row; i++)
       dualRHS.workEdWtFull[baseIndex[i]] = dualRHS.workEdWt[i];
     timer.stop(simplex_info.clock_[PermWtClock]);
 
@@ -771,12 +771,12 @@ void HDual::rebuild() {
     // Gather the edge weights according to the
     // permutation of baseIndex after INVERT
     timer.start(simplex_info.clock_[PermWtClock]);
-    for (int i = 0; i < numRow; i++)
+    for (int i = 0; i < solver_num_row; i++)
       dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
     timer.stop(simplex_info.clock_[PermWtClock]);
 
     // Possibly look at the basis condition
-    //		double bsCond = an_bs_cond(model);
+    //		double bsCond = an_bs_cond();
   }
 
   // Recompute dual solution
@@ -821,7 +821,7 @@ void HDual::rebuild() {
 
 #ifdef HiGHSDEV
   //  checkDualObjectiveValue("After computing dual objective value");
-  //  printf("Checking INVERT in rebuild()\n"); model->factor.checkInvert();
+  //  printf("Checking INVERT in rebuild()\n"); workHMO.factor_.checkInvert();
 #endif
 
   //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
@@ -932,7 +932,7 @@ void HDual::iterate_tasks() {
   chooseRow();
 
   // Disable slice when too sparse
-  if (1.0 * row_ep.count / numRow < 0.01) slice_PRICE = 0;
+  if (1.0 * row_ep.count / solver_num_row < 0.01) slice_PRICE = 0;
 
   timer.start(simplex_info.clock_[Group1Clock]);
 #pragma omp parallel
@@ -989,7 +989,7 @@ void HDual::iterateIzAn() {
     if (k == AnIterOpTy_Price) {
       AnIter->AnIterOpHyperCANCEL = 1.0;
       AnIter->AnIterOpHyperTRAN = 1.0;
-      AnIter->AnIterOpRsDim = numCol;
+      AnIter->AnIterOpRsDim = solver_num_col;
     } else {
       if (k == AnIterOpTy_Btran) {
         AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
@@ -998,7 +998,7 @@ void HDual::iterateIzAn() {
         AnIter->AnIterOpHyperCANCEL = hyperCANCEL;
         AnIter->AnIterOpHyperTRAN = hyperFTRANL;
       }
-      AnIter->AnIterOpRsDim = numRow;
+      AnIter->AnIterOpRsDim = solver_num_row;
     }
     AnIter->AnIterOpNumCa = 0;
     AnIter->AnIterOpNumHyperOp = 0;
@@ -1053,10 +1053,9 @@ void HDual::iterateAn() {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = workHMO.simplex_info_.iteration_count - AnIterIt0;
-      const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
       if (allow_dual_steepest_edge_to_devex_switch &&
           (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-          (lcNumIter > AnIterFracNumTot_ItBfSw * numTot)) {
+          (lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot)) {
         // At least 5% of the (at least) 0.1NumTot iterations have been costly
         // DSE so switch to Devex
 #ifdef HiGHSDEV
@@ -1069,7 +1068,7 @@ void HDual::iterateAn() {
         dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
         // Zero the number of Devex frameworks used and set up the first one
         n_dvx_fwk = 0;
-        dvx_ix.assign(numTot, 0);
+        dvx_ix.assign(solver_num_tot, 0);
         iz_dvx_fwk();
       }
     }
@@ -1324,7 +1323,7 @@ void HDual::chooseRow() {
   sourceOut = deltaPrimal < 0 ? -1 : 1;
   // Update the record of average row_ep (pi_p) density. This ignores
   // any BTRANs done for skipped candidates
-  double lc_OpRsDensity = (double)row_ep.count / numRow;
+  double lc_OpRsDensity = (double)row_ep.count / solver_num_row;
   uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
 }
 
@@ -1345,7 +1344,7 @@ void HDual::chooseColumn(HVector *row_ep) {
 #ifdef HiGHSDEV
   bool anPriceEr = false;
   bool useUltraPrice = allow_price_ultra &&
-                       row_apDensity * numCol * 10 < row_ap.ilP2 &&
+                       row_apDensity * solver_num_col * 10 < row_ap.ilP2 &&
                        row_apDensity < 1e-3;
 #endif
   if (price_mode == PriceMode::COL) {
@@ -1361,7 +1360,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   } else {
     // By default, use row-wise PRICE, but possibly use column-wise
     // PRICE if the density of row_ep is too high
-    double lc_dsty = (double)(*row_ep).count / numRow;
+    double lc_dsty = (double)(*row_ep).count / solver_num_row;
     if (allow_price_by_col_switch && (lc_dsty > dstyColPriceSw)) {
       // Use column-wise PRICE due to density of row_ep
 #ifdef HiGHSDEV
@@ -1375,9 +1374,8 @@ void HDual::chooseColumn(HVector *row_ep) {
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
       const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
-      for (int col = 0; col < numCol; col++) {
+      for (int col = 0; col < solver_num_col; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
-	//        row_ap.array[col] = model->basis.nonbasicFlag_[col] * row_ap.array[col];
       }
 #ifdef HiGHSDEV
       // Ultra-sparse PRICE is in development
@@ -1428,7 +1426,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   }
 #endif
   // Update the record of average row_ap density
-  double lc_OpRsDensity = (double)row_ap.count / numCol;
+  double lc_OpRsDensity = (double)row_ap.count / solver_num_col;
   uOpRsDensityRec(lc_OpRsDensity, row_apDensity);
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateOpRecAf(AnIterOpTy_Price, row_ap);
@@ -1452,7 +1450,7 @@ void HDual::chooseColumn(HVector *row_ep) {
   dualRow.choose_makepack(
       &row_ap, 0);  // Pack row_ap into the packIndex/Value of HDualRow
   dualRow.choose_makepack(
-      row_ep, numCol);  // Pack row_ep into the packIndex/Value of HDualRow
+      row_ep, solver_num_col);  // Pack row_ep into the packIndex/Value of HDualRow
   dualRow.choose_possible();  // Determine the possible variables - candidates
                               // for CHUZC
   timer.stop(simplex_info.clock_[Chuzc1Clock]);
@@ -1500,7 +1498,7 @@ void HDual::chooseColumn(HVector *row_ep) {
     // should be set up
     double dvx_rao = max(og_dvx_wt_o_rowOut / tru_dvx_wt_o_rowOut,
                          tru_dvx_wt_o_rowOut / og_dvx_wt_o_rowOut);
-    int i_te = numRow / minRlvNumberDevexIterations;
+    int i_te = solver_num_row / minRlvNumberDevexIterations;
     i_te = max(minAbsNumberDevexIterations, i_te);
     // Square maxAllowedDevexWeightRatio due to keeping squared
     // weights
@@ -1530,7 +1528,7 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   // Row_ep:         PACK + CC1
 #pragma omp task
   {
-    dualRow.choose_makepack(row_ep, numCol);
+    dualRow.choose_makepack(row_ep, solver_num_col);
     dualRow.choose_possible();
   }
 
@@ -1737,10 +1735,10 @@ void HDual::updatePrimal(HVector *DSE_Vector) {
   dualRHS.update_infeasList(&column);
 
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-    double lc_OpRsDensity = (double)DSE_Vector->count / numRow;
+    double lc_OpRsDensity = (double)DSE_Vector->count / solver_num_row;
     uOpRsDensityRec(lc_OpRsDensity, rowdseDensity);
   }
-  double lc_OpRsDensity = (double)column.count / numRow;
+  double lc_OpRsDensity = (double)column.count / solver_num_row;
   uOpRsDensityRec(lc_OpRsDensity, columnDensity);
 
   //  total_fake += column.fakeTick;
@@ -1803,8 +1801,7 @@ void HDual::iz_dvx_fwk() {
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
   const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
-  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-  for (int vr_n = 0; vr_n < numTot; vr_n++) {
+  for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
     //      if (workHMO.basis_.nonbasicFlag_[vr_n])
     //      if (nonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
@@ -1823,7 +1820,7 @@ void HDual::iz_dvx_fwk() {
     int dvx_ix_o_vr = 1 - nonbasicFlag[vr_n] * nonbasicFlag[vr_n];
     dvx_ix[vr_n] = dvx_ix_o_vr;
   }
-  dualRHS.workEdWt.assign(numRow, 1.0);  // Set all initial weights to 1
+  dualRHS.workEdWt.assign(solver_num_row, 1.0);  // Set all initial weights to 1
   n_dvx_it = 0;    // Zero the count of iterations with this Devex framework
   n_dvx_fwk += 1;  // Increment the number of Devex frameworks
   nw_dvx_fwk =
@@ -1920,45 +1917,44 @@ int HDual::util_getBasisInvRow(int r, double *coef, int *inds, int *ninds) {
   row_ep.array[r] = 1;
   row_ep.packFlag = true;
   factor->btran(row_ep, row_epDensity);
-  //  printf("util_getBasisInvRow: nnz = %4d/%4d\n", row_ep.count, numRow);
-  for (int row = 0; row < numRow; row++) {
+  //  printf("util_getBasisInvRow: nnz = %4d/%4d\n", row_ep.count, solver_num_row);
+  for (int row = 0; row < solver_num_row; row++) {
     //    printf("BasisInvRow(%4d) = %11g\n", row,  row_ep.array[row]);
     coef[row] = row_ep.array[row];
   }
-  if (0 <= row_ep.count && row_ep.count <= numRow) {
+  if (0 <= row_ep.count && row_ep.count <= solver_num_row) {
     for (int ix = 0; ix < row_ep.count; ix++) inds[ix] = row_ep.index[ix];
     ninds[0] = row_ep.count;
   } else {
     printf(
-        "util_getBasisInvRow: row_ep.count < 0 or row_ep.count > numRow: %4d; "
+        "util_getBasisInvRow: row_ep.count < 0 or row_ep.count > solver_num_row: %4d; "
         "%4d\n",
-        row_ep.count, numRow);
+        row_ep.count, solver_num_row);
     ninds[0] = -1;
   }
   cout << flush;
   return 0;
 }
 
-double HDual::an_bs_cond(HModel *ptr_model) {
-  model = ptr_model;
+double HDual::an_bs_cond() {
   // Alias to the matrix
-  matrix = model->matrix_;
+  matrix = &workHMO.matrix_;
   const int *Astart = matrix->getAstart();
   const double *Avalue = matrix->getAvalue();
   // Compute the Hager condition number estimate for the basis matrix
   double NoDensity = 1;
-  bs_cond_x.resize(numRow);
-  bs_cond_y.resize(numRow);
-  bs_cond_z.resize(numRow);
-  bs_cond_w.resize(numRow);
+  bs_cond_x.resize(solver_num_row);
+  bs_cond_y.resize(solver_num_row);
+  bs_cond_z.resize(solver_num_row);
+  bs_cond_w.resize(solver_num_row);
   // x = ones(n,1)/n;
   // y = A\x;
-  double mu = 1.0 / numRow;
+  double mu = 1.0 / solver_num_row;
   double norm_Binv;
-  for (int r_n = 0; r_n < numRow; r_n++) bs_cond_x[r_n] = mu;
+  for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
   row_ep.clear();
-  row_ep.count = numRow;
-  for (int r_n = 0; r_n < numRow; r_n++) {
+  row_ep.count = solver_num_row;
+  for (int r_n = 0; r_n < solver_num_row; r_n++) {
     row_ep.index[r_n] = r_n;
     row_ep.array[r_n] = bs_cond_x[r_n];
   }
@@ -1966,7 +1962,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
     row_ep.packFlag = false;
     factor->ftran(row_ep, NoDensity);
     // zeta = sign(y);
-    for (int r_n = 0; r_n < numRow; r_n++) {
+    for (int r_n = 0; r_n < solver_num_row; r_n++) {
       bs_cond_y[r_n] = row_ep.array[r_n];
       if (bs_cond_y[r_n] > 0)
         bs_cond_w[r_n] = 1.0;
@@ -1977,8 +1973,8 @@ double HDual::an_bs_cond(HModel *ptr_model) {
     }
     // z=A'\zeta;
     row_ep.clear();
-    row_ep.count = numRow;
-    for (int r_n = 0; r_n < numRow; r_n++) {
+    row_ep.count = solver_num_row;
+    for (int r_n = 0; r_n < solver_num_row; r_n++) {
       row_ep.index[r_n] = r_n;
       row_ep.array[r_n] = bs_cond_w[r_n];
     }
@@ -1998,7 +1994,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
     double ztx = 0.0;
     norm_Binv = 0.0;
     int argmax_z = -1;
-    for (int r_n = 0; r_n < numRow; r_n++) {
+    for (int r_n = 0; r_n < solver_num_row; r_n++) {
       bs_cond_z[r_n] = row_ep.array[r_n];
       double abs_z_v = abs(bs_cond_z[r_n]);
       if (abs_z_v > norm_z) {
@@ -2013,7 +2009,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
     if (norm_z <= ztx) break;
     // x = zeros(n,1);
     // x(fd_i) = 1;
-    for (int r_n = 0; r_n < numRow; r_n++) bs_cond_x[r_n] = 0.0;
+    for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
     row_ep.clear();
     row_ep.count = 1;
     row_ep.index[0] = argmax_z;
@@ -2021,10 +2017,10 @@ double HDual::an_bs_cond(HModel *ptr_model) {
     bs_cond_x[argmax_z] = 1.0;
   }
   double norm_B = 0.0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
+  for (int r_n = 0; r_n < solver_num_row; r_n++) {
     int vr_n = workHMO.basis_.basicIndex_[r_n];
     double c_norm = 0.0;
-    if (vr_n < numCol)
+    if (vr_n < solver_num_col)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
         c_norm += abs(Avalue[el_n]);
     else
@@ -2032,8 +2028,8 @@ double HDual::an_bs_cond(HModel *ptr_model) {
     norm_B = max(c_norm, norm_B);
   }
   double cond_B = norm_Binv * norm_B;
-  //  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B)
-  //  estimate is %g\n", norm_Binv, norm_B, cond_B);
+  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n",
+	 norm_Binv, norm_B, cond_B);
   return cond_B;
 }
 
@@ -2041,7 +2037,7 @@ double HDual::an_bs_cond(HModel *ptr_model) {
 void HDual::iterateOpRecBf(int opTy, HVector &vector, double hist_dsty) {
   AnIterOpRec *AnIter = &AnIterOp[opTy];
   AnIter->AnIterOpNumCa++;
-  double curr_dsty = 1.0 * vector.count / numRow;
+  double curr_dsty = 1.0 * vector.count / solver_num_row;
   //  printf("%10s: %g<= %g;  %g<= %g\n", AnIter->AnIterOpName.c_str(),
   //	 curr_dsty, AnIter->AnIterOpHyperCANCEL,
   //	 hist_dsty, AnIter->AnIterOpHyperTRAN);
@@ -2243,15 +2239,14 @@ void HDual::iterateRpAn() {
 void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
+  for (int r_n = 0; r_n < solver_num_row; r_n++) {
     int vr_n = workHMO.basis_.basicIndex_[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
-  const int numTot = model->solver_lp_->numCol_ + model->solver_lp_->numRow_;
-  for (int vr_n = 0; vr_n < numTot; vr_n++) {
+  for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
     if (workHMO.basis_.nonbasicFlag_[vr_n]) {
       double pr_act_v = workHMO.simplex_info_.workValue_[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;

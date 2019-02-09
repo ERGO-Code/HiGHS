@@ -39,7 +39,7 @@ void HDual::iterate_multi() {
   }
 
   // Assign the slice_row_ep, skip if possible
-  if (1.0 * multi_finish[multi_nFinish].row_ep->count / numRow < 0.01)
+  if (1.0 * multi_finish[multi_nFinish].row_ep->count / solver_num_row < 0.01)
     slice_PRICE = 0;
 
   if (slice_PRICE) {
@@ -111,7 +111,7 @@ void HDual::major_chooseRow() {
     for (int ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].rowOut >= 0) {
         row_epDensity *= 0.95;
-        row_epDensity += 0.05 * multi_choice[ich].row_ep.count / numRow;
+        row_epDensity += 0.05 * multi_choice[ich].row_ep.count / solver_num_row;
       }
     }
 
@@ -151,7 +151,7 @@ void HDual::major_chooseRow() {
 }
 
 void HDual::major_chooseRowBtran() {
-  //  model->timer.recordStart(HTICK_BTRAN);
+  //  timer.recordStart(HTICK_BTRAN);
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
@@ -185,7 +185,7 @@ void HDual::major_chooseRowBtran() {
   // 4.3 Put back edge weights
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
-  //  model->timer.recordFinish(HTICK_BTRAN);
+  //  timer.recordFinish(HTICK_BTRAN);
 }
 
 void HDual::minor_chooseRow() {
@@ -356,9 +356,9 @@ void HDual::minor_updatePivots() {
 }
 
 void HDual::minor_updateRows() {
-  //  model->timer.recordStart(HTICK_UPDATE_ROW_EP);
+  //  timer.recordStart(HTICK_UPDATE_ROW_EP);
   const HVector *Row = multi_finish[multi_nFinish].row_ep;
-  int updateRows_inDense = (Row->count < 0) || (Row->count > 0.1 * numRow);
+  int updateRows_inDense = (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
   if (updateRows_inDense) {
     int multi_nTasks = 0;
     int multi_iwhich[HIGHS_THREAD_LIMIT];
@@ -410,7 +410,7 @@ void HDual::minor_updateRows() {
       }
     }
   }
-  //  model->timer.recordFinish(HTICK_UPDATE_ROW_EP);
+  //  timer.recordFinish(HTICK_UPDATE_ROW_EP);
 }
 
 void HDual::major_update() {
@@ -490,7 +490,7 @@ void HDual::major_updateFtranPrepare() {
 }
 
 void HDual::major_updateFtranParallel() {
-  //  model->timer.recordStart(HTICK_FTRAN_MIX);
+  //  timer.recordStart(HTICK_FTRAN_MIX);
 
   // Prepare buffers
   int multi_ntasks = 0;
@@ -535,14 +535,14 @@ void HDual::major_updateFtranParallel() {
     MFinish *Fin = &multi_finish[iFn];
     HVector *Col = Fin->column;
     HVector *Row = Fin->row_ep;
-    columnDensity = 0.95 * columnDensity + 0.05 * Col->count / numRow;
-    rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / numRow;
+    columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
+    rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
   }
-  //  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  //  timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::major_updateFtranFinal() {
-  //  model->timer.recordStart(HTICK_FTRAN_MIX);
+  //  timer.recordStart(HTICK_FTRAN_MIX);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -561,14 +561,14 @@ void HDual::major_updateFtranFinal() {
         if (fabs(pivotX1) > HIGHS_CONST_TINY) {
           const double pivot = pivotX1 / pivotAlpha;
 #pragma omp parallel for
-          for (int i = 0; i < numRow; i++) myCol[i] -= pivot * pivotArray[i];
+          for (int i = 0; i < solver_num_row; i++) myCol[i] -= pivot * pivotArray[i];
           myCol[pivotRow] = pivot;
         }
         // The FTRAN-DSE buffer
         if (fabs(pivotX2) > HIGHS_CONST_TINY) {
           const double pivot = pivotX2 / pivotAlpha;
 #pragma omp parallel for
-          for (int i = 0; i < numRow; i++) myRow[i] -= pivot * pivotArray[i];
+          for (int i = 0; i < solver_num_row; i++) myRow[i] -= pivot * pivotArray[i];
           myRow[pivotRow] = pivot;
         }
       }
@@ -598,7 +598,7 @@ void HDual::major_updateFtranFinal() {
       }
     }
   }
-  //  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  //  timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::major_updatePrimal() {
@@ -608,7 +608,7 @@ void HDual::major_updatePrimal() {
     const double *mixArray = &columnBFRT.array[0];
     double *rhs = &dualRHS.workArray[0];
 #pragma omp parallel for schedule(static)
-    for (int iRow = 0; iRow < numRow; iRow++) {
+    for (int iRow = 0; iRow < solver_num_row; iRow++) {
       baseValue[iRow] -= mixArray[iRow];
       const double value = baseValue[iRow];
       const double less = baseLower[iRow] - value;
@@ -625,7 +625,7 @@ void HDual::major_updatePrimal() {
       double Kai = -2 / multi_finish[iFn].alphaRow;
       double *EdWt = &dualRHS.workEdWt[0];
 #pragma omp parallel for schedule(static)
-      for (int iRow = 0; iRow < numRow; iRow++) {
+      for (int iRow = 0; iRow < solver_num_row; iRow++) {
         const double val = colArray[iRow];
         EdWt[iRow] += val * (pivotEdWt * val + Kai * dseArray[iRow]);
         if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;

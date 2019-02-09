@@ -343,9 +343,7 @@ class HDual {
    * @brief Get the Hager condition number estimate for the basis matrix of a
    * model
    */
-  double an_bs_cond(
-      HModel *ptr_model  //!< Model for which basis condition is required
-  );
+  double an_bs_cond();
 
   /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the
@@ -469,6 +467,10 @@ class HDual {
   // Model
   HModel *model;
   HighsModelObject &workHMO;
+  int solver_num_row;
+  int solver_num_col;
+  int solver_num_tot;
+
   const HMatrix *matrix;
   const HFactor *factor;
   HSimplex simplex_method_;
@@ -485,10 +487,6 @@ class HDual {
   double *rowLower;
   double *rowUpper;
   int *nonbasicFlag;
-
-  int numCol;
-  int numRow;
-  int numTot;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
