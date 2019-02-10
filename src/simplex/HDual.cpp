@@ -814,7 +814,7 @@ void HDual::rebuild() {
   //  printf("Checking INVERT in rebuild()\n"); workHMO.factor_.checkInvert();
 #endif
 
-  //	model->util_reportNumberIterationObjectiveValue(sv_invertHint);
+  simplex_method_.report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
 
   timer.start(simplex_info.clock_[ReportInvertClock]);
   iterateRpInvert(sv_invertHint);
@@ -849,7 +849,7 @@ void HDual::cleanup() {
   simplex_method_.initialise_bound(workHMO);  //  model->initBound();
   simplex_method_.compute_dual(workHMO);  //  model->computeDual();
   simplex_method_.compute_dual_objective_value(workHMO, solvePhase);
-  //	model->util_reportNumberIterationObjectiveValue(-1);
+  simplex_method_.report_iteration_count_dual_objective_value(workHMO, -1);
   iterateRpInvert(-1);
 
   simplex_method_.compute_dual_infeasible_in_primal(workHMO, &dualInfeasCount);//model->computeDualInfeasInPrimal(&dualInfeasCount);

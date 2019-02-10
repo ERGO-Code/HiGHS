@@ -95,7 +95,7 @@ void reportLpColMtx(HighsLp &lp) {
 void reportLpSolution(HighsModelObject &highs_model) {
   HighsLp lp = highs_model.solver_lp_;
   reportLpBrief(lp);
-  //  model->util_reportModelStatus(lp);
+  //  simplex_interface.report_simplex_solution_status();
   assert(lp.numCol_ > 0);
   assert(lp.numRow_ > 0);
   vector<double> colPrimal(lp.numCol_);

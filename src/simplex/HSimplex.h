@@ -1210,6 +1210,36 @@ class HSimplex {
     }
   }
 
+  int get_nonbasicMove(HighsModelObject &highs_model_object, int var) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    //  printf("Calling get_nonbasicMove with var = %2d; numTot = %2d\n", var, numTot); 
+    assert(var >= 0);
+    assert(var < numTot);
+    if (!highs_isInfinity(-simplex_info.workLower_[var])) {
+      if (!highs_isInfinity(simplex_info.workUpper_[var])) {
+	// Finite lower and upper bounds so nonbasic move depends on whether they
+	// are equal
+	if (simplex_info.workLower_[var] == simplex_info.workUpper_[var])
+	  // Fixed variable so nonbasic move is zero
+	  return NONBASIC_MOVE_ZE;
+	// Boxed variable so nonbasic move is up (from lower bound)
+	return NONBASIC_MOVE_UP;
+      } else
+	// Finite lower bound and infinite upper bound so nonbasic move is up
+	// (from lower bound)
+	return NONBASIC_MOVE_UP;
+    } else
+      // Infinite lower bound so nonbasic move depends on whether the upper
+      // bound is finite
+      if (!highs_isInfinity(simplex_info.workUpper_[var]))
+	// Finite upper bound so nonbasic move is down (from upper bound)
+	return NONBASIC_MOVE_DN;
+    // Infinite upper bound so free variable: nonbasic move is zero
+    return NONBASIC_MOVE_ZE;
+  }
+
   void populate_work_arrays(HighsModelObject &highs_model_object) {
     // Initialize the values
     initialise_cost(highs_model_object);
@@ -1390,10 +1420,10 @@ class HSimplex {
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
     //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_TRUE; Setting
-    //    basis.nonbasicMove_[%2d] = %2d\n", var, var, get_nonbasicMoveCol(var));
+    //    basis.nonbasicMove_[%2d] = %2d\n", var, var, get_nonbasicMove(highs_model_object, var));
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    //    printf("Calling get_nonbasicMoveCol(%2d)\n", var);
-    //    basis.nonbasicMove_[var] = get_nonbasicMoveCol(var);
+    //    printf("Calling get_nonbasicMove(%2d)\n", var);
+    //    basis.nonbasicMove_[var] = get_nonbasicMove(highs_model_object, var);
   }
   // Make any new rows basic
   //  printf("Make any new rows basic: %d %d %d\n", solver_lp.numRow_, firstrow, lastrow);
@@ -2764,5 +2794,11 @@ class HSimplex {
   }
 #endif
   
+  void report_iteration_count_dual_objective_value(HighsModelObject &highs_model_object, int i_v) {
+    int iteration_count = highs_model_object.simplex_info_.iteration_count;
+    double dual_objective_value = highs_model_object.simplex_info_.dualObjectiveValue;
+    HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", iteration_count, dual_objective_value, i_v);
+  }
+
 };
 #endif // SIMPLEX_HSIMPLEX_H_

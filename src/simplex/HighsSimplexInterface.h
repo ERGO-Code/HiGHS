@@ -48,6 +48,11 @@ class HighsSimplexInterface {
 			const int* XAindex,
 			const double* XAvalue
 			);
+
+  // Methods for brief reports
+  void report_simplex_outcome(const char* message);
+  void report_simplex_solution_status();
+
   /**
    * @brief Get the column and row (primal) values and dual (values)
    */
@@ -57,6 +62,27 @@ class HighsSimplexInterface {
 			      vector<double> &XrowValue,
 			      vector<double> &XrowDual
 			      );
+
+  void get_nonbasicMove(vector<int> &XnonbasicMove);
+
+  // Utility to get the indices of the basic variables for SCIP
+  int get_basic_indices(
+			int *bind
+			);
+  // Utilities to convert model basic/nonbasic status to/from SCIP-like status
+  // Convert model basic/nonbasic status from SCIP-like status
+  // Postive  return value k implies invalid basis status for column k-1
+  // Negative return value k implies invalid basis status for row   -k-1
+  int convert_baseStat_to_working(
+				  const int* cstat,
+				  const int* rstat
+				  );
+  int convert_Working_to_BaseStat(
+				  int* cstat,
+				  int* rstat
+				  );
+
+
 
   /**
    * @brief Get the LP objective function value from column values
@@ -149,6 +175,33 @@ class HighsSimplexInterface {
 			       const double newval
 			       );
 
+  // Utilities to get LP data - put them elsewhere?
+  // Get the costs for a contiguous set of columns
+  void util_get_costs(
+		      HighsLp& lp,
+		      int firstcol,
+		      int lastcol,
+		      double* XcolCost
+		      );
+  
+// Get the bounds for a contiguous set of columns
+  void util_get_col_bounds(
+			   HighsLp& lp,
+			   int firstcol,
+			   int lastcol,
+			   double* XcolLower,
+			   double* XcolUpper
+			   );
+  
+// Get the bounds for a contiguous set of rows
+  void util_get_row_bounds(
+			   HighsLp& lp,
+			   int firstrow,
+			   int lastrow,
+			   double* XrowLower,
+			   double* XrowUpper
+			   );
+  
   void util_get_coefficient(
 			    HighsLp lp,
 			    int row,
@@ -156,6 +209,69 @@ class HighsSimplexInterface {
 			    double *val
 			    );
 
+  // Shift the objective
+  void shift_objective_value(
+			     double shift
+			     );
+
+  // Utilities to get/change costs and bounds
+  // Change the objective sense
+  int change_ObjSense(
+		      int Xsense
+		      );
+
+// Change the costs for all columns
+  int change_costs_all(
+		       const double* XcolCost
+		       );
+
+// Change the costs for a set of columns
+  int change_costs_set(
+		       int ncols,
+		       const int* XcolCostIndex,
+                       const double* XcolCostValues
+		       );
+
+// Change the bounds for all columns
+// Postive  return value k implies that the lower bound is being set to +Inf for
+// column k-1 Negative return value k implies that the upper bound is being set
+// to -Inf for column -k-1
+  int change_col_bounds_all(
+			    const double* XcolLower,
+			    const double* XcolUpper
+			    );
+
+// Change the bounds for a set of columns
+// Postive  return value k implies that the lower bound is being set to +Inf for
+// column k-1 Negative return value k implies that the upper bound is being set
+// to -Inf for column -k-1
+  int change_col_bounds_set(
+			    int ncols,
+			    const int* XcolBoundIndex,
+			    const double* XcolLowerValues,
+			    const double* XcolUpperValues
+			    );
+
+// Change the bounds for all rows
+// Postive  return value k implies that the lower bound is being set to +Inf for
+// row k-1 Negative return value k implies that the upper bound is being set to
+// -Inf for row -k-1
+  int change_row_bounds_all(
+			    const double* XrowLower,
+			    const double* XrowUpper
+			    );
+
+// Change the bounds for a set of rows
+// Postive  return value k implies that the lower bound is being set to +Inf for
+// row k-1 Negative return value k implies that the upper bound is being set to
+// -Inf for row -k-1
+  int change_row_bounds_set(
+			    int nrows,
+			    const int* XrowBoundIndex,
+			    const double* XrowLowerValues,
+			    const double* XrowUpperValues
+			    );
+  
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXINTERFACE_H_ */

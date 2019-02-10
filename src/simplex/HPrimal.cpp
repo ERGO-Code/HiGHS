@@ -143,7 +143,7 @@ void HPrimal::primalRebuild() {
   simplex_method_.compute_dual(workHMO);//model->computeDual();
   simplex_method_.compute_primal(workHMO);//model->computePrimal();
   simplex_method_.compute_dual_objective_value(workHMO);
-  model->util_reportNumberIterationObjectiveValue(sv_invertHint);
+  simplex_method_.report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseRebuildTime) {

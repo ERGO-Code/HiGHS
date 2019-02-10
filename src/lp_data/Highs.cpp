@@ -140,6 +140,7 @@ HighsStatus Highs::run(HighsLp& lp) {
     }
   }
 
+  HighsSimplexInterface simplex_interface(lps_[0]);
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
@@ -152,12 +153,14 @@ HighsStatus Highs::run(HighsLp& lp) {
       } else {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
-        lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
+        simplex_interface.report_simplex_outcome("Run");
+	//lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
       }
     }
   } else {
     // Report in old way so tests pass.
-    lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
+    simplex_interface.report_simplex_outcome("Run");
+    //lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 
   if (lps_[0].reportModelOperationsClock) {

@@ -12,6 +12,8 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HighsSimplexInterface.h"
+#include "HighsIO.h"
+#include "HighsUtils.h"
 
 void HighsSimplexInterface::load_from_arrays(
 					     int XnumCol,
@@ -52,6 +54,79 @@ void HighsSimplexInterface::load_from_arrays(
   
   }
   
+void HighsSimplexInterface::report_simplex_outcome(const char *message) {
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsTimer &timer = highs_model_object.timer_;
+
+  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
+    HighsPrintMessage(ML_ALWAYS, "%s: OPTIMAL", message);
+  else
+    HighsPrintMessage(ML_ALWAYS, "%s: NOT-OPT", message);
+  double dualObjectiveValue = simplex_info.dualObjectiveValue;
+#ifdef SCIP_DEV
+  double prObjVal = 0; printf("Call simplex_method.compute_primal_objective_function_value\n");
+  double dlObjVal =
+      abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
+  HighsPrintMessage(ML_MINIMAL, "%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
+		    solver_lp.model_name_.c_str(),
+		    prObjVal,
+		    dualObjectiveValue,
+		    dlObjVal,
+		    simplex_info.iteration_count,
+		    currentRunHighsTime);
+#else
+  double currentRunHighsTime = timer.readRunHighsClock();
+  HighsPrintMessage(ML_ALWAYS, "%32s %20.10e %10d %10.3f", solver_lp.model_name_.c_str(), dualObjectiveValue,
+         simplex_info.iteration_count, currentRunHighsTime);
+#endif
+  HighsPrintMessage(ML_ALWAYS, " [Ph1 = %d; Ph2 = %d; Pr = %d]",
+		    simplex_info.dual_phase1_iteration_count,
+		    simplex_info.dual_phase2_iteration_count,
+		    simplex_info.primal_phase2_iteration_count
+		    );
+  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL) {
+    HighsPrintMessage(ML_ALWAYS, "\n");
+  } else {
+    report_simplex_solution_status();
+    HighsPrintMessage(ML_ALWAYS, "\n");
+  }
+  // Greppable report line added
+  HighsPrintMessage(ML_ALWAYS, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s,%d,%d,%d\n",
+		    dualObjectiveValue,
+		    simplex_info.iteration_count,
+		    currentRunHighsTime,
+		    simplex_info.solution_status,
+		    solver_lp.model_name_.c_str(),
+		    simplex_info.dual_phase1_iteration_count,
+		    simplex_info.dual_phase2_iteration_count,
+		    simplex_info.primal_phase2_iteration_count
+		    );
+}
+
+// Methods for reporting the model, its solution, row and column data and matrix
+// Report the model status
+void HighsSimplexInterface::report_simplex_solution_status() {
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsPrintMessage(ML_ALWAYS, "simplex solution status is %2d: ", simplex_info.solution_status);
+  if (simplex_info.solution_status == SimplexSolutionStatus::UNSET)
+    HighsPrintMessage(ML_ALWAYS, "Unset\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
+    HighsPrintMessage(ML_ALWAYS, "Optimal\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::INFEASIBLE)
+    HighsPrintMessage(ML_ALWAYS, "Infeasible\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::UNBOUNDED)
+    HighsPrintMessage(ML_ALWAYS, "Primal unbounded\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::SINGULAR)
+    HighsPrintMessage(ML_ALWAYS, "Singular basis\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::FAILED)
+    HighsPrintMessage(ML_ALWAYS, "Failed\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
+    HighsPrintMessage(ML_ALWAYS, "Time limit exceeded\n");
+  else
+    HighsPrintMessage(ML_ALWAYS, "Unrecognised\n");
+}
+
 void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
 						   vector<double> &XcolDual,
 						   vector<double> &XrowValue,
@@ -90,6 +165,227 @@ void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
   for (int i = 0; i < solver_lp.numCol_; i++) XcolValue[i] = valuePtr[i];
   for (int i = 0; i < solver_lp.numRow_; i++) XrowDual[i] = solver_lp.sense_ * dual[i + solver_lp.numCol_];
   for (int i = 0; i < solver_lp.numCol_; i++) XcolDual[i] = solver_lp.sense_ * dual[i];
+}
+
+// Utility to get the indices of the basic variables for SCIP
+int HighsSimplexInterface::get_basic_indices(int *bind) {
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  for (int row = 0; row < solver_lp.numRow_; row++) {
+    int var = basis.basicIndex_[row];
+    if (var >= solver_lp.numCol_)
+      bind[row] = -(1 + var - solver_lp.numCol_);
+    else
+      bind[row] = var;
+  }
+  return 0;
+}
+
+  // Utilities to convert model basic/nonbasic status to/from SCIP-like status
+int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const int* rstat) {
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+
+  int numBasic = 0;
+  for (int col = 0; col < solver_lp.numCol_; col++) {
+    int var = col;
+    if (cstat[col] == HIGHS_BASESTAT_BASIC) {
+      basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+      basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      basis.basicIndex_[numBasic] = var;
+      numBasic++;
+      continue;
+    }
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+    if (cstat[col] == HIGHS_BASESTAT_LOWER) {
+      // HIGHS_BASESTAT_LOWER includes fixed variables
+      if (solver_lp.colLower_[col] == solver_lp.colUpper_[col]) {
+        basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+        continue;
+      } else {
+        basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+        continue;
+      }
+    } else if (cstat[col] == HIGHS_BASESTAT_UPPER) {
+      basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+      continue;
+    } else if (cstat[col] == HIGHS_BASESTAT_ZERO) {
+      basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      continue;
+    } else {
+#ifdef HiGHSDEV
+      printf("Invalid basis status: col=%d, cstat=%d, lower=%g, upper=%g\n",
+             col, cstat[col], solver_lp.colLower_[col], solver_lp.colUpper_[col]);
+#endif
+      return col + 1;
+    }
+  }
+  for (int row = 0; row < solver_lp.numRow_; row++) {
+    int var = solver_lp.numCol_ + row;
+    if (rstat[row] == HIGHS_BASESTAT_BASIC) {
+      basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+      basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      basis.basicIndex_[numBasic] = var;
+      numBasic++;
+      continue;
+    }
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+    if (rstat[row] == HIGHS_BASESTAT_LOWER) {
+      // HIGHS_BASESTAT_LOWER includes fixed variables
+      if (solver_lp.rowLower_[row] == solver_lp.rowUpper_[row]) {
+        basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+        continue;
+      } else {
+        basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+        continue;
+      }
+    } else if (rstat[row] == HIGHS_BASESTAT_UPPER) {
+      basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+      continue;
+    } else if (rstat[row] == HIGHS_BASESTAT_ZERO) {
+      basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      continue;
+    } else {
+#ifdef HiGHSDEV
+      printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
+             row, rstat[row], solver_lp.rowLower_[row], solver_lp.rowUpper_[row]);
+#endif
+      printf("Invalid basis status: row=%d, rstat=%d, lower=%g, upper=%g\n",
+             row, rstat[row], solver_lp.rowLower_[row], solver_lp.rowUpper_[row]);
+      return -(row + 1);
+    }
+    printf(
+        "convertBaseStatToWorking: row=%d, rstat=%d, lower=%g, upper=%g, "
+        "nonbasicMove=%d\n",
+        row, rstat[row], solver_lp.rowLower_[row], solver_lp.rowUpper_[row], basis.nonbasicMove_[var]);
+  }
+  assert(numBasic = solver_lp.numRow_);
+  printf("Call simplex_method_.populate_work_arrays();\n");
+  // simplex_method.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+  return 0;
+}
+
+int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  if (cstat != NULL) {
+    for (int col = 0; col < solver_lp.numCol_; col++) {
+      int var = col;
+      if (!basis.nonbasicFlag_[var]) {
+        cstat[col] = HIGHS_BASESTAT_BASIC;
+        continue;
+      } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+#ifdef HiGHSDEV
+        if (!highs_isInfinity(-solver_lp.colLower_[col]))
+#endif
+        {
+          cstat[col] = HIGHS_BASESTAT_LOWER;
+          continue;
+        }
+      } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+#ifdef HiGHSDEV
+        if (!highs_isInfinity(solver_lp.colUpper_[col]))
+#endif
+        {
+          cstat[col] = HIGHS_BASESTAT_UPPER;
+          continue;
+        }
+      } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
+        //	printf("Var %d Move = %d [%g, %g]\n", var, basis.nonbasicMove_[var],
+        // solver_lp.colLower_[col], solver_lp.colUpper_[col]);
+        if (solver_lp.colLower_[col] == solver_lp.colUpper_[col]) {
+#ifdef HiGHSDEV
+          if (!highs_isInfinity(solver_lp.colUpper_[col]))
+#endif
+          {
+            cstat[col] = HIGHS_BASESTAT_LOWER;
+            continue;
+          }
+        } else {
+#ifdef HiGHSDEV
+          if (highs_isInfinity(-solver_lp.colLower_[col]) && highs_isInfinity(solver_lp.colUpper_[col]))
+#endif
+          {
+            cstat[col] = HIGHS_BASESTAT_ZERO;
+            continue;
+          }
+        }
+      }
+#ifdef HiGHSDEV
+      printf(
+          "Invalid basis status: col=%d, nonbasicFlag=%d, nonbasicMove=%d, "
+          "lower=%g, upper=%g\n",
+          col, basis.nonbasicFlag_[var], basis.nonbasicMove_[var], solver_lp.colLower_[col],
+          solver_lp.colUpper_[col]);
+#endif
+      return col + 1;
+    }
+  }
+  if (rstat != NULL) {
+    for (int row = 0; row < solver_lp.numRow_; row++) {
+      int var = solver_lp.numCol_ + row;
+      if (!basis.nonbasicFlag_[var]) {
+        rstat[row] = HIGHS_BASESTAT_BASIC;
+        continue;
+      }
+      // NB nonbasicMove for rows refers to the solver's view where the bounds
+      // are switched and negated
+      else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN)
+      // Free to move only down from -solver_lp.rowLower_[row]
+      {
+#ifdef HiGHSDEV
+        if (!highs_isInfinity(-solver_lp.rowLower_[row]))
+#endif
+        {
+          rstat[row] = HIGHS_BASESTAT_LOWER;
+          continue;
+        }
+      } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP)
+      // Free to move only up from -solver_lp.rowUpper_[row]
+      {
+#ifdef HiGHSDEV
+        if (!highs_isInfinity(solver_lp.rowUpper_[row]))
+#endif
+        {
+          rstat[row] = HIGHS_BASESTAT_UPPER;
+          continue;
+        }
+      } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
+        if (solver_lp.rowLower_[row] == solver_lp.rowUpper_[row]) {
+#ifdef HiGHSDEV
+          if (!highs_isInfinity(solver_lp.rowUpper_[row]))
+#endif
+          {
+            rstat[row] = HIGHS_BASESTAT_LOWER;
+            continue;
+          }
+        } else {
+#ifdef HiGHSDEV
+          if (highs_isInfinity(-solver_lp.rowLower_[row]) && highs_isInfinity(solver_lp.rowUpper_[row]))
+#endif
+          {
+            rstat[row] = HIGHS_BASESTAT_ZERO;
+            continue;
+          }
+        }
+      }
+#ifdef HiGHSDEV
+      printf(
+          "Invalid basis status: row=%d, nonbasicFlag=%d, nonbasicMove=%d, "
+          "lower=%g, upper=%g\n",
+          row, basis.nonbasicFlag_[var], basis.nonbasicMove_[var], solver_lp.rowLower_[row],
+          solver_lp.rowUpper_[row]);
+#endif
+      return -(row + 1);
+    }
+  }
+  return 0;
+}
+
+
+void HighsSimplexInterface::get_nonbasicMove(vector<int> &XnonbasicMove) {
+  XnonbasicMove = highs_model_object.basis_.nonbasicMove_;
 }
 
 double HighsSimplexInterface::get_lp_objective_value(vector<double> &XcolValue) {
@@ -748,6 +1044,46 @@ void HighsSimplexInterface::util_change_coefficient(int row, int col, const doub
   //  solver_lp.reportLp();
 }
 
+void HighsSimplexInterface::util_get_costs(
+					   HighsLp& lp,
+					   int firstcol,
+					   int lastcol,
+					   double* XcolCost
+					   ) {
+  assert(0 <= firstcol);
+  assert(firstcol <= lastcol);
+  assert(lastcol < lp.numCol_);
+  for (int col = firstcol; col <= lastcol; ++col) XcolCost[col - firstcol] = lp.colCost_[col];
+}
+
+void HighsSimplexInterface::util_get_col_bounds(HighsLp& lp,
+						int firstcol,
+						int lastcol,
+						double* XcolLower,
+						double* XcolUpper) {
+  assert(0 <= firstcol);
+  assert(firstcol <= lastcol);
+  assert(lastcol < lp.numCol_);
+  for (int col = firstcol; col <= lastcol; ++col) {
+    if (XcolLower != NULL) XcolLower[col - firstcol] = lp.colLower_[col];
+    if (XcolUpper != NULL) XcolUpper[col - firstcol] = lp.colUpper_[col];
+  }
+}
+
+void HighsSimplexInterface::util_get_row_bounds(HighsLp& lp,
+						int firstrow,
+						int lastrow,
+						double* XrowLower,
+						double* XrowUpper) {
+  assert(0 <= firstrow);
+  assert(firstrow <= lastrow);
+  assert(lastrow < lp.numRow_);
+  for (int row = firstrow; row <= lastrow; ++row) {
+    if (XrowLower != NULL) XrowLower[row - firstrow] = lp.rowLower_[row];
+    if (XrowUpper != NULL) XrowUpper[row - firstrow] = lp.rowUpper_[row];
+  }
+}
+
 // Get a single coefficient from the matrix
 void HighsSimplexInterface::util_get_coefficient(HighsLp lp, int row, int col, double *val) {
   assert(row >= 0 && row < lp.numRow_);
@@ -776,3 +1112,178 @@ void HighsSimplexInterface::util_get_coefficient(HighsLp lp, int row, int col, d
     *val = lp.Avalue_[get_el];
   }
 }
+
+
+// Shift the objective
+void HighsSimplexInterface::shift_objective_value(
+						  double shift
+						  ) {
+  highs_model_object.simplex_info_.dualObjectiveValue += shift;
+}
+
+// Utilities to get/change costs and bounds
+int HighsSimplexInterface::change_ObjSense(
+		    int Xsense
+		    ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  if ((Xsense == OBJSENSE_MINIMIZE) != (solver_lp.sense_ == OBJSENSE_MINIMIZE)) {
+    // Flip the objective sense
+    solver_lp.sense_ = Xsense;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int var = 0; var < numTot; var++) {
+      simplex_info.workDual_[var] = -simplex_info.workDual_[var];
+      simplex_info.workCost_[var] = -simplex_info.workCost_[var];
+    }
+    simplex_info.solution_status = SimplexSolutionStatus::UNSET;
+  }
+  return 0;
+}
+int HighsSimplexInterface::change_costs_all(
+		     const double* XcolCost
+		     ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsScale &scale = highs_model_object.scale_;
+  assert(XcolCost != NULL);
+  for (int col = 0; col < solver_lp.numCol_; ++col) {
+    solver_lp.colCost_[col] = XcolCost[col] * scale.col_[col];
+  }
+  // Deduce the consequences of new costs
+  //  update_solver_lp_status_flags(highs_model, LpAction::NEW_COSTS);
+  return 0;
+}
+int HighsSimplexInterface::change_costs_set(
+		     int ncols,
+		     const int* XcolCostIndex,
+		     const double* XcolCostValues
+		     ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsScale &scale = highs_model_object.scale_;
+  assert(XcolCostIndex != NULL);
+  assert(XcolCostValues != NULL);
+  for (int ix = 0; ix < ncols; ++ix) {
+    int col = XcolCostIndex[ix];
+    assert(0 <= col);
+    assert(col < solver_lp.numCol_);
+    solver_lp.colCost_[col] = XcolCostValues[ix] * scale.col_[col];
+  }
+  // Deduce the consequences of new costs
+  //  update_solver_lp_status_flags(highs_model, LpAction::NEW_COSTS);
+  return 0;
+}
+int HighsSimplexInterface::change_col_bounds_all(
+			  const double* XcolLower,
+			  const double* XcolUpper
+			  ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsScale &scale = highs_model_object.scale_;
+  assert(XcolLower != NULL);
+  assert(XcolUpper != NULL);
+  for (int col = 0; col < solver_lp.numCol_; ++col) {
+    double lower = XcolLower[col];
+    double upper = XcolUpper[col];
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(lower)) return col + 1;
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(-upper)) return -(col + 1);
+    assert(lower <= upper);
+    solver_lp.colLower_[col] = (highs_isInfinity(-lower) ? lower : lower / scale.col_[col]);
+    solver_lp.colUpper_[col] = (highs_isInfinity(upper) ? upper : upper / scale.col_[col]);
+    //    printf("[LB; Pr; UB] for column %2d are now [%11g, %11g, %11g] Dual =
+    //    %g\n", col, solver_lp.colLower_[col], simplex_info.workValue_[col], solver_lp.colUpper_[col],
+    //    simplex_info.workDual_[col]);
+  }
+  // Deduce the consequences of new bounds
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
+  return 0;
+}
+int HighsSimplexInterface::change_col_bounds_set(
+			  int ncols,
+			  const int* XcolBoundIndex,
+			  const double* XcolLowerValues,
+			  const double* XcolUpperValues
+			  ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsScale &scale = highs_model_object.scale_;
+  assert(XcolBoundIndex != NULL);
+  assert(XcolLowerValues != NULL);
+  assert(XcolUpperValues != NULL);
+  for (int ix = 0; ix < ncols; ++ix) {
+    int col = XcolBoundIndex[ix];
+    assert(0 <= col);
+    assert(col < solver_lp.numCol_);
+    double lower = XcolLowerValues[ix];
+    double upper = XcolUpperValues[ix];
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(lower)) return col + 1;
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(-upper)) return -(col + 1);
+    assert(lower <= upper);
+    solver_lp.colLower_[col] = (highs_isInfinity(-lower) ? lower : lower / scale.col_[col]);
+    solver_lp.colUpper_[col] = (highs_isInfinity(upper) ? upper : upper / scale.col_[col]);
+    //    printf("Bounds for column %2d are now [%11g, %11g] Scale = %g\n", col,
+    //    solver_lp.colLower_[col], solver_lp.colUpper_[col], scale.col_[col]);
+  }
+  // Deduce the consequences of new bounds
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
+  return 0;
+}
+int HighsSimplexInterface::change_row_bounds_all(
+			  const double* XrowLower,
+			  const double* XrowUpper
+			  ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsScale &scale = highs_model_object.scale_;
+  assert(XrowLower != NULL);
+  assert(XrowUpper != NULL);
+  for (int row = 0; row < solver_lp.numRow_; ++row) {
+    double lower = XrowLower[row];
+    double upper = XrowUpper[row];
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(lower)) return row + 1;
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(-upper)) return -(row + 1);
+    solver_lp.rowLower_[row] = (highs_isInfinity(-lower) ? lower : lower * scale.row_[row]);
+    solver_lp.rowUpper_[row] = (highs_isInfinity(upper) ? upper : upper * scale.row_[row]);
+  }
+  // Deduce the consequences of new bounds
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
+  return 0;
+}
+int HighsSimplexInterface::change_row_bounds_set(
+			  int nrows,
+			  const int* XrowBoundIndex,
+			  const double* XrowLowerValues,
+			  const double* XrowUpperValues
+			  ){
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsScale &scale = highs_model_object.scale_;
+  assert(XrowBoundIndex != NULL);
+  assert(XrowLowerValues != NULL);
+  assert(XrowUpperValues != NULL);
+  for (int ix = 0; ix < nrows; ++ix) {
+    int row = XrowBoundIndex[ix];
+    assert(0 <= row);
+    assert(row < solver_lp.numRow_);
+    double lower = XrowLowerValues[ix];
+    double upper = XrowUpperValues[ix];
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(lower)) return row + 1;
+    // Check that the lower bound is not being set to +Inf
+    if (highs_isInfinity(-upper)) return -(row + 1);
+    solver_lp.rowLower_[row] = (highs_isInfinity(-lower) ? lower : lower * scale.row_[row]);
+    solver_lp.rowUpper_[row] = (highs_isInfinity(upper) ? upper : upper * scale.row_[row]);
+    //    printf("Bounds for row %2d are now [%11g, %11g]\n", row,
+    //    solver_lp.rowLower_[row], solver_lp.rowUpper_[row]);
+  }
+  // Deduce the consequences of new bounds
+  // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
+  return 0;
+}
+

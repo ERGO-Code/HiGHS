@@ -16,6 +16,7 @@
 #include "HDual.h"
 #include "HModel.h"
 #include "HConst.h"
+#include "HighsSimplexInterface.h"
 
 int HRanging::computeData(HighsModelObject &ref_highs_model_object) {
 
@@ -584,7 +585,9 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
   vector<int> Nmove = model->basis_->nonbasicMove_;
   vector<double> colValue(numCol), colDual(numCol);
   vector<double> rowValue(numRow), rowDual(numRow);
-  model->util_getPrimalDualValues(colValue, colDual, rowValue, rowDual);
+
+  HighsSimplexInterface simplex_interface(ref_highs_model_object);
+  simplex_interface.get_primal_dual_values(colValue, colDual, rowValue, rowDual);
 
   // Show all rowwise data
   if (reportRangingDataCheck) {
@@ -621,15 +624,15 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           check_data_clear_solver_lp_data(&testModel);
           printf("Row %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
-	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
-          testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  //	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
+          simplex_interface.change_row_bounds_set(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(&testModel, rpSolution);
 	  rpSolution = false;
           solved_dn = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
-	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
-          model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  //	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
+          simplex_interface.change_row_bounds_set(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(model, rpSolution);
           solved_dn = highs_model_object->simplex_info_.dualObjectiveValue;
         }
@@ -670,14 +673,14 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           check_data_clear_solver_lp_data(&testModel);
           printf("Row %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeRowLower, changeRowUpper, svRowLower, svRowUpper);
-	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
-          testModel.util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  //	  testModel.util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
+          simplex_interface.change_row_bounds_set(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(&testModel, rpSolution);
           solved_up = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
-	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
-          model->util_chgRowBoundsSet(1, &i, &changeRowLower, &changeRowUpper);
+	  //	  model->util_unscaleRowBoundValue(i, &changeRowLower, &changeRowUpper);
+          simplex_interface.change_row_bounds_set(1, &i, &changeRowLower, &changeRowUpper);
           checkDataSolve(model, rpSolution);
           solved_up = highs_model_object->simplex_info_.dualObjectiveValue;
         }
@@ -697,8 +700,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
       //#endif
     }
     if (recoverOriginalBounds) {
-      model->util_unscaleRowBoundValue(i, &svRowLower, &svRowUpper);
-      model->util_chgRowBoundsSet(1, &i, &svRowLower, &svRowUpper);
+      //      model->util_unscaleRowBoundValue(i, &svRowLower, &svRowUpper);
+      simplex_interface.change_row_bounds_set(1, &i, &svRowLower, &svRowUpper);
     }
     if (reportRangingDataCheck) {
       double maxRelativeError =
@@ -744,14 +747,14 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           check_data_clear_solver_lp_data(&testModel);
           printf("Col %2d: DN - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeColLower, changeColUpper, svColLower, svColUpper);
-	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
-          testModel.util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  //	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
+          simplex_interface.change_col_bounds_set(1, &i, &changeColLower, &changeColUpper);
           checkDataSolve(&testModel, rpSolution);
           solved_dn = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
-  	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
-	  model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  //  	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
+	  simplex_interface.change_col_bounds_set(1, &i, &changeColLower, &changeColUpper);
           checkDataSolve(model, rpSolution);
 	  rpSolution = false;
 	  solved_dn = highs_model_object->simplex_info_.dualObjectiveValue;
@@ -794,16 +797,16 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
           check_data_clear_solver_lp_data(&testModel);
           printf("Col %2d: UP - Using bounds [%12g, %12g] rather than [%12g, %12g]\n",
 		 i, changeColLower, changeColUpper, svColLower, svColUpper);
-	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
-          testModel.util_chgColBoundsSet(1, &i, &changeColLower,
+	  //	  testModel.util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
+          simplex_interface.change_col_bounds_set(1, &i, &changeColLower,
                                          &changeColUpper);
           checkDataSolve(&testModel, rpSolution);
           rpSolution = false;
           solved_up = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalBounds = true;
-  	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
-          model->util_chgColBoundsSet(1, &i, &changeColLower, &changeColUpper);
+	  //  	  model->util_unscaleColBoundValue(i, &changeColLower, &changeColUpper);
+          simplex_interface.change_col_bounds_set(1, &i, &changeColLower, &changeColUpper);
           checkDataSolve(model, rpSolution);
           solved_up = highs_model_object->simplex_info_.dualObjectiveValue;
         }
@@ -823,8 +826,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
       //#endif
     }
     if (recoverOriginalBounds) {
-      model->util_unscaleColBoundValue(i, &svColLower, &svColUpper);
-      model->util_chgColBoundsSet(1, &i, &svColLower, &svColUpper);
+      //      model->util_unscaleColBoundValue(i, &svColLower, &svColUpper);
+      simplex_interface.change_col_bounds_set(1, &i, &svColLower, &svColUpper);
     }
     if (reportRangingDataCheck) {
       double maxRelativeError =
@@ -855,14 +858,14 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         if (useTestModel) {
           HModel testModel = *model;
           check_data_clear_solver_lp_data(&testModel);
-          testModel.util_unscaleColCostValue(i, &changeColCost);
-          testModel.util_chgCostsSet(1, &i, &changeColCost);
+	  //          testModel.util_unscaleColCostValue(i, &changeColCost);
+          simplex_interface.change_costs_set(1, &i, &changeColCost);
           checkDataSolve(&testModel, rpSolution);
           solved_dn = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalCost = true;
-          model->util_unscaleColCostValue(i, &changeColCost);
-          model->util_chgCostsSet(1, &i, &changeColCost);
+	  //          model->util_unscaleColCostValue(i, &changeColCost);
+          simplex_interface.change_costs_set(1, &i, &changeColCost);
           checkDataSolve(model, rpSolution);
           solved_dn = highs_model_object->simplex_info_.dualObjectiveValue;
         }
@@ -890,14 +893,14 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
         if (useTestModel) {
           HModel testModel = *model;
           check_data_clear_solver_lp_data(&testModel);
-          testModel.util_unscaleColCostValue(i, &changeColCost);
-          testModel.util_chgCostsSet(1, &i, &changeColCost);
+	  //          testModel.util_unscaleColCostValue(i, &changeColCost);
+          simplex_interface.change_costs_set(1, &i, &changeColCost);
           checkDataSolve(&testModel, rpSolution);
           solved_up = 0;// testModelObject.simplex_info_.dualObjectiveValue;
         } else {
 	  recoverOriginalCost = true;
-          model->util_unscaleColCostValue(i, &changeColCost);
-          model->util_chgCostsSet(1, &i, &changeColCost);
+	  //          model->util_unscaleColCostValue(i, &changeColCost);
+          simplex_interface.change_costs_set(1, &i, &changeColCost);
           checkDataSolve(model, rpSolution);
           solved_up = highs_model_object->simplex_info_.dualObjectiveValue;
         }
@@ -917,8 +920,8 @@ int HRanging::checkData(HighsModelObject &ref_highs_model_object) {
       //#endif
     }
     if (recoverOriginalCost) {
-      model->util_unscaleColCostValue(i, &svColCost);
-      model->util_chgCostsSet(1, &i, &svColCost);
+      //      model->util_unscaleColCostValue(i, &svColCost);
+      simplex_interface.change_costs_set(1, &i, &svColCost);
     }
     if (reportRangingDataCheck) {
       double maxRelativeError =

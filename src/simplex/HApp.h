@@ -210,7 +210,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
 
   //  printf("Returned from simplex_interface.util_extractRows with\n");
   //  simplex_interface.util_reportRowVec(numExtractRows, XrowLower, XrowUpper);
-  //  simplex_interface.util_reportRowMtx(numExtractRows, XARstart, XARindex, XARvalue);
+  //  report_row_matrix(numExtractRows, XARstart, XARindex, XARvalue);
 
   // Delete the rows just extracted
   simplex_interface.util_delete_rows(FmRow, ToRow);
@@ -277,7 +277,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   HDual dual_solver(highs_model_object);
   dual_solver.solve();
   //  reportLpSolution(highs_model_object);
-  model.util_reportSolverOutcome("SCIP 1");
+  simplex_interface.report_simplex_outcome("SCIP 1");
 
   vector<double> colPrimal(lp.numCol_);
   vector<double> colDual(lp.numCol_);
@@ -288,8 +288,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   vector<double> rowLower(lp.numRow_);
   vector<double> rowUpper(lp.numRow_);
   simplex_interface.get_primal_dual_values(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(highs_model_object.solver_lp_, 0, lp.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(highs_model_object.solver_lp_, 0, lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  simplex_interface.util_get_col_bounds(highs_model_object.solver_lp_, 0, lp.numCol_ - 1, &colLower[0], &colUpper[0]);
+  simplex_interface.util_get_row_bounds(highs_model_object.solver_lp_, 0, lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -320,16 +320,15 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
       else
         nw_colLower = og_colUpper;
       nw_colUpper = og_colUpper;
-      printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex,
-             nw_colLower, nw_colUpper);
-      model.util_chgColBoundsSet(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
+      printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex, nw_colLower, nw_colUpper);
+      simplex_interface.change_col_bounds_set(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
       printf("Calling scale_solver_lp(highs_model_object)\n");
       simplex_method_.scale_solver_lp(highs_model_object);
       dual_solver.solve();
-      model.util_reportSolverOutcome("SCIP 2");
+      simplex_interface.report_simplex_outcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
       // avgas
-      model.util_chgColBoundsSet(1, &colBoundIndex, &og_colLower, &og_colUpper);
+      simplex_interface.change_col_bounds_set(1, &colBoundIndex, &og_colLower, &og_colUpper);
       if (num_resolve >= 10) break;
     }
   }
@@ -446,9 +445,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // HighsSolution set values in highs_model_object.
   HighsSolution& solution = highs_model_object.solution_;
-  highs_model_object.hmodel_[0].util_getPrimalDualValues(
-      solution.colValue_, solution.colDual_, solution.rowValue_,
-      solution.rowDual_);
+  HighsSimplexInterface simplex_interface(highs_model_object);
+  simplex_interface.get_primal_dual_values(solution.colValue_,
+					   solution.colDual_,
+					   solution.rowValue_,
+					   solution.rowDual_);
   model.util_getBasicIndexNonbasicFlag(highs_model_object.basis_info_.basis_index,
                                        highs_model_object.basis_info_.nonbasic_flag);
 
