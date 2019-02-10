@@ -74,9 +74,11 @@ HighsStatus solveSimplex(
   HDual dual_solver(highs_model_object);
   dual_solver.options();
   
+  HSimplex simplex_method_;
+
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
-    model.initFromNonbasic();
+    simplex_method_.initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
     timer.start(timer.solve_clock);
     dual_solver.solve();
     timer.stop(timer.solve_clock);
@@ -169,17 +171,12 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   HModel model;
   const HighsLp &lp = highs_model_object.lp_;
 
-  model.load_fromArrays(lp.numCol_, lp.sense_, &lp.colCost_[0],
-                        &lp.colLower_[0], &lp.colUpper_[0], lp.numRow_,
-                        &lp.rowLower_[0], &lp.rowUpper_[0], lp.nnz_,
-                        &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
-
-
   HSimplex simplex_method_;
+  HighsSimplexInterface simplex_interface(highs_model_object);
 
   // Extract columns numCol-3..numCol-1
-  int FmCol = highs_model_object.lp_.numCol_ - 3;
-  int ToCol = highs_model_object.lp_.numCol_ - 1;
+  int FmCol = lp.numCol_ - 3;
+  int ToCol = lp.numCol_ - 1;
   int numExtractCols = ToCol - FmCol + 1;
   vector<double> XcolCost;
   vector<double> XcolLower;
@@ -187,41 +184,41 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   vector<int> XAstart;
   vector<int> XAindex;
   vector<double> XAvalue;
-  //  model.util_extractCols(FmCol, ToCol, XcolCost, XcolLower, XcolUpper,
+  //  simplex_interface.util_extractCols(FmCol, ToCol, XcolCost, XcolLower, XcolUpper,
   //			 XAstart, XAindex, XAvalue);
 
-  //  printf("Returned from model.util_extractCols with\n");
-  //  model.util_reportColVec(numExtractCols, XcolCost, XcolLower, XcolUpper);
-  //  model.util_reportColMtx(numExtractCols, XAstart, XAindex, XAvalue);
+  //  printf("Returned from simplex_interface.util_extractCols with\n");
+  //  simplex_interface.util_reportColVec(numExtractCols, XcolCost, XcolLower, XcolUpper);
+  //  simplex_interface.util_reportColMtx(numExtractCols, XAstart, XAindex, XAvalue);
 
   // Delete the columns just extracted
-  model.util_deleteCols(FmCol, ToCol);
-  //  model.util_reportModel();
+  simplex_interface.util_delete_cols(FmCol, ToCol);
+  //  simplex_interface.util_reportModel();
 
   // Extract rows numRow-3..numRow-1
-  int FmRow = highs_model_object.lp_.numRow_ - 3;
-  int ToRow = highs_model_object.lp_.numRow_ - 1;
+  int FmRow = lp.numRow_ - 3;
+  int ToRow = lp.numRow_ - 1;
   int numExtractRows = ToRow - FmRow + 1;
   vector<double> XrowLower;
   vector<double> XrowUpper;
   vector<int> XARstart;
   vector<int> XARindex;
   vector<double> XARvalue;
-  //  model.util_extractRows(FmRow, ToRow, &(*XrowLower.begin()),
+  //  simplex_interface.util_extract_rows(FmRow, ToRow, &(*XrowLower.begin()),
   //  &(*XrowUpper.begin()),
   // &(*XARstart.begin()), &(*XARindex.begin()), &(*XARvalue.begin()));
 
-  //  printf("Returned from model.util_extractRows with\n");
-  //  model.util_reportRowVec(numExtractRows, XrowLower, XrowUpper);
-  //  model.util_reportRowMtx(numExtractRows, XARstart, XARindex, XARvalue);
+  //  printf("Returned from simplex_interface.util_extractRows with\n");
+  //  simplex_interface.util_reportRowVec(numExtractRows, XrowLower, XrowUpper);
+  //  simplex_interface.util_reportRowMtx(numExtractRows, XARstart, XARindex, XARvalue);
 
   // Delete the rows just extracted
-  model.util_deleteRows(FmRow, ToRow);
-  //  model.util_reportModel();
+  simplex_interface.util_delete_rows(FmRow, ToRow);
+  //  simplex_interface.util_reportModel();
 
   // Extract all remaining rows
   FmRow = 0;
-  ToRow = highs_model_object.lp_.numRow_ - 1;
+  ToRow = lp.numRow_ - 1;
   int num0ExtractRows = ToRow - FmRow + 1;
   vector<double> X0rowLower;
   vector<double> X0rowUpper;
@@ -229,18 +226,18 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   vector<int> X0ARindex;
   vector<double> X0ARvalue;
 
-  // model.util_extractRows(FmRow, ToRow, &(*X0rowLower.begin()),
+  // simplex_interface.util_extract_rows(FmRow, ToRow, &(*X0rowLower.begin()),
   // &(*X0rowUpper.begin()),
   //			 &(*X0ARstart.begin()), &(*X0ARindex.begin()),
   //&(*X0ARvalue.begin()));
 
   // Delete the rows just extracted
-  model.util_deleteRows(FmRow, ToRow);
-  //  model.util_reportModel();
+  simplex_interface.util_delete_rows(FmRow, ToRow);
+  //  simplex_interface.util_reportModel();
 
   // Extract all remaining columns
   FmCol = 0;
-  ToCol = highs_model_object.lp_.numCol_ - 1;
+  ToCol = lp.numCol_ - 1;
   int num0ExtractCols = ToCol - FmCol + 1;
   vector<double> X0colCost;
   vector<double> X0colLower;
@@ -248,33 +245,33 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   vector<int> X0Astart;
   vector<int> X0Aindex;
   vector<double> X0Avalue;
-  //  model.util_extractCols(FmCol, ToCol, X0colCost, X0colLower, X0colUpper,
+  //  simplex_interface.util_extract_cols(FmCol, ToCol, X0colCost, X0colLower, X0colUpper,
   //			 X0Astart, X0Aindex, X0Avalue);
 
   // Delete the columns just extracted
-  model.util_deleteCols(FmCol, ToCol);
-  //  model.util_reportModel();
+  simplex_interface.util_delete_cols(FmCol, ToCol);
+  //  simplex_interface.util_reportModel();
 
   int nnonz = 0;
-  model.util_addCols(num0ExtractCols, &X0colCost[0], &X0colLower[0],
+  simplex_interface.util_add_cols(num0ExtractCols, &X0colCost[0], &X0colLower[0],
                      &X0colUpper[0], nnonz, &X0Astart[0], &X0Aindex[0],
                      &X0Avalue[0]);
-  //  model.util_reportModel();
+  //  simplex_interface.util_reportModel();
 
   nnonz = X0ARstart[num0ExtractRows];
-  model.util_addRows(num0ExtractRows, &X0rowLower[0], &X0rowUpper[0], nnonz,
+  simplex_interface.util_add_rows(num0ExtractRows, &X0rowLower[0], &X0rowUpper[0], nnonz,
                      &X0ARstart[0], &X0ARindex[0], &X0ARvalue[0]);
-  //  model.util_reportModel();
+  //  simplex_interface.util_reportModel();
 
   nnonz = XARstart[numExtractRows];
-  model.util_addRows(numExtractRows, &XrowLower[0], &XrowUpper[0], nnonz,
+  simplex_interface.util_add_rows(numExtractRows, &XrowLower[0], &XrowUpper[0], nnonz,
                      &XARstart[0], &XARindex[0], &XARvalue[0]);
-  //  model.util_reportModel();
+  //  simplex_interface.util_reportModel();
 
   nnonz = XAstart[numExtractCols];
-  model.util_addCols(numExtractCols, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+  simplex_interface.util_add_cols(numExtractCols, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
-  //  model.util_reportModel();
+  //  simplex_interface.util_reportModel();
 
   simplex_method_.scale_solver_lp(highs_model_object);
   HDual dual_solver(highs_model_object);
@@ -282,17 +279,17 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   //  reportLpSolution(highs_model_object);
   model.util_reportSolverOutcome("SCIP 1");
 
-  vector<double> colPrimal(highs_model_object.lp_.numCol_);
-  vector<double> colDual(highs_model_object.lp_.numCol_);
-  vector<double> colLower(highs_model_object.lp_.numCol_);
-  vector<double> colUpper(highs_model_object.lp_.numCol_);
-  vector<double> rowPrimal(highs_model_object.lp_.numRow_);
-  vector<double> rowDual(highs_model_object.lp_.numRow_);
-  vector<double> rowLower(highs_model_object.lp_.numRow_);
-  vector<double> rowUpper(highs_model_object.lp_.numRow_);
-  model.util_getPrimalDualValues(colPrimal, colDual, rowPrimal, rowDual);
-  model.util_getColBounds(highs_model_object.solver_lp_, 0, highs_model_object.lp_.numCol_ - 1, &colLower[0], &colUpper[0]);
-  model.util_getRowBounds(highs_model_object.solver_lp_, 0, highs_model_object.lp_.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  vector<double> colPrimal(lp.numCol_);
+  vector<double> colDual(lp.numCol_);
+  vector<double> colLower(lp.numCol_);
+  vector<double> colUpper(lp.numCol_);
+  vector<double> rowPrimal(lp.numRow_);
+  vector<double> rowDual(lp.numRow_);
+  vector<double> rowLower(lp.numRow_);
+  vector<double> rowUpper(lp.numRow_);
+  simplex_interface.get_primal_dual_values(colPrimal, colDual, rowPrimal, rowDual);
+  model.util_getColBounds(highs_model_object.solver_lp_, 0, lp.numCol_ - 1, &colLower[0], &colUpper[0]);
+  model.util_getRowBounds(highs_model_object.solver_lp_, 0, lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -301,7 +298,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   double nw_colUpper;
 
   int num_resolve = 0;
-  for (int col = 0; col < highs_model_object.lp_.numCol_; col++) {
+  for (int col = 0; col < lp.numCol_; col++) {
     //    model.util_getColBounds(model.solver_lp_, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
@@ -354,25 +351,33 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // HighsModelObject. This will then be passed to HDual.
   highs_model_object.hmodel_.push_back(HModel());
 
-  HModel& model = highs_model_object.hmodel_[0];
+  // Set up aliases
   const HighsLp &lp_ = highs_model_object.lp_;
+  HighsBasis &basis_ = highs_model_object.basis_;
+  HighsScale &scale_ = highs_model_object.scale_;
+  HighsLp &solver_lp_ = highs_model_object.solver_lp_;
+  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HMatrix &matrix_ = highs_model_object.matrix_;
+  HFactor &factor_ = highs_model_object.factor_;
+
+  HModel& model = highs_model_object.hmodel_[0];
 
   // Give model the HiGHS Model Object run clock for timeout purposes
   //  model.modelTotalClock = highs_model_object.modelTotalClock;
 
+
   // Set pointers within HModel
-  model.basis_ = &highs_model_object.basis_;
-  model.scale_ = &highs_model_object.scale_;
-  model.simplex_info_ = &highs_model_object.simplex_info_;
-  model.solver_lp_ = &highs_model_object.solver_lp_;
-  model.matrix_ = &highs_model_object.matrix_;
-  model.factor_ = &highs_model_object.factor_;
+  model.basis_ = &basis_;
+  model.scale_ = &scale_;
+  model.solver_lp_ = &solver_lp_;
+  model.simplex_info_ = &simplex_info_;
+  model.matrix_ = &matrix_;
+  model.factor_ = &factor_;
   model.timer_ = &highs_model_object.timer_;
   model.random_ = &highs_model_object.random_;
 
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
   // Copy the LP to the structure to be used by the solver
-  highs_model_object.solver_lp_ = highs_model_object.lp_;
+  solver_lp_ = lp_;
 
   // Set simplex options from HiGHS options
   HSimplex simplex_method_;
@@ -389,9 +394,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Allocate memory for the basis
   // assignBasis();
   const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
-  highs_model_object.basis_.basicIndex_.resize(highs_model_object.lp_.numRow_);
-  highs_model_object.basis_.nonbasicFlag_.assign(numTot, 0);
-  highs_model_object.basis_.nonbasicMove_.resize(numTot);
+  basis_.basicIndex_.resize(highs_model_object.lp_.numRow_);
+  basis_.nonbasicFlag_.assign(numTot, 0);
+  basis_.nonbasicMove_.resize(numTot);
   //
   // Possibly scale the LP to be used by the solver
   //
@@ -414,19 +419,18 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   simplex_method_.report_solver_lp_status_flags(highs_model_object);
 #endif
 
-  model.initWithLogicalBasis();
+  simplex_method_.initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();
 
-  HighsLp &solver_lp_ = highs_model_object.solver_lp_;
-  highs_model_object.matrix_.setup_lgBs(solver_lp_.numCol_, solver_lp_.numRow_,
-				  &solver_lp_.Astart_[0],
-				  &solver_lp_.Aindex_[0],
-				  &solver_lp_.Avalue_[0]);
-
-  highs_model_object.factor_.setup(solver_lp_.numCol_, solver_lp_.numRow_,
-			   &solver_lp_.Astart_[0],
-			   &solver_lp_.Aindex_[0],
-			   &solver_lp_.Avalue_[0],
-			   &highs_model_object.basis_.basicIndex_[0]);
+  matrix_.setup_lgBs(solver_lp_.numCol_, solver_lp_.numRow_,
+		     &solver_lp_.Astart_[0],
+		     &solver_lp_.Aindex_[0],
+		     &solver_lp_.Avalue_[0]);
+  
+  factor_.setup(solver_lp_.numCol_, solver_lp_.numRow_,
+		&solver_lp_.Astart_[0],
+		&solver_lp_.Aindex_[0],
+		&solver_lp_.Avalue_[0],
+		&basis_.basicIndex_[0]);
 
   // Set pointers within HModel for the matrix and factor data structure
   //  model.matrix_ = &highs_model_object.matrix_;
@@ -448,7 +452,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   model.util_getBasicIndexNonbasicFlag(highs_model_object.basis_info_.basis_index,
                                        highs_model_object.basis_info_.nonbasic_flag);
 
-  highs_model_object.basis_info_.nonbasic_move = model.basis_->nonbasicMove_;
+  highs_model_object.basis_info_.nonbasic_move = basis_.nonbasicMove_;
 
   return result;
 }

@@ -20,7 +20,7 @@
 #include "HighsTimer.h" //For timer_
 #include "HighsRandom.h"
 
-class HVector;
+//class HVector;
 
 #include <sstream>
 #include <string>
@@ -35,31 +35,12 @@ class HModel {
   // allocate and populate (where possible) work* arrays and
   // allocate basis* arrays
   int load_fromToy(const char* filename);
-  void load_fromArrays(int XnumCol, int XobjSense, const double* XcolCost,
-                       const double* XcolLower, const double* XcolUpper,
-                       int XnumRow, const double* XrowLower,
-                       const double* XrowUpper, int XnumNz, const int* XAstart,
-                       const int* XAindex, const double* XAvalue);
 
   // Methods which initialise the basis then allocate and populate
   // (where possible) work* arrays and allocate basis* arrays
-  void initWithLogicalBasis();
-  void extendWithLogicalBasis(int firstcol, int lastcol, int firstrow,
-                              int lastrow);
-
-  // Methods which replace the basis then populate (where possible)
-  // work* arrays and allocate basis* arrays
-  void replaceWithLogicalBasis();
-  void replaceWithNewBasis(const int* XbasicIndex);
-
-  bool nonbasicFlagBasicIndex_OK(int XnumCol, int XnumRow);
   void rp_basis();
   int get_nonbasicMove(int var);
-  void initFromNonbasic();
   void replaceFromNonbasic();
-  void initBasicIndex();
-
-  void allocate_WorkAndBaseArrays();
 
   // ???? Housekeeping done from here down ????
 #ifdef HiGHSDEV
@@ -67,12 +48,6 @@ class HModel {
   void changeUpdate(int updateMethod);
 #endif
 
-  // Checking methods
-#ifdef HiGHSDEV
-  // Method to check code to load a model from arrays of data
-  void check_load_fromArrays();
-  void check_load_fromPostsolve();
-#endif
   int writeToMPS(const char* filename);
   //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   // Esoterica!
@@ -125,22 +100,6 @@ class HModel {
   int util_getBasicIndices(int* bind);
 
   // Utilities to add, extract and delete columns and rows
-  void util_addCols(int ncols, const double* XcolCost, const double* XcolLower,
-                    const double* XcolUpper, int nnonz, const int* XAstart,
-                    const int* XAindex, const double* XAvalue);
-  void util_deleteCols(int firstcol, int lastcol);
-  void util_deleteColset(vector<int>& dstat);
-  void util_extractCols(int firstcol, int lastcol, double* XcolLower,
-                        double* XcolUpper, int* nnonz, int* XAstart,
-                        int* XAindex, double* XAvalue);
-  void util_addRows(int nrows, const double* XrowLower, const double* XrowUpper,
-                    int nnonz, const int* XARstart, const int* XARindex,
-                    const double* XARvalue);
-  void util_deleteRows(int firstrow, int lastrow);
-  void util_deleteRowset(int* dstat);
-  void util_extractRows(int firstrow, int lastrow, double* XrowLower,
-                        double* XrowUpper, int* nnonz, int* XARstart,
-                        int* XARindex, double* XARvalue);
   void util_changeCoeff(int row, int col, const double newval);
   void util_getCoeff(HighsLp lp, int row, int col, double* val);
 

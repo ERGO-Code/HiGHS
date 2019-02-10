@@ -973,7 +973,7 @@ void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
   if (Crash_Mode == Crash_Mode_Bs) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
-    model_->replaceWithLogicalBasis();
+    printf("Call replace_with_logical_basis()\n");
     highs_model_object.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
     simplex_info_.solver_lp_has_matrix_row_wise = true;
     simplex_info_.solver_lp_has_matrix_col_wise = true;

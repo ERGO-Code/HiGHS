@@ -25,13 +25,21 @@
 #include "HighsStatus.h"
 #include "Presolve.h"
 
+#include "HighsSimplexInterface.h"// For util_add_cols
+
 HModel HighsLpToHModel(const HighsLp &lp);
 HighsLp HModelToHighsLp(const HModel &model);
 
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
     // call Julian's methods in HighsModelObject
-    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
+
+    // Julian's guess as to how this can be done >>>>
+    HighsSimplexInterface simplex_interface(this->lps_[0]);
+    simplex_interface.util_add_cols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
+    // <<<<<
+
+    //    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
     return 0; //TODO
     
   } else {

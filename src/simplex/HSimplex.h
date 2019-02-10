@@ -20,6 +20,7 @@
 #include "HighsUtils.h"
 #include "HighsModelObject.h"
 #include "SimplexTimer.h"
+
 #include <cassert>
 #include <vector>
 #include <cstring> // For strcmp
@@ -934,7 +935,81 @@ class HSimplex {
     simplex_info_.solver_lp_is_tightened = true;
   }
 
-  void init_value_from_nonbasic(HighsModelObject &highs_model_object, int firstvar, int lastvar) {
+  void initialise_basic_index(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+
+    int num_basic_variables = 0;
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int var = 0; var < numTot; var++) {
+      if (!basis.nonbasicFlag_[var]) {
+	assert(num_basic_variables < solver_lp.numRow_);
+	basis.basicIndex_[num_basic_variables] = var;
+	num_basic_variables++;
+      }
+    }
+    assert(num_basic_variables = solver_lp.numRow_ - 1);
+  }
+
+  void allocate_work_and_base_arrays(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    // Allocate bounds and solution spaces
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    simplex_info.workCost_.resize(numTot);
+    simplex_info.workDual_.resize(numTot);
+    simplex_info.workShift_.resize(numTot);
+    
+    simplex_info.workLower_.resize(numTot);
+    simplex_info.workUpper_.resize(numTot);
+    simplex_info.workRange_.resize(numTot);
+    simplex_info.workValue_.resize(numTot);
+    
+    simplex_info.baseLower_.resize(solver_lp.numRow_);
+    simplex_info.baseUpper_.resize(solver_lp.numRow_);
+    simplex_info.baseValue_.resize(solver_lp.numRow_);
+  }
+
+  void initialise_from_nonbasic(HighsModelObject &highs_model_object) {
+    // Initialise basicIndex from nonbasic* then allocate and populate
+    // (where possible) work* arrays and allocate basis* arrays
+    initialise_basic_index(highs_model_object);
+    allocate_work_and_base_arrays(highs_model_object);
+    populate_work_arrays(highs_model_object);
+    
+    // Deduce the consequences of a new basis
+    update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+  }
+  
+  void replace_from_nonbasic(HighsModelObject &highs_model_object) {
+    // Initialise basicIndex using nonbasic* then populate (where possible)
+    // work* arrays
+    initialise_basic_index(highs_model_object);
+    populate_work_arrays(highs_model_object);
+    
+    // Deduce the consequences of a new basis
+    update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+  }
+  
+  void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    // Initialise with a logical basis then allocate and populate (where
+    // possible) work* arrays and allocate basis* arrays
+    
+    for (int row = 0; row < solver_lp.numRow_; row++) basis.basicIndex_[row] = solver_lp.numCol_ + row;
+    for (int col = 0; col < solver_lp.numCol_; col++) basis.nonbasicFlag_[col] = 1;
+    simplex_info.num_basic_logicals = solver_lp.numRow_;
+    
+    allocate_work_and_base_arrays(highs_model_object);
+    populate_work_arrays(highs_model_object);
+    
+    // Deduce the consequences of a new basis
+    update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+  }
+
+  void initialise_value_from_nonbasic(HighsModelObject &highs_model_object, int firstvar, int lastvar) {
     // Initialise workValue and nonbasicMove from nonbasicFlag and
     // bounds, except for boxed variables when nonbasicMove is used to
     // set workValue=workLower/workUpper
@@ -999,13 +1074,13 @@ class HSimplex {
     //  %g\n", norm_dl_pr_act);
   }
 
-  void init_value(HighsModelObject &highs_model_object) {
+  void initialise_value(HighsModelObject &highs_model_object) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
-    init_value_from_nonbasic(highs_model_object, 0, numTot - 1);
+    initialise_value_from_nonbasic(highs_model_object, 0, numTot - 1);
   }
 
-  void init_phase2_col_bound(HighsModelObject &highs_model_object, int firstcol, int lastcol) {
+  void initialise_phase2_col_bound(HighsModelObject &highs_model_object, int firstcol, int lastcol) {
     // Copy bounds and compute ranges
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -1018,7 +1093,7 @@ class HSimplex {
     }
   }
 
-  void init_phase2_row_bound(HighsModelObject &highs_model_object, int firstrow, int lastrow) {
+  void initialise_phase2_row_bound(HighsModelObject &highs_model_object, int firstrow, int lastrow) {
     // Copy bounds and compute ranges
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -1032,13 +1107,13 @@ class HSimplex {
     }
   }
 
-  void init_bound(HighsModelObject &highs_model_object, int phase = 2) {
+  void initialise_bound(HighsModelObject &highs_model_object, int phase = 2) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
     // Initialise the Phase 2 bounds (and ranges). NB Phase 2 bounds
     // necessary to compute Phase 1 bounds
-    init_phase2_col_bound(highs_model_object, 0, solver_lp.numCol_ - 1);
-    init_phase2_row_bound(highs_model_object, 0, solver_lp.numRow_ - 1);
+    initialise_phase2_col_bound(highs_model_object, 0, solver_lp.numCol_ - 1);
+    initialise_phase2_row_bound(highs_model_object, 0, solver_lp.numRow_ - 1);
     if (phase == 2) return;
 
     // In Phase 1: change to dual phase 1 bound
@@ -1061,7 +1136,7 @@ class HSimplex {
     }
   }
 
-  void init_phase2_col_cost(HighsModelObject &highs_model_object, int firstcol, int lastcol) {
+  void initialise_phase2_col_cost(HighsModelObject &highs_model_object, int firstcol, int lastcol) {
     // Copy the Phase 2 cost and zero the shift
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -1072,7 +1147,7 @@ class HSimplex {
     }
   }
   
-  void init_phase2_row_cost(HighsModelObject &highs_model_object, int firstrow, int lastrow) {
+  void initialise_phase2_row_cost(HighsModelObject &highs_model_object, int firstrow, int lastrow) {
     // Zero the cost and shift
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -1083,13 +1158,12 @@ class HSimplex {
     }
   }
 
-  void init_cost(HighsModelObject &highs_model_object, int perturb = 0) {
+  void initialise_cost(HighsModelObject &highs_model_object, int perturb = 0) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
-    HighsBasis &basis = highs_model_object.basis_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
     // Copy the cost
-    init_phase2_col_cost(highs_model_object, 0, solver_lp.numCol_ - 1);
-    init_phase2_row_cost(highs_model_object, 0, solver_lp.numRow_ - 1);
+    initialise_phase2_col_cost(highs_model_object, 0, solver_lp.numCol_ - 1);
+    initialise_phase2_row_cost(highs_model_object, 0, solver_lp.numRow_ - 1);
     // See if we want to skip perturbation
     simplex_info.costs_perturbed = 0;
     if (perturb == 0 || simplex_info.perturb_costs == 0) return;
@@ -1138,17 +1212,17 @@ class HSimplex {
 
   void populate_work_arrays(HighsModelObject &highs_model_object) {
     // Initialize the values
-    init_cost(highs_model_object);
-    init_bound(highs_model_object);
-    init_value(highs_model_object);
+    initialise_cost(highs_model_object);
+    initialise_bound(highs_model_object);
+    initialise_value(highs_model_object);
   }
 
   void replace_with_logical_basis(HighsModelObject &highs_model_object) {
-    // Replace basis with a logical basis then populate (where possible)
-    // work* arrays
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsBasis &basis = highs_model_object.basis_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    // Replace basis with a logical basis then populate (where possible)
+    // work* arrays
     for (int row = 0; row < solver_lp.numRow_; row++) {
       int var = solver_lp.numCol_ + row;
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
@@ -1166,6 +1240,209 @@ class HSimplex {
    
   }
 
+  void replace_with_new_basis(HighsModelObject &highs_model_object, const int *XbasicIndex) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    // Replace basis with a new basis then populate (where possible)
+    // work* arrays
+    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+    for (int var = 0; var < numTot; var++) {
+      basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+    }
+    simplex_info.num_basic_logicals = 0;
+    for (int row = 0; row < solver_lp.numRow_; row++) {
+      int var = XbasicIndex[row];
+      if (var >= solver_lp.numCol_) simplex_info.num_basic_logicals++;
+      basis.basicIndex_[row] = var;
+      basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+    }
+    
+    populate_work_arrays(highs_model_object);
+
+    // Deduce the consequences of a new basis
+    update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BASIS);
+  }
+
+  void extend_with_logical_basis(HighsModelObject &highs_model_object, 
+				 int firstcol, int lastcol, int firstrow, int lastrow) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  // Add nonbasic structurals and basic slacks according to model bounds.
+  //
+  // NB Assumes that the basis data structures and work vectors on
+  // entry are assigned for columns 0..firstcol-1 and rows
+  // 0..firstrow-1 and that they constitute a valid basis. Thus they
+  // correspond to "firstcol" number of columns and "firstrow" number
+  // of rows. Also assumes that solver_lp_->numCol_ and solver_lp_->numRow_ have already been
+  // updated to correspond to any additional columns and rows. This is
+  // necessary so that generic methods can be used to assign model
+  // data to arrays dimensioned 0..numTot
+  //
+  // Null intervals firstcol...lastcol and firstrow...lastrow are
+  // permitted, but this is achieved by setting the "last" to be less
+  // than "first" since the latter is used to indicate what's
+  // currently in the data structure.
+
+  assert(firstcol >= 0);
+  assert(firstrow >= 0);
+
+  // printf("Called extendWithLogicalBasis:\n   solver_lp.numCol_ =   %d\n   firstcol =
+  // %d\n   lastcol =  %d\n   solver_lp.numRow_ =   %d\n   firstrow = %d\n   lastrow =
+  // %d\n", solver_lp.numCol_, firstcol, lastcol, solver_lp.numRow_, firstrow, lastrow);
+  // Determine the numbers of columns and rows to be added
+
+  int numAddCol = max(lastcol - firstcol + 1, 0);
+  int numAddRow = max(lastrow - firstrow + 1, 0);
+  int numAddTot = numAddCol + numAddRow;
+  if (numAddTot == 0) return;
+
+  // Determine the numbers of columns and rows before and after this method
+
+  int local_oldNumCol = firstcol;
+  int local_oldNumRow = firstrow;
+  int local_oldNumTot = local_oldNumCol + local_oldNumRow;
+
+  int local_newNumCol = max(local_oldNumCol, lastcol + 1);
+  int local_newNumRow = max(local_oldNumRow, lastrow + 1);
+  int local_newNumTot = local_newNumCol + local_newNumRow;
+
+  const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
+#ifdef SCIPDEV
+  printf("extendWithLogicalBasis\n");
+  printf("solver_lp.numCol_/Row/Tot = %d/%d/%d\n", solver_lp.numCol_, solver_lp.numRow_, numTot);
+  printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol,
+         local_newNumRow, local_newNumTot);
+  cout << flush;
+#endif
+  // ToDo: Replace references to local_newNum* by references to num* from here
+  // on
+  assert(local_newNumCol == solver_lp.numCol_);
+  assert(local_newNumRow == solver_lp.numRow_);
+  assert(local_newNumTot == numTot);
+
+#ifdef HiGHSDEV
+  // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid
+  // basis.
+  bool basisOK = nonbasic_flag_basic_index_ok(highs_model_object, local_oldNumCol, local_oldNumRow);
+  if (!basisOK)
+    printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
+  assert(basisOK);
+#endif
+
+  //  Resize if necessary
+
+  if (solver_lp.numRow_ > local_oldNumRow) {
+    basis.basicIndex_.resize(solver_lp.numRow_);
+
+    simplex_info.baseLower_.resize(solver_lp.numRow_);
+    simplex_info.baseUpper_.resize(solver_lp.numRow_);
+    simplex_info.baseValue_.resize(solver_lp.numRow_);
+  }
+  if (numTot > local_oldNumTot) {
+    basis.nonbasicFlag_.resize(numTot);
+    basis.nonbasicMove_.resize(numTot);
+
+    simplex_info.workCost_.resize(numTot);
+    simplex_info.workDual_.resize(numTot);
+    simplex_info.workShift_.resize(numTot);
+
+    simplex_info.workLower_.resize(numTot);
+    simplex_info.workUpper_.resize(numTot);
+    simplex_info.workRange_.resize(numTot);
+    simplex_info.workValue_.resize(numTot);
+  }
+
+  // Shift the row data in basicIndex, nonbasicFlag and nonbasicMove if
+  // necessary
+
+  int rowShift = solver_lp.numCol_ - local_oldNumCol;
+  if (rowShift > 0) {
+    // printf("Shifting row data by %d using row=%d..0\n", rowShift,
+    // local_oldNumRow-1);cout << flush;
+    for (int row = local_oldNumRow - 1; row >= 0; row--) {
+      basis.basicIndex_[row] += rowShift;
+      basis.nonbasicFlag_[solver_lp.numCol_ + row] = basis.nonbasicFlag_[local_oldNumCol + row];
+      basis.nonbasicMove_[solver_lp.numCol_ + row] = basis.nonbasicMove_[local_oldNumCol + row];
+
+      simplex_info.workCost_[solver_lp.numCol_ + row] = simplex_info.workCost_[local_oldNumCol + row];
+      simplex_info.workDual_[solver_lp.numCol_ + row] = simplex_info.workDual_[local_oldNumCol + row];
+      simplex_info.workShift_[solver_lp.numCol_ + row] = simplex_info.workShift_[local_oldNumCol + row];
+
+      simplex_info.workLower_[solver_lp.numCol_ + row] = simplex_info.workLower_[local_oldNumCol + row];
+      simplex_info.workUpper_[solver_lp.numCol_ + row] = simplex_info.workUpper_[local_oldNumCol + row];
+      simplex_info.workRange_[solver_lp.numCol_ + row] = simplex_info.workRange_[local_oldNumCol + row];
+      simplex_info.workValue_[solver_lp.numCol_ + row] = simplex_info.workValue_[local_oldNumCol + row];
+
+      // printf("Setting basicIndex[%2d] = %2d; basis.nonbasicFlag_[%2d] = %2d;
+      // basis.nonbasicMove_[%2d] = %2d\n",
+      //      row, basicIndex[row],
+      //      solver_lp.numCol_+row, basis.nonbasicFlag_[local_oldNumCol+row],
+      //      solver_lp.numCol_+row, basis.nonbasicMove_[local_oldNumCol+row]);cout << flush;
+    }
+  }
+  // rp_basis();
+  // printf("After possibly shifting row data\n");
+  // Make any new columns nonbasic
+  //  printf("Make any new cols nonbasic: %d %d %d\n", solver_lp.numCol_, firstcol,
+  //  lastcol);
+  for (int col = firstcol; col <= lastcol; col++) {
+    int var = col;
+    //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_TRUE; Setting
+    //    basis.nonbasicMove_[%2d] = %2d\n", var, var, get_nonbasicMoveCol(var));
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+    //    printf("Calling get_nonbasicMoveCol(%2d)\n", var);
+    //    basis.nonbasicMove_[var] = get_nonbasicMoveCol(var);
+  }
+  // Make any new rows basic
+  //  printf("Make any new rows basic: %d %d %d\n", solver_lp.numRow_, firstrow, lastrow);
+  for (int row = firstrow; row <= lastrow; row++) {
+    int var = solver_lp.numCol_ + row;
+    //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_FALSE; Setting
+    //    basicIndex[%2d] = %2d\n", var, row, var);
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+    basis.basicIndex_[row] = var;
+  }
+
+  // Initialise costs for the new columns and rows
+  printf("init_Phase2_col_cost(firstcol, lastcol);\n");
+  printf("init_Phase2_row_cost(firstrow, lastrow);\n");
+
+  // Initialise bounds for the new columns and rows
+  printf("init_Phase2_col_bound(firstcol, lastcol);\n");
+  printf("init_Phase2_row_bound(firstrow, lastrow);\n");
+
+  // Initialise values (and nonbasicMove) for the new columns
+  printf("Call init_value_from_nonbasic(firstcol, lastcol);\n");
+
+#ifdef HiGHSDEV
+  // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid
+  // basis.
+  basisOK = nonbasic_flag_basic_index_ok(highs_model_object, solver_lp.numCol_, solver_lp.numRow_);
+  assert(basisOK);
+#endif
+
+  simplex_info.num_basic_logicals += numAddRow;
+
+  //  rp_basis();
+
+  // Deduce the consequences of adding new columns and/or rows
+  if (numAddCol) update_solver_lp_status_flags(highs_model_object, LpAction::NEW_COLS);
+  if (numAddRow) update_solver_lp_status_flags(highs_model_object, LpAction::NEW_ROWS);
+  }
+
+  void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
+    HighsLp &solver_lp = highs_model_object.solver_lp_;
+    HighsBasis &basis = highs_model_object.basis_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    simplex_info.num_basic_logicals = 0;
+    for (int i = 0; i < solver_lp.numRow_; i++)
+      if (basis.basicIndex_[i] >= solver_lp.numCol_)
+	simplex_info.num_basic_logicals += 1;
+    printf("Determined num_basic_logicals = %d of %d\n", simplex_info.num_basic_logicals, solver_lp.numRow_);
+  }
+
   void setup_for_solve(HighsModelObject &highs_model_object) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     int solver_num_row = solver_lp.numRow_;
@@ -1181,7 +1458,7 @@ class HSimplex {
     printf("In setup_for_solve: basis_valid = %d \n", basis_valid);
     if (basis_valid) {
     // Model has a basis so just count the number of basic logicals
-      printf("Needs to call new version of setup_num_basic_logicals(highs_mode_object);\n");
+      setup_num_basic_logicals(highs_model_object);
     } else {
       // Model has no basis: set up a logical basis then populate (where
       // possible) work* arrays
@@ -1229,12 +1506,12 @@ class HSimplex {
     assert(XnumRow >= 0);
     //  printf("Called nonbasic_flag_basic_index_ok(%d, %d)\n", XnumCol, XnumRow);
     int XnumTot = XnumCol + XnumRow;
-    int numBasic = 0;
+    int num_basic_variables = 0;
     if (XnumTot > 0) {
-      for (int var = 0; var < XnumTot; var++) if (!basis.nonbasicFlag_[var]) numBasic++;
+      for (int var = 0; var < XnumTot; var++) if (!basis.nonbasicFlag_[var]) num_basic_variables++;
     }
-    assert(numBasic == XnumRow);
-    if (numBasic != XnumRow) return false;
+    assert(num_basic_variables == XnumRow);
+    if (num_basic_variables != XnumRow) return false;
     if (XnumRow > 0) {
       for (int row = 0; row < XnumRow; row++) {
 	int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
@@ -2486,7 +2763,6 @@ class HSimplex {
     
   }
 #endif
-  
   
 };
 #endif // SIMPLEX_HSIMPLEX_H_

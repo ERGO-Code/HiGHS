@@ -66,7 +66,7 @@ void HDual::solve(int num_threads) {
   // be called if model dimension changes
   init(num_threads);
 
-  simplex_method_.init_cost(workHMO, 1); //  model->initCost(1);
+  simplex_method_.initialise_cost(workHMO, 1); //  model->initCost(1);
   if (!simplex_info.solver_lp_has_fresh_invert) {
     int rankDeficiency = simplex_method_.compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
 
@@ -520,8 +520,8 @@ void HDual::solve_phase1() {
   HSimplex simplex_method_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
-  simplex_method_.init_bound(workHMO, 1); //model->initBound(1);
-  simplex_method_.init_value(workHMO); //  model->initValue();
+  simplex_method_.initialise_bound(workHMO, 1); //model->initBound(1);
+  simplex_method_.initialise_value(workHMO); //  model->initValue();
   // Main solving structure
   timer.start(simplex_info.clock_[IterateClock]);
   for (;;) {
@@ -609,8 +609,8 @@ void HDual::solve_phase1() {
   }
 
   if (solvePhase == 2) {
-    simplex_method_.init_bound(workHMO);//    model->initBound();
-    simplex_method_.init_value(workHMO);//    model->initValue();
+    simplex_method_.initialise_bound(workHMO);//    model->initBound();
+    simplex_method_.initialise_value(workHMO);//    model->initValue();
   }
 }
 
@@ -845,8 +845,8 @@ void HDual::cleanup() {
   // Remove perturbation and recompute the dual solution
   HighsPrintMessage(ML_DETAILED, "dual-cleanup-shift\n");
   HSimplex simplex_method_;
-  simplex_method_.init_cost(workHMO);  //  model->initCost();
-  simplex_method_.init_bound(workHMO);  //  model->initBound();
+  simplex_method_.initialise_cost(workHMO);  //  model->initCost();
+  simplex_method_.initialise_bound(workHMO);  //  model->initBound();
   simplex_method_.compute_dual(workHMO);  //  model->computeDual();
   simplex_method_.compute_dual_objective_value(workHMO, solvePhase);
   //	model->util_reportNumberIterationObjectiveValue(-1);
