@@ -36,26 +36,6 @@ class HModel {
   // allocate basis* arrays
   int load_fromToy(const char* filename);
 
-  // Methods which initialise the basis then allocate and populate
-  // (where possible) work* arrays and allocate basis* arrays
-  void rp_basis();
-  void replaceFromNonbasic();
-
-  // ???? Housekeeping done from here down ????
-#ifdef HiGHSDEV
-  // Changes the update method, but only used in HTester.cpp
-  void changeUpdate(int updateMethod);
-#endif
-
-  int writeToMPS(const char* filename);
-  void util_getBasicIndexNonbasicFlag(
-				      vector<int> &XbasicIndex,
-				      vector<int> &XnonbasicFlag
-				      );
-#ifdef HiGHSDEV
-  void util_anMlLargeCo(HighsLp lp, const char* message);
-#endif
-
  public:
   
   // The scaled model

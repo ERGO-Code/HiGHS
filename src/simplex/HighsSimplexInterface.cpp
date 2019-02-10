@@ -13,6 +13,7 @@
  */
 #include "HighsSimplexInterface.h"
 #include "HighsIO.h"
+#include "HMPSIO.h"
 #include "HighsUtils.h"
 
 void HighsSimplexInterface::load_from_arrays(
@@ -165,6 +166,20 @@ void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
   for (int i = 0; i < solver_lp.numCol_; i++) XcolValue[i] = valuePtr[i];
   for (int i = 0; i < solver_lp.numRow_; i++) XrowDual[i] = solver_lp.sense_ * dual[i + solver_lp.numCol_];
   for (int i = 0; i < solver_lp.numCol_; i++) XcolDual[i] = solver_lp.sense_ * dual[i];
+}
+
+void HighsSimplexInterface::get_basicIndex_nonbasicFlag(
+							vector<int> &XbasicIndex,
+							vector<int> &XnonbasicFlag
+							) {
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  XbasicIndex.resize(solver_lp.numRow_);
+  XnonbasicFlag.resize(basis.nonbasicFlag_.size());
+  int basicIndexSz = basis.basicIndex_.size();
+  for (int i = 0; i < basicIndexSz; i++) XbasicIndex[i] = basis.basicIndex_[i];
+  int nonbasicFlagSz = basis.nonbasicFlag_.size();
+  for (int i = 0; i < nonbasicFlagSz; i++) XnonbasicFlag[i] = basis.nonbasicFlag_[i];
 }
 
 // Utility to get the indices of the basic variables for SCIP
@@ -1286,4 +1301,20 @@ int HighsSimplexInterface::change_row_bounds_set(
   // simplex.method_.update_solver_lp_status_flags(highs_model_object, LpAction::NEW_BOUNDS);
   return 0;
 }
+
+int HighsSimplexInterface::write_to_mps(const char *filename) {
+  HighsLp &lp = highs_model_object.lp_;
+
+  vector<int> integerColumn;
+  int numInt = 0;
+  int rtCd = writeMPS(filename, lp.numRow_, lp.numCol_, numInt, lp.sense_, lp.offset_, lp.Astart_,
+		      lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_, lp.colUpper_,
+		      lp.rowLower_, lp.rowUpper_, integerColumn);
+  return rtCd;
+}
+#ifdef HiGHSDEV
+void HighsSimplexInterface::change_update_method(int updateMethod) {
+  highs_model_object.factor_.change(updateMethod);
+}
+#endif
 

@@ -958,7 +958,7 @@ void HRanging::checkDataSolve(HModel* model, bool rp) {
   if (rp) {
     //    messageLevel = 7;// TODO Fix this
     const char* fileName = "OutMl.mps";
-    model->writeToMPS(fileName);
+    simplex_interface.write_to_mps(fileName);
   } else {
     //    messageLevel = 0;// TODO Fix this
   }

@@ -450,8 +450,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 					   solution.colDual_,
 					   solution.rowValue_,
 					   solution.rowDual_);
-  model.util_getBasicIndexNonbasicFlag(highs_model_object.basis_info_.basis_index,
-                                       highs_model_object.basis_info_.nonbasic_flag);
+  simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.basis_info_.basis_index,
+						highs_model_object.basis_info_.nonbasic_flag);
 
   highs_model_object.basis_info_.nonbasic_move = basis_.nonbasicMove_;
 

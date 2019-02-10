@@ -65,6 +65,11 @@ class HighsSimplexInterface {
 
   void get_nonbasicMove(vector<int> &XnonbasicMove);
 
+  void get_basicIndex_nonbasicFlag(
+				   vector<int> &XbasicIndex,
+				   vector<int> &XnonbasicFlag
+				   );
+
   // Utility to get the indices of the basic variables for SCIP
   int get_basic_indices(
 			int *bind
@@ -272,6 +277,15 @@ class HighsSimplexInterface {
 			    const double* XrowUpperValues
 			    );
   
+  int write_to_mps(
+		   const char* filename
+		   );
+#ifdef HiGHSDEV
+  // Changes the update method, but only used in HTester.cpp
+  void change_update_method(
+			    int updateMethod
+			    );
+#endif
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXINTERFACE_H_ */

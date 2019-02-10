@@ -240,6 +240,33 @@ class HSimplex {
     }
   }
 
+void report_basis(HighsModelObject &highs_model_object) {
+  HighsLp &solver_lp = highs_model_object.solver_lp_;
+  HighsBasis &basis = highs_model_object.basis_;
+  
+  printf("\nReporting current basis: solver_lp.numCol_ = %d; solver_lp.numRow_ = %d\n", solver_lp.numCol_,
+         solver_lp.numRow_);
+  if (solver_lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
+  for (int col = 0; col < solver_lp.numCol_; col++) {
+    int var = col;
+    if (basis.nonbasicFlag_[var])
+      printf("%6d %6d        %6d %6d\n", var, col, basis.nonbasicFlag_[var],
+             basis.nonbasicMove_[var]);
+    else
+      printf("%6d %6d %6d\n", var, col, basis.nonbasicFlag_[var]);
+  }
+  if (solver_lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
+  for (int row = 0; row < solver_lp.numRow_; row++) {
+    int var = solver_lp.numCol_ + row;
+    if (basis.nonbasicFlag_[var])
+      printf("%6d %6d %6d %6d %6d\n", var, row, basis.basicIndex_[row],
+             basis.nonbasicFlag_[var], basis.nonbasicMove_[var]);
+    else
+      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
+  }
+}
+
+
   void report_solver_lp_status_flags(
 				 HighsModelObject &highs_model_object
 				 ) {
@@ -1412,7 +1439,7 @@ class HSimplex {
       //      solver_lp.numCol_+row, basis.nonbasicMove_[local_oldNumCol+row]);cout << flush;
     }
   }
-  // rp_basis();
+  // report_basis(highs_model_object);
   // printf("After possibly shifting row data\n");
   // Make any new columns nonbasic
   //  printf("Make any new cols nonbasic: %d %d %d\n", solver_lp.numCol_, firstcol,
@@ -1455,7 +1482,7 @@ class HSimplex {
 
   simplex_info.num_basic_logicals += numAddRow;
 
-  //  rp_basis();
+  //  report_basis(highs_model_object);
 
   // Deduce the consequences of adding new columns and/or rows
   if (numAddCol) update_solver_lp_status_flags(highs_model_object, LpAction::NEW_COLS);
