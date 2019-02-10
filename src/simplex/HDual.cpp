@@ -44,7 +44,6 @@ void HDual::solve(int num_threads) {
   if (workHMO.solver_lp_.numRow_ == 0) return;
 
   HighsTimer &timer = workHMO.timer_;
-  model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
   invertHint = INVERT_HINT_NO;
 
   SimplexTimer simplex_timer;
