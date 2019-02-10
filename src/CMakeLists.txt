@@ -23,6 +23,7 @@ set(sources
     simplex/HDualRow.cpp
     simplex/HDualMulti.cpp
     simplex/HFactor.cpp
+    simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
     simplex/HModel.cpp
     simplex/HPrimal.cpp
@@ -62,6 +63,7 @@ set(headers
     simplex/HDualRow.h
     simplex/HDualRHS.h
     simplex/HFactor.h
+    simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
     simplex/HModel.h
     simplex/HPrimal.h

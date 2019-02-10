@@ -86,14 +86,14 @@ const double pami_cutoff = 0.95;
  */
 class HDual {
  public:
-  HDual(HighsModelObject& model_object) : workHMO(model_object),
-                                          dualRow(model_object),
-                                          dualRHS(model_object) {
-    dualRow.setup();
-    for (int i=0; i<HIGHS_SLICED_LIMIT; i++) slice_dualRow.push_back(HDualRow(model_object));
-    dualRHS.setup();
-  }
-
+ HDual(HighsModelObject& model_object) : workHMO(model_object),
+    dualRow(model_object),
+    dualRHS(model_object) {
+      dualRow.setup();
+      for (int i=0; i<HIGHS_SLICED_LIMIT; i++) slice_dualRow.push_back(HDualRow(model_object));
+      dualRHS.setup();
+    }
+  
   /**
    * @brief Solve a model instance with a given number of threads
    */

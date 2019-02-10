@@ -1753,7 +1753,7 @@ void HDual::updatePivots() {
   //
   // Update the sets of indices of basic and nonbasic variables
   simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
-  //  checkDualObjectiveValue("After  model->updatePivots");
+  //  checkDualObjectiveValue("After simplex_method_.update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
   // is defined
