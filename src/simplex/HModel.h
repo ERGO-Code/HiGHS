@@ -52,9 +52,6 @@ class HModel {
   void replaceWithLogicalBasis();
   void replaceWithNewBasis(const int* XbasicIndex);
 
-  // Method to clear the current model
-  void clearModel();
-
   void setup_for_solve();
   bool OKtoSolve(int level, int phase);
 
@@ -65,12 +62,6 @@ class HModel {
   void rp_basis();
   int get_nonbasicMove(int var);
   void setup_numBasicLogicals();
-  void mlFg_Clear();
-  void mlFg_Update(int mlFg_action);
-#ifdef HiGHSDEV
-  void mlFg_Report();
-#endif
-
   void initFromNonbasic();
   void replaceFromNonbasic();
   void initBasicIndex();
@@ -218,65 +209,6 @@ class HModel {
   void util_anMlLargeCo(HighsLp lp, const char* message);
   void util_analyseLpSolution();
 #endif
-
-  // Model and solver status flags
-  // First the actions---to be passed as parameters to update_mlFg
-  const int mlFg_action_TransposeLP = 0;
-  const int mlFg_action_ScaleLP = 1;
-  const int mlFg_action_ShuffleLP = 2;
-  const int mlFg_action_NewCosts = 3;
-  const int mlFg_action_NewBounds = 4;
-  const int mlFg_action_NewBasis = 5;
-  const int mlFg_action_NewCols = 6;
-  const int mlFg_action_NewRows = 7;
-  const int mlFg_action_DelCols = 8;
-  const int mlFg_action_DelRows = 9;
-  const int mlFg_action_DelRowsBasisOK = 10;
-
-  int mlFg_transposedLP;
-  int mlFg_scaledLP;
-  int mlFg_shuffledLP;
-  //
-  // Basis consists of basicIndex, nonbasicFlag and nonbasicMove. To
-  // have them means that they correspond to a consistent basis
-  // logically, but B is not necessarily nonsingular.
-  int mlFg_haveBasis;
-  //
-  // Properties of data held in HMatrix.h: MatrixColWise is the copy
-  // of the constraint matrix, NOT the model's constraint matrix. To
-  // "have" them means that they are correct.
-  int mlFg_haveMatrixColWise;
-  int mlFg_haveMatrixRowWise;
-  //
-  // Properties of data held in HFactor.h. To "have" them means that
-  // they are assigned.
-  int mlFg_haveFactorArrays;
-  //
-  // This refers to workEdWt, which is held in HDualRHS.h and is
-  // assigned and initialised to 1s in dualRHS.setup(model). To
-  // "have" the edge weights means that they are correct.
-  int mlFg_haveEdWt;
-  //
-  // The representation of B^{-1} corresponds to the current basis
-  int mlFg_haveInvert;
-  // The representation of B^{-1} corresponds to the current basis and is fresh
-  int mlFg_haveFreshInvert;
-  //
-  // The nonbasic dual and basic primal values are known
-  int mlFg_haveNonbasicDuals;
-  int mlFg_haveBasicPrimals;
-  //
-  // The dual objective function value is known
-  //  int mlFg_haveDualObjectiveValue;
-  //
-  // The data are fresh from rebuild
-  int mlFg_haveFreshRebuild;
-  //
-  // The ranging information is known
-  int mlFg_haveRangingData;
-  //
-  // Need to know of any saved bounds in the event of scaling being performed
-  int mlFg_haveSavedBounds;
 
  public:
   

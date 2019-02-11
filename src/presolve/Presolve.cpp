@@ -592,7 +592,7 @@ void Presolve::resizeProblem() {
   ss << "rows " << numRow << "(-" << numRowOriginal - numRow << "), ";
   ss << "columns " << numCol << "(-" << numColOriginal - numCol << "), ";
   ss << "nonzeros " << nz << "(-" << ARindex.size() - nz << ") " << std::endl;
-  HighsPrintMessage(7, ss.str().c_str()); 
+  HighsPrintMessage(ML_MINIMAL, ss.str().c_str()); 
 
   if (nR + nC == 0) {
     status = Empty;

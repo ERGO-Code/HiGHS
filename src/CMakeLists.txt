@@ -6,15 +6,17 @@ set(sources
     io/FilereaderEms.cpp
     io/FilereaderMps.cpp
     io/HighsIO.cpp
- #   io/HinOut.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
+    lp_data/Highs.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
-    lp_data/HighsModel.cpp
- #   simplex/HAPI.cpp
+    lp_data/HighsModelBuilder.cpp
+    lp_data/HighsStatus.cpp
+    lp_data/HighsOptions.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
+ #   simplex/HAPI.cpp
     simplex/HCrash.cpp
     simplex/HDual.cpp
     simplex/HDualRHS.cpp
@@ -25,13 +27,6 @@ set(sources
     simplex/HModel.cpp
     simplex/HPrimal.cpp
     simplex/HRanging.cpp
- #   io/HinOut.cpp
-    io/HMPSIO.cpp
-    io/HToyIO.cpp
-    io/Filereader.cpp
-    io/FilereaderLp.cpp
-    io/FilereaderMps.cpp
-    io/HighsIO.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -41,12 +36,10 @@ set(sources
 )
 
 set(headers
-    #HighsOptions.h  # not using at the moment.
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
     io/FilereaderMps.h
-#    io/HinOut.h
     io/HMpsFF.h
     io/HMPSIO.h
     io/HToyIO_C.h
@@ -58,6 +51,10 @@ set(headers
     lp_data/HighsLpUtils.h
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtil.h
+    lp_data/HighsOptions.h
+    lp_data/HighsRuntimeOptions.h
+    lp_data/HighsStatus.h
+    lp_data/HighsModelBuilder.h
     simplex/HApp.h
     simplex/HConst.h
     simplex/HCrash.h
@@ -80,6 +77,7 @@ set(headers
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
+    Highs.h
 )
 
 

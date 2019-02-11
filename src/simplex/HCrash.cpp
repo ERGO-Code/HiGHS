@@ -87,6 +87,8 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
 }
 
 void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
+  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+
   const int *Astart = &lp_->Astart_[0];
   const int *Aindex = &lp_->Aindex_[0];
   const double *Avalue = &lp_->Avalue_[0];
@@ -236,7 +238,7 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
     // Update the basic/nonbasic variable info and the row-wise copy
     // of the matrix
     model_->updatePivots(columnIn, rowOut, sourceOut);
-    if (model_->mlFg_haveMatrixRowWise) model_->updateMatrix(columnIn, columnOut);
+    if (simplex_info_.solver_lp_has_matrix_row_wise) model_->updateMatrix(columnIn, columnOut);
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -679,6 +681,7 @@ void HCrash::ltssf_iz_mode(int Crash_Mode) {
 
 void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
   // LTSSF Main loop
+  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
   bool ltssf_stop = false;
@@ -706,7 +709,7 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
       // Update the basic/nonbasic variable info and the row-wise copy
       // of the matrix
       model_->updatePivots(columnIn, rowOut, sourceOut);
-      if (model_->mlFg_haveMatrixRowWise)
+      if (simplex_info_.solver_lp_has_matrix_row_wise)
         model_->updateMatrix(columnIn, columnOut);
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
@@ -903,6 +906,7 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
 }
 
 void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
+  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
   printf("HCrash::ltssf_iz_da Crash_Mode = %d\n", Crash_Mode);
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
@@ -969,8 +973,9 @@ void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
     // been set, start from a logical basis
     model_->replaceWithLogicalBasis();
     highs_model_object.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
-    model_->mlFg_haveMatrixColWise = 1;
-    model_->mlFg_haveMatrixRowWise = 1;
+    simplex_info_.solver_lp_has_matrix_row_wise = true;
+    simplex_info_.solver_lp_has_matrix_col_wise = true;
+
   }
   mx_r_pri = crsh_mn_pri_v;
   for (int r_n = 0; r_n < numRow; r_n++) {
@@ -1261,6 +1266,7 @@ void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
 
 #ifdef HiGHSDEV
 void HCrash::tsSing(HighsModelObject &highs_model_object) {
+  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
@@ -1274,7 +1280,7 @@ void HCrash::tsSing(HighsModelObject &highs_model_object) {
     // Update the basic/nonbasic variable info and the row-wise copy of the
     // matrix
     model_->updatePivots(columnIn, rowOut, sourceOut);
-    if (model_->mlFg_haveMatrixRowWise) model_->updateMatrix(columnIn, columnOut);
+    if (simplex_info_.solver_lp_has_matrix_row_wise) model_->updateMatrix(columnIn, columnOut);
     nBcVr++;
     if (nBcVr == numRow) break;
   }

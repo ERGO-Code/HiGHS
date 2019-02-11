@@ -53,7 +53,7 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char *filename,
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
-                                                   HighsModel &model) {
+FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
+                                                   HighsModelBuilder& model) {
   return FilereaderRetcode::PARSERERROR;
 }

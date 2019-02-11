@@ -231,7 +231,7 @@ class LpTokenComparison : public LpToken {
 class FilereaderLp : public Filereader {
  public:
   FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
-  FilereaderRetcode readModelFromFile(const char* filename, HighsModel& model);
+  FilereaderRetcode readModelFromFile(const char* filename, HighsModelBuilder& model);
   FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
@@ -268,13 +268,13 @@ class FilereaderLp : public Filereader {
   bool readNextToken();
   void splitTokens();
 
-  void handleObjectiveSection(HighsModel& model);
-  void handleConstraintSection(HighsModel& model);
-  void handleBoundsSection(HighsModel& model);
-  void handleBinarySection(HighsModel& model);
-  void handleGeneralSection(HighsModel& model);
-  void handleSemiSection(HighsModel& model);
-  void handleSosSection(HighsModel& model);
+  void handleObjectiveSection(HighsModelBuilder& model);
+  void handleConstraintSection(HighsModelBuilder& model);
+  void handleBoundsSection(HighsModelBuilder& model);
+  void handleBinarySection(HighsModelBuilder& model);
+  void handleGeneralSection(HighsModelBuilder& model);
+  void handleSemiSection(HighsModelBuilder& model);
+  void handleSosSection(HighsModelBuilder& model);
 
   LP_FILEREADER_STATUS status;
 

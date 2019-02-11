@@ -13,6 +13,7 @@
  */
 #include "HMPSIO.h"
 #include "HConst.h"
+#include "HighsOptions.h"
 #include "HModelCs.h"
 #include "HighsUtils.h"
 #include "HighsLp.h"

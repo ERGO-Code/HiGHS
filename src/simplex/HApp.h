@@ -25,6 +25,7 @@
 #include "HCrash.h"
 #include "HDual.h"
 #include "HighsLp.h"
+#include "HighsStatus.h"
 #include "HighsModelObject.h"
 //#include "HighsModelObjectUtils.h"
 #include "HighsUtils.h"
@@ -405,6 +406,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     simplex_method_.tighten_solver_lp(highs_model);
   //
 
+#ifdef HIGHSDEV
+  simplex_method_.report_solver_lp_status_flags(highs_model);
+#endif
 
   model.initWithLogicalBasis();
 
