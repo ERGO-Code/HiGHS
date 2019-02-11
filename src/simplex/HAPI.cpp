@@ -13,11 +13,12 @@
  */
 #include "HAPI.h"
 #include "HighsLpUtils.h"
+#include "HighsSimplexInterface.h"
 
 #include <cstring>
 
 #include "HDual.h"
-#include "HModel.h"
+#include "HighsSimplexInterface.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
                             const int XnumCol, const int XnumRow,
@@ -70,8 +71,8 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                       const double *XAvalue, double *colPrimalValues,
                       double *colDualValues, double *rowPrimalValues,
                       double *rowDualValues, int *basicVariables) {
-  HModel model;
-  model.load_fromArrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
+  HighsSimplexInterface simplex_interface;
+  simplex_interface.load_from_arrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
                         XnumRow, XrowLower, XrowUpper, XnumNz, XAstart, XAindex,
                         XAvalue);
   //  scaleLp(highs_model);
@@ -95,9 +96,11 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   vector<double> XrowDualValues;
   vector<double> XbasicVariables;
 
-  model.util_getPrimalDualValues(XcolPrimalValues, XcolDualValues,
+  /*
+  HighsSimplexInterface simplex_interface(highs_model_object);
+  simplex_interface.get_primal_dual_values(XcolPrimalValues, XcolDualValues,
                                  XrowPrimalValues, XrowDualValues);
-
+  */
   memcpy(colPrimalValues, &(XcolPrimalValues[0]),
          sizeof(double) * model.lpScaled.numCol_);
   memcpy(rowPrimalValues, &(XrowPrimalValues[0]),
@@ -109,7 +112,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   memcpy(basicVariables, &(model.basis.basicIndex_[0]),
          sizeof(int) * model.lpScaled.numRow_);
   LcBasisStatus = HiGHS_basisStatus_yes;
-  model.util_reportSolverOutcome("Solve plain API");
+  //simplex_interface.report_simplex_outcome("Solve plain API");
 #ifdef HiGHSDEV
   model.util_reportModelDense(model.lpScaled);
 #endif

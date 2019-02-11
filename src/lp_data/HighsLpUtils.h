@@ -23,47 +23,83 @@ class HighsLp;
 HighsStatus checkLp(const HighsLp& lp);
 
 // Methods taking HighsLp as an argument
+
+
+
+// Get the costs for a contiguous set of columns
+void getLpCosts(
+		const HighsLp& lp,
+		int firstcol,
+		int lastcol,
+		double* XcolCost
+		);
+
+// Get the bounds for a contiguous set of columns
+void getLpColBounds(
+		    const HighsLp& lp,
+		    int firstcol,
+		    int lastcol,
+		    double* XcolLower,
+		    double* XcolUpper
+		    );
+
+// Get the bounds for a contiguous set of rows
+void getLpRowBounds(
+		    const HighsLp& lp,
+		    int firstrow,
+		    int lastrow,
+		    double* XrowLower,
+		    double* XrowUpper
+		    );
+
+void getLpMatrixCoefficient(
+			    const HighsLp& lp,
+			    int row,
+			    int col,
+			    double *val
+			    );
+
 /**
  * @brief Report the data of an LP
  */
 void reportLp(
-	      HighsLp &lp //!< LP whose data are to be reported
+	      const HighsLp &lp //!< LP whose data are to be reported
 	      );
 /**
  * @brief Report the brief data of an LP 
  */
 void reportLpBrief(
-		   HighsLp &lp //!< LP whose data are to be reported
+		   const HighsLp &lp //!< LP whose data are to be reported
 		   );
 /**
  * @brief Report the data of an LP
  */
 void reportLpDimensions(
-			HighsLp &lp //!< LP whose data are to be reported
+			const HighsLp &lp //!< LP whose data are to be reported
 			);
 /**
  * @brief Report the data of an LP
  */
 void reportLpObjSense(
-		      HighsLp &lp //!< LP whose data are to be reported
+		      const HighsLp &lp //!< LP whose data are to be reported
 		      );
 /**
  * @brief Report the data of an LP
  */
 void reportLpColVec(
-		    HighsLp &lp //!< LP whose data are to be reported
+		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 /**
  * @brief Report the data of an LP
  */
 void reportLpRowVec(
-		    HighsLp &lp //!< LP whose data are to be reported
+		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 /**
  * @brief Report the data of an LP
  */
 void reportLpColMtx(
-		    HighsLp &lp //!< LP whose data are to be reported
+		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 
 
@@ -74,7 +110,7 @@ void reportLpColMtx(
 */
 #ifdef HiGHSDEV
 // Analyse the values of a vector, assessing how many are in each power of ten
-void util_analyseModel(HighsLp &lp, const char* message);
+void util_analyseModel(const HighsLp &lp, const char* message);
 void util_analyseModelBounds(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
 #endif
 #endif // LP_DATA_HIGHSLPUTILS_H_
