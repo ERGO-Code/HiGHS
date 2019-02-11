@@ -484,7 +484,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
   std::string strline;
 
-  auto parsename = [this](std::string name, int &rowidx) {
+  auto parsename = [this](const std::string& name, int &rowidx) {
     auto mit = rowname2idx.find(name);
 
     assert(mit != rowname2idx.end());
@@ -570,116 +570,115 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
 }
 
 HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
-  /*
-using namespace boost::spirit;
-std::string strline;
+  std::string strline, word;
 
-while (getline(file, strline)) {
-std::string::iterator it;
-if (strline.size() == 0) continue;
+  while (getline(file, strline)) {
+    trim(strline);
+    if (strline.size() == 0)
+      continue;
 
-bool empty = true;
-for (unsigned int i = 0; i < strline.size(); i++)
-  if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-      strline.at(i) != '\n') {
-    empty = false;
-    break;
-  }
-if (empty) continue;
+    int begin, end;
+    std::string word;
+    HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
-boost::string_ref word_ref;
-HMpsFF::parsekey key = checkFirstWord(strline, it, word_ref);
+    // start of new section?
+    if (key != parsekey::NONE)
+      return key;
 
-// start of new section?
-if (key != parsekey::NONE) return key;
+    bool islb = false;
+    bool isub = false;
+    bool isintegral = false;
+    bool isdefaultbound = false;
 
-bool islb = false;
-bool isub = false;
-bool isintegral = false;
-bool isdefaultbound = false;
+    if (word == "UP") // lower bound
+      isub = true;
+    else if (word == "LO") // upper bound
+      islb = true;
+    else if (word == "FX") // fixed
+    {
+      islb = true;
+      isub = true;
+    } else if (word == "MI") // infinite lower bound
+    {
+      islb = true;
+      isdefaultbound = true;
+    } else if (word == "PL") // infinite upper bound (redundant)
+    {
+      isub = true;
+      isdefaultbound = true;
+    } else if (word == "BV") // binary
+    {
+      isintegral = true;
+      isdefaultbound = true;
+    } else if (word == "LI") // integer lower bound
+    {
+      islb = true;
+      isintegral = true;
+    } else if (word == "UI") // integer upper bound
+    {
+      isub = true;
+      isintegral = true;
+    } else if (word == "FR") // free variable
+    {
+      islb = true;
+      isub = true;
+      isdefaultbound = true;
+    } else {
+      std::cerr << "unknown bound type " << word << std::endl;
+      exit(1);
+    }
 
-if (word_ref == "UP")  // lower bound
-  isub = true;
-else if (word_ref == "LO")  // upper bound
-  islb = true;
-else if (word_ref == "FX")  // fixed
-{
-  islb = true;
-  isub = true;
-} else if (word_ref == "MI")  // infinite lower bound
-{
-  islb = true;
-  isdefaultbound = true;
-} else if (word_ref == "PL")  // infinite upper bound (redundant)
-{
-  isub = true;
-  isdefaultbound = true;
-} else if (word_ref == "BV")  // binary
-{
-  isintegral = true;
-  isdefaultbound = true;
-} else if (word_ref == "LI")  // integer lower bound
-{
-  islb = true;
-  isintegral = true;
-} else if (word_ref == "UI")  // integer upper bound
-{
-  isub = true;
-  isintegral = true;
-} else if (word_ref == "FR")  // free variable
-{
-  islb = true;
-  isub = true;
-  isdefaultbound = true;
-} else {
-  std::cerr << "unknown bound type " << word_ref << std::endl;
-  exit(1);
-}
+    int colidx;
+    auto parsename = [this](const std::string& name, int& colidx) {
+      auto mit = colname2idx.find(name);
+      assert(mit != colname2idx.end());
+      colidx = mit->second;
+      assert(colidx >= 0);
+    };
 
-// parse over next word
-qi::phrase_parse(it, strline.end(), qi::lexeme[+qi::graph], ascii::space);
+    std::string marker = first_word(strline, end);
+    int end_marker = first_word_end(strline, end);
+    parsename(marker, colidx);
 
-int colidx;
+    if (isdefaultbound) {
+      if (isintegral) // binary
+      {
+        if (islb)
+          colLower[colidx] = 0.0;
+        if (isub)
+          colUpper[colidx] = 1.0;
+        col_integrality[colidx] = true;
+      } else {
+        if (islb)
+          colLower[colidx] = -HIGHS_CONST_INF;
+        if (isub)
+          colUpper[colidx] = HIGHS_CONST_INF;
+      }
+      continue;
+    }
 
-auto parsename = [&colidx, this](std::string name) {
-  auto mit = colname2idx.find(name);
-  assert(mit != colname2idx.end());
-  colidx = mit->second;
-  assert(colidx >= 0);
-};
+    // here marker is the col name and end marks its end
+    word = "";
+    word = first_word(strline, end_marker);
+    end = first_word_end(strline, end_marker);
 
-if (isdefaultbound) {
-  if (!qi::phrase_parse(
-          it, strline.end(),
-          (qi::lexeme[qi::as_string[+qi::graph][(parsename)]]),
-          ascii::space))
+    if (word == "") {
+      HighsLogMessage(HighsMessageType::ERROR, "No bound given for row %s",
+                      marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
+
+    double value = std::stof(word);
+    if (islb)
+      colLower[colidx] = value;
+    if (isub)
+      colUpper[colidx] = value;
+    if (isintegral)
+      col_integrality[colidx] = true;
+
     return parsekey::FAIL;
-
-  if (isintegral)  // binary
-  {
-    if (islb) lb4cols[colidx] = 0.0;
-    if (isub) ub4cols[colidx] = 1.0;
-    col_integrality[colidx] = true;
-  } else {
-    if (islb) lb4cols[colidx] = -HSIGHS_CONST_INF();
-    if (isub) ub4cols[colidx] = HSIGHS_CONST_INF();
   }
-  continue;
-}
 
-if (!qi::phrase_parse(
-        it, strline.end(),
-        +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-          qi::double_[(
-              [&colidx, &islb, &isub, &isintegral, this](double val) {
-                if (islb) lb4cols[colidx] = val;
-                if (isub) ub4cols[colidx] = val;
-                if (isintegral) col_integrality[colidx] = true;
-              })]),
-        ascii::space))
-  return parsekey::FAIL;
-}
-*/
   return parsekey::FAIL;
 }
 
