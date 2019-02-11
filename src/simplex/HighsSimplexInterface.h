@@ -17,8 +17,9 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "HVector.h"
 #include "HighsModelObject.h"
-//#include "HSimplex.h"
+#include "HSimplex.h"
 
 //class HFactor;
 

@@ -36,11 +36,6 @@ public:
   HighsTimer& timer_;
 
   HighsLp solver_lp_;
-  // Introduce a separate data structure for the basis information of
-  // solver_lp_, in which case it would seem sensible to pair up the
-  // two LPs and bases as structures (lp_, basis_) and (solver_lp_,
-  // solver_basis_)
-  //  HighsBasis solver_basis_;
   HighsSimplexInfo simplex_info_;
   HighsRanging ranging_;
   HighsScale scale_;

@@ -554,7 +554,6 @@ void HighsSimplexInterface::util_delete_cols(
 #ifdef HiGHSDEV
   printf("Called model.util_deleteCols(firstcol=%d, lastcol=%d)\n", firstcol,
          lastcol);
-  cout << flush;
 #endif
   // Trivial cases are
   //
@@ -632,14 +631,13 @@ void HighsSimplexInterface::util_extract_cols(
 #ifdef HiGHSDEV
   printf("Called model.util_extractCols(firstcol=%d, lastcol=%d)\n", firstcol,
          lastcol);
-  cout << flush;
 #endif
   // Determine the number of columns to be extracted
   // int numExtractCols = lastcol-firstcol+1;
-  // printf("Extracting %d columns\n", numExtractCols);cout << flush;
+  // printf("Extracting %d columns\n", numExtractCols);
   int elOs = solver_lp.Astart_[firstcol];
   for (int col = firstcol; col <= lastcol; col++) {
-    //    printf("Extracting column %d\n", col);cout << flush;
+    //    printf("Extracting column %d\n", col);
     XcolLower[col - firstcol] = solver_lp.colLower_[col];
     XcolUpper[col - firstcol] = solver_lp.colUpper_[col];
     XAstart[col - firstcol] = solver_lp.Astart_[col] - elOs;
@@ -1020,10 +1018,9 @@ void HighsSimplexInterface::util_change_coefficient(int row, int col, const doub
 #ifdef HiGHSDEV
   printf("Called model.util_changeCoeff(row=%d, col=%d, newval=%g)\n", row, col,
          newval);
-  cout << flush;
 #endif
   //  printf("\n\nCalled model.util_changeCoeff(row=%d, col=%d, newval=%g)\n\n",
-  //  row, col, newval);cout << flush;
+  //  row, col, newval);
 
   //  solver_lp.reportLp();
   int cg_el = -1;
@@ -1111,19 +1108,18 @@ void HighsSimplexInterface::util_get_coefficient(HighsLp lp, int row, int col, d
   int get_el = -1;
   for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
     //  printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el,
-    //  lp.Aindex_[el], row);cout << flush;
+    //  lp.Aindex_[el], row);
     if (lp.Aindex_[el] == row) {
       get_el = el;
       break;
     }
   }
   if (get_el < 0) {
-    //  printf("model.util_getCoeff: Cannot find row %d in column %d\n", row,
-    //  col);cout << flush;
+    //  printf("model.util_getCoeff: Cannot find row %d in column %d\n", row, col);
     *val = 0;
   } else {
     //  printf("model.util_getCoeff: Found row %d in column %d as element %d:
-    //  value %g\n", row, col, get_el, lp.Avalue_[get_el]);cout << flush;
+    //  value %g\n", row, col, get_el, lp.Avalue_[get_el]);
     *val = lp.Avalue_[get_el];
   }
 }
