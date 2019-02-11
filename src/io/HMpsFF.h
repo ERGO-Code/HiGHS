@@ -642,7 +642,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       std::cerr << "unknown bound type " << word << std::endl;
       exit(1);
     }
-    
+
     // The first word is the bound name, which should be ignored.
     int end_bound_name = first_word_end(strline, end);
     std::string marker = first_word(strline, end_bound_name);
@@ -751,10 +751,30 @@ HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
     addrhs(value, rowidx);
 
     if (!is_end(strline, end)) {
-      HighsLogMessage(HighsMessageType::ERROR,
-                      "Unknown specifiers in RANGES section for row %s.\n",
-                      marker.c_str());
-      return HMpsFF::parsekey::FAIL;
+      string marker = first_word(strline, end);
+      int end_marker = first_word_end(strline, end);
+
+      // here marker is the row name and end marks its end
+      word = "";
+      word = first_word(strline, end_marker);
+      end = first_word_end(strline, end_marker);
+
+      if (word == "") {
+        HighsLogMessage(HighsMessageType::ERROR, "No range given for row %s",
+                        marker.c_str());
+        return HMpsFF::parsekey::FAIL;
+      }
+
+      parsename(marker, rowidx);
+      double value = atof(word.c_str());
+      addrhs(value, rowidx);
+
+      if (!is_end(strline, end)) {
+        HighsLogMessage(HighsMessageType::ERROR,
+                        "Unknown specifiers in RANGES section for row %s.\n",
+                        marker.c_str());
+        return HMpsFF::parsekey::FAIL;
+      }
     }
   }
 

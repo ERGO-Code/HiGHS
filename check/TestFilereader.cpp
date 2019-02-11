@@ -3,19 +3,22 @@
 #define GetCurrentDir getcwd
 
 #include "FilereaderEms.h"
-#include "HighsIO.h"
-#include "HMpsFF.h"
 #include "HMPSIO.h"
-#include "HighsLp.h"
+#include "HMpsFF.h"
 #include "Highs.h"
+#include "HighsIO.h"
+#include "HighsLp.h"
 #include "LoadProblem.h"
 #include "catch.hpp"
 
 std::string GetCurrentWorkingDir(void) {
   char buff[FILENAME_MAX];
-  GetCurrentDir(buff, FILENAME_MAX);
-  std::string current_working_dir(buff);
-  return current_working_dir;
+  auto result = GetCurrentDir(buff, FILENAME_MAX);
+  if (result) {
+    std::string current_working_dir(buff);
+    return current_working_dir;
+  }
+  return "";
 }
 
 TEST_CASE("free-format-parser", "[highs_filereader]") {
@@ -24,8 +27,8 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   std::cout << dir << std::endl;
 
   // For debugging use the latter.
-  std::string filename = dir + "/../../check/instances/adlittle.mps";
-  // std::string filename = dir + "/check/instances/adlittle.mps";
+  // std::string filename = dir + "/../../check/instances/agg.mps";
+   std::string filename = dir + "/check/instances/agg.mps";
 
   // Read mps.
   HighsLp lp_free_format, lp_fixed_format;
@@ -42,7 +45,7 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
                    lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
                    lp_fixed_format.rowUpper_, integerColumn,
                    lp_fixed_format.row_names_, lp_fixed_format.col_names_);
-  
+
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
 
   bool are_the_same = lp_free_format == lp_fixed_format;
