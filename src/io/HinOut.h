@@ -18,8 +18,6 @@
 
 #include "HPreData.h"
 
-class HModel;
-
 class HinOut : public HPreData {
  public:
   int AcountX;

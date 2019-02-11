@@ -25,7 +25,6 @@ set(sources
     simplex/HFactor.cpp
     simplex/HighsSimplexInterface.cpp
     simplex/HMatrix.cpp
-    simplex/HModel.cpp
     simplex/HPrimal.cpp
 #    simplex/HRanging.cpp
     simplex/HVector.cpp
@@ -65,7 +64,6 @@ set(headers
     simplex/HFactor.h
     simplex/HighsSimplexInterface.h
     simplex/HMatrix.h
-    simplex/HModel.h
     simplex/HPrimal.h
 #    simplex/HRanging.h
     simplex/HSimplex.h

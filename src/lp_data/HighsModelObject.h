@@ -13,7 +13,8 @@
 #include "HighsLp.h"
 #include "HighsTimer.h"
 #include "HighsRandom.h"
-#include "HModel.h"
+#include "HMatrix.h"
+#include "HFactor.h"
 // include Sensitivity(or Ranging) header
 
 struct BasisInfo {
@@ -46,9 +47,6 @@ public:
   bool reportModelOperationsClock = false;
 
   BasisInfo basis_info_;
-
-  // the vector below either contains one vector or zero.
-  std::vector<HModel> hmodel_;
 
 };
 

@@ -26,10 +26,6 @@
 #include "HighsStatus.h"
 #include "Presolve.h"
 
-
-//HModel HighsLpToHModel(const HighsLp &lp);
-//HighsLp HModelToHighsLp(const HModel &model);
-
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
     HighsSimplexInterface simplex_interface(this->lps_[0]);
@@ -231,7 +227,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 #else
   // IPX
   // todo:Check options for simplex-specific options
-  // use model.lp_, model.solution_ and model.hmodel_ remains empty.
+  // use model.lp_, model.solution_
   status = runIpxSolver(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 

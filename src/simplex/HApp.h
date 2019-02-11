@@ -65,8 +65,6 @@ HighsStatus solveSimplex(
 			 ) {
   // Just solves the LP in highs_model_object.scaled_lp_
   HighsTimer &timer = highs_model_object.timer_;
-
-  HModel& model = highs_model_object.hmodel_[0];
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
 
   bool ranging = true;
@@ -166,9 +164,6 @@ HighsStatus solveSimplex(
 HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_object) {
   printf("Called solveScip.\n");
 
-  // This happens locally for now because I am not sure how it is used. Later
-  // HModel will disappear and we'll see what the best way is.
-  HModel model;
   const HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
 
@@ -346,10 +341,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   HighsTimer &timer = highs_model_object.timer_;
 
-  // When runSimplexSolver is called initialize an instance of HModel inside the
-  // HighsModelObject. This will then be passed to HDual.
-  highs_model_object.hmodel_.push_back(HModel());
-
   // Set up aliases
   const HighsLp &lp_ = highs_model_object.lp_;
   HighsBasis &basis_ = highs_model_object.basis_;
@@ -358,16 +349,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
   HMatrix &matrix_ = highs_model_object.matrix_;
   HFactor &factor_ = highs_model_object.factor_;
-
-  HModel& model = highs_model_object.hmodel_[0];
-  model.basis_ = &basis_;
-  model.scale_ = &scale_;
-  model.solver_lp_ = &solver_lp_;
-  model.simplex_info_ = &simplex_info_;
-  model.matrix_ = &matrix_;
-  model.factor_ = &factor_;
-  model.timer_ = &highs_model_object.timer_;
-  model.random_ = &highs_model_object.random_;
 
   // Copy the LP to the structure to be used by the solver
   solver_lp_ = lp_;

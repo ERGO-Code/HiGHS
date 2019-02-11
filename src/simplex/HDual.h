@@ -465,7 +465,6 @@ class HDual {
 #endif
 
   // Model
-  HModel *model;
   HighsModelObject &workHMO;
   int solver_num_row;
   int solver_num_col;
