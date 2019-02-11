@@ -66,6 +66,13 @@ std::string &trim(std::string &str, const std::string &chars) {
   return ltrim(rtrim(str, chars), chars);
 }
 
+bool is_empty(char c, const std::string &chars) {
+  int pos = chars.find_first_of(c);
+  if (pos == -1 || pos == chars.size())
+    return false;
+  return true;
+}
+
 bool is_empty(std::string &str, const std::string &chars) {
   int pos = str.find_first_not_of(chars);
   if (pos == -1 || pos == str.size())

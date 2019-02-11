@@ -68,7 +68,6 @@ private:
 
   /// load LP from MPS file as transposed triplet matrix
   int parseFile(std::string filename);
-  int fillArrays();
   int fillMatrix();
 
   enum class parsekey {
@@ -228,9 +227,16 @@ int HMpsFF::parse(const std::string &filename) {
   return 0;
 }
 
+// Assuming string is not empty.
 HMpsFF::parsekey HMpsFF::checkFirstWord(std::string &strline, int &start,
                                         int &end, std::string &word) const {
   start = strline.find_first_not_of(" ");
+  if ((start == strline.size() - 1) || is_empty(strline[start + 1])) {
+    end = start + 1;
+    word = strline[start];
+    return HMpsFF::parsekey::NONE;
+  }
+
   end = first_word_end(strline, start + 1);
 
   word = strline.substr(start, end - start);
@@ -370,7 +376,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
     if (rowidx >= 0)
       entries.push_back(std::make_tuple(ncols - 1, rowidx, coeff));
     else
-      colCost.push_back(coeff);
+      coeffobj.push_back(std::make_pair(ncols - 1, coeff));
   };
 
   while (getline(file, strline)) {
@@ -451,7 +457,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       return HMpsFF::parsekey::FAIL;
     }
     parsename(marker); // rowidx set
-    double value = std::stof(word);
+    double value = atof(word.c_str());
     addtuple(value);
 
     if (!is_end(strline, end)) {
@@ -473,7 +479,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       assert(is_end(strline, end));
 
       parsename(marker); // rowidx set
-      double value = std::stof(word);
+      double value = atof(word.c_str());
       addtuple(value);
     }
   }
@@ -514,7 +520,8 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
     if (strline.size() == 0)
       continue;
 
-    int begin, end;
+    int begin = 0;
+    int end = 0;
     std::string word;
     HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
@@ -539,7 +546,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
     }
 
     parsename(marker, rowidx);
-    double value = std::stof(word);
+    double value = atof(word.c_str());
     addrhs(value, rowidx);
 
     if (!is_end(strline, end)) {
@@ -561,7 +568,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
       assert(is_end(strline, end));
 
       parsename(marker, rowidx);
-      double value = std::stof(word);
+      double value = atof(word.c_str());
       addrhs(value, rowidx);
     }
   }
@@ -584,7 +591,8 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
     if (strline.size() == 0)
       continue;
 
-    int begin, end;
+    int begin = 0;
+    int end = 0;
     std::string word;
     HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
@@ -669,7 +677,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       return HMpsFF::parsekey::FAIL;
     }
 
-    double value = std::stof(word);
+    double value = atof(word.c_str());
     if (islb)
       colLower[colidx] = value;
     if (isub)
@@ -739,7 +747,7 @@ HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
     }
 
     parsename(marker, rowidx);
-    double value = std::stof(word);
+    double value = atof(word.c_str());
     addrhs(value, rowidx);
 
     if (!is_end(strline, end)) {
