@@ -484,7 +484,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
   std::string strline;
 
-  auto parsename = [this](const std::string& name, int &rowidx) {
+  auto parsename = [this](const std::string &name, int &rowidx) {
     auto mit = rowname2idx.find(name);
 
     assert(mit != rowname2idx.end());
@@ -572,6 +572,13 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
 HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
   std::string strline, word;
 
+  auto parsename = [this](const std::string &name, int &colidx) {
+    auto mit = colname2idx.find(name);
+    assert(mit != colname2idx.end());
+    colidx = mit->second;
+    assert(colidx >= 0);
+  };
+
   while (getline(file, strline)) {
     trim(strline);
     if (strline.size() == 0)
@@ -628,16 +635,10 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       exit(1);
     }
 
-    int colidx;
-    auto parsename = [this](const std::string& name, int& colidx) {
-      auto mit = colname2idx.find(name);
-      assert(mit != colname2idx.end());
-      colidx = mit->second;
-      assert(colidx >= 0);
-    };
-
     std::string marker = first_word(strline, end);
     int end_marker = first_word_end(strline, end);
+
+    int colidx;
     parsename(marker, colidx);
 
     if (isdefaultbound) {
@@ -683,63 +684,72 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
 }
 
 HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
-  /*
-using namespace boost::spirit;
-std::string strline;
+  std::string strline, word;
 
-while (getline(file, strline)) {
-std::string::iterator it;
-if (strline.size() == 0) continue;
+  auto parsename = [this](const std::string &name, int &rowidx) {
+    auto mit = rowname2idx.find(name);
 
-bool empty = true;
-for (unsigned int i = 0; i < strline.size(); i++)
-  if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-      strline.at(i) != '\n') {
-    empty = false;
-    break;
+    assert(mit != rowname2idx.end());
+    rowidx = mit->second;
+
+    assert(rowidx >= 0);
+    assert(rowidx < numRow);
+  };
+
+  auto addrhs = [this](double val, int &rowidx) {
+    if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
+        row_type[rowidx] == boundtype::LE) {
+      assert(rowUpper.at(rowidx) < HIGHS_CONST_INF);
+      rowLower.at(rowidx) = rowUpper.at(rowidx) - abs(val);
+    }
+
+    else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
+             row_type[rowidx] == boundtype::GE) {
+      assert(rowLower.at(rowidx) > (-HIGHS_CONST_INF));
+      rowUpper.at(rowidx) = rowLower.at(rowidx) + abs(val);
+    }
+  };
+
+  while (getline(file, strline)) {
+    trim(strline);
+    if (strline.size() == 0)
+      continue;
+
+    int begin, end;
+    std::string word;
+    HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
+
+    if (key != parsekey::NONE)
+      return key;
+
+    int rowidx;
+
+    std::string marker = first_word(strline, end);
+    int end_marker = first_word_end(strline, end);
+
+    // here marker is the row name and end marks its end
+    word = "";
+    word = first_word(strline, end_marker);
+    end = first_word_end(strline, end_marker);
+
+    if (word == "") {
+      HighsLogMessage(HighsMessageType::ERROR, "No range given for row %s",
+                      marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
+
+    parsename(marker, rowidx);
+    double value = std::stof(word);
+    addrhs(value, rowidx);
+
+    if (!is_end(strline, end)) {
+      HighsLogMessage(HighsMessageType::ERROR,
+                      "Unknown specifiers in RANGES section for row %s.\n",
+                      marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
   }
-if (empty) continue;
 
-boost::string_ref word_ref;
-HMpsFF::parsekey key = checkFirstWord(strline, it, word_ref);
-
-// start of new section?
-if (key != parsekey::NONE) return key;
-
-int rowidx;
-
-auto parsename = [&rowidx, this](std::string name) {
-  auto mit = rowname2idx.find(name);
-
-  assert(mit != rowname2idx.end());
-  rowidx = mit->second;
-
-  assert(rowidx >= 0);
-  assert(rowidx < nRows);
-};
-
-auto addrhs = [&rowidx, this](double val) {
-  if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
-      row_type[rowidx] == boundtype::LE) {
-    assert(rowUpper.at(rowidx) < HSIGHS_CONST_INF());
-    rowLower.at(rowidx) = rowUpper.at(rowidx) - abs(val);
-  }
-
-  else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
-           row_type[rowidx] == boundtype::GE) {
-    assert(rowLower.at(rowidx) > (-HSIGHS_CONST_INF()));
-    rowUpper.at(rowidx) = rowLower.at(rowidx) + abs(val);
-  }
-};
-
-if (!qi::phrase_parse(
-        it, strline.end(),
-        +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-          qi::double_[(addrhs)]),
-        ascii::space))
-  return parsekey::FAIL;
-}
-*/
   return HMpsFF::parsekey::FAIL;
 }
 
