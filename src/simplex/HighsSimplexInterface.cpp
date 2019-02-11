@@ -493,12 +493,12 @@ void HighsSimplexInterface::util_add_cols(
     solver_lp.colLower_[solver_lp.numCol_ + col] = colLower[col];
     solver_lp.colUpper_[solver_lp.numCol_ + col] = XcolUpper[col];
     scale.col_[solver_lp.numCol_ + col] = 1.0;
-    //    printf("In HModel::util_addCols: column %d: setting
+    //    printf("In util_add_cols: column %d: setting
     //    solver_lp.Astart_[solver_lp.numCol_+col+1] = %d \n", col, solver_lp.Astart_[solver_lp.numCol_]);
     solver_lp.Astart_[solver_lp.numCol_ + col + 1] = solver_lp.Astart_[solver_lp.numCol_];
   }
 
-  //  printf("In HModel::util_addCols: nnonz = %d; cuNnonz = %d\n", nnonz,
+  //  printf("In util_add_cols: nnonz = %d; cuNnonz = %d\n", nnonz,
   //  solver_lp.Astart_[solver_lp.numCol_]); 
   if (nnonz > 0) {
     // Determine the current number of nonzeros
@@ -513,12 +513,12 @@ void HighsSimplexInterface::util_add_cols(
 
     // Add the new columns
     for (int col = 0; col < ncols; col++) {
-      //      printf("In HModel::util_addCols: column %d: setting
+      //      printf("In util_add_cols: column %d: setting
       //      solver_lp.Astart_[solver_lp.numCol_+col] = %d = %d + %d\n",
       //             col, XAstart[col] + cuNnonz, XAstart[col], cuNnonz); 
       solver_lp.Astart_[solver_lp.numCol_ + col] = XAstart[col] + cuNnonz;
     }
-    //    printf("In HModel::util_addCols: setting solver_lp.Astart_[solver_lp.numCol_+ncols] = %d\n",
+    //    printf("In util_add_cols: setting solver_lp.Astart_[solver_lp.numCol_+ncols] = %d\n",
     //    nwNnonz);
     solver_lp.Astart_[solver_lp.numCol_ + ncols] = nwNnonz;
 
@@ -534,7 +534,7 @@ void HighsSimplexInterface::util_add_cols(
   solver_lp.numCol_ += ncols;
   //  numTot += ncols;
 
-  //  printf("In HModel::util_addCols: Model now has solver_lp.Astart_[%d] = %d
+  //  printf("In util_add_cols: Model now has solver_lp.Astart_[%d] = %d
   //  nonzeros\n", solver_lp.numCol_, solver_lp.Astart_[solver_lp.numCol_]);
 
   // Update the basis and work vectors correponding to new nonbasic columns

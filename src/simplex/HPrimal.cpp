@@ -12,7 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HPrimal.h"
-#include "HModel.h"
 #include "HConst.h"
 #include "HighsIO.h"
 #include "HSimplex.h"
@@ -25,7 +24,6 @@
 using std::runtime_error;
 
 void HPrimal::solvePhase2() {
-  model = &workHMO.hmodel_[0]; // Pointer to model within workHMO: defined in HDual.h
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
   solver_num_col = workHMO.solver_lp_.numCol_;
@@ -134,14 +132,14 @@ void HPrimal::primalRebuild() {
     }
   }
   if (reInvert) {
-    int rankDeficiency = simplex_method_.compute_factor(workHMO);    //    int rankDeficiency = model->computeFactor();
+    int rankDeficiency = simplex_method_.compute_factor(workHMO);
     if (rankDeficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");
     }
     simplex_info.update_count = 0;
   }
-  simplex_method_.compute_dual(workHMO);//model->computeDual();
-  simplex_method_.compute_primal(workHMO);//model->computePrimal();
+  simplex_method_.compute_dual(workHMO);
+  simplex_method_.compute_primal(workHMO);
   simplex_method_.compute_dual_objective_value(workHMO);
   simplex_method_.report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
 
@@ -313,7 +311,7 @@ void HPrimal::primalUpdate() {
 
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
-  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
+  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);
 
   baseValue[rowOut] = valueIn;
 
@@ -353,14 +351,10 @@ void HPrimal::primalUpdate() {
   workDual[columnOut] = -thetaDual;
 
   // Update workHMO.factor_ basis
-  simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);// model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
-  simplex_method_.update_matrix(workHMO, columnIn, columnOut); // model->updateMatrix(columnIn, columnOut);
-  // Used to be ++countUpdate because, previously HModel::countUpdate
-  // was updated in updatePivots, leaving HPrimal::countUpdate
-  // unchanged. Now everything based on simplex_info.update_count, the
-  // increment here is wrong.
+  simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
+  simplex_method_.update_matrix(workHMO, columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit) {
-    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;  // Was true;
+    invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);

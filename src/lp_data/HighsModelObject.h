@@ -37,7 +37,7 @@ public:
 
   HighsLp solver_lp_;
   HighsSimplexInfo simplex_info_;
-  HighsRanging ranging_;
+  //  HighsRanging ranging_;
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;

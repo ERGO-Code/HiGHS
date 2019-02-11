@@ -19,8 +19,6 @@
 #include "HVector.h"
 #include "HSimplex.h"
 
-//class HModel;
-
 /**
  * @brief Phase 2 primal simplex solver for HiGHS
  *
@@ -44,7 +42,6 @@ class HPrimal {
   void primalUpdate();
 
   // Model pointer
-  HModel *model;
   HighsModelObject &workHMO;
   HSimplex simplex_method_;
   

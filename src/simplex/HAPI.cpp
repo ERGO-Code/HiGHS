@@ -18,7 +18,7 @@
 #include <cstring>
 
 #include "HDual.h"
-#include "HModel.h"
+#include "HighsSimplexInterface.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
                             const int XnumCol, const int XnumRow,
@@ -71,8 +71,8 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                       const double *XAvalue, double *colPrimalValues,
                       double *colDualValues, double *rowPrimalValues,
                       double *rowDualValues, int *basicVariables) {
-  HModel model;
-  model.load_fromArrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
+  HighsSimplexInterface simplex_interface;
+  simplex_interface.load_from_arrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
                         XnumRow, XrowLower, XrowUpper, XnumNz, XAstart, XAindex,
                         XAvalue);
   //  scaleLp(highs_model);

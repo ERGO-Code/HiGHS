@@ -1384,7 +1384,7 @@ void report_basis(HighsModelObject &highs_model_object) {
   // basis.
   bool basisOK = nonbasic_flag_basic_index_ok(highs_model_object, local_oldNumCol, local_oldNumRow);
   if (!basisOK)
-    printf("HModel::extendWithLogicalBasis: basisOK = %d\n", basisOK);
+    printf("extend_with_logical_basis: basisOK = %d\n", basisOK);
   assert(basisOK);
 #endif
 
@@ -2282,7 +2282,7 @@ void report_basis(HighsModelObject &highs_model_object) {
     double vrDual = simplex_info.workDual_[columnOut];
     double dlDualObjectiveValue = nwValue*vrDual;
     //  if (abs(nwValue))
-    //    printf("HModel::updatePivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
+    //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g], nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
     //			   columnOut, basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb, nwValue, vrDual, dlDualObjectiveValue);
     simplex_info.updatedDualObjectiveValue += dlDualObjectiveValue;
     simplex_info.update_count++;

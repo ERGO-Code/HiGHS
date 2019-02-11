@@ -13,10 +13,9 @@
  */
 #include "HCrash.h"
 #include "HMatrix.h"
-#include "HModel.h"
 #include "HighsSort.h"
 #include "HConst.h"
-//#include "HSimplex.h"
+#include "HSimplex.h"
 
 #include <cassert>
 #include <set>
@@ -34,7 +33,6 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
   lp_ = &highs_model_object.solver_lp_;
   basis_ = &highs_model_object.basis_;
   matrix_ = &highs_model_object.matrix_;
-  model_ = &highs_model_object.hmodel_[0];
   if (lp_->numRow_ == 0) return;
   numRow = lp_->numRow_;
   numCol = lp_->numCol_;

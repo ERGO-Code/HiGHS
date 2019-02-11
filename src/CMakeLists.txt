@@ -27,7 +27,7 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HModel.cpp
     simplex/HPrimal.cpp
-    simplex/HRanging.cpp
+#    simplex/HRanging.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -67,7 +67,7 @@ set(headers
     simplex/HMatrix.h
     simplex/HModel.h
     simplex/HPrimal.h
-    simplex/HRanging.h
+#    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/SimplexConst.h
     presolve/Presolve.h
