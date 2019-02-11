@@ -642,9 +642,11 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       std::cerr << "unknown bound type " << word << std::endl;
       exit(1);
     }
-
-    std::string marker = first_word(strline, end);
-    int end_marker = first_word_end(strline, end);
+    
+    // The first word is the bound name, which should be ignored.
+    int end_bound_name = first_word_end(strline, end);
+    std::string marker = first_word(strline, end_bound_name);
+    int end_marker = first_word_end(strline, end_bound_name);
 
     int colidx;
     parsename(marker, colidx);
@@ -684,8 +686,6 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       colUpper[colidx] = value;
     if (isintegral)
       col_integrality[colidx] = true;
-
-    return parsekey::FAIL;
   }
 
   return parsekey::FAIL;
