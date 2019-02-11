@@ -22,24 +22,18 @@
 #include "HighsLp.h"
 #include "HighsLpUtils.h"
 #include "HighsModelObject.h"
+#include "HighsSimplexInterface.h"
 #include "HighsStatus.h"
 #include "Presolve.h"
 
-#include "HighsSimplexInterface.h"// For util_add_cols
 
-HModel HighsLpToHModel(const HighsLp &lp);
-HighsLp HModelToHighsLp(const HModel &model);
+//HModel HighsLpToHModel(const HighsLp &lp);
+//HighsLp HModelToHighsLp(const HModel &model);
 
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
-    // call Julian's methods in HighsModelObject
-
-    // Julian's guess as to how this can be done >>>>
     HighsSimplexInterface simplex_interface(this->lps_[0]);
     simplex_interface.util_add_cols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
-    // <<<<<
-
-    //    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
     return 0; //TODO
     
   } else {
@@ -154,13 +148,11 @@ HighsStatus Highs::run(HighsLp& lp) {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
         simplex_interface.report_simplex_outcome("Run");
-	//lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
       }
     }
   } else {
     // Report in old way so tests pass.
     simplex_interface.report_simplex_outcome("Run");
-    //lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
   }
 
   if (lps_[0].reportModelOperationsClock) {

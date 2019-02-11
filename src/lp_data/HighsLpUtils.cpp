@@ -18,10 +18,78 @@
 #include "HighsUtils.h"
 #include "HighsStatus.h"
 
+void getLpCosts(
+					   const HighsLp& lp,
+					   int firstcol,
+					   int lastcol,
+					   double* XcolCost
+					   ) {
+  assert(0 <= firstcol);
+  assert(firstcol <= lastcol);
+  assert(lastcol < lp.numCol_);
+  for (int col = firstcol; col <= lastcol; ++col) XcolCost[col - firstcol] = lp.colCost_[col];
+}
+
+void getLpColBounds(const HighsLp& lp,
+						int firstcol,
+						int lastcol,
+						double* XcolLower,
+						double* XcolUpper) {
+  assert(0 <= firstcol);
+  assert(firstcol <= lastcol);
+  assert(lastcol < lp.numCol_);
+  for (int col = firstcol; col <= lastcol; ++col) {
+    if (XcolLower != NULL) XcolLower[col - firstcol] = lp.colLower_[col];
+    if (XcolUpper != NULL) XcolUpper[col - firstcol] = lp.colUpper_[col];
+  }
+}
+
+void getLpRowBounds(const HighsLp& lp,
+						int firstrow,
+						int lastrow,
+						double* XrowLower,
+						double* XrowUpper) {
+  assert(0 <= firstrow);
+  assert(firstrow <= lastrow);
+  assert(lastrow < lp.numRow_);
+  for (int row = firstrow; row <= lastrow; ++row) {
+    if (XrowLower != NULL) XrowLower[row - firstrow] = lp.rowLower_[row];
+    if (XrowUpper != NULL) XrowUpper[row - firstrow] = lp.rowUpper_[row];
+  }
+}
+
+// Get a single coefficient from the matrix
+void getLpMatrixCoefficient(const HighsLp& lp, int row, int col, double *val) {
+  assert(row >= 0 && row < lp.numRow_);
+  assert(col >= 0 && col < lp.numCol_);
+#ifdef HiGHSDEV
+  printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);
+#endif
+  //  printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);
+
+  int get_el = -1;
+  for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
+    //  printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el,
+    //  lp.Aindex_[el], row);
+    if (lp.Aindex_[el] == row) {
+      get_el = el;
+      break;
+    }
+  }
+  if (get_el < 0) {
+    //  printf("model.util_getCoeff: Cannot find row %d in column %d\n", row, col);
+    *val = 0;
+  } else {
+    //  printf("model.util_getCoeff: Found row %d in column %d as element %d:
+    //  value %g\n", row, col, get_el, lp.Avalue_[get_el]);
+    *val = lp.Avalue_[get_el];
+  }
+}
+
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
-void reportLp(HighsLp &lp) {
+void reportLp(const HighsLp &lp) {
   reportLpBrief(lp);
   reportLpColVec(lp);
   reportLpRowVec(lp);
@@ -29,20 +97,20 @@ void reportLp(HighsLp &lp) {
 }
 
 // Report the LP briefly
-void reportLpBrief(HighsLp &lp) {
+void reportLpBrief(const HighsLp &lp) {
   reportLpDimensions(lp);
   reportLpObjSense(lp);
 }
 
 // Report the LP dimensions
-void reportLpDimensions(HighsLp &lp) {
+void reportLpDimensions(const HighsLp &lp) {
   HighsPrintMessage(ML_MINIMAL,
                     "LP has %d columns, %d rows and %d nonzeros\n",
                     lp.numCol_, lp.numRow_, lp.Astart_[lp.numCol_]);
 }
 
 // Report the LP objective sense
-void reportLpObjSense(HighsLp &lp) {
+void reportLpObjSense(const HighsLp &lp) {
   if (lp.sense_ == OBJSENSE_MINIMIZE)
     HighsPrintMessage(ML_MINIMAL, "Objective sense is minimize\n");
   else if (lp.sense_ == OBJSENSE_MAXIMIZE)
@@ -53,7 +121,7 @@ void reportLpObjSense(HighsLp &lp) {
 }
 
 // Report the vectors of LP column data
-void reportLpColVec(HighsLp &lp) {
+void reportLpColVec(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
                     "  Column        Lower        Upper         Cost\n");
@@ -64,7 +132,7 @@ void reportLpColVec(HighsLp &lp) {
 }
 
 // Report the vectors of LP row data
-void reportLpRowVec(HighsLp &lp) {
+void reportLpRowVec(const HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
                     "     Row        Lower        Upper\n");
@@ -75,7 +143,7 @@ void reportLpRowVec(HighsLp &lp) {
 }
 
 // Report the LP column-wise matrix
-void reportLpColMtx(HighsLp &lp) {
+void reportLpColMtx(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
                     "Column Index              Value\n");

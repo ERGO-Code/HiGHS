@@ -181,40 +181,6 @@ class HighsSimplexInterface {
 			       const double newval
 			       );
 
-  // Utilities to get LP data - put them elsewhere?
-  // Get the costs for a contiguous set of columns
-  void util_get_costs(
-		      HighsLp& lp,
-		      int firstcol,
-		      int lastcol,
-		      double* XcolCost
-		      );
-  
-// Get the bounds for a contiguous set of columns
-  void util_get_col_bounds(
-			   HighsLp& lp,
-			   int firstcol,
-			   int lastcol,
-			   double* XcolLower,
-			   double* XcolUpper
-			   );
-  
-// Get the bounds for a contiguous set of rows
-  void util_get_row_bounds(
-			   HighsLp& lp,
-			   int firstrow,
-			   int lastrow,
-			   double* XrowLower,
-			   double* XrowUpper
-			   );
-  
-  void util_get_coefficient(
-			    HighsLp lp,
-			    int row,
-			    int col,
-			    double *val
-			    );
-
   // Shift the objective
   void shift_objective_value(
 			     double shift

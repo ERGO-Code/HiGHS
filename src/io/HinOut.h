@@ -26,15 +26,15 @@ class HinOut : public HPreData {
   string fileIn, fileOut;
 
   HinOut(string filenameIn, string filenameOut);
-  void getData(HModel& ptr_model);
-  void setData(HModel& ptr_model);
-  void readDataPostsolve(HModel& ptr_model);
+  void getData(HighsModelObject& highs_model_object);
+  void setData(HighsModelObject& highs_model_object);
+  void readDataPostsolve(HighsModelObject& highs_model_object);
   void readDataColumnWise();
   void writeDataColumnWise();
   void clearData();
-  void HinOutTestIO(HModel& ptr);
-  void HinOutTestRead(HModel& ptr);
-  void HinOutTestWrite(HModel& ptr);
+  void HinOutTestIO(HighsModelObject& highs_model_object);
+  void HinOutTestRead(HighsModelObject& highs_model_object);
+  void HinOutTestWrite(HighsModelObject& highs_model_object);
   void compareData(int lvl);
   double getdiff(double v1, double v2);
 

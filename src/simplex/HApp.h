@@ -25,9 +25,9 @@
 #include "HCrash.h"
 #include "HDual.h"
 #include "HighsLp.h"
-#include "HighsStatus.h"
+#include "HighsLpUtils.h"
 #include "HighsModelObject.h"
-//#include "HighsModelObjectUtils.h"
+#include "HighsStatus.h"
 #include "HighsUtils.h"
 #include "HRanging.h"
 #include "HSimplex.h"
@@ -170,6 +170,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   // HModel will disappear and we'll see what the best way is.
   HModel model;
   const HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
 
   HSimplex simplex_method_;
   HighsSimplexInterface simplex_interface(highs_model_object);
@@ -288,8 +289,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   vector<double> rowLower(lp.numRow_);
   vector<double> rowUpper(lp.numRow_);
   simplex_interface.get_primal_dual_values(colPrimal, colDual, rowPrimal, rowDual);
-  simplex_interface.util_get_col_bounds(highs_model_object.solver_lp_, 0, lp.numCol_ - 1, &colLower[0], &colUpper[0]);
-  simplex_interface.util_get_row_bounds(highs_model_object.solver_lp_, 0, lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
+  getLpColBounds(highs_model_object.solver_lp_, 0, lp.numCol_ - 1, &colLower[0], &colUpper[0]);
+  getLpRowBounds(highs_model_object.solver_lp_, 0, lp.numRow_ - 1, &rowLower[0], &rowUpper[0]);
 
   double og_colLower;
   double og_colUpper;
@@ -299,10 +300,10 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
 
   int num_resolve = 0;
   for (int col = 0; col < lp.numCol_; col++) {
-    //    model.util_getColBounds(model.solver_lp_, col, col, &og_colLower, &og_colUpper);
+    getLpColBounds(lp, col, col, &og_colLower, &og_colUpper);
     printf("\nColumn %2d has primal value %11g and bounds [%11g, %11g]", col,
            colPrimal[col], og_colLower, og_colUpper);
-    if (model.basis_->nonbasicFlag_[col]) {
+    if (basis.nonbasicFlag_[col]) {
       printf(": nonbasic so don't branch\n");
       continue;
     } else {
@@ -320,9 +321,8 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
       else
         nw_colLower = og_colUpper;
       nw_colUpper = og_colUpper;
-      printf("Calling model.util_chgColBounds(1, %d, %g, %g)\n", colBoundIndex, nw_colLower, nw_colUpper);
+      printf("Calling simplex_interface.change_col_bounds_set(1, %d, %g, %g)\n", colBoundIndex, nw_colLower, nw_colUpper);
       simplex_interface.change_col_bounds_set(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
-      printf("Calling scale_solver_lp(highs_model_object)\n");
       simplex_method_.scale_solver_lp(highs_model_object);
       dual_solver.solve();
       simplex_interface.report_simplex_outcome("SCIP 2");
@@ -360,12 +360,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HFactor &factor_ = highs_model_object.factor_;
 
   HModel& model = highs_model_object.hmodel_[0];
-
-  // Give model the HiGHS Model Object run clock for timeout purposes
-  //  model.modelTotalClock = highs_model_object.modelTotalClock;
-
-
-  // Set pointers within HModel
   model.basis_ = &basis_;
   model.scale_ = &scale_;
   model.solver_lp_ = &solver_lp_;
@@ -430,11 +424,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 		&solver_lp_.Aindex_[0],
 		&solver_lp_.Avalue_[0],
 		&basis_.basicIndex_[0]);
-
-  // Set pointers within HModel for the matrix and factor data structure
-  //  model.matrix_ = &highs_model_object.matrix_;
-  //  model.factor_ = &highs_model_object.factor_;
-
 
   // Crash, if needed.
 
