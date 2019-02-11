@@ -18,6 +18,7 @@
 #include "SimplexConst.h" // For simplex strategy constants
 #include "HighsIO.h"
 #include "HighsUtils.h"
+#include "HighsLpUtils.h"
 #include "HighsModelObject.h"
 #include "SimplexTimer.h"
 
@@ -122,9 +123,9 @@ class HSimplex {
 #ifdef HiGHSDEV
     simplex_info_.report_simplex_phases_clock = true;//false;
     // Option for analysing simplex iterations
-    simplex_info_.analyseLp = false;
+    simplex_info_.analyseLp = true;//false;
     simplex_info_.analyseSimplexIterations = true;//false
-    simplex_info_.analyseLpSolution = false;
+    simplex_info_.analyseLpSolution = true;//false;
     simplex_info_.analyse_invert_time = false;
     simplex_info_.analyseRebuildTime = false;
 #endif
@@ -747,16 +748,6 @@ void report_basis(HighsModelObject &highs_model_object) {
     }
     // Deduce the consequences of scaling the LP
     update_solver_lp_status_flags(highs_model, LpAction::SCALE);
-#ifdef HiGHSDEV
-    // Analyse the scaled LP
-    //  if (simplex_info.analyse_lp) {
-    //    util_analyseLp(highs_model.solver_lp_, "Scaled");
-    //  }
-    //  if (simplex_info_.solver_lp_is_scaled) {
-    //  utils.util_analyseVectorValues("Column scaling factors", numCol, colScale, false);
-    //  utils.util_analyseVectorValues("Row scaling factors", numRow, rowScale, false);
-    //  }
-#endif
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
     timer.stop(timer.scale_clock);

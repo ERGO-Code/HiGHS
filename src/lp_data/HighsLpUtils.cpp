@@ -244,7 +244,7 @@ HighsStatus checkLp(const HighsLp& lp) {
 
 
 #ifdef HiGHSDEV
-void util_analyseModel(HighsLp &lp, const char *message) {
+void util_analyseModel(const HighsLp &lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
   util_analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
   util_analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
@@ -256,8 +256,10 @@ void util_analyseModel(HighsLp &lp, const char *message) {
   util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 
-void util_analyseModelBounds(const char *message, int numBd, std::vector<double> &lower,
-			     std::vector<double> &upper) {
+void util_analyseModelBounds(const char *message,
+			     int numBd,
+			     const std::vector<double> &lower,
+			     const std::vector<double> &upper) {
   if (numBd == 0) return;
   int numFr = 0;
   int numLb = 0;

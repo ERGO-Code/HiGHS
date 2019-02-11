@@ -26,7 +26,7 @@ bool highs_isInfinity(double val) {
 }
 
 #ifdef HiGHSDEV
-void util_analyseVectorValues(const char *message, int vecDim, std::vector<double> &vec,
+void util_analyseVectorValues(const char *message, int vecDim, const std::vector<double> &vec,
 			      bool anVLs) {
   if (vecDim == 0) return;
   double log10 = log(10.0);

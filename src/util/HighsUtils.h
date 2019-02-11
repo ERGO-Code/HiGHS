@@ -25,6 +25,6 @@ bool highs_isInfinity(
 		      double val //!< Value being tested against +Infinity
 		      );
 #ifdef HiGHSDEV
-void util_analyseVectorValues(const char* message, int vecDim, std::vector<double>& vec, bool anVLs);
+void util_analyseVectorValues(const char* message, int vecDim, const std::vector<double>& vec, bool anVLs);
 #endif
 #endif // UTIL_HIGHSUTILS_H_
