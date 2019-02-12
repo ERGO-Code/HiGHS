@@ -109,8 +109,7 @@ void reportLpColMtx(
   );
 */
 #ifdef HiGHSDEV
-// Analyse the values of a vector, assessing how many are in each power of ten
-void util_analyseModel(const HighsLp &lp, const char* message);
-void util_analyseModelBounds(const char* message, int numBd, std::vector<double>& lower, std::vector<double>& upper);
+// Analyse the data in an LP problem
+void util_analyseLp(const HighsLp &lp, const char* message);
 #endif
 #endif // LP_DATA_HIGHSLPUTILS_H_

@@ -155,7 +155,9 @@ HighsStatus solveSimplex(
     HighsSimplexInterface simplex_interface(highs_model_object);
     simplex_interface.get_primal_dual_values(colPrAct, colDuAct, rowPrAct, rowDuAct);
     double lp_objective_value = simplex_interface.get_lp_objective_value(colPrAct);
+#ifdef HiGHSDEV
     printf("Computed LP objective value = %g\n", lp_objective_value);
+#endif
 
   }
   return HighsStatus::Optimal;
@@ -388,9 +390,17 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   if (simplex_info_.tighten_solver_lp)
     simplex_method_.tighten_solver_lp(highs_model_object);
   //
-
-#ifdef HIGHSDEV
-  simplex_method_.report_solver_lp_status_flags(highs_model_object);
+#ifdef HiGHSDEV
+  // Analyse the scaled LP
+  if (simplex_info_.analyseLp) {
+    util_analyseLp(lp_, "Unscaled");
+    if (simplex_info_.solver_lp_is_scaled) {
+      util_analyseVectorValues("Column scaling factors", lp_.numCol_, scale_.col_, false);
+      util_analyseVectorValues("Row    scaling factors", lp_.numRow_, scale_.row_, false);
+      util_analyseLp(solver_lp_, "Scaled");
+    }
+  }
+  //  simplex_method_.report_solver_lp_status_flags(highs_model_object);
 #endif
 
   simplex_method_.initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();

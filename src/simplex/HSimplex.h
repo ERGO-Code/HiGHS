@@ -18,6 +18,7 @@
 #include "SimplexConst.h" // For simplex strategy constants
 #include "HighsIO.h"
 #include "HighsUtils.h"
+#include "HighsLpUtils.h"
 #include "HighsModelObject.h"
 #include "SimplexTimer.h"
 
@@ -122,9 +123,9 @@ class HSimplex {
 #ifdef HiGHSDEV
     simplex_info_.report_simplex_phases_clock = true;//false;
     // Option for analysing simplex iterations
-    simplex_info_.analyseLp = false;
+    simplex_info_.analyseLp = true;//false;
     simplex_info_.analyseSimplexIterations = true;//false
-    simplex_info_.analyseLpSolution = false;
+    simplex_info_.analyseLpSolution = true;//false;
     simplex_info_.analyse_invert_time = false;
     simplex_info_.analyseRebuildTime = false;
 #endif
@@ -747,16 +748,6 @@ void report_basis(HighsModelObject &highs_model_object) {
     }
     // Deduce the consequences of scaling the LP
     update_solver_lp_status_flags(highs_model, LpAction::SCALE);
-#ifdef HiGHSDEV
-    // Analyse the scaled LP
-    //  if (simplex_info.analyse_lp) {
-    //    util_analyseLp(highs_model.solver_lp_, "Scaled");
-    //  }
-    //  if (simplex_info_.solver_lp_is_scaled) {
-    //  utils.util_analyseVectorValues("Column scaling factors", numCol, colScale, false);
-    //  utils.util_analyseVectorValues("Row scaling factors", numRow, rowScale, false);
-    //  }
-#endif
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling) scaleCosts(highs_model);
     timer.stop(timer.scale_clock);
@@ -1497,7 +1488,9 @@ void report_basis(HighsModelObject &highs_model_object) {
     for (int i = 0; i < solver_lp.numRow_; i++)
       if (basis.basicIndex_[i] >= solver_lp.numCol_)
 	simplex_info.num_basic_logicals += 1;
+#ifdef HiGHSDEV
     printf("Determined num_basic_logicals = %d of %d\n", simplex_info.num_basic_logicals, solver_lp.numRow_);
+#endif
   }
 
   void setup_for_solve(HighsModelObject &highs_model_object) {
@@ -1510,9 +1503,13 @@ void report_basis(HighsModelObject &highs_model_object) {
     HighsBasis &basis = highs_model_object.basis_;
     HMatrix &matrix = highs_model_object.matrix_;
     HFactor &factor = highs_model_object.factor_;
+#ifdef HiGHSDEV
     report_solver_lp_status_flags(highs_model_object);
+#endif
     bool basis_valid = highs_model_object.basis_.valid_;
+#ifdef HiGHSDEV
     printf("In setup_for_solve: basis_valid = %d \n", basis_valid);
+#endif
     if (basis_valid) {
     // Model has a basis so just count the number of basic logicals
       setup_num_basic_logicals(highs_model_object);

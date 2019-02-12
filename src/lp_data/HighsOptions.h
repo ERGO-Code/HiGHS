@@ -74,7 +74,7 @@ struct HighsOptions
   // Options for HighsPrintMessage and HighsLogMessage
   FILE *logfile = stdout;
   FILE *output = stdout;
-  unsigned int messageLevel = 0;
+  unsigned int messageLevel = ML_MINIMAL;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
   //
@@ -115,7 +115,7 @@ bool setUserOptionValue(HighsOptions& options, const std::string& option, const 
 // Used for extended options read from file or set internally.
 bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
 
-// Called before sovle. This would check whether tolerances are set to correct values and
+// Called before solve. This would check whether tolerances are set to correct values and
 // all options are consistent.
 bool checkOptionsValue(HighsOptions& options);
 
