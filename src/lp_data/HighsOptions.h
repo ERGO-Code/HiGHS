@@ -46,6 +46,7 @@ enum objSense
 struct HighsOptions
 {
   std::string filename = "";
+  std::string options_file_ = "";
 
   // Options passed through the command line
 
@@ -107,6 +108,8 @@ struct HighsOptions
   bool clean_up = false;
 };
 
-bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+// Used only for options allowed for the user. For other options see
+// loadOptionsFromFile in LoadProblem.h
+bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
 
 #endif

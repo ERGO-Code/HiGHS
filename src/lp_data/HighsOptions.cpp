@@ -13,7 +13,7 @@
  */
 #include "HighsOptions.h"
 
-bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value) {
+bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value) {
   if (option == "presolve") {
     if (value == "on")
       options.presolve_option = PresolveOption::ON;

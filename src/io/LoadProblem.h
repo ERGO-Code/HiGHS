@@ -14,7 +14,8 @@
 #ifndef IO_LOAD_PROBLEM_H_
 #define IO_LOAD_PROBLEM_H_
 
-#include <unistd.h>
+#include <cstdio>
+#include <fstream>
 
 #include "Filereader.h"
 #include "HighsIO.h"
@@ -22,14 +23,13 @@
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
-HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
-  // Check if file exists
-  if (options.filename.size() == 0 || access(options.filename.c_str(), F_OK) == -1)
+HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
+{
+  if (options.filename.size() == 0)
     return HighsStatus::LpError;
 
-
-  Filereader* reader = Filereader::getFilereader(options.filename.c_str());
-  FilereaderRetcode success =  reader->readModelFromFile(options.filename.c_str(), lp);
+  Filereader *reader = Filereader::getFilereader(options.filename.c_str());
+  FilereaderRetcode success = reader->readModelFromFile(options.filename.c_str(), lp);
   delete reader;
   lp.nnz_ = lp.Avalue_.size();
 
@@ -43,11 +43,78 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
-  if(success != FilereaderRetcode::OKAY) {
+  if (success != FilereaderRetcode::OKAY)
+  {
     HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
   }
 
   return checkLp(lp);
 }
 
+// For extended options to be parsed from a file. Assuming options file is specified.
+bool loadOptionsFromFile(HighsOptions &options)
+{
+  if (options.options_file_.size() == 0)
+    return false;
+
+  string line, option, value;
+  int line_count = 0;
+  std::ifstream file(options.options_file_);
+  if (file.is_open()) {
+    while (file.good())
+    {
+      getline(file, line);
+      line_count++;
+      if (line.size() == 0 || line[0] == '#')
+        continue;
+
+      int equals = line.find_first_of("=");
+      if (equals < 0 || equals >= line.size()) {
+        HighsLogMessage(HighsMessageType::ERROR, "Options file not found.");
+        return false;
+      }
+      option = line.substr(0, equals);
+      value = line.substr(equals, line.size() - equals);
+
+      if (option == "presolve")
+      {
+        if (value == "on")
+          options.presolve_option = PresolveOption::ON;
+        else if (value == "off")
+          options.presolve_option = PresolveOption::OFF;
+        else
+          return false;
+      }
+      else if (option == "crash")
+      {
+        if (value == "on")
+          options.crash_option = CrashOption::ON;
+        else if (value == "off")
+          options.crash_option = CrashOption::OFF;
+        else
+          return false;
+      }
+      else if (option == "parallel")
+      {
+        if (value == "on")
+          options.pami = true;
+        else if (value == "off")
+          options.pami = false;
+        else
+          return false;
+      }
+      // todo: else if (option == "ipm")
+      // todo: else if (option == "simplex")
+      else if (option == "small_matrix_value") {
+        options.small_matrix_value = atof(value.c_str());
+      }
+      // todo: other options
+    }
+  } else {
+    HighsLogMessage(HighsMessageType::ERROR, "Options file not found.");
+    return false;
+  }
+
+  return true;
+}
 #endif
