@@ -22,16 +22,14 @@
 #include "HighsLp.h"
 #include "HighsLpUtils.h"
 #include "HighsModelObject.h"
+#include "HighsSimplexInterface.h"
 #include "HighsStatus.h"
 #include "Presolve.h"
 
-HModel HighsLpToHModel(const HighsLp &lp);
-HighsLp HModelToHighsLp(const HModel &model);
-
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
-    // call Julian's methods in HighsModelObject
-    this->lps_[0].hmodel_[0].util_addCols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
+    HighsSimplexInterface simplex_interface(this->lps_[0]);
+    simplex_interface.util_add_cols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
     return 0; //TODO
     
   } else {
@@ -132,6 +130,7 @@ HighsStatus Highs::run(HighsLp& lp) {
     }
   }
 
+  HighsSimplexInterface simplex_interface(lps_[0]);
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
@@ -144,12 +143,12 @@ HighsStatus Highs::run(HighsLp& lp) {
       } else {
         std::cout << "Solver terminated with a non-optimal status: "
                   << HighsStatusToString(solve_status) << std::endl;
-        lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
+        simplex_interface.report_simplex_outcome("Run");
       }
     }
   } else {
     // Report in old way so tests pass.
-    lps_[0].hmodel_[0].util_reportSolverOutcome("Run");
+    simplex_interface.report_simplex_outcome("Run");
   }
 
   if (lps_[0].reportModelOperationsClock) {
@@ -228,7 +227,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 #else
   // IPX
   // todo:Check options for simplex-specific options
-  // use model.lp_, model.solution_ and model.hmodel_ remains empty.
+  // use model.lp_, model.solution_
   status = runIpxSolver(options_, lp, solution);
   // If ipx crossover did not find optimality set up simplex.
 

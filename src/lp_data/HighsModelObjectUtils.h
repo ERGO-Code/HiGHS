@@ -22,4 +22,86 @@
 #include <cassert>
 #include <iostream>
 
+void report_row_vec_sol(
+			int nrow,
+			vector<double>& XrowLower,
+			vector<double>& XrowUpper,
+			vector<double>& XrowPrimal,
+			vector<double>& XrowDual,
+			vector<int>& XrowStatus
+			) {
+  // Report the LP row data and solution passed to the method, where
+  // XrowStatus is the SCIP-like basis status
+  if (nrow <= 0) return;
+  printf("Row    St      Primal       Lower       Upper        Dual\n");
+  for (int row = 0; row < nrow; row++) {
+    if (XrowStatus[row] == HIGHS_BASESTAT_BASIC)
+      printf("%6d BC", row);
+    else if (XrowStatus[row] == HIGHS_BASESTAT_ZERO)
+      printf("%6d FR", row);
+    else if (XrowStatus[row] == HIGHS_BASESTAT_LOWER) {
+      if (XrowLower[row] == XrowUpper[row])
+	printf("%6d FX", row);
+      else
+	printf("%6d LB", row);
+    } else if (XrowStatus[row] == HIGHS_BASESTAT_UPPER)
+      printf("%6d UB", row);
+    else
+      printf("%6d ??", row);
+    printf(" %11g %11g %11g %11g\n", XrowPrimal[row], XrowLower[row],
+	   XrowUpper[row], XrowDual[row]);
+  }
+}
+
+void report_row_matrix(
+		       int nrow,
+		       vector<int>& XARstart,
+		       vector<int>& XARindex,
+		       vector<double>& XARvalue
+		       ) {
+  // Report the row-wise matrix passed to the method
+  if (nrow <= 0) return;
+  printf("Row    Index       Value\n");
+  for (int row = 0; row < nrow; row++) {
+    printf("%6d Start %8d\n", row, XARstart[row]);
+    for (int el = XARstart[row]; el < XARstart[row + 1]; el++) {
+      printf("      %6d %11g\n", XARindex[el], XARvalue[el]);
+    }
+  }
+  printf("       Start %8d\n", XARstart[nrow]);
+}
+
+void report_col_vec_sol(int ncol,
+			vector<double>& XcolCost,
+			vector<double>& XcolLower,
+			vector<double>& XcolUpper,
+			vector<double>& XcolPrimal,
+			vector<double>& XcolDual,
+			vector<int>& XcolStatus
+			) {
+  // Report the LP column data and solution passed to the method,
+  // where XcolStatus is the SCIP-like basis status
+  if (ncol <= 0) return;
+  printf(
+	 "Col    St      Primal       Lower       Upper        Dual        "
+	 "Cost\n");
+  for (int col = 0; col < ncol; col++) {
+    if (XcolStatus[col] == HIGHS_BASESTAT_BASIC)
+      printf("%6d BC", col);
+    else if (XcolStatus[col] == HIGHS_BASESTAT_ZERO)
+      printf("%6d FR", col);
+    else if (XcolStatus[col] == HIGHS_BASESTAT_LOWER) {
+      if (colLower[col] == XcolUpper[col])
+        printf("%6d FX", col);
+      else
+        printf("%6d LB", col);
+    } else if (XcolStatus[col] == HIGHS_BASESTAT_UPPER)
+      printf("%6d UB", col);
+    else
+      printf("%6d ??", col);
+    printf(" %11g %11g %11g %11g %11g\n", XcolPrimal[col], colLower[col],
+           XcolUpper[col], XcolDual[col], XcolCost[col]);
+  }
+}
+
 #endif

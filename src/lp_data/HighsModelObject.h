@@ -13,7 +13,8 @@
 #include "HighsLp.h"
 #include "HighsTimer.h"
 #include "HighsRandom.h"
-#include "HModel.h"
+#include "HMatrix.h"
+#include "HFactor.h"
 // include Sensitivity(or Ranging) header
 
 struct BasisInfo {
@@ -36,13 +37,8 @@ public:
   HighsTimer& timer_;
 
   HighsLp solver_lp_;
-  // Introduce a separate data structure for the basis information of
-  // solver_lp_, in which case it would seem sensible to pair up the
-  // two LPs and bases as structures (lp_, basis_) and (solver_lp_,
-  // solver_basis_)
-  //  HighsBasis solver_basis_;
   HighsSimplexInfo simplex_info_;
-  HighsRanging ranging_;
+  //  HighsRanging ranging_;
   HighsScale scale_;
   HMatrix matrix_;
   HFactor factor_;
@@ -51,9 +47,6 @@ public:
   bool reportModelOperationsClock = false;
 
   BasisInfo basis_info_;
-
-  // the vector below either contains one vector or zero.
-  std::vector<HModel> hmodel_;
 
 };
 

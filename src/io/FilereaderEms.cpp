@@ -25,6 +25,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   int i;
 
   f.open(filename, std::ios::in);
+  if (f.is_open()) {
+ 
   std::string line;
   int numCol, numRow, AcountX;
   bool indices_from_one = false;
@@ -168,6 +170,9 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
   // ...
 
   f.close();
+  } else {
+       return FilereaderRetcode::PARSERERROR;
+  }
   return FilereaderRetcode::OKAY;
 }
 
