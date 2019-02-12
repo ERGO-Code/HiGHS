@@ -6,7 +6,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
   try
   {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
-    cxx_options.positional_help("[filename(s)]").show_positional_help();
+    cxx_options.positional_help("[file]").show_positional_help();
 
     std::string presolve, crash, simplex, ipm, parallel;
 
@@ -54,35 +54,35 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     if (result.count("presolve"))
     {
       std::string value = result["presolve"].as<std::string>();
-      if (!setOptionValue(options, "presolve", value))
+      if (setUserOptionValue(options, "presolve", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for presovle option: %s. Ignored.\n", value.c_str());
     }
 
     if (result.count("crash"))
     {
       std::string value = result["crash"].as<std::string>();
-      if (!setOptionValue(options, "crash", value))
+      if (!setUserOptionValue(options, "crash", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for crash option: %s. Ignored.\n", value.c_str());
     }
     
     if (result.count("parallel"))
     {
       std::string value = result["parallel"].as<std::string>();
-      if (!setOptionValue(options, "parallel", value))
+      if (!setUserOptionValue(options, "parallel", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for parallel option: %s. Ignored.\n", value.c_str());
     }
 
   if (result.count("simplex"))
     {
       std::string value = result["simplex"].as<std::string>();
-      if (!setOptionValue(options, "simplex", value))
+      if (!setUserOptionValue(options, "simplex", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for simplex option: %s. Ignored.\n", value.c_str());
     }
 
   if (result.count("ipm"))
     {
       std::string value = result["ipm"].as<std::string>();
-      if (setOptionValue(options, "ipm", value))
+      if (setUserOptionValue(options, "ipm", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
     }
 
