@@ -27,7 +27,7 @@ bool highs_isInfinity(double val) {
 
 #ifdef HiGHSDEV
 void util_analyseVectorValues(const char *message, int vecDim, const std::vector<double> &vec,
-			      bool anVLs) {
+			      bool analyseValueList) {
   if (vecDim == 0) return;
   double log10 = log(10.0);
   const int nVK = 20;
@@ -87,7 +87,7 @@ void util_analyseVectorValues(const char *message, int vecDim, const std::vector
         }
       }
     }
-    if (anVLs) {
+    if (analyseValueList) {
       if (v == 1.0) {
         VLsK[PlusOneIx]++;
       } else if (v == -1.0) {
@@ -119,30 +119,30 @@ void util_analyseVectorValues(const char *message, int vecDim, const std::vector
   }
   printf("%s of dimension %d with %d nonzeros (%3d%%): Analysis\n", message,
          vecDim, nNz, 100 * nNz / vecDim);
-  if (nNegInfV > 0) printf("   %7d values are -Inf\n", nNegInfV);
-  if (nPosInfV > 0) printf("   %7d values are +Inf\n", nPosInfV);
+  if (nNegInfV > 0) printf("%12d values are -Inf\n", nNegInfV);
+  if (nPosInfV > 0) printf("%12d values are +Inf\n", nPosInfV);
   int k = nVK;
   int vK = posVK[k];
-  if (vK > 0) printf("   %7d values satisfy 10^(%3d) <= v < Inf\n", vK, k);
+  if (vK > 0) printf("%12d values satisfy 10^(%3d) <= v < Inf\n", vK, k);
   for (int k = nVK - 1; k >= 0; k--) {
     int vK = posVK[k];
     if (vK > 0)
-      printf("   %7d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, k, k + 1);
+      printf("%12d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, k, k + 1);
   }
   for (int k = 1; k <= nVK; k++) {
     int vK = negVK[k];
     if (vK > 0)
-      printf("   %7d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, -k, 1 - k);
+      printf("%12d values satisfy 10^(%3d) <= v < 10^(%3d)\n", vK, -k, 1 - k);
   }
   vK = vecDim - nNz;
-  if (vK > 0) printf("   %7d values are zero\n", vK);
-  if (anVLs) {
+  if (vK > 0) printf("%12d values are zero\n", vK);
+  if (analyseValueList) {
     printf("           Value distribution:");
     if (excessVLsV) printf(" More than %d different values", VLsZ);
-    printf("\n           Value    Count\n");
+    printf("\n            Value        Count\n");
     for (int ix = 0; ix < VLsZ; ix++) {
       int pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
-      printf("     %11.4g %8d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
+      printf("     %12g %12d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
     }
   }
 }

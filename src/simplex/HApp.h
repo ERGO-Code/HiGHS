@@ -391,11 +391,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #ifdef HiGHSDEV
   // Analyse the scaled LP
   if (simplex_info_.analyseLp) {
-    util_analyseModel(lp_, "Unscaled");
+    util_analyseLp(lp_, "Unscaled");
     if (simplex_info_.solver_lp_is_scaled) {
       util_analyseVectorValues("Column scaling factors", lp_.numCol_, scale_.col_, false);
       util_analyseVectorValues("Row    scaling factors", lp_.numRow_, scale_.row_, false);
-      util_analyseModel(solver_lp_, "Scaled");
+      util_analyseLp(solver_lp_, "Scaled");
     }
   }
   //  simplex_method_.report_solver_lp_status_flags(highs_model_object);

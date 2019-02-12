@@ -72,7 +72,7 @@ struct HighsOptions
   // Options for HighsPrintMessage and HighsLogMessage
   FILE *logfile = stdout;
   FILE *output = stdout;
-  unsigned int messageLevel = 0;
+  unsigned int messageLevel = ML_MINIMAL;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
   //

@@ -814,8 +814,6 @@ void HDual::rebuild() {
   //  printf("Checking INVERT in rebuild()\n"); workHMO.factor_.checkInvert();
 #endif
 
-  simplex_method_.report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
-
   timer.start(simplex_info.clock_[ReportInvertClock]);
   iterateRpInvert(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportInvertClock]);
@@ -849,7 +847,6 @@ void HDual::cleanup() {
   simplex_method_.initialise_bound(workHMO);  //  model->initBound();
   simplex_method_.compute_dual(workHMO);  //  model->computeDual();
   simplex_method_.compute_dual_objective_value(workHMO, solvePhase);
-  simplex_method_.report_iteration_count_dual_objective_value(workHMO, -1);
   iterateRpInvert(-1);
 
   simplex_method_.compute_dual_infeasible_in_primal(workHMO, &dualInfeasCount);//model->computeDualInfeasInPrimal(&dualInfeasCount);
@@ -2066,21 +2063,21 @@ void HDual::iterateRpAn() {
   int lc_EdWtNumIter;
   lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::STEEPEST_EDGE];
   if (lc_EdWtNumIter > 0)
-    printf("DSE for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
+    printf("DSE for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::DEVEX];
   if (lc_EdWtNumIter > 0)
-    printf("Dvx for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
+    printf("Dvx for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   lc_EdWtNumIter = AnIterNumEdWtIt[(int) DualEdgeWeightMode::DANTZIG];
   if (lc_EdWtNumIter > 0)
-    printf("Dan for %7d (%3d%%) iterations\n", lc_EdWtNumIter,
+    printf("Dan for %12d (%3d%%) iterations\n", lc_EdWtNumIter,
            (100 * lc_EdWtNumIter) / AnIterNumIter);
   printf("\n");
   for (int k = 0; k < NumAnIterOpTy; k++) {
     AnIterOpRec *AnIter = &AnIterOp[k];
     int lcNumCa = AnIter->AnIterOpSuNumCa;
-    printf("\n%-9s performed %7d times\n", AnIter->AnIterOpName.c_str(),
+    printf("\n%-9s performed %d times\n", AnIter->AnIterOpName.c_str(),
            AnIter->AnIterOpSuNumCa);
     if (lcNumCa > 0) {
       int lcHyperOp = AnIter->AnIterOpSuNumHyperOp;
@@ -2088,16 +2085,17 @@ void HDual::iterateRpAn() {
       int pctHyperOp = (100 * lcHyperOp) / lcNumCa;
       int pctHyperRs = (100 * lcHyperRs) / lcNumCa;
       double lcRsDsty = pow(10.0, AnIter->AnIterOpSuLog10RsDsty / lcNumCa);
-      int lcNumNNz = lcRsDsty * AnIter->AnIterOpRsDim;
+      int lcAnIterOpRsDim = AnIter->AnIterOpRsDim;
+      int lcNumNNz = lcRsDsty * lcAnIterOpRsDim;
       int lcMxNNz = AnIter->AnIterOpRsMxNNZ;
       double lcMxNNzDsty = (1.0 * lcMxNNz) / AnIter->AnIterOpRsDim;
-      printf("   %11d hyper-sparse operations (%3d%%)\n", lcHyperOp,
+      printf("%12d hyper-sparse operations (%3d%%)\n", lcHyperOp,
              pctHyperOp);
-      printf("   %11d hyper-sparse results    (%3d%%)\n", lcHyperRs,
+      printf("%12d hyper-sparse results    (%3d%%)\n", lcHyperRs,
              pctHyperRs);
-      printf("   %11.4g density of result (%d nonzeros)\n", lcRsDsty, lcNumNNz);
-      printf("   %11.4g density of result with max (%d) nonzeros\n",
-             lcMxNNzDsty, lcMxNNz);
+      printf("%12g density of result (%d / %d nonzeros)\n", lcRsDsty, lcNumNNz, lcAnIterOpRsDim);
+      printf("%12g density of result with max (%d / %d) nonzeros\n",
+             lcMxNNzDsty, lcMxNNz, lcAnIterOpRsDim);
     }
   }
   int NumInvert = 0;
@@ -2106,57 +2104,57 @@ void HDual::iterateRpAn() {
   for (int k = 1; k <= last_invert_hint; k++) NumInvert += AnIterNumInvert[k];
   if (NumInvert > 0) {
     int lcNumInvert = 0;
-    printf("\nInvert    performed %7d times: average frequency = %d\n",
+    printf("\nInvert    performed %d times: average frequency = %d\n",
            NumInvert, AnIterNumIter / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_UPDATE_LIMIT_REACHED];
     if (lcNumInvert > 0)
-      printf("%7d (%3d%%) Invert operations due to update limit reached\n",
+      printf("%12d (%3d%%) Invert operations due to update limit reached\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT];
     if (lcNumInvert > 0)
-      printf("%7d (%3d%%) Invert operations due to pseudo-clock\n", lcNumInvert,
+      printf("%12d (%3d%%) Invert operations due to pseudo-clock\n", lcNumInvert,
              (100 * lcNumInvert) / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_OPTIMAL];
     if (lcNumInvert > 0)
-      printf("%7d (%3d%%) Invert operations due to possibly optimal\n",
+      printf("%12d (%3d%%) Invert operations due to possibly optimal\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED];
     if (lcNumInvert > 0)
-      printf("%7d (%3d%%) Invert operations due to possibly primal unbounded\n",
+      printf("%12d (%3d%%) Invert operations due to possibly primal unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED];
     if (lcNumInvert > 0)
-      printf("%7d (%3d%%) Invert operations due to possibly dual unbounded\n",
+      printf("%12d (%3d%%) Invert operations due to possibly dual unbounded\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_POSSIBLY_SINGULAR_BASIS];
     if (lcNumInvert > 0)
-      printf("%7d (%3d%%) Invert operations due to possibly singular basis\n",
+      printf("%12d (%3d%%) Invert operations due to possibly singular basis\n",
              lcNumInvert, (100 * lcNumInvert) / NumInvert);
     lcNumInvert = AnIterNumInvert[INVERT_HINT_PRIMAL_INFEASIBLE_IN_PRIMAL_SIMPLEX];
     if (lcNumInvert > 0)
       printf(
-          "%7d (%3d%%) Invert operations due to primal infeasible in primal "
+          "%12d (%3d%%) Invert operations due to primal infeasible in primal "
           "simplex\n",
           lcNumInvert, (100 * lcNumInvert) / NumInvert);
   }
-  printf("\n%7d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt,
+  printf("\n%12d (%3d%%) primal degenerate iterations\n", AnIterNumPrDgnIt,
          (100 * AnIterNumPrDgnIt) / AnIterNumIter);
-  printf("%7d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt,
+  printf("%12d (%3d%%)   dual degenerate iterations\n", AnIterNumDuDgnIt,
          (100 * AnIterNumDuDgnIt) / AnIterNumIter);
   int suPrice = AnIterNumColPrice + AnIterNumRowPrice + AnIterNumRowPriceWSw +
                 AnIterNumRowPriceUltra;
   if (suPrice > 0) {
-    printf("\n%7d Price operations:\n", suPrice);
-    printf("%7d Col Price      (%3d%%)\n", AnIterNumColPrice,
+    printf("\n%12d Price operations:\n", suPrice);
+    printf("%12d Col Price      (%3d%%)\n", AnIterNumColPrice,
            (100 * AnIterNumColPrice) / suPrice);
-    printf("%7d Row Price      (%3d%%)\n", AnIterNumRowPrice,
+    printf("%12d Row Price      (%3d%%)\n", AnIterNumRowPrice,
            (100 * AnIterNumRowPrice) / suPrice);
-    printf("%7d Row PriceWSw   (%3d%%)\n", AnIterNumRowPriceWSw,
+    printf("%12d Row PriceWSw   (%3d%%)\n", AnIterNumRowPriceWSw,
            (100 * AnIterNumRowPriceWSw / suPrice));
-    printf("%7d Row PriceUltra (%3d%%)\n", AnIterNumRowPriceUltra,
+    printf("%12d Row PriceUltra (%3d%%)\n", AnIterNumRowPriceUltra,
            (100 * AnIterNumRowPriceUltra / suPrice));
   }
-  printf("\n%7d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt,
+  printf("\n%12d (%3d%%) costly DSE        iterations\n", AnIterNumCostlyDseIt,
          (100 * AnIterNumCostlyDseIt) / AnIterNumIter);
 
   //
@@ -2188,7 +2186,7 @@ void HDual::iterateRpAn() {
     int fmIter = lcAnIter->AnIterTraceIter;
     double fmTime = lcAnIter->AnIterTraceTime;
     printf(
-        "   Iter ( FmIter: ToIter)     Time Iter/sec |  Col R_Ep R_Ap  DSE | "
+        "        Iter (      FmIter:      ToIter)     Time      Iter/sec |  Col R_Ep R_Ap  DSE | "
         "EdWt | Aux0\n");
     for (int rec = 1; rec <= AnIterTraceNumRec; rec++) {
       lcAnIter = &AnIterTrace[rec];
@@ -2216,7 +2214,7 @@ void HDual::iterateRpAn() {
         str_dual_edge_weight_mode = "Dan";
       else
         str_dual_edge_weight_mode = "XXX";
-      printf("%7d (%7d:%7d) %8.4f  %7d | %4d %4d %4d %4d |  %3s | %4d\n",
+      printf("%12d (%12d:%12d) %8.4f  %12d | %4d %4d %4d %4d |  %3s | %4d\n",
              dlIter, fmIter, toIter, dlTime, iterSpeed, l10ColDse, l10REpDse,
              l10RapDse, l10DseDse, str_dual_edge_weight_mode.c_str(), l10Aux0);
       fmIter = toIter;

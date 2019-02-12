@@ -25,6 +25,16 @@ bool highs_isInfinity(
 		      double val //!< Value being tested against +Infinity
 		      );
 #ifdef HiGHSDEV
-void util_analyseVectorValues(const char* message, int vecDim, const std::vector<double>& vec, bool anVLs);
+/**
+ * @brief Analyse the values of a vector, assessing how many are in
+ * each power of ten, and possibly analyse the distribution of
+ * different values
+ */
+  void util_analyseVectorValues(
+				const char* message,            //!< Message to be printed
+				int vecDim,                     //!< Dimension of vector
+				const std::vector<double>& vec, //!< Vector of values
+				bool analyseValueList           //!< Possibly analyse the distribution of different values in the vector
+				);
 #endif
 #endif // UTIL_HIGHSUTILS_H_

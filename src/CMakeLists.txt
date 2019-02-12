@@ -11,6 +11,7 @@ set(sources
     lp_data/Highs.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
+    lp_data/HighsModelUtils.cpp
     lp_data/HighsModelBuilder.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
@@ -49,6 +50,7 @@ set(headers
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h
+    lp_data/HighsModelUtils.h
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtil.h
     lp_data/HighsOptions.h
