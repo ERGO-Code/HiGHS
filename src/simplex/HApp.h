@@ -155,7 +155,9 @@ HighsStatus solveSimplex(
     HighsSimplexInterface simplex_interface(highs_model_object);
     simplex_interface.get_primal_dual_values(colPrAct, colDuAct, rowPrAct, rowDuAct);
     double lp_objective_value = simplex_interface.get_lp_objective_value(colPrAct);
+#ifdef HiGHSDEV
     printf("Computed LP objective value = %g\n", lp_objective_value);
+#endif
 
   }
   return HighsStatus::Optimal;

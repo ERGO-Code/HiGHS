@@ -1488,7 +1488,9 @@ void report_basis(HighsModelObject &highs_model_object) {
     for (int i = 0; i < solver_lp.numRow_; i++)
       if (basis.basicIndex_[i] >= solver_lp.numCol_)
 	simplex_info.num_basic_logicals += 1;
+#ifdef HiGHSDEV
     printf("Determined num_basic_logicals = %d of %d\n", simplex_info.num_basic_logicals, solver_lp.numRow_);
+#endif
   }
 
   void setup_for_solve(HighsModelObject &highs_model_object) {
@@ -1501,9 +1503,13 @@ void report_basis(HighsModelObject &highs_model_object) {
     HighsBasis &basis = highs_model_object.basis_;
     HMatrix &matrix = highs_model_object.matrix_;
     HFactor &factor = highs_model_object.factor_;
+#ifdef HiGHSDEV
     report_solver_lp_status_flags(highs_model_object);
+#endif
     bool basis_valid = highs_model_object.basis_.valid_;
+#ifdef HiGHSDEV
     printf("In setup_for_solve: basis_valid = %d \n", basis_valid);
+#endif
     if (basis_valid) {
     // Model has a basis so just count the number of basic logicals
       setup_num_basic_logicals(highs_model_object);
