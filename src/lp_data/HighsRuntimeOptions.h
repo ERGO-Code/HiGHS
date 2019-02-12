@@ -6,7 +6,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
   try
   {
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
-    cxx_options.positional_help("[filename(s)]").show_positional_help();
+    cxx_options.positional_help("[file]").show_positional_help();
 
     std::string presolve, crash, simplex, ipm, parallel;
 

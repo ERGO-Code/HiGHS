@@ -46,7 +46,7 @@ enum objSense
 struct HighsOptions
 {
   std::string filename = "";
-  std::string options_file_ = "";
+  std::string options_file = "";
 
   // Options passed through the command line
 
@@ -54,6 +54,7 @@ struct HighsOptions
   PresolveOption presolve_option = PresolveOption::DEFAULT;
   CrashOption crash_option = CrashOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
+  bool ipx = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
@@ -108,8 +109,14 @@ struct HighsOptions
   bool clean_up = false;
 };
 
-// Used only for options allowed for the user. For other options see
-// loadOptionsFromFile in LoadProblem.h
+// Used only for options allowed for the user. For other options see setOptionValue.
 bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+
+// Used for extended options read from file or set internally.
+bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+
+// Called before sovle. This would check whether tolerances are set to correct values and
+// all options are consistent.
+bool checkOptionsValue(HighsOptions& options);
 
 #endif

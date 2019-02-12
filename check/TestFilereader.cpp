@@ -22,8 +22,8 @@ TEST_CASE("load-options-from-file", "[highs_data]") {
   std::string dir = GetCurrentWorkingDir();
   
   // For debugging use the latter.
-  options.filename = dir + "/../../check/sample_options_file";
-  // options.filename = dir + "/check/sample_options_file";
+  options.options_file= dir + "/../../check/sample_options_file";
+  // options.options_file = dir + "/check/sample_options_file";
 
   bool success = loadOptionsFromFile(options); 
 
