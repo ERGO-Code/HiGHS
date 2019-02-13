@@ -87,10 +87,10 @@ HighsStatus Highs::run(HighsLp& lp) {
     case HighsPresolveStatus::Unbounded: {
       HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
                HighsStatus::Infeasible : HighsStatus::Unbounded;
-      std::string message = "Problem status detected on presolve: " + HighsStatusToString(result);
-      HighsPrintMessage(HighsMessageType::INFO, message.c_str());
+      HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
+                                   HighsStatusToString(result).c_str());
       // for tests
-      std::cout << "Run: NOT-OPT" << std::endl;
+      HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
       return result;
     }
     default: {

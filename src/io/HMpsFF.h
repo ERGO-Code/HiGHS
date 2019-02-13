@@ -8,53 +8,50 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HMpsFF.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IO_HMPSFF_H_
 #define IO_HMPSFF_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <map>
-#include <vector>
-
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-#include <algorithm>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/dynamic_bitset.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/spirit/include/qi.hpp>
-#include <boost/utility/string_ref.hpp>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <memory>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
+#include <vector>
+
 #include "HConst.h"
-#include "Hash.hpp"
+#include "HighsIO.h"
 #include "pdqsort.h"
+#include "stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;
 
-const double infinity() { return HIGHS_CONST_INF; }
+class HMpsFF {
+public:
+  HMpsFF() : status(-1) {}
+  int loadProblem(const std::string filename, HighsLp &lp);
 
-class MpsParser {
- private:
+private:
   int status;
 
   int numRow;
   int numCol;
+  int nnz;
+
   int objSense;
   double objOffset;
+
   std::vector<int> Astart;
   std::vector<int> Aindex;
   std::vector<double> Avalue;
@@ -64,27 +61,14 @@ class MpsParser {
   std::vector<double> rowLower;
   std::vector<double> rowUpper;
 
- public:
-  int loadProblem(const char *filename_, int &numRow_, int &numCol_,
-                  int &objSense_, double &objOffset_, std::vector<int> &Astart_,
-                  std::vector<int> &Aindex_, std::vector<double> &Avalue_,
-                  std::vector<double> &colCost_, std::vector<double> &colLower_,
-                  std::vector<double> &colUpper_,
-                  std::vector<double> &rowLower_,
-                  std::vector<double> &rowUpper_);
+  std::vector<std::string> rowNames;
+  std::vector<std::string> colNames;
 
-  int getProb();
-
-  MpsParser() : status(-1) {}
-
-  int getStatus() { return status; };
+  std::vector<int> col_integrality;
 
   /// load LP from MPS file as transposed triplet matrix
   int parseFile(std::string filename);
-
-  int fillArrays();
-
-  int fillMatrix(std::vector<Triplet> entries, int nRows_in, int nCols_in);
+  int fillMatrix();
 
   enum class parsekey {
     ROWS,
@@ -98,142 +82,74 @@ class MpsParser {
     COMMENT
   };
 
- private:
-  int parse(boost::iostreams::filtering_istream &file);
-
   enum class boundtype { LE, EQ, GE, FR };
-  /*
-   * data for mps problem
-   */
+  std::vector<boundtype> row_type;
+  std::vector<int> integer_column;
 
   std::vector<Triplet> entries;
   std::vector<std::pair<int, double>> coeffobj;
-  std::vector<double> rowlhs;
-  std::vector<double> rowrhs;
-  std::vector<std::string> rownames;
-  std::vector<std::string> colnames;
 
-  HashMap<std::string, int> rowname2idx;
-  HashMap<std::string, int> colname2idx;
-  std::vector<double> lb4cols;
-  std::vector<double> ub4cols;
-  std::vector<boundtype> row_type;
-  boost::dynamic_bitset<> col_integrality;
+  std::unordered_map<std::string, int> rowname2idx;
+  std::unordered_map<std::string, int> colname2idx;
 
-  int nCols = 0;
-  int nRows = 0;
-  int nnz = -1;
-
+  int parse(const std::string &filename);
   /// checks first word of strline and wraps it by it_begin and it_end
-  MpsParser::parsekey checkFirstWord(std::string &strline,
-                                     std::string::iterator &it,
-                                     boost::string_ref &word_ref) const;
+  HMpsFF::parsekey checkFirstWord(std::string &strline, int &start, int &end,
+                                  std::string &word) const;
 
-  MpsParser::parsekey parseDefault(
-      boost::iostreams::filtering_istream &file) const;
-
-  MpsParser::parsekey parseRows(boost::iostreams::filtering_istream &file,
-                                std::vector<boundtype> &rowtype);
-
-  MpsParser::parsekey parseCols(boost::iostreams::filtering_istream &file,
-                                const std::vector<boundtype> &rowtype);
-
-  MpsParser::parsekey parseRhs(boost::iostreams::filtering_istream &file);
-
-  MpsParser::parsekey parseRanges(boost::iostreams::filtering_istream &file);
-
-  MpsParser::parsekey parseBounds(boost::iostreams::filtering_istream &file);
+  HMpsFF::parsekey parseDefault(std::ifstream &file) const;
+  HMpsFF::parsekey parseRows(std::ifstream &file);
+  HMpsFF::parsekey parseCols(std::ifstream &file);
+  HMpsFF::parsekey parseRhs(std::ifstream &file);
+  HMpsFF::parsekey parseRanges(std::ifstream &file);
+  HMpsFF::parsekey parseBounds(std::ifstream &file);
 };
 
-bool operator==(boost::string_ref word, std::string str) {
-  unsigned int n = str.length();
-  if (word.size() != n) return false;
-
-  for (unsigned int i = 0; i < n; i++)
-    if (word.at(i) != str.at(i)) return false;
-
-  return true;
-}
-
-int MpsParser::loadProblem(
-    const char *filename_, int &numRow_, int &numCol_, int &objSense_,
-    double &objOffset_, std::vector<int> &Astart_, std::vector<int> &Aindex_,
-    std::vector<double> &Avalue_, std::vector<double> &colCost_,
-    std::vector<double> &colLower_, std::vector<double> &colUpper_,
-    std::vector<double> &rowLower_, std::vector<double> &rowUpper_) {
-  std::string filename(filename_);
-
-  status = parseFile(filename);
-
-  if (!status) {
-    int fillArrays_rt = fillArrays();
-    status = fillArrays_rt;
-    if (status) return status;
-  } else {
+int HMpsFF::loadProblem(const std::string filename, HighsLp &lp) {
+  status = parse(filename);
+  if (status)
     return status;
-  }
 
-  numRow_ = std::move(nRows);
-  numCol_ = std::move(nCols);
+  colCost.assign(numCol, 0);
+  for (auto i : coeffobj)
+    colCost[i.first] = i.second;
+  if (status)
+    return status;
+  fillMatrix();
+  if (status)
+    return status;
 
-  objSense_ = 1;
-  objOffset_ = 0;
+  lp.numRow_ = std::move(numRow);
+  lp.numCol_ = std::move(numCol);
+  lp.nnz_ = Avalue.size();
 
-  Astart_ = std::move(Astart);
-  Aindex_ = std::move(Aindex);
-  Avalue_ = std::move(Avalue);
-  colCost_ = std::move(colCost);
-  colLower_ = std::move(colLower);
-  colUpper_ = std::move(colUpper);
-  rowLower_ = std::move(rowLower);
-  rowUpper_ = std::move(rowUpper);
+  lp.sense_ = 1;
+  lp.offset_ = 0;
+
+  lp.Astart_ = std::move(Astart);
+  lp.Aindex_ = std::move(Aindex);
+  lp.Avalue_ = std::move(Avalue);
+  lp.colCost_ = std::move(colCost);
+  lp.colLower_ = std::move(colLower);
+  lp.colUpper_ = std::move(colUpper);
+  lp.rowLower_ = std::move(rowLower);
+  lp.rowUpper_ = std::move(rowUpper);
+
+  lp.row_names_ = std::move(rowNames);
+  lp.col_names_ = std::move(colNames);
 
   return status;
 }
 
-int readMPS_FF(const char *filename, int &numRow, int &numCol, int &objSense,
-               double &objOffset, std::vector<int> &Astart,
-               std::vector<int> &Aindex, std::vector<double> &Avalue,
-               std::vector<double> &colCost, std::vector<double> &colLower,
-               std::vector<double> &colUpper, std::vector<double> &rowLower,
-               std::vector<double> &rowUpper) {
-  MpsParser parser{};
-  int result = parser.loadProblem(filename, numRow, numCol, objSense, objOffset,
-                                  Astart, Aindex, Avalue, colCost, colLower,
-                                  colUpper, rowLower, rowUpper);
-
-  return result;
-}
-
-int MpsParser::fillArrays() {
-  assert(nnz >= 0);
-
-  colCost.assign(nCols, 0.0);
-
-  for (auto i : coeffobj) colCost[i.first] = i.second;
-
-  colLower = std::move(lb4cols);
-  colUpper = std::move(ub4cols);
-
-  rowLower = std::move(rowlhs);
-  rowUpper = std::move(rowrhs);
-
-  // TODO matrix values
-  // problem.setConstraintMatrix(   SparseStorage<REAL>{entries, nCols, nRows,
-  // true},   std::move(rowlhs),     std::move(rowrhs), true);
-  int fillMatrix_rt = fillMatrix(entries, nRows, nCols);
-  return fillMatrix_rt;
-}
-
-int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in,
-                          int nCols_in) {
+int HMpsFF::fillMatrix() {
   // assumes entries are sorted meaning the columns are consecutive and not
   // jumbled
-  if ((int)entries.size() != nnz) return 1;
+  if ((int)entries.size() != nnz)
+    return 1;
 
   Avalue.resize(nnz);
   Aindex.resize(nnz);
-  Astart.assign(nCols_in + 1, 0);
+  Astart.assign(numCol + 1, 0);
 
   int newColIndex = std::get<0>(entries.at(0));
 
@@ -244,7 +160,8 @@ int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in,
     if (std::get<0>(entries.at(k)) != newColIndex) {
       int nEmptyCols = std::get<0>(entries.at(k)) - newColIndex;
       newColIndex = std::get<0>(entries.at(k));
-      if (newColIndex >= nCols_in) return 1;
+      if (newColIndex >= numCol)
+        return 1;
 
       Astart.at(newColIndex) = k;
       for (int i = 1; i < nEmptyCols; i++) {
@@ -253,9 +170,9 @@ int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in,
     }
   }
 
-  Astart.at(nCols_in) = nnz;
+  Astart.at(numCol) = nnz;
 
-  for (int i = 0; i < nCols_in; i++) {
+  for (int i = 0; i < numCol; i++) {
     if (Astart[i] > Astart[i + 1]) {
       std::cout << "Error filling in matrix data\n";
       return 1;
@@ -265,182 +182,147 @@ int MpsParser::fillMatrix(std::vector<Triplet> entries, int nRows_in,
   return 0;
 }
 
-int MpsParser::parseFile(std::string filename) {
-  std::ifstream file(filename, std::ifstream::in);
-  if (!file.good()) {
-    std::cout << "Can not access file. Make sure it exists." << std::endl;
-    return 1;
-  }
-
-  boost::iostreams::filtering_istream in;
-
-  if (boost::algorithm::ends_with(filename, ".gz"))
-    in.push(boost::iostreams::gzip_decompressor());
-
-  in.push(file);
-
-  return parse(in);
-}
-
-int MpsParser::parse(boost::iostreams::filtering_istream &file) {
+int HMpsFF::parse(const std::string &filename) {
+  std::ifstream f(filename, std::ifstream::in);
   nnz = 0;
-  MpsParser::parsekey keyword = MpsParser::parsekey::NONE;
+  HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
 
   // parsing loop
-  while (keyword != MpsParser::parsekey::FAIL &&
-         keyword != MpsParser::parsekey::END) {
+  while (keyword != HMpsFF::parsekey::FAIL &&
+         keyword != HMpsFF::parsekey::END) {
     switch (keyword) {
-      case MpsParser::parsekey::ROWS:
-        keyword = parseRows(file, row_type);
-        break;
-      case MpsParser::parsekey::COLS:
-        keyword = parseCols(file, row_type);
-        break;
-      case MpsParser::parsekey::RHS:
-        keyword = parseRhs(file);
-        break;
-      case MpsParser::parsekey::BOUNDS:
-        keyword = parseBounds(file);
-        break;
-      case MpsParser::parsekey::RANGES:
-        keyword = parseRanges(file);
-        break;
-      case MpsParser::parsekey::FAIL:
-        return 1;
-        break;
-      default:
-        keyword = parseDefault(file);
-        break;
+    case HMpsFF::parsekey::ROWS:
+      keyword = parseRows(f);
+      break;
+    case HMpsFF::parsekey::COLS:
+      keyword = parseCols(f);
+      break;
+    case HMpsFF::parsekey::RHS:
+      keyword = parseRhs(f);
+      break;
+    case HMpsFF::parsekey::BOUNDS:
+      keyword = parseBounds(f);
+      break;
+    case HMpsFF::parsekey::RANGES:
+      keyword = parseRanges(f);
+      break;
+    case HMpsFF::parsekey::FAIL:
+      return 1;
+      break;
+    default:
+      keyword = parseDefault(f);
+      break;
     }
   }
 
-  if (keyword == MpsParser::parsekey::FAIL) {
-    std::cerr << "read error" << std::endl;
+  if (keyword == HMpsFF::parsekey::FAIL)
     return 1;
-  }
 
-  assert(row_type.size() == unsigned(nRows));
+  assert(row_type.size() == unsigned(numRow));
 
-  nCols = colname2idx.size();
+  numCol = colname2idx.size();
   // No need to update nRows because the assert ensures
   // it is correct.
 
   return 0;
 }
 
-MpsParser::parsekey MpsParser::checkFirstWord(
-    std::string &strline, std::string::iterator &it,
-    boost::string_ref &word_ref) const {
-  using namespace boost::spirit;
+// Assuming string is not empty.
+HMpsFF::parsekey HMpsFF::checkFirstWord(std::string &strline, int &start,
+                                        int &end, std::string &word) const {
+  start = strline.find_first_not_of(" ");
+  if ((start == strline.size() - 1) || is_empty(strline[start + 1])) {
+    end = start + 1;
+    word = strline[start];
+    return HMpsFF::parsekey::NONE;
+  }
 
-  it = strline.begin() + strline.find_first_not_of(" ");
-  std::string::iterator it_start = it;
+  end = first_word_end(strline, start + 1);
 
-  qi::parse(it, strline.end(), qi::lexeme[+qi::graph]);  // todo
+  word = strline.substr(start, end - start);
 
-  const std::size_t length = std::distance(it_start, it);
-
-  boost::string_ref word(&(*it_start), length);
-
-  word_ref = word;
-
-  if (word.front() == 'R')  // todo
-  {
+  if (word.front() == 'R') {
     if (word == "ROWS")
-      return MpsParser::parsekey::ROWS;
+      return HMpsFF::parsekey::ROWS;
     else if (word == "RHS")
-      return MpsParser::parsekey::RHS;
+      return HMpsFF::parsekey::RHS;
     else if (word == "RANGES")
-      return MpsParser::parsekey::RANGES;
+      return HMpsFF::parsekey::RANGES;
     else
-      return MpsParser::parsekey::NONE;
+      return HMpsFF::parsekey::NONE;
   } else if (word == "COLUMNS")
-    return MpsParser::parsekey::COLS;
+    return HMpsFF::parsekey::COLS;
   else if (word == "BOUNDS")
-    return MpsParser::parsekey::BOUNDS;
+    return HMpsFF::parsekey::BOUNDS;
   else if (word == "ENDATA")
-    return MpsParser::parsekey::END;
+    return HMpsFF::parsekey::END;
   else
-    return MpsParser::parsekey::NONE;
+    return HMpsFF::parsekey::NONE;
 }
 
-MpsParser::parsekey MpsParser::parseDefault(
-    boost::iostreams::filtering_istream &file) const {
-  std::string strline;
+HMpsFF::parsekey HMpsFF::parseDefault(std::ifstream &file) const {
+  std::string strline, word;
   getline(file, strline);
-
-  std::string::iterator it;
-  boost::string_ref word_ref;
-  return checkFirstWord(strline, it, word_ref);
+  int s, e;
+  return checkFirstWord(strline, s, e, word);
 }
 
-MpsParser::parsekey MpsParser::parseRows(
-    boost::iostreams::filtering_istream &file,
-    std::vector<boundtype> &rowtype) {
-  using namespace boost::spirit;
-
-  std::string strline;
+HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
+  std::string strline, word;
   size_t nrows = 0;
+  bool hasobj = false;
   std::string objectiveName = "";
 
   while (getline(file, strline)) {
-    if (strline.size() == 0) continue;
-
-    bool empty = true;
-    for (unsigned int i = 0; i < strline.size(); i++)
-      if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-          strline.at(i) != '\n') {
-        empty = false;
-        break;
-      }
-    if (empty) continue;
+    if (is_empty(strline))
+      continue;
 
     bool isobj = false;
     bool isFreeRow = false;
-    std::string::iterator it;
-    boost::string_ref word_ref;
-    MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
+
+    int start = 0;
+    int end = 0;
+
+    HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
     // start of new section?
-    if (key != MpsParser::parsekey::NONE) {
-      nRows = int(nrows);
+    if (key != HMpsFF::parsekey::NONE) {
+      numRow = int(nrows);
+      if (!hasobj) {
+        std::cout << "WARNING: no objective row found" << std::endl;
+        rowname2idx.emplace("artificial_empty_objective", -1);
+      };
       return key;
     }
 
-    if (word_ref.front() == 'G') {
-      rowlhs.push_back(0.0);
-      rowrhs.push_back(infinity());
-      rowtype.push_back(boundtype::GE);
-    } else if (word_ref.front() == 'E') {
-      rowlhs.push_back(0.0);
-      rowrhs.push_back(0.0);
-      rowtype.push_back(boundtype::EQ);
-    } else if (word_ref.front() == 'L') {
-      rowlhs.push_back(-infinity());
-      rowrhs.push_back(0.0);
-      rowtype.push_back(boundtype::LE);
-    } else if (word_ref.front() == 'N') {
+    if (strline[start] == 'G') {
+      rowLower.push_back(0.0);
+      rowUpper.push_back(HIGHS_CONST_INF);
+      row_type.push_back(boundtype::GE);
+    } else if (strline[start] == 'E') {
+      rowLower.push_back(0.0);
+      rowUpper.push_back(0.0);
+      row_type.push_back(boundtype::EQ);
+    } else if (strline[start] == 'L') {
+      rowLower.push_back(-HIGHS_CONST_INF);
+      rowUpper.push_back(0.0);
+      row_type.push_back(boundtype::LE);
+    } else if (strline[start] == 'N') {
       if (objectiveName == "") {
         isobj = true;
+        hasobj = true;
       } else {
-        // For the moment we add the free rows to the constraint
-        // matrix. A better way would be not to like soplex does but I
-        // didn't have enough time to do that.
-        // isFreeRow = true;
-        rowlhs.push_back(-infinity());
-        rowrhs.push_back(infinity());
-        rowtype.push_back(boundtype::FR);
+        isFreeRow = true;
       }
     } else {
       std::cerr << "reading error in ROWS section " << std::endl;
-      return MpsParser::parsekey::FAIL;
+      return HMpsFF::parsekey::FAIL;
     }
 
-    std::string rowname = "";  // todo use ref
+    std::string rowname = first_word(strline, start + 1);
 
-    // get row name
-    qi::phrase_parse(it, strline.end(), qi::lexeme[+qi::graph], ascii::space,
-                     rowname);  // todo use ref
+    // todo whitespace in name possible?
+    // only in fixed, using old parser for now.
 
     // Do not add to matrix if row is free.
     if (isFreeRow) {
@@ -448,19 +330,18 @@ MpsParser::parsekey MpsParser::parseRows(
       continue;
     }
 
-    // todo whitespace in name possible?
     // so in rowname2idx -1 is the objective, -2 is all the free rows
     auto ret = rowname2idx.emplace(rowname, isobj ? (-1) : (nrows++));
 
     // Else is enough here because all free rows are ignored.
     if (!isobj)
-      rownames.push_back(rowname);
+      rowNames.push_back(rowname);
     else
       objectiveName = rowname;
 
     if (!ret.second) {
       std::cerr << "duplicate row " << rowname << std::endl;
-      return MpsParser::parsekey::FAIL;
+      return HMpsFF::parsekey::FAIL;
     }
   }
 
@@ -468,18 +349,13 @@ MpsParser::parsekey MpsParser::parseRows(
   // constraint matrix.
   numRow = rowLower.size();
 
-  return MpsParser::parsekey::FAIL;
+  return HMpsFF::parsekey::FAIL;
 }
 
-typename MpsParser::parsekey MpsParser::parseCols(
-    boost::iostreams::filtering_istream &file,
-    const std::vector<boundtype> &rowtype) {
-  using namespace boost::spirit;
-
+typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   std::string colname = "";
-
-  std::string strline;
-  int rowidx;
+  std::string strline, word;
+  int rowidx, start, end;
   int ncols = 0;
   int colstart = 0;
   bool integral_cols = false;
@@ -496,7 +372,7 @@ typename MpsParser::parsekey MpsParser::parseCols(
       assert(-1 == rowidx || -2 == rowidx);
   };
 
-  auto addtuple = [&rowtype, &rowidx, &ncols, this](double coeff) {
+  auto addtuple = [&rowidx, &ncols, this](double coeff) {
     if (rowidx >= 0)
       entries.push_back(std::make_tuple(ncols - 1, rowidx, coeff));
     else
@@ -504,20 +380,11 @@ typename MpsParser::parsekey MpsParser::parseCols(
   };
 
   while (getline(file, strline)) {
-    if (strline.size() == 0) continue;
+    trim(strline);
+    if (strline.size() == 0)
+      continue;
 
-    bool empty = true;
-    for (unsigned int i = 0; i < strline.size(); i++)
-      if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-          strline.at(i) != '\n') {
-        empty = false;
-        break;
-      }
-    if (empty) continue;
-
-    std::string::iterator it;
-    boost::string_ref word_ref;
-    MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
+    HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
     // start of new section?
     if (key != parsekey::NONE) {
@@ -526,21 +393,15 @@ typename MpsParser::parsekey MpsParser::parseCols(
                 [](Triplet a, Triplet b) {
                   return std::get<1>(b) > std::get<1>(a);
                 });
-
       return key;
     }
 
     // check for integrality marker
-    std::string marker = "";  // todo use ref
-    std::string::iterator it2 = it;
-
-    qi::phrase_parse(it2, strline.end(), qi::lexeme[+qi::graph], ascii::space,
-                     marker);
+    std::string marker = first_word(strline, end);
+    int end_marker = first_word_end(strline, end);
 
     if (marker == "'MARKER'") {
-      marker = "";
-      qi::phrase_parse(it2, strline.end(), qi::lexeme[+qi::graph], ascii::space,
-                       marker);
+      marker = first_word(strline, end_marker);
 
       if ((integral_cols && marker != "'INTEND'") ||
           (!integral_cols && marker != "'INTORG'")) {
@@ -553,25 +414,25 @@ typename MpsParser::parsekey MpsParser::parseCols(
     }
 
     // new column?
-    if (!(word_ref == colname)) {
-      colname = std::string(word_ref.begin(), word_ref.end());
+    if (!(word == colname)) {
+      colname = word;
       auto ret = colname2idx.emplace(colname, ncols++);
-      colnames.push_back(colname);
+      colNames.push_back(colname);
 
       if (!ret.second) {
         std::cerr << "duplicate column " << std::endl;
         return parsekey::FAIL;
       }
 
-      col_integrality.push_back(integral_cols);
+      col_integrality.push_back((int)integral_cols);
 
       // initialize with default bounds
       if (integral_cols) {
-        lb4cols.push_back(0.0);
-        ub4cols.push_back(1.0);
+        colLower.push_back(0.0);
+        colUpper.push_back(1.0);
       } else {
-        lb4cols.push_back(0.0);
-        ub4cols.push_back(infinity());
+        colLower.push_back(0.0);
+        colUpper.push_back(HIGHS_CONST_INF);
       }
 
       if (ncols > 1)
@@ -585,252 +446,339 @@ typename MpsParser::parsekey MpsParser::parseCols(
 
     assert(ncols > 0);
 
-    if (!qi::phrase_parse(
-            it, strline.end(),
-            +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-              qi::double_[(addtuple)]),
-            ascii::space))
-      return parsekey::FAIL;
+    // here marker is the row name and end marks its end
+    word = "";
+    word = first_word(strline, end_marker);
+    end = first_word_end(strline, end_marker);
+
+    if (word == "") {
+      HighsLogMessage(HighsMessageType::ERROR,
+                      "No coefficient given for column %s", marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
+    parsename(marker); // rowidx set
+    double value = atof(word.c_str());
+    addtuple(value);
+
+    if (!is_end(strline, end)) {
+      // parse second coefficient
+      marker = first_word(strline, end);
+      if (word == "") {
+        HighsLogMessage(HighsMessageType::ERROR,
+                        "No coefficient given for column %s", marker.c_str());
+        return HMpsFF::parsekey::FAIL;
+      }
+      end_marker = first_word_end(strline, end);
+
+      // here marker is the row name and end marks its end
+      word = "";
+      end_marker++;
+      word = first_word(strline, end_marker);
+      end = first_word_end(strline, end_marker);
+
+      assert(is_end(strline, end));
+
+      parsename(marker); // rowidx set
+      double value = atof(word.c_str());
+      addtuple(value);
+    }
   }
 
   return parsekey::FAIL;
 }
 
-MpsParser::parsekey MpsParser::parseRhs(
-    boost::iostreams::filtering_istream &file) {
-  using namespace boost::spirit;
+HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
   std::string strline;
 
-  while (getline(file, strline)) {
-    if (strline.size() == 0) continue;
+  auto parsename = [this](const std::string &name, int &rowidx) {
+    auto mit = rowname2idx.find(name);
 
-    bool empty = true;
-    for (unsigned int i = 0; i < strline.size(); i++)
-      if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-          strline.at(i) != '\n') {
-        empty = false;
-        break;
+    assert(mit != rowname2idx.end());
+    rowidx = mit->second;
+
+    assert(rowidx < numRow);
+  };
+
+  auto addrhs = [this](double val, int rowidx) {
+    if (rowidx > -1) {
+      if (row_type[rowidx] == boundtype::EQ ||
+          row_type[rowidx] == boundtype::LE) {
+        assert(size_t(rowidx) < rowUpper.size());
+        rowUpper[rowidx] = val;
       }
-    if (empty) continue;
 
-    std::string::iterator it;
-    boost::string_ref word_ref;
-    MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
+      if (row_type[rowidx] == boundtype::EQ ||
+          row_type[rowidx] == boundtype::GE) {
+        assert(size_t(rowidx) < rowLower.size());
+        rowLower[rowidx] = val;
+      }
+    }
+  };
+
+  while (getline(file, strline)) {
+    trim(strline);
+    if (strline.size() == 0)
+      continue;
+
+    int begin = 0;
+    int end = 0;
+    std::string word;
+    HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
     // start of new section?
-    if (key != parsekey::NONE && key != parsekey::RHS) return key;
+    if (key != parsekey::NONE && key != parsekey::RHS)
+      return key;
 
     int rowidx;
 
-    auto parsename = [&rowidx, this](std::string name) {
-      auto mit = rowname2idx.find(name);
+    std::string marker = first_word(strline, end);
+    int end_marker = first_word_end(strline, end);
 
-      assert(mit != rowname2idx.end());
-      rowidx = mit->second;
+    // here marker is the row name and end marks its end
+    word = "";
+    word = first_word(strline, end_marker);
+    end = first_word_end(strline, end_marker);
 
-      assert(rowidx < nRows);
-    };
+    if (word == "") {
+      HighsLogMessage(HighsMessageType::ERROR, "No bound given for row %s",
+                      marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
 
-    auto addrhs = [&rowidx, this](double val) {
-      if (rowidx > -1) {
-        if (row_type[rowidx] == boundtype::EQ ||
-            row_type[rowidx] == boundtype::LE) {
-          assert(size_t(rowidx) < rowrhs.size());
-          rowrhs[rowidx] = val;
-        }
+    parsename(marker, rowidx);
+    double value = atof(word.c_str());
+    addrhs(value, rowidx);
 
-        if (row_type[rowidx] == boundtype::EQ ||
-            row_type[rowidx] == boundtype::GE) {
-          assert(size_t(rowidx) < rowlhs.size());
-          rowlhs[rowidx] = val;
-        }
+    if (!is_end(strline, end)) {
+      // parse second coefficient
+      marker = first_word(strline, end);
+      if (word == "") {
+        HighsLogMessage(HighsMessageType::ERROR,
+                        "No coefficient given for column %s", marker.c_str());
+        return HMpsFF::parsekey::FAIL;
       }
-    };
+      end_marker = first_word_end(strline, end);
 
-    if (!qi::phrase_parse(
-            it, strline.end(),
-            +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-              qi::double_[(addrhs)]),
-            ascii::space))
-      return parsekey::FAIL;
+      // here marker is the row name and end marks its end
+      word = "";
+      end_marker++;
+      word = first_word(strline, end_marker);
+      end = first_word_end(strline, end_marker);
+
+      assert(is_end(strline, end));
+
+      parsename(marker, rowidx);
+      double value = atof(word.c_str());
+      addrhs(value, rowidx);
+    }
   }
 
   return parsekey::FAIL;
 }
 
-MpsParser::parsekey MpsParser::parseBounds(
-    boost::iostreams::filtering_istream &file) {
-  using namespace boost::spirit;
-  std::string strline;
+HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
+  std::string strline, word;
+
+  auto parsename = [this](const std::string &name, int &colidx) {
+    auto mit = colname2idx.find(name);
+    assert(mit != colname2idx.end());
+    colidx = mit->second;
+    assert(colidx >= 0);
+  };
 
   while (getline(file, strline)) {
-    std::string::iterator it;
-    if (strline.size() == 0) continue;
+    trim(strline);
+    if (strline.size() == 0)
+      continue;
 
-    bool empty = true;
-    for (unsigned int i = 0; i < strline.size(); i++)
-      if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-          strline.at(i) != '\n') {
-        empty = false;
-        break;
-      }
-    if (empty) continue;
-
-    boost::string_ref word_ref;
-    MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
+    int begin = 0;
+    int end = 0;
+    std::string word;
+    HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
     // start of new section?
-    if (key != parsekey::NONE) return key;
+    if (key != parsekey::NONE)
+      return key;
 
     bool islb = false;
     bool isub = false;
     bool isintegral = false;
     bool isdefaultbound = false;
 
-    if (word_ref == "UP")  // lower bound
+    if (word == "UP") // lower bound
       isub = true;
-    else if (word_ref == "LO")  // upper bound
+    else if (word == "LO") // upper bound
       islb = true;
-    else if (word_ref == "FX")  // fixed
+    else if (word == "FX") // fixed
     {
       islb = true;
       isub = true;
-    } else if (word_ref == "MI")  // infinite lower bound
+    } else if (word == "MI") // infinite lower bound
     {
       islb = true;
       isdefaultbound = true;
-    } else if (word_ref == "PL")  // infinite upper bound (redundant)
+    } else if (word == "PL") // infinite upper bound (redundant)
     {
       isub = true;
       isdefaultbound = true;
-    } else if (word_ref == "BV")  // binary
+    } else if (word == "BV") // binary
     {
       isintegral = true;
       isdefaultbound = true;
-    } else if (word_ref == "LI")  // integer lower bound
+    } else if (word == "LI") // integer lower bound
     {
       islb = true;
       isintegral = true;
-    } else if (word_ref == "UI")  // integer upper bound
+    } else if (word == "UI") // integer upper bound
     {
       isub = true;
       isintegral = true;
-    } else if (word_ref == "FR")  // free variable
+    } else if (word == "FR") // free variable
     {
       islb = true;
       isub = true;
       isdefaultbound = true;
     } else {
-      std::cerr << "unknown bound type " << word_ref << std::endl;
+      std::cerr << "unknown bound type " << word << std::endl;
       exit(1);
     }
 
-    // parse over next word
-    qi::phrase_parse(it, strline.end(), qi::lexeme[+qi::graph], ascii::space);
+    // The first word is the bound name, which should be ignored.
+    int end_bound_name = first_word_end(strline, end);
+    std::string marker = first_word(strline, end_bound_name);
+    int end_marker = first_word_end(strline, end_bound_name);
 
     int colidx;
-
-    auto parsename = [&colidx, this](std::string name) {
-      auto mit = colname2idx.find(name);
-      assert(mit != colname2idx.end());
-      colidx = mit->second;
-      assert(colidx >= 0);
-    };
+    parsename(marker, colidx);
 
     if (isdefaultbound) {
-      if (!qi::phrase_parse(
-              it, strline.end(),
-              (qi::lexeme[qi::as_string[+qi::graph][(parsename)]]),
-              ascii::space))
-        return parsekey::FAIL;
-
-      if (isintegral)  // binary
+      if (isintegral) // binary
       {
-        if (islb) lb4cols[colidx] = 0.0;
-        if (isub) ub4cols[colidx] = 1.0;
+        if (islb)
+          colLower[colidx] = 0.0;
+        if (isub)
+          colUpper[colidx] = 1.0;
         col_integrality[colidx] = true;
       } else {
-        if (islb) lb4cols[colidx] = -infinity();
-        if (isub) ub4cols[colidx] = infinity();
+        if (islb)
+          colLower[colidx] = -HIGHS_CONST_INF;
+        if (isub)
+          colUpper[colidx] = HIGHS_CONST_INF;
       }
       continue;
     }
 
-    if (!qi::phrase_parse(
-            it, strline.end(),
-            +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-              qi::double_[(
-                  [&colidx, &islb, &isub, &isintegral, this](double val) {
-                    if (islb) lb4cols[colidx] = val;
-                    if (isub) ub4cols[colidx] = val;
-                    if (isintegral) col_integrality[colidx] = true;
-                  })]),
-            ascii::space))
-      return parsekey::FAIL;
+    // here marker is the col name and end marks its end
+    word = "";
+    word = first_word(strline, end_marker);
+    end = first_word_end(strline, end_marker);
+
+    if (word == "") {
+      HighsLogMessage(HighsMessageType::ERROR, "No bound given for row %s",
+                      marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
+
+    double value = atof(word.c_str());
+    if (islb)
+      colLower[colidx] = value;
+    if (isub)
+      colUpper[colidx] = value;
+    if (isintegral)
+      col_integrality[colidx] = true;
   }
 
   return parsekey::FAIL;
 }
 
-MpsParser::parsekey MpsParser::parseRanges(
-    boost::iostreams::filtering_istream &file) {
-  using namespace boost::spirit;
-  std::string strline;
+HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
+  std::string strline, word;
+
+  auto parsename = [this](const std::string &name, int &rowidx) {
+    auto mit = rowname2idx.find(name);
+
+    assert(mit != rowname2idx.end());
+    rowidx = mit->second;
+
+    assert(rowidx >= 0);
+    assert(rowidx < numRow);
+  };
+
+  auto addrhs = [this](double val, int &rowidx) {
+    if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
+        row_type[rowidx] == boundtype::LE) {
+      assert(rowUpper.at(rowidx) < HIGHS_CONST_INF);
+      rowLower.at(rowidx) = rowUpper.at(rowidx) - abs(val);
+    }
+
+    else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
+             row_type[rowidx] == boundtype::GE) {
+      assert(rowLower.at(rowidx) > (-HIGHS_CONST_INF));
+      rowUpper.at(rowidx) = rowLower.at(rowidx) + abs(val);
+    }
+  };
 
   while (getline(file, strline)) {
-    std::string::iterator it;
-    if (strline.size() == 0) continue;
+    trim(strline);
+    if (strline.size() == 0)
+      continue;
 
-    bool empty = true;
-    for (unsigned int i = 0; i < strline.size(); i++)
-      if (strline.at(i) != ' ' && strline.at(i) != '\t' &&
-          strline.at(i) != '\n') {
-        empty = false;
-        break;
-      }
-    if (empty) continue;
+    int begin, end;
+    std::string word;
+    HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
-    boost::string_ref word_ref;
-    MpsParser::parsekey key = checkFirstWord(strline, it, word_ref);
-
-    // start of new section?
-    if (key != parsekey::NONE) return key;
+    if (key != parsekey::NONE)
+      return key;
 
     int rowidx;
 
-    auto parsename = [&rowidx, this](std::string name) {
-      auto mit = rowname2idx.find(name);
+    std::string marker = first_word(strline, end);
+    int end_marker = first_word_end(strline, end);
 
-      assert(mit != rowname2idx.end());
-      rowidx = mit->second;
+    // here marker is the row name and end marks its end
+    word = "";
+    word = first_word(strline, end_marker);
+    end = first_word_end(strline, end_marker);
 
-      assert(rowidx >= 0);
-      assert(rowidx < nRows);
-    };
+    if (word == "") {
+      HighsLogMessage(HighsMessageType::ERROR, "No range given for row %s",
+                      marker.c_str());
+      return HMpsFF::parsekey::FAIL;
+    }
 
-    auto addrhs = [&rowidx, this](double val) {
-      if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
-          row_type[rowidx] == boundtype::LE) {
-        assert(rowrhs.at(rowidx) < infinity());
-        rowlhs.at(rowidx) = rowrhs.at(rowidx) - abs(val);
+    parsename(marker, rowidx);
+    double value = atof(word.c_str());
+    addrhs(value, rowidx);
+
+    if (!is_end(strline, end)) {
+      string marker = first_word(strline, end);
+      int end_marker = first_word_end(strline, end);
+
+      // here marker is the row name and end marks its end
+      word = "";
+      word = first_word(strline, end_marker);
+      end = first_word_end(strline, end_marker);
+
+      if (word == "") {
+        HighsLogMessage(HighsMessageType::ERROR, "No range given for row %s",
+                        marker.c_str());
+        return HMpsFF::parsekey::FAIL;
       }
 
-      else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
-               row_type[rowidx] == boundtype::GE) {
-        assert(rowlhs.at(rowidx) > (-infinity()));
-        rowrhs.at(rowidx) = rowlhs.at(rowidx) + abs(val);
-      }
-    };
+      parsename(marker, rowidx);
+      double value = atof(word.c_str());
+      addrhs(value, rowidx);
 
-    if (!qi::phrase_parse(
-            it, strline.end(),
-            +(qi::lexeme[qi::as_string[+qi::graph][(parsename)]] >>
-              qi::double_[(addrhs)]),
-            ascii::space))
-      return parsekey::FAIL;
+      if (!is_end(strline, end)) {
+        HighsLogMessage(HighsMessageType::ERROR,
+                        "Unknown specifiers in RANGES section for row %s.\n",
+                        marker.c_str());
+        return HMpsFF::parsekey::FAIL;
+      }
+    }
   }
 
-  return MpsParser::parsekey::FAIL;
+  return HMpsFF::parsekey::FAIL;
 }
 
 #endif /* IO_HMPSFF_H_ */
