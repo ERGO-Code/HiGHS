@@ -15,15 +15,16 @@
 #include "HConfig.h"
 #include "HighsIO.h"
 #include "HighsLpUtils.h"
+#include "HighsModelUtils.h"
 #include "HighsUtils.h"
 #include "HighsStatus.h"
 
 void getLpCosts(
-					   const HighsLp& lp,
-					   int firstcol,
-					   int lastcol,
-					   double* XcolCost
-					   ) {
+		const HighsLp& lp,
+		int firstcol,
+		int lastcol,
+		double* XcolCost
+		) {
   assert(0 <= firstcol);
   assert(firstcol <= lastcol);
   assert(lastcol < lp.numCol_);
@@ -31,10 +32,10 @@ void getLpCosts(
 }
 
 void getLpColBounds(const HighsLp& lp,
-						int firstcol,
-						int lastcol,
-						double* XcolLower,
-						double* XcolUpper) {
+		    int firstcol,
+		    int lastcol,
+		    double* XcolLower,
+		    double* XcolUpper) {
   assert(0 <= firstcol);
   assert(firstcol <= lastcol);
   assert(lastcol < lp.numCol_);
@@ -45,10 +46,10 @@ void getLpColBounds(const HighsLp& lp,
 }
 
 void getLpRowBounds(const HighsLp& lp,
-						int firstrow,
-						int lastrow,
-						double* XrowLower,
-						double* XrowUpper) {
+		    int firstrow,
+		    int lastrow,
+		    double* XrowLower,
+		    double* XrowUpper) {
   assert(0 <= firstrow);
   assert(firstrow <= lastrow);
   assert(lastrow < lp.numRow_);
@@ -244,7 +245,7 @@ HighsStatus checkLp(const HighsLp& lp) {
 
 
 #ifdef HiGHSDEV
-void util_analyseModel(HighsLp &lp, const char *message) {
+void util_analyseLp(const HighsLp &lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
   util_analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
   util_analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
@@ -255,56 +256,4 @@ void util_analyseModel(HighsLp &lp, const char *message) {
   util_analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
   util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
-
-void util_analyseModelBounds(const char *message, int numBd, std::vector<double> &lower,
-			     std::vector<double> &upper) {
-  if (numBd == 0) return;
-  int numFr = 0;
-  int numLb = 0;
-  int numUb = 0;
-  int numBx = 0;
-  int numFx = 0;
-  for (int ix = 0; ix < numBd; ix++) {
-    if (highs_isInfinity(-lower[ix])) {
-      // Infinite lower bound
-      if (highs_isInfinity(upper[ix])) {
-        // Infinite lower bound and infinite upper bound: Fr
-        numFr++;
-      } else {
-        // Infinite lower bound and   finite upper bound: Ub
-        numUb++;
-      }
-    } else {
-      // Finite lower bound
-      if (highs_isInfinity(upper[ix])) {
-        // Finite lower bound and infinite upper bound: Lb
-        numLb++;
-      } else {
-        // Finite lower bound and   finite upper bound:
-        if (lower[ix] < upper[ix]) {
-          // Distinct finite bounds: Bx
-          numBx++;
-        } else {
-          // Equal finite bounds: Fx
-          numFx++;
-        }
-      }
-    }
-  }
-  printf("Analysing %d %s bounds\n", numBd, message);
-  if (numFr > 0)
-    printf("   Free:  %7d (%3d%%)\n", numFr, (100 * numFr) / numBd);
-  if (numLb > 0)
-    printf("   LB:    %7d (%3d%%)\n", numLb, (100 * numLb) / numBd);
-  if (numUb > 0)
-    printf("   UB:    %7d (%3d%%)\n", numUb, (100 * numUb) / numBd);
-  if (numBx > 0)
-    printf("   Boxed: %7d (%3d%%)\n", numBx, (100 * numBx) / numBd);
-  if (numFx > 0)
-    printf("   Fixed: %7d (%3d%%)\n", numFx, (100 * numFx) / numBd);
-  printf("grep_CharMl,%s,Free,LB,UB,Boxed,Fixed\n", message);
-  printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
-         numFx);
-}
-
 #endif
