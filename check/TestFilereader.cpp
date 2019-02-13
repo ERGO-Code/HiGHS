@@ -47,7 +47,7 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   if (!status) {
     HMpsFF parser{};
     status = parser.loadProblem(filename, lp_free_format);
-    if (!status) 
+    if (!status)
       are_the_same = lp_free_format == lp_fixed_format;
   }
 

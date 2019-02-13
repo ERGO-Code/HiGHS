@@ -90,7 +90,7 @@ HighsStatus Highs::run(HighsLp& lp) {
       HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
                                    HighsStatusToString(result).c_str());
       // for tests
-      HighsPrintMessage(ML_ALWAYS, "NOT-OPT\n");
+      HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
       return result;
     }
     default: {
