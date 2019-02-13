@@ -27,17 +27,15 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   std::cout << dir << std::endl;
 
   // For debugging use the latter.
-  // std::string filename = dir + "/../../check/instances/agg.mps";
-  std::string filename = dir + "/check/instances/agg.mps";
+  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  // std::string filename = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_free_format, lp_fixed_format;
-
-  HMpsFF parser{};
-  int status = parser.loadProblem(filename, lp_free_format);
+  bool are_the_same = false;
 
   std::vector<int> integerColumn;
-  status = readMPS(filename.c_str(), -1, -1, lp_fixed_format.numRow_,
+  int status = readMPS(filename.c_str(), -1, -1, lp_fixed_format.numRow_,
                    lp_fixed_format.numCol_, lp_fixed_format.sense_,
                    lp_fixed_format.offset_, lp_fixed_format.Astart_,
                    lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
@@ -45,10 +43,14 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
                    lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
                    lp_fixed_format.rowUpper_, integerColumn,
                    lp_fixed_format.row_names_, lp_fixed_format.col_names_);
-
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
+  if (!status) {
+    HMpsFF parser{};
+    status = parser.loadProblem(filename, lp_free_format);
+    if (!status) 
+      are_the_same = lp_free_format == lp_fixed_format;
+  }
 
-  bool are_the_same = lp_free_format == lp_fixed_format;
   REQUIRE(are_the_same);
 }
 

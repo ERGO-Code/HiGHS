@@ -54,7 +54,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     if (result.count("presolve"))
     {
       std::string value = result["presolve"].as<std::string>();
-      if (setUserOptionValue(options, "presolve", value))
+      if (!setUserOptionValue(options, "presolve", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for presovle option: %s. Ignored.\n", value.c_str());
     }
 
@@ -82,7 +82,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
   if (result.count("ipm"))
     {
       std::string value = result["ipm"].as<std::string>();
-      if (setUserOptionValue(options, "ipm", value))
+      if (!setUserOptionValue(options, "ipm", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
     }
 
