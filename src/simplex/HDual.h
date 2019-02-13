@@ -472,7 +472,6 @@ class HDual {
 
   const HMatrix *matrix;
   const HFactor *factor;
-  HSimplex simplex_method_;
 
   const int *jMove;
   const double *workRange;

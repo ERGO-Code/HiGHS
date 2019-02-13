@@ -28,6 +28,7 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
 #    simplex/HRanging.cpp
+    simplex/HSimplex.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp

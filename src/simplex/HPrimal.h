@@ -43,7 +43,6 @@ class HPrimal {
 
   // Model pointer
   HighsModelObject &workHMO;
-  HSimplex simplex_method_;
   
   int solver_num_col;
   int solver_num_row;

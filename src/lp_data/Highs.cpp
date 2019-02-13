@@ -19,6 +19,7 @@
 
 #include "HConfig.h"
 #include "HApp.h"
+#include "HighsIO.h"
 #include "HighsLp.h"
 #include "HighsLpUtils.h"
 #include "HighsModelObject.h"
