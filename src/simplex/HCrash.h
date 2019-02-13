@@ -19,8 +19,8 @@
 
 #include "HConfig.h"
 #include "HighsModelObject.h"
+#include "HVector.h"
 
-class HModel;
 class HMatrix;
 
 /**
@@ -116,7 +116,6 @@ class HCrash {
   const HighsLp *lp_;
   const HighsBasis *basis_;
   const HMatrix *matrix_;
-  HModel *model_;
 
   //    LTSSF arrays
   std::vector<int> crsh_r_ty_pri_v;

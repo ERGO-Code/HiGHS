@@ -47,6 +47,7 @@ public:
 
 private:
   HighsSolution solution_;
+  HighsBasis basis_;
   // each HighsModelObject holds a const ref to its lp_
   std::vector<HighsModelObject> lps_;
 

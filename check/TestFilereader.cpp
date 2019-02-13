@@ -28,7 +28,7 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 
   // For debugging use the latter.
   // std::string filename = dir + "/../../check/instances/agg.mps";
-   std::string filename = dir + "/check/instances/agg.mps";
+  std::string filename = dir + "/check/instances/agg.mps";
 
   // Read mps.
   HighsLp lp_free_format, lp_fixed_format;
@@ -52,6 +52,22 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   REQUIRE(are_the_same);
 }
 
+// No commas in test case name.
+TEST_CASE("load-options-from-file", "[highs_data]") {
+  HighsOptions options;
+  std::string dir = GetCurrentWorkingDir();
+  
+  // For debugging use the latter.
+  options.options_file= dir + "/../../check/sample_options_file";
+  // options.options_file = dir + "/check/sample_options_file";
+
+  bool success = loadOptionsFromFile(options); 
+
+  REQUIRE(success == true);
+  REQUIRE(options.small_matrix_value == 0.001);
+}
+
+// No commas in test case name.
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
   HighsOptions options;
   std::string dir = GetCurrentWorkingDir();

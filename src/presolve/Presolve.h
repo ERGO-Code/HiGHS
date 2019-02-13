@@ -74,7 +74,6 @@ class Presolve : public HPreData {
   void setProblemStatus(const int s);
   void reportTimes();
 
-  friend class HModel;
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
   vector<double> implColUpper;

@@ -110,11 +110,13 @@ class HFactor {
   /**
    * @brief Change the update method
    *
-   * Only called in HModel::changeUpdate, which is only called in
-   * HTester.cpp Should only be compiled when HiGHSDEV=on
+   * Only called in HighsSimplexInterface::change_update_method, which
+   * is only called in HTester.cpp Should only be compiled when
+   * HiGHSDEV=on
    */
-  void change(int updateMethod  //!< New update method
-  );
+  void change(
+	      int updateMethod  //!< New update method
+	      );
 #endif
 
   /**

@@ -25,6 +25,11 @@
 using std::vector;
 using std::string;
 
+const int MPS_ROW_TY_N = 0;
+const int MPS_ROW_TY_E = 1;
+const int MPS_ROW_TY_L = 2;
+const int MPS_ROW_TY_G = 3;
+
 int readMPS(const char *filename, int mxNumRow, int mxNumCol, int &numRow,
             int &numCol, int &objSense, double &objOffset, vector<int> &Astart,
             vector<int> &Aindex, vector<double> &Avalue,
