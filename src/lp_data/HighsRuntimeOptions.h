@@ -26,7 +26,10 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(parallel))(
         "time-limit", "Use time limit.",
         cxxopts::value<double>())(
-        "h, help", "Print help.");
+        "h, help", "Print help.")(
+        "options-file",
+        "File containing HiGHS options.",
+        cxxopts::value<std::vector<std::string>>());
 
     cxx_options.parse_positional("file");
 
@@ -38,10 +41,8 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       exit(0);
     }
 
-    // Currently works for only one filename at a time.
     if (result.count("file"))
     {
-      std::string filename = "";
       auto &v = result["file"].as<std::vector<std::string>>();
       if (v.size() > 1)
       {
@@ -97,6 +98,18 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       }
       options.highs_run_time_limit = time_limit;
     }
+
+    if (result.count("options-file"))
+    {
+      auto &v = result["options-file"].as<std::vector<std::string>>();
+      if (v.size() > 1)
+      {
+        std::cout << "Multiple options files not implemented.\n";
+        return false;
+      }
+      options.options_file = v[0];
+    }
+
   }
   catch (const cxxopts::OptionException &e)
   {
