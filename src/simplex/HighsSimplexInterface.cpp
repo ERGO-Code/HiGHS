@@ -446,7 +446,6 @@ void HighsSimplexInterface::check_load_from_arrays() {
 
 void HighsSimplexInterface::check_load_from_postsolve() {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
-  //  HSimplex simplex_method_;
   bool ok;
 
   ok = true;printf("Need to call nonbasic_flag_basic_index_ok\n"); //nonbasicFlagBasicIndex_OK(solver_lp.numCol_, solver_lp.numRow_);

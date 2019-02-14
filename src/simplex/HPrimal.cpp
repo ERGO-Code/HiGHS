@@ -132,16 +132,16 @@ void HPrimal::primalRebuild() {
     }
   }
   if (reInvert) {
-    int rankDeficiency = simplex_method_.compute_factor(workHMO);
+    int rankDeficiency = compute_factor(workHMO);
     if (rankDeficiency) {
       throw runtime_error("Primal reInvert: singular-basis-matrix");
     }
     simplex_info.update_count = 0;
   }
-  simplex_method_.compute_dual(workHMO);
-  simplex_method_.compute_primal(workHMO);
-  simplex_method_.compute_dual_objective_value(workHMO);
-  simplex_method_.report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
+  compute_dual(workHMO);
+  compute_primal(workHMO);
+  compute_dual_objective_value(workHMO);
+  report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseRebuildTime) {
@@ -311,7 +311,7 @@ void HPrimal::primalUpdate() {
 
   // Pivot in
   int sourceOut = alpha * moveIn > 0 ? -1 : 1;
-  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, columnIn, rowOut, sourceOut);
 
   baseValue[rowOut] = valueIn;
 
@@ -351,8 +351,8 @@ void HPrimal::primalUpdate() {
   workDual[columnOut] = -thetaDual;
 
   // Update workHMO.factor_ basis
-  simplex_method_.update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
-  simplex_method_.update_matrix(workHMO, columnIn, columnOut);
+  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
+  update_matrix(workHMO, columnIn, columnOut);
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }

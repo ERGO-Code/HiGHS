@@ -317,8 +317,7 @@ bool HDualRow::choose_final() {
 }
 
 void HDualRow::update_flip(HVector *bfrtColumn) {
-  HSimplex simplex_method_;
-  //  &workHMO.simplex_method_->checkDualObjectiveValue("Before update_flip");
+  //  checkDualObjectiveValue("Before update_flip");
   double *workDual = &workHMO.simplex_info_.workDual_[0];//
   //  double *workLower = &workHMO.simplex_info_.workLower_[0];
   //  double *workUpper = &workHMO.simplex_info_.workUpper_[0];
@@ -333,17 +332,17 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
     //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
     //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
     dualObjectiveValueChange += lcDualObjectiveValueChange;
-    simplex_method_.flip_bound(workHMO, iCol);//workModel->flipBound(iCol);
+    flip_bound(workHMO, iCol);//workModel->flipBound(iCol);
     workHMO.matrix_.collect_aj(*bfrtColumn, iCol, change);
   }
   workHMO.simplex_info_.updatedDualObjectiveValue += dualObjectiveValueChange;
-  //  &workHMO.simplex_method_->checkDualObjectiveValue("After  update_flip");
+  //  &workHMO.>checkDualObjectiveValue("After  update_flip");
 }
 
 void HDualRow::update_dual(double theta, int columnOut) {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  //  &workHMO.simplex_method_->checkDualObjectiveValue("Before update_dual");
+  //  &workHMO.>checkDualObjectiveValue("Before update_dual");
   timer.start(simplex_info.clock_[UpdateDualClock]);
   double *workDual = &workHMO.simplex_info_.workDual_[0];
   //  int columnOut_i = -1;
