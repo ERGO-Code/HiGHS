@@ -15,7 +15,7 @@
 #define LP_DATA_HIGHSMODELUTILS_H_
 
 #include "HConfig.h"
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 
 #ifdef HiGHSDEV
 // Analyse lower and upper bounds of a model

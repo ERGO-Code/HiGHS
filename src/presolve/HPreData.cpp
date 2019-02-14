@@ -11,8 +11,8 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HPreData.h"
-#include "HConst.h"
+#include "presolve/HPreData.h"
+#include "lp_data/HConst.h"
 
 using std::cout;
 using std::setw;

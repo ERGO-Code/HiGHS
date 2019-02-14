@@ -15,9 +15,9 @@
 #define SIMPLEX_HPRIMAL_H_
 
 #include "HConfig.h"
-#include "HighsModelObject.h"
-#include "HVector.h"
-#include "HSimplex.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/HVector.h"
+#include "simplex/HSimplex.h"
 
 /**
  * @brief Phase 2 primal simplex solver for HiGHS

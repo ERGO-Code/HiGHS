@@ -7,10 +7,10 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#include "Filereader.h"
-#include "FilereaderLp.h"
-#include "FilereaderMps.h"
-#include "FilereaderEms.h"
+#include "io/Filereader.h"
+#include "io/FilereaderLp.h"
+#include "io/FilereaderMps.h"
+#include "io/FilereaderEms.h"
 
 #include <string.h>
 #include <stdexcept>

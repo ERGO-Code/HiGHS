@@ -22,17 +22,17 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "HCrash.h"
-#include "HDual.h"
-#include "HighsLp.h"
-#include "HighsLpUtils.h"
-#include "HighsModelObject.h"
-#include "HighsStatus.h"
-#include "HighsUtils.h"
+#include "simplex/HCrash.h"
+#include "simplex/HDual.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsStatus.h"
+#include "util/HighsUtils.h"
 //#include "HRanging.h"
-#include "HSimplex.h"
-#include "HighsSimplexInterface.h"
-#include "SimplexConst.h"
+#include "simplex/HSimplex.h"
+#include "simplex/HighsSimplexInterface.h"
+#include "simplex/SimplexConst.h"
 
 using std::cout;
 using std::endl;

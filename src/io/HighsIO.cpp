@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "HighsLp.h"
+#include "lp_data/HighsLp.h"
 
 FILE* logfile = stdout;
 FILE* output = stdout;

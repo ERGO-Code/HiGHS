@@ -14,7 +14,7 @@
 #include <list>
 #include <map>
 
-#include "HighsLp.h"
+#include "lp_data/HighsLp.h"
 
 enum class HighsVarType { CONT, SEMI, BIN, GEN };
 

@@ -12,10 +12,10 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "FilereaderLp.h"
+#include "io/FilereaderLp.h"
 #include <stdarg.h>
-#include "../util/stringutil.h"
-#include "HConst.h"
+#include "util/stringutil.h"
+#include "lp_data/HConst.h"
 
 FilereaderLp::FilereaderLp() {
   this->isFileBufferFullyRead = true;

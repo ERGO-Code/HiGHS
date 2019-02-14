@@ -12,14 +12,14 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HConfig.h"
-#include "HMatrix.h"
+#include "simplex/HMatrix.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 
-#include "HConst.h"
-#include "HVector.h"
+#include "lp_data/HConst.h"
+#include "simplex/HVector.h"
 
 using std::swap;
 using std::fabs;

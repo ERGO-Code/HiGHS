@@ -11,9 +11,9 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HinOut.h"
-#include "HConst.h"
-#include "HighsModelObjectl.h"
+#include "io/HinOut.h"
+#include "lp_data/HConst.h"
+#include "lp_data/HighsModelObject.h"
 
 void HinOut::HinOutTestRead(HighsModelObject& highs_model_object) {
   readDataColumnWise();

@@ -18,8 +18,8 @@
 #include <string>
 
 #include "HConfig.h"
-#include "HighsModelObject.h"
-#include "HVector.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/HVector.h"
 
 class HMatrix;
 

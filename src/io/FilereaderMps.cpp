@@ -11,10 +11,10 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "FilereaderMps.h"
-#include "HMPSIO.h"
-#include "HighsLp.h"
-#include "HMpsFF.h"
+#include "io/FilereaderMps.h"
+#include "io/HMPSIO.h"
+#include "lp_data/HighsLp.h"
+#include "io/HMpsFF.h"
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
                                                    HighsLp &model)

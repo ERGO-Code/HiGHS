@@ -1,4 +1,4 @@
-#include "HighsStatus.h"
+#include "lp_data/HighsStatus.h"
 
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {

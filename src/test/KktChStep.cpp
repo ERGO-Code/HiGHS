@@ -11,10 +11,10 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "KktChStep.h"
+#include "test/KktChStep.h"
 
-#include "HConst.h"
-#include "KktCheck.h"
+#include "lp_data/HConst.h"
+#include "test/KktCheck.h"
 
 #include <utility>
 

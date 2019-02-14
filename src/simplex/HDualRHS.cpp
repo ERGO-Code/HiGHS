@@ -18,10 +18,10 @@
 #include <iostream>
 #include <set>
 
-#include "HConst.h"
-#include "HVector.h"
-#include "HighsModelObject.h"
-#include "SimplexTimer.h"
+#include "lp_data/HConst.h"
+#include "simplex/HVector.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/SimplexTimer.h"
 
 using std::pair;
 using std::make_pair;
