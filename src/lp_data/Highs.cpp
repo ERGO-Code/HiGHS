@@ -130,7 +130,8 @@ HighsStatus Highs::run(HighsLp& lp) {
       solve_status = runSolver(lps_[0]);
     }
   }
-
+  
+  assert(lps_.size() > 0);
   int last = lps_.size() - 1;
   solution_ = lps_[last].solution_;
   basis_ = lps_[last].basis_;
