@@ -16,7 +16,7 @@
 
 #include <cstring>
 
-#include "HPreData.h"
+#include "presolve/HPreData.h"
 
 class HinOut : public HPreData {
  public:

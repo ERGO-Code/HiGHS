@@ -15,8 +15,8 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "HighsModelUtils.h"
-#include "HighsUtils.h"
+#include "lp_data/HighsModelUtils.h"
+#include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
 void util_analyseModelBounds(const char *message,

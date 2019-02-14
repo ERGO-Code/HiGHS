@@ -21,15 +21,15 @@
 #include <set>
 #include <stdexcept>
 
-#include "HConst.h"
-#include "HCrash.h"
-#include "HPrimal.h"
-#include "HighsLp.h"
-#include "HighsIO.h"
-#include "HighsModelObject.h"
-#include "HighsTimer.h"
-#include "SimplexTimer.h"
-#include "HSimplex.h"
+#include "lp_data/HConst.h"
+#include "simplex/HCrash.h"
+#include "simplex/HPrimal.h"
+#include "lp_data/HighsLp.h"
+#include "io/HighsIO.h"
+#include "lp_data/HighsModelObject.h"
+#include "util/HighsTimer.h"
+#include "simplex/SimplexTimer.h"
+#include "simplex/HSimplex.h"
 
 using std::runtime_error;
 using std::cout;

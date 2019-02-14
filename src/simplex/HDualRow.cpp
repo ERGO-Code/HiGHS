@@ -11,16 +11,16 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HDualRow.h"
-#include "HighsModelObject.h"
+#include "simplex/HDualRow.h"
+#include "lp_data/HighsModelObject.h"
 
 #include <cassert>
 #include <iostream>
 
-#include "HConst.h"
-#include "SimplexTimer.h"
-#include "HVector.h"
-#include "HSimplex.h"
+#include "lp_data/HConst.h"
+#include "simplex/SimplexTimer.h"
+#include "simplex/HVector.h"
+#include "simplex/HSimplex.h"
 
 using std::make_pair;
 using std::pair;

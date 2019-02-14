@@ -29,8 +29,8 @@ using std::string;
 #include <string.h>
 #include <time.h>
 
-#include "HConst.h"
-#include "HToyIO.h"
+#include "lp_data/HConst.h"
+#include "io/HToyIO.h"
 
 int readToy_LP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
                    double *offset, double **A, double **b, double **c,

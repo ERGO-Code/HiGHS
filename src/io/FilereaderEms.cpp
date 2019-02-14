@@ -15,9 +15,9 @@
 #include <fstream>
 #include <iomanip>
 
-#include "FilereaderEms.h"
-#include "HConst.h"
-#include "stringutil.h"
+#include "io/FilereaderEms.h"
+#include "lp_data/HConst.h"
+#include "util/stringutil.h"
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                                                    HighsLp &model) {

@@ -20,8 +20,8 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "HConst.h" // For HiGHS strategy options
-#include "SimplexConst.h" // For simplex strategy options
+#include "lp_data/HConst.h" // For HiGHS strategy options
+#include "simplex/SimplexConst.h" // For simplex strategy options
 
 enum class LpAction {
   TRANSPOSE = 0,

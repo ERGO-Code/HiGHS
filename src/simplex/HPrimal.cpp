@@ -11,11 +11,11 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HPrimal.h"
-#include "HConst.h"
-#include "HighsIO.h"
-#include "HSimplex.h"
-#include "SimplexTimer.h"
+#include "simplex/HPrimal.h"
+#include "lp_data/HConst.h"
+#include "io/HighsIO.h"
+#include "simplex/HSimplex.h"
+#include "simplex/SimplexTimer.h"
 
 #include <cassert>
 #include <cstdio>

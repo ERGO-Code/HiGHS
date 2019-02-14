@@ -11,11 +11,11 @@
  * @brief Bixby and Maros-style crash for the HiGHS simplex solver
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HCrash.h"
-#include "HMatrix.h"
-#include "HighsSort.h"
-#include "HConst.h"
-#include "HSimplex.h"
+#include "simplex/HCrash.h"
+#include "simplex/HMatrix.h"
+#include "util/HighsSort.h"
+#include "lp_data/HConst.h"
+#include "simplex/HSimplex.h"
 
 #include <cassert>
 #include <set>

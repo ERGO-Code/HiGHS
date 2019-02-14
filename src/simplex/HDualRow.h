@@ -17,7 +17,7 @@
 #include <set>
 #include <vector>
 
-#include "HighsModelObject.h"
+#include "lp_data/HighsModelObject.h"
 
 class HVector;
 

@@ -11,10 +11,10 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HighsSimplexInterface.h"
-#include "HighsIO.h"
-#include "HMPSIO.h"
-#include "HighsUtils.h"
+#include "simplex/HighsSimplexInterface.h"
+#include "io/HighsIO.h"
+#include "io/HMPSIO.h"
+#include "util/HighsUtils.h"
 
 void HighsSimplexInterface::load_from_arrays(
 					     int XnumCol,

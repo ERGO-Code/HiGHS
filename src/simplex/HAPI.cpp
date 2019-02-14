@@ -11,14 +11,12 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HAPI.h"
-#include "HighsLpUtils.h"
-#include "HighsSimplexInterface.h"
+#include "lp_data/HighsLpUtils.h"
 
 #include <cstring>
 
-#include "HDual.h"
-#include "HighsSimplexInterface.h"
+#include "simplex/HDual.h"
+#include "simplex/HighsSimplexInterface.h"
 
 void solve_fromArrays_dense(int *probStatus, int *basisStatus,
                             const int XnumCol, const int XnumRow,

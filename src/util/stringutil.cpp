@@ -1,4 +1,4 @@
-#include <stringutil.h>
+#include "util/stringutil.h"
 
 void strRemoveWhitespace(char *str) {
   char *dest = str;

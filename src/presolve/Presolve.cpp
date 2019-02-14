@@ -11,12 +11,12 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "Presolve.h"
-#include "HConst.h"
-#include "HighsIO.h"
+#include "presolve/Presolve.h"
+#include "lp_data/HConst.h"
+#include "io/HighsIO.h"
 
-#include "HFactor.h"
-#include "KktChStep.h"
+#include "simplex/HFactor.h"
+#include "test/KktChStep.h"
 
 #include <algorithm>
 #include <cmath>

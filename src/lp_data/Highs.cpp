@@ -18,14 +18,14 @@
 #include <memory>
 
 #include "HConfig.h"
-#include "HApp.h"
-#include "HighsIO.h"
-#include "HighsLp.h"
-#include "HighsLpUtils.h"
-#include "HighsModelObject.h"
-#include "HighsSimplexInterface.h"
-#include "HighsStatus.h"
-#include "Presolve.h"
+#include "simplex/HApp.h"
+#include "io/HighsIO.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/HighsSimplexInterface.h"
+#include "lp_data/HighsStatus.h"
+#include "presolve/Presolve.h"
 
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {

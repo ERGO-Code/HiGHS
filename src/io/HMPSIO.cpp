@@ -11,12 +11,12 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HMPSIO.h"
-#include "HConst.h"
-#include "HighsOptions.h"
-#include "HighsUtils.h"
-#include "HighsLp.h"
-#include "stringutil.h"
+#include "io/HMPSIO.h"
+#include "lp_data/HConst.h"
+#include "lp_data/HighsOptions.h"
+#include "util/HighsUtils.h"
+#include "lp_data/HighsLp.h"
+#include "util/stringutil.h"
 
 using std::map;
 

@@ -17,9 +17,9 @@
 #include <cstdio>
 #include <fstream>
 
-#include "Filereader.h"
-#include "HighsIO.h"
-#include "HighsLpUtils.h"
+#include "io/Filereader.h"
+#include "io/HighsIO.h"
+#include "lp_data/HighsLpUtils.h"
 
 // Parses the file in options.filename using the parser specified in
 // options.parser
