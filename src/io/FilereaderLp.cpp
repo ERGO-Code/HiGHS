@@ -44,9 +44,10 @@ FilereaderLp::~FilereaderLp() {
   emptyTokenQueue(this->sosSection);
 }
 
-FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   HighsModelBuilder m;
+  const char* filename = options.filename.c_str();
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
   return FilereaderRetcode::OKAY;

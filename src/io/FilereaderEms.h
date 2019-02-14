@@ -22,7 +22,7 @@
 
 class FilereaderEms : public Filereader {
  public:
-  FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderRetcode readModelFromFile(const HighsOptions& options, HighsLp& model);
   FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
   FilereaderRetcode readModelFromFile(const char* filename, HighsModelBuilder& model);
 };

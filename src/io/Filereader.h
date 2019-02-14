@@ -16,6 +16,7 @@
 
 #include "HighsLp.h"
 #include "HighsModelBuilder.h"
+#include "HighsOptions.h"
 
 enum class HighsInputStatus {
   OK,
@@ -38,7 +39,7 @@ enum class FilereaderRetcode {
 
 class Filereader {
  public:
-  virtual FilereaderRetcode readModelFromFile(const char* filename,
+  virtual FilereaderRetcode readModelFromFile(const HighsOptions& options,
                                               HighsLp& model) = 0;
   virtual FilereaderRetcode readModelFromFile(const char* filename,
                                               HighsModelBuilder& model) = 0;

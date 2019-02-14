@@ -14,26 +14,28 @@
 #include "FilereaderMps.h"
 #include "HMPSIO.h"
 #include "HighsLp.h"
-
-#if defined(Boost_FOUND) && !defined(OLD_PARSER)
 #include "HMpsFF.h"
-#endif
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
-                                                   HighsLp &model) {
+FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
+                                                   HighsLp &model)
+{
+  int status = 1;
+  const char* filename = options.filename.c_str();
 
-  int status;
-#if defined(Boost_FOUND) && !defined(OLD_PARSER)
-  HMpsFF parser{};
-  status = parser.loadProblem(filename, model);
-#else
-  std::vector<int> integerColumn;
-  status = readMPS(
-      filename, -1, -1, model.numRow_, model.numCol_, model.sense_,
-      model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
-      model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
-      model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
-#endif
+  if (options.parser_type == HighsMpsParserType::free)
+  {
+    HMpsFF parser{};
+    status = parser.loadProblem(filename, model);
+  }
+  else
+  {
+    std::vector<int> integerColumn;
+    status = readMPS(
+        filename, -1, -1, model.numRow_, model.numCol_, model.sense_,
+        model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
+        model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+        model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
+  }
 
   if (status)
     return FilereaderRetcode::PARSERERROR;
@@ -41,7 +43,8 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
 }
 
 FilereaderRetcode FilereaderMps::writeModelToFile(const char *filename,
-                                                  HighsLp &model) {
+                                                  HighsLp &model)
+{
   std::vector<int> integerColumn;
   int numint = 0;
   int objsense = 1;
@@ -53,7 +56,8 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char *filename,
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
-                                                   HighsModelBuilder& model) {
+FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
+                                                   HighsModelBuilder &model)
+{
   return FilereaderRetcode::PARSERERROR;
 }

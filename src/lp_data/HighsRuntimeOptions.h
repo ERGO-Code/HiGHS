@@ -29,7 +29,9 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         "h, help", "Print help.")(
         "options-file",
         "File containing HiGHS options.",
-        cxxopts::value<std::vector<std::string>>());
+        cxxopts::value<std::vector<std::string>>())(
+        "parser", "Mps parser type: swap back to fixed format parser.",
+        cxxopts::value<std::string>(presolve));
 
     cxx_options.parse_positional("file");
 
@@ -65,7 +67,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       if (!setUserOptionValue(options, "crash", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for crash option: %s. Ignored.\n", value.c_str());
     }
-    
+
     if (result.count("parallel"))
     {
       std::string value = result["parallel"].as<std::string>();
@@ -73,14 +75,14 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         HighsPrintMessage(ML_ALWAYS, "Unknown value for parallel option: %s. Ignored.\n", value.c_str());
     }
 
-  if (result.count("simplex"))
+    if (result.count("simplex"))
     {
       std::string value = result["simplex"].as<std::string>();
       if (!setUserOptionValue(options, "simplex", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for simplex option: %s. Ignored.\n", value.c_str());
     }
 
-  if (result.count("ipm"))
+    if (result.count("ipm"))
     {
       std::string value = result["ipm"].as<std::string>();
       if (!setUserOptionValue(options, "ipm", value))
@@ -110,6 +112,15 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       options.options_file = v[0];
     }
 
+    // For testing of new parser
+    if (result.count("parser"))
+    {
+      std::string value = result["parser"].as<std::string>();
+      if (value == "fixed")
+        options.parser_type = HighsMpsParserType::fixed;
+      else if (value == "free")
+        options.parser_type = HighsMpsParserType::free;
+    }
   }
   catch (const cxxopts::OptionException &e)
   {
