@@ -33,84 +33,66 @@ class HighsSimplexInterface {
   HighsModelObject &highs_model_object;
   
   /**
-   * @brief Load a model from arrays 
-   */
-  void load_from_arrays(
-			int XnumCol,
-			int XobjSense,
-			const double* XcolCost,
-			const double* XcolLower,
-			const double* XcolUpper,
-			int XnumRow,
-			const double* XrowLower,
-			const double* XrowUpper,
-			int XnumNz,
-			const int* XAstart,
-			const int* XAindex,
-			const double* XAvalue
-			);
-
-  // Methods for brief reports
-  /**
    * @brief Report the outcome of a simplex solve, printing a message first to contextualise the call
    */
   void report_simplex_outcome(
 			      const char* message
 			      );
   /**
-   * @brief Report the simplex solution status value as a string with \n
-   */
-  void report_simplex_solution_status();
-
-  /**
-   * @brief Get the column and row (primal) values and dual (values)
-   */
-  void get_primal_dual_values(
-			      vector<double> &XcolValue,
-			      vector<double> &XcolDual,
-			      vector<double> &XrowValue,
-			      vector<double> &XrowDual
-			      );
-
-  void get_basicIndex_nonbasicFlag(
-				   vector<int> &XbasicIndex,
-				   vector<int> &XnonbasicFlag
-				   );
-
-  // Utility to get the indices of the basic variables for SCIP
-  int get_basic_indices(
-			int *bind
-			);
-  // Utilities to convert model basic/nonbasic status to/from SCIP-like status
-  // Convert model basic/nonbasic status from SCIP-like status
-  // Postive  return value k implies invalid basis status for column k-1
-  // Negative return value k implies invalid basis status for row   -k-1
-  int convert_baseStat_to_working(
-				  const int* cstat,
-				  const int* rstat
-				  );
-  int convert_Working_to_BaseStat(
-				  int* cstat,
-				  int* rstat
-				  );
-
-
-
-  /**
-   * @brief Get the LP objective function value from column values
+   * @brief Compute the LP objective function value from column values
    */
   double get_lp_objective_value(
-			      vector<double> &XcolValue
+				vector<double> &XcolValue
+				);
+
+  /**
+   * @brief Get vectors of column and row (primal) values and dual (values)
+   */
+  void get_primal_dual_values(
+			      vector<double> &XcolValue, //!> Column primal activities
+			      vector<double> &XcolDual,  //!> Column dual activities
+			      vector<double> &XrowValue, //!> Row primal activities
+			      vector<double> &XrowDual   //!> Row dual activities
 			      );
+
+  /**
+   * @brief Get the basicIndex and nonbasicFlag vectors - Used?
+   */
+  void get_basicIndex_nonbasicFlag(
+				   vector<int> &XbasicIndex,  //!> Indices of basic variables
+				   vector<int> &XnonbasicFlag //!> Flag to indicate which variables are nonbasic
+				   );
+
+  /**
+   * @brief Get the indices of the basic variables for SCIP
+   */
+  int get_basic_indices(
+			int *bind //!> Indices of basic variables
+			);
+
+  /**
+   * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
+   * Postive  return value k implies invalid basis status for column k-1
+   * Negative return value k implies invalid basis status for row   -k-1
+   */
+  int convert_baseStat_to_working(
+				  const int* cstat, //!> Column baseStat
+				  const int* rstat  //!> Row baseStat
+				  );
+
+  /**
+   * @brief Convert a HiGHS basis to SCIP baseStat for columns and rows
+   * Postive  return value k implies invalid basis status for column k-1
+   * Negative return value k implies invalid basis status for row   -k-1
+   */
+  int convert_Working_to_BaseStat(
+				  int* cstat, //!> Column baseStat
+				  int* rstat  //!> Row baseStat
+				  );
 
 #ifdef HiGHSDEV
   /**
-   * @brief Test load_from_arrays
-   */
-  void check_load_from_arrays();
-
-  /**
-   * @brief Check that what's passed from postsolve is valid
+   * @brief Check that what's passed from postsolve is valid - Used?
    */
   void check_load_from_postsolve();
 #endif
@@ -250,9 +232,6 @@ class HighsSimplexInterface {
 			    const double* XrowUpperValues
 			    );
   
-  int write_to_mps(
-		   const char* filename
-		   );
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void change_update_method(

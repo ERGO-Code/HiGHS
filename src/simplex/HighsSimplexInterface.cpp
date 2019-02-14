@@ -16,45 +16,6 @@
 #include "HMPSIO.h"
 #include "HighsUtils.h"
 
-void HighsSimplexInterface::load_from_arrays(
-					     int XnumCol,
-					     int Xsense,
-					     const double* XcolCost,
-					     const double* XcolLower,
-					     const double* XcolUpper,
-					     int XnumRow,
-					     const double* XrowLower,
-					     const double* XrowUpper,
-					     int XnumNz,
-					     const int* XAstart,
-					     const int* XAindex,
-					     const double* XAvalue
-					      ) {
-  HighsLp &lp = highs_model_object.lp_;
-  //  printf("load_fromArrays: XnumCol = %d; XnumRow = %d; XnumNz = %d\n",
-  //  XnumCol, XnumRow, XnumNz);
-  assert(XnumCol > 0);
-  assert(XnumRow > 0);
-
-  lp.numCol_ = XnumCol;
-  lp.numRow_ = XnumRow;
-  lp.sense_ = Xsense;
-  int numNz = XnumNz;
-  lp.colCost_.assign(&XcolCost[0], &XcolCost[0] + lp.numCol_);
-  lp.colLower_.assign(&XcolLower[0], &XcolLower[0] + lp.numCol_);
-  lp.colUpper_.assign(&XcolUpper[0], &XcolUpper[0] + lp.numCol_);
-  lp.rowLower_.assign(&XrowLower[0], &XrowLower[0] + lp.numRow_);
-  lp.rowUpper_.assign(&XrowUpper[0], &XrowUpper[0] + lp.numRow_);
-  lp.Astart_.assign(&XAstart[0], &XAstart[0] + lp.numCol_ + 1);
-  lp.Aindex_.assign(&XAindex[0], &XAindex[0] + numNz);
-  lp.Avalue_.assign(&XAvalue[0], &XAvalue[0] + numNz);
-  // Assign and initialise the scaling factors
-
-  // Initialise with a logical basis then allocate and populate (where
-  // possible) work* arrays and allocate basis* arrays
-  
-  }
-  
 void HighsSimplexInterface::report_simplex_outcome(const char *message) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &solver_lp = highs_model_object.solver_lp_;
@@ -86,12 +47,23 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    simplex_info.dual_phase2_iteration_count,
 		    simplex_info.primal_phase2_iteration_count
 		    );
-  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL) {
+  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_ALWAYS, "\n");
-  } else {
-    report_simplex_solution_status();
-    HighsPrintMessage(ML_ALWAYS, "\n");
-  }
+  else if (simplex_info.solution_status == SimplexSolutionStatus::UNSET)
+    HighsPrintMessage(ML_ALWAYS, "Unset\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::INFEASIBLE)
+    HighsPrintMessage(ML_ALWAYS, "Infeasible\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::UNBOUNDED)
+    HighsPrintMessage(ML_ALWAYS, "Primal unbounded\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::SINGULAR)
+    HighsPrintMessage(ML_ALWAYS, "Singular basis\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::FAILED)
+    HighsPrintMessage(ML_ALWAYS, "Failed\n");
+  else if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
+    HighsPrintMessage(ML_ALWAYS, "Time limit exceeded\n");
+  else
+    HighsPrintMessage(ML_ALWAYS, "Unrecognised\n");
+
   // Greppable report line added
   HighsPrintMessage(ML_ALWAYS, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s,%d,%d,%d\n",
 		    dualObjectiveValue,
@@ -105,27 +77,12 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    );
 }
 
-// Methods for reporting the model, its solution, row and column data and matrix
-// Report the model status
-void HighsSimplexInterface::report_simplex_solution_status() {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsPrintMessage(ML_ALWAYS, "simplex solution status is %2d: ", simplex_info.solution_status);
-  if (simplex_info.solution_status == SimplexSolutionStatus::UNSET)
-    HighsPrintMessage(ML_ALWAYS, "Unset\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
-    HighsPrintMessage(ML_ALWAYS, "Optimal\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::INFEASIBLE)
-    HighsPrintMessage(ML_ALWAYS, "Infeasible\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::UNBOUNDED)
-    HighsPrintMessage(ML_ALWAYS, "Primal unbounded\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::SINGULAR)
-    HighsPrintMessage(ML_ALWAYS, "Singular basis\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::FAILED)
-    HighsPrintMessage(ML_ALWAYS, "Failed\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
-    HighsPrintMessage(ML_ALWAYS, "Time limit exceeded\n");
-  else
-    HighsPrintMessage(ML_ALWAYS, "Unrecognised\n");
+double HighsSimplexInterface::get_lp_objective_value(vector<double> &XcolValue) {
+  HighsLp &lp = highs_model_object.lp_;
+
+  double lp_objective_value = 0;
+  for (int i = 0; i < lp.numCol_; i++) lp_objective_value += XcolValue[i] * lp.colCost_[i];
+  return lp_objective_value;
 }
 
 void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
@@ -182,7 +139,6 @@ void HighsSimplexInterface::get_basicIndex_nonbasicFlag(
   for (int i = 0; i < nonbasicFlagSz; i++) XnonbasicFlag[i] = basis.nonbasicFlag_[i];
 }
 
-// Utility to get the indices of the basic variables for SCIP
 int HighsSimplexInterface::get_basic_indices(int *bind) {
   HighsBasis &basis = highs_model_object.basis_;
   HighsLp &solver_lp = highs_model_object.solver_lp_;
@@ -399,47 +355,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
 }
 
 
-double HighsSimplexInterface::get_lp_objective_value(vector<double> &XcolValue) {
-  HighsLp &lp = highs_model_object.lp_;
-
-  double lp_objective_value = 0;
-  for (int i = 0; i < lp.numCol_; i++) lp_objective_value += XcolValue[i] * lp.colCost_[i];
-  return lp_objective_value;
-}
-
 #ifdef HiGHSDEV
-void HighsSimplexInterface::check_load_from_arrays() {
-  HighsLp &lp = highs_model_object.lp_;
-  // Use the arrays read from an MPS file to test the routine to
-  // read a model passed by arrays. First copy the data.
-  int XnumCol = lp.numCol_;
-  int XnumRow = lp.numRow_;
-  int XnumNz = lp.Astart_[lp.numCol_];
-  int Xsense = lp.sense_;
-  vector<double> XcolCost;
-  vector<double> colLower;
-  vector<double> XcolUpper;
-  vector<double> XrowLower;
-  vector<double> XrowUpper;
-  vector<int> XAstart;
-  vector<int> XAindex;
-  vector<double> XAvalue;
-
-  XcolCost.assign(&lp.colCost_[0], &lp.colCost_[0] + XnumCol);
-  colLower.assign(&lp.colLower_[0], &lp.colLower_[0] + XnumCol);
-  XcolUpper.assign(&lp.colUpper_[0], &lp.colUpper_[0] + XnumCol);
-  XrowLower.assign(&lp.rowLower_[0], &lp.rowLower_[0] + XnumRow);
-  XrowUpper.assign(&lp.rowUpper_[0], &lp.rowUpper_[0] + XnumRow);
-  XAstart.assign(&lp.Astart_[0], &lp.Astart_[0] + XnumCol + 1);
-  XAindex.assign(&lp.Aindex_[0], &lp.Aindex_[0] + XnumNz);
-  XAvalue.assign(&lp.Avalue_[0], &lp.Avalue_[0] + XnumNz);
-
-  //  clear_solver_lp(highs_model_object);
-  load_from_arrays(XnumCol, Xsense, &XcolCost[0], &colLower[0],
-		   &XcolUpper[0], XnumRow, &XrowLower[0], &XrowUpper[0], XnumNz,
-		   &XAstart[0], &XAindex[0], &XAvalue[0]);
-}
-
 void HighsSimplexInterface::check_load_from_postsolve() {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
   //  HSimplex simplex_method_;
@@ -1225,16 +1141,6 @@ int HighsSimplexInterface::change_row_bounds_set(
   return 0;
 }
 
-int HighsSimplexInterface::write_to_mps(const char *filename) {
-  HighsLp &lp = highs_model_object.lp_;
-
-  vector<int> integerColumn;
-  int numInt = 0;
-  int rtCd = writeMPS(filename, lp.numRow_, lp.numCol_, numInt, lp.sense_, lp.offset_, lp.Astart_,
-		      lp.Aindex_, lp.Avalue_, lp.colCost_, lp.colLower_, lp.colUpper_,
-		      lp.rowLower_, lp.rowUpper_, integerColumn);
-  return rtCd;
-}
 #ifdef HiGHSDEV
 void HighsSimplexInterface::change_update_method(int updateMethod) {
   highs_model_object.factor_.change(updateMethod);

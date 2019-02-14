@@ -1228,12 +1228,12 @@ void report_basis(HighsModelObject &highs_model_object) {
     }
   }
 
-  // get_the nonbasicMove value for a particular variable - may not be used
-  int get_nonbasicMove(HighsModelObject &highs_model_object, int var) {
+  // Get the nonbasicMove value for a particular variable - may not be used
+  int get_one_nonbasicMove(HighsModelObject &highs_model_object, int var) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
     const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
-    //  printf("Calling get_nonbasicMove with var = %2d; numTot = %2d\n", var, numTot); 
+    //  printf("Calling get_one_nonbasicMove with var = %2d; numTot = %2d\n", var, numTot); 
     assert(var >= 0);
     assert(var < numTot);
     if (!highs_isInfinity(-simplex_info.workLower_[var])) {
@@ -1440,8 +1440,8 @@ void report_basis(HighsModelObject &highs_model_object) {
     int var = col;
     //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_TRUE\n", var);
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    //    printf("Calling get_nonbasicMove(%2d)\n", var);
-    //    basis.nonbasicMove_[var] = get_nonbasicMove(highs_model_object, var);
+    //    printf("Calling get_one_nonbasicMove(%2d)\n", var);
+    //    basis.nonbasicMove_[var] = get_one_nonbasicMove(highs_model_object, var);
   }
   // Make any new rows basic
   //  printf("Make any new rows basic: %d %d %d\n", solver_lp.numRow_, firstrow, lastrow);

@@ -18,7 +18,6 @@
 #include "HConst.h"
 #include "HighsIO.h"
 #include "HighsModelObject.h"
-//#include "HighsLpUtils.h"
 #include <cassert>
 #include <iostream>
 
