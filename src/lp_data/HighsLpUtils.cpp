@@ -13,11 +13,11 @@
  */
 
 #include "HConfig.h"
-#include "HighsIO.h"
-#include "HighsLpUtils.h"
-#include "HighsModelUtils.h"
-#include "HighsUtils.h"
-#include "HighsStatus.h"
+#include "io/HighsIO.h"
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
+#include "util/HighsUtils.h"
+#include "lp_data/HighsStatus.h"
 
 void getLpCosts(
 		const HighsLp& lp,

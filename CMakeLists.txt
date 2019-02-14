@@ -48,20 +48,6 @@ if(EXT_PRESOLVE_DIR)
     include_directories(${EXT_PRESOLVE_DIR}/external)
 endif()
 
-# See if boost is available
-if (UNIX)
-  find_package(Boost COMPONENTS iostreams)
-  if (Boost_FOUND)
-    add_definitions(-DBoost_FOUND)
-  endif()
-endif()
-
-# use hsol parser todo: remove once cmd option is available
-option(OLD_PARSER  "USE OLD PARSER" OFF)
-if(OLD_PARSER)
-    message(STATUS "Using old hsol parser")
-endif()
-
 # whether to use OpenMP
 option(OPENMP "OpenMP" ON)
 if(OPENMP)

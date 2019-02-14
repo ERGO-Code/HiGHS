@@ -12,10 +12,10 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "FilereaderLp.h"
+#include "io/FilereaderLp.h"
 #include <stdarg.h>
-#include "../util/stringutil.h"
-#include "HConst.h"
+#include "util/stringutil.h"
+#include "lp_data/HConst.h"
 
 FilereaderLp::FilereaderLp() {
   this->isFileBufferFullyRead = true;
@@ -44,9 +44,10 @@ FilereaderLp::~FilereaderLp() {
   emptyTokenQueue(this->sosSection);
 }
 
-FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
+FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   HighsModelBuilder m;
+  const char* filename = options.filename.c_str();
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
   return FilereaderRetcode::OKAY;

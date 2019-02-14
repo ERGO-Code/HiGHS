@@ -17,8 +17,8 @@
 
 #include <list>
 
-#include "Filereader.h"
-#include "HighsIO.h"
+#include "io/Filereader.h"
+#include "io/HighsIO.h"
 
 #define BUFFERSIZE 561
 #define LP_MAX_LINE_LENGTH 560
@@ -230,7 +230,7 @@ class LpTokenComparison : public LpToken {
 
 class FilereaderLp : public Filereader {
  public:
-  FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderRetcode readModelFromFile(const HighsOptions& options, HighsLp& model);
   FilereaderRetcode readModelFromFile(const char* filename, HighsModelBuilder& model);
   FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
   FilereaderLp();

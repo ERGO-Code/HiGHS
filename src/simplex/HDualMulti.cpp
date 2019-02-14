@@ -11,9 +11,9 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConst.h"
-#include "HDual.h"
-#include "HPrimal.h"
+#include "lp_data/HConst.h"
+#include "simplex/HDual.h"
+#include "simplex/HPrimal.h"
 //#include "HTimer.h"
 
 #include <cassert>
@@ -273,9 +273,8 @@ void HDual::minor_updateDual() {
    * 1. Update the dual solution
    *    XXX Data parallel (depends on the ap partition before)
    */
-  HSimplex simplex_method_;
   if (thetaDual == 0) {
-    simplex_method_.shift_cost(workHMO, columnIn, -workDual[columnIn]);//model->shiftCost(columnIn, -workDual[columnIn]);
+    shift_cost(workHMO, columnIn, -workDual[columnIn]);//model->shiftCost(columnIn, -workDual[columnIn]);
   } else {
     dualRow.update_dual(thetaDual, columnOut);
     if (slice_PRICE) {
@@ -285,7 +284,7 @@ void HDual::minor_updateDual() {
   }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
-  simplex_method_.shift_back(workHMO, columnOut);//model->shiftBack(columnOut);
+  shift_back(workHMO, columnOut);//model->shiftBack(columnOut);
 
   /**
    * 2. Apply global bound flip
@@ -344,10 +343,10 @@ void HDual::minor_updatePrimal() {
 }
 void HDual::minor_updatePivots() {
   MFinish *Fin = &multi_finish[multi_nFinish];
-  simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
   Fin->EdWt /= (alphaRow * alphaRow);
   Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
-  simplex_method_.update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
+  update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
   // Move this to Simplex class once it's created
@@ -686,7 +685,7 @@ void HDual::major_updateFactor() {
   }
   iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
   if (multi_nFinish > 0)
-    simplex_method_.update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);// model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
+    update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);// model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && workHMO.simplex_info_.update_count > 200)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
@@ -703,12 +702,11 @@ void HDual::major_rollback() {
     workHMO.basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
 
     // 2. Roll back matrix
-    simplex_method_.update_matrix(workHMO, Fin->columnOut, Fin->columnIn);// model->updateMatrix(Fin->columnOut, Fin->columnIn);
+    update_matrix(workHMO, Fin->columnOut, Fin->columnIn);// model->updateMatrix(Fin->columnOut, Fin->columnIn);
 
     // 3. Roll back flips
-    HSimplex simplex_method_;
     for (unsigned i = 0; i < Fin->flipList.size(); i++) {
-      simplex_method_.flip_bound(workHMO, Fin->flipList[i]); //model->flipBound(Fin->flipList[i]);
+      flip_bound(workHMO, Fin->flipList[i]); //model->flipBound(Fin->flipList[i]);
     }
 
     // 4. Roll back cost

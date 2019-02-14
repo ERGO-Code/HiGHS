@@ -11,8 +11,8 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "KktCheck.h"
-#include "HConst.h"
+#include "test/KktCheck.h"
+#include "lp_data/HConst.h"
 
 #include <vector>
 

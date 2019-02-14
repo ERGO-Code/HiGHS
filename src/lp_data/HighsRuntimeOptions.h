@@ -1,5 +1,5 @@
-#include "HighsOptions.h"
-#include "HConst.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HConst.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
@@ -26,7 +26,12 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(parallel))(
         "time-limit", "Use time limit.",
         cxxopts::value<double>())(
-        "h, help", "Print help.");
+        "h, help", "Print help.")(
+        "options-file",
+        "File containing HiGHS options.",
+        cxxopts::value<std::vector<std::string>>())(
+        "parser", "Mps parser type: swap back to fixed format parser.",
+        cxxopts::value<std::string>(presolve));
 
     cxx_options.parse_positional("file");
 
@@ -38,10 +43,8 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       exit(0);
     }
 
-    // Currently works for only one filename at a time.
     if (result.count("file"))
     {
-      std::string filename = "";
       auto &v = result["file"].as<std::vector<std::string>>();
       if (v.size() > 1)
       {
@@ -54,7 +57,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     if (result.count("presolve"))
     {
       std::string value = result["presolve"].as<std::string>();
-      if (setUserOptionValue(options, "presolve", value))
+      if (!setUserOptionValue(options, "presolve", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for presovle option: %s. Ignored.\n", value.c_str());
     }
 
@@ -64,7 +67,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       if (!setUserOptionValue(options, "crash", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for crash option: %s. Ignored.\n", value.c_str());
     }
-    
+
     if (result.count("parallel"))
     {
       std::string value = result["parallel"].as<std::string>();
@@ -72,17 +75,17 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         HighsPrintMessage(ML_ALWAYS, "Unknown value for parallel option: %s. Ignored.\n", value.c_str());
     }
 
-  if (result.count("simplex"))
+    if (result.count("simplex"))
     {
       std::string value = result["simplex"].as<std::string>();
       if (!setUserOptionValue(options, "simplex", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for simplex option: %s. Ignored.\n", value.c_str());
     }
 
-  if (result.count("ipm"))
+    if (result.count("ipm"))
     {
       std::string value = result["ipm"].as<std::string>();
-      if (setUserOptionValue(options, "ipm", value))
+      if (!setUserOptionValue(options, "ipm", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
     }
 
@@ -96,6 +99,27 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         exit(0);
       }
       options.highs_run_time_limit = time_limit;
+    }
+
+    if (result.count("options-file"))
+    {
+      auto &v = result["options-file"].as<std::vector<std::string>>();
+      if (v.size() > 1)
+      {
+        std::cout << "Multiple options files not implemented.\n";
+        return false;
+      }
+      options.options_file = v[0];
+    }
+
+    // For testing of new parser
+    if (result.count("parser"))
+    {
+      std::string value = result["parser"].as<std::string>();
+      if (value == "fixed")
+        options.parser_type = HighsMpsParserType::fixed;
+      else if (value == "free")
+        options.parser_type = HighsMpsParserType::free;
     }
   }
   catch (const cxxopts::OptionException &e)

@@ -22,17 +22,17 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "HCrash.h"
-#include "HDual.h"
-#include "HighsLp.h"
-#include "HighsLpUtils.h"
-#include "HighsModelObject.h"
-#include "HighsStatus.h"
-#include "HighsUtils.h"
+#include "simplex/HCrash.h"
+#include "simplex/HDual.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsStatus.h"
+#include "util/HighsUtils.h"
 //#include "HRanging.h"
-#include "HSimplex.h"
-#include "HighsSimplexInterface.h"
-#include "SimplexConst.h"
+#include "simplex/HSimplex.h"
+#include "simplex/HighsSimplexInterface.h"
+#include "simplex/SimplexConst.h"
 
 using std::cout;
 using std::endl;
@@ -72,11 +72,9 @@ HighsStatus solveSimplex(
   HDual dual_solver(highs_model_object);
   dual_solver.options();
   
-  HSimplex simplex_method_;
-
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
-    simplex_method_.initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
+    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
     timer.start(timer.solve_clock);
     dual_solver.solve();
     timer.stop(timer.solve_clock);
@@ -169,7 +167,6 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
   const HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
 
-  HSimplex simplex_method_;
   HighsSimplexInterface simplex_interface(highs_model_object);
 
   // Extract columns numCol-3..numCol-1
@@ -271,7 +268,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
                      nnonz, &XAstart[0], &XAindex[0], &XAvalue[0]);
   //  simplex_interface.util_reportModel();
 
-  simplex_method_.scale_solver_lp(highs_model_object);
+  scale_solver_lp(highs_model_object);
   HDual dual_solver(highs_model_object);
   dual_solver.solve();
   //  reportLpSolution(highs_model_object);
@@ -320,7 +317,7 @@ HighsStatus solveScip(const HighsOptions& opt, HighsModelObject& highs_model_obj
       nw_colUpper = og_colUpper;
       printf("Calling simplex_interface.change_col_bounds_set(1, %d, %g, %g)\n", colBoundIndex, nw_colLower, nw_colUpper);
       simplex_interface.change_col_bounds_set(1, &colBoundIndex, &nw_colLower, &nw_colUpper);
-      simplex_method_.scale_solver_lp(highs_model_object);
+      scale_solver_lp(highs_model_object);
       dual_solver.solve();
       simplex_interface.report_simplex_outcome("SCIP 2");
       // Was &nw_colLower, &nw_colUpper); and might be more interesting for
@@ -356,16 +353,15 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   solver_lp_ = lp_;
 
   // Set simplex options from HiGHS options
-  HSimplex simplex_method_;
-  simplex_method_.options(highs_model_object, opt);
+  options(highs_model_object, opt);
 
   // Possibly transpose the LP to be solved. This will change the
   // numbers of rows and columns in the LP to be solved
-  if (simplex_info_.transpose_solver_lp) simplex_method_.transpose_solver_lp(highs_model_object);
+  if (simplex_info_.transpose_solver_lp) transpose_solver_lp(highs_model_object);
 
   // Now that the numbers of rows and columns in the LP to be solved
   // are fixed, initialise the real and integer random vectors
-  simplex_method_.initialise_solver_lp_random_vectors(highs_model_object);
+  initialise_solver_lp_random_vectors(highs_model_object);
   //
   // Allocate memory for the basis
   // assignBasis();
@@ -378,17 +374,17 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //
   // Initialise unit scaling factors, to simplify things is no scaling
   // is performed
-  simplex_method_.scaleHighsModelInit(highs_model_object);
+  scaleHighsModelInit(highs_model_object);
   if (simplex_info_.scale_solver_lp)
-    simplex_method_.scale_solver_lp(highs_model_object);
+    scale_solver_lp(highs_model_object);
   //
   // Possibly permute the columns of the LP to be used by the solver. 
   if (simplex_info_.permute_solver_lp)
-    simplex_method_.permute_solver_lp(highs_model_object);
+    permute_solver_lp(highs_model_object);
   //
   // Possibly tighten the bounds of LP to be used by the solver. 
   if (simplex_info_.tighten_solver_lp)
-    simplex_method_.tighten_solver_lp(highs_model_object);
+    tighten_solver_lp(highs_model_object);
   //
 #ifdef HiGHSDEV
   // Analyse the scaled LP
@@ -400,10 +396,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       util_analyseLp(solver_lp_, "Scaled");
     }
   }
-  //  simplex_method_.report_solver_lp_status_flags(highs_model_object);
+  //  report_solver_lp_status_flags(highs_model_object);
 #endif
 
-  simplex_method_.initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();
+  initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();
 
   matrix_.setup_lgBs(solver_lp_.numCol_, solver_lp_.numRow_,
 		     &solver_lp_.Astart_[0],
@@ -430,10 +426,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 					   solution.colDual_,
 					   solution.rowValue_,
 					   solution.rowDual_);
-  simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.basis_info_.basis_index,
-						highs_model_object.basis_info_.nonbasic_flag);
+  simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.basis_.basicIndex_,
+						highs_model_object.basis_.nonbasicFlag_);
 
-  highs_model_object.basis_info_.nonbasic_move = basis_.nonbasicMove_;
+  highs_model_object.basis_.nonbasicMove_ = basis_.nonbasicMove_;
 
   return result;
 }

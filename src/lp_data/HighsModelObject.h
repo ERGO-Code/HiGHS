@@ -10,18 +10,12 @@
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
-#include "HighsLp.h"
-#include "HighsTimer.h"
-#include "HighsRandom.h"
-#include "HMatrix.h"
-#include "HFactor.h"
+#include "lp_data/HighsLp.h"
+#include "util/HighsTimer.h"
+#include "util/HighsRandom.h"
+#include "simplex/HMatrix.h"
+#include "simplex/HFactor.h"
 // include Sensitivity(or Ranging) header
-
-struct BasisInfo {
-  std::vector<int> basis_index;
-  std::vector<int> nonbasic_flag;
-  std::vector<int> nonbasic_move;
-};
 
 // Class to communicate data between the simplex solver and the class
 // Highs below. Sensitivity data structure would be added here. Only
@@ -45,8 +39,6 @@ public:
   HighsRandom random_;
 
   bool reportModelOperationsClock = false;
-
-  BasisInfo basis_info_;
 
 };
 

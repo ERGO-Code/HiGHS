@@ -11,10 +11,10 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HighsSimplexInterface.h"
-#include "HighsIO.h"
-#include "HMPSIO.h"
-#include "HighsUtils.h"
+#include "simplex/HighsSimplexInterface.h"
+#include "io/HighsIO.h"
+#include "io/HMPSIO.h"
+#include "util/HighsUtils.h"
 
 void HighsSimplexInterface::report_simplex_outcome(const char *message) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -358,7 +358,6 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
 #ifdef HiGHSDEV
 void HighsSimplexInterface::check_load_from_postsolve() {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
-  //  HSimplex simplex_method_;
   bool ok;
 
   ok = true;printf("Need to call nonbasic_flag_basic_index_ok\n"); //nonbasicFlagBasicIndex_OK(solver_lp.numCol_, solver_lp.numRow_);

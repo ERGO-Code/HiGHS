@@ -19,13 +19,13 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "HCrash.h"
-#include "HDualRHS.h"
-#include "HDualRow.h"
-#include "HighsModelObject.h"
-#include "HVector.h"
-#include "HMatrix.h"
-#include "HSimplex.h"
+#include "simplex/HCrash.h"
+#include "simplex/HDualRHS.h"
+#include "simplex/HDualRow.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/HVector.h"
+#include "simplex/HMatrix.h"
+#include "simplex/HSimplex.h"
 
 class HFactor;
 
@@ -472,7 +472,6 @@ class HDual {
 
   const HMatrix *matrix;
   const HFactor *factor;
-  HSimplex simplex_method_;
 
   const int *jMove;
   const double *workRange;

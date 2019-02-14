@@ -18,13 +18,14 @@
 #include <memory>
 
 #include "HConfig.h"
-#include "HApp.h"
-#include "HighsLp.h"
-#include "HighsLpUtils.h"
-#include "HighsModelObject.h"
-#include "HighsSimplexInterface.h"
-#include "HighsStatus.h"
-#include "Presolve.h"
+#include "simplex/HApp.h"
+#include "io/HighsIO.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/HighsSimplexInterface.h"
+#include "lp_data/HighsStatus.h"
+#include "presolve/Presolve.h"
 
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
@@ -87,10 +88,10 @@ HighsStatus Highs::run(HighsLp& lp) {
     case HighsPresolveStatus::Unbounded: {
       HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
                HighsStatus::Infeasible : HighsStatus::Unbounded;
-      std::string message = "Problem status detected on presolve: " + HighsStatusToString(result);
-      HighsPrintMessage(HighsMessageType::INFO, message.c_str());
+      HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
+                                   HighsStatusToString(result).c_str());
       // for tests
-      std::cout << "Run: NOT-OPT" << std::endl;
+      HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
       return result;
     }
     default: {
@@ -105,8 +106,8 @@ HighsStatus Highs::run(HighsLp& lp) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
       presolve_info.reduced_solution_ = lps_[1].solution_;
       presolve_info.presolve_[0].setBasisInfo(
-          lps_[1].basis_info_.basis_index, lps_[1].basis_info_.nonbasic_flag,
-          lps_[1].basis_info_.nonbasic_move);
+          lps_[1].basis_.basicIndex_, lps_[1].basis_.nonbasicFlag_,
+          lps_[1].basis_.nonbasicMove_);
     }
 
     timer.start(timer.postsolve_clock);
@@ -117,11 +118,11 @@ HighsStatus Highs::run(HighsLp& lp) {
 
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.
-      lps_[0].basis_info_.basis_index =
+      lps_[0].basis_.basicIndex_ =
           presolve_info.presolve_[0].getBasisIndex();
-      lps_[0].basis_info_.nonbasic_flag =
+      lps_[0].basis_.nonbasicFlag_ =
           presolve_info.presolve_[0].getNonbasicFlag();
-      lps_[0].basis_info_.nonbasic_move =
+      lps_[0].basis_.nonbasicMove_ =
           presolve_info.presolve_[0].getNonbasicMove();
 
       options_.clean_up = true;
@@ -129,6 +130,11 @@ HighsStatus Highs::run(HighsLp& lp) {
       solve_status = runSolver(lps_[0]);
     }
   }
+  
+  assert(lps_.size() > 0);
+  int last = lps_.size() - 1;
+  solution_ = lps_[last].solution_;
+  basis_ = lps_[last].basis_;
 
   HighsSimplexInterface simplex_interface(lps_[0]);
   if (solve_status != HighsStatus::Optimal) {
@@ -243,7 +249,6 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // todo:
   // assert(KktSatisfied(lp, solution));
 
-  solution_ = model.solution_;
   return status;
 }
 

@@ -11,11 +11,11 @@
  * @brief Bixby and Maros-style crash for the HiGHS simplex solver
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HCrash.h"
-#include "HMatrix.h"
-#include "HighsSort.h"
-#include "HConst.h"
-#include "HSimplex.h"
+#include "simplex/HCrash.h"
+#include "simplex/HMatrix.h"
+#include "util/HighsSort.h"
+#include "lp_data/HConst.h"
+#include "simplex/HSimplex.h"
 
 #include <cassert>
 #include <set>
@@ -87,7 +87,6 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
 
 void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  //  HSimplex simplex_method_;
 
   const int *Astart = &lp_->Astart_[0];
   const int *Aindex = &lp_->Aindex_[0];
@@ -682,7 +681,6 @@ void HCrash::ltssf_iz_mode(int Crash_Mode) {
 void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
   // LTSSF Main loop
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  //  HSimplex simplex_method_;
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
   bool ltssf_stop = false;
@@ -1267,7 +1265,6 @@ void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
 #ifdef HiGHSDEV
 void HCrash::tsSing(HighsModelObject &highs_model_object) {
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  //  HSimplex simplex_method_;
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number

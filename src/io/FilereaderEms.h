@@ -17,12 +17,12 @@
 
 #include <list>
 
-#include "Filereader.h"
-#include "HighsIO.h"  // For messages.
+#include "io/Filereader.h"
+#include "io/HighsIO.h"  // For messages.
 
 class FilereaderEms : public Filereader {
  public:
-  FilereaderRetcode readModelFromFile(const char* filename, HighsLp& model);
+  FilereaderRetcode readModelFromFile(const HighsOptions& options, HighsLp& model);
   FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
   FilereaderRetcode readModelFromFile(const char* filename, HighsModelBuilder& model);
 };

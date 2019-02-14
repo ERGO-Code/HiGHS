@@ -16,11 +16,11 @@
 
 #include <cstring>
 
-#include "HConst.h"
-#include "HighsLp.h"
-#include "Presolve.h"
-#include "HighsModelObject.h"
-#include "SimplexConst.h"
+#include "lp_data/HConst.h"
+#include "lp_data/HighsLp.h"
+#include "presolve/Presolve.h"
+#include "lp_data/HighsModelObject.h"
+#include "simplex/SimplexConst.h"
 #include "cxxopts.hpp"
 
 // The free parser also reads fixed format MPS files but the fixed

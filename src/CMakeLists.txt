@@ -28,6 +28,7 @@ set(sources
     simplex/HMatrix.cpp
     simplex/HPrimal.cpp
 #    simplex/HRanging.cpp
+    simplex/HSimplex.cpp
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
@@ -84,10 +85,6 @@ set(headers
 
 
 add_library(libhighs ${sources})
-
-if (Boost_FOUND)
-    target_link_libraries(libhighs ${Boost_LIBRARIES})
-endif()
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
