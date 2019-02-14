@@ -19,11 +19,12 @@
 #include "HConst.h"
 #include "stringutil.h"
 
-FilereaderRetcode FilereaderEms::readModelFromFile(const char *filename,
+FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
                                                    HighsLp &model) {
   std::ifstream f;
   int i;
-
+  
+  const char* filename = options.filename.c_str();
   f.open(filename, std::ios::in);
   if (f.is_open()) {
  

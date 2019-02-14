@@ -86,10 +86,6 @@ set(headers
 
 add_library(libhighs ${sources})
 
-if (Boost_FOUND)
-    target_link_libraries(libhighs ${Boost_LIBRARIES})
-endif()
-
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES
