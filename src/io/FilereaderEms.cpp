@@ -28,151 +28,151 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   f.open(filename, std::ios::in);
   if (f.is_open()) {
  
-  std::string line;
-  int numCol, numRow, AcountX;
-  bool indices_from_one = false;
+    std::string line;
+    int numCol, numRow, AcountX;
+    bool indices_from_one = false;
 
-  // counts
-  std::getline(f, line);
-  if (trim(line) != "n_rows") {
-    while (trim(line) != "n_rows")
+    // counts
+    std::getline(f, line);
+    if (trim(line) != "n_rows") {
+      while (trim(line) != "n_rows")
+        std::getline(f, line);
+      indices_from_one = true;
+    }
+    f >> numRow;
+
+    std::getline(f, line);
+    while (trim(line) == "")
       std::getline(f, line);
-    indices_from_one = true;
-  }
-  f >> numRow;
+    if (trim(line) != "n_columns")
+      return FilereaderRetcode::PARSERERROR;
+    f >> numCol;
 
-  std::getline(f, line);
-  while (trim(line) == "")
     std::getline(f, line);
-  if (trim(line) != "n_columns")
-    return FilereaderRetcode::PARSERERROR;
-  f >> numCol;
-
-  std::getline(f, line);
-  while (trim(line) == "")
-    std::getline(f, line);
-  if (trim(line) != "n_matrix_elements")
-    return FilereaderRetcode::PARSERERROR;
-  f >> AcountX;
-
-  model.numCol_ = numCol;
-  model.numRow_ = numRow;
-  model.nnz_ = AcountX;
-
-  // matrix
-  std::getline(f, line);
-  while (trim(line) == "")
-    std::getline(f, line);
-  if (trim(line) != "matrix")
-    return FilereaderRetcode::PARSERERROR;
-
-  model.Astart_.resize(numCol + 1);
-  model.Aindex_.resize(AcountX);
-  model.Avalue_.resize(AcountX);
-
-  for (i = 0; i < numCol + 1; i++) {
-    f >> model.Astart_[i];
-    if (indices_from_one)
-      model.Astart_[i]--;
-  }
-
-  for (i = 0; i < AcountX; i++) {
-    f >> model.Aindex_[i];
-    if (indices_from_one)
-      model.Aindex_[i]--;
-  }
-
-  for (i = 0; i < AcountX; i++)
-    f >> model.Avalue_[i];
-
-  // cost and bounds
-  std::getline(f, line);
-  while (trim(line) == "")
-    std::getline(f, line);
-  if (trim(line) != "column_bounds")
-    return FilereaderRetcode::PARSERERROR;
-  model.colLower_.reserve(numCol);
-  model.colUpper_.reserve(numCol);
-
-  model.colLower_.assign(numCol, -HIGHS_CONST_INF);
-  model.colUpper_.assign(numCol, HIGHS_CONST_INF);
-
-  for (i = 0; i < numCol; i++) {
-    f >> model.colLower_[i];
-  }
-
-  for (i = 0; i < numCol; i++) {
-    f >> model.colUpper_[i];
-  }
-
-  std::getline(f, line);
-  while (trim(line) == "")
-    std::getline(f, line);
-  if (trim(line) != "row_bounds")
-    return FilereaderRetcode::PARSERERROR;
-  model.rowLower_.reserve(numRow);
-  model.rowUpper_.reserve(numRow);
-  model.rowLower_.assign(numRow, -HIGHS_CONST_INF);
-  model.rowUpper_.assign(numRow, HIGHS_CONST_INF);
-
-  for (i = 0; i < numRow; i++) {
-    f >> model.rowLower_[i];
-  }
-
-  for (i = 0; i < numRow; i++) {
-    f >> model.rowUpper_[i];
-  }
-
-  std::getline(f, line);
-  while (trim(line) == "")
-    std::getline(f, line);
-  if (trim(line) != "column_costs")
-    return FilereaderRetcode::PARSERERROR;
-  model.colCost_.reserve(numCol);
-  model.colCost_.assign(numCol, 0);
-  for (i = 0; i < numCol; i++) {
-    f >> model.colCost_[i];
-  }
-
-  std::getline(f, line);
-  while (trim(line) == "" && f)
-    std::getline(f, line);
-  if (f && (trim(line) != "integer_columns" && trim(line) != "names"))
-    return FilereaderRetcode::PARSERERROR;
-  if (line == "names") {
-    // Ignore length since we support any length.
-    std::getline(f, line);
-    if (trim(line) != "columns")
+    while (trim(line) == "")
       std::getline(f, line);
-    if (trim(line) != "columns")
+    if (trim(line) != "n_matrix_elements")
+      return FilereaderRetcode::PARSERERROR;
+    f >> AcountX;
+
+    model.numCol_ = numCol;
+    model.numRow_ = numRow;
+    model.nnz_ = AcountX;
+
+    // matrix
+    std::getline(f, line);
+    while (trim(line) == "")
+      std::getline(f, line);
+    if (trim(line) != "matrix")
       return FilereaderRetcode::PARSERERROR;
 
-    model.row_names_.resize(numRow);
-    model.col_names_.resize(numCol);
+    model.Astart_.resize(numCol + 1);
+    model.Aindex_.resize(AcountX);
+    model.Avalue_.resize(AcountX);
+
+    for (i = 0; i < numCol + 1; i++) {
+      f >> model.Astart_[i];
+      if (indices_from_one)
+        model.Astart_[i]--;
+    }
+
+    for (i = 0; i < AcountX; i++) {
+      f >> model.Aindex_[i];
+      if (indices_from_one)
+        model.Aindex_[i]--;
+    }
+
+    for (i = 0; i < AcountX; i++)
+      f >> model.Avalue_[i];
+
+    // cost and bounds
+    std::getline(f, line);
+    while (trim(line) == "")
+      std::getline(f, line);
+    if (trim(line) != "column_bounds")
+      return FilereaderRetcode::PARSERERROR;
+    model.colLower_.reserve(numCol);
+    model.colUpper_.reserve(numCol);
+
+    model.colLower_.assign(numCol, -HIGHS_CONST_INF);
+    model.colUpper_.assign(numCol, HIGHS_CONST_INF);
 
     for (i = 0; i < numCol; i++) {
-      std::getline(f, line);
-      model.col_names_[i] = trim(line);
+      f >> model.colLower_[i];
+    }
+
+    for (i = 0; i < numCol; i++) {
+      f >> model.colUpper_[i];
     }
 
     std::getline(f, line);
-    if (trim(line) != "rows")
+    while (trim(line) == "")
+      std::getline(f, line);
+    if (trim(line) != "row_bounds")
       return FilereaderRetcode::PARSERERROR;
+    model.rowLower_.reserve(numRow);
+    model.rowUpper_.reserve(numRow);
+    model.rowLower_.assign(numRow, -HIGHS_CONST_INF);
+    model.rowUpper_.assign(numRow, HIGHS_CONST_INF);
 
     for (i = 0; i < numRow; i++) {
-      std::getline(f, line);
-      model.row_names_[i] = trim(line);
+      f >> model.rowLower_[i];
     }
-  }
 
-  // todo:
-  // while (trim(line) != "integer_variables" && trim(line) != "names") std::getline(f,
-  // line);
-  // ...
+    for (i = 0; i < numRow; i++) {
+      f >> model.rowUpper_[i];
+    }
 
-  f.close();
+    std::getline(f, line);
+    while (trim(line) == "")
+      std::getline(f, line);
+    if (trim(line) != "column_costs")
+      return FilereaderRetcode::PARSERERROR;
+    model.colCost_.reserve(numCol);
+    model.colCost_.assign(numCol, 0);
+    for (i = 0; i < numCol; i++) {
+      f >> model.colCost_[i];
+    }
+
+    std::getline(f, line);
+    while (trim(line) == "" && f)
+      std::getline(f, line);
+    if (f && (trim(line) != "integer_columns" && trim(line) != "names"))
+      return FilereaderRetcode::PARSERERROR;
+    if (line == "names") {
+      // Ignore length since we support any length.
+      std::getline(f, line);
+      if (trim(line) != "columns")
+        std::getline(f, line);
+      if (trim(line) != "columns")
+        return FilereaderRetcode::PARSERERROR;
+
+      model.row_names_.resize(numRow);
+      model.col_names_.resize(numCol);
+
+      for (i = 0; i < numCol; i++) {
+        std::getline(f, line);
+        model.col_names_[i] = trim(line);
+      }
+
+      std::getline(f, line);
+      if (trim(line) != "rows")
+        return FilereaderRetcode::PARSERERROR;
+
+      for (i = 0; i < numRow; i++) {
+        std::getline(f, line);
+        model.row_names_[i] = trim(line);
+      }
+    }
+
+    // todo:
+    // while (trim(line) != "integer_variables" && trim(line) != "names") std::getline(f,
+    // line);
+    // ...
+
+    f.close();
   } else {
-       return FilereaderRetcode::PARSERERROR;
+       return FilereaderRetcode::FILENOTFOUND;
   }
   return FilereaderRetcode::OKAY;
 }

@@ -31,6 +31,18 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
   Filereader *reader = Filereader::getFilereader(options.filename.c_str());
   FilereaderRetcode success = reader->readModelFromFile(options, lp);
   delete reader;
+
+  switch (success) {
+    case FilereaderRetcode::FILENOTFOUND:
+      HighsPrintMessage(ML_ALWAYS, "File not found.\n");
+      return HighsStatus::LpError;
+    case FilereaderRetcode::PARSERERROR:
+      HighsPrintMessage(ML_ALWAYS, "Error when parsing file.\n");
+      return HighsStatus::LpError;
+    default:
+      break;
+  }
+
   lp.nnz_ = lp.Avalue_.size();
 
   // Extract model name.
@@ -42,11 +54,6 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
   if (found < name.size())
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
-
-  if (success != FilereaderRetcode::OKAY)
-  {
-    HighsLogMessage(HighsMessageType::INFO, "Error when parsing file\n");
-  }
 
   return checkLp(lp);
 }

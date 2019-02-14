@@ -131,6 +131,10 @@ HighsStatus Highs::run(HighsLp& lp) {
     }
   }
 
+  int last = lps_.size() - 1;
+  solution_ = lps_[last].solution_;
+  basis_ = lps_[last].basis_;
+
   HighsSimplexInterface simplex_interface(lps_[0]);
   if (solve_status != HighsStatus::Optimal) {
     if (solve_status == HighsStatus::Infeasible ||
@@ -244,7 +248,6 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // todo:
   // assert(KktSatisfied(lp, solution));
 
-  solution_ = model.solution_;
   return status;
 }
 

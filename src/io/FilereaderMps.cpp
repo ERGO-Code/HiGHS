@@ -25,7 +25,11 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
   if (options.parser_type == HighsMpsParserType::free)
   {
     HMpsFF parser{};
-    status = parser.loadProblem(filename, model);
+    FreeFormatParserReturnCode result = parser.loadProblem(filename, model);
+    if (result == FreeFormatParserReturnCode::FILENOTFOUND)
+      return FilereaderRetcode::FILENOTFOUND;
+    else
+      status = 0;
   }
   else
   {

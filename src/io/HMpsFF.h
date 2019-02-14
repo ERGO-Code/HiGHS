@@ -37,13 +37,18 @@
 
 using Triplet = std::tuple<int, int, double>;
 
+enum class FreeFormatParserReturnCode {
+  SUCCESS,
+  PARSERERROR,
+  FILENOTFOUND
+};
+
 class HMpsFF {
 public:
-  HMpsFF() : status(-1) {}
-  int loadProblem(const std::string filename, HighsLp &lp);
+  HMpsFF() {}
+  FreeFormatParserReturnCode loadProblem(const std::string filename, HighsLp &lp);
 
 private:
-  int status;
 
   int numRow;
   int numCol;
@@ -92,7 +97,7 @@ private:
   std::unordered_map<std::string, int> rowname2idx;
   std::unordered_map<std::string, int> colname2idx;
 
-  int parse(const std::string &filename);
+  FreeFormatParserReturnCode parse(const std::string &filename);
   /// checks first word of strline and wraps it by it_begin and it_end
   HMpsFF::parsekey checkFirstWord(std::string &strline, int &start, int &end,
                                   std::string &word) const;
@@ -105,19 +110,17 @@ private:
   HMpsFF::parsekey parseBounds(std::ifstream &file);
 };
 
-int HMpsFF::loadProblem(const std::string filename, HighsLp &lp) {
-  status = parse(filename);
-  if (status)
-    return status;
+FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename, HighsLp &lp) {
+  FreeFormatParserReturnCode result = parse(filename);
+  if (result != FreeFormatParserReturnCode::SUCCESS)
+    return result;
 
   colCost.assign(numCol, 0);
   for (auto i : coeffobj)
     colCost[i.first] = i.second;
+  int status = fillMatrix();
   if (status)
-    return status;
-  fillMatrix();
-  if (status)
-    return status;
+    return FreeFormatParserReturnCode::PARSERERROR;
 
   lp.numRow_ = std::move(numRow);
   lp.numCol_ = std::move(numCol);
@@ -138,7 +141,7 @@ int HMpsFF::loadProblem(const std::string filename, HighsLp &lp) {
   lp.row_names_ = std::move(rowNames);
   lp.col_names_ = std::move(colNames);
 
-  return status;
+  return FreeFormatParserReturnCode::SUCCESS;
 }
 
 int HMpsFF::fillMatrix() {
@@ -182,41 +185,46 @@ int HMpsFF::fillMatrix() {
   return 0;
 }
 
-int HMpsFF::parse(const std::string &filename) {
-  std::ifstream f(filename, std::ifstream::in);
-  nnz = 0;
-  HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
+FreeFormatParserReturnCode HMpsFF::parse(const std::string &filename) {
+  std::ifstream f;
+  f.open(filename.c_str(), std::ios::in);
+  if (f.is_open()) {
+    nnz = 0;
+    HMpsFF::parsekey keyword = HMpsFF::parsekey::NONE;
 
-  // parsing loop
-  while (keyword != HMpsFF::parsekey::FAIL &&
-         keyword != HMpsFF::parsekey::END) {
-    switch (keyword) {
-    case HMpsFF::parsekey::ROWS:
-      keyword = parseRows(f);
-      break;
-    case HMpsFF::parsekey::COLS:
-      keyword = parseCols(f);
-      break;
-    case HMpsFF::parsekey::RHS:
-      keyword = parseRhs(f);
-      break;
-    case HMpsFF::parsekey::BOUNDS:
-      keyword = parseBounds(f);
-      break;
-    case HMpsFF::parsekey::RANGES:
-      keyword = parseRanges(f);
-      break;
-    case HMpsFF::parsekey::FAIL:
-      return 1;
-      break;
-    default:
-      keyword = parseDefault(f);
-      break;
+    // parsing loop
+    while (keyword != HMpsFF::parsekey::FAIL &&
+          keyword != HMpsFF::parsekey::END) {
+      switch (keyword) {
+      case HMpsFF::parsekey::ROWS:
+        keyword = parseRows(f);
+        break;
+      case HMpsFF::parsekey::COLS:
+        keyword = parseCols(f);
+        break;
+      case HMpsFF::parsekey::RHS:
+        keyword = parseRhs(f);
+        break;
+      case HMpsFF::parsekey::BOUNDS:
+        keyword = parseBounds(f);
+        break;
+      case HMpsFF::parsekey::RANGES:
+        keyword = parseRanges(f);
+        break;
+      case HMpsFF::parsekey::FAIL:
+        return FreeFormatParserReturnCode::PARSERERROR;
+        break;
+      default:
+        keyword = parseDefault(f);
+        break;
+      }
     }
-  }
 
-  if (keyword == HMpsFF::parsekey::FAIL)
-    return 1;
+    if (keyword == HMpsFF::parsekey::FAIL)
+      return FreeFormatParserReturnCode::PARSERERROR;
+  } else {
+    return FreeFormatParserReturnCode::FILENOTFOUND;
+  }
 
   assert(row_type.size() == unsigned(numRow));
 
@@ -224,7 +232,7 @@ int HMpsFF::parse(const std::string &filename) {
   // No need to update nRows because the assert ensures
   // it is correct.
 
-  return 0;
+  return FreeFormatParserReturnCode::SUCCESS;
 }
 
 // Assuming string is not empty.
