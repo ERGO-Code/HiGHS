@@ -106,8 +106,8 @@ HighsStatus Highs::run(HighsLp& lp) {
     if (presolve_status == HighsPresolveStatus::Reduced) {
       presolve_info.reduced_solution_ = lps_[1].solution_;
       presolve_info.presolve_[0].setBasisInfo(
-          lps_[1].basis_info_.basis_index, lps_[1].basis_info_.nonbasic_flag,
-          lps_[1].basis_info_.nonbasic_move);
+          lps_[1].basis_.basicIndex_, lps_[1].basis_.nonbasicFlag_,
+          lps_[1].basis_.nonbasicMove_);
     }
 
     timer.start(timer.postsolve_clock);
@@ -118,11 +118,11 @@ HighsStatus Highs::run(HighsLp& lp) {
 
       // Set solution and basis info for simplex clean up.
       // Original LP is in lp_[0] so we set the basis information there.
-      lps_[0].basis_info_.basis_index =
+      lps_[0].basis_.basicIndex_ =
           presolve_info.presolve_[0].getBasisIndex();
-      lps_[0].basis_info_.nonbasic_flag =
+      lps_[0].basis_.nonbasicFlag_ =
           presolve_info.presolve_[0].getNonbasicFlag();
-      lps_[0].basis_info_.nonbasic_move =
+      lps_[0].basis_.nonbasicMove_ =
           presolve_info.presolve_[0].getNonbasicMove();
 
       options_.clean_up = true;
