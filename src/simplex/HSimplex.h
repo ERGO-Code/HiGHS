@@ -1228,37 +1228,6 @@ void report_basis(HighsModelObject &highs_model_object) {
     }
   }
 
-  // Get the nonbasicMove value for a particular variable - may not be used
-  int get_one_nonbasicMove(HighsModelObject &highs_model_object, int var) {
-    HighsLp &solver_lp = highs_model_object.solver_lp_;
-    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-    const int numTot = solver_lp.numCol_ + solver_lp.numRow_;
-    //  printf("Calling get_one_nonbasicMove with var = %2d; numTot = %2d\n", var, numTot); 
-    assert(var >= 0);
-    assert(var < numTot);
-    if (!highs_isInfinity(-simplex_info.workLower_[var])) {
-      if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-	// Finite lower and upper bounds so nonbasic move depends on whether they
-	// are equal
-	if (simplex_info.workLower_[var] == simplex_info.workUpper_[var])
-	  // Fixed variable so nonbasic move is zero
-	  return NONBASIC_MOVE_ZE;
-	// Boxed variable so nonbasic move is up (from lower bound)
-	return NONBASIC_MOVE_UP;
-      } else
-	// Finite lower bound and infinite upper bound so nonbasic move is up
-	// (from lower bound)
-	return NONBASIC_MOVE_UP;
-    } else
-      // Infinite lower bound so nonbasic move depends on whether the upper
-      // bound is finite
-      if (!highs_isInfinity(simplex_info.workUpper_[var]))
-	// Finite upper bound so nonbasic move is down (from upper bound)
-	return NONBASIC_MOVE_DN;
-    // Infinite upper bound so free variable: nonbasic move is zero
-    return NONBASIC_MOVE_ZE;
-  }
-
   void populate_work_arrays(HighsModelObject &highs_model_object) {
     // Initialize the values
     initialise_cost(highs_model_object);
