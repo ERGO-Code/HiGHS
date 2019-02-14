@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexInterface.h
- * @brief Dual simplex solver for HiGHS
+ * @brief Return or report data from simplex solves and interface that data with changes to models
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HIGHSSIMPLEXINTERFACE_H_
@@ -24,7 +24,7 @@
 //class HFactor;
 
 /**
- * @brief Dual simplex solver for HiGHS
+ * @brief Return or report data from simplex solves and interface that data with changes to models
  */
 class HighsSimplexInterface {
  public:
@@ -51,7 +51,15 @@ class HighsSimplexInterface {
 			);
 
   // Methods for brief reports
-  void report_simplex_outcome(const char* message);
+  /**
+   * @brief Report the outcome of a simplex solve, printing a message first to contextualise the call
+   */
+  void report_simplex_outcome(
+			      const char* message
+			      );
+  /**
+   * @brief Report the simplex solution status value as a string with \n
+   */
   void report_simplex_solution_status();
 
   /**
@@ -63,8 +71,6 @@ class HighsSimplexInterface {
 			      vector<double> &XrowValue,
 			      vector<double> &XrowDual
 			      );
-
-  void get_nonbasicMove(vector<int> &XnonbasicMove);
 
   void get_basicIndex_nonbasicFlag(
 				   vector<int> &XbasicIndex,

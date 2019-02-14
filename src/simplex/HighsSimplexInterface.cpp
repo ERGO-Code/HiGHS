@@ -399,10 +399,6 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
 }
 
 
-void HighsSimplexInterface::get_nonbasicMove(vector<int> &XnonbasicMove) {
-  XnonbasicMove = highs_model_object.basis_.nonbasicMove_;
-}
-
 double HighsSimplexInterface::get_lp_objective_value(vector<double> &XcolValue) {
   HighsLp &lp = highs_model_object.lp_;
 

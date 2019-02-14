@@ -1228,6 +1228,7 @@ void report_basis(HighsModelObject &highs_model_object) {
     }
   }
 
+  // get_the nonbasicMove value for a particular variable - may not be used
   int get_nonbasicMove(HighsModelObject &highs_model_object, int var) {
     HighsLp &solver_lp = highs_model_object.solver_lp_;
     HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -1437,8 +1438,7 @@ void report_basis(HighsModelObject &highs_model_object) {
   //  lastcol);
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
-    //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_TRUE; Setting
-    //    basis.nonbasicMove_[%2d] = %2d\n", var, var, get_nonbasicMove(highs_model_object, var));
+    //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_TRUE\n", var);
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
     //    printf("Calling get_nonbasicMove(%2d)\n", var);
     //    basis.nonbasicMove_[var] = get_nonbasicMove(highs_model_object, var);
