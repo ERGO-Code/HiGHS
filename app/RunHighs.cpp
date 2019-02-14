@@ -74,8 +74,7 @@ int main(int argc, char **argv) {
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {
-    std::string message = "Error loading file\n";
-    HighsLogMessage(HighsMessageType::INFO, message.c_str());
+    HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
     return (int)HighsStatus::LpError;
   }
 
