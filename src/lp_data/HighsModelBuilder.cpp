@@ -9,8 +9,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "HighsModelBuilder.h"
 
-#include "HConst.h"
-#include "math.h"
+#include "lp_data/HConst.h"
+#include <math.h>
 
 HighsModelBuilder::~HighsModelBuilder() {
   while (this->variables.size() > 0) {

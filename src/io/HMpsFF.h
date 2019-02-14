@@ -30,10 +30,10 @@
 #include <utility>
 #include <vector>
 
-#include "HConst.h"
-#include "HighsIO.h"
-#include "pdqsort.h"
-#include "stringutil.h"
+#include "lp_data/HConst.h"
+#include "io/HighsIO.h"
+#include "../external/pdqsort.h"
+#include "util/stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;
 

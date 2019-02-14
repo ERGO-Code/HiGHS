@@ -1,5 +1,5 @@
-#include "HighsOptions.h"
-#include "HConst.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HConst.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {

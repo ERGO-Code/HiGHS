@@ -11,8 +11,8 @@
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HighsLp.h"
-#include "HConst.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HConst.h"
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.

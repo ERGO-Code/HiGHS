@@ -11,9 +11,9 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConst.h"
-#include "HDual.h"
-#include "HPrimal.h"
+#include "lp_data/HConst.h"
+#include "simplex/HDual.h"
+#include "simplex/HPrimal.h"
 //#include "HTimer.h"
 
 #include <cassert>

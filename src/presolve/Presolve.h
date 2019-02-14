@@ -21,9 +21,9 @@
 #include <utility>
 #include <vector>
 
-#include "HPreData.h"
-#include "HTimerPre.h"
-#include "HighsLp.h"
+#include "presolve/HPreData.h"
+#include "simplex/HTimerPre.h"
+#include "lp_data/HighsLp.h"
 
 using std::list;
 using std::string;

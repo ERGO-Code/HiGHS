@@ -12,14 +12,14 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "HSimplex.h"
+#include "simplex/HSimplex.h"
 #include "HConfig.h"
-#include "HighsIO.h"
-#include "HighsLpUtils.h"
-#include "HighsUtils.h"
-#include "HVector.h"
-#include "SimplexConst.h" // For simplex strategy constants
-#include "SimplexTimer.h"
+#include "io/HighsIO.h"
+#include "lp_data/HighsLpUtils.h"
+#include "util/HighsUtils.h"
+#include "simplex/HVector.h"
+#include "simplex/SimplexConst.h" // For simplex strategy constants
+#include "simplex/SimplexTimer.h"
 
 #include <cassert>
 #include <cstring> // For strcmp

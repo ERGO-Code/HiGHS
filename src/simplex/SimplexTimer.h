@@ -14,7 +14,7 @@
 #ifndef SIMPLEX_SIMPLEXTIMER_H_
 #define SIMPLEX_SIMPLEXTIMER_H_
 
-#include "HighsModelObject.h"
+#include "lp_data/HighsModelObject.h"
 
 // Clocks for profiling the dual simplex solver
 enum iClockSimplex {

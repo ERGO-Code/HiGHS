@@ -17,8 +17,8 @@
 
 #include <list>
 
-#include "Filereader.h"
-#include "HighsIO.h"
+#include "io/Filereader.h"
+#include "io/HighsIO.h"
 
 #define BUFFERSIZE 561
 #define LP_MAX_LINE_LENGTH 560

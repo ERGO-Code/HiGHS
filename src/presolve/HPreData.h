@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include "KktChStep.h"
+#include "test/KktChStep.h"
 
 using std::vector;
 using std::stack;

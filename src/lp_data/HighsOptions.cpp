@@ -11,8 +11,8 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HighsOptions.h"
-#include "HighsIO.h"
+#include "lp_data/HighsOptions.h"
+#include "io/HighsIO.h"
 
 bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value) {
   if (option == "presolve") {

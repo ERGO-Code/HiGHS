@@ -10,11 +10,11 @@
 #ifndef LP_DATA_HIGHS_MODEL_OBJECT_H_
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
-#include "HighsLp.h"
-#include "HighsTimer.h"
-#include "HighsRandom.h"
-#include "HMatrix.h"
-#include "HFactor.h"
+#include "lp_data/HighsLp.h"
+#include "util/HighsTimer.h"
+#include "util/HighsRandom.h"
+#include "simplex/HMatrix.h"
+#include "simplex/HFactor.h"
 // include Sensitivity(or Ranging) header
 
 struct BasisInfo {

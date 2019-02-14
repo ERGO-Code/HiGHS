@@ -14,7 +14,7 @@
 #ifndef IO_FILEREADER_MPS_H_
 #define IO_FILEREADER_MPS_H_
 
-#include "Filereader.h"
+#include "io/Filereader.h"
 
 class FilereaderMps : public Filereader {
  public:

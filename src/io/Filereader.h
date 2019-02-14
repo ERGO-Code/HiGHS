@@ -14,9 +14,9 @@
 #ifndef IO_FILEREADER_H_
 #define IO_FILEREADER_H_
 
-#include "HighsLp.h"
-#include "HighsModelBuilder.h"
-#include "HighsOptions.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsModelBuilder.h"
+#include "lp_data/HighsOptions.h"
 
 enum class HighsInputStatus {
   OK,

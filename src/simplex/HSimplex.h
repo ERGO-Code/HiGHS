@@ -14,8 +14,8 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
-#include "HighsModelObject.h"
-#include "HighsOptions.h"
+#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsOptions.h"
 
 /*
 // Increment iteration count (here!) and (possibly) store the pivots for

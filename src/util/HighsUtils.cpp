@@ -13,8 +13,8 @@
  */
 
 #include "HConfig.h"
-#include "HConst.h"
-#include "HighsUtils.h"
+#include "lp_data/HConst.h"
+#include "util/HighsUtils.h"
 
 #include <cmath>
 #include <vector>
