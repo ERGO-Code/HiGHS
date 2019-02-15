@@ -30,7 +30,7 @@ using std::cout;
 using std::flush;
 
 void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
-  lp_ = &highs_model_object.solver_lp_;
+  lp_ = &highs_model_object.simplex_lp_;
   basis_ = &highs_model_object.basis_;
   matrix_ = &highs_model_object.matrix_;
   if (lp_->numRow_ == 0) return;

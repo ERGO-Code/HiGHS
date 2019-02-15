@@ -162,7 +162,7 @@ void reportLpColMtx(const HighsLp &lp) {
 
 /*
 void reportLpSolution(HighsModelObject &highs_model) {
-  HighsLp lp = highs_model.solver_lp_;
+  HighsLp lp = highs_model.simplex_lp_;
   reportLpBrief(lp);
   //  simplex_interface.report_simplex_solution_status();
   assert(lp.numCol_ > 0);

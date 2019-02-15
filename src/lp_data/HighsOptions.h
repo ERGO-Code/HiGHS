@@ -81,13 +81,13 @@ struct HighsOptions
   // For an LP model
   //
   // Try to solve the dual of the LP
-  bool transpose_solver_lp = false;
+  bool transpose_simplex_lp = false;
   // Perform LP scaling
-  bool scale_solver_lp = true;
+  bool scale_simplex_lp = true;
   // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permute_solver_lp = false;
+  bool permute_simplex_lp = false;
   // Perform LP bound tightening
-  bool tighten_solver_lp = false;
+  bool tighten_simplex_lp = false;
   //
   // For any solver
   //

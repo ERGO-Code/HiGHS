@@ -27,8 +27,8 @@ void HPrimal::solvePhase2() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
 
-  solver_num_col = workHMO.solver_lp_.numCol_;
-  solver_num_row = workHMO.solver_lp_.numRow_;
+  solver_num_col = workHMO.simplex_lp_.numCol_;
+  solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
 #ifdef HiGHSDEV

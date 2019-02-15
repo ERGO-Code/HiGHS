@@ -435,7 +435,7 @@ void HDual::major_update() {
     double alphaDiff = fabs(alphaC - alphaR);
     // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
     if (alphaDiff / compare > 1e-8 && workHMO.simplex_info_.update_count > 0) {
-      cout << "REPORT " << workHMO.solver_lp_.model_name_ << " NEED-ROLL-BACK   ";
+      cout << "REPORT " << workHMO.simplex_lp_.model_name_ << " NEED-ROLL-BACK   ";
       cout << workHMO.simplex_info_.iteration_count << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;

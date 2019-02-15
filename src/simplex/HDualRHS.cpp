@@ -29,8 +29,8 @@ using std::fill_n;
 using std::nth_element;
 
 void HDualRHS::setup() {
-  const int numRow = workHMO.solver_lp_.numRow_;
-  const int numTot = workHMO.solver_lp_.numCol_ + workHMO.solver_lp_.numRow_;
+  const int numRow = workHMO.simplex_lp_.numRow_;
+  const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   workMark.resize(numRow);
   workIndex.resize(numRow);
   workArray.resize(numRow);
@@ -287,7 +287,7 @@ void HDualRHS::update_primal(HVector *column, double theta) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdatePrimalClock]);
 
-  const int numRow = workHMO.solver_lp_.numRow_;
+  const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
@@ -330,7 +330,7 @@ void HDualRHS::update_weight_DSE(HVector *column, double DSE_wt_o_rowOut,
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdateWeightClock]);
 
-  const int numRow = workHMO.solver_lp_.numRow_;
+  const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
@@ -358,7 +358,7 @@ void HDualRHS::update_weight_Dvx(HVector *column, double dvx_wt_o_rowOut) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   timer.start(simplex_info.clock_[UpdateWeightClock]);
 
-  const int numRow = workHMO.solver_lp_.numRow_;
+  const int numRow = workHMO.simplex_lp_.numRow_;
   const int columnCount = column->count;
   const int *columnIndex = &column->index[0];
   const double *columnArray = &column->array[0];
@@ -438,7 +438,7 @@ void HDualRHS::update_infeasList(HVector *column) {
 }
 
 void HDualRHS::create_infeasArray() {
-  int numRow = workHMO.solver_lp_.numRow_;
+  int numRow = workHMO.simplex_lp_.numRow_;
   const double *baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double *baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
@@ -453,7 +453,7 @@ void HDualRHS::create_infeasArray() {
 }
 
 void HDualRHS::create_infeasList(double columnDensity) {
-  int numRow = workHMO.solver_lp_.numRow_;
+  int numRow = workHMO.simplex_lp_.numRow_;
   double *dwork = &workEdWtFull[0];
 
   // 1. Build the full list

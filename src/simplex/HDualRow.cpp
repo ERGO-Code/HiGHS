@@ -43,7 +43,7 @@ void HDualRow::setupSlice(int size) {
 
 void HDualRow::setup() {
   // Setup common vectors
-  const int numTot = workHMO.solver_lp_.numCol_ + workHMO.solver_lp_.numRow_;
+  const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   setupSlice(numTot);
   workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
   
@@ -364,7 +364,7 @@ void HDualRow::create_Freelist() {
   freeList.clear();
   const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
-  const int numTot = workHMO.solver_lp_.numCol_ + workHMO.solver_lp_.numRow_;
+  const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (nonbasicFlag[i] && workRange[i] > 1.5 * HIGHS_CONST_INF) {
       freeList.insert(i);
@@ -377,7 +377,7 @@ void HDualRow::create_Freelist() {
   if (freeListSize != ckFreeListSize) {
     printf("!! STRANGE: freeListSize != ckFreeListSize\n");
   }
-  // const int numTot = workHMO.solver_lp_.numCol_ + workHMO.solver_lp_.numRow_;
+  // const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
   //  freeListE, freeListSize, 100*freeListSize/numTot);
 }
@@ -392,7 +392,7 @@ void HDualRow::create_Freemove(HVector *row_ep) {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workHMO.solver_lp_.numCol_);
+      assert(iCol < workHMO.simplex_lp_.numCol_);
       double alpha = workHMO.matrix_.compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * sourceOut > 0)
@@ -408,7 +408,7 @@ void HDualRow::delete_Freemove() {
     set<int>::iterator sit;
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
-      assert(iCol < workHMO.solver_lp_.numCol_);
+      assert(iCol < workHMO.simplex_lp_.numCol_);
       workHMO.basis_.nonbasicMove_[iCol] = 0;
     }
   }
@@ -426,7 +426,7 @@ void HDualRow::delete_Freelist(int iColumn) {
     if (freeListSize != ckFreeListSize) {
       printf("!! STRANGE: freeListSize != ckFreeListSize\n");
     }
-    // const int numTot = workHMO.solver_lp_.numCol_ + workHMO.solver_lp_.numRow_;
+    // const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
     //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
     //  freeListE, freeListSize, 100*freeListSize/numTot); if
     //  (freeList.empty()) {

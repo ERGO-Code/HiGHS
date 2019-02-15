@@ -199,10 +199,10 @@ struct HighsSimplexInfo {
   double dual_objective_value_upper_bound;
   
   // Options for the LP to be solved
-  bool transpose_solver_lp;
-  bool scale_solver_lp;
-  bool permute_solver_lp;
-  bool tighten_solver_lp;
+  bool transpose_simplex_lp;
+  bool scale_simplex_lp;
+  bool permute_simplex_lp;
+  bool tighten_simplex_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing

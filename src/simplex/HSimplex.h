@@ -32,11 +32,11 @@ void record_pivots(int columnIn, int columnOut, double alpha) {
 #ifdef HiGHSDEV
 // Store and write out the pivots for debugging NLA
 void writePivots(const char* suffix) {
-  string filename = "z-" + solver_lp_->model_name_ + "-" + suffix;
+  string filename = "z-" + simplex_lp_->model_name_ + "-" + suffix;
   ofstream output(filename.c_str());
   int count = historyColumnIn.size();
   double current_run_highs_time = timer_->readRunHighsClock();
-  output << solver_lp_->model_name_ << " " << count << "\t" <<
+  output << simplex_lp_->model_name_ << " " << count << "\t" <<
 current_run_highs_time << endl; output << setprecision(12); for (int i = 0; i <
 count; i++) { output << historyColumnIn[i] << "\t"; output <<
 historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
@@ -45,12 +45,12 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 }
 #endif
 */
-void clear_solver_lp_data(
+void clear_simplex_lp_data(
     HighsModelObject &highs_model_object //!< Model object in which data for LP
                                          //!< to be solved is to be cleared
 );
 
-void clear_solver_lp(
+void clear_simplex_lp(
     HighsModelObject &highs_model_object //!< Model object in which LP to be
                                          //!< solved is to be cleared
 );
@@ -61,32 +61,32 @@ void options(
     const HighsOptions &opt               //!< HiGHS options
 );
 
-void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
+void update_simplex_lp_status_flags(HighsModelObject &highs_model_object,
                                    LpAction action);
 
 void report_basis(HighsModelObject &highs_model_object);
 
-void report_solver_lp_status_flags(HighsModelObject &highs_model_object);
+void report_simplex_lp_status_flags(HighsModelObject &highs_model_object);
 void compute_dual_objective_value(HighsModelObject &highs_model_object,
                                   int phase = 2);
 
-void initialise_solver_lp_random_vectors(HighsModelObject &highs_model);
+void initialise_simplex_lp_random_vectors(HighsModelObject &highs_model);
 
 // TRANSPOSE:
 
-void transpose_solver_lp(HighsModelObject &highs_model);
+void transpose_simplex_lp(HighsModelObject &highs_model);
 
 void scaleHighsModelInit(HighsModelObject &highs_model);
 
 void scaleCosts(HighsModelObject &highs_model);
 
-void scale_solver_lp(HighsModelObject &highs_model);
+void scale_simplex_lp(HighsModelObject &highs_model);
 
-void permute_solver_lp(HighsModelObject &highs_model);
+void permute_simplex_lp(HighsModelObject &highs_model);
 
 // TIGHTEN:
 
-void tighten_solver_lp(HighsModelObject &highs_model);
+void tighten_simplex_lp(HighsModelObject &highs_model);
 
 void initialise_basic_index(HighsModelObject &highs_model_object);
 

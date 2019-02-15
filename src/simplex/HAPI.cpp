@@ -119,7 +119,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   //  (*probStatus) = simplex_info_.solution_status;
   (*basisStatus) = LcBasisStatus;
   // Remove any current model
-  //  clear_solver_lp(highs_model_object);
+  //  clear_simplex_lp(highs_model_object);
   //  printf("solve_fromArrays: probStatus = %d\n", (*probStatus));
   return;
 }

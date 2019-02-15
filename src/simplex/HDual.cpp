@@ -42,7 +42,7 @@ void HDual::solve(int num_threads) {
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   simplex_info.solution_status = SimplexSolutionStatus::UNSET;
   // Cannot solve box-constrained LPs
-  if (workHMO.solver_lp_.numRow_ == 0) return;
+  if (workHMO.simplex_lp_.numRow_ == 0) return;
 
   HighsTimer &timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
@@ -336,8 +336,8 @@ void HDual::solve(int num_threads) {
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
 #ifdef HiGHSDEV
-  //  printf("report_solver_lp_status_flags(workHMO) 9\n");cout<<flush;
-  //  report_solver_lp_status_flags(workHMO);cout<<flush;
+  //  printf("report_simplex_lp_status_flags(workHMO) 9\n");cout<<flush;
+  //  report_simplex_lp_status_flags(workHMO);cout<<flush;
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
@@ -406,8 +406,8 @@ void HDual::options() {
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
 
-  solver_num_col = workHMO.solver_lp_.numCol_;
-  solver_num_row = workHMO.solver_lp_.numRow_;
+  solver_num_col = workHMO.simplex_lp_.numCol_;
+  solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
   matrix = &workHMO.matrix_;
