@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HighsSimplexInterface.h"
+#include "simplex/HSimplex.h"
 #include "io/HighsIO.h"
 #include "io/HMPSIO.h"
 #include "util/HighsUtils.h"
@@ -360,11 +361,11 @@ void HighsSimplexInterface::check_load_from_postsolve() {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   bool ok;
 
-  ok = true;printf("Need to call nonbasic_flag_basic_index_ok\n"); //nonbasicFlagBasicIndex_OK(simplex_lp.numCol_, simplex_lp.numRow_);
+  ok = nonbasic_flag_basic_index_ok(highs_model_object, simplex_lp.numCol_, simplex_lp.numRow_);
   printf("check_load_from_postsolve: return from nonbasicFlagBasicIndex_OK = %d\n", ok);
   assert(ok);
 
-  ok = true;printf("Need to call all_nonbasic_move_vs_work_arrays_ok\n"); //simplex_method_.all_nonbasic_move_vs_work_arrays_ok(highs_model_object);
+  ok = all_nonbasic_move_vs_work_arrays_ok(highs_model_object);
   printf("check_load_from_postsolve: return from allNonbasicMoveVsWorkArrays_OK = %d\n", ok);
   assert(ok);
 }

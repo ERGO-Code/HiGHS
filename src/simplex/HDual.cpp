@@ -1751,7 +1751,7 @@ void HDual::updatePivots() {
   if (invertHint) return;
   //
   // Update the sets of indices of basic and nonbasic variables
-  update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, columnIn, rowOut, sourceOut);
   //  checkDualObjectiveValue("After update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
@@ -1761,10 +1761,10 @@ void HDual::updatePivots() {
   workHMO.simplex_info_.iteration_count++;
   //
   // Update the invertible representation of the basis matrix
-  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);//model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
   //
   // Update the row-wise representation of the nonbasic columns
-  update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
+  update_matrix(workHMO, columnIn, columnOut);
   //
   // Delete Freelist entry for columnIn
   dualRow.delete_Freelist(columnIn);
