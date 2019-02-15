@@ -388,17 +388,17 @@ void HDual::solve(int num_threads) {
 void HDual::options() {
   // Set solver options from simplex options
 
-  HighsSimplexInfo &simplex_info_ = workHMO.simplex_info_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
-  interpret_dual_edge_weight_strategy(simplex_info_.dual_edge_weight_strategy);
-  interpret_price_strategy(simplex_info_.price_strategy);
+  interpret_dual_edge_weight_strategy(simplex_info.dual_edge_weight_strategy);
+  interpret_price_strategy(simplex_info.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
-  primal_feasibility_tolerance = simplex_info_.primal_feasibility_tolerance;
-  dual_feasibility_tolerance = simplex_info_.dual_feasibility_tolerance;
-  dual_objective_value_upper_bound = simplex_info_.dual_objective_value_upper_bound;
-  //  perturb_costs = simplex_info_.perturb_costs;
-  //  iterationLimit = simplex_info_.iterationLimit;
+  primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
+  dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+  dual_objective_value_upper_bound = simplex_info.dual_objective_value_upper_bound;
+  //  perturb_costs = simplex_info.perturb_costs;
+  //  iterationLimit = simplex_info.iterationLimit;
 
   // Set values of internal options
 }

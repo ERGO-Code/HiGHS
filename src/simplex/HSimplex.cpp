@@ -34,7 +34,7 @@
 // debugging NLA
 void record_pivots(int columnIn, int columnOut, double alpha) {
   // NB This is where the iteration count is updated!
-  if (columnIn >= 0) simplex_info_.iteration_count++;
+  if (columnIn >= 0) simplex_info.iteration_count++;
 #ifdef HiGHSDEV
   historyColumnIn.push_back(columnIn);
   historyColumnOut.push_back(columnOut);
@@ -61,29 +61,29 @@ void clear_solver_lp_data(
     HighsModelObject &highs_model_object //!< Model object in which data for LP
                                          //!< to be solved is to be cleared
 ) {
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
-  simplex_lp_status_.solver_lp_has_matrix_col_wise = false;
-  simplex_lp_status_.solver_lp_has_matrix_row_wise = false;
-  simplex_lp_status_.solver_lp_has_dual_steepest_edge_weights = false;
-  simplex_lp_status_.solver_lp_has_nonbasic_dual_values = false;
-  simplex_lp_status_.solver_lp_has_basic_primal_values = false;
-  simplex_lp_status_.solver_lp_has_invert = false;
-  simplex_lp_status_.solver_lp_has_fresh_invert = false;
-  simplex_lp_status_.solver_lp_has_fresh_rebuild = false;
-  simplex_lp_status_.solver_lp_has_dual_objective_value = false;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  simplex_lp_status.solver_lp_has_matrix_col_wise = false;
+  simplex_lp_status.solver_lp_has_matrix_row_wise = false;
+  simplex_lp_status.solver_lp_has_dual_steepest_edge_weights = false;
+  simplex_lp_status.solver_lp_has_nonbasic_dual_values = false;
+  simplex_lp_status.solver_lp_has_basic_primal_values = false;
+  simplex_lp_status.solver_lp_has_invert = false;
+  simplex_lp_status.solver_lp_has_fresh_invert = false;
+  simplex_lp_status.solver_lp_has_fresh_rebuild = false;
+  simplex_lp_status.solver_lp_has_dual_objective_value = false;
 }
 
 void clear_solver_lp(
     HighsModelObject &highs_model_object //!< Model object in which LP to be
                                          //!< solved is to be cleared
 ) {
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   // Once the solver LP has its own basis
   //    highs_model_object.solver_basis_.valid_ = false;
-  simplex_lp_status_.solver_lp_is_transposed = false;
-  simplex_lp_status_.solver_lp_is_scaled = false;
-  simplex_lp_status_.solver_lp_is_permuted = false;
-  simplex_lp_status_.solver_lp_is_tightened = false;
+  simplex_lp_status.solver_lp_is_transposed = false;
+  simplex_lp_status.solver_lp_is_scaled = false;
+  simplex_lp_status.solver_lp_is_permuted = false;
+  simplex_lp_status.solver_lp_is_tightened = false;
   clear_solver_lp_data(highs_model_object);
 }
 
@@ -92,77 +92,77 @@ void options(
                                           //!< options are to be set
     const HighsOptions &opt               //!< HiGHS options
 ) {
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
 
   // Copy values of HighsOptions for the simplex solver
   // TODO: Get this right with proper simplex strategy
-  simplex_info_.simplex_strategy = opt.simplex_strategy;
-  simplex_info_.crash_strategy = opt.simplex_crash_strategy;
-  simplex_info_.dual_edge_weight_strategy =
+  simplex_info.simplex_strategy = opt.simplex_strategy;
+  simplex_info.crash_strategy = opt.simplex_crash_strategy;
+  simplex_info.dual_edge_weight_strategy =
       opt.simplex_dual_edge_weight_strategy;
-  simplex_info_.price_strategy = opt.simplex_price_strategy;
-  simplex_info_.primal_feasibility_tolerance = opt.primal_feasibility_tolerance;
-  simplex_info_.dual_feasibility_tolerance = opt.dual_feasibility_tolerance;
-  simplex_info_.dual_objective_value_upper_bound =
+  simplex_info.price_strategy = opt.simplex_price_strategy;
+  simplex_info.primal_feasibility_tolerance = opt.primal_feasibility_tolerance;
+  simplex_info.dual_feasibility_tolerance = opt.dual_feasibility_tolerance;
+  simplex_info.dual_objective_value_upper_bound =
       opt.dual_objective_value_upper_bound;
-  simplex_info_.perturb_costs = opt.simplex_perturb_costs;
-  simplex_info_.iteration_limit = opt.simplex_iteration_limit;
-  simplex_info_.update_limit = opt.simplex_update_limit;
-  simplex_info_.highs_run_time_limit = opt.highs_run_time_limit;
+  simplex_info.perturb_costs = opt.simplex_perturb_costs;
+  simplex_info.iteration_limit = opt.simplex_iteration_limit;
+  simplex_info.update_limit = opt.simplex_update_limit;
+  simplex_info.highs_run_time_limit = opt.highs_run_time_limit;
 
-  simplex_info_.transpose_solver_lp = opt.transpose_solver_lp;
-  simplex_info_.scale_solver_lp = opt.scale_solver_lp;
-  simplex_info_.permute_solver_lp = opt.permute_solver_lp;
-  simplex_info_.tighten_solver_lp = opt.tighten_solver_lp;
+  simplex_info.transpose_solver_lp = opt.transpose_solver_lp;
+  simplex_info.scale_solver_lp = opt.scale_solver_lp;
+  simplex_info.permute_solver_lp = opt.permute_solver_lp;
+  simplex_info.tighten_solver_lp = opt.tighten_solver_lp;
 
   // Set values of internal options
 
   // Options for reporting timing
-  simplex_info_.report_simplex_inner_clock = true; // false;
-  simplex_info_.report_simplex_outer_clock = false;
+  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
-  simplex_info_.report_simplex_phases_clock = true; // false;
+  simplex_info.report_simplex_phases_clock = true; // false;
   // Option for analysing simplex iterations
-  simplex_info_.analyseLp = true;                // false;
-  simplex_info_.analyseSimplexIterations = true; // false
-  simplex_info_.analyseLpSolution = true;        // false;
-  simplex_info_.analyse_invert_time = false;
-  simplex_info_.analyseRebuildTime = false;
+  simplex_info.analyseLp = true;                // false;
+  simplex_info.analyseSimplexIterations = true; // false
+  simplex_info.analyseLpSolution = true;        // false;
+  simplex_info.analyse_invert_time = false;
+  simplex_info.analyseRebuildTime = false;
 #endif
 }
 
 void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
                                    LpAction action) {
 
-  //  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   switch (action) {
   case LpAction::TRANSPOSE:
 #ifdef HIGHSDEV
     printf(" LpAction::TRANSPOSE\n");
 #endif
-    simplex_lp_status_.solver_lp_is_transposed = true;
+    simplex_lp_status.solver_lp_is_transposed = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::SCALE:
 #ifdef HIGHSDEV
     printf(" LpAction::SCALE\n");
 #endif
-    simplex_lp_status_.solver_lp_is_scaled = true;
+    simplex_lp_status.solver_lp_is_scaled = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::PERMUTE:
 #ifdef HIGHSDEV
     printf(" LpAction::PERMUTE\n");
 #endif
-    simplex_lp_status_.solver_lp_is_permuted = true;
+    simplex_lp_status.solver_lp_is_permuted = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::TIGHTEN:
 #ifdef HIGHSDEV
     printf(" LpAction::TIGHTEN\n");
 #endif
-    simplex_lp_status_.solver_lp_is_tightened = true;
+    simplex_lp_status.solver_lp_is_tightened = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::NEW_COSTS:
@@ -170,20 +170,20 @@ void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
     printf(" LpAction::NEW_COSTS\n");
 #endif
     //      initCost();
-    simplex_lp_status_.solver_lp_has_nonbasic_dual_values = false;
-    simplex_lp_status_.solver_lp_has_fresh_rebuild = false;
-    simplex_lp_status_.solver_lp_has_dual_objective_value = false;
+    simplex_lp_status.solver_lp_has_nonbasic_dual_values = false;
+    simplex_lp_status.solver_lp_has_fresh_rebuild = false;
+    simplex_lp_status.solver_lp_has_dual_objective_value = false;
     break;
   case LpAction::NEW_BOUNDS:
 #ifdef HIGHSDEV
     printf(" LpAction::NEW_BOUNDS\n");
 #endif
-    //      simplex_info_.solver_lp_ = true;
+    //      simplex_info.solver_lp_ = true;
     //     initBound();
     //     initValue();
-    simplex_lp_status_.solver_lp_has_basic_primal_values = false;
-    simplex_lp_status_.solver_lp_has_fresh_rebuild = false;
-    simplex_lp_status_.solver_lp_has_dual_objective_value = false;
+    simplex_lp_status.solver_lp_has_basic_primal_values = false;
+    simplex_lp_status.solver_lp_has_fresh_rebuild = false;
+    simplex_lp_status.solver_lp_has_dual_objective_value = false;
     break;
   case LpAction::NEW_BASIS:
 #ifdef HIGHSDEV
@@ -229,7 +229,7 @@ void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
 #ifdef HIGHSDEV
     printf(" LpAction::DEL_ROWS_BASIS_OK\n");
 #endif
-    //      simplex_info_.solver_lp_ = true;
+    //      simplex_info.solver_lp_ = true;
     break;
   default:
 #ifdef HIGHSDEV
@@ -270,70 +270,70 @@ void report_basis(HighsModelObject &highs_model_object) {
 }
 
 void report_solver_lp_status_flags(HighsModelObject &highs_model_object) {
-  //  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   printf("\nReporting solver status and flags:\n\n");
   printf("  is_transposed =                  %d\n",
-         simplex_lp_status_.solver_lp_is_transposed);
+         simplex_lp_status.solver_lp_is_transposed);
   printf("  is_scaled =                      %d\n",
-         simplex_lp_status_.solver_lp_is_scaled);
+         simplex_lp_status.solver_lp_is_scaled);
   printf("  is_permuted =                    %d\n",
-         simplex_lp_status_.solver_lp_is_permuted);
+         simplex_lp_status.solver_lp_is_permuted);
   printf("  is_tightened =                   %d\n",
-         simplex_lp_status_.solver_lp_is_tightened);
+         simplex_lp_status.solver_lp_is_tightened);
   printf("  has_matrix_col_wise =            %d\n",
-         simplex_lp_status_.solver_lp_has_matrix_col_wise);
+         simplex_lp_status.solver_lp_has_matrix_col_wise);
   printf("  has_matrix_row_wise =            %d\n",
-         simplex_lp_status_.solver_lp_has_matrix_row_wise);
+         simplex_lp_status.solver_lp_has_matrix_row_wise);
   printf("  has_dual_steepest_edge_weights = %d\n",
-         simplex_lp_status_.solver_lp_has_dual_steepest_edge_weights);
+         simplex_lp_status.solver_lp_has_dual_steepest_edge_weights);
   printf("  has_nonbasic_dual_values =       %d\n",
-         simplex_lp_status_.solver_lp_has_nonbasic_dual_values);
+         simplex_lp_status.solver_lp_has_nonbasic_dual_values);
   printf("  has_basic_primal_values =        %d\n",
-         simplex_lp_status_.solver_lp_has_basic_primal_values);
+         simplex_lp_status.solver_lp_has_basic_primal_values);
   printf("  has_invert =                     %d\n",
-         simplex_lp_status_.solver_lp_has_invert);
+         simplex_lp_status.solver_lp_has_invert);
   printf("  has_fresh_invert =               %d\n",
-         simplex_lp_status_.solver_lp_has_fresh_invert);
+         simplex_lp_status.solver_lp_has_fresh_invert);
   printf("  has_fresh_rebuild =              %d\n",
-         simplex_lp_status_.solver_lp_has_fresh_rebuild);
+         simplex_lp_status.solver_lp_has_fresh_rebuild);
   printf("  has_dual_objective_value =       %d\n",
-         simplex_lp_status_.solver_lp_has_dual_objective_value);
+         simplex_lp_status.solver_lp_has_dual_objective_value);
 }
 void compute_dual_objective_value(HighsModelObject &highs_model_object,
                                   int phase) {
   HighsLp &lp_ = highs_model_object.solver_lp_;
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 
-  simplex_info_.dualObjectiveValue = 0;
+  simplex_info.dualObjectiveValue = 0;
   const int numTot = lp_.numCol_ + lp_.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (highs_model_object.basis_.nonbasicFlag_[i]) {
-      simplex_info_.dualObjectiveValue +=
-          simplex_info_.workValue_[i] * simplex_info_.workDual_[i];
+      simplex_info.dualObjectiveValue +=
+          simplex_info.workValue_[i] * simplex_info.workDual_[i];
     }
   }
   if (phase != 1) {
-    simplex_info_.dualObjectiveValue *= highs_model_object.scale_.cost_;
-    simplex_info_.dualObjectiveValue -= lp_.offset_;
+    simplex_info.dualObjectiveValue *= highs_model_object.scale_.cost_;
+    simplex_info.dualObjectiveValue -= lp_.offset_;
   }
   // Now have dual objective value
-  simplex_lp_status_.solver_lp_has_dual_objective_value = true;
+  simplex_lp_status.solver_lp_has_dual_objective_value = true;
 }
 
-void initialise_solver_lp_random_vectors(HighsModelObject &highs_model) {
-  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  const int numCol = highs_model.solver_lp_.numCol_;
+void initialise_solver_lp_random_vectors(HighsModelObject &highs_model_object) {
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  const int numCol = highs_model_object.solver_lp_.numCol_;
   const int numTot =
-      highs_model.solver_lp_.numCol_ + highs_model.solver_lp_.numRow_;
+      highs_model_object.solver_lp_.numCol_ + highs_model_object.solver_lp_.numRow_;
   // Instantiate and (re-)initialise the random number generator
-  HighsRandom &random = highs_model.random_;
+  HighsRandom &random = highs_model_object.random_;
   random.initialise();
   //
   // Generate a random permutation of the column indices
-  simplex_info_.numColPermutation_.resize(numCol);
-  int *numColPermutation = &simplex_info_.numColPermutation_[0];
+  simplex_info.numColPermutation_.resize(numCol);
+  int *numColPermutation = &simplex_info.numColPermutation_[0];
   for (int i = 0; i < numCol; i++)
     numColPermutation[i] = i;
   for (int i = numCol - 1; i >= 1; i--) {
@@ -347,8 +347,8 @@ void initialise_solver_lp_random_vectors(HighsModelObject &highs_model) {
   random.initialise();
   //
   // Generate a random permutation of all the indices
-  simplex_info_.numTotPermutation_.resize(numTot);
-  int *numTotPermutation = &simplex_info_.numTotPermutation_[0];
+  simplex_info.numTotPermutation_.resize(numTot);
+  int *numTotPermutation = &simplex_info.numTotPermutation_[0];
   for (int i = 0; i < numTot; i++)
     numTotPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
@@ -357,8 +357,8 @@ void initialise_solver_lp_random_vectors(HighsModelObject &highs_model) {
   }
 
   // Generate a vector of random reals
-  simplex_info_.numTotRandomValue_.resize(numTot);
-  double *numTotRandomValue = &simplex_info_.numTotRandomValue_[0];
+  simplex_info.numTotRandomValue_.resize(numTot);
+  double *numTotRandomValue = &simplex_info.numTotRandomValue_[0];
   for (int i = 0; i < numTot; i++) {
     numTotRandomValue[i] = random.fraction();
   }
@@ -366,17 +366,17 @@ void initialise_solver_lp_random_vectors(HighsModelObject &highs_model) {
 
 // TRANSPOSE:
 
-void transpose_solver_lp(HighsModelObject &highs_model) {
-  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
+void transpose_solver_lp(HighsModelObject &highs_model_object) {
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called transpose_solver_lp: simplex_lp_status_.solver_lp_is_transposed = "
+  printf("Called transpose_solver_lp: simplex_lp_status.solver_lp_is_transposed = "
          "%d\n",
-         simplex_lp_status_.solver_lp_is_transposed);
+         simplex_lp_status.solver_lp_is_transposed);
 #endif
-  if (simplex_lp_status_.solver_lp_is_transposed)
+  if (simplex_lp_status.solver_lp_is_transposed)
     return;
-  HighsLp &primal_lp = highs_model.lp_;
+  HighsLp &primal_lp = highs_model_object.lp_;
 
   int primalNumCol = primal_lp.numCol_;
   int primalNumRow = primal_lp.numRow_;
@@ -397,7 +397,7 @@ void transpose_solver_lp(HighsModelObject &highs_model) {
   vector<double> &primalRowLower = primal_lp.rowLower_;
   vector<double> &primalRowUpper = primal_lp.rowUpper_;
 
-  HighsLp &dual_lp = highs_model.solver_lp_;
+  HighsLp &dual_lp = highs_model_object.solver_lp_;
   /*
     vector<int>& dualAstart = dual_lp.Astart_;
     vector<int>& dualAindex = dual_lp.Aindex_;
@@ -528,8 +528,8 @@ void transpose_solver_lp(HighsModelObject &highs_model) {
   dual_lp.colCost_.swap(dualCost);
   //    cout << "problem-transposed" << endl;
   // Deduce the consequences of transposing the LP
-  update_solver_lp_status_flags(highs_model, LpAction::TRANSPOSE);
-  //    simplex_lp_status_.solver_lp_is_transposed = true;
+  update_solver_lp_status_flags(highs_model_object, LpAction::TRANSPOSE);
+  //    simplex_lp_status.solver_lp_is_transposed = true;
 }
 
 // SCALING:
@@ -550,22 +550,22 @@ vector<int> largeCostFlag;
 double largeCostScale;
 #endif
 
-void scaleHighsModelInit(HighsModelObject &highs_model) {
-  highs_model.scale_.col_.assign(highs_model.solver_lp_.numCol_, 1);
-  highs_model.scale_.row_.assign(highs_model.solver_lp_.numRow_, 1);
-  highs_model.scale_.cost_ = 1;
+void scaleHighsModelInit(HighsModelObject &highs_model_object) {
+  highs_model_object.scale_.col_.assign(highs_model_object.solver_lp_.numCol_, 1);
+  highs_model_object.scale_.row_.assign(highs_model_object.solver_lp_.numRow_, 1);
+  highs_model_object.scale_.cost_ = 1;
 #ifdef HiGHSDEV
   //  largeCostScale = 1;
 #endif
 }
 
-void scaleCosts(HighsModelObject &highs_model) {
+void scaleCosts(HighsModelObject &highs_model_object) {
   // Scale the costs by no less than minAlwCostScale
-  double costScale = highs_model.scale_.cost_;
+  double costScale = highs_model_object.scale_.cost_;
   double maxNzCost = 0;
-  for (int iCol = 0; iCol < highs_model.solver_lp_.numCol_; iCol++) {
-    if (highs_model.solver_lp_.colCost_[iCol]) {
-      maxNzCost = max(fabs(highs_model.solver_lp_.colCost_[iCol]), maxNzCost);
+  for (int iCol = 0; iCol < highs_model_object.solver_lp_.numCol_; iCol++) {
+    if (highs_model_object.solver_lp_.colCost_[iCol]) {
+      maxNzCost = max(fabs(highs_model_object.solver_lp_.colCost_[iCol]), maxNzCost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -592,8 +592,8 @@ void scaleCosts(HighsModelObject &highs_model) {
     return;
   // Scale the costs (and record of maxNzCost) by costScale, being at most
   // maxAlwCostScale
-  for (int iCol = 0; iCol < highs_model.solver_lp_.numCol_; iCol++) {
-    highs_model.solver_lp_.colCost_[iCol] /= costScale;
+  for (int iCol = 0; iCol < highs_model_object.solver_lp_.numCol_; iCol++) {
+    highs_model_object.solver_lp_.colCost_[iCol] /= costScale;
   }
   maxNzCost /= costScale;
 
@@ -609,46 +609,46 @@ void scaleCosts(HighsModelObject &highs_model) {
     printf(
     "   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n",
     tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
-    for (int iCol = 0; iCol < highs_model.solver_lp_.numCol_; iCol++) {
+    for (int iCol = 0; iCol < highs_model_object.solver_lp_.numCol_; iCol++) {
     if (largeCostFlag[iCol]) {
-    highs_model.solver_lp_.colCost_[iCol] /= largeCostScale;
+    highs_model_object.solver_lp_.colCost_[iCol] /= largeCostScale;
     }
     }
     }
   */
   HighsPrintMessage(ML_MINIMAL, "After cost scaling\n");
   //  utils.util_analyseVectorValues("Column costs",
-  //  highs_model.solver_lp_.numCol_, highs_model.solver_lp_.colCost_, false);
+  //  highs_model_object.solver_lp_.numCol_, highs_model_object.solver_lp_.colCost_, false);
 #endif
 }
 
-void scale_solver_lp(HighsModelObject &highs_model) {
-  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
+void scale_solver_lp(HighsModelObject &highs_model_object) {
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called scale_solver_lp: simplex_lp_status_.solver_lp_is_scaled = %d\n",
-         simplex_lp_status_.solver_lp_is_scaled);
+  printf("Called scale_solver_lp: simplex_lp_status.solver_lp_is_scaled = %d\n",
+         simplex_lp_status.solver_lp_is_scaled);
 #endif
-  if (simplex_lp_status_.solver_lp_is_scaled)
+  if (simplex_lp_status.solver_lp_is_scaled)
     return;
-  // Scale the LP highs_model.solver_lp_, assuming all data are in place
+  // Scale the LP highs_model_object.solver_lp_, assuming all data are in place
   // Reset all scaling to 1
-  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
-  HighsTimer &timer = highs_model.timer_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsTimer &timer = highs_model_object.timer_;
   timer.start(timer.scale_clock);
-  scaleHighsModelInit(highs_model);
-  int numCol = highs_model.solver_lp_.numCol_;
-  int numRow = highs_model.solver_lp_.numRow_;
-  double *colScale = &highs_model.scale_.col_[0];
-  double *rowScale = &highs_model.scale_.row_[0];
-  int *Astart = &highs_model.solver_lp_.Astart_[0];
-  int *Aindex = &highs_model.solver_lp_.Aindex_[0];
-  double *Avalue = &highs_model.solver_lp_.Avalue_[0];
-  double *colCost = &highs_model.solver_lp_.colCost_[0];
-  double *colLower = &highs_model.solver_lp_.colLower_[0];
-  double *colUpper = &highs_model.solver_lp_.colUpper_[0];
-  double *rowLower = &highs_model.solver_lp_.rowLower_[0];
-  double *rowUpper = &highs_model.solver_lp_.rowUpper_[0];
+  scaleHighsModelInit(highs_model_object);
+  int numCol = highs_model_object.solver_lp_.numCol_;
+  int numRow = highs_model_object.solver_lp_.numRow_;
+  double *colScale = &highs_model_object.scale_.col_[0];
+  double *rowScale = &highs_model_object.scale_.row_[0];
+  int *Astart = &highs_model_object.solver_lp_.Astart_[0];
+  int *Aindex = &highs_model_object.solver_lp_.Aindex_[0];
+  double *Avalue = &highs_model_object.solver_lp_.Avalue_[0];
+  double *colCost = &highs_model_object.solver_lp_.colCost_[0];
+  double *colLower = &highs_model_object.solver_lp_.colLower_[0];
+  double *colUpper = &highs_model_object.solver_lp_.colUpper_[0];
+  double *rowLower = &highs_model_object.solver_lp_.rowLower_[0];
+  double *rowUpper = &highs_model_object.solver_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
   bool originalScaling = true;
@@ -671,13 +671,13 @@ void scale_solver_lp(HighsModelObject &highs_model) {
     // No matrix scaling, but possible cost scaling
 #ifdef HiGHSDEV
     HighsPrintMessage(ML_MINIMAL, "grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n",
-                      highs_model.lp_.model_name_.c_str());
+                      highs_model_object.lp_.model_name_.c_str());
 #endif
     // Possibly scale the costs
     if (!originalScaling && alwCostScaling)
-      scaleCosts(highs_model);
+      scaleCosts(highs_model_object);
     timer.stop(timer.scale_clock);
-    update_solver_lp_status_flags(highs_model, LpAction::SCALE);
+    update_solver_lp_status_flags(highs_model_object, LpAction::SCALE);
     return;
   }
   // See if we want to include cost include if minimum nonzero cost is less than
@@ -759,7 +759,7 @@ void scale_solver_lp(HighsModelObject &highs_model) {
 
   HighsPrintMessage(ML_MINIMAL,
                     "grep_Scaling,%s,%d,%d,Obj,%g,%d,Row,%g,%g,Col,%g,%g,%d\n",
-                    highs_model.lp_.model_name_.c_str(), originalScaling,
+                    highs_model_object.lp_.model_name_.c_str(), originalScaling,
                     alwCostScaling, minNzCost, includeCost, minColScale,
                     maxColScale, minRowScale, maxRowScale, excessScaling);
 #endif
@@ -779,45 +779,45 @@ void scale_solver_lp(HighsModelObject &highs_model) {
     rowUpper[iRow] *= rowUpper[iRow] == +inf ? 1 : rowScale[iRow];
   }
   // Deduce the consequences of scaling the LP
-  update_solver_lp_status_flags(highs_model, LpAction::SCALE);
+  update_solver_lp_status_flags(highs_model_object, LpAction::SCALE);
   // Possibly scale the costs
   if (!originalScaling && alwCostScaling)
-    scaleCosts(highs_model);
+    scaleCosts(highs_model_object);
   timer.stop(timer.scale_clock);
 }
 
 // PERMUTE:
 
-void permute_solver_lp(HighsModelObject &highs_model) {
-  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
+void permute_solver_lp(HighsModelObject &highs_model_object) {
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called permute_solver_lp: simplex_lp_status_.solver_lp_is_permuted = %d\n",
-         simplex_lp_status_.solver_lp_is_permuted);
+  printf("Called permute_solver_lp: simplex_lp_status.solver_lp_is_permuted = %d\n",
+         simplex_lp_status.solver_lp_is_permuted);
 #endif
-  if (simplex_lp_status_.solver_lp_is_permuted)
+  if (simplex_lp_status.solver_lp_is_permuted)
     return;
-  //  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
-  initialise_solver_lp_random_vectors(highs_model);
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  initialise_solver_lp_random_vectors(highs_model_object);
 
-  int numCol = highs_model.solver_lp_.numCol_;
-  vector<int> &numColPermutation = highs_model.simplex_info_.numColPermutation_;
-  vector<int> &Astart = highs_model.solver_lp_.Astart_;
-  vector<int> &Aindex = highs_model.solver_lp_.Aindex_;
-  vector<double> &Avalue = highs_model.solver_lp_.Avalue_;
-  vector<double> &colCost = highs_model.solver_lp_.colCost_;
-  vector<double> &colLower = highs_model.solver_lp_.colLower_;
-  vector<double> &colUpper = highs_model.solver_lp_.colUpper_;
-  vector<double> &colScale = highs_model.scale_.col_;
+  int numCol = highs_model_object.solver_lp_.numCol_;
+  vector<int> &numColPermutation = highs_model_object.simplex_info_.numColPermutation_;
+  vector<int> &Astart = highs_model_object.solver_lp_.Astart_;
+  vector<int> &Aindex = highs_model_object.solver_lp_.Aindex_;
+  vector<double> &Avalue = highs_model_object.solver_lp_.Avalue_;
+  vector<double> &colCost = highs_model_object.solver_lp_.colCost_;
+  vector<double> &colLower = highs_model_object.solver_lp_.colLower_;
+  vector<double> &colUpper = highs_model_object.solver_lp_.colUpper_;
+  vector<double> &colScale = highs_model_object.scale_.col_;
 
   // 2. Duplicate the original data to copy from
-  vector<int> saveAstart = highs_model.solver_lp_.Astart_;
-  vector<int> saveAindex = highs_model.solver_lp_.Aindex_;
-  vector<double> saveAvalue = highs_model.solver_lp_.Avalue_;
-  vector<double> saveColCost = highs_model.solver_lp_.colCost_;
-  vector<double> saveColLower = highs_model.solver_lp_.colLower_;
-  vector<double> saveColUpper = highs_model.solver_lp_.colUpper_;
-  vector<double> saveColScale = highs_model.scale_.col_;
+  vector<int> saveAstart = highs_model_object.solver_lp_.Astart_;
+  vector<int> saveAindex = highs_model_object.solver_lp_.Aindex_;
+  vector<double> saveAvalue = highs_model_object.solver_lp_.Avalue_;
+  vector<double> saveColCost = highs_model_object.solver_lp_.colCost_;
+  vector<double> saveColLower = highs_model_object.solver_lp_.colLower_;
+  vector<double> saveColUpper = highs_model_object.solver_lp_.colUpper_;
+  vector<double> saveColScale = highs_model_object.scale_.col_;
 
   // 3. Generate the permuted matrix and corresponding vectors of column data
   int countX = 0;
@@ -836,33 +836,33 @@ void permute_solver_lp(HighsModelObject &highs_model) {
   }
   assert(Astart[numCol] == countX);
   // Deduce the consequences of permuting the LP
-  update_solver_lp_status_flags(highs_model, LpAction::PERMUTE);
+  update_solver_lp_status_flags(highs_model_object, LpAction::PERMUTE);
 }
 
 // TIGHTEN:
 
-void tighten_solver_lp(HighsModelObject &highs_model) {
-  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
+void tighten_solver_lp(HighsModelObject &highs_model_object) {
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
   printf(
-      "Called tighten_solver_lp: simplex_lp_status_.solver_lp_is_tightened = %d\n",
-      simplex_lp_status_.solver_lp_is_tightened);
+      "Called tighten_solver_lp: simplex_lp_status.solver_lp_is_tightened = %d\n",
+      simplex_lp_status.solver_lp_is_tightened);
 #endif
-  if (simplex_lp_status_.solver_lp_is_tightened)
+  if (simplex_lp_status.solver_lp_is_tightened)
     return;
-  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
 
-  int numCol = highs_model.solver_lp_.numCol_;
-  int numRow = highs_model.solver_lp_.numRow_;
-  vector<int> &Astart = highs_model.solver_lp_.Astart_;
-  vector<int> &Aindex = highs_model.solver_lp_.Aindex_;
-  vector<double> &Avalue = highs_model.solver_lp_.Avalue_;
-  vector<double> &colCost = highs_model.solver_lp_.colCost_;
-  vector<double> &colLower = highs_model.solver_lp_.colLower_;
-  vector<double> &colUpper = highs_model.solver_lp_.colUpper_;
-  vector<double> &rowLower = highs_model.solver_lp_.rowLower_;
-  vector<double> &rowUpper = highs_model.solver_lp_.rowUpper_;
+  int numCol = highs_model_object.solver_lp_.numCol_;
+  int numRow = highs_model_object.solver_lp_.numRow_;
+  vector<int> &Astart = highs_model_object.solver_lp_.Astart_;
+  vector<int> &Aindex = highs_model_object.solver_lp_.Aindex_;
+  vector<double> &Avalue = highs_model_object.solver_lp_.Avalue_;
+  vector<double> &colCost = highs_model_object.solver_lp_.colCost_;
+  vector<double> &colLower = highs_model_object.solver_lp_.colLower_;
+  vector<double> &colUpper = highs_model_object.solver_lp_.colUpper_;
+  vector<double> &rowLower = highs_model_object.solver_lp_.rowLower_;
+  vector<double> &rowUpper = highs_model_object.solver_lp_.rowUpper_;
 
   vector<int> iwork(numRow, 0);
   vector<int> ARstart(numRow + 1, 0);
@@ -885,8 +885,8 @@ void tighten_solver_lp(HighsModelObject &highs_model) {
   }
 
   // Save column bounds
-  vector<double> colLower_0 = highs_model.solver_lp_.colLower_;
-  vector<double> colUpper_0 = highs_model.solver_lp_.colUpper_;
+  vector<double> colLower_0 = highs_model_object.solver_lp_.colLower_;
+  vector<double> colUpper_0 = highs_model_object.solver_lp_.colUpper_;
 
   double big_B = 1e10;
   int iPass = 0;
@@ -994,7 +994,7 @@ void tighten_solver_lp(HighsModelObject &highs_model) {
       }
     }
   }
-  simplex_lp_status_.solver_lp_is_tightened = true;
+  simplex_lp_status.solver_lp_is_tightened = true;
 }
 
 void initialise_basic_index(HighsModelObject &highs_model_object) {

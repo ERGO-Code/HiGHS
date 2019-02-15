@@ -65,7 +65,7 @@ HighsStatus solveSimplex(
 			 ) {
   // Just solves the LP in highs_model_object.scaled_lp_
   HighsTimer &timer = highs_model_object.timer_;
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
 
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
@@ -78,11 +78,11 @@ HighsStatus solveSimplex(
     timer.start(timer.solve_clock);
     dual_solver.solve();
     timer.stop(timer.solve_clock);
-    return LpStatusToHighsStatus(simplex_info_.solution_status);
+    return LpStatusToHighsStatus(simplex_info.solution_status);
   }
 
   // Crash, if HighsModelObject has basis information.
-  if (simplex_info_.crash_strategy != SimplexCrashStrategy::OFF) {
+  if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
     HCrash crash;
     timer.start(timer.crash_clock);
     crash.crash(highs_model_object, 0);
@@ -92,15 +92,15 @@ HighsStatus solveSimplex(
   timer.start(timer.solve_clock);
   // Solve, depending on the options.
   // Parallel.
-  if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
     dual_solver.solve(8);
-  } else if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
     //    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
     dual_solver.solve(8);
 #ifdef HiGHSDEV
     // Reinstate this once simplex::writePivots is written
-    //    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) writePivots("multi");
-    //    if (simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) writePivots("tasks");
+    //    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) writePivots("multi");
+    //    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) writePivots("tasks");
 #endif
   } else {
     // Serial. Based on previous solvePlainJAJH.
@@ -124,19 +124,19 @@ HighsStatus solveSimplex(
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        (int) simplex_info_.solution_status,
+        (int) simplex_info.solution_status,
 	highs_model_object.lp_.model_name_.c_str(),
 	highs_model_object.lp_.numRow_,
         highs_model_object.lp_.numCol_,
 	currentRunHighsTime,
-	simplex_info_.dualObjectiveValue,
-	simplex_info_.dual_phase1_iteration_count,
-        simplex_info_.dual_phase2_iteration_count,
-	simplex_info_.primal_phase1_iteration_count);
+	simplex_info.dualObjectiveValue,
+	simplex_info.dual_phase1_iteration_count,
+        simplex_info.dual_phase2_iteration_count,
+	simplex_info.primal_phase1_iteration_count);
 #endif
     //    reportLp(highs_model_object.lp_);
     //    reportLpSolution(highs_model_object);
-    HighsStatus result = LpStatusToHighsStatus(simplex_info_.solution_status);
+    HighsStatus result = LpStatusToHighsStatus(simplex_info.solution_status);
 
     timer.stop(timer.solve_clock);
 
@@ -345,8 +345,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HighsBasis &basis_ = highs_model_object.basis_;
   HighsScale &scale_ = highs_model_object.scale_;
   HighsLp &solver_lp_ = highs_model_object.solver_lp_;
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HMatrix &matrix_ = highs_model_object.matrix_;
   HFactor &factor_ = highs_model_object.factor_;
 
@@ -358,7 +358,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // Possibly transpose the LP to be solved. This will change the
   // numbers of rows and columns in the LP to be solved
-  if (simplex_info_.transpose_solver_lp) transpose_solver_lp(highs_model_object);
+  if (simplex_info.transpose_solver_lp) transpose_solver_lp(highs_model_object);
 
   // Now that the numbers of rows and columns in the LP to be solved
   // are fixed, initialise the real and integer random vectors
@@ -376,22 +376,22 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Initialise unit scaling factors, to simplify things is no scaling
   // is performed
   scaleHighsModelInit(highs_model_object);
-  if (simplex_info_.scale_solver_lp)
+  if (simplex_info.scale_solver_lp)
     scale_solver_lp(highs_model_object);
   //
   // Possibly permute the columns of the LP to be used by the solver. 
-  if (simplex_info_.permute_solver_lp)
+  if (simplex_info.permute_solver_lp)
     permute_solver_lp(highs_model_object);
   //
   // Possibly tighten the bounds of LP to be used by the solver. 
-  if (simplex_info_.tighten_solver_lp)
+  if (simplex_info.tighten_solver_lp)
     tighten_solver_lp(highs_model_object);
   //
 #ifdef HiGHSDEV
   // Analyse the scaled LP
-  if (simplex_info_.analyseLp) {
+  if (simplex_info.analyseLp) {
     util_analyseLp(lp_, "Unscaled");
-    if (simplex_lp_status_.solver_lp_is_scaled) {
+    if (simplex_lp_status.solver_lp_is_scaled) {
       util_analyseVectorValues("Column scaling factors", lp_.numCol_, scale_.col_, false);
       util_analyseVectorValues("Row    scaling factors", lp_.numRow_, scale_.row_, false);
       util_analyseLp(solver_lp_, "Scaled");
