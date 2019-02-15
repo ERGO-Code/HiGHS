@@ -252,7 +252,8 @@ void util_analyseLp(const HighsLp &lp, const char *message) {
   util_analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
   util_analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
   util_analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
-  util_analyseVectorValues("Matrix entries", lp.Astart_[lp.numCol_], lp.Avalue_, true);
+  util_analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_, true);
+  util_analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_, lp.Aindex_);
   util_analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
   util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
