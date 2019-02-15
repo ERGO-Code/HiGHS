@@ -25,6 +25,7 @@ using std::runtime_error;
 
 void HPrimal::solvePhase2() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
 
   solver_num_col = workHMO.solver_lp_.numCol_;
   solver_num_row = workHMO.solver_lp_.numRow_;
@@ -95,7 +96,7 @@ void HPrimal::solvePhase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_info.solver_lp_has_fresh_rebuild) break;
+    if (simplex_lp_status.solver_lp_has_fresh_rebuild) break;
   }
 
   if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
@@ -114,6 +115,7 @@ void HPrimal::solvePhase2() {
 
 void HPrimal::primalRebuild() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   HighsTimer &timer = workHMO.timer_;
   // Move this to Simplex class once it's created
   //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
@@ -154,7 +156,7 @@ void HPrimal::primalRebuild() {
   }
 #endif
   // Data are fresh from rebuild
-  simplex_info.solver_lp_has_fresh_rebuild = true;
+  simplex_lp_status.solver_lp_has_fresh_rebuild = true;
 }
 
 void HPrimal::primalChooseColumn() {

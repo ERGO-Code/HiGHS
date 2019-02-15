@@ -346,6 +346,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HighsScale &scale_ = highs_model_object.scale_;
   HighsLp &solver_lp_ = highs_model_object.solver_lp_;
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
   HMatrix &matrix_ = highs_model_object.matrix_;
   HFactor &factor_ = highs_model_object.factor_;
 
@@ -390,7 +391,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Analyse the scaled LP
   if (simplex_info_.analyseLp) {
     util_analyseLp(lp_, "Unscaled");
-    if (simplex_info_.solver_lp_is_scaled) {
+    if (simplex_lp_status_.solver_lp_is_scaled) {
       util_analyseVectorValues("Column scaling factors", lp_.numCol_, scale_.col_, false);
       util_analyseVectorValues("Row    scaling factors", lp_.numRow_, scale_.row_, false);
       util_analyseLp(solver_lp_, "Scaled");

@@ -61,29 +61,29 @@ void clear_solver_lp_data(
     HighsModelObject &highs_model_object //!< Model object in which data for LP
                                          //!< to be solved is to be cleared
 ) {
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
-  simplex_info_.solver_lp_has_matrix_col_wise = false;
-  simplex_info_.solver_lp_has_matrix_row_wise = false;
-  simplex_info_.solver_lp_has_dual_steepest_edge_weights = false;
-  simplex_info_.solver_lp_has_nonbasic_dual_values = false;
-  simplex_info_.solver_lp_has_basic_primal_values = false;
-  simplex_info_.solver_lp_has_invert = false;
-  simplex_info_.solver_lp_has_fresh_invert = false;
-  simplex_info_.solver_lp_has_fresh_rebuild = false;
-  simplex_info_.solver_lp_has_dual_objective_value = false;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
+  simplex_lp_status_.solver_lp_has_matrix_col_wise = false;
+  simplex_lp_status_.solver_lp_has_matrix_row_wise = false;
+  simplex_lp_status_.solver_lp_has_dual_steepest_edge_weights = false;
+  simplex_lp_status_.solver_lp_has_nonbasic_dual_values = false;
+  simplex_lp_status_.solver_lp_has_basic_primal_values = false;
+  simplex_lp_status_.solver_lp_has_invert = false;
+  simplex_lp_status_.solver_lp_has_fresh_invert = false;
+  simplex_lp_status_.solver_lp_has_fresh_rebuild = false;
+  simplex_lp_status_.solver_lp_has_dual_objective_value = false;
 }
 
 void clear_solver_lp(
     HighsModelObject &highs_model_object //!< Model object in which LP to be
                                          //!< solved is to be cleared
 ) {
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
   // Once the solver LP has its own basis
   //    highs_model_object.solver_basis_.valid_ = false;
-  simplex_info_.solver_lp_is_transposed = false;
-  simplex_info_.solver_lp_is_scaled = false;
-  simplex_info_.solver_lp_is_permuted = false;
-  simplex_info_.solver_lp_is_tightened = false;
+  simplex_lp_status_.solver_lp_is_transposed = false;
+  simplex_lp_status_.solver_lp_is_scaled = false;
+  simplex_lp_status_.solver_lp_is_permuted = false;
+  simplex_lp_status_.solver_lp_is_tightened = false;
   clear_solver_lp_data(highs_model_object);
 }
 
@@ -134,34 +134,35 @@ void options(
 void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
                                    LpAction action) {
 
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  //  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
   switch (action) {
   case LpAction::TRANSPOSE:
 #ifdef HIGHSDEV
     printf(" LpAction::TRANSPOSE\n");
 #endif
-    simplex_info_.solver_lp_is_transposed = true;
+    simplex_lp_status_.solver_lp_is_transposed = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::SCALE:
 #ifdef HIGHSDEV
     printf(" LpAction::SCALE\n");
 #endif
-    simplex_info_.solver_lp_is_scaled = true;
+    simplex_lp_status_.solver_lp_is_scaled = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::PERMUTE:
 #ifdef HIGHSDEV
     printf(" LpAction::PERMUTE\n");
 #endif
-    simplex_info_.solver_lp_is_permuted = true;
+    simplex_lp_status_.solver_lp_is_permuted = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::TIGHTEN:
 #ifdef HIGHSDEV
     printf(" LpAction::TIGHTEN\n");
 #endif
-    simplex_info_.solver_lp_is_tightened = true;
+    simplex_lp_status_.solver_lp_is_tightened = true;
     clear_solver_lp_data(highs_model_object);
     break;
   case LpAction::NEW_COSTS:
@@ -169,9 +170,9 @@ void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
     printf(" LpAction::NEW_COSTS\n");
 #endif
     //      initCost();
-    simplex_info_.solver_lp_has_nonbasic_dual_values = false;
-    simplex_info_.solver_lp_has_fresh_rebuild = false;
-    simplex_info_.solver_lp_has_dual_objective_value = false;
+    simplex_lp_status_.solver_lp_has_nonbasic_dual_values = false;
+    simplex_lp_status_.solver_lp_has_fresh_rebuild = false;
+    simplex_lp_status_.solver_lp_has_dual_objective_value = false;
     break;
   case LpAction::NEW_BOUNDS:
 #ifdef HIGHSDEV
@@ -180,9 +181,9 @@ void update_solver_lp_status_flags(HighsModelObject &highs_model_object,
     //      simplex_info_.solver_lp_ = true;
     //     initBound();
     //     initValue();
-    simplex_info_.solver_lp_has_basic_primal_values = false;
-    simplex_info_.solver_lp_has_fresh_rebuild = false;
-    simplex_info_.solver_lp_has_dual_objective_value = false;
+    simplex_lp_status_.solver_lp_has_basic_primal_values = false;
+    simplex_lp_status_.solver_lp_has_fresh_rebuild = false;
+    simplex_lp_status_.solver_lp_has_dual_objective_value = false;
     break;
   case LpAction::NEW_BASIS:
 #ifdef HIGHSDEV
@@ -269,39 +270,41 @@ void report_basis(HighsModelObject &highs_model_object) {
 }
 
 void report_solver_lp_status_flags(HighsModelObject &highs_model_object) {
-  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  //  HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
   printf("\nReporting solver status and flags:\n\n");
   printf("  is_transposed =                  %d\n",
-         simplex_info_.solver_lp_is_transposed);
+         simplex_lp_status_.solver_lp_is_transposed);
   printf("  is_scaled =                      %d\n",
-         simplex_info_.solver_lp_is_scaled);
+         simplex_lp_status_.solver_lp_is_scaled);
   printf("  is_permuted =                    %d\n",
-         simplex_info_.solver_lp_is_permuted);
+         simplex_lp_status_.solver_lp_is_permuted);
   printf("  is_tightened =                   %d\n",
-         simplex_info_.solver_lp_is_tightened);
+         simplex_lp_status_.solver_lp_is_tightened);
   printf("  has_matrix_col_wise =            %d\n",
-         simplex_info_.solver_lp_has_matrix_col_wise);
+         simplex_lp_status_.solver_lp_has_matrix_col_wise);
   printf("  has_matrix_row_wise =            %d\n",
-         simplex_info_.solver_lp_has_matrix_row_wise);
+         simplex_lp_status_.solver_lp_has_matrix_row_wise);
   printf("  has_dual_steepest_edge_weights = %d\n",
-         simplex_info_.solver_lp_has_dual_steepest_edge_weights);
+         simplex_lp_status_.solver_lp_has_dual_steepest_edge_weights);
   printf("  has_nonbasic_dual_values =       %d\n",
-         simplex_info_.solver_lp_has_nonbasic_dual_values);
+         simplex_lp_status_.solver_lp_has_nonbasic_dual_values);
   printf("  has_basic_primal_values =        %d\n",
-         simplex_info_.solver_lp_has_basic_primal_values);
+         simplex_lp_status_.solver_lp_has_basic_primal_values);
   printf("  has_invert =                     %d\n",
-         simplex_info_.solver_lp_has_invert);
+         simplex_lp_status_.solver_lp_has_invert);
   printf("  has_fresh_invert =               %d\n",
-         simplex_info_.solver_lp_has_fresh_invert);
+         simplex_lp_status_.solver_lp_has_fresh_invert);
   printf("  has_fresh_rebuild =              %d\n",
-         simplex_info_.solver_lp_has_fresh_rebuild);
+         simplex_lp_status_.solver_lp_has_fresh_rebuild);
   printf("  has_dual_objective_value =       %d\n",
-         simplex_info_.solver_lp_has_dual_objective_value);
+         simplex_lp_status_.solver_lp_has_dual_objective_value);
 }
 void compute_dual_objective_value(HighsModelObject &highs_model_object,
                                   int phase) {
   HighsLp &lp_ = highs_model_object.solver_lp_;
   HighsSimplexInfo &simplex_info_ = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model_object.simplex_lp_status_;
 
   simplex_info_.dualObjectiveValue = 0;
   const int numTot = lp_.numCol_ + lp_.numRow_;
@@ -316,7 +319,7 @@ void compute_dual_objective_value(HighsModelObject &highs_model_object,
     simplex_info_.dualObjectiveValue -= lp_.offset_;
   }
   // Now have dual objective value
-  simplex_info_.solver_lp_has_dual_objective_value = true;
+  simplex_lp_status_.solver_lp_has_dual_objective_value = true;
 }
 
 void initialise_solver_lp_random_vectors(HighsModelObject &highs_model) {
@@ -364,13 +367,14 @@ void initialise_solver_lp_random_vectors(HighsModelObject &highs_model) {
 // TRANSPOSE:
 
 void transpose_solver_lp(HighsModelObject &highs_model) {
-  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called transpose_solver_lp: simplex_info_.solver_lp_is_transposed = "
+  printf("Called transpose_solver_lp: simplex_lp_status_.solver_lp_is_transposed = "
          "%d\n",
-         simplex_info_.solver_lp_is_transposed);
+         simplex_lp_status_.solver_lp_is_transposed);
 #endif
-  if (simplex_info_.solver_lp_is_transposed)
+  if (simplex_lp_status_.solver_lp_is_transposed)
     return;
   HighsLp &primal_lp = highs_model.lp_;
 
@@ -525,7 +529,7 @@ void transpose_solver_lp(HighsModelObject &highs_model) {
   //    cout << "problem-transposed" << endl;
   // Deduce the consequences of transposing the LP
   update_solver_lp_status_flags(highs_model, LpAction::TRANSPOSE);
-  //    simplex_info_.solver_lp_is_transposed = true;
+  //    simplex_lp_status_.solver_lp_is_transposed = true;
 }
 
 // SCALING:
@@ -619,12 +623,13 @@ void scaleCosts(HighsModelObject &highs_model) {
 }
 
 void scale_solver_lp(HighsModelObject &highs_model) {
-  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called scale_solver_lp: simplex_info_.solver_lp_is_scaled = %d\n",
-         simplex_info_.solver_lp_is_scaled);
+  printf("Called scale_solver_lp: simplex_lp_status_.solver_lp_is_scaled = %d\n",
+         simplex_lp_status_.solver_lp_is_scaled);
 #endif
-  if (simplex_info_.solver_lp_is_scaled)
+  if (simplex_lp_status_.solver_lp_is_scaled)
     return;
   // Scale the LP highs_model.solver_lp_, assuming all data are in place
   // Reset all scaling to 1
@@ -784,12 +789,13 @@ void scale_solver_lp(HighsModelObject &highs_model) {
 // PERMUTE:
 
 void permute_solver_lp(HighsModelObject &highs_model) {
-  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called permute_solver_lp: simplex_info_.solver_lp_is_permuted = %d\n",
-         simplex_info_.solver_lp_is_permuted);
+  printf("Called permute_solver_lp: simplex_lp_status_.solver_lp_is_permuted = %d\n",
+         simplex_lp_status_.solver_lp_is_permuted);
 #endif
-  if (simplex_info_.solver_lp_is_permuted)
+  if (simplex_lp_status_.solver_lp_is_permuted)
     return;
   //  HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
   initialise_solver_lp_random_vectors(highs_model);
@@ -836,13 +842,14 @@ void permute_solver_lp(HighsModelObject &highs_model) {
 // TIGHTEN:
 
 void tighten_solver_lp(HighsModelObject &highs_model) {
-  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  //  HighsSimplexInfo &simplex_info_ = highs_model.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status_ = highs_model.simplex_lp_status_;
 #ifdef HiGHSDEV
   printf(
-      "Called tighten_solver_lp: simplex_info_.solver_lp_is_tightened = %d\n",
-      simplex_info_.solver_lp_is_tightened);
+      "Called tighten_solver_lp: simplex_lp_status_.solver_lp_is_tightened = %d\n",
+      simplex_lp_status_.solver_lp_is_tightened);
 #endif
-  if (simplex_info_.solver_lp_is_tightened)
+  if (simplex_lp_status_.solver_lp_is_tightened)
     return;
   HighsSimplexInfo &simplex_info = highs_model.simplex_info_;
 
@@ -987,7 +994,7 @@ void tighten_solver_lp(HighsModelObject &highs_model) {
       }
     }
   }
-  simplex_info_.solver_lp_is_tightened = true;
+  simplex_lp_status_.solver_lp_is_tightened = true;
 }
 
 void initialise_basic_index(HighsModelObject &highs_model_object) {
@@ -1586,6 +1593,7 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
     return;
 
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsBasis &basis = highs_model_object.basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
@@ -1606,8 +1614,8 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
     printf("Called replaceWithLogicalBasis\n");
   }
 
-  if (!(simplex_info.solver_lp_has_matrix_col_wise &&
-        simplex_info.solver_lp_has_matrix_row_wise)) {
+  if (!(simplex_lp_status.solver_lp_has_matrix_col_wise &&
+        simplex_lp_status.solver_lp_has_matrix_row_wise)) {
     // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
     if (simplex_info.num_basic_logicals == solver_num_row) {
       matrix.setup_lgBs(solver_num_col, solver_num_row, &solver_lp.Astart_[0],
@@ -1621,8 +1629,8 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
     }
     // Indicate that there is a colum-wise and row-wise copy of the
     // matrix: can't be done in matrix_->setup_lgBs
-    //    simplex_info.solver_lp_has_matrix_col_wise = true;
-    //    simplex_info.solver_lp_has_matrix_row_wise = true;
+    //    simplex_lp_status.solver_lp_has_matrix_col_wise = true;
+    //    simplex_lp_status.solver_lp_has_matrix_row_wise = true;
   }
 
   // TODO Put something in to skip factor_->setup
@@ -1632,7 +1640,7 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
                &solver_lp.Aindex_[0], &solver_lp.Avalue_[0],
                &basis.basicIndex_[0]);
   // Indicate that the model has factor arrays: can't be done in factor.setup
-  // simplex_info.solver_lp_has_factor_arrays = true;
+  // simplex_lp_status.solver_lp_has_factor_arrays = true;
 }
 
 bool nonbasic_flag_basic_index_ok(HighsModelObject &highs_model_object,
@@ -1930,40 +1938,41 @@ bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object) {
 
 bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsBasis &basis = highs_model_object.basis_;
   //  printf("Called ok_to_solve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
-  ok = basis.valid_ && simplex_info.solver_lp_has_matrix_col_wise &&
-       simplex_info.solver_lp_has_matrix_row_wise &&
-       //    simplex_info.solver_lp_has_factor_arrays &&
-       simplex_info.solver_lp_has_dual_steepest_edge_weights &&
-       simplex_info.solver_lp_has_invert;
+  ok = basis.valid_ && simplex_lp_status.solver_lp_has_matrix_col_wise &&
+       simplex_lp_status.solver_lp_has_matrix_row_wise &&
+       //    simplex_lp_status.solver_lp_has_factor_arrays &&
+       simplex_lp_status.solver_lp_has_dual_steepest_edge_weights &&
+       simplex_lp_status.solver_lp_has_invert;
   // TODO: Eliminate the following line ASAP!!!
   ok = true;
   if (!ok) {
     if (!basis.valid_)
       printf("Not OK to solve since basis.valid_ = %d\n", basis.valid_);
-    if (!simplex_info.solver_lp_has_matrix_col_wise)
-      printf("Not OK to solve since simplex_info.solver_lp_has_matrix_col_wise "
+    if (!simplex_lp_status.solver_lp_has_matrix_col_wise)
+      printf("Not OK to solve since simplex_lp_status.solver_lp_has_matrix_col_wise "
              "= %d\n",
-             simplex_info.solver_lp_has_matrix_col_wise);
-    if (!simplex_info.solver_lp_has_matrix_row_wise)
-      printf("Not OK to solve since simplex_info.solver_lp_has_matrix_row_wise "
+             simplex_lp_status.solver_lp_has_matrix_col_wise);
+    if (!simplex_lp_status.solver_lp_has_matrix_row_wise)
+      printf("Not OK to solve since simplex_lp_status.solver_lp_has_matrix_row_wise "
              "= %d\n",
-             simplex_info.solver_lp_has_matrix_row_wise);
-    //    if (!simplex_info.solver_lp_has_factor_arrays)
+             simplex_lp_status.solver_lp_has_matrix_row_wise);
+    //    if (!simplex_lp_status.solver_lp_has_factor_arrays)
     //      printf("Not OK to solve since
-    //      simplex_info.solver_lp_has_factor_arrays = %d\n",
-    //             simplex_info.solver_lp_has_factor_arrays);
-    if (!simplex_info.solver_lp_has_dual_steepest_edge_weights)
+    //      simplex_lp_status.solver_lp_has_factor_arrays = %d\n",
+    //             simplex_lp_status.solver_lp_has_factor_arrays);
+    if (!simplex_lp_status.solver_lp_has_dual_steepest_edge_weights)
       printf("Not OK to solve since "
-             "simplex_info.solver_lp_has_dual_steepest_edge_weights = %d\n",
-             simplex_info.solver_lp_has_dual_steepest_edge_weights);
-    if (!simplex_info.solver_lp_has_invert)
-      printf("Not OK to solve since simplex_info.solver_lp_has_invert = %d\n",
-             simplex_info.solver_lp_has_invert);
+             "simplex_lp_status.solver_lp_has_dual_steepest_edge_weights = %d\n",
+             simplex_lp_status.solver_lp_has_dual_steepest_edge_weights);
+    if (!simplex_lp_status.solver_lp_has_invert)
+      printf("Not OK to solve since simplex_lp_status.solver_lp_has_invert = %d\n",
+             simplex_lp_status.solver_lp_has_invert);
   }
   assert(ok);
   if (level <= 0)
@@ -2054,6 +2063,7 @@ iRow<solver_lp.numRow_; iRow++)
 */
 int compute_factor(HighsModelObject &highs_model_object) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsBasis &basis = highs_model_object.basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
@@ -2094,14 +2104,15 @@ int compute_factor(HighsModelObject &highs_model_object) {
 #endif
 
   // Now have a representation of B^{-1}, and it is fresh!
-  simplex_info.solver_lp_has_invert = true;
-  simplex_info.solver_lp_has_fresh_invert = true;
+  simplex_lp_status.solver_lp_has_invert = true;
+  simplex_lp_status.solver_lp_has_fresh_invert = true;
   return 0;
 }
 
 void compute_primal(HighsModelObject &highs_model_object) {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsBasis &basis = highs_model_object.basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
@@ -2124,12 +2135,13 @@ void compute_primal(HighsModelObject &highs_model_object) {
     simplex_info.baseUpper_[i] = simplex_info.workUpper_[iCol];
   }
   // Now have basic primals
-  simplex_info.solver_lp_has_basic_primal_values = true;
+  simplex_lp_status.solver_lp_has_basic_primal_values = true;
 }
 
 void compute_dual(HighsModelObject &highs_model_object) {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsBasis &basis = highs_model_object.basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
@@ -2199,7 +2211,7 @@ void compute_dual(HighsModelObject &highs_model_object) {
   }
 
   // Now have nonbasic duals
-  simplex_info.solver_lp_has_nonbasic_dual_values = true;
+  simplex_lp_status.solver_lp_has_nonbasic_dual_values = true;
 }
 
 void correct_dual(HighsModelObject &highs_model_object,
@@ -2364,13 +2376,14 @@ void update_factor(HighsModelObject &highs_model_object, HVector *column,
                    HVector *row_ep, int *iRow, int *hint) {
   //    HighsLp &solver_lp = highs_model_object.solver_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HFactor &factor = highs_model_object.factor_;
   HighsTimer &timer = highs_model_object.timer_;
 
   timer.start(simplex_info.clock_[UpdateFactorClock]);
   factor.update(column, row_ep, iRow, hint);
   // Now have a representation of B^{-1}, but it is not fresh
-  simplex_info.solver_lp_has_invert = true;
+  simplex_lp_status.solver_lp_has_invert = true;
   if (simplex_info.update_count >= simplex_info.update_limit)
     *hint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   timer.stop(simplex_info.clock_[UpdateFactorClock]);
@@ -2380,6 +2393,7 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
                    int rowOut, int sourceOut) {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsTimer &timer = highs_model_object.timer_;
 
@@ -2433,10 +2447,10 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
     simplex_info.num_basic_logicals += 1;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
-  simplex_info.solver_lp_has_invert = false;
-  simplex_info.solver_lp_has_fresh_invert = false;
+  simplex_lp_status.solver_lp_has_invert = false;
+  simplex_lp_status.solver_lp_has_fresh_invert = false;
   // Data are no longer fresh from rebuild
-  simplex_info.solver_lp_has_fresh_rebuild = false;
+  simplex_lp_status.solver_lp_has_fresh_rebuild = false;
   timer.stop(simplex_info.clock_[UpdatePivotsClock]);
 }
 

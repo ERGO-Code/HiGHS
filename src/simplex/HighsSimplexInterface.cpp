@@ -458,7 +458,8 @@ void HighsSimplexInterface::util_delete_cols(
 					     ) {
   HighsLp &solver_lp = highs_model_object.solver_lp_;
   HighsScale &scale = highs_model_object.scale_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   assert(firstcol >= 0);
   assert(lastcol < solver_lp.numCol_);
   assert(firstcol <= lastcol);
@@ -512,8 +513,8 @@ void HighsSimplexInterface::util_delete_cols(
 
   // ToDo Determine consequences for basis when deleting columns
   // Invalidate matrix copies
-  simplex_info.solver_lp_has_matrix_col_wise = false;
-  simplex_info.solver_lp_has_matrix_row_wise = false;
+  simplex_lp_status.solver_lp_has_matrix_col_wise = false;
+  simplex_lp_status.solver_lp_has_matrix_row_wise = false;
 }
 
 void HighsSimplexInterface::util_delete_col_set(
