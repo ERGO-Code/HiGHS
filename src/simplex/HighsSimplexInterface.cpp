@@ -358,7 +358,7 @@ void HighsSimplexInterface::check_load_from_postsolve() {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   bool ok;
 
-  ok = nonbasic_flag_basic_index_ok(highs_model_object, simplex_lp.numCol_, simplex_lp.numRow_);
+  ok = nonbasic_flag_basic_index_ok(highs_model_object.basis_, simplex_lp.numCol_, simplex_lp.numRow_);
   printf("check_load_from_postsolve: return from nonbasic_flag_basic_index_ok = %d\n", ok);
   assert(ok);
 
@@ -368,86 +368,103 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 }
 #endif
 
-void HighsSimplexInterface::util_add_cols(
-					  int ncols,
-					  const double *XcolCost,
-					  const double *colLower,
-					  const double *XcolUpper,
-					  int nnonz,
-					  const int *XAstart,
-					  const int *XAindex,
-					  const double *XAvalue) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
-  assert(ncols >= 0);
-  assert(nnonz >= 0);
-  // ToDo How to check that simplex_lp.Astart_[simplex_lp.numCol_] exists in util_addCols?
+void HighsSimplexInterface::util_add_cols(const bool simplexLp,
+					  HighsLp &lp, HighsBasis &basis, HighsScale &scale,
+					  HighsSimplexLpStatus &simplex_lp_status,
+					  int XnumCol, const double *XcolCost, const double *colLower,  const double *XcolUpper,
+					  int XnumNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+  assert(XnumCol >= 0);
+  assert(XnumNZ >= 0);
+  // ToDo How to check that lp.Astart_[lp.numCol_] exists in util_addCols?
 #ifdef HiGHSDEV
-  printf("Called model.util_addCols(ncols=%d, nnonz = %d)\n", ncols, nnonz);
+  printf("Called util_add_cols(XnumCol=%d, XnumNZ = %d)\n", XnumCol, XnumNZ);
 #endif
 
-  if (ncols == 0) return;
+  if (XnumCol == 0) return;
 
-  int nwNumCol = simplex_lp.numCol_ + ncols;
-  simplex_lp.colCost_.resize(nwNumCol);
-  simplex_lp.colLower_.resize(nwNumCol);
-  simplex_lp.colUpper_.resize(nwNumCol);
-  scale.col_.resize(nwNumCol);
-  simplex_lp.Astart_.resize(nwNumCol + 1);
+  // Determine whether there is an LP,  matrix and basis to add columns to, and whether row scaling should be applied
+  bool valid_lp;
+  bool valid_matrix;
+  bool valid_basis;
+  bool apply_row_scaling;
+  if (simplexLp) {
+    valid_lp = simplex_lp_status.valid;
+    valid_matrix = simplex_lp_status.has_matrix_col_wise;
+    valid_basis = simplex_lp_status.has_basis;
+    apply_row_scaling = simplex_lp_status.is_scaled;
+  } else {
+    // If not the simplex LP, the LP and matrix are always valid and
+    // row scaling should never be applied
+    valid_lp = true;
+    valid_matrix = true;
+    valid_basis = basis.valid_;
+    apply_row_scaling = false;
+  }
+#ifdef HiGHSDEV
+  if (!valid_lp) {
+    assert(!valid_matrix);
+    assert(!apply_row_scaling);
+  }
+#endif
+  if (!valid_lp) return;
 
-  // Note that the new columns must have starts, even if they have no entries
-  // (yet)
-  for (int col = 0; col < ncols; col++) {
-    simplex_lp.colCost_[simplex_lp.numCol_ + col] = XcolCost[col];
-    simplex_lp.colLower_[simplex_lp.numCol_ + col] = colLower[col];
-    simplex_lp.colUpper_[simplex_lp.numCol_ + col] = XcolUpper[col];
-    scale.col_[simplex_lp.numCol_ + col] = 1.0;
-    //    printf("In util_add_cols: column %d: setting
-    //    simplex_lp.Astart_[simplex_lp.numCol_+col+1] = %d \n", col, simplex_lp.Astart_[simplex_lp.numCol_]);
-    simplex_lp.Astart_[simplex_lp.numCol_ + col + 1] = simplex_lp.Astart_[simplex_lp.numCol_];
+  int newNumCol = lp.numCol_ + XnumCol;
+  lp.colCost_.resize(newNumCol);
+  lp.colLower_.resize(newNumCol);
+  lp.colUpper_.resize(newNumCol);
+  if (valid_matrix) lp.Astart_.resize(newNumCol + 1);
+  if (simplexLp) scale.col_.resize(newNumCol);
+
+  // Note that the new columns must have starts, even if they have no entries (yet)
+  for (int col = 0; col < XnumCol; col++) {
+    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
+    lp.colLower_[lp.numCol_ + col] = colLower[col];
+    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
+    if (valid_matrix) lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
+    if (simplexLp) scale.col_[lp.numCol_ + col] = 1.0;
   }
 
-  //  printf("In util_add_cols: nnonz = %d; cuNnonz = %d\n", nnonz,
-  //  simplex_lp.Astart_[simplex_lp.numCol_]); 
-  if (nnonz > 0) {
+  if (valid_matrix && XnumNZ > 0) {
     // Determine the current number of nonzeros
-    int cuNnonz = simplex_lp.Astart_[simplex_lp.numCol_];
+    int currentNumNZ = lp.Astart_[lp.numCol_];
 
     // Determine the new number of nonzeros and resize the column-wise matrix
     // arrays
-    int nwNnonz = cuNnonz + nnonz;
-    // simplex_lp.Astart_.resize(nwNumCol+1);
-    simplex_lp.Aindex_.resize(nwNnonz);
-    simplex_lp.Avalue_.resize(nwNnonz);
+    int newNumNZ = currentNumNZ + XnumNZ;
+    lp.Aindex_.resize(newNumNZ);
+    lp.Avalue_.resize(newNumNZ);
 
     // Add the new columns
-    for (int col = 0; col < ncols; col++) {
-      //      printf("In util_add_cols: column %d: setting
-      //      simplex_lp.Astart_[simplex_lp.numCol_+col] = %d = %d + %d\n",
-      //             col, XAstart[col] + cuNnonz, XAstart[col], cuNnonz); 
-      simplex_lp.Astart_[simplex_lp.numCol_ + col] = XAstart[col] + cuNnonz;
+    for (int col = 0; col < XnumCol; col++) {
+      lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
     }
-    //    printf("In util_add_cols: setting simplex_lp.Astart_[simplex_lp.numCol_+ncols] = %d\n",
-    //    nwNnonz);
-    simplex_lp.Astart_[simplex_lp.numCol_ + ncols] = nwNnonz;
+    lp.Astart_[lp.numCol_ + XnumCol] = newNumNZ;
 
-    for (int el = 0; el < nnonz; el++) {
+    for (int el = 0; el < XnumNZ; el++) {
       int row = XAindex[el];
       assert(row >= 0);
-      assert(row < simplex_lp.numRow_);
-      simplex_lp.Aindex_[cuNnonz + el] = row;
-      simplex_lp.Avalue_[cuNnonz + el] = XAvalue[el];
+      assert(row < lp.numRow_);
+      lp.Aindex_[currentNumNZ + el] = row;
+      if (apply_row_scaling) {
+	lp.Avalue_[currentNumNZ + el] = XAvalue[el] * scale.row_[row];
+      } else {
+	lp.Avalue_[currentNumNZ + el] = XAvalue[el];
+      }
     }
   }
-  // Increase the number of columns and total number of variables in the model
-  simplex_lp.numCol_ += ncols;
-  //  numTot += ncols;
+  // Increase the number of columns in the LP
+  lp.numCol_ += XnumCol;
 
-  //  printf("In util_add_cols: Model now has simplex_lp.Astart_[%d] = %d
-  //  nonzeros\n", simplex_lp.numCol_, simplex_lp.Astart_[simplex_lp.numCol_]);
-
-  // Update the basis and work vectors correponding to new nonbasic columns
-  extend_with_logical_basis(highs_model_object, simplex_lp.numCol_ - ncols, simplex_lp.numCol_ - 1, simplex_lp.numRow_, -1);
+  if (valid_basis) {
+    // Update the basis correponding to new nonbasic columns
+    int firstCol = lp.numCol_ - XnumCol;
+    int lastCol = lp.numCol_ - 1;
+    int firstRow = lp.numRow_;
+    int lastRow = -1;
+    extend_with_logical_basis(lp, basis, firstCol, lastCol, firstRow, lastRow);
+  }
+  // Deduce the consequences of adding new columns
+  if (simplexLp) update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
 }
 
 void HighsSimplexInterface::util_delete_cols(
@@ -655,7 +672,7 @@ void HighsSimplexInterface::util_add_rows(
   //  numTot += nrows;
 
   // Update the basis and work vectors correponding to new basic rows
-  extend_with_logical_basis(highs_model_object, simplex_lp.numCol_, -1, simplex_lp.numRow_ - nrows, simplex_lp.numRow_ - 1);
+  //  extend_with_logical_basis(highs_model_object, simplex_lp.numCol_, -1, simplex_lp.numRow_ - nrows, simplex_lp.numRow_ - 1);
   
 }
 
@@ -1144,4 +1161,3 @@ void HighsSimplexInterface::change_update_method(int updateMethod) {
   highs_model_object.factor_.change(updateMethod);
 }
 #endif
-

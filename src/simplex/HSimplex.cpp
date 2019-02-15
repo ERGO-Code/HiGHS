@@ -13,6 +13,7 @@
  */
 
 #include "simplex/HSimplex.h"
+#include "simplex/HighsSimplexInterface.h"
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
@@ -1350,192 +1351,6 @@ void replace_with_new_basis(HighsModelObject &highs_model_object,
   update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
 }
 
-void extend_with_logical_basis(HighsModelObject &highs_model_object,
-                               int firstcol, int lastcol, int firstrow,
-                               int lastrow) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  // Add nonbasic structurals and basic slacks according to model bounds.
-  //
-  // NB Assumes that the basis data structures and work vectors on
-  // entry are assigned for columns 0..firstcol-1 and rows
-  // 0..firstrow-1 and that they constitute a valid basis. Thus they
-  // correspond to "firstcol" number of columns and "firstrow" number
-  // of rows. Also assumes that simplex_lp_->numCol_ and simplex_lp_->numRow_ have
-  // already been updated to correspond to any additional columns and rows. This
-  // is necessary so that generic methods can be used to assign model data to
-  // arrays dimensioned 0..numTot
-  //
-  // Null intervals firstcol...lastcol and firstrow...lastrow are
-  // permitted, but this is achieved by setting the "last" to be less
-  // than "first" since the latter is used to indicate what's
-  // currently in the data structure.
-
-  assert(firstcol >= 0);
-  assert(firstrow >= 0);
-
-  // printf("Called extendWithLogicalBasis:\n   simplex_lp.numCol_ =   %d\n
-  // firstcol = %d\n   lastcol =  %d\n   simplex_lp.numRow_ =   %d\n   firstrow =
-  // %d\n   lastrow = %d\n", simplex_lp.numCol_, firstcol, lastcol,
-  // simplex_lp.numRow_, firstrow, lastrow); Determine the numbers of columns and
-  // rows to be added
-
-  int numAddCol = max(lastcol - firstcol + 1, 0);
-  int numAddRow = max(lastrow - firstrow + 1, 0);
-  int numAddTot = numAddCol + numAddRow;
-  if (numAddTot == 0)
-    return;
-
-  // Determine the numbers of columns and rows before and after this method
-
-  int local_oldNumCol = firstcol;
-  int local_oldNumRow = firstrow;
-  int local_oldNumTot = local_oldNumCol + local_oldNumRow;
-
-  int local_newNumCol = max(local_oldNumCol, lastcol + 1);
-  int local_newNumRow = max(local_oldNumRow, lastrow + 1);
-  int local_newNumTot = local_newNumCol + local_newNumRow;
-
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-#ifdef SCIPDEV
-  printf("extendWithLogicalBasis\n");
-  printf("simplex_lp.numCol_/Row/Tot = %d/%d/%d\n", simplex_lp.numCol_,
-         simplex_lp.numRow_, numTot);
-  printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol,
-         local_newNumRow, local_newNumTot);
-  cout << flush;
-#endif
-  // ToDo: Replace references to local_newNum* by references to num* from here
-  // on
-  assert(local_newNumCol == simplex_lp.numCol_);
-  assert(local_newNumRow == simplex_lp.numRow_);
-  assert(local_newNumTot == numTot);
-
-#ifdef HiGHSDEV
-  // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid
-  // basis.
-  bool basisOK = nonbasic_flag_basic_index_ok(highs_model_object,
-                                              local_oldNumCol, local_oldNumRow);
-  if (!basisOK)
-    printf("extend_with_logical_basis: basisOK = %d\n", basisOK);
-  assert(basisOK);
-#endif
-
-  //  Resize if necessary
-
-  if (simplex_lp.numRow_ > local_oldNumRow) {
-    basis.basicIndex_.resize(simplex_lp.numRow_);
-
-    simplex_info.baseLower_.resize(simplex_lp.numRow_);
-    simplex_info.baseUpper_.resize(simplex_lp.numRow_);
-    simplex_info.baseValue_.resize(simplex_lp.numRow_);
-  }
-  if (numTot > local_oldNumTot) {
-    basis.nonbasicFlag_.resize(numTot);
-    basis.nonbasicMove_.resize(numTot);
-
-    simplex_info.workCost_.resize(numTot);
-    simplex_info.workDual_.resize(numTot);
-    simplex_info.workShift_.resize(numTot);
-
-    simplex_info.workLower_.resize(numTot);
-    simplex_info.workUpper_.resize(numTot);
-    simplex_info.workRange_.resize(numTot);
-    simplex_info.workValue_.resize(numTot);
-  }
-
-  // Shift the row data in basicIndex, nonbasicFlag and nonbasicMove if
-  // necessary
-
-  int rowShift = simplex_lp.numCol_ - local_oldNumCol;
-  if (rowShift > 0) {
-    // printf("Shifting row data by %d using row=%d..0\n", rowShift,
-    // local_oldNumRow-1);cout << flush;
-    for (int row = local_oldNumRow - 1; row >= 0; row--) {
-      basis.basicIndex_[row] += rowShift;
-      basis.nonbasicFlag_[simplex_lp.numCol_ + row] =
-          basis.nonbasicFlag_[local_oldNumCol + row];
-      basis.nonbasicMove_[simplex_lp.numCol_ + row] =
-          basis.nonbasicMove_[local_oldNumCol + row];
-
-      simplex_info.workCost_[simplex_lp.numCol_ + row] =
-          simplex_info.workCost_[local_oldNumCol + row];
-      simplex_info.workDual_[simplex_lp.numCol_ + row] =
-          simplex_info.workDual_[local_oldNumCol + row];
-      simplex_info.workShift_[simplex_lp.numCol_ + row] =
-          simplex_info.workShift_[local_oldNumCol + row];
-
-      simplex_info.workLower_[simplex_lp.numCol_ + row] =
-          simplex_info.workLower_[local_oldNumCol + row];
-      simplex_info.workUpper_[simplex_lp.numCol_ + row] =
-          simplex_info.workUpper_[local_oldNumCol + row];
-      simplex_info.workRange_[simplex_lp.numCol_ + row] =
-          simplex_info.workRange_[local_oldNumCol + row];
-      simplex_info.workValue_[simplex_lp.numCol_ + row] =
-          simplex_info.workValue_[local_oldNumCol + row];
-
-      // printf("Setting basicIndex[%2d] = %2d; basis.nonbasicFlag_[%2d] = %2d;
-      // basis.nonbasicMove_[%2d] = %2d\n",
-      //      row, basicIndex[row],
-      //      simplex_lp.numCol_+row, basis.nonbasicFlag_[local_oldNumCol+row],
-      //      simplex_lp.numCol_+row,
-      //      basis.nonbasicMove_[local_oldNumCol+row]);cout << flush;
-    }
-  }
-  // report_basis(highs_model_object);
-  // printf("After possibly shifting row data\n");
-  // Make any new columns nonbasic
-  //  printf("Make any new cols nonbasic: %d %d %d\n", simplex_lp.numCol_,
-  //  firstcol, lastcol);
-  for (int col = firstcol; col <= lastcol; col++) {
-    int var = col;
-    //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_TRUE; Setting
-    //    basis.nonbasicMove_[%2d] = %2d\n", var, var,
-    //    get_nonbasicMove(highs_model_object, var));
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    //    printf("Calling get_nonbasicMove(%2d)\n", var);
-    //    basis.nonbasicMove_[var] = get_nonbasicMove(highs_model_object, var);
-  }
-  // Make any new rows basic
-  //  printf("Make any new rows basic: %d %d %d\n", simplex_lp.numRow_, firstrow,
-  //  lastrow);
-  for (int row = firstrow; row <= lastrow; row++) {
-    int var = simplex_lp.numCol_ + row;
-    //    printf("Setting basis.nonbasicFlag_[%2d] = NONBASIC_FLAG_FALSE;
-    //    Setting basicIndex[%2d] = %2d\n", var, row, var);
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
-    basis.basicIndex_[row] = var;
-  }
-
-  // Initialise costs for the new columns and rows
-  printf("init_Phase2_col_cost(firstcol, lastcol);\n");
-  printf("init_Phase2_row_cost(firstrow, lastrow);\n");
-
-  // Initialise bounds for the new columns and rows
-  printf("init_Phase2_col_bound(firstcol, lastcol);\n");
-  printf("init_Phase2_row_bound(firstrow, lastrow);\n");
-
-  // Initialise values (and nonbasicMove) for the new columns
-  printf("Call initialise_value_from_nonbasic(highs_model_object, firstcol, lastcol);\n");
-
-#ifdef HiGHSDEV
-  // Check that columns 0..firstcol-1 and rows 0..firstrow-1 constitute a valid
-  // basis.
-  basisOK = nonbasic_flag_basic_index_ok(highs_model_object, simplex_lp.numCol_,
-                                         simplex_lp.numRow_);
-  assert(basisOK);
-#endif
-
-  simplex_info.num_basic_logicals += numAddRow;
-
-  //  report_basis(highs_model_object);
-
-  // Deduce the consequences of adding new columns and/or rows
-  if (numAddCol) update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_COLS);
-  if (numAddRow) update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_ROWS);
-}
-
 void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &basis = highs_model_object.basis_;
@@ -1606,33 +1421,6 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
                &basis.basicIndex_[0]);
   // Indicate that the model has factor arrays: can't be done in factor.setup
   // simplex_lp_status.has_factor_arrays = true;
-}
-
-bool nonbasic_flag_basic_index_ok(HighsModelObject &highs_model_object,
-                                  int XnumCol, int XnumRow) {
-  HighsBasis &basis = highs_model_object.basis_;
-  assert(XnumCol >= 0);
-  assert(XnumRow >= 0);
-  //  printf("Called nonbasic_flag_basic_index_ok(%d, %d)\n", XnumCol, XnumRow);
-  int XnumTot = XnumCol + XnumRow;
-  int num_basic_variables = 0;
-  if (XnumTot > 0) {
-    for (int var = 0; var < XnumTot; var++)
-      if (!basis.nonbasicFlag_[var])
-        num_basic_variables++;
-  }
-  assert(num_basic_variables == XnumRow);
-  if (num_basic_variables != XnumRow)
-    return false;
-  if (XnumRow > 0) {
-    for (int row = 0; row < XnumRow; row++) {
-      int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
-      assert(!flag);
-      if (flag)
-        return false;
-    }
-  }
-  return true;
 }
 
 bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
@@ -1943,8 +1731,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   if (level <= 0)
     return ok;
   // Level 1: Basis and data check
-  ok = nonbasic_flag_basic_index_ok(highs_model_object, simplex_lp.numCol_,
-                                    simplex_lp.numRow_);
+  ok = nonbasic_flag_basic_index_ok(highs_model_object.basis_, simplex_lp.numCol_, simplex_lp.numRow_);
   if (!ok) {
     printf("Error in nonbasicFlag and basicIndex\n");
     assert(ok);
@@ -2946,3 +2733,131 @@ void report_iteration_count_dual_objective_value(
   HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", iteration_count,
                     dual_objective_value, i_v);
 }
+
+void extend_with_logical_basis(HighsLp &lp, HighsBasis &basis,
+						      int firstCol, int lastCol, int firstRow, int lastRow) {
+  // Add nonbasic structurals and basic slacks according to model bounds.
+  //
+  // NB Assumes that the basis is valid for columns 0..firstCol-1 and
+  // rows 0..firstRow-1. Thus they correspond to "firstCol" number of
+  // columns and "firstRow" number of rows. lp.numCol_ and lp.numRow_
+  // have already been updated to correspond to any additional columns
+  // and rows. This is necessary so that generic methods can be used
+  // to assign model data to arrays dimensioned 0..numTot
+  //
+  // Null intervals firstCol...lastCol and firstRow...lastRow are
+  // permitted, but this is achieved by setting the "last" to be less
+  // than "first" since the latter is used to indicate what's
+  // currently in the data structure.
+
+  assert(firstCol >= 0);
+  assert(firstRow >= 0);
+
+  // Determine the numbers of columns and rows to be added
+
+  int numAddCol = max(lastCol - firstCol + 1, 0);
+  int numAddRow = max(lastRow - firstRow + 1, 0);
+  int numAddTot = numAddCol + numAddRow;
+  if (numAddTot == 0) return;
+
+  // Determine the numbers of columns and rows before and after this method
+
+  int local_oldNumCol = firstCol;
+  int local_oldNumRow = firstRow;
+  int local_oldNumTot = local_oldNumCol + local_oldNumRow;
+
+  int local_newNumCol = max(local_oldNumCol, lastCol + 1);
+  int local_newNumRow = max(local_oldNumRow, lastRow + 1);
+  int local_newNumTot = local_newNumCol + local_newNumRow;
+
+  const int numTot = lp.numCol_ + lp.numRow_;
+#ifdef SCIPDEV
+  if (simplexLp) {
+    printf("extend_with_logical_basis\n");
+    printf("lp.numCol_/Row/Tot = %d/%d/%d\n", lp.numCol_, lp.numRow_, numTot);
+    printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol, local_newNumRow, local_newNumTot);
+  }
+#endif
+  // ToDo: Replace references to local_newNum* by references to num* from here
+  // on
+  assert(local_newNumCol == lp.numCol_);
+  assert(local_newNumRow == lp.numRow_);
+  assert(local_newNumTot == numTot);
+
+#ifdef HiGHSDEV
+  // Check that columns 0..firstCol-1 and rows 0..firstRow-1 constitute a valid
+  // basis.
+  bool basisOK = nonbasic_flag_basic_index_ok(basis, local_oldNumCol, local_oldNumRow);
+  if (!basisOK)
+    printf("extend_with_logical_basis: basisOK = %d\n", basisOK);
+  assert(basisOK);
+#endif
+
+  //  Resize if necessary
+
+  if (lp.numRow_ > local_oldNumRow) basis.basicIndex_.resize(lp.numRow_);
+  if (numTot > local_oldNumTot) basis.nonbasicFlag_.resize(numTot);
+
+  // Shift the row data in basicIndex and nonbasicFlag if necessary
+
+  int rowShift = lp.numCol_ - local_oldNumCol;
+  if (rowShift > 0) {
+    // printf("Shifting row data by %d using row=%d..0\n", rowShift,
+    // local_oldNumRow-1);cout << flush;
+    for (int row = local_oldNumRow - 1; row >= 0; row--) {
+      basis.basicIndex_[row] += rowShift;
+      basis.nonbasicFlag_[lp.numCol_ + row] = basis.nonbasicFlag_[local_oldNumCol + row];
+    }
+  }
+  // report_basis(basis, local_oldNumCol, local_oldNumRow);
+  // printf("After possibly shifting row data\n");
+  // Make any new columns nonbasic
+  for (int col = firstCol; col <= lastCol; col++) {
+    int var = col;
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+  }
+  // Make any new rows basic
+  //  printf("Make any new rows basic: %d %d %d\n", lp.numRow_, firstRow,
+  //  lastRow);
+  for (int row = firstRow; row <= lastRow; row++) {
+    int var = lp.numCol_ + row;
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+    basis.basicIndex_[row] = var;
+  }
+#ifdef HiGHSDEV
+  // Check that columns 0..lp.numCol_-1 and rows 0..lp.numRow_-1 constitute a valid basis.
+  basisOK = nonbasic_flag_basic_index_ok(basis, lp.numCol_, lp.numRow_);
+  assert(basisOK);
+#endif
+
+  //  report_basis(basis, lp.numCol_, lp.numRow_);
+
+  // Deduce the consequences of adding new columns and/or rows
+  //  if (numAddRow) update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_ROWS);
+}
+
+bool nonbasic_flag_basic_index_ok(HighsBasis &basis, int XnumCol, int XnumRow) {
+  assert(XnumCol >= 0);
+  assert(XnumRow >= 0);
+  //  printf("Called nonbasic_flag_basic_index_ok(%d, %d)\n", XnumCol, XnumRow);
+  int XnumTot = XnumCol + XnumRow;
+  int num_basic_variables = 0;
+  if (XnumTot > 0) {
+    for (int var = 0; var < XnumTot; var++)
+      if (!basis.nonbasicFlag_[var])
+        num_basic_variables++;
+  }
+  assert(num_basic_variables == XnumRow);
+  if (num_basic_variables != XnumRow)
+    return false;
+  if (XnumRow > 0) {
+    for (int row = 0; row < XnumRow; row++) {
+      int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
+      assert(!flag);
+      if (flag)
+        return false;
+    }
+  }
+  return true;
+}
+

@@ -198,12 +198,6 @@ void setup_for_solve(
 		     HighsModelObject &highs_model_object
 		     );
 
-bool nonbasic_flag_basic_index_ok(
-				  HighsModelObject &highs_model_object,
-                                  int XnumCol,
-				  int XnumRow
-				  );
-
 bool work_arrays_ok(
 		    HighsModelObject &highs_model_object,
 		    int phase
@@ -314,4 +308,19 @@ void report_iteration_count_dual_objective_value(
 						 int i_v
 						 );
 
+// Methods not requiring HighsModelObject 
+void extend_with_logical_basis(
+			       HighsLp &lp,
+			       HighsBasis &basis,
+                               int firstCol,
+			       int lastCol,
+			       int firstRow,
+			       int lastRow
+			       );
+
+bool nonbasic_flag_basic_index_ok(
+				  HighsBasis &basis,
+                                  int XnumCol,
+				  int XnumRow
+				  );
 #endif // SIMPLEX_HSIMPLEX_H_
