@@ -70,7 +70,7 @@ void HDual::solve(int num_threads) {
   init(num_threads);
 
   initialise_cost(workHMO, 1); //  model->initCost(1);
-  if (!simplex_lp_status.solver_lp_has_fresh_invert) {
+  if (!simplex_lp_status.has_fresh_invert) {
     int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
 
     if (rankDeficiency) {
@@ -94,12 +94,12 @@ void HDual::solve(int num_threads) {
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
-  //  printf("simplex_lp_status.solver_lp_has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
+  //  printf("simplex_lp_status.has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
   //  %d\n",
-  //	 simplex_lp_status.solver_lp_has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
-  //  printf("Edge weights known? %d\n", !simplex_lp_status.solver_lp_has_dual_steepest_edge_weights);cout<<flush;
+  //	 simplex_lp_status.has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
+  //  printf("Edge weights known? %d\n", !simplex_lp_status.has_dual_steepest_edge_weights);cout<<flush;
 #endif
-  if (!simplex_lp_status.solver_lp_has_dual_steepest_edge_weights) {
+  if (!simplex_lp_status.has_dual_steepest_edge_weights) {
     // Edge weights are not known
     // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
     if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
@@ -156,7 +156,7 @@ void HDual::solve(int num_threads) {
 #endif
     }
     // Indicate that edge weights are known
-    simplex_lp_status.solver_lp_has_dual_steepest_edge_weights = true;
+    simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
 
 #ifdef HiGHSDEV
@@ -226,7 +226,7 @@ void HDual::solve(int num_threads) {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
     // updated value
-    simplex_lp_status.solver_lp_has_dual_objective_value = 0;
+    simplex_lp_status.has_dual_objective_value = 0;
     switch (solvePhase) {
       case 1:
 	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
@@ -566,7 +566,7 @@ void HDual::solve_phase1() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_lp_status.solver_lp_has_fresh_rebuild) break;
+    if (simplex_lp_status.has_fresh_rebuild) break;
   }
 
   timer.stop(simplex_info.clock_[IterateClock]);
@@ -675,7 +675,7 @@ void HDual::solve_phase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_lp_status.solver_lp_has_fresh_rebuild) break;
+    if (simplex_lp_status.has_fresh_rebuild) break;
   }
   timer.stop(simplex_info.clock_[IterateClock]);
 
@@ -796,7 +796,7 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = simplex_lp_status.solver_lp_has_dual_objective_value;
+  bool checkDualObjectiveValue = simplex_lp_status.has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
   compute_dual_objective_value(workHMO, solvePhase);
@@ -840,7 +840,7 @@ void HDual::rebuild() {
   }
 #endif
   // Data are fresh from rebuild
-  simplex_lp_status.solver_lp_has_fresh_rebuild = true;
+  simplex_lp_status.has_fresh_rebuild = true;
 }
 
 void HDual::cleanup() {
@@ -1895,7 +1895,7 @@ double HDual::checkDualObjectiveValue(const char *message, int phase) {
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
   workHMO.simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
   // Now have dual objective value
-  workHMO.simplex_lp_status_.solver_lp_has_dual_objective_value = true;
+  workHMO.simplex_lp_status_.has_dual_objective_value = true;
   return updatedDualObjectiveError;
 }
 #endif

@@ -513,8 +513,8 @@ void HighsSimplexInterface::util_delete_cols(
 
   // ToDo Determine consequences for basis when deleting columns
   // Invalidate matrix copies
-  simplex_lp_status.solver_lp_has_matrix_col_wise = false;
-  simplex_lp_status.solver_lp_has_matrix_row_wise = false;
+  simplex_lp_status.has_matrix_col_wise = false;
+  simplex_lp_status.has_matrix_row_wise = false;
 }
 
 void HighsSimplexInterface::util_delete_col_set(
