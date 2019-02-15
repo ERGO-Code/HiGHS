@@ -341,17 +341,17 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   HighsTimer &timer = highs_model_object.timer_;
 
   // Set up aliases
-  const HighsLp &lp_ = highs_model_object.lp_;
-  HighsBasis &basis_ = highs_model_object.basis_;
-  HighsScale &scale_ = highs_model_object.scale_;
-  HighsLp &simplex_lp_ = highs_model_object.simplex_lp_;
+  const HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsScale &scale = highs_model_object.scale_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HMatrix &matrix_ = highs_model_object.matrix_;
-  HFactor &factor_ = highs_model_object.factor_;
+  HMatrix &matrix = highs_model_object.matrix_;
+  HFactor &factor = highs_model_object.factor_;
 
   // Copy the LP to the structure to be used by the solver
-  simplex_lp_ = lp_;
+  simplex_lp = lp;
 
   // Set simplex options from HiGHS options
   options(highs_model_object, opt);
@@ -367,9 +367,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Allocate memory for the basis
   // assignBasis();
   const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
-  basis_.basicIndex_.resize(highs_model_object.lp_.numRow_);
-  basis_.nonbasicFlag_.assign(numTot, 0);
-  basis_.nonbasicMove_.resize(numTot);
+  basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+  basis.nonbasicFlag_.assign(numTot, 0);
+  basis.nonbasicMove_.resize(numTot);
   //
   // Possibly scale the LP to be used by the solver
   //
@@ -390,11 +390,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #ifdef HiGHSDEV
   // Analyse the scaled LP
   if (simplex_info.analyseLp) {
-    util_analyseLp(lp_, "Unscaled");
+    util_analyseLp(lp, "Unscaled");
     if (simplex_lp_status.is_scaled) {
-      util_analyseVectorValues("Column scaling factors", lp_.numCol_, scale_.col_, false);
-      util_analyseVectorValues("Row    scaling factors", lp_.numRow_, scale_.row_, false);
-      util_analyseLp(simplex_lp_, "Scaled");
+      util_analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
+      util_analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
+      util_analyseLp(simplex_lp, "Scaled");
     }
   }
   //  report_simplex_lp_status_flags(highs_model_object);
@@ -402,16 +402,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();
 
-  matrix_.setup_lgBs(simplex_lp_.numCol_, simplex_lp_.numRow_,
-		     &simplex_lp_.Astart_[0],
-		     &simplex_lp_.Aindex_[0],
-		     &simplex_lp_.Avalue_[0]);
+  matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
+		     &simplex_lp.Astart_[0],
+		     &simplex_lp.Aindex_[0],
+		     &simplex_lp.Avalue_[0]);
   
-  factor_.setup(simplex_lp_.numCol_, simplex_lp_.numRow_,
-		&simplex_lp_.Astart_[0],
-		&simplex_lp_.Aindex_[0],
-		&simplex_lp_.Avalue_[0],
-		&basis_.basicIndex_[0]);
+  factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		&simplex_lp.Astart_[0],
+		&simplex_lp.Aindex_[0],
+		&simplex_lp.Avalue_[0],
+		&basis.basicIndex_[0]);
 
   // Crash, if needed.
 
@@ -430,7 +430,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.basis_.basicIndex_,
 						highs_model_object.basis_.nonbasicFlag_);
 
-  highs_model_object.basis_.nonbasicMove_ = basis_.nonbasicMove_;
+  highs_model_object.basis_.nonbasicMove_ = basis.nonbasicMove_;
 
   return result;
 }

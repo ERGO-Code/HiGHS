@@ -302,12 +302,12 @@ void report_simplex_lp_status_flags(HighsModelObject &highs_model_object) {
 }
 void compute_dual_objective_value(HighsModelObject &highs_model_object,
                                   int phase) {
-  HighsLp &lp_ = highs_model_object.simplex_lp_;
+  HighsLp &lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 
   simplex_info.dualObjectiveValue = 0;
-  const int numTot = lp_.numCol_ + lp_.numRow_;
+  const int numTot = lp.numCol_ + lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (highs_model_object.basis_.nonbasicFlag_[i]) {
       simplex_info.dualObjectiveValue +=
@@ -316,7 +316,7 @@ void compute_dual_objective_value(HighsModelObject &highs_model_object,
   }
   if (phase != 1) {
     simplex_info.dualObjectiveValue *= highs_model_object.scale_.cost_;
-    simplex_info.dualObjectiveValue -= lp_.offset_;
+    simplex_info.dualObjectiveValue -= lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;
