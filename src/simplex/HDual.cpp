@@ -336,8 +336,8 @@ void HDual::solve(int num_threads) {
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
 #ifdef HiGHSDEV
-  //  printf("report_simplex_lp_status_flags(workHMO) 9\n");cout<<flush;
-  //  report_simplex_lp_status_flags(workHMO);cout<<flush;
+  //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
+  //  report_simplex_lp_status_flags(workHMO.simplex_lp_status_);
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 

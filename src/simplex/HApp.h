@@ -397,7 +397,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       util_analyseLp(simplex_lp, "Scaled");
     }
   }
-  //  report_simplex_lp_status_flags(highs_model_object);
+  report_simplex_lp_status(highs_model_object.simplex_lp_status_);
 #endif
 
   initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();

@@ -102,14 +102,18 @@ struct HighsBasis {
 
 struct HighsSimplexLpStatus {
   // Status of LP solved by the simplex method and its data
+  bool valid = false;
   bool is_transposed = false;
   bool is_scaled = false;
   bool is_permuted = false;
   bool is_tightened = false;
+  // The LP has a valid basis
+  bool has_basis = false;
+  // The LP has a column-wise constraint matrix
   bool has_matrix_col_wise = false;
+  // The LP has a row-wise constraint matrix
   bool has_matrix_row_wise = false;
-  // Properties of data held in HFactor.h. To "have" them means that
-  // they are assigned.
+  // The LP has the constraint matrix and indices of basic variables used by INVERT
   int has_factor_arrays = false;
   // This refers to workEdWt, which is held in HDualRHS.h and is
   // assigned and initialised to 1s in dualRHS.setup(model). To
