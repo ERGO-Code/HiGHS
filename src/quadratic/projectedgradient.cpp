@@ -8,6 +8,21 @@
 
 void printVector(HVector& vec, const char* name);
 
+double ProjectedGradient::computeObjectiveValue(HVector& c, SparseMatrix& A, double mu, HVector& b, HVector& x) {
+  double obj = 0.0;
+
+  obj += c.scalarProduct(&x);
+
+  if (mu > 0.0) {
+    HVector temp(A.numCol);
+    A.mat_vec_prod(x, &temp);
+    temp.saxpy(-1.0, &b);
+    obj += mu/2 * temp.norm2();
+  }
+
+  return obj;
+}
+
 void ProjectedGradient::projectGradient(double sign, HVector& gradient,
                                         HVector& x, HVector& l, HVector& u,
                                         int numCol, HVector& result) {
@@ -138,6 +153,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
   this->computeGradientConstantPart(c, A, mu, b, gradientConstant);
 
   int iteration = 0;
+  int matlab_iterations = 0;
   while (iteration < 200) {
     // compute search direction
     gradient.setup(lp.numCol_);
@@ -151,7 +167,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     HighsPrintMessage(ModelLogLevel::ML_MINIMAL, "%d: gradient norm %lf\n",
                       iteration, norm);
     // TODO: make that a global constant, HIGHS_CONST_TINY is too small
-    if (norm < 10E-7) {
+    if (norm < 10E-8) {
       break;
     }
 
@@ -193,7 +209,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
         }
       }
     }
-
+    matlab_iterations++;
     // search in subspace. Variables at bounds may not be changed.
     // solve subproblem (approximately):
     // min  0.5 mu *x'A'Ax + c'x b mu * A'b
@@ -201,7 +217,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     // l <= x <= u
 
     // SPECULATIVE CODE START
-
+    gradient.setup(lp.numCol_);
     this->computeGradient(gradientConstant, mu, A, x, gradient);
     this->projectGradient(1.0, gradient, x, l, u, lp.numCol_, gradient);
 
@@ -209,9 +225,12 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     sk.saxpy(-1.0, &gradient);
 
     int cgIteration = 0;
+    double prevObjValue = this->computeObjectiveValue(c, A, mu, b, x);
     while (cgIteration < lp.numCol_) {
+      matlab_iterations++;
       double norm_sk = sk.norm2();
       if (norm_sk < HIGHS_CONST_TINY) {
+        HighsPrintMessage(ML_MINIMAL, "zero search direction in CG\n");
         break;
       }
 
@@ -227,6 +246,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
       double alpha = -q2 / q1;
 
       if (alpha <= HIGHS_CONST_TINY) {
+        HighsPrintMessage(ML_MINIMAL, "alpha in CG too small %lf\n", alpha);
         break;
       }
 
@@ -242,18 +262,24 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
       this->projectGradient(1.0, gradient, x, l, u, lp.numCol_, gradient);
 
       double norm_gkp1 = gradient.norm2();
-      if (norm_gkp1 < HIGHS_CONST_TINY) {
+      if (norm_gkp1 < 10E-2) {
+        HighsPrintMessage(ML_MINIMAL, "CG: norm of gradient too small: %lf\n", norm_gkp1);
         break;
       }
 
-      // TODO: check objective change
+      // if objective change is too small, stop CG and continue with PGM 
+      double newObjValue = this->computeObjectiveValue(c, A, mu, b, x);
+      if (fabs(prevObjValue - newObjValue) < 10E-6) {
+        HighsPrintMessage(ML_MINIMAL, "CG iter %d: objective change too small: %lf\n", cgIteration, fabs(prevObjValue - newObjValue) < 10E-4);
+        break;
+      }
+      prevObjValue = newObjValue;
 
-      double beta = (norm_gkp1 * norm_gkp1) / (norm_gk * norm_gk);
+      double beta = (norm_gkp1) / (norm_gk);
       sk.scale(beta);
       sk.tight();
       sk.saxpy(-1.0, &gradient);
-      projectGradient(-1.0, gradient, x, l, u, lp.numCol_, gradient);
-      // TODO: project gradient negative
+      projectGradient(-1.0, sk, x, l, u, lp.numCol_, sk); // replaced gradient by sk
 
       if (sk.scalarProduct(&gradient) > HIGHS_CONST_TINY) {
         sk.copy(&gradient);
@@ -267,4 +293,5 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     iteration++;
   }
   x.peak();
+  HighsPrintMessage(ML_MINIMAL, "Matlab Iterations %d\n", matlab_iterations);
 }

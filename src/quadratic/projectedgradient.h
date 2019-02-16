@@ -14,7 +14,7 @@ class ProjectedGradient {
  private:
   void computeGradientConstantPart(HVector& c, SparseMatrix& A, double mu, HVector& b, HVector& gradient);
   void computeGradient(HVector& gradientConstant, double mu, SparseMatrix& A, HVector& x, HVector& gradient);
-  double computeObjectiveValue(HVector& c, SparseMatrix& A, double mu, HVector& b);
+  double computeObjectiveValue(HVector& c, SparseMatrix& A, double mu, HVector& b, HVector& x);
   void computeSecondDerivativeVector(HVector& x, SparseMatrix& A, double mu, HVector& result);
   
   void computeBreakpoints(HVector& gradient, HVector& x, HVector& u, HVector& l, std::vector<double>& t, std::vector<double>& tbar);
