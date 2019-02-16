@@ -2734,8 +2734,57 @@ void report_iteration_count_dual_objective_value(
                     dual_objective_value, i_v);
 }
 
+void add_cols_to_lp_vectors(HighsLp &lp, int XnumCol,
+			    const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
+  int newNumCol = lp.numCol_ + XnumCol;
+  lp.colCost_.resize(newNumCol);
+  lp.colLower_.resize(newNumCol);
+  lp.colUpper_.resize(newNumCol);
+
+  // Note that the new columns must have starts, even if they have no entries (yet)
+  for (int col = 0; col < XnumCol; col++) {
+    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
+    lp.colLower_[lp.numCol_ + col] = XcolLower[col];
+    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
+  }
+
+
+}
+
+void add_cols_to_lp_matrix(HighsLp &lp, int XnumCol,
+			   int XnumNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+  int newNumCol = lp.numCol_ + XnumCol;
+  lp.Astart_.resize(newNumCol + 1);
+  for (int col = 0; col < XnumCol; col++) {
+    lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
+  }
+  
+  // Determine the current number of nonzeros
+  int currentNumNZ = lp.Astart_[lp.numCol_];
+  
+  // Determine the new number of nonzeros and resize the column-wise matrix
+  // arrays
+  int newNumNZ = currentNumNZ + XnumNZ;
+  lp.Aindex_.resize(newNumNZ);
+  lp.Avalue_.resize(newNumNZ);
+  
+  // Add the new columns
+  for (int col = 0; col < XnumCol; col++) {
+    lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
+  }
+  lp.Astart_[lp.numCol_ + XnumCol] = newNumNZ;
+  
+  for (int el = 0; el < XnumNZ; el++) {
+    int row = XAindex[el];
+    assert(row >= 0);
+    assert(row < lp.numRow_);
+    lp.Aindex_[currentNumNZ + el] = row;
+    lp.Avalue_[currentNumNZ + el] = XAvalue[el];
+  }
+}
+
 void extend_with_logical_basis(HighsLp &lp, HighsBasis &basis,
-						      int firstCol, int lastCol, int firstRow, int lastRow) {
+			       int firstCol, int lastCol, int firstRow, int lastRow) {
   // Add nonbasic structurals and basic slacks according to model bounds.
   //
   // NB Assumes that the basis is valid for columns 0..firstCol-1 and

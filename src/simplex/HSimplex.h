@@ -309,6 +309,24 @@ void report_iteration_count_dual_objective_value(
 						 );
 
 // Methods not requiring HighsModelObject 
+
+void add_cols_to_lp_vectors(
+			    HighsLp &lp,
+			    int XnumCol,
+			    const double *XcolCost,
+			    const double *colLower,
+			    const double *XcolUpper
+			    );
+
+void add_cols_to_lp_matrix(
+			   HighsLp &lp,
+			   int XnumCol,
+			   int XnumNZ,
+			   const int *XAstart,
+			   const int *XAindex,
+			   const double *XAvalue
+			   );
+
 void extend_with_logical_basis(
 			       HighsLp &lp,
 			       HighsBasis &basis,

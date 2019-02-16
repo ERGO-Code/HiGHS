@@ -30,20 +30,7 @@
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
     HighsSimplexInterface simplex_interface(this->lps_[0]);
-    simplex_interface.util_add_cols(false,
-				    this->lps_[0].lp_,
-				    basis_,
-				    this->lps_[0].scale_, //NULL?
-				    this->lps_[0].simplex_lp_status_, //NULL?
-				    1, &obj, &lo, &hi,
-				    0, NULL, NULL, NULL);
-    simplex_interface.util_add_cols(true,
-				    this->lps_[0].simplex_lp_,
-				    this->lps_[0].basis_,
-				    this->lps_[0].scale_,
-				    this->lps_[0].simplex_lp_status_,
-				    1, &obj, &lo, &hi,
-				    0, NULL, NULL, NULL);
+    simplex_interface.util_add_cols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
     return 0; //TODO
     
   } else {

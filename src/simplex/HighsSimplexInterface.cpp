@@ -368,10 +368,7 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 }
 #endif
 
-void HighsSimplexInterface::util_add_cols(const bool simplexLp,
-					  HighsLp &lp, HighsBasis &basis, HighsScale &scale,
-					  HighsSimplexLpStatus &simplex_lp_status,
-					  int XnumCol, const double *XcolCost, const double *colLower,  const double *XcolUpper,
+void HighsSimplexInterface::util_add_cols(int XnumCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 					  int XnumNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
   assert(XnumCol >= 0);
   assert(XnumNZ >= 0);
@@ -382,78 +379,60 @@ void HighsSimplexInterface::util_add_cols(const bool simplexLp,
 
   if (XnumCol == 0) return;
 
-  // Determine whether there is an LP,  matrix and basis to add columns to, and whether row scaling should be applied
-  bool valid_lp;
-  bool valid_matrix;
-  bool valid_basis;
-  bool apply_row_scaling;
-  if (simplexLp) {
-    valid_lp = simplex_lp_status.valid;
-    valid_matrix = simplex_lp_status.has_matrix_col_wise;
-    valid_basis = simplex_lp_status.has_basis;
-    apply_row_scaling = simplex_lp_status.is_scaled;
-  } else {
-    // If not the simplex LP, the LP and matrix are always valid and
-    // row scaling should never be applied
-    valid_lp = true;
-    valid_matrix = true;
-    valid_basis = basis.valid_;
-    apply_row_scaling = false;
-  }
+  HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsScale &scale = highs_model_object.scale_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+  int newNumCol = lp.numCol_ + XnumCol;
+
+  // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
+  bool valid_basis = basis.valid_;
+  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool valid_simplex_basis = simplex_lp_status.has_basis;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+  bool apply_row_scaling = simplex_lp_status.is_scaled;
+
 #ifdef HiGHSDEV
-  if (!valid_lp) {
-    assert(!valid_matrix);
+  // Check that if there is no simplex LP then there is no basis, matrix, scaling
+  if (!valid_simplex_lp) {
+    assert(!simplex_basis.valid);
+    assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
-  if (!valid_lp) return;
-
-  int newNumCol = lp.numCol_ + XnumCol;
-  lp.colCost_.resize(newNumCol);
-  lp.colLower_.resize(newNumCol);
-  lp.colUpper_.resize(newNumCol);
-  if (valid_matrix) lp.Astart_.resize(newNumCol + 1);
-  if (simplexLp) scale.col_.resize(newNumCol);
-
-  // Note that the new columns must have starts, even if they have no entries (yet)
-  for (int col = 0; col < XnumCol; col++) {
-    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
-    lp.colLower_[lp.numCol_ + col] = colLower[col];
-    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
-    if (valid_matrix) lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
-    if (simplexLp) scale.col_[lp.numCol_ + col] = 1.0;
-  }
-
-  if (valid_matrix && XnumNZ > 0) {
-    // Determine the current number of nonzeros
-    int currentNumNZ = lp.Astart_[lp.numCol_];
-
-    // Determine the new number of nonzeros and resize the column-wise matrix
-    // arrays
-    int newNumNZ = currentNumNZ + XnumNZ;
-    lp.Aindex_.resize(newNumNZ);
-    lp.Avalue_.resize(newNumNZ);
-
-    // Add the new columns
-    for (int col = 0; col < XnumCol; col++) {
-      lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
-    }
-    lp.Astart_[lp.numCol_ + XnumCol] = newNumNZ;
-
-    for (int el = 0; el < XnumNZ; el++) {
-      int row = XAindex[el];
-      assert(row >= 0);
-      assert(row < lp.numRow_);
-      lp.Aindex_[currentNumNZ + el] = row;
-      if (apply_row_scaling) {
-	lp.Avalue_[currentNumNZ + el] = XAvalue[el] * scale.row_[row];
-      } else {
-	lp.Avalue_[currentNumNZ + el] = XAvalue[el];
-      }
+  // Add columns to LP vectors and matrix
+  add_cols_to_lp_vectors(lp, XnumCol, XcolCost, XcolLower, XcolUpper);
+  add_cols_to_lp_matrix(lp, XnumCol, XnumNZ, XAstart, XAindex, XAvalue);
+  if (valid_simplex_lp) {
+    // Add columns to simplex LP vectors
+    add_cols_to_lp_vectors(simplex_lp, XnumCol, XcolCost, XcolLower, XcolUpper);
+    if (valid_simplex_matrix) {
+      // Add columns to simplex LP matrix
+      add_cols_to_lp_matrix(simplex_lp, XnumCol, XnumNZ, XAstart, XAindex, XAvalue);
     }
   }
-  // Increase the number of columns in the LP
-  lp.numCol_ += XnumCol;
+
+  // Now consider scaling
+  scale.col_.resize(newNumCol);  
+  for (int col = 0; col < XnumCol; col++) scale.col_[lp.numCol_ + col] = 1.0;
+
+  if (apply_row_scaling) {
+    // Determine scaling multipliers for this set of columns
+    // Determine scale factors for this set of columns
+    // Scale the simplex LP vectors for these columns
+    // Scale the simplex LP matrix for these columns
+  }
+
+
+  // Rewrite extend_... so it doesn't assume that the number of columns has been increased
+  // How about
+  // Method to extend nonbasicFlag when columns are to be added
+  // Method to add nonbasic columns
+  // Method to add nonbasic rows
+
 
   if (valid_basis) {
     // Update the basis correponding to new nonbasic columns
@@ -464,7 +443,11 @@ void HighsSimplexInterface::util_add_cols(const bool simplexLp,
     extend_with_logical_basis(lp, basis, firstCol, lastCol, firstRow, lastRow);
   }
   // Deduce the consequences of adding new columns
-  if (simplexLp) update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
+
+  // Increase the number of columns in the LP
+  lp.numCol_ += XnumCol;
+
 }
 
 void HighsSimplexInterface::util_delete_cols(

@@ -101,16 +101,11 @@ class HighsSimplexInterface {
    * @brief Add a contiguous set of columns to the model data---making them nonbasic
    */
   void util_add_cols(
-		     const bool simplex_lp,
-		     HighsLp &lp,
-		     HighsBasis &basis,
-		     HighsScale &scale,
-		     HighsSimplexLpStatus &simplex_lp_status,
-		     int ncols,
+		     int XnumCol,
 		     const double *XcolCost,
 		     const double *colLower,
 		     const double *XcolUpper,
-		     int nnonz,
+		     int XnumNZ,
 		     const int *XAstart,
 		     const int *XAindex,
 		     const double *XAvalue
