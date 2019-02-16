@@ -6,7 +6,10 @@
 #include <math.h>
 #include <algorithm>
 
-void printVector(HVector& vec, const char* name);
+#define TOLERANCE_GRADIENT_ZERO 10E-2
+#define TOLERANCE_CG_OBJECTIVE_CHANGE 10E-4
+#define TOLERANCE_CG_GRADIENT_SMALL 10E-2
+#define LIMIT_PGM_ITERATIONS 200
 
 double ProjectedGradient::computeObjectiveValue(HVector& c, SparseMatrix& A, double mu, HVector& b, HVector& x) {
   double obj = 0.0;
@@ -14,7 +17,7 @@ double ProjectedGradient::computeObjectiveValue(HVector& c, SparseMatrix& A, dou
   obj += c.scalarProduct(&x);
 
   if (mu > 0.0) {
-    HVector temp(A.numCol);
+    HVector temp(A.numRow);
     A.mat_vec_prod(x, &temp);
     temp.saxpy(-1.0, &b);
     obj += mu/2 * temp.norm2();
@@ -154,7 +157,7 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
 
   int iteration = 0;
   int matlab_iterations = 0;
-  while (iteration < 200) {
+  while (iteration < LIMIT_PGM_ITERATIONS) {
     // compute search direction
     gradient.setup(lp.numCol_);
     this->computeGradient(gradientConstant, mu, A, x, gradient);
@@ -166,8 +169,10 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     double norm = projectedGradient.norm2();
     HighsPrintMessage(ModelLogLevel::ML_MINIMAL, "%d: gradient norm %lf\n",
                       iteration, norm);
-    // TODO: make that a global constant, HIGHS_CONST_TINY is too small
-    if (norm < 10E-8) {
+
+    // TODO: I feel like this should not be a fixed value for all problems if used in the context of idiot crash
+    // maybe divide norm by the number of columns?
+    if (norm < TOLERANCE_GRADIENT_ZERO) {
       break;
     }
 
@@ -262,15 +267,16 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
       this->projectGradient(1.0, gradient, x, l, u, lp.numCol_, gradient);
 
       double norm_gkp1 = gradient.norm2();
-      if (norm_gkp1 < 10E-2) {
+      if (norm_gkp1 < TOLERANCE_CG_GRADIENT_SMALL) {
         HighsPrintMessage(ML_MINIMAL, "CG: norm of gradient too small: %lf\n", norm_gkp1);
         break;
       }
 
       // if objective change is too small, stop CG and continue with PGM 
       double newObjValue = this->computeObjectiveValue(c, A, mu, b, x);
-      if (fabs(prevObjValue - newObjValue) < 10E-6) {
-        HighsPrintMessage(ML_MINIMAL, "CG iter %d: objective change too small: %lf\n", cgIteration, fabs(prevObjValue - newObjValue) < 10E-4);
+      double objChange = fabs(prevObjValue - newObjValue);
+      if (objChange < TOLERANCE_CG_OBJECTIVE_CHANGE) {
+        HighsPrintMessage(ML_MINIMAL, "CG iter %d: objective change too small: %lf\n", cgIteration, objChange);
         break;
       }
       prevObjValue = newObjValue;
