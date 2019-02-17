@@ -14,6 +14,7 @@
 #ifndef SIMPLEX_HSIMPLEX_H_
 #define SIMPLEX_HSIMPLEX_H_
 
+#include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
 
@@ -66,10 +67,6 @@ void update_simplex_lp_status(
 void report_simplex_lp_status(
 			      HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be reported
 			      );
-
-void report_basis(
-		  HighsModelObject &highs_model_object
-		  );
 
 void compute_dual_objective_value(
 				  HighsModelObject &highs_model_object,
@@ -182,13 +179,6 @@ void replace_with_new_basis(
 			    HighsModelObject &highs_model_object,
                             const int *XbasicIndex
 			    );
-
-void extend_with_logical_basis(
-			       HighsModelObject &highs_model_object,
-                               int firstcol,
-			       int lastcol,
-			       int firstrow,
-                               int lastrow);
 
 void setup_num_basic_logicals(
 			      HighsModelObject &highs_model_object
@@ -312,7 +302,7 @@ void report_iteration_count_dual_objective_value(
 
 void add_cols_to_lp_vectors(
 			    HighsLp &lp,
-			    int XnumCol,
+			    int XnumNewCol,
 			    const double *XcolCost,
 			    const double *colLower,
 			    const double *XcolUpper
@@ -320,25 +310,72 @@ void add_cols_to_lp_vectors(
 
 void add_cols_to_lp_matrix(
 			   HighsLp &lp,
-			   int XnumCol,
-			   int XnumNZ,
+			   int XnumNewCol,
+			   int XnumNewNZ,
 			   const int *XAstart,
 			   const int *XAindex,
 			   const double *XAvalue
 			   );
 
-void extend_with_logical_basis(
-			       HighsLp &lp,
-			       HighsBasis &basis,
-                               int firstCol,
-			       int lastCol,
-			       int firstRow,
-			       int lastRow
-			       );
+void add_rows_to_lp_vectors(HighsLp &lp,
+			    int XnumNewRow,
+			    const double *XrowLower,
+			    const double *XrowUpper
+			    );
+
+void add_rows_to_lp_matrix(HighsLp &lp,
+			   int XnumNewRow,
+			   int XnumNewNZ,
+			   const int *XARstart,
+			   const int *XARindex,
+			   const double *XARvalue
+			   );
+
+void extend_basis_with_nonbasic_cols(
+				     HighsLp &lp,
+				     HighsBasis &basis,
+				     int XnumNewCol
+				     );
+
+void extend_basis_with_basic_rows(
+				  HighsLp &lp,
+				  HighsBasis &basis,
+				  int XnumNewRow
+				  );
+
+void del_cols_from_lp_vectors(
+			    HighsLp &lp,
+			    int XfromCol,
+			    int XtoCol
+			    );
+
+void del_cols_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromCol,
+			     int XtoCol
+			   );
+
+void del_rows_from_lp_vectors(
+			    HighsLp &lp,
+			    int XfromRow,
+			    int XtoRow
+			    );
+
+void del_rows_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromRow,
+			     int XtoRow
+			   );
 
 bool nonbasic_flag_basic_index_ok(
-				  HighsBasis &basis,
-                                  int XnumCol,
-				  int XnumRow
+				  HighsLp &lp,
+				  HighsBasis &basis
 				  );
+#ifdef HiGHSDEV
+void report_basis(
+		  HighsLp &lp,
+		  HighsBasis &basis
+		  );
+#endif
+
 #endif // SIMPLEX_HSIMPLEX_H_

@@ -103,7 +103,7 @@ class HighsSimplexInterface {
   void util_add_cols(
 		     int XnumCol,
 		     const double *XcolCost,
-		     const double *colLower,
+		     const double *XcolLower,
 		     const double *XcolUpper,
 		     int XnumNZ,
 		     const int *XAstart,
@@ -112,8 +112,8 @@ class HighsSimplexInterface {
 		     );
 
   void util_delete_cols(
-			int firstcol,
-			int lastcol
+			int XfromCol,
+			int XtoCol
 			);
 
   void util_delete_col_set(
@@ -121,7 +121,7 @@ class HighsSimplexInterface {
 			  );
 
   void util_extract_cols(
-			 int firstcol, int lastcol,
+			 int XfromCol, int XtoCol,
 			 double* XcolLower,
 			 double* XcolUpper,
 			 int* nnonz,

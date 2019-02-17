@@ -12,9 +12,9 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
+#include "HConfig.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
-#include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
@@ -236,37 +236,6 @@ void report_simplex_lp_status(HighsSimplexLpStatus &simplex_lp_status) {
   printf("  has_fresh_rebuild =              %d\n", simplex_lp_status.has_fresh_rebuild);
   printf("  has_dual_objective_value =       %d\n", simplex_lp_status.has_dual_objective_value);
 }
-
-void report_basis(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
-
-  printf("\nReporting current basis: simplex_lp.numCol_ = %d; simplex_lp.numRow_ "
-         "= %d\n",
-         simplex_lp.numCol_, simplex_lp.numRow_);
-  if (simplex_lp.numCol_ > 0)
-    printf("   Var    Col          Flag   Move\n");
-  for (int col = 0; col < simplex_lp.numCol_; col++) {
-    int var = col;
-    if (basis.nonbasicFlag_[var])
-      printf("%6d %6d        %6d %6d\n", var, col, basis.nonbasicFlag_[var],
-             basis.nonbasicMove_[var]);
-    else
-      printf("%6d %6d %6d\n", var, col, basis.nonbasicFlag_[var]);
-  }
-  if (simplex_lp.numRow_ > 0)
-    printf("   Var    Row  Basic   Flag   Move\n");
-  for (int row = 0; row < simplex_lp.numRow_; row++) {
-    int var = simplex_lp.numCol_ + row;
-    if (basis.nonbasicFlag_[var])
-      printf("%6d %6d %6d %6d %6d\n", var, row, basis.basicIndex_[row],
-             basis.nonbasicFlag_[var], basis.nonbasicMove_[var]);
-    else
-      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row],
-             basis.nonbasicFlag_[var]);
-  }
-}
-
 
 void compute_dual_objective_value(HighsModelObject &highs_model_object,
                                   int phase) {
@@ -1731,7 +1700,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   if (level <= 0)
     return ok;
   // Level 1: Basis and data check
-  ok = nonbasic_flag_basic_index_ok(highs_model_object.basis_, simplex_lp.numCol_, simplex_lp.numRow_);
+  ok = nonbasic_flag_basic_index_ok(simplex_lp, highs_model_object.basis_);
   if (!ok) {
     printf("Error in nonbasicFlag and basicIndex\n");
     assert(ok);
@@ -2734,28 +2703,30 @@ void report_iteration_count_dual_objective_value(
                     dual_objective_value, i_v);
 }
 
-void add_cols_to_lp_vectors(HighsLp &lp, int XnumCol,
+void add_cols_to_lp_vectors(HighsLp &lp, int XnumNewCol,
 			    const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
-  int newNumCol = lp.numCol_ + XnumCol;
+  assert(XnumNewCol >= 0);
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
   lp.colCost_.resize(newNumCol);
   lp.colLower_.resize(newNumCol);
   lp.colUpper_.resize(newNumCol);
 
-  // Note that the new columns must have starts, even if they have no entries (yet)
-  for (int col = 0; col < XnumCol; col++) {
+  for (int col = 0; col < XnumNewCol; col++) {
     lp.colCost_[lp.numCol_ + col] = XcolCost[col];
     lp.colLower_[lp.numCol_ + col] = XcolLower[col];
     lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
   }
-
-
 }
 
-void add_cols_to_lp_matrix(HighsLp &lp, int XnumCol,
-			   int XnumNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
-  int newNumCol = lp.numCol_ + XnumCol;
+void add_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
+			   int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+  assert(XnumNewCol >= 0);
+  assert(XnumNewNZ >= 0);
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
   lp.Astart_.resize(newNumCol + 1);
-  for (int col = 0; col < XnumCol; col++) {
+  for (int col = 0; col < XnumNewCol; col++) {
     lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
   }
   
@@ -2764,17 +2735,17 @@ void add_cols_to_lp_matrix(HighsLp &lp, int XnumCol,
   
   // Determine the new number of nonzeros and resize the column-wise matrix
   // arrays
-  int newNumNZ = currentNumNZ + XnumNZ;
+  int newNumNZ = currentNumNZ + XnumNewNZ;
   lp.Aindex_.resize(newNumNZ);
   lp.Avalue_.resize(newNumNZ);
   
   // Add the new columns
-  for (int col = 0; col < XnumCol; col++) {
+  for (int col = 0; col < XnumNewCol; col++) {
     lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
   }
-  lp.Astart_[lp.numCol_ + XnumCol] = newNumNZ;
+  lp.Astart_[lp.numCol_ + XnumNewCol] = newNumNZ;
   
-  for (int el = 0; el < XnumNZ; el++) {
+  for (int el = 0; el < XnumNewNZ; el++) {
     int row = XAindex[el];
     assert(row >= 0);
     assert(row < lp.numRow_);
@@ -2783,130 +2754,238 @@ void add_cols_to_lp_matrix(HighsLp &lp, int XnumCol,
   }
 }
 
-void extend_with_logical_basis(HighsLp &lp, HighsBasis &basis,
-			       int firstCol, int lastCol, int firstRow, int lastRow) {
-  // Add nonbasic structurals and basic slacks according to model bounds.
-  //
-  // NB Assumes that the basis is valid for columns 0..firstCol-1 and
-  // rows 0..firstRow-1. Thus they correspond to "firstCol" number of
-  // columns and "firstRow" number of rows. lp.numCol_ and lp.numRow_
-  // have already been updated to correspond to any additional columns
-  // and rows. This is necessary so that generic methods can be used
-  // to assign model data to arrays dimensioned 0..numTot
-  //
-  // Null intervals firstCol...lastCol and firstRow...lastRow are
-  // permitted, but this is achieved by setting the "last" to be less
-  // than "first" since the latter is used to indicate what's
-  // currently in the data structure.
+void add_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
+			    const double *XrowLower, const double *XrowUpper) {
+  assert(XnumNewRow >= 0);
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+  lp.rowLower_.resize(newNumRow);
+  lp.rowUpper_.resize(newNumRow);
 
-  assert(firstCol >= 0);
-  assert(firstRow >= 0);
-
-  // Determine the numbers of columns and rows to be added
-
-  int numAddCol = max(lastCol - firstCol + 1, 0);
-  int numAddRow = max(lastRow - firstRow + 1, 0);
-  int numAddTot = numAddCol + numAddRow;
-  if (numAddTot == 0) return;
-
-  // Determine the numbers of columns and rows before and after this method
-
-  int local_oldNumCol = firstCol;
-  int local_oldNumRow = firstRow;
-  int local_oldNumTot = local_oldNumCol + local_oldNumRow;
-
-  int local_newNumCol = max(local_oldNumCol, lastCol + 1);
-  int local_newNumRow = max(local_oldNumRow, lastRow + 1);
-  int local_newNumTot = local_newNumCol + local_newNumRow;
-
-  const int numTot = lp.numCol_ + lp.numRow_;
-#ifdef SCIPDEV
-  if (simplexLp) {
-    printf("extend_with_logical_basis\n");
-    printf("lp.numCol_/Row/Tot = %d/%d/%d\n", lp.numCol_, lp.numRow_, numTot);
-    printf("local_newNumCol/Row/Tot = %d/%d/%d\n", local_newNumCol, local_newNumRow, local_newNumTot);
+  for (int row = 0; row < XnumNewRow; row++) {
+    lp.rowLower_[lp.numRow_ + row] = XrowLower[row];
+    lp.rowUpper_[lp.numRow_ + row] = XrowUpper[row];
   }
-#endif
-  // ToDo: Replace references to local_newNum* by references to num* from here
-  // on
-  assert(local_newNumCol == lp.numCol_);
-  assert(local_newNumRow == lp.numRow_);
-  assert(local_newNumTot == numTot);
+}
 
-#ifdef HiGHSDEV
-  // Check that columns 0..firstCol-1 and rows 0..firstRow-1 constitute a valid
-  // basis.
-  bool basisOK = nonbasic_flag_basic_index_ok(basis, local_oldNumCol, local_oldNumRow);
-  if (!basisOK)
-    printf("extend_with_logical_basis: basisOK = %d\n", basisOK);
-  assert(basisOK);
-#endif
+void add_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
+			   int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
+  // Check that nonzeros aren't being added to a matrix with no columns
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
 
-  //  Resize if necessary
+  // NB SCIP doesn't have XARstart[XnumNewRow] defined, so have to use XnumNewNZ for last
+  // entry
+  if (XnumNewNZ == 0) return;
+  int currentNumNZ = lp.Astart_[lp.numCol_];
+  vector<int> Alength;
+  Alength.assign(lp.numCol_, 0);
+  for (int el = 0; el < XnumNewNZ; el++) {
+    int col = XARindex[el];
+    //      printf("El %2d: adding entry in column %2d\n", el, col); 
+    assert(col >= 0);
+    assert(col < lp.numCol_);
+    Alength[col]++;
+  }
+  // Determine the new number of nonzeros and resize the column-wise matrix arrays
+  int newNumNZ = currentNumNZ + XnumNewNZ;
+  lp.Aindex_.resize(newNumNZ);
+  lp.Avalue_.resize(newNumNZ);
 
-  if (lp.numRow_ > local_oldNumRow) basis.basicIndex_.resize(lp.numRow_);
-  if (numTot > local_oldNumTot) basis.nonbasicFlag_.resize(numTot);
+  // Add the new rows
+  // Shift the existing columns to make space for the new entries
+  int nwEl = newNumNZ;
+  for (int col = lp.numCol_ - 1; col >= 0; col--) {
+    // printf("Column %2d has additional length %2d\n", col, Alength[col]);
+    int Astart_Colp1 = nwEl;
+    nwEl -= Alength[col];
+    // printf("Shift: nwEl = %2d\n", nwEl);
+    for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
+      nwEl--;
+      // printf("Shift: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
+      // nwEl, el, lp.Aindex_[el]);
+      lp.Aindex_[nwEl] = lp.Aindex_[el];
+      lp.Avalue_[nwEl] = lp.Avalue_[el];
+    }
+    lp.Astart_[col + 1] = Astart_Colp1;
+  }
+  // printf("After shift: nwEl = %2d\n", nwEl);
+  assert(nwEl == 0);
+  // util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
 
-  // Shift the row data in basicIndex and nonbasicFlag if necessary
-
-  int rowShift = lp.numCol_ - local_oldNumCol;
-  if (rowShift > 0) {
-    // printf("Shifting row data by %d using row=%d..0\n", rowShift,
-    // local_oldNumRow-1);cout << flush;
-    for (int row = local_oldNumRow - 1; row >= 0; row--) {
-      basis.basicIndex_[row] += rowShift;
-      basis.nonbasicFlag_[lp.numCol_ + row] = basis.nonbasicFlag_[local_oldNumCol + row];
+  // Insert the new entries
+  for (int row = 0; row < XnumNewRow; row++) {
+    int fEl = XARstart[row];
+    int lEl = (row < XnumNewRow - 1 ? XARstart[row + 1] : XnumNewNZ) - 1;
+    for (int el = fEl; el <= lEl; el++) {
+      int col = XARindex[el];
+      nwEl = lp.Astart_[col + 1] - Alength[col];
+      Alength[col]--;
+      // printf("Insert: row = %2d; col = %2d; lp.Astart_[col+1]-Alength[col] =
+      // %2d; Alength[col] = %2d; nwEl = %2d\n", row, col,
+      // lp.Astart_[col+1]-Alength[col], Alength[col], nwEl);
+      assert(nwEl >= 0);
+      assert(el >= 0);
+      // printf("Insert: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
+      // nwEl, el, lp.Aindex_[el]);
+      lp.Aindex_[nwEl] = lp.numRow_ + row;
+      lp.Avalue_[nwEl] = XARvalue[el];
     }
   }
-  // report_basis(basis, local_oldNumCol, local_oldNumRow);
-  // printf("After possibly shifting row data\n");
-  // Make any new columns nonbasic
-  for (int col = firstCol; col <= lastCol; col++) {
-    int var = col;
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+}
+
+void extend_basis_with_nonbasic_cols(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
+  // Add nonbasic structurals
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  int newNumTot = newNumCol + lp.numRow_;
+  basis.nonbasicFlag_.resize(newNumTot);
+  // Shift the row data in basicIndex and nonbasicFlag if necessary
+  for (int row = lp.numRow_ - 1; row >= 0; row--) {
+    basis.basicIndex_[row] += XnumNewCol;
+    basis.nonbasicFlag_[newNumCol + row] = basis.nonbasicFlag_[lp.numCol_ + row];
   }
+  // Make any new columns nonbasic
+  for (int col = lp.numCol_; col < newNumCol; col++) {
+    basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+  }
+}
+
+void extend_basis_with_basic_rows(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
+  // Add basic logicals
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+  basis.basicIndex_.resize(newNumRow);
   // Make any new rows basic
-  //  printf("Make any new rows basic: %d %d %d\n", lp.numRow_, firstRow,
-  //  lastRow);
-  for (int row = firstRow; row <= lastRow; row++) {
+  for (int row = lp.numRow_; row < newNumRow; row++) {
     int var = lp.numCol_ + row;
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
     basis.basicIndex_[row] = var;
   }
-#ifdef HiGHSDEV
-  // Check that columns 0..lp.numCol_-1 and rows 0..lp.numRow_-1 constitute a valid basis.
-  basisOK = nonbasic_flag_basic_index_ok(basis, lp.numCol_, lp.numRow_);
-  assert(basisOK);
-#endif
-
-  //  report_basis(basis, lp.numCol_, lp.numRow_);
-
-  // Deduce the consequences of adding new columns and/or rows
-  //  if (numAddRow) update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_ROWS);
 }
 
-bool nonbasic_flag_basic_index_ok(HighsBasis &basis, int XnumCol, int XnumRow) {
-  assert(XnumCol >= 0);
-  assert(XnumRow >= 0);
-  //  printf("Called nonbasic_flag_basic_index_ok(%d, %d)\n", XnumCol, XnumRow);
-  int XnumTot = XnumCol + XnumRow;
+bool nonbasic_flag_basic_index_ok(HighsLp &lp, HighsBasis &basis) {
+  int numTot = lp.numCol_ + lp.numRow_;
   int num_basic_variables = 0;
-  if (XnumTot > 0) {
-    for (int var = 0; var < XnumTot; var++)
-      if (!basis.nonbasicFlag_[var])
-        num_basic_variables++;
-  }
-  assert(num_basic_variables == XnumRow);
-  if (num_basic_variables != XnumRow)
-    return false;
-  if (XnumRow > 0) {
-    for (int row = 0; row < XnumRow; row++) {
-      int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
-      assert(!flag);
-      if (flag)
-        return false;
-    }
+  for (int var = 0; var < numTot; var++) if (!basis.nonbasicFlag_[var]) num_basic_variables++;
+  assert(num_basic_variables == lp.numRow_);
+  if (num_basic_variables != lp.numRow_) return false;
+  for (int row = 0; row < lp.numRow_; row++) {
+    int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
+    assert(!flag);
+    if (flag) return false;
   }
   return true;
 }
+
+void del_cols_from_lp_vectors(HighsLp &lp, int XfromCol, int XtoCol) {
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+
+  int numDeleteCol = XtoCol - XfromCol + 1;
+  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
+  //
+  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns
+  // need be shifted. However, this implies lp.numCol_-numDeleteCol =
+  // XfromCol, in which case the loop is vacuous
+  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
+    lp.colCost_[col] = lp.colCost_[col + numDeleteCol];
+    lp.colLower_[col] = lp.colLower_[col + numDeleteCol];
+    lp.colUpper_[col] = lp.colUpper_[col + numDeleteCol];
+  }
+}
+
+void del_cols_from_lp_matrix(HighsLp &lp, int XfromCol, int XtoCol) {
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+
+  int numDeleteCol = XtoCol - XfromCol + 1;
+  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
+  //
+  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns need be shifted
+  // and the loops are vacuous
+  int elOs = lp.Astart_[XfromCol];
+  int numDeleteEl = lp.Astart_[XtoCol + 1] - elOs;
+  for (int el = lp.Astart_[XtoCol + 1]; el < lp.Astart_[lp.numCol_]; el++) {
+    lp.Aindex_[el - numDeleteEl] = lp.Aindex_[el];
+    lp.Avalue_[el - numDeleteEl] = lp.Avalue_[el];
+  }
+  for (int col = XfromCol; col <= lp.numCol_ - numDeleteCol; col++) {
+    lp.Astart_[col] = lp.Astart_[col + numDeleteCol] - numDeleteEl;
+  }
+
+}
+
+void del_rows_from_lp_vectors(HighsLp &lp, int XfromRow, int XtoRow) {
+  assert(XfromRow >= 0);
+  assert(XtoRow < lp.numRow_);
+  assert(XfromRow <= XtoRow);
+
+  int numDeleteRow = XtoRow - XfromRow + 1;
+  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
+  //
+  // Trivial case is XtoRow = lp.numRow_-1, in which case no rows
+  // need be shifted. However, this implies lp.numRow_-numDeleteRow =
+  // XfromRow, in which case the loop is vacuous
+  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
+    lp.rowLower_[row] = lp.rowLower_[row + numDeleteRow];
+    lp.rowUpper_[row] = lp.rowUpper_[row + numDeleteRow];
+  }
+}
+
+void del_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
+  assert(XfromRow >= 0);
+  assert(XtoRow < lp.numRow_);
+  assert(XfromRow <= XtoRow);
+
+  int numDeleteRow = XtoRow - XfromRow + 1;
+  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
+
+  int nnz = 0;
+  for (int col = 0; col < lp.numCol_; col++) {
+    int fmEl = lp.Astart_[col];
+    lp.Astart_[col] = nnz;
+    for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
+      int row = lp.Aindex_[el];
+      if (row < XfromRow || row > XtoRow) {
+	if (row < XfromRow) {
+	  lp.Aindex_[nnz] = row;
+	} else {
+	  lp.Aindex_[nnz] = row - numDeleteRow;
+	}
+	lp.Avalue_[nnz] = lp.Avalue_[el];
+	nnz++;
+      }
+    }
+  }
+  lp.Astart_[lp.numCol_] = nnz;
+}
+
+#ifdef HiGHSDEV
+void report_basis(HighsLp &lp, HighsBasis &basis) {
+  if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
+  for (int col = 0; col < lp.numCol_; col++) {
+    int var = col;
+    if (basis.nonbasicFlag_[var])
+      printf("%6d %6d        %6d\n", var, col, basis.nonbasicFlag_[var]);
+    // basis.nonbasicMove_[var]);
+    else
+      printf("%6d %6d %6d\n", var, col, basis.nonbasicFlag_[var]);
+  }
+  if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
+  for (int row = 0; row < lp.numRow_; row++) {
+    int var = lp.numCol_ + row;
+    if (basis.nonbasicFlag_[var])
+      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
+    // basis.nonbasicMove_[var]);
+    else
+      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
+  }
+}
+#endif
 

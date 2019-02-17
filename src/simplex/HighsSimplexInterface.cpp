@@ -11,6 +11,7 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "HConfig.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/HSimplex.h"
 #include "io/HighsIO.h"
@@ -358,7 +359,7 @@ void HighsSimplexInterface::check_load_from_postsolve() {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   bool ok;
 
-  ok = nonbasic_flag_basic_index_ok(highs_model_object.basis_, simplex_lp.numCol_, simplex_lp.numRow_);
+  ok = nonbasic_flag_basic_index_ok(simplex_lp, highs_model_object.basis_);
   printf("check_load_from_postsolve: return from nonbasic_flag_basic_index_ok = %d\n", ok);
   assert(ok);
 
@@ -368,16 +369,16 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 }
 #endif
 
-void HighsSimplexInterface::util_add_cols(int XnumCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-					  int XnumNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
-  assert(XnumCol >= 0);
-  assert(XnumNZ >= 0);
+void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+					  int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+  assert(XnumNewCol >= 0);
+  assert(XnumNewNZ >= 0);
   // ToDo How to check that lp.Astart_[lp.numCol_] exists in util_addCols?
 #ifdef HiGHSDEV
-  printf("Called util_add_cols(XnumCol=%d, XnumNZ = %d)\n", XnumCol, XnumNZ);
+  printf("Called util_add_cols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
 #endif
 
-  if (XnumCol == 0) return;
+  if (XnumNewCol == 0) return;
 
   HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
@@ -386,7 +387,7 @@ void HighsSimplexInterface::util_add_cols(int XnumCol, const double *XcolCost, c
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int newNumCol = lp.numCol_ + XnumCol;
+  int newNumCol = lp.numCol_ + XnumNewCol;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
@@ -404,20 +405,16 @@ void HighsSimplexInterface::util_add_cols(int XnumCol, const double *XcolCost, c
   }
 #endif
   // Add columns to LP vectors and matrix
-  add_cols_to_lp_vectors(lp, XnumCol, XcolCost, XcolLower, XcolUpper);
-  add_cols_to_lp_matrix(lp, XnumCol, XnumNZ, XAstart, XAindex, XAvalue);
-  if (valid_simplex_lp) {
-    // Add columns to simplex LP vectors
-    add_cols_to_lp_vectors(simplex_lp, XnumCol, XcolCost, XcolLower, XcolUpper);
-    if (valid_simplex_matrix) {
-      // Add columns to simplex LP matrix
-      add_cols_to_lp_matrix(simplex_lp, XnumCol, XnumNZ, XAstart, XAindex, XAvalue);
-    }
-  }
+  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+  add_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+  if (valid_simplex_lp) 
+    add_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+  if (valid_simplex_matrix) 
+    add_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
 
   // Now consider scaling
   scale.col_.resize(newNumCol);  
-  for (int col = 0; col < XnumCol; col++) scale.col_[lp.numCol_ + col] = 1.0;
+  for (int col = 0; col < XnumNewCol; col++) scale.col_[lp.numCol_ + col] = 1.0;
 
   if (apply_row_scaling) {
     // Determine scaling multipliers for this set of columns
@@ -426,340 +423,286 @@ void HighsSimplexInterface::util_add_cols(int XnumCol, const double *XcolCost, c
     // Scale the simplex LP matrix for these columns
   }
 
+  // Update the basis correponding to new nonbasic columns
+  if (valid_basis) extend_basis_with_nonbasic_cols(lp, basis, newNumCol);
+  //  if (valid_simplex_basis) extend_basis_with_nonbasic_cols(simplex_lp, simplex_basis, newNumCol);
 
-  // Rewrite extend_... so it doesn't assume that the number of columns has been increased
-  // How about
-  // Method to extend nonbasicFlag when columns are to be added
-  // Method to add nonbasic columns
-  // Method to add nonbasic rows
-
-
-  if (valid_basis) {
-    // Update the basis correponding to new nonbasic columns
-    int firstCol = lp.numCol_ - XnumCol;
-    int lastCol = lp.numCol_ - 1;
-    int firstRow = lp.numRow_;
-    int lastRow = -1;
-    extend_with_logical_basis(lp, basis, firstCol, lastCol, firstRow, lastRow);
-  }
   // Deduce the consequences of adding new columns
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
 
-  // Increase the number of columns in the LP
-  lp.numCol_ += XnumCol;
+  // Increase the number of columns in the LPs
+  lp.numCol_ += XnumNewCol;
+  if (valid_simplex_lp) simplex_lp.numCol_ += XnumNewCol;
+
+#ifdef HiGHSDEV
+  if (valid_basis) {
+    bool basisOK = nonbasic_flag_basic_index_ok(lp, basis);
+    assert(basisOK);
+    report_basis(lp, basis);
+  }
+  if (valid_simplex_basis) {
+    bool simplex_basisOK = true;//nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
+    assert(simplex_basisOK);
+    //    report_basis(simplex_lp, simplex_basis);
+  }
+#endif
 
 }
 
-void HighsSimplexInterface::util_delete_cols(
-					     int firstcol,
-					     int lastcol
-					     ) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  assert(firstcol >= 0);
-  assert(lastcol < simplex_lp.numCol_);
-  assert(firstcol <= lastcol);
+void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
 #ifdef HiGHSDEV
-  printf("Called model.util_deleteCols(firstcol=%d, lastcol=%d)\n", firstcol,
-         lastcol);
+  printf("Called util_deleteCols(XfromCol=%d, XtoCol=%d)\n", XfromCol, XtoCol);
 #endif
-  // Trivial cases are
-  //
-  // colStep = 0, in which case no columns are removed
-  //
-  // lastcol = simplex_lp.numCol_-1, in which case no columns need be
-  // shifted. However, this implies simplex_lp.numCol_-colStep=firstcol, in which
-  // case the loop is vacuous
-  int colStep = lastcol - firstcol + 1;
-  if (colStep) {
-    for (int col = firstcol; col < simplex_lp.numCol_ - colStep; col++) {
-      simplex_lp.colCost_[col] = simplex_lp.colCost_[col + colStep];
-      simplex_lp.colLower_[col] = simplex_lp.colLower_[col + colStep];
-      simplex_lp.colUpper_[col] = simplex_lp.colUpper_[col + colStep];
-      scale.col_[col] = scale.col_[col + colStep];
-    }
+  HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsScale &scale = highs_model_object.scale_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+
+  int numDeleteCol = XtoCol - XfromCol + 1;
+  if (numDeleteCol == 0) return;
+
+  int newNumCol = lp.numCol_ - numDeleteCol;
+
+  // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
+  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+
+#ifdef HiGHSDEV
+  // Check that if there is no simplex LP then there is no matrix
+  if (!valid_simplex_lp) {
+    assert(!valid_simplex_matrix);
   }
-  // Trivial cases are
-  //
-  // colstep = 0, in which case no columns are removed so elStep = 0
-  //
-  // lastcol = simplex_lp.numCol_-1, in which case no columns need be
-  // shifted and the loops are vacuous
-  if (colStep) {
-    int elOs = simplex_lp.Astart_[firstcol];
-    int elStep = simplex_lp.Astart_[lastcol + 1] - elOs;
-    //    printf("El loop over cols %2d [%2d] to %2d [%2d]\n", lastcol+1,
-    //    simplex_lp.Astart_[lastcol+1], simplex_lp.numCol_+1, simplex_lp.Astart_[simplex_lp.numCol_]-1);
-    for (int el = simplex_lp.Astart_[lastcol + 1]; el < simplex_lp.Astart_[simplex_lp.numCol_]; el++) {
-      //        printf("Over-write entry %3d [%3d] by entry %3d [%3d]\n",
-      //        el-elStep, simplex_lp.Aindex_[el-elStep], el, simplex_lp.Aindex_[el]);
-      simplex_lp.Aindex_[el - elStep] = simplex_lp.Aindex_[el];
-      simplex_lp.Avalue_[el - elStep] = simplex_lp.Avalue_[el];
-    }
-    for (int col = firstcol; col <= simplex_lp.numCol_ - colStep; col++) {
-      //    printf("Over-write start %3d [%3d] by entry %3d [%3d]\n", col,
-      //    simplex_lp.Astart_[col], col+colStep,  simplex_lp.Astart_[col+colStep]-elStep);
-      simplex_lp.Astart_[col] = simplex_lp.Astart_[col + colStep] - elStep;
-    }
+#endif
+
+  del_cols_from_lp_vectors(lp, XfromCol, XtoCol);
+  if (valid_simplex_lp) del_cols_from_lp_vectors(simplex_lp, XfromCol, XtoCol);
+  del_cols_from_lp_matrix(lp, XfromCol, XtoCol);
+  if (valid_simplex_matrix) del_cols_from_lp_matrix(simplex_lp, XfromCol, XtoCol);
+
+  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
+    scale.col_[col] = scale.col_[col + numDeleteCol];
   }
 
-  // Reduce the number of columns and total number of variables in the model
-  simplex_lp.numCol_ -= colStep;
-  //  numTot -= colStep;
+  // Reduce the number of columns in the LPs
+  lp.numCol_ -= numDeleteCol;
+  if (valid_simplex_lp) simplex_lp.numCol_ -= numDeleteCol;
 
   // ToDo Determine consequences for basis when deleting columns
   // Invalidate matrix copies
   simplex_lp_status.has_matrix_col_wise = false;
   simplex_lp_status.has_matrix_row_wise = false;
+  basis.valid_ = false;
+  //  simplex_basis.valid_ = false;
+  
 }
 
-void HighsSimplexInterface::util_delete_col_set(
-						vector<int>& dstat
-						) {
+void HighsSimplexInterface::util_delete_col_set(vector<int>& dstat) {
   printf("util_delete_col_set not implemented");
   assert(1 == 0);
 }
 
 
-void HighsSimplexInterface::util_extract_cols(
-					      int firstcol,
-					      int lastcol,
-					      double* XcolLower,
-					      double* XcolUpper,
-					      int* nnonz,
-					      int* XAstart,
-					      int* XAindex,
-					      double* XAvalue
-					      ) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+void HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* XcolLower, double* XcolUpper,
+					      int* XnumNZ, int* XAstart, int* XAindex, double* XAvalue) {
+  HighsLp &lp = highs_model_object.lp_;
   HighsScale &scale = highs_model_object.scale_;
-  assert(firstcol >= 0);
-  assert(lastcol < simplex_lp.numCol_);
-  assert(firstcol <= lastcol);
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
 #ifdef HiGHSDEV
-  printf("Called model.util_extractCols(firstcol=%d, lastcol=%d)\n", firstcol,
-         lastcol);
+  printf("Called model.util_extractCols(XfromCol=%d, XtoCol=%d)\n", XfromCol,
+         XtoCol);
 #endif
   // Determine the number of columns to be extracted
-  // int numExtractCols = lastcol-firstcol+1;
+  // int numExtractCols = XtoCol-XfromCol+1;
   // printf("Extracting %d columns\n", numExtractCols);
-  int elOs = simplex_lp.Astart_[firstcol];
-  for (int col = firstcol; col <= lastcol; col++) {
+  int elOs = lp.Astart_[XfromCol];
+  for (int col = XfromCol; col <= XtoCol; col++) {
     //    printf("Extracting column %d\n", col);
-    XcolLower[col - firstcol] = simplex_lp.colLower_[col];
-    XcolUpper[col - firstcol] = simplex_lp.colUpper_[col];
-    XAstart[col - firstcol] = simplex_lp.Astart_[col] - elOs;
+    XcolLower[col - XfromCol] = lp.colLower_[col];
+    XcolUpper[col - XfromCol] = lp.colUpper_[col];
+    XAstart[col - XfromCol] = lp.Astart_[col] - elOs;
   }
-  for (int el = simplex_lp.Astart_[firstcol]; el < simplex_lp.Astart_[lastcol + 1]; el++) {
-    XAindex[el - elOs] = simplex_lp.Aindex_[el];
-    XAvalue[el - elOs] = simplex_lp.Avalue_[el];
+  for (int el = lp.Astart_[XfromCol]; el < lp.Astart_[XtoCol + 1]; el++) {
+    XAindex[el - elOs] = lp.Aindex_[el];
+    XAvalue[el - elOs] = lp.Avalue_[el];
   }
-  *nnonz = simplex_lp.Astart_[lastcol + 1] - elOs;
+  *XnumNZ = lp.Astart_[XtoCol + 1] - elOs;
 }
 
 
-void HighsSimplexInterface::util_add_rows(
-					  int nrows,
-					  const double *XrowLower,
-					  const double *XrowUpper,
-					  int nnonz,
-					  const int *XARstart,
-					  const int *XARindex,
-					  const double *XARvalue
-					  ) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
-  assert(nrows >= 0);
-  assert(nnonz >= 0);
-  assert(nnonz == 0 || simplex_lp.numCol_ > 0);
+void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
+					  int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  // ToDo How to check that lp.Astart_[lp.numRow_] exists in util_addRows?
 #ifdef HiGHSDEV
-  printf("Called model.util_addRows(nrows=%d, nnonz = %d)\n", nrows, nnonz);
+  printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
 #endif
 
-  if (nrows == 0) return;
+  if (XnumNewRow == 0) return;
 
-  int nwNumRow = simplex_lp.numRow_ + nrows;
-  simplex_lp.rowLower_.resize(nwNumRow);
-  simplex_lp.rowUpper_.resize(nwNumRow);
-  scale.row_.resize(nwNumRow);
+  HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsScale &scale = highs_model_object.scale_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  for (int row = 0; row < nrows; row++) {
-    simplex_lp.rowLower_[simplex_lp.numRow_ + row] = XrowLower[row];
-    simplex_lp.rowUpper_[simplex_lp.numRow_ + row] = XrowUpper[row];
-    scale.row_[simplex_lp.numRow_ + row] = 1.0;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+
+  // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
+  bool valid_basis = basis.valid_;
+  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool valid_simplex_basis = simplex_lp_status.has_basis;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+  bool apply_row_scaling = simplex_lp_status.is_scaled;
+
+  if (valid_simplex_lp) 
+    assert(XnumNewNZ == 0 || simplex_lp.numCol_ > 0);
+#ifdef HiGHSDEV
+  // Check that if there is no simplex LP then there is no basis, matrix, scaling
+  if (!valid_simplex_lp) {
+    assert(!simplex_basis.valid);
+    assert(!valid_simplex_matrix);
+    assert(!apply_row_scaling);
   }
-  // NB SCIP doesn't have XARstart[nrows] defined, so have to use nnonz for last
-  // entry
-  if (nnonz > 0) {
-    int cuNnonz = simplex_lp.Astart_[simplex_lp.numCol_];
-    vector<int> Alength;
-    Alength.assign(simplex_lp.numCol_, 0);
-    for (int el = 0; el < nnonz; el++) {
-      int col = XARindex[el];
-      //      printf("El %2d: adding entry in column %2d\n", el, col); 
-      assert(col >= 0);
-      assert(col < simplex_lp.numCol_);
-      Alength[col]++;
-    }
-    // Determine the new number of nonzeros and resize the column-wise matrix
-    // arrays
-    int nwNnonz = cuNnonz + nnonz;
-    simplex_lp.Aindex_.resize(nwNnonz);
-    simplex_lp.Avalue_.resize(nwNnonz);
+#endif
+  // Add rows to LP vectors and matrix
+  add_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
+  add_rows_to_lp_matrix(lp, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
+  if (valid_simplex_lp) 
+    add_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
+  if (valid_simplex_matrix) 
+    add_rows_to_lp_matrix(simplex_lp, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
 
-    // Add the new rows
-    // Shift the existing columns to make space for the new entries
-    int nwEl = nwNnonz;
-    for (int col = simplex_lp.numCol_ - 1; col >= 0; col--) {
-      // printf("Column %2d has additional length %2d\n", col, Alength[col]);
-      int Astart_Colp1 = nwEl;
-      nwEl -= Alength[col];
-      // printf("Shift: nwEl = %2d\n", nwEl);
-      for (int el = simplex_lp.Astart_[col + 1] - 1; el >= simplex_lp.Astart_[col]; el--) {
-        nwEl--;
-        // printf("Shift: Over-writing simplex_lp.Aindex_[%2d] with simplex_lp.Aindex_[%2d]=%2d\n",
-        // nwEl, el, simplex_lp.Aindex_[el]);
-        simplex_lp.Aindex_[nwEl] = simplex_lp.Aindex_[el];
-        simplex_lp.Avalue_[nwEl] = simplex_lp.Avalue_[el];
-      }
-      simplex_lp.Astart_[col + 1] = Astart_Colp1;
-    }
-    // printf("After shift: nwEl = %2d\n", nwEl);
-    assert(nwEl == 0);
-    // util_reportColMtx(simplex_lp.numCol_, simplex_lp.Astart_, simplex_lp.Aindex_, simplex_lp.Avalue_);
+  // Now consider scaling
+  scale.row_.resize(newNumRow);  
+  for (int row = 0; row < XnumNewRow; row++) scale.row_[lp.numRow_ + row] = 1.0;
 
-    // Insert the new entries
-    for (int row = 0; row < nrows; row++) {
-      int fEl = XARstart[row];
-      int lEl = (row < nrows - 1 ? XARstart[row + 1] : nnonz) - 1;
-      for (int el = fEl; el <= lEl; el++) {
-        int col = XARindex[el];
-        nwEl = simplex_lp.Astart_[col + 1] - Alength[col];
-        Alength[col]--;
-        // printf("Insert: row = %2d; col = %2d; simplex_lp.Astart_[col+1]-Alength[col] =
-        // %2d; Alength[col] = %2d; nwEl = %2d\n", row, col,
-        // simplex_lp.Astart_[col+1]-Alength[col], Alength[col], nwEl);
-        assert(nwEl >= 0);
-        assert(el >= 0);
-        // printf("Insert: Over-writing simplex_lp.Aindex_[%2d] with simplex_lp.Aindex_[%2d]=%2d\n",
-        // nwEl, el, simplex_lp.Aindex_[el]);
-        simplex_lp.Aindex_[nwEl] = simplex_lp.numRow_ + row;
-        simplex_lp.Avalue_[nwEl] = XARvalue[el];
-      }
-    }
+  if (apply_row_scaling) {
+    // Determine scaling multipliers for this set of rows
+    // Determine scale factors for this set of rows
+    // Scale the simplex LP vectors for these rows
+    // Scale the simplex LP matrix for these rows
   }
+
+  // Update the basis correponding to new nonbasic rows
+  if (valid_basis) extend_basis_with_basic_rows(lp, basis, newNumRow);
+  //  if (valid_simplex_basis) extend_basis_with_basic_rows(simplex_lp, simplex_basis, newNumRow);
+
+  // Deduce the consequences of adding new rows
+  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
+
+  // Increase the number of rows in the LPs
+  lp.numRow_ += XnumNewRow;
+  if (valid_simplex_lp) simplex_lp.numRow_ += XnumNewRow;
+
+#ifdef HiGHSDEV
+  if (valid_basis) {
+    bool basisOK = nonbasic_flag_basic_index_ok(lp, basis);
+    assert(basisOK);
+    report_basis(lp, basis);
+  }
+  if (valid_simplex_basis) {
+    bool simplex_basisOK = true;//nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
+    assert(simplex_basisOK);
+    //    report_basis(simplex_lp, simplex_basis);
+  }
+#endif
+
   // Increase the number of rows and total number of variables in the model
-  simplex_lp.numRow_ += nrows;
-  //  numTot += nrows;
+  lp.numRow_ += XnumNewRow;
+  //  numTot += XnumNewRow;
 
   // Update the basis and work vectors correponding to new basic rows
-  //  extend_with_logical_basis(highs_model_object, simplex_lp.numCol_, -1, simplex_lp.numRow_ - nrows, simplex_lp.numRow_ - 1);
+  //  extend_with_logical_basis(lp.numCol_, -1, lp.numRow_ - XnumNewRow, lp.numRow_ - 1);
   
 }
 
-void HighsSimplexInterface::util_delete_rows(
-					     int firstrow,
-					     int lastrow
-					     ) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
+#ifdef HiGHSDEV
+  printf("Called model.util_deleteRows(XfromRow=%d, XtoRow=%d)\n", XfromRow, XtoRow);
+#endif
+  HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
-  assert(firstrow >= 0);
-  assert(lastrow < simplex_lp.numRow_);
-  assert(firstrow <= lastrow);
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+  assert(XfromRow >= 0);
+  assert(XtoRow < lp.numRow_);
+  assert(XfromRow <= XtoRow);
+  int numDeleteRow = XtoRow - XfromRow + 1;
+  if (numDeleteRow == 0) return;
+
+  int newNumRow = lp.numRow_ - numDeleteRow;
+
+  // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
+  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+
 #ifdef HiGHSDEV
-  printf("Called model.util_deleteRows(firstrow=%d, lastrow=%d)\n", firstrow,
-         lastrow);
+  // Check that if there is no simplex LP then there is no matrix
+  if (!valid_simplex_lp) {
+    assert(!valid_simplex_matrix);
+  }
 #endif
-  // Trivial cases are
-  //
-  // rowStep = 0, in which case no rows are removed
-  //
-  // lastrow = simplex_lp.numRow_-1, in which case no rows need be
-  // shifted. However, this implies simplex_lp.numRow_-rowStep=firstrow, in which
-  // case the loop is vacuous. However, they still have to be removed
-  // from the matrix unless all rows are to be removed
-  int rowStep = lastrow - firstrow + 1;
-  bool allRows = rowStep == simplex_lp.numRow_;
-#ifdef HiGHSDEV
-  if (allRows) printf("In model.util_deleteRows, aa rows are being removed)\n");
-#endif
-  if (rowStep) {
-    // Was: for (int row = firstrow; row < lastrow; row++) - surely wrong!
-    for (int row = firstrow; row < simplex_lp.numRow_ - rowStep; row++) {
-      simplex_lp.rowLower_[row] = simplex_lp.rowLower_[row + rowStep];
-      simplex_lp.rowUpper_[row] = simplex_lp.rowUpper_[row + rowStep];
-      //    scale.row_[row] = scale.row_[row + rowStep];
-    }
-    if (!allRows) {
-      int nnz = 0;
-      for (int col = 0; col < simplex_lp.numCol_; col++) {
-        int fmEl = simplex_lp.Astart_[col];
-        simplex_lp.Astart_[col] = nnz;
-        for (int el = fmEl; el < simplex_lp.Astart_[col + 1]; el++) {
-          int row = simplex_lp.Aindex_[el];
-          if (row < firstrow || row > lastrow) {
-            if (row < firstrow) {
-              simplex_lp.Aindex_[nnz] = row;
-            } else {
-              simplex_lp.Aindex_[nnz] = row - rowStep;
-            }
-            simplex_lp.Avalue_[nnz] = simplex_lp.Avalue_[el];
-            nnz++;
-          }
-        }
-      }
-      simplex_lp.Astart_[simplex_lp.numCol_] = nnz;
-    }
+
+  del_rows_from_lp_vectors(lp, XfromRow, XtoRow);
+  if (valid_simplex_lp) del_rows_from_lp_vectors(simplex_lp, XfromRow, XtoRow);
+  del_rows_from_lp_matrix(lp, XfromRow, XtoRow);
+  if (valid_simplex_matrix) del_rows_from_lp_matrix(simplex_lp, XfromRow, XtoRow);
+
+  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
+    scale.row_[row] = scale.row_[row + numDeleteRow];
   }
 
-  // Reduce the number of rows and total number of variables in the model
-  simplex_lp.numRow_ -= rowStep;
-  //  numTot -= rowStep;
+  // Reduce the number of rows in the LPs
+  lp.numRow_ -= numDeleteRow;
+  if (valid_simplex_lp) simplex_lp.numRow_ -= numDeleteRow;
 
   // Determine consequences for basis when deleting rows
   update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::DEL_ROWS);
 }
 
-void HighsSimplexInterface::util_delete_row_set(
-						vector<int>& dstat
-						) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+void HighsSimplexInterface::util_delete_row_set(vector<int>& dstat) {
+  HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   bool rp = false;
   if (rp) {
     printf("Called model.util_deleteRowSet\n");
     printf("Before\n");
   }
-  //  simplex_lp.reportLp();
+  //  lp.reportLp();
 
   int newRow = 0;
   // Look through the rows removing any being deleted and shifting data
   // for the rest
-  for (int row = 0; row < simplex_lp.numRow_; row++) {
+  for (int row = 0; row < lp.numRow_; row++) {
     if (!dstat[row]) {
       // Row is not deleted
-      int var = simplex_lp.numCol_ + row;
-      int newVar = simplex_lp.numCol_ + newRow;
+      int var = lp.numCol_ + row;
+      int newVar = lp.numCol_ + newRow;
       dstat[row] = newRow;
-      simplex_lp.rowLower_[newRow] = simplex_lp.rowLower_[row];
-      simplex_lp.rowUpper_[newRow] = simplex_lp.rowUpper_[row];
+      lp.rowLower_[newRow] = lp.rowLower_[row];
+      lp.rowUpper_[newRow] = lp.rowUpper_[row];
       //    scale.row_[row] = scale.row_[rowStep+row];
       basis.nonbasicFlag_[newVar] = basis.nonbasicFlag_[var];
       basis.nonbasicMove_[newVar] = basis.nonbasicMove_[var];
-      simplex_info.workCost_[newVar] = simplex_info.workCost_[var];
-      simplex_info.workShift_[newVar] = simplex_info.workShift_[var];
-      simplex_info.workLower_[newVar] = simplex_info.workLower_[var];
-      simplex_info.workUpper_[newVar] = simplex_info.workUpper_[var];
-      simplex_info.workRange_[newVar] = simplex_info.workRange_[var];
-      simplex_info.workValue_[newVar] = simplex_info.workValue_[var];
       if (rp)
         printf(
             "   Row %4d: dstat = %2d: Variable %2d becomes %2d; [%11g, %11g]; "
             "nonbasicFlag = %2d; nonbasicMove = %2d\n",
-            row, dstat[row], var, newVar, simplex_lp.rowLower_[newRow], simplex_lp.rowUpper_[newRow],
+            row, dstat[row], var, newVar, lp.rowLower_[newRow], lp.rowUpper_[newRow],
             basis.nonbasicFlag_[newVar], basis.nonbasicMove_[newVar]);
       newRow++;
     } else {
@@ -767,40 +710,40 @@ void HighsSimplexInterface::util_delete_row_set(
       dstat[row] = -1;
       if (rp)
         printf("   Row %4d: dstat = %2d: Variable %2d is deleted\n", row,
-               dstat[row], simplex_lp.numCol_ + row);
+               dstat[row], lp.numCol_ + row);
     }
   }
 
   if (rp) {
     printf("After\n");
-    for (int row = 0; row < simplex_lp.numRow_; row++)
+    for (int row = 0; row < lp.numRow_; row++)
       printf("   Row %4d: dstat = %2d\n", row, dstat[row]);
   }
   // Look through the column-wise matrix, removing entries
   // corresponding to deleted rows and shifting indices for the rest
   int nnz = 0;
-  for (int col = 0; col < simplex_lp.numCol_; col++) {
-    int fmEl = simplex_lp.Astart_[col];
-    simplex_lp.Astart_[col] = nnz;
-    for (int el = fmEl; el < simplex_lp.Astart_[col + 1]; el++) {
-      int row = simplex_lp.Aindex_[el];
+  for (int col = 0; col < lp.numCol_; col++) {
+    int fmEl = lp.Astart_[col];
+    lp.Astart_[col] = nnz;
+    for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
+      int row = lp.Aindex_[el];
       if (dstat[row] >= 0) {
-        simplex_lp.Aindex_[nnz] = dstat[row];
-        simplex_lp.Avalue_[nnz] = simplex_lp.Avalue_[el];
+        lp.Aindex_[nnz] = dstat[row];
+        lp.Avalue_[nnz] = lp.Avalue_[el];
         nnz++;
       }
     }
   }
-  simplex_lp.Astart_[simplex_lp.numCol_] = nnz;
+  lp.Astart_[lp.numCol_] = nnz;
 
   // Reduce the number of rows and total number of variables in the model
-  int dlNumRow = simplex_lp.numRow_ - newRow;
+  int dlNumRow = lp.numRow_ - newRow;
 #ifdef SCIP_DEV
   if (rp)
-    printf("Had %d rows; removed %d rows; now %d rows\n", simplex_lp.numRow_, dlNumRow,
+    printf("Had %d rows; removed %d rows; now %d rows\n", lp.numRow_, dlNumRow,
            newRow);
 #endif
-  simplex_lp.numRow_ -= dlNumRow;
+  lp.numRow_ -= dlNumRow;
   //  numTot -= dlNumRow;
 
   // Count the remaining basic variables: if there are as many as
@@ -808,7 +751,7 @@ void HighsSimplexInterface::util_delete_row_set(
   // columns have to be made nonbasic - but which?
   int numBasic = 0;
   bool basisOK = true;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const int numTot = lp.numCol_ + lp.numRow_;
   for (int var = 0; var < numTot; var++) {
     if (!basis.nonbasicFlag_[var]) {
       basis.basicIndex_[numBasic] = var;
@@ -821,21 +764,21 @@ void HighsSimplexInterface::util_delete_row_set(
   }
 
   if (rp) {
-    printf("Now have %d cols; %d rows and %d total\n", simplex_lp.numCol_, simplex_lp.numRow_, numTot);
-    for (int row = 0; row < simplex_lp.numRow_; row++)
+    printf("Now have %d cols; %d rows and %d total\n", lp.numCol_, lp.numRow_, numTot);
+    for (int row = 0; row < lp.numRow_; row++)
       printf("Basic variable in row %2d is %2d\n", row, basis.basicIndex_[row]);
-    for (int col = 0; col < simplex_lp.numCol_; col++)
+    for (int col = 0; col < lp.numCol_; col++)
       printf("Col %2d has nonbasicFlag = %2d\n", col, basis.nonbasicFlag_[col]);
-    for (int row = 0; row < simplex_lp.numRow_; row++)
+    for (int row = 0; row < lp.numRow_; row++)
       printf("Row %2d (Variable %2d) has nonbasicFlag = %2d\n", row,
-             simplex_lp.numCol_ + row, basis.nonbasicFlag_[simplex_lp.numCol_ + row]);
+             lp.numCol_ + row, basis.nonbasicFlag_[lp.numCol_ + row]);
   }
 
   if (basisOK) {
     // All rows removed had basic slacks so basis should be OK
 #ifdef SCIP_DEV
     // Check that basis is valid basis.
-    basisOK = nonbasicFlagBasicIndex_OK(simplex_lp.numCol_, simplex_lp.numRow_);
+    basisOK = nonbasicFlagBasicIndex_OK(lp.numCol_, lp.numRow_);
     assert(basisOK);
     //    printf("util_deleteRowset: all rows removed are basic slacks so
     //    basisOK\n");
@@ -854,34 +797,34 @@ void HighsSimplexInterface::util_delete_row_set(
 
 
 void HighsSimplexInterface::util_extract_rows(
-					      int firstrow,
-					      int lastrow,
+					      int XfromRow,
+					      int XtoRow,
 					      double* XrowLower,
 					      double* XrowUpper,
-					      int* nnonz,
+					      int* XnumNZ,
 					      int* XARstart,
 					      int* XARindex,
 					      double* XARvalue
 					      ) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
-  assert(firstrow >= 0);
-  assert(lastrow < simplex_lp.numRow_);
-  assert(firstrow <= lastrow);
+  assert(XfromRow >= 0);
+  assert(XtoRow < simplex_lp.numRow_);
+  assert(XfromRow <= XtoRow);
 #ifdef HiGHSDEV
-  printf("Called model.util_extractRows(firstrow=%d, lastrow=%d)\n", firstrow,
-         lastrow);
+  printf("Called model.util_extractRows(XfromRow=%d, XtoRow=%d)\n", XfromRow,
+         XtoRow);
 #endif
   // Determine the number of rows to be extracted
-  int numExtractRows = lastrow - firstrow + 1;
+  int numExtractRows = XtoRow - XfromRow + 1;
   //    printf("Extracting %d rows\n", numExtractRows);
-  for (int row = firstrow; row <= lastrow; row++) {
+  for (int row = XfromRow; row <= XtoRow; row++) {
     // printf("Extracting row %d\n", row);
-    XrowLower[row - firstrow] = simplex_lp.rowLower_[row];
-    XrowUpper[row - firstrow] = simplex_lp.rowUpper_[row];
+    XrowLower[row - XfromRow] = simplex_lp.rowLower_[row];
+    XrowUpper[row - XfromRow] = simplex_lp.rowUpper_[row];
     // printf("Extracted row %d from %d with bounds [%g, %g]\n",
-    //	   row-firstrow, row, XrowLower[row-firstrow],
-    // XrowUpper[row-firstrow]);
+    //	   row-XfromRow, row, XrowLower[row-XfromRow],
+    // XrowUpper[row-XfromRow]);
   }
   // Determine how many entries are in each row to be extracted
   vector<int> XARlength;
@@ -889,7 +832,7 @@ void HighsSimplexInterface::util_extract_rows(
 
   for (int el = simplex_lp.Astart_[0]; el < simplex_lp.Astart_[simplex_lp.numCol_]; el++) {
     int row = simplex_lp.Aindex_[el];
-    if (row >= firstrow && row <= lastrow) XARlength[row - firstrow] += 1;
+    if (row >= XfromRow && row <= XtoRow) XARlength[row - XfromRow] += 1;
   }
   XARstart[0] = 0;
   // printf("Start of row %2d is %d\n", 0, XARstart[0]);
@@ -905,19 +848,19 @@ void HighsSimplexInterface::util_extract_rows(
   for (int col = 0; col < simplex_lp.numCol_; col++) {
     for (int el = simplex_lp.Astart_[col]; el < simplex_lp.Astart_[col + 1]; el++) {
       int row = simplex_lp.Aindex_[el];
-      // printf("Is row=%d in [%d, %d]?\n", row, firstrow, lastrow);
-      if (row >= firstrow && row <= lastrow) {
-        int rowEl = XARstart[row - firstrow] + XARlength[row - firstrow];
+      // printf("Is row=%d in [%d, %d]?\n", row, XfromRow, XtoRow);
+      if (row >= XfromRow && row <= XtoRow) {
+        int rowEl = XARstart[row - XfromRow] + XARlength[row - XfromRow];
         // printf("Column %2d: Extracted element %d with value %g\n", col,
         // rowEl, simplex_lp.Avalue_[el]);
-        XARlength[row - firstrow] += 1;
+        XARlength[row - XfromRow] += 1;
         XARindex[rowEl] = col;
         XARvalue[rowEl] = simplex_lp.Avalue_[el];
       }
     }
   }
-  *nnonz = XARstart[lastrow - firstrow] + XARlength[lastrow - firstrow];
-  //  printf("Set nnonz = %d\n", *nnonz);
+  *XnumNZ = XARstart[XtoRow - XfromRow] + XARlength[XtoRow - XfromRow];
+  //  printf("Set XnumNZ = %d\n", *XnumNZ);
 }
 
 // Change a single coefficient in the matrix
@@ -1108,7 +1051,7 @@ int HighsSimplexInterface::change_row_bounds_all(
   return 0;
 }
 int HighsSimplexInterface::change_row_bounds_set(
-			  int nrows,
+			  int XnumNewRow,
 			  const int* XrowBoundIndex,
 			  const double* XrowLowerValues,
 			  const double* XrowUpperValues
@@ -1119,7 +1062,7 @@ int HighsSimplexInterface::change_row_bounds_set(
   assert(XrowBoundIndex != NULL);
   assert(XrowLowerValues != NULL);
   assert(XrowUpperValues != NULL);
-  for (int ix = 0; ix < nrows; ++ix) {
+  for (int ix = 0; ix < XnumNewRow; ++ix) {
     int row = XrowBoundIndex[ix];
     assert(0 <= row);
     assert(row < simplex_lp.numRow_);
