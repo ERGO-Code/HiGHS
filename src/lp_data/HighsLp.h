@@ -100,6 +100,38 @@ struct HighsBasis {
   std::vector<int> nonbasicMove_;
 };
 
+struct HighsSimplexLpStatus {
+  // Status of LP solved by the simplex method and its data
+  bool valid = false;
+  bool is_transposed = false;
+  bool is_scaled = false;
+  bool is_permuted = false;
+  bool is_tightened = false;
+  // The LP has a valid basis
+  bool has_basis = false;
+  // The LP has a column-wise constraint matrix
+  bool has_matrix_col_wise = false;
+  // The LP has a row-wise constraint matrix
+  bool has_matrix_row_wise = false;
+  // The LP has the constraint matrix and indices of basic variables used by INVERT
+  int has_factor_arrays = false;
+  // This refers to workEdWt, which is held in HDualRHS.h and is
+  // assigned and initialised to 1s in dualRHS.setup(model). To
+  // "have" the edge weights means that they are correct.
+  bool has_dual_steepest_edge_weights = false;
+ // The nonbasic dual and basic primal values are known
+  bool has_nonbasic_dual_values = false;
+  bool has_basic_primal_values = false;
+  // The representation of B^{-1} corresponds to the current basis
+  bool has_invert = false;
+  // The representation of B^{-1} corresponds to the current basis and is fresh
+  bool has_fresh_invert = false;
+  // The data are fresh from rebuild
+  bool has_fresh_rebuild = false;
+  // The dual objective function value is known
+  bool has_dual_objective_value = false;
+};
+
 struct HighsSimplexInfo {
   // Simplex information regarding primal and dual solution, objective
   // and iteration counts for this Highs Model Object. This is
@@ -115,7 +147,7 @@ struct HighsSimplexInfo {
   // workDual: Values of the dual variables corresponding to
   // workCost. Latter not known until solve() is called since B^{-1}
   // is required to compute them. Knowledge of them is indicated by
-  // solver_lp_has_nonbasic_dual_values
+  // has_nonbasic_dual_values
   //
   // workShift: WTF
   //
@@ -140,7 +172,7 @@ struct HighsSimplexInfo {
   // baseLower/baseUpper/baseValue: Lower and upper bounds on the
   // basic variables and their values. Latter not known until solve()
   // is called since B^{-1} is required to compute them. Knowledge of
-  // them is indicated by solver_lp_has_basic_primal_values
+  // them is indicated by has_basic_primal_values
   //
   std::vector<double> baseLower_;
   std::vector<double> baseUpper_;
@@ -171,10 +203,10 @@ struct HighsSimplexInfo {
   double dual_objective_value_upper_bound;
   
   // Options for the LP to be solved
-  bool transpose_solver_lp;
-  bool scale_solver_lp;
-  bool permute_solver_lp;
-  bool tighten_solver_lp;
+  bool transpose_simplex_lp;
+  bool scale_simplex_lp;
+  bool permute_simplex_lp;
+  bool tighten_simplex_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing
@@ -189,34 +221,6 @@ struct HighsSimplexInfo {
   bool analyse_invert_time;
   bool analyseRebuildTime;
 #endif
-  // Solved LP status
-  bool solver_lp_is_transposed = false;
-  bool solver_lp_is_scaled = false;
-  bool solver_lp_is_permuted = false;
-  bool solver_lp_is_tightened = false;
-  bool solver_lp_has_matrix_col_wise = false;
-  bool solver_lp_has_matrix_row_wise = false;
-  // Properties of data held in HFactor.h. To "have" them means that
-  // they are assigned.
-  int solver_lp_has_factor_arrays = false;
-  // This refers to workEdWt, which is held in HDualRHS.h and is
-  // assigned and initialised to 1s in dualRHS.setup(model). To
-  // "have" the edge weights means that they are correct.
-  bool solver_lp_has_dual_steepest_edge_weights = false;
- // The nonbasic dual and basic primal values are known
-  bool solver_lp_has_nonbasic_dual_values = false;
-  bool solver_lp_has_basic_primal_values = false;
-  // The representation of B^{-1} corresponds to the current basis
-  bool solver_lp_has_invert = false;
-  // The representation of B^{-1} corresponds to the current basis and is fresh
-  bool solver_lp_has_fresh_invert = false;
-  // The data are fresh from rebuild
-  bool solver_lp_has_fresh_rebuild = false;
-  // The dual objective function value is known
-  bool solver_lp_has_dual_objective_value = false;
-
-  // Simplex status
-
   // Simplex runtime information
   SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
   int costs_perturbed = 0;

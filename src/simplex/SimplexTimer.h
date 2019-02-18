@@ -74,8 +74,8 @@ enum iClockSimplex {
 class SimplexTimer {
  public:
   void initialiseDualSimplexClocks(HighsModelObject & model_object) {
-    HighsTimer & timer = model_object.timer_;
-    HighsSimplexInfo & simplex_info = model_object.simplex_info_;
+    HighsTimer &timer = model_object.timer_;
+    HighsSimplexInfo &simplex_info = model_object.simplex_info_;
     simplex_info.clock_.resize(SimplexNumClock);
     simplex_info.clock_[SimplexTotalClock] = timer.clock_def("Simplex total", "STT");
     simplex_info.clock_[SimplexIzDseWtClock] = timer.clock_def("Iz DSE Wt", "IWT");

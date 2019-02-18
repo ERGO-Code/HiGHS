@@ -36,5 +36,13 @@ bool highs_isInfinity(
 				const std::vector<double>& vec, //!< Vector of values
 				bool analyseValueList           //!< Possibly analyse the distribution of different values in the vector
 				);
+
+  void util_analyseMatrixSparsity(
+				  const char* message,            //!< Message to be printed
+				  int numCol,                     //!< Number of columns
+				  int numRow,                     //!< Number of rows
+				  const std::vector<int>& Astart, //!< Matrix column starts
+				  const std::vector<int>& Aindex //!< Matrix row indices
+				  );
 #endif
 #endif // UTIL_HIGHSUTILS_H_

@@ -26,12 +26,15 @@ public:
     timer_(timer) {}
 
   HighsLp& lp_;
+
   HighsBasis basis_;
   HighsSolution solution_;
   HighsTimer& timer_;
 
-  HighsLp solver_lp_;
+  HighsLp simplex_lp_;
+  HighsBasis simplex_basis_;
   HighsSimplexInfo simplex_info_;
+  HighsSimplexLpStatus simplex_lp_status_;
   //  HighsRanging ranging_;
   HighsScale scale_;
   HMatrix matrix_;

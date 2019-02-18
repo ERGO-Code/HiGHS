@@ -70,9 +70,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
                       double *colDualValues, double *rowPrimalValues,
                       double *rowDualValues, int *basicVariables) {
   HighsSimplexInterface simplex_interface;
-  simplex_interface.load_from_arrays(XnumCol, XobjSense, XcolCost, XcolLower, XcolUpper,
-                        XnumRow, XrowLower, XrowUpper, XnumNz, XAstart, XAindex,
-                        XAvalue);
+  printf("Need to load arrays into HiGHS\n");
   //  scaleLp(highs_model);
 
   int LcBasisStatus = (*basisStatus);
@@ -121,7 +119,7 @@ void solve_fromArrays(int *probStatus, int *basisStatus, const int XnumCol,
   //  (*probStatus) = simplex_info_.solution_status;
   (*basisStatus) = LcBasisStatus;
   // Remove any current model
-  //  clear_solver_lp(highs_model_object);
+  //  clear_simplex_lp(highs_model_object);
   //  printf("solve_fromArrays: probStatus = %d\n", (*probStatus));
   return;
 }

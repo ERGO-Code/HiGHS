@@ -25,9 +25,10 @@ using std::runtime_error;
 
 void HPrimal::solvePhase2() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
 
-  solver_num_col = workHMO.solver_lp_.numCol_;
-  solver_num_row = workHMO.solver_lp_.numRow_;
+  solver_num_col = workHMO.simplex_lp_.numCol_;
+  solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
 #ifdef HiGHSDEV
@@ -95,7 +96,7 @@ void HPrimal::solvePhase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_info.solver_lp_has_fresh_rebuild) break;
+    if (simplex_lp_status.has_fresh_rebuild) break;
   }
 
   if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
@@ -114,6 +115,7 @@ void HPrimal::solvePhase2() {
 
 void HPrimal::primalRebuild() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   HighsTimer &timer = workHMO.timer_;
   // Move this to Simplex class once it's created
   //  simplex_method.record_pivots(-1, -1, 0);  // Indicate REINVERT
@@ -154,14 +156,14 @@ void HPrimal::primalRebuild() {
   }
 #endif
   // Data are fresh from rebuild
-  simplex_info.solver_lp_has_fresh_rebuild = true;
+  simplex_lp_status.has_fresh_rebuild = true;
 }
 
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = &workHMO.basis_.nonbasicFlag_[0];
-  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  const int *jFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  const int *jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double *workDual = &workHMO.simplex_info_.workDual_[0];
   const double *workLower = &workHMO.simplex_info_.workLower_[0];
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
@@ -206,7 +208,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = workHMO.simplex_info_.update_count < 10 ? 1e-9 : workHMO.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
-  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  const int *jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -252,7 +254,7 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  int *jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double *workDual = &workHMO.simplex_info_.workDual_[0];
   const double *workLower = &workHMO.simplex_info_.workLower_[0];
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
@@ -265,7 +267,7 @@ void HPrimal::primalUpdate() {
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = workHMO.basis_.basicIndex_[rowOut];
+  int columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {

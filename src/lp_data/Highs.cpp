@@ -58,7 +58,6 @@ HighsStatus Highs::run(HighsLp& lp) {
   HighsTimer &timer = lps_[0].timer_;
   timer.startRunHighsClock();
 
-
   // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
   timer.start(timer.presolve_clock);
   PresolveInfo presolve_info(options_.presolve_option, lp);
@@ -134,7 +133,6 @@ HighsStatus Highs::run(HighsLp& lp) {
   assert(lps_.size() > 0);
   int last = lps_.size() - 1;
   solution_ = lps_[last].solution_;
-  basis_ = lps_[last].basis_;
 
   HighsSimplexInterface simplex_interface(lps_[0]);
   if (solve_status != HighsStatus::Optimal) {

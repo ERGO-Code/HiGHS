@@ -146,5 +146,126 @@ void util_analyseVectorValues(const char *message, int vecDim, const std::vector
     }
   }
 }
+
+void util_analyseMatrixSparsity(const char *message, int numCol, int numRow, const std::vector<int>& Astart, const std::vector<int>& Aindex) {
+				
+  if (numCol == 0) return;
+  std::vector<int> rowCount;
+  std::vector<int> colCount;
+  
+  rowCount.assign(numRow, 0);
+  colCount.resize(numCol);
+
+  for (int col = 0; col < numCol; col++) {
+    colCount[col] = Astart[col+1]-Astart[col];
+    for (int el = Astart[col]; el < Astart[col+1]; el++)
+      rowCount[Aindex[el]]++;
+  }
+  const int maxCat = 10;
+  std::vector<int> CatV;
+  std::vector<int> rowCatK;
+  std::vector<int> colCatK;
+  CatV.resize(maxCat+1);
+  rowCatK.assign(maxCat+1, 0);
+  colCatK.assign(maxCat+1, 0);
+
+  CatV[1] = 1;
+  for (int cat = 2; cat < maxCat+1; cat++) {
+    CatV[cat] = 2*CatV[cat-1];
+  }
+
+  int maxRowCount = 0;
+  int maxColCount = 0;
+  for (int col = 0; col < numCol; col++) {
+    maxColCount = std::max(colCount[col], maxColCount);
+    int fdCat = maxCat;
+    for (int cat = 0; cat < maxCat-1; cat++) {
+      if (colCount[col] < CatV[cat+1]) {
+	fdCat = cat;
+	break;
+      }
+    }
+    colCatK[fdCat]++;
+  }
+
+  for (int row = 0; row < numRow; row++) {
+    maxRowCount = std::max(rowCount[row], maxRowCount);
+    int fdCat = maxCat;
+    for (int cat = 0; cat < maxCat-1; cat++) {
+      if (rowCount[row] < CatV[cat+1]) {
+	fdCat = cat;
+	break;
+      }
+    }
+    rowCatK[fdCat]++;
+  }
+
+  printf("\n%s\n\n", message);
+  int lastRpCat;
+  for (int cat = 0; cat < maxCat+1; cat++) {
+    if (colCatK[cat]) lastRpCat = cat;
+  }
+  int cat = maxCat;
+  if (colCatK[cat]) lastRpCat = cat;
+  int sumK = 0;
+  int pct;
+  double v;
+  int sumPct = 0;
+  for (int cat = 0; cat < lastRpCat; cat++) {
+    sumK += colCatK[cat];
+    v = 100*colCatK[cat];
+    v = v/numCol+0.5;
+    pct = v;
+    sumPct += pct;
+    printf("%12d (%3d%%) columns of count in [%3d, %3d]\n", colCatK[cat], pct, CatV[cat], CatV[cat+1]-1);
+  }
+
+  cat = lastRpCat;
+  sumK += colCatK[cat];
+  v = 100*colCatK[cat];
+  v = v/numCol+0.5;
+  pct = v;
+  sumPct += pct;
+  if (cat == maxCat) {
+    printf("%12d (%3d%%) columns of count in [%3d, inf]\n", colCatK[cat], pct, CatV[cat]);
+  } else {
+    printf("%12d (%3d%%) columns of count in [%3d, %3d]\n", colCatK[cat], pct, CatV[cat], CatV[cat+1]-1);
+  }
+  printf("Max count is %d / %d\n\n", maxColCount, numRow);
+
+  lastRpCat;
+  for (int cat = 0; cat < maxCat+1; cat++) {
+    if (rowCatK[cat]) lastRpCat = cat;
+  }
+  cat = maxCat;
+  if (rowCatK[cat]) lastRpCat = cat;
+  sumK = 0;
+  pct;
+  v;
+  sumPct = 0;
+  for (int cat = 0; cat < lastRpCat; cat++) {
+    sumK += rowCatK[cat];
+    v = 100*rowCatK[cat];
+    v = v/numRow+0.5;
+    pct = v;
+    sumPct += pct;
+    printf("%12d (%3d%%)    rows of count in [%3d, %3d]\n", rowCatK[cat], pct, CatV[cat], CatV[cat+1]-1);
+  }
+  
+  cat = lastRpCat;
+  sumK += rowCatK[cat];
+  v = 100*rowCatK[cat];
+  v = v/numRow+0.5;
+  pct = v;
+  sumPct += pct;
+  if (cat == maxCat) {
+    printf("%12d (%3d%%)    rows of count in [%3d, inf]\n", rowCatK[cat], pct, CatV[cat]);
+  } else {
+    printf("%12d (%3d%%)    rows of count in [%3d, %3d]\n", rowCatK[cat], pct, CatV[cat], CatV[cat+1]-1);
+  }
+  printf("Max count is %d / %d\n", maxRowCount, numCol);
+ 
+}
+
 #endif
 
