@@ -36,6 +36,7 @@ set(sources
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
+    interfaces/OsiHiGHSSolverInterface.cpp
 )
 
 set(headers
@@ -83,6 +84,7 @@ set(headers
     util/HighsTimer.h
     util/HighsUtils.h
     Highs.h
+    interfaces/OsiHiGHSSolverInterface.hpp
 )
 
 
