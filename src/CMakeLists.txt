@@ -86,6 +86,9 @@ set(headers
 
 add_library(libhighs ${sources})
 
+link_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/)
+target_link_libraries(GLBall mylib)
+
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
     set_target_properties(libhighs PROPERTIES
