@@ -150,7 +150,7 @@ public:
    virtual const CoinPackedMatrix *getMatrixByCol() const { return NULL; }
 
    /// Get solver's value for infinity
-   virtual double getInfinity() const { return 100.0; }
+   virtual double getInfinity() const;
    //@}
 
    ///@name Solution query methods

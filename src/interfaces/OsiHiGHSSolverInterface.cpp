@@ -205,3 +205,6 @@ const double *OsiHiGHSSolverInterface::getObjCoefficients() {
     return &(this->lp->colCost_[0]);
   }
 }
+
+// TODO: review: 10^20?
+double OsiHiGHSSolverInterface::getInfinity() const { return HIGHS_CONST_INF; }
