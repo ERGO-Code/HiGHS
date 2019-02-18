@@ -181,378 +181,197 @@ public:
 
    ///@}
 
-//   //---------------------------------------------------------------------------
+   //---------------------------------------------------------------------------
 
-//   /**@name Problem modifying methods */
-//   //@{
-//   //-------------------------------------------------------------------------
-//   /**@name Changing bounds on variables and constraints */
-//   //@{
-//   /** Set an objective function coefficient */
-//   virtual void setObjCoeff(int elementIndex, double elementValue);
+   ///@name Methods to modify the objective, bounds, and solution
+   ///@{
+   ///@todo implement
 
-//   /** Set a a set of objective function coefficients */
-//   virtual void setObjCoeffSet(const int *indexFirst,
-//     const int *indexLast,
-//     const double *coeffList);
+   /// Set an objective function coefficient
+   virtual void setObjCoeff(int elementIndex, double elementValue) { };
 
-//   using OsiSolverInterface::setColLower;
-//   /** Set a single column lower bound<br>
-//     	  Use -COIN_DBL_MAX for -infinity. */
-//   virtual void setColLower(int elementIndex, double elementValue);
+   /// Set a set of objective function coefficients
+   virtual void setObjCoeffSet(const int *indexFirst,
+     const int *indexLast,
+     const double *coeffList) { };
 
-//   using OsiSolverInterface::setColUpper;
-//   /** Set a single column upper bound<br>
-//     	  Use COIN_DBL_MAX for infinity. */
-//   virtual void setColUpper(int elementIndex, double elementValue);
+   /// Set objective function sense (1 for min (default), -1 for max)
+   virtual void setObjSense(double s) { }
 
-//   /** Set a single column lower and upper bound<br>
-//     	  The default implementation just invokes <code>setColLower()</code> and
-//     	  <code>setColUpper()</code> */
-//   virtual void setColBounds(int elementIndex,
-//     double lower, double upper);
+   using OsiSolverInterface::setColLower;
+   /// Set a single column lower bound
+   virtual void setColLower(int elementIndex, double elementValue) { };
 
-//   /** Set the bounds on a number of columns simultaneously<br>
-//     	  The default implementation just invokes <code>setCollower()</code> and
-//     	  <code>setColupper()</code> over and over again.
-//     	  @param <code>[indexfirst,indexLast]</code> contains the indices of
-//     	         the constraints whose </em>either</em> bound changes
-//     	  @param boundList the new lower/upper bound pairs for the variables
-//       */
-//   virtual void setColSetBounds(const int *indexFirst,
-//     const int *indexLast,
-//     const double *boundList);
+   using OsiSolverInterface::setColUpper;
+   /// Set a single column upper bound
+   virtual void setColUpper(int elementIndex, double elementValue) { };
 
-//   /** Set a single row lower bound<br>
-//     	  Use -COIN_DBL_MAX for -infinity. */
-//   virtual void setRowLower(int elementIndex, double elementValue);
+   /// Set a single column lower and upper bound
+   //virtual void setColBounds(int elementIndex,
+   //  double lower, double upper)
 
-//   /** Set a single row upper bound<br>
-//     	  Use COIN_DBL_MAX for infinity. */
-//   virtual void setRowUpper(int elementIndex, double elementValue);
+   /// Set the bounds on a number of columns simultaneously
+   //virtual void setColSetBounds(const int *indexFirst,
+   //  const int *indexLast,
+   //  const double *boundList);
 
-//   /** Set a single row lower and upper bound<br>
-//     	  The default implementation just invokes <code>setRowLower()</code> and
-//     	  <code>setRowUpper()</code> */
-//   virtual void setRowBounds(int elementIndex,
-//     double lower, double upper);
+   /// Set a single row lower bound
+   virtual void setRowLower(int elementIndex, double elementValue) { }
 
-//   /** Set the type of a single row<br> */
-//   virtual void setRowType(int index, char sense, double rightHandSide,
-//     double range);
+   /// Set a single row upper bound
+   virtual void setRowUpper(int elementIndex, double elementValue) { }
 
-//   /** Set the bounds on a number of rows simultaneously<br>
-//     	  The default implementation just invokes <code>setRowLower()</code> and
-//     	  <code>setRowUpper()</code> over and over again.
-//     	  @param <code>[indexfirst,indexLast]</code> contains the indices of
-//     	         the constraints whose </em>either</em> bound changes
-//     	  @param boundList the new lower/upper bound pairs for the constraints
-//       */
-//   virtual void setRowSetBounds(const int *indexFirst,
-//     const int *indexLast,
-//     const double *boundList);
+   /// Set a single row lower and upper bound
+   //virtual void setRowBounds(int elementIndex,
+   //  double lower, double upper);
 
-//   /** Set the type of a number of rows simultaneously<br>
-//     	  The default implementation just invokes <code>setRowType()</code> and
-//     	  over and over again.
-//     	  @param <code>[indexfirst,indexLast]</code> contains the indices of
-//     	         the constraints whose type changes
-//     	  @param senseList the new senses
-//     	  @param rhsList   the new right hand sides
-//     	  @param rangeList the new ranges
-//       */
-//   virtual void setRowSetTypes(const int *indexFirst,
-//     const int *indexLast,
-//     const char *senseList,
-//     const double *rhsList,
-//     const double *rangeList);
-//   //@}
+   /// Set the bounds on a number of rows simultaneously
+   // virtual void setRowSetBounds(const int *indexFirst,
+   //   const int *indexLast,
+   //  const double *boundList);
 
-//   //-------------------------------------------------------------------------
-//   /**@name Integrality related changing methods */
-//   //@{
-//   /** Set the index-th variable to be a continuous variable */
-//   virtual void setContinuous(int index);
-//   /** Set the index-th variable to be an integer variable */
-//   virtual void setInteger(int index);
-//   /** Set the variables listed in indices (which is of length len) to be
-// 	  continuous variables */
-//   virtual void setContinuous(const int *indices, int len);
-//   /** Set the variables listed in indices (which is of length len) to be
-// 	  integer variables */
-//   virtual void setInteger(const int *indices, int len);
-//   //@}
+   /// Set the type of a single row
+   virtual void setRowType(int index, char sense, double rightHandSide,
+     double range) { };
 
-//   //-------------------------------------------------------------------------
-//   /// Set objective function sense (1 for min (default), -1 for max,)
-//   virtual void setObjSense(double s);
+   /// Set the type of a number of rows simultaneously
+   // virtual void setRowSetTypes(const int *indexFirst,
+   //  const int *indexLast,
+   //  const char *senseList,
+   //  const double *rhsList,
+   //  const double *rangeList);
+   //@}
 
-//   /** Set the primal solution column values
-    
-//     	colsol[numcols()] is an array of values of the problem column
-//     	variables. These values are copied to memory owned by the
-//     	solver object or the solver.  They will be returned as the
-//     	result of colsol() until changed by another call to
-//     	setColsol() or by a call to any solver routine.  Whether the
-//     	solver makes use of the solution in any way is
-//     	solver-dependent. 
-//     */
-//   virtual void setColSolution(const double *colsol);
+   /// Set the primal solution column values
+   virtual void setColSolution(const double *colsol) { }
 
-//   /** Set dual solution vector
-    
-//     	rowprice[numrows()] is an array of values of the problem row
-//     	dual variables. These values are copied to memory owned by the
-//     	solver object or the solver.  They will be returned as the
-//     	result of rowprice() until changed by another call to
-//     	setRowprice() or by a call to any solver routine.  Whether the
-//     	solver makes use of the solution in any way is
-//     	solver-dependent. 
-//     */
-//   virtual void setRowPrice(const double *rowprice);
+   /// Set dual solution vector
+   virtual void setRowPrice(const double *rowprice) { };
 
-//   //-------------------------------------------------------------------------
-//   /**@name Methods to expand a problem.<br>
-//        Note that if a column is added then by default it will correspond to a
-//        continuous variable. */
-//   //@{
-//   using OsiSolverInterface::addCol;
-//   /** */
-//   virtual void addCol(const CoinPackedVectorBase &vec,
-//     const double collb, const double colub,
-//     const double obj);
+   /// Set the index-th variable to be a continuous variable
+   virtual void setContinuous(int index) { }
 
-//   using OsiSolverInterface::addCols;
-//   /** */
-//   virtual void addCols(const int numcols,
-//     const CoinPackedVectorBase *const *cols,
-//     const double *collb, const double *colub,
-//     const double *obj);
-//   /** */
-//   virtual void deleteCols(const int num, const int *colIndices);
+   /// Set the index-th variable to be an integer variable
+   virtual void setInteger(int index) { };
 
-//   using OsiSolverInterface::addRow;
-//   /** */
-//   virtual void addRow(const CoinPackedVectorBase &vec,
-//     const double rowlb, const double rowub);
-//   /** */
-//   virtual void addRow(const CoinPackedVectorBase &vec,
-//     const char rowsen, const double rowrhs,
-//     const double rowrng);
+   /// Set the variables listed in indices (which is of length len) to be continuous variables
+   // virtual void setContinuous(const int *indices, int len);
 
-//   using OsiSolverInterface::addRows;
-//   /** */
-//   virtual void addRows(const int numrows,
-//     const CoinPackedVectorBase *const *rows,
-//     const double *rowlb, const double *rowub);
-//   /** */
-//   virtual void addRows(const int numrows,
-//     const CoinPackedVectorBase *const *rows,
-//     const char *rowsen, const double *rowrhs,
-//     const double *rowrng);
-//   /** */
-//   virtual void deleteRows(const int num, const int *rowIndices);
-//   //@}
-//   //@}
+   /// Set the variables listed in indices (which is of length len) to be integer variables
+   // virtual void setInteger(const int *indices, int len);
 
-  //---------------------------------------------------------------------------
+   //-------------------------------------------------------------------------
+   ///@name Methods to modify the constraint system.
+   ///@{
+   ///@todo implement
 
-  /**@name Methods to input a problem */
-  //@{
-  /** Load in an problem by copying the arguments (the constraints on the
-        rows are given by lower and upper bounds). If a pointer is 0 then the
-        following values are the default:
-        <ul>
-          <li> <code>colub</code>: all columns have upper bound infinity
-          <li> <code>collb</code>: all columns have lower bound 0 
-          <li> <code>rowub</code>: all rows have upper bound infinity
-          <li> <code>rowlb</code>: all rows have lower bound -infinity
-	  <li> <code>obj</code>: all variables have 0 objective coefficient
-        </ul>
-    */
-  virtual void loadProblem(const CoinPackedMatrix &matrix,
-    const double *collb, const double *colub,
-    const double *obj,
-    const double *rowlb, const double *rowub);
+   using OsiSolverInterface::addCol;
+   // Add a column (primal variable) to the problem.
+   virtual void addCol(const CoinPackedVectorBase &vec,
+     const double collb, const double colub,
+     const double obj) { }
 
-//   /** Load in an problem by assuming ownership of the arguments (the
-//         constraints on the rows are given by lower and upper bounds). For
-//         default values see the previous method. <br>
-// 	<strong>WARNING</strong>: The arguments passed to this method will be
-// 	freed using the C++ <code>delete</code> and <code>delete[]</code>
-// 	functions. 
-//     */
-//   virtual void assignProblem(CoinPackedMatrix *&matrix,
-//     double *&collb, double *&colub, double *&obj,
-//     double *&rowlb, double *&rowub);
+   /// Remove a set of columns (primal variables) from the problem.
+   virtual void deleteCols(const int num, const int *colIndices) { };
 
-//   /** Load in an problem by copying the arguments (the constraints on the
-// 	rows are given by sense/rhs/range triplets). If a pointer is 0 then the
-// 	following values are the default:
-// 	<ul>
-//           <li> <code>colub</code>: all columns have upper bound infinity
-//           <li> <code>collb</code>: all columns have lower bound 0 
-// 	  <li> <code>obj</code>: all variables have 0 objective coefficient
-//           <li> <code>rowsen</code>: all rows are >=
-//           <li> <code>rowrhs</code>: all right hand sides are 0
-//           <li> <code>rowrng</code>: 0 for the ranged rows
-//         </ul>
-//     */
-//   virtual void loadProblem(const CoinPackedMatrix &matrix,
-//     const double *collb, const double *colub,
-//     const double *obj,
-//     const char *rowsen, const double *rowrhs,
-//     const double *rowrng);
+   using OsiSolverInterface::addRow;
+   /// Add a row (constraint) to the problem.
+   virtual void addRow(const CoinPackedVectorBase &vec,
+     const double rowlb, const double rowub) { };
 
-//   /** Load in an problem by assuming ownership of the arguments (the
-//         constraints on the rows are given by sense/rhs/range triplets). For
-//         default values see the previous method. <br>
-// 	<strong>WARNING</strong>: The arguments passed to this method will be
-// 	freed using the C++ <code>delete</code> and <code>delete[]</code>
-// 	functions. 
-//     */
-//   virtual void assignProblem(CoinPackedMatrix *&matrix,
-//     double *&collb, double *&colub, double *&obj,
-//     char *&rowsen, double *&rowrhs,
-//     double *&rowrng);
+   /// Add a row (constraint) to the problem. */
+   virtual void addRow(const CoinPackedVectorBase &vec,
+     const char rowsen, const double rowrhs,
+     const double rowrng) { };
 
-//   /** Just like the other loadProblem() methods except that the matrix is
-// 	given in a standard column major ordered format (without gaps). */
-//   virtual void loadProblem(const int numcols, const int numrows,
-//     const int *start, const int *index,
-//     const double *value,
-//     const double *collb, const double *colub,
-//     const double *obj,
-//     const double *rowlb, const double *rowub);
+   /// Delete a set of rows (constraints) from the problem.
+   virtual void deleteRows(const int num, const int *rowIndices) { };
 
-//   /** Just like the other loadProblem() methods except that the matrix is
-// 	given in a standard column major ordered format (without gaps). */
-//   virtual void loadProblem(const int numcols, const int numrows,
-//     const int *start, const int *index,
-//     const double *value,
-//     const double *collb, const double *colub,
-//     const double *obj,
-//     const char *rowsen, const double *rowrhs,
-//     const double *rowrng);
+   ///@}
 
-//   using OsiSolverInterface::readMps;
-//   /** Read an mps file from the given filename */
-//   virtual int readMps(const char *filename,
-//     const char *extension = "mps");
+   //---------------------------------------------------------------------------
+   ///@name Methods for problem input and output
+   ///@{
+   ///@todo implement
 
-//   /** Write the problem into an mps file of the given filename.
-// 	If objSense is non zero then -1.0 forces the code to write a
-// 	maximization objective and +1.0 to write a minimization one.
-// 	If 0.0 then solver can do what it wants */
-//   virtual void writeMps(const char *filename,
-//     const char *extension = "mps",
-//     double objSense = 0.0) const;
+   /// Load in an problem by copying the arguments
+   virtual void loadProblem(const CoinPackedMatrix& matrix,
+     const double* collb, const double* colub,
+     const double* obj,
+     const double* rowlb, const double* rowub);
 
-//   //@}
+   /// Load in an problem by assuming ownership of the arguments.
+   virtual void assignProblem(CoinPackedMatrix*& matrix,
+     double*& collb, double*& colub, double*& obj,
+     double*& rowlb, double*& rowub) { };
 
-//   /**@name Message handling */
-//   //@{
-//   /** Pass in a message handler
-//         It is the client's responsibility to destroy a message handler installed
-//         by this routine; it will not be destroyed when the solver interface is
-//         destroyed. 
-//      */
-//   void passInMessageHandler(CoinMessageHandler *handler);
-//   //@}
+   /// Load in an problem by copying the arguments.
+   virtual void loadProblem(const CoinPackedMatrix &matrix,
+     const double* collb, const double* colub,
+     const double* obj,
+     const char* rowsen, const double* rowrhs,
+     const double* rowrng) { };
 
-//   /**@name Constructors and destructor */
-//   //@{
-//   /// Default Constructor
-  OsiHiGHSSolverInterface();
+   /// Load in an problem by assuming ownership of the arguments
+   virtual void assignProblem(CoinPackedMatrix*& matrix,
+     double*& collb, double*& colub, double*& obj,
+     char*& rowsen, double*& rowrhs,
+     double*& rowrng) { };
 
-//   /// Clone
-//   virtual OsiSolverInterface *clone(bool copyData = true) const;
+   /// Load in a problem by copying the arguments.
+   virtual void loadProblem(const int numcols, const int numrows,
+     const CoinBigIndex* start, const int* index,
+     const double* value,
+     const double* collb, const double* colub,
+     const double* obj,
+     const double* rowlb, const double* rowub) { }
 
-//   /// Copy constructor
-//   OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface &);
+   /// Load in a problem by copying the arguments.
+   virtual void loadProblem(const int numcols, const int numrows,
+     const CoinBigIndex *start, const int *index,
+     const double *value,
+     const double *collb, const double *colub,
+     const double *obj,
+     const char *rowsen, const double *rowrhs,
+     const double *rowrng) { }
 
-//   /// Assignment operator
-//   OsiHiGHSSolverInterface &operator=(const OsiHiGHSSolverInterface &rhs);
+   /// Write the problem into an mps file of the given filename.
+   virtual void writeMps(const char* filename,
+     const char* extension = "mps",
+     double objSense = 0.0) const { };
+
+   ///@}
+
+   ///@name Constructors and destructor
+   ///@{
+
+   /// Default Constructor
+   OsiHiGHSSolverInterface();
+
+   /// Clone
+   /// @todo implement
+   virtual OsiSolverInterface* clone(bool copyData = true) const { return NULL; }
+
+   /// Copy constructor
+   // OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface &);
+
+   /// Assignment operator
+   // OsiHiGHSSolverInterface &operator=(const OsiHiGHSSolverInterface& rhs);
 
   /// Destructor
   virtual ~OsiHiGHSSolverInterface();
 
-//   /// Resets as if default constructor
-//   virtual void reset();
-//   //@}
+   /// Resets as if default constructor
+   // virtual void reset();
+   ///@}
+   /***************************************************************************/
 
-//   /***************************************************************************/
-//   /**@name OsiSimplexInterface methods 
-//   */
-//   //@{
+ protected:
+   /// Apply a row cut.
+   virtual void applyRowCut(const OsiRowCut& rc) { }
 
-//   /** Returns 1 if can just do getBInv etc
-//       2 if has all OsiSimplex methods
-//       and 0 if it has none */
-//   virtual int canDoSimplexInterface() const;
-
-//   using OsiSolverInterface::enableSimplexInterface;
-//   /** Useless function, defined only for compatibility with 
-//      OsiSimplexInterface
-//   */
-//   virtual void enableSimplexInterface(int doingPrimal) {};
-
-//   /** Useless function, defined only for compatibility with 
-//      OsiSimplexInterface
-//   */
-//   virtual void disableSimplexInterface() {};
-
-//   /** Useless function, defined only for compatibility with 
-//      OsiSimplexInterface
-//   */
-//   virtual void enableFactorization() const {};
-
-//   /** Useless function, defined only for compatibility with 
-//      OsiSimplexInterface
-//   */
-//   virtual void disableFactorization() const {};
-
-//   ///Returns true if a basis is available
-//   virtual bool basisIsAvailable() const;
-
-//   /** Returns a basis status of the structural/artificial variables 
-//      At present as warm start i.e 0: free, 1: basic, 2: upper, 3: lower
-//   */
-//   virtual void getBasisStatus(int *cstat, int *rstat) const;
-
-//   ///Get a row of the tableau (slack part in slack if not NULL)
-//   virtual void getBInvARow(int row, double *z, double *slack = NULL) const;
-
-//   ///Get a row of the basis inverse
-//   virtual void getBInvRow(int row, double *z) const;
-
-//   ///Get a column of the tableau
-//   virtual void getBInvACol(int col, double *vec) const;
-
-//   ///Get a column of the basis inverse
-//   virtual void getBInvCol(int col, double *vec) const;
-
-//   /**  Get indices of the pivot variable in each row
-//       (order of indices corresponds to the
-//       order of elements in a vector retured by getBInvACol() and
-//       getBInvCol()).
-//   */
-//   virtual void getBasics(int *index) const;
-
-//   //@}
-//   /***************************************************************************/
-
-// protected:
-//   /**@name Protected methods */
-//   //@{
-//   /// Apply a row cut. Return true if cut was applied.
-//   virtual void applyRowCut(const OsiRowCut &rc);
-
-//   /** Apply a column cut (bound adjustment). 
-//       Return true if cut was applied.
-//   */
-//   virtual void applyColCut(const OsiColCut &cc);
-//   //@}
+   /// Apply a column cut (bound adjustment).
+   virtual void applyColCut(const OsiColCut& cc) { }
 
 
 private:
