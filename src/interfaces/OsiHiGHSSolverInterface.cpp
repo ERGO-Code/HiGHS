@@ -19,13 +19,25 @@
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   HighsOptions options;
   this->highs = new Highs(options);
-  this->lp = NULL;
 }
 
 OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   delete this->highs;
+
   if (this->lp != NULL) {
     delete this->lp;
+  }
+
+  if (this->rowRange != NULL) {
+    delete this->rowRange;
+  }
+
+  if (this->rhs != NULL) {
+    delete this->rhs;
+  }
+
+  if (this->rowSense != NULL) {
+    delete this->rowSense;
   }
 }
 
@@ -208,3 +220,97 @@ const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
 
 // TODO: review: 10^20?
 double OsiHiGHSSolverInterface::getInfinity() const { return HIGHS_CONST_INF; }
+
+const double *OsiHiGHSSolverInterface::getRowRange() const {
+  if (this->rowRange != NULL) {
+    delete[] this->rowRange;
+  }
+
+  int nrows = this->getNumCols();
+
+  if (nrows == 0) {
+    this->rowRange = new double[1];
+    return this->rowRange;
+  }
+
+  this->rowRange = new double[nrows];
+
+  for (int i = 0; i < nrows; i++) {
+    // compute range for row i
+    double lo = this->lp->rowLower_[i];
+    double hi = this->lp->rowUpper_[i];
+    if (lo > -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
+      this->rowRange[i] = hi - lo;
+    } else {
+      this->rowRange[i] = HIGHS_CONST_INF;
+    }
+  }
+
+  return this->rowRange;
+}
+
+const double *OsiHiGHSSolverInterface::getRightHandSide() const {
+  if (this->rhs != NULL) {
+    delete[] this->rhs;
+  }
+
+  int nrows = this->getNumCols();
+
+  if (nrows == 0) {
+    this->rhs = new double[1];
+    return this->rhs;
+  }
+
+  this->rhs = new double[nrows];
+
+  for (int i = 0; i < nrows; i++) {
+    // compute range for row i
+    double lo = this->lp->rowLower_[i];
+    double hi = this->lp->rowUpper_[i];
+    if (hi < HIGHS_CONST_INF) {
+      this->rhs[i] = hi;
+    } else if (lo > -HIGHS_CONST_INF) {
+      this->rhs[i] = lo;
+    } else {
+      this->rhs[i] = 0.0;
+    }
+  }
+
+  return this->rhs;
+}
+
+const char *OsiHiGHSSolverInterface::getRowSense() const {
+  if (this->rowSense != NULL) {
+    delete[] this->rowSense;
+  }
+
+  int nrows = this->getNumCols();
+
+  if (nrows == 0) {
+    this->rowSense = new char[1];
+    return this->rowSense;
+  }
+
+  this->rowSense = new char[nrows];
+
+  for (int i = 0; i < nrows; i++) {
+    // compute range for row i
+    double lo = this->lp->rowLower_[i];
+    double hi = this->lp->rowUpper_[i];
+    if (lo > -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
+      if (lo == hi) {
+        this->rowSense[i] = 'E';
+      } else {
+        this->rowSense[i] = 'R';
+      }
+    } else if (lo > -HIGHS_CONST_INF && hi >= HIGHS_CONST_INF) {
+      this->rowSense[i] = 'G';
+    } else if (lo <= -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
+      this->rowSense[i] = 'L';
+    } else {
+      this->rowSense[i] = 'N';
+    }
+  }
+
+  return this->rowSense;
+}

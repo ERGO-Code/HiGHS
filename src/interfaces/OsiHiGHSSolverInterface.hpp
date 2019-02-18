@@ -120,13 +120,13 @@ public:
    virtual const double* getColUpper() const;
 
    /// Get pointer to array[getNumRows()] of row constraint senses.
-   virtual const char* getRowSense() const { return NULL; }
+   virtual const char* getRowSense() const;
 
    /// Get pointer to array[getNumRows()] of rows right-hand sides
-   virtual const double* getRightHandSide() const { return NULL; }
+   virtual const double* getRightHandSide() const;
 
    /// Get pointer to array[getNumRows()] of row ranges.
-   virtual const double* getRowRange() const { return NULL; }
+   virtual const double* getRowRange() const;
 
    /// Get pointer to array[getNumRows()] of row lower bounds
    virtual const double* getRowLower() const;
@@ -379,8 +379,11 @@ public:
 private:
 
   Highs* highs;
-  HighsLp* lp;
+  HighsLp* lp = NULL;
   HighsStatus status = HighsStatus::Init;
+  mutable double* rowRange = NULL;
+  mutable double* rhs = NULL;
+  mutable char* rowSense = NULL;
 
 };
 
