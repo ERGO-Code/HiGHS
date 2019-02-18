@@ -87,12 +87,15 @@ set(headers
     interfaces/OsiHiGHSSolverInterface.hpp
 )
 
-
 add_library(libhighs ${sources})
 
-include_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/include/coin)
-find_library(OSI_LIB Osi HINTS ${CMAKE_SOURCE_DIR}/../Coin-Osi/lib)
-target_link_libraries(libhighs PUBLIC ${OSI_LIB})
+if (OSI)
+    string(CONCAT ROOT_OSI "${OSI_DIR}" "/")
+    include_directories(${ROOT_OSI}include/coin)
+    message("Osi lib folder: " ${ROOT_OSI}lib)
+    find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
+    target_link_libraries(libhighs PUBLIC ${OSI_LIB})
+endif()
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})

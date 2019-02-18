@@ -66,6 +66,21 @@ message(STATUS "SCIP  development: " ${SCIP_DEV})
 option(HiGHSDEV "HiGHS development" OFF)
 message(STATUS "HiGHS development: " ${HiGHSDEV})
 
+# osi off by default, unless given a path to installation
+set(OSI false CACHE BOOL "Use OSI interface")
+set(OSI_DIR "" CACHE STRING "OSI interface root folder")
+option(OSI_ROOT "Osi root folder." "OFF")
+if (NOT (${OSI_ROOT} STREQUAL  "OFF"))
+    message(STATUS "IF")
+    message(STATUS "Osi root folder: " ${OSI_ROOT})
+    set(OSI true)
+    set(OSI_DIR ${OSI_ROOT})
+else()
+    message(STATUS "Else")
+endif()
+unset(OSI_ROOT CACHE)
+
+
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})

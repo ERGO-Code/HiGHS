@@ -1,3 +1,5 @@
+#ifdef OSI
+
 // TODO license
 #include "OsiHiGHSSolverInterface.hpp"
 
@@ -9,3 +11,5 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
 OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
    delete this->highs;
 }
+
+#endif

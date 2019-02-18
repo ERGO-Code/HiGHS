@@ -1,4 +1,5 @@
 // TODO license
+#ifdef OSI
 
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H
@@ -644,4 +645,5 @@ private:
 
 };
 
+#endif
 #endif
