@@ -32,6 +32,8 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
 }
 
 void OsiHiGHSSolverInterface::initialSolve() {
+  if (!lp)
+	throw CoinError("No problem setup.", __FUNCTION__, "OsiHiGHSSolverInterface", __FILE__, __LINE__);
   this->status = this->highs->run(*this->lp);
 };
 
