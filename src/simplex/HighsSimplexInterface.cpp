@@ -539,9 +539,6 @@ void HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* 
 
 void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
 					  int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
-  assert(XnumNewRow >= 0);
-  assert(XnumNewNZ >= 0);
-  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
   // ToDo How to check that lp.Astart_[lp.numRow_] exists in util_addRows?
 #ifdef HiGHSDEV
   printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
@@ -555,6 +552,10 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
 
   int newNumRow = lp.numRow_ + XnumNewRow;
 
@@ -620,11 +621,6 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
 
   // Increase the number of rows and total number of variables in the model
   lp.numRow_ += XnumNewRow;
-  //  numTot += XnumNewRow;
-
-  // Update the basis and work vectors correponding to new basic rows
-  //  extend_with_logical_basis(lp.numCol_, -1, lp.numRow_ - XnumNewRow, lp.numRow_ - 1);
-  
 }
 
 void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
