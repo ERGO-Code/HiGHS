@@ -1,7 +1,6 @@
 # Define library.
 
 set(sources
-    interfaces/OsiHiGHSSolverInterface.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -36,11 +35,9 @@ set(sources
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
-    interfaces/OsiHiGHSSolverInterface.cpp
 )
 
 set(headers
-    interfaces/OsiHiGHSSolverInterface.hpp
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -85,6 +82,11 @@ set(headers
     util/HighsUtils.h
     Highs.h
 )
+
+if (OSI)
+    set(sources ${sources} interfaces/OsiHiGHSSolverInterface.cpp)
+    set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
+endif()
 
 add_library(libhighs ${sources})
 

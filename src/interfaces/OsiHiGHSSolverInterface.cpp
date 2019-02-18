@@ -11,12 +11,10 @@
  * @brief Osi/HiGHS interface implementation
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifdef OSI
 #include "OsiHiGHSSolverInterface.hpp"
 
 #include "Highs.h"
 #include "lp_data/HConst.h"
-
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   HighsOptions options;
@@ -31,9 +29,7 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   }
 }
 
-void OsiHiGHSSolverInterface::initialSolve() { 
-   this->highs->run(*this->lp);
-};
+void OsiHiGHSSolverInterface::initialSolve() { this->status = this->highs->run(*this->lp); };
 
 void OsiHiGHSSolverInterface::loadProblem(
     const CoinPackedMatrix &matrix, const double *collb, const double *colub,
@@ -68,7 +64,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   if (obj != NULL) {
     this->lp->colCost_.assign(obj, obj + numCol);
   } else {
-     this->lp->colCost_.assign(numCol, 0.0);
+    this->lp->colCost_.assign(numCol, 0.0);
   }
 
   if (collb != NULL) {
@@ -77,7 +73,7 @@ void OsiHiGHSSolverInterface::loadProblem(
     this->lp->colLower_.assign(numCol, 0.0);
   }
 
- if (colub != NULL) {
+  if (colub != NULL) {
     this->lp->colUpper_.assign(colub, colub + numCol);
   } else {
     this->lp->colUpper_.assign(numCol, HIGHS_CONST_INF);
@@ -94,27 +90,50 @@ void OsiHiGHSSolverInterface::loadProblem(
   } else {
     this->lp->rowUpper_.assign(numRow, HIGHS_CONST_INF);
   }
-  
 
   // get matrix data
   const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
   const int *vectorLengths = matrix.getVectorLengths();
   const double *elements = matrix.getElements();
-  const int* indices = matrix.getIndices();
+  const int *indices = matrix.getIndices();
 
   // set matrix in HighsLp
   this->lp->Astart_[0] = 0;
   int nz = 0;
   for (int i = 0; i < numCol; i++) {
-    this->lp->Astart_[i+1] = this->lp->Astart_[i] + vectorLengths[i];
+    this->lp->Astart_[i + 1] = this->lp->Astart_[i] + vectorLengths[i];
     CoinBigIndex first = matrix.getVectorFirst(i);
-    for (int j=0; j<vectorLengths[i]; j++) {
-       this->lp->Aindex_[nz] = indices[first + j];
-       this->lp->Avalue_[nz] = elements[first + j];
-       nz++;
+    for (int j = 0; j < vectorLengths[i]; j++) {
+      this->lp->Aindex_[nz] = indices[first + j];
+      this->lp->Avalue_[nz] = elements[first + j];
+      nz++;
     }
   }
   assert(nnz == nz);
 }
 
-#endif
+bool OsiHiGHSSolverInterface::isAbandoned() const {
+  return this->status == HighsStatus::NumericalDifficulties;
+}
+
+bool OsiHiGHSSolverInterface::isProvenOptimal() const {
+  return this->status == HighsStatus::Optimal;
+}
+
+bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
+  return this->status == HighsStatus::Infeasible;
+}
+
+bool OsiHiGHSSolverInterface::isProvenDualInfeasible() const {
+  return this->status == HighsStatus::Unbounded;
+}
+
+bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const { return false; }
+
+bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
+  return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
+}
+
+bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
+  return this->status == HighsStatus::ReachedIterationLimit;
+}
