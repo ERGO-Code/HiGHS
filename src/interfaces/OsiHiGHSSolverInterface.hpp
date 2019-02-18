@@ -105,13 +105,13 @@ public:
    ///@todo implement
 
    /// Get number of columns
-   virtual int getNumCols() const { return 0; }
+   virtual int getNumCols() const;
 
    /// Get number of rows
-   virtual int getNumRows() const { return 0; }
+   virtual int getNumRows() const;
 
    /// Get number of nonzero elements
-   virtual int getNumElements() const { return 0; }
+   virtual int getNumElements() const;
 
    /// Get pointer to array[getNumCols()] of column lower bounds
    virtual const double* getColLower() const { return NULL; }

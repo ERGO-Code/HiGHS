@@ -29,7 +29,9 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   }
 }
 
-void OsiHiGHSSolverInterface::initialSolve() { this->status = this->highs->run(*this->lp); };
+void OsiHiGHSSolverInterface::initialSolve() {
+  this->status = this->highs->run(*this->lp);
+};
 
 void OsiHiGHSSolverInterface::loadProblem(
     const CoinPackedMatrix &matrix, const double *collb, const double *colub,
@@ -128,7 +130,9 @@ bool OsiHiGHSSolverInterface::isProvenDualInfeasible() const {
   return this->status == HighsStatus::Unbounded;
 }
 
-bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const { return false; }
+bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const {
+  return false;
+}
 
 bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
   return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
@@ -137,3 +141,9 @@ bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
 bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
   return this->status == HighsStatus::ReachedIterationLimit;
 }
+
+int OsiHiGHSSolverInterface::getNumCols() const { return this->lp->numCol_; }
+
+int OsiHiGHSSolverInterface::getNumRows() const { return this->lp->numRow_; }
+
+int OsiHiGHSSolverInterface::getNumElements() const { return this->lp->nnz_; }
