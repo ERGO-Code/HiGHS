@@ -16,6 +16,7 @@
 #define OsiHiGHSSolverInterface_H
 
 #include "OsiSolverInterface.hpp"
+#include "HighsStatus.h"
 
 // forward declarations
 class Highs;
@@ -67,19 +68,19 @@ public:
    ///@{
    ///@todo implement
    /// Are there a numerical difficulties?
-   virtual bool isAbandoned() const { return false; }
+   virtual bool isAbandoned() const ;
    /// Is optimality proven?
-   virtual bool isProvenOptimal() const { return false; }
+   virtual bool isProvenOptimal() const;
    /// Is primal infeasiblity proven?
-   virtual bool isProvenPrimalInfeasible() const { return false; }
+   virtual bool isProvenPrimalInfeasible() const;
    /// Is dual infeasiblity proven?
-   virtual bool isProvenDualInfeasible() const { return false; }
+   virtual bool isProvenDualInfeasible() const;
    /// Is the given primal objective limit reached?
-   virtual bool isPrimalObjectiveLimitReached() const { return false; }
+   virtual bool isPrimalObjectiveLimitReached() const;
    /// Is the given dual objective limit reached?
-   virtual bool isDualObjectiveLimitReached() const { return false; }
+   virtual bool isDualObjectiveLimitReached() const;
    /// Iteration limit reached?
-   virtual bool isIterationLimitReached() const { return false; }
+   virtual bool isIterationLimitReached() const;
    //@}
 
    //---------------------------------------------------------------------------
@@ -380,6 +381,7 @@ private:
 
   Highs* highs;
   HighsLp* lp;
+  HighsStatus status = HighsStatus::Init;
 
 };
 
