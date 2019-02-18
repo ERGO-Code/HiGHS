@@ -16,14 +16,13 @@ set(TEST_SOURCES
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
-if (OSI)
-    string(CONCAT ROOT_OSI "${OSI_DIR}" "/")
-    include_directories(${ROOT_OSI}include/coin)
+pkg_check_modules(OSITEST osi osi-unittests)
+if (OSITEST_FOUND)
     include_directories(${CMAKE_SOURCE_DIR}/src)
-    find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
-    find_library(OSI_UNIT_TEST_LIB OsiCommonTests HINTS ${ROOT_OSI}lib)
-    add_executable(osi_unit_tests  OsiUnitTest.cpp)
-    target_link_libraries(osi_unit_tests libhighs Catch ${OSI_UNIT_TEST_LIB} ${OSI_LIB})
+    add_executable(osi_unit_tests OsiUnitTest.cpp)
+    target_link_libraries(osi_unit_tests libhighs Catch ${OSITEST_LINK_LIBRARIES})
+    target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS})
+    target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
 endif()
 
 # Check whether test executable builds OK.
@@ -45,7 +44,7 @@ set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
 
-if (OSI) 
+if (OSITEST_FOUND)
 
 add_test(NAME osi-unit-test-build
          COMMAND ${CMAKE_COMMAND}
@@ -59,7 +58,7 @@ PROPERTIES
 RESOURCE_LOCK osiunittestbin)
 
 # create a binary running all the tests in the executable
-add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests -mpsDir=${ROOT_OSI}/share/coin/Data/Sample -netlibDir=${ROOT_OSI}/share/coin/Data/Netlib)
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests -mpsDir=${OSITEST_PREFIX}/share/coin/Data/Sample -netlibDir=${OSITEST_PREFIX}/share/coin/Data/Netlib)
 set_tests_properties(osi_unit_tests_all
 PROPERTIES
 DEPENDS osi-unit-test-build)

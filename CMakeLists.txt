@@ -70,17 +70,16 @@ if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
     message(STATUS "HiGHS development: " ${HiGHSDEV})
 endif()
 
-# osi off by default, unless given a path to installation
-set(OSI false CACHE BOOL "Use OSI interface")
-set(OSI_DIR "" CACHE STRING "OSI interface root folder")
 option(OSI_ROOT "Osi root folder." "OFF")
-if (NOT (${OSI_ROOT} STREQUAL  "OFF"))
-    message(STATUS "OSI root folder: " ${OSI_ROOT})
-    set(OSI true)
-    set(OSI_DIR ${OSI_ROOT})
-endif()
+if (NOT (${OSI_ROOT} STREQUAL "OFF"))
+    # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
+    message(STATUS "OSI root folder set: " ${OSI_ROOT})
+    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+endif ()
 unset(OSI_ROOT CACHE)
 
+find_package(PkgConfig)
+pkg_check_modules(OSI osi)
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
