@@ -16,11 +16,15 @@ set(TEST_SOURCES
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
-include_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/include/coin)
-find_library(OSI_LIB Osi HINTS ${CMAKE_SOURCE_DIR}/../Coin-Osi/lib)
-find_library(OSI_UNIT_TEST_LIB OsiCommonTests HINTS ${CMAKE_SOURCE_DIR}/../Coin-Osi/lib)
-add_executable(osi_unit_tests  OsiUnitTest.cpp)
-target_link_libraries(osi_unit_tests libhighs Catch ${OSI_LIB} ${OSI_UNIT_TEST_LIB})
+if (OSI)
+    string(CONCAT ROOT_OSI "${OSI_DIR}" "/")
+    include_directories(${ROOT_OSI}include/coin)
+    include_directories(${CMAKE_SOURCE_DIR}/src)
+    find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
+    find_library(OSI_UNIT_TEST_LIB OsiCommonTests HINTS ${ROOT_OSI}lib)
+    add_executable(osi_unit_tests  OsiUnitTest.cpp)
+    target_link_libraries(osi_unit_tests libhighs Catch ${OSI_LIB} ${OSI_UNIT_TEST_LIB})
+endif()
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build

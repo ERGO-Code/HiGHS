@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "OsiUnitTests.hpp"
-#include "../src/interfaces/OsiHiGHSSolverInterface.hpp"
+#include "interfaces/OsiHiGHSSolverInterface.hpp"
 
 using namespace OsiUnitTest;
 
