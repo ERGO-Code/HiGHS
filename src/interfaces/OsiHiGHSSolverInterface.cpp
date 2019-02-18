@@ -13,6 +13,8 @@
  */
 
 #include "OsiHiGHSSolverInterface.hpp"
+
+#include "Highs.h"
 #include "lp_data/HConst.h"
 
 

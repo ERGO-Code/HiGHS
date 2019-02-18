@@ -16,8 +16,10 @@
 #define OsiHiGHSSolverInterface_H
 
 #include "OsiSolverInterface.hpp"
-#include "Highs.h"
 
+// forward declarations
+class Highs;
+class HighsLp;
 
 /** HiGHS Solver Interface
  *
