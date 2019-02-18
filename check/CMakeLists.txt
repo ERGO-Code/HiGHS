@@ -59,7 +59,7 @@ PROPERTIES
 RESOURCE_LOCK osiunittestbin)
 
 # create a binary running all the tests in the executable
-add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests --success)
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests -mpsDir=${ROOT_OSI}/share/coin/Data/Sample -netlibDir=${ROOT_OSI}/share/coin/Data/Netlib)
 set_tests_properties(osi_unit_tests_all
 PROPERTIES
 DEPENDS osi-unit-test-build)

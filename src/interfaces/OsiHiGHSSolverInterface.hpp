@@ -352,7 +352,7 @@ public:
 
    /// Clone
    /// @todo implement
-   virtual OsiSolverInterface* clone(bool copyData = true) const { return NULL; }
+   virtual OsiSolverInterface* clone(bool copyData = true) const { return new OsiHiGHSSolverInterface(); }
 
    /// Copy constructor
    // OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface &);

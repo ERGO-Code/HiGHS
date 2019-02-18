@@ -1,4 +1,16 @@
-// TODO license
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file OsiUnitTest
+ * @brief Osi/HiGHS unit test
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 
 #include "CoinPragma.hpp"
 
@@ -41,6 +53,13 @@ int main (int argc, const char *argv[])
   std::string mpsDir = parms["-mpsDir"] ;
   std::string netlibDir = parms["-netlibDir"] ;
 
+  // Do common solverInterface testing by calling the
+  // base class testing method.
+  {
+    OsiHiGHSSolverInterface highsSi;
+    OSIUNITTEST_CATCH_ERROR(OsiSolverInterfaceCommonUnitTest(&highsSi, mpsDir, netlibDir), {}, highsSi, "osi common unittest");
+  }
+#if 0
   /*
     Test Osi{Row,Col}Cut routines.
    */
@@ -59,16 +78,9 @@ int main (int argc, const char *argv[])
     testingMessage( "Testing OsiRowCutDebugger with OsiHiGHSSolverInterface\n" );
     OSIUNITTEST_CATCH_ERROR(OsiRowCutDebuggerUnitTest(&highsSi,mpsDir), {}, highsSi, "rowcut debugger unittest");
   }
-
-  // Do common solverInterface testing by calling the
-  // base class testing method.
-  {
-    OsiHiGHSSolverInterface m;
-    OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
-  }
-
+#endif
   /*
-    We have run the specialised unit test.
+    We have run the specialized unit test.
     Check now to see if we need to run through the Netlib problems.
    */
   if (parms.find("-testOsiSolverInterface") != parms.end())
