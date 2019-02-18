@@ -1,6 +1,11 @@
 // TODO license
 #include "OsiHiGHSSolverInterface.hpp"
 
-const CoinPackedMatrix* OsiHiGHSSolverInterface::getMatrixByRow() const {
-      return nullptr;
-  }
+OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
+  HighsOptions options;
+  this->highs = new Highs(options);
+}
+
+OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
+   delete this->highs;
+}
