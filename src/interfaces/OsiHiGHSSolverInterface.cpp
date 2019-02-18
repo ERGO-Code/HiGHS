@@ -142,8 +142,26 @@ bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
   return this->status == HighsStatus::ReachedIterationLimit;
 }
 
-int OsiHiGHSSolverInterface::getNumCols() const { return this->lp->numCol_; }
+int OsiHiGHSSolverInterface::getNumCols() const {
+  if (this->lp != NULL) {
+    return this->lp->numCol_;
+  } else {
+    return 0;
+  }
+}
 
-int OsiHiGHSSolverInterface::getNumRows() const { return this->lp->numRow_; }
+int OsiHiGHSSolverInterface::getNumRows() const {
+  if (this->lp != NULL) {
+    return this->lp->numRow_;
+  } else {
+    return 0;
+  }
+}
 
-int OsiHiGHSSolverInterface::getNumElements() const { return this->lp->nnz_; }
+int OsiHiGHSSolverInterface::getNumElements() const {
+  if (this->lp != NULL) {
+    return this->lp->nnz_;
+  } else {
+    return 0;
+  };
+}
