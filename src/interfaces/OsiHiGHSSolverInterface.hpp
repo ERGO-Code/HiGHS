@@ -1,12 +1,21 @@
-// TODO license
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file interfaces/OsiHiGHSInterface.hpp
+ * @brief Osi/HiGHS interface header
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H
 
 #include "OsiSolverInterface.hpp"
-#include "CoinWarmStartBasis.hpp"
-#include "OsiColCut.hpp"
-#include "OsiRowCut.hpp"
 #include "Highs.h"
 
 
@@ -14,255 +23,163 @@
  *
  *  Instantiation of OsiSolverInterface for HiGHS
  */
-
 class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
-  friend void OsiHiGHSSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
 
 public:
-  // //---------------------------------------------------------------------------
-  // /**@name Solve methods */
-  // //@{
-  // /// Solve initial LP relaxation
-  // virtual void initialSolve();
+   //---------------------------------------------------------------------------
+   /**@name Solve methods */
+   //@{
+   /// Solve initial LP relaxation
+   /// @todo implement
+   virtual void initialSolve() { };
 
-  // /// Resolve an LP relaxation after problem modification
-  // virtual void resolve();
+   /// Resolve an LP relaxation after problem modification
+   /// @todo implement
+   virtual void resolve() { };
 
-  // /// Invoke solver's built-in enumeration algorithm
-  // virtual void branchAndBound();
-  // //@}
+   /// Invoke solver's built-in enumeration algorithm
+   /// @todo implement
+   virtual void branchAndBound() { }
+   //@}
 
-//   //---------------------------------------------------------------------------
-//   /**@name Parameter set/get methods
+   //---------------------------------------------------------------------------
+   ///@name Parameter set/get methods
+   ///@todo use OsiSolverInterface default implementation or override?
+   ///@{
+   // Set an integer parameter
+   // bool setIntParam(OsiIntParam key, int value);
+   // Set an double parameter
+   // bool setDblParam(OsiDblParam key, double value);
+   // Set a string parameter
+   // bool setStrParam(OsiStrParam key, const std::string &value);
+   // Get an integer parameter
+   // bool getIntParam(OsiIntParam key, int &value) const;
+   // Get an double parameter
+   // bool getDblParam(OsiDblParam key, double &value) const;
+   // Get a string parameter
+   // bool getStrParam(OsiStrParam key, std::string &value) const;
+   //@}
 
-//      The set methods return true if the parameter was set to the given value,
-//      false otherwise. There can be various reasons for failure: the given
-//      parameter is not applicable for the solver (e.g., refactorization
-//      frequency for the volume algorithm), the parameter is not yet implemented
-//      for the solver or simply the value of the parameter is out of the range
-//      the solver accepts. If a parameter setting call returns false check the
-//      details of your solver.
+   //---------------------------------------------------------------------------
+   ///@name Methods returning info on how the solution process terminated
+   ///@{
+   ///@todo implement
+   /// Are there a numerical difficulties?
+   virtual bool isAbandoned() const { return false; }
+   /// Is optimality proven?
+   virtual bool isProvenOptimal() const { return false; }
+   /// Is primal infeasiblity proven?
+   virtual bool isProvenPrimalInfeasible() const { return false; }
+   /// Is dual infeasiblity proven?
+   virtual bool isProvenDualInfeasible() const { return false; }
+   /// Is the given primal objective limit reached?
+   virtual bool isPrimalObjectiveLimitReached() const { return false; }
+   /// Is the given dual objective limit reached?
+   virtual bool isDualObjectiveLimitReached() const { return false; }
+   /// Iteration limit reached?
+   virtual bool isIterationLimitReached() const { return false; }
+   //@}
 
-//      The get methods return true if the given parameter is applicable for the
-//      solver and is implemented. In this case the value of the parameter is
-//      returned in the second argument. Otherwise they return false.
-//   */
-//   //@{
-//   // Set an integer parameter
-//   bool setIntParam(OsiIntParam key, int value);
-//   // Set an double parameter
-//   bool setDblParam(OsiDblParam key, double value);
-//   // Set a string parameter
-//   bool setStrParam(OsiStrParam key, const std::string &value);
-//   // Get an integer parameter
-//   bool getIntParam(OsiIntParam key, int &value) const;
-//   // Get an double parameter
-//   bool getDblParam(OsiDblParam key, double &value) const;
-//   // Get a string parameter
-//   bool getStrParam(OsiStrParam key, std::string &value) const;
-//   //@}
+   //---------------------------------------------------------------------------
+   ///@name Warm start methods
+   ///@{
+   ///@todo implement
 
-//   //---------------------------------------------------------------------------
-//   ///@name Methods returning info on how the solution process terminated
-//   //@{
-//   /// Are there a numerical difficulties?
-//   virtual bool isAbandoned() const;
-//   /// Is optimality proven?
-//   virtual bool isProvenOptimal() const;
-//   /// Is primal infeasiblity proven?
-//   virtual bool isProvenPrimalInfeasible() const;
-//   /// Is dual infeasiblity proven?
-//   virtual bool isProvenDualInfeasible() const;
-//   /// Is the given primal objective limit reached?
-//   virtual bool isPrimalObjectiveLimitReached() const;
-//   /// Is the given dual objective limit reached?
-//   virtual bool isDualObjectiveLimitReached() const;
-//   /// Iteration limit reached?
-//   virtual bool isIterationLimitReached() const;
-//   //@}
+   /// Get an empty warm start object
+   CoinWarmStart *getEmptyWarmStart() const { return NULL; }
 
-//   //---------------------------------------------------------------------------
-//   /**@name WarmStart related methods */
-//   //@{
+   /// Get warmstarting information
+   virtual CoinWarmStart* getWarmStart() const { return NULL; }
 
-//   /*! \brief Get an empty warm start object
-    
-//     This routine returns an empty CoinWarmStartBasis object. Its purpose is
-//     to provide a way to give a client a warm start basis object of the
-//     appropriate type, which can resized and modified as desired.
-//   */
-//   CoinWarmStart *getEmptyWarmStart() const;
+   /** Set warmstarting information. Return true/false depending on whether
+    *  the warmstart information was accepted or not.
+    */
+   virtual bool setWarmStart(const CoinWarmStart *warmstart) { return false; }
+   ///@}
 
-//   /// Get warmstarting information
-//   virtual CoinWarmStart *getWarmStart() const;
-//   /** Set warmstarting information. Return true/false depending on whether
-// 	the warmstart information was accepted or not. */
-//   virtual bool setWarmStart(const CoinWarmStart *warmstart);
-//   //@}
+   //---------------------------------------------------------------------------
+   ///@name Problem query methods
+   ///@{
+   ///@todo implement
 
-//   //---------------------------------------------------------------------------
-//   /**@name Hotstart related methods (primarily used in strong branching). <br>
-//      The user can create a hotstart (a snapshot) of the optimization process
-//      then reoptimize over and over again always starting from there.<br>
-//      <strong>NOTE</strong>: between hotstarted optimizations only
-//      bound changes are allowed. */
-//   //@{
-//   /// Create a hotstart point of the optimization process
-//   virtual void markHotStart();
-//   /// Optimize starting from the hotstart
-//   virtual void solveFromHotStart();
-//   /// Delete the snapshot
-//   virtual void unmarkHotStart();
-//   //@}
+   /// Get number of columns
+   virtual int getNumCols() const { return 0; }
 
-//   //---------------------------------------------------------------------------
-//   /**@name Problem information methods 
-     
-//      These methods call the solver's query routines to return
-//      information about the problem referred to by the current object.
-//      Querying a problem that has no data associated with it result in
-//      zeros for the number of rows and columns, and NULL pointers from
-//      the methods that return vectors.
-     
-//      Const pointers returned from any data-query method are valid as
-//      long as the data is unchanged and the solver is not called.
-//   */
-//   //@{
-//   /**@name Methods related to querying the input data */
-//   //@{
-//   /// Get number of columns
-//   virtual int getNumCols() const;
+   /// Get number of rows
+   virtual int getNumRows() const { return 0; }
 
-//   /// Get number of rows
-//   virtual int getNumRows() const;
+   /// Get number of nonzero elements
+   virtual int getNumElements() const { return 0; }
 
-//   /// Get number of nonzero elements
-//   virtual int getNumElements() const;
+   /// Get pointer to array[getNumCols()] of column lower bounds
+   virtual const double* getColLower() const { return NULL; }
 
-//   /// Get pointer to array[getNumCols()] of column lower bounds
-//   virtual const double *getColLower() const;
+   /// Get pointer to array[getNumCols()] of column upper bounds
+   virtual const double* getColUpper() const { return NULL; }
 
-//   /// Get pointer to array[getNumCols()] of column upper bounds
-//   virtual const double *getColUpper() const;
+   /// Get pointer to array[getNumRows()] of row constraint senses.
+   virtual const char* getRowSense() const { return NULL; }
 
-//   /** Get pointer to array[getNumRows()] of row constraint senses.
-//   	<ul>
-//   	<li>'L': <= constraint
-//   	<li>'E': =  constraint
-//   	<li>'G': >= constraint
-//   	<li>'R': ranged constraint
-//   	<li>'N': free constraint
-//   	</ul>
-//       */
-//   virtual const char *getRowSense() const;
+   /// Get pointer to array[getNumRows()] of rows right-hand sides
+   virtual const double* getRightHandSide() const { return NULL; }
 
-//   /** Get pointer to array[getNumRows()] of rows right-hand sides
-//   	<ul>
-//   	  <li> if rowsense()[i] == 'L' then rhs()[i] == rowupper()[i]
-//   	  <li> if rowsense()[i] == 'G' then rhs()[i] == rowlower()[i]
-//   	  <li> if rowsense()[i] == 'R' then rhs()[i] == rowupper()[i]
-//   	  <li> if rowsense()[i] == 'N' then rhs()[i] == 0.0
-//   	</ul>
-//       */
-//   virtual const double *getRightHandSide() const;
+   /// Get pointer to array[getNumRows()] of row ranges.
+   virtual const double* getRowRange() const { return NULL; }
 
-//   /** Get pointer to array[getNumRows()] of row ranges.
-//   	<ul>
-//             <li> if rowsense()[i] == 'R' then
-//                     rowrange()[i] == rowupper()[i] - rowlower()[i]
-//             <li> if rowsense()[i] != 'R' then
-//                     rowrange()[i] is 0.0
-//           </ul>
-//       */
-//   virtual const double *getRowRange() const;
+   /// Get pointer to array[getNumRows()] of row lower bounds
+   virtual const double* getRowLower() const { return NULL; }
 
-//   /// Get pointer to array[getNumRows()] of row lower bounds
-//   virtual const double *getRowLower() const;
+   /// Get pointer to array[getNumRows()] of row upper bounds
+   virtual const double* getRowUpper() const { return NULL; }
 
-//   /// Get pointer to array[getNumRows()] of row upper bounds
-//   virtual const double *getRowUpper() const;
+   /// Get pointer to array[getNumCols()] of objective function coefficients
+   virtual const double* getObjCoefficients() const { return NULL; }
 
-//   /// Get pointer to array[getNumCols()] of objective function coefficients
-//   virtual const double *getObjCoefficients() const;
+   /// Get objective function sense (1 for min (default), -1 for max)
+   virtual double getObjSense() const  { return 1; }
 
-//   /// Get objective function sense (1 for min (default), -1 for max)
-//   virtual double getObjSense() const;
+   /// Return true if column is continuous
+   virtual bool isContinuous(int colNumber) const  { return true; }
 
-//   /// Return true if column is continuous
-//   virtual bool isContinuous(int colNumber) const;
+   /// Get pointer to row-wise copy of matrix
+   virtual const CoinPackedMatrix* getMatrixByRow() const { return NULL; }
 
-//   /// Get pointer to row-wise copy of matrix
-//   virtual const CoinPackedMatrix *getMatrixByRow() const;
+   /// Get pointer to column-wise copy of matrix
+   virtual const CoinPackedMatrix *getMatrixByCol() const { return NULL; }
 
-//   /// Get pointer to column-wise copy of matrix
-//   virtual const CoinPackedMatrix *getMatrixByCol() const;
+   /// Get solver's value for infinity
+   virtual double getInfinity() const { return 100.0; }
+   //@}
 
-//   /// Get solver's value for infinity
-//   virtual double getInfinity() const;
-//   //@}
+   ///@name Solution query methods
+   ///@{
+   ///@todo implement
 
-//   /**@name Methods related to querying the solution */
-//   //@{
-//   /// Get pointer to array[getNumCols()] of primal solution vector
-//   virtual const double *getColSolution() const;
+   /// Get pointer to array[getNumCols()] of primal solution vector
+   virtual const double* getColSolution() const { return NULL; }
 
-//   /// Get pointer to array[getNumRows()] of dual prices
-//   virtual const double *getRowPrice() const;
+   /// Get pointer to array[getNumRows()] of dual prices
+   virtual const double* getRowPrice() const { return NULL; }
 
-//   /// Get a pointer to array[getNumCols()] of reduced costs
-//   virtual const double *getReducedCost() const;
+   /// Get a pointer to array[getNumCols()] of reduced costs
+   virtual const double* getReducedCost() const { return NULL; }
 
-//   /** Get pointer to array[getNumRows()] of row activity levels (constraint
-//   	matrix times the solution vector */
-//   virtual const double *getRowActivity() const;
+   /// Get pointer to array[getNumRows()] of row activity levels (constraint matrix times the solution vector)
+   virtual const double *getRowActivity() const { return NULL; }
 
-//   /// Get objective function value
-//   virtual double getObjValue() const;
+   /// Get objective function value
+   virtual double getObjValue() const { return 0.0; }
 
-//   /** Get how many iterations it took to solve the problem (whatever
-// 	  "iteration" mean to the solver. */
-//   virtual int getIterationCount() const;
+   /// Get how many iterations it took to solve the problem (whatever "iteration" mean to the solver)
+   virtual int getIterationCount() const { return 42; }
 
-//   /** Get as many dual rays as the solver can provide. (In case of proven
-//           primal infeasibility there should be at least one.)
+   /// Get as many dual rays as the solver can provide.
+   virtual std::vector< double*> getDualRays(int maxNumRays, bool fullRay = false) const { return std::vector<double*>(0); }
 
-// 	  The first getNumRows() ray components will always be associated with
-// 	  the row duals (as returned by getRowPrice()). If \c fullRay is true,
-// 	  the final getNumCols() entries will correspond to the ray components
-// 	  associated with the nonbasic variables. If the full ray is requested
-// 	  and the method cannot provide it, it will throw an exception.
+   /// Get as many primal rays as the solver can provide.
+   virtual std::vector<double*> getPrimalRays(int maxNumRays) const { return std::vector<double*>(0); }
 
-//           <strong>NOTE for implementers of solver interfaces:</strong> <br>
-//           The double pointers in the vector should point to arrays of length
-//           getNumRows() and they should be allocated via new[]. <br>
-     
-//           <strong>NOTE for users of solver interfaces:</strong> <br>
-//           It is the user's responsibility to free the double pointers in the
-//           vector using delete[].
-//       */
-//   virtual std::vector< double * > getDualRays(int maxNumRays,
-//     bool fullRay = false) const;
-//   /** Get as many primal rays as the solver can provide. (In case of proven
-//           dual infeasibility there should be at least one.)
-     
-//           <strong>NOTE for implementers of solver interfaces:</strong> <br>
-//           The double pointers in the vector should point to arrays of length
-//           getNumCols() and they should be allocated via new[]. <br>
-     
-//           <strong>NOTE for users of solver interfaces:</strong> <br>
-//           It is the user's responsibility to free the double pointers in the
-//           vector using delete[].
-//       */
-//   virtual std::vector< double * > getPrimalRays(int maxNumRays) const;
-
-// #if 0
-//       /** Get vector of indices of solution which are integer variables 
-//   	presently at fractional values */
-//       virtual OsiVectorInt getFractionalIndices(const double etol=1.e-05)
-// 	const;
-// #endif
-//   //@}
-//   //@}
+   ///@}
 
 //   //---------------------------------------------------------------------------
 
