@@ -675,8 +675,4 @@ private:
 
 };
 
-//#############################################################################
-/** A function that tests the methods in the OsiHiGHSSolverInterface class. */
-void OsiHiGHSSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
-
 #endif
