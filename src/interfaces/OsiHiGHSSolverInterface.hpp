@@ -640,39 +640,6 @@ protected:
   virtual void applyColCut(const OsiColCut &cc);
   //@}
 
-private:
-  /**@name Private methods */
-  //@{
-
-  /// The real work of a copy constructor (used by copy and assignment)
-  void gutsOfCopy(const OsiHiGHSSolverInterface &source);
-
-  /// The real work of the constructor
-  void gutsOfConstructor();
-
-  /// The real work of the destructor
-  void gutsOfDestructor();
-
-  /// free cached column rim vectors
-  void freeCachedColRim();
-
-  /// free cached row rim vectors
-  void freeCachedRowRim();
-
-  /// free cached result vectors
-  void freeCachedResults();
-
-  /// free cached matrices
-  void freeCachedMatrix();
-
-  /// free all cached data (except specified entries, see getLpPtr())
-  void freeCachedData(int keepCached = KEEPCACHED_NONE);
-
-  /// free all allocated memory
-  void freeAllMemory();
-
-  //@}
-
 };
 
 #endif
