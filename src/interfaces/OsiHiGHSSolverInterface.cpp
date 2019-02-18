@@ -29,7 +29,9 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   }
 }
 
-void OsiHiGHSSolverInterface::initialSolve() { this->status = this->highs->run(*this->lp); };
+void OsiHiGHSSolverInterface::initialSolve() {
+  this->status = this->highs->run(*this->lp);
+};
 
 void OsiHiGHSSolverInterface::loadProblem(
     const CoinPackedMatrix &matrix, const double *collb, const double *colub,
@@ -128,7 +130,9 @@ bool OsiHiGHSSolverInterface::isProvenDualInfeasible() const {
   return this->status == HighsStatus::Unbounded;
 }
 
-bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const { return false; }
+bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const {
+  return false;
+}
 
 bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
   return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
@@ -136,4 +140,68 @@ bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
 
 bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
   return this->status == HighsStatus::ReachedIterationLimit;
+}
+
+int OsiHiGHSSolverInterface::getNumCols() const {
+  if (this->lp != NULL) {
+    return this->lp->numCol_;
+  } else {
+    return 0;
+  }
+}
+
+int OsiHiGHSSolverInterface::getNumRows() const {
+  if (this->lp != NULL) {
+    return this->lp->numRow_;
+  } else {
+    return 0;
+  }
+}
+
+int OsiHiGHSSolverInterface::getNumElements() const {
+  if (this->lp != NULL) {
+    return this->lp->nnz_;
+  } else {
+    return 0;
+  };
+}
+
+const double *OsiHiGHSSolverInterface::getColLower() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->colLower_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getColUpper() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->colUpper_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getRowLower() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->rowLower_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getRowUpper() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->rowUpper_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getObjCoefficients() {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->colCost_[0]);
+  }
 }

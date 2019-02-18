@@ -105,19 +105,19 @@ public:
    ///@todo implement
 
    /// Get number of columns
-   virtual int getNumCols() const { return 0; }
+   virtual int getNumCols() const;
 
    /// Get number of rows
-   virtual int getNumRows() const { return 0; }
+   virtual int getNumRows() const;
 
    /// Get number of nonzero elements
-   virtual int getNumElements() const { return 0; }
+   virtual int getNumElements() const;
 
    /// Get pointer to array[getNumCols()] of column lower bounds
-   virtual const double* getColLower() const { return NULL; }
+   virtual const double* getColLower() const;
 
    /// Get pointer to array[getNumCols()] of column upper bounds
-   virtual const double* getColUpper() const { return NULL; }
+   virtual const double* getColUpper() const;
 
    /// Get pointer to array[getNumRows()] of row constraint senses.
    virtual const char* getRowSense() const { return NULL; }
@@ -129,13 +129,13 @@ public:
    virtual const double* getRowRange() const { return NULL; }
 
    /// Get pointer to array[getNumRows()] of row lower bounds
-   virtual const double* getRowLower() const { return NULL; }
+   virtual const double* getRowLower() const;
 
    /// Get pointer to array[getNumRows()] of row upper bounds
-   virtual const double* getRowUpper() const { return NULL; }
+   virtual const double* getRowUpper() const;
 
    /// Get pointer to array[getNumCols()] of objective function coefficients
-   virtual const double* getObjCoefficients() const { return NULL; }
+   virtual const double* getObjCoefficients();
 
    /// Get objective function sense (1 for min (default), -1 for max)
    virtual double getObjSense() const  { return 1; }
