@@ -84,7 +84,6 @@ set(headers
     util/HighsTimer.h
     util/HighsUtils.h
     Highs.h
-    interfaces/OsiHiGHSSolverInterface.hpp
 )
 
 add_library(libhighs ${sources})
@@ -92,7 +91,6 @@ add_library(libhighs ${sources})
 if (OSI)
     string(CONCAT ROOT_OSI "${OSI_DIR}" "/")
     include_directories(${ROOT_OSI}include/coin)
-    message("Osi lib folder: " ${ROOT_OSI}lib)
     find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
     target_link_libraries(libhighs PUBLIC ${OSI_LIB})
 endif()

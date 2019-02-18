@@ -39,7 +39,7 @@ endif()
 message(STATUS "Git hash: " ${GITHASH})
 
 string(TIMESTAMP TODAY "%Y-%m-%d")
-message(STATUS "compilation date: " ${TODAY})
+message(STATUS "Compilation date: " ${TODAY})
 
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
@@ -61,22 +61,23 @@ endif()
 message(STATUS "OpenMP: " ${OPENMP})
 
 option(SCIP_DEV "SCIP  development" OFF)
-message(STATUS "SCIP  development: " ${SCIP_DEV})
+if (NOT (${SCIP_DEV} STREQUAL  "OFF"))
+    message(STATUS "SCIP  development: " ${SCIP_DEV})
+endif()
 
 option(HiGHSDEV "HiGHS development" OFF)
-message(STATUS "HiGHS development: " ${HiGHSDEV})
+if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
+    message(STATUS "HiGHS development: " ${HiGHSDEV})
+endif()
 
 # osi off by default, unless given a path to installation
 set(OSI false CACHE BOOL "Use OSI interface")
 set(OSI_DIR "" CACHE STRING "OSI interface root folder")
 option(OSI_ROOT "Osi root folder." "OFF")
 if (NOT (${OSI_ROOT} STREQUAL  "OFF"))
-    message(STATUS "IF")
-    message(STATUS "Osi root folder: " ${OSI_ROOT})
+    message(STATUS "OSI root folder: " ${OSI_ROOT})
     set(OSI true)
     set(OSI_DIR ${OSI_ROOT})
-else()
-    message(STATUS "Else")
 endif()
 unset(OSI_ROOT CACHE)
 
