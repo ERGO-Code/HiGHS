@@ -290,6 +290,33 @@ void del_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
   lp.Astart_[lp.numCol_] = nnz;
 }
 
+void change_lp_matrix_coefficient(HighsLp &lp, int Xrow, int Xcol, const double XnewValue) {
+  int changeElement = -1;
+  for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol + 1]; el++) {
+    // printf("Column %d: Element %d is row %d. Is it %d?\n", Xcol, el, lp.Aindex_[el], Xrow);
+    if (lp.Aindex_[el] == Xrow) {
+      changeElement = el;
+      break;
+    }
+  }
+  if (changeElement < 0) {
+    //    printf("util_changeCoeff: Cannot find row %d in column %d\n", Xrow, Xcol);
+    changeElement = lp.Astart_[Xcol + 1];
+    int newNumNZ = lp.Astart_[lp.numCol_] + 1;
+    //    printf("model.util_changeCoeff: Increasing Nnonz from %d to %d\n",
+    //    lp.Astart_[lp.numCol_], newNumNZ);
+    lp.Aindex_.resize(newNumNZ);
+    lp.Avalue_.resize(newNumNZ);
+    for (int i = Xcol + 1; i <= lp.numCol_; i++) lp.Astart_[i]++;
+    for (int el = newNumNZ - 1; el > changeElement; el--) {
+      lp.Aindex_[el] = lp.Aindex_[el - 1];
+      lp.Avalue_[el] = lp.Avalue_[el - 1];
+    }
+  }
+  lp.Aindex_[changeElement] = Xrow;
+  lp.Avalue_[changeElement] = XnewValue;
+}
+
 #ifdef HiGHSDEV
 void report_basis(HighsLp &lp, HighsBasis &basis) {
   if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");

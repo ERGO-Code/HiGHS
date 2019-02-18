@@ -87,10 +87,18 @@ void del_rows_from_lp_matrix(
 			     int XtoRow
 			   );
 
+void change_lp_matrix_coefficient(
+				  HighsLp &lp,
+				  int Xrow,
+				  int Xcol,
+				  const double XnewValue
+				  );
+
 bool nonbasic_flag_basic_index_ok(
 				  HighsLp &lp,
 				  HighsBasis &basis
 				  );
+
 #ifdef HiGHSDEV
 void report_basis(
 		  HighsLp &lp,

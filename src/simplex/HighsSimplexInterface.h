@@ -164,14 +164,14 @@ class HighsSimplexInterface {
 			 );
 
   void util_change_coefficient(
-			       int row,
-			       int col,
-			       const double newval
+			       int Xrow,
+			       int Xcol,
+			       const double XnewValue
 			       );
 
   // Shift the objective
   void shift_objective_value(
-			     double shift
+			     double Xshift
 			     );
 
   // Utilities to get/change costs and bounds
