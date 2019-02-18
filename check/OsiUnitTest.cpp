@@ -53,6 +53,13 @@ int main (int argc, const char *argv[])
   std::string mpsDir = parms["-mpsDir"] ;
   std::string netlibDir = parms["-netlibDir"] ;
 
+  // Do common solverInterface testing by calling the
+  // base class testing method.
+  {
+    OsiHiGHSSolverInterface m;
+    OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
+  }
+
   /*
     Test Osi{Row,Col}Cut routines.
    */
@@ -72,15 +79,8 @@ int main (int argc, const char *argv[])
     OSIUNITTEST_CATCH_ERROR(OsiRowCutDebuggerUnitTest(&highsSi,mpsDir), {}, highsSi, "rowcut debugger unittest");
   }
 
-  // Do common solverInterface testing by calling the
-  // base class testing method.
-  {
-    OsiHiGHSSolverInterface m;
-    OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
-  }
-
   /*
-    We have run the specialised unit test.
+    We have run the specialized unit test.
     Check now to see if we need to run through the Netlib problems.
    */
   if (parms.find("-testOsiSolverInterface") != parms.end())
