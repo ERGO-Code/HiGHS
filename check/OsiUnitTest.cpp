@@ -59,7 +59,7 @@ int main (int argc, const char *argv[])
     OsiHiGHSSolverInterface highsSi;
     OSIUNITTEST_CATCH_ERROR(OsiSolverInterfaceCommonUnitTest(&highsSi, mpsDir, netlibDir), {}, highsSi, "osi common unittest");
   }
-
+#if 0
   /*
     Test Osi{Row,Col}Cut routines.
    */
@@ -78,7 +78,7 @@ int main (int argc, const char *argv[])
     testingMessage( "Testing OsiRowCutDebugger with OsiHiGHSSolverInterface\n" );
     OSIUNITTEST_CATCH_ERROR(OsiRowCutDebuggerUnitTest(&highsSi,mpsDir), {}, highsSi, "rowcut debugger unittest");
   }
-
+#endif
   /*
     We have run the specialized unit test.
     Check now to see if we need to run through the Netlib problems.
