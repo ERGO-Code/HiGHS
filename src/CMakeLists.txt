@@ -53,13 +53,13 @@ set(headers
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
     lp_data/HighsModelObject.h
-    lp_data/HighsModelObjectUtil.h
+    lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRuntimeOptions.h
     lp_data/HighsStatus.h
     lp_data/HighsModelBuilder.h
     simplex/HApp.h
-    simplex/HConst.h
+#    simplex/HConst.h
     simplex/HCrash.h
     simplex/HDual.h
     simplex/HDualRow.h
