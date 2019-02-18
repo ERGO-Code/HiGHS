@@ -438,25 +438,25 @@ public:
 //   //@}
 //   //@}
 
-//   //---------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
 
-//   /**@name Methods to input a problem */
-//   //@{
-//   /** Load in an problem by copying the arguments (the constraints on the
-//         rows are given by lower and upper bounds). If a pointer is 0 then the
-//         following values are the default:
-//         <ul>
-//           <li> <code>colub</code>: all columns have upper bound infinity
-//           <li> <code>collb</code>: all columns have lower bound 0 
-//           <li> <code>rowub</code>: all rows have upper bound infinity
-//           <li> <code>rowlb</code>: all rows have lower bound -infinity
-// 	  <li> <code>obj</code>: all variables have 0 objective coefficient
-//         </ul>
-//     */
-//   virtual void loadProblem(const CoinPackedMatrix &matrix,
-//     const double *collb, const double *colub,
-//     const double *obj,
-//     const double *rowlb, const double *rowub);
+  /**@name Methods to input a problem */
+  //@{
+  /** Load in an problem by copying the arguments (the constraints on the
+        rows are given by lower and upper bounds). If a pointer is 0 then the
+        following values are the default:
+        <ul>
+          <li> <code>colub</code>: all columns have upper bound infinity
+          <li> <code>collb</code>: all columns have lower bound 0 
+          <li> <code>rowub</code>: all rows have upper bound infinity
+          <li> <code>rowlb</code>: all rows have lower bound -infinity
+	  <li> <code>obj</code>: all variables have 0 objective coefficient
+        </ul>
+    */
+  virtual void loadProblem(const CoinPackedMatrix &matrix,
+    const double *collb, const double *colub,
+    const double *obj,
+    const double *rowlb, const double *rowub);
 
 //   /** Load in an problem by assuming ownership of the arguments (the
 //         constraints on the rows are given by lower and upper bounds). For
@@ -641,6 +641,7 @@ public:
 private:
 
   Highs* highs;
+  HighsLp* lp;
 
 };
 
