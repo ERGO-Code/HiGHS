@@ -24,8 +24,10 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(ipm))(
         "parallel", "Use parallel solve: off by default.",
         cxxopts::value<std::string>(parallel))(
-        "time-limit", "Use time limit.",
+        "time-limit", "Use time limit (double).",
         cxxopts::value<double>())(
+        "iteration-limit", "Use iteration limit (integer).",
+        cxxopts::value<int>())(
         "h, help", "Print help.")(
         "options-file",
         "File containing HiGHS options.",
@@ -99,6 +101,18 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         exit(0);
       }
       options.highs_run_time_limit = time_limit;
+    }
+
+    if (result.count("iteration-limit"))
+    {
+      double iteration_limit = result["time-limit"].as<int>();
+      if (iteration_limit <= 0)
+      {
+        std::cout << "Iteration limit must be positive." << std::endl;
+        std::cout << cxx_options.help({""}) << std::endl;
+        exit(0);
+      }
+      options.simplex_iteration_limit = iteration_limit;
     }
 
     if (result.count("options-file"))
