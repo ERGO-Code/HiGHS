@@ -56,8 +56,8 @@ int main (int argc, const char *argv[])
   // Do common solverInterface testing by calling the
   // base class testing method.
   {
-    OsiHiGHSSolverInterface m;
-    OsiSolverInterfaceCommonUnitTest(&m, mpsDir, netlibDir);
+    OsiHiGHSSolverInterface highsSi;
+    OSIUNITTEST_CATCH_ERROR(OsiSolverInterfaceCommonUnitTest(&highsSi, mpsDir, netlibDir), {}, highsSi, "osi common unittest");
   }
 
   /*
