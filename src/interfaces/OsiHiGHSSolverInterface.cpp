@@ -11,7 +11,6 @@
  * @brief Osi/HiGHS interface implementation
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifdef OSI
 #include "OsiHiGHSSolverInterface.hpp"
 
 #include "Highs.h"
@@ -138,4 +137,3 @@ bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
 bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
   return this->status == HighsStatus::ReachedIterationLimit;
 }
-#endif

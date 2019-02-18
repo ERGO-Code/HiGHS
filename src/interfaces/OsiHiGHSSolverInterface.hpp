@@ -11,7 +11,6 @@
  * @brief Osi/HiGHS interface header
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifdef OSI
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H
 
@@ -385,5 +384,4 @@ private:
 
 };
 
-#endif
 #endif
