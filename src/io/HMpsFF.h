@@ -127,7 +127,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename, Highs
   lp.nnz_ = Avalue.size();
 
   lp.sense_ = 1;
-  lp.offset_ = 0;
+  lp.offset_ = objOffset;
 
   lp.Astart_ = std::move(Astart);
   lp.Aindex_ = std::move(Aindex);
@@ -753,7 +753,12 @@ HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
                       marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
-
+ 
+    if (marker == "OBJECTIVE_CONSTANT") {
+      objOffset = atof(word.c_str());
+      continue;
+    }
+    
     parsename(marker, rowidx);
     double value = atof(word.c_str());
     addrhs(value, rowidx);
