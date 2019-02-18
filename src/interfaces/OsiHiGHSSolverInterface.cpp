@@ -29,6 +29,10 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   }
 }
 
+void OsiHiGHSSolverInterface::initialSolve() { 
+   this->highs->run(*this->lp);
+};
+
 void OsiHiGHSSolverInterface::loadProblem(
     const CoinPackedMatrix &matrix, const double *collb, const double *colub,
     const double *obj, const double *rowlb, const double *rowub) {

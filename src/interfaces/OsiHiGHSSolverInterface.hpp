@@ -31,7 +31,7 @@ public:
    //@{
    /// Solve initial LP relaxation
    /// @todo implement
-   virtual void initialSolve() { };
+   virtual void initialSolve();
 
    /// Resolve an LP relaxation after problem modification
    /// @todo implement
