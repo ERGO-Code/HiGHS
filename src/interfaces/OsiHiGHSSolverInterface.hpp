@@ -114,10 +114,10 @@ public:
    virtual int getNumElements() const;
 
    /// Get pointer to array[getNumCols()] of column lower bounds
-   virtual const double* getColLower() const { return NULL; }
+   virtual const double* getColLower() const;
 
    /// Get pointer to array[getNumCols()] of column upper bounds
-   virtual const double* getColUpper() const { return NULL; }
+   virtual const double* getColUpper() const;
 
    /// Get pointer to array[getNumRows()] of row constraint senses.
    virtual const char* getRowSense() const { return NULL; }

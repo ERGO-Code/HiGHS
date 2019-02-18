@@ -165,3 +165,19 @@ int OsiHiGHSSolverInterface::getNumElements() const {
     return 0;
   };
 }
+
+const double *OsiHiGHSSolverInterface::getColLower() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->colLower_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getColUpper() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->colUpper_[0]);
+  }
+}
