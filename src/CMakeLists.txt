@@ -1,6 +1,7 @@
 # Define library.
 
 set(sources
+    interfaces/OsiHiGHSSolverInterface.cpp
     io/Filereader.cpp
     io/FilereaderLp.cpp
     io/FilereaderEms.cpp
@@ -38,6 +39,7 @@ set(sources
 )
 
 set(headers
+    interfaces/OsiHiGHSSolverInterface.hpp
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -86,8 +88,9 @@ set(headers
 
 add_library(libhighs ${sources})
 
-link_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/)
-target_link_libraries(GLBall mylib)
+include_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/include/coin)
+link_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/lib)
+target_link_libraries(libhighs libOsi)
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
