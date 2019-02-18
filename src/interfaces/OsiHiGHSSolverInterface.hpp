@@ -1,4 +1,16 @@
-// TODO license
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file interfaces/OsiHiGHSInterface.hpp
+ * @brief Osi/HiGHS interface header
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H
