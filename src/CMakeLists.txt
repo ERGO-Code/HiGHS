@@ -53,13 +53,13 @@ set(headers
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
     lp_data/HighsModelObject.h
-    lp_data/HighsModelObjectUtil.h
+    lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
     lp_data/HighsRuntimeOptions.h
     lp_data/HighsStatus.h
     lp_data/HighsModelBuilder.h
     simplex/HApp.h
-    simplex/HConst.h
+#    simplex/HConst.h
     simplex/HCrash.h
     simplex/HDual.h
     simplex/HDualRow.h
@@ -119,7 +119,7 @@ set_target_properties(libhighs PROPERTIES
 # install the header files of highs
 install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 
-# install the binary and the library to appropriate lcoations and add them to an export group
+# install the binary and the library to appropriate locations and add them to an export group
 install(TARGETS libhighs EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
@@ -131,7 +131,7 @@ export(TARGETS libhighs
 
 #configure the config file for the build tree
 #Either list all the src/* directories here, or put explicit paths in all the #include statements
-#M reckons that the latter is more transparent, and I'm incliuned to agree.
+#M reckons that the latter is more transparent, and I'm inclined to agree.
 set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
 configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)
@@ -141,7 +141,13 @@ set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
 configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
-# install the targets of the highs export group and the config file so that other projects
-# can link easily against highs
+#configure the pkg-config file for the install
+configure_file(${CMAKE_SOURCE_DIR}/highs.pc.in
+  "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
+
+# install the targets of the highs export group, the config file so that other cmake-projects
+# can link easily against highs, and the pkg-config flie so that other projects can easily
+# build against highs
 install(EXPORT highs-targets FILE highs-targets.cmake DESTINATION lib/cmake/highs)
 install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" DESTINATION lib/cmake/highs)
+install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" DESTINATION lib/pkg-config)

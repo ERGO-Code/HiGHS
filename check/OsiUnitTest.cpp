@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "OsiUnitTests.hpp"
-#include "OsiHiGHSSolverInterface.hpp"
+#include "interfaces/OsiHiGHSSolverInterface.hpp"
 
 using namespace OsiUnitTest;
 
@@ -28,7 +28,8 @@ int main (int argc, const char *argv[])
   Suppress an popup window that Windows shows in response to a crash. See
   note at head of file.
  */
-  WindowsErrorPopupBlocker();
+  
+  //WindowsErrorPopupBlocker();
 
 /*
   Process command line parameters.

@@ -16,6 +16,15 @@ set(TEST_SOURCES
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
+if (OSI)
+    string(CONCAT ROOT_OSI "${OSI_DIR}" "/")
+    include_directories(${ROOT_OSI}include/coin)
+    include_directories(${CMAKE_SOURCE_DIR}/src)
+    find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
+    find_library(OSI_UNIT_TEST_LIB OsiCommonTests HINTS ${ROOT_OSI}lib)
+    add_executable(osi_unit_tests  OsiUnitTest.cpp)
+    target_link_libraries(osi_unit_tests libhighs Catch ${OSI_LIB} ${OSI_UNIT_TEST_LIB})
+endif()
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
@@ -23,6 +32,7 @@ add_test(NAME unit-test-build
                  --build ${CMAKE_BINARY_DIR}
                  --target unit_tests
          )
+
 
 # Avoid that several build jobs try to concurretly build.
 set_tests_properties(unit-test-build
@@ -34,6 +44,27 @@ add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
+
+if (OSI) 
+
+add_test(NAME osi-unit-test-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${CMAKE_BINARY_DIR}
+                 --target osi_unit_tests
+         )
+         
+# Avoid that several build jobs try to concurretly build.
+set_tests_properties(osi-unit-test-build
+PROPERTIES
+RESOURCE_LOCK osiunittestbin)
+
+# create a binary running all the tests in the executable
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests --success)
+set_tests_properties(osi_unit_tests_all
+PROPERTIES
+DEPENDS osi-unit-test-build)
+
+endif()
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all

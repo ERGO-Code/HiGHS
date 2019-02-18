@@ -198,7 +198,7 @@ const double *OsiHiGHSSolverInterface::getRowUpper() const {
   }
 }
 
-const double *OsiHiGHSSolverInterface::getObjCoefficients() {
+const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
   if (this->lp == NULL) {
     return NULL;
   } else {

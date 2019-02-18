@@ -135,7 +135,7 @@ public:
    virtual const double* getRowUpper() const;
 
    /// Get pointer to array[getNumCols()] of objective function coefficients
-   virtual const double* getObjCoefficients();
+   virtual const double* getObjCoefficients() const;
 
    /// Get objective function sense (1 for min (default), -1 for max)
    virtual double getObjSense() const  { return 1; }
