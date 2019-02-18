@@ -57,8 +57,20 @@ set_tests_properties(osi-unit-test-build
 PROPERTIES
 RESOURCE_LOCK osiunittestbin)
 
+pkg_search_module(COINSAMPLE coindatasample)
+if (COINSAMPLE_FOUND)
+   pkg_get_variable(COINSAMPLEDIR coindatasample datadir)
+   set(OSIUNITTESTFLAGS ${OSIUNITTESTFLAGS} -mpsDir=${COINSAMPLEDIR})
+endif ()
+
+pkg_search_module(COINNETLIB coindatanetlib)
+if (COINNETLIB_FOUND)
+   pkg_get_variable(COINNETLIBDIR coindatanetlib datadir)
+   set(OSIUNITTESTFLAGS ${OSIUNITTESTFLAGS} -netlibDir=${COINNETLIBDIR})
+endif ()
+
 # create a binary running all the tests in the executable
-add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests -mpsDir=${OSITEST_PREFIX}/share/coin/Data/Sample -netlibDir=${OSITEST_PREFIX}/share/coin/Data/Netlib)
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests ${OSIUNITTESTFLAGS})
 set_tests_properties(osi_unit_tests_all
 PROPERTIES
 DEPENDS osi-unit-test-build)
