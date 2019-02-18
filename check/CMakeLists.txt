@@ -23,7 +23,7 @@ if (OSI)
     find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
     find_library(OSI_UNIT_TEST_LIB OsiCommonTests HINTS ${ROOT_OSI}lib)
     add_executable(osi_unit_tests  OsiUnitTest.cpp)
-    target_link_libraries(osi_unit_tests libhighs Catch ${OSI_LIB} ${OSI_UNIT_TEST_LIB})
+    target_link_libraries(osi_unit_tests libhighs Catch ${OSI_UNIT_TEST_LIB} ${OSI_LIB})
 endif()
 
 # Check whether test executable builds OK.
