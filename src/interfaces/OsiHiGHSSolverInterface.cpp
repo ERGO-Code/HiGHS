@@ -20,6 +20,8 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   HighsOptions options;
   this->highs = new Highs(options);
   this->lp = NULL;
+
+  setStrParam(OsiSolverName, "HiGHS");
 }
 
 OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
