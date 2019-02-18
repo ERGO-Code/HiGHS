@@ -28,7 +28,7 @@ using std::set;
 
 void HDualRow::setupSlice(int size) {
   workSize = size;
-  workMove = &workHMO.basis_.nonbasicMove_[0];
+  workMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   workDual = &workHMO.simplex_info_.workDual_[0];
   workRange = &workHMO.simplex_info_.workRange_[0];
 
@@ -353,7 +353,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workHMO.simplex_info_.workValue_[iCol];
-    double dlDuObj = workHMO.basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
+    double dlDuObj = workHMO.simplex_basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO.scale_.cost_;
     workHMO.simplex_info_.updatedDualObjectiveValue += dlDuObj;
   }
@@ -362,7 +362,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
 
 void HDualRow::create_Freelist() {
   freeList.clear();
-  const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
+  const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++) {
@@ -396,9 +396,9 @@ void HDualRow::create_Freemove(HVector *row_ep) {
       double alpha = workHMO.matrix_.compute_dot(*row_ep, iCol);
       if (fabs(alpha) > Ta) {
         if (alpha * sourceOut > 0)
-          workHMO.basis_.nonbasicMove_[iCol] = 1;
+          workHMO.simplex_basis_.nonbasicMove_[iCol] = 1;
         else
-          workHMO.basis_.nonbasicMove_[iCol] = -1;
+          workHMO.simplex_basis_.nonbasicMove_[iCol] = -1;
       }
     }
   }
@@ -409,7 +409,7 @@ void HDualRow::delete_Freemove() {
     for (sit = freeList.begin(); sit != freeList.end(); sit++) {
       int iCol = *sit;
       assert(iCol < workHMO.simplex_lp_.numCol_);
-      workHMO.basis_.nonbasicMove_[iCol] = 0;
+      workHMO.simplex_basis_.nonbasicMove_[iCol] = 0;
     }
   }
 }

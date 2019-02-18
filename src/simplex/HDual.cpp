@@ -174,7 +174,7 @@ void HDual::solve(int num_threads) {
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
   for (int i = 0; i < solver_num_tot; i++) {
-    if (workHMO.basis_.nonbasicFlag_[i]) {
+    if (workHMO.simplex_basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -414,7 +414,7 @@ void HDual::init(int num_threads) {
   factor = &workHMO.factor_;
 
   // Copy pointers
-  jMove = &workHMO.basis_.nonbasicMove_[0];
+  jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   workDual = &workHMO.simplex_info_.workDual_[0];
   workValue = &workHMO.simplex_info_.workValue_[0];
   workRange = &workHMO.simplex_info_.workRange_[0];
@@ -744,7 +744,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = &workHMO.basis_.basicIndex_[0];
+    const int *baseIndex = &workHMO.simplex_basis_.basicIndex_[0];
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -1300,7 +1300,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = workHMO.basis_.basicIndex_[rowOut];
+  columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1364,7 +1364,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
-      const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
+      const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
       for (int col = 0; col < solver_num_col; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
       }
@@ -1791,9 +1791,9 @@ void HDual::iz_dvx_fwk() {
   // Initialise the Devex framework: reference set is all basic
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
-  const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
+  const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
-    //      if (workHMO.basis_.nonbasicFlag_[vr_n])
+    //      if (workHMO.simplex_basis_.nonbasicFlag_[vr_n])
     //      if (nonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
     //	dvx_ix[vr_n] = dvx_not_in_R;
@@ -2009,7 +2009,7 @@ double HDual::an_bs_cond() {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = workHMO.basis_.basicIndex_[r_n];
+    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < solver_num_col)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2232,14 +2232,14 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = workHMO.basis_.basicIndex_[r_n];
+    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
   for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
-    if (workHMO.basis_.nonbasicFlag_[vr_n]) {
+    if (workHMO.simplex_basis_.nonbasicFlag_[vr_n]) {
       double pr_act_v = workHMO.simplex_info_.workValue_[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];

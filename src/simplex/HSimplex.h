@@ -18,6 +18,86 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
 
+// Methods not requiring HighsModelObject 
+
+void add_cols_to_lp_vectors(
+			    HighsLp &lp,
+			    int XnumNewCol,
+			    const double *XcolCost,
+			    const double *colLower,
+			    const double *XcolUpper
+			    );
+
+void add_cols_to_lp_matrix(
+			   HighsLp &lp,
+			   int XnumNewCol,
+			   int XnumNewNZ,
+			   const int *XAstart,
+			   const int *XAindex,
+			   const double *XAvalue
+			   );
+
+void add_rows_to_lp_vectors(HighsLp &lp,
+			    int XnumNewRow,
+			    const double *XrowLower,
+			    const double *XrowUpper
+			    );
+
+void add_rows_to_lp_matrix(HighsLp &lp,
+			   int XnumNewRow,
+			   int XnumNewNZ,
+			   const int *XARstart,
+			   const int *XARindex,
+			   const double *XARvalue
+			   );
+
+void extend_basis_with_nonbasic_cols(
+				     HighsLp &lp,
+				     HighsBasis &basis,
+				     int XnumNewCol
+				     );
+
+void extend_basis_with_basic_rows(
+				  HighsLp &lp,
+				  HighsBasis &basis,
+				  int XnumNewRow
+				  );
+
+void del_cols_from_lp_vectors(
+			    HighsLp &lp,
+			    int XfromCol,
+			    int XtoCol
+			    );
+
+void del_cols_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromCol,
+			     int XtoCol
+			   );
+
+void del_rows_from_lp_vectors(
+			    HighsLp &lp,
+			    int XfromRow,
+			    int XtoRow
+			    );
+
+void del_rows_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromRow,
+			     int XtoRow
+			   );
+
+bool nonbasic_flag_basic_index_ok(
+				  HighsLp &lp,
+				  HighsBasis &basis
+				  );
+#ifdef HiGHSDEV
+void report_basis(
+		  HighsLp &lp,
+		  HighsBasis &basis
+		  );
+#endif
+
 /*
 // Increment iteration count (here!) and (possibly) store the pivots for
 // debugging NLA
@@ -297,85 +377,5 @@ void report_iteration_count_dual_objective_value(
 						 HighsModelObject &highs_model_object,
 						 int i_v
 						 );
-
-// Methods not requiring HighsModelObject 
-
-void add_cols_to_lp_vectors(
-			    HighsLp &lp,
-			    int XnumNewCol,
-			    const double *XcolCost,
-			    const double *colLower,
-			    const double *XcolUpper
-			    );
-
-void add_cols_to_lp_matrix(
-			   HighsLp &lp,
-			   int XnumNewCol,
-			   int XnumNewNZ,
-			   const int *XAstart,
-			   const int *XAindex,
-			   const double *XAvalue
-			   );
-
-void add_rows_to_lp_vectors(HighsLp &lp,
-			    int XnumNewRow,
-			    const double *XrowLower,
-			    const double *XrowUpper
-			    );
-
-void add_rows_to_lp_matrix(HighsLp &lp,
-			   int XnumNewRow,
-			   int XnumNewNZ,
-			   const int *XARstart,
-			   const int *XARindex,
-			   const double *XARvalue
-			   );
-
-void extend_basis_with_nonbasic_cols(
-				     HighsLp &lp,
-				     HighsBasis &basis,
-				     int XnumNewCol
-				     );
-
-void extend_basis_with_basic_rows(
-				  HighsLp &lp,
-				  HighsBasis &basis,
-				  int XnumNewRow
-				  );
-
-void del_cols_from_lp_vectors(
-			    HighsLp &lp,
-			    int XfromCol,
-			    int XtoCol
-			    );
-
-void del_cols_from_lp_matrix(
-			     HighsLp &lp,
-			     int XfromCol,
-			     int XtoCol
-			   );
-
-void del_rows_from_lp_vectors(
-			    HighsLp &lp,
-			    int XfromRow,
-			    int XtoRow
-			    );
-
-void del_rows_from_lp_matrix(
-			     HighsLp &lp,
-			     int XfromRow,
-			     int XtoRow
-			   );
-
-bool nonbasic_flag_basic_index_ok(
-				  HighsLp &lp,
-				  HighsBasis &basis
-				  );
-#ifdef HiGHSDEV
-void report_basis(
-		  HighsLp &lp,
-		  HighsBasis &basis
-		  );
-#endif
 
 #endif // SIMPLEX_HSIMPLEX_H_

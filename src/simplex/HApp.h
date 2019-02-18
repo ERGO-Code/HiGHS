@@ -138,8 +138,10 @@ HighsStatus solveSimplex(
     //    reportLpSolution(highs_model_object);
     HighsStatus result = LpStatusToHighsStatus(simplex_info.solution_status);
 
-    timer.stop(timer.solve_clock);
+    // Deduce the LP basis from the simplex basis
+    highs_model_object.basis_ = highs_model_object.simplex_basis_;
 
+    timer.stop(timer.solve_clock);
 
     if (result != HighsStatus::Optimal) return result;
 
@@ -169,9 +171,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // Set up aliases
   const HighsLp &lp = highs_model_object.lp_;
-  HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HMatrix &matrix = highs_model_object.matrix_;
@@ -194,9 +196,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Allocate memory for the basis
   // assignBasis();
   const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
-  basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
-  basis.nonbasicFlag_.assign(numTot, 0);
-  basis.nonbasicMove_.resize(numTot);
+  simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+  simplex_basis.nonbasicFlag_.assign(numTot, 0);
+  simplex_basis.nonbasicMove_.resize(numTot);
   //
   // Possibly scale the LP to be used by the solver
   //
@@ -238,7 +240,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 		&simplex_lp.Astart_[0],
 		&simplex_lp.Aindex_[0],
 		&simplex_lp.Avalue_[0],
-		&basis.basicIndex_[0]);
+		&simplex_basis.basicIndex_[0]);
 
   // Crash, if needed.
 
@@ -254,10 +256,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 					   solution.colDual_,
 					   solution.rowValue_,
 					   solution.rowDual_);
-  simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.basis_.basicIndex_,
-						highs_model_object.basis_.nonbasicFlag_);
+  simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.simplex_basis_.basicIndex_,
+						highs_model_object.simplex_basis_.nonbasicFlag_);
 
-  highs_model_object.basis_.nonbasicMove_ = basis.nonbasicMove_;
+  highs_model_object.basis_.nonbasicMove_ = simplex_basis.nonbasicMove_;
 
   return result;
 }

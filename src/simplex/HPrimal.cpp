@@ -162,8 +162,8 @@ void HPrimal::primalRebuild() {
 void HPrimal::primalChooseColumn() {
   columnIn = -1;
   double bestInfeas = 0;
-  const int *jFlag = &workHMO.basis_.nonbasicFlag_[0];
-  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  const int *jFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  const int *jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double *workDual = &workHMO.simplex_info_.workDual_[0];
   const double *workLower = &workHMO.simplex_info_.workLower_[0];
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
@@ -208,7 +208,7 @@ void HPrimal::primalChooseRow() {
 
   // Choose column pass 1
   double alphaTol = workHMO.simplex_info_.update_count < 10 ? 1e-9 : workHMO.simplex_info_.update_count < 20 ? 1e-8 : 1e-7;
-  const int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  const int *jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   int moveIn = jMove[columnIn];
   if (moveIn == 0) {
     // If there's still free in the N
@@ -254,7 +254,7 @@ void HPrimal::primalChooseRow() {
 }
 
 void HPrimal::primalUpdate() {
-  int *jMove = &workHMO.basis_.nonbasicMove_[0];
+  int *jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   double *workDual = &workHMO.simplex_info_.workDual_[0];
   const double *workLower = &workHMO.simplex_info_.workLower_[0];
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
@@ -267,7 +267,7 @@ void HPrimal::primalUpdate() {
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = workHMO.basis_.basicIndex_[rowOut];
+  int columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   double alpha = column.array[rowOut];
   double thetaPrimal = 0;
   if (alpha * moveIn > 0) {

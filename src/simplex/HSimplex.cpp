@@ -26,9 +26,297 @@
 #include <cstring> // For strcmp
 #include <vector>
 
+
+void add_cols_to_lp_vectors(HighsLp &lp, int XnumNewCol,
+			    const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
+  assert(XnumNewCol >= 0);
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  lp.colCost_.resize(newNumCol);
+  lp.colLower_.resize(newNumCol);
+  lp.colUpper_.resize(newNumCol);
+
+  for (int col = 0; col < XnumNewCol; col++) {
+    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
+    lp.colLower_[lp.numCol_ + col] = XcolLower[col];
+    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
+  }
+}
+
+void add_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
+			   int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+  assert(XnumNewCol >= 0);
+  assert(XnumNewNZ >= 0);
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  lp.Astart_.resize(newNumCol + 1);
+  for (int col = 0; col < XnumNewCol; col++) {
+    lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
+  }
+  
+  // Determine the current number of nonzeros
+  int currentNumNZ = lp.Astart_[lp.numCol_];
+  
+  // Determine the new number of nonzeros and resize the column-wise matrix
+  // arrays
+  int newNumNZ = currentNumNZ + XnumNewNZ;
+  lp.Aindex_.resize(newNumNZ);
+  lp.Avalue_.resize(newNumNZ);
+  
+  // Add the new columns
+  for (int col = 0; col < XnumNewCol; col++) {
+    lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
+  }
+  lp.Astart_[lp.numCol_ + XnumNewCol] = newNumNZ;
+  
+  for (int el = 0; el < XnumNewNZ; el++) {
+    int row = XAindex[el];
+    assert(row >= 0);
+    assert(row < lp.numRow_);
+    lp.Aindex_[currentNumNZ + el] = row;
+    lp.Avalue_[currentNumNZ + el] = XAvalue[el];
+  }
+}
+
+void add_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
+			    const double *XrowLower, const double *XrowUpper) {
+  assert(XnumNewRow >= 0);
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+  lp.rowLower_.resize(newNumRow);
+  lp.rowUpper_.resize(newNumRow);
+
+  for (int row = 0; row < XnumNewRow; row++) {
+    lp.rowLower_[lp.numRow_ + row] = XrowLower[row];
+    lp.rowUpper_[lp.numRow_ + row] = XrowUpper[row];
+  }
+}
+
+void add_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
+			   int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
+  // Check that nonzeros aren't being added to a matrix with no columns
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+
+  // NB SCIP doesn't have XARstart[XnumNewRow] defined, so have to use XnumNewNZ for last
+  // entry
+  if (XnumNewNZ == 0) return;
+  int currentNumNZ = lp.Astart_[lp.numCol_];
+  vector<int> Alength;
+  Alength.assign(lp.numCol_, 0);
+  for (int el = 0; el < XnumNewNZ; el++) {
+    int col = XARindex[el];
+    //      printf("El %2d: adding entry in column %2d\n", el, col); 
+    assert(col >= 0);
+    assert(col < lp.numCol_);
+    Alength[col]++;
+  }
+  // Determine the new number of nonzeros and resize the column-wise matrix arrays
+  int newNumNZ = currentNumNZ + XnumNewNZ;
+  lp.Aindex_.resize(newNumNZ);
+  lp.Avalue_.resize(newNumNZ);
+
+  // Add the new rows
+  // Shift the existing columns to make space for the new entries
+  int nwEl = newNumNZ;
+  for (int col = lp.numCol_ - 1; col >= 0; col--) {
+    // printf("Column %2d has additional length %2d\n", col, Alength[col]);
+    int Astart_Colp1 = nwEl;
+    nwEl -= Alength[col];
+    // printf("Shift: nwEl = %2d\n", nwEl);
+    for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
+      nwEl--;
+      // printf("Shift: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
+      // nwEl, el, lp.Aindex_[el]);
+      lp.Aindex_[nwEl] = lp.Aindex_[el];
+      lp.Avalue_[nwEl] = lp.Avalue_[el];
+    }
+    lp.Astart_[col + 1] = Astart_Colp1;
+  }
+  // printf("After shift: nwEl = %2d\n", nwEl);
+  assert(nwEl == 0);
+  // util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
+
+  // Insert the new entries
+  for (int row = 0; row < XnumNewRow; row++) {
+    int fEl = XARstart[row];
+    int lEl = (row < XnumNewRow - 1 ? XARstart[row + 1] : XnumNewNZ) - 1;
+    for (int el = fEl; el <= lEl; el++) {
+      int col = XARindex[el];
+      nwEl = lp.Astart_[col + 1] - Alength[col];
+      Alength[col]--;
+      // printf("Insert: row = %2d; col = %2d; lp.Astart_[col+1]-Alength[col] =
+      // %2d; Alength[col] = %2d; nwEl = %2d\n", row, col,
+      // lp.Astart_[col+1]-Alength[col], Alength[col], nwEl);
+      assert(nwEl >= 0);
+      assert(el >= 0);
+      // printf("Insert: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
+      // nwEl, el, lp.Aindex_[el]);
+      lp.Aindex_[nwEl] = lp.numRow_ + row;
+      lp.Avalue_[nwEl] = XARvalue[el];
+    }
+  }
+}
+
+void extend_basis_with_nonbasic_cols(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
+  // Add nonbasic structurals
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  int newNumTot = newNumCol + lp.numRow_;
+  basis.nonbasicFlag_.resize(newNumTot);
+  // Shift the row data in basicIndex and nonbasicFlag if necessary
+  for (int row = lp.numRow_ - 1; row >= 0; row--) {
+    basis.basicIndex_[row] += XnumNewCol;
+    basis.nonbasicFlag_[newNumCol + row] = basis.nonbasicFlag_[lp.numCol_ + row];
+  }
+  // Make any new columns nonbasic
+  for (int col = lp.numCol_; col < newNumCol; col++) {
+    basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+  }
+}
+
+void extend_basis_with_basic_rows(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
+  // Add basic logicals
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+  basis.basicIndex_.resize(newNumRow);
+  // Make any new rows basic
+  for (int row = lp.numRow_; row < newNumRow; row++) {
+    int var = lp.numCol_ + row;
+    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+    basis.basicIndex_[row] = var;
+  }
+}
+
+bool nonbasic_flag_basic_index_ok(HighsLp &lp, HighsBasis &basis) {
+  int numTot = lp.numCol_ + lp.numRow_;
+  int num_basic_variables = 0;
+  for (int var = 0; var < numTot; var++) if (!basis.nonbasicFlag_[var]) num_basic_variables++;
+  assert(num_basic_variables == lp.numRow_);
+  if (num_basic_variables != lp.numRow_) return false;
+  for (int row = 0; row < lp.numRow_; row++) {
+    int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
+    assert(!flag);
+    if (flag) return false;
+  }
+  return true;
+}
+
+void del_cols_from_lp_vectors(HighsLp &lp, int XfromCol, int XtoCol) {
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+
+  int numDeleteCol = XtoCol - XfromCol + 1;
+  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
+  //
+  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns
+  // need be shifted. However, this implies lp.numCol_-numDeleteCol =
+  // XfromCol, in which case the loop is vacuous
+  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
+    lp.colCost_[col] = lp.colCost_[col + numDeleteCol];
+    lp.colLower_[col] = lp.colLower_[col + numDeleteCol];
+    lp.colUpper_[col] = lp.colUpper_[col + numDeleteCol];
+  }
+}
+
+void del_cols_from_lp_matrix(HighsLp &lp, int XfromCol, int XtoCol) {
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+
+  int numDeleteCol = XtoCol - XfromCol + 1;
+  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
+  //
+  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns need be shifted
+  // and the loops are vacuous
+  int elOs = lp.Astart_[XfromCol];
+  int numDeleteEl = lp.Astart_[XtoCol + 1] - elOs;
+  for (int el = lp.Astart_[XtoCol + 1]; el < lp.Astart_[lp.numCol_]; el++) {
+    lp.Aindex_[el - numDeleteEl] = lp.Aindex_[el];
+    lp.Avalue_[el - numDeleteEl] = lp.Avalue_[el];
+  }
+  for (int col = XfromCol; col <= lp.numCol_ - numDeleteCol; col++) {
+    lp.Astart_[col] = lp.Astart_[col + numDeleteCol] - numDeleteEl;
+  }
+
+}
+
+void del_rows_from_lp_vectors(HighsLp &lp, int XfromRow, int XtoRow) {
+  assert(XfromRow >= 0);
+  assert(XtoRow < lp.numRow_);
+  assert(XfromRow <= XtoRow);
+
+  int numDeleteRow = XtoRow - XfromRow + 1;
+  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
+  //
+  // Trivial case is XtoRow = lp.numRow_-1, in which case no rows
+  // need be shifted. However, this implies lp.numRow_-numDeleteRow =
+  // XfromRow, in which case the loop is vacuous
+  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
+    lp.rowLower_[row] = lp.rowLower_[row + numDeleteRow];
+    lp.rowUpper_[row] = lp.rowUpper_[row + numDeleteRow];
+  }
+}
+
+void del_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
+  assert(XfromRow >= 0);
+  assert(XtoRow < lp.numRow_);
+  assert(XfromRow <= XtoRow);
+
+  int numDeleteRow = XtoRow - XfromRow + 1;
+  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
+
+  int nnz = 0;
+  for (int col = 0; col < lp.numCol_; col++) {
+    int fmEl = lp.Astart_[col];
+    lp.Astart_[col] = nnz;
+    for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
+      int row = lp.Aindex_[el];
+      if (row < XfromRow || row > XtoRow) {
+	if (row < XfromRow) {
+	  lp.Aindex_[nnz] = row;
+	} else {
+	  lp.Aindex_[nnz] = row - numDeleteRow;
+	}
+	lp.Avalue_[nnz] = lp.Avalue_[el];
+	nnz++;
+      }
+    }
+  }
+  lp.Astart_[lp.numCol_] = nnz;
+}
+
+#ifdef HiGHSDEV
+void report_basis(HighsLp &lp, HighsBasis &basis) {
+  if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
+  for (int col = 0; col < lp.numCol_; col++) {
+    int var = col;
+    if (basis.nonbasicFlag_[var])
+      printf("%6d %6d        %6d\n", var, col, basis.nonbasicFlag_[var]);
+    // basis.nonbasicMove_[var]);
+    else
+      printf("%6d %6d %6d\n", var, col, basis.nonbasicFlag_[var]);
+  }
+  if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
+  for (int row = 0; row < lp.numRow_; row++) {
+    int var = lp.numCol_ + row;
+    if (basis.nonbasicFlag_[var])
+      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
+    // basis.nonbasicMove_[var]);
+    else
+      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
+  }
+}
+#endif
+
 /**
  * @brief Simplex utilities
  */
+
 
 /*
 // Increment iteration count (here!) and (possibly) store the pivots for
@@ -246,7 +534,7 @@ void compute_dual_objective_value(HighsModelObject &highs_model_object,
   simplex_info.dualObjectiveValue = 0;
   const int numTot = lp.numCol_ + lp.numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (highs_model_object.basis_.nonbasicFlag_[i]) {
+    if (highs_model_object.simplex_basis_.nonbasicFlag_[i]) {
       simplex_info.dualObjectiveValue +=
           simplex_info.workValue_[i] * simplex_info.workDual_[i];
     }
@@ -936,14 +1224,14 @@ void tighten_simplex_lp(HighsModelObject &highs_model_object) {
 
 void initialise_basic_index(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   int num_basic_variables = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; var++) {
-    if (!basis.nonbasicFlag_[var]) {
+    if (!simplex_basis.nonbasicFlag_[var]) {
       assert(num_basic_variables < simplex_lp.numRow_);
-      basis.basicIndex_[num_basic_variables] = var;
+      simplex_basis.basicIndex_[num_basic_variables] = var;
       num_basic_variables++;
     }
   }
@@ -992,15 +1280,15 @@ void replace_from_nonbasic(HighsModelObject &highs_model_object) {
 
 void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
 
   for (int row = 0; row < simplex_lp.numRow_; row++)
-    basis.basicIndex_[row] = simplex_lp.numCol_ + row;
+    simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
   for (int col = 0; col < simplex_lp.numCol_; col++)
-    basis.nonbasicFlag_[col] = 1;
+    simplex_basis.nonbasicFlag_[col] = 1;
   simplex_info.num_basic_logicals = simplex_lp.numRow_;
 
   allocate_work_and_base_arrays(highs_model_object);
@@ -1016,7 +1304,7 @@ void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   assert(firstvar >= 0);
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -1024,41 +1312,41 @@ void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
   // double dl_pr_act, norm_dl_pr_act;
   // norm_dl_pr_act = 0.0;
   for (int var = firstvar; var <= lastvar; var++) {
-    if (basis.nonbasicFlag_[var]) {
+    if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
       // double prev_pr_act = simplex_info.workValue_[var];
       if (simplex_info.workLower_[var] == simplex_info.workUpper_[var]) {
         // Fixed
         simplex_info.workValue_[var] = simplex_info.workLower_[var];
-        basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       } else if (!highs_isInfinity(-simplex_info.workLower_[var])) {
         // Finite lower bound so boxed or lower
         if (!highs_isInfinity(simplex_info.workUpper_[var])) {
           // Finite upper bound so boxed
-          if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+          if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
             // Set at lower
             simplex_info.workValue_[var] = simplex_info.workLower_[var];
-          } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+          } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
             // Set at upper
             simplex_info.workValue_[var] = simplex_info.workUpper_[var];
           } else {
             // Invalid nonbasicMove: correct and set value at lower
-            basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+            simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
             simplex_info.workValue_[var] = simplex_info.workLower_[var];
           }
         } else {
           // Lower
           simplex_info.workValue_[var] = simplex_info.workLower_[var];
-          basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+          simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
         }
       } else if (!highs_isInfinity(simplex_info.workUpper_[var])) {
         // Upper
         simplex_info.workValue_[var] = simplex_info.workUpper_[var];
-        basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
       } else {
         // FREE
         simplex_info.workValue_[var] = 0;
-        basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+        simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       }
       // dl_pr_act = simplex_info.workValue_[var] - prev_pr_act;
       // norm_dl_pr_act += dl_pr_act*dl_pr_act;
@@ -1070,7 +1358,7 @@ void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
       // simplex_info.workDual_[var], dl_pr_act);
     } else {
       // Basic variable
-      basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
+      simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
     }
   }
   //  norm_dl_pr_act = sqrt(norm_dl_pr_act);
@@ -1274,17 +1562,17 @@ void populate_work_arrays(HighsModelObject &highs_model_object) {
 
 void replace_with_logical_basis(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   // Replace basis with a logical basis then populate (where possible)
   // work* arrays
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_lp.numCol_ + row;
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
-    basis.basicIndex_[row] = var;
+    simplex_basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+    simplex_basis.basicIndex_[row] = var;
   }
   for (int col = 0; col < simplex_lp.numCol_; col++) {
-    basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+    simplex_basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
   }
   simplex_info.num_basic_logicals = simplex_lp.numRow_;
 
@@ -1297,21 +1585,21 @@ void replace_with_logical_basis(HighsModelObject &highs_model_object) {
 void replace_with_new_basis(HighsModelObject &highs_model_object,
                             const int *XbasicIndex) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   // Replace basis with a new basis then populate (where possible)
   // work* arrays
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; var++) {
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
+    simplex_basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
   }
   simplex_info.num_basic_logicals = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = XbasicIndex[row];
     if (var >= simplex_lp.numCol_)
       simplex_info.num_basic_logicals++;
-    basis.basicIndex_[row] = var;
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
+    simplex_basis.basicIndex_[row] = var;
+    simplex_basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
   }
 
   populate_work_arrays(highs_model_object);
@@ -1322,11 +1610,11 @@ void replace_with_new_basis(HighsModelObject &highs_model_object,
 
 void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   simplex_info.num_basic_logicals = 0;
   for (int i = 0; i < simplex_lp.numRow_; i++)
-    if (basis.basicIndex_[i] >= simplex_lp.numCol_)
+    if (simplex_basis.basicIndex_[i] >= simplex_lp.numCol_)
       simplex_info.num_basic_logicals += 1;
 #ifdef HiGHSDEV
   printf("Determined num_basic_logicals = %d of %d\n",
@@ -1343,17 +1631,17 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
 
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
 #ifdef HiGHSDEV
   report_simplex_lp_status(highs_model_object.simplex_lp_status_);
 #endif
-  bool basis_valid = highs_model_object.basis_.valid_;
+  bool simplex_basis_valid = highs_model_object.simplex_basis_.valid_;
 #ifdef HiGHSDEV
-  printf("In setup_for_solve: basis_valid = %d \n", basis_valid);
+  printf("In setup_for_solve: simplex_basis_valid = %d \n", simplex_basis_valid);
 #endif
-  if (basis_valid) {
+  if (simplex_basis_valid) {
     // Model has a basis so just count the number of basic logicals
     setup_num_basic_logicals(highs_model_object);
   } else {
@@ -1373,7 +1661,7 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
     } else {
       matrix.setup(solver_num_col, solver_num_row, &simplex_lp.Astart_[0],
                    &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-                   &basis.nonbasicFlag_[0]);
+                   &simplex_basis.nonbasicFlag_[0]);
       //      printf("Called matrix_->setup\n");cout<<flush;
     }
     // Indicate that there is a colum-wise and row-wise copy of the
@@ -1383,11 +1671,11 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
   }
 
   // TODO Put something in to skip factor_->setup
-  // Initialise factor arrays, passing &basis.basicIndex_[0] so that its
+  // Initialise factor arrays, passing &simplex_basis.basicIndex_[0] so that its
   // address can be copied to the internal Factor pointer
   factor.setup(solver_num_col, solver_num_row, &simplex_lp.Astart_[0],
                &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-               &basis.basicIndex_[0]);
+               &simplex_basis.basicIndex_[0]);
   // Indicate that the model has factor arrays: can't be done in factor.setup
   // simplex_lp_status.has_factor_arrays = true;
 }
@@ -1395,7 +1683,7 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
 bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   //  printf("Called work_arrays_ok(%d)\n", phase);cout << flush;
   bool ok = true;
   // Only check phase 2 bounds: others will have been set by solve() so can be
@@ -1485,17 +1773,17 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
                                          int var) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
   //	 var, numTot, simplex_info.workLower_[var],
-  //simplex_info.workUpper_[var], basis.nonbasicMove_[var]);
+  //simplex_info.workUpper_[var], simplex_basis.nonbasicMove_[var]);
   // cout<<flush;
   assert(var >= 0);
   assert(var < numTot);
   // Make sure we're not checking a basic variable
-  if (!basis.nonbasicFlag_[var])
+  if (!simplex_basis.nonbasicFlag_[var])
     return true;
   bool ok;
   if (!highs_isInfinity(-simplex_info.workLower_[var])) {
@@ -1504,14 +1792,14 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
       // are equal
       if (simplex_info.workLower_[var] == simplex_info.workUpper_[var]) {
         // Fixed variable
-        ok = basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
+        ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
         if (!ok) {
           printf("Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
                  "%11g] so nonbasic "
                  "move should be zero but is %d\n",
                  var, simplex_lp.numCol_, simplex_info.workLower_[var],
                  simplex_info.workValue_[var], simplex_info.workUpper_[var],
-                 basis.nonbasicMove_[var]);
+                 simplex_basis.nonbasicMove_[var]);
           return ok;
         }
         ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
@@ -1525,8 +1813,8 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
         }
       } else {
         // Boxed variable
-        ok = (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
-             (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
+        ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
+             (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
         if (!ok) {
           printf("Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
                  "%11g] range %g so "
@@ -1534,10 +1822,10 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
                  var, simplex_lp.numCol_, simplex_info.workLower_[var],
                  simplex_info.workValue_[var], simplex_info.workUpper_[var],
                  simplex_info.workUpper_[var] - simplex_info.workLower_[var],
-                 basis.nonbasicMove_[var]);
+                 simplex_basis.nonbasicMove_[var]);
           return ok;
         }
-        if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+        if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
           ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
           if (!ok) {
             printf("Boxed variable %d (simplex_lp.numCol_ = %d) with "
@@ -1561,7 +1849,7 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
       }
     } else {
       // Infinite upper bound
-      ok = basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
+      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP;
       if (!ok) {
         printf(
             "Finite lower bound and infinite upper bound variable %d "
@@ -1570,7 +1858,7 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
             "%d\n",
             var, simplex_lp.numCol_, simplex_info.workLower_[var],
             simplex_info.workValue_[var], simplex_info.workUpper_[var],
-            NONBASIC_MOVE_UP, basis.nonbasicMove_[var]);
+            NONBASIC_MOVE_UP, simplex_basis.nonbasicMove_[var]);
         return ok;
       }
       ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
@@ -1586,7 +1874,7 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
   } else {
     // Infinite lower bound
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
-      ok = basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
+      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
         printf("Finite upper bound and infinite lower bound variable %d "
                "(simplex_lp.numCol_ = "
@@ -1594,7 +1882,7 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
                "%d\n",
                var, simplex_lp.numCol_, simplex_info.workLower_[var],
                simplex_info.workValue_[var], simplex_info.workUpper_[var],
-               basis.nonbasicMove_[var]);
+               simplex_basis.nonbasicMove_[var]);
         return ok;
       }
       ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
@@ -1608,14 +1896,14 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
       }
     } else {
       // Infinite upper bound
-      ok = basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
+      ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
       if (!ok) {
         printf("Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
                "so nonbasic "
                "move should be zero but is  %d\n",
                var, simplex_lp.numCol_, simplex_info.workLower_[var],
                simplex_info.workValue_[var], simplex_info.workUpper_[var],
-               basis.nonbasicMove_[var]);
+               simplex_basis.nonbasicMove_[var]);
         return ok;
       }
       ok = simplex_info.workValue_[var] == 0.0;
@@ -1636,14 +1924,14 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
 bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   //    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   bool ok;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; ++var) {
     printf(
-        "NonbasicMoveVsWorkArrays: var = %2d; basis.nonbasicFlag_[var] = %2d\n",
-        var, basis.nonbasicFlag_[var]);
-    if (!basis.nonbasicFlag_[var])
+        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] = %2d\n",
+        var, simplex_basis.nonbasicFlag_[var]);
+    if (!simplex_basis.nonbasicFlag_[var])
       continue;
     ok = one_nonbasic_move_vs_work_arrays_ok(highs_model_object, var);
     if (!ok) {
@@ -1662,11 +1950,11 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   //  printf("Called ok_to_solve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
-  ok = basis.valid_ && simplex_lp_status.has_matrix_col_wise &&
+  ok = simplex_basis.valid_ && simplex_lp_status.has_matrix_col_wise &&
        simplex_lp_status.has_matrix_row_wise &&
        //    simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
@@ -1674,8 +1962,8 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   // TODO: Eliminate the following line ASAP!!!
   ok = true;
   if (!ok) {
-    if (!basis.valid_)
-      printf("Not OK to solve since basis.valid_ = %d\n", basis.valid_);
+    if (!simplex_basis.valid_)
+      printf("Not OK to solve since simplex_basis.valid_ = %d\n", simplex_basis.valid_);
     if (!simplex_lp_status.has_matrix_col_wise)
       printf("Not OK to solve since simplex_lp_status.has_matrix_col_wise "
              "= %d\n",
@@ -1700,7 +1988,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   if (level <= 0)
     return ok;
   // Level 1: Basis and data check
-  ok = nonbasic_flag_basic_index_ok(simplex_lp, highs_model_object.basis_);
+  ok = nonbasic_flag_basic_index_ok(simplex_lp, highs_model_object.simplex_basis_);
   if (!ok) {
     printf("Error in nonbasicFlag and basicIndex\n");
     assert(ok);
@@ -1714,7 +2002,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   }
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; ++var) {
-    if (basis.nonbasicFlag_[var]) {
+    if (simplex_basis.nonbasicFlag_[var]) {
       // Nonbasic variable
       ok = one_nonbasic_move_vs_work_arrays_ok(highs_model_object, var);
       if (!ok) {
@@ -1732,7 +2020,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
 }
 
 void flip_bound(HighsModelObject &highs_model_object, int iCol) {
-  int *nonbasicMove = &highs_model_object.basis_.nonbasicMove_[0];
+  int *nonbasicMove = &highs_model_object.simplex_basis_.nonbasicMove_[0];
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
   simplex_info.workValue_[iCol] =
@@ -1742,7 +2030,7 @@ void flip_bound(HighsModelObject &highs_model_object, int iCol) {
 int handle_rank_deficiency(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HFactor &factor = highs_model_object.factor_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   int rankDeficiency = factor.rankDeficiency;
   const int *noPvC = factor.getNoPvC();
   printf("Returned %d = factor.build();\n", rankDeficiency);
@@ -1750,11 +2038,11 @@ int handle_rank_deficiency(HighsModelObject &highs_model_object) {
   vector<int> basicRows;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   basicRows.resize(numTot);
-  //    printf("Before - basis.basicIndex_:"); for (int iRow=0;
+  //    printf("Before - simplex_basis.basicIndex_:"); for (int iRow=0;
 iRow<simplex_lp.numRow_; iRow++)
-  //    printf(" %2d", basis.basicIndex_[iRow]); printf("\n");
+  //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-basicRows[basis.basicIndex_[iRow]] = iRow; for (int k = 0; k < rankDeficiency;
+basicRows[simplex_basis.basicIndex_[iRow]] = iRow; for (int k = 0; k < rankDeficiency;
 k++) {
     //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
     //      k, noPvC[k]);fflush(stdout);
@@ -1765,17 +2053,17 @@ k++) {
     //      %11.4g]\n", columnIn, columnOut, rowOut,
 simplex_info.workLower_[columnOut],
     //      simplex_info.workUpper_[columnOut]);
-    if (basis.basicIndex_[rowOut] != columnOut) {
-      printf("%d = basis.basicIndex_[rowOut] != noPvC[k] = %d\n",
-basis.basicIndex_[rowOut], columnOut); fflush(stdout);
+    if (simplex_basis.basicIndex_[rowOut] != columnOut) {
+      printf("%d = simplex_basis.basicIndex_[rowOut] != noPvC[k] = %d\n",
+simplex_basis.basicIndex_[rowOut], columnOut); fflush(stdout);
     }
     int sourceOut = setSourceOutFmBd(columnOut);
     updatePivots(columnIn, rowOut, sourceOut);
     updateMatrix(columnIn, columnOut);
   }
-  //    printf("After  - basis.basicIndex_:"); for (int iRow=0;
+  //    printf("After  - simplex_basis.basicIndex_:"); for (int iRow=0;
 iRow<simplex_lp.numRow_; iRow++)
-  //    printf(" %2d", basis.basicIndex_[iRow]); printf("\n");
+  //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
 #ifdef HiGHSDEV
   factor.checkInvert();
 #endif
@@ -1785,7 +2073,7 @@ iRow<simplex_lp.numRow_; iRow++)
 int compute_factor(HighsModelObject &highs_model_object) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
 #ifdef HiGHSDEV
@@ -1834,7 +2122,7 @@ void compute_primal(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
   // Setup a local buffer for the values of basic variables
@@ -1843,14 +2131,14 @@ void compute_primal(HighsModelObject &highs_model_object) {
   buffer.clear();
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (basis.nonbasicFlag_[i] && simplex_info.workValue_[i] != 0) {
+    if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] != 0) {
       matrix.collect_aj(buffer, i, simplex_info.workValue_[i]);
     }
   }
   factor.ftran(buffer, 1);
 
   for (int i = 0; i < simplex_lp.numRow_; i++) {
-    int iCol = basis.basicIndex_[i];
+    int iCol = simplex_basis.basicIndex_[i];
     simplex_info.baseValue_[i] = -buffer.array[i];
     simplex_info.baseLower_[i] = simplex_info.workLower_[iCol];
     simplex_info.baseUpper_[i] = simplex_info.workUpper_[iCol];
@@ -1863,7 +2151,7 @@ void compute_dual(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
   bool an_compute_dual_norm2 = false;
@@ -1877,8 +2165,8 @@ void compute_dual(HighsModelObject &highs_model_object) {
   buffer.clear();
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     buffer.index[iRow] = iRow;
-    buffer.array[iRow] = simplex_info.workCost_[basis.basicIndex_[iRow]] +
-                         simplex_info.workShift_[basis.basicIndex_[iRow]];
+    buffer.array[iRow] = simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
+                         simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
   }
   buffer.count = simplex_lp.numRow_;
   if (an_compute_dual_norm2) {
@@ -1939,19 +2227,19 @@ void correct_dual(HighsModelObject &highs_model_object,
                   int *free_infeasibility_count) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsRandom &random = highs_model_object.random_;
   const double tau_d = simplex_info.dual_feasibility_tolerance;
   const double inf = HIGHS_CONST_INF;
   int workCount = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
-    if (basis.nonbasicFlag_[i]) {
+    if (simplex_basis.nonbasicFlag_[i]) {
       if (simplex_info.workLower_[i] == -inf &&
           simplex_info.workUpper_[i] == inf) {
         // FREE variable
         workCount += (fabs(simplex_info.workDual_[i]) >= tau_d);
-      } else if (basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d) {
+      } else if (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d) {
         if (simplex_info.workLower_[i] != -inf &&
             simplex_info.workUpper_[i] != inf) {
           // Boxed variable = flip
@@ -1959,7 +2247,7 @@ void correct_dual(HighsModelObject &highs_model_object,
         } else {
           // Other variable = shift
           simplex_info.costs_perturbed = 1;
-          if (basis.nonbasicMove_[i] == 1) {
+          if (simplex_basis.nonbasicMove_[i] == 1) {
             double random_v = random.fraction();
             double dual = (1 + random_v) * tau_d;
             double shift = dual - simplex_info.workDual_[i];
@@ -1982,14 +2270,14 @@ void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
                                      int *dual_infeasibility_count) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   int work_count = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = simplex_info.dual_feasibility_tolerance;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
-    if (!basis.nonbasicFlag_[i])
+    if (!simplex_basis.nonbasicFlag_[i])
       continue;
     // Free
     if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
@@ -1997,7 +2285,7 @@ void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
     // In dual, assuming that boxed variables will be flipped
     if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf)
       work_count +=
-          (basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
+          (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
   }
   *dual_infeasibility_count = work_count;
 }
@@ -2006,21 +2294,21 @@ void compute_dual_infeasible_in_primal(HighsModelObject &highs_model_object,
                                        int *dual_infeasibility_count) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   int work_count = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = simplex_info.dual_feasibility_tolerance;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
-    if (!basis.nonbasicFlag_[i])
+    if (!simplex_basis.nonbasicFlag_[i])
       continue;
     // Free
     if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
       work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);
     // In primal don't assume flip
     work_count +=
-        (basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
+        (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
   }
   *dual_infeasibility_count = work_count;
 }
@@ -2056,17 +2344,17 @@ double
 compute_primal_objective_function_value(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsScale &scale = highs_model_object.scale_;
   double primal_objective_function_value = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
-    int var = basis.basicIndex_[row];
+    int var = simplex_basis.basicIndex_[row];
     if (var < simplex_lp.numCol_)
       primal_objective_function_value +=
           simplex_info.baseValue_[row] * simplex_lp.colCost_[var];
   }
   for (int col = 0; col < simplex_lp.numCol_; col++) {
-    if (basis.nonbasicFlag_[col])
+    if (simplex_basis.nonbasicFlag_[col])
       primal_objective_function_value +=
           simplex_info.workValue_[col] * simplex_lp.colCost_[col];
   }
@@ -2115,21 +2403,21 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsTimer &timer = highs_model_object.timer_;
 
   timer.start(simplex_info.clock_[UpdatePivotsClock]);
-  int columnOut = basis.basicIndex_[rowOut];
+  int columnOut = simplex_basis.basicIndex_[rowOut];
 
   // Incoming variable
-  basis.basicIndex_[rowOut] = columnIn;
-  basis.nonbasicFlag_[columnIn] = 0;
-  basis.nonbasicMove_[columnIn] = 0;
+  simplex_basis.basicIndex_[rowOut] = columnIn;
+  simplex_basis.nonbasicFlag_[columnIn] = 0;
+  simplex_basis.nonbasicMove_[columnIn] = 0;
   simplex_info.baseLower_[rowOut] = simplex_info.workLower_[columnIn];
   simplex_info.baseUpper_[rowOut] = simplex_info.workUpper_[columnIn];
 
   // Outgoing variable
-  basis.nonbasicFlag_[columnOut] = 1;
+  simplex_basis.nonbasicFlag_[columnOut] = 1;
   //  double dlValue;
   //  double vrLb = simplex_info.workLower_[columnOut];
   //  double vrV = simplex_info.workValue_[columnOut];
@@ -2139,17 +2427,17 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
     //    dlValue =
     //    simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
-    basis.nonbasicMove_[columnOut] = 0;
+    simplex_basis.nonbasicMove_[columnOut] = 0;
   } else if (sourceOut == -1) {
     //    dlValue =
     //    simplex_info.workLower_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workLower_[columnOut];
-    basis.nonbasicMove_[columnOut] = 1;
+    simplex_basis.nonbasicMove_[columnOut] = 1;
   } else {
     //    dlValue =
     //    simplex_info.workUpper_[columnOut]-simplex_info.workValue_[columnOut];
     simplex_info.workValue_[columnOut] = simplex_info.workUpper_[columnOut];
-    basis.nonbasicMove_[columnOut] = -1;
+    simplex_basis.nonbasicMove_[columnOut] = -1;
   }
   double nwValue = simplex_info.workValue_[columnOut];
   double vrDual = simplex_info.workDual_[columnOut];
@@ -2157,7 +2445,7 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
   //  if (abs(nwValue))
   //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
   //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
-  //			   columnOut, basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb,
+  //			   columnOut, simplex_basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb,
   //nwValue, vrDual, dlDualObjectiveValue);
   simplex_info.updatedDualObjectiveValue += dlDualObjectiveValue;
   simplex_info.update_count++;
@@ -2190,7 +2478,7 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
 void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsBasis &basis = highs_model_object.basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsScale &scale = highs_model_object.scale_;
   if (simplex_info.solution_status != SimplexSolutionStatus::OPTIMAL)
     return;
@@ -2207,13 +2495,13 @@ void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
   // variables which are basic
   vector<double> value = simplex_info.workValue_;
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-    value[basis.basicIndex_[iRow]] = simplex_info.baseValue_[iRow];
+    value[simplex_basis.basicIndex_[iRow]] = simplex_info.baseValue_[iRow];
 
   // Copy the values of (nonbasic) dual variables and zero values of dual
   // variables which are basic
   vector<double> dual = simplex_info.workDual_;
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-    dual[basis.basicIndex_[iRow]] = 0;
+    dual[simplex_basis.basicIndex_[iRow]] = 0;
 
   // Allocate and zero values of row primal activites and column dual activities
   // to check the residuals
@@ -2295,14 +2583,14 @@ void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
     unsclColUpper *= unsclColUpper == +inf ? 1 : scale.col_[iCol];
     // Determine the column primal values given nonbasicMove and the bounds -
     // and check the dual residual errors and infeasibilities
-    if (basis.nonbasicFlag_[iCol]) {
+    if (simplex_basis.nonbasicFlag_[iCol]) {
       // Nonbasic variable - check that the value array is correct given
       // nonbasicMove and the bounds
-      if (basis.nonbasicMove_[iCol] == NONBASIC_MOVE_UP) {
+      if (simplex_basis.nonbasicMove_[iCol] == NONBASIC_MOVE_UP) {
         // At lower bound
         sclColValue = simplex_lp.colLower_[iCol];
         sclColDuIfs = max(-dual[iCol], 0.);
-      } else if (basis.nonbasicMove_[iCol] == NONBASIC_MOVE_DN) {
+      } else if (simplex_basis.nonbasicMove_[iCol] == NONBASIC_MOVE_DN) {
         // At upper bound
         sclColValue = simplex_lp.colUpper_[iCol];
         sclColDuIfs = max(dual[iCol], 0.);
@@ -2435,7 +2723,7 @@ void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
     if (rpCol) {
       numRpCol++;
       printf("\nCol %3d: [Fg = %2d; Mv = %2d] Scl = %11.4g\n", iCol,
-             basis.nonbasicFlag_[iCol], basis.nonbasicMove_[iCol],
+             simplex_basis.nonbasicFlag_[iCol], simplex_basis.nonbasicMove_[iCol],
              scale.col_[iCol]);
       printf("Scl   [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: "
              "%11.4g)\n",
@@ -2508,13 +2796,13 @@ void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
     unsclRowUpper *= unsclRowUpper == +inf ? 1 : scale.row_[iRow];
     // Determine the row primal values given nonbasicMove and the bounds - and
     // check the dual residual errors and infeasibilities
-    if (basis.nonbasicFlag_[simplex_lp.numCol_ + iRow]) {
+    if (simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow]) {
       // Nonbasic variable
-      if (basis.nonbasicMove_[simplex_lp.numCol_ + iRow] == NONBASIC_MOVE_DN) {
+      if (simplex_basis.nonbasicMove_[simplex_lp.numCol_ + iRow] == NONBASIC_MOVE_DN) {
         // At lower bound
         sclRowValue = simplex_lp.rowLower_[iRow];
         sclRowDuIfs = max(dual[simplex_lp.numCol_ + iRow], 0.);
-      } else if (basis.nonbasicMove_[simplex_lp.numCol_ + iRow] ==
+      } else if (simplex_basis.nonbasicMove_[simplex_lp.numCol_ + iRow] ==
                  NONBASIC_MOVE_UP) {
         // At upper bound
         sclRowValue = simplex_lp.rowUpper_[iRow];
@@ -2644,8 +2932,8 @@ void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
     if (rpRow) {
       numRpRow++;
       printf("Row %3d: [Fg = %2d; Mv = %2d] Scl = %11.4g\n", iRow,
-             basis.nonbasicFlag_[simplex_lp.numCol_ + iRow],
-             basis.nonbasicMove_[simplex_lp.numCol_ + iRow], scale.row_[iRow]);
+             simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow],
+             simplex_basis.nonbasicMove_[simplex_lp.numCol_ + iRow], scale.row_[iRow]);
       printf("Scl   [%11.4g, %11.4g, %11.4g] (Pr: %11.4g; Du: %11.4g; Rs: "
              "%11.4g)\n",
              simplex_lp.rowLower_[iRow], sclRowValue, simplex_lp.rowUpper_[iRow],
@@ -2702,290 +2990,4 @@ void report_iteration_count_dual_objective_value(
   HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", iteration_count,
                     dual_objective_value, i_v);
 }
-
-void add_cols_to_lp_vectors(HighsLp &lp, int XnumNewCol,
-			    const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
-  assert(XnumNewCol >= 0);
-  if (XnumNewCol == 0) return;
-  int newNumCol = lp.numCol_ + XnumNewCol;
-  lp.colCost_.resize(newNumCol);
-  lp.colLower_.resize(newNumCol);
-  lp.colUpper_.resize(newNumCol);
-
-  for (int col = 0; col < XnumNewCol; col++) {
-    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
-    lp.colLower_[lp.numCol_ + col] = XcolLower[col];
-    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
-  }
-}
-
-void add_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
-			   int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
-  assert(XnumNewCol >= 0);
-  assert(XnumNewNZ >= 0);
-  if (XnumNewCol == 0) return;
-  int newNumCol = lp.numCol_ + XnumNewCol;
-  lp.Astart_.resize(newNumCol + 1);
-  for (int col = 0; col < XnumNewCol; col++) {
-    lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
-  }
-  
-  // Determine the current number of nonzeros
-  int currentNumNZ = lp.Astart_[lp.numCol_];
-  
-  // Determine the new number of nonzeros and resize the column-wise matrix
-  // arrays
-  int newNumNZ = currentNumNZ + XnumNewNZ;
-  lp.Aindex_.resize(newNumNZ);
-  lp.Avalue_.resize(newNumNZ);
-  
-  // Add the new columns
-  for (int col = 0; col < XnumNewCol; col++) {
-    lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
-  }
-  lp.Astart_[lp.numCol_ + XnumNewCol] = newNumNZ;
-  
-  for (int el = 0; el < XnumNewNZ; el++) {
-    int row = XAindex[el];
-    assert(row >= 0);
-    assert(row < lp.numRow_);
-    lp.Aindex_[currentNumNZ + el] = row;
-    lp.Avalue_[currentNumNZ + el] = XAvalue[el];
-  }
-}
-
-void add_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
-			    const double *XrowLower, const double *XrowUpper) {
-  assert(XnumNewRow >= 0);
-  if (XnumNewRow == 0) return;
-  int newNumRow = lp.numRow_ + XnumNewRow;
-  lp.rowLower_.resize(newNumRow);
-  lp.rowUpper_.resize(newNumRow);
-
-  for (int row = 0; row < XnumNewRow; row++) {
-    lp.rowLower_[lp.numRow_ + row] = XrowLower[row];
-    lp.rowUpper_[lp.numRow_ + row] = XrowUpper[row];
-  }
-}
-
-void add_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
-			   int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
-  assert(XnumNewRow >= 0);
-  assert(XnumNewNZ >= 0);
-  // Check that nonzeros aren't being added to a matrix with no columns
-  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
-  if (XnumNewRow == 0) return;
-  int newNumRow = lp.numRow_ + XnumNewRow;
-
-  // NB SCIP doesn't have XARstart[XnumNewRow] defined, so have to use XnumNewNZ for last
-  // entry
-  if (XnumNewNZ == 0) return;
-  int currentNumNZ = lp.Astart_[lp.numCol_];
-  vector<int> Alength;
-  Alength.assign(lp.numCol_, 0);
-  for (int el = 0; el < XnumNewNZ; el++) {
-    int col = XARindex[el];
-    //      printf("El %2d: adding entry in column %2d\n", el, col); 
-    assert(col >= 0);
-    assert(col < lp.numCol_);
-    Alength[col]++;
-  }
-  // Determine the new number of nonzeros and resize the column-wise matrix arrays
-  int newNumNZ = currentNumNZ + XnumNewNZ;
-  lp.Aindex_.resize(newNumNZ);
-  lp.Avalue_.resize(newNumNZ);
-
-  // Add the new rows
-  // Shift the existing columns to make space for the new entries
-  int nwEl = newNumNZ;
-  for (int col = lp.numCol_ - 1; col >= 0; col--) {
-    // printf("Column %2d has additional length %2d\n", col, Alength[col]);
-    int Astart_Colp1 = nwEl;
-    nwEl -= Alength[col];
-    // printf("Shift: nwEl = %2d\n", nwEl);
-    for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
-      nwEl--;
-      // printf("Shift: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
-      // nwEl, el, lp.Aindex_[el]);
-      lp.Aindex_[nwEl] = lp.Aindex_[el];
-      lp.Avalue_[nwEl] = lp.Avalue_[el];
-    }
-    lp.Astart_[col + 1] = Astart_Colp1;
-  }
-  // printf("After shift: nwEl = %2d\n", nwEl);
-  assert(nwEl == 0);
-  // util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
-
-  // Insert the new entries
-  for (int row = 0; row < XnumNewRow; row++) {
-    int fEl = XARstart[row];
-    int lEl = (row < XnumNewRow - 1 ? XARstart[row + 1] : XnumNewNZ) - 1;
-    for (int el = fEl; el <= lEl; el++) {
-      int col = XARindex[el];
-      nwEl = lp.Astart_[col + 1] - Alength[col];
-      Alength[col]--;
-      // printf("Insert: row = %2d; col = %2d; lp.Astart_[col+1]-Alength[col] =
-      // %2d; Alength[col] = %2d; nwEl = %2d\n", row, col,
-      // lp.Astart_[col+1]-Alength[col], Alength[col], nwEl);
-      assert(nwEl >= 0);
-      assert(el >= 0);
-      // printf("Insert: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
-      // nwEl, el, lp.Aindex_[el]);
-      lp.Aindex_[nwEl] = lp.numRow_ + row;
-      lp.Avalue_[nwEl] = XARvalue[el];
-    }
-  }
-}
-
-void extend_basis_with_nonbasic_cols(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
-  // Add nonbasic structurals
-  if (XnumNewCol == 0) return;
-  int newNumCol = lp.numCol_ + XnumNewCol;
-  int newNumTot = newNumCol + lp.numRow_;
-  basis.nonbasicFlag_.resize(newNumTot);
-  // Shift the row data in basicIndex and nonbasicFlag if necessary
-  for (int row = lp.numRow_ - 1; row >= 0; row--) {
-    basis.basicIndex_[row] += XnumNewCol;
-    basis.nonbasicFlag_[newNumCol + row] = basis.nonbasicFlag_[lp.numCol_ + row];
-  }
-  // Make any new columns nonbasic
-  for (int col = lp.numCol_; col < newNumCol; col++) {
-    basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
-  }
-}
-
-void extend_basis_with_basic_rows(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
-  // Add basic logicals
-  if (XnumNewRow == 0) return;
-  int newNumRow = lp.numRow_ + XnumNewRow;
-  basis.basicIndex_.resize(newNumRow);
-  // Make any new rows basic
-  for (int row = lp.numRow_; row < newNumRow; row++) {
-    int var = lp.numCol_ + row;
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
-    basis.basicIndex_[row] = var;
-  }
-}
-
-bool nonbasic_flag_basic_index_ok(HighsLp &lp, HighsBasis &basis) {
-  int numTot = lp.numCol_ + lp.numRow_;
-  int num_basic_variables = 0;
-  for (int var = 0; var < numTot; var++) if (!basis.nonbasicFlag_[var]) num_basic_variables++;
-  assert(num_basic_variables == lp.numRow_);
-  if (num_basic_variables != lp.numRow_) return false;
-  for (int row = 0; row < lp.numRow_; row++) {
-    int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
-    assert(!flag);
-    if (flag) return false;
-  }
-  return true;
-}
-
-void del_cols_from_lp_vectors(HighsLp &lp, int XfromCol, int XtoCol) {
-  assert(XfromCol >= 0);
-  assert(XtoCol < lp.numCol_);
-  assert(XfromCol <= XtoCol);
-
-  int numDeleteCol = XtoCol - XfromCol + 1;
-  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
-  //
-  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns
-  // need be shifted. However, this implies lp.numCol_-numDeleteCol =
-  // XfromCol, in which case the loop is vacuous
-  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
-    lp.colCost_[col] = lp.colCost_[col + numDeleteCol];
-    lp.colLower_[col] = lp.colLower_[col + numDeleteCol];
-    lp.colUpper_[col] = lp.colUpper_[col + numDeleteCol];
-  }
-}
-
-void del_cols_from_lp_matrix(HighsLp &lp, int XfromCol, int XtoCol) {
-  assert(XfromCol >= 0);
-  assert(XtoCol < lp.numCol_);
-  assert(XfromCol <= XtoCol);
-
-  int numDeleteCol = XtoCol - XfromCol + 1;
-  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
-  //
-  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns need be shifted
-  // and the loops are vacuous
-  int elOs = lp.Astart_[XfromCol];
-  int numDeleteEl = lp.Astart_[XtoCol + 1] - elOs;
-  for (int el = lp.Astart_[XtoCol + 1]; el < lp.Astart_[lp.numCol_]; el++) {
-    lp.Aindex_[el - numDeleteEl] = lp.Aindex_[el];
-    lp.Avalue_[el - numDeleteEl] = lp.Avalue_[el];
-  }
-  for (int col = XfromCol; col <= lp.numCol_ - numDeleteCol; col++) {
-    lp.Astart_[col] = lp.Astart_[col + numDeleteCol] - numDeleteEl;
-  }
-
-}
-
-void del_rows_from_lp_vectors(HighsLp &lp, int XfromRow, int XtoRow) {
-  assert(XfromRow >= 0);
-  assert(XtoRow < lp.numRow_);
-  assert(XfromRow <= XtoRow);
-
-  int numDeleteRow = XtoRow - XfromRow + 1;
-  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
-  //
-  // Trivial case is XtoRow = lp.numRow_-1, in which case no rows
-  // need be shifted. However, this implies lp.numRow_-numDeleteRow =
-  // XfromRow, in which case the loop is vacuous
-  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
-    lp.rowLower_[row] = lp.rowLower_[row + numDeleteRow];
-    lp.rowUpper_[row] = lp.rowUpper_[row + numDeleteRow];
-  }
-}
-
-void del_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
-  assert(XfromRow >= 0);
-  assert(XtoRow < lp.numRow_);
-  assert(XfromRow <= XtoRow);
-
-  int numDeleteRow = XtoRow - XfromRow + 1;
-  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
-
-  int nnz = 0;
-  for (int col = 0; col < lp.numCol_; col++) {
-    int fmEl = lp.Astart_[col];
-    lp.Astart_[col] = nnz;
-    for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
-      int row = lp.Aindex_[el];
-      if (row < XfromRow || row > XtoRow) {
-	if (row < XfromRow) {
-	  lp.Aindex_[nnz] = row;
-	} else {
-	  lp.Aindex_[nnz] = row - numDeleteRow;
-	}
-	lp.Avalue_[nnz] = lp.Avalue_[el];
-	nnz++;
-      }
-    }
-  }
-  lp.Astart_[lp.numCol_] = nnz;
-}
-
-#ifdef HiGHSDEV
-void report_basis(HighsLp &lp, HighsBasis &basis) {
-  if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
-  for (int col = 0; col < lp.numCol_; col++) {
-    int var = col;
-    if (basis.nonbasicFlag_[var])
-      printf("%6d %6d        %6d\n", var, col, basis.nonbasicFlag_[var]);
-    // basis.nonbasicMove_[var]);
-    else
-      printf("%6d %6d %6d\n", var, col, basis.nonbasicFlag_[var]);
-  }
-  if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
-  for (int row = 0; row < lp.numRow_; row++) {
-    int var = lp.numCol_ + row;
-    if (basis.nonbasicFlag_[var])
-      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
-    // basis.nonbasicMove_[var]);
-    else
-      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
-  }
-}
-#endif
 

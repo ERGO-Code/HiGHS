@@ -385,7 +385,7 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   int newNumCol = lp.numCol_ + XnumNewCol;
 
@@ -399,7 +399,7 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
 #ifdef HiGHSDEV
   // Check that if there is no simplex LP then there is no basis, matrix, scaling
   if (!valid_simplex_lp) {
-    assert(!simplex_basis.valid);
+    assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
@@ -425,7 +425,7 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
 
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) extend_basis_with_nonbasic_cols(lp, basis, newNumCol);
-  //  if (valid_simplex_basis) extend_basis_with_nonbasic_cols(simplex_lp, simplex_basis, newNumCol);
+  if (valid_simplex_basis) extend_basis_with_nonbasic_cols(simplex_lp, simplex_basis, newNumCol);
 
   // Deduce the consequences of adding new columns
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
@@ -441,9 +441,9 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    bool simplex_basisOK = true;//nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
+    bool simplex_basisOK = nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
     assert(simplex_basisOK);
-    //    report_basis(simplex_lp, simplex_basis);
+    report_basis(simplex_lp, simplex_basis);
   }
 #endif
 
@@ -458,7 +458,7 @@ void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   assert(XfromCol >= 0);
   assert(XtoCol < lp.numCol_);
@@ -498,7 +498,7 @@ void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   simplex_lp_status.has_matrix_col_wise = false;
   simplex_lp_status.has_matrix_row_wise = false;
   basis.valid_ = false;
-  //  simplex_basis.valid_ = false;
+  simplex_basis.valid_ = false;
   
 }
 
@@ -551,7 +551,7 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   assert(XnumNewRow >= 0);
   assert(XnumNewNZ >= 0);
@@ -571,7 +571,7 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
 #ifdef HiGHSDEV
   // Check that if there is no simplex LP then there is no basis, matrix, scaling
   if (!valid_simplex_lp) {
-    assert(!simplex_basis.valid);
+    assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
@@ -597,7 +597,7 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
 
   // Update the basis correponding to new nonbasic rows
   if (valid_basis) extend_basis_with_basic_rows(lp, basis, newNumRow);
-  //  if (valid_simplex_basis) extend_basis_with_basic_rows(simplex_lp, simplex_basis, newNumRow);
+  if (valid_simplex_basis) extend_basis_with_basic_rows(simplex_lp, simplex_basis, newNumRow);
 
   // Deduce the consequences of adding new rows
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
@@ -613,9 +613,9 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    bool simplex_basisOK = true;//nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
+    bool simplex_basisOK = nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
     assert(simplex_basisOK);
-    //    report_basis(simplex_lp, simplex_basis);
+    report_basis(simplex_lp, simplex_basis);
   }
 #endif
 
@@ -628,11 +628,9 @@ void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   printf("Called model.util_deleteRows(XfromRow=%d, XtoRow=%d)\n", XfromRow, XtoRow);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  //  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   assert(XfromRow >= 0);
   assert(XtoRow < lp.numRow_);

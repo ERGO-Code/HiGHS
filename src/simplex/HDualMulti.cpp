@@ -217,7 +217,7 @@ void HDual::minor_chooseRow() {
 
     // Assign useful variables
     rowOut = workChoice->rowOut;
-    columnOut = workHMO.basis_.basicIndex_[rowOut];
+    columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
@@ -241,7 +241,7 @@ void HDual::minor_chooseRow() {
 void HDual::minor_update() {
   // Minor update - store roll back data
   MFinish *Fin = &multi_finish[multi_nFinish];
-  Fin->moveIn = workHMO.basis_.nonbasicMove_[columnIn];
+  Fin->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
   Fin->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
   Fin->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
@@ -695,11 +695,11 @@ void HDual::major_rollback() {
     MFinish *Fin = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    workHMO.basis_.nonbasicMove_[Fin->columnIn] = Fin->moveIn;
-    workHMO.basis_.nonbasicFlag_[Fin->columnIn] = 1;
-    workHMO.basis_.nonbasicMove_[Fin->columnOut] = 0;
-    workHMO.basis_.nonbasicFlag_[Fin->columnOut] = 0;
-    workHMO.basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
+    workHMO.simplex_basis_.nonbasicMove_[Fin->columnIn] = Fin->moveIn;
+    workHMO.simplex_basis_.nonbasicFlag_[Fin->columnIn] = 1;
+    workHMO.simplex_basis_.nonbasicMove_[Fin->columnOut] = 0;
+    workHMO.simplex_basis_.nonbasicFlag_[Fin->columnOut] = 0;
+    workHMO.simplex_basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
 
     // 2. Roll back matrix
     update_matrix(workHMO, Fin->columnOut, Fin->columnIn);// model->updateMatrix(Fin->columnOut, Fin->columnIn);
