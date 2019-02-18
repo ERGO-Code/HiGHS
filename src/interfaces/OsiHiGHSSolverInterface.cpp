@@ -181,3 +181,27 @@ const double *OsiHiGHSSolverInterface::getColUpper() const {
     return &(this->lp->colUpper_[0]);
   }
 }
+
+const double *OsiHiGHSSolverInterface::getRowLower() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->rowLower_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getRowUpper() const {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->rowUpper_[0]);
+  }
+}
+
+const double *OsiHiGHSSolverInterface::getObjCoefficients() {
+  if (this->lp == NULL) {
+    return NULL;
+  } else {
+    return &(this->lp->colCost_[0]);
+  }
+}

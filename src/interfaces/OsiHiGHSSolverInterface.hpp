@@ -129,13 +129,13 @@ public:
    virtual const double* getRowRange() const { return NULL; }
 
    /// Get pointer to array[getNumRows()] of row lower bounds
-   virtual const double* getRowLower() const { return NULL; }
+   virtual const double* getRowLower() const;
 
    /// Get pointer to array[getNumRows()] of row upper bounds
-   virtual const double* getRowUpper() const { return NULL; }
+   virtual const double* getRowUpper() const;
 
    /// Get pointer to array[getNumCols()] of objective function coefficients
-   virtual const double* getObjCoefficients() const { return NULL; }
+   virtual const double* getObjCoefficients();
 
    /// Get objective function sense (1 for min (default), -1 for max)
    virtual double getObjSense() const  { return 1; }
