@@ -33,6 +33,7 @@ add_test(NAME unit-test-build
                  --target unit_tests
          )
 
+
 # Avoid that several build jobs try to concurretly build.
 set_tests_properties(unit-test-build
                      PROPERTIES
@@ -43,6 +44,27 @@ add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
+
+if (OSI) 
+
+add_test(NAME osi-unit-test-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${CMAKE_BINARY_DIR}
+                 --target osi_unit_tests
+         )
+         
+# Avoid that several build jobs try to concurretly build.
+set_tests_properties(osi-unit-test-build
+PROPERTIES
+RESOURCE_LOCK osiunittestbin)
+
+# create a binary running all the tests in the executable
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests --success)
+set_tests_properties(osi_unit_tests_all
+PROPERTIES
+DEPENDS osi-unit-test-build)
+
+endif()
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all
