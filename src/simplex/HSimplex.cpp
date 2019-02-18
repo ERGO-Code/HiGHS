@@ -2363,7 +2363,7 @@ compute_primal_objective_function_value(HighsModelObject &highs_model_object) {
 }
 
 // Record the shift in the cost of a particular column
-double shift_cost(HighsModelObject &highs_model_object, int iCol,
+void shift_cost(HighsModelObject &highs_model_object, int iCol,
                   double amount) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   simplex_info.costs_perturbed = 1;
@@ -2372,7 +2372,7 @@ double shift_cost(HighsModelObject &highs_model_object, int iCol,
 }
 
 // Undo the shift in the cost of a particular column
-double shift_back(HighsModelObject &highs_model_object, int iCol) {
+void shift_back(HighsModelObject &highs_model_object, int iCol) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   simplex_info.workDual_[iCol] -= simplex_info.workShift_[iCol];
   simplex_info.workShift_[iCol] = 0;
