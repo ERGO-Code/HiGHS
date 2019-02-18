@@ -91,8 +91,8 @@ set(headers
 add_library(libhighs ${sources})
 
 include_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/include/coin)
-link_directories(${CMAKE_SOURCE_DIR}/../Coin-Osi/lib)
-target_link_libraries(libhighs libOsi)
+find_library(OSI_LIB Osi HINTS ${CMAKE_SOURCE_DIR}/../Coin-Osi/lib)
+target_link_libraries(libhighs PUBLIC ${OSI_LIB})
 
 # put version information into shared library file
 if(${BUILD_SHARED_LIBS})
