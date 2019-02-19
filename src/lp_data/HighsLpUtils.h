@@ -15,8 +15,9 @@
 #define LP_DATA_HIGHSLPUTILS_H_
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HighsStatus.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
 
 class HighsLp;
 
@@ -59,49 +60,97 @@ void getLpMatrixCoefficient(
 			    double *val
 			    );
 
+int add_lp_cols(
+		HighsLp& lp,
+		int XnumNewCol,
+		const double *XcolCost,
+		const double *XcolLower,
+		const double *XcolUpper,
+		int XnumNewNZ,
+		const int *XAstart,
+		const int *XAindex,
+		const double *XAvalue,
+		const HighsOptions& options,
+		const bool force = false
+		);
+
 int validate_col_bounds(
 			int XnumCol,
 			const double* XcolLower,
-			const double* XcolUpper
+			const double* XcolUpper,
+			double infinite_bound,
+			const bool force = false
 			);
 
-void filter_col_bounds(
+void add_cols_to_lp_vectors(
+			    HighsLp &lp,
+			    int XnumNewCol,
+			    const double *XcolCost,
+			    const double *colLower,
+			    const double *XcolUpper
+			    );
+
+int filter_col_bounds(
 		       HighsLp& lp,
 		       int XfromCol,
 		       int XtoCol,
-		       const double infinite_bound
+		       double infinite_bound
 		       );
 
 int validate_row_bounds(
 			int XnumRow,
 			const double* XrowLower,
-			const double* XrowUpper
+			const double* XrowUpper,
+			double infinite_bound,
+			const bool force = false
 			);
 
-void filter_row_bounds(
+void add_rows_to_lp_vectors(HighsLp &lp,
+			    int XnumNewRow,
+			    const double *XrowLower,
+			    const double *XrowUpper
+			    );
+
+int filter_row_bounds(
 		       HighsLp& lp,
 		       int XfromRow,
 		       int XtoRow,
-		       const double infinite_bound
+		       double infinite_bound
 		       );
 
-int validate_matrix(
+int validate_matrix_indices(
 		     int XnumRow,
 		     int XnumCol,
 		     int XnumNZ,
 		     const int* XAstart,
-		     const int* XAindex,
-		     const double* XAvalue
+		     const int* XAindex
 		     );
 
-void filter_matrix_values(
+void add_cols_to_lp_matrix(
+			   HighsLp &lp,
+			   int XnumNewCol,
+			   int XnumNewNZ,
+			   const int *XAstart,
+			   const int *XAindex,
+			   const double *XAvalue
+			   );
+
+void add_rows_to_lp_matrix(HighsLp &lp,
+			   int XnumNewRow,
+			   int XnumNewNZ,
+			   const int *XARstart,
+			   const int *XARindex,
+			   const double *XARvalue
+			   );
+
+int filter_matrix_values(
 			  HighsLp& lp,
 			  int XfromCol,
 			  int XtoCol,
 			  double small_matrix_value
 			  );
 
-void filter_row_matrix_values(
+int filter_row_matrix_values(
 			      int XnumRow,
 			      int XnumNZ,
 			      int* XARstart,
@@ -162,6 +211,9 @@ void reportLpColMtx(
 */
 #ifdef HiGHSDEV
 // Analyse the data in an LP problem
-void util_analyseLp(const HighsLp &lp, const char* message);
+void util_analyseLp(
+		    const HighsLp &lp,
+		    const char* message
+		    );
 #endif
 #endif // LP_DATA_HIGHSLPUTILS_H_

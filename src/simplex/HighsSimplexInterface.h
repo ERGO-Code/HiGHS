@@ -100,26 +100,27 @@ class HighsSimplexInterface {
   /**
    * @brief Add a contiguous set of columns to the model data---making them nonbasic
    */
-  void util_add_cols(
-		     int XnumCol,
-		     const double *XcolCost,
-		     const double *XcolLower,
-		     const double *XcolUpper,
-		     int XnumNZ,
-		     const int *XAstart,
-		     const int *XAindex,
-		     const double *XAvalue
-		     );
-
+  int util_add_cols(
+		    int XnumCol,
+		    const double *XcolCost,
+		    const double *XcolLower,
+		    const double *XcolUpper,
+		    int XnumNZ,
+		    const int *XAstart,
+		    const int *XAindex,
+		    const double *XAvalue,
+		    bool force = false
+		    );
+  
   void util_delete_cols(
 			int XfromCol,
 			int XtoCol
 			);
-
+  
   void util_delete_col_set(
-			  vector<int>& dstat
-			  );
-
+			   vector<int>& dstat
+			   );
+  
   void util_extract_cols(
 			 int XfromCol, int XtoCol,
 			 double* XcolLower,
@@ -135,23 +136,24 @@ class HighsSimplexInterface {
    * @brief Add a contiguous set of rows to the model data---making them basic
    */
   void util_add_rows(
-		     int nrows,
+		     int XnumNewRow,
 		     const double *XrowLower,
 		     const double *XrowUpper,
-		     int nnonz,
+		     int XnumNewNZ,
 		     const int *XARstart,
 		     const int *XARindex,
-		     const double *XARvalue
+		     const double *XARvalue,
+		     bool force = false
 		     );
   void util_delete_rows(
 			int firstrow,
 			int lastrow
 			);
-
+  
   void util_delete_row_set(
-			  vector<int>& dstat
-			  );
-
+			   vector<int>& dstat
+			   );
+  
   void util_extract_rows(
 			 int firstrow,
 			 int lastrow,
@@ -198,7 +200,8 @@ class HighsSimplexInterface {
 // to -Inf for column -k-1
   int change_col_bounds_all(
 			    const double* XcolLower,
-			    const double* XcolUpper
+			    const double* XcolUpper,
+			    bool force = false
 			    );
 
 // Change the bounds for a set of columns
@@ -209,7 +212,8 @@ class HighsSimplexInterface {
 			    int ncols,
 			    const int* XcolBoundIndex,
 			    const double* XcolLowerValues,
-			    const double* XcolUpperValues
+			    const double* XcolUpperValues,
+			    bool force = false
 			    );
 
 // Change the bounds for all rows
@@ -218,7 +222,8 @@ class HighsSimplexInterface {
 // -Inf for row -k-1
   int change_row_bounds_all(
 			    const double* XrowLower,
-			    const double* XrowUpper
+			    const double* XrowUpper,
+			    bool force = false
 			    );
 
 // Change the bounds for a set of rows
@@ -229,7 +234,8 @@ class HighsSimplexInterface {
 			    int nrows,
 			    const int* XrowBoundIndex,
 			    const double* XrowLowerValues,
-			    const double* XrowUpperValues
+			    const double* XrowUpperValues,
+			    bool force = false
 			    );
   
 #ifdef HiGHSDEV

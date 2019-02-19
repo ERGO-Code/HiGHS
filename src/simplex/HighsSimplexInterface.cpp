@@ -372,18 +372,20 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 }
 #endif
 
-void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-					  int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+int HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+					 int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
+					 bool force) {
   assert(XnumNewCol >= 0);
   assert(XnumNewNZ >= 0);
   // ToDo How to check that lp.Astart_[lp.numCol_] exists in util_addCols?
 #ifdef HiGHSDEV
   printf("Called util_add_cols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
 #endif
-
-  if (XnumNewCol == 0) return;
+  int returnCode = 0;
+  if (XnumNewCol == 0) return returnCode;
 
   HighsLp &lp = highs_model_object.lp_;
+  HighsOptions &options = highs_model_object.options_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -407,9 +409,24 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
     assert(!apply_row_scaling);
   }
 #endif
-  // Add columns to LP vectors and matrix
-  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+  // Validate the bounds
+  returnCode = add_lp_cols(lp,
+			   XnumNewCol, XcolCost, XcolLower, XcolUpper,
+			   XnumNewNZ, XAstart, XAindex, XAvalue,
+			   options, force);
+  if (returnCode) return returnCode;
+
+  // Validate the matrix indices
+  returnCode = validate_matrix_indices(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex);
+  if (returnCode) return returnCode;
+
+  // Add columns to LP matrix
   add_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+
+  double small_matrix_value = 1e-8;
+  // Filter the new matrix columns
+  filter_matrix_values(lp, lp.numCol_, newNumCol, small_matrix_value);
+  
   if (valid_simplex_lp) 
     add_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
   if (valid_simplex_matrix) 
@@ -541,7 +558,8 @@ void HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* 
 
 
 void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
-					  int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
+					  int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
+					  bool force) {
   // ToDo How to check that lp.Astart_[lp.numRow_] exists in util_addRows?
 #ifdef HiGHSDEV
   printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
@@ -970,19 +988,19 @@ int HighsSimplexInterface::change_costs_set(int XnumColInSet, const int* XcolCos
   return 0;
 }
 
-int HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper){
+int HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper, bool force){
   assert(XcolLower != NULL);
   assert(XcolUpper != NULL);
 
   HighsLp &lp = highs_model_object.lp_;
-  int returnCode = validate_col_bounds(lp.numCol_, XcolLower, XcolUpper);
+  double infinite_bound = 1e20;
+  int returnCode = validate_col_bounds(lp.numCol_, XcolLower, XcolUpper, infinite_bound, force);
   if (returnCode) return returnCode;
   
   for (int col = 0; col < lp.numCol_; ++col) {
     lp.colLower_[col] = XcolLower[col];
     lp.colUpper_[col] = XcolUpper[col];
   }
-  double infinite_bound = 1e20;// TODO: Have discussion on copy of options in HMO
   filter_col_bounds(lp, 0, lp.numCol_-1, infinite_bound);
 
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -1001,12 +1019,9 @@ int HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const 
   }
   return 0;
 }
-int HighsSimplexInterface::change_col_bounds_set(
-			  int XnumColInSet,
-			  const int* XcolBoundIndex,
-			  const double* XcolLowerValues,
-			  const double* XcolUpperValues
-			  ){
+int HighsSimplexInterface::change_col_bounds_set(int XnumColInSet,
+						 const int* XcolBoundIndex, const double* XcolLowerValues, const double* XcolUpperValues,
+						 bool force) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
@@ -1034,10 +1049,8 @@ int HighsSimplexInterface::change_col_bounds_set(
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
   return 0;
 }
-int HighsSimplexInterface::change_row_bounds_all(
-			  const double* XrowLower,
-			  const double* XrowUpper
-			  ){
+
+int HighsSimplexInterface::change_row_bounds_all(const double* XrowLower, const double* XrowUpper, bool force) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
@@ -1062,8 +1075,8 @@ int HighsSimplexInterface::change_row_bounds_set(
 			  int XnumNewRow,
 			  const int* XrowBoundIndex,
 			  const double* XrowLowerValues,
-			  const double* XrowUpperValues
-			  ){
+			  const double* XrowUpperValues,
+			  bool force) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;

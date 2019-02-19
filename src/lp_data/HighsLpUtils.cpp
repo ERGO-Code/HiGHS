@@ -243,17 +243,65 @@ HighsStatus checkLp(const HighsLp& lp) {
   return HighsStatus::OK;
 }
 
-int validate_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper) {
+int add_lp_cols(HighsLp& lp,
+		int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+		int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
+		const HighsOptions& options, const bool force) {
+  int returnCode = validate_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound, force);
+  if (returnCode && !force) return returnCode;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+  returnCode = filter_col_bounds(lp, lp.numCol_, newNumCol, options.infinite_bound);
+  lp.numCol_ += XnumNewCol;
+  return returnCode;
+}
+
+int validate_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper, double infinite_bound, bool force) {
   assert(XnumCol >= 0);
   if (XnumCol == 0) return 0;
+
+  int returnCode = 0;
   for (int col = 0; col < XnumCol; col++) {
-    if (highs_isInfinity(XcolLower[col])) return col + 1;
-    if (XcolLower[col] > XcolUpper[col]) return XnumCol + col + 1;
-    if (highs_isInfinity(-XcolUpper[col])) return -(col + 1);
+    bool legalLowerBound = XcolLower[col] < infinite_bound;
+    assert(legalLowerBound);
+    if (!legalLowerBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has lower bound of %12g >= %12g = Infinity",
+		      col, XcolLower[col], infinite_bound);
+      if (!returnCode) returnCode = col + 1;
+    }
+    bool legalLowerUpperBound = XcolLower[col] <= XcolUpper[col];
+    if (!legalLowerUpperBound) {
+      HighsLogMessage(HighsMessageType::WARNING, "Col %12d has inconsistent bounds [%12g, %12g]", col, XcolLower[col], XcolUpper[col]);
+      if (!returnCode) returnCode = XnumCol + col + 1;
+    }
+    bool legalUpperBound = XcolUpper[col] > -infinite_bound;
+    assert(legalUpperBound);
+    if (!legalUpperBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has upper bound of %12g <= %12g = -Infinity",
+		      col, XcolUpper[col], -infinite_bound);
+      if (!returnCode) returnCode = -(col + 1);
+    }
+  }
+  return returnCode;
+}
+
+void add_cols_to_lp_vectors(HighsLp &lp, int XnumNewCol,
+			    const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
+  assert(XnumNewCol >= 0);
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  lp.colCost_.resize(newNumCol);
+  lp.colLower_.resize(newNumCol);
+  lp.colUpper_.resize(newNumCol);
+
+  for (int col = 0; col < XnumNewCol; col++) {
+    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
+    lp.colLower_[lp.numCol_ + col] = XcolLower[col];
+    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
   }
 }
 
-void filter_col_bounds(HighsLp& lp, int XfromCol, int XtoCol, const double infinite_bound) {
+int filter_col_bounds(HighsLp& lp, int XfromCol, int XtoCol, const double infinite_bound) {
   assert(XfromCol >= 0);
   assert(XtoCol < lp.numCol_);
   assert(XfromCol <= XtoCol);
@@ -275,19 +323,54 @@ void filter_col_bounds(HighsLp& lp, int XfromCol, int XtoCol, const double infin
   if (numChangedUpperBounds)
     HighsLogMessage(HighsMessageType::WARNING, "%12d col upper bounds above %12g interpreted as +Infinity",
 		    numChangedUpperBounds, infinite_bound);
+  int numChangedBounds = numChangedLowerBounds + numChangedUpperBounds;
+  return numChangedBounds;
 }
 
-int validate_row_bounds(int XnumRow, const double* XrowLower, const double* XrowUpper) {
+int validate_row_bounds(int XnumRow, const double* XrowLower, const double* XrowUpper, double infinite_bound) {
   assert(XnumRow >= 0);
   if (XnumRow == 0) return 0;
+
+  int returnCode = 0;
   for (int row = 0; row < XnumRow; row++) {
-    if (highs_isInfinity(XrowLower[row])) return row + 1;
-    if (XrowLower[row] > XrowUpper[row]) return XnumRow + row + 1;
-    if (highs_isInfinity(-XrowUpper[row])) return -(row + 1);
+    bool legalLowerBound = XrowLower[row] < infinite_bound;
+    assert(legalLowerBound);
+    if (!legalLowerBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has lower bound of %12g >= %12g = Infinity",
+		      row, XrowLower[row], infinite_bound);
+      if (!returnCode) returnCode = row + 1;
+    }
+    bool legalLowerUpperBound = XrowLower[row] <= XrowUpper[row];
+    if (!legalLowerUpperBound) {
+      HighsLogMessage(HighsMessageType::WARNING, "Row %12d has inconsistent bounds [%12g, %12g]", row, XrowLower[row], XrowUpper[row]);
+      if (!returnCode) returnCode = XnumRow + row + 1;
+    }
+    bool legalUpperBound = XrowUpper[row] > -infinite_bound;
+    assert(legalUpperBound);
+    if (!legalUpperBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has upper bound of %12g <= %12g = -Infinity",
+		      row, XrowUpper[row], -infinite_bound);
+      if (!returnCode) returnCode = -(row + 1);
+    }
+  }
+  return returnCode;
+}
+
+void add_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
+			    const double *XrowLower, const double *XrowUpper) {
+  assert(XnumNewRow >= 0);
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+  lp.rowLower_.resize(newNumRow);
+  lp.rowUpper_.resize(newNumRow);
+
+  for (int row = 0; row < XnumNewRow; row++) {
+    lp.rowLower_[lp.numRow_ + row] = XrowLower[row];
+    lp.rowUpper_[lp.numRow_ + row] = XrowUpper[row];
   }
 }
 
-void filter_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double infinite_bound) {
+int filter_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double infinite_bound) {
   assert(XfromRow >= 0);
   assert(XtoRow < lp.numRow_);
   assert(XfromRow <= XtoRow);
@@ -309,6 +392,8 @@ void filter_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double infinite_bo
   if (numChangedUpperBounds)
     HighsLogMessage(HighsMessageType::WARNING, "%12d row upper bounds above %12g interpreted as +Infinity",
 		    numChangedUpperBounds, infinite_bound);
+  int numChangedBounds = numChangedLowerBounds + numChangedUpperBounds;
+  return numChangedBounds;
 }
 
 int validate_matrix_indices(int XnumRow, int XnumCol, int XnumNZ, const int* XAstart, const int* XAindex) {
@@ -318,6 +403,8 @@ int validate_matrix_indices(int XnumRow, int XnumCol, int XnumNZ, const int* XAs
   if (XnumRow == 0) return 0;
   if (XnumCol == 0) return 0;
   if (XnumNZ == 0) return 0;
+
+  int returnCode = 0;
   vector <int> colVec;
   colVec.assign(XnumRow, 0);
   for (int col = 0; col < XnumCol; col++) {
@@ -328,21 +415,155 @@ int validate_matrix_indices(int XnumRow, int XnumCol, int XnumNZ, const int* XAs
     } else {
       toEl = XnumNZ-1;
     }
-    if (fromEl > toEl+1 || fromEl > XnumNZ || fromEl < 0) return -(XnumCol + col + 1);
+    bool legalFromEl = fromEl >=0 && fromEl <= toEl+1 && fromEl <= XnumNZ;
+    assert(legalFromEl);
+    if (!legalFromEl) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal start %12d wrt 0, next start %12d or number of nonzeros %12d",
+		      col, fromEl, toEl, XnumNZ);
+      if (!returnCode) returnCode = -(XnumCol + col + 1);
+    }
     for (int el = fromEl; el <= toEl; el++) {
       int row = XAindex[el];
-      if (row < 0) return col + 1;
-      if (row >= XnumRow) return -(col + 1);
-      if (colVec[row]) return XnumCol + col + 1;
-    }
+      bool legalRow = row >= 0;
+      assert(legalRow);
+      if (!legalRow) {
+	HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal index %12d", col, row);
+	if (!returnCode) returnCode = col + 1;
+      }
+      legalRow = row < XnumRow;
+      assert(legalRow);
+      if (!legalRow) {
+	HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal index %12d >= %12g", col, row, XnumRow);
+	if (!returnCode) returnCode = -(col + 1);
+      }
+      legalRow = colVec[row] == 0;
+      assert(legalRow);
+      if (!legalRow) {
+	  HighsLogMessage(HighsMessageType::ERROR, "Col %12d has duplicate index %12d", col, row);	  
+	  if (!returnCode) returnCode = XnumCol + col + 1;
+	}
+      }
     for (int el = XAstart[col]; el <= toEl; el++) colVec[XAindex[el]] = 0;
   }
   int col = XnumCol;
   int fromEl = XAstart[col];
-  if (fromEl > XnumNZ || fromEl < 0) return -(XnumCol + col + 1);
+  bool legalFromEl = fromEl >=0 && fromEl <= XnumNZ;
+  assert(legalFromEl);
+  if (!legalFromEl) {
+    HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal start %12d wrt 0 or number of nonzeros %12d",
+		    col, fromEl, XnumNZ);
+    if (!returnCode) returnCode = -(XnumCol + col + 1);
+  }
+  return returnCode;
+
 }
 
-void filter_matrix_values(HighsLp& lp, int XfromCol, int XtoCol, double small_matrix_value) {
+
+void add_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
+			   int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+  assert(XnumNewCol >= 0);
+  assert(XnumNewNZ >= 0);
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  lp.Astart_.resize(newNumCol + 1);
+  for (int col = 0; col < XnumNewCol; col++) {
+    lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
+  }
+  
+  // Determine the current number of nonzeros
+  int currentNumNZ = lp.Astart_[lp.numCol_];
+  
+  // Determine the new number of nonzeros and resize the column-wise matrix
+  // arrays
+  int newNumNZ = currentNumNZ + XnumNewNZ;
+  lp.Aindex_.resize(newNumNZ);
+  lp.Avalue_.resize(newNumNZ);
+  
+  // Add the new columns
+  for (int col = 0; col < XnumNewCol; col++) {
+    lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
+  }
+  lp.Astart_[lp.numCol_ + XnumNewCol] = newNumNZ;
+  
+  for (int el = 0; el < XnumNewNZ; el++) {
+    int row = XAindex[el];
+    assert(row >= 0);
+    assert(row < lp.numRow_);
+    lp.Aindex_[currentNumNZ + el] = row;
+    lp.Avalue_[currentNumNZ + el] = XAvalue[el];
+  }
+}
+
+void add_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
+			   int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
+  // Check that nonzeros aren't being added to a matrix with no columns
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  if (XnumNewRow == 0) return;
+  int newNumRow = lp.numRow_ + XnumNewRow;
+
+  // NB SCIP doesn't have XARstart[XnumNewRow] defined, so have to use XnumNewNZ for last
+  // entry
+  if (XnumNewNZ == 0) return;
+  int currentNumNZ = lp.Astart_[lp.numCol_];
+  vector<int> Alength;
+  Alength.assign(lp.numCol_, 0);
+  for (int el = 0; el < XnumNewNZ; el++) {
+    int col = XARindex[el];
+    //      printf("El %2d: adding entry in column %2d\n", el, col); 
+    assert(col >= 0);
+    assert(col < lp.numCol_);
+    Alength[col]++;
+  }
+  // Determine the new number of nonzeros and resize the column-wise matrix arrays
+  int newNumNZ = currentNumNZ + XnumNewNZ;
+  lp.Aindex_.resize(newNumNZ);
+  lp.Avalue_.resize(newNumNZ);
+
+  // Add the new rows
+  // Shift the existing columns to make space for the new entries
+  int nwEl = newNumNZ;
+  for (int col = lp.numCol_ - 1; col >= 0; col--) {
+    // printf("Column %2d has additional length %2d\n", col, Alength[col]);
+    int Astart_Colp1 = nwEl;
+    nwEl -= Alength[col];
+    // printf("Shift: nwEl = %2d\n", nwEl);
+    for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
+      nwEl--;
+      // printf("Shift: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
+      // nwEl, el, lp.Aindex_[el]);
+      lp.Aindex_[nwEl] = lp.Aindex_[el];
+      lp.Avalue_[nwEl] = lp.Avalue_[el];
+    }
+    lp.Astart_[col + 1] = Astart_Colp1;
+  }
+  // printf("After shift: nwEl = %2d\n", nwEl);
+  assert(nwEl == 0);
+  // util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
+
+  // Insert the new entries
+  for (int row = 0; row < XnumNewRow; row++) {
+    int fEl = XARstart[row];
+    int lEl = (row < XnumNewRow - 1 ? XARstart[row + 1] : XnumNewNZ) - 1;
+    for (int el = fEl; el <= lEl; el++) {
+      int col = XARindex[el];
+      nwEl = lp.Astart_[col + 1] - Alength[col];
+      Alength[col]--;
+      // printf("Insert: row = %2d; col = %2d; lp.Astart_[col+1]-Alength[col] =
+      // %2d; Alength[col] = %2d; nwEl = %2d\n", row, col,
+      // lp.Astart_[col+1]-Alength[col], Alength[col], nwEl);
+      assert(nwEl >= 0);
+      assert(el >= 0);
+      // printf("Insert: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
+      // nwEl, el, lp.Aindex_[el]);
+      lp.Aindex_[nwEl] = lp.numRow_ + row;
+      lp.Avalue_[nwEl] = XARvalue[el];
+    }
+  }
+}
+
+int filter_matrix_values(HighsLp& lp, int XfromCol, int XtoCol, double small_matrix_value) {
   assert(XfromCol >= 0);
   assert(XtoCol < lp.numCol_);
   assert(XfromCol <= XtoCol);
@@ -377,14 +598,15 @@ void filter_matrix_values(HighsLp& lp, int XfromCol, int XtoCol, double small_ma
     HighsLogMessage(HighsMessageType::WARNING, "%12d matrix values less than %12g removed",
 		    numRemovedValues, small_matrix_value);
   }
+  return numRemovedValues;
 }
 
-void filter_row_matrix_values(int XnumRow, int XnumNZ, int* XARstart, int* XARindex, double* XARvalue, double small_matrix_value) {
+int filter_row_matrix_values(int XnumRow, int XnumNZ, int* XARstart, int* XARindex, double* XARvalue, double small_matrix_value) {
   assert(XnumRow >= 0);
   assert(XnumNZ >= 0);
   assert(small_matrix_value >=0);
-  if (XnumRow == 0) return;
-  if (XnumNZ == 0) return;
+  if (XnumRow == 0) return 0;
+  if (XnumNZ == 0) return 0;
   int numRemovedValues = 0;
   int numTrueNZ = 0;
   for (int row = 0; row < XnumRow; row++) {
@@ -404,6 +626,7 @@ void filter_row_matrix_values(int XnumRow, int XnumNZ, int* XARstart, int* XARin
   if (numRemovedValues) 
     HighsLogMessage(HighsMessageType::WARNING, "%12d matrix values less than %12g removed",
 		    numRemovedValues, small_matrix_value);
+  return numRemovedValues;
 }
 
 

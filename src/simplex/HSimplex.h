@@ -20,37 +20,6 @@
 
 // Methods not requiring HighsModelObject 
 
-void add_cols_to_lp_vectors(
-			    HighsLp &lp,
-			    int XnumNewCol,
-			    const double *XcolCost,
-			    const double *colLower,
-			    const double *XcolUpper
-			    );
-
-void add_cols_to_lp_matrix(
-			   HighsLp &lp,
-			   int XnumNewCol,
-			   int XnumNewNZ,
-			   const int *XAstart,
-			   const int *XAindex,
-			   const double *XAvalue
-			   );
-
-void add_rows_to_lp_vectors(HighsLp &lp,
-			    int XnumNewRow,
-			    const double *XrowLower,
-			    const double *XrowUpper
-			    );
-
-void add_rows_to_lp_matrix(HighsLp &lp,
-			   int XnumNewRow,
-			   int XnumNewNZ,
-			   const int *XARstart,
-			   const int *XARindex,
-			   const double *XARvalue
-			   );
-
 void extend_basis_with_nonbasic_cols(
 				     HighsLp &lp,
 				     HighsBasis &basis,
