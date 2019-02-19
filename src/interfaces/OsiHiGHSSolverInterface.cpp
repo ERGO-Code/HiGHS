@@ -54,87 +54,6 @@ void OsiHiGHSSolverInterface::initialSolve() {
   this->status = this->highs->run(*this->lp);
 };
 
-void OsiHiGHSSolverInterface::loadProblem(
-    const CoinPackedMatrix &matrix, const double *collb, const double *colub,
-    const double *obj, const double *rowlb, const double *rowub) {
-  assert(this->lp == NULL);
-  assert(matrix.isColOrdered());
-
-  this->lp = new HighsLp();
-
-  int numCol = matrix.getNumCols();
-  int numRow = matrix.getNumRows();
-  int nnz = matrix.getNumElements();
-
-  this->lp->numRow_ = numRow;
-  this->lp->numCol_ = numCol;
-  this->lp->nnz_ = nnz;
-
-  // setup HighsLp data structures
-  // TODO: create and use HighsLp construtor for this!!!
-  this->lp->colCost_.resize(numCol);
-  this->lp->colUpper_.resize(numCol);
-  this->lp->colLower_.resize(numCol);
-
-  this->lp->rowLower_.resize(numRow);
-  this->lp->rowUpper_.resize(numRow);
-
-  this->lp->Astart_.resize(numCol + 1);
-  this->lp->Aindex_.resize(nnz);
-  this->lp->Avalue_.resize(nnz);
-
-  // set HighsLp data
-  if (obj != NULL) {
-    this->lp->colCost_.assign(obj, obj + numCol);
-  } else {
-    this->lp->colCost_.assign(numCol, 0.0);
-  }
-
-  if (collb != NULL) {
-    this->lp->colLower_.assign(collb, collb + numCol);
-  } else {
-    this->lp->colLower_.assign(numCol, 0.0);
-  }
-
-  if (colub != NULL) {
-    this->lp->colUpper_.assign(colub, colub + numCol);
-  } else {
-    this->lp->colUpper_.assign(numCol, HIGHS_CONST_INF);
-  }
-
-  if (rowlb != NULL) {
-    this->lp->rowLower_.assign(rowlb, rowlb + numRow);
-  } else {
-    this->lp->rowLower_.assign(numRow, -HIGHS_CONST_INF);
-  }
-
-  if (rowub != NULL) {
-    this->lp->rowUpper_.assign(rowub, rowub + numRow);
-  } else {
-    this->lp->rowUpper_.assign(numRow, HIGHS_CONST_INF);
-  }
-
-  // get matrix data
-  const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
-  const int *vectorLengths = matrix.getVectorLengths();
-  const double *elements = matrix.getElements();
-  const int *indices = matrix.getIndices();
-
-  // set matrix in HighsLp
-  this->lp->Astart_[0] = 0;
-  int nz = 0;
-  for (int i = 0; i < numCol; i++) {
-    this->lp->Astart_[i + 1] = this->lp->Astart_[i] + vectorLengths[i];
-    CoinBigIndex first = matrix.getVectorFirst(i);
-    for (int j = 0; j < vectorLengths[i]; j++) {
-      this->lp->Aindex_[nz] = indices[first + j];
-      this->lp->Avalue_[nz] = elements[first + j];
-      nz++;
-    }
-  }
-  assert(nnz == nz);
-}
-
 bool OsiHiGHSSolverInterface::isAbandoned() const {
   return this->status == HighsStatus::NumericalDifficulties;
 }
@@ -385,11 +304,12 @@ void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
                                           const double *rowrng) {
   int numRow = matrix.getNumRows();
 
-  double* rowlb = new double[numRow];
-  double* rowub = new double[numRow];
+  double *rowlb = new double[numRow];
+  double *rowub = new double[numRow];
 
-  for (int i=0; i<numRow; i++) {
-     this->convertSenseToBound(rowsen[i], rowrhs[i], rowrng[i], rowlb[i], rowub[i]);
+  for (int i = 0; i < numRow; i++) {
+    this->convertSenseToBound(rowsen[i], rowrhs[i], rowrng[i], rowlb[i],
+                              rowub[i]);
   }
 
   this->loadProblem(matrix, collb, colub, obj, rowlb, rowub);
@@ -418,3 +338,129 @@ void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
   delete[] rowrng;
   rowrng = 0;
 };
+
+void OsiHiGHSSolverInterface::loadProblem(
+    const int numcols, const int numrows, const CoinBigIndex *start,
+    const int *index, const double *value, const double *collb,
+    const double *colub, const double *obj, const double *rowlb,
+    const double *rowub) {
+  if (this->lp != NULL) {
+    delete this->lp;
+  }
+
+  this->lp = new HighsLp();
+
+  this->lp->numRow_ = numrows;
+  this->lp->numCol_ = numcols;
+  this->lp->nnz_ = start[numcols];
+
+  // setup HighsLp data structures
+  // TODO: create and use HighsLp construtor for this!!!
+  this->lp->colCost_.resize(numcols);
+  this->lp->colUpper_.resize(numcols);
+  this->lp->colLower_.resize(numcols);
+
+  this->lp->rowLower_.resize(numrows);
+  this->lp->rowUpper_.resize(numrows);
+
+  this->lp->Astart_.resize(numcols + 1);
+  this->lp->Aindex_.resize(start[numcols]);
+  this->lp->Avalue_.resize(start[numcols]);
+
+  // copy data
+  if (obj != NULL) {
+    this->lp->colCost_.assign(obj, obj + numcols);
+  } else {
+    this->lp->colCost_.assign(numcols, 0.0);
+  }
+
+  if (collb != NULL) {
+    this->lp->colLower_.assign(collb, collb + numcols);
+  } else {
+    this->lp->colLower_.assign(numcols, 0.0);
+  }
+
+  if (colub != NULL) {
+    this->lp->colUpper_.assign(colub, colub + numcols);
+  } else {
+    this->lp->colUpper_.assign(numcols, HIGHS_CONST_INF);
+  }
+
+  if (rowlb != NULL) {
+    this->lp->rowLower_.assign(rowlb, rowlb + numrows);
+  } else {
+    this->lp->rowLower_.assign(numrows, -HIGHS_CONST_INF);
+  }
+
+  if (rowub != NULL) {
+    this->lp->rowUpper_.assign(rowub, rowub + numrows);
+  } else {
+    this->lp->rowUpper_.assign(numrows, HIGHS_CONST_INF);
+  }
+
+  this->lp->Astart_.assign(start, start + numcols + 1);
+  this->lp->Aindex_.assign(index, index + start[numcols]);
+  this->lp->Avalue_.assign(value, value + start[numcols]);
+}
+
+void OsiHiGHSSolverInterface::loadProblem(
+    const int numcols, const int numrows, const CoinBigIndex *start,
+    const int *index, const double *value, const double *collb,
+    const double *colub, const double *obj, const char *rowsen,
+    const double *rowrhs, const double *rowrng) {
+
+  double *rowlb = new double[numrows];
+  double *rowub = new double[numrows];
+
+  for (int i = 0; i < numrows; i++) {
+    this->convertSenseToBound(rowsen[i], rowrhs[i], rowrng[i], rowlb[i],
+                              rowub[i]);
+  }
+
+  this->loadProblem(numcols, numrows, start, index, value, collb, colub, obj, rowlb, rowub);
+
+  delete[] rowlb;
+  delete[] rowub;
+}
+
+void OsiHiGHSSolverInterface::loadProblem(
+    const CoinPackedMatrix &matrix, const double *collb, const double *colub,
+    const double *obj, const double *rowlb, const double *rowub) {
+  assert(matrix.isColOrdered());
+
+  this->lp = new HighsLp();
+
+  int numCol = matrix.getNumCols();
+  int numRow = matrix.getNumRows();
+  int nnz = matrix.getNumElements();
+
+  int* start = new int[numCol + 1];
+  int* index = new int[nnz];
+  double* value = new double[nnz];
+
+  // get matrix data
+  const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
+  const int *vectorLengths = matrix.getVectorLengths();
+  const double *elements = matrix.getElements();
+  const int *indices = matrix.getIndices();
+
+  // set matrix in HighsLp
+  start[0] = 0;
+  int nz = 0;
+  for (int i = 0; i < numCol; i++) {
+    start[i + 1] = start[i] + vectorLengths[i];
+    CoinBigIndex first = matrix.getVectorFirst(i);
+    for (int j = 0; j < vectorLengths[i]; j++) {
+      index[nz] = indices[first + j];
+      value[nz] = elements[first + j];
+      nz++;
+    }
+  }
+  assert(nnz == nz);
+
+  this->loadProblem(numCol, numRow, start, index, value, collb, colub, obj, rowlb, rowub);
+
+  delete[] start;
+  delete[] index;
+  delete[] value;
+}

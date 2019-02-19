@@ -326,7 +326,7 @@ public:
      const double* value,
      const double* collb, const double* colub,
      const double* obj,
-     const double* rowlb, const double* rowub) { }
+     const double* rowlb, const double* rowub);
 
    /// Load in a problem by copying the arguments.
    virtual void loadProblem(const int numcols, const int numrows,
@@ -335,7 +335,7 @@ public:
      const double *collb, const double *colub,
      const double *obj,
      const char *rowsen, const double *rowrhs,
-     const double *rowrng) { }
+     const double *rowrng);
 
    /// Write the problem into an mps file of the given filename.
    virtual void writeMps(const char* filename,
