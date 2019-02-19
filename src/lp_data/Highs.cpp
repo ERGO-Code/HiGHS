@@ -240,7 +240,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // IPX
   // todo:Check options for simplex-specific options
   // use model.lp_, model.solution_
-  status = runIpxSolver(options_, lp, solution);
+  // status = runIpxSolver(options_, lp_, solution_);
   // If ipx crossover did not find optimality set up simplex.
 
 #endif
@@ -275,8 +275,8 @@ bool Highs::addRows(const int num_new_rows,
              const bool force) {
   // if simplex has not solved already
   if (hmos_.size() == 0) {
-    // add_lp_rows(lp, ..., options);  
-    
+    // add_lp_rows(lp, ..., options);
+
     // the above currently being
     // add_rows_to_lp_vectors
     // add_rows_to_lp_matrix
@@ -290,6 +290,43 @@ bool Highs::addRows(const int num_new_rows,
     // todo: change to take int return value
     interface.util_add_rows(num_new_rows, lower_bounds, upper_bounds,
                             num_new_nz, row_starts, columns, values);
+  }
+
+  return 0;
+}
+
+bool Highs::addCol(const double lower_bound, const double upper_bound,
+            const int num_new_nz,
+            const int *rows, const double *values,
+            const bool force) {
+  int col_starts = 0;
+  return addCols(1, &lower_bound, &upper_bound, &col_starts,
+                 num_new_nz, rows, values);
+}
+
+bool Highs::addCols(const int num_new_cols,
+             const double *lower_bounds, const double *upper_bounds,
+             const int *col_starts,
+             const int num_new_nz,
+             const int *rows, const double *values,
+             const bool force) {
+  // if simplex has not solved already
+  if (hmos_.size() == 0) {
+    // add_lp_cols(lp, ..., options);  
+    
+    // the above currently being
+    // add_cols_to_lp_vectors
+    // add_cols_to_lp_matrix
+  }
+  // else (if simplex has solved already)
+  {
+    assert(hmos_.size() > 0);
+    int last = hmos_.size() - 1;
+    HighsSimplexInterface interface(hmos_[last]);
+
+    // todo: change to take int return value
+    interface.util_add_rows(num_new_cols, lower_bounds, upper_bounds,
+                            num_new_nz, col_starts, rows, values);
   }
   
   return 0;

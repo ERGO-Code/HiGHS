@@ -32,8 +32,9 @@ public:
   // todo: Set warm/hot start methods
 
   // No getters for LP members because the user has access to the HighsLp.
+  const HighsLp &getHighsLp() { return lp_; }
 
-  // todo: add methods to modify matrix within simplex
+  // add methods to modify matrix within simplex
   bool addRow(const double lower_bound, const double upper_bound,
               const int num_new_nz,
               const int *columns, const double *values,
@@ -44,6 +45,18 @@ public:
               const int *row_starts,
               const int num_new_nz,
               const int *columns, const double *values,
+              const bool force = false);
+
+  bool addCol(const double lower_bound, const double upper_bound,
+              const int num_new_nz,
+              const int *rows, const double *values,
+              const bool force = false);
+
+  bool addCols(const int num_new_rows,
+              const double *lower_bounds, const double *upper_bounds,
+              const int *col_starts,
+              const int num_new_nz,
+              const int *rows, const double *values,
               const bool force = false);
 
   // addRow | add Col | change coeff (int row, int col) | ...
