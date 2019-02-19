@@ -27,6 +27,9 @@
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
 
+// until add_row_.. functions are moved to HighsLpUtils.h
+#include "simplex/HSimplex.h"
+
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
     HighsSimplexInterface simplex_interface(this->lps_[0]);
@@ -250,4 +253,39 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   return status;
 }
 
+bool Highs::addRow(const double lower_bound, const double upper_bound,
+            const int num_new_nz,
+            const int *columns, const double *values,
+            const bool force) {
+  int row_starts = 0;
+  return addRows(1, &lower_bound, &upper_bound, &row_starts,
+                 num_new_nz, columns, values);
+}
 
+bool Highs::addRows(const int num_new_rows,
+             const double *lower_bounds, const double *upper_bounds,
+             const int *row_starts,
+             const int num_new_nz,
+             const int *columns, const double *values,
+             const bool force) {
+  // if simplex has not solved already
+  if (lps_.size() == 0) {
+    // add_lp_rows(lp, ..., options);  
+    
+    // the above currently being
+    // add_rows_to_lp_vectors
+    // add_rows_to_lp_matrix
+  }
+  // else (if simplex has solved already)
+  {
+    assert(lps_.size() > 0);
+    int last = lps_.size() - 1;
+    HighsSimplexInterface interface(lps_[last]);
+
+    // todo: change to take int return value
+    interface.util_add_rows(num_new_rows, lower_bounds, upper_bounds,
+                            num_new_nz, row_starts, columns, values);
+  }
+  
+  return 0;
+}
