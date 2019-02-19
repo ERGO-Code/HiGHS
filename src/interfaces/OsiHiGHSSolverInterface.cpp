@@ -257,14 +257,13 @@ const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByCol() const {
 }
 
 const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByRow() const {
-  if (this->matrixByCol != NULL) {
-    delete this->matrixByCol;
+  if (this->matrixByRow != NULL) {
+    delete this->matrixByRow;
   }
+  this->matrixByRow = new CoinPackedMatrix();
+  this->matrixByRow->reverseOrderedCopyOf(*this->getMatrixByCol());
 
-  this->matrixByCol = (CoinPackedMatrix*)this->getMatrixByCol();
-  this->matrixByCol->transpose();
-
-  return this->matrixByCol;
+  return this->matrixByRow;
 }
 
 double OsiHiGHSSolverInterface::getObjSense() const {
