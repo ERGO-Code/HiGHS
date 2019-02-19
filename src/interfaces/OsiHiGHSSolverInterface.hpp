@@ -312,13 +312,13 @@ public:
      const double* collb, const double* colub,
      const double* obj,
      const char* rowsen, const double* rowrhs,
-     const double* rowrng) { };
+     const double* rowrng);
 
    /// Load in an problem by assuming ownership of the arguments
    virtual void assignProblem(CoinPackedMatrix*& matrix,
      double*& collb, double*& colub, double*& obj,
      char*& rowsen, double*& rowrhs,
-     double*& rowrng) { };
+     double*& rowrng);
 
    /// Load in a problem by copying the arguments.
    virtual void loadProblem(const int numcols, const int numrows,

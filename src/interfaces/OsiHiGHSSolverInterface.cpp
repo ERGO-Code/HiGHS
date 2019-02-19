@@ -248,11 +248,9 @@ const double *OsiHiGHSSolverInterface::getRowRange() const {
     // compute range for row i
     double lo = this->lp->rowLower_[i];
     double hi = this->lp->rowUpper_[i];
-    if (lo > -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
-      this->rowRange[i] = hi - lo;
-    } else {
-      this->rowRange[i] = HIGHS_CONST_INF;
-    }
+    double t1;
+    char t2;
+    this->convertBoundToSense(lo, hi, t2, t1, this->rowRange[i]);
   }
 
   return this->rowRange;
@@ -276,13 +274,9 @@ const double *OsiHiGHSSolverInterface::getRightHandSide() const {
     // compute rhs for row i
     double lo = this->lp->rowLower_[i];
     double hi = this->lp->rowUpper_[i];
-    if (hi < HIGHS_CONST_INF) {
-      this->rhs[i] = hi;
-    } else if (lo > -HIGHS_CONST_INF) {
-      this->rhs[i] = lo;
-    } else {
-      this->rhs[i] = 0.0;
-    }
+    double t1;
+    char t2;
+    this->convertBoundToSense(lo, hi, t2, this->rhs[i], t1);
   }
 
   return this->rhs;
@@ -306,19 +300,8 @@ const char *OsiHiGHSSolverInterface::getRowSense() const {
     // compute sense for row i
     double lo = this->lp->rowLower_[i];
     double hi = this->lp->rowUpper_[i];
-    if (lo > -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
-      if (lo == hi) {
-        this->rowSense[i] = 'E';
-      } else {
-        this->rowSense[i] = 'R';
-      }
-    } else if (lo > -HIGHS_CONST_INF && hi >= HIGHS_CONST_INF) {
-      this->rowSense[i] = 'G';
-    } else if (lo <= -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
-      this->rowSense[i] = 'L';
-    } else {
-      this->rowSense[i] = 'N';
-    }
+    double t1, t2;
+    this->convertBoundToSense(lo, hi, this->rowSense[i], t1, t2);
   }
 
   return this->rowSense;
@@ -376,11 +359,9 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
-  double *&collb, double *&colub,
-  double *&obj,
-  double *&rowlb, double *&rowub)
-{
-
+                                            double *&collb, double *&colub,
+                                            double *&obj, double *&rowlb,
+                                            double *&rowub) {
   loadProblem(*matrix, collb, colub, obj, rowlb, rowub);
   delete matrix;
   matrix = 0;
@@ -395,3 +376,34 @@ void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
   delete[] rowub;
   rowub = 0;
 }
+
+void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
+                                          const double *collb,
+                                          const double *colub,
+                                          const double *obj, const char *rowsen,
+                                          const double *rowrhs,
+                                          const double *rowrng){
+    // TODO
+    // this->convertSenseToBound()
+};
+
+void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
+                                            double *&collb, double *&colub,
+                                            double *&obj, char *&rowsen,
+                                            double *&rowrhs, double *&rowrng) {
+  loadProblem(*matrix, collb, colub, obj, rowsen, rowrhs, rowrng);
+  delete matrix;
+  matrix = 0;
+  delete[] collb;
+  collb = 0;
+  delete[] colub;
+  colub = 0;
+  delete[] obj;
+  obj = 0;
+  delete[] rowsen;
+  rowsen = 0;
+  delete[] rowrhs;
+  rowrhs = 0;
+  delete[] rowrng;
+  rowrng = 0;
+};
