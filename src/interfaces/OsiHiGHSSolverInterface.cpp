@@ -267,9 +267,8 @@ double OsiHiGHSSolverInterface::getObjSense() const {
 // todo: start from tomorrow
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const double rowlb, const double rowub) {
-       // get pointers to data                                
-       // highs.addRow( pointers to data , optional force)
-  }
+  // get pointers to data                                
+  // highs.addRow( pointers to data , optional force)
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
