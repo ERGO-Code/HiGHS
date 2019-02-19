@@ -138,7 +138,7 @@ public:
    virtual const double* getObjCoefficients() const;
 
    /// Get objective function sense (1 for min (default), -1 for max)
-   virtual double getObjSense() const  { return 1; }
+   double getObjSense() const;
 
    /// Return true if column is continuous
    virtual bool isContinuous(int colNumber) const  { return true; }
@@ -278,8 +278,8 @@ public:
 
    using OsiSolverInterface::addRow;
    /// Add a row (constraint) to the problem.
-   virtual void addRow(const CoinPackedVectorBase &vec,
-     const double rowlb, const double rowub) { };
+   void addRow(const CoinPackedVectorBase &vec,
+     const double rowlb, const double rowub);
 
    /// Add a row (constraint) to the problem. */
    virtual void addRow(const CoinPackedVectorBase &vec,
