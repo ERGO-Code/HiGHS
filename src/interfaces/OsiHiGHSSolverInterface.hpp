@@ -384,7 +384,7 @@ private:
   mutable double* rowRange = NULL;
   mutable double* rhs = NULL;
   mutable char* rowSense = NULL;
-  mutable CoinPackedMatrix* matrixByCol;
+  mutable CoinPackedMatrix* matrixByCol = NULL;
 
 };
 

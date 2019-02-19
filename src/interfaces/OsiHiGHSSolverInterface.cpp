@@ -425,8 +425,6 @@ void OsiHiGHSSolverInterface::loadProblem(
     const double *obj, const double *rowlb, const double *rowub) {
   assert(matrix.isColOrdered());
 
-  this->lp = new HighsLp();
-
   int numCol = matrix.getNumCols();
   int numRow = matrix.getNumRows();
   int nnz = matrix.getNumElements();
