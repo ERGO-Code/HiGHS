@@ -83,18 +83,17 @@ set(headers
     Highs.h
 )
 
-if (OSI)
+if (OSI_FOUND)
     set(sources ${sources} interfaces/OsiHiGHSSolverInterface.cpp)
     set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
 endif()
 
 add_library(libhighs ${sources})
 
-if (OSI)
-    string(CONCAT ROOT_OSI "${OSI_DIR}" "/")
-    include_directories(${ROOT_OSI}include/coin)
-    find_library(OSI_LIB Osi HINTS ${ROOT_OSI}lib)
-    target_link_libraries(libhighs PUBLIC ${OSI_LIB})
+if (OSI_FOUND)
+    target_include_directories(libhighs PUBLIC ${OSI_INCLUDE_DIRS})
+    target_link_libraries(libhighs PUBLIC ${OSI_LINK_LIBRARIES})
+    target_compile_options(libhighs PUBLIC ${OSI_CFLAGS_OTHER})
 endif()
 
 # put version information into shared library file
