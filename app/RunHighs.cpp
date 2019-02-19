@@ -79,8 +79,14 @@ int main(int argc, char **argv) {
   }
 
   Highs highs(options);
+  
+  HighsStatus init_status = highs.initializeLp(lp);
+  if (init_status != HighsStatus::OK) {
+    HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
+    return (int)HighsStatus::LpError;
+  }
 
-  HighsStatus run_status = highs.run(lp);
+  HighsStatus run_status = highs.run();
 
   double end_time = timer.getWallTime();
   HighsPrintMessage(ML_ALWAYS, "HiGHS run ended after %12g seconds\n",
