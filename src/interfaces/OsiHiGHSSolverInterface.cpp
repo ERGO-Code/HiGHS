@@ -51,7 +51,7 @@ void OsiHiGHSSolverInterface::initialSolve() {
   if (!lp)
     throw CoinError("No problem setup.", __FUNCTION__,
                     "OsiHiGHSSolverInterface", __FILE__, __LINE__);
-  this->status = this->highs->run(*this->lp);
+  this->status = this->highs->run();
 };
 
 bool OsiHiGHSSolverInterface::isAbandoned() const {
@@ -395,6 +395,8 @@ void OsiHiGHSSolverInterface::loadProblem(
   this->lp->Astart_.assign(start, start + numcols + 1);
   this->lp->Aindex_.assign(index, index + start[numcols]);
   this->lp->Avalue_.assign(value, value + start[numcols]);
+
+  this->highs->initializeLp(*this->lp);
 }
 
 void OsiHiGHSSolverInterface::loadProblem(
