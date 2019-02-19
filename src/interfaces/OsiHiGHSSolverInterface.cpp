@@ -154,7 +154,7 @@ const double *OsiHiGHSSolverInterface::getRowRange() const {
     delete[] this->rowRange;
   }
 
-  int nrows = this->getNumCols();
+  int nrows = this->getNumRows();
 
   if (nrows == 0) {
     return this->rowRange;
@@ -179,7 +179,7 @@ const double *OsiHiGHSSolverInterface::getRightHandSide() const {
     delete[] this->rhs;
   }
 
-  int nrows = this->getNumCols();
+  int nrows = this->getNumRows();
 
   if (nrows == 0) {
     return this->rhs;
@@ -204,7 +204,7 @@ const char *OsiHiGHSSolverInterface::getRowSense() const {
     delete[] this->rowSense;
   }
 
-  int nrows = this->getNumCols();
+  int nrows = this->getNumRows();
 
   if (nrows == 0) {
     return this->rowSense;
@@ -413,7 +413,7 @@ void OsiHiGHSSolverInterface::loadProblem(
                               rowub[i]);
   }
 
-  this->loadProblem(numcols, numrows, start, index, value, collb, colub, obj, rowlb, rowub);
+  this->loadProblem(numcols, numrows, start, index, value,  collb, colub, obj, rowlb, rowub);
 
   delete[] rowlb;
   delete[] rowub;
