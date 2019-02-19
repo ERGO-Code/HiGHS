@@ -305,7 +305,7 @@ public:
    /// Load in an problem by assuming ownership of the arguments.
    virtual void assignProblem(CoinPackedMatrix*& matrix,
      double*& collb, double*& colub, double*& obj,
-     double*& rowlb, double*& rowub) { };
+     double*& rowlb, double*& rowub);
 
    /// Load in an problem by copying the arguments.
    virtual void loadProblem(const CoinPackedMatrix &matrix,
