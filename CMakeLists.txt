@@ -80,6 +80,8 @@ unset(OSI_ROOT CACHE)
 
 find_package(PkgConfig)
 pkg_check_modules(OSI osi)
+# need to come before adding any targets (add_executable, add_library)
+link_directories(${OSI_LIBRARY_DIRS})
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)

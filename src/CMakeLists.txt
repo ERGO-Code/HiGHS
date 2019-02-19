@@ -93,7 +93,6 @@ add_library(libhighs ${sources})
 if (OSI_FOUND)
     target_include_directories(libhighs PUBLIC ${OSI_INCLUDE_DIRS})
     target_link_libraries(libhighs PUBLIC ${OSI_LIBRARIES})
-    target_link_directories(libhighs PUBLIC ${OSI_LIBRARY_DIRS})
     target_compile_options(libhighs PUBLIC ${OSI_CFLAGS_OTHER})
 endif()
 
