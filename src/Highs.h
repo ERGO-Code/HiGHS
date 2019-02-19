@@ -34,6 +34,18 @@ public:
   // No getters for LP members because the user has access to the HighsLp.
 
   // todo: add methods to modify matrix within simplex
+  bool addRow(const double lower_bound, const double upper_bound,
+              const int num_new_nz,
+              const int *columns, const double *values,
+              const bool force = false);
+
+  bool addRows(const int num_new_rows,
+              const double *lower_bounds, const double *upper_bounds,
+              const int *row_starts,
+              const int num_new_nz,
+              const int *columns, const double *values,
+              const bool force = false);
+
   // addRow | add Col | change coeff (int row, int col) | ...
   // ipx (not implemented)
 

@@ -270,10 +270,8 @@ double OsiHiGHSSolverInterface::getObjSense() const {
 // todo: start from tomorrow
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const double rowlb, const double rowub) {
-  if (this->lp == NULL) {
-    // Add row to an empty probelm. Use HighsModelBuilder.
-  } else {
-    // Add row to our existing problem. Use Julian's add_row method.
+       // get pointers to data                                
+       // highs.addRow( pointers to data , optional force)
   }
 };
 
