@@ -66,6 +66,8 @@ HighsStatus solveSimplex(
   // Just solves the LP in highs_model_object.scaled_lp_
   HighsTimer &timer = highs_model_object.timer_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsLp &lp = highs_model_object.lp_;
 
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
@@ -78,7 +80,7 @@ HighsStatus solveSimplex(
     timer.start(timer.solve_clock);
     dual_solver.solve();
     timer.stop(timer.solve_clock);
-    return LpStatusToHighsStatus(simplex_info.solution_status);
+    return LpStatusToHighsStatus(simplex_lp_status.solution_status);
   }
 
   // Crash, if HighsModelObject has basis information.
@@ -120,23 +122,21 @@ HighsStatus solveSimplex(
       dual_solver.solve();
 
 #ifdef HiGHSDEV
-    double currentRunHighsTime = highs_model_object.timer_.readRunHighsClock();
+    double currentRunHighsTime = timer.readRunHighsClock();
     printf(
         "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
         "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        (int) simplex_info.solution_status,
-	highs_model_object.lp_.model_name_.c_str(),
-	highs_model_object.lp_.numRow_,
-        highs_model_object.lp_.numCol_,
+        (int) simplex_lp_status.solution_status,
+	lp.model_name_.c_str(), lp.numRow_, lp.numCol_,
 	currentRunHighsTime,
 	simplex_info.dualObjectiveValue,
 	simplex_info.dual_phase1_iteration_count,
         simplex_info.dual_phase2_iteration_count,
 	simplex_info.primal_phase1_iteration_count);
 #endif
-    //    reportLp(highs_model_object.lp_);
+    //    reportLp(lp);
     //    reportLpSolution(highs_model_object);
-    HighsStatus result = LpStatusToHighsStatus(simplex_info.solution_status);
+    HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
     // Deduce the LP basis from the simplex basis
     highs_model_object.basis_ = highs_model_object.simplex_basis_;

@@ -243,6 +243,169 @@ HighsStatus checkLp(const HighsLp& lp) {
   return HighsStatus::OK;
 }
 
+int validate_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper) {
+  assert(XnumCol >= 0);
+  if (XnumCol == 0) return 0;
+  for (int col = 0; col < XnumCol; col++) {
+    if (highs_isInfinity(XcolLower[col])) return col + 1;
+    if (XcolLower[col] > XcolUpper[col]) return XnumCol + col + 1;
+    if (highs_isInfinity(-XcolUpper[col])) return -(col + 1);
+  }
+}
+
+void filter_col_bounds(HighsLp& lp, int XfromCol, int XtoCol, const double infinite_bound) {
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+  int numChangedLowerBounds = 0;
+  int numChangedUpperBounds = 0;
+  for (int col = XfromCol; col <= XtoCol; col++) {
+    if (lp.colLower_[col] <= -infinite_bound) {
+      lp.colLower_[col] = -HIGHS_CONST_INF;
+      numChangedLowerBounds++;
+    }
+    if (lp.colUpper_[col] >= infinite_bound) {
+      lp.colUpper_[col] = HIGHS_CONST_INF;
+      numChangedUpperBounds++;
+    }
+  }
+  if (numChangedLowerBounds)
+    HighsLogMessage(HighsMessageType::WARNING, "%12d col lower bounds below %12g interpreted as -Infinity",
+		    numChangedLowerBounds, -infinite_bound);
+  if (numChangedUpperBounds)
+    HighsLogMessage(HighsMessageType::WARNING, "%12d col upper bounds above %12g interpreted as +Infinity",
+		    numChangedUpperBounds, infinite_bound);
+}
+
+int validate_row_bounds(int XnumRow, const double* XrowLower, const double* XrowUpper) {
+  assert(XnumRow >= 0);
+  if (XnumRow == 0) return 0;
+  for (int row = 0; row < XnumRow; row++) {
+    if (highs_isInfinity(XrowLower[row])) return row + 1;
+    if (XrowLower[row] > XrowUpper[row]) return XnumRow + row + 1;
+    if (highs_isInfinity(-XrowUpper[row])) return -(row + 1);
+  }
+}
+
+void filter_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double infinite_bound) {
+  assert(XfromRow >= 0);
+  assert(XtoRow < lp.numRow_);
+  assert(XfromRow <= XtoRow);
+  int numChangedLowerBounds = 0;
+  int numChangedUpperBounds = 0;
+  for (int row = XfromRow; row <= XtoRow; row++) {
+    if (lp.rowLower_[row] <= -infinite_bound) {
+      lp.rowLower_[row] = -HIGHS_CONST_INF;
+      numChangedLowerBounds++;
+    }
+    if (lp.rowUpper_[row] >= infinite_bound) {
+      lp.rowUpper_[row] = HIGHS_CONST_INF;
+      numChangedUpperBounds++;
+    }
+  }
+  if (numChangedLowerBounds)
+    HighsLogMessage(HighsMessageType::WARNING, "%12d row lower bounds below %12g interpreted as -Infinity",
+		    numChangedLowerBounds, -infinite_bound);
+  if (numChangedUpperBounds)
+    HighsLogMessage(HighsMessageType::WARNING, "%12d row upper bounds above %12g interpreted as +Infinity",
+		    numChangedUpperBounds, infinite_bound);
+}
+
+int validate_matrix_indices(int XnumRow, int XnumCol, int XnumNZ, const int* XAstart, const int* XAindex) {
+  assert(XnumRow >= 0);
+  assert(XnumCol >= 0);
+  assert(XnumNZ >= 0);
+  if (XnumRow == 0) return 0;
+  if (XnumCol == 0) return 0;
+  if (XnumNZ == 0) return 0;
+  vector <int> colVec;
+  colVec.assign(XnumRow, 0);
+  for (int col = 0; col < XnumCol; col++) {
+    int fromEl = XAstart[col];
+    int toEl;
+    if (col < XnumCol-1) {
+      toEl = XAstart[col+1]-1;
+    } else {
+      toEl = XnumNZ-1;
+    }
+    if (fromEl > toEl+1 || fromEl > XnumNZ || fromEl < 0) return -(XnumCol + col + 1);
+    for (int el = fromEl; el <= toEl; el++) {
+      int row = XAindex[el];
+      if (row < 0) return col + 1;
+      if (row >= XnumRow) return -(col + 1);
+      if (colVec[row]) return XnumCol + col + 1;
+    }
+    for (int el = XAstart[col]; el <= toEl; el++) colVec[XAindex[el]] = 0;
+  }
+  int col = XnumCol;
+  int fromEl = XAstart[col];
+  if (fromEl > XnumNZ || fromEl < 0) return -(XnumCol + col + 1);
+}
+
+void filter_matrix_values(HighsLp& lp, int XfromCol, int XtoCol, double small_matrix_value) {
+  assert(XfromCol >= 0);
+  assert(XtoCol < lp.numCol_);
+  assert(XfromCol <= XtoCol);
+  assert(small_matrix_value >=0);
+  int numRemovedValues = 0;
+  int numTrueNZ = lp.Astart_[XfromCol];
+  for (int col = XfromCol; col <= XtoCol; col++) {
+    int fromEl = lp.Astart_[col];
+    lp.Astart_[col] = numTrueNZ;
+    for (int el = fromEl; el < lp.Astart_[col+1]; el++) {
+      if (fabs(lp.Avalue_[el]) <= small_matrix_value) {
+	numRemovedValues++;
+      } else {
+	lp.Aindex_[numTrueNZ] = lp.Aindex_[el];
+	lp.Avalue_[numTrueNZ] = lp.Avalue_[el];
+	numTrueNZ++;
+      }
+    }
+  }
+  if (numRemovedValues) {
+    for (int col = XtoCol+1; col < lp.numCol_; col++) {
+      int fromEl = lp.Astart_[col];
+      lp.Astart_[col] = numTrueNZ;
+	for (int el = fromEl; el < lp.Astart_[col+1]; el++) {
+	  lp.Aindex_[numTrueNZ] = lp.Aindex_[el];
+	  lp.Avalue_[numTrueNZ] = lp.Avalue_[el];
+	  numTrueNZ++;
+	}
+    }
+    lp.Astart_[lp.numCol_] = numTrueNZ;
+    lp.nnz_ = numTrueNZ;
+    HighsLogMessage(HighsMessageType::WARNING, "%12d matrix values less than %12g removed",
+		    numRemovedValues, small_matrix_value);
+  }
+}
+
+void filter_row_matrix_values(int XnumRow, int XnumNZ, int* XARstart, int* XARindex, double* XARvalue, double small_matrix_value) {
+  assert(XnumRow >= 0);
+  assert(XnumNZ >= 0);
+  assert(small_matrix_value >=0);
+  if (XnumRow == 0) return;
+  if (XnumNZ == 0) return;
+  int numRemovedValues = 0;
+  int numTrueNZ = 0;
+  for (int row = 0; row < XnumRow; row++) {
+    int fromEl = XARstart[row];
+    XARstart[row] = numTrueNZ;
+    for (int el = fromEl; el < XARstart[row+1]; el++) {
+      if (fabs(XARvalue[el]) <= small_matrix_value) {
+	numRemovedValues++;
+      } else {
+	XARindex[numTrueNZ] = XARindex[el];
+	XARvalue[numTrueNZ] = XARvalue[el];
+	numTrueNZ++;
+      }
+    }
+  }
+  XARstart[XnumRow] = numTrueNZ;
+  if (numRemovedValues) 
+    HighsLogMessage(HighsMessageType::WARNING, "%12d matrix values less than %12g removed",
+		    numRemovedValues, small_matrix_value);
+}
+
 
 #ifdef HiGHSDEV
 void util_analyseLp(const HighsLp &lp, const char *message) {

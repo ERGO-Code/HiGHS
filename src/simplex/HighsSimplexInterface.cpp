@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HConfig.h"
+#include "lp_data/HighsLpUtils.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/HSimplex.h"
 #include "io/HighsIO.h"
@@ -21,9 +22,10 @@
 void HighsSimplexInterface::report_simplex_outcome(const char *message) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsTimer &timer = highs_model_object.timer_;
 
-  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_ALWAYS, "%s: OPTIMAL", message);
   else
     HighsPrintMessage(ML_ALWAYS, "%s: NOT-OPT", message);
@@ -49,19 +51,19 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    simplex_info.dual_phase2_iteration_count,
 		    simplex_info.primal_phase2_iteration_count
 		    );
-  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_ALWAYS, "\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::UNSET)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::UNSET)
     HighsPrintMessage(ML_ALWAYS, "Unset\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::INFEASIBLE)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::INFEASIBLE)
     HighsPrintMessage(ML_ALWAYS, "Infeasible\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::UNBOUNDED)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::UNBOUNDED)
     HighsPrintMessage(ML_ALWAYS, "Primal unbounded\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::SINGULAR)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::SINGULAR)
     HighsPrintMessage(ML_ALWAYS, "Singular basis\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::FAILED)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
     HighsPrintMessage(ML_ALWAYS, "Failed\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
     HighsPrintMessage(ML_ALWAYS, "Time limit exceeded\n");
   else
     HighsPrintMessage(ML_ALWAYS, "Unrecognised\n");
@@ -71,7 +73,7 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    dualObjectiveValue,
 		    simplex_info.iteration_count,
 		    currentRunHighsTime,
-		    simplex_info.solution_status,
+		    simplex_lp_status.solution_status,
 		    simplex_lp.model_name_.c_str(),
 		    simplex_info.dual_phase1_iteration_count,
 		    simplex_info.dual_phase2_iteration_count,
@@ -920,78 +922,87 @@ int HighsSimplexInterface::change_ObjSense(int Xsense){
     if ((Xsense == OBJSENSE_MINIMIZE) != (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
-      simplex_info.solution_status = SimplexSolutionStatus::UNSET;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
     }
   }
   return 0;
 }
 
-int HighsSimplexInterface::change_costs_all(
-		     const double* XcolCost
-		     ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
+int HighsSimplexInterface::change_costs_all(const double* XcolCost) {
   assert(XcolCost != NULL);
-  for (int col = 0; col < simplex_lp.numCol_; ++col) {
-    simplex_lp.colCost_[col] = XcolCost[col] * scale.col_[col];
+  // Change the LP costs
+  HighsLp &lp = highs_model_object.lp_;
+  for (int col = 0; col < lp.numCol_; ++col) lp.colCost_[col] = XcolCost[col];
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Change the simplex LP costs
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    for (int col = 0; col < simplex_lp.numCol_; ++col) simplex_lp.colCost_[col] = XcolCost[col] * scale.col_[col];
+    // Deduce the consequences of new costs
+    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
   }
-  // Deduce the consequences of new costs
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
   return 0;
 }
-int HighsSimplexInterface::change_costs_set(
-		     int ncols,
-		     const int* XcolCostIndex,
-		     const double* XcolCostValues
-		     ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsScale &scale = highs_model_object.scale_;
+int HighsSimplexInterface::change_costs_set(int XnumColInSet, const int* XcolCostIndex, const double* XcolCostValue) {
   assert(XcolCostIndex != NULL);
-  assert(XcolCostValues != NULL);
-  for (int ix = 0; ix < ncols; ++ix) {
+  assert(XcolCostValue != NULL);
+  HighsLp &lp = highs_model_object.lp_;
+  // Change a set of LP costs
+  for (int ix = 0; ix < XnumColInSet; ++ix) {
     int col = XcolCostIndex[ix];
-    assert(0 <= col);
-    assert(col < simplex_lp.numCol_);
-    simplex_lp.colCost_[col] = XcolCostValues[ix] * scale.col_[col];
+    assert(0 <= col && col < lp.numCol_);
+    lp.colCost_[col] = XcolCostValue[ix];
   }
-  // Deduce the consequences of new costs
-   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Change a set of simplex LP costs
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    for (int ix = 0; ix < XnumColInSet; ++ix) {
+      int col = XcolCostIndex[ix];
+      assert(0 <= col && col < simplex_lp.numCol_);
+      simplex_lp.colCost_[col] = XcolCostValue[ix] * scale.col_[col];
+    }
+    // Deduce the consequences of new costs
+    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
+  }
   return 0;
 }
-int HighsSimplexInterface::change_col_bounds_all(
-			  const double* XcolLower,
-			  const double* XcolUpper
-			  ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+
+int HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper){
   assert(XcolLower != NULL);
   assert(XcolUpper != NULL);
-  for (int col = 0; col < simplex_lp.numCol_; ++col) {
-    double lower = XcolLower[col];
-    double upper = XcolUpper[col];
-    // Check that the lower bound is not being set to +Inf
-    if (highs_isInfinity(lower)) return col + 1;
-    // Check that the lower bound is not being set to +Inf
-    if (highs_isInfinity(-upper)) return -(col + 1);
-    assert(lower <= upper);
-    simplex_lp.colLower_[col] = (highs_isInfinity(-lower) ? lower : lower / scale.col_[col]);
-    simplex_lp.colUpper_[col] = (highs_isInfinity(upper) ? upper : upper / scale.col_[col]);
-    //    printf("[LB; Pr; UB] for column %2d are now [%11g, %11g, %11g] Dual =
-    //    %g\n", col, simplex_lp.colLower_[col], simplex_info.workValue_[col], simplex_lp.colUpper_[col],
-    //    simplex_info.workDual_[col]);
+
+  HighsLp &lp = highs_model_object.lp_;
+  int returnCode = validate_col_bounds(lp.numCol_, XcolLower, XcolUpper);
+  if (returnCode) return returnCode;
+  
+  for (int col = 0; col < lp.numCol_; ++col) {
+    lp.colLower_[col] = XcolLower[col];
+    lp.colUpper_[col] = XcolUpper[col];
   }
-  // Deduce the consequences of new bounds
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
+  double infinite_bound = 1e20;// TODO: Have discussion on copy of options in HMO
+  filter_col_bounds(lp, 0, lp.numCol_-1, infinite_bound);
+
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Change all simplex LP bounds
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    for (int col = 0; col < lp.numCol_; ++col) {
+      simplex_lp.colLower_[col] = lp.colLower_[col];
+      simplex_lp.colUpper_[col] = lp.colUpper_[col];
+    }
+    // TODO Scale the simplex LP bounds
+
+    // Deduce the consequences of new bounds
+    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
+  }
   return 0;
 }
 int HighsSimplexInterface::change_col_bounds_set(
-			  int ncols,
+			  int XnumColInSet,
 			  const int* XcolBoundIndex,
 			  const double* XcolLowerValues,
 			  const double* XcolUpperValues
@@ -1003,7 +1014,7 @@ int HighsSimplexInterface::change_col_bounds_set(
   assert(XcolBoundIndex != NULL);
   assert(XcolLowerValues != NULL);
   assert(XcolUpperValues != NULL);
-  for (int ix = 0; ix < ncols; ++ix) {
+  for (int ix = 0; ix < XnumColInSet; ++ix) {
     int col = XcolBoundIndex[ix];
     assert(0 <= col);
     assert(col < simplex_lp.numCol_);

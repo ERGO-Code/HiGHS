@@ -2115,7 +2115,7 @@ int compute_factor(HighsModelObject &highs_model_object) {
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
     //    handle_rank_deficiency();
-    //    simplex_info.solution_status = SimplexSolutionStatus::SINGULAR;
+    //    simplex_lp_status.solution_status = SimplexSolutionStatus::SINGULAR;
 #ifdef HiGHSDEV
     //    writePivots("failed");
 #endif
@@ -2504,10 +2504,11 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
 #ifdef HiGHSDEV
 void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsScale &scale = highs_model_object.scale_;
-  if (simplex_info.solution_status != SimplexSolutionStatus::OPTIMAL)
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL)
     return;
   printf("\nAnalysing the model solution\n");
   fflush(stdout);

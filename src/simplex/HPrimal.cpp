@@ -82,34 +82,34 @@ void HPrimal::solvePhase2() {
         printf("HPrimal::solve_phase2: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
-        simplex_info.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
     }
 
     double currentRunHighsTime = timer.readRunHighsClock();
     if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
-      simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
     }
-    if (simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) break;
+    if (simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
     if (simplex_lp_status.has_fresh_rebuild) break;
   }
 
-  if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
-      simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND)
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
+      simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND)
     return;
 
   if (columnIn == -1) {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-    simplex_info.solution_status = SimplexSolutionStatus::OPTIMAL;
+    simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
   } else {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
-    simplex_info.solution_status = SimplexSolutionStatus::UNBOUNDED;
+    simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
   }
 }
 

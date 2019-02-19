@@ -187,9 +187,9 @@ class HighsSimplexInterface {
 
 // Change the costs for a set of columns
   int change_costs_set(
-		       int ncols,
+		       int XnumColInSet,
 		       const int* XcolCostIndex,
-                       const double* XcolCostValues
+                       const double* XcolCostValue
 		       );
 
 // Change the bounds for all columns

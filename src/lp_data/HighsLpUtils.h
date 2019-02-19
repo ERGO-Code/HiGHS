@@ -59,6 +59,58 @@ void getLpMatrixCoefficient(
 			    double *val
 			    );
 
+int validate_col_bounds(
+			int XnumCol,
+			const double* XcolLower,
+			const double* XcolUpper
+			);
+
+void filter_col_bounds(
+		       HighsLp& lp,
+		       int XfromCol,
+		       int XtoCol,
+		       const double infinite_bound
+		       );
+
+int validate_row_bounds(
+			int XnumRow,
+			const double* XrowLower,
+			const double* XrowUpper
+			);
+
+void filter_row_bounds(
+		       HighsLp& lp,
+		       int XfromRow,
+		       int XtoRow,
+		       const double infinite_bound
+		       );
+
+int validate_matrix(
+		     int XnumRow,
+		     int XnumCol,
+		     int XnumNZ,
+		     const int* XAstart,
+		     const int* XAindex,
+		     const double* XAvalue
+		     );
+
+void filter_matrix_values(
+			  HighsLp& lp,
+			  int XfromCol,
+			  int XtoCol,
+			  double small_matrix_value
+			  );
+
+void filter_row_matrix_values(
+			      int XnumRow,
+			      int XnumNZ,
+			      int* XARstart,
+			      int* XARindex,
+			      double* XARvalue,
+			      double small_matrix_value
+			      );
+
+
 /**
  * @brief Report the data of an LP
  */
