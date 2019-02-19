@@ -144,7 +144,7 @@ public:
    virtual bool isContinuous(int colNumber) const  { return true; }
 
    /// Get pointer to row-wise copy of matrix
-   virtual const CoinPackedMatrix* getMatrixByRow() const { return NULL; }
+   virtual const CoinPackedMatrix* getMatrixByRow() const;
 
    /// Get pointer to column-wise copy of matrix
    virtual const CoinPackedMatrix *getMatrixByCol() const;
@@ -385,6 +385,7 @@ private:
   mutable double* rhs = NULL;
   mutable char* rowSense = NULL;
   mutable CoinPackedMatrix* matrixByCol = NULL;
+  mutable CoinPackedMatrix* matrixByRow = NULL;
 
 };
 

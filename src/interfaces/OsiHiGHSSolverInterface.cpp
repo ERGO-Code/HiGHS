@@ -238,9 +238,9 @@ const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByCol() const {
   double *value = new double[nelements];
 
   // copy data
-  memcpy(start, &(this->lp->Astart_[0]), ncols + 1);
-  memcpy(index, &(this->lp->Aindex_[0]), nelements);
-  memcpy(value, &(this->lp->Avalue_[0]), nelements);
+  memcpy(start, &(this->lp->Astart_[0]), (ncols + 1) * sizeof(int));
+  memcpy(index, &(this->lp->Aindex_[0]), nelements * sizeof(int));
+  memcpy(value, &(this->lp->Avalue_[0]), nelements * sizeof(double));
 
   for (int i = 0; i < ncols; i++) {
     len[i] = start[i + 1] - start[i];
@@ -256,9 +256,20 @@ const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByCol() const {
   return this->matrixByCol;
 }
 
+const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByRow() const {
+  if (this->matrixByCol != NULL) {
+    delete this->matrixByCol;
+  }
+
+  this->matrixByCol = (CoinPackedMatrix*)this->getMatrixByCol();
+  this->matrixByCol->transpose();
+
+  return this->matrixByCol;
+}
+
 double OsiHiGHSSolverInterface::getObjSense() const {
   if (this->lp == NULL) {
-    return 0;
+    return 1.0;
   }
 
   return this->lp->sense_;
@@ -266,9 +277,9 @@ double OsiHiGHSSolverInterface::getObjSense() const {
 
 // todo: start from tomorrow
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
-                                     const double rowlb, const double rowub) {
-  // get pointers to data                                
-  // highs.addRow( pointers to data , optional force)
+                                     const double rowlb, const double rowub){
+    // get pointers to data
+    // highs.addRow( pointers to data , optional force)
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
@@ -404,7 +415,6 @@ void OsiHiGHSSolverInterface::loadProblem(
     const int *index, const double *value, const double *collb,
     const double *colub, const double *obj, const char *rowsen,
     const double *rowrhs, const double *rowrng) {
-
   double *rowlb = new double[numrows];
   double *rowub = new double[numrows];
 
@@ -413,7 +423,8 @@ void OsiHiGHSSolverInterface::loadProblem(
                               rowub[i]);
   }
 
-  this->loadProblem(numcols, numrows, start, index, value,  collb, colub, obj, rowlb, rowub);
+  this->loadProblem(numcols, numrows, start, index, value, collb, colub, obj,
+                    rowlb, rowub);
 
   delete[] rowlb;
   delete[] rowub;
@@ -428,9 +439,9 @@ void OsiHiGHSSolverInterface::loadProblem(
   int numRow = matrix.getNumRows();
   int nnz = matrix.getNumElements();
 
-  int* start = new int[numCol + 1];
-  int* index = new int[nnz];
-  double* value = new double[nnz];
+  int *start = new int[numCol + 1];
+  int *index = new int[nnz];
+  double *value = new double[nnz];
 
   // get matrix data
   const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
@@ -452,7 +463,8 @@ void OsiHiGHSSolverInterface::loadProblem(
   }
   assert(nnz == nz);
 
-  this->loadProblem(numCol, numRow, start, index, value, collb, colub, obj, rowlb, rowub);
+  this->loadProblem(numCol, numRow, start, index, value, collb, colub, obj,
+                    rowlb, rowub);
 
   delete[] start;
   delete[] index;
