@@ -157,7 +157,6 @@ const double *OsiHiGHSSolverInterface::getRowRange() const {
   int nrows = this->getNumCols();
 
   if (nrows == 0) {
-    this->rowRange = new double[1];
     return this->rowRange;
   }
 
@@ -183,7 +182,6 @@ const double *OsiHiGHSSolverInterface::getRightHandSide() const {
   int nrows = this->getNumCols();
 
   if (nrows == 0) {
-    this->rhs = new double[1];
     return this->rhs;
   }
 
@@ -209,7 +207,6 @@ const char *OsiHiGHSSolverInterface::getRowSense() const {
   int nrows = this->getNumCols();
 
   if (nrows == 0) {
-    this->rowSense = new char[1];
     return this->rowSense;
   }
 
