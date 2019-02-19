@@ -31,21 +31,26 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   }
 
   if (this->rowRange != NULL) {
-    delete this->rowRange;
+    delete[] this->rowRange;
   }
 
   if (this->rhs != NULL) {
-    delete this->rhs;
+    delete[] this->rhs;
   }
 
   if (this->rowSense != NULL) {
-    delete this->rowSense;
+    delete[] this->rowSense;
+  }
+
+  if (this->matrixByCol != NULL) {
+    delete this->matrixByCol;
   }
 }
 
 void OsiHiGHSSolverInterface::initialSolve() {
   if (!lp)
-	throw CoinError("No problem setup.", __FUNCTION__, "OsiHiGHSSolverInterface", __FILE__, __LINE__);
+    throw CoinError("No problem setup.", __FUNCTION__,
+                    "OsiHiGHSSolverInterface", __FILE__, __LINE__);
   this->status = this->highs->run(*this->lp);
 };
 
@@ -268,7 +273,7 @@ const double *OsiHiGHSSolverInterface::getRightHandSide() const {
   this->rhs = new double[nrows];
 
   for (int i = 0; i < nrows; i++) {
-    // compute range for row i
+    // compute rhs for row i
     double lo = this->lp->rowLower_[i];
     double hi = this->lp->rowUpper_[i];
     if (hi < HIGHS_CONST_INF) {
@@ -298,7 +303,7 @@ const char *OsiHiGHSSolverInterface::getRowSense() const {
   this->rowSense = new char[nrows];
 
   for (int i = 0; i < nrows; i++) {
-    // compute range for row i
+    // compute sense for row i
     double lo = this->lp->rowLower_[i];
     double hi = this->lp->rowUpper_[i];
     if (lo > -HIGHS_CONST_INF && hi < HIGHS_CONST_INF) {
@@ -317,4 +322,37 @@ const char *OsiHiGHSSolverInterface::getRowSense() const {
   }
 
   return this->rowSense;
+}
+
+const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByCol() const {
+  if (this->matrixByCol != NULL) {
+    delete this->matrixByCol;
+  }
+
+  int nrows = this->getNumRows();
+  int ncols = this->getNumCols();
+  int nelements = this->getNumElements();
+
+  int *len = new int[ncols];
+  int *start = new int[ncols + 1];
+  int *index = new int[nelements];
+  double *value = new double[nelements];
+
+  // copy data
+  memcpy(start, &(this->lp->Astart_[0]), ncols + 1);
+  memcpy(index, &(this->lp->Aindex_[0]), nelements);
+  memcpy(value, &(this->lp->Avalue_[0]), nelements);
+
+  for (int i = 0; i < ncols; i++) {
+    len[i] = start[i + 1] - start[i];
+  }
+
+  this->matrixByCol = new CoinPackedMatrix();
+
+  this->matrixByCol->assignMatrix(true, nrows, ncols, nelements, value, index,
+                                  start, len);
+  assert(this->matrixByCol->getNumCols() == ncols);
+  assert(this->matrixByCol->getNumRows() == nrows);
+
+  return this->matrixByCol;
 }

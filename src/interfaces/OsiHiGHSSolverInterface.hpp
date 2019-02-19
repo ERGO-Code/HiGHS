@@ -147,7 +147,7 @@ public:
    virtual const CoinPackedMatrix* getMatrixByRow() const { return NULL; }
 
    /// Get pointer to column-wise copy of matrix
-   virtual const CoinPackedMatrix *getMatrixByCol() const { return NULL; }
+   virtual const CoinPackedMatrix *getMatrixByCol() const;
 
    /// Get solver's value for infinity
    virtual double getInfinity() const;
@@ -384,6 +384,7 @@ private:
   mutable double* rowRange = NULL;
   mutable double* rhs = NULL;
   mutable char* rowSense = NULL;
+  mutable CoinPackedMatrix* matrixByCol;
 
 };
 
