@@ -382,9 +382,20 @@ void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
                                           const double *colub,
                                           const double *obj, const char *rowsen,
                                           const double *rowrhs,
-                                          const double *rowrng){
-    // TODO
-    // this->convertSenseToBound()
+                                          const double *rowrng) {
+  int numRow = matrix.getNumRows();
+
+  double* rowlb = new double[numRow];
+  double* rowub = new double[numRow];
+
+  for (int i=0; i<numRow; i++) {
+     this->convertSenseToBound(rowsen[i], rowrhs[i], rowrng[i], rowlb[i], rowub[i]);
+  }
+
+  this->loadProblem(matrix, collb, colub, obj, rowlb, rowub);
+
+  delete[] rowlb;
+  delete[] rowub;
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
