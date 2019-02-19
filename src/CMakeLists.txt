@@ -83,7 +83,18 @@ set(headers
     Highs.h
 )
 
+if (GAMS_FOUND)
+    set(sources ${sources} interfaces/GAMS.cpp)
+    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gmomcc.c")
+    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gevmcc.c")
+    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/optcc.c")
+endif()
+
 add_library(libhighs ${sources})
+
+if (GAMS_FOUND)
+    target_include_directories(libhighs PUBLIC "${GAMS_ROOT}/apifiles/C/api")
+endif()
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file

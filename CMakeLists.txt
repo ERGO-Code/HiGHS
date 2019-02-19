@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(HIGHS LANGUAGES CXX)
+project(HIGHS LANGUAGES CXX C)
 
 set(HIGHS_VERSION_MAJOR 1)
 set(HIGHS_VERSION_MINOR 0)
@@ -82,6 +82,14 @@ find_package(PkgConfig)
 pkg_check_modules(OSI osi)
 # need to come before adding any targets (add_executable, add_library)
 link_directories(${OSI_LIBRARY_DIRS})
+
+option(GAMS_ROOT "GAMS root folder." "OFF")
+if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
+    message(STATUS "GAMS root folder set: " ${GAMS_ROOT})
+    set(GAMS_FOUND ON)
+else ()
+    set(GAMS_FOUND OFF)
+endif ()
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
