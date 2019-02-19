@@ -356,3 +356,19 @@ const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByCol() const {
 
   return this->matrixByCol;
 }
+double getObjSense() const {
+  if (!lp)
+    return 0;
+
+  return this->lp->sense_;
+}
+
+// todo: start from tomorrow
+void addRow(const CoinPackedVectorBase &vec, const double rowlb, 
+            const double rowub) {
+  if (!lp) {
+    // Add row to an empty probelm. Use HighsModelBuilder.
+  } else {
+    // Add row to our existing problem. Use Julian's add_row method.
+  }
+};
