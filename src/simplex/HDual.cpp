@@ -40,7 +40,7 @@ using std::fabs;
 void HDual::solve(int num_threads) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
-  simplex_info.solution_status = SimplexSolutionStatus::UNSET;
+  simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
   // Cannot solve box-constrained LPs
   if (workHMO.simplex_lp_.numRow_ == 0) return;
 
@@ -293,7 +293,7 @@ void HDual::solve(int num_threads) {
     }
 #endif
 
-  if (simplex_info.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
     // Use primal to clean up if not out of time
     int it0 = simplex_info.iteration_count;
     if (solvePhase == 4) {
@@ -553,14 +553,14 @@ void HDual::solve_phase1() {
         printf("HDual::solve_phase1: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
-        simplex_info.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
     }
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > simplex_info.highs_run_time_limit) {
       SolveBailout = true;
-      simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
     }
     // If the data are fresh from rebuild(), break out of
@@ -587,7 +587,7 @@ void HDual::solve_phase1() {
         // Report dual infeasible
         solvePhase = -1;
         HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
-        simplex_info.solution_status = SimplexSolutionStatus::UNBOUNDED;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
       }
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
@@ -595,7 +595,7 @@ void HDual::solve_phase1() {
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-    simplex_info.solution_status = SimplexSolutionStatus::FAILED;
+    simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
@@ -607,7 +607,7 @@ void HDual::solve_phase1() {
       // Report strange issues
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-      simplex_info.solution_status = SimplexSolutionStatus::FAILED;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
     }
   }
 
@@ -657,18 +657,18 @@ void HDual::solve_phase2() {
         printf("HDual::solve_phase2: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
-        simplex_info.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         SolveBailout = true;
         break;
       }
     }
-    if (simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
+    if (simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
       SolveBailout = true;
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > simplex_info.highs_run_time_limit) {
-      simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       SolveBailout = true;
       break;
     }
@@ -699,14 +699,14 @@ void HDual::solve_phase2() {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
       HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-      simplex_info.solution_status = SimplexSolutionStatus::OPTIMAL;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
-    simplex_info.solution_status = SimplexSolutionStatus::FAILED;
+    simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
@@ -718,7 +718,7 @@ void HDual::solve_phase2() {
       // primal infeasible
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
-      simplex_info.solution_status = SimplexSolutionStatus::INFEASIBLE;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::INFEASIBLE;
     }
   }
 }
