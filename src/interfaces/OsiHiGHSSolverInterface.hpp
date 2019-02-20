@@ -158,19 +158,19 @@ public:
    ///@todo implement
 
    /// Get pointer to array[getNumCols()] of primal solution vector
-   virtual const double* getColSolution() const { return NULL; }
+   const double* getColSolution() const;
 
    /// Get pointer to array[getNumRows()] of dual prices
-   virtual const double* getRowPrice() const { return NULL; }
+   const double* getRowPrice() const;
 
    /// Get a pointer to array[getNumCols()] of reduced costs
-   virtual const double* getReducedCost() const { return NULL; }
+   const double* getReducedCost() const;
 
    /// Get pointer to array[getNumRows()] of row activity levels (constraint matrix times the solution vector)
-   virtual const double *getRowActivity() const { return NULL; }
+   const double *getRowActivity() const;
 
    /// Get objective function value
-   virtual double getObjValue() const { return 0.0; }
+   double getObjValue() const;
 
    /// Get how many iterations it took to solve the problem (whatever "iteration" mean to the solver)
    virtual int getIterationCount() const { return 42; }

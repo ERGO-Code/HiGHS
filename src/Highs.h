@@ -57,6 +57,10 @@ public:
 
   HighsSolution getSolution() const { return solution_; }
 
+#ifdef OSI_FOUND
+  friend class OsiHiGHSSolverInterface;
+#endif
+
 private:
   HighsOptions options_;
   HighsSolution solution_;
