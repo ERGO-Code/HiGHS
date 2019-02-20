@@ -30,8 +30,8 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   setStrParam(OsiSolverName, "HiGHS");
 }
 
-OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(Highs& other) {
-  this->highs = new Highs();
+OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(Highs& other)
+: OsiHiGHSSolverInterface() {
   this->highs->initializeLp(other.getLp());
 }
 
