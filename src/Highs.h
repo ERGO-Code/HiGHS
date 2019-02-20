@@ -12,6 +12,9 @@ class Highs
 {
 public:
   Highs() {}
+  Highs(HighsOptions& options) { 
+    options_ = options;
+  }
 
   // The public method run() calls runSolver to solve problem before
   // or after presolve (or crash later) depending on the specified options.
