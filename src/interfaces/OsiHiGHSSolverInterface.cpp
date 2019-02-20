@@ -29,8 +29,9 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   setStrParam(OsiSolverName, "HiGHS");
 }
 
-OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(HighsLp &original) {
-  this->lp = new HighsLp(original);
+OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(Highs& other) {
+  this->highs = new Highs();
+  this->highs->initializeLp(other.getLp());
 }
 
 OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
@@ -38,10 +39,6 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface()\n");
   delete this->highs;
-
-  if (this->lp != NULL) {
-    delete this->lp;
-  }
 
   if (this->rowRange != NULL) {
     delete[] this->rowRange;
@@ -61,13 +58,13 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
 }
 
 OsiSolverInterface *OsiHiGHSSolverInterface::clone(bool copyData) const {
-  if (this->lp == NULL || !copyData) {
+  if (!copyData) {
     OsiHiGHSSolverInterface *cln = new OsiHiGHSSolverInterface();
     cln->objOffset = this->objOffset;
     return cln;
 
   } else {
-    return new OsiHiGHSSolverInterface(*this->lp);
+    return new OsiHiGHSSolverInterface(*(this->highs));
   }
 }
 
@@ -246,85 +243,49 @@ bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
 int OsiHiGHSSolverInterface::getNumCols() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getNumCols()\n");
-  if (this->lp != NULL) {
-    return this->lp->numCol_;
-  } else {
-    return 0;
-  }
+  return this->highs->lp_.numCol_;
 }
 
 int OsiHiGHSSolverInterface::getNumRows() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getNumRows()\n");
-  if (this->lp != NULL) {
-    return this->lp->numRow_;
-  } else {
-    return 0;
-  }
+    return this->highs->lp_.numRow_;
 }
 
 int OsiHiGHSSolverInterface::getNumElements() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getNumElements()\n");
-  if (this->lp != NULL) {
-    return this->lp->nnz_;
-  } else {
-    return 0;
-  };
+    return this->highs->lp_.nnz_;
 }
 
 const double *OsiHiGHSSolverInterface::getColLower() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColLower()\n");
-  if (this->lp == NULL) {
-    // const HighsLp& sjkfhdjfh = this->highs->getLp();
-    // if (sjkfhdjfh.numCol_ > 0) {
-    //   return &sjkfhdjfh.colLower_[0];
-    // } 
-    return NULL;
-  } else {
-    return &(this->lp->colLower_[0]);
-  }
+  return &(this->highs->lp_.colLower_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getColUpper() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColUpper()\n");
-  if (this->lp == NULL) {
-    return NULL;
-  } else {
-    return &(this->lp->colUpper_[0]);
-  }
+    return &(this->highs->lp_.colUpper_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getRowLower() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowLower()\n");
-  if (this->lp == NULL) {
-    return NULL;
-  } else {
-    return &(this->lp->rowLower_[0]);
-  }
+    return &(this->highs->lp_.rowLower_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getRowUpper() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowUpper()\n");
-  if (this->lp == NULL) {
-    return NULL;
-  } else {
-    return &(this->lp->rowUpper_[0]);
-  }
+    return &(this->highs->lp_.rowUpper_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjCoefficients()\n");
-  if (this->lp == NULL) {
-    return NULL;
-  } else {
-    return &(this->lp->colCost_[0]);
-  }
+    return &(this->highs->lp_.colCost_[0]);
 }
 
 // TODO: review: 10^20?
@@ -351,8 +312,8 @@ const double *OsiHiGHSSolverInterface::getRowRange() const {
 
   for (int i = 0; i < nrows; i++) {
     // compute range for row i
-    double lo = this->lp->rowLower_[i];
-    double hi = this->lp->rowUpper_[i];
+    double lo = this->highs->lp_.rowLower_[i];
+    double hi = this->highs->lp_.rowUpper_[i];
     double t1;
     char t2;
     this->convertBoundToSense(lo, hi, t2, t1, this->rowRange[i]);
@@ -378,8 +339,8 @@ const double *OsiHiGHSSolverInterface::getRightHandSide() const {
 
   for (int i = 0; i < nrows; i++) {
     // compute rhs for row i
-    double lo = this->lp->rowLower_[i];
-    double hi = this->lp->rowUpper_[i];
+    double lo = this->highs->lp_.rowLower_[i];
+    double hi = this->highs->lp_.rowUpper_[i];
     double t1;
     char t2;
     this->convertBoundToSense(lo, hi, t2, this->rhs[i], t1);
@@ -405,8 +366,8 @@ const char *OsiHiGHSSolverInterface::getRowSense() const {
 
   for (int i = 0; i < nrows; i++) {
     // compute sense for row i
-    double lo = this->lp->rowLower_[i];
-    double hi = this->lp->rowUpper_[i];
+    double lo = this->highs->lp_.rowLower_[i];
+    double hi = this->highs->lp_.rowUpper_[i];
     double t1, t2;
     this->convertBoundToSense(lo, hi, this->rowSense[i], t1, t2);
   }
@@ -431,9 +392,9 @@ const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByCol() const {
   double *value = new double[nelements];
 
   // copy data
-  memcpy(start, &(this->lp->Astart_[0]), (ncols + 1) * sizeof(int));
-  memcpy(index, &(this->lp->Aindex_[0]), nelements * sizeof(int));
-  memcpy(value, &(this->lp->Avalue_[0]), nelements * sizeof(double));
+  memcpy(start, &(this->highs->lp_.Astart_[0]), (ncols + 1) * sizeof(int));
+  memcpy(index, &(this->highs->lp_.Aindex_[0]), nelements * sizeof(int));
+  memcpy(value, &(this->highs->lp_.Avalue_[0]), nelements * sizeof(double));
 
   for (int i = 0; i < ncols; i++) {
     len[i] = start[i + 1] - start[i];
@@ -464,21 +425,13 @@ const CoinPackedMatrix *OsiHiGHSSolverInterface::getMatrixByRow() const {
 double OsiHiGHSSolverInterface::getObjSense() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjSense()\n");
-  if (this->lp == NULL) {
-    return 1.0;
-  }
-
-  return this->lp->sense_;
+  return this->highs->lp_.sense_;
 }
 
 void OsiHiGHSSolverInterface::setObjSense(double s) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjSense()\n");
-  if (this->lp == NULL) {
-    // TODO
-    return;
-  }
-  this->lp->sense_ = (int)s;
+  this->highs->lp_.sense_ = (int)s;
 }
 
 // todo: start from tomorrow
@@ -565,67 +518,62 @@ void OsiHiGHSSolverInterface::loadProblem(
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::loadProblem()\n");
   double oldObjSense = this->getObjSense();
-  if (this->lp != NULL) {
-    delete this->lp;
-  }
 
-  this->lp = new HighsLp();
+  HighsLp lp;
 
-  this->lp->numRow_ = numrows;
-  this->lp->numCol_ = numcols;
-  this->lp->nnz_ = start[numcols];
+  lp.numRow_ = numrows;
+  lp.numCol_ = numcols;
+  lp.nnz_ = start[numcols];
 
   // setup HighsLp data structures
   // TODO: create and use HighsLp construtor for this!!!
-  this->lp->colCost_.resize(numcols);
-  this->lp->colUpper_.resize(numcols);
-  this->lp->colLower_.resize(numcols);
+  lp.colCost_.resize(numcols);
+  lp.colUpper_.resize(numcols);
+  lp.colLower_.resize(numcols);
 
-  this->lp->rowLower_.resize(numrows);
-  this->lp->rowUpper_.resize(numrows);
+  lp.rowLower_.resize(numrows);
+  lp.rowUpper_.resize(numrows);
 
-  this->lp->Astart_.resize(numcols + 1);
-  this->lp->Aindex_.resize(start[numcols]);
-  this->lp->Avalue_.resize(start[numcols]);
+  lp.Astart_.resize(numcols + 1);
+  lp.Aindex_.resize(start[numcols]);
+  lp.Avalue_.resize(start[numcols]);
 
   // copy data
   if (obj != NULL) {
-    this->lp->colCost_.assign(obj, obj + numcols);
+    lp.colCost_.assign(obj, obj + numcols);
   } else {
-    this->lp->colCost_.assign(numcols, 0.0);
+    lp.colCost_.assign(numcols, 0.0);
   }
 
   if (collb != NULL) {
-    this->lp->colLower_.assign(collb, collb + numcols);
+    lp.colLower_.assign(collb, collb + numcols);
   } else {
-    this->lp->colLower_.assign(numcols, 0.0);
+    lp.colLower_.assign(numcols, 0.0);
   }
 
   if (colub != NULL) {
-    this->lp->colUpper_.assign(colub, colub + numcols);
+    lp.colUpper_.assign(colub, colub + numcols);
   } else {
-    this->lp->colUpper_.assign(numcols, HIGHS_CONST_INF);
+    lp.colUpper_.assign(numcols, HIGHS_CONST_INF);
   }
 
   if (rowlb != NULL) {
-    this->lp->rowLower_.assign(rowlb, rowlb + numrows);
+    lp.rowLower_.assign(rowlb, rowlb + numrows);
   } else {
-    this->lp->rowLower_.assign(numrows, -HIGHS_CONST_INF);
+    lp.rowLower_.assign(numrows, -HIGHS_CONST_INF);
   }
 
   if (rowub != NULL) {
-    this->lp->rowUpper_.assign(rowub, rowub + numrows);
+    lp.rowUpper_.assign(rowub, rowub + numrows);
   } else {
-    this->lp->rowUpper_.assign(numrows, HIGHS_CONST_INF);
+    lp.rowUpper_.assign(numrows, HIGHS_CONST_INF);
   }
 
-  this->lp->Astart_.assign(start, start + numcols + 1);
-  this->lp->Aindex_.assign(index, index + start[numcols]);
-  this->lp->Avalue_.assign(value, value + start[numcols]);
+  lp.Astart_.assign(start, start + numcols + 1);
+  lp.Aindex_.assign(index, index + start[numcols]);
+  lp.Avalue_.assign(value, value + start[numcols]);
   this->setObjSense(oldObjSense);
-  this->highs->initializeLp(*this->lp);
-  delete this->lp;
-  this->lp = NULL;
+  this->highs->initializeLp(lp);
 }
 
 void OsiHiGHSSolverInterface::loadProblem(
@@ -697,14 +645,14 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColSolution()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!lp || !highs) {
+  if (!highs) {
     return nullptr;
   }
   else {
     if (highs->solution_.col_value.size() == 0) {
       double num_cols = highs->lp_.numCol_;
       this->dummy_solution.col_value.resize(num_cols);
-      for (int col=0; col< lp->numCol_; col++) {
+      for (int col=0; col< highs->lp_.numCol_; col++) {
         if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
           dummy_solution.col_value[col] = 0;
         else if (std::fabs(highs->lp_.colLower_[col] < 
@@ -753,7 +701,7 @@ double OsiHiGHSSolverInterface::getObjValue() const {
 }
 
 int OsiHiGHSSolverInterface::getIterationCount() const {
-  if (!lp || !highs) {
+  if (!highs) {
     return 0;
   }
 

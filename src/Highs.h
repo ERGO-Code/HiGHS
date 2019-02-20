@@ -16,7 +16,7 @@ public:
 
   // The public method run() calls runSolver to solve problem before
   // or after presolve (or crash later) depending on the specified options.
-  HighsStatus initializeLp(HighsLp &lp);
+  HighsStatus initializeLp(const HighsLp &lp);
   HighsStatus run();
 
   const HighsLp& getLp() const;
