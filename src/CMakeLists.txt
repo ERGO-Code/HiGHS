@@ -83,37 +83,45 @@ set(headers
     Highs.h
 )
 
-if (OSI_FOUND)
-    set(sources ${sources} interfaces/OsiHiGHSSolverInterface.cpp)
-    set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
-endif()
-
 add_library(libhighs ${sources})
 
-if (OSI_FOUND)
-    target_include_directories(libhighs PUBLIC ${OSI_INCLUDE_DIRS})
-    target_link_libraries(libhighs PUBLIC ${OSI_LIBRARIES})
-    target_compile_options(libhighs PUBLIC ${OSI_CFLAGS_OTHER})
-endif()
-
-# put version information into shared library file
 if(${BUILD_SHARED_LIBS})
+    # put version information into shared library file
     set_target_properties(libhighs PROPERTIES
         VERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
         SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
-# create static highs library with pic
 else()
+    # create static highs library with pic
     set_target_properties(libhighs PROPERTIES
         POSITION_INDEPENDENT_CODE on)
 endif()
-
-# set the install rpath to the installed destination
-set_target_properties(highs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # on UNIX system the 'lib' prefix is automatically added
 set_target_properties(libhighs PROPERTIES
     OUTPUT_NAME "highs"
     MACOSX_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+
+if (OSI_FOUND)
+    add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
+    set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
+
+    target_include_directories(OsiHighs PUBLIC ${OSI_INCLUDE_DIRS})
+    target_link_libraries(OsiHighs PUBLIC libhighs ${OSI_LIBRARIES})
+    target_compile_options(OsiHighs PUBLIC ${OSI_CFLAGS_OTHER})
+
+    if(${BUILD_SHARED_LIBS})
+        set_target_properties(OsiHighs PROPERTIES
+           VERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR}.${HIGHS_VERSION_PATCH}
+           SOVERSION ${HIGHS_VERSION_MAJOR}.${HIGHS_VERSION_MINOR})
+    else()
+        set_target_properties(OsiHighs PROPERTIES POSITION_INDEPENDENT_CODE on)
+    endif()
+endif()
+
+
+# set the install rpath to the installed destination
+set_target_properties(highs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # install the header files of highs
 install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
