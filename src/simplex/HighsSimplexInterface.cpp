@@ -919,8 +919,8 @@ void HighsSimplexInterface::util_extract_rows(
 // Change a single coefficient in the matrix
 void HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, const double XnewValue) {
   HighsLp &lp = highs_model_object.lp_;
-  assert(Xrow >= 0 && row < lp.numRow_);
-  assert(Xcol >= 0 && col < lp.numCol_);
+  assert(Xrow >= 0 && Xrow < lp.numRow_);
+  assert(Xcol >= 0 && Xcol < lp.numCol_);
 #ifdef HiGHSDEV
   printf("Called util_changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow, Xcol, XnewValue);
 #endif
@@ -932,7 +932,7 @@ void HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, const do
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
     assert(!valid_simplex_matrix);
-    assert(!apply_row_scaling);
+    //    assert(!apply_row_scaling);
   }
 #endif
   change_lp_matrix_coefficient(lp, Xrow, Xcol, XnewValue);
