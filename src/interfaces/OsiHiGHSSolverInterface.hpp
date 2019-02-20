@@ -339,6 +339,10 @@ public:
      const char *rowsen, const double *rowrhs,
      const double *rowrng);
 
+   /// Read a problem in MPS format from the given filename.
+   virtual int readMps(const char *filename,
+     const char *extension = "mps");
+
    /// Write the problem into an mps file of the given filename.
    virtual void writeMps(const char* filename,
      const char* extension = "mps",

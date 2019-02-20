@@ -637,6 +637,21 @@ void OsiHiGHSSolverInterface::loadProblem(
   delete[] value;
 }
 
+/// Read a problem in MPS format from the given filename.
+int OsiHiGHSSolverInterface::readMps(const char *filename,
+  const char *extension)
+{
+  HighsLp lp;
+
+  FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_, lp);
+  if (rc != FilereaderRetcode::OKAY)
+	  return (int)rc;
+
+  highs->initializeLp(lp);
+
+  return 0;
+}
+
 /// Write the problem into an mps file of the given filename.
 void OsiHiGHSSolverInterface::writeMps(const char* filename,
   const char* extension,
