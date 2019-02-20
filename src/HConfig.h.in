@@ -2,10 +2,10 @@
 #define HCONFIG_H_
 
 #cmakedefine EXT_PRESOLVE
-#cmakedefine OLD_PARSER
 #cmakedefine OPENMP
 #cmakedefine SCIP_DEV
 #cmakedefine HiGHSDEV
+#cmakedefine OSI_FOUND
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HiGHSRELEASE
 #define HIGHS_GITHASH "@GITHASH@"

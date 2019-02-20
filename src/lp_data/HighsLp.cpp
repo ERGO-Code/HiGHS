@@ -15,10 +15,10 @@
 #include "lp_data/HConst.h"
 
 bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
-  if (solution.colDual_.size() == (size_t)lp.numCol_ ||
-      solution.colValue_.size() == (size_t)lp.numCol_ ||
-      solution.rowDual_.size() == (size_t)lp.numRow_ ||
-      solution.rowValue_.size() == (size_t)lp.numRow_)
+  if (solution.col_dual.size() == (size_t)lp.numCol_ ||
+      solution.col_value.size() == (size_t)lp.numCol_ ||
+      solution.row_dual.size() == (size_t)lp.numRow_ ||
+      solution.row_value.size() == (size_t)lp.numRow_)
     return true;
   return false;
 }

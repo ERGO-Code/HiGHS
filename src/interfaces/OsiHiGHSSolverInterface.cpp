@@ -542,3 +542,29 @@ void OsiHiGHSSolverInterface::loadProblem(
   delete[] index;
   delete[] value;
 }
+
+
+const double* OsiHiGHSSolverInterface::getColSolution() const {
+  if (!highs) return nullptr;
+  return &highs->solution_.col_value[0];
+}
+
+const double* OsiHiGHSSolverInterface::getRowPrice() const {
+  if (!highs) return nullptr;
+  return &highs->solution_.col_value[0];
+}
+
+const double* OsiHiGHSSolverInterface::getReducedCost() const {
+  if (!highs) return nullptr;
+  return &highs->solution_.col_value[0];
+}
+
+const double* OsiHiGHSSolverInterface::getRowActivity() const {
+  if (!highs) return nullptr;
+  return &highs->solution_.col_value[0];
+}
+
+double OsiHiGHSSolverInterface::getObjValue() const {
+  if (!highs) return 0;
+  return highs->getObjectiveValue();
+}

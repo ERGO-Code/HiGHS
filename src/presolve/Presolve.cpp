@@ -2184,9 +2184,9 @@ void Presolve::testAnAR(int post) {
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                                          HighsSolution& recovered_solution) {
-  colValue = reduced_solution.colValue_;
-  colDual = reduced_solution.colDual_;
-  rowDual = reduced_solution.rowDual_;
+  colValue = reduced_solution.col_value;
+  colDual = reduced_solution.col_dual;
+  rowDual = reduced_solution.row_dual;
 
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.

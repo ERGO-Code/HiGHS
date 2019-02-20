@@ -261,10 +261,10 @@ struct HighsSimplexInfo {
 };
 
 struct HighsSolution {
-  std::vector<double> colValue_;
-  std::vector<double> colDual_;
-  std::vector<double> rowValue_;
-  std::vector<double> rowDual_;
+  std::vector<double> col_value;
+  std::vector<double> col_dual;
+  std::vector<double> row_value;
+  std::vector<double> row_dual;
 };
 
 struct HighsRanging {
