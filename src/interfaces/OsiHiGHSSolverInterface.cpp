@@ -278,6 +278,10 @@ const double *OsiHiGHSSolverInterface::getColLower() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColLower()\n");
   if (this->lp == NULL) {
+    // const HighsLp& sjkfhdjfh = this->highs->getLp();
+    // if (sjkfhdjfh.numCol_ > 0) {
+    //   return &sjkfhdjfh.colLower_[0];
+    // } 
     return NULL;
   } else {
     return &(this->lp->colLower_[0]);
@@ -621,6 +625,8 @@ void OsiHiGHSSolverInterface::loadProblem(
   this->lp->Avalue_.assign(value, value + start[numcols]);
   this->setObjSense(oldObjSense);
   this->highs->initializeLp(*this->lp);
+  delete this->lp;
+  this->lp = NULL;
 }
 
 void OsiHiGHSSolverInterface::loadProblem(
