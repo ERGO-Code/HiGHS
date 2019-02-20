@@ -435,6 +435,8 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
   // get pointers to data
   // highs.addRow( pointers to data , optional force)
+  bool success = this->highs->addRow(rowlb, rowub, vec.getNumElements(), vec.getIndices(), vec.getElements(), true);
+  assert(success);
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
