@@ -23,31 +23,23 @@
 
 using namespace OsiUnitTest;
 
-//----------------------------------------------------------------
-// to see parameter list, call unitTest -usage
-//----------------------------------------------------------------
-
 int main (int argc, const char *argv[])
 {
 #if !COINSAMPLEFOUND
   std::cerr << "Path to Data/Sample not known. Cannot run tests without sample MPS files." << std::endl;
   return EXIT_FAILURE;
 #endif
-/*
-  Start off with various bits of initialisation that don't really belong
-  anywhere else.
 
-  Synchronise C++ stream i/o with C stdio. This makes debugging
-  output a bit more comprehensible. It still suffers from interleave of cout
-  (stdout) and cerr (stderr), but -nobuf deals with that.
- */
+  // Synchronise C++ stream i/o with C stdio.
   std::ios::sync_with_stdio();
+  setbuf(stderr, 0);
+  setbuf(stdout, 0);
 
-/*
-  Suppress an popup window that Windows shows in response to a crash. See
-  note at head of file.
- */
+  // Suppress an popup window that Windows shows in response to a crash.
   WindowsErrorPopupBlocker();
+
+  // OsiUnitTest::verbosity = 10;
+  // OsiUnitTest::haltonerror = 2;
 
   int nerrors;
   int nerrors_expected;
@@ -55,16 +47,13 @@ int main (int argc, const char *argv[])
   std::string mpsDir = COINSAMPLEDIR;
   mpsDir.push_back(CoinFindDirSeparator());
 
-  // Do common solverInterface testing by calling the
-  // base class testing method.
+  // Do common solverInterface testing by calling the base class testing method.
   {
     OsiHiGHSSolverInterface highsSi;
     OSIUNITTEST_CATCH_ERROR(OsiSolverInterfaceCommonUnitTest(&highsSi, mpsDir, ""), {}, highsSi, "osi common unittest");
   }
 
-  /*
-    Test Osi{Row,Col}Cut routines.
-   */
+  // Test Osi{Row,Col}Cut routines
   {
     OsiHiGHSSolverInterface highsSi;
     testingMessage( "Testing OsiRowCut with OsiHiGHSSolverInterface\n" );
@@ -81,11 +70,9 @@ int main (int argc, const char *argv[])
     OSIUNITTEST_CATCH_ERROR(OsiRowCutDebuggerUnitTest(&highsSi,mpsDir), {}, highsSi, "rowcut debugger unittest");
   }
 
-  /*
-    We have run the fast unit tests.
-    If there were no errors, then also run the Netlib problems.
-   */
 #if COINNETLIBFOUND
+  //  We have run the fast unit tests.
+  //  If there were no errors, then also run the Netlib problems.
   outcomes.getCountBySeverity(TestOutcome::ERROR, nerrors, nerrors_expected);
   if( nerrors <= nerrors_expected)
   {
@@ -108,9 +95,7 @@ int main (int argc, const char *argv[])
   testingMessage( "Skip testing OsiSolverInterface on Netlib problems as path to Data/Netlib not known.\n" );
 #endif
 
-  /*
-    We're done. Report on the results.
-   */
+  // We're done. Report on the results.
   std::cout.flush();
   outcomes.print();
 
