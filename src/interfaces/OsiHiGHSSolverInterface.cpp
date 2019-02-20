@@ -31,6 +31,9 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface& original) 
 : OsiSolverInterface(original) {
+    HighsPrintMessage(
+      ML_ALWAYS,
+      "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->highs = new Highs();
   this->highs->initializeLp(original.highs->getLp());
   setStrParam(OsiSolverName, "HiGHS");
@@ -60,6 +63,9 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
 }
 
 OsiSolverInterface *OsiHiGHSSolverInterface::clone(bool copyData) const {
+    HighsPrintMessage(
+      ML_ALWAYS,
+      "Calling OsiHiGHSSolverInterface::clone()\n");
   if (!copyData) {
     OsiHiGHSSolverInterface *cln = new OsiHiGHSSolverInterface();
     cln->objOffset = this->objOffset;
@@ -754,6 +760,8 @@ double OsiHiGHSSolverInterface::getObjValue() const {
 }
 
 int OsiHiGHSSolverInterface::getIterationCount() const {
+    HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::getIterationCount()\n");
   if (!highs) {
     return 0;
   }
