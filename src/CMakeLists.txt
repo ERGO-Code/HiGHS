@@ -117,6 +117,11 @@ if (OSI_FOUND)
     else()
         set_target_properties(OsiHighs PROPERTIES POSITION_INDEPENDENT_CODE on)
     endif()
+
+    #configure and install the pkg-config file
+    configure_file(${CMAKE_SOURCE_DIR}/osi-highs.pc.in
+        "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
+    install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" DESTINATION lib/pkg-config)
 endif()
 
 
