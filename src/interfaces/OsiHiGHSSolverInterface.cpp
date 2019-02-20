@@ -54,6 +54,130 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   }
 }
 
+bool OsiHiGHSSolverInterface::setIntParam(OsiIntParam key, int value) {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::setIntParam()\n");
+  switch (key) {
+    case OsiMaxNumIteration:
+    case OsiMaxNumIterationHotStart:
+      this->highs->options_.simplex_iteration_limit = value;
+      return true;
+      break;
+    case OsiNameDiscipline:
+      // TODO
+      return false;
+      break;
+    case OsiLastIntParam:
+      return false;
+      break;
+  }
+
+  return false;
+}
+
+bool OsiHiGHSSolverInterface::setDblParam(OsiDblParam key, double value) {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::setDblParam()\n");
+  switch (key) {
+    case OsiDualObjectiveLimit:
+      this->highs->options_.dual_objective_value_upper_bound = value;
+      return true;
+    case OsiPrimalObjectiveLimit:
+      return false;
+    case OsiDualTolerance:
+      this->highs->options_.dual_feasibility_tolerance = value;
+      return true;
+    case OsiPrimalTolerance:
+      this->highs->options_.primal_feasibility_tolerance = value;
+      return true;
+    case OsiObjOffset:
+      // TODO: fix
+      if (this->lp != NULL) {
+        this->lp->offset_ = value;
+      }
+      return false;
+    case OsiLastDblParam:
+      return false;
+  }
+}
+
+bool OsiHiGHSSolverInterface::setStrParam(OsiStrParam key,
+                                          const std::string &value) {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::setStrParam(%d, %s)\n", key, value.c_str());
+  switch (key) {
+    case OsiProbName:
+      return OsiSolverInterface::setStrParam(key, value);
+    case OsiSolverName:
+      // TODO ??
+      return OsiSolverInterface::setStrParam(key, value);
+    case OsiLastStrParam:
+      return false;
+  }
+}
+
+bool OsiHiGHSSolverInterface::getIntParam(OsiIntParam key, int &value) const {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::getIntParam()\n");
+  switch (key) {
+    case OsiMaxNumIteration:
+    case OsiMaxNumIterationHotStart:
+      value = this->highs->options_.simplex_iteration_limit;
+      return true;
+      break;
+    case OsiNameDiscipline:
+      // TODO
+      return false;
+      break;
+    case OsiLastIntParam:
+      return false;
+      break;
+  }
+
+  return false;
+}
+
+bool OsiHiGHSSolverInterface::getDblParam(OsiDblParam key,
+                                          double &value) const {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::getDblParam()\n");
+  switch (key) {
+    case OsiDualObjectiveLimit:
+      value = this->highs->options_.dual_objective_value_upper_bound;
+      return true;
+    case OsiPrimalObjectiveLimit:
+      return false;
+    case OsiDualTolerance:
+      value = this->highs->options_.dual_feasibility_tolerance;
+      return true;
+    case OsiPrimalTolerance:
+      value = this->highs->options_.primal_feasibility_tolerance;
+      return true;
+    case OsiObjOffset:
+      // TODO: fix
+      if (this->lp != NULL) {
+        value = this->lp->offset_;
+      }
+      return false;
+    case OsiLastDblParam:
+      return false;
+  }
+}
+
+bool OsiHiGHSSolverInterface::getStrParam(OsiStrParam key,
+                                          std::string &value) const {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::getStrParam(%d, %s)\n", key, value.c_str());
+  switch (key) {
+    case OsiProbName:
+      return OsiSolverInterface::getStrParam(key, value);
+    case OsiSolverName:
+      return OsiSolverInterface::getStrParam(key, value);
+    case OsiLastStrParam:
+      return false;
+  }
+}
+
 void OsiHiGHSSolverInterface::initialSolve() {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::initialSolve()\n");
@@ -543,28 +667,27 @@ void OsiHiGHSSolverInterface::loadProblem(
   delete[] value;
 }
 
-
-const double* OsiHiGHSSolverInterface::getColSolution() const {
+const double *OsiHiGHSSolverInterface::getColSolution() const {
   HighsPrintMessage(ML_ALWAYS,
-                  "Calling OsiHiGHSSolverInterface::getColSolution()\n");
+                    "Calling OsiHiGHSSolverInterface::getColSolution()\n");
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
-const double* OsiHiGHSSolverInterface::getRowPrice() const {
+const double *OsiHiGHSSolverInterface::getRowPrice() const {
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
-const double* OsiHiGHSSolverInterface::getReducedCost() const {
+const double *OsiHiGHSSolverInterface::getReducedCost() const {
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
-const double* OsiHiGHSSolverInterface::getRowActivity() const {
+const double *OsiHiGHSSolverInterface::getRowActivity() const {
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];

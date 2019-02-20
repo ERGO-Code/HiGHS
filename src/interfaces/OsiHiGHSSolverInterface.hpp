@@ -49,17 +49,17 @@ public:
    ///@todo use OsiSolverInterface default implementation or override?
    ///@{
    // Set an integer parameter
-   // bool setIntParam(OsiIntParam key, int value);
+    bool setIntParam(OsiIntParam key, int value);
    // Set an double parameter
-   // bool setDblParam(OsiDblParam key, double value);
+    bool setDblParam(OsiDblParam key, double value);
    // Set a string parameter
-   // bool setStrParam(OsiStrParam key, const std::string &value);
+    bool setStrParam(OsiStrParam key, const std::string &value);
    // Get an integer parameter
-   // bool getIntParam(OsiIntParam key, int &value) const;
+    bool getIntParam(OsiIntParam key, int &value) const;
    // Get an double parameter
-   // bool getDblParam(OsiDblParam key, double &value) const;
+    bool getDblParam(OsiDblParam key, double &value) const;
    // Get a string parameter
-   // bool getStrParam(OsiStrParam key, std::string &value) const;
+    bool getStrParam(OsiStrParam key, std::string &value) const;
    //@}
 
    //---------------------------------------------------------------------------
