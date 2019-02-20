@@ -13,6 +13,8 @@
  */
 #include "OsiHiGHSSolverInterface.hpp"
 
+#include <cmath>
+
 #include "Highs.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
@@ -671,7 +673,27 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColSolution()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return nullptr;
+  if (!lp || !highs) {
+    return nullptr;
+  }
+  else {
+    if (highs->getSolution().col_value.size() == 0) {
+      const HighsLp& highs_lp = highs->getLp();
+      double num_cols = highs_lp.numCol_;
+      this->dummy_solution.col_value.resize(num_cols);
+      for (int col=0; col< lp->numCol_; col++) {
+        if (highs_lp.colLower_[col] <= 0 && highs_lp.colUpper_[col] >= 0)
+          dummy_solution.col_value[col] = 0;
+        else if (std::fabs(highs_lp.colLower_[col] < 
+                 std::fabs(highs_lp.colUpper_[col])))
+          dummy_solution.col_value[col] = highs_lp.colLower_[col];
+        else
+          dummy_solution.col_value[col] = highs_lp.colUpper_[col];
+      }
+      return &dummy_solution.col_value[0];
+    }
+  }
+  
   return &highs->solution_.col_value[0];
 }
 

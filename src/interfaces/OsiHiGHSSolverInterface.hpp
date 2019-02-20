@@ -16,6 +16,7 @@
 
 #include "OsiSolverInterface.hpp"
 #include "HighsStatus.h"
+#include "HighsLp.h"
 
 // forward declarations
 class Highs;
@@ -386,7 +387,8 @@ private:
   mutable char* rowSense = NULL;
   mutable CoinPackedMatrix* matrixByCol = NULL;
   mutable CoinPackedMatrix* matrixByRow = NULL;
-
+ 
+  mutable HighsSolution dummy_solution;
 };
 
 #endif

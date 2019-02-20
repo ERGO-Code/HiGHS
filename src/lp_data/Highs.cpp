@@ -52,8 +52,12 @@ int Highs::HighsAddVariable(double obj, double lo, double hi) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+  // todo: check if lp is empty.
+
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s", lp_.model_name_.c_str());
   // Not solved before, so create an instance of HighsModelObject.
+  // For the moment hmos_[0] is the HighsModelObject corresponding to the
+  // original lp.
   hmos_.push_back(HighsModelObject(lp_, timer));
 
   // Options for HighsPrintMessage and HighsPrintMessage
@@ -139,8 +143,8 @@ HighsStatus Highs::run() {
   }
   
   assert(hmos_.size() > 0);
-  int last = hmos_.size() - 1;
-  solution_ = hmos_[last].solution_;
+  solution_ = hmos_[0].solution_;
+  basis_ = getHighsBasis(hmos_[0].basis_);
 
   HighsSimplexInterface simplex_interface(hmos_[0]);
   if (solve_status != HighsStatus::Optimal) {
@@ -284,8 +288,7 @@ bool Highs::addRows(const int num_new_rows,
   // else (if simplex has solved already)
   {
     assert(hmos_.size() > 0);
-    int last = hmos_.size() - 1;
-    HighsSimplexInterface interface(hmos_[last]);
+    HighsSimplexInterface interface(hmos_[0]);
 
     // todo: change to take int return value
     interface.util_add_rows(num_new_rows, lower_bounds, upper_bounds,
@@ -321,8 +324,7 @@ bool Highs::addCols(const int num_new_cols,
   // else (if simplex has solved already)
   {
     assert(hmos_.size() > 0);
-    int last = hmos_.size() - 1;
-    HighsSimplexInterface interface(hmos_[last]);
+    HighsSimplexInterface interface(hmos_[0]);
 
     // todo: change to take int return value
     interface.util_add_rows(num_new_cols, lower_bounds, upper_bounds,
@@ -332,13 +334,25 @@ bool Highs::addCols(const int num_new_cols,
   return 0;
 }
 
-  double Highs::getObjectiveValue() {
-    if (hmos_.size() > 0) {
-      int last = hmos_.size() - 1;
-      return hmos_[last].simplex_info_.dualObjectiveValue;
-    } else {
-      // todo: ipx case
-      // todo: error/warning message
-    }
-    return 0;
+double Highs::getObjectiveValue() {
+  if (hmos_.size() > 0) {
+    int last = hmos_.size() - 1;
+    return hmos_[last].simplex_info_.dualObjectiveValue;
+  } else {
+    // todo: ipx case
+    // todo: error/warning message
   }
+  return 0;
+}
+
+const HighsLp& Highs::getLp() const {
+  return lp_; 
+}
+
+const HighsSolution& Highs::getSolution() const {
+  return solution_; 
+}
+
+const HighsBasis_new& Highs::getBasis() const {
+  return basis_; 
+}

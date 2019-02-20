@@ -267,6 +267,11 @@ struct HighsSolution {
   std::vector<double> row_dual;
 };
 
+struct HighsBasis_new {
+  std::vector<int> col_status;
+  std::vector<int> row_status;
+};
+
 struct HighsRanging {
   std::vector<double> colCostRangeUpValue_;
   std::vector<double> colCostRangeUpObjective_;
