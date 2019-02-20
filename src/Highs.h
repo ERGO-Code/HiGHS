@@ -12,7 +12,9 @@ class Highs
 {
 public:
   Highs() {}
-  explicit Highs(const HighsOptions &opt) : options_(opt){};
+  Highs(HighsOptions& options) { 
+    options_ = options;
+  }
 
   // The public method run() calls runSolver to solve problem before
   // or after presolve (or crash later) depending on the specified options.
@@ -31,9 +33,6 @@ public:
   // todo: getRangingInformation(..)
 
   // Methods to modify LP.
-  int HighsAddVariable(double obj=0.0, double lo=0.0, double hi=HIGHS_CONST_INF); // TODO: name
-
-  // add methods to modify matrix within simplex
   bool addRow(const double lower_bound, const double upper_bound,
               const int num_new_nz,
               const int *columns, const double *values,
@@ -68,8 +67,9 @@ public:
   friend class OsiHiGHSSolverInterface;
 #endif
 
-private:
   HighsOptions options_;
+
+private:
   HighsSolution solution_;
   HighsBasis_new basis_;
   HighsLp lp_;
@@ -90,8 +90,6 @@ private:
     // todo: implement, from user's side.
     return HighsPresolveStatus::NullError;
   };
-
-  HighsModelBuilder builder;
 };
 
 #endif

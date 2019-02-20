@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     return (int)HighsStatus::LpError;
   }
 
-  Highs highs(options);
+  Highs highs;
   
   HighsStatus init_status = highs.initializeLp(lp);
   if (init_status != HighsStatus::OK) {

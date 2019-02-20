@@ -24,7 +24,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   HighsOptions options;
-  this->highs = new Highs(options);
+  this->highs = new Highs();
 
   setStrParam(OsiSolverName, "HiGHS");
 }
@@ -76,17 +76,13 @@ bool OsiHiGHSSolverInterface::setIntParam(OsiIntParam key, int value) {
     case OsiMaxNumIterationHotStart:
       this->highs->options_.simplex_iteration_limit = value;
       return true;
-      break;
     case OsiNameDiscipline:
       // TODO
       return false;
-      break;
     case OsiLastIntParam:
+    default:
       return false;
-      break;
   }
-
-  return false;
 }
 
 bool OsiHiGHSSolverInterface::setDblParam(OsiDblParam key, double value) {
@@ -108,6 +104,7 @@ bool OsiHiGHSSolverInterface::setDblParam(OsiDblParam key, double value) {
       this->objOffset = value;
       return true;
     case OsiLastDblParam:
+    default:
       return false;
   }
 }
@@ -121,9 +118,9 @@ bool OsiHiGHSSolverInterface::setStrParam(OsiStrParam key,
     case OsiProbName:
       return OsiSolverInterface::setStrParam(key, value);
     case OsiSolverName:
-      // TODO ??
       return OsiSolverInterface::setStrParam(key, value);
     case OsiLastStrParam:
+    default:
       return false;
   }
 }
@@ -136,17 +133,13 @@ bool OsiHiGHSSolverInterface::getIntParam(OsiIntParam key, int &value) const {
     case OsiMaxNumIterationHotStart:
       value = this->highs->options_.simplex_iteration_limit;
       return true;
-      break;
     case OsiNameDiscipline:
       // TODO
       return false;
-      break;
     case OsiLastIntParam:
+    default:
       return false;
-      break;
   }
-
-  return false;
 }
 
 bool OsiHiGHSSolverInterface::getDblParam(OsiDblParam key,
@@ -169,6 +162,7 @@ bool OsiHiGHSSolverInterface::getDblParam(OsiDblParam key,
       value = this->objOffset;
       return true;
     case OsiLastDblParam:
+    default:
       return false;
   }
 }
@@ -184,6 +178,7 @@ bool OsiHiGHSSolverInterface::getStrParam(OsiStrParam key,
     case OsiSolverName:
       return OsiSolverInterface::getStrParam(key, value);
     case OsiLastStrParam:
+    default:
       return false;
   }
 }
