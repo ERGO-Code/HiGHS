@@ -264,12 +264,8 @@ bool Highs::addRows(const int num_new_rows,
              const bool force) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
-
-    // add_lp_rows(lp_, ..., options_);
-
-    // the above currently being
-    // add_rows_to_lp_vectors
-    // add_rows_to_lp_matrix
+    add_lp_rows(lp_, num_new_rows, lower_bounds, upper_bounds, num_new_nz,
+                row_starts, columns, values, options_);
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
