@@ -66,17 +66,17 @@ RESOURCE_LOCK osiunittestbin)
 pkg_search_module(COINSAMPLE coindatasample)
 if (COINSAMPLE_FOUND)
    pkg_get_variable(COINSAMPLEDIR coindatasample datadir)
-   set(OSIUNITTESTFLAGS ${OSIUNITTESTFLAGS} -mpsDir=${COINSAMPLEDIR})
 endif ()
 
 pkg_search_module(COINNETLIB coindatanetlib)
 if (COINNETLIB_FOUND)
    pkg_get_variable(COINNETLIBDIR coindatanetlib datadir)
-   set(OSIUNITTESTFLAGS ${OSIUNITTESTFLAGS} -netlibDir=${COINNETLIBDIR})
 endif ()
 
+configure_file(${CMAKE_SOURCE_DIR}/check/HCheckConfig.h.in ${CMAKE_BINARY_DIR}/HCheckConfig.h)
+
 # create a binary running all the tests in the executable
-add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests ${OSIUNITTESTFLAGS})
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests)
 set_tests_properties(osi_unit_tests_all
 PROPERTIES
 DEPENDS osi-unit-test-build)

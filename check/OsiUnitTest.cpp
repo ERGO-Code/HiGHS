@@ -16,8 +16,10 @@
 
 #include <iostream>
 
+#include "CoinHelperFunctions.hpp"
 #include "OsiUnitTests.hpp"
 #include "interfaces/OsiHiGHSSolverInterface.hpp"
+#include "HCheckConfig.h"
 
 using namespace OsiUnitTest;
 
@@ -41,17 +43,12 @@ int main (int argc, const char *argv[])
   note at head of file.
  */
   
-  //WindowsErrorPopupBlocker();
+  WindowsErrorPopupBlocker();
 
-/*
-  Process command line parameters.
- */
-  std::map<std::string,std::string> parms;
-  if (processParameters(argc,argv,parms) == false)
-    return 1;
-
-  std::string mpsDir = parms["-mpsDir"] ;
-  std::string netlibDir = parms["-netlibDir"] ;
+  std::string mpsDir = COINSAMPLEDIR;
+  std::string netlibDir = COINNETLIBDIR;
+  mpsDir.push_back(CoinFindDirSeparator());
+  netlibDir.push_back(CoinFindDirSeparator());
 
   // Do common solverInterface testing by calling the
   // base class testing method.
@@ -78,7 +75,7 @@ int main (int argc, const char *argv[])
     testingMessage( "Testing OsiRowCutDebugger with OsiHiGHSSolverInterface\n" );
     OSIUNITTEST_CATCH_ERROR(OsiRowCutDebuggerUnitTest(&highsSi,mpsDir), {}, highsSi, "rowcut debugger unittest");
   }
-#endif
+
   /*
     We have run the specialized unit test.
     Check now to see if we need to run through the Netlib problems.
@@ -95,7 +92,7 @@ int main (int argc, const char *argv[])
   }
   else
     testingMessage( "***Skipped Testing of OsiHiGHSSolverInterface on Netlib problems, use -testOsiSolverInterface to run them.***\n" );
-
+#endif
   /*
     We're done. Report on the results.
    */
