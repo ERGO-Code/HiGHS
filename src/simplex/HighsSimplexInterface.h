@@ -109,7 +109,7 @@ class HighsSimplexInterface {
 		    const int *XAstart,
 		    const int *XAindex,
 		    const double *XAvalue,
-		    bool force = false
+		    const bool force = false
 		    );
   
   void util_delete_cols(
@@ -135,7 +135,7 @@ class HighsSimplexInterface {
   /**
    * @brief Add a contiguous set of rows to the model data---making them basic
    */
-  void util_add_rows(
+  int util_add_rows(
 		     int XnumNewRow,
 		     const double *XrowLower,
 		     const double *XrowUpper,
@@ -143,7 +143,7 @@ class HighsSimplexInterface {
 		     const int *XARstart,
 		     const int *XARindex,
 		     const double *XARvalue,
-		     bool force = false
+		     const bool force = false
 		     );
   void util_delete_rows(
 			int firstrow,

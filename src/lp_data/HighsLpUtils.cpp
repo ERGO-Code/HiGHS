@@ -247,16 +247,33 @@ int add_lp_cols(HighsLp& lp,
 		int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 		int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
 		const HighsOptions& options, const bool force) {
-  int returnCode = validate_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound, force);
-  if (returnCode && !force) return returnCode;
-  int newNumCol = lp.numCol_ + XnumNewCol;
-  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-  returnCode = filter_col_bounds(lp, lp.numCol_, newNumCol, options.infinite_bound);
+  int returnCode = augment_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+				   XnumNewNZ, XAstart, XAindex, XAvalue,
+				   options, force);
   lp.numCol_ += XnumNewCol;
   return returnCode;
 }
 
-int validate_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper, double infinite_bound, bool force) {
+int augment_lp_cols(HighsLp& lp,
+		    int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+		    int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
+		    const HighsOptions& options, const bool force) {
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  // Validate the bounds and matrix indices, returning on error unless addition is forced
+  int returnCode = validate_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound);
+  if (returnCode && !force) return returnCode;
+  returnCode = validate_matrix_indices(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex);
+  if (returnCode && !force) return returnCode;
+  // Add the columns to the LP vectors and matrix
+  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+  add_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+  // Filter the new LP column bounds and matrix columns
+  int numChangedBounds = filter_col_bounds(lp, lp.numCol_, newNumCol, options.infinite_bound);
+  int numRemovedEntries = filter_matrix_entries(lp, lp.numCol_, newNumCol, options.small_matrix_value);
+  return returnCode;
+}
+
+int validate_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper, double infinite_bound) {
   assert(XnumCol >= 0);
   if (XnumCol == 0) return 0;
 
@@ -325,6 +342,29 @@ int filter_col_bounds(HighsLp& lp, int XfromCol, int XtoCol, const double infini
 		    numChangedUpperBounds, infinite_bound);
   int numChangedBounds = numChangedLowerBounds + numChangedUpperBounds;
   return numChangedBounds;
+}
+
+int add_lp_rows(HighsLp& lp,
+		int XnumNewRow, const double *XrowLower,  const double *XrowUpper,
+		int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
+		const HighsOptions& options, const bool force) {
+  int returnCode = augment_lp_rows(lp, XnumNewRow, XrowLower, XrowUpper,
+				   XnumNewNZ, XARstart, XARindex, XARvalue,
+				   options, force);
+  lp.numRow_ += XnumNewRow;
+  return returnCode;
+}
+
+int augment_lp_rows(HighsLp& lp,
+		    int XnumNewRow, const double *XrowLower,  const double *XrowUpper,
+		    int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
+		    const HighsOptions& options, const bool force) {
+  int newNumRow = lp.numRow_ + XnumNewRow;
+  int returnCode = validate_row_bounds(XnumNewRow, XrowLower, XrowUpper, options.infinite_bound);
+  if (returnCode && !force) return returnCode;
+  add_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
+  int numChangedBounds = filter_row_bounds(lp, lp.numRow_, newNumRow, options.infinite_bound);
+  return returnCode;
 }
 
 int validate_row_bounds(int XnumRow, const double* XrowLower, const double* XrowUpper, double infinite_bound) {
@@ -563,7 +603,7 @@ void add_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
   }
 }
 
-int filter_matrix_values(HighsLp& lp, int XfromCol, int XtoCol, double small_matrix_value) {
+int filter_matrix_entries(HighsLp& lp, int XfromCol, int XtoCol, double small_matrix_value) {
   assert(XfromCol >= 0);
   assert(XtoCol < lp.numCol_);
   assert(XfromCol <= XtoCol);
@@ -601,7 +641,8 @@ int filter_matrix_values(HighsLp& lp, int XfromCol, int XtoCol, double small_mat
   return numRemovedValues;
 }
 
-int filter_row_matrix_values(int XnumRow, int XnumNZ, int* XARstart, int* XARindex, double* XARvalue, double small_matrix_value) {
+int filter_row_matrix_entries(int XnumCol, int XnumRow, int XnumNZ, int* XARstart, int* XARindex, double* XARvalue, double small_matrix_value) {
+  assert(XnumCol >= 0);
   assert(XnumRow >= 0);
   assert(XnumNZ >= 0);
   assert(small_matrix_value >=0);

@@ -374,7 +374,7 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 
 int HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 					 int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
-					 bool force) {
+					 const bool force) {
   assert(XnumNewCol >= 0);
   assert(XnumNewNZ >= 0);
   // ToDo How to check that lp.Astart_[lp.numCol_] exists in util_addCols?
@@ -392,8 +392,6 @@ int HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost,
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int newNumCol = lp.numCol_ + XnumNewCol;
-
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
@@ -401,36 +399,44 @@ int HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost,
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = simplex_lp_status.is_scaled;
 
+  // Check that if nonzeros are to be added then the model has a positive number of rows
+  assert(XnumNewNZ == 0 || lp.numRow_ > 0);
+  if (valid_simplex_lp)
+    assert(XnumNewNZ == 0 || simplex_lp.numRow_ > 0);
+
+  // Record the new number of columns
+  int newNumCol = lp.numCol_ + XnumNewCol;
+
 #ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no basis, matrix, scaling
+  // Check that if there is no simplex LP then there is no basis, matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
-  // Validate the bounds
-  returnCode = add_lp_cols(lp,
-			   XnumNewCol, XcolCost, XcolLower, XcolUpper,
-			   XnumNewNZ, XAstart, XAindex, XAvalue,
-			   options, force);
-  if (returnCode) return returnCode;
-
-  // Validate the matrix indices
+  // Validate the bounds and matrix indices, returning on error unless addition is forced
+  returnCode = validate_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound);
+  if (returnCode && !force) return returnCode;
   returnCode = validate_matrix_indices(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex);
-  if (returnCode) return returnCode;
+  if (returnCode && !force) return returnCode;
 
-  // Add columns to LP matrix
+  // Add the columns to the LP vectors and matrix
+  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
   add_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
 
-  double small_matrix_value = 1e-8;
-  // Filter the new matrix columns
-  filter_matrix_values(lp, lp.numCol_, newNumCol, small_matrix_value);
-  
-  if (valid_simplex_lp) 
+  // Filter the new LP column bounds and matrix columns
+  int numChangedBounds = filter_col_bounds(lp, lp.numCol_, newNumCol, options.infinite_bound);
+  int numRemovedEntries = filter_matrix_entries(lp, lp.numCol_, newNumCol, options.small_matrix_value);
+
+  if (valid_simplex_lp) {
     add_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-  if (valid_simplex_matrix) 
+    numChangedBounds = filter_col_bounds(simplex_lp, simplex_lp.numCol_, newNumCol, options.infinite_bound);
+  }
+  if (valid_simplex_matrix) {
     add_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+    numRemovedEntries = filter_matrix_entries(simplex_lp, simplex_lp.numCol_, newNumCol, options.small_matrix_value);
+  }
 
   // Now consider scaling
   scale.col_.resize(newNumCol);  
@@ -557,28 +563,25 @@ void HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* 
 }
 
 
-void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
-					  int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
-					  bool force) {
+int HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
+					 int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
+					 bool force) {
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
   // ToDo How to check that lp.Astart_[lp.numRow_] exists in util_addRows?
 #ifdef HiGHSDEV
   printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
 #endif
-
-  if (XnumNewRow == 0) return;
+  int returnCode = 0;
+  if (XnumNewRow == 0) return returnCode;
 
   HighsLp &lp = highs_model_object.lp_;
+  HighsOptions &options = highs_model_object.options_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
-
-  assert(XnumNewRow >= 0);
-  assert(XnumNewNZ >= 0);
-  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
-
-  int newNumRow = lp.numRow_ + XnumNewRow;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
@@ -587,23 +590,55 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = simplex_lp_status.is_scaled;
 
-  if (valid_simplex_lp) 
+  // Check that if nonzeros are to be added then the model has a positive number of columns
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  if (valid_simplex_lp)
     assert(XnumNewNZ == 0 || simplex_lp.numCol_ > 0);
+
+  // Record the new number of rows
+  int newNumRow = lp.numRow_ + XnumNewRow;
+
 #ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no basis, matrix, scaling
+  // Check that if there is no simplex LP then there is no basis, matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
-  // Add rows to LP vectors and matrix
+  // Validate the bounds and matrix indices, returning on error unless addition is forced
+  returnCode = validate_row_bounds(XnumNewRow, XrowLower, XrowUpper, options.infinite_bound);
+  if (returnCode && !force) return returnCode;
+  returnCode = validate_matrix_indices(lp.numCol_, XnumNewRow, XnumNewNZ, XARstart, XARindex);
+  if (returnCode && !force) return returnCode;
+
+  // Add the columns to the LP vectors and matrix
   add_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
-  add_rows_to_lp_matrix(lp, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
-  if (valid_simplex_lp) 
+
+  // Filter the LP row bounds
+  int numChangedBounds = filter_row_bounds(lp, lp.numRow_, newNumRow, options.infinite_bound);
+
+  // Copy the new row-wise matrix into a local copy that can be filtered
+  int lc_XnumNewNZ = XnumNewNZ;
+  int* lc_XARstart;
+  int* lc_XARindex;
+  double* lc_XARvalue;
+  std::memcpy(lc_XARstart, XARstart, sizeof(int)*XnumNewRow);
+  std::memcpy(lc_XARindex, XARindex, sizeof(int)*XnumNewNZ);
+  std::memcpy(lc_XARvalue, XARvalue, sizeof(double)*XnumNewNZ);
+  // Filter the new matrix columns
+  int numRemovedEntries = filter_row_matrix_entries(lp.numCol_, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue, options.small_matrix_value);
+
+  // Add rows to LP matrix
+  add_rows_to_lp_matrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+
+  if (valid_simplex_lp) {
     add_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-  if (valid_simplex_matrix) 
-    add_rows_to_lp_matrix(simplex_lp, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
+    numChangedBounds = filter_row_bounds(simplex_lp, simplex_lp.numRow_, newNumRow, options.infinite_bound);
+  }
+  if (valid_simplex_matrix) {
+    add_rows_to_lp_matrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+  }
 
   // Now consider scaling
   scale.row_.resize(newNumRow);  
@@ -994,7 +1029,7 @@ int HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const 
 
   HighsLp &lp = highs_model_object.lp_;
   double infinite_bound = 1e20;
-  int returnCode = validate_col_bounds(lp.numCol_, XcolLower, XcolUpper, infinite_bound, force);
+  int returnCode = validate_col_bounds(lp.numCol_, XcolLower, XcolUpper, infinite_bound);
   if (returnCode) return returnCode;
   
   for (int col = 0; col < lp.numCol_; ++col) {

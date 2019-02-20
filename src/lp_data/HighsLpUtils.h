@@ -74,12 +74,25 @@ int add_lp_cols(
 		const bool force = false
 		);
 
+int augment_lp_cols(
+		HighsLp& lp,
+		int XnumNewCol,
+		const double *XcolCost,
+		const double *XcolLower,
+		const double *XcolUpper,
+		int XnumNewNZ,
+		const int *XAstart,
+		const int *XAindex,
+		const double *XAvalue,
+		const HighsOptions& options,
+		const bool force = false
+		);
+
 int validate_col_bounds(
 			int XnumCol,
 			const double* XcolLower,
 			const double* XcolUpper,
-			double infinite_bound,
-			const bool force = false
+			double infinite_bound
 			);
 
 void add_cols_to_lp_vectors(
@@ -97,12 +110,37 @@ int filter_col_bounds(
 		       double infinite_bound
 		       );
 
+int add_lp_rows(
+		HighsLp& lp,
+		int XnumNewRow,
+		const double *XrowLower,
+		const double *XrowUpper,
+		int XnumNewNZ,
+		const int *XARstart,
+		const int *XARindex,
+		const double *XARvalue,
+		const HighsOptions& options,
+		const bool force = false
+		);
+
+int augment_lp_rows(
+		    HighsLp& lp,
+		    int XnumNewRow,
+		    const double *XrowLower,
+		    const double *XrowUpper,
+		    int XnumNewNZ,
+		    const int *XARstart,
+		    const int *XARindex,
+		    const double *XARvalue,
+		    const HighsOptions& options,
+		    const bool force = false
+		    );
+
 int validate_row_bounds(
 			int XnumRow,
 			const double* XrowLower,
 			const double* XrowUpper,
-			double infinite_bound,
-			const bool force = false
+			double infinite_bound
 			);
 
 void add_rows_to_lp_vectors(HighsLp &lp,
@@ -123,8 +161,7 @@ int validate_matrix_indices(
 		     int XnumCol,
 		     int XnumNZ,
 		     const int* XAstart,
-		     const int* XAindex
-		     );
+		     const int* XAindex);
 
 void add_cols_to_lp_matrix(
 			   HighsLp &lp,
@@ -143,14 +180,15 @@ void add_rows_to_lp_matrix(HighsLp &lp,
 			   const double *XARvalue
 			   );
 
-int filter_matrix_values(
+int filter_matrix_entries(
 			  HighsLp& lp,
 			  int XfromCol,
 			  int XtoCol,
 			  double small_matrix_value
 			  );
 
-int filter_row_matrix_values(
+int filter_row_matrix_entries(
+			      int XnumCol,
 			      int XnumRow,
 			      int XnumNZ,
 			      int* XARstart,
