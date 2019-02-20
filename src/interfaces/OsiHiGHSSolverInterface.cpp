@@ -698,18 +698,17 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
     return nullptr;
   }
   else {
-    if (highs->getSolution().col_value.size() == 0) {
-      const HighsLp& highs_lp = highs->getLp();
-      double num_cols = highs_lp.numCol_;
+    if (highs->solution_.col_value.size() == 0) {
+      double num_cols = highs->lp_.numCol_;
       this->dummy_solution.col_value.resize(num_cols);
       for (int col=0; col< lp->numCol_; col++) {
-        if (highs_lp.colLower_[col] <= 0 && highs_lp.colUpper_[col] >= 0)
+        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
           dummy_solution.col_value[col] = 0;
-        else if (std::fabs(highs_lp.colLower_[col] < 
-                 std::fabs(highs_lp.colUpper_[col])))
-          dummy_solution.col_value[col] = highs_lp.colLower_[col];
+        else if (std::fabs(highs->lp_.colLower_[col] < 
+                 std::fabs(highs->lp_.colUpper_[col])))
+          dummy_solution.col_value[col] = highs->lp_.colLower_[col];
         else
-          dummy_solution.col_value[col] = highs_lp.colUpper_[col];
+          dummy_solution.col_value[col] = highs->lp_.colUpper_[col];
       }
       return &dummy_solution.col_value[0];
     }
@@ -748,4 +747,12 @@ double OsiHiGHSSolverInterface::getObjValue() const {
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) return 0;
   return highs->getObjectiveValue() - this->objOffset;
+}
+
+int OsiHiGHSSolverInterface::getIterationCount() const {
+  if (!lp || !highs) {
+    return 0;
+  }
+
+  return highs->getIterationCount();
 }

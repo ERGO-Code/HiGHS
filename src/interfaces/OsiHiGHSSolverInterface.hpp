@@ -174,7 +174,7 @@ public:
    double getObjValue() const;
 
    /// Get how many iterations it took to solve the problem (whatever "iteration" mean to the solver)
-   virtual int getIterationCount() const { return 42; }
+   int getIterationCount() const;
 
    /// Get as many dual rays as the solver can provide.
    virtual std::vector< double*> getDualRays(int maxNumRays, bool fullRay = false) const { return std::vector<double*>(0); }

@@ -25,8 +25,9 @@ public:
   // becomes SimplexBasis
   const HighsBasis_new& getBasis() const; 
 
-  double getRowValue(int row);
-  double getObjectiveValue();
+  double getRowValue(const int row) const;
+  double getObjectiveValue() const;
+  const int getIterationCount() const;
   // todo: getRangingInformation(..)
 
   // Methods to modify LP.

@@ -334,7 +334,7 @@ bool Highs::addCols(const int num_new_cols,
   return 0;
 }
 
-double Highs::getObjectiveValue() {
+double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
     return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
@@ -354,4 +354,10 @@ const HighsSolution& Highs::getSolution() const {
 
 const HighsBasis_new& Highs::getBasis() const {
   return basis_; 
+}
+
+const int Highs::getIterationCount() const {
+  if (hmos_.size() == 0)
+    return 0;
+  return hmos_[0].simplex_info_.iteration_count;
 }
