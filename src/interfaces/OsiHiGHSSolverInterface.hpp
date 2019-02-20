@@ -16,6 +16,7 @@
 
 #include "OsiSolverInterface.hpp"
 #include "HighsStatus.h"
+#include "HighsOptions.h"
 #include "HighsLp.h"
 
 // forward declarations
@@ -378,9 +379,8 @@ public:
 
 
 private:
-
   Highs* highs;
-  HighsLp* lp = NULL;
+  HighsLp* lp;
   HighsStatus status = HighsStatus::Init;
   mutable double* rowRange = NULL;
   mutable double* rhs = NULL;

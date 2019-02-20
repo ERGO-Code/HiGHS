@@ -35,20 +35,6 @@ HighsStatus Highs::initializeLp(HighsLp &lp) {
   return HighsStatus::OK;
 }
 
-int Highs::HighsAddVariable(double obj, double lo, double hi) {
-  if (this->runSuccessful) {
-    HighsSimplexInterface simplex_interface(this->hmos_[0]);
-    simplex_interface.util_add_cols(1, &obj, &lo, &hi, 0, NULL, NULL, NULL);
-    return 0; //TODO
-    
-  } else {
-    // build initial model using HighsModelBuilder
-    HighsVar* newVariable;
-    this->builder.HighsCreateVar(NULL, lo, hi, obj, HighsVarType::CONT, &newVariable);
-    return this->builder.getNumberOfVariables();
-  }
-}
-
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {

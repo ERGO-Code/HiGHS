@@ -24,7 +24,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   HighsOptions options;
-  this->highs = new Highs(options);
+  this->highs = new Highs();
 
   setStrParam(OsiSolverName, "HiGHS");
 }
@@ -319,11 +319,7 @@ const double *OsiHiGHSSolverInterface::getRowUpper() const {
 const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjCoefficients()\n");
-  if (this->lp == NULL) {
-    return NULL;
-  } else {
-    return &(this->lp->colCost_[0]);
-  }
+    return &(highs->lp_.colCost_[0]);
 }
 
 // TODO: review: 10^20?
