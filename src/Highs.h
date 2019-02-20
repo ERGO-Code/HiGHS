@@ -1,11 +1,12 @@
 #ifndef HIGHS_H_
 #define HIGHS_H_
 
-#include "HighsOptions.h"
-#include "HighsTimer.h"
-#include "HighsLp.h"
-#include "HighsStatus.h"
-#include "HighsModelBuilder.h"
+#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsOptions.h"
+#include "util/HighsTimer.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsStatus.h"
+#include "lp_data/HighsModelBuilder.h"
 
 // Class to set parameters and run HiGHS
 class Highs

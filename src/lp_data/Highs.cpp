@@ -22,7 +22,6 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelObject.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
@@ -44,7 +43,7 @@ HighsStatus Highs::run() {
   // Not solved before, so create an instance of HighsModelObject.
   // For the moment hmos_[0] is the HighsModelObject corresponding to the
   // original lp.
-  hmos_.push_back(HighsModelObject(lp_, timer));
+  hmos_.push_back(HighsModelObject(lp_, options_, timer));
 
   // Options for HighsPrintMessage and HighsPrintMessage
   options_.logfile = stdout;//fopen("HiGHS.log", "w");
@@ -73,7 +72,7 @@ HighsStatus Highs::run() {
       HighsLp& reduced_lp = presolve_info.getReducedProblem();
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
-      hmos_.push_back(HighsModelObject(reduced_lp, timer));
+      hmos_.push_back(HighsModelObject(reduced_lp, options_, timer));
       solve_status = runSolver(hmos_[1]);
       break;
     }
@@ -265,12 +264,8 @@ bool Highs::addRows(const int num_new_rows,
              const bool force) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
-
-    // add_lp_rows(lp_, ..., options_);
-
-    // the above currently being
-    // add_rows_to_lp_vectors
-    // add_rows_to_lp_matrix
+    add_lp_rows(lp_, num_new_rows, lower_bounds, upper_bounds, num_new_nz,
+                row_starts, columns, values, options_);
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
@@ -300,11 +295,8 @@ bool Highs::addCols(const int num_new_cols,
              const bool force) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
-    // add_lp_cols(lp_, ..., options_);  
-    
-    // the above currently being
-    // add_cols_to_lp_vectors
-    // add_cols_to_lp_matrix
+    add_lp_cols(lp_, num_new_cols, lower_bounds, upper_bounds, num_new_nz,
+                col_starts, rows, values, options_);
   }
   // else (if simplex has solved already)
   {

@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "HConfig.h"
+#include "lp_data/HighsLpUtils.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/HSimplex.h"
 #include "io/HighsIO.h"
@@ -21,9 +22,10 @@
 void HighsSimplexInterface::report_simplex_outcome(const char *message) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsTimer &timer = highs_model_object.timer_;
 
-  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_ALWAYS, "%s: OPTIMAL", message);
   else
     HighsPrintMessage(ML_ALWAYS, "%s: NOT-OPT", message);
@@ -49,19 +51,19 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    simplex_info.dual_phase2_iteration_count,
 		    simplex_info.primal_phase2_iteration_count
 		    );
-  if (simplex_info.solution_status == SimplexSolutionStatus::OPTIMAL)
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL)
     HighsPrintMessage(ML_ALWAYS, "\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::UNSET)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::UNSET)
     HighsPrintMessage(ML_ALWAYS, "Unset\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::INFEASIBLE)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::INFEASIBLE)
     HighsPrintMessage(ML_ALWAYS, "Infeasible\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::UNBOUNDED)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::UNBOUNDED)
     HighsPrintMessage(ML_ALWAYS, "Primal unbounded\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::SINGULAR)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::SINGULAR)
     HighsPrintMessage(ML_ALWAYS, "Singular basis\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::FAILED)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
     HighsPrintMessage(ML_ALWAYS, "Failed\n");
-  else if (simplex_info.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
+  else if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME)
     HighsPrintMessage(ML_ALWAYS, "Time limit exceeded\n");
   else
     HighsPrintMessage(ML_ALWAYS, "Unrecognised\n");
@@ -71,7 +73,7 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    dualObjectiveValue,
 		    simplex_info.iteration_count,
 		    currentRunHighsTime,
-		    simplex_info.solution_status,
+		    simplex_lp_status.solution_status,
 		    simplex_lp.model_name_.c_str(),
 		    simplex_info.dual_phase1_iteration_count,
 		    simplex_info.dual_phase2_iteration_count,
@@ -155,12 +157,13 @@ int HighsSimplexInterface::get_basic_indices(int *bind) {
 int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const int* rstat) {
   HighsBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
 
   int numBasic = 0;
   for (int col = 0; col < simplex_lp.numCol_; col++) {
     int var = col;
-    if (cstat[col] == HIGHS_BASESTAT_BASIC) {
+    if (cstat[col] == (int) HighsBasisStatus::BASIC) {
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       basis.basicIndex_[numBasic] = var;
@@ -168,8 +171,8 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
       continue;
     }
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    if (cstat[col] == HIGHS_BASESTAT_LOWER) {
-      // HIGHS_BASESTAT_LOWER includes fixed variables
+    if (cstat[col] == (int) HighsBasisStatus::LOWER) {
+      // (int) HighsBasisStatus::LOWER includes fixed variables
       if (simplex_lp.colLower_[col] == simplex_lp.colUpper_[col]) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
         continue;
@@ -177,10 +180,10 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
         basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
         continue;
       }
-    } else if (cstat[col] == HIGHS_BASESTAT_UPPER) {
+    } else if (cstat[col] == (int) HighsBasisStatus::UPPER) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
       continue;
-    } else if (cstat[col] == HIGHS_BASESTAT_ZERO) {
+    } else if (cstat[col] == (int) HighsBasisStatus::ZERO) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       continue;
     } else {
@@ -193,7 +196,7 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
   }
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_lp.numCol_ + row;
-    if (rstat[row] == HIGHS_BASESTAT_BASIC) {
+    if (rstat[row] == (int) HighsBasisStatus::BASIC) {
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       basis.basicIndex_[numBasic] = var;
@@ -201,8 +204,8 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
       continue;
     }
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    if (rstat[row] == HIGHS_BASESTAT_LOWER) {
-      // HIGHS_BASESTAT_LOWER includes fixed variables
+    if (rstat[row] == (int) HighsBasisStatus::LOWER) {
+      // (int) HighsBasisStatus::LOWER includes fixed variables
       if (simplex_lp.rowLower_[row] == simplex_lp.rowUpper_[row]) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
         continue;
@@ -210,10 +213,10 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
         basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
         continue;
       }
-    } else if (rstat[row] == HIGHS_BASESTAT_UPPER) {
+    } else if (rstat[row] == (int) HighsBasisStatus::UPPER) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
       continue;
-    } else if (rstat[row] == HIGHS_BASESTAT_ZERO) {
+    } else if (rstat[row] == (int) HighsBasisStatus::ZERO) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       continue;
     } else {
@@ -232,7 +235,7 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
   }
   assert(numBasic = simplex_lp.numRow_);
   populate_work_arrays(highs_model_object);
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BASIS);
   return 0;
 }
 
@@ -243,14 +246,14 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
     for (int col = 0; col < simplex_lp.numCol_; col++) {
       int var = col;
       if (!basis.nonbasicFlag_[var]) {
-        cstat[col] = HIGHS_BASESTAT_BASIC;
+        cstat[col] = (int) HighsBasisStatus::BASIC;
         continue;
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
 #ifdef HiGHSDEV
         if (!highs_isInfinity(-simplex_lp.colLower_[col]))
 #endif
         {
-          cstat[col] = HIGHS_BASESTAT_LOWER;
+          cstat[col] = (int) HighsBasisStatus::LOWER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
@@ -258,7 +261,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
         if (!highs_isInfinity(simplex_lp.colUpper_[col]))
 #endif
         {
-          cstat[col] = HIGHS_BASESTAT_UPPER;
+          cstat[col] = (int) HighsBasisStatus::UPPER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
@@ -269,7 +272,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (!highs_isInfinity(simplex_lp.colUpper_[col]))
 #endif
           {
-            cstat[col] = HIGHS_BASESTAT_LOWER;
+            cstat[col] = (int) HighsBasisStatus::LOWER;
             continue;
           }
         } else {
@@ -277,7 +280,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (highs_isInfinity(-simplex_lp.colLower_[col]) && highs_isInfinity(simplex_lp.colUpper_[col]))
 #endif
           {
-            cstat[col] = HIGHS_BASESTAT_ZERO;
+            cstat[col] = (int) HighsBasisStatus::ZERO;
             continue;
           }
         }
@@ -296,7 +299,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
     for (int row = 0; row < simplex_lp.numRow_; row++) {
       int var = simplex_lp.numCol_ + row;
       if (!basis.nonbasicFlag_[var]) {
-        rstat[row] = HIGHS_BASESTAT_BASIC;
+        rstat[row] = (int) HighsBasisStatus::BASIC;
         continue;
       }
       // NB nonbasicMove for rows refers to the solver's view where the bounds
@@ -308,7 +311,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
         if (!highs_isInfinity(-simplex_lp.rowLower_[row]))
 #endif
         {
-          rstat[row] = HIGHS_BASESTAT_LOWER;
+          rstat[row] = (int) HighsBasisStatus::LOWER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP)
@@ -318,7 +321,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
         if (!highs_isInfinity(simplex_lp.rowUpper_[row]))
 #endif
         {
-          rstat[row] = HIGHS_BASESTAT_UPPER;
+          rstat[row] = (int) HighsBasisStatus::UPPER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
@@ -327,7 +330,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (!highs_isInfinity(simplex_lp.rowUpper_[row]))
 #endif
           {
-            rstat[row] = HIGHS_BASESTAT_LOWER;
+            rstat[row] = (int) HighsBasisStatus::LOWER;
             continue;
           }
         } else {
@@ -335,7 +338,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (highs_isInfinity(-simplex_lp.rowLower_[row]) && highs_isInfinity(simplex_lp.rowUpper_[row]))
 #endif
           {
-            rstat[row] = HIGHS_BASESTAT_ZERO;
+            rstat[row] = (int) HighsBasisStatus::ZERO;
             continue;
           }
         }
@@ -369,25 +372,25 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 }
 #endif
 
-void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-					  int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+						 int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
+						 const bool force) {
+  HighsStatus return_status = HighsStatus::NotSet;
   assert(XnumNewCol >= 0);
   assert(XnumNewNZ >= 0);
   // ToDo How to check that lp.Astart_[lp.numCol_] exists in util_addCols?
 #ifdef HiGHSDEV
   printf("Called util_add_cols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
 #endif
-
-  if (XnumNewCol == 0) return;
+  if (XnumNewCol == 0) return HighsStatus::OK;
 
   HighsLp &lp = highs_model_object.lp_;
+  HighsOptions &options = highs_model_object.options_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
-
-  int newNumCol = lp.numCol_ + XnumNewCol;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
@@ -396,21 +399,39 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = simplex_lp_status.is_scaled;
 
+  // Check that if nonzeros are to be added then the model has a positive number of rows
+  assert(XnumNewNZ == 0 || lp.numRow_ > 0);
+  if (valid_simplex_lp)
+    assert(XnumNewNZ == 0 || simplex_lp.numRow_ > 0);
+
+  // Record the new number of columns
+  int newNumCol = lp.numCol_ + XnumNewCol;
+
 #ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no basis, matrix, scaling
+  // Check that if there is no simplex LP then there is no basis, matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
-  // Add columns to LP vectors and matrix
-  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-  add_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
-  if (valid_simplex_lp) 
-    add_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-  if (valid_simplex_matrix) 
-    add_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+  HighsStatus call_status;
+  call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+			       XnumNewNZ, XAstart, XAindex, XAvalue,
+			       options, force);
+  return_status = worse_status(call_status, return_status);
+  if (return_status == HighsStatus::Error && !force) return return_status;
+
+  if (valid_simplex_lp) {
+    append_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+    call_status = normalise_col_bounds(simplex_lp, simplex_lp.numCol_, newNumCol, options.infinite_bound);
+    return_status = worse_status(call_status, return_status);
+  }
+  if (valid_simplex_matrix) {
+    append_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+    call_status = normalise_lp_matrix(simplex_lp, simplex_lp.numCol_, newNumCol, options.small_matrix_value, options.large_matrix_value);
+    return_status = worse_status(call_status, return_status);
+  }
 
   // Now consider scaling
   scale.col_.resize(newNumCol);  
@@ -424,8 +445,8 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
   }
 
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis) extend_basis_with_nonbasic_cols(lp, basis, newNumCol);
-  if (valid_simplex_basis) extend_basis_with_nonbasic_cols(simplex_lp, simplex_basis, newNumCol);
+  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, newNumCol);
+  if (valid_simplex_basis) append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, newNumCol);
 
   // Deduce the consequences of adding new columns
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
@@ -446,6 +467,7 @@ void HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
+  return return_status;
 
 }
 
@@ -537,27 +559,25 @@ void HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* 
 }
 
 
-void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
-					  int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
+HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
+						 int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
+						 bool force) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  assert(XnumNewRow >= 0);
+  assert(XnumNewNZ >= 0);
   // ToDo How to check that lp.Astart_[lp.numRow_] exists in util_addRows?
 #ifdef HiGHSDEV
   printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
 #endif
-
-  if (XnumNewRow == 0) return;
+  if (XnumNewRow == 0) return HighsStatus::OK;
 
   HighsLp &lp = highs_model_object.lp_;
+  HighsOptions &options = highs_model_object.options_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
-
-  assert(XnumNewRow >= 0);
-  assert(XnumNewNZ >= 0);
-  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
-
-  int newNumRow = lp.numRow_ + XnumNewRow;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
@@ -566,23 +586,59 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = simplex_lp_status.is_scaled;
 
-  if (valid_simplex_lp) 
+  // Check that if nonzeros are to be added then the model has a positive number of columns
+  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  if (valid_simplex_lp)
     assert(XnumNewNZ == 0 || simplex_lp.numCol_ > 0);
+
+  // Record the new number of rows
+  int newNumRow = lp.numRow_ + XnumNewRow;
+
 #ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no basis, matrix, scaling
+  // Check that if there is no simplex LP then there is no basis, matrix or scaling
   if (!valid_simplex_lp) {
     assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
-  // Add rows to LP vectors and matrix
-  add_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
-  add_rows_to_lp_matrix(lp, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
-  if (valid_simplex_lp) 
-    add_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-  if (valid_simplex_matrix) 
-    add_rows_to_lp_matrix(simplex_lp, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
+  HighsStatus call_status;
+  // Assess the bounds and matrix indices, returning on error unless addition is forced
+  call_status = assess_row_bounds(XnumNewRow, XrowLower, XrowUpper, options.infinite_bound);
+  return_status = worse_status(call_status, return_status);
+  call_status = assess_matrix(lp.numCol_, XnumNewRow, XnumNewNZ, XARstart, XARindex, XARvalue);
+  return_status = worse_status(call_status, return_status);
+  if (return_status == HighsStatus::Error && !force) return return_status;
+
+  // Append the columns to the LP vectors and matrix
+  append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
+
+  // Normalise the LP row bounds
+  call_status = normalise_row_bounds(lp, lp.numRow_, newNumRow, options.infinite_bound);
+  return_status = worse_status(call_status, return_status);
+
+  // Copy the new row-wise matrix into a local copy that can be normalised
+  int lc_XnumNewNZ = XnumNewNZ;
+  int* lc_XARstart;
+  int* lc_XARindex;
+  double* lc_XARvalue;
+  std::memcpy(lc_XARstart, XARstart, sizeof(int)*XnumNewRow);
+  std::memcpy(lc_XARindex, XARindex, sizeof(int)*XnumNewNZ);
+  std::memcpy(lc_XARvalue, XARvalue, sizeof(double)*XnumNewNZ);
+  // Normalise the new matrix columns
+  call_status = normalise_lp_row_matrix(lp.numCol_, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue, options.small_matrix_value, options.large_matrix_value);
+
+  // Append rows to LP matrix
+  append_rows_to_lp_matrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+
+  if (valid_simplex_lp) {
+    append_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
+    call_status = normalise_row_bounds(simplex_lp, simplex_lp.numRow_, newNumRow, options.infinite_bound);
+    return_status = worse_status(call_status, return_status);
+  }
+  if (valid_simplex_matrix) {
+    append_rows_to_lp_matrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+  }
 
   // Now consider scaling
   scale.row_.resize(newNumRow);  
@@ -596,8 +652,8 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
   }
 
   // Update the basis correponding to new nonbasic rows
-  if (valid_basis) extend_basis_with_basic_rows(lp, basis, newNumRow);
-  if (valid_simplex_basis) extend_basis_with_basic_rows(simplex_lp, simplex_basis, newNumRow);
+  if (valid_basis) append_basic_rows_to_basis(lp, basis, newNumRow);
+  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp, simplex_basis, newNumRow);
 
   // Deduce the consequences of adding new rows
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
@@ -621,6 +677,8 @@ void HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLowe
 
   // Increase the number of rows and total number of variables in the model
   lp.numRow_ += XnumNewRow;
+  return return_status;
+
 }
 
 void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
@@ -665,12 +723,13 @@ void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   if (valid_simplex_lp) simplex_lp.numRow_ -= numDeleteRow;
 
   // Determine consequences for basis when deleting rows
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::DEL_ROWS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
 }
 
 void HighsSimplexInterface::util_delete_row_set(vector<int>& dstat) {
   HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   bool rp = false;
   if (rp) {
     printf("Called model.util_deleteRowSet\n");
@@ -778,14 +837,14 @@ void HighsSimplexInterface::util_delete_row_set(vector<int>& dstat) {
     //    basisOK\n");
 #endif
     // Determine consequences for basis when deleting rows to leave an OK basis
-    update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::DEL_ROWS_BASIS_OK);
+    update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS_BASIS_OK);
   } else {
     assert(basisOK);
 #ifdef SCIP_DEV
     printf("util_deleteRowset: not all rows removed are basic slacks\n");
 #endif
     // Determine consequences for basis when deleting rows to leave no basis
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::DEL_ROWS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
   }
 }
 
@@ -858,150 +917,160 @@ void HighsSimplexInterface::util_extract_rows(
 }
 
 // Change a single coefficient in the matrix
-void HighsSimplexInterface::util_change_coefficient(int row, int col, const double newval) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  assert(row >= 0 && row < simplex_lp.numRow_);
-  assert(col >= 0 && col < simplex_lp.numCol_);
+void HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, const double XnewValue) {
+  HighsLp &lp = highs_model_object.lp_;
+  assert(Xrow >= 0 && Xrow < lp.numRow_);
+  assert(Xcol >= 0 && Xcol < lp.numCol_);
 #ifdef HiGHSDEV
-  printf("Called model.util_changeCoeff(row=%d, col=%d, newval=%g)\n", row, col,
-         newval);
+  printf("Called util_changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow, Xcol, XnewValue);
 #endif
-  //  printf("\n\nCalled model.util_changeCoeff(row=%d, col=%d, newval=%g)\n\n",
-  //  row, col, newval);
-
-  //  simplex_lp.reportLp();
-  int cg_el = -1;
-  for (int el = simplex_lp.Astart_[col]; el < simplex_lp.Astart_[col + 1]; el++) {
-    //    printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el,
-    //    simplex_lp.Aindex_[el], row);
-    if (simplex_lp.Aindex_[el] == row) {
-      cg_el = el;
-      break;
-    }
+  //  printf("\n\nCalled model.util_changeCoeff(row=%d, col=%d, newval=%g)\n\n", Xrow, Xcol, XnewValue);
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  bool valid_simplex_lp = simplex_lp_status.valid;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+#ifdef HiGHSDEV
+  // Check that if there is no simplex LP then there is no matrix or scaling
+  if (!valid_simplex_lp) {
+    assert(!valid_simplex_matrix);
+    //    assert(!apply_row_scaling);
   }
-  if (cg_el < 0) {
-    //    printf("model.util_changeCoeff: Cannot find row %d in column %d\n",
-    //    row, col);
-    cg_el = simplex_lp.Astart_[col + 1];
-    int nwNnonz = simplex_lp.Astart_[simplex_lp.numCol_] + 1;
-    //    printf("model.util_changeCoeff: Increasing Nnonz from %d to %d\n",
-    //    simplex_lp.Astart_[simplex_lp.numCol_], nwNnonz);
-    simplex_lp.Aindex_.resize(nwNnonz);
-    simplex_lp.Avalue_.resize(nwNnonz);
-    for (int i = col + 1; i <= simplex_lp.numCol_; i++) simplex_lp.Astart_[i]++;
-    for (int el = nwNnonz - 1; el > cg_el; el--) {
-      simplex_lp.Aindex_[el] = simplex_lp.Aindex_[el - 1];
-      simplex_lp.Avalue_[el] = simplex_lp.Avalue_[el - 1];
-    }
+#endif
+  change_lp_matrix_coefficient(lp, Xrow, Xcol, XnewValue);
+  if (valid_simplex_lp) {
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    double scaledXnewValue = XnewValue*scale.row_[Xrow]*scale.col_[Xcol];
+    change_lp_matrix_coefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
   }
-  simplex_lp.Avalue_[cg_el] = newval;
-
+  // simplex_lp.reportLp();
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if
-   update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_ROWS);
+   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
   //  simplex_lp.reportLp();
 }
 
-// Shift the objective
-void HighsSimplexInterface::shift_objective_value(
-						  double shift
-						  ) {
-  highs_model_object.simplex_info_.dualObjectiveValue += shift;
+void HighsSimplexInterface::shift_objective_value(double Xshift) {
+  printf("Where is shift_objective_value required - so I can interpret what's required\n");
+  // Update the LP objective value with the shift
+  highs_model_object.simplex_info_.dualObjectiveValue += Xshift;
+  // Update the LP offset with the shift
+  HighsLp &lp = highs_model_object.lp_;
+  highs_model_object.lp_.offset_ += Xshift;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Update the simplex LP offset with the shift
+    highs_model_object.simplex_lp_.offset_ += Xshift;
+  }
 }
 
-// Utilities to get/change costs and bounds
-int HighsSimplexInterface::change_ObjSense(
-		    int Xsense
-		    ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  if ((Xsense == OBJSENSE_MINIMIZE) != (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
-    // Flip the objective sense
-    simplex_lp.sense_ = Xsense;
-    const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-    for (int var = 0; var < numTot; var++) {
-      simplex_info.workDual_[var] = -simplex_info.workDual_[var];
-      simplex_info.workCost_[var] = -simplex_info.workCost_[var];
+int HighsSimplexInterface::change_ObjSense(int Xsense){
+  HighsLp &lp = highs_model_object.lp_;
+  if ((Xsense == OBJSENSE_MINIMIZE) != (lp.sense_ == OBJSENSE_MINIMIZE)) {
+    // Flip the LP objective sense
+    lp.sense_ = Xsense;
+  }
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+    if ((Xsense == OBJSENSE_MINIMIZE) != (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
+      // Flip the objective sense
+      simplex_lp.sense_ = Xsense;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
     }
-    simplex_info.solution_status = SimplexSolutionStatus::UNSET;
   }
   return 0;
 }
-int HighsSimplexInterface::change_costs_all(
-		     const double* XcolCost
-		     ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
+
+int HighsSimplexInterface::change_costs_all(const double* XcolCost) {
   assert(XcolCost != NULL);
-  for (int col = 0; col < simplex_lp.numCol_; ++col) {
-    simplex_lp.colCost_[col] = XcolCost[col] * scale.col_[col];
+  // Change the LP costs
+  HighsLp &lp = highs_model_object.lp_;
+  for (int col = 0; col < lp.numCol_; ++col) lp.colCost_[col] = XcolCost[col];
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Change the simplex LP costs
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    for (int col = 0; col < simplex_lp.numCol_; ++col) simplex_lp.colCost_[col] = XcolCost[col] * scale.col_[col];
+    // Deduce the consequences of new costs
+    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
   }
-  // Deduce the consequences of new costs
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_COSTS);
   return 0;
 }
-int HighsSimplexInterface::change_costs_set(
-		     int ncols,
-		     const int* XcolCostIndex,
-		     const double* XcolCostValues
-		     ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
+int HighsSimplexInterface::change_costs_set(int XnumColInSet, const int* XcolCostIndex, const double* XcolCostValue) {
   assert(XcolCostIndex != NULL);
-  assert(XcolCostValues != NULL);
-  for (int ix = 0; ix < ncols; ++ix) {
+  assert(XcolCostValue != NULL);
+  HighsLp &lp = highs_model_object.lp_;
+  // Change a set of LP costs
+  for (int ix = 0; ix < XnumColInSet; ++ix) {
     int col = XcolCostIndex[ix];
-    assert(0 <= col);
-    assert(col < simplex_lp.numCol_);
-    simplex_lp.colCost_[col] = XcolCostValues[ix] * scale.col_[col];
+    assert(0 <= col && col < lp.numCol_);
+    lp.colCost_[col] = XcolCostValue[ix];
   }
-  // Deduce the consequences of new costs
-   update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_COSTS);
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Change a set of simplex LP costs
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    for (int ix = 0; ix < XnumColInSet; ++ix) {
+      int col = XcolCostIndex[ix];
+      assert(0 <= col && col < simplex_lp.numCol_);
+      simplex_lp.colCost_[col] = XcolCostValue[ix] * scale.col_[col];
+    }
+    // Deduce the consequences of new costs
+    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
+  }
   return 0;
 }
-int HighsSimplexInterface::change_col_bounds_all(
-			  const double* XcolLower,
-			  const double* XcolUpper
-			  ){
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
+
+HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper, bool force){
+  HighsStatus return_status = HighsStatus::NotSet;
   assert(XcolLower != NULL);
   assert(XcolUpper != NULL);
-  for (int col = 0; col < simplex_lp.numCol_; ++col) {
-    double lower = XcolLower[col];
-    double upper = XcolUpper[col];
-    // Check that the lower bound is not being set to +Inf
-    if (highs_isInfinity(lower)) return col + 1;
-    // Check that the lower bound is not being set to +Inf
-    if (highs_isInfinity(-upper)) return -(col + 1);
-    assert(lower <= upper);
-    simplex_lp.colLower_[col] = (highs_isInfinity(-lower) ? lower : lower / scale.col_[col]);
-    simplex_lp.colUpper_[col] = (highs_isInfinity(upper) ? upper : upper / scale.col_[col]);
-    //    printf("[LB; Pr; UB] for column %2d are now [%11g, %11g, %11g] Dual =
-    //    %g\n", col, simplex_lp.colLower_[col], simplex_info.workValue_[col], simplex_lp.colUpper_[col],
-    //    simplex_info.workDual_[col]);
+
+  HighsLp &lp = highs_model_object.lp_;
+  double infinite_bound = 1e20;
+  HighsStatus call_status;
+  call_status = assess_col_bounds(lp.numCol_, XcolLower, XcolUpper, infinite_bound);
+  return_status = worse_status(call_status, return_status);
+  if (return_status == HighsStatus::Error && !force) return return_status;
+  
+  for (int col = 0; col < lp.numCol_; ++col) {
+    lp.colLower_[col] = XcolLower[col];
+    lp.colUpper_[col] = XcolUpper[col];
   }
-  // Deduce the consequences of new bounds
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
-  return 0;
+  call_status = normalise_col_bounds(lp, 0, lp.numCol_-1, infinite_bound);
+  if (return_status == HighsStatus::Error && !force) return return_status;
+
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  if (simplex_lp_status.valid) {
+    // Change all simplex LP bounds
+    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+    HighsScale &scale = highs_model_object.scale_;
+    for (int col = 0; col < lp.numCol_; ++col) {
+      simplex_lp.colLower_[col] = lp.colLower_[col];
+      simplex_lp.colUpper_[col] = lp.colUpper_[col];
+    }
+    // TODO Scale the simplex LP bounds
+
+    // Deduce the consequences of new bounds
+    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
+  }
+  return return_status;
 }
-int HighsSimplexInterface::change_col_bounds_set(
-			  int ncols,
-			  const int* XcolBoundIndex,
-			  const double* XcolLowerValues,
-			  const double* XcolUpperValues
-			  ){
+int HighsSimplexInterface::change_col_bounds_set(int XnumColInSet,
+						 const int* XcolBoundIndex, const double* XcolLowerValues, const double* XcolUpperValues,
+						 bool force) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   assert(XcolBoundIndex != NULL);
   assert(XcolLowerValues != NULL);
   assert(XcolUpperValues != NULL);
-  for (int ix = 0; ix < ncols; ++ix) {
+  for (int ix = 0; ix < XnumColInSet; ++ix) {
     int col = XcolBoundIndex[ix];
     assert(0 <= col);
     assert(col < simplex_lp.numCol_);
@@ -1018,16 +1087,15 @@ int HighsSimplexInterface::change_col_bounds_set(
     //    simplex_lp.colLower_[col], simplex_lp.colUpper_[col], scale.col_[col]);
   }
   // Deduce the consequences of new bounds
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
   return 0;
 }
-int HighsSimplexInterface::change_row_bounds_all(
-			  const double* XrowLower,
-			  const double* XrowUpper
-			  ){
+
+int HighsSimplexInterface::change_row_bounds_all(const double* XrowLower, const double* XrowUpper, bool force) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   assert(XrowLower != NULL);
   assert(XrowUpper != NULL);
   for (int row = 0; row < simplex_lp.numRow_; ++row) {
@@ -1041,18 +1109,19 @@ int HighsSimplexInterface::change_row_bounds_all(
     simplex_lp.rowUpper_[row] = (highs_isInfinity(upper) ? upper : upper * scale.row_[row]);
   }
   // Deduce the consequences of new bounds
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
   return 0;
 }
 int HighsSimplexInterface::change_row_bounds_set(
 			  int XnumNewRow,
 			  const int* XrowBoundIndex,
 			  const double* XrowLowerValues,
-			  const double* XrowUpperValues
-			  ){
+			  const double* XrowUpperValues,
+			  bool force) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   assert(XrowBoundIndex != NULL);
   assert(XrowLowerValues != NULL);
   assert(XrowUpperValues != NULL);
@@ -1072,7 +1141,7 @@ int HighsSimplexInterface::change_row_bounds_set(
     //    simplex_lp.rowLower_[row], simplex_lp.rowUpper_[row]);
   }
   // Deduce the consequences of new bounds
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
   return 0;
 }
 
