@@ -6,7 +6,10 @@
 // HiGHS status
 enum class HighsStatus
 {
+  NotSet,
   OK,
+  Warning,
+  Error,
   Init,
   LpError,
   OptionsError,
@@ -27,4 +30,6 @@ enum class HighsStatus
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status);
 
+// Return the maximum of two HighsStatus
+HighsStatus worse_status(HighsStatus status0, HighsStatus status1);
 #endif

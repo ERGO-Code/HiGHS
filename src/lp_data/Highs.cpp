@@ -22,7 +22,6 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsModelObject.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
@@ -44,7 +43,7 @@ HighsStatus Highs::run() {
   // Not solved before, so create an instance of HighsModelObject.
   // For the moment hmos_[0] is the HighsModelObject corresponding to the
   // original lp.
-  hmos_.push_back(HighsModelObject(lp_, timer));
+  hmos_.push_back(HighsModelObject(lp_, options_, timer));
 
   // Options for HighsPrintMessage and HighsPrintMessage
   options_.logfile = stdout;//fopen("HiGHS.log", "w");
@@ -73,7 +72,7 @@ HighsStatus Highs::run() {
       HighsLp& reduced_lp = presolve_info.getReducedProblem();
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
-      hmos_.push_back(HighsModelObject(reduced_lp, timer));
+      hmos_.push_back(HighsModelObject(reduced_lp, options_, timer));
       solve_status = runSolver(hmos_[1]);
       break;
     }

@@ -130,6 +130,8 @@ struct HighsSimplexLpStatus {
   bool has_fresh_rebuild = false;
   // The dual objective function value is known
   bool has_dual_objective_value = false;
+  // The solution status is UNSET
+  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
 };
 
 struct HighsSimplexInfo {
@@ -222,7 +224,6 @@ struct HighsSimplexInfo {
   bool analyseRebuildTime;
 #endif
   // Simplex runtime information
-  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
   int costs_perturbed = 0;
   // Cumulative iteration count - updated in simplex solvers
   int iteration_count = 0;
