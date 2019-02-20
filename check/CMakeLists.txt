@@ -16,14 +16,20 @@ set(TEST_SOURCES
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
+if (OSI_FOUND)
+option(OSI_ROOT "Osi root folder." "OFF")
+if (NOT (${OSI_ROOT} STREQUAL "OFF"))
+    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+endif ()
 pkg_check_modules(OSITEST osi osi-unittests)
 if (OSITEST_FOUND)
     include_directories(${CMAKE_SOURCE_DIR}/src)
     add_executable(osi_unit_tests OsiUnitTest.cpp)
-    target_link_libraries(osi_unit_tests libhighs Catch ${OSITEST_LDFLAGS} -Wl,-rpath,${OSITEST_LIBDIR})
+    target_link_libraries(osi_unit_tests libhighs Catch ${OSITEST_LIBRARIES})
     target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS})
     target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
-endif()
+endif (OSITEST_FOUND)
+endif (OSI_FOUND)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
