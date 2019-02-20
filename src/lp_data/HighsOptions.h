@@ -54,6 +54,7 @@ struct HighsOptions
   CrashOption crash_option = CrashOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
   bool ipx = false;
+  int allow_superbasic = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;

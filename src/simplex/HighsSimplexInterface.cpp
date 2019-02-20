@@ -163,7 +163,7 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
   int numBasic = 0;
   for (int col = 0; col < simplex_lp.numCol_; col++) {
     int var = col;
-    if (cstat[col] == HIGHS_BASESTAT_BASIC) {
+    if (cstat[col] == (int) HighsBasisStatus::BASIC) {
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       basis.basicIndex_[numBasic] = var;
@@ -171,8 +171,8 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
       continue;
     }
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    if (cstat[col] == HIGHS_BASESTAT_LOWER) {
-      // HIGHS_BASESTAT_LOWER includes fixed variables
+    if (cstat[col] == (int) HighsBasisStatus::LOWER) {
+      // (int) HighsBasisStatus::LOWER includes fixed variables
       if (simplex_lp.colLower_[col] == simplex_lp.colUpper_[col]) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
         continue;
@@ -180,10 +180,10 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
         basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
         continue;
       }
-    } else if (cstat[col] == HIGHS_BASESTAT_UPPER) {
+    } else if (cstat[col] == (int) HighsBasisStatus::UPPER) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
       continue;
-    } else if (cstat[col] == HIGHS_BASESTAT_ZERO) {
+    } else if (cstat[col] == (int) HighsBasisStatus::ZERO) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       continue;
     } else {
@@ -196,7 +196,7 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
   }
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_lp.numCol_ + row;
-    if (rstat[row] == HIGHS_BASESTAT_BASIC) {
+    if (rstat[row] == (int) HighsBasisStatus::BASIC) {
       basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       basis.basicIndex_[numBasic] = var;
@@ -204,8 +204,8 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
       continue;
     }
     basis.nonbasicFlag_[var] = NONBASIC_FLAG_TRUE;
-    if (rstat[row] == HIGHS_BASESTAT_LOWER) {
-      // HIGHS_BASESTAT_LOWER includes fixed variables
+    if (rstat[row] == (int) HighsBasisStatus::LOWER) {
+      // (int) HighsBasisStatus::LOWER includes fixed variables
       if (simplex_lp.rowLower_[row] == simplex_lp.rowUpper_[row]) {
         basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
         continue;
@@ -213,10 +213,10 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
         basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
         continue;
       }
-    } else if (rstat[row] == HIGHS_BASESTAT_UPPER) {
+    } else if (rstat[row] == (int) HighsBasisStatus::UPPER) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
       continue;
-    } else if (rstat[row] == HIGHS_BASESTAT_ZERO) {
+    } else if (rstat[row] == (int) HighsBasisStatus::ZERO) {
       basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
       continue;
     } else {
@@ -246,14 +246,14 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
     for (int col = 0; col < simplex_lp.numCol_; col++) {
       int var = col;
       if (!basis.nonbasicFlag_[var]) {
-        cstat[col] = HIGHS_BASESTAT_BASIC;
+        cstat[col] = (int) HighsBasisStatus::BASIC;
         continue;
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
 #ifdef HiGHSDEV
         if (!highs_isInfinity(-simplex_lp.colLower_[col]))
 #endif
         {
-          cstat[col] = HIGHS_BASESTAT_LOWER;
+          cstat[col] = (int) HighsBasisStatus::LOWER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
@@ -261,7 +261,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
         if (!highs_isInfinity(simplex_lp.colUpper_[col]))
 #endif
         {
-          cstat[col] = HIGHS_BASESTAT_UPPER;
+          cstat[col] = (int) HighsBasisStatus::UPPER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
@@ -272,7 +272,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (!highs_isInfinity(simplex_lp.colUpper_[col]))
 #endif
           {
-            cstat[col] = HIGHS_BASESTAT_LOWER;
+            cstat[col] = (int) HighsBasisStatus::LOWER;
             continue;
           }
         } else {
@@ -280,7 +280,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (highs_isInfinity(-simplex_lp.colLower_[col]) && highs_isInfinity(simplex_lp.colUpper_[col]))
 #endif
           {
-            cstat[col] = HIGHS_BASESTAT_ZERO;
+            cstat[col] = (int) HighsBasisStatus::ZERO;
             continue;
           }
         }
@@ -299,7 +299,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
     for (int row = 0; row < simplex_lp.numRow_; row++) {
       int var = simplex_lp.numCol_ + row;
       if (!basis.nonbasicFlag_[var]) {
-        rstat[row] = HIGHS_BASESTAT_BASIC;
+        rstat[row] = (int) HighsBasisStatus::BASIC;
         continue;
       }
       // NB nonbasicMove for rows refers to the solver's view where the bounds
@@ -311,7 +311,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
         if (!highs_isInfinity(-simplex_lp.rowLower_[row]))
 #endif
         {
-          rstat[row] = HIGHS_BASESTAT_LOWER;
+          rstat[row] = (int) HighsBasisStatus::LOWER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP)
@@ -321,7 +321,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
         if (!highs_isInfinity(simplex_lp.rowUpper_[row]))
 #endif
         {
-          rstat[row] = HIGHS_BASESTAT_UPPER;
+          rstat[row] = (int) HighsBasisStatus::UPPER;
           continue;
         }
       } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
@@ -330,7 +330,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (!highs_isInfinity(simplex_lp.rowUpper_[row]))
 #endif
           {
-            rstat[row] = HIGHS_BASESTAT_LOWER;
+            rstat[row] = (int) HighsBasisStatus::LOWER;
             continue;
           }
         } else {
@@ -338,7 +338,7 @@ int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
           if (highs_isInfinity(-simplex_lp.rowLower_[row]) && highs_isInfinity(simplex_lp.rowUpper_[row]))
 #endif
           {
-            rstat[row] = HIGHS_BASESTAT_ZERO;
+            rstat[row] = (int) HighsBasisStatus::ZERO;
             continue;
           }
         }
