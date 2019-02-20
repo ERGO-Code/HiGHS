@@ -208,7 +208,7 @@ bool OsiHiGHSSolverInterface::isAbandoned() const {
 bool OsiHiGHSSolverInterface::isProvenOptimal() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::isProvenOptimal()\n");
-  return this->status == HighsStatus::Optimal;
+  return (this->status == HighsStatus::Optimal) || (this->status == HighsStatus::OK);
 }
 
 bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
