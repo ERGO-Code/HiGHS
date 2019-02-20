@@ -19,20 +19,19 @@ public:
   HighsStatus initializeLp(HighsLp &lp);
   HighsStatus run();
 
+  const HighsLp& getLp() const;
+  const HighsSolution& getSolution() const;
+  // todo: rename to HighsBasis when the current HighsBasis
+  // becomes SimplexBasis
+  const HighsBasis_new& getBasis() const; 
+
+  double getRowValue(const int row) const;
+  double getObjectiveValue() const;
+  const int getIterationCount() const;
+  // todo: getRangingInformation(..)
+
+  // Methods to modify LP.
   int HighsAddVariable(double obj=0.0, double lo=0.0, double hi=HIGHS_CONST_INF); // TODO: name
-
-  bool setIntegerOption(const std::string &param, const int value);
-  bool setDoubleOption(const std::string &param, const double value);
-  bool setStringOption(const std::string &param, const std::string &value);
-
-  bool getIntegerOption(const std::string &param, int &value);
-  bool getDoubleOption(const std::string &param, double &value);
-  bool getStringOption(const std::string &param, std::string &value);
-
-  // todo: Set warm/hot start methods
-
-  // No getters for LP members because the user has access to the HighsLp.
-  const HighsLp &getHighsLp() { return lp_; }
 
   // add methods to modify matrix within simplex
   bool addRow(const double lower_bound, const double upper_bound,
@@ -59,16 +58,11 @@ public:
               const int *rows, const double *values,
               const bool force = false);
 
-  // addRow | add Col | change coeff (int row, int col) | ...
+  // change coeff (int row, int col) | ...
   // ipx (not implemented)
 
-  // todo: getRangingInformation(..)
 
-  double getRowValue(int row);
-
-  double getObjectiveValue();
-
-  HighsSolution getSolution() const { return solution_; }
+  // todo: Set warm/hot start methods
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;
@@ -77,6 +71,7 @@ public:
 private:
   HighsOptions options_;
   HighsSolution solution_;
+  HighsBasis_new basis_;
   HighsLp lp_;
 
   // each HighsModelObject holds a const ref to its lp_

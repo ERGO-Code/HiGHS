@@ -112,4 +112,7 @@ void reportLpColMtx(
 // Analyse the data in an LP problem
 void util_analyseLp(const HighsLp &lp, const char* message);
 #endif
+
+HighsBasis_new getHighsBasis(const HighsBasis& basis);
+
 #endif // LP_DATA_HIGHSLPUTILS_H_

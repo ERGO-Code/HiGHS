@@ -258,3 +258,10 @@ void util_analyseLp(const HighsLp &lp, const char *message) {
   util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 #endif
+
+HighsBasis_new getHighsBasis(const HighsBasis& basis) {
+  HighsBasis_new new_basis;
+  // todo: call Julian's code to translate basis once it's out of
+  // SimplexInterface
+  return new_basis;
+}

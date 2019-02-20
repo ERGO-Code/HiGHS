@@ -13,6 +13,8 @@
  */
 #include "OsiHiGHSSolverInterface.hpp"
 
+#include <cmath>
+
 #include "Highs.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
@@ -698,7 +700,26 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColSolution()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return nullptr;
+  if (!lp || !highs) {
+    return nullptr;
+  }
+  else {
+    if (highs->solution_.col_value.size() == 0) {
+      double num_cols = highs->lp_.numCol_;
+      this->dummy_solution.col_value.resize(num_cols);
+      for (int col=0; col< lp->numCol_; col++) {
+        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+          dummy_solution.col_value[col] = 0;
+        else if (std::fabs(highs->lp_.colLower_[col] < 
+                 std::fabs(highs->lp_.colUpper_[col])))
+          dummy_solution.col_value[col] = highs->lp_.colLower_[col];
+        else
+          dummy_solution.col_value[col] = highs->lp_.colUpper_[col];
+      }
+      return &dummy_solution.col_value[0];
+    }
+  }
+  
   return &highs->solution_.col_value[0];
 }
 
@@ -732,4 +753,12 @@ double OsiHiGHSSolverInterface::getObjValue() const {
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) return 0;
   return highs->getObjectiveValue() - this->objOffset;
+}
+
+int OsiHiGHSSolverInterface::getIterationCount() const {
+  if (!lp || !highs) {
+    return 0;
+  }
+
+  return highs->getIterationCount();
 }
