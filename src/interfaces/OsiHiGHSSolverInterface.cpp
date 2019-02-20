@@ -194,9 +194,6 @@ bool OsiHiGHSSolverInterface::getStrParam(OsiStrParam key,
 void OsiHiGHSSolverInterface::initialSolve() {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::initialSolve()\n");
-  if (!lp)
-    throw CoinError("No problem setup.", __FUNCTION__,
-                    "OsiHiGHSSolverInterface", __FILE__, __LINE__);
   this->status = this->highs->run();
 };
 
@@ -280,6 +277,10 @@ const double *OsiHiGHSSolverInterface::getColLower() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColLower()\n");
   if (this->lp == NULL) {
+    // const HighsLp& sjkfhdjfh = this->highs->getLp();
+    // if (sjkfhdjfh.numCol_ > 0) {
+    //   return &sjkfhdjfh.colLower_[0];
+    // } 
     return NULL;
   } else {
     return &(this->lp->colLower_[0]);
@@ -324,7 +325,7 @@ const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
 
 // TODO: review: 10^20?
 double OsiHiGHSSolverInterface::getInfinity() const {
-  HighsPrintMessage(ML_ALWAYS,
+  HighsPrintMessage(ML_NONE,
                     "Calling OsiHiGHSSolverInterface::getInfinity()\n");
   return HIGHS_CONST_INF;
 }
@@ -619,6 +620,8 @@ void OsiHiGHSSolverInterface::loadProblem(
   this->lp->Avalue_.assign(value, value + start[numcols]);
   this->setObjSense(oldObjSense);
   this->highs->initializeLp(*this->lp);
+  delete this->lp;
+  this->lp = NULL;
 }
 
 void OsiHiGHSSolverInterface::loadProblem(

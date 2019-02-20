@@ -38,7 +38,7 @@ int main (int argc, const char *argv[])
   // Suppress an popup window that Windows shows in response to a crash.
   WindowsErrorPopupBlocker();
 
-  // OsiUnitTest::verbosity = 10;
+  OsiUnitTest::verbosity = 10;
   // OsiUnitTest::haltonerror = 2;
 
   int nerrors;
