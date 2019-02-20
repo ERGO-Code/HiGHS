@@ -24,7 +24,7 @@ endif ()
 pkg_check_modules(OSITEST osi osi-unittests)
 if (OSITEST_FOUND)
     include_directories(${CMAKE_SOURCE_DIR}/src)
-    add_executable(osi_unit_tests OsiUnitTest.cpp)
+    add_executable(osi_unit_tests TestOsi.cpp)
     target_link_libraries(osi_unit_tests libhighs Catch ${OSITEST_LIBRARIES})
     target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS})
     target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
@@ -66,17 +66,17 @@ RESOURCE_LOCK osiunittestbin)
 pkg_search_module(COINSAMPLE coindatasample)
 if (COINSAMPLE_FOUND)
    pkg_get_variable(COINSAMPLEDIR coindatasample datadir)
-   set(OSIUNITTESTFLAGS ${OSIUNITTESTFLAGS} -mpsDir=${COINSAMPLEDIR})
 endif ()
 
 pkg_search_module(COINNETLIB coindatanetlib)
 if (COINNETLIB_FOUND)
    pkg_get_variable(COINNETLIBDIR coindatanetlib datadir)
-   set(OSIUNITTESTFLAGS ${OSIUNITTESTFLAGS} -netlibDir=${COINNETLIBDIR})
 endif ()
 
+configure_file(${CMAKE_SOURCE_DIR}/check/HCheckConfig.h.in ${CMAKE_BINARY_DIR}/HCheckConfig.h)
+
 # create a binary running all the tests in the executable
-add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests ${OSIUNITTESTFLAGS})
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests)
 set_tests_properties(osi_unit_tests_all
 PROPERTIES
 DEPENDS osi-unit-test-build)
