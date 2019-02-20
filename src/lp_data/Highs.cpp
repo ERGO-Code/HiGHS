@@ -278,16 +278,17 @@ bool Highs::addRows(const int num_new_rows,
   return 0;
 }
 
-bool Highs::addCol(const double lower_bound, const double upper_bound,
-            const int num_new_nz,
-            const int *rows, const double *values,
-            const bool force) {
+bool Highs::addCol(const double cost,
+                   const double lower_bound, const double upper_bound,
+                   const int num_new_nz,
+                   const int *rows, const double *values,
+                   const bool force) {
   int col_starts = 0;
-  return addCols(1, &lower_bound, &upper_bound, &col_starts,
+  return addCols(1, &cost, &lower_bound, &upper_bound, &col_starts,
                  num_new_nz, rows, values);
 }
 
-bool Highs::addCols(const int num_new_cols,
+bool Highs::addCols(const int num_new_cols, const double* column_costs,
              const double *lower_bounds, const double *upper_bounds,
              const int *col_starts,
              const int num_new_nz,
@@ -295,8 +296,8 @@ bool Highs::addCols(const int num_new_cols,
              const bool force) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
-    add_lp_cols(lp_, num_new_cols, lower_bounds, upper_bounds, num_new_nz,
-                col_starts, rows, values, options_);
+    add_lp_cols(lp_, num_new_cols, column_costs, lower_bounds, upper_bounds,
+    num_new_nz, col_starts, rows, values, options_);
   }
   // else (if simplex has solved already)
   {
