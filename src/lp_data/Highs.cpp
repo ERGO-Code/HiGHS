@@ -295,11 +295,8 @@ bool Highs::addCols(const int num_new_cols,
              const bool force) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
-    // add_lp_cols(lp_, ..., options_);  
-    
-    // the above currently being
-    // add_cols_to_lp_vectors
-    // add_cols_to_lp_matrix
+    add_lp_cols(lp_, num_new_cols, lower_bounds, upper_bounds, num_new_nz,
+                col_starts, rows, values, options_);
   }
   // else (if simplex has solved already)
   {
