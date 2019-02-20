@@ -481,6 +481,6 @@ const double* OsiHiGHSSolverInterface::getRowActivity() const {
 }
 
 double OsiHiGHSSolverInterface::getObjValue() const {
-  // todo
-  return 0;
+  if (!highs) return 0;
+  return highs->getObjectiveValue();
 }
