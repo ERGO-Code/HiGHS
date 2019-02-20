@@ -380,7 +380,7 @@ public:
 
 private:
   Highs* highs;
-  HighsLp* lp;
+  HighsLp* lp = NULL;
   HighsStatus status = HighsStatus::Init;
   mutable double* rowRange = NULL;
   mutable double* rhs = NULL;
