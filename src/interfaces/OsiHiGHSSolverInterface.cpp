@@ -436,6 +436,8 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
   // get pointers to data
   // highs.addRow( pointers to data , optional force)
+  bool success = this->highs->addRow(rowlb, rowub, vec.getNumElements(), vec.getIndices(), vec.getElements(), true);
+  assert(success);
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
@@ -637,6 +639,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   delete[] value;
 }
 
+#if 0
 /// Read a problem in MPS format from the given filename.
 int OsiHiGHSSolverInterface::readMps(const char *filename,
   const char *extension)
@@ -656,6 +659,7 @@ int OsiHiGHSSolverInterface::readMps(const char *filename,
 
   return 0;
 }
+#endif
 
 /// Write the problem into an mps file of the given filename.
 void OsiHiGHSSolverInterface::writeMps(const char* filename,
@@ -736,8 +740,16 @@ double OsiHiGHSSolverInterface::getObjValue() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjValue()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return 0;
-  return highs->getObjectiveValue() - this->objOffset;
+  const double* sol = this->getColSolution();
+  const double* cost = this->getObjCoefficients();
+  int ncols = this->getNumCols();
+
+  double objVal = -this->objOffset;
+  for (int i=0; i<ncols; i++) {
+    objVal += sol[i] * cost[i];
+  }
+
+  return objVal;
 }
 
 int OsiHiGHSSolverInterface::getIterationCount() const {
