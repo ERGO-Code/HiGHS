@@ -655,6 +655,9 @@ int OsiHiGHSSolverInterface::readMps(const char *filename,
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::readMps()\n");
 
+  // readMps seems to be supposed to read also compressed files and even looks around for them
+  // HiGHS doesn't seem to read compressed MPS files so far
+#if 0
   HighsLp lp;
 
   highs->options_.filename = std::string(filename) + "." + std::string(extension);
@@ -664,6 +667,9 @@ int OsiHiGHSSolverInterface::readMps(const char *filename,
 	  return (int)rc;
 
   highs->initializeLp(lp);
+#else
+  OsiSolverInterface::readMps(filename, extension);
+#endif
 
   return 0;
 }
