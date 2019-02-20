@@ -129,12 +129,10 @@ TERMINATE:
 
 static
 int processSolve(
-   gamshighs_t* gh
+   gamshighs_t* gh,
+   HighsStatus status
 )
 {
-   double* x;
-   double* pi;
-
    assert(gh != NULL);
    assert(gh->highs != NULL);
    assert(gh->lp != NULL);
@@ -142,24 +140,73 @@ int processSolve(
    gmoSetHeadnTail(gh->gmo, gmoHresused, gevTimeDiffStart(gh->gev));
    gmoSetHeadnTail(gh->gmo, gmoHiterused, 42 /* FIXME number of iterations */);
 
-   /* FIXME below assumes best possible outcome: solved to optimality, have optimal primal and dual solution */
+   HighsSolution sol = gh->highs->getSolution();
+   bool havesol = sol.col_value.size() > 0;
 
-   x = new double[gmoN(gh->gmo)];
-   pi = new double[gmoM(gh->gmo)];
+   if( havesol )
+   {
+      /* TODO probably should use gmoSetSolution or gmoSetSolution8 */
+      gmoSetSolution2(gh->gmo, &sol.col_value[0], &sol.row_dual[0]);
+      gmoCompleteSolution(gh->gmo);
+   }
 
-   /* TODO fill x with primal solution
-    * TODO fill pi with dual solution (w.r.t. rows)
-    * TODO probably should use gmoSetSolution or gmoSetSolution8
-    */
-
-   gmoSetSolution2(gh->gmo, x, pi);
-   gmoCompleteSolution(gh->gmo);
-
-   gmoModelStatSet(gh->gmo, gmoModelStat_OptimalGlobal);
    gmoSolveStatSet(gh->gmo, gmoSolveStat_Normal);
 
-   delete[] x;
-   delete[] pi;
+   switch( status )
+   {
+      case HighsStatus::Init:
+      case HighsStatus::LpError:
+      case HighsStatus::OptionsError:
+      case HighsStatus::PresolveError:
+      case HighsStatus::SolutionError:
+      case HighsStatus::PostsolveError:
+      case HighsStatus::NotImplemented:
+         gmoModelStatSet(gh->gmo, gmoModelStat_ErrorNoSolution);
+         gmoSolveStatSet(gh->gmo, gmoSolveStat_SolverErr);
+         break;
+
+      case HighsStatus::ReachedDualObjectiveUpperBound:
+         /* TODO is solution feasible? */
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gh->gmo, gmoSolveStat_Solver);
+         break;
+
+      case HighsStatus::Unbounded:
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_Unbounded : gmoModelStat_UnboundedNoSolution);
+         break;
+
+      case HighsStatus::Infeasible:
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleGlobal : gmoModelStat_InfeasibleNoSolution);
+         break;
+
+      case HighsStatus::Feasible:
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleGlobal : gmoModelStat_InfeasibleNoSolution);
+         break;
+
+      case HighsStatus::OK:   /* ???? */
+      case HighsStatus::Optimal:
+         assert(havesol);
+         gmoModelStatSet(gh->gmo, gmoModelStat_OptimalGlobal);
+         break;
+
+      case HighsStatus::Timeout:
+         /* TODO is solution feasible? */
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gh->gmo, gmoSolveStat_Resource);
+         break;
+
+      case HighsStatus::ReachedIterationLimit:
+         /* TODO is solution feasible? */
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gh->gmo, gmoSolveStat_Iteration);
+         break;
+
+      case HighsStatus::NumericalDifficulties:
+         /* TODO is solution feasible? */
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gh->gmo, gmoSolveStat_Solver);
+         break;
+   }
 
    return 0;
 }
@@ -271,6 +318,7 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
    int rc = 1;
    char buffer[1024];
    gamshighs_t* gh;
+   HighsStatus status;
 
    gh = (gamshighs_t*)Cptr;
    assert(gh->gmo != NULL);
@@ -295,7 +343,7 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
    gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
    gmoPinfSet(gh->gmo,  HIGHS_CONST_INF);
 
-   if( !setupProblem(gh) )
+   if( setupProblem(gh) )
       goto TERMINATE;
 
    /* set timelimit */
@@ -303,12 +351,11 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
 
    gevTimeSetStart(gh->gev);
 
-   /* TODO solve the problem here */
+   /* solve the problem */
+   status = gh->highs->run();
 
-   /* pass solution, status, etc back to GMO here */
-
-   /* process solve outcome */
-   if( !processSolve(gh) )
+   /* pass solution, status, etc back to GMO */
+   if( processSolve(gh, status) )
       goto TERMINATE;
 
    rc = 0;
