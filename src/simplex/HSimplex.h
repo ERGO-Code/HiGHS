@@ -20,48 +20,17 @@
 
 // Methods not requiring HighsModelObject 
 
-void extend_basis_with_nonbasic_cols(
-				     HighsLp &lp,
-				     HighsBasis &basis,
-				     int XnumNewCol
-				     );
+void append_nonbasic_cols_to_basis(
+				   HighsLp &lp,
+				   HighsBasis &basis,
+				   int XnumNewCol
+				   );
 
-void extend_basis_with_basic_rows(
-				  HighsLp &lp,
-				  HighsBasis &basis,
-				  int XnumNewRow
-				  );
-
-void del_cols_from_lp_vectors(
-			    HighsLp &lp,
-			    int XfromCol,
-			    int XtoCol
-			    );
-
-void del_cols_from_lp_matrix(
-			     HighsLp &lp,
-			     int XfromCol,
-			     int XtoCol
-			   );
-
-void del_rows_from_lp_vectors(
-			    HighsLp &lp,
-			    int XfromRow,
-			    int XtoRow
-			    );
-
-void del_rows_from_lp_matrix(
-			     HighsLp &lp,
-			     int XfromRow,
-			     int XtoRow
-			   );
-
-void change_lp_matrix_coefficient(
-				  HighsLp &lp,
-				  int Xrow,
-				  int Xcol,
-				  const double XnewValue
-				  );
+void append_basic_rows_to_basis(
+				HighsLp &lp,
+				HighsBasis &basis,
+				int XnumNewRow
+				);
 
 bool nonbasic_flag_basic_index_ok(
 				  HighsLp &lp,

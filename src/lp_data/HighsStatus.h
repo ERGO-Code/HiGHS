@@ -7,6 +7,8 @@
 enum class HighsStatus
 {
   OK,
+  Warning,
+  Error,
   Init,
   LpError,
   OptionsError,

@@ -6,6 +6,12 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::OK:
       return "OK";
       break;
+    case HighsStatus::Warning:
+      return "Warning";
+      break;
+    case HighsStatus::Error:
+      return "Error";
+      break;
     case HighsStatus::Init:
       return "Init";
       break;

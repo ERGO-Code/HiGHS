@@ -26,7 +26,7 @@
 #include <cstring> // For strcmp
 #include <vector>
 
-void extend_basis_with_nonbasic_cols(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
+void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
   int newNumCol = lp.numCol_ + XnumNewCol;
@@ -43,7 +43,7 @@ void extend_basis_with_nonbasic_cols(HighsLp &lp, HighsBasis &basis, int XnumNew
   }
 }
 
-void extend_basis_with_basic_rows(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
+void append_basic_rows_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
   // Add basic logicals
   if (XnumNewRow == 0) return;
   int newNumRow = lp.numRow_ + XnumNewRow;
@@ -68,118 +68,6 @@ bool nonbasic_flag_basic_index_ok(HighsLp &lp, HighsBasis &basis) {
     if (flag) return false;
   }
   return true;
-}
-
-void del_cols_from_lp_vectors(HighsLp &lp, int XfromCol, int XtoCol) {
-  assert(XfromCol >= 0);
-  assert(XtoCol < lp.numCol_);
-  assert(XfromCol <= XtoCol);
-
-  int numDeleteCol = XtoCol - XfromCol + 1;
-  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
-  //
-  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns
-  // need be shifted. However, this implies lp.numCol_-numDeleteCol =
-  // XfromCol, in which case the loop is vacuous
-  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
-    lp.colCost_[col] = lp.colCost_[col + numDeleteCol];
-    lp.colLower_[col] = lp.colLower_[col + numDeleteCol];
-    lp.colUpper_[col] = lp.colUpper_[col + numDeleteCol];
-  }
-}
-
-void del_cols_from_lp_matrix(HighsLp &lp, int XfromCol, int XtoCol) {
-  assert(XfromCol >= 0);
-  assert(XtoCol < lp.numCol_);
-  assert(XfromCol <= XtoCol);
-
-  int numDeleteCol = XtoCol - XfromCol + 1;
-  if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return;
-  //
-  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns need be shifted
-  // and the loops are vacuous
-  int elOs = lp.Astart_[XfromCol];
-  int numDeleteEl = lp.Astart_[XtoCol + 1] - elOs;
-  for (int el = lp.Astart_[XtoCol + 1]; el < lp.Astart_[lp.numCol_]; el++) {
-    lp.Aindex_[el - numDeleteEl] = lp.Aindex_[el];
-    lp.Avalue_[el - numDeleteEl] = lp.Avalue_[el];
-  }
-  for (int col = XfromCol; col <= lp.numCol_ - numDeleteCol; col++) {
-    lp.Astart_[col] = lp.Astart_[col + numDeleteCol] - numDeleteEl;
-  }
-
-}
-
-void del_rows_from_lp_vectors(HighsLp &lp, int XfromRow, int XtoRow) {
-  assert(XfromRow >= 0);
-  assert(XtoRow < lp.numRow_);
-  assert(XfromRow <= XtoRow);
-
-  int numDeleteRow = XtoRow - XfromRow + 1;
-  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
-  //
-  // Trivial case is XtoRow = lp.numRow_-1, in which case no rows
-  // need be shifted. However, this implies lp.numRow_-numDeleteRow =
-  // XfromRow, in which case the loop is vacuous
-  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
-    lp.rowLower_[row] = lp.rowLower_[row + numDeleteRow];
-    lp.rowUpper_[row] = lp.rowUpper_[row + numDeleteRow];
-  }
-}
-
-void del_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
-  assert(XfromRow >= 0);
-  assert(XtoRow < lp.numRow_);
-  assert(XfromRow <= XtoRow);
-
-  int numDeleteRow = XtoRow - XfromRow + 1;
-  if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return;
-
-  int nnz = 0;
-  for (int col = 0; col < lp.numCol_; col++) {
-    int fmEl = lp.Astart_[col];
-    lp.Astart_[col] = nnz;
-    for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
-      int row = lp.Aindex_[el];
-      if (row < XfromRow || row > XtoRow) {
-	if (row < XfromRow) {
-	  lp.Aindex_[nnz] = row;
-	} else {
-	  lp.Aindex_[nnz] = row - numDeleteRow;
-	}
-	lp.Avalue_[nnz] = lp.Avalue_[el];
-	nnz++;
-      }
-    }
-  }
-  lp.Astart_[lp.numCol_] = nnz;
-}
-
-void change_lp_matrix_coefficient(HighsLp &lp, int Xrow, int Xcol, const double XnewValue) {
-  int changeElement = -1;
-  for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol + 1]; el++) {
-    // printf("Column %d: Element %d is row %d. Is it %d?\n", Xcol, el, lp.Aindex_[el], Xrow);
-    if (lp.Aindex_[el] == Xrow) {
-      changeElement = el;
-      break;
-    }
-  }
-  if (changeElement < 0) {
-    //    printf("util_changeCoeff: Cannot find row %d in column %d\n", Xrow, Xcol);
-    changeElement = lp.Astart_[Xcol + 1];
-    int newNumNZ = lp.Astart_[lp.numCol_] + 1;
-    //    printf("model.util_changeCoeff: Increasing Nnonz from %d to %d\n",
-    //    lp.Astart_[lp.numCol_], newNumNZ);
-    lp.Aindex_.resize(newNumNZ);
-    lp.Avalue_.resize(newNumNZ);
-    for (int i = Xcol + 1; i <= lp.numCol_; i++) lp.Astart_[i]++;
-    for (int el = newNumNZ - 1; el > changeElement; el--) {
-      lp.Aindex_[el] = lp.Aindex_[el - 1];
-      lp.Avalue_[el] = lp.Avalue_[el - 1];
-    }
-  }
-  lp.Aindex_[changeElement] = Xrow;
-  lp.Avalue_[changeElement] = XnewValue;
 }
 
 #ifdef HiGHSDEV

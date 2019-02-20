@@ -415,27 +415,18 @@ int HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost,
     assert(!apply_row_scaling);
   }
 #endif
-  // Validate the bounds and matrix indices, returning on error unless addition is forced
-  returnCode = validate_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound);
+  returnCode = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+			      XnumNewNZ, XAstart, XAindex, XAvalue,
+			      options, force);
   if (returnCode && !force) return returnCode;
-  returnCode = validate_matrix_indices(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex);
-  if (returnCode && !force) return returnCode;
-
-  // Add the columns to the LP vectors and matrix
-  add_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-  add_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
-
-  // Filter the new LP column bounds and matrix columns
-  int numChangedBounds = filter_col_bounds(lp, lp.numCol_, newNumCol, options.infinite_bound);
-  int numRemovedEntries = filter_matrix_entries(lp, lp.numCol_, newNumCol, options.small_matrix_value);
 
   if (valid_simplex_lp) {
-    add_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-    numChangedBounds = filter_col_bounds(simplex_lp, simplex_lp.numCol_, newNumCol, options.infinite_bound);
+    append_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
+    int numChangedBounds = normalise_col_bounds(simplex_lp, simplex_lp.numCol_, newNumCol, options.infinite_bound);
   }
   if (valid_simplex_matrix) {
-    add_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
-    numRemovedEntries = filter_matrix_entries(simplex_lp, simplex_lp.numCol_, newNumCol, options.small_matrix_value);
+    append_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+    int numRemovedEntries = normalise_matrix_entries(simplex_lp, simplex_lp.numCol_, newNumCol, options.small_matrix_value);
   }
 
   // Now consider scaling
@@ -450,8 +441,8 @@ int HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost,
   }
 
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis) extend_basis_with_nonbasic_cols(lp, basis, newNumCol);
-  if (valid_simplex_basis) extend_basis_with_nonbasic_cols(simplex_lp, simplex_basis, newNumCol);
+  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, newNumCol);
+  if (valid_simplex_basis) append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, newNumCol);
 
   // Deduce the consequences of adding new columns
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
@@ -606,19 +597,19 @@ int HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower
     assert(!apply_row_scaling);
   }
 #endif
-  // Validate the bounds and matrix indices, returning on error unless addition is forced
-  returnCode = validate_row_bounds(XnumNewRow, XrowLower, XrowUpper, options.infinite_bound);
+  // Assess the bounds and matrix indices, returning on error unless addition is forced
+  returnCode = assess_row_bounds(XnumNewRow, XrowLower, XrowUpper, options.infinite_bound);
   if (returnCode && !force) return returnCode;
-  returnCode = validate_matrix_indices(lp.numCol_, XnumNewRow, XnumNewNZ, XARstart, XARindex);
+  returnCode = assess_matrix_indices(lp.numCol_, XnumNewRow, XnumNewNZ, XARstart, XARindex);
   if (returnCode && !force) return returnCode;
 
-  // Add the columns to the LP vectors and matrix
-  add_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
+  // Append the columns to the LP vectors and matrix
+  append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
 
-  // Filter the LP row bounds
-  int numChangedBounds = filter_row_bounds(lp, lp.numRow_, newNumRow, options.infinite_bound);
+  // Normalise the LP row bounds
+  int numChangedBounds = normalise_row_bounds(lp, lp.numRow_, newNumRow, options.infinite_bound);
 
-  // Copy the new row-wise matrix into a local copy that can be filtered
+  // Copy the new row-wise matrix into a local copy that can be normalised
   int lc_XnumNewNZ = XnumNewNZ;
   int* lc_XARstart;
   int* lc_XARindex;
@@ -626,18 +617,18 @@ int HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower
   std::memcpy(lc_XARstart, XARstart, sizeof(int)*XnumNewRow);
   std::memcpy(lc_XARindex, XARindex, sizeof(int)*XnumNewNZ);
   std::memcpy(lc_XARvalue, XARvalue, sizeof(double)*XnumNewNZ);
-  // Filter the new matrix columns
-  int numRemovedEntries = filter_row_matrix_entries(lp.numCol_, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue, options.small_matrix_value);
+  // Normalise the new matrix columns
+  int numRemovedEntries = normalise_row_matrix_entries(lp.numCol_, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue, options.small_matrix_value);
 
-  // Add rows to LP matrix
-  add_rows_to_lp_matrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+  // Append rows to LP matrix
+  append_rows_to_lp_matrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
 
   if (valid_simplex_lp) {
-    add_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-    numChangedBounds = filter_row_bounds(simplex_lp, simplex_lp.numRow_, newNumRow, options.infinite_bound);
+    append_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
+    numChangedBounds = normalise_row_bounds(simplex_lp, simplex_lp.numRow_, newNumRow, options.infinite_bound);
   }
   if (valid_simplex_matrix) {
-    add_rows_to_lp_matrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+    append_rows_to_lp_matrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
   }
 
   // Now consider scaling
@@ -652,8 +643,8 @@ int HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower
   }
 
   // Update the basis correponding to new nonbasic rows
-  if (valid_basis) extend_basis_with_basic_rows(lp, basis, newNumRow);
-  if (valid_simplex_basis) extend_basis_with_basic_rows(simplex_lp, simplex_basis, newNumRow);
+  if (valid_basis) append_basic_rows_to_basis(lp, basis, newNumRow);
+  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp, simplex_basis, newNumRow);
 
   // Deduce the consequences of adding new rows
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
@@ -1029,14 +1020,14 @@ int HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const 
 
   HighsLp &lp = highs_model_object.lp_;
   double infinite_bound = 1e20;
-  int returnCode = validate_col_bounds(lp.numCol_, XcolLower, XcolUpper, infinite_bound);
+  int returnCode = assess_col_bounds(lp.numCol_, XcolLower, XcolUpper, infinite_bound);
   if (returnCode) return returnCode;
   
   for (int col = 0; col < lp.numCol_; ++col) {
     lp.colLower_[col] = XcolLower[col];
     lp.colUpper_[col] = XcolUpper[col];
   }
-  filter_col_bounds(lp, 0, lp.numCol_-1, infinite_bound);
+  normalise_col_bounds(lp, 0, lp.numCol_-1, infinite_bound);
 
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.valid) {

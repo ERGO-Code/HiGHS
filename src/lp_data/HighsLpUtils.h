@@ -60,6 +60,11 @@ void getLpMatrixCoefficient(
 			    double *val
 			    );
 
+int assess_lp(
+		HighsLp& lp,
+		const HighsOptions& options
+		);
+
 int add_lp_cols(
 		HighsLp& lp,
 		int XnumNewCol,
@@ -74,41 +79,41 @@ int add_lp_cols(
 		const bool force = false
 		);
 
-int augment_lp_cols(
-		HighsLp& lp,
-		int XnumNewCol,
-		const double *XcolCost,
-		const double *XcolLower,
-		const double *XcolUpper,
-		int XnumNewNZ,
-		const int *XAstart,
-		const int *XAindex,
-		const double *XAvalue,
-		const HighsOptions& options,
-		const bool force = false
-		);
+int append_lp_cols(
+		   HighsLp& lp,
+		   int XnumNewCol,
+		   const double *XcolCost,
+		   const double *XcolLower,
+		   const double *XcolUpper,
+		   int XnumNewNZ,
+		   const int *XAstart,
+		   const int *XAindex,
+		   const double *XAvalue,
+		   const HighsOptions& options,
+		   const bool force = false
+		   );
 
-int validate_col_bounds(
+int assess_col_bounds(
 			int XnumCol,
 			const double* XcolLower,
 			const double* XcolUpper,
 			double infinite_bound
 			);
 
-void add_cols_to_lp_vectors(
-			    HighsLp &lp,
-			    int XnumNewCol,
-			    const double *XcolCost,
-			    const double *colLower,
-			    const double *XcolUpper
-			    );
+void append_cols_to_lp_vectors(
+			       HighsLp &lp,
+			       int XnumNewCol,
+			       const double *XcolCost,
+			       const double *colLower,
+			       const double *XcolUpper
+			       );
 
-int filter_col_bounds(
-		       HighsLp& lp,
-		       int XfromCol,
-		       int XtoCol,
-		       double infinite_bound
-		       );
+int normalise_col_bounds(
+		      HighsLp& lp,
+		      int XfromCol,
+		      int XtoCol,
+		      double infinite_bound
+		      );
 
 int add_lp_rows(
 		HighsLp& lp,
@@ -123,47 +128,47 @@ int add_lp_rows(
 		const bool force = false
 		);
 
-int augment_lp_rows(
-		    HighsLp& lp,
-		    int XnumNewRow,
-		    const double *XrowLower,
-		    const double *XrowUpper,
-		    int XnumNewNZ,
-		    const int *XARstart,
-		    const int *XARindex,
-		    const double *XARvalue,
-		    const HighsOptions& options,
-		    const bool force = false
-		    );
+int append_lp_rows(
+		   HighsLp& lp,
+		   int XnumNewRow,
+		   const double *XrowLower,
+		   const double *XrowUpper,
+		   int XnumNewNZ,
+		   const int *XARstart,
+		   const int *XARindex,
+		   const double *XARvalue,
+		   const HighsOptions& options,
+		   const bool force = false
+		   );
 
-int validate_row_bounds(
+int assess_row_bounds(
 			int XnumRow,
 			const double* XrowLower,
 			const double* XrowUpper,
 			double infinite_bound
 			);
 
-void add_rows_to_lp_vectors(HighsLp &lp,
-			    int XnumNewRow,
-			    const double *XrowLower,
-			    const double *XrowUpper
-			    );
+void append_rows_to_lp_vectors(HighsLp &lp,
+			       int XnumNewRow,
+			       const double *XrowLower,
+			       const double *XrowUpper
+			       );
 
-int filter_row_bounds(
+int normalise_row_bounds(
 		       HighsLp& lp,
 		       int XfromRow,
 		       int XtoRow,
 		       double infinite_bound
 		       );
 
-int validate_matrix_indices(
+int assess_matrix_indices(
 		     int XnumRow,
 		     int XnumCol,
 		     int XnumNZ,
 		     const int* XAstart,
 		     const int* XAindex);
 
-void add_cols_to_lp_matrix(
+void append_cols_to_lp_matrix(
 			   HighsLp &lp,
 			   int XnumNewCol,
 			   int XnumNewNZ,
@@ -172,7 +177,7 @@ void add_cols_to_lp_matrix(
 			   const double *XAvalue
 			   );
 
-void add_rows_to_lp_matrix(HighsLp &lp,
+void append_rows_to_lp_matrix(HighsLp &lp,
 			   int XnumNewRow,
 			   int XnumNewNZ,
 			   const int *XARstart,
@@ -180,14 +185,14 @@ void add_rows_to_lp_matrix(HighsLp &lp,
 			   const double *XARvalue
 			   );
 
-int filter_matrix_entries(
+int normalise_matrix_entries(
 			  HighsLp& lp,
 			  int XfromCol,
 			  int XtoCol,
 			  double small_matrix_value
 			  );
 
-int filter_row_matrix_entries(
+int normalise_row_matrix_entries(
 			      int XnumCol,
 			      int XnumRow,
 			      int XnumNZ,
@@ -196,6 +201,37 @@ int filter_row_matrix_entries(
 			      double* XARvalue,
 			      double small_matrix_value
 			      );
+
+void del_cols_from_lp_vectors(
+			      HighsLp &lp,
+			      int XfromCol,
+			      int XtoCol
+			      );
+
+void del_cols_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromCol,
+			     int XtoCol
+			     );
+
+void del_rows_from_lp_vectors(
+			      HighsLp &lp,
+			      int XfromRow,
+			      int XtoRow
+			      );
+
+void del_rows_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromRow,
+			     int XtoRow
+			     );
+
+void change_lp_matrix_coefficient(
+				  HighsLp &lp,
+				  int Xrow,
+				  int Xcol,
+				  const double XnewValue
+				  );
 
 
 /**
