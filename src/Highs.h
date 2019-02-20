@@ -47,12 +47,13 @@ public:
               const int *columns, const double *values,
               const bool force = false);
 
-  bool addCol(const double lower_bound, const double upper_bound,
+  bool addCol(const double cost,
+              const double lower_bound, const double upper_bound,
               const int num_new_nz,
               const int *rows, const double *values,
               const bool force = false);
 
-  bool addCols(const int num_new_rows,
+  bool addCols(const int num_new_rows, const double* column_costs,
               const double *lower_bounds, const double *upper_bounds,
               const int *col_starts,
               const int num_new_nz,
