@@ -194,9 +194,6 @@ bool OsiHiGHSSolverInterface::getStrParam(OsiStrParam key,
 void OsiHiGHSSolverInterface::initialSolve() {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::initialSolve()\n");
-  if (!lp)
-    throw CoinError("No problem setup.", __FUNCTION__,
-                    "OsiHiGHSSolverInterface", __FILE__, __LINE__);
   this->status = this->highs->run();
 };
 
@@ -332,7 +329,7 @@ const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
 
 // TODO: review: 10^20?
 double OsiHiGHSSolverInterface::getInfinity() const {
-  HighsPrintMessage(ML_ALWAYS,
+  HighsPrintMessage(ML_NONE,
                     "Calling OsiHiGHSSolverInterface::getInfinity()\n");
   return HIGHS_CONST_INF;
 }
