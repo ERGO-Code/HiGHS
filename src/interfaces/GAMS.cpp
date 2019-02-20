@@ -38,8 +38,27 @@ struct gamshighs_s
 
    Highs*      highs;
    HighsLp*    lp;
+   HighsOptions* options;
 };
 typedef struct gamshighs_s gamshighs_t;
+
+static
+int setupOptions(
+   gamshighs_t* gh
+)
+{
+   assert(gh != NULL);
+   assert(gh->options == NULL);
+
+   gh->options = new HighsOptions;
+
+   gh->options->highs_run_time_limit = gevGetDblOpt(gh->gev, gevResLim);
+   gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
+   //gh->options->options_file
+   //gh->options->dual_objective_value_upper_bound
+
+   return 0;
+}
 
 static
 int setupProblem(
@@ -53,11 +72,11 @@ int setupProblem(
    int rc = 1;
 
    assert(gh != NULL);
+   assert(gh->options != NULL);
    assert(gh->highs == NULL);
    assert(gh->lp == NULL);
 
-   HighsOptions options;
-   gh->highs = new Highs(options);
+   gh->highs = new Highs(*gh->options);
 
    numCol = gmoN(gh->gmo);
    numRow = gmoM(gh->gmo);
@@ -329,12 +348,6 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
    gmoModelStatSet(gh->gmo, gmoModelStat_NoSolutionReturned);
    gmoSolveStatSet(gh->gmo, gmoSolveStat_SystemErr);
 
-   /*
-   if( dooptions(highs) )
-      goto TERMINATE;
-    */
-
-
    /* get the problem into a normal form */
    gmoObjStyleSet(gh->gmo, gmoObjType_Fun);
    gmoObjReformSet(gh->gmo, 1);
@@ -343,11 +356,11 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
    gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
    gmoPinfSet(gh->gmo,  HIGHS_CONST_INF);
 
-   if( setupProblem(gh) )
+   if( setupOptions(gh) )
       goto TERMINATE;
 
-   /* set timelimit */
-//   gh->model->dblOption[DBLOPT_TIME_LIMIT] = gevGetDblOpt(gh->gev, gevResLim);
+   if( setupProblem(gh) )
+      goto TERMINATE;
 
    gevTimeSetStart(gh->gev);
 
@@ -369,6 +382,9 @@ TERMINATE:
 
    delete gh->highs;
    gh->highs= NULL;
+
+   delete gh->options;
+   gh->options = NULL;
 
    return rc;
 }
