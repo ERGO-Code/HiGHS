@@ -18,7 +18,7 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "OsiUnitTests.hpp"
-#include "interfaces/OsiHiGHSSolverInterface.hpp"
+#include "OsiHiGHSSolverInterface.hpp"
 #include "HCheckConfig.h"
 
 using namespace OsiUnitTest;
