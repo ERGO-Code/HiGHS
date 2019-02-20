@@ -336,8 +336,7 @@ bool Highs::addCols(const int num_new_cols,
 
 double Highs::getObjectiveValue() {
   if (hmos_.size() > 0) {
-    int last = hmos_.size() - 1;
-    return hmos_[last].simplex_info_.dualObjectiveValue;
+    return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case
     // todo: error/warning message

@@ -199,7 +199,7 @@ public:
      const double *coeffList) { };
 
    /// Set objective function sense (1 for min (default), -1 for max)
-   virtual void setObjSense(double s) { }
+   virtual void setObjSense(double s);
 
    using OsiSolverInterface::setColLower;
    /// Set a single column lower bound
@@ -353,7 +353,7 @@ public:
 
    /// Clone
    /// @todo implement
-   virtual OsiSolverInterface* clone(bool copyData = true) const { return new OsiHiGHSSolverInterface(); }
+   virtual OsiSolverInterface* clone(bool copyData = true) const;
 
    /// Copy constructor
    // OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface &);
@@ -389,6 +389,11 @@ private:
   mutable CoinPackedMatrix* matrixByRow = NULL;
  
   mutable HighsSolution dummy_solution;
+
+  double objOffset = 0.0;
+
+  OsiHiGHSSolverInterface(HighsLp& original);
+
 };
 
 #endif
