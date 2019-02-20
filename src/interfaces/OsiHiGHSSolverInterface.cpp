@@ -545,26 +545,33 @@ void OsiHiGHSSolverInterface::loadProblem(
 
 
 const double* OsiHiGHSSolverInterface::getColSolution() const {
+  HighsPrintMessage(ML_ALWAYS,
+                  "Calling OsiHiGHSSolverInterface::getColSolution()\n");
+  // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
 const double* OsiHiGHSSolverInterface::getRowPrice() const {
+  // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
 const double* OsiHiGHSSolverInterface::getReducedCost() const {
+  // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
 const double* OsiHiGHSSolverInterface::getRowActivity() const {
+  // todo: fix this: check if highs has found a solution to return.
   if (!highs) return nullptr;
   return &highs->solution_.col_value[0];
 }
 
 double OsiHiGHSSolverInterface::getObjValue() const {
+  // todo: fix this: check if highs has found a solution to return.
   if (!highs) return 0;
   return highs->getObjectiveValue();
 }
