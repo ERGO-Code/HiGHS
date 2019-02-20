@@ -29,7 +29,7 @@
 
 // until add_row_.. functions are moved to HighsLpUtils.h
 #include "simplex/HSimplex.h"
-HighsStatus Highs::initializeLp(HighsLp &lp) {
+HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
   return HighsStatus::OK;

@@ -380,7 +380,6 @@ public:
 
 private:
   Highs* highs;
-  HighsLp* lp = NULL;
   HighsStatus status = HighsStatus::Init;
   mutable double* rowRange = NULL;
   mutable double* rhs = NULL;
@@ -392,7 +391,7 @@ private:
 
   double objOffset = 0.0;
 
-  OsiHiGHSSolverInterface(HighsLp& original);
+  OsiHiGHSSolverInterface(Highs& original);
 
 };
 
