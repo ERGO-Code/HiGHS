@@ -29,5 +29,5 @@ enum class HighsStatus
 std::string HighsStatusToString(HighsStatus status);
 
 // Return the maximum of two HighsStatus
-HighsStatus max_status(HighsStatus status0, HighsStatus status1);
+HighsStatus worse_status(HighsStatus status0, HighsStatus status1);
 #endif

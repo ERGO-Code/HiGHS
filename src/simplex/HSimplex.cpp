@@ -13,6 +13,7 @@
  */
 
 #include "HConfig.h"
+#include "lp_data/HighsStatus.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "io/HighsIO.h"

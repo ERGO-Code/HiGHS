@@ -100,17 +100,17 @@ class HighsSimplexInterface {
   /**
    * @brief Add a contiguous set of columns to the model data---making them nonbasic
    */
-  int util_add_cols(
-		    int XnumCol,
-		    const double *XcolCost,
-		    const double *XcolLower,
-		    const double *XcolUpper,
-		    int XnumNZ,
-		    const int *XAstart,
-		    const int *XAindex,
-		    const double *XAvalue,
-		    const bool force = false
-		    );
+  HighsStatus util_add_cols(
+			    int XnumCol,
+			    const double *XcolCost,
+			    const double *XcolLower,
+			    const double *XcolUpper,
+			    int XnumNZ,
+			    const int *XAstart,
+			    const int *XAindex,
+			    const double *XAvalue,
+			    const bool force = false
+			    );
   
   void util_delete_cols(
 			int XfromCol,
@@ -135,16 +135,16 @@ class HighsSimplexInterface {
   /**
    * @brief Add a contiguous set of rows to the model data---making them basic
    */
-  int util_add_rows(
-		     int XnumNewRow,
-		     const double *XrowLower,
-		     const double *XrowUpper,
-		     int XnumNewNZ,
-		     const int *XARstart,
-		     const int *XARindex,
-		     const double *XARvalue,
-		     const bool force = false
-		     );
+  HighsStatus util_add_rows(
+			    int XnumNewRow,
+			    const double *XrowLower,
+			    const double *XrowUpper,
+			    int XnumNewNZ,
+			    const int *XARstart,
+			    const int *XARindex,
+			    const double *XARvalue,
+			    const bool force = false
+			    );
   void util_delete_rows(
 			int firstrow,
 			int lastrow
@@ -198,11 +198,11 @@ class HighsSimplexInterface {
 // Postive  return value k implies that the lower bound is being set to +Inf for
 // column k-1 Negative return value k implies that the upper bound is being set
 // to -Inf for column -k-1
-  int change_col_bounds_all(
-			    const double* XcolLower,
-			    const double* XcolUpper,
-			    bool force = false
-			    );
+  HighsStatus change_col_bounds_all(
+				    const double* XcolLower,
+				    const double* XcolUpper,
+				    bool force = false
+				    );
 
 // Change the bounds for a set of columns
 // Postive  return value k implies that the lower bound is being set to +Inf for
