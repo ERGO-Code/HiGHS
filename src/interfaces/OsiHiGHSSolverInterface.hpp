@@ -395,7 +395,7 @@ private:
 
   double objOffset = 0.0;
 
-  OsiHiGHSSolverInterface(Highs& original);
+  OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface& original);
 
 };
 
