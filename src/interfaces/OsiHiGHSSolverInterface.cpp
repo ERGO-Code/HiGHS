@@ -740,8 +740,16 @@ double OsiHiGHSSolverInterface::getObjValue() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjValue()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return 0;
-  return highs->getObjectiveValue() - this->objOffset;
+  const double* sol = this->getColSolution();
+  const double* cost = this->getObjCoefficients();
+  int ncols = this->getNumCols();
+
+  double objVal = -this->objOffset;
+  for (int i=0; i<ncols; i++) {
+    objVal += sol[i] * cost[i];
+  }
+
+  return objVal;
 }
 
 int OsiHiGHSSolverInterface::getIterationCount() const {
