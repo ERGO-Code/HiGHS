@@ -18,6 +18,7 @@
 #include "Highs.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "io/FilereaderMps.h"
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   HighsPrintMessage(
@@ -29,8 +30,8 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   setStrParam(OsiSolverName, "HiGHS");
 }
 
-OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(Highs& other) {
-  this->highs = new Highs();
+OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(Highs& other)
+: OsiHiGHSSolverInterface() {
   this->highs->initializeLp(other.getLp());
 }
 
@@ -636,6 +637,50 @@ void OsiHiGHSSolverInterface::loadProblem(
   delete[] start;
   delete[] index;
   delete[] value;
+}
+
+/// Read a problem in MPS format from the given filename.
+int OsiHiGHSSolverInterface::readMps(const char *filename,
+  const char *extension)
+{
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::readMps()\n");
+
+  HighsLp lp;
+
+  highs->options_.filename = std::string(filename) + "." + std::string(extension);
+
+  FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_, lp);
+  if (rc != FilereaderRetcode::OKAY)
+	  return (int)rc;
+
+  highs->initializeLp(lp);
+
+  return 0;
+}
+
+/// Write the problem into an mps file of the given filename.
+void OsiHiGHSSolverInterface::writeMps(const char* filename,
+  const char* extension,
+  double objSense) const
+{
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::writeMps()\n");
+
+  std::string fullname = std::string(filename) + "." + std::string(extension);
+
+  if (objSense != 0.0)
+  {
+    // HiGHS doesn't do funny stuff with the objective sense, so use Osi's method if something strange is requested
+    OsiSolverInterface::writeMpsNative(fullname.c_str(), NULL, NULL, 0, 2, objSense);
+    return;
+  }
+
+  FilereaderMps frmps;
+  FilereaderRetcode rc = frmps.writeModelToFile(fullname.c_str(), highs->lp_);
+
+  if (rc != FilereaderRetcode::OKAY)
+	  throw CoinError("Creating MPS file failed", "writeMps", "OsiHiGHSSolverInterface", __FILE__, __LINE__);
 }
 
 const double *OsiHiGHSSolverInterface::getColSolution() const {

@@ -11,6 +11,7 @@
 class Highs
 {
 public:
+  // see if an empty lp should have Astart[0] = 0
   Highs() {}
   Highs(HighsOptions& options) { 
     options_ = options;
@@ -77,7 +78,7 @@ private:
   // each HighsModelObject holds a const ref to its lp_
   std::vector<HighsModelObject> hmos_;
 
-  bool runSuccessful;
+  bool simplex_has_run_;
 
   HighsPresolveStatus runPresolve(PresolveInfo &presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo &presolve_info);

@@ -264,15 +264,14 @@ bool Highs::addRows(const int num_new_rows,
              const int *columns, const double *values,
              const bool force) {
   // if simplex has not solved already
-  if (hmos_.size() == 0) {
-    // add_lp_rows(lp, ..., options);
+  if (!simplex_has_run_) {
+
+    // add_lp_rows(lp_, ..., options_);
 
     // the above currently being
     // add_rows_to_lp_vectors
     // add_rows_to_lp_matrix
-  }
-  // else (if simplex has solved already)
-  {
+  } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
@@ -300,8 +299,8 @@ bool Highs::addCols(const int num_new_cols,
              const int *rows, const double *values,
              const bool force) {
   // if simplex has not solved already
-  if (hmos_.size() == 0) {
-    // add_lp_cols(lp, ..., options);  
+  if (!simplex_has_run_) {
+    // add_lp_cols(lp_, ..., options_);  
     
     // the above currently being
     // add_cols_to_lp_vectors
@@ -320,14 +319,14 @@ bool Highs::addCols(const int num_new_cols,
   return 0;
 }
 
-  double Highs::getObjectiveValue() const {
-    if (hmos_.size() > 0) {
-      int last = hmos_.size() - 1;
-      return hmos_[last].simplex_info_.dualObjectiveValue;
-    } else {
-      // todo: ipx case
-      // todo: error/warning message
-    }
+double Highs::getObjectiveValue() const {
+  if (hmos_.size() > 0) {
+    int last = hmos_.size() - 1;
+    return hmos_[last].simplex_info_.dualObjectiveValue;
+  } else {
+    // todo: ipx case
+    // todo: error/warning message
+  }
   return 0;
 }
 
