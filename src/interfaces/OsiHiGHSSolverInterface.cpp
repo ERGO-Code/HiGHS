@@ -348,6 +348,7 @@ void OsiHiGHSSolverInterface::loadProblem(
     const int *index, const double *value, const double *collb,
     const double *colub, const double *obj, const double *rowlb,
     const double *rowub) {
+  double oldObjSense = this->getObjSense();
   if (this->lp != NULL) {
     delete this->lp;
   }
@@ -405,7 +406,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   this->lp->Astart_.assign(start, start + numcols + 1);
   this->lp->Aindex_.assign(index, index + start[numcols]);
   this->lp->Avalue_.assign(value, value + start[numcols]);
-
+  this->setObjSense(oldObjSense);
   this->highs->initializeLp(*this->lp);
 }
 
