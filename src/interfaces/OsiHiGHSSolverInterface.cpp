@@ -68,7 +68,6 @@ OsiSolverInterface *OsiHiGHSSolverInterface::clone(bool copyData) const {
       "Calling OsiHiGHSSolverInterface::clone()\n");
   if (!copyData) {
     OsiHiGHSSolverInterface *cln = new OsiHiGHSSolverInterface();
-    cln->objOffset = this->objOffset;
     return cln;
 
   } else {
@@ -649,24 +648,24 @@ void OsiHiGHSSolverInterface::loadProblem(
 }
 
 /// Read a problem in MPS format from the given filename.
-int OsiHiGHSSolverInterface::readMps(const char *filename,
-  const char *extension)
-{
-  HighsPrintMessage(ML_ALWAYS,
-                    "Calling OsiHiGHSSolverInterface::readMps()\n");
+// int OsiHiGHSSolverInterface::readMps(const char *filename,
+//   const char *extension)
+// {
+//   HighsPrintMessage(ML_ALWAYS,
+//                     "Calling OsiHiGHSSolverInterface::readMps()\n");
 
-  HighsLp lp;
+//   HighsLp lp;
 
-  highs->options_.filename = std::string(filename) + "." + std::string(extension);
+//   highs->options_.filename = std::string(filename) + "." + std::string(extension);
 
-  FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_, lp);
-  if (rc != FilereaderRetcode::OKAY)
-	  return (int)rc;
+//   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_, lp);
+//   if (rc != FilereaderRetcode::OKAY)
+// 	  return (int)rc;
+//   this->setDblParam(OsiDblParam::OsiObjOffset, lp.offset_);
+//   highs->initializeLp(lp);
 
-  highs->initializeLp(lp);
-
-  return 0;
-}
+//   return 0;
+// }
 
 /// Write the problem into an mps file of the given filename.
 void OsiHiGHSSolverInterface::writeMps(const char* filename,
@@ -747,15 +746,20 @@ double OsiHiGHSSolverInterface::getObjValue() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjValue()\n");
   // todo: fix this: check if highs has found a solution to return.
-  const double* sol = this->getColSolution();
-  const double* cost = this->getObjCoefficients();
-  int ncols = this->getNumCols();
+  double objVal = 0.0;
+  if (true || highs->solution_.col_value.size() == 0) {
+    const double* sol = this->getColSolution();
+    const double* cost = this->getObjCoefficients();
+    int ncols = this->getNumCols();
 
-  double objVal = -this->objOffset;
-  for (int i=0; i<ncols; i++) {
-    objVal += sol[i] * cost[i];
+    objVal = -this->objOffset;
+    for (int i=0; i<ncols; i++) {
+      objVal += sol[i] * cost[i];
+    }
+  } else {
+    objVal = this->highs->getObjectiveValue();
   }
-
+ 
   return objVal;
 }
 
