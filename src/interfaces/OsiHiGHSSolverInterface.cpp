@@ -18,6 +18,7 @@
 #include "Highs.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
+#include "io/FilereaderMps.h"
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   HighsPrintMessage(
@@ -634,6 +635,27 @@ void OsiHiGHSSolverInterface::loadProblem(
   delete[] start;
   delete[] index;
   delete[] value;
+}
+
+/// Write the problem into an mps file of the given filename.
+void OsiHiGHSSolverInterface::writeMps(const char* filename,
+  const char* extension,
+  double objSense) const
+{
+  std::string fullname = std::string(filename) + "." + std::string(extension);
+
+  if (objSense != 0.0)
+  {
+    // HiGHS doesn't do funny stuff with the objective sense, so use Osi's method if something strange is requested
+    OsiSolverInterface::writeMpsNative(fullname.c_str(), NULL, NULL, 0, 2, objSense);
+    return;
+  }
+
+  FilereaderMps frmps;
+  FilereaderRetcode rc = frmps.writeModelToFile(fullname.c_str(), highs->lp_);
+
+  if (rc != FilereaderRetcode::OKAY)
+	  throw CoinError("Creating MPS file failed", "writeMps", "OsiHiGHSSolverInterface", __FILE__, __LINE__);
 }
 
 const double *OsiHiGHSSolverInterface::getColSolution() const {
