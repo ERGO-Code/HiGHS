@@ -641,7 +641,12 @@ void OsiHiGHSSolverInterface::loadProblem(
 int OsiHiGHSSolverInterface::readMps(const char *filename,
   const char *extension)
 {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::readMps()\n");
+
   HighsLp lp;
+
+  highs->options_.filename = std::string(filename) + "." + std::string(extension);
 
   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_, lp);
   if (rc != FilereaderRetcode::OKAY)
@@ -657,6 +662,9 @@ void OsiHiGHSSolverInterface::writeMps(const char* filename,
   const char* extension,
   double objSense) const
 {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::writeMps()\n");
+
   std::string fullname = std::string(filename) + "." + std::string(extension);
 
   if (objSense != 0.0)
