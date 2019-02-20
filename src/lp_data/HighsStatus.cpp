@@ -3,6 +3,9 @@
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
   switch (status) {
+    case HighsStatus::NotSet:
+      return "Not Set";
+      break;
     case HighsStatus::OK:
       return "OK";
       break;
@@ -16,7 +19,7 @@ std::string HighsStatusToString(HighsStatus status) {
       return "Init";
       break;
     case HighsStatus::LpError:
-      return "Lp Error";
+      return "LP Error";
       break;
     case HighsStatus::OptionsError:
       return "Options Error";
@@ -50,4 +53,15 @@ std::string HighsStatusToString(HighsStatus status) {
       break;
   }
   return "";
+}
+
+HighsStatus worse_status(HighsStatus status0, HighsStatus status1) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (status0 == HighsStatus::Error || status1 == HighsStatus::Error)
+    return_status = HighsStatus::Error;
+  else if (status0 == HighsStatus::Warning || status1 == HighsStatus::Warning)
+    return_status = HighsStatus::Warning;
+  else 
+    return_status = HighsStatus::OK;
+  return return_status;
 }
