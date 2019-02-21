@@ -6,6 +6,6 @@ Name: OsiHiGHS
 Description: COIN-OR Open Solver Interface for HiGHS
 URL: https://github.com/ERGO-Code/HiGHS
 Version: @HIGHS_VERSION_MAJOR@.@HIGHS_VERSION_MINOR@.@HIGHS_VERSION_PATCH@
-Libs: -L${libdir} -lOsiHiGHS
+Libs: -L${libdir} -lOsiHighs
 Cflags: -I${includedir}
 Requires.private: osi highs
