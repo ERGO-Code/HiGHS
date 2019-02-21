@@ -72,6 +72,12 @@ public:
   bool changeObjectiveSense(int sense);
   bool changeRowBounds(int index, double lower, double higher);
   bool changeColBounds(int index, double lower, double higher);
+  bool changeRowsBounds(int n, int* index, double* lower, double* higher);
+  bool changeColsBounds(int n, int* index, double* lower, double* higher);
+  bool changeObjCoef(int index, double coef);
+  bool changeObjCoefs(int n, int* index, double* coef);
+  bool deleteRows(const int n, const int* indices);
+  bool deleteCols(const int n, const int* indices);
 
 
   // change coeff (int row, int col) | ...
