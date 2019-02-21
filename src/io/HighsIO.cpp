@@ -18,6 +18,7 @@
 #include <time.h>
 
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
 
 FILE* logfile = stdout;
 FILE* output = stdout;
@@ -105,4 +106,7 @@ void HighsSetIO(HighsOptions& options) {
   logfile = options.logfile;
   output = options.output;
   messageLevel = options.messageLevel;
+  printmsgcb = options.printmsgcb;
+  logmsgcb = options.logmsgcb;
+  msgcb_data = options.msgcb_data;
 }
