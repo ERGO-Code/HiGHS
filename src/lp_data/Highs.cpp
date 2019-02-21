@@ -230,6 +230,7 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
   status = runSimplexSolver(options_, model);
+  simplex_has_run_ = true;
 #else
   // IPX
   // todo:Check options for simplex-specific options
