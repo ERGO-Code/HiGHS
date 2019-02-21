@@ -118,6 +118,13 @@ if (OSI_FOUND)
         set_target_properties(OsiHighs PROPERTIES POSITION_INDEPENDENT_CODE on)
     endif()
 
+    install(TARGETS OsiHighs
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)
+
+    set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
     #configure and install the pkg-config file
     configure_file(${CMAKE_SOURCE_DIR}/osi-highs.pc.in
         "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
