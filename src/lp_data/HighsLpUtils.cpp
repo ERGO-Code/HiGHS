@@ -885,12 +885,11 @@ HighsBasis_new getHighsBasis(const HighsBasis& basis) {
 }
 
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
-  assert(solution.row_value.size() > 0);
+  assert(solution.row_dual.size() > 0);
   if (!isSolutionConsistent(lp, solution))
     return HighsStatus::Error;
 
-  solution.col_dual.clear();
-  solution.col_dual = lp.colCost_;
+  solution.col_dual.assign(lp.numCol_, 0);
 
   for (int col = 0; col < lp.numCol_; col++) {
     for (int i=lp.Astart_[col]; i<lp.Astart_[col+1]; i++) {
@@ -898,8 +897,9 @@ HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
       assert(row >= 0);
       assert(row < lp.numRow_);
 
-      solution.col_dual[col] -= solution.row_value[row] * lp.Avalue_[i];
+      solution.col_dual[col] -= solution.row_dual[row] * lp.Avalue_[i];
     }
+    solution.col_dual[col] += lp.colCost_[col];
   }
 
   return HighsStatus::OK;
@@ -919,7 +919,7 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
       assert(row >= 0);
       assert(row < lp.numRow_);
 
-      solution.row_value[row] += lp.colCost_[col] * lp.Avalue_[i];
+      solution.row_value[row] += solution.col_value[col] * lp.Avalue_[i];
     }
   }
 
