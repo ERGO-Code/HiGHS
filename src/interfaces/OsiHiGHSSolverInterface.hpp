@@ -14,14 +14,13 @@
 #ifndef OsiHiGHSSolverInterface_H
 #define OsiHiGHSSolverInterface_H
 
-#include "HighsLp.h"
-#include "HighsOptions.h"
-#include "HighsStatus.h"
 #include "OsiSolverInterface.hpp"
 
 // forward declarations
 class Highs;
 class HighsLp;
+class HighsSolution;
+enum class HighsStatus;
 
 /** HiGHS Solver Interface
  *
@@ -377,14 +376,14 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
 
  private:
   Highs* highs;
-  HighsStatus status = HighsStatus::Init;
+  HighsStatus status;
   mutable double* rowRange = NULL;
   mutable double* rhs = NULL;
   mutable char* rowSense = NULL;
   mutable CoinPackedMatrix* matrixByCol = NULL;
   mutable CoinPackedMatrix* matrixByRow = NULL;
 
-  mutable HighsSolution dummy_solution;
+  mutable HighsSolution* dummy_solution;
 
   double objOffset = 0.0;
 
