@@ -517,8 +517,39 @@ void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
   double *rowlb = new double[numRow];
   double *rowub = new double[numRow];
 
+  char* myrowsen = (char*)rowsen;
+  bool rowsennull = false;
+  double* myrowrhs = (double*)rowrhs;
+  bool rowrhsnull = false;
+  double* myrowrng = (double*)rowrng;
+  bool rowrngnull = false;
+
+  if (rowsen == NULL) {
+    rowsennull = true;
+    myrowsen = new char[numRow];
+    for (int i=0; i<numRow; i++) {
+      myrowsen[i] = 'G';
+    }
+  }
+
+  if (rowrhs == NULL) {
+    rowsennull = true;
+    myrowrhs = new double[numRow];
+    for (int i=0; i<numRow; i++) {
+      myrowrhs[i] = 0.0;
+    }
+  }
+
+  if (rowrng == NULL) {
+    rowrngnull = true;
+    myrowrng = new double[numRow];
+    for (int i=0; i<numRow; i++) {
+      myrowrng[i] = 0.0;
+    }
+  }  
+
   for (int i = 0; i < numRow; i++) {
-    this->convertSenseToBound(rowsen[i], rowrhs[i], rowrng[i], rowlb[i],
+    this->convertSenseToBound(myrowsen[i], myrowrhs[i], myrowrng[i], rowlb[i],
                               rowub[i]);
   }
 
@@ -526,6 +557,18 @@ void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
 
   delete[] rowlb;
   delete[] rowub;
+
+  if (rowsennull) {
+    delete[] myrowsen;
+  }
+
+  if (rowrhsnull) {
+    delete[] myrowrhs;
+  }
+
+  if (rowrngnull) {
+    delete[] myrowrng;
+  }
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
@@ -648,7 +691,8 @@ void OsiHiGHSSolverInterface::loadProblem(
   if (!matrix.isColOrdered()) {
     transpose = true;
     // ToDo: remove this hack
-    ((CoinPackedMatrix *)&matrix)->transpose();
+    //((CoinPackedMatrix *)&matrix)->transpose();
+    ((CoinPackedMatrix *)&matrix)->reverseOrdering();
   }
 
   int numCol = matrix.getNumCols();
@@ -683,7 +727,8 @@ void OsiHiGHSSolverInterface::loadProblem(
                     rowlb, rowub);
 
   if (transpose) {
-    ((CoinPackedMatrix)matrix).transpose();
+    //((CoinPackedMatrix)matrix).transpose();
+    ((CoinPackedMatrix *)&matrix)->reverseOrdering();
   }
 
   delete[] start;
