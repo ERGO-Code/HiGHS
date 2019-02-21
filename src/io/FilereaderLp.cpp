@@ -919,8 +919,8 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFile("\\ %s", LP_COMMENT_FILESTART);
   this->writeToFileLineend();
 
-  // write objective (standard is minimization)
-  this->writeToFile("%s", LP_KEYWORD_MIN[0]);
+  // write objective
+  this->writeToFile("%s", model.sense_ == 1.0 ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
   this->writeToFileLineend();
   this->writeToFile(" obj: ");
   for (int i = 0; i < model.numCol_; i++) {
