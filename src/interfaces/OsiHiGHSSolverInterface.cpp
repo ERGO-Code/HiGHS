@@ -457,8 +457,20 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   this->addRow(vec, lb, ub);
 };
 
+void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase &vec,
+                                     const double collb, const double colub,
+                                     const double obj) {
+  bool success = this->highs->addCol(obj, collb, colub, vec.getNumElements(),
+                                     vec.getIndices(), vec.getElements(), true);
+  assert(success);
+}
+
+void OsiHiGHSSolverInterface::deleteCols(const int num, const int *colIndices){
+  // TODO
+};
+
 void OsiHiGHSSolverInterface::deleteRows(const int num, const int *rowIndices){
-    // TODO
+  // TODO
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,

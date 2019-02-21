@@ -273,10 +273,10 @@ public:
    // Add a column (primal variable) to the problem.
    virtual void addCol(const CoinPackedVectorBase &vec,
      const double collb, const double colub,
-     const double obj) { }
+     const double obj);
 
    /// Remove a set of columns (primal variables) from the problem.
-   virtual void deleteCols(const int num, const int *colIndices) { };
+   virtual void deleteCols(const int num, const int *colIndices);
 
    using OsiSolverInterface::addRow;
    /// Add a row (constraint) to the problem.
