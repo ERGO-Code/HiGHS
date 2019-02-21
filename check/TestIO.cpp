@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 
 #include "HighsIO.h"
 #include "catch.hpp"

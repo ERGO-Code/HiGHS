@@ -15,7 +15,8 @@
 #define HIGHS_IO_H
 
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
+
+class HighsOptions;
 
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
