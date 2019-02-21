@@ -344,8 +344,16 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
 
   ///@}
 
-  ///@name Constructors and destructor
+  ///@name Message handling
   ///@{
+
+  /// Pass in a message handler
+  virtual void passInMessageHandler(CoinMessageHandler *handler);
+
+  ///@}
+
+   ///@name Constructors and destructor
+   ///@{
 
   /// Default Constructor
   OsiHiGHSSolverInterface();
