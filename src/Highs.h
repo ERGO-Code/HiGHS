@@ -37,24 +37,7 @@ public:
   // In the solution passed as a parameter below can have one or many of
   // col_value, col_dual and row_dual set. If any of them are not set the
   // solution in Highs does not get updated.
-  HighsStatus setSolution(const HighsSolution& solution) {
-    // Check if solution is valid.
-    assert(solution_.col_value.size() != 0 ||
-           solution_.col_value.size() != lp_.numCol_);
-    assert(solution.col_dual.size() == 0 ||
-           solution.col_dual.size() == lp_.numCol_);
-    assert(solution.row_dual.size() == 0 ||
-           solution.row_dual.size() == lp_.numRow_);
-
-    if (solution.col_value.size())
-      solution_.col_value = solution.col_value;
-    if (solution.col_dual.size())
-      solution_.col_dual = solution.col_dual;
-    if (solution.row_dual.size())
-      solution_.row_dual = solution.row_dual;
-
-    // todo: calculate row_value?
-  }
+  HighsStatus setSolution(const HighsSolution& solution);
 
   HighsStatus setBasis(const HighsBasis_new& basis) {
     basis_ = basis;

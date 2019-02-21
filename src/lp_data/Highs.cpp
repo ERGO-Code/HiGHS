@@ -340,3 +340,22 @@ const int Highs::getIterationCount() const {
     return 0;
   return hmos_[0].simplex_info_.iteration_count;
 }
+
+HighsStatus Highs::setSolution(const HighsSolution& solution) {
+    // Check if solution is valid.
+    assert(solution_.col_value.size() != 0 ||
+           solution_.col_value.size() != lp_.numCol_);
+    assert(solution.col_dual.size() == 0 ||
+           solution.col_dual.size() == lp_.numCol_);
+    assert(solution.row_dual.size() == 0 ||
+           solution.row_dual.size() == lp_.numRow_);
+
+    if (solution.col_value.size())
+      solution_.col_value = solution.col_value;
+    if (solution.col_dual.size())
+      solution_.col_dual = solution.col_dual;
+    if (solution.row_dual.size())
+      solution_.row_dual = solution.row_dual;
+
+    // todo: calculate row_value?
+  }
