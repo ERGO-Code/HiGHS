@@ -65,6 +65,16 @@ void HighsSetMessagelevel(
 );
 
 /*
+ * @brief sets the callbacks used to print output and and log
+ *
+ * Set to NULL to reset to default, which is to print to logfile and output file
+ */
+void HighsSetMessageCallback(
+	void (*printmsgcb_) (unsigned int level, const char* msg, void* msgcb_data),
+	void (*logmsgcb_) (HighsMessageType type, const char* msg, void* msgcb_data),
+	void* msgcb_data_);
+
+/*
  * @brief sets output options
  */
 void HighsSetIO(
