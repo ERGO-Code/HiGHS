@@ -57,6 +57,8 @@ Set custom options with `-D<option>=<value>` during the configuration step (`cma
     on: Includes a lot of testing and development code which should not be used in "production" or when running optimized code
 - `HiGHSRELEASE`:
     on: Defined when CMAKE_BUILD_TYPE=Release
+- `OSI_ROOT`:
+    path to COIN-OR/Osi build/install directory (OSI_ROOT/lib/pkg-config/osi.pc should exist)
 
 Testing
 -------
