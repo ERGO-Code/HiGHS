@@ -247,10 +247,10 @@ public:
    //@}
 
    /// Set the primal solution column values
-   virtual void setColSolution(const double *colsol) { }
+   virtual void setColSolution(const double *colsol);
 
    /// Set dual solution vector
-   virtual void setRowPrice(const double *rowprice) { };
+   void setRowPrice(const double *rowprice);
 
    /// Set the index-th variable to be a continuous variable
    virtual void setContinuous(int index) { }
