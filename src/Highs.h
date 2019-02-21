@@ -41,6 +41,7 @@ public:
 
   HighsStatus setBasis(const HighsBasis_new& basis) {
     basis_ = basis;
+    return HighsStatus::OK;
   }
 
   // Methods to modify LP.

@@ -345,6 +345,7 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   if (solution.row_dual.size()) solution_.row_dual = solution.row_dual;
 
   // todo: calculate row_value?
+  return HighsStatus::OK;
 }
 
 void Highs::changeObjectiveSense(int sense) {
