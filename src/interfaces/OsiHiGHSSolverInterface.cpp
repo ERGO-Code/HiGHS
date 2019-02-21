@@ -838,6 +838,8 @@ int OsiHiGHSSolverInterface::getIterationCount() const {
 }
 
 void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
+  if (!rowprice)
+    return;
   HighsSolution solution;
   solution.row_dual.resize(highs->lp_.numRow_);
   for (int row=0; row<highs->lp_.numRow_; row++)
@@ -847,6 +849,8 @@ void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
 };
 
 void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
+  if (!colsol)
+    return;
   HighsSolution solution;
   solution.col_value.resize(highs->lp_.numCol_);
   for (int col=0; col<highs->lp_.numCol_; col++)
