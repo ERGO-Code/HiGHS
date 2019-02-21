@@ -638,7 +638,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   if (!matrix.isColOrdered()) {
     transpose = true;
     // ToDo: remove this hack
-    ((CoinPackedMatrix)matrix).transpose();
+    ((CoinPackedMatrix*)&matrix)->transpose();
   }
 
   int numCol = matrix.getNumCols();
