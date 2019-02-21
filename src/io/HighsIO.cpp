@@ -41,7 +41,7 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
   va_list argptr;
   va_start(argptr, format);
 
-  fprintf(logfile, "%02d:%02d:%02d [%s] ", timeinfo->tm_hour, timeinfo->tm_min,
+  fprintf(logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour, timeinfo->tm_min,
           timeinfo->tm_sec, HighsMessageTypeTag[type]);
   vfprintf(logfile, format, argptr);
   fprintf(logfile, "\n");

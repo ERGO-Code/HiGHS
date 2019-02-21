@@ -247,13 +247,101 @@ HighsStatus assess_lp(const HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::NotSet;
   // Assess the bounds and matrix indices, returning on error unless addition is forced
   HighsStatus call_status;
+  int lp_num_nz = lp.Astart_[lp.numCol_];
+  call_status = assess_lp_dimensions(lp);
+  return_status = worse_status(call_status, return_status);
+  call_status = assess_col_costs(lp.numCol_, &lp.colCost_[0], options.infinite_cost);
+  return_status = worse_status(call_status, return_status);
   call_status = assess_col_bounds(lp.numCol_, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound);
   return_status = worse_status(call_status, return_status);
   call_status = assess_row_bounds(lp.numRow_, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound);
   return_status = worse_status(call_status, return_status);
-  call_status = assess_matrix(lp.numRow_, lp.numCol_, lp.nnz_, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
+  call_status = assess_matrix(lp.numRow_, lp.numCol_, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+			      options.small_matrix_value, options.large_matrix_value);
   return_status = worse_status(call_status, return_status);
+  if (return_status == HighsStatus::Error) return_status = HighsStatus::LpError;
+  HighsLogMessage(HighsMessageType::INFO, "assess_lp returns HighsStatus = %s\n", HighsStatusToString(return_status).c_str());
   return return_status;
+}
+
+HighsStatus assess_lp_dimensions(const HighsLp& lp) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  int lp_num_nz = lp.Astart_[lp.numCol_];
+  bool error_found = false;
+  // Check dimensions.
+  bool legal_num_col = lp.numCol_ > 0;
+  bool legal_num_row = lp.numRow_ >= 0;
+  bool legal_num_nz = lp_num_nz >= 0;
+  assert(legal_num_col);
+  assert(legal_num_row);
+  assert(legal_num_nz);
+  if (!legal_num_col) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal number of cols = %d\n", lp.numCol_);
+    error_found = true;
+  }
+  if (!legal_num_row) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal number of rows = %d\n", lp.numRow_);
+    error_found = true;
+  }
+  if (!legal_num_nz) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal number of nonzeros = %d\n", lp_num_nz);
+    error_found = true;
+  }
+  int col_cost_size = lp.colCost_.size();
+  int col_lower_size = lp.colLower_.size();
+  int col_upper_size = lp.colUpper_.size();
+  bool legal_col_cost_size = col_cost_size >= lp.numCol_;
+  bool legal_col_lower_size = col_lower_size >= lp.numCol_;
+  bool legal_col_upper_size = col_lower_size >= lp.numCol_;
+  if (!legal_col_cost_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal colCost size = %d < %d\n", col_cost_size, lp.numCol_);
+    error_found = true;
+  }
+  if (!legal_col_lower_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal colLower size = %d < %d\n", col_lower_size, lp.numCol_);
+    error_found = true;
+  }
+  if (!legal_col_upper_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal colUpper size = %d < %d\n", col_upper_size, lp.numCol_);
+    error_found = true;
+  }
+  int row_lower_size = lp.rowLower_.size();
+  int row_upper_size = lp.rowUpper_.size();
+  bool legal_row_lower_size = row_lower_size >= lp.numRow_;
+  bool legal_row_upper_size = row_lower_size >= lp.numRow_;
+  if (!legal_row_lower_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal rowLower size = %d < %d\n", row_lower_size, lp.numRow_);
+    error_found = true;
+  }
+  if (!legal_row_upper_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal rowUpper size = %d < %d\n", row_upper_size, lp.numRow_);
+    error_found = true;
+  }
+  int matrix_start_size = lp.Astart_.size();
+  int matrix_index_size = lp.Aindex_.size();
+  int matrix_value_size = lp.Avalue_.size();
+  bool legal_matrix_start_size = matrix_start_size >= lp.numCol_+1;
+  bool legal_matrix_index_size = matrix_index_size >= lp_num_nz;
+  bool legal_matrix_value_size = matrix_value_size >= lp_num_nz;
+  if (!legal_matrix_start_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal Astart size = %d < %d\n", matrix_start_size, lp.numCol_+1);
+    error_found = true;
+  }
+  if (!legal_matrix_index_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal Aindex size = %d < %d\n", matrix_index_size, lp_num_nz);
+    error_found = true;
+  }
+  if (!legal_matrix_value_size) {
+    HighsLogMessage(HighsMessageType::ERROR, "LP has illegal Avalue size = %d < %d\n", matrix_value_size, lp_num_nz);
+    error_found = true;
+  }
+
+  if (error_found)
+    return_status = HighsStatus::Error;
+  else
+    return_status = HighsStatus::OK;
+
+  return return_status;  
 }
 
 HighsStatus add_lp_cols(HighsLp& lp,
@@ -279,7 +367,8 @@ HighsStatus append_lp_cols(HighsLp& lp,
   HighsStatus call_status = assess_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound);
   return_status = worse_status(call_status, return_status);
 
-  call_status = assess_matrix(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+  call_status = assess_matrix(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue,
+			      options.small_matrix_value, options.large_matrix_value);
   return_status = worse_status(call_status, return_status);
 
   if (return_status == HighsStatus::Error && !force) return return_status;
@@ -296,7 +385,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
   return return_status;
 }
 
-HighsStatus assess_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper, double infinite_bound) {
+HighsStatus assess_col_costs(int XnumCol, const double* XcolCost, double infinite_cost) {
   assert(XnumCol >= 0);
   if (XnumCol == 0) return HighsStatus::OK;
 
@@ -304,23 +393,12 @@ HighsStatus assess_col_bounds(int XnumCol, const double* XcolLower, const double
   bool error_found = false;
   bool warning_found = false;
   for (int col = 0; col < XnumCol; col++) {
-    bool legalLowerBound = XcolLower[col] < infinite_bound;
-    assert(legalLowerBound);
-    if (!legalLowerBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has lower bound of %12g >= %12g = Infinity",
-		      col, XcolLower[col], infinite_bound);
-      error_found = true;
-    }
-    bool legalLowerUpperBound = XcolLower[col] <= XcolUpper[col];
-    if (!legalLowerUpperBound) {
-      HighsLogMessage(HighsMessageType::WARNING, "Col %12d has inconsistent bounds [%12g, %12g]", col, XcolLower[col], XcolUpper[col]);
-      warning_found = true;
-    }
-    bool legalUpperBound = XcolUpper[col] > -infinite_bound;
-    assert(legalUpperBound);
-    if (!legalUpperBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has upper bound of %12g <= %12g = -Infinity",
-		      col, XcolUpper[col], -infinite_bound);
+    double absCost = abs(XcolCost[col]);
+    bool legalCost = absCost < infinite_cost;
+    assert(legalCost);
+    if (!legalCost) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has |cost| of %12g >= %12g = Infinity",
+		      col, absCost, infinite_cost);
       error_found = true;
     }
   }
@@ -328,6 +406,66 @@ HighsStatus assess_col_bounds(int XnumCol, const double* XcolLower, const double
     return_status = HighsStatus::Error;
   else if (warning_found)
     return_status = HighsStatus::Warning;
+  else
+    return_status = HighsStatus::OK;
+    
+  return return_status;
+}
+
+HighsStatus assess_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper, double infinite_bound) {
+  assert(XnumCol >= 0);
+  if (XnumCol == 0) return HighsStatus::OK;
+
+  HighsStatus return_status = HighsStatus::NotSet;
+  bool error_found = false;
+  bool warning_found = false;
+  bool info_found = false;
+  int num_infinte_lower_bound = 0;
+  int num_infinte_upper_bound = 0;
+  for (int col = 0; col < XnumCol; col++) {
+    // Check that the lower bound is not as much as +Infinity
+    bool legalLowerBound = XcolLower[col] < infinite_bound;
+    assert(legalLowerBound);
+    if (!legalLowerBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has lower bound of %12g >= %12g = Infinity", col, XcolLower[col], infinite_bound);
+      error_found = true;
+    }
+    if (!highs_isInfinity(-XcolLower[col])) {
+      // Check whether a finite lower bound will be treated as -Infinity      
+      bool infinite_lower_bound = XcolLower[col] <= -infinite_bound;
+      if (infinite_lower_bound) num_infinte_lower_bound++;
+    }
+    // Check that the lower bound does not exceed the upper bound
+    bool legalLowerUpperBound = XcolLower[col] <= XcolUpper[col];
+    if (!legalLowerUpperBound) {
+      HighsLogMessage(HighsMessageType::WARNING, "Col %12d has inconsistent bounds [%12g, %12g]", col, XcolLower[col], XcolUpper[col]);
+      warning_found = true;
+    }
+    if (!highs_isInfinity(XcolUpper[col])) {
+      // Check whether a finite upper bound will be treated as Infinity      
+      bool infinite_upper_bound = XcolUpper[col] >= infinite_bound;
+      if (infinite_upper_bound) num_infinte_upper_bound++;
+    }
+    // Check that the upper bound is not as little as -Infinity
+    bool legalUpperBound = XcolUpper[col] > -infinite_bound;
+    assert(legalUpperBound);
+    if (!legalUpperBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has upper bound of %12g <= %12g = -Infinity", col, XcolUpper[col], -infinite_bound);
+      error_found = true;
+    }
+  }
+  int num_infinte_bound = num_infinte_lower_bound + num_infinte_upper_bound;
+  if (num_infinte_bound) {
+    HighsLogMessage(HighsMessageType::INFO, "The %12d col lower bounds exceeding %12g = -Infinity and %12d upper bounds exceeding %12g = Infinity will be treated as infinity", num_infinte_lower_bound, -infinite_bound, num_infinte_upper_bound, infinite_bound);
+    info_found = true;
+  }
+  
+  if (error_found)
+    return_status = HighsStatus::Error;
+  else if (warning_found)
+    return_status = HighsStatus::Warning;
+  else if (info_found)
+    return_status = HighsStatus::Info;
   else
     return_status = HighsStatus::OK;
     
@@ -420,34 +558,56 @@ HighsStatus assess_row_bounds(int XnumRow, const double* XrowLower, const double
   HighsStatus return_status = HighsStatus::NotSet;
   bool error_found = false;
   bool warning_found = false;
+  bool info_found = false;
+  int num_infinte_lower_bound = 0;
+  int num_infinte_upper_bound = 0;
   for (int row = 0; row < XnumRow; row++) {
+    // Check that the lower bound is not as much as +Infinity
     bool legalLowerBound = XrowLower[row] < infinite_bound;
     assert(legalLowerBound);
     if (!legalLowerBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has lower bound of %12g >= %12g = Infinity",
-		      row, XrowLower[row], infinite_bound);
+      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has lower bound of %12g >= %12g = Infinity", row, XrowLower[row], infinite_bound);
       error_found = true;
     }
+    if (!highs_isInfinity(-XrowLower[row])) {
+      // Check whether a finite lower bound will be treated as -Infinity      
+      bool infinite_lower_bound = XrowLower[row] <= -infinite_bound;
+      if (infinite_lower_bound) num_infinte_lower_bound++;
+    }
+    // Check that the lower bound does not exceed the upper bound
     bool legalLowerUpperBound = XrowLower[row] <= XrowUpper[row];
     if (!legalLowerUpperBound) {
       HighsLogMessage(HighsMessageType::WARNING, "Row %12d has inconsistent bounds [%12g, %12g]", row, XrowLower[row], XrowUpper[row]);
       warning_found = true;
     }
+    if (!highs_isInfinity(XrowUpper[row])) {
+      // Check whether a finite upper bound will be treated as Infinity      
+      bool infinite_upper_bound = XrowUpper[row] >= infinite_bound;
+      if (infinite_upper_bound) num_infinte_upper_bound++;
+    }
+    // Check that the upper bound is not as little as -Infinity
     bool legalUpperBound = XrowUpper[row] > -infinite_bound;
     assert(legalUpperBound);
     if (!legalUpperBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has upper bound of %12g <= %12g = -Infinity",
-		      row, XrowUpper[row], -infinite_bound);
+      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has upper bound of %12g <= %12g = -Infinity", row, XrowUpper[row], -infinite_bound);
       error_found = true;
     }
   }
+  int num_infinte_bound = num_infinte_lower_bound + num_infinte_upper_bound;
+  if (num_infinte_bound) {
+    HighsLogMessage(HighsMessageType::INFO, "The %12d row lower bounds exceeding %12g = -Infinity and %12d upper bounds exceeding %12g = Infinity will be treated as infinity", num_infinte_lower_bound, -infinite_bound, num_infinte_upper_bound, infinite_bound);
+    info_found = true;
+  }
+  
   if (error_found)
     return_status = HighsStatus::Error;
   else if (warning_found)
     return_status = HighsStatus::Warning;
+  else if (info_found)
+    return_status = HighsStatus::Info;
   else
     return_status = HighsStatus::OK;
-
+    
   return return_status;
 }
 
@@ -497,7 +657,8 @@ HighsStatus normalise_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double i
   return return_status;
 }
 
-HighsStatus assess_matrix(int XnumRow, int XnumCol, int XnumNZ, const int* XAstart, const int* XAindex, const double* XAvalue) {
+HighsStatus assess_matrix(int XnumRow, int XnumCol, int XnumNZ, const int* XAstart, const int* XAindex, const double* XAvalue,
+			  double small_matrix_value, double large_matrix_value) {
   HighsStatus return_status = HighsStatus::NotSet;
   assert(XnumRow >= 0);
   assert(XnumCol >= 0);
@@ -510,8 +671,10 @@ HighsStatus assess_matrix(int XnumRow, int XnumCol, int XnumNZ, const int* XAsta
   bool warning_found = false;
   vector <int> colVec;
   colVec.assign(XnumRow, 0);
+  int fromEl = XAstart[0];
+  
   for (int col = 0; col < XnumCol; col++) {
-    int fromEl = XAstart[col];
+    fromEl = XAstart[col];
     int toEl;
     if (col < XnumCol-1) {
       toEl = XAstart[col+1]-1;
@@ -549,7 +712,7 @@ HighsStatus assess_matrix(int XnumRow, int XnumCol, int XnumNZ, const int* XAsta
     for (int el = XAstart[col]; el <= toEl; el++) colVec[XAindex[el]] = 0;
   }
   int col = XnumCol;
-  int fromEl = XAstart[col];
+  fromEl = XAstart[col];
   bool legalFromEl = fromEl >=0 && fromEl <= XnumNZ;
   assert(legalFromEl);
   if (!legalFromEl) {

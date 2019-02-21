@@ -8,6 +8,7 @@ enum class HighsStatus
 {
   NotSet,
   OK,
+  Info,
   Warning,
   Error,
   Init,

@@ -61,10 +61,13 @@ void getLpMatrixCoefficient(
 			    );
 
 HighsStatus assess_lp(
-		HighsLp& lp,
+		const HighsLp& lp,
 		const HighsOptions& options
 		);
 
+HighsStatus assess_lp_dimensions(
+				 const HighsLp& lp
+				 );
 HighsStatus add_lp_cols(
 		HighsLp& lp,
 		int XnumNewCol,
@@ -92,6 +95,12 @@ HighsStatus append_lp_cols(
 		   const HighsOptions& options,
 		   const bool force = false
 		   );
+
+HighsStatus assess_col_costs(
+			int XnumCol,
+			const double* XcolCost,
+			double infinite_cost
+			);
 
 HighsStatus assess_col_bounds(
 			int XnumCol,
@@ -167,7 +176,9 @@ HighsStatus assess_matrix(
 			  int XnumNZ,
 			  const int* XAstart,
 			  const int* XAindex,
-			  const double *XAvalue
+			  const double *XAvalue,
+			  double small_matrix_value,
+			  double large_matrix_value
 			  );
 
 void append_cols_to_lp_matrix(
