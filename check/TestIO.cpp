@@ -29,10 +29,28 @@ TEST_CASE("msgcb", "[highs_io]") {
   HighsPrintMessage(4, "Hi %s!", "HiGHS");
   REQUIRE(*printedmsg == '\0');
 
+  {
+    char longmsg[sizeof(printedmsg)];
+    memset(longmsg, 'H', sizeof(longmsg));
+    longmsg[sizeof(longmsg)-1] = '\0';
+    HighsPrintMessage(2, longmsg);
+    REQUIRE(strncmp(printedmsg, "HHHH", 4) == 0);
+    REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
+  }
+
   HighsLogMessage(HighsMessageType::INFO, "Hello %s!", "HiGHS");
   REQUIRE(strlen(printedmsg) > 8);
   REQUIRE(strcmp(printedmsg+8, " [INFO] Hello HiGHS!\n") == 0);  // begin of printedmsg is a timestamp, which we skip over
 
-  // TODO test handling of oversized messages
+  {
+    char longmsg[sizeof(printedmsg)];
+    memset(longmsg, 'H', sizeof(longmsg));
+    longmsg[sizeof(longmsg)-1] = '\0';
+    HighsLogMessage(HighsMessageType::WARNING, longmsg);
+    REQUIRE(strstr(printedmsg, "HHHH") != NULL);
+    REQUIRE(strlen(printedmsg) <= sizeof(printedmsg));
+  }
+
+
   // TODO test msgcb_data is correctly passed on
 }
