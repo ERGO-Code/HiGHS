@@ -87,7 +87,6 @@ if (GAMS_FOUND)
     set(sources ${sources} interfaces/GAMS.cpp)
     set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gmomcc.c")
     set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gevmcc.c")
-    set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/optcc.c")
 endif()
 
 add_library(libhighs ${sources})

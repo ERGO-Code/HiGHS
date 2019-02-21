@@ -8,10 +8,12 @@
 /* GAMS API */
 #include "gmomcc.h"
 #include "gevmcc.h"
-#include "optcc.h"
+
+typedef struct optRec* optHandle_t;
 
 /* HiGHS API */
 #include "Highs.h"
+#include "io/LoadProblem.h"  /* for loadOptionsFromFile */
 
 #if defined(_WIN32)
 #if !defined(STDCALL)
@@ -33,7 +35,6 @@ struct gamshighs_s
 {
    gmoHandle_t gmo;
    gevHandle_t gev;
-   optHandle_t opt;
    int         debug;
 
    Highs*      highs;
@@ -54,7 +55,15 @@ int setupOptions(
 
    gh->options->highs_run_time_limit = gevGetDblOpt(gh->gev, gevResLim);
    gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
-   //gh->options->options_file
+
+   if( gmoOptFile(gh->gmo) > 0 )
+   {
+      char optfilename[GMS_SSSIZE];
+      gmoNameOptFile(gh->gmo, optfilename);
+      gh->options->options_file = optfilename;
+      if( !loadOptionsFromFile(*gh->options) )
+         return 1;
+   }
    //gh->options->dual_objective_value_upper_bound
 
    return 0;
@@ -240,14 +249,12 @@ void his_Initialize(void)
 {
    gmoInitMutexes();
    gevInitMutexes();
-   optInitMutexes();
 }
 
 void his_Finalize(void)
 {
    gmoFiniMutexes();
    gevFiniMutexes();
-   optFiniMutexes();
 }
 
 DllExport void STDCALL hisXCreate(void** Cptr)
@@ -318,6 +325,7 @@ DllExport int STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t O
 
    assert(Cptr != NULL);
    assert(Gptr != NULL);
+   assert(Optr == NULL);
 
    char msg[256];
    if(!gmoGetReady(msg, sizeof(msg)))
@@ -328,7 +336,6 @@ DllExport int STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t O
    gh = (gamshighs_t*)Cptr;
    gh->gmo = Gptr;
    gh->gev = (gevHandle_t)gmoEnvironment(gh->gmo);
-   gh->opt = Optr;
 
    return 0;
 }
@@ -378,9 +385,6 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
 
    rc = 0;
 TERMINATE:
-
-   if( gh->opt != NULL )
-      optFree(&gh->opt);
 
    delete gh->lp;
    gh->lp = NULL;
