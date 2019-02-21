@@ -173,6 +173,7 @@ int processSolve(
 
    switch( status )
    {
+      case HighsStatus::NotSet:
       case HighsStatus::Init:
       case HighsStatus::LpError:
       case HighsStatus::OptionsError:
@@ -332,6 +333,9 @@ DllExport int STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t O
    return 0;
 }
 
+#define XQUOTE(x) QUOTE(x)
+#define QUOTE(x) #x
+
 DllExport int STDCALL C__hisCallSolver(void* Cptr)
 {
    int rc = 1;
@@ -343,7 +347,8 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
    assert(gh->gmo != NULL);
    assert(gh->gev != NULL);
 
-   gevLogStat(gh->gev, "This is the GAMS link to HiGHS.");
+   gevLogStatPChar(gh->gev, "HiGHS " XQUOTE(HIGHS_VERSION_MAJOR) "." XQUOTE(HIGHS_VERSION_MINOR) "." XQUOTE(HIGHS_VERSION_PATCH) " [date: " HIGHS_COMPILATION_DATE ", git hash: " HIGHS_GITHASH "]\n");
+   gevLogStatPChar(gh->gev, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
 
    gmoModelStatSet(gh->gmo, gmoModelStat_NoSolutionReturned);
    gmoSolveStatSet(gh->gmo, gmoSolveStat_SystemErr);
