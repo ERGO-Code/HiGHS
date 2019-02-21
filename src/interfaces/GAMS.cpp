@@ -56,6 +56,9 @@ int setupOptions(
    gh->options->highs_run_time_limit = gevGetDblOpt(gh->gev, gevResLim);
    gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
 
+   if( gevGetIntOpt(gh->gev, gevUseCutOff) )
+      gh->options->dual_objective_value_upper_bound = gevGetDblOpt(gh->gev, gevCutOff);
+
    if( gmoOptFile(gh->gmo) > 0 )
    {
       char optfilename[GMS_SSSIZE];
@@ -64,7 +67,6 @@ int setupOptions(
       if( !loadOptionsFromFile(*gh->options) )
          return 1;
    }
-   //gh->options->dual_objective_value_upper_bound
 
    return 0;
 }
