@@ -90,15 +90,15 @@ public:
    ///@todo implement
 
    /// Get an empty warm start object
-   CoinWarmStart *getEmptyWarmStart() const { return NULL; }
+   CoinWarmStart *getEmptyWarmStart() const;
 
    /// Get warmstarting information
-   virtual CoinWarmStart* getWarmStart() const { return NULL; }
+   virtual CoinWarmStart* getWarmStart() const;
 
    /** Set warmstarting information. Return true/false depending on whether
     *  the warmstart information was accepted or not.
     */
-   virtual bool setWarmStart(const CoinWarmStart *warmstart) { return false; }
+   virtual bool setWarmStart(const CoinWarmStart *warmstart);
    ///@}
 
    //---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ public:
    double getObjSense() const;
 
    /// Return true if column is continuous
-   virtual bool isContinuous(int colNumber) const  { return true; }
+   virtual bool isContinuous(int colNumber) const;
 
    /// Get pointer to row-wise copy of matrix
    virtual const CoinPackedMatrix* getMatrixByRow() const;
@@ -178,10 +178,10 @@ public:
    int getIterationCount() const;
 
    /// Get as many dual rays as the solver can provide.
-   virtual std::vector< double*> getDualRays(int maxNumRays, bool fullRay = false) const { return std::vector<double*>(0); }
+   virtual std::vector< double*> getDualRays(int maxNumRays, bool fullRay = false) const;
 
    /// Get as many primal rays as the solver can provide.
-   virtual std::vector<double*> getPrimalRays(int maxNumRays) const { return std::vector<double*>(0); }
+   virtual std::vector<double*> getPrimalRays(int maxNumRays) const;
 
    ///@}
 
@@ -192,7 +192,7 @@ public:
    ///@todo implement
 
    /// Set an objective function coefficient
-   virtual void setObjCoeff(int elementIndex, double elementValue) { };
+   virtual void setObjCoeff(int elementIndex, double elementValue);
 
    /// Set a set of objective function coefficients
    virtual void setObjCoeffSet(const int *indexFirst,
@@ -204,11 +204,11 @@ public:
 
    using OsiSolverInterface::setColLower;
    /// Set a single column lower bound
-   virtual void setColLower(int elementIndex, double elementValue) { };
+   virtual void setColLower(int elementIndex, double elementValue);
 
    using OsiSolverInterface::setColUpper;
    /// Set a single column upper bound
-   virtual void setColUpper(int elementIndex, double elementValue) { };
+   virtual void setColUpper(int elementIndex, double elementValue);
 
    /// Set a single column lower and upper bound
    //virtual void setColBounds(int elementIndex,
@@ -220,10 +220,10 @@ public:
    //  const double *boundList);
 
    /// Set a single row lower bound
-   virtual void setRowLower(int elementIndex, double elementValue) { }
+   virtual void setRowLower(int elementIndex, double elementValue);
 
    /// Set a single row upper bound
-   virtual void setRowUpper(int elementIndex, double elementValue) { }
+   virtual void setRowUpper(int elementIndex, double elementValue);
 
    /// Set a single row lower and upper bound
    //virtual void setRowBounds(int elementIndex,
@@ -236,7 +236,7 @@ public:
 
    /// Set the type of a single row
    virtual void setRowType(int index, char sense, double rightHandSide,
-     double range) { };
+     double range);
 
    /// Set the type of a number of rows simultaneously
    // virtual void setRowSetTypes(const int *indexFirst,
@@ -253,10 +253,10 @@ public:
    void setRowPrice(const double *rowprice);
 
    /// Set the index-th variable to be a continuous variable
-   virtual void setContinuous(int index) { }
+   virtual void setContinuous(int index);
 
    /// Set the index-th variable to be an integer variable
-   virtual void setInteger(int index) { };
+   virtual void setInteger(int index);
 
    /// Set the variables listed in indices (which is of length len) to be continuous variables
    // virtual void setContinuous(const int *indices, int len);
@@ -376,10 +376,10 @@ public:
 
  protected:
    /// Apply a row cut.
-   virtual void applyRowCut(const OsiRowCut& rc) { }
+   virtual void applyRowCut(const OsiRowCut& rc);
 
    /// Apply a column cut (bound adjustment).
-   virtual void applyColCut(const OsiColCut& cc) { }
+   virtual void applyColCut(const OsiColCut& cc);
 
 
 private:
