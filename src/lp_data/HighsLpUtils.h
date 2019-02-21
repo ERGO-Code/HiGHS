@@ -61,13 +61,14 @@ void getLpMatrixCoefficient(
 			    );
 
 HighsStatus assess_lp(
-		const HighsLp& lp,
+		HighsLp& lp,
 		const HighsOptions& options
 		);
 
 HighsStatus assess_lp_dimensions(
 				 const HighsLp& lp
 				 );
+
 HighsStatus add_lp_cols(
 		HighsLp& lp,
 		int XnumNewCol,
@@ -98,16 +99,20 @@ HighsStatus append_lp_cols(
 
 HighsStatus assess_col_costs(
 			int XnumCol,
-			const double* XcolCost,
-			double infinite_cost
+			double* XcolCost,
+			double infinite_cost,
+			bool normalise = true
 			);
 
-HighsStatus assess_col_bounds(
-			int XnumCol,
-			const double* XcolLower,
-			const double* XcolUpper,
-			double infinite_bound
-			);
+HighsStatus assess_bounds(
+			  const char* type,
+			  int Xfrom_ix,
+			  int Xto_ix,
+			  double* XLower,
+			  double* XUpper,
+			  double infinite_bound,
+			  bool normalise = true
+			  );
 
 void append_cols_to_lp_vectors(
 			       HighsLp &lp,
@@ -150,13 +155,6 @@ HighsStatus append_lp_rows(
 		   const bool force = false
 		   );
 
-HighsStatus assess_row_bounds(
-			int XnumRow,
-			const double* XrowLower,
-			const double* XrowUpper,
-			double infinite_bound
-			);
-
 void append_rows_to_lp_vectors(HighsLp &lp,
 			       int XnumNewRow,
 			       const double *XrowLower,
@@ -172,13 +170,15 @@ HighsStatus normalise_row_bounds(
 
 HighsStatus assess_matrix(
 			  int XnumRow,
-			  int XnumCol,
+			  int XfromCol,
+			  int XtoCol,
 			  int XnumNZ,
-			  const int* XAstart,
-			  const int* XAindex,
-			  const double *XAvalue,
+			  int* XAstart,
+			  int* XAindex,
+			  double *XAvalue,
 			  double small_matrix_value,
-			  double large_matrix_value
+			  double large_matrix_value,
+			  bool normalise = true
 			  );
 
 void append_cols_to_lp_matrix(

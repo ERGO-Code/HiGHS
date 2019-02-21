@@ -243,20 +243,25 @@ HighsStatus checkLp(const HighsLp& lp) {
   return HighsStatus::OK;
 }
 
-HighsStatus assess_lp(const HighsLp& lp, const HighsOptions& options) {
+HighsStatus assess_lp(HighsLp& lp, const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::NotSet;
-  // Assess the bounds and matrix indices, returning on error unless addition is forced
   HighsStatus call_status;
   int lp_num_nz = lp.Astart_[lp.numCol_];
+  // Assess the LP dimensions and vector sizes, returning on error
   call_status = assess_lp_dimensions(lp);
   return_status = worse_status(call_status, return_status);
+  if (return_status == HighsStatus::Error) return HighsStatus::LpError;
+  // Assess the LP column costs
   call_status = assess_col_costs(lp.numCol_, &lp.colCost_[0], options.infinite_cost);
   return_status = worse_status(call_status, return_status);
-  call_status = assess_col_bounds(lp.numCol_, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound);
+  // Assess the LP column bounds
+  call_status = assess_bounds("Col", 0, lp.numCol_-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound);
   return_status = worse_status(call_status, return_status);
-  call_status = assess_row_bounds(lp.numRow_, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound);
+  // Assess the LP row bounds
+  call_status = assess_bounds("Row", 0, lp.numRow_-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound);
   return_status = worse_status(call_status, return_status);
-  call_status = assess_matrix(lp.numRow_, lp.numCol_, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+  // Assess the LP matrix
+  call_status = assess_matrix(lp.numRow_, 0, lp.numCol_-1, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
 			      options.small_matrix_value, options.large_matrix_value);
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error) return_status = HighsStatus::LpError;
@@ -364,13 +369,14 @@ HighsStatus append_lp_cols(HighsLp& lp,
   HighsStatus return_status = HighsStatus::NotSet;
   int newNumCol = lp.numCol_ + XnumNewCol;
   // Assess the bounds and matrix indices, returning on error unless addition is forced
-  HighsStatus call_status = assess_col_bounds(XnumNewCol, XcolLower, XcolUpper, options.infinite_bound);
+  bool normalise = false;
+  HighsStatus call_status;
+  call_status = assess_bounds("Col", 0, XnumNewCol-1, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
 
-  call_status = assess_matrix(lp.numRow_, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue,
-			      options.small_matrix_value, options.large_matrix_value);
+  call_status = assess_matrix(lp.numRow_, 0, XnumNewCol-1, XnumNewNZ, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
+			      options.small_matrix_value, options.large_matrix_value, normalise);
   return_status = worse_status(call_status, return_status);
-
   if (return_status == HighsStatus::Error && !force) return return_status;
 
   // Append the columns to the LP vectors and matrix
@@ -378,14 +384,15 @@ HighsStatus append_lp_cols(HighsLp& lp,
   append_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
 
   // Normalise the new LP column bounds and matrix columns
-  call_status = normalise_col_bounds(lp, lp.numCol_, newNumCol, options.infinite_bound);
+  normalise = true;
+  call_status = assess_bounds("Col", lp.numCol_, newNumCol-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
   call_status = normalise_lp_matrix(lp, lp.numCol_, newNumCol, options.small_matrix_value, options.large_matrix_value);
   return_status = worse_status(call_status, return_status);
   return return_status;
 }
 
-HighsStatus assess_col_costs(int XnumCol, const double* XcolCost, double infinite_cost) {
+HighsStatus assess_col_costs(int XnumCol, double* XcolCost, double infinite_cost, bool normalise) {
   assert(XnumCol >= 0);
   if (XnumCol == 0) return HighsStatus::OK;
 
@@ -412,54 +419,80 @@ HighsStatus assess_col_costs(int XnumCol, const double* XcolCost, double infinit
   return return_status;
 }
 
-HighsStatus assess_col_bounds(int XnumCol, const double* XcolLower, const double* XcolUpper, double infinite_bound) {
-  assert(XnumCol >= 0);
-  if (XnumCol == 0) return HighsStatus::OK;
+HighsStatus assess_bounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLower, double* XUpper, double infinite_bound, bool normalise) {
+  assert(Xfrom_ix >= 0);
+  assert(Xto_ix >= 0);
+  assert(Xfrom_ix <= Xto_ix);
+  if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
   bool error_found = false;
   bool warning_found = false;
   bool info_found = false;
-  int num_infinte_lower_bound = 0;
-  int num_infinte_upper_bound = 0;
-  for (int col = 0; col < XnumCol; col++) {
-    // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = XcolLower[col] < infinite_bound;
-    assert(legalLowerBound);
-    if (!legalLowerBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has lower bound of %12g >= %12g = Infinity", col, XcolLower[col], infinite_bound);
-      error_found = true;
-    }
-    if (!highs_isInfinity(-XcolLower[col])) {
+  int num_infinite_lower_bound = 0;
+  int num_infinite_upper_bound = 0;
+  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+    if (!highs_isInfinity(-XLower[ix])) {
       // Check whether a finite lower bound will be treated as -Infinity      
-      bool infinite_lower_bound = XcolLower[col] <= -infinite_bound;
-      if (infinite_lower_bound) num_infinte_lower_bound++;
+      bool infinite_lower_bound = XLower[ix] <= -infinite_bound;
+      if (infinite_lower_bound) {
+	if (normalise) XLower[ix] = -HIGHS_CONST_INF;
+	num_infinite_lower_bound++;
+      }
+    }
+    if (!highs_isInfinity(XUpper[ix])) {
+      // Check whether a finite upper bound will be treated as Infinity      
+      bool infinite_upper_bound = XUpper[ix] >= infinite_bound;
+      if (infinite_upper_bound) {
+	if (normalise) XUpper[ix] = HIGHS_CONST_INF;
+	num_infinite_upper_bound++;
+      }
     }
     // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = XcolLower[col] <= XcolUpper[col];
+    bool legalLowerUpperBound = XLower[ix] <= XUpper[ix];
     if (!legalLowerUpperBound) {
-      HighsLogMessage(HighsMessageType::WARNING, "Col %12d has inconsistent bounds [%12g, %12g]", col, XcolLower[col], XcolUpper[col]);
+      // Leave inconsistent bounds to be used to deduce infeasibility
+      HighsLogMessage(HighsMessageType::WARNING, "%3s  %12d has inconsistent bounds [%12g, %12g]", type, ix, XLower[ix], XUpper[ix]);
       warning_found = true;
-    }
-    if (!highs_isInfinity(XcolUpper[col])) {
-      // Check whether a finite upper bound will be treated as Infinity      
-      bool infinite_upper_bound = XcolUpper[col] >= infinite_bound;
-      if (infinite_upper_bound) num_infinte_upper_bound++;
-    }
-    // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = XcolUpper[col] > -infinite_bound;
-    assert(legalUpperBound);
-    if (!legalUpperBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has upper bound of %12g <= %12g = -Infinity", col, XcolUpper[col], -infinite_bound);
-      error_found = true;
+    } else {
+      // Check that the lower bound is not as much as +Infinity
+      bool legalLowerBound = XLower[ix] < infinite_bound;
+      assert(legalLowerBound);
+      if (!legalLowerBound) {
+	if (normalise) {
+	  // Ignore the illegal lower bound - have to do something if forced to normalise!
+	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g set to %12g", type, ix, XLower[ix], infinite_bound, -HIGHS_CONST_INF);
+	  XLower[ix] = -HIGHS_CONST_INF;
+	} else {
+	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, XLower[ix], infinite_bound);
+	}
+	error_found = true;
+      }
+      // Check that the upper bound is not as little as -Infinity
+      bool legalUpperBound = XUpper[ix] > -infinite_bound;
+      assert(legalUpperBound);
+      if (!legalUpperBound) {
+	if (normalise) {
+	  // Ignore the illegal upper bound - have to do something if forced to normalise!
+	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g set to %12g", type, ix, XUpper[ix], -infinite_bound, HIGHS_CONST_INF);
+	  XUpper[ix] = HIGHS_CONST_INF;
+	} else {
+	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, XUpper[ix], -infinite_bound);
+	}
+	error_found = true;
+      }
     }
   }
-  int num_infinte_bound = num_infinte_lower_bound + num_infinte_upper_bound;
-  if (num_infinte_bound) {
-    HighsLogMessage(HighsMessageType::INFO, "The %12d col lower bounds exceeding %12g = -Infinity and %12d upper bounds exceeding %12g = Infinity will be treated as infinity", num_infinte_lower_bound, -infinite_bound, num_infinte_upper_bound, infinite_bound);
-    info_found = true;
+  if (normalise) {
+    if (num_infinite_lower_bound) {
+      HighsLogMessage(HighsMessageType::INFO, "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity", type, num_infinite_lower_bound, -infinite_bound);
+      info_found = true;
+    }
+    if (num_infinite_upper_bound) {
+      HighsLogMessage(HighsMessageType::INFO, "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity", type, num_infinite_upper_bound, infinite_bound);
+      info_found = true;
+    }
   }
-  
   if (error_found)
     return_status = HighsStatus::Error;
   else if (warning_found)
@@ -540,74 +573,16 @@ HighsStatus append_lp_rows(HighsLp& lp,
   HighsStatus return_status = HighsStatus::NotSet;
   int newNumRow = lp.numRow_ + XnumNewRow;
   // Assess the bounds and matrix indices, returning on error unless addition is forced
-  HighsStatus call_status = assess_row_bounds(XnumNewRow, XrowLower, XrowUpper, options.infinite_bound);
+  bool normalise = false;
+  HighsStatus call_status = assess_bounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
 
   if (return_status == HighsStatus::Error && !force) return return_status;
 
   append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
+  normalise = true;
   call_status = normalise_row_bounds(lp, lp.numRow_, newNumRow, options.infinite_bound);
   return_status = worse_status(call_status, return_status);
-  return return_status;
-}
-
-HighsStatus assess_row_bounds(int XnumRow, const double* XrowLower, const double* XrowUpper, double infinite_bound) {
-  assert(XnumRow >= 0);
-  if (XnumRow == 0) return HighsStatus::OK;
-
-  HighsStatus return_status = HighsStatus::NotSet;
-  bool error_found = false;
-  bool warning_found = false;
-  bool info_found = false;
-  int num_infinte_lower_bound = 0;
-  int num_infinte_upper_bound = 0;
-  for (int row = 0; row < XnumRow; row++) {
-    // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = XrowLower[row] < infinite_bound;
-    assert(legalLowerBound);
-    if (!legalLowerBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has lower bound of %12g >= %12g = Infinity", row, XrowLower[row], infinite_bound);
-      error_found = true;
-    }
-    if (!highs_isInfinity(-XrowLower[row])) {
-      // Check whether a finite lower bound will be treated as -Infinity      
-      bool infinite_lower_bound = XrowLower[row] <= -infinite_bound;
-      if (infinite_lower_bound) num_infinte_lower_bound++;
-    }
-    // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = XrowLower[row] <= XrowUpper[row];
-    if (!legalLowerUpperBound) {
-      HighsLogMessage(HighsMessageType::WARNING, "Row %12d has inconsistent bounds [%12g, %12g]", row, XrowLower[row], XrowUpper[row]);
-      warning_found = true;
-    }
-    if (!highs_isInfinity(XrowUpper[row])) {
-      // Check whether a finite upper bound will be treated as Infinity      
-      bool infinite_upper_bound = XrowUpper[row] >= infinite_bound;
-      if (infinite_upper_bound) num_infinte_upper_bound++;
-    }
-    // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = XrowUpper[row] > -infinite_bound;
-    assert(legalUpperBound);
-    if (!legalUpperBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "Row %12d has upper bound of %12g <= %12g = -Infinity", row, XrowUpper[row], -infinite_bound);
-      error_found = true;
-    }
-  }
-  int num_infinte_bound = num_infinte_lower_bound + num_infinte_upper_bound;
-  if (num_infinte_bound) {
-    HighsLogMessage(HighsMessageType::INFO, "The %12d row lower bounds exceeding %12g = -Infinity and %12d upper bounds exceeding %12g = Infinity will be treated as infinity", num_infinte_lower_bound, -infinite_bound, num_infinte_upper_bound, infinite_bound);
-    info_found = true;
-  }
-  
-  if (error_found)
-    return_status = HighsStatus::Error;
-  else if (warning_found)
-    return_status = HighsStatus::Warning;
-  else if (info_found)
-    return_status = HighsStatus::Info;
-  else
-    return_status = HighsStatus::OK;
-    
   return return_status;
 }
 
@@ -657,26 +632,32 @@ HighsStatus normalise_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double i
   return return_status;
 }
 
-HighsStatus assess_matrix(int XnumRow, int XnumCol, int XnumNZ, const int* XAstart, const int* XAindex, const double* XAvalue,
-			  double small_matrix_value, double large_matrix_value) {
+HighsStatus assess_matrix(int XnumRow, int XfromCol, int XtoCol, int XnumNZ, int* XAstart, int* XAindex, double* XAvalue,
+			  double small_matrix_value, double large_matrix_value, bool normalise) {
+  assert(XfromCol >= 0);
+  assert(XtoCol >= 0);
+  assert(XfromCol <= XtoCol);
+  if (XfromCol == XtoCol) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
-  assert(XnumRow >= 0);
-  assert(XnumCol >= 0);
-  assert(XnumNZ >= 0);
   if (XnumRow == 0) return HighsStatus::OK;
-  if (XnumCol == 0) return HighsStatus::OK;
+  if (XfromCol > XtoCol) return HighsStatus::OK;
   if (XnumNZ == 0) return HighsStatus::OK;
 
   bool error_found = false;
   bool warning_found = false;
   vector <int> colVec;
   colVec.assign(XnumRow, 0);
-  int fromEl = XAstart[0];
+
+  int fromEl;
+  if (XfromCol == 0) {
+     fromEl = XAstart[0];
+    // Check fromEl==0
+  }
   
-  for (int col = 0; col < XnumCol; col++) {
+  for (int col = XfromCol; col <= XtoCol; col++) {
     fromEl = XAstart[col];
     int toEl;
-    if (col < XnumCol-1) {
+    if (col < XtoCol) {
       toEl = XAstart[col+1]-1;
     } else {
       toEl = XnumNZ-1;
@@ -711,7 +692,7 @@ HighsStatus assess_matrix(int XnumRow, int XnumCol, int XnumNZ, const int* XAsta
       }
     for (int el = XAstart[col]; el <= toEl; el++) colVec[XAindex[el]] = 0;
   }
-  int col = XnumCol;
+  int col = XtoCol;
   fromEl = XAstart[col];
   bool legalFromEl = fromEl >=0 && fromEl <= XnumNZ;
   assert(legalFromEl);
