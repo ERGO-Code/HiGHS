@@ -31,6 +31,7 @@
 HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
+  simplex_has_run_ = false;
   return HighsStatus::OK;
 }
 
@@ -350,14 +351,127 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   return result;
 }
 
-void Highs::changeObjectiveSense(int sense) {
+bool Highs::changeObjectiveSense(int sense) {
   if (!simplex_has_run_) {
     this->lp_.sense_ = sense;
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-
-    // todo: change to take int return value
     interface.change_ObjSense(sense);
   }
+  return true;
+}
+
+bool Highs::changeRowBounds(int index, double lower, double higher) {
+  if (!simplex_has_run_) {
+    this->lp_.rowLower_[index] = lower;
+    this->lp_.rowUpper_[index] = higher;
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_row_bounds_set(1, &index, &lower, &higher, true);
+  }
+  return true;
+}
+
+bool Highs::changeColBounds(int index, double lower, double higher) {
+  if (!simplex_has_run_) {
+    this->lp_.colLower_[index] = lower;
+    this->lp_.colUpper_[index] = higher;
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_col_bounds_set(1, &index, &lower, &higher, true);
+  }
+  return true;
+}
+
+bool Highs::changeRowsBounds(int n, int *index, double *lower, double *higher) {
+  if (!simplex_has_run_) {
+    for (int i = 0; i < n; i++) {
+      this->lp_.rowLower_[index[i]] = lower[i];
+      this->lp_.rowUpper_[index[i]] = higher[i];
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_row_bounds_set(n, index, lower, higher, true);
+  }
+  return true;
+}
+
+bool Highs::changeColsBounds(int n, int *index, double *lower, double *higher) {
+  if (!simplex_has_run_) {
+    for (int i = 0; i < n; i++) {
+      this->lp_.colLower_[index[i]] = lower[i];
+      this->lp_.colUpper_[index[i]] = higher[i];
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_col_bounds_set(n, index, lower, higher, true);
+  }
+  return true;
+}
+
+bool Highs::changeObjCoef(int index, double coef) {
+  if (!simplex_has_run_) {
+    this->lp_.colCost_[index] = coef;
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_costs_set(1, &index, &coef);
+  }
+  return true;
+}
+
+bool Highs::deleteRows(const int n, const int *indices) {
+  std::vector<int> rows;
+  rows.assign(indices, indices + n);
+
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.util_delete_row_set(rows);
+  }
+  return true;
+}
+
+bool Highs::deleteCols(const int n, const int *indices) {
+  std::vector<int> cols;
+  cols.assign(indices, indices + n);
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.util_delete_col_set(cols);
+  }
+  return true;
+}
+
+bool Highs::changeObjCoefs(int n, int* index, double* coef) {
+  if (!simplex_has_run_) {
+    for (int i=0; i<n; i++) {
+      this->lp_.colCost_[index[i]] = coef[i];
+    }
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_costs_set(n, index, coef);
+  }
+  return true;  
 }
