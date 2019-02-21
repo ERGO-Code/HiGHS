@@ -16,9 +16,9 @@
 #include <cmath>
 
 #include "Highs.h"
+#include "io/FilereaderMps.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "io/FilereaderMps.h"
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   HighsPrintMessage(
@@ -29,9 +29,10 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface() {
   setStrParam(OsiSolverName, "HiGHS");
 }
 
-OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface& original) 
-: OsiSolverInterface(original) {
-    HighsPrintMessage(
+OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
+    const OsiHiGHSSolverInterface &original)
+    : OsiSolverInterface(original) {
+  HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->highs = new Highs();
@@ -63,15 +64,13 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
 }
 
 OsiSolverInterface *OsiHiGHSSolverInterface::clone(bool copyData) const {
-    HighsPrintMessage(
-      ML_ALWAYS,
-      "Calling OsiHiGHSSolverInterface::clone()\n");
+  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::clone()\n");
   if (!copyData) {
     OsiHiGHSSolverInterface *cln = new OsiHiGHSSolverInterface();
     return cln;
 
   } else {
-     OsiHiGHSSolverInterface *cln =  new OsiHiGHSSolverInterface(*this);
+    OsiHiGHSSolverInterface *cln = new OsiHiGHSSolverInterface(*this);
     cln->objOffset = this->objOffset;
     return cln;
   }
@@ -207,7 +206,8 @@ bool OsiHiGHSSolverInterface::isAbandoned() const {
 bool OsiHiGHSSolverInterface::isProvenOptimal() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::isProvenOptimal()\n");
-  return (this->status == HighsStatus::Optimal) || (this->status == HighsStatus::OK);
+  return (this->status == HighsStatus::Optimal) ||
+         (this->status == HighsStatus::OK);
 }
 
 bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
@@ -253,13 +253,13 @@ int OsiHiGHSSolverInterface::getNumCols() const {
 int OsiHiGHSSolverInterface::getNumRows() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getNumRows()\n");
-    return this->highs->lp_.numRow_;
+  return this->highs->lp_.numRow_;
 }
 
 int OsiHiGHSSolverInterface::getNumElements() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getNumElements()\n");
-    return this->highs->lp_.nnz_;
+  return this->highs->lp_.nnz_;
 }
 
 const double *OsiHiGHSSolverInterface::getColLower() const {
@@ -271,25 +271,25 @@ const double *OsiHiGHSSolverInterface::getColLower() const {
 const double *OsiHiGHSSolverInterface::getColUpper() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColUpper()\n");
-    return &(this->highs->lp_.colUpper_[0]);
+  return &(this->highs->lp_.colUpper_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getRowLower() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowLower()\n");
-    return &(this->highs->lp_.rowLower_[0]);
+  return &(this->highs->lp_.rowLower_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getRowUpper() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowUpper()\n");
-    return &(this->highs->lp_.rowUpper_[0]);
+  return &(this->highs->lp_.rowUpper_[0]);
 }
 
 const double *OsiHiGHSSolverInterface::getObjCoefficients() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjCoefficients()\n");
-    return &(this->highs->lp_.colCost_[0]);
+  return &(this->highs->lp_.colCost_[0]);
 }
 
 // TODO: review: 10^20?
@@ -444,8 +444,21 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
   // get pointers to data
   // highs.addRow( pointers to data , optional force)
-  bool success = this->highs->addRow(rowlb, rowub, vec.getNumElements(), vec.getIndices(), vec.getElements(), true);
+  bool success = this->highs->addRow(rowlb, rowub, vec.getNumElements(),
+                                     vec.getIndices(), vec.getElements(), true);
   assert(success);
+};
+
+void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
+                                     const char rowsen, const double rowrhs,
+                                     const double rowrng) {
+  double lb, ub;
+  this->convertSenseToBound(rowsen, rowrhs, rowrng, lb, ub);
+  this->addRow(vec, lb, ub);
+};
+
+void OsiHiGHSSolverInterface::deleteRows(const int num, const int *rowIndices){
+    // TODO
 };
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
@@ -614,7 +627,7 @@ void OsiHiGHSSolverInterface::loadProblem(
     transpose = true;
     // ToDo: remove this hack
     ((CoinPackedMatrix)matrix).transpose();
-  } 
+  }
 
   int numCol = matrix.getNumCols();
   int numRow = matrix.getNumRows();
@@ -648,9 +661,8 @@ void OsiHiGHSSolverInterface::loadProblem(
                     rowlb, rowub);
 
   if (transpose) {
-     ((CoinPackedMatrix)matrix).transpose();
+    ((CoinPackedMatrix)matrix).transpose();
   }
-   
 
   delete[] start;
   delete[] index;
@@ -666,10 +678,11 @@ void OsiHiGHSSolverInterface::loadProblem(
 
 //   HighsLp lp;
 
-//   highs->options_.filename = std::string(filename) + "." + std::string(extension);
+//   highs->options_.filename = std::string(filename) + "." +
+//   std::string(extension);
 
-//   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_, lp);
-//   if (rc != FilereaderRetcode::OKAY)
+//   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_,
+//   lp); if (rc != FilereaderRetcode::OKAY)
 // 	  return (int)rc;
 //   this->setDblParam(OsiDblParam::OsiObjOffset, lp.offset_);
 //   highs->initializeLp(lp);
@@ -678,19 +691,18 @@ void OsiHiGHSSolverInterface::loadProblem(
 // }
 
 /// Write the problem into an mps file of the given filename.
-void OsiHiGHSSolverInterface::writeMps(const char* filename,
-  const char* extension,
-  double objSense) const
-{
-  HighsPrintMessage(ML_ALWAYS,
-                    "Calling OsiHiGHSSolverInterface::writeMps()\n");
+void OsiHiGHSSolverInterface::writeMps(const char *filename,
+                                       const char *extension,
+                                       double objSense) const {
+  HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::writeMps()\n");
 
   std::string fullname = std::string(filename) + "." + std::string(extension);
 
-  if (objSense != 0.0)
-  {
-    // HiGHS doesn't do funny stuff with the objective sense, so use Osi's method if something strange is requested
-    OsiSolverInterface::writeMpsNative(fullname.c_str(), NULL, NULL, 0, 2, objSense);
+  if (objSense != 0.0) {
+    // HiGHS doesn't do funny stuff with the objective sense, so use Osi's
+    // method if something strange is requested
+    OsiSolverInterface::writeMpsNative(fullname.c_str(), NULL, NULL, 0, 2,
+                                       objSense);
     return;
   }
 
@@ -698,7 +710,8 @@ void OsiHiGHSSolverInterface::writeMps(const char* filename,
   FilereaderRetcode rc = frmps.writeModelToFile(fullname.c_str(), highs->lp_);
 
   if (rc != FilereaderRetcode::OKAY)
-	  throw CoinError("Creating MPS file failed", "writeMps", "OsiHiGHSSolverInterface", __FILE__, __LINE__);
+    throw CoinError("Creating MPS file failed", "writeMps",
+                    "OsiHiGHSSolverInterface", __FILE__, __LINE__);
 }
 
 const double *OsiHiGHSSolverInterface::getColSolution() const {
@@ -707,16 +720,15 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
   // todo: fix this: check if highs has found a solution to return.
   if (!highs) {
     return nullptr;
-  }
-  else {
+  } else {
     if (highs->solution_.col_value.size() == 0) {
       double num_cols = highs->lp_.numCol_;
       this->dummy_solution.col_value.resize(num_cols);
-      for (int col=0; col< highs->lp_.numCol_; col++) {
+      for (int col = 0; col < highs->lp_.numCol_; col++) {
         if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
           dummy_solution.col_value[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] < 
-                 std::fabs(highs->lp_.colUpper_[col])))
+        else if (std::fabs(highs->lp_.colLower_[col] <
+                           std::fabs(highs->lp_.colUpper_[col])))
           dummy_solution.col_value[col] = highs->lp_.colLower_[col];
         else
           dummy_solution.col_value[col] = highs->lp_.colUpper_[col];
@@ -724,7 +736,7 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
       return &dummy_solution.col_value[0];
     }
   }
-  
+
   return &highs->solution_.col_value[0];
 }
 
@@ -732,17 +744,17 @@ const double *OsiHiGHSSolverInterface::getRowPrice() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowPrice()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) 
+  if (!highs)
     return nullptr;
   else {
     if (highs->solution_.row_dual.size() == 0) {
       double num_cols = highs->lp_.numCol_;
       this->dummy_solution.row_dual.resize(num_cols);
-      for (int col=0; col< highs->lp_.numCol_; col++) {
+      for (int col = 0; col < highs->lp_.numCol_; col++) {
         if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
           dummy_solution.row_dual[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] < 
-                 std::fabs(highs->lp_.colUpper_[col])))
+        else if (std::fabs(highs->lp_.colLower_[col] <
+                           std::fabs(highs->lp_.colUpper_[col])))
           dummy_solution.row_dual[col] = highs->lp_.colLower_[col];
         else
           dummy_solution.row_dual[col] = highs->lp_.colUpper_[col];
@@ -750,7 +762,7 @@ const double *OsiHiGHSSolverInterface::getRowPrice() const {
       return &dummy_solution.row_dual[0];
     }
   }
-  
+
   return &highs->solution_.row_dual[0];
 }
 
@@ -758,17 +770,17 @@ const double *OsiHiGHSSolverInterface::getReducedCost() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getReducedCost()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) 
+  if (!highs)
     return nullptr;
   else {
     if (highs->solution_.col_dual.size() == 0) {
       double num_cols = highs->lp_.numCol_;
       this->dummy_solution.col_dual.resize(num_cols);
-      for (int col=0; col< highs->lp_.numCol_; col++) {
+      for (int col = 0; col < highs->lp_.numCol_; col++) {
         if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
           dummy_solution.col_dual[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] < 
-                 std::fabs(highs->lp_.colUpper_[col])))
+        else if (std::fabs(highs->lp_.colLower_[col] <
+                           std::fabs(highs->lp_.colUpper_[col])))
           dummy_solution.col_dual[col] = highs->lp_.colLower_[col];
         else
           dummy_solution.col_dual[col] = highs->lp_.colUpper_[col];
@@ -776,7 +788,7 @@ const double *OsiHiGHSSolverInterface::getReducedCost() const {
       return &dummy_solution.col_dual[0];
     }
   }
-  
+
   return &highs->solution_.col_dual[0];
 }
 
@@ -790,11 +802,11 @@ const double *OsiHiGHSSolverInterface::getRowActivity() const {
     if (highs->solution_.row_value.size() == 0) {
       double num_cols = highs->lp_.numCol_;
       this->dummy_solution.row_value.resize(num_cols);
-      for (int col=0; col< highs->lp_.numCol_; col++) {
+      for (int col = 0; col < highs->lp_.numCol_; col++) {
         if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
           dummy_solution.row_value[col] = 0;
-        else if (std::fabs(highs->lp_.colLower_[col] < 
-                 std::fabs(highs->lp_.colUpper_[col])))
+        else if (std::fabs(highs->lp_.colLower_[col] <
+                           std::fabs(highs->lp_.colUpper_[col])))
           dummy_solution.row_value[col] = highs->lp_.colLower_[col];
         else
           dummy_solution.row_value[col] = highs->lp_.colUpper_[col];
@@ -802,7 +814,7 @@ const double *OsiHiGHSSolverInterface::getRowActivity() const {
       return &dummy_solution.row_value[0];
     }
   }
-  
+
   return &highs->solution_.row_value[0];
 }
 
@@ -812,23 +824,23 @@ double OsiHiGHSSolverInterface::getObjValue() const {
   // todo: fix this: check if highs has found a solution to return.
   double objVal = 0.0;
   if (true || highs->solution_.col_value.size() == 0) {
-    const double* sol = this->getColSolution();
-    const double* cost = this->getObjCoefficients();
+    const double *sol = this->getColSolution();
+    const double *cost = this->getObjCoefficients();
     int ncols = this->getNumCols();
 
     objVal = -this->objOffset;
-    for (int i=0; i<ncols; i++) {
+    for (int i = 0; i < ncols; i++) {
       objVal += sol[i] * cost[i];
     }
   } else {
     objVal = this->highs->getObjectiveValue();
   }
- 
+
   return objVal;
 }
 
 int OsiHiGHSSolverInterface::getIterationCount() const {
-    HighsPrintMessage(ML_ALWAYS,
+  HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getIterationCount()\n");
   if (!highs) {
     return 0;
@@ -838,22 +850,20 @@ int OsiHiGHSSolverInterface::getIterationCount() const {
 }
 
 void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
-  if (!rowprice)
-    return;
+  if (!rowprice) return;
   HighsSolution solution;
   solution.row_dual.resize(highs->lp_.numRow_);
-  for (int row=0; row<highs->lp_.numRow_; row++)
+  for (int row = 0; row < highs->lp_.numRow_; row++)
     solution.row_dual[row] = rowprice[row];
 
   HighsStatus result = highs->setSolution(solution);
 };
 
 void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
-  if (!colsol)
-    return;
+  if (!colsol) return;
   HighsSolution solution;
   solution.col_value.resize(highs->lp_.numCol_);
-  for (int col=0; col<highs->lp_.numCol_; col++)
+  for (int col = 0; col < highs->lp_.numCol_; col++)
     solution.col_value[col] = colsol[col];
 
   HighsStatus result = highs->setSolution(solution);

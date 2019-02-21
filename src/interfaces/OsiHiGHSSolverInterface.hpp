@@ -286,10 +286,10 @@ public:
    /// Add a row (constraint) to the problem. */
    virtual void addRow(const CoinPackedVectorBase &vec,
      const char rowsen, const double rowrhs,
-     const double rowrng) { };
+     const double rowrng);
 
    /// Delete a set of rows (constraints) from the problem.
-   virtual void deleteRows(const int num, const int *rowIndices) { };
+   virtual void deleteRows(const int num, const int *rowIndices);
 
    ///@}
 
