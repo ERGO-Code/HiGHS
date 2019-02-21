@@ -344,10 +344,10 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   if (solution.col_value.size()) solution_.col_value = solution.col_value;
   if (solution.col_dual.size()) solution_.col_dual = solution.col_dual;
   if (solution.row_dual.size()) solution_.row_dual = solution.row_dual;
-  
+
   HighsStatus result_values = HighsStatus::NotSet;
   HighsStatus result_duals = HighsStatus::NotSet;
-  
+
   if (solution.col_value.size() > 0)
     result_values = calculateRowValues(lp_, solution_);
   if (solution.row_dual.size() > 0)
