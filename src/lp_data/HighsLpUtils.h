@@ -21,53 +21,24 @@
 
 class HighsLp;
 
-HighsStatus checkLp(const HighsLp& lp);
-
 // Methods taking HighsLp as an argument
-
-
-
-// Get the costs for a contiguous set of columns
-void getLpCosts(
-		const HighsLp& lp,
-		int firstcol,
-		int lastcol,
-		double* XcolCost
-		);
-
-// Get the bounds for a contiguous set of columns
-void getLpColBounds(
-		    const HighsLp& lp,
-		    int firstcol,
-		    int lastcol,
-		    double* XcolLower,
-		    double* XcolUpper
+HighsStatus checkLp(
+		    const HighsLp& lp
 		    );
 
-// Get the bounds for a contiguous set of rows
-void getLpRowBounds(
-		    const HighsLp& lp,
-		    int firstrow,
-		    int lastrow,
-		    double* XrowLower,
-		    double* XrowUpper
-		    );
+HighsStatus assessLp(
+		     HighsLp& lp,
+		     const HighsOptions& options,
+		     bool normalise = true
+		     );
 
-void getLpMatrixCoefficient(
-			    const HighsLp& lp,
-			    int row,
-			    int col,
-			    double *val
-			    );
+int getLpNumNZ(
+	       const HighsLp& lp
+	       );
 
-HighsStatus assess_lp(
-		HighsLp& lp,
-		const HighsOptions& options
-		);
-
-HighsStatus assess_lp_dimensions(
-				 const HighsLp& lp
-				 );
+HighsStatus assessLpDimensions(
+			       const HighsLp& lp
+			       );
 
 HighsStatus add_lp_cols(
 		HighsLp& lp,
@@ -97,14 +68,14 @@ HighsStatus append_lp_cols(
 		   const bool force = false
 		   );
 
-HighsStatus assess_col_costs(
+HighsStatus assessCosts(
 			int XnumCol,
 			double* XcolCost,
 			double infinite_cost,
 			bool normalise = true
 			);
 
-HighsStatus assess_bounds(
+HighsStatus assessBounds(
 			  const char* type,
 			  int Xfrom_ix,
 			  int Xto_ix,
@@ -114,7 +85,7 @@ HighsStatus assess_bounds(
 			  bool normalise = true
 			  );
 
-void append_cols_to_lp_vectors(
+HighsStatus append_cols_to_lp_vectors(
 			       HighsLp &lp,
 			       int XnumNewCol,
 			       const double *XcolCost,
@@ -155,7 +126,7 @@ HighsStatus append_lp_rows(
 		   const bool force = false
 		   );
 
-void append_rows_to_lp_vectors(HighsLp &lp,
+HighsStatus append_rows_to_lp_vectors(HighsLp &lp,
 			       int XnumNewRow,
 			       const double *XrowLower,
 			       const double *XrowUpper
@@ -168,7 +139,7 @@ HighsStatus normalise_row_bounds(
 		       double infinite_bound
 		       );
 
-HighsStatus assess_matrix(
+HighsStatus assessMatrix(
 			  int XnumRow,
 			  int XfromCol,
 			  int XtoCol,
@@ -181,7 +152,7 @@ HighsStatus assess_matrix(
 			  bool normalise = true
 			  );
 
-void append_cols_to_lp_matrix(
+HighsStatus append_cols_to_lp_matrix(
 			   HighsLp &lp,
 			   int XnumNewCol,
 			   int XnumNewNZ,
@@ -190,7 +161,7 @@ void append_cols_to_lp_matrix(
 			   const double *XAvalue
 			   );
 
-void append_rows_to_lp_matrix(HighsLp &lp,
+HighsStatus append_rows_to_lp_matrix(HighsLp &lp,
 			   int XnumNewRow,
 			   int XnumNewNZ,
 			   const int *XARstart,
@@ -217,31 +188,75 @@ HighsStatus normalise_lp_row_matrix(
 			      double large_matrix_value
 			      );
 
-void del_cols_from_lp_vectors(
+HighsStatus delete_lp_cols(HighsLp &lp,
+			      int XfromCol,
+			      int XtoCol
+			      );
+
+HighsStatus delete_lp_col_set(HighsLp &lp,
+			      int XnumCol,
+			      int* XcolSet
+			      );
+
+HighsStatus delete_cols_from_lp_vectors(
 			      HighsLp &lp,
 			      int XfromCol,
 			      int XtoCol
 			      );
 
-void del_cols_from_lp_matrix(
+HighsStatus delete_cols_from_lp_matrix(
 			     HighsLp &lp,
 			     int XfromCol,
 			     int XtoCol
 			     );
 
-void del_rows_from_lp_vectors(
+HighsStatus delete_col_set_from_lp_vectors(
+			      HighsLp &lp,
+			      int XnumCol,
+			      int* XcolSet
+			      );
+
+HighsStatus delete_col_set_from_lp_matrix(
+			     HighsLp &lp,
+			     int XnumCol,
+			     int* XcolSet
+			     );
+
+HighsStatus delete_lp_rows(HighsLp &lp,
+			      int XfromRow,
+			      int XtoRow
+			      );
+
+HighsStatus delete_lp_row_set(HighsLp &lp,
+			      int XnumRow,
+			      int* XrowSet
+			      );
+
+HighsStatus delete_rows_from_lp_vectors(
 			      HighsLp &lp,
 			      int XfromRow,
 			      int XtoRow
 			      );
 
-void del_rows_from_lp_matrix(
+HighsStatus delete_rows_from_lp_matrix(
 			     HighsLp &lp,
 			     int XfromRow,
 			     int XtoRow
 			     );
 
-void change_lp_matrix_coefficient(
+HighsStatus delete_row_set_from_lp_vectors(
+			      HighsLp &lp,
+			      int XnumRow,
+			      int* XrowSet
+			      );
+
+HighsStatus delete_row_set_from_lp_matrix(
+			     HighsLp &lp,
+			     int XnumRow,
+			     int* XrowSet
+			     );
+
+HighsStatus change_lp_matrix_coefficient(
 				  HighsLp &lp,
 				  int Xrow,
 				  int Xcol,
@@ -291,6 +306,40 @@ void reportLpRowVec(
 void reportLpColMtx(
 		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
+
+// Get the costs for a contiguous set of columns
+void getLpCosts(
+		const HighsLp& lp,
+		int firstcol,
+		int lastcol,
+		double* XcolCost
+		);
+
+// Get the bounds for a contiguous set of columns
+void getLpColBounds(
+		    const HighsLp& lp,
+		    int firstcol,
+		    int lastcol,
+		    double* XcolLower,
+		    double* XcolUpper
+		    );
+
+// Get the bounds for a contiguous set of rows
+void getLpRowBounds(
+		    const HighsLp& lp,
+		    int firstrow,
+		    int lastrow,
+		    double* XrowLower,
+		    double* XrowUpper
+		    );
+
+void getLpMatrixCoefficient(
+			    const HighsLp& lp,
+			    int row,
+			    int col,
+			    double *val
+			    );
+
 
 
 /*

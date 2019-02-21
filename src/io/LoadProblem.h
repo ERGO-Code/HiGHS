@@ -55,7 +55,7 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
-  return assess_lp(lp, options);
+  return assessLp(lp, options);
   //  return checkLp(lp);
 }
 

@@ -471,7 +471,7 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 
 }
 
-void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
+HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
 #ifdef HiGHSDEV
   printf("Called util_deleteCols(XfromCol=%d, XtoCol=%d)\n", XfromCol, XtoCol);
 #endif
@@ -487,7 +487,7 @@ void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   assert(XfromCol <= XtoCol);
 
   int numDeleteCol = XtoCol - XfromCol + 1;
-  if (numDeleteCol == 0) return;
+  if (numDeleteCol == 0) return HighsStatus::OK;
 
   int newNumCol = lp.numCol_ - numDeleteCol;
 
@@ -502,10 +502,10 @@ void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   }
 #endif
 
-  del_cols_from_lp_vectors(lp, XfromCol, XtoCol);
-  if (valid_simplex_lp) del_cols_from_lp_vectors(simplex_lp, XfromCol, XtoCol);
-  del_cols_from_lp_matrix(lp, XfromCol, XtoCol);
-  if (valid_simplex_matrix) del_cols_from_lp_matrix(simplex_lp, XfromCol, XtoCol);
+  delete_cols_from_lp_vectors(lp, XfromCol, XtoCol);
+  if (valid_simplex_lp) delete_cols_from_lp_vectors(simplex_lp, XfromCol, XtoCol);
+  delete_cols_from_lp_matrix(lp, XfromCol, XtoCol);
+  if (valid_simplex_matrix) delete_cols_from_lp_matrix(simplex_lp, XfromCol, XtoCol);
 
   for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
     scale.col_[col] = scale.col_[col + numDeleteCol];
@@ -524,13 +524,13 @@ void HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   
 }
 
-void HighsSimplexInterface::util_delete_col_set(vector<int>& dstat) {
+HighsStatus HighsSimplexInterface::util_delete_col_set(int XnumCol, int* XcolSet) {
   printf("util_delete_col_set not implemented");
   assert(1 == 0);
 }
 
 
-void HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* XcolLower, double* XcolUpper,
+HighsStatus HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* XcolLower, double* XcolUpper,
 					      int* XnumNZ, int* XAstart, int* XAindex, double* XAvalue) {
   HighsLp &lp = highs_model_object.lp_;
   HighsScale &scale = highs_model_object.scale_;
@@ -605,10 +605,10 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   // Assess the bounds and matrix indices, returning on error unless addition is forced
   bool normalise = false;
   HighsStatus call_status;
-  call_status = assess_bounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
+  call_status = assessBounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
 
-  call_status = assess_matrix(lp.numCol_, 0, XnumNewRow-1, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+  call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			      options.small_matrix_value, options.large_matrix_value, normalise);
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error && !force) return return_status;
@@ -686,7 +686,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
 }
 
-void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
+HighsStatus HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
 #ifdef HiGHSDEV
   printf("Called model.util_deleteRows(XfromRow=%d, XtoRow=%d)\n", XfromRow, XtoRow);
 #endif
@@ -699,7 +699,7 @@ void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   assert(XtoRow < lp.numRow_);
   assert(XfromRow <= XtoRow);
   int numDeleteRow = XtoRow - XfromRow + 1;
-  if (numDeleteRow == 0) return;
+  if (numDeleteRow == 0) return HighsStatus::OK;
 
   int newNumRow = lp.numRow_ - numDeleteRow;
 
@@ -714,10 +714,10 @@ void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   }
 #endif
 
-  del_rows_from_lp_vectors(lp, XfromRow, XtoRow);
-  if (valid_simplex_lp) del_rows_from_lp_vectors(simplex_lp, XfromRow, XtoRow);
-  del_rows_from_lp_matrix(lp, XfromRow, XtoRow);
-  if (valid_simplex_matrix) del_rows_from_lp_matrix(simplex_lp, XfromRow, XtoRow);
+  delete_rows_from_lp_vectors(lp, XfromRow, XtoRow);
+  if (valid_simplex_lp) delete_rows_from_lp_vectors(simplex_lp, XfromRow, XtoRow);
+  delete_rows_from_lp_matrix(lp, XfromRow, XtoRow);
+  if (valid_simplex_matrix) delete_rows_from_lp_matrix(simplex_lp, XfromRow, XtoRow);
 
   for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
     scale.row_[row] = scale.row_[row + numDeleteRow];
@@ -731,7 +731,8 @@ void HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
 }
 
-void HighsSimplexInterface::util_delete_row_set(vector<int>& dstat) {
+HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet) {
+  /*
   HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -851,10 +852,11 @@ void HighsSimplexInterface::util_delete_row_set(vector<int>& dstat) {
     // Determine consequences for basis when deleting rows to leave no basis
   update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
   }
+  */
 }
 
 
-void HighsSimplexInterface::util_extract_rows(
+HighsStatus HighsSimplexInterface::util_extract_rows(
 					      int XfromRow,
 					      int XtoRow,
 					      double* XrowLower,
@@ -922,7 +924,7 @@ void HighsSimplexInterface::util_extract_rows(
 }
 
 // Change a single coefficient in the matrix
-void HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, const double XnewValue) {
+HighsStatus HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, const double XnewValue) {
   HighsLp &lp = highs_model_object.lp_;
   assert(Xrow >= 0 && Xrow < lp.numRow_);
   assert(Xcol >= 0 && Xcol < lp.numCol_);
@@ -1038,7 +1040,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
   HighsLp &lp = highs_model_object.lp_;
   double infinite_bound = 1e20;
   HighsStatus call_status;
-  call_status = assess_bounds("Col", 0, lp.numCol_-1, (double*)XcolLower, (double*)XcolUpper, infinite_bound);
+  call_status = assessBounds("Col", 0, lp.numCol_-1, (double*)XcolLower, (double*)XcolUpper, infinite_bound);
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error && !force) return return_status;
   
