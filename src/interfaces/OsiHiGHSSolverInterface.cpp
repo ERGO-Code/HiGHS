@@ -435,7 +435,7 @@ double OsiHiGHSSolverInterface::getObjSense() const {
 void OsiHiGHSSolverInterface::setObjSense(double s) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjSense()\n");
-  this->highs->lp_.sense_ = (int)s;
+  this->highs->changeObjectiveSense((int)s);
 }
 
 // todo: start from tomorrow
@@ -603,8 +603,8 @@ void OsiHiGHSSolverInterface::loadProblem(
   lp.Astart_.assign(start, start + numcols + 1);
   lp.Aindex_.assign(index, index + start[numcols]);
   lp.Avalue_.assign(value, value + start[numcols]);
-  this->setObjSense(oldObjSense);
   this->highs->initializeLp(lp);
+  this->setObjSense(oldObjSense);
 }
 
 void OsiHiGHSSolverInterface::loadProblem(

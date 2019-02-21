@@ -45,8 +45,6 @@ class HighsLp {
   int numRow_ = 0;
   int nnz_ = 0;
 
-  HighsLp();
-
   std::vector<int> Astart_;
   std::vector<int> Aindex_;
   std::vector<double> Avalue_;

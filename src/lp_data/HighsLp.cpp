@@ -22,8 +22,3 @@ bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
     return true;
   return false;
 }
-
-
-HighsLp::HighsLp() {
-  this->Astart_.push_back(0);
-}
