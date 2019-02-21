@@ -39,7 +39,7 @@ public:
 
    /// Resolve an LP relaxation after problem modification
    /// @todo implement
-   virtual void resolve() { };
+   virtual void resolve();
 
    /// Invoke solver's built-in enumeration algorithm
    /// @todo implement

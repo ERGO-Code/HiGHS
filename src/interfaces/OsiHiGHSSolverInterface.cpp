@@ -911,34 +911,53 @@ void OsiHiGHSSolverInterface::setInteger(int index) {
                     "Calling OsiHiGHSSolverInterface::setInteger()\n");
 };
 
+bool OsiHiGHSSolverInterface::isContinuous(int colNumber) const {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::isContinuous()\n");
+  return true;
+}
+
 void OsiHiGHSSolverInterface::setRowType(int index, char sense,
                                          double rightHandSide, double range) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setRowType()\n");
+  double lo, hi;
+  this->convertSenseToBound(sense, rightHandSide, range, lo, hi);
+  this->setRowBounds(index, lo, hi);
 };
 
 void OsiHiGHSSolverInterface::setRowLower(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setRowLower()\n");
+                    
+  double upper = this->getRowUpper()[elementIndex];
+
+  this->highs->changeRowBounds(elementIndex, elementValue, upper);
 }
 
 void OsiHiGHSSolverInterface::setRowUpper(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setRowUpper()\n");
+  double lower = this->getRowLower()[elementIndex];
+  this->highs->changeRowBounds(elementIndex, lower, elementValue);
 }
 
 void OsiHiGHSSolverInterface::setColLower(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setColLower()\n");
+  double upper = this->getColUpper()[elementIndex];
+  this->highs->changeColBounds(elementIndex, elementValue, upper);
 };
 
 void OsiHiGHSSolverInterface::setColUpper(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setColUpper()\n");
+  double lower = this->getColLower()[elementIndex];
+  this->highs->changeColBounds(elementIndex, lower, elementValue);
 };
 
 void OsiHiGHSSolverInterface::setObjCoeff(int elementIndex,
@@ -961,12 +980,6 @@ std::vector<double *> OsiHiGHSSolverInterface::getPrimalRays(
   return std::vector<double *>(0);
 }
 
-bool OsiHiGHSSolverInterface::isContinuous(int colNumber) const {
-  HighsPrintMessage(ML_ALWAYS,
-                    "Calling OsiHiGHSSolverInterface::isContinuous()\n");
-  return true;
-}
-
 CoinWarmStart *OsiHiGHSSolverInterface::getEmptyWarmStart() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getEmptyWarmStart()\n");
@@ -983,4 +996,10 @@ bool OsiHiGHSSolverInterface::setWarmStart(const CoinWarmStart *warmstart) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setWarmStart()\n");
   return false;
+}
+
+void OsiHiGHSSolverInterface::resolve() {
+  HighsPrintMessage(ML_ALWAYS,
+                    "Calling OsiHiGHSSolverInterface::resolve()\n");  
+  this->highs->run();
 }

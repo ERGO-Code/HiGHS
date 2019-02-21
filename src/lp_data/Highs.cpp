@@ -348,14 +348,39 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   return HighsStatus::OK;
 }
 
-void Highs::changeObjectiveSense(int sense) {
+bool Highs::changeObjectiveSense(int sense) {
   if (!simplex_has_run_) {
     this->lp_.sense_ = sense;
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-
-    // todo: change to take int return value
     interface.change_ObjSense(sense);
   }
+  return true;
+}
+
+bool Highs::changeRowBounds(int index, double lower, double higher) {
+  if (!simplex_has_run_) {
+    this->lp_.rowLower_[index] = lower;
+    this->lp_.rowUpper_[index] = higher;
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_row_bounds_set(1, &index, &lower, &higher, true);
+  }
+  return true;
+}
+
+bool Highs::changeColBounds(int index, double lower, double higher) {
+  if (!simplex_has_run_) {
+    this->lp_.colLower_[index] = lower;
+    this->lp_.colUpper_[index] = higher;
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.change_col_bounds_set(1, &index, &lower, &higher, true);
+  }
+  return true;
 }
