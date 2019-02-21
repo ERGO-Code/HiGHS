@@ -31,6 +31,7 @@
 HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
+  simplex_has_run_ = false;
   return HighsStatus::OK;
 }
 
