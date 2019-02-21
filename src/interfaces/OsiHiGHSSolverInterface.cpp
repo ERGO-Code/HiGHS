@@ -722,24 +722,78 @@ const double *OsiHiGHSSolverInterface::getRowPrice() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowPrice()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return nullptr;
-  return &highs->solution_.col_value[0];
+  if (!highs) 
+    return nullptr;
+  else {
+    if (highs->solution_.row_dual.size() == 0) {
+      double num_cols = highs->lp_.numCol_;
+      this->dummy_solution.row_dual.resize(num_cols);
+      for (int col=0; col< highs->lp_.numCol_; col++) {
+        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+          dummy_solution.row_dual[col] = 0;
+        else if (std::fabs(highs->lp_.colLower_[col] < 
+                 std::fabs(highs->lp_.colUpper_[col])))
+          dummy_solution.row_dual[col] = highs->lp_.colLower_[col];
+        else
+          dummy_solution.row_dual[col] = highs->lp_.colUpper_[col];
+      }
+      return &dummy_solution.row_dual[0];
+    }
+  }
+  
+  return &highs->solution_.row_dual[0];
 }
 
 const double *OsiHiGHSSolverInterface::getReducedCost() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getReducedCost()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return nullptr;
-  return &highs->solution_.col_value[0];
+  if (!highs) 
+    return nullptr;
+  else {
+    if (highs->solution_.col_dual.size() == 0) {
+      double num_cols = highs->lp_.numCol_;
+      this->dummy_solution.col_dual.resize(num_cols);
+      for (int col=0; col< highs->lp_.numCol_; col++) {
+        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+          dummy_solution.col_dual[col] = 0;
+        else if (std::fabs(highs->lp_.colLower_[col] < 
+                 std::fabs(highs->lp_.colUpper_[col])))
+          dummy_solution.col_dual[col] = highs->lp_.colLower_[col];
+        else
+          dummy_solution.col_dual[col] = highs->lp_.colUpper_[col];
+      }
+      return &dummy_solution.col_dual[0];
+    }
+  }
+  
+  return &highs->solution_.col_dual[0];
 }
 
 const double *OsiHiGHSSolverInterface::getRowActivity() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowActivity()\n");
   // todo: fix this: check if highs has found a solution to return.
-  if (!highs) return nullptr;
-  return &highs->solution_.col_value[0];
+  if (!highs)
+    return nullptr;
+  else {
+    if (highs->solution_.row_value.size() == 0) {
+      double num_cols = highs->lp_.numCol_;
+      this->dummy_solution.row_value.resize(num_cols);
+      for (int col=0; col< highs->lp_.numCol_; col++) {
+        if (highs->lp_.colLower_[col] <= 0 && highs->lp_.colUpper_[col] >= 0)
+          dummy_solution.row_value[col] = 0;
+        else if (std::fabs(highs->lp_.colLower_[col] < 
+                 std::fabs(highs->lp_.colUpper_[col])))
+          dummy_solution.row_value[col] = highs->lp_.colLower_[col];
+        else
+          dummy_solution.row_value[col] = highs->lp_.colUpper_[col];
+      }
+      return &dummy_solution.row_value[0];
+    }
+  }
+  
+  return &highs->solution_.row_value[0];
 }
 
 double OsiHiGHSSolverInterface::getObjValue() const {
