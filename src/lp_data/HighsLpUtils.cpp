@@ -11,10 +11,12 @@
  * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "lp_data/HighsLpUtils.h"
+
+#include <cassert>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
-#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 #include "lp_data/HighsStatus.h"
@@ -880,4 +882,25 @@ HighsBasis_new getHighsBasis(const HighsBasis& basis) {
   // todo: call Julian's code to translate basis once it's out of
   // SimplexInterface
   return new_basis;
+}
+
+HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
+  assert(solution.col_value.size() > 0);
+  if (!isSolutionConsistent(lp, solution))
+    return HighsStatus::Error;
+
+  solution.row_value.clear();
+  solution.row_value.assign(lp.numRow_, 0);
+
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int i=lp.Astart_[col]; i<lp.Astart_[col+1]; i++) {
+      const int row = lp.Aindex_[i];
+      assert(row >= 0);
+      assert(row < lp.numRow_);
+
+      solution.row_value[row] += lp.colCost_[col] * lp.Avalue_[i];
+    }
+  }
+
+  return HighsStatus::OK;
 }

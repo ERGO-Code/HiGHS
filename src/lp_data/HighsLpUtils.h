@@ -297,4 +297,6 @@ void util_analyseLp(
 
 HighsBasis_new getHighsBasis(const HighsBasis& basis);
 
+HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
+
 #endif // LP_DATA_HIGHSLPUTILS_H_
