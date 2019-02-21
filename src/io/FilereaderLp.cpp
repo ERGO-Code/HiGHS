@@ -984,18 +984,18 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFileLineend();
   for (int i = 0; i < model.numCol_; i++) {
     // if both lower/upper bound are +/-infinite: [name] free
-    if (model.colLower_[i] >= -HIGHS_CONST_INF &&
-        model.colUpper_[i] <= HIGHS_CONST_INF) {
+    if (model.colLower_[i] > -HIGHS_CONST_INF &&
+        model.colUpper_[i] < HIGHS_CONST_INF) {
       this->writeToFile(" %+g <= x%d <= %+g", model.colLower_[i], i + 1,
                         model.colUpper_[i]);
       this->writeToFileLineend();
-    } else if (model.colLower_[i] < -HIGHS_CONST_INF &&
-               model.colUpper_[i] <= HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] <= -HIGHS_CONST_INF &&
+               model.colUpper_[i] < HIGHS_CONST_INF) {
       this->writeToFile(" -inf <= x%d <= %+g", i + 1, model.colUpper_[i]);
       this->writeToFileLineend();
 
-    } else if (model.colLower_[i] >= -HIGHS_CONST_INF &&
-               model.colUpper_[i] > HIGHS_CONST_INF) {
+    } else if (model.colLower_[i] > -HIGHS_CONST_INF &&
+               model.colUpper_[i] >= HIGHS_CONST_INF) {
       this->writeToFile(" %+g <= x%d <= +inf", model.colLower_[i], i + 1);
       this->writeToFileLineend();
     } else {
