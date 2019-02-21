@@ -359,3 +359,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
     // todo: calculate row_value?
   }
+
+  void Highs::changeObjectiveSense(int sense) {
+    // TODO
+  }

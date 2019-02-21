@@ -68,6 +68,7 @@ public:
               const int num_new_nz,
               const int *rows, const double *values,
               const bool force = false);
+  void changeObjectiveSense(int sense);
 
   // change coeff (int row, int col) | ...
   // ipx (not implemented)
