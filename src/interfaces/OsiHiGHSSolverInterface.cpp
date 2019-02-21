@@ -609,7 +609,12 @@ void OsiHiGHSSolverInterface::loadProblem(
     const double *obj, const double *rowlb, const double *rowub) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::loadProblem()\n");
-  assert(matrix.isColOrdered());
+  bool transpose = false;
+  if (!matrix.isColOrdered()) {
+    transpose = true;
+    // ToDo: remove this hack
+    ((CoinPackedMatrix)matrix).transpose();
+  } 
 
   int numCol = matrix.getNumCols();
   int numRow = matrix.getNumRows();
@@ -641,6 +646,11 @@ void OsiHiGHSSolverInterface::loadProblem(
 
   this->loadProblem(numCol, numRow, start, index, value, collb, colub, obj,
                     rowlb, rowub);
+
+  if (transpose) {
+     ((CoinPackedMatrix)matrix).transpose();
+  }
+   
 
   delete[] start;
   delete[] index;
