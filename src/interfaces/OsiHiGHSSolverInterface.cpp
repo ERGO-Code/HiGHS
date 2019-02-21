@@ -23,13 +23,55 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 
+static
+void printtomessagehandler(unsigned int level, const char* msg, void* msgcb_data) {
+  assert(msgcb_data != NULL);
+
+  CoinMessageHandler* handler = (CoinMessageHandler*) msgcb_data;
+
+  int len = strlen(msg);
+  if (len > 0 && msg[len-1] == '\n')
+  {
+    const_cast<char*>(msg)[len-1] = '\0';
+    handler->message(0, "HiGHS", msg, ' ') << CoinMessageEol;
+    const_cast<char*>(msg)[len-1] = '\n';
+  }
+  else
+    handler->message(0, "HiGHS", msg, ' ');
+}
+
+static
+void logtomessagehandler(HighsMessageType type, const char* msg, void* msgcb_data) {
+  assert(msgcb_data != NULL);
+
+  CoinMessageHandler* handler = (CoinMessageHandler*) msgcb_data;
+
+  // we know log message end with a newline, replace by coin-eol
+  int len = strlen(msg);
+  assert(len > 0);
+  assert(msg[len-1] == '\n');
+  const_cast<char*>(msg)[len-1] = '\0';
+
+  handler->message(0, "HiGHS", msg, ' ')  << CoinMessageEol;
+
+  const_cast<char*>(msg)[len-1] = '\n';
+}
+
+
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
 : status(HighsStatus::Init) {
+  HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
+
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
+
+  // because HiGHS calls HiGHSSetIO with the Options, whichoverwrites the previous setting
+  this->highs->options_.printmsgcb = printtomessagehandler;
+  this->highs->options_.logmsgcb = logtomessagehandler;
+  this->highs->options_.msgcb_data = (void*)handler_;
 
   setStrParam(OsiSolverName, "HiGHS");
 }
@@ -37,11 +79,19 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
     const OsiHiGHSSolverInterface &original)
     : OsiSolverInterface(original), status(HighsStatus::Init) {
+  HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
+
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()\n");
   this->highs = new Highs();
   this->dummy_solution = new HighsSolution;
+
+  // because HiGHS calls HiGHSSetIO with the Options, whichoverwrites the previous setting
+  this->highs->options_.printmsgcb = printtomessagehandler;
+  this->highs->options_.logmsgcb = logtomessagehandler;
+  this->highs->options_.msgcb_data = (void*)handler_;
+
   this->highs->initializeLp(original.highs->getLp());
   setStrParam(OsiSolverName, "HiGHS");
 }
@@ -50,6 +100,9 @@ OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface() {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::~OsiHiGHSSolverInterface()\n");
+
+  HighsSetMessageCallback(NULL, NULL, NULL);
+
   delete this->highs;
 
   if (this->rowRange != NULL) {
@@ -779,6 +832,17 @@ void OsiHiGHSSolverInterface::writeMps(const char *filename,
   if (rc != FilereaderRetcode::OKAY)
     throw CoinError("Creating MPS file failed", "writeMps",
                     "OsiHiGHSSolverInterface", __FILE__, __LINE__);
+}
+
+void OsiHiGHSSolverInterface::passInMessageHandler(CoinMessageHandler *handler) {
+  OsiSolverInterface::passInMessageHandler(handler);
+
+  HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler);
+
+  // because HiGHS calls HiGHSSetIO with the Options, whichoverwrites the previous setting
+  this->highs->options_.printmsgcb = printtomessagehandler;
+  this->highs->options_.logmsgcb = logtomessagehandler;
+  this->highs->options_.msgcb_data = (void*)handler_;
 }
 
 const double *OsiHiGHSSolverInterface::getColSolution() const {

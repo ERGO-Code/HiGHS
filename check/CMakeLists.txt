@@ -11,7 +11,8 @@ target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 set(TEST_SOURCES
     TestMain.cpp
     TestFilereader.cpp
-    TestSetup.cpp)
+    TestSetup.cpp
+    TestIO.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
