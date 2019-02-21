@@ -345,10 +345,13 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   if (solution.col_dual.size()) solution_.col_dual = solution.col_dual;
   if (solution.row_dual.size()) solution_.row_dual = solution.row_dual;
 
-  HighsStatus result = calculateRowValues(lp_, solution_);
-  assert(result == HighsStatus::OK);
-  // todo: calculate row_value?
-  return result;
+  HighsStatus result_values = calculateRowValues(lp_, solution_);
+  HighsStatus result_duals = calculateColDuals(lp_, solution_);
+  if (!(result_values == HighsStatus::OK &&
+        result_duals == HighsStatus::OK))
+    return HighsStatus::Error;
+
+  return HighsStatus::OK;
 }
 
 bool Highs::changeObjectiveSense(int sense) {
