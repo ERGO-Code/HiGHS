@@ -31,6 +31,11 @@
 HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
+
+  // For the moment hmos_[0] is the HighsModelObject corresponding to the
+  // original lp.
+  hmos_.clear();
+  hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   simplex_has_run_ = false;
   return HighsStatus::OK;
 }
@@ -40,101 +45,103 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 HighsStatus Highs::run() {
   // todo: check if lp is empty.
 
+  // todo: check options.
+  HighsSetIO(options_);
+  
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s",
                     lp_.model_name_.c_str());
-  // Not solved before, so create an instance of HighsModelObject.
-  // For the moment hmos_[0] is the HighsModelObject corresponding to the
-  // original lp.
-  hmos_.push_back(HighsModelObject(lp_, options_, timer));
-
-  // Options for HighsPrintMessage and HighsPrintMessage
-  options_.logfile = stdout;  // fopen("HiGHS.log", "w");
-  options_.output = stdout;
-  options_.messageLevel = ML_DEFAULT;
-  HighsSetIO(options_);
-
-  // Define clocks
-  HighsTimer &timer = hmos_[0].timer_;
-  timer.startRunHighsClock();
-
-  // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
-  timer.start(timer.presolve_clock);
-  PresolveInfo presolve_info(options_.presolve_option, lp_);
-  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
-  timer.stop(timer.presolve_clock);
-
-  // Run solver.
+  
+  timer_.startRunHighsClock();
+  // todo: make sure it should remain Init for calls of run() after
+  // simplex_has_run_ is valid.
   HighsStatus solve_status = HighsStatus::Init;
-  switch (presolve_status) {
-    case HighsPresolveStatus::NotReduced: {
-      solve_status = runSolver(hmos_[0]);
-      break;
+  
+  // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
+  if (!simplex_has_run_) {
+    // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
+    timer_.start(timer_.presolve_clock);
+    PresolveInfo presolve_info(options_.presolve_option, lp_);
+    HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+    timer_.stop(timer_.presolve_clock);
+
+    // Run solver.
+    switch (presolve_status) {
+      case HighsPresolveStatus::NotReduced: {
+        solve_status = runSolver(hmos_[0]);
+        break;
+      }
+      case HighsPresolveStatus::Reduced: {
+        HighsLp &reduced_lp = presolve_info.getReducedProblem();
+        // Add reduced lp object to vector of HighsModelObject,
+        // so the last one in lp_ is the presolved one.
+        hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
+        solve_status = runSolver(hmos_[1]);
+        break;
+      }
+      case HighsPresolveStatus::ReducedToEmpty: {
+        // Proceed to postsolve.
+        break;
+      }
+      case HighsPresolveStatus::Infeasible:
+      case HighsPresolveStatus::Unbounded: {
+        HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible)
+                                ? HighsStatus::Infeasible
+                                : HighsStatus::Unbounded;
+        HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
+                          HighsStatusToString(result).c_str());
+        // for tests
+        HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
+        return result;
+      }
+      default: {
+        // case HighsPresolveStatus::Error
+        HighsPrintMessage(HighsMessageType::ERROR, "Presolve failed.");
+        return HighsStatus::PresolveError;
+      }
     }
-    case HighsPresolveStatus::Reduced: {
-      HighsLp &reduced_lp = presolve_info.getReducedProblem();
-      // Add reduced lp object to vector of HighsModelObject,
-      // so the last one in lp_ is the presolved one.
-      hmos_.push_back(HighsModelObject(reduced_lp, options_, timer));
-      solve_status = runSolver(hmos_[1]);
-      break;
+
+    // Postsolve. Does nothing if there were no reductions during presolve.
+    if (solve_status == HighsStatus::Optimal) {
+      if (presolve_status == HighsPresolveStatus::Reduced) {
+        presolve_info.reduced_solution_ = hmos_[1].solution_;
+        presolve_info.presolve_[0].setBasisInfo(hmos_[1].basis_.basicIndex_,
+                                                hmos_[1].basis_.nonbasicFlag_,
+                                                hmos_[1].basis_.nonbasicMove_);
+      }
+
+      timer_.start(timer_.postsolve_clock);
+      HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+      timer_.stop(timer_.postsolve_clock);
+      if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+        HighsPrintMessage(HighsMessageType::INFO, "Postsolve finished.");
+
+        // Set solution and basis info for simplex clean up.
+        // Original LP is in lp_[0] so we set the basis information there.
+        hmos_[0].basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
+        hmos_[0].basis_.nonbasicFlag_ =
+            presolve_info.presolve_[0].getNonbasicFlag();
+        hmos_[0].basis_.nonbasicMove_ =
+            presolve_info.presolve_[0].getNonbasicMove();
+
+        options_.clean_up = true;
+
+        solve_status = runSolver(hmos_[0]);
+      }
     }
-    case HighsPresolveStatus::ReducedToEmpty: {
-      // Proceed to postsolve.
-      break;
-    }
-    case HighsPresolveStatus::Infeasible:
-    case HighsPresolveStatus::Unbounded: {
-      HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible)
-                               ? HighsStatus::Infeasible
-                               : HighsStatus::Unbounded;
-      HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
-                        HighsStatusToString(result).c_str());
-      // for tests
-      HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
-      return result;
-    }
-    default: {
-      // case HighsPresolveStatus::Error
-      HighsPrintMessage(HighsMessageType::ERROR, "Presolve failed.");
-      return HighsStatus::PresolveError;
-    }
+  } else {
+    // The problem has been solved before so we ignore presolve/postsolve/ipx.
+    solve_status = runSolver(hmos_[0]);
   }
 
-  // Postsolve. Does nothing if there were no reductions during presolve.
-  if (solve_status == HighsStatus::Optimal) {
-    if (presolve_status == HighsPresolveStatus::Reduced) {
-      presolve_info.reduced_solution_ = hmos_[1].solution_;
-      presolve_info.presolve_[0].setBasisInfo(hmos_[1].basis_.basicIndex_,
-                                              hmos_[1].basis_.nonbasicFlag_,
-                                              hmos_[1].basis_.nonbasicMove_);
-    }
-
-    timer.start(timer.postsolve_clock);
-    HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-    timer.stop(timer.postsolve_clock);
-    if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-      HighsPrintMessage(HighsMessageType::INFO, "Postsolve finished.");
-
-      // Set solution and basis info for simplex clean up.
-      // Original LP is in lp_[0] so we set the basis information there.
-      hmos_[0].basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
-      hmos_[0].basis_.nonbasicFlag_ =
-          presolve_info.presolve_[0].getNonbasicFlag();
-      hmos_[0].basis_.nonbasicMove_ =
-          presolve_info.presolve_[0].getNonbasicMove();
-
-      options_.clean_up = true;
-
-      solve_status = runSolver(hmos_[0]);
-    }
-  }
-
-  assert(hmos_.size() > 0);
-  solution_ = hmos_[0].solution_;
-  basis_ = getHighsBasis(hmos_[0].basis_);
-
+  // Report status.
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  if (solve_status != HighsStatus::Optimal) {
+  if (solve_status == HighsStatus::Optimal) {
+    solution_ = hmos_[0].solution_;
+    basis_ = getHighsBasis(hmos_[0].basis_);
+
+    // Report in old way so tests pass.
+    simplex_interface.report_simplex_outcome("Run");
+  } else {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
       if (options_.presolve_option == PresolveOption::ON) {
@@ -150,17 +157,14 @@ HighsStatus Highs::run() {
         simplex_interface.report_simplex_outcome("Run");
       }
     }
-  } else {
-    // Report in old way so tests pass.
-    simplex_interface.report_simplex_outcome("Run");
   }
 
+  // Report times
   if (hmos_[0].reportModelOperationsClock) {
-    // Report times
-    std::vector<int> clockList{timer.presolve_clock, timer.scale_clock,
-                               timer.crash_clock, timer.solve_clock,
-                               timer.postsolve_clock};
-    timer.report("ModelOperations", clockList);
+    std::vector<int> clockList{timer_.presolve_clock, timer_.scale_clock,
+                               timer_.crash_clock, timer_.solve_clock,
+                               timer_.postsolve_clock};
+    timer_.report("ModelOperations", clockList);
   }
 #ifdef HiGHSDEV
 /* todo: do elsewhere once timing is added.
@@ -184,7 +188,7 @@ HighsStatus Highs::run() {
 */
 #endif
 
-  timer.stopRunHighsClock();
+  timer_.stopRunHighsClock();
 
   return HighsStatus::OK;
 }

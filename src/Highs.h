@@ -97,15 +97,17 @@ private:
   HighsBasis_new basis_;
   HighsLp lp_;
 
-  // each HighsModelObject holds a const ref to its lp_
+  // Each HighsModelObject holds a const ref to its lp_. There is potentially
+  // several hmos_ to allow for the solution of several different modified
+  // versions of the original LP for instance different levels of presolve.
   std::vector<HighsModelObject> hmos_;
+  HighsTimer timer_;
 
   bool simplex_has_run_;
 
   HighsPresolveStatus runPresolve(PresolveInfo &presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo &presolve_info);
   HighsStatus runSolver(HighsModelObject &model);
-  HighsTimer timer;
 
   // Function to call just presolve.
   HighsPresolveStatus presolve(const HighsLp &lp, HighsLp &reduced_lp)
