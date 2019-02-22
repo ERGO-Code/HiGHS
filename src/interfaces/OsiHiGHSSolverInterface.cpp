@@ -1108,6 +1108,7 @@ CoinWarmStart *OsiHiGHSSolverInterface::getEmptyWarmStart() const {
   return (dynamic_cast< CoinWarmStart * >(new CoinWarmStartBasis()));
 }
 
+// todo: next
 CoinWarmStart *OsiHiGHSSolverInterface::getWarmStart() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getWarmStart()\n");
