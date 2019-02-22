@@ -85,6 +85,10 @@ DEPENDS osi-unit-test-build)
 
 endif()
 
+if (GAMS_FOUND)
+add_test(NAME rungams COMMAND ${CMAKE_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
+endif (GAMS_FOUND)
+
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all
 # TEST_CASEs in the source files specified in TEST_SOURCES. Do not define any

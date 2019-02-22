@@ -59,6 +59,8 @@ Set custom options with `-D<option>=<value>` during the configuration step (`cma
     on: Defined when CMAKE_BUILD_TYPE=Release
 - `OSI_ROOT`:
     path to COIN-OR/Osi build/install directory (OSI_ROOT/lib/pkg-config/osi.pc should exist)
+- `GAMS_ROOT`:
+    path to GAMS system: enables building of GAMS interface
 
 Testing
 -------
@@ -113,6 +115,16 @@ due to executing the command
     unset OMP_NUM_THREADS
 
 then all available threads will be used.
+
+If build with GAMS interface, then HiGHS can be made available as solver
+in GAMS by adding an entry for HiGHS to the file gmscmpun.txt in the GAMS
+system directory (gmscmpnt.txt on Windows):
+```
+HIGHS 11 5 0001020304 1 0 2 LP RMIP
+gmsgenus.run
+gmsgenux.out
+/path/to/libhighs.so his 1 1
+```
 
 Observations
 ------------
