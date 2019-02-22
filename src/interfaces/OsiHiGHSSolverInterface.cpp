@@ -502,7 +502,6 @@ void OsiHiGHSSolverInterface::setObjSense(double s) {
   this->highs->changeObjectiveSense((int)s);
 }
 
-// todo: start from tomorrow
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const double rowlb, const double rowub) {
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
@@ -668,7 +667,6 @@ void OsiHiGHSSolverInterface::loadProblem(
   lp.nnz_ = start[numcols];
 
   // setup HighsLp data structures
-  // TODO: create and use HighsLp construtor for this!!!
   lp.colCost_.resize(numcols);
   lp.colUpper_.resize(numcols);
   lp.colLower_.resize(numcols);
@@ -853,7 +851,6 @@ void OsiHiGHSSolverInterface::passInMessageHandler(CoinMessageHandler *handler) 
 const double *OsiHiGHSSolverInterface::getColSolution() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getColSolution()\n");
-  // todo: fix this: check if highs has found a solution to return.
   if (!highs) {
     return nullptr;
   } else {
@@ -879,7 +876,6 @@ const double *OsiHiGHSSolverInterface::getColSolution() const {
 const double *OsiHiGHSSolverInterface::getRowPrice() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowPrice()\n");
-  // todo: fix this: check if highs has found a solution to return.
   if (!highs)
     return nullptr;
   else {
@@ -905,7 +901,6 @@ const double *OsiHiGHSSolverInterface::getRowPrice() const {
 const double *OsiHiGHSSolverInterface::getReducedCost() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getReducedCost()\n");
-  // todo: fix this: check if highs has found a solution to return.
   if (!highs)
     return nullptr;
   else {
@@ -934,7 +929,6 @@ const double *OsiHiGHSSolverInterface::getReducedCost() const {
 const double *OsiHiGHSSolverInterface::getRowActivity() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getRowActivity()\n");
-  // todo: fix this: check if highs has found a solution to return.
   if (!highs)
     return nullptr;
   else {
@@ -960,7 +954,6 @@ const double *OsiHiGHSSolverInterface::getRowActivity() const {
 double OsiHiGHSSolverInterface::getObjValue() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getObjValue()\n");
-  // todo: fix this: check if highs has found a solution to return.
   double objVal = 0.0;
   if (true || highs->solution_.col_value.size() == 0) {
     const double *sol = this->getColSolution();
@@ -1113,6 +1106,30 @@ CoinWarmStart *OsiHiGHSSolverInterface::getWarmStart() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getWarmStart()\n");
   return NULL;
+  
+  // todo?
+  if (!basisIsAvailable())
+    return NULL;
+
+  CoinWarmStartBasis *ws = NULL;
+  int numcols = getNumCols();
+  int numrows = getNumRows();
+  int *cstat = new int[numcols];
+  int *rstat = new int[numrows];
+  int i;
+
+#if 1
+  getBasisStatus(cstat, rstat);
+
+  ws = new CoinWarmStartBasis;
+  ws->setSize(numcols, numrows);
+
+  for (i = 0; i < numrows; ++i)
+    ws->setArtifStatus(i, CoinWarmStartBasis::Status(rstat[i]));
+  for (i = 0; i < numcols; ++i)
+    ws->setStructStatus(i, CoinWarmStartBasis::Status(cstat[i]));
+
+  return warm_start;
 }
 
 bool OsiHiGHSSolverInterface::setWarmStart(const CoinWarmStart *warmstart) {
