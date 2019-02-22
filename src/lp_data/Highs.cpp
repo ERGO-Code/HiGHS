@@ -135,29 +135,25 @@ HighsStatus Highs::run() {
 
   // Report status.
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  if (solve_status == HighsStatus::Optimal) {
-    solution_ = hmos_[0].solution_;
-    basis_ = getHighsBasis(hmos_[0].basis_);
-
-    // Report in old way so tests pass.
-    simplex_interface.report_simplex_outcome("Run");
-  } else {
-    if (solve_status == HighsStatus::Infeasible ||
-        solve_status == HighsStatus::Unbounded) {
+  switch (solve_status) {
+    case HighsStatus::Optimal:
+    case HighsStatus::ReachedDualObjectiveUpperBound: {
+      solution_ = hmos_[0].solution_;
+      basis_ = getHighsBasis(hmos_[0].basis_);
+    }
+    case HighsStatus::Infeasible:
+    case HighsStatus::Unbounded: {
       if (options_.presolve_option == PresolveOption::ON) {
-        std::stringstream ss;
-        ss << "Reduced problem status: " << HighsStatusToString(solve_status)
-           << ".";
-        HighsPrintMessage(HighsMessageType::ERROR, ss.str().c_str());
-        // todo: handle case. Try to solve again with no presolve?
+        // todo: handle case. Try to solve again with no presolve.
+        HighsPrintMessage(HighsMessageType::ERROR, "Reduced problem status: %s\n",
+                          HighsStatusToString(solve_status));
         return HighsStatus::NotImplemented;
-      } else {
-        std::cout << "Solver terminated with a non-optimal status: "
-                  << HighsStatusToString(solve_status) << std::endl;
-        simplex_interface.report_simplex_outcome("Run");
       }
     }
   }
+
+  // Report in old way so tests pass. Change to better output and modify tests.
+  simplex_interface.report_simplex_outcome("Run");
 
   // Report times
   if (hmos_[0].reportModelOperationsClock) {
