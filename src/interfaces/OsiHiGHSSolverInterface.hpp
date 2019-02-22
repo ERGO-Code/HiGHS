@@ -343,6 +343,8 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
 
   ///@}
 
+  virtual int canDoSimplexInterface() const;
+
   ///@name Message handling
   ///@{
 
