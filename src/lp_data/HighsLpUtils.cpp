@@ -113,8 +113,9 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, bool normalise) {
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error) return_status = HighsStatus::LpError;
   else return_status = HighsStatus::OK;
+#ifdef HiGHSDEV
   HighsLogMessage(HighsMessageType::INFO, "assess_lp returns HighsStatus = %s", HighsStatusToString(return_status).c_str());
-
+#endif
   return return_status;
 }
 
@@ -419,8 +420,8 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
       bool ok_value = abs_value > small_matrix_value;
       if (!ok_value) {
 #ifdef HiGHSDEV
+	HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector %d, entry %d, is small value |%g| <= %g", ix, el, abs_value, small_matrix_value);
 #endif
-	HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector %d, entry %d, is small value |%g| <= %g", ix, el, abs_value, small_matrix_value);	  
 	num_small_values++;
       }
       if (!ok_value && normalise) {

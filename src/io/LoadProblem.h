@@ -56,7 +56,7 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
   lp.model_name_ = name;
 
   return assessLp(lp, options);
-  //  return checkLp(lp);
+  //    return checkLp(lp);
 }
 
 // For extended options to be parsed from a file. Assuming options file is specified.

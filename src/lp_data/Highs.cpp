@@ -225,9 +225,7 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject& model) {
-  //  assert(checkLp(model.lp_) == HighsStatus::OK);
-  HighsStatus call_status = assessLp(model.lp_, model.options_);
-  assert(assessLp(model.lp_, model.options_) != HighsStatus::Error);
+  assert(checkLp(model.lp_) == HighsStatus::OK);
 
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX
