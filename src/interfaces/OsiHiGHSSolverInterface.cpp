@@ -1122,7 +1122,7 @@ bool OsiHiGHSSolverInterface::setWarmStart(const CoinWarmStart *warmstart) {
 
 void OsiHiGHSSolverInterface::resolve() {
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::resolve()\n");
-  this->highs->run();
+  this->status = this->highs->run();
 }
 
 void OsiHiGHSSolverInterface::setRowBounds(int elementIndex, double lower,
@@ -1169,4 +1169,8 @@ void OsiHiGHSSolverInterface::setObjCoeffSet(const int *indexFirst,
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjCoeffSet()\n");
   OsiSolverInterface::setObjCoeffSet(indexFirst, indexLast, coeffList);
+}
+
+int OsiHiGHSSolverInterface::canDoSimplexInterface() const {
+  return 0;
 }
