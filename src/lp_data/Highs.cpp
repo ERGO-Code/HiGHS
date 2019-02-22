@@ -140,14 +140,15 @@ HighsStatus Highs::run() {
     case HighsStatus::ReachedDualObjectiveUpperBound: {
       solution_ = hmos_[0].solution_;
       basis_ = getHighsBasis(hmos_[0].basis_);
+      break;
     }
     case HighsStatus::Infeasible:
     case HighsStatus::Unbounded: {
       if (options_.presolve_option == PresolveOption::ON) {
         // todo: handle case. Try to solve again with no presolve.
-        HighsPrintMessage(HighsMessageType::ERROR, "Reduced problem status: %s\n",
+        HighsPrintMessage(ML_ALWAYS, "Reduced problem status not optiaml: %s\n",
                           HighsStatusToString(solve_status));
-        return HighsStatus::NotImplemented;
+        break;
       }
     }
   }
