@@ -13,6 +13,7 @@ matrix:
          - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
 
     - os: linux
+      if: branch = master
       addons:
         apt:
           sources:
@@ -23,6 +24,7 @@ matrix:
          - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
 
     - os: linux
+      if: branch = master
       addons:
         apt:
           sources:

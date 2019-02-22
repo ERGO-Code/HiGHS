@@ -1,5 +1,6 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HConst.h"
+#include "io/LoadProblem.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
@@ -110,6 +111,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         return false;
       }
       options.options_file = v[0];
+      loadOptionsFromFile(options);
     }
 
     // For testing of new parser
