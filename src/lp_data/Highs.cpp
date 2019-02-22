@@ -47,15 +47,15 @@ HighsStatus Highs::run() {
 
   // todo: check options.
   HighsSetIO(options_);
-  
+
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s",
                     lp_.model_name_.c_str());
-  
+
   timer_.startRunHighsClock();
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
   HighsStatus solve_status = HighsStatus::Init;
-  
+
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   if (!simplex_has_run_) {
     // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
