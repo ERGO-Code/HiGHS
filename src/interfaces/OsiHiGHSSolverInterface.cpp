@@ -23,6 +23,8 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 
+#include "CoinWarmStartBasis.hpp"
+
 static
 void printtomessagehandler(unsigned int level, const char* msg, void* msgcb_data) {
   assert(msgcb_data != NULL);
@@ -57,6 +59,9 @@ void logtomessagehandler(HighsMessageType type, const char* msg, void* msgcb_dat
   const_cast<char*>(msg)[len-1] = '\n';
 }
 
+//CoinWarmStart * CoinHiGHSWarmStart::clone() const {
+//  return new CoinHiGHSWarmStart();
+//}
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
 : status(HighsStatus::Init) {
@@ -1100,7 +1105,7 @@ std::vector<double *> OsiHiGHSSolverInterface::getPrimalRays(
 CoinWarmStart *OsiHiGHSSolverInterface::getEmptyWarmStart() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getEmptyWarmStart()\n");
-  return NULL;
+  return (dynamic_cast< CoinWarmStart * >(new CoinWarmStartBasis()));
 }
 
 CoinWarmStart *OsiHiGHSSolverInterface::getWarmStart() const {

@@ -22,6 +22,31 @@ class HighsLp;
 class HighsSolution;
 enum class HighsStatus;
 
+// Don't think I need that but leave for now.
+// /** HiGHS warm start
+//  *
+//  *  Instantiation of CoinWarmStart for HiGHS
+//  */
+
+// class CoinHiGHSWarmStart : virtual public CoinWarmStart {
+// public:
+//   void resize() {
+//     std::cout << "test";
+//   }
+
+//   CoinHiGHSWarmStart() {}
+
+//   virtual CoinWarmStart *clone() const;
+
+//   virtual CoinWarmStartDiff *
+//   generateDiff(const CoinWarmStart *const) const { return 0; }
+
+//   virtual void
+//   applyDiff(const CoinWarmStartDiff *const) {} 
+
+//   virtual ~CoinHiGHSWarmStart() {}
+// };
+
 /** HiGHS Solver Interface
  *
  *  Instantiation of OsiSolverInterface for HiGHS
@@ -392,6 +417,8 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   mutable CoinPackedMatrix* matrixByRow = NULL;
 
   mutable HighsSolution* dummy_solution;
+  
+  // mutable CoinHiGHSWarmStart* warm_start;
 
   double objOffset = 0.0;
 

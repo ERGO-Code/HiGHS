@@ -223,6 +223,23 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo &info) {
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject &model) {
+  // trim bounds to get OSI unit test to pass: delete when checkLp
+  // disappears.
+  HighsLp& lp = model.lp_;
+  for (int i = 0; i < lp.numRow_; i++) {
+      if (lp.rowLower_[i] < -HIGHS_CONST_INF)
+        lp.rowLower_[i] = -HIGHS_CONST_INF;
+      if (lp.rowUpper_[i] > HIGHS_CONST_INF)
+        lp.rowUpper_[i] = HIGHS_CONST_INF;
+    }
+
+  for (int j = 0; j < lp.numCol_; j++) {
+      if (lp.colLower_[j] < -HIGHS_CONST_INF)
+        lp.colLower_[j] = -HIGHS_CONST_INF;
+      if (lp.colUpper_[j] > HIGHS_CONST_INF)
+        lp.colUpper_[j] = HIGHS_CONST_INF;
+    }
+
   assert(checkLp(model.lp_) == HighsStatus::OK);
 
   HighsStatus status = HighsStatus::Init;
