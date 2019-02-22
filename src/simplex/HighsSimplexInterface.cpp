@@ -424,12 +424,19 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 
   if (valid_simplex_lp) {
     append_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-    call_status = normalise_col_bounds(simplex_lp, simplex_lp.numCol_, newNumCol, options.infinite_bound);
+    bool normalise = true;
+    call_status = assessBounds("Col", 0, XnumNewCol-1,
+			       &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0],
+			       options.infinite_bound, normalise);
     return_status = worse_status(call_status, return_status);
   }
   if (valid_simplex_matrix) {
     append_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
-    call_status = normalise_lp_matrix(simplex_lp, simplex_lp.numCol_, newNumCol, options.small_matrix_value, options.large_matrix_value);
+    bool normalise = true;
+    call_status = assessMatrix(simplex_lp.numRow_, 0, lp.numCol_-1, lp.numCol_, lp_num_nz,
+			     &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+			     options.small_matrix_value, options.large_matrix_value, normalise);
+    normaliseMatrix(simplex_lp, simplex_lp.numCol_, newNumCol, options.small_matrix_value, options.large_matrix_value);
     return_status = worse_status(call_status, return_status);
   }
 

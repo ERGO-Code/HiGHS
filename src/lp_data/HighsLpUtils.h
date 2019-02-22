@@ -54,13 +54,14 @@ HighsStatus assessBounds(
 			  );
 
 HighsStatus assessMatrix(
-			  int XnumRow,
-			  int XfromCol,
-			  int XtoCol,
-			  int XnumNZ,
-			  int* XAstart,
-			  int* XAindex,
-			  double *XAvalue,
+			  int Xvec_dim,
+			  int Xfrom_ix,
+			  int Xto_ix,
+			  int Xnum_vec,
+			  int Xnum_nz,
+			  int* Xstart,
+			  int* Xindex,
+			  double* Xvalue,
 			  double small_matrix_value,
 			  double large_matrix_value,
 			  bool normalise = true
@@ -102,13 +103,6 @@ HighsStatus append_cols_to_lp_vectors(
 			       const double *XcolUpper
 			       );
 
-HighsStatus normalise_col_bounds(
-		      HighsLp& lp,
-		      int XfromCol,
-		      int XtoCol,
-		      double infinite_bound
-		      );
-
 HighsStatus add_lp_rows(
 		HighsLp& lp,
 		int XnumNewRow,
@@ -141,13 +135,6 @@ HighsStatus append_rows_to_lp_vectors(HighsLp &lp,
 			       const double *XrowUpper
 			       );
 
-HighsStatus normalise_row_bounds(
-		       HighsLp& lp,
-		       int XfromRow,
-		       int XtoRow,
-		       double infinite_bound
-		       );
-
 HighsStatus append_cols_to_lp_matrix(
 			   HighsLp &lp,
 			   int XnumNewCol,
@@ -164,25 +151,6 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp,
 			   const int *XARindex,
 			   const double *XARvalue
 			   );
-
-HighsStatus normalise_lp_matrix(
-			  HighsLp& lp,
-			  int XfromCol,
-			  int XtoCol,
-			  double small_matrix_value,
-			  double large_matrix_value
-			  );
-
-HighsStatus normalise_lp_row_matrix(
-			      int XnumCol,
-			      int XnumRow,
-			      int XnumNZ,
-			      int* XARstart,
-			      int* XARindex,
-			      double* XARvalue,
-			      double small_matrix_value,
-			      double large_matrix_value
-			      );
 
 HighsStatus delete_lp_cols(HighsLp &lp,
 			      int XfromCol,
