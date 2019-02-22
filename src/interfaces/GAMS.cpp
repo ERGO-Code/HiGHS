@@ -14,6 +14,8 @@ typedef struct optRec* optHandle_t;
 /* HiGHS API */
 #include "Highs.h"
 #include "io/LoadProblem.h"  /* for loadOptionsFromFile */
+#include "io/FilereaderLp.h"
+#include "io/FilereaderMps.h"
 
 #if defined(_WIN32)
 #if !defined(STDCALL)
@@ -43,6 +45,27 @@ struct gamshighs_s
 };
 typedef struct gamshighs_s gamshighs_t;
 
+void gevprint(
+   unsigned int  level,
+   const char*   msg,
+   void*         msgcb_data)
+{
+   gevHandle_t gev = (gevHandle_t) msgcb_data;
+   gevLogPChar(gev, msg);
+}
+
+void gevlog(
+   HighsMessageType type,
+   const char*      msg,
+   void*            msgcb_data)
+{
+   gevHandle_t gev = (gevHandle_t) msgcb_data;
+   if( type == HighsMessageType::INFO )
+      gevLogPChar(gev, msg);
+   else
+      gevLogStatPChar(gev, msg);
+}
+
 static
 int setupOptions(
    gamshighs_t* gh
@@ -67,6 +90,10 @@ int setupOptions(
       if( !loadOptionsFromFile(*gh->options) )
          return 1;
    }
+
+   gh->options->printmsgcb = gevprint;
+   gh->options->logmsgcb = gevlog;
+   gh->options->msgcb_data = (void*)gh->gev;
 
    return 0;
 }
@@ -150,6 +177,9 @@ int setupProblem(
    gmoGetMatrixCol(gh->gmo, &gh->lp->Astart_[0], &gh->lp->Aindex_[0], &gh->lp->Avalue_[0], NULL);
 
    gh->highs->initializeLp(*gh->lp);
+
+   //FilereaderLp().writeModelToFile("highs.lp", *gh->lp);
+   //FilereaderMps().writeModelToFile("highs.mps", *gh->lp);
 
    rc = 0;
 TERMINATE:
