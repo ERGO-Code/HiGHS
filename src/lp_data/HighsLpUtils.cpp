@@ -94,7 +94,6 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, bool normalise) {
 
   // From here, any LP has lp.numCol_ > 0 and lp.Astart_[lp.numCol_] exists (as the number of nonzeros)
   assert(lp.numCol_ > 0);
-  int lp_num_nz = lp.Astart_[lp.numCol_];
 
   // Assess the LP column costs
   call_status = assessCosts(0, lp.numCol_-1, &lp.colCost_[0], options.infinite_cost);
@@ -106,9 +105,11 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, bool normalise) {
   call_status = assessBounds("Row", 0, lp.numRow_-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
   // Assess the LP matrix
+  int lp_num_nz = lp.Astart_[lp.numCol_];
   call_status = assessMatrix(lp.numRow_, 0, lp.numCol_-1, lp.numCol_, lp_num_nz,
 			     &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
 			     options.small_matrix_value, options.large_matrix_value, normalise);
+  lp.Astart_[lp.numCol_] = lp_num_nz;
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error) return_status = HighsStatus::LpError;
   else return_status = HighsStatus::OK;
