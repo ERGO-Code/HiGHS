@@ -32,27 +32,53 @@ HighsStatus assessLp(
 		     bool normalise = true
 		     );
 
-int getLpNumNZ(
-	       const HighsLp& lp
-	       );
-
 HighsStatus assessLpDimensions(
 			       const HighsLp& lp
 			       );
 
+HighsStatus assessCosts(
+			int Xfrom_col,
+			int Xto_col,
+			double* XcolCost,
+			double infinite_cost
+			);
+
+HighsStatus assessBounds(
+			  const char* type,
+			  int Xfrom_ix,
+			  int Xto_ix,
+			  double* XLower,
+			  double* XUpper,
+			  double infinite_bound,
+			  bool normalise = true
+			  );
+
+HighsStatus assessMatrix(
+			  int XnumRow,
+			  int XfromCol,
+			  int XtoCol,
+			  int XnumNZ,
+			  int* XAstart,
+			  int* XAindex,
+			  double *XAvalue,
+			  double small_matrix_value,
+			  double large_matrix_value,
+			  bool normalise = true
+			  );
+
 HighsStatus add_lp_cols(
-		HighsLp& lp,
-		int XnumNewCol,
-		const double *XcolCost,
-		const double *XcolLower,
-		const double *XcolUpper,
-		int XnumNewNZ,
-		const int *XAstart,
-		const int *XAindex,
-		const double *XAvalue,
-		const HighsOptions& options,
-		const bool force = false
-		);
+			HighsLp& lp,
+			int XnumNewCol,
+			const double *XcolCost,
+			const double *XcolLower,
+			const double *XcolUpper,
+			int XnumNewNZ,
+			const int *XAstart,
+			const int *XAindex,
+			const double *XAvalue,
+			const HighsOptions& options,
+			const bool force = false
+			);
 
 HighsStatus append_lp_cols(
 		   HighsLp& lp,
@@ -67,23 +93,6 @@ HighsStatus append_lp_cols(
 		   const HighsOptions& options,
 		   const bool force = false
 		   );
-
-HighsStatus assessCosts(
-			int XnumCol,
-			double* XcolCost,
-			double infinite_cost,
-			bool normalise = true
-			);
-
-HighsStatus assessBounds(
-			  const char* type,
-			  int Xfrom_ix,
-			  int Xto_ix,
-			  double* XLower,
-			  double* XUpper,
-			  double infinite_bound,
-			  bool normalise = true
-			  );
 
 HighsStatus append_cols_to_lp_vectors(
 			       HighsLp &lp,
@@ -138,19 +147,6 @@ HighsStatus normalise_row_bounds(
 		       int XtoRow,
 		       double infinite_bound
 		       );
-
-HighsStatus assessMatrix(
-			  int XnumRow,
-			  int XfromCol,
-			  int XtoCol,
-			  int XnumNZ,
-			  int* XAstart,
-			  int* XAindex,
-			  double *XAvalue,
-			  double small_matrix_value,
-			  double large_matrix_value,
-			  bool normalise = true
-			  );
 
 HighsStatus append_cols_to_lp_matrix(
 			   HighsLp &lp,

@@ -83,7 +83,6 @@ HighsStatus checkLp(const HighsLp& lp) {
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, bool normalise) {
   HighsStatus return_status = HighsStatus::NotSet;
   HighsStatus call_status;
-  printf("In assess_lp(lp, options);\n");
   // Assess the LP dimensions and vector sizes, returning on error
   call_status = assessLpDimensions(lp);
   return_status = worse_status(call_status, return_status);
@@ -98,7 +97,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, bool normalise) {
   int lp_num_nz = lp.Astart_[lp.numCol_];
 
   // Assess the LP column costs
-  call_status = assessCosts(lp.numCol_, &lp.colCost_[0], options.infinite_cost, normalise);
+  call_status = assessCosts(0, lp.numCol_-1, &lp.colCost_[0], options.infinite_cost);
   return_status = worse_status(call_status, return_status);
   // Assess the LP column bounds
   call_status = assessBounds("Col", 0, lp.numCol_-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
@@ -228,13 +227,227 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   assert(legal_matrix_index_size);
   assert(legal_matrix_value_size);
 
-  if (error_found)
-    return_status = HighsStatus::Error;
-  else
-    return_status = HighsStatus::OK;
+  if (error_found) return_status = HighsStatus::Error;
+  else return_status = HighsStatus::OK;
 
   return return_status;  
 }
+
+HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double infinite_cost) {
+  assert(Xfrom_col >= 0);
+  assert(Xto_col >= 0);
+  assert(Xfrom_col <= Xto_col+1);
+  if (Xfrom_col > Xto_col) return HighsStatus::OK;
+
+  HighsStatus return_status = HighsStatus::NotSet;
+  bool error_found = false;
+  for (int col = Xfrom_col; col <= Xto_col; col++) {
+    double absCost = abs(XcolCost[col]);
+    bool legalCost = absCost < infinite_cost;
+    assert(legalCost);
+    if (!legalCost) {
+      HighsLogMessage(HighsMessageType::ERROR, "Col  %12d has |cost| of %12g >= %12g",  col, absCost, infinite_cost);
+      error_found = true;
+    }
+  }
+  if (error_found) return_status = HighsStatus::Error;
+  else return_status = HighsStatus::OK;
+    
+  return return_status;
+}
+
+HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLower, double* XUpper, double infinite_bound, bool normalise) {
+  assert(Xfrom_ix >= 0);
+  assert(Xto_ix >= 0);
+  assert(Xfrom_ix <= Xto_ix+1);
+  if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
+
+  HighsStatus return_status = HighsStatus::NotSet;
+  bool error_found = false;
+  bool warning_found = false;
+  bool info_found = false;
+  int num_infinite_lower_bound = 0;
+  int num_infinite_upper_bound = 0;
+  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+    if (!highs_isInfinity(-XLower[ix])) {
+      // Check whether a finite lower bound will be treated as -Infinity      
+      bool infinite_lower_bound = XLower[ix] <= -infinite_bound;
+      if (infinite_lower_bound) {
+	if (normalise) XLower[ix] = -HIGHS_CONST_INF;
+	num_infinite_lower_bound++;
+      }
+    }
+    if (!highs_isInfinity(XUpper[ix])) {
+      // Check whether a finite upper bound will be treated as Infinity      
+      bool infinite_upper_bound = XUpper[ix] >= infinite_bound;
+      if (infinite_upper_bound) {
+	if (normalise) XUpper[ix] = HIGHS_CONST_INF;
+	num_infinite_upper_bound++;
+      }
+    }
+    // Check that the lower bound does not exceed the upper bound
+    bool legalLowerUpperBound = XLower[ix] <= XUpper[ix];
+    if (!legalLowerUpperBound) {
+      // Leave inconsistent bounds to be used to deduce infeasibility
+      HighsLogMessage(HighsMessageType::WARNING, "%3s  %12d has inconsistent bounds [%12g, %12g]", type, ix, XLower[ix], XUpper[ix]);
+      warning_found = true;
+    } else {
+      // Check that the lower bound is not as much as +Infinity
+      bool legalLowerBound = XLower[ix] < infinite_bound;
+      assert(legalLowerBound);
+      if (!legalLowerBound) {
+	HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, XLower[ix], infinite_bound);
+	error_found = true;
+      }
+      // Check that the upper bound is not as little as -Infinity
+      bool legalUpperBound = XUpper[ix] > -infinite_bound;
+      assert(legalUpperBound);
+      if (!legalUpperBound) {
+	HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, XUpper[ix], -infinite_bound);
+	error_found = true;
+      }
+    }
+  }
+  if (normalise) {
+    if (num_infinite_lower_bound) {
+      HighsLogMessage(HighsMessageType::INFO, "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity", type, num_infinite_lower_bound, -infinite_bound);
+      info_found = true;
+    }
+    if (num_infinite_upper_bound) {
+      HighsLogMessage(HighsMessageType::INFO, "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity", type, num_infinite_upper_bound, infinite_bound);
+      info_found = true;
+    }
+  }
+  if (error_found) return_status = HighsStatus::Error;
+  else if (warning_found) return_status = HighsStatus::Warning;
+  else if (info_found) return_status = HighsStatus::Info;
+  else return_status = HighsStatus::OK;
+    
+  return return_status;
+}
+
+HighsStatus assessMatrix(int Xdim, int Xfrom_ix, int Xto_ix, int Xnum_nz, int* Xstart, int* Xindex, double* Xvalue,
+			 double small_matrix_value, double large_matrix_value, bool normalise) {
+  assert(Xdim >= 0);
+  assert(Xfrom_ix >= 0);
+  assert(Xto_ix >= 0);
+  assert(Xfrom_ix <= Xto_ix+1);
+  if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
+
+  HighsStatus return_status = HighsStatus::NotSet;
+  bool error_found = false;
+  bool warning_found = false;
+
+  // Warn the user if the first start is not zero
+  int fromEl = Xstart[0];
+  if (fromEl != 0) {
+      HighsLogMessage(HighsMessageType::WARNING, "Matrix starts do not begin with 0");
+      warning_found = true;
+  }
+  // Assess the starts
+  // Set up previous_start for a fictitious previous empty packed vector
+  int previous_start = std::max(0, Xstart[Xfrom_ix]);
+  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+    int this_start = Xstart[ix];
+    bool this_start_too_small = this_start < previous_start;
+    assert(!this_start_too_small);
+    if (this_start_too_small) {
+      HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d has illegal start of %d < %d = previous start", ix, this_start, previous_start);
+      return HighsStatus::Error;
+    }
+    bool this_start_too_big = this_start > Xnum_nz;
+    if (this_start_too_big) {
+      HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d has illegal start of %d > %d = number of nonzeros", ix, this_start, Xnum_nz);
+      return HighsStatus::Error;
+    }
+  }
+
+  // Assess the indices and values
+  // Count the number of acceptable indices/values
+  int new_num_nz = Xstart[Xfrom_ix];
+  int num_small_values = 0;
+  // Set up a zeroed vector to detect duplicate indices
+  vector<int> check_vector;
+  if (Xdim > 0) check_vector.assign(Xdim, 0);
+  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+    int from_el = Xstart[ix];
+    int to_el;
+    if (ix < Xto_ix) {
+      to_el = Xstart[ix+1]-1;
+    } else {
+      to_el = Xnum_nz-1;
+    }
+    if (normalise) {
+      // Account for any index-value pairs removed so far
+      Xstart[ix] = new_num_nz;
+    }
+    for (int el = from_el; el <= to_el; el++) {
+      int component = Xindex[el];
+      // Check that the index is non-negative
+      bool legal_component = component >= 0;
+      if (!legal_component) {
+	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is illegal index %d", ix, el, component);
+	assert(legal_component);
+	return HighsStatus::Error;
+      }
+      // Check that the index does not exceed the vector dimension
+      legal_component = component < Xdim;
+      if (!legal_component) {
+	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is illegal index %12d >= %g", ix, el, component, Xdim);
+	assert(legal_component);
+	return HighsStatus::Error;
+      }
+      // Check that the index has not already ocurred
+      legal_component = check_vector[component] == 0;
+      if (!legal_component) {
+	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el, component);	  
+	assert(legal_component);
+	return HighsStatus::Error;
+      }
+      // Check that the value is not too large
+      double abs_value = fabs(Xvalue[el]);
+      bool large_value = abs_value >= large_matrix_value;
+      if (large_value) {
+	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is large value |%g| >= %g", ix, el, abs_value, large_matrix_value);	  
+	assert(!large_value);
+	return HighsStatus::Error;
+      }
+      bool ok_value = abs_value > small_matrix_value;
+      if (!ok_value) {
+#ifdef HiGHSDEV
+#endif
+	HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector %d, entry %d, is small value |%g| <= %g", ix, el, abs_value, small_matrix_value);	  
+	num_small_values++;
+      }
+      if (!ok_value && normalise) {
+	Xindex[new_num_nz] = Xindex[el];
+	Xvalue[new_num_nz] = Xvalue[el];
+      } else {
+	new_num_nz++;
+      }
+    }
+    // Zero check_vector
+    for (int el = Xstart[ix]; el <= new_num_nz-1; el++) check_vector[Xindex[el]] = 0;
+#ifdef HiGHSDEV
+    // Check zeroing of check vector
+    for (int component = 0; component < Xdim; component++) {
+      if (check_vector[component]) error_found;
+    }
+    if (error_found) HighsLogMessage(HighsMessageType::ERROR, "assessMatrix: check_vector not zeroed");
+#endif
+  }
+  if (num_small_values) {
+    HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector contains %d values less than %g in magnitude: ignored", num_small_values, small_matrix_value);	  
+    warning_found = true;
+  }
+  if (error_found) return_status = HighsStatus::Error;
+  else if (warning_found) return_status = HighsStatus::Warning;
+  else return_status = HighsStatus::OK;
+
+  return return_status;
+
+}
+
 
 HighsStatus add_lp_cols(HighsLp& lp,
 			int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
@@ -276,119 +489,6 @@ HighsStatus append_lp_cols(HighsLp& lp,
   return_status = worse_status(call_status, return_status);
   call_status = normalise_lp_matrix(lp, lp.numCol_, newNumCol, options.small_matrix_value, options.large_matrix_value);
   return_status = worse_status(call_status, return_status);
-  return return_status;
-}
-
-HighsStatus assessCosts(int XnumCol, double* XcolCost, double infinite_cost, bool normalise) {
-  assert(XnumCol >= 0);
-  if (XnumCol == 0) return HighsStatus::OK;
-
-  HighsStatus return_status = HighsStatus::NotSet;
-  bool error_found = false;
-  bool warning_found = false;
-  for (int col = 0; col < XnumCol; col++) {
-    double absCost = abs(XcolCost[col]);
-    bool legalCost = absCost < infinite_cost;
-    assert(legalCost);
-    if (!legalCost) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has |cost| of %12g >= %12g = Infinity",
-		      col, absCost, infinite_cost);
-      error_found = true;
-    }
-  }
-  if (error_found)
-    return_status = HighsStatus::Error;
-  else if (warning_found)
-    return_status = HighsStatus::Warning;
-  else
-    return_status = HighsStatus::OK;
-    
-  return return_status;
-}
-
-HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLower, double* XUpper, double infinite_bound, bool normalise) {
-  assert(Xfrom_ix >= 0);
-  assert(Xto_ix >= 0);
-  assert(Xfrom_ix <= Xto_ix);
-  if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
-
-  HighsStatus return_status = HighsStatus::NotSet;
-  bool error_found = false;
-  bool warning_found = false;
-  bool info_found = false;
-  int num_infinite_lower_bound = 0;
-  int num_infinite_upper_bound = 0;
-  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
-    if (!highs_isInfinity(-XLower[ix])) {
-      // Check whether a finite lower bound will be treated as -Infinity      
-      bool infinite_lower_bound = XLower[ix] <= -infinite_bound;
-      if (infinite_lower_bound) {
-	if (normalise) XLower[ix] = -HIGHS_CONST_INF;
-	num_infinite_lower_bound++;
-      }
-    }
-    if (!highs_isInfinity(XUpper[ix])) {
-      // Check whether a finite upper bound will be treated as Infinity      
-      bool infinite_upper_bound = XUpper[ix] >= infinite_bound;
-      if (infinite_upper_bound) {
-	if (normalise) XUpper[ix] = HIGHS_CONST_INF;
-	num_infinite_upper_bound++;
-      }
-    }
-    // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = XLower[ix] <= XUpper[ix];
-    if (!legalLowerUpperBound) {
-      // Leave inconsistent bounds to be used to deduce infeasibility
-      HighsLogMessage(HighsMessageType::WARNING, "%3s  %12d has inconsistent bounds [%12g, %12g]", type, ix, XLower[ix], XUpper[ix]);
-      warning_found = true;
-    } else {
-      // Check that the lower bound is not as much as +Infinity
-      bool legalLowerBound = XLower[ix] < infinite_bound;
-      assert(legalLowerBound);
-      if (!legalLowerBound) {
-	if (normalise) {
-	  // Ignore the illegal lower bound - have to do something if forced to normalise!
-	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g set to %12g", type, ix, XLower[ix], infinite_bound, -HIGHS_CONST_INF);
-	  XLower[ix] = -HIGHS_CONST_INF;
-	} else {
-	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, XLower[ix], infinite_bound);
-	}
-	error_found = true;
-      }
-      // Check that the upper bound is not as little as -Infinity
-      bool legalUpperBound = XUpper[ix] > -infinite_bound;
-      assert(legalUpperBound);
-      if (!legalUpperBound) {
-	if (normalise) {
-	  // Ignore the illegal upper bound - have to do something if forced to normalise!
-	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g set to %12g", type, ix, XUpper[ix], -infinite_bound, HIGHS_CONST_INF);
-	  XUpper[ix] = HIGHS_CONST_INF;
-	} else {
-	  HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, XUpper[ix], -infinite_bound);
-	}
-	error_found = true;
-      }
-    }
-  }
-  if (normalise) {
-    if (num_infinite_lower_bound) {
-      HighsLogMessage(HighsMessageType::INFO, "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity", type, num_infinite_lower_bound, -infinite_bound);
-      info_found = true;
-    }
-    if (num_infinite_upper_bound) {
-      HighsLogMessage(HighsMessageType::INFO, "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity", type, num_infinite_upper_bound, infinite_bound);
-      info_found = true;
-    }
-  }
-  if (error_found)
-    return_status = HighsStatus::Error;
-  else if (warning_found)
-    return_status = HighsStatus::Warning;
-  else if (info_found)
-    return_status = HighsStatus::Info;
-  else
-    return_status = HighsStatus::OK;
-    
   return return_status;
 }
 
@@ -518,85 +618,6 @@ HighsStatus normalise_row_bounds(HighsLp& lp, int XfromRow, int XtoRow, double i
     
   return return_status;
 }
-
-HighsStatus assessMatrix(int XnumRow, int XfromCol, int XtoCol, int XnumNZ, int* XAstart, int* XAindex, double* XAvalue,
-			  double small_matrix_value, double large_matrix_value, bool normalise) {
-  assert(XfromCol >= 0);
-  assert(XtoCol >= 0);
-  assert(XfromCol <= XtoCol);
-  if (XfromCol == XtoCol) return HighsStatus::OK;
-  HighsStatus return_status = HighsStatus::NotSet;
-  if (XnumRow == 0) return HighsStatus::OK;
-  if (XfromCol > XtoCol) return HighsStatus::OK;
-  if (XnumNZ == 0) return HighsStatus::OK;
-
-  bool error_found = false;
-  bool warning_found = false;
-  vector <int> colVec;
-  colVec.assign(XnumRow, 0);
-
-  int fromEl;
-  if (XfromCol == 0) {
-     fromEl = XAstart[0];
-    // Check fromEl==0
-  }
-  
-  for (int col = XfromCol; col <= XtoCol; col++) {
-    fromEl = XAstart[col];
-    int toEl;
-    if (col < XtoCol) {
-      toEl = XAstart[col+1]-1;
-    } else {
-      toEl = XnumNZ-1;
-    }
-    bool legalFromEl = fromEl >=0 && fromEl <= toEl+1 && fromEl <= XnumNZ;
-    assert(legalFromEl);
-    if (!legalFromEl) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal start %12d wrt 0, next start %12d or number of nonzeros %12d",
-		      col, fromEl, toEl, XnumNZ);
-      error_found = true;
-    }
-    for (int el = fromEl; el <= toEl; el++) {
-      int row = XAindex[el];
-      bool legalRow = row >= 0;
-      assert(legalRow);
-      if (!legalRow) {
-	HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal index %12d", col, row);
-	error_found = true;
-      }
-      legalRow = row < XnumRow;
-      assert(legalRow);
-      if (!legalRow) {
-	HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal index %12d >= %12g", col, row, XnumRow);
-	error_found = true;
-      }
-      legalRow = colVec[row] == 0;
-      assert(legalRow);
-      if (!legalRow) {
-	  HighsLogMessage(HighsMessageType::ERROR, "Col %12d has duplicate index %12d", col, row);	  
-	  error_found = true;
-	}
-      }
-    for (int el = XAstart[col]; el <= toEl; el++) colVec[XAindex[el]] = 0;
-  }
-  int col = XtoCol;
-  fromEl = XAstart[col];
-  bool legalFromEl = fromEl >=0 && fromEl <= XnumNZ;
-  assert(legalFromEl);
-  if (!legalFromEl) {
-    HighsLogMessage(HighsMessageType::ERROR, "Col %12d has illegal start %12d wrt 0 or number of nonzeros %12d",
-		    col, fromEl, XnumNZ);
-    error_found = true;
-  }
-  if (error_found) 
-    return_status = HighsStatus::Error;
-  else
-    return_status = HighsStatus::OK;
-
-  return return_status;
-
-}
-
 
 HighsStatus append_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
 			      int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
