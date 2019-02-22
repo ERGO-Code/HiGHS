@@ -42,7 +42,7 @@ HighsModelBuilder::~HighsModelBuilder() {
       VarConsMap::iterator iter = this->variableConstraintMap.find(variable);
       if (iter != variableConstraintMap.end()) {
         std::list<HighsLinearCons*>* conslist = iter->second;
-        assert(conslist->empty());
+        conslist->clear();
         this->variableConstraintMap.erase(iter);
         delete conslist;
       }

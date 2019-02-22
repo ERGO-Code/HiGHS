@@ -87,9 +87,10 @@ int main(int argc, char **argv) {
   }
 
   HighsStatus run_status = highs.run();
+  std::string statusname = HighsStatusToString(run_status);
 
   double end_time = timer.getWallTime();
-  HighsPrintMessage(ML_ALWAYS, "HiGHS run ended after %12g seconds\n",
-                  end_time - start_time);
+  HighsPrintMessage(ML_ALWAYS, "HiGHS run ended with status %s after %12g seconds\n",
+		  statusname.c_str(), end_time - start_time);
   return 0;
 }

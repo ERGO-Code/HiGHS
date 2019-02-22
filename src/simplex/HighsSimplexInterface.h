@@ -112,16 +112,17 @@ class HighsSimplexInterface {
 			    const bool force = false
 			    );
   
-  void util_delete_cols(
+  HighsStatus util_delete_cols(
 			int XfromCol,
 			int XtoCol
 			);
   
-  void util_delete_col_set(
-			   vector<int>& dstat
+  HighsStatus util_delete_col_set(
+			   int XnumCol,
+			   int* XcolSet
 			   );
   
-  void util_extract_cols(
+  HighsStatus util_extract_cols(
 			 int XfromCol, int XtoCol,
 			 double* XcolLower,
 			 double* XcolUpper,
@@ -145,16 +146,17 @@ class HighsSimplexInterface {
 			    const double *XARvalue,
 			    const bool force = false
 			    );
-  void util_delete_rows(
+  HighsStatus util_delete_rows(
 			int firstrow,
 			int lastrow
 			);
   
-  void util_delete_row_set(
-			   vector<int>& dstat
+  HighsStatus util_delete_row_set(
+			   int XnumRow,
+			   int* XrowSet
 			   );
   
-  void util_extract_rows(
+  HighsStatus util_extract_rows(
 			 int firstrow,
 			 int lastrow,
 			 double* XrowLower,
@@ -165,7 +167,7 @@ class HighsSimplexInterface {
 			 double* XARvalue
 			 );
 
-  void util_change_coefficient(
+  HighsStatus util_change_coefficient(
 			       int Xrow,
 			       int Xcol,
 			       const double XnewValue

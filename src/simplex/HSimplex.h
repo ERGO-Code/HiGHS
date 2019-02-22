@@ -324,4 +324,6 @@ void report_iteration_count_dual_objective_value(
 						 int i_v
 						 );
 
+std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
+
 #endif // SIMPLEX_HSIMPLEX_H_
