@@ -21,7 +21,7 @@
 
 HighsStatus checkLp(const HighsLp& lp) {
   // Check dimensions.
-  if (lp.numCol_ <= 0 || lp.numRow_ <= 0)
+  if (lp.numCol_ < 0 || lp.numRow_ < 0)
     return HighsStatus::LpError;
 
   // Check vectors.
@@ -52,29 +52,31 @@ HighsStatus checkLp(const HighsLp& lp) {
   // Check matrix.
   if ((size_t)lp.nnz_ != lp.Avalue_.size())
     return HighsStatus::LpError;
-  if (lp.nnz_ <= 0) return HighsStatus::LpError;
+  if (lp.nnz_ < 0) return HighsStatus::LpError;
   if ((int)lp.Aindex_.size() != lp.nnz_)
     return HighsStatus::LpError;
 
-  if ((int)lp.Astart_.size() != lp.numCol_ + 1)
-    return HighsStatus::LpError;
-  // Was lp.Astart_[i] >= lp.nnz_ (below), but this is wrong when the
-  // last column is empty. Need to check as follows, and also check
-  // the entry lp.Astart_[lp.numCol_] > lp.nnz_
-  for (int i = 0; i < lp.numCol_; i++) {
-    if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp.nnz_ ||
-        lp.Astart_[i] < 0)
+  if (lp.numCol_ > 0) {
+    if ((int)lp.Astart_.size() != lp.numCol_ + 1)
       return HighsStatus::LpError;
-  }
-  if (lp.Astart_[lp.numCol_] > lp.nnz_ ||
-      lp.Astart_[lp.numCol_] < 0)
+    // Was lp.Astart_[i] >= lp.nnz_ (below), but this is wrong when the
+    // last column is empty. Need to check as follows, and also check
+    // the entry lp.Astart_[lp.numCol_] > lp.nnz_
+    for (int i = 0; i < lp.numCol_; i++) {
+      if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp.nnz_ ||
+	  lp.Astart_[i] < 0)
+	return HighsStatus::LpError;
+    }
+    if (lp.Astart_[lp.numCol_] > lp.nnz_ ||
+	lp.Astart_[lp.numCol_] < 0)
       return HighsStatus::LpError;
 
-  for (int k = 0; k < lp.nnz_; k++) {
-    if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
-      return HighsStatus::LpError;
-    if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
-      return HighsStatus::LpError;
+    for (int k = 0; k < lp.nnz_; k++) {
+      if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
+	return HighsStatus::LpError;
+      if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
+	return HighsStatus::LpError;
+    }
   }
 
   return HighsStatus::OK;
@@ -377,7 +379,7 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
   for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
     int from_el = Xstart[ix];
     int to_el;
-    if (ix < Xnum_vec) {
+    if (ix < Xnum_vec-1) {
       to_el = Xstart[ix+1]-1;
     } else {
       to_el = Xnum_nz-1;
@@ -478,9 +480,10 @@ HighsStatus add_lp_cols(HighsLp& lp,
 			int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
 			const HighsOptions& options, const bool force) {
   HighsStatus return_status = HighsStatus::NotSet;
+  const bool valid_matrix = true;
   HighsStatus call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 					   XnumNewNZ, XAstart, XAindex, XAvalue,
-					   options, force);
+					   options, valid_matrix, force);
   lp.numCol_ += XnumNewCol;
   return_status = call_status;
   return return_status;
@@ -489,35 +492,40 @@ HighsStatus add_lp_cols(HighsLp& lp,
 HighsStatus append_lp_cols(HighsLp& lp,
 			   int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 			   int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
-			   const HighsOptions& options, const bool force) {
+			   const HighsOptions& options, const bool valid_matrix, const bool force) {
   HighsStatus return_status = HighsStatus::NotSet;
   int newNumCol = lp.numCol_ + XnumNewCol;
   // Assess the bounds and matrix indices, returning on error unless addition is forced
   bool normalise = false;
   HighsStatus call_status;
+  call_status = assessCosts(0, XnumNewCol-1, (double*)XcolCost, options.infinite_cost);
+  return_status = worse_status(call_status, return_status);
   call_status = assessBounds("Col", 0, XnumNewCol-1, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
-
   call_status = assessMatrix(lp.numRow_, 0, XnumNewCol-1, XnumNewCol, XnumNewNZ,
 			     (int*)XAstart, (int*)XAindex, (double*)XAvalue,
-			      options.small_matrix_value, options.large_matrix_value, normalise);
+			     options.small_matrix_value, options.large_matrix_value, normalise);
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error && !force) return return_status;
 
   // Append the columns to the LP vectors and matrix
   append_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-  append_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
+  if (valid_matrix) append_cols_to_lp_matrix(lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
 
-  // Normalise the new LP column bounds and matrix columns
+  // Normalise the new LP column costs and bounds
   normalise = true;
+  call_status = assessCosts(lp.numCol_, newNumCol-1, &lp.colCost_[0], options.infinite_bound);
+  return_status = worse_status(call_status, return_status);
   call_status = assessBounds("Col", lp.numCol_, newNumCol-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
-
-  int lp_num_nz = lp.Astart_[newNumCol];
-  call_status = assessMatrix(lp.numRow_, 0, XnumNewCol-1, XnumNewCol, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
-			      options.small_matrix_value, options.large_matrix_value, normalise);
-  lp.Astart_[newNumCol] = lp_num_nz;
-  return_status = worse_status(call_status, return_status);
+  if (valid_matrix) {
+    // Normalise the new LP matrix columns
+    int lp_num_nz = lp.Astart_[newNumCol];
+    call_status = assessMatrix(lp.numRow_, 0, XnumNewCol-1, XnumNewCol, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+			       options.small_matrix_value, options.large_matrix_value, normalise);
+    lp.Astart_[newNumCol] = lp_num_nz;
+    return_status = worse_status(call_status, return_status);
+  }
   return return_status;
 }
 
@@ -587,36 +595,30 @@ HighsStatus append_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
 }
 
 HighsStatus append_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
-			      int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
+				     int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
   assert(XnumNewCol >= 0);
   assert(XnumNewNZ >= 0);
   if (XnumNewCol == 0) return HighsStatus::OK;
   int newNumCol = lp.numCol_ + XnumNewCol;
   lp.Astart_.resize(newNumCol + 1);
-  for (int col = 0; col < XnumNewCol; col++) {
-    lp.Astart_[lp.numCol_ + col + 1] = lp.Astart_[lp.numCol_];
+  if (lp.numCol_ == 0) {
+    // Adding columns to an empty LP so introduce the start for the ficititious column 0
+    lp.Astart_[0] = 0;
   }
-  
   // Determine the current number of nonzeros
   int currentNumNZ = lp.Astart_[lp.numCol_];
   
-  // Determine the new number of nonzeros and resize the column-wise matrix
-  // arrays
+  // Determine the new number of nonzeros and resize the column-wise matrix arrays
   int newNumNZ = currentNumNZ + XnumNewNZ;
   lp.Aindex_.resize(newNumNZ);
   lp.Avalue_.resize(newNumNZ);
   
   // Append the new columns
-  for (int col = 0; col < XnumNewCol; col++) {
-    lp.Astart_[lp.numCol_ + col] = XAstart[col] + currentNumNZ;
-  }
+  for (int col = 0; col < XnumNewCol; col++) lp.Astart_[lp.numCol_ + col] = currentNumNZ + XAstart[col];
   lp.Astart_[lp.numCol_ + XnumNewCol] = newNumNZ;
   
   for (int el = 0; el < XnumNewNZ; el++) {
-    int row = XAindex[el];
-    assert(row >= 0);
-    assert(row < lp.numRow_);
-    lp.Aindex_[currentNumNZ + el] = row;
+    lp.Aindex_[currentNumNZ + el] = XAindex[el];
     lp.Avalue_[currentNumNZ + el] = XAvalue[el];
   }
 }
@@ -912,9 +914,12 @@ void reportLpBrief(const HighsLp &lp) {
 
 // Report the LP dimensions
 void reportLpDimensions(const HighsLp &lp) {
+  int lp_num_nz;
+  if (lp.numCol_ == 0) lp_num_nz = 0;
+  else lp_num_nz = lp.Astart_[lp.numCol_];
   HighsPrintMessage(ML_MINIMAL,
                     "LP has %d columns, %d rows and %d nonzeros\n",
-                    lp.numCol_, lp.numRow_, lp.Astart_[lp.numCol_]);
+                    lp.numCol_, lp.numRow_, lp_num_nz);
 }
 
 // Report the LP objective sense

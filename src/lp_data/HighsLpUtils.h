@@ -29,7 +29,7 @@ HighsStatus checkLp(
 HighsStatus assessLp(
 		     HighsLp& lp,
 		     const HighsOptions& options,
-		     bool normalise = true
+		     bool normalise
 		     );
 
 HighsStatus assessLpDimensions(
@@ -50,7 +50,7 @@ HighsStatus assessBounds(
 			  double* XLower,
 			  double* XUpper,
 			  double infinite_bound,
-			  bool normalise = true
+			  bool normalise
 			  );
 
 HighsStatus assessMatrix(
@@ -64,7 +64,7 @@ HighsStatus assessMatrix(
 			  double* Xvalue,
 			  double small_matrix_value,
 			  double large_matrix_value,
-			  bool normalise = true
+			  bool normalise
 			  );
 
 HighsStatus add_lp_cols(
@@ -92,6 +92,7 @@ HighsStatus append_lp_cols(
 		   const int *XAindex,
 		   const double *XAvalue,
 		   const HighsOptions& options,
+		   const bool valid_matrix, 
 		   const bool force = false
 		   );
 

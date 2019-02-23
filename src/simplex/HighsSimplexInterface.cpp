@@ -365,7 +365,6 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   HighsStatus return_status = HighsStatus::NotSet;
   assert(XnumNewCol >= 0);
   assert(XnumNewNZ >= 0);
-  // ToDo How to check that lp.Astart_[lp.numCol_] exists in util_addCols?
 #ifdef HiGHSDEV
   printf("Called util_add_cols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
 #endif
@@ -381,15 +380,15 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
+  bool valid_lp_matrix = true;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
+  bool valid_simplex_lp_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = simplex_lp_status.is_scaled;
 
   // Check that if nonzeros are to be added then the model has a positive number of rows
   assert(XnumNewNZ == 0 || lp.numRow_ > 0);
-  if (valid_simplex_lp)
-    assert(XnumNewNZ == 0 || simplex_lp.numRow_ > 0);
+  if (valid_simplex_lp) assert(XnumNewNZ == 0 || simplex_lp.numRow_ > 0);
 
   // Record the new number of columns
   int newNumCol = lp.numCol_ + XnumNewCol;
@@ -405,27 +404,14 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   HighsStatus call_status;
   call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 			       XnumNewNZ, XAstart, XAindex, XAvalue,
-			       options, force);
+			       options, valid_lp_matrix, force);
   return_status = worse_status(call_status, return_status);
   if (return_status == HighsStatus::Error && !force) return return_status;
 
   if (valid_simplex_lp) {
-    append_cols_to_lp_vectors(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
-    bool normalise = true;
-    call_status = assessBounds("Col", 0, XnumNewCol-1,
-			       &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0],
-			       options.infinite_bound, normalise);
-    return_status = worse_status(call_status, return_status);
-  }
-  if (valid_simplex_matrix) {
-    append_cols_to_lp_matrix(simplex_lp, XnumNewCol, XnumNewNZ, XAstart, XAindex, XAvalue);
-    bool normalise = true;
-
-    int lp_num_nz = simplex_lp.Astart_[newNumCol];
-    call_status = assessMatrix(simplex_lp.numRow_, 0, simplex_lp.numCol_-1, simplex_lp.numCol_, lp_num_nz,
-			     &simplex_lp.Astart_[0], &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-			     options.small_matrix_value, options.large_matrix_value, normalise);
-    simplex_lp.Astart_[newNumCol] = lp_num_nz;
+    call_status = append_lp_cols(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+				 XnumNewNZ, XAstart, XAindex, XAvalue,
+				 options, valid_simplex_lp_matrix, force);
     return_status = worse_status(call_status, return_status);
   }
 
@@ -626,8 +612,9 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   std::memcpy(lc_XARindex, XARindex, sizeof(int)*XnumNewNZ);
   std::memcpy(lc_XARvalue, XARvalue, sizeof(double)*XnumNewNZ);
   // Normalise the new matrix columns
+  normalise = true;
   call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue,
-					options.small_matrix_value, options.large_matrix_value);
+					options.small_matrix_value, options.large_matrix_value, normalise);
   // Append rows to LP matrix
   append_rows_to_lp_matrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
 
