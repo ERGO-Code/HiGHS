@@ -44,40 +44,89 @@ public:
     return HighsStatus::OK;
   }
 
-  // Methods to modify LP.
-  bool addRow(const double lower_bound, const double upper_bound,
-              const int num_new_nz,
-              const int *columns, const double *values,
-              const bool force = false);
+   /**
+   * @brief Adds a row to the model
+   */
+  bool addRow(const double lower_bound, //!< lower bound of the row
+              const double upper_bound, //!< upper bound of the row
+              const int num_new_nz, //!< number of nonzeros in the row
+              const int *columns,  //!< array of size num_new_nz with column indices
+              const double *values, //!< array of size num_new_nz with coefficients
+              const bool force = false //!< if true, adds the row at all costs, even if nonsensical
+              );
 
-  bool addRows(const int num_new_rows,
-              const double *lower_bounds, const double *upper_bounds,
-              const int *row_starts,
-              const int num_new_nz,
-              const int *columns, const double *values,
-              const bool force = false);
+   /**
+   * @brief Adds multiple rows to the model
+   */
+  bool addRows(const int num_new_rows, //!< number of new rows
+              const double *lower_bounds,  //!< array of size num_new_rows with lower bounds
+              const double *upper_bounds, //!< array of size num_new_rows with upper bounds
+              const int *row_starts, //!< array of size num_new_rows+1 with start indices of the rows
+              const int num_new_nz, //!< number of total new nonzeros
+              const int *columns,  //!< array of size num_new_nz with column indices for all rows
+              const double *values, //!< array of size num_new_nz with coefficients for all rows
+              const bool force = false); //!< if true, adds the rows at all costs, even if nonsensical
 
   bool addCol(const double cost,
-              const double lower_bound, const double upper_bound,
+              const double lower_bound, 
+              const double upper_bound,
               const int num_new_nz,
-              const int *rows, const double *values,
+              const int *rows, 
+              const double *values,
               const bool force = false);
 
-  bool addCols(const int num_new_rows, const double* column_costs,
-              const double *lower_bounds, const double *upper_bounds,
+  bool addCols(const int num_new_rows, 
+              const double* column_costs,
+              const double *lower_bounds, 
+              const double *upper_bounds,
               const int *col_starts,
               const int num_new_nz,
-              const int *rows, const double *values,
+              const int *rows, 
+              const double *values,
               const bool force = false);
-  bool changeObjectiveSense(int sense);
-  bool changeRowBounds(int index, double lower, double higher);
-  bool changeColBounds(int index, double lower, double higher);
-  bool changeRowsBounds(int n, int* index, double* lower, double* higher);
-  bool changeColsBounds(int n, int* index, double* lower, double* higher);
-  bool changeObjCoef(int index, double coef);
-  bool changeObjCoefs(int n, int* index, double* coef);
-  bool deleteRows(const int n, const int* indices);
-  bool deleteCols(const int n, const int* indices);
+
+  bool changeObjectiveSense(
+    int sense);
+
+  bool changeRowBounds(
+    int index, 
+    double lower, 
+    double higher);
+
+  bool changeColBounds(
+    int index, 
+    double lower, 
+    double higher);
+
+  bool changeRowsBounds(
+    int n, 
+    int* index, 
+    double* lower, 
+    double* higher);
+
+  bool changeColsBounds(
+    int n, 
+    int* index, 
+    double* lower, 
+    double* higher);
+
+  bool changeObjCoef(
+    int index, 
+    double coef);
+
+  bool changeObjCoefs(
+    int n, 
+    int* index, 
+    double* coef);
+
+  bool deleteRows(
+    const int n, 
+    const int* indices);
+
+  bool deleteCols(
+    const int n, 
+    const int* indices);
+
 
 
   // change coeff (int row, int col) | ...

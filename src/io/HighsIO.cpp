@@ -58,13 +58,13 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
   va_start(argptr, format);
 
   if (logmsgcb == NULL) {
-    fprintf(logfile, "%02d:%02d:%02d [%s] ", timeinfo->tm_hour, timeinfo->tm_min,
+    fprintf(logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour, timeinfo->tm_min,
             timeinfo->tm_sec, HighsMessageTypeTag[type]);
     vfprintf(logfile, format, argptr);
     fprintf(logfile, "\n");
   } else {
 	int len;
-	len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%s] ", timeinfo->tm_hour, timeinfo->tm_min,
+	len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour, timeinfo->tm_min,
                    timeinfo->tm_sec, HighsMessageTypeTag[type]);
 	if (len < sizeof(msgbuffer))
 	  len += vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);

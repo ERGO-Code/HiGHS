@@ -296,7 +296,7 @@ bool Highs::addRows(const int num_new_rows, const double *lower_bounds,
                             num_new_nz, row_starts, columns, values);
   }
 
-  return 0;
+  return true;
 }
 
 bool Highs::addCol(const double cost, const double lower_bound,
@@ -304,7 +304,7 @@ bool Highs::addCol(const double cost, const double lower_bound,
                    const int *rows, const double *values, const bool force) {
   int col_starts = 0;
   return addCols(1, &cost, &lower_bound, &upper_bound, &col_starts, num_new_nz,
-                 rows, values);
+                 rows, values, force);
 }
 
 bool Highs::addCols(const int num_new_cols, const double *column_costs,
@@ -314,9 +314,8 @@ bool Highs::addCols(const int num_new_cols, const double *column_costs,
   // if simplex has not solved already
   if (!simplex_has_run_) {
     add_lp_cols(lp_, num_new_cols, column_costs, lower_bounds, upper_bounds,
-                num_new_nz, col_starts, rows, values, options_);
-  }
-  // else (if simplex has solved already)
+                num_new_nz, col_starts, rows, values, options_, force);
+  } else
   {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
@@ -326,7 +325,7 @@ bool Highs::addCols(const int num_new_cols, const double *column_costs,
                             num_new_nz, col_starts, rows, values);
   }
 
-  return 0;
+  return true;
 }
 
 double Highs::getObjectiveValue() const {
@@ -461,8 +460,6 @@ bool Highs::changeObjCoef(int index, double coef) {
 }
 
 bool Highs::deleteRows(const int n, const int *indices) {
-  std::vector<int> rows;
-  rows.assign(indices, indices + n);
 
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -470,22 +467,19 @@ bool Highs::deleteRows(const int n, const int *indices) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-
-    interface.util_delete_row_set(rows);
+    interface.util_delete_row_set(n, (int*)indices);
   }
   return true;
 }
 
 bool Highs::deleteCols(const int n, const int *indices) {
-  std::vector<int> cols;
-  cols.assign(indices, indices + n);
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.util_delete_col_set(cols);
+    interface.util_delete_col_set(n, (int*)indices);
   }
   return true;
 }

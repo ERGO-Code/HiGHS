@@ -11,8 +11,9 @@ target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 set(TEST_SOURCES
     TestMain.cpp
     TestFilereader.cpp
-    TestSetup.cpp
-    TestIO.cpp)
+    TestIO.cpp
+    TestLpValidation.cpp
+    TestSetup.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
@@ -83,6 +84,10 @@ PROPERTIES
 DEPENDS osi-unit-test-build)
 
 endif()
+
+if (GAMS_FOUND)
+add_test(NAME rungams COMMAND ${CMAKE_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
+endif (GAMS_FOUND)
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all
