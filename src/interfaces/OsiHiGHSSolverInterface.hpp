@@ -402,6 +402,8 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   ///@}
   /***************************************************************************/
 
+  void getBasisStatus(int *cstat, int *rstat) const;
+
  protected:
   /// Apply a row cut.
   virtual void applyRowCut(const OsiRowCut& rc);

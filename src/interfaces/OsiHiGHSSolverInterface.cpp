@@ -1101,33 +1101,31 @@ CoinWarmStart *OsiHiGHSSolverInterface::getEmptyWarmStart() const {
   return (dynamic_cast< CoinWarmStart * >(new CoinWarmStartBasis()));
 }
 
-// todo: next
 CoinWarmStart *OsiHiGHSSolverInterface::getWarmStart() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::getWarmStart()\n");
-  return NULL;
+  if (!highs)
+    return NULL;
   
-  // todo?
-  if (!basisIsAvailable())
+  if (highs->basis_.col_status.size() == 0 ||
+      highs->basis_.row_status.size() == 0)
     return NULL;
 
-  CoinWarmStartBasis *ws = NULL;
-  int numcols = getNumCols();
-  int numrows = getNumRows();
-  int *cstat = new int[numcols];
-  int *rstat = new int[numrows];
-  int i;
+  int num_cols = highs->lp_.numCol_;
+  int num_rows = highs->lp_.numRow_;
+  
+  int *cstat = new int[num_cols];
+  int *rstat = new int[num_rows];
 
-#if 1
   getBasisStatus(cstat, rstat);
 
-  ws = new CoinWarmStartBasis;
-  ws->setSize(numcols, numrows);
+  CoinWarmStartBasis *warm_start = new CoinWarmStartBasis();
+  warm_start->setSize(num_cols, num_rows);
 
-  for (i = 0; i < numrows; ++i)
-    ws->setArtifStatus(i, CoinWarmStartBasis::Status(rstat[i]));
-  for (i = 0; i < numcols; ++i)
-    ws->setStructStatus(i, CoinWarmStartBasis::Status(cstat[i]));
+  for (int i = 0; i < num_rows; ++i)
+    warm_start->setArtifStatus(i, CoinWarmStartBasis::Status(rstat[i]));
+  for (int i = 0; i < num_cols; ++i)
+    warm_start->setStructStatus(i, CoinWarmStartBasis::Status(cstat[i]));
 
   return warm_start;
 }
@@ -1191,4 +1189,58 @@ void OsiHiGHSSolverInterface::setObjCoeffSet(const int *indexFirst,
 
 int OsiHiGHSSolverInterface::canDoSimplexInterface() const {
   return 0;
+}
+
+/* Osi return codes:
+0: free
+1: basic
+2: upper
+3: lower
+*/
+void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
+  if (!highs)
+    return;
+
+  if (highs->basis_.col_status.size() == 0 ||
+      highs->basis_.row_status.size() == 0)
+    return;
+
+  for (int i = 0; i < highs->basis_.col_status.size(); ++i)
+    switch (highs->basis_.col_status[i]) {
+    case HighsBasisStatus::BASIC:
+      cstat[i] = 1;
+      break;
+    case HighsBasisStatus::LOWER:
+      cstat[i] = 3;
+      break;
+    case HighsBasisStatus::UPPER:
+      cstat[i] = 2;
+      break;
+    case HighsBasisStatus::SUPER:
+      cstat[i] = 0;
+      break;
+    case HighsBasisStatus::ZERO:
+      cstat[i] = 0;
+      break;
+    }
+
+  for (int i = 0; i < highs->basis_.row_status.size(); ++i)
+    switch (highs->basis_.row_status[i]) {
+    case HighsBasisStatus::BASIC:
+      cstat[i] = 1;
+      break;
+    case HighsBasisStatus::LOWER:
+      cstat[i] = 3;
+      break;
+    case HighsBasisStatus::UPPER:
+      cstat[i] = 2;
+      break;
+    case HighsBasisStatus::SUPER:
+      cstat[i] = 0;
+      break;
+    case HighsBasisStatus::ZERO:
+      cstat[i] = 0;
+      break;
+    }
+
 }

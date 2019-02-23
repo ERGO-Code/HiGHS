@@ -139,7 +139,7 @@ HighsStatus Highs::run() {
     case HighsStatus::Optimal:
     case HighsStatus::ReachedDualObjectiveUpperBound: {
       solution_ = hmos_[0].solution_;
-      basis_ = getHighsBasis(hmos_[0].basis_);
+      basis_ = getHighsBasis(lp_, hmos_[0].basis_);
       break;
     }
     case HighsStatus::Infeasible:
