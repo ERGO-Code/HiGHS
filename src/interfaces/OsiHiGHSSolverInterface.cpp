@@ -59,10 +59,6 @@ void logtomessagehandler(HighsMessageType type, const char* msg, void* msgcb_dat
   const_cast<char*>(msg)[len-1] = '\n';
 }
 
-//CoinWarmStart * CoinHiGHSWarmStart::clone() const {
-//  return new CoinHiGHSWarmStart();
-//}
-
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
 : status(HighsStatus::Init) {
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
