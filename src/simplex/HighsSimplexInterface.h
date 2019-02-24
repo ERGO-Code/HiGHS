@@ -180,21 +180,21 @@ class HighsSimplexInterface {
 
   // Utilities to get/change costs and bounds
   // Change the objective sense
-  int change_ObjSense(
-		      int Xsense
-		      );
+  HighsStatus change_ObjSense(
+			      int Xsense
+			      );
 
 // Change the costs for all columns
-  int change_costs_all(
-		       const double* XcolCost
-		       );
+  HighsStatus change_costs_all(
+			       const double* XcolCost
+			       );
 
 // Change the costs for a set of columns
-  int change_costs_set(
-		       int XnumColInSet,
-		       const int* XcolCostIndex,
-                       const double* XcolCostValue
-		       );
+  HighsStatus change_costs_set(
+			       int XnumColInSet,
+			       const int* XcolCostIndex,
+			       const double* XcolCostValue
+			       );
 
 // Change the bounds for all columns
 // Postive  return value k implies that the lower bound is being set to +Inf for
@@ -210,35 +210,35 @@ class HighsSimplexInterface {
 // Postive  return value k implies that the lower bound is being set to +Inf for
 // column k-1 Negative return value k implies that the upper bound is being set
 // to -Inf for column -k-1
-  int change_col_bounds_set(
-			    int ncols,
-			    const int* XcolBoundIndex,
-			    const double* XcolLowerValues,
-			    const double* XcolUpperValues,
-			    bool force = false
-			    );
+  HighsStatus change_col_bounds_set(
+				    int ncols,
+				    const int* XcolBoundIndex,
+				    const double* XcolLowerValues,
+				    const double* XcolUpperValues,
+				    bool force = false
+				    );
 
 // Change the bounds for all rows
 // Postive  return value k implies that the lower bound is being set to +Inf for
 // row k-1 Negative return value k implies that the upper bound is being set to
 // -Inf for row -k-1
-  int change_row_bounds_all(
-			    const double* XrowLower,
-			    const double* XrowUpper,
-			    bool force = false
-			    );
+  HighsStatus change_row_bounds_all(
+				    const double* XrowLower,
+				    const double* XrowUpper,
+				    bool force = false
+				    );
 
 // Change the bounds for a set of rows
 // Postive  return value k implies that the lower bound is being set to +Inf for
 // row k-1 Negative return value k implies that the upper bound is being set to
 // -Inf for row -k-1
-  int change_row_bounds_set(
-			    int nrows,
-			    const int* XrowBoundIndex,
-			    const double* XrowLowerValues,
-			    const double* XrowUpperValues,
-			    bool force = false
-			    );
+  HighsStatus change_row_bounds_set(
+				    int nrows,
+				    const int* XrowBoundIndex,
+				    const double* XrowLowerValues,
+				    const double* XrowUpperValues,
+				    bool force = false
+				    );
   
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp

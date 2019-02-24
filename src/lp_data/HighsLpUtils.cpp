@@ -249,7 +249,7 @@ HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double inf
   HighsStatus return_status = HighsStatus::NotSet;
   bool error_found = false;
   for (int col = Xfrom_col; col <= Xto_col; col++) {
-    double absCost = abs(XcolCost[col]);
+    double absCost = fabs(XcolCost[col]);
     bool legalCost = absCost < infinite_cost;
     assert(legalCost);
     if (!legalCost) {
@@ -325,6 +325,7 @@ HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLo
       info_found = true;
     }
   }
+
   if (error_found) return_status = HighsStatus::Error;
   else if (warning_found) return_status = HighsStatus::Warning;
   else if (info_found) return_status = HighsStatus::Info;

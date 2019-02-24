@@ -12,7 +12,8 @@ set(TEST_SOURCES
     TestMain.cpp
     TestFilereader.cpp
     TestLpValidation.cpp
-    TestSetup.cpp)
+    TestSetup.cpp
+    Avgas.cpp)
 
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
