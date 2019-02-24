@@ -600,7 +600,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
   // Normalise the LP row bounds
   normalise = true;
-  call_status = assessBounds("Row", lp.numRow_, newNumRow, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Row", lp.numRow_, newNumRow-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worse_status(call_status, return_status);
 
   int lc_XnumNewNZ = XnumNewNZ;
