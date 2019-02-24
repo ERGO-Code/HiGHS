@@ -279,14 +279,14 @@ compute_primal_objective_function_value(
 					);
 
 // Record the shift in the cost of a particular column
-double shift_cost(
+void shift_cost(
 		  HighsModelObject &highs_model_object,
 		  int iCol,
                   double amount
 		  );
 
 // Undo the shift in the cost of a particular column
-double shift_back(
+void shift_back(
 		  HighsModelObject &highs_model_object,
 		  int iCol);
 

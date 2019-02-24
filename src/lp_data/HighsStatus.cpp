@@ -54,6 +54,9 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::Timeout:
       return "Timeout";
       break;
+    default:
+      return "Status toString() not implemented.";
+      break;
   }
   return "";
 }

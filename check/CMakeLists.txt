@@ -11,6 +11,7 @@ target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
 set(TEST_SOURCES
     TestMain.cpp
     TestFilereader.cpp
+    TestIO.cpp
     TestLpValidation.cpp
     TestSetup.cpp
     Avgas.cpp)
@@ -18,6 +19,20 @@ set(TEST_SOURCES
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
+if (OSI_FOUND)
+option(OSI_ROOT "Osi root folder." "OFF")
+if (NOT (${OSI_ROOT} STREQUAL "OFF"))
+    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+endif ()
+pkg_check_modules(OSITEST osi osi-unittests)
+if (OSITEST_FOUND)
+    include_directories(${CMAKE_SOURCE_DIR}/src)
+    add_executable(osi_unit_tests TestOsi.cpp)
+    target_link_libraries(osi_unit_tests OsiHighs Catch ${OSITEST_LIBRARIES})
+    target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/src/interfaces)
+    target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
+endif (OSITEST_FOUND)
+endif (OSI_FOUND)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
@@ -25,6 +40,7 @@ add_test(NAME unit-test-build
                  --build ${CMAKE_BINARY_DIR}
                  --target unit_tests
          )
+
 
 # Avoid that several build jobs try to concurretly build.
 set_tests_properties(unit-test-build
@@ -36,6 +52,43 @@ add_test(NAME unit_tests_all COMMAND unit_tests --success)
 set_tests_properties(unit_tests_all
                     PROPERTIES
                     DEPENDS unit-test-build)
+
+if (OSITEST_FOUND)
+
+add_test(NAME osi-unit-test-build
+         COMMAND ${CMAKE_COMMAND}
+                 --build ${CMAKE_BINARY_DIR}
+                 --target osi_unit_tests
+         )
+         
+# Avoid that several build jobs try to concurretly build.
+set_tests_properties(osi-unit-test-build
+PROPERTIES
+RESOURCE_LOCK osiunittestbin)
+
+pkg_search_module(COINSAMPLE coindatasample)
+if (COINSAMPLE_FOUND)
+   pkg_get_variable(COINSAMPLEDIR coindatasample datadir)
+endif ()
+
+pkg_search_module(COINNETLIB coindatanetlib)
+if (COINNETLIB_FOUND)
+   pkg_get_variable(COINNETLIBDIR coindatanetlib datadir)
+endif ()
+
+configure_file(${CMAKE_SOURCE_DIR}/check/HCheckConfig.h.in ${CMAKE_BINARY_DIR}/HCheckConfig.h)
+
+# create a binary running all the tests in the executable
+add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests)
+set_tests_properties(osi_unit_tests_all
+PROPERTIES
+DEPENDS osi-unit-test-build)
+
+endif()
+
+if (GAMS_FOUND)
+add_test(NAME rungams COMMAND ${CMAKE_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
+endif (GAMS_FOUND)
 
 # An individual test can be added with the command below but the approach
 # above with a single add_test for all the unit tests automatically detects all

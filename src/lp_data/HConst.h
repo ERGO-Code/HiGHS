@@ -65,8 +65,7 @@ const double DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT = HIGHS_CONST_INF;
 const int SIMPLEX_ITERATION_LIMIT_DEFAULT = HIGHS_CONST_I_INF;
 const int SIMPLEX_UPDATE_LIMIT_DEFAULT = 5000;
 
-/** SCIP-like basis status for columns and rows. Don't use enum
-    class since they are used in conditional statements */
+/** SCIP-like basis status for columns and rows. */
 enum class HighsBasisStatus {
   LOWER = 0, // (slack) variable is at its lower bound [including fixed variables]
   BASIC, // (slack) variable is basic 

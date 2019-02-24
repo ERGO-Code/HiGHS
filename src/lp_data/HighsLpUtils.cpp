@@ -11,10 +11,12 @@
  * @brief Class-independent utilities for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "lp_data/HighsLpUtils.h"
+
+#include <cassert>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
-#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 #include "lp_data/HighsStatus.h"
@@ -1010,3 +1012,105 @@ void util_analyseLp(const HighsLp &lp, const char *message) {
 }
 #endif
 
+HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
+                         HighsBasis_new& new_basis) {
+  new_basis.col_status.clear();
+  new_basis.row_status.clear();
+
+  new_basis.col_status.resize(lp.numCol_);
+  new_basis.row_status.resize(lp.numRow_);
+
+  for (int col = 0; col < lp.numCol_; col++) {
+    if (!basis.nonbasicFlag_[col]) {
+      new_basis.col_status[col] = HighsBasisStatus::BASIC;
+    } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_UP) {
+        new_basis.col_status[col] = HighsBasisStatus::LOWER;
+    } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_DN) {
+        new_basis.col_status[col] =  HighsBasisStatus::UPPER;
+    } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_ZE) {
+      if (lp.colLower_[col] == lp.colUpper_[col]) {
+          new_basis.col_status[col] =  HighsBasisStatus::LOWER;
+      } else {
+          new_basis.col_status[col] = HighsBasisStatus::ZERO;
+      }
+    } else {
+      return HighsStatus::Error;
+    }
+  }
+
+
+  for (int row = 0; row < lp.numRow_; row++) {
+    int var = lp.numCol_ + row;
+    if (!basis.nonbasicFlag_[var]) {
+      new_basis.row_status[row] = HighsBasisStatus::BASIC;
+    } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+        new_basis.row_status[row] = HighsBasisStatus::LOWER;
+    } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
+        new_basis.row_status[row] = HighsBasisStatus::UPPER;
+    } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
+      if (lp.rowLower_[row] == lp.rowUpper_[row]) {
+          new_basis.row_status[row] = HighsBasisStatus::LOWER;
+      } else {
+          new_basis.row_status[row] = HighsBasisStatus::ZERO;
+      }
+    } else {
+      return HighsStatus::Error;
+    }
+  }
+
+  return HighsStatus::OK;
+}
+
+HighsBasis_new getHighsBasis(const HighsLp& lp, const HighsBasis& basis) {
+  HighsBasis_new new_basis;
+  HighsStatus result = convertBasis(lp, basis, new_basis);
+  if (result != HighsStatus::OK)
+    return HighsBasis_new();
+  // Call Julian's code to translate basis once it's out of
+  // SimplexInterface. Until it is out of SimplexInteface use code
+  // I just added above which does the same but only returns an
+  // error and not which basis index has an illegal value.
+  return new_basis;
+}
+
+HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution) {
+  assert(solution.row_dual.size() > 0);
+  if (!isSolutionConsistent(lp, solution))
+    return HighsStatus::Error;
+
+  solution.col_dual.assign(lp.numCol_, 0);
+
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int i=lp.Astart_[col]; i<lp.Astart_[col+1]; i++) {
+      const int row = lp.Aindex_[i];
+      assert(row >= 0);
+      assert(row < lp.numRow_);
+
+      solution.col_dual[col] -= solution.row_dual[row] * lp.Avalue_[i];
+    }
+    solution.col_dual[col] += lp.colCost_[col];
+  }
+
+  return HighsStatus::OK;
+}
+
+HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
+  assert(solution.col_value.size() > 0);
+  if (!isSolutionConsistent(lp, solution))
+    return HighsStatus::Error;
+
+  solution.row_value.clear();
+  solution.row_value.assign(lp.numRow_, 0);
+
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int i=lp.Astart_[col]; i<lp.Astart_[col+1]; i++) {
+      const int row = lp.Aindex_[i];
+      assert(row >= 0);
+      assert(row < lp.numRow_);
+
+      solution.row_value[row] += solution.col_value[col] * lp.Avalue_[i];
+    }
+  }
+
+  return HighsStatus::OK;
+}
