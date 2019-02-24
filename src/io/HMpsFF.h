@@ -521,6 +521,10 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
         rowLower[rowidx] = val;
       }
     }
+    else if (rowidx == -1) {
+      // objective shift
+      objOffset = val;
+    }
   };
 
   while (getline(file, strline)) {
@@ -562,7 +566,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
       marker = first_word(strline, end);
       if (word == "") {
         HighsLogMessage(HighsMessageType::ERROR,
-                        "No coefficient given for column %s", marker.c_str());
+                        "No coefficient given for rhs of row %s", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
       end_marker = first_word_end(strline, end);
