@@ -110,3 +110,15 @@ all available threads so performance may be very slow. Although the best value
 will be problem and architecture dependent, `OMP_NUM_THREADS=8` is typically a
 good choice. Although HiGHS is slower when run in parallel than in serial for 
 some problems, it is typically faster in parallel.
+
+HiGHS Library
+-------------
+
+Highs is compiled in a library. Running
+`make install`
+installs the highs executable in the bin/ and the highs library in the
+lib/ folder, as well as all header files in include/. For a custom
+installation in `folder` run
+`cmake -DCMAKE_INSTALL_PREFIX=folder ..`
+and then
+`make install`
