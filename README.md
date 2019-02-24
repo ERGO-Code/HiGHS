@@ -59,39 +59,22 @@ solves the model in `ml.mps`
 HiGHS options
 -------------
 Usage:
-  ./highs [OPTION...] [file]
+    highs [OPTION...] [file]
 
-      --file arg          Filename of LP to solve.
-      --presolve arg      Use presolve: off by default.
-      --crash arg         Use crash to start simplex: off by default.
-      --simplex arg       Use simplex solver: on by default.
-      --ipm arg           Use interior point method solver: off by default.
-      --parallel arg      Use parallel solve: off by default.
-      --time-limit arg    Use time limit.
-  -h, --help              Print help.
-      --options-file arg  File containing HiGHS options.
-      --parser arg        Mps parser type: swap back to fixed format parser.
+      --file arg             Filename of LP to solve.
+      --presolve arg         Use presolve: off by default.
+      --crash arg            Use crash to start simplex: off by default.
+      --simplex arg          Use simplex solver: on by default.
+      --ipm arg              Use interior point method solver: off by
+                             default.
+      --parallel arg         Use parallel solve: off by default.
+      --time-limit arg       Use time limit.
+      --iteration-limit arg  Use iteration limit (integer).
+      --options-file arg     File containing HiGHS options.
+      --parser arg           Mps parser type: swap back to fixed format
+                             parser.
+  -h, --help                 Print help.
 
-
-
-
-When compiled with the OpenMP directives invoked, the number of
-threads used at run time is the value of the environment variable
-`OMP_NUM_THREADS`. For example, to use HiGHS with PAMI and eight
-threads to solve `ml.mps` execute
-
-    export OMP_NUM_THREADS=8
-    highs -m -f ml.mps
-
-If `OMP_NUM_THREADS` is not set, either because it has not been set or
-due to executing the command
-
-    unset OMP_NUM_THREADS
-
-then all available threads will be used.
-
-Observations
-------------
 
 Parallel code
 -------------
@@ -102,8 +85,20 @@ the interface currently being developed.
 In order to use OpenMP if available, set`-DOPENMP=ON` during the configuration
 step (`cmake ..`).
 
-Notes on parallel code
-----------------------
+When compiled with the parallel option on, the number of threads used at run
+time is the value of the environment variable `OMP_NUM_THREADS`. For example,
+to use HiGHS with eight threads to solve `ml.mps` execute
+
+    export OMP_NUM_THREADS=8
+    highs --parallel ml.mps
+
+If `OMP_NUM_THREADS` is not set, either because it has not been set or due to
+executing the command
+
+    unset OMP_NUM_THREADS
+
+then all available threads will be used.
+
 If run with `OMP_NUM_THREADS=1`, HiGHS is serial. The `--parallel` run-time
 option will cause HiGHS to use serial minor iterations and, although this
 could lead to better performance on some problems, performance will typically be
