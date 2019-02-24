@@ -383,7 +383,7 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   bool valid_lp_matrix = true;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool valid_simplex_lp_matrix = simplex_lp_status.has_matrix_col_wise;
+  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = simplex_lp_status.is_scaled;
 
   // Check that if nonzeros are to be added then the model has a positive number of rows
@@ -411,7 +411,7 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   if (valid_simplex_lp) {
     call_status = append_lp_cols(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 				 XnumNewNZ, XAstart, XAindex, XAvalue,
-				 options, valid_simplex_lp_matrix, force);
+				 options, valid_simplex_matrix, force);
     return_status = worse_status(call_status, return_status);
   }
 
