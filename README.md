@@ -2,15 +2,13 @@
 
 [![Build Status](https://travis-ci.org/ERGO-Code/HiGHS.svg?branch=master)](https://travis-ci.org/ERGO-Code/HiGHS)
 
-HiGHS is a high performance serial and parallel solver for large scale
-sparse linear programming (LP) problems of the form
+HiGHS is a high performance serial and parallel solver for large scale sparse
+linear programming (LP) problems of the form
 
     Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
 
-It is written in C++ with OpenMP directives. It is based on the dual
-revised simplex method implemented in HSOL, exploiting parallelism using either "parallel
-minor iterations" (PAMI) or "single iteration parallelism" (SIP). A
-full technical reference to PAMI and SIP is
+It is written in C++ with OpenMP directives. It is based on the dual revised
+simplex method implemented in HSOL.
 
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
@@ -19,9 +17,9 @@ DOI: 10.1007/s12532-017-0130-5
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
-HSOL was originally written by Qi Huangfu, with features such as
-presolve, crash and advanced basis start added by Julian Hall and Ivet
-Galabova.
+HSOL was originally written by Qi Huangfu, with features such as presolve,
+crash and advanced basis start added by Julian Hall and Ivet Galabova and 
+further work by Michael Feldmeiher.
 
 HSOL has been developed and tested on various linux installations
 using both the GNU (g++) and Intel (icc) C++ compilers.
@@ -30,33 +28,15 @@ Compilation
 -----------
 
 HiGHS uses CMake as build system. To compile the run you need to setup
-a build directory and define your build configuration:
+a build directory and call
 
     mkdir build
     cd build
-    cmake .. [add otional parameters here]
+    cmake .. 
 
-Afterwards you may compile the code wrt the set configuration using your
-defined build generator, e.g. `make`:
+Then compile the code using
 
     make
-
-Useful options
---------------
-
-Set custom options with `-D<option>=<value>` during the configuration step (`cmake ..`):
-
-- `OLD_PARSER`: 
-    on: Uses the original fixed-format MPS file reader
-    off: Uses the new free-format MPS file reader (which requires Boost)
-- `OPENMP`:
-    on: Causes OpenMP to be used if available - cmake checks for this
-- `SCIP_DEV`:
-    on: Adds some printing for SCIP interface development when, otherwise, all HiGHS output is suppressed
-- `HiGHSDEV`:
-    on: Includes a lot of testing and development code which should not be used in "production" or when running optimized code
-- `HiGHSRELEASE`:
-    on: Defined when CMAKE_BUILD_TYPE=Release
 
 Testing
 -------
@@ -68,34 +48,32 @@ To perform a quick test whether the compilation was successful, run
 Run-time options
 ----------------
 
-In the following discussion, the name of the executable file generated
-is assumed to be `HiGHS`.
+In the following discussion, the name of the executable file generated is
+assumed to be `highs`.
 
-HiGHS can only read plain text MPS files, and the following command
+HiGHS can read plain text MPS files and LP files and the following command
 solves the model in `ml.mps`
 
-    highs -f ml.mps
+    highs ml.mps
 
-Usage
------
+HiGHS options
+-------------
+Usage:
+  ./highs [OPTION...] [file]
 
-```
-usage: highs [options] -f fName.mps 
+      --file arg          Filename of LP to solve.
+      --presolve arg      Use presolve: off by default.
+      --crash arg         Use crash to start simplex: off by default.
+      --simplex arg       Use simplex solver: on by default.
+      --ipm arg           Use interior point method solver: off by default.
+      --parallel arg      Use parallel solve: off by default.
+      --time-limit arg    Use time limit.
+  -h, --help              Print help.
+      --options-file arg  File containing HiGHS options.
+      --parser arg        Mps parser type: swap back to fixed format parser.
 
-Options:
-    -p mode  : use presolve mode. Values:
-             : Off On
-    -c mode  : use crash mode to mode. Values:
-             : Off LTSSF LTSSF1 LTSSF2 LTSSF3 LTSSF4 LTSSF5 LTSSF6 LTSSF7
-    -e edWt  : set edge weight to edWt. Values:
-             : Dan Dvx DSE DSE0 DSE1
-    -s       : use option sip
-    -m [cut] : use pami. Cutoff optional double value.
-    -t fName : use pami with partition file fName
-    -d       : debug mode on
-```
 
-Run-time options `-p` and `-s` direct HiGHS to use PAMI or SIP.
+
 
 When compiled with the OpenMP directives invoked, the number of
 threads used at run time is the value of the environment variable
@@ -115,18 +93,25 @@ then all available threads will be used.
 Observations
 ------------
 
-When compiled without the OpenMP directives, or if run with
-`OMP_NUM_THREADS=1`, HiGHS is serial. The `-sip` run-time option will not
-affect performance. The `-pami` run-time option will cause HiGHS to use
-serial minor iterations and, although this could lead to better
-performance on some problems, performance will typically be
+Parallel code
+-------------
+At the moment the parallel option is temporarily unavailable due to a large
+refactoring in progress. This document will be updated once we have completed
+the interface currently being developed.
+
+In order to use OpenMP if available, set`-DOPENMP=ON` during the configuration
+step (`cmake ..`).
+
+Notes on parallel code
+----------------------
+If run with `OMP_NUM_THREADS=1`, HiGHS is serial. The `--parallel` run-time
+option will cause HiGHS to use serial minor iterations and, although this
+could lead to better performance on some problems, performance will typically be
 diminished.
 
-When compiled with the OpenMP directives and `OMP_NUM_THREADS>1` or
-unset, HiGHS will use multiple threads if the `-pami` or `-sip` run-time
-option is specified. If `OMP_NUM_THREADS` is unset, HiGHS will try to use
-all available threads so performance may be very slow. Although the
-best value will be problem and architecture dependent,
-`OMP_NUM_THREADS=8` is typically a good choice. Although HiGHS is slower
-when run in parallel than in serial for some problems, it is typically
-faster, with the `-pami` option usually faster than the `-sip` option.
+When compiled with the parallel option and `OMP_NUM_THREADS>1` or unset, HiGHS
+will use multiple threads. If `OMP_NUM_THREADS` is unset, HiGHS will try to use
+all available threads so performance may be very slow. Although the best value
+will be problem and architecture dependent, `OMP_NUM_THREADS=8` is typically a
+good choice. Although HiGHS is slower when run in parallel than in serial for 
+some problems, it is typically faster in parallel.

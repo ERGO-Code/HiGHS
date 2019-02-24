@@ -27,12 +27,12 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(parallel))(
         "time-limit", "Use time limit.",
         cxxopts::value<double>())(
-        "h, help", "Print help.")(
         "options-file",
         "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())(
         "parser", "Mps parser type: swap back to fixed format parser.",
-        cxxopts::value<std::string>(presolve));
+        cxxopts::value<std::string>(presolve))(
+        "h, help", "Print help.");
 
     cxx_options.parse_positional("file");
 
