@@ -329,6 +329,9 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
 
     std::string rowname = first_word(strline, start + 1);
 
+    // todo: add check that there is no other words on row
+    // detect if file is in fixed format
+
     // todo whitespace in name possible?
     // only in fixed, using old parser for now.
 
@@ -420,6 +423,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
       continue;
     }
+
+    // todo: add check that there is no other words on row
+    // detect if file is in fixed format
 
     // new column?
     if (!(word == colname)) {
@@ -703,7 +709,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
+HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
   std::string strline, word;
 
   auto parsename = [this](const std::string &name, int &rowidx) {
