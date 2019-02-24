@@ -106,7 +106,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
 
     if (result.count("iteration-limit"))
     {
-      double iteration_limit = result["time-limit"].as<int>();
+      double iteration_limit = result["iteration-limit"].as<int>();
       if (iteration_limit <= 0)
       {
         std::cout << "Iteration limit must be positive." << std::endl;
