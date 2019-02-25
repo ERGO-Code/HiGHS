@@ -46,7 +46,7 @@ TEST_CASE("msgcb", "[highs_io]") {
 
   HighsLogMessage(HighsMessageType::INFO, "Hello %s!", "HiGHS");
   REQUIRE(strlen(printedmsg) > 8);
-  REQUIRE(strcmp(printedmsg+8, " [INFO] Hello HiGHS!\n") == 0);  // begin of printedmsg is a timestamp, which we skip over
+  REQUIRE(strcmp(printedmsg+8, " [INFO   ] Hello HiGHS!\n") == 0);  // begin of printedmsg is a timestamp, which we skip over
   REQUIRE(receiveddata == &dummydata);
 
   {
