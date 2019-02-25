@@ -104,6 +104,15 @@ bool setOptionValue(HighsOptions& options, const std::string& option, const std:
       options.large_matrix_value = atof(value.c_str());
   } else if (option == "dual_objective_value_upper_bound") {
       options.dual_objective_value_upper_bound = atof(value.c_str());
+      /*
+ } else if (option == "parser_type") {
+    if (value == "free")
+      options.parser_type = HighsMpsParserType::free;
+    else if (value == "fixed")
+      options.parser_type = HighsMpsParserType::fixed;
+    else
+      return false;
+      */
   } else {
     HighsLogMessage(HighsMessageType::WARNING, "Unknown option: %s.", option.c_str());
     return false;
