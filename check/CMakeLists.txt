@@ -33,6 +33,15 @@ if (OSITEST_FOUND)
 endif (OSITEST_FOUND)
 endif (OSI_FOUND)
 
+if(FORTRAN_FOUND)
+   set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
+   include_directories(${CMAKE_SOURCE_DIR}/src)
+   add_executable(fortrantest TestFortranAPI.f90)
+   target_link_libraries(fortrantest libhighs FortranHighs)
+   target_include_directories(fortrantest PUBLIC ${CMAKE_SOURCE_DIR}/src/interfaces)
+ else()
+ endif(FORTRAN_FOUND)
+
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
