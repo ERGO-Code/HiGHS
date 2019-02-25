@@ -147,7 +147,7 @@ HighsStatus Highs::run() {
       if (options_.presolve_option == PresolveOption::ON) {
         // todo: handle case. Try to solve again with no presolve.
         HighsPrintMessage(ML_ALWAYS, "Reduced problem status not optiaml: %s\n",
-                          HighsStatusToString(solve_status));
+                          HighsStatusToString(solve_status).c_str());
         break;
       }
     }
