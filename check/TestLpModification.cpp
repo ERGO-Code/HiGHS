@@ -11,12 +11,12 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   Avgas avgas;
   int num_row;
-  int num_nz;
   vector<double> rowLower;
   vector<double> rowUpper;
   avgas.rows(num_row, rowLower, rowUpper);
 
   int num_col = 0;
+  int num_nz = 0;
   vector<double> colCost;
   vector<double> colLower;
   vector<double> colUpper;

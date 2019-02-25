@@ -650,7 +650,6 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
 
   // Increase the number of rows in the LPs
-  printf("add_rows: %d %d\n", lp.numRow_, XnumNewRow);
   lp.numRow_ += XnumNewRow;
   if (valid_simplex_lp) simplex_lp.numRow_ += XnumNewRow;
 

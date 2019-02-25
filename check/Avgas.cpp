@@ -14,6 +14,8 @@
 #include "Avgas.h"
 #include <cassert>
 
+#include <stdio.h> // For printf
+
 void Avgas::rows(int &num_row, std::vector<double> &rowLower, std::vector<double> &rowUpper) {
   rowLower.resize(10);
   rowUpper.resize(10);
@@ -59,7 +61,6 @@ void Avgas::col(int col, int &num_col, int &num_nz,
   colLower.resize(num_col+1);
   colUpper.resize(num_col+1);
   Astart.resize(num_col+1);
-
   Astart[num_col] = num_nz;
   int num_new_nz = 4;
   if (col == 0) {
