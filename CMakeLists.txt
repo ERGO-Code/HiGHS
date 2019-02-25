@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(HIGHS LANGUAGES CXX C)
+project(HIGHS LANGUAGES CXX C Fortran)
 
 set(HIGHS_VERSION_MAJOR 1)
 set(HIGHS_VERSION_MINOR 0)
@@ -77,6 +77,14 @@ if (NOT (${OSI_ROOT} STREQUAL "OFF"))
     set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
 endif ()
 unset(OSI_ROOT CACHE)
+
+include(CheckLanguage)
+check_language("Fortran")
+if(CMAKE_Fortran_COMPILER)
+    set(FORTRAN_FOUND ON)
+    else()
+        set(FORTRAN_FOUND OFF)
+    endif()
 
 find_package(PkgConfig)
 pkg_check_modules(OSI osi)

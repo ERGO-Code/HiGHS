@@ -55,6 +55,7 @@ buildDebug/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+*.mod
 *_i.c
 *_p.c
 *.ilk
