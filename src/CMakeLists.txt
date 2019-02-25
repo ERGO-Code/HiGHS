@@ -114,7 +114,7 @@ set_target_properties(libhighs PROPERTIES
 
 include(CheckLanguage)
 check_language("Fortran")
-if(CMAKE_Fortran_COMPILER)
+if(FORTRAN_FOUND)
     set(fortransources
     interfaces/highs_lp_solver.f90
     )
@@ -126,11 +126,8 @@ if(CMAKE_Fortran_COMPILER)
         ARCHIVE DESTINATION lib
         INCLUDES DESTINATION include
         MODULES DESTINATION modules)
-
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
- else()
-
- endif(CMAKE_Fortran_COMPILER)
+ endif(FORTRAN_FOUND)
 
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)

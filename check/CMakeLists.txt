@@ -33,11 +33,7 @@ if (OSITEST_FOUND)
 endif (OSITEST_FOUND)
 endif (OSI_FOUND)
 
-# FORTRAN_START
-include(CheckLanguage)
-check_language("Fortran")
-if(CMAKE_Fortran_COMPILER)
-   message("Fortran found")
+if(FORTRAN_FOUND)
    enable_language(Fortran)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
    include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -45,9 +41,7 @@ if(CMAKE_Fortran_COMPILER)
    target_link_libraries(fortrantest libhighs FortranHighs)
    target_include_directories(fortrantest PUBLIC ${CMAKE_SOURCE_DIR}/src/interfaces)
  else()
-   message(STATUS "No Fortran support")
- endif(CMAKE_Fortran_COMPILER)
-# FORTRAN_END
+ endif(FORTRAN_FOUND)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
