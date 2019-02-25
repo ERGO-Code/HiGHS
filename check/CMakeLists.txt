@@ -34,7 +34,6 @@ endif (OSITEST_FOUND)
 endif (OSI_FOUND)
 
 if(FORTRAN_FOUND)
-   enable_language(Fortran)
    set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
    include_directories(${CMAKE_SOURCE_DIR}/src)
    add_executable(fortrantest TestFortranAPI.f90)

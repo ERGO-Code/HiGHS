@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(HIGHS LANGUAGES CXX C Fortran)
+project(HIGHS LANGUAGES CXX C)
 
 set(HIGHS_VERSION_MAJOR 1)
 set(HIGHS_VERSION_MINOR 0)
@@ -81,6 +81,7 @@ unset(OSI_ROOT CACHE)
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
+    enable_language(Fortran)
     set(FORTRAN_FOUND ON)
 else()
     set(FORTRAN_FOUND OFF)
