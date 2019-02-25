@@ -1,4 +1,5 @@
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
 #include "lp_data/HConst.h"
 #include "io/LoadProblem.h"
 
@@ -60,36 +61,31 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     if (result.count("presolve"))
     {
       std::string value = result["presolve"].as<std::string>();
-      if (!setUserOptionValue(options, "presolve", value))
-        HighsPrintMessage(ML_ALWAYS, "Unknown value for presovle option: %s. Ignored.\n", value.c_str());
+      if (setPresolveValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
     if (result.count("crash"))
     {
       std::string value = result["crash"].as<std::string>();
-      if (!setUserOptionValue(options, "crash", value))
-        HighsPrintMessage(ML_ALWAYS, "Unknown value for crash option: %s. Ignored.\n", value.c_str());
+      if (setCrashValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
     if (result.count("parallel"))
     {
       std::string value = result["parallel"].as<std::string>();
-      if (!setUserOptionValue(options, "parallel", value))
-        HighsPrintMessage(ML_ALWAYS, "Unknown value for parallel option: %s. Ignored.\n", value.c_str());
+      if (setParallelValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
     if (result.count("simplex"))
     {
       std::string value = result["simplex"].as<std::string>();
-      if (!setUserOptionValue(options, "simplex", value))
-        HighsPrintMessage(ML_ALWAYS, "Unknown value for simplex option: %s. Ignored.\n", value.c_str());
+      if (setSimplexValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
     if (result.count("ipm"))
     {
       std::string value = result["ipm"].as<std::string>();
-      if (!setUserOptionValue(options, "ipm", value))
-        HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
+      if (setIpmValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
     if (result.count("time-limit"))
@@ -125,7 +121,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         return false;
       }
       options.options_file = v[0];
-      loadOptionsFromFile(options);
+      if (!loadOptionsFromFile(options)) return false;
     }
 
     // For testing of new parser

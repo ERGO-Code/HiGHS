@@ -1,0 +1,12 @@
+cd ~/HiGHS/src
+grep -i -F $1 ../app/*.cpp 
+grep -i -F $1 ../app/*.cpp 
+gcpp $1 check/
+gcpp $1 io/
+gcpp $1 lp_data/
+gcpp $1 presolve/
+gcpp $1 simplex/
+gcpp $1 test/
+gcpp $1 util/
+
+grep -i -F $1 /home/jajhall/scip/src/lpi/lpi_highs.cpp

@@ -23,6 +23,17 @@
 #include "simplex/SimplexConst.h"
 #include "cxxopts.hpp"
 
+enum class OptionStatus
+{
+  OK = 0,
+  NO_FILE,
+  UNKNOWN_OPTION,
+  ILLEGAL_VALUE
+};
+
+const string on_string = "on";
+const string off_string = "off";
+
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
 enum class HighsMpsParserType
@@ -117,13 +128,18 @@ struct HighsOptions
 };
 
 // Used only for options allowed for the user. For other options see setOptionValue.
-bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+OptionStatus setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
 
 // Used for extended options read from file or set internally.
-bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
 
 // Called before solve. This would check whether tolerances are set to correct values and
 // all options are consistent.
-bool checkOptionsValue(HighsOptions& options);
+OptionStatus checkOptionsValue(HighsOptions& options);
 
+OptionStatus setPresolveValue(HighsOptions& options, const std::string& value);
+OptionStatus setCrashValue(HighsOptions& options, const std::string& value);
+OptionStatus setParallelValue(HighsOptions& options, const std::string& value);
+OptionStatus setSimplexValue(HighsOptions& options, const std::string& value);
+OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
 #endif
