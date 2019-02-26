@@ -127,8 +127,6 @@ public:
     const int n, 
     const int* indices);
 
-
-
   // change coeff (int row, int col) | ...
   // ipx (not implemented)
 

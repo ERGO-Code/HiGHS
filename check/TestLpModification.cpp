@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "Highs.h"
+#include "lp_data/HighsLpUtils.h"
 #include "Avgas.h"
 
 // No commas in test case name.
@@ -35,7 +36,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::LpEmpty);
-
-  //  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0], false);
+  const HighsLp &reference_lp = highs.getLp();
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportLp(reference_lp, 2);
+  HighsSetMessagelevel(ML_NONE);
+  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0], false);
 }
 

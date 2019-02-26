@@ -902,11 +902,13 @@ void getLpMatrixCoefficient(const HighsLp& lp, int row, int col, double *val) {
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
-void reportLp(const HighsLp &lp) {
+void reportLp(const HighsLp &lp, const int report_level) {
   reportLpBrief(lp);
-  reportLpColVec(lp);
-  reportLpRowVec(lp);
-  reportLpColMtx(lp);
+  if (report_level >= 1) {
+    reportLpColVec(lp);
+    reportLpRowVec(lp);
+    if (report_level >= 2) reportLpColMtx(lp);
+  }
 }
 
 // Report the LP briefly

@@ -499,3 +499,4 @@ bool Highs::changeObjCoefs(int n, int* index, double* coef) {
   }
   return true;  
 }
+
