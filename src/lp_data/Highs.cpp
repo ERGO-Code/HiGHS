@@ -43,7 +43,8 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
-  // todo: check if lp is empty.
+  // Return immediately if the LP has no columns
+  if (!lp_.numCol_) return HighsStatus::LpEmpty;
 
   // todo: check options.
   HighsSetIO(options_);

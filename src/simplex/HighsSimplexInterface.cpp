@@ -405,14 +405,14 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 			       XnumNewNZ, XAstart, XAindex, XAvalue,
 			       options, valid_lp_matrix, force);
-  return_status = worse_status(call_status, return_status);
+  return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error && !force) return return_status;
 
   if (valid_simplex_lp) {
     call_status = append_lp_cols(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 				 XnumNewNZ, XAstart, XAindex, XAvalue,
 				 options, valid_simplex_matrix, force);
-    return_status = worse_status(call_status, return_status);
+    return_status = worseStatus(call_status, return_status);
   }
 
   // Now consider scaling
@@ -586,12 +586,12 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   bool normalise = false;
   HighsStatus call_status;
   call_status = assessBounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
-  return_status = worse_status(call_status, return_status);
+  return_status = worseStatus(call_status, return_status);
   
   if (XnumNewNZ) {
     call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
-    return_status = worse_status(call_status, return_status);
+    return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error && !force) return return_status;
   }
 
@@ -601,7 +601,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   // Normalise the LP row bounds
   normalise = true;
   call_status = assessBounds("Row", lp.numRow_, newNumRow-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
-  return_status = worse_status(call_status, return_status);
+  return_status = worseStatus(call_status, return_status);
 
   int lc_XnumNewNZ = XnumNewNZ;
   int* lc_XARstart;
@@ -625,7 +625,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   if (valid_simplex_lp) {
     append_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
     call_status = assessBounds("Row", simplex_lp.numRow_, XnumNewRow, &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0], options.infinite_bound, normalise);
-    return_status = worse_status(call_status, return_status);
+    return_status = worseStatus(call_status, return_status);
   }
   if (valid_simplex_matrix && lc_XnumNewNZ) {
     append_rows_to_lp_matrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
@@ -1026,7 +1026,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
   HighsStatus call_status;
   bool normalise = false;
   call_status = assessBounds("Col", 0, lp.numCol_-1, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
-  return_status = worse_status(call_status, return_status);
+  return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error && !force) return return_status;
   
   for (int col = 0; col < lp.numCol_; ++col) {

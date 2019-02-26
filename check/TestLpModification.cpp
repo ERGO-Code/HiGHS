@@ -31,5 +31,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_status = highs.initializeLp(lp);
   //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
+
+  return_status = highs.run();
+  HighsStatusReport("highs.run()", return_status);
+  REQUIRE(return_status == HighsStatus::LpEmpty);
+  
 }
 
