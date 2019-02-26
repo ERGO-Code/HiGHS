@@ -77,8 +77,7 @@ HighsStatus add_lp_cols(
 			const int *XAstart,
 			const int *XAindex,
 			const double *XAvalue,
-			const HighsOptions& options,
-			const bool force = false
+			const HighsOptions& options
 			);
 
 HighsStatus append_lp_cols(
@@ -92,8 +91,7 @@ HighsStatus append_lp_cols(
 		   const int *XAindex,
 		   const double *XAvalue,
 		   const HighsOptions& options,
-		   const bool valid_matrix, 
-		   const bool force = false
+		   const bool valid_matrix
 		   );
 
 HighsStatus append_cols_to_lp_vectors(
@@ -104,6 +102,15 @@ HighsStatus append_cols_to_lp_vectors(
 			       const double *XcolUpper
 			       );
 
+HighsStatus append_cols_to_lp_matrix(
+			   HighsLp &lp,
+			   int XnumNewCol,
+			   int XnumNewNZ,
+			   const int *XAstart,
+			   const int *XAindex,
+			   const double *XAvalue
+			   );
+
 HighsStatus add_lp_rows(
 		HighsLp& lp,
 		int XnumNewRow,
@@ -113,8 +120,7 @@ HighsStatus add_lp_rows(
 		const int *XARstart,
 		const int *XARindex,
 		const double *XARvalue,
-		const HighsOptions& options,
-		const bool force = false
+		const HighsOptions& options
 		);
 
 HighsStatus append_lp_rows(
@@ -126,8 +132,7 @@ HighsStatus append_lp_rows(
 		   const int *XARstart,
 		   const int *XARindex,
 		   const double *XARvalue,
-		   const HighsOptions& options,
-		   const bool force = false
+		   const HighsOptions& options
 		   );
 
 HighsStatus append_rows_to_lp_vectors(HighsLp &lp,
@@ -135,15 +140,6 @@ HighsStatus append_rows_to_lp_vectors(HighsLp &lp,
 			       const double *XrowLower,
 			       const double *XrowUpper
 			       );
-
-HighsStatus append_cols_to_lp_matrix(
-			   HighsLp &lp,
-			   int XnumNewCol,
-			   int XnumNewNZ,
-			   const int *XAstart,
-			   const int *XAindex,
-			   const double *XAvalue
-			   );
 
 HighsStatus append_rows_to_lp_matrix(HighsLp &lp,
 			   int XnumNewRow,

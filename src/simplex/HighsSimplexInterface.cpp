@@ -360,8 +360,7 @@ void HighsSimplexInterface::check_load_from_postsolve() {
 #endif
 
 HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-						 int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
-						 const bool force) {
+						 int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
 #ifdef HiGHSDEV
   printf("Called util_add_cols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
 #endif
@@ -404,14 +403,14 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   HighsStatus call_status;
   call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 			       XnumNewNZ, XAstart, XAindex, XAvalue,
-			       options, valid_lp_matrix, force);
+			       options, valid_lp_matrix);
   return_status = worseStatus(call_status, return_status);
-  if (return_status == HighsStatus::Error && !force) return return_status;
+  if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     call_status = append_lp_cols(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 				 XnumNewNZ, XAstart, XAindex, XAvalue,
-				 options, valid_simplex_matrix, force);
+				 options, valid_simplex_matrix);
     return_status = worseStatus(call_status, return_status);
   }
 
@@ -542,8 +541,7 @@ HighsStatus HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, d
 
 
 HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
-						 int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
-						 bool force) {
+						 int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
 #ifdef HiGHSDEV
   printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
 #endif
@@ -582,7 +580,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
     assert(!apply_row_scaling);
   }
 #endif
-  // Assess the bounds and matrix indices, returning on error unless addition is forced
+  // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
   call_status = assessBounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
@@ -592,7 +590,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
     call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
-    if (return_status == HighsStatus::Error && !force) return return_status;
+    if (return_status == HighsStatus::Error) return return_status;
   }
 
   // Append the columns to the LP vectors and matrix
@@ -1016,7 +1014,7 @@ HighsStatus HighsSimplexInterface::change_costs_set(int XnumColInSet, const int*
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper, bool force){
+HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper){
   HighsStatus return_status = HighsStatus::NotSet;
   if (XcolLower == NULL) return HighsStatus::Error;
   if (XcolUpper == NULL) return HighsStatus::Error;
@@ -1027,7 +1025,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
   bool normalise = false;
   call_status = assessBounds("Col", 0, lp.numCol_-1, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  if (return_status == HighsStatus::Error && !force) return return_status;
+  if (return_status == HighsStatus::Error) return return_status;
   
   for (int col = 0; col < lp.numCol_; ++col) {
     lp.colLower_[col] = XcolLower[col];
@@ -1035,7 +1033,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
   }
   normalise = true;
   call_status = assessBounds("Col", 0, lp.numCol_-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
-  if (return_status == HighsStatus::Error && !force) return return_status;
+  if (return_status == HighsStatus::Error) return return_status;
 
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.valid) {
@@ -1056,8 +1054,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
 }
 
 HighsStatus HighsSimplexInterface::change_col_bounds_set(int XnumColInSet,
-						 const int* XcolBoundIndex, const double* XcolLowerValues, const double* XcolUpperValues,
-						 bool force) {
+						 const int* XcolBoundIndex, const double* XcolLowerValues, const double* XcolUpperValues) {
   if (XcolBoundIndex == NULL) return HighsStatus::Error;
   if (XcolLowerValues == NULL) return HighsStatus::Error;
   if (XcolUpperValues == NULL) return HighsStatus::Error;
@@ -1097,7 +1094,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_set(int XnumColInSet,
   return return_status;
 }
 
-HighsStatus HighsSimplexInterface::change_row_bounds_all(const double* XrowLower, const double* XrowUpper, bool force) {
+HighsStatus HighsSimplexInterface::change_row_bounds_all(const double* XrowLower, const double* XrowUpper) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsScale &scale = highs_model_object.scale_;
@@ -1119,12 +1116,7 @@ HighsStatus HighsSimplexInterface::change_row_bounds_all(const double* XrowLower
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::change_row_bounds_set(
-							 int XnumNewRow,
-							 const int* XrowBoundIndex,
-							 const double* XrowLowerValues,
-							 const double* XrowUpperValues,
-							 bool force) {
+HighsStatus HighsSimplexInterface::change_row_bounds_set(int XnumNewRow, const int* XrowBoundIndex, const double* XrowLowerValues, const double* XrowUpperValues) {
   
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;

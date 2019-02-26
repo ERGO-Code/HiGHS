@@ -51,39 +51,38 @@ public:
               const double upper_bound, //!< upper bound of the row
               const int num_new_nz, //!< number of nonzeros in the row
               const int *columns,  //!< array of size num_new_nz with column indices
-              const double *values, //!< array of size num_new_nz with coefficients
-              const bool force = false //!< if true, adds the row at all costs, even if nonsensical
+              const double *values //!< array of size num_new_nz with coefficients
               );
 
    /**
    * @brief Adds multiple rows to the model
    */
   bool addRows(const int num_new_rows, //!< number of new rows
-              const double *lower_bounds,  //!< array of size num_new_rows with lower bounds
-              const double *upper_bounds, //!< array of size num_new_rows with upper bounds
-              const int *row_starts, //!< array of size num_new_rows+1 with start indices of the rows
-              const int num_new_nz, //!< number of total new nonzeros
-              const int *columns,  //!< array of size num_new_nz with column indices for all rows
-              const double *values, //!< array of size num_new_nz with coefficients for all rows
-              const bool force = false); //!< if true, adds the rows at all costs, even if nonsensical
+	       const double *lower_bounds,  //!< array of size num_new_rows with lower bounds
+	       const double *upper_bounds, //!< array of size num_new_rows with upper bounds
+	       const int *row_starts, //!< array of size num_new_rows+1 with start indices of the rows
+	       const int num_new_nz, //!< number of total new nonzeros
+	       const int *columns,  //!< array of size num_new_nz with column indices for all rows
+	       const double *values //!< array of size num_new_nz with coefficients for all rows
+	       );
 
   bool addCol(const double cost,
               const double lower_bound, 
               const double upper_bound,
               const int num_new_nz,
               const int *rows, 
-              const double *values,
-              const bool force = false);
+              const double *values
+	      );
 
   bool addCols(const int num_new_rows, 
-              const double* column_costs,
-              const double *lower_bounds, 
-              const double *upper_bounds,
-              const int *col_starts,
-              const int num_new_nz,
-              const int *rows, 
-              const double *values,
-              const bool force = false);
+	       const double* column_costs,
+	       const double *lower_bounds, 
+	       const double *upper_bounds,
+	       const int *col_starts,
+	       const int num_new_nz,
+	       const int *rows, 
+	       const double *values
+	       );
 
   bool changeObjectiveSense(
     int sense);

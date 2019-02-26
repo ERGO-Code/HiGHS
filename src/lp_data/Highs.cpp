@@ -275,7 +275,7 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
 
 bool Highs::addRow(const double lower_bound, const double upper_bound,
                    const int num_new_nz, const int *columns,
-                   const double *values, const bool force) {
+                   const double *values) {
   int row_starts = 0;
   return addRows(1, &lower_bound, &upper_bound, &row_starts, num_new_nz,
                  columns, values);
@@ -284,7 +284,7 @@ bool Highs::addRow(const double lower_bound, const double upper_bound,
 bool Highs::addRows(const int num_new_rows, const double *lower_bounds,
                     const double *upper_bounds, const int *row_starts,
                     const int num_new_nz, const int *columns,
-                    const double *values, const bool force) {
+                    const double *values) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
     add_lp_rows(lp_, num_new_rows, lower_bounds, upper_bounds, num_new_nz,
@@ -303,20 +303,20 @@ bool Highs::addRows(const int num_new_rows, const double *lower_bounds,
 
 bool Highs::addCol(const double cost, const double lower_bound,
                    const double upper_bound, const int num_new_nz,
-                   const int *rows, const double *values, const bool force) {
+                   const int *rows, const double *values) {
   int col_starts = 0;
   return addCols(1, &cost, &lower_bound, &upper_bound, &col_starts, num_new_nz,
-                 rows, values, force);
+                 rows, values);
 }
 
 bool Highs::addCols(const int num_new_cols, const double *column_costs,
                     const double *lower_bounds, const double *upper_bounds,
                     const int *col_starts, const int num_new_nz,
-                    const int *rows, const double *values, const bool force) {
+                    const int *rows, const double *values) {
   // if simplex has not solved already
   if (!simplex_has_run_) {
     add_lp_cols(lp_, num_new_cols, column_costs, lower_bounds, upper_bounds,
-                num_new_nz, col_starts, rows, values, options_, force);
+                num_new_nz, col_starts, rows, values, options_);
   } else
   {
     assert(hmos_.size() > 0);
@@ -399,7 +399,7 @@ bool Highs::changeRowBounds(int index, double lower, double higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_row_bounds_set(1, &index, &lower, &higher, true);
+    interface.change_row_bounds_set(1, &index, &lower, &higher);
   }
   return true;
 }
@@ -412,7 +412,7 @@ bool Highs::changeColBounds(int index, double lower, double higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_col_bounds_set(1, &index, &lower, &higher, true);
+    interface.change_col_bounds_set(1, &index, &lower, &higher);
   }
   return true;
 }
@@ -428,7 +428,7 @@ bool Highs::changeRowsBounds(int n, int *index, double *lower, double *higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_row_bounds_set(n, index, lower, higher, true);
+    interface.change_row_bounds_set(n, index, lower, higher);
   }
   return true;
 }
@@ -444,7 +444,7 @@ bool Highs::changeColsBounds(int n, int *index, double *lower, double *higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_col_bounds_set(n, index, lower, higher, true);
+    interface.change_col_bounds_set(n, index, lower, higher);
   }
   return true;
 }

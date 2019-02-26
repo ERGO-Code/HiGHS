@@ -40,6 +40,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsSetMessagelevel(ML_ALWAYS);
   reportLp(reference_lp, 2);
   HighsSetMessagelevel(ML_NONE);
-  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0], false);
+  //  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0]);
 }
 

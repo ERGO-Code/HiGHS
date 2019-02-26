@@ -48,7 +48,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsModelObject hmo(lp, options, timer);
   HighsSimplexInterface hsi(hmo);
 
-  return_status = hsi.util_add_rows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL, true);
+  return_status = hsi.util_add_rows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
   //  printf("util_add_rows: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::Info);
   reportLp(lp);
@@ -70,11 +70,9 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<int> XAstart; XAstart.resize(XnumNewCol);
   vector<int> XAindex; 
   vector<double> XAvalue;
-  bool force = false;
   // Add an empty column
   return_status = hsi.util_add_cols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0],
-				    force);
+				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::Info);
   XcolUpper[0] = my_infinity;
   reportLp(lp);
@@ -82,21 +80,18 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Try to add a column with illegal cost
   XcolCost[0] = my_infinity;
   return_status = hsi.util_add_cols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0],
-				    force);
+				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::Error);
   XcolCost[0] = -my_infinity;
   return_status = hsi.util_add_cols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0],
-				    force);
+				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::Error);
   XcolCost[0] = 1;
 
   // Add a column with bound inconsistency due to upper
   XcolUpper[0] = -my_infinity;
   return_status = hsi.util_add_cols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0],
-				    force);
+				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::Warning);
   XcolUpper[0] = 0;
 
@@ -105,8 +100,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Add a column with bound inconsistency due to lower
   XcolLower[0] = my_infinity;
   return_status = hsi.util_add_cols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0],
-				    force);
+				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::Warning);
   XcolLower[0] = 0;
 
@@ -115,8 +109,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Add a legitimate column
   XcolLower[0] = 0;
   return_status = hsi.util_add_cols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0],
-				    force);
+				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::OK);
 
   reportLp(lp);

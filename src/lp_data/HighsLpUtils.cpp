@@ -129,24 +129,11 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   // Use error_found to track whether an error has been found in multiple tests
   bool error_found = false;
 
-  // Set all these to true to avoid false asserts, since not all can be tested
-  bool legal_num_row = true;
-  bool legal_num_col = true;
-  bool legal_num_nz = true;
-  bool legal_col_cost_size = true;
-  bool legal_col_lower_size = true;
-  bool legal_col_upper_size = true;
-  bool legal_row_lower_size = true;
-  bool legal_row_upper_size = true;
-  bool legal_matrix_start_size = true;
-  bool legal_matrix_index_size = true;
-  bool legal_matrix_value_size = true;
-
   // Don't expect the matrix_start_size to be legal if there are no columns
   bool check_matrix_start_size = lp.numCol_ > 0;
 
   // Assess column-related dimensions
-  legal_num_col = lp.numCol_ >= 0;
+  bool legal_num_col = lp.numCol_ >= 0;
   if (!legal_num_col) {
     HighsLogMessage(HighsMessageType::ERROR, "LP has illegal number of cols = %d\n", lp.numCol_);
     error_found = true;
@@ -156,9 +143,9 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
     int col_lower_size = lp.colLower_.size();
     int col_upper_size = lp.colUpper_.size();
     int matrix_start_size = lp.Astart_.size();
-    legal_col_cost_size = col_cost_size >= lp.numCol_;
-    legal_col_lower_size = col_lower_size >= lp.numCol_;
-    legal_col_upper_size = col_lower_size >= lp.numCol_;
+    bool legal_col_cost_size = col_cost_size >= lp.numCol_;
+    bool legal_col_lower_size = col_lower_size >= lp.numCol_;
+    bool legal_col_upper_size = col_lower_size >= lp.numCol_;
     
     if (!legal_col_cost_size) {
       HighsLogMessage(HighsMessageType::ERROR, "LP has illegal colCost size = %d < %d\n", col_cost_size, lp.numCol_);
@@ -173,7 +160,7 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
       error_found = true;
     }
     if (check_matrix_start_size) {
-      legal_matrix_start_size = matrix_start_size >= lp.numCol_+1;
+      bool legal_matrix_start_size = matrix_start_size >= lp.numCol_+1;
       if (!legal_matrix_start_size) {
 	HighsLogMessage(HighsMessageType::ERROR, "LP has illegal Astart size = %d < %d\n", matrix_start_size, lp.numCol_+1);
 	error_found = true;
@@ -182,16 +169,15 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   }
 
   // Assess row-related dimensions
-  legal_num_row = lp.numRow_ >= 0;
-  assert(legal_num_row);
+  bool legal_num_row = lp.numRow_ >= 0;
   if (!legal_num_row) {
     HighsLogMessage(HighsMessageType::ERROR, "LP has illegal number of rows = %d\n", lp.numRow_);
     error_found = true;
   } else {
     int row_lower_size = lp.rowLower_.size();
     int row_upper_size = lp.rowUpper_.size();
-    legal_row_lower_size = row_lower_size >= lp.numRow_;
-    legal_row_upper_size = row_lower_size >= lp.numRow_;
+    bool legal_row_lower_size = row_lower_size >= lp.numRow_;
+    bool legal_row_upper_size = row_lower_size >= lp.numRow_;
     if (!legal_row_lower_size) {
       HighsLogMessage(HighsMessageType::ERROR, "LP has illegal rowLower size = %d < %d\n", row_lower_size, lp.numRow_);
       error_found = true;
@@ -205,15 +191,15 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   // Assess matrix-related dimensions
   if (check_matrix_start_size) {
     int lp_num_nz = lp.Astart_[lp.numCol_];
-    legal_num_nz = lp_num_nz >= 0;
+    bool legal_num_nz = lp_num_nz >= 0;
     if (!legal_num_nz) {
       HighsLogMessage(HighsMessageType::ERROR, "LP has illegal number of nonzeros = %d\n", lp_num_nz);
       error_found = true;
     } else {
       int matrix_index_size = lp.Aindex_.size();
       int matrix_value_size = lp.Avalue_.size();
-      legal_matrix_index_size = matrix_index_size >= lp_num_nz;
-      legal_matrix_value_size = matrix_value_size >= lp_num_nz;
+      bool legal_matrix_index_size = matrix_index_size >= lp_num_nz;
+      bool legal_matrix_value_size = matrix_value_size >= lp_num_nz;
       if (!legal_matrix_index_size) {
 	HighsLogMessage(HighsMessageType::ERROR, "LP has illegal Aindex size = %d < %d\n", matrix_index_size, lp_num_nz);
 	error_found = true;
@@ -224,18 +210,6 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
       }
     }
   }
-  assert(legal_num_row);
-  assert(legal_num_col);
-  assert(legal_num_nz);
-  assert(legal_col_cost_size);
-  assert(legal_col_lower_size);
-  assert(legal_col_upper_size);
-  assert(legal_row_lower_size);
-  assert(legal_row_upper_size);
-  assert(legal_matrix_start_size);
-  assert(legal_matrix_index_size);
-  assert(legal_matrix_value_size);
-
   if (error_found) return_status = HighsStatus::Error;
   else return_status = HighsStatus::OK;
 
@@ -243,9 +217,9 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
 }
 
 HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double infinite_cost) {
-  assert(Xfrom_col >= 0);
-  assert(Xto_col >= 0);
-  assert(Xfrom_col <= Xto_col+1);
+  if (Xfrom_col < 0) return HighsStatus::Error;
+  if (Xto_col < 0) return HighsStatus::Error;
+  // Nothing to do so return
   if (Xfrom_col > Xto_col) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
@@ -253,7 +227,6 @@ HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double inf
   for (int col = Xfrom_col; col <= Xto_col; col++) {
     double absCost = fabs(XcolCost[col]);
     bool legalCost = absCost < infinite_cost;
-    assert(legalCost);
     if (!legalCost) {
       HighsLogMessage(HighsMessageType::ERROR, "Col  %12d has |cost| of %12g >= %12g",  col, absCost, infinite_cost);
       error_found = true;
@@ -266,9 +239,9 @@ HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double inf
 }
 
 HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLower, double* XUpper, double infinite_bound, bool normalise) {
-  assert(Xfrom_ix >= 0);
-  assert(Xto_ix >= 0);
-  assert(Xfrom_ix <= Xto_ix+1);
+  if (Xfrom_ix < 0) return HighsStatus::Error;
+  if (Xto_ix < 0) return HighsStatus::Error;
+  // Nothing to do so return
   if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
@@ -303,14 +276,12 @@ HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLo
     } else {
       // Check that the lower bound is not as much as +Infinity
       bool legalLowerBound = XLower[ix] < infinite_bound;
-      assert(legalLowerBound);
       if (!legalLowerBound) {
 	HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, XLower[ix], infinite_bound);
 	error_found = true;
       }
       // Check that the upper bound is not as little as -Infinity
       bool legalUpperBound = XUpper[ix] > -infinite_bound;
-      assert(legalUpperBound);
       if (!legalUpperBound) {
 	HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, XUpper[ix], -infinite_bound);
 	error_found = true;
@@ -338,10 +309,11 @@ HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLo
 
 HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, int Xnum_nz, int* Xstart, int* Xindex, double* Xvalue,
 			 double small_matrix_value, double large_matrix_value, bool normalise) {
-  assert(Xvec_dim >= 0);
-  assert(Xfrom_ix >= 0);
-  assert(Xto_ix >= 0);
-  assert(Xfrom_ix <= Xto_ix+1);
+  if (Xvec_dim < 0) return HighsStatus::Error;
+  if (Xfrom_ix < 0) return HighsStatus::Error;
+  if (Xto_ix < 0) return HighsStatus::Error;
+  if (Xfrom_ix >= Xnum_vec) return HighsStatus::Error; 
+  if (Xto_ix >= Xnum_vec) return HighsStatus::Error; 
   if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
@@ -360,7 +332,6 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
   for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
     int this_start = Xstart[ix];
     bool this_start_too_small = this_start < previous_start;
-    assert(!this_start_too_small);
     if (this_start_too_small) {
       HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d has illegal start of %d < %d = previous start", ix, this_start, previous_start);
       return HighsStatus::Error;
@@ -397,21 +368,18 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
       bool legal_component = component >= 0;
       if (!legal_component) {
 	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is illegal index %d", ix, el, component);
-	assert(legal_component);
 	return HighsStatus::Error;
       }
       // Check that the index does not exceed the vector dimension
       legal_component = component < Xvec_dim;
       if (!legal_component) {
 	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is illegal index %12d >= %g", ix, el, component, Xvec_dim);
-	assert(legal_component);
 	return HighsStatus::Error;
       }
       // Check that the index has not already ocurred
       legal_component = check_vector[component] == 0;
       if (!legal_component) {
 	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el, component);	  
-	assert(legal_component);
 	return HighsStatus::Error;
       }
       // Check that the value is not too large
@@ -419,7 +387,6 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
       bool large_value = abs_value >= large_matrix_value;
       if (large_value) {
 	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is large value |%g| >= %g", ix, el, abs_value, large_matrix_value);	  
-	assert(!large_value);
 	return HighsStatus::Error;
       }
       bool ok_value = abs_value > small_matrix_value;
@@ -481,12 +448,12 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
 HighsStatus add_lp_cols(HighsLp& lp,
 			int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 			int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
-			const HighsOptions& options, const bool force) {
+			const HighsOptions& options) {
   HighsStatus return_status = HighsStatus::NotSet;
   const bool valid_matrix = true;
   HighsStatus call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 					   XnumNewNZ, XAstart, XAindex, XAvalue,
-					   options, valid_matrix, force);
+					   options, valid_matrix);
   lp.numCol_ += XnumNewCol;
   return_status = call_status;
   return return_status;
@@ -495,10 +462,12 @@ HighsStatus add_lp_cols(HighsLp& lp,
 HighsStatus append_lp_cols(HighsLp& lp,
 			   int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 			   int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
-			   const HighsOptions& options, const bool valid_matrix, const bool force) {
+			   const HighsOptions& options, const bool valid_matrix) {
+  if (XnumNewCol < 0) return HighsStatus::Error;
+  if (XnumNewCol == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
   int newNumCol = lp.numCol_ + XnumNewCol;
-  // Assess the bounds and matrix indices, returning on error unless addition is forced
+  // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
   call_status = assessCosts(0, XnumNewCol-1, (double*)XcolCost, options.infinite_cost);
@@ -509,7 +478,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
 			     (int*)XAstart, (int*)XAindex, (double*)XAvalue,
 			     options.small_matrix_value, options.large_matrix_value, normalise);
   return_status = worseStatus(call_status, return_status);
-  if (return_status == HighsStatus::Error && !force) return return_status;
+  if (return_status == HighsStatus::Error) return return_status;
 
   // Append the columns to the LP vectors and matrix
   append_cols_to_lp_vectors(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper);
@@ -534,7 +503,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
 
 HighsStatus append_cols_to_lp_vectors(HighsLp &lp, int XnumNewCol,
 				      const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
-  assert(XnumNewCol >= 0);
+  if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
   int newNumCol = lp.numCol_ + XnumNewCol;
   lp.colCost_.resize(newNumCol);
@@ -551,11 +520,14 @@ HighsStatus append_cols_to_lp_vectors(HighsLp &lp, int XnumNewCol,
 HighsStatus add_lp_rows(HighsLp& lp,
 		int XnumNewRow, const double *XrowLower,  const double *XrowUpper,
 		int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
-		const HighsOptions& options, const bool force) {
+		const HighsOptions& options) {
+  if (XnumNewRow < 0) return HighsStatus::Error;
+  if (XnumNewRow == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
   HighsStatus call_status = append_lp_rows(lp, XnumNewRow, XrowLower, XrowUpper,
 				  XnumNewNZ, XARstart, XARindex, XARvalue,
-				  options, force);
+				  options);
+  if (call_status != HighsStatus::OK && call_status != HighsStatus::Warning) return call_status;
   lp.numRow_ += XnumNewRow;
   return_status = call_status;
   return return_status;
@@ -564,16 +536,18 @@ HighsStatus add_lp_rows(HighsLp& lp,
 HighsStatus append_lp_rows(HighsLp& lp,
 		   int XnumNewRow, const double *XrowLower,  const double *XrowUpper,
 		   int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
-		   const HighsOptions& options, const bool force) {
+		   const HighsOptions& options) {
+  if (XnumNewRow < 0) return HighsStatus::Error;
+  if (XnumNewRow == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
   int newNumRow = lp.numRow_ + XnumNewRow;
-  // Assess the bounds and matrix indices, returning on error unless addition is forced
+  // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
   call_status = assessBounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
-  if (return_status == HighsStatus::Error && !force) return return_status;
+  if (return_status == HighsStatus::Error) return return_status;
 
   append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
   normalise = true;
@@ -585,7 +559,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
 
 HighsStatus append_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
 			       const double *XrowLower, const double *XrowUpper) {
-  assert(XnumNewRow >= 0);
+  if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
   int newNumRow = lp.numRow_ + XnumNewRow;
   lp.rowLower_.resize(newNumRow);
@@ -599,9 +573,10 @@ HighsStatus append_rows_to_lp_vectors(HighsLp &lp, int XnumNewRow,
 
 HighsStatus append_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
 				     int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
-  assert(XnumNewCol >= 0);
-  assert(XnumNewNZ >= 0);
+  if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
+  // Check that nonzeros aren't being appended to a matrix with no columnsrows
+  if (XnumNewNZ > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
   int newNumCol = lp.numCol_ + XnumNewCol;
   lp.Astart_.resize(newNumCol + 1);
   if (lp.numCol_ == 0) {
@@ -628,24 +603,19 @@ HighsStatus append_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
 
 HighsStatus append_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
 			      int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
-  assert(XnumNewRow >= 0);
-  assert(XnumNewNZ >= 0);
-  // Check that nonzeros aren't being appended to a matrix with no columns
-  assert(XnumNewNZ == 0 || lp.numCol_ > 0);
+  if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
+  // Check that nonzeros aren't being appended to a matrix with no columns
+  if (XnumNewNZ > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
   int newNumRow = lp.numRow_ + XnumNewRow;
-
-  // NB SCIP doesn't have XARstart[XnumNewRow] defined, so have to use XnumNewNZ for last
-  // entry
   if (XnumNewNZ == 0) return HighsStatus::OK;
   int currentNumNZ = lp.Astart_[lp.numCol_];
   vector<int> Alength;
   Alength.assign(lp.numCol_, 0);
   for (int el = 0; el < XnumNewNZ; el++) {
     int col = XARindex[el];
-    //      printf("El %2d: appending entry in column %2d\n", el, col); 
-    assert(col >= 0);
-    assert(col < lp.numCol_);
+    if (col < 0) return HighsStatus::Error;
+    if (col >= lp.numCol_) return HighsStatus::Error;
     Alength[col]++;
   }
   // Determine the new number of nonzeros and resize the column-wise matrix arrays
@@ -702,9 +672,9 @@ HighsStatus delete_lp_col_set(HighsLp &lp, int XnumCol, int* XcolSet) {
 }
 
 HighsStatus delete_cols_from_lp_vectors(HighsLp &lp, int XfromCol, int XtoCol) {
-  assert(XfromCol >= 0);
-  assert(XtoCol < lp.numCol_);
-  assert(XfromCol <= XtoCol);
+  if (XfromCol < 0) return HighsStatus::Error;
+  if (XtoCol >= lp.numCol_) return HighsStatus::Error;
+  if (XfromCol > XtoCol) return HighsStatus::OK;
 
   int numDeleteCol = XtoCol - XfromCol + 1;
   if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return HighsStatus::OK;
