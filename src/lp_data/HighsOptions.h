@@ -91,7 +91,7 @@ struct HighsOptions
   bool ipx = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
-  HighsMpsParserType parser_type = HighsMpsParserType::free;
+  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
 
   // Options not passed through the command line
   double infinite_cost = INFINITE_COST_DEFAULT;
@@ -109,7 +109,6 @@ struct HighsOptions
   bool scip = 0;
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
