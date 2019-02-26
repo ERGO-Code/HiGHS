@@ -20,7 +20,6 @@
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsOptions.h"
-//#include "lp_data/HighsStatus.h"
 #include "lp_data/HighsLpUtils.h"
 
 // Parses the file in options.filename using the parser specified in

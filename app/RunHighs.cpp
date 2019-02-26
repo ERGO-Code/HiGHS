@@ -29,14 +29,9 @@ void HiGHSRun(const char *message = nullptr) {
 
 #ifdef HiGHSDEV
   // Report on preprocessing macros
-  std::cout << "In " << message << std::endl;
-  std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
-#ifdef OLD_PARSER
-  std::cout << "OLD_PARSER       is     defined" << std::endl;
-#else
-  std::cout << "OLD_PARSER       is not defined" << std::endl;
-#endif
-
+  if (message != nullptr) {
+    std::cout << "In " << message << std::endl;
+  }
 #ifdef OPENMP
   std::cout << "OPENMP           is     defined" << std::endl;
 #else
@@ -54,6 +49,7 @@ void HiGHSRun(const char *message = nullptr) {
 #else
   std::cout << "HiGHSDEV         is not defined" << std::endl;
 #endif
+  std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 
 #endif
 };

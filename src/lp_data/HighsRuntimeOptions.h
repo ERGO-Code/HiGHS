@@ -1,5 +1,6 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
+#include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "io/LoadProblem.h"
 
@@ -10,32 +11,30 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
 
-    std::string presolve, crash, simplex, ipm, parallel;
+    std::string presolve, crash, simplex, ipm, parallel, parser;// ?? Was without , parser
 
     cxx_options.add_options()(
-        "file",
-        "Filename of LP to solve.",
+        file_string, "Filename of LP to solve.",
         cxxopts::value<std::vector<std::string>>())(
-        "presolve", "Use presolve: off by default.",
+        presolve_string, "Use presolve: off by default.",
         cxxopts::value<std::string>(presolve))(
-        "crash", "Use crash to start simplex: off by default.",
+        crash_string, "Use crash to start simplex: off by default.",
         cxxopts::value<std::string>(crash))(
-        "simplex", "Use simplex solver: on by default.",
-        cxxopts::value<std::string>(simplex))(
-        "ipm", "Use interior point method solver: off by default.",
-        cxxopts::value<std::string>(ipm))(
-        "parallel", "Use parallel solve: off by default.",
+        parallel_string, "Use parallel solve: off by default.",
         cxxopts::value<std::string>(parallel))(
-        "time-limit", "Use time limit (double).",
+        simplex_string, "Use simplex solver: on by default.",
+        cxxopts::value<std::string>(simplex))(
+        ipm_string, "Use interior point method solver: off by default.",
+        cxxopts::value<std::string>(ipm))(
+        highs_run_time_limit_string, "Use HiGHS run time limit (double).",
         cxxopts::value<double>())(
-        "iteration-limit", "Use iteration limit (integer).",
+        simplex_iteration_limit_string, "Use simplex iteration limit (integer).",
         cxxopts::value<int>())(
         "h, help", "Print help.")(
-        "options-file",
-        "File containing HiGHS options.",
+        options_file_string, "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())(
-        "parser", "Mps parser type: swap back to fixed format parser.",
-        cxxopts::value<std::string>(presolve));
+        parser_type_string, "Mps parser type: swap back to fixed format parser.",
+        cxxopts::value<std::string>(parser)); // ?? Was (presolve)
 
     cxx_options.parse_positional("file");
 
@@ -47,9 +46,9 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       exit(0);
     }
 
-    if (result.count("file"))
+    if (result.count(file_string))
     {
-      auto &v = result["file"].as<std::vector<std::string>>();
+      auto &v = result[file_string].as<std::vector<std::string>>();
       if (v.size() > 1)
       {
         std::cout << "Multiple files not implemented.\n";
@@ -58,63 +57,51 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       options.filename = v[0];
     }
 
-    if (result.count("presolve"))
+    if (result.count(presolve_string))
     {
-      std::string value = result["presolve"].as<std::string>();
+      std::string value = result[presolve_string].as<std::string>();
       if (setPresolveValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("crash"))
+    if (result.count(crash_string))
     {
-      std::string value = result["crash"].as<std::string>();
+      std::string value = result[crash_string].as<std::string>();
       if (setCrashValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("parallel"))
+    if (result.count(parallel_string))
     {
-      std::string value = result["parallel"].as<std::string>();
+      std::string value = result[parallel_string].as<std::string>();
       if (setParallelValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("simplex"))
+    if (result.count(simplex_string))
     {
-      std::string value = result["simplex"].as<std::string>();
+      std::string value = result[simplex_string].as<std::string>();
       if (setSimplexValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("ipm"))
+    if (result.count(ipm_string))
     {
-      std::string value = result["ipm"].as<std::string>();
+      std::string value = result[ipm_string].as<std::string>();
       if (setIpmValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("time-limit"))
+    if (result.count(highs_run_time_limit_string))
     {
-      double time_limit = result["time-limit"].as<double>();
-      if (time_limit <= 0)
-      {
-        std::cout << "Time limit must be positive." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.highs_run_time_limit = time_limit;
+      double value = result[highs_run_time_limit_string].as<double>();
+      if (setHighsRunTimeLimitValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("iteration-limit"))
+    if (result.count(simplex_iteration_limit_string))
     {
-      double iteration_limit = result["time-limit"].as<int>();
-      if (iteration_limit <= 0)
-      {
-        std::cout << "Iteration limit must be positive." << std::endl;
-        std::cout << cxx_options.help({""}) << std::endl;
-        exit(0);
-      }
-      options.simplex_iteration_limit = iteration_limit;
+      int value = result[simplex_iteration_limit_string].as<int>();
+      if (setSimplexIterationLimitValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
 
-    if (result.count("options-file"))
+    if (result.count(options_file_string))
     {
-      auto &v = result["options-file"].as<std::vector<std::string>>();
+      auto &v = result[options_file_string].as<std::vector<std::string>>();
       if (v.size() > 1)
       {
         std::cout << "Multiple options files not implemented.\n";
@@ -125,18 +112,15 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     }
 
     // For testing of new parser
-    if (result.count("parser"))
+    if (result.count(parser_type_string))
     {
-      std::string value = result["parser"].as<std::string>();
-      if (value == "fixed")
-        options.parser_type = HighsMpsParserType::fixed;
-      else if (value == "free")
-        options.parser_type = HighsMpsParserType::free;
+      std::string value = result[parser_type_string].as<std::string>();
+      if (setParserTypeValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
   }
   catch (const cxxopts::OptionException &e)
   {
-    std::cout << "error parsing options: " << e.what() << std::endl;
+    HighsLogMessage(HighsMessageType::ERROR, "Error parsing options: %s", e.what());
     return false;
   }
 
