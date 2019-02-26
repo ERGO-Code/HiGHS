@@ -35,6 +35,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::LpEmpty);
-  
+
+  //  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0], false);
 }
 
