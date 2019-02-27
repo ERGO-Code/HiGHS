@@ -14,6 +14,10 @@ class Program {
       int[] astart = {0, 2, 4};
       int[] aindex = {0, 1, 0, 1};
       double[] avalue = {1, 2, 1, 3};
+      call_highs(cc, cl, cu, rl, ru, astart, aindex, avalue);
+   }
+
+   static void call_highs(double[] cc, double[] cl, double[] cu, double[] rl, double[] ru, int[] astart, int[] aindex, double[] avalue) {
       int nc = cc.Length;
       int nr = rl.Length;
       int nnz = aindex.Length;
