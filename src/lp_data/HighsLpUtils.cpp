@@ -100,17 +100,17 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, bool normalise) {
   assert(lp.numCol_ > 0);
 
   // Assess the LP column costs
-  call_status = assessCosts(0, lp.numCol_-1, &lp.colCost_[0], options.infinite_cost);
+  call_status = assessCosts(0, lp.numCol_, &lp.colCost_[0], options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP column bounds
-  call_status = assessBounds("Col", 0, lp.numCol_-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Col", 0, lp.numCol_, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP row bounds
-  call_status = assessBounds("Row", 0, lp.numRow_-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Row", 0, lp.numRow_, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP matrix
   int lp_num_nz = lp.Astart_[lp.numCol_];
-  call_status = assessMatrix(lp.numRow_, 0, lp.numCol_-1, lp.numCol_, lp_num_nz,
+  call_status = assessMatrix(lp.numRow_, 0, lp.numCol_, lp.numCol_, lp_num_nz,
 			     &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
 			     options.small_matrix_value, options.large_matrix_value, normalise);
   lp.Astart_[lp.numCol_] = lp_num_nz;
@@ -217,14 +217,14 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
 }
 
 HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double infinite_cost) {
+  // Uses Xto_col in iterator style
   if (Xfrom_col < 0) return HighsStatus::Error;
-  if (Xto_col < 0) return HighsStatus::Error;
   // Nothing to do so return
-  if (Xfrom_col > Xto_col) return HighsStatus::OK;
+  if (Xfrom_col >= Xto_col) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
   bool error_found = false;
-  for (int col = Xfrom_col; col <= Xto_col; col++) {
+  for (int col = Xfrom_col; col < Xto_col; col++) {
     double absCost = fabs(XcolCost[col]);
     bool legalCost = absCost < infinite_cost;
     if (!legalCost) {
@@ -239,10 +239,10 @@ HighsStatus assessCosts(int Xfrom_col, int Xto_col, double* XcolCost, double inf
 }
 
 HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLower, double* XUpper, double infinite_bound, bool normalise) {
+  // Uses Xto_ix in iterator style
   if (Xfrom_ix < 0) return HighsStatus::Error;
-  if (Xto_ix < 0) return HighsStatus::Error;
   // Nothing to do so return
-  if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
+  if (Xfrom_ix >= Xto_ix) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
   bool error_found = false;
@@ -250,7 +250,7 @@ HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLo
   bool info_found = false;
   int num_infinite_lower_bound = 0;
   int num_infinite_upper_bound = 0;
-  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+  for (int ix = Xfrom_ix; ix < Xto_ix; ix++) {
     if (!highs_isInfinity(-XLower[ix])) {
       // Check whether a finite lower bound will be treated as -Infinity      
       bool infinite_lower_bound = XLower[ix] <= -infinite_bound;
@@ -309,12 +309,9 @@ HighsStatus assessBounds(const char* type, int Xfrom_ix, int Xto_ix, double* XLo
 
 HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, int Xnum_nz, int* Xstart, int* Xindex, double* Xvalue,
 			 double small_matrix_value, double large_matrix_value, bool normalise) {
-  if (Xvec_dim < 0) return HighsStatus::Error;
+  // Uses Xto_ix in iterator style
   if (Xfrom_ix < 0) return HighsStatus::Error;
-  if (Xto_ix < 0) return HighsStatus::Error;
-  if (Xfrom_ix >= Xnum_vec) return HighsStatus::Error; 
-  if (Xto_ix >= Xnum_vec) return HighsStatus::Error; 
-  if (Xfrom_ix > Xto_ix) return HighsStatus::OK;
+  if (Xfrom_ix >= Xto_ix) return HighsStatus::OK;
 
   HighsStatus return_status = HighsStatus::NotSet;
   bool error_found = false;
@@ -329,7 +326,7 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
   // Assess the starts
   // Set up previous_start for a fictitious previous empty packed vector
   int previous_start = std::max(0, Xstart[Xfrom_ix]);
-  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+  for (int ix = Xfrom_ix; ix < Xto_ix; ix++) {
     int this_start = Xstart[ix];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
@@ -350,7 +347,7 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
   // Set up a zeroed vector to detect duplicate indices
   vector<int> check_vector;
   if (Xvec_dim > 0) check_vector.assign(Xvec_dim, 0);
-  for (int ix = Xfrom_ix; ix <= Xto_ix; ix++) {
+  for (int ix = Xfrom_ix; ix < Xto_ix; ix++) {
     int from_el = Xstart[ix];
     int to_el;
     if (ix < Xnum_vec-1) {
@@ -418,7 +415,7 @@ HighsStatus assessMatrix(int Xvec_dim, int Xfrom_ix, int Xto_ix, int Xnum_vec, i
     warning_found = true;
     if (normalise) {
       // Accommodate the loss of these values in any subsequent packed vectors
-      for (int ix = Xto_ix+1; ix < Xnum_vec; ix++) {
+      for (int ix = Xto_ix; ix < Xnum_vec; ix++) {
 	int from_el = Xstart[ix];
 	Xstart[ix] = new_num_nz;
 	int to_el;
@@ -470,11 +467,11 @@ HighsStatus append_lp_cols(HighsLp& lp,
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
-  call_status = assessCosts(0, XnumNewCol-1, (double*)XcolCost, options.infinite_cost);
+  call_status = assessCosts(0, XnumNewCol, (double*)XcolCost, options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
-  call_status = assessBounds("Col", 0, XnumNewCol-1, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
+  call_status = assessBounds("Col", 0, XnumNewCol, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  call_status = assessMatrix(lp.numRow_, 0, XnumNewCol-1, XnumNewCol, XnumNewNZ,
+  call_status = assessMatrix(lp.numRow_, 0, XnumNewCol, XnumNewCol, XnumNewNZ,
 			     (int*)XAstart, (int*)XAindex, (double*)XAvalue,
 			     options.small_matrix_value, options.large_matrix_value, normalise);
   return_status = worseStatus(call_status, return_status);
@@ -486,14 +483,14 @@ HighsStatus append_lp_cols(HighsLp& lp,
 
   // Normalise the new LP column costs and bounds
   normalise = true;
-  call_status = assessCosts(lp.numCol_, newNumCol-1, &lp.colCost_[0], options.infinite_bound);
+  call_status = assessCosts(lp.numCol_, newNumCol, &lp.colCost_[0], options.infinite_bound);
   return_status = worseStatus(call_status, return_status);
-  call_status = assessBounds("Col", lp.numCol_, newNumCol-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Col", lp.numCol_, newNumCol, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
-    call_status = assessMatrix(lp.numRow_, 0, XnumNewCol-1, XnumNewCol, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+    call_status = assessMatrix(lp.numRow_, 0, XnumNewCol, XnumNewCol, lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     lp.Astart_[newNumCol] = lp_num_nz;
     return_status = worseStatus(call_status, return_status);
@@ -544,14 +541,14 @@ HighsStatus append_lp_rows(HighsLp& lp,
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
-  call_status = assessBounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
+  call_status = assessBounds("Row", 0, XnumNewRow, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
   if (return_status == HighsStatus::Error) return return_status;
 
   append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
   normalise = true;
-  call_status = assessBounds("Row", 0, XnumNewRow-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Row", 0, XnumNewRow, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   printf("!!! STILL HAVE TO ADD MATRIX!!!\n");
   return return_status;
@@ -575,7 +572,7 @@ HighsStatus append_cols_to_lp_matrix(HighsLp &lp, int XnumNewCol,
 				     int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
   if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
-  // Check that nonzeros aren't being appended to a matrix with no columnsrows
+  // Check that nonzeros aren't being appended to a matrix with no rows
   if (XnumNewNZ > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
   int newNumCol = lp.numCol_ + XnumNewCol;
   lp.Astart_.resize(newNumCol + 1);
@@ -665,47 +662,47 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp, int XnumNewRow,
   }
 }
 
-HighsStatus delete_lp_cols(HighsLp &lp, int XfromCol, int XtoCol) {
+HighsStatus delete_lp_cols(HighsLp &lp, int Xfrom_col, int Xto_col) {
 }
 
 HighsStatus delete_lp_col_set(HighsLp &lp, int XnumCol, int* XcolSet) {
 }
 
-HighsStatus delete_cols_from_lp_vectors(HighsLp &lp, int XfromCol, int XtoCol) {
-  if (XfromCol < 0) return HighsStatus::Error;
-  if (XtoCol >= lp.numCol_) return HighsStatus::Error;
-  if (XfromCol > XtoCol) return HighsStatus::OK;
+HighsStatus delete_cols_from_lp_vectors(HighsLp &lp, int Xfrom_col, int Xto_col) {
+  // Uses Xto_col in iterator style
+  if (Xfrom_col < 0 || Xto_col > lp.numCol_) return HighsStatus::Error;
+  if (Xfrom_col > Xto_col) return HighsStatus::OK;
 
-  int numDeleteCol = XtoCol - XfromCol + 1;
+  int numDeleteCol = Xto_col - Xfrom_col;
   if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return HighsStatus::OK;
   //
-  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns
+  // Trivial case is Xto_col = lp.numCol_, in which case no columns
   // need be shifted. However, this implies lp.numCol_-numDeleteCol =
-  // XfromCol, in which case the loop is vacuous
-  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
+  // Xfrom_col, in which case the loop is vacuous
+  for (int col = Xfrom_col; col < lp.numCol_ - numDeleteCol; col++) {
     lp.colCost_[col] = lp.colCost_[col + numDeleteCol];
     lp.colLower_[col] = lp.colLower_[col + numDeleteCol];
     lp.colUpper_[col] = lp.colUpper_[col + numDeleteCol];
   }
 }
 
-HighsStatus delete_cols_from_lp_matrix(HighsLp &lp, int XfromCol, int XtoCol) {
-  assert(XfromCol >= 0);
-  assert(XtoCol < lp.numCol_);
-  assert(XfromCol <= XtoCol);
+HighsStatus delete_cols_from_lp_matrix(HighsLp &lp, int Xfrom_col, int Xto_col) {
+  // Uses Xto_col in iterator style
+  if (Xfrom_col < 0 || Xto_col > lp.numCol_) return HighsStatus::Error;
+  if (Xfrom_col > Xto_col) return HighsStatus::OK;
 
-  int numDeleteCol = XtoCol - XfromCol + 1;
+  int numDeleteCol = Xto_col - Xfrom_col;
   if (numDeleteCol == 0 || numDeleteCol == lp.numCol_) return HighsStatus::OK;
   //
-  // Trivial case is XtoCol = lp.numCol_-1, in which case no columns need be shifted
+  // Trivial case is Xto_col = lp.numCol_, in which case no columns need be shifted
   // and the loops are vacuous
-  int elOs = lp.Astart_[XfromCol];
-  int numDeleteEl = lp.Astart_[XtoCol + 1] - elOs;
-  for (int el = lp.Astart_[XtoCol + 1]; el < lp.Astart_[lp.numCol_]; el++) {
+  int elOs = lp.Astart_[Xfrom_col];
+  int numDeleteEl = lp.Astart_[Xto_col] - elOs;
+  for (int el = lp.Astart_[Xto_col]; el < lp.Astart_[lp.numCol_]; el++) {
     lp.Aindex_[el - numDeleteEl] = lp.Aindex_[el];
     lp.Avalue_[el - numDeleteEl] = lp.Avalue_[el];
   }
-  for (int col = XfromCol; col <= lp.numCol_ - numDeleteCol; col++) {
+  for (int col = Xfrom_col; col <= lp.numCol_ - numDeleteCol; col++) {
     lp.Astart_[col] = lp.Astart_[col + numDeleteCol] - numDeleteEl;
   }
 
@@ -717,35 +714,35 @@ HighsStatus delete_col_set_from_lp_vectors(HighsLp &lp, int XnumCol, int* XcolSe
 HighsStatus delete_col_set_from_lp_matrix(HighsLp &lp, int XnumCol, int* XcolSet) {
 }
 
-HighsStatus delete_lp_rows(HighsLp &lp, int XfromRow, int XtoRow) {
+HighsStatus delete_lp_rows(HighsLp &lp, int Xfrom_row, int Xto_row) {
 }
 
 HighsStatus delete_lp_row_set(HighsLp &lp, int XnumRow, int* XrowSet) {
 }
 
-HighsStatus delete_rows_from_lp_vectors(HighsLp &lp, int XfromRow, int XtoRow) {
-  assert(XfromRow >= 0);
-  assert(XtoRow < lp.numRow_);
-  assert(XfromRow <= XtoRow);
+HighsStatus delete_rows_from_lp_vectors(HighsLp &lp, int Xfrom_row, int Xto_row) {
+  // Uses Xto_row in iterator style
+  if (Xfrom_row < 0 || Xto_row > lp.numRow_) return HighsStatus::Error;
+  if (Xfrom_row > Xto_row) return HighsStatus::OK;
 
-  int numDeleteRow = XtoRow - XfromRow + 1;
+  int numDeleteRow = Xto_row - Xfrom_row;
   if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return HighsStatus::OK;
   //
-  // Trivial case is XtoRow = lp.numRow_-1, in which case no rows
+  // Trivial case is Xto_row = lp.numRow_, in which case no rows
   // need be shifted. However, this implies lp.numRow_-numDeleteRow =
-  // XfromRow, in which case the loop is vacuous
-  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
+  // Xfrom_row, in which case the loop is vacuous
+  for (int row = Xfrom_row; row < lp.numRow_ - numDeleteRow; row++) {
     lp.rowLower_[row] = lp.rowLower_[row + numDeleteRow];
     lp.rowUpper_[row] = lp.rowUpper_[row + numDeleteRow];
   }
 }
 
-HighsStatus delete_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
-  assert(XfromRow >= 0);
-  assert(XtoRow < lp.numRow_);
-  assert(XfromRow <= XtoRow);
+HighsStatus delete_rows_from_lp_matrix(HighsLp &lp, int Xfrom_row, int Xto_row) {
+  // Uses Xto_row in iterator style
+  if (Xfrom_row < 0 || Xto_row > lp.numRow_) return HighsStatus::Error;
+  if (Xfrom_row > Xto_row) return HighsStatus::OK;
 
-  int numDeleteRow = XtoRow - XfromRow + 1;
+  int numDeleteRow = Xto_row - Xfrom_row;
   if (numDeleteRow == 0 || numDeleteRow == lp.numRow_) return HighsStatus::OK;
 
   int nnz = 0;
@@ -754,8 +751,8 @@ HighsStatus delete_rows_from_lp_matrix(HighsLp &lp, int XfromRow, int XtoRow) {
     lp.Astart_[col] = nnz;
     for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
       int row = lp.Aindex_[el];
-      if (row < XfromRow || row > XtoRow) {
-	if (row < XfromRow) {
+      if (row < Xfrom_row || row >= Xto_row) {
+	if (row < Xfrom_row) {
 	  lp.Aindex_[nnz] = row;
 	} else {
 	  lp.Aindex_[nnz] = row - numDeleteRow;
@@ -775,6 +772,8 @@ HighsStatus delete_row_set_from_lp_matrix(HighsLp &lp, int XnumRow, int* XrowSet
 }
 
 HighsStatus change_lp_matrix_coefficient(HighsLp &lp, int Xrow, int Xcol, const double XnewValue) {
+  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
   int changeElement = -1;
   for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol + 1]; el++) {
     // printf("Column %d: Element %d is row %d. Is it %d?\n", Xcol, el, lp.Aindex_[el], Xrow);
@@ -801,72 +800,57 @@ HighsStatus change_lp_matrix_coefficient(HighsLp &lp, int Xrow, int Xcol, const 
   lp.Avalue_[changeElement] = XnewValue;
 }
 
-void getLpCosts(
-		const HighsLp& lp,
-		int firstcol,
-		int lastcol,
-		double* XcolCost
-		) {
-  assert(0 <= firstcol);
-  assert(firstcol <= lastcol);
-  assert(lastcol < lp.numCol_);
-  for (int col = firstcol; col <= lastcol; ++col) XcolCost[col - firstcol] = lp.colCost_[col];
+HighsStatus getLpCosts(const HighsLp& lp, int Xfrom_col, int Xto_col,double* XcolCost) {
+  // Uses Xto_col in iterator style
+  if (Xfrom_col < 0 || Xto_col > lp.numCol_) return HighsStatus::Error;
+  if (Xfrom_col > Xto_col) return HighsStatus::OK;
+  for (int col = Xfrom_col; col < Xto_col; col++) XcolCost[col - Xfrom_col] = lp.colCost_[col];
+  return HighsStatus::OK;
 }
 
-void getLpColBounds(const HighsLp& lp,
-		    int firstcol,
-		    int lastcol,
-		    double* XcolLower,
-		    double* XcolUpper) {
-  assert(0 <= firstcol);
-  assert(firstcol <= lastcol);
-  assert(lastcol < lp.numCol_);
-  for (int col = firstcol; col <= lastcol; ++col) {
-    if (XcolLower != NULL) XcolLower[col - firstcol] = lp.colLower_[col];
-    if (XcolUpper != NULL) XcolUpper[col - firstcol] = lp.colUpper_[col];
+HighsStatus getLpColBounds(const HighsLp& lp, int Xfrom_col, int Xto_col, double* XcolLower, double* XcolUpper) {
+  // Uses Xto_col in iterator style
+  if (Xfrom_col < 0 || Xto_col > lp.numCol_) return HighsStatus::Error;
+  if (Xfrom_col > Xto_col) return HighsStatus::OK;
+  for (int col = Xfrom_col; col < Xto_col; col++) {
+    if (XcolLower != NULL) XcolLower[col - Xfrom_col] = lp.colLower_[col];
+    if (XcolUpper != NULL) XcolUpper[col - Xfrom_col] = lp.colUpper_[col];
   }
+  return HighsStatus::OK;
 }
 
-void getLpRowBounds(const HighsLp& lp,
-		    int firstrow,
-		    int lastrow,
-		    double* XrowLower,
-		    double* XrowUpper) {
-  assert(0 <= firstrow);
-  assert(firstrow <= lastrow);
-  assert(lastrow < lp.numRow_);
-  for (int row = firstrow; row <= lastrow; ++row) {
-    if (XrowLower != NULL) XrowLower[row - firstrow] = lp.rowLower_[row];
-    if (XrowUpper != NULL) XrowUpper[row - firstrow] = lp.rowUpper_[row];
+HighsStatus getLpRowBounds(const HighsLp& lp, int Xfrom_row, int Xto_row, double* XrowLower, double* XrowUpper) {
+  // Uses Xto_row in iterator style
+  if (Xfrom_row < 0 || Xto_row > lp.numRow_) return HighsStatus::Error;
+  if (Xfrom_row > Xto_row) return HighsStatus::OK;
+  for (int row = Xfrom_row; row < Xto_row; row++) {
+    if (XrowLower != NULL) XrowLower[row - Xfrom_row] = lp.rowLower_[row];
+    if (XrowUpper != NULL) XrowUpper[row - Xfrom_row] = lp.rowUpper_[row];
   }
+  return HighsStatus::OK;
 }
 
 // Get a single coefficient from the matrix
-void getLpMatrixCoefficient(const HighsLp& lp, int row, int col, double *val) {
-  assert(row >= 0 && row < lp.numRow_);
-  assert(col >= 0 && col < lp.numCol_);
+HighsStatus getLpMatrixCoefficient(const HighsLp& lp, int Xrow, int Xcol, double *val) {
 #ifdef HiGHSDEV
-  printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);
+  printf("Called model.util_getCoeff(row=%d, col=%d)\n", Xrow, Xcol);
 #endif
-  //  printf("Called model.util_getCoeff(row=%d, col=%d)\n", row, col);
+  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
 
   int get_el = -1;
-  for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-    //  printf("Column %4d: Element %4d is row %4d. Is it %4d?\n", col, el,
-    //  lp.Aindex_[el], row);
-    if (lp.Aindex_[el] == row) {
+  for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol + 1]; el++) {
+    if (lp.Aindex_[el] == Xrow) {
       get_el = el;
       break;
     }
   }
   if (get_el < 0) {
-    //  printf("model.util_getCoeff: Cannot find row %d in column %d\n", row, col);
     *val = 0;
   } else {
-    //  printf("model.util_getCoeff: Found row %d in column %d as element %d:
-    //  value %g\n", row, col, get_el, lp.Avalue_[get_el]);
     *val = lp.Avalue_[get_el];
   }
+  return HighsStatus::OK;
 }
 
 // Methods for reporting an LP, including its row and column data and matrix

@@ -453,13 +453,13 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 }
 
 HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
+  // Uses XtoCol in iterator style
 #ifdef HiGHSDEV
   printf("Called util_deleteCols(XfromCol=%d, XtoCol=%d)\n", XfromCol, XtoCol);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromCol < 0) return HighsStatus::Error;
-  if (XtoCol >= lp.numCol_) return HighsStatus::Error;
-  if (XfromCol > XtoCol) return HighsStatus::Error;
+  if (XfromCol < 0 || XtoCol > lp.numCol_) return HighsStatus::Error;
+  if (XfromCol >= XtoCol) return HighsStatus::OK;
 
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
@@ -467,7 +467,7 @@ HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int numDeleteCol = XtoCol - XfromCol + 1;
+  int numDeleteCol = XtoCol - XfromCol;
   if (numDeleteCol == 0) return HighsStatus::OK;
 
   int newNumCol = lp.numCol_ - numDeleteCol;
@@ -513,30 +513,30 @@ HighsStatus HighsSimplexInterface::util_delete_col_set(int XnumCol, int* XcolSet
 
 HighsStatus HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* XcolLower, double* XcolUpper,
 						     int* XnumNZ, int* XAstart, int* XAindex, double* XAvalue) {
+  // Uses XtoCol in iterator style
 #ifdef HiGHSDEV
   printf("Called util_extractCols(XfromCol=%d, XtoCol=%d)\n", XfromCol, XtoCol);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromCol < 0) return HighsStatus::Error;
-  if (XtoCol >= lp.numCol_) return HighsStatus::Error;
-  if (XfromCol > XtoCol) return HighsStatus::Error;
+  if (XfromCol < 0 || XtoCol > lp.numCol_) return HighsStatus::Error;
+  if (XfromCol >= XtoCol) return HighsStatus::OK;
 
   HighsScale &scale = highs_model_object.scale_;
   // Determine the number of columns to be extracted
   // int numExtractCols = XtoCol-XfromCol+1;
   // printf("Extracting %d columns\n", numExtractCols);
   int elOs = lp.Astart_[XfromCol];
-  for (int col = XfromCol; col <= XtoCol; col++) {
+  for (int col = XfromCol; col < XtoCol; col++) {
     //    printf("Extracting column %d\n", col);
     XcolLower[col - XfromCol] = lp.colLower_[col];
     XcolUpper[col - XfromCol] = lp.colUpper_[col];
     XAstart[col - XfromCol] = lp.Astart_[col] - elOs;
   }
-  for (int el = lp.Astart_[XfromCol]; el < lp.Astart_[XtoCol + 1]; el++) {
+  for (int el = lp.Astart_[XfromCol]; el < lp.Astart_[XtoCol]; el++) {
     XAindex[el - elOs] = lp.Aindex_[el];
     XAvalue[el - elOs] = lp.Avalue_[el];
   }
-  *XnumNZ = lp.Astart_[XtoCol + 1] - elOs;
+  *XnumNZ = lp.Astart_[XtoCol] - elOs;
 }
 
 
@@ -583,11 +583,11 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
-  call_status = assessBounds("Row", 0, XnumNewRow-1, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
+  call_status = assessBounds("Row", 0, XnumNewRow, (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   
   if (XnumNewNZ) {
-    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
@@ -598,7 +598,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
   // Normalise the LP row bounds
   normalise = true;
-  call_status = assessBounds("Row", lp.numRow_, newNumRow-1, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Row", lp.numRow_, newNumRow, &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
   int lc_XnumNewNZ = XnumNewNZ;
@@ -612,7 +612,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
     std::memcpy(lc_XARvalue, XARvalue, sizeof(double)*XnumNewNZ);
     // Normalise the new matrix columns
     normalise = true;
-    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow-1, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue,
+    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     if (lc_XnumNewNZ) {
       // Append rows to LP matrix
@@ -668,18 +668,18 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 }
 
 HighsStatus HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
+  // Uses XtoRow in iterator style
 #ifdef HiGHSDEV
   printf("Called model.util_deleteRows(XfromRow=%d, XtoRow=%d)\n", XfromRow, XtoRow);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromRow < 0) return HighsStatus::Error;
-  if (XtoRow >= lp.numRow_) return HighsStatus::Error;
-  if (XfromRow > XtoRow) return HighsStatus::Error;
+  if (XfromRow < 0 || XtoRow > lp.numRow_) return HighsStatus::Error;
+  if (XfromRow >= XtoRow) return HighsStatus::OK;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
 
-  int numDeleteRow = XtoRow - XfromRow + 1;
+  int numDeleteRow = XtoRow - XfromRow;
   if (numDeleteRow == 0) return HighsStatus::OK;
 
   int newNumRow = lp.numRow_ - numDeleteRow;
@@ -838,34 +838,22 @@ HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet
 
 
 HighsStatus HighsSimplexInterface::util_extract_rows(
-					      int XfromRow,
-					      int XtoRow,
-					      double* XrowLower,
-					      double* XrowUpper,
-					      int* XnumNZ,
-					      int* XARstart,
-					      int* XARindex,
-					      double* XARvalue
-					      ) {
+						     int XfromRow, int XtoRow, double* XrowLower, double* XrowUpper,
+						     int* XnumNZ, int* XARstart, int* XARindex, double* XARvalue) {
+  // Uses XtoRow in iterator style
 #ifdef HiGHSDEV
   printf("Called model.util_extractRows(XfromRow=%d, XtoRow=%d)\n", XfromRow,
          XtoRow);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromRow < 0) return HighsStatus::Error;
-  if (XtoRow >= lp.numRow_) return HighsStatus::Error;
-  if (XfromRow > XtoRow) return HighsStatus::Error;
+  if (XfromRow < 0 || XtoRow > lp.numRow_) return HighsStatus::Error;
+  if (XfromRow >= XtoRow) return HighsStatus::OK;
 
   // Determine the number of rows to be extracted
-  int numExtractRows = XtoRow - XfromRow + 1;
-  //    printf("Extracting %d rows\n", numExtractRows);
-  for (int row = XfromRow; row <= XtoRow; row++) {
-    // printf("Extracting row %d\n", row);
+  int numExtractRows = XtoRow - XfromRow;
+  for (int row = XfromRow; row < XtoRow; row++) {
     XrowLower[row - XfromRow] = lp.rowLower_[row];
     XrowUpper[row - XfromRow] = lp.rowUpper_[row];
-    // printf("Extracted row %d from %d with bounds [%g, %g]\n",
-    //	   row-XfromRow, row, XrowLower[row-XfromRow],
-    // XrowUpper[row-XfromRow]);
   }
   // Determine how many entries are in each row to be extracted
   vector<int> XARlength;
@@ -873,34 +861,27 @@ HighsStatus HighsSimplexInterface::util_extract_rows(
 
   for (int el = lp.Astart_[0]; el < lp.Astart_[lp.numCol_]; el++) {
     int row = lp.Aindex_[el];
-    if (row >= XfromRow && row <= XtoRow) XARlength[row - XfromRow] += 1;
+    if (row >= XfromRow && row < XtoRow) XARlength[row - XfromRow] += 1;
   }
   XARstart[0] = 0;
-  // printf("Start of row %2d is %d\n", 0, XARstart[0]);
-  // printf("Length of row %2d is %d\n", 0, XARlength[0]);
-  for (int row = 0; row < numExtractRows - 1; row++) {
+  for (int row = 0; row < numExtractRows-1; row++) {
     XARstart[row + 1] = XARstart[row] + XARlength[row];
     XARlength[row] = 0;
-    // printf("Start of row %2d is %d\n", row+1, XARstart[row+1]);
-    // printf("Length of row %2d is %d\n", row+1, XARlength[row+1]);
   }
-  XARlength[numExtractRows - 1] = 0;
+  XARlength[numExtractRows-1] = 0;
 
   for (int col = 0; col < lp.numCol_; col++) {
     for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
       int row = lp.Aindex_[el];
-      // printf("Is row=%d in [%d, %d]?\n", row, XfromRow, XtoRow);
-      if (row >= XfromRow && row <= XtoRow) {
+      if (row >= XfromRow && row < XtoRow) {
         int rowEl = XARstart[row - XfromRow] + XARlength[row - XfromRow];
-        // printf("Column %2d: Extracted element %d with value %g\n", col,
-        // rowEl, lp.Avalue_[el]);
         XARlength[row - XfromRow] += 1;
         XARindex[rowEl] = col;
         XARvalue[rowEl] = lp.Avalue_[el];
       }
     }
   }
-  *XnumNZ = XARstart[XtoRow - XfromRow] + XARlength[XtoRow - XfromRow];
+  *XnumNZ = XARstart[numExtractRows-1] + XARlength[numExtractRows-1];
   //  printf("Set XnumNZ = %d\n", *XnumNZ);
 }
 
@@ -1023,7 +1004,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
   HighsOptions &options = highs_model_object.options_;
   HighsStatus call_status;
   bool normalise = false;
-  call_status = assessBounds("Col", 0, lp.numCol_-1, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
+  call_status = assessBounds("Col", 0, lp.numCol_, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
   
@@ -1032,7 +1013,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
     lp.colUpper_[col] = XcolUpper[col];
   }
   normalise = true;
-  call_status = assessBounds("Col", 0, lp.numCol_-1, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Col", 0, lp.numCol_, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   if (return_status == HighsStatus::Error) return return_status;
 
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -1044,7 +1025,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower
       simplex_lp.colLower_[col] = lp.colLower_[col];
       simplex_lp.colUpper_[col] = lp.colUpper_[col];
     }
-    call_status = assessBounds("Col", 0, simplex_lp.numCol_-1, &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0], options.infinite_bound, normalise);
+    call_status = assessBounds("Col", 0, simplex_lp.numCol_, &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0], options.infinite_bound, normalise);
     // TODO Scale the simplex LP bounds
 
     // Deduce the consequences of new bounds

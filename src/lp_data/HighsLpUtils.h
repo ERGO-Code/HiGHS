@@ -270,32 +270,32 @@ void reportLpColMtx(
 		    );
 
 // Get the costs for a contiguous set of columns
-void getLpCosts(
+HighsStatus getLpCosts(
 		const HighsLp& lp,
-		int firstcol,
-		int lastcol,
+		int Xfrom_col,
+		int Xto_col,
 		double* XcolCost
 		);
 
 // Get the bounds for a contiguous set of columns
-void getLpColBounds(
+HighsStatus getLpColBounds(
 		    const HighsLp& lp,
-		    int firstcol,
-		    int lastcol,
+		    int Xfrom_col,
+		    int Xto_col,
 		    double* XcolLower,
 		    double* XcolUpper
 		    );
 
 // Get the bounds for a contiguous set of rows
-void getLpRowBounds(
+HighsStatus getLpRowBounds(
 		    const HighsLp& lp,
-		    int firstrow,
-		    int lastrow,
+		    int Xfrom_row,
+		    int Xto_row,
 		    double* XrowLower,
 		    double* XrowUpper
 		    );
 
-void getLpMatrixCoefficient(
+HighsStatus getLpMatrixCoefficient(
 			    const HighsLp& lp,
 			    int row,
 			    int col,
