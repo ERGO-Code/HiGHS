@@ -1,8 +1,8 @@
 
 function call_highs(cc, cl, cu, rl, ru, astart, aindex, avalue)
-   n_col = convert(Int32, size(cc, 2))
-   n_row = convert(Int32, size(rl, 2))
-   n_nz = convert(Int32, size(aindex, 2))
+   n_col = convert(Int32, size(cc, 1))
+   n_row = convert(Int32, size(rl, 1))
+   n_nz = convert(Int32, size(aindex, 1))
 
    colcost = convert(Array{Cdouble}, cc)
    collower = convert(Array{Cdouble}, cl)
