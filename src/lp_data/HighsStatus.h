@@ -8,6 +8,7 @@ enum class HighsStatus
 {
   NotSet,
   OK,
+  Info,
   Warning,
   Error,
   Init,
@@ -22,7 +23,9 @@ enum class HighsStatus
   Infeasible,
   Feasible,
   Optimal,
-  Timeout
+  Timeout,
+  ReachedIterationLimit,
+  NumericalDifficulties
 };
 
 // Return a string representation of HighsStatus.

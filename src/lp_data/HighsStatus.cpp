@@ -9,6 +9,9 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::OK:
       return "OK";
       break;
+    case HighsStatus::Info:
+      return "Info";
+      break;
     case HighsStatus::Warning:
       return "Warning";
       break;
@@ -51,6 +54,9 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::Timeout:
       return "Timeout";
       break;
+    default:
+      return "Status toString() not implemented.";
+      break;
   }
   return "";
 }
@@ -61,6 +67,8 @@ HighsStatus worse_status(HighsStatus status0, HighsStatus status1) {
     return_status = HighsStatus::Error;
   else if (status0 == HighsStatus::Warning || status1 == HighsStatus::Warning)
     return_status = HighsStatus::Warning;
+  else if (status0 == HighsStatus::Info || status1 == HighsStatus::Info)
+    return_status = HighsStatus::Info;
   else 
     return_status = HighsStatus::OK;
   return return_status;

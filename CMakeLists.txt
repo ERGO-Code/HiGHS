@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(HIGHS LANGUAGES CXX)
+project(HIGHS LANGUAGES CXX C)
 
 set(HIGHS_VERSION_MAJOR 1)
 set(HIGHS_VERSION_MINOR 0)
@@ -39,7 +39,7 @@ endif()
 message(STATUS "Git hash: " ${GITHASH})
 
 string(TIMESTAMP TODAY "%Y-%m-%d")
-message(STATUS "compilation date: " ${TODAY})
+message(STATUS "Compilation date: " ${TODAY})
 
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
@@ -61,10 +61,44 @@ endif()
 message(STATUS "OpenMP: " ${OPENMP})
 
 option(SCIP_DEV "SCIP  development" OFF)
-message(STATUS "SCIP  development: " ${SCIP_DEV})
+if (NOT (${SCIP_DEV} STREQUAL  "OFF"))
+    message(STATUS "SCIP  development: " ${SCIP_DEV})
+endif()
 
 option(HiGHSDEV "HiGHS development" OFF)
-message(STATUS "HiGHS development: " ${HiGHSDEV})
+if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
+    message(STATUS "HiGHS development: " ${HiGHSDEV})
+endif()
+
+option(OSI_ROOT "Osi root folder." "OFF")
+if (NOT (${OSI_ROOT} STREQUAL "OFF"))
+    # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
+    message(STATUS "OSI root folder set: " ${OSI_ROOT})
+    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+endif ()
+unset(OSI_ROOT CACHE)
+
+include(CheckLanguage)
+check_language("Fortran")
+if(CMAKE_Fortran_COMPILER)
+    enable_language(Fortran)
+    set(FORTRAN_FOUND ON)
+else()
+    set(FORTRAN_FOUND OFF)
+endif(CMAKE_Fortran_COMPILER)
+
+find_package(PkgConfig)
+pkg_check_modules(OSI osi)
+# need to come before adding any targets (add_executable, add_library)
+link_directories(${OSI_LIBRARY_DIRS})
+
+option(GAMS_ROOT "GAMS root folder." "OFF")
+if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
+    message(STATUS "GAMS root folder set: " ${GAMS_ROOT})
+    set(GAMS_FOUND ON)
+else ()
+    set(GAMS_FOUND OFF)
+endif ()
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)

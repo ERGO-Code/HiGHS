@@ -18,6 +18,7 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "io/HighsIO.h"
 #include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
 #include "cxxopts.hpp"
@@ -77,6 +78,10 @@ struct HighsOptions
   FILE *logfile = stdout;
   FILE *output = stdout;
   unsigned int messageLevel = ML_MINIMAL;
+
+  void (*printmsgcb) (unsigned int level, const char* msg, void* msgcb_data) = NULL;
+  void (*logmsgcb) (HighsMessageType type, const char* msg, void* msgcb_data) = NULL;
+  void* msgcb_data = NULL;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
   //

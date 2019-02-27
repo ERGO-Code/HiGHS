@@ -76,7 +76,7 @@ class HighsTimer {
   /**
    * @brief Zero an external clock record
    */
-  int clockInit(
+  void clockInit(
 	       HighsClockRecord &x_clock   //!< Record for the external clock
 		) {
     x_clock.calls = 0;
@@ -90,7 +90,7 @@ class HighsTimer {
   /**
    * @brief Add to an external clock record
    */
-  int clockAdd(
+  void clockAdd(
 		HighsClockRecord x_clock,   //!< Record for the external clock
 		int i_clock                 //!< Clock of record to be added
 		) {
