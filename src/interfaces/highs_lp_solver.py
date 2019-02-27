@@ -1,5 +1,6 @@
 import ctypes
-highs = ctypes.cdll.LoadLibrary("../build/lib/libhighs.so") # change path
+import os
+highs = ctypes.cdll.LoadLibrary("libhighs.so") # highs lib folder must be in "LD_LIBRARY_PATH" environment variable
 
 highs.callhighs.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double))
 
