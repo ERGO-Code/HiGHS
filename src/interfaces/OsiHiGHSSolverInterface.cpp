@@ -502,7 +502,7 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const double rowlb, const double rowub) {
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addRow()\n");
   bool success = this->highs->addRow(rowlb, rowub, vec.getNumElements(),
-                                     vec.getIndices(), vec.getElements(), true);
+                                     vec.getIndices(), vec.getElements());
   assert(success);
 };
 
@@ -520,7 +520,7 @@ void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase &vec,
                                      const double obj) {
   HighsPrintMessage(ML_ALWAYS, "Calling OsiHiGHSSolverInterface::addCol()\n");
   bool success = this->highs->addCol(obj, collb, colub, vec.getNumElements(),
-                                     vec.getIndices(), vec.getElements(), true);
+                                     vec.getIndices(), vec.getElements());
   assert(success);
 }
 
