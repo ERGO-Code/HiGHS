@@ -19,7 +19,7 @@ http://www.maths.ed.ac.uk/hall/HuHa13/
 
 HSOL was originally written by Qi Huangfu, with features such as presolve,
 crash and advanced basis start added by Julian Hall and Ivet Galabova and
-further work by Michael Feldmeiher.
+further work by Michael Feldmeier.
 
 HSOL has been developed and tested on various linux installations
 using both the GNU (g++) and Intel (icc) C++ compilers.
