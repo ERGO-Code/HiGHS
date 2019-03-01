@@ -42,6 +42,5 @@
  * @brief Heapify function for sorting by increasing value
  */
   void max_heapify(double *heap_v, int *heap_i, int i, int n);
-//};
 
 #endif /* UTIL_HIGHSSORT_H_ */

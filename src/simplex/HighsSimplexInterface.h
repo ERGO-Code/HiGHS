@@ -46,15 +46,31 @@ class HighsSimplexInterface {
 			    const double *XAvalue
 			    );
   
-  HighsStatus util_delete_cols(
-			int XfromCol,
-			int XtoCol
-			);
+  HighsStatus delete_cols(
+			  int from_col,
+			  int to_col
+			  );
   
-  HighsStatus util_delete_col_set(
-			   int XnumCol,
-			   int* XcolSet
-			   );
+
+  HighsStatus delete_cols(
+			  int num_col,
+			  const int* col_set
+			  );
+  
+  HighsStatus delete_cols(
+			  const int* col_mask
+			  );
+  
+  HighsStatus delete_cols_general(
+				  bool interval,
+				  int from_col,
+				  int to_col,
+				  bool set,
+				  int num_col,
+				  const int* col_set,
+				  bool mask,
+				  const int* col_mask
+				  );
   
   HighsStatus util_extract_cols(
 			 int XfromCol, int XtoCol,
@@ -79,15 +95,32 @@ class HighsSimplexInterface {
 			    const int *XARindex,
 			    const double *XARvalue
 			    );
-  HighsStatus util_delete_rows(
-			int firstrow,
-			int lastrow
-			);
+
+  HighsStatus delete_rows(
+			  int from_row,
+			  int to_row
+			  );
   
-  HighsStatus util_delete_row_set(
-			   int XnumRow,
-			   int* XrowSet
-			   );
+
+  HighsStatus delete_rows(
+			  int num_row,
+			  const int* row_set
+			  );
+  
+  HighsStatus delete_rows(
+			  const int* row_mask
+			  );
+  
+  HighsStatus delete_rows_general(
+				  bool interval,
+				  int from_row,
+				  int to_row,
+				  bool set,
+				  int num_row,
+				  const int* row_set,
+				  bool mask,
+				  const int* row_mask
+				  );
   
   HighsStatus util_extract_rows(
 			 int firstrow,
@@ -117,18 +150,39 @@ class HighsSimplexInterface {
 			      int Xsense
 			      );
 
-// Change the costs for all columns
-  HighsStatus change_costs_all(
-			       const double* XcolCost
-			       );
+// Change the costs for an interval of columns
+  HighsStatus change_costs(
+			  int from_col,
+			  int to_col,
+			  const double* usr_col_cost
+			  );
+  
 
-// Change the costs for a set of columns
-  HighsStatus change_costs_set(
-			       int XnumColInSet,
-			       const int* XcolCostIndex,
-			       const double* XcolCostValue
-			       );
-
+// Change the costs from an ordered set of indices
+  HighsStatus change_costs(
+			   int num_col,
+			   const int* col_set,
+			   const double* usr_col_cost
+			   );
+  
+// Change the costs with a mask
+  HighsStatus change_costs(
+			   const int* col_mask,
+			   const double* usr_col_cost
+			   );
+  
+  HighsStatus change_costs_general(
+				  bool interval,
+				  int from_col,
+				  int to_col,
+				  bool set,
+				  int num_col,
+				  const int* col_set,
+				  bool mask,
+				  const int* col_mask,
+				  const double* usr_col_cost
+				  );
+  
 // Change the bounds for all columns
   HighsStatus change_col_bounds_all(
 				    const double* XcolLower,

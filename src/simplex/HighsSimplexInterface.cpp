@@ -112,14 +112,40 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 
 }
 
-HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
-  // Uses XtoCol in iterator style
+HighsStatus HighsSimplexInterface::delete_cols(int from_col, int to_col) {
+  return delete_cols_general(
+			     true, from_col, to_col,
+			     false, 0, NULL,
+			     false, NULL
+			     );
+}
+
+HighsStatus HighsSimplexInterface::delete_cols(int num_col, const int* col_set) {
+  return delete_cols_general(
+			     false, 0, 0,
+			     true, num_col, col_set,
+			     false, NULL
+			     );
+}
+
+HighsStatus HighsSimplexInterface::delete_cols(const int* col_mask) {
+  return delete_cols_general(
+			     false, 0, 0,
+			     false, 0, NULL,
+			     true, col_mask
+			     );
+}
+
+HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_col, int to_col,
+						       bool set, int num_col, const int* col_set,
+						       bool mask, const int* col_mask) {
+  // Uses to_col in iterator style
 #ifdef HiGHSDEV
-  printf("Called util_deleteCols(XfromCol=%d, XtoCol=%d)\n", XfromCol, XtoCol);
+  printf("Called util_deleteCols(from_col=%d, to_col=%d)\n", from_col, to_col);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromCol < 0 || XtoCol > lp.numCol_) return HighsStatus::Error;
-  if (XfromCol >= XtoCol) return HighsStatus::OK;
+  if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
+  if (from_col >= to_col) return HighsStatus::OK;
 
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
@@ -127,7 +153,7 @@ HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int numDeleteCol = XtoCol - XfromCol;
+  int numDeleteCol = to_col - from_col;
   if (numDeleteCol == 0) return HighsStatus::OK;
 
   int newNumCol = lp.numCol_ - numDeleteCol;
@@ -143,12 +169,12 @@ HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   }
 #endif
 
-  delete_cols_from_lp_vectors(lp, XfromCol, XtoCol);
-  if (valid_simplex_lp) delete_cols_from_lp_vectors(simplex_lp, XfromCol, XtoCol);
-  delete_cols_from_lp_matrix(lp, XfromCol, XtoCol);
-  if (valid_simplex_matrix) delete_cols_from_lp_matrix(simplex_lp, XfromCol, XtoCol);
+  delete_cols_from_lp_vectors(lp, from_col, to_col);
+  if (valid_simplex_lp) delete_cols_from_lp_vectors(simplex_lp, from_col, to_col);
+  delete_cols_from_lp_matrix(lp, from_col, to_col);
+  if (valid_simplex_matrix) delete_cols_from_lp_matrix(simplex_lp, from_col, to_col);
 
-  for (int col = XfromCol; col < lp.numCol_ - numDeleteCol; col++) {
+  for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) {
     scale.col_[col] = scale.col_[col + numDeleteCol];
   }
 
@@ -164,12 +190,6 @@ HighsStatus HighsSimplexInterface::util_delete_cols(int XfromCol, int XtoCol) {
   simplex_basis.valid_ = false;
   
 }
-
-HighsStatus HighsSimplexInterface::util_delete_col_set(int XnumCol, int* XcolSet) {
-  printf("util_delete_col_set not implemented");
-  assert(1 == 0);
-}
-
 
 HighsStatus HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* XcolLower, double* XcolUpper,
 						     int* XnumNZ, int* XAstart, int* XAindex, double* XAvalue) {
@@ -327,19 +347,45 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
 }
 
-HighsStatus HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
-  // Uses XtoRow in iterator style
+HighsStatus HighsSimplexInterface::delete_rows(int from_row, int to_row) {
+  return delete_rows_general(
+			     true, from_row, to_row,
+			     false, 0, NULL,
+			     false, NULL
+			     );
+}
+
+HighsStatus HighsSimplexInterface::delete_rows(int num_row, const int* row_set) {
+  return delete_rows_general(
+			     false, 0, 0,
+			     true, num_row, row_set,
+			     false, NULL
+			     );
+}
+
+HighsStatus HighsSimplexInterface::delete_rows(const int* row_mask) {
+  return delete_rows_general(
+			     false, 0, 0,
+			     false, 0, NULL,
+			     true, row_mask
+			     );
+}
+
+HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_row, int to_row,
+						       bool set, int num_row, const int* row_set,
+						       bool mask, const int* row_mask) {
+  // Uses to_row in iterator style
 #ifdef HiGHSDEV
-  printf("Called model.util_deleteRows(XfromRow=%d, XtoRow=%d)\n", XfromRow, XtoRow);
+  printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row, to_row);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromRow < 0 || XtoRow > lp.numRow_) return HighsStatus::Error;
-  if (XfromRow >= XtoRow) return HighsStatus::OK;
+  if (from_row < 0 || to_row > lp.numRow_) return HighsStatus::Error;
+  if (from_row >= to_row) return HighsStatus::OK;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
 
-  int numDeleteRow = XtoRow - XfromRow;
+  int numDeleteRow = to_row - from_row;
   if (numDeleteRow == 0) return HighsStatus::OK;
 
   int newNumRow = lp.numRow_ - numDeleteRow;
@@ -355,12 +401,12 @@ HighsStatus HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   }
 #endif
 
-  delete_rows_from_lp_vectors(lp, XfromRow, XtoRow);
-  if (valid_simplex_lp) delete_rows_from_lp_vectors(simplex_lp, XfromRow, XtoRow);
-  delete_rows_from_lp_matrix(lp, XfromRow, XtoRow);
-  if (valid_simplex_matrix) delete_rows_from_lp_matrix(simplex_lp, XfromRow, XtoRow);
+  delete_rows_from_lp_vectors(lp, from_row, to_row);
+  if (valid_simplex_lp) delete_rows_from_lp_vectors(simplex_lp, from_row, to_row);
+  delete_rows_from_lp_matrix(lp, from_row, to_row);
+  if (valid_simplex_matrix) delete_rows_from_lp_matrix(simplex_lp, from_row, to_row);
 
-  for (int row = XfromRow; row < lp.numRow_ - numDeleteRow; row++) {
+  for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++) {
     scale.row_[row] = scale.row_[row + numDeleteRow];
   }
 
@@ -372,8 +418,8 @@ HighsStatus HighsSimplexInterface::util_delete_rows(int XfromRow, int XtoRow) {
   update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
 }
 
-HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet) {
   /*
+HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet) {
   HighsLp &lp = highs_model_object.lp_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -493,8 +539,8 @@ HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet
     // Determine consequences for basis when deleting rows to leave no basis
   update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
   }
-  */
 }
+  */
 
 
 HighsStatus HighsSimplexInterface::util_extract_rows(
@@ -612,23 +658,52 @@ HighsStatus HighsSimplexInterface::change_ObjSense(int Xsense){
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::change_costs_all(const double* XcolCost) {
-  if (XcolCost == NULL) return HighsStatus::Error;
+HighsStatus HighsSimplexInterface::change_costs(int from_col, int to_col, const double* usr_col_cost) {
+  return change_costs_general(
+			      true, from_col, to_col,
+			      false, 0, NULL,
+			      false, NULL,
+			      usr_col_cost);
+}
+
+HighsStatus HighsSimplexInterface::change_costs(int num_col, const int* col_set, const double* usr_col_cost) {
+  return change_costs_general(
+			      false, 0, 0,
+			      true, num_col, col_set,
+			      false, NULL,
+			      usr_col_cost);
+}
+
+HighsStatus HighsSimplexInterface::change_costs(const int* col_mask, const double* usr_col_cost) {
+  return change_costs_general(
+			      false, 0, 0,
+			      false, 0, NULL,
+			      true, col_mask,
+			      usr_col_cost);
+}
+
+HighsStatus HighsSimplexInterface::change_costs_general(
+							bool interval, int from_col, int to_col,
+							bool set, int num_col, const int* col_set,
+							bool mask, const int* col_mask,
+							const double* usr_col_cost) {
+  if (usr_col_cost == NULL) return HighsStatus::Error;
   // Change the LP costs
   HighsLp &lp = highs_model_object.lp_;
-  for (int col = 0; col < lp.numCol_; ++col) lp.colCost_[col] = XcolCost[col];
+  for (int col = 0; col < lp.numCol_; ++col) lp.colCost_[col] = usr_col_cost[col];
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.valid) {
     // Change the simplex LP costs
     HighsLp &simplex_lp = highs_model_object.simplex_lp_;
     HighsScale &scale = highs_model_object.scale_;
-    for (int col = 0; col < simplex_lp.numCol_; ++col) simplex_lp.colCost_[col] = XcolCost[col] * scale.col_[col];
+    for (int col = 0; col < simplex_lp.numCol_; ++col) simplex_lp.colCost_[col] = usr_col_cost[col] * scale.col_[col];
     // Deduce the consequences of new costs
     update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
   }
   return HighsStatus::OK;
 }
 
+/*
 HighsStatus HighsSimplexInterface::change_costs_set(int XnumColInSet, const int* XcolCostIndex, const double* XcolCostValue) {
   if (XcolCostIndex == NULL) return HighsStatus::Error;
   if (XcolCostValue == NULL) return HighsStatus::Error;
@@ -654,6 +729,7 @@ HighsStatus HighsSimplexInterface::change_costs_set(int XnumColInSet, const int*
   }
   return HighsStatus::OK;
 }
+*/
 
 HighsStatus HighsSimplexInterface::change_col_bounds_all(const double* XcolLower, const double* XcolUpper){
   HighsStatus return_status = HighsStatus::NotSet;

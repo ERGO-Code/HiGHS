@@ -456,7 +456,7 @@ bool Highs::changeObjCoef(int index, double coef) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_costs_set(1, &index, &coef);
+    interface.change_costs(1, &index, &coef);
   }
   return true;
 }
@@ -469,7 +469,7 @@ bool Highs::deleteRows(const int n, const int *indices) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    interface.util_delete_row_set(n, (int*)indices);
+    interface.delete_rows(n, indices);
   }
   return true;
 }
@@ -481,7 +481,7 @@ bool Highs::deleteCols(const int n, const int *indices) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.util_delete_col_set(n, (int*)indices);
+    interface.delete_cols(n, indices);
   }
   return true;
 }
@@ -495,7 +495,7 @@ bool Highs::changeObjCoefs(int n, int* index, double* coef) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_costs_set(n, index, coef);
+    interface.change_costs(n, index, coef);
   }
   return true;  
 }
