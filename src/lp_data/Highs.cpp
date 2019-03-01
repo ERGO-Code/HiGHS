@@ -399,7 +399,7 @@ bool Highs::changeRowBounds(int index, double lower, double higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_row_bounds_set(1, &index, &lower, &higher);
+    interface.change_row_bounds(1, &index, &lower, &higher);
   }
   return true;
 }
@@ -412,7 +412,7 @@ bool Highs::changeColBounds(int index, double lower, double higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_col_bounds_set(1, &index, &lower, &higher);
+    interface.change_col_bounds(1, &index, &lower, &higher);
   }
   return true;
 }
@@ -428,7 +428,7 @@ bool Highs::changeRowsBounds(int n, int *index, double *lower, double *higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_row_bounds_set(n, index, lower, higher);
+    interface.change_row_bounds(n, index, lower, higher);
   }
   return true;
 }
@@ -444,7 +444,7 @@ bool Highs::changeColsBounds(int n, int *index, double *lower, double *higher) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_col_bounds_set(n, index, lower, higher);
+    interface.change_col_bounds(n, index, lower, higher);
   }
   return true;
 }

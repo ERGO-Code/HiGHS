@@ -53,7 +53,7 @@ class HighsSimplexInterface {
   
 
   HighsStatus delete_cols(
-			  int num_col,
+			  int num_set_entries,
 			  const int* col_set
 			  );
   
@@ -66,7 +66,7 @@ class HighsSimplexInterface {
 				  int from_col,
 				  int to_col,
 				  bool set,
-				  int num_col,
+				  int num_set_entries,
 				  const int* col_set,
 				  bool mask,
 				  const int* col_mask
@@ -103,7 +103,7 @@ class HighsSimplexInterface {
   
 
   HighsStatus delete_rows(
-			  int num_row,
+			  int num_set_entries,
 			  const int* row_set
 			  );
   
@@ -116,7 +116,7 @@ class HighsSimplexInterface {
 				  int from_row,
 				  int to_row,
 				  bool set,
-				  int num_row,
+				  int num_set_entries,
 				  const int* row_set,
 				  bool mask,
 				  const int* row_mask
@@ -160,7 +160,7 @@ class HighsSimplexInterface {
 
 // Change the costs from an ordered set of indices
   HighsStatus change_costs(
-			   int num_col,
+			   int num_set_entries,
 			   const int* col_set,
 			   const double* usr_col_cost
 			   );
@@ -176,41 +176,87 @@ class HighsSimplexInterface {
 				  int from_col,
 				  int to_col,
 				  bool set,
-				  int num_col,
+				  int num_set_entries,
 				  const int* col_set,
 				  bool mask,
 				  const int* col_mask,
 				  const double* usr_col_cost
 				  );
   
-// Change the bounds for all columns
-  HighsStatus change_col_bounds_all(
-				    const double* XcolLower,
-				    const double* XcolUpper
-				    );
-
-// Change the bounds for a set of columns
-  HighsStatus change_col_bounds_set(
-				    int ncols,
-				    const int* XcolBoundIndex,
-				    const double* XcolLowerValues,
-				    const double* XcolUpperValues
-				    );
-
-// Change the bounds for all rows
-  HighsStatus change_row_bounds_all(
-				    const double* XrowLower,
-				    const double* XrowUpper
-				    );
-
-// Change the bounds for a set of rows
-  HighsStatus change_row_bounds_set(
-				    int nrows,
-				    const int* XrowBoundIndex,
-				    const double* XrowLowerValues,
-				    const double* XrowUpperValues
-				    );
+// Change the bounds for an interval of columns
+  HighsStatus change_col_bounds(
+			  int from_col,
+			  int to_col,
+			  const double* usr_col_lower,
+			  const double* usr_col_upper
+			  );
   
+
+// Change the bounds from an ordered set of indices
+  HighsStatus change_col_bounds(
+			   int num_set_entries,
+			   const int* col_set,
+			   const double* usr_col_lower,
+			   const double* usr_col_upper
+			   );
+  
+// Change the bounds with a mask
+  HighsStatus change_col_bounds(
+			   const int* col_mask,
+			   const double* usr_col_lower,
+			   const double* usr_col_upper
+			   );
+  
+  HighsStatus change_col_bounds_general(
+				  bool interval,
+				  int from_col,
+				  int to_col,
+				  bool set,
+				  int num_set_entries,
+				  const int* col_set,
+				  bool mask,
+				  const int* col_mask,
+				  const double* usr_col_lower,
+				  const double* usr_col_upper
+				  );
+
+// Change the bounds for an interval of rows
+  HighsStatus change_row_bounds(
+			  int from_row,
+			  int to_row,
+			  const double* usr_row_lower,
+			  const double* usr_row_upper
+			  );
+  
+
+// Change the bounds from an ordered set of indices
+  HighsStatus change_row_bounds(
+			   int num_set_entries,
+			   const int* row_set,
+			   const double* usr_row_lower,
+			   const double* usr_row_upper
+			   );
+  
+// Change the bounds with a mask
+  HighsStatus change_row_bounds(
+			   const int* row_mask,
+			   const double* usr_row_lower,
+			   const double* usr_row_upper
+			   );
+  
+  HighsStatus change_row_bounds_general(
+				  bool interval,
+				  int from_row,
+				  int to_row,
+				  bool set,
+				  int num_set_entries,
+				  const int* row_set,
+				  bool mask,
+				  const int* row_mask,
+				  const double* usr_row_lower,
+				  const double* usr_row_upper
+				  );
+
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void change_update_method(
