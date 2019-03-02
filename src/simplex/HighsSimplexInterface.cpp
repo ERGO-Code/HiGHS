@@ -690,49 +690,16 @@ HighsStatus HighsSimplexInterface::change_costs_general(
 							bool set, int num_set_entries, const int* col_set,
 							bool mask, const int* col_mask,
 							const double* usr_col_cost) {
-  if (usr_col_cost == NULL) return HighsStatus::Error;
-  // Change the LP costs
-  HighsLp &lp = highs_model_object.lp_;
-  for (int col = 0; col < lp.numCol_; ++col) lp.colCost_[col] = usr_col_cost[col];
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  if (simplex_lp_status.valid) {
-    // Change the simplex LP costs
-    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-    HighsScale &scale = highs_model_object.scale_;
-    for (int col = 0; col < simplex_lp.numCol_; ++col) simplex_lp.colCost_[col] = usr_col_cost[col] * scale.col_[col];
-    // Deduce the consequences of new costs
-    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
-  }
-  return HighsStatus::OK;
+  HighsStatus call_status = change_lp_costs(highs_model_object.lp_, 
+					    interval, from_col, to_col,
+					    set, num_set_entries, col_set,
+					    mask, col_mask,
+					    usr_col_cost, highs_model_object.options_.infinite_cost);
+ if (call_status == HighsStatus::Error) return HighsStatus::Error;
+ // Deduce the consequences of new costs
+ update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_COSTS);
+ return HighsStatus::OK;
 }
-
-/*
-HighsStatus HighsSimplexInterface::change_costs_set(int XnumColInSet, const int* XcolCostIndex, const double* XcolCostValue) {
-  if (XcolCostIndex == NULL) return HighsStatus::Error;
-  if (XcolCostValue == NULL) return HighsStatus::Error;
-  HighsLp &lp = highs_model_object.lp_;
-  // Change a set of LP costs
-  for (int ix = 0; ix < XnumColInSet; ++ix) {
-    int col = XcolCostIndex[ix];
-    if (col < 0 || col >= lp.numCol_) return HighsStatus::Error;
-    lp.colCost_[col] = XcolCostValue[ix];
-  }
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  if (simplex_lp_status.valid) {
-    // Change a set of simplex LP costs
-    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-    HighsScale &scale = highs_model_object.scale_;
-    for (int ix = 0; ix < XnumColInSet; ++ix) {
-      int col = XcolCostIndex[ix];
-      if (col < 0 || col >= simplex_lp.numCol_) return HighsStatus::Error;
-      simplex_lp.colCost_[col] = XcolCostValue[ix] * scale.col_[col];
-    }
-    // Deduce the consequences of new costs
-    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COSTS);
-  }
-  return HighsStatus::OK;
-}
-*/
 
 HighsStatus HighsSimplexInterface::change_col_bounds(int from_col, int to_col, const double* usr_col_lower, const double* usr_col_upper) {
   return change_col_bounds_general(
@@ -763,44 +730,15 @@ HighsStatus HighsSimplexInterface::change_col_bounds_general(
 							bool set, int num_set_entries, const int* col_set,
 							bool mask, const int* col_mask,
 							const double* usr_col_lower, const double* usr_col_upper) {
-  /*
-  HighsStatus return_status = HighsStatus::NotSet;
-  if (XcolLower == NULL) return HighsStatus::Error;
-  if (XcolUpper == NULL) return HighsStatus::Error;
-
-  HighsLp &lp = highs_model_object.lp_;
-  HighsOptions &options = highs_model_object.options_;
-  HighsStatus call_status;
-  bool normalise = false;
-  call_status = assessBounds("Col", 0, lp.numCol_, (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
-  if (return_status == HighsStatus::Error) return return_status;
-  
-  for (int col = 0; col < lp.numCol_; ++col) {
-    lp.colLower_[col] = XcolLower[col];
-    lp.colUpper_[col] = XcolUpper[col];
-  }
-  normalise = true;
-  call_status = assessBounds("Col", 0, lp.numCol_, &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
-  if (return_status == HighsStatus::Error) return return_status;
-
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  if (simplex_lp_status.valid) {
-    // Change all simplex LP bounds
-    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-    HighsScale &scale = highs_model_object.scale_;
-    for (int col = 0; col < lp.numCol_; ++col) {
-      simplex_lp.colLower_[col] = lp.colLower_[col];
-      simplex_lp.colUpper_[col] = lp.colUpper_[col];
-    }
-    call_status = assessBounds("Col", 0, simplex_lp.numCol_, &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0], options.infinite_bound, normalise);
-    // TODO Scale the simplex LP bounds
-
-    // Deduce the consequences of new bounds
-    update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
-  }
-  return return_status;
-  */
+ HighsStatus call_status = change_lp_col_bounds(highs_model_object.lp_, 
+						interval, from_col, to_col,
+						set, num_set_entries, col_set,
+						mask, col_mask,
+						usr_col_lower, usr_col_upper, highs_model_object.options_.infinite_bound);
+ if (call_status == HighsStatus::Error) return HighsStatus::Error;
+ // Deduce the consequences of new bounds
+ update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+ return HighsStatus::OK;
 }
 
 HighsStatus HighsSimplexInterface::change_row_bounds(int from_row, int to_row, const double* usr_row_lower, const double* usr_row_upper) {
@@ -832,27 +770,15 @@ HighsStatus HighsSimplexInterface::change_row_bounds_general(
 							bool set, int num_set_entries, const int* row_set,
 							bool mask, const int* row_mask,
 							const double* usr_row_lower, const double* usr_row_upper) {
-  /*
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  assert(XrowLower != NULL);
-  assert(XrowUpper != NULL);
-  for (int row = 0; row < simplex_lp.numRow_; ++row) {
-    double lower = XrowLower[row];
-    double upper = XrowUpper[row];
-    // Check that the lower bound is not being set to +Inf
-    if (highs_isInfinity(lower)) return HighsStatus::Error;// row + 1;
-    // Check that the lower bound is not being set to +Inf
-    if (highs_isInfinity(-upper)) return HighsStatus::Error;//-(row + 1);
-    simplex_lp.rowLower_[row] = (highs_isInfinity(-lower) ? lower : lower * scale.row_[row]);
-    simplex_lp.rowUpper_[row] = (highs_isInfinity(upper) ? upper : upper * scale.row_[row]);
-  }
-  // Deduce the consequences of new bounds
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BOUNDS);
-  return HighsStatus::OK;
-  */
+ HighsStatus call_status = change_lp_row_bounds(highs_model_object.lp_, 
+						interval, from_row, to_row,
+						set, num_set_entries, row_set,
+						mask, row_mask,
+						usr_row_lower, usr_row_upper, highs_model_object.options_.infinite_bound);
+ if (call_status == HighsStatus::Error) return HighsStatus::Error;
+ // Deduce the consequences of new bounds
+ update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+ return HighsStatus::OK;
 }
 
 
