@@ -270,12 +270,13 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
-  call_status = assess_bounds("Row", lp.numRow_, 0, true, 0, XnumNewRow, false, 0, NULL, false, NULL,
+  call_status = assess_bounds("Row", lp.numRow_, XnumNewRow, true, 0, XnumNewRow, false, 0, NULL, false, NULL,
 			      (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   
   if (XnumNewNZ) {
-    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow, XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow,
+			       XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
@@ -286,7 +287,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
   // Normalise the LP row bounds
   normalise = true;
-  call_status = assess_bounds("Row", lp.numRow_, 0, true, 0, newNumRow, false, 0, NULL, false, NULL,
+  call_status = assess_bounds("Row", lp.numRow_, newNumRow, true, 0, newNumRow, false, 0, NULL, false, NULL,
 			     &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
@@ -301,7 +302,8 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
     std::memcpy(lc_XARvalue, XARvalue, sizeof(double)*XnumNewNZ);
     // Normalise the new matrix columns
     normalise = true;
-    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue,
+    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow,
+			       lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     if (lc_XnumNewNZ) {
       // Append rows to LP matrix
@@ -311,7 +313,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
   if (valid_simplex_lp) {
     append_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
-    call_status = assess_bounds("Row", simplex_lp.numRow_, 0, true, 0, newNumRow, false, 0, NULL, false, NULL,
+    call_status = assess_bounds("Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow, false, 0, NULL, false, NULL,
 				&simplex_lp.colLower_[0], &simplex_lp.colUpper_[0], options.infinite_bound, normalise);
     return_status = worseStatus(call_status, return_status);
   }
