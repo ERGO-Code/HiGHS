@@ -96,6 +96,21 @@ HighsStatus assess_interval_set_mask(
 				     int to_k
 				     );
 
+void update_delete_keep_ix(const int ix_dim, 
+				  const bool interval,
+				  const int from_ix,
+				  const int to_ix,
+				  const bool set,
+				  int num_set_entries,
+				  const int* ix_set,
+				  const bool mask,
+				  const int* ix_mask,
+				  int& delete_from_ix,
+				  int& delete_to_ix,
+				  int& keep_from_ix,
+				  int& keep_to_ix,
+				  int& current_set_entry);
+
 HighsStatus add_lp_cols(
 			HighsLp& lp,
 			const int XnumNewCol,
