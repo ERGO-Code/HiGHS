@@ -178,39 +178,43 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp,
 			   const double *XARvalue
 			   );
 
-HighsStatus delete_lp_cols(HighsLp &lp,
-			      int XfromCol,
-			      int XtoCol
-			      );
+HighsStatus delete_lp_cols(
+			   HighsLp &lp,
+			   bool interval, int from_col, int to_col,
+			   bool set, int num_set_entries, const int* col_set,
+			   bool mask, const int* col_mask,
+			   bool valid_matrix);
 
 HighsStatus delete_cols_from_lp_vectors(
-			      HighsLp &lp,
-			      int XfromCol,
-			      int XtoCol
-			      );
+			   HighsLp &lp,
+			   bool interval, int from_col, int to_col,
+			   bool set, int num_set_entries, const int* col_set,
+			   bool mask, const int* col_mask);
 
 HighsStatus delete_cols_from_lp_matrix(
-			     HighsLp &lp,
-			     int XfromCol,
-			     int XtoCol
-			     );
+			   HighsLp &lp,
+			   bool interval, int from_col, int to_col,
+			   bool set, int num_set_entries, const int* col_set,
+			   bool mask, const int* col_mask);
 
-HighsStatus delete_lp_rows(HighsLp &lp,
-			      int XfromRow,
-			      int XtoRow
-			      );
+HighsStatus delete_lp_rows(
+			   HighsLp &lp,
+			   bool interval, int from_row, int to_row,
+			   bool set, int num_set_entries, const int* row_set,
+			   bool mask, const int* row_mask,
+			   bool valid_matrix);
 
 HighsStatus delete_rows_from_lp_vectors(
-			      HighsLp &lp,
-			      int XfromRow,
-			      int XtoRow
-			      );
+			   HighsLp &lp,
+			   bool interval, int from_row, int to_row,
+			   bool set, int num_set_entries, const int* row_set,
+			   bool mask, const int* row_mask);
 
 HighsStatus delete_rows_from_lp_matrix(
-			     HighsLp &lp,
-			     int XfromRow,
-			     int XtoRow
-			     );
+			   HighsLp &lp,
+			   bool interval, int from_row, int to_row,
+			   bool set, int num_set_entries, const int* row_set,
+			   bool mask, const int* row_mask);
 
 HighsStatus change_lp_matrix_coefficient(
 				  HighsLp &lp,

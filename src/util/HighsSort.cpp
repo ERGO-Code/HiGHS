@@ -11,6 +11,7 @@
  * @brief Sorting routines for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
+#include "lp_data/HConst.h"
 #include "util/HighsSort.h"
 #include <cstddef>
 
@@ -102,29 +103,39 @@ void max_heapify(double *heap_v, int *heap_i, int i, int n) {
   return;
 }
 
-bool increasing_set_ok(int *set, int set_num_entries, int set_entry_lower, int set_entry_upper) {
+bool increasing_set_ok(const int *set, const int set_num_entries, const int set_entry_lower, const int set_entry_upper) {
   if (set_num_entries < 0) return false;
-  if (set_entry_lower > set_entry_upper) return false;
   if (set == NULL) return false;
-  int previous_entry = set_entry_lower;
+  bool check_bounds = set_entry_lower <= set_entry_upper;
+  int previous_entry;
+  if (check_bounds) {
+    previous_entry = set_entry_lower;
+  } else {
+    previous_entry = -HIGHS_CONST_I_INF;
+  }
   for (int k = 0; k < set_num_entries; k++) {
     int entry = set[k];
     if (entry < previous_entry) return false;
-    if (entry > set_entry_upper) return false;
+    if (check_bounds && entry > set_entry_upper) return false;
     previous_entry = entry;
   }
   return true;			
 }
 
-bool increasing_set_ok(double *set, int set_num_entries, double set_entry_lower, double set_entry_upper) {
+bool increasing_set_ok(const double *set, const int set_num_entries, const double set_entry_lower, const double set_entry_upper) {
   if (set_num_entries < 0) return false;
-  if (set_entry_lower > set_entry_upper) return false;
   if (set == NULL) return false;
-  double previous_entry = set_entry_lower;
+  bool check_bounds = set_entry_lower <= set_entry_upper;
+  double previous_entry;
+  if (check_bounds) {
+    previous_entry = set_entry_lower;
+  } else {
+    previous_entry = -HIGHS_CONST_INF;;
+  }
   for (int k = 0; k < set_num_entries; k++) {
     double entry = set[k];
     if (entry < previous_entry) return false;
-    if (entry > set_entry_upper) return false;
+    if (check_bounds && entry > set_entry_upper) return false;
     previous_entry = entry;
   }
   return true;			

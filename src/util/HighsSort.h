@@ -72,11 +72,11 @@ void max_heapify(double *heap_v, int *heap_i, int i, int n);
 /**
  * @brief Check that a set of integers is in increasing order and in bounds
  */
-bool increasing_set_ok(int *set, int set_num_entries, int set_entry_lower, int set_entry_upper);
+bool increasing_set_ok(const int *set, const int set_num_entries, const int set_entry_lower, const int set_entry_upper);
 
 /**
  * @brief Check that a set of doubles is in increasing order and in bounds
  */
-bool increasing_set_ok(double *set, int set_num_entries, double set_entry_lower, double set_entry_upper);
+bool increasing_set_ok(const double *set, const int set_num_entries, const double set_entry_lower, const double set_entry_upper);
 
 #endif /* UTIL_HIGHSSORT_H_ */

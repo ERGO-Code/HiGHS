@@ -44,13 +44,20 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   REQUIRE(error1 == false);  
 
   // Use the indices of the previous sort as a vector of integers to sort
-  for (int ix = 0; ix < num_values; ix++) int_values[ix] = indices[1+ix];
+  for (int ix = 0; ix < num_values; ix++) {
+    double_values[ix] = double_values[ix+1];
+    int_values[ix] = indices[1+ix];
+  }
   std::make_heap(int_values.begin(), int_values.end());
   std::sort_heap(int_values.begin(), int_values.end());
   //  maxheapsort(&int_values[0], num_values);
 
+  bool ok;
   // Check that the values in the vector of integers are ascending
-  bool ok = increasing_set_ok(&int_values[0], num_values, 0, num_values);
+  ok = increasing_set_ok(&double_values[0], num_values, 0, 1);
+  REQUIRE(ok == true);  
 
+  // Check that the values in the vector of integers are ascending
+  ok = increasing_set_ok(&int_values[0], num_values, 0, num_values);
   REQUIRE(ok == true);  
 }

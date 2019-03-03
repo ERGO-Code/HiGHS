@@ -153,9 +153,7 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int numDeleteCol = to_col - from_col;
-  if (numDeleteCol == 0) return HighsStatus::OK;
-
+  int numDeleteCol = 0;// TODO Fix this
   int newNumCol = lp.numCol_ - numDeleteCol;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
@@ -168,11 +166,20 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
     assert(!valid_simplex_matrix);
   }
 #endif
-
-  delete_cols_from_lp_vectors(lp, from_col, to_col);
-  if (valid_simplex_lp) delete_cols_from_lp_vectors(simplex_lp, from_col, to_col);
-  delete_cols_from_lp_matrix(lp, from_col, to_col);
-  if (valid_simplex_matrix) delete_cols_from_lp_matrix(simplex_lp, from_col, to_col);
+  bool valid_matrix = true;
+  delete_lp_cols(lp, 
+		 interval, from_col, to_col,
+		 set, num_set_entries, col_set,
+		 mask, col_mask,
+		 valid_matrix);
+  
+  if (valid_simplex_lp) {
+    delete_lp_cols(simplex_lp, 
+		   interval, from_col, to_col,
+		   set, num_set_entries, col_set,
+		   mask, col_mask,
+		   valid_simplex_matrix);
+  }
 
   for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) {
     scale.col_[col] = scale.col_[col + numDeleteCol];
@@ -388,7 +395,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
 
-  int numDeleteRow = to_row - from_row;
+  int numDeleteRow = 0;//TODO Fix this
   if (numDeleteRow == 0) return HighsStatus::OK;
 
   int newNumRow = lp.numRow_ - numDeleteRow;
@@ -404,10 +411,20 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
   }
 #endif
 
-  delete_rows_from_lp_vectors(lp, from_row, to_row);
-  if (valid_simplex_lp) delete_rows_from_lp_vectors(simplex_lp, from_row, to_row);
-  delete_rows_from_lp_matrix(lp, from_row, to_row);
-  if (valid_simplex_matrix) delete_rows_from_lp_matrix(simplex_lp, from_row, to_row);
+  bool valid_matrix = true;
+  delete_lp_rows(lp, 
+		 interval, from_row, to_row,
+		 set, num_set_entries, row_set,
+		 mask, row_mask,
+		 valid_matrix);
+  
+  if (valid_simplex_lp) {
+    delete_lp_rows(simplex_lp, 
+		   interval, from_row, to_row,
+		   set, num_set_entries, row_set,
+		   mask, row_mask,
+		   valid_simplex_matrix);
+  }
 
   for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++) {
     scale.row_[row] = scale.row_[row + numDeleteRow];
