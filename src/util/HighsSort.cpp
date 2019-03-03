@@ -12,6 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "util/HighsSort.h"
+#include <cstddef>
 
 void maxheapsort(int *heap_v, int n) {
   build_maxheap(heap_v, n);
@@ -99,4 +100,32 @@ void max_heapify(double *heap_v, int *heap_i, int i, int n) {
   heap_v[j / 2] = temp_v;
   heap_i[j / 2] = temp_i;
   return;
+}
+
+bool increasing_set_ok(int *set, int set_num_entries, int set_entry_lower, int set_entry_upper) {
+  if (set_num_entries < 0) return false;
+  if (set_entry_lower > set_entry_upper) return false;
+  if (set == NULL) return false;
+  int previous_entry = set_entry_lower;
+  for (int k = 0; k < set_num_entries; k++) {
+    int entry = set[k];
+    if (entry < previous_entry) return false;
+    if (entry > set_entry_upper) return false;
+    previous_entry = entry;
+  }
+  return true;			
+}
+
+bool increasing_set_ok(double *set, int set_num_entries, double set_entry_lower, double set_entry_upper) {
+  if (set_num_entries < 0) return false;
+  if (set_entry_lower > set_entry_upper) return false;
+  if (set == NULL) return false;
+  double previous_entry = set_entry_lower;
+  for (int k = 0; k < set_num_entries; k++) {
+    double entry = set[k];
+    if (entry < previous_entry) return false;
+    if (entry > set_entry_upper) return false;
+    previous_entry = entry;
+  }
+  return true;			
 }

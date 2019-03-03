@@ -8,7 +8,7 @@
 // No commas in test case name.
 TEST_CASE("HiGHS_sort", "[highs_data]") {
 
-  int num_values = 1000;
+  int num_values = 10;
   std::vector<int> indices;
   std::vector<int> int_values;
   std::vector<double> double_values;
@@ -50,13 +50,7 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   //  maxheapsort(&int_values[0], num_values);
 
   // Check that the values in the vector of integers are ascending
-  error0 = false;
-  int previous_int = -1;
-  for (int ix = 0; ix < num_values; ix++) {
-    //    printf("%2d: %2d\n", ix, int_values[ix]);
-    error0 = error0 || int_values[ix] < previous_int;
-    previous_int = int_values[ix];
-  }
+  bool ok = increasing_set_ok(&int_values[0], num_values, 0, num_values);
 
-  REQUIRE(error0 == false);  
+  REQUIRE(ok == true);  
 }
