@@ -578,21 +578,22 @@ void update_delete_keep_ix(const int ix_dim,
     delete_to_ix = delete_from_ix+1;
     current_set_entry++;
     int current_set_entry0 = current_set_entry;
-    for (int set_entry = current_set_entry0; set_entry < num_set_entries+1; set_entry++) {
+    for (int set_entry = current_set_entry0; set_entry < num_set_entries; set_entry++) {
       int ix = ix_set[set_entry];
-      if (ix > delete_from_ix+1) break;
-      current_set_entry++;
+      if (ix > delete_to_ix) break;
       delete_to_ix = ix_set[current_set_entry]+1;
+      current_set_entry++;
     }
     keep_from_ix = delete_to_ix;
-    if (current_set_entry == num_set_entries) {
+    if (current_set_entry < num_set_entries) {
+      keep_to_ix = ix_set[current_set_entry];
+    } else {
       // Account for getting to the end of the set
       keep_to_ix = ix_dim;
-    } else {
-      keep_to_ix = ix_set[current_set_entry];
     }
   } else {
     delete_from_ix = keep_to_ix;
+    delete_to_ix = ix_dim;
     for (int ix = keep_to_ix; ix < ix_dim; ix++) {
       if (!ix_mask[ix]) {
 	delete_to_ix = ix;
@@ -600,6 +601,7 @@ void update_delete_keep_ix(const int ix_dim,
       }
     }
     keep_from_ix = delete_to_ix;
+    keep_to_ix = ix_dim;
     for (int ix = delete_to_ix; ix < ix_dim; ix++) {
       if (ix_mask[ix]) {
 	keep_to_ix = ix;
