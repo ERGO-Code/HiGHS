@@ -28,6 +28,8 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
+  if (XnumNewCol > 0) if (isColDataNull(XcolCost, XcolLower,  XcolUpper)) return HighsStatus::Error;
+  if (XnumNewNZ > 0) if (isMatrixDataNull(XAstart, XAindex, XAvalue)) return HighsStatus::Error;
 
   HighsLp &lp = highs_model_object.lp_;
   HighsOptions &options = highs_model_object.options_;
@@ -236,6 +238,8 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
+  if (XnumNewRow > 0) if (isRowDataNull(XrowLower, XrowUpper)) return HighsStatus::Error;
+  if (XnumNewNZ > 0) if (isMatrixDataNull(XARstart, XARindex, XARvalue)) return HighsStatus::Error;
 
   HighsLp &lp = highs_model_object.lp_;
   HighsOptions &options = highs_model_object.options_;

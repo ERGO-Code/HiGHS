@@ -227,7 +227,7 @@ HighsStatus assess_costs(const int col_ix_os,
 			 const bool mask, const int* col_mask,
 			 const double* usr_col_cost,
 			 const double infinite_cost) {
-   // Check parameters for technique and, if OK set the loop limits - in iterator style
+  // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
   HighsStatus return_status = assess_interval_set_mask(col_dim,
@@ -269,7 +269,7 @@ HighsStatus assess_bounds(const char* type, const int ix_os,
 			  const bool mask, const int* ix_mask,
 			  double* usr_lower, double* usr_upper,
 			  const double infinite_bound, bool normalise) {
-   // Check parameters for technique and, if OK set the loop limits - in iterator style
+  // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
   HighsStatus return_status = assess_interval_set_mask(ix_dim,
@@ -615,13 +615,16 @@ HighsStatus add_lp_cols(HighsLp& lp,
 			const int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 			const int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue,
 			const HighsOptions& options) {
-  HighsStatus return_status = HighsStatus::NotSet;
   const bool valid_matrix = true;
-  HighsStatus call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+  if (XnumNewCol < 0) return HighsStatus::Error;
+  if (XnumNewCol == 0) return HighsStatus::OK;
+  HighsStatus return_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 					   XnumNewNZ, XAstart, XAindex, XAvalue,
 					   options, valid_matrix);
+  // Which of the following two??
+  if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  //  if (return_status != HighsStatus::OK && return_status != HighsStatus::Warning) return return_status
   lp.numCol_ += XnumNewCol;
-  return_status = call_status;
   return return_status;
 }
 
@@ -636,16 +639,21 @@ HighsStatus append_lp_cols(HighsLp& lp,
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
+  // Assess the column costs
   call_status = assess_costs(lp.numCol_, XnumNewCol, true, 0, XnumNewCol, false, 0, NULL, false, NULL,
 			     (double*)XcolCost, options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
+  // Assess the column bounds
   call_status = assess_bounds("Col", lp.numCol_, XnumNewCol, true, 0, XnumNewCol, false, 0, NULL, false, NULL,
 			     (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  call_status = assessMatrix(lp.numRow_, 0, XnumNewCol, XnumNewCol, 
-			     XnumNewNZ, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
-			     options.small_matrix_value, options.large_matrix_value, normalise);
-  return_status = worseStatus(call_status, return_status);
+  if (valid_matrix) {
+    // Assess the matrix columns
+    call_status = assessMatrix(lp.numRow_, 0, XnumNewCol, XnumNewCol, 
+			       XnumNewNZ, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
+			       options.small_matrix_value, options.large_matrix_value, normalise);
+    return_status = worseStatus(call_status, return_status);
+  }
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the columns to the LP vectors and matrix
@@ -689,22 +697,23 @@ HighsStatus add_lp_rows(HighsLp& lp,
 			const int XnumNewRow, const double *XrowLower,  const double *XrowUpper,
 			const int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
 			const HighsOptions& options) {
+  const bool valid_matrix = true;
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
-  HighsStatus return_status = HighsStatus::NotSet;
-  HighsStatus call_status = append_lp_rows(lp, XnumNewRow, XrowLower, XrowUpper,
-				  XnumNewNZ, XARstart, XARindex, XARvalue,
-				  options);
-  if (call_status != HighsStatus::OK && call_status != HighsStatus::Warning) return call_status;
+  HighsStatus return_status = append_lp_rows(lp, XnumNewRow, XrowLower, XrowUpper,
+					     XnumNewNZ, XARstart, XARindex, XARvalue,
+					     options, valid_matrix);
+  // Which of the following two??
+  if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  //  if (return_status != HighsStatus::OK && return_status != HighsStatus::Warning) return return_status
   lp.numRow_ += XnumNewRow;
-  return_status = call_status;
   return return_status;
 }
 
 HighsStatus append_lp_rows(HighsLp& lp,
 			   const int XnumNewRow, const double *XrowLower,  const double *XrowUpper,
 			   const int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue,
-			   const HighsOptions& options) {
+			   const HighsOptions& options, bool valid_matrix) {
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
@@ -712,10 +721,17 @@ HighsStatus append_lp_rows(HighsLp& lp,
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
+  // Assess the row bounds
   call_status = assess_bounds("Row", lp.numRow_, XnumNewRow, true, 0, XnumNewRow, false, 0, NULL, false, NULL,
 			     (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-
+  if (valid_matrix) {
+    // Assess the matrix columns
+    call_status = assessMatrix(lp.numCol_, 0, XnumNewRow, XnumNewRow, 
+			       XnumNewNZ, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+			       options.small_matrix_value, options.large_matrix_value, normalise);
+    return_status = worseStatus(call_status, return_status);
+  }
   if (return_status == HighsStatus::Error) return return_status;
 
   append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
@@ -1488,4 +1504,51 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   }
 
   return HighsStatus::OK;
+}
+
+bool isColDataNull(const double *usr_col_cost, const double *usr_col_lower,  const double *usr_col_upper) {
+  bool null_data = false;
+  if (usr_col_cost == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied column costs are NULL");
+    null_data = true;
+  }
+  if (usr_col_lower == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied column lower bounds are NULL");
+    null_data = true;
+  }
+  if (usr_col_upper == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied column upper bounds are NULL");
+    null_data = true;
+  }
+  return null_data;
+}
+
+bool isRowDataNull(const double *usr_row_lower,  const double *usr_row_upper) {
+  bool null_data = false;
+  if (usr_row_lower == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied row lower bounds are NULL");
+    null_data = true;
+  }
+  if (usr_row_upper == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied row upper bounds are NULL");
+    null_data = true;
+  }
+  return null_data;
+}
+
+bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, const double *usr_matrix_value) {
+  bool null_data = false;
+  if (usr_matrix_start == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied matrix starts are NULL");
+    null_data = true;
+  }
+  if (usr_matrix_index == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied matrix indices are NULL");
+    null_data = true;
+  }
+  if (usr_matrix_value == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied matrix values are NULL");
+    null_data = true;
+  }
+  return null_data;
 }

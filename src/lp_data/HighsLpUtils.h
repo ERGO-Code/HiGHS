@@ -168,16 +168,17 @@ HighsStatus add_lp_rows(
 		);
 
 HighsStatus append_lp_rows(
-		   HighsLp& lp,
-		   const int XnumNewRow,
-		   const double *XrowLower,
-		   const double *XrowUpper,
-		   const int XnumNewNZ,
-		   const int *XARstart,
-		   const int *XARindex,
-		   const double *XARvalue,
-		   const HighsOptions& options
-		   );
+			   HighsLp& lp,
+			   const int XnumNewRow,
+			   const double *XrowLower,
+			   const double *XrowUpper,
+			   const int XnumNewNZ,
+			   const int *XARstart,
+			   const int *XARindex,
+			   const double *XARvalue,
+			   const HighsOptions& options,
+			   bool valid_matrix
+			   );
 
 HighsStatus append_rows_to_lp_vectors(HighsLp &lp,
 			       const int XnumNewRow,
@@ -397,5 +398,9 @@ HighsBasis_new getHighsBasis(const HighsLp& lp, const HighsBasis& basis);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
+
+bool isColDataNull(const double *usr_col_cost, const double *usr_col_lower,  const double *usr_col_upper);
+bool isRowDataNull(const double *usr_row_lower,  const double *usr_row_upper);
+bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, const double *usr_matrix_value);
 
 #endif // LP_DATA_HIGHSLPUTILS_H_
