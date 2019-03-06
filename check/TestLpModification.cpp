@@ -258,17 +258,30 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  test_all_delete_keep(num_row);
 
-  // Add column vectors and matrix to model with no rows returns an error
+  // Adding column vectors and matrix to model with no rows returns an error
   bool return_bool;
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_col_nz, &Aindex[0], &Avalue[0]);
   REQUIRE(!return_bool);
 
-  // Add column vectors to model with no rows returns OK
+  // Adding column vectors to model with no rows returns OK
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
   REQUIRE(return_bool);
 
   HighsSetMessagelevel(ML_ALWAYS);
   reportLp(reference_lp, 2);
   HighsSetMessagelevel(ML_NONE);
+
+  // Adding row vectors and matrix to model with columns returns OK
+  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  REQUIRE(return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportLp(reference_lp, 2);
+  HighsSetMessagelevel(ML_NONE);
+
+  return_status = highs.run();
+  HighsStatusReport("highs.run()", return_status);
+  REQUIRE(return_status == HighsStatus::Optimal);
+  
 }
 

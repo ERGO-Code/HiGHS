@@ -53,24 +53,22 @@ HighsStatus checkLp(const HighsLp& lp) {
   }
 
   // Check matrix.
-  if ((size_t)lp.nnz_ != lp.Avalue_.size())
-    return HighsStatus::LpError;
-  if (lp.nnz_ < 0) return HighsStatus::LpError;
-  if ((int)lp.Aindex_.size() != lp.nnz_)
-    return HighsStatus::LpError;
+  int lp_num_nz = lp.Astart_[lp.numCol_];
+  if ((int)lp.Avalue_.size() < lp_num_nz) return HighsStatus::LpError;
+  if (lp_num_nz < 0) return HighsStatus::LpError;
+  if ((int)lp.Aindex_.size() < lp_num_nz) return HighsStatus::LpError;
 
   if (lp.numCol_ > 0) {
-    if ((int)lp.Astart_.size() != lp.numCol_ + 1)
-      return HighsStatus::LpError;
+    if ((int)lp.Astart_.size() < lp.numCol_ + 1) return HighsStatus::LpError;
     // Was lp.Astart_[i] >= lp.nnz_ (below), but this is wrong when the
     // last column is empty. Need to check as follows, and also check
     // the entry lp.Astart_[lp.numCol_] > lp.nnz_
     for (int i = 0; i < lp.numCol_; i++) {
-      if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp.nnz_ ||
+      if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp_num_nz ||
 	  lp.Astart_[i] < 0)
 	return HighsStatus::LpError;
     }
-    if (lp.Astart_[lp.numCol_] > lp.nnz_ ||
+    if (lp.Astart_[lp.numCol_] > lp_num_nz ||
 	lp.Astart_[lp.numCol_] < 0)
       return HighsStatus::LpError;
 
@@ -535,14 +533,22 @@ HighsStatus append_lp_cols(HighsLp& lp,
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the columns to the LP vectors and matrix
-  append_cols_to_lp_vectors(lp, num_new_col, XcolCost, XcolLower, XcolUpper);
-  if (valid_matrix) append_cols_to_lp_matrix(lp, num_new_col, num_new_nz, XAstart, XAindex, XAvalue);
+  call_status = append_cols_to_lp_vectors(lp, num_new_col, XcolCost, XcolLower, XcolUpper);
+  return_status = worseStatus(call_status, return_status);
+  if (return_status == HighsStatus::Error) return return_status;
+
+  if (valid_matrix) {
+    call_status = append_cols_to_lp_matrix(lp, num_new_col, num_new_nz, XAstart, XAindex, XAvalue);
+    return_status = worseStatus(call_status, return_status);
+    if (return_status == HighsStatus::Error) return return_status;
+  }
 
   // Normalise the new LP column bounds
   normalise = true;
   call_status = assess_bounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false, 0, NULL, false, NULL,
 			     &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
+  if (return_status == HighsStatus::Error) return return_status;
   if (valid_matrix) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
@@ -551,6 +557,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     lp.Astart_[newNumCol] = lp_num_nz;
     return_status = worseStatus(call_status, return_status);
+    if (return_status == HighsStatus::Error) return return_status;
   }
   return return_status;
 }
@@ -612,12 +619,41 @@ HighsStatus append_lp_rows(HighsLp& lp,
   }
   if (return_status == HighsStatus::Error) return return_status;
 
-  append_rows_to_lp_vectors(lp, num_new_row, XrowLower, XrowUpper);
+  // Append the rows to the LP vectors
+  call_status = append_rows_to_lp_vectors(lp, num_new_row, XrowLower, XrowUpper);
+  return_status = worseStatus(call_status, return_status);
+  if (return_status == HighsStatus::Error) return return_status;
+
+  // Normalise the new LP row bounds
   normalise = true;
   call_status = assess_bounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false, 0, NULL, false, NULL,
 			      &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  printf("!!! STILL HAVE TO ADD MATRIX!!!\n");
+
+  if (valid_matrix) {
+    // Copy the supplied row-wise matrix so it can be normalised before being appended
+    int lc_num_new_nz = num_new_nz;
+    int *lc_row_matrix_start = (int *)malloc(sizeof(int) * num_new_row);
+    int *lc_row_matrix_index = (int *)malloc(sizeof(int) * lc_num_new_nz);
+    double *lc_row_matrix_value = (double *)malloc(sizeof(double) * lc_num_new_nz);
+    for (int row=0; row < num_new_row; row++) {
+      lc_row_matrix_start[row] = XARstart[row];
+    }
+    for (int el=0; el < lc_num_new_nz; el++) {
+      lc_row_matrix_index[el] = XARindex[el];
+      lc_row_matrix_value[el] = XARvalue[el];
+    }
+    call_status = assessMatrix(lp.numCol_, 0, num_new_row, num_new_row, 
+			       lc_num_new_nz, lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
+			       options.small_matrix_value, options.large_matrix_value, normalise);
+    return_status = worseStatus(call_status, return_status);
+    if (return_status == HighsStatus::Error) return return_status;
+    // Append the matrix to the LP vectors
+    call_status = append_rows_to_lp_matrix(lp, num_new_row, num_new_nz,
+					   lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value);
+    return_status = worseStatus(call_status, return_status);
+    if (return_status == HighsStatus::Error) return return_status;
+  }
   return return_status;
 }
 
@@ -671,7 +707,7 @@ HighsStatus append_cols_to_lp_matrix(HighsLp &lp, const int num_new_col,
 }
 
 HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
-			      const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue) {
+				     const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
@@ -681,12 +717,7 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
   int current_num_nz = lp.Astart_[lp.numCol_];
   vector<int> Alength;
   Alength.assign(lp.numCol_, 0);
-  for (int el = 0; el < num_new_nz; el++) {
-    int col = XARindex[el];
-    if (col < 0) return HighsStatus::Error;
-    if (col >= lp.numCol_) return HighsStatus::Error;
-    Alength[col]++;
-  }
+  for (int el = 0; el < num_new_nz; el++)Alength[XARindex[el]]++;
   // Determine the new number of nonzeros and resize the column-wise matrix arrays
   int new_num_nz = current_num_nz + num_new_nz;
   lp.Aindex_.resize(new_num_nz);
@@ -696,22 +727,16 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
   // Shift the existing columns to make space for the new entries
   int new_el = new_num_nz;
   for (int col = lp.numCol_ - 1; col >= 0; col--) {
-    // printf("Column %2d has additional length %2d\n", col, Alength[col]);
-    int Astart_Colp1 = new_el;
+    int start_col_plus_1 = new_el;
     new_el -= Alength[col];
-    // printf("Shift: new_el = %2d\n", new_el);
     for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
       new_el--;
-      // printf("Shift: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
-      // new_el, el, lp.Aindex_[el]);
       lp.Aindex_[new_el] = lp.Aindex_[el];
       lp.Avalue_[new_el] = lp.Avalue_[el];
     }
-    lp.Astart_[col + 1] = Astart_Colp1;
+    lp.Astart_[col + 1] = start_col_plus_1;
   }
-  // printf("After shift: new_el = %2d\n", new_el);
   assert(new_el == 0);
-  // util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
 
   // Insert the new entries
   for (int row = 0; row < num_new_row; row++) {
@@ -721,13 +746,6 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
       int col = XARindex[el];
       new_el = lp.Astart_[col + 1] - Alength[col];
       Alength[col]--;
-      // printf("Insert: row = %2d; col = %2d; lp.Astart_[col+1]-Alength[col] =
-      // %2d; Alength[col] = %2d; new_el = %2d\n", row, col,
-      // lp.Astart_[col+1]-Alength[col], Alength[col], new_el);
-      assert(new_el >= 0);
-      assert(el >= 0);
-      // printf("Insert: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
-      // new_el, el, lp.Aindex_[el]);
       lp.Aindex_[new_el] = lp.numRow_ + row;
       lp.Avalue_[new_el] = XARvalue[el];
     }

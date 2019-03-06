@@ -188,7 +188,7 @@ HighsStatus Highs::run() {
 
   timer_.stopRunHighsClock();
 
-  return HighsStatus::OK;
+  return solve_status;
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo &info) {
