@@ -151,7 +151,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Add column vectors to model with no rows returns OK
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
-  REQUIRE(!return_bool);
+  REQUIRE(return_bool);
 
   HighsSetMessagelevel(ML_ALWAYS);
   reportLp(reference_lp, 2);

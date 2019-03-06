@@ -390,7 +390,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 
   // Assess the indices and values
   // Count the number of acceptable indices/values
-  int new_num_nz = Xstart[from_ix];
+  int num_new_nz = Xstart[from_ix];
   int num_small_values = 0;
   // Set up a zeroed vector to detect duplicate indices
   vector<int> check_vector;
@@ -405,7 +405,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
     }
     if (normalise) {
       // Account for any index-value pairs removed so far
-      Xstart[ix] = new_num_nz;
+      Xstart[ix] = num_new_nz;
     }
     for (int el = from_el; el <= to_el; el++) {
       int component = Xindex[el];
@@ -442,14 +442,14 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 	num_small_values++;
       }
       if (!ok_value && normalise) {
-	Xindex[new_num_nz] = Xindex[el];
-	Xvalue[new_num_nz] = Xvalue[el];
+	Xindex[num_new_nz] = Xindex[el];
+	Xvalue[num_new_nz] = Xvalue[el];
       } else {
-	new_num_nz++;
+	num_new_nz++;
       }
     }
     // Zero check_vector
-    for (int el = Xstart[ix]; el <= new_num_nz-1; el++) check_vector[Xindex[el]] = 0;
+    for (int el = Xstart[ix]; el <= num_new_nz-1; el++) check_vector[Xindex[el]] = 0;
 #ifdef HiGHSDEV
     // Check zeroing of check vector
     for (int component = 0; component < vec_dim; component++) {
@@ -465,7 +465,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
       // Accommodate the loss of these values in any subsequent packed vectors
       for (int ix = to_ix; ix < num_vec; ix++) {
 	int from_el = Xstart[ix];
-	Xstart[ix] = new_num_nz;
+	Xstart[ix] = num_new_nz;
 	int to_el;
 	if (ix < num_vec) {
 	  to_el = Xstart[ix+1]-1;
@@ -473,12 +473,12 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 	  to_el = num_nz-1;
 	}
 	for (int el = Xstart[ix]; el <= to_el; el++) {
-	  Xindex[new_num_nz] = Xindex[el];
-	  Xvalue[new_num_nz] = Xvalue[el];
-	  new_num_nz++;
+	  Xindex[num_new_nz] = Xindex[el];
+	  Xvalue[num_new_nz] = Xvalue[el];
+	  num_new_nz++;
 	}
       }    
-      num_nz = new_num_nz;
+      num_nz = num_new_nz;
     }
   }
   if (error_found) return_status = HighsStatus::Error;
@@ -491,13 +491,13 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 
 HighsStatus add_lp_cols(HighsLp& lp,
 			const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-			const int new_num_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
+			const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
 			const HighsOptions& options) {
   const bool valid_matrix = true;
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
   HighsStatus return_status = append_lp_cols(lp, num_new_col, XcolCost, XcolLower, XcolUpper,
-					   new_num_nz, XAstart, XAindex, XAvalue,
+					   num_new_nz, XAstart, XAindex, XAvalue,
 					   options, valid_matrix);
   // Which of the following two??
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
@@ -508,7 +508,7 @@ HighsStatus add_lp_cols(HighsLp& lp,
 
 HighsStatus append_lp_cols(HighsLp& lp,
 			   const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-			   const int new_num_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
+			   const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
 			   const HighsOptions& options, const bool valid_matrix) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
@@ -528,7 +528,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
   if (valid_matrix) {
     // Assess the matrix columns
     call_status = assessMatrix(lp.numRow_, 0, num_new_col, num_new_col, 
-			       new_num_nz, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
+			       num_new_nz, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -536,7 +536,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
 
   // Append the columns to the LP vectors and matrix
   append_cols_to_lp_vectors(lp, num_new_col, XcolCost, XcolLower, XcolUpper);
-  if (valid_matrix) append_cols_to_lp_matrix(lp, num_new_col, new_num_nz, XAstart, XAindex, XAvalue);
+  if (valid_matrix) append_cols_to_lp_matrix(lp, num_new_col, num_new_nz, XAstart, XAindex, XAvalue);
 
   // Normalise the new LP column bounds
   normalise = true;
@@ -573,13 +573,13 @@ HighsStatus append_cols_to_lp_vectors(HighsLp &lp, const int num_new_col,
 
 HighsStatus add_lp_rows(HighsLp& lp,
 			const int num_new_row, const double *XrowLower,  const double *XrowUpper,
-			const int new_num_nz, const int *XARstart, const int *XARindex, const double *XARvalue,
+			const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue,
 			const HighsOptions& options) {
   const bool valid_matrix = true;
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   HighsStatus return_status = append_lp_rows(lp, num_new_row, XrowLower, XrowUpper,
-					     new_num_nz, XARstart, XARindex, XARvalue,
+					     num_new_nz, XARstart, XARindex, XARvalue,
 					     options, valid_matrix);
   // Which of the following two??
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
@@ -590,7 +590,7 @@ HighsStatus add_lp_rows(HighsLp& lp,
 
 HighsStatus append_lp_rows(HighsLp& lp,
 			   const int num_new_row, const double *XrowLower,  const double *XrowUpper,
-			   const int new_num_nz, const int *XARstart, const int *XARindex, const double *XARvalue,
+			   const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue,
 			   const HighsOptions& options, bool valid_matrix) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
@@ -606,7 +606,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
   if (valid_matrix) {
     // Assess the matrix columns
     call_status = assessMatrix(lp.numCol_, 0, num_new_row, num_new_row, 
-			       new_num_nz, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+			       num_new_nz, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -636,11 +636,11 @@ HighsStatus append_rows_to_lp_vectors(HighsLp &lp, const int num_new_row,
 }
 
 HighsStatus append_cols_to_lp_matrix(HighsLp &lp, const int num_new_col,
-				     const int new_num_nz, const int *XAstart, const int *XAindex, const double *XAvalue) {
+				     const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no rows
-  if (new_num_nz > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
+  if (num_new_nz > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
   // Determine the new number of columns in the matrix and resize the
   // starts accordingly. Even if no matrix entries are added, f they
   // are added later as rows it will be assumesd that the starts are
@@ -650,86 +650,86 @@ HighsStatus append_cols_to_lp_matrix(HighsLp &lp, const int num_new_col,
   // If adding columns to an empty LP then introduce the start for the fictitious column 0
   if (lp.numCol_ == 0) lp.Astart_[0] = 0;
   // If no nonzeros are bing added then there's nothing to do
-  if (new_num_nz <= 0) return HighsStatus::OK;
+  if (num_new_nz <= 0) return HighsStatus::OK;
   //
   // Adding a non-trivial matrix so determine the current number of nonzeros
-  int currentNumNZ = lp.Astart_[lp.numCol_];
+  int current_num_nz = lp.Astart_[lp.numCol_];
   
   // Determine the new number of nonzeros and resize the column-wise matrix arrays accordingly
-  int newNumNZ = currentNumNZ + new_num_nz;
-  lp.Aindex_.resize(newNumNZ);
-  lp.Avalue_.resize(newNumNZ);
+  int new_num_nz = current_num_nz + num_new_nz;
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
   
   // Append the new columns
-  for (int col = 0; col < num_new_col; col++) lp.Astart_[lp.numCol_ + col] = currentNumNZ + XAstart[col];
-  lp.Astart_[lp.numCol_ + num_new_col] = newNumNZ;
+  for (int col = 0; col < num_new_col; col++) lp.Astart_[lp.numCol_ + col] = current_num_nz + XAstart[col];
+  lp.Astart_[lp.numCol_ + num_new_col] = new_num_nz;
   
-  for (int el = 0; el < new_num_nz; el++) {
-    lp.Aindex_[currentNumNZ + el] = XAindex[el];
-    lp.Avalue_[currentNumNZ + el] = XAvalue[el];
+  for (int el = 0; el < num_new_nz; el++) {
+    lp.Aindex_[current_num_nz + el] = XAindex[el];
+    lp.Avalue_[current_num_nz + el] = XAvalue[el];
   }
 }
 
 HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
-			      const int new_num_nz, const int *XARstart, const int *XARindex, const double *XARvalue) {
+			      const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
-  if (new_num_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
+  if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
   int new_num_row = lp.numRow_ + num_new_row;
-  if (new_num_nz == 0) return HighsStatus::OK;
-  int currentNumNZ = lp.Astart_[lp.numCol_];
+  if (num_new_nz == 0) return HighsStatus::OK;
+  int current_num_nz = lp.Astart_[lp.numCol_];
   vector<int> Alength;
   Alength.assign(lp.numCol_, 0);
-  for (int el = 0; el < new_num_nz; el++) {
+  for (int el = 0; el < num_new_nz; el++) {
     int col = XARindex[el];
     if (col < 0) return HighsStatus::Error;
     if (col >= lp.numCol_) return HighsStatus::Error;
     Alength[col]++;
   }
   // Determine the new number of nonzeros and resize the column-wise matrix arrays
-  int newNumNZ = currentNumNZ + new_num_nz;
-  lp.Aindex_.resize(newNumNZ);
-  lp.Avalue_.resize(newNumNZ);
+  int new_num_nz = current_num_nz + num_new_nz;
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
 
   // Append the new rows
   // Shift the existing columns to make space for the new entries
-  int nwEl = newNumNZ;
+  int new_el = new_num_nz;
   for (int col = lp.numCol_ - 1; col >= 0; col--) {
     // printf("Column %2d has additional length %2d\n", col, Alength[col]);
-    int Astart_Colp1 = nwEl;
-    nwEl -= Alength[col];
-    // printf("Shift: nwEl = %2d\n", nwEl);
+    int Astart_Colp1 = new_el;
+    new_el -= Alength[col];
+    // printf("Shift: new_el = %2d\n", new_el);
     for (int el = lp.Astart_[col + 1] - 1; el >= lp.Astart_[col]; el--) {
-      nwEl--;
+      new_el--;
       // printf("Shift: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
-      // nwEl, el, lp.Aindex_[el]);
-      lp.Aindex_[nwEl] = lp.Aindex_[el];
-      lp.Avalue_[nwEl] = lp.Avalue_[el];
+      // new_el, el, lp.Aindex_[el]);
+      lp.Aindex_[new_el] = lp.Aindex_[el];
+      lp.Avalue_[new_el] = lp.Avalue_[el];
     }
     lp.Astart_[col + 1] = Astart_Colp1;
   }
-  // printf("After shift: nwEl = %2d\n", nwEl);
-  assert(nwEl == 0);
+  // printf("After shift: new_el = %2d\n", new_el);
+  assert(new_el == 0);
   // util_reportColMtx(lp.numCol_, lp.Astart_, lp.Aindex_, lp.Avalue_);
 
   // Insert the new entries
   for (int row = 0; row < num_new_row; row++) {
-    int fEl = XARstart[row];
-    int lEl = (row < num_new_row - 1 ? XARstart[row + 1] : new_num_nz) - 1;
-    for (int el = fEl; el <= lEl; el++) {
+    int first_el = XARstart[row];
+    int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz) - 1;
+    for (int el = first_el; el <= last_el; el++) {
       int col = XARindex[el];
-      nwEl = lp.Astart_[col + 1] - Alength[col];
+      new_el = lp.Astart_[col + 1] - Alength[col];
       Alength[col]--;
       // printf("Insert: row = %2d; col = %2d; lp.Astart_[col+1]-Alength[col] =
-      // %2d; Alength[col] = %2d; nwEl = %2d\n", row, col,
-      // lp.Astart_[col+1]-Alength[col], Alength[col], nwEl);
-      assert(nwEl >= 0);
+      // %2d; Alength[col] = %2d; new_el = %2d\n", row, col,
+      // lp.Astart_[col+1]-Alength[col], Alength[col], new_el);
+      assert(new_el >= 0);
       assert(el >= 0);
       // printf("Insert: Over-writing lp.Aindex_[%2d] with lp.Aindex_[%2d]=%2d\n",
-      // nwEl, el, lp.Aindex_[el]);
-      lp.Aindex_[nwEl] = lp.numRow_ + row;
-      lp.Avalue_[nwEl] = XARvalue[el];
+      // new_el, el, lp.Aindex_[el]);
+      lp.Aindex_[new_el] = lp.numRow_ + row;
+      lp.Avalue_[new_el] = XARvalue[el];
     }
   }
 }
@@ -952,13 +952,13 @@ HighsStatus change_lp_matrix_coefficient(HighsLp &lp, const int row, const int c
   if (changeElement < 0) {
     //    printf("util_changeCoeff: Cannot find row %d in column %d\n", row, col);
     changeElement = lp.Astart_[col + 1];
-    int newNumNZ = lp.Astart_[lp.numCol_] + 1;
+    int new_num_nz = lp.Astart_[lp.numCol_] + 1;
     //    printf("model.util_changeCoeff: Increasing Nnonz from %d to %d\n",
-    //    lp.Astart_[lp.numCol_], newNumNZ);
-    lp.Aindex_.resize(newNumNZ);
-    lp.Avalue_.resize(newNumNZ);
+    //    lp.Astart_[lp.numCol_], new_num_nz);
+    lp.Aindex_.resize(new_num_nz);
+    lp.Avalue_.resize(new_num_nz);
     for (int i = col + 1; i <= lp.numCol_; i++) lp.Astart_[i]++;
-    for (int el = newNumNZ - 1; el > changeElement; el--) {
+    for (int el = new_num_nz - 1; el > changeElement; el--) {
       lp.Aindex_[el] = lp.Aindex_[el - 1];
       lp.Avalue_[el] = lp.Avalue_[el - 1];
     }
