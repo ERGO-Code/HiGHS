@@ -20,21 +20,30 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsSetMessagelevel(ML_ALWAYS);
 
   Avgas avgas;
-  int num_row;
+  const int avgas_num_col = 8;
+  const int avgas_num_row = 10;
+  int num_row = 0;
+  int num_row_nz = 0;
   vector<double> rowLower;
   vector<double> rowUpper;
-  avgas.rows(num_row, rowLower, rowUpper);
+  vector<int> ARstart;
+  vector<int> ARindex;
+  vector<double> ARvalue;
+  
+  for (int row = 0; row < avgas_num_row; row++) {
+    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex, ARvalue);
+  }
 
   int num_col = 0;
-  int num_nz = 0;
+  int num_col_nz = 0;
   vector<double> colCost;
   vector<double> colLower;
   vector<double> colUpper;
   vector<int> Astart;
   vector<int> Aindex;
   vector<double> Avalue;
-  for (int col = 0; col < 8; col++) {
-    avgas.col(col, num_col, num_nz, colCost, colLower, colUpper, Astart, Aindex, Avalue);
+  for (int col = 0; col < avgas_num_col; col++) {
+    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart, Aindex, Avalue);
   }
 
   return_status = checkLp(lp);
@@ -54,7 +63,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   reportLp(lp);
   
   return_status = hsi.util_add_cols(num_col, &colCost[0], &colLower[0], &colUpper[0],
-				    num_nz, &Astart[0], &Aindex[0], &Avalue[0]);
+				    num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
   printf("util_add_cols: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
   reportLp(lp);

@@ -3,6 +3,111 @@
 #include "lp_data/HighsLpUtils.h"
 #include "Avgas.h"
 
+bool areLpColEqual(
+		   const int num_col0, const double* colCost0, const double* colLower0, const double* colUpper0,
+		   const int num_nz0, const int* Astart0, const int* Aindex0, const double* Avalue0,
+		   const int num_col1, const double* colCost1, const double* colLower1, const double* colUpper1,
+		   const int num_nz1, const int* Astart1, const int* Aindex1, const double* Avalue1,
+		   const double infinite_bound) {
+  if (num_col0 != num_col1) {
+    printf("areLpColEqual: %d = num_col0 != num_col1 = %d\n", num_col0, num_col1);
+    return false;
+  }
+  if (!num_col0) return true;
+  int num_col = num_col0;
+  for (int col = 0; col < num_col; col++) {
+    if (colCost0[col] != colCost1[col]) {
+      printf("areLpColEqual: %g = colCost0[%d] != colCost1[%d] = %g\n", colCost0[col], col, col, colCost1[col]);
+      return false;
+    }
+  }
+  for (int col = 0; col < num_col; col++) {
+    if (colLower0[col] <= -infinite_bound && colLower1[col] <= -infinite_bound) continue;
+    if (colLower0[col] != colLower1[col]) {
+      printf("areLpColEqual: %g = colLower0[%d] != colLower1[%d] = %g\n", colLower0[col], col, col, colLower1[col]);
+      return false;
+    }
+    if (colUpper0[col] >= infinite_bound && colUpper1[col] >= infinite_bound) continue;
+    if (colUpper0[col] != colUpper1[col]) {
+      printf("areLpColEqual: %g = colUpper0[%d] != colUpper1[%d] = %g\n", colUpper0[col], col, col, colUpper1[col]);
+      return false;
+    }
+  }
+  if (num_nz0 != num_nz1) {
+    printf("areLpColEqual: %d = num_nz0 != num_nz1 = %d\n", num_nz0, num_nz1);
+    return false;
+  }
+  if (!num_nz0) return true;
+  for (int col = 0; col < num_col; col++) {
+    if (Astart0[col] != Astart1[col]) {
+      printf("areLpColEqual: %d = Astart0[%d] != Astart1[%d] = %d\n", Astart0[col], col, col, Astart1[col]);
+      return false;
+    }
+  }
+  int num_nz = num_nz0;
+  for (int nz = 0; nz < num_nz; nz++) {
+    if (Aindex0[nz] != Aindex1[nz]) {
+      printf("areLpColEqual: %d = Aindex0[%d] != Aindex1[%d] = %d\n", Aindex0[nz], nz, nz, Aindex1[nz]);
+      return false;
+    }
+    if (Avalue0[nz] != Avalue1[nz]) {
+      printf("areLpColEqual: %g = Avalue0[%d] != Avalue1[%d] = %g\n", Avalue0[nz], nz, nz, Avalue1[nz]);
+      return false;
+    }
+  }
+  return true;		      
+}
+
+bool areLpRowEqual(
+		   const int num_row0,const double* rowLower0, const double* rowUpper0,
+		   const int num_nz0, const int* ARstart0, const int* ARindex0, const double* ARvalue0,
+		   const int num_row1, const double* rowLower1, const double* rowUpper1,
+		   const int num_nz1, const int* ARstart1, const int* ARindex1, const double* ARvalue1,
+		   const double infinite_bound) {
+  if (num_row0 != num_row1) {
+    printf("areLpRowEqual: %d = num_row0 != num_row1 = %d\n", num_row0, num_row1);
+    return false;
+  }
+  if (!num_row0) return true;
+  int num_row = num_row0;
+  for (int row = 0; row < num_row; row++) {
+    if (rowLower0[row] <= -infinite_bound && rowLower1[row] <= -infinite_bound) continue;
+    if (rowLower0[row] != rowLower1[row]) {
+      printf("areLpRowEqual: %g = rowLower0[%d] != rowLower1[%d] = %g\n", rowLower0[row], row, row, rowLower1[row]);
+      return false;
+    }
+    if (rowUpper0[row] >= infinite_bound && rowUpper1[row] >= infinite_bound) continue;
+    if (rowUpper0[row] != rowUpper1[row]) {
+      printf("areLpRowEqual: %g = rowUpper0[%d] != rowUpper1[%d] = %g\n", rowUpper0[row], row, row, rowUpper1[row]);
+      return false;
+    }
+  }
+  if (num_nz0 != num_nz1) {
+    printf("areLpRowEqual: %d = num_nz0 != num_nz1 = %d\n", num_nz0, num_nz1);
+    return false;
+  }
+  if (!num_nz0) return true;
+  for (int row = 0; row < num_row; row++) {
+    if (ARstart0[row] != ARstart1[row]) {
+      printf("areLpRowEqual: %d = ARstart0[%d] != ARstart1[%d] = %d\n", ARstart0[row], row, row, ARstart1[row]);
+      return false;
+    }
+  }
+  int num_nz = num_nz0;
+  for (int nz = 0; nz < num_nz; nz++) {
+    if (ARindex0[nz] != ARindex1[nz]) {
+      printf("areLpRowEqual: %d = ARindex0[%d] != ARindex1[%d] = %d\n", ARindex0[nz], nz, nz, ARindex1[nz]);
+      return false;
+    }
+    if (ARvalue0[nz] != ARvalue1[nz]) {
+      printf("areLpRowEqual: %g = ARvalue0[%d] != ARvalue1[%d] = %g\n", ARvalue0[nz], nz, nz, ARvalue1[nz]);
+      return false;
+    }
+  }
+  return true;		      
+}
+
+
 void test_delete_keep(const int row_dim,
 		      const bool interval, const int from_row, const int to_row,
 		      const bool set, const int num_set_entries, const int* row_set,
@@ -112,21 +217,30 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsSetMessagelevel(ML_ALWAYS);
 
   Avgas avgas;
-  int num_row;
+  const int avgas_num_col = 8;
+  const int avgas_num_row = 10;
+  int num_row = 0;
+  int num_row_nz = 0;
   vector<double> rowLower;
   vector<double> rowUpper;
-  avgas.rows(num_row, rowLower, rowUpper);
+  vector<int> ARstart;
+  vector<int> ARindex;
+  vector<double> ARvalue;
+  
+  for (int row = 0; row < avgas_num_row; row++) {
+    avgas.row(row, num_row, num_row_nz, rowLower, rowUpper, ARstart, ARindex, ARvalue);
+  }
 
   int num_col = 0;
-  int num_nz = 0;
+  int num_col_nz = 0;
   vector<double> colCost;
   vector<double> colLower;
   vector<double> colUpper;
   vector<int> Astart;
   vector<int> Aindex;
   vector<double> Avalue;
-  for (int col = 0; col < 8; col++) {
-    avgas.col(col, num_col, num_nz, colCost, colLower, colUpper, Astart, Aindex, Avalue);
+  for (int col = 0; col < avgas_num_col; col++) {
+    avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart, Aindex, Avalue);
   }
   Highs highs(options);
   HighsStatus return_status;
@@ -146,7 +260,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Add column vectors and matrix to model with no rows returns an error
   bool return_bool;
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0]);
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_col_nz, &Aindex[0], &Avalue[0]);
   REQUIRE(!return_bool);
 
   // Add column vectors to model with no rows returns OK

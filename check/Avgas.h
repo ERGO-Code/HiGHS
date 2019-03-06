@@ -21,16 +21,19 @@
  */
 class Avgas {
  public:
-  void rows(
-	    int &num_row,
-	    std::vector<double> &rowLower,
-	    std::vector<double> &rowUpper
-	    );
+  void row(int row,
+	   int &num_row,
+	   int &num_row_nz,
+	   std::vector<double> &rowLower,
+	   std::vector<double> &rowUpper, 
+	   std::vector<int> &ARstart,
+	   std::vector<int> &ARindex,
+	   std::vector<double> &ARvalue);
   
   void col(
 	   int col,
 	   int &num_col,
-	   int &num_nz,
+	   int &num_col_nz,
 	   std::vector<double> &colCost,
 	   std::vector<double> &colLower,
 	   std::vector<double> &colUpper, 
