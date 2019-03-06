@@ -538,42 +538,42 @@ HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet
 
 
 HighsStatus HighsSimplexInterface::getCols(const int from_col, const int to_col,
-					   int num_col, double *col_costs, double *col_lower, double *col_upper,
+					   int num_col, double *col_cost, double *col_lower, double *col_upper,
 					   int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
   return getColsGeneral(
 			true, from_col, to_col,
 			false, 0, NULL,
 			false, NULL,
-			num_col, col_costs, col_lower, col_upper,
+			num_col, col_cost, col_lower, col_upper,
 			num_nz, col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getCols(const int num_set_entries, const int* col_set,
-					   int num_col, double *col_costs, double *col_lower, double *col_upper,
+					   int num_col, double *col_cost, double *col_lower, double *col_upper,
 					   int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
   return getColsGeneral(
 			false, 0, 0,
 			true, num_set_entries, col_set,
 			false, NULL,
-			num_col, col_costs, col_lower, col_upper,
+			num_col, col_cost, col_lower, col_upper,
 			num_nz, col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getCols(const int* col_mask,
-					   int num_col, double *col_costs, double *col_lower, double *col_upper,
+					   int num_col, double *col_cost, double *col_lower, double *col_upper,
 					   int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
   return getColsGeneral(
 			false, 0, 0,
 			false, 0, NULL,
 			true, col_mask,
-			num_col, col_costs, col_lower, col_upper,
+			num_col, col_cost, col_lower, col_upper,
 			num_nz, col_matrix_start, col_matrix_index, col_matrix_value);
 }
 
 HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int from_col, const int to_col,
 						  const bool set, const int num_set_entries, const int* col_set, 
 						  const bool mask, const int* col_mask,
-						  int num_col, double *col_costs, double *col_lower, double *col_upper,
+						  int num_col, double *col_cost, double *col_lower, double *col_upper,
 						  int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
   int from_k;
   int to_k;
@@ -588,22 +588,39 @@ HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int
 
   if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
   if (from_col >= to_col) return HighsStatus::OK;
-
-
-  /*
-  int elOs = lp.Astart_[XfromCol];
-  for (int col = XfromCol; col < XtoCol; col++) {
-    //    printf("Extracting column %d\n", col);
-    XcolLower[col - XfromCol] = lp.colLower_[col];
-    XcolUpper[col - XfromCol] = lp.colUpper_[col];
-    XAstart[col - XfromCol] = lp.Astart_[col] - elOs;
+  int out_from_col;
+  int out_to_col;
+  int in_from_col;
+  int in_to_col = 0;
+  int current_set_entry = 0;
+  int col_dim = lp.numCol_;
+  num_col = 0;
+  num_nz = 0;
+  for (int k = 0; k < col_dim; k++) {
+    update_out_in_ix(col_dim,
+		     interval, from_col, to_col,
+		     set, num_set_entries, col_set,
+		     mask, col_mask,
+		     out_from_col, out_to_col,
+		     in_from_col, in_to_col,
+		     current_set_entry);
+    if (out_to_col == col_dim || in_to_col == col_dim) break;
+    assert(out_to_col < col_dim);
+    assert(in_to_col < col_dim);
+    for (int col = out_from_col; col < out_to_col; col++) {
+      col_cost[num_col] = lp.colCost_[col];
+      col_lower[num_col] = lp.colLower_[col];
+      col_upper[num_col] = lp.colUpper_[col];
+      col_matrix_start[num_col] = num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
+      num_col++;
+    }
+    for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col]; el++) {
+      col_matrix_index[num_nz] = lp.Aindex_[el];
+      col_matrix_value[num_nz] = lp.Avalue_[el];
+      num_nz++;
+    }
   }
-  for (int el = lp.Astart_[XfromCol]; el < lp.Astart_[XtoCol]; el++) {
-    XAindex[el - elOs] = lp.Aindex_[el];
-    XAvalue[el - elOs] = lp.Avalue_[el];
-  }
-  *XnumNZ = lp.Astart_[XtoCol] - elOs;
-  */
+  return HighsStatus::OK;
 }
 
 

@@ -741,8 +741,8 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
   // Insert the new entries
   for (int row = 0; row < num_new_row; row++) {
     int first_el = XARstart[row];
-    int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz) - 1;
-    for (int el = first_el; el <= last_el; el++) {
+    int last_el = (row < num_new_row - 1 ? XARstart[row + 1] : num_new_nz);
+    for (int el = first_el; el < last_el; el++) {
       int col = XARindex[el];
       new_el = lp.Astart_[col + 1] - Alength[col];
       Alength[col]--;
@@ -794,13 +794,13 @@ HighsStatus delete_cols_from_lp_vectors(HighsLp &lp,
   int col_dim = lp.numCol_;
   int keep_col = 0;
   for (int k = 0; k < col_dim; k++) {
-    update_delete_keep_ix(col_dim,
-			  interval, from_col, to_col,
-			  set, num_set_entries, col_set,
-			  mask, col_mask,
-			  delete_from_col, delete_to_col,
-			  keep_from_col, keep_to_col,
-			  current_set_entry);
+    update_out_in_ix(col_dim,
+		     interval, from_col, to_col,
+		     set, num_set_entries, col_set,
+		     mask, col_mask,
+		     delete_from_col, delete_to_col,
+		     keep_from_col, keep_to_col,
+		     current_set_entry);
      if (delete_to_col == col_dim || keep_to_col == col_dim) break;
      assert(delete_to_col < col_dim);
      assert(keep_to_col < col_dim);
@@ -1253,18 +1253,18 @@ void reportLpRowVec(const HighsLp &lp) {
 // Report the LP column-wise matrix
 void reportLpColMtx(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(ML_VERBOSE,
-                    "Column Index              Value\n");
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(ML_VERBOSE, "    %8d Start   %10d\n", iCol,
-                      lp.Astart_[iCol]);
-    for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol + 1]; el++) {
-      HighsPrintMessage(ML_VERBOSE, "          %8d %12g\n",
-                        lp.Aindex_[el], lp.Avalue_[el]);
-    }
+  reportMtx("Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0]);
+}
+
+void reportMtx(const char* message, const int num_col, const int num_nz, const int* start, const int* index, const double* value) {
+  if (num_col <= 0) return;
+  HighsPrintMessage(ML_VERBOSE, "%6s Index              Value\n", message);
+  for (int col = 0; col < num_col; col++) {
+    HighsPrintMessage(ML_VERBOSE, "    %8d Start   %10d\n", col, start[col]);
+    int to_el = (col < num_col-1 ? start[col+1] : num_nz);
+    for (int el = start[col]; el < to_el; el++) HighsPrintMessage(ML_VERBOSE, "          %8d %12g\n", index[el], value[el]);
   }
-  HighsPrintMessage(ML_VERBOSE, "             Start   %10d\n",
-                    lp.Astart_[lp.numCol_]);
+  HighsPrintMessage(ML_VERBOSE, "             Start   %10d\n", num_nz);
 }
 
 /*
@@ -1480,51 +1480,51 @@ HighsStatus assess_interval_set_mask(const int ix_dim,
   return HighsStatus::OK;
 }
 
-void update_delete_keep_ix(const int ix_dim, 
-			   const bool interval, const int from_ix, const int to_ix,
-			   const bool set, int num_set_entries, const int* ix_set,
-			   const bool mask, const int* ix_mask,
-			   int& delete_from_ix, int& delete_to_ix,
-			   int& keep_from_ix, int& keep_to_ix,
-			   int& current_set_entry) {
+void update_out_in_ix(const int ix_dim, 
+		      const bool interval, const int from_ix, const int to_ix,
+		      const bool set, const int num_set_entries, const int* ix_set,
+		      const bool mask, const int* ix_mask,
+		      int& out_from_ix, int& out_to_ix,
+		      int& in_from_ix, int& in_to_ix,
+		      int& current_set_entry) {
   
   if (interval) {
-    delete_from_ix = from_ix;
-    delete_to_ix = to_ix;
-    keep_from_ix = to_ix;
-    keep_to_ix = ix_dim;
+    out_from_ix = from_ix;
+    out_to_ix = to_ix;
+    in_from_ix = to_ix;
+    in_to_ix = ix_dim;
   } else if (set) {
-    delete_from_ix = ix_set[current_set_entry];
-    delete_to_ix = delete_from_ix+1;
+    out_from_ix = ix_set[current_set_entry];
+    out_to_ix = out_from_ix+1;
     current_set_entry++;
     int current_set_entry0 = current_set_entry;
     for (int set_entry = current_set_entry0; set_entry < num_set_entries; set_entry++) {
       int ix = ix_set[set_entry];
-      if (ix > delete_to_ix) break;
-      delete_to_ix = ix_set[current_set_entry]+1;
+      if (ix > out_to_ix) break;
+      out_to_ix = ix_set[current_set_entry]+1;
       current_set_entry++;
     }
-    keep_from_ix = delete_to_ix;
+    in_from_ix = out_to_ix;
     if (current_set_entry < num_set_entries) {
-      keep_to_ix = ix_set[current_set_entry];
+      in_to_ix = ix_set[current_set_entry];
     } else {
       // Account for getting to the end of the set
-      keep_to_ix = ix_dim;
+      in_to_ix = ix_dim;
     }
   } else {
-    delete_from_ix = keep_to_ix;
-    delete_to_ix = ix_dim;
-    for (int ix = keep_to_ix; ix < ix_dim; ix++) {
+    out_from_ix = in_to_ix;
+    out_to_ix = ix_dim;
+    for (int ix = in_to_ix; ix < ix_dim; ix++) {
       if (!ix_mask[ix]) {
-	delete_to_ix = ix;
+	out_to_ix = ix;
 	break;	
       }
     }
-    keep_from_ix = delete_to_ix;
-    keep_to_ix = ix_dim;
-    for (int ix = delete_to_ix; ix < ix_dim; ix++) {
+    in_from_ix = out_to_ix;
+    in_to_ix = ix_dim;
+    for (int ix = out_to_ix; ix < ix_dim; ix++) {
       if (ix_mask[ix]) {
-	keep_to_ix = ix;
+	in_to_ix = ix;
 	break;	
       }
     }

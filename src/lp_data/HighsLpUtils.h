@@ -317,6 +317,15 @@ void reportLpColMtx(
 		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 
+void reportMtx(
+	       const char* message,
+	       const int num_col,
+	       const int num_nz,
+	       const int* start,
+	       const int* index,
+	       const double* value
+	       );
+
 // Get the costs for a contiguous set of columns
 HighsStatus getLpCosts(
 		const HighsLp& lp,
@@ -384,20 +393,20 @@ HighsStatus assess_interval_set_mask(
 				     int &to_k
 				     );
 
-void update_delete_keep_ix(const int ix_dim, 
-				  const bool interval,
-				  const int from_ix,
-				  const int to_ix,
-				  const bool set,
-				  int num_set_entries,
-				  const int* ix_set,
-				  const bool mask,
-				  const int* ix_mask,
-				  int& delete_from_ix,
-				  int& delete_to_ix,
-				  int& keep_from_ix,
-				  int& keep_to_ix,
-				  int& current_set_entry);
+void update_out_in_ix(const int ix_dim, 
+		      const bool interval,
+		      const int from_ix,
+		      const int to_ix,
+		      const bool set,
+		      const int num_set_entries,
+		      const int* ix_set,
+		      const bool mask,
+		      const int* ix_mask,
+		      int& out_from_ix,
+		      int& out_to_ix,
+		      int& in_from_ix,
+		      int& in_to_ix,
+		      int& current_set_entry);
 
 bool isColDataNull(const double *usr_col_cost, const double *usr_col_lower,  const double *usr_col_upper);
 bool isRowDataNull(const double *usr_row_lower,  const double *usr_row_upper);
