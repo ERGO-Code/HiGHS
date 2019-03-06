@@ -20,7 +20,9 @@ public:
 
   // The public method run() calls runSolver to solve problem before
   // or after presolve (or crash later) depending on the specified options.
-  HighsStatus initializeLp(const HighsLp &lp);
+  HighsStatus initializeLp(
+			   const HighsLp &lp
+			   );
   HighsStatus run();
 
   const HighsLp& getLp() const;
@@ -29,7 +31,9 @@ public:
   // becomes SimplexBasis
   const HighsBasis_new& getBasis() const; 
 
-  double getRowValue(const int row) const;
+  double getRowValue(
+		     const int row
+		     ) const;
   double getObjectiveValue() const;
   const int getIterationCount() const;
   // todo: getRangingInformation(..)
@@ -37,9 +41,13 @@ public:
   // In the solution passed as a parameter below can have one or many of
   // col_value, col_dual and row_dual set. If any of them are not set the
   // solution in Highs does not get updated.
-  HighsStatus setSolution(const HighsSolution& solution);
+  HighsStatus setSolution(
+			  const HighsSolution& solution
+			  );
 
-  HighsStatus setBasis(const HighsBasis_new& basis) {
+  HighsStatus setBasis(
+		       const HighsBasis_new& basis
+		       ) {
     basis_ = basis;
     return HighsStatus::OK;
   }
@@ -85,46 +93,80 @@ public:
 	       );
 
   bool changeObjectiveSense(
-    int sense);
+			    int sense
+			    );
 
   bool changeRowBounds(
-    int index, 
-    double lower, 
-    double higher);
-
+		       int index, 
+		       double lower, 
+		       double higher
+		       );
+  
   bool changeColBounds(
-    int index, 
-    double lower, 
-    double higher);
+		       int index, 
+		       double lower, 
+		       double higher
+		       );
 
   bool changeRowsBounds(
-    int n, 
-    int* index, 
-    double* lower, 
-    double* higher);
+			int n, 
+			int* index, 
+			double* lower, 
+			double* higher
+			);
 
   bool changeColsBounds(
-    int n, 
-    int* index, 
-    double* lower, 
-    double* higher);
+			int n, 
+			int* index, 
+			double* lower, 
+			double* higher
+			);
 
   bool changeObjCoef(
-    int index, 
-    double coef);
+		     int index, 
+		     double coef
+		     );
 
   bool changeObjCoefs(
-    int n, 
-    int* index, 
-    double* coef);
+		      int n, 
+		      int* index, 
+		      double* coef
+		      );
+
+  bool getCols(
+	       const int n, 
+	       const int* indices,
+	       int num_col,
+	       double *col_costs,
+	       double *col_lower,
+	       double *col_upper,
+	       int num_nz,
+	       int *col_matrix_start,
+	       int *col_matrix_index,
+	       double *col_matrix_value
+	       );
+
+  bool getRows(
+	       const int n, 
+	       const int* indices,
+	       int num_row,
+	       double *row_lower,
+	       double *row_upper,
+	       int num_nz,
+	       int *row_matrix_start,
+	       int *row_matrix_index,
+	       double *row_matrix_value
+	       );
 
   bool deleteRows(
-    const int n, 
-    const int* indices);
+		  const int n, 
+		  const int* indices
+		  );
 
   bool deleteCols(
-    const int n, 
-    const int* indices);
+		  const int n, 
+		  const int* indices
+		  );
 
   // change coeff (int row, int col) | ...
   // ipx (not implemented)

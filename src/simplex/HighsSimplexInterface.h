@@ -72,15 +72,117 @@ class HighsSimplexInterface {
 				  const int* col_mask
 				  );
   
-  HighsStatus util_extract_cols(
-			 int XfromCol, int XtoCol,
-			 double* XcolLower,
-			 double* XcolUpper,
-			 int* nnonz,
-			 int* XAstart,
-			 int* XAindex,
-			 double* XAvalue
-			 );
+  HighsStatus getCols(
+		      const int from_col,
+		      const int to_col,
+		      int num_col,
+		      double *col_costs,
+		      double *col_lower,
+		      double *col_upper,
+		      int num_nz,
+		      int *col_matrix_start,
+		      int *col_matrix_index,
+		      double *col_matrix_value
+		      );
+  
+  
+  HighsStatus getCols(
+		      const int num_set_entries,
+		      const int* col_set,
+		      int num_col,
+		      double *col_costs,
+		      double *col_lower,
+		      double *col_upper,
+		      int num_nz,
+		      int *col_matrix_start,
+		      int *col_matrix_index,
+		      double *col_matrix_value
+		      );
+  
+  HighsStatus getCols(
+		      const int* col_mask,
+		      int num_col,
+		      double *col_costs,
+		      double *col_lower,
+		      double *col_upper,
+		      int num_nz,
+		      int *col_matrix_start,
+		      int *col_matrix_index,
+		      double *col_matrix_value
+		      );
+  
+  HighsStatus getColsGeneral(
+			     const bool interval,
+			     const int from_col,
+			     const int to_col,
+			     const bool set,
+			     const int num_set_entries,
+			     const int* col_set,
+			     const bool mask,
+			     const int* col_mask,
+			     int num_col,
+			     double *col_costs,
+			     double *col_lower,
+			     double *col_upper,
+			     int num_nz,
+			     int *col_matrix_start,
+			     int *col_matrix_index,
+			     double *col_matrix_value
+			     );
+  
+  HighsStatus getRows(
+		      const int from_row,
+		      const int to_row,
+		      int num_row,
+		      double *row_lower,
+		      double *row_upper,
+		      int num_nz,
+		      int *row_matrix_start,
+		      int *row_matrix_index,
+		      double *row_matrix_value
+		      );
+  
+  
+  HighsStatus getRows(
+		      const int num_set_entries,
+		      const int* row_set,
+		      int num_row,
+		      double *row_lower,
+		      double *row_upper,
+		      int num_nz,
+		      int *row_matrix_start,
+		      int *row_matrix_index,
+		      double *row_matrix_value
+		      );
+  
+  HighsStatus getRows(
+		      const int* row_mask,
+		      int num_row,
+		      double *row_lower,
+		      double *row_upper,
+		      int num_nz,
+		      int *row_matrix_start,
+		      int *row_matrix_index,
+		      double *row_matrix_value
+		      );
+  
+ HighsStatus getRowsGeneral(
+			    const bool interval,
+			    const int from_row,
+			    const int to_row,
+			    const bool set,
+			    const int num_set_entries,
+			    const int* row_set,
+			    const bool mask,
+			    const int* row_mask,
+			    int num_row,
+			    double *row_lower,
+			    double *row_upper,
+			    int num_nz,
+			    int *row_matrix_start,
+			    int *row_matrix_index,
+			    double *row_matrix_value
+			    );
 
 
   /**
@@ -122,17 +224,6 @@ class HighsSimplexInterface {
 				  const int* row_mask
 				  );
   
-  HighsStatus util_extract_rows(
-			 int firstrow,
-			 int lastrow,
-			 double* XrowLower,
-			 double* XrowUpper,
-			 int* nnonz,
-			 int* XARstart,
-			 int* XARindex,
-			 double* XARvalue
-			 );
-
   HighsStatus util_change_coefficient(
 			       int Xrow,
 			       int Xcol,

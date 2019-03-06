@@ -142,9 +142,6 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
 						       bool set, int num_set_entries, const int* col_set,
 						       bool mask, const int* col_mask) {
   // Uses to_col in iterator style
-#ifdef HiGHSDEV
-  printf("Called util_deleteCols(from_col=%d, to_col=%d)\n", from_col, to_col);
-#endif
   HighsLp &lp = highs_model_object.lp_;
   if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
   if (from_col >= to_col) return HighsStatus::OK;
@@ -199,35 +196,6 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
   simplex_basis.valid_ = false;
   
 }
-
-HighsStatus HighsSimplexInterface::util_extract_cols(int XfromCol, int XtoCol, double* XcolLower, double* XcolUpper,
-						     int* XnumNZ, int* XAstart, int* XAindex, double* XAvalue) {
-  // Uses XtoCol in iterator style
-#ifdef HiGHSDEV
-  printf("Called util_extractCols(XfromCol=%d, XtoCol=%d)\n", XfromCol, XtoCol);
-#endif
-  HighsLp &lp = highs_model_object.lp_;
-  if (XfromCol < 0 || XtoCol > lp.numCol_) return HighsStatus::Error;
-  if (XfromCol >= XtoCol) return HighsStatus::OK;
-
-  HighsScale &scale = highs_model_object.scale_;
-  // Determine the number of columns to be extracted
-  // int numExtractCols = XtoCol-XfromCol+1;
-  // printf("Extracting %d columns\n", numExtractCols);
-  int elOs = lp.Astart_[XfromCol];
-  for (int col = XfromCol; col < XtoCol; col++) {
-    //    printf("Extracting column %d\n", col);
-    XcolLower[col - XfromCol] = lp.colLower_[col];
-    XcolUpper[col - XfromCol] = lp.colUpper_[col];
-    XAstart[col - XfromCol] = lp.Astart_[col] - elOs;
-  }
-  for (int el = lp.Astart_[XfromCol]; el < lp.Astart_[XtoCol]; el++) {
-    XAindex[el - elOs] = lp.Aindex_[el];
-    XAvalue[el - elOs] = lp.Avalue_[el];
-  }
-  *XnumNZ = lp.Astart_[XtoCol] - elOs;
-}
-
 
 HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
 						 int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
@@ -569,14 +537,115 @@ HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet
   */
 
 
-HighsStatus HighsSimplexInterface::util_extract_rows(
-						     int XfromRow, int XtoRow, double* XrowLower, double* XrowUpper,
-						     int* XnumNZ, int* XARstart, int* XARindex, double* XARvalue) {
-  // Uses XtoRow in iterator style
-#ifdef HiGHSDEV
-  printf("Called model.util_extractRows(XfromRow=%d, XtoRow=%d)\n", XfromRow,
-         XtoRow);
-#endif
+HighsStatus HighsSimplexInterface::getCols(const int from_col, const int to_col,
+					   int num_col, double *col_costs, double *col_lower, double *col_upper,
+					   int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
+  return getColsGeneral(
+			true, from_col, to_col,
+			false, 0, NULL,
+			false, NULL,
+			num_col, col_costs, col_lower, col_upper,
+			num_nz, col_matrix_start, col_matrix_index, col_matrix_value);
+}
+
+HighsStatus HighsSimplexInterface::getCols(const int num_set_entries, const int* col_set,
+					   int num_col, double *col_costs, double *col_lower, double *col_upper,
+					   int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
+  return getColsGeneral(
+			false, 0, 0,
+			true, num_set_entries, col_set,
+			false, NULL,
+			num_col, col_costs, col_lower, col_upper,
+			num_nz, col_matrix_start, col_matrix_index, col_matrix_value);
+}
+
+HighsStatus HighsSimplexInterface::getCols(const int* col_mask,
+					   int num_col, double *col_costs, double *col_lower, double *col_upper,
+					   int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
+  return getColsGeneral(
+			false, 0, 0,
+			false, 0, NULL,
+			true, col_mask,
+			num_col, col_costs, col_lower, col_upper,
+			num_nz, col_matrix_start, col_matrix_index, col_matrix_value);
+}
+
+HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int from_col, const int to_col,
+						  const bool set, const int num_set_entries, const int* col_set, 
+						  const bool mask, const int* col_mask,
+						  int num_col, double *col_costs, double *col_lower, double *col_upper,
+						  int num_nz, int *col_matrix_start, int *col_matrix_index, double *col_matrix_value) {
+  int from_k;
+  int to_k;
+  HighsLp &lp = highs_model_object.lp_;
+  HighsStatus return_status = assess_interval_set_mask(lp.numCol_,
+						     interval, from_col, to_col,
+						     set, num_set_entries, col_set,
+						     mask, col_mask,
+						     from_k, to_k);
+  if (return_status != HighsStatus::OK) return return_status;
+  if (from_k >= to_k) return HighsStatus::OK;
+
+  if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
+  if (from_col >= to_col) return HighsStatus::OK;
+
+
+  /*
+  int elOs = lp.Astart_[XfromCol];
+  for (int col = XfromCol; col < XtoCol; col++) {
+    //    printf("Extracting column %d\n", col);
+    XcolLower[col - XfromCol] = lp.colLower_[col];
+    XcolUpper[col - XfromCol] = lp.colUpper_[col];
+    XAstart[col - XfromCol] = lp.Astart_[col] - elOs;
+  }
+  for (int el = lp.Astart_[XfromCol]; el < lp.Astart_[XtoCol]; el++) {
+    XAindex[el - elOs] = lp.Aindex_[el];
+    XAvalue[el - elOs] = lp.Avalue_[el];
+  }
+  *XnumNZ = lp.Astart_[XtoCol] - elOs;
+  */
+}
+
+
+HighsStatus HighsSimplexInterface::getRows(const int from_row, const int to_row,
+					   int num_row, double *row_lower, double *row_upper,
+					   int num_nz, int *row_matrix_start, int *row_matrix_index, double *row_matrix_value) {
+  return getRowsGeneral(
+			true, from_row, to_row,
+			false, 0, NULL,
+			false, NULL,
+			num_row, row_lower, row_upper,
+			num_nz, row_matrix_start, row_matrix_index, row_matrix_value);
+}
+
+HighsStatus HighsSimplexInterface::getRows(const int num_set_entries, const int* row_set,
+					   int num_row, double *row_lower, double *row_upper,
+					   int num_nz, int *row_matrix_start, int *row_matrix_index, double *row_matrix_value) {
+  return getRowsGeneral(
+			false, 0, 0,
+			true, num_set_entries, row_set,
+			false, NULL,
+			num_row, row_lower, row_upper,
+			num_nz, row_matrix_start, row_matrix_index, row_matrix_value);
+}
+
+HighsStatus HighsSimplexInterface::getRows(const int* row_mask,
+					   int num_row, double *row_lower, double *row_upper,
+					   int num_nz, int *row_matrix_start, int *row_matrix_index, double *row_matrix_value) {
+  return getRowsGeneral(
+			false, 0, 0,
+			false, 0, NULL,
+			true, row_mask,
+			num_row, row_lower, row_upper,
+			num_nz, row_matrix_start, row_matrix_index, row_matrix_value);
+}
+
+HighsStatus HighsSimplexInterface::getRowsGeneral(const bool interval, const int from_row, const int to_row,
+						  const bool set, const int num_set_entries, const int* row_set, 
+						  const bool mask, const int* row_mask,
+						  int num_row, double *row_lower, double *row_upper,
+						  int num_nz, int *row_matrix_start, int *row_matrix_index, double *row_matrix_value) {
+  /*
   HighsLp &lp = highs_model_object.lp_;
   if (XfromRow < 0 || XtoRow > lp.numRow_) return HighsStatus::Error;
   if (XfromRow >= XtoRow) return HighsStatus::OK;
@@ -615,6 +684,7 @@ HighsStatus HighsSimplexInterface::util_extract_rows(
   }
   *XnumNZ = XARstart[numExtractRows-1] + XARlength[numExtractRows-1];
   //  printf("Set XnumNZ = %d\n", *XnumNZ);
+*/
 }
 
 // Change a single coefficient in the matrix
