@@ -54,6 +54,56 @@ void test_delete_keep(const int row_dim,
   }
 }
 
+bool test_all_delete_keep(int num_row) {
+  // Test the extraction of intervals from interval, set and mask
+  bool interval = false;
+  bool set = false;
+  bool mask = false;
+  int row_dim = num_row;
+  
+  int from_row = 3;
+  int to_row = 7;
+  int num_set_entries = 4;
+  int row_set[] = {1, 4, 5, 8};
+  int current_set_entry;
+  int row_mask[] = {0,1,0,0,1,1,0,0,1,0};
+  for (int pass = 0; pass < 3; pass++) {
+    printf("\nTesting delete-keep: pass %d\n", pass);
+    if (pass == 1) {
+      from_row = 0;
+      row_set[0] = 0;
+      row_mask[0] = 1;
+    } else if (pass == 2) {
+      from_row = 3;
+      to_row = 10;
+      row_set[0] = 1;
+      row_set[3] = 9;
+      row_mask[0] = 0;
+      row_mask[9] = 1;
+    }
+    
+    interval = true;
+    test_delete_keep(row_dim,
+		     interval, from_row, to_row,
+		     set, num_set_entries, row_set,
+		     mask, row_mask);
+    interval = false;
+    set = true;
+    test_delete_keep(row_dim,
+		     interval, from_row, to_row,
+		     set, num_set_entries, row_set,
+		     mask, row_mask);
+    set = false;
+    mask = true;
+    test_delete_keep(row_dim,
+		     interval, from_row, to_row,
+		     set, num_set_entries, row_set,
+		     mask, row_mask);
+  }
+  return true;
+}
+
+
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
   // Create an empty LP
@@ -92,51 +142,19 @@ TEST_CASE("LP-modification", "[highs_data]") {
   reportLp(reference_lp, 2);
   HighsSetMessagelevel(ML_NONE);
 
-  // Test the extraction of intervals from interval, set and mask
-  bool interval = false;
-  bool set = false;
-  bool mask = false;
-  int row_dim = num_row;
+  //  test_all_delete_keep(num_row);
 
-  int from_row = 3;
-  int to_row = 7;
-  int num_set_entries = 4;
-  int row_set[] = {1, 4, 5, 8};
-  int current_set_entry;
-  int row_mask[] = {0,1,0,0,1,1,0,0,1,0};
-  for (int pass = 0; pass < 3; pass++) {
-    printf("\nTesting delete-keep: pass %d\n", pass);
-    if (pass == 1) {
-      from_row = 0;
-      row_set[0] = 0;
-      row_mask[0] = 1;
-    } else if (pass == 2) {
-      from_row = 3;
-      to_row = 10;
-      row_set[0] = 1;
-      row_set[3] = 9;
-      row_mask[0] = 0;
-      row_mask[9] = 1;
-    }
+  // Add column vectors and matrix to model with no rows returns an error
+  bool return_bool;
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0]);
+  REQUIRE(!return_bool);
 
-    interval = true;
-    test_delete_keep(row_dim,
-		     interval, from_row, to_row,
-		     set, num_set_entries, row_set,
-		     mask, row_mask);
-    interval = false;
-    set = true;
-    test_delete_keep(row_dim,
-		     interval, from_row, to_row,
-		     set, num_set_entries, row_set,
-		     mask, row_mask);
-    set = false;
-    mask = true;
-    test_delete_keep(row_dim,
-		     interval, from_row, to_row,
-		     set, num_set_entries, row_set,
-		     mask, row_mask);
-  }
-  //  highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_nz, &Aindex[0], &Avalue[0]);
+  // Add column vectors to model with no rows returns OK
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  REQUIRE(!return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportLp(reference_lp, 2);
+  HighsSetMessagelevel(ML_NONE);
 }
 

@@ -285,19 +285,20 @@ bool Highs::addRows(const int num_new_rows, const double *lower_bounds,
                     const double *upper_bounds, const int *row_starts,
                     const int num_new_nz, const int *columns,
                     const double *values) {
+  HighsStatus return_status;
   // if simplex has not solved already
   if (!simplex_has_run_) {
-    add_lp_rows(lp_, num_new_rows, lower_bounds, upper_bounds, num_new_nz,
+    return_status = add_lp_rows(lp_, num_new_rows, lower_bounds, upper_bounds, num_new_nz,
                 row_starts, columns, values, options_);
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
     // todo: change to take int return value
-    interface.util_add_rows(num_new_rows, lower_bounds, upper_bounds,
+    return_status = interface.util_add_rows(num_new_rows, lower_bounds, upper_bounds,
                             num_new_nz, row_starts, columns, values);
   }
-
+  if (return_status == HighsStatus::Error) return false;
   return true;
 }
 
@@ -313,9 +314,10 @@ bool Highs::addCols(const int num_new_cols, const double *column_costs,
                     const double *lower_bounds, const double *upper_bounds,
                     const int *col_starts, const int num_new_nz,
                     const int *rows, const double *values) {
+  HighsStatus return_status;
   // if simplex has not solved already
   if (!simplex_has_run_) {
-    add_lp_cols(lp_, num_new_cols, column_costs, lower_bounds, upper_bounds,
+    return_status = add_lp_cols(lp_, num_new_cols, column_costs, lower_bounds, upper_bounds,
                 num_new_nz, col_starts, rows, values, options_);
   } else
   {
@@ -323,10 +325,10 @@ bool Highs::addCols(const int num_new_cols, const double *column_costs,
     HighsSimplexInterface interface(hmos_[0]);
 
     // todo: change to take int return value
-    interface.util_add_rows(num_new_cols, lower_bounds, upper_bounds,
+    return_status = interface.util_add_cols(num_new_cols, column_costs, lower_bounds, upper_bounds,
                             num_new_nz, col_starts, rows, values);
   }
-
+  if (return_status == HighsStatus::Error) return false;
   return true;
 }
 

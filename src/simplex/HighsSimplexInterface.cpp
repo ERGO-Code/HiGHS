@@ -713,6 +713,12 @@ HighsStatus HighsSimplexInterface::change_costs_general(
 							bool set, int num_set_entries, const int* col_set,
 							bool mask, const int* col_mask,
 							const double* usr_col_cost) {
+  bool null_data = false;
+  if (usr_col_cost == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied column costs are NULL");
+    null_data = true;
+  }
+  if (null_data) return HighsStatus::Error;
   HighsStatus call_status = change_lp_costs(highs_model_object.lp_, 
 					    interval, from_col, to_col,
 					    set, num_set_entries, col_set,
@@ -753,15 +759,25 @@ HighsStatus HighsSimplexInterface::change_col_bounds_general(
 							bool set, int num_set_entries, const int* col_set,
 							bool mask, const int* col_mask,
 							const double* usr_col_lower, const double* usr_col_upper) {
- HighsStatus call_status = change_lp_col_bounds(highs_model_object.lp_, 
-						interval, from_col, to_col,
-						set, num_set_entries, col_set,
-						mask, col_mask,
-						usr_col_lower, usr_col_upper, highs_model_object.options_.infinite_bound);
- if (call_status == HighsStatus::Error) return HighsStatus::Error;
- // Deduce the consequences of new bounds
- update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
- return HighsStatus::OK;
+  bool null_data = false;
+  if (usr_col_lower == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied column lower bounds are NULL");
+    null_data = true;
+  }
+  if (usr_col_upper == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied column upper bounds are NULL");
+    null_data = true;
+  }
+  if (null_data) return HighsStatus::Error;
+  HighsStatus call_status = change_lp_col_bounds(highs_model_object.lp_, 
+						 interval, from_col, to_col,
+						 set, num_set_entries, col_set,
+						 mask, col_mask,
+						 usr_col_lower, usr_col_upper, highs_model_object.options_.infinite_bound);
+  if (call_status == HighsStatus::Error) return HighsStatus::Error;
+  // Deduce the consequences of new bounds
+  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  return HighsStatus::OK;
 }
 
 HighsStatus HighsSimplexInterface::change_row_bounds(int from_row, int to_row, const double* usr_row_lower, const double* usr_row_upper) {
@@ -793,15 +809,25 @@ HighsStatus HighsSimplexInterface::change_row_bounds_general(
 							bool set, int num_set_entries, const int* row_set,
 							bool mask, const int* row_mask,
 							const double* usr_row_lower, const double* usr_row_upper) {
- HighsStatus call_status = change_lp_row_bounds(highs_model_object.lp_, 
-						interval, from_row, to_row,
-						set, num_set_entries, row_set,
-						mask, row_mask,
-						usr_row_lower, usr_row_upper, highs_model_object.options_.infinite_bound);
- if (call_status == HighsStatus::Error) return HighsStatus::Error;
- // Deduce the consequences of new bounds
- update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
- return HighsStatus::OK;
+  bool null_data = false;
+  if (usr_row_lower == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied row lower bounds are NULL");
+    null_data = true;
+  }
+  if (usr_row_upper == NULL) {
+    HighsLogMessage(HighsMessageType::ERROR, "User-supplied row upper bounds are NULL");
+    null_data = true;
+  }
+  if (null_data) return HighsStatus::Error;
+  HighsStatus call_status = change_lp_row_bounds(highs_model_object.lp_, 
+						 interval, from_row, to_row,
+						 set, num_set_entries, row_set,
+						 mask, row_mask,
+						 usr_row_lower, usr_row_upper, highs_model_object.options_.infinite_bound);
+  if (call_status == HighsStatus::Error) return HighsStatus::Error;
+  // Deduce the consequences of new bounds
+  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  return HighsStatus::OK;
 }
 
 
