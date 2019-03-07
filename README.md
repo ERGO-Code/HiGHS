@@ -114,7 +114,7 @@ some problems, it is typically faster in parallel.
 HiGHS Library
 -------------
 
-Highs is compiled in a library. Running
+Highs is compiled in a shared library. Running
 
 `make install`
 
@@ -140,4 +140,4 @@ highs library. After running the code above compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 
-`LD_LIBRARY_PATH=~/programs/HiGHS_install/lib/ ./use_highs`
+`LD_LIBRARY_PATH=intstall_folder/lib/ ./use_highs`
