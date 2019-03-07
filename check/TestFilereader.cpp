@@ -27,8 +27,9 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   std::cout << dir << std::endl;
 
   // For debugging use the latter.
-  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  //std::string filename = dir + "/../../check/instances/adlittle.mps";
   // std::string filename = dir + "/check/instances/adlittle.mps";
+  std::string filename = "/home/s1131817/test-problems/mps_da/self";
 
   // Read mps.
   HighsLp lp_free_format, lp_fixed_format;
@@ -54,9 +55,9 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
   }
 
   // In case you want to compare.
-  // FilereaderEms ems;
-  // ems.writeModelToFile("fixed.ems", lp_fixed_format);
-  // ems.writeModelToFile("free.ems", lp_free_format);
+   FilereaderEms ems;
+   ems.writeModelToFile("fixed.ems", lp_fixed_format);
+   ems.writeModelToFile("free.ems", lp_free_format);
 
   REQUIRE(are_the_same);
 }
