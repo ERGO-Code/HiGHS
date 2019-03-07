@@ -108,6 +108,8 @@ bool areLpRowEqual(
 }
 
 
+//bool testGetCols(Highs highs) {}
+
 void test_delete_keep(const int row_dim,
 		      const bool interval, const int from_row, const int to_row,
 		      const bool set, const int num_set_entries, const int* row_set,
@@ -288,6 +290,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsSetMessagelevel(ML_NONE);
 
   // Getting columns from the LP is OK
+  int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
   int col1357_col_set[] = {1, 3, 5, 7};
   int col1357_num_ix = 4;
   int col1357_num_col;
@@ -305,7 +308,23 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   HighsSetMessagelevel(ML_ALWAYS);
-  reportMtx("Column", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  reportMtx("Get by set\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  HighsSetMessagelevel(ML_NONE);
+  
+  return_bool = highs.getCols(3, 7, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportMtx("Get by interval\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  HighsSetMessagelevel(ML_NONE);
+  
+  return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportMtx("Get by mask\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   HighsSetMessagelevel(ML_NONE);
   
   return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);

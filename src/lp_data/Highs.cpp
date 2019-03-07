@@ -463,6 +463,22 @@ bool Highs::changeObjCoef(int index, double coef) {
   return true;
 }
 
+bool Highs::getCols(const int from_col, const int to_col,
+		    int &num_col, double *costs, double *lower_bounds, double *upper_bounds,
+		    int &num_nz, int *start, int *index, double *value) {
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.getCols(from_col, to_col,
+		      num_col, costs, lower_bounds, upper_bounds,
+		      num_nz, start, index, value);
+  }
+  return true;
+}
+
 bool Highs::getCols(const int n, const int *indices,
 		    int &num_col, double *costs, double *lower_bounds, double *upper_bounds,
 		    int &num_nz, int *start, int *index, double *value) {
@@ -473,6 +489,22 @@ bool Highs::getCols(const int n, const int *indices,
     HighsSimplexInterface interface(hmos_[0]);
 
     interface.getCols(n, indices,
+		      num_col, costs, lower_bounds, upper_bounds,
+		      num_nz, start, index, value);
+  }
+  return true;
+}
+
+bool Highs::getCols(const int *col_mask,
+		    int &num_col, double *costs, double *lower_bounds, double *upper_bounds,
+		    int &num_nz, int *start, int *index, double *value) {
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.getCols(col_mask,
 		      num_col, costs, lower_bounds, upper_bounds,
 		      num_nz, start, index, value);
   }
