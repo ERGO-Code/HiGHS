@@ -20,7 +20,6 @@
 #include "lp_data/HighsLp.h"
 #include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
-#include "cxxopts.hpp"
 
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.

@@ -68,7 +68,7 @@ private:
     return HighsPresolveStatus::NullError;
   };
 
-  HighsModelBuilder builder;
+  // HighsModelBuilder builder;
 };
 
 #endif
