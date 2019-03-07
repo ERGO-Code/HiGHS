@@ -18,8 +18,8 @@ DOI: 10.1007/s12532-017-0130-5
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
 HSOL was originally written by Qi Huangfu, with features such as presolve,
-crash and advanced basis start added by Julian Hall and Ivet Galabova and 
-further work by Michael Feldmeiher.
+crash and advanced basis start added by Julian Hall and Ivet Galabova and
+further work by Michael Feldmeier.
 
 HSOL has been developed and tested on various linux installations
 using both the GNU (g++) and Intel (icc) C++ compilers.
@@ -32,7 +32,7 @@ a build directory and call
 
     mkdir build
     cd build
-    cmake .. 
+    cmake ..
 
 Then compile the code using
 
@@ -108,7 +108,7 @@ When compiled with the parallel option and `OMP_NUM_THREADS>1` or unset, HiGHS
 will use multiple threads. If `OMP_NUM_THREADS` is unset, HiGHS will try to use
 all available threads so performance may be very slow. Although the best value
 will be problem and architecture dependent, `OMP_NUM_THREADS=8` is typically a
-good choice. Although HiGHS is slower when run in parallel than in serial for 
+good choice. Although HiGHS is slower when run in parallel than in serial for
 some problems, it is typically faster in parallel.
 
 HiGHS Library

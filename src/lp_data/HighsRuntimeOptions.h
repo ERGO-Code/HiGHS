@@ -136,6 +136,11 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         options.parser_type = HighsMpsParserType::fixed;
       else if (value == "free")
         options.parser_type = HighsMpsParserType::free;
+      else {
+        std::cout << "Illegall value for parser." << std::endl;
+        std::cout << cxx_options.help({""}) << std::endl;
+        exit(0);
+      }
     }
   }
   catch (const cxxopts::OptionException &e)

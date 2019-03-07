@@ -66,7 +66,7 @@ struct HighsOptions
   bool scip = 0;
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  HighsMpsParserType parser_type = HighsMpsParserType::free;
+  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
 
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
