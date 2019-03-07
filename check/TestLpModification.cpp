@@ -108,8 +108,6 @@ bool areLpRowEqual(
 }
 
 
-//bool testGetCols(Highs highs) {}
-
 void test_delete_keep(const int row_dim,
 		      const bool interval, const int from_row, const int to_row,
 		      const bool set, const int num_set_entries, const int* row_set,
