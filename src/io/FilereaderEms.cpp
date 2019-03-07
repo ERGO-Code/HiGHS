@@ -246,6 +246,9 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char *filename,
 
   // todo: integer variables.
 
+  if (model.offset_ != 0)
+    f << "shift" << std::endl << model.offset_ << std::endl;
+
   f << std::endl;
   f.close();
   return FilereaderRetcode::OKAY;
