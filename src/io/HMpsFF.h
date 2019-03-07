@@ -763,12 +763,12 @@ HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
                       marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
- 
+
     if (marker == "OBJECTIVE_CONSTANT") {
       objOffset = atof(word.c_str());
       continue;
     }
-    
+
     parsename(marker, rowidx);
     double value = atof(word.c_str());
     addrhs(value, rowidx);
