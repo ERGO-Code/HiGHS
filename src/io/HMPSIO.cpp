@@ -132,8 +132,8 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
           "this!\n",
           data[0]);
 #endif
-      //            objOffset = data[0]; // Objective offset
-      objOffset = 0;
+      objOffset = data[0]; // Objective offset
+      //objOffset = 0;
     }
   }
 #ifdef HiGHSDEV

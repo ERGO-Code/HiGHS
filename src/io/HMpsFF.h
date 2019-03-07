@@ -55,7 +55,7 @@ private:
   int nnz;
 
   int objSense;
-  double objOffset;
+  double objOffset = 0;
 
   std::vector<int> Astart;
   std::vector<int> Aindex;
@@ -127,7 +127,7 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename, Highs
   lp.nnz_ = Avalue.size();
 
   lp.sense_ = 1;
-  lp.offset_ = 0;
+  lp.offset_ = objOffset;
 
   lp.Astart_ = std::move(Astart);
   lp.Aindex_ = std::move(Aindex);
@@ -329,6 +329,9 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
 
     std::string rowname = first_word(strline, start + 1);
 
+    // todo: add check that there is no other words on row
+    // detect if file is in fixed format
+
     // todo whitespace in name possible?
     // only in fixed, using old parser for now.
 
@@ -420,6 +423,9 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
       continue;
     }
+
+    // todo: add check that there is no other words on row
+    // detect if file is in fixed format
 
     // new column?
     if (!(word == colname)) {
@@ -521,6 +527,10 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
         rowLower[rowidx] = val;
       }
     }
+    else if (rowidx == -1) {
+      // objective shift
+      objOffset = val;
+    }
   };
 
   while (getline(file, strline)) {
@@ -562,7 +572,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
       marker = first_word(strline, end);
       if (word == "") {
         HighsLogMessage(HighsMessageType::ERROR,
-                        "No coefficient given for column %s", marker.c_str());
+                        "No coefficient given for rhs of row %s", marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
       end_marker = first_word_end(strline, end);
@@ -699,7 +709,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
   return parsekey::FAIL;
 }
 
-HMpsFF::parsekey HMpsFF::parseRanges(std::ifstream &file) {
+HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
   std::string strline, word;
 
   auto parsename = [this](const std::string &name, int &rowidx) {

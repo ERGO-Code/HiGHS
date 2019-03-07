@@ -53,6 +53,11 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
       are_the_same = lp_free_format == lp_fixed_format;
   }
 
+  // In case you want to compare.
+  // FilereaderEms ems;
+  // ems.writeModelToFile("fixed.ems", lp_fixed_format);
+  // ems.writeModelToFile("free.ems", lp_free_format);
+
   REQUIRE(are_the_same);
 }
 
