@@ -15,8 +15,9 @@
 #define LP_DATA_HIGHSLPUTILS_H_
 
 #include "HConfig.h"
-#include "HighsLp.h"
-#include "HighsStatus.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
 
 class HighsLp;
 
@@ -58,6 +59,184 @@ void getLpMatrixCoefficient(
 			    int col,
 			    double *val
 			    );
+
+HighsStatus assess_lp(
+		HighsLp& lp,
+		const HighsOptions& options
+		);
+
+HighsStatus add_lp_cols(
+		HighsLp& lp,
+		int XnumNewCol,
+		const double *XcolCost,
+		const double *XcolLower,
+		const double *XcolUpper,
+		int XnumNewNZ,
+		const int *XAstart,
+		const int *XAindex,
+		const double *XAvalue,
+		const HighsOptions& options,
+		const bool force = false
+		);
+
+HighsStatus append_lp_cols(
+		   HighsLp& lp,
+		   int XnumNewCol,
+		   const double *XcolCost,
+		   const double *XcolLower,
+		   const double *XcolUpper,
+		   int XnumNewNZ,
+		   const int *XAstart,
+		   const int *XAindex,
+		   const double *XAvalue,
+		   const HighsOptions& options,
+		   const bool force = false
+		   );
+
+HighsStatus assess_col_bounds(
+			int XnumCol,
+			const double* XcolLower,
+			const double* XcolUpper,
+			double infinite_bound
+			);
+
+void append_cols_to_lp_vectors(
+			       HighsLp &lp,
+			       int XnumNewCol,
+			       const double *XcolCost,
+			       const double *colLower,
+			       const double *XcolUpper
+			       );
+
+HighsStatus normalise_col_bounds(
+		      HighsLp& lp,
+		      int XfromCol,
+		      int XtoCol,
+		      double infinite_bound
+		      );
+
+HighsStatus add_lp_rows(
+		HighsLp& lp,
+		int XnumNewRow,
+		const double *XrowLower,
+		const double *XrowUpper,
+		int XnumNewNZ,
+		const int *XARstart,
+		const int *XARindex,
+		const double *XARvalue,
+		const HighsOptions& options,
+		const bool force = false
+		);
+
+HighsStatus append_lp_rows(
+		   HighsLp& lp,
+		   int XnumNewRow,
+		   const double *XrowLower,
+		   const double *XrowUpper,
+		   int XnumNewNZ,
+		   const int *XARstart,
+		   const int *XARindex,
+		   const double *XARvalue,
+		   const HighsOptions& options,
+		   const bool force = false
+		   );
+
+HighsStatus assess_row_bounds(
+			int XnumRow,
+			const double* XrowLower,
+			const double* XrowUpper,
+			double infinite_bound
+			);
+
+void append_rows_to_lp_vectors(HighsLp &lp,
+			       int XnumNewRow,
+			       const double *XrowLower,
+			       const double *XrowUpper
+			       );
+
+HighsStatus normalise_row_bounds(
+		       HighsLp& lp,
+		       int XfromRow,
+		       int XtoRow,
+		       double infinite_bound
+		       );
+
+HighsStatus assess_matrix(
+			  int XnumRow,
+			  int XnumCol,
+			  int XnumNZ,
+			  const int* XAstart,
+			  const int* XAindex,
+			  const double *XAvalue
+			  );
+
+void append_cols_to_lp_matrix(
+			   HighsLp &lp,
+			   int XnumNewCol,
+			   int XnumNewNZ,
+			   const int *XAstart,
+			   const int *XAindex,
+			   const double *XAvalue
+			   );
+
+void append_rows_to_lp_matrix(HighsLp &lp,
+			   int XnumNewRow,
+			   int XnumNewNZ,
+			   const int *XARstart,
+			   const int *XARindex,
+			   const double *XARvalue
+			   );
+
+HighsStatus normalise_lp_matrix(
+			  HighsLp& lp,
+			  int XfromCol,
+			  int XtoCol,
+			  double small_matrix_value,
+			  double large_matrix_value
+			  );
+
+HighsStatus normalise_lp_row_matrix(
+			      int XnumCol,
+			      int XnumRow,
+			      int XnumNZ,
+			      int* XARstart,
+			      int* XARindex,
+			      double* XARvalue,
+			      double small_matrix_value,
+			      double large_matrix_value
+			      );
+
+void del_cols_from_lp_vectors(
+			      HighsLp &lp,
+			      int XfromCol,
+			      int XtoCol
+			      );
+
+void del_cols_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromCol,
+			     int XtoCol
+			     );
+
+void del_rows_from_lp_vectors(
+			      HighsLp &lp,
+			      int XfromRow,
+			      int XtoRow
+			      );
+
+void del_rows_from_lp_matrix(
+			     HighsLp &lp,
+			     int XfromRow,
+			     int XtoRow
+			     );
+
+void change_lp_matrix_coefficient(
+				  HighsLp &lp,
+				  int Xrow,
+				  int Xcol,
+				  const double XnewValue
+				  );
+
 
 /**
  * @brief Report the data of an LP
@@ -110,6 +289,9 @@ void reportLpColMtx(
 */
 #ifdef HiGHSDEV
 // Analyse the data in an LP problem
-void util_analyseLp(const HighsLp &lp, const char* message);
+void util_analyseLp(
+		    const HighsLp &lp,
+		    const char* message
+		    );
 #endif
 #endif // LP_DATA_HIGHSLPUTILS_H_

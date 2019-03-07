@@ -19,7 +19,6 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "presolve/Presolve.h"
-#include "lp_data/HighsModelObject.h"
 #include "simplex/SimplexConst.h"
 #include "cxxopts.hpp"
 
@@ -55,16 +54,19 @@ struct HighsOptions
   CrashOption crash_option = CrashOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
   bool ipx = false;
+  int allow_superbasic = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+  double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
+  double large_matrix_value = LARGE_MATRIX_VALUE_DEFAULT;
 
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  HighsMpsParserType parser_type = HighsMpsParserType::free;
+  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
 
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
@@ -81,13 +83,13 @@ struct HighsOptions
   // For an LP model
   //
   // Try to solve the dual of the LP
-  bool transpose_solver_lp = false;
+  bool transpose_simplex_lp = false;
   // Perform LP scaling
-  bool scale_solver_lp = true;
+  bool scale_simplex_lp = true;
   // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permute_solver_lp = false;
+  bool permute_simplex_lp = false;
   // Perform LP bound tightening
-  bool tighten_solver_lp = false;
+  bool tighten_simplex_lp = false;
   //
   // For any solver
   //

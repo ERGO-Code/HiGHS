@@ -1,5 +1,6 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HConst.h"
+#include "io/LoadProblem.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
@@ -26,12 +27,14 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(parallel))(
         "time-limit", "Use time limit.",
         cxxopts::value<double>())(
-        "h, help", "Print help.")(
+        "iteration-limit", "Use iteration limit (integer).",
+        cxxopts::value<int>())(
         "options-file",
         "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())(
         "parser", "Mps parser type: swap back to fixed format parser.",
-        cxxopts::value<std::string>(presolve));
+        cxxopts::value<std::string>(presolve))(
+        "h, help", "Print help.");
 
     cxx_options.parse_positional("file");
 
@@ -101,6 +104,18 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       options.highs_run_time_limit = time_limit;
     }
 
+    if (result.count("iteration-limit"))
+    {
+      double iteration_limit = result["iteration-limit"].as<int>();
+      if (iteration_limit <= 0)
+      {
+        std::cout << "Iteration limit must be positive." << std::endl;
+        std::cout << cxx_options.help({""}) << std::endl;
+        exit(0);
+      }
+      options.simplex_iteration_limit = iteration_limit;
+    }
+
     if (result.count("options-file"))
     {
       auto &v = result["options-file"].as<std::vector<std::string>>();
@@ -110,6 +125,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         return false;
       }
       options.options_file = v[0];
+      loadOptionsFromFile(options);
     }
 
     // For testing of new parser
@@ -120,6 +136,11 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         options.parser_type = HighsMpsParserType::fixed;
       else if (value == "free")
         options.parser_type = HighsMpsParserType::free;
+      else {
+        std::cout << "Illegall value for parser." << std::endl;
+        std::cout << cxx_options.help({""}) << std::endl;
+        exit(0);
+      }
     }
   }
   catch (const cxxopts::OptionException &e)

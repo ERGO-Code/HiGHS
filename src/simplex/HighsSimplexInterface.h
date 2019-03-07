@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HighsSimplexInterface.h
- * @brief Dual simplex solver for HiGHS
+ * @brief Return or report data from simplex solves and interface that data with changes to models
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef SIMPLEX_HIGHSSIMPLEXINTERFACE_H_
@@ -24,7 +24,7 @@
 //class HFactor;
 
 /**
- * @brief Dual simplex solver for HiGHS
+ * @brief Return or report data from simplex solves and interface that data with changes to models
  */
 class HighsSimplexInterface {
  public:
@@ -33,78 +33,66 @@ class HighsSimplexInterface {
   HighsModelObject &highs_model_object;
   
   /**
-   * @brief Load a model from arrays 
+   * @brief Report the outcome of a simplex solve, printing a message first to contextualise the call
    */
-  void load_from_arrays(
-			int XnumCol,
-			int XobjSense,
-			const double* XcolCost,
-			const double* XcolLower,
-			const double* XcolUpper,
-			int XnumRow,
-			const double* XrowLower,
-			const double* XrowUpper,
-			int XnumNz,
-			const int* XAstart,
-			const int* XAindex,
-			const double* XAvalue
-			);
-
-  // Methods for brief reports
-  void report_simplex_outcome(const char* message);
-  void report_simplex_solution_status();
-
-  /**
-   * @brief Get the column and row (primal) values and dual (values)
-   */
-  void get_primal_dual_values(
-			      vector<double> &XcolValue,
-			      vector<double> &XcolDual,
-			      vector<double> &XrowValue,
-			      vector<double> &XrowDual
+  void report_simplex_outcome(
+			      const char* message
 			      );
-
-  void get_nonbasicMove(vector<int> &XnonbasicMove);
-
-  void get_basicIndex_nonbasicFlag(
-				   vector<int> &XbasicIndex,
-				   vector<int> &XnonbasicFlag
-				   );
-
-  // Utility to get the indices of the basic variables for SCIP
-  int get_basic_indices(
-			int *bind
-			);
-  // Utilities to convert model basic/nonbasic status to/from SCIP-like status
-  // Convert model basic/nonbasic status from SCIP-like status
-  // Postive  return value k implies invalid basis status for column k-1
-  // Negative return value k implies invalid basis status for row   -k-1
-  int convert_baseStat_to_working(
-				  const int* cstat,
-				  const int* rstat
-				  );
-  int convert_Working_to_BaseStat(
-				  int* cstat,
-				  int* rstat
-				  );
-
-
-
   /**
-   * @brief Get the LP objective function value from column values
+   * @brief Compute the LP objective function value from column values
    */
   double get_lp_objective_value(
-			      vector<double> &XcolValue
+				vector<double> &XcolValue
+				);
+
+  /**
+   * @brief Get vectors of column and row (primal) values and dual (values)
+   */
+  void get_primal_dual_values(
+			      vector<double> &XcolValue, //!> Column primal activities
+			      vector<double> &XcolDual,  //!> Column dual activities
+			      vector<double> &XrowValue, //!> Row primal activities
+			      vector<double> &XrowDual   //!> Row dual activities
 			      );
+
+  /**
+   * @brief Get the basicIndex and nonbasicFlag vectors - Used?
+   */
+  void get_basicIndex_nonbasicFlag(
+				   vector<int> &XbasicIndex,  //!> Indices of basic variables
+				   vector<int> &XnonbasicFlag //!> Flag to indicate which variables are nonbasic
+				   );
+
+  /**
+   * @brief Get the indices of the basic variables for SCIP
+   */
+  int get_basic_indices(
+			int *bind //!> Indices of basic variables
+			);
+
+  /**
+   * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
+   * Postive  return value k implies invalid basis status for column k-1
+   * Negative return value k implies invalid basis status for row   -k-1
+   */
+  int convert_baseStat_to_working(
+				  const int* cstat, //!> Column baseStat
+				  const int* rstat  //!> Row baseStat
+				  );
+
+  /**
+   * @brief Convert a HiGHS basis to SCIP baseStat for columns and rows
+   * Postive  return value k implies invalid basis status for column k-1
+   * Negative return value k implies invalid basis status for row   -k-1
+   */
+  int convert_Working_to_BaseStat(
+				  int* cstat, //!> Column baseStat
+				  int* rstat  //!> Row baseStat
+				  );
 
 #ifdef HiGHSDEV
   /**
-   * @brief Test load_from_arrays
-   */
-  void check_load_from_arrays();
-
-  /**
-   * @brief Check that what's passed from postsolve is valid
+   * @brief Check that what's passed from postsolve is valid - Used?
    */
   void check_load_from_postsolve();
 #endif
@@ -112,28 +100,29 @@ class HighsSimplexInterface {
   /**
    * @brief Add a contiguous set of columns to the model data---making them nonbasic
    */
-  void util_add_cols(
-		     int ncols,
-		     const double *XcolCost,
-		     const double *colLower,
-		     const double *XcolUpper,
-		     int nnonz,
-		     const int *XAstart,
-		     const int *XAindex,
-		     const double *XAvalue
-		     );
-
+  HighsStatus util_add_cols(
+			    int XnumCol,
+			    const double *XcolCost,
+			    const double *XcolLower,
+			    const double *XcolUpper,
+			    int XnumNZ,
+			    const int *XAstart,
+			    const int *XAindex,
+			    const double *XAvalue,
+			    const bool force = false
+			    );
+  
   void util_delete_cols(
-			int firstcol,
-			int lastcol
+			int XfromCol,
+			int XtoCol
 			);
-
+  
   void util_delete_col_set(
-			  vector<int>& dstat
-			  );
-
+			   vector<int>& dstat
+			   );
+  
   void util_extract_cols(
-			 int firstcol, int lastcol,
+			 int XfromCol, int XtoCol,
 			 double* XcolLower,
 			 double* XcolUpper,
 			 int* nnonz,
@@ -146,24 +135,25 @@ class HighsSimplexInterface {
   /**
    * @brief Add a contiguous set of rows to the model data---making them basic
    */
-  void util_add_rows(
-		     int nrows,
-		     const double *XrowLower,
-		     const double *XrowUpper,
-		     int nnonz,
-		     const int *XARstart,
-		     const int *XARindex,
-		     const double *XARvalue
-		     );
+  HighsStatus util_add_rows(
+			    int XnumNewRow,
+			    const double *XrowLower,
+			    const double *XrowUpper,
+			    int XnumNewNZ,
+			    const int *XARstart,
+			    const int *XARindex,
+			    const double *XARvalue,
+			    const bool force = false
+			    );
   void util_delete_rows(
 			int firstrow,
 			int lastrow
 			);
-
+  
   void util_delete_row_set(
-			  vector<int>& dstat
-			  );
-
+			   vector<int>& dstat
+			   );
+  
   void util_extract_rows(
 			 int firstrow,
 			 int lastrow,
@@ -176,14 +166,14 @@ class HighsSimplexInterface {
 			 );
 
   void util_change_coefficient(
-			       int row,
-			       int col,
-			       const double newval
+			       int Xrow,
+			       int Xcol,
+			       const double XnewValue
 			       );
 
   // Shift the objective
   void shift_objective_value(
-			     double shift
+			     double Xshift
 			     );
 
   // Utilities to get/change costs and bounds
@@ -199,19 +189,20 @@ class HighsSimplexInterface {
 
 // Change the costs for a set of columns
   int change_costs_set(
-		       int ncols,
+		       int XnumColInSet,
 		       const int* XcolCostIndex,
-                       const double* XcolCostValues
+                       const double* XcolCostValue
 		       );
 
 // Change the bounds for all columns
 // Postive  return value k implies that the lower bound is being set to +Inf for
 // column k-1 Negative return value k implies that the upper bound is being set
 // to -Inf for column -k-1
-  int change_col_bounds_all(
-			    const double* XcolLower,
-			    const double* XcolUpper
-			    );
+  HighsStatus change_col_bounds_all(
+				    const double* XcolLower,
+				    const double* XcolUpper,
+				    bool force = false
+				    );
 
 // Change the bounds for a set of columns
 // Postive  return value k implies that the lower bound is being set to +Inf for
@@ -221,7 +212,8 @@ class HighsSimplexInterface {
 			    int ncols,
 			    const int* XcolBoundIndex,
 			    const double* XcolLowerValues,
-			    const double* XcolUpperValues
+			    const double* XcolUpperValues,
+			    bool force = false
 			    );
 
 // Change the bounds for all rows
@@ -230,7 +222,8 @@ class HighsSimplexInterface {
 // -Inf for row -k-1
   int change_row_bounds_all(
 			    const double* XrowLower,
-			    const double* XrowUpper
+			    const double* XrowUpper,
+			    bool force = false
 			    );
 
 // Change the bounds for a set of rows
@@ -241,12 +234,10 @@ class HighsSimplexInterface {
 			    int nrows,
 			    const int* XrowBoundIndex,
 			    const double* XrowLowerValues,
-			    const double* XrowUpperValues
+			    const double* XrowUpperValues,
+			    bool force = false
 			    );
   
-  int write_to_mps(
-		   const char* filename
-		   );
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void change_update_method(

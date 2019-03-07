@@ -11,6 +11,7 @@
 #define LP_DATA_HIGHS_MODEL_OBJECT_H_
 
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
 #include "util/HighsTimer.h"
 #include "util/HighsRandom.h"
 #include "simplex/HMatrix.h"
@@ -22,16 +23,19 @@
 // include essential data.
 class HighsModelObject {
 public:
- HighsModelObject(HighsLp& lp, HighsTimer& timer) : lp_(lp),
-    timer_(timer) {}
+ HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer) : lp_(lp), options_(options), timer_(timer) {}
 
   HighsLp& lp_;
-  HighsBasis basis_;
-  HighsSolution solution_;
+  HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsLp solver_lp_;
+  HighsBasis basis_;
+  HighsSolution solution_;
+
+  HighsLp simplex_lp_;
+  HighsBasis simplex_basis_;
   HighsSimplexInfo simplex_info_;
+  HighsSimplexLpStatus simplex_lp_status_;
   //  HighsRanging ranging_;
   HighsScale scale_;
   HMatrix matrix_;

@@ -54,8 +54,10 @@ enum class SimplexOption {
   DEFAULT = OFF
 };
 
+const double INFINITE_COST_DEFAULT = 1e20;
 const double INFINITE_BOUND_DEFAULT = 1e20;
 const double SMALL_MATRIX_VALUE_DEFAULT = 1e-9;
+const double LARGE_MATRIX_VALUE_DEFAULT = 1e15;
 const double HIGHS_RUN_TIME_LIMIT_DEFAULT = HIGHS_CONST_INF;
 const double PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
 const double DUAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
@@ -65,10 +67,15 @@ const int SIMPLEX_UPDATE_LIMIT_DEFAULT = 5000;
 
 /** SCIP-like basis status for columns and rows. Don't use enum
     class since they are used in conditional statements */
-const int HIGHS_BASESTAT_LOWER = 0; // (slack) variable is at its lower bound [including fixed variables]
-const int HIGHS_BASESTAT_BASIC = 1; // (slack) variable is basic 
-const int HIGHS_BASESTAT_UPPER = 2; // (slack) variable is at its upper bound 
-const int HIGHS_BASESTAT_ZERO = 3;  // free variable is non-basic and set to zero 
+enum class HighsBasisStatus {
+  LOWER = 0, // (slack) variable is at its lower bound [including fixed variables]
+  BASIC, // (slack) variable is basic 
+  UPPER, // (slack) variable is at its upper bound 
+  ZERO,  // free variable is non-basic and set to zero 
+  SUPER // Super-basic variable: non-basic and either free and nonzero
+	// or not at a bound. Not permitted when allow_superbasic is
+	// false: no SCIP equivalent
+};
 
 /** HiGHS nonbasicFlag status for columns and rows. Don't use enum
     class since they are used as int to replace conditional statements

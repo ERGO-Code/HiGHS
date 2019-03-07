@@ -39,9 +39,10 @@ using std::fabs;
 
 void HDual::solve(int num_threads) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  simplex_info.solution_status = SimplexSolutionStatus::UNSET;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
   // Cannot solve box-constrained LPs
-  if (workHMO.solver_lp_.numRow_ == 0) return;
+  if (workHMO.simplex_lp_.numRow_ == 0) return;
 
   HighsTimer &timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
@@ -69,7 +70,7 @@ void HDual::solve(int num_threads) {
   init(num_threads);
 
   initialise_cost(workHMO, 1); //  model->initCost(1);
-  if (!simplex_info.solver_lp_has_fresh_invert) {
+  if (!simplex_lp_status.has_fresh_invert) {
     int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
 
     if (rankDeficiency) {
@@ -93,12 +94,12 @@ void HDual::solve(int num_threads) {
   // Dantzig pricing
   //
 #ifdef HiGHSDEV
-  //  printf("simplex_info.solver_lp_has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
+  //  printf("simplex_lp_status.has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
   //  %d\n",
-  //	 simplex_info.solver_lp_has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
-  //  printf("Edge weights known? %d\n", !simplex_info.solver_lp_has_dual_steepest_edge_weights);cout<<flush;
+  //	 simplex_lp_status.has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
+  //  printf("Edge weights known? %d\n", !simplex_lp_status.has_dual_steepest_edge_weights);cout<<flush;
 #endif
-  if (!simplex_info.solver_lp_has_dual_steepest_edge_weights) {
+  if (!simplex_lp_status.has_dual_steepest_edge_weights) {
     // Edge weights are not known
     // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
     if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
@@ -155,7 +156,7 @@ void HDual::solve(int num_threads) {
 #endif
     }
     // Indicate that edge weights are known
-    simplex_info.solver_lp_has_dual_steepest_edge_weights = true;
+    simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
 
 #ifdef HiGHSDEV
@@ -173,7 +174,7 @@ void HDual::solve(int num_threads) {
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
   for (int i = 0; i < solver_num_tot; i++) {
-    if (workHMO.basis_.nonbasicFlag_[i]) {
+    if (workHMO.simplex_basis_.nonbasicFlag_[i]) {
       double myDual = fabs(workDual[i] * jMove[i]);
       if (largeDual < myDual) largeDual = myDual;
     }
@@ -225,7 +226,7 @@ void HDual::solve(int num_threads) {
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
     // updated value
-    simplex_info.solver_lp_has_dual_objective_value = 0;
+    simplex_lp_status.has_dual_objective_value = 0;
     switch (solvePhase) {
       case 1:
 	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
@@ -292,7 +293,7 @@ void HDual::solve(int num_threads) {
     }
 #endif
 
-  if (simplex_info.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
     // Use primal to clean up if not out of time
     int it0 = simplex_info.iteration_count;
     if (solvePhase == 4) {
@@ -335,8 +336,8 @@ void HDual::solve(int num_threads) {
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
 #ifdef HiGHSDEV
-  //  printf("report_solver_lp_status_flags(workHMO) 9\n");cout<<flush;
-  //  report_solver_lp_status_flags(workHMO);cout<<flush;
+  //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
+  //  report_simplex_lp_status_flags(workHMO.simplex_lp_status_);
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
@@ -387,17 +388,17 @@ void HDual::solve(int num_threads) {
 void HDual::options() {
   // Set solver options from simplex options
 
-  HighsSimplexInfo &simplex_info_ = workHMO.simplex_info_;
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
 
-  interpret_dual_edge_weight_strategy(simplex_info_.dual_edge_weight_strategy);
-  interpret_price_strategy(simplex_info_.price_strategy);
+  interpret_dual_edge_weight_strategy(simplex_info.dual_edge_weight_strategy);
+  interpret_price_strategy(simplex_info.price_strategy);
 
   // Copy values of simplex solver options to dual simplex options
-  primal_feasibility_tolerance = simplex_info_.primal_feasibility_tolerance;
-  dual_feasibility_tolerance = simplex_info_.dual_feasibility_tolerance;
-  dual_objective_value_upper_bound = simplex_info_.dual_objective_value_upper_bound;
-  //  perturb_costs = simplex_info_.perturb_costs;
-  //  iterationLimit = simplex_info_.iterationLimit;
+  primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
+  dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+  dual_objective_value_upper_bound = simplex_info.dual_objective_value_upper_bound;
+  //  perturb_costs = simplex_info.perturb_costs;
+  //  iterationLimit = simplex_info.iterationLimit;
 
   // Set values of internal options
 }
@@ -405,15 +406,15 @@ void HDual::options() {
 void HDual::init(int num_threads) {
   // Copy size, matrix and factor
 
-  solver_num_col = workHMO.solver_lp_.numCol_;
-  solver_num_row = workHMO.solver_lp_.numRow_;
+  solver_num_col = workHMO.simplex_lp_.numCol_;
+  solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
   matrix = &workHMO.matrix_;
   factor = &workHMO.factor_;
 
   // Copy pointers
-  jMove = &workHMO.basis_.nonbasicMove_[0];
+  jMove = &workHMO.simplex_basis_.nonbasicMove_[0];
   workDual = &workHMO.simplex_info_.workDual_[0];
   workValue = &workHMO.simplex_info_.workValue_[0];
   workRange = &workHMO.simplex_info_.workRange_[0];
@@ -519,6 +520,7 @@ void HDual::init_slice(int init_sliced_num) {
 void HDual::solve_phase1() {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   initialise_bound(workHMO, 1); //model->initBound(1);
@@ -551,20 +553,20 @@ void HDual::solve_phase1() {
         printf("HDual::solve_phase1: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
-        simplex_info.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
     }
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > simplex_info.highs_run_time_limit) {
       SolveBailout = true;
-      simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
     }
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_info.solver_lp_has_fresh_rebuild) break;
+    if (simplex_lp_status.has_fresh_rebuild) break;
   }
 
   timer.stop(simplex_info.clock_[IterateClock]);
@@ -585,7 +587,7 @@ void HDual::solve_phase1() {
         // Report dual infeasible
         solvePhase = -1;
         HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
-        simplex_info.solution_status = SimplexSolutionStatus::UNBOUNDED;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
       }
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
@@ -593,7 +595,7 @@ void HDual::solve_phase1() {
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-    simplex_info.solution_status = SimplexSolutionStatus::FAILED;
+    simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
@@ -605,7 +607,7 @@ void HDual::solve_phase1() {
       // Report strange issues
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-      simplex_info.solution_status = SimplexSolutionStatus::FAILED;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
     }
   }
 
@@ -618,6 +620,7 @@ void HDual::solve_phase1() {
 void HDual::solve_phase2() {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   HighsPrintMessage(ML_DETAILED, "dual-phase-2-start\n");
 
   // Collect free variables
@@ -654,25 +657,25 @@ void HDual::solve_phase2() {
         printf("HDual::solve_phase2: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
-        simplex_info.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        simplex_lp_status.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         SolveBailout = true;
         break;
       }
     }
-    if (simplex_info.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
+    if (simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
       SolveBailout = true;
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > simplex_info.highs_run_time_limit) {
-      simplex_info.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       SolveBailout = true;
       break;
     }
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_info.solver_lp_has_fresh_rebuild) break;
+    if (simplex_lp_status.has_fresh_rebuild) break;
   }
   timer.stop(simplex_info.clock_[IterateClock]);
 
@@ -696,14 +699,14 @@ void HDual::solve_phase2() {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
       HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-      simplex_info.solution_status = SimplexSolutionStatus::OPTIMAL;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
-    simplex_info.solution_status = SimplexSolutionStatus::FAILED;
+    simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
@@ -715,7 +718,7 @@ void HDual::solve_phase2() {
       // primal infeasible
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
-      simplex_info.solution_status = SimplexSolutionStatus::INFEASIBLE;
+      simplex_lp_status.solution_status = SimplexSolutionStatus::INFEASIBLE;
     }
   }
 }
@@ -723,6 +726,7 @@ void HDual::solve_phase2() {
 void HDual::rebuild() {
   HighsTimer &timer = workHMO.timer_;
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   // Save history information
   // Move this to Simplex class once it's created
   //  record_pivots(-1, -1, 0);  // Indicate REINVERT
@@ -740,7 +744,7 @@ void HDual::rebuild() {
     }
   }
   if (reInvert) {
-    const int *baseIndex = &workHMO.basis_.basicIndex_[0];
+    const int *baseIndex = &workHMO.simplex_basis_.basicIndex_[0];
     // Scatter the edge weights so that, after INVERT,
     // they can be gathered according to the new
 
@@ -792,7 +796,7 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = simplex_info.solver_lp_has_dual_objective_value;
+  bool checkDualObjectiveValue = simplex_lp_status.has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuobjClock]);
   compute_dual_objective_value(workHMO, solvePhase);
@@ -836,7 +840,7 @@ void HDual::rebuild() {
   }
 #endif
   // Data are fresh from rebuild
-  simplex_info.solver_lp_has_fresh_rebuild = true;
+  simplex_lp_status.has_fresh_rebuild = true;
 }
 
 void HDual::cleanup() {
@@ -1296,7 +1300,7 @@ void HDual::chooseRow() {
   // Assign basic info:
   //
   // Record the column (variable) associated with the leaving row
-  columnOut = workHMO.basis_.basicIndex_[rowOut];
+  columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
   // Record the change in primal variable associated with the move to the bound
   // being violated
   if (baseValue[rowOut] < baseLower[rowOut]) {
@@ -1360,7 +1364,7 @@ void HDual::chooseColumn(HVector *row_ep) {
       matrix->price_by_col(row_ap, *row_ep);
       // Zero the components of row_ap corresponding to basic variables
       // (nonbasicFlag[*]=0)
-      const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
+      const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
       for (int col = 0; col < solver_num_col; col++) {
         row_ap.array[col] = nonbasicFlag[col] * row_ap.array[col];
       }
@@ -1747,7 +1751,7 @@ void HDual::updatePivots() {
   if (invertHint) return;
   //
   // Update the sets of indices of basic and nonbasic variables
-  update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, columnIn, rowOut, sourceOut);
   //  checkDualObjectiveValue("After update_pivots");
   //
   // Update the iteration count and store the basis change if HiGHSDEV
@@ -1757,10 +1761,10 @@ void HDual::updatePivots() {
   workHMO.simplex_info_.iteration_count++;
   //
   // Update the invertible representation of the basis matrix
-  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);//model->updateFactor(&column, &row_ep, &rowOut, &invertHint);
+  update_factor(workHMO, &column, &row_ep, &rowOut, &invertHint);
   //
   // Update the row-wise representation of the nonbasic columns
-  update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
+  update_matrix(workHMO, columnIn, columnOut);
   //
   // Delete Freelist entry for columnIn
   dualRow.delete_Freelist(columnIn);
@@ -1787,9 +1791,9 @@ void HDual::iz_dvx_fwk() {
   // Initialise the Devex framework: reference set is all basic
   // variables
   timer.start(simplex_info.clock_[DevexIzClock]);
-  const int *nonbasicFlag = &workHMO.basis_.nonbasicFlag_[0];
+  const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
-    //      if (workHMO.basis_.nonbasicFlag_[vr_n])
+    //      if (workHMO.simplex_basis_.nonbasicFlag_[vr_n])
     //      if (nonbasicFlag[vr_n])
     //			Nonbasic variables not in reference set
     //	dvx_ix[vr_n] = dvx_not_in_R;
@@ -1891,7 +1895,7 @@ double HDual::checkDualObjectiveValue(const char *message, int phase) {
   previousUpdatedDualObjectiveValue = dualObjectiveValue;
   workHMO.simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
   // Now have dual objective value
-  workHMO.simplex_info_.solver_lp_has_dual_objective_value = true;
+  workHMO.simplex_lp_status_.has_dual_objective_value = true;
   return updatedDualObjectiveError;
 }
 #endif
@@ -2005,7 +2009,7 @@ double HDual::an_bs_cond() {
   }
   double norm_B = 0.0;
   for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = workHMO.basis_.basicIndex_[r_n];
+    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
     double c_norm = 0.0;
     if (vr_n < solver_num_col)
       for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
@@ -2228,14 +2232,14 @@ void HDual::an_iz_vr_v() {
   double norm_bc_pr_vr = 0;
   double norm_bc_du_vr = 0;
   for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = workHMO.basis_.basicIndex_[r_n];
+    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
     norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
     norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
   }
   double norm_nonbc_pr_vr = 0;
   double norm_nonbc_du_vr = 0;
   for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
-    if (workHMO.basis_.nonbasicFlag_[vr_n]) {
+    if (workHMO.simplex_basis_.nonbasicFlag_[vr_n]) {
       double pr_act_v = workHMO.simplex_info_.workValue_[vr_n];
       norm_nonbc_pr_vr += pr_act_v * pr_act_v;
       norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];

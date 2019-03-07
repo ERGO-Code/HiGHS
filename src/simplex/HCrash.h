@@ -113,8 +113,8 @@ class HCrash {
   int numCol;
   int numRow;
   int numTot;
-  const HighsLp *lp_;
-  const HighsBasis *basis_;
+  const HighsLp *simplex_lp_;
+  const HighsBasis *simplex_basis_;
   const HMatrix *matrix_;
 
   //    LTSSF arrays

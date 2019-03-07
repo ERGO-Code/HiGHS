@@ -1,11 +1,12 @@
 #ifndef HIGHS_H_
 #define HIGHS_H_
 
-#include "HighsOptions.h"
-#include "HighsTimer.h"
-#include "HighsLp.h"
-#include "HighsStatus.h"
-#include "HighsModelBuilder.h"
+#include "lp_data/HighsModelObject.h"
+#include "lp_data/HighsOptions.h"
+#include "util/HighsTimer.h"
+#include "lp_data/HighsLp.h"
+#include "lp_data/HighsStatus.h"
+#include "lp_data/HighsModelBuilder.h"
 
 // Class to set parameters and run HiGHS
 class Highs
@@ -14,9 +15,9 @@ public:
   Highs() {}
   explicit Highs(const HighsOptions &opt) : options_(opt){};
 
-  // The public method run(lp, solution) calls runSolver to solve problem before
-  // or after presolve (or crash later?) depending on the specified options.
-  HighsStatus run(HighsLp &lp);
+  // The public method run() calls runSolver to solve problem before
+  // or after presolve (or crash later) depending on the specified options.
+  HighsStatus initializeLp(HighsLp &lp);
   HighsStatus run();
 
   int HighsAddVariable(double obj=0.0, double lo=0.0, double hi=HIGHS_CONST_INF); // TODO: name
@@ -46,10 +47,12 @@ public:
   HighsSolution getSolution() const { return solution_; }
 
 private:
+  HighsOptions options_;
   HighsSolution solution_;
-  HighsBasis basis_;
+  HighsLp lp_;
+
   // each HighsModelObject holds a const ref to its lp_
-  std::vector<HighsModelObject> lps_;
+  std::vector<HighsModelObject> hmos_;
 
   bool runSuccessful;
 
@@ -64,8 +67,6 @@ private:
     // todo: implement, from user's side.
     return HighsPresolveStatus::NullError;
   };
-
-  HighsOptions options_;
 
   HighsModelBuilder builder;
 };

@@ -94,8 +94,16 @@ bool setOptionValue(HighsOptions& options, const std::string& option, const std:
       options.simplex_option = SimplexOption::OFF;
     else
       return false;
+  } else if (option == "infinite_cost") {
+      options.infinite_cost = atof(value.c_str());
+  } else if (option == "infinite_bound") {
+      options.infinite_bound = atof(value.c_str());
   } else if (option == "small_matrix_value") {
       options.small_matrix_value = atof(value.c_str());
+  } else if (option == "large_matrix_value") {
+      options.large_matrix_value = atof(value.c_str());
+  } else if (option == "dual_objective_value_upper_bound") {
+      options.dual_objective_value_upper_bound = atof(value.c_str());
   } else {
     HighsLogMessage(HighsMessageType::WARNING, "Unknown option: %s.", option.c_str());
     return false;
