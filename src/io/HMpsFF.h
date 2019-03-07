@@ -726,13 +726,13 @@ HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
     if ((row_type[rowidx] == boundtype::EQ && val < 0) ||
         row_type[rowidx] == boundtype::LE) {
       assert(rowUpper.at(rowidx) < HIGHS_CONST_INF);
-      rowLower.at(rowidx) = rowUpper.at(rowidx) - abs(val);
+      rowLower.at(rowidx) = rowUpper.at(rowidx) - fabs(val);
     }
 
     else if ((row_type[rowidx] == boundtype::EQ && val > 0) ||
              row_type[rowidx] == boundtype::GE) {
       assert(rowLower.at(rowidx) > (-HIGHS_CONST_INF));
-      rowUpper.at(rowidx) = rowLower.at(rowidx) + abs(val);
+      rowUpper.at(rowidx) = rowLower.at(rowidx) + fabs(val);
     }
   };
 
