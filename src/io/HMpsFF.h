@@ -55,7 +55,7 @@ private:
   int nnz;
 
   int objSense;
-  double objOffset;
+  double objOffset = 0;
 
   std::vector<int> Astart;
   std::vector<int> Aindex;
