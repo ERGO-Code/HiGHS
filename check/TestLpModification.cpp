@@ -283,5 +283,57 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::Optimal);
   
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportLp(reference_lp, 2);
+  HighsSetMessagelevel(ML_NONE);
+
+  // Getting columns from the LP is OK
+  int col1357_col_set[] = {1, 3, 5, 7};
+  int col1357_num_ix = 4;
+  int col1357_num_col;
+  int col1357_num_nz;
+  double *col1357_cost = (double *)malloc(sizeof(double) * col1357_num_ix);
+  double *col1357_lower = (double *)malloc(sizeof(double) * col1357_num_ix);
+  double *col1357_upper = (double *)malloc(sizeof(double) * col1357_num_ix);
+  int *col1357_start = (int *)malloc(sizeof(int) * col1357_num_ix);
+  int *col1357_index = (int *)malloc(sizeof(int) * num_col_nz);
+  double *col1357_value = (double *)malloc(sizeof(double) * num_col_nz);
+
+    
+  return_bool = highs.getCols(col1357_num_ix, col1357_col_set, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportMtx("Column", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  HighsSetMessagelevel(ML_NONE);
+  
+  return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
+  REQUIRE(return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportLp(reference_lp, 2);
+  HighsSetMessagelevel(ML_NONE);
+
+  // Getting columns from the LP is OK
+  int row1357_row_set[] = {1, 3, 5, 7};
+  int row1357_num_ix = 4;
+  int row1357_num_row;
+  int row1357_num_nz;
+  double *row1357_lower = (double *)malloc(sizeof(double) * row1357_num_ix);
+  double *row1357_upper = (double *)malloc(sizeof(double) * row1357_num_ix);
+  int *row1357_start = (int *)malloc(sizeof(int) * row1357_num_ix);
+  int *row1357_index = (int *)malloc(sizeof(int) * num_row_nz);
+  double *row1357_value = (double *)malloc(sizeof(double) * num_row_nz);
+
+    
+  return_bool = highs.getRows(row1357_num_ix, row1357_row_set, row1357_num_row, row1357_lower, row1357_upper,
+			      row1357_num_nz, row1357_start, row1357_index, row1357_value);
+  REQUIRE(return_bool);
+
+  HighsSetMessagelevel(ML_ALWAYS);
+  reportMtx("Row   ", row1357_num_row, row1357_num_nz, row1357_start, row1357_index, row1357_value);
+  HighsSetMessagelevel(ML_NONE);
+  
 }
 

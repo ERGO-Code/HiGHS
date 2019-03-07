@@ -464,8 +464,8 @@ bool Highs::changeObjCoef(int index, double coef) {
 }
 
 bool Highs::getCols(const int n, const int *indices,
-		    int num_col, double *costs, double *lower_bounds, double *upper_bounds,
-		    int num_nz, int *start, int *index, double *value) {
+		    int &num_col, double *costs, double *lower_bounds, double *upper_bounds,
+		    int &num_nz, int *start, int *index, double *value) {
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -480,8 +480,8 @@ bool Highs::getCols(const int n, const int *indices,
 }
 
 bool Highs::getRows(const int n, const int *indices,
-		    int num_row, double *lower_bounds, double *upper_bounds,
-		    int num_nz, int *start, int *index, double *value) {
+		    int &num_row, double *lower_bounds, double *upper_bounds,
+		    int &num_nz, int *start, int *index, double *value) {
 
   if (!simplex_has_run_) {
     // TODO: modify local lp

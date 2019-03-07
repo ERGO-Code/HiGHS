@@ -136,11 +136,11 @@ public:
   bool getCols(
 	       const int n, 
 	       const int* indices,
-	       int num_col,
+	       int& num_col,
 	       double *col_costs,
 	       double *col_lower,
 	       double *col_upper,
-	       int num_nz,
+	       int& num_nz,
 	       int *col_matrix_start,
 	       int *col_matrix_index,
 	       double *col_matrix_value
@@ -149,10 +149,10 @@ public:
   bool getRows(
 	       const int n, 
 	       const int* indices,
-	       int num_row,
+	       int& num_row,
 	       double *row_lower,
 	       double *row_upper,
-	       int num_nz,
+	       int& num_nz,
 	       int *row_matrix_start,
 	       int *row_matrix_index,
 	       double *row_matrix_value
