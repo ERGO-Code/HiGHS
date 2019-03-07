@@ -32,6 +32,8 @@ HighsStatus Highs::initializeLp(HighsLp &lp) {
   return HighsStatus::OK;
 }
 
+/* Commented out due to errors with HighsModelBuilder. Method re-written in branch
+   OSIinterface. Delete one below when merging.
 int Highs::HighsAddVariable(double obj, double lo, double hi) {
   if (this->runSuccessful) {
     HighsSimplexInterface simplex_interface(this->hmos_[0]);
@@ -45,6 +47,7 @@ int Highs::HighsAddVariable(double obj, double lo, double hi) {
     return this->builder.getNumberOfVariables();
   }
 }
+*/
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
@@ -144,9 +147,8 @@ HighsStatus Highs::run() {
     if (solve_status == HighsStatus::Infeasible ||
         solve_status == HighsStatus::Unbounded) {
       if (options_.presolve_option == PresolveOption::ON) {
-        std::stringstream ss;
-        ss << "Reduced problem status: " << HighsStatusToString(solve_status) << ".";
-        HighsPrintMessage(HighsMessageType::ERROR,ss.str().c_str());
+        HighsPrintMessage(HighsMessageType::ERROR, "Reduced problem status: %s.\n",
+                          HighsStatusToString(solve_status).c_str());
         // todo: handle case. Try to solve again with no presolve?
         return HighsStatus::NotImplemented;
       } else {

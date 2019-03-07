@@ -1,6 +1,7 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HConst.h"
 #include "io/LoadProblem.h"
+#include "../external/cxxopts.hpp"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
