@@ -148,7 +148,7 @@ HighsStatus Highs::run() {
         solve_status == HighsStatus::Unbounded) {
       if (options_.presolve_option == PresolveOption::ON) {
         HighsPrintMessage(HighsMessageType::ERROR, "Reduced problem status: %s.\n",
-                          HighsStatusToString(solve_status));
+                          HighsStatusToString(solve_status).c_str());
         // todo: handle case. Try to solve again with no presolve?
         return HighsStatus::NotImplemented;
       } else {
