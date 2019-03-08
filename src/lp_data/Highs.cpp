@@ -529,27 +529,28 @@ bool Highs::getRows(const int n, const int *indices,
 }
 
 bool Highs::deleteRows(const int n, const int *indices) {
-
+  HighsStatus return_status;
   if (!simplex_has_run_) {
     // TODO: modify local lp
-
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    interface.delete_rows(n, indices);
+    return_status = interface.delete_rows(n, indices);
   }
+  if (return_status == HighsStatus::Error) return false;
   return true;
 }
 
 bool Highs::deleteCols(const int n, const int *indices) {
+  HighsStatus return_status;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-
-    interface.delete_cols(n, indices);
+    return_status = interface.delete_cols(n, indices);
   }
+  if (return_status == HighsStatus::Error) return false;
   return true;
 }
 

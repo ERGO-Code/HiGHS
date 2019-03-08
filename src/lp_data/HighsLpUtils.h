@@ -174,6 +174,7 @@ HighsStatus delete_lp_cols(
 
 HighsStatus delete_cols_from_lp_vectors(
 			   HighsLp &lp,
+			   int &new_num_col,
 			   const bool interval, const int from_col, const int to_col,
 			   const bool set, const int num_set_entries, const int* col_set,
 			   const bool mask, const int* col_mask);
@@ -193,6 +194,7 @@ HighsStatus delete_lp_rows(
 
 HighsStatus delete_rows_from_lp_vectors(
 			   HighsLp &lp,
+			   int &new_num_row,
 			   const bool interval, const int from_row, const int to_row,
 			   const bool set, const int num_set_entries, const int* row_set,
 			   const bool mask, const int* row_mask);

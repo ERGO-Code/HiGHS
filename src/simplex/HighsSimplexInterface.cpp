@@ -143,17 +143,12 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
 						       bool mask, const int* col_mask) {
   // Uses to_col in iterator style
   HighsLp &lp = highs_model_object.lp_;
-  if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
-  if (from_col >= to_col) return HighsStatus::OK;
 
   HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
-
-  int numDeleteCol = 0;// TODO Fix this
-  int newNumCol = lp.numCol_ - numDeleteCol;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
@@ -166,35 +161,30 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
   }
 #endif
   bool valid_matrix = true;
-  delete_lp_cols(lp, 
-		 interval, from_col, to_col,
-		 set, num_set_entries, col_set,
-		 mask, col_mask,
-		 valid_matrix);
+  HighsStatus returnStatus;
+  returnStatus = delete_lp_cols(lp, 
+				interval, from_col, to_col,
+				set, num_set_entries, col_set,
+				mask, col_mask,
+				valid_matrix);
+  if (returnStatus != HighsStatus::OK) return returnStatus;
+  // ToDo Determine consequences for basis when deleting columns
+  basis.valid_ = false;
   
   if (valid_simplex_lp) {
-    delete_lp_cols(simplex_lp, 
-		   interval, from_col, to_col,
-		   set, num_set_entries, col_set,
-		   mask, col_mask,
-		   valid_simplex_matrix);
+    returnStatus = delete_lp_cols(simplex_lp, 
+				  interval, from_col, to_col,
+				  set, num_set_entries, col_set,
+				  mask, col_mask,
+				  valid_simplex_matrix);
+    if (returnStatus != HighsStatus::OK) return returnStatus;
+    //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) scale.col_[col] = scale.col_[col + numDeleteCol];
+    // ToDo Determine consequences for basis when deleting columns
+    simplex_lp_status.has_matrix_col_wise = false;
+    simplex_lp_status.has_matrix_row_wise = false;
+    simplex_basis.valid_ = false;
   }
-
-  for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) {
-    scale.col_[col] = scale.col_[col + numDeleteCol];
-  }
-
-  // Reduce the number of columns in the LPs
-  lp.numCol_ -= numDeleteCol;
-  if (valid_simplex_lp) simplex_lp.numCol_ -= numDeleteCol;
-
-  // ToDo Determine consequences for basis when deleting columns
-  // Invalidate matrix copies
-  simplex_lp_status.has_matrix_col_wise = false;
-  simplex_lp_status.has_matrix_row_wise = false;
-  basis.valid_ = false;
-  simplex_basis.valid_ = false;
-  
+  return HighsStatus::OK;
 }
 
 HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
@@ -386,18 +376,22 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 #endif
 
   bool valid_matrix = true;
-  delete_lp_rows(lp, 
-		 interval, from_row, to_row,
-		 set, num_set_entries, row_set,
-		 mask, row_mask,
-		 valid_matrix);
+  HighsStatus returnStatus;
+  returnStatus = delete_lp_rows(lp, 
+				interval, from_row, to_row,
+				set, num_set_entries, row_set,
+				mask, row_mask,
+				valid_matrix);
   
   if (valid_simplex_lp) {
-    delete_lp_rows(simplex_lp, 
-		   interval, from_row, to_row,
-		   set, num_set_entries, row_set,
-		   mask, row_mask,
-		   valid_simplex_matrix);
+    returnStatus = delete_lp_rows(simplex_lp, 
+				  interval, from_row, to_row,
+				  set, num_set_entries, row_set,
+				  mask, row_mask,
+				  valid_simplex_matrix);
+    if (returnStatus != HighsStatus::OK) return returnStatus;
+    //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) scale.col_[col] = scale.col_[col + numDeleteCol];
+    // ToDo Determine consequences for basis when deleting columns
   }
 
   for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++) {
@@ -410,6 +404,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 
   // Determine consequences for basis when deleting rows
   update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
+  return HighsStatus::OK;
 }
 
   /*
@@ -617,7 +612,7 @@ HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int
       num_nz++;
     }
     if (out_to_col == col_dim || in_to_col == col_dim) break;
-}
+  }
   return HighsStatus::OK;
 }
 
