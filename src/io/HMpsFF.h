@@ -32,7 +32,6 @@
 
 #include "lp_data/HConst.h"
 #include "io/HighsIO.h"
-#include "../external/pdqsort.h"
 #include "util/stringutil.h"
 
 using Triplet = std::tuple<int, int, double>;
@@ -145,8 +144,6 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename, Highs
 }
 
 int HMpsFF::fillMatrix() {
-  // assumes entries are sorted meaning the columns are consecutive and not
-  // jumbled
   if ((int)entries.size() != nnz)
     return 1;
 
@@ -398,14 +395,8 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
     HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
     // start of new section?
-    if (key != parsekey::NONE) {
-      if (ncols > 1)
-        pdqsort(entries.begin() + colstart, entries.end(),
-                [](Triplet a, Triplet b) {
-                  return std::get<1>(b) > std::get<1>(a);
-                });
+    if (key != parsekey::NONE)
       return key;
-    }
 
     // check for integrality marker
     std::string marker = first_word(strline, end);
@@ -448,12 +439,6 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
         colLower.push_back(0.0);
         colUpper.push_back(HIGHS_CONST_INF);
       }
-
-      if (ncols > 1)
-        pdqsort(entries.begin() + colstart, entries.end(),
-                [](Triplet a, Triplet b) {
-                  return std::get<1>(b) > std::get<1>(a);
-                });
 
       colstart = entries.size();
     }
