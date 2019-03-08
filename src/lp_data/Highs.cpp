@@ -98,8 +98,22 @@ HighsStatus Highs::run() {
                HighsStatus::Infeasible : HighsStatus::Unbounded;
       HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
                                    HighsStatusToString(result).c_str());
-      // for tests
-      HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
+
+      // Report this way for the moment. May modify after merge with OSIinterface
+      // branch which has new way of setting up a HighsModelObject and can support
+      // multiple calls to run().
+      timer.stopRunHighsClock();
+
+      std::stringstream message_not_opt;
+      message_not_opt << std::endl;
+      message_not_opt << "Run status : " << HighsStatusToString(result)
+              << std::endl;
+      message_not_opt << "Time       : " << std::defaultfloat << timer.clock_time[0]
+              << std::endl;
+
+      message_not_opt << std::endl;
+
+      HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
       return result;
     }
     default: {
