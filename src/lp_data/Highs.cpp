@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 #include "HConfig.h"
 #include "simplex/HApp.h"
@@ -140,7 +141,7 @@ HighsStatus Highs::run() {
   
   assert(hmos_.size() > 0);
   int last = hmos_.size() - 1;
-  solution_ = hmos_[last].solution_;
+  solution_ = hmos_[0].solution_;
 
   HighsSimplexInterface simplex_interface(hmos_[0]);
   if (solve_status != HighsStatus::Optimal) {
@@ -191,7 +192,23 @@ HighsStatus Highs::run() {
 
   timer.stopRunHighsClock();
 
-  return HighsStatus::OK;
+  std::stringstream message;
+  message << std::endl;
+  message << "Run status : " << HighsStatusToString(solve_status)
+          << std::endl;
+  message << "Iterations : " << hmos_[0].simplex_info_.iteration_count
+          << std::endl;
+  message << "Time       : " << std::defaultfloat << timer.clock_time[0]
+          << std::endl;
+
+  if (solve_status == HighsStatus::Optimal)
+    message << "Objective  : " << std::scientific
+            << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
+  message << std::endl;
+
+  HighsPrintMessage(ML_MINIMAL, message.str().c_str());
+
+  return solve_status;
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {

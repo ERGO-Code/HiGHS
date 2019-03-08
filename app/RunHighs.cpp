@@ -76,6 +76,9 @@ int main(int argc, char **argv) {
   if (read_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
     return (int)HighsStatus::LpError;
+  } else {
+    HighsPrintMessage(ML_MINIMAL, "LP parsed from file. Problem name: %s.\n",
+                      lp.model_name_.c_str());
   }
 
   Highs highs(options);
@@ -90,7 +93,7 @@ int main(int argc, char **argv) {
   std::string statusname = HighsStatusToString(run_status);
 
   double end_time = timer.getWallTime();
-  HighsPrintMessage(ML_ALWAYS, "HiGHS run ended with status %s after %12g seconds\n",
+  HighsPrintMessage(ML_ALWAYS, "HiGHS terminated after %12g seconds.\n",
 		  statusname.c_str(), end_time - start_time);
   return 0;
 }
