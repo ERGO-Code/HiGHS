@@ -152,30 +152,14 @@ HighsStatus Highs::run() {
       solve_status = runSolver(hmos_[0]);
     }
   }
+  // else if (reduced problem failed to solve) {
+  //   todo: handle case when presolved problem failed to solve. Try to solve again
+  //   with no presolve.
+  // }
   
   assert(hmos_.size() > 0);
   int last = hmos_.size() - 1;
   solution_ = hmos_[0].solution_;
-
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  if (solve_status != HighsStatus::Optimal) {
-    if (solve_status == HighsStatus::Infeasible ||
-        solve_status == HighsStatus::Unbounded) {
-      if (options_.presolve_option == PresolveOption::ON) {
-        HighsPrintMessage(HighsMessageType::ERROR, "Reduced problem status: %s.\n",
-                          HighsStatusToString(solve_status).c_str());
-        // todo: handle case. Try to solve again with no presolve?
-        return HighsStatus::NotImplemented;
-      } else {
-        std::cout << "Solver terminated with a non-optimal status: "
-                  << HighsStatusToString(solve_status) << std::endl;
-        simplex_interface.report_simplex_outcome("Run");
-      }
-    }
-  } else {
-    // Report in old way so tests pass.
-    simplex_interface.report_simplex_outcome("Run");
-  }
 
   if (hmos_[0].reportModelOperationsClock) {
     // Report times
