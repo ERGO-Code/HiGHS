@@ -51,36 +51,36 @@ set_tests_properties(unit_tests_all
 #
 # define the set of feasible instances
 set(successInstances
-    "adlittle\;"
-    "afiro\;"
-    "agg\;"
-    "beaconfd\;"
-    "blend\;"
-    "bore3d\;"
-    "brandy\;"
-    "capri\;"
-    "cycle\;"
-    "etamacro\;"
-    "finnis\;"
-    "greenbea\;"
-    "greenbeb\;"
-    "grow7\;"
-    "israel\;"
-    "kb2\;"
-    "lotfi\;"
-    "recipe\;"
-    "sc105\;"
-    "sc205\;"
-    "sc50a\;"
-    "sc50b\;"
-    "scagr25\;"
-    "scagr7\;"
-    "scfxm1\;"
-    "scorpion\;"
-    "scrs8\;"
-    "scsd1\;"
-    "seba\;"
-    "share1b\;"
+    "adlittle\;81\;2.25495\;"
+    "afiro\;21\;-4.647531\;"
+    "agg\;232\;-3.599177\;"
+    "beaconfd\;99\;3.359249\;"
+    "blend\;98\;-3.081215\;"
+    "bore3d\;209\;1.373080\;"
+    "brandy\;276\;1.518510\;"
+    "capri\;300\;2.690013\;"
+    "cycle\;2544\;-5.226393\;"
+    "etamacro\;507\;-7.557152\;"
+    "finnis\;360\;1.727911\;"
+    "greenbea\;5249\;-7.255525\;"
+    "greenbeb\;9801\;-4.302260\;"
+    "grow7\;419\;-4.778781\;"
+    "israel\;159\;-8.966448\;"
+    "kb2\;45\;-1.749900\;"
+    "lotfi\;299\;-2.526471\;"
+    "recipe\;45\;-2.666160\;"
+    "sc105\;121\;-5.220206\;"
+    "sc205\;236\;-5.220206\;"
+    "sc50a\;56\;-6.457508\;"
+    "sc50b\;48\;-7.000000\;"
+    "scagr25\;512\;-1.475343\;"
+    "scagr7\;165\;-2.331390\;"
+    "scfxm1\;499\;1.841676\;"
+    "scorpion\;329\;1.878125\;"
+    "scrs8\;608\;9.042970\;"
+    "scsd1\;102\;8.666667\;"
+    "seba\;439\;1.571160\;"
+    "share1b\;230\;-7.658932\;"
     )
 
 set(infeasibleInstances
@@ -119,7 +119,12 @@ foreach(instance ${${instances}})
     # add default tests
     # treat the instance as a tuple (list) of two values
     list(GET instance 0 name)
-    list(GET instance 1 optval)
+    list(GET instance 1 iter)
+
+    if(${solutionstatus} STREQUAL "Optimal")
+        list(GET instance 2 optval)
+    endif()
+
     # specify the instance and the settings load command
     set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
 
@@ -134,10 +139,14 @@ foreach(instance ${${instances}})
                 PASS_REGULAR_EXPRESSION
                 "Run status : ${solutionstatus}")
 
-        #if(solutionstatus STREQUAL "Optimal")
-        #set_tests_properties (${name}${setting} PROPERTIES
-        #        PASS_REGULAR_EXPRESSION
-        #        "Objective  : ${optval}")
+        if(${solutionstatus} STREQUAL "Optimal")
+            set_tests_properties (${name}${setting} PROPERTIES
+                    PASS_REGULAR_EXPRESSION
+                    "Iterations : ${iter}\nObjective  : ${optval}")
+          #  set_tests_properties (${name}${setting} PROPERTIES
+          #          PASS_REGULAR_EXPRESSION
+          #          "Objective  : ${optval}")
+        endif()
 
     endforeach(setting)
 endforeach(instance)

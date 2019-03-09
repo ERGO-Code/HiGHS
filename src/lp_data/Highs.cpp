@@ -196,12 +196,14 @@ HighsStatus Highs::run() {
           << std::endl;
   message << "Iterations : " << hmos_[0].simplex_info_.iteration_count
           << std::endl;
-  message << "Time       : " << std::defaultfloat << timer.clock_time[0]
-          << std::endl;
 
   if (solve_status == HighsStatus::Optimal)
     message << "Objective  : " << std::scientific
             << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
+
+  message << "Time       : " << std::defaultfloat << timer.clock_time[0]
+          << std::endl;
+
   message << std::endl;
 
   HighsPrintMessage(ML_MINIMAL, message.str().c_str());
