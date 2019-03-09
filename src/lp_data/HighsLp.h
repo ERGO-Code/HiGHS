@@ -80,9 +80,7 @@ class HighsLp {
       return false;
 
     if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ ||
-        Avalue_ != lp.Avalue_ || colCost_ != lp.colCost_ ||
-        colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
-        rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
+        Avalue_ != lp.Avalue_)
       return false;
 
     return true;
