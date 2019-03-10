@@ -169,7 +169,7 @@ HighsStatus delete_lp_cols(
 			   HighsLp &lp,
 			   const bool interval, const int from_col, const int to_col,
 			   const bool set, const int num_set_entries, const int* col_set,
-			   const bool mask, const int* col_mask,
+			   const bool mask, int* col_mask,
 			   const bool valid_matrix);
 
 HighsStatus delete_cols_from_lp_vectors(
@@ -183,13 +183,13 @@ HighsStatus delete_cols_from_lp_matrix(
 			   HighsLp &lp,
 			   const bool interval, const int from_col, const int to_col,
 			   const bool set, const int num_set_entries, const int* col_set,
-			   const bool mask, const int* col_mask);
+			   const bool mask, int* col_mask);
 
 HighsStatus delete_lp_rows(
 			   HighsLp &lp,
 			   const bool interval, const int from_row, const int to_row,
 			   const bool set, const int num_set_entries, const int* row_set,
-			   const bool mask, const int* row_mask,
+			   const bool mask, int* row_mask,
 			   const bool valid_matrix);
 
 HighsStatus delete_rows_from_lp_vectors(
@@ -203,7 +203,7 @@ HighsStatus delete_rows_from_lp_matrix(
 			   HighsLp &lp,
 			   const bool interval, const int from_row, const int to_row,
 			   const bool set, const int num_set_entries, const int* row_set,
-			   const bool mask, const int* row_mask);
+			   const bool mask, int* row_mask);
 
 HighsStatus change_lp_matrix_coefficient(
 				  HighsLp &lp,
@@ -303,23 +303,23 @@ void reportLpObjSense(
 /**
  * @brief Report the data of an LP
  */
-void reportLpColVec(
+void reportLpColVectors(
 		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 /**
  * @brief Report the data of an LP
  */
-void reportLpRowVec(
+void reportLpRowVectors(
 		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 /**
  * @brief Report the data of an LP
  */
-void reportLpColMtx(
+void reportLpColMatrix(
 		    const HighsLp &lp //!< LP whose data are to be reported
 		    );
 
-void reportMtx(
+void reportMatrix(
 	       const char* message,
 	       const int num_col,
 	       const int num_nz,

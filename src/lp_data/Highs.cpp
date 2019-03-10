@@ -49,8 +49,7 @@ HighsStatus Highs::run() {
   // todo: check options.
   HighsSetIO(options_);
 
-  HighsPrintMessage(HighsMessageType::INFO, "Solving %s",
-                    lp_.model_name_.c_str());
+  HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
 
   timer_.startRunHighsClock();
   // todo: make sure it should remain Init for calls of run() after
@@ -96,7 +95,7 @@ HighsStatus Highs::run() {
       }
       default: {
         // case HighsPresolveStatus::Error
-        HighsPrintMessage(HighsMessageType::ERROR, "Presolve failed.");
+        HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
         return HighsStatus::PresolveError;
       }
     }
@@ -114,7 +113,7 @@ HighsStatus Highs::run() {
       HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
       timer_.stop(timer_.postsolve_clock);
       if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-        HighsPrintMessage(HighsMessageType::INFO, "Postsolve finished.");
+        HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
 
         // Set solution and basis info for simplex clean up.
         // Original LP is in lp_[0] so we set the basis information there.
@@ -528,14 +527,14 @@ bool Highs::getRows(const int n, const int *indices,
   return true;
 }
 
-bool Highs::deleteRows(const int n, const int *indices) {
+bool Highs::deleteCols(const int from_col, const int to_col) {
   HighsStatus return_status;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_rows(n, indices);
+    return_status = interface.delete_cols(from_col, to_col);
   }
   if (return_status == HighsStatus::Error) return false;
   return true;
@@ -549,6 +548,58 @@ bool Highs::deleteCols(const int n, const int *indices) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.delete_cols(n, indices);
+  }
+  if (return_status == HighsStatus::Error) return false;
+  return true;
+}
+
+bool Highs::deleteCols(int *mask) {
+  HighsStatus return_status;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_cols(mask);
+  }
+  if (return_status == HighsStatus::Error) return false;
+  return true;
+}
+
+bool Highs::deleteRows(const int from_row, const int to_row) {
+  HighsStatus return_status;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_rows(from_row, to_row);
+  }
+  if (return_status == HighsStatus::Error) return false;
+  return true;
+}
+
+bool Highs::deleteRows(const int n, const int *indices) {
+  HighsStatus return_status;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_rows(n, indices);
+  }
+  if (return_status == HighsStatus::Error) return false;
+  return true;
+}
+
+bool Highs::deleteRows(int *mask) {
+  HighsStatus return_status;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_rows(mask);
   }
   if (return_status == HighsStatus::Error) return false;
   return true;

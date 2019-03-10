@@ -2771,7 +2771,7 @@ void report_iteration_count_dual_objective_value(
   int iteration_count = highs_model_object.simplex_info_.iteration_count;
   double dual_objective_value =
       highs_model_object.simplex_info_.dualObjectiveValue;
-  HighsLogMessage(INFO, "Iter %10d: %20.10e %2d", iteration_count, dual_objective_value, i_v);
+  HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %2d", iteration_count, dual_objective_value, i_v);
 }
 
 // Return a string representation of SimplexSolutionStatus.

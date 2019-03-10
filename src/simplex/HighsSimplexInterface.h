@@ -58,7 +58,7 @@ class HighsSimplexInterface {
 			  );
   
   HighsStatus delete_cols(
-			  const int* col_mask
+			  int* col_mask
 			  );
   
   HighsStatus delete_cols_general(
@@ -69,7 +69,7 @@ class HighsSimplexInterface {
 				  int num_set_entries,
 				  const int* col_set,
 				  bool mask,
-				  const int* col_mask
+				  int* col_mask
 				  );
   
   HighsStatus getCols(
@@ -210,7 +210,7 @@ class HighsSimplexInterface {
 			  );
   
   HighsStatus delete_rows(
-			  const int* row_mask
+			  int* row_mask
 			  );
   
   HighsStatus delete_rows_general(
@@ -221,7 +221,7 @@ class HighsSimplexInterface {
 				  int num_set_entries,
 				  const int* row_set,
 				  bool mask,
-				  const int* row_mask
+				  int* row_mask
 				  );
   
   HighsStatus util_change_coefficient(

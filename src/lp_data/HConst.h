@@ -21,7 +21,7 @@ const double HIGHS_CONST_ZERO = 1e-50;
 
 constexpr double kBoundTolerance = 1e-8;
 
-enum ModelLogLevel {
+enum HighsPrintMessageLevel {
   ML_NONE = 0,
   ML_VERBOSE = 1,
   ML_DETAILED = 2,

@@ -130,7 +130,7 @@ HighsStatus HighsSimplexInterface::delete_cols(int num_set_entries, const int* c
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_cols(const int* col_mask) {
+HighsStatus HighsSimplexInterface::delete_cols(int* col_mask) {
   return delete_cols_general(
 			     false, 0, 0,
 			     false, 0, NULL,
@@ -140,7 +140,7 @@ HighsStatus HighsSimplexInterface::delete_cols(const int* col_mask) {
 
 HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_col, int to_col,
 						       bool set, int num_set_entries, const int* col_set,
-						       bool mask, const int* col_mask) {
+						       bool mask, int* col_mask) {
   // Uses to_col in iterator style
   HighsLp &lp = highs_model_object.lp_;
 
@@ -337,7 +337,7 @@ HighsStatus HighsSimplexInterface::delete_rows(int num_set_entries, const int* r
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_rows(const int* row_mask) {
+HighsStatus HighsSimplexInterface::delete_rows(int* row_mask) {
   return delete_rows_general(
 			     false, 0, 0,
 			     false, 0, NULL,
@@ -347,22 +347,17 @@ HighsStatus HighsSimplexInterface::delete_rows(const int* row_mask) {
 
 HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_row, int to_row,
 						       bool set, int num_set_entries, const int* row_set,
-						       bool mask, const int* row_mask) {
+						       bool mask, int* row_mask) {
   // Uses to_row in iterator style
 #ifdef HiGHSDEV
   printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row, to_row);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  if (from_row < 0 || to_row > lp.numRow_) return HighsStatus::Error;
-  if (from_row >= to_row) return HighsStatus::OK;
+  HighsBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-
-  int numDeleteRow = 0;//TODO Fix this
-  if (numDeleteRow == 0) return HighsStatus::OK;
-
-  int newNumRow = lp.numRow_ - numDeleteRow;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
@@ -374,7 +369,6 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
     assert(!valid_simplex_matrix);
   }
 #endif
-
   bool valid_matrix = true;
   HighsStatus returnStatus;
   returnStatus = delete_lp_rows(lp, 
@@ -382,6 +376,9 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 				set, num_set_entries, row_set,
 				mask, row_mask,
 				valid_matrix);
+  if (returnStatus != HighsStatus::OK) return returnStatus;
+  // ToDo Determine consequences for basis when deleting rowumns
+  basis.valid_ = false;
   
   if (valid_simplex_lp) {
     returnStatus = delete_lp_rows(simplex_lp, 
@@ -390,147 +387,16 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 				  mask, row_mask,
 				  valid_simplex_matrix);
     if (returnStatus != HighsStatus::OK) return returnStatus;
-    //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) scale.col_[col] = scale.col_[col + numDeleteCol];
-    // ToDo Determine consequences for basis when deleting columns
+    //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++) scale.row_[row] = scale.row_[row + numDeleteRow];
+    // ToDo Determine consequences for basis when deleting rowumns
+    simplex_lp_status.has_matrix_col_wise = false;
+    simplex_lp_status.has_matrix_row_wise = false;
+    simplex_basis.valid_ = false;
   }
-
-  for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++) {
-    scale.row_[row] = scale.row_[row + numDeleteRow];
-  }
-
-  // Reduce the number of rows in the LPs
-  lp.numRow_ -= numDeleteRow;
-  if (valid_simplex_lp) simplex_lp.numRow_ -= numDeleteRow;
-
-  // Determine consequences for basis when deleting rows
-  update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
+    // ToDo Determine consequences for basis when deleting rows
+  //  update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
   return HighsStatus::OK;
 }
-
-  /*
-HighsStatus HighsSimplexInterface::util_delete_row_set(int XnumCol, int* XcolSet) {
-  HighsLp &lp = highs_model_object.lp_;
-  HighsBasis &basis = highs_model_object.basis_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  bool rp = false;
-  if (rp) {
-    printf("Called model.util_deleteRowSet\n");
-    printf("Before\n");
-  }
-  //  lp.reportLp();
-
-  int newRow = 0;
-  // Look through the rows removing any being deleted and shifting data
-  // for the rest
-  for (int row = 0; row < lp.numRow_; row++) {
-    if (!dstat[row]) {
-      // Row is not deleted
-      int var = lp.numCol_ + row;
-      int newVar = lp.numCol_ + newRow;
-      dstat[row] = newRow;
-      lp.rowLower_[newRow] = lp.rowLower_[row];
-      lp.rowUpper_[newRow] = lp.rowUpper_[row];
-      //    scale.row_[row] = scale.row_[rowStep+row];
-      basis.nonbasicFlag_[newVar] = basis.nonbasicFlag_[var];
-      basis.nonbasicMove_[newVar] = basis.nonbasicMove_[var];
-      if (rp)
-        printf(
-            "   Row %4d: dstat = %2d: Variable %2d becomes %2d; [%11g, %11g]; "
-            "nonbasicFlag = %2d; nonbasicMove = %2d\n",
-            row, dstat[row], var, newVar, lp.rowLower_[newRow], lp.rowUpper_[newRow],
-            basis.nonbasicFlag_[newVar], basis.nonbasicMove_[newVar]);
-      newRow++;
-    } else {
-      // Row is deleted
-      dstat[row] = -1;
-      if (rp)
-        printf("   Row %4d: dstat = %2d: Variable %2d is deleted\n", row,
-               dstat[row], lp.numCol_ + row);
-    }
-  }
-
-  if (rp) {
-    printf("After\n");
-    for (int row = 0; row < lp.numRow_; row++)
-      printf("   Row %4d: dstat = %2d\n", row, dstat[row]);
-  }
-  // Look through the column-wise matrix, removing entries
-  // corresponding to deleted rows and shifting indices for the rest
-  int nnz = 0;
-  for (int col = 0; col < lp.numCol_; col++) {
-    int fmEl = lp.Astart_[col];
-    lp.Astart_[col] = nnz;
-    for (int el = fmEl; el < lp.Astart_[col + 1]; el++) {
-      int row = lp.Aindex_[el];
-      if (dstat[row] >= 0) {
-        lp.Aindex_[nnz] = dstat[row];
-        lp.Avalue_[nnz] = lp.Avalue_[el];
-        nnz++;
-      }
-    }
-  }
-  lp.Astart_[lp.numCol_] = nnz;
-
-  // Reduce the number of rows and total number of variables in the model
-  int dlNumRow = lp.numRow_ - newRow;
-#ifdef SCIP_DEV
-  if (rp)
-    printf("Had %d rows; removed %d rows; now %d rows\n", lp.numRow_, dlNumRow,
-           newRow);
-#endif
-  lp.numRow_ -= dlNumRow;
-  //  numTot -= dlNumRow;
-
-  // Count the remaining basic variables: if there are as many as
-  // there are (now) rows then the basis is OK. If there are more then some
-  // columns have to be made nonbasic - but which?
-  int numBasic = 0;
-  bool basisOK = true;
-  const int numTot = lp.numCol_ + lp.numRow_;
-  for (int var = 0; var < numTot; var++) {
-    if (!basis.nonbasicFlag_[var]) {
-      basis.basicIndex_[numBasic] = var;
-      numBasic++;
-      if (numBasic > newRow) {
-        basisOK = false;
-        break;
-      }
-    }
-  }
-
-  if (rp) {
-    printf("Now have %d cols; %d rows and %d total\n", lp.numCol_, lp.numRow_, numTot);
-    for (int row = 0; row < lp.numRow_; row++)
-      printf("Basic variable in row %2d is %2d\n", row, basis.basicIndex_[row]);
-    for (int col = 0; col < lp.numCol_; col++)
-      printf("Col %2d has nonbasicFlag = %2d\n", col, basis.nonbasicFlag_[col]);
-    for (int row = 0; row < lp.numRow_; row++)
-      printf("Row %2d (Variable %2d) has nonbasicFlag = %2d\n", row,
-             lp.numCol_ + row, basis.nonbasicFlag_[lp.numCol_ + row]);
-  }
-
-  if (basisOK) {
-    // All rows removed had basic slacks so basis should be OK
-#ifdef SCIP_DEV
-    // Check that basis is valid basis.
-    basisOK = nonbasicFlagBasicIndex_OK(lp.numCol_, lp.numRow_);
-    assert(basisOK);
-    //    printf("util_deleteRowset: all rows removed are basic slacks so
-    //    basisOK\n");
-#endif
-    // Determine consequences for basis when deleting rows to leave an OK basis
-    update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS_BASIS_OK);
-  } else {
-    assert(basisOK);
-#ifdef SCIP_DEV
-    printf("util_deleteRowset: not all rows removed are basic slacks\n");
-#endif
-    // Determine consequences for basis when deleting rows to leave no basis
-  update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
-  }
-}
-  */
-
 
 HighsStatus HighsSimplexInterface::getCols(const int from_col, const int to_col,
 					   int &num_col, double *col_cost, double *col_lower, double *col_upper,

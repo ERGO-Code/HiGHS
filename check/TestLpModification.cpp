@@ -208,6 +208,20 @@ bool test_all_delete_keep(int num_row) {
   return true;
 }
 
+void messageReportLp(const char* message, const HighsLp &lp) {
+  HighsSetMessagelevel(ML_ALWAYS);
+  HighsPrintMessage(ML_VERBOSE, "\nReporting LP: %s\n", message);
+  reportLp(lp, 2);
+  HighsSetMessagelevel(ML_NONE);
+}  
+
+void messageReportMatrix(const char* message, const int num_col, const int num_nz,
+			 const int* start, const int* index, const double* value) {
+  HighsSetMessagelevel(ML_ALWAYS);
+  HighsPrintMessage(ML_VERBOSE, "\nReporting Matrix: %s\n", message);
+  reportMatrix(message, num_col, num_nz, start, index, value);
+  HighsSetMessagelevel(ML_NONE);
+}  
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
@@ -251,11 +265,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::LpEmpty);
-  const HighsLp &reference_lp = highs.getLp();
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportLp(reference_lp, 2);
-  HighsSetMessagelevel(ML_NONE);
 
+  const HighsLp &reference_lp = highs.getLp();
+  //  messageReportLp("Empty", reference_lp);
   //  test_all_delete_keep(num_row);
 
   // Adding column vectors and matrix to model with no rows returns an error
@@ -267,26 +279,18 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportLp(reference_lp, 2);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportLp("With columns but no rows", reference_lp);
 
   // Adding row vectors and matrix to model with columns returns OK
   return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportLp(reference_lp, 2);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportLp("With columns and rows", reference_lp);
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::Optimal);
   
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportLp(reference_lp, 2);
-  HighsSetMessagelevel(ML_NONE);
-
   // Getting columns from the LP is OK
   int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
   int col1357_col_set[] = {1, 3, 5, 7};
@@ -305,34 +309,57 @@ TEST_CASE("LP-modification", "[highs_data]") {
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportMtx("Get by set\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportMatrix("Get by set\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
   return_bool = highs.getCols(3, 7, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportMtx("Get by interval\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportMatrix("Get by interval\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
   return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportMtx("Get by mask\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportMatrix("Get by mask\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
   return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportLp(reference_lp, 2);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportLp("After deleting columns 1, 3, 5, 7", reference_lp);
 
-  // Getting columns from the LP is OK
+  return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_start, col1357_num_nz, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  //  messageReportLp("After restoring columns 1, 3, 5, 7", reference_lp);
+
+  return_status = highs.run();
+  HighsStatusReport("highs.run()", return_status);
+  REQUIRE(return_status == HighsStatus::Optimal);
+  
+  // Try to delete an empty range of rows: OK
+  return_bool = highs.deleteRows(0, -1);
+  REQUIRE(return_bool);
+
+  // Try to delete more rows than there are: ERROR
+  return_bool = highs.deleteRows(0, num_row+1);
+  REQUIRE(!return_bool);
+
+  // Delete all the rows: OK
+  return_bool = highs.deleteRows(0, num_row);
+  REQUIRE(return_bool);
+
+  messageReportLp("After deleting all rows", reference_lp);
+
+  // Delete all the columns: OK
+  return_bool = highs.deleteCols(0, num_col);
+  REQUIRE(return_bool);
+
+  messageReportLp("After deleting all columns", reference_lp);
+
+
+  // Getting rows from the LP is OK
   int row1357_row_set[] = {1, 3, 5, 7};
   int row1357_num_ix = 4;
   int row1357_num_row;
@@ -348,9 +375,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 			      row1357_num_nz, row1357_start, row1357_index, row1357_value);
   REQUIRE(return_bool);
 
-  HighsSetMessagelevel(ML_ALWAYS);
-  reportMtx("Row   ", row1357_num_row, row1357_num_nz, row1357_start, row1357_index, row1357_value);
-  HighsSetMessagelevel(ML_NONE);
+  //  messageReportMatrix("Row   ", row1357_num_row, row1357_num_nz, row1357_start, row1357_index, row1357_value);
   
 }
 

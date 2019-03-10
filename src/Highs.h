@@ -184,14 +184,32 @@ public:
 	       double *row_matrix_value
 	       );
 
-  bool deleteRows(
-		  const int n, 
-		  const int* indices
+  bool deleteCols(
+		  const int from_col,
+		  const int to_col
 		  );
 
   bool deleteCols(
 		  const int n, 
 		  const int* indices
+		  );
+
+  bool deleteCols(
+		  int* mask
+		  );
+
+  bool deleteRows(
+		  const int from_row, 
+		  const int to_row
+		  );
+
+  bool deleteRows(
+		  const int n, 
+		  const int* indices
+		  );
+
+  bool deleteRows(
+		  int* mask
 		  );
 
   // change coeff (int row, int col) | ...
