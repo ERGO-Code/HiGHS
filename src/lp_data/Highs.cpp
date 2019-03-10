@@ -201,8 +201,8 @@ HighsStatus Highs::run() {
     message << "Objective  : " << std::scientific
             << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
 
-  message << "Time       : " << std::defaultfloat << timer.clock_time[0]
-          << std::endl << std::endl;
+  message << "Time       : " << std::fixed << std::setprecision(3)
+          << timer.clock_time[0] << std::endl << std::endl;
 
   HighsPrintMessage(ML_MINIMAL, message.str().c_str());
 
