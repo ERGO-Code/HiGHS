@@ -202,9 +202,7 @@ HighsStatus Highs::run() {
             << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
 
   message << "Time       : " << std::defaultfloat << timer.clock_time[0]
-          << std::endl;
-
-  message << std::endl;
+          << std::endl << std::endl;
 
   HighsPrintMessage(ML_MINIMAL, message.str().c_str());
 
