@@ -1509,7 +1509,7 @@ HighsStatus assess_interval_set_mask(const int ix_dim,
       return HighsStatus::Error;
     }
     if (to_ix > ix_dim) {
-      HighsLogMessage(HighsMessageType::ERROR, "Index interval lower limit is %d < 0", from_ix);
+      HighsLogMessage(HighsMessageType::ERROR, "Index interval upper limit is %d > %d", to_ix, ix_dim);
       return HighsStatus::Error;
     }
     from_k = from_ix;

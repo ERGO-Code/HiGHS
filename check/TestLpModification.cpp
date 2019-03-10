@@ -346,17 +346,15 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteRows(0, num_row+1);
   REQUIRE(!return_bool);
 
-  // Delete all the rows: OK
-  return_bool = highs.deleteRows(0, num_row);
-  REQUIRE(return_bool);
-
-  messageReportLp("After deleting all rows", reference_lp);
-
   // Delete all the columns: OK
   return_bool = highs.deleteCols(0, num_col);
   REQUIRE(return_bool);
-
   messageReportLp("After deleting all columns", reference_lp);
+
+  // Delete all the rows: OK
+  return_bool = highs.deleteRows(0, num_row);
+  REQUIRE(return_bool);
+  messageReportLp("After deleting all rows", reference_lp);
 
 
   // Getting rows from the LP is OK
