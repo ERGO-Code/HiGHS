@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 #include "HConfig.h"
 #include "simplex/HApp.h"
@@ -97,8 +98,22 @@ HighsStatus Highs::run() {
                HighsStatus::Infeasible : HighsStatus::Unbounded;
       HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
                                    HighsStatusToString(result).c_str());
-      // for tests
-      HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
+
+      // Report this way for the moment. May modify after merge with OSIinterface
+      // branch which has new way of setting up a HighsModelObject and can support
+      // multiple calls to run().
+      timer.stopRunHighsClock();
+
+      std::stringstream message_not_opt;
+      message_not_opt << std::endl;
+      message_not_opt << "Run status : " << HighsStatusToString(result)
+              << std::endl;
+      message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
+              << timer.clock_time[0] << std::endl;
+
+      message_not_opt << std::endl;
+
+      HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
       return result;
     }
     default: {
@@ -137,30 +152,14 @@ HighsStatus Highs::run() {
       solve_status = runSolver(hmos_[0]);
     }
   }
+  // else if (reduced problem failed to solve) {
+  //   todo: handle case when presolved problem failed to solve. Try to solve again
+  //   with no presolve.
+  // }
   
   assert(hmos_.size() > 0);
   int last = hmos_.size() - 1;
-  solution_ = hmos_[last].solution_;
-
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  if (solve_status != HighsStatus::Optimal) {
-    if (solve_status == HighsStatus::Infeasible ||
-        solve_status == HighsStatus::Unbounded) {
-      if (options_.presolve_option == PresolveOption::ON) {
-        HighsPrintMessage(HighsMessageType::ERROR, "Reduced problem status: %s.\n",
-                          HighsStatusToString(solve_status).c_str());
-        // todo: handle case. Try to solve again with no presolve?
-        return HighsStatus::NotImplemented;
-      } else {
-        std::cout << "Solver terminated with a non-optimal status: "
-                  << HighsStatusToString(solve_status) << std::endl;
-        simplex_interface.report_simplex_outcome("Run");
-      }
-    }
-  } else {
-    // Report in old way so tests pass.
-    simplex_interface.report_simplex_outcome("Run");
-  }
+  solution_ = hmos_[0].solution_;
 
   if (hmos_[0].reportModelOperationsClock) {
     // Report times
@@ -191,7 +190,25 @@ HighsStatus Highs::run() {
 
   timer.stopRunHighsClock();
 
-  return HighsStatus::OK;
+  std::stringstream message;
+  message << std::endl;
+  message << "Run status : " << HighsStatusToString(solve_status)
+          << std::endl;
+  message << "Iterations : " << hmos_[0].simplex_info_.iteration_count
+          << std::endl;
+
+  if (solve_status == HighsStatus::Optimal)
+    message << "Objective  : " << std::scientific
+            << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
+
+  message << "Time       : " << std::fixed << std::setprecision(3)
+          << timer.clock_time[0] << std::endl;
+
+  message << std::endl;
+
+  HighsPrintMessage(ML_MINIMAL, message.str().c_str());
+
+  return solve_status;
 }
 
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {

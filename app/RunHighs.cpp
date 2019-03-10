@@ -25,7 +25,7 @@ void HiGHSRun(const char *message = nullptr) {
      << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
 
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
-  HighsPrintMessage(ML_ALWAYS, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
+  HighsPrintMessage(ML_ALWAYS, "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
 
 #ifdef HiGHSDEV
   // Report on preprocessing macros
@@ -59,10 +59,6 @@ void HiGHSRun(const char *message = nullptr) {
 };
 
 int main(int argc, char **argv) {
-  // Initialise timer
-  HighsTimer timer;
-  double start_time = timer.getWallTime();
-
   HiGHSRun();
 
   // Load user options.
@@ -76,6 +72,9 @@ int main(int argc, char **argv) {
   if (read_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
     return (int)HighsStatus::LpError;
+  } else {
+    HighsPrintMessage(ML_MINIMAL, "LP parsed from file: %s\n\n",
+                      lp.model_name_.c_str());
   }
 
   Highs highs(options);
@@ -89,8 +88,5 @@ int main(int argc, char **argv) {
   HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
 
-  double end_time = timer.getWallTime();
-  HighsPrintMessage(ML_ALWAYS, "HiGHS run ended with status %s after %12g seconds\n",
-		  statusname.c_str(), end_time - start_time);
   return 0;
 }
