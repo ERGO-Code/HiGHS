@@ -174,6 +174,10 @@ int HMpsFF::fillMatrix() {
 
   Astart.at(numCol) = nnz;
 
+  // Add empty column at end if objective shift specified in bounds section.
+  if (Astart[numCol-1] == 0)
+    Astart[numCol-1] = 539041;
+
   for (int i = 0; i < numCol; i++) {
     if (Astart[i] > Astart[i + 1]) {
       std::cout << "Error filling in matrix data\n";
@@ -380,6 +384,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   std::string strline, word;
   int rowidx, start, end;
   int ncols = 0;
+  numCol = 0;
   bool integral_cols = false;
 
   auto parsename = [&rowidx, this](std::string name) {
@@ -446,6 +451,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
     if (!(word == colname)) {
       colname = word;
       auto ret = colname2idx.emplace(colname, ncols++);
+      numCol++;
       colNames.push_back(colname);
 
       if (!ret.second) {
@@ -611,7 +617,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
     // No check because if mit = end we add an empty column with the
     // corresponding bound.
     if (mit == colname2idx.end())
-      colidx = colname2idx.size();
+      colidx = numCol;
     else 
       colidx = mit->second;
     assert(colidx >= 0);
@@ -683,7 +689,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
     parsename(marker, colidx);
 
     // If empty column with empty cost add column
-    if (colidx == colname2idx.size()) {
+    if (colidx == numCol) {
       std::string colname = marker;
       auto ret = colname2idx.emplace(colname, numCol++);
       colNames.push_back(colname);
@@ -693,6 +699,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       // initialize with default bounds
       colLower.push_back(0.0);
       colUpper.push_back(HIGHS_CONST_INF);
+      numCol++;
     }
 
     if (isdefaultbound) {
