@@ -431,10 +431,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
     }
 
     // Detect if file is in fixed format.
-    // name_end should be the end index of the row name (more than 13)
-    int name_end = first_word_end(strline, end_marker);
-    if (name_end < 14) {
-      std::string name = strline.substr(0, 14);
+    // end_marker should be the end index of the row name:
+    // more than 13 minus the 4 whitespaces we have trimmed from the start so
+    // more than 9
+    if (end_marker < 9) {
+      std::string name = strline.substr(0, 10);
       name = trim(name);
       if (name.size() > 8)
         return HMpsFF::parsekey::FAIL;
