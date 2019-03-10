@@ -73,8 +73,11 @@ int main(int argc, char **argv) {
     HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
     return (int)HighsStatus::LpError;
   } else {
-    HighsPrintMessage(ML_MINIMAL, "LP parsed from file: %s\n\n",
+    HighsPrintMessage(ML_MINIMAL, "LP       : %s\n",
                       lp.model_name_.c_str());
+    HighsPrintMessage(ML_MINIMAL,
+                      "Rows     : %d\nCols     : %d\nNonzeros : %d\n\n",
+                      lp.numRow_, lp.numCol_, lp.Avalue_.size());
   }
 
   Highs highs(options);
