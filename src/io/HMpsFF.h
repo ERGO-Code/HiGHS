@@ -84,7 +84,8 @@ private:
     NONE,
     END,
     FAIL,
-    COMMENT
+    COMMENT,
+    FIXED_FORMAT
   };
 
   enum class boundtype { LE, EQ, GE, FR };
@@ -210,19 +211,27 @@ FreeFormatParserReturnCode HMpsFF::parse(const std::string &filename) {
         keyword = parseRanges(f);
         break;
       case HMpsFF::parsekey::FAIL:
+        f.close();
         return FreeFormatParserReturnCode::PARSERERROR;
-        break;
+      case HMpsFF::parsekey::FIXED_FORMAT:
+        f.close();
+        return FreeFormatParserReturnCode::FIXED_FORMAT;
       default:
         keyword = parseDefault(f);
         break;
       }
     }
 
-    if (keyword == HMpsFF::parsekey::FAIL)
+    if (keyword == HMpsFF::parsekey::FAIL) {
+      f.close();
       return FreeFormatParserReturnCode::PARSERERROR;
+   }
   } else {
+    f.close();
     return FreeFormatParserReturnCode::FILENOTFOUND;
   }
+
+  f.close();
 
   assert(row_type.size() == unsigned(numRow));
 
@@ -326,12 +335,17 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
     }
 
     std::string rowname = first_word(strline, start + 1);
+    int rowname_end = first_word_end(strline, start + 1);
 
-    // todo: add check that there is no other words on row
-    // detect if file is in fixed format
-
-    // todo whitespace in name possible?
-    // only in fixed, using old parser for now.
+    // Detect if file is in fixed format.
+    if (!is_end(strline, rowname_end)) {
+      std::string name = strline.substr(start + 1);
+      name = trim(name);
+      if (name.size() > 8)
+        return HMpsFF::parsekey::FAIL;
+      else
+        return HMpsFF::parsekey::FIXED_FORMAT;
+    }
 
     // Do not add to matrix if row is free.
     if (isFreeRow) {
@@ -416,8 +430,17 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
       continue;
     }
 
-    // todo: add check that there is no other words on row
-    // detect if file is in fixed format
+    // Detect if file is in fixed format.
+    // name_end should be the end index of the row name (more than 13)
+    int name_end = first_word_end(strline, end_marker);
+    if (name_end < 14) {
+      std::string name = strline.substr(0, 14);
+      name = trim(name);
+      if (name.size() > 8)
+        return HMpsFF::parsekey::FAIL;
+      else
+        return HMpsFF::parsekey::FIXED_FORMAT;
+    }
 
     // new column?
     if (!(word == colname)) {

@@ -36,6 +36,9 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
       case FreeFormatParserReturnCode::FILENOTFOUND:
         return FilereaderRetcode::FILENOTFOUND;
       case FreeFormatParserReturnCode::FIXED_FORMAT:
+        HighsPrintMessage(ML_DETAILED | ML_VERBOSE | ML_ALWAYS, "%s %s\n",
+                          "Whitespaces encountered in row / col name.",
+                          "Switching to fixed format parser.");
         break;
     }
   }
