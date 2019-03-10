@@ -108,8 +108,8 @@ HighsStatus Highs::run() {
       message_not_opt << std::endl;
       message_not_opt << "Run status : " << HighsStatusToString(result)
               << std::endl;
-      message_not_opt << "Time       : " << std::defaultfloat << timer.clock_time[0]
-              << std::endl;
+      message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
+              << timer.clock_time[0] << std::endl;
 
       message_not_opt << std::endl;
 
