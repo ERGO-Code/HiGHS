@@ -39,7 +39,8 @@ using Triplet = std::tuple<int, int, double>;
 enum class FreeFormatParserReturnCode {
   SUCCESS,
   PARSERERROR,
-  FILENOTFOUND
+  FILENOTFOUND,
+  FIXED_FORMAT
 };
 
 class HMpsFF {
