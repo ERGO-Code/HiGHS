@@ -21,7 +21,7 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
 {
   int status = 1;
   const char* filename = options.filename.c_str();
-  
+
   // if free format parser
   // Parse file and return status.
   if (options.parser_type == HighsMpsParserType::free)
