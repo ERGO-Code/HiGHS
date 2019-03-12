@@ -90,6 +90,9 @@ int main(int argc, char **argv) {
 
   HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
+  if (run_status != HighsStatus::OK &&
+      run_status != HighsStatus::Optimal)
+    HighsPrintMessage(ML_ALWAYS, "Highs status: %s\n", statusname.c_str());
 
   return 0;
 }

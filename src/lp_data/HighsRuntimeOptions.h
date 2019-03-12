@@ -15,7 +15,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
 
-    std::string presolve, crash, simplex, ipm, parallel;
+    std::string presolve, crash, simplex, ipm, mip, parallel;
 
     cxx_options.add_options()(
         "file",
@@ -29,6 +29,8 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(simplex))(
         "ipm", "Use interior point method solver: off by default.",
         cxxopts::value<std::string>(ipm))(
+        "mip", "Use branch and bound solver: off by default.",
+        cxxopts::value<std::string>(mip))(
         "parallel", "Use parallel solve: off by default.",
         cxxopts::value<std::string>(parallel))(
         "time-limit", "Use time limit.",
@@ -110,6 +112,13 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       std::string value = result["ipm"].as<std::string>();
       if (!setUserOptionValue(options, "ipm", value))
         HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
+    }
+
+    if (result.count("mip"))
+    {
+      std::string value = result["mip"].as<std::string>();
+      if (!setUserOptionValue(options, "mip", value))
+        HighsPrintMessage(ML_ALWAYS, "Unknown value for mip option: %s. Ignored.\n", value.c_str());
     }
 
     if (result.count("time-limit"))

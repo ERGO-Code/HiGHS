@@ -50,6 +50,13 @@ bool setUserOptionValue(HighsOptions& options, const std::string& option, const 
       options.simplex_option = SimplexOption::OFF;
     else
       return false;
+  } else if (option == "mip") {
+    if (value == "on")
+      options.mip = true;
+    else if (value == "off")
+      options.mip = false;
+    else
+      return false;
   } else {
     return false;
   }

@@ -26,6 +26,7 @@
 #include "simplex/HighsSimplexInterface.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
+#include "mip/SolveMip.h"
 
 HighsStatus Highs::initializeLp(HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
@@ -54,6 +55,9 @@ int Highs::HighsAddVariable(double obj, double lo, double hi) {
 // with runSolver(..)
 HighsStatus Highs::run() {
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s", lp_.model_name_.c_str());
+  if (options_.mip)
+    return runBnb();
+
   // Not solved before, so create an instance of HighsModelObject.
   hmos_.push_back(HighsModelObject(lp_, options_, timer));
 
@@ -158,7 +162,6 @@ HighsStatus Highs::run() {
   // }
   
   assert(hmos_.size() > 0);
-  int last = hmos_.size() - 1;
   solution_ = hmos_[0].solution_;
 
   if (hmos_[0].reportModelOperationsClock) {
@@ -272,4 +275,136 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // assert(KktSatisfied(lp, solution));
 
   return status;
+}
+
+// Solve a mixed integer problem using branch and bound.
+HighsStatus Highs::runBnb() {
+  HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
+
+  return HighsStatus::NotImplemented;
+  // todo: make sure integer variables are parsed correctly
+  // make tree
+  // solve root
+  // initialize NodeStack from SolveMip.h
+
+  // call chooseBranchingVariable method from SolveMip.h taking a NodeStack 
+    // (make a class so you can keep best solution so far and keep HighsLp)
+    // choose brancing variable (currently the first violated)
+    // if a branching one is chosen add children to NodeStack
+    // if no more violated integrality constraints we have a feas solution:
+		//   if best than current best save
+  
+  // while stack not empty
+    // pop node
+    // solve node
+    // chooseBranchingVariable
+}
+
+
+HighsStatus Highs::solveNode() {
+  return HighsStatus::NotImplemented;
+}
+
+// todo: modify this (just copied)
+HighsStatus Highs::solveRootNode() {
+// Not solved before, so create an instance of HighsModelObject.
+  hmos_.push_back(HighsModelObject(lp_, options_, timer));
+
+  // Options for HighsPrintMessage and HighsPrintMessage
+  options_.logfile = stdout;//fopen("HiGHS.log", "w");
+  options_.output = stdout;
+  options_.messageLevel = ML_DEFAULT;
+  HighsSetIO(options_);
+
+  //Define clocks
+  HighsTimer &timer = hmos_[0].timer_;
+  timer.startRunHighsClock();
+
+  // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
+  timer.start(timer.presolve_clock);
+  PresolveInfo presolve_info(options_.presolve_option, lp_);
+  HighsPresolveStatus presolve_status = runPresolve(presolve_info);
+  timer.stop(timer.presolve_clock);
+ 
+  // Run solver.
+  HighsStatus solve_status = HighsStatus::Init;
+  switch (presolve_status) {
+    case HighsPresolveStatus::NotReduced: {
+      solve_status = runSolver(hmos_[0]);
+      break;
+    }
+    case HighsPresolveStatus::Reduced: {
+      HighsLp& reduced_lp = presolve_info.getReducedProblem();
+      // Add reduced lp object to vector of HighsModelObject,
+      // so the last one in lp_ is the presolved one.
+      hmos_.push_back(HighsModelObject(reduced_lp, options_, timer));
+      solve_status = runSolver(hmos_[1]);
+      break;
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      // Proceed to postsolve.
+      break;
+    }
+    case HighsPresolveStatus::Infeasible:
+    case HighsPresolveStatus::Unbounded: {
+      HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
+               HighsStatus::Infeasible : HighsStatus::Unbounded;
+      HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
+                                   HighsStatusToString(result).c_str());
+
+      // Report this way for the moment. May modify after merge with OSIinterface
+      // branch which has new way of setting up a HighsModelObject and can support
+      // multiple calls to run().
+      timer.stopRunHighsClock();
+
+      std::stringstream message_not_opt;
+      message_not_opt << std::endl;
+      message_not_opt << "Run status : " << HighsStatusToString(result)
+              << std::endl;
+      message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
+              << timer.clock_time[0] << std::endl;
+
+      message_not_opt << std::endl;
+
+      HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
+      return result;
+    }
+    default: {
+      // case HighsPresolveStatus::Error
+      HighsPrintMessage(HighsMessageType::ERROR, "Presolve failed.");
+      return HighsStatus::PresolveError;
+    }
+  }
+
+  // Postsolve. Does nothing if there were no reductions during presolve.
+  if (solve_status == HighsStatus::Optimal) {
+    if (presolve_status == HighsPresolveStatus::Reduced) {
+      presolve_info.reduced_solution_ = hmos_[1].solution_;
+      presolve_info.presolve_[0].setBasisInfo(
+          hmos_[1].basis_.basicIndex_, hmos_[1].basis_.nonbasicFlag_,
+          hmos_[1].basis_.nonbasicMove_);
+    }
+
+    timer.start(timer.postsolve_clock);
+    HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+    timer.stop(timer.postsolve_clock);
+    if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+       HighsPrintMessage(HighsMessageType::INFO, "Postsolve finished.");
+
+      // Set solution and basis info for simplex clean up.
+      // Original LP is in lp_[0] so we set the basis information there.
+      hmos_[0].basis_.basicIndex_ =
+          presolve_info.presolve_[0].getBasisIndex();
+      hmos_[0].basis_.nonbasicFlag_ =
+          presolve_info.presolve_[0].getNonbasicFlag();
+      hmos_[0].basis_.nonbasicMove_ =
+          presolve_info.presolve_[0].getNonbasicMove();
+
+      options_.clean_up = true;
+
+      solve_status = runSolver(hmos_[0]);
+    }
+  }
+
+  timer.stopRunHighsClock();
 }

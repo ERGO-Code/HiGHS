@@ -15,6 +15,7 @@ set(sources
     lp_data/HighsModelBuilder.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    mip/SolveMip.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
  #   simplex/HAPI.cpp
@@ -57,6 +58,7 @@ set(headers
     lp_data/HighsOptions.h
     lp_data/HighsStatus.h
     lp_data/HighsModelBuilder.h
+    mip/SolveMip.h
     simplex/HApp.h
 #    simplex/HConst.h
     simplex/HCrash.h
