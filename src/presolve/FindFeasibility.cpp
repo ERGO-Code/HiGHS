@@ -1,8 +1,8 @@
 #include "FindFeasibility.h"
 #include "io/HighsIO.h"
 
-struct Quadratic {
-  
+struct Quadratic
+{
   double objective;
   double residual_norm_1;
   double residual_norm_2;
@@ -10,10 +10,11 @@ struct Quadratic {
   vector<double> residual;
 };
 
-HighsStatus initialize(const HighsLp& lp, 
+HighsStatus initialize(const HighsLp& lp,
                        HighsSolution& solution,
                        double& mu,
-                       std::vector<double>& lambda) {
+                       std::vector<double>& lambda)
+{
   if (!isSolutionConsistent(lp, solution)) {
     // clear and resize solution.
     solution.colValue_.clear();
@@ -56,10 +57,10 @@ HighsStatus runIdiot(const HighsLp& lp, HighsSolution& solution) {
   int K = 15;
   for (int k = 0; k < K; k++)
     // Minimize quadratic function.
-    
+
     // Possibly update mu.
 
     // Else update lambda.
 
-  return HighsStatus::OK;
+    return HighsStatus::OK;
 }
