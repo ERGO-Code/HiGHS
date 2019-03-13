@@ -15,6 +15,7 @@ set(sources
     lp_data/HighsModelBuilder.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    presolve/FindFeasibility.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
  #   simplex/HAPI.cpp
@@ -70,6 +71,7 @@ set(headers
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/SimplexConst.h
+    presolve/FindFeasibility.h
     presolve/Presolve.h
     presolve/HPreData.h
     simplex/HTimerPre.h
