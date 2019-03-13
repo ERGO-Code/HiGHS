@@ -294,6 +294,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   // Getting columns from the LP is OK
   int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
   int col1357_col_set[] = {1, 3, 5, 7};
+  int col1357_illegal_col_set[] = {3, 7, 1, 5};
   int col1357_num_ix = 4;
   int col1357_num_col;
   int col1357_num_nz;
@@ -311,6 +312,11 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  messageReportMatrix("Get by interval\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
+  // Calling getCols using an unordered set should be OK but for now HiGHS returns an error
+  return_bool = highs.getCols(col1357_num_ix, col1357_illegal_col_set, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  REQUIRE(!return_bool);
+
   return_bool = highs.getCols(col1357_num_ix, col1357_col_set, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
@@ -522,8 +528,66 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::Optimal);
-  
-printf("Finished successfully\n"); fflush(stdout);
+
+  col1357_cost[0] = 2.01;
+  col1357_cost[1] = 2.31;
+  col1357_cost[2] = 2.51;
+  col1357_cost[3] = 2.71;
+  col1357_lower[0] = 0.01;
+  col1357_lower[1] = 0.31;
+  col1357_lower[2] = 0.51;
+  col1357_lower[3] = 0.71;
+  col1357_upper[0] = 1.01;
+  col1357_upper[1] = 1.31;
+  col1357_upper[2] = 1.51;
+  col1357_upper[3] = 1.71;
+
+  row0135789_lower[0] = -0.01;
+  row0135789_lower[1] = -0.11;
+  row0135789_lower[2] = -0.31;
+  row0135789_lower[3] = -0.51;
+  row0135789_lower[4] = -0.71;
+  row0135789_lower[5] = -0.81;
+  row0135789_lower[6] = -0.91;
+  row0135789_upper[0] = 3.01;
+  row0135789_upper[1] = 3.11;
+  row0135789_upper[2] = 3.31;
+  row0135789_upper[3] = 3.51;
+  row0135789_upper[4] = 3.71;
+  row0135789_upper[5] = 3.81;
+  row0135789_upper[6] = 3.91;
+
+
+  // Attempting to set a cost to infinity returns error
+  return_bool = highs.changeObjCoef(7, HIGHS_CONST_INF);
+  REQUIRE(!return_bool);
+
+  // Attempting to set a cost to a finite value returns OK
+  return_bool = highs.changeObjCoef(7, 77);
+  REQUIRE(return_bool);
+
+
+  // Attempting to set row bounds with infinite lower bound returns error
+  return_bool = highs.changeRowBounds(2, HIGHS_CONST_INF, 3.21);
+  REQUIRE(!return_bool);
+
+  return_bool = highs.changeRowBounds(2, -HIGHS_CONST_INF, 3.21);
+  REQUIRE(return_bool);
+
+  // Attempting to set col bounds with -infinite upper bound returns error
+  return_bool = highs.changeColBounds(2, 0.21, -HIGHS_CONST_INF);
+  REQUIRE(!return_bool);
+
+  return_bool = highs.changeColBounds(2, 0.21, HIGHS_CONST_INF);
+  REQUIRE(return_bool);
+
+  return_bool = highs.changeRowsBounds(row0135789_num_ix, row0135789_row_set, row0135789_lower, row0135789_upper);
+  REQUIRE(return_bool);
+
+  return_bool = highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower, col1357_upper);
+  REQUIRE(return_bool);
+
+  printf("Finished successfully\n"); fflush(stdout);
  
 }
 
