@@ -305,17 +305,17 @@ TEST_CASE("LP-modification", "[highs_data]") {
   double *col1357_value = (double *)malloc(sizeof(double) * num_col_nz);
 
     
-  return_bool = highs.getCols(col1357_num_ix, col1357_col_set, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
-			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
-  REQUIRE(return_bool);
-
-  //  messageReportMatrix("Get by set\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
-  
   return_bool = highs.getCols(3, 7, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
   //  messageReportMatrix("Get by interval\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  
+  return_bool = highs.getCols(col1357_num_ix, col1357_col_set, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  //  messageReportMatrix("Get by set\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
   return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
@@ -323,6 +323,14 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  messageReportMatrix("Get by mask\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
+ // Try to delete an empty range of cols: OK
+  return_bool = highs.deleteCols(0, -1);
+  REQUIRE(return_bool);
+
+  // Try to delete more cols than there are: ERROR
+  return_bool = highs.deleteCols(0, num_col+1);
+  REQUIRE(!return_bool);
+
   return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
   REQUIRE(return_bool);
 
@@ -338,14 +346,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::Optimal);
   
-  // Try to delete an empty range of rows: OK
-  return_bool = highs.deleteRows(0, -1);
-  REQUIRE(return_bool);
-
-  // Try to delete more rows than there are: ERROR
-  return_bool = highs.deleteRows(0, num_row+1);
-  REQUIRE(!return_bool);
-
   // Delete all the columns: OK
   return_bool = highs.deleteCols(0, num_col);
   REQUIRE(return_bool);
@@ -356,24 +356,174 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
   messageReportLp("After deleting all rows", reference_lp);
 
-
-  // Getting rows from the LP is OK
-  int row1357_row_set[] = {1, 3, 5, 7};
-  int row1357_num_ix = 4;
-  int row1357_num_row;
-  int row1357_num_nz;
-  double *row1357_lower = (double *)malloc(sizeof(double) * row1357_num_ix);
-  double *row1357_upper = (double *)malloc(sizeof(double) * row1357_num_ix);
-  int *row1357_start = (int *)malloc(sizeof(int) * row1357_num_ix);
-  int *row1357_index = (int *)malloc(sizeof(int) * num_row_nz);
-  double *row1357_value = (double *)malloc(sizeof(double) * num_row_nz);
-
-    
-  return_bool = highs.getRows(row1357_num_ix, row1357_row_set, row1357_num_row, row1357_lower, row1357_upper,
-			      row1357_num_nz, row1357_start, row1357_index, row1357_value);
+  // Adding column vectors to model with no rows returns OK
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
   REQUIRE(return_bool);
 
-  //  messageReportMatrix("Row   ", row1357_num_row, row1357_num_nz, row1357_start, row1357_index, row1357_value);
+  messageReportLp("With columns but no rows", reference_lp);
+
+  // Adding row vectors and matrix to model with columns returns OK
+  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  REQUIRE(return_bool);
+
+   messageReportLp("With columns and rows", reference_lp);
+
+
+
+  // Getting rows from the LP is OK
+  int row0135789_row_set[] = {0, 1, 3, 5, 7, 8, 9};
+  int row0135789_row_mask[] = {1, 1, 0, 1, 0, 1, 0, 1, 1, 1};
+  int row0135789_num_ix = 7;
+  int row0135789_num_row;
+  int row0135789_num_nz;
+  double *row0135789_lower = (double *)malloc(sizeof(double) * row0135789_num_ix);
+  double *row0135789_upper = (double *)malloc(sizeof(double) * row0135789_num_ix);
+  int *row0135789_start = (int *)malloc(sizeof(int) * row0135789_num_ix);
+  int *row0135789_index = (int *)malloc(sizeof(int) * num_row_nz);
+  double *row0135789_value = (double *)malloc(sizeof(double) * num_row_nz);
+
+    
+  return_bool = highs.getRows(0, 4, row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  REQUIRE(return_bool);
+
+  messageReportMatrix("Get by interval\nRow   ", row0135789_num_row, row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
   
+  return_bool = highs.getRows(row0135789_num_ix, row0135789_row_set, row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  REQUIRE(return_bool);
+
+  messageReportMatrix("Get by set\nRow   ", row0135789_num_row, row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  
+  return_bool = highs.getRows(row0135789_row_mask, row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  REQUIRE(return_bool);
+
+  messageReportMatrix("Get by mask\nRow   ", row0135789_num_row, row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+
+
+  return_bool = highs.getRows(row0135789_num_ix, row0135789_row_set, row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
+  REQUIRE(return_bool);
+
+  return_bool = highs.deleteRows(row0135789_num_ix, row0135789_row_set);
+  REQUIRE(return_bool);
+
+  messageReportLp("After deleting rows 0-1, 3, 5, 7-9", reference_lp);
+
+  int row012_row_set[] = {0, 1, 2};
+  int row012_row_mask[] = {1, 1, 1};
+  int row012_num_ix = 3;
+  int row012_num_row;
+  int row012_num_nz;
+  double *row012_lower = (double *)malloc(sizeof(double) * row012_num_ix);
+  double *row012_upper = (double *)malloc(sizeof(double) * row012_num_ix);
+  int *row012_start = (int *)malloc(sizeof(int) * row012_num_ix);
+  int *row012_index = (int *)malloc(sizeof(int) * num_row_nz);
+  double *row012_value = (double *)malloc(sizeof(double) * num_row_nz);
+
+  return_bool = highs.getRows(row012_num_ix, row012_row_set, row012_num_row, row012_lower, row012_upper,
+			      row012_num_nz, row012_start, row012_index, row012_value);
+  REQUIRE(return_bool);
+
+  return_bool = highs.deleteRows(row012_row_mask);
+  REQUIRE(return_bool);
+
+  // Delete all the columns: OK
+  return_bool = highs.deleteCols(0, num_col);
+  REQUIRE(return_bool);
+  messageReportLp("After deleting all rows and columns", reference_lp);
+
+  // Can't add rows with no columns
+  return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_start, row0135789_num_nz, row0135789_index, row0135789_value);
+  REQUIRE(!return_bool);
+
+  // Adding column vectors to model with no rows returns OK
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  REQUIRE(return_bool);
+
+  return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_start, row0135789_num_nz, row0135789_index, row0135789_value);
+  REQUIRE(return_bool);
+
+  return_bool = highs.addRows(row012_num_row, row012_lower, row012_upper,
+			      row012_start, row012_num_nz, row012_index, row012_value);
+  REQUIRE(return_bool);
+
+  messageReportLp("After restoring all rows", reference_lp);
+
+  return_status = highs.run();
+  HighsStatusReport("highs.run()", return_status);
+  REQUIRE(return_status == HighsStatus::Optimal);
+  
+ // Try to delete an empty range of rows: OK
+  return_bool = highs.deleteRows(0, -1);
+  REQUIRE(return_bool);
+
+  // Try to delete more rows than there are: ERROR
+  return_bool = highs.deleteRows(0, num_row+1);
+  REQUIRE(!return_bool);
+
+  return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
+  REQUIRE(return_bool);
+
+  int col0123_col_mask[] = {1, 1, 1, 1};
+  int col0123_col_set[] = {0, 1, 2, 3};
+  int col0123_num_ix = 4;
+  int col0123_num_col;
+  int col0123_num_nz;
+  double *col0123_cost = (double *)malloc(sizeof(double) * col0123_num_ix);
+  double *col0123_lower = (double *)malloc(sizeof(double) * col0123_num_ix);
+  double *col0123_upper = (double *)malloc(sizeof(double) * col0123_num_ix);
+  int *col0123_start = (int *)malloc(sizeof(int) * col0123_num_ix);
+  int *col0123_index = (int *)malloc(sizeof(int) * num_col_nz);
+  double *col0123_value = (double *)malloc(sizeof(double) * num_col_nz);
+
+  return_bool = highs.getCols(col0123_col_mask, col0123_num_col, col0123_cost, col0123_lower, col0123_upper,
+			      col0123_num_nz, col0123_start, col0123_index, col0123_value);
+  REQUIRE(return_bool);
+  messageReportMatrix("Get col1357 by mask\nRow   ", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
+  messageReportMatrix("Get col0123 by mask\nRow   ", col0123_num_col, col0123_num_nz, col0123_start, col0123_index, col0123_value);
+
+  return_bool = highs.deleteRows(0, num_row);
+  REQUIRE(return_bool);
+   
+  return_bool = highs.deleteCols(col0123_col_mask);
+  REQUIRE(return_bool);
+  messageReportLp("After deleting all rows and columns", reference_lp);
+ 
+  // Adding row vectors to model with no columns returns OK
+  return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
+			      row0135789_start, 0, row0135789_index, row0135789_value);
+  REQUIRE(return_bool);
+
+  return_bool = highs.addRows(row012_num_row, row012_lower, row012_upper,
+			      row012_start, 0, row012_index, row012_value);
+  REQUIRE(return_bool);
+  messageReportLp("After restoring all rows", reference_lp);
+  
+  return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+			      col1357_start, col1357_num_nz, col1357_index, col1357_value);
+  REQUIRE(return_bool);
+
+  messageReportLp("After restoring columns 1, 3, 5, 7", reference_lp);
+  
+  return_bool = highs.addCols(col0123_num_col, col0123_cost, col0123_lower, col0123_upper,
+			      col0123_start, col0123_num_nz, col0123_index, col0123_value);
+  REQUIRE(return_bool);
+
+  messageReportLp("After restoring remaining 4 columns", reference_lp);
+  
+  return_status = highs.run();
+  HighsStatusReport("highs.run()", return_status);
+  REQUIRE(return_status == HighsStatus::Optimal);
+  
+printf("Finished successfully\n"); fflush(stdout);
+ 
 }
 

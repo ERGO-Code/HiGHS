@@ -56,7 +56,6 @@ set(headers
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
-    lp_data/HighsRuntimeOptions.h
     lp_data/HighsStatus.h
     lp_data/HighsModelBuilder.h
     simplex/HApp.h
@@ -73,11 +72,13 @@ set(headers
     simplex/HSimplex.h
     simplex/SimplexConst.h
     presolve/Presolve.h
+    presolve/HPreData.h
     simplex/HTimerPre.h
     simplex/HVector.h
     test/KktCheck.h
     test/KktChStep.h
     util/stringutil.h
+    util/HighsRandom.h
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
@@ -92,9 +93,7 @@ endif()
 
 add_library(libhighs ${sources})
 
-if (GAMS_FOUND)
-    target_include_directories(libhighs PUBLIC "${GAMS_ROOT}/apifiles/C/api")
-endif()
+# put version information into shared library file
 
 if(${BUILD_SHARED_LIBS})
     # put version information into shared library file
@@ -163,7 +162,11 @@ endif()
 set_target_properties(highs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
 # install the header files of highs
-install(FILES ${headers} ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
+foreach ( file ${headers} )
+    get_filename_component( dir ${file} DIRECTORY )
+    install( FILES ${file} DESTINATION include/${dir} )
+endforeach()
+install(FILES ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
 
 # install the binary and the library to appropriate locations and add them to an export group
 install(TARGETS libhighs EXPORT highs-targets

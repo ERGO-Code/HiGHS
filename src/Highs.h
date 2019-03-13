@@ -134,6 +134,19 @@ public:
 		      );
 
   bool getCols(
+	       const int from_col,
+	       const int to_col,
+	       int& num_col,
+	       double *col_costs,
+	       double *col_lower,
+	       double *col_upper,
+	       int& num_nz,
+	       int *col_matrix_start,
+	       int *col_matrix_index,
+	       double *col_matrix_value
+	       );
+
+  bool getCols(
 	       const int n, 
 	       const int* indices,
 	       int& num_col,
@@ -159,22 +172,34 @@ public:
 	       double *col_matrix_value
 	       );
 
-  bool getCols(
-	       const int from_col,
-	       const int to_col,
-	       int& num_col,
-	       double *col_costs,
-	       double *col_lower,
-	       double *col_upper,
+  bool getRows(
+	       const int from_row,
+	       const int to_row,
+	       int& num_row,
+	       double *row_lower,
+	       double *row_upper,
 	       int& num_nz,
-	       int *col_matrix_start,
-	       int *col_matrix_index,
-	       double *col_matrix_value
+	       int *row_matrix_start,
+	       int *row_matrix_index,
+	       double *row_matrix_value
 	       );
+
 
   bool getRows(
 	       const int n, 
 	       const int* indices,
+	       int& num_row,
+	       double *row_lower,
+	       double *row_upper,
+	       int& num_nz,
+	       int *row_matrix_start,
+	       int *row_matrix_index,
+	       double *row_matrix_value
+	       );
+
+
+  bool getRows(
+	       const int* row_mask,
 	       int& num_row,
 	       double *row_lower,
 	       double *row_upper,

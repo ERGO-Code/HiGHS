@@ -856,8 +856,6 @@ HighsStatus delete_cols_from_lp_matrix(HighsLp &lp,
 		     delete_from_col, delete_to_col,
 		     keep_from_col, keep_to_col,
 		     current_set_entry);
-    if (delete_to_col == col_dim) break;
-     assert(delete_to_col < col_dim);
      if (k == from_k) {
        // Account for the initial columns being kept
        if (mask) {
@@ -870,6 +868,13 @@ HighsStatus delete_cols_from_lp_matrix(HighsLp &lp,
        }
        new_num_nz = lp.Astart_[delete_from_col];
      }
+     // Ensure that the starts of the deleted columns are zeroed to
+     // avoid redundant start information for columns whose indices
+     // are't used after the deletion takes place. In particular, if
+     // all columns are deleted then something must be done to ensure
+     // that the matrix isn't magially recreated by increasing the
+     // number of columns from zero when there are no rows in the LP.
+     for (int col = delete_from_col; col < delete_to_col; col++) lp.Astart_[col] = 0;
      for (int col = keep_from_col; col < keep_to_col; col++) {
        lp.Astart_[new_num_col] = new_num_nz + lp.Astart_[col] - lp.Astart_[keep_from_col];
        new_num_col++;
@@ -881,6 +886,11 @@ HighsStatus delete_cols_from_lp_matrix(HighsLp &lp,
     }
     if (keep_to_col == col_dim) break;
   }
+  // Ensure that the start of the spurious last column is zeroed so
+  // that it doesn't give a positive number of matrix entries if the
+  // number of columns in the LP is increased when there are no rows
+  // in the LP.
+  lp.Astart_[lp.numCol_] = 0;
   lp.Astart_[new_num_col] = new_num_nz;
   return HighsStatus::OK;
 }

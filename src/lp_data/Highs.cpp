@@ -510,17 +510,48 @@ bool Highs::getCols(const int *col_mask,
   return true;
 }
 
-bool Highs::getRows(const int n, const int *indices,
+bool Highs::getRows(const int from_row, const int to_row,
 		    int &num_row, double *lower_bounds, double *upper_bounds,
 		    int &num_nz, int *start, int *index, double *value) {
-
   if (!simplex_has_run_) {
     // TODO: modify local lp
-
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
+
+    interface.getRows(from_row, to_row,
+		      num_row, lower_bounds, upper_bounds,
+		      num_nz, start, index, value);
+  }
+  return true;
+}
+
+bool Highs::getRows(const int n, const int *indices,
+		    int &num_row, double *lower_bounds, double *upper_bounds,
+		    int &num_nz, int *start, int *index, double *value) {
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
     interface.getRows(n, indices,
+		      num_row, lower_bounds, upper_bounds,
+		      num_nz, start, index, value);
+  }
+  return true;
+}
+
+bool Highs::getRows(const int *row_mask,
+		    int &num_row, double *lower_bounds, double *upper_bounds,
+		    int &num_nz, int *start, int *index, double *value) {
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    interface.getRows(row_mask,
 		      num_row, lower_bounds, upper_bounds,
 		      num_nz, start, index, value);
   }

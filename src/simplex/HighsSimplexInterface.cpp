@@ -254,9 +254,9 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   return_status = worseStatus(call_status, return_status);
 
   int lc_XnumNewNZ = XnumNewNZ;
-  int* lc_XARstart;
-  int* lc_XARindex;
-  double* lc_XARvalue;
+  int* lc_XARstart = (int *)malloc(sizeof(int) * XnumNewRow);
+  int* lc_XARindex = (int *)malloc(sizeof(int) * XnumNewNZ);
+  double* lc_XARvalue = (double *)malloc(sizeof(double) * XnumNewNZ);
   if (XnumNewNZ) {
     // Copy the new row-wise matrix into a local copy that can be normalised
     std::memcpy(lc_XARstart, XARstart, sizeof(int)*XnumNewRow);
@@ -446,6 +446,8 @@ HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int
 						     from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
   if (from_k < 0 || to_k > lp.numCol_) return HighsStatus::Error;
+  num_col = 0;
+  num_nz = 0;
   if (from_k >= to_k) return HighsStatus::OK;
   int out_from_col;
   int out_to_col;
@@ -453,8 +455,6 @@ HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int
   int in_to_col = 0;
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
-  num_col = 0;
-  num_nz = 0;
   for (int k = from_k; k < to_k; k++) {
     update_out_in_ix(col_dim,
 		     interval, from_col, to_col,
@@ -521,46 +521,119 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(const bool interval, const int
 						  const bool mask, const int* row_mask,
 						  int &num_row, double *row_lower, double *row_upper,
 						  int &num_nz, int *row_matrix_start, int *row_matrix_index, double *row_matrix_value) {
-  /*
+  int from_k;
+  int to_k;
   HighsLp &lp = highs_model_object.lp_;
-  if (XfromRow < 0 || XtoRow > lp.numRow_) return HighsStatus::Error;
-  if (XfromRow >= XtoRow) return HighsStatus::OK;
+  HighsStatus return_status = assess_interval_set_mask(lp.numRow_,
+						     interval, from_row, to_row,
+						     set, num_set_entries, row_set,
+						     mask, row_mask,
+						     from_k, to_k);
+  if (return_status != HighsStatus::OK) return return_status;
+  if (from_k < 0 || to_k > lp.numRow_) return HighsStatus::Error;
+  num_row = 0;
+  num_nz = 0;
+  if (from_k >= to_k) return HighsStatus::OK;
+  // "Out" means not in the set to be extrated
+  // "In" means in the set to be extrated
+  int out_from_row;
+  int out_to_row;
+  int in_from_row;
+  int in_to_row = 0;
+  int current_set_entry = 0;
+  int row_dim = lp.numRow_;
+  // Set up a row mask so that entries to be got from the column-wise
+  // matrix can be identified and have their correct row index.
+  int *new_index = (int *)malloc(sizeof(int) * lp.numRow_);
 
-  // Determine the number of rows to be extracted
-  int numExtractRows = XtoRow - XfromRow;
-  for (int row = XfromRow; row < XtoRow; row++) {
-    XrowLower[row - XfromRow] = lp.rowLower_[row];
-    XrowUpper[row - XfromRow] = lp.rowUpper_[row];
-  }
-  // Determine how many entries are in each row to be extracted
-  vector<int> XARlength;
-  XARlength.assign(numExtractRows, 0);
-
-  for (int el = lp.Astart_[0]; el < lp.Astart_[lp.numCol_]; el++) {
-    int row = lp.Aindex_[el];
-    if (row >= XfromRow && row < XtoRow) XARlength[row - XfromRow] += 1;
-  }
-  XARstart[0] = 0;
-  for (int row = 0; row < numExtractRows-1; row++) {
-    XARstart[row + 1] = XARstart[row] + XARlength[row];
-    XARlength[row] = 0;
-  }
-  XARlength[numExtractRows-1] = 0;
-
-  for (int col = 0; col < lp.numCol_; col++) {
-    for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-      int row = lp.Aindex_[el];
-      if (row >= XfromRow && row < XtoRow) {
-        int rowEl = XARstart[row - XfromRow] + XARlength[row - XfromRow];
-        XARlength[row - XfromRow] += 1;
-        XARindex[rowEl] = col;
-        XARvalue[rowEl] = lp.Avalue_[el];
+  if (!mask) {
+    out_to_row = 0;
+    current_set_entry = 0;
+    for (int k = from_k; k < to_k; k++) {
+      update_out_in_ix(row_dim,
+		       interval, from_row, to_row,
+		       set, num_set_entries, row_set,
+		       mask, row_mask,
+		       in_from_row, in_to_row,
+		       out_from_row, out_to_row,
+		       current_set_entry);
+      if (k == from_k) {
+	// Account for any initial rows not being extracted
+	for (int row = 0; row < in_from_row; row++) {
+	  new_index[row] = -1;
+	}
+      }
+      for (int row = in_from_row; row < in_to_row; row++) {
+	new_index[row] = num_row;
+	num_row++;
+      }
+      for (int row = out_from_row; row < out_to_row; row++) {
+	new_index[row] = -1;
+      }
+      if (out_to_row == row_dim) break;
+    }
+  } else {
+    for (int row = 0; row < lp.numRow_; row++) {
+      if (row_mask[row]) {
+	new_index[row] = num_row;
+	num_row++;
+      } else {
+	new_index[row] = -1;
       }
     }
   }
-  *XnumNZ = XARstart[numExtractRows-1] + XARlength[numExtractRows-1];
-  //  printf("Set XnumNZ = %d\n", *XnumNZ);
-*/
+
+  // Bail out if no rows are to be extracted
+  if (num_row == 0) return HighsStatus::OK;
+
+  // Allocate an array of lengths for the row-wise matrix to be extracted
+  int *row_matrix_length = (int *)malloc(sizeof(int) * num_row);
+  
+  for (int row = 0; row < lp.numRow_; row++) {
+    int new_row = new_index[row];
+    if (new_row >= 0) {
+      assert(new_row < num_row);
+      row_lower[new_row] = lp.rowLower_[row];
+      row_upper[new_row] = lp.rowUpper_[row];
+      row_matrix_length[new_row] = 0;
+    }
+  }
+  // Identify the lengths of the rows in the row-wise matrix to be extracted
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int el = lp.Astart_[col]; el < lp.Astart_[col+1]; el++) {
+      int row = lp.Aindex_[el];
+      int new_row = new_index[row];
+      if (new_row >= 0) row_matrix_length[new_row]++;
+    }
+  }
+
+  row_matrix_start[0] = 0;
+  for (int row = 0; row < num_row-1; row++) {
+    row_matrix_start[row+1] = row_matrix_start[row] + row_matrix_length[row];
+  }
+
+  // Fill the row-wise matrix with indices and values
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int el = lp.Astart_[col]; el < lp.Astart_[col+1]; el++) {
+      int row = lp.Aindex_[el];
+      int new_row = new_index[row];
+      if (new_row >= 0) {
+	int row_el = row_matrix_start[new_row];
+	row_matrix_index[row_el] = col;
+	row_matrix_value[row_el] = lp.Avalue_[el];
+	row_matrix_start[new_row]++;
+      }
+    }
+  }
+  // Restore the starts of the row-wise matrix and count the number of nonzeros in it
+  num_nz = 0;
+  row_matrix_start[0] = 0;
+  for (int row = 0; row < num_row-1; row++) {
+    row_matrix_start[row+1] = row_matrix_start[row] + row_matrix_length[row];
+    num_nz += row_matrix_length[row];
+  }
+  num_nz += row_matrix_length[num_row-1];
+  return HighsStatus::OK;
 }
 
 // Change a single coefficient in the matrix
