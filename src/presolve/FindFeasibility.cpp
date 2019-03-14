@@ -14,13 +14,14 @@ class Quadratic
  public:
   Quadratic(const HighsLp& lp,
             std::vector<double>& primal_values) :
-            lp_(lp), x_value(primal_values) {
-              updateResidual();
+            lp_(lp), col_value(primal_values) {
               updateObjective();
+              updateRowValue();
+              updateResidual();
             }
 
-  void setSolution(std::vector<double> values) {
-    x_value = std::move(values);
+  void setSolution(const std::vector<double>& values) {
+    col_value = (values);
     updateObjective();
     updateRowValue();
     updateResidual();
@@ -28,14 +29,13 @@ class Quadratic
 
  private:
   const HighsLp& lp_;
-  std::vector<double>& x_value;
+  vector<double> col_value;
+  vector<double> row_value;
 
   double objective;
   double residual_norm_1;
   double residual_norm_2;
-
   vector<double> residual;
-  vector<double> row_value;
 
   void updateObjective();
   void updateRowValue();
@@ -49,7 +49,7 @@ void Quadratic::updateRowValue() {
   for (int col = 0; col < lp_.numCol_; col++) {
     for (int k = lp_.Astart_[col]; k < lp_.Astart_[col+1]; k++) {
       int row = lp_.Aindex_[k];
-      row_value[row] += lp_.Avalue_[k] * x_value[col];
+      row_value[row] += lp_.Avalue_[k] * col_value[col];
     }
   }
 }
@@ -74,7 +74,7 @@ void Quadratic::updateResidual() {
 void Quadratic::updateObjective() {
   objective = 0;
   for (int col = 0; col < lp_.numCol_; col++)
-    objective += lp_.colCost_[col] * x_value[col];
+    objective += lp_.colCost_[col] * col_value[col];
 }
 
 double chooseStartingMu(const HighsLp& lp) {
