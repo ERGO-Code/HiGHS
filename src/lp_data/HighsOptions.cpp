@@ -104,7 +104,15 @@ bool setOptionValue(HighsOptions& options, const std::string& option, const std:
       options.large_matrix_value = atof(value.c_str());
   } else if (option == "dual_objective_value_upper_bound") {
       options.dual_objective_value_upper_bound = atof(value.c_str());
-  } else {
+  } else if (option == "find_feasibility") {
+    if (value != "on" && value != "true") {
+      HighsLogMessage(HighsMessageType::WARNING,
+      "Find feasibility can only be set to true. Value: %s", value.c_str());
+      return false;
+    }
+    options.find_feasibility = true;
+  }
+  else {
     HighsLogMessage(HighsMessageType::WARNING, "Unknown option: %s.", option.c_str());
     return false;
   }

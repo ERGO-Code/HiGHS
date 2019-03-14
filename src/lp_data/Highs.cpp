@@ -26,6 +26,7 @@
 #include "simplex/HighsSimplexInterface.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
+#include "presolve/FindFeasibility.h"
 
 HighsStatus Highs::initializeLp(HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
@@ -53,6 +54,9 @@ int Highs::HighsAddVariable(double obj, double lo, double hi) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+  if (options_.find_feasibility)
+    return runFeasibility(lp_, solution_);
+
   HighsPrintMessage(HighsMessageType::INFO, "Solving %s", lp_.model_name_.c_str());
   // Not solved before, so create an instance of HighsModelObject.
   hmos_.push_back(HighsModelObject(lp_, options_, timer));

@@ -31,14 +31,14 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<std::string>(ipm))(
         "parallel", "Use parallel solve: off by default.",
         cxxopts::value<std::string>(parallel))(
-        "time-limit", "Use time limit.",
+        "time_limit", "Use time limit.",
         cxxopts::value<double>())(
-        "iteration-limit", "Use iteration limit (integer).",
+        "iteration_limit", "Use iteration limit (integer).",
         cxxopts::value<int>())(
-        "options-file",
+        "options_file",
         "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())(
-        "parser", "Mps parser type: swap back to fixed format parser.",
+        "parser_type", "Mps parser type: swap back to fixed format parser.",
         cxxopts::value<std::string>(presolve))(
         "h, help", "Print help.");
 
@@ -112,9 +112,9 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         HighsPrintMessage(ML_ALWAYS, "Unknown value for ipm option: %s. Ignored.\n", value.c_str());
     }
 
-    if (result.count("time-limit"))
+    if (result.count("time_limit"))
     {
-      double time_limit = result["time-limit"].as<double>();
+      double time_limit = result["time_limit"].as<double>();
       if (time_limit <= 0)
       {
         std::cout << "Time limit must be positive." << std::endl;
@@ -124,7 +124,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       options.highs_run_time_limit = time_limit;
     }
 
-    if (result.count("iteration-limit"))
+    if (result.count("iteration_limit"))
     {
       double iteration_limit = result["iteration-limit"].as<int>();
       if (iteration_limit <= 0)
@@ -136,9 +136,9 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       options.simplex_iteration_limit = iteration_limit;
     }
 
-    if (result.count("options-file"))
+    if (result.count("options_file"))
     {
-      auto &v = result["options-file"].as<std::vector<std::string>>();
+      auto &v = result["options_file"].as<std::vector<std::string>>();
       if (v.size() > 1)
       {
         std::cout << "Multiple options files not implemented.\n";
@@ -149,9 +149,9 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     }
 
     // For testing of new parser
-    if (result.count("parser"))
+    if (result.count("parser_type"))
     {
-      std::string value = result["parser"].as<std::string>();
+      std::string value = result["parser_type"].as<std::string>();
       if (value == "fixed")
         options.parser_type = HighsMpsParserType::fixed;
       else if (value == "free")

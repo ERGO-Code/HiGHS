@@ -4,6 +4,7 @@
 #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsLp.h"
 
-HighsStatus runIdiot(const HighsLp& lp, const HighsSolution& solution);
+HighsStatus runFeasibility(const HighsLp& lp,
+                           HighsSolution& solution);
 
 #endif

@@ -51,22 +51,17 @@ private:
   HighsSolution solution_;
   HighsLp lp_;
 
+  HighsTimer timer;
+
   // each HighsModelObject holds a const ref to its lp_
   std::vector<HighsModelObject> hmos_;
 
   bool runSuccessful;
 
+  HighsStatus runSolver(HighsModelObject &model);
+
   HighsPresolveStatus runPresolve(PresolveInfo &presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo &presolve_info);
-  HighsStatus runSolver(HighsModelObject &model);
-  HighsTimer timer;
-
-  // Function to call just presolve.
-  HighsPresolveStatus presolve(const HighsLp &lp, HighsLp &reduced_lp)
-  {
-    // todo: implement, from user's side.
-    return HighsPresolveStatus::NullError;
-  };
 
   // HighsModelBuilder builder;
 };

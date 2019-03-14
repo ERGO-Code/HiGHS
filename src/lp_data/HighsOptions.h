@@ -108,6 +108,7 @@ struct HighsOptions
   int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool clean_up = false;
+  bool find_feasibility = false;
 };
 
 // Used only for options allowed for the user. For other options see setOptionValue.
