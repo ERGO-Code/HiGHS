@@ -21,7 +21,6 @@
 #include "io/HighsIO.h"
 #include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
-#include "cxxopts.hpp"
 
 enum class OptionStatus
 {

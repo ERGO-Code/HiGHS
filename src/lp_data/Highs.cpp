@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
@@ -55,7 +56,7 @@ HighsStatus Highs::run() {
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
   HighsStatus solve_status = HighsStatus::Init;
-
+ 
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   if (!simplex_has_run_) {
     // Presolve. runPresolve handles the level of presolving (0 = don't presolve).
@@ -65,40 +66,54 @@ HighsStatus Highs::run() {
     timer_.stop(timer_.presolve_clock);
 
     // Run solver.
-    switch (presolve_status) {
-      case HighsPresolveStatus::NotReduced: {
-        solve_status = runSolver(hmos_[0]);
-        break;
-      }
-      case HighsPresolveStatus::Reduced: {
-        HighsLp &reduced_lp = presolve_info.getReducedProblem();
-        // Add reduced lp object to vector of HighsModelObject,
-        // so the last one in lp_ is the presolved one.
-        hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
-        solve_status = runSolver(hmos_[1]);
-        break;
-      }
-      case HighsPresolveStatus::ReducedToEmpty: {
-        // Proceed to postsolve.
-        break;
-      }
-      case HighsPresolveStatus::Infeasible:
-      case HighsPresolveStatus::Unbounded: {
-        HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible)
-                                ? HighsStatus::Infeasible
-                                : HighsStatus::Unbounded;
-        HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
-                          HighsStatusToString(result).c_str());
-        // for tests
-        HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
-        return result;
-      }
-      default: {
-        // case HighsPresolveStatus::Error
-        HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
-        return HighsStatus::PresolveError;
-      }
+  switch (presolve_status) {
+    case HighsPresolveStatus::NotReduced: {
+      solve_status = runSolver(hmos_[0]);
+      break;
     }
+    case HighsPresolveStatus::Reduced: {
+      HighsLp& reduced_lp = presolve_info.getReducedProblem();
+      // Add reduced lp object to vector of HighsModelObject,
+      // so the last one in lp_ is the presolved one.
+      hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
+      solve_status = runSolver(hmos_[1]);
+      break;
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      // Proceed to postsolve.
+      break;
+    }
+    case HighsPresolveStatus::Infeasible:
+    case HighsPresolveStatus::Unbounded: {
+      HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
+               HighsStatus::Infeasible : HighsStatus::Unbounded;
+      HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
+                                   HighsStatusToString(result).c_str());
+
+      // Report this way for the moment. May modify after merge with OSIinterface
+      // branch which has new way of setting up a HighsModelObject and can support
+      // multiple calls to run().
+      timer_.stopRunHighsClock();
+
+      std::stringstream message_not_opt;
+      message_not_opt << std::endl;
+      message_not_opt << "Run status : " << HighsStatusToString(result)
+              << std::endl;
+      message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
+              << timer_.clock_time[0] << std::endl;
+
+      message_not_opt << std::endl;
+
+      HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
+      return result;
+    }
+    default: {
+      // case HighsPresolveStatus::Error
+      HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
+      return HighsStatus::PresolveError;
+    }
+  }
+
 
     // Postsolve. Does nothing if there were no reductions during presolve.
     if (solve_status == HighsStatus::Optimal) {
@@ -132,29 +147,14 @@ HighsStatus Highs::run() {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
     solve_status = runSolver(hmos_[0]);
   }
-
-  // Report status.
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  switch (solve_status) {
-    case HighsStatus::Optimal:
-    case HighsStatus::ReachedDualObjectiveUpperBound: {
-      solution_ = hmos_[0].solution_;
-      basis_ = getHighsBasis(lp_, hmos_[0].basis_);
-      break;
-    }
-    case HighsStatus::Infeasible:
-    case HighsStatus::Unbounded: {
-      if (options_.presolve_option == PresolveOption::ON) {
-        // todo: handle case. Try to solve again with no presolve.
-        HighsPrintMessage(ML_ALWAYS, "Reduced problem status not optimal: %s\n",
-                          HighsStatusToString(solve_status).c_str());
-        break;
-      }
-    }
-  }
-
-  // Report in old way so tests pass. Change to better output and modify tests.
-  simplex_interface.report_simplex_outcome("Run");
+  // else if (reduced problem failed to solve) {
+  //   todo: handle case when presolved problem failed to solve. Try to solve again
+  //   with no presolve.
+  // }
+  
+  assert(hmos_.size() > 0);
+  int last = hmos_.size() - 1;
+  solution_ = hmos_[0].solution_;
 
   // Report times
   if (hmos_[0].reportModelOperationsClock) {
@@ -186,6 +186,24 @@ HighsStatus Highs::run() {
 #endif
 
   timer_.stopRunHighsClock();
+
+  std::stringstream message;
+  message << std::endl;
+  message << "Run status : " << HighsStatusToString(solve_status)
+          << std::endl;
+  message << "Iterations : " << hmos_[0].simplex_info_.iteration_count
+          << std::endl;
+
+  if (solve_status == HighsStatus::Optimal)
+    message << "Objective  : " << std::scientific
+            << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
+
+  message << "Time       : " << std::fixed << std::setprecision(3)
+          << timer_.clock_time[0] << std::endl;
+
+  message << std::endl;
+
+  HighsPrintMessage(ML_MINIMAL, message.str().c_str());
 
   return solve_status;
 }

@@ -69,13 +69,18 @@ class HighsLp {
         model_name_ != lp.model_name_)
       return false;
 
-    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ ||
-        Avalue_ != lp.Avalue_ || colCost_ != lp.colCost_ ||
-        colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
+    if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)
+      return false;
+
+    if (colCost_ != lp.colCost_)
+      return false;
+
+    if (colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
         rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
       return false;
 
-    if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)
+    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ ||
+        Avalue_ != lp.Avalue_)
       return false;
 
     return true;

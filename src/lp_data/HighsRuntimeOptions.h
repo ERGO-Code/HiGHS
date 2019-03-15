@@ -1,8 +1,14 @@
+#ifndef LP_DATA_HIGHSRUNTIMEOPTIONS_H_
+#define LP_DATA_HIGHSRUNTIMEOPTIONS_H_
+
+#include "../external/cxxopts.hpp"
+
+#include "io/LoadProblem.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "io/LoadProblem.h"
+#include "util/stringutil.h"
 
 bool loadOptions(int argc, char **argv, HighsOptions &options)
 {
@@ -30,11 +36,11 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<double>())(
         simplex_iteration_limit_string, "Use simplex iteration limit (integer).",
         cxxopts::value<int>())(
-        "h, help", "Print help.")(
         options_file_string, "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())(
         parser_type_string, "Mps parser type: swap back to fixed format parser.",
-        cxxopts::value<std::string>(parser)); // ?? Was (presolve)
+        cxxopts::value<std::string>(parser))(
+        "h, help", "Print help.");
 
     cxx_options.parse_positional("file");
 
@@ -49,12 +55,22 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     if (result.count(file_string))
     {
       auto &v = result[file_string].as<std::vector<std::string>>();
-      if (v.size() > 1)
-      {
-        std::cout << "Multiple files not implemented.\n";
-        return false;
+      if (v.size() > 1) {
+        int nonEmpty = 0;
+        for (int i=0; i<v.size(); i++) {
+          std::string arg = v[i];
+          if (trim(arg).size() > 0) {
+            nonEmpty++;
+            options.filename = arg;
+          }
+        }
+        if (nonEmpty > 1) {
+          std::cout << "Multiple files not implemented.\n";
+          return false;
+        }
+      } else {
+        options.filename = v[0];
       }
-      options.filename = v[0];
     }
 
     if (result.count(presolve_string))
@@ -130,9 +146,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     return false;
   }
 
-  // Force column permutation of the LP to be used by the solver if
-  // parallel code is to be used
-  //  if (options.pami || options.sip) {options.permuteLp = true;}
-
   return true;
 }
+
+#endif

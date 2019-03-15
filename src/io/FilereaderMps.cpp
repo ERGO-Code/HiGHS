@@ -22,24 +22,34 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
   int status = 1;
   const char* filename = options.filename.c_str();
 
+  // if free format parser
+  // Parse file and return status.
   if (options.parser_type == HighsMpsParserType::free)
   {
     HMpsFF parser{};
     FreeFormatParserReturnCode result = parser.loadProblem(filename, model);
-    if (result == FreeFormatParserReturnCode::FILENOTFOUND)
-      return FilereaderRetcode::FILENOTFOUND;
-    else
-      status = 0;
+    switch (result) {
+      case FreeFormatParserReturnCode::SUCCESS:
+        return FilereaderRetcode::OKAY;
+      case FreeFormatParserReturnCode::PARSERERROR:
+        return FilereaderRetcode::PARSERERROR;
+      case FreeFormatParserReturnCode::FILENOTFOUND:
+        return FilereaderRetcode::FILENOTFOUND;
+      case FreeFormatParserReturnCode::FIXED_FORMAT:
+        HighsPrintMessage(ML_DETAILED | ML_VERBOSE, "%s %s\n",
+                          "Whitespaces encountered in row / col name.",
+                          "Switching to fixed format parser.");
+        break;
+    }
   }
-  else
-  {
-    std::vector<int> integerColumn;
-    status = readMPS(
-        filename, -1, -1, model.numRow_, model.numCol_, model.sense_,
-        model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
-        model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
-        model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
-  }
+
+  // else use fixed format parser
+  std::vector<int> integerColumn;
+  status = readMPS(
+      filename, -1, -1, model.numRow_, model.numCol_, model.sense_,
+      model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
+      model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+      model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
 
   if (status)
     return FilereaderRetcode::PARSERERROR;
