@@ -529,6 +529,23 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsStatusReport("highs.run()", return_status);
   REQUIRE(return_status == HighsStatus::Optimal);
 
+  return_bool = highs.deleteRows(0, num_row);
+  REQUIRE(return_bool);
+   
+  return_bool = highs.deleteCols(0, num_col);
+  REQUIRE(return_bool);
+  messageReportLp("After deleting all rows and columns", reference_lp);
+ 
+  // Adding column vectors to model with no rows returns OK
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  REQUIRE(return_bool);
+
+  //  messageReportLp("With columns but no rows", reference_lp);
+
+  // Adding row vectors and matrix to model with columns returns OK
+  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  REQUIRE(return_bool);
+
   col1357_cost[0] = 2.01;
   col1357_cost[1] = 2.31;
   col1357_cost[2] = 2.51;
@@ -559,13 +576,15 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
 
   // Attempting to set a cost to infinity returns error
-  return_bool = highs.changeObjCoef(7, HIGHS_CONST_INF);
+  return_bool = highs.changeColCost(7, HIGHS_CONST_INF);
   REQUIRE(!return_bool);
 
   // Attempting to set a cost to a finite value returns OK
-  return_bool = highs.changeObjCoef(7, 77);
+  return_bool = highs.changeColCost(7, 77);
   REQUIRE(return_bool);
 
+  return_bool = highs.changeColsCost(col1357_num_ix, col1357_col_set, col1357_cost);
+  REQUIRE(return_bool);
 
   // Attempting to set row bounds with infinite lower bound returns error
   return_bool = highs.changeRowBounds(2, HIGHS_CONST_INF, 3.21);
@@ -587,6 +606,26 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower, col1357_upper);
   REQUIRE(return_bool);
 
+  messageReportLp("After changing costs and bounds", reference_lp);
+
+  // Return the LP to its original state with a mask
+  
+  return_bool = highs.changeColsCost(col1357_col_mask, &colCost[0]);
+  REQUIRE(return_bool);
+
+  return_bool = highs.changeColBounds(2, colLower[2], colUpper[2]);
+  REQUIRE(return_bool);
+
+  return_bool = highs.changeColsBounds(col1357_col_mask, &colLower[0], &colUpper[0]);
+  REQUIRE(return_bool);
+
+  return_bool = highs.changeRowsBounds(row0135789_row_mask, &rowLower[0], &rowUpper[0]);
+  REQUIRE(return_bool);
+
+  return_bool = highs.changeRowBounds(2, rowLower[2], rowUpper[2]);
+  REQUIRE(return_bool);
+
+  messageReportLp("After restoring costs and bounds", reference_lp);
   printf("Finished successfully\n"); fflush(stdout);
  
 }

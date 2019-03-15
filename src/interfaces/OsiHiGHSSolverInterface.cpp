@@ -1074,7 +1074,7 @@ void OsiHiGHSSolverInterface::setObjCoeff(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjCoeff()\n");
-  this->highs->changeObjCoef(elementIndex, elementValue);
+  this->highs->changeColCost(elementIndex, elementValue);
 };
 
 std::vector<double *> OsiHiGHSSolverInterface::getDualRays(int maxNumRays,

@@ -96,24 +96,33 @@ public:
 			    int sense
 			    );
 
-  bool changeRowBounds(
-		       int index, 
-		       double lower, 
-		       double higher
-		       );
-  
+  bool changeColCost(
+		     int index, 
+		     double coef
+		     );
+
+  bool changeColsCost(
+		      int from_col,
+		      int to_col, 
+		      double* coef
+		      );
+
+  bool changeColsCost(
+		      int n, 
+		      int* index, 
+		      double* coef
+		      );
+
+  bool changeColsCost(
+		      int* mask, 
+		      double* coef
+		      );
+
   bool changeColBounds(
 		       int index, 
 		       double lower, 
 		       double higher
 		       );
-
-  bool changeRowsBounds(
-			int n, 
-			int* index, 
-			double* lower, 
-			double* higher
-			);
 
   bool changeColsBounds(
 			int n, 
@@ -122,16 +131,30 @@ public:
 			double* higher
 			);
 
-  bool changeObjCoef(
-		     int index, 
-		     double coef
-		     );
+  bool changeColsBounds(
+			int* mask, 
+			double* lower, 
+			double* higher
+			);
 
-  bool changeObjCoefs(
-		      int n, 
-		      int* index, 
-		      double* coef
-		      );
+  bool changeRowBounds(
+		       int index, 
+		       double lower, 
+		       double higher
+		       );
+  
+  bool changeRowsBounds(
+			int n, 
+			int* index, 
+			double* lower, 
+			double* higher
+			);
+
+  bool changeRowsBounds(
+			int* mask, 
+			double* lower, 
+			double* higher
+			);
 
   bool getCols(
 	       const int from_col,

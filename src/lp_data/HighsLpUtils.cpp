@@ -53,6 +53,7 @@ HighsStatus checkLp(const HighsLp& lp) {
   }
 
   // Check matrix.
+  if (lp.numCol_ == 0) return HighsStatus::OK;
   int lp_num_nz = lp.Astart_[lp.numCol_];
   if ((int)lp.Avalue_.size() < lp_num_nz) return HighsStatus::LpError;
   if (lp_num_nz < 0) return HighsStatus::LpError;
@@ -316,19 +317,18 @@ HighsStatus assess_bounds(const char* type, const int ix_os,
       // Leave inconsistent bounds to be used to deduce infeasibility
       HighsLogMessage(HighsMessageType::WARNING, "%3s  %12d has inconsistent bounds [%12g, %12g]", type, ix, usr_lower[k], usr_upper[k]);
       warning_found = true;
-    } else {
-      // Check that the lower bound is not as much as +Infinity
-      bool legalLowerBound = usr_lower[k] < infinite_bound;
-      if (!legalLowerBound) {
-	HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, usr_lower[k], infinite_bound);
-	error_found = true;
-      }
-      // Check that the upper bound is not as little as -Infinity
-      bool legalUpperBound = usr_upper[k] > -infinite_bound;
-      if (!legalUpperBound) {
-	HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, usr_upper[k], -infinite_bound);
-	error_found = true;
-      }
+    }
+    // Check that the lower bound is not as much as +Infinity
+    bool legalLowerBound = usr_lower[k] < infinite_bound;
+    if (!legalLowerBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, usr_lower[k], infinite_bound);
+      error_found = true;
+    }
+    // Check that the upper bound is not as little as -Infinity
+    bool legalUpperBound = usr_upper[k] > -infinite_bound;
+    if (!legalUpperBound) {
+      HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, usr_upper[k], -infinite_bound);
+      error_found = true;
     }
   }
   if (normalise) {
@@ -1121,6 +1121,7 @@ HighsStatus change_lp_costs(HighsLp &lp,
     if (mask && !col_mask[col]) continue;
     lp.colCost_[col] = usr_col_cost[k];
   }
+  return HighsStatus::OK;
 }
 
 HighsStatus change_lp_col_bounds(
@@ -1133,8 +1134,8 @@ HighsStatus change_lp_col_bounds(
 				 const double infinite_bound
 				 ) {
   return change_bounds("col", &lp.colLower_[0], &lp.colUpper_[0], 
-		       interval, from_col, to_col,
 		       lp.numCol_,
+		       interval, from_col, to_col,
 		       set, num_set_entries, col_set,
 		       mask, col_mask,
 		       usr_col_lower, usr_col_upper,
@@ -1151,8 +1152,8 @@ HighsStatus change_lp_row_bounds(
 				 const double infinite_bound
 				 ) {
   return change_bounds("row", &lp.rowLower_[0], &lp.rowUpper_[0], 
-		       interval, from_row, to_row,
 		       lp.numRow_,
+		       interval, from_row, to_row,
 		       set, num_set_entries, row_set,
 		       mask, row_mask,
 		       usr_row_lower, usr_row_upper,
