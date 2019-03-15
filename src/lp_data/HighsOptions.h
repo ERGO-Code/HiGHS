@@ -18,8 +18,44 @@
 
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "io/HighsIO.h"
 #include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
+
+enum class OptionStatus
+{
+  OK = 0,
+  NO_FILE,
+  UNKNOWN_OPTION,
+  ILLEGAL_VALUE
+};
+
+const string on_string = "on";
+const string off_string = "off";
+
+const string fixed_string = "fixed";
+const string free_string = "free";
+
+// Strings for command line options
+const string file_string = "file";
+const string presolve_string = "presolve";
+const string crash_string = "crash";
+const string parallel_string = "parallel";
+const string simplex_string = "simplex";
+const string ipm_string = "ipm";
+const string highs_run_time_limit_string = "highs_run_time_limit";
+const string simplex_iteration_limit_string = "simplex_iteration_limit";
+const string options_file_string = "options_file";
+const string parser_type_string = "parser_type";
+
+// Strings for file options
+const string infinite_cost_string = "infinite_cost";
+const string infinite_bound_string = "infinite_bound";
+const string small_matrix_value_string = "small_matrix_value";
+const string large_matrix_value_string = "large_matrix_value";
+const string primal_feasibility_tolerance_string = "primal_feasibility";
+const string dual_feasibility_tolerance_string = "dual_feasibility";
+const string dual_objective_value_upper_bound_string = "dual_objective_value_upper_bound";
 
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
@@ -47,35 +83,42 @@ struct HighsOptions
   std::string options_file = "";
 
   // Options passed through the command line
-
-  ParallelOption parallel_option = ParallelOption::DEFAULT;
   PresolveOption presolve_option = PresolveOption::DEFAULT;
   CrashOption crash_option = CrashOption::DEFAULT;
+  ParallelOption parallel_option = ParallelOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
   bool ipx = false;
-  int allow_superbasic = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
+  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
+
+  // Options not passed through the command line
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
   double large_matrix_value = LARGE_MATRIX_VALUE_DEFAULT;
+  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
+  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
+  double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
+
+  int allow_superbasic = false;
 
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
-
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
-
-  // Options not passed through the command line
 
   // Options for HighsPrintMessage and HighsLogMessage
   FILE *logfile = stdout;
   FILE *output = stdout;
   unsigned int messageLevel = ML_MINIMAL;
+
+  void (*printmsgcb) (unsigned int level, const char* msg, void* msgcb_data) = NULL;
+  void (*logmsgcb) (HighsMessageType type, const char* msg, void* msgcb_data) = NULL;
+  void* msgcb_data = NULL;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
   //
@@ -92,32 +135,37 @@ struct HighsOptions
   //
   // For any solver
   //
-  // primal feasibility (dual optimality) tolerance
-  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
-  // dual feasibility (primal optimality) tolerance
-  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
 
-  // Upper bound on dual objective value
-  double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
   //
   // For the simplex solver
   //
   bool simplex_perturb_costs = true;
-  // Maximum number of simplex iterations
-  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
+  // Maximum number of simplex updates
   int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool clean_up = false;
 };
 
-// Used only for options allowed for the user. For other options see setOptionValue.
-bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
-
-// Used for extended options read from file or set internally.
-bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
 
 // Called before solve. This would check whether tolerances are set to correct values and
 // all options are consistent.
-bool checkOptionsValue(HighsOptions& options);
+OptionStatus checkOptionsValue(HighsOptions& options);
 
+OptionStatus setPresolveValue(HighsOptions& options, const std::string& value);
+OptionStatus setCrashValue(HighsOptions& options, const std::string& value);
+OptionStatus setParallelValue(HighsOptions& options, const std::string& value);
+OptionStatus setSimplexValue(HighsOptions& options, const std::string& value);
+OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
+OptionStatus setHighsRunTimeLimitValue(HighsOptions& options, const double& value);
+OptionStatus setSimplexIterationLimitValue(HighsOptions& options, const int& value);
+OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value);
+
+OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
+OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
+OptionStatus setSmallMatrixValueValue(HighsOptions& options, const double& value);
+OptionStatus setLargeMatrixValueValue(HighsOptions& options, const double& value);
+OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options, const double& value);
+OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const double& value);
+OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value);
 #endif

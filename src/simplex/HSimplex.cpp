@@ -1429,7 +1429,9 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
     // Model has no basis: set up a logical basis then populate (where
     // possible) work* arrays
     replace_with_logical_basis(highs_model_object);
+#ifdef HiGHSDEV
     printf("Called replaceWithLogicalBasis\n");
+#endif
   }
 
   if (!(simplex_lp_status.has_matrix_col_wise &&
@@ -2144,7 +2146,7 @@ compute_primal_objective_function_value(HighsModelObject &highs_model_object) {
 }
 
 // Record the shift in the cost of a particular column
-double shift_cost(HighsModelObject &highs_model_object, int iCol,
+void shift_cost(HighsModelObject &highs_model_object, int iCol,
                   double amount) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   simplex_info.costs_perturbed = 1;
@@ -2153,7 +2155,7 @@ double shift_cost(HighsModelObject &highs_model_object, int iCol,
 }
 
 // Undo the shift in the cost of a particular column
-double shift_back(HighsModelObject &highs_model_object, int iCol) {
+void shift_back(HighsModelObject &highs_model_object, int iCol) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   simplex_info.workDual_[iCol] -= simplex_info.workShift_[iCol];
   simplex_info.workShift_[iCol] = 0;
@@ -2769,7 +2771,37 @@ void report_iteration_count_dual_objective_value(
   int iteration_count = highs_model_object.simplex_info_.iteration_count;
   double dual_objective_value =
       highs_model_object.simplex_info_.dualObjectiveValue;
-  HighsPrintMessage(ML_MINIMAL, "%10d  %20.10e  %2d\n", iteration_count,
-                    dual_objective_value, i_v);
+  HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %2d", iteration_count, dual_objective_value, i_v);
+}
+
+// Return a string representation of SimplexSolutionStatus.
+std::string SimplexSolutionStatusToString(SimplexSolutionStatus status) {
+  switch (status) {
+  case SimplexSolutionStatus::UNSET:
+    return "Unset";
+    break;
+  case SimplexSolutionStatus::OPTIMAL:
+    return "Optimal";
+    break;
+  case SimplexSolutionStatus::INFEASIBLE:
+    return "Infeasible";
+    break;
+  case SimplexSolutionStatus::UNBOUNDED:
+    return "Primal unbounded";
+    break;
+  case SimplexSolutionStatus::SINGULAR:
+    return "Singular basis";
+    break;
+  case SimplexSolutionStatus::FAILED:
+    return "Failed";
+    break;
+  case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    return "Reached dual objective value upper bound";
+    break;
+  case SimplexSolutionStatus::OUT_OF_TIME:
+    return "Time limit exceeded";
+    break;
+  }
+  return "";
 }
 

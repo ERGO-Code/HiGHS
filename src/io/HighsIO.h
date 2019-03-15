@@ -15,12 +15,13 @@
 #define HIGHS_IO_H
 
 #include "lp_data/HighsLp.h"
-#include "lp_data/HighsOptions.h"
+
+class HighsOptions;
 
 /**
  * @brief IO methods for HiGHS - currently just print/log messages
  */
-enum HighsMessageType { INFO, WARNING, ERROR };
+enum class HighsMessageType { INFO, WARNING, ERROR };
 const char* const HighsMessageTypeTag[] = {"INFO", "WARNING", "ERROR"};
 
 /**
@@ -63,6 +64,16 @@ void HighsSetOutput(
 void HighsSetMessagelevel(
 	unsigned int level //!< The message level: Use | operator to display at level NONE, VERBOSE, DETAILED, MINIMAL. default NONE
 );
+
+/*
+ * @brief sets the callbacks used to print output and and log
+ *
+ * Set to NULL to reset to default, which is to print to logfile and output file
+ */
+void HighsSetMessageCallback(
+	void (*printmsgcb_) (unsigned int level, const char* msg, void* msgcb_data),
+	void (*logmsgcb_) (HighsMessageType type, const char* msg, void* msgcb_data),
+	void* msgcb_data_);
 
 /*
  * @brief sets output options
