@@ -1,5 +1,10 @@
 #include "FindFeasibility.h"
+
+#include <sstream>
+
 #include "io/HighsIO.h"
+
+constexpr double kExitTolerance = 0.00000001;
 
 bool isEqualityProblem(const HighsLp& lp) {
   for (int row = 0; row < lp.numRow_; row++)
@@ -14,13 +19,15 @@ class Quadratic
  public:
   Quadratic(const HighsLp& lp,
             std::vector<double>& primal_values) :
-            lp_(lp), col_value(primal_values) { update(); }
+            lp_(lp), col_value_(primal_values) { update(); }
 
-  const std::vector<double>& getResidual() const { return residual; }
+  const std::vector<double>& getResidual() const { return residual_; }
+  double getResidualNorm2() const { return residual_norm_2_; }
+  double getObjective() const { return objective_; }
 
   void getSolution(HighsSolution& solution) const {
-    solution.colValue_ = col_value;
-    solution.rowValue_ = row_value;
+    solution.colValue_ = col_value_;
+    solution.rowValue_ = row_value_;
   }
 
   void minimize_by_component(const double mu,
@@ -28,13 +35,13 @@ class Quadratic
 
  private:
   const HighsLp& lp_;
-  vector<double> col_value;
-  vector<double> row_value;
+  vector<double> col_value_;
+  vector<double> row_value_;
 
-  double objective;
-  double residual_norm_1;
-  double residual_norm_2;
-  vector<double> residual;
+  double objective_;
+  double residual_norm_1_;
+  double residual_norm_2_;
+  vector<double> residual_;
 
   void updateObjective();
   void updateRowValue();
@@ -50,46 +57,50 @@ void Quadratic::update() {
 }
 
 void Quadratic::updateRowValue() {
-  row_value.clear();
-  row_value.assign(lp_.numRow_, 0);
+  row_value_.clear();
+  row_value_.assign(lp_.numRow_, 0);
 
   for (int col = 0; col < lp_.numCol_; col++) {
     for (int k = lp_.Astart_[col]; k < lp_.Astart_[col+1]; k++) {
       int row = lp_.Aindex_[k];
-      row_value[row] += lp_.Avalue_[k] * col_value[col];
+      row_value_[row] += lp_.Avalue_[k] * col_value_[col];
     }
   }
 }
 
 void Quadratic::updateResidual() {
-  residual.clear();
-  residual.assign(lp_.numRow_, 0);
-  residual_norm_1 = 0;
-  residual_norm_2 = 0;
+  residual_.clear();
+  residual_.assign(lp_.numRow_, 0);
+  residual_norm_1_ = 0;
+  residual_norm_2_ = 0;
 
   for (int row = 0; row  < lp_.numRow_; row++) {
     // for the moment assuming rowLower == rowUpper
-    residual[row] = lp_.rowUpper_[row] - row_value[row];
+    residual_[row] = lp_.rowUpper_[row] - row_value_[row];
 
-    residual_norm_1 += std::fabs(residual[row]);
-    residual_norm_2 += residual[row] * residual[row];
+    residual_norm_1_ += std::fabs(residual_[row]);
+    residual_norm_2_ += residual_[row] * residual_[row];
   }
 
-  residual_norm_2 = std::sqrt(residual_norm_2);
+  residual_norm_2_ = std::sqrt(residual_norm_2_);
 }
 
 void Quadratic::updateObjective() {
-  objective = 0;
+  objective_ = 0;
   for (int col = 0; col < lp_.numCol_; col++)
-    objective += lp_.colCost_[col] * col_value[col];
+    objective_ += lp_.colCost_[col] * col_value_[col];
 }
 
 
 void Quadratic::minimize_by_component(const double mu,
                                       const std::vector<double>& lambda) {
-  int iterations = 5;
+  int iterations = 15;
 
-  // todo: check notes for formulas for a and b and x.
+  // Formulas for a and b when minimizing for x_j
+  // a = (1/(2*mu)) * sum_i a_ij^2
+  // b = -(1/(2*mu) sum_i (2 * a_ij * (sum_{k!=j} a_ik * x_k - b_i)) + c_j \
+  //     + sum_i a_ij * lambda_i
+
   double a = 0.0;
   double b = 0.0;
 
@@ -100,7 +111,7 @@ void Quadratic::minimize_by_component(const double mu,
       for (int k = lp_.Astart_[col]; k < lp_.Astart_[col+1]; k++) {
         int row = lp_.Aindex_[k];
         a += lp_.Avalue_[k] * lp_.Avalue_[k];
-        b += lp_.Avalue_[k] * col_value[col];
+        b += lp_.Avalue_[k] * col_value_[col];
       }
 
       a = (0.5 / mu) * a;
@@ -110,11 +121,11 @@ void Quadratic::minimize_by_component(const double mu,
       double delta_x = 0;
 
       if (theta > 0)
-        delta_x = std::min(theta, lp_.colUpper_[col] - col_value[col]);
+        delta_x = std::min(theta, lp_.colUpper_[col] - col_value_[col]);
       else
-        delta_x = std::max(theta, lp_.colLower_[col] - col_value[col]);
+        delta_x = std::max(theta, lp_.colLower_[col] - col_value_[col]);
 
-      col_value[col] += delta_x;
+      col_value_[col] += delta_x;
 
     }
 
@@ -125,7 +136,7 @@ void Quadratic::minimize_by_component(const double mu,
 }
 
 double chooseStartingMu(const HighsLp& lp) {
-  return 1;
+  return 1000;
 }
 
 
@@ -177,10 +188,23 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
   HighsStatus status = initialize(lp, solution, mu, lambda);
   Quadratic quadratic(lp, solution.colValue_);
 
-  int K = 15;
+  int K = 10;
   for (int iteration = 0; iteration < K; iteration++) {
     // Minimize quadratic function.
     quadratic.minimize_by_component(mu, lambda);
+    std::stringstream ss;
+
+    // Report outcome.
+    double residual_norm_2 = quadratic.getResidualNorm2();
+    ss << "Iteration " << std::setw(3) << iteration << ": objective " << std::setw(3)
+       << std::fixed << std::setprecision(2)
+       << quadratic.getObjective() << " residual " << std::setw(5)
+       << std::scientific << residual_norm_2 << std::endl;
+    HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+
+    // Exit if feasible.
+    if (residual_norm_2 < kExitTolerance)
+      break;
 
     // Update mu every third iteration, otherwise update lambda.
     if (iteration % 3 == 2) {
@@ -194,7 +218,7 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
 
   quadratic.getSolution(solution);
   HighsPrintMessage(ML_ALWAYS,
-                    "Solution set at the end of feasibility search.\n");
+                    "\nSolution set at the end of feasibility search.\n");
 
   return HighsStatus::OK;
 }
