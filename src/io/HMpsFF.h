@@ -293,7 +293,7 @@ HMpsFF::parsekey HMpsFF::parseRows(std::ifstream &file) {
   std::string objectiveName = "";
 
   while (getline(file, strline)) {
-    if (is_empty(strline))
+    if (is_empty(strline) || strline[0] == '*')
       continue;
 
     bool isobj = false;
@@ -408,7 +408,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
   while (getline(file, strline)) {
     trim(strline);
-    if (strline.size() == 0)
+    if (strline.size() == 0 || strline[0] == '*')
       continue;
 
     HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
@@ -549,7 +549,7 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
 
   while (getline(file, strline)) {
     trim(strline);
-    if (strline.size() == 0)
+    if (strline.size() == 0 || strline[0] == '*')
       continue;
 
     int begin = 0;
@@ -625,7 +625,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
 
   while (getline(file, strline)) {
     trim(strline);
-    if (strline.size() == 0)
+    if (strline.size() == 0 || strline[0] == '*')
       continue;
 
     int begin = 0;
@@ -771,7 +771,7 @@ HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
 
   while (getline(file, strline)) {
     trim(strline);
-    if (strline.size() == 0)
+    if (strline.size() == 0 || strline[0] == '*')
       continue;
 
     int begin, end;

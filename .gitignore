@@ -55,6 +55,7 @@ buildDebug/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+*.mod
 *_i.c
 *_p.c
 *.ilk
@@ -230,3 +231,10 @@ pip-log.txt
 
 #Virtual Studio directory
 .vscode/
+
+#Unit test fallout?
+test.lp
+test.out.gz
+test2.lp
+test2.out
+

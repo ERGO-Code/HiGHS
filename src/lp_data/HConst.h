@@ -21,7 +21,7 @@ const double HIGHS_CONST_ZERO = 1e-50;
 
 constexpr double kBoundTolerance = 1e-8;
 
-enum ModelLogLevel {
+enum HighsPrintMessageLevel {
   ML_NONE = 0,
   ML_VERBOSE = 1,
   ML_DETAILED = 2,
@@ -54,19 +54,30 @@ enum class SimplexOption {
   DEFAULT = OFF
 };
 
+const double INFINITE_COST_MIN =     1e15;
 const double INFINITE_COST_DEFAULT = 1e20;
+const double INFINITE_COST_MAX =     1e25;
+const double INFINITE_BOUND_MIN =     1e15;
 const double INFINITE_BOUND_DEFAULT = 1e20;
+const double INFINITE_BOUND_MAX =     1e25;
+const double SMALL_MATRIX_VALUE_MIN =     1e-12;
 const double SMALL_MATRIX_VALUE_DEFAULT = 1e-9;
+const double SMALL_MATRIX_VALUE_MAX =     HIGHS_CONST_INF;
+const double LARGE_MATRIX_VALUE_MIN =     1e0;
 const double LARGE_MATRIX_VALUE_DEFAULT = 1e15;
+const double LARGE_MATRIX_VALUE_MAX =     1e20;
 const double HIGHS_RUN_TIME_LIMIT_DEFAULT = HIGHS_CONST_INF;
+const double PRIMAL_FEASIBILITY_TOLERANCE_MIN =     1e-10;
 const double PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
+const double PRIMAL_FEASIBILITY_TOLERANCE_MAX =     HIGHS_CONST_INF;
+const double DUAL_FEASIBILITY_TOLERANCE_MIN =     1e-10;
 const double DUAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
+const double DUAL_FEASIBILITY_TOLERANCE_MAX =     HIGHS_CONST_INF;
 const double DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT = HIGHS_CONST_INF;
 const int SIMPLEX_ITERATION_LIMIT_DEFAULT = HIGHS_CONST_I_INF;
 const int SIMPLEX_UPDATE_LIMIT_DEFAULT = 5000;
 
-/** SCIP-like basis status for columns and rows. Don't use enum
-    class since they are used in conditional statements */
+/** SCIP-like basis status for columns and rows. */
 enum class HighsBasisStatus {
   LOWER = 0, // (slack) variable is at its lower bound [including fixed variables]
   BASIC, // (slack) variable is basic 

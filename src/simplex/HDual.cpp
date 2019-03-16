@@ -806,10 +806,15 @@ void HDual::rebuild() {
   if (checkDualObjectiveValue) {
     double absDualObjectiveError = fabs(simplex_info.updatedDualObjectiveValue - dualObjectiveValue);
     double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(dualObjectiveValue));
+#ifdef HiGHSDEV
+    /*
+    // TODO Investigate these Dual objective value errors
     if (rlvDualObjectiveError >= 1e-8) {
       HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)",
 			absDualObjectiveError, rlvDualObjectiveError);
     }
+    */
+#endif
   }
   simplex_info.updatedDualObjectiveValue = dualObjectiveValue;
 
@@ -1212,13 +1217,15 @@ void HDual::iterateRpDsty(int iterate_log_level, bool header) {
 }
 
 void HDual::iterateRpInvert(int i_v) {
-  HighsPrintMessage(ML_MINIMAL, "Iter %10d:", workHMO.simplex_info_.iteration_count);
 #ifdef HiGHSDEV
+  HighsPrintMessage(ML_MINIMAL, "Iter %10d:", workHMO.simplex_info_.iteration_count);
   iterateRpDsty(ML_MINIMAL, true);
   iterateRpDsty(ML_MINIMAL, false);
-#endif
   iterateRpDuObj(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
+#else
+  report_iteration_count_dual_objective_value(workHMO, i_v);
+#endif
 }
 
 int HDual::intLog10(double v) {
@@ -2045,14 +2052,17 @@ void HDual::iterateOpRecAf(int opTy, HVector &vector) {
   if (rsDsty > 0) {
     AnIter->AnIterOpLog10RsDsty += log(rsDsty) / log(10.0);
   } else {
+    /*
+    // TODO Investigate these zero norms
     double vectorNorm = 0;
+
     for (int index = 0; index < AnIter->AnIterOpRsDim; index++) {
       double vectorValue = vector.array[index];
       vectorNorm += vectorValue * vectorValue;
     }
     vectorNorm = sqrt(vectorNorm);
-    printf("Strange: operation %s has result density = %g: ||vector|| = %g\n",
-           AnIter->AnIterOpName.c_str(), rsDsty, vectorNorm);
+    printf("Strange: operation %s has result density = %g: ||vector|| = %g\n", AnIter->AnIterOpName.c_str(), rsDsty, vectorNorm);
+    */
   }
 }
 
