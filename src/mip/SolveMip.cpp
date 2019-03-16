@@ -30,7 +30,7 @@ bool Tree::branch(Node& node) {
     return false;
 
   // Pop current node from stack before adding children.
-  nodes_.erase(nodes_.end() - 1);
+  nodes_.pop();
 
   // Branch.
   // Create children and add to node.
@@ -55,7 +55,7 @@ bool Tree::branch(Node& node) {
   node.right_child->col_lower_bound[col] = std::ceil(value);
 
   // Add to stack.
-  nodes_.push_back(node.left_child);
+  nodes_.push(node.left_child);
   //stack_.push(*(node.right_child.get()));
 
   return true;

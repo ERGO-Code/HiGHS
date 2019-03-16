@@ -39,11 +39,11 @@ class Tree {
 public:
   bool branch(Node& node);
 
-  Node& next() { return *(nodes_[nodes_.size() - 1]); }
+  Node& next() { return *(nodes_.top()); }
   bool empty() {return (nodes_.size() == 0); }
 
 private:
-  std::vector<Node *> nodes_;
+  std::stack<Node *> nodes_;
   std::vector<double> best_solution_;
 
   NodeIndex chooseBranchingVariable(const Node& node);
