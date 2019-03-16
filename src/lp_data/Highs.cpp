@@ -24,7 +24,6 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
-#include "mip/SolveMip.h"
 #include "simplex/HApp.h"
 #include "simplex/HighsSimplexInterface.h"
 
@@ -315,13 +314,25 @@ HighsStatus Highs::runBnb() {
     // chooseBranchingVariable
 }
 
-HighsStatus Highs::solveNode() {
+HighsStatus Highs::solveNode(Node& node) {
+  // Apply column bounds from node to LP.
+  lp_.colLower_ = node.col_lower_bound;
+  lp_.colUpper_ = node.col_upper_bound;
+
+  // Call warm start.
+  solveSimplex(options_, hmos_[0]);
+
+  // Set solution.
+  node.primal_solution = hmos_[0].solution_.col_value;
+
   return HighsStatus::NotImplemented;
 }
 
-// todo: modify this (just copied)
 HighsStatus Highs::solveRootNode() {
+  // No presolve for the moment.
+  HighsStatus status = runSimplexSolver(options_, hmos_[0]);
 
+  return status;
 }
 
 bool Highs::addRow(const double lower_bound, const double upper_bound,

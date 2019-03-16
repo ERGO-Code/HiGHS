@@ -19,7 +19,7 @@ struct Node {
   std::vector<double> primal_solution;
 
   // Minimal information about changes. Just bounds for the moment.
-  std::vector<double> cow_lower_bound;
+  std::vector<double> col_lower_bound;
   std::vector<double> col_upper_bound;
 
   std::unique_ptr<Node> left_child;
@@ -37,7 +37,6 @@ public:
                                     const std::vector<int>& integer_variables);
 
 private:
-  std::vector<int> integer_variables_;
   std::vector<double> best_solution_;
 
   std::stack<Node> stack_;

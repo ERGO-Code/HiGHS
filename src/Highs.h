@@ -3,10 +3,11 @@
 
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
-#include "util/HighsTimer.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsModelBuilder.h"
+#include "mip/SolveMip.h"
+#include "util/HighsTimer.h"
 
 // Class to set parameters and run HiGHS
 class Highs
@@ -292,8 +293,7 @@ private:
 
   HighsStatus runBnb();
   HighsStatus solveRootNode();
-  HighsStatus solveNode();
-
+  HighsStatus solveNode(Node& node);
 };
 
 #endif
