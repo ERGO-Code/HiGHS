@@ -108,3 +108,34 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   std::remove(options.filename.c_str());
 }
+
+TEST_CASE("integrality-constraints", "[highs_filereader]") {
+  std::string dir = GetCurrentWorkingDir();
+
+  // For debugging use the latter.
+  std::string filename = dir + "/../../check/instances/small_mip";
+  // std::string filename = dir + "/check/instances/small_mip";
+
+  HighsOptions options;
+  options.filename = filename;
+  // integer variables are COL03,COL04 so x[2], x[3].
+  const std::vector<int> kIntegers{0, 0, 1, 1, 0, 0, 0, 0};
+
+  // Read mps with fixed format parser.
+  HighsLp lp_fixed;
+  options.parser_type = HighsMpsParserType::fixed;
+
+  HighsStatus read_status = loadLpFromFile(options, lp_fixed);
+  REQUIRE(read_status == HighsStatus::OK);
+  REQUIRE(lp_fixed.integrality_.size() == lp_fixed.numCol_);
+  REQUIRE(lp_fixed.integrality_ == kIntegers);
+
+  // Read mps with free format parser.
+  HighsLp lp_free;
+  options.parser_type = HighsMpsParserType::free;
+
+  read_status = loadLpFromFile(options, lp_free);
+  REQUIRE(read_status == HighsStatus::OK);
+  REQUIRE(lp_free.integrality_.size() == lp_free.numCol_);
+  REQUIRE(lp_free.integrality_ == kIntegers);
+}
