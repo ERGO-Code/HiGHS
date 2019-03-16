@@ -33,13 +33,18 @@ constexpr NodeIndex kNodeIndexError = -2;
 
 class NodeStack {
 public:
-  NodeIndex chooseBranchingVariable(const Node& node,
-                                    const std::vector<int>& integer_variables);
+  bool branch(Node& node);
+
+  void pop() { return stack_.pop(); }
+  Node& top() { return stack_.top(); }
+  bool empty() {return stack_.empty(); }
 
 private:
+  std::stack<Node> stack_;
   std::vector<double> best_solution_;
 
-  std::stack<Node> stack_;
+  NodeIndex chooseBranchingVariable(const Node& node);
+
 };
 
 #endif

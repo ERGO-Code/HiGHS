@@ -295,11 +295,14 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
 HighsStatus Highs::runBnb() {
   HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
 
-  return HighsStatus::NotImplemented;
-  // todo: make sure integer variables are parsed correctly
-  // make tree
-  // solve root
-  // initialize NodeStack from SolveMip.h
+  // Start tree by making root node.
+  Node root(-1,0,0);
+  root.integer_variables = lp_.integrality_;
+
+  solveRootNode();
+
+  NodeStack nodes;
+  nodes.branch(root);
 
   // call chooseBranchingVariable method from SolveMip.h taking a NodeStack 
     // (make a class so you can keep best solution so far and keep HighsLp)
@@ -308,10 +311,16 @@ HighsStatus Highs::runBnb() {
     // if no more violated integrality constraints we have a feas solution:
 		//   if best than current best save
   
+  while (!nodes.empty()) {
+    Node& node = nodes.top();
+    solveNode(node);
+    nodes.branch(node);
+
   // while stack not empty
     // pop node
     // solve node
     // chooseBranchingVariable
+  }
 }
 
 HighsStatus Highs::solveNode(Node& node) {
