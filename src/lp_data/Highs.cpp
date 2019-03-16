@@ -299,25 +299,27 @@ HighsStatus Highs::runBnb() {
   std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
 
   root->integer_variables = lp_.integrality_;
+  root->col_lower_bound = lp_.colLower_;
+  root->col_upper_bound = lp_.colUpper_;
 
   solveRootNode(*(root.get()));
 
-  NodeStack nodes;
+  Tree tree;
 
   // The method branch() below calls chooseBranchingVariable(..) which
   // currently returns the first violated one. If a branching variable is found
   // children are added to the stack. If there are no more violated integrality
   // constraints we have a feasible solution, if it is best than current best,
   // the current best is updated.
-  nodes.branch(*(root.get()));
+  tree.branch(*(root.get()));
   
   // While stack not empty.
   //   Solve node.
   //   Branch.
-  while (!nodes.empty()) {
-    Node& node = nodes.top();
+  while (!tree.empty()) {
+    Node& node = tree.next();
     solveNode(node);
-    nodes.branch(node);
+    tree.branch(node);
   }
 
   // todo: report solution.

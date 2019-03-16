@@ -3,7 +3,7 @@
 #include <cmath>
 
 // For the moment just return first violated.
-NodeIndex NodeStack::chooseBranchingVariable(const Node& node) {
+NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   if (node.integer_variables.size() == 0)
     return kNodeIndexError;
   
@@ -23,27 +23,30 @@ NodeIndex NodeStack::chooseBranchingVariable(const Node& node) {
   return kNoNodeIndex;
 }
 
-bool NodeStack::branch(Node& node) {
+bool Tree::branch(Node& node) {
   NodeIndex branch_col = chooseBranchingVariable(node);
   if (branch_col == kNodeIndexError ||
       branch_col == kNoNodeIndex)
     return false;
 
   // Pop current node from stack before adding children.
-  pop();
+  nodes_.erase(nodes_.end() - 1);
 
   // Branch.
   // Create children and add to node.
   num_nodes++;
-  node.left_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+  node.left_child = new Node(node.id, num_nodes, node.level + 1);
   num_nodes++;
-  node.right_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+  node.right_child = new Node(node.id, num_nodes, node.level + 1);
 
   // Copy bounds from parent.
   node.left_child->col_lower_bound = node.col_lower_bound;
   node.left_child->col_upper_bound = node.col_upper_bound;
+  node.left_child->integer_variables = node.integer_variables;
+
   node.right_child->col_lower_bound = node.col_lower_bound;
   node.right_child->col_upper_bound = node.col_upper_bound;
+  node.right_child->integer_variables = node.integer_variables;
 
   int col = static_cast<int>(branch_col);
   double value = node.primal_solution[col];
@@ -52,8 +55,8 @@ bool NodeStack::branch(Node& node) {
   node.right_child->col_lower_bound[col] = std::ceil(value);
 
   // Add to stack.
-  stack_.push(*(node.left_child.get()));
-  stack_.push(*(node.right_child.get()));
+  nodes_.push_back(node.left_child);
+  //stack_.push(*(node.right_child.get()));
 
   return true;
 }
