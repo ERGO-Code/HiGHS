@@ -219,12 +219,12 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   return return_status;  
 }
 
-HighsStatus assess_costs(const int col_ix_os,
+HighsStatus assess_costs(const int ml_col_os,
 			 const int col_dim,
 			 const bool interval, const int from_col, const int to_col,
 			 const bool set, const int num_set_entries, const int* col_set,
 			 const bool mask, const int* col_mask,
-			 const double* usr_col_cost,
+			 const double* col_cost,
 			 const double infinite_cost) {
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
@@ -239,19 +239,42 @@ HighsStatus assess_costs(const int col_ix_os,
 
   return_status = HighsStatus::NotSet;
   bool error_found = false;
-  int usr_col;
+  // Work through the data to be assessed.
+  //
+  // Loop is k \in [from_k...to_k) covering the entries in the interval, set or mask to be considered.
+  //
+  // For an interval or mask, these values of k are the columns to be
+  // considered in a local sense, as well as the entries in the
+  // col_cost data to be assessed
+  //
+  // For a set, these values of k are the indices in the set, from
+  // which the columns to be considered in a local sense are
+  // drawn. The entries in the col_cost data to be assessed correspond
+  // to the values of k
+  //
+  // Adding the value of ml_col_os to local_col yields the value of
+  // ml_col, being the column in a global (whole-model) sense. This is
+  // necessary when assessing the costs of columns being added to a
+  // model, since they are specified using an interval
+  // [0...num_new_col) which must be offset by the current number of
+  // columns in the model.
+  //
+  int local_col;
+  int data_col;
   for (int k = from_k; k < to_k; k++) {
     if (interval || mask) {
-      usr_col = k;
+      local_col = k;
+      data_col = k;
     } else {
-      usr_col = col_set[k];
+      local_col = col_set[k];
+      data_col = k;
     }
-    int col = col_ix_os + usr_col;
-    if (mask && !col_mask[usr_col]) continue;
-    double abs_cost = fabs(usr_col_cost[k]);
+    int ml_col = ml_col_os + local_col;
+    if (mask && !col_mask[local_col]) continue;
+    double abs_cost = fabs(col_cost[data_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col  %12d has |cost| of %12g >= %12g",  col, abs_cost, infinite_cost);
+      HighsLogMessage(HighsMessageType::ERROR, "Col  %12d has |cost| of %12g >= %12g",  ml_col, abs_cost, infinite_cost);
       error_found = true;
     }
   }
