@@ -84,6 +84,7 @@ int main(int argc, char **argv) {
     return (int)HighsStatus::LpError;
   }
 
+  highs.options_ = options;
   HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
   if (run_status != HighsStatus::OK &&
