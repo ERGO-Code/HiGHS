@@ -107,6 +107,32 @@ bool areLpRowEqual(
   return true;		      
 }
 
+bool areLpEqual(const HighsLp lp0, const HighsLp lp1, const double infinite_bound) {
+
+  bool return_bool;
+  if (lp0.numCol_ > 0 && lp1.numCol_ > 0) {
+    int lp0_num_nz = lp0.Astart_[lp0.numCol_];
+    int lp1_num_nz = lp1.Astart_[lp1.numCol_];
+    return_bool = areLpColEqual(
+				lp0.numCol_, &lp0.colCost_[0], &lp0.colLower_[0], &lp0.colUpper_[0],
+				lp0_num_nz, &lp0.Astart_[0], &lp0.Aindex_[0], &lp0.Avalue_[0],
+				lp1.numCol_, &lp1.colCost_[0], &lp1.colLower_[0], &lp1.colUpper_[0],
+				lp1_num_nz, &lp1.Astart_[0], &lp1.Aindex_[0], &lp1.Avalue_[0],
+				infinite_bound);
+    if (!return_bool) return return_bool;
+  }
+  if (lp0.numRow_ > 0 && lp1.numRow_ > 0) {
+    int lp0_num_nz = 0;
+    int lp1_num_nz = 0;
+    return_bool = areLpRowEqual(
+				lp0.numRow_, &lp0.rowLower_[0], &lp0.rowUpper_[0],
+				0, NULL, NULL, NULL,
+				lp1.numRow_, &lp1.rowLower_[0], &lp1.rowUpper_[0],
+				0, NULL, NULL, NULL,
+				infinite_bound);
+  }
+  return return_bool;
+}
 
 void test_delete_keep(const int row_dim,
 		      const bool interval, const int from_row, const int to_row,
@@ -225,8 +251,6 @@ void messageReportMatrix(const char* message, const int num_col, const int num_n
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
-  // Create an empty LP
-  HighsLp lp;
   HighsOptions options;
   HighsSetMessagelevel(ML_ALWAYS);
 
@@ -256,8 +280,29 @@ TEST_CASE("LP-modification", "[highs_data]") {
   for (int col = 0; col < avgas_num_col; col++) {
     avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart, Aindex, Avalue);
   }
-  Highs highs(options);
+
+  bool return_bool;
   HighsStatus return_status;
+
+  // Create an empty LP
+  HighsLp avgas_lp;
+
+  // Create an empty LP
+  HighsLp lp;
+
+  Highs avgas_highs(options);
+  return_status = avgas_highs.initializeLp(avgas_lp);
+  //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
+  REQUIRE(return_status == HighsStatus::OK);
+  const HighsLp &reference_avgas = avgas_highs.getLp();
+
+  return_bool = avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  REQUIRE(return_bool);
+  return_bool = avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  REQUIRE(return_bool);
+
+
+  Highs highs(options);
   return_status = highs.initializeLp(lp);
   //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
@@ -271,7 +316,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  test_all_delete_keep(num_row);
 
   // Adding column vectors and matrix to model with no rows returns an error
-  bool return_bool;
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_col_nz, &Aindex[0], &Avalue[0]);
   REQUIRE(!return_bool);
 
@@ -286,6 +330,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   //  messageReportLp("With columns and rows", reference_lp);
+
+  return_bool = areLpEqual(reference_avgas, reference_lp, options.infinite_bound);
+  REQUIRE(return_bool);
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
@@ -623,6 +670,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   return_bool = highs.changeRowBounds(2, rowLower[2], rowUpper[2]);
+  REQUIRE(return_bool);
+
+  return_bool = areLpEqual(reference_avgas, reference_lp, options.infinite_bound);
   REQUIRE(return_bool);
 
   messageReportLp("After restoring costs and bounds", reference_lp);
