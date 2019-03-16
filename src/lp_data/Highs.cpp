@@ -296,31 +296,33 @@ HighsStatus Highs::runBnb() {
   HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
 
   // Start tree by making root node.
-  Node root(-1,0,0);
-  root.integer_variables = lp_.integrality_;
+  std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
 
-  solveRootNode();
+  root->integer_variables = lp_.integrality_;
+
+  solveRootNode(*(root.get()));
 
   NodeStack nodes;
-  nodes.branch(root);
 
-  // call chooseBranchingVariable method from SolveMip.h taking a NodeStack 
-    // (make a class so you can keep best solution so far and keep HighsLp)
-    // choose brancing variable (currently the first violated)
-    // if a branching one is chosen add children to NodeStack
-    // if no more violated integrality constraints we have a feas solution:
-		//   if best than current best save
+  // The method branch() below calls chooseBranchingVariable(..) which
+  // currently returns the first violated one. If a branching variable is found
+  // children are added to the stack. If there are no more violated integrality
+  // constraints we have a feasible solution, if it is best than current best,
+  // the current best is updated.
+  nodes.branch(*(root.get()));
   
+  // While stack not empty.
+  //   Solve node.
+  //   Branch.
   while (!nodes.empty()) {
     Node& node = nodes.top();
     solveNode(node);
     nodes.branch(node);
-
-  // while stack not empty
-    // pop node
-    // solve node
-    // chooseBranchingVariable
   }
+
+  // todo: report solution.
+
+  return HighsStatus::OK;
 }
 
 HighsStatus Highs::solveNode(Node& node) {
@@ -337,9 +339,10 @@ HighsStatus Highs::solveNode(Node& node) {
   return HighsStatus::NotImplemented;
 }
 
-HighsStatus Highs::solveRootNode() {
+HighsStatus Highs::solveRootNode(Node& root) {
   // No presolve for the moment.
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+  root.primal_solution = hmos_[0].solution_.col_value;
 
   return status;
 }

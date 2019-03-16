@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <stack>
+#include <functional>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
@@ -40,11 +41,12 @@ public:
   bool empty() {return stack_.empty(); }
 
 private:
-  std::stack<Node> stack_;
+  std::stack<std::reference_wrapper<Node> > stack_;
   std::vector<double> best_solution_;
 
   NodeIndex chooseBranchingVariable(const Node& node);
-
+  
+  int num_nodes = 0;
 };
 
 #endif

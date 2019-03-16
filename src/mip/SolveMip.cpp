@@ -34,8 +34,26 @@ bool NodeStack::branch(Node& node) {
 
   // Branch.
   // Create children and add to node.
+  num_nodes++;
+  node.left_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+  num_nodes++;
+  node.right_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+
+  // Copy bounds from parent.
+  node.left_child->col_lower_bound = node.col_lower_bound;
+  node.left_child->col_upper_bound = node.col_upper_bound;
+  node.right_child->col_lower_bound = node.col_lower_bound;
+  node.right_child->col_upper_bound = node.col_upper_bound;
+
+  int col = static_cast<int>(branch_col);
+  double value = node.primal_solution[col];
+
+  node.left_child->col_upper_bound[col] = std::floor(value);
+  node.right_child->col_lower_bound[col] = std::ceil(value);
 
   // Add to stack.
+  stack_.push(*(node.left_child.get()));
+  stack_.push(*(node.right_child.get()));
 
   return true;
 }

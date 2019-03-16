@@ -292,7 +292,7 @@ private:
   HighsStatus runSolver(HighsModelObject &model);
 
   HighsStatus runBnb();
-  HighsStatus solveRootNode();
+  HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
 };
 
