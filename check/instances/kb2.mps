@@ -1,4 +1,4 @@
-NAME          KB2
+NAME          KB2     SIZE: N=41, M=44, NZ=327
 ROWS
  N  FAT7..J.
  E  BAL...BW

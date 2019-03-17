@@ -1,4 +1,4 @@
-NAME          SEBA
+NAME          SEBA    SIZE: N=1028, M=516, NZ=5380
 ROWS
  N  00000000
  E  20001000
