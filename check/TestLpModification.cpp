@@ -296,9 +296,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::OK);
   const HighsLp &reference_avgas = avgas_highs.getLp();
 
-  return_bool = avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  return_bool = avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
-  return_bool = avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  return_bool = avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
 
@@ -316,17 +316,17 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  test_all_delete_keep(num_row);
 
   // Adding column vectors and matrix to model with no rows returns an error
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], &Astart[0], num_col_nz, &Aindex[0], &Avalue[0]);
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
   REQUIRE(!return_bool);
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
   //  messageReportLp("With columns but no rows", reference_lp);
 
   // Adding row vectors and matrix to model with columns returns OK
-  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
   //  messageReportLp("With columns and rows", reference_lp);
@@ -390,7 +390,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  messageReportLp("After deleting columns 1, 3, 5, 7", reference_lp);
 
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
-			      col1357_start, col1357_num_nz, col1357_index, col1357_value);
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
   //  messageReportLp("After restoring columns 1, 3, 5, 7", reference_lp);
@@ -410,13 +410,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
   messageReportLp("After deleting all rows", reference_lp);
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
   messageReportLp("With columns but no rows", reference_lp);
 
   // Adding row vectors and matrix to model with columns returns OK
-  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
    messageReportLp("With columns and rows", reference_lp);
@@ -489,19 +489,19 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   // Can't add rows with no columns
   return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
-			      row0135789_start, row0135789_num_nz, row0135789_index, row0135789_value);
+			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
   REQUIRE(!return_bool);
 
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
   return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
-			      row0135789_start, row0135789_num_nz, row0135789_index, row0135789_value);
+			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
   REQUIRE(return_bool);
 
   return_bool = highs.addRows(row012_num_row, row012_lower, row012_upper,
-			      row012_start, row012_num_nz, row012_index, row012_value);
+			      row012_num_nz, row012_start, row012_index, row012_value);
   REQUIRE(return_bool);
 
   messageReportLp("After restoring all rows", reference_lp);
@@ -552,22 +552,22 @@ TEST_CASE("LP-modification", "[highs_data]") {
  
   // Adding row vectors to model with no columns returns OK
   return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
-			      row0135789_start, 0, row0135789_index, row0135789_value);
+			      0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
   return_bool = highs.addRows(row012_num_row, row012_lower, row012_upper,
-			      row012_start, 0, row012_index, row012_value);
+			      0, row012_start, row012_index, row012_value);
   REQUIRE(return_bool);
   messageReportLp("After restoring all rows", reference_lp);
   
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
-			      col1357_start, col1357_num_nz, col1357_index, col1357_value);
+			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
   messageReportLp("After restoring columns 1, 3, 5, 7", reference_lp);
   
   return_bool = highs.addCols(col0123_num_col, col0123_cost, col0123_lower, col0123_upper,
-			      col0123_start, col0123_num_nz, col0123_index, col0123_value);
+			      col0123_num_nz, col0123_start, col0123_index, col0123_value);
   REQUIRE(return_bool);
 
   messageReportLp("After restoring remaining 4 columns", reference_lp);
@@ -584,13 +584,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
   messageReportLp("After deleting all rows and columns", reference_lp);
  
   // Adding column vectors to model with no rows returns OK
-  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], NULL, 0, NULL, NULL);
+  return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
   //  messageReportLp("With columns but no rows", reference_lp);
 
   // Adding row vectors and matrix to model with columns returns OK
-  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], &ARstart[0], num_row_nz, &ARindex[0], &ARvalue[0]);
+  return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
   col1357_cost[0] = 2.01;
