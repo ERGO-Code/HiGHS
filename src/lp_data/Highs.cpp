@@ -295,23 +295,32 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
 HighsStatus Highs::runBnb() {
   HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
 
+  HighsTimer timer_bnb;
+  timer_bnb.startRunHighsClock();
+
   // Start tree by making root node.
    std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
-  //std::shared_ptr<Node> root =std::shared_ptr<Node>(new Node(-1, 0, 0));
 
   root->integer_variables = lp_.integrality_;
   root->col_lower_bound = lp_.colLower_;
   root->col_upper_bound = lp_.colUpper_;
 
-  solveRootNode(*(root.get()));
-
-  Tree tree(*(root.get()));
-
-  // The method branch() below calls chooseBranchingVariable(..) which
+  HighsStatus status = solveRootNode(*(root.get()));
+  if (status != HighsStatus::Optimal) {
+    HighsPrintMessage(ML_ALWAYS,
+                      "Root note not solved to optimality. Status: %s\n",
+                      HighsStatusToString(status));
+    return status;
+  }
+  
+  // The method branch(...) below calls chooseBranchingVariable(..) which
   // currently returns the first violated one. If a branching variable is found
   // children are added to the stack. If there are no more violated integrality
   // constraints we have a feasible solution, if it is best than current best,
   // the current best is updated.
+  int message_level = ML_DETAILED | ML_VERBOSE;
+  options_.messageLevel = message_level;
+  Tree tree(*(root.get()));
   tree.branch(*(root.get()));
   
   // While stack not empty.
@@ -320,10 +329,26 @@ HighsStatus Highs::runBnb() {
   while (!tree.empty()) {
     Node& node = tree.next();
     solveNode(node);
+    options_.messageLevel = message_level;
     tree.branch(node);
   }
+  
+  if (tree.getBestSolution().size() > 0) {
+    std::stringstream message;
+    message << "Optimal solution found.";
+    message << std::endl;
+    message << "Run status : " << HighsStatusToString(HighsStatus::Optimal)
+            << std::endl;
+    message << "Objective  : " << std::scientific
+            << tree.getBestObjective() << std::endl;
+    message << "Time       : " << std::fixed << std::setprecision(3)
+            << timer_bnb.clock_time[0] << std::endl;
+    message << std::endl;
 
-  // todo: report solution.
+    HighsPrintMessage(ML_MINIMAL, message.str().c_str());
+  } else {
+    HighsPrintMessage(ML_ALWAYS, "No feasible solution found.\n");
+  }
 
   return HighsStatus::OK;
 }
@@ -334,18 +359,25 @@ HighsStatus Highs::solveNode(Node& node) {
   lp_.colUpper_ = node.col_upper_bound;
 
   // Call warm start.
-  solveSimplex(options_, hmos_[0]);
+  HighsStatus status = solveSimplex(options_, hmos_[0]);
 
   // Set solution.
-  node.primal_solution = hmos_[0].solution_.col_value;
+  if (status == HighsStatus::Optimal) {
+    node.primal_solution = hmos_[0].solution_.col_value;
+    node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  }
 
-  return HighsStatus::NotImplemented;
+  return status;
 }
 
 HighsStatus Highs::solveRootNode(Node& root) {
   // No presolve for the moment.
+  options_.messageLevel = ML_NONE;
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
-  root.primal_solution = hmos_[0].solution_.col_value;
+  if (status == HighsStatus::Optimal) {
+    root.primal_solution = hmos_[0].solution_.col_value;
+    root.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  }
 
   return status;
 }
@@ -413,8 +445,7 @@ bool Highs::addCols(const int num_new_cols, const double *column_costs,
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
-    int last = hmos_.size() - 1;
-    return hmos_[last].simplex_info_.dualObjectiveValue;
+    return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case
     // todo: error/warning message

@@ -22,6 +22,7 @@ struct Node {
 
   std::vector<int> integer_variables;
   std::vector<double> primal_solution;
+  double objective_value;
 
   // Minimal information about changes. Just bounds for the moment.
   std::vector<double> col_lower_bound;
@@ -49,9 +50,16 @@ public:
   void pop() { nodes_.erase(nodes_.end() -1); }
   bool empty() {return (nodes_.size() == 0); }
 
+  const std::vector<double>& getBestSolution() const {
+    return best_solution_;
+  }
+
+  double getBestObjective() { return best_objective_; }
+
 private:
   std::vector<std::reference_wrapper<Node> > nodes_;
-  std::vector<int> best_solution_;
+  std::vector<double> best_solution_;
+  double best_objective_;
 
   NodeIndex chooseBranchingVariable(const Node& node);
   

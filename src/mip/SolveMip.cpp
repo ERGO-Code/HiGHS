@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include "io/HighsIO.h"
+
 // For the moment just return first violated.
 NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   if (node.integer_variables.size() == 0)
@@ -31,13 +33,30 @@ struct testn {
 };
 
 bool Tree::branch(Node& node) {
+  // Pop current node from stack.
+  pop();
+
   NodeIndex branch_col = chooseBranchingVariable(node);
-  if (branch_col == kNodeIndexError ||
-      branch_col == kNoNodeIndex)
+  if (branch_col == kNodeIndexError)
     return false;
 
-  // Pop current node from stack before adding children.
-  pop();
+  if (branch_col == kNoNodeIndex) {
+    // All integer variables are feasible. Update best solution.
+    // Assuming minimization.
+    HighsPrintMessage(ML_DETAILED | ML_VERBOSE,
+                      "Updating best solution at node %d.\n",
+                      node.id);
+
+    if (node.objective_value < best_objective_) {
+      best_objective_ = node.objective_value;
+      best_solution_ = node.primal_solution;
+    }
+    return false;
+  }
+
+  HighsPrintMessage(ML_DETAILED | ML_VERBOSE,
+                    "Branching on variable %d\n",
+                    node.id);
 
   // Branch.
   // Create children and add to node.
