@@ -54,9 +54,17 @@ bool Tree::branch(Node& node) {
     return false;
   }
 
+  int col = static_cast<int>(branch_col);
+  double value = node.primal_solution[col];
+
   HighsPrintMessage(ML_DETAILED | ML_VERBOSE,
                     "Branching on variable %d\n",
                     node.id);
+
+  HighsPrintMessage(ML_DETAILED | ML_VERBOSE,
+                    "%d(%d, %d) left child: %.2f, right child: %.2f\n",
+                    node.id, num_nodes + 1, num_nodes + 2,
+                    std::floor(value), std::ceil(value));
 
   // Branch.
   // Create children and add to node.
@@ -73,9 +81,6 @@ bool Tree::branch(Node& node) {
   node.right_child->col_lower_bound = node.col_lower_bound;
   node.right_child->col_upper_bound = node.col_upper_bound;
   node.right_child->integer_variables = node.integer_variables;
-
-  int col = static_cast<int>(branch_col);
-  double value = node.primal_solution[col];
 
   node.left_child->col_upper_bound[col] = std::floor(value);
   node.right_child->col_lower_bound[col] = std::ceil(value);
