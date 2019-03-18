@@ -296,7 +296,8 @@ HighsStatus Highs::runBnb() {
   HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
 
   // Start tree by making root node.
-  std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
+   std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
+  //std::shared_ptr<Node> root =std::shared_ptr<Node>(new Node(-1, 0, 0));
 
   root->integer_variables = lp_.integrality_;
   root->col_lower_bound = lp_.colLower_;
@@ -304,7 +305,7 @@ HighsStatus Highs::runBnb() {
 
   solveRootNode(*(root.get()));
 
-  Tree tree;
+  Tree tree(*(root.get()));
 
   // The method branch() below calls chooseBranchingVariable(..) which
   // currently returns the first violated one. If a branching variable is found

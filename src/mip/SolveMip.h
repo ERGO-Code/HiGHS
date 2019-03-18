@@ -13,6 +13,7 @@ struct Node {
   int parent_id;
   int level;
 
+  Node();
   Node(int parent, int index, int depth) :
     id(index), parent_id(parent), level(depth) {
       left_child = nullptr;
@@ -26,8 +27,8 @@ struct Node {
   std::vector<double> col_lower_bound;
   std::vector<double> col_upper_bound;
 
-  Node * left_child;
-  Node * right_child;
+  std::unique_ptr<Node> left_child;
+  std::unique_ptr<Node> right_child;
 };
 
 using NodeIndex = int;
@@ -37,14 +38,20 @@ constexpr NodeIndex kNodeIndexError = -2;
 
 class Tree {
 public:
+  Tree(Node& node) {
+    std::reference_wrapper<Node> ref(node);
+    nodes_.push_back(ref);
+  }
+
   bool branch(Node& node);
 
-  Node& next() { return *(nodes_.top()); }
+  Node& next() { return nodes_[nodes_.size() - 1]; }
+  void pop() { nodes_.erase(nodes_.end() -1); }
   bool empty() {return (nodes_.size() == 0); }
 
 private:
-  std::stack<Node *> nodes_;
-  std::vector<double> best_solution_;
+  std::vector<std::reference_wrapper<Node> > nodes_;
+  std::vector<int> best_solution_;
 
   NodeIndex chooseBranchingVariable(const Node& node);
   

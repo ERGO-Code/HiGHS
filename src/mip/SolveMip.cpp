@@ -23,6 +23,13 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   return kNoNodeIndex;
 }
 
+struct testn {
+  testn* left;
+  testn* right;
+  testn(int a, int b) : a_(a) {}
+  int a_;
+};
+
 bool Tree::branch(Node& node) {
   NodeIndex branch_col = chooseBranchingVariable(node);
   if (branch_col == kNodeIndexError ||
@@ -30,14 +37,14 @@ bool Tree::branch(Node& node) {
     return false;
 
   // Pop current node from stack before adding children.
-  nodes_.pop();
+  pop();
 
   // Branch.
   // Create children and add to node.
   num_nodes++;
-  node.left_child = new Node(node.id, num_nodes, node.level + 1);
+  node.left_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
   num_nodes++;
-  node.right_child = new Node(node.id, num_nodes, node.level + 1);
+  node.right_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
 
   // Copy bounds from parent.
   node.left_child->col_lower_bound = node.col_lower_bound;
@@ -55,8 +62,10 @@ bool Tree::branch(Node& node) {
   node.right_child->col_lower_bound[col] = std::ceil(value);
 
   // Add to stack.
-  nodes_.push(node.left_child);
-  //stack_.push(*(node.right_child.get()));
+  std::reference_wrapper<Node> left(*(node.left_child).get());
+  std::reference_wrapper<Node> right(*(node.right_child).get());
+  nodes_.push_back(left);
+  nodes_.push_back(right);
 
   return true;
 }
