@@ -108,16 +108,21 @@ void Quadratic::minimize_by_component(const double mu,
     for (int col = 0; col < lp_.numCol_; col++) {
       // todo: determine whether to minimize for col.
       // Minimize quadratic for column col.
+
       for (int k = lp_.Astart_[col]; k < lp_.Astart_[col+1]; k++) {
         int row = lp_.Aindex_[k];
         a += lp_.Avalue_[k] * lp_.Avalue_[k];
-        b += lp_.Avalue_[k] * col_value_[col];
+      // matlab
+        double bracket = 2 * residual_[row] - lp_.Avalue_[k] * col_value_[col];
+      // clp
+      // double bracket = - residual[row];
+        b += lp_.Avalue_[k] * bracket;
       }
 
       a = (0.5 / mu) * a;
       b = (0.5 / mu) * b + 0.5 * lp_.colCost_[col];
 
-      double theta = -b / a; // todo: -b / 2a? see notes.
+      double theta = -b / a;
       double delta_x = 0;
 
       if (theta > 0)
@@ -127,11 +132,23 @@ void Quadratic::minimize_by_component(const double mu,
 
       col_value_[col] += delta_x;
 
+      // Update objective, row_value, residual after each component update.
+      objective_[col] += lp_.colCost_[col] * delta_x;
+      for (int k = lp_.Astart_[col]; k < lp_.Astart_[col+1]; k++) {
+        int row = lp_.Aindex_[k];
+        residual_[row] -= lp_.Avalue_[k] * delta_x;
+        row_value_[row] += lp_.Avalue_[k] * delta_x;
+      }
+
     }
 
-    // For the moment update only after each pass of columns. Later maybe
-    // update objective, row_value, residual after each component update.
-    update();
+    // Code below commented out because updating after each component
+    // minimization.
+    // update();
+
+    // updateResidual();
+    // todo: check for early exit
+
   }
 }
 
