@@ -113,8 +113,8 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
   std::string dir = GetCurrentWorkingDir();
 
   // For debugging use the latter.
-  std::string filename = dir + "/../../check/instances/small_mip";
-  // std::string filename = dir + "/check/instances/small_mip";
+  std::string filename = dir + "/../../check/instances/small_mip.mps";
+  // std::string filename = dir + "/check/instances/small_mip.mps";
 
   HighsOptions options;
   options.filename = filename;
