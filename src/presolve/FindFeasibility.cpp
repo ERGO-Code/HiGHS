@@ -111,10 +111,14 @@ void Quadratic::minimize_by_component(const double mu,
       for (int k = lp_.Astart_[col]; k < lp_.Astart_[col+1]; k++) {
         int row = lp_.Aindex_[k];
         a += lp_.Avalue_[k] * lp_.Avalue_[k];
-        // matlab
-        double bracket = 2 * residual_[row] - lp_.Avalue_[k] * col_value_[col];
+        // matlab but with b = b / 2
+        double bracket = - residual_[row] - lp_.Avalue_[k] * col_value_[col];
+        bracket += lambda[row];
         // clp
-        // double bracket = - residual_[row];
+        double bracket_clp = - residual_[row];
+        if (bracket != bracket_clp)
+          std::cout << "diff";
+
         b += lp_.Avalue_[k] * bracket;
       }
 
