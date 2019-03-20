@@ -328,13 +328,19 @@ HighsStatus Highs::runBnb() {
   //   Branch.
   while (!tree.empty()) {
     Node& node = tree.next();
-    solveNode(node);
+    HighsStatus status = solveNode(node);
+    tree.pop();
+
+    if (status == HighsStatus::Infeasible)
+      continue;
+
     options_.messageLevel = message_level;
     tree.branch(node);
   }
   
   if (tree.getBestSolution().size() > 0) {
     std::stringstream message;
+    message << std::endl;
     message << "Optimal solution found.";
     message << std::endl;
     message << "Run status : " << HighsStatusToString(HighsStatus::Optimal)

@@ -59,7 +59,7 @@ public:
 private:
   std::vector<std::reference_wrapper<Node> > nodes_;
   std::vector<double> best_solution_;
-  double best_objective_;
+  double best_objective_ = HIGHS_CONST_INF;
 
   NodeIndex chooseBranchingVariable(const Node& node);
   

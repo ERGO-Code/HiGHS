@@ -33,9 +33,6 @@ struct testn {
 };
 
 bool Tree::branch(Node& node) {
-  // Pop current node from stack.
-  pop();
-
   NodeIndex branch_col = chooseBranchingVariable(node);
   if (branch_col == kNodeIndexError)
     return false;
