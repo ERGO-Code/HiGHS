@@ -354,12 +354,25 @@ HighsStatus Highs::runBnb() {
 }
 
 HighsStatus Highs::solveNode(Node& node) {
-  // Apply column bounds from node to LP.
+  // // Apply column bounds from node to LP.
+  // lp_.colLower_ = node.col_lower_bound;
+  // lp_.colUpper_ = node.col_upper_bound;
+
+  // // Call warm start.
+  // HighsStatus status = solveSimplex(options_, hmos_[0]);
+
+  // // Set solution.
+  // if (status == HighsStatus::Optimal) {
+  //   node.primal_solution = hmos_[0].solution_.col_value;
+  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  // }
+
+  // Solve with a new hmo (replace with code above)
+  initializeLp(lp_);
   lp_.colLower_ = node.col_lower_bound;
   lp_.colUpper_ = node.col_upper_bound;
 
-  // Call warm start.
-  HighsStatus status = solveSimplex(options_, hmos_[0]);
+  HighsStatus status = runSimplexSolver(options_, hmos_[0]);
 
   // Set solution.
   if (status == HighsStatus::Optimal) {
