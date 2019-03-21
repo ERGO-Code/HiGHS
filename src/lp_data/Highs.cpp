@@ -153,7 +153,6 @@ HighsStatus Highs::run() {
   // }
   
   assert(hmos_.size() > 0);
-  int last = hmos_.size() - 1;
   solution_ = hmos_[0].solution_;
 
   // Report times
@@ -216,8 +215,7 @@ const HighsBasis_new &Highs::getBasis() const { return basis_; }
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
-    int last = hmos_.size() - 1;
-    return hmos_[last].simplex_info_.dualObjectiveValue;
+    return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case
     // todo: error/warning message
@@ -258,11 +256,11 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   return HighsStatus::OK;
 }
 
-/*HighsStatus setBasis(const HighsBasis_new& basis) {
+HighsStatus Highs::setBasis(const HighsBasis_new& basis) {
   basis_ = basis;
   return HighsStatus::OK;
 }
-*/
+
 
 bool Highs::addRow(const double lower_bound, const double upper_bound,
                    const int num_new_nz, const int *indices, const double *values) {

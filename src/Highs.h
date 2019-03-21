@@ -67,12 +67,6 @@ public:
   const HighsBasis_new& getBasis() const; 
 
   /**
-   * @brief What is getRowValue for?
-   */
-  double getRowValue(
-		     const int row
-		     ) const;
-  /**
    * @brief Returns the (dual) objective function value for the LP of
    * the (first?) HighsModelObject
    */
@@ -102,10 +96,7 @@ public:
    */
   HighsStatus setBasis(
 		       const HighsBasis_new& basis
-		       ) {
-  basis_ = basis;
-  return HighsStatus::OK;
-  }
+		       );
 
    /**
    * @brief Adds a row to the model
