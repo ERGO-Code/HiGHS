@@ -309,7 +309,7 @@ HighsStatus Highs::runBnb() {
   if (status != HighsStatus::Optimal) {
     HighsPrintMessage(ML_ALWAYS,
                       "Root note not solved to optimality. Status: %s\n",
-                      HighsStatusToString(status));
+                      HighsStatusToString(status).c_str());
     return status;
   }
   
