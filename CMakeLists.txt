@@ -121,14 +121,11 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/external
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/io
-    ${CMAKE_SOURCE_DIR}/src/ipx
     ${CMAKE_SOURCE_DIR}/src/lp_data
     ${CMAKE_SOURCE_DIR}/src/presolve
     ${CMAKE_SOURCE_DIR}/src/simplex
     ${CMAKE_SOURCE_DIR}/src/test
-    ${CMAKE_SOURCE_DIR}/src/util
-    ${CMAKE_SOURCE_DIR}/src/wrappers
-    ${CMAKE_SOURCE_DIR}/include)
+    ${CMAKE_SOURCE_DIR}/src/util)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)

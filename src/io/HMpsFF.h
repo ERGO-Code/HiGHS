@@ -142,6 +142,8 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename, Highs
   lp.row_names_ = std::move(rowNames);
   lp.col_names_ = std::move(colNames);
 
+  lp.integrality_ = std::move(col_integrality);
+
   return FreeFormatParserReturnCode::SUCCESS;
 }
 

@@ -44,12 +44,11 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
   }
 
   // else use fixed format parser
-  std::vector<int> integerColumn;
   status = readMPS(
       filename, -1, -1, model.numRow_, model.numCol_, model.sense_,
       model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
       model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
-      model.rowUpper_, integerColumn, model.row_names_, model.col_names_);
+      model.rowUpper_, model.integrality_, model.row_names_, model.col_names_);
 
   if (status)
     return FilereaderRetcode::PARSERERROR;

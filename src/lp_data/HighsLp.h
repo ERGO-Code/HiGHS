@@ -63,6 +63,8 @@ class HighsLp {
   std::vector<std::string> row_names_;
   std::vector<std::string> col_names_;
 
+  std::vector<int> integrality_;
+
   bool operator==(const HighsLp& lp) {
     if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || nnz_ != lp.nnz_ ||
         sense_ != lp.sense_ || offset_ != lp.offset_ ||

@@ -17,7 +17,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
     cxxopts::Options cxx_options(argv[0], "HiGHS options");
     cxx_options.positional_help("[file]").show_positional_help();
 
-    std::string presolve, crash, simplex, ipm, parallel, parser;// ?? Was without , parser
+    std::string presolve, crash, simplex, ipm, parallel, parser;
 
     cxx_options.add_options()(
         file_string, "Filename of LP to solve.",

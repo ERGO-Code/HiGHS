@@ -47,6 +47,7 @@ const string highs_run_time_limit_string = "highs_run_time_limit";
 const string simplex_iteration_limit_string = "simplex_iteration_limit";
 const string options_file_string = "options_file";
 const string parser_type_string = "parser_type";
+const string mip_string = "mip";
 
 // Strings for file options
 const string infinite_cost_string = "infinite_cost";
@@ -144,6 +145,8 @@ struct HighsOptions
   int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool clean_up = false;
+
+  bool mip = false;
 };
 
 OptionStatus setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
@@ -160,6 +163,7 @@ OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
 OptionStatus setHighsRunTimeLimitValue(HighsOptions& options, const double& value);
 OptionStatus setSimplexIterationLimitValue(HighsOptions& options, const int& value);
 OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value);
+OptionStatus setMipValue(HighsOptions& options, const std::string& value);
 
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);

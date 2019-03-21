@@ -3,10 +3,11 @@
 
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
-#include "util/HighsTimer.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsModelBuilder.h"
+#include "mip/SolveMip.h"
+#include "util/HighsTimer.h"
 
 // Class to set parameters and run HiGHS
 class Highs
@@ -277,11 +278,12 @@ private:
   HighsBasis_new basis_;
   HighsLp lp_;
 
+  HighsTimer timer_;
+
   // Each HighsModelObject holds a const ref to its lp_. There is potentially
   // several hmos_ to allow for the solution of several different modified
   // versions of the original LP for instance different levels of presolve.
   std::vector<HighsModelObject> hmos_;
-  HighsTimer timer_;
 
   bool simplex_has_run_;
 
@@ -289,12 +291,9 @@ private:
   HighsPostsolveStatus runPostsolve(PresolveInfo &presolve_info);
   HighsStatus runSolver(HighsModelObject &model);
 
-  // Function to call just presolve.
-  HighsPresolveStatus presolve(const HighsLp &lp, HighsLp &reduced_lp)
-  {
-    // todo: implement, from user's side.
-    return HighsPresolveStatus::NullError;
-  };
+  HighsStatus runBnb();
+  HighsStatus solveRootNode(Node& root);
+  HighsStatus solveNode(Node& node);
 };
 
 #endif
