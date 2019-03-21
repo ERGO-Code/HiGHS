@@ -94,7 +94,7 @@ void Quadratic::updateObjective() {
 
 void Quadratic::minimize_by_component(const double mu,
                                       const std::vector<double>& lambda) {
-  int iterations = 15;
+  int iterations = 100;
 
   for (int iteration = 0; iteration < iterations; iteration++) {
     for (int col = 0; col < lp_.numCol_; col++) {
@@ -103,8 +103,9 @@ void Quadratic::minimize_by_component(const double mu,
 
       // Formulas for a and b when minimizing for x_j
       // a = (1/(2*mu)) * sum_i a_ij^2
-      // b = -(1/(2*mu) sum_i (2 * a_ij * (sum_{k!=j} a_ik * x_k - b_i)) + c_j \
+      // b = -(1/(2*mu)) sum_i (2 * a_ij * (sum_{k!=j} a_ik * x_k - b_i)) + c_j \
       //     + sum_i a_ij * lambda_i
+      // b / 2 = -(1/(2*mu)) sum_i (2 * a_ij
       double a = 0.0;
       double b = 0.0;
 
@@ -114,11 +115,8 @@ void Quadratic::minimize_by_component(const double mu,
         // matlab but with b = b / 2
         double bracket = - residual_[row] - lp_.Avalue_[k] * col_value_[col];
         bracket += lambda[row];
-        // clp
-        double bracket_clp = - residual_[row];
-        if (bracket != bracket_clp)
-          std::cout << "diff";
-
+        // clp minimizing for delta_x
+        // double bracket_clp = - residual_[row];
         b += lp_.Avalue_[k] * bracket;
       }
 
@@ -128,10 +126,19 @@ void Quadratic::minimize_by_component(const double mu,
       double theta = -b / a;
       double delta_x = 0;
 
+      // matlab
+      double new_x;
       if (theta > 0)
-        delta_x = std::min(theta, lp_.colUpper_[col] - col_value_[col]);
+        new_x = std::min(theta, lp_.colUpper_[col]);
       else
-        delta_x = std::max(theta, lp_.colLower_[col] - col_value_[col]);
+        new_x = std::max(theta, lp_.colLower_[col]);
+      delta_x = new_x - col_value_[col];
+
+      // clp minimizing for delta_x
+      // if (theta > 0)
+      //   delta_x = std::min(theta, lp_.colUpper_[col] - col_value_[col]);
+      // else
+      //   delta_x = std::max(theta, lp_.colLower_[col] - col_value_[col]);
 
       col_value_[col] += delta_x;
 
@@ -142,7 +149,6 @@ void Quadratic::minimize_by_component(const double mu,
         residual_[row] -= lp_.Avalue_[k] * delta_x;
         row_value_[row] += lp_.Avalue_[k] * delta_x;
       }
-
     }
 
     // Code below commented out because updating after each component
@@ -151,7 +157,6 @@ void Quadratic::minimize_by_component(const double mu,
 
     // updateResidual();
     // todo: check for early exit
-
   }
   update();
 }
@@ -218,9 +223,8 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
       << std::scientific << quadratic.getResidualNorm2() << std::endl;
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 
-
-
-  int K = 4;
+  // Minimize approximately for K iterations.
+  int K = 30;
   for (int iteration = 1; iteration < K + 1; iteration++) {
     // Minimize quadratic function.
     quadratic.minimize_by_component(mu, lambda);
