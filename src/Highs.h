@@ -287,9 +287,10 @@ private:
 
   bool simplex_has_run_;
 
+  HighsStatus runSolver(HighsModelObject &model);
+
   HighsPresolveStatus runPresolve(PresolveInfo &presolve_info);
   HighsPostsolveStatus runPostsolve(PresolveInfo &presolve_info);
-  HighsStatus runSolver(HighsModelObject &model);
 
   HighsStatus runBnb();
   HighsStatus solveRootNode(Node& root);

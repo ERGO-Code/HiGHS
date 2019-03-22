@@ -24,6 +24,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
+#include "presolve/FindFeasibility.h"
 #include "simplex/HApp.h"
 #include "simplex/HighsSimplexInterface.h"
 
@@ -44,6 +45,10 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+  // For the moment runFeasibility as standalone.
+  if (options_.find_feasibility)
+    return runFeasibility(lp_, solution_);
+
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) return HighsStatus::LpEmpty;
 
