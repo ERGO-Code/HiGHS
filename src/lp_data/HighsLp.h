@@ -63,6 +63,8 @@ class HighsLp {
   std::vector<std::string> row_names_;
   std::vector<std::string> col_names_;
 
+  std::vector<int> integrality_;
+
   bool operator==(const HighsLp& lp) {
     if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || nnz_ != lp.nnz_ ||
         sense_ != lp.sense_ || offset_ != lp.offset_ ||
@@ -267,10 +269,17 @@ struct HighsSimplexInfo {
 };
 
 struct HighsSolution {
-  std::vector<double> colValue_;
-  std::vector<double> colDual_;
-  std::vector<double> rowValue_;
-  std::vector<double> rowDual_;
+  std::vector<double> col_value;
+  std::vector<double> col_dual;
+  std::vector<double> row_value;
+  std::vector<double> row_dual;
+};
+
+// To be the basis representation given back to the user. Values of
+// HighsBasisStatus are defined in HConst.h
+struct HighsBasis_new {
+  std::vector<HighsBasisStatus> col_status;
+  std::vector<HighsBasisStatus> row_status;
 };
 
 struct HighsRanging {

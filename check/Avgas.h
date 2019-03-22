@@ -7,18 +7,39 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file lp_data/HighsLp.cpp
- * @brief
+/**@file simplex/Avgas.h
+ * @brief Utilities for tests with AVGAS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "lp_data/HighsLp.h"
-#include "lp_data/HConst.h"
+#ifndef SIMPLEX_AVGAS_H_
+#define SIMPLEX_AVGAS_H_
 
-bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution) {
-  if (solution.col_dual.size() == (size_t)lp.numCol_ ||
-      solution.col_value.size() == (size_t)lp.numCol_ ||
-      solution.row_dual.size() == (size_t)lp.numRow_ ||
-      solution.row_value.size() == (size_t)lp.numRow_)
-    return true;
-  return false;
-}
+#include <vector>
+
+/**
+ * @brief Utilities for tests with AVGAS
+ */
+class Avgas {
+ public:
+  void row(int row,
+	   int &num_row,
+	   int &num_row_nz,
+	   std::vector<double> &rowLower,
+	   std::vector<double> &rowUpper, 
+	   std::vector<int> &ARstart,
+	   std::vector<int> &ARindex,
+	   std::vector<double> &ARvalue);
+  
+  void col(
+	   int col,
+	   int &num_col,
+	   int &num_col_nz,
+	   std::vector<double> &colCost,
+	   std::vector<double> &colLower,
+	   std::vector<double> &colUpper, 
+	   std::vector<int> &Astart,
+	   std::vector<int> &Aindex,
+	   std::vector<double> &Avalue
+	   );
+};
+#endif /* SIMPLEX_AVGAS_H_ */

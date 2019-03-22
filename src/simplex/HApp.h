@@ -252,10 +252,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // HighsSolution set values in highs_model_object.
   HighsSolution& solution = highs_model_object.solution_;
   HighsSimplexInterface simplex_interface(highs_model_object);
-  simplex_interface.get_primal_dual_values(solution.colValue_,
-					   solution.colDual_,
-					   solution.rowValue_,
-					   solution.rowDual_);
+  simplex_interface.get_primal_dual_values(solution.col_value,
+					   solution.col_dual,
+					   solution.row_value,
+					   solution.row_dual);
   simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.simplex_basis_.basicIndex_,
 						highs_model_object.simplex_basis_.nonbasicFlag_);
 

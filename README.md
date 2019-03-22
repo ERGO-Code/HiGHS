@@ -78,6 +78,7 @@ Usage:
 
 Parallel code
 -------------
+
 At the moment the parallel option is temporarily unavailable due to a large
 refactoring in progress. This document will be updated once we have completed
 the interface currently being developed.
@@ -141,3 +142,28 @@ highs library. After running the code above compile and run with
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 
 `LD_LIBRARY_PATH=intstall_folder/lib/ ./use_highs`
+
+Interfaces
+----------
+
+GAMS
+----
+
+Set custom options with `-D<option>=<value>` during the configuration step (`cmake ..`):
+
+- `GAMS_ROOT`:
+    path to GAMS system: enables building of GAMS interface
+
+If build with GAMS interface, then HiGHS can be made available as solver
+in GAMS by adding an entry for HiGHS to the file gmscmpun.txt in the GAMS
+system directory (gmscmpnt.txt on Windows):
+```
+HIGHS 11 5 0001020304 1 0 2 LP RMIP
+gmsgenus.run
+gmsgenux.out
+/path/to/libhighs.so his 1 1
+```
+OSI
+---
+- `OSI_ROOT`:
+    path to COIN-OR/Osi build/install directory (OSI_ROOT/lib/pkg-config/osi.pc should exist)

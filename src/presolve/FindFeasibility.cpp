@@ -1,6 +1,8 @@
 #include "FindFeasibility.h"
 
 #include <sstream>
+#include <cmath>
+#include <iomanip>
 
 #include "io/HighsIO.h"
 
@@ -26,8 +28,8 @@ class Quadratic
   double getObjective() const { return objective_; }
 
   void getSolution(HighsSolution& solution) const {
-    solution.colValue_ = col_value_;
-    solution.rowValue_ = row_value_;
+    solution.col_value = col_value_;
+    solution.row_value = row_value_;
   }
 
   void minimize_by_component(const double mu,
@@ -35,13 +37,13 @@ class Quadratic
 
  private:
   const HighsLp& lp_;
-  vector<double> col_value_;
-  vector<double> row_value_;
+  std::vector<double> col_value_;
+  std::vector<double> row_value_;
 
   double objective_;
   double residual_norm_1_;
   double residual_norm_2_;
-  vector<double> residual_;
+  std::vector<double> residual_;
 
   void updateObjective();
   void updateRowValue();
@@ -173,21 +175,21 @@ HighsStatus initialize(const HighsLp& lp,
 {
   if (!isSolutionConsistent(lp, solution)) {
     // clear and resize solution.
-    solution.colValue_.clear();
-    solution.colDual_.clear();
-    solution.rowValue_.clear();
-    solution.rowDual_.clear();
+    solution.col_value.clear();
+    solution.col_dual.clear();
+    solution.row_value.clear();
+    solution.row_dual.clear();
 
-    solution.colValue_.resize(lp.numCol_);
+    solution.col_value.resize(lp.numCol_);
   }
 
   for (int col = 0; col < lp.numCol_; col++) {
     if (lp.colLower_[col] <= 0 && lp.colUpper_[col] >= 0)
-      solution.colValue_[col] = 0;
+      solution.col_value[col] = 0;
     else if (lp.colLower_[col] > 0)
-      solution.colValue_[col] = lp.colLower_[col];
+      solution.col_value[col] = lp.colLower_[col];
     else if (lp.colUpper_[col] < 0)
-      solution.colValue_[col] = lp.colUpper_[col];
+      solution.col_value[col] = lp.colUpper_[col];
     else {
       HighsLogMessage(HighsMessageType::ERROR,
                       "Error setting initial value for column %d", col);
@@ -212,7 +214,7 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
   std::vector<double> lambda;
 
   HighsStatus status = initialize(lp, solution, mu, lambda);
-  Quadratic quadratic(lp, solution.colValue_);
+  Quadratic quadratic(lp, solution.col_value);
 
   // Report values at start.
   std::stringstream ss;
