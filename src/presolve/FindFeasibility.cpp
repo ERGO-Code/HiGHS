@@ -1,5 +1,6 @@
 #include "FindFeasibility.h"
 
+#include <algorithm>
 #include <sstream>
 #include <cmath>
 #include <iomanip>
@@ -30,6 +31,13 @@ class Quadratic
   void getSolution(HighsSolution& solution) const {
     solution.col_value = col_value_;
     solution.row_value = row_value_;
+
+    // check what solution looks like
+    double max = *std::max_element(col_value_.begin(), col_value_.end());
+    double min = *std::min_element(col_value_.begin(), col_value_.end());
+
+    HighsPrintMessage(ML_ALWAYS, "Solution max element: %4.3f\n", max);
+    HighsPrintMessage(ML_ALWAYS, "Solution min element: %4.3f\n", min);
   }
 
   void minimize_by_component(const double mu,
