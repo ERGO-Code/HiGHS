@@ -161,6 +161,9 @@ void Quadratic::minimize_by_component(const double mu,
       }
     }
 
+    // Minimize over rows.
+    // todo: matlab do both versions and check output.
+
     // Code below commented out because updating after each component
     // minimization.
     // update();
