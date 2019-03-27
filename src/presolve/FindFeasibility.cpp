@@ -6,6 +6,7 @@
 #include <iomanip>
 
 #include "io/HighsIO.h"
+#include "presolve/ExactSubproblem.h"
 
 constexpr double kExitTolerance = 0.00000001;
 
@@ -36,12 +37,15 @@ class Quadratic
     double max = *std::max_element(col_value_.begin(), col_value_.end());
     double min = *std::min_element(col_value_.begin(), col_value_.end());
 
+    HighsPrintMessage(ML_ALWAYS, "\n");
     HighsPrintMessage(ML_ALWAYS, "Solution max element: %4.3f\n", max);
     HighsPrintMessage(ML_ALWAYS, "Solution min element: %4.3f\n", min);
   }
 
   void minimize_by_component(const double mu,
                              const std::vector<double>& lambda);
+
+  void minimize_exact_penalty(const double mu);
 
  private:
   const HighsLp& lp_;
@@ -101,6 +105,14 @@ void Quadratic::updateObjective() {
     objective_ += lp_.colCost_[col] * col_value_[col];
 }
 
+void Quadratic::minimize_exact_penalty(const double mu) {
+  double mu_penalty = 1.0 / mu;
+  const HighsLp& lp_ref = lp_;
+
+  solve_exact(lp_ref, mu_penalty, col_value_);
+
+  update();
+}
 
 void Quadratic::minimize_by_component(const double mu,
                                       const std::vector<double>& lambda) {
@@ -213,7 +225,9 @@ HighsStatus initialize(const HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
+HighsStatus runFeasibility(const HighsLp& lp,
+                           HighsSolution& solution,
+                           const MinimizationType type) {
   if (!isEqualityProblem(lp))
     return HighsStatus::NotImplemented;
 
@@ -223,6 +237,11 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
 
   HighsStatus status = initialize(lp, solution, mu, lambda);
   Quadratic quadratic(lp, solution.col_value);
+
+  if (type == MinimizationType::kComponentWise)
+    HighsPrintMessage(ML_ALWAYS, "Minimizing quadratic subproblem component-wise...\n");
+  else if (type == MinimizationType::kExact)
+    HighsPrintMessage(ML_ALWAYS, "Minimizing quadratic subproblem exactly...\n");
 
   // Report values at start.
   std::stringstream ss;
@@ -237,7 +256,10 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution) {
   int K = 30;
   for (int iteration = 1; iteration < K + 1; iteration++) {
     // Minimize quadratic function.
-    quadratic.minimize_by_component(mu, lambda);
+    if (type == MinimizationType::kComponentWise)
+      quadratic.minimize_by_component(mu, lambda);
+    else if (type == MinimizationType::kExact)
+      quadratic.minimize_exact_penalty(mu);
 
     // Report outcome.
     residual_norm_2 = quadratic.getResidualNorm2();

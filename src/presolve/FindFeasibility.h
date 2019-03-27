@@ -4,7 +4,13 @@
 #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsLp.h"
 
+enum class MinimizationType {
+  kComponentWise,
+  kExact,
+};
+
 HighsStatus runFeasibility(const HighsLp& lp,
-                           HighsSolution& solution);
+                           HighsSolution& solution,
+                           const MinimizationType type);
 
 #endif

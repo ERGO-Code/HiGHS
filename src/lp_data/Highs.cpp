@@ -46,8 +46,10 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // with runSolver(..)
 HighsStatus Highs::run() {
   // For the moment runFeasibility as standalone.
-  if (options_.find_feasibility)
-    return runFeasibility(lp_, solution_);
+  if (options_.find_feasibility) {
+    // return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);
+    return runFeasibility(lp_, solution_, MinimizationType::kExact);
+  }
 
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) return HighsStatus::LpEmpty;

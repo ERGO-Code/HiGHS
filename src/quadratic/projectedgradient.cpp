@@ -298,6 +298,6 @@ void ProjectedGradient::solveLpPenalty(HighsLp& lp, double mu, HVector& x) {
     // SPECULATIVE CODE END
     iteration++;
   }
-  x.peak();
+  // x.peak();
   HighsPrintMessage(ML_MINIMAL, "Matlab Iterations %d\n", matlab_iterations);
 }

@@ -77,6 +77,7 @@ set(headers
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/SimplexConst.h
+    presolve/ExactSubproblem.h
     presolve/FindFeasibility.h
     presolve/Presolve.h
     presolve/HPreData.h
