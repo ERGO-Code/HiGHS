@@ -469,6 +469,8 @@ bool Highs::addCols(const int num_new_cols, const double *column_costs,
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
+    if (lp_.sense_ == OBJSENSE_MAXIMIZE)
+      return -hmos_[0].simplex_info_.dualObjectiveValue;
     return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case

@@ -414,4 +414,7 @@ bool isColDataNull(const double *usr_col_cost, const double *usr_col_lower,  con
 bool isRowDataNull(const double *usr_row_lower,  const double *usr_row_upper);
 bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, const double *usr_matrix_value);
 
+HighsLp transformIntoEqualityProblem(const HighsLp& lp);
+HighsLp dualizeEqualityProblem(const HighsLp& lp);
+
 #endif // LP_DATA_HIGHSLPUTILS_H_
