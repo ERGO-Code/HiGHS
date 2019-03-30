@@ -1763,27 +1763,90 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
   return equality_lp;
 }
 
+// Given (P) returns (D) for the pair
+// (P)
+//    min c'x st Ax=b
+//     st l <= x <= u
+// (D)
+//    max b'y + l'zl - u'zu
+//     st A'y + zl - zu = c
+//        y free, zl >=0, zu >= 0
 HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   assert(checkLp(lp) == HighsStatus::OK);
   
   HighsLp dual;
+  int ncols = lp.numRow_;
 
-  // Add columns (y)
-  for (int row = 0; row < lp.numRow_; row++) {
+  dual.colLower_.resize(ncols);
+  dual.colUpper_.resize(ncols);
+  dual.colCost_.resize(ncols);
   
+  // Add columns (y)
+  for (int col = 0; col< lp.numRow_; col++) {
+    dual.colLower_[col] = -HIGHS_CONST_INF;
+    dual.colUpper_[col] = HIGHS_CONST_INF;
+    // cost b'y
+    dual.colCost_[col] = lp.rowLower_[col];
+  }
+  dual.numCol_ = lp.numRow_;
+
+  // Get transpose of A
+  int i, k;
+  vector<int> iwork(lp.numRow_, 0);
+  dual.Astart_.resize(lp.numRow_ + 1, 0);
+  int AcountX = lp.Aindex_.size();
+  dual.Aindex_.resize(AcountX);
+  dual.Avalue_.resize(AcountX);
+  for (int k = 0; k < AcountX; k++) iwork.at(lp.Aindex_.at(k))++;
+  for (i = 1; i <= lp.numRow_; i++)
+    dual.Astart_.at(i) = dual.Astart_.at(i - 1) + iwork.at(i - 1);
+  for (i = 0; i < lp.numRow_; i++) iwork.at(i) = dual.Astart_.at(i);
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    for (k = lp.Astart_.at(iCol); k < lp.Astart_.at(iCol + 1); k++) {
+      int iRow = lp.Aindex_.at(k);
+      int iPut = iwork.at(iRow)++;
+      dual.Aindex_.at(iPut) = iCol;
+      dual.Avalue_.at(iPut) = lp.Avalue_[k];
+    }
   }
 
-  // Add columns (zl, zu)
+  // Add columns (zl)
   for (int col = 0; col < lp.numRow_; col++) {
+    if (lp.colLower_[col] > -HIGHS_CONST_INF) {
+      const int nnz = dual.Astart_[dual.numCol_];
 
+      dual.colLower_.push_back(0);
+      dual.colUpper_.push_back(HIGHS_CONST_INF);
+
+      dual.colCost_.push_back(lp.rowLower_[col]);
+      
+      // Add constaints 
+      dual.Astart_.push_back(nnz + 1);
+      dual.Aindex_.push_back(col);
+      dual.Avalue_.push_back(1.0);
+
+      dual.numCol_++;
+    }
   }
 
-  // Add objective
-  for (int row = 0; row < lp.numRow_; row++) {}
-  for (int col = 0; col < lp.numRow_; col++) {}
+  // Add columns (zu)
+  for (int col = 0; col < lp.numRow_; col++) {
+    if (lp.colUpper_[col] < HIGHS_CONST_INF) {
+      const int nnz = dual.Astart_[dual.numCol_];
 
-  // Add constaints 
-  for (int col = 0; col < lp.numRow_; col++) {}
+      dual.colLower_.push_back(0);
+      dual.colUpper_.push_back(HIGHS_CONST_INF);
+
+      dual.colCost_.push_back(lp.rowUpper_[col]);
+      
+      // Add constaints 
+      dual.Astart_.push_back(nnz + 1);
+      dual.Aindex_.push_back(col);
+      dual.Avalue_.push_back(-1.0);
+
+      dual.numCol_++;
+    }
+  }
 
   return dual;
 }

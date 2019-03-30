@@ -178,13 +178,15 @@ TEST_CASE("dualize", "[highs_data]") {
   double diff_equality = lp_objective - primal_objective;
   REQUIRE(diff_equality < 0.00000001);
 
-  // HighsLp dual = dualizeEqualityProblem(primal);
-  // Highs highs_dual;
-  // status = highs_dual.initializeLp(dual);
-  // status = highs_dual.run();
+  HighsLp dual = dualizeEqualityProblem(primal);
+  Highs highs_dual;
+  status = highs_dual.initializeLp(dual);
+  REQUIRE(status == HighsStatus::OK);
+  status = highs_dual.run();
+  REQUIRE(status == HighsStatus::Optimal);
 
-  // double dual_objective = highs_dual.getObjectiveValue();
+  double dual_objective = highs_dual.getObjectiveValue();
 
-  // double diff_dual = primal_objective - dual_objective;
-  // REQUIRE(diff_dual < 0.00000001);
+  double diff_dual = primal_objective - dual_objective;
+  REQUIRE(diff_dual < 0.00000001);
 }
