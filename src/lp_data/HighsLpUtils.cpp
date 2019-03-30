@@ -1773,22 +1773,29 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 //        y free, zl >=0, zu >= 0
 HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   assert(checkLp(lp) == HighsStatus::OK);
+  assert(lp.sense_ == OBJSENSE_MINIMIZE);
+  assert(lp.rowLower_ == lp.rowUpper_);
   
   HighsLp dual;
-  int ncols = lp.numRow_;
+  const int ncols = lp.numRow_;
+  const int nrows = lp.numCol_;
 
+  dual.numRow_ = nrows;
+  dual.rowLower_ = lp.colCost_;
+  dual.rowUpper_ = lp.colCost_;
+
+  // Add columns (y)
+  dual.numCol_ = ncols;
   dual.colLower_.resize(ncols);
   dual.colUpper_.resize(ncols);
   dual.colCost_.resize(ncols);
   
-  // Add columns (y)
-  for (int col = 0; col< lp.numRow_; col++) {
+  for (int col = 0; col < ncols; col++) {
     dual.colLower_[col] = -HIGHS_CONST_INF;
     dual.colUpper_[col] = HIGHS_CONST_INF;
     // cost b'y
     dual.colCost_[col] = lp.rowLower_[col];
   }
-  dual.numCol_ = lp.numRow_;
 
   // Get transpose of A
   int i, k;
@@ -1811,14 +1818,14 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   }
 
   // Add columns (zl)
-  for (int col = 0; col < lp.numRow_; col++) {
+  for (int col = 0; col < lp.numCol_; col++) {
     if (lp.colLower_[col] > -HIGHS_CONST_INF) {
       const int nnz = dual.Astart_[dual.numCol_];
 
       dual.colLower_.push_back(0);
       dual.colUpper_.push_back(HIGHS_CONST_INF);
 
-      dual.colCost_.push_back(lp.rowLower_[col]);
+      dual.colCost_.push_back(lp.colLower_[col]);
       
       // Add constaints 
       dual.Astart_.push_back(nnz + 1);
@@ -1830,14 +1837,14 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   }
 
   // Add columns (zu)
-  for (int col = 0; col < lp.numRow_; col++) {
+  for (int col = 0; col < lp.numCol_; col++) {
     if (lp.colUpper_[col] < HIGHS_CONST_INF) {
       const int nnz = dual.Astart_[dual.numCol_];
 
       dual.colLower_.push_back(0);
       dual.colUpper_.push_back(HIGHS_CONST_INF);
 
-      dual.colCost_.push_back(lp.rowUpper_[col]);
+      dual.colCost_.push_back(-lp.colUpper_[col]);
       
       // Add constaints 
       dual.Astart_.push_back(nnz + 1);
@@ -1847,6 +1854,9 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
       dual.numCol_++;
     }
   }
+
+  dual.offset_ = -lp.offset_;
+  dual.sense_ = OBJSENSE_MAXIMIZE;
 
   return dual;
 }

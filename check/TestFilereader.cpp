@@ -145,8 +145,8 @@ TEST_CASE("dualize", "[highs_data]") {
   std::string dir = GetCurrentWorkingDir();
 
   // For debugging use the latter.
-  //std::string filename = dir + "/../../check/instances/adlittle.mps";
-   std::string filename = dir + "/check/instances/adlittle.mps";
+  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  // std::string filename = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsOptions options;
@@ -180,6 +180,8 @@ TEST_CASE("dualize", "[highs_data]") {
 
   HighsLp dual = dualizeEqualityProblem(primal);
   Highs highs_dual;
+  status = checkLp(dual);
+  REQUIRE(status == HighsStatus::OK);
   status = highs_dual.initializeLp(dual);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.run();
