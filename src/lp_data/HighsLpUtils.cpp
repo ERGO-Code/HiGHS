@@ -1669,3 +1669,86 @@ bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, 
   }
   return null_data;
 }
+
+HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
+  assert(checkLp(lp) == HighsStatus::OK);
+
+  // Copy lp.
+  HighsLp equality_lp = lp;
+
+  // Add slacks for each row with more than one bound.
+  std::vector<double> rhs(lp.numRow_, 0);
+
+  for (int row = 0; row < lp.numRow_; row++) {
+    assert(equality_lp.Astart_[equality_lp.numCol_] == equality_lp.Avalue_.size());
+    assert(equality_lp.Aindex_.size() == equality_lp.Avalue_.size());
+    const int nnz = equality_lp.Astart_.size();
+   
+    if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+        lp.rowUpper_[row] == HIGHS_CONST_INF) {
+      // free row
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(1.0);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(-HIGHS_CONST_INF);
+      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+    }
+    else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] == HIGHS_CONST_INF) {
+      // only lower bound
+      rhs[row] = lp.rowLower_[row];
+
+    }
+    else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] < HIGHS_CONST_INF) {
+      // only upper bound
+      rhs[row] = lp.rowUpper_[row];
+
+    }
+    else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] < HIGHS_CONST_INF &&
+             lp.rowLower_[row] != lp.rowUpper_[row]) {
+      // both lower and upper bound that are different
+      if (fabs(lp.rowLower_[row]) < fabs(lp.rowUpper_[row])) {
+        
+      } else {
+
+      }
+    }
+    else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] < HIGHS_CONST_INF &&
+             lp.rowLower_[row] != lp.rowUpper_[row]) {
+      // equality row
+    }
+
+  }
+
+  return equality_lp;
+}
+
+HighsLp dualizeEqualityProblem(const HighsLp& lp) {
+  assert(checkLp(lp) == HighsStatus::OK);
+  
+  HighsLp dual;
+
+  // Add columns (y)
+  for (int row = 0; row < lp.numRow_; row++) {
+  
+  }
+
+  // Add columns (zl, zu)
+  for (int col = 0; col < lp.numRow_; col++) {
+
+  }
+
+  // Add objective
+  for (int row = 0; row < lp.numRow_; row++) {}
+  for (int col = 0; col < lp.numRow_; col++) {}
+
+  // Add constaints 
+  for (int col = 0; col < lp.numRow_; col++) {}
+
+  return dual;
+}
