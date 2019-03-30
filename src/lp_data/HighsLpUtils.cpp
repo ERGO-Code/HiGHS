@@ -1702,11 +1702,12 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 
       equality_lp.Astart_.push_back(nnz + 1);
       equality_lp.Aindex_.push_back(row);
-      equality_lp.Avalue_.push_back(1.0);
+      equality_lp.Avalue_.push_back(-1.0);
 
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(0);
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colCost_.push_back(0);
     }
     else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
              lp.rowUpper_[row] < HIGHS_CONST_INF) {
@@ -1720,6 +1721,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(0);
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colCost_.push_back(0);
     }
     else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
              lp.rowUpper_[row] < HIGHS_CONST_INF &&
@@ -1743,6 +1745,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(0);
       equality_lp.colUpper_.push_back(difference);
+      equality_lp.colCost_.push_back(0);
     }
     else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
       // equality row
@@ -1752,8 +1755,10 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
                         "Unknown row type when adding slacks. \
                          Returning unmodified lp copy.");
       return lp;
-    }
-  }
+    } 
+  } 
+  equality_lp.rowLower_ = rhs;
+  equality_lp.rowUpper_ = rhs;
 
   return equality_lp;
 }
