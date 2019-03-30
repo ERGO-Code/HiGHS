@@ -1682,7 +1682,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
   for (int row = 0; row < lp.numRow_; row++) {
     assert(equality_lp.Astart_[equality_lp.numCol_] == equality_lp.Avalue_.size());
     assert(equality_lp.Aindex_.size() == equality_lp.Avalue_.size());
-    const int nnz = equality_lp.Astart_.size();
+    const int nnz = equality_lp.Astart_[equality_lp.numCol_];
    
     if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
         lp.rowUpper_[row] == HIGHS_CONST_INF) {
@@ -1700,29 +1700,59 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
       // only lower bound
       rhs[row] = lp.rowLower_[row];
 
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(1.0);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(0);
+      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
     }
     else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
              lp.rowUpper_[row] < HIGHS_CONST_INF) {
       // only upper bound
       rhs[row] = lp.rowUpper_[row];
 
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(1.0);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(0);
+      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
     }
     else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
              lp.rowUpper_[row] < HIGHS_CONST_INF &&
              lp.rowLower_[row] != lp.rowUpper_[row]) {
       // both lower and upper bound that are different
+      double rhs_value, coefficient;
+      double difference = lp.rowUpper_[row] - lp.rowLower_[row];
       if (fabs(lp.rowLower_[row]) < fabs(lp.rowUpper_[row])) {
-        
+        rhs_value = lp.rowLower_[row];
+        coefficient = -1;
       } else {
-
+        rhs_value = lp.rowUpper_[row];
+        coefficient = 1;
       }
-    }
-    else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
-             lp.rowUpper_[row] < HIGHS_CONST_INF &&
-             lp.rowLower_[row] != lp.rowUpper_[row]) {
-      // equality row
-    }
+      rhs[row] = rhs_value;
 
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(coefficient);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(0);
+      equality_lp.colUpper_.push_back(difference);
+    }
+    else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
+      // equality row
+      rhs[row] = lp.rowLower_[row];
+    } else {
+      HighsPrintMessage(ML_ALWAYS,
+                        "Unknown row type when adding slacks. \
+                         Returning unmodified lp copy.");
+      return lp;
+    }
   }
 
   return equality_lp;
