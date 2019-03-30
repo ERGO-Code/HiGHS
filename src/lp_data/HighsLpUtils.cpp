@@ -1683,7 +1683,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
     assert(equality_lp.Astart_[equality_lp.numCol_] == equality_lp.Avalue_.size());
     assert(equality_lp.Aindex_.size() == equality_lp.Avalue_.size());
     const int nnz = equality_lp.Astart_[equality_lp.numCol_];
-   
+
     if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
         lp.rowUpper_[row] == HIGHS_CONST_INF) {
       // free row
@@ -1755,8 +1755,8 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
                         "Unknown row type when adding slacks. \
                          Returning unmodified lp copy.");
       return lp;
-    } 
-  } 
+    }
+  }
   equality_lp.rowLower_ = rhs;
   equality_lp.rowUpper_ = rhs;
 
@@ -1775,7 +1775,7 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   assert(checkLp(lp) == HighsStatus::OK);
   assert(lp.sense_ == OBJSENSE_MINIMIZE);
   assert(lp.rowLower_ == lp.rowUpper_);
-  
+
   HighsLp dual;
   const int ncols = lp.numRow_;
   const int nrows = lp.numCol_;
@@ -1789,7 +1789,7 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   dual.colLower_.resize(ncols);
   dual.colUpper_.resize(ncols);
   dual.colCost_.resize(ncols);
-  
+
   for (int col = 0; col < ncols; col++) {
     dual.colLower_[col] = -HIGHS_CONST_INF;
     dual.colUpper_[col] = HIGHS_CONST_INF;
@@ -1826,8 +1826,8 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
       dual.colUpper_.push_back(HIGHS_CONST_INF);
 
       dual.colCost_.push_back(lp.colLower_[col]);
-      
-      // Add constaints 
+
+      // Add constaints
       dual.Astart_.push_back(nnz + 1);
       dual.Aindex_.push_back(col);
       dual.Avalue_.push_back(1.0);
@@ -1845,8 +1845,8 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
       dual.colUpper_.push_back(HIGHS_CONST_INF);
 
       dual.colCost_.push_back(-lp.colUpper_[col]);
-      
-      // Add constaints 
+
+      // Add constaints
       dual.Astart_.push_back(nnz + 1);
       dual.Aindex_.push_back(col);
       dual.Avalue_.push_back(-1.0);
