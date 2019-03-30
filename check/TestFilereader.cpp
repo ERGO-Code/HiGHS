@@ -139,3 +139,46 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
   REQUIRE(lp_free.integrality_.size() == lp_free.numCol_);
   REQUIRE(lp_free.integrality_ == kIntegers);
 }
+
+TEST_CASE("dualize", "[highs_data]") {
+
+  std::string dir = GetCurrentWorkingDir();
+
+  // For debugging use the latter.
+  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  // std::string filename = dir + "/check/instances/adlittle.mps";
+
+  // Read mps.
+  HighsOptions options;
+  options.filename = filename;
+
+  HighsLp lp;
+  HMpsFF parser{};
+  FreeFormatParserReturnCode result = parser.loadProblem(filename, lp);
+  REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
+
+  HighsLp primal = transformIntoEqualityProblem(lp);
+  HighsLp dual = dualizeEqualityProblem(primal);
+
+  Highs highs_lp;
+  highs_lp.initializeLp(lp);
+  highs_lp.run();
+
+  Highs highs_primal;
+  highs_primal.initializeLp(primal);
+  highs_primal.run();
+
+  Highs highs_dual;
+  highs_dual.initializeLp(dual);
+  highs_dual.run();
+
+  double lp_objective = highs_lp.getObjectiveValue();
+  double primal_objective = highs_primal.getObjectiveValue();
+  double dual_objective = highs_dual.getObjectiveValue();
+
+  double diff_equality = lp_objective - primal_objective;
+  REQUIRE(diff_equality < 0.00000001);
+
+  double diff_dual = primal_objective - dual_objective;
+  REQUIRE(diff_dual < 0.00000001);
+}
