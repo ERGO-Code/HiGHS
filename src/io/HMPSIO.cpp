@@ -310,12 +310,12 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
-int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
-             int& objSense, double& objOffset, vector<int>& Astart,
-             vector<int>& Aindex, vector<double>& Avalue,
-             vector<double>& colCost, vector<double>& colLower,
-             vector<double>& colUpper, vector<double>& rowLower,
-             vector<double>& rowUpper, vector<int>& integerColumn) {
+int writeMPS(const char* filename, const int& numRow, const int& numCol, const int& numInt,
+             const int& objSense, const double& objOffset, const vector<int>& Astart,
+             const vector<int>& Aindex, const vector<double>& Avalue,
+             const vector<double>& colCost, const vector<double>& colLower,
+             const vector<double>& colUpper, const vector<double>& rowLower,
+             const vector<double>& rowUpper, const vector<int>& integerColumn) {
 #ifdef HiGHSDEV
   printf("writeMPS: Trying to open file %s\n", filename);
 #endif

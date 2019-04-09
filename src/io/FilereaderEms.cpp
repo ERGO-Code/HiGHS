@@ -137,7 +137,24 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     std::getline(f, line);
     while (trim(line) == "" && f)
       std::getline(f, line);
-    if (f && (trim(line) != "integer_columns" && trim(line) != "names"))
+    if (trim(line) == "integer_columns") {
+      int num_integer_col;
+      f >> num_integer_col;
+      if (num_integer_col) {
+	model.integrality_.resize(model.numCol_, 0);
+	int iCol;
+	for (i = 0; i < num_integer_col; i++) {
+	  f >> iCol;
+	  model.integrality_[iCol] = 1;
+	}
+      }
+    }
+    // Get the next keyword - should be "names", if anything
+    std::getline(f, line);
+    while (trim(line) == "" && f)
+      std::getline(f, line);
+
+    if (f && trim(line) != "names")
       return FilereaderRetcode::PARSERERROR;
     if (line == "names") {
       // Ignore length since we support any length.

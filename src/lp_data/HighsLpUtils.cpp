@@ -17,6 +17,7 @@
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
+#include "io/HMPSIO.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 #include "util/HighsSort.h"
@@ -1283,7 +1284,42 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow, const int 
 
 bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   printf("Reached writeLpAsMPS\n");
-  return true;
+  bool have_col_names = lp.col_names_.size();
+  bool have_row_names = lp.row_names_.size();
+  bool have_integer_columns = lp.integrality_.size();
+  std::vector<std::string> local_col_names;
+  std::vector<std::string> local_row_names;
+  local_col_names.resize(lp.numCol_);
+  local_row_names.resize(lp.numRow_);
+  if (!have_col_names) {
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      std::string name = "C" + std::to_string(iCol);
+      local_col_names[iCol] = name;
+    }
+  } else {
+    local_col_names = lp.col_names_;
+  }
+  if (!have_row_names) {
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      std::string name = "R" + std::to_string(iRow);
+      local_row_names[iRow] = name;
+    }
+  } else {
+    local_row_names = lp.row_names_;
+  }
+  int numInt = 0;
+  if (have_integer_columns) {
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) if (lp.integrality_[iCol]) numInt++;
+    printf("Model has %d integer columns\n", numInt);
+  }
+  int writeMPS_return = writeMPS(filename, lp.numRow_, lp.numCol_, numInt,
+	   lp.sense_, lp.offset_, lp.Astart_,
+	   lp.Aindex_, lp.Avalue_,
+	   lp.colCost_, lp.colLower_,
+	   lp.colUpper_, lp.rowLower_,
+	   lp.rowUpper_, lp.integrality_);
+  bool return_value = writeMPS_return == 0;
+  return return_value;
 }
 
 // Methods for reporting an LP, including its row and column data and matrix
@@ -1351,14 +1387,17 @@ std::string getBoundType(const double lower, const double upper) {
 void reportLpColVectors(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
-                    "  Column        Lower        Upper         Cost         Type        Count\n");
+                    "  Column        Lower        Upper         Cost       Type        Count  Name\n");
   std::string type;
   int count;
+  int col_names_size = lp.col_names_.size();
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
     count = lp.Astart_[iCol+1]-lp.Astart_[iCol];
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g         %2s %12d\n", iCol,
-                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol], type.c_str(), count);
+    std::string name = "";
+    if (col_names_size) name = lp.col_names_[iCol];
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g         %2s %12d  %-s\n", iCol,
+                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol], type.c_str(), count, name.c_str());
   }
 }
 
@@ -1366,17 +1405,20 @@ void reportLpColVectors(const HighsLp &lp) {
 void reportLpRowVectors(const HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
-                    "     Row        Lower        Upper         Type        Count\n");
+                    "     Row        Lower        Upper       Type        Count  Name\n");
   std::string type;
   vector<int> count;
+  int row_names_size = lp.row_names_.size();
   count.resize(lp.numRow_, 0);
   if (lp.numCol_ > 0) {
     for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g         %2s %12d\n", iRow,
-                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(), count[iRow]);
+    std::string name = "";
+    if (row_names_size) name = lp.row_names_[iRow];
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g         %2s %12d  %-s\n", iRow,
+                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(), count[iRow], name.c_str());
   }
 }
 
