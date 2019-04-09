@@ -315,7 +315,8 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
              const vector<int>& Aindex, const vector<double>& Avalue,
              const vector<double>& colCost, const vector<double>& colLower,
              const vector<double>& colUpper, const vector<double>& rowLower,
-             const vector<double>& rowUpper, const vector<int>& integerColumn) {
+             const vector<double>& rowUpper, const vector<int>& integerColumn,
+	     const vector<std::string>col_names, const vector<std::string>row_names) {
 #ifdef HiGHSDEV
   printf("writeMPS: Trying to open file %s\n", filename);
 #endif
@@ -399,13 +400,13 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   fprintf(file, " N  COST\n");
   for (int r_n = 0; r_n < numRow; r_n++) {
     if (r_ty[r_n] == MPS_ROW_TY_E) {
-      fprintf(file, " E  R%-7d\n", r_n + 1);
+      fprintf(file, " E  %-8s\n", row_names[r_n].c_str());
     } else if (r_ty[r_n] == MPS_ROW_TY_G) {
-      fprintf(file, " G  R%-7d\n", r_n + 1);
+      fprintf(file, " G  %-8s\n", row_names[r_n].c_str());
     } else if (r_ty[r_n] == MPS_ROW_TY_L) {
-      fprintf(file, " L  R%-7d\n", r_n + 1);
+      fprintf(file, " L  %-8s\n", row_names[r_n].c_str());
     } else {
-      fprintf(file, " N  R%-7d\n", r_n + 1);
+      fprintf(file, " N  %-8s\n", row_names[r_n].c_str());
     }
   }
   bool integerFg = false;
@@ -429,12 +430,12 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
     }
     if (colCost[c_n] != 0) {
       double v = colCost[c_n];
-      fprintf(file, "    C%-7d  COST      %.15g\n", c_n + 1, v);
+      fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
     }
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       double v = Avalue[el_n];
       int r_n = Aindex[el_n];
-      fprintf(file, "    C%-7d  R%-7d  %.15g\n", c_n + 1, r_n + 1, v);
+      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(), row_names[r_n].c_str(), v);
     }
   }
   have_rhs = true;
@@ -442,14 +443,14 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
     fprintf(file, "RHS\n");
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = rhs[r_n];
-      if (v) fprintf(file, "    RHS_V     R%-7d  %.15g\n", r_n + 1, v);
+      if (v) fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
     }
   }
   if (have_ranges) {
     fprintf(file, "RANGES\n");
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = ranges[r_n];
-      if (v) fprintf(file, "    RANGE     R%-7d  %.15g\n", r_n + 1, v);
+      if (v) fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
     }
   }
   if (have_bounds) {
@@ -459,20 +460,20 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
 
       double ub = colUpper[c_n];
       if (lb == ub) {
-        fprintf(file, " FX BOUND     C%-7d  %.15g\n", c_n + 1, lb);
+        fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
       } else {
         if (!highs_isInfinity(ub)) {
           // Upper bounded variable
-          fprintf(file, " UP BOUND     C%-7d  %.15g\n", c_n + 1, ub);
+          fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), ub);
         }
         if (!highs_isInfinity(-lb)) {
           // Lower bounded variable - default is 0
           if (lb) {
-            fprintf(file, " LO BOUND     C%-7d  %.15g\n", c_n + 1, lb);
+            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
           }
         } else {
           // Infinite lower bound
-          fprintf(file, " MI BOUND     C%-7d\n", c_n + 1);
+          fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
         }
       }
     }

@@ -65,7 +65,7 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char *filename,
   writeMPS(filename, model.numRow_, model.numCol_, numint, objsense, objoffset,
            model.Astart_, model.Aindex_, model.Avalue_, model.colCost_,
            model.colLower_, model.colUpper_, model.rowLower_, model.rowUpper_,
-           integerColumn);
+           integerColumn, model.col_names_, model.row_names_);
   return FilereaderRetcode::OKAY;
 }
 
