@@ -1281,6 +1281,11 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow, const int 
   return HighsStatus::OK;
 }
 
+bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
+  printf("Reached writeLpAsMPS\n");
+  return true;
+}
+
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP

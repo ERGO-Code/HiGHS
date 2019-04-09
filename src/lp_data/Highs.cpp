@@ -912,3 +912,6 @@ bool Highs::deleteRows(int *mask) {
   return true;
 }
 
+bool Highs::writeMPS(const char* filename) {
+  return writeLpAsMPS(filename, lp_);
+}

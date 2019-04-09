@@ -264,6 +264,12 @@ public:
   // change coeff (int row, int col) | ...
   // ipx (not implemented)
 
+   /**
+   * @brief Write out the model as an MPS file
+   */
+  bool writeMPS(
+		const char* filename
+		);
 
   // todo: Set warm/hot start methods
 

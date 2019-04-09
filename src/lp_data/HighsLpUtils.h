@@ -274,6 +274,12 @@ HighsStatus change_bounds(
 			  const double infinite_bound
 			  );
 
+/**
+ * @brief Write out the LP as an MPS file
+ */
+bool writeLpAsMPS(
+		  const char* filename,
+		  const HighsLp& lp);		  
 
 /**
  * @brief Report the data of an LP
