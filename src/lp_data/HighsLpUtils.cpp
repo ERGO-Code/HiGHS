@@ -1320,14 +1320,40 @@ void reportLpObjSense(const HighsLp &lp) {
                       "Objective sense is ill-defined as %d\n", lp.sense_);
 }
 
+std::string getBoundType(const double lower, const double upper) {
+  std::string type;
+  if (highs_isInfinity(-lower)) {
+    if (highs_isInfinity(upper)) {
+      type = "FR";
+    } else {
+      type = "UB";
+    }
+  } else {
+    if (highs_isInfinity(upper)) {
+      type = "LB";
+    } else {
+      if (lower < upper) {
+	type = "BX";
+      } else {
+	type = "FX";
+      }
+    }
+  }
+  return type;
+}
+
 // Report the vectors of LP column data
 void reportLpColVectors(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
-                    "  Column        Lower        Upper         Cost\n");
+                    "  Column        Lower        Upper         Cost         Type        Count\n");
+  std::string type;
+  int count;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g\n", iCol,
-                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol]);
+    type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
+    count = lp.Astart_[iCol+1]-lp.Astart_[iCol];
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g         %2s %12d\n", iCol,
+                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol], type.c_str(), count);
   }
 }
 
@@ -1335,10 +1361,17 @@ void reportLpColVectors(const HighsLp &lp) {
 void reportLpRowVectors(const HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
   HighsPrintMessage(ML_VERBOSE,
-                    "     Row        Lower        Upper\n");
+                    "     Row        Lower        Upper         Type        Count\n");
+  std::string type;
+  vector<int> count;
+  count.resize(lp.numRow_, 0);
+  if (lp.numCol_ > 0) {
+    for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
+  }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g\n", iRow,
-                      lp.rowLower_[iRow], lp.rowUpper_[iRow]);
+    type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g         %2s %12d\n", iRow,
+                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(), count[iRow]);
   }
 }
 

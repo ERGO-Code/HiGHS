@@ -219,16 +219,21 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
     }
   }
   // Set bounds of [0,1] for integer variables without bounds
+#ifdef HiGHSDEV
+  int num_integer_col = 0;
+#endif
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
+#ifdef HiGHSDEV
+      num_integer_col++;
+#endif
       if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
-  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow,
-         numCol, integerCol);
+  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow, numCol, num_integer_col);
 #endif
   // Load ENDATA and close file
   fclose(file);

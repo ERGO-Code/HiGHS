@@ -19,6 +19,7 @@
 
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
+#include "io/HMPSIO.h" //Just for writeMPS
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsLpUtils.h"
 
@@ -55,6 +56,21 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
   if (found < name.size())
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
+
+  
+  int numInt=0;
+  printf("Size of lp.integrality_ is %d\n", lp.integrality_.size());
+  for (int iCol=0; iCol<lp.numCol_;iCol++) {
+    //printf("Col %2d has integrality %d and name %s\n", iCol, lp.integrality_[iCol], lp.col_names_[iCol].c_str());
+    if (lp.integrality_[iCol]) numInt++;
+  }
+  printf("Number of integer variables is %d\n", numInt);
+  writeMPS("write.mps", lp.numRow_, lp.numCol_, numInt,
+	   lp.sense_, lp.offset_, lp.Astart_,
+	   lp.Aindex_, lp.Avalue_,
+	   lp.colCost_, lp.colLower_,
+	   lp.colUpper_, lp.rowLower_,
+	   lp.rowUpper_, lp.integrality_);
 
       return checkLp(lp);
   //  return assessLp(lp, options);

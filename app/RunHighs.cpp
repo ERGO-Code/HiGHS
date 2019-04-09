@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
   // Load user options.
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
-
+  //  options.mip="on"; //ToDo ensure that options file works in vscode, otherwise this is necessary to force MIP solver
   if (!options_ok) return 0;
 
   HighsLp lp;

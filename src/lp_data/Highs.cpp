@@ -45,6 +45,10 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+
+  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS);
+  reportLp(lp_, 1);
+
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility)
     return runFeasibility(lp_, solution_);
