@@ -42,8 +42,14 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == mip_string)
     return setMipValue(options, value);
 
- else if (option == find_feasibility_string)
+  else if (option == find_feasibility_string)
     return setFindFeasibilityValue(options, value);
+
+  else if (option == find_feasibility_strategy_string)
+    return setFindFeasibilityStrategyValue(options, value);
+
+  else if (option == find_feasibility_dualize_string)
+    return setFindFeasibilityDualizeValue(options, value);
 
   else if (option == infinite_cost_string) 
     return setInfiniteCostValue(options, atof(value.c_str()));
@@ -199,6 +205,34 @@ OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& v
   else {
     HighsLogMessage(HighsMessageType::ERROR,
 		    "find_feasibility value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
+		    value.c_str(), "on", "off");
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value) {
+  if (value == "on" || value == "true")
+    options.feasibility_strategy_component_wise = true;
+  else if (value == "off" || value == "false")
+    options.feasibility_strategy_component_wise = false;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "feasibility component-wise value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
+		    value.c_str(), "on", "off");
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value) {
+  if (value == "on" || value == "true")
+    options.feasibility_strategy_dualize = true;
+  else if (value == "off" || value == "false")
+    options.feasibility_strategy_dualize = false;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "feasibility dualize value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
 		    value.c_str(), "on", "off");
     return OptionStatus::ILLEGAL_VALUE;
   }
