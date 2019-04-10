@@ -1283,7 +1283,6 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow, const int 
 }
 
 bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
-  printf("Reached writeLpAsMPS\n");
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   bool have_integer_columns = lp.integrality_.size();
@@ -1310,7 +1309,6 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   int numInt = 0;
   if (have_integer_columns) {
     for (int iCol = 0; iCol < lp.numCol_; iCol++) if (lp.integrality_[iCol]) numInt++;
-    printf("Model has %d integer columns\n", numInt);
   }
   int writeMPS_return = writeMPS(filename, lp.numRow_, lp.numCol_, numInt,
 				 lp.sense_, lp.offset_,
@@ -1387,39 +1385,62 @@ std::string getBoundType(const double lower, const double upper) {
 // Report the vectors of LP column data
 void reportLpColVectors(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(ML_VERBOSE,
-                    "  Column        Lower        Upper         Cost       Type        Count  Name\n");
   std::string type;
   int count;
-  int col_names_size = lp.col_names_.size();
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+  bool have_integer_columns = lp.integrality_.size();
+  bool have_col_names = lp.col_names_.size();
+
+  HighsPrintMessage(ML_VERBOSE, "  Column        Lower        Upper         Cost       Type        Count");
+  if (have_integer_columns) HighsPrintMessage(ML_VERBOSE, "  Discrete");
+  if (have_col_names) HighsPrintMessage(ML_VERBOSE, "  Name");
+  HighsPrintMessage(ML_VERBOSE, "\n");
+
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
     count = lp.Astart_[iCol+1]-lp.Astart_[iCol];
-    std::string name = "";
-    if (col_names_size) name = lp.col_names_[iCol];
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g         %2s %12d  %-s\n", iCol,
-                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol], type.c_str(), count, name.c_str());
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g         %2s %12d", iCol,
+                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol],
+		      type.c_str(), count);
+    if (have_integer_columns) {
+      std::string integer_column = "";
+      if (lp.integrality_[iCol]) {
+	if (lp.colLower_[iCol] == 0 && lp.colUpper_[iCol] == 1) {
+	  integer_column = "Binary";
+	} else {
+	  integer_column = "Integer";
+	}
+      }
+      HighsPrintMessage(ML_VERBOSE, "  %-8s", integer_column.c_str());
+    }
+    if (have_col_names) HighsPrintMessage(ML_VERBOSE, "  %-s", lp.col_names_[iCol].c_str());
+    HighsPrintMessage(ML_VERBOSE, "\n");
   }
 }
 
 // Report the vectors of LP row data
 void reportLpRowVectors(const HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
-  HighsPrintMessage(ML_VERBOSE,
-                    "     Row        Lower        Upper       Type        Count  Name\n");
   std::string type;
   vector<int> count;
-  int row_names_size = lp.row_names_.size();
+  bool have_row_names = lp.row_names_.size();
+
   count.resize(lp.numRow_, 0);
   if (lp.numCol_ > 0) {
     for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
   }
+
+  HighsPrintMessage(ML_VERBOSE,
+                    "     Row        Lower        Upper       Type        Count");
+  if (have_row_names) HighsPrintMessage(ML_VERBOSE, "  Name");
+  HighsPrintMessage(ML_VERBOSE, "\n");
+
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
     std::string name = "";
-    if (row_names_size) name = lp.row_names_[iRow];
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g         %2s %12d  %-s\n", iRow,
-                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(), count[iRow], name.c_str());
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g         %2s %12d", iRow,
+                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(), count[iRow]);
+    if (have_row_names) HighsPrintMessage(ML_VERBOSE, "  %-s", lp.row_names_[iRow].c_str());
+    HighsPrintMessage(ML_VERBOSE, "\n");
   }
 }
 

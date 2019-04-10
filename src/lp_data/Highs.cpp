@@ -46,7 +46,7 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // with runSolver(..)
 HighsStatus Highs::run() {
 
-  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
+  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
 
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility)

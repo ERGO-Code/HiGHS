@@ -395,6 +395,8 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   //         1         2         3         4         5         6
   // 1234567890123456789012345678901234567890123456789012345678901
   // x11x22222222xx33333333xx444444444444xxx55555555xx666666666666
+  //     XENM01    BRRE01         .017001   BOFCN01         .00113
+  //     C8        R11       0.01222
   fprintf(file, "NAME\n");
   fprintf(file, "ROWS\n");
   fprintf(file, " N  COST\n");
