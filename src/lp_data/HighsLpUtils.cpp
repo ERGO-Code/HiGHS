@@ -1858,5 +1858,6 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   dual.offset_ = -lp.offset_;
   dual.sense_ = OBJSENSE_MAXIMIZE;
 
+  HighsPrintMessage(ML_ALWAYS, "Dualized equality LP.\n");
   return dual;
 }

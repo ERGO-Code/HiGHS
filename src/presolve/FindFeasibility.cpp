@@ -253,7 +253,7 @@ HighsStatus runFeasibility(const HighsLp& lp,
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 
   // Minimize approximately for K iterations.
-  int K = 30;
+  int K = 50;
   for (int iteration = 1; iteration < K + 1; iteration++) {
     // Minimize quadratic function.
     if (type == MinimizationType::kComponentWise)
