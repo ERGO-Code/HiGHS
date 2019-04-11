@@ -78,7 +78,14 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow) return 2;
       rowType.push_back(flag[0]);
-      rowIndex[data[1]] = numRow++;
+      // rowIndex is used to get the row index from a row name in the
+      // COLUMNS, RHS and RANGES section. However, if this contains a
+      // reference to a row that isn't in the ROWS section the value
+      // of rowIndex is zero. Unless the value associated with the
+      // name in rowIndex is one more than the index of the row, this
+      // return of zero leads to data relating to row 0 being
+      // over-written and (generally) corrupted.
+      rowIndex[data[1]] = ++numRow;
       std::string name(&line[4], &line[4] + 8);
       name = trim(name);
       row_names.push_back(name);
@@ -91,24 +98,53 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   // Load COLUMNS
   map<double, int> colIndex;
   double lastName = 0;
+  // flag[1] is used to indicate whether there is more to read on the
+  // line - field 5 non-empty. save_flag1 is used to deduce whether
+  // the row name and value are from fields 5 and 6, or 3 and 4
+  int save_flag1 = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+    int iRow = rowIndex[data[2]]-1;
+    std::string name = "";
+    if (iRow>=0) name = row_names[iRow];
     if (lastName != data[1]) {  // New column
       if (mxNumCol > 0 && numCol >= mxNumCol) return 2;
       lastName = data[1];
-      colIndex[data[1]] = numCol++;
+      // colIndex is used to get the column index from a column name
+      // in the BOUNDS section. However, if this contains a reference
+      // to a column that isn't in the COLUMNS section the value of
+      // colIndex is zero. Unless the value associated with the name
+      // in colIndex is one more than the index of the column, this
+      // return of zero leads to the bounds on column 0 being
+      // over-written and (generally) corrupted.
+      colIndex[data[1]] = ++numCol;
       colCost.push_back(0);
       Astart.push_back(Aindex.size());
       integerColumn.push_back(integerCol);
-      std::string name(&line[4], &line[4] + 8);
+      std::string name(&line[field_2_start], &line[field_2_start] + field_2_width);
       name = trim(name);
       col_names.push_back(name);
     }
     if (data[2] == objName)  // Cost
       colCost.back() = data[0];
     else if (data[0] != 0) {
-      Aindex.push_back(rowIndex[data[2]]);
-      Avalue.push_back(data[0]);
+      int iRow = rowIndex[data[2]] - 1;
+      if (iRow >= 0) {
+	Aindex.push_back(iRow);
+	Avalue.push_back(data[0]);
+      } else {
+	// Spurious row name
+	std::string name;
+	if (!save_flag1) {
+	  std::string field_3(&line[field_3_start], &line[field_3_start] + field_3_width);
+	  name = field_3;
+	} else {
+	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
+	  name = field_5;
+	}
+	HighsPrintMessage(ML_ALWAYS, "COLUMNS section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+      }
     }
+    save_flag1 = flag[1];
   }
   Astart.push_back(Aindex.size());
 
@@ -118,23 +154,32 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 
   // Load RHS
   vector<double> RHS(numRow, 0);
+  save_flag1 = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
     if (data[2] != objName) {
-      int iRow = rowIndex[data[2]];
-      RHS[iRow] = data[0];
+      int iRow = rowIndex[data[2]] - 1;
+      if (iRow >= 0) {
+	RHS[iRow] = data[0];
+      } else {
+	// Spurious row name
+	std::string name;
+	if (!save_flag1) {
+	  std::string field_3(&line[field_3_start], &line[field_3_start] + field_3_width);
+	  name = field_3;
+	} else {
+	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
+	  name = field_5;
+	}
+	HighsPrintMessage(ML_ALWAYS, "RHS     section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+      }
     } else {
-      // Strictly, if there is a RHS entry for the N row, it is an
-      // objective offset. However, the reported objective values for
-      // problems (eg e226) ignore this
-#ifdef HiGHSDEV
-      printf(
-          "RHS for N-row in MPS file implies objective offset of %g: ignoring "
-          "this!\n",
-          data[0]);
-#endif
+      // Treat a RHS entry for the N row as an objective offset. Not
+      // all MPS readers do this, so give different reported objective
+      // values for problems (eg e226)
+      HighsPrintMessage(ML_ALWAYS, "Using RHS value of %g for N-row in MPS file as objective offset\n", data[0]);
       objOffset = data[0]; // Objective offset
-      //objOffset = 0;
     }
+    save_flag1 = flag[1];
   }
 #ifdef HiGHSDEV
   printf("readMPS: Read RHS     OK\n");
@@ -144,16 +189,31 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   rowLower.resize(numRow);
   rowUpper.resize(numRow);
   if (flag[0] == 'R') {
+    save_flag1 = 0;
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      int iRow = rowIndex[data[2]];
-      if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
-        rowLower[iRow] = RHS[iRow] - fabs(data[0]);
-        rowUpper[iRow] = RHS[iRow];
+      int iRow = rowIndex[data[2]] - 1;
+      if (iRow >= 0) {
+	if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
+	  rowLower[iRow] = RHS[iRow] - fabs(data[0]);
+	  rowUpper[iRow] = RHS[iRow];
+	} else {
+	  rowUpper[iRow] = RHS[iRow] + fabs(data[0]);
+	  rowLower[iRow] = RHS[iRow];
+	}
+	rowType[iRow] = 'X';
       } else {
-        rowUpper[iRow] = RHS[iRow] + fabs(data[0]);
-        rowLower[iRow] = RHS[iRow];
+	// Spurious row name
+	std::string name;
+	if (!save_flag1) {
+	  std::string field_3(&line[field_3_start], &line[field_3_start] + field_3_width);
+	  name = field_3;
+	} else {
+	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
+	  name = field_5;
+	}
+	HighsPrintMessage(ML_ALWAYS, "RANGES  section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
       }
-      rowType[iRow] = 'X';
+      save_flag1 = flag[1];
     }
   }
 
@@ -190,9 +250,12 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      int iCol = colIndex[data[2]];
-
-      switch (flag[0]) {
+      // Find the column index associated woith the name "data[2]". If
+      // the name is in colIndex then the value stored is the true
+      // column index plus one. Otherwise 0 will be returned.
+      int iCol = colIndex[data[2]] - 1;
+      if (iCol >= 0) {
+	switch (flag[0]) {
         case 'O': /*LO*/
           colLower[iCol] = data[0];
           break;
@@ -215,6 +278,10 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
           if (colLower[iCol] == 0 && data[0] < 0)
             colLower[iCol] = -HIGHS_CONST_INF;
           break;
+	}
+      } else {
+	std::string name(&line[field_3_start], &line[field_3_start] + field_3_width);
+	HighsPrintMessage(ML_ALWAYS, "BOUNDS  section contains col %-8s not in COLUMNS section, line: %s\n", name.c_str(), line);
       }
     }
   }
@@ -391,12 +458,22 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
 #endif
 
   // Field:    1           2          3         4         5         6
-  // Columns:  2-3        5-12      15-22     25-36     40-47     50-61
-  //         1         2         3         4         5         6
-  // 1234567890123456789012345678901234567890123456789012345678901
+  // Columns:  2-3        5-12      15-22     25-36     40-47     50-61 Indexed from 1
+  // Columns:  1-2        4-11      14-21     24-35     39-46     49-60 Indexed from 0
+  //           1         2         3         4         5         6
+  // 0123456789012345678901234567890123456789012345678901234567890
   // x11x22222222xx33333333xx444444444444xxx55555555xx666666666666
-  //     XENM01    BRRE01         .017001   BOFCN01         .00113
-  //     C8        R11       0.01222
+  // ROWS
+  //  N  ENDCAP
+  // COLUMNS
+  //     CFOOD01   BAGR01          .00756   BFTT01         .150768
+  // RHS
+  //     RHSIDE    HCAP01            -20.   CBCAP01            -8.
+  // RANGES
+  //     RANGE1    VILLKOR2            7.   VILLKOR3            7.
+  // BOUNDS
+  //  LO BOUND     CFOOD01           850.
+  //
   fprintf(file, "NAME\n");
   fprintf(file, "ROWS\n");
   fprintf(file, " N  COST\n");
@@ -415,6 +492,8 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   int nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
   for (int c_n = 0; c_n < numCol; c_n++) {
+    // Skip this column if it's empty and has no cost
+    if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) continue;
     if (numInt) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
@@ -458,8 +537,9 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   if (have_bounds) {
     fprintf(file, "BOUNDS\n");
     for (int c_n = 0; c_n < numCol; c_n++) {
+      // Skip this column if it's empty and has no cost
+      if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) continue;
       double lb = colLower[c_n];
-
       double ub = colUpper[c_n];
       if (lb == ub) {
         fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);

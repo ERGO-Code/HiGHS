@@ -29,6 +29,18 @@ const int MPS_ROW_TY_N = 0;
 const int MPS_ROW_TY_E = 1;
 const int MPS_ROW_TY_L = 2;
 const int MPS_ROW_TY_G = 3;
+const int field_1_start = 1;
+const int field_1_width = 2;
+const int field_2_start = 4;
+const int field_2_width = 8;
+const int field_3_start = 14;
+const int field_3_width = 8;
+const int field_4_start = 24;
+const int field_4_width = 12;
+const int field_5_start = 39;
+const int field_5_width = 8;
+const int field_6_start = 49;
+const int field_6_width = 12;
 
 int readMPS(const char *filename, int mxNumRow, int mxNumCol, int &numRow,
             int &numCol, int &objSense, double &objOffset, vector<int> &Astart,
