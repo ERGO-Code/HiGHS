@@ -1,3 +1,4 @@
+// mcs -out:cstest call_highs_from_csharp.cs -r:../src/interfaces/highscslib 
 class Program {
    static void Main(string[] args) {
       double[] cc = {1, -2};
