@@ -458,7 +458,15 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 #endif
   }
   if (num_small_values) {
-    HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector contains %d values less than %g in magnitude: ignored", num_small_values, small_matrix_value);	  
+    if (normalise) {
+      HighsLogMessage(HighsMessageType::WARNING,
+		      "Matrix packed vector contains %d values less than %g in magnitude: ignored",
+		      num_small_values, small_matrix_value);
+    } else {
+      HighsLogMessage(HighsMessageType::WARNING,
+		      "Matrix packed vector contains %d values less than %g in magnitude: retained",
+		      num_small_values, small_matrix_value);
+    }
     warning_found = true;
     if (normalise) {
       // Accommodate the loss of these values in any subsequent packed vectors
@@ -1285,7 +1293,6 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow, const int 
 bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
-  bool have_integer_columns = lp.integrality_.size();
   std::vector<std::string> local_col_names;
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.numCol_);
@@ -1306,11 +1313,7 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   } else {
     local_row_names = lp.row_names_;
   }
-  int numInt = 0;
-  if (have_integer_columns) {
-    for (int iCol = 0; iCol < lp.numCol_; iCol++) if (lp.integrality_[iCol]) numInt++;
-  }
-  int writeMPS_return = writeMPS(filename, lp.numRow_, lp.numCol_, numInt,
+  int writeMPS_return = writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_,
 				 lp.sense_, lp.offset_,
 				 lp.Astart_, lp.Aindex_, lp.Avalue_,
 				 lp.colCost_, lp.colLower_,
@@ -1344,9 +1347,12 @@ void reportLpDimensions(const HighsLp &lp) {
   int lp_num_nz;
   if (lp.numCol_ == 0) lp_num_nz = 0;
   else lp_num_nz = lp.Astart_[lp.numCol_];
-  HighsPrintMessage(ML_MINIMAL,
-                    "LP has %d columns, %d rows and %d nonzeros\n",
-                    lp.numCol_, lp.numRow_, lp_num_nz);
+  HighsPrintMessage(ML_MINIMAL, "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
+  if (lp.numInt_) {
+    HighsPrintMessage(ML_MINIMAL, ", %d nonzeros and %d integer columns\n", lp_num_nz, lp.numInt_);
+  } else {
+    HighsPrintMessage(ML_MINIMAL, "and %d nonzeros\n", lp_num_nz, lp.numInt_);
+  }
 }
 
 // Report the LP objective sense

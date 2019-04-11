@@ -43,6 +43,7 @@ class HighsLp {
   // Model data
   int numCol_ = 0;
   int numRow_ = 0;
+  int numInt_ = 0;
   int nnz_ = 0;
 
   std::vector<int> Astart_;

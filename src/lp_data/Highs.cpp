@@ -46,7 +46,10 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // with runSolver(..)
 HighsStatus Highs::run() {
 
-  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
+  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
+  bool normalise = false;
+  HighsStatus return_status = assessLp(lp_, options_, normalise);
+  if (return_status == HighsStatus::Error) return return_status;
 
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility)
@@ -268,7 +271,6 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
     }
 
   assert(checkLp(model.lp_) == HighsStatus::OK);
-  //  assert(assessLp(lp, options) == HighsStatus::OK);
   
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX

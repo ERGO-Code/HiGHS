@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
   // Load user options.
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
-  //  options.mip="on"; //ToDo ensure that options file works in vscode, otherwise this is necessary to force MIP solver
+  //  options.mip=1; //ToDo ensure that options file works in vscode, otherwise this is necessary to force MIP solver
   if (!options_ok) return 0;
 
   HighsLp lp;
@@ -72,8 +72,13 @@ int main(int argc, char **argv) {
     HighsPrintMessage(ML_MINIMAL, "LP       : %s\n",
                       lp.model_name_.c_str());
     HighsPrintMessage(ML_MINIMAL,
-                      "Rows     : %d\nCols     : %d\nNonzeros : %d\n\n",
+                      "Rows     : %d\nCols     : %d\nNonzeros : %d\n",
                       lp.numRow_, lp.numCol_, lp.Avalue_.size());
+    if (lp.numInt_) {
+      HighsPrintMessage(ML_MINIMAL, "Integer  : %d\n\n", lp.numInt_);
+    } else {
+      HighsPrintMessage(ML_MINIMAL, "\n");
+    }
   }
 
   Highs highs;
@@ -84,8 +89,7 @@ int main(int argc, char **argv) {
     return (int)HighsStatus::LpError;
   }
 
-  bool write_mps_return = highs.writeMPS("write.mps");
-  if (!write_mps_return) printf("Error return from highs.writeMPS\n");
+  //  bool write_mps_return = highs.writeMPS("write.mps"); if (!write_mps_return) printf("Error return from highs.writeMPS\n");
   highs.options_ = options;
   HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);

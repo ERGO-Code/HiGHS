@@ -138,12 +138,11 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     while (trim(line) == "" && f)
       std::getline(f, line);
     if (trim(line) == "integer_columns") {
-      int num_integer_col;
-      f >> num_integer_col;
-      if (num_integer_col) {
+      f >> model.numInt_;
+      if (model.numInt_) {
 	model.integrality_.resize(model.numCol_, 0);
 	int iCol;
-	for (i = 0; i < num_integer_col; i++) {
+	for (i = 0; i < model.numInt_; i++) {
 	  f >> iCol;
 	  model.integrality_[iCol] = 1;
 	}

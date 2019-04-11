@@ -42,13 +42,14 @@ const int field_5_width = 8;
 const int field_6_start = 49;
 const int field_6_width = 12;
 
-int readMPS(const char *filename, int mxNumRow, int mxNumCol, int &numRow,
-            int &numCol, int &objSense, double &objOffset, vector<int> &Astart,
-            vector<int> &Aindex, vector<double> &Avalue,
-            vector<double> &colCost, vector<double> &colLower,
-            vector<double> &colUpper, vector<double> &rowLower,
-            vector<double> &rowUpper, vector<int> &integerColumn,
-            vector<string>& row_names, vector<string> &col_names);
+int readMPS(const char *filename, int mxNumRow, int mxNumCol,
+	    int& numRow, int& numCol, int& numInt,
+	    int& objSense, double& objOffset,
+	    vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+            vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+	    vector<double>& rowLower, vector<double>& rowUpper,
+	    vector<int>& integerColumn,
+            vector<std::string>& col_names, vector<std::string>& row_names);
 
 int writeMPS(const char* filename, const int& numRow, const int& numCol, const int& numInt,
              const int& objSense, const double& objOffset, const vector<int>& Astart,

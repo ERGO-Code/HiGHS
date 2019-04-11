@@ -19,7 +19,6 @@
 
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
-//#include "io/HMPSIO.h" //Just for writeMPS
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsLpUtils.h"
 
@@ -57,8 +56,9 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
-  return checkLp(lp);
-  //  return assessLp(lp, options);
+  //  return checkLp(lp);
+  bool normalise = false;
+  return assessLp(lp, options, normalise);
 }
 
 // For extended options to be parsed from a file. Assuming options file is specified.

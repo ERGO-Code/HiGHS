@@ -23,13 +23,14 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
-            int& numCol, int& objSense, double& objOffset, vector<int>& Astart,
-            vector<int>& Aindex, vector<double>& Avalue,
-            vector<double>& colCost, vector<double>& colLower,
-            vector<double>& colUpper, vector<double>& rowLower,
-            vector<double>& rowUpper, vector<int>& integerColumn,
-            vector<string>& row_names, vector<string>& col_names) {
+int readMPS(const char* filename, int mxNumRow, int mxNumCol,
+	    int& numRow, int& numCol, int& numInt, 
+            int& objSense, double& objOffset,
+	    vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+            vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+	    vector<double>& rowLower, vector<double>& rowUpper,
+	    vector<int>& integerColumn,
+            vector<string>& col_names, vector<string>& row_names) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -285,22 +286,19 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
       }
     }
   }
-  // Set bounds of [0,1] for integer variables without bounds
-#ifdef HiGHSDEV
-  int num_integer_col = 0;
-#endif
+  // Determine the number of integer variables and set bounds of [0,1]
+  // for integer variables without bounds
+  numInt = 0;
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
-#ifdef HiGHSDEV
-      num_integer_col++;
-#endif
+      numInt++;
       if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
-  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow, numCol, num_integer_col);
+  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow, numCol, numInt);
 #endif
   // Load ENDATA and close file
   fclose(file);
