@@ -56,6 +56,7 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
+  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp, 1);
   //  return checkLp(lp);
   bool normalise = true;
   return assessLp(lp, options, normalise);
