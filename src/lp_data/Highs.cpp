@@ -47,7 +47,7 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 HighsStatus Highs::run() {
 
   //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
-  bool normalise = false;
+  bool normalise = true;
   HighsStatus return_status = assessLp(lp_, options_, normalise);
   if (return_status == HighsStatus::Error) return return_status;
 

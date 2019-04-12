@@ -352,7 +352,7 @@ HighsStatus assess_bounds(const char* type, const int ix_os,
 }
 
 HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, const int num_vec,
-			 int num_nz, int* Xstart, int* Xindex, double* Xvalue,
+			 int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
 			 const double small_matrix_value, const double large_matrix_value, const bool normalise) {
   // Uses to_ix in iterator style
   if (from_ix < 0) return HighsStatus::Error;
@@ -391,6 +391,8 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
   // Count the number of acceptable indices/values
   int num_new_nz = Xstart[from_ix];
   int num_small_values = 0;
+  double max_small_value = 0;
+  double min_small_value = HIGHS_CONST_INF;
   // Set up a zeroed vector to detect duplicate indices
   vector<int> check_vector;
   if (vec_dim > 0) check_vector.assign(vec_dim, 0);
@@ -398,15 +400,15 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
     int from_el = Xstart[ix];
     int to_el;
     if (ix < num_vec-1) {
-      to_el = Xstart[ix+1]-1;
+      to_el = Xstart[ix+1];
     } else {
-      to_el = num_nz-1;
+      to_el = num_nz;
     }
     if (normalise) {
       // Account for any index-value pairs removed so far
       Xstart[ix] = num_new_nz;
     }
-    for (int el = from_el; el <= to_el; el++) {
+    for (int el = from_el; el < to_el; el++) {
       int component = Xindex[el];
       // Check that the index is non-negative
       bool legal_component = component >= 0;
@@ -426,6 +428,8 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el, component);	  
 	return HighsStatus::Error;
       }
+      // Indicate that the index has occurred
+      check_vector[component] = 1;
       // Check that the value is not too large
       double abs_value = fabs(Xvalue[el]);
       bool large_value = abs_value >= large_matrix_value;
@@ -438,17 +442,31 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 #ifdef HiGHSDEV
 	HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector %d, entry %d, is small value |%g| <= %g", ix, el, abs_value, small_matrix_value);
 #endif
+	if (max_small_value < abs_value) max_small_value = abs_value;
+	if (min_small_value > abs_value) min_small_value = abs_value;
 	num_small_values++;
       }
-      if (!ok_value && normalise) {
-	Xindex[num_new_nz] = Xindex[el];
-	Xvalue[num_new_nz] = Xvalue[el];
-      } else {
-	num_new_nz++;
+      if (normalise) {
+	if (ok_value) {
+	  // Shift the index and value of the OK entry to the new
+	  // position in the index and value vectors, and increment
+	  // the new number of nonzeros
+	  Xindex[num_new_nz] = Xindex[el];
+	  Xvalue[num_new_nz] = Xvalue[el];
+	  num_new_nz++;
+	} else {
+	  // Zero the check_vector entry since the small value
+	  // _hasn't_ occurred
+	  check_vector[component] = 0;
+	}
       }
     }
     // Zero check_vector
-    for (int el = Xstart[ix]; el <= num_new_nz-1; el++) check_vector[Xindex[el]] = 0;
+    if (normalise) {
+      for (int el = Xstart[ix]; el < num_new_nz; el++) check_vector[Xindex[el]] = 0;
+    } else {
+      for (int el = Xstart[ix]; el < to_el; el++) check_vector[Xindex[el]] = 0;
+    }
 #ifdef HiGHSDEV
     // Check zeroing of check vector
     for (int component = 0; component < vec_dim; component++) {
@@ -460,12 +478,12 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
   if (num_small_values) {
     if (normalise) {
       HighsLogMessage(HighsMessageType::WARNING,
-		      "Matrix packed vector contains %d values less than %g in magnitude: ignored",
-		      num_small_values, small_matrix_value);
+		      "Matrix packed vector contains %d |values| in [%g, %g] less than %g: ignored",
+		      num_small_values, min_small_value, max_small_value, small_matrix_value);
     } else {
       HighsLogMessage(HighsMessageType::WARNING,
-		      "Matrix packed vector contains %d values less than %g in magnitude: retained",
-		      num_small_values, small_matrix_value);
+		      "Matrix packed vector contains %d |values| in [%g, %g] less than %g: retained",
+		      num_small_values, min_small_value, max_small_value, small_matrix_value);
     }
     warning_found = true;
     if (normalise) {
@@ -475,11 +493,11 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 	Xstart[ix] = num_new_nz;
 	int to_el;
 	if (ix < num_vec) {
-	  to_el = Xstart[ix+1]-1;
+	  to_el = Xstart[ix+1];
 	} else {
-	  to_el = num_nz-1;
+	  to_el = num_nz;
 	}
-	for (int el = Xstart[ix]; el <= to_el; el++) {
+	for (int el = Xstart[ix]; el < to_el; el++) {
 	  Xindex[num_new_nz] = Xindex[el];
 	  Xvalue[num_new_nz] = Xvalue[el];
 	  num_new_nz++;
@@ -534,8 +552,12 @@ HighsStatus append_lp_cols(HighsLp& lp,
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Assess the matrix columns
+    // Need to pass num_new_nz as non-const since assessMatrix can
+    // modify it [XAstart, XAindex and XAvalue] when normalise is
+    // true---which is not the case here
+    int pass_num_new_nz = num_new_nz;
     call_status = assessMatrix(lp.numRow_, 0, num_new_col, num_new_col, 
-			       num_new_nz, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
+			       pass_num_new_nz, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -622,8 +644,12 @@ HighsStatus append_lp_rows(HighsLp& lp,
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Assess the matrix columns
+    // Need to pass num_new_nz as non-const since assessMatrix can
+    // modify it [XAstart, XAindex and XAvalue] when normalise is
+    // true---which is not the case here
+    int pass_num_new_nz = num_new_nz;
     call_status = assessMatrix(lp.numCol_, 0, num_new_row, num_new_row, 
-			       num_new_nz, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+			       pass_num_new_nz, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -659,7 +685,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
     // Append the matrix to the LP vectors
-    call_status = append_rows_to_lp_matrix(lp, num_new_row, num_new_nz,
+    call_status = append_rows_to_lp_matrix(lp, num_new_row, lc_num_new_nz,
 					   lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
@@ -1393,7 +1419,7 @@ void reportLpColVectors(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
   std::string type;
   int count;
-  bool have_integer_columns = lp.integrality_.size();
+  bool have_integer_columns = lp.numInt_;
   bool have_col_names = lp.col_names_.size();
 
   HighsPrintMessage(ML_VERBOSE, "  Column        Lower        Upper         Cost       Type        Count");

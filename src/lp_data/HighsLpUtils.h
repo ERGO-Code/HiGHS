@@ -73,7 +73,7 @@ HighsStatus assessMatrix(
 			  const int from_ix,
 			  const int to_ix,
 			  const int num_vec,
-			  int num_nz,
+			  int& num_nz,
 			  int* Xstart,
 			  int* Xindex,
 			  double* Xvalue,

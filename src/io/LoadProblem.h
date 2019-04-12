@@ -57,7 +57,7 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
   lp.model_name_ = name;
 
   //  return checkLp(lp);
-  bool normalise = false;
+  bool normalise = true;
   return assessLp(lp, options, normalise);
 }
 
