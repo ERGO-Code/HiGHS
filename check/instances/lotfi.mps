@@ -1,4 +1,4 @@
-NAME          LOTFI
+NAME          LOTFI   SIZE: N=308, M=154, NZ=1386
 ROWS
  N  1
  E  2

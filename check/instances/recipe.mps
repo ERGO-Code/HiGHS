@@ -1,4 +1,4 @@
-NAME          RECIPE
+NAME          RECIPE  SIZE: N=180, M=92, NZ=843
 ROWS
  E  BAL...BE
  E  BCC...BE

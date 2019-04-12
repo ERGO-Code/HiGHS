@@ -1,4 +1,4 @@
-NAME          SC205
+NAME          SC205   SIZE: N=203, M=206, NZ=754
 ROWS
  N  MAXIM
  L  ROW00001

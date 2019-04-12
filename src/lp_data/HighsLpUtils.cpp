@@ -220,12 +220,12 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   return return_status;  
 }
 
-HighsStatus assess_costs(const int col_ix_os,
+HighsStatus assess_costs(const int ml_col_os,
 			 const int col_dim,
 			 const bool interval, const int from_col, const int to_col,
 			 const bool set, const int num_set_entries, const int* col_set,
 			 const bool mask, const int* col_mask,
-			 const double* usr_col_cost,
+			 const double* col_cost,
 			 const double infinite_cost) {
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
@@ -240,19 +240,44 @@ HighsStatus assess_costs(const int col_ix_os,
 
   return_status = HighsStatus::NotSet;
   bool error_found = false;
-  int usr_col;
+  // Work through the data to be assessed.
+  //
+  // Loop is k \in [from_k...to_k) covering the entries in the
+  // interval, set or mask to be considered.
+  //
+  // For an interval or mask, these values of k are the columns to be
+  // considered in a local sense, as well as the entries in the
+  // col_cost data to be assessed
+  //
+  // For a set, these values of k are the indices in the set, from
+  // which the columns to be considered in a local sense are
+  // drawn. The entries in the col_cost data to be assessed correspond
+  // to the values of k
+  //
+  // Adding the value of ml_col_os to local_col yields the value of
+  // ml_col, being the column in a global (whole-model) sense. This is
+  // necessary when assessing the costs of columns being added to a
+  // model, since they are specified using an interval
+  // [0...num_new_col) which must be offset by the current number of
+  // columns in the model.
+  //
+  int local_col;
+  int data_col;
+  int ml_col;
   for (int k = from_k; k < to_k; k++) {
     if (interval || mask) {
-      usr_col = k;
+      local_col = k;
+      data_col = k;
     } else {
-      usr_col = col_set[k];
+      local_col = col_set[k];
+      data_col = k;
     }
-    int col = col_ix_os + usr_col;
-    if (mask && !col_mask[usr_col]) continue;
-    double abs_cost = fabs(usr_col_cost[k]);
+    ml_col = ml_col_os + local_col;
+    if (mask && !col_mask[local_col]) continue;
+    double abs_cost = fabs(col_cost[data_col]);
     bool legal_cost = abs_cost < infinite_cost;
     if (!legal_cost) {
-      HighsLogMessage(HighsMessageType::ERROR, "Col  %12d has |cost| of %12g >= %12g",  col, abs_cost, infinite_cost);
+      HighsLogMessage(HighsMessageType::ERROR, "Col  %12d has |cost| of %12g >= %12g",  ml_col, abs_cost, infinite_cost);
       error_found = true;
     }
   }
@@ -262,12 +287,12 @@ HighsStatus assess_costs(const int col_ix_os,
   return return_status;
 }
 
-HighsStatus assess_bounds(const char* type, const int ix_os,
+HighsStatus assess_bounds(const char* type, const int ml_ix_os,
 			  const int ix_dim,
 			  const bool interval, const int from_ix, const int to_ix,
 			  const bool set, const int num_set_entries, const int* ix_set,
 			  const bool mask, const int* ix_mask,
-			  double* usr_lower, double* usr_upper,
+			  double* lower_bounds, double* upper_bounds,
 			  const double infinite_bound, bool normalise) {
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
@@ -284,51 +309,84 @@ HighsStatus assess_bounds(const char* type, const int ix_os,
   bool error_found = false;
   bool warning_found = false;
   bool info_found = false;
+  // Work through the data to be assessed.
+  //
+  // Loop is k \in [from_k...to_k) covering the entries in the
+  // interval, set or mask to be considered.
+  //
+  // For an interval or mask, these values of k are the row/column
+  // indices to be considered in a local sense, as well as the entries
+  // in the lower and upper bound data to be assessed
+  //
+  // For a set, these values of k are the indices in the set, from
+  // which the indices to be considered in a local sense are
+  // drawn. When not normalising data, the entries in the lower and
+  // upper bound data to be assessed correspond to the values of
+  // k. When normalising data, these values are assumed to have been
+  // distributed, so lower_bounds and upper_bounds are full
+  // length. Hence the entries to be assessed correspond to the local
+  // indices
+  //
+  // Adding the value of ml_ix_os to local_ix yields the value of
+  // ml_ix, being the index in a global (whole-model) sense. This is
+  // necessary when assessing the bounds of rows/columns being added
+  // to a model, since they are specified using an interval
+  // [0...num_new_row/col) which must be offset by the current number
+  // of rows/columns (generically indices) in the model.
+  //
   int num_infinite_lower_bound = 0;
   int num_infinite_upper_bound = 0;
-  int usr_ix;
+  int local_ix;
+  int data_ix;
+  int ml_ix;
   for (int k = from_k; k < to_k; k++) {
     if (interval || mask) {
-      usr_ix = k;
+      local_ix = k;
+      data_ix = k;
     } else {
-      usr_ix = ix_set[k];
+      local_ix = ix_set[k];
+      if (normalise) {
+	data_ix = local_ix;
+      } else {
+	data_ix = k;
+      }
     }
-    int ix = ix_os + usr_ix;
-    if (mask && !ix_mask[usr_ix]) continue;
+    ml_ix = ml_ix_os + local_ix;
+    if (mask && !ix_mask[local_ix]) continue;
 
-    if (!highs_isInfinity(-usr_lower[k])) {
+    if (!highs_isInfinity(-lower_bounds[data_ix])) {
       // Check whether a finite lower bound will be treated as -Infinity      
-      bool infinite_lower_bound = usr_lower[k] <= -infinite_bound;
+      bool infinite_lower_bound = lower_bounds[data_ix] <= -infinite_bound;
       if (infinite_lower_bound) {
-	if (normalise) usr_lower[k] = -HIGHS_CONST_INF;
+	if (normalise) lower_bounds[data_ix] = -HIGHS_CONST_INF;
 	num_infinite_lower_bound++;
       }
     }
-    if (!highs_isInfinity(usr_upper[k])) {
+    if (!highs_isInfinity(upper_bounds[data_ix])) {
       // Check whether a finite upper bound will be treated as Infinity      
-      bool infinite_upper_bound = usr_upper[k] >= infinite_bound;
+      bool infinite_upper_bound = upper_bounds[data_ix] >= infinite_bound;
       if (infinite_upper_bound) {
-	if (normalise) usr_upper[k] = HIGHS_CONST_INF;
+	if (normalise) upper_bounds[data_ix] = HIGHS_CONST_INF;
 	num_infinite_upper_bound++;
       }
     }
     // Check that the lower bound does not exceed the upper bound
-    bool legalLowerUpperBound = usr_lower[k] <= usr_upper[k];
+    bool legalLowerUpperBound = lower_bounds[data_ix] <= upper_bounds[data_ix];
     if (!legalLowerUpperBound) {
       // Leave inconsistent bounds to be used to deduce infeasibility
-      HighsLogMessage(HighsMessageType::WARNING, "%3s  %12d has inconsistent bounds [%12g, %12g]", type, ix, usr_lower[k], usr_upper[k]);
+      HighsLogMessage(HighsMessageType::WARNING, "%3s  %12d has inconsistent bounds [%12g, %12g]", type, ml_ix, lower_bounds[data_ix], upper_bounds[data_ix]);
       warning_found = true;
     }
     // Check that the lower bound is not as much as +Infinity
-    bool legalLowerBound = usr_lower[k] < infinite_bound;
+    bool legalLowerBound = lower_bounds[data_ix] < infinite_bound;
     if (!legalLowerBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ix, usr_lower[k], infinite_bound);
+      HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has lower bound of %12g >= %12g", type, ml_ix, lower_bounds[data_ix], infinite_bound);
       error_found = true;
     }
     // Check that the upper bound is not as little as -Infinity
-    bool legalUpperBound = usr_upper[k] > -infinite_bound;
+    bool legalUpperBound = upper_bounds[data_ix] > -infinite_bound;
     if (!legalUpperBound) {
-      HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ix, usr_upper[k], -infinite_bound);
+      HighsLogMessage(HighsMessageType::ERROR, "%3s  %12d has upper bound of %12g <= %12g", type, ml_ix, upper_bounds[data_ix], -infinite_bound);
       error_found = true;
     }
   }

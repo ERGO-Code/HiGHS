@@ -1,4 +1,4 @@
-NAME          BORE3D
+NAME          BORE3D  SIZE: N=315, M=234, NZ=1744
 ROWS
  E  B...XI
  E  TIE.MRAR

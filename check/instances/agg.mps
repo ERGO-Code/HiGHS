@@ -1,4 +1,4 @@
-NAME          AGG
+NAME          AGG     SIZE: N=163, M=489, NZ=2573
 ROWS
  L  CAP00101
  L  CAP00201

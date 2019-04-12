@@ -1,4 +1,5 @@
-NAME          BLEND    BRUCE MURTAGHS BLENDING PROBLEM (MINIMIZE).
+*NAME          BLEND    BRUCE MURTAGHS BLENDING PROBLEM (MINIMIZE).
+NAME          BLEND    SIZE: N=83, M=75, NZ=574
 ROWS
  E  1
  E  2
@@ -352,8 +353,8 @@ COLUMNS
     82        42                 -1.   C                .0132
     83        43                 -1.   C                  .01
 RHS
-    rh1       65               23.26   66                5.25
-    rh2       67               26.32   68               21.05
-    rh3       69               13.45   70                2.58
-    rh4       71                 10.   72                 10.
+         RHS  65               23.26   66                5.25
+         RHS  67               26.32   68               21.05
+         RHS  69               13.45   70                2.58
+         RHS  71                 10.   72                 10.
 ENDATA
