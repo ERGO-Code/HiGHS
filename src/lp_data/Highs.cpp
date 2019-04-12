@@ -45,6 +45,12 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+
+  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
+  bool normalise = true;
+  HighsStatus return_status = assessLp(lp_, options_, normalise);
+  if (return_status == HighsStatus::Error) return return_status;
+
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility)
     return runFeasibility(lp_, solution_);
@@ -265,7 +271,6 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
     }
 
   assert(checkLp(model.lp_) == HighsStatus::OK);
-  //  assert(assessLp(lp, options) == HighsStatus::OK);
   
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX
@@ -908,3 +913,6 @@ bool Highs::deleteRows(int *mask) {
   return true;
 }
 
+bool Highs::writeMPS(const char* filename) {
+  return writeLpAsMPS(filename, lp_);
+}

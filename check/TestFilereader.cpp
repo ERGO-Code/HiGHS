@@ -36,13 +36,13 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 
   std::vector<int> integerColumn;
   int status = readMPS(filename.c_str(), -1, -1, lp_fixed_format.numRow_,
-                   lp_fixed_format.numCol_, lp_fixed_format.sense_,
-                   lp_fixed_format.offset_, lp_fixed_format.Astart_,
-                   lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
-                   lp_fixed_format.colCost_, lp_fixed_format.colLower_,
-                   lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
-                   lp_fixed_format.rowUpper_, integerColumn,
-                   lp_fixed_format.row_names_, lp_fixed_format.col_names_);
+		       lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
+		       lp_fixed_format.offset_, lp_fixed_format.Astart_,
+		       lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
+		       lp_fixed_format.colCost_, lp_fixed_format.colLower_,
+		       lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
+		       lp_fixed_format.rowUpper_, integerColumn,
+		       lp_fixed_format.col_names_, lp_fixed_format.row_names_);
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
   if (!status) {
     HMpsFF parser{};

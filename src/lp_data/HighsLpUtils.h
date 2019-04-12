@@ -73,7 +73,7 @@ HighsStatus assessMatrix(
 			  const int from_ix,
 			  const int to_ix,
 			  const int num_vec,
-			  int num_nz,
+			  int& num_nz,
 			  int* Xstart,
 			  int* Xindex,
 			  double* Xvalue,
@@ -274,6 +274,12 @@ HighsStatus change_bounds(
 			  const double infinite_bound
 			  );
 
+/**
+ * @brief Write out the LP as an MPS file
+ */
+bool writeLpAsMPS(
+		  const char* filename,
+		  const HighsLp& lp);		  
 
 /**
  * @brief Report the data of an LP
