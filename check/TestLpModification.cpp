@@ -389,6 +389,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  messageReportLp("After deleting columns 1, 3, 5, 7", reference_lp);
 
+  /*
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
@@ -677,6 +678,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   messageReportLp("After restoring costs and bounds", reference_lp);
   printf("Finished successfully\n"); fflush(stdout);
- 
+  */
 }
 

@@ -17,6 +17,7 @@
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
+#include "io/HMPSIO.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 #include "util/HighsSort.h"
@@ -409,7 +410,7 @@ HighsStatus assess_bounds(const char* type, const int ml_ix_os,
 }
 
 HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, const int num_vec,
-			 int num_nz, int* Xstart, int* Xindex, double* Xvalue,
+			 int& num_nz, int* Xstart, int* Xindex, double* Xvalue,
 			 const double small_matrix_value, const double large_matrix_value, const bool normalise) {
   // Uses to_ix in iterator style
   if (from_ix < 0) return HighsStatus::Error;
@@ -448,6 +449,8 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
   // Count the number of acceptable indices/values
   int num_new_nz = Xstart[from_ix];
   int num_small_values = 0;
+  double max_small_value = 0;
+  double min_small_value = HIGHS_CONST_INF;
   // Set up a zeroed vector to detect duplicate indices
   vector<int> check_vector;
   if (vec_dim > 0) check_vector.assign(vec_dim, 0);
@@ -455,15 +458,15 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
     int from_el = Xstart[ix];
     int to_el;
     if (ix < num_vec-1) {
-      to_el = Xstart[ix+1]-1;
+      to_el = Xstart[ix+1];
     } else {
-      to_el = num_nz-1;
+      to_el = num_nz;
     }
     if (normalise) {
       // Account for any index-value pairs removed so far
       Xstart[ix] = num_new_nz;
     }
-    for (int el = from_el; el <= to_el; el++) {
+    for (int el = from_el; el < to_el; el++) {
       int component = Xindex[el];
       // Check that the index is non-negative
       bool legal_component = component >= 0;
@@ -483,6 +486,8 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 	HighsLogMessage(HighsMessageType::ERROR, "Matrix packed vector %d, entry %d, is duplicate index %d", ix, el, component);	  
 	return HighsStatus::Error;
       }
+      // Indicate that the index has occurred
+      check_vector[component] = 1;
       // Check that the value is not too large
       double abs_value = fabs(Xvalue[el]);
       bool large_value = abs_value >= large_matrix_value;
@@ -495,17 +500,31 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 #ifdef HiGHSDEV
 	HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector %d, entry %d, is small value |%g| <= %g", ix, el, abs_value, small_matrix_value);
 #endif
+	if (max_small_value < abs_value) max_small_value = abs_value;
+	if (min_small_value > abs_value) min_small_value = abs_value;
 	num_small_values++;
       }
-      if (!ok_value && normalise) {
-	Xindex[num_new_nz] = Xindex[el];
-	Xvalue[num_new_nz] = Xvalue[el];
-      } else {
-	num_new_nz++;
+      if (normalise) {
+	if (ok_value) {
+	  // Shift the index and value of the OK entry to the new
+	  // position in the index and value vectors, and increment
+	  // the new number of nonzeros
+	  Xindex[num_new_nz] = Xindex[el];
+	  Xvalue[num_new_nz] = Xvalue[el];
+	  num_new_nz++;
+	} else {
+	  // Zero the check_vector entry since the small value
+	  // _hasn't_ occurred
+	  check_vector[component] = 0;
+	}
       }
     }
     // Zero check_vector
-    for (int el = Xstart[ix]; el <= num_new_nz-1; el++) check_vector[Xindex[el]] = 0;
+    if (normalise) {
+      for (int el = Xstart[ix]; el < num_new_nz; el++) check_vector[Xindex[el]] = 0;
+    } else {
+      for (int el = Xstart[ix]; el < to_el; el++) check_vector[Xindex[el]] = 0;
+    }
 #ifdef HiGHSDEV
     // Check zeroing of check vector
     for (int component = 0; component < vec_dim; component++) {
@@ -515,7 +534,15 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 #endif
   }
   if (num_small_values) {
-    HighsLogMessage(HighsMessageType::WARNING, "Matrix packed vector contains %d values less than %g in magnitude: ignored", num_small_values, small_matrix_value);	  
+    if (normalise) {
+      HighsLogMessage(HighsMessageType::WARNING,
+		      "Matrix packed vector contains %d |values| in [%g, %g] less than %g: ignored",
+		      num_small_values, min_small_value, max_small_value, small_matrix_value);
+    } else {
+      HighsLogMessage(HighsMessageType::WARNING,
+		      "Matrix packed vector contains %d |values| in [%g, %g] less than %g: retained",
+		      num_small_values, min_small_value, max_small_value, small_matrix_value);
+    }
     warning_found = true;
     if (normalise) {
       // Accommodate the loss of these values in any subsequent packed vectors
@@ -524,11 +551,11 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 	Xstart[ix] = num_new_nz;
 	int to_el;
 	if (ix < num_vec) {
-	  to_el = Xstart[ix+1]-1;
+	  to_el = Xstart[ix+1];
 	} else {
-	  to_el = num_nz-1;
+	  to_el = num_nz;
 	}
-	for (int el = Xstart[ix]; el <= to_el; el++) {
+	for (int el = Xstart[ix]; el < to_el; el++) {
 	  Xindex[num_new_nz] = Xindex[el];
 	  Xvalue[num_new_nz] = Xvalue[el];
 	  num_new_nz++;
@@ -583,8 +610,12 @@ HighsStatus append_lp_cols(HighsLp& lp,
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Assess the matrix columns
+    // Need to pass num_new_nz as non-const since assessMatrix can
+    // modify it [XAstart, XAindex and XAvalue] when normalise is
+    // true---which is not the case here
+    int pass_num_new_nz = num_new_nz;
     call_status = assessMatrix(lp.numRow_, 0, num_new_col, num_new_col, 
-			       num_new_nz, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
+			       pass_num_new_nz, (int*)XAstart, (int*)XAindex, (double*)XAvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -671,8 +702,12 @@ HighsStatus append_lp_rows(HighsLp& lp,
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Assess the matrix columns
+    // Need to pass num_new_nz as non-const since assessMatrix can
+    // modify it [XAstart, XAindex and XAvalue] when normalise is
+    // true---which is not the case here
+    int pass_num_new_nz = num_new_nz;
     call_status = assessMatrix(lp.numCol_, 0, num_new_row, num_new_row, 
-			       num_new_nz, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
+			       pass_num_new_nz, (int*)XARstart, (int*)XARindex, (double*)XARvalue,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -708,7 +743,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
     // Append the matrix to the LP vectors
-    call_status = append_rows_to_lp_matrix(lp, num_new_row, num_new_nz,
+    call_status = append_rows_to_lp_matrix(lp, num_new_row, lc_num_new_nz,
 					   lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
@@ -1339,6 +1374,40 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow, const int 
   return HighsStatus::OK;
 }
 
+bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
+  bool have_col_names = lp.col_names_.size();
+  bool have_row_names = lp.row_names_.size();
+  std::vector<std::string> local_col_names;
+  std::vector<std::string> local_row_names;
+  local_col_names.resize(lp.numCol_);
+  local_row_names.resize(lp.numRow_);
+  if (!have_col_names) {
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      std::string name = "C" + std::to_string(iCol);
+      local_col_names[iCol] = name;
+    }
+  } else {
+    local_col_names = lp.col_names_;
+  }
+  if (!have_row_names) {
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      std::string name = "R" + std::to_string(iRow);
+      local_row_names[iRow] = name;
+    }
+  } else {
+    local_row_names = lp.row_names_;
+  }
+  int writeMPS_return = writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_,
+				 lp.sense_, lp.offset_,
+				 lp.Astart_, lp.Aindex_, lp.Avalue_,
+				 lp.colCost_, lp.colLower_,
+				 lp.colUpper_, lp.rowLower_, lp.rowUpper_,
+				 lp.integrality_,
+				 local_col_names, local_row_names);
+  bool return_value = writeMPS_return == 0;
+  return return_value;
+}
+
 // Methods for reporting an LP, including its row and column data and matrix
 //
 // Report the whole LP
@@ -1362,9 +1431,12 @@ void reportLpDimensions(const HighsLp &lp) {
   int lp_num_nz;
   if (lp.numCol_ == 0) lp_num_nz = 0;
   else lp_num_nz = lp.Astart_[lp.numCol_];
-  HighsPrintMessage(ML_MINIMAL,
-                    "LP has %d columns, %d rows and %d nonzeros\n",
-                    lp.numCol_, lp.numRow_, lp_num_nz);
+  HighsPrintMessage(ML_MINIMAL, "LP has %d columns, %d rows", lp.numCol_, lp.numRow_);
+  if (lp.numInt_) {
+    HighsPrintMessage(ML_MINIMAL, ", %d nonzeros and %d integer columns\n", lp_num_nz, lp.numInt_);
+  } else {
+    HighsPrintMessage(ML_MINIMAL, "and %d nonzeros\n", lp_num_nz, lp.numInt_);
+  }
 }
 
 // Report the LP objective sense
@@ -1378,25 +1450,87 @@ void reportLpObjSense(const HighsLp &lp) {
                       "Objective sense is ill-defined as %d\n", lp.sense_);
 }
 
+std::string getBoundType(const double lower, const double upper) {
+  std::string type;
+  if (highs_isInfinity(-lower)) {
+    if (highs_isInfinity(upper)) {
+      type = "FR";
+    } else {
+      type = "UB";
+    }
+  } else {
+    if (highs_isInfinity(upper)) {
+      type = "LB";
+    } else {
+      if (lower < upper) {
+	type = "BX";
+      } else {
+	type = "FX";
+      }
+    }
+  }
+  return type;
+}
+
 // Report the vectors of LP column data
 void reportLpColVectors(const HighsLp &lp) {
   if (lp.numCol_ <= 0) return;
-  HighsPrintMessage(ML_VERBOSE,
-                    "  Column        Lower        Upper         Cost\n");
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g\n", iCol,
-                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol]);
+  std::string type;
+  int count;
+  bool have_integer_columns = lp.numInt_;
+  bool have_col_names = lp.col_names_.size();
+
+  HighsPrintMessage(ML_VERBOSE, "  Column        Lower        Upper         Cost       Type        Count");
+  if (have_integer_columns) HighsPrintMessage(ML_VERBOSE, "  Discrete");
+  if (have_col_names) HighsPrintMessage(ML_VERBOSE, "  Name");
+  HighsPrintMessage(ML_VERBOSE, "\n");
+
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    type = getBoundType(lp.colLower_[iCol], lp.colUpper_[iCol]);
+    count = lp.Astart_[iCol+1]-lp.Astart_[iCol];
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g %12g         %2s %12d", iCol,
+                      lp.colLower_[iCol], lp.colUpper_[iCol], lp.colCost_[iCol],
+		      type.c_str(), count);
+    if (have_integer_columns) {
+      std::string integer_column = "";
+      if (lp.integrality_[iCol]) {
+	if (lp.colLower_[iCol] == 0 && lp.colUpper_[iCol] == 1) {
+	  integer_column = "Binary";
+	} else {
+	  integer_column = "Integer";
+	}
+      }
+      HighsPrintMessage(ML_VERBOSE, "  %-8s", integer_column.c_str());
+    }
+    if (have_col_names) HighsPrintMessage(ML_VERBOSE, "  %-s", lp.col_names_[iCol].c_str());
+    HighsPrintMessage(ML_VERBOSE, "\n");
   }
 }
 
 // Report the vectors of LP row data
 void reportLpRowVectors(const HighsLp &lp) {
   if (lp.numRow_ <= 0) return;
+  std::string type;
+  vector<int> count;
+  bool have_row_names = lp.row_names_.size();
+
+  count.resize(lp.numRow_, 0);
+  if (lp.numCol_ > 0) {
+    for (int el = 0; el < lp.Astart_[lp.numCol_]; el++) count[lp.Aindex_[el]]++;
+  }
+
   HighsPrintMessage(ML_VERBOSE,
-                    "     Row        Lower        Upper\n");
+                    "     Row        Lower        Upper       Type        Count");
+  if (have_row_names) HighsPrintMessage(ML_VERBOSE, "  Name");
+  HighsPrintMessage(ML_VERBOSE, "\n");
+
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g\n", iRow,
-                      lp.rowLower_[iRow], lp.rowUpper_[iRow]);
+    type = getBoundType(lp.rowLower_[iRow], lp.rowUpper_[iRow]);
+    std::string name = "";
+    HighsPrintMessage(ML_VERBOSE, "%8d %12g %12g         %2s %12d", iRow,
+                      lp.rowLower_[iRow], lp.rowUpper_[iRow], type.c_str(), count[iRow]);
+    if (have_row_names) HighsPrintMessage(ML_VERBOSE, "  %-s", lp.row_names_[iRow].c_str());
+    HighsPrintMessage(ML_VERBOSE, "\n");
   }
 }
 
@@ -1726,4 +1860,195 @@ bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, 
     null_data = true;
   }
   return null_data;
+}
+
+HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
+  assert(checkLp(lp) == HighsStatus::OK);
+
+  // Copy lp.
+  HighsLp equality_lp = lp;
+
+  // Add slacks for each row with more than one bound.
+  std::vector<double> rhs(lp.numRow_, 0);
+
+  for (int row = 0; row < lp.numRow_; row++) {
+    assert(equality_lp.Astart_[equality_lp.numCol_] == equality_lp.Avalue_.size());
+    assert(equality_lp.Aindex_.size() == equality_lp.Avalue_.size());
+    const int nnz = equality_lp.Astart_[equality_lp.numCol_];
+
+    if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+        lp.rowUpper_[row] == HIGHS_CONST_INF) {
+      // free row
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(1.0);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(-HIGHS_CONST_INF);
+      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+    }
+    else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] == HIGHS_CONST_INF) {
+      // only lower bound
+      rhs[row] = lp.rowLower_[row];
+
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(-1.0);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(0);
+      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colCost_.push_back(0);
+    }
+    else if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] < HIGHS_CONST_INF) {
+      // only upper bound
+      rhs[row] = lp.rowUpper_[row];
+
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(1.0);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(0);
+      equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colCost_.push_back(0);
+    }
+    else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
+             lp.rowUpper_[row] < HIGHS_CONST_INF &&
+             lp.rowLower_[row] != lp.rowUpper_[row]) {
+      // both lower and upper bound that are different
+      double rhs_value, coefficient;
+      double difference = lp.rowUpper_[row] - lp.rowLower_[row];
+      if (fabs(lp.rowLower_[row]) < fabs(lp.rowUpper_[row])) {
+        rhs_value = lp.rowLower_[row];
+        coefficient = -1;
+      } else {
+        rhs_value = lp.rowUpper_[row];
+        coefficient = 1;
+      }
+      rhs[row] = rhs_value;
+
+      equality_lp.Astart_.push_back(nnz + 1);
+      equality_lp.Aindex_.push_back(row);
+      equality_lp.Avalue_.push_back(coefficient);
+
+      equality_lp.numCol_++;
+      equality_lp.colLower_.push_back(0);
+      equality_lp.colUpper_.push_back(difference);
+      equality_lp.colCost_.push_back(0);
+    }
+    else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
+      // equality row
+      rhs[row] = lp.rowLower_[row];
+    } else {
+      HighsPrintMessage(ML_ALWAYS,
+                        "Unknown row type when adding slacks. \
+                         Returning unmodified lp copy.");
+      return lp;
+    }
+  }
+  equality_lp.rowLower_ = rhs;
+  equality_lp.rowUpper_ = rhs;
+
+  return equality_lp;
+}
+
+// Given (P) returns (D) for the pair
+// (P)
+//    min c'x st Ax=b
+//     st l <= x <= u
+// (D)
+//    max b'y + l'zl - u'zu
+//     st A'y + zl - zu = c
+//        y free, zl >=0, zu >= 0
+HighsLp dualizeEqualityProblem(const HighsLp& lp) {
+  assert(checkLp(lp) == HighsStatus::OK);
+  assert(lp.sense_ == OBJSENSE_MINIMIZE);
+  assert(lp.rowLower_ == lp.rowUpper_);
+
+  HighsLp dual;
+  const int ncols = lp.numRow_;
+  const int nrows = lp.numCol_;
+
+  dual.numRow_ = nrows;
+  dual.rowLower_ = lp.colCost_;
+  dual.rowUpper_ = lp.colCost_;
+
+  // Add columns (y)
+  dual.numCol_ = ncols;
+  dual.colLower_.resize(ncols);
+  dual.colUpper_.resize(ncols);
+  dual.colCost_.resize(ncols);
+
+  for (int col = 0; col < ncols; col++) {
+    dual.colLower_[col] = -HIGHS_CONST_INF;
+    dual.colUpper_[col] = HIGHS_CONST_INF;
+    // cost b'y
+    dual.colCost_[col] = lp.rowLower_[col];
+  }
+
+  // Get transpose of A
+  int i, k;
+  vector<int> iwork(lp.numRow_, 0);
+  dual.Astart_.resize(lp.numRow_ + 1, 0);
+  int AcountX = lp.Aindex_.size();
+  dual.Aindex_.resize(AcountX);
+  dual.Avalue_.resize(AcountX);
+  for (int k = 0; k < AcountX; k++) iwork.at(lp.Aindex_.at(k))++;
+  for (i = 1; i <= lp.numRow_; i++)
+    dual.Astart_.at(i) = dual.Astart_.at(i - 1) + iwork.at(i - 1);
+  for (i = 0; i < lp.numRow_; i++) iwork.at(i) = dual.Astart_.at(i);
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    for (k = lp.Astart_.at(iCol); k < lp.Astart_.at(iCol + 1); k++) {
+      int iRow = lp.Aindex_.at(k);
+      int iPut = iwork.at(iRow)++;
+      dual.Aindex_.at(iPut) = iCol;
+      dual.Avalue_.at(iPut) = lp.Avalue_[k];
+    }
+  }
+
+  // Add columns (zl)
+  for (int col = 0; col < lp.numCol_; col++) {
+    if (lp.colLower_[col] > -HIGHS_CONST_INF) {
+      const int nnz = dual.Astart_[dual.numCol_];
+
+      dual.colLower_.push_back(0);
+      dual.colUpper_.push_back(HIGHS_CONST_INF);
+
+      dual.colCost_.push_back(lp.colLower_[col]);
+
+      // Add constaints
+      dual.Astart_.push_back(nnz + 1);
+      dual.Aindex_.push_back(col);
+      dual.Avalue_.push_back(1.0);
+
+      dual.numCol_++;
+    }
+  }
+
+  // Add columns (zu)
+  for (int col = 0; col < lp.numCol_; col++) {
+    if (lp.colUpper_[col] < HIGHS_CONST_INF) {
+      const int nnz = dual.Astart_[dual.numCol_];
+
+      dual.colLower_.push_back(0);
+      dual.colUpper_.push_back(HIGHS_CONST_INF);
+
+      dual.colCost_.push_back(-lp.colUpper_[col]);
+
+      // Add constaints
+      dual.Astart_.push_back(nnz + 1);
+      dual.Aindex_.push_back(col);
+      dual.Avalue_.push_back(-1.0);
+
+      dual.numCol_++;
+    }
+  }
+
+  dual.offset_ = -lp.offset_;
+  dual.sense_ = OBJSENSE_MAXIMIZE;
+
+  return dual;
 }

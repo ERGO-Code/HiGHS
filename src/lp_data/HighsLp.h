@@ -43,6 +43,7 @@ class HighsLp {
   // Model data
   int numCol_ = 0;
   int numRow_ = 0;
+  int numInt_ = 0;
   int nnz_ = 0;
 
   std::vector<int> Astart_;
@@ -62,6 +63,8 @@ class HighsLp {
 
   std::vector<std::string> row_names_;
   std::vector<std::string> col_names_;
+
+  std::vector<int> integrality_;
 
   bool operator==(const HighsLp& lp) {
     if (numCol_ != lp.numCol_ || numRow_ != lp.numRow_ || nnz_ != lp.nnz_ ||

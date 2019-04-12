@@ -39,6 +39,12 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == parser_type_string) 
     return setParserTypeValue(options, value);
 
+  else if (option == mip_string)
+    return setMipValue(options, value);
+
+ else if (option == find_feasibility_string)
+    return setFindFeasibilityValue(options, value);
+
   else if (option == infinite_cost_string) 
     return setInfiniteCostValue(options, atof(value.c_str()));
 
@@ -166,6 +172,34 @@ OptionStatus setSimplexIterationLimitValue(HighsOptions& options, const int& val
     HighsLogMessage(HighsMessageType::ERROR,
 		    "Simplex iteration limit value \"%s\" is not permitted: legal values are no less than %d\n",
 		    value, 0);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setMipValue(HighsOptions& options, const std::string& value) {
+  if (value == "on" || value == "true")
+    options.mip = true;
+  else if (value == "off" || value == "false")
+    options.mip = false;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "mip value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
+		    value.c_str(), "on", "off");
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& value) {
+  if (value == "on" || value == "true")
+    options.find_feasibility = true;
+  else if (value == "off" || value == "false")
+    options.find_feasibility = false;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "find_feasibility value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
+		    value.c_str(), "on", "off");
     return OptionStatus::ILLEGAL_VALUE;
   }
   return OptionStatus::OK;

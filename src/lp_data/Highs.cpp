@@ -24,6 +24,7 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
+#include "presolve/FindFeasibility.h"
 #include "simplex/HApp.h"
 #include "simplex/HighsSimplexInterface.h"
 
@@ -44,6 +45,16 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+
+  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
+  bool normalise = true;
+  HighsStatus return_status = assessLp(lp_, options_, normalise);
+  if (return_status == HighsStatus::Error) return return_status;
+
+  // For the moment runFeasibility as standalone.
+  if (options_.find_feasibility)
+    return runFeasibility(lp_, solution_);
+
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) return HighsStatus::LpEmpty;
 
@@ -51,6 +62,8 @@ HighsStatus Highs::run() {
   HighsSetIO(options_);
 
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
+  if (options_.mip)
+    return runBnb();
 
   timer_.startRunHighsClock();
   // todo: make sure it should remain Init for calls of run() after
@@ -215,6 +228,8 @@ const HighsBasis_new &Highs::getBasis() const { return basis_; }
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
+    if (lp_.sense_ == OBJSENSE_MAXIMIZE)
+      return -hmos_[0].simplex_info_.dualObjectiveValue;
     return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case
@@ -261,7 +276,6 @@ HighsStatus Highs::setBasis(const HighsBasis_new& basis) {
   return HighsStatus::OK;
 }
 
-
 bool Highs::addRow(const double lower_bound, const double upper_bound,
                    const int num_new_nz, const int *indices, const double *values) {
   int starts = 0;
@@ -297,6 +311,7 @@ bool Highs::addCol(const double cost, const double lower_bound, const double upp
   return addCols(1, &cost, &lower_bound, &upper_bound, 
                  num_new_nz, &starts, indices, values);
 }
+
 
 bool Highs::addCols(const int num_new_col, 
                     const double *costs, const double *lower_bounds, const double *upper_bounds,
@@ -663,6 +678,10 @@ bool Highs::deleteRows(int *mask) {
   return true;
 }
 
+bool Highs::writeMPS(const char* filename) {
+  return writeLpAsMPS(filename, lp_);
+}
+
 // Private methods
 HighsPresolveStatus Highs::runPresolve(PresolveInfo &info) {
   if (options_.presolve_option != PresolveOption::ON)
@@ -742,6 +761,116 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
 
   // todo:
   // assert(KktSatisfied(lp, solution));
+
+  return status;
+}
+
+// Solve a mixed integer problem using branch and bound.
+HighsStatus Highs::runBnb() {
+  HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
+
+  HighsTimer timer_bnb;
+  timer_bnb.startRunHighsClock();
+
+  // Start tree by making root node.
+   std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
+
+  root->integer_variables = lp_.integrality_;
+  root->col_lower_bound = lp_.colLower_;
+  root->col_upper_bound = lp_.colUpper_;
+
+  HighsStatus status = solveRootNode(*(root.get()));
+  if (status != HighsStatus::Optimal) {
+    HighsPrintMessage(ML_ALWAYS,
+                      "Root note not solved to optimality. Status: %s\n",
+                      HighsStatusToString(status).c_str());
+    return status;
+  }
+  
+  // The method branch(...) below calls chooseBranchingVariable(..) which
+  // currently returns the first violated one. If a branching variable is found
+  // children are added to the stack. If there are no more violated integrality
+  // constraints we have a feasible solution, if it is best than current best,
+  // the current best is updated.
+  int message_level = ML_DETAILED | ML_VERBOSE;
+  options_.messageLevel = message_level;
+  Tree tree(*(root.get()));
+  tree.branch(*(root.get()));
+  
+  // While stack not empty.
+  //   Solve node.
+  //   Branch.
+  while (!tree.empty()) {
+    Node& node = tree.next();
+    HighsStatus status = solveNode(node);
+    tree.pop();
+
+    if (status == HighsStatus::Infeasible)
+      continue;
+
+    options_.messageLevel = message_level;
+    tree.branch(node);
+  }
+  
+  if (tree.getBestSolution().size() > 0) {
+    std::stringstream message;
+    message << std::endl;
+    message << "Optimal solution found.";
+    message << std::endl;
+    message << "Run status : " << HighsStatusToString(HighsStatus::Optimal)
+            << std::endl;
+    message << "Objective  : " << std::scientific
+            << tree.getBestObjective() << std::endl;
+    message << "Time       : " << std::fixed << std::setprecision(3)
+            << timer_bnb.clock_time[0] << std::endl;
+    message << std::endl;
+
+    HighsPrintMessage(ML_MINIMAL, message.str().c_str());
+  } else {
+    HighsPrintMessage(ML_ALWAYS, "No feasible solution found.\n");
+  }
+
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::solveNode(Node& node) {
+  // // Apply column bounds from node to LP.
+  // lp_.colLower_ = node.col_lower_bound;
+  // lp_.colUpper_ = node.col_upper_bound;
+
+  // // Call warm start.
+  // HighsStatus status = solveSimplex(options_, hmos_[0]);
+
+  // // Set solution.
+  // if (status == HighsStatus::Optimal) {
+  //   node.primal_solution = hmos_[0].solution_.col_value;
+  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  // }
+
+  // Solve with a new hmo (replace with code above)
+  initializeLp(lp_);
+  lp_.colLower_ = node.col_lower_bound;
+  lp_.colUpper_ = node.col_upper_bound;
+
+  HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+
+  // Set solution.
+  if (status == HighsStatus::Optimal) {
+    node.primal_solution = hmos_[0].solution_.col_value;
+    node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  }
+
+  return status;
+}
+
+HighsStatus Highs::solveRootNode(Node& root) {
+  // No presolve for the moment.
+  options_.messageLevel = ML_NONE;
+  HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+  if (status == HighsStatus::Optimal) {
+    root.primal_solution = hmos_[0].solution_.col_value;
+    root.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  }
 
   return status;
 }
