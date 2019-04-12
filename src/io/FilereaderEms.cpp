@@ -206,6 +206,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
         model.row_names_[i] = trim(line);
       }
     } else {
+      // OK if file just ends after the integer_columns section without end_linear
+      if (!f) return FilereaderRetcode::OKAY;
       HighsLogMessage(HighsMessageType::ERROR, "names not found in EMS file");
       return FilereaderRetcode::PARSERERROR;
     }
