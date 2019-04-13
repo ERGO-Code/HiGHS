@@ -1671,7 +1671,9 @@ bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, 
 }
 
 HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
-  assert(checkLp(lp) == HighsStatus::OK);
+  HighsStatus check = checkLp(lp);
+  if (check != HighsStatus::OK)
+    HighsPrintMessage(ML_ALWAYS, "Check LP failed: transformIntoEqualityProblem.\n");
 
   // Copy lp.
   HighsLp equality_lp = lp;
@@ -1694,6 +1696,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(-HIGHS_CONST_INF);
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colCost_.push_back(0);
     }
     else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
              lp.rowUpper_[row] == HIGHS_CONST_INF) {
@@ -1772,7 +1775,10 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 //     st A'y + zl - zu = c
 //        y free, zl >=0, zu >= 0
 HighsLp dualizeEqualityProblem(const HighsLp& lp) {
-  assert(checkLp(lp) == HighsStatus::OK);
+  HighsStatus check = checkLp(lp);
+  if (check != HighsStatus::OK)
+    HighsPrintMessage(ML_ALWAYS, "Check LP failed: dualizeEqualityProblem.\n");
+
   assert(lp.sense_ == OBJSENSE_MINIMIZE);
   assert(lp.rowLower_ == lp.rowUpper_);
 
