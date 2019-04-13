@@ -1,4 +1,4 @@
-NAME          SC50B
+NAME          SC50B   SIZE: N=48, M=51, NZ=166
 ROWS
  N  MAXIM
  L  ROW00001

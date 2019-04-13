@@ -1,4 +1,4 @@
-NAME          SCRS8
+NAME          SCRS8   SIZE: N=1169, M=491, NZ=4351
 ROWS
  N  COST
  E  CPCOAL00

@@ -1,4 +1,4 @@
-NAME          SCFXM1
+NAME          SCFXM1  SIZE: N=457, M=331, NZ=3046
 ROWS
  N  .COSTA
  E  1DT001

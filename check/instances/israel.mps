@@ -1,4 +1,4 @@
-NAME          ISRAEL
+NAME          ISRAEL  SIZE: N=142, M=175, NZ=2411
 ROWS
  N  COST
  L  B1
