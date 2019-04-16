@@ -252,6 +252,12 @@ HighsStatus runFeasibility(const HighsLp& lp,
       << std::scientific << quadratic.getResidualNorm2() << std::endl;
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 
+  residual_norm_2 = quadratic.getResidualNorm2();
+  if (residual_norm_2 < kExitTolerance) {
+    HighsPrintMessage(ML_ALWAYS, "Solution feasible within exit tolerance: %g.\n", kExitTolerance);
+    return HighsStatus::OK;
+  }
+
   // Minimize approximately for K iterations.
   int K = 50;
   for (int iteration = 1; iteration < K + 1; iteration++) {
@@ -271,8 +277,10 @@ HighsStatus runFeasibility(const HighsLp& lp,
     HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 
     // Exit if feasible.
-    if (residual_norm_2 < kExitTolerance)
+    if (residual_norm_2 < kExitTolerance) {
+      HighsPrintMessage(ML_ALWAYS, "Solution feasible within exit tolerance: %g.\n", kExitTolerance);
       break;
+    }
 
     // Update mu every third iteration, otherwise update lambda.
     if (iteration % 3 == 2) {
