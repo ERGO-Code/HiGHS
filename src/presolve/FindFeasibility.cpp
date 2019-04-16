@@ -18,6 +18,30 @@ bool isEqualityProblem(const HighsLp& lp) {
   return true;
 }
 
+std::vector<double> getAtb(const HighsLp& lp) {
+  assert(lp.rowUpper_ == lp.rowLower_);
+  std::vector<double> atb(lp.numCol_, 0);
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int k = lp.Astart_[col]; k < lp.Astart_[col+1]; k++) {
+      const int row = lp.Aindex_[k];
+      atb.at(col) += lp.Avalue_[k] * lp.rowUpper_[row];
+    }
+  }
+  return atb;
+}
+
+std::vector<double> getAtLambda(const HighsLp& lp,
+                                const std::vector<double> lambda) {
+  std::vector<double> atl(lp.numCol_);
+  for (int col = 0; col < lp.numCol_; col++) {
+    for (int k = lp.Astart_[col]; k < lp.Astart_[col+1]; k++) {
+      const int row = lp.Aindex_[k];
+      atl.at(col) += lp.Avalue_[k] * lambda[row];
+    }
+  }
+  return atl;
+}
+
 class Quadratic
 {
  public:
@@ -46,6 +70,8 @@ class Quadratic
                              const std::vector<double>& lambda);
 
   void minimize_exact_penalty(const double mu);
+  void minimize_exact_with_lambda(const double mu,
+                                  const std::vector<double>& lambda);
 
  private:
   const HighsLp& lp_;
@@ -105,11 +131,31 @@ void Quadratic::updateObjective() {
     objective_ += lp_.colCost_[col] * col_value_[col];
 }
 
+void Quadratic::minimize_exact_with_lambda(const double mu, const std::vector<double>& lambda) {
+  double mu_penalty = 1.0 / mu;
+  HighsLp lp = lp_;
+  // Modify cost. See notebook ."lambda"
+  // projected_gradient_c = c - 1/mu*(A'b) - A'\lambda
+  std::vector<double> atb = getAtb(lp);
+  std::vector<double> atlambda = getAtLambda(lp, lambda);
+  for (int col = 0; col < lp.colCost_.size(); col++)
+    lp.colCost_[col] -= (atb[col]) / mu - atlambda[col];
+
+  solve_exact(lp, mu_penalty, col_value_);
+
+  update();
+}
+
 void Quadratic::minimize_exact_penalty(const double mu) {
   double mu_penalty = 1.0 / mu;
-  const HighsLp& lp_ref = lp_;
+  HighsLp lp = lp_;
+  // Modify cost. See notebook ."no lambda"
+  // projected_gradient_c = c - 1/mu*(A'b)
+  std::vector<double> atb = getAtb(lp);
+  for (int col = 0; col < lp.colCost_.size(); col++)
+    lp.colCost_[col] -= (atb[col]) / mu;
 
-  solve_exact(lp_ref, mu_penalty, col_value_);
+  solve_exact(lp, mu_penalty, col_value_);
 
   update();
 }
@@ -265,7 +311,7 @@ HighsStatus runFeasibility(const HighsLp& lp,
     if (type == MinimizationType::kComponentWise)
       quadratic.minimize_by_component(mu, lambda);
     else if (type == MinimizationType::kExact)
-      quadratic.minimize_exact_penalty(mu);
+      quadratic.minimize_exact_with_lambda(mu, lambda);
 
     // Report outcome.
     residual_norm_2 = quadratic.getResidualNorm2();

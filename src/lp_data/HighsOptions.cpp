@@ -212,10 +212,12 @@ OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& v
 }
 
 OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value) {
-  if (value == "on" || value == "true")
-    options.feasibility_strategy_component_wise = true;
-  else if (value == "off" || value == "false")
-    options.feasibility_strategy_component_wise = false;
+  if (value == "approx_component")
+    options.feasibility_strategy = FeasibilityStrategy::kApproxComponentWise;
+  else if (value == "approx_exact")
+    options.feasibility_strategy = FeasibilityStrategy::kApproxExact;
+  else if (value == "direct") 
+    options.feasibility_strategy = FeasibilityStrategy::kDirectSolve;
   else {
     HighsLogMessage(HighsMessageType::ERROR,
 		    "feasibility component-wise value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",

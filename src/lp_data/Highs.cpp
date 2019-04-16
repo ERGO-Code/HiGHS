@@ -53,10 +53,22 @@ HighsStatus Highs::run() {
 
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility) {
-    if (options_.feasibility_strategy_component_wise)
+      HighsSolution& solution = solution_;
+      if (options_.feasibility_strategy_dualize) {
+        // Add slacks & dualize.
+        HighsLp primal = transformIntoEqualityProblem(lp_);
+        HighsLp dual = dualizeEqualityProblem(primal);
+        initializeLp(dual);
+      }
+
+    if (options_.feasibility_strategy == FeasibilityStrategy::kApproxComponentWise)
       return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);
-    else
+    else if (options_.feasibility_strategy == FeasibilityStrategy::kApproxExact)
       return runFeasibility(lp_, solution_, MinimizationType::kExact);
+    else if (options_.feasibility_strategy == FeasibilityStrategy::kDirectSolve) {
+      // Proceed to normal exection of run().
+      // If dualize has been called replace LP is replaced with dual in code above.
+    }
   }
 
   // Return immediately if the LP has no columns
