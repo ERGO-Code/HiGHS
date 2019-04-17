@@ -6,6 +6,7 @@
 #include <iomanip>
 
 #include "io/HighsIO.h"
+#include "lp_data/HConst.h"
 #include "presolve/ExactSubproblem.h"
 
 constexpr double kExitTolerance = 0.00000001;
@@ -162,7 +163,13 @@ void Quadratic::minimize_exact_penalty(const double mu) {
 
 void Quadratic::minimize_by_component(const double mu,
                                       const std::vector<double>& lambda) {
+  HighsPrintMessageLevel ML_DESC = ML_DETAILED;
   int iterations = 100;
+
+  HighsPrintMessage(ML_DESC,
+                    "Values at start: %3.2g, %3.4g, \n",
+                    objective_,
+                    residual_norm_2_);
 
   for (int iteration = 0; iteration < iterations; iteration++) {
     for (int col = 0; col < lp_.numCol_; col++) {
@@ -219,11 +226,16 @@ void Quadratic::minimize_by_component(const double mu,
       }
     }
 
-    // Code below commented out because updating after each component
-    // minimization.
-    // update();
-
+    // Code below gets the residual norms updated.
+    update();
     // updateResidual();
+
+    HighsPrintMessage(ML_DESC,
+                      "Values at approximate iteration %d: %3.2g, %3.4g, \n",
+                      iteration,
+                      objective_,
+                      residual_norm_2_);
+
     // todo: check for early exit
   }
   update();
@@ -276,7 +288,7 @@ HighsStatus runFeasibility(const HighsLp& lp,
                            const MinimizationType type) {
   if (!isEqualityProblem(lp))
     return HighsStatus::NotImplemented;
-
+  
   // Initialize x_0 ≥ 0, μ_1, λ_1 = 0.
   double mu;
   std::vector<double> lambda;

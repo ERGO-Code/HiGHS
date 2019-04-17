@@ -53,7 +53,12 @@ HighsStatus Highs::run() {
 
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility) {
+      // use when you do something with solution depending on whether we have dualized or not.
       HighsSolution& solution = solution_;
+
+      options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
+      HighsSetIO(options_);
+
       if (options_.feasibility_strategy_dualize) {
         // Add slacks & dualize.
         HighsLp primal = transformIntoEqualityProblem(lp_);
