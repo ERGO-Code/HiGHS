@@ -387,6 +387,8 @@ HighsBasis_new getHighsBasis(const HighsLp& lp, const HighsBasis& basis);
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 
+double calculateObjective(const HighsLp& lp, HighsSolution& solution);
+
 HighsStatus assess_interval_set_mask(
 				     const int max_ix, 
 				     const bool interval,

@@ -7,7 +7,7 @@
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
-#include "presolve/ExactSubproblem.h"
+#include "lp_data/HighsLpUtils.h"
 
 constexpr double kExitTolerance = 0.00000001;
 
@@ -70,10 +70,6 @@ class Quadratic
   void minimize_by_component(const double mu,
                              const std::vector<double>& lambda);
 
-  void minimize_exact_penalty(const double mu);
-  void minimize_exact_with_lambda(const double mu,
-                                  const std::vector<double>& lambda);
-
  private:
   const HighsLp& lp_;
   std::vector<double> col_value_;
@@ -132,34 +128,6 @@ void Quadratic::updateObjective() {
     objective_ += lp_.colCost_[col] * col_value_[col];
 }
 
-void Quadratic::minimize_exact_with_lambda(const double mu, const std::vector<double>& lambda) {
-  double mu_penalty = 1.0 / mu;
-  HighsLp lp = lp_;
-  // Modify cost. See notebook ."lambda"
-  // projected_gradient_c = c - 1/mu*(A'b) - A'\lambda
-  std::vector<double> atb = getAtb(lp);
-  std::vector<double> atlambda = getAtLambda(lp, lambda);
-  for (int col = 0; col < lp.colCost_.size(); col++)
-    lp.colCost_[col] -= (atb[col]) / mu - atlambda[col];
-
-  solve_exact(lp, mu_penalty, col_value_);
-
-  update();
-}
-
-void Quadratic::minimize_exact_penalty(const double mu) {
-  double mu_penalty = 1.0 / mu;
-  HighsLp lp = lp_;
-  // Modify cost. See notebook ."no lambda"
-  // projected_gradient_c = c - 1/mu*(A'b)
-  std::vector<double> atb = getAtb(lp);
-  for (int col = 0; col < lp.colCost_.size(); col++)
-    lp.colCost_[col] -= (atb[col]) / mu;
-
-  solve_exact(lp, mu_penalty, col_value_);
-
-  update();
-}
 
 void Quadratic::minimize_by_component(const double mu,
                                       const std::vector<double>& lambda) {
@@ -305,7 +273,8 @@ HighsStatus runFeasibility(const HighsLp& lp,
   if (type == MinimizationType::kComponentWise)
     HighsPrintMessage(ML_ALWAYS, "Minimizing quadratic subproblem component-wise...\n");
   else if (type == MinimizationType::kExact)
-    HighsPrintMessage(ML_ALWAYS, "Minimizing quadratic subproblem exactly...\n");
+    // exact minimization requires projected gradient code which is still not in master.
+    return HighsStatus::NotImplemented; 
 
   // Report values at start.
   std::stringstream ss;
@@ -330,7 +299,8 @@ HighsStatus runFeasibility(const HighsLp& lp,
     if (type == MinimizationType::kComponentWise)
       quadratic.minimize_by_component(mu, lambda);
     else if (type == MinimizationType::kExact)
-      quadratic.minimize_exact_with_lambda(mu, lambda);
+      // while projected gradient code which is still not in master. 
+    return HighsStatus::NotImplemented; 
 
     // Report outcome.
     residual_norm_2 = quadratic.getResidualNorm2();
@@ -360,12 +330,14 @@ HighsStatus runFeasibility(const HighsLp& lp,
   quadratic.getSolution(solution);
   HighsPrintMessage(ML_ALWAYS,
                     "\nSolution set at the end of feasibility search.\n");
-  ss.clear();
-  ss << "Model, " << lp.model_name_ << ", iter, " << iteration << ", objective, " << std::setw(3)
+  
+  // Using ss again instead of ss_str messes up HighsIO.
+  std::stringstream ss_str;
+  ss_str << "Model, " << lp.model_name_ << ", iter, " << iteration << ", quadratic_objective, " << std::setw(3)
       << std::fixed << std::setprecision(2)
-      << quadratic.getObjective() << " ,residual, " << std::setw(5)
-      << std::scientific << residual_norm_2 << std::endl;
-  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
+      << quadratic.getObjective() << ", c'x, " << calculateObjective(lp, solution) <<" ,residual, " << std::setw(5)
+      << std::scientific << residual_norm_2 << "," << std::endl;
+  HighsPrintMessage(ML_ALWAYS, ss_str.str().c_str());
 
   return HighsStatus::OK;
 }
