@@ -173,7 +173,12 @@ void Quadratic::minimize_by_component(const double mu,
 
   for (int iteration = 0; iteration < iterations; iteration++) {
     for (int col = 0; col < lp_.numCol_; col++) {
-      // todo: determine whether to minimize for col.
+      // determine whether to minimize for col.
+      // if empty skip. 
+      if (lp_.Astart_[col] == lp_.Astart_[col+1])
+        continue;
+      // todo: add slope calculation.
+
       // Minimize quadratic for column col.
 
       // Formulas for a and b when minimizing for x_j
@@ -243,6 +248,7 @@ void Quadratic::minimize_by_component(const double mu,
 
 double chooseStartingMu(const HighsLp& lp) {
   return 0.001;
+  //return 1000;
 }
 
 
@@ -318,7 +324,8 @@ HighsStatus runFeasibility(const HighsLp& lp,
 
   // Minimize approximately for K iterations.
   int K = 50;
-  for (int iteration = 1; iteration < K + 1; iteration++) {
+  int iteration = 0;
+  for (iteration = 1; iteration < K + 1; iteration++) {
     // Minimize quadratic function.
     if (type == MinimizationType::kComponentWise)
       quadratic.minimize_by_component(mu, lambda);
@@ -353,6 +360,12 @@ HighsStatus runFeasibility(const HighsLp& lp,
   quadratic.getSolution(solution);
   HighsPrintMessage(ML_ALWAYS,
                     "\nSolution set at the end of feasibility search.\n");
+  ss.clear();
+  ss << "Model, " << lp.model_name_ << ", iter, " << iteration << ", objective, " << std::setw(3)
+      << std::fixed << std::setprecision(2)
+      << quadratic.getObjective() << " ,residual, " << std::setw(5)
+      << std::scientific << residual_norm_2 << std::endl;
+  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 
   return HighsStatus::OK;
 }

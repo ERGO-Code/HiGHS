@@ -1971,7 +1971,12 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   if (check != HighsStatus::OK)
     HighsPrintMessage(ML_ALWAYS, "Check LP failed: dualizeEqualityProblem.\n");
 
-  assert(lp.sense_ == OBJSENSE_MINIMIZE);
+  std::vector<double> colCost = lp.colCost_;
+  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+    for (int col = 0; col < lp.numCol_; col++)
+      colCost[col] = -colCost[col];
+  }
+
   assert(lp.rowLower_ == lp.rowUpper_);
 
   HighsLp dual;
@@ -1979,8 +1984,8 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   const int nrows = lp.numCol_;
 
   dual.numRow_ = nrows;
-  dual.rowLower_ = lp.colCost_;
-  dual.rowUpper_ = lp.colCost_;
+  dual.rowLower_ = colCost;
+  dual.rowUpper_ = colCost;
 
   // Add columns (y)
   dual.numCol_ = ncols;
@@ -2055,6 +2060,7 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
 
   dual.offset_ = -lp.offset_;
   dual.sense_ = OBJSENSE_MAXIMIZE;
+  dual.model_name_ = lp.model_name_ + "_dualized";
 
   HighsPrintMessage(ML_ALWAYS, "Dualized equality LP.\n");
   return dual;

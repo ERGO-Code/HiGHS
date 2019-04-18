@@ -34,6 +34,13 @@ public:
     options_ = options;
   }
 
+  HighsStatus setHighsOptionValue(const std::string& option,
+                             const std::string& value) {
+    OptionStatus status = setOptionValue(options_, option, value);
+    if (status != OptionStatus::OK)
+      return HighsStatus::OK;
+    return HighsStatus::Error;
+  }
   /**
    * @brief Clears the vector of HighsModelObjects (hmos), creates a
    * HighsModelObject for this LP and makes it the first of the vector

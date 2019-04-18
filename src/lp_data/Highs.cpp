@@ -56,14 +56,16 @@ HighsStatus Highs::run() {
       // use when you do something with solution depending on whether we have dualized or not.
       HighsSolution& solution = solution_;
 
-      options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
-      HighsSetIO(options_);
+      //options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
+      //HighsSetIO(options_);
 
+      HighsLp primal = transformIntoEqualityProblem(lp_);
       if (options_.feasibility_strategy_dualize) {
         // Add slacks & dualize.
-        HighsLp primal = transformIntoEqualityProblem(lp_);
         HighsLp dual = dualizeEqualityProblem(primal);
         initializeLp(dual);
+      } else {
+        initializeLp(primal);
       }
 
     if (options_.feasibility_strategy == FeasibilityStrategy::kApproxComponentWise)
@@ -249,8 +251,6 @@ const HighsBasis_new &Highs::getBasis() const { return basis_; }
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
-    if (lp_.sense_ == OBJSENSE_MAXIMIZE)
-      return -hmos_[0].simplex_info_.dualObjectiveValue;
     return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case
