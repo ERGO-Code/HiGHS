@@ -1,4 +1,4 @@
-NAME          SC105
+NAME          SC105   SIZE: N=103, M=106, NZ=383
 ROWS
  N  MAXIM
  L  ROW00001

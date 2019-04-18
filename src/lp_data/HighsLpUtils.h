@@ -73,7 +73,7 @@ HighsStatus assessMatrix(
 			  const int from_ix,
 			  const int to_ix,
 			  const int num_vec,
-			  int num_nz,
+			  int& num_nz,
 			  int* Xstart,
 			  int* Xindex,
 			  double* Xvalue,
@@ -274,6 +274,12 @@ HighsStatus change_bounds(
 			  const double infinite_bound
 			  );
 
+/**
+ * @brief Write out the LP as an MPS file
+ */
+bool writeLpAsMPS(
+		  const char* filename,
+		  const HighsLp& lp);		  
 
 /**
  * @brief Report the data of an LP
@@ -413,5 +419,8 @@ void update_out_in_ix(const int ix_dim,
 bool isColDataNull(const double *usr_col_cost, const double *usr_col_lower,  const double *usr_col_upper);
 bool isRowDataNull(const double *usr_row_lower,  const double *usr_row_upper);
 bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, const double *usr_matrix_value);
+
+HighsLp transformIntoEqualityProblem(const HighsLp& lp);
+HighsLp dualizeEqualityProblem(const HighsLp& lp);
 
 #endif // LP_DATA_HIGHSLPUTILS_H_

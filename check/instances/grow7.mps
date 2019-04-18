@@ -1,4 +1,4 @@
-NAME          GROW7
+NAME          GROW7   SIZE: N=301, M=141, NZ=2913
 ROWS
  N  REVENUE
  E  PRI0101

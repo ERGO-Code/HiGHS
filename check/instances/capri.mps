@@ -1,4 +1,4 @@
-NAME          CAPRI
+NAME          CAPRI   SIZE: N=353, M=272, NZ=2120
 ROWS
  E  VLRES
  N  OBJEC
