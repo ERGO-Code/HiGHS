@@ -84,4 +84,10 @@ enum InvertHint {
 // phase 2
 const bool invert_if_row_out_negative = true;
 
+enum class FeasibilityStrategy {
+  kApproxComponentWise,
+  kApproxExact,
+  kDirectSolve
+};
+
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

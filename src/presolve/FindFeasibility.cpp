@@ -215,7 +215,8 @@ void Quadratic::minimize_by_component(const double mu,
 }
 
 double chooseStartingMu(const HighsLp& lp) {
-  return 0.001;
+ // return 0.001;
+  return 10;
 }
 
 
@@ -292,7 +293,8 @@ HighsStatus runFeasibility(const HighsLp& lp,
 
   // Minimize approximately for K iterations.
   int K = 30;
-  for (int iteration = 1; iteration < K + 1; iteration++) {
+  int iteration = 0;
+  for (iteration = 1; iteration < K + 1; iteration++) {
     // Minimize quadratic function.
   if (type == MinimizationType::kComponentWise)
       quadratic.minimize_by_component(mu, lambda);
@@ -311,7 +313,7 @@ HighsStatus runFeasibility(const HighsLp& lp,
 
     // Exit if feasible.
     if (residual_norm_2 < kExitTolerance) {
-      HighsPrintMessage(ML_ALWAYS, "Solution feasible within exit tolerance: %g.\n", kExitTolerance);)
+      HighsPrintMessage(ML_ALWAYS, "Solution feasible within exit tolerance: %g.\n", kExitTolerance);
       break;
     }
 
