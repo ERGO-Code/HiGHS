@@ -18,6 +18,29 @@
 #include <cmath>
 #include "stdio.h"  //Just for temporary printf
 
+
+  HVector::HVector() {
+
+  }
+
+  HVector::HVector(int length) {
+    this->setup(length);
+  }
+
+  HVector::HVector(vector<double> vec, int length) {
+    this->setup(length);
+    int nz = 0;
+    for(int i=0; i < length; i++) {
+      this->array[i] = vec[i];
+      if (abs(vec[i]) > HIGHS_CONST_TINY) {
+        this->index[nz] = i;
+        nz++;
+      }
+    }
+    this->count = nz;
+  }
+
+
 void HVector::setup(int size_) {
   /*
    * Initialise an HVector instance
@@ -192,6 +215,22 @@ void HVector::copy(const HVector *from) {
   }
 }
 
+double HVector::scalarProduct(const HVector* other) {
+  double result = 0.0;
+ 
+  for (int i=0; i<this->count; i++) {
+    result += this->array[this->index[i]] * other->array[this->index[i]];
+  }
+
+  return result;
+}
+
+void HVector::scale(double factor) {
+  for (int i=0; i<this->count; i++) {
+    this->array[this->index[i]] *= factor;
+  }
+}
+
 double HVector::norm2() {
   /*
    * Compute the squared 2-norm of the vector
@@ -238,4 +277,15 @@ void HVector::saxpy(const double pivotX, const HVector *pivot) {
     workArray[iRow] = (fabs(x1) < HIGHS_CONST_TINY) ? HIGHS_CONST_ZERO : x1;
   }
   count = workCount;
+}
+
+void HVector::peak() {
+  int num = this->count;
+  if (num > 5) {
+    num = 5;
+  }
+  for (int i=0; i<num; i++) {
+    printf("%d %lf ", this->index[i], this->array[this->index[i]]);
+  }
+  printf("\n");
 }

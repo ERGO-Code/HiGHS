@@ -34,6 +34,9 @@ set(sources
     simplex/HVector.cpp
     test/KktCheck.cpp
     test/KktChStep.cpp
+    quadratic/projectedgradient.cpp
+    quadratic/conjugategradient.cpp
+    quadratic/SparseMatrix.cpp
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
@@ -74,6 +77,7 @@ set(headers
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/SimplexConst.h
+    presolve/ExactSubproblem.h
     presolve/FindFeasibility.h
     presolve/Presolve.h
     presolve/HPreData.h
@@ -83,6 +87,10 @@ set(headers
     test/KktChStep.h
     util/stringutil.h
     util/HighsRandom.h
+    quadratic/projectedgradient.h
+    quadratic/conjugategradient.h
+    quadratic/HighsQp.h
+    quadratic/SparseMatrix.h
     util/HighsSort.h
     util/HighsTimer.h
     util/HighsUtils.h
