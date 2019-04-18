@@ -146,7 +146,8 @@ TEST_CASE("dualize", "[highs_data]") {
 
   // For debugging use the latter.
   std::string filename = dir + "/../../check/instances/adlittle.mps";
-  // std::string filename = dir + "/check/instances/adlittle.mps";
+  //std::string filename = dir + "/check/instances/adlittle.mps";
+  //std::string filename = "/home/s1131817/test-problems/qaps/qap04";
 
   // Read mps.
   HighsOptions options;
@@ -189,6 +190,6 @@ TEST_CASE("dualize", "[highs_data]") {
 
   double dual_objective = highs_dual.getObjectiveValue();
 
-  double diff_dual = primal_objective - dual_objective;
+  double diff_dual = primal_objective + dual_objective;
   REQUIRE(diff_dual < 0.00000001);
 }
