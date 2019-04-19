@@ -1505,7 +1505,11 @@ bool Presolve::removeIfImpliedFree(int col, int i, int k) {
       implColLower.at(col) = low;
       implColUpperRowIndex.at(col) = i;
     }
-    implColDualUpper.at(i) = 0;
+    // JAJH(190419): Segfault here since i is a row index and
+    // segfaults (on dcp1) due to i=4899 exceeding column dimension of
+    // 3007. Hence correction. Also pattern-matches the next case :-)
+    //    implColDualUpper.at(i) = 0;
+    implColDualUpper.at(col) = 0;
   } else if (low <= upp && upp <= colUpper.at(col)) {
     if (implColUpper.at(col) > upp) {
       implColUpper.at(col) = upp;
@@ -1750,6 +1754,12 @@ void Presolve::removeForcingConstraints(int mainIter) {
 void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
   int i;
+  int singRowZ =  singRow.size();
+  /*
+  if (singRowZ == 36) {
+    printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
+  }
+  */
   while (!(singRow.empty())) {
     i = singRow.front();
     singRow.pop_front();
@@ -1761,6 +1771,12 @@ void Presolve::removeRowSingletons() {
     }
 
     int k = getSingRowElementIndexInAR(i);
+    // JAJH(190419): This throws a segfault with greenbea and greenbeb since k=-1
+    if (k < 0) {
+      printf("In removeRowSingletons: %d = k < 0\n", k);
+      printf("   Occurs for case when initial singRow.size() = %d\n", singRowZ);
+      fflush(stdout);
+    }
     int j = ARindex.at(k);
 
     // add old bounds OF X to checker and for postsolve
@@ -2080,15 +2096,13 @@ int Presolve::getSingRowElementIndexInAR(int i) {
   int k = ARstart.at(i);
   while (!flagCol.at(ARindex.at(k))) ++k;
   if (k >= ARstart.at(i + 1)) {
-    cout << "Error during presolve: no variable found in singleton row " << i
-         << ".";
+    cout << "Error during presolve: no variable found in singleton row " << i << endl;
     return -1;
   }
   int rest = k + 1;
   while (rest < ARstart.at(i + 1) && !flagCol.at(ARindex.at(rest))) ++rest;
   if (rest < ARstart.at(i + 1)) {
-    cout << "Error during presolve: more variables found in singleton row " << i
-         << ".";
+    cout << "Error during presolve: more variables found in singleton row " << i << endl;
     return -1;
   }
   return k;

@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     printf("In main: set options.mip = 1 so vscode can be used to debug\n");
     options.mip = 1; 
   }
-  bool force_presolve = false;
+  bool force_presolve = true;
   if (force_presolve) {
     printf("In main: set options.presolve_option = PresolveOption::ON so vscode can be used to debug\n");
     options.presolve_option = PresolveOption::ON;
