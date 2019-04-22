@@ -145,8 +145,8 @@ TEST_CASE("dualize", "[highs_data]") {
   std::string dir = GetCurrentWorkingDir();
 
   // For debugging use the latter.
-  //std::string filename = dir + "/../../check/instances/adlittle.mps";
-  std::string filename = dir + "/check/instances/adlittle.mps";
+  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  //std::string filename = dir + "/check/instances/adlittle.mps";
   //std::string filename = "/home/s1131817/test-problems/qaps/qap04";
 
   // Read mps.

@@ -2069,8 +2069,7 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
 
   dual.sense_ = OBJSENSE_MINIMIZE;
   for (int col = 0; col < lp.numCol_; col++) {
-    colCost[col] = -colCost[col];
-    dual.offset_ = -lp.offset_;
+    dual.colCost_[col] = -dual.colCost_[col];
   }
 
   dual.model_name_ = lp.model_name_ + "_dualized";
