@@ -53,20 +53,28 @@ HighsStatus Highs::run() {
 
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility) {
-      // use when you do something with solution depending on whether we have dualized or not.
-      HighsSolution& solution = solution_;
+    // use when you do something with solution depending on whether we have dualized or not.
+    HighsSolution& solution = solution_;
 
-      //options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
-      //HighsSetIO(options_);
+    //options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
+    //HighsSetIO(options_);
 
-      HighsLp primal = transformIntoEqualityProblem(lp_);
-      if (options_.feasibility_strategy_dualize) {
-        // Add slacks & dualize.
-        HighsLp dual = dualizeEqualityProblem(primal);
-        initializeLp(dual);
-      } else {
-        initializeLp(primal);
+    // Add slacks and make sure a minimization problem is passed to runFeasibility.
+    HighsLp primal = transformIntoEqualityProblem(lp_);
+    if (options_.feasibility_strategy_dualize) {
+      // Add slacks & dualize.
+      HighsLp dual = dualizeEqualityProblem(primal);
+      // dualizeEqualityProblem returns a minimization problem.
+      initializeLp(dual);
+    } else {
+      // If maximization, minimize before calling runFeasibility.
+      if (primal.sense_ != OBJSENSE_MINIMIZE) {
+        for (int col = 0; col < primal.numCol_; col++)
+          primal.colCost_[col] = -primal.colCost_[col];
       }
+      initializeLp(primal);
+    }
+
 
     if (options_.feasibility_strategy == FeasibilityStrategy::kApproxComponentWise)
       return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);

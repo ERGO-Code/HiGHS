@@ -2067,10 +2067,14 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
     }
   }
 
-  dual.offset_ = -lp.offset_;
-  dual.sense_ = OBJSENSE_MAXIMIZE;
+  dual.sense_ = OBJSENSE_MINIMIZE;
+  for (int col = 0; col < lp.numCol_; col++) {
+    colCost[col] = -colCost[col];
+    dual.offset_ = -lp.offset_;
+  }
+
   dual.model_name_ = lp.model_name_ + "_dualized";
- 
+
   HighsPrintMessage(ML_ALWAYS, "Dualized equality LP.\n");
 
   return dual;

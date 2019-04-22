@@ -262,6 +262,11 @@ HighsStatus runFeasibility(const HighsLp& lp,
                            const MinimizationType type) {
   if (!isEqualityProblem(lp))
     return HighsStatus::NotImplemented;
+  
+  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+    HighsPrintMessage(ML_ALWAYS,
+                      "Error: FindFeasibility does not support maximization problems.\n");
+  }
 
   // Initialize x_0 ≥ 0, μ_1, λ_1 = 0.
   double mu;
