@@ -2068,7 +2068,7 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   }
 
   dual.sense_ = OBJSENSE_MINIMIZE;
-  for (int col = 0; col < lp.numCol_; col++) {
+  for (int col = 0; col < dual.numCol_; col++) {
     dual.colCost_[col] = -dual.colCost_[col];
   }
 
