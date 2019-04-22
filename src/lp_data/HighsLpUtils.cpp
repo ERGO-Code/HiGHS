@@ -1691,6 +1691,15 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution) {
   return HighsStatus::OK;
 }
 
+double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
+  assert(isSolutionConsistent(lp, solution));
+  double sum = 0;
+  for (int col = 0; col < lp.numCol_; col++)
+    sum += lp.colCost_[col] * solution.col_value[col];
+
+  return sum;
+}
+
 HighsStatus assess_interval_set_mask(const int ix_dim, 
 				     const bool interval, const int from_ix, const int to_ix,
 				     const bool set, int num_set_entries, const int* ix_set,
@@ -1863,7 +1872,9 @@ bool isMatrixDataNull(const int *usr_matrix_start, const int *usr_matrix_index, 
 }
 
 HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
-  assert(checkLp(lp) == HighsStatus::OK);
+  HighsStatus check = checkLp(lp);
+  if (check != HighsStatus::OK)
+    HighsPrintMessage(ML_ALWAYS, "Check LP failed: transformIntoEqualityProblem.\n");
 
   // Copy lp.
   HighsLp equality_lp = lp;
@@ -1886,6 +1897,7 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
       equality_lp.numCol_++;
       equality_lp.colLower_.push_back(-HIGHS_CONST_INF);
       equality_lp.colUpper_.push_back(HIGHS_CONST_INF);
+      equality_lp.colCost_.push_back(0);
     }
     else if (lp.rowLower_[row] > -HIGHS_CONST_INF &&
              lp.rowUpper_[row] == HIGHS_CONST_INF) {
@@ -1964,8 +1976,16 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 //     st A'y + zl - zu = c
 //        y free, zl >=0, zu >= 0
 HighsLp dualizeEqualityProblem(const HighsLp& lp) {
-  assert(checkLp(lp) == HighsStatus::OK);
-  assert(lp.sense_ == OBJSENSE_MINIMIZE);
+  HighsStatus check = checkLp(lp);
+  if (check != HighsStatus::OK)
+    HighsPrintMessage(ML_ALWAYS, "Check LP failed: dualizeEqualityProblem.\n");
+
+  std::vector<double> colCost = lp.colCost_;
+  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+    for (int col = 0; col < lp.numCol_; col++)
+      colCost[col] = -colCost[col];
+  }
+
   assert(lp.rowLower_ == lp.rowUpper_);
 
   HighsLp dual;
@@ -1973,8 +1993,8 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
   const int nrows = lp.numCol_;
 
   dual.numRow_ = nrows;
-  dual.rowLower_ = lp.colCost_;
-  dual.rowUpper_ = lp.colCost_;
+  dual.rowLower_ = colCost;
+  dual.rowUpper_ = colCost;
 
   // Add columns (y)
   dual.numCol_ = ncols;
@@ -2047,8 +2067,14 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp) {
     }
   }
 
-  dual.offset_ = -lp.offset_;
-  dual.sense_ = OBJSENSE_MAXIMIZE;
+  dual.sense_ = OBJSENSE_MINIMIZE;
+  for (int col = 0; col < dual.numCol_; col++) {
+    dual.colCost_[col] = -dual.colCost_[col];
+  }
+
+  dual.model_name_ = lp.model_name_ + "_dualized";
+
+  HighsPrintMessage(ML_ALWAYS, "Dualized equality LP.\n");
 
   return dual;
 }

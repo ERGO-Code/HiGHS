@@ -49,6 +49,8 @@ const string options_file_string = "options_file";
 const string parser_type_string = "parser_type";
 const string mip_string = "mip";
 const string find_feasibility_string = "find_feasibility";
+const string find_feasibility_strategy_string = "feasibility_strategy";
+const string find_feasibility_dualize_string = "feasibility_dualize"; 
 
 // Strings for file options
 const string infinite_cost_string = "infinite_cost";
@@ -147,6 +149,8 @@ struct HighsOptions
 
   bool clean_up = false;
   bool find_feasibility = false;
+  FeasibilityStrategy feasibility_strategy = FeasibilityStrategy::kApproxComponentWise;
+  bool feasibility_strategy_dualize = false;
 
   bool mip = false;
 };
@@ -167,6 +171,9 @@ OptionStatus setSimplexIterationLimitValue(HighsOptions& options, const int& val
 OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value);
 OptionStatus setMipValue(HighsOptions& options, const std::string& value);
 OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& value);
+OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value);
+OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value);
+ 
 
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);

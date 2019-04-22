@@ -52,8 +52,40 @@ HighsStatus Highs::run() {
   if (return_status == HighsStatus::Error) return return_status;
 
   // For the moment runFeasibility as standalone.
-  if (options_.find_feasibility)
-    return runFeasibility(lp_, solution_);
+  if (options_.find_feasibility) {
+    // use when you do something with solution depending on whether we have dualized or not.
+    HighsSolution& solution = solution_;
+
+    //options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
+    //HighsSetIO(options_);
+
+    // Add slacks and make sure a minimization problem is passed to runFeasibility.
+    HighsLp primal = transformIntoEqualityProblem(lp_);
+    if (options_.feasibility_strategy_dualize) {
+      // Add slacks & dualize.
+      HighsLp dual = dualizeEqualityProblem(primal);
+      // dualizeEqualityProblem returns a minimization problem.
+      initializeLp(dual);
+    } else {
+      // If maximization, minimize before calling runFeasibility.
+      if (primal.sense_ != OBJSENSE_MINIMIZE) {
+        for (int col = 0; col < primal.numCol_; col++)
+          primal.colCost_[col] = -primal.colCost_[col];
+      }
+      initializeLp(primal);
+    }
+
+
+    if (options_.feasibility_strategy == FeasibilityStrategy::kApproxComponentWise)
+      return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);
+    else if (options_.feasibility_strategy == FeasibilityStrategy::kApproxExact)
+      return runFeasibility(lp_, solution_, MinimizationType::kExact);
+    else if (options_.feasibility_strategy == FeasibilityStrategy::kDirectSolve) {
+      // Proceed to normal exection of run().
+      // If dualize has been called replace LP is replaced with dual in code above.
+    }
+  }
+
 
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) return HighsStatus::LpEmpty;
@@ -228,8 +260,6 @@ const HighsBasis_new &Highs::getBasis() const { return basis_; }
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
-    if (lp_.sense_ == OBJSENSE_MAXIMIZE)
-      return -hmos_[0].simplex_info_.dualObjectiveValue;
     return hmos_[0].simplex_info_.dualObjectiveValue;
   } else {
     // todo: ipx case
