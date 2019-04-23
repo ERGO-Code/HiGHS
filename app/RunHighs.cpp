@@ -73,6 +73,11 @@ int main(int argc, char **argv) {
     printf("In main: set options.presolve_option = PresolveOption::ON so vscode can be used to debug\n");
     options.presolve_option = PresolveOption::ON;
   }
+  bool force_message_level_always = false;
+  if (force_message_level_always) {
+    printf("In main: set options.messageLevel = ML_ALWAYS so vscode can be used to debug\n");
+    options.messageLevel = ML_ALWAYS;
+  }
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
