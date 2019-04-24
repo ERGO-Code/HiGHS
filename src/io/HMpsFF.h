@@ -486,9 +486,17 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
                       "No coefficient given for column %s", marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
-    parsename(marker); // rowidx set
-    double value = atof(word.c_str());
-    addtuple(value);
+
+    auto mit = rowname2idx.find(marker);
+    if (mit == rowname2idx.end()) {
+      HighsPrintMessage(ML_ALWAYS,
+      "COLUMNS section contains row %s not in ROWS section.\n",
+      marker.c_str());
+    } else {
+      parsename(marker); // rowidx set
+      double value = atof(word.c_str());
+      addtuple(value);
+    }
 
     if (!is_end(strline, end)) {
       // parse second coefficient
@@ -508,8 +516,16 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
 
       assert(is_end(strline, end));
 
-      parsename(marker); // rowidx set
+      auto mit = rowname2idx.find(marker);
+      if (mit == rowname2idx.end()) {
+        HighsPrintMessage(ML_ALWAYS,
+        "COLUMNS section contains row %s not in ROWS section.\n",
+        marker.c_str());
+        continue;
+      };
+
       double value = atof(word.c_str());
+      parsename(marker); // rowidx set
       addtuple(value);
     }
   }
@@ -579,9 +595,16 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
       return HMpsFF::parsekey::FAIL;
     }
 
-    parsename(marker, rowidx);
-    double value = atof(word.c_str());
-    addrhs(value, rowidx);
+    auto mit = rowname2idx.find(marker);
+    if (mit == rowname2idx.end()) {
+      HighsPrintMessage(ML_ALWAYS,
+      "RHS section contains row %s not in ROWS section.\n",
+      marker.c_str());
+    } else {
+      parsename(marker, rowidx);
+      double value = atof(word.c_str());
+      addrhs(value, rowidx);
+    }
 
     if (!is_end(strline, end)) {
       // parse second coefficient
@@ -600,6 +623,14 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
       end = first_word_end(strline, end_marker);
 
       assert(is_end(strline, end));
+
+      auto mit = rowname2idx.find(marker);
+      if (mit == rowname2idx.end()) {
+        HighsPrintMessage(ML_ALWAYS,
+        "RHS section contains row %s not in ROWS section.\n",
+        marker.c_str());
+        continue;
+      };
 
       parsename(marker, rowidx);
       double value = atof(word.c_str());
@@ -686,6 +717,14 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
     int end_bound_name = first_word_end(strline, end);
     std::string marker = first_word(strline, end_bound_name);
     int end_marker = first_word_end(strline, end_bound_name);
+
+    auto mit = colname2idx.find(marker);
+    if (mit == colname2idx.end()) {
+      HighsPrintMessage(ML_ALWAYS,
+      "BOUNDS section contains col %s not in COLS section.\n",
+      marker.c_str());
+      continue;
+    };
 
     int colidx;
     parsename(marker, colidx);
@@ -799,9 +838,17 @@ HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
       return HMpsFF::parsekey::FAIL;
     }
 
-    parsename(marker, rowidx);
-    double value = atof(word.c_str());
-    addrhs(value, rowidx);
+    auto mit = rowname2idx.find(marker);
+    if (mit == rowname2idx.end()) {
+      HighsPrintMessage(ML_ALWAYS,
+      "RANGES section contains row %s not in ROWS    section\n",
+      marker.c_str());
+      continue;
+    } else {
+      parsename(marker, rowidx);
+      double value = atof(word.c_str());
+      addrhs(value, rowidx);
+    }
 
     if (!is_end(strline, end)) {
       string marker = first_word(strline, end);
@@ -817,6 +864,14 @@ HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
                         marker.c_str());
         return HMpsFF::parsekey::FAIL;
       }
+
+      auto mit = rowname2idx.find(marker);
+      if (mit == rowname2idx.end()) {
+        HighsPrintMessage(ML_ALWAYS,
+        "RANGES section contains row %s not in ROWS    section\n",
+        marker.c_str());
+        continue;
+      };
 
       parsename(marker, rowidx);
       double value = atof(word.c_str());
