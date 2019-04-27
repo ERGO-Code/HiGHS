@@ -1199,20 +1199,25 @@ void HDual::iterateRpIterDa(int iterate_log_level, bool header) {
 }
 
 void HDual::iterateRpDsty(int iterate_log_level, bool header) {
+  bool rp_dual_steepest_edge = dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap  DSE");
+    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap");
+    if (rp_dual_steepest_edge) {
+      HighsPrintMessage(iterate_log_level, "  DSE");
+    } else {
+      HighsPrintMessage(iterate_log_level, "     ");
+    }
   } else {
     int l10ColDse = intLog10(columnDensity);
     int l10REpDse = intLog10(row_epDensity);
     int l10RapDse = intLog10(row_apDensity);
-    double lc_rowdseDensity;
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      lc_rowdseDensity = rowdseDensity;
+    HighsPrintMessage(iterate_log_level, " %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse);
+    if (rp_dual_steepest_edge) {
+      int l10DseDse = intLog10(rowdseDensity);
+      HighsPrintMessage(iterate_log_level, " %4d", l10DseDse);
     } else {
-      lc_rowdseDensity = 0;
+      HighsPrintMessage(iterate_log_level, "     ");
     }
-    int l10DseDse = intLog10(lc_rowdseDensity);
-    HighsPrintMessage(iterate_log_level, " %4d %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse, l10DseDse);
   }
 }
 

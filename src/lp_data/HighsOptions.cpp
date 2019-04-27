@@ -66,6 +66,21 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
    else if (option == dual_objective_value_upper_bound_string) 
     return setDualObjectiveValueUpperBoundValue(options, atof(value.c_str()));
 
+   else if (option == simplex_strategy_string) 
+    return setSimplexStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_crash_strategy_string) 
+    return setSimplexCrashStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_dual_edge_weight_strategy_string) 
+    return setSimplexDualEdgeWeightStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_price_strategy_string) 
+    return setSimplexPriceStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == message_level_string) 
+    return setMessageLevelValue(options, atoi(value.c_str()));
+
    else {
     HighsLogMessage(HighsMessageType::WARNING, "Unknown option: %s.", option.c_str());
     return OptionStatus::UNKNOWN_OPTION;
@@ -294,5 +309,57 @@ OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const doubl
 OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value) {
   options.dual_objective_value_upper_bound = value;
   return OptionStatus::OK;
+}
+
+OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_strategy = intToSimplexStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_crash_strategy = intToSimplexCrashStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_dual_edge_weight_strategy = intToSimplexDualEdgeWeightStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_price_strategy = intToSimplexPriceStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
+  options.messageLevel = value;
+  return OptionStatus::OK;
+}
+
+SimplexStrategy intToSimplexStrategy(const int& value) {
+  if (value == (int)SimplexStrategy::DUAL_PLAIN) return SimplexStrategy::DUAL_PLAIN;
+  if (value == (int)SimplexStrategy::DUAL_MULTI) return SimplexStrategy::DUAL_MULTI;
+  //  if (value == (int)SimplexStrategy::PRIMAL) return SimplexStrategy::PRIMAL;
+  return SimplexStrategy::DEFAULT;
+}
+SimplexCrashStrategy intToSimplexCrashStrategy(const int& value) {
+  if (value == (int)SimplexCrashStrategy::LTSSF_K) return SimplexCrashStrategy::LTSSF_K;
+  if (value == (int)SimplexCrashStrategy::LTSSF_PRI) return SimplexCrashStrategy::LTSSF_PRI;
+  if (value == (int)SimplexCrashStrategy::BIXBY) return SimplexCrashStrategy::BIXBY;
+  return SimplexCrashStrategy::DEFAULT;
+}
+SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value) {
+  if (value == (int)SimplexDualEdgeWeightStrategy::DANTZIG) return SimplexDualEdgeWeightStrategy::DANTZIG;
+  if (value == (int)SimplexDualEdgeWeightStrategy::DEVEX) return SimplexDualEdgeWeightStrategy::DEVEX;
+  if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;
+  if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH;
+  return SimplexDualEdgeWeightStrategy::DEFAULT;
+}
+SimplexPriceStrategy intToSimplexPriceStrategy(const int& value) {
+  if (value == (int)SimplexPriceStrategy::COL) return SimplexPriceStrategy::COL;
+  if (value == (int)SimplexPriceStrategy::ROW) return SimplexPriceStrategy::ROW;
+  if (value == (int)SimplexPriceStrategy::ROW_SWITCH) return SimplexPriceStrategy::ROW_SWITCH;
+  if (value == (int)SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH) return SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH;
+  return SimplexPriceStrategy::DEFAULT;
 }
 

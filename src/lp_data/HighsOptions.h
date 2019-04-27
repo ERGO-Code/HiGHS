@@ -59,6 +59,13 @@ const string primal_feasibility_tolerance_string = "primal_feasibility";
 const string dual_feasibility_tolerance_string = "dual_feasibility";
 const string dual_objective_value_upper_bound_string = "dual_objective_value_upper_bound";
 
+const string simplex_strategy_string = "simplex_strategy";
+const string simplex_crash_strategy_string = "simplex_crash_strategy";
+const string simplex_dual_edge_weight_strategy_string = "simplex_dual_edge_weight_strategy";
+const string simplex_price_strategy_string = "simplex_price_strategy";
+
+const string message_level_string = "message_level";
+
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
 enum class HighsMpsParserType
@@ -102,16 +109,16 @@ struct HighsOptions
   double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
   double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
   double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
+  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
+  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
+  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
+  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
   int allow_superbasic = false;
 
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
-  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
-  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
-  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
   // Options for HighsPrintMessage and HighsLogMessage
   FILE *logfile = stdout;
@@ -175,4 +182,17 @@ OptionStatus setLargeMatrixValueValue(HighsOptions& options, const double& value
 OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options, const double& value);
 OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const double& value);
 OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value);
+OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value);
+
+OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
+
+SimplexStrategy intToSimplexStrategy(const int& value);
+SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
+SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value);
+SimplexPriceStrategy intToSimplexPriceStrategy(const int& value);
+
 #endif
+
