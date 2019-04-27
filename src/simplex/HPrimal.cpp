@@ -70,9 +70,6 @@ void HPrimal::solvePhase2() {
         invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
       }
-      // Report on the iteration
-      iterateRp();
-
       primalUpdate();
       if (invertHint) {
         break;
@@ -272,9 +269,12 @@ void HPrimal::primalUpdate() {
 
   // Compute thetaPrimal
   int moveIn = jMove[columnIn];
-  int columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
-  double alpha = column.array[rowOut];
-  double thetaPrimal = 0;
+  //  int
+  columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
+  //  double
+  alpha = column.array[rowOut];
+  //  double
+  thetaPrimal = 0;
   if (alpha * moveIn > 0) {
     // Lower bound
     thetaPrimal = (baseValue[rowOut] - baseLower[rowOut]) / alpha;
@@ -342,7 +342,8 @@ void HPrimal::primalUpdate() {
   workHMO.matrix_.price_by_row(row_ap, row_ep);
   row_epDensity = 0.95 * row_epDensity + 0.05 * row_ep.count / solver_num_row;
 
-  double thetaDual = workDual[columnIn] / alpha;
+  //  double
+  thetaDual = workDual[columnIn] / alpha;
   for (int i = 0; i < row_ap.count; i++) {
     int iCol = row_ap.index[i];
     workDual[iCol] -= thetaDual * row_ap.array[iCol];
@@ -352,6 +353,22 @@ void HPrimal::primalUpdate() {
     int iCol = iGet + solver_num_col;
     workDual[iCol] -= thetaDual * row_ep.array[iGet];
   }
+
+  // updateVerify for primal
+  double aCol = fabs(alpha);
+  double alphaRow;
+  if (columnIn < workHMO.simplex_lp_.numCol_) {
+    alphaRow = row_ap.array[columnIn];
+  } else {
+    alphaRow = row_ep.array[rowOut];
+  }
+  double aRow = fabs(alphaRow);
+  double aDiff = fabs(aCol - aRow);
+  numericalTrouble = aDiff / min(aCol, aRow);
+  if (numericalTrouble > 1e-7) 
+    printf("Numerical check: alphaCol = %12g, alphaRow = a%12g, aDiff = a%12g: measure = %12g\n", alpha, alphaRow, aDiff, numericalTrouble);
+  // Reinvert if the relative difference is large enough, and updates have been performed
+  //  if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 
   // Dual for the pivot
   workDual[columnIn] = 0;
@@ -363,9 +380,13 @@ void HPrimal::primalUpdate() {
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
+  // Report on the iteration
+  iterateRp();
+
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   simplex_info.iteration_count++;
+
 }
 
 void HPrimal::iterateRp() {
@@ -418,13 +439,6 @@ void HPrimal::iterateRpDuObj(int iterate_log_level, bool header) {
 }
 
 void HPrimal::iterateRpIterDa(int iterate_log_level, bool header) {
-  double numericalTrouble=0.;
-  int columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
-  double alpha = column.array[rowOut];
-  double thetaPrimal = 0;
-  double deltaPrimal = 0;
-  double thetaDual = 0;
-  
   if (header) {
     HighsPrintMessage(iterate_log_level, " Inv       NumCk     EnC     LvR     LvC        DlPr        ThDu        ThPr          Aa");
   } else {

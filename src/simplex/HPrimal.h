@@ -59,6 +59,13 @@ class HPrimal {
   int invertHint;
   int columnIn;
   int rowOut;
+  int columnOut;
+  double deltaPrimal;
+  double thetaDual;
+  double thetaPrimal;
+  double alpha;
+  //  double alphaRow;
+  double numericalTrouble;
 
   // Solve buffer
   HVector row_ep;

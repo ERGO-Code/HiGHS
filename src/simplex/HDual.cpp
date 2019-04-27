@@ -1666,8 +1666,7 @@ void HDual::updateVerify() {
   double aRow = fabs(alphaRow);
   double aDiff = fabs(aCol - aRow);
   numericalTrouble = aDiff / min(aCol, aRow);
-  // Reinvert if the relative difference is large enough, and updates hav ebeen
-  // performed
+  // Reinvert if the relative difference is large enough, and updates have been performed
   if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
   }
