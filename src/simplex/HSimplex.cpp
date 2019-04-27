@@ -1930,6 +1930,87 @@ void compute_primal(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_basic_primal_values = true;
 }
 
+int computePrimalInfeasible(HighsModelObject &highs_model_object) {
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+  int num_zero_values = 0;
+  int num_unit_values = 0;
+  int num_nonbinary_values = 0;
+  int num_binary_values = 0;
+  int num_primal_infeasibilities = 0;
+  double sum_primal_infeasibilities = 0;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+
+  int nonbasic_ix = 0;
+  for (int i = 0; i < numTot; i++) {
+    if (simplex_basis.nonbasicFlag_[i]) {
+      // Nonbasic column
+      double value = simplex_info.workValue_[i];
+      double lower = simplex_info.workLower_[i];
+      double upper = simplex_info.workUpper_[i];
+      double residual = max(lower-value, value-upper);
+      //      printf("Nonbasic column %2d is %2d, [%12g, %12g, %12g] residual = %12g\n", nonbasic_ix, i, lower, value, upper, residual);
+      nonbasic_ix++;
+      if (residual > simplex_info.primal_feasibility_tolerance) {
+	num_primal_infeasibilities++;
+	sum_primal_infeasibilities += residual;
+      }
+      if (abs(value) <= simplex_info.primal_feasibility_tolerance) {
+	num_zero_values++;
+      } else if (abs(value-1.0) <= simplex_info.primal_feasibility_tolerance) {
+	num_unit_values++;
+      } else {
+	num_nonbinary_values++;
+      }
+    }
+  }
+  if (num_primal_infeasibilities) {
+    printf("Primal rebuild has %d (%12g) nonbasic primal infeasibilities\n", num_primal_infeasibilities, sum_primal_infeasibilities);
+  }
+  num_binary_values = num_zero_values + num_unit_values;
+  if (num_binary_values+num_nonbinary_values-simplex_lp.numCol_)
+    printf("Accounting error in computePrimalInfeasible: num_binary_values+num_nonbinary_values-simplex_lp.numCol_ = %d + %d - %d\n",
+	   num_binary_values, num_nonbinary_values, simplex_lp.numCol_);
+
+  int pct = (100*num_binary_values)/simplex_lp.numCol_;
+  printf("Binary nonbasic variable values: %6d 0s %6d 1s giving %d/%d (%3d%%)\n", num_zero_values, num_unit_values, num_binary_values, simplex_lp.numCol_, pct);
+
+  for (int i = 0; i < simplex_lp.numRow_; i++) {
+    // Basic variable
+    int iCol = simplex_basis.basicIndex_[i];
+    double value = simplex_info.baseValue_[i];
+    double lower = simplex_info.baseLower_[i];
+    double upper = simplex_info.baseUpper_[i];
+    double residual = max(lower-value, value-upper);
+    //    if (value > 0.1) printf("Basic row %2d is %2d, [%12g, %12g, %12g] residual = %12g\n", i, iCol, lower, value, upper, residual);
+    if (residual > simplex_info.primal_feasibility_tolerance) {
+      num_primal_infeasibilities++;
+      sum_primal_infeasibilities += residual;
+    }	
+    if (abs(value) <= simplex_info.primal_feasibility_tolerance) {
+      num_zero_values++;
+    } else if (abs(value-1.0) <= simplex_info.primal_feasibility_tolerance) {
+      num_unit_values++;
+    } else {
+      num_nonbinary_values++;
+    }
+  }
+  if (num_primal_infeasibilities) {
+    printf("Primal rebuild has %d (%12g) nonbasic primal infeasibilities\n", num_primal_infeasibilities, sum_primal_infeasibilities);
+  }
+  num_binary_values = num_zero_values + num_unit_values;
+  if (num_binary_values+num_nonbinary_values-numTot)
+    printf("Accounting error in computePrimalInfeasible: num_binary_values+num_nonbinary_values-numTot = %d + %d - %d\n",
+	   num_binary_values, num_nonbinary_values, numTot);
+  pct = (100*num_binary_values)/numTot;
+  printf("Binary          variable values: %6d 0s %6d 1s giving %d/%d (%3d%%)\n", num_zero_values, num_unit_values, num_binary_values, numTot, pct);
+
+  return num_primal_infeasibilities;  
+}
+
 void compute_dual(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -2123,8 +2204,7 @@ int set_source_out_from_bound(HighsModelObject &highs_model_object,
   return source_out;
 }
 
-double
-compute_primal_objective_function_value(HighsModelObject &highs_model_object) {
+double compute_primal_objective_function_value(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsBasis &simplex_basis = highs_model_object.simplex_basis_;

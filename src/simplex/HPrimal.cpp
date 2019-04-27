@@ -70,6 +70,9 @@ void HPrimal::solvePhase2() {
         invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
       }
+      // Report on the iteration
+      iterateRp();
+
       primalUpdate();
       if (invertHint) {
         break;
@@ -142,6 +145,8 @@ void HPrimal::primalRebuild() {
   }
   compute_dual(workHMO);
   compute_primal(workHMO);
+  int numPrimalInfeas = computePrimalInfeasible(workHMO);
+
   compute_dual_objective_value(workHMO);
   report_iteration_count_dual_objective_value(workHMO, sv_invertHint);
 
@@ -362,3 +367,112 @@ void HPrimal::primalUpdate() {
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   simplex_info.iteration_count++;
 }
+
+void HPrimal::iterateRp() {
+  int numIter = workHMO.simplex_info_.iteration_count;
+  bool header = numIter % 10 == 1;
+  //  header = true;  // JAJH10/10
+  if (header) iterateRpFull(header);
+  iterateRpFull(false);
+}
+
+void HPrimal::iterateRpFull(bool header) {
+  if (header) {
+    iterateRpIterPh(ML_DETAILED, true);
+    iterateRpDuObj(ML_DETAILED, true);
+#ifdef HiGHSDEV
+    iterateRpIterDa(ML_DETAILED, true);
+    //    iterateRpDsty(ML_DETAILED, true);
+    //    HighsPrintMessage(ML_DETAILED, " FreeLsZ");
+#endif
+    HighsPrintMessage(ML_DETAILED, "\n");
+  } else {
+    iterateRpIterPh(ML_DETAILED, false);
+    iterateRpDuObj(ML_DETAILED, false);
+#ifdef HiGHSDEV
+    iterateRpIterDa(ML_DETAILED, false);
+    //    iterateRpDsty(ML_DETAILED, false);
+    //    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
+#endif
+    HighsPrintMessage(ML_DETAILED, "\n");
+  }
+}
+
+void HPrimal::iterateRpIterPh(int iterate_log_level, bool header) {
+  int solvePhase=2;
+  if (header) {
+    HighsPrintMessage(iterate_log_level, " Iteration Ph");
+  } else {
+    int numIter = workHMO.simplex_info_.iteration_count;
+    HighsPrintMessage(iterate_log_level, " %9d %2d", numIter, solvePhase);
+  }
+}
+
+void HPrimal::iterateRpDuObj(int iterate_log_level, bool header) {
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  if (header) {
+    HighsPrintMessage(iterate_log_level, "    DualObjective    ");
+  } else {
+    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.updatedDualObjectiveValue);
+  }
+}
+
+void HPrimal::iterateRpIterDa(int iterate_log_level, bool header) {
+  double numericalTrouble=0.;
+  int columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
+  double alpha = column.array[rowOut];
+  double thetaPrimal = 0;
+  double deltaPrimal = 0;
+  double thetaDual = 0;
+  
+  if (header) {
+    HighsPrintMessage(iterate_log_level, " Inv       NumCk     EnC     LvR     LvC        DlPr        ThDu        ThPr          Aa");
+  } else {
+    HighsPrintMessage(iterate_log_level, " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g %11.4g", 
+		      invertHint, numericalTrouble, columnIn, rowOut, columnOut, deltaPrimal,
+		      thetaDual, thetaPrimal, alpha);
+  }
+}
+
+/*
+void HPrimal::iterateRpDsty(int iterate_log_level, bool header) {
+  bool rp_dual_steepest_edge = dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
+  if (header) {
+    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap");
+    if (rp_dual_steepest_edge) {
+      HighsPrintMessage(iterate_log_level, "  DSE");
+    } else {
+      HighsPrintMessage(iterate_log_level, "     ");
+    }
+  } else {
+    int l10ColDse = intLog10(columnDensity);
+    int l10REpDse = intLog10(row_epDensity);
+    int l10RapDse = intLog10(row_apDensity);
+    HighsPrintMessage(iterate_log_level, " %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse);
+    if (rp_dual_steepest_edge) {
+      int l10DseDse = intLog10(rowdseDensity);
+      HighsPrintMessage(iterate_log_level, " %4d", l10DseDse);
+    } else {
+      HighsPrintMessage(iterate_log_level, "     ");
+    }
+  }
+}
+int HPrimal::intLog10(double v) {
+  int intLog10V = -99;
+  if (v > 0) intLog10V = log(v) / log(10.0);
+  return intLog10V;
+}
+
+*/
+void HPrimal::iterateRpInvert(int i_v) {
+#ifdef HiGHSDEV
+  HighsPrintMessage(ML_MINIMAL, "Iter %10d:", workHMO.simplex_info_.iteration_count);
+  //  iterateRpDsty(ML_MINIMAL, true);
+  //  iterateRpDsty(ML_MINIMAL, false);
+  iterateRpDuObj(ML_MINIMAL, false);
+  HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
+#else
+  report_iteration_count_dual_objective_value(workHMO, i_v);
+#endif
+}
+

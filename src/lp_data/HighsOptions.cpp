@@ -339,7 +339,7 @@ OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
 SimplexStrategy intToSimplexStrategy(const int& value) {
   if (value == (int)SimplexStrategy::DUAL_PLAIN) return SimplexStrategy::DUAL_PLAIN;
   if (value == (int)SimplexStrategy::DUAL_MULTI) return SimplexStrategy::DUAL_MULTI;
-  //  if (value == (int)SimplexStrategy::PRIMAL) return SimplexStrategy::PRIMAL;
+  if (value == (int)SimplexStrategy::PRIMAL) return SimplexStrategy::PRIMAL;
   return SimplexStrategy::DEFAULT;
 }
 SimplexCrashStrategy intToSimplexCrashStrategy(const int& value) {

@@ -20,9 +20,11 @@
 #include <map>
 #include <set>
 #include <vector>
+//#include <stdexcept> // Just to hack in primal simplex solver
 
 #include "HConfig.h"
 #include "simplex/HCrash.h"
+#include "simplex/HPrimal.h"
 #include "simplex/HDual.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
@@ -33,7 +35,9 @@
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
+#include "simplex/SimplexTimer.h" // Just to hack in primal simplex solver
 
+using std::runtime_error; // Just to hack in primal simplex solver
 using std::cout;
 using std::endl;
 using std::flush;
@@ -71,6 +75,24 @@ HighsStatus solveSimplex(
 
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
+  if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
+    HPrimal primal_solver(highs_model_object);
+    SimplexTimer simplex_timer;
+    simplex_timer.initialiseDualSimplexClocks(highs_model_object);
+
+    int rankDeficiency = compute_factor(highs_model_object);
+    if (rankDeficiency) {
+      throw runtime_error("Primal initialise: singular-basis-matrix");
+    }
+
+    primal_solver.solvePhase2();
+
+    HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
+
+    // Deduce the LP basis from the simplex basis
+    highs_model_object.basis_ = highs_model_object.simplex_basis_;
+    return result;
+  }
   HDual dual_solver(highs_model_object);
   dual_solver.options();
   

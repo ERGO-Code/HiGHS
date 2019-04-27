@@ -41,6 +41,13 @@ class HPrimal {
   void primalChooseRow();
   void primalUpdate();
 
+  void iterateRp();
+  void iterateRpFull(bool header);
+  void iterateRpIterPh(int iterate_log_level, bool header);
+  void iterateRpDuObj(int iterate_log_level, bool header);
+  void iterateRpIterDa(int iterate_log_level, bool header);
+  void iterateRpInvert(int i_v);
+
   // Model pointer
   HighsModelObject &workHMO;
   
