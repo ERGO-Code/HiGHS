@@ -44,7 +44,10 @@ enum iClockSimplex {
   ComputePrimalClock,  //!< Computation of primal values in dual rebuild()
   ComputeDuobjClock,   //!< Computation of dual objective value in dual rebuild()
   ReportInvertClock,   //!< Reporting of log line in dual rebuild()
-  Chuzr1Clock,          //!< CHUZR
+  ChuzrClock,           //!< CHUZR - Dual
+  Chuzr1Clock,          //!< CHUZR - stage 1
+  Chuzr2Clock,          //!< CHUZR - stage 2
+  ChuzcClock,           //!< CHUZC - Primal
   Chuzc0Clock,          //!< CHUZC - stage 0
   Chuzc1Clock,          //!< CHUZC - stage 1
   Chuzc2Clock,          //!< CHUZC - stage 2
@@ -101,7 +104,10 @@ class SimplexTimer {
     simplex_info.clock_[CollectPrIfsClock] = timer.clock_def("COLLECT_PR_IFS", "IFS");
     simplex_info.clock_[ComputeDuobjClock] = timer.clock_def("COMPUTE_DUOBJ", "DOB");
     simplex_info.clock_[ReportInvertClock] = timer.clock_def("REPORT_INVERT", "RPI");
+    simplex_info.clock_[ChuzrClock] = timer.clock_def("CHUZR", "CzR");
     simplex_info.clock_[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
+    simplex_info.clock_[Chuzr2Clock] = timer.clock_def("CHUZR2", "CR2");
+    simplex_info.clock_[ChuzcClock] = timer.clock_def("CHUZC", "CzC");
     simplex_info.clock_[Chuzc0Clock] = timer.clock_def("CHUZC0", "CC0");
     simplex_info.clock_[Chuzc1Clock] = timer.clock_def("CHUZC1", "CC1");
     simplex_info.clock_[Chuzc2Clock] = timer.clock_def("CHUZC2", "CC2");
@@ -172,11 +178,24 @@ class SimplexTimer {
     std::vector<int> simplex_clock_list{
       InvertClock, PermWtClock, ComputeDualClock, 
 	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
-	ComputeDuobjClock, ReportInvertClock, Chuzr1Clock, 
-	BtranClock, PriceClock, Chuzc0Clock, 
+	ComputeDuobjClock, ReportInvertClock, ChuzrClock, Chuzr1Clock, Chuzr2Clock, 
+	BtranClock, PriceClock, ChuzcClock, Chuzc0Clock, 
 	Chuzc1Clock, Chuzc2Clock, Chuzc3Clock, 
 	Chuzc4Clock, DevexWtClock, FtranClock, 
 	FtranBfrtClock, FtranDseClock, UpdateDualClock, 
+	UpdatePrimalClock, UpdateWeightClock, DevexIzClock, 
+	UpdatePivotsClock, UpdateFactorClock, UpdateMatrixClock
+	};
+    report_simplex_clock_list("SimplexInner", simplex_clock_list, model_object);
+  };
+  
+  void reportPrimalSimplexInnerClock(HighsModelObject & model_object) {
+    std::vector<int> simplex_clock_list{
+      InvertClock, PermWtClock, ComputeDualClock, 
+	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
+	ComputeDuobjClock, ReportInvertClock, Chuzr1Clock, Chuzr2Clock,
+	BtranClock, PriceClock, ChuzcClock, 
+	DevexWtClock, FtranClock, UpdateDualClock, 
 	UpdatePrimalClock, UpdateWeightClock, DevexIzClock, 
 	UpdatePivotsClock, UpdateFactorClock, UpdateMatrixClock
 	};

@@ -79,13 +79,41 @@ HighsStatus solveSimplex(
     HPrimal primal_solver(highs_model_object);
     SimplexTimer simplex_timer;
     simplex_timer.initialiseDualSimplexClocks(highs_model_object);
+#ifdef HiGHSDEV
+  timer.start(simplex_info.clock_[SimplexTotalClock]);
+#endif
 
     int rankDeficiency = compute_factor(highs_model_object);
     if (rankDeficiency) {
       throw runtime_error("Primal initialise: singular-basis-matrix");
     }
 
+    timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
     primal_solver.solvePhase2();
+    timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+
+#ifdef HiGHSDEV
+    //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
+    // Report the ticks before primal
+    if (simplex_info.report_simplex_inner_clock) {
+      simplex_timer.reportPrimalSimplexInnerClock(highs_model_object);
+    }
+    /*
+    if (simplex_info.report_simplex_outer_clock) {
+      simplex_timer.reportDualSimplexIterateClock(highs_model_object);
+      simplex_timer.reportDualSimplexOuterClock(highs_model_object);
+    }
+    //  printf("report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_)\n");cout<<flush;
+    //  report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_);
+    timer.stop(simplex_info.clock_[SimplexTotalClock]);
+    double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
+    
+    if (simplex_info.report_simplex_phases_clock) {
+      simplex_timer.reportSimplexTotalClock(highs_model_object);
+      simplex_timer.report_simplex_phases_clock(highs_model_object);
+    }
+    */
+#endif
 
     HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
 

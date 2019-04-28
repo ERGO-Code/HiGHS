@@ -55,6 +55,8 @@ class HPrimal {
   int solver_num_row;
   int solver_num_tot;
 
+  bool no_free_columns;
+  
   // Pivot related
   int invertHint;
   int columnIn;
@@ -71,6 +73,11 @@ class HPrimal {
   HVector row_ep;
   HVector row_ap;
   HVector column;
+
+  int num_tabu_col;
+  vector<int> tabu_col_p;
+  vector<int> tabu_col;
+
   double row_epDensity;
   double columnDensity;
 };

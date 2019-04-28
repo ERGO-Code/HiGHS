@@ -1523,7 +1523,7 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   // If reinversion is needed then skip this method
   if (invertHint) return;
 
-  timer.start(simplex_info.clock_[Chuzr1Clock]);
+  timer.start(simplex_info.clock_[ChuzrClock]);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
@@ -1558,10 +1558,10 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;  
-    timer.stop(simplex_info.clock_[Chuzr1Clock]);
+    timer.stop(simplex_info.clock_[ChuzrClock]);
     return;
   }
-  timer.stop(simplex_info.clock_[Chuzr1Clock]);
+  timer.stop(simplex_info.clock_[ChuzrClock]);
 
   // Choose column 2, This only happens if didn't go out
   dualRow.choose_final();
