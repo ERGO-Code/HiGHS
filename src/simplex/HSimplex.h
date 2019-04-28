@@ -98,6 +98,10 @@ void compute_dual_objective_value(
 				  HighsModelObject &highs_model_object,
                                   int phase = 2);
 
+void compute_primal_objective_value(
+				    HighsModelObject &highs_model_object
+				    );
+
 void initialise_simplex_lp_random_vectors(
 					  HighsModelObject &highs_model
 					  );
@@ -282,11 +286,6 @@ int set_source_out_from_bound(
                               const int column_out
 			      );
 
-double
-compute_primal_objective_function_value(
-					HighsModelObject &highs_model_object
-					);
-
 // Record the shift in the cost of a particular column
 void shift_cost(
 		  HighsModelObject &highs_model_object,
@@ -329,6 +328,11 @@ void util_analyse_lp_solution(
 #endif
 
 void report_iteration_count_dual_objective_value(
+						 HighsModelObject &highs_model_object,
+						 int i_v
+						 );
+
+void report_iteration_count_primal_objective_value(
 						 HighsModelObject &highs_model_object,
 						 int i_v
 						 );

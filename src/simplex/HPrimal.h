@@ -44,7 +44,7 @@ class HPrimal {
   void iterateRp();
   void iterateRpFull(bool header);
   void iterateRpIterPh(int iterate_log_level, bool header);
-  void iterateRpDuObj(int iterate_log_level, bool header);
+  void iterateRpPrObj(int iterate_log_level, bool header);
   void iterateRpIterDa(int iterate_log_level, bool header);
   void iterateRpInvert(int i_v);
 
@@ -62,7 +62,6 @@ class HPrimal {
   int columnIn;
   int rowOut;
   int columnOut;
-  double deltaPrimal;
   double thetaDual;
   double thetaPrimal;
   double alpha;

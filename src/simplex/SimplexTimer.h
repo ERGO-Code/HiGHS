@@ -43,6 +43,7 @@ enum iClockSimplex {
   CollectPrIfsClock,  //!< Identification of primal infeasibilities in dual rebuild()
   ComputePrimalClock,  //!< Computation of primal values in dual rebuild()
   ComputeDuobjClock,   //!< Computation of dual objective value in dual rebuild()
+  ComputeProbjClock,   //!< Computation of primalal objective value in primal rebuild()
   ReportInvertClock,   //!< Reporting of log line in dual rebuild()
   ChuzrClock,           //!< CHUZR - Dual
   Chuzr1Clock,          //!< CHUZR - stage 1
@@ -103,6 +104,7 @@ class SimplexTimer {
     simplex_info.clock_[ComputePrimalClock] = timer.clock_def("COMPUTE_PRIMAL", "CPP");
     simplex_info.clock_[CollectPrIfsClock] = timer.clock_def("COLLECT_PR_IFS", "IFS");
     simplex_info.clock_[ComputeDuobjClock] = timer.clock_def("COMPUTE_DUOBJ", "DOB");
+    simplex_info.clock_[ComputeProbjClock] = timer.clock_def("COMPUTE_PROBJ", "POB");
     simplex_info.clock_[ReportInvertClock] = timer.clock_def("REPORT_INVERT", "RPI");
     simplex_info.clock_[ChuzrClock] = timer.clock_def("CHUZR", "CzR");
     simplex_info.clock_[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
@@ -178,7 +180,7 @@ class SimplexTimer {
     std::vector<int> simplex_clock_list{
       InvertClock, PermWtClock, ComputeDualClock, 
 	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
-	ComputeDuobjClock, ReportInvertClock, ChuzrClock, Chuzr1Clock, Chuzr2Clock, 
+	ComputeDuobjClock, ComputeProbjClock, ReportInvertClock, ChuzrClock, Chuzr1Clock, Chuzr2Clock, 
 	BtranClock, PriceClock, ChuzcClock, Chuzc0Clock, 
 	Chuzc1Clock, Chuzc2Clock, Chuzc3Clock, 
 	Chuzc4Clock, DevexWtClock, FtranClock, 
