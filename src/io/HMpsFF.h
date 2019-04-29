@@ -174,11 +174,8 @@ int HMpsFF::fillMatrix() {
     }
   }
 
-  Astart.at(numCol) = nnz;
-
-  // Add empty column at end if objective shift specified in bounds section.
-  if (numCol > 1 && Astart[numCol-1] == 0)
-    Astart[numCol-1] = Astart[numCol];
+  for (int col = newColIndex + 1; col <= numCol; col++)
+    Astart[col] = nnz;
 
   for (int i = 0; i < numCol; i++) {
     if (Astart[i] > Astart[i + 1]) {
