@@ -41,6 +41,13 @@ class HPrimal {
   void primalChooseRow();
   void primalUpdate();
 
+  void iterateRp();
+  void iterateRpFull(bool header);
+  void iterateRpIterPh(int iterate_log_level, bool header);
+  void iterateRpPrObj(int iterate_log_level, bool header);
+  void iterateRpIterDa(int iterate_log_level, bool header);
+  void iterateRpInvert(int i_v);
+
   // Model pointer
   HighsModelObject &workHMO;
   
@@ -48,15 +55,28 @@ class HPrimal {
   int solver_num_row;
   int solver_num_tot;
 
+  bool no_free_columns;
+  
   // Pivot related
   int invertHint;
   int columnIn;
   int rowOut;
+  int columnOut;
+  double thetaDual;
+  double thetaPrimal;
+  double alpha;
+  //  double alphaRow;
+  double numericalTrouble;
 
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
   HVector column;
+
+  int num_tabu_col;
+  vector<int> tabu_col_p;
+  vector<int> tabu_col;
+
   double row_epDensity;
   double columnDensity;
 };

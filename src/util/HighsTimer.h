@@ -344,7 +344,7 @@ class HighsTimer {
     }
 
     // Report one line per clock, the time, number of calls and time per call
-    printf("%s-time  Operation       :    Time                     :   Calls   Time/Call\n", grep_stamp);
+    printf("%s-time  Operation       :    Time                     :    Calls   Time/Call\n", grep_stamp);
     // Convert approximate seconds
     double sum_tick = 0;
     double sum_time = 0;
@@ -358,7 +358,7 @@ class HighsTimer {
       if (clock_num_call[i_clock] > 0) {
 	time_per_call = time / clock_num_call[i_clock];
 	if (percent_sum_clock_ticks >= tl_per_cent_report) {
-	  printf("%s-time  %-16s: %11.4e (%5.1f%%; %5.1f%%): %7d %11.4e\n", grep_stamp,
+	  printf("%s-time  %-16s: %11.4e (%5.1f%%; %5.1f%%):%9d %11.4e\n", grep_stamp,
 		 clock_names[i_clock].c_str(),
 		 time, percent_sum_clock_ticks, percent_run_highs, 
 		 clock_num_call[i_clock], time_per_call);

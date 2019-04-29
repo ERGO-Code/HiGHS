@@ -20,9 +20,11 @@
 #include <map>
 #include <set>
 #include <vector>
+//#include <stdexcept> // Just to hack in primal simplex solver
 
 #include "HConfig.h"
 #include "simplex/HCrash.h"
+#include "simplex/HPrimal.h"
 #include "simplex/HDual.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
@@ -33,7 +35,9 @@
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
+#include "simplex/SimplexTimer.h" // Just to hack in primal simplex solver
 
+using std::runtime_error; // Just to hack in primal simplex solver
 using std::cout;
 using std::endl;
 using std::flush;
@@ -71,6 +75,52 @@ HighsStatus solveSimplex(
 
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
+  if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
+    HPrimal primal_solver(highs_model_object);
+    SimplexTimer simplex_timer;
+    simplex_timer.initialiseDualSimplexClocks(highs_model_object);
+#ifdef HiGHSDEV
+  timer.start(simplex_info.clock_[SimplexTotalClock]);
+#endif
+
+    int rankDeficiency = compute_factor(highs_model_object);
+    if (rankDeficiency) {
+      throw runtime_error("Primal initialise: singular-basis-matrix");
+    }
+
+    timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+    primal_solver.solvePhase2();
+    timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+
+#ifdef HiGHSDEV
+    //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
+    // Report the ticks before primal
+    if (simplex_info.report_simplex_inner_clock) {
+      simplex_timer.reportPrimalSimplexInnerClock(highs_model_object);
+    }
+    /*
+    if (simplex_info.report_simplex_outer_clock) {
+      simplex_timer.reportDualSimplexIterateClock(highs_model_object);
+      simplex_timer.reportDualSimplexOuterClock(highs_model_object);
+    }
+    //  printf("report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_)\n");cout<<flush;
+    //  report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_);
+    timer.stop(simplex_info.clock_[SimplexTotalClock]);
+    double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
+    
+    if (simplex_info.report_simplex_phases_clock) {
+      simplex_timer.reportSimplexTotalClock(highs_model_object);
+      simplex_timer.report_simplex_phases_clock(highs_model_object);
+    }
+    */
+#endif
+
+    HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
+
+    // Deduce the LP basis from the simplex basis
+    highs_model_object.basis_ = highs_model_object.simplex_basis_;
+    return result;
+  }
   HDual dual_solver(highs_model_object);
   dual_solver.options();
   

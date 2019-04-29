@@ -871,13 +871,13 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 
 
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
+  double primalObjectiveValue = simplex_info.primalObjectiveValue;
   double currentRunHighsTime = timer.readRunHighsClock();
 #ifdef SCIP_DEV
-  double prObjVal = compute_primal_objective_function_value(highs_model_object);
-  double dlObjVal = abs(prObjVal - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(prObjVal), 1.0));
+  double dlObjVal = abs(primalObjectiveValue - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(primalObjectiveValue), 1.0));
   HighsPrintMessage(ML_MINIMAL, "%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
 		    simplex_lp.model_name_.c_str(),
-		    prObjVal,
+		    primalObjectiveValue,
 		    dualObjectiveValue,
 		    dlObjVal,
 		    simplex_info.iteration_count,
