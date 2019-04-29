@@ -412,16 +412,16 @@ void HPrimal::primalChooseRow() {
 	}
       }
     }
-    if (unitPivotRowOut >= 0) {
-      rowOut = unitPivotRowOut;
-      alpha = column.array[rowOut];
-    } else {
-      if (require_unit_pivot) {
+    if (require_unit_pivot) {
+      if (unitPivotRowOut >= 0) {
+	rowOut = unitPivotRowOut;
+	alpha = column.array[rowOut];
+      } else {
 	rowOut = -1;
 	alpha = 0;
-      } else {
-	alpha = column.array[rowOut];
       }
+    } else {
+      alpha = column.array[rowOut];
     }
     if (numPass == 1) timer.stop(simplex_info.clock_[Chuzr2Clock]);
     if (rowOut >= 0) break;
@@ -581,13 +581,12 @@ void HPrimal::primalUpdate() {
   if (simplex_info.update_count >= simplex_info.update_limit) {
     invertHint = INVERT_HINT_UPDATE_LIMIT_REACHED;
   }
-  // Report on the iteration
-  iterateRp();
-
   // Move this to Simplex class once it's created
   // simplex_method.record_pivots(columnIn, columnOut, alpha);
   simplex_info.iteration_count++;
 
+  // Report on the iteration
+  iterateRp();
 }
 
 void HPrimal::iterateRp() {

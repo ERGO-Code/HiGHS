@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = true;
+  bool force_options_file = false;
   if (force_options_file) {
     printf("In main: set options.options_file = options_file so vscode can be used to debug\n");
     options.options_file = "options_file";
