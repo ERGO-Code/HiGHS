@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,24 +11,24 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HinOut.h"
-#include "HConst.h"
-#include "HModel.h"
+#include "io/HinOut.h"
+#include "lp_data/HConst.h"
+#include "lp_data/HighsModelObject.h"
 
-void HinOut::HinOutTestRead(HModel& ptr) {
+void HinOut::HinOutTestRead(HighsModelObject& highs_model_object) {
   readDataColumnWise();
-  setData(ptr);
+  setData(highs_model_object);
 }
 
-void HinOut::HinOutTestWrite(HModel& ptr) {
-  getData(ptr);
+void HinOut::HinOutTestWrite(HighsModelObject& highs_model_object) {
+  getData(highs_model_object);
   writeDataColumnWise();
 }
 
-void HinOut::HinOutTestIO(HModel& ptr) {
-  HinOutTestWrite(ptr);
+void HinOut::HinOutTestIO(HighsModelObject& highs_model_object) {
+  HinOutTestWrite(highs_model_object);
   // clearData();
-  HinOutTestRead(ptr);
+  HinOutTestRead(highs_model_object);
 
   compareData(2);
   cout << " DATA IS THE SAME" << endl;
@@ -160,32 +160,32 @@ void HinOut::writeDataColumnWise() {
   f.close();
 }
 
-void HinOut::getData(HModel& ptr_model) {
-  onumCol = ptr_model.lpScaled.numCol_;
-  onumRow = ptr_model.lpScaled.numRow_;
-  oAstart = ptr_model.lpScaled.Astart_;
-  oAindex = ptr_model.lpScaled.Aindex_;
-  oAvalue = ptr_model.lpScaled.Avalue_;
-  ocolCost = ptr_model.lpScaled.colCost_;
-  ocolLower = ptr_model.lpScaled.colLower_;
-  ocolUpper = ptr_model.lpScaled.colUpper_;
-  orowLower = ptr_model.lpScaled.rowLower_;
-  orowUpper = ptr_model.lpScaled.rowUpper_;
+void HinOut::getData(HighsModelObject& highs_model_object) {
+  onumCol = highs_model_object.lp_.numCol_;
+  onumRow = highs_model_object.lp_.numRow_;
+  oAstart = highs_model_object.lp_.Astart_;
+  oAindex = highs_model_object.lp_.Aindex_;
+  oAvalue = highs_model_object.lp_.Avalue_;
+  ocolCost = highs_model_object.lp_.colCost_;
+  ocolLower = highs_model_object.lp_.colLower_;
+  ocolUpper = highs_model_object.lp_.colUpper_;
+  orowLower = highs_model_object.lp_.rowLower_;
+  orowUpper = highs_model_object.lp_.rowUpper_;
 
   oAcountX = oAvalue.size();
 }
 
-void HinOut::readDataPostsolve(HModel& ptr_model) {
-  numCol = ptr_model.lpScaled.numCol_;
-  numRow = ptr_model.lpScaled.numRow_;
-  Astart = ptr_model.lpScaled.Astart_;
-  Aindex = ptr_model.lpScaled.Aindex_;
-  Avalue = ptr_model.lpScaled.Avalue_;
-  colCost = ptr_model.lpScaled.colCost_;
-  colLower = ptr_model.lpScaled.colLower_;
-  colUpper = ptr_model.lpScaled.colUpper_;
-  rowLower = ptr_model.lpScaled.rowLower_;
-  rowUpper = ptr_model.lpScaled.rowUpper_;
+void HinOut::readDataPostsolve(HighsModelObject& highs_model_object) {
+  numCol = highs_model_object.lp_.numCol_;
+  numRow = highs_model_object.lp_.numRow_;
+  Astart = highs_model_object.lp_.Astart_;
+  Aindex = highs_model_object.lp_.Aindex_;
+  Avalue = highs_model_object.lp_.Avalue_;
+  colCost = highs_model_object.lp_.colCost_;
+  colLower = highs_model_object.lp_.colLower_;
+  colUpper = highs_model_object.lp_.colUpper_;
+  rowLower = highs_model_object.lp_.rowLower_;
+  rowUpper = highs_model_object.lp_.rowUpper_;
 
   AcountX = oAvalue.size();
 }
@@ -264,17 +264,17 @@ void HinOut::compareData(int lvl) {
   }
 }
 
-void HinOut::setData(HModel& ptr_model) {
-  ptr_model.lpScaled.numCol_ = numCol;
-  ptr_model.lpScaled.numRow_ = numRow;
-  ptr_model.lpScaled.Astart_ = Astart;
-  ptr_model.lpScaled.Aindex_ = Aindex;
-  ptr_model.lpScaled.Avalue_ = Avalue;
-  ptr_model.lpScaled.colCost_ = colCost;
-  ptr_model.lpScaled.colLower_ = colLower;
-  ptr_model.lpScaled.colUpper_ = colUpper;
-  ptr_model.lpScaled.rowLower_ = rowLower;
-  ptr_model.lpScaled.rowUpper_ = rowUpper;
+void HinOut::setData(HighsModelObject& highs_model_object) {
+  highs_model_object.lp_.numCol_ = numCol;
+  highs_model_object.lp_.numRow_ = numRow;
+  highs_model_object.lp_.Astart_ = Astart;
+  highs_model_object.lp_.Aindex_ = Aindex;
+  highs_model_object.lp_.Avalue_ = Avalue;
+  highs_model_object.lp_.colCost_ = colCost;
+  highs_model_object.lp_.colLower_ = colLower;
+  highs_model_object.lp_.colUpper_ = colUpper;
+  highs_model_object.lp_.rowLower_ = rowLower;
+  highs_model_object.lp_.rowUpper_ = rowUpper;
 }
 
 HinOut::HinOut(string filenameIn, string filenameOut) {

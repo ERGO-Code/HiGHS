@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -21,9 +21,12 @@
 #include <utility>
 #include <vector>
 
-#include "HPreData.h"
-#include "HTimerPre.h"
-#include "HighsLp.h"
+#include "presolve/HPreData.h"
+#include "simplex/HTimerPre.h"
+#include "lp_data/HighsLp.h"
+
+using std::list;
+using std::string;
 
 enum class HighsPostsolveStatus {
   ReducedSolutionEmpty,
@@ -34,6 +37,7 @@ enum class HighsPostsolveStatus {
 };
 
 enum class HighsPresolveStatus {
+    NotPresolved = -1,
     NotReduced,
     Infeasible,
     Unbounded,
@@ -71,7 +75,6 @@ class Presolve : public HPreData {
   void setProblemStatus(const int s);
   void reportTimes();
 
-  friend class HModel;
   // new bounds on primal variables for implied free detection
   vector<double> implColLower;
   vector<double> implColUpper;
@@ -237,8 +240,8 @@ class PresolveInfo {
  public:
   PresolveInfo() {}
   // option_presolve : 0 means don't presolve.
-  PresolveInfo(std::string option_presolve, const HighsLp& lp) {
-    if (option_presolve == "on") {
+  PresolveInfo(PresolveOption option_presolve, const HighsLp& lp) {
+    if (option_presolve == PresolveOption::ON) {
       lp_ = &lp;
       presolve_.push_back(Presolve());
      }

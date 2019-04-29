@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.0.0)
 
-project(HIGHS LANGUAGES CXX)
+project(HIGHS LANGUAGES CXX C)
 
 set(HIGHS_VERSION_MAJOR 1)
 set(HIGHS_VERSION_MINOR 0)
@@ -39,27 +39,13 @@ endif()
 message(STATUS "Git hash: " ${GITHASH})
 
 string(TIMESTAMP TODAY "%Y-%m-%d")
-message(STATUS "compilation date: " ${TODAY})
+message(STATUS "Compilation date: " ${TODAY})
 
 set(EXT_PRESOLVE_DIR "" CACHE STRING "Path to the external presolving library")
 if(EXT_PRESOLVE_DIR)
     message(STATUS "External presolve: " ${EXT_PRESOLVE_DIR})
     include_directories(${EXT_PRESOLVE_DIR}/src)
     include_directories(${EXT_PRESOLVE_DIR}/external)
-endif()
-
-# See if boost is available
-if (UNIX)
-  find_package(Boost COMPONENTS iostreams)
-  if (Boost_FOUND)
-    add_definitions(-DBoost_FOUND)
-  endif()
-endif()
-
-# use hsol parser todo: remove once cmd option is available
-option(OLD_PARSER  "USE OLD PARSER" OFF)
-if(OLD_PARSER)
-    message(STATUS "Using old hsol parser")
 endif()
 
 # whether to use OpenMP
@@ -75,10 +61,44 @@ endif()
 message(STATUS "OpenMP: " ${OPENMP})
 
 option(SCIP_DEV "SCIP  development" OFF)
-message(STATUS "SCIP  development: " ${SCIP_DEV})
+if (NOT (${SCIP_DEV} STREQUAL  "OFF"))
+    message(STATUS "SCIP  development: " ${SCIP_DEV})
+endif()
 
 option(HiGHSDEV "HiGHS development" OFF)
-message(STATUS "HiGHS development: " ${HiGHSDEV})
+if (NOT (${HiGHSDEV} STREQUAL  "OFF"))
+    message(STATUS "HiGHS development: " ${HiGHSDEV})
+endif()
+
+option(OSI_ROOT "Osi root folder." "OFF")
+if (NOT (${OSI_ROOT} STREQUAL "OFF"))
+    # if OSI_ROOT is set, then overwrite PKG_CONFIG_PATH
+    message(STATUS "OSI root folder set: " ${OSI_ROOT})
+    set(ENV{PKG_CONFIG_PATH}  "${OSI_ROOT}/lib/pkgconfig")
+endif ()
+unset(OSI_ROOT CACHE)
+
+include(CheckLanguage)
+check_language("Fortran")
+if(CMAKE_Fortran_COMPILER)
+    enable_language(Fortran)
+    set(FORTRAN_FOUND ON)
+else()
+    set(FORTRAN_FOUND OFF)
+endif(CMAKE_Fortran_COMPILER)
+
+find_package(PkgConfig)
+pkg_check_modules(OSI osi)
+# need to come before adding any targets (add_executable, add_library)
+link_directories(${OSI_LIBRARY_DIRS})
+
+option(GAMS_ROOT "GAMS root folder." "OFF")
+if (NOT (${GAMS_ROOT} STREQUAL "OFF"))
+    message(STATUS "GAMS root folder set: " ${GAMS_ROOT})
+    set(GAMS_FOUND ON)
+else ()
+    set(GAMS_FOUND OFF)
+endif ()
 
 # whether to use shared or static libraries
 option(SHARED "Build shared libraries" ON)
@@ -105,8 +125,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src/presolve
     ${CMAKE_SOURCE_DIR}/src/simplex
     ${CMAKE_SOURCE_DIR}/src/test
-    ${CMAKE_SOURCE_DIR}/src/wrappers
-    ${CMAKE_SOURCE_DIR}/include)
+    ${CMAKE_SOURCE_DIR}/src/util)
 
 # use interior point solver
 set(IPX_DIR "${CMAKE_SOURCE_DIR}/interior_point" CACHE STRING "Path to IPX folder.")
@@ -142,7 +161,7 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-# Funciton to set compiler flags on and off easily.
+# Function to set compiler flags on and off easily.
 include(CheckCXXCompilerFlag)
 function(enable_cxx_compiler_flag_if_supported flag)
     string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)

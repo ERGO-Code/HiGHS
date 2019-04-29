@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,11 +11,12 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "Presolve.h"
-#include "HConst.h"
+#include "presolve/Presolve.h"
+#include "lp_data/HConst.h"
+#include "io/HighsIO.h"
 
-#include "HFactor.h"
-#include "KktChStep.h"
+#include "simplex/HFactor.h"
+#include "test/KktChStep.h"
 
 #include <algorithm>
 #include <cmath>
@@ -26,7 +27,19 @@
 #include <queue>
 #include <sstream>
 
-using namespace std;
+using std::ios;
+using std::max;
+using std::min;
+using std::cout;
+using std::endl;
+using std::setw;
+using std::get;
+using std::list;
+using std::make_pair;
+using std::ofstream;
+using std::flush;
+using std::setprecision;
+using std::stringstream;
 
 void Presolve::load(const HighsLp& lp) {
   numCol = lp.numCol_;
@@ -304,7 +317,9 @@ void Presolve::removeDoubletonEquations() {
   for (int row = 0; row < numRow; row++)
     if (flagRow.at(row))
       if (nzRow.at(row) == 2 &&
-          abs(rowLower.at(row) - rowUpper.at(row)) < tol) {
+          rowLower[row] > -HIGHS_CONST_INF &&
+          rowUpper[row] < HIGHS_CONST_INF &&
+          abs(rowLower[row] - rowUpper[row]) < tol) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -572,16 +587,12 @@ void Presolve::resizeProblem() {
   numCol = nC;
   numTot = nR + nC;
 
-  if (1) {
-    // if (iPrint == -1) {
-    cout << "Presolve m=" << setw(2) << numRow << "(-" << setw(2)
-         << numRowOriginal - numRow << ") ";
-    cout << "n=" << setw(2) << numCol << "(-" << setw(2)
-         << numColOriginal - numCol << ") ";
-    cout << "nz=" << setw(4) << nz << "(-" << setw(4) << ARindex.size() - nz
-         << ") ";
-    cout << endl;
-  }
+  std::stringstream ss;
+  ss << "Problem reduced: ";
+  ss << "rows " << numRow << "(-" << numRowOriginal - numRow << "), ";
+  ss << "columns " << numCol << "(-" << numColOriginal - numCol << "), ";
+  ss << "nonzeros " << nz << "(-" << ARindex.size() - nz << ") " << std::endl;
+  HighsPrintMessage(ML_MINIMAL, ss.str().c_str()); 
 
   if (nR + nC == 0) {
     status = Empty;
@@ -1002,7 +1013,9 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
-    if (abs(colCost.at(j) - d) < tol && colLower.at(j) > -HIGHS_CONST_INF) {
+    if (d < HIGHS_CONST_INF &&
+        abs(colCost.at(j) - d) < tol &&
+        colLower.at(j) > -HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colLower.at(j));
       addChange(WEAKLY_DOMINATED_COLS, 0, j);
@@ -1012,7 +1025,8 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
 
       countRemovedCols[WEAKLY_DOMINATED_COLS]++;
       timer.recordFinish(WEAKLY_DOMINATED_COLS);
-    } else if (abs(colCost.at(j) - e) < tol &&
+    } else if (e > -HIGHS_CONST_INF &&
+               abs(colCost.at(j) - e) < tol &&
                colUpper.at(j) < HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colUpper.at(j));
@@ -1491,7 +1505,11 @@ bool Presolve::removeIfImpliedFree(int col, int i, int k) {
       implColLower.at(col) = low;
       implColUpperRowIndex.at(col) = i;
     }
-    implColDualUpper.at(i) = 0;
+    // JAJH(190419): Segfault here since i is a row index and
+    // segfaults (on dcp1) due to i=4899 exceeding column dimension of
+    // 3007. Hence correction. Also pattern-matches the next case :-)
+    //    implColDualUpper.at(i) = 0;
+    implColDualUpper.at(col) = 0;
   } else if (low <= upp && upp <= colUpper.at(col)) {
     if (implColUpper.at(col) > upp) {
       implColUpper.at(col) = upp;
@@ -1736,6 +1754,12 @@ void Presolve::removeForcingConstraints(int mainIter) {
 void Presolve::removeRowSingletons() {
   timer.recordStart(SING_ROW);
   int i;
+  int singRowZ =  singRow.size();
+  /*
+  if (singRowZ == 36) {
+    printf("JAJH: singRow.size() = %d\n", singRowZ);fflush(stdout);
+  }
+  */
   while (!(singRow.empty())) {
     i = singRow.front();
     singRow.pop_front();
@@ -1747,6 +1771,12 @@ void Presolve::removeRowSingletons() {
     }
 
     int k = getSingRowElementIndexInAR(i);
+    // JAJH(190419): This throws a segfault with greenbea and greenbeb since k=-1
+    if (k < 0) {
+      printf("In removeRowSingletons: %d = k < 0\n", k);
+      printf("   Occurs for case when initial singRow.size() = %d\n", singRowZ);
+      fflush(stdout);
+    }
     int j = ARindex.at(k);
 
     // add old bounds OF X to checker and for postsolve
@@ -2066,15 +2096,13 @@ int Presolve::getSingRowElementIndexInAR(int i) {
   int k = ARstart.at(i);
   while (!flagCol.at(ARindex.at(k))) ++k;
   if (k >= ARstart.at(i + 1)) {
-    cout << "Error during presolve: no variable found in singleton row " << i
-         << ".";
+    cout << "Error during presolve: no variable found in singleton row " << i << endl;
     return -1;
   }
   int rest = k + 1;
   while (rest < ARstart.at(i + 1) && !flagCol.at(ARindex.at(rest))) ++rest;
   if (rest < ARstart.at(i + 1)) {
-    cout << "Error during presolve: more variables found in singleton row " << i
-         << ".";
+    cout << "Error during presolve: more variables found in singleton row " << i << endl;
     return -1;
   }
   return k;
@@ -2170,9 +2198,9 @@ void Presolve::testAnAR(int post) {
 // todo: error reporting.
 HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                                          HighsSolution& recovered_solution) {
-  colValue = reduced_solution.colValue_;
-  colDual = reduced_solution.colDual_;
-  rowDual = reduced_solution.rowDual_;
+  colValue = reduced_solution.col_value;
+  colDual = reduced_solution.col_dual;
+  rowDual = reduced_solution.row_dual;
 
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.

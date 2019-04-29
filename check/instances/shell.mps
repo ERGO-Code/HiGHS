@@ -1,4 +1,4 @@
-NAME          SHELL
+NAME          SHELL   SIZE: N=1775, M=537, NZ=5331
 ROWS
  L  3001
  L  3002

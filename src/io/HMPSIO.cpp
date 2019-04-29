@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,20 +11,26 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HMPSIO.h"
-#include "HConst.h"
-#include "HModelCs.h"
-#include "HighsUtils.h"
-#include "HighsLp.h"
+#include "io/HMPSIO.h"
+#include "lp_data/HConst.h"
+#include "lp_data/HighsOptions.h"
+#include "util/HighsUtils.h"
+#include "lp_data/HighsLp.h"
+#include "util/stringutil.h"
+
+using std::map;
+
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
-            int& numCol, int& objSense, double& objOffset, vector<int>& Astart,
-            vector<int>& Aindex, vector<double>& Avalue,
-            vector<double>& colCost, vector<double>& colLower,
-            vector<double>& colUpper, vector<double>& rowLower,
-            vector<double>& rowUpper, vector<int>& integerColumn) {
+int readMPS(const char* filename, int mxNumRow, int mxNumCol,
+	    int& numRow, int& numCol, int& numInt, 
+            int& objSense, double& objOffset,
+	    vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+            vector<double>& colCost, vector<double>& colLower, vector<double>& colUpper,
+	    vector<double>& rowLower, vector<double>& rowUpper,
+	    vector<int>& integerColumn,
+            vector<string>& col_names, vector<string>& row_names) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -62,6 +68,8 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   printf("readMPS: Read NAME    OK\n");
 #endif
 
+  row_names.clear();
+  col_names.clear();
   vector<char> rowType;
   map<double, int> rowIndex;
   double objName = 0;
@@ -71,7 +79,17 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow) return 2;
       rowType.push_back(flag[0]);
-      rowIndex[data[1]] = numRow++;
+      // rowIndex is used to get the row index from a row name in the
+      // COLUMNS, RHS and RANGES section. However, if this contains a
+      // reference to a row that isn't in the ROWS section the value
+      // of rowIndex is zero. Unless the value associated with the
+      // name in rowIndex is one more than the index of the row, this
+      // return of zero leads to data relating to row 0 being
+      // over-written and (generally) corrupted.
+      rowIndex[data[1]] = ++numRow;
+      std::string name(&line[4], &line[4] + 8);
+      name = trim(name);
+      row_names.push_back(name);
     }
   }
 #ifdef HiGHSDEV
@@ -81,21 +99,53 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   // Load COLUMNS
   map<double, int> colIndex;
   double lastName = 0;
+  // flag[1] is used to indicate whether there is more to read on the
+  // line - field 5 non-empty. save_flag1 is used to deduce whether
+  // the row name and value are from fields 5 and 6, or 3 and 4
+  int save_flag1 = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
+    int iRow = rowIndex[data[2]]-1;
+    std::string name = "";
+    if (iRow>=0) name = row_names[iRow];
     if (lastName != data[1]) {  // New column
       if (mxNumCol > 0 && numCol >= mxNumCol) return 2;
       lastName = data[1];
-      colIndex[data[1]] = numCol++;
+      // colIndex is used to get the column index from a column name
+      // in the BOUNDS section. However, if this contains a reference
+      // to a column that isn't in the COLUMNS section the value of
+      // colIndex is zero. Unless the value associated with the name
+      // in colIndex is one more than the index of the column, this
+      // return of zero leads to the bounds on column 0 being
+      // over-written and (generally) corrupted.
+      colIndex[data[1]] = ++numCol;
       colCost.push_back(0);
       Astart.push_back(Aindex.size());
       integerColumn.push_back(integerCol);
+      std::string name(&line[field_2_start], &line[field_2_start] + field_2_width);
+      name = trim(name);
+      col_names.push_back(name);
     }
     if (data[2] == objName)  // Cost
       colCost.back() = data[0];
     else if (data[0] != 0) {
-      Aindex.push_back(rowIndex[data[2]]);
-      Avalue.push_back(data[0]);
+      int iRow = rowIndex[data[2]] - 1;
+      if (iRow >= 0) {
+	Aindex.push_back(iRow);
+	Avalue.push_back(data[0]);
+      } else {
+	// Spurious row name
+	std::string name;
+	if (!save_flag1) {
+	  std::string field_3(&line[field_3_start], &line[field_3_start] + field_3_width);
+	  name = field_3;
+	} else {
+	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
+	  name = field_5;
+	}
+	HighsPrintMessage(ML_ALWAYS, "COLUMNS section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+      }
     }
+    save_flag1 = flag[1];
   }
   Astart.push_back(Aindex.size());
 
@@ -105,23 +155,32 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 
   // Load RHS
   vector<double> RHS(numRow, 0);
+  save_flag1 = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
     if (data[2] != objName) {
-      int iRow = rowIndex[data[2]];
-      RHS[iRow] = data[0];
+      int iRow = rowIndex[data[2]] - 1;
+      if (iRow >= 0) {
+	RHS[iRow] = data[0];
+      } else {
+	// Spurious row name
+	std::string name;
+	if (!save_flag1) {
+	  std::string field_3(&line[field_3_start], &line[field_3_start] + field_3_width);
+	  name = field_3;
+	} else {
+	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
+	  name = field_5;
+	}
+	HighsPrintMessage(ML_ALWAYS, "RHS     section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+      }
     } else {
-      // Strictly, if there is a RHS entry for the N row, it is an
-      // objective offset. However, the reported objective values for
-      // problems (eg e226) ignore this
-#ifdef HiGHSDEV
-      printf(
-          "RHS for N-row in MPS file implies objective offset of %g: ignoring "
-          "this!\n",
-          data[0]);
-#endif
-      //            objOffset = data[0]; // Objective offset
-      objOffset = 0;
+      // Treat a RHS entry for the N row as an objective offset. Not
+      // all MPS readers do this, so give different reported objective
+      // values for problems (eg e226)
+      HighsPrintMessage(ML_ALWAYS, "Using RHS value of %g for N-row in MPS file as objective offset\n", data[0]);
+      objOffset = data[0]; // Objective offset
     }
+    save_flag1 = flag[1];
   }
 #ifdef HiGHSDEV
   printf("readMPS: Read RHS     OK\n");
@@ -131,16 +190,31 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
   rowLower.resize(numRow);
   rowUpper.resize(numRow);
   if (flag[0] == 'R') {
+    save_flag1 = 0;
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      int iRow = rowIndex[data[2]];
-      if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
-        rowLower[iRow] = RHS[iRow] - fabs(data[0]);
-        rowUpper[iRow] = RHS[iRow];
+      int iRow = rowIndex[data[2]] - 1;
+      if (iRow >= 0) {
+	if (rowType[iRow] == 'L' || (rowType[iRow] == 'E' && data[0] < 0)) {
+	  rowLower[iRow] = RHS[iRow] - fabs(data[0]);
+	  rowUpper[iRow] = RHS[iRow];
+	} else {
+	  rowUpper[iRow] = RHS[iRow] + fabs(data[0]);
+	  rowLower[iRow] = RHS[iRow];
+	}
+	rowType[iRow] = 'X';
       } else {
-        rowUpper[iRow] = RHS[iRow] + fabs(data[0]);
-        rowLower[iRow] = RHS[iRow];
+	// Spurious row name
+	std::string name;
+	if (!save_flag1) {
+	  std::string field_3(&line[field_3_start], &line[field_3_start] + field_3_width);
+	  name = field_3;
+	} else {
+	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
+	  name = field_5;
+	}
+	HighsPrintMessage(ML_ALWAYS, "RANGES  section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
       }
-      rowType[iRow] = 'X';
+      save_flag1 = flag[1];
     }
   }
 
@@ -177,9 +251,12 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-      int iCol = colIndex[data[2]];
-
-      switch (flag[0]) {
+      // Find the column index associated woith the name "data[2]". If
+      // the name is in colIndex then the value stored is the true
+      // column index plus one. Otherwise 0 will be returned.
+      int iCol = colIndex[data[2]] - 1;
+      if (iCol >= 0) {
+	switch (flag[0]) {
         case 'O': /*LO*/
           colLower[iCol] = data[0];
           break;
@@ -202,20 +279,26 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
           if (colLower[iCol] == 0 && data[0] < 0)
             colLower[iCol] = -HIGHS_CONST_INF;
           break;
+	}
+      } else {
+	std::string name(&line[field_3_start], &line[field_3_start] + field_3_width);
+	HighsPrintMessage(ML_ALWAYS, "BOUNDS  section contains col %-8s not in COLUMNS section, line: %s\n", name.c_str(), line);
       }
     }
   }
-  // Set bounds of [0,1] for integer variables without bounds
+  // Determine the number of integer variables and set bounds of [0,1]
+  // for integer variables without bounds
+  numInt = 0;
   for (int iCol = 0; iCol < numCol; iCol++) {
     if (integerColumn[iCol]) {
+      numInt++;
       if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
-  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow,
-         numCol, integerCol);
+  printf("readMPS: Model has %d rows and %d columns with %d integer\n", numRow, numCol, numInt);
 #endif
   // Load ENDATA and close file
   fclose(file);
@@ -292,12 +375,13 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
-int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
-             int& objSense, double& objOffset, vector<int>& Astart,
-             vector<int>& Aindex, vector<double>& Avalue,
-             vector<double>& colCost, vector<double>& colLower,
-             vector<double>& colUpper, vector<double>& rowLower,
-             vector<double>& rowUpper, vector<int>& integerColumn) {
+int writeMPS(const char* filename, const int& numRow, const int& numCol, const int& numInt,
+             const int& objSense, const double& objOffset, const vector<int>& Astart,
+             const vector<int>& Aindex, const vector<double>& Avalue,
+             const vector<double>& colCost, const vector<double>& colLower,
+             const vector<double>& colUpper, const vector<double>& rowLower,
+             const vector<double>& rowUpper, const vector<int>& integerColumn,
+	     const vector<std::string>col_names, const vector<std::string>row_names) {
 #ifdef HiGHSDEV
   printf("writeMPS: Trying to open file %s\n", filename);
 #endif
@@ -372,28 +456,42 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
 #endif
 
   // Field:    1           2          3         4         5         6
-  // Columns:  2-3        5-12      15-22     25-36     40-47     50-61
-  //         1         2         3         4         5         6
-  // 1234567890123456789012345678901234567890123456789012345678901
+  // Columns:  2-3        5-12      15-22     25-36     40-47     50-61 Indexed from 1
+  // Columns:  1-2        4-11      14-21     24-35     39-46     49-60 Indexed from 0
+  //           1         2         3         4         5         6
+  // 0123456789012345678901234567890123456789012345678901234567890
   // x11x22222222xx33333333xx444444444444xxx55555555xx666666666666
+  // ROWS
+  //  N  ENDCAP
+  // COLUMNS
+  //     CFOOD01   BAGR01          .00756   BFTT01         .150768
+  // RHS
+  //     RHSIDE    HCAP01            -20.   CBCAP01            -8.
+  // RANGES
+  //     RANGE1    VILLKOR2            7.   VILLKOR3            7.
+  // BOUNDS
+  //  LO BOUND     CFOOD01           850.
+  //
   fprintf(file, "NAME\n");
   fprintf(file, "ROWS\n");
   fprintf(file, " N  COST\n");
   for (int r_n = 0; r_n < numRow; r_n++) {
     if (r_ty[r_n] == MPS_ROW_TY_E) {
-      fprintf(file, " E  R%-7d\n", r_n + 1);
+      fprintf(file, " E  %-8s\n", row_names[r_n].c_str());
     } else if (r_ty[r_n] == MPS_ROW_TY_G) {
-      fprintf(file, " G  R%-7d\n", r_n + 1);
+      fprintf(file, " G  %-8s\n", row_names[r_n].c_str());
     } else if (r_ty[r_n] == MPS_ROW_TY_L) {
-      fprintf(file, " L  R%-7d\n", r_n + 1);
+      fprintf(file, " L  %-8s\n", row_names[r_n].c_str());
     } else {
-      fprintf(file, " N  R%-7d\n", r_n + 1);
+      fprintf(file, " N  %-8s\n", row_names[r_n].c_str());
     }
   }
   bool integerFg = false;
   int nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
   for (int c_n = 0; c_n < numCol; c_n++) {
+    // Skip this column if it's empty and has no cost
+    if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) continue;
     if (numInt) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
@@ -411,12 +509,12 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
     }
     if (colCost[c_n] != 0) {
       double v = colCost[c_n];
-      fprintf(file, "    C%-7d  COST      %.15g\n", c_n + 1, v);
+      fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
     }
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       double v = Avalue[el_n];
       int r_n = Aindex[el_n];
-      fprintf(file, "    C%-7d  R%-7d  %.15g\n", c_n + 1, r_n + 1, v);
+      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(), row_names[r_n].c_str(), v);
     }
   }
   have_rhs = true;
@@ -424,37 +522,38 @@ int writeMPS(const char* filename, int& numRow, int& numCol, int& numInt,
     fprintf(file, "RHS\n");
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = rhs[r_n];
-      if (v) fprintf(file, "    RHS_V     R%-7d  %.15g\n", r_n + 1, v);
+      if (v) fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
     }
   }
   if (have_ranges) {
     fprintf(file, "RANGES\n");
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = ranges[r_n];
-      if (v) fprintf(file, "    RANGE     R%-7d  %.15g\n", r_n + 1, v);
+      if (v) fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
     }
   }
   if (have_bounds) {
     fprintf(file, "BOUNDS\n");
     for (int c_n = 0; c_n < numCol; c_n++) {
+      // Skip this column if it's empty and has no cost
+      if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) continue;
       double lb = colLower[c_n];
-
       double ub = colUpper[c_n];
       if (lb == ub) {
-        fprintf(file, " FX BOUND     C%-7d  %.15g\n", c_n + 1, lb);
+        fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
       } else {
         if (!highs_isInfinity(ub)) {
           // Upper bounded variable
-          fprintf(file, " UP BOUND     C%-7d  %.15g\n", c_n + 1, ub);
+          fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), ub);
         }
         if (!highs_isInfinity(-lb)) {
           // Lower bounded variable - default is 0
           if (lb) {
-            fprintf(file, " LO BOUND     C%-7d  %.15g\n", c_n + 1, lb);
+            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
           }
         } else {
           // Infinite lower bound
-          fprintf(file, " MI BOUND     C%-7d\n", c_n + 1);
+          fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
         }
       }
     }

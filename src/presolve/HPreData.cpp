@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,8 +11,12 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HPreData.h"
-#include "HConst.h"
+#include "presolve/HPreData.h"
+#include "lp_data/HConst.h"
+
+using std::cout;
+using std::setw;
+using std::endl;
 
 HPreData::HPreData() {}
 

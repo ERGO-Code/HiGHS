@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,12 +11,10 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConst.h"
-#include "HDual.h"
-#include "HPrimal.h"
-#include "HModel.h"
-#include "HTimer.h"
-//#include "HighsModelObject.h"
+#include "lp_data/HConst.h"
+#include "simplex/HDual.h"
+#include "simplex/HPrimal.h"
+//#include "HTimer.h"
 
 #include <cassert>
 #include <cmath>
@@ -25,6 +23,9 @@
 #include <set>
 #include <stdexcept>
 
+using std::cout;
+using std::endl;
+
 void HDual::iterate_multi() {
   slice_PRICE = 1;
 
@@ -32,12 +33,12 @@ void HDual::iterate_multi() {
   major_chooseRow();
   minor_chooseRow();
   if (rowOut == -1) {
-    invertHint = invertHint_possiblyOptimal;  // Was 1
+    invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
     return;
   }
 
   // Assign the slice_row_ep, skip if possible
-  if (1.0 * multi_finish[multi_nFinish].row_ep->count / numRow < 0.01)
+  if (1.0 * multi_finish[multi_nFinish].row_ep->count / solver_num_row < 0.01)
     slice_PRICE = 0;
 
   if (slice_PRICE) {
@@ -61,7 +62,7 @@ void HDual::major_chooseRow() {
   /**
    * 0. Initial check to see if we need to do it again
    */
-  if (model->countUpdate == 0) multi_chooseAgain = 1;
+  if (workHMO.simplex_info_.update_count == 0) multi_chooseAgain = 1;
   if (!multi_chooseAgain) return;
   multi_chooseAgain = 0;
   multi_iteration++;
@@ -109,7 +110,7 @@ void HDual::major_chooseRow() {
     for (int ich = 0; ich < multi_num; ich++) {
       if (multi_choice[ich].rowOut >= 0) {
         row_epDensity *= 0.95;
-        row_epDensity += 0.05 * multi_choice[ich].row_ep.count / numRow;
+        row_epDensity += 0.05 * multi_choice[ich].row_ep.count / solver_num_row;
       }
     }
 
@@ -129,7 +130,7 @@ void HDual::major_chooseRow() {
   }
 
   // 6. Take other info associated with choices
-  double pamiCutoff = model->dblOption[DBLOPT_PAMI_CUTOFF];
+  double pami_cutoff = 0.95;
   for (int i = 0; i < multi_num; i++) {
     const int iRow = multi_choice[i].rowOut;
     if (iRow < 0) continue;
@@ -141,7 +142,7 @@ void HDual::major_chooseRow() {
     multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit =
         dualRHS.workArray[iRow] / dualRHS.workEdWt[iRow];
-    multi_choice[i].infeasLimit *= pamiCutoff;
+    multi_choice[i].infeasLimit *= pami_cutoff;
   }
 
   // 6. Finish count
@@ -149,7 +150,7 @@ void HDual::major_chooseRow() {
 }
 
 void HDual::major_chooseRowBtran() {
-  model->timer.recordStart(HTICK_BTRAN);
+  //  timer.recordStart(HTICK_BTRAN);
 
   // 4.1. Prepare BTRAN buffer
   int multi_ntasks = 0;
@@ -183,7 +184,7 @@ void HDual::major_chooseRowBtran() {
   // 4.3 Put back edge weights
   for (int i = 0; i < multi_ntasks; i++)
     multi_choice[multi_iwhich[i]].infeasEdWt = multi_EdWt[i];
-  model->timer.recordFinish(HTICK_BTRAN);
+  //  timer.recordFinish(HTICK_BTRAN);
 }
 
 void HDual::minor_chooseRow() {
@@ -216,7 +217,7 @@ void HDual::minor_chooseRow() {
 
     // Assign useful variables
     rowOut = workChoice->rowOut;
-    columnOut = highs_model_object->basis_.basicIndex_[rowOut];
+    columnOut = workHMO.simplex_basis_.basicIndex_[rowOut];
     double valueOut = workChoice->baseValue;
     double lowerOut = workChoice->baseLower;
     double upperOut = workChoice->baseUpper;
@@ -240,8 +241,8 @@ void HDual::minor_chooseRow() {
 void HDual::minor_update() {
   // Minor update - store roll back data
   MFinish *Fin = &multi_finish[multi_nFinish];
-  Fin->moveIn = highs_model_object->basis_.nonbasicMove_[columnIn];
-  Fin->shiftOut = highs_model_object->simplex_.workShift_[columnOut];
+  Fin->moveIn = workHMO.simplex_basis_.nonbasicMove_[columnIn];
+  Fin->shiftOut = workHMO.simplex_info_.workShift_[columnOut];
   Fin->flipList.clear();
   for (int i = 0; i < dualRow.workCount; i++)
     Fin->flipList.push_back(dualRow.workData[i].first);
@@ -273,7 +274,7 @@ void HDual::minor_updateDual() {
    *    XXX Data parallel (depends on the ap partition before)
    */
   if (thetaDual == 0) {
-    model->shiftCost(columnIn, -workDual[columnIn]);
+    shift_cost(workHMO, columnIn, -workDual[columnIn]);//model->shiftCost(columnIn, -workDual[columnIn]);
   } else {
     dualRow.update_dual(thetaDual, columnOut);
     if (slice_PRICE) {
@@ -283,7 +284,7 @@ void HDual::minor_updateDual() {
   }
   workDual[columnIn] = 0;
   workDual[columnOut] = -thetaDual;
-  model->shiftBack(columnOut);
+  shift_back(workHMO, columnOut);//model->shiftBack(columnOut);
 
   /**
    * 2. Apply global bound flip
@@ -342,19 +343,21 @@ void HDual::minor_updatePrimal() {
 }
 void HDual::minor_updatePivots() {
   MFinish *Fin = &multi_finish[multi_nFinish];
-  model->updatePivots(columnIn, rowOut, sourceOut);
+  update_pivots(workHMO, columnIn, rowOut, sourceOut);//model->updatePivots(columnIn, rowOut, sourceOut);
   Fin->EdWt /= (alphaRow * alphaRow);
-  Fin->basicValue = highs_model_object->simplex_.workValue_[columnIn] + thetaPrimal;
-  model->updateMatrix(columnIn, columnOut);
+  Fin->basicValue = workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal;
+  update_matrix(workHMO, columnIn, columnOut); //model->updateMatrix(columnIn, columnOut);
   Fin->columnIn = columnIn;
   Fin->alphaRow = alphaRow;
-  model->recordPivots(columnIn, columnOut, alphaRow);
+  // Move this to Simplex class once it's created
+  // simplex_method.record_pivots(columnIn, columnOut, alphaRow);
+  workHMO.simplex_info_.iteration_count++;
 }
 
 void HDual::minor_updateRows() {
-  model->timer.recordStart(HTICK_UPDATE_ROW_EP);
+  //  timer.recordStart(HTICK_UPDATE_ROW_EP);
   const HVector *Row = multi_finish[multi_nFinish].row_ep;
-  int updateRows_inDense = (Row->count < 0) || (Row->count > 0.1 * numRow);
+  int updateRows_inDense = (Row->count < 0) || (Row->count > 0.1 * solver_num_row);
   if (updateRows_inDense) {
     int multi_nTasks = 0;
     int multi_iwhich[HIGHS_THREAD_LIMIT];
@@ -406,7 +409,7 @@ void HDual::minor_updateRows() {
       }
     }
   }
-  model->timer.recordFinish(HTICK_UPDATE_ROW_EP);
+  //  timer.recordFinish(HTICK_UPDATE_ROW_EP);
 }
 
 void HDual::major_update() {
@@ -430,13 +433,13 @@ void HDual::major_update() {
     double alphaR = fabs(iFinish->alphaRow);
     double compare = min(alphaC, alphaR);
     double alphaDiff = fabs(alphaC - alphaR);
-    // int startUpdate = model->countUpdate - multi_nFinish;
-    if (alphaDiff / compare > 1e-8 && model->countUpdate > 0) {
-      cout << "REPORT " << model->modelName << " NEED-ROLL-BACK   ";
-      cout << model->numberIteration << " alpha = " << alphaC
+    // int startUpdate = workHMO.simplex_info_.update_count - multi_nFinish;
+    if (alphaDiff / compare > 1e-8 && workHMO.simplex_info_.update_count > 0) {
+      cout << "REPORT " << workHMO.simplex_lp_.model_name_ << " NEED-ROLL-BACK   ";
+      cout << workHMO.simplex_info_.iteration_count << " alpha = " << alphaC
            << " alphaR = " << alphaR << " diff = " << alphaDiff / compare
            << "  multi_nFinish = " << multi_nFinish << endl;
-      invertHint = invertHint_possiblySingularBasis;
+      invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
 	// if (startUpdate > 0) {
       major_rollback();
       return;
@@ -486,7 +489,7 @@ void HDual::major_updateFtranPrepare() {
 }
 
 void HDual::major_updateFtranParallel() {
-  model->timer.recordStart(HTICK_FTRAN_MIX);
+  //  timer.recordStart(HTICK_FTRAN_MIX);
 
   // Prepare buffers
   int multi_ntasks = 0;
@@ -531,14 +534,14 @@ void HDual::major_updateFtranParallel() {
     MFinish *Fin = &multi_finish[iFn];
     HVector *Col = Fin->column;
     HVector *Row = Fin->row_ep;
-    columnDensity = 0.95 * columnDensity + 0.05 * Col->count / numRow;
-    rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / numRow;
+    columnDensity = 0.95 * columnDensity + 0.05 * Col->count / solver_num_row;
+    rowdseDensity = 0.95 * rowdseDensity + 0.05 * Row->count / solver_num_row;
   }
-  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  //  timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::major_updateFtranFinal() {
-  model->timer.recordStart(HTICK_FTRAN_MIX);
+  //  timer.recordStart(HTICK_FTRAN_MIX);
   int updateFTRAN_inDense = dualRHS.workCount < 0;
   if (updateFTRAN_inDense) {
     for (int iFn = 0; iFn < multi_nFinish; iFn++) {
@@ -557,14 +560,14 @@ void HDual::major_updateFtranFinal() {
         if (fabs(pivotX1) > HIGHS_CONST_TINY) {
           const double pivot = pivotX1 / pivotAlpha;
 #pragma omp parallel for
-          for (int i = 0; i < numRow; i++) myCol[i] -= pivot * pivotArray[i];
+          for (int i = 0; i < solver_num_row; i++) myCol[i] -= pivot * pivotArray[i];
           myCol[pivotRow] = pivot;
         }
         // The FTRAN-DSE buffer
         if (fabs(pivotX2) > HIGHS_CONST_TINY) {
           const double pivot = pivotX2 / pivotAlpha;
 #pragma omp parallel for
-          for (int i = 0; i < numRow; i++) myRow[i] -= pivot * pivotArray[i];
+          for (int i = 0; i < solver_num_row; i++) myRow[i] -= pivot * pivotArray[i];
           myRow[pivotRow] = pivot;
         }
       }
@@ -594,7 +597,7 @@ void HDual::major_updateFtranFinal() {
       }
     }
   }
-  model->timer.recordFinish(HTICK_FTRAN_MIX);
+  //  timer.recordFinish(HTICK_FTRAN_MIX);
 }
 
 void HDual::major_updatePrimal() {
@@ -604,7 +607,7 @@ void HDual::major_updatePrimal() {
     const double *mixArray = &columnBFRT.array[0];
     double *rhs = &dualRHS.workArray[0];
 #pragma omp parallel for schedule(static)
-    for (int iRow = 0; iRow < numRow; iRow++) {
+    for (int iRow = 0; iRow < solver_num_row; iRow++) {
       baseValue[iRow] -= mixArray[iRow];
       const double value = baseValue[iRow];
       const double less = baseLower[iRow] - value;
@@ -621,7 +624,7 @@ void HDual::major_updatePrimal() {
       double Kai = -2 / multi_finish[iFn].alphaRow;
       double *EdWt = &dualRHS.workEdWt[0];
 #pragma omp parallel for schedule(static)
-      for (int iRow = 0; iRow < numRow; iRow++) {
+      for (int iRow = 0; iRow < solver_num_row; iRow++) {
         const double val = colArray[iRow];
         EdWt[iRow] += val * (pivotEdWt * val + Kai * dseArray[iRow]);
         if (EdWt[iRow] < 1e-4) EdWt[iRow] = 1e-4;
@@ -682,11 +685,9 @@ void HDual::major_updateFactor() {
   }
   iRows[multi_nFinish - 1] = multi_finish[multi_nFinish - 1].rowOut;
   if (multi_nFinish > 0)
-    model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows,
-                        &invertHint);
-
-  if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && model->countUpdate > 200)
-    invertHint = invertHint_syntheticClockSaysInvert;
+    update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);// model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
+  if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && workHMO.simplex_info_.update_count > 200)
+    invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
 }
 
 void HDual::major_rollback() {
@@ -694,24 +695,25 @@ void HDual::major_rollback() {
     MFinish *Fin = &multi_finish[iFn];
 
     // 1. Roll back pivot
-    highs_model_object->basis_.nonbasicMove_[Fin->columnIn] = Fin->moveIn;
-    highs_model_object->basis_.nonbasicFlag_[Fin->columnIn] = 1;
-    highs_model_object->basis_.nonbasicMove_[Fin->columnOut] = 0;
-    highs_model_object->basis_.nonbasicFlag_[Fin->columnOut] = 0;
-    highs_model_object->basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
+    workHMO.simplex_basis_.nonbasicMove_[Fin->columnIn] = Fin->moveIn;
+    workHMO.simplex_basis_.nonbasicFlag_[Fin->columnIn] = 1;
+    workHMO.simplex_basis_.nonbasicMove_[Fin->columnOut] = 0;
+    workHMO.simplex_basis_.nonbasicFlag_[Fin->columnOut] = 0;
+    workHMO.simplex_basis_.basicIndex_[Fin->rowOut] = Fin->columnOut;
 
     // 2. Roll back matrix
-    model->updateMatrix(Fin->columnOut, Fin->columnIn);
+    update_matrix(workHMO, Fin->columnOut, Fin->columnIn);// model->updateMatrix(Fin->columnOut, Fin->columnIn);
 
     // 3. Roll back flips
-    for (unsigned i = 0; i < Fin->flipList.size(); i++)
-      model->flipBound(Fin->flipList[i]);
+    for (unsigned i = 0; i < Fin->flipList.size(); i++) {
+      flip_bound(workHMO, Fin->flipList[i]); //model->flipBound(Fin->flipList[i]);
+    }
 
     // 4. Roll back cost
-    highs_model_object->simplex_.workShift_[Fin->columnIn] = 0;
-    highs_model_object->simplex_.workShift_[Fin->columnOut] = Fin->shiftOut;
+    workHMO.simplex_info_.workShift_[Fin->columnIn] = 0;
+    workHMO.simplex_info_.workShift_[Fin->columnOut] = Fin->shiftOut;
 
     // 5. The iteration count
-    model->numberIteration--;
+    workHMO.simplex_info_.iteration_count--;
   }
 }

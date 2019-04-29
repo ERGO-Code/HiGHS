@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -19,7 +19,6 @@
 //#include <cstdio>
 //#include <fstream>
 //#include <iostream>
-// using namespace std;
 
 int readToy_LP_cpp(const char* filename, int* m_p, int* n_p, int* maxmin,
                    double* offset, double** A, double** b, double** c,

@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -17,9 +17,13 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
-using namespace std;
 
 #include "HConfig.h"
+
+using std::vector;
+using std::max;
+using std::min;
+
 class HVector;
 
 enum UPDATE_METHOD {
@@ -56,6 +60,30 @@ const double hyperRESULT = 0.10;
  *
  * Solves \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN) and
  * \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
+ *
+ * HFactor is initialised using HFactor::setup, which takes copies of
+ * the pointers to the constraint matrix starts, indices, values and
+ * basic column indices. 
+ *
+ * Forming \f$PBQ=LU\f$ (INVERT) is performed using HFactor::build
+ *
+ * Solving \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN) is performed using
+ * HFactor::ftran
+ *
+ * Solving \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN) is performed using
+ * HFactor::btran
+ *
+ * Updating the invertible representation of the basis matrix
+ * according to \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
+ * is performed by HFactor::update. UPDATE requires vectors
+ * \f$B^{-1}\mathbf{a}_q\f$ and \f$B^{-T}\mathbf{e}_q\f$, together
+ * with the index of the pivotal row.
+ *
+ * HFactor assumes that the basic column indices are kept up-to-date
+ * externally as basis changes take place. INVERT permutes the basic
+ * column indices, since these define the order of the solution values
+ * after FTRAN, and the assumed order of the RHS before BTRAN
+ *
  */
 class HFactor {
  public:
@@ -82,11 +110,13 @@ class HFactor {
   /**
    * @brief Change the update method
    *
-   * Only called in HModel::changeUpdate, which is only called in
-   * HTester.cpp Should only be compiled when HiGHSDEV=on
+   * Only called in HighsSimplexInterface::change_update_method, which
+   * is only called in HTester.cpp Should only be compiled when
+   * HiGHSDEV=on
    */
-  void change(int updateMethod  //!< New update method
-  );
+  void change(
+	      int updateMethod  //!< New update method
+	      );
 #endif
 
   /**
@@ -117,7 +147,7 @@ class HFactor {
    * \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
    */
   void update(HVector *aq,  //!< Vector \f$B^{-1}\mathbf{a}_q\f$
-              HVector *ep,  //!< Vector \f$B^{-T}\mathbf{e}_q\f$
+              HVector *ep,  //!< Vector \f$B^{-T}\mathbf{e}_p\f$
               int *iRow,    //!< Index of pivotal row
               int *hint     //!< Reinversion status
   );
@@ -186,6 +216,15 @@ class HFactor {
   void checkInvert();
 #endif
 
+
+  // Properties of data held in HFactor.h. To "have" them means that
+  // they are assigned.
+  int haveArrays;
+  // The representation of B^{-1} corresponds to the current basis
+  int haveInvert;
+  // The representation of B^{-1} corresponds to the current basis and is fresh
+  int haveFreshInvert;
+
  private:
   /**
    * Data of the factor
@@ -199,8 +238,6 @@ class HFactor {
   const double *Avalue;
   int *baseIndex;
   int updateMethod;
-
-  // Count of elements
 
   // Working buffer
   int nwork;

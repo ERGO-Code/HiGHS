@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,13 +11,19 @@
  * @brief 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "KktChStep.h"
+#include "test/KktChStep.h"
 
-#include "HConst.h"
-#include "KktCheck.h"
+#include "lp_data/HConst.h"
+#include "test/KktCheck.h"
 
 #include <utility>
-using namespace std;
+
+using std::cout;
+using std::endl;
+using std::pair;
+using std::setw;
+using std::vector;
+using std::get;
 
 void KktChStep::passSolution(const vector<double>& colVal,
                              const vector<double>& colDu,

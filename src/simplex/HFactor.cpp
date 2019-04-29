@@ -2,7 +2,7 @@
 /*                                                                       */
 /*    This file is part of the HiGHS linear optimization suite           */
 /*                                                                       */
-/*    Written and engineered 2008-2018 at the University of Edinburgh    */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
 /*                                                                       */
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
@@ -11,16 +11,21 @@
  * @brief Types of solution classes 
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HFactor.h"
-#include "HConst.h"
-#include "HTimer.h"
-#include "HVector.h"
+#include "simplex/HFactor.h"
+#include "lp_data/HConst.h"
+#include "util/HighsTimer.h"
+#include "simplex/HVector.h"
 
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
-using namespace std;
+
+using std::fill_n;
+using std::copy;
+using std::vector;
+using std::pair;
+using std::make_pair;
 
 void solveMatrixT(const int Xstart, const int Xend, const int Ystart,
                   const int Yend, const int *Tindex, const double *Tvalue,
@@ -255,7 +260,7 @@ void HFactor::change(int updateMethod_) { updateMethod = updateMethod_; }
 #endif
 
 int HFactor::build() {
-  HTimer timer;
+  HighsTimer timer;
   timer.reset();
   build_syntheticTick = 0;
   build_realTick = timer.getTick();
@@ -335,7 +340,7 @@ void HFactor::checkInvert() {
       } else {
         ckValue = 0;
       }
-      double lcEr = abs(value - ckValue);
+      double lcEr = fabs(value - ckValue);
       invertEr0 += lcEr * lcEr;
       if (rpR && lcEr > 1e-12)
         printf("   Row: %2d has value %11.4g: error = %11.4g\n", lc_iRow, value,
