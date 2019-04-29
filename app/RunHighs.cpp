@@ -60,8 +60,16 @@ int main(int argc, char **argv) {
   // Load user options.
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
-  //  options.mip=1; //ToDo ensure that options file works in vscode, otherwise this is necessary to force MIP solver
   if (!options_ok) return 0;
+
+  bool force_options_file = false;
+  if (force_options_file) {
+    printf("In main: set options.options_file = options_file so vscode can be used to debug\n");
+    options.options_file = "options_file";
+    if (!loadOptionsFromFile(options)) {
+      printf("In main: fail return from loadOptionsFromFile\n");
+    }
+  }
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);

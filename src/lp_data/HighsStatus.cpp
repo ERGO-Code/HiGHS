@@ -48,6 +48,9 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::LpEmpty:
       return "LP is empty";
       break;
+    case HighsStatus::ReachedDualObjectiveUpperBound:
+      return "Reached Dual Objective Upper Bound";
+      break;
     case HighsStatus::Unbounded:
       return "Unbounded";
       break;

@@ -138,6 +138,8 @@ struct HighsSimplexLpStatus {
   bool has_fresh_rebuild = false;
   // The dual objective function value is known
   bool has_dual_objective_value = false;
+  // The dual objective function value is known
+  bool has_primal_objective_value = false;
   // The solution status is UNSET
   SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
 };
@@ -243,12 +245,16 @@ struct HighsSimplexInfo {
 
   // Number of UPDATE operations performed - should be zeroed when INVERT is performed
   int update_count;
-  // Value of dual objective - only set when computed from scratch in rebuild()
+  // Value of dual objective - only set when computed from scratch in dual rebuild()
   double dualObjectiveValue;
+  // Value of primal objective - only set when computed from scratch in primal rebuild()
+  double primalObjectiveValue;
 
 
   // Value of dual objective that is updated in dual simplex solver
   double updatedDualObjectiveValue;
+  // Value of primal objective that is updated in primal simplex solver
+  double updatedPrimalObjectiveValue;
   // Number of logical variables in the basis 
   int num_basic_logicals;
 

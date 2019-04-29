@@ -68,9 +68,9 @@ Usage:
       --ipm arg              Use interior point method solver: off by
                              default.
       --parallel arg         Use parallel solve: off by default.
-      --time-limit arg       Use time limit.
-      --iteration-limit arg  Use iteration limit (integer).
-      --options-file arg     File containing HiGHS options.
+      --time_limit arg       Use time limit.
+      --iteration_limit arg  Use iteration limit (integer).
+      --options_file arg     File containing HiGHS options.
       --parser arg           Mps parser type: swap back to fixed format
                              parser.
   -h, --help                 Print help.

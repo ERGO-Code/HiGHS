@@ -98,6 +98,10 @@ void compute_dual_objective_value(
 				  HighsModelObject &highs_model_object,
                                   int phase = 2);
 
+void compute_primal_objective_value(
+				    HighsModelObject &highs_model_object
+				    );
+
 void initialise_simplex_lp_random_vectors(
 					  HighsModelObject &highs_model
 					  );
@@ -247,6 +251,15 @@ void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
 
+int computeNumBinaryColumnValues(
+				 HighsModelObject &highs_model_object,
+				 bool report_values = false
+				 );
+
+int computePrimalInfeasible(
+		    HighsModelObject &highs_model_object
+		    );
+
 void compute_dual(
 		  HighsModelObject &highs_model_object
 		  );
@@ -272,11 +285,6 @@ int set_source_out_from_bound(
 			      HighsModelObject &highs_model_object,
                               const int column_out
 			      );
-
-double
-compute_primal_objective_function_value(
-					HighsModelObject &highs_model_object
-					);
 
 // Record the shift in the cost of a particular column
 void shift_cost(
@@ -320,6 +328,11 @@ void util_analyse_lp_solution(
 #endif
 
 void report_iteration_count_dual_objective_value(
+						 HighsModelObject &highs_model_object,
+						 int i_v
+						 );
+
+void report_iteration_count_primal_objective_value(
 						 HighsModelObject &highs_model_object,
 						 int i_v
 						 );

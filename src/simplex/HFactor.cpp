@@ -340,7 +340,7 @@ void HFactor::checkInvert() {
       } else {
         ckValue = 0;
       }
-      double lcEr = abs(value - ckValue);
+      double lcEr = fabs(value - ckValue);
       invertEr0 += lcEr * lcEr;
       if (rpR && lcEr > 1e-12)
         printf("   Row: %2d has value %11.4g: error = %11.4g\n", lc_iRow, value,

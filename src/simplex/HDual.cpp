@@ -1199,20 +1199,25 @@ void HDual::iterateRpIterDa(int iterate_log_level, bool header) {
 }
 
 void HDual::iterateRpDsty(int iterate_log_level, bool header) {
+  bool rp_dual_steepest_edge = dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap  DSE");
+    HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap");
+    if (rp_dual_steepest_edge) {
+      HighsPrintMessage(iterate_log_level, "  DSE");
+    } else {
+      HighsPrintMessage(iterate_log_level, "     ");
+    }
   } else {
     int l10ColDse = intLog10(columnDensity);
     int l10REpDse = intLog10(row_epDensity);
     int l10RapDse = intLog10(row_apDensity);
-    double lc_rowdseDensity;
-    if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
-      lc_rowdseDensity = rowdseDensity;
+    HighsPrintMessage(iterate_log_level, " %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse);
+    if (rp_dual_steepest_edge) {
+      int l10DseDse = intLog10(rowdseDensity);
+      HighsPrintMessage(iterate_log_level, " %4d", l10DseDse);
     } else {
-      lc_rowdseDensity = 0;
+      HighsPrintMessage(iterate_log_level, "     ");
     }
-    int l10DseDse = intLog10(lc_rowdseDensity);
-    HighsPrintMessage(iterate_log_level, " %4d %4d %4d %4d", l10ColDse, l10REpDse, l10RapDse, l10DseDse);
   }
 }
 
@@ -1518,7 +1523,7 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   // If reinversion is needed then skip this method
   if (invertHint) return;
 
-  timer.start(simplex_info.clock_[Chuzr1Clock]);
+  timer.start(simplex_info.clock_[ChuzrClock]);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
@@ -1553,10 +1558,10 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;  
-    timer.stop(simplex_info.clock_[Chuzr1Clock]);
+    timer.stop(simplex_info.clock_[ChuzrClock]);
     return;
   }
-  timer.stop(simplex_info.clock_[Chuzr1Clock]);
+  timer.stop(simplex_info.clock_[ChuzrClock]);
 
   // Choose column 2, This only happens if didn't go out
   dualRow.choose_final();
@@ -1661,8 +1666,7 @@ void HDual::updateVerify() {
   double aRow = fabs(alphaRow);
   double aDiff = fabs(aCol - aRow);
   numericalTrouble = aDiff / min(aCol, aRow);
-  // Reinvert if the relative difference is large enough, and updates hav ebeen
-  // performed
+  // Reinvert if the relative difference is large enough, and updates have been performed
   if (numericalTrouble > 1e-7 && workHMO.simplex_info_.update_count > 0) {
     invertHint = INVERT_HINT_POSSIBLY_SINGULAR_BASIS;
   }
