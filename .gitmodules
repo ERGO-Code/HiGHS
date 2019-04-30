@@ -1,6 +1,0 @@
-[submodule "interior_point/basiclu"]
-	path = interior_point/basiclu
-	url = git@github.com:ERGO-Code/basiclu.git
-[submodule "interior_point/ipx"]
-	path = interior_point/ipx
-	url = git@github.com:ERGO-Code/ipx.git
