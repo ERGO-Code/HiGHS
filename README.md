@@ -141,7 +141,7 @@ highs library. After running the code above compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 
-`LD_LIBRARY_PATH=intstall_folder/lib/ ./use_highs`
+`LD_LIBRARY_PATH=install_folder/lib/ ./use_highs`
 
 Interfaces
 ----------
