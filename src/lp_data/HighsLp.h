@@ -97,7 +97,7 @@ struct HighsScale {
   std::vector<double> row_;
 };
 
-struct HighsBasis {
+struct SimplexBasis {
   // The basis for the simplex method consists of basicIndex,
   // nonbasicFlag and nonbasicMove. If valid_ is true then they are
   // self-consistent and correpond to the dimensions of an associated

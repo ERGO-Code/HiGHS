@@ -33,11 +33,11 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 
   HighsLp &lp = highs_model_object.lp_;
   HighsOptions &options = highs_model_object.options_;
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
@@ -144,11 +144,11 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
   // Uses to_col in iterator style
   HighsLp &lp = highs_model_object.lp_;
 
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
@@ -201,11 +201,11 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
   HighsLp &lp = highs_model_object.lp_;
   HighsOptions &options = highs_model_object.options_;
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
@@ -353,11 +353,11 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
   printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row, to_row);
 #endif
   HighsLp &lp = highs_model_object.lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsScale &scale = highs_model_object.scale_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
@@ -919,7 +919,7 @@ void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
 						   vector<double> &XrowDual
 						   ) {
   HighsScale &scale = highs_model_object.scale_;
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   // Take primal solution
@@ -954,7 +954,7 @@ void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
 }
 
 void HighsSimplexInterface::get_basicIndex_nonbasicFlag(vector<int> &XbasicIndex, vector<int> &XnonbasicFlag) {
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   XbasicIndex.resize(simplex_lp.numRow_);
   XnonbasicFlag.resize(basis.nonbasicFlag_.size());
@@ -965,7 +965,7 @@ void HighsSimplexInterface::get_basicIndex_nonbasicFlag(vector<int> &XbasicIndex
 }
 
 int HighsSimplexInterface::get_basic_indices(int *bind) {
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = basis.basicIndex_[row];
@@ -979,7 +979,7 @@ int HighsSimplexInterface::get_basic_indices(int *bind) {
 
   // Utilities to convert model basic/nonbasic status to/from SCIP-like status
 int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const int* rstat) {
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -1064,7 +1064,7 @@ int HighsSimplexInterface::convert_baseStat_to_working(const int* cstat, const i
 }
 
 int HighsSimplexInterface::convert_Working_to_BaseStat(int* cstat, int* rstat) {
-  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   if (cstat != NULL) {
     for (int col = 0; col < simplex_lp.numCol_; col++) {

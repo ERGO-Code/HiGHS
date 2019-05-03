@@ -29,11 +29,11 @@ public:
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsBasis basis_;
+  SimplexBasis basis_;
   HighsSolution solution_;
 
   HighsLp simplex_lp_;
-  HighsBasis simplex_basis_;
+  SimplexBasis simplex_basis_;
   HighsSimplexInfo simplex_info_;
   HighsSimplexLpStatus simplex_lp_status_;
   //  HighsRanging ranging_;

@@ -1588,7 +1588,7 @@ void util_analyseLp(const HighsLp &lp, const char *message) {
 }
 #endif
 
-HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
+HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
                          HighsNewBasis& new_basis) {
   new_basis.col_status.clear();
   new_basis.row_status.clear();
@@ -1637,7 +1637,7 @@ HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
   return HighsStatus::OK;
 }
 
-HighsNewBasis getHighsBasis(const HighsLp& lp, const HighsBasis& basis) {
+HighsNewBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis) {
   HighsNewBasis new_basis;
   HighsStatus result = convertBasis(lp, basis, new_basis);
   if (result != HighsStatus::OK)

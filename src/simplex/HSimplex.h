@@ -22,25 +22,25 @@
 
 void append_nonbasic_cols_to_basis(
 				   HighsLp &lp,
-				   HighsBasis &basis,
+				   SimplexBasis &basis,
 				   int XnumNewCol
 				   );
 
 void append_basic_rows_to_basis(
 				HighsLp &lp,
-				HighsBasis &basis,
+				SimplexBasis &basis,
 				int XnumNewRow
 				);
 
 bool nonbasic_flag_basic_index_ok(
 				  HighsLp &lp,
-				  HighsBasis &basis
+				  SimplexBasis &basis
 				  );
 
 #ifdef HiGHSDEV
 void report_basis(
 		  HighsLp &lp,
-		  HighsBasis &basis
+		  SimplexBasis &basis
 		  );
 #endif
 

@@ -223,7 +223,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   const HighsLp &lp = highs_model_object.lp_;
   HighsScale &scale = highs_model_object.scale_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HMatrix &matrix = highs_model_object.matrix_;
