@@ -34,16 +34,16 @@ void report_row_vec_sol(
   if (nrow <= 0) return;
   printf("Row    St      Primal       Lower       Upper        Dual\n");
   for (int row = 0; row < nrow; row++) {
-    if (XrowStatus[row] == (int) HighsFredBasisStatus::BASIC)
+    if (XrowStatus[row] == (int) HighsBasisStatus::BASIC)
       printf("%6d BC", row);
-    else if (XrowStatus[row] == (int) HighsFredBasisStatus::ZERO)
+    else if (XrowStatus[row] == (int) HighsBasisStatus::ZERO)
       printf("%6d FR", row);
-    else if (XrowStatus[row] == (int) HighsFredBasisStatus::LOWER) {
+    else if (XrowStatus[row] == (int) HighsBasisStatus::LOWER) {
       if (XrowLower[row] == XrowUpper[row])
 	printf("%6d FX", row);
       else
 	printf("%6d LB", row);
-    } else if (XrowStatus[row] == (int) HighsFredBasisStatus::UPPER)
+    } else if (XrowStatus[row] == (int) HighsBasisStatus::UPPER)
       printf("%6d UB", row);
     else
       printf("%6d ??", row);
@@ -85,16 +85,16 @@ void report_col_vec_sol(int ncol,
 	 "Col    St      Primal       Lower       Upper        Dual        "
 	 "Cost\n");
   for (int col = 0; col < ncol; col++) {
-    if (XcolStatus[col] == (int) HighsFredBasisStatus::BASIC)
+    if (XcolStatus[col] == (int) HighsBasisStatus::BASIC)
       printf("%6d BC", col);
-    else if (XcolStatus[col] == (int) HighsFredBasisStatus::ZERO)
+    else if (XcolStatus[col] == (int) HighsBasisStatus::ZERO)
       printf("%6d FR", col);
-    else if (XcolStatus[col] == (int) HighsFredBasisStatus::LOWER) {
+    else if (XcolStatus[col] == (int) HighsBasisStatus::LOWER) {
       if (colLower[col] == XcolUpper[col])
         printf("%6d FX", col);
       else
         printf("%6d LB", col);
-    } else if (XcolStatus[col] == (int) HighsFredBasisStatus::UPPER)
+    } else if (XcolStatus[col] == (int) HighsBasisStatus::UPPER)
       printf("%6d UB", col);
     else
       printf("%6d ??", col);

@@ -1598,16 +1598,16 @@ HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
 
   for (int col = 0; col < lp.numCol_; col++) {
     if (!basis.nonbasicFlag_[col]) {
-      new_basis.col_status[col] = HighsFredBasisStatus::BASIC;
+      new_basis.col_status[col] = HighsBasisStatus::BASIC;
     } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_UP) {
-        new_basis.col_status[col] = HighsFredBasisStatus::LOWER;
+        new_basis.col_status[col] = HighsBasisStatus::LOWER;
     } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_DN) {
-        new_basis.col_status[col] =  HighsFredBasisStatus::UPPER;
+        new_basis.col_status[col] =  HighsBasisStatus::UPPER;
     } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_ZE) {
       if (lp.colLower_[col] == lp.colUpper_[col]) {
-          new_basis.col_status[col] =  HighsFredBasisStatus::LOWER;
+          new_basis.col_status[col] =  HighsBasisStatus::LOWER;
       } else {
-          new_basis.col_status[col] = HighsFredBasisStatus::ZERO;
+          new_basis.col_status[col] = HighsBasisStatus::ZERO;
       }
     } else {
       return HighsStatus::Error;
@@ -1618,16 +1618,16 @@ HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
   for (int row = 0; row < lp.numRow_; row++) {
     int var = lp.numCol_ + row;
     if (!basis.nonbasicFlag_[var]) {
-      new_basis.row_status[row] = HighsFredBasisStatus::BASIC;
+      new_basis.row_status[row] = HighsBasisStatus::BASIC;
     } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
-        new_basis.row_status[row] = HighsFredBasisStatus::LOWER;
+        new_basis.row_status[row] = HighsBasisStatus::LOWER;
     } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-        new_basis.row_status[row] = HighsFredBasisStatus::UPPER;
+        new_basis.row_status[row] = HighsBasisStatus::UPPER;
     } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
       if (lp.rowLower_[row] == lp.rowUpper_[row]) {
-          new_basis.row_status[row] = HighsFredBasisStatus::LOWER;
+          new_basis.row_status[row] = HighsBasisStatus::LOWER;
       } else {
-          new_basis.row_status[row] = HighsFredBasisStatus::ZERO;
+          new_basis.row_status[row] = HighsBasisStatus::ZERO;
       }
     } else {
       return HighsStatus::Error;
