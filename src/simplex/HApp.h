@@ -118,7 +118,8 @@ HighsStatus solveSimplex(
     HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
     // Deduce the LP basis from the simplex basis
-    highs_model_object.basis_ = highs_model_object.simplex_basis_;
+    printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
+    //    highs_model_object.basis_ = highs_model_object.simplex_basis_;
     return result;
   }
   HDual dual_solver(highs_model_object);
@@ -189,7 +190,8 @@ HighsStatus solveSimplex(
     HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
     // Deduce the LP basis from the simplex basis
-    highs_model_object.basis_ = highs_model_object.simplex_basis_;
+    printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
+    //    highs_model_object.basis_ = highs_model_object.simplex_basis_;
 
     timer.stop(timer.solve_clock);
 
@@ -306,11 +308,12 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 					   solution.col_dual,
 					   solution.row_value,
 					   solution.row_dual);
+  printf("!! simplex_interface.get_basicIndex_nonbasicFlag should be  simplex_interface.getHighsBasis !!");
+  /*
   simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.simplex_basis_.basicIndex_,
 						highs_model_object.simplex_basis_.nonbasicFlag_);
-
   highs_model_object.basis_.nonbasicMove_ = simplex_basis.nonbasicMove_;
-
+  */
   return result;
 }
 

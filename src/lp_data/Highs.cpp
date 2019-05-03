@@ -174,9 +174,12 @@ HighsStatus Highs::run() {
       if (solve_status == HighsStatus::Optimal) {
 	if (presolve_status == HighsPresolveStatus::Reduced) {
 	  presolve_info.reduced_solution_ = hmos_[1].solution_;
+	  printf("!! Check that presolve_info.presolve_[0].setBasisInfo can work from hmos_[1].simplex_basis_ !!");
+	  /*
 	  presolve_info.presolve_[0].setBasisInfo(hmos_[1].basis_.basicIndex_,
 						  hmos_[1].basis_.nonbasicFlag_,
 						  hmos_[1].basis_.nonbasicMove_);
+	  */
 	  //    } // Don't run postsolve unless model was reduced in presolve
 	  
 	  timer_.start(timer_.postsolve_clock);
@@ -187,12 +190,12 @@ HighsStatus Highs::run() {
 	    
 	    // Set solution and basis info for simplex clean up.
 	    // Original LP is in lp_[0] so we set the basis information there.
+	    printf("!! Check that presolve_info.presolve_[0].setBasisInfo can go to hmos_[1].simplex_basis_ !!");
+	    /*
 	    hmos_[0].basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
-	    hmos_[0].basis_.nonbasicFlag_ =
-	      presolve_info.presolve_[0].getNonbasicFlag();
-	    hmos_[0].basis_.nonbasicMove_ =
-	      presolve_info.presolve_[0].getNonbasicMove();
-	    
+	    hmos_[0].basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
+	    hmos_[0].basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
+	    */
 	    options_.clean_up = true;
 	    
 	    solved_hmo = 0;

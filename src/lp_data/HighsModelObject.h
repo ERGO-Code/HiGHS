@@ -29,7 +29,7 @@ public:
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  SimplexBasis basis_;
+  HighsBasis basis_;
   HighsSolution solution_;
 
   HighsLp simplex_lp_;

@@ -27,44 +27,72 @@
 #include <cstring> // For strcmp
 #include <vector>
 
-void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &basis, int XnumNewCol) {
+void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
+  printf("!! Don't do this if basis is invalid! !!\n");
+  // Add nonbasic structurals
+  if (XnumNewCol == 0) return;
+  int newNumCol = lp.numCol_ + XnumNewCol;
+  basis.col_status.resize(newNumCol);
+  // Make any new columns nonbasic
+  for (int col = lp.numCol_; col < newNumCol; col++) {
+    if (!highs_isInfinity(-lp.colLower_[col])) {
+      // Has finite lower bound so set it there
+	basis.col_status[col] = HighsBasisStatus::LOWER;
+    } else if (!highs_isInfinity(lp.colUpper_[col])) {
+      // Has finite upper bound so set it there
+      basis.col_status[col] = HighsBasisStatus::UPPER;
+    } else {
+      // Free variable so set to zero
+      basis.col_status[col] = HighsBasisStatus::ZERO;
+    }
+  }
+}
+
+void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &simplex_basis, int XnumNewCol) {
+  printf("!! Don't do this if basis is invalid! !!\n");
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
   int newNumCol = lp.numCol_ + XnumNewCol;
   int newNumTot = newNumCol + lp.numRow_;
-  basis.nonbasicFlag_.resize(newNumTot);
+  simplex_basis.nonbasicFlag_.resize(newNumTot);
   // Shift the row data in basicIndex and nonbasicFlag if necessary
   for (int row = lp.numRow_ - 1; row >= 0; row--) {
-    basis.basicIndex_[row] += XnumNewCol;
-    basis.nonbasicFlag_[newNumCol + row] = basis.nonbasicFlag_[lp.numCol_ + row];
+    simplex_basis.basicIndex_[row] += XnumNewCol;
+    simplex_basis.nonbasicFlag_[newNumCol + row] = simplex_basis.nonbasicFlag_[lp.numCol_ + row];
   }
   // Make any new columns nonbasic
   for (int col = lp.numCol_; col < newNumCol; col++) {
-    basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+    simplex_basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
   }
 }
 
-void append_basic_rows_to_basis(HighsLp &lp, SimplexBasis &basis, int XnumNewRow) {
+void append_basic_rows_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
+  printf("!! Don't do this if basis is invalid! !!\n");
   // Add basic logicals
   if (XnumNewRow == 0) return;
   int newNumRow = lp.numRow_ + XnumNewRow;
-  basis.basicIndex_.resize(newNumRow);
+  basis.row_status.resize(newNumRow);
   // Make any new rows basic
   for (int row = lp.numRow_; row < newNumRow; row++) {
-    int var = lp.numCol_ + row;
-    basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
-    basis.basicIndex_[row] = var;
+    basis.row_status[row] = HighsBasisStatus::BASIC;
   }
 }
 
-bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &basis) {
+bool highs_basis_ok(HighsLp &lp, HighsBasis &basis) {
+  printf("!! Don't check if basis is invalid! !!\n");
+  printf("!! WRITE highs_basis_ok for HighsBasis !!\n");
+  return false;
+}
+
+bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &simplex_basis) {
+  printf("!! Don't check if basis is invalid! !!\n");
   int numTot = lp.numCol_ + lp.numRow_;
   int num_basic_variables = 0;
-  for (int var = 0; var < numTot; var++) if (!basis.nonbasicFlag_[var]) num_basic_variables++;
+  for (int var = 0; var < numTot; var++) if (!simplex_basis.nonbasicFlag_[var]) num_basic_variables++;
   assert(num_basic_variables == lp.numRow_);
   if (num_basic_variables != lp.numRow_) return false;
   for (int row = 0; row < lp.numRow_; row++) {
-    int flag = basis.nonbasicFlag_[basis.basicIndex_[row]];
+    int flag = simplex_basis.nonbasicFlag_[simplex_basis.basicIndex_[row]];
     assert(!flag);
     if (flag) return false;
   }
@@ -72,24 +100,29 @@ bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &basis) {
 }
 
 #ifdef HiGHSDEV
-void report_basis(HighsLp &lp, SimplexBasis &basis) {
+void report_basis(HighsLp &lp, HighsBasis &basis) {
+  printf("!! WRITE report_basis for HighsBasis !!\n");
+  if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
+  if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
+}
+void report_basis(HighsLp &lp, SimplexBasis &simplex_basis) {
   if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
   for (int col = 0; col < lp.numCol_; col++) {
     int var = col;
-    if (basis.nonbasicFlag_[var])
-      printf("%6d %6d        %6d\n", var, col, basis.nonbasicFlag_[var]);
-    // basis.nonbasicMove_[var]);
+    if (simplex_basis.nonbasicFlag_[var])
+      printf("%6d %6d        %6d\n", var, col, simplex_basis.nonbasicFlag_[var]);
+    // simplex_basis.nonbasicMove_[var]);
     else
-      printf("%6d %6d %6d\n", var, col, basis.nonbasicFlag_[var]);
+      printf("%6d %6d %6d\n", var, col, simplex_basis.nonbasicFlag_[var]);
   }
   if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
   for (int row = 0; row < lp.numRow_; row++) {
     int var = lp.numCol_ + row;
-    if (basis.nonbasicFlag_[var])
-      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
-    // basis.nonbasicMove_[var]);
+    if (simplex_basis.nonbasicFlag_[var])
+      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.basicIndex_[row], simplex_basis.nonbasicFlag_[var]);
+    // simplex_basis.nonbasicMove_[var]);
     else
-      printf("%6d %6d %6d %6d\n", var, row, basis.basicIndex_[row], basis.nonbasicFlag_[var]);
+      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.basicIndex_[row], simplex_basis.nonbasicFlag_[var]);
   }
 }
 #endif
