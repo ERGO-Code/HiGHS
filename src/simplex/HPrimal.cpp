@@ -197,7 +197,6 @@ void HPrimal::primalRebuild() {
 
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
   int numPrimalInfeas = computePrimalInfeasible(workHMO);
-  int numBinaryColumnValues = computeNumBinaryColumnValues(workHMO);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
   if (num_tabu_col) {
@@ -212,7 +211,7 @@ void HPrimal::primalRebuild() {
   timer.start(simplex_info.clock_[ComputeProbjClock]);
   compute_primal_objective_value(workHMO);
   timer.stop(simplex_info.clock_[ComputeProbjClock]);
-  report_iteration_count_primal_objective_value(workHMO, numBinaryColumnValues);//sv_invertHint);
+  report_iteration_count_primal_objective_value(workHMO, sv_invertHint);
 
   double primalObjectiveValue = simplex_info.primalObjectiveValue;
   if (checkPrimalObjectiveValue) {
@@ -615,10 +614,6 @@ void HPrimal::iterateRpFull(bool header) {
     //    iterateRpDsty(ML_DETAILED, false);
     //    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
 #endif
-    if (workHMO.options_.messageLevel & ML_DETAILED) {
-      int numBinaryColumnValues = computeNumBinaryColumnValues(workHMO);
-      HighsPrintMessage(ML_DETAILED, " %7d", numBinaryColumnValues);
-    }
     HighsPrintMessage(ML_DETAILED, "\n");
   }
 }

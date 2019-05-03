@@ -377,7 +377,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 				mask, row_mask,
 				valid_matrix);
   if (returnStatus != HighsStatus::OK) return returnStatus;
-  // ToDo Determine consequences for basis when deleting rowumns
+  // ToDo Determine consequences for basis when deleting rows
   basis.valid_ = false;
   
   if (valid_simplex_lp) {
@@ -388,7 +388,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 				  valid_simplex_matrix);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++) scale.row_[row] = scale.row_[row + numDeleteRow];
-    // ToDo Determine consequences for basis when deleting rowumns
+    // ToDo Determine consequences for basis when deleting rows
     simplex_lp_status.has_matrix_col_wise = false;
     simplex_lp_status.has_matrix_row_wise = false;
     simplex_basis.valid_ = false;
@@ -905,78 +905,6 @@ void HighsSimplexInterface::report_simplex_outcome(const char *message) {
 		    );
 }
 
-double HighsSimplexInterface::get_lp_objective_value(vector<double> &XcolValue) {
-  HighsLp &lp = highs_model_object.lp_;
-
-  double lp_objective_value = 0;
-  for (int i = 0; i < lp.numCol_; i++) lp_objective_value += XcolValue[i] * lp.colCost_[i];
-  return lp_objective_value;
-}
-
-void HighsSimplexInterface::get_primal_dual_values(vector<double> &XcolValue,
-						   vector<double> &XcolDual,
-						   vector<double> &XrowValue,
-						   vector<double> &XrowDual
-						   ) {
-  HighsScale &scale = highs_model_object.scale_;
-  SimplexBasis &basis = highs_model_object.simplex_basis_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  // Take primal solution
-  vector<double> value = simplex_info.workValue_;
-  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-    value[basis.basicIndex_[iRow]] = simplex_info.baseValue_[iRow];
-  // Take dual solution
-  vector<double> dual = simplex_info.workDual_;
-  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) dual[basis.basicIndex_[iRow]] = 0;
-  // Scale back
-  for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-    value[iCol] *= scale.col_[iCol];
-    dual[iCol] /= (scale.col_[iCol] / scale.cost_);
-  }
-  for (int iRow = 0, iTot = simplex_lp.numCol_; iRow < simplex_lp.numRow_; iRow++, iTot++) {
-    value[iTot] /= scale.row_[iRow];
-    dual[iTot] *= (scale.row_[iRow] * scale.cost_);
-  }
-
-  //************** part 2: gepr and gedu
-  // Now we can get the solution
-  XcolValue.resize(simplex_lp.numCol_);
-  XcolDual.resize(simplex_lp.numCol_);
-  XrowValue.resize(simplex_lp.numRow_);
-  XrowDual.resize(simplex_lp.numRow_);
-
-  double *valuePtr = &value[0];
-  for (int i = 0; i < simplex_lp.numRow_; i++) XrowValue[i] = -valuePtr[i + simplex_lp.numCol_];
-  for (int i = 0; i < simplex_lp.numCol_; i++) XcolValue[i] = valuePtr[i];
-  for (int i = 0; i < simplex_lp.numRow_; i++) XrowDual[i] = simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
-  for (int i = 0; i < simplex_lp.numCol_; i++) XcolDual[i] = simplex_lp.sense_ * dual[i];
-}
-
-void HighsSimplexInterface::get_basicIndex_nonbasicFlag(vector<int> &XbasicIndex, vector<int> &XnonbasicFlag) {
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  XbasicIndex.resize(simplex_lp.numRow_);
-  XnonbasicFlag.resize(simplex_basis.nonbasicFlag_.size());
-  int basicIndexSz = simplex_basis.basicIndex_.size();
-  for (int i = 0; i < basicIndexSz; i++) XbasicIndex[i] = simplex_basis.basicIndex_[i];
-  int nonbasicFlagSz = simplex_basis.nonbasicFlag_.size();
-  for (int i = 0; i < nonbasicFlagSz; i++) XnonbasicFlag[i] = simplex_basis.nonbasicFlag_[i];
-}
-
-int HighsSimplexInterface::get_basic_indices(int *bind) {
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  for (int row = 0; row < simplex_lp.numRow_; row++) {
-    int var = simplex_basis.basicIndex_[row];
-    if (var >= simplex_lp.numCol_)
-      bind[row] = -(1 + var - simplex_lp.numCol_);
-    else
-      bind[row] = var;
-  }
-  return 0;
-}
-
   // Utilities to convert model basic/nonbasic status to/from SCIP-like status
 int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat, const int* rstat) {
   HighsBasis &basis = highs_model_object.basis_;
@@ -1023,15 +951,15 @@ int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat, const i
       continue;
     }
     if (rstat[row] == (int) HighsBasisStatus::LOWER) {
-      // Supplied basis has this rowumn nonbasic at its lower bound: check that the lower bound is finite
+      // Supplied basis has this row nonbasic at its lower bound: check that the lower bound is finite
       error_found = highs_isInfinity(-lp.rowLower_[row]);
       basis.row_status[row] = HighsBasisStatus::LOWER;
     } else if (rstat[row] == (int) HighsBasisStatus::UPPER) {
-      // Supplied basis has this rowumn nonbasic at its upper bound: check that the upper bound is finite
+      // Supplied basis has this row nonbasic at its upper bound: check that the upper bound is finite
       error_found = highs_isInfinity(lp.rowUpper_[row]);
       basis.row_status[row] = HighsBasisStatus::UPPER;
     } else if (rstat[row] == (int) HighsBasisStatus::ZERO) {
-      // Supplied basis has this rowumn nonbasic at zero so free: check that neither bound is finite
+      // Supplied basis has this row nonbasic at zero so free: check that neither bound is finite
       error_found = !highs_isInfinity(-lp.rowLower_[row]) || !highs_isInfinity(lp.rowUpper_[row]);
       basis.row_status[row] = HighsBasisStatus::UPPER;
     } else {
@@ -1069,8 +997,10 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
   HighsBasis &basis = highs_model_object.basis_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsLp &lp = highs_model_object.lp_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  //  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  basis.col_status.resize(lp.numCol_);
+  basis.row_status.resize(lp.numRow_);
 
   assert(simplex_basis.valid_);
   bool error_found = false;
@@ -1127,19 +1057,20 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
     if (!simplex_basis.nonbasicFlag_[var]) {
       basis.row_status[row] = HighsBasisStatus::BASIC;
     } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-      // Nonbasic and free to move up so should be OK to give status LOWER
-#ifdef HiGHSDEV
-      // Check that the lower bound isn't infinite
-      error_found = highs_isInfinity(-lp.rowLower_[row]);
-#endif
-      basis.row_status[row] = HighsBasisStatus::LOWER;
-    } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
-      // Nonbasic and free to move down so should be OK to give status UPPER
+      // Nonbasic and free to move up so should be OK to give status UPPER - since simplex row bounds are flipped and negated
 #ifdef HiGHSDEV
       // Check that the upper bound isn't infinite
       error_found = highs_isInfinity(lp.rowUpper_[row]);
 #endif
       basis.row_status[row] = HighsBasisStatus::UPPER;
+    } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
+      // Nonbasic and free to move down so should be OK to give status
+      // LOWER - since simplex row bounds are flipped and negated
+#ifdef HiGHSDEV
+      // Check that the lower bound isn't infinite
+      error_found = highs_isInfinity(-lp.rowLower_[row]);
+#endif
+      basis.row_status[row] = HighsBasisStatus::LOWER;
     } else if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
       // Row is either fixed or free, depending on the bounds
       if (lp.rowLower_[row] == lp.rowUpper_[row]) {
@@ -1248,27 +1179,28 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
       if (basis.row_status[row] == HighsBasisStatus::LOWER) {
 	// HighsBasisStatus::LOWER includes fixed variables
 #ifdef HiGHSDEV
-	// Check that the lower bound isn't infinite
-	error_found = highs_isInfinity(-lp.rowLower_[row]);
+	// Check that the upper bound isn't infinite
+	error_found = highs_isInfinity(lp.rowUpper_[row]);
 #endif
 	if (lp.rowLower_[row] == lp.rowUpper_[row]) {
-	  // Equal bounds so indicate that the rowumn can't move
+	  // Equal bounds so indicate that the row can't move
 #ifdef HiGHSDEV
-	  // Check that the upper bound isn't infinite
-	  error_found = highs_isInfinity(lp.rowUpper_[row]);
+	  // Check that the lower bound isn't infinite
+	  error_found = highs_isInfinity(-lp.rowLower_[row]);
 #endif
 	  simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_ZE;
 	} else {
-	  // unequal bounds so indicate that the rowumn can only move up
-	  simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
+	  // Unequal bounds so indicate that the row can only move
+	  // down - since simplex row bounds are flipped and negated
+	  simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
 	}
       } else if (basis.row_status[row] == HighsBasisStatus::UPPER) {
 	// HighsBasisStatus::UPPER includes only variables at their upper bound
 #ifdef HiGHSDEV
-	// Check that the upper bound isn't infinite
-	error_found = highs_isInfinity(lp.rowUpper_[row]);
+	// Check that the lower bound isn't infinite
+	error_found = highs_isInfinity(-lp.rowLower_[row]);
 #endif
-	simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_DN;
+	simplex_basis.nonbasicMove_[var] = NONBASIC_MOVE_UP;
       } else if (basis.row_status[row] == HighsBasisStatus::ZERO) {
 	// HighsBasisStatus::ZERO implies a free variable
 #ifdef HiGHSDEV
@@ -1294,6 +1226,54 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
   simplex_basis.valid_ = true;
 }
 
+void HighsSimplexInterface::convertSimplexToHighsSolution() {
+  HighsSolution &solution = highs_model_object.solution_;
+  HighsScale &scale = highs_model_object.scale_;
+  SimplexBasis &basis = highs_model_object.simplex_basis_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  // Take primal solution
+  vector<double> value = simplex_info.workValue_;
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) value[basis.basicIndex_[iRow]] = simplex_info.baseValue_[iRow];
+  // Take dual solution
+  vector<double> dual = simplex_info.workDual_;
+  for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) dual[basis.basicIndex_[iRow]] = 0;
+  // Scale back
+  for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+    value[iCol] *= scale.col_[iCol];
+    dual[iCol] /= (scale.col_[iCol] / scale.cost_);
+  }
+  for (int iRow = 0, iTot = simplex_lp.numCol_; iRow < simplex_lp.numRow_; iRow++, iTot++) {
+    value[iTot] /= scale.row_[iRow];
+    dual[iTot] *= (scale.row_[iRow] * scale.cost_);
+  }
+
+  // Now we can get the solution
+  solution.col_value.resize(simplex_lp.numCol_);
+  solution.col_dual.resize(simplex_lp.numCol_);
+  solution.row_value.resize(simplex_lp.numRow_);
+  solution.row_dual.resize(simplex_lp.numRow_);
+
+  //  double *valuePtr = &value[0];
+  for (int i = 0; i < simplex_lp.numRow_; i++) solution.row_value[i] = -value[i + simplex_lp.numCol_];
+  for (int i = 0; i < simplex_lp.numCol_; i++) solution.col_value[i] = value[i];
+  for (int i = 0; i < simplex_lp.numRow_; i++) solution.row_dual[i] = simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
+  for (int i = 0; i < simplex_lp.numCol_; i++) solution.col_dual[i] = simplex_lp.sense_ * dual[i];
+
+}
+
+int HighsSimplexInterface::get_basic_indices(int *bind) {
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  for (int row = 0; row < simplex_lp.numRow_; row++) {
+    int var = simplex_basis.basicIndex_[row];
+    if (var >= simplex_lp.numCol_)
+      bind[row] = -(1 + var - simplex_lp.numCol_);
+    else
+      bind[row] = var;
+  }
+  return 0;
+}
 
 #ifdef HiGHSDEV
 void HighsSimplexInterface::check_load_from_postsolve() {

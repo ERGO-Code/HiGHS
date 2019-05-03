@@ -361,37 +361,6 @@ class HighsSimplexInterface {
   void report_simplex_outcome(
 			      const char* message
 			      );
-  /**
-   * @brief Compute the LP objective function value from column values
-   */
-  double get_lp_objective_value(
-				vector<double> &XcolValue
-				);
-
-  /**
-   * @brief Get vectors of column and row (primal) values and dual (values)
-   */
-  void get_primal_dual_values(
-			      vector<double> &XcolValue, //!> Column primal activities
-			      vector<double> &XcolDual,  //!> Column dual activities
-			      vector<double> &XrowValue, //!> Row primal activities
-			      vector<double> &XrowDual   //!> Row dual activities
-			      );
-
-  /**
-   * @brief Get the basicIndex and nonbasicFlag vectors - Used?
-   */
-  void get_basicIndex_nonbasicFlag(
-				   vector<int> &XbasicIndex,  //!> Indices of basic variables
-				   vector<int> &XnonbasicFlag //!> Flag to indicate which variables are nonbasic
-				   );
-
-  /**
-   * @brief Get the indices of the basic variables for SCIP
-   */
-  int get_basic_indices(
-			int *bind //!> Indices of basic variables
-			);
 
   /**
    * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
@@ -422,6 +391,17 @@ class HighsSimplexInterface {
    * @brief Convert a HiGHS basis to a simplex basis
    */
   void convertHighsToSimplexBasis();
+  /**
+   * @brief Convert a simplex solution to a HiGHS solution
+   */
+  void convertSimplexToHighsSolution();
+
+  /**
+   * @brief Get the indices of the basic variables for SCIP
+   */
+  int get_basic_indices(
+			int *bind //!> Indices of basic variables
+			);
 
 #ifdef HiGHSDEV
   /**

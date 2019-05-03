@@ -172,45 +172,13 @@ HighsStatus solveSimplex(
     else
       dual_solver.solve();
 
-#ifdef HiGHSDEV
-    double currentRunHighsTime = timer.readRunHighsClock();
-    printf(
-        "\nBnchmkHsol01 After presolve        ,hsol,%3d,%16s, %d,%d,"
-        "%10.3f,%20.10e,%10d,%10d,%10d\n",
-        (int) simplex_lp_status.solution_status,
-	lp.model_name_.c_str(), lp.numRow_, lp.numCol_,
-	currentRunHighsTime,
-	simplex_info.dualObjectiveValue,
-	simplex_info.dual_phase1_iteration_count,
-        simplex_info.dual_phase2_iteration_count,
-	simplex_info.primal_phase1_iteration_count);
-#endif
     //    reportLp(lp);
     //    reportLpSolution(highs_model_object);
     HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
-    // Deduce the LP basis from the simplex basis
-    printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
-    //    highs_model_object.basis_ = highs_model_object.simplex_basis_;
-
     timer.stop(timer.solve_clock);
 
     if (result != HighsStatus::Optimal) return result;
-
-
-    // TODO Reinstate this once solve after postsolve is performed
-    vector<double> colPrAct;
-    vector<double> colDuAct;
-    vector<double> rowPrAct;
-    vector<double> rowDuAct;
-
-    HighsSimplexInterface simplex_interface(highs_model_object);
-    simplex_interface.get_primal_dual_values(colPrAct, colDuAct, rowPrAct, rowDuAct);
-    double lp_objective_value = simplex_interface.get_lp_objective_value(colPrAct);
-#ifdef HiGHSDEV
-    printf("Computed LP objective value = %g\n", lp_objective_value);
-#endif
-
   }
   return HighsStatus::Optimal;
 }
@@ -313,18 +281,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // todo uncomment line below.
   if (result != HighsStatus::Optimal) return result;
 
-  // HighsSolution set values in highs_model_object.
-  HighsSolution& solution = highs_model_object.solution_;
-  simplex_interface.get_primal_dual_values(solution.col_value,
-					   solution.col_dual,
-					   solution.row_value,
-					   solution.row_dual);
-  printf("!! simplex_interface.get_basicIndex_nonbasicFlag should be  simplex_interface.getHighsBasis !!");
-  /*
-  simplex_interface.get_basicIndex_nonbasicFlag(highs_model_object.simplex_basis_.basicIndex_,
-						highs_model_object.simplex_basis_.nonbasicFlag_);
-  highs_model_object.basis_.nonbasicMove_ = simplex_basis.nonbasicMove_;
-  */
+  simplex_interface.convertSimplexToHighsSolution();
+  simplex_interface.convertSimplexToHighsBasis();
   return result;
 }
 

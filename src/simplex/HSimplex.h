@@ -266,11 +266,6 @@ void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
 
-int computeNumBinaryColumnValues(
-				 HighsModelObject &highs_model_object,
-				 bool report_values = false
-				 );
-
 int computePrimalInfeasible(
 		    HighsModelObject &highs_model_object
 		    );

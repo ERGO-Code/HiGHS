@@ -388,7 +388,8 @@ void compute_primal_objective_value(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_primal_objective_value = true;
 }
 
-void initialise_simplex_lp_random_vectors(HighsModelObject &highs_model_object) {
+void 
+initialise_simplex_lp_random_vectors(HighsModelObject &highs_model_object) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   const int numCol = highs_model_object.simplex_lp_.numCol_;
   const int numTot =
@@ -1126,10 +1127,9 @@ void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
 
-  for (int row = 0; row < simplex_lp.numRow_; row++)
-    simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
-  for (int col = 0; col < simplex_lp.numCol_; col++)
-    simplex_basis.nonbasicFlag_[col] = 1;
+  for (int row = 0; row < simplex_lp.numRow_; row++) simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
+  for (int col = 0; col < simplex_lp.numCol_; col++) simplex_basis.nonbasicFlag_[col] = 1;
+  simplex_basis.valid_ = true;
   simplex_info.num_basic_logicals = simplex_lp.numRow_;
 
   allocate_work_and_base_arrays(highs_model_object);
@@ -2039,64 +2039,6 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
   return num_primal_infeasibilities;  
 }
 
-int computeNumBinaryColumnValues(HighsModelObject &highs_model_object, bool report_values) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-
-  int num_zero_values = 0;
-  int num_unit_values = 0;
-  int num_nonbinary_values = 0;
-  int num_binary_values = 0;
-  int num_primal_infeasibilities = 0;
-  double sum_primal_infeasibilities = 0;
-  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-
-  for (int i = 0; i < simplex_lp.numCol_; i++) {
-    if (simplex_basis.nonbasicFlag_[i]) {
-      // Nonbasic column
-      double value = simplex_info.workValue_[i];
-      double lower = simplex_info.workLower_[i];
-      double upper = simplex_info.workUpper_[i];
-      if (report_values) printf("Nonbasic: %6d = [%12g, %12g, %12g]\n", i, lower, value, upper);
-      if (abs(value) <= simplex_info.primal_feasibility_tolerance) {
-	num_zero_values++;
-      } else if (abs(value-1.0) <= simplex_info.primal_feasibility_tolerance) {
-	num_unit_values++;
-      } else {
-	num_nonbinary_values++;
-      }
-    }
-  }
-  for (int i = 0; i < simplex_lp.numRow_; i++) {
-    // Basic variable
-    int iCol = simplex_basis.basicIndex_[i];
-    if (iCol < simplex_lp.numCol_) {
-      double value = simplex_info.baseValue_[i];
-      double lower = simplex_info.baseLower_[i];
-      double upper = simplex_info.baseUpper_[i];
-      if (report_values) printf("   Basic: %6d = [%12g, %12g, %12g]\n", iCol, lower, value, upper);
-      if (fabs(value) <= simplex_info.primal_feasibility_tolerance) {
-	num_zero_values++;
-      } else if (fabs(value-1.0) <= simplex_info.primal_feasibility_tolerance) {
-	num_unit_values++;
-      } else {
-	num_nonbinary_values++;
-      }
-    }
-  }
-  num_binary_values = num_zero_values + num_unit_values;
-  if (num_binary_values+num_nonbinary_values-simplex_lp.numCol_)
-    printf("Accounting error in computePrimalInfeasible: num_binary_values+num_nonbinary_values-numCol = %d + %d - %d\n",
-	   num_binary_values, num_nonbinary_values, simplex_lp.numCol_);
-  /*
-  int pct = (100*num_binary_values)/simplex_lp.numCol_;
-  printf(" Binary values: %6d 0s %6d 1s giving %d/%d (%3d%%)\n", num_zero_values, num_unit_values, num_binary_values, simplex_lp.numCol_, pct);
-  */
-  return num_binary_values;
-}
-
 void compute_dual(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -2426,10 +2368,6 @@ void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
     value[simplex_basis.basicIndex_[iRow]] = simplex_info.baseValue_[iRow];
 
-  int num_binary_column_values = computeNumBinaryColumnValues(highs_model_object);
-  if (num_binary_column_values) {
-    printf("Solution is [%d, %d] binary and non-binary\n", num_binary_column_values, simplex_lp.numCol_ - num_binary_column_values);
-  }
   // Copy the values of (nonbasic) dual variables and zero values of dual
   // variables which are basic
   vector<double> dual = simplex_info.workDual_;
