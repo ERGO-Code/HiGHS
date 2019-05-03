@@ -51,7 +51,7 @@ bool nonbasic_flag_basic_index_ok(
 #ifdef HiGHSDEV
 void report_basis(
 		  HighsLp &lp,
-		    HighsBasis &basis
+		  HighsBasis &basis
 		  );
 void report_basis(
 		  HighsLp &lp,

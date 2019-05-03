@@ -219,69 +219,81 @@ HighsStatus solveSimplex(
 // solution in solution.
 HighsStatus runSimplexSolver(const HighsOptions& opt,
                              HighsModelObject& highs_model_object) {
+  HighsSimplexInterface simplex_interface(highs_model_object);
   HighsTimer &timer = highs_model_object.timer_;
 
   // Set up aliases
   const HighsLp &lp = highs_model_object.lp_;
   HighsScale &scale = highs_model_object.scale_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsBasis &basis = highs_model_object.basis_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
 
-  // Copy the LP to the structure to be used by the solver
-  simplex_lp = lp;
-
   // Set simplex options from HiGHS options
   options(highs_model_object, opt);
 
-  // Possibly transpose the LP to be solved. This will change the
-  // numbers of rows and columns in the LP to be solved
-  if (simplex_info.transpose_simplex_lp) transpose_simplex_lp(highs_model_object);
+  if (!simplex_lp_status.valid) {
+    // No valid simplex LP so copy the LP to the structure to be used by the solver
+    simplex_lp = lp;
 
-  // Now that the numbers of rows and columns in the LP to be solved
-  // are fixed, initialise the real and integer random vectors
-  initialise_simplex_lp_random_vectors(highs_model_object);
-  //
-  // Allocate memory for the basis
-  // assignBasis();
-  const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
-  simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
-  simplex_basis.nonbasicFlag_.assign(numTot, 0);
-  simplex_basis.nonbasicMove_.resize(numTot);
-  //
-  // Possibly scale the LP to be used by the solver
-  //
-  // Initialise unit scaling factors, to simplify things is no scaling
-  // is performed
-  scaleHighsModelInit(highs_model_object);
-  if (simplex_info.scale_simplex_lp)
-    scale_simplex_lp(highs_model_object);
-  //
-  // Possibly permute the columns of the LP to be used by the solver. 
-  if (simplex_info.permute_simplex_lp)
-    permute_simplex_lp(highs_model_object);
-  //
-  // Possibly tighten the bounds of LP to be used by the solver. 
-  if (simplex_info.tighten_simplex_lp)
-    tighten_simplex_lp(highs_model_object);
-  //
+    // Possibly transpose the LP to be solved. This will change the
+    // numbers of rows and columns in the LP to be solved
+    if (simplex_info.transpose_simplex_lp) transpose_simplex_lp(highs_model_object);
+
+    // Now that the numbers of rows and columns in the LP to be solved
+    // are fixed, initialise the real and integer random vectors
+    initialise_simplex_lp_random_vectors(highs_model_object);
+    //
+    // Allocate memory for the basis
+    // assignBasis();
+    const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
+    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    simplex_basis.nonbasicFlag_.assign(numTot, 0);
+    simplex_basis.nonbasicMove_.resize(numTot);
+    //
+    // Possibly scale the LP to be used by the solver
+    //
+    // Initialise unit scaling factors, to simplify things if no scaling
+    // is performed
+    scaleHighsModelInit(highs_model_object);
+    if (simplex_info.scale_simplex_lp)
+      scale_simplex_lp(highs_model_object);
+    //
+    // Possibly permute the columns of the LP to be used by the solver. 
+    if (simplex_info.permute_simplex_lp)
+      permute_simplex_lp(highs_model_object);
+    //
+    // Possibly tighten the bounds of LP to be used by the solver. 
+    if (simplex_info.tighten_simplex_lp)
+      tighten_simplex_lp(highs_model_object);
+    //
 #ifdef HiGHSDEV
-  // Analyse the scaled LP
-  if (simplex_info.analyseLp) {
-    util_analyseLp(lp, "Unscaled");
-    if (simplex_lp_status.is_scaled) {
-      util_analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
-      util_analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
-      util_analyseLp(simplex_lp, "Scaled");
+    // Analyse the scaled LP
+    if (simplex_info.analyseLp) {
+      util_analyseLp(lp, "Unscaled");
+      if (simplex_lp_status.is_scaled) {
+	util_analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
+	util_analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
+	util_analyseLp(simplex_lp, "Scaled");
+      }
+    }
+    report_simplex_lp_status(highs_model_object.simplex_lp_status_);
+#endif
+  }
+  if (!simplex_basis.valid_) {
+    // Simplex basis is not valid so either...
+    if (basis.valid_) {
+      // .. initialise using the LP's valid basis or..
+      simplex_interface.convertHighsToSimplexBasis();
+    } else {
+      // .. set up a logical basis
+      initialise_with_logical_basis(highs_model_object);
     }
   }
-  report_simplex_lp_status(highs_model_object.simplex_lp_status_);
-#endif
-
-  initialise_with_logical_basis(highs_model_object); // initWithLogicalBasis();
 
   matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
 		     &simplex_lp.Astart_[0],
@@ -303,7 +315,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // HighsSolution set values in highs_model_object.
   HighsSolution& solution = highs_model_object.solution_;
-  HighsSimplexInterface simplex_interface(highs_model_object);
   simplex_interface.get_primal_dual_values(solution.col_value,
 					   solution.col_dual,
 					   solution.row_value,

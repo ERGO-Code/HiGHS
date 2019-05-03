@@ -398,7 +398,7 @@ class HighsSimplexInterface {
    * Postive  return value k implies invalid basis status for column k-1
    * Negative return value k implies invalid basis status for row   -k-1
    */
-  int convert_baseStat_to_working(
+  int convertBaseStatToHighsBasis(
 				  const int* cstat, //!> Column baseStat
 				  const int* rstat  //!> Row baseStat
 				  );
@@ -408,10 +408,20 @@ class HighsSimplexInterface {
    * Postive  return value k implies invalid basis status for column k-1
    * Negative return value k implies invalid basis status for row   -k-1
    */
-  int convert_Working_to_BaseStat(
+  int convertHighsBasisToBaseStat(
 				  int* cstat, //!> Column baseStat
 				  int* rstat  //!> Row baseStat
 				  );
+
+  /**
+   * @brief Convert a simplex basis to a HiGHS basis
+   */
+  void convertSimplexToHighsBasis();
+
+  /**
+   * @brief Convert a HiGHS basis to a simplex basis
+   */
+  void convertHighsToSimplexBasis();
 
 #ifdef HiGHSDEV
   /**
