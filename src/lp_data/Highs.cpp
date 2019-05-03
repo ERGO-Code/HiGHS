@@ -276,7 +276,7 @@ const HighsLp &Highs::getLp() const { return lp_; }
 
 const HighsSolution &Highs::getSolution() const { return solution_; }
 
-const HighsNewBasis &Highs::getBasis() const { return basis_; }
+const HighsBasis &Highs::getBasis() const { return basis_; }
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
@@ -321,7 +321,7 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::setBasis(const HighsNewBasis& basis) {
+HighsStatus Highs::setBasis(const HighsBasis& basis) {
   basis_ = basis;
   return HighsStatus::OK;
 }

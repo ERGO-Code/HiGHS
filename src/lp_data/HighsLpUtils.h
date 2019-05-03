@@ -382,7 +382,7 @@ void util_analyseLp(
 		    );
 #endif
 
-HighsNewBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
+HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

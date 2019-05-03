@@ -1589,7 +1589,7 @@ void util_analyseLp(const HighsLp &lp, const char *message) {
 #endif
 
 HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
-                         HighsNewBasis& new_basis) {
+                         HighsBasis& new_basis) {
   new_basis.col_status.clear();
   new_basis.row_status.clear();
 
@@ -1637,11 +1637,11 @@ HighsStatus convertBasis(const HighsLp& lp, const SimplexBasis& basis,
   return HighsStatus::OK;
 }
 
-HighsNewBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis) {
-  HighsNewBasis new_basis;
+HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis) {
+  HighsBasis new_basis;
   HighsStatus result = convertBasis(lp, basis, new_basis);
   if (result != HighsStatus::OK)
-    return HighsNewBasis();
+    return HighsBasis();
   // Call Julian's code to translate basis once it's out of
   // SimplexInterface. Until it is out of SimplexInteface use code
   // I just added above which does the same but only returns an

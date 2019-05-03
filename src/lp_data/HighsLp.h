@@ -284,7 +284,7 @@ struct HighsSolution {
 
 // To be the basis representation given back to the user. Values of
 // HighsFredBasisStatus are defined in HConst.h
-struct HighsNewBasis {
+struct HighsBasis {
   std::vector<HighsFredBasisStatus> col_status;
   std::vector<HighsFredBasisStatus> row_status;
 };
