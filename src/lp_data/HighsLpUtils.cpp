@@ -1589,7 +1589,7 @@ void util_analyseLp(const HighsLp &lp, const char *message) {
 #endif
 
 HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
-                         HighsBasis_new& new_basis) {
+                         HighsNewBasis& new_basis) {
   new_basis.col_status.clear();
   new_basis.row_status.clear();
 
@@ -1598,16 +1598,16 @@ HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
 
   for (int col = 0; col < lp.numCol_; col++) {
     if (!basis.nonbasicFlag_[col]) {
-      new_basis.col_status[col] = HighsBasisStatus::BASIC;
+      new_basis.col_status[col] = HighsFredBasisStatus::BASIC;
     } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_UP) {
-        new_basis.col_status[col] = HighsBasisStatus::LOWER;
+        new_basis.col_status[col] = HighsFredBasisStatus::LOWER;
     } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_DN) {
-        new_basis.col_status[col] =  HighsBasisStatus::UPPER;
+        new_basis.col_status[col] =  HighsFredBasisStatus::UPPER;
     } else if (basis.nonbasicMove_[col] == NONBASIC_MOVE_ZE) {
       if (lp.colLower_[col] == lp.colUpper_[col]) {
-          new_basis.col_status[col] =  HighsBasisStatus::LOWER;
+          new_basis.col_status[col] =  HighsFredBasisStatus::LOWER;
       } else {
-          new_basis.col_status[col] = HighsBasisStatus::ZERO;
+          new_basis.col_status[col] = HighsFredBasisStatus::ZERO;
       }
     } else {
       return HighsStatus::Error;
@@ -1618,16 +1618,16 @@ HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
   for (int row = 0; row < lp.numRow_; row++) {
     int var = lp.numCol_ + row;
     if (!basis.nonbasicFlag_[var]) {
-      new_basis.row_status[row] = HighsBasisStatus::BASIC;
+      new_basis.row_status[row] = HighsFredBasisStatus::BASIC;
     } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_DN) {
-        new_basis.row_status[row] = HighsBasisStatus::LOWER;
+        new_basis.row_status[row] = HighsFredBasisStatus::LOWER;
     } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
-        new_basis.row_status[row] = HighsBasisStatus::UPPER;
+        new_basis.row_status[row] = HighsFredBasisStatus::UPPER;
     } else if (basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE) {
       if (lp.rowLower_[row] == lp.rowUpper_[row]) {
-          new_basis.row_status[row] = HighsBasisStatus::LOWER;
+          new_basis.row_status[row] = HighsFredBasisStatus::LOWER;
       } else {
-          new_basis.row_status[row] = HighsBasisStatus::ZERO;
+          new_basis.row_status[row] = HighsFredBasisStatus::ZERO;
       }
     } else {
       return HighsStatus::Error;
@@ -1637,11 +1637,11 @@ HighsStatus convertBasis(const HighsLp& lp, const HighsBasis& basis,
   return HighsStatus::OK;
 }
 
-HighsBasis_new getHighsBasis(const HighsLp& lp, const HighsBasis& basis) {
-  HighsBasis_new new_basis;
+HighsNewBasis getHighsBasis(const HighsLp& lp, const HighsBasis& basis) {
+  HighsNewBasis new_basis;
   HighsStatus result = convertBasis(lp, basis, new_basis);
   if (result != HighsStatus::OK)
-    return HighsBasis_new();
+    return HighsNewBasis();
   // Call Julian's code to translate basis once it's out of
   // SimplexInterface. Until it is out of SimplexInteface use code
   // I just added above which does the same but only returns an

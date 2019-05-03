@@ -78,7 +78,7 @@ const int SIMPLEX_ITERATION_LIMIT_DEFAULT = HIGHS_CONST_I_INF;
 const int SIMPLEX_UPDATE_LIMIT_DEFAULT = 5000;
 
 /** SCIP-like basis status for columns and rows. */
-enum class HighsBasisStatus {
+enum class HighsFredBasisStatus {
   LOWER = 0, // (slack) variable is at its lower bound [including fixed variables]
   BASIC, // (slack) variable is basic 
   UPPER, // (slack) variable is at its upper bound 

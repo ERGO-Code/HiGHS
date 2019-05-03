@@ -98,10 +98,10 @@ struct HighsScale {
 };
 
 struct HighsBasis {
-  // Basis consists of basicIndex, nonbasicFlag and nonbasicMove.  If
-  // valid_ is true then they are self-consistent and correpond to the
-  // dimensions of an associated HighsLp, but the basis matrix B is
-  // not necessarily nonsingular.
+  // The basis for the simplex method consists of basicIndex,
+  // nonbasicFlag and nonbasicMove. If valid_ is true then they are
+  // self-consistent and correpond to the dimensions of an associated
+  // HighsLp, but the basis matrix B is not necessarily nonsingular.
   bool valid_ = false;
   std::vector<int> basicIndex_;
   std::vector<int> nonbasicFlag_;
@@ -283,10 +283,10 @@ struct HighsSolution {
 };
 
 // To be the basis representation given back to the user. Values of
-// HighsBasisStatus are defined in HConst.h
-struct HighsBasis_new {
-  std::vector<HighsBasisStatus> col_status;
-  std::vector<HighsBasisStatus> row_status;
+// HighsFredBasisStatus are defined in HConst.h
+struct HighsNewBasis {
+  std::vector<HighsFredBasisStatus> col_status;
+  std::vector<HighsFredBasisStatus> row_status;
 };
 
 struct HighsRanging {

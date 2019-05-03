@@ -1203,38 +1203,38 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
 
   for (int i = 0; i < highs->basis_.col_status.size(); ++i)
     switch (highs->basis_.col_status[i]) {
-    case HighsBasisStatus::BASIC:
+    case HighsFredBasisStatus::BASIC:
       cstat[i] = 1;
       break;
-    case HighsBasisStatus::LOWER:
+    case HighsFredBasisStatus::LOWER:
       cstat[i] = 3;
       break;
-    case HighsBasisStatus::UPPER:
+    case HighsFredBasisStatus::UPPER:
       cstat[i] = 2;
       break;
-    case HighsBasisStatus::SUPER:
+    case HighsFredBasisStatus::SUPER:
       cstat[i] = 0;
       break;
-    case HighsBasisStatus::ZERO:
+    case HighsFredBasisStatus::ZERO:
       cstat[i] = 0;
       break;
     }
 
   for (int i = 0; i < highs->basis_.row_status.size(); ++i)
     switch (highs->basis_.row_status[i]) {
-    case HighsBasisStatus::BASIC:
+    case HighsFredBasisStatus::BASIC:
       cstat[i] = 1;
       break;
-    case HighsBasisStatus::LOWER:
+    case HighsFredBasisStatus::LOWER:
       cstat[i] = 3;
       break;
-    case HighsBasisStatus::UPPER:
+    case HighsFredBasisStatus::UPPER:
       cstat[i] = 2;
       break;
-    case HighsBasisStatus::SUPER:
+    case HighsFredBasisStatus::SUPER:
       cstat[i] = 0;
       break;
-    case HighsBasisStatus::ZERO:
+    case HighsFredBasisStatus::ZERO:
       cstat[i] = 0;
       break;
     }
