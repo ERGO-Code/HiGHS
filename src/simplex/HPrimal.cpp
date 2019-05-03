@@ -50,10 +50,6 @@ void HPrimal::solvePhase2() {
   columnDensity = 0;
   row_epDensity = 0;
 
-  num_tabu_col = 0;
-  tabu_col_p.resize(solver_num_tot);
-  tabu_col.assign(solver_num_tot, 1);
-  
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
     if (highs_isInfinity(-workHMO.simplex_info_.workLower_[iCol])) {
@@ -81,32 +77,12 @@ void HPrimal::solvePhase2() {
     timer.stop(simplex_info.clock_[IteratePrimalRebuildClock]);
 
     for (;;) {
-      for (;;) {
-	if (num_tabu_col == solver_num_tot) {
-	  printf("All columns tabu!\n");
-	  invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
-	  break;
-	}
-	primalChooseColumn();
-	if (columnIn == -1) {
-	  printf("Possibly optimal: num_tabu_col = %d\n", num_tabu_col);
-	  invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
-	  break;
-	}
-	primalChooseRow();
-	if (alpha) break;
-	tabu_col_p[num_tabu_col] = columnIn;
-	tabu_col[columnIn] = 0;
-	num_tabu_col++;
+      primalChooseColumn();
+      if (columnIn == -1) {
+	invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+	break;
       }
-      if (invertHint) break;
-      if (num_tabu_col) {
-	for (int p = 0; p < num_tabu_col; p++) {
-	  tabu_col[tabu_col_p[p]] = 1;
-	}
-	//	printf("Removed %2d tabu columns\n", num_tabu_col);
-	num_tabu_col = 0;
-      }
+      primalChooseRow();
       if (rowOut == -1) {
         invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
@@ -197,22 +173,14 @@ void HPrimal::primalRebuild() {
 
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
   int numPrimalInfeas = computePrimalInfeasible(workHMO);
-  int numBinaryColumnValues = computeNumBinaryColumnValues(workHMO);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
-
-  if (num_tabu_col) {
-    for (int p = 0; p < num_tabu_col; p++) {
-      tabu_col[tabu_col_p[p]] = 1;
-    }
-    num_tabu_col = 0;
-  }
 
   // Primal objective section
   bool checkPrimalObjectiveValue = simplex_lp_status.has_primal_objective_value;
   timer.start(simplex_info.clock_[ComputeProbjClock]);
   compute_primal_objective_value(workHMO);
   timer.stop(simplex_info.clock_[ComputeProbjClock]);
-  report_iteration_count_primal_objective_value(workHMO, numBinaryColumnValues);//sv_invertHint);
+  report_iteration_count_primal_objective_value(workHMO, sv_invertHint);
 
   double primalObjectiveValue = simplex_info.primalObjectiveValue;
   if (checkPrimalObjectiveValue) {
@@ -268,7 +236,7 @@ void HPrimal::primalChooseColumn() {
       //      printf("CHUZC: %1d [%6d, %6d] %6d\n", numPass, fromCol, toCol, solver_num_tot);
       for (int iCol = fromCol; iCol < toCol; iCol++) {
 	// Then look at dual infeasible
-	if (tabu_col[iCol] * jMove[iCol] * workDual[iCol] < -dualTolerance) {
+	if (jMove[iCol] * workDual[iCol] < -dualTolerance) {
 	  if (bestInfeas < fabs(workDual[iCol])) {
 	    bestInfeas = fabs(workDual[iCol]);
 	    columnIn = iCol;
@@ -331,6 +299,26 @@ void HPrimal::primalChooseRow() {
   timer.stop(simplex_info.clock_[FtranClock]);
   columnDensity = 0.95 * columnDensity + 0.05 * column.count / solver_num_row;
 
+  const bool check_dual = false;
+  if (check_dual) {
+    const double *workCost = &workHMO.simplex_info_.workCost_[0];
+    const double *workDual = &workHMO.simplex_info_.workDual_[0];
+    const int *basicIndex = &workHMO.simplex_basis_.basicIndex_[0];
+    double check_dual_value = workCost[columnIn];
+    for (int i = 0; i < column.count; i++) {
+      int row = column.index[i];
+      int col = basicIndex[row];
+      double value = column.array[row];
+      double cost = workCost[col];
+      check_dual_value -= value * cost;
+      //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value = %12g\n", i, row, value, cost, check_dual_value);
+    }
+    thetaDual = workDual[columnIn];
+    double dual_error = abs(check_dual_value-thetaDual)/max(1.0, fabs(thetaDual));
+    if (dual_error>1e-8)
+      printf("Checking dual: updated = %12g; direct = %12g; error = %12g\n", thetaDual, check_dual_value, dual_error);
+  }
+
   timer.start(simplex_info.clock_[Chuzr1Clock]);
   // Initialize
   rowOut = -1;
@@ -346,90 +334,49 @@ void HPrimal::primalChooseRow() {
     // We would report not-solved
     // Need to handle free
   }
-  int numPass = 1;
-  for (;;) {
-    report = numPass == 2;
-    double relaxTheta = 1e100;
-    double relaxSpace;
-    for (int i = 0; i < column.count; i++) {
-      int index = column.index[i];
-      //    double
-      alpha = column.array[index] * moveIn;
-      bool report_alpha = false;
-      if (alpha > alphaTol) {
-	report_alpha = abs(alpha-1.0) < primalTolerance;
-	relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
-	if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
-      } else if (alpha < -alphaTol) {
-	report_alpha = abs(alpha+1.0) < primalTolerance;
-	relaxSpace = baseValue[index] - baseUpper[index] - primalTolerance;
-	if (relaxSpace > relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
-      }
-      double ratio = relaxSpace / alpha;
-      if (report && report_alpha && ratio < 10*relaxTheta)
-	printf("Row %6d: entry %12g: relaxSpace = %12g; ratio = %12g; minRatio = %12g\n", index, alpha, relaxSpace, ratio, relaxTheta);
+  double relaxTheta = 1e100;
+  double relaxSpace;
+  for (int i = 0; i < column.count; i++) {
+    int index = column.index[i];
+    alpha = column.array[index] * moveIn;
+    bool report_alpha = false;
+    if (alpha > alphaTol) {
+      relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
+      if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
+    } else if (alpha < -alphaTol) {
+      relaxSpace = baseValue[index] - baseUpper[index] - primalTolerance;
+      if (relaxSpace > relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
     }
-    if (numPass == 1) timer.stop(simplex_info.clock_[Chuzr1Clock]);
-    
-    if (numPass == 1) timer.start(simplex_info.clock_[Chuzr2Clock]);
-    // Choose row pass 2
-    double bestAlpha = 0;
-    int numCandidate = 0;
-    int unitPivotRowOut = -1;
-    for (int i = 0; i < column.count; i++) {
-      int index = column.index[i];
-      //    double
-      alpha = column.array[index] * moveIn;
-      if (alpha > alphaTol) {
-	// Positive pivotal column entry
-	double tightSpace = baseValue[index] - baseLower[index];
-	if (tightSpace <= relaxTheta * alpha) {// NB JAJH Changed < to <= 
-	  numCandidate++;
-	  if (numPass == 2) {
-	    printf("CHUZR: %3d has tightSpace = %12g < %12g = %12g * %12g (relaxTheta * alpha)\n",
-		   numCandidate, tightSpace, relaxTheta * alpha, relaxTheta, alpha);
-	  }
-	  if (alpha == 1.0) unitPivotRowOut = index;
-	  if (bestAlpha < alpha) {
-	    bestAlpha = alpha;
-	    rowOut = index;
-	  }
-	}
-      } else if (alpha < -alphaTol) {
-	// Negative pivotal column entry
-	double tightSpace = baseValue[index] - baseUpper[index];
-	if (tightSpace >= relaxTheta * alpha) {// NB JAJH Changed > to >= 
-	  numCandidate++;
-	  if (numPass == 2) {
-	    printf("CHUZR: %3d has tightSpace = %12g > %12g = %12g * %12g (relaxTheta * alpha)\n",
-		   numCandidate, tightSpace, relaxTheta * alpha, relaxTheta, alpha);
-	  }
-	  if (alpha == -1.0) unitPivotRowOut = index;
-	  if (bestAlpha < -alpha) {
-	    bestAlpha = -alpha;
-	    rowOut = index;
-	  }
-	}
-      }
-    }
-    if (require_unit_pivot) {
-      if (unitPivotRowOut >= 0) {
-	rowOut = unitPivotRowOut;
-	alpha = column.array[rowOut];
-      } else {
-	rowOut = -1;
-	alpha = 0;
-      }
-    } else {
-      alpha = column.array[rowOut];
-    }
-    if (numPass == 1) timer.stop(simplex_info.clock_[Chuzr2Clock]);
-    if (rowOut >= 0) break;
-    if (numPass > 1) break;
-    if (!allow_extra_pass) break;
-    numPass++;
-    printf("Iteration %6d: Cannot find unit pivot: relaxTheta = %12g\n", simplexIteration, relaxTheta);
   }
+  timer.stop(simplex_info.clock_[Chuzr1Clock]);
+
+  // Choose row pass 2
+  timer.start(simplex_info.clock_[Chuzr2Clock]);
+  double bestAlpha = 0;
+  for (int i = 0; i < column.count; i++) {
+    int index = column.index[i];
+    alpha = column.array[index] * moveIn;
+    if (alpha > alphaTol) {
+      // Positive pivotal column entry
+      double tightSpace = baseValue[index] - baseLower[index];
+      if (tightSpace < relaxTheta * alpha) {
+	if (bestAlpha < alpha) {
+	  bestAlpha = alpha;
+	  rowOut = index;
+	}
+      }
+    } else if (alpha < -alphaTol) {
+      // Negative pivotal column entry
+      double tightSpace = baseValue[index] - baseUpper[index];
+      if (tightSpace > relaxTheta * alpha) {
+	if (bestAlpha < -alpha) {
+	  bestAlpha = -alpha;
+	  rowOut = index;
+	}
+      }
+    }
+  }
+  timer.stop(simplex_info.clock_[Chuzr2Clock]);
 }
 
 void HPrimal::primalUpdate() {
@@ -615,10 +562,6 @@ void HPrimal::iterateRpFull(bool header) {
     //    iterateRpDsty(ML_DETAILED, false);
     //    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
 #endif
-    if (workHMO.options_.messageLevel & ML_DETAILED) {
-      int numBinaryColumnValues = computeNumBinaryColumnValues(workHMO);
-      HighsPrintMessage(ML_DETAILED, " %7d", numBinaryColumnValues);
-    }
     HighsPrintMessage(ML_DETAILED, "\n");
   }
 }
