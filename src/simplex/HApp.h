@@ -127,7 +127,6 @@ HighsStatus solveSimplex(
   
   // If after postsolve. todo: advanced basis start here.
   if (opt.clean_up) {
-    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
     timer.start(timer.solve_clock);
     dual_solver.solve();
     timer.stop(timer.solve_clock);
@@ -220,7 +219,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     // assignBasis();
     const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
     simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
-    simplex_basis.nonbasicFlag_.assign(numTot, 0);
+    simplex_basis.nonbasicFlag_.resize(numTot);
     simplex_basis.nonbasicMove_.resize(numTot);
     //
     // Possibly scale the LP to be used by the solver
@@ -252,22 +251,27 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     report_simplex_lp_status(highs_model_object.simplex_lp_status_);
 #endif
   }
-  if (!simplex_basis.valid_) {
-    // Simplex basis is not valid so either...
-    if (basis.valid_) {
-      // .. initialise using the LP's valid basis or..
+  if (!simplex_basis.valid_ && basis.valid_) {
+    // Simplex basis is not valid, but HiGHS basis is valid so convert it to a simplex basis
       simplex_interface.convertHighsToSimplexBasis();
-    } else {
-      // .. set up a logical basis
-      initialise_with_logical_basis(highs_model_object);
-    }
   }
-
-  matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
-		     &simplex_lp.Astart_[0],
-		     &simplex_lp.Aindex_[0],
-		     &simplex_lp.Avalue_[0]);
+  if (simplex_basis.valid_) {
+    // Valid simplex basis so use it to initialise...
+    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
+    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		 &simplex_lp.Astart_[0],
+		 &simplex_lp.Aindex_[0],
+		 &simplex_lp.Avalue_[0],
+		 &simplex_basis.nonbasicFlag_[0]);
+  } else {
+    // ... otherwise start from a logical basis
+    initialise_with_logical_basis(highs_model_object);
+    matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
+		      &simplex_lp.Astart_[0],
+		      &simplex_lp.Aindex_[0],
+		      &simplex_lp.Avalue_[0]);
   
+  }
   factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
 		&simplex_lp.Astart_[0],
 		&simplex_lp.Aindex_[0],

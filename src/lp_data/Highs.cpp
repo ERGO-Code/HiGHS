@@ -34,8 +34,7 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
 
-  // For the moment hmos_[0] is the HighsModelObject corresponding to the
-  // original lp.
+  // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   simplex_has_run_ = false;
@@ -101,8 +100,12 @@ HighsStatus Highs::run() {
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
   HighsStatus solve_status = HighsStatus::Init;
-  int original_hmo = 0;
-  int solved_hmo = -1;
+  // Define identifiers to refer to the HMO of the original LP
+  // (0) and the HMO created when using presolve (1)
+  const int original_hmo = 0;
+  const int presolve_hmo = 1;
+  // Keep track of the hmo that is the most recently solved. By default it's the original LP
+  int solved_hmo = original_hmo;
 
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   if (!simplex_has_run_) {
@@ -115,14 +118,12 @@ HighsStatus Highs::run() {
     // Run solver.
     switch (presolve_status) {
     case HighsPresolveStatus::NotPresolved: {
-      solved_hmo = 0;
-      solve_status = runSolver(hmos_[0]);
+      solve_status = runSolver(hmos_[solved_hmo]);
       break;
     }
     case HighsPresolveStatus::NotReduced: {
       printf("Problem not reduced\n");
-      solved_hmo = 0;
-      solve_status = runSolver(hmos_[0]);
+      solve_status = runSolver(hmos_[solved_hmo]);
       break;
     }
     case HighsPresolveStatus::Reduced: {
@@ -130,8 +131,8 @@ HighsStatus Highs::run() {
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
       hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
-      solved_hmo = 1;
-      solve_status = runSolver(hmos_[1]);
+      solved_hmo = presolve_hmo;
+      solve_status = runSolver(hmos_[solved_hmo]);
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -155,7 +156,7 @@ HighsStatus Highs::run() {
       message_not_opt << "Run status : " << HighsStatusToString(result)
 		      << std::endl;
       message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
-		      << timer_.clock_time[0] << std::endl;
+		      << timer_.clock_time[solved_hmo] << std::endl;
       
       message_not_opt << std::endl;
       
@@ -173,39 +174,47 @@ HighsStatus Highs::run() {
       // Postsolve. Does nothing if there were no reductions during presolve.
       if (solve_status == HighsStatus::Optimal) {
 	if (presolve_status == HighsPresolveStatus::Reduced) {
-	  presolve_info.reduced_solution_ = hmos_[1].solution_;
-	  presolve_info.presolve_[0].setBasisInfo(hmos_[1].simplex_basis_.basicIndex_,
-						  hmos_[1].simplex_basis_.nonbasicFlag_,
-						  hmos_[1].simplex_basis_.nonbasicMove_);
+	  // If presolve is nontrivial, extract the optimal solution
+	  // and basis for the presolved problem in order to generate
+	  // the solution and basis for postsolve to use to generate a
+	  // solution(?) and basis that is, hopefully, optimal. This is
+	  // confirmed or corrected by hot-starting the simplex solver
+	  presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
+	  presolve_info.presolve_[0].setBasisInfo(hmos_[solved_hmo].simplex_basis_.basicIndex_,
+						  hmos_[solved_hmo].simplex_basis_.nonbasicFlag_,
+						  hmos_[solved_hmo].simplex_basis_.nonbasicMove_);
+	  // Run postsolve
 	  timer_.start(timer_.postsolve_clock);
 	  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
 	  timer_.stop(timer_.postsolve_clock);
 	  if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
 	    HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
-	    
-	    // Set solution and basis info for simplex clean up.
-	    // Original LP is in lp_[0] so we set the basis information there.
-	    hmos_[0].simplex_basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
-	    hmos_[0].simplex_basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
-	    hmos_[0].simplex_basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
+	    // Set solution(?) and basis to hot-start the simplex solver
+	    // for the original_hmo
+	    hmos_[original_hmo].simplex_basis_.valid_ = true;
+	    hmos_[original_hmo].simplex_basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
+	    hmos_[original_hmo].simplex_basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
+	    hmos_[original_hmo].simplex_basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
 	    options_.clean_up = true;
-	    
-	    solved_hmo = 0;
-	    solve_status = runSolver(hmos_[0]);
+	    // Now hot-start the simplex solver for the original_hmo
+	    solved_hmo = original_hmo;
+	    solve_status = runSolver(hmos_[solved_hmo]);
 	  }
 	}
       }
     } else {
       // Hack to get data for reporting when bypassing postsolve
-      if (solved_hmo == 1) {
-	hmos_[0].simplex_info_.iteration_count = hmos_[1].simplex_info_.iteration_count;
-	hmos_[0].simplex_info_.dualObjectiveValue = hmos_[1].simplex_info_.dualObjectiveValue;
+      if (solved_hmo == presolve_hmo) {
+	hmos_[original_hmo].simplex_info_.iteration_count =
+	  hmos_[solved_hmo].simplex_info_.iteration_count;
+	hmos_[original_hmo].simplex_info_.dualObjectiveValue =
+	  hmos_[solved_hmo].simplex_info_.dualObjectiveValue;
       }
     }
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
-    solved_hmo = 0;
-    solve_status = runSolver(hmos_[0]);
+    solved_hmo = original_hmo;
+    solve_status = runSolver(hmos_[solved_hmo]);
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve again
@@ -213,52 +222,30 @@ HighsStatus Highs::run() {
   // }
   
   assert(hmos_.size() > 0);
-  solution_ = hmos_[0].solution_;
+  solution_ = hmos_[original_hmo].solution_;
   
   // Report times
-  if (hmos_[0].reportModelOperationsClock) {
+  if (hmos_[original_hmo].reportModelOperationsClock) {
     std::vector<int> clockList{timer_.presolve_clock, timer_.scale_clock,
                                timer_.crash_clock, timer_.solve_clock,
                                timer_.postsolve_clock};
     timer_.report("ModelOperations", clockList);
   }
-#ifdef HiGHSDEV
-/* todo: do elsewhere once timing is added.
-    bool rpBnchmk = false;
-    if (rpBnchmk) {
-      int numCol = highs_model.lp_.numCol_;
-      int numRow = highs_model.lp_.numRow_;
-      printf(
-          "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
-          "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
-          "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
-          "%20.10e,%10d,%10.3f,"
-          "%d\n",
-          model.getPrStatus(), highs_model.lp_->model_name_.c_str(),
-   Presolve_ArgV, Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
-          presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
-          postsolveTime, simplex_info_.dualObjectiveValue,
-   simplex_info_.iteration_count, model.totalTime, solver.n_wg_DSE_wt); cout <<
-   flush;
-    }
-*/
-#endif
-
   timer_.stopRunHighsClock();
 
   std::stringstream message;
   message << std::endl;
   message << "Run status : " << HighsStatusToString(solve_status)
           << std::endl;
-  message << "Iterations : " << hmos_[0].simplex_info_.iteration_count
+  message << "Iterations : " << hmos_[original_hmo].simplex_info_.iteration_count
           << std::endl;
 
   if (solve_status == HighsStatus::Optimal)
     message << "Objective  : " << std::scientific
-            << hmos_[0].simplex_info_.dualObjectiveValue << std::endl;
+            << hmos_[original_hmo].simplex_info_.dualObjectiveValue << std::endl;
 
   message << "Time       : " << std::fixed << std::setprecision(3)
-          << timer_.clock_time[0] << std::endl;
+          << timer_.clock_time[original_hmo] << std::endl;
 
   message << std::endl;
 

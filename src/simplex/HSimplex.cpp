@@ -1077,7 +1077,7 @@ void initialise_basic_index(HighsModelObject &highs_model_object) {
       num_basic_variables++;
     }
   }
-  assert(num_basic_variables = simplex_lp.numRow_ - 1);
+  assert(num_basic_variables == simplex_lp.numRow_);
 }
 
 void allocate_work_and_base_arrays(HighsModelObject &highs_model_object) {
