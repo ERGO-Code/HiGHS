@@ -217,11 +217,6 @@ void HDual::solve(int num_threads) {
 
   while (solvePhase) {
     int it0 = simplex_info.iteration_count;
-#ifdef HiGHSDEV
-    double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
-    // printf("HDual::solve Phase %d: Iteration %d; simplexTotalTime = %g\n",
-    // solvePhase, simplex_info.iteration_count, simplexTotalTime);cout<<flush;
-#endif
     // When starting a new phase the (updated) dual objective function
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
@@ -339,7 +334,6 @@ void HDual::solve(int num_threads) {
   //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
   //  report_simplex_lp_status_flags(workHMO.simplex_lp_status_);
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
-  double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
 
   if (simplex_info.report_simplex_phases_clock) {
     simplex_timer.reportSimplexTotalClock(workHMO);

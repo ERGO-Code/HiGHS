@@ -83,22 +83,9 @@ HighsStatus solveSimplex(
     // Use primal simplex solver
     HPrimal primal_solver(highs_model_object);
 
-    bool skip_primalSolve = false;
-    if (skip_primalSolve) {
-      int rankDeficiency = compute_factor(highs_model_object);
-      if (rankDeficiency) {
-	throw runtime_error("Primal initialise: singular-basis-matrix");
-      }
-      timer.start(simplex_info.clock_[SimplexTotalClock]);
-      timer.start(timer.solve_clock);
-      primal_solver.solvePhase2();
-      timer.stop(timer.solve_clock);
-      timer.stop(simplex_info.clock_[SimplexTotalClock]);
-    } else {
-      timer.start(timer.solve_clock);
-      primal_solver.solve();
-      timer.stop(timer.solve_clock);
-    }
+    timer.start(timer.solve_clock);
+    primal_solver.solve();
+    timer.stop(timer.solve_clock);
 
     // Deduce the LP basis from the simplex basis
     printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
