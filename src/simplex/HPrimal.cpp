@@ -523,8 +523,6 @@ void HPrimal::primalChooseRow() {
   const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   double *baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
-  const bool require_unit_pivot = false;
-  const bool allow_extra_pass = false;
     
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
@@ -550,90 +548,48 @@ void HPrimal::primalChooseRow() {
     // We would report not-solved
     // Need to handle free
   }
-  int numPass = 1;
-  for (;;) {
-    report = numPass == 2;
-    double relaxTheta = 1e100;
-    double relaxSpace;
-    for (int i = 0; i < column.count; i++) {
-      int index = column.index[i];
-      //    double
-      alpha = column.array[index] * moveIn;
-      bool report_alpha = false;
-      if (alpha > alphaTol) {
-	report_alpha = abs(alpha-1.0) < primalTolerance;
-	relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
-	if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
-      } else if (alpha < -alphaTol) {
-	report_alpha = abs(alpha+1.0) < primalTolerance;
-	relaxSpace = baseValue[index] - baseUpper[index] - primalTolerance;
-	if (relaxSpace > relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
-      }
-      double ratio = relaxSpace / alpha;
-      if (report && report_alpha && ratio < 10*relaxTheta)
-	printf("Row %6d: entry %12g: relaxSpace = %12g; ratio = %12g; minRatio = %12g\n", index, alpha, relaxSpace, ratio, relaxTheta);
+  double relaxTheta = 1e100;
+  double relaxSpace;
+  for (int i = 0; i < column.count; i++) {
+    int index = column.index[i];
+    alpha = column.array[index] * moveIn;
+    if (alpha > alphaTol) {
+      relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
+      if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
+    } else if (alpha < -alphaTol) {
+      relaxSpace = baseValue[index] - baseUpper[index] - primalTolerance;
+      if (relaxSpace > relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
     }
-    if (numPass == 1) timer.stop(simplex_info.clock_[Chuzr1Clock]);
-    
-    if (numPass == 1) timer.start(simplex_info.clock_[Chuzr2Clock]);
-    // Choose row pass 2
-    double bestAlpha = 0;
-    int numCandidate = 0;
-    int unitPivotRowOut = -1;
-    for (int i = 0; i < column.count; i++) {
-      int index = column.index[i];
-      //    double
-      alpha = column.array[index] * moveIn;
-      if (alpha > alphaTol) {
-	// Positive pivotal column entry
-	double tightSpace = baseValue[index] - baseLower[index];
-	if (tightSpace <= relaxTheta * alpha) {// NB JAJH Changed < to <= 
-	  numCandidate++;
-	  if (numPass == 2) {
-	    printf("CHUZR: %3d has tightSpace = %12g < %12g = %12g * %12g (relaxTheta * alpha)\n",
-		   numCandidate, tightSpace, relaxTheta * alpha, relaxTheta, alpha);
-	  }
-	  if (alpha == 1.0) unitPivotRowOut = index;
-	  if (bestAlpha < alpha) {
-	    bestAlpha = alpha;
-	    rowOut = index;
-	  }
-	}
-      } else if (alpha < -alphaTol) {
-	// Negative pivotal column entry
-	double tightSpace = baseValue[index] - baseUpper[index];
-	if (tightSpace >= relaxTheta * alpha) {// NB JAJH Changed > to >= 
-	  numCandidate++;
-	  if (numPass == 2) {
-	    printf("CHUZR: %3d has tightSpace = %12g > %12g = %12g * %12g (relaxTheta * alpha)\n",
-		   numCandidate, tightSpace, relaxTheta * alpha, relaxTheta, alpha);
-	  }
-	  if (alpha == -1.0) unitPivotRowOut = index;
-	  if (bestAlpha < -alpha) {
-	    bestAlpha = -alpha;
-	    rowOut = index;
-	  }
-	}
-      }
-    }
-    if (require_unit_pivot) {
-      if (unitPivotRowOut >= 0) {
-	rowOut = unitPivotRowOut;
-	alpha = column.array[rowOut];
-      } else {
-	rowOut = -1;
-	alpha = 0;
-      }
-    } else {
-      alpha = column.array[rowOut];
-    }
-    if (numPass == 1) timer.stop(simplex_info.clock_[Chuzr2Clock]);
-    if (rowOut >= 0) break;
-    if (numPass > 1) break;
-    if (!allow_extra_pass) break;
-    numPass++;
-    printf("Iteration %6d: Cannot find unit pivot: relaxTheta = %12g\n", simplexIteration, relaxTheta);
   }
+  timer.stop(simplex_info.clock_[Chuzr1Clock]);
+    
+  timer.start(simplex_info.clock_[Chuzr2Clock]);
+  // Choose row pass 2
+  double bestAlpha = 0;
+  for (int i = 0; i < column.count; i++) {
+    int index = column.index[i];
+    alpha = column.array[index] * moveIn;
+    if (alpha > alphaTol) {
+      // Positive pivotal column entry
+      double tightSpace = baseValue[index] - baseLower[index];
+      if (tightSpace < relaxTheta * alpha) {
+	if (bestAlpha < alpha) {
+	  bestAlpha = alpha;
+	  rowOut = index;
+	}
+      }
+    } else if (alpha < -alphaTol) {
+      // Negative pivotal column entry
+      double tightSpace = baseValue[index] - baseUpper[index];
+      if (tightSpace > relaxTheta * alpha) {
+	if (bestAlpha < -alpha) {
+	  bestAlpha = -alpha;
+	  rowOut = index;
+	}
+      }
+    }
+  }
+  timer.stop(simplex_info.clock_[Chuzr2Clock]);
 }
 
 void HPrimal::primalUpdate() {
