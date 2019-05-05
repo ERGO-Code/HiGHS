@@ -176,44 +176,23 @@ void HPrimal::solve() {
     if (SolveBailout) break;
     */
   }
-#ifdef HiGHSDEV
-    // ToDO move iterateRpAn to simplex
-    //  if (simplex_info.analyseSimplexIterations) iterateRpAn();
   solvePhase = 2;
   if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
-    // Use primal to clean up if not out of time
     if (solvePhase == 2) {
       int it0 = simplex_info.iteration_count;
-      HPrimal hPrimal(workHMO);
 
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-      hPrimal.solvePhase2();
+      solvePhase2();
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
 
       simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
     }
   }
-  // Save the solved results
-  if (simplex_info.dual_phase1_iteration_count +
-      simplex_info.dual_phase2_iteration_count +
-      simplex_info.primal_phase2_iteration_count !=
-      simplex_info.iteration_count) {
-    printf("Iteration total error \n");
-  }
-  printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
-	 simplex_info.dual_phase1_iteration_count,
-         simplex_info.dual_phase2_iteration_count,
-	 simplex_info.primal_phase2_iteration_count,
-	 simplex_info.iteration_count);
+#ifdef HiGHSDEV
   /*
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
            simplex_info.iteration_count / n_dvx_fwk);
-  }
-  bool rp_bs_cond = false;
-  if (rp_bs_cond) {
-    double bs_cond = an_bs_cond();
-    printf("Optimal basis condition estimate is %g\n", bs_cond);
   }
   */
 #endif
@@ -223,42 +202,6 @@ void HPrimal::solve() {
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
   */
-#ifdef HiGHSDEV
-  if (simplex_info.analyseLpSolution) { util_analyse_lp_solution(workHMO);}
-  if (simplex_info.analyse_invert_time) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    int iClock = simplex_info.clock_[InvertClock];
-    simplex_info.total_inverts = timer.clock_num_call[iClock];
-    simplex_info.total_invert_time = timer.clock_time[iClock];
-    
-    printf(
-	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
-	   simplex_info.total_inverts, simplex_info.total_invert_time, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-  if (simplex_info.analyseRebuildTime) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    HighsClockRecord totalRebuildClock;
-    timer.clockInit(totalRebuildClock);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
-    int totalRebuilds = 0;
-    double totalRebuildTime = 0;
-    printf(
-        "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
-        totalRebuildTime, totalRebuilds, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-
-#endif
 }
 
 void HPrimal::solvePhase2() {
@@ -270,11 +213,6 @@ void HPrimal::solvePhase2() {
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
-#ifdef HiGHSDEV
-  printf("************************************\n");
-  printf("Performing primal simplex iterations\n");
-  printf("************************************\n");
-#endif
   // Setup update limits
   simplex_info.update_limit = min(100 + solver_num_row / 100, 1000); // TODO: Consider allowing the dual limit to be used
   simplex_info.update_count = 0;
@@ -360,9 +298,6 @@ void HPrimal::solvePhase2() {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
     simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
-#ifdef HiGHSDEV
-    util_analyse_lp_solution(workHMO);
-#endif    
   } else {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
     simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;

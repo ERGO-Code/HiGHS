@@ -243,51 +243,32 @@ void HDual::solve(int num_threads) {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateRpAn();
+#endif
   if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
     // Use primal to clean up if not out of time
     int it0 = simplex_info.iteration_count;
     if (solvePhase == 4) {
+#ifdef HiGHSDEV
+      printf("************************************\n");
+      printf("Performing primal simplex iterations\n");
+      printf("************************************\n");
+#endif
       HPrimal hPrimal(workHMO);
-
       timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
       hPrimal.solvePhase2();
       timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-
     }
     simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
   }
-  // Save the solved results
-  if (simplex_info.dual_phase1_iteration_count +
-      simplex_info.dual_phase2_iteration_count +
-      simplex_info.primal_phase2_iteration_count !=
-      simplex_info.iteration_count) {
-    printf("Iteration total error \n");
-  }
-  printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
-	 simplex_info.dual_phase1_iteration_count,
-         simplex_info.dual_phase2_iteration_count,
-	 simplex_info.primal_phase2_iteration_count,
-	 simplex_info.iteration_count);
+#ifdef HiGHSDEV
   if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
     printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
            simplex_info.iteration_count / n_dvx_fwk);
-  }
-  if (rp_bs_cond) {
-    double bs_cond = an_bs_cond();
-    printf("Optimal basis condition estimate is %g\n", bs_cond);
   }
 #endif
   ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
-#ifdef HiGHSDEV
-  //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
-  //  report_simplex_lp_status_flags(workHMO.simplex_lp_status_);
-#endif
-
-#ifdef HiGHSDEV
-  if (simplex_info.analyseLpSolution) { util_analyse_lp_solution(workHMO);}
-#endif
 }
 
 void HDual::options() {
