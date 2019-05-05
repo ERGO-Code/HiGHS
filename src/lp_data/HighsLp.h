@@ -205,6 +205,7 @@ struct HighsSimplexInfo {
   SimplexStrategy simplex_strategy;
   SimplexCrashStrategy crash_strategy;
   SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
+  SimplexPrimalEdgeWeightStrategy primal_edge_weight_strategy;
   SimplexPriceStrategy price_strategy;
 
   double primal_feasibility_tolerance;

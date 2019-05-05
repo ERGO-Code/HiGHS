@@ -81,6 +81,9 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
    else if (option == simplex_dual_edge_weight_strategy_string) 
     return setSimplexDualEdgeWeightStrategyValue(options, atoi(value.c_str()));
 
+   else if (option == simplex_primal_edge_weight_strategy_string) 
+    return setSimplexPrimalEdgeWeightStrategyValue(options, atoi(value.c_str()));
+
    else if (option == simplex_price_strategy_string) 
     return setSimplexPriceStrategyValue(options, atoi(value.c_str()));
 
@@ -363,6 +366,11 @@ OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const 
   return OptionStatus::OK;
 }
 
+OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_primal_edge_weight_strategy = intToSimplexPrimalEdgeWeightStrategy(value);
+  return OptionStatus::OK;
+}
+
 OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value) {
   options.simplex_price_strategy = intToSimplexPriceStrategy(value);
   return OptionStatus::OK;
@@ -391,6 +399,11 @@ SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& valu
   if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;
   if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH;
   return SimplexDualEdgeWeightStrategy::DEFAULT;
+}
+SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(const int& value) {
+  if (value == (int)SimplexPrimalEdgeWeightStrategy::DANTZIG) return SimplexPrimalEdgeWeightStrategy::DANTZIG;
+  if (value == (int)SimplexPrimalEdgeWeightStrategy::DEVEX) return SimplexPrimalEdgeWeightStrategy::DEVEX;
+  return SimplexPrimalEdgeWeightStrategy::DEFAULT;
 }
 SimplexPriceStrategy intToSimplexPriceStrategy(const int& value) {
   if (value == (int)SimplexPriceStrategy::COL) return SimplexPriceStrategy::COL;

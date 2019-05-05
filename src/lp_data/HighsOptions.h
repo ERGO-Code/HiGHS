@@ -64,6 +64,7 @@ const string dual_objective_value_upper_bound_string = "dual_objective_value_upp
 const string simplex_strategy_string = "simplex_strategy";
 const string simplex_crash_strategy_string = "simplex_crash_strategy";
 const string simplex_dual_edge_weight_strategy_string = "simplex_dual_edge_weight_strategy";
+const string simplex_primal_edge_weight_strategy_string = "simplex_primal_edge_weight_strategy";
 const string simplex_price_strategy_string = "simplex_price_strategy";
 
 const string message_level_string = "message_level";
@@ -114,6 +115,7 @@ struct HighsOptions
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
+  SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
   int allow_superbasic = false;
@@ -191,6 +193,7 @@ OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const doubl
 OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value);
 OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value);
 
@@ -199,6 +202,7 @@ OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
 SimplexStrategy intToSimplexStrategy(const int& value);
 SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
 SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value);
+SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(const int& value);
 SimplexPriceStrategy intToSimplexPriceStrategy(const int& value);
 
 #endif
