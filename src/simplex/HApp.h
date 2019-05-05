@@ -98,21 +98,15 @@ HighsStatus solveSimplex(
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportPrimalSimplexInnerClock(highs_model_object);
     }
-    /*
     if (simplex_info.report_simplex_outer_clock) {
       simplex_timer.reportDualSimplexIterateClock(highs_model_object);
       simplex_timer.reportDualSimplexOuterClock(highs_model_object);
     }
-    //  printf("report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_)\n");cout<<flush;
-    //  report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_);
     timer.stop(simplex_info.clock_[SimplexTotalClock]);
-    double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
-    
     if (simplex_info.report_simplex_phases_clock) {
       simplex_timer.reportSimplexTotalClock(highs_model_object);
       simplex_timer.report_simplex_phases_clock(highs_model_object);
     }
-    */
 #endif
 
     HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
@@ -157,11 +151,7 @@ HighsStatus solveSimplex(
   } else {
     // Serial. Based on previous solvePlainJAJH.
 
-    //    double lcSolveTime;
-
-    //  bool FourThreads = true;
     bool FourThreads = false;
-    //  bool EightThreads = true;
     bool EightThreads = false;
 
     if (FourThreads)
