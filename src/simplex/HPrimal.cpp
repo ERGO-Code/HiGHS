@@ -140,11 +140,6 @@ void HPrimal::solve() {
 
   while (solvePhase) {
     int it0 = simplex_info.iteration_count;
-#ifdef HiGHSDEV
-    //    double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
-    // printf("HPrimal::solve Phase %d: Iteration %d; simplexTotalTime = %g\n",
-    // solvePhase, simplex_info.iteration_count, simplexTotalTime);cout<<flush;
-#endif
     // When starting a new phase the (updated) primal objective function
     // value isn't known. Indicate this so that when the value
     // computed from scratch in build() isn't checked against the the
@@ -153,16 +148,16 @@ void HPrimal::solve() {
     /*
     switch (solvePhase) {
       case 1:
-	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
-        solve_phase1();
-	timer.stop(simplex_info.clock_[SimplexDualPhase1Clock]);
-        simplex_info.dual_phase1_iteration_count += (simplex_info.iteration_count - it0);
+	timer.start(simplex_info.clock_[SimplexPrimalPhase1Clock]);
+        solvePhase1();
+	timer.stop(simplex_info.clock_[SimplexPrimalPhase1Clock]);
+        simplex_info.primal_phase1_iteration_count += (simplex_info.iteration_count - it0);
         break;
       case 2:
-	timer.start(simplex_info.clock_[SimplexDualPhase2Clock]);
-        solve_phase2();
-	timer.stop(simplex_info.clock_[SimplexDualPhase2Clock]);
-        simplex_info.dual_phase2_iteration_count += (simplex_info.iteration_count - it0);
+	timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+        solvePhase2();
+	timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+        simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
         break;
       case 4:
         break;
@@ -190,7 +185,7 @@ void HPrimal::solve() {
   }
 #ifdef HiGHSDEV
   /*
-  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+  if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
     printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
            simplex_info.iteration_count / n_dvx_fwk);
   }
@@ -348,9 +343,9 @@ void HPrimal::primalRebuild() {
 
   // Primal objective section
   bool checkPrimalObjectiveValue = simplex_lp_status.has_primal_objective_value;
-  timer.start(simplex_info.clock_[ComputeProbjClock]);
+  timer.start(simplex_info.clock_[ComputePrObjClock]);
   compute_primal_objective_value(workHMO);
-  timer.stop(simplex_info.clock_[ComputeProbjClock]);
+  timer.stop(simplex_info.clock_[ComputePrObjClock]);
   report_iteration_count_primal_objective_value(workHMO, sv_invertHint);
 
   double primalObjectiveValue = simplex_info.primalObjectiveValue;
@@ -392,7 +387,7 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
   const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
 
-  timer.start(simplex_info.clock_[ChuzcClock]);
+  timer.start(simplex_info.clock_[ChuzcPrimalClock]);
   columnIn = -1;
   double bestInfeas = 0;
   if (no_free_columns) {
@@ -448,7 +443,7 @@ void HPrimal::primalChooseColumn() {
       }
     }
   }
-  timer.stop(simplex_info.clock_[ChuzcClock]);
+  timer.stop(simplex_info.clock_[ChuzcPrimalClock]);
 }
 
 void HPrimal::primalChooseRow() {

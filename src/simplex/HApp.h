@@ -73,9 +73,8 @@ HighsStatus solveSimplex(
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &lp = highs_model_object.lp_;
 
-
   SimplexTimer simplex_timer;
-  simplex_timer.initialiseDualSimplexClocks(highs_model_object);
+  simplex_timer.initialiseSimplexClocks(highs_model_object);
 #ifdef HiGHSDEV
   timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
@@ -89,11 +88,6 @@ HighsStatus solveSimplex(
     timer.start(timer.solve_clock);
     primal_solver.solve();
     timer.stop(timer.solve_clock);
-
-    // Deduce the LP basis from the simplex basis
-    printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
-    //    highs_model_object.basis_ = highs_model_object.simplex_basis_;
-
 
   } else {
     // Use dual simplex solver
@@ -173,11 +167,11 @@ HighsStatus solveSimplex(
   //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
   if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportDualSimplexInnerClock(highs_model_object);
+      simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
   } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportDualSimplexInnerClock(highs_model_object);
+      simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
     if (simplex_info.report_simplex_outer_clock) {
       simplex_timer.reportDualSimplexIterateClock(highs_model_object);

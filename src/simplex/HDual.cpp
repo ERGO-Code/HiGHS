@@ -684,9 +684,9 @@ void HDual::rebuild() {
   // check against
   bool checkDualObjectiveValue = simplex_lp_status.has_dual_objective_value;
   // Compute the objective value
-  timer.start(simplex_info.clock_[ComputeDuobjClock]);
+  timer.start(simplex_info.clock_[ComputeDuObjClock]);
   compute_dual_objective_value(workHMO, solvePhase);
-  timer.stop(simplex_info.clock_[ComputeDuobjClock]);
+  timer.stop(simplex_info.clock_[ComputeDuObjClock]);
 
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
   if (checkDualObjectiveValue) {
@@ -1409,7 +1409,7 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   // If reinversion is needed then skip this method
   if (invertHint) return;
 
-  timer.start(simplex_info.clock_[ChuzrClock]);
+  timer.start(simplex_info.clock_[ChuzrDualClock]);
   dualRow.clear();
   dualRow.workDelta = deltaPrimal;
   dualRow.create_Freemove(row_ep);
@@ -1444,10 +1444,10 @@ void HDual::chooseColumn_slice(HVector *row_ep) {
   columnIn = -1;
   if (dualRow.workTheta <= 0 || dualRow.workCount == 0) {
     invertHint = INVERT_HINT_POSSIBLY_DUAL_UNBOUNDED;  
-    timer.stop(simplex_info.clock_[ChuzrClock]);
+    timer.stop(simplex_info.clock_[ChuzrDualClock]);
     return;
   }
-  timer.stop(simplex_info.clock_[ChuzrClock]);
+  timer.stop(simplex_info.clock_[ChuzrDualClock]);
 
   // Choose column 2, This only happens if didn't go out
   dualRow.choose_final();
