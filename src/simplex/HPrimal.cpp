@@ -204,6 +204,8 @@ void HPrimal::solvePhase2() {
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   HighsTimer &timer = workHMO.timer_;
 
+  invertHint = INVERT_HINT_NO;
+
   solver_num_col = workHMO.simplex_lp_.numCol_;
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
