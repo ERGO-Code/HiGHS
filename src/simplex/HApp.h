@@ -73,12 +73,15 @@ HighsStatus solveSimplex(
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &lp = highs_model_object.lp_;
 
+
+  SimplexTimer simplex_timer;
+  simplex_timer.initialiseDualSimplexClocks(highs_model_object);
+
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
   if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
+    // Use primal simplex solver
     HPrimal primal_solver(highs_model_object);
-    SimplexTimer simplex_timer;
-    simplex_timer.initialiseDualSimplexClocks(highs_model_object);
 #ifdef HiGHSDEV
   timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
@@ -88,13 +91,73 @@ HighsStatus solveSimplex(
       throw runtime_error("Primal initialise: singular-basis-matrix");
     }
 
-    timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+    timer.start(timer.solve_clock);
     primal_solver.solvePhase2();
-    timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+    timer.stop(timer.solve_clock);
 
+    // Deduce the LP basis from the simplex basis
+    printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
+    //    highs_model_object.basis_ = highs_model_object.simplex_basis_;
+
+    timer.stop(simplex_info.clock_[SimplexTotalClock]);
+
+  } else {
+    // Use dual simplex solver
+    HDual dual_solver(highs_model_object);
+    dual_solver.options();
+  
+    // If after postsolve. todo: advanced basis start here.
+    if (opt.clean_up) {
+      timer.start(timer.solve_clock);
+      dual_solver.solve();
+      timer.stop(timer.solve_clock);
+    } else {
+
+      // Crash, if HighsModelObject has basis information.
+      if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
+	HCrash crash;
+	timer.start(timer.crash_clock);
+	crash.crash(highs_model_object, 0);
+	timer.stop(timer.crash_clock);
+      }
+
+      timer.start(timer.solve_clock);
+      // Solve, depending on the options.
+      // Parallel.
+      if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+	dual_solver.solve(8);
+      } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+	//    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
+	dual_solver.solve(8);
+#ifdef HiGHSDEV
+	// Reinstate this once simplex::writePivots is written
+	//    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) writePivots("multi");
+	//    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) writePivots("tasks");
+#endif
+      } else {
+	// Serial. Based on previous solvePlainJAJH.
+	
+	bool FourThreads = false;
+	bool EightThreads = false;
+	
+	if (FourThreads)
+	  dual_solver.solve(4);
+	else if (EightThreads)
+	  dual_solver.solve(8);
+	else
+	  dual_solver.solve();
+	
+	//    reportLp(lp);
+	//    reportLpSolution(highs_model_object);
+	HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
+
+	timer.stop(timer.solve_clock);
+
+      }
+    }
+  }
 #ifdef HiGHSDEV
     //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
-    // Report the ticks before primal
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportPrimalSimplexInnerClock(highs_model_object);
     }
@@ -102,74 +165,13 @@ HighsStatus solveSimplex(
       simplex_timer.reportDualSimplexIterateClock(highs_model_object);
       simplex_timer.reportDualSimplexOuterClock(highs_model_object);
     }
-    timer.stop(simplex_info.clock_[SimplexTotalClock]);
     if (simplex_info.report_simplex_phases_clock) {
       simplex_timer.reportSimplexTotalClock(highs_model_object);
       simplex_timer.report_simplex_phases_clock(highs_model_object);
     }
 #endif
+  return LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
-    HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
-
-    // Deduce the LP basis from the simplex basis
-    printf("!! Convert rather than copy from highs_model_object.simplex_basis_ to highs_model_object.basis_ !!\n");
-    //    highs_model_object.basis_ = highs_model_object.simplex_basis_;
-    return result;
-  }
-  HDual dual_solver(highs_model_object);
-  dual_solver.options();
-  
-  // If after postsolve. todo: advanced basis start here.
-  if (opt.clean_up) {
-    timer.start(timer.solve_clock);
-    dual_solver.solve();
-    timer.stop(timer.solve_clock);
-    return LpStatusToHighsStatus(simplex_lp_status.solution_status);
-  }
-
-  // Crash, if HighsModelObject has basis information.
-  if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
-    HCrash crash;
-    timer.start(timer.crash_clock);
-    crash.crash(highs_model_object, 0);
-    timer.stop(timer.crash_clock);
-  }
-
-  timer.start(timer.solve_clock);
-  // Solve, depending on the options.
-  // Parallel.
-  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
-    dual_solver.solve(8);
-  } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
-    //    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-    dual_solver.solve(8);
-#ifdef HiGHSDEV
-    // Reinstate this once simplex::writePivots is written
-    //    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) writePivots("multi");
-    //    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) writePivots("tasks");
-#endif
-  } else {
-    // Serial. Based on previous solvePlainJAJH.
-
-    bool FourThreads = false;
-    bool EightThreads = false;
-
-    if (FourThreads)
-      dual_solver.solve(4);
-    else if (EightThreads)
-      dual_solver.solve(8);
-    else
-      dual_solver.solve();
-
-    //    reportLp(lp);
-    //    reportLpSolution(highs_model_object);
-    HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
-
-    timer.stop(timer.solve_clock);
-
-    if (result != HighsStatus::Optimal) return result;
-  }
-  return HighsStatus::Optimal;
 }
 
 // Single function to solve an lp according to options and fill
