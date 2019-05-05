@@ -47,9 +47,6 @@ void HDual::solve(int num_threads) {
   HighsTimer &timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
 
-  SimplexTimer simplex_timer;
-  simplex_timer.initialiseDualSimplexClocks(workHMO);
-
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
 #ifdef HiGHSDEV
@@ -249,45 +246,6 @@ void HDual::solve(int num_threads) {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseSimplexIterations) iterateRpAn();
-  // Report the ticks before primal
-  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
-    if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportDualSimplexInnerClock(workHMO);
-    }
-    if (simplex_info.report_simplex_outer_clock) {
-      simplex_timer.reportDualSimplexIterateClock(workHMO);
-      simplex_timer.reportDualSimplexOuterClock(workHMO);
-    }
-  }
-
-  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
-  //    int reportList[] = {
-  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
-  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
-  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
-  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
-  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
-  //        HTICK_GROUP1};
-  //    int reportCount = sizeof(reportList) / sizeof(int);
-  //    timer.report(reportCount, reportList, 0.0);
-  //  }
-
-  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
-  //    int reportList[] = {
-  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
-  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
-  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
-  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
-  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
-  //        HTICK_UPDATE_ROW_EP};
-  //    int reportCount = sizeof(reportList) / sizeof(int);
-  //    timer.report(reportCount, reportList, 0.0);
-      printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
-             workHMO.lp_.model_name_.c_str(), pami_cutoff,
-             simplex_info.iteration_count / (1.0 + multi_iteration));
-    }
-#endif
-
   if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
     // Use primal to clean up if not out of time
     int it0 = simplex_info.iteration_count;
@@ -302,7 +260,6 @@ void HDual::solve(int num_threads) {
     simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
   }
   // Save the solved results
-#ifdef HiGHSDEV
   if (simplex_info.dual_phase1_iteration_count +
       simplex_info.dual_phase2_iteration_count +
       simplex_info.primal_phase2_iteration_count !=
@@ -323,22 +280,12 @@ void HDual::solve(int num_threads) {
     printf("Optimal basis condition estimate is %g\n", bs_cond);
   }
 #endif
-#ifdef HiGHSDEV
-  //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve():
-  //  solvePhase = %d\n", solvePhase);cout<<flush;}
-#endif
   ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
 #ifdef HiGHSDEV
   //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
   //  report_simplex_lp_status_flags(workHMO.simplex_lp_status_);
-  timer.stop(simplex_info.clock_[SimplexTotalClock]);
-
-  if (simplex_info.report_simplex_phases_clock) {
-    simplex_timer.reportSimplexTotalClock(workHMO);
-    simplex_timer.report_simplex_phases_clock(workHMO);
-  }
 #endif
 
 #ifdef HiGHSDEV

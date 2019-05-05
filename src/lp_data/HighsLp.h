@@ -243,6 +243,12 @@ struct HighsSimplexInfo {
   int primal_phase1_iteration_count = 0;
   int primal_phase2_iteration_count = 0;
 
+  // Cutoff for PAMI
+  double pami_cutoff = 0.95;
+
+  // Info on PAMI iterations
+  int multi_iteration = 0;
+
   // Number of UPDATE operations performed - should be zeroed when INVERT is performed
   int update_count;
   // Value of dual objective - only set when computed from scratch in dual rebuild()

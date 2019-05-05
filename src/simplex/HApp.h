@@ -76,6 +76,9 @@ HighsStatus solveSimplex(
 
   SimplexTimer simplex_timer;
   simplex_timer.initialiseDualSimplexClocks(highs_model_object);
+#ifdef HiGHSDEV
+  timer.start(simplex_info.clock_[SimplexTotalClock]);
+#endif
 
   bool ranging = true;
   // Initialize solver and set dual solver options from simplex options
@@ -147,6 +150,73 @@ HighsStatus solveSimplex(
       }
     }
   }
+
+
+
+
+
+
+
+
+
+
+
+  // Report the ticks before primal
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+    if (simplex_info.report_simplex_inner_clock) {
+      simplex_timer.reportDualSimplexInnerClock(highs_model_object);
+    }
+    if (simplex_info.report_simplex_outer_clock) {
+      simplex_timer.reportDualSimplexIterateClock(highs_model_object);
+      simplex_timer.reportDualSimplexOuterClock(highs_model_object);
+    }
+  }
+
+  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  //    int reportList[] = {
+  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
+  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
+  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
+  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
+  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
+  //        HTICK_GROUP1};
+  //    int reportCount = sizeof(reportList) / sizeof(int);
+  //    timer.report(reportCount, reportList, 0.0);
+  //  }
+
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  //    int reportList[] = {
+  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
+  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
+  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
+  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
+  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
+  //        HTICK_UPDATE_ROW_EP};
+  //    int reportCount = sizeof(reportList) / sizeof(int);
+  //    timer.report(reportCount, reportList, 0.0);
+      printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
+             highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
+             simplex_info.iteration_count / (1.0 + simplex_info.multi_iteration));
+    }
+  timer.stop(simplex_info.clock_[SimplexTotalClock]);
+
+  if (simplex_info.report_simplex_phases_clock) {
+    simplex_timer.reportSimplexTotalClock(highs_model_object);
+    simplex_timer.report_simplex_phases_clock(highs_model_object);
+  }
+#endif
+  
+
+
+
+
+
+
+
+
+
+
+
 #ifdef HiGHSDEV
     //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
     if (simplex_info.report_simplex_inner_clock) {
@@ -261,16 +331,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 		&simplex_lp.Avalue_[0],
 		&simplex_basis.basicIndex_[0]);
 
-  // Crash, if needed.
-
   HighsStatus result = solveSimplex(opt, highs_model_object);
 
-  // todo uncomment line below.
   if (result != HighsStatus::Optimal) return result;
 
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
   return result;
 }
-
-#endif
