@@ -25,6 +25,304 @@
 
 using std::runtime_error;
 
+void HPrimal::solve() {
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
+  // Cannot solve box-constrained LPs
+  if (workHMO.simplex_lp_.numRow_ == 0) return;
+
+  HighsTimer &timer = workHMO.timer_;
+  invertHint = INVERT_HINT_NO;
+
+  SimplexTimer simplex_timer;
+  simplex_timer.initialiseDualSimplexClocks(workHMO);
+
+  // Setup aspects of the model data which are needed for solve() but better
+  // left until now for efficiency reasons.
+#ifdef HiGHSDEV
+  printf("Calling setup_for_solve(workHMO);\n");
+#endif
+  // ToDo primal simplex version
+  // setup_for_solve(workHMO);
+
+#ifdef HiGHSDEV
+  timer.start(simplex_info.clock_[SimplexTotalClock]);
+#endif
+  // Set SolveBailout to be true if control is to be returned immediately to
+  // calling function
+  // ToDo Move to Simplex
+  //  SolveBailout = false;
+
+  // Initialise working environment
+  // Does LOTS, including initialisation of edge weights. Should only
+  // be called if model dimension changes
+  // ToDo primal simplex version
+  // init(num_threads);
+
+  // ToDo primal simplex version
+  // initialise_cost(workHMO, 1); //  model->initCost(1);
+  if (!simplex_lp_status.has_fresh_invert) {
+    int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
+
+    if (rankDeficiency) {
+      throw runtime_error("Primal initialise: singular-basis-matrix");
+    }
+#ifdef HiGHSDEV
+    bool rp_bs_cond = false;
+    double bsCond = 1;
+  // ToDo move from HDual to HSimplex 
+  // an_bs_cond();
+    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
+    if (bsCond > 1e12) {
+      HighsPrintMessage(ML_MINIMAL, " excessive\n");
+      return;
+    } else {
+      HighsPrintMessage(ML_MINIMAL, " OK\n");
+    }
+#endif
+  }
+  // Consider initialising edge weights - create Primal variants
+  //
+#ifdef HiGHSDEV
+  //  printf("simplex_lp_status.has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
+  //  %d\n",
+  //	 simplex_lp_status.has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
+  //  printf("Edge weights known? %d\n", !simplex_lp_status.has_dual_steepest_edge_weights);cout<<flush;
+#endif
+  /*
+  if (!simplex_lp_status.has_dual_steepest_edge_weights) {
+    // Edge weights are not known
+    // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
+    // Using dual Devex edge weights
+    // Zero the number of Devex frameworks used and set up the first one
+    n_dvx_fwk = 0;
+    dvx_ix.assign(solver_num_tot, 0);
+    iz_dvx_fwk();
+    // Indicate that edge weights are known
+    simplex_lp_status.has_dual_steepest_edge_weights = true;
+  }
+  */
+
+  // ToDo Determine primal simplex phase from initial primal values
+  //
+  /*
+  compute_primal(workHMO);
+  compute_primal_infeasible_in_??(workHMO, &dualInfeasCount);
+  solvePhase = ??InfeasCount > 0 ? 1 : 2;
+  */
+  solvePhase = 2;
+
+  // Check that the model is OK to solve:
+  //
+  // Level 0 just checks the flags
+  //
+  // Level 1 also checks that the basis is OK and that the necessary
+  // data in work* is populated.
+  //
+  // Level 2 (will) checks things like the nonbasic duals and basic
+  // primal values
+  //
+  // Level 3 (will) checks expensive things like the INVERT and
+  // steepeest edge weights
+  //
+  // ToDo Write primal simplex equivalent
+  /*
+  bool ok = ok_to_solve(workHMO, 1, solvePhase);
+  if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
+  assert(ok);
+  */
+#ifdef HiGHSDEV
+  //  Analyse the initial values of primal and dual variables
+  //  an_iz_vr_v();
+#endif
+
+  // The major solving loop
+
+  // Initialise the iteration analysis. Necessary for strategy, but
+  // much is for development and only switched on with HiGHSDEV
+  // ToDo Move to simplex and adapt so it's OK for primal and dual
+  //  iterateIzAn();
+
+  while (solvePhase) {
+    int it0 = simplex_info.iteration_count;
+#ifdef HiGHSDEV
+    //    double simplexTotalTime = timer.read(simplex_info.clock_[SimplexTotalClock]);
+    // printf("HPrimal::solve Phase %d: Iteration %d; simplexTotalTime = %g\n",
+    // solvePhase, simplex_info.iteration_count, simplexTotalTime);cout<<flush;
+#endif
+    // When starting a new phase the (updated) primal objective function
+    // value isn't known. Indicate this so that when the value
+    // computed from scratch in build() isn't checked against the the
+    // updated value
+    simplex_lp_status.has_primal_objective_value = 0;
+    /*
+    switch (solvePhase) {
+      case 1:
+	timer.start(simplex_info.clock_[SimplexDualPhase1Clock]);
+        solve_phase1();
+	timer.stop(simplex_info.clock_[SimplexDualPhase1Clock]);
+        simplex_info.dual_phase1_iteration_count += (simplex_info.iteration_count - it0);
+        break;
+      case 2:
+	timer.start(simplex_info.clock_[SimplexDualPhase2Clock]);
+        solve_phase2();
+	timer.stop(simplex_info.clock_[SimplexDualPhase2Clock]);
+        simplex_info.dual_phase2_iteration_count += (simplex_info.iteration_count - it0);
+        break;
+      case 4:
+        break;
+      default:
+        solvePhase = 0;
+        break;
+    }
+    // Jump for primal
+    if (solvePhase == 4) break;
+    // Possibly bail out
+    if (SolveBailout) break;
+    */
+  }
+#ifdef HiGHSDEV
+    // ToDO move iterateRpAn to simplex
+    //  if (simplex_info.analyseSimplexIterations) iterateRpAn();
+  // Report the ticks before primal
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+    if (simplex_info.report_simplex_inner_clock) {
+      simplex_timer.reportDualSimplexInnerClock(workHMO);
+    }
+    if (simplex_info.report_simplex_outer_clock) {
+      simplex_timer.reportDualSimplexIterateClock(workHMO);
+      simplex_timer.reportDualSimplexOuterClock(workHMO);
+    }
+  }
+
+  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  //    int reportList[] = {
+  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
+  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
+  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
+  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
+  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
+  //        HTICK_GROUP1};
+  //    int reportCount = sizeof(reportList) / sizeof(int);
+  //    timer.report(reportCount, reportList, 0.0);
+  //  }
+
+  /*
+  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  //    int reportList[] = {
+  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
+  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
+  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
+  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
+  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
+  //        HTICK_UPDATE_ROW_EP};
+  //    int reportCount = sizeof(reportList) / sizeof(int);
+  //    timer.report(reportCount, reportList, 0.0);
+      printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
+             workHMO.lp_.model_name_.c_str(), pami_cutoff,
+             simplex_info.iteration_count / (1.0 + multi_iteration));
+    }
+  */
+#endif
+
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
+    // Use primal to clean up if not out of time
+    if (solvePhase == 2) {
+      int it0 = simplex_info.iteration_count;
+      HPrimal hPrimal(workHMO);
+
+      timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      hPrimal.solvePhase2();
+      timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+
+      simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
+    }
+  }
+  // Save the solved results
+#ifdef HiGHSDEV
+  if (simplex_info.dual_phase1_iteration_count +
+      simplex_info.dual_phase2_iteration_count +
+      simplex_info.primal_phase2_iteration_count !=
+      simplex_info.iteration_count) {
+    printf("Iteration total error \n");
+  }
+  printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
+	 simplex_info.dual_phase1_iteration_count,
+         simplex_info.dual_phase2_iteration_count,
+	 simplex_info.primal_phase2_iteration_count,
+	 simplex_info.iteration_count);
+  /*
+  if (dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) {
+    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
+           simplex_info.iteration_count / n_dvx_fwk);
+  }
+  bool rp_bs_cond = false;
+  if (rp_bs_cond) {
+    double bs_cond = an_bs_cond();
+    printf("Optimal basis condition estimate is %g\n", bs_cond);
+  }
+  */
+#endif
+#ifdef HiGHSDEV
+  //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve():
+  //  solvePhase = %d\n", solvePhase);cout<<flush;}
+#endif
+  /*
+  // ToDo Adapt ok_to_solve to be used by primal
+  bool ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
+  if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
+  assert(ok);
+  */
+#ifdef HiGHSDEV
+  //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
+  //  report_simplex_lp_status_flags(workHMO.simplex_lp_status_);
+  timer.stop(simplex_info.clock_[SimplexTotalClock]);
+
+  if (simplex_info.report_simplex_phases_clock) {
+    simplex_timer.reportSimplexTotalClock(workHMO);
+    simplex_timer.report_simplex_phases_clock(workHMO);
+  }
+#endif
+
+#ifdef HiGHSDEV
+  if (simplex_info.analyseLpSolution) { util_analyse_lp_solution(workHMO);}
+  if (simplex_info.analyse_invert_time) {
+    double current_run_highs_time = timer.readRunHighsClock();
+    int iClock = simplex_info.clock_[InvertClock];
+    simplex_info.total_inverts = timer.clock_num_call[iClock];
+    simplex_info.total_invert_time = timer.clock_time[iClock];
+    
+    printf(
+	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
+	   simplex_info.total_inverts, simplex_info.total_invert_time, current_run_highs_time);
+    if (current_run_highs_time > 0.001) {
+      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / current_run_highs_time);
+    } else {
+      printf("\n");
+    }
+  }
+  if (simplex_info.analyseRebuildTime) {
+    double current_run_highs_time = timer.readRunHighsClock();
+    HighsClockRecord totalRebuildClock;
+    timer.clockInit(totalRebuildClock);
+    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
+    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
+    int totalRebuilds = 0;
+    double totalRebuildTime = 0;
+    printf(
+        "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
+        totalRebuildTime, totalRebuilds, current_run_highs_time);
+    if (current_run_highs_time > 0.001) {
+      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
+    } else {
+      printf("\n");
+    }
+  }
+
+#endif
+}
+
 void HPrimal::solvePhase2() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;

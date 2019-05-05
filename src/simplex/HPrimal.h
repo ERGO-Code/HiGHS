@@ -31,6 +31,11 @@ class HPrimal {
  HPrimal(HighsModelObject& model_object) : workHMO(model_object)
    {  }
   /**
+   * @brief Solve a model instance
+   */
+  void solve();
+
+  /**
    * @brief Perform Phase 2 primal simplex iterations
    */
   void solvePhase2();
@@ -57,6 +62,8 @@ class HPrimal {
 
   bool no_free_columns;
   
+  int solvePhase;
+
   // Pivot related
   int invertHint;
   int columnIn;
