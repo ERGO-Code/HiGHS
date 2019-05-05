@@ -286,10 +286,6 @@ void HPrimal::solvePhase2() {
   columnDensity = 0;
   row_epDensity = 0;
 
-  num_tabu_col = 0;
-  tabu_col_p.resize(solver_num_tot);
-  tabu_col.assign(solver_num_tot, 1);
-  
   no_free_columns = true;
   for (int iCol = 0; iCol < solver_num_tot; iCol++) {
     if (highs_isInfinity(-workHMO.simplex_info_.workLower_[iCol])) {
@@ -317,32 +313,12 @@ void HPrimal::solvePhase2() {
     timer.stop(simplex_info.clock_[IteratePrimalRebuildClock]);
 
     for (;;) {
-      for (;;) {
-	if (num_tabu_col == solver_num_tot) {
-	  printf("All columns tabu!\n");
-	  invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
-	  break;
-	}
-	primalChooseColumn();
-	if (columnIn == -1) {
-	  printf("Possibly optimal: num_tabu_col = %d\n", num_tabu_col);
-	  invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
-	  break;
-	}
-	primalChooseRow();
-	if (alpha) break;
-	tabu_col_p[num_tabu_col] = columnIn;
-	tabu_col[columnIn] = 0;
-	num_tabu_col++;
+      primalChooseColumn();
+      if (columnIn == -1) {
+	invertHint = INVERT_HINT_POSSIBLY_OPTIMAL;
+	break;
       }
-      if (invertHint) break;
-      if (num_tabu_col) {
-	for (int p = 0; p < num_tabu_col; p++) {
-	  tabu_col[tabu_col_p[p]] = 1;
-	}
-	//	printf("Removed %2d tabu columns\n", num_tabu_col);
-	num_tabu_col = 0;
-      }
+      primalChooseRow();
       if (rowOut == -1) {
         invertHint = INVERT_HINT_POSSIBLY_PRIMAL_UNBOUNDED;
         break;
@@ -435,13 +411,6 @@ void HPrimal::primalRebuild() {
   int numPrimalInfeas = computePrimalInfeasible(workHMO);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
-  if (num_tabu_col) {
-    for (int p = 0; p < num_tabu_col; p++) {
-      tabu_col[tabu_col_p[p]] = 1;
-    }
-    num_tabu_col = 0;
-  }
-
   // Primal objective section
   bool checkPrimalObjectiveValue = simplex_lp_status.has_primal_objective_value;
   timer.start(simplex_info.clock_[ComputeProbjClock]);
@@ -503,7 +472,7 @@ void HPrimal::primalChooseColumn() {
       //      printf("CHUZC: %1d [%6d, %6d] %6d\n", numPass, fromCol, toCol, solver_num_tot);
       for (int iCol = fromCol; iCol < toCol; iCol++) {
 	// Then look at dual infeasible
-	if (tabu_col[iCol] * jMove[iCol] * workDual[iCol] < -dualTolerance) {
+	if (jMove[iCol] * workDual[iCol] < -dualTolerance) {
 	  if (bestInfeas < fabs(workDual[iCol])) {
 	    bestInfeas = fabs(workDual[iCol]);
 	    columnIn = iCol;
