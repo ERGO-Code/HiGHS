@@ -54,9 +54,6 @@ void HDual::solve(int num_threads) {
 #endif
   setup_for_solve(workHMO); //  model->setup_for_solve();
 
-#ifdef HiGHSDEV
-  timer.start(simplex_info.clock_[SimplexTotalClock]);
-#endif
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
   SolveBailout = false;
@@ -290,39 +287,6 @@ void HDual::solve(int num_threads) {
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseLpSolution) { util_analyse_lp_solution(workHMO);}
-  if (simplex_info.analyse_invert_time) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    int iClock = simplex_info.clock_[InvertClock];
-    simplex_info.total_inverts = timer.clock_num_call[iClock];
-    simplex_info.total_invert_time = timer.clock_time[iClock];
-    
-    printf(
-	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
-	   simplex_info.total_inverts, simplex_info.total_invert_time, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-  if (simplex_info.analyseRebuildTime) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    HighsClockRecord totalRebuildClock;
-    timer.clockInit(totalRebuildClock);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
-    int totalRebuilds = 0;
-    double totalRebuildTime = 0;
-    printf(
-        "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
-        totalRebuildTime, totalRebuilds, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-
 #endif
 }
 
