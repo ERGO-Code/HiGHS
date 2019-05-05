@@ -111,7 +111,7 @@ void HPrimal::solve() {
   compute_primal_infeasible_in_??(workHMO, &dualInfeasCount);
   solvePhase = ??InfeasCount > 0 ? 1 : 2;
   */
-  solvePhase = 2;
+  solvePhase = 0; // Frig to skip while (solvePhase) {*}
 
   // Check that the model is OK to solve:
   //
@@ -226,6 +226,7 @@ void HPrimal::solve() {
   */
 #endif
 
+  solvePhase = 2;
   if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
     // Use primal to clean up if not out of time
     if (solvePhase == 2) {
