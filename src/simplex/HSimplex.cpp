@@ -2351,7 +2351,7 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
 }
 
 #ifdef HiGHSDEV
-void util_analyse_lp_solution(HighsModelObject &highs_model_object) {
+void analyse_lp_solution(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;

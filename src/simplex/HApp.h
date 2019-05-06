@@ -350,11 +350,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 		      &simplex_lp.Avalue_[0]);
   
   }
+  simplex_lp_status.has_matrix_col_wise = true;
+  simplex_lp_status.has_matrix_row_wise = true;
+
+
   factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
 		&simplex_lp.Astart_[0],
 		&simplex_lp.Aindex_[0],
 		&simplex_lp.Avalue_[0],
 		&simplex_basis.basicIndex_[0]);
+  simplex_lp_status.has_factor_arrays = true;
 
   HighsStatus result = solveSimplex(opt, highs_model_object);
 

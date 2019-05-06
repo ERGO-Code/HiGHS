@@ -332,9 +332,9 @@ void update_matrix(HighsModelObject &highs_model_object,
 		   );
 
 #ifdef HiGHSDEV
-void util_analyse_lp_solution(
-			      HighsModelObject &highs_model_object
-			      );
+void analyse_lp_solution(
+			 HighsModelObject &highs_model_object
+			 );
 #endif
 
 void report_iteration_count_dual_objective_value(
