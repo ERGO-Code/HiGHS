@@ -37,37 +37,16 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h" // Just to hack in primal simplex solver
 
-using std::runtime_error; // Just to hack in primal simplex solver
-using std::cout;
-using std::endl;
-using std::flush;
-
-HighsStatus LpStatusToHighsStatus(SimplexSolutionStatus simplex_solution_status) {
-  switch (simplex_solution_status) {
-  case SimplexSolutionStatus::OUT_OF_TIME:
-      return HighsStatus::Timeout;
-  case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return HighsStatus::ReachedDualObjectiveUpperBound;
-  case SimplexSolutionStatus::FAILED:
-      return HighsStatus::SolutionError;
-  case SimplexSolutionStatus::SINGULAR:
-      return HighsStatus::SolutionError;
-  case SimplexSolutionStatus::UNBOUNDED:
-      return HighsStatus::Unbounded;
-  case SimplexSolutionStatus::INFEASIBLE:
-      return HighsStatus::Infeasible;
-  case SimplexSolutionStatus::OPTIMAL:
-      return HighsStatus::Optimal;
-  default:
-      return HighsStatus::NotImplemented;
-  }
-}
+//using std::cout;
+//using std::endl;
+//using std::flush;
 
 HighsStatus solveSimplex(
 			 const HighsOptions& opt,
                          HighsModelObject& highs_model_object
 			 ) {
   // Just solves the LP in highs_model_object.scaled_lp_
+  HighsSimplexInterface simplex_interface(highs_model_object);
   HighsTimer &timer = highs_model_object.timer_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -100,7 +79,6 @@ HighsStatus solveSimplex(
       dual_solver.solve();
       timer.stop(timer.solve_clock);
     } else {
-
       // Crash, if HighsModelObject has basis information.
       if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
 	HCrash crash;
@@ -108,7 +86,6 @@ HighsStatus solveSimplex(
 	crash.crash(highs_model_object, 0);
 	timer.stop(timer.crash_clock);
       }
-
       timer.start(timer.solve_clock);
       // Solve, depending on the options.
       // Parallel.
@@ -135,9 +112,7 @@ HighsStatus solveSimplex(
 	else
 	  dual_solver.solve();
 	
-	//    reportLp(lp);
-	//    reportLpSolution(highs_model_object);
-	HighsStatus result = LpStatusToHighsStatus(simplex_lp_status.solution_status);
+	HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
 	timer.stop(timer.solve_clock);
 
@@ -147,6 +122,7 @@ HighsStatus solveSimplex(
 
   if (simplex_info.dual_phase1_iteration_count +
       simplex_info.dual_phase2_iteration_count +
+      simplex_info.primal_phase1_iteration_count +
       simplex_info.primal_phase2_iteration_count !=
       simplex_info.iteration_count) {
     printf("Iteration total error \n");
@@ -156,9 +132,6 @@ HighsStatus solveSimplex(
 #ifdef HiGHSDEV
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   reportSimplexProfiling(highs_model_object);
-  //#endif
-  
-  
   printf("!! Move an_bs_cond() to HSimplex\n");
   /*
     if (rp_bs_cond) {
@@ -169,84 +142,7 @@ HighsStatus solveSimplex(
     // ToDO move iterateRpAn to simplex
   printf("!! Move iterateRpAn() to HSimplex\n");
   //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
-  if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
-    if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexInnerClock(highs_model_object);
-    }
-  } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
-    if (simplex_info.report_simplex_inner_clock) {
-      simplex_timer.reportSimplexInnerClock(highs_model_object);
-    }
-    if (simplex_info.report_simplex_outer_clock) {
-      simplex_timer.reportDualSimplexIterateClock(highs_model_object);
-      simplex_timer.reportDualSimplexOuterClock(highs_model_object);
-    }
-  }
-  
-  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
-  //    int reportList[] = {
-  //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
-  //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
-  //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
-  //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
-  //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
-  //        HTICK_GROUP1};
-  //    int reportCount = sizeof(reportList) / sizeof(int);
-  //    timer.report(reportCount, reportList, 0.0);
-  //  }
-  
-  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
-    //    int reportList[] = {
-    //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
-    //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
-    //        HTICK_CHUZC3,        HTICK_DEVEX_WT,      HTICK_FTRAN,
-    //        HTICK_FTRAN_BFRT,    HTICK_FTRAN_DSE,     HTICK_UPDATE_DUAL,
-    //        HTICK_UPDATE_PRIMAL, HTICK_UPDATE_WEIGHT, HTICK_UPDATE_FACTOR,
-    //        HTICK_UPDATE_ROW_EP};
-    //    int reportCount = sizeof(reportList) / sizeof(int);
-    //    timer.report(reportCount, reportList, 0.0);
-    printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
-	   highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
-	   simplex_info.iteration_count / (1.0 + simplex_info.multi_iteration));
-  }
-  
-  if (simplex_info.report_simplex_phases_clock) {
-    simplex_timer.reportSimplexTotalClock(highs_model_object);
-    simplex_timer.report_simplex_phases_clock(highs_model_object);
-  }
 
-  if (simplex_info.analyse_invert_time) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    int iClock = simplex_info.clock_[InvertClock];
-    simplex_info.total_inverts = timer.clock_num_call[iClock];
-    simplex_info.total_invert_time = timer.clock_time[iClock];
-    
-    printf(
-	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
-	   simplex_info.total_inverts, simplex_info.total_invert_time, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
-  if (simplex_info.analyseRebuildTime) {
-    double current_run_highs_time = timer.readRunHighsClock();
-    HighsClockRecord totalRebuildClock;
-    timer.clockInit(totalRebuildClock);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
-    int totalRebuilds = 0;
-    double totalRebuildTime = 0;
-    printf(
-        "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
-        totalRebuildTime, totalRebuilds, current_run_highs_time);
-    if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
-    } else {
-      printf("\n");
-    }
-  }
   printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
 	 simplex_info.dual_phase1_iteration_count,
          simplex_info.dual_phase2_iteration_count,
@@ -260,7 +156,7 @@ HighsStatus solveSimplex(
   if (simplex_info.analyseLpSolution) { analyse_lp_solution(highs_model_object);}
 #endif
 
-  return LpStatusToHighsStatus(simplex_lp_status.solution_status);
+  return simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
 }
 
@@ -281,13 +177,17 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //
   if (!highs_model_object.simplex_lp_status_.valid) setupSimplexLp(highs_model_object);
 
+  // Setup the basis if not valid, taking the Highs basis if it's
+  // valid, otherwise a unit basis
   setupForSimplexSolve(highs_model_object);
 
+  // Call the simplex solver
   HighsStatus result = solveSimplex(opt, highs_model_object);
 
+  // Return if not optimal
   if (result != HighsStatus::Optimal) return result;
 
-  // Copy the solution and basis
+  // Optimal solution: copy the solution and basis
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
   return result;

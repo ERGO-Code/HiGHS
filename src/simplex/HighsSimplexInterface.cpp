@@ -856,56 +856,28 @@ void HighsSimplexInterface::change_update_method(int updateMethod) {
 }
 #endif
 
-void HighsSimplexInterface::report_simplex_outcome(const char *message) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HighsTimer &timer = highs_model_object.timer_;
-
-  string ch7_status;
-  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL)
-    ch7_status = "OPTIMAL";
-  else
-    ch7_status = "NOT-OPT";
-  HighsPrintMessage(ML_ALWAYS, "%s: %7s\n", message, ch7_status.c_str());
-
-
-  double dualObjectiveValue = simplex_info.dualObjectiveValue;
-  double primalObjectiveValue = simplex_info.primalObjectiveValue;
-  double currentRunHighsTime = timer.readRunHighsClock();
-#ifdef SCIP_DEV
-  double dlObjVal = abs(primalObjectiveValue - dualObjectiveValue) / max(abs(dualObjectiveValue), max(abs(primalObjectiveValue), 1.0));
-  HighsPrintMessage(ML_MINIMAL, "%32s: PrObj=%20.10e; DuObj=%20.10e; DlObj=%g; Iter=%10d; %10.3f",
-		    simplex_lp.model_name_.c_str(),
-		    primalObjectiveValue,
-		    dualObjectiveValue,
-		    dlObjVal,
-		    simplex_info.iteration_count,
-		    currentRunHighsTime);
-#endif
-  HighsLogMessage(HighsMessageType::INFO, "Model name: %-s", simplex_lp.model_name_.c_str());
-  HighsLogMessage(HighsMessageType::INFO, "Run status: %-s", SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
-  HighsLogMessage(HighsMessageType::INFO, "Objective value:             %15.8g", dualObjectiveValue);
-  HighsLogMessage(HighsMessageType::INFO, "Iteration count (dual phase 1): %12d", simplex_info.dual_phase1_iteration_count);
-  HighsLogMessage(HighsMessageType::INFO, "Iteration count (dual phase 2): %12d", simplex_info.dual_phase2_iteration_count);
-  HighsLogMessage(HighsMessageType::INFO, "Iteration count (primal):       %12d", simplex_info.primal_phase2_iteration_count);
-  HighsLogMessage(HighsMessageType::INFO, "Iteration count (total):        %12d", simplex_info.iteration_count);
-  HighsLogMessage(HighsMessageType::INFO, "Run time:                       %12.2f", currentRunHighsTime);
-
-  // Greppable report line added
-  HighsLogMessage(HighsMessageType::INFO, "grep_HiGHS,%15.8g,%d,%g,Status,%d,%16s,%d,%d,%d\n",
-		    dualObjectiveValue,
-		    simplex_info.iteration_count,
-		    currentRunHighsTime,
-		    simplex_lp_status.solution_status,
-		    simplex_lp.model_name_.c_str(),
-		    simplex_info.dual_phase1_iteration_count,
-		    simplex_info.dual_phase2_iteration_count,
-		    simplex_info.primal_phase2_iteration_count
-		    );
+HighsStatus HighsSimplexInterface::LpStatusToHighsStatus(SimplexSolutionStatus simplex_solution_status) {
+  switch (simplex_solution_status) {
+  case SimplexSolutionStatus::OUT_OF_TIME:
+      return HighsStatus::Timeout;
+  case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+      return HighsStatus::ReachedDualObjectiveUpperBound;
+  case SimplexSolutionStatus::FAILED:
+      return HighsStatus::SolutionError;
+  case SimplexSolutionStatus::SINGULAR:
+      return HighsStatus::SolutionError;
+  case SimplexSolutionStatus::UNBOUNDED:
+      return HighsStatus::Unbounded;
+  case SimplexSolutionStatus::INFEASIBLE:
+      return HighsStatus::Infeasible;
+  case SimplexSolutionStatus::OPTIMAL:
+      return HighsStatus::Optimal;
+  default:
+      return HighsStatus::NotImplemented;
+  }
 }
 
-  // Utilities to convert model basic/nonbasic status to/from SCIP-like status
+// Utilities to convert model basic/nonbasic status to/from SCIP-like status
 int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat, const int* rstat) {
   HighsBasis &basis = highs_model_object.basis_;
   HighsLp &lp = highs_model_object.lp_;

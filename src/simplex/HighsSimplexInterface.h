@@ -355,13 +355,9 @@ class HighsSimplexInterface {
 			    );
 #endif
 
-  /**
-   * @brief Report the outcome of a simplex solve, printing a message first to contextualise the call
-   */
-  void report_simplex_outcome(
-			      const char* message
-			      );
-
+  HighsStatus LpStatusToHighsStatus(
+				    SimplexSolutionStatus simplex_solution_status
+				    );
   /**
    * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
    * Postive  return value k implies invalid basis status for column k-1
