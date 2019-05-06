@@ -1469,7 +1469,59 @@ void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
 #endif
 }
 
-void setup_for_solve(HighsModelObject &highs_model_object) {
+void setupSimplexLp(HighsModelObject &highs_model_object) {
+  const HighsLp &lp = highs_model_object.lp_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+
+  // Copy the LP to the structure to be used by the solver
+  simplex_lp = lp;
+
+  // Possibly transpose the LP to be solved. This will change the
+  // numbers of rows and columns in the LP to be solved
+  if (simplex_info.transpose_simplex_lp) transpose_simplex_lp(highs_model_object);
+
+  // Now that the numbers of rows and columns in the LP to be solved
+  // are fixed, initialise the real and integer random vectors
+  initialise_simplex_lp_random_vectors(highs_model_object);
+  //
+  // Allocate memory for the basis
+  const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
+  simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+  simplex_basis.nonbasicFlag_.resize(numTot);
+  simplex_basis.nonbasicMove_.resize(numTot);
+  //
+  // Possibly scale the LP to be used by the solver
+  //
+  // Initialise unit scaling factors, to simplify things if no scaling
+  // is performed
+  scaleHighsModelInit(highs_model_object);
+  if (simplex_info.scale_simplex_lp) scale_simplex_lp(highs_model_object);
+  //
+  // Possibly permute the columns of the LP to be used by the solver. 
+  if (simplex_info.permute_simplex_lp) permute_simplex_lp(highs_model_object);
+  //
+  // Possibly tighten the bounds of LP to be used by the solver. 
+  if (simplex_info.tighten_simplex_lp) tighten_simplex_lp(highs_model_object);
+  //
+#ifdef HiGHSDEV
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsScale &scale = highs_model_object.scale_;
+  // Analyse the scaled LP
+  if (simplex_info.analyseLp) {
+    analyseLp(lp, "Unscaled");
+    if (simplex_lp_status.is_scaled) {
+      analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
+      analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
+      analyseLp(simplex_lp, "Scaled");
+    }
+  }
+  report_simplex_lp_status(highs_model_object.simplex_lp_status_);
+#endif
+}
+
+void setupForSimplexSolve(HighsModelObject &highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   int solver_num_row = simplex_lp.numRow_;
@@ -1520,6 +1572,12 @@ void setup_for_solve(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_factor_arrays = true;
   
 }
+
+#ifdef HiGHSDEV
+void reportSimplexProfiling(HighsModelObject &highs_model_object) {
+}
+#endif
+
 
 bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;

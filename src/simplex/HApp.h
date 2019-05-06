@@ -155,6 +155,10 @@ HighsStatus solveSimplex(
 
 #ifdef HiGHSDEV
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
+  reportSimplexProfiling(highs_model_object);
+  //#endif
+  
+  
   printf("!! Move an_bs_cond() to HSimplex\n");
   /*
     if (rp_bs_cond) {
@@ -260,77 +264,24 @@ HighsStatus solveSimplex(
 
 }
 
-// Single function to solve an lp according to options and fill
-// solution in solution.
+// Single function to solve an lp according to options and covert simplex solution and basis
 HighsStatus runSimplexSolver(const HighsOptions& opt,
                              HighsModelObject& highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
-  HighsTimer &timer = highs_model_object.timer_;
-
-  // Set up aliases
-  const HighsLp &lp = highs_model_object.lp_;
-  //  HighsScale &scale = highs_model_object.scale_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  //  HighsBasis &basis = highs_model_object.basis_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  //  HMatrix &matrix = highs_model_object.matrix_;
-  //  HFactor &factor = highs_model_object.factor_;
 
   // Set simplex options from HiGHS options
   options(highs_model_object, opt);
 
-  if (!simplex_lp_status.valid) {
-    // No valid simplex LP so copy the LP to the structure to be used by the solver
-    simplex_lp = lp;
+  // Possibly set up the LP to be solved by the simplex method. According to options
+  //
+  // * Transpose the LP to be solved - deprecated since primal simplex solver is better
+  // * Scale the LP to be solved
+  // * Permute the LP to be solved
+  // * Tighten the bounds of LP to be solved - deprecated since presolve is better
+  //
+  if (!highs_model_object.simplex_lp_status_.valid) setupSimplexLp(highs_model_object);
 
-    // Possibly transpose the LP to be solved. This will change the
-    // numbers of rows and columns in the LP to be solved
-    if (simplex_info.transpose_simplex_lp) transpose_simplex_lp(highs_model_object);
-
-    // Now that the numbers of rows and columns in the LP to be solved
-    // are fixed, initialise the real and integer random vectors
-    initialise_simplex_lp_random_vectors(highs_model_object);
-    //
-    // Allocate memory for the basis
-    // assignBasis();
-    const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
-    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
-    simplex_basis.nonbasicFlag_.resize(numTot);
-    simplex_basis.nonbasicMove_.resize(numTot);
-    //
-    // Possibly scale the LP to be used by the solver
-    //
-    // Initialise unit scaling factors, to simplify things if no scaling
-    // is performed
-    scaleHighsModelInit(highs_model_object);
-    if (simplex_info.scale_simplex_lp)
-      scale_simplex_lp(highs_model_object);
-    //
-    // Possibly permute the columns of the LP to be used by the solver. 
-    if (simplex_info.permute_simplex_lp)
-      permute_simplex_lp(highs_model_object);
-    //
-    // Possibly tighten the bounds of LP to be used by the solver. 
-    if (simplex_info.tighten_simplex_lp)
-      tighten_simplex_lp(highs_model_object);
-    //
-#ifdef HiGHSDEV
-    // Analyse the scaled LP
-    if (simplex_info.analyseLp) {
-      analyseLp(lp, "Unscaled");
-      if (simplex_lp_status.is_scaled) {
-	analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
-	analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
-	analyseLp(simplex_lp, "Scaled");
-      }
-    }
-    report_simplex_lp_status(highs_model_object.simplex_lp_status_);
-#endif
-  }
-
-  setup_for_solve(highs_model_object);
+  setupForSimplexSolve(highs_model_object);
 
   HighsStatus result = solveSimplex(opt, highs_model_object);
 

@@ -229,9 +229,17 @@ void setup_num_basic_logicals(
 			      HighsModelObject &highs_model_object
 			      );
 
-void setup_for_solve(
-		     HighsModelObject &highs_model_object
-		     );
+void setupSimplexLp(
+		    HighsModelObject &highs_model_object
+		    );
+
+void setupForSimplexSolve(
+		   HighsModelObject &highs_model_object
+		   );
+
+void reportSimplexProfiling(
+			    HighsModelObject &highs_model_object
+			    );
 
 bool work_arrays_ok(
 		    HighsModelObject &highs_model_object,
