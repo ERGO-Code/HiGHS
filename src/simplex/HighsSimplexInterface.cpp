@@ -1257,7 +1257,7 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
   //  double *valuePtr = &value[0];
   for (int i = 0; i < simplex_lp.numRow_; i++) solution.row_value[i] = -value[i + simplex_lp.numCol_];
   for (int i = 0; i < simplex_lp.numCol_; i++) solution.col_value[i] = value[i];
-  for (int i = 0; i < simplex_lp.numRow_; i++) solution.row_dual[i] = simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
+  for (int i = 0; i < simplex_lp.numRow_; i++) solution.row_dual[i] = -simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
   for (int i = 0; i < simplex_lp.numCol_; i++) solution.col_dual[i] = simplex_lp.sense_ * dual[i];
 
 }

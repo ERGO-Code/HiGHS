@@ -170,7 +170,7 @@ HighsStatus Highs::run() {
       return HighsStatus::PresolveError;
     }
     }
-    bool run_postsolve= true;
+    bool run_postsolve = false;
     if (run_postsolve) {
       // Postsolve. Does nothing if there were no reductions during presolve.
       if (solve_status == HighsStatus::Optimal) {
@@ -224,6 +224,7 @@ HighsStatus Highs::run() {
   
   assert(hmos_.size() > 0);
   solution_ = hmos_[original_hmo].solution_;
+  basis_ = hmos_[original_hmo].basis_;
   
   // Report times
   if (hmos_[original_hmo].reportModelOperationsClock) {
@@ -315,6 +316,11 @@ void Highs::reportSolution() {
 		      lp_.col_names_,
 		      solution_.col_value, solution_.col_dual,
 		      basis_.col_status);
+  reportModelBoundSol(false, lp_.numRow_,
+		      lp_.rowLower_, lp_.rowUpper_,
+		      lp_.row_names_,
+		      solution_.row_value, solution_.row_dual,
+		      basis_.row_status);
 }
 
 bool Highs::addRow(const double lower_bound, const double upper_bound,

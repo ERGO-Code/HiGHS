@@ -52,7 +52,7 @@ void HDual::solve(int num_threads) {
 #ifdef HiGHSDEV
   printf("Calling setup_for_solve(workHMO);\n");
 #endif
-  setup_for_solve(workHMO); //  model->setup_for_solve();
+  setup_for_solve(workHMO);
 
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
@@ -63,7 +63,7 @@ void HDual::solve(int num_threads) {
   // be called if model dimension changes
   init(num_threads);
 
-  initialise_cost(workHMO, 1); //  model->initCost(1);
+  initialise_cost(workHMO, 1);
   if (!simplex_lp_status.has_fresh_invert) {
     int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
 

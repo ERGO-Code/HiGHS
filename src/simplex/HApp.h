@@ -360,6 +360,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   if (result != HighsStatus::Optimal) return result;
 
+  // Copy the solution and basis
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
   return result;
