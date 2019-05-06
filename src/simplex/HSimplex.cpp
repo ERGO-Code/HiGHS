@@ -1470,63 +1470,55 @@ void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
 }
 
 void setup_for_solve(HighsModelObject &highs_model_object) {
+  HighsSimplexInterface simplex_interface(highs_model_object);
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   int solver_num_row = simplex_lp.numRow_;
   int solver_num_col = simplex_lp.numCol_;
   if (solver_num_row == 0)
     return;
 
+  HighsBasis &basis = highs_model_object.basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
 #ifdef HiGHSDEV
   report_simplex_lp_status(highs_model_object.simplex_lp_status_);
 #endif
-  bool simplex_basis_valid = highs_model_object.simplex_basis_.valid_;
-#ifdef HiGHSDEV
-  printf("In setup_for_solve: simplex_basis_valid = %d \n", simplex_basis_valid);
-#endif
-  if (simplex_basis_valid) {
-    // Model has a basis so just count the number of basic logicals
-    setup_num_basic_logicals(highs_model_object);
+
+  if (!simplex_basis.valid_ && basis.valid_) {
+    // Simplex basis is not valid, but HiGHS basis is valid so convert it to a simplex basis
+    simplex_interface.convertHighsToSimplexBasis();
+  }
+  if (simplex_basis.valid_) {
+    // Valid simplex basis so use it to initialise...
+    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
+    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		 &simplex_lp.Astart_[0],
+		 &simplex_lp.Aindex_[0],
+		 &simplex_lp.Avalue_[0],
+		 &simplex_basis.nonbasicFlag_[0]);
   } else {
-    // Model has no basis: set up a logical basis then populate (where
-    // possible) work* arrays
-    replace_with_logical_basis(highs_model_object);
-#ifdef HiGHSDEV
-    printf("Called replaceWithLogicalBasis\n");
-#endif
+    // ... otherwise start from a logical basis
+    initialise_with_logical_basis(highs_model_object);
+    matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
+		      &simplex_lp.Astart_[0],
+		      &simplex_lp.Aindex_[0],
+		      &simplex_lp.Avalue_[0]);
+    
   }
-
-  if (!(simplex_lp_status.has_matrix_col_wise &&
-        simplex_lp_status.has_matrix_row_wise)) {
-    // Make a copy of col-wise matrix for HMatrix and create its row-wise matrix
-    if (simplex_info.num_basic_logicals == solver_num_row) {
-      matrix.setup_lgBs(solver_num_col, solver_num_row, &simplex_lp.Astart_[0],
-                        &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0]);
-      //      printf("Called matrix_->setup_lgBs\n");cout<<flush;
-    } else {
-      matrix.setup(solver_num_col, solver_num_row, &simplex_lp.Astart_[0],
-                   &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-                   &simplex_basis.nonbasicFlag_[0]);
-      //      printf("Called matrix_->setup\n");cout<<flush;
-    }
-    // Indicate that there is a colum-wise and row-wise copy of the
-    // matrix: can't be done in matrix_->setup_lgBs
-    //    simplex_lp_status.has_matrix_col_wise = true;
-    //    simplex_lp_status.has_matrix_row_wise = true;
-  }
-
-  // TODO Put something in to skip factor_->setup
-  // Initialise factor arrays, passing &simplex_basis.basicIndex_[0] so that its
-  // address can be copied to the internal Factor pointer
-  factor.setup(solver_num_col, solver_num_row, &simplex_lp.Astart_[0],
-               &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
-               &simplex_basis.basicIndex_[0]);
-  // Indicate that the model has factor arrays: can't be done in factor.setup
-  // simplex_lp_status.has_factor_arrays = true;
+  simplex_lp_status.has_matrix_col_wise = true;
+  simplex_lp_status.has_matrix_row_wise = true;
+  
+  
+  factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+	       &simplex_lp.Astart_[0],
+	       &simplex_lp.Aindex_[0],
+	       &simplex_lp.Avalue_[0],
+	       &simplex_basis.basicIndex_[0]);
+  simplex_lp_status.has_factor_arrays = true;
+  
 }
 
 bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {

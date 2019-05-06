@@ -269,14 +269,14 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   // Set up aliases
   const HighsLp &lp = highs_model_object.lp_;
-  HighsScale &scale = highs_model_object.scale_;
+  //  HighsScale &scale = highs_model_object.scale_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsBasis &basis = highs_model_object.basis_;
+  //  HighsBasis &basis = highs_model_object.basis_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HMatrix &matrix = highs_model_object.matrix_;
-  HFactor &factor = highs_model_object.factor_;
+  //  HMatrix &matrix = highs_model_object.matrix_;
+  //  HFactor &factor = highs_model_object.factor_;
 
   // Set simplex options from HiGHS options
   options(highs_model_object, opt);
@@ -329,37 +329,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     report_simplex_lp_status(highs_model_object.simplex_lp_status_);
 #endif
   }
-  if (!simplex_basis.valid_ && basis.valid_) {
-    // Simplex basis is not valid, but HiGHS basis is valid so convert it to a simplex basis
-      simplex_interface.convertHighsToSimplexBasis();
-  }
-  if (simplex_basis.valid_) {
-    // Valid simplex basis so use it to initialise...
-    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
-    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-		 &simplex_lp.Astart_[0],
-		 &simplex_lp.Aindex_[0],
-		 &simplex_lp.Avalue_[0],
-		 &simplex_basis.nonbasicFlag_[0]);
-  } else {
-    // ... otherwise start from a logical basis
-    initialise_with_logical_basis(highs_model_object);
-    matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
-		      &simplex_lp.Astart_[0],
-		      &simplex_lp.Aindex_[0],
-		      &simplex_lp.Avalue_[0]);
-  
-  }
-  simplex_lp_status.has_matrix_col_wise = true;
-  simplex_lp_status.has_matrix_row_wise = true;
 
-
-  factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-		&simplex_lp.Astart_[0],
-		&simplex_lp.Aindex_[0],
-		&simplex_lp.Avalue_[0],
-		&simplex_basis.basicIndex_[0]);
-  simplex_lp_status.has_factor_arrays = true;
+  setup_for_solve(highs_model_object);
 
   HighsStatus result = solveSimplex(opt, highs_model_object);
 

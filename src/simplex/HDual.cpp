@@ -47,13 +47,6 @@ void HDual::solve(int num_threads) {
   HighsTimer &timer = workHMO.timer_;
   invertHint = INVERT_HINT_NO;
 
-  // Setup aspects of the model data which are needed for solve() but better
-  // left until now for efficiency reasons.
-#ifdef HiGHSDEV
-  printf("Calling setup_for_solve(workHMO);\n");
-#endif
-  setup_for_solve(workHMO);
-
   // Set SolveBailout to be true if control is to be returned immediately to
   // calling function
   SolveBailout = false;
