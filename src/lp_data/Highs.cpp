@@ -170,7 +170,7 @@ HighsStatus Highs::run() {
       return HighsStatus::PresolveError;
     }
     }
-    bool run_postsolve = false;
+    bool run_postsolve = false;//true;
     if (run_postsolve) {
       // Postsolve. Does nothing if there were no reductions during presolve.
       if (solve_status == HighsStatus::Optimal) {

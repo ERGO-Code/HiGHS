@@ -1077,6 +1077,12 @@ void initialise_basic_index(HighsModelObject &highs_model_object) {
       num_basic_variables++;
     }
   }
+  /*
+  if (num_basic_variables != simplex_lp.numRow_) {
+    printf("STRANGE: %d = num_basic_variables != simplex_lp.numRow_ = %d\n", num_basic_variables, simplex_lp.numRow_);
+    fflush(stdout);
+  }
+  */
   assert(num_basic_variables == simplex_lp.numRow_);
 }
 
