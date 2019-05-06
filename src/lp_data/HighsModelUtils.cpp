@@ -15,11 +15,12 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
-void util_analyseModelBounds(const char *message,
+void analyseModelBounds(const char *message,
 			     int numBd,
 			     const std::vector<double> &lower,
 			     const std::vector<double> &upper) {
@@ -71,4 +72,11 @@ void util_analyseModelBounds(const char *message,
   printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
          numFx);
 }
+
 #endif
+void reportModelBoundSol(const bool columns, const int dim,
+			 const std::vector<double>& lower, const std::vector<double>& upper,
+			 const std::vector<std::string>& names,
+			 const std::vector<double>& primal, const std::vector<double>& dual,
+			 const std::vector<HighsBasisStatus>& status) {
+}

@@ -57,7 +57,7 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
              const vector<double>& colCost, const vector<double>& colLower,
              const vector<double>& colUpper, const vector<double>& rowLower,
              const vector<double>& rowUpper, const vector<int>& integerColumn,
-	     const vector<std::string>col_names, const vector<std::string>row_names);
+	     const vector<std::string>& col_names, const vector<std::string>& row_names);
 
 bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
                   double* data);

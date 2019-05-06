@@ -253,7 +253,7 @@ HighsStatus solveSimplex(
 #ifdef HiGHSDEV
   //  printf("report_simplex_lp_status_flags(workHMO.simplex_lp_status_)\n");cout<<flush;
   //  report_simplex_lp_status_flags(highs_model_object.simplex_lp_status_);
-  if (simplex_info.analyseLpSolution) { util_analyse_lp_solution(highs_model_object);}
+  if (simplex_info.analyseLpSolution) { analyse_lp_solution(highs_model_object);}
 #endif
 
   return LpStatusToHighsStatus(simplex_lp_status.solution_status);
@@ -319,11 +319,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #ifdef HiGHSDEV
     // Analyse the scaled LP
     if (simplex_info.analyseLp) {
-      util_analyseLp(lp, "Unscaled");
+      analyseLp(lp, "Unscaled");
       if (simplex_lp_status.is_scaled) {
-	util_analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
-	util_analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
-	util_analyseLp(simplex_lp, "Scaled");
+	analyseVectorValues("Column scaling factors", lp.numCol_, scale.col_, false);
+	analyseVectorValues("Row    scaling factors", lp.numRow_, scale.row_, false);
+	analyseLp(simplex_lp, "Scaled");
       }
     }
     report_simplex_lp_status(highs_model_object.simplex_lp_status_);

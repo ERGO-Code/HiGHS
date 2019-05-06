@@ -1152,10 +1152,10 @@ HighsStatus change_lp_matrix_coefficient(HighsLp &lp, const int row, const int c
     }
   }
   if (changeElement < 0) {
-    //    printf("util_changeCoeff: Cannot find row %d in column %d\n", row, col);
+    //    printf("change_lp_matrix_coefficient: Cannot find row %d in column %d\n", row, col);
     changeElement = lp.Astart_[col + 1];
     int new_num_nz = lp.Astart_[lp.numCol_] + 1;
-    //    printf("model.util_changeCoeff: Increasing Nnonz from %d to %d\n",
+    //    printf("change_lp_matrix_coefficient: Increasing Nnonz from %d to %d\n",
     //    lp.Astart_[lp.numCol_], new_num_nz);
     lp.Aindex_.resize(new_num_nz);
     lp.Avalue_.resize(new_num_nz);
@@ -1354,7 +1354,7 @@ HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row, const int to_r
 // Get a single coefficient from the matrix
 HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow, const int Xcol, double *val) {
 #ifdef HiGHSDEV
-  printf("Called model.util_getCoeff(row=%d, col=%d)\n", Xrow, Xcol);
+  printf("Called getLpMatrixCoefficient(row=%d, col=%d)\n", Xrow, Xcol);
 #endif
   if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
   if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
@@ -1574,17 +1574,17 @@ void reportLpSolution(HighsModelObject &highs_model) {
 
 
 #ifdef HiGHSDEV
-void util_analyseLp(const HighsLp &lp, const char *message) {
+void analyseLp(const HighsLp &lp, const char *message) {
   printf("\n%s model data: Analysis\n", message);
-  util_analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
-  util_analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
-  util_analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
-  util_analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
-  util_analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
-  util_analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_, true);
-  util_analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_, lp.Aindex_);
-  util_analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
-  util_analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
+  analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
+  analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
+  analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
+  analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
+  analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
+  analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_, true);
+  analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_, lp.Aindex_);
+  analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
+  analyseModelBounds("Row", lp.numRow_, lp.rowLower_, lp.rowUpper_);
 }
 #endif
 

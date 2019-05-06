@@ -104,6 +104,7 @@ int main(int argc, char **argv) {
   if (run_status != HighsStatus::OK &&
       run_status != HighsStatus::Optimal)
     HighsPrintMessage(ML_ALWAYS, "Highs status: %s\n", statusname.c_str());
+  highs.reportSolution();
 
   return 0;
 }

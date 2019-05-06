@@ -107,7 +107,13 @@ public:
 		       const HighsBasis& basis
 		       );
 
-   /**
+  /**
+   * @brief Reports the solution and basis status for the LP of the
+   * (first?) HighsModelObject
+   */
+  void reportSolution();
+  
+  /**
    * @brief Adds a row to the model
    */
   bool addRow(const double lower,   //!< Lower bound of the row

@@ -21,6 +21,7 @@
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
@@ -306,6 +307,14 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   basis_ = basis;
   return HighsStatus::OK;
+}
+
+void Highs::reportSolution() {
+  reportModelBoundSol(true, lp_.numCol_,
+		      lp_.colLower_, lp_.colUpper_,
+		      lp_.col_names_,
+		      solution_.col_value, solution_.col_dual,
+		      basis_.col_status);
 }
 
 bool Highs::addRow(const double lower_bound, const double upper_bound,

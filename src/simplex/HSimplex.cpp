@@ -684,7 +684,7 @@ void scaleCosts(HighsModelObject &highs_model_object) {
     }
   */
   HighsPrintMessage(ML_MINIMAL, "After cost scaling\n");
-  //  utils.util_analyseVectorValues("Column costs",
+  //  utils.analyseVectorValues("Column costs",
   //  highs_model_object.simplex_lp_.numCol_, highs_model_object.simplex_lp_.colCost_, false);
 #endif
 }
