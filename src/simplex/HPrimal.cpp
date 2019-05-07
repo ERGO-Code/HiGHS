@@ -231,11 +231,13 @@ void HPrimal::solvePhase2() {
       }
     }
   }
+#ifdef HiGHSDEV
   if (no_free_columns) {
     printf("Model has no free columns\n");
   } else {
     printf("Model has free columns\n");
   }
+#endif
 
   // Setup other buffers
 

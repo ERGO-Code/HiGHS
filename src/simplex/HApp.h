@@ -47,7 +47,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Set simplex options from HiGHS options
   options(highs_model_object, opt);
 
+#ifdef HiGHSDEV
   reportSimplexLpStatus(simplex_lp_status, "On entry to runSimplexSolver");
+#endif
 
   // Possibly set up the LP to be solved by the simplex method. According to options
   //
@@ -61,7 +63,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //
   if (!simplex_lp_status.valid) {
     setupSimplexLp(highs_model_object);
+#ifdef HiGHSDEV
     reportSimplexLpStatus(simplex_lp_status, "After setupSimplexLp");
+#endif
   }
   
   SimplexTimer simplex_timer;
@@ -79,7 +83,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // if necessary
 
   setupForSimplexSolve(highs_model_object);
+#ifdef HiGHSDEV
   reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
+#endif
 
 #ifdef HiGHSDEV
   bool compute_basis_condition = true;

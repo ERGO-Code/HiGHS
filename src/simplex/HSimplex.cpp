@@ -329,7 +329,9 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
 }
 
 void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
+#ifdef HiGHSDEV
   printf("!! Don't do this if basis is invalid! !!\n");
+#endif
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
   int newNumCol = lp.numCol_ + XnumNewCol;
@@ -350,7 +352,9 @@ void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCo
 }
 
 void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &simplex_basis, int XnumNewCol) {
+#ifdef HiGHSDEV
   printf("!! Don't do this if basis is invalid! !!\n");
+#endif
   // Add nonbasic structurals
   if (XnumNewCol == 0) return;
   int newNumCol = lp.numCol_ + XnumNewCol;
@@ -368,7 +372,9 @@ void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &simplex_basis, int
 }
 
 void append_basic_rows_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
+#ifdef HiGHSDEV
   printf("!! Don't do this if basis is invalid! !!\n");
+#endif
   // Add basic logicals
   if (XnumNewRow == 0) return;
   int newNumRow = lp.numRow_ + XnumNewRow;
@@ -380,13 +386,17 @@ void append_basic_rows_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewRow) 
 }
 
 bool highs_basis_ok(HighsLp &lp, HighsBasis &basis) {
+#ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
   printf("!! WRITE highs_basis_ok for HighsBasis !!\n");
+#endif
   return false;
 }
 
 bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &simplex_basis) {
+#ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
+#endif
   int numTot = lp.numCol_ + lp.numRow_;
   int num_basic_variables = 0;
   for (int var = 0; var < numTot; var++) if (!simplex_basis.nonbasicFlag_[var]) num_basic_variables++;
@@ -402,7 +412,9 @@ bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &simplex_basis) {
 
 #ifdef HiGHSDEV
 void report_basis(HighsLp &lp, HighsBasis &basis) {
+#ifdef HiGHSDEV
   printf("!! WRITE report_basis for HighsBasis !!\n");
+#endif
   if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
   if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
 }
