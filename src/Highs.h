@@ -69,11 +69,11 @@ public:
   const HighsSolution& getSolution() const;
 
   /**
-   * @brief Returns the HighsBasis_new instance for the LP of the
+   * @brief Returns the HighsBasis instance for the LP of the
    * (first?) HighsModelObject TODO: rename to HighsBasis when the
    * current HighsBasis becomes SimplexBasis
    */
-  const HighsBasis_new& getBasis() const; 
+  const HighsBasis& getBasis() const; 
 
   /**
    * @brief Returns the (dual) objective function value for the LP of
@@ -100,14 +100,20 @@ public:
 			  );
 
   /**
-   * @brief Uses the HighsBasis_new passed to set the basis for the
+   * @brief Uses the HighsBasis passed to set the basis for the
    * LP of the (first?) HighsModelObject
    */
   HighsStatus setBasis(
-		       const HighsBasis_new& basis
+		       const HighsBasis& basis
 		       );
 
-   /**
+  /**
+   * @brief Reports the solution and basis status for the LP of the
+   * (first?) HighsModelObject
+   */
+  void reportSolution();
+  
+  /**
    * @brief Adds a row to the model
    */
   bool addRow(const double lower,   //!< Lower bound of the row
@@ -399,7 +405,7 @@ public:
 
 private:
   HighsSolution solution_;
-  HighsBasis_new basis_;
+  HighsBasis basis_;
   HighsLp lp_;
 
   HighsTimer timer_;

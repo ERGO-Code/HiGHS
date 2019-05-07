@@ -23,7 +23,10 @@
 // include essential data.
 class HighsModelObject {
 public:
- HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer) : lp_(lp), options_(options), timer_(timer) {}
+ HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer) : lp_(lp), options_(options), timer_(timer) {
+    // The following may be false by default - but it's an unassigned variable
+    simplex_lp_status_.valid = false;
+  }
 
   HighsLp& lp_;
   HighsOptions& options_;
@@ -33,7 +36,7 @@ public:
   HighsSolution solution_;
 
   HighsLp simplex_lp_;
-  HighsBasis simplex_basis_;
+  SimplexBasis simplex_basis_;
   HighsSimplexInfo simplex_info_;
   HighsSimplexLpStatus simplex_lp_status_;
   //  HighsRanging ranging_;
@@ -43,7 +46,6 @@ public:
   HighsRandom random_;
 
   bool reportModelOperationsClock = false;
-
 };
 
 #endif // LP_DATA_HIGHS_MODEL_OBJECT_H_

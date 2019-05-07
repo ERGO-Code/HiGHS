@@ -339,11 +339,6 @@ class HDual {
                           int *inds,     //!< Indices of entries in row required
                           int *ninds     //!< Number of indices in row required
   );
-  /**
-   * @brief Get the Hager condition number estimate for the basis matrix of a
-   * model
-   */
-  double an_bs_cond();
 
   /**
    * @brief PAMI: Choose the indices of a good set of rows to leave the
@@ -504,11 +499,6 @@ class HDual {
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
   
-  vector<double> bs_cond_x;
-  vector<double> bs_cond_y;
-  vector<double> bs_cond_z;
-  vector<double> bs_cond_w;
-
   int solvePhase;
   int invertHint;
 

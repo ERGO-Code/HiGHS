@@ -25,20 +25,191 @@
 
 using std::runtime_error;
 
+void HPrimal::solve() {
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
+  // Cannot solve box-constrained LPs
+  if (workHMO.simplex_lp_.numRow_ == 0) return;
+
+  HighsTimer &timer = workHMO.timer_;
+  invertHint = INVERT_HINT_NO;
+
+  // Setup aspects of the model data which are needed for solve() but better
+  // left until now for efficiency reasons.
+#ifdef HiGHSDEV
+  printf("Calling setup_for_solve(workHMO);\n");
+#endif
+  // ToDo primal simplex version
+  // setup_for_solve(workHMO);
+
+  // Set SolveBailout to be true if control is to be returned immediately to
+  // calling function
+  // ToDo Move to Simplex
+  //  SolveBailout = false;
+
+  // Initialise working environment
+  // Does LOTS, including initialisation of edge weights. Should only
+  // be called if model dimension changes
+  // ToDo primal simplex version
+  // init(num_threads);
+
+  // ToDo primal simplex version
+  // initialise_cost(workHMO, 1); //  model->initCost(1);
+  if (!simplex_lp_status.has_fresh_invert) {
+    int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
+
+    if (rankDeficiency) {
+      throw runtime_error("Primal initialise: singular-basis-matrix");
+    }
+#ifdef HiGHSDEV
+    bool rp_bs_cond = false;
+    double bsCond = 1;
+  // ToDo move from HDual to HSimplex 
+  // an_bs_cond();
+    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
+    if (bsCond > 1e12) {
+      HighsPrintMessage(ML_MINIMAL, " excessive\n");
+      return;
+    } else {
+      HighsPrintMessage(ML_MINIMAL, " OK\n");
+    }
+#endif
+  }
+  // Consider initialising edge weights - create Primal variants
+  //
+#ifdef HiGHSDEV
+  //  printf("simplex_lp_status.has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
+  //  %d\n",
+  //	 simplex_lp_status.has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
+  //  printf("Edge weights known? %d\n", !simplex_lp_status.has_dual_steepest_edge_weights);cout<<flush;
+#endif
+  /*
+  if (!simplex_lp_status.has_dual_steepest_edge_weights) {
+    // Edge weights are not known
+    // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
+    // Using dual Devex edge weights
+    // Zero the number of Devex frameworks used and set up the first one
+    n_dvx_fwk = 0;
+    dvx_ix.assign(solver_num_tot, 0);
+    iz_dvx_fwk();
+    // Indicate that edge weights are known
+    simplex_lp_status.has_dual_steepest_edge_weights = true;
+  }
+  */
+
+  // ToDo Determine primal simplex phase from initial primal values
+  //
+  /*
+  compute_primal(workHMO);
+  compute_primal_infeasible_in_??(workHMO, &dualInfeasCount);
+  solvePhase = ??InfeasCount > 0 ? 1 : 2;
+  */
+  solvePhase = 0; // Frig to skip while (solvePhase) {*}
+
+  // Check that the model is OK to solve:
+  //
+  // Level 0 just checks the flags
+  //
+  // Level 1 also checks that the basis is OK and that the necessary
+  // data in work* is populated.
+  //
+  // Level 2 (will) checks things like the nonbasic duals and basic
+  // primal values
+  //
+  // Level 3 (will) checks expensive things like the INVERT and
+  // steepeest edge weights
+  //
+  // ToDo Write primal simplex equivalent
+  /*
+  bool ok = ok_to_solve(workHMO, 1, solvePhase);
+  if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
+  assert(ok);
+  */
+#ifdef HiGHSDEV
+  //  Analyse the initial values of primal and dual variables
+  //  an_iz_vr_v();
+#endif
+
+  // The major solving loop
+
+  // Initialise the iteration analysis. Necessary for strategy, but
+  // much is for development and only switched on with HiGHSDEV
+  // ToDo Move to simplex and adapt so it's OK for primal and dual
+  //  iterateIzAn();
+
+  while (solvePhase) {
+    int it0 = simplex_info.iteration_count;
+    // When starting a new phase the (updated) primal objective function
+    // value isn't known. Indicate this so that when the value
+    // computed from scratch in build() isn't checked against the the
+    // updated value
+    simplex_lp_status.has_primal_objective_value = 0;
+    /*
+    switch (solvePhase) {
+      case 1:
+	timer.start(simplex_info.clock_[SimplexPrimalPhase1Clock]);
+        solvePhase1();
+	timer.stop(simplex_info.clock_[SimplexPrimalPhase1Clock]);
+        simplex_info.primal_phase1_iteration_count += (simplex_info.iteration_count - it0);
+        break;
+      case 2:
+	timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+        solvePhase2();
+	timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+        simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
+        break;
+      case 4:
+        break;
+      default:
+        solvePhase = 0;
+        break;
+    }
+    // Jump for primal
+    if (solvePhase == 4) break;
+    // Possibly bail out
+    if (SolveBailout) break;
+    */
+  }
+  solvePhase = 2;
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
+    if (solvePhase == 2) {
+      int it0 = simplex_info.iteration_count;
+
+      timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+      solvePhase2();
+      timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
+
+      simplex_info.primal_phase2_iteration_count += (simplex_info.iteration_count - it0);
+    }
+  }
+#ifdef HiGHSDEV
+  /*
+  if (primal_edge_weight_mode == PrimalEdgeWeightMode::DEVEX) {
+    printf("Devex: n_dvx_fwk = %d; Average n_dvx_it = %d\n", n_dvx_fwk,
+           simplex_info.iteration_count / n_dvx_fwk);
+  }
+  */
+#endif
+  /*
+  // ToDo Adapt ok_to_solve to be used by primal
+  bool ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
+  if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
+  assert(ok);
+  */
+}
+
 void HPrimal::solvePhase2() {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   HighsTimer &timer = workHMO.timer_;
 
+  invertHint = INVERT_HINT_NO;
+
   solver_num_col = workHMO.simplex_lp_.numCol_;
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
 
-#ifdef HiGHSDEV
-  printf("************************************\n");
-  printf("Performing primal simplex iterations\n");
-  printf("************************************\n");
-#endif
   // Setup update limits
   simplex_info.update_limit = min(100 + solver_num_row / 100, 1000); // TODO: Consider allowing the dual limit to be used
   simplex_info.update_count = 0;
@@ -60,11 +231,13 @@ void HPrimal::solvePhase2() {
       }
     }
   }
+#ifdef HiGHSDEV
   if (no_free_columns) {
     printf("Model has no free columns\n");
   } else {
     printf("Model has free columns\n");
   }
+#endif
 
   // Setup other buffers
 
@@ -124,9 +297,6 @@ void HPrimal::solvePhase2() {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
     simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
-#ifdef HiGHSDEV
-    util_analyse_lp_solution(workHMO);
-#endif    
   } else {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
     simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
@@ -177,9 +347,9 @@ void HPrimal::primalRebuild() {
 
   // Primal objective section
   bool checkPrimalObjectiveValue = simplex_lp_status.has_primal_objective_value;
-  timer.start(simplex_info.clock_[ComputeProbjClock]);
+  timer.start(simplex_info.clock_[ComputePrObjClock]);
   compute_primal_objective_value(workHMO);
-  timer.stop(simplex_info.clock_[ComputeProbjClock]);
+  timer.stop(simplex_info.clock_[ComputePrObjClock]);
   report_iteration_count_primal_objective_value(workHMO, sv_invertHint);
 
   double primalObjectiveValue = simplex_info.primalObjectiveValue;
@@ -189,7 +359,7 @@ void HPrimal::primalRebuild() {
 #ifdef HiGHSDEV
     // TODO Investigate these Primal objective value errors
     if (rlvPrimalObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING, "Primal objective value error abs(rel) = %12g (%12g)",
+      HighsLogMessage(HighsMessageType::WARNING, "Primal objective value error |rel| = %12g (%12g)",
 			absPrimalObjectiveError, rlvPrimalObjectiveError);
     }
 #endif
@@ -221,7 +391,7 @@ void HPrimal::primalChooseColumn() {
   const double *workUpper = &workHMO.simplex_info_.workUpper_[0];
   const double dualTolerance = workHMO.simplex_info_.dual_feasibility_tolerance;
 
-  timer.start(simplex_info.clock_[ChuzcClock]);
+  timer.start(simplex_info.clock_[ChuzcPrimalClock]);
   columnIn = -1;
   double bestInfeas = 0;
   if (no_free_columns) {
@@ -277,7 +447,7 @@ void HPrimal::primalChooseColumn() {
       }
     }
   }
-  timer.stop(simplex_info.clock_[ChuzcClock]);
+  timer.stop(simplex_info.clock_[ChuzcPrimalClock]);
 }
 
 void HPrimal::primalChooseRow() {
@@ -287,8 +457,6 @@ void HPrimal::primalChooseRow() {
   const double *baseUpper = &workHMO.simplex_info_.baseUpper_[0];
   double *baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double primalTolerance = workHMO.simplex_info_.primal_feasibility_tolerance;
-  const bool require_unit_pivot = false;
-  const bool allow_extra_pass = false;
     
   // Compute pivot column
   timer.start(simplex_info.clock_[FtranClock]);
@@ -339,7 +507,6 @@ void HPrimal::primalChooseRow() {
   for (int i = 0; i < column.count; i++) {
     int index = column.index[i];
     alpha = column.array[index] * moveIn;
-    bool report_alpha = false;
     if (alpha > alphaTol) {
       relaxSpace = baseValue[index] - baseLower[index] + primalTolerance;
       if (relaxSpace < relaxTheta * alpha) relaxTheta = relaxSpace / alpha;
@@ -350,7 +517,6 @@ void HPrimal::primalChooseRow() {
   }
   timer.stop(simplex_info.clock_[Chuzr1Clock]);
 
-  // Choose row pass 2
   timer.start(simplex_info.clock_[Chuzr2Clock]);
   double bestAlpha = 0;
   for (int i = 0; i < column.count; i++) {

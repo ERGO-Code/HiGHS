@@ -114,7 +114,7 @@ class HCrash {
   int numRow;
   int numTot;
   const HighsLp *simplex_lp_;
-  const HighsBasis *simplex_basis_;
+  const SimplexBasis *simplex_basis_;
   const HMatrix *matrix_;
 
   //    LTSSF arrays

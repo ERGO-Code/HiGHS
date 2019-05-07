@@ -39,12 +39,12 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
   numTot = simplex_lp_->numCol_ + simplex_lp_->numRow_;
   const int objSense = simplex_lp_->sense_;
 #ifdef HiGHSDEV
-  if (abs(objSense) != 1) {
+  if (fabs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
     cout << flush;
   }
 #endif
-  assert(abs(objSense) == 1);
+  assert(fabs(objSense) == 1);
 
   if (Crash_Mode == Crash_Mode_Bs
 #ifdef HiGHSDEV
@@ -125,7 +125,7 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       int r_n = Aindex[el_n];
       if (bixby_r_k[r_n] == 0) {
-        double lc_aa = abs(Avalue[el_n]);
+        double lc_aa = fabs(Avalue[el_n]);
         if (lc_aa > aa) {
           aa = lc_aa;
           r_o_mx_aa = r_n;
@@ -170,10 +170,10 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
         int r_n = Aindex[el_n];
         // If this value in the column would give an unacceptable
         // multiplier then continue to next pass
-        nx_ps = abs(Avalue[el_n]) > bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
+        nx_ps = fabs(Avalue[el_n]) > bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
         if (nx_ps) {
 #ifdef HiGHSDEV
-          rp_v = abs(Avalue[el_n]) / (bixby_pseudo_pv_v[r_n] * c_mx_abs_v);
+          rp_v = fabs(Avalue[el_n]) / (bixby_pseudo_pv_v[r_n] * c_mx_abs_v);
 #endif
           break;
         }
@@ -192,7 +192,7 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       int r_n = Aindex[el_n];
       if (bixby_pv_in_r[r_n] == 0) {
-        double lc_aa = abs(Avalue[el_n]);
+        double lc_aa = fabs(Avalue[el_n]);
         if (lc_aa > aa) {
           aa = lc_aa;
           r_o_mx_aa = r_n;
@@ -259,7 +259,7 @@ void HCrash::bixby_rp_mrt(HighsModelObject &highs_model_object) {
   double mx_co_v = -HIGHS_CONST_INF;
   for (int c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
-    mx_co_v = max(abs(sense_col_cost), mx_co_v);
+    mx_co_v = max(fabs(sense_col_cost), mx_co_v);
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
@@ -370,10 +370,10 @@ bool HCrash::bixby_iz_da(HighsModelObject &highs_model_object) {
     crsh_mtx_c_mx_abs_v[c_n] = 0.0;
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       crsh_mtx_c_mx_abs_v[c_n] =
-          max(abs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
+          max(fabs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
     }
     double sense_col_cost = objSense * colCost[c_n];
-    mx_co_v = max(abs(sense_col_cost), mx_co_v);
+    mx_co_v = max(fabs(sense_col_cost), mx_co_v);
   }
   double co_v_mu = 1;
   if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
@@ -699,7 +699,7 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
 #endif
       // A basis change has occurred
       n_crsh_bs_cg += 1;
-      double abs_pv_v = abs(pv_v);
+      double abs_pv_v = fabs(pv_v);
       double rlv_pv_v = abs_pv_v / crsh_mtx_c_mx_abs_v[cz_c_n];
       mn_abs_pv_v = min(abs_pv_v, mn_abs_pv_v);
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
@@ -1082,7 +1082,7 @@ void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       int r_n = Aindex[el_n];
       crsh_mtx_c_mx_abs_v[c_n] =
-          max(abs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
+          max(fabs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
       if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
       int r_el_n = CrshARstart[r_n];
       CrshARindex[r_el_n] = c_n;
@@ -1233,7 +1233,7 @@ void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
     bool pv_ok = no_ck_pv;
     if (!no_ck_pv) {
       // Check the matrix entry if it may be used as a pivot.
-      double abs_c_v = abs(CrshARvalue[el_n]);
+      double abs_c_v = fabs(CrshARvalue[el_n]);
       bool abs_pv_v_ok = abs_c_v > tl_crsh_abs_pv_v;
       bool rlv_pv_v_ok = abs_c_v > tl_crsh_rlv_pv_v * crsh_mtx_c_mx_abs_v[c_n];
       if (!abs_pv_v_ok) n_abs_pv_no_ok += 1;
