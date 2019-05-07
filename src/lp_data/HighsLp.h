@@ -115,33 +115,19 @@ struct HighsSimplexLpStatus {
   bool is_scaled = false;
   bool is_permuted = false;
   bool is_tightened = false;
-  // The LP has a valid basis
-  bool has_basis = false;
-  // The LP has a column-wise constraint matrix
-  bool has_matrix_col_wise = false;
-  // The LP has a row-wise constraint matrix
-  bool has_matrix_row_wise = false;
-  // The LP has the constraint matrix and indices of basic variables used by INVERT
-  int has_factor_arrays = false;
-  // This refers to workEdWt, which is held in HDualRHS.h and is
-  // assigned and initialised to 1s in dualRHS.setup(model). To
-  // "have" the edge weights means that they are correct.
-  bool has_dual_steepest_edge_weights = false;
- // The nonbasic dual and basic primal values are known
-  bool has_nonbasic_dual_values = false;
-  bool has_basic_primal_values = false;
-  // The representation of B^{-1} corresponds to the current basis
-  bool has_invert = false;
-  // The representation of B^{-1} corresponds to the current basis and is fresh
-  bool has_fresh_invert = false;
-  // The data are fresh from rebuild
-  bool has_fresh_rebuild = false;
-  // The dual objective function value is known
-  bool has_dual_objective_value = false;
-  // The dual objective function value is known
-  bool has_primal_objective_value = false;
-  // The solution status is UNSET
-  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
+  bool has_basis = false; // The LP has a valid simplex basis - duplication of simplex_basis_.valid_ because the latter can't be queried in SimplexLpStatus methods
+  bool has_matrix_col_wise = false; // The LP has a column-wise constraint matrix
+  bool has_matrix_row_wise = false; // The LP has a row-wise constraint matrix
+  bool has_factor_arrays = false; // Has the arrays for the representation of B^{-1}
+  bool has_dual_steepest_edge_weights = false; // The DSE weights are known
+  bool has_nonbasic_dual_values = false; // The nonbasic dual values are known
+  bool has_basic_primal_values = false;// The basic primal values are known
+  bool has_invert = false; // The representation of B^{-1} corresponds to the current basis
+  bool has_fresh_invert = false; // The representation of B^{-1} corresponds to the current basis and is fresh
+  bool has_fresh_rebuild = false; // The data are fresh from rebuild
+  bool has_dual_objective_value = false; // The dual objective function value is known
+  bool has_primal_objective_value = false; // The dual objective function value is known
+  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET; // The solution status is UNSET
 };
 
 struct HighsSimplexInfo {

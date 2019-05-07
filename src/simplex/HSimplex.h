@@ -18,6 +18,37 @@
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
 
+void options(
+	     HighsModelObject &highs_model_object, //!< Model object in which simplex options are to be set
+	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
+	     );
+
+void reportSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be reported
+			   const char* message = ""
+			   );
+
+void invalidateSimplexLpData(
+			     HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
+			     );
+
+void invalidateSimplexLp(
+			 HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
+			 );
+
+void updateSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
+			   LpAction action// !< Action prompting update
+			   );
+
+void setupSimplexLp(
+		    HighsModelObject &highs_model_object
+		    );
+
+void setupForSimplexSolve(
+		   HighsModelObject &highs_model_object
+		   );
+
 // Methods not requiring HighsModelObject 
 
 void append_nonbasic_cols_to_basis(
@@ -87,28 +118,6 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 }
 #endif
 */
-void options(
-	     HighsModelObject &highs_model_object, //!< Model object in which simplex options are to be set
-	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
-	     );
-
-void invalidate_simplex_lp_data(
-				HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
-				);
-
-void invalidate_simplex_lp(
-			   HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
-);
-
-void update_simplex_lp_status(
-			      HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
-			      LpAction action// !< Action prompting update
-			      );
-
-void report_simplex_lp_status(
-			      HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be reported
-			      );
-
 void compute_dual_objective_value(
 				  HighsModelObject &highs_model_object,
                                   int phase = 2);
@@ -228,14 +237,6 @@ void replace_with_new_basis(
 void setup_num_basic_logicals(
 			      HighsModelObject &highs_model_object
 			      );
-
-void setupSimplexLp(
-		    HighsModelObject &highs_model_object
-		    );
-
-void setupForSimplexSolve(
-		   HighsModelObject &highs_model_object
-		   );
 
 #ifdef HiGHSDEV
 void reportSimplexProfiling(

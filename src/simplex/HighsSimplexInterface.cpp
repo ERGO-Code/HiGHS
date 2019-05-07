@@ -92,7 +92,7 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   if (valid_simplex_basis) append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, newNumCol);
 
   // Deduce the consequences of adding new columns
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_COLS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_COLS);
 
   // Increase the number of columns in the LPs
   lp.numCol_ += XnumNewCol;
@@ -299,7 +299,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   //  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp, simplex_basis, newNumRow);
 
   // Deduce the consequences of adding new rows
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
 
   // Increase the number of rows in the LPs
   lp.numRow_ += XnumNewRow;
@@ -394,7 +394,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
     simplex_basis.valid_ = false;
   }
     // ToDo Determine consequences for basis when deleting rows
-  //  update_simplex_lp_status(simplex_lp_status, LpAction::DEL_ROWS);
+  //  updateSimplexLpStatus(simplex_lp_status, LpAction::DEL_ROWS);
   return HighsStatus::OK;
 }
 
@@ -666,7 +666,7 @@ HighsStatus HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, c
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if
-   update_simplex_lp_status(simplex_lp_status, LpAction::NEW_ROWS);
+   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
   //  simplex_lp.reportLp();
 }
 
@@ -745,7 +745,7 @@ HighsStatus HighsSimplexInterface::change_costs_general(
 					    usr_col_cost, highs_model_object.options_.infinite_cost);
  if (call_status == HighsStatus::Error) return HighsStatus::Error;
  // Deduce the consequences of new costs
- update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_COSTS);
+ updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_COSTS);
  return HighsStatus::OK;
 }
 
@@ -795,7 +795,7 @@ HighsStatus HighsSimplexInterface::change_col_bounds_general(
 						 usr_col_lower, usr_col_upper, highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new bounds
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
   return HighsStatus::OK;
 }
 
@@ -845,7 +845,7 @@ HighsStatus HighsSimplexInterface::change_row_bounds_general(
 						 usr_row_lower, usr_row_upper, highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new bounds
-  update_simplex_lp_status(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
   return HighsStatus::OK;
 }
 
@@ -947,7 +947,7 @@ int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat, const i
   }
   assert(numBasic = lp.numRow_);
   basis.valid_ = true;
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
   return 0;
 }
 
@@ -1194,7 +1194,7 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
   }
   assert(num_basic = lp.numRow_);
   populate_work_arrays(highs_model_object);
-  update_simplex_lp_status(simplex_lp_status, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
   simplex_basis.valid_ = true;
 }
 
