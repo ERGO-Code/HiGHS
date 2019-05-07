@@ -467,6 +467,26 @@ void HPrimal::primalChooseRow() {
   timer.stop(simplex_info.clock_[FtranClock]);
   columnDensity = 0.95 * columnDensity + 0.05 * column.count / solver_num_row;
 
+  const bool check_dual = false;
+  if (check_dual) {
+    const double *workCost = &workHMO.simplex_info_.workCost_[0];
+    const double *workDual = &workHMO.simplex_info_.workDual_[0];
+    const int *basicIndex = &workHMO.simplex_basis_.basicIndex_[0];
+    double check_dual_value = workCost[columnIn];
+    for (int i = 0; i < column.count; i++) {
+      int row = column.index[i];
+      int col = basicIndex[row];
+      double value = column.array[row];
+      double cost = workCost[col];
+      check_dual_value -= value * cost;
+      //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value = %12g\n", i, row, value, cost, check_dual_value);
+    }
+    thetaDual = workDual[columnIn];
+    double dual_error = abs(check_dual_value-thetaDual)/max(1.0, fabs(thetaDual));
+    if (dual_error>1e-8)
+      printf("Checking dual: updated = %12g; direct = %12g; error = %12g\n", thetaDual, check_dual_value, dual_error);
+  }
+
   timer.start(simplex_info.clock_[Chuzr1Clock]);
   // Initialize
   rowOut = -1;
@@ -496,9 +516,8 @@ void HPrimal::primalChooseRow() {
     }
   }
   timer.stop(simplex_info.clock_[Chuzr1Clock]);
-    
+
   timer.start(simplex_info.clock_[Chuzr2Clock]);
-  // Choose row pass 2
   double bestAlpha = 0;
   for (int i = 0; i < column.count; i++) {
     int index = column.index[i];
