@@ -14,6 +14,7 @@
 
 #include "HConfig.h"
 #include "lp_data/HighsStatus.h"
+#include "simplex/HCrash.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "io/HighsIO.h"
@@ -23,6 +24,7 @@
 #include "simplex/SimplexConst.h" // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
 
+using std::runtime_error;
 #include <cassert>
 #include <cstring> // For strcmp
 #include <vector>
@@ -1552,6 +1554,15 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
 		 &simplex_lp.Avalue_[0],
 		 &simplex_basis.nonbasicFlag_[0]);
   } else {
+    // ... or Crash, if the option to do so is set...
+    if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
+      HighsTimer &timer = highs_model_object.timer_;
+      HCrash crash;
+      timer.start(timer.crash_clock);
+      crash.crash(highs_model_object, 0);
+      timer.stop(timer.crash_clock);
+    }
+
     // ... otherwise start from a logical basis
     initialise_with_logical_basis(highs_model_object);
     matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
@@ -1570,7 +1581,13 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
 	       &simplex_lp.Avalue_[0],
 	       &simplex_basis.basicIndex_[0]);
   simplex_lp_status.has_factor_arrays = true;
-  
+
+  if (!simplex_lp_status.has_fresh_invert) {
+    int rankDeficiency = compute_factor(highs_model_object);
+    if (rankDeficiency) {
+      throw runtime_error("Dual initialise: singular-basis-matrix");
+    }
+  }
 }
 
 #ifdef HiGHSDEV

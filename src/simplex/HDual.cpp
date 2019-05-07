@@ -58,21 +58,11 @@ void HDual::solve(int num_threads) {
 
   initialise_cost(workHMO, 1);
   if (!simplex_lp_status.has_fresh_invert) {
-    int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
+    int rankDeficiency = compute_factor(workHMO);
 
     if (rankDeficiency) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
-#ifdef HiGHSDEV
-    double bsCond = computeBasisCondition(workHMO);
-    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
-    if (bsCond > 1e12) {
-      HighsPrintMessage(ML_MINIMAL, " excessive\n");
-      return;
-    } else {
-      HighsPrintMessage(ML_MINIMAL, " OK\n");
-    }
-#endif
   }
   // Consider initialising edge weights
   //
@@ -145,14 +135,6 @@ void HDual::solve(int num_threads) {
     // Indicate that edge weights are known
     simplex_lp_status.has_dual_steepest_edge_weights = true;
   }
-
-#ifdef HiGHSDEV
-  bool rp_bs_cond = true;
-  if (rp_bs_cond) {
-    double bs_cond = computeBasisCondition(workHMO);
-    printf("Initial basis condition estimate is %g\n", bs_cond);
-  }
-#endif
 
   compute_dual(workHMO); //  model->computeDual();
   compute_dual_infeasible_in_dual(workHMO, &dualInfeasCount);//model->computeDualInfeasInDual(&dualInfeasCount);
@@ -262,10 +244,6 @@ void HDual::solve(int num_threads) {
   ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
-  if (rp_bs_cond) {
-    double bs_cond = computeBasisCondition(workHMO);
-    printf("Optimal basis condition estimate is %g\n", bs_cond);
-  }
 }
 
 void HDual::options() {
@@ -651,9 +629,6 @@ void HDual::rebuild() {
     for (int i = 0; i < solver_num_row; i++)
       dualRHS.workEdWt[i] = dualRHS.workEdWtFull[baseIndex[i]];
     timer.stop(simplex_info.clock_[PermWtClock]);
-
-    // Possibly look at the basis condition
-    //		double bsCond = computeBasisCondition(workHMO);
   }
 
   // Recompute dual solution

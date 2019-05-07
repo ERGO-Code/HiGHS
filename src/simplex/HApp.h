@@ -23,7 +23,6 @@
 //#include <stdexcept> // Just to hack in primal simplex solver
 
 #include "HConfig.h"
-#include "simplex/HCrash.h"
 #include "simplex/HPrimal.h"
 #include "simplex/HDual.h"
 #include "lp_data/HighsLp.h"
@@ -35,11 +34,7 @@
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"
-#include "simplex/SimplexTimer.h" // Just to hack in primal simplex solver
-
-//using std::cout;
-//using std::endl;
-//using std::flush;
+#include "simplex/SimplexTimer.h"
 
 HighsStatus solveSimplex(
 			 const HighsOptions& opt,
@@ -52,92 +47,70 @@ HighsStatus solveSimplex(
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   HighsLp &lp = highs_model_object.lp_;
 
-  SimplexTimer simplex_timer;
-  simplex_timer.initialiseSimplexClocks(highs_model_object);
 #ifdef HiGHSDEV
+  bool compute_basis_condition = true;
+  if (compute_basis_condition) {
+    double basis_condition = computeBasisCondition(highs_model_object);
+    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", basis_condition);
+    if (basis_condition > 1e12) {
+      HighsPrintMessage(ML_MINIMAL, " excessive\n");
+      return simplex_interface.LpStatusToHighsStatus(SimplexSolutionStatus::FAILED);
+    } else {
+      HighsPrintMessage(ML_MINIMAL, " OK\n");
+    }
+  }
   timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
 
-  bool ranging = true;
-  // Initialize solver and set dual solver options from simplex options
+  // Official start of solver
+  timer.start(timer.solve_clock);
+
   if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
     // Use primal simplex solver
     HPrimal primal_solver(highs_model_object);
-
-    timer.start(timer.solve_clock);
     primal_solver.solve();
-    timer.stop(timer.solve_clock);
-
   } else {
     // Use dual simplex solver
     HDual dual_solver(highs_model_object);
     dual_solver.options();
-  
-    // If after postsolve. todo: advanced basis start here.
-    if (opt.clean_up) {
-      timer.start(timer.solve_clock);
+    // Solve, depending on the particular strategy
+    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+      // Serial
       dual_solver.solve();
-      timer.stop(timer.solve_clock);
-    } else {
-      // Crash, if HighsModelObject has basis information.
-      if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
-	HCrash crash;
-	timer.start(timer.crash_clock);
-	crash.crash(highs_model_object, 0);
-	timer.stop(timer.crash_clock);
-      }
-      timer.start(timer.solve_clock);
-      // Solve, depending on the options.
-      // Parallel.
-      if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+    } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+      // Parallel - SIP
+      // writePivots("tasks");
+      dual_solver.solve(8);
+    } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+      // Parallel - PAMI
+      // writePivots("multi");
+      // if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
+      bool FourThreads = false;
+      bool EightThreads = false;
+      if (FourThreads)
+	dual_solver.solve(4);
+      else if (EightThreads)
 	dual_solver.solve(8);
-      } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
-	//    if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-	dual_solver.solve(8);
-#ifdef HiGHSDEV
-	// Reinstate this once simplex::writePivots is written
-	//    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) writePivots("multi");
-	//    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) writePivots("tasks");
-#endif
-      } else {
-	// Serial. Based on previous solvePlainJAJH.
-	
-	bool FourThreads = false;
-	bool EightThreads = false;
-	
-	if (FourThreads)
-	  dual_solver.solve(4);
-	else if (EightThreads)
-	  dual_solver.solve(8);
-	else
-	  dual_solver.solve();
-	
-	HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
-
-	timer.stop(timer.solve_clock);
-
-      }
+      else
+	dual_solver.solve();
+      HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
     }
   }
-
   if (simplex_info.dual_phase1_iteration_count +
       simplex_info.dual_phase2_iteration_count +
       simplex_info.primal_phase1_iteration_count +
       simplex_info.primal_phase2_iteration_count !=
-      simplex_info.iteration_count) {
-    printf("Iteration total error \n");
-  }
+      simplex_info.iteration_count) printf("Iteration total error \n");
 
+  // Official finish of solver
+  timer.stop(timer.solve_clock);
 
 #ifdef HiGHSDEV
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   reportSimplexProfiling(highs_model_object);
-  printf("!! Move an_bs_cond() to HSimplex\n");
-  
-  bool rp_bs_cond = true;
-  if (rp_bs_cond) {
-    double bs_cond = computeBasisCondition(highs_model_object);
-    printf("Optimal basis condition estimate is %g\n", bs_cond);
+  if (compute_basis_condition) {
+    double basis_condition = computeBasisCondition(highs_model_object);
+    printf("Optimal basis condition estimate is %g\n", basis_condition);
   }
   // ToDO move iterateRpAn to simplex
   printf("!! Move iterateRpAn() to HSimplex\n");
@@ -177,8 +150,13 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //
   if (!highs_model_object.simplex_lp_status_.valid) setupSimplexLp(highs_model_object);
 
+  SimplexTimer simplex_timer;
+  simplex_timer.initialiseSimplexClocks(highs_model_object);
+
   // Setup the basis if not valid, taking the Highs basis if it's
-  // valid, otherwise a unit basis
+  // valid, otherwise a unit basis or crash basis and perform INVERT
+  // if necessary
+
   setupForSimplexSolve(highs_model_object);
 
   // Call the simplex solver
