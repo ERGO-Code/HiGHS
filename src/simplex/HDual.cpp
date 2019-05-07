@@ -57,12 +57,9 @@ void HDual::solve(int num_threads) {
   init(num_threads);
 
   initialise_cost(workHMO, 1);
+  assert(simplex_lp_status.has_fresh_invert);
   if (!simplex_lp_status.has_fresh_invert) {
-    int rankDeficiency = compute_factor(workHMO);
-
-    if (rankDeficiency) {
-      throw runtime_error("Dual initialise: singular-basis-matrix");
-    }
+    printf("ERROR: Should enter with fresh INVERT - unless no_invert_on_optimal is set\n");
   }
   // Consider initialising edge weights
   //
@@ -70,12 +67,6 @@ void HDual::solve(int num_threads) {
   // dualRHS.setup(workHMO) so that CHUZR is well defined, even for
   // Dantzig pricing
   //
-#ifdef HiGHSDEV
-  //  printf("simplex_lp_status.has_dual_steepest_edge_weights 2 = %d; dual_edge_weight_mode = %d; DualEdgeWeightMode::STEEPEST_EDGE =
-  //  %d\n",
-  //	 simplex_lp_status.has_dual_steepest_edge_weights, dual_edge_weight_mode, DualEdgeWeightMode::STEEPEST_EDGE);cout<<flush;
-  //  printf("Edge weights known? %d\n", !simplex_lp_status.has_dual_steepest_edge_weights);cout<<flush;
-#endif
   if (!simplex_lp_status.has_dual_steepest_edge_weights) {
     // Edge weights are not known
     // Set up edge weights according to dual_edge_weight_mode and initialise_dual_steepest_edge_weights
@@ -140,6 +131,8 @@ void HDual::solve(int num_threads) {
   compute_dual_infeasible_in_dual(workHMO, &dualInfeasCount);//model->computeDualInfeasInDual(&dualInfeasCount);
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
 
+#ifdef HiGHSDEV
+  /*
   // Find largest dual. No longer adjust the dual tolerance accordingly
   double largeDual = 0;
   for (int i = 0; i < solver_num_tot; i++) {
@@ -148,8 +141,8 @@ void HDual::solve(int num_threads) {
       if (largeDual < myDual) largeDual = myDual;
     }
   }
-#ifdef HiGHSDEV
   //  printf("Solve: Large dual = %g\n", largeDual);cout<<flush;
+  */
 #endif
 
   // Check that the model is OK to solve:
@@ -165,17 +158,11 @@ void HDual::solve(int num_threads) {
   // Level 3 (will) checks expensive things like the INVERT and
   // steepeest edge weights
   //
-#ifdef HiGHSDEV
-  //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve():
-  //  solvePhase = %d\n", solvePhase);cout<<flush;}
-#endif
   bool ok = ok_to_solve(workHMO, 1, solvePhase);
   if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
   assert(ok);
-
 #ifdef HiGHSDEV
-  //  Analyse the initial values of primal and dual variables
-  //  an_iz_vr_v();
+  reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving loop");
 #endif
 
   // The major solving loop
@@ -244,6 +231,7 @@ void HDual::solve(int num_threads) {
   ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
+  compute_primal_objective_value(workHMO);
 }
 
 void HDual::options() {
@@ -1999,32 +1987,5 @@ void HDual::iterateRpAn() {
     }
     printf("\n");
   }
-}
-
-// TODO Put this in the right place - try to identify when workValue is set
-// [nonbasic primals are set to the right bound for dual feasibility?]
-void HDual::an_iz_vr_v() {
-  double norm_bc_pr_vr = 0;
-  double norm_bc_du_vr = 0;
-  for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
-    norm_bc_pr_vr += baseValue[r_n] * baseValue[r_n];
-    norm_bc_du_vr += workDual[vr_n] * workDual[vr_n];
-  }
-  double norm_nonbc_pr_vr = 0;
-  double norm_nonbc_du_vr = 0;
-  for (int vr_n = 0; vr_n < solver_num_tot; vr_n++) {
-    if (workHMO.simplex_basis_.nonbasicFlag_[vr_n]) {
-      double pr_act_v = workHMO.simplex_info_.workValue_[vr_n];
-      norm_nonbc_pr_vr += pr_act_v * pr_act_v;
-      norm_nonbc_du_vr += workDual[vr_n] * workDual[vr_n];
-    }
-  }
-  // printf("Initial point has %d dual infeasibilities\n", dualInfeasCount);
-  // printf("Norm of the basic    primal activites is %g\n",
-  // sqrt(norm_bc_pr_vr)); printf("Norm of the basic    dual   activites is
-  // %g\n", sqrt(norm_bc_du_vr)); printf("Norm of the nonbasic primal activites
-  // is %g\n", sqrt(norm_nonbc_pr_vr)); printf("Norm of the nonbasic dual
-  // activites is %g\n", sqrt(norm_nonbc_du_vr));
 }
 #endif

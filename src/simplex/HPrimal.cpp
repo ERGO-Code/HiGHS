@@ -126,11 +126,6 @@ void HPrimal::solve() {
   if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
   assert(ok);
   */
-#ifdef HiGHSDEV
-  //  Analyse the initial values of primal and dual variables
-  //  an_iz_vr_v();
-#endif
-
   // The major solving loop
 
   // Initialise the iteration analysis. Necessary for strategy, but

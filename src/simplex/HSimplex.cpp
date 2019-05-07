@@ -309,10 +309,10 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
 		      &simplex_lp.Avalue_[0]);
     
   }
+  simplex_lp_status.has_basis = true;
   simplex_lp_status.has_matrix_col_wise = true;
   simplex_lp_status.has_matrix_row_wise = true;
-  
-  
+
   factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
 	       &simplex_lp.Astart_[0],
 	       &simplex_lp.Aindex_[0],

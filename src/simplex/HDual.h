@@ -427,7 +427,6 @@ class HDual {
   void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector &vector);
   void iterateRpAn();
-  void an_iz_vr_v();
 #endif
 
   int Crash_Mode = 0;     //!< Crash mode. TODO: handle this otherwise
