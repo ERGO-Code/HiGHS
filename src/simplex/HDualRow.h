@@ -41,7 +41,7 @@ class HDualRow {
    * @brief Set up the packed indices and values for the dual ratio test
    *
    * Done either for the whole pivotal row (see HDualRow::setup), or
-   * just for a slice (see HDual::init_slice)
+   * just for a slice (see HDual::initSlice)
    */
   void setupSlice( int size        //!< Dimension of slice
 		  );

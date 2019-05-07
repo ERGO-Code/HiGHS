@@ -149,9 +149,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     double basis_condition = computeBasisCondition(highs_model_object);
     printf("Optimal basis condition estimate is %g\n", basis_condition);
   }
-  // ToDO move iterateRpAn to simplex
-  printf("!! Move iterateRpAn() to HSimplex\n");
-  //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
+  // ToDO move iterationAnalysisReport to simplex
+  printf("!! Move iterationAnalysisReport() to HSimplex\n");
+  //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
 
   if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
     printf("Iterations [Ph1 %d; Ph2 %d] Total %d\n",
