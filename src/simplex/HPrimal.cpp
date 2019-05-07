@@ -357,7 +357,7 @@ void HPrimal::primalRebuild() {
 #ifdef HiGHSDEV
     // TODO Investigate these Primal objective value errors
     if (rlvPrimalObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING, "Primal objective value error abs(rel) = %12g (%12g)",
+      HighsLogMessage(HighsMessageType::WARNING, "Primal objective value error |rel| = %12g (%12g)",
 			absPrimalObjectiveError, rlvPrimalObjectiveError);
     }
 #endif

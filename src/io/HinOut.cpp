@@ -192,9 +192,9 @@ void HinOut::readDataPostsolve(HighsModelObject& highs_model_object) {
 
 double HinOut::getdiff(double v1, double v2) {
   double mx = 1;
-  if (abs(v1) > 1) mx = max(abs(v1), abs(v2));
+  if (fabs(v1) > 1) mx = max(fabs(v1), fabs(v2));
 
-  double val = abs(v1 - v2) / mx;
+  double val = fabs(v1 - v2) / mx;
   if (val > 0.00000001) return val;
 
   return 0;

@@ -237,8 +237,19 @@ void setupForSimplexSolve(
 		   HighsModelObject &highs_model_object
 		   );
 
+#ifdef HiGHSDEV
 void reportSimplexProfiling(
 			    HighsModelObject &highs_model_object
+			    );
+
+#endif
+
+  /**
+   * @brief Get the Hager condition number estimate for the basis matrix of a
+   * model
+   */
+double computeBasisCondition(
+			     HighsModelObject &highs_model_object
 			    );
 
 bool work_arrays_ok(

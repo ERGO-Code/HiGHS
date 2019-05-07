@@ -957,7 +957,7 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
             index, numTinyVEr, PriceV, lcPriceV);
       }
     }
-    double dlPriceV = abs(PriceV - lcPriceV);
+    double dlPriceV = fabs(PriceV - lcPriceV);
     if (dlPriceV > 1e-4) {
       numDlPriceV++;
       printf(
@@ -992,7 +992,7 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
   // whether it's zero, reinstating its values from the local row.
   double priceEr2 = 0;
   for (int index = 0; index < numCol; index++) {
-    double ZePriceV = abs(ap_array[index]);
+    double ZePriceV = fabs(ap_array[index]);
     if (ZePriceV > 1e-4)
       printf("Index %7d: ZePriceV = %11.4g\n", index, ZePriceV);
     priceEr2 += ZePriceV * ZePriceV;
@@ -1000,7 +1000,7 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
   }
   priceEr1 = sqrt(priceEr1);
   priceEr2 = sqrt(priceEr2);
-  row_apNormCk = sqrt(abs(row_apNormCk));
+  row_apNormCk = sqrt(fabs(row_apNormCk));
   double row_apNormCkTl = 1e-3;
   bool row_apNormCkEr = row_apNormCk > row_apNormCkTl * row_apNorm;
   bool price_er = row_apCountEr || priceEr1 > priceErTl ||

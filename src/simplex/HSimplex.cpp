@@ -1197,7 +1197,7 @@ void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
       }
       // dl_pr_act = simplex_info.workValue_[var] - prev_pr_act;
       // norm_dl_pr_act += dl_pr_act*dl_pr_act;
-      //      if (abs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
+      //      if (fabs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
       //      %8g; %8g] Du = %8g; DlPr = %8g\n",
       //					var,
       //simplex_info.workLower_[var],
@@ -1660,6 +1660,112 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
 }
 #endif
 
+double computeBasisCondition(
+			     HighsModelObject &highs_model_object
+			     ) {
+  int solver_num_row = highs_model_object.simplex_lp_.numRow_;
+  int solver_num_col = highs_model_object.simplex_lp_.numCol_;
+  vector<double> bs_cond_x;
+  vector<double> bs_cond_y;
+  vector<double> bs_cond_z;
+  vector<double> bs_cond_w;
+  HVector row_ep;
+  row_ep.setup(solver_num_row);
+
+  HFactor &factor = highs_model_object.factor_;
+  const int *Astart = &highs_model_object.simplex_lp_.Astart_[0];
+  const double *Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
+  // Compute the Hager condition number estimate for the basis matrix
+  double NoDensity = 1;
+  bs_cond_x.resize(solver_num_row);
+  bs_cond_y.resize(solver_num_row);
+  bs_cond_z.resize(solver_num_row);
+  bs_cond_w.resize(solver_num_row);
+  // x = ones(n,1)/n;
+  // y = A\x;
+  double mu = 1.0 / solver_num_row;
+  double norm_Binv;
+  for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
+  row_ep.clear();
+  row_ep.count = solver_num_row;
+  for (int r_n = 0; r_n < solver_num_row; r_n++) {
+    row_ep.index[r_n] = r_n;
+    row_ep.array[r_n] = bs_cond_x[r_n];
+  }
+  for (int ps_n = 1; ps_n <= 5; ps_n++) {
+    row_ep.packFlag = false;
+    factor.ftran(row_ep, NoDensity);
+    // zeta = sign(y);
+    for (int r_n = 0; r_n < solver_num_row; r_n++) {
+      bs_cond_y[r_n] = row_ep.array[r_n];
+      if (bs_cond_y[r_n] > 0)
+        bs_cond_w[r_n] = 1.0;
+      else if (bs_cond_y[r_n] < 0)
+        bs_cond_w[r_n] = -1.0;
+      else
+        bs_cond_w[r_n] = 0.0;
+    }
+    // z=A'\zeta;
+    row_ep.clear();
+    row_ep.count = solver_num_row;
+    for (int r_n = 0; r_n < solver_num_row; r_n++) {
+      row_ep.index[r_n] = r_n;
+      row_ep.array[r_n] = bs_cond_w[r_n];
+    }
+    row_ep.packFlag = false;
+    factor.btran(row_ep, NoDensity);
+    // norm_z = norm(z,'inf');
+    // ztx = z'*x ;
+    // NormEst = norm(y,1);
+    // fd_i = 0;
+    // for i=1:n
+    //    if fabs(z(i)) == norm_z
+    //        fd_i = i;
+    //        break
+    //    end
+    // end
+    double norm_z = 0.0;
+    double ztx = 0.0;
+    norm_Binv = 0.0;
+    int argmax_z = -1;
+    for (int r_n = 0; r_n < solver_num_row; r_n++) {
+      bs_cond_z[r_n] = row_ep.array[r_n];
+      double abs_z_v = fabs(bs_cond_z[r_n]);
+      if (abs_z_v > norm_z) {
+        norm_z = abs_z_v;
+        argmax_z = r_n;
+      }
+      ztx += bs_cond_z[r_n] * bs_cond_x[r_n];
+      norm_Binv += fabs(bs_cond_y[r_n]);
+    }
+    // printf("%2d: ||z||_inf = %8.2g; z^T*x = %8.2g; ||y||_1 = %g\n", ps_n,
+    // norm_z, ztx, norm_Binv);
+    if (norm_z <= ztx) break;
+    // x = zeros(n,1);
+    // x(fd_i) = 1;
+    for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
+    row_ep.clear();
+    row_ep.count = 1;
+    row_ep.index[0] = argmax_z;
+    row_ep.array[argmax_z] = 1.0;
+    bs_cond_x[argmax_z] = 1.0;
+  }
+  double norm_B = 0.0;
+  for (int r_n = 0; r_n < solver_num_row; r_n++) {
+    int vr_n = highs_model_object.simplex_basis_.basicIndex_[r_n];
+    double c_norm = 0.0;
+    if (vr_n < solver_num_col)
+      for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
+        c_norm += fabs(Avalue[el_n]);
+    else
+      c_norm += 1.0;
+    norm_B = max(c_norm, norm_B);
+  }
+  double cond_B = norm_Binv * norm_B;
+  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n",
+	 norm_Binv, norm_B, cond_B);
+  return cond_B;
+}
 
 bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
@@ -2450,7 +2556,7 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
   double nwValue = simplex_info.workValue_[columnOut];
   double vrDual = simplex_info.workDual_[columnOut];
   double dlDualObjectiveValue = nwValue * vrDual;
-  //  if (abs(nwValue))
+  //  if (fabs(nwValue))
   //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
   //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
   //			   columnOut, simplex_basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb,
@@ -2630,12 +2736,12 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
             }
           }
           sclColValue = value[iCol];
-          sclColDuIfs = abs(dual[iCol]);
+          sclColDuIfs = fabs(dual[iCol]);
           //	  if (!freeEr) {printf("Column %7d is free with value %g\n",
           // iCol ,sclColValue);}
         }
       }
-      double valueEr = abs(sclColValue - value[iCol]);
+      double valueEr = fabs(sclColValue - value[iCol]);
       if (valueEr > tlValueEr) {
         printf(
             "Column %7d has value error of %11.4g for sclColValue = %11.4g and "
@@ -2647,7 +2753,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
     } else {
       // Basic variable
       sclColValue = value[iCol];
-      sclColDuIfs = abs(dual[iCol]);
+      sclColDuIfs = fabs(dual[iCol]);
     }
 
     lcPrObjV += sclColValue * simplex_lp.colCost_[iCol];
@@ -2692,7 +2798,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
     // Check column residual errors
     // Using scaled column activities
     double sclColDual = dual[iCol];
-    double sclColDuRsduEr = abs(sclColDuAct[iCol] + sclColDual);
+    double sclColDuRsduEr = fabs(sclColDuAct[iCol] + sclColDual);
     if (sclColDuRsduEr > tlDuRsduEr) {
       /*
         bool rpCol = (rpAllCol || (numRpCol<mxRpCol)) && !rpNoCol;
@@ -2709,7 +2815,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
     maxSclColDuRsduEr = max(sclColDuRsduEr, maxSclColDuRsduEr);
     // Using unscaled column activities
     double colDual = sclColDual * scale.cost_ / scale.col_[iCol];
-    double colDuRsduEr = abs(colDuAct[iCol] + colDual);
+    double colDuRsduEr = fabs(colDuAct[iCol] + colDual);
     if (colDuRsduEr > tlDuRsduEr) {
       /*
         bool rpCol = (rpAllCol || (numRpCol<mxRpCol)) && !rpNoCol;
@@ -2843,12 +2949,12 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
             }
           }
           sclRowValue = -value[simplex_lp.numCol_ + iRow];
-          sclRowDuIfs = abs(dual[simplex_lp.numCol_ + iRow]);
+          sclRowDuIfs = fabs(dual[simplex_lp.numCol_ + iRow]);
           //	  if (!freeEr) {printf("Row    %7d is free with value %g\n",
           // iRow, sclRowValue);}
         }
       }
-      double valueEr = abs(sclRowValue + value[simplex_lp.numCol_ + iRow]);
+      double valueEr = fabs(sclRowValue + value[simplex_lp.numCol_ + iRow]);
       if (valueEr > tlValueEr) {
         printf(
             "Row    %7d has value error of %11.4g for sclRowValue = %11.4g and "
@@ -2859,7 +2965,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
     } else {
       // Basic variable
       sclRowValue = -value[simplex_lp.numCol_ + iRow];
-      sclRowDuIfs = abs(dual[simplex_lp.numCol_ + iRow]);
+      sclRowDuIfs = fabs(dual[simplex_lp.numCol_ + iRow]);
     }
     //      assert(highs_isInfinity(-sclRowValue));
     //      assert(highs_isInfinity(sclRowValue));
@@ -2901,7 +3007,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
 
     // Check row residual errors
     // Using scaled row activities
-    double sclRowPrRsduEr = abs(sclRowPrAct[iRow] - sclRowValue);
+    double sclRowPrRsduEr = fabs(sclRowPrAct[iRow] - sclRowValue);
     if (sclRowPrRsduEr > tlPrRsduEr) {
       /*
         bool rpRow = (rpAllRow || (numRpRow<mxRpRow)) && !rpNoRow;
@@ -2918,7 +3024,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
     maxSclRowPrRsduEr = max(sclRowPrRsduEr, maxSclRowPrRsduEr);
     // Using unscaled row activities
     double rowValue = sclRowValue / scale.row_[iRow];
-    double rowPrRsduEr = abs(rowPrAct[iRow] - rowValue);
+    double rowPrRsduEr = fabs(rowPrAct[iRow] - rowValue);
     if (rowPrRsduEr > tlPrRsduEr) {
       /*
         bool rpRow = (rpAllRow || (numRpRow<mxRpRow)) && !rpNoRow;
@@ -2984,7 +3090,7 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
   lcPrObjV += simplex_lp.offset_;
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
   double ObjEr =
-      abs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
+      fabs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
   printf("Relative objective error of %11.4g: dualObjectiveValue = %g; "
          "lcPrObjV = %g\n",
          ObjEr, dualObjectiveValue, lcPrObjV);

@@ -143,7 +143,7 @@ class SimplexTimer {
     for (int en=0; en<simplex_clock_list_size; en++) {
       clockList[en] = simplex_info.clock_[simplex_clock_list[en]];
     }
-    timer.report_tl(grepStamp, clockList, 0.0);
+    timer.report_tl(grepStamp, clockList, 1.0);
   };
   
   void reportSimplexTotalClock(HighsModelObject & model_object) {

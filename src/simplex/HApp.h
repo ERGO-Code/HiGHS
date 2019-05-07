@@ -133,13 +133,13 @@ HighsStatus solveSimplex(
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   reportSimplexProfiling(highs_model_object);
   printf("!! Move an_bs_cond() to HSimplex\n");
-  /*
-    if (rp_bs_cond) {
-    double bs_cond = an_bs_cond();
+  
+  bool rp_bs_cond = true;
+  if (rp_bs_cond) {
+    double bs_cond = computeBasisCondition(highs_model_object);
     printf("Optimal basis condition estimate is %g\n", bs_cond);
-    }
-  */
-    // ToDO move iterateRpAn to simplex
+  }
+  // ToDO move iterateRpAn to simplex
   printf("!! Move iterateRpAn() to HSimplex\n");
   //    if (simplex_info.analyseSimplexIterations) iterateRpAn();
 

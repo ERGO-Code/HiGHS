@@ -64,7 +64,7 @@ void HDual::solve(int num_threads) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
 #ifdef HiGHSDEV
-    double bsCond = an_bs_cond();
+    double bsCond = computeBasisCondition(workHMO);
     HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
     if (bsCond > 1e12) {
       HighsPrintMessage(ML_MINIMAL, " excessive\n");
@@ -147,9 +147,9 @@ void HDual::solve(int num_threads) {
   }
 
 #ifdef HiGHSDEV
-  bool rp_bs_cond = false;
+  bool rp_bs_cond = true;
   if (rp_bs_cond) {
-    double bs_cond = an_bs_cond();
+    double bs_cond = computeBasisCondition(workHMO);
     printf("Initial basis condition estimate is %g\n", bs_cond);
   }
 #endif
@@ -187,7 +187,7 @@ void HDual::solve(int num_threads) {
   //  if ((solvePhase != 1) && (solvePhase != 2)) {printf("In solve():
   //  solvePhase = %d\n", solvePhase);cout<<flush;}
 #endif
-  bool ok = ok_to_solve(workHMO, 1, solvePhase);//  model->OKtoSolve(1, solvePhase);
+  bool ok = ok_to_solve(workHMO, 1, solvePhase);
   if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
   assert(ok);
 
@@ -262,6 +262,10 @@ void HDual::solve(int num_threads) {
   ok = ok_to_solve(workHMO, 1, solvePhase);// model->OKtoSolve(1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
+  if (rp_bs_cond) {
+    double bs_cond = computeBasisCondition(workHMO);
+    printf("Optimal basis condition estimate is %g\n", bs_cond);
+  }
 }
 
 void HDual::options() {
@@ -649,7 +653,7 @@ void HDual::rebuild() {
     timer.stop(simplex_info.clock_[PermWtClock]);
 
     // Possibly look at the basis condition
-    //		double bsCond = an_bs_cond();
+    //		double bsCond = computeBasisCondition(workHMO);
   }
 
   // Recompute dual solution
@@ -689,7 +693,7 @@ void HDual::rebuild() {
     /*
     // TODO Investigate these Dual objective value errors
     if (rlvDualObjectiveError >= 1e-8) {
-      HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error abs(rel) = %12g (%12g)",
+      HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error |rel| = %12g (%12g)",
 			absDualObjectiveError, rlvDualObjectiveError);
     }
     */
@@ -1815,103 +1819,6 @@ int HDual::util_getBasisInvRow(int r, double *coef, int *inds, int *ninds) {
   }
   cout << flush;
   return 0;
-}
-
-double HDual::an_bs_cond() {
-  // Alias to the matrix
-  matrix = &workHMO.matrix_;
-  const int *Astart = matrix->getAstart();
-  const double *Avalue = matrix->getAvalue();
-  // Compute the Hager condition number estimate for the basis matrix
-  double NoDensity = 1;
-  bs_cond_x.resize(solver_num_row);
-  bs_cond_y.resize(solver_num_row);
-  bs_cond_z.resize(solver_num_row);
-  bs_cond_w.resize(solver_num_row);
-  // x = ones(n,1)/n;
-  // y = A\x;
-  double mu = 1.0 / solver_num_row;
-  double norm_Binv;
-  for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = mu;
-  row_ep.clear();
-  row_ep.count = solver_num_row;
-  for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    row_ep.index[r_n] = r_n;
-    row_ep.array[r_n] = bs_cond_x[r_n];
-  }
-  for (int ps_n = 1; ps_n <= 5; ps_n++) {
-    row_ep.packFlag = false;
-    factor->ftran(row_ep, NoDensity);
-    // zeta = sign(y);
-    for (int r_n = 0; r_n < solver_num_row; r_n++) {
-      bs_cond_y[r_n] = row_ep.array[r_n];
-      if (bs_cond_y[r_n] > 0)
-        bs_cond_w[r_n] = 1.0;
-      else if (bs_cond_y[r_n] < 0)
-        bs_cond_w[r_n] = -1.0;
-      else
-        bs_cond_w[r_n] = 0.0;
-    }
-    // z=A'\zeta;
-    row_ep.clear();
-    row_ep.count = solver_num_row;
-    for (int r_n = 0; r_n < solver_num_row; r_n++) {
-      row_ep.index[r_n] = r_n;
-      row_ep.array[r_n] = bs_cond_w[r_n];
-    }
-    row_ep.packFlag = false;
-    factor->btran(row_ep, NoDensity);
-    // norm_z = norm(z,'inf');
-    // ztx = z'*x ;
-    // NormEst = norm(y,1);
-    // fd_i = 0;
-    // for i=1:n
-    //    if abs(z(i)) == norm_z
-    //        fd_i = i;
-    //        break
-    //    end
-    // end
-    double norm_z = 0.0;
-    double ztx = 0.0;
-    norm_Binv = 0.0;
-    int argmax_z = -1;
-    for (int r_n = 0; r_n < solver_num_row; r_n++) {
-      bs_cond_z[r_n] = row_ep.array[r_n];
-      double abs_z_v = abs(bs_cond_z[r_n]);
-      if (abs_z_v > norm_z) {
-        norm_z = abs_z_v;
-        argmax_z = r_n;
-      }
-      ztx += bs_cond_z[r_n] * bs_cond_x[r_n];
-      norm_Binv += abs(bs_cond_y[r_n]);
-    }
-    // printf("%2d: ||z||_inf = %8.2g; z^T*x = %8.2g; ||y||_1 = %g\n", ps_n,
-    // norm_z, ztx, norm_Binv);
-    if (norm_z <= ztx) break;
-    // x = zeros(n,1);
-    // x(fd_i) = 1;
-    for (int r_n = 0; r_n < solver_num_row; r_n++) bs_cond_x[r_n] = 0.0;
-    row_ep.clear();
-    row_ep.count = 1;
-    row_ep.index[0] = argmax_z;
-    row_ep.array[argmax_z] = 1.0;
-    bs_cond_x[argmax_z] = 1.0;
-  }
-  double norm_B = 0.0;
-  for (int r_n = 0; r_n < solver_num_row; r_n++) {
-    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
-    double c_norm = 0.0;
-    if (vr_n < solver_num_col)
-      for (int el_n = Astart[vr_n]; el_n < Astart[vr_n + 1]; el_n++)
-        c_norm += abs(Avalue[el_n]);
-    else
-      c_norm += 1.0;
-    norm_B = max(c_norm, norm_B);
-  }
-  double cond_B = norm_Binv * norm_B;
-  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n",
-	 norm_Binv, norm_B, cond_B);
-  return cond_B;
 }
 
 #ifdef HiGHSDEV
