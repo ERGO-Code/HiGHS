@@ -126,6 +126,9 @@ void HPrimal::solve() {
   if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
   assert(ok);
   */
+#ifdef HiGHSDEV
+  reportSimplexLpStatus(simplex_lp_status, "Before HPrimal major solving loop");
+#endif
   // The major solving loop
 
   // Initialise the iteration analysis. Necessary for strategy, but

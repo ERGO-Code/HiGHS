@@ -2070,7 +2070,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   // Level 0: Minimal check - just look at flags. This means we trust them!
   ok = simplex_basis.valid_ && simplex_lp_status.has_matrix_col_wise &&
        simplex_lp_status.has_matrix_row_wise &&
-       //    simplex_lp_status.has_factor_arrays &&
+       simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
   // TODO: Eliminate the following line ASAP!!!
@@ -2127,9 +2127,6 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
       }
     }
   }
-  if (level <= 1)
-    return ok;
-  printf("OKtoSolve(%1d) not implemented\n", level);
   return ok;
 }
 

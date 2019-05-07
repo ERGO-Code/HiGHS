@@ -430,7 +430,7 @@ class HDual {
 #endif
 
   int Crash_Mode = 0;     //!< Crash mode. TODO: handle this otherwise
-  bool SolveBailout;  //!< Set true if control is to be returned immediately to
+  bool solve_bailout;  //!< Set true if control is to be returned immediately to
                       //!< calling function
 
   // Devex scalars
