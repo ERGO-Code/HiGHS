@@ -107,7 +107,7 @@ int Presolve::presolve(int print) {
     }
   }
 
-  // iPrint = 1;
+  iPrint = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -137,23 +137,23 @@ int Presolve::presolve(int print) {
     if (iPrint > 0) cout << "PR: main loop " << iter << ":" << endl;
     //***************** main loop ******************
 
-    removeRowSingletons();
-    if (status) return status;
-    removeForcingConstraints(iter);
-    if (status) return status;
+    // removeRowSingletons();
+    // if (status) return status;
+    // removeForcingConstraints(iter);
+    // if (status) return status;
 
-    removeRowSingletons();
-    if (status) return status;
-    removeDoubletonEquations();
-    if (status) return status;
+    // removeRowSingletons();
+    // if (status) return status;
+    // removeDoubletonEquations();
+    // if (status) return status;
 
-    removeRowSingletons();
-    if (status) return status;
+    // removeRowSingletons();
+    // if (status) return status;
     removeColumnSingletons();
     if (status) return status;
 
-    removeDominatedColumns();
-    if (status) return status;
+    // removeDominatedColumns();
+    // if (status) return status;
 
     //***************** main loop ******************
     iter++;
@@ -1333,18 +1333,18 @@ void Presolve::removeColumnSingletons() {
       // free
       if (colLower.at(col) == -HIGHS_CONST_INF &&
           colUpper.at(col) == HIGHS_CONST_INF) {
-        removeFreeColumnSingleton(col, i, k);
-        it = singCol.erase(it);
-        continue;
+        // removeFreeColumnSingleton(col, i, k);
+        // it = singCol.erase(it);
+        // continue;
       }
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
-        bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-        if (result) {
-          it = singCol.erase(it);
-          continue;
-        }
+        // bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
+        // if (result) {
+        //   it = singCol.erase(it);
+        //   continue;
+        // }
       }
       // implied free
       else {
@@ -2450,6 +2450,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         break;
       }
       case REDUNDANT_ROW: {
+        // this is not zero if the row bounds got relaxed and transferred to a
+        // column which then had a nonzero dual.
         valueRowDual[c.row] = 0;
 
         flagRow[c.row] = 1;
