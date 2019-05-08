@@ -319,7 +319,7 @@ void Presolve::removeDoubletonEquations() {
       if (nzRow.at(row) == 2 &&
           rowLower[row] > -HIGHS_CONST_INF &&
           rowUpper[row] < HIGHS_CONST_INF &&
-          abs(rowLower[row] - rowUpper[row]) < tol) {
+          fabs(rowLower[row] - rowUpper[row]) < tol) {
         // row is of form akx_x + aky_y = b, where k=row and y is present in
         // fewer constraints
         b = rowLower.at(row);
@@ -437,7 +437,7 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     if (ARindex.at(ind) == x) break;
 
   xNew = ARvalue.at(ind) - (aiy * akx) / aky;
-  if (abs(xNew) > tol) {
+  if (fabs(xNew) > tol) {
     // case new x != 0
     // cout<<"case: x still there row "<<i<<" "<<endl;
 
@@ -1014,7 +1014,7 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
   // check if it is weakly dominated: Excluding singletons!
   if (nzCol.at(j) > 1) {
     if (d < HIGHS_CONST_INF &&
-        abs(colCost.at(j) - d) < tol &&
+        fabs(colCost.at(j) - d) < tol &&
         colLower.at(j) > -HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colLower.at(j));
@@ -1026,7 +1026,7 @@ void Presolve::removeIfWeaklyDominated(const int j, const double d,
       countRemovedCols[WEAKLY_DOMINATED_COLS]++;
       timer.recordFinish(WEAKLY_DOMINATED_COLS);
     } else if (e > -HIGHS_CONST_INF &&
-               abs(colCost.at(j) - e) < tol &&
+               fabs(colCost.at(j) - e) < tol &&
                colUpper.at(j) < HIGHS_CONST_INF) {
       timer.recordStart(WEAKLY_DOMINATED_COLS);
       setPrimalValue(j, colUpper.at(j));
@@ -1199,7 +1199,7 @@ bool Presolve::removeColumnSingletonInDoubletonInequality(const int col,
 
   // only inequality case and case two singletons here,
   // others handled in doubleton equation
-  if ((abs(rowLower.at(i) - rowUpper.at(i)) < tol) && (nzCol.at(j) > 1))
+  if ((fabs(rowLower.at(i) - rowUpper.at(i)) < tol) && (nzCol.at(j) > 1))
     return false;
 
   timer.recordStart(SING_COL_DOUBLETON_INEQ);
@@ -1306,7 +1306,7 @@ void Presolve::removeSecondColumnSingletonInDoubletonRow(const int j,
   } else {  //(colCost.at(j) == 0)
     if (colUpper.at(j) >= 0 && colLower.at(j) <= 0)
       value = 0;
-    else if (abs(colUpper.at(j)) < abs(colLower.at(j)))
+    else if (fabs(colUpper.at(j)) < fabs(colLower.at(j)))
       value = colUpper.at(j);
     else
       value = colLower.at(j);
@@ -2522,7 +2522,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                  << c.col << endl;
           }
 
-          if (abs(valuePrimalLB) < abs(valuePrimalUB))
+          if (fabs(valuePrimalLB) < fabs(valuePrimalUB))
             valuePrimal[c.col] = valuePrimalLB;
           else
             valuePrimal[c.col] = valuePrimalUB;
@@ -2603,7 +2603,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         if (ck == 0) {
           if (low < 0 && upp > 0)
             xkValue = 0;
-          else if (abs(low) < abs(upp))
+          else if (fabs(low) < fabs(upp))
             xkValue = low;
           else
             xkValue = upp;
@@ -2633,13 +2633,13 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           valueColDual[c.col] = getColumnDualPost(c.col);
         } else {
           double lo, up;
-          if (abs(rowlb - rowub) < tol) {
+          if (fabs(rowlb - rowub) < tol) {
             lo = -HIGHS_CONST_INF;
             up = HIGHS_CONST_INF;
-          } else if (abs(rowub - rowVal) <= tol) {
+          } else if (fabs(rowub - rowVal) <= tol) {
             lo = 0;
             up = HIGHS_CONST_INF;
-          } else if (abs(rowlb - rowVal) <= tol) {
+          } else if (fabs(rowlb - rowVal) <= tol) {
             lo = -HIGHS_CONST_INF;
             ;
             up = 0;
@@ -2669,7 +2669,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           valueColDual[c.col] = getColumnDualPost(c.col);
         }
 
-        if (abs(valueColDual[c.col]) > tol) {
+        if (fabs(valueColDual[c.col]) > tol) {
           nonbasicFlag[c.col] = 1;
           nonbasicFlag.at(j) = 0;
           basicIndex.pop_back();
@@ -3009,7 +3009,7 @@ void Presolve::getBoundOnLByZj(int row, int j, double *lo, double *up,
   double aij = getaij(row, j);
   x = x / aij;
 
-  if (abs(colLow - colUpp) < tol)
+  if (fabs(colLow - colUpp) < tol)
     return;  // here there is no restriction on zj so no bound on y
 
   if ((valuePrimal.at(j) - colLow) > tol &&
@@ -3144,7 +3144,7 @@ void Presolve::getDualsSingletonRow(int row, int col) {
     // row is nonbasic
   } else {
     if ((valuePrimal.at(col) > l && valuePrimal.at(col) < u &&
-         abs(valueColDual.at(col)) > tol) ||
+         fabs(valueColDual.at(col)) > tol) ||
         (valuePrimal.at(col) == l && valuePrimal.at(col) < u &&
          valueColDual.at(col) < -tol) ||
         (valuePrimal.at(col) == u && valuePrimal.at(col) > l &&
@@ -3367,7 +3367,7 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
     // row becomes basic unless y is between bounds, in which case y is basic
     if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
       nonbasicFlag.at(y) = 0;
-    } else if (abs(valueX - ubxNew) < tol || abs(valueX - lbxNew) < tol)
+    } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol)
       nonbasicFlag.at(y) = 0;
     else
       nonbasicFlag[numColOriginal + row] = 0;
