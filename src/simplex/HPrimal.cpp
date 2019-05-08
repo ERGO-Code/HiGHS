@@ -480,7 +480,7 @@ void HPrimal::primalChooseRow() {
       //    printf("Entry %2d: [%2d, %12g] Cost = %12g; check_dual_value = %12g\n", i, row, value, cost, check_dual_value);
     }
     thetaDual = workDual[columnIn];
-    double dual_error = abs(check_dual_value-thetaDual)/max(1.0, fabs(thetaDual));
+    double dual_error = fabs(check_dual_value-thetaDual)/max(1.0, fabs(thetaDual));
     if (dual_error>1e-8)
       printf("Checking dual: updated = %12g; direct = %12g; error = %12g\n", thetaDual, check_dual_value, dual_error);
   }
