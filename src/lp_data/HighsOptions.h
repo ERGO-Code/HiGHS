@@ -53,6 +53,8 @@ const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize"; 
 
 // Strings for file options
+const string scale_simplex_lp_string = "scale_simplex_lp";
+const string permute_simplex_lp_string = "permute_simplex_lp";
 const string infinite_cost_string = "infinite_cost";
 const string infinite_bound_string = "infinite_bound";
 const string small_matrix_value_string = "small_matrix_value";
@@ -105,6 +107,10 @@ struct HighsOptions
   HighsMpsParserType parser_type = HighsMpsParserType::fixed;
 
   // Options not passed through the command line
+  // Perform LP scaling
+  bool scale_simplex_lp = true;
+  // Permute the columns of the LP randomly
+  bool permute_simplex_lp = false;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
@@ -134,21 +140,6 @@ struct HighsOptions
   void* msgcb_data = NULL;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
-  //
-  // For an LP model
-  //
-  // Try to solve the dual of the LP
-  bool transpose_simplex_lp = false;
-  // Perform LP scaling
-  bool scale_simplex_lp = true;
-  // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permute_simplex_lp = false;
-  // Perform LP bound tightening
-  bool tighten_simplex_lp = false;
-  //
-  // For any solver
-  //
-
   //
   // For the simplex solver
   //
@@ -183,6 +174,9 @@ OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& v
 OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value);
 OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value);
  
+
+OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
+OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value);
 
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
