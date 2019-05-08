@@ -485,10 +485,12 @@ LpSectionKeyword FilereaderLp::tryParseLongSectionKeyword(const char* str,
   int nread = sscanf(str, "%s %s%n", s1, s2, characters);
   if (nread == 2) {
     sprintf(s3, "%s %s", s1, s2);
-    if (strcmp(s3, LP_KEYWORD_ST[0]) == 0) {
+    char* s4 = strClone(s3);
+    strToLower(s4);
+    if (strcmp(s4, LP_KEYWORD_ST[0]) == 0) {
       return LpSectionKeyword::CON;
     }
-    if (strcmp(s3, LP_KEYWORD_ST[1]) == 0) {
+    if (strcmp(s4, LP_KEYWORD_ST[1]) == 0) {
       return LpSectionKeyword::CON;
     }
   }
