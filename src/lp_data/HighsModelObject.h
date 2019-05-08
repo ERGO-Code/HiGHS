@@ -23,10 +23,7 @@
 // include essential data.
 class HighsModelObject {
 public:
- HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer) : lp_(lp), options_(options), timer_(timer) {
-    // The following may be false by default - but it's an unassigned variable
-    simplex_lp_status_.valid = false;
-  }
+ HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer) : lp_(lp), options_(options), timer_(timer) {}
 
   HighsLp& lp_;
   HighsOptions& options_;

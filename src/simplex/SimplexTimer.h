@@ -153,7 +153,7 @@ class SimplexTimer {
     report_simplex_clock_list("SimplexTotal", simplex_clock_list, model_object);
   };
   
-  void report_simplex_phases_clock(HighsModelObject & model_object) {
+  void reportSimplexPhasesClock(HighsModelObject & model_object) {
     std::vector<int> simplex_clock_list{
       SimplexIzDseWtClock,
 	SimplexDualPhase1Clock, SimplexDualPhase2Clock, SimplexPrimalPhase2Clock

@@ -1290,7 +1290,7 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
   
   if (simplex_info.report_simplex_phases_clock) {
     simplex_timer.reportSimplexTotalClock(highs_model_object);
-    simplex_timer.report_simplex_phases_clock(highs_model_object);
+    simplex_timer.reportSimplexPhasesClock(highs_model_object);
   }
 
   if (simplex_info.analyse_invert_time) {
