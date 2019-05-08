@@ -48,10 +48,8 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   simplex_info.update_limit = opt.simplex_update_limit;
   simplex_info.highs_run_time_limit = opt.highs_run_time_limit;
 
-  simplex_info.transpose_simplex_lp = opt.transpose_simplex_lp;
   simplex_info.scale_simplex_lp = opt.scale_simplex_lp;
   simplex_info.permute_simplex_lp = opt.permute_simplex_lp;
-  simplex_info.tighten_simplex_lp = opt.tighten_simplex_lp;
 
   // Set values of internal options
 
@@ -72,10 +70,8 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 void reportSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, const char* message) {
   printf("\nReporting solver status and flags: %s\n\n", message);
   printf("  valid =                          %d\n", simplex_lp_status.valid);
-  printf("  is_transposed =                  %d\n", simplex_lp_status.is_transposed);
   printf("  is_scaled =                      %d\n", simplex_lp_status.is_scaled);
   printf("  is_permuted =                    %d\n", simplex_lp_status.is_permuted);
-  printf("  is_tightened =                   %d\n", simplex_lp_status.is_tightened);
   printf("  has_basis =                      %d\n", simplex_lp_status.has_basis);
   printf("  has_matrix_col_wise =            %d\n", simplex_lp_status.has_matrix_col_wise);
   printf("  has_matrix_row_wise =            %d\n", simplex_lp_status.has_matrix_row_wise);
@@ -107,23 +103,14 @@ void invalidateSimplexLpData(HighsSimplexLpStatus &simplex_lp_status) {
 
 void invalidateSimplexLp(HighsSimplexLpStatus &simplex_lp_status) {
   simplex_lp_status.valid = false;
-  simplex_lp_status.is_transposed = false;
   simplex_lp_status.is_scaled = false;
   simplex_lp_status.is_permuted = false;
-  simplex_lp_status.is_tightened = false;
   invalidateSimplexLpData(simplex_lp_status);
 }
 
 void updateSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, LpAction action) {
 
   switch (action) {
-  case LpAction::TRANSPOSE:
-#ifdef HIGHSDEV
-    printf(" LpAction::TRANSPOSE\n");
-#endif
-    simplex_lp_status.is_transposed = true;
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
   case LpAction::SCALE:
 #ifdef HIGHSDEV
     printf(" LpAction::SCALE\n");
@@ -136,13 +123,6 @@ void updateSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, LpAction act
     printf(" LpAction::PERMUTE\n");
 #endif
     simplex_lp_status.is_permuted = true;
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::TIGHTEN:
-#ifdef HIGHSDEV
-    printf(" LpAction::TIGHTEN\n");
-#endif
-    simplex_lp_status.is_tightened = true;
     invalidateSimplexLpData(simplex_lp_status);
     break;
   case LpAction::NEW_COSTS:
@@ -224,13 +204,8 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
   // Copy the LP to the structure to be used by the solver
   simplex_lp = lp;
 
-  // Possibly transpose the LP to be solved. This will change the
-  // numbers of rows and columns in the LP to be solved
-  if (simplex_info.transpose_simplex_lp) transpose_simplex_lp(highs_model_object);
-
-  // Now that the numbers of rows and columns in the LP to be solved
-  // are fixed, initialise the real and integer random vectors
-  initialise_simplex_lp_random_vectors(highs_model_object);
+  // Initialise the real and integer random vectors
+  initialiseSimplexLpRandomVectors(highs_model_object);
   //
   // Allocate memory for the basis
   const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
@@ -243,14 +218,11 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
   // Initialise unit scaling factors, to simplify things if no scaling
   // is performed
   scaleHighsModelInit(highs_model_object);
-  if (simplex_info.scale_simplex_lp) scale_simplex_lp(highs_model_object);
+  if (simplex_info.scale_simplex_lp) scaleSimplexLp(highs_model_object);
   //
   // Possibly permute the columns of the LP to be used by the solver. 
-  if (simplex_info.permute_simplex_lp) permute_simplex_lp(highs_model_object);
-  //
-  // Possibly tighten the bounds of LP to be used by the solver. 
-  if (simplex_info.tighten_simplex_lp) tighten_simplex_lp(highs_model_object);
-  //
+  if (simplex_info.permute_simplex_lp) permuteSimplexLp(highs_model_object);
+
 #ifdef HiGHSDEV
   HighsScale &scale = highs_model_object.scale_;
   // Analyse the scaled LP
@@ -309,10 +281,10 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
 		      &simplex_lp.Avalue_[0]);
     
   }
+  simplex_lp_status.has_basis = true;
   simplex_lp_status.has_matrix_col_wise = true;
   simplex_lp_status.has_matrix_row_wise = true;
-  
-  
+
   factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
 	       &simplex_lp.Astart_[0],
 	       &simplex_lp.Aindex_[0],
@@ -519,8 +491,7 @@ void compute_primal_objective_value(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_primal_objective_value = true;
 }
 
-void 
-initialise_simplex_lp_random_vectors(HighsModelObject &highs_model_object) {
+void initialiseSimplexLpRandomVectors(HighsModelObject &highs_model_object) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   const int numCol = highs_model_object.simplex_lp_.numCol_;
   const int numTot =
@@ -560,174 +531,6 @@ initialise_simplex_lp_random_vectors(HighsModelObject &highs_model_object) {
   for (int i = 0; i < numTot; i++) {
     numTotRandomValue[i] = random.fraction();
   }
-}
-
-// TRANSPOSE:
-
-void transpose_simplex_lp(HighsModelObject &highs_model_object) {
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-#ifdef HiGHSDEV
-  printf("Called transpose_simplex_lp: simplex_lp_status.is_transposed = "
-         "%d\n",
-         simplex_lp_status.is_transposed);
-#endif
-  if (simplex_lp_status.is_transposed)
-    return;
-  HighsLp &primal_lp = highs_model_object.lp_;
-
-  int primalNumCol = primal_lp.numCol_;
-  int primalNumRow = primal_lp.numRow_;
-
-  int transposeCancelled = 0;
-  if (1.0 * primalNumCol / primalNumRow > 0.2) {
-    //        cout << "transpose-cancelled-by-ratio" << endl;
-    transposeCancelled = 1;
-    return;
-  }
-
-  vector<int> &primalAstart = primal_lp.Astart_;
-  vector<int> &primalAindex = primal_lp.Aindex_;
-  vector<double> &primalAvalue = primal_lp.Avalue_;
-  vector<double> &primalColCost = primal_lp.colCost_;
-  vector<double> &primalColLower = primal_lp.colLower_;
-  vector<double> &primalColUpper = primal_lp.colUpper_;
-  vector<double> &primalRowLower = primal_lp.rowLower_;
-  vector<double> &primalRowUpper = primal_lp.rowUpper_;
-
-  HighsLp &dual_lp = highs_model_object.simplex_lp_;
-  /*
-    vector<int>& dualAstart = dual_lp.Astart_;
-    vector<int>& dualAindex = dual_lp.Aindex_;
-    vector<double>& dualAvalue = dual_lp.Avalue_;
-    vector<double>& dualColCost = dual_lp.colCost_;
-    vector<double>& dualColLower = dual_lp.colLower_;
-    vector<double>& dualColUpper = dual_lp.colUpper_;
-    vector<double>& dualRowLower = dual_lp.rowLower_;
-    vector<double>& dualRowUpper = dual_lp.rowUpper_;
-  */
-
-  // Convert primal cost to dual bound
-  const double inf = HIGHS_CONST_INF;
-  vector<double> dualRowLower(primalNumCol);
-  vector<double> dualRowUpper(primalNumCol);
-  for (int j = 0; j < primalNumCol; j++) {
-    double lower = primalColLower[j];
-    double upper = primalColUpper[j];
-
-    /*
-     * Primal      Dual
-     * Free        row = c
-     * x > 0       row < c
-     * x < 0       row > c
-     * x = 0       row free
-     * other       cancel
-     */
-
-    if (lower == -inf && upper == inf) {
-      dualRowLower[j] = primalColCost[j];
-      dualRowUpper[j] = primalColCost[j];
-    } else if (lower == 0 && upper == inf) {
-      dualRowLower[j] = -inf;
-      dualRowUpper[j] = primalColCost[j];
-    } else if (lower == -inf && upper == 0) {
-      dualRowLower[j] = primalColCost[j];
-      dualRowUpper[j] = +inf;
-    } else if (lower == 0 && upper == 0) {
-      dualRowLower[j] = -inf;
-      dualRowUpper[j] = +inf;
-    } else {
-      transposeCancelled = 1;
-      break;
-    }
-  }
-
-  // Check flag
-  if (transposeCancelled == 1) {
-    //        cout << "transpose-cancelled-by-column" << endl;
-    return;
-  }
-
-  // Convert primal row bound to dual variable cost
-  vector<double> dualColLower(primalNumRow);
-  vector<double> dualColUpper(primalNumRow);
-  vector<double> dualCost(primalNumRow);
-  for (int i = 0; i < primalNumRow; i++) {
-    double lower = primalRowLower[i];
-    double upper = primalRowUpper[i];
-
-    /*
-     * Primal      Dual
-     * row = b     Free
-     * row < b     y < 0
-     * row > b     y > 0
-     * row free    y = 0
-     * other       cancel
-     */
-
-    if (lower == upper) {
-      dualColLower[i] = -inf;
-      dualColUpper[i] = +inf;
-      dualCost[i] = -lower;
-    } else if (lower == -inf && upper != inf) {
-      dualColLower[i] = -inf;
-      dualColUpper[i] = 0;
-      dualCost[i] = -upper;
-    } else if (lower != -inf && upper == inf) {
-      dualColLower[i] = 0;
-      dualColUpper[i] = +inf;
-      dualCost[i] = -lower;
-    } else if (lower == -inf && upper == inf) {
-      dualColLower[i] = 0;
-      dualColUpper[i] = 0;
-      dualCost[i] = 0;
-    } else {
-      transposeCancelled = 1;
-      break;
-    }
-  }
-
-  // Check flag
-  if (transposeCancelled == 1) {
-    //        cout << "transpose-cancelled-by-row" << endl;
-    return;
-  }
-
-  // We can now really transpose things
-  vector<int> iwork(primalNumRow, 0);
-  vector<int> ARstart(primalNumRow + 1, 0);
-  int AcountX = primalAindex.size();
-  vector<int> ARindex(AcountX);
-  vector<double> ARvalue(AcountX);
-  for (int k = 0; k < AcountX; k++)
-    iwork[primalAindex[k]]++;
-  for (int i = 1; i <= primalNumRow; i++)
-    ARstart[i] = ARstart[i - 1] + iwork[i - 1];
-  for (int i = 0; i < primalNumRow; i++)
-    iwork[i] = ARstart[i];
-  for (int iCol = 0; iCol < primalNumCol; iCol++) {
-    for (int k = primalAstart[iCol]; k < primalAstart[iCol + 1]; k++) {
-      int iRow = primalAindex[k];
-      int iPut = iwork[iRow]++;
-      ARindex[iPut] = iCol;
-      ARvalue[iPut] = primalAvalue[k];
-    }
-  }
-
-  // Transpose the problem!
-  std::swap(primalNumRow, primalNumCol);
-  dual_lp.Astart_.swap(ARstart);
-  dual_lp.Aindex_.swap(ARindex);
-  dual_lp.Avalue_.swap(ARvalue);
-  dual_lp.colLower_.swap(dualColLower);
-  dual_lp.colUpper_.swap(dualColUpper);
-  dual_lp.rowLower_.swap(dualRowLower);
-  dual_lp.rowUpper_.swap(dualRowUpper);
-  dual_lp.colCost_.swap(dualCost);
-  //    cout << "problem-transposed" << endl;
-  // Deduce the consequences of transposing the LP
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::TRANSPOSE);
-  //    simplex_lp_status.is_transposed = true;
 }
 
 // SCALING:
@@ -820,7 +623,7 @@ void scaleCosts(HighsModelObject &highs_model_object) {
 #endif
 }
 
-void scale_simplex_lp(HighsModelObject &highs_model_object) {
+void scaleSimplexLp(HighsModelObject &highs_model_object) {
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
@@ -986,17 +789,13 @@ void scale_simplex_lp(HighsModelObject &highs_model_object) {
 
 // PERMUTE:
 
-void permute_simplex_lp(HighsModelObject &highs_model_object) {
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void permuteSimplexLp(HighsModelObject &highs_model_object) {
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
   printf("Called permute_simplex_lp: simplex_lp_status.is_permuted = %d\n",
          simplex_lp_status.is_permuted);
 #endif
-  if (simplex_lp_status.is_permuted)
-    return;
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  initialise_simplex_lp_random_vectors(highs_model_object);
+  if (simplex_lp_status.is_permuted) return;
 
   int numCol = highs_model_object.simplex_lp_.numCol_;
   vector<int> &numColPermutation = highs_model_object.simplex_info_.numColPermutation_;
@@ -1035,164 +834,6 @@ void permute_simplex_lp(HighsModelObject &highs_model_object) {
   assert(Astart[numCol] == countX);
   // Deduce the consequences of permuting the LP
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::PERMUTE);
-}
-
-// TIGHTEN:
-
-void tighten_simplex_lp(HighsModelObject &highs_model_object) {
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-#ifdef HiGHSDEV
-  printf(
-      "Called tighten_simplex_lp: simplex_lp_status.is_tightened = %d\n",
-      simplex_lp_status.is_tightened);
-#endif
-  if (simplex_lp_status.is_tightened)
-    return;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-
-  int numCol = highs_model_object.simplex_lp_.numCol_;
-  int numRow = highs_model_object.simplex_lp_.numRow_;
-  vector<int> &Astart = highs_model_object.simplex_lp_.Astart_;
-  vector<int> &Aindex = highs_model_object.simplex_lp_.Aindex_;
-  vector<double> &Avalue = highs_model_object.simplex_lp_.Avalue_;
-  vector<double> &colCost = highs_model_object.simplex_lp_.colCost_;
-  vector<double> &colLower = highs_model_object.simplex_lp_.colLower_;
-  vector<double> &colUpper = highs_model_object.simplex_lp_.colUpper_;
-  vector<double> &rowLower = highs_model_object.simplex_lp_.rowLower_;
-  vector<double> &rowUpper = highs_model_object.simplex_lp_.rowUpper_;
-
-  vector<int> iwork(numRow, 0);
-  vector<int> ARstart(numRow + 1, 0);
-  int AcountX = Aindex.size();
-  vector<int> ARindex(AcountX);
-  vector<double> ARvalue(AcountX);
-  for (int k = 0; k < AcountX; k++)
-    iwork[Aindex[k]]++;
-  for (int i = 1; i <= numRow; i++)
-    ARstart[i] = ARstart[i - 1] + iwork[i - 1];
-  for (int i = 0; i < numRow; i++)
-    iwork[i] = ARstart[i];
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
-      int iRow = Aindex[k];
-      int iPut = iwork[iRow]++;
-      ARindex[iPut] = iCol;
-      ARvalue[iPut] = Avalue[k];
-    }
-  }
-
-  // Save column bounds
-  vector<double> colLower_0 = highs_model_object.simplex_lp_.colLower_;
-  vector<double> colUpper_0 = highs_model_object.simplex_lp_.colUpper_;
-
-  double big_B = 1e10;
-  int iPass = 0;
-  for (;;) {
-    int numberChanged = 0;
-    for (int iRow = 0; iRow < numRow; iRow++) {
-      // SKIP free rows
-      if (rowLower[iRow] < -big_B && rowUpper[iRow] > big_B)
-        continue;
-
-      // possible row
-      int ninfU = 0;
-      int ninfL = 0;
-      double xmaxU = 0.0;
-      double xminL = 0.0;
-      int myStart = ARstart[iRow];
-      int myEnd = ARstart[iRow + 1];
-      // Compute possible lower and upper ranges
-
-      for (int k = myStart; k < myEnd; ++k) {
-        int iCol = ARindex[k];
-        double value = ARvalue[k];
-        double upper = value > 0 ? colUpper[iCol] : -colLower[iCol];
-        double lower = value > 0 ? colLower[iCol] : -colUpper[iCol];
-        value = fabs(value);
-        if (upper < big_B)
-          xmaxU += upper * value;
-        else
-          ++ninfU;
-        if (lower > -big_B)
-          xminL += lower * value;
-        else
-          ++ninfL;
-      }
-
-      // Build in a margin of error
-      xmaxU += 1.0e-8 * fabs(xmaxU);
-      xminL -= 1.0e-8 * fabs(xminL);
-
-      double xminLmargin = (fabs(xminL) > 1.0e8) ? 1e-12 * fabs(xminL) : 0;
-      double xmaxUmargin = (fabs(xmaxU) > 1.0e8) ? 1e-12 * fabs(xmaxU) : 0;
-
-      // Skip redundant row : also need to consider U < L  case
-      double comp_U = xmaxU + ninfU * 1.0e31;
-      double comp_L = xminL - ninfL * 1.0e31;
-      if (comp_U <= rowUpper[iRow] + 1e-7 && comp_L >= rowLower[iRow] - 1e-7)
-        continue;
-
-      double row_L = rowLower[iRow];
-      double row_U = rowUpper[iRow];
-
-      // Now see if we can tighten column bounds
-      for (int k = myStart; k < myEnd; ++k) {
-        double value = ARvalue[k];
-        int iCol = ARindex[k];
-        double col_L = colLower[iCol];
-        double col_U = colUpper[iCol];
-        double new_L = -HIGHS_CONST_INF;
-        double new_U = +HIGHS_CONST_INF;
-
-        if (value > 0.0) {
-          if (row_L > -big_B && ninfU <= 1 && (ninfU == 0 || col_U > +big_B))
-            new_L = (row_L - xmaxU) / value + (1 - ninfU) * col_U - xmaxUmargin;
-          if (row_U < +big_B && ninfL <= 1 && (ninfL == 0 || col_L < -big_B))
-            new_U = (row_U - xminL) / value + (1 - ninfL) * col_L + xminLmargin;
-        } else {
-          if (row_L > -big_B && ninfU <= 1 && (ninfU == 0 || col_L < -big_B))
-            new_U = (row_L - xmaxU) / value + (1 - ninfU) * col_L + xmaxUmargin;
-          if (row_U < +big_B && ninfL <= 1 && (ninfL == 0 || col_U > +big_B))
-            new_L = (row_U - xminL) / value + (1 - ninfL) * col_U - xminLmargin;
-        }
-
-        if (new_U < col_U - 1.0e-12 && new_U < big_B) {
-          colUpper[iCol] = max(new_U, col_L);
-          numberChanged++;
-        }
-        if (new_L > col_L + 1.0e-12 && new_L > -big_B) {
-          colLower[iCol] = min(new_L, col_U);
-          numberChanged++;
-        }
-      }
-    }
-
-    if (numberChanged == 0)
-      break;
-    iPass++;
-    if (iPass > 10)
-      break;
-  }
-
-  double useTolerance = 1.0e-3;
-  for (int iCol = 0; iCol < numCol; iCol++) {
-    if (colUpper_0[iCol] > colLower_0[iCol] + useTolerance) {
-      const double relax = 100.0 * useTolerance;
-      if (colUpper[iCol] - colLower[iCol] < useTolerance + 1.0e-8) {
-        colLower[iCol] = max(colLower_0[iCol], colLower[iCol] - relax);
-        colUpper[iCol] = min(colUpper_0[iCol], colUpper[iCol] + relax);
-      } else {
-        if (colUpper[iCol] < colUpper_0[iCol]) {
-          colUpper[iCol] = min(colUpper[iCol] + relax, colUpper_0[iCol]);
-        }
-        if (colLower[iCol] > colLower_0[iCol]) {
-          colLower[iCol] = min(colLower[iCol] - relax, colLower_0[iCol]);
-        }
-      }
-    }
-  }
-  simplex_lp_status.is_tightened = true;
 }
 
 void initialise_basic_index(HighsModelObject &highs_model_object) {
@@ -1649,7 +1290,7 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
   
   if (simplex_info.report_simplex_phases_clock) {
     simplex_timer.reportSimplexTotalClock(highs_model_object);
-    simplex_timer.report_simplex_phases_clock(highs_model_object);
+    simplex_timer.reportSimplexPhasesClock(highs_model_object);
   }
 
   if (simplex_info.analyse_invert_time) {
@@ -2070,7 +1711,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   // Level 0: Minimal check - just look at flags. This means we trust them!
   ok = simplex_basis.valid_ && simplex_lp_status.has_matrix_col_wise &&
        simplex_lp_status.has_matrix_row_wise &&
-       //    simplex_lp_status.has_factor_arrays &&
+       simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
        simplex_lp_status.has_invert;
   // TODO: Eliminate the following line ASAP!!!
@@ -2127,9 +1768,6 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
       }
     }
   }
-  if (level <= 1)
-    return ok;
-  printf("OKtoSolve(%1d) not implemented\n", level);
   return ok;
 }
 

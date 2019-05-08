@@ -125,19 +125,19 @@ class HDual {
    * TODO generalise call slice_matrix[i].setup_lgBs so slice can be
    * used with non-logical initial basis
    */
-  void init_slice(int init_sliced_num  //!< Ideal number of slices - true number
+  void initSlice(int init_sliced_num  //!< Ideal number of slices - true number
                                        //!< is modified in light of limits
   );
 
   /**
    * @brief Perform Phase 1 dual simplex iterations
    */
-  void solve_phase1();
+  void solvePhase1();
 
   /**
    * @brief Perform Phase 2 dual simplex iterations
    */
-  void solve_phase2();
+  void solvePhase2();
 
   /**
    * @brief Reinvert if INVERT not fresh, then recompute dual and primal values
@@ -167,42 +167,49 @@ class HDual {
   /**
    * @brief Perform a single SIP dual simplex iteration
    */
-  void iterate_tasks();
+  void iterateTasks();
 
   /**
    * @brief Perform a single PAMI dual simplex iteration - source code in
    * HDualMulti.cpp
    */
-  void iterate_multi();  // in HDualMulti.cpp
+  void iterateMulti();  // in HDualMulti.cpp
 
   /**
    * @brief Initialise the iteration analysis
    */
-  void iterateIzAn();
+  void iterationAnalysisInitialise();
 
   /**
    * @brief Perform the iteration analysis
    */
-  void iterateAn();
+  void iterationAnalysis();
+
+#ifdef HiGHSDEV
+  /**
+   * @brief Report on the iteration analysis
+   */
+  void iterationAnalysisReport();
+#endif
 
   /**
-   * @brief Report on the iteration using iterateRpFull, possibly using it to
+   * @brief Report on the iteration using iterationReportFull, possibly using it to
    * write out column headers
    */
-  void iterateRp();
+  void iterationReport();
 
   /**
    * @brief Report full iteration headers or data according to value of
    * <tt>header</tt>
    */
-  void iterateRpFull(
+  void iterationReportFull(
 		     bool header  //!< Logic to determine whether to write out column headers or data
   );
 
   /**
    * @brief Report iteration number and LP phase headers or data according to value of <tt>header</tt>
    */
-  void iterateRpIterPh(
+  void iterationReportIterationAndPhase(
 		       int iterate_log_level, //!< Iteration logging level
 		       bool header            //!< Logic to determine whether to write out column headers or data
   );
@@ -210,7 +217,7 @@ class HDual {
   /**
    * @brief Report dual objective value header or data according to value of <tt>header</tt>
    */
-  void iterateRpDuObj(
+  void iterationReportDualObjective(
 		      int iterate_log_level, //!< Iteration logging level
 		      bool header            //!< Logic to determine whether to write out column header or data
   );
@@ -218,7 +225,7 @@ class HDual {
   /**
    * @brief Report dual iteration data header or data according to value of <tt>header</tt>
    */
-  void iterateRpIterDa(
+  void iterationReportIterationData(
 		       int iterate_log_level, //!< Iteration logging level
 		       bool header            //!< Logic to determine whether to write out column headers or data
   );
@@ -226,7 +233,7 @@ class HDual {
   /**
    * @brief Report dual iteration operation density header or data according to value of <tt>header</tt>
    */
-  void iterateRpDsty(
+  void iterationReportDensity(
 		     int iterate_log_level, //!< Iteration logging level
 		     bool header            //!< Logic to determine whether to write out column headers or data
   );
@@ -237,7 +244,7 @@ class HDual {
   /**
    * @brief Single line report after INVERT
    */
-  void iterateRpInvert(
+  void iterationReportInvert(
 		       int i_v  //!< Integer value to be reported - generally invertHint
   );
 
@@ -426,12 +433,10 @@ class HDual {
 #ifdef HiGHSDEV
   void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector &vector);
-  void iterateRpAn();
-  void an_iz_vr_v();
 #endif
 
   int Crash_Mode = 0;     //!< Crash mode. TODO: handle this otherwise
-  bool SolveBailout;  //!< Set true if control is to be returned immediately to
+  bool solve_bailout;  //!< Set true if control is to be returned immediately to
                       //!< calling function
 
   // Devex scalars

@@ -46,8 +46,8 @@ void setupSimplexLp(
 		    );
 
 void setupForSimplexSolve(
-		   HighsModelObject &highs_model_object
-		   );
+			  HighsModelObject &highs_model_object
+			  );
 
 // Methods not requiring HighsModelObject 
 
@@ -126,15 +126,11 @@ void compute_primal_objective_value(
 				    HighsModelObject &highs_model_object
 				    );
 
-void initialise_simplex_lp_random_vectors(
-					  HighsModelObject &highs_model
-					  );
+void initialiseSimplexLpRandomVectors(
+				      HighsModelObject &highs_model
+				      );
 
-// TRANSPOSE:
-
-void transpose_simplex_lp(
-			  HighsModelObject &highs_model
-			  );
+// SCALE:
 
 void scaleHighsModelInit(
 			 HighsModelObject &highs_model
@@ -144,19 +140,15 @@ void scaleCosts(
 		HighsModelObject &highs_model
 		);
 
-void scale_simplex_lp(
+void scaleSimplexLp(
+		    HighsModelObject &highs_model
+		    );
+
+// PERMUTE:
+
+void permuteSimplexLp(
 		      HighsModelObject &highs_model
 		      );
-
-void permute_simplex_lp(
-			HighsModelObject &highs_model
-			);
-
-// TIGHTEN:
-
-void tighten_simplex_lp(
-			HighsModelObject &highs_model
-			);
 
 void initialise_basic_index(
 			    HighsModelObject &highs_model_object

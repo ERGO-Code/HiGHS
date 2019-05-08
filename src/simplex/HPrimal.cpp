@@ -127,16 +127,14 @@ void HPrimal::solve() {
   assert(ok);
   */
 #ifdef HiGHSDEV
-  //  Analyse the initial values of primal and dual variables
-  //  an_iz_vr_v();
+  reportSimplexLpStatus(simplex_lp_status, "Before HPrimal major solving loop");
 #endif
-
   // The major solving loop
 
   // Initialise the iteration analysis. Necessary for strategy, but
   // much is for development and only switched on with HiGHSDEV
   // ToDo Move to simplex and adapt so it's OK for primal and dual
-  //  iterateIzAn();
+  //  iterationAnalysisInitialise();
 
   while (solvePhase) {
     int it0 = simplex_info.iteration_count;
@@ -265,11 +263,11 @@ void HPrimal::solvePhase2() {
         break;
       }
       double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
-      // printf("HPrimal::solve_phase2: Iter = %d; Objective = %g\n",
+      // printf("HPrimal::solvePhase2: Iter = %d; Objective = %g\n",
       // simplex_info.iteration_count, current_dual_objective_value);
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
-        printf("HPrimal::solve_phase2: %12g = Objective > ObjectiveUB\n",
+        printf("HPrimal::solvePhase2: %12g = Objective > ObjectiveUB\n",
 	       current_dual_objective_value, simplex_info.dual_objective_value_upper_bound);
 #endif
         simplex_lp_status.solution_status = SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
@@ -699,40 +697,40 @@ void HPrimal::primalUpdate() {
   simplex_info.iteration_count++;
 
   // Report on the iteration
-  iterateRp();
+  iterationReport();
 }
 
-void HPrimal::iterateRp() {
+void HPrimal::iterationReport() {
   int numIter = workHMO.simplex_info_.iteration_count;
   bool header = numIter % 10 == 1;
   //  header = true;  // JAJH10/10
-  if (header) iterateRpFull(header);
-  iterateRpFull(false);
+  if (header) iterationReportFull(header);
+  iterationReportFull(false);
 }
 
-void HPrimal::iterateRpFull(bool header) {
+void HPrimal::iterationReportFull(bool header) {
   if (header) {
-    iterateRpIterPh(ML_DETAILED, true);
-    iterateRpPrObj(ML_DETAILED, true);
+    iterationReportIterationAndPhase(ML_DETAILED, true);
+    iterationReportPrimalObjective(ML_DETAILED, true);
 #ifdef HiGHSDEV
-    iterateRpIterDa(ML_DETAILED, true);
-    //    iterateRpDsty(ML_DETAILED, true);
+    iterationReportIterationData(ML_DETAILED, true);
+    //    iterationReportDsty(ML_DETAILED, true);
     //    HighsPrintMessage(ML_DETAILED, " FreeLsZ");
 #endif
     HighsPrintMessage(ML_DETAILED, "\n");
   } else {
-    iterateRpIterPh(ML_DETAILED, false);
-    iterateRpPrObj(ML_DETAILED, false);
+    iterationReportIterationAndPhase(ML_DETAILED, false);
+    iterationReportPrimalObjective(ML_DETAILED, false);
 #ifdef HiGHSDEV
-    iterateRpIterDa(ML_DETAILED, false);
-    //    iterateRpDsty(ML_DETAILED, false);
+    iterationReportIterationData(ML_DETAILED, false);
+    //    iterationReportDsty(ML_DETAILED, false);
     //    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
 #endif
     HighsPrintMessage(ML_DETAILED, "\n");
   }
 }
 
-void HPrimal::iterateRpIterPh(int iterate_log_level, bool header) {
+void HPrimal::iterationReportIterationAndPhase(int iterate_log_level, bool header) {
   int solvePhase=2;
   if (header) {
     HighsPrintMessage(iterate_log_level, " Iteration Ph");
@@ -742,7 +740,7 @@ void HPrimal::iterateRpIterPh(int iterate_log_level, bool header) {
   }
 }
 
-void HPrimal::iterateRpPrObj(int iterate_log_level, bool header) {
+void HPrimal::iterationReportPrimalObjective(int iterate_log_level, bool header) {
   HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   if (header) {
     HighsPrintMessage(iterate_log_level, "  PrimalObjective    ");
@@ -751,7 +749,7 @@ void HPrimal::iterateRpPrObj(int iterate_log_level, bool header) {
   }
 }
 
-void HPrimal::iterateRpIterDa(int iterate_log_level, bool header) {
+void HPrimal::iterationReportIterationData(int iterate_log_level, bool header) {
   if (header) {
     HighsPrintMessage(iterate_log_level, " Inv       NumCk     EnC     LvR     LvC        ThDu        ThPr          Aa");
   } else {
@@ -762,7 +760,7 @@ void HPrimal::iterateRpIterDa(int iterate_log_level, bool header) {
 }
 
 /*
-void HPrimal::iterateRpDsty(int iterate_log_level, bool header) {
+void HPrimal::iterationReportDsty(int iterate_log_level, bool header) {
   bool rp_dual_steepest_edge = dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE;
   if (header) {
     HighsPrintMessage(iterate_log_level, "  Col R_Ep R_Ap");
@@ -791,12 +789,12 @@ int HPrimal::intLog10(double v) {
 }
 
 */
-void HPrimal::iterateRpInvert(int i_v) {
+void HPrimal::iterationReportInvert(int i_v) {
 #ifdef HiGHSDEV
   HighsPrintMessage(ML_MINIMAL, "Iter %10d:", workHMO.simplex_info_.iteration_count);
-  //  iterateRpDsty(ML_MINIMAL, true);
-  //  iterateRpDsty(ML_MINIMAL, false);
-  iterateRpPrObj(ML_MINIMAL, false);
+  //  iterationReportDsty(ML_MINIMAL, true);
+  //  iterationReportDsty(ML_MINIMAL, false);
+  iterationReportPrimalObjective(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
 #else
   report_iteration_count_primal_objective_value(workHMO, i_v);
