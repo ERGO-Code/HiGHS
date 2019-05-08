@@ -201,6 +201,16 @@ public:
 		       );
 
   /**
+   * @brief Change the bounds of multiple columns given by an interval
+   */
+  bool changeColsBounds(
+			const int from_col,  //!< The index of the first column whose bounds change
+			const int to_col,    //!< One more than the index of the last column whose bounds change
+			const double* lower, //!< Array of size to_col-from_col with new lower bounds
+			const double* upper  //!< Array of size to_col-from_col with new upper bounds
+			);
+
+  /**
    * @brief Change the bounds of multiple columns given by a set of indices
    */
   bool changeColsBounds(
