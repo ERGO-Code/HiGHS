@@ -53,12 +53,10 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 
   // Set values of internal options
 
-  // Options for reporting timing
+#ifdef HiGHSDEV
   simplex_info.report_simplex_inner_clock = true; // false;
   simplex_info.report_simplex_outer_clock = false;
-#ifdef HiGHSDEV
   simplex_info.report_simplex_phases_clock = true; // false;
-  // Option for analysing simplex iterations
   simplex_info.analyseLp = true;                // false;
   simplex_info.analyseSimplexIterations = true; // false
   simplex_info.analyseLpSolution = true;        // false;
@@ -267,9 +265,9 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
     // ... or Crash, if the option to do so is set...
     if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
       HighsTimer &timer = highs_model_object.timer_;
-      HCrash crash;
+      HCrash crash(highs_model_object);
       timer.start(timer.crash_clock);
-      crash.crash(highs_model_object, 0);
+      crash.crash(0);
       timer.stop(timer.crash_clock);
     }
 

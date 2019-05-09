@@ -75,40 +75,20 @@ const bool reportBixbyPass = false;
  */
 class HCrash {
  public:
+ HCrash(HighsModelObject& model_object) : workHMO(model_object)
+   {  }
 /**
  * @brief Determine a particular crash basis for a given model instance
  */
   void crash(
-	     HighsModelObject &highs_model_object,  //!< The HiGHS model object instance to be crashed
 	     int Crash_Mode     //!< The crash mode to be used
 	     );
  private:
-  void bixby(HighsModelObject &highs_model_object, int Crash_Mode);
-  bool bixby_iz_da(HighsModelObject &highs_model_object);
-  void bixby_rp_mrt(HighsModelObject &highs_model_object);
-  void crsh_iz_vr_ty(HighsModelObject &highs_model_object, int Crash_Mode);
-  void ltssf(HighsModelObject &highs_model_object, int Crash_Mode);
-  void ltssf_iz_mode(int Crash_Mode);
-  void ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode);
-  void ltssf_iterate(HighsModelObject &highs_model_object);
-  void ltssf_u_da(HighsModelObject &highs_model_object);
-  void ltssf_u_da_af_bs_cg(HighsModelObject &highs_model_object);
-  void ltssf_u_da_af_no_bs_cg();
-#ifdef HiGHSDEV
-  void ltssf_ck_da();
-#endif
-  void ltssf_cz_r();
-  void ltssf_cz_c(HighsModelObject &highs_model_object);
-#ifdef HiGHSDEV
-  void tsSing(HighsModelObject &highs_model_object);
-  void crsh_an_c_co(HighsModelObject &highs_model_object);
-  std::string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
-  void crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode);
-  void crsh_rp_r_c_st(int mode, int Crash_Mode);
-  void ltssf_rp_r_k();
-  void ltssf_rp_r_pri();
-  void ltssf_rp_pri_k_da();
-#endif
+  // Internal methods
+
+  // Model pointer
+  HighsModelObject &workHMO;
+  
   // Model
   int numCol;
   int numRow;
