@@ -23,23 +23,6 @@
 
 class HMatrix;
 
-/**
- * Possible crash mode values used to test Crash_Mode
- */
-const int Crash_Mode_No = 0;
-const int Crash_Mode_LTSSF_k = 1;
-const int Crash_Mode_LTSSF_pri = 2;
-const int Crash_Mode_LTSF_k = 3;
-const int Crash_Mode_LTSF_pri = 4;
-const int Crash_Mode_LTSF = 5;
-const int Crash_Mode_Bixby = 6;
-const int Crash_Mode_BixbyNoNzCCo = 7;
-const int Crash_Mode_Bs = 8;
-#ifdef HiGHSDEV
-const int Crash_Mode_TsSing = 9;
-#endif
-const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
-
 // LTSSF scalar parameters
 const int crsh_vr_st_no_act = 0;
 const int crsh_vr_st_act = 1;
@@ -80,9 +63,7 @@ class HCrash {
 /**
  * @brief Determine a particular crash basis for a given model instance
  */
-  void crash(
-	     int Crash_Mode     //!< The crash mode to be used
-	     );
+  void crash();
  private:
   // Internal methods
 

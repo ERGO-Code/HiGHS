@@ -407,6 +407,7 @@ SimplexCrashStrategy intToSimplexCrashStrategy(const int& value) {
   if (value == (int)SimplexCrashStrategy::LTSSF_K) return SimplexCrashStrategy::LTSSF_K;
   if (value == (int)SimplexCrashStrategy::LTSSF_PRI) return SimplexCrashStrategy::LTSSF_PRI;
   if (value == (int)SimplexCrashStrategy::BIXBY) return SimplexCrashStrategy::BIXBY;
+  printf("Crash strategy option %d cannot be parsed yet!\n", value);
   return SimplexCrashStrategy::DEFAULT;
 }
 SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value) {

@@ -48,7 +48,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   options(highs_model_object, opt);
 
 #ifdef HiGHSDEV
-  reportSimplexLpStatus(simplex_lp_status, "On entry to runSimplexSolver");
+  //  reportSimplexLpStatus(simplex_lp_status, "On entry to runSimplexSolver");
 #endif
 
   // Possibly set up the LP to be solved by the simplex method. According to options
@@ -64,7 +64,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   if (!simplex_lp_status.valid) {
     setupSimplexLp(highs_model_object);
 #ifdef HiGHSDEV
-    reportSimplexLpStatus(simplex_lp_status, "After setupSimplexLp");
+    //    reportSimplexLpStatus(simplex_lp_status, "After setupSimplexLp");
 #endif
   }
   
@@ -84,7 +84,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   setupForSimplexSolve(highs_model_object);
 #ifdef HiGHSDEV
-  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
+  //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
 #endif
 
 #ifdef HiGHSDEV
@@ -168,7 +168,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #endif
 
 #ifdef HiGHSDEV
-  reportSimplexLpStatus(simplex_lp_status, "After solve");
+  //  reportSimplexLpStatus(simplex_lp_status, "After solve");
   if (simplex_info.analyseLpSolution) { analyse_lp_solution(highs_model_object);}
 #endif
 

@@ -29,15 +29,17 @@ using std::abs;
 using std::cout;
 using std::flush;
 
-void HCrash::crash(int Crash_Mode) {
-  simplex_lp_ = &workHMO.simplex_lp_;
-  simplex_basis_ = &workHMO.simplex_basis_;
-  matrix_ = &workHMO.matrix_;
-  if (simplex_lp_->numRow_ == 0) return;
-  numRow = simplex_lp_->numRow_;
-  numCol = simplex_lp_->numCol_;
-  numTot = simplex_lp_->numCol_ + simplex_lp_->numRow_;
-  const int objSense = simplex_lp_->sense_;
+void HCrash::crash() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  SimplexBasis &simplex_basis = workHMO.simplex_basis_;
+  HMatrix &matrix = workHMO.matrix_;
+  if (simplex_lp.numRow_ == 0) return;
+  numRow = simplex_lp.numRow_;
+  numCol = simplex_lp.numCol_;
+  numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const SimplexCrashStrategy crash_strategy = workHMO.simplex_info_.crash_strategy;
+  const int objSense = simplex_lp.sense_;
 #ifdef HiGHSDEV
   if (fabs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
@@ -46,9 +48,9 @@ void HCrash::crash(int Crash_Mode) {
 #endif
   assert(fabs(objSense) == 1);
 
-  if (Crash_Mode == Crash_Mode_Bs
+  if (crash_strategy == SimplexCrashStrategy::BASIC
 #ifdef HiGHSDEV
-      || Crash_Mode == Crash_Mode_TsSing
+      || crash_strategy == SimplexCrashStrategy::TEST_SING
 #endif
   ) {
     // First and last variable types are the only types for basis and
@@ -68,19 +70,19 @@ void HCrash::crash(int Crash_Mode) {
     crsh_no_act_pri_v = crsh_mn_pri_v;
   }
 
-  if (Crash_Mode == Crash_Mode_Bixby ||
-      Crash_Mode == Crash_Mode_BixbyNoNzCCo) {
+  if (crash_strategy == SimplexCrashStrategy::BIXBY ||
+      crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS) {
     // Use the Bixby crash
-    //    bixby(Crash_Mode);
+    //    bixby();
   }
 #ifdef HiGHSDEV
-  else if (Crash_Mode == Crash_Mode_TsSing) {
+  else if (crash_strategy == SimplexCrashStrategy::TEST_SING) {
     // Use the test singularity crash
     //    tsSing();
   }
 #endif
   else {
     // Use the LTSSF crash
-    //    ltssf(Crash_Mode);
+    //    ltssf();
   }
 }

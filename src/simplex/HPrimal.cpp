@@ -127,7 +127,7 @@ void HPrimal::solve() {
   assert(ok);
   */
 #ifdef HiGHSDEV
-  reportSimplexLpStatus(simplex_lp_status, "Before HPrimal major solving loop");
+  //  reportSimplexLpStatus(simplex_lp_status, "Before HPrimal major solving loop");
 #endif
   // The major solving loop
 

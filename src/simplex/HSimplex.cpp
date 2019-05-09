@@ -54,12 +54,12 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // Set values of internal options
 
 #ifdef HiGHSDEV
-  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_inner_clock = false; // false;
   simplex_info.report_simplex_outer_clock = false;
-  simplex_info.report_simplex_phases_clock = true; // false;
-  simplex_info.analyseLp = true;                // false;
-  simplex_info.analyseSimplexIterations = true; // false
-  simplex_info.analyseLpSolution = true;        // false;
+  simplex_info.report_simplex_phases_clock = false; // false;
+  simplex_info.analyseLp = false;                // false;
+  simplex_info.analyseSimplexIterations = false; // false
+  simplex_info.analyseLpSolution = false;        // false;
   simplex_info.analyse_invert_time = false;
   simplex_info.analyseRebuildTime = false;
 #endif
@@ -267,7 +267,7 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
       HighsTimer &timer = highs_model_object.timer_;
       HCrash crash(highs_model_object);
       timer.start(timer.crash_clock);
-      crash.crash(0);
+      crash.crash();
       timer.stop(timer.crash_clock);
     }
 
