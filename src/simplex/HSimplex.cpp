@@ -1925,10 +1925,11 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
       }
     }
   }
+#ifdef HiGHSDEV
   if (num_primal_infeasibilities) {
     printf("Primal rebuild has %d (%12g) nonbasic primal infeasibilities\n", num_primal_infeasibilities, sum_primal_infeasibilities);
   }
-
+#endif
   for (int i = 0; i < simplex_lp.numRow_; i++) {
     // Basic variable
     int iCol = simplex_basis.basicIndex_[i];
@@ -1942,9 +1943,11 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
       sum_primal_infeasibilities += residual;
     }	
   }
+#ifdef HiGHSDEV
   if (num_primal_infeasibilities) {
     printf("Primal rebuild has %d (%12g) nonbasic primal infeasibilities\n", num_primal_infeasibilities, sum_primal_infeasibilities);
   }
+#endif
   return num_primal_infeasibilities;  
 }
 
