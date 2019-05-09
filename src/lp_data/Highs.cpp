@@ -917,27 +917,14 @@ HighsStatus Highs::runBnb() {
 }
 
 HighsStatus Highs::solveNode(Node& node) {
-  // // Apply column bounds from node to LP.
-  // lp_.colLower_ = node.col_lower_bound;
-  // lp_.colUpper_ = node.col_upper_bound;
-
-  // // Call warm start.
-  // HighsStatus status = runSimplexSolver(options_, hmos_[0]);
-
-  // // Set solution.
-  // if (status == HighsStatus::Optimal) {
-  //   node.primal_solution = hmos_[0].solution_.col_value;
-  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
-  // }
-
-  // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
-  // changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
-
-  // Solve with a new hmo (replace with code above)
-  initializeLp(lp_);
+  // Apply column bounds from node to LP.
   lp_.colLower_ = node.col_lower_bound;
   lp_.colUpper_ = node.col_upper_bound;
 
+  // Call warm start.
+  // HighsStatus status = run();
+  // call works but simply calling run() should be enough and will call hot
+  // start in the same way as a user would call it from the outside
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
 
   // Set solution.
@@ -946,12 +933,30 @@ HighsStatus Highs::solveNode(Node& node) {
     node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
   }
 
+  // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
+  // changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
+
+  // Solve with a new hmo (replace with code above)
+  // initializeLp(lp_);
+  // lp_.colLower_ = node.col_lower_bound;
+  // lp_.colUpper_ = node.col_upper_bound;
+
+  // HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+
+  // // Set solution.
+  // if (status == HighsStatus::Optimal) {
+  //   node.primal_solution = hmos_[0].solution_.col_value;
+  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  // }
+
   return status;
 }
 
 HighsStatus Highs::solveRootNode(Node& root) {
   // No presolve for the moment.
   options_.messageLevel = ML_NONE;
+  //HighsStatus status = run();
+  // call works but simply calling run() should be enough.
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
   if (status == HighsStatus::Optimal) {
     root.primal_solution = hmos_[0].solution_.col_value;
