@@ -66,6 +66,17 @@ class HCrash {
   void crash();
  private:
   // Internal methods
+  void bixby();
+  bool bixby_iz_da();
+  void bixby_rp_mrt();
+  void crsh_iz_vr_ty();
+
+#ifdef HiGHSDEV
+  void crsh_an_c_co();
+  void crsh_rp_r_c_st(int mode);
+  void crsh_an_r_c_st_af();
+  std::string crsh_nm_o_crsh_vr_ty(int vr_ty);
+#endif
 
   // Model pointer
   HighsModelObject &workHMO;
@@ -74,9 +85,6 @@ class HCrash {
   int numCol;
   int numRow;
   int numTot;
-  const HighsLp *simplex_lp_;
-  const SimplexBasis *simplex_basis_;
-  const HMatrix *matrix_;
 
   //    LTSSF arrays
   std::vector<int> crsh_r_ty_pri_v;
