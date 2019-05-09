@@ -401,7 +401,7 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   auto addtuple = [&rowidx, &ncols, this](double coeff) {
     if (rowidx >= 0)
       entries.push_back(std::make_tuple(ncols - 1, rowidx, coeff));
-    else
+    else if (rowidx == -1)
       coeffobj.push_back(std::make_pair(ncols - 1, coeff));
   };
 
