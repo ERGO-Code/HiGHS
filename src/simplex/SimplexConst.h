@@ -56,6 +56,12 @@ enum class SimplexDualEdgeWeightStrategy {
   DEFAULT = STEEPEST_EDGE_TO_DEVEX_SWITCH
 };
 
+enum class SimplexPrimalEdgeWeightStrategy {
+  DANTZIG = 0,
+  DEVEX,
+  DEFAULT = DEVEX
+};
+
 enum class SimplexPriceStrategy {
   COL = 0,
   ROW,

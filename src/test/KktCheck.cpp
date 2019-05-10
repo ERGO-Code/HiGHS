@@ -101,7 +101,7 @@ void KktCheck::chPrimalFeas() {
     for (k = ARstart[i]; k < ARstart[i + 1]; k++)
       rowV = rowV + colValue[ARindex[k]] * ARvalue[k];
 
-    if (((rowV - rowLower[i]) < 0) && (abs(rowV - rowLower[i]) > tol)) {
+    if (((rowV - rowLower[i]) < 0) && (fabs(rowV - rowLower[i]) > tol)) {
       if (print == 1)
         std::cout << "Row " << rIndexRev[i] << " infeasible: Row value=" << rowV
              << "  L=" << rowLower[i] << "  U=" << rowUpper[i] << std::endl;
@@ -110,7 +110,7 @@ void KktCheck::chPrimalFeas() {
       istrue = false;
     }
 
-    if (((rowV - rowUpper[i]) > 0) && (abs(rowV - rowUpper[i]) > tol)) {
+    if (((rowV - rowUpper[i]) > 0) && (fabs(rowV - rowUpper[i]) > tol)) {
       if (print == 1)
         std::cout << "Row " << rIndexRev[i] << " infeasible: Row value=" << rowV
              << "  L=" << rowLower[i] << "  U=" << rowUpper[i] << std::endl;
@@ -135,7 +135,7 @@ void KktCheck::chDualFeas() {
   for (i = 0; i < numCol; i++) {
     // j not in L or U
     if (colLower[i] == -HIGHS_CONST_INF && colUpper[i] == HIGHS_CONST_INF) {
-      if (abs(colDual[i]) > tol) {
+      if (fabs(colDual[i]) > tol) {
         if (print == 1)
           std::cout << "Dual feasibility fail: l=-inf, x[" << cIndexRev[i]
                << "]=" << colValue[i] << ", u=inf, z[" << i
@@ -147,7 +147,7 @@ void KktCheck::chDualFeas() {
     }
     // j in L: x=l and l<u
     else if (colValue[i] == colLower[i] && colLower[i] < colUpper[i]) {
-      if (colDual[i] < 0 && abs(colDual[i]) > tol) {
+      if (colDual[i] < 0 && fabs(colDual[i]) > tol) {
         if (print == 1)
           std::cout << "Dual feasibility fail: l[" << cIndexRev[i]
                << "]=" << colLower[i] << " = x[" << cIndexRev[i]
@@ -180,10 +180,10 @@ void KktCheck::chDualFeas() {
       rowV = rowV + colValue[ARindex[k]] * ARvalue[k];
 
     // L = Ax = U can be any sign
-    if (abs(rowLower[i] - rowV) < tol && abs(rowUpper[i] - rowV) < tol) {
+    if (fabs(rowLower[i] - rowV) < tol && fabs(rowUpper[i] - rowV) < tol) {
     }
     // L = Ax < U
-    else if (abs(rowLower[i] - rowV) < tol && rowV < rowUpper[i]) {
+    else if (fabs(rowLower[i] - rowV) < tol && rowV < rowUpper[i]) {
       if (rowDual[i] > tol) {
         if (print == 1)
           std::cout << "Dual feasibility fail for row " << rIndexRev[i]
@@ -195,7 +195,7 @@ void KktCheck::chDualFeas() {
       }
     }
     // L < Ax = U
-    else if (rowLower[i] < rowV && abs(rowV - rowUpper[i]) < tol) {
+    else if (rowLower[i] < rowV && fabs(rowV - rowUpper[i]) < tol) {
       // std::cout<<"Dual feasibility fail for row "<<i<<": L= "<<rowLower[i] <<",
       // Ax="<<rowV<<", U="<<rowUpper[i]<<", y="<<rowDual[i]<<std::endl;
       if (rowDual[i] < -tol) {
@@ -210,7 +210,7 @@ void KktCheck::chDualFeas() {
     }
     // L < Ax < U
     else if ((rowLower[i] < (rowV + tol)) && (rowV < (rowUpper[i] + tol))) {
-      if (abs(rowDual[i]) > tol) {
+      if (fabs(rowDual[i]) > tol) {
         if (print == 1)
           std::cout << "Dual feasibility fail for row " << rIndexRev[i]
                << ": L= " << rowLower[i] << ", Ax=" << rowV
@@ -236,8 +236,8 @@ void KktCheck::chComplementarySlackness() {
 
   for (i = 0; i < numCol; i++) {
     if (colLower[i] > -HIGHS_CONST_INF)
-      if (abs((colValue[i] - colLower[i]) * (colDual[i])) > tol &&
-          colValue[i] != colUpper[i] && abs(colDual[i]) > tol) {
+      if (fabs((colValue[i] - colLower[i]) * (colDual[i])) > tol &&
+          colValue[i] != colUpper[i] && fabs(colDual[i]) > tol) {
         if (print == 1)
           std::cout << "Comp. slackness fail: "
                << "l[" << cIndexRev[i] << "]=" << colLower[i] << ", x[" << i
@@ -248,8 +248,8 @@ void KktCheck::chComplementarySlackness() {
         istrue = false;
       }
     if (colUpper[i] < HIGHS_CONST_INF)
-      if (abs((colUpper[i] - colValue[i]) * (colDual[i])) > tol &&
-          colValue[i] != colLower[i] && abs(colDual[i]) > tol) {
+      if (fabs((colUpper[i] - colValue[i]) * (colDual[i])) > tol &&
+          colValue[i] != colLower[i] && fabs(colDual[i]) > tol) {
         if (print == 1)
           std::cout << "Comp. slackness fail: x[" << cIndexRev[i]
                << "]=" << colValue[i] << ", u[" << i << "]=" << colUpper[i]
@@ -302,7 +302,7 @@ void KktCheck::chStOfLagrangian() {
     for (k = Astart[j]; k < Astart[j + 1]; k++)
       lagrV = lagrV + rowDual[Aindex[k]] * Avalue[k];
 
-    if (abs(lagrV) > tol) {
+    if (fabs(lagrV) > tol) {
       if (print == 1)
         std::cout << "Column " << cIndexRev[j]
              << " fails stationary of Lagrangian: dL/dx" << j << " = " << lagrV

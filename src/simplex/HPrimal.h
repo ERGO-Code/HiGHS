@@ -31,6 +31,11 @@ class HPrimal {
  HPrimal(HighsModelObject& model_object) : workHMO(model_object)
    {  }
   /**
+   * @brief Solve a model instance
+   */
+  void solve();
+
+  /**
    * @brief Perform Phase 2 primal simplex iterations
    */
   void solvePhase2();
@@ -41,12 +46,12 @@ class HPrimal {
   void primalChooseRow();
   void primalUpdate();
 
-  void iterateRp();
-  void iterateRpFull(bool header);
-  void iterateRpIterPh(int iterate_log_level, bool header);
-  void iterateRpPrObj(int iterate_log_level, bool header);
-  void iterateRpIterDa(int iterate_log_level, bool header);
-  void iterateRpInvert(int i_v);
+  void iterationReport();
+  void iterationReportFull(bool header);
+  void iterationReportIterationAndPhase(int iterate_log_level, bool header);
+  void iterationReportPrimalObjective(int iterate_log_level, bool header);
+  void iterationReportIterationData(int iterate_log_level, bool header);
+  void iterationReportInvert(int i_v);
 
   // Model pointer
   HighsModelObject &workHMO;
@@ -57,6 +62,8 @@ class HPrimal {
 
   bool no_free_columns;
   
+  int solvePhase;
+
   // Pivot related
   int invertHint;
   int columnIn;
@@ -67,15 +74,12 @@ class HPrimal {
   double alpha;
   //  double alphaRow;
   double numericalTrouble;
+  int num_flip_since_rebuild;
 
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
   HVector column;
-
-  int num_tabu_col;
-  vector<int> tabu_col_p;
-  vector<int> tabu_col;
 
   double row_epDensity;
   double columnDensity;

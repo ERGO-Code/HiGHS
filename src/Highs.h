@@ -69,11 +69,11 @@ public:
   const HighsSolution& getSolution() const;
 
   /**
-   * @brief Returns the HighsBasis_new instance for the LP of the
+   * @brief Returns the HighsBasis instance for the LP of the
    * (first?) HighsModelObject TODO: rename to HighsBasis when the
    * current HighsBasis becomes SimplexBasis
    */
-  const HighsBasis_new& getBasis() const; 
+  const HighsBasis& getBasis() const; 
 
   /**
    * @brief Returns the (dual) objective function value for the LP of
@@ -100,14 +100,20 @@ public:
 			  );
 
   /**
-   * @brief Uses the HighsBasis_new passed to set the basis for the
+   * @brief Uses the HighsBasis passed to set the basis for the
    * LP of the (first?) HighsModelObject
    */
   HighsStatus setBasis(
-		       const HighsBasis_new& basis
+		       const HighsBasis& basis
 		       );
 
-   /**
+  /**
+   * @brief Reports the solution and basis status for the LP of the
+   * (first?) HighsModelObject
+   */
+  void reportSolution();
+  
+  /**
    * @brief Adds a row to the model
    */
   bool addRow(const double lower,   //!< Lower bound of the row
@@ -193,6 +199,16 @@ public:
 		       const double lower, //!< The new lower bound
         	       const double upper  //!< The new upper bound
 		       );
+
+  /**
+   * @brief Change the bounds of multiple columns given by an interval
+   */
+  bool changeColsBounds(
+			const int from_col,  //!< The index of the first column whose bounds change
+			const int to_col,    //!< One more than the index of the last column whose bounds change
+			const double* lower, //!< Array of size to_col-from_col with new lower bounds
+			const double* upper  //!< Array of size to_col-from_col with new upper bounds
+			);
 
   /**
    * @brief Change the bounds of multiple columns given by a set of indices
@@ -399,7 +415,7 @@ public:
 
 private:
   HighsSolution solution_;
-  HighsBasis_new basis_;
+  HighsBasis basis_;
   HighsLp lp_;
 
   HighsTimer timer_;

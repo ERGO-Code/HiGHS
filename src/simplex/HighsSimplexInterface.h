@@ -355,50 +355,15 @@ class HighsSimplexInterface {
 			    );
 #endif
 
-  /**
-   * @brief Report the outcome of a simplex solve, printing a message first to contextualise the call
-   */
-  void report_simplex_outcome(
-			      const char* message
-			      );
-  /**
-   * @brief Compute the LP objective function value from column values
-   */
-  double get_lp_objective_value(
-				vector<double> &XcolValue
-				);
-
-  /**
-   * @brief Get vectors of column and row (primal) values and dual (values)
-   */
-  void get_primal_dual_values(
-			      vector<double> &XcolValue, //!> Column primal activities
-			      vector<double> &XcolDual,  //!> Column dual activities
-			      vector<double> &XrowValue, //!> Row primal activities
-			      vector<double> &XrowDual   //!> Row dual activities
-			      );
-
-  /**
-   * @brief Get the basicIndex and nonbasicFlag vectors - Used?
-   */
-  void get_basicIndex_nonbasicFlag(
-				   vector<int> &XbasicIndex,  //!> Indices of basic variables
-				   vector<int> &XnonbasicFlag //!> Flag to indicate which variables are nonbasic
-				   );
-
-  /**
-   * @brief Get the indices of the basic variables for SCIP
-   */
-  int get_basic_indices(
-			int *bind //!> Indices of basic variables
-			);
-
+  HighsStatus LpStatusToHighsStatus(
+				    SimplexSolutionStatus simplex_solution_status
+				    );
   /**
    * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
    * Postive  return value k implies invalid basis status for column k-1
    * Negative return value k implies invalid basis status for row   -k-1
    */
-  int convert_baseStat_to_working(
+  int convertBaseStatToHighsBasis(
 				  const int* cstat, //!> Column baseStat
 				  const int* rstat  //!> Row baseStat
 				  );
@@ -408,10 +373,31 @@ class HighsSimplexInterface {
    * Postive  return value k implies invalid basis status for column k-1
    * Negative return value k implies invalid basis status for row   -k-1
    */
-  int convert_Working_to_BaseStat(
+  int convertHighsBasisToBaseStat(
 				  int* cstat, //!> Column baseStat
 				  int* rstat  //!> Row baseStat
 				  );
+
+  /**
+   * @brief Convert a simplex basis to a HiGHS basis
+   */
+  void convertSimplexToHighsBasis();
+
+  /**
+   * @brief Convert a HiGHS basis to a simplex basis
+   */
+  void convertHighsToSimplexBasis();
+  /**
+   * @brief Convert a simplex solution to a HiGHS solution
+   */
+  void convertSimplexToHighsSolution();
+
+  /**
+   * @brief Get the indices of the basic variables for SCIP
+   */
+  int get_basic_indices(
+			int *bind //!> Indices of basic variables
+			);
 
 #ifdef HiGHSDEV
   /**

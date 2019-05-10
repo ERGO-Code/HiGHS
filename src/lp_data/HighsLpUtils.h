@@ -366,23 +366,15 @@ HighsStatus getLpMatrixCoefficient(
 			    const int col,
 			    double *val
 			    );
-
-
-
-/*
-  void reportLpSolution(
-  HighsModelObject &highs_model //!< Model object whose LP solution is to be reported
-  );
-*/
 #ifdef HiGHSDEV
 // Analyse the data in an LP problem
-void util_analyseLp(
-		    const HighsLp &lp,
-		    const char* message
-		    );
+void analyseLp(
+	       const HighsLp &lp,
+	       const char* message
+	       );
 #endif
 
-HighsBasis_new getHighsBasis(const HighsLp& lp, const HighsBasis& basis);
+HighsBasis getSimplexBasis(const HighsLp& lp, const SimplexBasis& basis);
 
 HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);

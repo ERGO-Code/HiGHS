@@ -53,6 +53,8 @@ const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize"; 
 
 // Strings for file options
+const string scale_simplex_lp_string = "scale_simplex_lp";
+const string permute_simplex_lp_string = "permute_simplex_lp";
 const string infinite_cost_string = "infinite_cost";
 const string infinite_bound_string = "infinite_bound";
 const string small_matrix_value_string = "small_matrix_value";
@@ -64,6 +66,7 @@ const string dual_objective_value_upper_bound_string = "dual_objective_value_upp
 const string simplex_strategy_string = "simplex_strategy";
 const string simplex_crash_strategy_string = "simplex_crash_strategy";
 const string simplex_dual_edge_weight_strategy_string = "simplex_dual_edge_weight_strategy";
+const string simplex_primal_edge_weight_strategy_string = "simplex_primal_edge_weight_strategy";
 const string simplex_price_strategy_string = "simplex_price_strategy";
 
 const string message_level_string = "message_level";
@@ -104,6 +107,10 @@ struct HighsOptions
   HighsMpsParserType parser_type = HighsMpsParserType::fixed;
 
   // Options not passed through the command line
+  // Perform LP scaling
+  bool scale_simplex_lp = true;
+  // Permute the columns of the LP randomly
+  bool permute_simplex_lp = false;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
@@ -114,6 +121,7 @@ struct HighsOptions
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
+  SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
   int allow_superbasic = false;
@@ -132,21 +140,6 @@ struct HighsOptions
   void* msgcb_data = NULL;
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
-  //
-  // For an LP model
-  //
-  // Try to solve the dual of the LP
-  bool transpose_simplex_lp = false;
-  // Perform LP scaling
-  bool scale_simplex_lp = true;
-  // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permute_simplex_lp = false;
-  // Perform LP bound tightening
-  bool tighten_simplex_lp = false;
-  //
-  // For any solver
-  //
-
   //
   // For the simplex solver
   //
@@ -182,6 +175,9 @@ OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::s
 OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value);
  
 
+OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
+OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value);
+
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
 OptionStatus setSmallMatrixValueValue(HighsOptions& options, const double& value);
@@ -191,6 +187,7 @@ OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const doubl
 OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value);
 OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value);
 
@@ -199,6 +196,7 @@ OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
 SimplexStrategy intToSimplexStrategy(const int& value);
 SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
 SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value);
+SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(const int& value);
 SimplexPriceStrategy intToSimplexPriceStrategy(const int& value);
 
 #endif

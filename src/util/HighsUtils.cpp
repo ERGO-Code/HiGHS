@@ -26,7 +26,7 @@ bool highs_isInfinity(double val) {
 }
 
 #ifdef HiGHSDEV
-void util_analyseVectorValues(const char *message, int vecDim, const std::vector<double> &vec,
+void analyseVectorValues(const char *message, int vecDim, const std::vector<double> &vec,
 			      bool analyseValueList) {
   if (vecDim == 0) return;
   double log10 = log(10.0);
@@ -147,7 +147,7 @@ void util_analyseVectorValues(const char *message, int vecDim, const std::vector
   }
 }
 
-void util_analyseMatrixSparsity(const char *message, int numCol, int numRow, const std::vector<int>& Astart, const std::vector<int>& Aindex) {
+void analyseMatrixSparsity(const char *message, int numCol, int numRow, const std::vector<int>& Astart, const std::vector<int>& Aindex) {
 				
   if (numCol == 0) return;
   std::vector<int> rowCount;

@@ -51,6 +51,12 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == find_feasibility_dualize_string)
     return setFindFeasibilityDualizeValue(options, value);
 
+  else if (option == scale_simplex_lp_string) 
+    return setScaleSimplexLpValue(options, atoi(value.c_str()));
+
+  else if (option == permute_simplex_lp_string) 
+    return setPermuteSimplexLpValue(options, atoi(value.c_str()));
+
   else if (option == infinite_cost_string) 
     return setInfiniteCostValue(options, atof(value.c_str()));
 
@@ -80,6 +86,9 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
 
    else if (option == simplex_dual_edge_weight_strategy_string) 
     return setSimplexDualEdgeWeightStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_primal_edge_weight_strategy_string) 
+    return setSimplexPrimalEdgeWeightStrategyValue(options, atoi(value.c_str()));
 
    else if (option == simplex_price_strategy_string) 
     return setSimplexPriceStrategyValue(options, atoi(value.c_str()));
@@ -271,6 +280,16 @@ OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value)
   return OptionStatus::OK;
 }
 
+OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value) {
+  options.scale_simplex_lp = value != 0;
+  return OptionStatus::OK;
+}
+
+OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value) {
+  options.permute_simplex_lp = value != 0;
+  return OptionStatus::OK;
+}
+
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value) {
   if (value >= INFINITE_COST_MIN && value <= INFINITE_COST_MAX)
     options.infinite_cost = value;
@@ -363,6 +382,11 @@ OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const 
   return OptionStatus::OK;
 }
 
+OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_primal_edge_weight_strategy = intToSimplexPrimalEdgeWeightStrategy(value);
+  return OptionStatus::OK;
+}
+
 OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value) {
   options.simplex_price_strategy = intToSimplexPriceStrategy(value);
   return OptionStatus::OK;
@@ -391,6 +415,11 @@ SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& valu
   if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;
   if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH;
   return SimplexDualEdgeWeightStrategy::DEFAULT;
+}
+SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(const int& value) {
+  if (value == (int)SimplexPrimalEdgeWeightStrategy::DANTZIG) return SimplexPrimalEdgeWeightStrategy::DANTZIG;
+  if (value == (int)SimplexPrimalEdgeWeightStrategy::DEVEX) return SimplexPrimalEdgeWeightStrategy::DEVEX;
+  return SimplexPrimalEdgeWeightStrategy::DEFAULT;
 }
 SimplexPriceStrategy intToSimplexPriceStrategy(const int& value) {
   if (value == (int)SimplexPriceStrategy::COL) return SimplexPriceStrategy::COL;

@@ -59,6 +59,13 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
   char flag[2] = {0, 0};
   double data[3];
 
+  int num_alien_entries=0;
+  int alien_entries_message_level = ML_VERBOSE;
+#ifdef HiGHSDEV
+  alien_entries_message_level = ML_ALWAYS;
+  alien_entries_message_level = ML_NONE;
+#endif
+
   int integerCol = 0;
 
   // Load NAME and ROWS
@@ -74,8 +81,11 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
   map<double, int> rowIndex;
   double objName = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-    if (flag[0] == 'N' && objName == 0) {
-      objName = data[1];
+    if (flag[0] == 'N'
+	//       	&& objName == 0
+	) {
+      // N-row: take the first as the objective and ignore any others
+      if (objName == 0) objName = data[1];
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow) return 2;
       rowType.push_back(flag[0]);
@@ -142,18 +152,23 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
 	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
 	  name = field_5;
 	}
-	HighsPrintMessage(ML_ALWAYS, "COLUMNS section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+	num_alien_entries++;
+	HighsPrintMessage(alien_entries_message_level,
+			  "COLUMNS section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);			  
       }
     }
     save_flag1 = flag[1];
   }
   Astart.push_back(Aindex.size());
 
+  if (num_alien_entries)
+    HighsLogMessage(HighsMessageType::WARNING, "COLUMNS section entries contain %8d with row not in ROWS    section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read COLUMNS OK\n");
 #endif
 
   // Load RHS
+  num_alien_entries = 0;
   vector<double> RHS(numRow, 0);
   save_flag1 = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
@@ -171,7 +186,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
 	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
 	  name = field_5;
 	}
-	HighsPrintMessage(ML_ALWAYS, "RHS     section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+	num_alien_entries++;
+	HighsPrintMessage(alien_entries_message_level,
+			  "RHS     section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
       }
     } else {
       // Treat a RHS entry for the N row as an objective offset. Not
@@ -182,11 +199,14 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
     }
     save_flag1 = flag[1];
   }
+  if (num_alien_entries)
+    HighsLogMessage(HighsMessageType::WARNING, "RHS     section entries contain %8d with row not in ROWS    section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RHS     OK\n");
 #endif
 
   // Load RANGES
+  num_alien_entries = 0;
   rowLower.resize(numRow);
   rowUpper.resize(numRow);
   if (flag[0] == 'R') {
@@ -212,7 +232,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
 	  std::string field_5(&line[field_5_start], &line[field_5_start] + field_5_width);
 	  name = field_5;
 	}
-	HighsPrintMessage(ML_ALWAYS, "RANGES  section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
+	num_alien_entries++;
+	HighsPrintMessage(alien_entries_message_level,
+			  "RANGES  section contains row %-8s not in ROWS    section, line: %s\n", name.c_str(), line);
       }
       save_flag1 = flag[1];
     }
@@ -241,14 +263,16 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
         break;
     }
   }
+  if (num_alien_entries)
+    HighsLogMessage(HighsMessageType::WARNING, "RANGES  section entries contain %8d with row not in ROWS    section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read RANGES  OK\n");
 #endif
 
   // Load BOUNDS
+  num_alien_entries = 0;
   colLower.assign(numCol, 0);
   colUpper.assign(numCol, HIGHS_CONST_INF);
-
   if (flag[0] == 'B') {
     while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
       // Find the column index associated woith the name "data[2]". If
@@ -282,7 +306,8 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
 	}
       } else {
 	std::string name(&line[field_3_start], &line[field_3_start] + field_3_width);
-	HighsPrintMessage(ML_ALWAYS, "BOUNDS  section contains col %-8s not in COLUMNS section, line: %s\n", name.c_str(), line);
+	num_alien_entries++;
+	HighsPrintMessage(alien_entries_message_level, "BOUNDS  section contains col %-8s not in COLUMNS section, line: %s\n", name.c_str(), line);
       }
     }
   }
@@ -295,6 +320,8 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
       if (colUpper[iCol] == HIGHS_CONST_INF) colUpper[iCol] = 1;
     }
   }
+  if (num_alien_entries)
+    HighsLogMessage(HighsMessageType::WARNING, "BOUNDS  section entries contain %8d with col not in COLUMNS section: ignored", num_alien_entries);
 #ifdef HiGHSDEV
   printf("readMPS: Read BOUNDS  OK\n");
   printf("readMPS: Read ENDATA  OK\n");
@@ -381,7 +408,7 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
              const vector<double>& colCost, const vector<double>& colLower,
              const vector<double>& colUpper, const vector<double>& rowLower,
              const vector<double>& rowUpper, const vector<int>& integerColumn,
-	     const vector<std::string>col_names, const vector<std::string>row_names) {
+	     const vector<std::string>& col_names, const vector<std::string>& row_names) {
 #ifdef HiGHSDEV
   printf("writeMPS: Trying to open file %s\n", filename);
 #endif
