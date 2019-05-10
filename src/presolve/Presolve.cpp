@@ -139,8 +139,8 @@ int Presolve::presolve(int print) {
 
     // removeRowSingletons();
     // if (status) return status;
-    // removeForcingConstraints(iter);
-    // if (status) return status;
+     removeForcingConstraints(iter);
+     if (status) return status;
 
     // removeRowSingletons();
     // if (status) return status;
