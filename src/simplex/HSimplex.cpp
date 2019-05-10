@@ -254,24 +254,28 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
     // Simplex basis is not valid, but HiGHS basis is valid so convert it to a simplex basis
     simplex_interface.convertHighsToSimplexBasis();
   }
-  if (simplex_basis.valid_) {
-    // Valid simplex basis so use it to initialise...
-    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
-    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-		 &simplex_lp.Astart_[0],
-		 &simplex_lp.Aindex_[0],
-		 &simplex_lp.Avalue_[0],
-		 &simplex_basis.nonbasicFlag_[0]);
-  } else {
-    // ... or Crash, if the option to do so is set...
-    if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
+  if (simplex_basis.valid_ || simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
+    // Have either a supplied basis or the option to crash, so
+    // can expect to start from a non-identity basis
+    if (simplex_basis.valid_) {
+    // Valid basis is preferred, so use it to initialise...
+      initialise_from_nonbasic(highs_model_object);
+    } else {
+      // ... or initialise with a logical basis and crash
+      initialise_with_logical_basis(highs_model_object);
       HighsTimer &timer = highs_model_object.timer_;
       HCrash crash(highs_model_object);
       timer.start(timer.crash_clock);
       crash.crash();
       timer.stop(timer.crash_clock);
     }
-
+    // Now set up the internal matrix structures using the supplied or crash basis
+    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		 &simplex_lp.Astart_[0],
+		 &simplex_lp.Aindex_[0],
+		 &simplex_lp.Avalue_[0],
+		 &simplex_basis.nonbasicFlag_[0]);
+  } else {
     // ... otherwise start from a logical basis
     initialise_with_logical_basis(highs_model_object);
     matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,

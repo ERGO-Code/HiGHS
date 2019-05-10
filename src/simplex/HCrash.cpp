@@ -12,7 +12,7 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
-#include "simplex/HMatrix.h"
+//#include "simplex/HMatrix.h"
 #include "util/HighsSort.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"
@@ -33,7 +33,7 @@ void HCrash::crash() {
   HighsLp &simplex_lp = workHMO.simplex_lp_;
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   SimplexBasis &simplex_basis = workHMO.simplex_basis_;
-  HMatrix &matrix = workHMO.matrix_;
+  //  HMatrix &matrix = workHMO.matrix_;
   if (simplex_lp.numRow_ == 0) return;
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;
@@ -238,11 +238,11 @@ void HCrash::bixby() {
     int columnIn = cz_c_n;
     int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(workHMO, columnOut);\n"); //model.setSourceOutFmBd(columnOut);
+    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy
     // of the matrix
-    printf("Need to call simplex_method_.update_pivots(workHMO, columnIn, rowOut, sourceOut);\n");//model.updatePivots(columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(columnIn, columnOut);\n"); //model.updateMatrix(columnIn, columnOut);
+    update_pivots(workHMO, columnIn, rowOut, sourceOut);
+    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
