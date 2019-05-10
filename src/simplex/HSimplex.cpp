@@ -266,7 +266,7 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
       HighsTimer &timer = highs_model_object.timer_;
       HCrash crash(highs_model_object);
       timer.start(timer.crash_clock);
-      crash.crash();
+      crash.crash(simplex_info.crash_strategy);
       timer.stop(timer.crash_clock);
     }
     // Now set up the internal matrix structures using the supplied or crash basis

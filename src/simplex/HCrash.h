@@ -20,6 +20,7 @@
 #include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
 #include "simplex/HVector.h"
+//#include "simplex/HSimplex.h"
 
 class HMatrix;
 
@@ -63,7 +64,7 @@ class HCrash {
 /**
  * @brief Determine a particular crash basis for a given model instance
  */
-  void crash();
+  void crash(SimplexCrashStrategy pass_crash_strategy);
  private:
   // Internal methods
   void bixby();
@@ -73,15 +74,18 @@ class HCrash {
 
 #ifdef HiGHSDEV
   void crsh_an_c_co();
-  void crsh_rp_r_c_st(int mode);
+  void crsh_rp_r_c_st(const int mode);
   void crsh_an_r_c_st_af();
-  std::string crsh_nm_o_crsh_vr_ty(int vr_ty);
+  std::string crsh_nm_o_crsh_vr_ty(const int vr_ty);
 #endif
 
-  // Model pointer
+  // Model to be crashed
   HighsModelObject &workHMO;
   
-  // Model
+  // Crash strategy to be used
+  SimplexCrashStrategy crash_strategy;
+
+  // Model dimensions
   int numCol;
   int numRow;
   int numTot;

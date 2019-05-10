@@ -29,7 +29,8 @@ using std::abs;
 using std::cout;
 using std::flush;
 
-void HCrash::crash() {
+void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
+  crash_strategy = pass_crash_strategy;
   HighsLp &simplex_lp = workHMO.simplex_lp_;
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   SimplexBasis &simplex_basis = workHMO.simplex_basis_;
@@ -38,7 +39,6 @@ void HCrash::crash() {
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;
   numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  const SimplexCrashStrategy crash_strategy = workHMO.simplex_info_.crash_strategy;
   const int objSense = simplex_lp.sense_;
 #ifdef HiGHSDEV
   if (fabs(objSense) != 1) {
@@ -97,7 +97,7 @@ void HCrash::bixby() {
   const int *Aindex = &simplex_lp.Aindex_[0];
   const double *Avalue = &simplex_lp.Avalue_[0];
 
-  bixby_no_nz_c_co = workHMO.simplex_info_.crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS;
+  bixby_no_nz_c_co = crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS;
   bixby_no_nz_c_co = false;
 
   bool perform_crash = bixby_iz_da();
@@ -497,7 +497,7 @@ void HCrash::crsh_iz_vr_ty() {
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
-  if (workHMO.simplex_info_.crash_strategy == SimplexCrashStrategy::BASIC) {
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
     for (int r_n = 0; r_n < numRow; r_n++) {
       if (nonbasicFlag[numCol + r_n] == NONBASIC_FLAG_TRUE)
         crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
@@ -618,7 +618,7 @@ void HCrash::crsh_an_c_co() {
          (100 * n_fs_c_co) / numCol);
 }
 
-void HCrash::crsh_rp_r_c_st(int mode) {
+void HCrash::crsh_rp_r_c_st(const int mode) {
   string TyNm;
   int ck_su_n_c = 0;
   int ck_su_n_r = 0;
@@ -765,9 +765,9 @@ void HCrash::crsh_an_r_c_st_af() {
   crsh_rp_r_c_st(3);
 }
 
-string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty) {
+string HCrash::crsh_nm_o_crsh_vr_ty(const int vr_ty) {
   string TyNm;
-  if (workHMO.simplex_info_.crash_strategy == SimplexCrashStrategy::BASIC) {
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
     if (vr_ty == crsh_vr_ty_non_bc)
       TyNm = "NBc";
     else if (vr_ty == crsh_vr_ty_bc)
