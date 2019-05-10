@@ -301,6 +301,21 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
   }
+  bool compute_basis_condition = true;
+  if (compute_basis_condition) {
+    double basis_condition = computeBasisCondition(highs_model_object);
+#ifdef HiGHSDEV
+    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", basis_condition);
+    if (basis_condition > 1e12) {
+      HighsPrintMessage(ML_MINIMAL, " excessive\n");
+      simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
+      HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
+      //      return result;
+    } else {
+      HighsPrintMessage(ML_MINIMAL, " OK\n");
+    }
+#endif
+  }
 }
 
 void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
@@ -1433,8 +1448,10 @@ double computeBasisCondition(
     norm_B = max(c_norm, norm_B);
   }
   double cond_B = norm_Binv * norm_B;
-  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n",
-	 norm_Binv, norm_B, cond_B);
+#ifdef HiGHSDEV
+  printf("Hager estimate of ||B||_1 = %g; ||B^{-1}||_1 = %g so cond_1(B) estimate is %g\n",
+	 norm_B, norm_Binv, cond_B);
+#endif
   return cond_B;
 }
 
