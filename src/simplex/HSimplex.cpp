@@ -1941,8 +1941,8 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
       sum_basic_primal_infeasibilities += residual;
     }	
   }
-#ifdef HiGHSDEV
   int num_primal_infeasibilities = num_nonbasic_primal_infeasibilities + num_basic_primal_infeasibilities;
+#ifdef HiGHSDEV
   double sum_primal_infeasibilities = sum_nonbasic_primal_infeasibilities + sum_basic_primal_infeasibilities;
   if (num_primal_infeasibilities) {
     printf("Iter %9d has %8d (%8d+%8d) primal infeasibilities, summing to %12g (%12g+%12g)\n", num_iter,
@@ -2267,7 +2267,7 @@ void comparePrimalDualObjectiveValues(HighsModelObject &highs_model_object) {
   printf("Relative primal-dual objective value difference of %11.4g: primal = %g, dual = %g\n",
          relative_difference, primalObjectiveValue, dualObjectiveValue);
 #else
-  int message_type = HighsMessageType::INFO;
+  HighsMessageType message_type = HighsMessageType::INFO;
   if (relative_difference > 1e-2) {
     message_type = HighsMessageType::ERROR;
   } else if (relative_difference > 1e-8) {
