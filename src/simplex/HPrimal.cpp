@@ -611,6 +611,8 @@ void HPrimal::primalUpdate() {
 
   simplex_info.updatedPrimalObjectiveValue += workDual[columnIn]*thetaPrimal;
 
+  int numPrimalInfeas = computePrimalInfeasible(workHMO);
+
   // If flipped, then no need touch the pivots
   if (flipped) {
     rowOut = -1;

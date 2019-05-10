@@ -63,6 +63,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
   int alien_entries_message_level = ML_VERBOSE;
 #ifdef HiGHSDEV
   alien_entries_message_level = ML_ALWAYS;
+  alien_entries_message_level = ML_NONE;
 #endif
 
   int integerCol = 0;
@@ -80,7 +81,9 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
   map<double, int> rowIndex;
   double objName = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-    if (flag[0] == 'N') {
+    if (flag[0] == 'N'
+	//       	&& objName == 0
+	) {
       // N-row: take the first as the objective and ignore any others
       if (objName == 0) objName = data[1];
     } else {
