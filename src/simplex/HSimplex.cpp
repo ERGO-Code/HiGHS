@@ -54,14 +54,14 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // Set values of internal options
 
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_inner_clock = false; // false;
   simplex_info.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
-  simplex_info.report_simplex_phases_clock = true; // false;
+  simplex_info.report_simplex_phases_clock = false; // false;
   // Option for analysing simplex iterations
-  simplex_info.analyseLp = true;                // false;
-  simplex_info.analyseSimplexIterations = true; // false
-  simplex_info.analyseLpSolution = true;        // false;
+  simplex_info.analyseLp = false;                // false;
+  simplex_info.analyseSimplexIterations = false; // false
+  simplex_info.analyseLpSolution = false;        // false;
   simplex_info.analyse_invert_time = false;
   simplex_info.analyseRebuildTime = false;
 #endif
@@ -1905,8 +1905,11 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int num_primal_infeasibilities = 0;
-  double sum_primal_infeasibilities = 0;
+  int num_iter = simplex_info.iteration_count;
+  int num_nonbasic_primal_infeasibilities = 0;
+  int num_basic_primal_infeasibilities = 0;
+  double sum_nonbasic_primal_infeasibilities = 0;
+  double sum_basic_primal_infeasibilities = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
 
   //  int nonbasic_ix = 0;
@@ -1920,15 +1923,11 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
       //      printf("Nonbasic column %2d is %2d, [%12g, %12g, %12g] residual = %12g\n", nonbasic_ix, i, lower, value, upper, residual);
       //      nonbasic_ix++;
       if (residual > simplex_info.primal_feasibility_tolerance) {
-	num_primal_infeasibilities++;
-	sum_primal_infeasibilities += residual;
+	num_nonbasic_primal_infeasibilities++;
+	sum_nonbasic_primal_infeasibilities += residual;
       }
     }
   }
-  if (num_primal_infeasibilities) {
-    printf("Primal rebuild has %d (%12g) nonbasic primal infeasibilities\n", num_primal_infeasibilities, sum_primal_infeasibilities);
-  }
-
   for (int i = 0; i < simplex_lp.numRow_; i++) {
     // Basic variable
     int iCol = simplex_basis.basicIndex_[i];
@@ -1938,13 +1937,19 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
     double residual = max(lower-value, value-upper);
     //    if (value > 0.1) printf("Basic row %2d is %2d, [%12g, %12g, %12g] residual = %12g\n", i, iCol, lower, value, upper, residual);
     if (residual > simplex_info.primal_feasibility_tolerance) {
-      num_primal_infeasibilities++;
-      sum_primal_infeasibilities += residual;
+      num_basic_primal_infeasibilities++;
+      sum_basic_primal_infeasibilities += residual;
     }	
   }
+  int num_primal_infeasibilities = num_nonbasic_primal_infeasibilities + num_basic_primal_infeasibilities;
+#ifdef HiGHSDEV
+  double sum_primal_infeasibilities = sum_nonbasic_primal_infeasibilities + sum_basic_primal_infeasibilities;
   if (num_primal_infeasibilities) {
-    printf("Primal rebuild has %d (%12g) nonbasic primal infeasibilities\n", num_primal_infeasibilities, sum_primal_infeasibilities);
+    printf("Iter %9d has %8d (%8d+%8d) primal infeasibilities, summing to %12g (%12g+%12g)\n", num_iter,
+	   num_primal_infeasibilities, num_nonbasic_primal_infeasibilities, num_basic_primal_infeasibilities, 
+	   sum_primal_infeasibilities, sum_nonbasic_primal_infeasibilities, sum_basic_primal_infeasibilities);
   }
+#endif
   return num_primal_infeasibilities;  
 }
 
@@ -2251,6 +2256,26 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
   timer.start(simplex_info.clock_[UpdateMatrixClock]);
   matrix.update(columnIn, columnOut);
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
+}
+
+void comparePrimalDualObjectiveValues(HighsModelObject &highs_model_object) {
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  double primalObjectiveValue = simplex_info.primalObjectiveValue;
+  double dualObjectiveValue = simplex_info.dualObjectiveValue;
+  double relative_difference = fabs(primalObjectiveValue-dualObjectiveValue)/max(fabs(primalObjectiveValue), max(fabs(dualObjectiveValue), 1.0));
+#ifdef HiGHSDEV
+  printf("Relative primal-dual objective value difference of %11.4g: primal = %g, dual = %g\n",
+         relative_difference, primalObjectiveValue, dualObjectiveValue);
+#else
+  HighsMessageType message_type = HighsMessageType::INFO;
+  if (relative_difference > 1e-2) {
+    message_type = HighsMessageType::ERROR;
+  } else if (relative_difference > 1e-8) {
+    message_type = HighsMessageType::WARNING;
+  }
+  if ((int)message_type) HighsLogMessage(message_type, "Relative primal-dual objective value difference of %11.4g: primal = %g, dual = %g",
+					 relative_difference, primalObjectiveValue, dualObjectiveValue);
+#endif
 }
 
 #ifdef HiGHSDEV
@@ -2753,11 +2778,13 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
 
   lcPrObjV *= scale.cost_;
   lcPrObjV += simplex_lp.offset_;
+  double primalObjectiveValue = simplex_info.primalObjectiveValue;
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
-  double ObjEr =
-      fabs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
-  printf("Relative objective error of %11.4g: dualObjectiveValue = %g; "
-         "lcPrObjV = %g\n",
+  double ObjEr = fabs(primalObjectiveValue - lcPrObjV) / max(1.0, fabs(primalObjectiveValue));
+  printf("Relative primal objective error of %11.4g: primalObjectiveValue = %g; lcPrObjV = %g\n",
+	 ObjEr, primalObjectiveValue, lcPrObjV);
+  ObjEr = fabs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
+  printf("Relative dual objective error of %11.4g: dualObjectiveValue = %g; lcPrObjV = %g\n",
          ObjEr, dualObjectiveValue, lcPrObjV);
 }
 #endif

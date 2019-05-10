@@ -343,6 +343,10 @@ void update_matrix(HighsModelObject &highs_model_object,
                    int columnOut
 		   );
 
+void comparePrimalDualObjectiveValues(
+				      HighsModelObject &highs_model_object
+				      );
+
 #ifdef HiGHSDEV
 void analyse_lp_solution(
 			 HighsModelObject &highs_model_object

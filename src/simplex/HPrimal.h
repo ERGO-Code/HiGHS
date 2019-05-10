@@ -74,6 +74,7 @@ class HPrimal {
   double alpha;
   //  double alphaRow;
   double numericalTrouble;
+  int num_flip_since_rebuild;
 
   // Solve buffer
   HVector row_ep;
