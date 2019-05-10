@@ -97,8 +97,9 @@ HighsStatus Highs::run() {
   if (options_.mip)
     return runBnb();
 
-  // Running as LP solver: start the HiGHS clock
-  timer_.startRunHighsClock();
+  // Running as LP solver: start the HiGHS clock unless it's already running
+  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
+  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
   double tt0 = timer_.readRunHighsClock();
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
@@ -152,8 +153,8 @@ HighsStatus Highs::run() {
       // Report this way for the moment. May modify after merge with OSIinterface
       // branch which has new way of setting up a HighsModelObject and can support
       // multiple calls to run().
-      // JAJH(8519) Stop and read the HiGHS clock, then work out time for this call
-      timer_.stopRunHighsClock();
+      // Stop and read the HiGHS clock, then work out time for this call
+      if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
       double tt1 = timer_.readRunHighsClock();
       
       std::stringstream message_not_opt;
@@ -171,7 +172,7 @@ HighsStatus Highs::run() {
     default: {
       // case HighsPresolveStatus::Error
       HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
-      timer_.stopRunHighsClock();
+      if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
       return HighsStatus::PresolveError;
     }
     }
@@ -238,8 +239,8 @@ HighsStatus Highs::run() {
                                timer_.postsolve_clock};
     timer_.report("ModelOperations", clockList);
   }
-  // JAJH(8519) Stop and read the HiGHS clock, then work out time for this call
-  timer_.stopRunHighsClock();
+  // Stop and read the HiGHS clock, then work out time for this call
+  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
   double tt1 = timer_.readRunHighsClock();
 
   std::stringstream message;
@@ -843,10 +844,9 @@ HighsStatus Highs::runSolver(HighsModelObject &model) {
 HighsStatus Highs::runBnb() {
   HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
 
-  //  HighsTimer timer_bnb;
-  //  timer_bnb.startRunHighsClock();
-  // JAJH(8519) Need to use the HighsModelObject timer_
-  timer_.startRunHighsClock();
+  // Need to start the HiGHS clock unless it's already running
+  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
+  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
   double tt0 = timer_.readRunHighsClock();
 
   // Start tree by making root node.
@@ -889,8 +889,8 @@ HighsStatus Highs::runBnb() {
     tree.branch(node);
   }
   
-  // JAJH(8519) Stop and read the HiGHS clock, then work out time for this call
-  timer_.stopRunHighsClock();
+  // Stop and read the HiGHS clock, then work out time for this call
+  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
   double tt1 = timer_.readRunHighsClock();
 
   if (tree.getBestSolution().size() > 0) {
@@ -903,8 +903,6 @@ HighsStatus Highs::runBnb() {
     message << "Objective  : " << std::scientific
             << tree.getBestObjective() << std::endl;
     message << "Time       : " << std::fixed << std::setprecision(3)
-      // JAJH(8519) Need to use the HighsModelObject timer_
-      //           << timer_bnb.clock_time[0] << std::endl;
             << tt1-tt0 << std::endl;
     message << std::endl;
 
@@ -917,27 +915,14 @@ HighsStatus Highs::runBnb() {
 }
 
 HighsStatus Highs::solveNode(Node& node) {
-  // // Apply column bounds from node to LP.
-  // lp_.colLower_ = node.col_lower_bound;
-  // lp_.colUpper_ = node.col_upper_bound;
-
-  // // Call warm start.
-  // HighsStatus status = runSimplexSolver(options_, hmos_[0]);
-
-  // // Set solution.
-  // if (status == HighsStatus::Optimal) {
-  //   node.primal_solution = hmos_[0].solution_.col_value;
-  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
-  // }
-
-  // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
-  // changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
-
-  // Solve with a new hmo (replace with code above)
-  initializeLp(lp_);
+  // Apply column bounds from node to LP.
   lp_.colLower_ = node.col_lower_bound;
   lp_.colUpper_ = node.col_upper_bound;
 
+  // Call warm start.
+  //  HighsStatus status = run();
+  // call works but simply calling run() should be enough and will call hot
+  // start in the same way as a user would call it from the outside
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
 
   // Set solution.
@@ -946,12 +931,30 @@ HighsStatus Highs::solveNode(Node& node) {
     node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
   }
 
+  // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
+  // changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
+
+  // Solve with a new hmo (replace with code above)
+  // initializeLp(lp_);
+  // lp_.colLower_ = node.col_lower_bound;
+  // lp_.colUpper_ = node.col_upper_bound;
+
+  // HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+
+  // // Set solution.
+  // if (status == HighsStatus::Optimal) {
+  //   node.primal_solution = hmos_[0].solution_.col_value;
+  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  // }
+
   return status;
 }
 
 HighsStatus Highs::solveRootNode(Node& root) {
   // No presolve for the moment.
   options_.messageLevel = ML_NONE;
+  //HighsStatus status = run();
+  // call works but simply calling run() should be enough.
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
   if (status == HighsStatus::Optimal) {
     root.primal_solution = hmos_[0].solution_.col_value;

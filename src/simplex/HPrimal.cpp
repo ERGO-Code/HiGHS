@@ -239,8 +239,8 @@ void HPrimal::solvePhase2() {
 
   // Setup other buffers
 
-  HighsPrintMessage(ML_DETAILED, "primal-start\n");
-
+  HighsPrintMessage(ML_DETAILED, "primal-phase2-start\n");
+  iterationReportFull(true);
   // Main solving structure
   for (;;) {
     timer.start(simplex_info.clock_[IteratePrimalRebuildClock]);
@@ -284,7 +284,13 @@ void HPrimal::solvePhase2() {
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
-    if (simplex_lp_status.has_fresh_rebuild) break;
+    if (simplex_lp_status.has_fresh_rebuild) {
+#ifdef HiGHSDEV
+      if (num_flip_since_rebuild) printf("Consider doing a primal rebuild if flips have occurred\n");
+#endif
+      //      if (num_flip_since_rebuild == 0)
+      break;
+    }
   }
 
   if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
@@ -374,6 +380,7 @@ void HPrimal::primalRebuild() {
         totalRebuilds, sv_invertHint, simplex_info.iteration_count, totalRebuildTime);
   }
 #endif
+  num_flip_since_rebuild = 0;
   // Data are fresh from rebuild
   simplex_lp_status.has_fresh_rebuild = true;
 }
@@ -604,8 +611,15 @@ void HPrimal::primalUpdate() {
 
   simplex_info.updatedPrimalObjectiveValue += workDual[columnIn]*thetaPrimal;
 
+  int numPrimalInfeas = computePrimalInfeasible(workHMO);
+
   // If flipped, then no need touch the pivots
   if (flipped) {
+    rowOut = -1;
+    numericalTrouble = 0;
+    thetaDual = workDual[columnIn];
+    iterationReport();
+    num_flip_since_rebuild++;
     return;
   }
 
@@ -665,8 +679,9 @@ void HPrimal::primalUpdate() {
   }
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 
-  /*
   // updateVerify for primal
+  numericalTrouble = 0;
+  /*
   double aCol = fabs(alpha);
   double alphaRow;
   if (columnIn < workHMO.simplex_lp_.numCol_) {
@@ -753,9 +768,16 @@ void HPrimal::iterationReportIterationData(int iterate_log_level, bool header) {
   if (header) {
     HighsPrintMessage(iterate_log_level, " Inv       NumCk     EnC     LvR     LvC        ThDu        ThPr          Aa");
   } else {
-    HighsPrintMessage(iterate_log_level, " %3d %11.4g %7d %7d %7d %11.4g %11.4g %11.4g", 
-		      invertHint, numericalTrouble, columnIn, rowOut, columnOut, 
-		      thetaDual, thetaPrimal, alpha);
+    bool flipped = rowOut < 0;
+      HighsPrintMessage(iterate_log_level, " %3d %11.4g %7d", 
+			invertHint, numericalTrouble, columnIn);
+    if (flipped) {
+      HighsPrintMessage(iterate_log_level, "                 %11.4g %11.4g            ", 
+			thetaDual, thetaPrimal);
+    } else {
+      HighsPrintMessage(iterate_log_level, " %7d %7d %11.4g %11.4g %11.4g", 
+			rowOut, columnOut, thetaDual, thetaPrimal, alpha);
+    }
   }
 }
 

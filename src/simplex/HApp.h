@@ -171,6 +171,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //  reportSimplexLpStatus(simplex_lp_status, "After solve");
   if (simplex_info.analyseLpSolution) { analyse_lp_solution(highs_model_object);}
 #endif
+  comparePrimalDualObjectiveValues(highs_model_object);
 
   HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
 
