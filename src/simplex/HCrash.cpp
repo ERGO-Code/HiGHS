@@ -12,7 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
-//#include "simplex/HMatrix.h"
 #include "util/HighsSort.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"

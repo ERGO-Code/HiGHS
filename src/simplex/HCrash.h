@@ -17,10 +17,7 @@
 #include <vector>
 #include <string>
 
-#include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
-#include "simplex/HVector.h"
-//#include "simplex/HSimplex.h"
 
 class HMatrix;
 
