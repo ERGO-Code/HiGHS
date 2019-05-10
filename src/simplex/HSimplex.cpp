@@ -54,14 +54,14 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // Set values of internal options
 
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_inner_clock = false; // false;
   simplex_info.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
-  simplex_info.report_simplex_phases_clock = true; // false;
+  simplex_info.report_simplex_phases_clock = false; // false;
   // Option for analysing simplex iterations
-  simplex_info.analyseLp = true;                // false;
-  simplex_info.analyseSimplexIterations = true; // false
-  simplex_info.analyseLpSolution = true;        // false;
+  simplex_info.analyseLp = false;                // false;
+  simplex_info.analyseSimplexIterations = false; // false
+  simplex_info.analyseLpSolution = false;        // false;
   simplex_info.analyse_invert_time = false;
   simplex_info.analyseRebuildTime = false;
 #endif
@@ -2256,6 +2256,14 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
 }
 
+void comparePrimalDualObjectiveValues(HighsModelObject &highs_model_object) {
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  double primalObjectiveValue = simplex_info.primalObjectiveValue;
+  double dualObjectiveValue = simplex_info.dualObjectiveValue;
+  double relative_difference = fabs(primalObjectiveValue-dualObjectiveValue)/max(fabs(primalObjectiveValue), max(fabs(dualObjectiveValue), 1.0));
+  printf("Relative primal-dual objective value difference of %11.4g: primal = %g, dual = %g\n",
+         relative_difference, primalObjectiveValue, dualObjectiveValue);
+}
 #ifdef HiGHSDEV
 void analyse_lp_solution(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
@@ -2756,11 +2764,13 @@ void analyse_lp_solution(HighsModelObject &highs_model_object) {
 
   lcPrObjV *= scale.cost_;
   lcPrObjV += simplex_lp.offset_;
+  double primalObjectiveValue = simplex_info.primalObjectiveValue;
   double dualObjectiveValue = simplex_info.dualObjectiveValue;
-  double ObjEr =
-      fabs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
-  printf("Relative objective error of %11.4g: dualObjectiveValue = %g; "
-         "lcPrObjV = %g\n",
+  double ObjEr = fabs(primalObjectiveValue - lcPrObjV) / max(1.0, fabs(primalObjectiveValue));
+  printf("Relative primal objective error of %11.4g: primalObjectiveValue = %g; lcPrObjV = %g\n",
+	 ObjEr, primalObjectiveValue, lcPrObjV);
+  ObjEr = fabs(dualObjectiveValue - lcPrObjV) / max(1.0, fabs(dualObjectiveValue));
+  printf("Relative dual objective error of %11.4g: dualObjectiveValue = %g; lcPrObjV = %g\n",
          ObjEr, dualObjectiveValue, lcPrObjV);
 }
 #endif

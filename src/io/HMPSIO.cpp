@@ -62,7 +62,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol,
   int num_alien_entries=0;
   int alien_entries_message_level = ML_VERBOSE;
 #ifdef HiGHSDEV
-  alien_entries_message_level = ML_ALWAYS, 
+  alien_entries_message_level = ML_ALWAYS;
 #endif
 
   int integerCol = 0;
