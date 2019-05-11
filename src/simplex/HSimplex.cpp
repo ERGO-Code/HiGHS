@@ -52,11 +52,10 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   simplex_info.permute_simplex_lp = opt.permute_simplex_lp;
 
   // Set values of internal options
-
-  // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = false; // false;
-  simplex_info.report_simplex_outer_clock = false;
 #ifdef HiGHSDEV
+  // Options for reporting timing
+  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_outer_clock = false;
   simplex_info.report_simplex_phases_clock = false; // false;
   // Option for analysing simplex iterations
   simplex_info.analyseLp = false;                // false;
@@ -239,6 +238,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 
 void setupForSimplexSolve(HighsModelObject &highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
+  HighsTimer &timer = highs_model_object.timer_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   int solver_num_row = simplex_lp.numRow_;
   int solver_num_col = simplex_lp.numCol_;
@@ -255,24 +255,29 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
     // Simplex basis is not valid, but HiGHS basis is valid so convert it to a simplex basis
     simplex_interface.convertHighsToSimplexBasis();
   }
-  if (simplex_basis.valid_) {
-    // Valid simplex basis so use it to initialise...
-    initialise_from_nonbasic(highs_model_object); // initFromNonbasic();
+  if (simplex_basis.valid_ || simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
+    // Have either a supplied basis or the option to crash, so
+    // can expect to start from a non-identity basis
+    if (simplex_basis.valid_) {
+    // Valid basis is preferred, so use it to initialise...
+      initialise_from_nonbasic(highs_model_object);
+    } else {
+      // ... or initialise with a logical basis and crash
+      initialise_with_logical_basis(highs_model_object);
+      HCrash crash(highs_model_object);
+      timer.start(timer.crash_clock);
+      timer.start(simplex_info.clock_[CrashClock]);
+      crash.crash(simplex_info.crash_strategy);
+      timer.stop(simplex_info.clock_[CrashClock]);
+      timer.stop(timer.crash_clock);
+    }
+    // Now set up the internal matrix structures using the supplied or crash basis
     matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
 		 &simplex_lp.Astart_[0],
 		 &simplex_lp.Aindex_[0],
 		 &simplex_lp.Avalue_[0],
 		 &simplex_basis.nonbasicFlag_[0]);
   } else {
-    // ... or Crash, if the option to do so is set...
-    if (simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
-      HighsTimer &timer = highs_model_object.timer_;
-      HCrash crash;
-      timer.start(timer.crash_clock);
-      crash.crash(highs_model_object, 0);
-      timer.stop(timer.crash_clock);
-    }
-
     // ... otherwise start from a logical basis
     initialise_with_logical_basis(highs_model_object);
     matrix.setup_lgBs(simplex_lp.numCol_, simplex_lp.numRow_,
@@ -296,6 +301,19 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
     int rankDeficiency = compute_factor(highs_model_object);
     if (rankDeficiency) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
+    }
+  }
+  if (highs_model_object.options_.simplex_initial_condition_check) {
+    timer.start(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition = computeBasisCondition(highs_model_object);
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
+    bool basis_condition_ok = basis_condition < basis_condition_tolerance;
+    printf("Initial basis condition estimate of %11.4g", basis_condition);
+    if (basis_condition_ok) {
+      printf(" is within the tolerance of %g\n", basis_condition_tolerance);
+    } else { 
+      printf(" exceeds the tolerance of %g\n", basis_condition_tolerance);
     }
   }
 }
@@ -1430,8 +1448,10 @@ double computeBasisCondition(
     norm_B = max(c_norm, norm_B);
   }
   double cond_B = norm_Binv * norm_B;
-  printf("Hager estimate of ||B^{-1}||_1 = %g; ||B||_1 = %g so cond_1(B) estimate is %g\n",
-	 norm_Binv, norm_B, cond_B);
+#ifdef HiGHSDEV
+  printf("Hager estimate of ||B||_1 = %g; ||B^{-1}||_1 = %g so cond_1(B) estimate is %g\n",
+	 norm_B, norm_Binv, cond_B);
+#endif
   return cond_B;
 }
 

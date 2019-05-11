@@ -91,8 +91,8 @@ void HDual::solve(int num_threads) {
         // Basis is not logical and DSE weights are to be initialised
 #ifdef HiGHSDEV
         printf("Compute exact DSE weights\n");
-	int iClock = simplex_info.clock_[SimplexIzDseWtClock];
-	timer.start(iClock);
+	timer.start(simplex_info.clock_[SimplexIzDseWtClock]);
+	timer.start(simplex_info.clock_[DseIzClock]);
 #endif
         for (int i = 0; i < solver_num_row; i++) {
           row_ep.clear();
@@ -106,8 +106,9 @@ void HDual::solve(int num_threads) {
           uOpRsDensityRec(lc_OpRsDensity, row_epDensity);
         }
 #ifdef HiGHSDEV
-	timer.stop(iClock);
-        double IzDseWtTT = timer.read(iClock);
+	timer.stop(simplex_info.clock_[SimplexIzDseWtClock]);
+	timer.stop(simplex_info.clock_[DseIzClock]);
+        double IzDseWtTT = timer.read(SimplexIzDseWtClock);
         HighsPrintMessage(ML_DETAILED, "Computed %d initial DSE weights in %gs\n",
 			  solver_num_row, IzDseWtTT);
 #endif

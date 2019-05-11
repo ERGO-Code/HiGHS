@@ -392,6 +392,23 @@ OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& valu
   return OptionStatus::OK;
 }
 
+OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options, const int& value) {
+  options.simplex_initial_condition_check = value;
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options, const double& value) {
+  if (value >= SIMPLEX_INITIAL_CONDITION_TOLERANCE_MIN && value <= SIMPLEX_INITIAL_CONDITION_TOLERANCE_MAX)
+    options.dual_feasibility_tolerance = value;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "simplex initial condition tolerance value \"%s\" is not permitted: legal values are between %d and %d\n",
+		    value, SIMPLEX_INITIAL_CONDITION_TOLERANCE_MIN, SIMPLEX_INITIAL_CONDITION_TOLERANCE_MAX);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
   options.messageLevel = value;
   return OptionStatus::OK;
@@ -407,6 +424,7 @@ SimplexCrashStrategy intToSimplexCrashStrategy(const int& value) {
   if (value == (int)SimplexCrashStrategy::LTSSF_K) return SimplexCrashStrategy::LTSSF_K;
   if (value == (int)SimplexCrashStrategy::LTSSF_PRI) return SimplexCrashStrategy::LTSSF_PRI;
   if (value == (int)SimplexCrashStrategy::BIXBY) return SimplexCrashStrategy::BIXBY;
+  printf("Crash strategy option %d cannot be parsed yet!\n", value);
   return SimplexCrashStrategy::DEFAULT;
 }
 SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value) {

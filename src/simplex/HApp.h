@@ -87,22 +87,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
 #endif
 
-#ifdef HiGHSDEV
-  bool compute_basis_condition = true;
-  if (compute_basis_condition) {
-    double basis_condition = computeBasisCondition(highs_model_object);
-    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", basis_condition);
-    if (basis_condition > 1e12) {
-      HighsPrintMessage(ML_MINIMAL, " excessive\n");
-      simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
-      HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
-      return result;
-    } else {
-      HighsPrintMessage(ML_MINIMAL, " OK\n");
-    }
-  }
-#endif
-
   if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
     // Use primal simplex solver
     HPrimal primal_solver(highs_model_object);
@@ -139,16 +123,19 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       simplex_info.primal_phase2_iteration_count !=
       simplex_info.iteration_count) printf("Iteration total error \n");
 
+  if (highs_model_object.options_.simplex_initial_condition_check) {
+    timer.start(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition = computeBasisCondition(highs_model_object);
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+    printf("Optimal basis condition estimate is %g\n", basis_condition);
+  }
+
   // Official finish of solver
   timer.stop(timer.solve_clock);
 
 #ifdef HiGHSDEV
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   reportSimplexProfiling(highs_model_object);
-  if (compute_basis_condition) {
-    double basis_condition = computeBasisCondition(highs_model_object);
-    printf("Optimal basis condition estimate is %g\n", basis_condition);
-  }
   // ToDO move iterationAnalysisReport to simplex
   printf("!! Move iterationAnalysisReport() to HSimplex\n");
   //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();

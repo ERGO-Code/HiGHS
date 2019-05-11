@@ -12,7 +12,6 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
-#include "simplex/HMatrix.h"
 #include "util/HighsSort.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"
@@ -29,15 +28,17 @@ using std::abs;
 using std::cout;
 using std::flush;
 
-void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
-  simplex_lp_ = &highs_model_object.simplex_lp_;
-  simplex_basis_ = &highs_model_object.simplex_basis_;
-  matrix_ = &highs_model_object.matrix_;
-  if (simplex_lp_->numRow_ == 0) return;
-  numRow = simplex_lp_->numRow_;
-  numCol = simplex_lp_->numCol_;
-  numTot = simplex_lp_->numCol_ + simplex_lp_->numRow_;
-  const int objSense = simplex_lp_->sense_;
+void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
+  crash_strategy = pass_crash_strategy;
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  SimplexBasis &simplex_basis = workHMO.simplex_basis_;
+  //  HMatrix &matrix = workHMO.matrix_;
+  if (simplex_lp.numRow_ == 0) return;
+  numRow = simplex_lp.numRow_;
+  numCol = simplex_lp.numCol_;
+  numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+  const int objSense = simplex_lp.sense_;
 #ifdef HiGHSDEV
   if (fabs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
@@ -46,9 +47,10 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
 #endif
   assert(fabs(objSense) == 1);
 
-  if (Crash_Mode == Crash_Mode_Bs
+  printf("\nArrived in CRASH!!\n\n");
+  if (crash_strategy == SimplexCrashStrategy::BASIC
 #ifdef HiGHSDEV
-      || Crash_Mode == Crash_Mode_TsSing
+      || crash_strategy == SimplexCrashStrategy::TEST_SING
 #endif
   ) {
     // First and last variable types are the only types for basis and
@@ -68,38 +70,39 @@ void HCrash::crash(HighsModelObject &highs_model_object, int Crash_Mode) {
     crsh_no_act_pri_v = crsh_mn_pri_v;
   }
 
-  if (Crash_Mode == Crash_Mode_Bixby ||
-      Crash_Mode == Crash_Mode_BixbyNoNzCCo) {
+  if (crash_strategy == SimplexCrashStrategy::BIXBY ||
+      crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS) {
     // Use the Bixby crash
-    bixby(highs_model_object, Crash_Mode);
+    bixby();
   }
 #ifdef HiGHSDEV
-  else if (Crash_Mode == Crash_Mode_TsSing) {
+  else if (crash_strategy == SimplexCrashStrategy::TEST_SING) {
     // Use the test singularity crash
-    tsSing(highs_model_object);
+    tsSing();
   }
 #endif
   else {
     // Use the LTSSF crash
-    ltssf(highs_model_object, Crash_Mode);
+    ltssf();
   }
 }
 
-void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+void HCrash::bixby() {
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
 
-  const int *Astart = &simplex_lp_->Astart_[0];
-  const int *Aindex = &simplex_lp_->Aindex_[0];
-  const double *Avalue = &simplex_lp_->Avalue_[0];
+  const int *Astart = &simplex_lp.Astart_[0];
+  const int *Aindex = &simplex_lp.Aindex_[0];
+  const double *Avalue = &simplex_lp.Avalue_[0];
 
-  bixby_no_nz_c_co = Crash_Mode == Crash_Mode_BixbyNoNzCCo;
+  bixby_no_nz_c_co = crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS;
   bixby_no_nz_c_co = false;
 
-  bool perform_crash = bixby_iz_da(highs_model_object);
+  bool perform_crash = bixby_iz_da();
   if (!perform_crash) return;
 
-  // bixby_rp_mrt(highs_model_object);
+  // bixby_rp_mrt(workHMO);
 
   // These multipliers are in Step 2(a) and Step 2(b) of the paper: default
   // values 0.99 and 0.01
@@ -234,11 +237,11 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
     int columnIn = cz_c_n;
     int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(highs_model_object, columnOut);\n"); //model_->setSourceOutFmBd(columnOut);
+    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy
     // of the matrix
-    printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n");//model_->updatePivots(columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(columnIn, columnOut);\n"); //model_->updateMatrix(columnIn, columnOut);
+    update_pivots(workHMO, columnIn, rowOut, sourceOut);
+    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -247,72 +250,24 @@ void HCrash::bixby(HighsModelObject &highs_model_object, int Crash_Mode) {
 #endif
   }
 #ifdef HiGHSDEV
-  crsh_an_r_c_st_af(highs_model_object, Crash_Mode_Bixby);
+  crsh_an_r_c_st_af();
 #endif
 }
 
-void HCrash::bixby_rp_mrt(HighsModelObject &highs_model_object) {
-  const int objSense = simplex_lp_->sense_;
-  const double *colCost = &simplex_lp_->colCost_[0];
-  const double *colLower = &simplex_lp_->colLower_[0];
-  const double *colUpper = &simplex_lp_->colUpper_[0];
-  double mx_co_v = -HIGHS_CONST_INF;
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    double sense_col_cost = objSense * colCost[c_n];
-    mx_co_v = max(fabs(sense_col_cost), mx_co_v);
-  }
-  double co_v_mu = 1;
-  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  double prev_mrt_v0 = -HIGHS_CONST_INF;
-  double prev_mrt_v = -HIGHS_CONST_INF;
-  bool rp_c;
-  bool rp_al_c = false;
-  int n_mrt_v = 0;
-  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  printf("\nAnalysis of sorted Bixby merits\n");
-  for (int ps_n = 0; ps_n < numCol; ps_n++) {
-    double mrt_v = bixby_mrt_v[ps_n];
-    int c_n = bixby_mrt_ix[ps_n];
-    double sense_col_cost = objSense * colCost[c_n];
-    double mrt_v0 = mrt_v - sense_col_cost / co_v_mu;
-    double c_lb = colLower[c_n];
-    double c_ub = colUpper[c_n];
-    if ((ps_n == 0) || (ps_n == numCol - 1))
-      rp_c = true;
-    else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
-             (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
-      rp_c = true;
-      prev_mrt_v = -HIGHS_CONST_INF;
-      prev_mrt_v0 = -HIGHS_CONST_INF;
-    } else if (rp_al_c)
-      rp_c = true;
-    else
-      rp_c = mrt_v0 > prev_mrt_v0;
-    prev_mrt_v0 = mrt_v0;
-    if (mrt_v > prev_mrt_v) {
-      n_mrt_v += 1;
-      prev_mrt_v = mrt_v;
-    }
-    if (rp_c)
-      printf("%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; [%10.4g,%10.4g]\n",
-	     ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
-  }
-  printf("\n%6d different Bixby merits\n", n_mrt_v);
-}
+bool HCrash::bixby_iz_da() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int *Astart = &simplex_lp.Astart_[0];
+  const double *Avalue = &simplex_lp.Avalue_[0];
+  const int objSense = simplex_lp.sense_;
+  const double *colCost = &simplex_lp.colCost_[0];
+  const double *colLower = &simplex_lp.colLower_[0];
+  const double *colUpper = &simplex_lp.colUpper_[0];
 
-bool HCrash::bixby_iz_da(HighsModelObject &highs_model_object) {
-  const int *Astart = &simplex_lp_->Astart_[0];
-  const double *Avalue = &simplex_lp_->Avalue_[0];
-  const int objSense = simplex_lp_->sense_;
-  const double *colCost = &simplex_lp_->colCost_[0];
-  const double *colLower = &simplex_lp_->colLower_[0];
-  const double *colUpper = &simplex_lp_->colUpper_[0];
-
-  // const double *primalColLowerImplied = simplex_lp_->primalColLowerImplied_;
-  // const double *primalColUpperImplied = simplex_lp_->primalColUpperImplied_;
+  // const double *primalColLowerImplied = simplex_lp.primalColLowerImplied_;
+  // const double *primalColUpperImplied = simplex_lp.primalColUpperImplied_;
   //
-  // const double *dualColLowerImplied = simplex_lp_->dualColLowerImplied_;
-  // const double *dualColUpperImplied = simplex_lp_->dualColUpperImplied_;
+  // const double *dualColLowerImplied = simplex_lp.dualColLowerImplied_;
+  // const double *dualColUpperImplied = simplex_lp.dualColUpperImplied_;
 
   // Allocate the arrays required for crash
   crsh_mtx_c_mx_abs_v.resize(numCol);
@@ -326,12 +281,12 @@ bool HCrash::bixby_iz_da(HighsModelObject &highs_model_object) {
   // bixby_ze_r_k.resize(numRow);
 
 #ifdef HiGHSDEV
-  crsh_an_c_co(highs_model_object);
+  crsh_an_c_co();
 #endif
-  crsh_iz_vr_ty(highs_model_object, Crash_Mode_Bixby);
+  crsh_iz_vr_ty();
 
 #ifdef HiGHSDEV
-  crsh_rp_r_c_st(0, Crash_Mode_Bixby);
+  crsh_rp_r_c_st(0);
 #endif
 
   // Initialise the arrays required for the Bixby crash
@@ -481,122 +436,85 @@ bool HCrash::bixby_iz_da(HighsModelObject &highs_model_object) {
   return true;
 }
 
-void HCrash::crsh_iz_vr_ty(HighsModelObject &highs_model_object, int Crash_Mode) {
-  const double *colLower = &simplex_lp_->colLower_[0];
-  const double *colUpper = &simplex_lp_->colUpper_[0];
-  const double *rowLower = &simplex_lp_->rowLower_[0];
-  const double *rowUpper = &simplex_lp_->rowUpper_[0];
-  const int *nonbasicFlag = &highs_model_object.simplex_basis_.nonbasicFlag_[0];
-  // Allocate the arrays required for crash
-  crsh_r_ty.resize(numRow);
-  crsh_c_ty.resize(numCol);
-  if (Crash_Mode == Crash_Mode_Bs) {
-    for (int r_n = 0; r_n < numRow; r_n++) {
-      if (nonbasicFlag[numCol + r_n] == NONBASIC_FLAG_TRUE)
-        crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
-      else
-        crsh_r_ty[r_n] = crsh_vr_ty_bc;
-    }
-    for (int c_n = 0; c_n < numCol; c_n++) {
-      if (nonbasicFlag[c_n] == NONBASIC_FLAG_TRUE)
-        crsh_c_ty[c_n] = crsh_vr_ty_non_bc;
-      else
-        crsh_c_ty[c_n] = crsh_vr_ty_bc;
-    }
-  } else {
-    for (int r_n = 0; r_n < numRow; r_n++) {
-      if (rowUpper[r_n] >= HIGHS_CONST_INF) {
-        if (rowLower[r_n] <= -HIGHS_CONST_INF)
-          crsh_r_ty[r_n] = crsh_vr_ty_fr;  // Free row
-        else
-          crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) row
-      } else {
-        if (rowLower[r_n] <= -HIGHS_CONST_INF)
-          crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) row
-        else {
-          // Two-sided row - maybe fixed (equality)
-          if (rowLower[r_n] != rowUpper[r_n])
-            crsh_r_ty[r_n] = crsh_vr_ty_2_sd;  // 2-sided row
-          else
-            crsh_r_ty[r_n] = crsh_vr_ty_fx;  // Fixed (equality) row
-        }
-      }
-    }
-    // Set up the column variable types for crash
-    for (int c_n = 0; c_n < numCol; c_n++) {
-      if (colUpper[c_n] >= HIGHS_CONST_INF) {
-        if (colLower[c_n] <= -HIGHS_CONST_INF)
-          crsh_c_ty[c_n] = crsh_vr_ty_fr;  // Free column
-        else
-          crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) column
-      } else {
-        if (colLower[c_n] <= -HIGHS_CONST_INF)
-          crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) column
-        else {
-          // Two-sided row - maybe fixed (equality)
-          if (colLower[c_n] != colUpper[c_n])
-            crsh_c_ty[c_n] = crsh_vr_ty_2_sd;  // 2-sided column
-          else
-            crsh_c_ty[c_n] = crsh_vr_ty_fx;  // Fixed column
-        }
-      }
-    }
+void HCrash::bixby_rp_mrt() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int objSense = simplex_lp.sense_;
+  const double *colCost = &simplex_lp.colCost_[0];
+  const double *colLower = &simplex_lp.colLower_[0];
+  const double *colUpper = &simplex_lp.colUpper_[0];
+  double mx_co_v = -HIGHS_CONST_INF;
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    double sense_col_cost = objSense * colCost[c_n];
+    mx_co_v = max(fabs(sense_col_cost), mx_co_v);
   }
-#ifdef HiGHSDEV
-  // Allocate the arrays to analyse crash
-  crsh_vr_ty_og_n_r.resize(crsh_l_vr_ty + 1);
-  crsh_vr_ty_rm_n_r.resize(crsh_l_vr_ty + 1);
-  crsh_vr_ty_og_n_c.resize(crsh_l_vr_ty + 1);
-  crsh_vr_ty_add_n_c.resize(crsh_l_vr_ty + 1);
-  crsh_bs_vr_ty_n_r.resize(crsh_l_vr_ty + 1);
-  crsh_bs_vr_ty_n_c.resize(crsh_l_vr_ty + 1);
-  crsh_nonbc_vr_ty_n_r.resize(crsh_l_vr_ty + 1);
-  crsh_nonbc_vr_ty_n_c.resize(crsh_l_vr_ty + 1);
-  // Initialise the counts of numbers and changes of variable types -
-  // just for reporting
-  for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
-    crsh_vr_ty_og_n_r[vr_ty] = 0;
-    crsh_vr_ty_og_n_c[vr_ty] = 0;
-    crsh_vr_ty_rm_n_r[vr_ty] = 0;
-    crsh_vr_ty_add_n_c[vr_ty] = 0;
-    crsh_bs_vr_ty_n_r[vr_ty] = 0;
-    crsh_bs_vr_ty_n_c[vr_ty] = 0;
-    crsh_nonbc_vr_ty_n_r[vr_ty] = 0;
-    crsh_nonbc_vr_ty_n_c[vr_ty] = 0;
+  double co_v_mu = 1;
+  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
+  double prev_mrt_v0 = -HIGHS_CONST_INF;
+  double prev_mrt_v = -HIGHS_CONST_INF;
+  bool rp_c;
+  bool rp_al_c = false;
+  int n_mrt_v = 0;
+  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
+  printf("\nAnalysis of sorted Bixby merits\n");
+  for (int ps_n = 0; ps_n < numCol; ps_n++) {
+    double mrt_v = bixby_mrt_v[ps_n];
+    int c_n = bixby_mrt_ix[ps_n];
+    double sense_col_cost = objSense * colCost[c_n];
+    double mrt_v0 = mrt_v - sense_col_cost / co_v_mu;
+    double c_lb = colLower[c_n];
+    double c_ub = colUpper[c_n];
+    if ((ps_n == 0) || (ps_n == numCol - 1))
+      rp_c = true;
+    else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
+             (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
+      rp_c = true;
+      prev_mrt_v = -HIGHS_CONST_INF;
+      prev_mrt_v0 = -HIGHS_CONST_INF;
+    } else if (rp_al_c)
+      rp_c = true;
+    else
+      rp_c = mrt_v0 > prev_mrt_v0;
+    prev_mrt_v0 = mrt_v0;
+    if (mrt_v > prev_mrt_v) {
+      n_mrt_v += 1;
+      prev_mrt_v = mrt_v;
+    }
+    if (rp_c)
+      printf("%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; [%10.4g,%10.4g]\n",
+	     ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
   }
-  for (int r_n = 0; r_n < numRow; r_n++) crsh_vr_ty_og_n_r[crsh_r_ty[r_n]] += 1;
-  for (int c_n = 0; c_n < numCol; c_n++) crsh_vr_ty_og_n_c[crsh_c_ty[c_n]] += 1;
-#endif
+  printf("\n%6d different Bixby merits\n", n_mrt_v);
 }
 
-void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
-  printf("HCrash::ltssf Crash_Mode = %d\n", Crash_Mode);
-  if (Crash_Mode == Crash_Mode_LTSSF_k) {
+void HCrash::ltssf() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  printf("HCrash::ltssf crash_strategy = %d\n", (int)crash_strategy);
+  if (crash_strategy == SimplexCrashStrategy::LTSSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
     alw_al_bs_cg = false;
     no_ck_pv = false;
-  } else if (Crash_Mode == Crash_Mode_LTSF_k) {
+  } else if (crash_strategy == SimplexCrashStrategy::LTSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
     alw_al_bs_cg = false;
     no_ck_pv = true;
-  } else if (Crash_Mode == Crash_Mode_LTSF) {
+  } else if (crash_strategy == SimplexCrashStrategy::LTSF) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
     alw_al_bs_cg = true;
     no_ck_pv = true;
-  } else if (Crash_Mode == Crash_Mode_LTSSF_pri) {
+  } else if (crash_strategy == SimplexCrashStrategy::LTSSF_PRI) {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
     no_ck_pv = false;
-  } else if (Crash_Mode == Crash_Mode_LTSF_pri) {
+  } else if (crash_strategy == SimplexCrashStrategy::LTSF_PRI) {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
     no_ck_pv = false;
-  } else if (Crash_Mode == Crash_Mode_Bs) {
+  } else if (crash_strategy == SimplexCrashStrategy::BASIC) {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
@@ -610,12 +528,12 @@ void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
   }
 
   mn_co_tie_bk = false;
-  numRow = simplex_lp_->numRow_;
-  numCol = simplex_lp_->numCol_;
-  numTot = simplex_lp_->numCol_ + simplex_lp_->numRow_;
+  numRow = simplex_lp.numRow_;
+  numCol = simplex_lp.numCol_;
+  numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
 
   // Initialise the LTSSF data structures
-  ltssf_iz_da(highs_model_object, Crash_Mode);
+  ltssf_iz_da();
 #ifdef HiGHSDEV
   printf("\nLTSSF Crash\n");
   printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
@@ -653,9 +571,9 @@ void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
 #endif
 
 #ifdef HiGHSDEV
-  crsh_rp_r_c_st(0, Crash_Mode);
+  crsh_rp_r_c_st(0);
 #endif
-  ltssf_iterate(highs_model_object);
+  ltssf_iterate();
 
 #ifdef HiGHSDEV
   printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
@@ -668,21 +586,21 @@ void HCrash::ltssf(HighsModelObject &highs_model_object, int Crash_Mode) {
       " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
       "value = %6.4e\n",
       tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
-  crsh_an_r_c_st_af(highs_model_object, Crash_Mode);
+  crsh_an_r_c_st_af();
 #endif
 }
 
-void HCrash::ltssf_iz_mode(int Crash_Mode) {
+void HCrash::ltssf_iz_mode() {
   crsh_fn_cf_pri_v = 1;
   crsh_fn_cf_k = 10;
   alw_al_bs_cg = false;
   no_ck_pv = false;
 }
 
-void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
+void HCrash::ltssf_iterate() {
   // LTSSF Main loop
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
   bool ltssf_stop = false;
@@ -690,7 +608,7 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
     ltssf_cz_r();
     if (cz_r_n == no_ix) break;
     cz_r_pri_v = crsh_r_ty_pri_v[crsh_r_ty[cz_r_n]];
-    ltssf_cz_c(highs_model_object);
+    ltssf_cz_c();
     bool bs_cg = cz_c_n != no_ix;
     if (bs_cg) {
 #ifdef HiGHSDEV
@@ -706,11 +624,11 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
       int columnIn = cz_c_n;
       int rowOut = cz_r_n;
       int columnOut = numCol + cz_r_n;
-      int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(highs_model_object, columnOut);\n");//model_->setSourceOutFmBd(columnOut);
+      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
       // Update the basic/nonbasic variable info and the row-wise copy
       // of the matrix
-      printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n"); //model_->updatePivots(columnIn, rowOut, sourceOut);
-      if (simplex_lp_status.has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(columnIn, columnOut);\n");// model_->updateMatrix(columnIn, columnOut);
+      update_pivots(workHMO, columnIn, rowOut, sourceOut);
+      if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -727,7 +645,7 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
 #ifdef HiGHSDEV
     if (reportCrashData) ltssf_rp_pri_k_da();
 #endif
-    ltssf_u_da(highs_model_object);
+    ltssf_u_da();
     // Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
 #ifdef HiGHSDEV
     if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
@@ -754,9 +672,9 @@ void HCrash::ltssf_iterate(HighsModelObject &highs_model_object) {
   }
 }
 
-void HCrash::ltssf_u_da(HighsModelObject &highs_model_object) {
+void HCrash::ltssf_u_da() {
   if ((cz_r_n != no_ix) && (cz_c_n != no_ix)) {
-    ltssf_u_da_af_bs_cg(highs_model_object);
+    ltssf_u_da_af_bs_cg();
   } else {
     ltssf_u_da_af_no_bs_cg();
   }
@@ -770,9 +688,10 @@ void HCrash::ltssf_u_da(HighsModelObject &highs_model_object) {
   }
 }
 
-void HCrash::ltssf_u_da_af_bs_cg(HighsModelObject &highs_model_object) {
-  const int *Astart = &simplex_lp_->Astart_[0];
-  const int *Aindex = &simplex_lp_->Aindex_[0];
+void HCrash::ltssf_u_da_af_bs_cg() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int *Astart = &simplex_lp.Astart_[0];
+  const int *Aindex = &simplex_lp.Aindex_[0];
   // ltssf_rp_r_k();
   for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1]; r_el_n++) {
     int c_n = CrshARindex[r_el_n];
@@ -905,31 +824,32 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
   }
 }
 
-void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  printf("HCrash::ltssf_iz_da Crash_Mode = %d\n", Crash_Mode);
+void HCrash::ltssf_iz_da() {
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  printf("HCrash::ltssf_iz_da crash_strategy = %d\n", (int)crash_strategy);
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
-  const int *Astart = &simplex_lp_->Astart_[0];
-  const int *Aindex = &simplex_lp_->Aindex_[0];
-  const double *Avalue = &simplex_lp_->Avalue_[0];
+  const int *Astart = &simplex_lp.Astart_[0];
+  const int *Aindex = &simplex_lp.Aindex_[0];
+  const double *Avalue = &simplex_lp.Avalue_[0];
   ;
   int numEl = Astart[numCol];
-  // const double *primalColLowerImplied = simplex_lp_->primalColLowerImplied_;
-  // const double *primalColUpperImplied = simplex_lp_->primalColUpperImplied_;
-  // const double *primalRowLowerImplied = simplex_lp_->primalRowLowerImplied_;
-  // const double *primalRowUpperImplied = simplex_lp_->primalRowUpperImplied_;
+  // const double *primalColLowerImplied = simplex_lp.primalColLowerImplied_;
+  // const double *primalColUpperImplied = simplex_lp.primalColUpperImplied_;
+  // const double *primalRowLowerImplied = simplex_lp.primalRowLowerImplied_;
+  // const double *primalRowUpperImplied = simplex_lp.primalRowUpperImplied_;
   //
-  // const double *dualColLowerImplied = simplex_lp_->dualColLowerImplied_;
-  // const double *dualColUpperImplied = simplex_lp_->dualColUpperImplied_;
-  // const double *dualRowLowerImplied = simplex_lp_->dualRowLowerImplied_;
-  // const double *dualRowUpperImplied = simplex_lp_->dualRowUpperImplied_;
+  // const double *dualColLowerImplied = simplex_lp.dualColLowerImplied_;
+  // const double *dualColUpperImplied = simplex_lp.dualColUpperImplied_;
+  // const double *dualRowLowerImplied = simplex_lp.dualRowLowerImplied_;
+  // const double *dualRowUpperImplied = simplex_lp.dualRowUpperImplied_;
 
   // Allocate the crash variable type arrays
   crsh_r_ty_pri_v.resize(crsh_l_vr_ty);
   crsh_c_ty_pri_v.resize(crsh_l_vr_ty);
-  if (Crash_Mode == Crash_Mode_Bs) {
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
     // Basis-preserving crash:
     printf("Basis-preserving crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_non_bc] = 1;
@@ -967,16 +887,13 @@ void HCrash::ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode) {
   crsh_act_r.resize(numRow);
   crsh_act_c.resize(numCol);
 
-  crsh_iz_vr_ty(highs_model_object, Crash_Mode);
+  crsh_iz_vr_ty();
 
-  if (Crash_Mode == Crash_Mode_Bs) {
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
     printf("Call replace_with_logical_basis()\n");
-    highs_model_object.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
-    simplex_lp_status.has_matrix_row_wise = true;
-    simplex_lp_status.has_matrix_col_wise = true;
-
+    //    workHMO.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
   }
   mx_r_pri = crsh_mn_pri_v;
   for (int r_n = 0; r_n < numRow; r_n++) {
@@ -1190,9 +1107,10 @@ void HCrash::ltssf_cz_r() {
   }
 }
 
-void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
-  const int objSense = simplex_lp_->sense_;
-  const double *colCost = &simplex_lp_->colCost_[0];
+void HCrash::ltssf_cz_c() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int objSense = simplex_lp.sense_;
+  const double *colCost = &simplex_lp.colCost_[0];
 
   cz_c_n = no_ix;
   int su_r_c_pri_v_lm = crsh_mx_pri_v;
@@ -1266,9 +1184,9 @@ void HCrash::ltssf_cz_c(HighsModelObject &highs_model_object) {
 }
 
 #ifdef HiGHSDEV
-void HCrash::tsSing(HighsModelObject &highs_model_object) {
-  //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+void HCrash::tsSing() {
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
@@ -1278,226 +1196,14 @@ void HCrash::tsSing(HighsModelObject &highs_model_object) {
     int columnIn = c_n;
     int rowOut = r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = 0; printf("Need to call simplex_method_.set_source_out_from_bound(highs_model_object, columnOut);\n");// model_->setSourceOutFmBd(columnOut);
+    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
     // Update the basic/nonbasic variable info and the row-wise copy of the
     // matrix
-    printf("Need to call simplex_method_.update_pivots(highs_model_object, columnIn, rowOut, sourceOut);\n");//model_->updatePivots(columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) printf("Need to call simplex_method_.update_matrix(highs_model_object, columnIn, columnOut);\n"); // model_->updateMatrix(columnIn, columnOut);
+    update_pivots(workHMO, columnIn, rowOut, sourceOut);
+    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
     nBcVr++;
     if (nBcVr == numRow) break;
   }
-}
-
-void HCrash::crsh_an_c_co(HighsModelObject &highs_model_object) {
-  const int objSense = simplex_lp_->sense_;
-  const double *colCost = &simplex_lp_->colCost_[0];
-  const double *colLower = &simplex_lp_->colLower_[0];
-  const double *colUpper = &simplex_lp_->colUpper_[0];
-
-  int n_ze_c_co = 0;
-  int n_fs_c_co = 0;
-
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    double sense_col_cost = objSense * colCost[c_n];
-    if (sense_col_cost == 0.0) {
-      n_ze_c_co += 1;
-      n_fs_c_co += 1;
-      continue;
-    }
-    if (colUpper[c_n] >= HIGHS_CONST_INF) {
-      // Free column: nonzero cost cannot be feasible
-      if (colLower[c_n] > -HIGHS_CONST_INF) {
-        // Lower-bounded (1-sided) column: non-negative cost is feasible
-        double sense_col_cost = objSense * colCost[c_n];
-        if (sense_col_cost >= 0.0) n_fs_c_co += 1;
-      }
-    } else {
-      if (colLower[c_n] <= -HIGHS_CONST_INF) {
-        // Upper-bonded (1-sided) column: non-positive cost is feasible
-        double sense_col_cost = objSense * colCost[c_n];
-        if (sense_col_cost <= 0.0) n_fs_c_co += 1;
-      } else {
-        // Two-sided column: any cost is feasible
-        n_fs_c_co += 1;
-      }
-    }
-  }
-  printf(" Model has %7d Ze costs (%3d%%)\n", n_ze_c_co,
-         (100 * n_ze_c_co) / numCol);
-  printf(" Model has %7d Fs costs (%3d%%)\n", n_fs_c_co,
-         (100 * n_fs_c_co) / numCol);
-}
-
-void HCrash::crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode) {
-  const int *Astart = &simplex_lp_->Astart_[0];
-  for (int k = 0; k < numRow; k++) {
-    int vr_n = highs_model_object.simplex_basis_.basicIndex_[k];
-    if (vr_n < numCol) {
-      int c_n = vr_n;
-      crsh_bs_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
-    } else {
-      int r_n = vr_n - numCol;
-      crsh_bs_vr_ty_n_r[crsh_r_ty[r_n]] += 1;
-    }
-  }
-
-  for (int vr_n = 0; vr_n < numTot; vr_n++) {
-    if (highs_model_object.simplex_basis_.nonbasicFlag_[vr_n] == 0) continue;
-    if (vr_n < numCol) {
-      int c_n = vr_n;
-      crsh_nonbc_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
-    } else {
-      int r_n = vr_n - numCol;
-      crsh_nonbc_vr_ty_n_r[crsh_r_ty[r_n]] += 1;
-    }
-  }
-  int bs_mtx_n_struc_el = 0;
-  for (int r_n = 0; r_n < numRow; r_n++) {
-    int vr_n = highs_model_object.simplex_basis_.basicIndex_[r_n];
-    if (vr_n < numCol) {
-      int c_n_el = Astart[vr_n + 1] - Astart[vr_n];
-      bs_mtx_n_struc_el += c_n_el;
-    }
-  }
-
-  crsh_rp_r_c_st(1, Crash_Mode);
-  crsh_rp_r_c_st(2, Crash_Mode);
-  printf(" Basis    matrix    contains%7d structural entries\n",
-         bs_mtx_n_struc_el);
-  crsh_rp_r_c_st(3, Crash_Mode);
-}
-
-void HCrash::crsh_rp_r_c_st(int mode, int Crash_Mode) {
-  string TyNm;
-  int ck_su_n_c = 0;
-  int ck_su_n_r = 0;
-  int ck_su_n_bc_vr = 0;
-  int ck_su_n_nonbc_vr = 0;
-  int n_ps = 2;
-  if (mode == 1) n_ps = 1;
-  for (int ps_n = 0; ps_n < n_ps; ps_n++) {
-    if (ps_n == 1) {
-      if (mode == 0)
-        printf("grep_CharCrash,Rows");
-      else if (mode == 2)
-        printf("grep_CharCrash,Basic");
-      else
-        printf("grep_CharCrash,Nonbasic");
-      for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
-        TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
-        if (mode == 0) {
-          printf(",%s", TyNm.c_str());
-        } else {
-          printf(",%s_Row", TyNm.c_str());
-          printf(",%s_Col", TyNm.c_str());
-        }
-      }
-      printf("\n");
-      if (mode == 0)
-        printf("grep_CharCrash,%d", numRow);
-      else if (mode == 2)
-        printf("grep_CharCrash,%d", numRow);
-      else if (mode == 3)
-        printf("grep_CharCrash,%d", numCol);
-    }
-    for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
-      TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
-      if (mode == 0) {
-        if (ps_n == 0) ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
-        int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
-        if (ps_n == 0) {
-          if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-            printf(" Model has %7d %3s rows (%3d%%)\n",
-                   crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(), lc_pct);
-        } else {
-          printf(",%7d", crsh_vr_ty_og_n_r[vr_ty]);
-        }
-      } else if (mode == 1) {
-        if (crsh_vr_ty_og_n_r[vr_ty] > 0)
-          printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
-                 crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
-                 TyNm.c_str(),
-                 (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
-      } else if (mode == 2) {
-        if (ps_n == 0) {
-	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
-	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
-	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
-	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
-          if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
-            printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
-                   crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
-                   (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
-          if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
-            printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
-                   crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
-                   (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
-        } else {
-          printf(",%d,%d", crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
-        }
-      } else {
-        if (ps_n == 0) {
-          if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
-            printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
-                   crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
-                   (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
-          if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
-            printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
-                   crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
-                   (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
-        } else {
-          printf(",%d,%d", crsh_nonbc_vr_ty_n_r[vr_ty],
-                 crsh_nonbc_vr_ty_n_c[vr_ty]);
-        }
-      }
-    }
-    if (ps_n == 1) printf("\n");
-  }
-  if (mode == 0) assert(ck_su_n_r == numRow);
-  if (mode == 2) assert(ck_su_n_bc_vr == numRow);
-  if (mode == 2) assert(ck_su_n_nonbc_vr == numCol);
-  if (mode <= 1) {
-    for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
-      TyNm = crsh_nm_o_crsh_vr_ty(vr_ty, Crash_Mode);
-      if (mode == 0) ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
-      if (crsh_vr_ty_og_n_c[vr_ty] > 0)
-        printf(" Model has %7d %3s cols (%3d%%)\n", crsh_vr_ty_og_n_c[vr_ty],
-               TyNm.c_str(), (100 * crsh_vr_ty_og_n_c[vr_ty]) / numCol);
-
-      else if (mode == 1) {
-        if (crsh_vr_ty_og_n_c[vr_ty] > 0)
-          printf(" Added   %7d of %7d %3s cols (%3d%%)\n",
-                 crsh_vr_ty_add_n_c[vr_ty], crsh_vr_ty_og_n_c[vr_ty],
-                 TyNm.c_str(),
-                 (100 * crsh_vr_ty_add_n_c[vr_ty]) / crsh_vr_ty_og_n_c[vr_ty]);
-      }
-    }
-    if (mode == 0) assert(ck_su_n_c == numCol);
-  }
-}
-
-string HCrash::crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode) {
-  string TyNm;
-  if (Crash_Mode == Crash_Mode_Bs) {
-    if (vr_ty == crsh_vr_ty_non_bc)
-      TyNm = "NBc";
-    else if (vr_ty == crsh_vr_ty_bc)
-      TyNm = " Bc";
-    else
-      printf("Unrecognised type %d\n", vr_ty);
-  } else {
-    if (vr_ty == crsh_vr_ty_fx)
-      TyNm = "Fx ";
-    else if (vr_ty == crsh_vr_ty_2_sd)
-      TyNm = "2sd";
-    else if (vr_ty == crsh_vr_ty_1_sd)
-      TyNm = "1sd";
-    else if (vr_ty == crsh_vr_ty_fr)
-      TyNm = "Fr ";
-    else
-      printf("Unrecognised type %d\n", vr_ty);
-  }
-  return TyNm;
 }
 
 void HCrash::ltssf_rp_r_k() {
@@ -1594,3 +1300,306 @@ void HCrash::ltssf_rp_pri_k_da() {
 
 #endif
 
+void HCrash::crsh_iz_vr_ty() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const double *colLower = &simplex_lp.colLower_[0];
+  const double *colUpper = &simplex_lp.colUpper_[0];
+  const double *rowLower = &simplex_lp.rowLower_[0];
+  const double *rowUpper = &simplex_lp.rowUpper_[0];
+  const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  // Allocate the arrays required for crash
+  crsh_r_ty.resize(numRow);
+  crsh_c_ty.resize(numCol);
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+    for (int r_n = 0; r_n < numRow; r_n++) {
+      if (nonbasicFlag[numCol + r_n] == NONBASIC_FLAG_TRUE)
+        crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
+      else
+        crsh_r_ty[r_n] = crsh_vr_ty_bc;
+    }
+    for (int c_n = 0; c_n < numCol; c_n++) {
+      if (nonbasicFlag[c_n] == NONBASIC_FLAG_TRUE)
+        crsh_c_ty[c_n] = crsh_vr_ty_non_bc;
+      else
+        crsh_c_ty[c_n] = crsh_vr_ty_bc;
+    }
+  } else {
+    for (int r_n = 0; r_n < numRow; r_n++) {
+      if (rowUpper[r_n] >= HIGHS_CONST_INF) {
+        if (rowLower[r_n] <= -HIGHS_CONST_INF)
+          crsh_r_ty[r_n] = crsh_vr_ty_fr;  // Free row
+        else
+          crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) row
+      } else {
+        if (rowLower[r_n] <= -HIGHS_CONST_INF)
+          crsh_r_ty[r_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) row
+        else {
+          // Two-sided row - maybe fixed (equality)
+          if (rowLower[r_n] != rowUpper[r_n])
+            crsh_r_ty[r_n] = crsh_vr_ty_2_sd;  // 2-sided row
+          else
+            crsh_r_ty[r_n] = crsh_vr_ty_fx;  // Fixed (equality) row
+        }
+      }
+    }
+    // Set up the column variable types for crash
+    for (int c_n = 0; c_n < numCol; c_n++) {
+      if (colUpper[c_n] >= HIGHS_CONST_INF) {
+        if (colLower[c_n] <= -HIGHS_CONST_INF)
+          crsh_c_ty[c_n] = crsh_vr_ty_fr;  // Free column
+        else
+          crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Lower-bounded (1-sided) column
+      } else {
+        if (colLower[c_n] <= -HIGHS_CONST_INF)
+          crsh_c_ty[c_n] = crsh_vr_ty_1_sd;  // Upper-bonded (1-sided) column
+        else {
+          // Two-sided row - maybe fixed (equality)
+          if (colLower[c_n] != colUpper[c_n])
+            crsh_c_ty[c_n] = crsh_vr_ty_2_sd;  // 2-sided column
+          else
+            crsh_c_ty[c_n] = crsh_vr_ty_fx;  // Fixed column
+        }
+      }
+    }
+  }
+#ifdef HiGHSDEV
+  // Allocate the arrays to analyse crash
+  crsh_vr_ty_og_n_r.resize(crsh_l_vr_ty + 1);
+  crsh_vr_ty_rm_n_r.resize(crsh_l_vr_ty + 1);
+  crsh_vr_ty_og_n_c.resize(crsh_l_vr_ty + 1);
+  crsh_vr_ty_add_n_c.resize(crsh_l_vr_ty + 1);
+  crsh_bs_vr_ty_n_r.resize(crsh_l_vr_ty + 1);
+  crsh_bs_vr_ty_n_c.resize(crsh_l_vr_ty + 1);
+  crsh_nonbc_vr_ty_n_r.resize(crsh_l_vr_ty + 1);
+  crsh_nonbc_vr_ty_n_c.resize(crsh_l_vr_ty + 1);
+  // Initialise the counts of numbers and changes of variable types -
+  // just for reporting
+  for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
+    crsh_vr_ty_og_n_r[vr_ty] = 0;
+    crsh_vr_ty_og_n_c[vr_ty] = 0;
+    crsh_vr_ty_rm_n_r[vr_ty] = 0;
+    crsh_vr_ty_add_n_c[vr_ty] = 0;
+    crsh_bs_vr_ty_n_r[vr_ty] = 0;
+    crsh_bs_vr_ty_n_c[vr_ty] = 0;
+    crsh_nonbc_vr_ty_n_r[vr_ty] = 0;
+    crsh_nonbc_vr_ty_n_c[vr_ty] = 0;
+  }
+  for (int r_n = 0; r_n < numRow; r_n++) crsh_vr_ty_og_n_r[crsh_r_ty[r_n]] += 1;
+  for (int c_n = 0; c_n < numCol; c_n++) crsh_vr_ty_og_n_c[crsh_c_ty[c_n]] += 1;
+#endif
+}
+
+#ifdef HiGHSDEV
+void HCrash::crsh_an_c_co() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int objSense = simplex_lp.sense_;
+  const double *colCost = &simplex_lp.colCost_[0];
+  const double *colLower = &simplex_lp.colLower_[0];
+  const double *colUpper = &simplex_lp.colUpper_[0];
+
+  int n_ze_c_co = 0;
+  int n_fs_c_co = 0;
+
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    double sense_col_cost = objSense * colCost[c_n];
+    if (sense_col_cost == 0.0) {
+      n_ze_c_co += 1;
+      n_fs_c_co += 1;
+      continue;
+    }
+    if (colUpper[c_n] >= HIGHS_CONST_INF) {
+      // Free column: nonzero cost cannot be feasible
+      if (colLower[c_n] > -HIGHS_CONST_INF) {
+        // Lower-bounded (1-sided) column: non-negative cost is feasible
+        double sense_col_cost = objSense * colCost[c_n];
+        if (sense_col_cost >= 0.0) n_fs_c_co += 1;
+      }
+    } else {
+      if (colLower[c_n] <= -HIGHS_CONST_INF) {
+        // Upper-bonded (1-sided) column: non-positive cost is feasible
+        double sense_col_cost = objSense * colCost[c_n];
+        if (sense_col_cost <= 0.0) n_fs_c_co += 1;
+      } else {
+        // Two-sided column: any cost is feasible
+        n_fs_c_co += 1;
+      }
+    }
+  }
+  printf(" Model has %7d Ze costs (%3d%%)\n", n_ze_c_co,
+         (100 * n_ze_c_co) / numCol);
+  printf(" Model has %7d Fs costs (%3d%%)\n", n_fs_c_co,
+         (100 * n_fs_c_co) / numCol);
+}
+
+void HCrash::crsh_rp_r_c_st(const int mode) {
+  string TyNm;
+  int ck_su_n_c = 0;
+  int ck_su_n_r = 0;
+  int ck_su_n_bc_vr = 0;
+  int ck_su_n_nonbc_vr = 0;
+  int n_ps = 2;
+  if (mode == 1) n_ps = 1;
+  for (int ps_n = 0; ps_n < n_ps; ps_n++) {
+    if (ps_n == 1) {
+      if (mode == 0)
+        printf("grep_CharCrash,Rows");
+      else if (mode == 2)
+        printf("grep_CharCrash,Basic");
+      else
+        printf("grep_CharCrash,Nonbasic");
+      for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
+        TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
+        if (mode == 0) {
+          printf(",%s", TyNm.c_str());
+        } else {
+          printf(",%s_Row", TyNm.c_str());
+          printf(",%s_Col", TyNm.c_str());
+        }
+      }
+      printf("\n");
+      if (mode == 0)
+        printf("grep_CharCrash,%d", numRow);
+      else if (mode == 2)
+        printf("grep_CharCrash,%d", numRow);
+      else if (mode == 3)
+        printf("grep_CharCrash,%d", numCol);
+    }
+    for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
+      TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
+      if (mode == 0) {
+        if (ps_n == 0) ck_su_n_r += crsh_vr_ty_og_n_r[vr_ty];
+        int lc_pct = (100 * crsh_vr_ty_og_n_r[vr_ty]) / numRow;
+        if (ps_n == 0) {
+          if (crsh_vr_ty_og_n_r[vr_ty] > 0)
+            printf(" Model has %7d %3s rows (%3d%%)\n",
+                   crsh_vr_ty_og_n_r[vr_ty], TyNm.c_str(), lc_pct);
+        } else {
+          printf(",%7d", crsh_vr_ty_og_n_r[vr_ty]);
+        }
+      } else if (mode == 1) {
+        if (crsh_vr_ty_og_n_r[vr_ty] > 0)
+          printf(" Removed %7d of %7d %3s rows (%3d%%)\n",
+                 crsh_vr_ty_rm_n_r[vr_ty], crsh_vr_ty_og_n_r[vr_ty],
+                 TyNm.c_str(),
+                 (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
+      } else if (mode == 2) {
+        if (ps_n == 0) {
+	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
+	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
+	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
+	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
+          if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
+            printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
+                   crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
+                   (100 * crsh_bs_vr_ty_n_r[vr_ty]) / numRow);
+          if (crsh_bs_vr_ty_n_c[vr_ty] > 0)
+            printf(" Basic    variables contain %7d %3s cols (%3d%%)\n",
+                   crsh_bs_vr_ty_n_c[vr_ty], TyNm.c_str(),
+                   (100 * crsh_bs_vr_ty_n_c[vr_ty]) / numRow);
+        } else {
+          printf(",%d,%d", crsh_bs_vr_ty_n_r[vr_ty], crsh_bs_vr_ty_n_c[vr_ty]);
+        }
+      } else {
+        if (ps_n == 0) {
+          if (crsh_nonbc_vr_ty_n_c[vr_ty] > 0)
+            printf(" Nonbasic variables contain %7d %3s cols (%3d%%)\n",
+                   crsh_nonbc_vr_ty_n_c[vr_ty], TyNm.c_str(),
+                   (100 * crsh_nonbc_vr_ty_n_c[vr_ty]) / numCol);
+          if (crsh_nonbc_vr_ty_n_r[vr_ty] > 0)
+            printf(" Nonbasic variables contain %7d %3s rows (%3d%%)\n",
+                   crsh_nonbc_vr_ty_n_r[vr_ty], TyNm.c_str(),
+                   (100 * crsh_nonbc_vr_ty_n_r[vr_ty]) / numCol);
+        } else {
+          printf(",%d,%d", crsh_nonbc_vr_ty_n_r[vr_ty],
+                 crsh_nonbc_vr_ty_n_c[vr_ty]);
+        }
+      }
+    }
+    if (ps_n == 1) printf("\n");
+  }
+  if (mode == 0) assert(ck_su_n_r == numRow);
+  if (mode == 2) assert(ck_su_n_bc_vr == numRow);
+  if (mode == 2) assert(ck_su_n_nonbc_vr == numCol);
+  if (mode <= 1) {
+    for (int vr_ty = crsh_f_vr_ty; vr_ty < crsh_l_vr_ty + 1; vr_ty++) {
+      TyNm = crsh_nm_o_crsh_vr_ty(vr_ty);
+      if (mode == 0) ck_su_n_c += crsh_vr_ty_og_n_c[vr_ty];
+      if (crsh_vr_ty_og_n_c[vr_ty] > 0)
+        printf(" Model has %7d %3s cols (%3d%%)\n", crsh_vr_ty_og_n_c[vr_ty],
+               TyNm.c_str(), (100 * crsh_vr_ty_og_n_c[vr_ty]) / numCol);
+
+      else if (mode == 1) {
+        if (crsh_vr_ty_og_n_c[vr_ty] > 0)
+          printf(" Added   %7d of %7d %3s cols (%3d%%)\n",
+                 crsh_vr_ty_add_n_c[vr_ty], crsh_vr_ty_og_n_c[vr_ty],
+                 TyNm.c_str(),
+                 (100 * crsh_vr_ty_add_n_c[vr_ty]) / crsh_vr_ty_og_n_c[vr_ty]);
+      }
+    }
+    if (mode == 0) assert(ck_su_n_c == numCol);
+  }
+}
+void HCrash::crsh_an_r_c_st_af() {
+  const int *Astart = &workHMO.simplex_lp_.Astart_[0];
+  for (int k = 0; k < numRow; k++) {
+    int vr_n = workHMO.simplex_basis_.basicIndex_[k];
+    if (vr_n < numCol) {
+      int c_n = vr_n;
+      crsh_bs_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
+    } else {
+      int r_n = vr_n - numCol;
+      crsh_bs_vr_ty_n_r[crsh_r_ty[r_n]] += 1;
+    }
+  }
+
+  for (int vr_n = 0; vr_n < numTot; vr_n++) {
+    if (workHMO.simplex_basis_.nonbasicFlag_[vr_n] == 0) continue;
+    if (vr_n < numCol) {
+      int c_n = vr_n;
+      crsh_nonbc_vr_ty_n_c[crsh_c_ty[c_n]] += 1;
+    } else {
+      int r_n = vr_n - numCol;
+      crsh_nonbc_vr_ty_n_r[crsh_r_ty[r_n]] += 1;
+    }
+  }
+  int bs_mtx_n_struc_el = 0;
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    int vr_n = workHMO.simplex_basis_.basicIndex_[r_n];
+    if (vr_n < numCol) {
+      int c_n_el = Astart[vr_n + 1] - Astart[vr_n];
+      bs_mtx_n_struc_el += c_n_el;
+    }
+  }
+
+  crsh_rp_r_c_st(1);
+  crsh_rp_r_c_st(2);
+  printf(" Basis    matrix    contains%7d structural entries\n",
+         bs_mtx_n_struc_el);
+  crsh_rp_r_c_st(3);
+}
+
+string HCrash::crsh_nm_o_crsh_vr_ty(const int vr_ty) {
+  string TyNm;
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+    if (vr_ty == crsh_vr_ty_non_bc)
+      TyNm = "NBc";
+    else if (vr_ty == crsh_vr_ty_bc)
+      TyNm = " Bc";
+    else
+      printf("Unrecognised type %d\n", vr_ty);
+  } else {
+    if (vr_ty == crsh_vr_ty_fx)
+      TyNm = "Fx ";
+    else if (vr_ty == crsh_vr_ty_2_sd)
+      TyNm = "2sd";
+    else if (vr_ty == crsh_vr_ty_1_sd)
+      TyNm = "1sd";
+    else if (vr_ty == crsh_vr_ty_fr)
+      TyNm = "Fr ";
+    else
+      printf("Unrecognised type %d\n", vr_ty);
+  }
+  return TyNm;
+}
+
+#endif
