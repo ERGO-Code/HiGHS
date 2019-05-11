@@ -67,6 +67,26 @@ class HCrash {
   void bixby();
   bool bixby_iz_da();
   void bixby_rp_mrt();
+
+  void ltssf();
+  void ltssf_iz_mode();
+  void ltssf_iz_da();
+  void ltssf_iterate();
+  void ltssf_u_da();
+  void ltssf_u_da_af_bs_cg();
+  void ltssf_u_da_af_no_bs_cg();
+#ifdef HiGHSDEV
+  void ltssf_ck_da();
+#endif
+  void ltssf_cz_r();
+  void ltssf_cz_c();
+#ifdef HiGHSDEV
+  void tsSing();
+  void ltssf_rp_r_k();
+  void ltssf_rp_r_pri();
+  void ltssf_rp_pri_k_da();
+#endif
+
   void crsh_iz_vr_ty();
 
 #ifdef HiGHSDEV

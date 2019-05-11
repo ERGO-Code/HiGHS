@@ -123,17 +123,19 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       simplex_info.primal_phase2_iteration_count !=
       simplex_info.iteration_count) printf("Iteration total error \n");
 
+  if (highs_model_object.options_.simplex_initial_condition_check) {
+    timer.start(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition = computeBasisCondition(highs_model_object);
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+    printf("Optimal basis condition estimate is %g\n", basis_condition);
+  }
+
   // Official finish of solver
   timer.stop(timer.solve_clock);
 
 #ifdef HiGHSDEV
   timer.stop(simplex_info.clock_[SimplexTotalClock]);
   reportSimplexProfiling(highs_model_object);
-  bool compute_basis_condition = true;
-  if (compute_basis_condition) {
-    double basis_condition = computeBasisCondition(highs_model_object);
-    printf("Optimal basis condition estimate is %g\n", basis_condition);
-  }
   // ToDO move iterationAnalysisReport to simplex
   printf("!! Move iterationAnalysisReport() to HSimplex\n");
   //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();

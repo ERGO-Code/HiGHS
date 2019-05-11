@@ -78,12 +78,12 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
 #ifdef HiGHSDEV
   else if (crash_strategy == SimplexCrashStrategy::TEST_SING) {
     // Use the test singularity crash
-    //    tsSing();
+    tsSing();
   }
 #endif
   else {
     // Use the LTSSF crash
-    // ltssf();
+    ltssf();
   }
 }
 
@@ -252,56 +252,6 @@ void HCrash::bixby() {
 #ifdef HiGHSDEV
   crsh_an_r_c_st_af();
 #endif
-}
-
-void HCrash::bixby_rp_mrt() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  const int objSense = simplex_lp.sense_;
-  const double *colCost = &simplex_lp.colCost_[0];
-  const double *colLower = &simplex_lp.colLower_[0];
-  const double *colUpper = &simplex_lp.colUpper_[0];
-  double mx_co_v = -HIGHS_CONST_INF;
-  for (int c_n = 0; c_n < numCol; c_n++) {
-    double sense_col_cost = objSense * colCost[c_n];
-    mx_co_v = max(fabs(sense_col_cost), mx_co_v);
-  }
-  double co_v_mu = 1;
-  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  double prev_mrt_v0 = -HIGHS_CONST_INF;
-  double prev_mrt_v = -HIGHS_CONST_INF;
-  bool rp_c;
-  bool rp_al_c = false;
-  int n_mrt_v = 0;
-  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
-  printf("\nAnalysis of sorted Bixby merits\n");
-  for (int ps_n = 0; ps_n < numCol; ps_n++) {
-    double mrt_v = bixby_mrt_v[ps_n];
-    int c_n = bixby_mrt_ix[ps_n];
-    double sense_col_cost = objSense * colCost[c_n];
-    double mrt_v0 = mrt_v - sense_col_cost / co_v_mu;
-    double c_lb = colLower[c_n];
-    double c_ub = colUpper[c_n];
-    if ((ps_n == 0) || (ps_n == numCol - 1))
-      rp_c = true;
-    else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
-             (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
-      rp_c = true;
-      prev_mrt_v = -HIGHS_CONST_INF;
-      prev_mrt_v0 = -HIGHS_CONST_INF;
-    } else if (rp_al_c)
-      rp_c = true;
-    else
-      rp_c = mrt_v0 > prev_mrt_v0;
-    prev_mrt_v0 = mrt_v0;
-    if (mrt_v > prev_mrt_v) {
-      n_mrt_v += 1;
-      prev_mrt_v = mrt_v;
-    }
-    if (rp_c)
-      printf("%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; [%10.4g,%10.4g]\n",
-	     ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
-  }
-  printf("\n%6d different Bixby merits\n", n_mrt_v);
 }
 
 bool HCrash::bixby_iz_da() {
@@ -485,6 +435,870 @@ bool HCrash::bixby_iz_da() {
 #endif
   return true;
 }
+
+void HCrash::bixby_rp_mrt() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int objSense = simplex_lp.sense_;
+  const double *colCost = &simplex_lp.colCost_[0];
+  const double *colLower = &simplex_lp.colLower_[0];
+  const double *colUpper = &simplex_lp.colUpper_[0];
+  double mx_co_v = -HIGHS_CONST_INF;
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    double sense_col_cost = objSense * colCost[c_n];
+    mx_co_v = max(fabs(sense_col_cost), mx_co_v);
+  }
+  double co_v_mu = 1;
+  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
+  double prev_mrt_v0 = -HIGHS_CONST_INF;
+  double prev_mrt_v = -HIGHS_CONST_INF;
+  bool rp_c;
+  bool rp_al_c = false;
+  int n_mrt_v = 0;
+  if (mx_co_v > 0) co_v_mu = 1e3 * mx_co_v;
+  printf("\nAnalysis of sorted Bixby merits\n");
+  for (int ps_n = 0; ps_n < numCol; ps_n++) {
+    double mrt_v = bixby_mrt_v[ps_n];
+    int c_n = bixby_mrt_ix[ps_n];
+    double sense_col_cost = objSense * colCost[c_n];
+    double mrt_v0 = mrt_v - sense_col_cost / co_v_mu;
+    double c_lb = colLower[c_n];
+    double c_ub = colUpper[c_n];
+    if ((ps_n == 0) || (ps_n == numCol - 1))
+      rp_c = true;
+    else if ((crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n - 1]]) ||
+             (crsh_c_ty[c_n] != crsh_c_ty[bixby_mrt_ix[ps_n + 1]])) {
+      rp_c = true;
+      prev_mrt_v = -HIGHS_CONST_INF;
+      prev_mrt_v0 = -HIGHS_CONST_INF;
+    } else if (rp_al_c)
+      rp_c = true;
+    else
+      rp_c = mrt_v0 > prev_mrt_v0;
+    prev_mrt_v0 = mrt_v0;
+    if (mrt_v > prev_mrt_v) {
+      n_mrt_v += 1;
+      prev_mrt_v = mrt_v;
+    }
+    if (rp_c)
+      printf("%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; [%10.4g,%10.4g]\n",
+	     ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
+  }
+  printf("\n%6d different Bixby merits\n", n_mrt_v);
+}
+
+void HCrash::ltssf() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  printf("HCrash::ltssf crash_strategy = %d\n", (int)crash_strategy);
+  if (crash_strategy == SimplexCrashStrategy::LTSSF_K) {
+    crsh_fn_cf_pri_v = 1;
+    crsh_fn_cf_k = 10;
+    alw_al_bs_cg = false;
+    no_ck_pv = false;
+  } else if (crash_strategy == SimplexCrashStrategy::LTSF_K) {
+    crsh_fn_cf_pri_v = 1;
+    crsh_fn_cf_k = 10;
+    alw_al_bs_cg = false;
+    no_ck_pv = true;
+  } else if (crash_strategy == SimplexCrashStrategy::LTSF) {
+    crsh_fn_cf_pri_v = 1;
+    crsh_fn_cf_k = 10;
+    alw_al_bs_cg = true;
+    no_ck_pv = true;
+  } else if (crash_strategy == SimplexCrashStrategy::LTSSF_PRI) {
+    crsh_fn_cf_pri_v = 10;
+    crsh_fn_cf_k = 1;
+    alw_al_bs_cg = false;
+    no_ck_pv = false;
+  } else if (crash_strategy == SimplexCrashStrategy::LTSF_PRI) {
+    crsh_fn_cf_pri_v = 10;
+    crsh_fn_cf_k = 1;
+    alw_al_bs_cg = false;
+    no_ck_pv = false;
+  } else if (crash_strategy == SimplexCrashStrategy::BASIC) {
+    crsh_fn_cf_pri_v = 10;
+    crsh_fn_cf_k = 1;
+    alw_al_bs_cg = false;
+    no_ck_pv = true;
+  } else {
+    //  Dev version
+    crsh_fn_cf_pri_v = 1;
+    crsh_fn_cf_k = 10;
+    alw_al_bs_cg = false;
+    no_ck_pv = false;
+  }
+
+  mn_co_tie_bk = false;
+  numRow = simplex_lp.numRow_;
+  numCol = simplex_lp.numCol_;
+  numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+
+  // Initialise the LTSSF data structures
+  ltssf_iz_da();
+#ifdef HiGHSDEV
+  printf("\nLTSSF Crash\n");
+  printf(" crsh_fn_cf_pri_v = %d\n", crsh_fn_cf_pri_v);
+  printf(" crsh_fn_cf_k = %d\n", crsh_fn_cf_k);
+  printf(" Objective f = %2d*pri_v - %2d*k\n", crsh_fn_cf_pri_v, crsh_fn_cf_k);
+  string lg;
+  // if (mn_co_tie_bk) lg = "T"; else lg = "F";
+  // printf(" Break priority function ties on smallest cost = %s\n", lg);
+  if (alw_al_bs_cg)
+    printf(" Allow any basis change regardless of priority = T\n");
+  else
+    printf(" Allow any basis change regardless of priority = F\n");
+  if (no_ck_pv)
+    printf(" Don't do numerical check on pivot = T\n");
+  else
+    printf(" Don't do numerical check on pivot = F\n");
+
+  printf("Max row priority is %d\n", mx_r_pri);
+  printf("Max col priority is %d\n", mx_c_pri);
+#endif
+  if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) {
+#ifdef HiGHSDEV
+    printf("Max row priority of %d + Max col priority of %d = %d <= %d: no value in performing LTSSF crash\n",
+        mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
+#endif
+    // Save the solved results
+    return;
+  }
+#ifdef HiGHSDEV
+  if (ltssf_ck_fq > 0) {
+    printf("\nCHECKING LTSSF DATA NOW AND EVERY %d PASS(ES)!!\n\n", ltssf_ck_fq);
+    ltssf_ck_da();
+  }
+  if (reportCrashData) ltssf_rp_pri_k_da();
+#endif
+
+#ifdef HiGHSDEV
+  crsh_rp_r_c_st(0);
+#endif
+  ltssf_iterate();
+
+#ifdef HiGHSDEV
+  printf(" %d/%d basis changes from %d passes\n", n_crsh_bs_cg, numRow,
+         n_crsh_ps);
+  printf(
+      " Absolute tolerance (%6.4f): Rejected %7d pivots: min absolute pivot "
+      "value = %6.4e\n",
+      tl_crsh_abs_pv_v, n_abs_pv_no_ok, mn_abs_pv_v);
+  printf(
+      " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
+      "value = %6.4e\n",
+      tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
+  crsh_an_r_c_st_af();
+#endif
+}
+
+void HCrash::ltssf_iz_mode() {
+  crsh_fn_cf_pri_v = 1;
+  crsh_fn_cf_k = 10;
+  alw_al_bs_cg = false;
+  no_ck_pv = false;
+}
+
+void HCrash::ltssf_iterate() {
+  // LTSSF Main loop
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  n_crsh_ps = 0;
+  n_crsh_bs_cg = 0;
+  bool ltssf_stop = false;
+  for (;;) {
+    ltssf_cz_r();
+    if (cz_r_n == no_ix) break;
+    cz_r_pri_v = crsh_r_ty_pri_v[crsh_r_ty[cz_r_n]];
+    ltssf_cz_c();
+    bool bs_cg = cz_c_n != no_ix;
+    if (bs_cg) {
+#ifdef HiGHSDEV
+      if (reportCrashData)
+        printf("Pass %2d; cz_r = %2d; cz_c = %2d\n", n_crsh_ps, cz_r_n, cz_c_n);
+#endif
+      // A basis change has occurred
+      n_crsh_bs_cg += 1;
+      double abs_pv_v = fabs(pv_v);
+      double rlv_pv_v = abs_pv_v / crsh_mtx_c_mx_abs_v[cz_c_n];
+      mn_abs_pv_v = min(abs_pv_v, mn_abs_pv_v);
+      mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
+      int columnIn = cz_c_n;
+      int rowOut = cz_r_n;
+      int columnOut = numCol + cz_r_n;
+      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
+      // Update the basic/nonbasic variable info and the row-wise copy
+      // of the matrix
+      update_pivots(workHMO, columnIn, rowOut, sourceOut);
+      if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+      // Update the count of this type of removal and addition
+#ifdef HiGHSDEV
+      int vr_ty = crsh_r_ty[cz_r_n];
+      crsh_vr_ty_rm_n_r[vr_ty] += 1;
+      vr_ty = crsh_c_ty[cz_c_n];
+      crsh_vr_ty_add_n_c[vr_ty] += 1;
+#endif
+    } else {
+#ifdef HiGHSDEV
+      if (reportCrashData)
+        printf("Pass %2d; cz_r = %2d: No basis change\n", n_crsh_ps, cz_r_n);
+#endif
+    }
+#ifdef HiGHSDEV
+    if (reportCrashData) ltssf_rp_pri_k_da();
+#endif
+    ltssf_u_da();
+    // Check LTSSF data every ltssf_ck_fq passes (if ltssf_ck_fq>0)
+#ifdef HiGHSDEV
+    if ((ltssf_ck_fq > 0) && (n_crsh_ps % ltssf_ck_fq == 0)) ltssf_ck_da();
+    if (reportCrashData) ltssf_rp_pri_k_da();
+#endif
+    // Determine whether the are still rows worth removing
+    mx_r_pri = crsh_mn_pri_v - 1;
+    for (int pri_v = crsh_mx_pri_v; pri_v > crsh_mn_pri_v; pri_v--) {
+      if (crsh_r_pri_mn_r_k[pri_v] < numCol + 1) {
+	mx_r_pri = pri_v;
+	break;
+      }
+    }
+    if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) {
+#ifdef HiGHSDEV
+      printf("Max active row priority of %d + Max original col priority of %d = "
+	     "%d <= %d: no value in performing further LTSSF crash\n",
+	     mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
+#endif
+      ltssf_stop = true;
+    }
+    n_crsh_ps += 1;
+    if (ltssf_stop) break;
+  }
+}
+
+void HCrash::ltssf_u_da() {
+  if ((cz_r_n != no_ix) && (cz_c_n != no_ix)) {
+    ltssf_u_da_af_bs_cg();
+  } else {
+    ltssf_u_da_af_no_bs_cg();
+  }
+  // If there are no more rows with the current maximum row priority
+  // then get the new maximum row priority value TODO Surely this is
+  // not necessary with 2-d headers
+  if ((crsh_r_pri_mn_r_k[cz_r_pri_v] > numCol) && (cz_r_pri_v == mx_r_pri_v)) {
+    mx_r_pri_v = -HIGHS_CONST_I_INF;
+    for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++)
+      if (crsh_r_pri_mn_r_k[pri_v] <= numCol) mx_r_pri_v = pri_v;
+  }
+}
+
+void HCrash::ltssf_u_da_af_bs_cg() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int *Astart = &simplex_lp.Astart_[0];
+  const int *Aindex = &simplex_lp.Aindex_[0];
+  // ltssf_rp_r_k();
+  for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1]; r_el_n++) {
+    int c_n = CrshARindex[r_el_n];
+    if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
+    for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
+      int r_n = Aindex[el_n];
+      if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
+      // Remove the row from the linked list with this number of active entries
+      int prev_r_n;
+      int r_k = crsh_r_k[r_n];
+      int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
+#ifdef HiGHSDEV
+      if (reportCrashData) {
+	ltssf_rp_pri_k_da();
+	printf("1: Remove row %d of pri %d from linked list with %d entries\n",
+	       r_n, pri_v, r_k);
+      }
+#endif
+      int hdr_ix = pri_v * (numCol + 1) + r_k;
+      // Remove the row from the linked list with this number of active entries
+      int nx_r_n = crsh_r_pri_k_lkf[r_n];
+      if (r_n == crsh_r_pri_k_hdr[hdr_ix]) {
+	prev_r_n = no_lk;
+	crsh_r_pri_k_hdr[hdr_ix] = nx_r_n;
+      } else {
+	prev_r_n = crsh_r_pri_k_lkb[r_n];
+	crsh_r_pri_k_lkf[prev_r_n] = nx_r_n;
+      }
+      if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = prev_r_n;
+      if ((crsh_r_pri_k_hdr[hdr_ix] == no_lk) &&
+	  (crsh_r_pri_mn_r_k[pri_v] == r_k)) {
+	// This was the only row of minimum row count so look for the next row
+	// count with non-null header
+	//
+	// Set crsh_r_pri_mn_r_k to numCol+1 in case r_k=numCol so priority is cleared
+	crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
+	for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
+	  int hdr_ix = pri_v * (numCol + 1) + qy_k;
+	  if (crsh_r_pri_k_hdr[hdr_ix] != no_lk) {
+	    crsh_r_pri_mn_r_k[pri_v] = qy_k;
+	    break;
+	  }
+	}
+      }
+      // Reduce the number of active entries in this row by one and...
+      r_k -= 1;
+      crsh_r_k[r_n] = r_k;
+      if (r_k > 0) {
+	// ... either add the row as the header of the list with one
+	// fewer number of active entries...
+#ifdef HiGHSDEV
+	if (reportCrashData) {
+	  ltssf_rp_pri_k_da();
+	  printf("Add row %d of pri %d to linked list with %d entries\n", r_n, pri_v, r_k);
+	}
+#endif
+	int hdr_ix = pri_v * (numCol + 1) + r_k;
+	nx_r_n = crsh_r_pri_k_hdr[hdr_ix];
+	crsh_r_pri_k_hdr[hdr_ix] = r_n;
+	crsh_r_pri_k_lkf[r_n] = nx_r_n;
+	if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = r_n;
+	if (crsh_r_pri_mn_r_k[pri_v] > r_k) {
+	  // There is now a row of smaller count for this priority
+	  crsh_r_pri_mn_r_k[pri_v] = r_k;
+	}
+      } else {
+#ifdef HiGHSDEV
+	if (reportCrashData) {
+	  ltssf_rp_pri_k_da();
+	  printf("2: Remove row %d of pri %d and count %d from active submatrix\n",
+		 r_n, pri_v, r_k);
+	}
+#endif
+	// ...or, if the count is zero, the row leaves the active submatrix...
+	crsh_act_r[r_n] = crsh_vr_st_no_act;
+	// ... and has already left the priority value and count data structure
+      }
+    }
+    // The column leaves the active submatrix
+    crsh_act_c[c_n] = crsh_vr_st_no_act;
+    // Unless this is the chosen column, the structural remains nonbasic.
+  }
+}
+
+void HCrash::ltssf_u_da_af_no_bs_cg() {
+  // The basis has not changed. The row becomes inactive and the
+  // number of active entries in each column in which it has entries
+  // is reduced by one.
+  for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1];
+       r_el_n++) {
+    int c_n = CrshARindex[r_el_n];
+    if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
+    crsh_c_k[c_n] -= 1;
+    // If the number of active entries in the column is zeroed then it becomes
+    // inactive.
+    if (crsh_c_k[c_n] == 0) crsh_act_c[c_n] = crsh_vr_st_no_act;
+  }
+  int r_n = cz_r_n;
+  // Remove the row from the linked list with this number of active entries
+  // Remove the row from the linked list with this priority and number of active entries
+  crsh_act_r[r_n] = crsh_vr_st_no_act;
+  int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
+  int r_k = crsh_r_k[r_n];
+  int hdr_ix = pri_v * (numCol + 1) + r_k;
+  int prev_r_n;
+  int nx_r_n = crsh_r_pri_k_lkf[r_n];
+  if (r_n == crsh_r_pri_k_hdr[hdr_ix]) {
+    prev_r_n = no_lk;
+    crsh_r_pri_k_hdr[hdr_ix] = nx_r_n;
+  } else {
+    prev_r_n = crsh_r_pri_k_lkb[r_n];
+    crsh_r_pri_k_lkf[prev_r_n] = nx_r_n;
+  }
+  if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = prev_r_n;
+  if ((crsh_r_pri_k_hdr[hdr_ix] == no_lk) &&
+      (crsh_r_pri_mn_r_k[pri_v] == r_k)) {
+    // No more rows of this count for this priority value: look for next
+    // highest.
+    //
+    // Set crsh_r_pri_mn_r_k to numCol + 1 in case r_k=numCol so
+    // priority is cleared
+    crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
+    for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
+      int hdr_ix = pri_v * (numCol + 1) + qy_k;
+      if (crsh_r_pri_k_hdr[hdr_ix] != no_lk) {
+	crsh_r_pri_mn_r_k[pri_v] = qy_k;
+	break;
+      }
+    }
+  }
+}
+
+void HCrash::ltssf_iz_da() {
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  printf("HCrash::ltssf_iz_da crash_strategy = %d\n", (int)crash_strategy);
+  // bool ImpliedDualLTSSF = false;
+  // ImpliedDualLTSSF = true;
+  const int *Astart = &simplex_lp.Astart_[0];
+  const int *Aindex = &simplex_lp.Aindex_[0];
+  const double *Avalue = &simplex_lp.Avalue_[0];
+  ;
+  int numEl = Astart[numCol];
+  // const double *primalColLowerImplied = simplex_lp.primalColLowerImplied_;
+  // const double *primalColUpperImplied = simplex_lp.primalColUpperImplied_;
+  // const double *primalRowLowerImplied = simplex_lp.primalRowLowerImplied_;
+  // const double *primalRowUpperImplied = simplex_lp.primalRowUpperImplied_;
+  //
+  // const double *dualColLowerImplied = simplex_lp.dualColLowerImplied_;
+  // const double *dualColUpperImplied = simplex_lp.dualColUpperImplied_;
+  // const double *dualRowLowerImplied = simplex_lp.dualRowLowerImplied_;
+  // const double *dualRowUpperImplied = simplex_lp.dualRowUpperImplied_;
+
+  // Allocate the crash variable type arrays
+  crsh_r_ty_pri_v.resize(crsh_l_vr_ty);
+  crsh_c_ty_pri_v.resize(crsh_l_vr_ty);
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+    // Basis-preserving crash:
+    printf("Basis-preserving crash:\n");
+    crsh_r_ty_pri_v[crsh_vr_ty_non_bc] = 1;
+    crsh_r_ty_pri_v[crsh_vr_ty_bc] = 0;
+    crsh_c_ty_pri_v[crsh_vr_ty_non_bc] = 0;
+    crsh_c_ty_pri_v[crsh_vr_ty_bc] = 1;
+
+  } else {
+    // Standard crash:
+    printf("Standard crash:\n");
+    crsh_r_ty_pri_v[crsh_vr_ty_fx] = 3;
+    crsh_r_ty_pri_v[crsh_vr_ty_2_sd] = 2;
+    crsh_r_ty_pri_v[crsh_vr_ty_1_sd] = 1;
+    crsh_r_ty_pri_v[crsh_vr_ty_fr] = 0;
+    crsh_c_ty_pri_v[crsh_vr_ty_fx] = 0;
+    crsh_c_ty_pri_v[crsh_vr_ty_2_sd] = 1;
+    crsh_c_ty_pri_v[crsh_vr_ty_1_sd] = 2;
+    crsh_c_ty_pri_v[crsh_vr_ty_fr] = 3;
+  }
+
+  // Allocate the arrays required for crash
+  crsh_r_k.resize(numRow);
+  crsh_c_k.resize(numCol);
+
+  // Add one since need [0..crsh_mx_pri_v]
+  crsh_r_pri_k_hdr.resize((crsh_mx_pri_v + 1) * (numCol + 1));
+  crsh_r_pri_k_lkf.resize(numRow);
+  crsh_r_pri_k_lkb.resize(numRow);
+  crsh_r_pri_mn_r_k.resize(crsh_mx_pri_v + 1);
+
+  crsh_mtx_c_mx_abs_v.resize(numCol);
+  CrshARvalue.resize(numEl);
+  CrshARindex.resize(numEl);
+  CrshARstart.resize(numRow + 1);
+  crsh_act_r.resize(numRow);
+  crsh_act_c.resize(numCol);
+
+  crsh_iz_vr_ty();
+
+  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+    // For the basis crash, once the row and column priorities have
+    // been set, start from a logical basis
+    printf("Call replace_with_logical_basis()\n");
+    //    workHMO.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
+  }
+  mx_r_pri = crsh_mn_pri_v;
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    mx_r_pri = max(mx_r_pri, crsh_r_ty_pri_v[crsh_r_ty[r_n]]);}
+  mx_c_pri = crsh_mn_pri_v;
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    mx_c_pri = max(mx_c_pri, crsh_c_ty_pri_v[crsh_c_ty[c_n]]);}
+
+  if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) return;
+  for (int c_n = 0; c_n < numCol + 1; c_n++) {
+    for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
+      crsh_r_pri_k_hdr[pri_v * (numCol + 1) + c_n] = no_lk;
+    }
+  }
+  mn_abs_pv_v = HIGHS_CONST_INF;
+  mn_rlv_pv_v = HIGHS_CONST_INF;
+  n_abs_pv_no_ok = 0;
+  n_rlv_pv_no_ok = 0;
+  // Determine the status and type of each row
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    int vr_ty = crsh_r_ty[r_n];
+    int pri_v = crsh_r_ty_pri_v[vr_ty];
+    if (pri_v == crsh_no_act_pri_v) {
+      // Rows with no priority value are free - and should be removed
+      // by presolve. They will be basic
+      crsh_act_r[r_n] = crsh_vr_st_no_act;
+    } else {
+      crsh_act_r[r_n] = crsh_vr_st_act;
+    }
+    // Initialise the count of active entries in the row
+    crsh_r_k[r_n] = 0;
+  }
+
+  // Determine the status and type of each column and compute the
+  // number of active entries in each row and column
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    int vr_ty = crsh_c_ty[c_n];
+    int pri_v = crsh_c_ty_pri_v[vr_ty];
+    int c_n_en = Astart[c_n + 1] - Astart[c_n];
+    if ((pri_v == crsh_no_act_pri_v) || (c_n_en == 0)) {
+      // Columns with no priority value are fixed or zero - and should
+      // be removed by presolve. They will be nonbasic
+      crsh_act_c[c_n] = crsh_vr_st_no_act;
+    } else {
+      crsh_act_c[c_n] = crsh_vr_st_act;
+    }
+    //  TODO Count the original number of columns of this type
+    if (crsh_act_c[c_n] == crsh_vr_st_act) {
+      // The column is active: count the active rows and update the
+      // number of active entries in those rows
+      //
+      // Initialise the count of active entries in the row
+      crsh_c_k[c_n] = 0;
+      for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
+        int r_n = Aindex[el_n];
+        if (crsh_act_r[r_n] != crsh_vr_st_no_act) {
+          // The row is active so increase the number of active
+          // entries in the column and row
+          crsh_c_k[c_n] += 1;
+          crsh_r_k[r_n] += 1;
+        }
+      }
+    }
+  }
+  // Now that the row counts are known, make any zero rows non-active.
+  //
+  // Form linked list of active rows with each priority.
+  //
+  for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
+    crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
+  }
+
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
+    // Row appears active but check whether it is empty
+    if (crsh_r_k[r_n] <= 0) {
+      crsh_act_r[r_n] = crsh_vr_st_no_act;
+      continue;
+    }
+    // Add as the header of the appropriate priority value list
+    int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
+    int r_k = crsh_r_k[r_n];
+    // Add as the header of rows of a given priority with this count
+    int nx_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
+    crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k] = r_n;
+    crsh_r_pri_k_lkb[r_n] = no_lk;
+    crsh_r_pri_k_lkf[r_n] = nx_r_n;
+    if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = r_n;
+    // Update the minimum row count for this priority value
+    crsh_r_pri_mn_r_k[pri_v] = min(r_k, crsh_r_pri_mn_r_k[pri_v]);
+  }
+  // Set up the row-wise matrix. Although not essential, it is
+  // convenient to avoid columns which are not active since the row
+  // counts determined above can be used.
+  CrshARstart[0] = 0;
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    CrshARstart[r_n + 1] = CrshARstart[r_n] + crsh_r_k[r_n];
+  }
+  for (int c_n = 0; c_n < numCol; c_n++) {
+    if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
+    // Column is active so find its largest entry in updating the row counts
+    crsh_mtx_c_mx_abs_v[c_n] = 0.0;
+    for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
+      int r_n = Aindex[el_n];
+      crsh_mtx_c_mx_abs_v[c_n] =
+          max(fabs(Avalue[el_n]), crsh_mtx_c_mx_abs_v[c_n]);
+      if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
+      int r_el_n = CrshARstart[r_n];
+      CrshARindex[r_el_n] = c_n;
+      CrshARvalue[r_el_n] = Avalue[el_n];
+      CrshARstart[r_n] += 1;
+    }
+  }
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    CrshARstart[r_n] -= crsh_r_k[r_n];
+  }
+}
+
+#ifdef HiGHSDEV
+void HCrash::ltssf_ck_da() {
+  bool er_fd = false;
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    if (crsh_act_r[r_n] == crsh_vr_st_no_act) continue;
+    int k = crsh_r_k[r_n];
+    int ck_k = 0;
+    for (int el_n = CrshARstart[r_n]; el_n < CrshARstart[r_n + 1]; el_n++) {
+      int c_n = CrshARindex[el_n];
+      if (crsh_act_c[c_n] != crsh_vr_st_no_act) ck_k += 1;
+    }
+    if (ck_k != k) {
+      er_fd = true;
+      printf("ERROR: Row %d has number of entries error: True = %d; Updated = %d\n",
+      r_n, ck_k, k);
+    }
+  }
+  for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
+    int mn_r_k = numCol + 1;
+    for (int k = 1; k < numCol + 1; k++) {
+      // Check the rows with this priority value and count
+      int r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + k];
+      if (r_n == no_ix) continue;
+      do {
+	int ck_pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
+	if (ck_pri_v != pri_v) {
+	  er_fd = true;
+	  printf("ERROR: Row %d has ck_pri_v = %d but pri_v = %d\n", r_n,
+		 ck_pri_v, pri_v);
+	}
+	int ck_k = crsh_r_k[r_n];
+	if (ck_k != k) {
+	  er_fd = true;
+	  printf("ERROR: Row %d has ck_k = %d but k = %d\n", r_n, ck_k, k);
+	}
+	int nx_r_n = crsh_r_pri_k_lkf[r_n];
+	if (nx_r_n != no_lk) {
+	  int prev_nx_r_n = crsh_r_pri_k_lkb[nx_r_n];
+	  if (prev_nx_r_n != r_n) {
+	    er_fd = true;
+	    printf("ERROR: Back link error for nx_r_n = %d: prev_nx_r_n = %d but r_n = %d\n",
+		   nx_r_n, prev_nx_r_n, r_n);
+	  }
+	}
+	// Update the true minimum row count
+	mn_r_k = min(k, mn_r_k);
+	r_n = nx_r_n;
+      } while (r_n != no_lk);
+    }
+    if (crsh_r_pri_mn_r_k[pri_v] != mn_r_k)
+      printf("ERROR: Priority %d has crsh_r_pri_mn_r_k = %d < %d = true mn_r_k\n",
+	     pri_v, crsh_r_pri_mn_r_k[pri_v], mn_r_k);
+    crsh_r_pri_mn_r_k[pri_v] = mn_r_k;
+  }
+  if (er_fd) {
+    printf("Error in LTSSF data\n");
+  } else {
+    printf("No error in LTSSF data\n");
+  }
+}
+#endif
+
+void HCrash::ltssf_cz_r() {
+  cz_r_n = no_ix;
+  //  Choose a row from the active submatrix
+  if (crsh_fn_cf_pri_v > crsh_fn_cf_k) {
+    // Search according to maximum priority function
+    for (int pri_v = crsh_mx_pri_v; pri_v > crsh_mn_pri_v; pri_v--) {
+      int r_k = crsh_r_pri_mn_r_k[pri_v];
+      if (r_k > numCol) continue;
+      cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
+      if (cz_r_n == no_ix) {
+	printf("ERROR: header for pri_v = %d and count = %d is empty for crsh_r_pri_mn_r_k[pri_v] = %d\n",
+	       pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
+      }
+      break;
+    }
+  } else {
+    // Search according to number of active entries
+    int mn_r_k = numCol + 1;
+    for (int pri_v = crsh_mx_pri_v; pri_v > crsh_mn_pri_v; pri_v--) {
+      int r_k = crsh_r_pri_mn_r_k[pri_v];
+      if (r_k < mn_r_k) {
+	cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
+	if (cz_r_n == no_ix) {
+	  printf("ERROR: header for pri_v = %d and count = %d is empty for crsh_r_pri_mn_r_k[pri_v] = %d\n",
+		 pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
+	}
+	mn_r_k = r_k;
+	if (mn_r_k == 1) break;
+      }
+    }
+  }
+}
+
+void HCrash::ltssf_cz_c() {
+  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  const int objSense = simplex_lp.sense_;
+  const double *colCost = &simplex_lp.colCost_[0];
+
+  cz_c_n = no_ix;
+  int su_r_c_pri_v_lm = crsh_mx_pri_v;
+  // Choose a column which has maximium priority function amongst those
+  // with entries in the selected row---making sure that the pivot is
+  // acceptable numerically.
+  //
+  // Note
+  //
+  // Numerical checking is switched off by setting the tolerances to
+  // zero.
+  //
+  // Make sure that tl_crsh_rlv_pv_v < 1 otherwise test
+  // abs_c_v/crsh_mtx_c_mx_abs_v(c_n) .gt. tl_crsh_rlv_pv_v will never
+  // be satisfied
+
+  if (alw_al_bs_cg)
+    su_r_c_pri_v_lm = -crsh_mx_pri_v;
+  else
+    su_r_c_pri_v_lm = crsh_mx_pri_v;
+
+  n_eqv_c = 0;
+  pv_v = 0.0;
+  double mn_co = HIGHS_CONST_INF;
+  int mx_c_pri_fn_v = -HIGHS_CONST_I_INF;
+  for (int el_n = CrshARstart[cz_r_n]; el_n < CrshARstart[cz_r_n + 1]; el_n++) {
+    int c_n = CrshARindex[el_n];
+    if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
+    // Don't allow the row to be replaced by a column whose priority
+    // to remain nonbasic is the same or greater.
+    if (!alw_al_bs_cg && (crsh_c_ty_pri_v[crsh_c_ty[c_n]] + cz_r_pri_v <= su_r_c_pri_v_lm))
+      continue;
+    // If column is worse than current best then break
+    int c_pri_fn_v = crsh_fn_cf_pri_v * crsh_c_ty_pri_v[crsh_c_ty[c_n]] -
+                     crsh_fn_cf_k * crsh_c_k[c_n];
+    if (c_pri_fn_v < mx_c_pri_fn_v) continue;
+    // Pivot is OK if pivots are not being checked
+    bool pv_ok = no_ck_pv;
+    if (!no_ck_pv) {
+      // Check the matrix entry if it may be used as a pivot.
+      double abs_c_v = fabs(CrshARvalue[el_n]);
+      bool abs_pv_v_ok = abs_c_v > tl_crsh_abs_pv_v;
+      bool rlv_pv_v_ok = abs_c_v > tl_crsh_rlv_pv_v * crsh_mtx_c_mx_abs_v[c_n];
+      if (!abs_pv_v_ok) n_abs_pv_no_ok += 1;
+      if (!rlv_pv_v_ok) n_rlv_pv_no_ok += 1;
+      pv_ok = abs_pv_v_ok && rlv_pv_v_ok;
+    }
+    // If the pivot is not OK then break
+    if (!pv_ok) continue;
+    // Pivot is OK [or not being checked]
+    if (c_pri_fn_v > mx_c_pri_fn_v) {
+      // Better column than best so far
+      mx_c_pri_fn_v = c_pri_fn_v;
+      cz_c_n = c_n;
+      pv_v = CrshARvalue[el_n];
+      n_eqv_c = 1;
+      double sense_col_cost = objSense * colCost[c_n];
+      mn_co = sense_col_cost;
+    } else if (c_pri_fn_v == mx_c_pri_fn_v) {
+      // Matches the best column so far: possibly break tie on cost
+      double sense_col_cost = objSense * colCost[c_n];
+      if (mn_co_tie_bk && (sense_col_cost < mn_co)) {
+        cz_c_n = c_n;
+        pv_v = CrshARvalue[el_n];
+        n_eqv_c = 1;
+        mn_co = sense_col_cost;
+      }
+      n_eqv_c += 1;
+    }
+  }
+}
+
+#ifdef HiGHSDEV
+void HCrash::tsSing() {
+  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  printf("\nTesting singularity Crash\n");
+  int nBcVr = 0;
+  // Make columns basic until they are either all basic or the number
+  // of basic variables reaches numRow
+  for (int c_n = 0; c_n < numTot; c_n++) {
+    int r_n = c_n;
+    int columnIn = c_n;
+    int rowOut = r_n;
+    int columnOut = numCol + r_n;
+    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
+    // Update the basic/nonbasic variable info and the row-wise copy of the
+    // matrix
+    update_pivots(workHMO, columnIn, rowOut, sourceOut);
+    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+    nBcVr++;
+    if (nBcVr == numRow) break;
+  }
+}
+
+void HCrash::ltssf_rp_r_k() {
+  printf("\n        : ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", r_n);
+  }
+  printf(" \n");
+  printf("k: ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_r_k[r_n]);
+  }
+  printf(" \n");
+}
+
+void HCrash::ltssf_rp_r_pri() {
+  printf("\nRow       : ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", r_n);
+  }
+  printf(" \n");
+  printf("crsh_r_ty:  ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_r_ty[r_n]);
+  }
+  printf(" \n");
+  printf("pri_v:      ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_r_ty_pri_v[crsh_r_ty[r_n]]);
+  }
+  printf(" \n");
+  printf("act_r:      ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_act_r[r_n]);
+  }
+}
+
+void HCrash::ltssf_rp_pri_k_da() {
+  for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
+    printf("Pri = %1d: ", pri_v);
+    for (int k = 1; k < numCol + 1; k++) {
+      int hdr_ix = pri_v * (numCol + 1) + k;
+      printf(" %2d", crsh_r_pri_k_hdr[hdr_ix]);
+    }
+    printf("\n");
+  }
+  printf("r_n: ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", r_n);
+  }
+  printf("\n");
+  printf("Act: ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_act_r[r_n]);
+  }
+  printf("\n");
+  printf("Cnt: ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_r_k[r_n]);
+  }
+  printf("\n");
+  printf("Lkf: ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_r_pri_k_lkf[r_n]);
+  }
+  printf("\n");
+  printf("Lkb: ");
+  for (int r_n = 0; r_n < numRow; r_n++) {
+    printf(" %2d", crsh_r_pri_k_lkb[r_n]);
+  }
+  printf("\n");
+  for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
+    for (int k = 1; k < numCol + 1; k++) {
+      int hdr_ix = pri_v * (numCol + 1) + k;
+      int r_n = crsh_r_pri_k_hdr[hdr_ix];
+      //   printf("Pri = %1d; k = %1d: hdr = %d\n", pri_v,
+      // k, r_n);
+      if (r_n == no_lk) continue;
+      int nx_r_n = crsh_r_pri_k_lkf[r_n];
+      printf("Pri = %1d; k = %1d: %3d %3d <-  ", pri_v, k, r_n, nx_r_n);
+      r_n = nx_r_n;
+      if (r_n != no_lk) {
+        do {
+          int prev_r_n = crsh_r_pri_k_lkb[r_n];
+          int nx_r_n = crsh_r_pri_k_lkf[r_n];
+          printf("  <-%3d %3d %3d ->  ", prev_r_n, r_n, nx_r_n);
+          r_n = nx_r_n;
+        } while (r_n != no_lk);
+      }
+      printf("\n");
+    }
+  }
+}
+
+#endif
 
 void HCrash::crsh_iz_vr_ty() {
   HighsLp &simplex_lp = workHMO.simplex_lp_;
@@ -789,6 +1603,3 @@ string HCrash::crsh_nm_o_crsh_vr_ty(const int vr_ty) {
 }
 
 #endif
-
-
-
