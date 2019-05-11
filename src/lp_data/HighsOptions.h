@@ -69,6 +69,9 @@ const string simplex_dual_edge_weight_strategy_string = "simplex_dual_edge_weigh
 const string simplex_primal_edge_weight_strategy_string = "simplex_primal_edge_weight_strategy";
 const string simplex_price_strategy_string = "simplex_price_strategy";
 
+const string simplex_initial_condition_check_string = "simplex_initial_condition_check";
+const string simplex_initial_condition_tolerance_string = "simplex_initial_condition_tolerance";
+
 const string message_level_string = "message_level";
 
 // The free parser also reads fixed format MPS files but the fixed
@@ -124,6 +127,8 @@ struct HighsOptions
   SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DEFAULT;
   SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
 
+  bool simplex_initial_condition_check = true;
+  double simplex_initial_condition_tolerance = SIMPLEX_INITIAL_CONDITION_TOLERANCE_DEFAULT;
   int allow_superbasic = false;
 
   bool pami = 0;
@@ -174,7 +179,6 @@ OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& v
 OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value);
 OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value);
  
-
 OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
 OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value);
 
@@ -190,6 +194,9 @@ OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& valu
 OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value);
+
+OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexInitialConditionCheckTolerance(HighsOptions& options, const double& value);
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
 

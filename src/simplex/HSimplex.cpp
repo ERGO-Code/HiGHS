@@ -54,7 +54,7 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // Set values of internal options
 #ifdef HiGHSDEV
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = false; // false;
+  simplex_info.report_simplex_inner_clock = true; // false;
   simplex_info.report_simplex_outer_clock = false;
   simplex_info.report_simplex_phases_clock = false; // false;
   // Option for analysing simplex iterations
@@ -238,6 +238,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 
 void setupForSimplexSolve(HighsModelObject &highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
+  HighsTimer &timer = highs_model_object.timer_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   int solver_num_row = simplex_lp.numRow_;
   int solver_num_col = simplex_lp.numCol_;
@@ -263,10 +264,11 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
     } else {
       // ... or initialise with a logical basis and crash
       initialise_with_logical_basis(highs_model_object);
-      HighsTimer &timer = highs_model_object.timer_;
       HCrash crash(highs_model_object);
       timer.start(timer.crash_clock);
+      timer.start(simplex_info.clock_[CrashClock]);
       crash.crash(simplex_info.crash_strategy);
+      timer.stop(simplex_info.clock_[CrashClock]);
       timer.stop(timer.crash_clock);
     }
     // Now set up the internal matrix structures using the supplied or crash basis
@@ -301,20 +303,18 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
       throw runtime_error("Dual initialise: singular-basis-matrix");
     }
   }
-  bool compute_basis_condition = true;
-  if (compute_basis_condition) {
+  if (highs_model_object.options_.simplex_initial_condition_check) {
+    timer.start(simplex_info.clock_[BasisConditionClock]);
     double basis_condition = computeBasisCondition(highs_model_object);
-#ifdef HiGHSDEV
-    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", basis_condition);
-    if (basis_condition > 1e12) {
-      HighsPrintMessage(ML_MINIMAL, " excessive\n");
-      simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
-      HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
-      //      return result;
-    } else {
-      HighsPrintMessage(ML_MINIMAL, " OK\n");
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
+    bool basis_condition_ok = basis_condition < basis_condition_tolerance;
+    printf("Initial basis condition estimate of %11.4g", basis_condition);
+    if (basis_condition_ok) {
+      printf(" is within the tolerance of %g\n", basis_condition_tolerance);
+    } else { 
+      printf(" exceeds the tolerance of %g\n", basis_condition_tolerance);
     }
-#endif
   }
 }
 

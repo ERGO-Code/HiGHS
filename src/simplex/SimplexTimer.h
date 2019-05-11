@@ -38,6 +38,9 @@ enum iClockSimplex {
   IterateDevexIzClock,       //!< Second level timing of initialise Devex
   IteratePivotsClock,        //!< Second level timing of pivoting
 
+  CrashClock,          //!< Crash
+  BasisConditionClock, //!< Basis condition estimation
+  DseIzClock,          //!< DSE weight initialisation
   InvertClock,        //!< Invert in dual rebuild()
   PermWtClock,        //!< Permutation of SED weights each side of INVERT in dual rebuild()
   ComputeDualClock,   //!< Computation of dual values in dual rebuild()
@@ -97,8 +100,11 @@ class SimplexTimer {
     simplex_info.clock_[IterateVerifyClock] = timer.clock_def("VERIFY", "VRF");
     simplex_info.clock_[IterateDualClock] = timer.clock_def("DUAL", "UDU");
     simplex_info.clock_[IteratePrimalClock] = timer.clock_def("PRIMAL", "UPR");
-    simplex_info.clock_[IterateDevexIzClock] = timer.clock_def("DEVEX_IZ", "DIZ");
+    simplex_info.clock_[IterateDevexIzClock] = timer.clock_def("DEVEX_IZ", "DVI");
     simplex_info.clock_[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
+    simplex_info.clock_[CrashClock] = timer.clock_def("CRASH", "CSH");
+    simplex_info.clock_[BasisConditionClock] = timer.clock_def("BASIS_CONDITION", "CON");
+    simplex_info.clock_[DseIzClock] = timer.clock_def("DSE_IZ", "DEI");
     simplex_info.clock_[InvertClock] = timer.clock_def("INVERT", "INV");
     simplex_info.clock_[PermWtClock] = timer.clock_def("PERM_WT", "PWT");
     simplex_info.clock_[ComputeDualClock] = timer.clock_def("COMPUTE_DUAL", "CPD");
@@ -143,7 +149,7 @@ class SimplexTimer {
     for (int en=0; en<simplex_clock_list_size; en++) {
       clockList[en] = simplex_info.clock_[simplex_clock_list[en]];
     }
-    timer.report_tl(grepStamp, clockList, 1.0);
+    timer.report_tl(grepStamp, clockList, 1e-8);
   };
   
   void reportSimplexTotalClock(HighsModelObject & model_object) {
@@ -179,7 +185,8 @@ class SimplexTimer {
 
   void reportSimplexInnerClock(HighsModelObject & model_object) {
     std::vector<int> simplex_clock_list{
-      InvertClock, PermWtClock, ComputeDualClock, 
+      CrashClock,BasisConditionClock,DseIzClock,
+	InvertClock, PermWtClock, ComputeDualClock, 
 	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
 	ComputeDuObjClock, ComputePrObjClock, ReportInvertClock,
 	ChuzrDualClock, Chuzr1Clock, Chuzr2Clock, 

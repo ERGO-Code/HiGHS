@@ -392,6 +392,23 @@ OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& valu
   return OptionStatus::OK;
 }
 
+OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options, const int& value) {
+  options.simplex_initial_condition_check = value;
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options, const double& value) {
+  if (value >= SIMPLEX_INITIAL_CONDITION_TOLERANCE_MIN && value <= SIMPLEX_INITIAL_CONDITION_TOLERANCE_MAX)
+    options.dual_feasibility_tolerance = value;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "simplex initial condition tolerance value \"%s\" is not permitted: legal values are between %d and %d\n",
+		    value, SIMPLEX_INITIAL_CONDITION_TOLERANCE_MIN, SIMPLEX_INITIAL_CONDITION_TOLERANCE_MAX);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
   options.messageLevel = value;
   return OptionStatus::OK;
