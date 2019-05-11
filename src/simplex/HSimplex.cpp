@@ -56,7 +56,7 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = true; // false;
   simplex_info.report_simplex_outer_clock = false;
-  simplex_info.report_simplex_phases_clock = false; // false;
+  simplex_info.report_simplex_phases_clock = true; // false;
   // Option for analysing simplex iterations
   simplex_info.analyseLp = false;                // false;
   simplex_info.analyseSimplexIterations = false; // false
