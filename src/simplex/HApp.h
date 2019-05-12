@@ -20,7 +20,6 @@
 #include <map>
 #include <set>
 #include <vector>
-//#include <stdexcept> // Just to hack in primal simplex solver
 
 #include "HConfig.h"
 #include "simplex/HPrimal.h"
@@ -52,6 +51,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #endif
   if (opt.clean_up) {
     // Analyse the basis and solution
+    printf("\nOn entry to runSimplexSolver\n");  
     simplex_interface.analyseHighsSolutionAndSimplexBasis();
   }
   // Possibly set up the LP to be solved by the simplex method. According to options
@@ -171,6 +171,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Optimal solution: copy the solution and basis
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
+  printf("\nOn leaving runSimplexSolver\n");  
+  simplex_interface.analyseHighsSolutionAndSimplexBasis();
   return result;
 }
 #endif

@@ -405,7 +405,9 @@ class HighsSimplexInterface {
 						 const double value,
 						 const double dual,
 						 int &num_non_basic_var, 
-						 int &num_basic_var 
+						 int &num_basic_var,
+						 double& primal_infeasibility,
+						 double& dual_infeasibility
 						 );
 
   /**
