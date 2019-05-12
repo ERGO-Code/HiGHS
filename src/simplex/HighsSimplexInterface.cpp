@@ -1345,7 +1345,7 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndSimplexBasis(bool repor
   return query;
 }
 
-void HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis() {
+SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis() {
   HighsSolution &solution = highs_model_object.solution_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsLp &lp = highs_model_object.lp_;
@@ -1468,6 +1468,8 @@ void HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis() {
 	 sum_primal_residual, num_primal_infeasibility, max_primal_infeasibility, sum_primal_infeasibility);
   printf("Dual   residual sum = %12g: num/max/sum infeasibilities %6d/%12g/%12g\n",
 	 sum_dual_residual, num_dual_infeasibility, max_dual_infeasibility, sum_dual_infeasibility);
+  if (num_primal_infeasibility == 0 && num_dual_infeasibility == 0) return SimplexSolutionStatus::OPTIMAL;
+  return SimplexSolutionStatus::UNSET; 
 }
 
 int HighsSimplexInterface::get_basic_indices(int *bind) {

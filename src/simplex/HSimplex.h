@@ -17,6 +17,7 @@
 #include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
 
 void options(
 	     HighsModelObject &highs_model_object, //!< Model object in which simplex options are to be set
@@ -39,7 +40,11 @@ void invalidateSimplexLp(
 void updateSimplexLpStatus(
 			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
 			   LpAction action// !< Action prompting update
-			   );
+				  );
+
+SimplexSolutionStatus rebuildPostsolve(
+				       HighsModelObject &highs_model_object
+				       );
 
 void setupSimplexLp(
 		    HighsModelObject &highs_model_object

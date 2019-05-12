@@ -52,7 +52,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   if (opt.clean_up) {
     // Analyse the basis and solution
     printf("\nOn entry to runSimplexSolver\n");  
-    simplex_interface.analyseHighsSolutionAndSimplexBasis();
+    SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
   }
   // Possibly set up the LP to be solved by the simplex method. According to options
   //
@@ -172,7 +172,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
   printf("\nOn leaving runSimplexSolver\n");  
-  simplex_interface.analyseHighsSolutionAndSimplexBasis();
+  SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
+  
   return result;
 }
 #endif

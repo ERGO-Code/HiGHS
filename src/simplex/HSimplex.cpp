@@ -236,6 +236,72 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 #endif
 }
 
+SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
+  HighsLp &lp = highs_model_object.lp_;
+  HFactor &factor = highs_model_object.factor_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  SimplexBasis &basis = highs_model_object.simplex_basis_;
+  //  SimplexTimer simplex_timer;
+  //  simplex_timer.initialiseSimplexClocks(highs_model_object);
+#ifdef HiGHSDEV
+  reportSimplexLpStatus(highs_model_object.simplex_lp_status_, "In rebuildPostsolve");
+#endif
+  // Analyse the basis and solution
+  printf("\nIn rebuildPostsolve\n");  
+  HighsSimplexInterface interface(highs_model_object);
+  SimplexSolutionStatus lp_status = interface.analyseHighsSolutionAndSimplexBasis();
+  if (lp_status == SimplexSolutionStatus::OPTIMAL) {
+    printf("After postsolve LP is optimal\n");
+    compute_primal_objective_value(highs_model_object) ;
+    compute_dual_objective_value(highs_model_object) ;
+  }
+  
+  factor.setup(lp.numCol_, lp.numRow_,
+	       &lp.Astart_[0],
+	       &lp.Aindex_[0],
+	       &lp.Avalue_[0],
+	       &basis.basicIndex_[0]);
+  simplex_lp_status.has_factor_arrays = true;
+  int rankDeficiency = factor.build();
+  if (rankDeficiency) {
+    throw runtime_error("Dual initialise: singular-basis-matrix");
+  }
+  // Create a local buffer for the pi vector
+  HVector buffer;
+  buffer.setup(lp.numRow_);
+  buffer.clear();
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    int iCol = basis.basicIndex_[iRow];
+    buffer.index[iRow] = iRow;
+    if (iCol < lp.numCol_) {
+      buffer.array[iRow] = lp.colCost_[iCol];
+    } else {
+      buffer.array[iRow] = 0;
+    }
+  }
+  buffer.count = lp.numRow_;
+  factor.btran(buffer, 1);
+  double sum_dl_dual = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    if (!basis.nonbasicFlag_[iCol]) continue;
+    double col_dual = 0;
+    double old_col_dual = highs_model_object.solution_.col_dual[iCol];
+    for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
+      int iRow = lp.Aindex_[el];
+      col_dual -= buffer.array[iRow]*lp.Avalue_[el];
+    }
+    double new_col_dual = col_dual + lp.colCost_[iCol];
+    double dl_dual = fabs(new_col_dual - old_col_dual);
+    if (dl_dual > 1e-8)
+      printf("Column %2d: DlDual = %12g; dual = %12g; cost = %12g; y = %12g; new_dual = %12g \n",
+	     iCol, dl_dual, old_col_dual, lp.colCost_[iCol], col_dual, new_col_dual);
+    sum_dl_dual += fabs(dl_dual);
+  }
+  printf("Sum delta dual = %12g\n", sum_dl_dual);
+
+  return SimplexSolutionStatus::OPTIMAL;
+}
+
 void setupForSimplexSolve(HighsModelObject &highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
   HighsTimer &timer = highs_model_object.timer_;
