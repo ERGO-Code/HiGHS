@@ -1,6 +1,12 @@
 #include <cstdio>
+
+#ifdef __linux__
 #include <unistd.h>
-#define GetCurrentDir getcwd
+#elif _WIN32
+#include <windows.h>
+#else
+
+#endif
 
 #include "FilereaderEms.h"
 #include "HMPSIO.h"
@@ -13,7 +19,16 @@
 
 std::string GetCurrentWorkingDir(void) {
   char buff[FILENAME_MAX];
-  auto result = GetCurrentDir(buff, FILENAME_MAX);
+
+  #ifdef __linux__ 
+    auto result = getcwd(buff, FILENAME_MAX);
+  #elif _WIN32
+   GetModuleFileName( NULL, buff, FILENAME_MAX );
+  #else
+  
+  #endif
+
+  
   if (result) {
     std::string current_working_dir(buff);
     return current_working_dir;
