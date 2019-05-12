@@ -23,9 +23,11 @@ std::string GetCurrentWorkingDir(void) {
   #ifdef __linux__ 
     auto result = getcwd(buff, FILENAME_MAX);
   #elif _WIN32
-   GetModuleFileName( NULL, buff, FILENAME_MAX );
+    GetModuleFileName( NULL, buff, FILENAME_MAX );
+    string::size_type pos = string( buff ).find_last_of( "\\/" );
+    return string( buff ).substr( 0, pos);
   #else
-  
+
   #endif
 
   
