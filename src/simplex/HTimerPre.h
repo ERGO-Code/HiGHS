@@ -14,7 +14,7 @@
 #ifndef SIMPLEX_HTIMERPRE_H_
 #define SIMPLEX_HTIMERPRE_H_
 
-#include <sys/time.h>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -80,7 +80,7 @@ class HTimerPre {
   // Reset the timer
   void reset() {
     for (int i = 0; i < HTICK_ITEMS_COUNT_PRE; i++) itemTicks[i] = 0;
-    startTime = getWallTime();
+    startTime = wall_clock::now();
     startTick = getWallTick();
   }
 
@@ -106,7 +106,11 @@ class HTimerPre {
   }
 
   // Current eclipsed time
-  double getTime() { return getWallTime() - startTime; }
+  double getTime() {
+    using namespace std::chrono;
+    return duration_cast<duration<double>>(wall_clock::now() - startTime)
+        .count();
+  }
 
   // Current eclipsed CPU tick
   double getTick() { return getWallTick() - startTick; }
@@ -116,7 +120,10 @@ class HTimerPre {
 
  private:
   // The start tick and time
-  double startTime;
+  using wall_clock = std::chrono::high_resolution_clock;
+  using time_point = wall_clock::time_point;
+
+  time_point startTime;
   double startTick;
 
   // The items tick and name
@@ -124,12 +131,9 @@ class HTimerPre {
 
   // Current wall time
   double getWallTime() {
-    double walltime;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    walltime = tv.tv_sec;
-    walltime += (double)tv.tv_usec / 1000000.0;
-    return walltime;
+    using namespace std::chrono;
+    return duration_cast<duration<double>>(wall_clock::now().time_since_epoch())
+        .count();
   }
 
   // Current wall tick
