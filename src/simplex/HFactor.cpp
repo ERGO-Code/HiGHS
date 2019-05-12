@@ -1603,8 +1603,8 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
   int numUpdate = 0;
   for (HVector *vec = aq; vec != 0; vec = vec->next) numUpdate++;
 
-  HVector *aqWork[numUpdate];
-  HVector *epWork[numUpdate];
+  HVector **aqWork = new HVector*[numUpdate];
+  HVector **epWork = new HVector*[numUpdate];
 
   for (int i = 0; i < numUpdate; i++) {
     aqWork[i] = aq;
@@ -1615,9 +1615,9 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
 
   // Pivot related buffers
   int PFnp0 = PFpivotIndex.size();
-  int pLogic[numUpdate];
-  double pValue[numUpdate];
-  double pAlpha[numUpdate];
+  int* pLogic = new int[numUpdate];
+  double* pValue = new double[numUpdate];
+  double* pAlpha = new double[numUpdate];
   for (int cp = 0; cp < numUpdate; cp++) {
     int cRow = iRow[cp];
     int iLogic = UpivotLookup[cRow];
@@ -1627,8 +1627,8 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
   }
 
   // Temporary U pointers
-  int Tstart[numUpdate + 1];
-  double Tpivot[numUpdate];
+  int* Tstart = new int[numUpdate + 1];
+  double* Tpivot = new double[numUpdate];
   Tstart[0] = Uindex.size();
 
   // Logically sorted previous row_ep
@@ -1843,6 +1843,13 @@ void HFactor::updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint) {
   //    // See if we want refactor
   //    if (UtotalX > UmeritX && PFpivotIndex.size() > 100)
   //        *hint = 1;
+  delete[] aqWork;
+  delete[] epWork;
+  delete[] pLogic;
+  delete[] pValue;
+  delete[] pAlpha;
+  delete[] Tstart;
+  delete[] Tpivot;
 }
 
 void HFactor::updateFT(HVector *aq, HVector *ep, int iRow, int *hint) {

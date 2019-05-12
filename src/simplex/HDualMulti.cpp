@@ -71,10 +71,11 @@ void HDual::major_chooseRow() {
    * Major loop:
    *     repeat 1-5, until we found a good sets of choices
    */
+  int* choiceIndex = new int[multi_num];
   for (;;) {
     // 1. Multiple CHUZR
     int initialCount = 0;
-    int choiceIndex[multi_num];
+    
     dualRHS.choose_multi_HGauto(&choiceIndex[0], &initialCount, multi_num);
     //        dualRHS.choose_multi_global(&choiceIndex[0], &initialCount,
     //        multi_num);
@@ -128,6 +129,7 @@ void HDual::major_chooseRow() {
     }
     if (countWrongEdWt <= choiceCount / 3) break;
   }
+  delete[] choiceIndex;
 
   // 6. Take other info associated with choices
   double pami_cutoff = 0.95;
