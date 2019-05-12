@@ -199,7 +199,7 @@ HighsStatus Highs::run() {
       return HighsStatus::PresolveError;
     }
     }
-    bool run_postsolve = true;
+    bool run_postsolve = false;
     if (run_postsolve) {
       // Postsolve. Does nothing if there were no reductions during presolve.
       if (solve_status == HighsStatus::Optimal) {
@@ -286,9 +286,7 @@ HighsStatus Highs::run() {
   message << std::endl;
   message << "Run status : " << HighsStatusToString(solve_status)
           << std::endl;
-  message << "Iterations : " << lp_solve_simplex_iteration_count
-          << std::endl;
-  message << "Postsolve  : " << lp_solve_postsolve_iteration_count
+  message << "Iterations : " << lp_solve_simplex_iteration_count//hmos_[solved_hmo].simplex_info_.iteration_count
           << std::endl;
 
   if (solve_status == HighsStatus::Optimal)
@@ -297,6 +295,8 @@ HighsStatus Highs::run() {
 
   message << "Time       : " << std::fixed << std::setprecision(3)
           << lp_solve_final_time-lp_solve_initial_time << std::endl;
+
+  message << "Postsolve  : " << lp_solve_postsolve_iteration_count          << std::endl;
 
   message << std::endl;
 
