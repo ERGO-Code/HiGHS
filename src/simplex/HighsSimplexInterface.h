@@ -393,6 +393,22 @@ class HighsSimplexInterface {
   void convertSimplexToHighsSolution();
 
   /**
+   * @brief Analyse a single HiGHS solution and simplex basis, looking for
+   * primal and dual infeasibilities
+   */
+  bool analyseSingleHighsSolutionAndSimplexBasis(
+						 bool report,
+						 const int nonbasic_flag,
+						 const int nonbasic_move,
+						 const double lower,
+						 const double upper,
+						 const double value,
+						 const double dual,
+						 int &num_non_basic_var, 
+						 int &num_basic_var 
+						 );
+
+  /**
    * @brief Analyse the HiGHS solution and simplex basis, looking for
    * primal and dual infeasibilities
    */

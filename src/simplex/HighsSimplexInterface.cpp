@@ -1261,81 +1261,159 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
   }
 }
 
+bool HighsSimplexInterface::analyseSingleHighsSolutionAndSimplexBasis(bool report,
+								      const int nonbasic_flag, const int nonbasic_move,
+								      const double lower, const double upper, const double value, const double dual,
+								      int &num_non_basic_var, int &num_basic_var) {
+  double primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  double middle = (lower+upper)*0.5;
+  
+  bool query = false;
+  bool count = !report;
+  double primal_residual = max(lower-value, value-upper);
+  // ToDo Strange: nonbasic_flag seems to be inverted???
+  if (nonbasic_flag == NONBASIC_FLAG_TRUE) {
+    // Nonbasic variable: look for primal and dual infeasibility
+    if (count) num_non_basic_var++;
+    if (primal_residual > primal_feasibility_tolerance) {
+      // Outside a bound 
+      if (value < lower) {
+	query = true;
+	if (report) printf(": Nonbasic below lower bound by %12g", primal_residual);
+      } else {
+	query = true;
+	if (report) printf(": Nonbasic above upper bound by %12g", primal_residual);
+      }
+    } else if (primal_residual >= -primal_feasibility_tolerance) {
+      // At a bound: check for dual feasibility
+      if (lower < upper) {
+	// Non-fixed column
+	if (value < middle) {
+	  // At lower
+	  if (dual < -dual_feasibility_tolerance) {
+	    // Dual infeasiblility
+	    query = true;
+	    if (report) printf(": Dual infeasibility of %12g", -dual);
+	  }
+	} else {
+	  // At Upper
+	  if (dual > dual_feasibility_tolerance) {
+	    // Dual infeasiblility
+	    query = true;
+	    if (report) printf(": Dual infeasibility of %12g", dual);
+	  }
+	}
+      }
+    } else {
+      // Between bounds (or free)
+      if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+	// Free
+	if (report) printf(": Nonbasic free");
+      } else {
+	query = true;
+	if (report) printf(": Nonbasic off bound by %12g", -primal_residual);
+      }
+      if (fabs(dual) > dual_feasibility_tolerance) {
+	query = true;
+	if (report) printf(": Dual infeasibility of %12g", fabs(dual));
+      }
+    }
+  } else {
+    // Basic variable: look for primal and dual infeasibility
+    if (count) num_basic_var++;
+    if (primal_residual > primal_feasibility_tolerance) {
+      // Outside a bound 
+      if (value < lower) {
+	query = true;
+	if (report) printf(": Basic below lower bound by %12g", primal_residual);
+      } else {
+	query = true;
+	if (report) printf(": Basic above upper bound by %12g", primal_residual);
+      }
+    }
+  }
+  return query;
+}
+
 void HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis() {
   HighsSolution &solution = highs_model_object.solution_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsLp &lp = highs_model_object.lp_;
   printf("\nIn analyseHighsSolutionAndSimplexBasis\n\n");
+  
   double primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
   vector <double> row_primal_activities;
   vector <double> row_dual_activities;
   row_primal_activities.assign(lp.numRow_, 0);
   row_dual_activities.assign(lp.numRow_, 0);
-  printf("Index Bs Mv [          LB,           UB]       Primal         Dual   PrimalRsdu     DualRsdu\n");
+  int num_non_basic_var = 0;
+  int num_basic_var = 0;
+  bool header_written = false;
   for (int iCol=0; iCol<lp.numCol_; iCol++) {
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
-    double middle = (lower+upper)*0.5;
-    double value = solution.col_dual[iCol];
-    double dual = solution.col_value[iCol];
-    int nonbasicFlag = simplex_basis.nonbasicFlag_[iCol];
-    int nonbasicMove = simplex_basis.nonbasicMove_[iCol];
-    printf("%5d %2d %2d [%12g, %12g] %12g %12g", iCol, nonbasicFlag, nonbasicMove, lower, upper, value, dual);
-    double primal_residual = max(lower-value, value-upper);
-    // ToDo Strange: nonbasicFlag seems to be inverted???
-    if (nonbasicFlag == 0) {
-      // Nonbasic variable: look for primal and dual infeasibility
-      if (primal_residual > primal_feasibility_tolerance) {
-	// Outside a bound 
-	if (value < lower) {
-	  printf(": Nonbasic below lower bound by %12g", primal_residual);
-	} else {
-	  printf(": Nonbasic above upper bound by %12g", primal_residual);
-	}
-      } else if (primal_residual >= -primal_feasibility_tolerance) {
-	// At a bound: check for dual feasibility
-	if (lower < upper) {
-	  // Non-fixed column
-	  if (value < middle) {
-	    // At lower
-	    if (dual < -dual_feasibility_tolerance) {
-	      // Dual infeasiblility
-	      printf(": Dual infeasibility of %12g", -dual);
-	    }
-	  } else {
-	    // At Upper
-	    if (dual > dual_feasibility_tolerance) {
-	      // Dual infeasiblility
-	      printf(": Dual infeasibility of %12g", dual);
-	    }
-	  }
-	}
-      } else {
-	// Between bounds (or free)
-	if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-	  // Free
-	  printf(": Nonbasic free");
-	} else {
-	  printf(": Nonbasic off bound by %12g", -primal_residual);
-	}
-	if (fabs(dual) > dual_feasibility_tolerance) {
-	  printf(": Dual infeasibility of %12g", fabs(dual));
-	}
+    double value = solution.col_value[iCol];
+    double dual = solution.col_dual[iCol];
+    int iVar = iCol;
+    int nonbasic_flag = simplex_basis.nonbasicFlag_[iVar];
+    int nonbasic_move = simplex_basis.nonbasicMove_[iVar];
+
+    bool report = false;
+    bool query = false;
+
+    query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+					      lower, upper, value, dual,
+					      num_non_basic_var, num_basic_var 
+					      );
+    report = true;//query;
+    if (report) {
+      if (!header_written) {
+	printf("Columns\nIndex Bs Mv [          LB,           UB]       Primal         Dual   PrimalRsdu     DualRsdu\n");
+	header_written = true;
       }
-    } else {
-      // Basic variable: look for primal and dual infeasibility
-      if (primal_residual > primal_feasibility_tolerance) {
-	// Outside a bound 
-	if (value < lower) {
-	  printf(": Basic below lower bound by %12g", primal_residual);
-	} else {
-	  printf(": Basic above upper bound by %12g", primal_residual);
-	}
-      }
+      printf("%5d %2d %2d [%12g, %12g] %12g %12g", iCol, nonbasic_flag, nonbasic_move, lower, upper, value, dual);
+      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+						lower, upper, value, dual,
+						num_non_basic_var, num_basic_var 
+						);
+      printf("\n");
     }
-    printf("\n");
   }
+  header_written = false;
+  for (int iRow=0; iRow<lp.numRow_; iRow++) {
+    double lower = lp.rowLower_[iRow];
+    double upper = lp.rowUpper_[iRow];
+    double value = solution.row_value[iRow];
+    double dual = -solution.row_dual[iRow];
+    int iVar = lp.numCol_ + iRow;
+    int nonbasic_flag = simplex_basis.nonbasicFlag_[iVar];
+    int nonbasic_move = simplex_basis.nonbasicMove_[iVar];
+
+    bool report = false;
+    bool query = false;
+
+    query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+					      lower, upper, value, dual,
+					      num_non_basic_var, num_basic_var 
+					      );
+    report = true;//query;
+    if (report) {
+      if (!header_written) {
+	printf("Rows\nIndex Bs Mv [          LB,           UB]       Primal         Dual   PrimalRsdu     DualRsdu\n");
+	header_written = true;
+      }
+      printf("%5d %2d %2d [%12g, %12g] %12g %12g", iRow, nonbasic_flag, nonbasic_move, lower, upper, value, dual);
+      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+						lower, upper, value, dual,
+						num_non_basic_var, num_basic_var 
+						);
+      printf("\n");
+    }
+  }
+  printf("Number of nonbasic variables is %2d; number of columns is %2d\n", num_non_basic_var, lp.numCol_);
+  printf("Number of    basic variables is %2d; number of rows    is %2d\n", num_basic_var, lp.numRow_);
 }
 
 int HighsSimplexInterface::get_basic_indices(int *bind) {
