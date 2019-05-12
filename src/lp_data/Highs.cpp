@@ -46,7 +46,6 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // with runSolver(..)
 HighsStatus Highs::run() {
 
-  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp_, 1);
   bool normalise = true;
   HighsStatus return_status = assessLp(lp_, options_, normalise);
   if (return_status == HighsStatus::Error) return return_status;
@@ -100,7 +99,10 @@ HighsStatus Highs::run() {
   // Running as LP solver: start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-  double tt0 = timer_.readRunHighsClock();
+  // Record the initial time and zero the overall iteration count
+  double lp_solve_initial_time = timer_.readRunHighsClock();
+  int lp_solve_simplex_iteration_count = 0;
+  int lp_solve_postsolve_iteration_count = 0;
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
   HighsStatus solve_status = HighsStatus::Init;
@@ -122,12 +124,26 @@ HighsStatus Highs::run() {
     // Run solver.
     switch (presolve_status) {
     case HighsPresolveStatus::NotPresolved: {
+      int lp_solve_initial_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      // Call runSolver
       solve_status = runSolver(hmos_[solved_hmo]);
+      int lp_solve_final_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					   lp_solve_initial_simplex_iteration_count);
       break;
     }
     case HighsPresolveStatus::NotReduced: {
       printf("Problem not reduced\n");
+      int lp_solve_initial_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      // Call runSolver
       solve_status = runSolver(hmos_[solved_hmo]);
+      int lp_solve_final_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					   lp_solve_initial_simplex_iteration_count);
       break;
     }
     case HighsPresolveStatus::Reduced: {
@@ -136,7 +152,14 @@ HighsStatus Highs::run() {
       // so the last one in lp_ is the presolved one.
       hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
       solved_hmo = presolve_hmo;
+      int lp_solve_initial_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      // Call runSolver
       solve_status = runSolver(hmos_[solved_hmo]);
+      int lp_solve_final_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					   lp_solve_initial_simplex_iteration_count);
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
@@ -155,14 +178,14 @@ HighsStatus Highs::run() {
       // multiple calls to run().
       // Stop and read the HiGHS clock, then work out time for this call
       if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-      double tt1 = timer_.readRunHighsClock();
+      double lp_solve_final_time = timer_.readRunHighsClock();
       
       std::stringstream message_not_opt;
       message_not_opt << std::endl;
       message_not_opt << "Run status : " << HighsStatusToString(result)
 		      << std::endl;
       message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
-		      << tt1-tt0 << std::endl;
+		      << lp_solve_final_time-lp_solve_initial_time << std::endl;
       
       message_not_opt << std::endl;
       
@@ -198,6 +221,7 @@ HighsStatus Highs::run() {
 	    HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
 	    // Set solution(?) and basis to hot-start the simplex solver
 	    // for the original_hmo
+	    hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
 	    hmos_[original_hmo].simplex_basis_.valid_ = true;
 	    hmos_[original_hmo].simplex_basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
 	    hmos_[original_hmo].simplex_basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
@@ -205,8 +229,16 @@ HighsStatus Highs::run() {
 	    options_.clean_up = true;
 	    // Now hot-start the simplex solver for the original_hmo
 	    solved_hmo = original_hmo;
+	    int lp_solve_initial_simplex_iteration_count =
+	      hmos_[solved_hmo].simplex_info_.iteration_count;
+	    // Call runSolver
 	    solve_status = runSolver(hmos_[solved_hmo]);
-	  }
+	    int lp_solve_final_simplex_iteration_count =
+	      hmos_[solved_hmo].simplex_info_.iteration_count;
+	    lp_solve_postsolve_iteration_count = lp_solve_final_simplex_iteration_count -
+	      lp_solve_initial_simplex_iteration_count;
+	    lp_solve_simplex_iteration_count += lp_solve_postsolve_iteration_count;
+ 	  }
 	}
       }
     } else {
@@ -221,7 +253,14 @@ HighsStatus Highs::run() {
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
     solved_hmo = original_hmo;
+    int lp_solve_initial_simplex_iteration_count =
+      hmos_[solved_hmo].simplex_info_.iteration_count;
+    // Call runSolver
     solve_status = runSolver(hmos_[solved_hmo]);
+    int lp_solve_final_simplex_iteration_count =
+      hmos_[solved_hmo].simplex_info_.iteration_count;
+    lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					 lp_solve_initial_simplex_iteration_count);
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve again
@@ -241,13 +280,15 @@ HighsStatus Highs::run() {
   }
   // Stop and read the HiGHS clock, then work out time for this call
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-  double tt1 = timer_.readRunHighsClock();
+  double lp_solve_final_time = timer_.readRunHighsClock();
 
   std::stringstream message;
   message << std::endl;
   message << "Run status : " << HighsStatusToString(solve_status)
           << std::endl;
-  message << "Iterations : " << hmos_[original_hmo].simplex_info_.iteration_count
+  message << "Iterations : " << lp_solve_simplex_iteration_count
+          << std::endl;
+  message << "Postsolve  : " << lp_solve_postsolve_iteration_count
           << std::endl;
 
   if (solve_status == HighsStatus::Optimal)
@@ -255,7 +296,7 @@ HighsStatus Highs::run() {
             << hmos_[original_hmo].simplex_info_.dualObjectiveValue << std::endl;
 
   message << "Time       : " << std::fixed << std::setprecision(3)
-          << tt1-tt0 << std::endl;
+          << lp_solve_final_time-lp_solve_initial_time << std::endl;
 
   message << std::endl;
 
@@ -791,26 +832,10 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo &info) {
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject &model) {
-  // trim bounds to get OSI unit test to pass: delete when checkLp
-  // disappears.
-  HighsLp& lp = model.lp_;
-  for (int i = 0; i < lp.numRow_; i++) {
-      if (lp.rowLower_[i] < -HIGHS_CONST_INF)
-        lp.rowLower_[i] = -HIGHS_CONST_INF;
-      if (lp.rowUpper_[i] > HIGHS_CONST_INF)
-        lp.rowUpper_[i] = HIGHS_CONST_INF;
-    }
+  bool normalise = true;
+  HighsStatus return_status = assessLp(model.lp_, model.options_, normalise);
+  if (return_status == HighsStatus::Error) return return_status;
 
-  for (int j = 0; j < lp.numCol_; j++) {
-      if (lp.colLower_[j] < -HIGHS_CONST_INF)
-        lp.colLower_[j] = -HIGHS_CONST_INF;
-      if (lp.colUpper_[j] > HIGHS_CONST_INF)
-        lp.colUpper_[j] = HIGHS_CONST_INF;
-    }
-
-  assert(checkLp(model.lp_) == HighsStatus::OK);
-  //  assert(assessLp(lp, options) == HighsStatus::OK);
-  
   HighsStatus status = HighsStatus::Init;
 #ifndef IPX
   // HiGHS
@@ -847,7 +872,7 @@ HighsStatus Highs::runBnb() {
   // Need to start the HiGHS clock unless it's already running
   bool run_highs_clock_already_running = timer_.runningRunHighsClock();
   if (!run_highs_clock_already_running) timer_.startRunHighsClock();
-  double tt0 = timer_.readRunHighsClock();
+  double mip_solve_initial_time = timer_.readRunHighsClock();
 
   // Start tree by making root node.
    std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
@@ -891,7 +916,7 @@ HighsStatus Highs::runBnb() {
   
   // Stop and read the HiGHS clock, then work out time for this call
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-  double tt1 = timer_.readRunHighsClock();
+  double mip_solve_final_time = timer_.readRunHighsClock();
 
   if (tree.getBestSolution().size() > 0) {
     std::stringstream message;
@@ -903,7 +928,7 @@ HighsStatus Highs::runBnb() {
     message << "Objective  : " << std::scientific
             << tree.getBestObjective() << std::endl;
     message << "Time       : " << std::fixed << std::setprecision(3)
-            << tt1-tt0 << std::endl;
+            << mip_solve_final_time-mip_solve_initial_time << std::endl;
     message << std::endl;
 
     HighsPrintMessage(ML_MINIMAL, message.str().c_str());

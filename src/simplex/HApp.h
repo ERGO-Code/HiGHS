@@ -50,7 +50,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "On entry to runSimplexSolver");
 #endif
-
+  if (opt.clean_up) {
+    // Analyse the basis and solution
+    simplex_interface.analyseHighsSolutionAndSimplexBasis();
+  }
   // Possibly set up the LP to be solved by the simplex method. According to options
   //
   // * Transpose the LP to be solved - deprecated since primal simplex solver is better
