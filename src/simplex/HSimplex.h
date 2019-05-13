@@ -131,6 +131,11 @@ void compute_primal_objective_value(
 				    HighsModelObject &highs_model_object
 				    );
 
+void computePrimalObjectiveValueFromColumnValue(
+				    HighsModelObject &highs_model_object,
+				    const double *col_value
+				    );
+
 void initialiseSimplexLpRandomVectors(
 				      HighsModelObject &highs_model
 				      );

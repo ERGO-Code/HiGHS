@@ -54,9 +54,9 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // Set values of internal options
 #ifdef HiGHSDEV
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_inner_clock = false; // false;
   simplex_info.report_simplex_outer_clock = false;
-  simplex_info.report_simplex_phases_clock = true; // false;
+  simplex_info.report_simplex_phases_clock = false; // false;
   // Option for analysing simplex iterations
   simplex_info.analyseLp = false;                // false;
   simplex_info.analyseSimplexIterations = false; // false
@@ -239,21 +239,53 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   HighsLp &lp = highs_model_object.lp_;
   HFactor &factor = highs_model_object.factor_;
+  HighsSolution &solution = highs_model_object.solution_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   SimplexBasis &basis = highs_model_object.simplex_basis_;
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
+  printf("\nIn rebuildPostsolve\n");  
+  printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
+  bool zero_basic_duals = true;
+  double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+ if (zero_basic_duals) {
+    int num_small_basic_duals = 0;
+    int num_big_basic_duals = 0;
+    double sum_big_basic_duals = 0;
+    for (int ix = 0; ix < lp.numRow_; ix++) {
+      int iVar = basis.basicIndex_[ix];
+      double abs_dual;
+      if (iVar < lp.numCol_) {
+	abs_dual = fabs(solution.col_dual[iVar]);
+	solution.col_dual[iVar] = 0;
+      } else {
+	int iRow = iVar-lp.numCol_;
+	abs_dual = fabs(solution.row_dual[iRow]);
+	solution.row_dual[iRow] = 0;
+      }
+      if (abs_dual) {
+	if (abs_dual <  dual_feasibility_tolerance) {
+	  num_small_basic_duals++;
+	} else {
+	  num_big_basic_duals++;
+	  sum_big_basic_duals += abs_dual;
+	}
+      }
+    }
+    int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
+    printf("Zeroed %d basic duals: %d big (sum = %g) and %d small\n",
+	   num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
+  }
 #ifdef HiGHSDEV
-  reportSimplexLpStatus(highs_model_object.simplex_lp_status_, "In rebuildPostsolve");
+ //  reportSimplexLpStatus(highs_model_object.simplex_lp_status_, "In rebuildPostsolve");
 #endif
   // Analyse the basis and solution
-  printf("\nIn rebuildPostsolve\n");  
   HighsSimplexInterface interface(highs_model_object);
   SimplexSolutionStatus lp_status = interface.analyseHighsSolutionAndSimplexBasis();
   if (lp_status == SimplexSolutionStatus::OPTIMAL) {
     printf("After postsolve LP is optimal\n");
-    compute_primal_objective_value(highs_model_object) ;
-    compute_dual_objective_value(highs_model_object) ;
+    
+    highs_model_object.simplex_info_.dualObjectiveValue = highs_model_object.simplex_info_.primalObjectiveValue;
   }
   
   factor.setup(lp.numCol_, lp.numRow_,
@@ -281,23 +313,49 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   }
   buffer.count = lp.numRow_;
   factor.btran(buffer, 1);
-  double sum_dl_dual = 0;
+  printf("\nDifferences when recomputing duals:\nPi vector\n");
+  double sum_delta_dual = 0;
+  bool header_written = false;
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    double old_row_dual = -highs_model_object.solution_.row_dual[iRow];
+    double new_row_dual = buffer.array[iRow];
+    double dl_dual = fabs(new_row_dual - old_row_dual);
+    if (dl_dual > 1e-8) {
+      if (!header_written) {
+	printf("\nIndex NonBs          New          Old        Delta\n");
+	header_written = true;
+      }
+      printf("%5d %5d %12g %12g %12g\n",
+	     iRow, basis.nonbasicFlag_[iRow], new_row_dual, old_row_dual, dl_dual);
+    }
+    sum_delta_dual += dl_dual;
+  }
+  if (header_written) printf("\n");
+  printf("Sum delta row dual = %12g\n", sum_delta_dual);
+
+  printf("\nDifferences when recomputing duals:\nReduced costs\n");
+  sum_delta_dual = 0;
+  header_written = false;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (!basis.nonbasicFlag_[iCol]) continue;
-    double col_dual = 0;
+    double new_col_dual = lp.colCost_[iCol];
     double old_col_dual = highs_model_object.solution_.col_dual[iCol];
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
       int iRow = lp.Aindex_[el];
-      col_dual -= buffer.array[iRow]*lp.Avalue_[el];
+      new_col_dual -= buffer.array[iRow]*lp.Avalue_[el];
     }
-    double new_col_dual = col_dual + lp.colCost_[iCol];
     double dl_dual = fabs(new_col_dual - old_col_dual);
-    if (dl_dual > 1e-8)
-      printf("Column %2d: DlDual = %12g; dual = %12g; cost = %12g; y = %12g; new_dual = %12g \n",
-	     iCol, dl_dual, old_col_dual, lp.colCost_[iCol], col_dual, new_col_dual);
-    sum_dl_dual += fabs(dl_dual);
+    if (dl_dual > 1e-8) {
+      if (!header_written) {
+	printf("\nIndex NonBs          New          Old        Delta\n");
+	header_written = true;
+      }
+      printf("%5d %5d %12g %12g %12g\n",
+	     iCol, basis.nonbasicFlag_[iCol], new_col_dual, old_col_dual, dl_dual);
+    }
+    sum_delta_dual += dl_dual;
   }
-  printf("Sum delta dual = %12g\n", sum_dl_dual);
+  if (header_written) printf("\n");
+  printf("Sum delta column dual = %12g\n", sum_delta_dual);
 
   return SimplexSolutionStatus::OPTIMAL;
 }
@@ -573,6 +631,16 @@ void compute_primal_objective_value(HighsModelObject &highs_model_object) {
   simplex_info.primalObjectiveValue -= simplex_lp.offset_;
   // Now have primal objective value
   simplex_lp_status.has_primal_objective_value = true;
+}
+
+void computePrimalObjectiveValueFromColumnValue(HighsModelObject &highs_model_object, const double *col_value) {
+  HighsLp &lp = highs_model_object.lp_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  simplex_info.primalObjectiveValue = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    simplex_info.primalObjectiveValue += col_value[iCol] * lp.colCost_[iCol];
+  }
+  simplex_info.primalObjectiveValue -= lp.offset_;
 }
 
 void initialiseSimplexLpRandomVectors(HighsModelObject &highs_model_object) {

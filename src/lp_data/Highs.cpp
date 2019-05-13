@@ -227,7 +227,7 @@ HighsStatus Highs::run() {
 	    hmos_[original_hmo].simplex_basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
 	    hmos_[original_hmo].simplex_basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
 	    hmos_[original_hmo].simplex_lp_status_.has_basis = true;
-
+	    computePrimalObjectiveValueFromColumnValue(hmos_[original_hmo], &hmos_[original_hmo].solution_.col_value[0]);
 	    SimplexSolutionStatus lp_status = rebuildPostsolve(hmos_[original_hmo]);
 	    
 	    options_.clean_up = true;
