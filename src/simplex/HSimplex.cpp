@@ -246,6 +246,11 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   printf("\nIn rebuildPostsolve\n");  
   printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
+  bool frig_adlittle = false;
+  if (frig_adlittle) {
+    solution.col_dual[95] = -solution.row_dual[24];
+    solution.row_dual[24] = 0;
+  }
   bool zero_basic_duals = true;
   double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
  if (zero_basic_duals) {
