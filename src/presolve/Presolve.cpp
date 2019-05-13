@@ -2652,7 +2652,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           // calculate yi
           if (lo - up > tol)
             cout << "PR: Error in postsolving doubleton inequality " << c.row
-                 << " : inconsistent bounds for it's dual value.\n";
+                 << " : inconsistent bounds for its dual value.\n";
 
           if (lo <= 0 && up >= 0) {
             valueRowDual[c.row] = 0;
@@ -2670,6 +2670,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         }
 
         if (fabs(valueColDual[c.col]) > tol) {
+	  if (report_postsolve) {
+	    printf("1.0 : Recover col %3d as %3d (nonbasic)\n", c.col, j);
+	  }
           nonbasicFlag[c.col] = 1;
           nonbasicFlag.at(j) = 0;
           basicIndex.pop_back();
@@ -2822,6 +2825,9 @@ void Presolve::setBasisElement(change c) {
 
   switch (c.type) {
     case EMPTY_ROW: {
+      if (report_postsolve) {
+	printf("2.1 : Recover row %3d as %3d (basic): empty row\n", c.row, numColOriginal + c.row);
+      }
       nonbasicFlag.at(numColOriginal + c.row) = 0;
       break;
     }
@@ -2835,39 +2841,65 @@ void Presolve::setBasisElement(change c) {
 
       break;
     case FORCING_ROW: {
+      if (report_postsolve) {
+	printf("2.2 : Recover row %3d as %3d (basic): forcing row\n", c.row, numColOriginal + c.row);
+      }
       nonbasicFlag.at(numColOriginal + c.row) = 0;
       break;
     }
     case REDUNDANT_ROW: {
+      if (report_postsolve) {
+	printf("2.3 : Recover row %3d as %3d (basic): redundant\n", c.row, numColOriginal + c.row);
+      }
       nonbasicFlag.at(numColOriginal + c.row) = 0;
       break;
     }
     case FREE_SING_COL:
     case IMPLIED_FREE_SING_COL: {
+      if (report_postsolve) {
+	printf("2.4a: Recover col %3d as %3d (basic): implied free singleton column\n", c.col, numColOriginal + c.row);
+      }
       nonbasicFlag[c.col] = 0;
       basicIndex.push_back(c.col);
 
+      if (report_postsolve) {
+	printf("2.5b: Recover row %3d as %3d (nonbasic): implied free singleton column\n", c.row, numColOriginal + c.row);
+      }
       nonbasicFlag.at(numColOriginal + c.row) = 1;
       break;
     }
     case SING_COL_DOUBLETON_INEQ: {
       // column singleton in a doubleton inequality.
+      if (report_postsolve) {
+	printf("2.6b: Recover col %3d as %3d (basic): singleton column doubleton inequality\n", c.col, numColOriginal + c.row);
+      }
       nonbasicFlag.at(c.col) = 0;
       basicIndex.push_back(c.col);
 
+      if (report_postsolve) {
+	printf("2.6b: Recover row %3d as %3d (nonbasic): singleton column doubleton inequality\n", c.row, numColOriginal + c.row);
+      }
       nonbasicFlag.at(numColOriginal + c.row) = 1;
       break;
     }
     case EMPTY_COL:
     case DOMINATED_COLS:
     case WEAKLY_DOMINATED_COLS: {
+      if (report_postsolve) {
+	printf("2.7 : Recover column %3d (nonbasic): weakly dominated column\n", c.col);
+      }
       nonbasicFlag.at(c.col) = 1;
       break;
     }
     case FIXED_COL: {  // fixed variable:
       // check if it was NOT after singRow
-      if (chng.size() > 0)
-        if (chng.top().type != SING_ROW) nonbasicFlag.at(c.col) = 1;
+      if (chng.size() > 0) 
+        if (chng.top().type != SING_ROW) {
+	  if (report_postsolve) {
+	    printf("2.8 : Recover column %3d (nonbasic): weakly dominated column\n", c.col);
+	  }
+	  nonbasicFlag.at(c.col) = 1;
+	}
       break;
     }
   }
@@ -3095,7 +3127,7 @@ string Presolve::getDualsForcingRow(int row, vector<int> &fRjs) {
   // calculate yi
   if (lo > up)
     cout << "PR: Error in postsolving forcing row " << row
-         << " : inconsistent bounds for it's dual value.\n";
+         << " : inconsistent bounds for its dual value.\n";
 
   if (lo <= 0 && up >= 0) {
     valueRowDual.at(row) = 0;
@@ -3282,14 +3314,25 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   if (nonbasicFlag.at(col) == 1) {
     // x was not basic but is now
     if (valuePrimal.at(col) != l && valuePrimal.at(col) != u) {
+      if (report_postsolve) {
+	printf("3.1 : Make column %3d nonbasic and row %3d basic\n", col, row);
+      }
       nonbasicFlag.at(col) = 0;
       nonbasicFlag[numColOriginal + row] = 1;
     }
     // x was not basic and is not now either, row is basic
-    else
+    else {
+      if (report_postsolve) {
+	printf("3.2 : Make row %3d basic\n", row);
+      }
       nonbasicFlag[numColOriginal + row] = 0;
-  } else if (nonbasicFlag.at(col) == 0)      // x is basic
+    }
+  } else if (nonbasicFlag.at(col) == 0) {    // x is basic
+      if (report_postsolve) {
+	printf("3.3 : Make row %3d basic\n", row);
+      }
     nonbasicFlag[numColOriginal + row] = 0;  // row becomes basic too
+  }
 }
 
 void Presolve::getDualsDoubletonEquation(int row, int col) {
@@ -3349,7 +3392,7 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
   // calculate yi
   if (lo - up > tol)
     cout << "PR: Error in postsolving doubleton equation " << row
-         << " : inconsistent bounds for it's dual value.\n";
+         << " : inconsistent bounds for its dual value.\n";
 
   if (lo <= 0 && up >= 0) {
     valueRowDual.at(row) = 0;
@@ -3367,15 +3410,40 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 
   if ((nonbasicFlag.at(x) == 1 && valueX == ubxNew && ubxNew < ubxOld) ||
       (nonbasicFlag.at(x) == 1 && valueX == lbxNew && lbxNew > lbxOld)) {
+      if (report_postsolve) {
+	if (x < numColOriginal) {
+	  printf("4.1 : Make column %3d basic\n", x);
+	} else {
+	  printf("4.1 : Make row    %3d basic\n", x-numColOriginal);
+	}
+      }
     nonbasicFlag.at(x) = 0;
   } else {
     // row becomes basic unless y is between bounds, in which case y is basic
     if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
+      if (report_postsolve) {
+	if (y < numColOriginal) {
+	  printf("4.2 : Make column %3d basic\n", y);
+	} else {
+	  printf("4.2 : Make row    %3d basic\n", y-numColOriginal);
+	}
+      }
       nonbasicFlag.at(y) = 0;
-    } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol)
+    } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
+      if (report_postsolve) {
+	if (y < numColOriginal) {
+	  printf("4.3 : Make column %3d basic\n", y);
+	} else {
+	  printf("4.3 : Make row    %3d basic\n", y-numColOriginal);
+	}
+      }
       nonbasicFlag.at(y) = 0;
-    else
+    } else {
+      if (report_postsolve) {
+	printf("4.4 : Make row    %3d basic\n", row);
+      }
       nonbasicFlag[numColOriginal + row] = 0;
+    }
   }
 
   // flagRow.at(row) = true;

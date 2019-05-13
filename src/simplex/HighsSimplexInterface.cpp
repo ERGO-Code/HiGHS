@@ -1484,7 +1484,8 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis
 	 sum_primal_residual, num_primal_infeasibility, max_primal_infeasibility, sum_primal_infeasibility);
   printf("Dual   residual sum = %12g: num/max/sum infeasibilities %6d/%12g/%12g\n",
 	 sum_dual_residual, num_dual_infeasibility, max_dual_infeasibility, sum_dual_infeasibility);
-  if (num_primal_infeasibility == 0 && num_dual_infeasibility == 0) {
+  if ((num_primal_infeasibility + num_dual_infeasibility == 0) &&
+      (sum_primal_residual + sum_dual_residual < primal_feasibility_tolerance + dual_feasibility_tolerance)) {
     printf("\nOptimal in analyseHighsSolutionAndSimplexBasis\n\n");
     return SimplexSolutionStatus::OPTIMAL;
   }
