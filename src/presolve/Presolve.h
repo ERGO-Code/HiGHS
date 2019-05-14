@@ -69,7 +69,7 @@ class Presolve : public HPreData {
   int iKKTcheck;
   int presolve(int print);
 
-  const bool report_postsolve = true;
+  const bool report_postsolve = false;
 
   double objShift;
   void initializeVectors();

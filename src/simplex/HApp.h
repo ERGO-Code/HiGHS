@@ -170,7 +170,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Optimal solution: copy the solution and basis
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
-  //  printf("\nOn leaving runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
+  printf("\nOn leaving runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
+  //  rebuildPostsolve(highs_model_object);// Just for checking correctness of rebuildPostsolve checks
   
   return result;
 }

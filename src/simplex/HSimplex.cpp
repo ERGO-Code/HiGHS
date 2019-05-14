@@ -362,6 +362,55 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   if (header_written) printf("\n");
   printf("Sum delta column dual = %12g\n", sum_delta_dual);
 
+  // Compute the basic primal variables
+  buffer.clear();
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) buffer.array[iRow] = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    if (!basis.nonbasicFlag_[iCol]) continue;
+    double value = highs_model_object.solution_.col_value[iCol];
+    for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
+      int iRow = lp.Aindex_[el];
+      //      printf("Col %2d: Row %2d Value %12g\n", iCol, iRow, lp.Avalue_[el]);
+      buffer.array[iRow] += value*lp.Avalue_[el];
+    }
+  }
+  //  for (int i = 0; i < lp.numRow_; i++) printf("Bf FTRAN: After cols Row %2d has value %12g\n", i, buffer.array[i]);
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
+    double value = -highs_model_object.solution_.row_value[iRow];
+    //    printf("Bf FTRAN: Row %2d: adding %12g\n", iRow, value);
+    buffer.array[iRow] += value;
+  }
+  //  for (int i = 0; i < lp.numRow_; i++) printf("Bf FTRAN: After rows Row %2d has value %12g\n", i, buffer.array[i]);
+  buffer.count = lp.numRow_;
+  factor.ftran(buffer, 1);
+  printf("\nDifferences when recomputing primals:\nBasic variables\n");
+  double sum_delta_value = 0;
+  header_written = false;
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    int iCol = basis.basicIndex_[iRow];
+    double old_value;
+    if (iCol < lp.numCol_) {
+      old_value = -highs_model_object.solution_.col_value[iCol];
+    } else {
+      old_value = highs_model_object.solution_.row_value[iCol-lp.numCol_];
+    }
+    double new_value = buffer.array[iRow];
+    double dl_value = fabs(new_value - old_value);
+    if (dl_value > 1e-8) {
+      if (!header_written) {
+	printf("\nIndex          New          Old        Delta\n");
+	header_written = true;
+      }
+      printf("%5d %12g %12g %12g\n",
+	     iRow, new_value, old_value, dl_value);
+    }
+    sum_delta_value += dl_value;
+  }
+  if (header_written) printf("\n");
+  printf("Sum delta basic value = %12g\n", sum_delta_value);
+
+  
   return SimplexSolutionStatus::OPTIMAL;
 }
 
@@ -2042,10 +2091,14 @@ void compute_primal(HighsModelObject &highs_model_object) {
   buffer.clear();
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
+    //    if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] == 0) printf("\nAfter adding in %12g*a[%2d]\n", simplex_info.workValue_[i], i);
     if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] != 0) {
       matrix.collect_aj(buffer, i, simplex_info.workValue_[i]);
+      //      printf("\nAfter adding in %12g*a[%2d]\nRow     value\n", simplex_info.workValue_[i], i);
+      //      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) printf("%3d %12g\n", iRow, buffer.array[iRow]);
     }
   }
+  //  for (int i = 0; i < simplex_lp.numRow_; i++) printf("Bf FTRAN: Row %2d has value %12g\n", i, buffer.array[i]);
   factor.ftran(buffer, 1);
 
   for (int i = 0; i < simplex_lp.numRow_; i++) {

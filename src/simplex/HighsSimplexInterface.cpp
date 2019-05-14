@@ -1369,7 +1369,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis
   double sum_dual_infeasibility = 0;
   double max_primal_infeasibility = 0;
   double max_dual_infeasibility = 0;
-  const bool force_report = false;
+  const bool force_report = false;//true;//
   for (int iCol=0; iCol<lp.numCol_; iCol++) {
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
