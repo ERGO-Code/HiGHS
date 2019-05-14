@@ -244,14 +244,17 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   SimplexBasis &basis = highs_model_object.simplex_basis_;
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
-  printf("\nIn rebuildPostsolve\n");  
-  printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
+  bool report = false;
+  if (report) {
+    printf("\nIn rebuildPostsolve\n");  
+    printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
+  }
   bool frig_adlittle = false;
   if (frig_adlittle) {
     solution.col_dual[95] = -solution.row_dual[24];
     solution.row_dual[24] = 0;
   }
-  bool zero_basic_duals = true;
+  bool zero_basic_duals = false;
   double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
  if (zero_basic_duals) {
     int num_small_basic_duals = 0;
@@ -278,8 +281,9 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
       }
     }
     int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
-    printf("Zeroed %d basic duals: %d big (sum = %g) and %d small\n",
-	   num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
+    if (report) printf("Zeroed %d basic duals: %d big (sum = %g) and %d small\n",
+	     num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
+    printf(",%g", sum_big_basic_duals);
   }
 #ifdef HiGHSDEV
  //  reportSimplexLpStatus(highs_model_object.simplex_lp_status_, "In rebuildPostsolve");
@@ -288,8 +292,7 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   HighsSimplexInterface interface(highs_model_object);
   SimplexSolutionStatus lp_status = interface.analyseHighsSolutionAndSimplexBasis();
   if (lp_status == SimplexSolutionStatus::OPTIMAL) {
-    printf("After postsolve LP is optimal\n");
-    
+    if (report) printf("After postsolve LP is optimal\n");
     highs_model_object.simplex_info_.dualObjectiveValue = highs_model_object.simplex_info_.primalObjectiveValue;
   }
   
@@ -318,7 +321,7 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   }
   buffer.count = lp.numRow_;
   factor.btran(buffer, 1);
-  printf("\nDifferences when recomputing duals:\nPi vector\n");
+  if (report) printf("\nDifferences when recomputing duals:\nPi vector\n");
   double sum_delta_dual = 0;
   bool header_written = false;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
@@ -327,18 +330,18 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
     double dl_dual = fabs(new_row_dual - old_row_dual);
     if (dl_dual > 1e-8) {
       if (!header_written) {
-	printf("\nIndex NonBs          New          Old        Delta\n");
+	if (report) printf("\nIndex NonBs          New          Old        Delta\n");
 	header_written = true;
       }
-      printf("%5d %5d %12g %12g %12g\n",
+      if (report) printf("%5d %5d %12g %12g %12g\n",
 	     iRow, basis.nonbasicFlag_[iRow], new_row_dual, old_row_dual, dl_dual);
     }
     sum_delta_dual += dl_dual;
   }
-  if (header_written) printf("\n");
-  printf("Sum delta row dual = %12g\n", sum_delta_dual);
+  if (header_written) if (report) printf("\n");
+  if (report) printf("Sum delta row dual = %12g\n", sum_delta_dual);
 
-  printf("\nDifferences when recomputing duals:\nReduced costs\n");
+  if (report) printf("\nDifferences when recomputing duals:\nReduced costs\n");
   sum_delta_dual = 0;
   header_written = false;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
@@ -351,16 +354,16 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
     double dl_dual = fabs(new_col_dual - old_col_dual);
     if (dl_dual > 1e-8) {
       if (!header_written) {
-	printf("\nIndex NonBs          New          Old        Delta\n");
+	if (report) printf("\nIndex NonBs          New          Old        Delta\n");
 	header_written = true;
       }
-      printf("%5d %5d %12g %12g %12g\n",
+      if (report) printf("%5d %5d %12g %12g %12g\n",
 	     iCol, basis.nonbasicFlag_[iCol], new_col_dual, old_col_dual, dl_dual);
     }
     sum_delta_dual += dl_dual;
   }
-  if (header_written) printf("\n");
-  printf("Sum delta column dual = %12g\n", sum_delta_dual);
+  if (header_written) if (report) printf("\n");
+  if (report) printf("Sum delta column dual = %12g\n", sum_delta_dual);
 
   // Compute the basic primal variables
   buffer.clear();
@@ -370,21 +373,21 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
     double value = highs_model_object.solution_.col_value[iCol];
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
       int iRow = lp.Aindex_[el];
-      //      printf("Col %2d: Row %2d Value %12g\n", iCol, iRow, lp.Avalue_[el]);
+      //      if (report) printf("Col %2d: Row %2d Value %12g\n", iCol, iRow, lp.Avalue_[el]);
       buffer.array[iRow] += value*lp.Avalue_[el];
     }
   }
-  //  for (int i = 0; i < lp.numRow_; i++) printf("Bf FTRAN: After cols Row %2d has value %12g\n", i, buffer.array[i]);
+  //  for (int i = 0; i < lp.numRow_; i++) if (report) printf("Bf FTRAN: After cols Row %2d has value %12g\n", i, buffer.array[i]);
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
     double value = -highs_model_object.solution_.row_value[iRow];
-    //    printf("Bf FTRAN: Row %2d: adding %12g\n", iRow, value);
+    //    if (report) printf("Bf FTRAN: Row %2d: adding %12g\n", iRow, value);
     buffer.array[iRow] += value;
   }
-  //  for (int i = 0; i < lp.numRow_; i++) printf("Bf FTRAN: After rows Row %2d has value %12g\n", i, buffer.array[i]);
+  //  for (int i = 0; i < lp.numRow_; i++) if (report) printf("Bf FTRAN: After rows Row %2d has value %12g\n", i, buffer.array[i]);
   buffer.count = lp.numRow_;
   factor.ftran(buffer, 1);
-  printf("\nDifferences when recomputing primals:\nBasic variables\n");
+  if (report) printf("\nDifferences when recomputing primals:\nBasic variables\n");
   double sum_delta_value = 0;
   header_written = false;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
@@ -399,18 +402,17 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
     double dl_value = fabs(new_value - old_value);
     if (dl_value > 1e-8) {
       if (!header_written) {
-	printf("\nIndex          New          Old        Delta\n");
+	if (report) printf("\nIndex          New          Old        Delta\n");
 	header_written = true;
       }
-      printf("%5d %12g %12g %12g\n",
-	     iRow, new_value, old_value, dl_value);
+      if (report) printf("%5d %12g %12g %12g\n", iRow, new_value, old_value, dl_value);
     }
     sum_delta_value += dl_value;
   }
-  if (header_written) printf("\n");
-  printf("Sum delta basic value = %12g\n", sum_delta_value);
+  if (header_written) if (report) printf("\n");
+  if (report) printf("Sum delta basic value = %12g\n", sum_delta_value);
 
-  
+  printf(",%12.4g,%12.4g\n", sum_delta_dual, sum_delta_value);
   return SimplexSolutionStatus::OPTIMAL;
 }
 
