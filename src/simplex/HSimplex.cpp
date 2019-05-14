@@ -279,12 +279,11 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
 	  sum_big_basic_duals += abs_dual;
 	}
       }
-      //    }
+    }
     int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
     if (report) printf("Zeroed %d basic duals: %d big (sum = %g) and %d small\n",
 	     num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
-    printf(",%g", sum_big_basic_duals);
-  }
+    //  }
 #ifdef HiGHSDEV
  //  reportSimplexLpStatus(highs_model_object.simplex_lp_status_, "In rebuildPostsolve");
 #endif
@@ -412,6 +411,7 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   if (header_written) if (report) printf("\n");
   if (report) printf("Sum delta basic value = %12g\n", sum_delta_value);
 
+  printf(",%g", sum_big_basic_duals);
   printf(",%12.4g,%12.4g\n", sum_delta_dual, sum_delta_value);
   printf("Sum delta column dual = %12g\nSum delta basic value = %12g\n", sum_delta_dual, sum_delta_value);
   return SimplexSolutionStatus::OPTIMAL;
