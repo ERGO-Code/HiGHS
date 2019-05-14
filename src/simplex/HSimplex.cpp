@@ -256,7 +256,7 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   }
   bool zero_basic_duals = false;
   double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
- if (zero_basic_duals) {
+  // if (zero_basic_duals) {
     int num_small_basic_duals = 0;
     int num_big_basic_duals = 0;
     double sum_big_basic_duals = 0;
@@ -265,11 +265,11 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
       double abs_dual;
       if (iVar < lp.numCol_) {
 	abs_dual = fabs(solution.col_dual[iVar]);
-	solution.col_dual[iVar] = 0;
+	if (zero_basic_duals) solution.col_dual[iVar] = 0;
       } else {
 	int iRow = iVar-lp.numCol_;
 	abs_dual = fabs(solution.row_dual[iRow]);
-	solution.row_dual[iRow] = 0;
+	if (zero_basic_duals) solution.row_dual[iRow] = 0;
       }
       if (abs_dual) {
 	if (abs_dual <  dual_feasibility_tolerance) {
@@ -279,7 +279,7 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
 	  sum_big_basic_duals += abs_dual;
 	}
       }
-    }
+      //    }
     int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
     if (report) printf("Zeroed %d basic duals: %d big (sum = %g) and %d small\n",
 	     num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
@@ -413,6 +413,7 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   if (report) printf("Sum delta basic value = %12g\n", sum_delta_value);
 
   printf(",%12.4g,%12.4g\n", sum_delta_dual, sum_delta_value);
+  printf("Sum delta column dual = %12g\nSum delta basic value = %12g\n", sum_delta_dual, sum_delta_value);
   return SimplexSolutionStatus::OPTIMAL;
 }
 
