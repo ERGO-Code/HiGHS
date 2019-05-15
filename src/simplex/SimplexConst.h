@@ -17,6 +17,8 @@
 enum class SimplexSolutionStatus {
   UNSET = -1,
     OPTIMAL,
+    PRIMAL_FEASIBLE,
+    DUAL_FEASIBLE,
     INFEASIBLE,
     UNBOUNDED,
     SINGULAR,

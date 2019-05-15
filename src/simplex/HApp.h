@@ -49,7 +49,11 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "On entry to runSimplexSolver");
 #endif
+  // Set the default simplex strategy from the options
+  SimplexStrategy use_simplex_strategy = opt.simplex_strategy;
   if (opt.clean_up) {
+    computePrimalObjectiveValueFromColumnValue(highs_model_object, &highs_model_object.solution_.col_value[0]);
+    rebuildPostsolve(highs_model_object);
     // Analyse the basis and solution
     //    printf("\nOn entry to runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
   }
@@ -89,7 +93,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
 #endif
 
-  if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
+  if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
     // Use primal simplex solver
     HPrimal primal_solver(highs_model_object);
     primal_solver.solve();
@@ -98,14 +102,14 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     HDual dual_solver(highs_model_object);
     dual_solver.options();
     // Solve, depending on the particular strategy
-    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+    if (use_simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
       // Serial
       dual_solver.solve();
-    } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+    } else if (use_simplex_strategy == SimplexStrategy::DUAL_TASKS) {
       // Parallel - SIP
       // writePivots("tasks");
       dual_solver.solve(8);
-    } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+    } else if (use_simplex_strategy == SimplexStrategy::DUAL_MULTI) {
       // Parallel - PAMI
       // writePivots("multi");
       // if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
@@ -142,7 +146,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   printf("!! Move iterationAnalysisReport() to HSimplex\n");
   //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
 
-  if (opt.simplex_strategy == SimplexStrategy::PRIMAL) {
+  if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
     printf("Iterations [Ph1 %d; Ph2 %d] Total %d\n",
 	   simplex_info.primal_phase1_iteration_count,
 	   simplex_info.primal_phase2_iteration_count,

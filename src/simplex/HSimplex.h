@@ -42,9 +42,9 @@ void updateSimplexLpStatus(
 			   LpAction action// !< Action prompting update
 				  );
 
-SimplexSolutionStatus rebuildPostsolve(
-				       HighsModelObject &highs_model_object
-				       );
+void rebuildPostsolve(
+		      HighsModelObject &highs_model_object
+		      );
 
 void setupSimplexLp(
 		    HighsModelObject &highs_model_object

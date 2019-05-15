@@ -870,6 +870,10 @@ HighsStatus HighsSimplexInterface::LpStatusToHighsStatus(SimplexSolutionStatus s
       return HighsStatus::Unbounded;
   case SimplexSolutionStatus::INFEASIBLE:
       return HighsStatus::Infeasible;
+  case SimplexSolutionStatus::DUAL_FEASIBLE:
+      return HighsStatus::DualFeasible;
+  case SimplexSolutionStatus::PRIMAL_FEASIBLE:
+      return HighsStatus::PrimalFeasible;
   case SimplexSolutionStatus::OPTIMAL:
       return HighsStatus::Optimal;
   default:
@@ -1351,7 +1355,6 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndSimplexBasis(bool repor
 }
 
 SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis(const int report_level) {
-  printf("analyseHighsSolutionAndSimplexBasis(%1d)\n", report_level);
   HighsSolution &solution = highs_model_object.solution_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsLp &lp = highs_model_object.lp_;

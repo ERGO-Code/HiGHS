@@ -236,7 +236,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 #endif
 }
 
-SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
+void rebuildPostsolve(HighsModelObject &highs_model_object) {
   HighsLp &lp = highs_model_object.lp_;
   HFactor &factor = highs_model_object.factor_;
   HighsSolution &solution = highs_model_object.solution_;
@@ -295,8 +295,8 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
 #endif
   // Analyse the basis and solution
   HighsSimplexInterface interface(highs_model_object);
-  SimplexSolutionStatus lp_status = interface.analyseHighsSolutionAndSimplexBasis(rebuild_postsolve_report_level);
-  if (lp_status == SimplexSolutionStatus::OPTIMAL) {
+  SimplexSolutionStatus simplex_status = interface.analyseHighsSolutionAndSimplexBasis(rebuild_postsolve_report_level);
+  if (simplex_status == SimplexSolutionStatus::OPTIMAL) {
     if (rebuild_postsolve_report_level>=0) printf("After postsolve LP is optimal\n");
     highs_model_object.simplex_info_.dualObjectiveValue = highs_model_object.simplex_info_.primalObjectiveValue;
   }
@@ -516,7 +516,26 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   }
   printf("Number of dual infeasibilities = %d\n", num_dual_infeasible);
 
-  return SimplexSolutionStatus::OPTIMAL;
+  simplex_status = SimplexSolutionStatus::UNSET;
+  if (num_dual_infeasible) {
+    if (num_primal_infeasible) {
+      // Both primal and dual infeasibilities
+      simplex_status = SimplexSolutionStatus::UNSET;
+    } else {
+      // No primal but dual infeasibilities
+      simplex_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+    }
+  } else {
+    if (num_primal_infeasible) {
+      // Primal but no dual infeasibilities
+      simplex_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+    } else {
+      // No primal or dual infeasibilities
+      simplex_status = SimplexSolutionStatus::OPTIMAL;
+    }
+  }
+  printf("rebuildPostsolve returns simplex status: %s\n", SimplexSolutionStatusToString(simplex_status).c_str());
+  highs_model_object.simplex_lp_status_.solution_status = simplex_status;
 }
 
 bool dual_infeasible(const double value, const double lower, const double upper, const double dual,
@@ -3174,6 +3193,12 @@ std::string SimplexSolutionStatusToString(SimplexSolutionStatus status) {
     break;
   case SimplexSolutionStatus::OPTIMAL:
     return "Optimal";
+    break;
+  case SimplexSolutionStatus::PRIMAL_FEASIBLE:
+    return "Primal feasible";
+    break;
+  case SimplexSolutionStatus::DUAL_FEASIBLE:
+    return "Dual feasible";
     break;
   case SimplexSolutionStatus::INFEASIBLE:
     return "Infeasible";
