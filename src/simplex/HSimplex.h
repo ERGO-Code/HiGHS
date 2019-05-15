@@ -42,6 +42,10 @@ void updateSimplexLpStatus(
 			   LpAction action// !< Action prompting update
 				  );
 
+void postsolveSimplextoHighsBasis(
+		      HighsModelObject &highs_model_object
+		      );
+
 void rebuildPostsolve(
 		      HighsModelObject &highs_model_object
 		      );

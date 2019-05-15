@@ -236,6 +236,96 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 #endif
 }
 
+void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
+  HighsLp &lp = highs_model_object.lp_;
+  HighsSolution &solution = highs_model_object.solution_;
+  HighsBasis &basis = highs_model_object.basis_;
+  basis.col_status.resize(lp.numCol_);
+  basis.row_status.resize(lp.numRow_);
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  double value_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  int num_nonzero_free = 0;
+  int num_nonbasic_infeasible = 0;
+  int num_nonbasic_off_bound = 0;
+  for (int iVar=0; iVar<lp.numCol_+lp.numRow_; iVar++) {
+    double lower;
+    double upper;
+    double value;
+    HighsBasisStatus status;
+    int flag = simplex_basis.nonbasicFlag_[iVar];
+    if (iVar < lp.numCol_) {
+      int iCol = iVar;
+      lower = lp.colLower_[iCol];
+      upper = lp.colUpper_[iCol];
+      value = solution.col_value[iCol];
+      //      printf("Col: %2d (%1d) [%12g, %12g] %12g: %2d %2d\n", iCol, flag, lower, upper, value, num_nonbasic_infeasible, num_nonbasic_off_bound);
+    } else {
+      int iRow = iVar - lp.numCol_;
+      lower = lp.rowLower_[iRow];
+      upper = lp.rowUpper_[iRow];
+      value = solution.row_value[iRow];
+      //      printf("\nRow: %2d (%1d) [%12g, %12g] %12g: %2d %2d\n", iRow, flag, lower, upper, value, num_nonbasic_infeasible, num_nonbasic_off_bound);
+    }
+    double midpoint = (lower+upper)*0.5;
+    double residual;
+    if (simplex_basis.nonbasicFlag_[iVar]) {
+      if (iVar >= lp.numCol_)
+      if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+	// Free variable
+	status = HighsBasisStatus::ZERO;
+	if (value) num_nonzero_free++;
+      } else if (fabs(lower-value) < value_tolerance) {
+	// At lower bound
+	status = HighsBasisStatus::LOWER;
+      } else if (fabs(upper-value) < value_tolerance) {
+	// At upper bound
+	status = HighsBasisStatus::UPPER;
+      }	else {
+	residual = max(lower-value, value-upper);
+	if (residual > 0) {
+	  // Infeasible
+	  num_nonbasic_infeasible++;
+	  if (value < lower) {
+	    status = HighsBasisStatus::LOWER;
+	    //	    printf("Below lower bound: [%12g, %12g] %12g\n", lower, upper, value);
+	    value = lower;
+	  } else {
+	    status = HighsBasisStatus::UPPER;
+	    //	    printf("Below upper bound: [%12g, %12g] %12g\n", lower, upper, value);
+	    value = upper;
+	  }
+	} else {
+	  // Off bound
+	  num_nonbasic_off_bound++;
+	  if (value < midpoint) {
+	    // Closer to lower bound
+	    status = HighsBasisStatus::LOWER;
+	    printf("Closer to lower bound: [%12g, %12g] %12g\n", lower, upper, value);
+	    value = lower;
+	  } else {
+	    // Closer to upper bound
+	    status = HighsBasisStatus::UPPER;
+	    printf("Closer to upper bound: [%12g, %12g] %12g\n", lower, upper, value);
+	    value = upper;
+	  }
+	}
+      }
+    } else {
+      status = HighsBasisStatus::BASIC;
+    }
+    if (iVar < lp.numCol_) {
+      int iCol = iVar;
+      solution.col_value[iCol] = value;
+      basis.col_status[iCol] = status;
+    } else {
+      int iRow = iVar - lp.numCol_;
+      solution.row_value[iRow] = value;
+      basis.row_status[iRow] = status;
+    }
+  }
+  printf("postsolveSimplextoHighsBasis: num_nonbasic_infeasible = %d; num_nonbasic_off_bound = %d\n", num_nonbasic_infeasible, num_nonbasic_off_bound);
+}
+
 void rebuildPostsolve(HighsModelObject &highs_model_object) {
   HighsLp &lp = highs_model_object.lp_;
   HFactor &factor = highs_model_object.factor_;
@@ -505,7 +595,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     //    if (infeasible) printf("Nonbasic col dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iCol, lower, upper, value, dual, infeasible);
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (!basis.nonbasicFlag_[iRow]) continue;
+    if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
     double value = solution.row_value[iRow];
     double dual = row_dual.array[iRow];
     double lower = lp.rowLower_[iRow];
@@ -552,6 +642,9 @@ bool dual_infeasible(const double value, const double lower, const double upper,
     } else {
       // Finite upper bound
       // Upper bounded - and assumed to be nonbasic at that bound
+      if (fabs(residual) >= value_tolerance) {
+	printf("dual_infeasible: %12g %12g %12g %12g %12g\n", value, lower, upper, residual, value_tolerance);
+      }
       assert(fabs(residual) < value_tolerance);
       infeasible = dual >= dual_tolerance;
     }
