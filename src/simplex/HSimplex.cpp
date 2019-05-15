@@ -26,7 +26,7 @@
 
 using std::runtime_error;
 #include <cassert>
-#include <cstring> // For strcmp
+//#include <cstring> // For strcmp
 #include <vector>
 
 void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
@@ -244,8 +244,8 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   SimplexBasis &basis = highs_model_object.simplex_basis_;
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
-  bool report = false;
-  if (report) {
+  const int rebuild_postsolve_report_level = 1;
+  if (rebuild_postsolve_report_level>=0) {
     printf("\nIn rebuildPostsolve\n");  
     printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
   }
@@ -255,43 +255,49 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
     solution.row_dual[24] = 0;
   }
   bool zero_basic_duals = false;
-  double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
-  // if (zero_basic_duals) {
-    int num_small_basic_duals = 0;
-    int num_big_basic_duals = 0;
-    double sum_big_basic_duals = 0;
-    for (int ix = 0; ix < lp.numRow_; ix++) {
-      int iVar = basis.basicIndex_[ix];
-      double abs_dual;
-      if (iVar < lp.numCol_) {
-	abs_dual = fabs(solution.col_dual[iVar]);
-	if (zero_basic_duals) solution.col_dual[iVar] = 0;
+  double value_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  double dual_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  int num_small_basic_duals = 0;
+  int num_big_basic_duals = 0;
+  double sum_big_basic_duals = 0;
+  for (int ix = 0; ix < lp.numRow_; ix++) {
+    int iVar = basis.basicIndex_[ix];
+    double abs_dual;
+    if (iVar < lp.numCol_) {
+      abs_dual = fabs(solution.col_dual[iVar]);
+      if (zero_basic_duals) solution.col_dual[iVar] = 0;
+    } else {
+      int iRow = iVar-lp.numCol_;
+      abs_dual = fabs(solution.row_dual[iRow]);
+      if (zero_basic_duals) solution.row_dual[iRow] = 0;
+    }
+    if (abs_dual) {
+      if (abs_dual <  dual_tolerance) {
+	num_small_basic_duals++;
       } else {
-	int iRow = iVar-lp.numCol_;
-	abs_dual = fabs(solution.row_dual[iRow]);
-	if (zero_basic_duals) solution.row_dual[iRow] = 0;
-      }
-      if (abs_dual) {
-	if (abs_dual <  dual_feasibility_tolerance) {
-	  num_small_basic_duals++;
-	} else {
-	  num_big_basic_duals++;
-	  sum_big_basic_duals += abs_dual;
-	}
+	num_big_basic_duals++;
+	sum_big_basic_duals += abs_dual;
       }
     }
-    int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
-    if (report) printf("Zeroed %d basic duals: %d big (sum = %g) and %d small\n",
-	     num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
-    //  }
+  }
+  int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
+  if (rebuild_postsolve_report_level>=0) {
+    printf("%d nonzero basic duals: %d big (sum = %g) and %d small",
+	   num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
+    if (zero_basic_duals) {
+      printf(": zeroed\n");
+    } else {
+      printf(": not zeroed\n");
+    }
+  }
 #ifdef HiGHSDEV
  //  reportSimplexLpStatus(highs_model_object.simplex_lp_status_, "In rebuildPostsolve");
 #endif
   // Analyse the basis and solution
   HighsSimplexInterface interface(highs_model_object);
-  SimplexSolutionStatus lp_status = interface.analyseHighsSolutionAndSimplexBasis();
+  SimplexSolutionStatus lp_status = interface.analyseHighsSolutionAndSimplexBasis(rebuild_postsolve_report_level);
   if (lp_status == SimplexSolutionStatus::OPTIMAL) {
-    if (report) printf("After postsolve LP is optimal\n");
+    if (rebuild_postsolve_report_level>=0) printf("After postsolve LP is optimal\n");
     highs_model_object.simplex_info_.dualObjectiveValue = highs_model_object.simplex_info_.primalObjectiveValue;
   }
   
@@ -305,116 +311,258 @@ SimplexSolutionStatus rebuildPostsolve(HighsModelObject &highs_model_object) {
   if (rankDeficiency) {
     throw runtime_error("Dual initialise: singular-basis-matrix");
   }
-  // Create a local buffer for the pi vector
-  HVector buffer;
-  buffer.setup(lp.numRow_);
-  buffer.clear();
+
+  double sum_delta_row_dual = 0;
+  double sum_delta_col_dual = 0;
+  double sum_delta_basic_value = 0;
+
+  // Create a local HVector for row duals
+  HVector row_dual;
+  row_dual.setup(lp.numRow_);
+  row_dual.clear();
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     int iCol = basis.basicIndex_[iRow];
-    buffer.index[iRow] = iRow;
+    row_dual.index[iRow] = iRow;
     if (iCol < lp.numCol_) {
-      buffer.array[iRow] = lp.colCost_[iCol];
+      row_dual.array[iRow] = lp.colCost_[iCol];
     } else {
-      buffer.array[iRow] = 0;
+      row_dual.array[iRow] = 0;
     }
   }
-  buffer.count = lp.numRow_;
-  factor.btran(buffer, 1);
-  if (report) printf("\nDifferences when recomputing duals:\nPi vector\n");
-  double sum_delta_dual = 0;
-  bool header_written = false;
+  row_dual.count = lp.numRow_;
+  // FTRAN for row duals
+  factor.btran(row_dual, 1);
+  // Check (and zero) the basic row duals
+  double sum_basic_row_dual = 0;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    double old_row_dual = -highs_model_object.solution_.row_dual[iRow];
-    double new_row_dual = buffer.array[iRow];
-    double dl_dual = fabs(new_row_dual - old_row_dual);
-    if (dl_dual > 1e-8) {
-      if (!header_written) {
-	if (report) printf("\nIndex NonBs          New          Old        Delta\n");
-	header_written = true;
-      }
-      if (report) printf("%5d %5d %12g %12g %12g\n",
-	     iRow, basis.nonbasicFlag_[iRow], new_row_dual, old_row_dual, dl_dual);
+    if (!basis.nonbasicFlag_[lp.numCol_+iRow]) {
+      sum_basic_row_dual += fabs(row_dual.array[iRow]);
+      row_dual.array[iRow] = 0;
     }
-    sum_delta_dual += dl_dual;
   }
-  if (header_written) if (report) printf("\n");
-  if (report) printf("Sum delta row dual = %12g\n", sum_delta_dual);
+  if (rebuild_postsolve_report_level>=0) {
+    if (rebuild_postsolve_report_level<2) printf("\n");
+    printf("\nSum basic    row dual = %12g\n", sum_basic_row_dual);
+  }
 
-  if (report) printf("\nDifferences when recomputing duals:\nReduced costs\n");
-  sum_delta_dual = 0;
-  header_written = false;
+  // Compute the column duals
+  vector<double> col_dual;
+  col_dual.assign(lp.numCol_, 0);
+  double sum_basic_col_dual = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double new_col_dual = lp.colCost_[iCol];
-    double old_col_dual = highs_model_object.solution_.col_dual[iCol];
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
       int iRow = lp.Aindex_[el];
-      new_col_dual -= buffer.array[iRow]*lp.Avalue_[el];
+      new_col_dual -= row_dual.array[iRow]*lp.Avalue_[el];
     }
-    double dl_dual = fabs(new_col_dual - old_col_dual);
-    if (dl_dual > 1e-8) {
-      if (!header_written) {
-	if (report) printf("\nIndex NonBs          New          Old        Delta\n");
-	header_written = true;
-      }
-      if (report) printf("%5d %5d %12g %12g %12g\n",
-	     iCol, basis.nonbasicFlag_[iCol], new_col_dual, old_col_dual, dl_dual);
+    if (basis.nonbasicFlag_[iCol]) {
+      col_dual[iCol] = new_col_dual;
+    } else {
+      sum_basic_col_dual += fabs(new_col_dual);
     }
-    sum_delta_dual += dl_dual;
   }
-  if (header_written) if (report) printf("\n");
-  if (report) printf("Sum delta column dual = %12g\n", sum_delta_dual);
+  if (rebuild_postsolve_report_level>=0) printf("Sum basic    col dual = %12g\n", sum_basic_col_dual);
 
-  // Compute the basic primal variables
-  buffer.clear();
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) buffer.array[iRow] = 0;
+  if (rebuild_postsolve_report_level>=0) {
+    // Analyse the differences in row duals
+    if (rebuild_postsolve_report_level==2) printf("\nDifferences when recomputing duals:\nRow duals\n");
+    bool header_written = false;
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      double old_row_dual = -solution.row_dual[iRow];
+      double new_row_dual = row_dual.array[iRow];
+      double dl_dual = fabs(new_row_dual - old_row_dual);
+      if (dl_dual > 1e-8) {
+	if (rebuild_postsolve_report_level==2) {
+	  if (!header_written) printf("\nIndex NonBs          New          Old        Delta\n");
+	  header_written = true;
+	  printf("%5d %5d %12g %12g %12g\n",
+		 iRow, basis.nonbasicFlag_[iRow], new_row_dual, old_row_dual, dl_dual);
+	}
+      }
+      sum_delta_row_dual += dl_dual;
+    }
+    if (header_written) printf("\n");
+    printf("Sum delta    row dual = %12g\n", sum_delta_row_dual);
+
+  // Analyse the differences in column duals
+    if (rebuild_postsolve_report_level==2) printf("\nDifferences when recomputing duals:\nColumn duals\n");
+    header_written = false;
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      double new_col_dual = col_dual[iCol];
+      double old_col_dual = solution.col_dual[iCol];
+      double dl_dual = fabs(new_col_dual - old_col_dual);
+      if (dl_dual > 1e-8) {
+	if (rebuild_postsolve_report_level==2) {
+	  if (!header_written) printf("\nIndex NonBs          New          Old        Delta\n");
+	  header_written = true;
+	  printf("%5d %5d %12g %12g %12g\n",
+		 iCol, basis.nonbasicFlag_[iCol], new_col_dual, old_col_dual, dl_dual);
+	}
+      }
+      sum_delta_col_dual += dl_dual;
+    }
+    if (header_written) printf("\n");
+    printf("Sum delta column dual = %12g\n", sum_delta_col_dual);
+  }
+
+  // Create a local HVector for basic primal variables
+  HVector basic_value;
+  basic_value.setup(lp.numRow_);
+  basic_value.clear();
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) basic_value.array[iRow] = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     if (!basis.nonbasicFlag_[iCol]) continue;
-    double value = highs_model_object.solution_.col_value[iCol];
+    double value = solution.col_value[iCol];
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
       int iRow = lp.Aindex_[el];
-      //      if (report) printf("Col %2d: Row %2d Value %12g\n", iCol, iRow, lp.Avalue_[el]);
-      buffer.array[iRow] += value*lp.Avalue_[el];
+      if (rebuild_postsolve_report_level==4) printf("Col %2d: Row %2d Value %12g\n", iCol, iRow, lp.Avalue_[el]);
+      basic_value.array[iRow] += value*lp.Avalue_[el];
     }
   }
-  //  for (int i = 0; i < lp.numRow_; i++) if (report) printf("Bf FTRAN: After cols Row %2d has value %12g\n", i, buffer.array[i]);
+  if (rebuild_postsolve_report_level==4) {
+    for (int i = 0; i < lp.numRow_; i++)
+      printf("Bf FTRAN: After cols Row %2d has value %12g\n", i, basic_value.array[i]);
+  }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
-    double value = -highs_model_object.solution_.row_value[iRow];
-    //    if (report) printf("Bf FTRAN: Row %2d: adding %12g\n", iRow, value);
-    buffer.array[iRow] += value;
+    double value = -solution.row_value[iRow];
+    if (rebuild_postsolve_report_level==4) printf("Bf FTRAN: Row %2d: adding %12g\n", iRow, value);
+    basic_value.array[iRow] += value;
   }
-  //  for (int i = 0; i < lp.numRow_; i++) if (report) printf("Bf FTRAN: After rows Row %2d has value %12g\n", i, buffer.array[i]);
-  buffer.count = lp.numRow_;
-  factor.ftran(buffer, 1);
-  if (report) printf("\nDifferences when recomputing primals:\nBasic variables\n");
-  double sum_delta_value = 0;
-  header_written = false;
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    int iCol = basis.basicIndex_[iRow];
-    double old_value;
-    if (iCol < lp.numCol_) {
-      old_value = -highs_model_object.solution_.col_value[iCol];
-    } else {
-      old_value = highs_model_object.solution_.row_value[iCol-lp.numCol_];
-    }
-    double new_value = buffer.array[iRow];
-    double dl_value = fabs(new_value - old_value);
-    if (dl_value > 1e-8) {
-      if (!header_written) {
-	if (report) printf("\nIndex          New          Old        Delta\n");
-	header_written = true;
-      }
-      if (report) printf("%5d %12g %12g %12g\n", iRow, new_value, old_value, dl_value);
-    }
-    sum_delta_value += dl_value;
+  if (rebuild_postsolve_report_level==4) {
+    for (int i = 0; i < lp.numRow_; i++)
+    printf("Bf FTRAN: After rows Row %2d has value %12g\n", i, basic_value.array[i]);
   }
-  if (header_written) if (report) printf("\n");
-  if (report) printf("Sum delta basic value = %12g\n", sum_delta_value);
+  basic_value.count = lp.numRow_;
+  factor.ftran(basic_value, 1);
 
-  printf(",%g", sum_big_basic_duals);
-  printf(",%12.4g,%12.4g\n", sum_delta_dual, sum_delta_value);
-  printf("Sum delta column dual = %12g\nSum delta basic value = %12g\n", sum_delta_dual, sum_delta_value);
+  // Possibly analyse the differences in basic values
+  if (rebuild_postsolve_report_level>=0) {
+    if (rebuild_postsolve_report_level==2) printf("\nDifferences when recomputing primals:\nBasic variables\n");
+   bool header_written = false;
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      int iCol = basis.basicIndex_[iRow];
+      double old_basic_value;
+      if (iCol < lp.numCol_) {
+	old_basic_value = solution.col_value[iCol];
+      } else {
+	old_basic_value = -solution.row_value[iCol-lp.numCol_];
+      }
+      double new_basic_value = -basic_value.array[iRow];
+      double dl_value = fabs(new_basic_value - old_basic_value);
+      if (dl_value > 1e-8) {
+	if (rebuild_postsolve_report_level==2) {
+	  if (!header_written) printf("\nIndex          New          Old        Delta\n");
+	  header_written = true;
+	  printf("%5d %12g %12g %12g\n", iRow, new_basic_value, old_basic_value, dl_value);
+	}
+      }
+      sum_delta_basic_value += dl_value;
+    }
+    if (header_written) printf("\n");
+    printf("Sum delta basic value = %12g\n\n", sum_delta_basic_value);
+  }
+
+  if (rebuild_postsolve_report_level == 0) {
+    printf(",%g", sum_big_basic_duals);
+    printf(",%12.4g,%12.4g,%12.4g\n", sum_delta_row_dual, sum_delta_col_dual, sum_delta_basic_value);
+  }
+  // Determine primal feasibility
+  int num_primal_infeasible = 0;
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    int iVar = basis.basicIndex_[iRow];
+    double value;
+    double lower;
+    double upper;
+    double residual;
+    if (iVar < lp.numCol_) {
+      value = -basic_value.array[iRow];
+      lower = lp.colLower_[iVar];
+      upper = lp.colUpper_[iVar];
+      residual = max(lower-value, value-upper);
+    } else {
+      value = basic_value.array[iRow];
+      lower = lp.rowLower_[iVar-lp.numCol_];
+      upper = lp.rowUpper_[iVar-lp.numCol_];
+      residual = max(lower-value, value-upper);
+    }
+    bool infeasible = residual > value_tolerance;
+    if (infeasible) num_primal_infeasible++;
+    if (infeasible) printf("Basic primal infeasiblility %4d %4d %12g %12g %12g %2d\n", iRow, iVar, lower, upper, value, infeasible);
+  }
+  printf("Number of primal infeasibilities = %d\n", num_primal_infeasible);
+
+  // Determine dual feasibility
+  int num_dual_infeasible = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    if (!basis.nonbasicFlag_[iCol]) continue;
+    double value = solution.col_value[iCol];
+    double dual = col_dual[iCol];
+    double lower = lp.colLower_[iCol];
+    double upper = lp.colUpper_[iCol];
+    bool infeasible = dual_infeasible(value, lower, upper, dual, value_tolerance, dual_tolerance);
+    if (infeasible) num_dual_infeasible++;
+    //    if (infeasible) printf("Nonbasic col dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iCol, lower, upper, value, dual, infeasible);
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    if (!basis.nonbasicFlag_[iRow]) continue;
+    double value = solution.row_value[iRow];
+    double dual = row_dual.array[iRow];
+    double lower = lp.rowLower_[iRow];
+    double upper = lp.rowUpper_[iRow];
+    bool infeasible = dual_infeasible(value, lower, upper, dual, value_tolerance, dual_tolerance);
+    if (infeasible) num_dual_infeasible++;
+    //    if (infeasible) printf("Nonbasic row dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iRow, lower, upper, value, dual, infeasible);
+  }
+  printf("Number of dual infeasibilities = %d\n", num_dual_infeasible);
+
   return SimplexSolutionStatus::OPTIMAL;
+}
+
+bool dual_infeasible(const double value, const double lower, const double upper, const double dual,
+		     const double value_tolerance, const double dual_tolerance) {
+  double midpoint = (lower+upper)*0.5;
+  double residual = max(lower-value, value-upper);
+  bool infeasible = false;
+  if (highs_isInfinity(-lower)) {
+    // Infinite lower bound
+    if (highs_isInfinity(upper)) {
+      // Infinite upper bound
+      // Free
+      infeasible = fabs(dual) >= dual_tolerance;
+    } else {
+      // Finite upper bound
+      // Upper bounded - and assumed to be nonbasic at that bound
+      assert(fabs(residual) < value_tolerance);
+      infeasible = dual >= dual_tolerance;
+    }
+  } else {
+    // Finite lower bound
+    if (highs_isInfinity(upper)) {
+      // Infinite upper bound
+      // Lower bounded - and assumed to be nonbasic at that bound
+      assert(fabs(residual) < value_tolerance);
+      infeasible = dual <= -dual_tolerance;
+    } else {
+      // Finite upper bound
+      // Assumed to be nonbasic at that bound
+      assert(fabs(residual) < value_tolerance);
+      if (lower < upper) {
+	// Boxed
+	if (value < midpoint) {
+	  // At lower bound
+	  infeasible = dual <= -dual_tolerance;
+	} else {
+	  // At upper bound
+	  infeasible = dual >= dual_tolerance;
+	}
+      } else {
+	// Fixed
+	infeasible = false;
+      }
+    }
+  }
+  return infeasible;
 }
 
 void setupForSimplexSolve(HighsModelObject &highs_model_object) {
@@ -2298,8 +2446,7 @@ void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
-    if (!simplex_basis.nonbasicFlag_[i])
-      continue;
+    if (!simplex_basis.nonbasicFlag_[i]) continue;
     // Free
     if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
       work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);

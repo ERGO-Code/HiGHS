@@ -50,6 +50,15 @@ void setupSimplexLp(
 		    HighsModelObject &highs_model_object
 		    );
 
+bool dual_infeasible(
+		     const double value,
+		     const double lower,
+		     const double upper,
+		     const double dual,
+		     const double value_tolerance,
+		     const double dual_tolerance
+		     );
+
 void setupForSimplexSolve(
 			  HighsModelObject &highs_model_object
 			  );

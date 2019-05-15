@@ -415,7 +415,7 @@ class HighsSimplexInterface {
    * @brief Analyse the HiGHS solution and simplex basis, looking for
    * primal and dual infeasibilities
    */
-  SimplexSolutionStatus analyseHighsSolutionAndSimplexBasis();
+  SimplexSolutionStatus analyseHighsSolutionAndSimplexBasis(const int report_level);
   
   /**
    * @brief Get the indices of the basic variables for SCIP
