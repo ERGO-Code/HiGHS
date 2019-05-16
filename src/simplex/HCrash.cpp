@@ -47,7 +47,6 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
 #endif
   assert(fabs(objSense) == 1);
 
-  printf("\nArrived in CRASH!!\n\n");
   if (crash_strategy == SimplexCrashStrategy::BASIC
 #ifdef HiGHSDEV
       || crash_strategy == SimplexCrashStrategy::TEST_SING
@@ -488,7 +487,6 @@ void HCrash::bixby_rp_mrt() {
 
 void HCrash::ltssf() {
   HighsLp &simplex_lp = workHMO.simplex_lp_;
-  printf("HCrash::ltssf crash_strategy = %d\n", (int)crash_strategy);
   if (crash_strategy == SimplexCrashStrategy::LTSSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
@@ -828,7 +826,6 @@ void HCrash::ltssf_iz_da() {
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsLp &simplex_lp = workHMO.simplex_lp_;
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
-  printf("HCrash::ltssf_iz_da crash_strategy = %d\n", (int)crash_strategy);
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
   const int *Astart = &simplex_lp.Astart_[0];

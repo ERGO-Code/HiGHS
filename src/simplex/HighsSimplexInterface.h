@@ -393,6 +393,30 @@ class HighsSimplexInterface {
   void convertSimplexToHighsSolution();
 
   /**
+   * @brief Analyse a single HiGHS solution and simplex basis, looking for
+   * primal and dual infeasibilities
+   */
+  bool analyseSingleHighsSolutionAndSimplexBasis(
+						 bool report,
+						 const int nonbasic_flag,
+						 const int nonbasic_move,
+						 const double lower,
+						 const double upper,
+						 const double value,
+						 const double dual,
+						 int &num_non_basic_var, 
+						 int &num_basic_var,
+						 double& primal_infeasibility,
+						 double& dual_infeasibility
+						 );
+
+  /**
+   * @brief Analyse the HiGHS solution and simplex basis, looking for
+   * primal and dual infeasibilities
+   */
+  SimplexSolutionStatus analyseHighsSolutionAndSimplexBasis();
+  
+  /**
    * @brief Get the indices of the basic variables for SCIP
    */
   int get_basic_indices(

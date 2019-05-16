@@ -2808,6 +2808,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     for (int k = ARstart.at(i); k < ARstart.at(i + 1); ++k)
       rowValue.at(i) += valuePrimal.at(ARindex.at(k)) * ARvalue.at(k);
   }
+  // JAJH(120519) Added following four lines so that recovered solution is returned
+  recovered_solution.col_value = colValue;
+  recovered_solution.col_dual = colDual;
+  recovered_solution.row_value = rowValue;
+  recovered_solution.row_dual = rowDual;
   return HighsPostsolveStatus::SolutionRecovered;
 }
 

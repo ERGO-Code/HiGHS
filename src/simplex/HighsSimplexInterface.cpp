@@ -1254,10 +1254,241 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
       solution.col_dual[iCol] = simplex_lp.sense_ * dual[i];
     }
   }
+  int row_dual_sign = 1;//-1; 
   for (int i = 0; i < simplex_lp.numRow_; i++) {
     solution.row_value[i] = -value[i + simplex_lp.numCol_];
-    solution.row_dual[i] = -simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
+    solution.row_dual[i] = row_dual_sign*simplex_lp.sense_ * dual[i + simplex_lp.numCol_];
   }
+}
+
+bool HighsSimplexInterface::analyseSingleHighsSolutionAndSimplexBasis(bool report,
+								      const int nonbasic_flag, const int nonbasic_move,
+								      const double lower, const double upper, const double value, const double dual,
+								      int &num_non_basic_var, int &num_basic_var,
+								      double& primal_infeasibility, double& dual_infeasibility) {
+  double primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  double middle = (lower+upper)*0.5;
+  
+  bool query = false;
+  bool count = !report;
+  double primal_residual = max(lower-value, value-upper);
+  primal_infeasibility = max(primal_residual, 0.);
+  // ToDo Strange: nonbasic_flag seems to be inverted???
+  if (nonbasic_flag == NONBASIC_FLAG_TRUE) {
+    // Nonbasic variable: look for primal and dual infeasibility
+    if (count) num_non_basic_var++;
+
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      // Outside a bound 
+      dual_infeasibility = 0;
+      if (value < lower) {
+	query = true;
+	if (report) printf(": Nonbasic below lower bound by %12g", primal_residual);
+      } else {
+	query = true;
+	if (report) printf(": Nonbasic above upper bound by %12g", primal_residual);
+      }
+    } else if (primal_residual >= -primal_feasibility_tolerance) {
+      // At a bound: check for dual feasibility
+      if (lower < upper) {
+	// Non-fixed column
+	if (value < middle) {
+	  // At lower
+	  dual_infeasibility = max(-dual, 0.);
+	  if (dual_infeasibility > dual_feasibility_tolerance) {
+	    // Dual infeasiblility
+	    query = true;
+	    if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
+	  }
+	} else {
+	  // At Upper
+	  dual_infeasibility = max(dual, 0.);
+	  if (dual_infeasibility > dual_feasibility_tolerance) {
+	    // Dual infeasiblility
+	    query = true;
+	    if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
+	  }
+	}
+      }
+    } else {
+      // Between bounds (or free)
+      if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+	// Free
+	if (report) printf(": Nonbasic free");
+      } else {
+	query = true;
+	if (report) printf(": Nonbasic off bound by %12g", -primal_residual);
+      }
+      dual_infeasibility = fabs(dual);
+      if (dual_infeasibility > dual_feasibility_tolerance) {
+	query = true;
+	if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
+      }
+    }
+  } else {
+    // Basic variable: look for primal infeasibility
+    if (count) num_basic_var++;
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      // Outside a bound 
+      if (value < lower) {
+	query = true;
+	if (report) printf(": Basic below lower bound by %12g", primal_residual);
+      } else {
+	query = true;
+	if (report) printf(": Basic above upper bound by %12g", primal_residual);
+      }
+    }
+    dual_infeasibility = fabs(dual);
+    if (dual_infeasibility > dual_feasibility_tolerance) {
+      query = true;
+      if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
+    }
+  }
+  return query;
+}
+
+SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis() {
+  HighsSolution &solution = highs_model_object.solution_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsLp &lp = highs_model_object.lp_;
+  double primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
+  vector <double> primal_activities;
+  vector <double> dual_activities;
+  primal_activities.assign(lp.numRow_, 0);
+  dual_activities.resize(lp.numCol_);
+  int num_non_basic_var = 0;
+  int num_basic_var = 0;
+  bool header_written = false;
+  double primal_infeasibility;
+  double dual_infeasibility;
+  int num_primal_infeasibility = 0;
+  int num_dual_infeasibility = 0;
+  double sum_primal_infeasibility = 0;
+  double sum_dual_infeasibility = 0;
+  double max_primal_infeasibility = 0;
+  double max_dual_infeasibility = 0;
+  const bool force_report = false;
+  for (int iCol=0; iCol<lp.numCol_; iCol++) {
+    double lower = lp.colLower_[iCol];
+    double upper = lp.colUpper_[iCol];
+    double value = solution.col_value[iCol];
+    double dual = solution.col_dual[iCol];
+    int iVar = iCol;
+    int nonbasic_flag = simplex_basis.nonbasicFlag_[iVar];
+    int nonbasic_move = simplex_basis.nonbasicMove_[iVar];
+
+    bool report = false;
+    bool query = false;
+
+    query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+						      lower, upper, value, dual,
+						      num_non_basic_var, num_basic_var,
+						      primal_infeasibility, dual_infeasibility);
+    if (primal_infeasibility > primal_feasibility_tolerance) num_primal_infeasibility++;
+    max_primal_infeasibility = max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibility += primal_infeasibility;
+    if (dual_infeasibility > dual_feasibility_tolerance) num_dual_infeasibility++;
+    max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
+    sum_dual_infeasibility += dual_infeasibility;
+    report = force_report || query;
+    //    if (primal_infeasibility >0 || dual_infeasibility>0) printf("Col: %6d %12g %12g %2d %2d\n", iCol, primal_infeasibility, dual_infeasibility, query, report);
+    if (report) {
+      if (!header_written) {
+	printf("\nColumns\nIndex NonBs Mv [          LB,           UB]       Primal         Dual    PrimalIfs      DualIfs\n");
+	header_written = true;
+      }
+      printf("%5d %5d %2d [%12g, %12g] %12g %12g", iCol, nonbasic_flag, nonbasic_move, lower, upper, value, dual);
+      printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
+      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+						lower, upper, value, dual,
+						num_non_basic_var, num_basic_var,
+						primal_infeasibility, dual_infeasibility);
+      printf("\n");
+    }
+    dual_activities[iCol] = lp.colCost_[iCol];
+    for (int el=lp.Astart_[iCol]; el<lp.Astart_[iCol+1]; el++) {
+      int iRow = lp.Aindex_[el];
+      double Avalue = lp.Avalue_[el];
+      primal_activities[iRow] += value*Avalue;
+      dual_activities[iCol] += solution.row_dual[iRow]*Avalue;
+    }
+  }
+  header_written = false;
+  double sum_primal_residual = 0;
+  for (int iRow=0; iRow<lp.numRow_; iRow++) {
+    double primal_residual = fabs(primal_activities[iRow]-solution.row_value[iRow]);
+    sum_primal_residual += primal_residual;
+    if (primal_residual > primal_feasibility_tolerance) {
+      if (!header_written) {
+	printf("\nRow primal residuals\nIndex     Activity     Solution     Residual\n");
+	header_written = true;
+      }
+      printf("%5d %12g %12g %12g\n", iRow, primal_activities[iRow], solution.row_value[iRow], primal_residual);
+    }
+  }
+  header_written = false;
+  double sum_dual_residual = 0;
+  for (int iCol=0; iCol<lp.numCol_; iCol++) {
+    double dual_residual = fabs(dual_activities[iCol]-solution.col_dual[iCol]);
+    sum_dual_residual += dual_residual;
+    if (dual_residual > dual_feasibility_tolerance) {
+      if (!header_written) {
+	printf("\nRow dual residuals\nIndex     Activity     Solution     Residual\n");
+	header_written = true;
+      }
+      printf("%5d %12g %12g %12g\n", iCol, dual_activities[iCol], solution.row_value[iCol], dual_residual);
+    }
+  }
+  header_written = false;
+  for (int iRow=0; iRow<lp.numRow_; iRow++) {
+    double lower = lp.rowLower_[iRow];
+    double upper = lp.rowUpper_[iRow];
+    double value = solution.row_value[iRow];
+    double dual = -solution.row_dual[iRow];
+    int iVar = lp.numCol_ + iRow;
+    int nonbasic_flag = simplex_basis.nonbasicFlag_[iVar];
+    int nonbasic_move = simplex_basis.nonbasicMove_[iVar];
+
+    bool report = false;
+    bool query = false;
+
+    query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+						      lower, upper, value, dual,
+						      num_non_basic_var, num_basic_var ,
+						      primal_infeasibility, dual_infeasibility);
+    if (primal_infeasibility > primal_feasibility_tolerance) num_primal_infeasibility++;
+    max_primal_infeasibility = max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibility += primal_infeasibility;
+    if (dual_infeasibility > dual_feasibility_tolerance) num_dual_infeasibility++;
+    max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
+    sum_dual_infeasibility += dual_infeasibility;
+    report = force_report || query;
+    //    if (primal_infeasibility >0 || dual_infeasibility>0) printf("Row: %6d %12g %12g %2d %2d\n", iRow, primal_infeasibility, dual_infeasibility, query, report);
+    if (report) {
+      if (!header_written) {
+	printf("Rows\nIndex NonBs Mv [          LB,           UB]       Primal         Dual    PrimalIfs      DualIfs\n");
+	header_written = true;
+      }
+      printf("%5d %5d %2d [%12g, %12g] %12g %12g", iRow, nonbasic_flag, nonbasic_move, lower, upper, value, dual);
+      printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
+      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+						lower, upper, value, dual,
+						num_non_basic_var, num_basic_var,
+						primal_infeasibility, dual_infeasibility);
+      printf("\n");
+    }
+  }
+  printf("\nPrimal residual sum = %12g: num/max/sum infeasibilities %6d/%12g/%12g\n",
+	 sum_primal_residual, num_primal_infeasibility, max_primal_infeasibility, sum_primal_infeasibility);
+  printf("Dual   residual sum = %12g: num/max/sum infeasibilities %6d/%12g/%12g\n",
+	 sum_dual_residual, num_dual_infeasibility, max_dual_infeasibility, sum_dual_infeasibility);
+  if (num_primal_infeasibility == 0 && num_dual_infeasibility == 0) {
+    printf("\nOptimal in analyseHighsSolutionAndSimplexBasis\n\n");
+    return SimplexSolutionStatus::OPTIMAL;
+  }
+  return SimplexSolutionStatus::UNSET; 
 }
 
 int HighsSimplexInterface::get_basic_indices(int *bind) {
