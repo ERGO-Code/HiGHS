@@ -19,6 +19,12 @@
 #include <cstdlib>
 #include <string>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+
 using std::string;
 
 enum HTickItemPre {
@@ -138,9 +144,7 @@ class HTimerPre {
 
   // Current wall tick
   double getWallTick() {
-    unsigned a, d;
-    asm volatile("rdtsc" : "=a"(a), "=d"(d));
-    return ((unsigned long long)a) | (((unsigned long long)d) << 32);
+    return __rdtsc();
   }
 };
 
