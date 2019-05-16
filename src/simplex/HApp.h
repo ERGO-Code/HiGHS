@@ -56,18 +56,24 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     rebuildPostsolve(highs_model_object);
     // Analyse the basis and solution
     //    printf("\nOn entry to runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
+    if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL ||
+	simplex_lp_status.solution_status == SimplexSolutionStatus::PRIMAL_FEASIBLE) {
+      // Optimal or primal feasible so force the use of primal somplex solver
+      printf("Optimal or primal feasible so force the use of primal somplex solver\n");
+      use_simplex_strategy = SimplexStrategy::PRIMAL;
+    }
   }
-  // Possibly set up the LP to be solved by the simplex method. According to options
-  //
-  // * Transpose the LP to be solved - deprecated since primal simplex solver is better
-  //
-  // * Scale the LP to be solved
-  //
-  // * Permute the LP to be solved - good idea to do all the time, but needs permutations to be applied to column solution
-  //
-  // * Tighten the bounds of LP to be solved - deprecated since presolve is better
-  //
   if (!simplex_lp_status.valid) {
+    // Set up the LP to be solved by the simplex method. According to options
+    //
+    // * Transpose the LP to be solved - deprecated since primal simplex solver is better
+    //
+    // * Scale the LP to be solved
+    //
+    // * Permute the LP to be solved - good idea to do all the time, but needs permutations to be applied to column solution
+    //
+    // * Tighten the bounds of LP to be solved - deprecated since presolve is better
+    //
     setupSimplexLp(highs_model_object);
 #ifdef HiGHSDEV
     //    reportSimplexLpStatus(simplex_lp_status, "After setupSimplexLp");

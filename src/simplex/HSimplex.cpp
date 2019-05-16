@@ -26,7 +26,6 @@
 
 using std::runtime_error;
 #include <cassert>
-//#include <cstring> // For strcmp
 #include <vector>
 
 void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
@@ -211,6 +210,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
   simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
   simplex_basis.nonbasicFlag_.resize(numTot);
   simplex_basis.nonbasicMove_.resize(numTot);
+  simplex_basis.valid_ = false;
   //
   // Possibly scale the LP to be used by the solver
   //
@@ -258,18 +258,15 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
       lower = lp.colLower_[iCol];
       upper = lp.colUpper_[iCol];
       value = solution.col_value[iCol];
-      //      printf("Col: %2d (%1d) [%12g, %12g] %12g: %2d %2d\n", iCol, flag, lower, upper, value, num_nonbasic_infeasible, num_nonbasic_off_bound);
     } else {
       int iRow = iVar - lp.numCol_;
       lower = lp.rowLower_[iRow];
       upper = lp.rowUpper_[iRow];
       value = solution.row_value[iRow];
-      //      printf("\nRow: %2d (%1d) [%12g, %12g] %12g: %2d %2d\n", iRow, flag, lower, upper, value, num_nonbasic_infeasible, num_nonbasic_off_bound);
     }
     double midpoint = (lower+upper)*0.5;
     double residual;
-    if (simplex_basis.nonbasicFlag_[iVar]) {
-      if (iVar >= lp.numCol_)
+    if (flag) {
       if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
 	// Free variable
 	status = HighsBasisStatus::ZERO;
@@ -317,12 +314,19 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
       int iCol = iVar;
       solution.col_value[iCol] = value;
       basis.col_status[iCol] = status;
+      printf("Col: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
+	     iCol, flag, lower, upper, value, (int)status,
+	     num_nonbasic_infeasible, num_nonbasic_off_bound);
     } else {
       int iRow = iVar - lp.numCol_;
       solution.row_value[iRow] = value;
       basis.row_status[iRow] = status;
+      printf("Row: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
+	     iRow, flag, lower, upper, value, (int)status,
+	     num_nonbasic_infeasible, num_nonbasic_off_bound);
     }
   }
+  basis.valid_ = true;
   printf("postsolveSimplextoHighsBasis: num_nonbasic_infeasible = %d; num_nonbasic_off_bound = %d\n", num_nonbasic_infeasible, num_nonbasic_off_bound);
 }
 

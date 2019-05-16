@@ -1167,14 +1167,14 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
       if (basis.row_status[lp_row] == HighsBasisStatus::LOWER) {
 	// HighsBasisStatus::LOWER includes fixed variables
 #ifdef HiGHSDEV
-	// Check that the upper bound isn't infinite
-	error_found = highs_isInfinity(lp.rowUpper_[lp_row]);
+	// Check that the lower bound isn't infinite
+	error_found = highs_isInfinity(-lp.rowLower_[lp_row]);
 #endif
 	if (lp.rowLower_[lp_row] == lp.rowUpper_[lp_row]) {
 	  // Equal bounds so indicate that the row can't move
 #ifdef HiGHSDEV
-	  // Check that the lower bound isn't infinite
-	  error_found = highs_isInfinity(-lp.rowLower_[lp_row]);
+	  // Check that the upper bound isn't infinite
+	  error_found = highs_isInfinity(lp.rowUpper_[lp_row]);
 #endif
 	  simplex_basis.nonbasicMove_[simplex_var] = NONBASIC_MOVE_ZE;
 	} else {
@@ -1185,9 +1185,11 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
       } else if (basis.row_status[lp_row] == HighsBasisStatus::UPPER) {
 	// HighsBasisStatus::UPPER includes only variables at their upper bound
 #ifdef HiGHSDEV
-	// Check that the lower bound isn't infinite
-	error_found = highs_isInfinity(-lp.rowLower_[lp_row]);
+	// Check that the upper bound isn't infinite
+	error_found = highs_isInfinity(lp.rowUpper_[lp_row]);
 #endif
+	// Upper bounded so indicate that the row can only move
+	// up - since simplex row bounds are flipped and negated
 	simplex_basis.nonbasicMove_[simplex_var] = NONBASIC_MOVE_UP;
       } else if (basis.row_status[lp_row] == HighsBasisStatus::ZERO) {
 	// HighsBasisStatus::ZERO implies a free variable
@@ -1209,7 +1211,7 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
     if (error_found) return;
   }
   assert(num_basic = lp.numRow_);
-  populate_work_arrays(highs_model_object);
+  //  populate_work_arrays(highs_model_object); // Why might this have been done here?
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
   simplex_basis.valid_ = true;
 }
