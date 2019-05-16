@@ -12,6 +12,7 @@
 #ifdef __linux__
 #include <unistd.h>
 #elif _WIN32
+#define NOGDI
 #include <windows.h>
 #else
 
