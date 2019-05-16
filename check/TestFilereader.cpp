@@ -1,13 +1,5 @@
 #include <cstdio>
 
-#ifdef __linux__
-#include <unistd.h>
-#elif _WIN32
-#include <windows.h>
-#else
-
-#endif
-
 #include "FilereaderEms.h"
 #include "HMPSIO.h"
 #include "HMpsFF.h"
@@ -16,6 +8,14 @@
 #include "HighsLp.h"
 #include "LoadProblem.h"
 #include "catch.hpp"
+
+#ifdef __linux__
+#include <unistd.h>
+#elif _WIN32
+#include <windows.h>
+#else
+
+#endif
 
 std::string GetCurrentWorkingDir(void) {
   char buff[FILENAME_MAX];
