@@ -679,7 +679,7 @@ void HDual::major_updateFactor() {
   /**
    * 9. Update the factor by CFT
    */
-  int iRows[multi_nFinish];
+  int* iRows = new int[multi_nFinish];
   for (int iCh = 0; iCh < multi_nFinish - 1; iCh++) {
     multi_finish[iCh].row_ep->next = multi_finish[iCh + 1].row_ep;
     multi_finish[iCh].column->next = multi_finish[iCh + 1].column;
@@ -690,6 +690,7 @@ void HDual::major_updateFactor() {
     update_factor(workHMO, multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);// model->updateFactor(multi_finish[0].column, multi_finish[0].row_ep, iRows, &invertHint);
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 && workHMO.simplex_info_.update_count > 200)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+  delete[] iRows;
 }
 
 void HDual::major_rollback() {
