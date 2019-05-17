@@ -37,9 +37,6 @@ void HPrimal::solve() {
 
   // Setup aspects of the model data which are needed for solve() but better
   // left until now for efficiency reasons.
-#ifdef HiGHSDEV
-  printf("Calling setup_for_solve(workHMO);\n");
-#endif
   // ToDo primal simplex version
   // setup_for_solve(workHMO);
 

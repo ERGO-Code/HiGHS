@@ -314,16 +314,20 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
       int iCol = iVar;
       solution.col_value[iCol] = value;
       basis.col_status[iCol] = status;
+      /*
       printf("Col: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
 	     iCol, flag, lower, upper, value, (int)status,
 	     num_nonbasic_infeasible, num_nonbasic_off_bound);
+      */
     } else {
       int iRow = iVar - lp.numCol_;
       solution.row_value[iRow] = value;
       basis.row_status[iRow] = status;
+      /*
       printf("Row: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
 	     iRow, flag, lower, upper, value, (int)status,
 	     num_nonbasic_infeasible, num_nonbasic_off_bound);
+      */
     }
   }
   basis.valid_ = true;
@@ -338,8 +342,8 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   SimplexBasis &basis = highs_model_object.simplex_basis_;
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
-  const int rebuild_postsolve_report_level = 1;
-  if (rebuild_postsolve_report_level>=0) {
+  const int rebuild_postsolve_report_level = 0;
+  if (rebuild_postsolve_report_level>0) {
     printf("\nIn rebuildPostsolve\n");  
     printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
   }
@@ -375,7 +379,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     }
   }
   int num_nonzero_basic_dual = num_small_basic_duals + num_big_basic_duals;
-  if (rebuild_postsolve_report_level>=0) {
+  if (rebuild_postsolve_report_level>0) {
     printf("%d nonzero basic duals: %d big (sum = %g) and %d small",
 	   num_nonzero_basic_dual, num_big_basic_duals, sum_big_basic_duals, num_small_basic_duals);
     if (zero_basic_duals) {
@@ -391,7 +395,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   HighsSimplexInterface interface(highs_model_object);
   SimplexSolutionStatus simplex_status = interface.analyseHighsSolutionAndSimplexBasis(rebuild_postsolve_report_level);
   if (simplex_status == SimplexSolutionStatus::OPTIMAL) {
-    if (rebuild_postsolve_report_level>=0) printf("After postsolve LP is optimal\n");
+    if (rebuild_postsolve_report_level>0) printf("After postsolve LP is optimal\n");
     highs_model_object.simplex_info_.dualObjectiveValue = highs_model_object.simplex_info_.primalObjectiveValue;
   }
   
@@ -434,7 +438,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       row_dual.array[iRow] = 0;
     }
   }
-  if (rebuild_postsolve_report_level>=0) {
+  if (rebuild_postsolve_report_level>0) {
     if (rebuild_postsolve_report_level<2) printf("\n");
     printf("\nSum basic    row dual = %12g\n", sum_basic_row_dual);
   }
@@ -455,7 +459,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       sum_basic_col_dual += fabs(new_col_dual);
     }
   }
-  if (rebuild_postsolve_report_level>=0) printf("Sum basic    col dual = %12g\n", sum_basic_col_dual);
+  if (rebuild_postsolve_report_level>0) printf("Sum basic    col dual = %12g\n", sum_basic_col_dual);
 
   if (rebuild_postsolve_report_level>=0) {
     // Analyse the differences in row duals
@@ -476,7 +480,8 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       sum_delta_row_dual += dl_dual;
     }
     if (header_written) printf("\n");
-    printf("Sum delta    row dual = %12g\n", sum_delta_row_dual);
+    if (rebuild_postsolve_report_level>0) 
+      printf("Sum delta    row dual = %12g\n", sum_delta_row_dual);
 
   // Analyse the differences in column duals
     if (rebuild_postsolve_report_level==2) printf("\nDifferences when recomputing duals:\nColumn duals\n");
@@ -496,7 +501,8 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       sum_delta_col_dual += dl_dual;
     }
     if (header_written) printf("\n");
-    printf("Sum delta column dual = %12g\n", sum_delta_col_dual);
+    if (rebuild_postsolve_report_level>0)
+      printf("Sum delta column dual = %12g\n", sum_delta_col_dual);
   }
 
   // Create a local HVector for basic primal variables
@@ -554,12 +560,13 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       sum_delta_basic_value += dl_value;
     }
     if (header_written) printf("\n");
-    printf("Sum delta basic value = %12g\n\n", sum_delta_basic_value);
+    if (rebuild_postsolve_report_level>0)
+      printf("Sum delta basic value = %12g\n\n", sum_delta_basic_value);
   }
 
   if (rebuild_postsolve_report_level == 0) {
     printf(",%g", sum_big_basic_duals);
-    printf(",%12.4g,%12.4g,%12.4g\n", sum_delta_row_dual, sum_delta_col_dual, sum_delta_basic_value);
+    printf(",%g,%g,%g", sum_delta_row_dual, sum_delta_col_dual, sum_delta_basic_value);
   }
   // Determine primal feasibility
   int num_primal_infeasible = 0;
@@ -581,10 +588,14 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       residual = max(lower-value, value-upper);
     }
     bool infeasible = residual > value_tolerance;
-    if (infeasible) num_primal_infeasible++;
-    if (infeasible) printf("Basic primal infeasiblility %4d %4d %12g %12g %12g %2d\n", iRow, iVar, lower, upper, value, infeasible);
+    if (infeasible) {
+      num_primal_infeasible++;
+      if (rebuild_postsolve_report_level>1)
+	printf("Basic primal infeasiblility %4d %4d %12g %12g %12g %2d\n", iRow, iVar, lower, upper, value, infeasible);
+    }
   }
-  printf("Number of primal infeasibilities = %d\n", num_primal_infeasible);
+  if (rebuild_postsolve_report_level>0)
+    printf("Number of primal infeasibilities = %d\n", num_primal_infeasible);
 
   // Determine dual feasibility
   int num_dual_infeasible = 0;
@@ -595,8 +606,10 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
     bool infeasible = dual_infeasible(value, lower, upper, dual, value_tolerance, dual_tolerance);
-    if (infeasible) num_dual_infeasible++;
-    //    if (infeasible) printf("Nonbasic col dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iCol, lower, upper, value, dual, infeasible);
+    if (infeasible) {
+      num_dual_infeasible++;
+      if (rebuild_postsolve_report_level>1) printf("Nonbasic col dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iCol, lower, upper, value, dual, infeasible);
+    }
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
     if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
@@ -605,11 +618,18 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     double lower = lp.rowLower_[iRow];
     double upper = lp.rowUpper_[iRow];
     bool infeasible = dual_infeasible(value, lower, upper, dual, value_tolerance, dual_tolerance);
-    if (infeasible) num_dual_infeasible++;
-    //    if (infeasible) printf("Nonbasic row dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iRow, lower, upper, value, dual, infeasible);
+    if (infeasible) {
+      num_dual_infeasible++;
+      if (rebuild_postsolve_report_level>1)
+	printf("Nonbasic row dual infeasiblility %2d %12g %12g %12g %12g %2d\n", iRow, lower, upper, value, dual, infeasible);
+    }
   }
-  printf("Number of dual infeasibilities = %d\n", num_dual_infeasible);
+  if (rebuild_postsolve_report_level>0)
+    printf("Number of dual infeasibilities = %d\n", num_dual_infeasible);
 
+  if (rebuild_postsolve_report_level == 0) {
+    printf(",%d,%d\n", num_primal_infeasible, num_dual_infeasible);
+  }
   simplex_status = SimplexSolutionStatus::UNSET;
   if (num_dual_infeasible) {
     if (num_primal_infeasible) {
