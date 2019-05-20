@@ -794,8 +794,21 @@ HighsStatus HighsSimplexInterface::change_col_bounds_general(
 						 mask, col_mask,
 						 usr_col_lower, usr_col_upper, highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
-  // Deduce the consequences of new bounds
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+
+  if (highs_model_object.simplex_lp_status_.valid) {
+    // Also change the simplex LP's column bounds
+    assert(highs_model_object.lp_.numCol_ == highs_model_object.simplex_lp_.numCol_);
+    assert(highs_model_object.lp_.numRow_ == highs_model_object.simplex_lp_.numRow_);
+    
+    call_status = change_lp_col_bounds(highs_model_object.simplex_lp_, 
+				       interval, from_col, to_col,
+				       set, num_set_entries, col_set,
+				       mask, col_mask,
+				       usr_col_lower, usr_col_upper, highs_model_object.options_.infinite_bound);
+    if (call_status == HighsStatus::Error) return HighsStatus::Error;
+    // Deduce the consequences of new bounds
+    updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BOUNDS);
+  }
   return HighsStatus::OK;
 }
 
