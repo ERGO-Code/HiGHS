@@ -15,7 +15,7 @@
 #include "lp_data/HConst.h"
 #include "io/HighsIO.h"
 
-#include "simplex/HFactor.h"
+//#include "simplex/HFactor.h"
 #include "test/KktChStep.h"
 
 #include <algorithm>
@@ -91,7 +91,7 @@ HighsLp& PresolveInfo::getReducedProblem() {
 void Presolve::setBasisInfo(const std::vector<int>& index, const std::vector<int>& nbf, const std::vector<int>& nbm) {
   basicIndex = index;
   nonbasicFlag = nbf;
-  nonbasicMove = nbm;
+  //  nonbasicMove = nbm;
 }
 
 int Presolve::presolve(int print) {
@@ -2793,6 +2793,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
   colCost = colCostOriginal;
 
+  /*
   nonbasicMove.resize(numTot, 0);
   for (int i = 0; i < numColOriginal; ++i) {
     if (colLower.at(i) != colUpper.at(i) && colLower.at(i) != -HIGHS_CONST_INF)
@@ -2802,7 +2803,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     else
       nonbasicMove.at(i) = 0;
   }
-
+  */
   colValue = valuePrimal;
   colDual = valueColDual;
   rowDual = valueRowDual;
