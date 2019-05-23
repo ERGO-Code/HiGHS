@@ -123,7 +123,7 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 
   // Read mps with fixed format parser.
   HighsLp lp_fixed;
-  options.parser_type = HighsMpsParserType::fixed;
+  options.mps_parser_type = MpsParserType::fixed;
 
   HighsStatus read_status = loadLpFromFile(options, lp_fixed);
   REQUIRE(read_status == HighsStatus::OK);
@@ -132,7 +132,7 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 
   // Read mps with free format parser.
   HighsLp lp_free;
-  options.parser_type = HighsMpsParserType::free;
+  options.mps_parser_type = MpsParserType::free;
 
   read_status = loadLpFromFile(options, lp_free);
   REQUIRE(read_status == HighsStatus::OK);

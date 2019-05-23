@@ -36,8 +36,8 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == simplex_iteration_limit_string) 
     return setSimplexIterationLimitValue(options, atoi(value.c_str()));
 
-  else if (option == parser_type_string) 
-    return setParserTypeValue(options, value);
+  else if (option == mps_parser_type_string) 
+    return setMpsParserTypeValue(options, value);
 
   else if (option == mip_string)
     return setMipValue(options, value);
@@ -111,6 +111,152 @@ OptionStatus checkOptionsValue(HighsOptions& options) {
     return OptionStatus::ILLEGAL_VALUE;
   }
   return OptionStatus::OK;
+}
+
+void reportStringOptionValue(const int report_level,
+			     const string option_string, const string option_value, const string option_default) {
+  bool is_default = option_value == option_default;
+  if (!is_default || report_level>0) {
+    printf("Option: %-32s has", option_string.c_str());
+    if (is_default) {
+      printf(" default value \"%s\"\n", option_default.c_str());
+    } else {
+      printf("         value \"%s\"", option_value.c_str());
+      printf(": default value is \"%s\"\n", option_default.c_str());
+    }
+  }
+}
+
+void reportIntOptionValue(const int report_level,
+			  const string option_string, const int option_value, const int option_default,
+			  const int* option_min, const int* option_max) {
+  bool is_default = option_value == option_default;
+  if (!is_default || report_level>0) {
+    printf("Option: %-32s has", option_string.c_str());
+    if (is_default) {
+      printf(" default value %6d", option_default);
+    } else {
+      printf("         value %6d", option_value);
+      printf(": default value is %6d", option_default);
+    }
+    if (option_min == NULL) {
+      if (option_max == NULL) {
+	printf("\n");
+      } else {
+	printf(": valid range is [-Inf, %6d]\n", *option_max);
+      }
+    } else {
+      if (option_max == NULL) {
+	printf(": valid range is [%6d, Inf]\n", *option_min);
+      } else {
+	printf(": valid range is [%6d, %6d]\n", *option_min, *option_max);
+      }
+    }
+  }
+}
+
+void reportDoubleOptionValue(const int report_level,
+			  const string option_string, const double option_value, const double option_default,
+			  const double* option_min, const double* option_max) {
+  bool is_default = option_value == option_default;
+  if (!is_default || report_level>0) {
+    printf("Option: %-32s has", option_string.c_str());
+    if (is_default) {
+      printf(" default value %12g", option_default);
+    } else {
+      printf("         value %12g", option_value);
+      printf(": default value is %12g", option_default);
+    }
+    if (option_min == NULL) {
+      if (option_max == NULL) {
+	printf("\n");
+      } else {
+	printf(": valid range is [-Inf, %12g]\n", *option_max);
+      }
+    } else {
+      if (option_max == NULL) {
+	printf(": valid range is [%12g, Inf]\n", *option_min);
+      } else {
+	printf(": valid range is [%12g, %12g]\n", *option_min, *option_max);
+      }
+    }
+  }
+}
+
+void reportOptionsValue(const HighsOptions& options, const int report_level) {
+  // Report on the command line options
+  bool is_default;
+  // Model file name
+  reportStringOptionValue(report_level, file_string, options.filename, FILENAME_DEFAULT);
+  // Options file name
+  reportStringOptionValue(report_level, options_file_string, options.options_file, OPTIONS_FILE_DEFAULT);
+  // Presolve option
+  is_default = options.presolve_option == PresolveOption::DEFAULT;
+  if (!is_default || report_level) {
+    if (is_default) {
+      printf("Option: %-32s has default value \"off\"\n", presolve_string.c_str());
+    } else {
+      printf("Option: %-32s has         value \"on\": default value is \"off\"\n", presolve_string.c_str());
+    }
+  }
+  // Crash option
+  is_default = options.crash_option == CrashOption::DEFAULT;
+  if (!is_default || report_level) {
+    if (is_default) {
+      printf("Option: %-32s has default value \"off\"\n", crash_string.c_str());
+    } else {
+      printf("Option: %-32s has         value \"on\": default value is \"off\"\n", crash_string.c_str());
+    }
+  }
+  // Parallel option
+  is_default = options.parallel_option == ParallelOption::DEFAULT;
+  if (!is_default || report_level) {
+    if (is_default) {
+      printf("Option: %-32s has default value \"off\"\n", parallel_string.c_str());
+    } else {
+      printf("Option: %-32s has         value \"on\": default value is \"off\"\n", parallel_string.c_str());
+    }
+  }
+  // Simplex option
+  is_default = options.simplex_option == SimplexOption::DEFAULT;
+  if (!is_default || report_level) {
+    if (is_default) {
+      printf("Option: %-32s has default value \"off\"\n", simplex_string.c_str());
+    } else {
+      printf("Option: %-32s has         value \"on\": default value is \"off\"\n", simplex_string.c_str());
+    }
+  }
+  // Ipx option ToDo This is a mess name-wise and should use IpmOption::OFF/ON/DEFAULT
+  is_default = options.ipx == false;
+  if (!is_default || report_level) {
+    if (is_default) {
+      printf("Option: %-32s has default value \"false\"\n", ipm_string.c_str());
+    } else {
+      printf("Option: %-32s has         value \"true\": default value is \"false\"\n", ipm_string.c_str());
+    }
+  }
+  // HiGHS run time limit
+  reportDoubleOptionValue(report_level, highs_run_time_limit_string, options.highs_run_time_limit, HIGHS_RUN_TIME_LIMIT_DEFAULT,
+			  NULL, NULL);
+  // Simplex iteration limit
+  reportIntOptionValue(report_level, simplex_iteration_limit_string, options.simplex_iteration_limit, SIMPLEX_ITERATION_LIMIT_DEFAULT,
+		       NULL, NULL);
+    
+  // MPS parser option
+  is_default = options.mps_parser_type == MpsParserType::DEFAULT;
+  if (!is_default || report_level) {
+    if (is_default) {
+      printf("Option: %-32s has default value \"fixed\"\n", mps_parser_type_string.c_str());
+    } else {
+      printf("Option: %-32s has         value \"free\": default value is \"fixed\"\n", mps_parser_type_string.c_str());
+    }
+  }
+  /*
+const string mip_string = "mip";
+const string find_feasibility_string = "find_feasibility";
+const string find_feasibility_strategy_string = "feasibility_strategy";
+const string find_feasibility_dualize_string = "feasibility_dualize"; 
+  */
 }
 
 OptionStatus setPresolveValue(HighsOptions& options, const std::string& value) {
@@ -266,14 +412,14 @@ OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::st
   return OptionStatus::OK;
 }
 
-OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value) {
+OptionStatus setMpsParserTypeValue(HighsOptions& options, const std::string& value) {
   if (value == "fixed")
-    options.parser_type = HighsMpsParserType::fixed;
+    options.mps_parser_type = MpsParserType::fixed;
   else if (value == "free")
-    options.parser_type = HighsMpsParserType::free;
+    options.mps_parser_type = MpsParserType::free;
   else {
     HighsLogMessage(HighsMessageType::ERROR,
-		    "parser type value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
+		    "MPS parser type value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
 		    value.c_str(), fixed_string.c_str(), free_string.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }

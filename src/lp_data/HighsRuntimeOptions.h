@@ -38,7 +38,7 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
         cxxopts::value<int>())(
         options_file_string, "File containing HiGHS options.",
         cxxopts::value<std::vector<std::string>>())(
-        parser_type_string, "Mps parser type: swap back to fixed format parser.",
+        mps_parser_type_string, "Mps parser type: swap back to fixed format parser.",
         cxxopts::value<std::string>(parser))(
         "h, help", "Print help.");
 
@@ -127,11 +127,11 @@ bool loadOptions(int argc, char **argv, HighsOptions &options)
       if (!loadOptionsFromFile(options)) return false;
     }
 
-    // For testing of new parser
-    if (result.count(parser_type_string))
+    // For testing of new MPS parser
+    if (result.count(mps_parser_type_string))
     {
-      std::string value = result[parser_type_string].as<std::string>();
-      if (setParserTypeValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
+      std::string value = result[mps_parser_type_string].as<std::string>();
+      if (setMpsParserTypeValue(options, value) == OptionStatus::ILLEGAL_VALUE) return false;
     }
   }
   catch (const cxxopts::OptionException &e)

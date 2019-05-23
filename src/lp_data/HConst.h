@@ -14,6 +14,8 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
+#include <string>
+
 const int HIGHS_CONST_I_INF = 2147483647;//32767;
 const double HIGHS_CONST_INF = 1e200;
 const double HIGHS_CONST_TINY = 1e-14;
@@ -54,6 +56,14 @@ enum class SimplexOption {
   DEFAULT = OFF
 };
 
+enum class IpmOption {
+  OFF = 0,
+  ON,
+  DEFAULT = OFF
+};
+
+const std::string FILENAME_DEFAULT = "";
+const std::string OPTIONS_FILE_DEFAULT = "";
 const double INFINITE_COST_MIN =     1e15;
 const double INFINITE_COST_DEFAULT = 1e20;
 const double INFINITE_COST_MAX =     1e25;
