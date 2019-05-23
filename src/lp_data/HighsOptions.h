@@ -38,7 +38,6 @@ const string free_string = "free";
 
 // Strings for command line options
 const string file_string = "file";
-const string options_file_string = "options_file";
 const string presolve_string = "presolve";
 const string crash_string = "crash";
 const string parallel_string = "parallel";
@@ -46,7 +45,8 @@ const string simplex_string = "simplex";
 const string ipm_string = "ipm";
 const string highs_run_time_limit_string = "highs_run_time_limit";
 const string simplex_iteration_limit_string = "simplex_iteration_limit";
-const string mps_parser_type_string = "mps_parser_type";
+const string options_file_string = "options_file";
+const string parser_type_string = "parser_type";
 const string mip_string = "mip";
 const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
@@ -76,11 +76,10 @@ const string message_level_string = "message_level";
 
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
-enum class MpsParserType
+enum class HighsMpsParserType
 {
-  free = 0,
-  fixed,
-  DEFAULT = fixed
+  free,
+  fixed
 };
 
 /** SCIP/HiGHS Objective sense */
@@ -108,7 +107,7 @@ struct HighsOptions
   bool ipx = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
-  MpsParserType mps_parser_type = MpsParserType::DEFAULT;
+  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
 
   // Options not passed through the command line
   // Perform LP scaling
@@ -175,7 +174,7 @@ OptionStatus setSimplexValue(HighsOptions& options, const std::string& value);
 OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
 OptionStatus setHighsRunTimeLimitValue(HighsOptions& options, const double& value);
 OptionStatus setSimplexIterationLimitValue(HighsOptions& options, const int& value);
-OptionStatus setMpsParserTypeValue(HighsOptions& options, const std::string& value);
+OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value);
 OptionStatus setMipValue(HighsOptions& options, const std::string& value);
 OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& value);
 OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value);

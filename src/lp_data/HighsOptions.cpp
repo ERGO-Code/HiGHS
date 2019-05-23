@@ -36,8 +36,8 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == simplex_iteration_limit_string) 
     return setSimplexIterationLimitValue(options, atoi(value.c_str()));
 
-  else if (option == mps_parser_type_string) 
-    return setMpsParserTypeValue(options, value);
+  else if (option == parser_type_string) 
+    return setParserTypeValue(options, value);
 
   else if (option == mip_string)
     return setMipValue(options, value);
@@ -241,17 +241,9 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   // Simplex iteration limit
   reportIntOptionValue(report_level, simplex_iteration_limit_string, options.simplex_iteration_limit, SIMPLEX_ITERATION_LIMIT_DEFAULT,
 		       NULL, NULL);
-    
-  // MPS parser option
-  is_default = options.mps_parser_type == MpsParserType::DEFAULT;
-  if (!is_default || report_level) {
-    if (is_default) {
-      printf("Option: %-32s has default value \"fixed\"\n", mps_parser_type_string.c_str());
-    } else {
-      printf("Option: %-32s has         value \"free\": default value is \"fixed\"\n", mps_parser_type_string.c_str());
-    }
-  }
   /*
+    
+const string parser_type_string = "parser_type";
 const string mip_string = "mip";
 const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
@@ -412,14 +404,14 @@ OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::st
   return OptionStatus::OK;
 }
 
-OptionStatus setMpsParserTypeValue(HighsOptions& options, const std::string& value) {
+OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value) {
   if (value == "fixed")
-    options.mps_parser_type = MpsParserType::fixed;
+    options.parser_type = HighsMpsParserType::fixed;
   else if (value == "free")
-    options.mps_parser_type = MpsParserType::free;
+    options.parser_type = HighsMpsParserType::free;
   else {
     HighsLogMessage(HighsMessageType::ERROR,
-		    "MPS parser type value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
+		    "parser type value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
 		    value.c_str(), fixed_string.c_str(), free_string.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }

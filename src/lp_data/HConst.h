@@ -98,8 +98,7 @@ enum class HighsBasisStatus {
   UPPER,     // (slack) variable is at its upper bound 
   ZERO,      // free variable is non-basic and set to zero 
   SUPER      // Super-basic variable: non-basic and either free and
-	     // nonzero or not at a bound. Not permitted when
-	     // allow_superbasic is false: no SCIP equivalent
+	     // nonzero or not at a bound. No SCIP equivalent
 };
 
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
