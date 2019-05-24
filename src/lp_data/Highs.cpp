@@ -224,9 +224,15 @@ HighsStatus Highs::run() {
 	    // for the original_hmo
 	    hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
 	    hmos_[original_hmo].simplex_basis_.valid_ = true;
+
 	    hmos_[original_hmo].simplex_basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
+	    //hmos_[original_hmo].simplex_basis_.basicIndex_.resize(hmos_[original_hmo].lp_.numRow_);
+	    
 	    hmos_[original_hmo].simplex_basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
-	    hmos_[original_hmo].simplex_basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
+
+	    //	    hmos_[original_hmo].simplex_basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
+	    hmos_[original_hmo].simplex_basis_.nonbasicMove_.resize(hmos_[original_hmo].lp_.numCol_+hmos_[original_hmo].lp_.numRow_);
+
 	    hmos_[original_hmo].simplex_lp_status_.has_basis = true;
 	    postsolveSimplextoHighsBasis(hmos_[original_hmo]);
 	    options_.clean_up = true;
