@@ -313,6 +313,15 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
     if (iVar < lp.numCol_) {
       int iCol = iVar;
       solution.col_value[iCol] = value;
+      if (status == HighsBasisStatus::BASIC) {
+	if (basis.col_status[iCol] != HighsBasisStatus::BASIC) {
+	  printf("Basic    column %3d col_status error: %2d-%2d\n", iCol, (int)status, (int)basis.col_status[iCol]);
+	}
+      } else {
+	if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
+	  printf("Nonbasic column %3d col_status error: %2d-%2d\n", iCol, (int)status, (int)basis.col_status[iCol]);
+	}
+      }
       basis.col_status[iCol] = status;
       /*
       printf("Col: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
@@ -322,6 +331,15 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
     } else {
       int iRow = iVar - lp.numCol_;
       solution.row_value[iRow] = value;
+      if (status == HighsBasisStatus::BASIC) {
+	if (basis.row_status[iRow] != HighsBasisStatus::BASIC) {
+	  printf("Basic    row %3d row_status error: %2d-%2d\n", iRow, (int)status, (int)basis.row_status[iRow]);
+	}
+      } else {
+	if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
+	  printf("Nonbasic row %3d row_status error: %2d-%2d\n", iRow, (int)status, (int)basis.row_status[iRow]);
+	}
+      }
       basis.row_status[iRow] = status;
       /*
       printf("Row: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",

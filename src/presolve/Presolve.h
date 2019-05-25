@@ -55,7 +55,10 @@ class Presolve : public HPreData {
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
                                  HighsSolution& recovered_solution);
 
-  void setBasisInfo(const std::vector<int>& index, const std::vector<int>& nbf, const std::vector<int>& nbm);
+  void setSimplexBasisInfo(const std::vector<int>& pass_basicIndex, const std::vector<int>& pass_nonbasicFlag);
+  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status, const std::vector<HighsBasisStatus>& pass_row_status);
+  const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
+  const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
   const std::vector<int>& getBasisIndex() { return basicIndex; }
   const std::vector<int>& getNonbasicFlag() { return nonbasicFlag; }
   //  const std::vector<int>& getNonbasicMove() { return nonbasicMove; }

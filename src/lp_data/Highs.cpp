@@ -211,9 +211,10 @@ HighsStatus Highs::run() {
 	  // solution(?) and basis that is, hopefully, optimal. This is
 	  // confirmed or corrected by hot-starting the simplex solver
 	  presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
-	  presolve_info.presolve_[0].setBasisInfo(hmos_[solved_hmo].simplex_basis_.basicIndex_,
-						  hmos_[solved_hmo].simplex_basis_.nonbasicFlag_,
-						  hmos_[solved_hmo].simplex_basis_.nonbasicMove_);
+	  presolve_info.presolve_[0].setSimplexBasisInfo(hmos_[solved_hmo].simplex_basis_.basicIndex_,
+							 hmos_[solved_hmo].simplex_basis_.nonbasicFlag_);
+	  presolve_info.presolve_[0].setBasisInfo(hmos_[solved_hmo].basis_.col_status,
+						  hmos_[solved_hmo].basis_.row_status);
 	  // Run postsolve
 	  timer_.start(timer_.postsolve_clock);
 	  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
@@ -234,7 +235,13 @@ HighsStatus Highs::run() {
 	    hmos_[original_hmo].simplex_basis_.nonbasicMove_.resize(hmos_[original_hmo].lp_.numCol_+hmos_[original_hmo].lp_.numRow_);
 
 	    hmos_[original_hmo].simplex_lp_status_.has_basis = true;
+
+	    hmos_[original_hmo].basis_.col_status = presolve_info.presolve_[0].getColStatus();
+	    hmos_[original_hmo].basis_.row_status = presolve_info.presolve_[0].getRowStatus();
+	    hmos_[original_hmo].basis_.valid_ = true;
+
 	    postsolveSimplextoHighsBasis(hmos_[original_hmo]);
+	    
 	    options_.clean_up = true;
 	    // Now hot-start the simplex solver for the original_hmo
 	    solved_hmo = original_hmo;

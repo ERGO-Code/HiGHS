@@ -58,8 +58,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     //    printf("\nOn entry to runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
     if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL ||
 	simplex_lp_status.solution_status == SimplexSolutionStatus::PRIMAL_FEASIBLE) {
-      // Optimal or primal feasible so force the use of primal somplex solver
-      printf("Optimal or primal feasible so force the use of primal somplex solver\n");
+      // Optimal or primal feasible so force the use of primal simplex solver
+      printf("Optimal or primal feasible so force the use of primal simplex solver\n");
       use_simplex_strategy = SimplexStrategy::PRIMAL;
     }
   }
