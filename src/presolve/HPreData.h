@@ -77,6 +77,7 @@ class HPreData {
   vector<int> flagCol;
   vector<int> flagRow;
 
+  const bool use_simplex_basis_logic = true;
   vector<int> basicIndex;
   vector<int> nonbasicFlag;
   //  vector<int> nonbasicMove;
