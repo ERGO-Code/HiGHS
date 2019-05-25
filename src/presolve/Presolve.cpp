@@ -2768,6 +2768,13 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   basicIndex.resize(numRowOriginal);
   for (int i = 0; i < numColOriginal + numRowOriginal; ++i) {
     bool local_logic;
+    HighsBasisStatus status;
+    if (i < numColOriginal) {
+      status = col_status.at(i);
+    } else {
+      status = row_status.at(i-numColOriginal);
+    }
+
     if (use_simplex_basis_logic) {
       local_logic = nonbasicFlag.at(i) == 0;
     } else {
@@ -2782,17 +2789,19 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         cout << "Error during postsolve: wrong basic variables number: basic "
                 "variables more than rows."
              << endl;
+	printf("Get at least %d basic variables, not %d\n", cntVar+1, numRowOriginal);
         break;
       }
       basicIndex[cntVar] = i;
       cntVar++;
     }
   }
-  if (cntVar < numRowOriginal)
+  if (cntVar < numRowOriginal) {
     cout << "Error during postsolve: wrong basic variables number: basic "
             "variables less than rows."
          << endl;
-
+    printf("Get %d basic variables, not %d\n", cntVar, numRowOriginal);
+  }
   if (iKKTcheck == 2) {
     if (chk.print == 3) chk.print = 2;
     chk.passSolution(valuePrimal, valueColDual, valueRowDual);
@@ -3348,8 +3357,10 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   // check if x is at a bound forced by the singleton row: then x becomes basic
   // and row nonbasic
   HighsBasisStatus local_status;
-  //  printf("Testing use_simplex_basis_logic: 1\n");
-  if (use_simplex_basis_logic) {
+  bool local_logic = use_simplex_basis_logic;
+  //  local_logic = true;
+  //  if (!local_logic) printf("Testing use_simplex_basis_logic: 1\n");
+  if (local_logic) {
     if (nonbasicFlag.at(col) == 1) {
       local_status = HighsBasisStatus::LOWER;
     } else {
@@ -3358,7 +3369,7 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   } else {
     local_status = col_status.at(col);
   }
-  if (local_status == HighsBasisStatus::LOWER) {
+  if (local_status != HighsBasisStatus::BASIC) {
     // x was not basic but is now
     if (valuePrimal.at(col) != l && valuePrimal.at(col) != u) {
       if (report_postsolve) {
@@ -3377,7 +3388,9 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       nonbasicFlag[numColOriginal + row] = 0;
       row_status.at(row) = HighsBasisStatus::BASIC;
     }
-  } else if (local_status == HighsBasisStatus::BASIC) {    // x is basic
+    //  } else if (local_status == HighsBasisStatus::BASIC) {
+  } else {
+    // x is basic
     if (report_postsolve) {
       printf("3.3 : Make row %3d basic\n", row);
     }
@@ -3460,8 +3473,10 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
   if (iKKTcheck == 1) chk.colDual.at(x) = valueColDual.at(x);
 
   HighsBasisStatus local_status;
-  //  printf("Testing use_simplex_basis_logic: 2\n");
-  if (use_simplex_basis_logic) {
+  bool lc_logic = use_simplex_basis_logic;
+  //  lc_logic = true;
+  //  if (!lc_logic) printf("Testing use_simplex_basis_logic: 2\n");
+  if (lc_logic) {
     if (nonbasicFlag.at(x) == 1) {
       local_status = HighsBasisStatus::LOWER;
     } else {
@@ -3477,8 +3492,8 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 
   //  if ((nonbasicFlag.at(x) == 1 && valueX == ubxNew && ubxNew < ubxOld) ||
   //      (nonbasicFlag.at(x) == 1 && valueX == lbxNew && lbxNew > lbxOld)) {
-  if ((local_status == HighsBasisStatus::LOWER && valueX == ubxNew && ubxNew < ubxOld) ||
-      (local_status == HighsBasisStatus::LOWER && valueX == lbxNew && lbxNew > lbxOld)) {
+  if ((local_status != HighsBasisStatus::BASIC && valueX == ubxNew && ubxNew < ubxOld) ||
+      (local_status != HighsBasisStatus::BASIC && valueX == lbxNew && lbxNew > lbxOld)) {
     nonbasicFlag.at(x) = 0;
     if (x < numColOriginal) {
       col_status.at(x) = HighsBasisStatus::BASIC;
