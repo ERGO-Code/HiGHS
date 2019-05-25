@@ -2273,7 +2273,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   for (int i = 0; i < numRow; ++i) {
     valueRowDual[eqIndexOfReduROW.at(i)] = rowDual.at(i);
     nonbasicFlag[numColOriginal + eqIndexOfReduROW.at(i)] = temp[numCol + i];
-    row_status[eqIndexOfReduROW.at(i)] = temp_row_status.at(i);
+    row_status.at(eqIndexOfReduROW.at(i)) = temp_row_status.at(i);
   }
 
   // cmpNBF(-1, -1);
@@ -2688,7 +2688,13 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           nonbasicFlag[c.col] = 1;
           nonbasicFlag.at(j) = 0;
 	  col_status.at(c.col) = HighsBasisStatus::LOWER;// Really LOWER?
-	  row_status.at(j) = HighsBasisStatus::BASIC;
+	  if (j < numColOriginal) {
+	    // j is a column
+	    col_status.at(j) = HighsBasisStatus::BASIC;
+	  } else {
+	    // j is a row
+	    row_status.at(j-numColOriginal) = HighsBasisStatus::BASIC;
+	  }
           basicIndex.pop_back();
           basicIndex.push_back(j);
         }
