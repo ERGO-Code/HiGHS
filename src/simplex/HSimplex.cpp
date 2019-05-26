@@ -315,11 +315,11 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
     if (iVar < lp.numCol_) {
       int iCol = iVar;
       solution.col_value[iCol] = value;
-      //      basis.col_status[iCol] = status;
+      basis.col_status[iCol] = status;
     } else {
       int iRow = iVar - lp.numCol_;
       solution.row_value[iRow] = value;
-      //      basis.row_status[iRow] = status;
+      basis.row_status[iRow] = status;
     }
   }
   basis.valid_ = true;
