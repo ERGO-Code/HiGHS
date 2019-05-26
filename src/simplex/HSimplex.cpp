@@ -341,10 +341,12 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
   }
   // Construct nonbasicFlag and basicIndex from col/row_status
+  vector<int> &nonbasicMove = simplex_basis.nonbasicMove_;
   vector<int> &nonbasicFlag = simplex_basis.nonbasicFlag_;
   vector<int> &basicIndex = simplex_basis.basicIndex_;
   vector<HighsBasisStatus> &col_status = basis.col_status;
   vector<HighsBasisStatus> &row_status = basis.row_status;
+  //  nonbasicMove.resize(lp.numCol_+lp.numRow_);
   nonbasicFlag.resize(lp.numCol_+lp.numRow_);
   basicIndex.resize(lp.numRow_);
   int num_basic_var = 0;

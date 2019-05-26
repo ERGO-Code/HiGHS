@@ -1268,7 +1268,7 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
 }
 
 bool HighsSimplexInterface::analyseSingleHighsSolutionAndSimplexBasis(bool report,
-								      const int nonbasic_flag, const int nonbasic_move,
+								      const int nonbasic_flag, 
 								      const double lower, const double upper, const double value, const double dual,
 								      int &num_non_basic_var, int &num_basic_var, int &num_off_bound_nonbasic,
 								      double& primal_infeasibility, double& dual_infeasibility) {
@@ -1385,10 +1385,9 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis
     double dual = solution.col_dual[iCol];
     int iVar = iCol;
     int nonbasic_flag = simplex_basis.nonbasicFlag_[iVar];
-    int nonbasic_move = simplex_basis.nonbasicMove_[iVar];
 
     bool report = false;
-    bool query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+    bool query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, 
 						      lower, upper, value, dual,
 						      num_non_basic_var, num_basic_var, num_off_bound_nonbasic,
 						      primal_infeasibility, dual_infeasibility);
@@ -1404,9 +1403,9 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis
 	printf("\nColumns\nIndex NonBs Mv [          LB,           UB]       Primal         Dual    PrimalIfs      DualIfs\n");
 	header_written = true;
       }
-      printf("%5d %5d %2d [%12g, %12g] %12g %12g", iCol, nonbasic_flag, nonbasic_move, lower, upper, value, dual);
+      printf("%5d %5d [%12g, %12g] %12g %12g", iCol, nonbasic_flag, lower, upper, value, dual);
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
-      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, 
 						lower, upper, value, dual,
 						num_non_basic_var, num_basic_var, num_off_bound_nonbasic,
 						primal_infeasibility, dual_infeasibility);
@@ -1459,10 +1458,9 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis
     double dual = -solution.row_dual[iRow];
     int iVar = lp.numCol_ + iRow;
     int nonbasic_flag = simplex_basis.nonbasicFlag_[iVar];
-    int nonbasic_move = simplex_basis.nonbasicMove_[iVar];
 
     bool report = false;
-    bool query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+    bool query = analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag,
 						      lower, upper, value, dual,
 						      num_non_basic_var, num_basic_var, num_off_bound_nonbasic,
 						      primal_infeasibility, dual_infeasibility);
@@ -1478,9 +1476,9 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndSimplexBasis
 	printf("Rows\nIndex NonBs Mv [          LB,           UB]       Primal         Dual    PrimalIfs      DualIfs\n");
 	header_written = true;
       }
-      printf("%5d %5d %2d [%12g, %12g] %12g %12g", iRow, nonbasic_flag, nonbasic_move, lower, upper, value, dual);
+      printf("%5d %5d [%12g, %12g] %12g %12g", iRow, nonbasic_flag, lower, upper, value, dual);
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
-      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, nonbasic_move,
+      analyseSingleHighsSolutionAndSimplexBasis(report, nonbasic_flag, 
 						lower, upper, value, dual,
 						num_non_basic_var, num_basic_var, num_off_bound_nonbasic,
 						primal_infeasibility, dual_infeasibility);

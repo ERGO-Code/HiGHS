@@ -399,7 +399,6 @@ class HighsSimplexInterface {
   bool analyseSingleHighsSolutionAndSimplexBasis(
 						 bool report,
 						 const int nonbasic_flag,
-						 const int nonbasic_move,
 						 const double lower,
 						 const double upper,
 						 const double value,
