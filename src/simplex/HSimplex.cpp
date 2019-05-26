@@ -210,7 +210,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
   simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
   simplex_basis.nonbasicFlag_.resize(numTot);
   simplex_basis.nonbasicMove_.resize(numTot);
-  simplex_basis.valid_ = false;
+  simplex_lp_status.has_basis = false;
   //
   // Possibly scale the LP to be used by the solver
   //
@@ -754,14 +754,14 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
   HMatrix &matrix = highs_model_object.matrix_;
   HFactor &factor = highs_model_object.factor_;
 
-  if (!simplex_basis.valid_ && basis.valid_) {
+  if (!simplex_lp_status.has_basis && basis.valid_) {
     // Simplex basis is not valid, but HiGHS basis is valid so convert it to a simplex basis
     simplex_interface.convertHighsToSimplexBasis();
   }
-  if (simplex_basis.valid_ || simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
+  if (simplex_lp_status.has_basis || simplex_info.crash_strategy != SimplexCrashStrategy::OFF) {
     // Have either a supplied basis or the option to crash, so
     // can expect to start from a non-identity basis
-    if (simplex_basis.valid_) {
+    if (simplex_lp_status.has_basis) {
     // Valid basis is preferred, so use it to initialise...
       initialise_from_nonbasic(highs_model_object);
     } else {
@@ -1433,12 +1433,13 @@ void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
 
   for (int row = 0; row < simplex_lp.numRow_; row++) simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
   for (int col = 0; col < simplex_lp.numCol_; col++) simplex_basis.nonbasicFlag_[col] = 1;
-  simplex_basis.valid_ = true;
+  simplex_lp_status.has_basis = true;
   simplex_info.num_basic_logicals = simplex_lp.numRow_;
 
   allocate_work_and_base_arrays(highs_model_object);
@@ -2242,7 +2243,7 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   //  printf("Called ok_to_solve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
-  ok = simplex_basis.valid_ && simplex_lp_status.has_matrix_col_wise &&
+  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
        simplex_lp_status.has_matrix_row_wise &&
        simplex_lp_status.has_factor_arrays &&
        simplex_lp_status.has_dual_steepest_edge_weights &&
@@ -2250,8 +2251,8 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   // TODO: Eliminate the following line ASAP!!!
   ok = true;
   if (!ok) {
-    if (!simplex_basis.valid_)
-      printf("Not OK to solve since simplex_basis.valid_ = %d\n", simplex_basis.valid_);
+    if (!simplex_lp_status.has_basis)
+      printf("Not OK to solve since simplex_lp_status.has_basis = %d\n", simplex_lp_status.has_basis);
     if (!simplex_lp_status.has_matrix_col_wise)
       printf("Not OK to solve since simplex_lp_status.has_matrix_col_wise "
              "= %d\n",

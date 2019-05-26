@@ -182,7 +182,7 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
     // ToDo Determine consequences for basis when deleting columns
     simplex_lp_status.has_matrix_col_wise = false;
     simplex_lp_status.has_matrix_row_wise = false;
-    simplex_basis.valid_ = false;
+    simplex_lp_status.has_basis = false;
   }
   return HighsStatus::OK;
 }
@@ -391,7 +391,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
     // ToDo Determine consequences for basis when deleting rows
     simplex_lp_status.has_matrix_col_wise = false;
     simplex_lp_status.has_matrix_row_wise = false;
-    simplex_basis.valid_ = false;
+    simplex_lp_status.has_basis = false;
   }
     // ToDo Determine consequences for basis when deleting rows
   //  updateSimplexLpStatus(simplex_lp_status, LpAction::DEL_ROWS);
@@ -1095,7 +1095,6 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
   int* numColPermutation = &highs_model_object.simplex_info_.numColPermutation_[0];
   // numColPermutation[iCol] is the true column in column iCol
   int num_basic = 0;
-  simplex_basis.valid_ = false;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     int simplex_var = iCol;
     int lp_col = iCol;
@@ -1213,7 +1212,7 @@ void HighsSimplexInterface::convertHighsToSimplexBasis() {
   assert(num_basic = lp.numRow_);
   //  populate_work_arrays(highs_model_object); // Why might this have been done here?
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
-  simplex_basis.valid_ = true;
+  simplex_lp_status.has_basis = true;
 }
 
 void HighsSimplexInterface::convertSimplexToHighsSolution() {

@@ -97,10 +97,10 @@ struct HighsScale {
 
 struct SimplexBasis {
   // The basis for the simplex method consists of basicIndex,
-  // nonbasicFlag and nonbasicMove. If valid_ is true then they are
+  // nonbasicFlag and nonbasicMove. If HighsSimplexLpStatus has_basis
+  // is true then it is assumed that basicIndex_ and nonbasicFlag_ are
   // self-consistent and correpond to the dimensions of an associated
   // HighsLp, but the basis matrix B is not necessarily nonsingular.
-  bool valid_ = false;
   std::vector<int> basicIndex_;
   std::vector<int> nonbasicFlag_;
   std::vector<int> nonbasicMove_;
@@ -111,7 +111,7 @@ struct HighsSimplexLpStatus {
   bool valid = false;
   bool is_scaled = false;
   bool is_permuted = false;
-  bool has_basis = false; // The LP has a valid simplex basis - duplication of simplex_basis_.valid_ because the latter can't be queried in SimplexLpStatus methods
+  bool has_basis = false; // The LP has a valid simplex basis
   bool has_matrix_col_wise = false; // The LP has a column-wise constraint matrix
   bool has_matrix_row_wise = false; // The LP has a row-wise constraint matrix
   bool has_factor_arrays = false; // Has the arrays for the representation of B^{-1}
