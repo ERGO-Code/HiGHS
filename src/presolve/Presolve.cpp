@@ -2767,6 +2767,40 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   }
 
   // cmpNBF();
+
+  // Check number of basic variables
+  int num_basic_var = 0;
+  for (int iCol = 0; iCol < numColOriginal; iCol++) {
+    if (col_status[iCol] == HighsBasisStatus::BASIC) {
+      assert(num_basic_var < numRowOriginal);
+      if (num_basic_var == numRowOriginal) {
+	printf("Error in postsolve: more basic variables than rows\n");
+	break;
+      }
+      num_basic_var++;
+    }
+  }
+  for (int iRow = 0; iRow < numRowOriginal; iRow++) {
+    int iVar = numColOriginal + iRow;
+    if (row_status[iRow] == HighsBasisStatus::BASIC) {
+      assert(num_basic_var < numRowOriginal);
+      if (num_basic_var == numRowOriginal) {
+	printf("Error from postsolve: more basic variables than rows\n");
+	break;
+      }
+      num_basic_var++;
+    }
+  }
+  // Return error if the number of basic variables does not equal the
+  // number of rows in the original LP
+  assert(num_basic_var == numRowOriginal);
+  if (num_basic_var != numRowOriginal) {
+    printf("Error from postsolve: number of basic variables = %d != %d = number of rows\n", num_basic_var, numRowOriginal);
+    return HighsPostsolveStatus::BasisError;
+  }
+  
+  /*
+
   // cout<<"Singularity check at end of postsolve: ";
   // testBasisMatrixSingularity();
 
@@ -2808,6 +2842,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
          << endl;
     printf("Get %d basic variables, not %d\n", cntVar, numRowOriginal);
   }
+  */
   if (iKKTcheck == 2) {
     if (chk.print == 3) chk.print = 2;
     chk.passSolution(valuePrimal, valueColDual, valueRowDual);

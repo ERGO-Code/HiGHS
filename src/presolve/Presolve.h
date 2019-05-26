@@ -33,6 +33,7 @@ enum class HighsPostsolveStatus {
   ReducedSolutionDimenionsError,
   SolutionRecovered,
   LpOrPresolveObjectMissing,
+  BasisError,
   NoPostsolve
 };
 

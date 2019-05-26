@@ -362,10 +362,11 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
 
 void rebuildPostsolve(HighsModelObject &highs_model_object) {
   HighsLp &lp = highs_model_object.lp_;
+  HighsBasis &basis = highs_model_object.basis_;
   HFactor &factor = highs_model_object.factor_;
   HighsSolution &solution = highs_model_object.solution_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &basis = highs_model_object.simplex_basis_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   //  SimplexTimer simplex_timer;
   //  simplex_timer.initialiseSimplexClocks(highs_model_object);
   const int rebuild_postsolve_report_level = 0;
@@ -373,6 +374,49 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     printf("\nIn rebuildPostsolve\n");  
     printf("Primal objective value = %18.12g\n", highs_model_object.simplex_info_.primalObjectiveValue);
   }
+  // Construct nonbasicFlag and basicIndex from col/row_status
+  vector<int> &nonbasicFlag = simplex_basis.nonbasicFlag_;
+  vector<int> &basicIndex = simplex_basis.basicIndex_;
+  vector<HighsBasisStatus> &col_status = basis.col_status;
+  vector<HighsBasisStatus> &row_status = basis.row_status;
+  nonbasicFlag.resize(lp.numCol_+lp.numRow_);
+  basicIndex.resize(lp.numRow_);
+  int num_basic_var = 0;
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    int iVar = iCol;
+    if (col_status[iCol] == HighsBasisStatus::BASIC) {
+      nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+      basicIndex[num_basic_var] = iVar;
+      assert(num_basic_var < lp.numRow_);
+      if (num_basic_var == lp.numRow_) {
+	printf("Error from postsolve: more basic variables than rows\n");
+	break;
+      }
+      num_basic_var++;
+    } else {
+      nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+    }
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    int iVar = lp.numCol_ + iRow;
+    if (row_status[iRow] == HighsBasisStatus::BASIC) {
+      nonbasicFlag[iVar] = NONBASIC_FLAG_FALSE;
+      basicIndex[num_basic_var] = iVar;
+      assert(num_basic_var < lp.numRow_);
+      if (num_basic_var == lp.numRow_) {
+	printf("Error from postsolve: more basic variables than rows\n");
+	break;
+      }
+      num_basic_var++;
+    } else {
+      nonbasicFlag[iVar] = NONBASIC_FLAG_TRUE;
+    }
+  }
+  assert(num_basic_var == lp.numRow_);
+  if (num_basic_var != lp.numRow_) {
+    printf("Error from postsolve: number of basic variables = %d != %d = number of rows\n", num_basic_var, lp.numRow_);
+  }
+
   bool frig_adlittle = false;
   if (frig_adlittle) {
     solution.col_dual[95] = -solution.row_dual[24];
@@ -385,7 +429,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   int num_big_basic_duals = 0;
   double sum_big_basic_duals = 0;
   for (int ix = 0; ix < lp.numRow_; ix++) {
-    int iVar = basis.basicIndex_[ix];
+    int iVar = basicIndex[ix];
     double abs_dual;
     if (iVar < lp.numCol_) {
       abs_dual = fabs(solution.col_dual[iVar]);
@@ -429,7 +473,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
 	       &lp.Astart_[0],
 	       &lp.Aindex_[0],
 	       &lp.Avalue_[0],
-	       &basis.basicIndex_[0]);
+	       &basicIndex[0]);
   simplex_lp_status.has_factor_arrays = true;
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
@@ -445,7 +489,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   row_dual.setup(lp.numRow_);
   row_dual.clear();
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    int iCol = basis.basicIndex_[iRow];
+    int iCol = basicIndex[iRow];
     row_dual.index[iRow] = iRow;
     if (iCol < lp.numCol_) {
       row_dual.array[iRow] = lp.colCost_[iCol];
@@ -459,7 +503,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   // Check (and zero) the basic row duals
   double sum_basic_row_dual = 0;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (!basis.nonbasicFlag_[lp.numCol_+iRow]) {
+    if (!nonbasicFlag[lp.numCol_+iRow]) {
       sum_basic_row_dual += fabs(row_dual.array[iRow]);
       row_dual.array[iRow] = 0;
     }
@@ -479,7 +523,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       int iRow = lp.Aindex_[el];
       new_col_dual -= row_dual.array[iRow]*lp.Avalue_[el];
     }
-    if (basis.nonbasicFlag_[iCol]) {
+    if (nonbasicFlag[iCol]) {
       col_dual[iCol] = new_col_dual;
     } else {
       sum_basic_col_dual += fabs(new_col_dual);
@@ -500,7 +544,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
 	  if (!header_written) printf("\nIndex NonBs          New          Old        Delta\n");
 	  header_written = true;
 	  printf("%5d %5d %12g %12g %12g\n",
-		 iRow, basis.nonbasicFlag_[iRow], new_row_dual, old_row_dual, dl_dual);
+		 iRow, nonbasicFlag[iRow], new_row_dual, old_row_dual, dl_dual);
 	}
       }
       sum_delta_row_dual += dl_dual;
@@ -521,7 +565,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
 	  if (!header_written) printf("\nIndex NonBs          New          Old        Delta\n");
 	  header_written = true;
 	  printf("%5d %5d %12g %12g %12g\n",
-		 iCol, basis.nonbasicFlag_[iCol], new_col_dual, old_col_dual, dl_dual);
+		 iCol, nonbasicFlag[iCol], new_col_dual, old_col_dual, dl_dual);
 	}
       }
       sum_delta_col_dual += dl_dual;
@@ -537,7 +581,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   basic_value.clear();
   for (int iRow = 0; iRow < lp.numRow_; iRow++) basic_value.array[iRow] = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (!basis.nonbasicFlag_[iCol]) continue;
+    if (!nonbasicFlag[iCol]) continue;
     double value = solution.col_value[iCol];
     for (int el = lp.Astart_[iCol]; el < lp.Astart_[iCol+1]; el++) {
       int iRow = lp.Aindex_[el];
@@ -550,7 +594,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
       printf("Bf FTRAN: After cols Row %2d has value %12g\n", i, basic_value.array[i]);
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
+    if (!nonbasicFlag[lp.numCol_+iRow]) continue;
     double value = -solution.row_value[iRow];
     if (rebuild_postsolve_report_level==4) printf("Bf FTRAN: Row %2d: adding %12g\n", iRow, value);
     basic_value.array[iRow] += value;
@@ -567,7 +611,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     if (rebuild_postsolve_report_level==2) printf("\nDifferences when recomputing primals:\nBasic variables\n");
    bool header_written = false;
     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-      int iCol = basis.basicIndex_[iRow];
+      int iCol = basicIndex[iRow];
       double old_basic_value;
       if (iCol < lp.numCol_) {
 	old_basic_value = solution.col_value[iCol];
@@ -597,7 +641,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   // Determine primal feasibility
   int num_primal_infeasible = 0;
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    int iVar = basis.basicIndex_[iRow];
+    int iVar = basicIndex[iRow];
     double value;
     double lower;
     double upper;
@@ -626,7 +670,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
   // Determine dual feasibility
   int num_dual_infeasible = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (!basis.nonbasicFlag_[iCol]) continue;
+    if (!nonbasicFlag[iCol]) continue;
     double value = solution.col_value[iCol];
     double dual = col_dual[iCol];
     double lower = lp.colLower_[iCol];
@@ -638,7 +682,7 @@ void rebuildPostsolve(HighsModelObject &highs_model_object) {
     }
   }
   for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    if (!basis.nonbasicFlag_[lp.numCol_+iRow]) continue;
+    if (!nonbasicFlag[lp.numCol_+iRow]) continue;
     double value = solution.row_value[iRow];
     double dual = row_dual.array[iRow];
     double lower = lp.rowLower_[iRow];
