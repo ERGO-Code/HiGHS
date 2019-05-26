@@ -57,7 +57,6 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 #ifdef HiGHSDEV
   // Check that if there is no simplex LP then there is no basis, matrix or scaling
   if (!valid_simplex_lp) {
-    assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
@@ -224,7 +223,6 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 #ifdef HiGHSDEV
   // Check that if there is no simplex LP then there is no basis, matrix or scaling
   if (!valid_simplex_lp) {
-    assert(!simplex_basis.valid_);
     assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
@@ -978,7 +976,7 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
   basis.col_status.resize(lp.numCol_);
   basis.row_status.resize(lp.numRow_);
 
-  assert(simplex_basis.valid_);
+  assert(highs_model_object.simplex_lp_status_.has_basis);
   bool permuted = highs_model_object.simplex_lp_status_.is_permuted;
   int* numColPermutation = &highs_model_object.simplex_info_.numColPermutation_[0];
   // numColPermutation[iCol] is the true column in column iCol
