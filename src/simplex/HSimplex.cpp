@@ -244,7 +244,6 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
   basis.row_status.resize(lp.numRow_);
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   double value_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
-  int num_status_errors = 0;
   int num_nonzero_free = 0;
   int num_nonbasic_infeasible = 0;
   int num_nonbasic_off_bound = 0;
@@ -252,22 +251,24 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
     double lower;
     double upper;
     double value;
-    HighsBasisStatus status;
-    int flag = simplex_basis.nonbasicFlag_[iVar];
+    bool is_nonbasic;
     if (iVar < lp.numCol_) {
       int iCol = iVar;
+      is_nonbasic = basis.col_status[iCol] != HighsBasisStatus::BASIC;
       lower = lp.colLower_[iCol];
       upper = lp.colUpper_[iCol];
       value = solution.col_value[iCol];
     } else {
       int iRow = iVar - lp.numCol_;
+      is_nonbasic = basis.row_status[iRow] != HighsBasisStatus::BASIC;
       lower = lp.rowLower_[iRow];
       upper = lp.rowUpper_[iRow];
       value = solution.row_value[iRow];
     }
+    HighsBasisStatus status;
     double midpoint = (lower+upper)*0.5;
     double residual;
-    if (flag) {
+    if (is_nonbasic) {
       if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
 	// Free variable
 	status = HighsBasisStatus::ZERO;
@@ -314,49 +315,14 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
     if (iVar < lp.numCol_) {
       int iCol = iVar;
       solution.col_value[iCol] = value;
-      if (status == HighsBasisStatus::BASIC) {
-	if (basis.col_status[iCol] != HighsBasisStatus::BASIC) {
-	  num_status_errors++;
-	  // printf("Basic    column %3d col_status error: %2d-%2d\n", iCol, (int)status, (int)basis.col_status[iCol]);
-	}
-      } else {
-	if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
-	  num_status_errors++;
-	  // printf("Nonbasic column %3d col_status error: %2d-%2d\n", iCol, (int)status, (int)basis.col_status[iCol]);
-	}
-      }
-      basis.col_status[iCol] = status;
-      /*
-      printf("Col: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
-	     iCol, flag, lower, upper, value, (int)status,
-	     num_nonbasic_infeasible, num_nonbasic_off_bound);
-      */
+      //      basis.col_status[iCol] = status;
     } else {
       int iRow = iVar - lp.numCol_;
       solution.row_value[iRow] = value;
-      if (status == HighsBasisStatus::BASIC) {
-	if (basis.row_status[iRow] != HighsBasisStatus::BASIC) {
-	  num_status_errors++;
-	  // printf("Basic    row %3d row_status error: %2d-%2d\n", iRow, (int)status, (int)basis.row_status[iRow]);
-	}
-      } else {
-	if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
-	  num_status_errors++;
-	  // printf("Nonbasic row %3d row_status error: %2d-%2d\n", iRow, (int)status, (int)basis.row_status[iRow]);
-	}
-      }
-      basis.row_status[iRow] = status;
-      /*
-      printf("Row: %2d (%1d) [%12g, %12g] %12g (%1d): %2d %2d\n",
-	     iRow, flag, lower, upper, value, (int)status,
-	     num_nonbasic_infeasible, num_nonbasic_off_bound);
-      */
+      //      basis.row_status[iRow] = status;
     }
   }
   basis.valid_ = true;
-  if (num_status_errors) {
-    printf("postsolveSimplextoHighsBasis: num_status_errors = %d\n", num_status_errors);
-  }
   printf("postsolveSimplextoHighsBasis: num_nonbasic_infeasible = %d; num_nonbasic_off_bound = %d\n", num_nonbasic_infeasible, num_nonbasic_off_bound);
 }
 
