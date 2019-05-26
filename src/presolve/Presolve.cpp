@@ -2252,7 +2252,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
       ++j;
     }
 
-  vector<int> temp = nonbasicFlag;
   vector<HighsBasisStatus> temp_col_status = col_status;
   vector<HighsBasisStatus> temp_row_status = row_status;
 
@@ -2261,18 +2260,16 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   row_status.assign(numRowOriginal, HighsBasisStatus::LOWER);// Really LOWER?
 
   for (int i = 0; i < numCol; ++i) {
-    valuePrimal[eqIndexOfReduced.at(i)] = colValue.at(i);
-    valueColDual[eqIndexOfReduced.at(i)] = colDual.at(i);
-    nonbasicFlag[eqIndexOfReduced.at(i)] = temp.at(i);
-
     int iCol = eqIndexOfReduced.at(i);
+    valuePrimal[iCol] = colValue.at(i);
+    valueColDual[iCol] = colDual.at(i);
     col_status.at(iCol) = temp_col_status.at(i);
   }
 
   for (int i = 0; i < numRow; ++i) {
-    valueRowDual[eqIndexOfReduROW.at(i)] = rowDual.at(i);
-    nonbasicFlag[numColOriginal + eqIndexOfReduROW.at(i)] = temp[numCol + i];
-    row_status.at(eqIndexOfReduROW.at(i)) = temp_row_status.at(i);
+    int iRow = eqIndexOfReduROW.at(i);
+    valueRowDual[iRow] = rowDual.at(i);
+    row_status.at(iRow) = temp_row_status.at(i);
   }
 
   // cmpNBF(-1, -1);
@@ -2684,8 +2681,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 	  if (report_postsolve) {
 	    printf("1.0 : Recover col %3d as %3d (nonbasic)\n", c.col, j);
 	  }
-          nonbasicFlag[c.col] = 1;
-          nonbasicFlag.at(j) = 0;
 	  col_status.at(c.col) = HighsBasisStatus::LOWER;// Really LOWER?
 	  if (j < numColOriginal) {
 	    // j is a column
@@ -2851,8 +2846,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 }
 
 void Presolve::setBasisElement(change c) {
-  // nonbasicFlag starts off as [numCol + numRow] and is already
-  // increased to [numColOriginal + numRowOriginal] so fill in gaps
   // col_status starts off as [numCol] and has already been increased to [numColOriginal] and
   // row_status starts off as [numRow] and has already been increased to [numRowOriginal] so fill fill in gaps in both
 
@@ -2861,7 +2854,6 @@ void Presolve::setBasisElement(change c) {
       if (report_postsolve) {
 	printf("2.1 : Recover row %3d as %3d (basic): empty row\n", c.row, numColOriginal + c.row);
       }
-      nonbasicFlag.at(numColOriginal + c.row) = 0;
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
     }
@@ -2878,7 +2870,6 @@ void Presolve::setBasisElement(change c) {
       if (report_postsolve) {
 	printf("2.2 : Recover row %3d as %3d (basic): forcing row\n", c.row, numColOriginal + c.row);
       }
-      nonbasicFlag.at(numColOriginal + c.row) = 0;
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
     }
@@ -2886,7 +2877,6 @@ void Presolve::setBasisElement(change c) {
       if (report_postsolve) {
 	printf("2.3 : Recover row %3d as %3d (basic): redundant\n", c.row, numColOriginal + c.row);
       }
-      nonbasicFlag.at(numColOriginal + c.row) = 0;
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
     }
@@ -2895,13 +2885,11 @@ void Presolve::setBasisElement(change c) {
       if (report_postsolve) {
 	printf("2.4a: Recover col %3d as %3d (basic): implied free singleton column\n", c.col, numColOriginal + c.row);
       }
-      nonbasicFlag[c.col] = 0;
       col_status.at(c.col) = HighsBasisStatus::BASIC;
 
       if (report_postsolve) {
 	printf("2.5b: Recover row %3d as %3d (nonbasic): implied free singleton column\n", c.row, numColOriginal + c.row);
       }
-      nonbasicFlag.at(numColOriginal + c.row) = 1;
       row_status.at(c.row) = HighsBasisStatus::LOWER; // Really LOWER?
       break;
     }
@@ -2910,13 +2898,11 @@ void Presolve::setBasisElement(change c) {
       if (report_postsolve) {
 	printf("2.6b: Recover col %3d as %3d (basic): singleton column doubleton inequality\n", c.col, numColOriginal + c.row);
       }
-      nonbasicFlag.at(c.col) = 0;
       col_status.at(c.col) = HighsBasisStatus::BASIC;
 
       if (report_postsolve) {
 	printf("2.6b: Recover row %3d as %3d (nonbasic): singleton column doubleton inequality\n", c.row, numColOriginal + c.row);
       }
-      nonbasicFlag.at(numColOriginal + c.row) = 1;
       row_status.at(c.row) = HighsBasisStatus::LOWER; // Really LOWER?
       break;
     }
@@ -2926,7 +2912,6 @@ void Presolve::setBasisElement(change c) {
       if (report_postsolve) {
 	printf("2.7 : Recover column %3d (nonbasic): weakly dominated column\n", c.col);
       }
-      nonbasicFlag.at(c.col) = 1;
       col_status.at(c.col) = HighsBasisStatus::LOWER; // Really LOWER?
       break;
     }
@@ -2937,7 +2922,6 @@ void Presolve::setBasisElement(change c) {
 	  if (report_postsolve) {
 	    printf("2.8 : Recover column %3d (nonbasic): weakly dominated column\n", c.col);
 	  }
-	  nonbasicFlag.at(c.col) = 1;
 	  col_status.at(c.col) = HighsBasisStatus::LOWER; // Really LOWER?
 	}
       break;
@@ -3015,6 +2999,7 @@ int Presolve::testBasisMatrixSingularity() {
     vector<int>  bindex(nR);
     int countBasic=0;
 
+    printf("To recover this test need to use col/row_status\n");
      for (int i=0; i< nonbasicFlag.size();++i) {
          if (nonbasicFlag.at(i) == 0)
                          countBasic++;
@@ -3352,26 +3337,13 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   // check if x is at a bound forced by the singleton row: then x becomes basic
   // and row nonbasic
   HighsBasisStatus local_status;
-  bool local_logic = use_simplex_basis_logic;
-  //  local_logic = true;
-  //  if (!local_logic) printf("Testing use_simplex_basis_logic: 1\n");
-  if (local_logic) {
-    if (nonbasicFlag.at(col) == 1) {
-      local_status = HighsBasisStatus::LOWER;
-    } else {
-      local_status = HighsBasisStatus::BASIC;
-    }
-  } else {
-    local_status = col_status.at(col);
-  }
+  local_status = col_status.at(col);
   if (local_status != HighsBasisStatus::BASIC) {
     // x was not basic but is now
     if (valuePrimal.at(col) != l && valuePrimal.at(col) != u) {
       if (report_postsolve) {
 	printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
       }
-      nonbasicFlag.at(col) = 0;
-      nonbasicFlag[numColOriginal + row] = 1;
       col_status.at(col) = HighsBasisStatus::BASIC;
       row_status.at(row) = HighsBasisStatus::LOWER;// Really LOWER?
     }
@@ -3380,7 +3352,6 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       if (report_postsolve) {
 	printf("3.2 : Make row %3d basic\n", row);
       }
-      nonbasicFlag[numColOriginal + row] = 0;
       row_status.at(row) = HighsBasisStatus::BASIC;
     }
     //  } else if (local_status == HighsBasisStatus::BASIC) {
@@ -3389,7 +3360,6 @@ void Presolve::getDualsSingletonRow(int row, int col) {
     if (report_postsolve) {
       printf("3.3 : Make row %3d basic\n", row);
     }
-    nonbasicFlag[numColOriginal + row] = 0;  // row becomes basic too
     row_status.at(row) = HighsBasisStatus::BASIC;
   }
 }
@@ -3468,28 +3438,13 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
   if (iKKTcheck == 1) chk.colDual.at(x) = valueColDual.at(x);
 
   HighsBasisStatus local_status;
-  bool lc_logic = use_simplex_basis_logic;
-  //  lc_logic = true;
-  //  if (!lc_logic) printf("Testing use_simplex_basis_logic: 2\n");
-  if (lc_logic) {
-    if (nonbasicFlag.at(x) == 1) {
-      local_status = HighsBasisStatus::LOWER;
-    } else {
-      local_status = HighsBasisStatus::BASIC;
-    }
+  if (x < numColOriginal) {
+    local_status = col_status.at(x);
   } else {
-    if (x < numColOriginal) {
-      local_status = col_status.at(x);
-    } else {
-      local_status = row_status.at(x-numColOriginal);
-    }
+    local_status = row_status.at(x-numColOriginal);
   }
-
-  //  if ((nonbasicFlag.at(x) == 1 && valueX == ubxNew && ubxNew < ubxOld) ||
-  //      (nonbasicFlag.at(x) == 1 && valueX == lbxNew && lbxNew > lbxOld)) {
   if ((local_status != HighsBasisStatus::BASIC && valueX == ubxNew && ubxNew < ubxOld) ||
       (local_status != HighsBasisStatus::BASIC && valueX == lbxNew && lbxNew > lbxOld)) {
-    nonbasicFlag.at(x) = 0;
     if (x < numColOriginal) {
       col_status.at(x) = HighsBasisStatus::BASIC;
       if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
@@ -3500,7 +3455,6 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
   } else {
     // row becomes basic unless y is between bounds, in which case y is basic
     if (valuePrimal.at(y) - lby > tol && uby - valuePrimal.at(y) > tol) {
-      nonbasicFlag.at(y) = 0;
       if (y < numColOriginal) {
 	col_status.at(y) = HighsBasisStatus::BASIC;
 	if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
@@ -3509,7 +3463,6 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 	if (report_postsolve) printf("4.2 : Make row    %3d basic\n", y-numColOriginal);
       }
     } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
-      nonbasicFlag.at(y) = 0;
       if (y < numColOriginal) {
 	col_status.at(y) = HighsBasisStatus::BASIC;
 	if (report_postsolve) printf("4.3 : Make column %3d basic\n", y);
@@ -3522,7 +3475,6 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
 	printf("4.4 : Make row    %3d basic\n", row);
       }
       row_status.at(row) = HighsBasisStatus::BASIC;
-      nonbasicFlag[numColOriginal + row] = 0;
     }
   }
 
