@@ -88,10 +88,6 @@ HighsLp& PresolveInfo::getReducedProblem() {
   return reduced_lp_;
 }
 
-void Presolve::setSimplexBasisInfo(const std::vector<int>& pass_basicIndex, const std::vector<int>& pass_nonbasicFlag) {
-  nonbasicFlag = pass_nonbasicFlag;
-}
-
 void Presolve::setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status, const std::vector<HighsBasisStatus>& pass_row_status) {
   col_status = pass_col_status;
   row_status = pass_row_status;

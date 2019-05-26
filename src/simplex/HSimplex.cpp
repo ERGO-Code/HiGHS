@@ -236,7 +236,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
 #endif
 }
 
-void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
+void postsolveRefineHighsBasisAndSolution(HighsModelObject &highs_model_object) {
   HighsLp &lp = highs_model_object.lp_;
   HighsSolution &solution = highs_model_object.solution_;
   HighsBasis &basis = highs_model_object.basis_;
@@ -323,7 +323,7 @@ void postsolveSimplextoHighsBasis(HighsModelObject &highs_model_object) {
     }
   }
   basis.valid_ = true;
-  printf("postsolveSimplextoHighsBasis: num_nonbasic_infeasible = %d; num_nonbasic_off_bound = %d\n", num_nonbasic_infeasible, num_nonbasic_off_bound);
+  printf("postsolveRefineHighsBasisAndSolution: num_nonbasic_infeasible = %d; num_nonbasic_off_bound = %d\n", num_nonbasic_infeasible, num_nonbasic_off_bound);
 }
 
 void rebuildPostsolve(HighsModelObject &highs_model_object) {
