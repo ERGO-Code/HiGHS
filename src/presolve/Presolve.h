@@ -60,9 +60,7 @@ class Presolve : public HPreData {
   void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status, const std::vector<HighsBasisStatus>& pass_row_status);
   const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
   const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
-  const std::vector<int>& getBasisIndex() { return basicIndex; }
   const std::vector<int>& getNonbasicFlag() { return nonbasicFlag; }
-  //  const std::vector<int>& getNonbasicMove() { return nonbasicMove; }
 
   void load(const HighsLp& lp);
  // todo: clear the public from below. 

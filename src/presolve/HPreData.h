@@ -78,9 +78,7 @@ class HPreData {
   vector<int> flagRow;
 
   const bool use_simplex_basis_logic = false;//true;//
-  vector<int> basicIndex;
   vector<int> nonbasicFlag;
-  //  vector<int> nonbasicMove;
 
   // Record of whether a column or row is basic or nonbasic
   vector<HighsBasisStatus> col_status;

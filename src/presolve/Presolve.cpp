@@ -89,7 +89,6 @@ HighsLp& PresolveInfo::getReducedProblem() {
 }
 
 void Presolve::setSimplexBasisInfo(const std::vector<int>& pass_basicIndex, const std::vector<int>& pass_nonbasicFlag) {
-  basicIndex = pass_basicIndex;
   nonbasicFlag = pass_nonbasicFlag;
 }
 
@@ -2695,8 +2694,6 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 	    // j is a row
 	    row_status.at(j-numColOriginal) = HighsBasisStatus::BASIC;
 	  }
-          basicIndex.pop_back();
-          basicIndex.push_back(j);
         }
 
         flagRow[c.row] = 1;
@@ -2799,50 +2796,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     return HighsPostsolveStatus::BasisError;
   }
   
-  /*
-
   // cout<<"Singularity check at end of postsolve: ";
   // testBasisMatrixSingularity();
 
-  int cntVar = 0;
-  basicIndex.resize(numRowOriginal);
-  for (int i = 0; i < numColOriginal + numRowOriginal; ++i) {
-    bool local_logic;
-    HighsBasisStatus status;
-    if (i < numColOriginal) {
-      status = col_status.at(i);
-    } else {
-      status = row_status.at(i-numColOriginal);
-    }
-
-    if (use_simplex_basis_logic) {
-      local_logic = nonbasicFlag.at(i) == 0;
-    } else {
-      if (i < numColOriginal) {
-	local_logic = col_status.at(i) == HighsBasisStatus::BASIC;
-      } else {
-	local_logic = row_status.at(i-numColOriginal) == HighsBasisStatus::BASIC;
-      }
-    }
-    if (local_logic) {
-      if (cntVar == numRowOriginal) {
-        cout << "Error during postsolve: wrong basic variables number: basic "
-                "variables more than rows."
-             << endl;
-	printf("Get at least %d basic variables, not %d\n", cntVar+1, numRowOriginal);
-        break;
-      }
-      basicIndex[cntVar] = i;
-      cntVar++;
-    }
-  }
-  if (cntVar < numRowOriginal) {
-    cout << "Error during postsolve: wrong basic variables number: basic "
-            "variables less than rows."
-         << endl;
-    printf("Get %d basic variables, not %d\n", cntVar, numRowOriginal);
-  }
-  */
   if (iKKTcheck == 2) {
     if (chk.print == 3) chk.print = 2;
     chk.passSolution(valuePrimal, valueColDual, valueRowDual);
@@ -2941,7 +2897,6 @@ void Presolve::setBasisElement(change c) {
       }
       nonbasicFlag[c.col] = 0;
       col_status.at(c.col) = HighsBasisStatus::BASIC;
-      basicIndex.push_back(c.col);
 
       if (report_postsolve) {
 	printf("2.5b: Recover row %3d as %3d (nonbasic): implied free singleton column\n", c.row, numColOriginal + c.row);
@@ -2957,7 +2912,6 @@ void Presolve::setBasisElement(change c) {
       }
       nonbasicFlag.at(c.col) = 0;
       col_status.at(c.col) = HighsBasisStatus::BASIC;
-      basicIndex.push_back(c.col);
 
       if (report_postsolve) {
 	printf("2.6b: Recover row %3d as %3d (nonbasic): singleton column doubleton inequality\n", c.row, numColOriginal + c.row);
