@@ -2616,6 +2616,7 @@ void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   int work_count = 0;
+  double sum_dual_infeasibilities = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = simplex_info.dual_feasibility_tolerance;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -2623,12 +2624,33 @@ void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
     // Only for non basic variables
     if (!simplex_basis.nonbasicFlag_[i]) continue;
     // Free
+
+    /*
     if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
       work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);
     // In dual, assuming that boxed variables will be flipped
     if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf)
       work_count +=
           (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
+    */
+
+    if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf) {
+      double fabs_dual = fabs(simplex_info.workDual_[i]);
+      if (fabs_dual >= tau_d) {
+	sum_dual_infeasibilities += fabs_dual;
+	work_count++;
+      }
+    }
+
+    // In dual, assuming that boxed variables will be flipped
+    if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf) {
+      double signed_dual = simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i];
+      if (signed_dual <= -tau_d) {
+	sum_dual_infeasibilities -= signed_dual;
+	work_count++; 
+      }
+    }
+
   }
   *dual_infeasibility_count = work_count;
 }

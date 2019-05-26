@@ -153,14 +153,29 @@ HighsStatus Highs::run() {
       // so the last one in lp_ is the presolved one.
       hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
       solved_hmo = presolve_hmo;
-      int lp_solve_initial_simplex_iteration_count =
-	hmos_[solved_hmo].simplex_info_.iteration_count;
+      int lp_solve_initial_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
       // Call runSolver
       solve_status = runSolver(hmos_[solved_hmo]);
-      int lp_solve_final_simplex_iteration_count =
-	hmos_[solved_hmo].simplex_info_.iteration_count;
+      int lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
       lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
 					   lp_solve_initial_simplex_iteration_count);
+      if (hmos_[solved_hmo].simplex_lp_status_.is_scaled) {
+	// Now solve the unscaled LP using the optimal basis and solution
+	lp_solve_initial_simplex_iteration_count = lp_solve_final_simplex_iteration_count;
+	// Set the scale option to false
+	options_.scale_simplex_lp = false;
+	invalidateSimplexLp(hmos_[solved_hmo].simplex_lp_status_);
+	// Call runSolver
+	solve_status = runSolver(hmos_[solved_hmo]);
+	lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
+	int solve_unscaled_lp_iteration_count = 
+	  lp_solve_final_simplex_iteration_count -
+	  lp_solve_initial_simplex_iteration_count;
+	printf("Solving the unscaled LP problem requires %d iterations\n", solve_unscaled_lp_iteration_count);
+	lp_solve_simplex_iteration_count += solve_unscaled_lp_iteration_count;
+	// Return the scale option to true
+	options_.scale_simplex_lp = true;
+      }
       break;
     }
     case HighsPresolveStatus::ReducedToEmpty: {
