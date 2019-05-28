@@ -105,12 +105,12 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options, const bool normal
 			     &lp.colCost_[0], options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP column bounds
-  call_status = assess_bounds("Col", 0, lp.numCol_, true, 0, lp.numCol_, false, 0, NULL, false, NULL,
-			      &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Col", 0, lp.numCol_, true, 0, lp.numCol_, false, 0, NULL, false, NULL,
+			     &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP row bounds
-  call_status = assess_bounds("Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
-			      &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
+			     &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP matrix
   int lp_num_nz = lp.Astart_[lp.numCol_];
@@ -287,13 +287,13 @@ HighsStatus assess_costs(const int ml_col_os,
   return return_status;
 }
 
-HighsStatus assess_bounds(const char* type, const int ml_ix_os,
-			  const int ix_dim,
-			  const bool interval, const int from_ix, const int to_ix,
-			  const bool set, const int num_set_entries, const int* ix_set,
-			  const bool mask, const int* ix_mask,
-			  double* lower_bounds, double* upper_bounds,
-			  const double infinite_bound, bool normalise) {
+HighsStatus assessBounds(const char* type, const int ml_ix_os,
+			 const int ix_dim,
+			 const bool interval, const int from_ix, const int to_ix,
+			 const bool set, const int num_set_entries, const int* ix_set,
+			 const bool mask, const int* ix_mask,
+			 double* lower_bounds, double* upper_bounds,
+			 const double infinite_bound, bool normalise) {
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
@@ -572,6 +572,41 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 
 }
 
+HighsStatus scaleLpColBounds(HighsLp& lp,
+			     vector<double> &colScale,
+			     const bool interval, const int from_col, const int to_col,
+			     const bool set, const int num_set_entries, const int* col_set,
+			     const bool mask, const int* col_mask) {
+  // Check parameters for technique and, if OK set the loop limits - in iterator style
+  int col_dim = lp.numCol_;
+  int from_k;
+  int to_k;
+  HighsStatus return_status = assess_interval_set_mask(col_dim,
+						       interval, from_col, to_col,
+						       set, num_set_entries, col_set,
+						       mask, col_mask,
+						       from_k, to_k);
+  if (return_status != HighsStatus::OK) return return_status;
+  if (from_k >= to_k) return HighsStatus::OK;
+
+  int local_col;
+  int ml_col;
+  const int ml_col_os = 0;
+  for (int k = from_k; k < to_k; k++) {
+    if (interval || mask) {
+      local_col = k;
+    } else {
+      local_col = col_set[k];
+    }
+    ml_col = ml_col_os + local_col;
+    if (mask && !col_mask[local_col]) continue;
+    if (!highs_isInfinity(-lp.colLower_[ml_col])) lp.colLower_[ml_col] /= colScale[ml_col];
+    if (!highs_isInfinity( lp.colUpper_[ml_col])) lp.colUpper_[ml_col] /= colScale[ml_col];
+  }
+    
+  return HighsStatus::OK;
+}
+
 HighsStatus add_lp_cols(HighsLp& lp,
 			const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 			const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
@@ -605,7 +640,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
 			     (double*)XcolCost, options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
   // Assess the column bounds
-  call_status = assess_bounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false, 0, NULL, false, NULL,
+  call_status = assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false, 0, NULL, false, NULL,
 			     (double*)XcolLower, (double*)XcolUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
@@ -634,7 +669,7 @@ HighsStatus append_lp_cols(HighsLp& lp,
 
   // Normalise the new LP column bounds
   normalise = true;
-  call_status = assess_bounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false, 0, NULL, false, NULL,
+  call_status = assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false, 0, NULL, false, NULL,
 			     &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
@@ -697,7 +732,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
   bool normalise = false;
   HighsStatus call_status;
   // Assess the row bounds
-  call_status = assess_bounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false, 0, NULL, false, NULL,
+  call_status = assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false, 0, NULL, false, NULL,
 			     (double*)XrowLower, (double*)XrowUpper, options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
@@ -720,7 +755,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
 
   // Normalise the new LP row bounds
   normalise = true;
-  call_status = assess_bounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false, 0, NULL, false, NULL,
+  call_status = assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false, 0, NULL, false, NULL,
 			      &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
@@ -1217,54 +1252,54 @@ HighsStatus change_lp_costs(HighsLp &lp,
   return HighsStatus::OK;
 }
 
-HighsStatus change_lp_col_bounds(
-				 HighsLp &lp,
-				 const bool interval, const int from_col, const int to_col,
-				 const bool set, const int num_set_entries, const int* col_set,
-				 const bool mask, const int* col_mask,
-				 const double* usr_col_lower,
-				 const double* usr_col_upper,
-				 const double infinite_bound
-				 ) {
-  return change_bounds("col", &lp.colLower_[0], &lp.colUpper_[0], 
-		       lp.numCol_,
-		       interval, from_col, to_col,
-		       set, num_set_entries, col_set,
-		       mask, col_mask,
-		       usr_col_lower, usr_col_upper,
-		       infinite_bound);
+HighsStatus changeLpColBounds(
+			      HighsLp &lp,
+			      const bool interval, const int from_col, const int to_col,
+			      const bool set, const int num_set_entries, const int* col_set,
+			      const bool mask, const int* col_mask,
+			      const double* usr_col_lower,
+			      const double* usr_col_upper,
+			      const double infinite_bound
+			      ) {
+  return changeBounds("col", &lp.colLower_[0], &lp.colUpper_[0], 
+		      lp.numCol_,
+		      interval, from_col, to_col,
+		      set, num_set_entries, col_set,
+		      mask, col_mask,
+		      usr_col_lower, usr_col_upper,
+		      infinite_bound);
 }
 
-HighsStatus change_lp_row_bounds(
-				 HighsLp &lp,
-				 const bool interval, const int from_row, const int to_row,
-				 const bool set, const int num_set_entries, const int* row_set,
-				 const bool mask, const int* row_mask,
-				 const double* usr_row_lower,
-				 const double* usr_row_upper,
-				 const double infinite_bound
-				 ) {
-  return change_bounds("row", &lp.rowLower_[0], &lp.rowUpper_[0], 
-		       lp.numRow_,
-		       interval, from_row, to_row,
-		       set, num_set_entries, row_set,
-		       mask, row_mask,
-		       usr_row_lower, usr_row_upper,
-		       infinite_bound);
+HighsStatus changeLpRowBounds(
+			      HighsLp &lp,
+			      const bool interval, const int from_row, const int to_row,
+			      const bool set, const int num_set_entries, const int* row_set,
+			      const bool mask, const int* row_mask,
+			      const double* usr_row_lower,
+			      const double* usr_row_upper,
+			      const double infinite_bound
+			      ) {
+  return changeBounds("row", &lp.rowLower_[0], &lp.rowUpper_[0], 
+		      lp.numRow_,
+		      interval, from_row, to_row,
+		      set, num_set_entries, row_set,
+		      mask, row_mask,
+		      usr_row_lower, usr_row_upper,
+		      infinite_bound);
 }
 
-HighsStatus change_bounds(
-			  const char* type,
-			  double* lower,
-			  double* upper,
-			  const int ix_dim,
-			  const bool interval, const int from_ix, const int to_ix,
-			  const bool set, const int num_set_entries, const int* ix_set,
-			  const bool mask, const int* ix_mask,
-			  const double* usr_lower,
-			  const double* usr_upper,
-			  const double infinite_bound
-			  ) {
+HighsStatus changeBounds(
+			 const char* type,
+			 double* lower,
+			 double* upper,
+			 const int ix_dim,
+			 const bool interval, const int from_ix, const int to_ix,
+			 const bool set, const int num_set_entries, const int* ix_set,
+			 const bool mask, const int* ix_mask,
+			 const double* usr_lower,
+			 const double* usr_upper,
+			 const double infinite_bound
+			 ) {
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
@@ -1284,7 +1319,7 @@ HighsStatus change_bounds(
 
   // Assess the user bounds and return on error
   bool normalise = false;
-  call_status = assess_bounds(type, 0,
+  call_status = assessBounds(type, 0,
 			      ix_dim,
 			      interval, from_ix, to_ix,
 			      set, num_set_entries, ix_set,
@@ -1308,7 +1343,7 @@ HighsStatus change_bounds(
     upper[ix] = usr_upper[k];
   }
   normalise = true;
-  call_status = assess_bounds(type, 0,
+  call_status = assessBounds(type, 0,
 			      ix_dim,
 			      interval, from_ix, to_ix,
 			      set, num_set_entries, ix_set,

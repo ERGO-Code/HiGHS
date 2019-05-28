@@ -275,7 +275,7 @@ class HighsSimplexInterface {
 				  );
   
 // Change the bounds for an interval of columns
-  HighsStatus change_col_bounds(
+  HighsStatus changeColBounds(
 			  int from_col,
 			  int to_col,
 			  const double* usr_col_lower,
@@ -284,7 +284,7 @@ class HighsSimplexInterface {
   
 
 // Change the bounds from an ordered set of indices
-  HighsStatus change_col_bounds(
+  HighsStatus changeColBounds(
 			   int num_set_entries,
 			   const int* col_set,
 			   const double* usr_col_lower,
@@ -292,13 +292,13 @@ class HighsSimplexInterface {
 			   );
   
 // Change the bounds with a mask
-  HighsStatus change_col_bounds(
+  HighsStatus changeColBounds(
 			   const int* col_mask,
 			   const double* usr_col_lower,
 			   const double* usr_col_upper
 			   );
   
-  HighsStatus change_col_bounds_general(
+  HighsStatus changeColBoundsGeneral(
 				  bool interval,
 				  int from_col,
 				  int to_col,
@@ -312,7 +312,7 @@ class HighsSimplexInterface {
 				  );
 
 // Change the bounds for an interval of rows
-  HighsStatus change_row_bounds(
+  HighsStatus changeRowBounds(
 			  int from_row,
 			  int to_row,
 			  const double* usr_row_lower,
@@ -321,7 +321,7 @@ class HighsSimplexInterface {
   
 
 // Change the bounds from an ordered set of indices
-  HighsStatus change_row_bounds(
+  HighsStatus changeRowBounds(
 			   int num_set_entries,
 			   const int* row_set,
 			   const double* usr_row_lower,
@@ -329,13 +329,13 @@ class HighsSimplexInterface {
 			   );
   
 // Change the bounds with a mask
-  HighsStatus change_row_bounds(
+  HighsStatus changeRowBounds(
 			   const int* row_mask,
 			   const double* usr_row_lower,
 			   const double* usr_row_upper
 			   );
   
-  HighsStatus change_row_bounds_general(
+  HighsStatus changeRowBoundsGeneral(
 				  bool interval,
 				  int from_row,
 				  int to_row,

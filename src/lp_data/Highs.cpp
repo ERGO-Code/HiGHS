@@ -467,7 +467,7 @@ bool Highs::changeColsBounds(const int num_set_entries, const int *set, const do
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_col_bounds(num_set_entries, set, lower, upper);
+    return_status = interface.changeColBounds(num_set_entries, set, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;
@@ -487,7 +487,7 @@ bool Highs::changeColsBounds(const int from_col, const int to_col, const double 
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_col_bounds(from_col, to_col, lower, upper);
+    return_status = interface.changeColBounds(from_col, to_col, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;
@@ -508,7 +508,7 @@ bool Highs::changeColsBounds(const int *mask, const double *lower, const double 
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_col_bounds(mask, lower, upper);
+    return_status = interface.changeColBounds(mask, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;
@@ -533,7 +533,7 @@ bool Highs::changeRowsBounds(const int num_set_entries,
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_row_bounds(num_set_entries, set, lower, upper);
+    return_status = interface.changeRowBounds(num_set_entries, set, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;
@@ -554,7 +554,7 @@ bool Highs::changeRowsBounds(const int *mask, const double *lower, const double 
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_row_bounds(mask, lower, upper);
+    return_status = interface.changeRowBounds(mask, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;
