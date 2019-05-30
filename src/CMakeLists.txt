@@ -86,6 +86,7 @@ set(headers
     util/HighsTimer.h
     util/HighsUtils.h
     Highs.h
+    interfaces/highs_lp_solver.h
 )
 
 if (GAMS_FOUND)
