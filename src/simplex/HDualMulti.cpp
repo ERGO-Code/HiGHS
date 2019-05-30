@@ -26,7 +26,7 @@
 using std::cout;
 using std::endl;
 
-void HDual::iterate_multi() {
+void HDual::iterateMulti() {
   slice_PRICE = 1;
 
   // Report candidate

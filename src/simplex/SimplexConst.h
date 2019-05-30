@@ -56,6 +56,12 @@ enum class SimplexDualEdgeWeightStrategy {
   DEFAULT = STEEPEST_EDGE_TO_DEVEX_SWITCH
 };
 
+enum class SimplexPrimalEdgeWeightStrategy {
+  DANTZIG = 0,
+  DEVEX,
+  DEFAULT = DEVEX
+};
+
 enum class SimplexPriceStrategy {
   COL = 0,
   ROW,
@@ -83,5 +89,11 @@ enum InvertHint {
 // efficient by preventing reinversion on optimality in phase 1 or
 // phase 2
 const bool invert_if_row_out_negative = true;
+
+enum class FeasibilityStrategy {
+  kApproxComponentWise,
+  kApproxExact,
+  kDirectSolve
+};
 
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

@@ -25,18 +25,13 @@ void HiGHSRun(const char *message = nullptr) {
      << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
 
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
-  HighsPrintMessage(ML_ALWAYS, "Copyright (c) 2019 ERGO-Code under MIT licence terms.\n");
+  HighsPrintMessage(ML_ALWAYS, "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
 
 #ifdef HiGHSDEV
   // Report on preprocessing macros
-  std::cout << "In " << message << std::endl;
-  std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
-#ifdef OLD_PARSER
-  std::cout << "OLD_PARSER       is     defined" << std::endl;
-#else
-  std::cout << "OLD_PARSER       is not defined" << std::endl;
-#endif
-
+  if (message != nullptr) {
+    std::cout << "In " << message << std::endl;
+  }
 #ifdef OPENMP
   std::cout << "OPENMP           is     defined" << std::endl;
 #else
@@ -54,28 +49,44 @@ void HiGHSRun(const char *message = nullptr) {
 #else
   std::cout << "HiGHSDEV         is not defined" << std::endl;
 #endif
+  std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 
 #endif
 };
 
 int main(int argc, char **argv) {
-  // Initialise timer
-  HighsTimer timer;
-  double start_time = timer.getWallTime();
-
   HiGHSRun();
 
   // Load user options.
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
-
   if (!options_ok) return 0;
+
+  bool force_options_file = false;//true;//
+  if (force_options_file) {
+    printf("In main: set options.options_file = options_file so vscode can be used to debug\n");
+    options.options_file = "options_file";
+    if (!loadOptionsFromFile(options)) {
+      printf("In main: fail return from loadOptionsFromFile\n");
+    }
+  }
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
     return (int)HighsStatus::LpError;
+  } else {
+    HighsPrintMessage(ML_MINIMAL, "LP       : %s\n",
+                      lp.model_name_.c_str());
+    HighsPrintMessage(ML_MINIMAL,
+                      "Rows     : %d\nCols     : %d\nNonzeros : %d\n",
+                      lp.numRow_, lp.numCol_, lp.Avalue_.size());
+    if (lp.numInt_) {
+      HighsPrintMessage(ML_MINIMAL, "Integer  : %d\n\n", lp.numInt_);
+    } else {
+      HighsPrintMessage(ML_MINIMAL, "\n");
+    }
   }
 
   Highs highs;
@@ -86,11 +97,14 @@ int main(int argc, char **argv) {
     return (int)HighsStatus::LpError;
   }
 
+  //  bool write_mps_return = highs.writeMPS("write.mps"); if (!write_mps_return) printf("Error return from highs.writeMPS\n");
+  highs.options_ = options;
   HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
+  if (run_status != HighsStatus::OK &&
+      run_status != HighsStatus::Optimal)
+    HighsPrintMessage(ML_ALWAYS, "Highs status: %s\n", statusname.c_str());
+  //    highs.reportSolution();
 
-  double end_time = timer.getWallTime();
-  HighsPrintMessage(ML_ALWAYS, "HiGHS run ended with status %s after %12g seconds\n",
-		  statusname.c_str(), end_time - start_time);
   return 0;
 }

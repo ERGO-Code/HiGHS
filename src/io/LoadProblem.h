@@ -19,6 +19,7 @@
 
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
+#include "lp_data/HighsOptions.h"
 #include "lp_data/HighsLpUtils.h"
 
 // Parses the file in options.filename using the parser specified in
@@ -55,8 +56,10 @@ HighsStatus loadLpFromFile(const HighsOptions &options, HighsLp &lp)
     name.erase(found, name.size() - found);
   lp.model_name_ = name;
 
-  //  return assessLp(lp, options);
-      return checkLp(lp);
+  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp, 1);
+  //  return checkLp(lp);
+  bool normalise = true;
+  return assessLp(lp, options, normalise);
 }
 
 // For extended options to be parsed from a file. Assuming options file is specified.
@@ -82,8 +85,7 @@ bool loadOptionsFromFile(HighsOptions &options) {
       }
       option = line.substr(0, equals);
       value = line.substr(equals + 1, line.size() - equals);
-
-      setOptionValue(options, option, value);
+      if (setOptionValue(options, option, value) != OptionStatus::OK) return false;
     }
   } else {
     HighsLogMessage(HighsMessageType::ERROR, "Options file not found.");

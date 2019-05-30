@@ -1,4 +1,4 @@
-NAME          ADLITTLE
+NAME          ADLITTLE SIZE: N=97, M=57, NZ=480
 ROWS
  N  .Z....
  L  ....01

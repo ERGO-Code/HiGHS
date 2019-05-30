@@ -36,13 +36,13 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 
   std::vector<int> integerColumn;
   int status = readMPS(filename.c_str(), -1, -1, lp_fixed_format.numRow_,
-                   lp_fixed_format.numCol_, lp_fixed_format.sense_,
-                   lp_fixed_format.offset_, lp_fixed_format.Astart_,
-                   lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
-                   lp_fixed_format.colCost_, lp_fixed_format.colLower_,
-                   lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
-                   lp_fixed_format.rowUpper_, integerColumn,
-                   lp_fixed_format.row_names_, lp_fixed_format.col_names_);
+		       lp_fixed_format.numCol_, lp_fixed_format.numInt_, lp_fixed_format.sense_,
+		       lp_fixed_format.offset_, lp_fixed_format.Astart_,
+		       lp_fixed_format.Aindex_, lp_fixed_format.Avalue_,
+		       lp_fixed_format.colCost_, lp_fixed_format.colLower_,
+		       lp_fixed_format.colUpper_, lp_fixed_format.rowLower_,
+		       lp_fixed_format.rowUpper_, integerColumn,
+		       lp_fixed_format.col_names_, lp_fixed_format.row_names_);
   lp_fixed_format.nnz_ = lp_fixed_format.Avalue_.size();
   if (!status) {
     HMpsFF parser{};
@@ -52,6 +52,11 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
     if (!status)
       are_the_same = lp_free_format == lp_fixed_format;
   }
+
+  // In case you want to compare.
+  // FilereaderEms ems;
+  // ems.writeModelToFile("fixed.ems", lp_fixed_format);
+  // ems.writeModelToFile("free.ems", lp_free_format);
 
   REQUIRE(are_the_same);
 }
@@ -102,4 +107,89 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   REQUIRE(are_the_same);
 
   std::remove(options.filename.c_str());
+}
+
+TEST_CASE("integrality-constraints", "[highs_filereader]") {
+  std::string dir = GetCurrentWorkingDir();
+
+  // For debugging use the latter.
+  std::string filename = dir + "/../../check/instances/small_mip.mps";
+  // std::string filename = dir + "/check/instances/small_mip.mps";
+
+  HighsOptions options;
+  options.filename = filename;
+  // integer variables are COL03,COL04 so x[2], x[3].
+  const std::vector<int> kIntegers{0, 0, 1, 1, 0, 0, 0, 0};
+
+  // Read mps with fixed format parser.
+  HighsLp lp_fixed;
+  options.parser_type = HighsMpsParserType::fixed;
+
+  HighsStatus read_status = loadLpFromFile(options, lp_fixed);
+  REQUIRE(read_status == HighsStatus::OK);
+  REQUIRE(lp_fixed.integrality_.size() == lp_fixed.numCol_);
+  REQUIRE(lp_fixed.integrality_ == kIntegers);
+
+  // Read mps with free format parser.
+  HighsLp lp_free;
+  options.parser_type = HighsMpsParserType::free;
+
+  read_status = loadLpFromFile(options, lp_free);
+  REQUIRE(read_status == HighsStatus::OK);
+  REQUIRE(lp_free.integrality_.size() == lp_free.numCol_);
+  REQUIRE(lp_free.integrality_ == kIntegers);
+}
+
+TEST_CASE("dualize", "[highs_data]") {
+
+  std::string dir = GetCurrentWorkingDir();
+
+  // For debugging use the latter.
+  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  //std::string filename = dir + "/check/instances/adlittle.mps";
+  //std::string filename = "/home/s1131817/test-problems/qaps/qap04";
+
+  // Read mps.
+  HighsOptions options;
+  options.filename = filename;
+
+  HighsLp lp;
+  HMpsFF parser{};
+  FreeFormatParserReturnCode result = parser.loadProblem(filename, lp);
+  REQUIRE(result == FreeFormatParserReturnCode::SUCCESS);
+
+  HighsLp primal = transformIntoEqualityProblem(lp);
+  HighsStatus status;
+
+  Highs highs_lp;
+  status = highs_lp.initializeLp(lp);
+  REQUIRE(status == HighsStatus::OK);
+  status = highs_lp.run();
+  REQUIRE(status == HighsStatus::Optimal);
+
+  Highs highs_primal;
+  status = highs_primal.initializeLp(primal);
+  REQUIRE(status == HighsStatus::OK);
+  status = highs_primal.run();
+  REQUIRE(status == HighsStatus::Optimal);
+
+  double lp_objective = highs_lp.getObjectiveValue();
+  double primal_objective = highs_primal.getObjectiveValue();
+
+  double diff_equality = lp_objective - primal_objective;
+  REQUIRE(diff_equality < 0.00000001);
+
+  HighsLp dual = dualizeEqualityProblem(primal);
+  Highs highs_dual;
+  status = checkLp(dual);
+  REQUIRE(status == HighsStatus::OK);
+  status = highs_dual.initializeLp(dual);
+  REQUIRE(status == HighsStatus::OK);
+  status = highs_dual.run();
+  REQUIRE(status == HighsStatus::Optimal);
+
+  double dual_objective = highs_dual.getObjectiveValue();
+
+  double diff_dual = primal_objective + dual_objective;
+  REQUIRE(diff_dual < 0.00000001);
 }

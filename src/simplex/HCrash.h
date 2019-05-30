@@ -17,28 +17,9 @@
 #include <vector>
 #include <string>
 
-#include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
-#include "simplex/HVector.h"
 
 class HMatrix;
-
-/**
- * Possible crash mode values used to test Crash_Mode
- */
-const int Crash_Mode_No = 0;
-const int Crash_Mode_LTSSF_k = 1;
-const int Crash_Mode_LTSSF_pri = 2;
-const int Crash_Mode_LTSF_k = 3;
-const int Crash_Mode_LTSF_pri = 4;
-const int Crash_Mode_LTSF = 5;
-const int Crash_Mode_Bixby = 6;
-const int Crash_Mode_BixbyNoNzCCo = 7;
-const int Crash_Mode_Bs = 8;
-#ifdef HiGHSDEV
-const int Crash_Mode_TsSing = 9;
-#endif
-const int Crash_Mode_Df = Crash_Mode_LTSSF_pri;
 
 // LTSSF scalar parameters
 const int crsh_vr_st_no_act = 0;
@@ -75,47 +56,56 @@ const bool reportBixbyPass = false;
  */
 class HCrash {
  public:
+ HCrash(HighsModelObject& model_object) : workHMO(model_object)
+   {  }
 /**
  * @brief Determine a particular crash basis for a given model instance
  */
-  void crash(
-	     HighsModelObject &highs_model_object,  //!< The HiGHS model object instance to be crashed
-	     int Crash_Mode     //!< The crash mode to be used
-	     );
+  void crash(SimplexCrashStrategy pass_crash_strategy);
  private:
-  void bixby(HighsModelObject &highs_model_object, int Crash_Mode);
-  bool bixby_iz_da(HighsModelObject &highs_model_object);
-  void bixby_rp_mrt(HighsModelObject &highs_model_object);
-  void crsh_iz_vr_ty(HighsModelObject &highs_model_object, int Crash_Mode);
-  void ltssf(HighsModelObject &highs_model_object, int Crash_Mode);
-  void ltssf_iz_mode(int Crash_Mode);
-  void ltssf_iz_da(HighsModelObject &highs_model_object, int Crash_Mode);
-  void ltssf_iterate(HighsModelObject &highs_model_object);
-  void ltssf_u_da(HighsModelObject &highs_model_object);
-  void ltssf_u_da_af_bs_cg(HighsModelObject &highs_model_object);
+  // Internal methods
+  void bixby();
+  bool bixby_iz_da();
+  void bixby_rp_mrt();
+
+  void ltssf();
+  void ltssf_iz_mode();
+  void ltssf_iz_da();
+  void ltssf_iterate();
+  void ltssf_u_da();
+  void ltssf_u_da_af_bs_cg();
   void ltssf_u_da_af_no_bs_cg();
 #ifdef HiGHSDEV
   void ltssf_ck_da();
 #endif
   void ltssf_cz_r();
-  void ltssf_cz_c(HighsModelObject &highs_model_object);
+  void ltssf_cz_c();
 #ifdef HiGHSDEV
-  void tsSing(HighsModelObject &highs_model_object);
-  void crsh_an_c_co(HighsModelObject &highs_model_object);
-  std::string crsh_nm_o_crsh_vr_ty(int vr_ty, int Crash_Mode);
-  void crsh_an_r_c_st_af(HighsModelObject &highs_model_object, int Crash_Mode);
-  void crsh_rp_r_c_st(int mode, int Crash_Mode);
+  void tsSing();
   void ltssf_rp_r_k();
   void ltssf_rp_r_pri();
   void ltssf_rp_pri_k_da();
 #endif
-  // Model
+
+  void crsh_iz_vr_ty();
+
+#ifdef HiGHSDEV
+  void crsh_an_c_co();
+  void crsh_rp_r_c_st(const int mode);
+  void crsh_an_r_c_st_af();
+  std::string crsh_nm_o_crsh_vr_ty(const int vr_ty);
+#endif
+
+  // Model to be crashed
+  HighsModelObject &workHMO;
+  
+  // Crash strategy to be used
+  SimplexCrashStrategy crash_strategy;
+
+  // Model dimensions
   int numCol;
   int numRow;
   int numTot;
-  const HighsLp *simplex_lp_;
-  const HighsBasis *simplex_basis_;
-  const HMatrix *matrix_;
 
   //    LTSSF arrays
   std::vector<int> crsh_r_ty_pri_v;

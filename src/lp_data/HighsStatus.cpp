@@ -1,4 +1,10 @@
 #include "lp_data/HighsStatus.h"
+#include "io/HighsIO.h"
+
+// Report a HighsStatus.
+void HighsStatusReport(const char* message, HighsStatus status) {
+  HighsLogMessage(HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n", message, (int)status, HighsStatusToString(status).c_str());
+}
 
 // Return a string representation of HighsStatus.
 std::string HighsStatusToString(HighsStatus status) {
@@ -18,6 +24,9 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::Error:
       return "Error";
       break;
+    case HighsStatus::NotImplemented:
+      return "Not implemented";
+      break;
     case HighsStatus::Init:
       return "Init";
       break;
@@ -36,8 +45,11 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::PostsolveError:
       return "Postsolve Error";
       break;
-    case HighsStatus::NotImplemented:
-      return "Not implemented";
+    case HighsStatus::LpEmpty:
+      return "LP is empty";
+      break;
+    case HighsStatus::ReachedDualObjectiveUpperBound:
+      return "Reached Dual Objective Upper Bound";
       break;
     case HighsStatus::Unbounded:
       return "Unbounded";
@@ -61,7 +73,7 @@ std::string HighsStatusToString(HighsStatus status) {
   return "";
 }
 
-HighsStatus worse_status(HighsStatus status0, HighsStatus status1) {
+HighsStatus worseStatus(HighsStatus status0, HighsStatus status1) {
   HighsStatus return_status = HighsStatus::NotSet;
   if (status0 == HighsStatus::Error || status1 == HighsStatus::Error)
     return_status = HighsStatus::Error;

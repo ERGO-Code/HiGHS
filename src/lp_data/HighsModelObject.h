@@ -33,7 +33,7 @@ public:
   HighsSolution solution_;
 
   HighsLp simplex_lp_;
-  HighsBasis simplex_basis_;
+  SimplexBasis simplex_basis_;
   HighsSimplexInfo simplex_info_;
   HighsSimplexLpStatus simplex_lp_status_;
   //  HighsRanging ranging_;
@@ -43,7 +43,6 @@ public:
   HighsRandom random_;
 
   bool reportModelOperationsClock = false;
-
 };
 
 #endif // LP_DATA_HIGHS_MODEL_OBJECT_H_

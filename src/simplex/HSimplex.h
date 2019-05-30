@@ -17,6 +17,42 @@
 #include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
+
+void options(
+	     HighsModelObject &highs_model_object, //!< Model object in which simplex options are to be set
+	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
+	     );
+
+void reportSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be reported
+			   const char* message = ""
+			   );
+
+void invalidateSimplexLpData(
+			     HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
+			     );
+
+void invalidateSimplexLp(
+			 HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
+			 );
+
+void updateSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
+			   LpAction action// !< Action prompting update
+				  );
+
+SimplexSolutionStatus rebuildPostsolve(
+				       HighsModelObject &highs_model_object
+				       );
+
+void setupSimplexLp(
+		    HighsModelObject &highs_model_object
+		    );
+
+void setupForSimplexSolve(
+			  HighsModelObject &highs_model_object
+			  );
 
 // Methods not requiring HighsModelObject 
 
@@ -26,21 +62,36 @@ void append_nonbasic_cols_to_basis(
 				   int XnumNewCol
 				   );
 
+void append_nonbasic_cols_to_basis(
+				   HighsLp &lp,
+				   SimplexBasis &simplex_basis,
+				   int XnumNewCol
+				   );
+
 void append_basic_rows_to_basis(
 				HighsLp &lp,
 				HighsBasis &basis,
 				int XnumNewRow
 				);
 
+bool highs_basis_ok(
+		    HighsLp &lp,
+		    HighsBasis &basis
+		    );
+
 bool nonbasic_flag_basic_index_ok(
 				  HighsLp &lp,
-				  HighsBasis &basis
+				  SimplexBasis &simplex_basis
 				  );
 
 #ifdef HiGHSDEV
 void report_basis(
 		  HighsLp &lp,
 		  HighsBasis &basis
+		  );
+void report_basis(
+		  HighsLp &lp,
+		  SimplexBasis &simplex_basis
 		  );
 #endif
 
@@ -72,41 +123,24 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 }
 #endif
 */
-void options(
-	     HighsModelObject &highs_model_object, //!< Model object in which simplex options are to be set
-	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
-	     );
-
-void invalidate_simplex_lp_data(
-				HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
-				);
-
-void invalidate_simplex_lp(
-			   HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
-);
-
-void update_simplex_lp_status(
-			      HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
-			      LpAction action// !< Action prompting update
-			      );
-
-void report_simplex_lp_status(
-			      HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be reported
-			      );
-
 void compute_dual_objective_value(
 				  HighsModelObject &highs_model_object,
                                   int phase = 2);
 
-void initialise_simplex_lp_random_vectors(
-					  HighsModelObject &highs_model
-					  );
+void compute_primal_objective_value(
+				    HighsModelObject &highs_model_object
+				    );
 
-// TRANSPOSE:
+void computePrimalObjectiveValueFromColumnValue(
+				    HighsModelObject &highs_model_object,
+				    const double *col_value
+				    );
 
-void transpose_simplex_lp(
-			  HighsModelObject &highs_model
-			  );
+void initialiseSimplexLpRandomVectors(
+				      HighsModelObject &highs_model
+				      );
+
+// SCALE:
 
 void scaleHighsModelInit(
 			 HighsModelObject &highs_model
@@ -116,19 +150,15 @@ void scaleCosts(
 		HighsModelObject &highs_model
 		);
 
-void scale_simplex_lp(
+void scaleSimplexLp(
+		    HighsModelObject &highs_model
+		    );
+
+// PERMUTE:
+
+void permuteSimplexLp(
 		      HighsModelObject &highs_model
 		      );
-
-void permute_simplex_lp(
-			HighsModelObject &highs_model
-			);
-
-// TIGHTEN:
-
-void tighten_simplex_lp(
-			HighsModelObject &highs_model
-			);
 
 void initialise_basic_index(
 			    HighsModelObject &highs_model_object
@@ -210,9 +240,20 @@ void setup_num_basic_logicals(
 			      HighsModelObject &highs_model_object
 			      );
 
-void setup_for_solve(
-		     HighsModelObject &highs_model_object
-		     );
+#ifdef HiGHSDEV
+void reportSimplexProfiling(
+			    HighsModelObject &highs_model_object
+			    );
+
+#endif
+
+  /**
+   * @brief Get the Hager condition number estimate for the basis matrix of a
+   * model
+   */
+double computeBasisCondition(
+			     HighsModelObject &highs_model_object
+			    );
 
 bool work_arrays_ok(
 		    HighsModelObject &highs_model_object,
@@ -247,6 +288,10 @@ void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
 
+int computePrimalInfeasible(
+		    HighsModelObject &highs_model_object
+		    );
+
 void compute_dual(
 		  HighsModelObject &highs_model_object
 		  );
@@ -272,11 +317,6 @@ int set_source_out_from_bound(
 			      HighsModelObject &highs_model_object,
                               const int column_out
 			      );
-
-double
-compute_primal_objective_function_value(
-					HighsModelObject &highs_model_object
-					);
 
 // Record the shift in the cost of a particular column
 void shift_cost(
@@ -313,13 +353,22 @@ void update_matrix(HighsModelObject &highs_model_object,
                    int columnOut
 		   );
 
+void comparePrimalDualObjectiveValues(
+				      HighsModelObject &highs_model_object
+				      );
+
 #ifdef HiGHSDEV
-void util_analyse_lp_solution(
-			      HighsModelObject &highs_model_object
-			      );
+void analyse_lp_solution(
+			 HighsModelObject &highs_model_object
+			 );
 #endif
 
 void report_iteration_count_dual_objective_value(
+						 HighsModelObject &highs_model_object,
+						 int i_v
+						 );
+
+void report_iteration_count_primal_objective_value(
 						 HighsModelObject &highs_model_object,
 						 int i_v
 						 );

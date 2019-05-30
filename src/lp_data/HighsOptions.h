@@ -21,7 +21,58 @@
 #include "io/HighsIO.h"
 #include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
-#include "cxxopts.hpp"
+
+enum class OptionStatus
+{
+  OK = 0,
+  NO_FILE,
+  UNKNOWN_OPTION,
+  ILLEGAL_VALUE
+};
+
+const string on_string = "on";
+const string off_string = "off";
+
+const string fixed_string = "fixed";
+const string free_string = "free";
+
+// Strings for command line options
+const string file_string = "file";
+const string presolve_string = "presolve";
+const string crash_string = "crash";
+const string parallel_string = "parallel";
+const string simplex_string = "simplex";
+const string ipm_string = "ipm";
+const string highs_run_time_limit_string = "highs_run_time_limit";
+const string simplex_iteration_limit_string = "simplex_iteration_limit";
+const string options_file_string = "options_file";
+const string parser_type_string = "parser_type";
+const string mip_string = "mip";
+const string find_feasibility_string = "find_feasibility";
+const string find_feasibility_strategy_string = "feasibility_strategy";
+const string find_feasibility_dualize_string = "feasibility_dualize"; 
+
+// Strings for file options
+const string scale_simplex_lp_string = "scale_simplex_lp";
+const string permute_simplex_lp_string = "permute_simplex_lp";
+const string infinite_cost_string = "infinite_cost";
+const string infinite_bound_string = "infinite_bound";
+const string small_matrix_value_string = "small_matrix_value";
+const string large_matrix_value_string = "large_matrix_value";
+const string primal_feasibility_tolerance_string = "primal_feasibility";
+const string dual_feasibility_tolerance_string = "dual_feasibility";
+const string dual_objective_value_upper_bound_string = "dual_objective_value_upper_bound";
+
+const string simplex_strategy_string = "simplex_strategy";
+const string simplex_crash_strategy_string = "simplex_crash_strategy";
+const string simplex_dual_edge_weight_strategy_string = "simplex_dual_edge_weight_strategy";
+const string simplex_primal_edge_weight_strategy_string = "simplex_primal_edge_weight_strategy";
+const string simplex_price_strategy_string = "simplex_price_strategy";
+
+const string simplex_initial_condition_check_string = "simplex_initial_condition_check";
+const string simplex_initial_condition_tolerance_string = "simplex_initial_condition_tolerance";
+
+const string message_level_string = "message_level";
 
 // The free parser also reads fixed format MPS files but the fixed
 // parser does not read free mps files.
@@ -49,30 +100,40 @@ struct HighsOptions
   std::string options_file = "";
 
   // Options passed through the command line
-
-  ParallelOption parallel_option = ParallelOption::DEFAULT;
   PresolveOption presolve_option = PresolveOption::DEFAULT;
   CrashOption crash_option = CrashOption::DEFAULT;
+  ParallelOption parallel_option = ParallelOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
   bool ipx = false;
-  int allow_superbasic = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
+  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
+
+  // Options not passed through the command line
+  // Perform LP scaling
+  bool scale_simplex_lp = true;
+  // Permute the columns of the LP randomly
+  bool permute_simplex_lp = false;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
   double large_matrix_value = LARGE_MATRIX_VALUE_DEFAULT;
+  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
+  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
+  double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
+  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
+  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
+  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
+  SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DEFAULT;
+  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
+
+  bool simplex_initial_condition_check = true;
+  double simplex_initial_condition_tolerance = SIMPLEX_INITIAL_CONDITION_TOLERANCE_DEFAULT;
+  int allow_superbasic = false;
 
   bool pami = 0;
   bool sip = 0;
   bool scip = 0;
-  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
-  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  HighsMpsParserType parser_type = HighsMpsParserType::fixed;
-
-  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
-  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
-
-  // Options not passed through the command line
 
   // Options for HighsPrintMessage and HighsLogMessage
   FILE *logfile = stdout;
@@ -85,45 +146,65 @@ struct HighsOptions
 
   // Declare HighsOptions for an LP model, any solver and simplex solver, setting the default value
   //
-  // For an LP model
-  //
-  // Try to solve the dual of the LP
-  bool transpose_simplex_lp = false;
-  // Perform LP scaling
-  bool scale_simplex_lp = true;
-  // Permute the columns of the LP randomly to aid load distribution in block parallelism
-  bool permute_simplex_lp = false;
-  // Perform LP bound tightening
-  bool tighten_simplex_lp = false;
-  //
-  // For any solver
-  //
-  // primal feasibility (dual optimality) tolerance
-  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
-  // dual feasibility (primal optimality) tolerance
-  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
-
-  // Upper bound on dual objective value
-  double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
-  //
   // For the simplex solver
   //
   bool simplex_perturb_costs = true;
-  // Maximum number of simplex iterations
-  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
+  // Maximum number of simplex updates
   int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool clean_up = false;
+  bool find_feasibility = false;
+  FeasibilityStrategy feasibility_strategy = FeasibilityStrategy::kApproxComponentWise;
+  bool feasibility_strategy_dualize = false;
+
+  bool mip = false;
 };
 
-// Used only for options allowed for the user. For other options see setOptionValue.
-bool setUserOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
-
-// Used for extended options read from file or set internally.
-bool setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option, const std::string& value);
 
 // Called before solve. This would check whether tolerances are set to correct values and
 // all options are consistent.
-bool checkOptionsValue(HighsOptions& options);
+OptionStatus checkOptionsValue(HighsOptions& options);
+
+OptionStatus setPresolveValue(HighsOptions& options, const std::string& value);
+OptionStatus setCrashValue(HighsOptions& options, const std::string& value);
+OptionStatus setParallelValue(HighsOptions& options, const std::string& value);
+OptionStatus setSimplexValue(HighsOptions& options, const std::string& value);
+OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
+OptionStatus setHighsRunTimeLimitValue(HighsOptions& options, const double& value);
+OptionStatus setSimplexIterationLimitValue(HighsOptions& options, const int& value);
+OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value);
+OptionStatus setMipValue(HighsOptions& options, const std::string& value);
+OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& value);
+OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value);
+OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value);
+ 
+OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
+OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value);
+
+OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
+OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
+OptionStatus setSmallMatrixValueValue(HighsOptions& options, const double& value);
+OptionStatus setLargeMatrixValueValue(HighsOptions& options, const double& value);
+OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options, const double& value);
+OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const double& value);
+OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value);
+OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value);
+
+OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexInitialConditionCheckTolerance(HighsOptions& options, const double& value);
+
+OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
+
+SimplexStrategy intToSimplexStrategy(const int& value);
+SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
+SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value);
+SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(const int& value);
+SimplexPriceStrategy intToSimplexPriceStrategy(const int& value);
 
 #endif
+

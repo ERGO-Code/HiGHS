@@ -37,6 +37,7 @@ enum class HighsPostsolveStatus {
 };
 
 enum class HighsPresolveStatus {
+    NotPresolved = -1,
     NotReduced,
     Infeasible,
     Unbounded,

@@ -1,4 +1,4 @@
-NAME          AFIRO
+NAME          AFIRO   SIZE: N=32, M=28, NZ=115
 ROWS
  E  R09
  E  R10

@@ -33,71 +33,6 @@ class HighsSimplexInterface {
   HighsModelObject &highs_model_object;
   
   /**
-   * @brief Report the outcome of a simplex solve, printing a message first to contextualise the call
-   */
-  void report_simplex_outcome(
-			      const char* message
-			      );
-  /**
-   * @brief Compute the LP objective function value from column values
-   */
-  double get_lp_objective_value(
-				vector<double> &XcolValue
-				);
-
-  /**
-   * @brief Get vectors of column and row (primal) values and dual (values)
-   */
-  void get_primal_dual_values(
-			      vector<double> &XcolValue, //!> Column primal activities
-			      vector<double> &XcolDual,  //!> Column dual activities
-			      vector<double> &XrowValue, //!> Row primal activities
-			      vector<double> &XrowDual   //!> Row dual activities
-			      );
-
-  /**
-   * @brief Get the basicIndex and nonbasicFlag vectors - Used?
-   */
-  void get_basicIndex_nonbasicFlag(
-				   vector<int> &XbasicIndex,  //!> Indices of basic variables
-				   vector<int> &XnonbasicFlag //!> Flag to indicate which variables are nonbasic
-				   );
-
-  /**
-   * @brief Get the indices of the basic variables for SCIP
-   */
-  int get_basic_indices(
-			int *bind //!> Indices of basic variables
-			);
-
-  /**
-   * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
-   * Postive  return value k implies invalid basis status for column k-1
-   * Negative return value k implies invalid basis status for row   -k-1
-   */
-  int convert_baseStat_to_working(
-				  const int* cstat, //!> Column baseStat
-				  const int* rstat  //!> Row baseStat
-				  );
-
-  /**
-   * @brief Convert a HiGHS basis to SCIP baseStat for columns and rows
-   * Postive  return value k implies invalid basis status for column k-1
-   * Negative return value k implies invalid basis status for row   -k-1
-   */
-  int convert_Working_to_BaseStat(
-				  int* cstat, //!> Column baseStat
-				  int* rstat  //!> Row baseStat
-				  );
-
-#ifdef HiGHSDEV
-  /**
-   * @brief Check that what's passed from postsolve is valid - Used?
-   */
-  void check_load_from_postsolve();
-#endif
-
-  /**
    * @brief Add a contiguous set of columns to the model data---making them nonbasic
    */
   HighsStatus util_add_cols(
@@ -108,29 +43,146 @@ class HighsSimplexInterface {
 			    int XnumNZ,
 			    const int *XAstart,
 			    const int *XAindex,
-			    const double *XAvalue,
-			    const bool force = false
+			    const double *XAvalue
 			    );
   
-  HighsStatus util_delete_cols(
-			int XfromCol,
-			int XtoCol
-			);
+  HighsStatus delete_cols(
+			  int from_col,
+			  int to_col
+			  );
   
-  HighsStatus util_delete_col_set(
-			   int XnumCol,
-			   int* XcolSet
-			   );
+
+  HighsStatus delete_cols(
+			  int num_set_entries,
+			  const int* col_set
+			  );
   
-  HighsStatus util_extract_cols(
-			 int XfromCol, int XtoCol,
-			 double* XcolLower,
-			 double* XcolUpper,
-			 int* nnonz,
-			 int* XAstart,
-			 int* XAindex,
-			 double* XAvalue
-			 );
+  HighsStatus delete_cols(
+			  int* col_mask
+			  );
+  
+  HighsStatus delete_cols_general(
+				  bool interval,
+				  int from_col,
+				  int to_col,
+				  bool set,
+				  int num_set_entries,
+				  const int* col_set,
+				  bool mask,
+				  int* col_mask
+				  );
+  
+  HighsStatus getCols(
+		      const int from_col,
+		      const int to_col,
+		      int &num_col,
+		      double *col_cost,
+		      double *col_lower,
+		      double *col_upper,
+		      int &num_nz,
+		      int *col_matrix_start,
+		      int *col_matrix_index,
+		      double *col_matrix_value
+		      );
+  
+  
+  HighsStatus getCols(
+		      const int num_set_entries,
+		      const int* col_set,
+		      int &num_col,
+		      double *col_cost,
+		      double *col_lower,
+		      double *col_upper,
+		      int &num_nz,
+		      int *col_matrix_start,
+		      int *col_matrix_index,
+		      double *col_matrix_value
+		      );
+  
+  HighsStatus getCols(
+		      const int* col_mask,
+		      int &num_col,
+		      double *col_cost,
+		      double *col_lower,
+		      double *col_upper,
+		      int &num_nz,
+		      int *col_matrix_start,
+		      int *col_matrix_index,
+		      double *col_matrix_value
+		      );
+  
+  HighsStatus getColsGeneral(
+			     const bool interval,
+			     const int from_col,
+			     const int to_col,
+			     const bool set,
+			     const int num_set_entries,
+			     const int* col_set,
+			     const bool mask,
+			     const int* col_mask,
+			     int &num_col,
+			     double *col_cost,
+			     double *col_lower,
+			     double *col_upper,
+			     int &num_nz,
+			     int *col_matrix_start,
+			     int *col_matrix_index,
+			     double *col_matrix_value
+			     );
+  
+  HighsStatus getRows(
+		      const int from_row,
+		      const int to_row,
+		      int &num_row,
+		      double *row_lower,
+		      double *row_upper,
+		      int &num_nz,
+		      int *row_matrix_start,
+		      int *row_matrix_index,
+		      double *row_matrix_value
+		      );
+  
+  
+  HighsStatus getRows(
+		      const int num_set_entries,
+		      const int* row_set,
+		      int &num_row,
+		      double *row_lower,
+		      double *row_upper,
+		      int &num_nz,
+		      int *row_matrix_start,
+		      int *row_matrix_index,
+		      double *row_matrix_value
+		      );
+  
+  HighsStatus getRows(
+		      const int* row_mask,
+		      int &num_row,
+		      double *row_lower,
+		      double *row_upper,
+		      int &num_nz,
+		      int *row_matrix_start,
+		      int *row_matrix_index,
+		      double *row_matrix_value
+		      );
+  
+ HighsStatus getRowsGeneral(
+			    const bool interval,
+			    const int from_row,
+			    const int to_row,
+			    const bool set,
+			    const int num_set_entries,
+			    const int* row_set,
+			    const bool mask,
+			    const int* row_mask,
+			    int &num_row,
+			    double *row_lower,
+			    double *row_upper,
+			    int &num_nz,
+			    int *row_matrix_start,
+			    int *row_matrix_index,
+			    double *row_matrix_value
+			    );
 
 
   /**
@@ -143,30 +195,35 @@ class HighsSimplexInterface {
 			    int XnumNewNZ,
 			    const int *XARstart,
 			    const int *XARindex,
-			    const double *XARvalue,
-			    const bool force = false
+			    const double *XARvalue
 			    );
-  HighsStatus util_delete_rows(
-			int firstrow,
-			int lastrow
-			);
-  
-  HighsStatus util_delete_row_set(
-			   int XnumRow,
-			   int* XrowSet
-			   );
-  
-  HighsStatus util_extract_rows(
-			 int firstrow,
-			 int lastrow,
-			 double* XrowLower,
-			 double* XrowUpper,
-			 int* nnonz,
-			 int* XARstart,
-			 int* XARindex,
-			 double* XARvalue
-			 );
 
+  HighsStatus delete_rows(
+			  int from_row,
+			  int to_row
+			  );
+  
+
+  HighsStatus delete_rows(
+			  int num_set_entries,
+			  const int* row_set
+			  );
+  
+  HighsStatus delete_rows(
+			  int* row_mask
+			  );
+  
+  HighsStatus delete_rows_general(
+				  bool interval,
+				  int from_row,
+				  int to_row,
+				  bool set,
+				  int num_set_entries,
+				  const int* row_set,
+				  bool mask,
+				  int* row_mask
+				  );
+  
   HighsStatus util_change_coefficient(
 			       int Xrow,
 			       int Xcol,
@@ -180,72 +237,202 @@ class HighsSimplexInterface {
 
   // Utilities to get/change costs and bounds
   // Change the objective sense
-  int change_ObjSense(
-		      int Xsense
-		      );
+  HighsStatus change_ObjSense(
+			      int Xsense
+			      );
 
-// Change the costs for all columns
-  int change_costs_all(
-		       const double* XcolCost
-		       );
-
-// Change the costs for a set of columns
-  int change_costs_set(
-		       int XnumColInSet,
-		       const int* XcolCostIndex,
-                       const double* XcolCostValue
-		       );
-
-// Change the bounds for all columns
-// Postive  return value k implies that the lower bound is being set to +Inf for
-// column k-1 Negative return value k implies that the upper bound is being set
-// to -Inf for column -k-1
-  HighsStatus change_col_bounds_all(
-				    const double* XcolLower,
-				    const double* XcolUpper,
-				    bool force = false
-				    );
-
-// Change the bounds for a set of columns
-// Postive  return value k implies that the lower bound is being set to +Inf for
-// column k-1 Negative return value k implies that the upper bound is being set
-// to -Inf for column -k-1
-  int change_col_bounds_set(
-			    int ncols,
-			    const int* XcolBoundIndex,
-			    const double* XcolLowerValues,
-			    const double* XcolUpperValues,
-			    bool force = false
-			    );
-
-// Change the bounds for all rows
-// Postive  return value k implies that the lower bound is being set to +Inf for
-// row k-1 Negative return value k implies that the upper bound is being set to
-// -Inf for row -k-1
-  int change_row_bounds_all(
-			    const double* XrowLower,
-			    const double* XrowUpper,
-			    bool force = false
-			    );
-
-// Change the bounds for a set of rows
-// Postive  return value k implies that the lower bound is being set to +Inf for
-// row k-1 Negative return value k implies that the upper bound is being set to
-// -Inf for row -k-1
-  int change_row_bounds_set(
-			    int nrows,
-			    const int* XrowBoundIndex,
-			    const double* XrowLowerValues,
-			    const double* XrowUpperValues,
-			    bool force = false
-			    );
+// Change the costs for an interval of columns
+  HighsStatus change_costs(
+			  int from_col,
+			  int to_col,
+			  const double* usr_col_cost
+			  );
   
+
+// Change the costs from an ordered set of indices
+  HighsStatus change_costs(
+			   int num_set_entries,
+			   const int* col_set,
+			   const double* usr_col_cost
+			   );
+  
+// Change the costs with a mask
+  HighsStatus change_costs(
+			   const int* col_mask,
+			   const double* usr_col_cost
+			   );
+  
+  HighsStatus change_costs_general(
+				  bool interval,
+				  int from_col,
+				  int to_col,
+				  bool set,
+				  int num_set_entries,
+				  const int* col_set,
+				  bool mask,
+				  const int* col_mask,
+				  const double* usr_col_cost
+				  );
+  
+// Change the bounds for an interval of columns
+  HighsStatus change_col_bounds(
+			  int from_col,
+			  int to_col,
+			  const double* usr_col_lower,
+			  const double* usr_col_upper
+			  );
+  
+
+// Change the bounds from an ordered set of indices
+  HighsStatus change_col_bounds(
+			   int num_set_entries,
+			   const int* col_set,
+			   const double* usr_col_lower,
+			   const double* usr_col_upper
+			   );
+  
+// Change the bounds with a mask
+  HighsStatus change_col_bounds(
+			   const int* col_mask,
+			   const double* usr_col_lower,
+			   const double* usr_col_upper
+			   );
+  
+  HighsStatus change_col_bounds_general(
+				  bool interval,
+				  int from_col,
+				  int to_col,
+				  bool set,
+				  int num_set_entries,
+				  const int* col_set,
+				  bool mask,
+				  const int* col_mask,
+				  const double* usr_col_lower,
+				  const double* usr_col_upper
+				  );
+
+// Change the bounds for an interval of rows
+  HighsStatus change_row_bounds(
+			  int from_row,
+			  int to_row,
+			  const double* usr_row_lower,
+			  const double* usr_row_upper
+			  );
+  
+
+// Change the bounds from an ordered set of indices
+  HighsStatus change_row_bounds(
+			   int num_set_entries,
+			   const int* row_set,
+			   const double* usr_row_lower,
+			   const double* usr_row_upper
+			   );
+  
+// Change the bounds with a mask
+  HighsStatus change_row_bounds(
+			   const int* row_mask,
+			   const double* usr_row_lower,
+			   const double* usr_row_upper
+			   );
+  
+  HighsStatus change_row_bounds_general(
+				  bool interval,
+				  int from_row,
+				  int to_row,
+				  bool set,
+				  int num_set_entries,
+				  const int* row_set,
+				  bool mask,
+				  const int* row_mask,
+				  const double* usr_row_lower,
+				  const double* usr_row_upper
+				  );
+
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void change_update_method(
 			    int updateMethod
 			    );
 #endif
+
+  HighsStatus LpStatusToHighsStatus(
+				    SimplexSolutionStatus simplex_solution_status
+				    );
+  /**
+   * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
+   * Postive  return value k implies invalid basis status for column k-1
+   * Negative return value k implies invalid basis status for row   -k-1
+   */
+  int convertBaseStatToHighsBasis(
+				  const int* cstat, //!> Column baseStat
+				  const int* rstat  //!> Row baseStat
+				  );
+
+  /**
+   * @brief Convert a HiGHS basis to SCIP baseStat for columns and rows
+   * Postive  return value k implies invalid basis status for column k-1
+   * Negative return value k implies invalid basis status for row   -k-1
+   */
+  int convertHighsBasisToBaseStat(
+				  int* cstat, //!> Column baseStat
+				  int* rstat  //!> Row baseStat
+				  );
+
+  /**
+   * @brief Convert a simplex basis to a HiGHS basis
+   */
+  void convertSimplexToHighsBasis();
+
+  /**
+   * @brief Convert a HiGHS basis to a simplex basis
+   */
+  void convertHighsToSimplexBasis();
+  /**
+   * @brief Convert a simplex solution to a HiGHS solution
+   */
+  void convertSimplexToHighsSolution();
+
+  /**
+   * @brief Analyse a single HiGHS solution and simplex basis, looking for
+   * primal and dual infeasibilities
+   */
+  bool analyseSingleHighsSolutionAndSimplexBasis(
+						 bool report,
+						 const int nonbasic_flag,
+						 const int nonbasic_move,
+						 const double lower,
+						 const double upper,
+						 const double value,
+						 const double dual,
+						 int &num_non_basic_var, 
+						 int &num_basic_var,
+						 double& primal_infeasibility,
+						 double& dual_infeasibility
+						 );
+
+  /**
+   * @brief Analyse the HiGHS solution and simplex basis, looking for
+   * primal and dual infeasibilities
+   */
+  SimplexSolutionStatus analyseHighsSolutionAndSimplexBasis();
+  
+  /**
+   * @brief Get the indices of the basic variables for SCIP
+   */
+  int get_basic_indices(
+			int *bind //!> Indices of basic variables
+			);
+
+#ifdef HiGHSDEV
+  /**
+   * @brief Check that what's passed from postsolve is valid - Used?
+   */
+  void check_load_from_postsolve();
+#endif
+
+
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXINTERFACE_H_ */
+
+

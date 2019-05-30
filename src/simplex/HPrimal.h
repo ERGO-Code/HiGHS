@@ -31,6 +31,11 @@ class HPrimal {
  HPrimal(HighsModelObject& model_object) : workHMO(model_object)
    {  }
   /**
+   * @brief Solve a model instance
+   */
+  void solve();
+
+  /**
    * @brief Perform Phase 2 primal simplex iterations
    */
   void solvePhase2();
@@ -41,6 +46,13 @@ class HPrimal {
   void primalChooseRow();
   void primalUpdate();
 
+  void iterationReport();
+  void iterationReportFull(bool header);
+  void iterationReportIterationAndPhase(int iterate_log_level, bool header);
+  void iterationReportPrimalObjective(int iterate_log_level, bool header);
+  void iterationReportIterationData(int iterate_log_level, bool header);
+  void iterationReportInvert(int i_v);
+
   // Model pointer
   HighsModelObject &workHMO;
   
@@ -48,15 +60,27 @@ class HPrimal {
   int solver_num_row;
   int solver_num_tot;
 
+  bool no_free_columns;
+  
+  int solvePhase;
+
   // Pivot related
   int invertHint;
   int columnIn;
   int rowOut;
+  int columnOut;
+  double thetaDual;
+  double thetaPrimal;
+  double alpha;
+  //  double alphaRow;
+  double numericalTrouble;
+  int num_flip_since_rebuild;
 
   // Solve buffer
   HVector row_ep;
   HVector row_ap;
   HVector column;
+
   double row_epDensity;
   double columnDensity;
 };

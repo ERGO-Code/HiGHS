@@ -16,13 +16,16 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+#include <sstream>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
+#include "presolve/FindFeasibility.h"
 #include "simplex/HApp.h"
 #include "simplex/HighsSimplexInterface.h"
 
@@ -32,8 +35,7 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
 
-  // For the moment hmos_[0] is the HighsModelObject corresponding to the
-  // original lp.
+  // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   simplex_has_run_ = false;
@@ -43,18 +45,73 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
-  // todo: check if lp is empty.
+
+  bool normalise = true;
+  HighsStatus return_status = assessLp(lp_, options_, normalise);
+  if (return_status == HighsStatus::Error) return return_status;
+
+  // For the moment runFeasibility as standalone.
+  if (options_.find_feasibility) {
+    // use when you do something with solution depending on whether we have dualized or not.
+    HighsSolution& solution = solution_;
+
+    //options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
+    //HighsSetIO(options_);
+
+    // Add slacks and make sure a minimization problem is passed to runFeasibility.
+    HighsLp primal = transformIntoEqualityProblem(lp_);
+    if (options_.feasibility_strategy_dualize) {
+      // Add slacks & dualize.
+      HighsLp dual = dualizeEqualityProblem(primal);
+      // dualizeEqualityProblem returns a minimization problem.
+      initializeLp(dual);
+    } else {
+      // If maximization, minimize before calling runFeasibility.
+      if (primal.sense_ != OBJSENSE_MINIMIZE) {
+        for (int col = 0; col < primal.numCol_; col++)
+          primal.colCost_[col] = -primal.colCost_[col];
+      }
+      initializeLp(primal);
+    }
+
+
+    if (options_.feasibility_strategy == FeasibilityStrategy::kApproxComponentWise)
+      return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);
+    else if (options_.feasibility_strategy == FeasibilityStrategy::kApproxExact)
+      return runFeasibility(lp_, solution_, MinimizationType::kExact);
+    else if (options_.feasibility_strategy == FeasibilityStrategy::kDirectSolve) {
+      // Proceed to normal exection of run().
+      // If dualize has been called replace LP is replaced with dual in code above.
+    }
+  }
+
+
+  // Return immediately if the LP has no columns
+  if (!lp_.numCol_) return HighsStatus::LpEmpty;
 
   // todo: check options.
   HighsSetIO(options_);
 
-  HighsPrintMessage(HighsMessageType::INFO, "Solving %s",
-                    lp_.model_name_.c_str());
+  HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
+  if (options_.mip)
+    return runBnb();
 
-  timer_.startRunHighsClock();
+  // Running as LP solver: start the HiGHS clock unless it's already running
+  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
+  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
+  // Record the initial time and zero the overall iteration count
+  double lp_solve_initial_time = timer_.readRunHighsClock();
+  int lp_solve_simplex_iteration_count = 0;
+  int lp_solve_postsolve_iteration_count = 0;
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
   HighsStatus solve_status = HighsStatus::Init;
+  // Define identifiers to refer to the HMO of the original LP
+  // (0) and the HMO created when using presolve (1)
+  const int original_hmo = 0;
+  const int presolve_hmo = 1;
+  // Keep track of the hmo that is the most recently solved. By default it's the original LP
+  int solved_hmo = original_hmo;
 
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   if (!simplex_has_run_) {
@@ -63,287 +120,210 @@ HighsStatus Highs::run() {
     PresolveInfo presolve_info(options_.presolve_option, lp_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
-
+    
     // Run solver.
     switch (presolve_status) {
-      case HighsPresolveStatus::NotReduced: {
-        solve_status = runSolver(hmos_[0]);
-        break;
-      }
-      case HighsPresolveStatus::Reduced: {
-        HighsLp &reduced_lp = presolve_info.getReducedProblem();
-        // Add reduced lp object to vector of HighsModelObject,
-        // so the last one in lp_ is the presolved one.
-        hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
-        solve_status = runSolver(hmos_[1]);
-        break;
-      }
-      case HighsPresolveStatus::ReducedToEmpty: {
-        // Proceed to postsolve.
-        break;
-      }
-      case HighsPresolveStatus::Infeasible:
-      case HighsPresolveStatus::Unbounded: {
-        HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible)
-                                ? HighsStatus::Infeasible
-                                : HighsStatus::Unbounded;
-        HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
-                          HighsStatusToString(result).c_str());
-        // for tests
-        HighsPrintMessage(ML_ALWAYS, "Run: NOT-OPT\n");
-        return result;
-      }
-      default: {
-        // case HighsPresolveStatus::Error
-        HighsPrintMessage(HighsMessageType::ERROR, "Presolve failed.");
-        return HighsStatus::PresolveError;
-      }
+    case HighsPresolveStatus::NotPresolved: {
+      int lp_solve_initial_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      // Call runSolver
+      solve_status = runSolver(hmos_[solved_hmo]);
+      int lp_solve_final_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					   lp_solve_initial_simplex_iteration_count);
+      break;
     }
-
-    // Postsolve. Does nothing if there were no reductions during presolve.
-    if (solve_status == HighsStatus::Optimal) {
-      if (presolve_status == HighsPresolveStatus::Reduced) {
-        presolve_info.reduced_solution_ = hmos_[1].solution_;
-        presolve_info.presolve_[0].setBasisInfo(hmos_[1].basis_.basicIndex_,
-                                                hmos_[1].basis_.nonbasicFlag_,
-                                                hmos_[1].basis_.nonbasicMove_);
+    case HighsPresolveStatus::NotReduced: {
+      printf("Problem not reduced\n");
+      int lp_solve_initial_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      // Call runSolver
+      solve_status = runSolver(hmos_[solved_hmo]);
+      int lp_solve_final_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					   lp_solve_initial_simplex_iteration_count);
+      break;
+    }
+    case HighsPresolveStatus::Reduced: {
+      HighsLp& reduced_lp = presolve_info.getReducedProblem();
+      // Add reduced lp object to vector of HighsModelObject,
+      // so the last one in lp_ is the presolved one.
+      hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
+      solved_hmo = presolve_hmo;
+      int lp_solve_initial_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      // Call runSolver
+      solve_status = runSolver(hmos_[solved_hmo]);
+      int lp_solve_final_simplex_iteration_count =
+	hmos_[solved_hmo].simplex_info_.iteration_count;
+      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					   lp_solve_initial_simplex_iteration_count);
+      break;
+    }
+    case HighsPresolveStatus::ReducedToEmpty: {
+      // Proceed to postsolve.
+      break;
+    }
+    case HighsPresolveStatus::Infeasible:
+    case HighsPresolveStatus::Unbounded: {
+      HighsStatus result = (presolve_status == HighsPresolveStatus::Infeasible) ?
+	HighsStatus::Infeasible : HighsStatus::Unbounded;
+      HighsPrintMessage(ML_ALWAYS, "Problem status detected on presolve: %s\n",
+			HighsStatusToString(result).c_str());
+      
+      // Report this way for the moment. May modify after merge with OSIinterface
+      // branch which has new way of setting up a HighsModelObject and can support
+      // multiple calls to run().
+      // Stop and read the HiGHS clock, then work out time for this call
+      if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+      double lp_solve_final_time = timer_.readRunHighsClock();
+      
+      std::stringstream message_not_opt;
+      message_not_opt << std::endl;
+      message_not_opt << "Run status : " << HighsStatusToString(result)
+		      << std::endl;
+      message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
+		      << lp_solve_final_time-lp_solve_initial_time << std::endl;
+      
+      message_not_opt << std::endl;
+      
+      HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
+      return result;
+    }
+    default: {
+      // case HighsPresolveStatus::Error
+      HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
+      if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+      return HighsStatus::PresolveError;
+    }
+    }
+    bool run_postsolve = false;
+    if (run_postsolve) {
+      // Postsolve. Does nothing if there were no reductions during presolve.
+      if (solve_status == HighsStatus::Optimal) {
+	if (presolve_status == HighsPresolveStatus::Reduced) {
+	  // If presolve is nontrivial, extract the optimal solution
+	  // and basis for the presolved problem in order to generate
+	  // the solution and basis for postsolve to use to generate a
+	  // solution(?) and basis that is, hopefully, optimal. This is
+	  // confirmed or corrected by hot-starting the simplex solver
+	  presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
+	  presolve_info.presolve_[0].setBasisInfo(hmos_[solved_hmo].simplex_basis_.basicIndex_,
+						  hmos_[solved_hmo].simplex_basis_.nonbasicFlag_,
+						  hmos_[solved_hmo].simplex_basis_.nonbasicMove_);
+	  // Run postsolve
+	  timer_.start(timer_.postsolve_clock);
+	  HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+	  timer_.stop(timer_.postsolve_clock);
+	  if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+	    HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
+	    // Set solution(?) and basis to hot-start the simplex solver
+	    // for the original_hmo
+	    hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
+	    hmos_[original_hmo].simplex_basis_.valid_ = true;
+	    hmos_[original_hmo].simplex_basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
+	    hmos_[original_hmo].simplex_basis_.nonbasicFlag_ = presolve_info.presolve_[0].getNonbasicFlag();
+	    hmos_[original_hmo].simplex_basis_.nonbasicMove_ = presolve_info.presolve_[0].getNonbasicMove();
+	    hmos_[original_hmo].simplex_lp_status_.has_basis = true;
+	    computePrimalObjectiveValueFromColumnValue(hmos_[original_hmo], &hmos_[original_hmo].solution_.col_value[0]);
+	    SimplexSolutionStatus lp_status = rebuildPostsolve(hmos_[original_hmo]);
+	    
+	    options_.clean_up = true;
+	    // Now hot-start the simplex solver for the original_hmo
+	    solved_hmo = original_hmo;
+	    int lp_solve_initial_simplex_iteration_count =
+	      hmos_[solved_hmo].simplex_info_.iteration_count;
+	    // Call runSolver
+	    solve_status = runSolver(hmos_[solved_hmo]);
+	    int lp_solve_final_simplex_iteration_count =
+	      hmos_[solved_hmo].simplex_info_.iteration_count;
+	    lp_solve_postsolve_iteration_count = lp_solve_final_simplex_iteration_count -
+	      lp_solve_initial_simplex_iteration_count;
+	    lp_solve_simplex_iteration_count += lp_solve_postsolve_iteration_count;
+ 	  }
+	}
       }
-
-      timer_.start(timer_.postsolve_clock);
-      HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-      timer_.stop(timer_.postsolve_clock);
-      if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-        HighsPrintMessage(HighsMessageType::INFO, "Postsolve finished.");
-
-        // Set solution and basis info for simplex clean up.
-        // Original LP is in lp_[0] so we set the basis information there.
-        hmos_[0].basis_.basicIndex_ = presolve_info.presolve_[0].getBasisIndex();
-        hmos_[0].basis_.nonbasicFlag_ =
-            presolve_info.presolve_[0].getNonbasicFlag();
-        hmos_[0].basis_.nonbasicMove_ =
-            presolve_info.presolve_[0].getNonbasicMove();
-
-        options_.clean_up = true;
-
-        solve_status = runSolver(hmos_[0]);
+    } else {
+      // Hack to get data for reporting when bypassing postsolve
+      if (solved_hmo == presolve_hmo) {
+	hmos_[original_hmo].simplex_info_.iteration_count =
+	  hmos_[solved_hmo].simplex_info_.iteration_count;
+	hmos_[original_hmo].simplex_info_.dualObjectiveValue =
+	  hmos_[solved_hmo].simplex_info_.dualObjectiveValue;
       }
     }
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
-    solve_status = runSolver(hmos_[0]);
+    solved_hmo = original_hmo;
+    int lp_solve_initial_simplex_iteration_count =
+      hmos_[solved_hmo].simplex_info_.iteration_count;
+    // Call runSolver
+    solve_status = runSolver(hmos_[solved_hmo]);
+    int lp_solve_final_simplex_iteration_count =
+      hmos_[solved_hmo].simplex_info_.iteration_count;
+    lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
+					 lp_solve_initial_simplex_iteration_count);
   }
-
-  // Report status.
-  HighsSimplexInterface simplex_interface(hmos_[0]);
-  switch (solve_status) {
-    case HighsStatus::Optimal:
-    case HighsStatus::ReachedDualObjectiveUpperBound: {
-      solution_ = hmos_[0].solution_;
-      basis_ = getHighsBasis(lp_, hmos_[0].basis_);
-      break;
-    }
-    case HighsStatus::Infeasible:
-    case HighsStatus::Unbounded: {
-      if (options_.presolve_option == PresolveOption::ON) {
-        // todo: handle case. Try to solve again with no presolve.
-        HighsPrintMessage(ML_ALWAYS, "Reduced problem status not optiaml: %s\n",
-                          HighsStatusToString(solve_status).c_str());
-        break;
-      }
-    }
-  }
-
-  // Report in old way so tests pass. Change to better output and modify tests.
-  simplex_interface.report_simplex_outcome("Run");
-
+  // else if (reduced problem failed to solve) {
+  //   todo: handle case when presolved problem failed to solve. Try to solve again
+  //   with no presolve.
+  // }
+  
+  assert(hmos_.size() > 0);
+  solution_ = hmos_[original_hmo].solution_;
+  basis_ = hmos_[original_hmo].basis_;
+  
   // Report times
-  if (hmos_[0].reportModelOperationsClock) {
+  if (hmos_[original_hmo].reportModelOperationsClock) {
     std::vector<int> clockList{timer_.presolve_clock, timer_.scale_clock,
                                timer_.crash_clock, timer_.solve_clock,
                                timer_.postsolve_clock};
     timer_.report("ModelOperations", clockList);
   }
-#ifdef HiGHSDEV
-/* todo: do elsewhere once timing is added.
-    bool rpBnchmk = false;
-    if (rpBnchmk) {
-      int numCol = highs_model.lp_.numCol_;
-      int numRow = highs_model.lp_.numRow_;
-      printf(
-          "\nBnchmkHsol99,hsol,%3d,%16s,Presolve %s,"
-          "Crash %s,EdWt %s,Price %s,%d,%d,%10.3f,%10.3f,"
-          "%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,"
-          "%20.10e,%10d,%10.3f,"
-          "%d\n",
-          model.getPrStatus(), highs_model.lp_->model_name_.c_str(),
-   Presolve_ArgV, Crash_ArgV, EdWt_ArgV, Price_ArgV, numRow, numCol, setupTime,
-          presolve1Time, crashTime, crossoverTime, presolve2Time, solveTime,
-          postsolveTime, simplex_info_.dualObjectiveValue,
-   simplex_info_.iteration_count, model.totalTime, solver.n_wg_DSE_wt); cout <<
-   flush;
-    }
-*/
-#endif
+  // Stop and read the HiGHS clock, then work out time for this call
+  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+  double lp_solve_final_time = timer_.readRunHighsClock();
 
-  timer_.stopRunHighsClock();
+  std::stringstream message;
+  message << std::endl;
+  message << "Run status : " << HighsStatusToString(solve_status)
+          << std::endl;
+  message << "Iterations : " << lp_solve_simplex_iteration_count//hmos_[solved_hmo].simplex_info_.iteration_count
+          << std::endl;
 
-  return HighsStatus::OK;
-}
+  if (solve_status == HighsStatus::Optimal)
+    message << "Objective  : " << std::scientific
+            << hmos_[original_hmo].simplex_info_.dualObjectiveValue << std::endl;
 
-HighsPresolveStatus Highs::runPresolve(PresolveInfo &info) {
-  if (options_.presolve_option != PresolveOption::ON)
-    return HighsPresolveStatus::NotReduced;
+  message << "Time       : " << std::fixed << std::setprecision(3)
+          << lp_solve_final_time-lp_solve_initial_time << std::endl;
 
-  if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;
+  message << "Postsolve  : " << lp_solve_postsolve_iteration_count          << std::endl;
 
-  if (info.presolve_.size() == 0) return HighsPresolveStatus::NotReduced;
+  message << std::endl;
 
-  info.presolve_[0].load(*(info.lp_));
+  HighsPrintMessage(ML_MINIMAL, message.str().c_str());
 
-  // Initialize a new presolve class instance for the LP given in presolve info
-  return info.presolve_[0].presolve();
-}
-
-HighsPostsolveStatus Highs::runPostsolve(PresolveInfo &info) {
-  if (info.presolve_.size() != 0) {
-    bool solution_ok =
-        isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
-    if (!solution_ok)
-      return HighsPostsolveStatus::ReducedSolutionDimenionsError;
-
-    // todo: error handling + see todo in run()
-    info.presolve_[0].postsolve(info.reduced_solution_,
-                                info.recovered_solution_);
-
-    return HighsPostsolveStatus::SolutionRecovered;
-  } else {
-    return HighsPostsolveStatus::NoPostsolve;
-  }
-}
-
-// The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::runSolver(HighsModelObject &model) {
-  // trim bounds to get OSI unit test to pass: delete when checkLp
-  // disappears.
-  HighsLp& lp = model.lp_;
-  for (int i = 0; i < lp.numRow_; i++) {
-      if (lp.rowLower_[i] < -HIGHS_CONST_INF)
-        lp.rowLower_[i] = -HIGHS_CONST_INF;
-      if (lp.rowUpper_[i] > HIGHS_CONST_INF)
-        lp.rowUpper_[i] = HIGHS_CONST_INF;
-    }
-
-  for (int j = 0; j < lp.numCol_; j++) {
-      if (lp.colLower_[j] < -HIGHS_CONST_INF)
-        lp.colLower_[j] = -HIGHS_CONST_INF;
-      if (lp.colUpper_[j] > HIGHS_CONST_INF)
-        lp.colUpper_[j] = HIGHS_CONST_INF;
-    }
-
-  assert(checkLp(model.lp_) == HighsStatus::OK);
-
-  HighsStatus status = HighsStatus::Init;
-#ifndef IPX
-  // HiGHS
-  // todo: Without the presolve part, so will be
-  //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = runSimplexSolver(options_, model);
-  simplex_has_run_ = true;
-#else
-  // IPX
-  // todo:Check options for simplex-specific options
-  // use model.lp_, model.solution_
-  // status = runIpxSolver(options_, lp_, solution_);
-  // If ipx crossover did not find optimality set up simplex.
-
-#endif
-
-  if (status != HighsStatus::Optimal) return status;
-
-  // Check.
-  if (!isSolutionConsistent(model.lp_, model.solution_)) {
-    std::cout << "Error: Inconsistent solution returned from solver.\n";
-  }
-
-  // todo:
-  // assert(KktSatisfied(lp, solution));
-
-  return status;
-}
-
-bool Highs::addRow(const double lower_bound, const double upper_bound,
-                   const int num_new_nz, const int *columns,
-                   const double *values, const bool force) {
-  int row_starts = 0;
-  return addRows(1, &lower_bound, &upper_bound, &row_starts, num_new_nz,
-                 columns, values);
-}
-
-bool Highs::addRows(const int num_new_rows, const double *lower_bounds,
-                    const double *upper_bounds, const int *row_starts,
-                    const int num_new_nz, const int *columns,
-                    const double *values, const bool force) {
-  // if simplex has not solved already
-  if (!simplex_has_run_) {
-    add_lp_rows(lp_, num_new_rows, lower_bounds, upper_bounds, num_new_nz,
-                row_starts, columns, values, options_);
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    // todo: change to take int return value
-    interface.util_add_rows(num_new_rows, lower_bounds, upper_bounds,
-                            num_new_nz, row_starts, columns, values);
-  }
-
-  return true;
-}
-
-bool Highs::addCol(const double cost, const double lower_bound,
-                   const double upper_bound, const int num_new_nz,
-                   const int *rows, const double *values, const bool force) {
-  int col_starts = 0;
-  return addCols(1, &cost, &lower_bound, &upper_bound, &col_starts, num_new_nz,
-                 rows, values, force);
-}
-
-bool Highs::addCols(const int num_new_cols, const double *column_costs,
-                    const double *lower_bounds, const double *upper_bounds,
-                    const int *col_starts, const int num_new_nz,
-                    const int *rows, const double *values, const bool force) {
-  // if simplex has not solved already
-  if (!simplex_has_run_) {
-    add_lp_cols(lp_, num_new_cols, column_costs, lower_bounds, upper_bounds,
-                num_new_nz, col_starts, rows, values, options_, force);
-  } else
-  {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    // todo: change to take int return value
-    interface.util_add_rows(num_new_cols, lower_bounds, upper_bounds,
-                            num_new_nz, col_starts, rows, values);
-  }
-
-  return true;
-}
-
-double Highs::getObjectiveValue() const {
-  if (hmos_.size() > 0) {
-    int last = hmos_.size() - 1;
-    return hmos_[last].simplex_info_.dualObjectiveValue;
-  } else {
-    // todo: ipx case
-    // todo: error/warning message
-  }
-  return 0;
+  return solve_status;
 }
 
 const HighsLp &Highs::getLp() const { return lp_; }
 
 const HighsSolution &Highs::getSolution() const { return solution_; }
 
-const HighsBasis_new &Highs::getBasis() const { return basis_; }
+const HighsBasis &Highs::getBasis() const { return basis_; }
+
+double Highs::getObjectiveValue() const {
+  if (hmos_.size() > 0) {
+    return hmos_[0].simplex_info_.dualObjectiveValue;
+  } else {
+    // todo: ipx case
+    // todo: error/warning message
+  }
+  return 0;
+}
 
 const int Highs::getIterationCount() const {
   if (hmos_.size() == 0) return 0;
@@ -378,122 +358,637 @@ HighsStatus Highs::setSolution(const HighsSolution &solution) {
   return HighsStatus::OK;
 }
 
-bool Highs::changeObjectiveSense(int sense) {
+HighsStatus Highs::setBasis(const HighsBasis& basis) {
+  basis_ = basis;
+  return HighsStatus::OK;
+}
+
+void Highs::reportSolution() {
+  reportModelBoundSol(true, lp_.numCol_,
+		      lp_.colLower_, lp_.colUpper_,
+		      lp_.col_names_,
+		      solution_.col_value, solution_.col_dual,
+		      basis_.col_status);
+  reportModelBoundSol(false, lp_.numRow_,
+		      lp_.rowLower_, lp_.rowUpper_,
+		      lp_.row_names_,
+		      solution_.row_value, solution_.row_dual,
+		      basis_.row_status);
+}
+
+bool Highs::addRow(const double lower_bound, const double upper_bound,
+                   const int num_new_nz, const int *indices, const double *values) {
+  int starts = 0;
+  return addRows(1, &lower_bound, &upper_bound, 
+                 num_new_nz, &starts, indices, values);
+}
+
+bool Highs::addRows(const int num_new_row,
+		    const double *lower_bounds, const double *upper_bounds, 
+                    const int num_new_nz,
+		    const int *starts, const int *indices, const double *values) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  // if simplex has not solved already
+  if (!simplex_has_run_) {
+    return_status = add_lp_rows(lp_, num_new_row, lower_bounds, upper_bounds,
+				num_new_nz, starts, indices, values, options_);
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    // todo: change to take int return value
+    return_status = interface.util_add_rows(num_new_row, lower_bounds, upper_bounds,
+					    num_new_nz, starts, indices, values);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::addCol(const double cost, const double lower_bound, const double upper_bound,
+		   const int num_new_nz, const int *indices, const double *values) {
+  int starts = 0;
+  return addCols(1, &cost, &lower_bound, &upper_bound, 
+                 num_new_nz, &starts, indices, values);
+}
+
+
+bool Highs::addCols(const int num_new_col, 
+                    const double *costs, const double *lower_bounds, const double *upper_bounds,
+                    const int num_new_nz,
+		    const int *starts, const int *indices, const double *values) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  // if simplex has not solved already
+  if (!simplex_has_run_) {
+    return_status = add_lp_cols(lp_, num_new_col,
+				costs, lower_bounds, upper_bounds,
+				num_new_nz, starts, indices, values, options_);
+  } else
+  {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    // todo: change to take int return value
+    return_status = interface.util_add_cols(num_new_col,
+					    costs, lower_bounds, upper_bounds,
+					    num_new_nz, starts, indices, values);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::changeObjectiveSense(const int sense) {
+  HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     this->lp_.sense_ = sense;
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    interface.change_ObjSense(sense);
+    return_status = interface.change_ObjSense(sense);
   }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
   return true;
 }
 
-bool Highs::changeRowBounds(int index, double lower, double higher) {
-  if (!simplex_has_run_) {
-    this->lp_.rowLower_[index] = lower;
-    this->lp_.rowUpper_[index] = higher;
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    interface.change_row_bounds_set(1, &index, &lower, &higher, true);
-  }
-  return true;
+bool Highs::changeColCost(const int col, const double cost) {
+  return changeColsCost(1, &col, &cost);
 }
 
-bool Highs::changeColBounds(int index, double lower, double higher) {
+bool Highs::changeColsCost(const int num_set_entries, const int* set, const double* cost) {
+  HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
-    this->lp_.colLower_[index] = lower;
-    this->lp_.colUpper_[index] = higher;
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    interface.change_col_bounds_set(1, &index, &lower, &higher, true);
-  }
-  return true;
-}
-
-bool Highs::changeRowsBounds(int n, int *index, double *lower, double *higher) {
-  if (!simplex_has_run_) {
-    for (int i = 0; i < n; i++) {
-      this->lp_.rowLower_[index[i]] = lower[i];
-      this->lp_.rowUpper_[index[i]] = higher[i];
-    }
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    interface.change_row_bounds_set(n, index, lower, higher, true);
-  }
-  return true;
-}
-
-bool Highs::changeColsBounds(int n, int *index, double *lower, double *higher) {
-  if (!simplex_has_run_) {
-    for (int i = 0; i < n; i++) {
-      this->lp_.colLower_[index[i]] = lower[i];
-      this->lp_.colUpper_[index[i]] = higher[i];
-    }
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    interface.change_col_bounds_set(n, index, lower, higher, true);
-  }
-  return true;
-}
-
-bool Highs::changeObjCoef(int index, double coef) {
-  if (!simplex_has_run_) {
-    this->lp_.colCost_[index] = coef;
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    interface.change_costs_set(1, &index, &coef);
-  }
-  return true;
-}
-
-bool Highs::deleteRows(const int n, const int *indices) {
-
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    interface.util_delete_row_set(n, (int*)indices);
-  }
-  return true;
-}
-
-bool Highs::deleteCols(const int n, const int *indices) {
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    interface.util_delete_col_set(n, (int*)indices);
-  }
-  return true;
-}
-
-bool Highs::changeObjCoefs(int n, int* index, double* coef) {
-  if (!simplex_has_run_) {
-    for (int i=0; i<n; i++) {
-      this->lp_.colCost_[index[i]] = coef[i];
+    for (int i=0; i<num_set_entries; i++) {
+      this->lp_.colCost_[set[i]] = cost[i];
     }
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    interface.change_costs_set(n, index, coef);
+    return_status = interface.change_costs(num_set_entries, set, cost);
   }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
   return true;  
+}
+
+bool Highs::changeColsCost(const int* mask, const double* cost) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    for (int i=0; i<this->lp_.numCol_; i++) {
+      if (mask[i]) this->lp_.colCost_[i] = cost[i];
+    }
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.change_costs(mask, cost);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;  
+}
+
+bool Highs::changeColBounds(const int col, const double lower, const double upper) {
+  return changeColsBounds(1, &col, &lower, &upper);
+}
+
+bool Highs::changeColsBounds(const int num_set_entries, const int *set, const double *lower, const double *upper) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    for (int i = 0; i < num_set_entries; i++) {
+      this->lp_.colLower_[set[i]] = lower[i];
+      this->lp_.colUpper_[set[i]] = upper[i];
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.change_col_bounds(num_set_entries, set, lower, upper);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::changeColsBounds(const int from_col, const int to_col, const double *lower, const double *upper) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    int num_changed_bounds = to_col-from_col;
+    for (int i = 0; i < num_changed_bounds; i++) {
+      this->lp_.colLower_[from_col+i] = lower[i];
+      this->lp_.colUpper_[from_col+i] = upper[i];
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.change_col_bounds(from_col, to_col, lower, upper);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::changeColsBounds(const int *mask, const double *lower, const double *upper) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    for (int i = 0; i < this->lp_.numCol_; i++) {
+      if (mask[i]) {
+	this->lp_.colLower_[i] = lower[i];
+	this->lp_.colUpper_[i] = upper[i];
+      }
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.change_col_bounds(mask, lower, upper);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::changeRowBounds(const int row,
+			    const double lower, const double upper) {
+  return changeRowsBounds(1, &row, &lower, &upper);
+}
+
+bool Highs::changeRowsBounds(const int num_set_entries,
+			     const int *set, const double *lower, const double *upper) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    for (int i = 0; i < num_set_entries; i++) {
+      this->lp_.rowLower_[set[i]] = lower[i];
+      this->lp_.rowUpper_[set[i]] = upper[i];
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.change_row_bounds(num_set_entries, set, lower, upper);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::changeRowsBounds(const int *mask, const double *lower, const double *upper) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    for (int i = 0; i < this->lp_.numRow_; i++) {
+      if (mask[i]) {
+	this->lp_.rowLower_[i] = lower[i];
+	this->lp_.rowUpper_[i] = upper[i];
+      }
+    }
+
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.change_row_bounds(mask, lower, upper);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::getCols(const int from_col, const int to_col,
+		    int &num_col, double *costs, double *lower, double *upper,
+		    int &num_nz, int *start, int *index, double *value) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.getCols(from_col, to_col,
+				      num_col, costs, lower, upper,
+				      num_nz, start, index, value);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::getCols(const int n, const int *set,
+		    int &num_col, double *costs, double *lower, double *upper,
+		    int &num_nz, int *start, int *index, double *value) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.getCols(n, set,
+				      num_col, costs, lower, upper,
+				      num_nz, start, index, value);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::getCols(const int *col_mask,
+		    int &num_col, double *costs, double *lower, double *upper,
+		    int &num_nz, int *start, int *index, double *value) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.getCols(col_mask,
+		      num_col, costs, lower, upper,
+		      num_nz, start, index, value);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::getRows(const int from_row, const int to_row,
+		    int &num_row, double *lower, double *upper,
+		    int &num_nz, int *start, int *index, double *value) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.getRows(from_row, to_row,
+		      num_row, lower, upper,
+		      num_nz, start, index, value);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::getRows(const int num_set_entries, const int *set,
+		    int &num_row, double *lower, double *upper,
+		    int &num_nz, int *start, int *index, double *value) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.getRows(num_set_entries, set,
+		      num_row, lower, upper,
+		      num_nz, start, index, value);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::getRows(const int *mask,
+		    int &num_row, double *lower, double *upper,
+		    int &num_nz, int *start, int *index, double *value) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+
+    return_status = interface.getRows(mask,
+		      num_row, lower, upper,
+		      num_nz, start, index, value);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::deleteCols(const int from_col, const int to_col) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_cols(from_col, to_col);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::deleteCols(const int num_set_entries, const int *set) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_cols(num_set_entries, set);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::deleteCols(int *mask) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_cols(mask);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::deleteRows(const int from_row, const int to_row) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_rows(from_row, to_row);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::deleteRows(const int num_set_entries, const int *set) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_rows(num_set_entries, set);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::deleteRows(int *mask) {
+  HighsStatus return_status = HighsStatus::NotSet;
+  if (!simplex_has_run_) {
+    // TODO: modify local lp
+  } else {
+    assert(hmos_.size() > 0);
+    HighsSimplexInterface interface(hmos_[0]);
+    return_status = interface.delete_rows(mask);
+  }
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet) return false;
+  return true;
+}
+
+bool Highs::writeMPS(const char* filename) {
+  return writeLpAsMPS(filename, lp_);
+}
+
+// Private methods
+HighsPresolveStatus Highs::runPresolve(PresolveInfo &info) {
+  if (options_.presolve_option != PresolveOption::ON)
+    return HighsPresolveStatus::NotPresolved;
+
+  if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;
+
+  if (info.presolve_.size() == 0) return HighsPresolveStatus::NotReduced;
+
+  info.presolve_[0].load(*(info.lp_));
+
+  // Initialize a new presolve class instance for the LP given in presolve info
+  return info.presolve_[0].presolve();
+}
+
+HighsPostsolveStatus Highs::runPostsolve(PresolveInfo &info) {
+  if (info.presolve_.size() != 0) {
+    bool solution_ok =
+        isSolutionConsistent(info.getReducedProblem(), info.reduced_solution_);
+    if (!solution_ok)
+      return HighsPostsolveStatus::ReducedSolutionDimenionsError;
+
+    // todo: error handling + see todo in run()
+    info.presolve_[0].postsolve(info.reduced_solution_,
+                                info.recovered_solution_);
+
+    return HighsPostsolveStatus::SolutionRecovered;
+  } else {
+    return HighsPostsolveStatus::NoPostsolve;
+  }
+}
+
+// The method below runs simplex or ipx solver on the lp.
+HighsStatus Highs::runSolver(HighsModelObject &model) {
+  bool normalise = true;
+  HighsStatus return_status = assessLp(model.lp_, model.options_, normalise);
+  if (return_status == HighsStatus::Error) return return_status;
+
+  HighsStatus status = HighsStatus::Init;
+#ifndef IPX
+  // HiGHS
+  // todo: Without the presolve part, so will be
+  //     = solve_simplex(options, reduced_lp, reduced_solution)
+  status = runSimplexSolver(options_, model);
+  simplex_has_run_ = true;
+#else
+  // IPX
+  // todo:Check options for simplex-specific options
+  // use model.lp_, model.solution_
+  // status = runIpxSolver(options_, lp_, solution_);
+  // If ipx crossover did not find optimality set up simplex.
+
+#endif
+
+  if (status != HighsStatus::Optimal) return status;
+
+  // Check.
+  if (!isSolutionConsistent(model.lp_, model.solution_)) {
+    std::cout << "Error: Inconsistent solution returned from solver.\n";
+  }
+
+  // todo:
+  // assert(KktSatisfied(lp, solution));
+
+  return status;
+}
+
+// Solve a mixed integer problem using branch and bound.
+HighsStatus Highs::runBnb() {
+  HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
+
+  // Need to start the HiGHS clock unless it's already running
+  bool run_highs_clock_already_running = timer_.runningRunHighsClock();
+  if (!run_highs_clock_already_running) timer_.startRunHighsClock();
+  double mip_solve_initial_time = timer_.readRunHighsClock();
+
+  // Start tree by making root node.
+   std::unique_ptr<Node> root =std::unique_ptr<Node>(new Node(-1, 0, 0));
+
+  root->integer_variables = lp_.integrality_;
+  root->col_lower_bound = lp_.colLower_;
+  root->col_upper_bound = lp_.colUpper_;
+
+  HighsStatus status = solveRootNode(*(root.get()));
+  if (status != HighsStatus::Optimal) {
+    HighsPrintMessage(ML_ALWAYS,
+                      "Root note not solved to optimality. Status: %s\n",
+                      HighsStatusToString(status).c_str());
+    return status;
+  }
+  
+  // The method branch(...) below calls chooseBranchingVariable(..) which
+  // currently returns the first violated one. If a branching variable is found
+  // children are added to the stack. If there are no more violated integrality
+  // constraints we have a feasible solution, if it is best than current best,
+  // the current best is updated.
+  int message_level = ML_DETAILED | ML_VERBOSE;
+  options_.messageLevel = message_level;
+  Tree tree(*(root.get()));
+  tree.branch(*(root.get()));
+  
+  // While stack not empty.
+  //   Solve node.
+  //   Branch.
+  while (!tree.empty()) {
+    Node& node = tree.next();
+    HighsStatus status = solveNode(node);
+    tree.pop();
+
+    if (status == HighsStatus::Infeasible)
+      continue;
+
+    options_.messageLevel = message_level;
+    tree.branch(node);
+  }
+  
+  // Stop and read the HiGHS clock, then work out time for this call
+  if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
+  double mip_solve_final_time = timer_.readRunHighsClock();
+
+  if (tree.getBestSolution().size() > 0) {
+    std::stringstream message;
+    message << std::endl;
+    message << "Optimal solution found.";
+    message << std::endl;
+    message << "Run status : " << HighsStatusToString(HighsStatus::Optimal)
+            << std::endl;
+    message << "Objective  : " << std::scientific
+            << tree.getBestObjective() << std::endl;
+    message << "Time       : " << std::fixed << std::setprecision(3)
+            << mip_solve_final_time-mip_solve_initial_time << std::endl;
+    message << std::endl;
+
+    HighsPrintMessage(ML_MINIMAL, message.str().c_str());
+  } else {
+    HighsPrintMessage(ML_ALWAYS, "No feasible solution found.\n");
+  }
+
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::solveNode(Node& node) {
+  // Apply column bounds from node to LP.
+  lp_.colLower_ = node.col_lower_bound;
+  lp_.colUpper_ = node.col_upper_bound;
+
+  // Call warm start.
+  //  HighsStatus status = run();
+  // call works but simply calling run() should be enough and will call hot
+  // start in the same way as a user would call it from the outside
+  HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+
+  // Set solution.
+  if (status == HighsStatus::Optimal) {
+    node.primal_solution = hmos_[0].solution_.col_value;
+    node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  }
+
+  // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
+  // changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
+
+  // Solve with a new hmo (replace with code above)
+  // initializeLp(lp_);
+  // lp_.colLower_ = node.col_lower_bound;
+  // lp_.colUpper_ = node.col_upper_bound;
+
+  // HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+
+  // // Set solution.
+  // if (status == HighsStatus::Optimal) {
+  //   node.primal_solution = hmos_[0].solution_.col_value;
+  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  // }
+
+  return status;
+}
+
+HighsStatus Highs::solveRootNode(Node& root) {
+  // No presolve for the moment.
+  options_.messageLevel = ML_NONE;
+  //HighsStatus status = run();
+  // call works but simply calling run() should be enough.
+  HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+  if (status == HighsStatus::Optimal) {
+    root.primal_solution = hmos_[0].solution_.col_value;
+    root.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  }
+
+  return status;
 }

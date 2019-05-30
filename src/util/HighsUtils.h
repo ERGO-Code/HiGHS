@@ -30,14 +30,14 @@ bool highs_isInfinity(
  * each power of ten, and possibly analyse the distribution of
  * different values
  */
-  void util_analyseVectorValues(
+  void analyseVectorValues(
 				const char* message,            //!< Message to be printed
 				int vecDim,                     //!< Dimension of vector
 				const std::vector<double>& vec, //!< Vector of values
 				bool analyseValueList           //!< Possibly analyse the distribution of different values in the vector
 				);
 
-  void util_analyseMatrixSparsity(
+  void analyseMatrixSparsity(
 				  const char* message,            //!< Message to be printed
 				  int numCol,                     //!< Number of columns
 				  int numRow,                     //!< Number of rows
