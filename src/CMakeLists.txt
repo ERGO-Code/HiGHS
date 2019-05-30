@@ -37,6 +37,7 @@ set(sources
     util/HighsUtils.cpp
     util/stringutil.cpp
     interfaces/MinimalAPI.cpp
+    interfaces/highs_c_api.cpp
 )
 
 set(headers
@@ -87,6 +88,7 @@ set(headers
     util/HighsUtils.h
     Highs.h
     interfaces/highs_lp_solver.h
+    interfaces/highs_c_api.h
 )
 
 if (GAMS_FOUND)

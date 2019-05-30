@@ -1,9 +1,12 @@
 #include "interfaces/highs_lp_solver.h"
+#include "interfaces/highs_c_api.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-int main() {
+// gcc call_highs_from_c.c -o highstest -I ../build/install_folder/include/ -L ../build/install_folder/lib/ -lhighs
+
+void minimal_api() {
   int numcol = 2;
   int numrow = 2;
   int nnz = 4;
@@ -29,8 +32,8 @@ int main() {
   callhighs(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
             cd, rv, rd, cbs, rbs);
 
-  for (i=0; i<numcol; i++) {
-     printf("x%d = %lf\n", i, cv[i]);
+  for (i = 0; i < numcol; i++) {
+    printf("x%d = %lf\n", i, cv[i]);
   }
 
   free(cv);
@@ -39,6 +42,19 @@ int main() {
   free(rd);
   free(cbs);
   free(rbs);
+}
 
-  return 0;
+void full_api() {
+  void* highs;
+
+  highs = Highs_create();
+  Highs_loadFromFile(highs, "/home/s1613957/lpInstances/qap04.mps");
+  Highs_run(highs);
+  Highs_destroy(highs);
+}
+
+int main() { 
+  minimal_api();
+  full_api();
+  return 0; 
 }
