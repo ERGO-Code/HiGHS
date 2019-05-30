@@ -242,7 +242,7 @@ class HighsSimplexInterface {
 			      );
 
 // Change the costs for an interval of columns
-  HighsStatus change_costs(
+  HighsStatus changeCosts(
 			  int from_col,
 			  int to_col,
 			  const double* usr_col_cost
@@ -250,29 +250,29 @@ class HighsSimplexInterface {
   
 
 // Change the costs from an ordered set of indices
-  HighsStatus change_costs(
+  HighsStatus changeCosts(
 			   int num_set_entries,
 			   const int* col_set,
 			   const double* usr_col_cost
 			   );
   
 // Change the costs with a mask
-  HighsStatus change_costs(
-			   const int* col_mask,
-			   const double* usr_col_cost
-			   );
+  HighsStatus changeCosts(
+			  const int* col_mask,
+			  const double* usr_col_cost
+			  );
   
-  HighsStatus change_costs_general(
-				  bool interval,
-				  int from_col,
-				  int to_col,
-				  bool set,
-				  int num_set_entries,
-				  const int* col_set,
-				  bool mask,
-				  const int* col_mask,
-				  const double* usr_col_cost
-				  );
+  HighsStatus changeCostsGeneral(
+				 bool interval,
+				 int from_col,
+				 int to_col,
+				 bool set,
+				 int num_set_entries,
+				 const int* col_set,
+				 bool mask,
+				 const int* col_mask,
+				 const double* usr_col_cost
+				 );
   
 // Change the bounds for an interval of columns
   HighsStatus changeColBounds(

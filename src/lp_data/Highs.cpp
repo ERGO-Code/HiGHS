@@ -427,7 +427,7 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set, const doub
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_costs(num_set_entries, set, cost);
+    return_status = interface.changeCosts(num_set_entries, set, cost);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;
@@ -444,7 +444,7 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_costs(mask, cost);
+    return_status = interface.changeCosts(mask, cost);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet) return false;

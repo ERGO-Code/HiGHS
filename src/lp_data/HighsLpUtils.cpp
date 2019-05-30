@@ -572,6 +572,40 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix, 
 
 }
 
+HighsStatus scaleLpColCosts(HighsLp& lp,
+			    vector<double> &colScale,
+			    const bool interval, const int from_col, const int to_col,
+			    const bool set, const int num_set_entries, const int* col_set,
+			    const bool mask, const int* col_mask) {
+  // Check parameters for technique and, if OK set the loop limits - in iterator style
+  int col_dim = lp.numCol_;
+  int from_k;
+  int to_k;
+  HighsStatus return_status = assess_interval_set_mask(col_dim,
+						       interval, from_col, to_col,
+						       set, num_set_entries, col_set,
+						       mask, col_mask,
+						       from_k, to_k);
+  if (return_status != HighsStatus::OK) return return_status;
+  if (from_k >= to_k) return HighsStatus::OK;
+  
+  int local_col;
+  int ml_col;
+  const int ml_col_os = 0;
+  for (int k = from_k; k < to_k; k++) {
+    if (interval || mask) {
+      local_col = k;
+    } else {
+      local_col = col_set[k];
+    }
+    ml_col = ml_col_os + local_col;
+    if (mask && !col_mask[local_col]) continue;
+    lp.colCost_[ml_col] *= colScale[ml_col];
+  }
+    
+  return HighsStatus::OK;
+}
+
 HighsStatus scaleLpColBounds(HighsLp& lp,
 			     vector<double> &colScale,
 			     const bool interval, const int from_col, const int to_col,
@@ -602,6 +636,41 @@ HighsStatus scaleLpColBounds(HighsLp& lp,
     if (mask && !col_mask[local_col]) continue;
     if (!highs_isInfinity(-lp.colLower_[ml_col])) lp.colLower_[ml_col] /= colScale[ml_col];
     if (!highs_isInfinity( lp.colUpper_[ml_col])) lp.colUpper_[ml_col] /= colScale[ml_col];
+  }
+    
+  return HighsStatus::OK;
+}
+
+HighsStatus scaleLpRowBounds(HighsLp& lp,
+			     vector<double> &rowScale,
+			     const bool interval, const int from_row, const int to_row,
+			     const bool set, const int num_set_entries, const int* row_set,
+			     const bool mask, const int* row_mask) {
+  // Check parameters for technique and, if OK set the loop limits - in iterator style
+  int row_dim = lp.numRow_;
+  int from_k;
+  int to_k;
+  HighsStatus return_status = assess_interval_set_mask(row_dim,
+						       interval, from_row, to_row,
+						       set, num_set_entries, row_set,
+						       mask, row_mask,
+						       from_k, to_k);
+  if (return_status != HighsStatus::OK) return return_status;
+  if (from_k >= to_k) return HighsStatus::OK;
+
+  int local_row;
+  int ml_row;
+  const int ml_row_os = 0;
+  for (int k = from_k; k < to_k; k++) {
+    if (interval || mask) {
+      local_row = k;
+    } else {
+      local_row = row_set[k];
+    }
+    ml_row = ml_row_os + local_row;
+    if (mask && !row_mask[local_row]) continue;
+    if (!highs_isInfinity(-lp.rowLower_[ml_row])) lp.rowLower_[ml_row] *= rowScale[ml_row];
+    if (!highs_isInfinity( lp.rowUpper_[ml_row])) lp.rowUpper_[ml_row] *= rowScale[ml_row];
   }
     
   return HighsStatus::OK;

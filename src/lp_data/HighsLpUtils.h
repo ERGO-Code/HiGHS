@@ -82,6 +82,18 @@ HighsStatus assessMatrix(
 			  bool normalise
 			  );
 
+HighsStatus scaleLpColCosts(HighsLp& lp,
+			    vector<double> &colScale,
+			    const bool interval,
+			    const int from_col,
+			    const int to_col,
+			    const bool set,
+			    const int num_set_entries,
+			    const int* col_set,
+			    const bool mask,
+			    const int* col_mask
+			    );
+
 HighsStatus scaleLpColBounds(HighsLp& lp,
 			     vector<double> &colScale,
 			     const bool interval,
@@ -92,6 +104,18 @@ HighsStatus scaleLpColBounds(HighsLp& lp,
 			     const int* col_set,
 			     const bool mask,
 			     const int* col_mask
+			     );
+
+HighsStatus scaleLpRowBounds(HighsLp& lp,
+			     vector<double> &rowScale,
+			     const bool interval,
+			     const int from_row,
+			     const int to_row,
+			     const bool set,
+			     const int num_set_entries,
+			     const int* row_set,
+			     const bool mask,
+			     const int* row_mask
 			     );
 
 HighsStatus add_lp_cols(
