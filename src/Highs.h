@@ -50,6 +50,21 @@ public:
   HighsStatus initializeLp(
 			   const HighsLp &lp //!< The HighsLp instance for this LP 
 			   );
+
+  /**
+   * @brief reads a model from a file and initializes the Highs object
+   */
+  HighsStatus initializeFromFile(
+  		   const std::string filename //!< the filename
+         );
+
+  /**
+   * @brief writes the current model to a file
+   */
+  HighsStatus writeToFile(
+         const std::string filename //!< the filename
+  );
+
   /**
    * @brief Calls runSolver to solve the LP according to the
    * specified options
@@ -397,13 +412,6 @@ public:
 
   // change coeff (int row, int col) | ...
   // ipx (not implemented)
-
-   /**
-   * @brief Write out the model as an MPS file
-   */
-  bool writeMPS(
-		const char* filename
-		);
 
   // todo: Set warm/hot start methods
 
