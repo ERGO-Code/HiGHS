@@ -102,8 +102,6 @@ class HCrash {
   // Crash strategy to be used
   SimplexCrashStrategy crash_strategy;
 
-  const bool full_basis = false;
-
   // Model dimensions
   int numCol;
   int numRow;

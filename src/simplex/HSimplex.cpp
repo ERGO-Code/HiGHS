@@ -2406,6 +2406,8 @@ int compute_factor(HighsModelObject &highs_model_object) {
   return 0;
 }
 
+// Compute the primal values (in baseValue) and set the lower and upper bounds
+// of basic variables
 void compute_primal(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -2678,33 +2680,6 @@ void compute_dual_infeasible_in_primal(HighsModelObject &highs_model_object,
         (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
   }
   *dual_infeasibility_count = work_count;
-}
-
-// Compute the primal values (in baseValue) and set the lower and upper bounds
-// of basic variables
-int set_source_out_from_bound(HighsModelObject &highs_model_object,
-                              const int column_out) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  int source_out = 0;
-  if (simplex_info.workLower_[column_out] !=
-      simplex_info.workUpper_[column_out]) {
-    if (!highs_isInfinity(-simplex_info.workLower_[column_out])) {
-      // Finite LB so source_out = -1 ensures value set to LB if LB < UB
-      source_out = -1;
-      //      printf("STRANGE: variable %d leaving the basis is [%11.4g, %11.4g]
-      //      so setting source_out = -1\n", column_out,
-      //      simplex_info.workLower_[column_out],
-      //      simplex_info.workUpper_[column_out]);
-    } else {
-      // Infinite LB so source_out = 1 ensures value set to UB
-      source_out = 1;
-      if (!highs_isInfinity(simplex_info.workUpper_[column_out])) {
-        // Free variable => trouble!
-        printf("TROUBLE: variable %d leaving the basis is free!\n", column_out);
-      }
-    }
-  }
-  return source_out;
 }
 
 // Record the shift in the cost of a particular column

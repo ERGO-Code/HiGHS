@@ -235,16 +235,8 @@ void HCrash::bixby() {
     int cz_c_n = bixby_vr_in_r[r_n];
     int columnIn = cz_c_n;
     int columnOut = numCol + r_n;
-    if (full_basis) {
-      int rowOut = cz_r_n;
-      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-      // Update the basic/nonbasic variable info and the row-wise copy
-      // of the matrix
-      update_pivots(workHMO, columnIn, rowOut, sourceOut);
-    } else {
-      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
-    }
+    workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+    workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -631,16 +623,8 @@ void HCrash::ltssf_iterate() {
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
       int columnIn = cz_c_n;
       int columnOut = numCol + cz_r_n;
-      if (full_basis) {
-	int rowOut = cz_r_n;
-	int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-	// Update the basic/nonbasic variable info and the row-wise copy
-	// of the matrix
-	update_pivots(workHMO, columnIn, rowOut, sourceOut);
-      } else {
-	workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-	workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
-      }
+      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -1206,15 +1190,8 @@ void HCrash::tsSing() {
     int r_n = c_n;
     int columnIn = c_n;
     int columnOut = numCol + r_n;
-    if (full_basis) {
-      int rowOut = r_n;
-      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-      // Update the basic/nonbasic variable info
-      update_pivots(workHMO, columnIn, rowOut, sourceOut);
-    } else {
-      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
-      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
-    }
+    workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+    workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
     nBcVr++;
     if (nBcVr == numRow) break;
   }

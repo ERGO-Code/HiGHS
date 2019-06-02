@@ -297,6 +297,8 @@ int compute_factor(
 		   HighsModelObject &highs_model_object
 		   );
 
+// Compute the primal values (in baseValue) and set the lower and upper bounds
+// of basic variables
 void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
@@ -323,13 +325,6 @@ void compute_dual_infeasible_in_primal(
 				       HighsModelObject &highs_model_object,
                                        int *dual_infeasibility_count
 				       );
-
-// Compute the primal values (in baseValue) and set the lower and upper bounds
-// of basic variables
-int set_source_out_from_bound(
-			      HighsModelObject &highs_model_object,
-                              const int column_out
-			      );
 
 // Record the shift in the cost of a particular column
 void shift_cost(
