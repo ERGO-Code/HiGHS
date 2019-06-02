@@ -774,6 +774,7 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
       crash.crash(simplex_info.crash_strategy);
       timer.stop(simplex_info.clock_[CrashClock]);
       timer.stop(timer.crash_clock);
+      initialise_basic_index(highs_model_object);
     }
     // Now set up the internal matrix structures using the supplied or crash basis
     matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
