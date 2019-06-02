@@ -52,13 +52,14 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 
   // Set values of internal options
 #ifdef HiGHSDEV
+  bool useful_analysis = false;
   // Options for reporting timing
-  simplex_info.report_simplex_inner_clock = true; // false;
+  simplex_info.report_simplex_inner_clock = useful_analysis; // false;
   simplex_info.report_simplex_outer_clock = false;
   simplex_info.report_simplex_phases_clock = false; // false;
   // Option for analysing simplex iterations
-  simplex_info.analyseLp = true;                // false;
-  simplex_info.analyseSimplexIterations = true; // false
+  simplex_info.analyseLp = useful_analysis;                // false;
+  simplex_info.analyseSimplexIterations = useful_analysis; // false
   simplex_info.analyseLpSolution = false;        // false;
   simplex_info.analyse_invert_time = false;
   simplex_info.analyseRebuildTime = false;
