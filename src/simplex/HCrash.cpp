@@ -234,13 +234,17 @@ void HCrash::bixby() {
     int cz_r_n = r_n;
     int cz_c_n = bixby_vr_in_r[r_n];
     int columnIn = cz_c_n;
-    int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-    // Update the basic/nonbasic variable info and the row-wise copy
-    // of the matrix
-    update_pivots(workHMO, columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+    if (full_basis) {
+      int rowOut = cz_r_n;
+      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
+      // Update the basic/nonbasic variable info and the row-wise copy
+      // of the matrix
+      update_pivots(workHMO, columnIn, rowOut, sourceOut);
+    } else {
+      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+    }
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -249,6 +253,9 @@ void HCrash::bixby() {
 #endif
   }
 #ifdef HiGHSDEV
+  // Analyse the row and column status after Crash
+  // basicIndex is only required for this analysis, so set it here.
+  initialise_basic_index(workHMO);
   crsh_an_r_c_st_af();
 #endif
 }
@@ -584,6 +591,9 @@ void HCrash::ltssf() {
       " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
       "value = %6.4e\n",
       tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
+  // Analyse the row and column status after Crash
+  // basicIndex is only required for this analysis, so set it here.
+  initialise_basic_index(workHMO);
   crsh_an_r_c_st_af();
 #endif
 }
@@ -620,13 +630,17 @@ void HCrash::ltssf_iterate() {
       mn_abs_pv_v = min(abs_pv_v, mn_abs_pv_v);
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
       int columnIn = cz_c_n;
-      int rowOut = cz_r_n;
       int columnOut = numCol + cz_r_n;
-      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-      // Update the basic/nonbasic variable info and the row-wise copy
-      // of the matrix
-      update_pivots(workHMO, columnIn, rowOut, sourceOut);
-      if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+      if (full_basis) {
+	int rowOut = cz_r_n;
+	int sourceOut = set_source_out_from_bound(workHMO, columnOut);
+	// Update the basic/nonbasic variable info and the row-wise copy
+	// of the matrix
+	update_pivots(workHMO, columnIn, rowOut, sourceOut);
+      } else {
+	workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+	workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+      }
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -1191,13 +1205,16 @@ void HCrash::tsSing() {
   for (int c_n = 0; c_n < numTot; c_n++) {
     int r_n = c_n;
     int columnIn = c_n;
-    int rowOut = r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-    // Update the basic/nonbasic variable info and the row-wise copy of the
-    // matrix
-    update_pivots(workHMO, columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+    if (full_basis) {
+      int rowOut = r_n;
+      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
+      // Update the basic/nonbasic variable info
+      update_pivots(workHMO, columnIn, rowOut, sourceOut);
+    } else {
+      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
+    }
     nBcVr++;
     if (nBcVr == numRow) break;
   }
