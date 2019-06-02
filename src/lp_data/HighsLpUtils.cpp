@@ -1381,21 +1381,38 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.numCol_);
   local_row_names.resize(lp.numRow_);
-  if (!have_col_names) {
+  // Determine whether any existing names can be used
+  // Consider column names
+  if (have_col_names) {
+    int max_col_name_length = maxNameLength(lp.numCol_, lp.col_names_);
+    if (max_col_name_length > 8) {
+      printf("Cannot use model column names since maximum length is %d\n", max_col_name_length);
+      have_col_names = false;
+    }
+  }
+  if (have_col_names) {
+    local_col_names = lp.col_names_;
+  } else {
     for (int iCol = 0; iCol < lp.numCol_; iCol++) {
       std::string name = "C" + std::to_string(iCol);
       local_col_names[iCol] = name;
     }
-  } else {
-    local_col_names = lp.col_names_;
   }
-  if (!have_row_names) {
+  // Consider row names
+  if (have_row_names) {
+    int max_row_name_length = maxNameLength(lp.numRow_, lp.row_names_);
+    if (max_row_name_length > 8) {
+      printf("Cannot use model row    names since maximum length is %d\n", max_row_name_length);
+      have_row_names = false;
+    }
+  }
+  if (have_row_names) {
+    local_row_names = lp.row_names_;
+  } else {
     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
       std::string name = "R" + std::to_string(iRow);
       local_row_names[iRow] = name;
     }
-  } else {
-    local_row_names = lp.row_names_;
   }
   int writeMPS_return = writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_,
 				 lp.sense_, lp.offset_,

@@ -13,9 +13,10 @@
  */
 #include "io/HMPSIO.h"
 #include "lp_data/HConst.h"
-#include "lp_data/HighsOptions.h"
-#include "util/HighsUtils.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsModelUtils.h"
+#include "util/HighsUtils.h"
 #include "util/stringutil.h"
 
 using std::map;
@@ -409,6 +410,9 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
              const vector<double>& colUpper, const vector<double>& rowLower,
              const vector<double>& rowUpper, const vector<int>& integerColumn,
 	     const vector<std::string>& col_names, const vector<std::string>& row_names) {
+  const bool write_zero_no_cost_columns = true;
+  int num_zero_no_cost_columns = 0;
+  int num_zero_no_cost_columns_in_bounds_section = 0;
 #ifdef HiGHSDEV
   printf("writeMPS: Trying to open file %s\n", filename);
 #endif
@@ -422,6 +426,16 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
 #ifdef HiGHSDEV
   printf("writeMPS: Opened file  OK\n");
 #endif
+  // Check that the names are no longer than 8 characters
+  int max_col_name_length = maxNameLength(numCol, col_names);
+  int max_row_name_length = maxNameLength(numRow, row_names);
+  int max_name_length = std::max(max_col_name_length, max_row_name_length);
+  if (max_name_length > 8) {
+#ifdef HiGHSDEV
+    printf("writeMPS: Cannot write fixed MPS with names of length (up to) %d\n", max_name_length);
+#endif
+    return 1;
+  }
   vector<int> r_ty;
   vector<double> rhs, ranges;
   bool have_rhs = false;
@@ -460,6 +474,8 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
       break;
     }
   }
+  // Check whether there is an objective offset - which will be defines as a RHS on the cost row
+  if (objOffset) have_rhs = true;
   for (int r_n = 0; r_n < numRow; r_n++) {
     if (ranges[r_n]) {
       have_ranges = true;
@@ -517,8 +533,19 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   int nIntegerMk = 0;
   fprintf(file, "COLUMNS\n");
   for (int c_n = 0; c_n < numCol; c_n++) {
-    // Skip this column if it's empty and has no cost
-    if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) continue;
+    if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
+      // Possibly skip this column as it's zero and has no cost
+#ifdef HiGHSDEV
+#endif
+      printf("Column %d (%s) is zero and has no cost\n", c_n, col_names[c_n].c_str());
+      num_zero_no_cost_columns++;
+      if (write_zero_no_cost_columns) {
+	// Give the column a presence by writing out a zero cost
+	double v = 0;
+	fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+      }
+      continue;
+    }
     if (numInt) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
@@ -535,7 +562,7 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
       }
     }
     if (colCost[c_n] != 0) {
-      double v = colCost[c_n];
+      double v = objSense*colCost[c_n];
       fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
     }
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
@@ -547,6 +574,11 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   have_rhs = true;
   if (have_rhs) {
     fprintf(file, "RHS\n");
+    if (objOffset) {
+      // Handle the objective offset as a RHS entry for the cost row
+      double v = objSense*objOffset;
+      fprintf(file, "    RHS_V     COST      %.15g\n", v);
+    }
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = rhs[r_n];
       if (v) fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
@@ -562,10 +594,18 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
   if (have_bounds) {
     fprintf(file, "BOUNDS\n");
     for (int c_n = 0; c_n < numCol; c_n++) {
-      // Skip this column if it's empty and has no cost
-      if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) continue;
       double lb = colLower[c_n];
       double ub = colUpper[c_n];
+      if (Astart[c_n] == Astart[c_n + 1] && colCost[c_n] == 0) {
+	// Possibly skip this column if it's zero and has no cost
+	if (!highs_isInfinity(ub) || lb) {
+	  // Column would have a bound to report
+	  printf("Column %d (%s) is zero and has no cost, but nontrivial bounds [%.15g, %.15g]\n",
+		 c_n, col_names[c_n].c_str(), lb, ub);
+	  num_zero_no_cost_columns_in_bounds_section++;
+	}
+	if (write_zero_no_cost_columns) continue;
+      }
       if (lb == ub) {
         fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
       } else {
@@ -586,6 +626,17 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol, const i
     }
   }
   fprintf(file, "ENDATA\n");
+  //#ifdef HiGHSDEV
+  if (num_zero_no_cost_columns) {
+      printf("Model has %d zero columns with no costs: %d have finite upper bounds or nonzero lower bounds",
+	     num_zero_no_cost_columns, num_zero_no_cost_columns_in_bounds_section);
+    if (write_zero_no_cost_columns) {
+      printf(" and are written in MPS file\n");
+    } else {
+      printf(" and are not written in MPS file\n");
+    }
+  }
+  //#endif
   fclose(file);
   return 0;
 }

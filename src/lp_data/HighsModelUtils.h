@@ -35,4 +35,9 @@ void reportModelBoundSol(
 			 const std::vector<double>& dual,
 			 const std::vector<HighsBasisStatus>& status
 			 );
+int maxNameLength(
+		  const int num_name,
+		  const std::vector<std::string>& names
+		  );
+
 #endif
