@@ -75,6 +75,9 @@ private:
   int parseFile(std::string filename);
   int fillMatrix();
 
+  const bool any_first_non_blank_as_star_implies_comment = false;
+  const bool handle_bv_in_bounds = false;
+  
   enum class parsekey {
     ROWS,
     COLS,
@@ -386,6 +389,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   numCol = 0;
   bool integral_cols = false;
 
+  if (any_first_non_blank_as_star_implies_comment) {
+    printf("In free format MPS reader: treating line as comment if first non-blank character is *\n");
+  } else {
+    printf("In free format MPS reader: treating line as comment if first character is *\n");
+  }
   auto parsename = [&rowidx, this](std::string name) {
     auto mit = rowname2idx.find(name);
 
@@ -406,9 +414,20 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   };
 
   while (getline(file, strline)) {
-    trim(strline);
-    if (strline.size() == 0 || strline[0] == '*')
-      continue;
+    if (any_first_non_blank_as_star_implies_comment) {
+      trim(strline);
+      if (strline.size() == 0 || strline[0] == '*')
+	continue;
+    } else {
+      if (strline.size()>0) {
+	// Just look for comment character in column 1
+	if (strline[0] == '*')
+	  continue;
+      }
+      trim(strline);
+      if (strline.size() == 0)
+	continue;
+    }
 
     HMpsFF::parsekey key = checkFirstWord(strline, start, end, word);
 
@@ -563,9 +582,20 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
   };
 
   while (getline(file, strline)) {
-    trim(strline);
-    if (strline.size() == 0 || strline[0] == '*')
-      continue;
+    if (any_first_non_blank_as_star_implies_comment) {
+      trim(strline);
+      if (strline.size() == 0 || strline[0] == '*')
+	continue;
+    } else {
+      if (strline.size()>0) {
+	// Just look for comment character in column 1
+	if (strline[0] == '*')
+	  continue;
+      }
+      trim(strline);
+      if (strline.size() == 0)
+	continue;
+    }
 
     int begin = 0;
     int end = 0;
@@ -641,6 +671,9 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream &file) {
 HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
   std::string strline, word;
 
+  int num_bv = 0;
+  int num_change_bv_lb = 0;
+  int num_change_bv_ub = 0;
   auto parsename = [this](const std::string &name, int &colidx) {
     auto mit = colname2idx.find(name);
     // assert(mit != colname2idx.end());
@@ -654,9 +687,20 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
   };
 
   while (getline(file, strline)) {
-    trim(strline);
-    if (strline.size() == 0 || strline[0] == '*')
-      continue;
+    if (any_first_non_blank_as_star_implies_comment) {
+      trim(strline);
+      if (strline.size() == 0 || strline[0] == '*')
+	continue;
+    } else {
+      if (strline.size()>0) {
+	// Just look for comment character in column 1
+	if (strline[0] == '*')
+	  continue;
+      }
+      trim(strline);
+      if (strline.size() == 0)
+	continue;
+    }
 
     int begin = 0;
     int end = 0;
@@ -664,14 +708,21 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
     HMpsFF::parsekey key = checkFirstWord(strline, begin, end, word);
 
     // start of new section?
-    if (key != parsekey::NONE)
+    if (key != parsekey::NONE) {
+      if (num_change_bv_lb+num_change_bv_ub) {
+	if (handle_bv_in_bounds) {
+	  printf(" Found %d BV entries: changed %d LB to 0 and %d UB to 1\n", num_bv, num_change_bv_lb, num_change_bv_ub);
+	} else {
+	  printf(" Found %d BV entries: not changed %d LB to 0 or %d UB to 1\n", num_bv, num_change_bv_lb, num_change_bv_ub);
+	}
+      }
       return key;
-
+    }
     bool islb = false;
     bool isub = false;
     bool isintegral = false;
     bool isdefaultbound = false;
-
+    bool found_bv = false;
     if (word == "UP") // lower bound
       isub = true;
     else if (word == "LO") // upper bound
@@ -692,6 +743,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
     {
       isintegral = true;
       isdefaultbound = true;
+      found_bv = true;
     } else if (word == "LI") // integer lower bound
     {
       islb = true;
@@ -739,7 +791,6 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
       colUpper.push_back(HIGHS_CONST_INF);
       numCol++;
     }
-
     if (isdefaultbound) {
       if (isintegral) // binary
       {
@@ -754,8 +805,20 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream &file) {
         if (isub)
           colUpper[colidx] = HIGHS_CONST_INF;
       }
+      if (found_bv) {
+	if (colLower[colidx] != 0) {
+	  if (handle_bv_in_bounds) colLower[colidx] = 0.0;
+	  num_change_bv_lb++;
+	}
+	if (colUpper[colidx] != 0) {
+	  if (handle_bv_in_bounds) colUpper[colidx] = 1.0;
+	  num_change_bv_ub++;
+	}
+	num_bv++;
+      }
       continue;
     }
+
 
     // here marker is the col name and end marks its end
     word = "";
@@ -808,9 +871,20 @@ HMpsFF::parsekey HMpsFF:: parseRanges(std::ifstream &file) {
   };
 
   while (getline(file, strline)) {
-    trim(strline);
-    if (strline.size() == 0 || strline[0] == '*')
-      continue;
+    if (any_first_non_blank_as_star_implies_comment) {
+      trim(strline);
+      if (strline.size() == 0 || strline[0] == '*')
+	continue;
+    } else {
+      if (strline.size()>0) {
+	// Just look for comment character in column 1
+	if (strline[0] == '*')
+	  continue;
+      }
+      trim(strline);
+      if (strline.size() == 0)
+	continue;
+    }
 
     int begin, end;
     std::string word;
