@@ -398,6 +398,13 @@ public:
   // change coeff (int row, int col) | ...
   // ipx (not implemented)
 
+  /**
+   * @brief Reads a model from a file
+   */
+  HighsStatus readFromFile(
+    std::string filename //!< filename
+  );
+
    /**
    * @brief Write out the model as an MPS file
    */
