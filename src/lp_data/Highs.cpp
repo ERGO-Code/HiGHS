@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "HConfig.h"
+#include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsModelUtils.h"
@@ -40,6 +41,21 @@ HighsStatus Highs::initializeLp(const HighsLp &lp) {
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   simplex_has_run_ = false;
   return HighsStatus::OK;
+}
+
+HighsStatus Highs::readFromFile(
+  std::string filename 
+) {
+  HighsLp model;
+  this->options_.filename = filename;
+  Filereader* filereader = Filereader::getFilereader(filename.c_str());
+
+  FilereaderRetcode retcode = filereader->readModelFromFile(this->options_, model);
+  if (retcode != FilereaderRetcode::OKAY) {
+    return HighsStatus::Error;
+  }
+
+  return this->initializeLp(model);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
