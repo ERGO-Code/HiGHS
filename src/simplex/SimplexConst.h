@@ -28,11 +28,34 @@ enum class SimplexSolutionStatus {
     };
 
 enum class SimplexStrategy {
-  DUAL_PLAIN = 0,
+  CHOOSE = 0,
+  DUAL_PLAIN,
   DUAL_TASKS,
   DUAL_MULTI,
   PRIMAL,
   DEFAULT = DUAL_PLAIN
+};
+  
+enum class SimplexDualiseStrategy {
+  OFF = 0,
+    CHOOSE,
+    ON,
+  DEFAULT = OFF
+};
+  
+enum class SimplexPermuteStrategy {
+  OFF = 0,
+    CHOOSE,
+    ON,
+  DEFAULT = OFF
+};
+  
+enum class SimplexScaleStrategy {
+  OFF = 0,
+    CHOOSE,
+    HSOL,
+    HIGHS,
+  DEFAULT = HSOL
 };
   
 enum class SimplexCrashStrategy {

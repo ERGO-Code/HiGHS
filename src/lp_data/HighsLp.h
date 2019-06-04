@@ -24,8 +24,9 @@
 #include "simplex/SimplexConst.h" // For simplex strategy options
 
 enum class LpAction {
-    SCALE = 0,
+    DUALISE = 0,
     PERMUTE,
+    SCALE,
     NEW_COSTS,
     NEW_BOUNDS,
     NEW_BASIS,
@@ -109,8 +110,9 @@ struct SimplexBasis {
 struct HighsSimplexLpStatus {
   // Status of LP solved by the simplex method and its data
   bool valid = false;
-  bool is_scaled = false;
+  bool is_dualised = false;
   bool is_permuted = false;
+  bool is_scaled = false;
   bool has_basis = false; // The LP has a valid simplex basis
   bool has_matrix_col_wise = false; // The LP has a column-wise constraint matrix
   bool has_matrix_row_wise = false; // The LP has a row-wise constraint matrix
@@ -198,8 +200,9 @@ struct HighsSimplexInfo {
   double dual_objective_value_upper_bound;
   
   // Options for the LP to be solved
-  bool scale_simplex_lp;
+  bool dualise_simplex_lp;
   bool permute_simplex_lp;
+  bool scale_simplex_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing

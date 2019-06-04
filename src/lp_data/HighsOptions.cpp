@@ -69,6 +69,9 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
    else if (option == large_matrix_value_string) 
     return setLargeMatrixValueValue(options, atof(value.c_str()));
 
+   else if (option == allowed_simplex_scale_factor_string) 
+     return setAllowedSimplexScaleFactorValue(options, atoi(value.c_str()));
+
    else if (option == primal_feasibility_tolerance_string) 
     return setPrimalFeasibilityToleranceValue(options, atof(value.c_str()));
 
@@ -80,6 +83,15 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
 
    else if (option == simplex_strategy_string) 
     return setSimplexStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_dualise_strategy_string) 
+    return setSimplexDualiseStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_permute_strategy_string) 
+    return setSimplexPermuteStrategyValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_scale_strategy_string) 
+    return setSimplexScaleStrategyValue(options, atoi(value.c_str()));
 
    else if (option == simplex_crash_strategy_string) 
     return setSimplexCrashStrategyValue(options, atoi(value.c_str()));
@@ -249,6 +261,72 @@ const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize"; 
   */
+
+  // infinite_cost
+  reportDoubleOptionValue(report_level, infinite_cost_string, options.infinite_cost,
+			  INFINITE_COST_DEFAULT,
+			  &INFINITE_COST_MIN, &INFINITE_COST_MAX);
+  
+  // infinite_bound
+  reportDoubleOptionValue(report_level, infinite_bound_string, options.infinite_bound,
+			  INFINITE_BOUND_DEFAULT,
+			  &INFINITE_BOUND_MIN, &INFINITE_BOUND_MAX);
+  
+  // small_matrix_value
+  reportDoubleOptionValue(report_level, small_matrix_value_string, options.small_matrix_value,
+			  SMALL_MATRIX_VALUE_DEFAULT,
+			  &SMALL_MATRIX_VALUE_MIN, &SMALL_MATRIX_VALUE_MAX);
+  
+  // large_matrix_value
+  reportDoubleOptionValue(report_level, large_matrix_value_string, options.large_matrix_value,
+			  LARGE_MATRIX_VALUE_DEFAULT,
+			  &LARGE_MATRIX_VALUE_MIN, &LARGE_MATRIX_VALUE_MAX);
+  
+  // Allowed simplex scale factor
+  reportIntOptionValue(report_level, allowed_simplex_scale_factor_string, options.allowed_simplex_scale_factor,
+		       ALLOWED_SIMPLEX_SCALE_FACTOR_DEFAULT,
+		       &ALLOWED_SIMPLEX_SCALE_FACTOR_MIN, &ALLOWED_SIMPLEX_SCALE_FACTOR_MAX);
+  
+  // primal_feasibility_tolerance
+  reportDoubleOptionValue(report_level, primal_feasibility_tolerance_string, options.primal_feasibility_tolerance,
+			  PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT,
+			  &PRIMAL_FEASIBILITY_TOLERANCE_MIN, &PRIMAL_FEASIBILITY_TOLERANCE_MAX);
+  
+  // dual_feasibility_tolerance
+  reportDoubleOptionValue(report_level, dual_feasibility_tolerance_string, options.dual_feasibility_tolerance,
+			  DUAL_FEASIBILITY_TOLERANCE_DEFAULT,
+			  &DUAL_FEASIBILITY_TOLERANCE_MIN, &DUAL_FEASIBILITY_TOLERANCE_MAX);
+  
+  // dual_objective_value_upper_bound
+  reportDoubleOptionValue(report_level, dual_objective_value_upper_bound_string, options.dual_objective_value_upper_bound,
+			  DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT,
+			  NULL, NULL);
+  
+  // Simplex strategy
+  reportIntOptionValue(report_level, simplex_strategy_string, (int)options.simplex_strategy,
+		       (int)SimplexStrategy::DEFAULT,
+		       NULL, NULL);
+
+  // Simplex dualise strategy
+  reportIntOptionValue(report_level, simplex_dualise_strategy_string, (int)options.simplex_dualise_strategy,
+		       (int)SimplexDualiseStrategy::DEFAULT,
+		       NULL, NULL);
+
+  // Simplex permute strategy
+  reportIntOptionValue(report_level, simplex_permute_strategy_string, (int)options.simplex_permute_strategy,
+		       (int)SimplexPermuteStrategy::DEFAULT,
+		       NULL, NULL);
+
+  // Simplex scale strategy
+  reportIntOptionValue(report_level, simplex_scale_strategy_string, (int)options.simplex_scale_strategy,
+		       (int)SimplexScaleStrategy::DEFAULT,
+		       NULL, NULL);
+
+  // Simplex crash strategy
+  reportIntOptionValue(report_level, simplex_crash_strategy_string, (int)options.simplex_crash_strategy,
+		       (int)SimplexCrashStrategy::DEFAULT,
+		       NULL, NULL);
+
 }
 
 OptionStatus setPresolveValue(HighsOptions& options, const std::string& value) {
@@ -476,6 +554,18 @@ OptionStatus setLargeMatrixValueValue(HighsOptions& options, const double& value
   return OptionStatus::OK;
 }
 
+OptionStatus setAllowedSimplexScaleFactorValue(HighsOptions& options, const int& value) {
+  if (value >= ALLOWED_SIMPLEX_SCALE_FACTOR_MIN && value <= ALLOWED_SIMPLEX_SCALE_FACTOR_MAX)
+    options.allowed_simplex_scale_factor = value;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "allowed simplex scale factor value \"%s\" is not permitted: legal values are between %d and %d\n",
+		    value, ALLOWED_SIMPLEX_SCALE_FACTOR_MIN, ALLOWED_SIMPLEX_SCALE_FACTOR_MAX);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
 OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options, const double& value) {
   if (value >= PRIMAL_FEASIBILITY_TOLERANCE_MIN && value <= PRIMAL_FEASIBILITY_TOLERANCE_MAX)
     options.primal_feasibility_tolerance = value;
@@ -507,6 +597,21 @@ OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const d
 
 OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value) {
   options.simplex_strategy = intToSimplexStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexDualiseStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_dualise_strategy = intToSimplexDualiseStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexPermuteStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_permute_strategy = intToSimplexPermuteStrategy(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus setSimplexScaleStrategyValue(HighsOptions& options, const int& value) {
+  options.simplex_scale_strategy = intToSimplexScaleStrategy(value);
   return OptionStatus::OK;
 }
 
@@ -553,10 +658,30 @@ OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
 }
 
 SimplexStrategy intToSimplexStrategy(const int& value) {
+  if (value == (int)SimplexStrategy::CHOOSE) return SimplexStrategy::CHOOSE;
   if (value == (int)SimplexStrategy::DUAL_PLAIN) return SimplexStrategy::DUAL_PLAIN;
   if (value == (int)SimplexStrategy::DUAL_MULTI) return SimplexStrategy::DUAL_MULTI;
   if (value == (int)SimplexStrategy::PRIMAL) return SimplexStrategy::PRIMAL;
   return SimplexStrategy::DEFAULT;
+}
+SimplexDualiseStrategy intToSimplexDualiseStrategy(const int& value) {
+  if (value == (int)SimplexDualiseStrategy::OFF) return SimplexDualiseStrategy::OFF;
+  if (value == (int)SimplexDualiseStrategy::CHOOSE) return SimplexDualiseStrategy::CHOOSE;
+  if (value == (int)SimplexDualiseStrategy::ON) return SimplexDualiseStrategy::ON;
+  return SimplexDualiseStrategy::DEFAULT;
+}
+SimplexPermuteStrategy intToSimplexPermuteStrategy(const int& value) {
+  if (value == (int)SimplexPermuteStrategy::OFF) return SimplexPermuteStrategy::OFF;
+  if (value == (int)SimplexPermuteStrategy::CHOOSE) return SimplexPermuteStrategy::CHOOSE;
+  if (value == (int)SimplexPermuteStrategy::ON) return SimplexPermuteStrategy::ON;
+  return SimplexPermuteStrategy::DEFAULT;
+}
+SimplexScaleStrategy intToSimplexScaleStrategy(const int& value) {
+  if (value == (int)SimplexScaleStrategy::OFF) return SimplexScaleStrategy::OFF;
+  if (value == (int)SimplexScaleStrategy::CHOOSE) return SimplexScaleStrategy::CHOOSE;
+  if (value == (int)SimplexScaleStrategy::HSOL) return SimplexScaleStrategy::HSOL;
+  if (value == (int)SimplexScaleStrategy::HIGHS) return SimplexScaleStrategy::HIGHS;
+  return SimplexScaleStrategy::DEFAULT;
 }
 SimplexCrashStrategy intToSimplexCrashStrategy(const int& value) {
   if (value == (int)SimplexCrashStrategy::LTSSF_K) return SimplexCrashStrategy::LTSSF_K;

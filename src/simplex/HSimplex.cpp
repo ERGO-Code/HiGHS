@@ -52,7 +52,7 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 
   // Set values of internal options
 #ifdef HiGHSDEV
-  bool useful_analysis = true;
+  bool useful_analysis = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis; // false;
   simplex_info.report_simplex_outer_clock = false;
@@ -69,8 +69,9 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 void reportSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, const char* message) {
   printf("\nReporting solver status and flags: %s\n\n", message);
   printf("  valid =                          %d\n", simplex_lp_status.valid);
-  printf("  is_scaled =                      %d\n", simplex_lp_status.is_scaled);
+  printf("  is_dualised =                    %d\n", simplex_lp_status.is_dualised);
   printf("  is_permuted =                    %d\n", simplex_lp_status.is_permuted);
+  printf("  is_scaled =                      %d\n", simplex_lp_status.is_scaled);
   printf("  has_basis =                      %d\n", simplex_lp_status.has_basis);
   printf("  has_matrix_col_wise =            %d\n", simplex_lp_status.has_matrix_col_wise);
   printf("  has_matrix_row_wise =            %d\n", simplex_lp_status.has_matrix_row_wise);
@@ -102,19 +103,20 @@ void invalidateSimplexLpData(HighsSimplexLpStatus &simplex_lp_status) {
 
 void invalidateSimplexLp(HighsSimplexLpStatus &simplex_lp_status) {
   simplex_lp_status.valid = false;
-  simplex_lp_status.is_scaled = false;
+  simplex_lp_status.is_dualised = false;
   simplex_lp_status.is_permuted = false;
+  simplex_lp_status.is_scaled = false;
   invalidateSimplexLpData(simplex_lp_status);
 }
 
 void updateSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, LpAction action) {
 
   switch (action) {
-  case LpAction::SCALE:
+  case LpAction::DUALISE:
 #ifdef HIGHSDEV
-    printf(" LpAction::SCALE\n");
+    printf(" LpAction::DUALISE\n");
 #endif
-    simplex_lp_status.is_scaled = true;
+    simplex_lp_status.is_dualised = true;
     invalidateSimplexLpData(simplex_lp_status);
     break;
   case LpAction::PERMUTE:
@@ -122,6 +124,13 @@ void updateSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, LpAction act
     printf(" LpAction::PERMUTE\n");
 #endif
     simplex_lp_status.is_permuted = true;
+    invalidateSimplexLpData(simplex_lp_status);
+    break;
+  case LpAction::SCALE:
+#ifdef HIGHSDEV
+    printf(" LpAction::SCALE\n");
+#endif
+    simplex_lp_status.is_scaled = true;
     invalidateSimplexLpData(simplex_lp_status);
     break;
   case LpAction::NEW_COSTS:

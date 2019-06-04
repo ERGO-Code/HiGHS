@@ -59,11 +59,15 @@ const string infinite_cost_string = "infinite_cost";
 const string infinite_bound_string = "infinite_bound";
 const string small_matrix_value_string = "small_matrix_value";
 const string large_matrix_value_string = "large_matrix_value";
-const string primal_feasibility_tolerance_string = "primal_feasibility";
-const string dual_feasibility_tolerance_string = "dual_feasibility";
+const string allowed_simplex_scale_factor_string = "allowed_simplex_scale_factor";
+const string primal_feasibility_tolerance_string = "primal_feasibility_tolerance";
+const string dual_feasibility_tolerance_string = "dual_feasibility_tolerance";
 const string dual_objective_value_upper_bound_string = "dual_objective_value_upper_bound";
 
 const string simplex_strategy_string = "simplex_strategy";
+const string simplex_dualise_strategy_string = "simplex_dualise_strategy";
+const string simplex_permute_strategy_string = "simplex_permute_strategy";
+const string simplex_scale_strategy_string = "simplex_scale_strategy";
 const string simplex_crash_strategy_string = "simplex_crash_strategy";
 const string simplex_dual_edge_weight_strategy_string = "simplex_dual_edge_weight_strategy";
 const string simplex_primal_edge_weight_strategy_string = "simplex_primal_edge_weight_strategy";
@@ -118,10 +122,14 @@ struct HighsOptions
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
   double large_matrix_value = LARGE_MATRIX_VALUE_DEFAULT;
+  int allowed_simplex_scale_factor = ALLOWED_SIMPLEX_SCALE_FACTOR_DEFAULT;
   double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
   double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
   double dual_objective_value_upper_bound = DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
+  SimplexDualiseStrategy simplex_dualise_strategy = SimplexDualiseStrategy::DEFAULT;
+  SimplexPermuteStrategy simplex_permute_strategy = SimplexPermuteStrategy::DEFAULT;
+  SimplexScaleStrategy simplex_scale_strategy = SimplexScaleStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::DEFAULT;
   SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DEFAULT;
@@ -180,17 +188,22 @@ OptionStatus setFindFeasibilityValue(HighsOptions& options, const std::string& v
 OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options, const std::string& value);
 OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::string& value);
  
-OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
+OptionStatus setDualiseSimplexLpValue(HighsOptions& options, const int& value);
 OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value);
+OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
 
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
 OptionStatus setSmallMatrixValueValue(HighsOptions& options, const double& value);
 OptionStatus setLargeMatrixValueValue(HighsOptions& options, const double& value);
+OptionStatus setAllowedSimplexScaleFactorValue(HighsOptions& options, const int& value);
 OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options, const double& value);
 OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options, const double& value);
 OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options, const double& value);
 OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexDualiseStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexPermuteStrategyValue(HighsOptions& options, const int& value);
+OptionStatus setSimplexScaleStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexCrashStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options, const int& value);
 OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const int& value);
@@ -202,6 +215,9 @@ OptionStatus setSimplexInitialConditionCheckTolerance(HighsOptions& options, con
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
 
 SimplexStrategy intToSimplexStrategy(const int& value);
+SimplexDualiseStrategy intToSimplexDualiseStrategy(const int& value);
+SimplexPermuteStrategy intToSimplexPermuteStrategy(const int& value);
+SimplexScaleStrategy intToSimplexScaleStrategy(const int& value);
 SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
 SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(const int& value);
 SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(const int& value);
