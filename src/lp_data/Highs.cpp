@@ -92,7 +92,7 @@ HighsStatus Highs::run() {
   // todo: check options.
   HighsSetIO(options_);
 
-  reportOptionsValue(options_, 1);
+  reportOptionsValue(options_, 0);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip)
     return runBnb();
@@ -162,8 +162,9 @@ HighsStatus Highs::run() {
       if (hmos_[solved_hmo].simplex_lp_status_.is_scaled) {
 	// Now solve the unscaled LP using the optimal basis and solution
 	lp_solve_initial_simplex_iteration_count = lp_solve_final_simplex_iteration_count;
-	// Set the scale option to false
-	options_.scale_simplex_lp = false;
+	// Save the scaling strategy and set it off temporarily
+	SimplexScaleStrategy save_simplex_scale_strategy = options_.simplex_scale_strategy;
+	options_.simplex_scale_strategy = SimplexScaleStrategy::OFF;
 	invalidateSimplexLp(hmos_[solved_hmo].simplex_lp_status_);
 	// Call runSolver
 	solve_status = runSolver(hmos_[solved_hmo]);
@@ -173,8 +174,8 @@ HighsStatus Highs::run() {
 	  lp_solve_initial_simplex_iteration_count;
 	printf("Solving the unscaled LP problem requires %d iterations\n", solve_unscaled_lp_iteration_count);
 	lp_solve_simplex_iteration_count += solve_unscaled_lp_iteration_count;
-	// Return the scale option to true
-	options_.scale_simplex_lp = true;
+	// Return the scaling strategy to its original value
+	options_.simplex_scale_strategy = save_simplex_scale_strategy;
       }
       break;
     }

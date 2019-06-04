@@ -199,10 +199,6 @@ struct HighsSimplexInfo {
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
-  // Options for the LP to be solved
-  bool dualise_simplex_lp;
-  bool permute_simplex_lp;
-  bool scale_simplex_lp;
   // Internal options - can't be changed externally
 
   // Options for reporting timing

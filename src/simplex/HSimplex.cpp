@@ -47,9 +47,6 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   simplex_info.update_limit = opt.simplex_update_limit;
   simplex_info.highs_run_time_limit = opt.highs_run_time_limit;
 
-  simplex_info.scale_simplex_lp = opt.scale_simplex_lp;
-  simplex_info.permute_simplex_lp = opt.permute_simplex_lp;
-
   // Set values of internal options
 #ifdef HiGHSDEV
   bool useful_analysis = false;
@@ -202,6 +199,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, LpAction act
 void setupSimplexLp(HighsModelObject &highs_model_object) {
   const HighsLp &lp = highs_model_object.lp_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsOptions &options = highs_model_object.options_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -227,10 +225,10 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
   // Initialise unit scaling factors, to simplify things if no scaling
   // is performed
   scaleHighsModelInit(highs_model_object);
-  if (simplex_info.scale_simplex_lp) scaleSimplexLp(highs_model_object);
+  if (options.simplex_scale_strategy != SimplexScaleStrategy::OFF) scaleSimplexLp(highs_model_object);
   //
   // Possibly permute the columns of the LP to be used by the solver. 
-  if (simplex_info.permute_simplex_lp) permuteSimplexLp(highs_model_object);
+  if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF) permuteSimplexLp(highs_model_object);
 
 #ifdef HiGHSDEV
   HighsScale &scale = highs_model_object.scale_;
@@ -1169,7 +1167,7 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called scale_simplex_lp: simplex_lp_status.is_scaled = %d\n",
+  printf("Called scaleSimplexLp: simplex_lp_status.is_scaled = %d\n",
          simplex_lp_status.is_scaled);
 #endif
   if (simplex_lp_status.is_scaled)
@@ -1334,7 +1332,7 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
 void permuteSimplexLp(HighsModelObject &highs_model_object) {
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
-  printf("Called permute_simplex_lp: simplex_lp_status.is_permuted = %d\n",
+  printf("Called permuteSimplexLp: simplex_lp_status.is_permuted = %d\n",
          simplex_lp_status.is_permuted);
 #endif
   if (simplex_lp_status.is_permuted) return;

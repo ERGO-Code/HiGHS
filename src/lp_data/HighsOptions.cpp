@@ -51,12 +51,6 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == find_feasibility_dualize_string)
     return setFindFeasibilityDualizeValue(options, value);
 
-  else if (option == scale_simplex_lp_string) 
-    return setScaleSimplexLpValue(options, atoi(value.c_str()));
-
-  else if (option == permute_simplex_lp_string) 
-    return setPermuteSimplexLpValue(options, atoi(value.c_str()));
-
   else if (option == infinite_cost_string) 
     return setInfiniteCostValue(options, atof(value.c_str()));
 
@@ -493,16 +487,6 @@ OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value)
 		    value.c_str(), fixed_string.c_str(), free_string.c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
-  return OptionStatus::OK;
-}
-
-OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value) {
-  options.scale_simplex_lp = value != 0;
-  return OptionStatus::OK;
-}
-
-OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value) {
-  options.permute_simplex_lp = value != 0;
   return OptionStatus::OK;
 }
 
