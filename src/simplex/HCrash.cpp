@@ -31,9 +31,6 @@ using std::flush;
 void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
   crash_strategy = pass_crash_strategy;
   HighsLp &simplex_lp = workHMO.simplex_lp_;
-  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  SimplexBasis &simplex_basis = workHMO.simplex_basis_;
-  //  HMatrix &matrix = workHMO.matrix_;
   if (simplex_lp.numRow_ == 0) return;
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;

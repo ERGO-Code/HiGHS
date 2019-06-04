@@ -30,17 +30,19 @@ using std::runtime_error;
 
 void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-
+  //
   // Copy values of HighsOptions for the simplex solver
-  // TODO: Get this right with proper simplex strategy
+  //
+  // Currently most of these options are straight copies, but they
+  // will become valuable when "choose" becomes a HiGHS strategy value
+  // that will need converting into a specific simplex strategy value.
+  //
   simplex_info.simplex_strategy = opt.simplex_strategy;
-  simplex_info.dual_edge_weight_strategy =
-      opt.simplex_dual_edge_weight_strategy;
+  simplex_info.dual_edge_weight_strategy = opt.simplex_dual_edge_weight_strategy;
   simplex_info.price_strategy = opt.simplex_price_strategy;
   simplex_info.primal_feasibility_tolerance = opt.primal_feasibility_tolerance;
   simplex_info.dual_feasibility_tolerance = opt.dual_feasibility_tolerance;
-  simplex_info.dual_objective_value_upper_bound =
-      opt.dual_objective_value_upper_bound;
+  simplex_info.dual_objective_value_upper_bound = opt.dual_objective_value_upper_bound;
   simplex_info.perturb_costs = opt.simplex_perturb_costs;
   simplex_info.iteration_limit = opt.simplex_iteration_limit;
   simplex_info.update_limit = opt.simplex_update_limit;
@@ -60,6 +62,168 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   simplex_info.analyse_invert_time = false;
   simplex_info.analyseRebuildTime = false;
 #endif
+}
+
+void transition(HighsModelObject &highs_model_object) {
+  // Perform the transition from whatever information is known about
+  // the LP to a status where simplex data are set up for the initial
+  // rebuild() of the chosen solver - primal, scalar dual or parallel
+  // dual.
+  // 
+  // First look at what basis and solution information is known. If a
+  // simplex basis is known, then it's used, and there's no need for
+  // the solution values. This will usually correspond to hot start
+  // when solving MIP problems. Otherwise, generate a simplex basis,
+  // thus:
+  //
+  // If there is a HiGHS basis: use it to determine what's basic and nonbasic (nonbasicFlag).
+  //
+  // If there's no HiGHS basis: generate nonbasicFlag, possibly by dualising and performing a crash.
+  //
+  // Use nonbasicFlag to generate basicIndex
+  //
+  // Use nonbasicFlag and any HiGHS solution to determine nonbasicMove
+  //
+  HighsTimer &timer = highs_model_object.timer_;
+  const HighsOptions &options = highs_model_object.options_;
+  HighsSolution &solution = highs_model_object.solution_;
+  HighsBasis &basis = highs_model_object.basis_;
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  if (!simplex_lp_status.has_basis) {
+    // No simplex basis
+    // Invalidate the simplex LP
+    invalidateSimplexLp(simplex_lp_status);
+    // Identify a simplex basis
+    // Copy the LP to the structure to be used by the solver
+    simplex_lp = highs_model_object.simplex_lp_;
+
+    // Initialise the real and integer random vectors
+    initialiseSimplexLpRandomVectors(highs_model_object);
+    //
+    // Allocate memory for the basis
+    const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
+    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    simplex_basis.nonbasicFlag_.resize(numTot);
+    simplex_basis.nonbasicMove_.resize(numTot);
+    simplex_lp_status.has_basis = false;
+    bool basis_ok = true;
+    if (basis.valid_) {
+      // There is is HiGHS basis: use it to construct nonbasicFlag,
+      // checking that it has the right number of basic variables
+      int num_basic_variables = 0;
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+	int iVar = iCol;
+	if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
+	  assert(num_basic_variables < simplex_lp.numRow_);
+	  if (num_basic_variables >= simplex_lp.numRow_) {
+	    basis_ok = false;
+	    break;
+	  }
+	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+	  num_basic_variables++;
+	} else {
+	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+	}
+      }
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+	int iVar = simplex_lp.numCol_ + iRow;
+	if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
+	  assert(num_basic_variables < simplex_lp.numRow_);
+	  if (num_basic_variables >= simplex_lp.numRow_) {
+	    basis_ok = false;
+	    break;
+	  }
+	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+	  num_basic_variables++;
+	} else {
+	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+	}
+      }
+      assert(num_basic_variables == simplex_lp.numRow_);
+      if (num_basic_variables != simplex_lp.numRow_) basis_ok = false;
+      if (!basis_ok) basis.valid_ = false;
+    }
+    // If the HiGHS basis is not valid, generate one, possibly by dualising and performing a crash.
+    if (!basis.valid_) {
+
+      // Possibly dualise
+      //if (options.simplex_dualise_strategy != SimplexDualiseStrategy::OFF) dualiseSimplexLp(highs_model_object);
+
+      // Possibly permute the columns of the LP to be used by the solver. 
+      if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF) permuteSimplexLp(highs_model_object);
+      
+      // Possibly find a crash basis
+      if (options.simplex_crash_strategy != SimplexCrashStrategy::OFF) {
+	for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+	for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_+iRow] = NONBASIC_FLAG_FALSE;
+	HCrash crash(highs_model_object);
+	timer.start(timer.crash_clock);
+	timer.start(simplex_info.clock_[CrashClock]);
+	crash.crash(options.simplex_crash_strategy);
+	timer.stop(simplex_info.clock_[CrashClock]);
+	timer.stop(timer.crash_clock);	
+      }
+    }
+    // Now there is a valid nonbasicFlag, use it to form basicIndex
+    basis_ok = true;
+    int num_basic_variables = 0;
+    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
+	assert(num_basic_variables < simplex_lp.numRow_);
+	if (num_basic_variables >= simplex_lp.numRow_) {
+	  basis_ok = false;
+	  break;
+	}
+	simplex_basis.basicIndex_[num_basic_variables] = iVar;
+	num_basic_variables++;
+      }
+    }
+    assert(num_basic_variables == simplex_lp.numRow_);
+    if (num_basic_variables != simplex_lp.numRow_) basis_ok = false;
+    if (!basis_ok) {
+      // Something's gone wrong, so revert to logical basis
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+	int iVar = iCol;
+	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+      }
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
+	int iVar = simplex_lp.numCol_ + iRow;
+	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+	simplex_basis.basicIndex_[iRow] = iVar;
+      }
+    }
+  }
+  //
+  // Possibly scale the LP to be used by the solver
+  //
+  // Initialise unit scaling factors, to simplify things if no scaling
+  // is performed
+  scaleHighsModelInit(highs_model_object);
+  if (options.simplex_scale_strategy != SimplexScaleStrategy::OFF) scaleSimplexLp(highs_model_object);
+#ifdef HiGHSDEV
+  HighsScale &scale = highs_model_object.scale_;
+  // Analyse the scaled LP
+  if (simplex_info.analyseLp) {
+    analyseLp(highs_model_object.lp_, "Unscaled");
+    if (simplex_lp_status.is_scaled) {
+      analyseVectorValues("Column scaling factors", simplex_lp.numCol_, scale.col_, false);
+      analyseVectorValues("Row    scaling factors", simplex_lp.numRow_, scale.row_, false);
+      analyseLp(simplex_lp, "Scaled");
+    }
+  }
+#endif
+  // Now there is a valid nonbasicFlag and basicIndex, possibly
+  // reinvert to check for basis condition/singularity
+
+
+  // Now there is a simplex basis and values of nonbasic primal
+  // variables, (possibly) solve for the basic primal and nonbasic
+  // dual values to determine which simplex solver to use, unless it's
+  // forced
+  
 }
 
 void setupSimplexLp(HighsModelObject &highs_model_object) {
@@ -641,14 +805,15 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
       initialise_from_nonbasic(highs_model_object);
     } else {
       // ... or initialise with a logical basis and crash
-      initialise_with_logical_basis(highs_model_object);
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_+iRow] = NONBASIC_FLAG_FALSE;
       HCrash crash(highs_model_object);
       timer.start(timer.crash_clock);
       timer.start(simplex_info.clock_[CrashClock]);
       crash.crash(options.simplex_crash_strategy);
       timer.stop(simplex_info.clock_[CrashClock]);
       timer.stop(timer.crash_clock);
-      initialise_basic_index(highs_model_object);
+      initialise_from_nonbasic(highs_model_object);
     }
     // Now set up the internal matrix structures using the supplied or crash basis
     matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
@@ -941,15 +1106,6 @@ void initialiseSimplexLpRandomVectors(HighsModelObject &highs_model_object) {
 }
 
 // SCALING:
-// Limits on scaling factors
-const double minAlwScale = 1 / 1024.0;
-const double maxAlwScale = 1024.0;
-const double maxAlwCostScale = maxAlwScale;
-const double minAlwColScale = minAlwScale;
-const double maxAlwColScale = maxAlwScale;
-const double minAlwRowScale = minAlwScale;
-const double maxAlwRowScale = maxAlwScale;
-
 #ifdef HiGHSDEV
 // Information on large costs
 const double tlLargeCo = 1e5;
@@ -969,6 +1125,7 @@ void scaleHighsModelInit(HighsModelObject &highs_model_object) {
 
 void scaleCosts(HighsModelObject &highs_model_object) {
   // Scale the costs by no less than minAlwCostScale
+  double maxAlwCostScale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
   double costScale = highs_model_object.scale_.cost_;
   double maxNzCost = 0;
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
@@ -1059,10 +1216,9 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
   double *rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  bool originalScaling = true;
+  bool originalScaling = highs_model_object.options_.simplex_scale_strategy == SimplexScaleStrategy::HSOL;
   bool alwCostScaling = true;
-  if (originalScaling)
-    alwCostScaling = false;
+  if (originalScaling) alwCostScaling = false;
 
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
@@ -1099,7 +1255,22 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
   //  if (originalScaling)
   includeCost = minNzCost < 0.1;
 
-  // Search up to 6 times
+  // Limits on scaling factors
+  double maxAlwScale;
+  double minAlwScale;
+  if (originalScaling) {
+    maxAlwScale = HIGHS_CONST_INF;
+  } else {
+    maxAlwScale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+  } 
+  minAlwScale = 1/maxAlwScale;
+  
+  double minAlwColScale = minAlwScale;
+  double maxAlwColScale = maxAlwScale;
+  double minAlwRowScale = minAlwScale;
+  double maxAlwRowScale = maxAlwScale;
+
+// Search up to 6 times
   vector<double> rowMin(numRow, inf);
   vector<double> rowMax(numRow, 1 / inf);
   for (int search_count = 0; search_count < 6; search_count++) {
