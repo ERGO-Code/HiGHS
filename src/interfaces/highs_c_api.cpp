@@ -22,3 +22,15 @@ int Highs_loadFromFile(void* highs, const char* filename) {
    reader->readModelFromFile(options, lp);
    return (int)((Highs*)highs)->initializeLp(lp);
 }
+
+int Highs_setHighsOptionValue(void* highs, const char* option, const char* value) {
+   return (int)((Highs*)highs)->setHighsOptionValue(std::string(option), std::string(value));
+}
+
+int Highs_initializeFromFile(void* highs, const char* filename) {
+   return (int)((Highs*)highs)->initializeFromFile(std::string(filename));
+}
+
+int Highs_writeToFile(void* highs, const char* filename) {
+   return (int)((Highs*)highs)->writeToFile(std::string(filename));
+}

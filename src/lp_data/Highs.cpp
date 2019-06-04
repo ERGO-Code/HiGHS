@@ -56,7 +56,7 @@ HighsStatus Highs::initializeFromFile(const std::string filename) {
   return this->initializeLp(model);
 }
 
-HighsStatus writeToFile(const std::string filename) {
+HighsStatus Highs::writeToFile(const std::string filename) {
   HighsLp model; // todo: get right lp
 
   Filereader* writer = Filereader::getFilereader(filename.c_str());
