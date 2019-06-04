@@ -24,23 +24,9 @@ void options(
 	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
 	     );
 
-void reportSimplexLpStatus(
-			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be reported
-			   const char* message = ""
-			   );
-
-void invalidateSimplexLpData(
-			     HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
-			     );
-
-void invalidateSimplexLp(
-			 HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
-			 );
-
-void updateSimplexLpStatus(
-			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
-			   LpAction action// !< Action prompting update
-				  );
+void setupSimplexLp(
+		    HighsModelObject &highs_model_object
+		    );
 
 void postsolveRefineHighsBasisAndSolution(
 					  HighsModelObject &highs_model_object
@@ -49,10 +35,6 @@ void postsolveRefineHighsBasisAndSolution(
 void rebuildPostsolve(
 		      HighsModelObject &highs_model_object
 		      );
-
-void setupSimplexLp(
-		    HighsModelObject &highs_model_object
-		    );
 
 bool dual_infeasible(
 		     const double value,
@@ -382,5 +364,23 @@ void report_iteration_count_primal_objective_value(
 						 );
 
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
+
+void reportSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be reported
+			   const char* message = ""
+			   );
+
+void invalidateSimplexLpData(
+			     HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
+			     );
+
+void invalidateSimplexLp(
+			 HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
+			 );
+
+void updateSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
+			   LpAction action// !< Action prompting update
+				  );
 
 #endif // SIMPLEX_HSIMPLEX_H_
