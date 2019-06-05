@@ -24,9 +24,9 @@ void options(
 	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
 	     );
 
-void transition(
-		HighsModelObject &highs_model_object
-		);
+SimplexSolutionStatus transition(
+				 HighsModelObject &highs_model_object
+				 );
 
 void setupSimplexLp(
 		    HighsModelObject &highs_model_object

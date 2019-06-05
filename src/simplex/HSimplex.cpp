@@ -64,7 +64,7 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 #endif
 }
 
-void transition(HighsModelObject &highs_model_object) {
+SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   // Perform the transition from whatever information is known about
   // the LP to a status where simplex data are set up for the initial
   // rebuild() of the chosen solver - primal, scalar dual or parallel
@@ -86,12 +86,21 @@ void transition(HighsModelObject &highs_model_object) {
   //
   HighsTimer &timer = highs_model_object.timer_;
   const HighsOptions &options = highs_model_object.options_;
-  HighsSolution &solution = highs_model_object.solution_;
+  const HighsSolution &solution = highs_model_object.solution_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HFactor &factor = highs_model_object.factor_;
+  HMatrix &matrix = highs_model_object.matrix_;
+  // First determine whether the HiGHS solution space has been
+  // allocated, a necessary condition for its values to be used later
+  bool have_highs_solution = 
+    solution.col_value.size() == highs_model_object.lp_.numCol_ &&
+    solution.col_dual.size() == highs_model_object.lp_.numCol_ &&
+    solution.row_value.size() == highs_model_object.lp_.numRow_ &&
+    solution.row_dual.size() == highs_model_object.lp_.numRow_;
   if (!simplex_lp_status.has_basis) {
     // No simplex basis
     // Invalidate the simplex LP
@@ -109,7 +118,6 @@ void transition(HighsModelObject &highs_model_object) {
     simplex_basis.nonbasicFlag_.resize(numTot);
     simplex_basis.nonbasicMove_.resize(numTot);
     simplex_lp_status.has_basis = false;
-    bool basis_ok = true;
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag,
       // checking that it has the right number of basic variables
@@ -117,13 +125,8 @@ void transition(HighsModelObject &highs_model_object) {
       for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
 	int iVar = iCol;
 	if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
-	  assert(num_basic_variables < simplex_lp.numRow_);
-	  if (num_basic_variables >= simplex_lp.numRow_) {
-	    basis_ok = false;
-	    break;
-	  }
-	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
 	  num_basic_variables++;
+	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
 	} else {
 	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
 	}
@@ -131,34 +134,32 @@ void transition(HighsModelObject &highs_model_object) {
       for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
 	int iVar = simplex_lp.numCol_ + iRow;
 	if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
-	  assert(num_basic_variables < simplex_lp.numRow_);
-	  if (num_basic_variables >= simplex_lp.numRow_) {
-	    basis_ok = false;
-	    break;
-	  }
-	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
 	  num_basic_variables++;
+	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
 	} else {
 	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
 	}
       }
       assert(num_basic_variables == simplex_lp.numRow_);
-      if (num_basic_variables != simplex_lp.numRow_) basis_ok = false;
-      if (!basis_ok) basis.valid_ = false;
+      if (num_basic_variables != simplex_lp.numRow_) basis.valid_ = false;
     }
-    // If the HiGHS basis is not valid, generate one, possibly by dualising and performing a crash.
-    if (!basis.valid_) {
+    // nonbasicFlag is valid if the HiGHS basis exists and has the correct number of basic variables
+    bool nonbasicFlag_valid = basis.valid_;
+    if (!nonbasicFlag_valid) {
+      // nonbasicFlag is not valid, so generate a simplex basis, possibly by performing a crash, and possibly after dualising
 
-      // Possibly dualise
-      //if (options.simplex_dualise_strategy != SimplexDualiseStrategy::OFF) dualiseSimplexLp(highs_model_object);
+      // Possibly dualise, making sure that no simplex or other data are used to initialise
+      //if (options.simplex_dualise_strategy != SimplexDualiseStrategy::OFF) {dualiseSimplexLp(highs_model_object); have_highs_solution = false;}
 
       // Possibly permute the columns of the LP to be used by the solver. 
       if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF) permuteSimplexLp(highs_model_object);
       
+      // Set up a logical basis
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_+iRow] = NONBASIC_FLAG_FALSE;
+
       // Possibly find a crash basis
       if (options.simplex_crash_strategy != SimplexCrashStrategy::OFF) {
-	for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-	for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_+iRow] = NONBASIC_FLAG_FALSE;
 	HCrash crash(highs_model_object);
 	timer.start(timer.crash_clock);
 	timer.start(simplex_info.clock_[CrashClock]);
@@ -167,63 +168,189 @@ void transition(HighsModelObject &highs_model_object) {
 	timer.stop(timer.crash_clock);	
       }
     }
-    // Now there is a valid nonbasicFlag, use it to form basicIndex
-    basis_ok = true;
+    // Now that the dimensions of the LP to be solved by the simplex
+    // method are know, make sure that there is a postive number of
+    // rows. ToDo: Ensure that LPs with no rows can still be solved
+    assert(simplex_lp.numRow_>0);
+    if (simplex_lp.numRow_ == 0) {
+      printf("Cannot currently solve LPs with no rows using the simplex method\n");
+      return SimplexSolutionStatus::FAILED;
+    }
+    
+    // There is now a nonbasicFlag that should be valid - have the
+    // right number of basic variables - so check this
     int num_basic_variables = 0;
     for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) num_basic_variables++;
+    }
+    nonbasicFlag_valid = num_basic_variables == simplex_lp.numRow_;
+    assert(nonbasicFlag_valid);
+    if (!nonbasicFlag_valid) {
+      // Something's gone wrong: any HiGHS basis has been checked and,
+      // if there isn't one or it's been found to be invalid, a
+      // logical or crash basis has been set up. Both should guarantee
+      // the right number of basic variables
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow] = NONBASIC_FLAG_FALSE;
+      nonbasicFlag_valid = true;
+      // The HiGHS basis shouldn't be valid at this point
+      assert(!basis.valid_);
+    }
+    // Use nonbasicFlag to form basicIndex
+    num_basic_variables = 0;
+    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
-	assert(num_basic_variables < simplex_lp.numRow_);
-	if (num_basic_variables >= simplex_lp.numRow_) {
-	  basis_ok = false;
-	  break;
-	}
 	simplex_basis.basicIndex_[num_basic_variables] = iVar;
 	num_basic_variables++;
       }
     }
-    assert(num_basic_variables == simplex_lp.numRow_);
-    if (num_basic_variables != simplex_lp.numRow_) basis_ok = false;
-    if (!basis_ok) {
-      // Something's gone wrong, so revert to logical basis
-      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-	int iVar = iCol;
-	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-      }
-      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-	int iVar = simplex_lp.numCol_ + iRow;
-	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-	simplex_basis.basicIndex_[iRow] = iVar;
-      }
-    }
+    // Double-check that we have the right number of basic variables
+    nonbasicFlag_valid = num_basic_variables == simplex_lp.numRow_;
+    assert(nonbasicFlag_valid);
+    // 
   }
+  // Execute from here for all calls
   //
-  // Possibly scale the LP to be used by the solver
+  bool have_highs_basis = basis.valid_;
   //
-  // Initialise unit scaling factors, to simplify things if no scaling
-  // is performed
-  scaleHighsModelInit(highs_model_object);
-  if (options.simplex_scale_strategy != SimplexScaleStrategy::OFF) scaleSimplexLp(highs_model_object);
+  // Possibly scale the LP to be solved
+  //
+  // If the LP to be solved isn't scaled then initialise unit scaling
+  // factors, to simplify things if no scaling is performed. ToDo This
+  // is inefficient if the LP isn't to be scales and is repeatedly
+  // hot-started - but is this really going to happen?
+  if (!simplex_lp_status.is_scaled) scaleHighsModelInit(highs_model_object);
+  //
+  // Scale the LP to be used by the solver if scaling is to be used and the LP is not already scaled
+  bool scale_lp = options.simplex_scale_strategy != SimplexScaleStrategy::OFF && !simplex_lp_status.is_scaled;
+  if (scale_lp) {
+    scaleSimplexLp(highs_model_object);
 #ifdef HiGHSDEV
-  HighsScale &scale = highs_model_object.scale_;
-  // Analyse the scaled LP
-  if (simplex_info.analyseLp) {
-    analyseLp(highs_model_object.lp_, "Unscaled");
-    if (simplex_lp_status.is_scaled) {
-      analyseVectorValues("Column scaling factors", simplex_lp.numCol_, scale.col_, false);
-      analyseVectorValues("Row    scaling factors", simplex_lp.numRow_, scale.row_, false);
-      analyseLp(simplex_lp, "Scaled");
+    HighsScale &scale = highs_model_object.scale_;
+    // Analyse the scaled LP
+    if (simplex_info.analyseLp) {
+      analyseLp(highs_model_object.lp_, "Unscaled");
+      if (simplex_lp_status.is_scaled) {
+	analyseVectorValues("Column scaling factors", simplex_lp.numCol_, scale.col_, false);
+	analyseVectorValues("Row    scaling factors", simplex_lp.numRow_, scale.row_, false);
+	analyseLp(simplex_lp, "Scaled");
+      }
     }
   }
 #endif
   // Now there is a valid nonbasicFlag and basicIndex, possibly
   // reinvert to check for basis condition/singularity
+  //
+  // First setup the factor arrays if they don't exist
+  if (!simplex_lp_status.has_factor_arrays) {
+    factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		 &simplex_lp.Astart_[0],
+		 &simplex_lp.Aindex_[0],
+		 &simplex_lp.Avalue_[0],
+		 &simplex_basis.basicIndex_[0]);
+    simplex_lp_status.has_factor_arrays = true;
+  }
+  // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot start
+  bool reinvert = !simplex_lp_status.has_fresh_invert;
+  if (reinvert) {
+    int rankDeficiency = compute_factor(highs_model_object);
+    if (rankDeficiency) {
+      // ToDo Handle rank deficiency by replacing singular columns with logicals
+      throw runtime_error("Transition has singular basis matrix");
+    }
+  }
+  // Possibly check for basis condition. ToDo Override this for MIP hot start
+  bool basis_condition_ok = true;
+  if (highs_model_object.options_.simplex_initial_condition_check) {
+    timer.start(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition = computeBasisCondition(highs_model_object);
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
+    basis_condition_ok = basis_condition < basis_condition_tolerance;
+    printf("Initial basis condition estimate of %11.4g", basis_condition);
+    if (basis_condition_ok) {
+      printf(" is within the tolerance of %g\n", basis_condition_tolerance);
+    } else { 
+      printf(" exceeds the tolerance of %g\n", basis_condition_tolerance);
+    }
+  }
+  // ToDo Handle ill-conditioned basis with basis crash, in which case
+  // ensure that HiGHS and simplex basis are invalidated and simplex
+  // work and base arrays are re-populated
+  assert(basis_condition_ok);
+  // Now there are nonbasicFlag and basicIndex corresponding to a
+  // basis with well-conditioned invertible representation, possibly
+  // set up set up the simplex work and base arrays
+  if (!simplex_lp_status.has_basis) {
+    allocate_work_and_base_arrays(highs_model_object);
+    initialise_cost(highs_model_object);
+    initialise_bound(highs_model_object);
+    // Don't have a simplex basis since nonbasicMove is not set up. Do this 
+    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+	// Nonbasic variable
+	if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) {
+	  // Fixed
+	  simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+	  simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+	} else if (!highs_isInfinity(-simplex_info.workLower_[iVar])) {
+	  // Finite lower bound so boxed or lower
+	  if (!highs_isInfinity(simplex_info.workUpper_[iVar])) {
+	    // Finite upper bound so boxed
+	    double midpoint = 0.5*(simplex_info.workLower_[iVar] + simplex_info.workUpper_[iVar]);
+	    // Set according to Determine the bound to u
 
+	    if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
+            // Set at lower
+            simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+          } else if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
+            // Set at upper
+            simplex_info.workValue_[iVar] = simplex_info.workUpper_[iVar];
+          } else {
+            // Invalid nonbasicMove: correct and set value at lower
+            simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
+            simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+          }
+        } else {
+          // Lower
+          simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
+          simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
+        }
+      } else if (!highs_isInfinity(simplex_info.workUpper_[iVar])) {
+        // Upper
+        simplex_info.workValue_[iVar] = simplex_info.workUpper_[iVar];
+        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_DN;
+      } else {
+        // FREE
+        simplex_info.workValue_[iVar] = 0;
+        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+      }
+      // dl_pr_act = simplex_info.workValue_[iVar] - prev_pr_act;
+      // norm_dl_pr_act += dl_pr_act*dl_pr_act;
+      //      if (fabs(dl_pr_act) > 1e-4) printf("IVar %5d: [LB; Pr; UB] of [%8g;
+      //      %8g; %8g] Du = %8g; DlPr = %8g\n",
+      //					iVar,
+      //simplex_info.workLower_[iVar],
+      // simplex_info.workValue_[iVar], simplex_info.workUpper_[iVar],
+      // simplex_info.workDual_[iVar], dl_pr_act);
+	
+      } else {
+	// Basic variable
+	simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+      }
 
-  // Now there is a simplex basis and values of nonbasic primal
-  // variables, (possibly) solve for the basic primal and nonbasic
-  // dual values to determine which simplex solver to use, unless it's
-  // forced
+    }
+  }
+      populate_work_arrays(highs_model_object);
+
+  // Deduce the consequences of a new basis
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+
+  //  if (!simplex_lp_status.has_matrix_col_wise || !simplex_lp_status.has_matrix_row_wise) {
   
+    
+  //possibly) solve for the basic primal and nonbasic dual values to determine
+  // which simplex solver to use, unless it's forced
 }
 
 void setupSimplexLp(HighsModelObject &highs_model_object) {

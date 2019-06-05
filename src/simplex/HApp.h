@@ -53,7 +53,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 
   bool use_transition = false;
   if (use_transition) {
-    transition(highs_model_object);
+    simplex_lp_status.solution_status = transition(highs_model_object);
+    if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
+      return simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
     // Official start of solver
     // Start the solve closk - because setupForSimplexSolve has simplex computations
     timer.start(timer.solve_clock);
