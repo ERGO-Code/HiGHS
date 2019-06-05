@@ -8,7 +8,7 @@ extern "C" {
 /*
  * @brief runs a model using HiGHS
  */
-void callhighs(
+int callhighs(
     int numcol,        //!< number of columns
     int numrow,        //!< number of rows
     int numnz,         //!< number of entries in the constraint matrix
@@ -60,6 +60,25 @@ int Highs_readFromFile(void *highs,          //!< HiGHS object reference
  */
 int Highs_writeToFile(void *highs,          //!< HiGHS object reference
                       const char *filename  //!< filename
+);
+
+/*
+ * @brief load full model
+ */
+int Highs_loadModel(
+    void *highs,       //!< HiGHS object reference
+    int numcol,        //!< number of columns
+    int numrow,        //!< number of rows
+    int numnz,         //!< number of entries in the constraint matrix
+    double *colcost,   //!< array of length [numcol] with column costs
+    double *collower,  //!< array of length [numcol] with lower column bounds
+    double *colupper,  //!< array of length [numcol] with upper column bounds
+    double *rowlower,  //!< array of length [numrow] with lower row bounds
+    double *rowupper,  //!< array of length [numrow] with upper row bounds
+    int *astart,       //!< array of length [numcol+1] with column start indices
+    int *
+        aindex,  //!< array of length [numnz] with row indices of matrix entries
+    double *avalue  //!< array of length [numnz] with value of matrix entries
 );
 
 /*
@@ -135,13 +154,14 @@ int Highs_addRows(
 /**
  * @brief Adds a column to the model
  */
-int Highs_addCol(void *highs,           //!< HiGHS object reference
-            const double cost,     //!< Cost of the column
-            const double lower,    //!< Lower bound of the column
-            const double upper,    //!< Upper bound of the column
-            const int num_new_nz,  //!< Number of nonzeros in the column
-            const int *indices,   //!< Array of size num_new_nz with row indices
-            const double *values  //!< Array of size num_new_nz with row values
+int Highs_addCol(
+    void *highs,           //!< HiGHS object reference
+    const double cost,     //!< Cost of the column
+    const double lower,    //!< Lower bound of the column
+    const double upper,    //!< Upper bound of the column
+    const int num_new_nz,  //!< Number of nonzeros in the column
+    const int *indices,    //!< Array of size num_new_nz with row indices
+    const double *values   //!< Array of size num_new_nz with row values
 );
 
 /**
@@ -166,7 +186,7 @@ int Highs_addCols(
  * @brief Change the objective sense of the model
  */
 int Highs_changeObjectiveSense(void *highs,     //!< HiGHS object reference
-                          const int sense  //!< New objective sense
+                               const int sense  //!< New objective sense
 );
 
 /**
@@ -283,22 +303,23 @@ int Highs_changeRowsBoundsByMask(
 /**
  * @brief Get multiple columns from the model given by an interval
  */
-int Highs_getColsByRange(void *highs,         //!< HiGHS object reference
-                    const int from_col,  //!< The index of the first column to
-                                         //!< get from the model
-                    const int to_col,  //!< One more than the last column to get
-                                       //!< from the model
-                    int num_col,      //!< Number of columns got from the model
-                    double *costs,     //!< Array of size num_col with costs
-                    double *lower,  //!< Array of size num_col with lower bounds
-                    double *upper,  //!< Array of size num_col with upper bounds
-                    int num_nz,    //!< Number of nonzeros got from the model
-                    int *matrix_start,    //!< Array of size num_col with start
-                                          //!< indices of the columns
-                    int *matrix_index,    //!< Array of size num_nz with row
-                                          //!< indices for the columns
-                    double *matrix_value  //!< Array of size num_nz with row
-                                          //!< values for the columns
+int Highs_getColsByRange(
+    void *highs,          //!< HiGHS object reference
+    const int from_col,   //!< The index of the first column to
+                          //!< get from the model
+    const int to_col,     //!< One more than the last column to get
+                          //!< from the model
+    int num_col,          //!< Number of columns got from the model
+    double *costs,        //!< Array of size num_col with costs
+    double *lower,        //!< Array of size num_col with lower bounds
+    double *upper,        //!< Array of size num_col with upper bounds
+    int num_nz,           //!< Number of nonzeros got from the model
+    int *matrix_start,    //!< Array of size num_col with start
+                          //!< indices of the columns
+    int *matrix_index,    //!< Array of size num_nz with row
+                          //!< indices for the columns
+    double *matrix_value  //!< Array of size num_nz with row
+                          //!< values for the columns
 );
 
 /**
@@ -309,11 +330,11 @@ int Highs_getColsBySet(
     const int num_set_entries,  //!< The number of indides in the set
     const int *set,             //!< Array of size num_set_entries with indices
                                 //!< of columns to get
-    int num_col,               //!< Number of columns got from the model
+    int num_col,                //!< Number of columns got from the model
     double *costs,              //!< Array of size num_col with costs
     double *lower,              //!< Array of size num_col with lower bounds
     double *upper,              //!< Array of size num_col with upper bounds
-    int num_nz,                //!< Number of nonzeros got from the model
+    int num_nz,                 //!< Number of nonzeros got from the model
     int *matrix_start,          //!< Array of size num_col with start indices
                                 //!< of the columns
     int *matrix_index,          //!< Array of size num_nz with row indices
@@ -328,11 +349,11 @@ int Highs_getColsBySet(
 int Highs_getColsByMask(
     void *highs,          //!< HiGHS object reference
     const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_col,         //!< Number of columns got from the model
+    int num_col,          //!< Number of columns got from the model
     double *costs,        //!< Array of size num_col with costs
     double *lower,        //!< Array of size num_col with lower bounds
     double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,          //!< Number of nonzeros got from the model
+    int num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!<  Array of size num_col with start
                           //!<  indices of the columns
     int *matrix_index,    //!<  Array of size num_nz with row indices
@@ -348,10 +369,10 @@ int Highs_getRowsByRange(
     void *highs,          //!< HiGHS object reference
     const int from_row,   //!< The index of the first row to get from the model
     const int to_row,     //!< One more than the last row get from the model
-    int num_row,         //!< Number of rows got from the model
+    int num_row,          //!< Number of rows got from the model
     double *lower,        //!< Array of size num_row with lower bounds
     double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,          //!< Number of nonzeros got from the model
+    int num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_row with start indices of the
                           //!< rows
     int *matrix_index,    //!< Array of size num_nz with column indices for the
@@ -368,10 +389,10 @@ int Highs_getRowsBySet(
     const int num_set_entries,  //!< The number of indides in the set
     const int *set,             //!< Array of size num_set_entries with indices
                                 //!< of rows to get
-    int num_row,               //!< Number of rows got from the model
+    int num_row,                //!< Number of rows got from the model
     double *lower,              //!< Array of size num_row with lower bounds
     double *upper,              //!< Array of size num_row with upper bounds
-    int num_nz,                //!< Number of nonzeros got from the model
+    int num_nz,                 //!< Number of nonzeros got from the model
     int *matrix_start,          //!< Array of size num_row with start indices
                                 //!< of the rows
     int *matrix_index,          //!< Array of size num_nz with column indices
@@ -386,10 +407,10 @@ int Highs_getRowsBySet(
 int Highs_getRowsByMask(
     void *highs,          //!< HiGHS object reference
     const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_row,         //!< Number of rows got from the model
+    int num_row,          //!< Number of rows got from the model
     double *lower,        //!< Array of size num_row with lower bounds
     double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,          //!< Number of nonzeros got from the model
+    int num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_row with start indices
                           //!< of the rows
     int *matrix_index,    //!< Array of size num_nz with column indices
@@ -401,11 +422,12 @@ int Highs_getRowsByMask(
 /**
  * @brief Delete multiple columns from the model given by an interval
  */
-int Highs_deleteColsByRange(void *highs,         //!< HiGHS object reference
-                       const int from_col,  //!< The index of the first column
-                                            //!< to delete from the model
-                       const int to_col  //!< One more than the last column to
-                                         //!< delete from the model
+int Highs_deleteColsByRange(
+    void *highs,         //!< HiGHS object reference
+    const int from_col,  //!< The index of the first column
+                         //!< to delete from the model
+    const int to_col     //!< One more than the last column to
+                         //!< delete from the model
 );
 
 /**

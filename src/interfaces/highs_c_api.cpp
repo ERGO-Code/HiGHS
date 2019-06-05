@@ -2,11 +2,65 @@
 #include "Highs.h"
 #include "io/Filereader.h"
 
-void callhighs(int numcol, int numrow, int numnz, double *colcost,
-               double *collower, double *colupper, double *rowlower,
-               double *rowupper, int *astart, int *aindex, double *avalue,
-               double *colvalue, double *coldual, double *rowvalue,
-               double *rowdual, int *colbasisstatus, int *rowbasisstatus) {
+int callhighs(int numcol, int numrow, int numnz, double *colcost,
+              double *collower, double *colupper, double *rowlower,
+              double *rowupper, int *astart, int *aindex, double *avalue,
+              double *colvalue, double *coldual, double *rowvalue,
+              double *rowdual, int *colbasisstatus, int *rowbasisstatus) {
+  Highs highs;
+
+  int status =
+      Highs_loadModel(&highs, numcol, numrow, numnz, colcost, collower,
+                      colupper, rowlower, rowupper, astart, aindex, avalue);
+  if (status != 1) {
+    return status;
+  }
+
+  status = (int)highs.run();
+
+  if (status == 1) {
+    HighsSolution solution;
+    HighsBasis basis;
+
+    solution = highs.getSolution();
+    basis = highs.getBasis();
+
+    for (int i = 0; i < numcol; i++) {
+      colvalue[i] = solution.col_value[i];
+      coldual[i] = solution.col_dual[i];
+
+      colbasisstatus[i] = (int)basis.col_status[i];
+    }
+
+    for (int i = 0; i < numrow; i++) {
+      rowvalue[i] = solution.row_value[i];
+      rowdual[i] = solution.row_dual[i];
+
+      rowbasisstatus[i] = (int)basis.row_status[i];
+    }
+  }
+
+  return status;
+}
+
+void *Highs_create() { return new Highs(); }
+
+void Highs_destroy(void *highs) { delete (Highs *)highs; }
+
+int Highs_run(void *highs) { return (int)((Highs *)highs)->run(); }
+
+int Highs_readFromFile(void *highs, const char *filename) {
+  return (int)((Highs *)highs)->initializeFromFile(std::string(filename));
+}
+
+int Highs_writeToFile(void *highs, const char *filename) {
+  return (int)((Highs *)highs)->writeToFile(std::string(filename));
+}
+
+int Highs_loadModel(void *highs, int numcol, int numrow, int numnz,
+                    double *colcost, double *collower, double *colupper,
+                    double *rowlower, double *rowupper, int *astart,
+                    int *aindex, double *avalue) {
   HighsLp lp;
   lp.numCol_ = numcol;
   lp.numRow_ = numrow;
@@ -32,47 +86,7 @@ void callhighs(int numcol, int numrow, int numnz, double *colcost,
   lp.Aindex_.assign(aindex, aindex + numnz);
   lp.Avalue_.assign(avalue, avalue + numnz);
 
-  HighsOptions options;
-  HighsStatus status;
-
-  Highs highs(options);
-
-  status = highs.initializeLp(lp);
-  status = highs.run();
-
-  HighsSolution solution;
-  HighsBasis basis;
-
-  solution = highs.getSolution();
-  basis = highs.getBasis();
-
-  for (int i = 0; i < numcol; i++) {
-    colvalue[i] = solution.col_value[i];
-    coldual[i] = solution.col_dual[i];
-
-    colbasisstatus[i] = (int)basis.col_status[i];
-  }
-
-  for (int i = 0; i < numrow; i++) {
-    rowvalue[i] = solution.row_value[i];
-    rowdual[i] = solution.row_dual[i];
-
-    rowbasisstatus[i] = (int)basis.row_status[i];
-  }
-}
-
-void *Highs_create() { return new Highs(); }
-
-void Highs_destroy(void *highs) { delete (Highs *)highs; }
-
-int Highs_run(void *highs) { return (int)((Highs *)highs)->run(); }
-
-int Highs_readFromFile(void *highs, const char *filename) {
-  return (int)((Highs *)highs)->initializeFromFile(std::string(filename));
-}
-
-int Highs_writeToFile(void *highs, const char *filename) {
-  return (int)((Highs *)highs)->writeToFile(std::string(filename));
+  return (int)((Highs *)highs)->initializeLp(lp);
 }
 
 int Highs_setHighsOptionValue(void *highs, const char *option,
@@ -155,279 +169,134 @@ int Highs_changeObjectiveSense(void *highs, const int sense) {
   return ((Highs *)highs)->changeObjectiveSense(sense);
 }
 
-int Highs_changeColCost(
-    void *highs,       //!< HiGHS object reference
-    const int col,     //!< The index of the column whose cost is to change
-    const double cost  //!< The new cost
-) {
+int Highs_changeColCost(void *highs, const int col, const double cost) {
   return ((Highs *)highs)->changeColCost(col, cost);
 }
 
-int Highs_changeColsCostBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set,     //!< Array of size num_set_entries with indices of
-                        //!< columns whose costs change
-    const double *cost  //!< Array of size num_set_entries with new costs
-) {
+int Highs_changeColsCostBySet(void *highs, const int num_set_entries,
+                              const int *set, const double *cost) {
   return ((Highs *)highs)->changeColsCost(num_set_entries, set, cost);
 }
 
-int Highs_changeColsCostByMask(
-    void *highs,        //!< HiGHS object reference
-    const int *mask,    //!< Full length array with 1 => change; 0 => not
-    const double *cost  //!< Full length array of new costs
-) {
+int Highs_changeColsCostByMask(void *highs, const int *mask,
+                               const double *cost) {
   return ((Highs *)highs)->changeColsCost(mask, cost);
 }
 
-int Highs_changeColBounds(
-    void *highs,         //!< HiGHS object reference
-    const int col,       //!< The index of the column whose bounds are to change
-    const double lower,  //!< The new lower bound
-    const double upper   //!< The new upper bound
-) {
+int Highs_changeColBounds(void *highs, const int col, const double lower,
+                          const double upper) {
   return ((Highs *)highs)->changeColBounds(col, lower, upper);
 }
 
-int Highs_changeColsBoundsByRange(
-    void *highs,         //!< HiGHS object reference
-    const int from_col,  //!< The index of the first column whose bounds change
-    const int to_col,    //!< One more than the index of the last column whose
-                         //!< bounds change
-    const double
-        *lower,  //!< Array of size to_col-from_col with new lower bounds
-    const double
-        *upper  //!< Array of size to_col-from_col with new upper bounds
-) {
+int Highs_changeColsBoundsByRange(void *highs, const int from_col,
+                                  const int to_col, const double *lower,
+                                  const double *upper) {
   return ((Highs *)highs)->changeColsBounds(from_col, to_col, lower, upper);
 }
 
-int Highs_changeColsBoundsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set,  //!< Array of size num_set_entries with indices of
-                     //!< columns whose bounds change
-    const double
-        *lower,  //!< Array of size num_set_entries with new lower bounds
-    const double
-        *upper  //!< Array of size num_set_entries with new upper bounds
-) {
+int Highs_changeColsBoundsBySet(void *highs, const int num_set_entries,
+                                const int *set, const double *lower,
+                                const double *upper) {
   return ((Highs *)highs)->changeColsBounds(num_set_entries, set, lower, upper);
 }
 
-int Highs_changeColsBoundsByMask(
-    void *highs,          //!< HiGHS object reference
-    const int *mask,      //!< Full length array with 1 => change; 0 => not
-    const double *lower,  //!< Full length array of new lower bounds
-    const double *upper   //!< Full length array of new upper bounds
-) {
+int Highs_changeColsBoundsByMask(void *highs, const int *mask,
+                                 const double *lower, const double *upper) {
   return ((Highs *)highs)->changeColsBounds(mask, lower, upper);
 }
 
-int Highs_changeRowBounds(
-    void *highs,         //!< HiGHS object reference
-    const int row,       //!< The index of the row whose bounds are to change
-    const double lower,  //!< The new lower bound
-    const double upper   //!< The new upper bound
-) {
+int Highs_changeRowBounds(void *highs, const int row, const double lower,
+                          const double upper) {
   return ((Highs *)highs)->changeRowBounds(row, lower, upper);
 }
 
-int Highs_changeRowsBoundsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set,  //!< Array of size num_set_entries with indices of rows
-                     //!< whose bounds change
-    const double
-        *lower,  //!< Array of size num_set_entries with new lower bounds
-    const double
-        *upper  //!< Array of size num_set_entries with new upper bounds
-) {
+int Highs_changeRowsBoundsBySet(void *highs, const int num_set_entries,
+                                const int *set, const double *lower,
+                                const double *upper) {
   return ((Highs *)highs)->changeRowsBounds(num_set_entries, set, lower, upper);
 }
 
-int Highs_changeRowsBoundsByMask(
-    void *highs,          //!< HiGHS object reference
-    const int *mask,      //!< Full length array with 1 => change; 0 => not
-    const double *lower,  //!< Full length array of new lower bounds
-    const double *upper   //!< Full length array of new upper bounds
-) {
+int Highs_changeRowsBoundsByMask(void *highs, const int *mask,
+                                 const double *lower, const double *upper) {
   return ((Highs *)highs)->changeRowsBounds(mask, lower, upper);
 }
 
-int Highs_getColsByRange(
-    void *highs,          //!< HiGHS object reference
-    const int from_col,   //!< The index of the first column to
-                          //!< get from the model
-    const int to_col,     //!< One more than the last column to get
-                          //!< from the model
-    int num_col,          //!< Number of columns got from the model
-    double *costs,        //!< Array of size num_col with costs
-    double *lower,        //!< Array of size num_col with lower bounds
-    double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
-    int *matrix_start,    //!< Array of size num_col with start
-                          //!< indices of the columns
-    int *matrix_index,    //!< Array of size num_nz with row
-                          //!< indices for the columns
-    double *matrix_value  //!< Array of size num_nz with row
-                          //!< values for the columns
-) {
+int Highs_getColsByRange(void *highs, const int from_col, const int to_col,
+                         int num_col, double *costs, double *lower,
+                         double *upper, int num_nz, int *matrix_start,
+                         int *matrix_index, double *matrix_value) {
   return ((Highs *)highs)
       ->getCols(from_col, to_col, num_col, costs, lower, upper, num_nz,
                 matrix_start, matrix_index, matrix_value);
 }
 
-int Highs_getColsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set,             //!< Array of size num_set_entries with indices
-                                //!< of columns to get
-    int num_col,                //!< Number of columns got from the model
-    double *costs,              //!< Array of size num_col with costs
-    double *lower,              //!< Array of size num_col with lower bounds
-    double *upper,              //!< Array of size num_col with upper bounds
-    int num_nz,                 //!< Number of nonzeros got from the model
-    int *matrix_start,          //!< Array of size num_col with start indices
-                                //!< of the columns
-    int *matrix_index,          //!< Array of size num_nz with row indices
-                                //!< for the columns
-    double *matrix_value        //!< Array of size num_nz with row values
-                                //!< for the columns
-) {
+int Highs_getColsBySet(void *highs, const int num_set_entries, const int *set,
+                       int num_col, double *costs, double *lower, double *upper,
+                       int num_nz, int *matrix_start, int *matrix_index,
+                       double *matrix_value) {
   return ((Highs *)highs)
       ->getCols(num_set_entries, set, num_col, costs, lower, upper, num_nz,
                 matrix_start, matrix_index, matrix_value);
 }
 
-int Highs_getColsByMask(
-    void *highs,          //!< HiGHS object reference
-    const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_col,          //!< Number of columns got from the model
-    double *costs,        //!< Array of size num_col with costs
-    double *lower,        //!< Array of size num_col with lower bounds
-    double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
-    int *matrix_start,    //!<  Array of size num_col with start
-                          //!<  indices of the columns
-    int *matrix_index,    //!<  Array of size num_nz with row indices
-                          //!<  for the columns
-    double *matrix_value  //!<  Array of size num_nz with row values
-                          //!<  for the columns
-) {
+int Highs_getColsByMask(void *highs, const int *mask, int num_col,
+                        double *costs, double *lower, double *upper, int num_nz,
+                        int *matrix_start, int *matrix_index,
+                        double *matrix_value) {
   return ((Highs *)highs)
       ->getCols(mask, num_col, costs, lower, upper, num_nz, matrix_start,
                 matrix_index, matrix_value);
 }
 
-int Highs_getRowsByRange(
-    void *highs,          //!< HiGHS object reference
-    const int from_row,   //!< The index of the first row to get from the model
-    const int to_row,     //!< One more than the last row get from the model
-    int num_row,          //!< Number of rows got from the model
-    double *lower,        //!< Array of size num_row with lower bounds
-    double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
-    int *matrix_start,    //!< Array of size num_row with start indices of the
-                          //!< rows
-    int *matrix_index,    //!< Array of size num_nz with column indices for the
-                          //!< rows
-    double *matrix_value  //!< Array of size num_nz with column values for the
-                          //!< rows
-) {
+int Highs_getRowsByRange(void *highs, const int from_row, const int to_row,
+                         int num_row, double *lower, double *upper, int num_nz,
+                         int *matrix_start, int *matrix_index,
+                         double *matrix_value) {
   return ((Highs *)highs)
       ->getRows(from_row, to_row, num_row, lower, upper, num_nz, matrix_start,
                 matrix_index, matrix_value);
 }
 
-int Highs_getRowsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set,             //!< Array of size num_set_entries with indices
-                                //!< of rows to get
-    int num_row,                //!< Number of rows got from the model
-    double *lower,              //!< Array of size num_row with lower bounds
-    double *upper,              //!< Array of size num_row with upper bounds
-    int num_nz,                 //!< Number of nonzeros got from the model
-    int *matrix_start,          //!< Array of size num_row with start indices
-                                //!< of the rows
-    int *matrix_index,          //!< Array of size num_nz with column indices
-                                //!< for the rows
-    double *matrix_value        //!< Array of size num_nz with column
-                                //!< values for the rows
-) {
+int Highs_getRowsBySet(void *highs, const int num_set_entries, const int *set,
+                       int num_row, double *lower, double *upper, int num_nz,
+                       int *matrix_start, int *matrix_index,
+                       double *matrix_value) {
   return ((Highs *)highs)
       ->getRows(num_set_entries, set, num_row, lower, upper, num_nz,
                 matrix_start, matrix_index, matrix_value);
 }
 
-int Highs_getRowsByMask(
-    void *highs,          //!< HiGHS object reference
-    const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_row,          //!< Number of rows got from the model
-    double *lower,        //!< Array of size num_row with lower bounds
-    double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
-    int *matrix_start,    //!< Array of size num_row with start indices
-                          //!< of the rows
-    int *matrix_index,    //!< Array of size num_nz with column indices
-                          //!< for the rows
-    double *matrix_value  //!< Array of size num_nz with column
-                          //!< values for the rows
-) {
+int Highs_getRowsByMask(void *highs, const int *mask, int num_row,
+                        double *lower, double *upper, int num_nz,
+                        int *matrix_start, int *matrix_index,
+                        double *matrix_value) {
   return ((Highs *)highs)
       ->getRows(mask, num_row, lower, upper, num_nz, matrix_start, matrix_index,
                 matrix_value);
 }
 
-int Highs_deleteColsByRange(
-    void *highs,         //!< HiGHS object reference
-    const int from_col,  //!< The index of the first column
-                         //!< to delete from the model
-    const int to_col     //!< One more than the last column to
-                         //!< delete from the model
-) {
+int Highs_deleteColsByRange(void *highs, const int from_col, const int to_col) {
   return ((Highs *)highs)->deleteCols(from_col, to_col);
 }
 
-int Highs_deleteColsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set  //!< Array of size num_set_entries with indices of columns
-                    //!< to delete
-) {
+int Highs_deleteColsBySet(void *highs, const int num_set_entries,
+                          const int *set) {
   return ((Highs *)highs)->deleteCols(num_set_entries, set);
 }
 
-int Highs_deleteColsByMask(
-    void *highs,  //!< HiGHS object reference
-    int *mask     //!< Full length array with 1 => delete; 0 => not
-) {
+int Highs_deleteColsByMask(void *highs, int *mask) {
   return ((Highs *)highs)->deleteCols(mask);
 }
 
-int Highs_deleteRowsByRange(
-    void *highs,  //!< HiGHS object reference
-    const int
-        from_row,     //!< The index of the first row to delete from the model
-    const int to_row  //!< One more than the last row delete from the model
-) {
+int Highs_deleteRowsByRange(void *highs, const int from_row, const int to_row) {
   return ((Highs *)highs)->deleteRows(from_row, to_row);
 }
 
-int Highs_deleteRowsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set  //!< Array of size num_set_entries with indices of columns
-                    //!< to delete
-) {
+int Highs_deleteRowsBySet(void *highs, const int num_set_entries,
+                          const int *set) {
   return ((Highs *)highs)->deleteRows(num_set_entries, set);
 }
 
-int Highs_deleteRowsByMask(
-    void *highs,  //!< HiGHS object reference
-    int *mask     //!< Full length array with 1 => delete; 0 => not
-) {
+int Highs_deleteRowsByMask(void *highs, int *mask) {
   return ((Highs *)highs)->deleteRows(mask);
 }

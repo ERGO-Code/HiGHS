@@ -1,4 +1,3 @@
-#include "interfaces/highs_lp_solver.h"
 #include "interfaces/highs_c_api.h"
 
 #include <stdio.h>
@@ -30,8 +29,10 @@ void minimal_api() {
   int* cbs = (int*)malloc(sizeof(int) * numcol);
   int* rbs = (int*)malloc(sizeof(int) * numrow);
 
-  callhighs(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
+  int status = callhighs(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
             cd, rv, rd, cbs, rbs);
+
+  assert(status == 1);
 
   for (i = 0; i < numcol; i++) {
     printf("x%d = %lf\n", i, cv[i]);
