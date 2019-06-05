@@ -1,0 +1,444 @@
+struct HighsModel
+   colcost
+   collower
+   colupper
+   rowlower
+   rowupper
+   astart
+   aindex
+   avalue
+end
+
+struct HighsSolution
+   colvalue
+   coldual
+   rowvalue
+   rowdual
+end
+
+struct HighsBasis
+   colbasisstatus
+   rowbasisstatus
+end
+
+function callhighs(model)
+   n_col = convert(Int32, size(model.colcost, 1))
+   n_row = convert(Int32, size(model.rowlower, 1))
+   n_nz = convert(Int32, size(model.aindex, 1))
+
+   colcost = convert(Array{Cdouble}, model.colcost)
+   collower = convert(Array{Cdouble}, model.collower)
+   colupper = convert(Array{Cdouble}, model.colupper)
+
+   rowlower = convert(Array{Cdouble}, model.rowlower)
+   rowupper = convert(Array{Cdouble}, model.rowupper)
+   matstart = convert(Array{Int32}, model.astart)
+   matindex = convert(Array{Int32}, model.aindex)
+   matvalue = convert(Array{Cdouble}, model.avalue)
+
+   solution = HighsSolution(Array{Cdouble, 1}(undef, n_col), Array{Cdouble, 1}(undef, n_col), Array{Cdouble, 1}(undef, n_row),  Array{Cdouble, 1}(undef, n_row))
+   basis = HighsBasis(Array{Cint, 1}(undef, n_col), Array{Cint, 1}(undef, n_row)) 
+
+   status = ccall((:callhighs, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}),
+   n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual, basis.colbasisstatus, basis.rowbasisstatus)
+
+   return status, solution, basis
+end
+
+function Highs_create()
+   return ccall((:Highs_create, "libhighs.so"), Ptr{Cvoid}, () )
+end
+
+function Highs_destroy(highs)
+   ccall((:Highs_destroy, "libhighs.so"), Cvoid, (Ptr{Cvoid},), highs)
+end
+
+function Highs_run(highs)
+   return ccall((:Highs_run, "libhighs.so"), Int32, (Ptr{Cvoid},), highs)
+end
+
+function Highs_readFromFile(highs, filename)
+   name = convert(Cstring, pointer(filename))
+   return ccall((:Highs_readFromFile, "libhighs.so"), Int32, (Ptr{Cvoid}, Cstring), highs, name)
+end
+
+function Highs_writeToFile(highs, filename)
+   name = convert(Cstring, pointer(filename))
+   return ccall((:Highs_writeToFile, "libhighs.so"), Int32, (Ptr{Cvoid}, Cstring), highs, name)
+end
+
+function Highs_loadModel(highs, model)
+   n_col = convert(Int32, size(model.colcost, 1))
+   n_row = convert(Int32, size(model.rowlower, 1))
+   n_nz = convert(Int32, size(model.aindex, 1))
+
+   colcost = convert(Array{Cdouble}, model.colcost)
+   collower = convert(Array{Cdouble}, model.collower)
+   colupper = convert(Array{Cdouble}, model.colupper)
+
+   rowlower = convert(Array{Cdouble}, model.rowlower)
+   rowupper = convert(Array{Cdouble}, model.rowupper)
+   matstart = convert(Array{Int32}, model.astart)
+   matindex = convert(Array{Int32}, model.aindex)
+   matvalue = convert(Array{Cdouble}, model.avalue)
+
+   return ccall((:Highs_loadModel, "libhighs.so"), Cint, (Ptr{Cvoid},Int32, Int32, Int32, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Int32},Ptr{Int32},Ptr{Cdouble}),
+   highs, n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue)
+end
+
+function Highs_setOptionValue(highs, option, value)
+   opt = convert(Cstring, pointer(option))
+   val = convert(Cstring, pointer(val))
+   return ccall((:Highs_setOptionValue, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring, Cstring), highs, opt, val)
+end
+
+function Highs_getNumCols(highs)
+   return ccall((:Highs_getNumCols, "libhighs.so"), Cint, ())
+end
+
+function Highs_getNumRows(highs)
+   return ccall((:Highs_getNumRows, "libhighs.so"), Cint, ())
+end
+
+function Highs_getNumNz(highs)
+   return ccall((:Highs_getNumNz, "libhighs.so"), Cint, ())
+end
+
+function Highs_getSolution(highs)
+   numcol = Highs_getNumCols(highs)
+   numrow = Highs_getNumRows(highs)
+
+   solution = HighsSolution(Array{Cdouble, 1}(undef, numcol), Array{Cdouble, 1}(undef, numcol), Array{Cdouble, 1}(undef, numrow),  Array{Cdouble, 1}(undef, numrow))
+
+   ccall((:Highs_getSolution, "libhighs.so"), Cvoid, (Ptr{Cvoid}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}), highs, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual)
+
+   return solution
+end
+
+function Highs_getBasis(highs)
+   numcol = Highs_getNumCols(highs)
+   numrow = Highs_getNumRows(highs)
+
+   basis = HighsBasis(Array{Cint, 1}(undef, numcol), Array{Cint, 1}(undef, numrow))   
+
+   ccall((:Highs_getBasis, "libhighs.so"), Cvoid, (Ptr{Cvoid}, Ptr{Cint}, Ptr{Cint}), highs, basis.colbasisstatus, basis.rowbasisstatus)
+
+   return basis
+end
+
+function Highs_getObjectiveValue(highs)
+   return ccall((:Highs_getObjectiveValue, "libhighs.so"), Cdouble, (Ptr{Cvoid},), highs)
+end
+
+function Highs_getIterationCount(highs)
+   return ccall((:Highs_getIterationCount, "libhighs.so"), Cint, (Ptr{Cvoid},), highs)
+end
+
+function Highs_addRow(highs, lower, upper, indices, values)
+   n_new_nz = convert(Int32, size(indices, 1))
+
+   lo = convert(Cdouble, lower)
+   hi = convert(Cdouble, upper)
+
+   idx = convert(Array{Cint}, indices)
+   val = convert(Array{Cdouble}, values)
+
+   return ccall((:Highs_addRow, "libhighs.so"), Cint, (Ptr{Cvoid}, Cdouble, Cdouble, Cint, Ptr{Cint}, Ptr{Cdouble}), highs, lo, hi, n_new_nz, idx, val)
+end
+
+function Highs_addRows(highs, lower, upper, starts, indices, values)
+   n_new_rows = convert(Int32, size(lower, 1))
+   n_new_nz = convert(Int32, size(indices, 1))
+
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array{Cdouble}, upper)
+
+   st = convert(Array{Cint}, starts)
+   idx = convert(Array{Cint}, indices)
+   val = convert(Array{Cdouble}, values)
+
+   return ccall((:Highs_addRows, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}), 
+   highs, n_new_rows, lo, hi, n_new_nz, st, idx, val)
+end
+
+function Highs_addCol(highs, cost, lower, upper, indices, values)
+   n_new_nz = convert(Int32, size(indices, 1))
+
+   cc = convert(Cdouble, cost)
+   lo = convert(Cdouble, lower)
+   hi = convert(Cdouble, upper)
+
+   idx = convert(Array{Cint}, indices)
+   val = convert(Array{Cdouble}, values)
+
+   return ccall((:Highs_addCol, "libhighs.so"), Cint, (Ptr{Cvoid}, Cdouble, Cdouble, Cdouble, Cint, Ptr{Cint}, Ptr{Cdouble}),
+   highs, cc, lo, hi, n_new_nz, idx, val)
+end
+
+function Highs_addCols(highs, costs, lower, upper, starts, indices, values)
+   n_new_cols = convert(Int32, size(lower, 1))
+   n_new_nz = convert(Int32, size(indices, 1))
+
+   co = convert(Array{Cdouble}, costs)
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array{Cdouble}, upper)
+
+   st = convert(Array{Cint}, starts)
+   idx = convert(Array{Cint}, indices)
+   val = convert(Array{Cdouble}, values)
+
+   return ccall((:Highs_addCols, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}), 
+   highs, n_new_cols, co, lo, hi, n_new_nz, st, idx, val)
+end
+
+function Highs_changeObjectiveSense(highs, sense)
+   sns = convert(Int32, sense)
+
+   return ccall((:Highs_changeObjectiveSense, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint), highs, sns)
+end
+
+function Highs_changeColCost(highs, colidx, cost)
+   col = convert(Int32, colidx)
+   cst = convert(Cdouble, cost)
+
+   return ccall((:Highs_changeColCost, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Cdouble), highs, colidx, cost)
+end
+
+function Highs_changeColsCostBySet(highs, set, cost)
+   num_set_entries = convert(Int32, size(set, 1)) 
+
+   st = convert(Array{Cint}, set)
+   cst = convert(Array{Cdouble}, cost)
+
+   return ccall((:Highs_changeColsCostBySet, "libhighs.so"), Cint, (Ptr{Cvoid}, Ptr{Cint}, Ptr{Cdouble}), highs, st, cst)
+end
+
+function Highs_changeColsCostByMask(highs, mask, cost)
+   msk = convert(Array{Cint}, mask)
+   cst = convert(Array{Cdouble}, cost)
+
+   return ccall((:Highs_changeColsCostByMask, "libhighs.so"), Cint, (Ptr{Cvoid}, Ptr{Cint}, Ptr{Cdouble}), highs, msk, cst)
+end
+
+function Highs_changeColBounds(highs, col, lower, upper)
+   colidx = convert(Int32, col)
+
+   lo = convert(Cdouble, lower)
+   hi = convert(Cdouble, upper)
+
+   return ccall((:Highs_changeColBounds, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Cdouble, Cdouble), highs, colidx, lo, hi)
+end
+
+function Highs_changeColsBoundsByRange(highs, from, to, lower, upper)
+   f = convert(Int32, from)
+   t = convert(Int33, to)
+
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array{Cdouble}, upper)
+
+   return ccall((:Highs_changeColsBoundsByRange, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}),
+   highs, f, t, lo, hi)
+end
+
+function Highs_changeColsBoundsBySet(highs, set, lower, upper)
+   nset = convert(Int32, size(set, 1))
+
+   st = convert(Array{Cint}, set)
+
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array{Cdouble}, upper)
+
+   return ccall((:Highs_changeColsBoundsBySet, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}), 
+   highs, nset, st, lo, hi)
+end
+
+function Highs_changeColsBoundsByMask(highs, mask, lower, upper) 
+   msk = convert(Array{Cint}, mask)
+
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array{Cdouble}, upper)
+
+   return ccall((:Highs_changeColsBoundsByMask, "libhighs.so"), Cint, (Ptr{Cvoid}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}),
+   highs, msk, lo, hi)
+end
+
+function Highs_changeRowBounds(highs, row, lower, upper) 
+   idx = convert(Int32, row)
+   lo = convert(Cdouble, lower)
+   hi = convert(Cdouble, upper)
+
+   return ccall((:Highs_changeRowBounds, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Cdouble, Cdouble),
+   highs, idx, lo, hi)
+end
+
+function Highs_changeRowsBoundsBySet(highs, set, lower, upper)
+   nst = convert(Cint, size(set, 1))
+   st = convert(Array{Cint}, set)
+
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array(Cdouble), upper)
+
+   return ccall((:Highs_changeRowsBoundsBySet, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}),
+   highs, nst, st, lo, hi)
+end
+
+function Highs_changeRowsBoundsByMask(highs, mask, lower, upper)
+   msk = convert(Array{Cint}, mask)
+
+   lo = convert(Array{Cdouble}, lower)
+   hi = convert(Array{Cdouble}, upper)
+
+   return ccall((:Highs_changeRowsBoundsByMask, "libhighs.so"), Cint, (Ptr{Cvoid}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}),
+   highs, msk, lo, hi)
+end
+
+
+
+
+
+
+
+
+
+
+#=
+int Highs_getColsByRange(
+    void *highs,          //!< HiGHS object reference
+    const int from_col,   //!< The index of the first column to
+                          //!< get from the model
+    const int to_col,     //!< One more than the last column to get
+                          //!< from the model
+    int num_col,          //!< Number of columns got from the model
+    double *costs,        //!< Array of size num_col with costs
+    double *lower,        //!< Array of size num_col with lower bounds
+    double *upper,        //!< Array of size num_col with upper bounds
+    int num_nz,           //!< Number of nonzeros got from the model
+    int *matrix_start,    //!< Array of size num_col with start
+                          //!< indices of the columns
+    int *matrix_index,    //!< Array of size num_nz with row
+                          //!< indices for the columns
+    double *matrix_value  //!< Array of size num_nz with row
+                          //!< values for the columns
+);
+
+int Highs_getColsBySet(
+    void *highs,                //!< HiGHS object reference
+    const int num_set_entries,  //!< The number of indides in the set
+    const int *set,             //!< Array of size num_set_entries with indices
+                                //!< of columns to get
+    int num_col,                //!< Number of columns got from the model
+    double *costs,              //!< Array of size num_col with costs
+    double *lower,              //!< Array of size num_col with lower bounds
+    double *upper,              //!< Array of size num_col with upper bounds
+    int num_nz,                 //!< Number of nonzeros got from the model
+    int *matrix_start,          //!< Array of size num_col with start indices
+                                //!< of the columns
+    int *matrix_index,          //!< Array of size num_nz with row indices
+                                //!< for the columns
+    double *matrix_value        //!< Array of size num_nz with row values
+                                //!< for the columns
+);
+
+int Highs_getColsByMask(
+    void *highs,          //!< HiGHS object reference
+    const int *mask,      //!< Full length array with 1 => get; 0 => not
+    int num_col,          //!< Number of columns got from the model
+    double *costs,        //!< Array of size num_col with costs
+    double *lower,        //!< Array of size num_col with lower bounds
+    double *upper,        //!< Array of size num_col with upper bounds
+    int num_nz,           //!< Number of nonzeros got from the model
+    int *matrix_start,    //!<  Array of size num_col with start
+                          //!<  indices of the columns
+    int *matrix_index,    //!<  Array of size num_nz with row indices
+                          //!<  for the columns
+    double *matrix_value  //!<  Array of size num_nz with row values
+                          //!<  for the columns
+);
+
+int Highs_getRowsByRange(
+    void *highs,          //!< HiGHS object reference
+    const int from_row,   //!< The index of the first row to get from the model
+    const int to_row,     //!< One more than the last row get from the model
+    int num_row,          //!< Number of rows got from the model
+    double *lower,        //!< Array of size num_row with lower bounds
+    double *upper,        //!< Array of size num_row with upper bounds
+    int num_nz,           //!< Number of nonzeros got from the model
+    int *matrix_start,    //!< Array of size num_row with start indices of the
+                          //!< rows
+    int *matrix_index,    //!< Array of size num_nz with column indices for the
+                          //!< rows
+    double *matrix_value  //!< Array of size num_nz with column values for the
+                          //!< rows
+);
+
+int Highs_getRowsBySet(
+    void *highs,                //!< HiGHS object reference
+    const int num_set_entries,  //!< The number of indides in the set
+    const int *set,             //!< Array of size num_set_entries with indices
+                                //!< of rows to get
+    int num_row,                //!< Number of rows got from the model
+    double *lower,              //!< Array of size num_row with lower bounds
+    double *upper,              //!< Array of size num_row with upper bounds
+    int num_nz,                 //!< Number of nonzeros got from the model
+    int *matrix_start,          //!< Array of size num_row with start indices
+                                //!< of the rows
+    int *matrix_index,          //!< Array of size num_nz with column indices
+                                //!< for the rows
+    double *matrix_value        //!< Array of size num_nz with column
+                                //!< values for the rows
+);
+
+int Highs_getRowsByMask(
+    void *highs,          //!< HiGHS object reference
+    const int *mask,      //!< Full length array with 1 => get; 0 => not
+    int num_row,          //!< Number of rows got from the model
+    double *lower,        //!< Array of size num_row with lower bounds
+    double *upper,        //!< Array of size num_row with upper bounds
+    int num_nz,           //!< Number of nonzeros got from the model
+    int *matrix_start,    //!< Array of size num_row with start indices
+                          //!< of the rows
+    int *matrix_index,    //!< Array of size num_nz with column indices
+                          //!< for the rows
+    double *matrix_value  //!< Array of size num_nz with column
+                          //!< values for the rows
+);
+
+int Highs_deleteColsByRange(
+    void *highs,         //!< HiGHS object reference
+    const int from_col,  //!< The index of the first column
+                         //!< to delete from the model
+    const int to_col     //!< One more than the last column to
+                         //!< delete from the model
+);
+
+int Highs_deleteColsBySet(
+    void *highs,                //!< HiGHS object reference
+    const int num_set_entries,  //!< The number of indides in the set
+    const int *set  //!< Array of size num_set_entries with indices of columns
+                    //!< to delete
+);
+
+int Highs_deleteColsByMask(
+    void *highs,  //!< HiGHS object reference
+    int *mask     //!< Full length array with 1 => delete; 0 => not
+);
+
+int Highs_deleteRowsByRange(
+    void *highs,  //!< HiGHS object reference
+    const int
+        from_row,     //!< The index of the first row to delete from the model
+    const int to_row  //!< One more than the last row delete from the model
+);
+
+int Highs_deleteRowsBySet(
+    void *highs,                //!< HiGHS object reference
+    const int num_set_entries,  //!< The number of indides in the set
+    const int *set  //!< Array of size num_set_entries with indices of columns
+                    //!< to delete
+);
+
+int Highs_deleteRowsByMask(
+    void *highs,  //!< HiGHS object reference
+    int *mask     //!< Full length array with 1 => delete; 0 => not
+);
+=#

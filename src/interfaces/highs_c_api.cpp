@@ -18,7 +18,7 @@ int callhighs(int numcol, int numrow, int numnz, double *colcost,
 
   status = (int)highs.run();
 
-  if (status == 1) {
+  if (status == 1 || status == 17) {
     HighsSolution solution;
     HighsBasis basis;
 
@@ -299,4 +299,22 @@ int Highs_deleteRowsBySet(void *highs, const int num_set_entries,
 
 int Highs_deleteRowsByMask(void *highs, int *mask) {
   return ((Highs *)highs)->deleteRows(mask);
+}
+
+int Highs_getNumCols(
+    void* highs 
+) {
+  return ((Highs *)highs)->getLp().numCol_;
+}
+
+int Highs_getNumRows(
+    void* highs 
+) {
+   return ((Highs *)highs)->getLp().numRow_;
+}
+
+int Highs_getNumNz(
+    void* highs 
+) {
+   return ((Highs *)highs)->getLp().nnz_;
 }
