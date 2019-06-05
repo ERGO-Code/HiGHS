@@ -1393,6 +1393,8 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   if (have_col_names) {
     local_col_names = lp.col_names_;
   } else {
+    // Cannot (easily) make up names for more than 10^7 columns
+    if (lp.numCol_ > 10000000) return false;
     for (int iCol = 0; iCol < lp.numCol_; iCol++) {
       std::string name = "C" + std::to_string(iCol);
       local_col_names[iCol] = name;
@@ -1409,6 +1411,8 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
   if (have_row_names) {
     local_row_names = lp.row_names_;
   } else {
+    // Cannot (easily) make up names for more than 10^7 rows
+    if (lp.numRow_ > 10000000) return false;
     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
       std::string name = "R" + std::to_string(iRow);
       local_row_names[iRow] = name;
