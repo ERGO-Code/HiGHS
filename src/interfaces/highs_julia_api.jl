@@ -403,42 +403,46 @@ int Highs_getRowsByMask(
                           //!< values for the rows
 );
 
-int Highs_deleteColsByRange(
-    void *highs,         //!< HiGHS object reference
-    const int from_col,  //!< The index of the first column
-                         //!< to delete from the model
-    const int to_col     //!< One more than the last column to
-                         //!< delete from the model
-);
-
-int Highs_deleteColsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set  //!< Array of size num_set_entries with indices of columns
-                    //!< to delete
-);
-
-int Highs_deleteColsByMask(
-    void *highs,  //!< HiGHS object reference
-    int *mask     //!< Full length array with 1 => delete; 0 => not
-);
-
-int Highs_deleteRowsByRange(
-    void *highs,  //!< HiGHS object reference
-    const int
-        from_row,     //!< The index of the first row to delete from the model
-    const int to_row  //!< One more than the last row delete from the model
-);
-
-int Highs_deleteRowsBySet(
-    void *highs,                //!< HiGHS object reference
-    const int num_set_entries,  //!< The number of indides in the set
-    const int *set  //!< Array of size num_set_entries with indices of columns
-                    //!< to delete
-);
-
-int Highs_deleteRowsByMask(
-    void *highs,  //!< HiGHS object reference
-    int *mask     //!< Full length array with 1 => delete; 0 => not
-);
 =#
+
+function Highs_deleteColsByRange(highs, from, to)
+   f = convert(Cint, from)
+   t = convert(Cint, to)
+
+   return ccall((:Highs_deleteColsByRange, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Cint), highs, f, t)
+end
+
+function Highs_deleteColsBySet(highs, set)
+   nset = convert(Cint, size(set, 1))
+
+   st = convert(Array{Cint}, set)
+
+   return ccall((:Highs_deleteColsBySet, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Ptr{Cint}), highs, nset, st)
+end
+
+function Highs_deleteColsByMask(highs, mask)
+   msk = convert(Array{Cint}, mask)
+
+   return ccall((:Highs_deleteColsByMask, "libighs.so"), Cint, (Ptr{Cvoid}, Ptr{Cint}), highs, msk)
+end
+
+function Highs_deleteRowsByRange(highs, from, to)
+   f = convert(Cint, from)
+   t = convert(Cint, to)   
+
+   return ccall((:Highs_deleteRowsByRange, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Cint), highs, f, t)
+end
+
+function Highs_deleteRowsBySet(highs, set)
+   nset = convert(Cint, size(set, 1))
+
+   st = convert(Array{Cint}, set)
+
+   return ccall((:Highs_deleteRowsBySet, "libhighs.so"), Cint, (Ptr{Cvoid}, Cint, Ptr{Cint}), highs, nset, st)
+end
+
+function Highs_deleteRowsByMask(highs, mask)
+   msk = convert(Array{Cint}, mask)
+
+   return ccall((:Highs_deleteRowsByMask, "libhighs.so"), Cint, (Ptr{Cvoid}, Ptr{Cint}), highs, msk)
+end
