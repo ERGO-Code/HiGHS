@@ -29,7 +29,7 @@ void minimal_api() {
 
   int status = callhighs(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
             cd, rv, rd, cbs, rbs);
-  assert(status == 1);
+  assert(status == 1 || status == 17);
 
   for (i = 0; i < numcol; i++) {
     printf("x%d = %lf\n", i, cv[i]);
