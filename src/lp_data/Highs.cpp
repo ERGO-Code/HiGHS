@@ -32,6 +32,14 @@
 
 // until add_row_.. functions are moved to HighsLpUtils.h
 #include "simplex/HSimplex.h"
+
+Highs::Highs() {
+  hmos_.clear();
+  hmos_.push_back(HighsModelObject(lp_, options_, timer_));
+  simplex_has_run_ = false;
+}
+
+
 HighsStatus Highs::initializeLp(const HighsLp &lp) {
   // todo:(julian) add code to check that LP is valid.
   lp_ = lp;
@@ -57,7 +65,7 @@ HighsStatus Highs::initializeFromFile(const std::string filename) {
 }
 
 HighsStatus Highs::writeToFile(const std::string filename) {
-  HighsLp model; // todo: get right lp
+  HighsLp model = this->lp_;
 
   Filereader* writer = Filereader::getFilereader(filename.c_str());
   FilereaderRetcode retcode = writer->writeModelToFile(filename.c_str(), model);

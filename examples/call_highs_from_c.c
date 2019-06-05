@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 // gcc call_highs_from_c.c -o highstest -I ../build/install_folder/include/ -L ../build/install_folder/lib/ -lhighs
 
@@ -48,7 +49,19 @@ void full_api() {
   void* highs;
 
   highs = Highs_create();
-  Highs_loadFromFile(highs, "/home/s1613957/lpInstances/qap04.mps");
+
+  double cc[2] = {1.0, -2.0};
+  double cl[2] = {0.0, 0.0};
+  double cu[2] = {10.0, 10.0};
+  double rl[2] = {0.0, 0.0};
+  double ru[2] = {2.0, 1.0};
+  int astart[3] = {0, 2, 4};
+  int aindex[4] = {0, 1, 0, 1};
+  double avalue[4] = {1.0, 2.0, 1.0, 3.0};
+
+  assert( Highs_addCols(highs, 2, cc, cl, cu, 0, NULL, NULL, NULL) );
+  assert( Highs_addRows(highs, 2, rl, ru,  4, astart, aindex, avalue) );
+
   Highs_run(highs);
   Highs_destroy(highs);
 }

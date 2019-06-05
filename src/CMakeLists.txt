@@ -36,7 +36,6 @@ set(sources
     util/HighsSort.cpp
     util/HighsUtils.cpp
     util/stringutil.cpp
-    interfaces/MinimalAPI.cpp
     interfaces/highs_c_api.cpp
 )
 
