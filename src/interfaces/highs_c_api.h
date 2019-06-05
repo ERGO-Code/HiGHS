@@ -309,11 +309,11 @@ int Highs_getColsByRange(
                           //!< get from the model
     const int to_col,     //!< One more than the last column to get
                           //!< from the model
-    int num_col,          //!< Number of columns got from the model
+    int* num_col,          //!< Number of columns got from the model
     double *costs,        //!< Array of size num_col with costs
     double *lower,        //!< Array of size num_col with lower bounds
     double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_col with start
                           //!< indices of the columns
     int *matrix_index,    //!< Array of size num_nz with row
@@ -330,11 +330,11 @@ int Highs_getColsBySet(
     const int num_set_entries,  //!< The number of indides in the set
     const int *set,             //!< Array of size num_set_entries with indices
                                 //!< of columns to get
-    int num_col,                //!< Number of columns got from the model
+    int* num_col,                //!< Number of columns got from the model
     double *costs,              //!< Array of size num_col with costs
     double *lower,              //!< Array of size num_col with lower bounds
     double *upper,              //!< Array of size num_col with upper bounds
-    int num_nz,                 //!< Number of nonzeros got from the model
+    int* num_nz,                 //!< Number of nonzeros got from the model
     int *matrix_start,          //!< Array of size num_col with start indices
                                 //!< of the columns
     int *matrix_index,          //!< Array of size num_nz with row indices
@@ -349,11 +349,11 @@ int Highs_getColsBySet(
 int Highs_getColsByMask(
     void *highs,          //!< HiGHS object reference
     const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_col,          //!< Number of columns got from the model
+    int* num_col,          //!< Number of columns got from the model
     double *costs,        //!< Array of size num_col with costs
     double *lower,        //!< Array of size num_col with lower bounds
     double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!<  Array of size num_col with start
                           //!<  indices of the columns
     int *matrix_index,    //!<  Array of size num_nz with row indices
@@ -369,10 +369,10 @@ int Highs_getRowsByRange(
     void *highs,          //!< HiGHS object reference
     const int from_row,   //!< The index of the first row to get from the model
     const int to_row,     //!< One more than the last row get from the model
-    int num_row,          //!< Number of rows got from the model
+    int* num_row,          //!< Number of rows got from the model
     double *lower,        //!< Array of size num_row with lower bounds
     double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_row with start indices of the
                           //!< rows
     int *matrix_index,    //!< Array of size num_nz with column indices for the
@@ -389,10 +389,10 @@ int Highs_getRowsBySet(
     const int num_set_entries,  //!< The number of indides in the set
     const int *set,             //!< Array of size num_set_entries with indices
                                 //!< of rows to get
-    int num_row,                //!< Number of rows got from the model
+    int* num_row,                //!< Number of rows got from the model
     double *lower,              //!< Array of size num_row with lower bounds
     double *upper,              //!< Array of size num_row with upper bounds
-    int num_nz,                 //!< Number of nonzeros got from the model
+    int* num_nz,                 //!< Number of nonzeros got from the model
     int *matrix_start,          //!< Array of size num_row with start indices
                                 //!< of the rows
     int *matrix_index,          //!< Array of size num_nz with column indices
@@ -407,10 +407,10 @@ int Highs_getRowsBySet(
 int Highs_getRowsByMask(
     void *highs,          //!< HiGHS object reference
     const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_row,          //!< Number of rows got from the model
+    int* num_row,          //!< Number of rows got from the model
     double *lower,        //!< Array of size num_row with lower bounds
     double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_row with start indices
                           //!< of the rows
     int *matrix_index,    //!< Array of size num_nz with column indices

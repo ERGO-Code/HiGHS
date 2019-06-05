@@ -1,6 +1,5 @@
 #include "highs_c_api.h"
 #include "Highs.h"
-#include "io/Filereader.h"
 
 int callhighs(int numcol, int numrow, int numnz, double *colcost,
               double *collower, double *colupper, double *rowlower,
@@ -222,57 +221,81 @@ int Highs_changeRowsBoundsByMask(void *highs, const int *mask,
 }
 
 int Highs_getColsByRange(void *highs, const int from_col, const int to_col,
-                         int num_col, double *costs, double *lower,
-                         double *upper, int num_nz, int *matrix_start,
+                         int *num_col, double *costs, double *lower,
+                         double *upper, int *num_nz, int *matrix_start,
                          int *matrix_index, double *matrix_value) {
-  return ((Highs *)highs)
-      ->getCols(from_col, to_col, num_col, costs, lower, upper, num_nz,
-                matrix_start, matrix_index, matrix_value);
+  int numcol, numnz;
+  int status = ((Highs *)highs)
+                   ->getCols(from_col, to_col, numcol, costs, lower, upper,
+                             numnz, matrix_start, matrix_index, matrix_value);
+  *num_col = numcol;
+  *num_nz = numnz;
+  return status;
 }
 
 int Highs_getColsBySet(void *highs, const int num_set_entries, const int *set,
-                       int num_col, double *costs, double *lower, double *upper,
-                       int num_nz, int *matrix_start, int *matrix_index,
-                       double *matrix_value) {
-  return ((Highs *)highs)
-      ->getCols(num_set_entries, set, num_col, costs, lower, upper, num_nz,
-                matrix_start, matrix_index, matrix_value);
+                       int *num_col, double *costs, double *lower,
+                       double *upper, int *num_nz, int *matrix_start,
+                       int *matrix_index, double *matrix_value) {
+  int numcol, numnz;
+  int status = ((Highs *)highs)
+                   ->getCols(num_set_entries, set, numcol, costs, lower, upper,
+                             numnz, matrix_start, matrix_index, matrix_value);
+  *num_col = numcol;
+  *num_nz = numnz;
+  return status;
 }
 
-int Highs_getColsByMask(void *highs, const int *mask, int num_col,
-                        double *costs, double *lower, double *upper, int num_nz,
-                        int *matrix_start, int *matrix_index,
+int Highs_getColsByMask(void *highs, const int *mask, int *num_col,
+                        double *costs, double *lower, double *upper,
+                        int *num_nz, int *matrix_start, int *matrix_index,
                         double *matrix_value) {
-  return ((Highs *)highs)
-      ->getCols(mask, num_col, costs, lower, upper, num_nz, matrix_start,
-                matrix_index, matrix_value);
+  int numcol, numnz;
+  int status = ((Highs *)highs)
+                   ->getCols(mask, numcol, costs, lower, upper, numnz,
+                             matrix_start, matrix_index, matrix_value);
+  *num_col = numcol;
+  *num_nz = numnz;
+  return status;
 }
 
 int Highs_getRowsByRange(void *highs, const int from_row, const int to_row,
-                         int num_row, double *lower, double *upper, int num_nz,
-                         int *matrix_start, int *matrix_index,
+                         int *num_row, double *lower, double *upper,
+                         int *num_nz, int *matrix_start, int *matrix_index,
                          double *matrix_value) {
-  return ((Highs *)highs)
-      ->getRows(from_row, to_row, num_row, lower, upper, num_nz, matrix_start,
-                matrix_index, matrix_value);
+  int numrow, numnz;
+  int status = ((Highs *)highs)
+                   ->getRows(from_row, to_row, numrow, lower, upper, numnz,
+                             matrix_start, matrix_index, matrix_value);
+  *num_row = numrow;
+  *num_nz = numnz;
+  return status;
 }
 
 int Highs_getRowsBySet(void *highs, const int num_set_entries, const int *set,
-                       int num_row, double *lower, double *upper, int num_nz,
+                       int *num_row, double *lower, double *upper, int *num_nz,
                        int *matrix_start, int *matrix_index,
                        double *matrix_value) {
-  return ((Highs *)highs)
-      ->getRows(num_set_entries, set, num_row, lower, upper, num_nz,
-                matrix_start, matrix_index, matrix_value);
+  int numrow, numnz;
+  int status = ((Highs *)highs)
+                   ->getRows(num_set_entries, set, numrow, lower, upper, numnz,
+                             matrix_start, matrix_index, matrix_value);
+  *num_row = numrow;
+  *num_nz = numnz;
+  return status;
 }
 
-int Highs_getRowsByMask(void *highs, const int *mask, int num_row,
-                        double *lower, double *upper, int num_nz,
+int Highs_getRowsByMask(void *highs, const int *mask, int *num_row,
+                        double *lower, double *upper, int *num_nz,
                         int *matrix_start, int *matrix_index,
                         double *matrix_value) {
-  return ((Highs *)highs)
-      ->getRows(mask, num_row, lower, upper, num_nz, matrix_start, matrix_index,
-                matrix_value);
+  int numrow, numnz;
+  int status = ((Highs *)highs)
+                   ->getRows(mask, numrow, lower, upper, numnz, matrix_start,
+                             matrix_index, matrix_value);
+  *num_row = numrow;
+  *num_nz = numnz;
+  return status;
 }
 
 int Highs_deleteColsByRange(void *highs, const int from_col, const int to_col) {
@@ -301,20 +324,8 @@ int Highs_deleteRowsByMask(void *highs, int *mask) {
   return ((Highs *)highs)->deleteRows(mask);
 }
 
-int Highs_getNumCols(
-    void* highs 
-) {
-  return ((Highs *)highs)->getLp().numCol_;
-}
+int Highs_getNumCols(void *highs) { return ((Highs *)highs)->getLp().numCol_; }
 
-int Highs_getNumRows(
-    void* highs 
-) {
-   return ((Highs *)highs)->getLp().numRow_;
-}
+int Highs_getNumRows(void *highs) { return ((Highs *)highs)->getLp().numRow_; }
 
-int Highs_getNumNz(
-    void* highs 
-) {
-   return ((Highs *)highs)->getLp().nnz_;
-}
+int Highs_getNumNz(void *highs) { return ((Highs *)highs)->getLp().nnz_; }
