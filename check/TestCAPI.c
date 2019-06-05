@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-// gcc call_highs_from_c.c -o highstest -I ../build/install_folder/include/ -L ../build/install_folder/lib/ -lhighs
-
 void minimal_api() {
   int numcol = 2;
   int numrow = 2;
@@ -31,7 +29,6 @@ void minimal_api() {
 
   int status = callhighs(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
             cd, rv, rd, cbs, rbs);
-            
   assert(status == 1);
 
   for (i = 0; i < numcol; i++) {

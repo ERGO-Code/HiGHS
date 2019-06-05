@@ -86,7 +86,6 @@ set(headers
     util/HighsTimer.h
     util/HighsUtils.h
     Highs.h
-    interfaces/highs_lp_solver.h
     interfaces/highs_c_api.h
 )
 
