@@ -89,6 +89,7 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   const HighsSolution &solution = highs_model_object.solution_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsScale &scale = highs_model_object.scale_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
@@ -228,7 +229,6 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   if (scale_lp) {
     scaleSimplexLp(highs_model_object);
 #ifdef HiGHSDEV
-    HighsScale &scale = highs_model_object.scale_;
     // Analyse the scaled LP
     if (simplex_info.analyseLp) {
       analyseLp(highs_model_object.lp_, "Unscaled");
@@ -238,8 +238,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
 	analyseLp(simplex_lp, "Scaled");
       }
     }
-  }
 #endif
+  }
   // Now there is a valid nonbasicFlag and basicIndex, possibly
   // reinvert to check for basis condition/singularity
   //
