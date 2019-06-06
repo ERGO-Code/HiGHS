@@ -242,6 +242,9 @@ struct HighsSimplexInfo {
   double updatedPrimalObjectiveValue;
   // Number of logical variables in the basis 
   int num_basic_logicals;
+  // Number of primal and dual infeasibilities
+  int num_primal_infeasibilities;
+  int num_dual_infeasibilities;
 
 #ifdef HiGHSDEV
   // Analysis of INVERT

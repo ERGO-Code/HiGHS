@@ -424,10 +424,12 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   compute_dual(highs_model_object);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
-  int num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
-  int num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
-  printf("/n after transition() simplex solution has %d primal infeasibilities and %d dual infeasibilities\n\n",
-	 num_primal_infeasibilities, num_dual_infeasibilities);
+  compute_dual_objective_value(highs_model_object);
+  compute_primal_objective_value(highs_model_object);
+  simplex_info.num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
+  simplex_info.num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
+  printf("\nAfter transition() simplex solution has %d primal infeasibilities and %d dual infeasibilities\n\n",
+	 simplex_info.num_primal_infeasibilities, simplex_info.num_dual_infeasibilities);
 }
 
 void setupSimplexLp(HighsModelObject &highs_model_object) {

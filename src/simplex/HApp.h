@@ -51,17 +51,45 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   SimplexTimer simplex_timer;
   simplex_timer.initialiseSimplexClocks(highs_model_object);
 
+  // Copy the simplex stratgy so that it can be modified:
+  //
+  // 1. If it is "CHOOSE", in which case an approapriate stratgy is
+  // used
+  //
+  // 2. If re-solving choose the strategy appropriate to primal or
+  // dual feasibility
+  //
+  SimplexStrategy use_simplex_strategy = simplex_info.simplex_strategy;
   bool use_transition = true;
   if (use_transition) {
     simplex_lp_status.solution_status = transition(highs_model_object);
     if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
       return simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
-    // Official start of solver
-    // Start the solve closk - because setupForSimplexSolve has simplex computations
-    timer.start(timer.solve_clock);
+    // Use the number of primal and dual infeasibilities to determine
+    // whether the simplex solver is needed and, if so, possibly which
+    // variant to use.
+    if (simplex_info.num_primal_infeasibilities == 0) {
+      // Primal feasible
+      if (simplex_info.num_dual_infeasibilities == 0) {
+	// Dual feasible
+	// Simplex solution is optimal
+	simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
+      } else {
+	// Only dual infeasible, so maybe use primal simplex
+	if (use_simplex_strategy == SimplexStrategy::CHOOSE) use_simplex_strategy = SimplexStrategy::PRIMAL;
+      }
+    } else {
+      // Not primal feasible, so maybe use dual simplex
+      if (use_simplex_strategy == SimplexStrategy::CHOOSE) use_simplex_strategy = SimplexStrategy::DUAL;
+    }
+    if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL) {
+      // Official start of solver Start the solve clock - because
+      // setupForSimplexSolve has simplex computations
+      timer.start(timer.solve_clock);
 #ifdef HiGHSDEV
-    timer.start(simplex_info.clock_[SimplexTotalClock]);
+      timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
+    }
 #ifdef HiGHSDEV
     reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
@@ -80,7 +108,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 	  simplex_lp_status.solution_status == SimplexSolutionStatus::PRIMAL_FEASIBLE) {
 	// Optimal or primal feasible so force the use of primal simplex solver
 	printf("Optimal or primal feasible so force the use of primal simplex solver\n");
-	simplex_info.simplex_strategy = SimplexStrategy::PRIMAL;
+	use_simplex_strategy = SimplexStrategy::PRIMAL;
       }
     }
     if (!simplex_lp_status.valid) {
@@ -114,76 +142,78 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #endif
   }
 
-  if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
-    // Use primal simplex solver
-    HPrimal primal_solver(highs_model_object);
-    primal_solver.solve();
-  } else {
-    // Use dual simplex solver
-    HDual dual_solver(highs_model_object);
-    dual_solver.options();
-    // Solve, depending on the particular strategy
-    if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
-      // Serial
-      dual_solver.solve();
-    } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
-      // Parallel - SIP
-      // writePivots("tasks");
-      dual_solver.solve(8);
-    } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
-      // Parallel - PAMI
-      // writePivots("multi");
-      // if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
-      bool FourThreads = false;
-      bool EightThreads = false;
-      if (FourThreads)
-	dual_solver.solve(4);
-      else if (EightThreads)
-	dual_solver.solve(8);
-      else
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL) {
+    if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
+      // Use primal simplex solver
+      HPrimal primal_solver(highs_model_object);
+      primal_solver.solve();
+    } else {
+      // Use dual simplex solver
+      HDual dual_solver(highs_model_object);
+      dual_solver.options();
+      // Solve, depending on the particular strategy
+      if (use_simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+	// Serial
 	dual_solver.solve();
+      } else if (use_simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+	// Parallel - SIP
+	// writePivots("tasks");
+	dual_solver.solve(8);
+      } else if (use_simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+	// Parallel - PAMI
+	// writePivots("multi");
+	// if (opt.partitionFile.size() > 0) {model.strOption[STROPT_PARTITION_FILE] = opt.partitionFile;}
+	bool FourThreads = false;
+	bool EightThreads = false;
+	if (FourThreads)
+	  dual_solver.solve(4);
+	else if (EightThreads)
+	  dual_solver.solve(8);
+	else
+	  dual_solver.solve();
+      }
     }
-  }
-  if (simplex_info.dual_phase1_iteration_count +
-      simplex_info.dual_phase2_iteration_count +
-      simplex_info.primal_phase1_iteration_count +
-      simplex_info.primal_phase2_iteration_count !=
-      simplex_info.iteration_count) printf("Iteration total error \n");
+    if (simplex_info.dual_phase1_iteration_count +
+	simplex_info.dual_phase2_iteration_count +
+	simplex_info.primal_phase1_iteration_count +
+	simplex_info.primal_phase2_iteration_count !=
+	simplex_info.iteration_count) printf("Iteration total error \n");
+    
+    if (highs_model_object.options_.simplex_initial_condition_check) {
+      timer.start(simplex_info.clock_[BasisConditionClock]);
+      double basis_condition = computeBasisCondition(highs_model_object);
+      timer.stop(simplex_info.clock_[BasisConditionClock]);
+      printf("Optimal basis condition estimate is %g\n", basis_condition);
+    }
 
-  if (highs_model_object.options_.simplex_initial_condition_check) {
-    timer.start(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition = computeBasisCondition(highs_model_object);
-    timer.stop(simplex_info.clock_[BasisConditionClock]);
-    printf("Optimal basis condition estimate is %g\n", basis_condition);
-  }
-
-  // Official finish of solver
-  timer.stop(timer.solve_clock);
-
+    // Official finish of solver
+    timer.stop(timer.solve_clock);
+    
 #ifdef HiGHSDEV
-  timer.stop(simplex_info.clock_[SimplexTotalClock]);
-  reportSimplexProfiling(highs_model_object);
-  // ToDO move iterationAnalysisReport to simplex
-  printf("!! Move iterationAnalysisReport() to HSimplex\n");
-  //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
-
-  if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
-    printf("Iterations [Ph1 %d; Ph2 %d] Total %d\n",
-	   simplex_info.primal_phase1_iteration_count,
-	   simplex_info.primal_phase2_iteration_count,
-	   simplex_info.iteration_count);
-  } else {
-    printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
-	   simplex_info.dual_phase1_iteration_count,
-	   simplex_info.dual_phase2_iteration_count,
-	   simplex_info.primal_phase2_iteration_count,
-	   simplex_info.iteration_count);
-  }
+    timer.stop(simplex_info.clock_[SimplexTotalClock]);
+    reportSimplexProfiling(highs_model_object);
+    // ToDO move iterationAnalysisReport to simplex
+    printf("!! Move iterationAnalysisReport() to HSimplex\n");
+    //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
+    
+    if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
+      printf("Iterations [Ph1 %d; Ph2 %d] Total %d\n",
+	     simplex_info.primal_phase1_iteration_count,
+	     simplex_info.primal_phase2_iteration_count,
+	     simplex_info.iteration_count);
+    } else {
+      printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
+	     simplex_info.dual_phase1_iteration_count,
+	     simplex_info.dual_phase2_iteration_count,
+	     simplex_info.primal_phase2_iteration_count,
+	     simplex_info.iteration_count);
+    }
 #endif
+  }
 
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After solve");
-  if (simplex_info.analyseLpSolution) { analyse_lp_solution(highs_model_object);}
+  if (simplex_info.analyseLpSolution) {analyse_lp_solution(highs_model_object);}
 #endif
   comparePrimalDualObjectiveValues(highs_model_object);
 

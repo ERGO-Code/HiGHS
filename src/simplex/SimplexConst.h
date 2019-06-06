@@ -29,11 +29,12 @@ enum class SimplexSolutionStatus {
 
 enum class SimplexStrategy {
   CHOOSE = 0,
-  DUAL_PLAIN,
+  DUAL,
+  DUAL_PLAIN = DUAL,
   DUAL_TASKS,
   DUAL_MULTI,
   PRIMAL,
-  DEFAULT = DUAL_PLAIN
+  DEFAULT = DUAL
 };
   
 enum class SimplexDualiseStrategy {
