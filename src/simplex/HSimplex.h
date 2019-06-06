@@ -293,6 +293,10 @@ int computePrimalInfeasible(
 		    HighsModelObject &highs_model_object
 		    );
 
+int computeDualInfeasible(
+			  HighsModelObject &highs_model_object
+			  );
+
 void compute_dual(
 		  HighsModelObject &highs_model_object
 		  );

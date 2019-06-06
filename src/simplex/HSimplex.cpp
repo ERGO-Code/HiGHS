@@ -107,7 +107,7 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     invalidateSimplexLp(simplex_lp_status);
     // Identify a simplex basis
     // Copy the LP to the structure to be used by the solver
-    simplex_lp = highs_model_object.simplex_lp_;
+    simplex_lp = highs_model_object.lp_;
 
     // Initialise the real and integer random vectors
     initialiseSimplexLpRandomVectors(highs_model_object);
@@ -198,9 +198,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     }
     // Use nonbasicFlag to form basicIndex
     num_basic_variables = 0;
+    simplex_info.num_basic_logicals = 0;
     for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
 	simplex_basis.basicIndex_[num_basic_variables] = iVar;
+	if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
 	num_basic_variables++;
       }
     }
@@ -258,6 +260,7 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       // ToDo Handle rank deficiency by replacing singular columns with logicals
       throw runtime_error("Transition has singular basis matrix");
     }
+    simplex_lp_status.has_fresh_invert = true;
   }
   // Possibly check for basis condition. ToDo Override this for MIP hot start
   bool basis_condition_ok = true;
@@ -279,78 +282,152 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   // work and base arrays are re-populated
   assert(basis_condition_ok);
   // Now there are nonbasicFlag and basicIndex corresponding to a
-  // basis with well-conditioned invertible representation, possibly
-  // set up set up the simplex work and base arrays
-  if (!simplex_lp_status.has_basis) {
+  // basis with well-conditioned invertible representation
+  //
+  // Possibly set up the column-wise and row-wise copies of the matrix
+  if (!simplex_lp_status.has_matrix_col_wise || simplex_lp_status.has_matrix_row_wise) {
+    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
+		 &simplex_lp.Astart_[0],
+		 &simplex_lp.Aindex_[0],
+		 &simplex_lp.Avalue_[0],
+		 &simplex_basis.nonbasicFlag_[0]);
+    simplex_lp_status.has_matrix_col_wise = true;
+    simplex_lp_status.has_matrix_row_wise = true;
+  }
+  // Possibly set up the simplex work and base arrays
+  // ToDo Stop doing this always
+  //  if (!simplex_lp_status.has_basis) {
     allocate_work_and_base_arrays(highs_model_object);
     initialise_cost(highs_model_object);
     initialise_bound(highs_model_object);
-    // Don't have a simplex basis since nonbasicMove is not set up. Do this 
+    // Don't have a simplex basis since nonbasicMove is not set up. 
+    const int illegal_move_value = -99;
     for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
 	// Nonbasic variable
-	if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) {
+	double lower = simplex_info.workLower_[iVar];
+	double upper = simplex_info.workUpper_[iVar];
+	int move = illegal_move_value;
+	double value;
+	if (lower == upper) {
 	  // Fixed
-	  simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
-	  simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
-	} else if (!highs_isInfinity(-simplex_info.workLower_[iVar])) {
+	  value = lower;
+	  move = NONBASIC_MOVE_ZE;
+	} else if (!highs_isInfinity(-lower)) {
 	  // Finite lower bound so boxed or lower
-	  if (!highs_isInfinity(simplex_info.workUpper_[iVar])) {
+	  if (!highs_isInfinity(upper)) {
 	    // Finite upper bound so boxed
-	    double midpoint = 0.5*(simplex_info.workLower_[iVar] + simplex_info.workUpper_[iVar]);
-	    // Set according to Determine the bound to u
-
-	    if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_UP) {
-            // Set at lower
-            simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
-          } else if (simplex_basis.nonbasicMove_[iVar] == NONBASIC_MOVE_DN) {
-            // Set at upper
-            simplex_info.workValue_[iVar] = simplex_info.workUpper_[iVar];
-          } else {
-            // Invalid nonbasicMove: correct and set value at lower
-            simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
-            simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
-          }
-        } else {
-          // Lower
-          simplex_info.workValue_[iVar] = simplex_info.workLower_[iVar];
-          simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_UP;
-        }
-      } else if (!highs_isInfinity(simplex_info.workUpper_[iVar])) {
-        // Upper
-        simplex_info.workValue_[iVar] = simplex_info.workUpper_[iVar];
-        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_DN;
-      } else {
-        // FREE
-        simplex_info.workValue_[iVar] = 0;
-        simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
-      }
-      // dl_pr_act = simplex_info.workValue_[iVar] - prev_pr_act;
-      // norm_dl_pr_act += dl_pr_act*dl_pr_act;
-      //      if (fabs(dl_pr_act) > 1e-4) printf("IVar %5d: [LB; Pr; UB] of [%8g;
-      //      %8g; %8g] Du = %8g; DlPr = %8g\n",
-      //					iVar,
-      //simplex_info.workLower_[iVar],
-      // simplex_info.workValue_[iVar], simplex_info.workUpper_[iVar],
-      // simplex_info.workDual_[iVar], dl_pr_act);
-	
+	    // Determine the bound to set the value to according to, in order of priority
+	    // 1. Any valid HiGHS basis status
+	    if (have_highs_basis) {
+	      if (iVar < simplex_lp.numCol_) {
+		// Column
+		if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
+		  // Set to lower bound
+		  move = NONBASIC_MOVE_UP;
+		  value = lower;
+		} else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
+		  // Set to upper bound
+		  move = NONBASIC_MOVE_DN;
+		  value = upper;
+		}
+	      } else {
+		// Row
+		int iRow = iVar - simplex_lp.numCol_;
+		if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
+		  // Set to upper bound
+		  move = NONBASIC_MOVE_DN;
+		  value = upper;
+		} else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
+		  // Set to lower bound
+		  move = NONBASIC_MOVE_UP;
+		  value = lower;
+		}
+	      }
+	    }
+	    // 2. Any HiGHS solution value
+	    if (move == illegal_move_value && have_highs_solution) {
+	      double midpoint = 0.5*(lower + upper);
+	      if (iVar < simplex_lp.numCol_) {
+		// Column
+		if (solution.col_value[iVar] < midpoint) {
+		  // Set to lower bound
+		  move = NONBASIC_MOVE_UP;
+		  value = lower;
+		} else {
+		  // Set to upper bound
+		  move = NONBASIC_MOVE_DN;
+		  value = upper;
+		}
+	      } else {
+		// Row
+		int iRow = iVar - simplex_lp.numCol_;
+		if (solution.col_value[iVar] < midpoint) {
+		  // Set to upper bound
+		  move = NONBASIC_MOVE_DN;
+		  value = upper;
+		} else {
+		  // Set to lower bound
+		  move = NONBASIC_MOVE_UP;
+		  value = lower;
+		}
+	      }
+	    }
+	    // 3. Lower bound for original LP
+	    if (move == illegal_move_value) {
+	      if (iVar < simplex_lp.numCol_) {
+		// Set to lower bound
+		move = NONBASIC_MOVE_UP;
+		value = lower;
+	      } else {
+		// Row
+		int iRow = iVar - simplex_lp.numCol_;
+		// Set to upper bound
+		move = NONBASIC_MOVE_DN;
+		value = upper;
+	      }
+	    }
+	  } else {
+	    // Lower (since upper bound is infinite)
+	    value = lower;
+	    move = NONBASIC_MOVE_UP;
+	  }
+	} else if (!highs_isInfinity(upper)) {
+	  // Upper
+	  value = upper;
+	  move = NONBASIC_MOVE_DN;
+	} else {
+	  // FREE
+	  value = 0;
+	  move = NONBASIC_MOVE_ZE;
+	}
+	assert(move != illegal_move_value);
+	simplex_info.workValue_[iVar] = value;
+	simplex_basis.nonbasicMove_[iVar] = move;
       } else {
 	// Basic variable
 	simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
       }
-
     }
-  }
-      populate_work_arrays(highs_model_object);
+    //  } else {}
 
-  // Deduce the consequences of a new basis
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
-
-  //  if (!simplex_lp_status.has_matrix_col_wise || !simplex_lp_status.has_matrix_row_wise) {
-  
+    // Simplex basis is now valid
+    simplex_lp_status.has_basis = true;
     
-  //possibly) solve for the basic primal and nonbasic dual values to determine
+  // Possibly solve for the basic primal and nonbasic dual values to determine
   // which simplex solver to use, unless it's forced
+  //  if (simplex_lp_status.has_basic_primal_values) {
+  compute_primal(highs_model_object);
+  simplex_lp_status.has_basic_primal_values = true;
+  //}
+  //  if (simplex_lp_status.has_basic_dual_values) {
+  compute_dual(highs_model_object);
+  simplex_lp_status.has_nonbasic_dual_values = true;
+  //}
+  int num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
+  int num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
+  printf("/n after transition() simplex solution has %d primal infeasibilities and %d dual infeasibilities\n\n",
+	 num_primal_infeasibilities, num_dual_infeasibilities);
 }
 
 void setupSimplexLp(HighsModelObject &highs_model_object) {
@@ -2619,9 +2696,10 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
 
-  int num_iter = simplex_info.iteration_count;
   int num_nonbasic_primal_infeasibilities = 0;
   int num_basic_primal_infeasibilities = 0;
+  double max_nonbasic_primal_infeasibility = 0;
+  double max_basic_primal_infeasibility = 0;
   double sum_nonbasic_primal_infeasibilities = 0;
   double sum_basic_primal_infeasibilities = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -2633,12 +2711,13 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
       double value = simplex_info.workValue_[i];
       double lower = simplex_info.workLower_[i];
       double upper = simplex_info.workUpper_[i];
-      double residual = max(lower-value, value-upper);
-      //      printf("Nonbasic column %2d is %2d, [%12g, %12g, %12g] residual = %12g\n", nonbasic_ix, i, lower, value, upper, residual);
+      double primal_infeasibility = max(lower-value, value-upper);
+      //      printf("Nonbasic column %2d is %2d, [%12g, %12g, %12g] primal_infeasibility = %12g\n", nonbasic_ix, i, lower, value, upper, primal_infeasibility);
       //      nonbasic_ix++;
-      if (residual > simplex_info.primal_feasibility_tolerance) {
+      if (primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
 	num_nonbasic_primal_infeasibilities++;
-	sum_nonbasic_primal_infeasibilities += residual;
+	max_nonbasic_primal_infeasibility = std::max(primal_infeasibility, max_nonbasic_primal_infeasibility);
+	sum_nonbasic_primal_infeasibilities += primal_infeasibility;
       }
     }
   }
@@ -2648,23 +2727,67 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
     double value = simplex_info.baseValue_[i];
     double lower = simplex_info.baseLower_[i];
     double upper = simplex_info.baseUpper_[i];
-    double residual = max(lower-value, value-upper);
-    //    if (value > 0.1) printf("Basic row %2d is %2d, [%12g, %12g, %12g] residual = %12g\n", i, iCol, lower, value, upper, residual);
-    if (residual > simplex_info.primal_feasibility_tolerance) {
+    double primal_infeasibility = max(lower-value, value-upper);
+    //    if (value > 0.1) printf("Basic row %2d is %2d, [%12g, %12g, %12g] primal_infeasibility = %12g\n", i, iCol, lower, value, upper, primal_infeasibility);
+    if (primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
       num_basic_primal_infeasibilities++;
-      sum_basic_primal_infeasibilities += residual;
+      max_basic_primal_infeasibility = std::max(primal_infeasibility, max_basic_primal_infeasibility);
+      sum_basic_primal_infeasibilities += primal_infeasibility;
     }	
   }
   int num_primal_infeasibilities = num_nonbasic_primal_infeasibilities + num_basic_primal_infeasibilities;
 #ifdef HiGHSDEV
+  double max_primal_infeasibility = std::max(max_nonbasic_primal_infeasibility, max_basic_primal_infeasibility);
   double sum_primal_infeasibilities = sum_nonbasic_primal_infeasibilities + sum_basic_primal_infeasibilities;
   if (num_primal_infeasibilities) {
-    printf("Iter %9d has %8d (%8d+%8d) primal infeasibilities, summing to %12g (%12g+%12g)\n", num_iter,
-	   num_primal_infeasibilities, num_nonbasic_primal_infeasibilities, num_basic_primal_infeasibilities, 
+    int num_iter = simplex_info.iteration_count;
+    printf("Iter %d has %d (%d+%d) primal infeasibilities (max = %g = max[%g, %g]) summing to %g (%g+%g)\n", num_iter,
+	   num_primal_infeasibilities, num_nonbasic_primal_infeasibilities, num_basic_primal_infeasibilities,
+	   max_primal_infeasibility, max_nonbasic_primal_infeasibility, max_basic_primal_infeasibility,
 	   sum_primal_infeasibilities, sum_nonbasic_primal_infeasibilities, sum_basic_primal_infeasibilities);
   }
 #endif
   return num_primal_infeasibilities;  
+}
+
+int computeDualInfeasible(HighsModelObject &highs_model_object) {
+  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+
+  int num_dual_infeasibilities = 0;
+  double max_dual_infeasibility = 0;
+  double sum_dual_infeasibilities = 0;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    // Nonbasic column
+    double lower = simplex_info.workLower_[iVar];
+    double upper = simplex_info.workUpper_[iVar];
+    double dual_infeasibility;
+    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+      // Free: any nonzero dual value is infeasible
+      dual_infeasibility = fabs(simplex_info.workDual_[iVar]);
+    } else if (lower < upper) {
+      // Not fixed: any dual infeasibility is given by value signed by nonbasicMove
+      dual_infeasibility = -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
+    }
+    if (dual_infeasibility > simplex_info.dual_feasibility_tolerance) {
+      num_dual_infeasibilities++;
+      max_dual_infeasibility = std::max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibilities += dual_infeasibility;
+    }
+  }
+#ifdef HiGHSDEV
+  if (num_dual_infeasibilities) {
+    int num_iter = simplex_info.iteration_count;
+    printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n", num_iter,
+	   num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
+  }
+#endif
+  return num_dual_infeasibilities;  
 }
 
 void compute_dual(HighsModelObject &highs_model_object) {

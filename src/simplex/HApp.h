@@ -51,7 +51,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   SimplexTimer simplex_timer;
   simplex_timer.initialiseSimplexClocks(highs_model_object);
 
-  bool use_transition = false;
+  bool use_transition = true;
   if (use_transition) {
     simplex_lp_status.solution_status = transition(highs_model_object);
     if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
@@ -61,6 +61,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     timer.start(timer.solve_clock);
 #ifdef HiGHSDEV
     timer.start(simplex_info.clock_[SimplexTotalClock]);
+#endif
+#ifdef HiGHSDEV
+    reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
   } else {
 
@@ -106,10 +109,10 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     // valid, otherwise a unit basis or crash basis and perform INVERT
     // if necessary
     setupForSimplexSolve(highs_model_object);
-  }
 #ifdef HiGHSDEV
-  //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
+    //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
 #endif
+  }
 
   if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
     // Use primal simplex solver
