@@ -1,4 +1,4 @@
-// mcs -out:cstest call_highs_from_csharp.cs -r:../src/interfaces/highscslib 
+// mcs -out:cstest call_highs_from_csharp.cs -r:highscslib.dll
 class Program {
    static void Main(string[] args) {
       double[] cc = {1, -2};
@@ -9,6 +9,7 @@ class Program {
       int[] astart = {0, 2, 4};
       int[] aindex = {0, 1, 0, 1};
       double[] avalue = {1, 2, 1, 3};
-      HighsLpSolver.call_highs(cc, cl, cu, rl, ru, astart, aindex, avalue);
+      int status = HighsLpSolver.Highs_callhighs(cc, cl, cu, rl, ru, astart, aindex, avalue);
+      //Console.Writeline("Status: " + status);
    }
 }
