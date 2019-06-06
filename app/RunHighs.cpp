@@ -96,8 +96,7 @@ int main(int argc, char **argv) {
     HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
     return (int)HighsStatus::LpError;
   }
-
-  //  bool write_mps_return = highs.writeMPS("write.mps"); if (!write_mps_return) printf("Error return from highs.writeMPS\n");
+  
   highs.options_ = options;
   HighsStatus run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
