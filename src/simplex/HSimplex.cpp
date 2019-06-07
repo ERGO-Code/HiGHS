@@ -50,7 +50,7 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 
   // Set values of internal options
 #ifdef HiGHSDEV
-  bool useful_analysis = false;
+  bool useful_analysis = true;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis; // false;
   simplex_info.report_simplex_outer_clock = false;

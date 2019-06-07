@@ -91,7 +91,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #endif
     }
 #ifdef HiGHSDEV
-    reportSimplexLpStatus(simplex_lp_status, "After transition");
+    // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
   } else {
 

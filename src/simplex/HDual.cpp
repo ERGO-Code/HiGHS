@@ -140,7 +140,7 @@ void HDual::solve(int num_threads) {
   if (!ok) {printf("NOT OK TO SOLVE???\n"); cout << flush;}
   assert(ok);
 #ifdef HiGHSDEV
-  reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving loop");
+  //reportSimplexLpStatus(simplex_lp_status, "Before HDual major solving loop");
 #endif
   //
   // The major solving loop
