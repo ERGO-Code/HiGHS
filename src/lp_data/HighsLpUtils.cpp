@@ -683,6 +683,7 @@ HighsStatus add_lp_rows(HighsLp& lp,
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
   //  if (return_status != HighsStatus::OK && return_status != HighsStatus::Warning) return return_status
   lp.numRow_ += num_new_row;
+  lp.nnz_ += num_new_nz;
   return return_status;
 }
 
