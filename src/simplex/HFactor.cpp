@@ -1069,6 +1069,7 @@ void HFactor::buildFinish() {
   }
 
   // U pointer
+  Ustart.push_back(0);
   Ulastp.assign(&Ustart[1], &Ustart[numRow + 1]);
   Ustart.resize(numRow);
 
@@ -1144,8 +1145,12 @@ void HFactor::ftranL(HVector &rhs, double hist_dsty) const {
 
     // Alias to factor L
     const int *Lstart = &this->Lstart[0];
-    const int *Lindex = &this->Lindex[0];
-    const double *Lvalue = &this->Lvalue[0];
+    int *Lindex = NULL;
+    if (this->Lindex.size() > 0)
+      Lindex = (int*)&this->Lindex[0];
+    double *Lvalue = NULL;
+    if (this->Lvalue.size() > 0)
+      Lvalue = (double*)&this->Lvalue[0];
 
     // Transform
     for (int i = 0; i < numRow; i++) {
@@ -1164,6 +1169,12 @@ void HFactor::ftranL(HVector &rhs, double hist_dsty) const {
     // Save the count
     rhs.count = RHScount;
   } else {
+    int *Lindex = NULL;
+    if (this->Lindex.size() > 0)
+      Lindex = (int*)&this->Lindex[0];
+    double *Lvalue = NULL;
+    if (this->Lvalue.size() > 0)
+      Lvalue = (double*)&this->Lvalue[0];
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
   }
@@ -1182,8 +1193,13 @@ void HFactor::btranL(HVector &rhs, double hist_dsty) const {
 
     // Alias to factor L
     const int *LRstart = &this->LRstart[0];
-    const int *LRindex = &this->LRindex[0];
-    const double *LRvalue = &this->LRvalue[0];
+    int *LRindex = NULL;
+    if (this->LRindex.size() > 0)
+      LRindex = (int*)&this->LRindex[0];
+
+    double *LRvalue = NULL;
+    if (this->LRvalue.size() > 0)
+      LRvalue = (double*)&this->LRvalue[0];
 
     // Transform
     for (int i = numRow - 1; i >= 0; i--) {
@@ -1203,6 +1219,13 @@ void HFactor::btranL(HVector &rhs, double hist_dsty) const {
     // Save the count
     rhs.count = RHScount;
   } else {
+    int *LRindex = NULL;
+    if (this->LRindex.size() > 0)
+      LRindex = (int*)&this->LRindex[0];
+
+    double *LRvalue = NULL;
+    if (this->LRvalue.size() > 0)
+      LRvalue = (double*)&this->LRvalue[0];
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
   }
@@ -1243,8 +1266,13 @@ void HFactor::ftranU(HVector &rhs, double hist_dsty) const {
     // Alias to the factor
     const int *Ustart = &this->Ustart[0];
     const int *Uend = &this->Ulastp[0];
-    const int *Uindex = &this->Uindex[0];
-    const double *Uvalue = &this->Uvalue[0];
+    int *Uindex = NULL;
+    if (this->Uindex.size() > 0)
+      Uindex = (int*)&this->Uindex[0];
+
+    double *Uvalue = NULL;
+    if (this->Uvalue.size() > 0)
+      Uvalue = (double*)&this->Uvalue[0];
 
     // Transform
     //        double RHS_TickStart = RHS_Tick;
@@ -1279,6 +1307,13 @@ void HFactor::ftranU(HVector &rhs, double hist_dsty) const {
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
   } else {
+    int *Uindex = NULL;
+    if (this->Uindex.size() > 0)
+      Uindex = (int*)&this->Uindex[0];
+
+    double *Uvalue = NULL;
+    if (this->Uvalue.size() > 0)
+      Uvalue = (double*)&this->Uvalue[0];
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
   }
@@ -1371,10 +1406,21 @@ void HFactor::btranU(HVector &rhs, double hist_dsty) const {
 void HFactor::ftranFT(HVector &vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
-  const int *PFpivotIndex = &this->PFpivotIndex[0];
-  const int *PFstart = &this->PFstart[0];
-  const int *PFindex = &this->PFindex[0];
-  const double *PFvalue = &this->PFvalue[0];
+  int *PFpivotIndex = NULL;
+    if( this->PFpivotIndex.size() > 0)
+    PFpivotIndex = (int*)&this->PFpivotIndex[0];
+
+  int *PFstart = NULL;
+  if (this->PFstart.size() > 0)
+    PFstart = (int*)&this->PFstart[0];
+
+  int *PFindex = NULL;
+  if(this->PFindex.size() > 0)
+    PFindex = (int*)&this->PFindex[0];
+
+  double *PFvalue = NULL;
+  if (this->PFvalue.size() > 0)
+    PFvalue = (double*)&this->PFvalue[0];
 
   // Alias to non constant
   //    int RHS_Tick = vector.pseudoTick;
@@ -1415,10 +1461,18 @@ void HFactor::ftranFT(HVector &vector) const {
 void HFactor::btranFT(HVector &vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
-  const int *PFpivotIndex = &this->PFpivotIndex[0];
-  const int *PFstart = &this->PFstart[0];
-  const int *PFindex = &this->PFindex[0];
-  const double *PFvalue = &this->PFvalue[0];
+  int *PFpivotIndex = NULL;
+  if (this->PFpivotIndex.size() > 0)
+    PFpivotIndex = (int*)&this->PFpivotIndex[0];
+  int *PFstart = NULL;
+  if (this->PFstart.size() > 0)
+    PFstart = (int*)&this->PFstart[0];
+  int *PFindex = NULL;
+  if (this->PFindex.size() > 0)
+    PFindex = (int*)&this->PFindex[0];
+  double *PFvalue = NULL;
+  if (this->PFvalue.size() > 0)
+    PFvalue =(double*)&this->PFvalue[0];
 
   // Alias to non constant
   //    int RHS_Tick = vector.pseudoTick;

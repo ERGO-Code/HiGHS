@@ -371,15 +371,18 @@ void HDualRow::create_Freelist() {
       ckFreeListSize++;
     }
   }
-  //  int freeListSa = *freeList.begin();
-  //  int freeListE = *freeList.end();
-  freeListSize = *freeList.end();
-  if (freeListSize != ckFreeListSize) {
-    printf("!! STRANGE: freeListSize != ckFreeListSize\n");
+  if (freeList.size() > 0) {
+    //  int freeListSa = *freeList.begin();
+    //  int freeListE = *freeList.end();
+    freeListSize = *freeList.end();
+    if (freeListSize != ckFreeListSize) {
+      printf("!! STRANGE: freeListSize != ckFreeListSize\n");
+    }
+    // const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
+    //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
+    //  freeListE, freeListSize, 100*freeListSize/numTot);
   }
-  // const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
-  //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
-  //  freeListE, freeListSize, 100*freeListSize/numTot);
+
 }
 
 void HDualRow::create_Freemove(HVector *row_ep) {

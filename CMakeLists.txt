@@ -165,9 +165,9 @@ endfunction()
 #enable_cxx_compiler_flag_if_supported("-Wextra")
 #enable_cxx_compiler_flag_if_supported("-pedantic")
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
+#if(CMAKE_BUILD_TYPE STREQUAL Debug)
     enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
-endif()
+#endif()
 
 # Targets
 enable_testing()
