@@ -45,6 +45,10 @@ if(FORTRAN_FOUND)
  else()
  endif(FORTRAN_FOUND)
 
+# check the C API
+add_executable(capi_unit_tests TestCAPI.c)
+target_link_libraries(capi_unit_tests libhighs)
+
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
