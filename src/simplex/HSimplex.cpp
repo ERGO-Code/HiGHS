@@ -478,6 +478,7 @@ void setupSimplexLp(HighsModelObject &highs_model_object) {
     }
   }
 #endif
+  simplex_lp_status.valid = true;
 }
 
 void postsolveRefineHighsBasisAndSolution(HighsModelObject &highs_model_object) {
@@ -1059,12 +1060,14 @@ void setupForSimplexSolve(HighsModelObject &highs_model_object) {
     timer.stop(simplex_info.clock_[BasisConditionClock]);
     double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
     bool basis_condition_ok = basis_condition < basis_condition_tolerance;
+#ifdef HiGHSDEV
     printf("Initial basis condition estimate of %11.4g", basis_condition);
     if (basis_condition_ok) {
       printf(" is within the tolerance of %g\n", basis_condition_tolerance);
     } else { 
       printf(" exceeds the tolerance of %g\n", basis_condition_tolerance);
     }
+#endif
   }
 }
 
@@ -1691,7 +1694,7 @@ void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
   // possible) work* arrays and allocate basis* arrays
 
   for (int row = 0; row < simplex_lp.numRow_; row++) simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
-  for (int col = 0; col < simplex_lp.numCol_; col++) simplex_basis.nonbasicFlag_[col] = 1;
+  for (int col = 0; col < simplex_lp.numCol_; col++) simplex_basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
   simplex_lp_status.has_basis = true;
   simplex_info.num_basic_logicals = simplex_lp.numRow_;
 

@@ -373,11 +373,17 @@ HighsStatus Highs::run() {
   return solve_status;
 }
 
-const HighsLp &Highs::getLp() const { return lp_; }
+const HighsLp &Highs::getLp() const {
+  return lp_;
+}
 
-const HighsSolution &Highs::getSolution() const { return solution_; }
+const HighsSolution &Highs::getSolution() const {
+  return solution_;
+}
 
-const HighsBasis &Highs::getBasis() const { return basis_; }
+const HighsBasis &Highs::getBasis() const {
+  return basis_;
+}
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
@@ -531,7 +537,7 @@ bool Highs::changeColsCost(const int num_set_entries, const int *set,
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_costs(num_set_entries, set, cost);
+    return_status = interface.changeCosts(num_set_entries, set, cost);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -549,7 +555,7 @@ bool Highs::changeColsCost(const int *mask, const double *cost) {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_costs(mask, cost);
+    return_status = interface.changeCosts(mask, cost);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -574,9 +580,7 @@ bool Highs::changeColsBounds(const int num_set_entries, const int *set,
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-
-    return_status =
-        interface.change_col_bounds(num_set_entries, set, lower, upper);
+    return_status = interface.changeColBounds(num_set_entries, set, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -598,7 +602,7 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_col_bounds(from_col, to_col, lower, upper);
+    return_status = interface.changeColBounds(from_col, to_col, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -621,7 +625,7 @@ bool Highs::changeColsBounds(const int *mask, const double *lower,
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_col_bounds(mask, lower, upper);
+    return_status = interface.changeColBounds(mask, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -646,9 +650,7 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int *set,
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-
-    return_status =
-        interface.change_row_bounds(num_set_entries, set, lower, upper);
+    return_status = interface.changeRowBounds(num_set_entries, set, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -671,7 +673,7 @@ bool Highs::changeRowsBounds(const int *mask, const double *lower,
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
 
-    return_status = interface.change_row_bounds(mask, lower, upper);
+    return_status = interface.changeRowBounds(mask, lower, upper);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -1024,14 +1026,64 @@ HighsStatus Highs::runBnb() {
 
 HighsStatus Highs::solveNode(Node &node) {
   // Apply column bounds from node to LP.
-  lp_.colLower_ = node.col_lower_bound;
-  lp_.colUpper_ = node.col_upper_bound;
+  const bool check_call = false;
+  const bool call_changeColsBounds = true;
+  if (call_changeColsBounds) {
+    changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
+  } else {
+    // Change the LP directly and ivalidate the simplex information
+    lp_.colLower_ = node.col_lower_bound;
+    lp_.colUpper_ = node.col_upper_bound;
+    hmos_[0].simplex_lp_status_.valid = false;
+  }
 
   // Call warm start.
   //  HighsStatus status = run();
   // call works but simply calling run() should be enough and will call hot
   // start in the same way as a user would call it from the outside
+
+  int iteration_count0;
+  int iteration_count1;
+  int solve0_iteration_count;
+  int solve1_iteration_count;
+  double solve0_objective_value;
+  double solve1_objective_value;
+  int solve0_status;
+  int solve1_status;
+
+  iteration_count0 = hmos_[0].simplex_info_.iteration_count;
+
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+  simplex_has_run_ = true;
+
+  iteration_count1 = hmos_[0].simplex_info_.iteration_count;
+  solve0_iteration_count = iteration_count1 - iteration_count0;
+  solve0_objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  solve0_status = (int)status;
+  printf("Solve0: Obj = %12g; Iter =%6d; Status =%2d\n", solve0_objective_value, solve0_iteration_count, solve0_status);
+
+  if (check_call) {
+    // Generate a fresh model object for the LP at this node
+    hmos_[0].simplex_lp_status_.valid = false;
+    hmos_[0].basis_.valid_ = false;
+    iteration_count1 = hmos_[0].simplex_info_.iteration_count;
+    HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+    iteration_count1 = hmos_[0].simplex_info_.iteration_count;
+    solve1_iteration_count = iteration_count1 - iteration_count0;
+    solve1_iteration_count = iteration_count1 - iteration_count0;
+    solve1_objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+    solve1_status = (int)status;
+    printf("Solve1: Obj = %12g; Iter =%6d; Status =%2d\n", solve1_objective_value, solve1_iteration_count, solve1_status);
+    double rlv_objective_value_difference = fabs(solve1_objective_value - solve0_objective_value)/max(1.0, fabs(solve1_objective_value));
+    if (solve0_status != solve1_status) {
+      // Look for unequal status
+      printf("!! NodeSolveInequality: Status difference: Status0=%2d; Status1=%2d !!\n", solve0_status, solve1_status);
+    } else if (solve0_status != (int)HighsStatus::Infeasible) {
+      // Unless infeasible, look for unequal objective
+      if (rlv_objective_value_difference > 1e-12)
+	printf("!! NodeSolveInequality: Relative objective difference = %12g !!\n", rlv_objective_value_difference);
+    }
+  }
 
   // Set solution.
   if (status == HighsStatus::Optimal) {
@@ -1065,6 +1117,8 @@ HighsStatus Highs::solveRootNode(Node &root) {
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
   HighsStatus status = runSimplexSolver(options_, hmos_[0]);
+  simplex_has_run_ = true;
+  
   if (status == HighsStatus::Optimal) {
     root.primal_solution = hmos_[0].solution_.col_value;
     root.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;

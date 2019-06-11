@@ -50,23 +50,23 @@ HighsStatus assess_costs(const int col_ix_os,
 			 const double infinite_cost
 			 );
 
-HighsStatus assess_bounds(
-			  const char* type,
-			  const int ix_os,
-			  const int mask_num_ix,
-			  const bool interval,
-			  const int from_ix,
-			  const int to_ix,
-			  const bool set,
-			  const int num_set_entries,
-			  const int* ix_set,
-			  const bool mask,
-			  const int* ix_mask,
-			  double* usr_lower,
-			  double* usr_upper,
-			  const double infinite_bound,
-			  const bool normalise
-			  );
+HighsStatus assessBounds(
+			 const char* type,
+			 const int ix_os,
+			 const int mask_num_ix,
+			 const bool interval,
+			 const int from_ix,
+			 const int to_ix,
+			 const bool set,
+			 const int num_set_entries,
+			 const int* ix_set,
+			 const bool mask,
+			 const int* ix_mask,
+			 double* usr_lower,
+			 double* usr_upper,
+			 const double infinite_bound,
+			 const bool normalise
+			 );
 
 HighsStatus assessMatrix(
 			  const int vec_dim,
@@ -81,6 +81,42 @@ HighsStatus assessMatrix(
 			  const double large_matrix_value,
 			  bool normalise
 			  );
+
+HighsStatus scaleLpColCosts(HighsLp& lp,
+			    vector<double> &colScale,
+			    const bool interval,
+			    const int from_col,
+			    const int to_col,
+			    const bool set,
+			    const int num_set_entries,
+			    const int* col_set,
+			    const bool mask,
+			    const int* col_mask
+			    );
+
+HighsStatus scaleLpColBounds(HighsLp& lp,
+			     vector<double> &colScale,
+			     const bool interval,
+			     const int from_col,
+			     const int to_col,
+			     const bool set,
+			     const int num_set_entries,
+			     const int* col_set,
+			     const bool mask,
+			     const int* col_mask
+			     );
+
+HighsStatus scaleLpRowBounds(HighsLp& lp,
+			     vector<double> &rowScale,
+			     const bool interval,
+			     const int from_row,
+			     const int to_row,
+			     const bool set,
+			     const int num_set_entries,
+			     const int* row_set,
+			     const bool mask,
+			     const int* row_mask
+			     );
 
 HighsStatus add_lp_cols(
 			HighsLp& lp,
@@ -226,53 +262,53 @@ HighsStatus change_lp_costs(
 			    const double infinite_cost
 			    );
 
-HighsStatus change_lp_col_bounds(
-				 HighsLp &lp,
-				 const bool interval,
-				 const int from_col,
-				 const int to_col,
-				 const bool set,
-				 const int num_set_entries,
-				 const int* col_set,
-				 const bool mask,
-				 const int* col_mask,
-				 const double* usr_col_lower,
-				 const double* usr_col_upper,
-				 const double infinite_bound
-				 );
+HighsStatus changeLpColBounds(
+			      HighsLp &lp,
+			      const bool interval,
+			      const int from_col,
+			      const int to_col,
+			      const bool set,
+			      const int num_set_entries,
+			      const int* col_set,
+			      const bool mask,
+			      const int* col_mask,
+			      const double* usr_col_lower,
+			      const double* usr_col_upper,
+			      const double infinite_bound
+			      );
 
-HighsStatus change_lp_row_bounds(
-				 HighsLp &lp,
-				 const bool interval,
-				 const int from_row,
-				 const int to_row,
-				 const bool set,
-				 const int num_set_entries,
-				 const int* row_set,
-				 const bool mask,
-				 const int* row_mask,
-				 const double* usr_row_lower,
-				 const double* usr_row_upper,
-				 const double infinite_bound
-				 );
+HighsStatus changeLpRowBounds(
+			      HighsLp &lp,
+			      const bool interval,
+			      const int from_row,
+			      const int to_row,
+			      const bool set,
+			      const int num_set_entries,
+			      const int* row_set,
+			      const bool mask,
+			      const int* row_mask,
+			      const double* usr_row_lower,
+			      const double* usr_row_upper,
+			      const double infinite_bound
+			      );
 
-HighsStatus change_bounds(
-			  const char* type,
-			  double* lower,
-			  double* upper,
-			  const int mask_num_ix,
-			  const bool interval,
-			  const int from_ix,
-			  const int to_ix,
-			  const bool set,
-			  const int num_set_entries,
-			  const int* ix_set,
-			  const bool mask,
-			  const int* ix_mask,
-			  const double* usr_lower,
-			  const double* usr_upper,
-			  const double infinite_bound
-			  );
+HighsStatus changeBounds(
+			 const char* type,
+			 double* lower,
+			 double* upper,
+			 const int mask_num_ix,
+			 const bool interval,
+			 const int from_ix,
+			 const int to_ix,
+			 const bool set,
+			 const int num_set_entries,
+			 const int* ix_set,
+			 const bool mask,
+			 const int* ix_mask,
+			 const double* usr_lower,
+			 const double* usr_upper,
+			 const double infinite_bound
+			 );
 
 /**
  * @brief Write out the LP as an MPS file
