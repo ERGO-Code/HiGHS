@@ -1064,12 +1064,11 @@ HighsStatus Highs::solveNode(Node &node) {
 
   if (check_call) {
     // Generate a fresh model object for the LP at this node
-    hmos_[0].simplex_lp_status_.valid = false;
+    hmos_[0].simplex_lp_status_.has_basis = false;
     hmos_[0].basis_.valid_ = false;
-    iteration_count1 = hmos_[0].simplex_info_.iteration_count;
+    iteration_count0 = hmos_[0].simplex_info_.iteration_count;
     HighsStatus status = runSimplexSolver(options_, hmos_[0]);
     iteration_count1 = hmos_[0].simplex_info_.iteration_count;
-    solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
     solve1_status = (int)status;

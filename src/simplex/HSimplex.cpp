@@ -102,26 +102,22 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     solution.col_dual.size() == highs_model_object.lp_.numCol_ &&
     solution.row_value.size() == highs_model_object.lp_.numRow_ &&
     solution.row_dual.size() == highs_model_object.lp_.numRow_;
-  if (!simplex_lp_status.has_basis) {
-    // No simplex basis
-    // Invalidate the simplex LP
+  if (!simplex_lp_status.valid) {
+    // Simplex LP is not valid, so ensure that it is fully invalidated
     invalidateSimplexLp(simplex_lp_status);
-    // Identify a simplex basis
     // Copy the LP to the structure to be used by the solver
     simplex_lp = highs_model_object.lp_;
-
     // Initialise the real and integer random vectors
     initialiseSimplexLpRandomVectors(highs_model_object);
-    //
-    // Allocate memory for the basis
-    const int numTot = highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_;
-    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
-    simplex_basis.nonbasicFlag_.resize(numTot);
-    simplex_basis.nonbasicMove_.resize(numTot);
-    simplex_lp_status.has_basis = false;
+  }
+  if (!simplex_lp_status.has_basis) {
+    // There is no simplex basis, so try to identify one
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag,
       // checking that it has the right number of basic variables
+      //
+      // Allocate memory for nonbasicFlag
+      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_);
       int num_basic_variables = 0;
       for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
 	int iVar = iCol;
@@ -149,13 +145,20 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     if (!nonbasicFlag_valid) {
       // nonbasicFlag is not valid, so generate a simplex basis, possibly by performing a crash, and possibly after dualising
 
+      /*
       // Possibly dualise, making sure that no simplex or other data are used to initialise
-      //if (options.simplex_dualise_strategy != SimplexDualiseStrategy::OFF) {dualiseSimplexLp(highs_model_object); have_highs_solution = false;}
-
+      if (options.simplex_dualise_strategy != SimplexDualiseStrategy::OFF) {
+	dualiseSimplexLp(highs_model_object); have_highs_solution = false;
+	// Initialise the real and integer random vectors
+	initialiseSimplexLpRandomVectors(highs_model_object);
+      }
+      */
       // Possibly permute the columns of the LP to be used by the solver. 
       if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF) permuteSimplexLp(highs_model_object);
       
-      // Set up a logical basis
+      // Allocate memory for nonbasicFlag
+      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_);
+      // Set up nonbasicFlag for a logical basis
       for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
       for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_+iRow] = NONBASIC_FLAG_FALSE;
 
@@ -170,7 +173,7 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       }
     }
     // Now that the dimensions of the LP to be solved by the simplex
-    // method are know, make sure that there is a postive number of
+    // method are known, make sure that there is a postive number of
     // rows. ToDo: Ensure that LPs with no rows can still be solved
     assert(simplex_lp.numRow_>0);
     if (simplex_lp.numRow_ == 0) {
@@ -198,6 +201,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       assert(!basis.valid_);
     }
     // Use nonbasicFlag to form basicIndex
+    // Allocate memory for basicIndex
+    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
     num_basic_variables = 0;
     simplex_info.num_basic_logicals = 0;
     for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
@@ -210,10 +215,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     // Double-check that we have the right number of basic variables
     nonbasicFlag_valid = num_basic_variables == simplex_lp.numRow_;
     assert(nonbasicFlag_valid);
-    // 
+    updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
   }
   // Execute from here for all calls
   //
+  // Note whether a HiGHS basis can be used to (try to) choose the better bound for boxed variables
   bool have_highs_basis = basis.valid_;
   //
   // Possibly scale the LP to be solved
@@ -298,6 +304,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   // Possibly set up the simplex work and base arrays
   // ToDo Stop doing this always
   //  if (!simplex_lp_status.has_basis) {
+    // Allocate memory for nonbasicMove
+    simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_+simplex_lp.numRow_);
     allocate_work_and_base_arrays(highs_model_object);
     initialise_cost(highs_model_object);
     initialise_bound(highs_model_object);
@@ -412,8 +420,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     }
     //  } else {}
 
-    // Simplex basis is now valid
-    simplex_lp_status.has_basis = true;
+  // Simplex basis is now valid
+  simplex_lp_status.has_basis = true;
     
   // Possibly solve for the basic primal and nonbasic dual values to determine
   // which simplex solver to use, unless it's forced
