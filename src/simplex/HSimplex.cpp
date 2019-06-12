@@ -435,11 +435,30 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   //}
   compute_dual_objective_value(highs_model_object);
   compute_primal_objective_value(highs_model_object);
+  simplex_lp_status.valid = true;
+
+  // Store, analyse and possibly report the number of primal and dual
+  // infeasiblities and the simplex status
   simplex_info.num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
   simplex_info.num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
-  HighsPrintMessage(ML_MINIMAL, "After transition() simplex solution has %d primal infeasibilities and %d dual infeasibilities\n",
-	 simplex_info.num_primal_infeasibilities, simplex_info.num_dual_infeasibilities);
-  simplex_lp_status.valid = true;
+  SimplexSolutionStatus return_status;
+  if (simplex_info.num_primal_infeasibilities) {
+    if (simplex_info.num_dual_infeasibilities) {
+      return_status = SimplexSolutionStatus::UNSET;
+    } else {
+      return_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+    }
+  } else {
+    if (simplex_info.num_dual_infeasibilities) {
+      return_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+    } else {
+      return_status = SimplexSolutionStatus::OPTIMAL;
+    }
+  }
+  HighsPrintMessage(ML_MINIMAL, "After transition() simplex solution has %d primal and %d dual infeasibilities; Simplex status - %s\n",
+		    simplex_info.num_primal_infeasibilities, simplex_info.num_dual_infeasibilities, SimplexSolutionStatusToString(return_status).c_str());
+  simplex_lp_status.solution_status = return_status;
+  return return_status;
 }
 
 void setupSimplexLp(HighsModelObject &highs_model_object) {

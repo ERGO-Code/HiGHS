@@ -141,7 +141,6 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
 #endif
   }
-
   if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL) {
     if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
       // Use primal simplex solver
