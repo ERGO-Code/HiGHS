@@ -281,7 +281,7 @@ HighsStatus Highs::run() {
 	    hmos_[original_hmo].basis_.row_status = presolve_info.presolve_[0].getRowStatus();
 	    hmos_[original_hmo].basis_.valid_ = true;
 
-	    postsolveRefineHighsBasisAndSolution(hmos_[original_hmo]);
+	    //	    postsolveRefineHighsBasisAndSolution(hmos_[original_hmo]);
 	    
 	    options_.clean_up = true;
 	    // Now hot-start the simplex solver for the original_hmo
@@ -1026,7 +1026,7 @@ HighsStatus Highs::runBnb() {
 
 HighsStatus Highs::solveNode(Node &node) {
   // Apply column bounds from node to LP.
-  const bool check_call = true;
+  const bool check_call = false;
   const bool call_changeColsBounds = true;
   if (call_changeColsBounds) {
     changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
