@@ -60,87 +60,37 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // dual feasibility
   //
   SimplexStrategy use_simplex_strategy = simplex_info.simplex_strategy;
-  bool use_transition = true;
-  if (use_transition) {
-    simplex_lp_status.solution_status = transition(highs_model_object);
-    if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
-      return simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
-    // Use the number of primal and dual infeasibilities to determine
-    // whether the simplex solver is needed and, if so, possibly which
-    // variant to use.
-    if (simplex_info.num_primal_infeasibilities == 0) {
-      // Primal feasible
-      if (simplex_info.num_dual_infeasibilities == 0) {
-	// Dual feasible
-	// Simplex solution is optimal
-	simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
-      } else {
-	// Only dual infeasible, so maybe use primal simplex
-	if (use_simplex_strategy == SimplexStrategy::CHOOSE) use_simplex_strategy = SimplexStrategy::PRIMAL;
-      }
+  simplex_lp_status.solution_status = transition(highs_model_object);
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
+    return simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
+  // Use the number of primal and dual infeasibilities to determine
+  // whether the simplex solver is needed and, if so, possibly which
+  // variant to use.
+  if (simplex_info.num_primal_infeasibilities == 0) {
+    // Primal feasible
+    if (simplex_info.num_dual_infeasibilities == 0) {
+      // Dual feasible
+      // Simplex solution is optimal
+      simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
     } else {
-      // Not primal feasible, so maybe use dual simplex
-      if (use_simplex_strategy == SimplexStrategy::CHOOSE) use_simplex_strategy = SimplexStrategy::DUAL;
+      // Only dual infeasible, so maybe use primal simplex
+      if (use_simplex_strategy == SimplexStrategy::CHOOSE) use_simplex_strategy = SimplexStrategy::PRIMAL;
     }
-    if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL) {
-      // Official start of solver Start the solve clock - because
-      // setupForSimplexSolve has simplex computations
-      timer.start(timer.solve_clock);
-#ifdef HiGHSDEV
-      timer.start(simplex_info.clock_[SimplexTotalClock]);
-#endif
-    }
-#ifdef HiGHSDEV
-    // reportSimplexLpStatus(simplex_lp_status, "After transition");
-#endif
   } else {
-
-#ifdef HiGHSDEV
-    //  reportSimplexLpStatus(simplex_lp_status, "On entry to runSimplexSolver");
-#endif
-    // Set the default simplex strategy from the options
-    if (opt.clean_up) {
-      computePrimalObjectiveValueFromColumnValue(highs_model_object, &highs_model_object.solution_.col_value[0]);
-      rebuildPostsolve(highs_model_object);
-      // Analyse the basis and solution
-      //    printf("\nOn entry to runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
-      if (simplex_lp_status.solution_status == SimplexSolutionStatus::OPTIMAL ||
-	  simplex_lp_status.solution_status == SimplexSolutionStatus::PRIMAL_FEASIBLE) {
-	// Optimal or primal feasible so force the use of primal simplex solver
-	printf("Optimal or primal feasible so force the use of primal simplex solver\n");
-	use_simplex_strategy = SimplexStrategy::PRIMAL;
-      }
-    }
-    if (!simplex_lp_status.valid) {
-      // Set up the LP to be solved by the simplex method. According to options
-      //
-      // * Transpose the LP to be solved - deprecated since primal simplex solver is better
-      //
-      // * Scale the LP to be solved
-      //
-      // * Permute the LP to be solved - good idea to do all the time, but needs permutations to be applied to column solution
-      //
-      // * Tighten the bounds of LP to be solved - deprecated since presolve is better
-      //
-      setupSimplexLp(highs_model_object);
-#ifdef HiGHSDEV
-      //    reportSimplexLpStatus(simplex_lp_status, "After setupSimplexLp");
-#endif
-    }
-    // Official start of solver
-    // Start the solve closk - because setupForSimplexSolve has simplex computations
+    // Not primal feasible, so maybe use dual simplex
+    if (use_simplex_strategy == SimplexStrategy::CHOOSE) use_simplex_strategy = SimplexStrategy::DUAL;
+  }
+  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL) {
+    // Official start of solver Start the solve clock - because
+    // setupForSimplexSolve has simplex computations
     timer.start(timer.solve_clock);
 #ifdef HiGHSDEV
     timer.start(simplex_info.clock_[SimplexTotalClock]);
 #endif
-    // Setup the basis if not valid, taking the Highs basis if it's
-    // valid, otherwise a unit basis or crash basis and perform INVERT
-    // if necessary
-    setupForSimplexSolve(highs_model_object);
-#ifdef HiGHSDEV
-    //  reportSimplexLpStatus(simplex_lp_status, "After setupForSimplexSolve");
-#endif
   }
+#ifdef HiGHSDEV
+  // reportSimplexLpStatus(simplex_lp_status, "After transition");
+#endif
   if (simplex_lp_status.solution_status != SimplexSolutionStatus::OPTIMAL) {
     if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
       // Use primal simplex solver
@@ -210,23 +160,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #endif
   }
 
+  HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
+  if (result == HighsStatus::Optimal) {
+    // Optimal solution: copy the solution and basis
+    simplex_interface.convertSimplexToHighsSolution();
+    simplex_interface.convertSimplexToHighsBasis();
+    if (simplex_info.analyseLpSolution) simplex_interface.analyseHighsSolutionAndBasis(1);
+  }
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After solve");
-  if (simplex_info.analyseLpSolution) {analyse_lp_solution(highs_model_object);}
 #endif
-  comparePrimalDualObjectiveValues(highs_model_object);
-
-  HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
-
-  // Return if not optimal
-  if (result != HighsStatus::Optimal) return result;
-
-  // Optimal solution: copy the solution and basis
-  simplex_interface.convertSimplexToHighsSolution();
-  simplex_interface.convertSimplexToHighsBasis();
-  //  printf("\nOn leaving runSimplexSolver\n"); SimplexSolutionStatus lp_status = simplex_interface.analyseHighsSolutionAndSimplexBasis();
-  //  rebuildPostsolve(highs_model_object);// Just for checking correctness of rebuildPostsolve checks
-  
   return result;
 }
 #endif

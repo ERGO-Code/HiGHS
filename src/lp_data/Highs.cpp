@@ -281,9 +281,6 @@ HighsStatus Highs::run() {
 	    hmos_[original_hmo].basis_.row_status = presolve_info.presolve_[0].getRowStatus();
 	    hmos_[original_hmo].basis_.valid_ = true;
 
-	    //	    postsolveRefineHighsBasisAndSolution(hmos_[original_hmo]);
-	    
-	    options_.clean_up = true;
 	    // Now hot-start the simplex solver for the original_hmo
 	    solved_hmo = original_hmo;
 	    int lp_solve_initial_simplex_iteration_count =

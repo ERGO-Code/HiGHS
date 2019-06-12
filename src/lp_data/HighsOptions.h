@@ -154,7 +154,6 @@ struct HighsOptions
   // Maximum number of simplex updates
   int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
-  bool clean_up = false;
   bool find_feasibility = false;
   FeasibilityStrategy feasibility_strategy = FeasibilityStrategy::kApproxComponentWise;
   bool feasibility_strategy_dualize = false;

@@ -28,18 +28,6 @@ SimplexSolutionStatus transition(
 				 HighsModelObject &highs_model_object
 				 );
 
-void setupSimplexLp(
-		    HighsModelObject &highs_model_object
-		    );
-
-void postsolveRefineHighsBasisAndSolution(
-					  HighsModelObject &highs_model_object
-					  );
-
-void rebuildPostsolve(
-		      HighsModelObject &highs_model_object
-		      );
-
 bool dual_infeasible(
 		     const double value,
 		     const double lower,
@@ -48,10 +36,6 @@ bool dual_infeasible(
 		     const double value_tolerance,
 		     const double dual_tolerance
 		     );
-
-void setupForSimplexSolve(
-			  HighsModelObject &highs_model_object
-			  );
 
 // Methods not requiring HighsModelObject 
 
@@ -128,11 +112,6 @@ void compute_dual_objective_value(
 
 void compute_primal_objective_value(
 				    HighsModelObject &highs_model_object
-				    );
-
-void computePrimalObjectiveValueFromColumnValue(
-				    HighsModelObject &highs_model_object,
-				    const double *col_value
 				    );
 
 void initialiseSimplexLpRandomVectors(
@@ -350,16 +329,6 @@ void update_matrix(HighsModelObject &highs_model_object,
 		   int columnIn,
                    int columnOut
 		   );
-
-void comparePrimalDualObjectiveValues(
-				      HighsModelObject &highs_model_object
-				      );
-
-#ifdef HiGHSDEV
-void analyse_lp_solution(
-			 HighsModelObject &highs_model_object
-			 );
-#endif
 
 void report_iteration_count_dual_objective_value(
 						 HighsModelObject &highs_model_object,
