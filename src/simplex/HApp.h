@@ -183,7 +183,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       timer.start(simplex_info.clock_[BasisConditionClock]);
       double basis_condition = computeBasisCondition(highs_model_object);
       timer.stop(simplex_info.clock_[BasisConditionClock]);
-      printf("Optimal basis condition estimate is %g\n", basis_condition);
+      HighsPrintMessage(ML_MINIMAL, "Optimal basis condition estimate is %g\n", basis_condition);
     }
 
     // Official finish of solver

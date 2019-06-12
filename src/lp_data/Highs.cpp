@@ -1026,12 +1026,12 @@ HighsStatus Highs::runBnb() {
 
 HighsStatus Highs::solveNode(Node &node) {
   // Apply column bounds from node to LP.
-  const bool check_call = false;
+  const bool check_call = true;
   const bool call_changeColsBounds = true;
   if (call_changeColsBounds) {
     changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0], &node.col_upper_bound[0]);
   } else {
-    // Change the LP directly and ivalidate the simplex information
+    // Change the LP directly and invalidate the simplex information
     lp_.colLower_ = node.col_lower_bound;
     lp_.colUpper_ = node.col_upper_bound;
     hmos_[0].simplex_lp_status_.valid = false;

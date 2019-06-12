@@ -270,11 +270,12 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     timer.stop(simplex_info.clock_[BasisConditionClock]);
     double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
     basis_condition_ok = basis_condition < basis_condition_tolerance;
-    printf("Initial basis condition estimate of %11.4g", basis_condition);
+
+    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g", basis_condition);
     if (basis_condition_ok) {
-      printf(" is within the tolerance of %g\n", basis_condition_tolerance);
+      HighsPrintMessage(ML_MINIMAL, " is within the tolerance of %g\n", basis_condition_tolerance);
     } else { 
-      printf(" exceeds the tolerance of %g\n", basis_condition_tolerance);
+      HighsPrintMessage(ML_MINIMAL, " exceeds the tolerance of %g\n", basis_condition_tolerance);
     }
   }
   // ToDo Handle ill-conditioned basis with basis crash, in which case
@@ -428,8 +429,9 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   compute_primal_objective_value(highs_model_object);
   simplex_info.num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
   simplex_info.num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
-  printf("\nAfter transition() simplex solution has %d primal infeasibilities and %d dual infeasibilities\n\n",
+  HighsPrintMessage(ML_MINIMAL, "After transition() simplex solution has %d primal infeasibilities and %d dual infeasibilities\n",
 	 simplex_info.num_primal_infeasibilities, simplex_info.num_dual_infeasibilities);
+  simplex_lp_status.valid = true;
 }
 
 void setupSimplexLp(HighsModelObject &highs_model_object) {
