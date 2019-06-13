@@ -53,25 +53,9 @@ void HPrimal::solve() {
 
   // ToDo primal simplex version
   // initialise_cost(workHMO, 1); //  model->initCost(1);
+  assert(simplex_lp_status.has_fresh_invert);
   if (!simplex_lp_status.has_fresh_invert) {
-    int rankDeficiency = compute_factor(workHMO); // int rankDeficiency = model->computeFactor();
-
-    if (rankDeficiency) {
-      throw runtime_error("Primal initialise: singular-basis-matrix");
-    }
-#ifdef HiGHSDEV
-    bool rp_bs_cond = false;
-    double bsCond = 1;
-  // ToDo move from HDual to HSimplex 
-  // an_bs_cond();
-    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g is", bsCond);
-    if (bsCond > 1e12) {
-      HighsPrintMessage(ML_MINIMAL, " excessive\n");
-      return;
-    } else {
-      HighsPrintMessage(ML_MINIMAL, " OK\n");
-    }
-#endif
+    printf("ERROR: Should enter with fresh INVERT - unless no_invert_on_optimal is set\n");
   }
   // Consider initialising edge weights - create Primal variants
   //

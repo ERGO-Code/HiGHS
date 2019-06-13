@@ -132,7 +132,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
       timer.start(simplex_info.clock_[BasisConditionClock]);
       double basis_condition = computeBasisCondition(highs_model_object);
       timer.stop(simplex_info.clock_[BasisConditionClock]);
-      HighsPrintMessage(ML_MINIMAL, "Optimal basis condition estimate is %g\n", basis_condition);
+      HighsLogMessage(HighsMessageType::INFO, "Final basis condition estimate is %g", basis_condition);
     }
 
     // Official finish of solver
@@ -146,12 +146,12 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
     
     if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
-      printf("Iterations [Ph1 %d; Ph2 %d] Total %d\n",
+      HighsLogMessage(HighsMessageType::INFO, "Iterations [Ph1 %d; Ph2 %d] Total %d",
 	     simplex_info.primal_phase1_iteration_count,
 	     simplex_info.primal_phase2_iteration_count,
 	     simplex_info.iteration_count);
     } else {
-      printf("Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d\n",
+      HighsLogMessage(HighsMessageType::INFO, "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
 	     simplex_info.dual_phase1_iteration_count,
 	     simplex_info.dual_phase2_iteration_count,
 	     simplex_info.primal_phase2_iteration_count,

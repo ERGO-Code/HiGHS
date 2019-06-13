@@ -277,18 +277,47 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     timer.stop(simplex_info.clock_[BasisConditionClock]);
     double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
     basis_condition_ok = basis_condition < basis_condition_tolerance;
-
-    HighsPrintMessage(ML_MINIMAL, "Initial basis condition estimate of %11.4g", basis_condition);
+    HighsMessageType message_type = HighsMessageType::INFO;
+    std::string condition_comment;
     if (basis_condition_ok) {
-      HighsPrintMessage(ML_MINIMAL, " is within the tolerance of %g\n", basis_condition_tolerance);
-    } else { 
-      HighsPrintMessage(ML_MINIMAL, " exceeds the tolerance of %g\n", basis_condition_tolerance);
+      condition_comment = "is within";
+    } else {
+      message_type = HighsMessageType::WARNING;
+      condition_comment = "exceeds";
     }
+    HighsLogMessage(message_type, "Initial basis condition estimate of %g %s the tolerance of %g",
+		    basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   }
   // ToDo Handle ill-conditioned basis with basis crash, in which case
   // ensure that HiGHS and simplex basis are invalidated and simplex
   // work and base arrays are re-populated
   assert(basis_condition_ok);
+  if (!basis_condition_ok) {
+    HCrash crash(highs_model_object);
+    timer.start(timer.crash_clock);
+    timer.start(simplex_info.clock_[CrashClock]);
+    crash.crash(SimplexCrashStrategy::BASIC);
+    timer.stop(simplex_info.clock_[CrashClock]);
+    timer.stop(timer.crash_clock);
+    HighsLogMessage(HighsMessageType::INFO, "Performed crash to prioritise previously basic variables in well-conditioned basis");
+    // Check the condition after the basis crash
+    timer.start(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition = computeBasisCondition(highs_model_object);
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+    double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
+    basis_condition_ok = basis_condition < basis_condition_tolerance;
+    HighsMessageType message_type = HighsMessageType::INFO;
+    std::string condition_comment;
+    if (basis_condition_ok) {
+      condition_comment = "is within";
+    } else {
+      message_type = HighsMessageType::WARNING;
+      condition_comment = "exceeds";
+    }
+    HighsLogMessage(message_type, "Initial basis condition estimate of %11.4g %s the tolerance of %g",
+		    basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+  }
+
   // Now there are nonbasicFlag and basicIndex corresponding to a
   // basis with well-conditioned invertible representation
   //
@@ -442,26 +471,29 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   // infeasiblities and the simplex status
   simplex_info.num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
   simplex_info.num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
-  SimplexSolutionStatus simplex_status;
+  SimplexSolutionStatus solution_status;
   bool primal_feasible = simplex_info.num_primal_infeasibilities == 0;// && max_primal_residual < primal_feasibility_tolerance;
   bool dual_feasible = simplex_info.num_dual_infeasibilities == 0;// && max_dual_residual < dual_feasibility_tolerance;
   if (primal_feasible) {
     if (dual_feasible) {
-      simplex_status = SimplexSolutionStatus::OPTIMAL;
+      solution_status = SimplexSolutionStatus::OPTIMAL;
     } else {
-      simplex_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+      solution_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
     }
   } else {
     if (dual_feasible) {
-      simplex_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+      solution_status = SimplexSolutionStatus::DUAL_FEASIBLE;
     } else {
-      simplex_status = SimplexSolutionStatus::UNSET;
+      solution_status = SimplexSolutionStatus::UNSET;
     }
   }
-  HighsPrintMessage(ML_MINIMAL, "After transition() simplex solution has %d primal and %d dual infeasibilities; Simplex status - %s\n",
-		    simplex_info.num_primal_infeasibilities, simplex_info.num_dual_infeasibilities, SimplexSolutionStatusToString(simplex_status).c_str());
-  simplex_lp_status.solution_status = simplex_status;
-  return simplex_status;
+  simplex_lp_status.solution_status = solution_status;
+  HighsLogMessage(HighsMessageType::INFO, "Initial basic solution: Objective = %.15g; Infeasibilities primal/dual = %d/%d; Status: %s",
+		  simplex_info.primalObjectiveValue,
+		  simplex_info.num_primal_infeasibilities,
+		  simplex_info.num_dual_infeasibilities, 
+		  SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+  return solution_status;
 }
 
 bool dual_infeasible(const double value, const double lower, const double upper, const double dual,

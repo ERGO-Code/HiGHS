@@ -165,6 +165,7 @@ HighsStatus Highs::run() {
       int lp_solve_initial_simplex_iteration_count =
 	hmos_[solved_hmo].simplex_info_.iteration_count;
       // Call runSolver
+      HighsLogMessage(HighsMessageType::INFO, "Not presolved: solving the LP");
       solve_status = runSolver(hmos_[solved_hmo]);
       int lp_solve_final_simplex_iteration_count =
 	hmos_[solved_hmo].simplex_info_.iteration_count;
@@ -177,6 +178,7 @@ HighsStatus Highs::run() {
       int lp_solve_initial_simplex_iteration_count =
 	hmos_[solved_hmo].simplex_info_.iteration_count;
       // Call runSolver
+      HighsLogMessage(HighsMessageType::INFO, "Problem not reduced by presolve: solving the LP");
       solve_status = runSolver(hmos_[solved_hmo]);
       int lp_solve_final_simplex_iteration_count =
 	hmos_[solved_hmo].simplex_info_.iteration_count;
@@ -192,6 +194,7 @@ HighsStatus Highs::run() {
       solved_hmo = presolve_hmo;
       int lp_solve_initial_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
       // Call runSolver
+      HighsLogMessage(HighsMessageType::INFO, "Problem reduced by presolve: solving the presolved LP");
       solve_status = runSolver(hmos_[solved_hmo]);
       int lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
       lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
@@ -201,16 +204,16 @@ HighsStatus Highs::run() {
 	lp_solve_initial_simplex_iteration_count = lp_solve_final_simplex_iteration_count;
 	// Save the options to switch off scaling and allow the best simplex strategy to be used
 	HighsOptions save_options = options_;
-	options_.simplex_scale_strategy = SimplexScaleStrategy::OFF;
 	options_.simplex_strategy = SimplexStrategy::CHOOSE;
+	options_.simplex_scale_strategy = SimplexScaleStrategy::OFF;
 	invalidateSimplexLp(hmos_[solved_hmo].simplex_lp_status_);
 	// Call runSolver
+	HighsLogMessage(HighsMessageType::INFO, "Solving the unscaled presolved LP");
 	solve_status = runSolver(hmos_[solved_hmo]);
 	lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
 	int solve_unscaled_lp_iteration_count = 
 	  lp_solve_final_simplex_iteration_count -
 	  lp_solve_initial_simplex_iteration_count;
-	printf("Solving the unscaled LP problem requires %d iterations\n", solve_unscaled_lp_iteration_count);
 	lp_solve_simplex_iteration_count += solve_unscaled_lp_iteration_count;
 	// Recover the options
 	options_ = save_options;
@@ -291,6 +294,7 @@ HighsStatus Highs::run() {
 	    options_.simplex_strategy = SimplexStrategy::CHOOSE;
 	    //
 	    // Call runSolver
+	    HighsLogMessage(HighsMessageType::INFO, "Solving the original LP from the solution after postsolve");
 	    solve_status = runSolver(hmos_[solved_hmo]);
 	    //
 	    // Recover the options
@@ -318,6 +322,7 @@ HighsStatus Highs::run() {
     int lp_solve_initial_simplex_iteration_count =
         hmos_[solved_hmo].simplex_info_.iteration_count;
     // Call runSolver
+    HighsLogMessage(HighsMessageType::INFO, "Re-solving the LP");
     solve_status = runSolver(hmos_[solved_hmo]);
     int lp_solve_final_simplex_iteration_count =
         hmos_[solved_hmo].simplex_info_.iteration_count;

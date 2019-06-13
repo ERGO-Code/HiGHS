@@ -1396,6 +1396,8 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(const 
   HighsSolution &solution = highs_model_object.solution_;
   HighsBasis &basis = highs_model_object.basis_;
   HighsLp &lp = highs_model_object.lp_;
+  HighsSimplexInfo &simplex_info =  highs_model_object.simplex_info_;
+  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
   double primal_feasibility_tolerance = highs_model_object.options_.primal_feasibility_tolerance;
   double dual_feasibility_tolerance = highs_model_object.options_.dual_feasibility_tolerance;
   vector <double> primal_activities;
@@ -1534,27 +1536,30 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(const 
   }
   local_primal_objective_value += lp.offset_;
   local_dual_objective_value += lp.offset_;
-  double primal_objective_value = highs_model_object.simplex_info_.primalObjectiveValue;
-  double dual_objective_value = highs_model_object.simplex_info_.dualObjectiveValue;
+  double primal_objective_value = simplex_info.primalObjectiveValue;
+  double dual_objective_value = simplex_info.dualObjectiveValue;
   double primal_objective_error = fabs(primal_objective_value - local_primal_objective_value) / max(1.0, fabs(primal_objective_value));
   double dual_objective_error = fabs(dual_objective_value - local_primal_objective_value) / max(1.0, fabs(dual_objective_value));
   double relative_objective_difference = fabs(primal_objective_value-dual_objective_value)/max(fabs(primal_objective_value), max(fabs(dual_objective_value), 1.0));
-  SimplexSolutionStatus simplex_status;
+  simplex_info.num_primal_infeasibilities = num_primal_infeasibilities;
+  simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
+  SimplexSolutionStatus solution_status;
   bool primal_feasible = num_primal_infeasibilities == 0;// && max_primal_residual < primal_feasibility_tolerance;
   bool dual_feasible = num_dual_infeasibilities == 0;// && max_dual_residual < dual_feasibility_tolerance;
   if (primal_feasible) {
     if (dual_feasible) {
-      simplex_status = SimplexSolutionStatus::OPTIMAL;
+      solution_status = SimplexSolutionStatus::OPTIMAL;
     } else {
-      simplex_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+      solution_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
     }
   } else {
     if (dual_feasible) {
-      simplex_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+      solution_status = SimplexSolutionStatus::DUAL_FEASIBLE;
     } else {
-      simplex_status = SimplexSolutionStatus::UNSET;
+      solution_status = SimplexSolutionStatus::UNSET;
     }
   }
+  simplex_lp_status.solution_status = solution_status;
   if (report_level) {
     HighsMessageType message_type = HighsMessageType::INFO;
     HighsLogMessage(message_type, "Primal num/max/sum residuals %6d/%12g/%12g: num/max/sum infeasibilities %6d/%12g/%12g",
@@ -1565,17 +1570,22 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(const 
 		    num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
     HighsLogMessage(message_type, "Relative objective errors (primal = %.4g; dual = %.4g); relative objective difference = %.4g",
 		    primal_objective_error, dual_objective_error, relative_objective_difference);
-    HighsLogMessage(message_type, "LP Status: %s", SimplexSolutionStatusToString(simplex_status).c_str());
   } else {
     printf("grep_AnBsSol,%d,%d,%.15g,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g",
-	   num_non_basic_var, num_basic_var, highs_model_object.simplex_info_.primalObjectiveValue,
+	   num_non_basic_var, num_basic_var, simplex_info.primalObjectiveValue,
 	   num_off_bound_nonbasic,
 	   num_primal_residual, max_primal_residual, sum_primal_residual,
 	   num_primal_infeasibilities, max_primal_infeasibility, sum_primal_infeasibilities,
 	   num_dual_residual, max_dual_residual, sum_dual_residual,
 	   num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
   }
-  return simplex_status;
+  HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Iterations = %d; Objective = %.15g; Infeasibilities primal/dual = %d/%d; Status: %s",
+		  simplex_info.iteration_count,
+		  simplex_info.primalObjectiveValue,
+		  simplex_info.num_primal_infeasibilities,
+		  simplex_info.num_dual_infeasibilities, 
+		  SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+  return solution_status;
 }
 
 int HighsSimplexInterface::get_basic_indices(int *bind) {
