@@ -24,35 +24,18 @@ void options(
 	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
 	     );
 
-void reportSimplexLpStatus(
-			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be reported
-			   const char* message = ""
-			   );
+SimplexSolutionStatus transition(
+				 HighsModelObject &highs_model_object
+				 );
 
-void invalidateSimplexLpData(
-			     HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
-			     );
-
-void invalidateSimplexLp(
-			 HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
-			 );
-
-void updateSimplexLpStatus(
-			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
-			   LpAction action// !< Action prompting update
-				  );
-
-SimplexSolutionStatus rebuildPostsolve(
-				       HighsModelObject &highs_model_object
-				       );
-
-void setupSimplexLp(
-		    HighsModelObject &highs_model_object
-		    );
-
-void setupForSimplexSolve(
-			  HighsModelObject &highs_model_object
-			  );
+bool dual_infeasible(
+		     const double value,
+		     const double lower,
+		     const double upper,
+		     const double dual,
+		     const double value_tolerance,
+		     const double dual_tolerance
+		     );
 
 // Methods not requiring HighsModelObject 
 
@@ -129,11 +112,6 @@ void compute_dual_objective_value(
 
 void compute_primal_objective_value(
 				    HighsModelObject &highs_model_object
-				    );
-
-void computePrimalObjectiveValueFromColumnValue(
-				    HighsModelObject &highs_model_object,
-				    const double *col_value
 				    );
 
 void initialiseSimplexLpRandomVectors(
@@ -284,6 +262,8 @@ int compute_factor(
 		   HighsModelObject &highs_model_object
 		   );
 
+// Compute the primal values (in baseValue) and set the lower and upper bounds
+// of basic variables
 void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
@@ -291,6 +271,10 @@ void compute_primal(
 int computePrimalInfeasible(
 		    HighsModelObject &highs_model_object
 		    );
+
+int computeDualInfeasible(
+			  HighsModelObject &highs_model_object
+			  );
 
 void compute_dual(
 		  HighsModelObject &highs_model_object
@@ -310,13 +294,6 @@ void compute_dual_infeasible_in_primal(
 				       HighsModelObject &highs_model_object,
                                        int *dual_infeasibility_count
 				       );
-
-// Compute the primal values (in baseValue) and set the lower and upper bounds
-// of basic variables
-int set_source_out_from_bound(
-			      HighsModelObject &highs_model_object,
-                              const int column_out
-			      );
 
 // Record the shift in the cost of a particular column
 void shift_cost(
@@ -353,16 +330,6 @@ void update_matrix(HighsModelObject &highs_model_object,
                    int columnOut
 		   );
 
-void comparePrimalDualObjectiveValues(
-				      HighsModelObject &highs_model_object
-				      );
-
-#ifdef HiGHSDEV
-void analyse_lp_solution(
-			 HighsModelObject &highs_model_object
-			 );
-#endif
-
 void report_iteration_count_dual_objective_value(
 						 HighsModelObject &highs_model_object,
 						 int i_v
@@ -374,5 +341,23 @@ void report_iteration_count_primal_objective_value(
 						 );
 
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
+
+void reportSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be reported
+			   const char* message = ""
+			   );
+
+void invalidateSimplexLpData(
+			     HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
+			     );
+
+void invalidateSimplexLp(
+			 HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
+			 );
+
+void updateSimplexLpStatus(
+			   HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
+			   LpAction action// !< Action prompting update
+				  );
 
 #endif // SIMPLEX_HSIMPLEX_H_

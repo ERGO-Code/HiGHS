@@ -57,8 +57,11 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::Infeasible:
       return "Infeasible";
       break;
-    case HighsStatus::Feasible:
-      return "Feasible";
+    case HighsStatus::PrimalFeasible:
+      return "PrimalFeasible";
+      break;
+    case HighsStatus::DualFeasible:
+      return "DualFeasible";
       break;
     case HighsStatus::Optimal:
       return "Optimal";

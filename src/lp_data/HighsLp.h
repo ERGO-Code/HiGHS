@@ -24,8 +24,9 @@
 #include "simplex/SimplexConst.h" // For simplex strategy options
 
 enum class LpAction {
-    SCALE = 0,
+    DUALISE = 0,
     PERMUTE,
+    SCALE,
     NEW_COSTS,
     NEW_BOUNDS,
     NEW_BASIS,
@@ -97,10 +98,10 @@ struct HighsScale {
 
 struct SimplexBasis {
   // The basis for the simplex method consists of basicIndex,
-  // nonbasicFlag and nonbasicMove. If valid_ is true then they are
+  // nonbasicFlag and nonbasicMove. If HighsSimplexLpStatus has_basis
+  // is true then it is assumed that basicIndex_ and nonbasicFlag_ are
   // self-consistent and correpond to the dimensions of an associated
   // HighsLp, but the basis matrix B is not necessarily nonsingular.
-  bool valid_ = false;
   std::vector<int> basicIndex_;
   std::vector<int> nonbasicFlag_;
   std::vector<int> nonbasicMove_;
@@ -109,9 +110,10 @@ struct SimplexBasis {
 struct HighsSimplexLpStatus {
   // Status of LP solved by the simplex method and its data
   bool valid = false;
-  bool is_scaled = false;
+  bool is_dualised = false;
   bool is_permuted = false;
-  bool has_basis = false; // The LP has a valid simplex basis - duplication of simplex_basis_.valid_ because the latter can't be queried in SimplexLpStatus methods
+  bool is_scaled = false;
+  bool has_basis = false; // The LP has a valid simplex basis
   bool has_matrix_col_wise = false; // The LP has a column-wise constraint matrix
   bool has_matrix_row_wise = false; // The LP has a row-wise constraint matrix
   bool has_factor_arrays = false; // Has the arrays for the representation of B^{-1}
@@ -185,7 +187,6 @@ struct HighsSimplexInfo {
   // Options from HighsOptions for the simplex solver
   double highs_run_time_limit;
   SimplexStrategy simplex_strategy;
-  SimplexCrashStrategy crash_strategy;
   SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
   SimplexPrimalEdgeWeightStrategy primal_edge_weight_strategy;
   SimplexPriceStrategy price_strategy;
@@ -197,20 +198,17 @@ struct HighsSimplexInfo {
   int iteration_limit;
   double dual_objective_value_upper_bound;
   
-  // Options for the LP to be solved
-  bool scale_simplex_lp;
-  bool permute_simplex_lp;
   // Internal options - can't be changed externally
 
+  bool analyseLpSolution;
+#ifdef HiGHSDEV
   // Options for reporting timing
   bool report_simplex_inner_clock;
   bool report_simplex_outer_clock;
   bool report_simplex_phases_clock;
-#ifdef HiGHSDEV
-  // Option for analysing simplex iterations, INVERT time and rebuild time
+  // Option for analysing the LP simplex iterations, INVERT time and rebuild time
   bool analyseLp;
   bool analyseSimplexIterations;
-  bool analyseLpSolution;
   bool analyse_invert_time;
   bool analyseRebuildTime;
 #endif
@@ -244,6 +242,9 @@ struct HighsSimplexInfo {
   double updatedPrimalObjectiveValue;
   // Number of logical variables in the basis 
   int num_basic_logicals;
+  // Number of primal and dual infeasibilities
+  int num_primal_infeasibilities;
+  int num_dual_infeasibilities;
 
 #ifdef HiGHSDEV
   // Analysis of INVERT

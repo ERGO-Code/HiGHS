@@ -142,3 +142,12 @@ void reportModelBoundSol(const bool columns, const int dim,
     }
   }
 }
+
+int maxNameLength(const int num_name, const std::vector<std::string>& names) {
+  int max_name_length = 0;
+  for (int ix = 0; ix < num_name; ix++) {
+    int name_length = names[ix].length();
+    max_name_length = std::max(name_length, max_name_length);
+  }
+  return max_name_length;
+}

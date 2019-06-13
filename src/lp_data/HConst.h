@@ -14,6 +14,8 @@
 #ifndef LP_DATA_HCONST_H_
 #define LP_DATA_HCONST_H_
 
+#include <string>
+
 const int HIGHS_CONST_I_INF = 2147483647;//32767;
 const double HIGHS_CONST_INF = 1e200;
 const double HIGHS_CONST_TINY = 1e-14;
@@ -54,6 +56,14 @@ enum class SimplexOption {
   DEFAULT = OFF
 };
 
+enum class IpmOption {
+  OFF = 0,
+  ON,
+  DEFAULT = OFF
+};
+
+const std::string FILENAME_DEFAULT = "";
+const std::string OPTIONS_FILE_DEFAULT = "";
 const double INFINITE_COST_MIN =     1e15;
 const double INFINITE_COST_DEFAULT = 1e20;
 const double INFINITE_COST_MAX =     1e25;
@@ -66,6 +76,9 @@ const double SMALL_MATRIX_VALUE_MAX =     HIGHS_CONST_INF;
 const double LARGE_MATRIX_VALUE_MIN =     1e0;
 const double LARGE_MATRIX_VALUE_DEFAULT = 1e15;
 const double LARGE_MATRIX_VALUE_MAX =     1e20;
+const int ALLOWED_SIMPLEX_SCALE_FACTOR_MIN =     0;
+const int ALLOWED_SIMPLEX_SCALE_FACTOR_DEFAULT = 10;
+const int ALLOWED_SIMPLEX_SCALE_FACTOR_MAX =     20;
 const double HIGHS_RUN_TIME_LIMIT_DEFAULT = HIGHS_CONST_INF;
 const double PRIMAL_FEASIBILITY_TOLERANCE_MIN =     1e-10;
 const double PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT = 1e-7;
@@ -88,8 +101,7 @@ enum class HighsBasisStatus {
   UPPER,     // (slack) variable is at its upper bound 
   ZERO,      // free variable is non-basic and set to zero 
   SUPER      // Super-basic variable: non-basic and either free and
-	     // nonzero or not at a bound. Not permitted when
-	     // allow_superbasic is false: no SCIP equivalent
+	     // nonzero or not at a bound. No SCIP equivalent
 };
 
 /** Simplex nonbasicFlag status for columns and rows. Don't use enum
