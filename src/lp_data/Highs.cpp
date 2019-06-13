@@ -191,10 +191,21 @@ HighsStatus Highs::run() {
       // Add reduced lp object to vector of HighsModelObject,
       // so the last one in lp_ is the presolved one.
       hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
+      // Report on presolve reductions
+      int num_col_from = hmos_[original_hmo].lp_.numCol_;
+      int num_row_from = hmos_[original_hmo].lp_.numRow_;
+      int num_els_from = hmos_[original_hmo].lp_.Astart_[num_col_from];
+      int num_col_to = hmos_[presolve_hmo].lp_.numCol_;
+      int num_row_to = hmos_[presolve_hmo].lp_.numRow_;
+      int num_els_to = hmos_[presolve_hmo].lp_.Astart_[num_col_to];
+      HighsLogMessage(HighsMessageType::INFO, "Presolve reductions: columns %d(-%d); rows %d(-%d) elements %d(-%d)",
+		      num_col_to, (num_col_from-num_col_to),
+		      num_row_to, (num_row_from-num_row_to),
+		      num_els_to, (num_els_from-num_els_to));
       solved_hmo = presolve_hmo;
       int lp_solve_initial_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
       // Call runSolver
-      HighsLogMessage(HighsMessageType::INFO, "Problem reduced by presolve: solving the presolved LP");
+      HighsLogMessage(HighsMessageType::INFO, "Solving the presolved LP");
       solve_status = runSolver(hmos_[solved_hmo]);
       int lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
       lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -

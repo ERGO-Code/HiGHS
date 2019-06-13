@@ -843,7 +843,6 @@ void HCrash::ltssf_iz_da() {
   crsh_c_ty_pri_v.resize(crsh_l_vr_ty);
   if (crash_strategy == SimplexCrashStrategy::BASIC) {
     // Basis-preserving crash:
-    printf("Basis-preserving crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_non_bc] = 1;
     crsh_r_ty_pri_v[crsh_vr_ty_bc] = 0;
     crsh_c_ty_pri_v[crsh_vr_ty_non_bc] = 0;
@@ -851,7 +850,6 @@ void HCrash::ltssf_iz_da() {
 
   } else {
     // Standard crash:
-    printf("Standard crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_fx] = 3;
     crsh_r_ty_pri_v[crsh_vr_ty_2_sd] = 2;
     crsh_r_ty_pri_v[crsh_vr_ty_1_sd] = 1;

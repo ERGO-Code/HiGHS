@@ -171,6 +171,12 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
 	crash.crash(options.simplex_crash_strategy);
 	timer.stop(simplex_info.clock_[CrashClock]);
 	timer.stop(timer.crash_clock);	
+	int num_basic_structurals=0;
+	for (int iCol=0; iCol < simplex_lp.numCol_; iCol++) {
+	  if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE) num_basic_structurals++;
+	}
+	HighsLogMessage(HighsMessageType::INFO, "Crash has created a basis with %d/%d structurals",
+			num_basic_structurals, simplex_lp.numRow_);
       }
     }
     // Now that the dimensions of the LP to be solved by the simplex
