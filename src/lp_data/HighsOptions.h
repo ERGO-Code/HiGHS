@@ -204,7 +204,7 @@ OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options, const 
 OptionStatus setSimplexPriceStrategyValue(HighsOptions& options, const int& value);
 
 OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options, const int& value);
-OptionStatus setSimplexInitialConditionCheckTolerance(HighsOptions& options, const double& value);
+OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options, const double& value);
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
 

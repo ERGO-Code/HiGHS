@@ -167,10 +167,46 @@ HighsStatus Highs::run() {
       // Call runSolver
       HighsLogMessage(HighsMessageType::INFO, "Not presolved: solving the LP");
       solve_status = runSolver(hmos_[solved_hmo]);
-      int lp_solve_final_simplex_iteration_count =
-	hmos_[solved_hmo].simplex_info_.iteration_count;
-      lp_solve_simplex_iteration_count += (lp_solve_final_simplex_iteration_count -
-					   lp_solve_initial_simplex_iteration_count);
+      int lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
+      int iteration_count = lp_solve_final_simplex_iteration_count - lp_solve_initial_simplex_iteration_count;
+      lp_solve_simplex_iteration_count += iteration_count;
+
+      // Solve the unscaled model from the optimal basis to see if any iterations are required
+      if (hmos_[solved_hmo].simplex_lp_status_.is_scaled) {
+	// Get the scale factor ranges for reporting
+	double min_col_scale;
+	double max_col_scale;
+	double min_row_scale;
+	double max_row_scale;
+	scaleFactorRanges(hmos_[solved_hmo], min_col_scale, max_col_scale, min_row_scale, max_row_scale);
+	double cost_scale = hmos_[solved_hmo].scale_.cost_;
+	int scaled_lp_iteration_count = iteration_count;
+	double scaled_lp_objective_value = hmos_[solved_hmo].simplex_info_.primalObjectiveValue;
+	// Now solve the unscaled LP using the optimal basis and solution
+	lp_solve_initial_simplex_iteration_count = lp_solve_final_simplex_iteration_count;
+	// Save the options to switch off scaling and allow the best simplex strategy to be used
+	HighsOptions save_options = options_;
+	options_.simplex_strategy = SimplexStrategy::CHOOSE;
+	options_.simplex_scale_strategy = SimplexScaleStrategy::OFF;
+	invalidateSimplexLp(hmos_[solved_hmo].simplex_lp_status_);
+	// Call runSolver
+	HighsLogMessage(HighsMessageType::INFO, "Solving the unscaled LP");
+	solve_status = runSolver(hmos_[solved_hmo]);
+	lp_solve_final_simplex_iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
+	int unscaled_lp_iteration_count = 
+	  lp_solve_final_simplex_iteration_count -
+	  lp_solve_initial_simplex_iteration_count;
+	lp_solve_simplex_iteration_count += unscaled_lp_iteration_count;
+	double unscaled_lp_objective_value = hmos_[solved_hmo].simplex_info_.primalObjectiveValue;
+	printf("grep_scaling,%s,%g,%g,%g,%g,%g,%d,%d,%.15g,%.15g\n",
+	       hmos_[solved_hmo].lp_.model_name_.c_str(),
+	       cost_scale, -1/min_col_scale, max_col_scale, -1/min_row_scale, max_row_scale,
+	       scaled_lp_iteration_count, unscaled_lp_iteration_count,
+	       scaled_lp_objective_value, unscaled_lp_objective_value);
+	// Recover the options
+	options_ = save_options;
+      }
+
       break;
     }
     case HighsPresolveStatus::NotReduced: {

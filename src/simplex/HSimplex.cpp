@@ -297,7 +297,7 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   // ToDo Handle ill-conditioned basis with basis crash, in which case
   // ensure that HiGHS and simplex basis are invalidated and simplex
   // work and base arrays are re-populated
-  assert(basis_condition_ok);
+  //  assert(basis_condition_ok);
   if (!basis_condition_ok) {
     HCrash crash(highs_model_object);
     timer.start(timer.crash_clock);
@@ -306,6 +306,34 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     timer.stop(simplex_info.clock_[CrashClock]);
     timer.stop(timer.crash_clock);
     HighsLogMessage(HighsMessageType::INFO, "Performed crash to prioritise previously basic variables in well-conditioned basis");
+    // Use nonbasicFlag to form basicIndex
+    // Allocate memory for basicIndex
+    simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
+    int num_basic_variables = 0;
+    simplex_info.num_basic_logicals = 0;
+    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
+	simplex_basis.basicIndex_[num_basic_variables] = iVar;
+	if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
+	num_basic_variables++;
+      }
+    }
+    // Double-check that we have the right number of basic variables
+    bool nonbasicFlag_valid = num_basic_variables == simplex_lp.numRow_;
+    assert(nonbasicFlag_valid);
+    updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
+    // Report on the outcome of crash
+    int num_basic_structurals = simplex_lp.numRow_ - simplex_info.num_basic_logicals;
+    HighsLogMessage(HighsMessageType::INFO, "Crash has created a basis with %d/%d structurals",
+		    num_basic_structurals, simplex_lp.numRow_);
+    // Now reinvert
+    int rankDeficiency = compute_factor(highs_model_object);
+    if (rankDeficiency) {
+      // ToDo Handle rank deficiency by replacing singular columns with logicals
+      throw runtime_error("Transition has singular basis matrix");
+    }
+    simplex_lp_status.has_fresh_invert = true;
+
     // Check the condition after the basis crash
     timer.start(simplex_info.clock_[BasisConditionClock]);
     double basis_condition = computeBasisCondition(highs_model_object);
@@ -804,12 +832,12 @@ void scaleHighsModelInit(HighsModelObject &highs_model_object) {
 
 void scaleCosts(HighsModelObject &highs_model_object) {
   // Scale the costs by no less than minAlwCostScale
-  double maxAlwCostScale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
-  double costScale = highs_model_object.scale_.cost_;
-  double maxNzCost = 0;
+  double max_allowed_cost_scale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+  double cost_scale;
+  double max_nonzero_cost = 0;
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
     if (highs_model_object.simplex_lp_.colCost_[iCol]) {
-      maxNzCost = max(fabs(highs_model_object.simplex_lp_.colCost_[iCol]), maxNzCost);
+      max_nonzero_cost = max(fabs(highs_model_object.simplex_lp_.colCost_[iCol]), max_nonzero_cost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -817,39 +845,32 @@ void scaleCosts(HighsModelObject &highs_model_object) {
   // scaling factor pushes it up by a power of 2 so it's close to 1
   // Scaling the costs down effectively decreases the dual tolerance
   // to which the problem is solved - so this can't be done too much
-  costScale = 1;
+  cost_scale = 1;
   const double ln2 = log(2.0);
-  // Scale the costs if the max cost is positive and outside the range [1/16,
-  // 16]
-  if ((maxNzCost > 0) && ((maxNzCost < (1.0 / 16)) || (maxNzCost > 16))) {
-    costScale = maxNzCost;
-    costScale = pow(2.0, floor(log(costScale) / ln2 + 0.5));
-    costScale = min(costScale, maxAlwCostScale);
+  // Scale if the max cost is positive and outside the range [1/16, 16]
+  if ((max_nonzero_cost > 0) && ((max_nonzero_cost < (1.0 / 16)) || (max_nonzero_cost > 16))) {
+    cost_scale = max_nonzero_cost;
+    cost_scale = pow(2.0, floor(log(cost_scale) / ln2 + 0.5));
+    cost_scale = min(cost_scale, max_allowed_cost_scale);
   }
-#ifdef HiGHSDEV
-  HighsPrintMessage(
-      ML_MINIMAL,
-      "MaxNzCost = %11.4g: scaling all costs by %11.4g\ngrep_CostScale,%g,%g\n",
-      maxNzCost, costScale, maxNzCost, costScale);
-#endif
-  if (costScale == 1)
-    return;
-  // Scale the costs (and record of maxNzCost) by costScale, being at most
-  // maxAlwCostScale
+  highs_model_object.scale_.cost_ = cost_scale;
+  if (cost_scale == 1) return;
+  // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at most
+  // max_allowed_cost_scale
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
-    highs_model_object.simplex_lp_.colCost_[iCol] /= costScale;
+    highs_model_object.simplex_lp_.colCost_[iCol] /= cost_scale;
   }
-  maxNzCost /= costScale;
+  max_nonzero_cost /= cost_scale;
 
 #ifdef HiGHSDEV
   bool alwLargeCostScaling = false;
   /*
     if (alwLargeCostScaling && (numLargeCo > 0)) {
     // Scale any large costs by largeCostScale, being at most (a further)
-    // maxAlwCostScale
-    largeCostScale = maxNzCost;
+    // max_allowed_cost_scale
+    largeCostScale = max_nonzero_cost;
     largeCostScale = pow(2.0, floor(log(largeCostScale) / ln2 + 0.5));
-    largeCostScale = min(largeCostScale, maxAlwCostScale);
+    largeCostScale = min(largeCostScale, max_allowed_cost_scale);
     printf(
     "   Scaling all |cost| > %11.4g by %11.4g\ngrep_LargeCostScale,%g,%g\n",
     tlLargeCo, largeCostScale, tlLargeCo, largeCostScale);
@@ -860,21 +881,37 @@ void scaleCosts(HighsModelObject &highs_model_object) {
     }
     }
   */
-  HighsPrintMessage(ML_MINIMAL, "After cost scaling\n");
   //  utils.analyseVectorValues("Column costs",
   //  highs_model_object.simplex_lp_.numCol_, highs_model_object.simplex_lp_.colCost_, false);
 #endif
 }
 
+void scaleFactorRanges(HighsModelObject &highs_model_object,
+		       double &min_col_scale, double &max_col_scale,
+		       double &min_row_scale, double &max_row_scale) {
+  int numCol = highs_model_object.simplex_lp_.numCol_;
+  int numRow = highs_model_object.simplex_lp_.numRow_;
+  double *colScale = &highs_model_object.scale_.col_[0];
+  double *rowScale = &highs_model_object.scale_.row_[0];
+  // Determine the max and min row and column scaling factors
+  min_col_scale = HIGHS_CONST_INF;
+  max_col_scale = 1 / HIGHS_CONST_INF;
+  min_row_scale = HIGHS_CONST_INF;
+  max_row_scale = 1 / HIGHS_CONST_INF;
+  for (int iCol = 0; iCol < numCol; iCol++) {
+    min_col_scale = min(colScale[iCol], min_col_scale);
+    max_col_scale = max(colScale[iCol], max_col_scale);
+  }
+  for (int iRow = 0; iRow < numRow; iRow++) {
+    min_row_scale = min(rowScale[iRow], min_row_scale);
+    max_row_scale = max(rowScale[iRow], max_row_scale);
+  }
+}
+
 void scaleSimplexLp(HighsModelObject &highs_model_object) {
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-#ifdef HiGHSDEV
-  printf("Called scaleSimplexLp: simplex_lp_status.is_scaled = %d\n",
-         simplex_lp_status.is_scaled);
-#endif
-  if (simplex_lp_status.is_scaled)
-    return;
+  if (simplex_lp_status.is_scaled) return;
   // Scale the LP highs_model_object.simplex_lp_, assuming all data are in place
   // Reset all scaling to 1
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
@@ -895,152 +932,129 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
   double *rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  bool originalScaling = highs_model_object.options_.simplex_scale_strategy == SimplexScaleStrategy::HSOL;
-  bool alwCostScaling = true;
-  if (originalScaling) alwCostScaling = false;
-
+  bool original_scaling = highs_model_object.options_.simplex_scale_strategy == SimplexScaleStrategy::HSOL;
+  bool allow_cost_scaling = true;
+  if (original_scaling) allow_cost_scaling = false;
+  if (original_scaling) printf("Using original scaling\n");
   // Find out range of matrix values and skip matrix scaling if all
   // |values| are in [0.2, 5]
-  const double inf = HIGHS_CONST_INF;
-  double min0 = inf, max0 = 0;
+  double min_matrix_value = HIGHS_CONST_INF, max_matrix_value = 0;
   for (int k = 0, AnX = Astart[numCol]; k < AnX; k++) {
     double value = fabs(Avalue[k]);
-    min0 = min(min0, value);
-    max0 = max(max0, value);
+    min_matrix_value = min(min_matrix_value, value);
+    max_matrix_value = max(max_matrix_value, value);
   }
-  bool noScaling = min0 >= 0.2 && max0 <= 5;
-  //   noScaling = false; printf("!!!! FORCE SCALING !!!!\n");
-  if (noScaling) {
+  bool no_scaling = min_matrix_value >= 0.2 && max_matrix_value <= 5;
+  //   no_scaling = false; printf("!!!! FORCE SCALING !!!!\n");
+  if (no_scaling) {
     // No matrix scaling, but possible cost scaling
-#ifdef HiGHSDEV
-    HighsPrintMessage(ML_MINIMAL, "grep_Scaling,%s,Obj,0,Row,1,1,Col,1,1,0\n",
-                      highs_model_object.lp_.model_name_.c_str());
-#endif
     // Possibly scale the costs
-    if (!originalScaling && alwCostScaling)
-      scaleCosts(highs_model_object);
+    if (allow_cost_scaling) scaleCosts(highs_model_object);
     timer.stop(timer.scale_clock);
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::SCALE);
     return;
   }
-  // See if we want to include cost include if minimum nonzero cost is less than
-  // 0.1
-  double minNzCost = inf;
+  // Include cost in scaling if minimum nonzero cost is less than 0.1
+  double min_nonzero_cost = HIGHS_CONST_INF;
   for (int i = 0; i < numCol; i++) {
     if (colCost[i])
-      minNzCost = min(fabs(colCost[i]), minNzCost);
+      min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
   }
-  bool includeCost = false;
-  //  if (originalScaling)
-  includeCost = minNzCost < 0.1;
+  bool include_cost_in_scaling = false;
+  //  if (original_scaling)
+  include_cost_in_scaling = min_nonzero_cost < 0.1;
 
   // Limits on scaling factors
-  double maxAlwScale;
-  double minAlwScale;
-  if (originalScaling) {
-    maxAlwScale = HIGHS_CONST_INF;
+  double max_allow_scale;
+  double min_allow_scale;
+  if (original_scaling) {
+    max_allow_scale = HIGHS_CONST_INF;
   } else {
-    maxAlwScale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+    max_allow_scale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
   } 
-  minAlwScale = 1/maxAlwScale;
+  min_allow_scale = 1/max_allow_scale;
   
-  double minAlwColScale = minAlwScale;
-  double maxAlwColScale = maxAlwScale;
-  double minAlwRowScale = minAlwScale;
-  double maxAlwRowScale = maxAlwScale;
+  double min_allow_col_scale = min_allow_scale;
+  double max_allow_col_scale = max_allow_scale;
+  double min_allow_row_scale = min_allow_scale;
+  double max_allow_row_scale = max_allow_scale;
 
 // Search up to 6 times
-  vector<double> rowMin(numRow, inf);
-  vector<double> rowMax(numRow, 1 / inf);
+  vector<double> row_min_value(numRow, HIGHS_CONST_INF);
+  vector<double> row_max_value(numRow, 1 / HIGHS_CONST_INF);
   for (int search_count = 0; search_count < 6; search_count++) {
     // Find column scale, prepare row data
     for (int iCol = 0; iCol < numCol; iCol++) {
       // For column scale (find)
-      double colMin = inf;
-      double colMax = 1 / inf;
-      double myCost = fabs(colCost[iCol]);
-      if (includeCost && myCost != 0)
-        colMin = min(colMin, myCost), colMax = max(colMax, myCost);
+      double col_min_value = HIGHS_CONST_INF;
+      double col_max_value = 1 / HIGHS_CONST_INF;
+      double abs_col_cost = fabs(colCost[iCol]);
+      if (include_cost_in_scaling && abs_col_cost != 0) {
+        col_min_value = min(col_min_value, abs_col_cost);
+	col_max_value = max(col_max_value, abs_col_cost);
+      }
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         double value = fabs(Avalue[k]) * rowScale[Aindex[k]];
-        colMin = min(colMin, value), colMax = max(colMax, value);
+        col_min_value = min(col_min_value, value);
+	col_max_value = max(col_max_value, value);
       }
-      colScale[iCol] = 1 / sqrt(colMin * colMax);
-      if (!originalScaling) {
-        // Ensure that column scale factor is not excessively large or small
-        colScale[iCol] =
-            min(max(minAlwColScale, colScale[iCol]), maxAlwColScale);
-      }
+      colScale[iCol] = 1 / sqrt(col_min_value * col_max_value);
+      // Ensure that column scale factor is not excessively large or small
+      colScale[iCol] = min(max(min_allow_col_scale, colScale[iCol]), max_allow_col_scale);
       // For row scale (only collect)
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         int iRow = Aindex[k];
         double value = fabs(Avalue[k]) * colScale[iCol];
-        rowMin[iRow] = min(rowMin[iRow], value);
-        rowMax[iRow] = max(rowMax[iRow], value);
+        row_min_value[iRow] = min(row_min_value[iRow], value);
+        row_max_value[iRow] = max(row_max_value[iRow], value);
       }
     }
 
     // For row scale (find)
     for (int iRow = 0; iRow < numRow; iRow++) {
-      rowScale[iRow] = 1 / sqrt(rowMin[iRow] * rowMax[iRow]);
-      if (!originalScaling) {
-        // Ensure that row scale factor is not excessively large or small
-        rowScale[iRow] =
-            min(max(minAlwRowScale, rowScale[iRow]), maxAlwRowScale);
-      }
+      rowScale[iRow] = 1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
+      // Ensure that row scale factor is not excessively large or small
+      rowScale[iRow] = min(max(min_allow_row_scale, rowScale[iRow]), max_allow_row_scale);
     }
-    rowMin.assign(numRow, inf);
-    rowMax.assign(numRow, 1 / inf);
+    row_min_value.assign(numRow, HIGHS_CONST_INF);
+    row_max_value.assign(numRow, 1 / HIGHS_CONST_INF);
   }
 
   // Make it numerical better
   // Also determine the max and min row and column scaling factors
-  double minColScale = inf;
-  double maxColScale = 1 / inf;
-  double minRowScale = inf;
-  double maxRowScale = 1 / inf;
-  const double ln2 = log(2.0);
+  double min_col_scale = HIGHS_CONST_INF;
+  double max_col_scale = 1 / HIGHS_CONST_INF;
+  double min_row_scale = HIGHS_CONST_INF;
+  double max_row_scale = 1 / HIGHS_CONST_INF;
+  const double log2 = log(2.0);
   for (int iCol = 0; iCol < numCol; iCol++) {
-    colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / ln2 + 0.5));
-    minColScale = min(colScale[iCol], minColScale);
-    maxColScale = max(colScale[iCol], maxColScale);
+    colScale[iCol] = pow(2.0, floor(log(colScale[iCol]) / log2 + 0.5));
+    min_col_scale = min(colScale[iCol], min_col_scale);
+    max_col_scale = max(colScale[iCol], max_col_scale);
   }
   for (int iRow = 0; iRow < numRow; iRow++) {
-    rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / ln2 + 0.5));
-    minRowScale = min(rowScale[iRow], minRowScale);
-    maxRowScale = max(rowScale[iRow], maxRowScale);
+    rowScale[iRow] = pow(2.0, floor(log(rowScale[iRow]) / log2 + 0.5));
+    min_row_scale = min(rowScale[iRow], min_row_scale);
+    max_row_scale = max(rowScale[iRow], max_row_scale);
   }
-#ifdef HiGHSDEV
-  bool excessScaling =
-      (minColScale < minAlwColScale) || (maxColScale > maxAlwColScale) ||
-      (minRowScale < minAlwRowScale) || (maxRowScale > maxAlwRowScale);
-
-  HighsPrintMessage(ML_MINIMAL,
-                    "grep_Scaling,%s,%d,%d,Obj,%g,%d,Row,%g,%g,Col,%g,%g,%d\n",
-                    highs_model_object.lp_.model_name_.c_str(), originalScaling,
-                    alwCostScaling, minNzCost, includeCost, minColScale,
-                    maxColScale, minRowScale, maxRowScale, excessScaling);
-#endif
-
   // Apply scaling to matrix and bounds
   for (int iCol = 0; iCol < numCol; iCol++)
     for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
       Avalue[k] *= (colScale[iCol] * rowScale[Aindex[k]]);
 
   for (int iCol = 0; iCol < numCol; iCol++) {
-    colLower[iCol] /= colLower[iCol] == -inf ? 1 : colScale[iCol];
-    colUpper[iCol] /= colUpper[iCol] == +inf ? 1 : colScale[iCol];
+    colLower[iCol] /= colLower[iCol] == -HIGHS_CONST_INF ? 1 : colScale[iCol];
+    colUpper[iCol] /= colUpper[iCol] == +HIGHS_CONST_INF ? 1 : colScale[iCol];
     colCost[iCol] *= colScale[iCol];
   }
   for (int iRow = 0; iRow < numRow; iRow++) {
-    rowLower[iRow] *= rowLower[iRow] == -inf ? 1 : rowScale[iRow];
-    rowUpper[iRow] *= rowUpper[iRow] == +inf ? 1 : rowScale[iRow];
+    rowLower[iRow] *= rowLower[iRow] == -HIGHS_CONST_INF ? 1 : rowScale[iRow];
+    rowUpper[iRow] *= rowUpper[iRow] == +HIGHS_CONST_INF ? 1 : rowScale[iRow];
   }
   // Deduce the consequences of scaling the LP
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::SCALE);
   // Possibly scale the costs
-  if (!originalScaling && alwCostScaling)
-    scaleCosts(highs_model_object);
+  if (allow_cost_scaling) scaleCosts(highs_model_object);
   timer.stop(timer.scale_clock);
 }
 
