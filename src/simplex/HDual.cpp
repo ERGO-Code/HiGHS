@@ -727,7 +727,9 @@ void HDual::iterate() {
   timer.start(simplex_info.clock_[IteratePrimalClock]);
   updatePrimal(&row_ep);
   timer.stop(simplex_info.clock_[IteratePrimalClock]);
-
+  // After primal update in dual simplex the primal objective value is not known
+  workHMO.simplex_lp_status_.has_primal_objective_value = false;
+  // Possibly update Devex weights
   if ((dual_edge_weight_mode == DualEdgeWeightMode::DEVEX) && (nw_dvx_fwk)) {
     timer.start(simplex_info.clock_[IterateDevexIzClock]);
     iz_dvx_fwk();

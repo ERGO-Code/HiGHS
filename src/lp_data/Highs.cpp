@@ -181,7 +181,7 @@ HighsStatus Highs::run() {
 	scaleFactorRanges(hmos_[solved_hmo], min_col_scale, max_col_scale, min_row_scale, max_row_scale);
 	double cost_scale = hmos_[solved_hmo].scale_.cost_;
 	int scaled_lp_iteration_count = iteration_count;
-	double scaled_lp_objective_value = hmos_[solved_hmo].simplex_info_.primalObjectiveValue;
+	double scaled_lp_objective_value = hmos_[solved_hmo].simplex_info_.primal_objective_value;
 	// Now solve the unscaled LP using the optimal basis and solution
 	lp_solve_initial_simplex_iteration_count = lp_solve_final_simplex_iteration_count;
 	// Save the options to switch off scaling and allow the best simplex strategy to be used
@@ -197,7 +197,7 @@ HighsStatus Highs::run() {
 	  lp_solve_final_simplex_iteration_count -
 	  lp_solve_initial_simplex_iteration_count;
 	lp_solve_simplex_iteration_count += unscaled_lp_iteration_count;
-	double unscaled_lp_objective_value = hmos_[solved_hmo].simplex_info_.primalObjectiveValue;
+	double unscaled_lp_objective_value = hmos_[solved_hmo].simplex_info_.primal_objective_value;
 	printf("grep_scaling,%s,%g,%g,%g,%g,%g,%d,%d,%.15g,%.15g\n",
 	       hmos_[solved_hmo].lp_.model_name_.c_str(),
 	       cost_scale, -1/min_col_scale, max_col_scale, -1/min_row_scale, max_row_scale,

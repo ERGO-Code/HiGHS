@@ -660,6 +660,9 @@ void HPrimal::primalUpdate() {
   }
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 
+  // After dual update in primal simplex the dual objective value is not known
+  workHMO.simplex_lp_status_.has_dual_objective_value = false;
+
   // updateVerify for primal
   numericalTrouble = 0;
   /*
