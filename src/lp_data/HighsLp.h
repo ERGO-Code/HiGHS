@@ -231,15 +231,15 @@ struct HighsSimplexInfo {
   // Number of UPDATE operations performed - should be zeroed when INVERT is performed
   int update_count;
   // Value of dual objective - only set when computed from scratch in dual rebuild()
-  double dualObjectiveValue;
+  double dual_objective_value;
   // Value of primal objective - only set when computed from scratch in primal rebuild()
-  double primalObjectiveValue;
+  double primal_objective_value;
 
 
   // Value of dual objective that is updated in dual simplex solver
-  double updatedDualObjectiveValue;
+  double updated_dual_objective_value;
   // Value of primal objective that is updated in primal simplex solver
-  double updatedPrimalObjectiveValue;
+  double updated_primal_objective_value;
   // Number of logical variables in the basis 
   int num_basic_logicals;
   // Number of primal and dual infeasibilities
