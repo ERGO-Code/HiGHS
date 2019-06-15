@@ -470,7 +470,7 @@ bool Highs::addRows(const int num_new_row, const double *lower_bounds,
   HighsStatus return_status = HighsStatus::NotSet;
   // if simplex has not solved already
   if (!simplex_has_run_) {
-    return_status = add_lp_rows(lp_, num_new_row, lower_bounds, upper_bounds,
+    return_status = addLpRows(lp_, num_new_row, lower_bounds, upper_bounds,
                                 num_new_nz, starts, indices, values, options_);
   } else {
     assert(hmos_.size() > 0);
@@ -478,7 +478,7 @@ bool Highs::addRows(const int num_new_row, const double *lower_bounds,
 
     // todo: change to take int return value
     return_status =
-        interface.util_add_rows(num_new_row, lower_bounds, upper_bounds,
+        interface.addRows(num_new_row, lower_bounds, upper_bounds,
                                 num_new_nz, starts, indices, values);
   }
   if (return_status == HighsStatus::Error ||
@@ -503,7 +503,7 @@ bool Highs::addCols(const int num_new_col, const double *costs,
   // if simplex has not solved already
   if (!simplex_has_run_) {
     return_status =
-        add_lp_cols(lp_, num_new_col, costs, lower_bounds, upper_bounds,
+        addLpCols(lp_, num_new_col, costs, lower_bounds, upper_bounds,
                     num_new_nz, starts, indices, values, options_);
   } else {
     assert(hmos_.size() > 0);
@@ -511,7 +511,7 @@ bool Highs::addCols(const int num_new_col, const double *costs,
 
     // todo: change to take int return value
     return_status =
-        interface.util_add_cols(num_new_col, costs, lower_bounds, upper_bounds,
+        interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
                                 num_new_nz, starts, indices, values);
   }
   if (return_status == HighsStatus::Error ||
@@ -527,7 +527,7 @@ bool Highs::changeObjectiveSense(const int sense) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.change_ObjSense(sense);
+    return_status = interface.changeObjectiveSense(sense);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -814,7 +814,7 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_cols(from_col, to_col);
+    return_status = interface.deleteCols(from_col, to_col);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -829,7 +829,7 @@ bool Highs::deleteCols(const int num_set_entries, const int *set) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_cols(num_set_entries, set);
+    return_status = interface.deleteCols(num_set_entries, set);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -844,7 +844,7 @@ bool Highs::deleteCols(int *mask) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_cols(mask);
+    return_status = interface.deleteCols(mask);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -859,7 +859,7 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_rows(from_row, to_row);
+    return_status = interface.deleteRows(from_row, to_row);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -874,7 +874,7 @@ bool Highs::deleteRows(const int num_set_entries, const int *set) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_rows(num_set_entries, set);
+    return_status = interface.deleteRows(num_set_entries, set);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
@@ -889,7 +889,7 @@ bool Highs::deleteRows(int *mask) {
   } else {
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.delete_rows(mask);
+    return_status = interface.deleteRows(mask);
   }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)

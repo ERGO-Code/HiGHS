@@ -230,7 +230,7 @@ HighsStatus assess_costs(const int ml_col_os,
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(col_dim,
+  HighsStatus return_status = assessIntervalSetMask(col_dim,
 						       interval, from_col, to_col,
 						       set, num_set_entries, col_set,
 						       mask, col_mask,
@@ -297,7 +297,7 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os,
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(ix_dim,
+  HighsStatus return_status = assessIntervalSetMask(ix_dim,
 						       interval, from_ix, to_ix,
 						       set, num_set_entries, ix_set,
 						       mask, ix_mask,
@@ -581,7 +581,7 @@ HighsStatus scaleLpColCosts(HighsLp& lp,
   int col_dim = lp.numCol_;
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(col_dim,
+  HighsStatus return_status = assessIntervalSetMask(col_dim,
 						       interval, from_col, to_col,
 						       set, num_set_entries, col_set,
 						       mask, col_mask,
@@ -615,7 +615,7 @@ HighsStatus scaleLpColBounds(HighsLp& lp,
   int col_dim = lp.numCol_;
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(col_dim,
+  HighsStatus return_status = assessIntervalSetMask(col_dim,
 						       interval, from_col, to_col,
 						       set, num_set_entries, col_set,
 						       mask, col_mask,
@@ -650,7 +650,7 @@ HighsStatus scaleLpRowBounds(HighsLp& lp,
   int row_dim = lp.numRow_;
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(row_dim,
+  HighsStatus return_status = assessIntervalSetMask(row_dim,
 						       interval, from_row, to_row,
 						       set, num_set_entries, row_set,
 						       mask, row_mask,
@@ -676,14 +676,14 @@ HighsStatus scaleLpRowBounds(HighsLp& lp,
   return HighsStatus::OK;
 }
 
-HighsStatus add_lp_cols(HighsLp& lp,
-			const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-			const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
-			const HighsOptions& options) {
+HighsStatus addLpCols(HighsLp& lp,
+		      const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+		      const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
+		      const HighsOptions& options) {
   const bool valid_matrix = true;
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
-  HighsStatus return_status = append_lp_cols(lp, num_new_col, XcolCost, XcolLower, XcolUpper,
+  HighsStatus return_status = appendLpCols(lp, num_new_col, XcolCost, XcolLower, XcolUpper,
 					   num_new_nz, XAstart, XAindex, XAvalue,
 					   options, valid_matrix);
   // Which of the following two??
@@ -693,10 +693,10 @@ HighsStatus add_lp_cols(HighsLp& lp,
   return return_status;
 }
 
-HighsStatus append_lp_cols(HighsLp& lp,
-			   const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
-			   const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
-			   const HighsOptions& options, const bool valid_matrix) {
+HighsStatus appendLpCols(HighsLp& lp,
+			 const int num_new_col, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+			 const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue,
+			 const HighsOptions& options, const bool valid_matrix) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
@@ -726,12 +726,12 @@ HighsStatus append_lp_cols(HighsLp& lp,
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the columns to the LP vectors and matrix
-  call_status = append_cols_to_lp_vectors(lp, num_new_col, XcolCost, XcolLower, XcolUpper);
+  call_status = appendColsToLpVectors(lp, num_new_col, XcolCost, XcolLower, XcolUpper);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_matrix) {
-    call_status = append_cols_to_lp_matrix(lp, num_new_col, num_new_nz, XAstart, XAindex, XAvalue);
+    call_status = appendColsToLpMatrix(lp, num_new_col, num_new_nz, XAstart, XAindex, XAvalue);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
   }
@@ -755,31 +755,35 @@ HighsStatus append_lp_cols(HighsLp& lp,
   return return_status;
 }
 
-HighsStatus append_cols_to_lp_vectors(HighsLp &lp, const int num_new_col,
+HighsStatus appendColsToLpVectors(HighsLp &lp, const int num_new_col,
 				      const double*XcolCost, const double *XcolLower, const double *XcolUpper) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
-  int newNumCol = lp.numCol_ + num_new_col;
-  lp.colCost_.resize(newNumCol);
-  lp.colLower_.resize(newNumCol);
-  lp.colUpper_.resize(newNumCol);
-  
-  for (int col = 0; col < num_new_col; col++) {
-    lp.colCost_[lp.numCol_ + col] = XcolCost[col];
-    lp.colLower_[lp.numCol_ + col] = XcolLower[col];
-    lp.colUpper_[lp.numCol_ + col] = XcolUpper[col];
+  int new_num_col = lp.numCol_ + num_new_col;
+  lp.colCost_.resize(new_num_col);
+  lp.colLower_.resize(new_num_col);
+  lp.colUpper_.resize(new_num_col);
+  bool have_names = lp.col_names_.size();
+  if (have_names) lp.col_names_.resize(new_num_col);
+  for (int new_col = 0; new_col < num_new_col; new_col++) {
+    int iCol = lp.numCol_ + new_col;
+    lp.colCost_[iCol] = XcolCost[new_col];
+    lp.colLower_[iCol] = XcolLower[new_col];
+    lp.colUpper_[iCol] = XcolUpper[new_col];
+    // Cannot guarantee to create unique names, so name is blank
+    if (have_names) lp.col_names_[iCol] = "";
   }
   return HighsStatus::OK;
 }
 
-HighsStatus add_lp_rows(HighsLp& lp,
+HighsStatus addLpRows(HighsLp& lp,
 			const int num_new_row, const double *XrowLower,  const double *XrowUpper,
 			const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue,
 			const HighsOptions& options) {
   const bool valid_matrix = true;
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
-  HighsStatus return_status = append_lp_rows(lp, num_new_row, XrowLower, XrowUpper,
+  HighsStatus return_status = appendLpRows(lp, num_new_row, XrowLower, XrowUpper,
 					     num_new_nz, XARstart, XARindex, XARvalue,
 					     options, valid_matrix);
   // Which of the following two??
@@ -790,7 +794,7 @@ HighsStatus add_lp_rows(HighsLp& lp,
   return return_status;
 }
 
-HighsStatus append_lp_rows(HighsLp& lp,
+HighsStatus appendLpRows(HighsLp& lp,
 			   const int num_new_row, const double *XrowLower,  const double *XrowUpper,
 			   const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue,
 			   const HighsOptions& options, bool valid_matrix) {
@@ -819,7 +823,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the rows to the LP vectors
-  call_status = append_rows_to_lp_vectors(lp, num_new_row, XrowLower, XrowUpper);
+  call_status = appendRowsToLpVectors(lp, num_new_row, XrowLower, XrowUpper);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
@@ -848,7 +852,7 @@ HighsStatus append_lp_rows(HighsLp& lp,
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
     // Append the matrix to the LP vectors
-    call_status = append_rows_to_lp_matrix(lp, num_new_row, lc_num_new_nz,
+    call_status = appendRowsToLpMatrix(lp, num_new_row, lc_num_new_nz,
 					   lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
@@ -856,22 +860,27 @@ HighsStatus append_lp_rows(HighsLp& lp,
   return return_status;
 }
 
-HighsStatus append_rows_to_lp_vectors(HighsLp &lp, const int num_new_row,
+HighsStatus appendRowsToLpVectors(HighsLp &lp, const int num_new_row,
 				      const double *XrowLower, const double *XrowUpper) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   int new_num_row = lp.numRow_ + num_new_row;
   lp.rowLower_.resize(new_num_row);
   lp.rowUpper_.resize(new_num_row);
+  bool have_names = lp.row_names_.size();
+  if (have_names) lp.row_names_.resize(new_num_row);
 
-  for (int row = 0; row < num_new_row; row++) {
-    lp.rowLower_[lp.numRow_ + row] = XrowLower[row];
-    lp.rowUpper_[lp.numRow_ + row] = XrowUpper[row];
+  for (int new_row = 0; new_row < num_new_row; new_row++) {
+    int iRow = lp.numRow_ + new_row;
+    lp.rowLower_[iRow] = XrowLower[new_row];
+    lp.rowUpper_[iRow] = XrowUpper[new_row];
+    // Cannot guarantee to create unique names, so name is blank
+    if (have_names) lp.row_names_[iRow] = "";
   }
   return HighsStatus::OK;
 }
 
-HighsStatus append_cols_to_lp_matrix(HighsLp &lp, const int num_new_col,
+HighsStatus appendColsToLpMatrix(HighsLp &lp, const int num_new_col,
 				     const int num_new_nz, const int *XAstart, const int *XAindex, const double *XAvalue) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
@@ -881,8 +890,8 @@ HighsStatus append_cols_to_lp_matrix(HighsLp &lp, const int num_new_col,
   // starts accordingly. Even if no matrix entries are added, f they
   // are added later as rows it will be assumesd that the starts are
   // of the right size.
-  int newNumCol = lp.numCol_ + num_new_col;
-  lp.Astart_.resize(newNumCol + 1);
+  int new_num_col = lp.numCol_ + num_new_col;
+  lp.Astart_.resize(new_num_col + 1);
   // If adding columns to an empty LP then introduce the start for the fictitious column 0
   if (lp.numCol_ == 0) lp.Astart_[0] = 0;
   // If no nonzeros are bing added then there's nothing to do
@@ -907,8 +916,8 @@ HighsStatus append_cols_to_lp_matrix(HighsLp &lp, const int num_new_col,
   return HighsStatus::OK;
 }
 
-HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
-				     const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue) {
+HighsStatus appendRowsToLpMatrix(HighsLp &lp, const int num_new_row,
+				 const int num_new_nz, const int *XARstart, const int *XARindex, const double *XARvalue) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
@@ -954,39 +963,39 @@ HighsStatus append_rows_to_lp_matrix(HighsLp &lp, const int num_new_row,
   return HighsStatus::OK;
 }
 
-HighsStatus delete_lp_cols(HighsLp &lp,
-			   const bool interval, const int from_col, const int to_col,
-			   const bool set, const int num_set_entries, const int* col_set,
-			   const bool mask, int* col_mask,
-			   const bool valid_matrix) {
+HighsStatus deleteLpCols(HighsLp &lp,
+			 const bool interval, const int from_col, const int to_col,
+			 const bool set, const int num_set_entries, const int* col_set,
+			 const bool mask, int* col_mask,
+			 const bool valid_matrix) {
   int new_num_col;
-  HighsStatus call_status = delete_cols_from_lp_vectors(lp, new_num_col,
-							interval, from_col, to_col,
-							set, num_set_entries, col_set,
-							mask, col_mask);
+  HighsStatus call_status = deleteColsFromLpVectors(lp, new_num_col,
+						    interval, from_col, to_col,
+						    set, num_set_entries, col_set,
+						    mask, col_mask);
   if (call_status != HighsStatus::OK) return call_status;
   if (valid_matrix) {
-    HighsStatus call_status = delete_cols_from_lp_matrix(lp,
-							 interval, from_col, to_col,
-							 set, num_set_entries, col_set,
-							 mask, col_mask);
+    HighsStatus call_status = deleteColsFromLpMatrix(lp,
+						     interval, from_col, to_col,
+						     set, num_set_entries, col_set,
+						     mask, col_mask);
     if (call_status != HighsStatus::OK) return call_status;
   }
   lp.numCol_ = new_num_col;
   return HighsStatus::OK;
 }
 
-HighsStatus delete_cols_from_lp_vectors(HighsLp &lp, int &new_num_col,
-					const bool interval, const int from_col, const int to_col,
-					const bool set, const int num_set_entries, const int* col_set,
-					const bool mask, const int* col_mask) {
+HighsStatus deleteColsFromLpVectors(HighsLp &lp, int &new_num_col,
+				    const bool interval, const int from_col, const int to_col,
+				    const bool set, const int num_set_entries, const int* col_set,
+				    const bool mask, const int* col_mask) {
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(lp.numCol_,
-						     interval, from_col, to_col,
-						     set, num_set_entries, col_set,
-						     mask, col_mask,
-						     from_k, to_k);
+  HighsStatus return_status = assessIntervalSetMask(lp.numCol_,
+						       interval, from_col, to_col,
+						       set, num_set_entries, col_set,
+						       mask, col_mask,
+						       from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
   // Initialise new_num_col in case none is removed due to from_k >= to_k
   new_num_col = lp.numCol_;
@@ -999,42 +1008,44 @@ HighsStatus delete_cols_from_lp_vectors(HighsLp &lp, int &new_num_col,
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   new_num_col = 0;
+  bool have_names = lp.col_names_.size();
   for (int k = from_k; k < to_k; k++) {
-    update_out_in_ix(col_dim,
-		     interval, from_col, to_col,
-		     set, num_set_entries, col_set,
-		     mask, col_mask,
-		     delete_from_col, delete_to_col,
-		     keep_from_col, keep_to_col,
-		     current_set_entry);
+    updateOutInIx(col_dim,
+		  interval, from_col, to_col,
+		  set, num_set_entries, col_set,
+		  mask, col_mask,
+		  delete_from_col, delete_to_col,
+		  keep_from_col, keep_to_col,
+		  current_set_entry);
     if (delete_to_col == col_dim) break;
-     assert(delete_to_col < col_dim);
-     if (k == from_k) {
-       // Account for the initial columns being kept
-       new_num_col = delete_from_col;
-     }
-     for (int col = keep_from_col; col < keep_to_col; col++) {
-       lp.colCost_[new_num_col] = lp.colCost_[col];
-       lp.colLower_[new_num_col] = lp.colLower_[col];
-       lp.colUpper_[new_num_col] = lp.colUpper_[col];
-       new_num_col++;
-     }
-     if (keep_to_col == col_dim) break;
+    assert(delete_to_col < col_dim);
+    if (k == from_k) {
+      // Account for the initial columns being kept
+      new_num_col = delete_from_col;
+    }
+    for (int col = keep_from_col; col < keep_to_col; col++) {
+      lp.colCost_[new_num_col] = lp.colCost_[col];
+      lp.colLower_[new_num_col] = lp.colLower_[col];
+      lp.colUpper_[new_num_col] = lp.colUpper_[col];
+      if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
+      new_num_col++;
+    }
+    if (keep_to_col == col_dim) break;
   }
   return HighsStatus::OK;
 }
 
-HighsStatus delete_cols_from_lp_matrix(HighsLp &lp,
+HighsStatus deleteColsFromLpMatrix(HighsLp &lp,
 				       const bool interval, const int from_col, const int to_col,
 				       const bool set, const int num_set_entries, const int* col_set,
 				       const bool mask, int* col_mask) {
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(lp.numCol_,
-						       interval, from_col, to_col,
-						       set, num_set_entries, col_set,
-						       mask, col_mask,
-						       from_k, to_k);
+  HighsStatus return_status = assessIntervalSetMask(lp.numCol_,
+						    interval, from_col, to_col,
+						    set, num_set_entries, col_set,
+						    mask, col_mask,
+						    from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
   if (from_k >= to_k) return HighsStatus::OK;
 
@@ -1047,37 +1058,37 @@ HighsStatus delete_cols_from_lp_matrix(HighsLp &lp,
   int new_num_col = 0;
   int new_num_nz = 0;
   for (int k = from_k; k < to_k; k++) {
-    update_out_in_ix(col_dim,
-		     interval, from_col, to_col,
-		     set, num_set_entries, col_set,
-		     mask, col_mask,
-		     delete_from_col, delete_to_col,
-		     keep_from_col, keep_to_col,
-		     current_set_entry);
-     if (k == from_k) {
-       // Account for the initial columns being kept
-       if (mask) {
-	 for (int col = 0; col < delete_from_col; col++) {
-	   col_mask[col] = new_num_col;
-	   new_num_col++;
-	 }
-       } else {
-	 new_num_col = delete_from_col;
-       }
-       new_num_nz = lp.Astart_[delete_from_col];
-     }
-     // Ensure that the starts of the deleted columns are zeroed to
-     // avoid redundant start information for columns whose indices
-     // are't used after the deletion takes place. In particular, if
-     // all columns are deleted then something must be done to ensure
-     // that the matrix isn't magially recreated by increasing the
-     // number of columns from zero when there are no rows in the LP.
-     for (int col = delete_from_col; col < delete_to_col; col++) lp.Astart_[col] = 0;
-     for (int col = keep_from_col; col < keep_to_col; col++) {
-       lp.Astart_[new_num_col] = new_num_nz + lp.Astart_[col] - lp.Astart_[keep_from_col];
-       new_num_col++;
-     }
-     for (int el = lp.Astart_[keep_from_col]; el < lp.Astart_[keep_to_col]; el++) {
+    updateOutInIx(col_dim,
+		  interval, from_col, to_col,
+		  set, num_set_entries, col_set,
+		  mask, col_mask,
+		  delete_from_col, delete_to_col,
+		  keep_from_col, keep_to_col,
+		  current_set_entry);
+    if (k == from_k) {
+      // Account for the initial columns being kept
+      if (mask) {
+	for (int col = 0; col < delete_from_col; col++) {
+	  col_mask[col] = new_num_col;
+	  new_num_col++;
+	}
+      } else {
+	new_num_col = delete_from_col;
+      }
+      new_num_nz = lp.Astart_[delete_from_col];
+    }
+    // Ensure that the starts of the deleted columns are zeroed to
+    // avoid redundant start information for columns whose indices
+    // are't used after the deletion takes place. In particular, if
+    // all columns are deleted then something must be done to ensure
+    // that the matrix isn't magially recreated by increasing the
+    // number of columns from zero when there are no rows in the LP.
+    for (int col = delete_from_col; col < delete_to_col; col++) lp.Astart_[col] = 0;
+    for (int col = keep_from_col; col < keep_to_col; col++) {
+      lp.Astart_[new_num_col] = new_num_nz + lp.Astart_[col] - lp.Astart_[keep_from_col];
+      new_num_col++;
+    }
+    for (int el = lp.Astart_[keep_from_col]; el < lp.Astart_[keep_to_col]; el++) {
       lp.Aindex_[new_num_nz] = lp.Aindex_[el];
       lp.Avalue_[new_num_nz] = lp.Avalue_[el];
       new_num_nz++;
@@ -1093,39 +1104,39 @@ HighsStatus delete_cols_from_lp_matrix(HighsLp &lp,
   return HighsStatus::OK;
 }
 
-HighsStatus delete_lp_rows(HighsLp &lp,
-			   const bool interval, const int from_row, const int to_row,
-			   const bool set, const int num_set_entries, const int* row_set,
-			   const bool mask, int* row_mask,
-			   const bool valid_matrix) {
+HighsStatus deleteLpRows(HighsLp &lp,
+			 const bool interval, const int from_row, const int to_row,
+			 const bool set, const int num_set_entries, const int* row_set,
+			 const bool mask, int* row_mask,
+			 const bool valid_matrix) {
   int new_num_row;
-  HighsStatus return_status = delete_rows_from_lp_vectors(lp, new_num_row,
-							  interval, from_row, to_row,
-							  set, num_set_entries, row_set,
-							  mask, row_mask);
+  HighsStatus return_status = deleteRowsFromLpVectors(lp, new_num_row,
+						      interval, from_row, to_row,
+						      set, num_set_entries, row_set,
+						      mask, row_mask);
   if (return_status != HighsStatus::OK) return return_status;
   if (valid_matrix) {
-    HighsStatus return_status = delete_rows_from_lp_matrix(lp,
-							   interval, from_row, to_row,
-							   set, num_set_entries, row_set,
-							   mask, row_mask);
+    HighsStatus return_status = deleteRowsFromLpMatrix(lp,
+						       interval, from_row, to_row,
+						       set, num_set_entries, row_set,
+						       mask, row_mask);
     if (return_status != HighsStatus::OK) return return_status;
   }
   lp.numRow_ = new_num_row;
   return HighsStatus::OK;
 }
 
-HighsStatus delete_rows_from_lp_vectors(HighsLp &lp, int &new_num_row,
-					const bool interval, const int from_row, const int to_row,
-					const bool set, const int num_set_entries, const int* row_set,
-					const bool mask, const int* row_mask) {
+HighsStatus deleteRowsFromLpVectors(HighsLp &lp, int &new_num_row,
+				    const bool interval, const int from_row, const int to_row,
+				    const bool set, const int num_set_entries, const int* row_set,
+				    const bool mask, const int* row_mask) {
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(lp.numRow_,
-						     interval, from_row, to_row,
-						     set, num_set_entries, row_set,
-						     mask, row_mask,
-						     from_k, to_k);
+  HighsStatus return_status = assessIntervalSetMask(lp.numRow_,
+						    interval, from_row, to_row,
+						    set, num_set_entries, row_set,
+						    mask, row_mask,
+						    from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
   // Initialise new_num_row in case none is removed due to from_k >= to_k
   new_num_row = lp.numRow_;
@@ -1138,14 +1149,15 @@ HighsStatus delete_rows_from_lp_vectors(HighsLp &lp, int &new_num_row,
   int current_set_entry = 0;
   int row_dim = lp.numRow_;
   new_num_row = 0;
+  bool have_names = lp.row_names_.size();
   for (int k = from_k; k < to_k; k++) {
-    update_out_in_ix(row_dim,
-		     interval, from_row, to_row,
-		     set, num_set_entries, row_set,
-		     mask, row_mask,
-		     delete_from_row, delete_to_row,
-		     keep_from_row, keep_to_row,
-		     current_set_entry);
+    updateOutInIx(row_dim,
+		  interval, from_row, to_row,
+		  set, num_set_entries, row_set,
+		  mask, row_mask,
+		  delete_from_row, delete_to_row,
+		  keep_from_row, keep_to_row,
+		  current_set_entry);
     if (delete_to_row == row_dim) break;
      assert(delete_to_row < row_dim);
      if (k == from_k) {
@@ -1155,6 +1167,7 @@ HighsStatus delete_rows_from_lp_vectors(HighsLp &lp, int &new_num_row,
      for (int row = keep_from_row; row < keep_to_row; row++) {
        lp.rowLower_[new_num_row] = lp.rowLower_[row];
        lp.rowUpper_[new_num_row] = lp.rowUpper_[row];
+       if (have_names) lp.row_names_[new_num_row] = lp.row_names_[row];
        new_num_row++;
      }
      if (keep_to_row == row_dim) break;
@@ -1162,17 +1175,17 @@ HighsStatus delete_rows_from_lp_vectors(HighsLp &lp, int &new_num_row,
   return HighsStatus::OK;
 }
 
-HighsStatus delete_rows_from_lp_matrix(HighsLp &lp, 
-				       const bool interval, const int from_row, const int to_row,
-				       const bool set, const int num_set_entries, const int* row_set,
-				       const bool mask, int* row_mask) {
+HighsStatus deleteRowsFromLpMatrix(HighsLp &lp, 
+				   const bool interval, const int from_row, const int to_row,
+				   const bool set, const int num_set_entries, const int* row_set,
+				   const bool mask, int* row_mask) {
   int from_k;
   int to_k;
-  HighsStatus return_status = assess_interval_set_mask(lp.numRow_,
-						     interval, from_row, to_row,
-						     set, num_set_entries, row_set,
-						     mask, row_mask,
-						     from_k, to_k);
+  HighsStatus return_status = assessIntervalSetMask(lp.numRow_,
+						    interval, from_row, to_row,
+						    set, num_set_entries, row_set,
+						    mask, row_mask,
+						    from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
   if (from_k >= to_k) return HighsStatus::OK;
 
@@ -1182,7 +1195,6 @@ HighsStatus delete_rows_from_lp_matrix(HighsLp &lp,
   int row_dim = lp.numRow_;
   int keep_to_row;
   int current_set_entry;
-
   // Set up a row mask to indicate the new row index of kept rows and
   // -1 for deleted rows so that the kept entries in the column-wise
   // matrix can be identified and have their correct row index.
@@ -1192,13 +1204,13 @@ HighsStatus delete_rows_from_lp_matrix(HighsLp &lp,
     keep_to_row = 0;
     current_set_entry = 0;
     for (int k = from_k; k < to_k; k++) {
-      update_out_in_ix(row_dim,
-		       interval, from_row, to_row,
-		       set, num_set_entries, row_set,
-		       mask, row_mask,
-		       delete_from_row, delete_to_row,
-		       keep_from_row, keep_to_row,
-		       current_set_entry);
+      updateOutInIx(row_dim,
+		    interval, from_row, to_row,
+		    set, num_set_entries, row_set,
+		    mask, row_mask,
+		    delete_from_row, delete_to_row,
+		    keep_from_row, keep_to_row,
+		    current_set_entry);
       if (k == from_k) {
 	// Account for any initial rows being kept
 	for (int row = 0; row < delete_from_row; row++) {
@@ -1245,7 +1257,7 @@ HighsStatus delete_rows_from_lp_matrix(HighsLp &lp,
   return HighsStatus::OK;
 }
     
-HighsStatus change_lp_matrix_coefficient(HighsLp &lp, const int row, const int col, const double new_value) {
+HighsStatus changeLpMatrixCoefficient(HighsLp &lp, const int row, const int col, const double new_value) {
   if (row < 0 || row > lp.numRow_) return HighsStatus::Error;
   if (col < 0 || col > lp.numCol_) return HighsStatus::Error;
   int changeElement = -1;
@@ -1257,10 +1269,10 @@ HighsStatus change_lp_matrix_coefficient(HighsLp &lp, const int row, const int c
     }
   }
   if (changeElement < 0) {
-    //    printf("change_lp_matrix_coefficient: Cannot find row %d in column %d\n", row, col);
+    //    printf("changeLpMatrixCoefficient: Cannot find row %d in column %d\n", row, col);
     changeElement = lp.Astart_[col + 1];
     int new_num_nz = lp.Astart_[lp.numCol_] + 1;
-    //    printf("change_lp_matrix_coefficient: Increasing Nnonz from %d to %d\n",
+    //    printf("changeLpMatrixCoefficient: Increasing Nnonz from %d to %d\n",
     //    lp.Astart_[lp.numCol_], new_num_nz);
     lp.Aindex_.resize(new_num_nz);
     lp.Avalue_.resize(new_num_nz);
@@ -1274,7 +1286,7 @@ HighsStatus change_lp_matrix_coefficient(HighsLp &lp, const int row, const int c
   lp.Avalue_[changeElement] = new_value;
 }
 
-HighsStatus change_lp_costs(HighsLp &lp,
+HighsStatus changeLpCosts(HighsLp &lp,
 			    const bool interval, const int from_col, const int to_col,
 			    const bool set, const int num_set_entries, const int* col_set,
 			    const bool mask, const int* col_mask,
@@ -1283,7 +1295,7 @@ HighsStatus change_lp_costs(HighsLp &lp,
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
-  HighsStatus call_status = assess_interval_set_mask(lp.numCol_,
+  HighsStatus call_status = assessIntervalSetMask(lp.numCol_,
 						     interval, from_col, to_col,
 						     set, num_set_entries, col_set,
 						     mask, col_mask,
@@ -1373,7 +1385,7 @@ HighsStatus changeBounds(
   // Check parameters for technique and, if OK set the loop limits - in iterator style
   int from_k;
   int to_k;
-  HighsStatus call_status = assess_interval_set_mask(ix_dim,
+  HighsStatus call_status = assessIntervalSetMask(ix_dim,
 						       interval, from_ix, to_ix,
 						       set, num_set_entries, ix_set,
 						       mask, ix_mask,
@@ -1826,7 +1838,7 @@ double calculateObjective(const HighsLp& lp, HighsSolution& solution) {
   return sum;
 }
 
-HighsStatus assess_interval_set_mask(const int ix_dim, 
+HighsStatus assessIntervalSetMask(const int ix_dim, 
 				     const bool interval, const int from_ix, const int to_ix,
 				     const bool set, int num_set_entries, const int* ix_set,
 				     const bool mask, const int* ix_mask,
@@ -1899,7 +1911,7 @@ HighsStatus assess_interval_set_mask(const int ix_dim,
   return HighsStatus::OK;
 }
 
-void update_out_in_ix(const int ix_dim, 
+void updateOutInIx(const int ix_dim, 
 		      const bool interval, const int from_ix, const int to_ix,
 		      const bool set, const int num_set_entries, const int* ix_set,
 		      const bool mask, const int* ix_mask,

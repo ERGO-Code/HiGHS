@@ -118,7 +118,7 @@ HighsStatus scaleLpRowBounds(HighsLp& lp,
 			     const int* row_mask
 			     );
 
-HighsStatus add_lp_cols(
+HighsStatus addLpCols(
 			HighsLp& lp,
 			const int num_new_col,
 			const double *XcolCost,
@@ -131,136 +131,136 @@ HighsStatus add_lp_cols(
 			const HighsOptions& options
 			);
 
-HighsStatus append_lp_cols(
-		   HighsLp& lp,
-		   const int num_new_col,
-		   const double *XcolCost,
-		   const double *XcolLower,
-		   const double *XcolUpper,
-		   const int num_new_nz,
-		   const int *XAstart,
-		   const int *XAindex,
-		   const double *XAvalue,
-		   const HighsOptions& options,
-		   const bool valid_matrix
-		   );
+HighsStatus appendLpCols(
+			 HighsLp& lp,
+			 const int num_new_col,
+			 const double *XcolCost,
+			 const double *XcolLower,
+			 const double *XcolUpper,
+			 const int num_new_nz,
+			 const int *XAstart,
+			 const int *XAindex,
+			 const double *XAvalue,
+			 const HighsOptions& options,
+			 const bool valid_matrix
+			 );
 
-HighsStatus append_cols_to_lp_vectors(
-			       HighsLp &lp,
-			       const int num_new_col,
-			       const double *XcolCost,
-			       const double *colLower,
-			       const double *XcolUpper
-			       );
-
-HighsStatus append_cols_to_lp_matrix(
-			   HighsLp &lp,
-			   const int num_new_col,
-			   const int num_new_nz,
-			   const int *XAstart,
-			   const int *XAindex,
-			   const double *XAvalue
-			   );
-
-HighsStatus add_lp_rows(
-		HighsLp& lp,
-		const int num_new_row,
-		const double *XrowLower,
-		const double *XrowUpper,
-		const int num_new_nz,
-		const int *XARstart,
-		const int *XARindex,
-		const double *XARvalue,
-		const HighsOptions& options
-		);
-
-HighsStatus append_lp_rows(
-			   HighsLp& lp,
-			   const int num_new_row,
-			   const double *XrowLower,
-			   const double *XrowUpper,
-			   const int num_new_nz,
-			   const int *XARstart,
-			   const int *XARindex,
-			   const double *XARvalue,
-			   const HighsOptions& options,
-			   bool valid_matrix
-			   );
-
-HighsStatus append_rows_to_lp_vectors(HighsLp &lp,
-			       const int num_new_row,
-			       const double *XrowLower,
-			       const double *XrowUpper
-			       );
-
-HighsStatus append_rows_to_lp_matrix(HighsLp &lp,
-			   const int num_new_row,
-			   const int num_new_nz,
-			   const int *XARstart,
-			   const int *XARindex,
-			   const double *XARvalue
-			   );
-
-HighsStatus delete_lp_cols(
-			   HighsLp &lp,
-			   const bool interval, const int from_col, const int to_col,
-			   const bool set, const int num_set_entries, const int* col_set,
-			   const bool mask, int* col_mask,
-			   const bool valid_matrix);
-
-HighsStatus delete_cols_from_lp_vectors(
-			   HighsLp &lp,
-			   int &new_num_col,
-			   const bool interval, const int from_col, const int to_col,
-			   const bool set, const int num_set_entries, const int* col_set,
-			   const bool mask, const int* col_mask);
-
-HighsStatus delete_cols_from_lp_matrix(
-			   HighsLp &lp,
-			   const bool interval, const int from_col, const int to_col,
-			   const bool set, const int num_set_entries, const int* col_set,
-			   const bool mask, int* col_mask);
-
-HighsStatus delete_lp_rows(
-			   HighsLp &lp,
-			   const bool interval, const int from_row, const int to_row,
-			   const bool set, const int num_set_entries, const int* row_set,
-			   const bool mask, int* row_mask,
-			   const bool valid_matrix);
-
-HighsStatus delete_rows_from_lp_vectors(
-			   HighsLp &lp,
-			   int &new_num_row,
-			   const bool interval, const int from_row, const int to_row,
-			   const bool set, const int num_set_entries, const int* row_set,
-			   const bool mask, const int* row_mask);
-
-HighsStatus delete_rows_from_lp_matrix(
-			   HighsLp &lp,
-			   const bool interval, const int from_row, const int to_row,
-			   const bool set, const int num_set_entries, const int* row_set,
-			   const bool mask, int* row_mask);
-
-HighsStatus change_lp_matrix_coefficient(
+HighsStatus appendColsToLpVectors(
 				  HighsLp &lp,
-				  const int row,
-				  const int col,
-				  const double new_value
+				  const int num_new_col,
+				  const double *XcolCost,
+				  const double *colLower,
+				  const double *XcolUpper
 				  );
 
-HighsStatus change_lp_costs(
-			    HighsLp &lp,
-			    const bool interval,
-			    const int from_col,
-			    const int to_col,
-			    const bool set,
-			    const int num_set_entries,
-			    const int* col_set,
-			    const bool mask,
-			    const int* col_mask,
-			    const double* usr_col_cost,
-			    const double infinite_cost
-			    );
+HighsStatus appendColsToLpMatrix(
+				 HighsLp &lp,
+				 const int num_new_col,
+				 const int num_new_nz,
+				 const int *XAstart,
+				 const int *XAindex,
+				 const double *XAvalue
+				 );
+
+HighsStatus addLpRows(
+		      HighsLp& lp,
+		      const int num_new_row,
+		      const double *XrowLower,
+		      const double *XrowUpper,
+		      const int num_new_nz,
+		      const int *XARstart,
+		      const int *XARindex,
+		      const double *XARvalue,
+		      const HighsOptions& options
+		      );
+
+HighsStatus appendLpRows(
+			 HighsLp& lp,
+			 const int num_new_row,
+			 const double *XrowLower,
+			 const double *XrowUpper,
+			 const int num_new_nz,
+			 const int *XARstart,
+			 const int *XARindex,
+			 const double *XARvalue,
+			 const HighsOptions& options,
+			 bool valid_matrix
+			 );
+
+HighsStatus appendRowsToLpVectors(HighsLp &lp,
+				  const int num_new_row,
+				  const double *XrowLower,
+				  const double *XrowUpper
+				  );
+
+HighsStatus appendRowsToLpMatrix(HighsLp &lp,
+				 const int num_new_row,
+				 const int num_new_nz,
+				 const int *XARstart,
+				 const int *XARindex,
+				 const double *XARvalue
+				 );
+
+HighsStatus deleteLpCols(
+			 HighsLp &lp,
+			 const bool interval, const int from_col, const int to_col,
+			 const bool set, const int num_set_entries, const int* col_set,
+			 const bool mask, int* col_mask,
+			 const bool valid_matrix);
+
+HighsStatus deleteColsFromLpVectors(
+				    HighsLp &lp,
+				    int &new_num_col,
+				    const bool interval, const int from_col, const int to_col,
+				    const bool set, const int num_set_entries, const int* col_set,
+				    const bool mask, const int* col_mask);
+
+HighsStatus deleteColsFromLpMatrix(
+				   HighsLp &lp,
+				   const bool interval, const int from_col, const int to_col,
+				   const bool set, const int num_set_entries, const int* col_set,
+				   const bool mask, int* col_mask);
+
+HighsStatus deleteLpRows(
+			 HighsLp &lp,
+			 const bool interval, const int from_row, const int to_row,
+			 const bool set, const int num_set_entries, const int* row_set,
+			 const bool mask, int* row_mask,
+			 const bool valid_matrix);
+
+HighsStatus deleteRowsFromLpVectors(
+				    HighsLp &lp,
+				    int &new_num_row,
+				    const bool interval, const int from_row, const int to_row,
+				    const bool set, const int num_set_entries, const int* row_set,
+				    const bool mask, const int* row_mask);
+
+HighsStatus deleteRowsFromLpMatrix(
+				   HighsLp &lp,
+				   const bool interval, const int from_row, const int to_row,
+				   const bool set, const int num_set_entries, const int* row_set,
+				   const bool mask, int* row_mask);
+
+HighsStatus changeLpMatrixCoefficient(
+				      HighsLp &lp,
+				      const int row,
+				      const int col,
+				      const double new_value
+				      );
+
+HighsStatus changeLpCosts(
+			  HighsLp &lp,
+			  const bool interval,
+			  const int from_col,
+			  const int to_col,
+			  const bool set,
+			  const int num_set_entries,
+			  const int* col_set,
+			  const bool mask,
+			  const int* col_mask,
+			  const double* usr_col_cost,
+			  const double infinite_cost
+			  );
 
 HighsStatus changeLpColBounds(
 			      HighsLp &lp,
@@ -346,29 +346,29 @@ void reportLpObjSense(
  * @brief Report the data of an LP
  */
 void reportLpColVectors(
-		    const HighsLp &lp //!< LP whose data are to be reported
-		    );
+			const HighsLp &lp //!< LP whose data are to be reported
+			);
 /**
  * @brief Report the data of an LP
  */
 void reportLpRowVectors(
-		    const HighsLp &lp //!< LP whose data are to be reported
-		    );
+			const HighsLp &lp //!< LP whose data are to be reported
+			);
 /**
  * @brief Report the data of an LP
  */
 void reportLpColMatrix(
-		    const HighsLp &lp //!< LP whose data are to be reported
-		    );
+		       const HighsLp &lp //!< LP whose data are to be reported
+		       );
 
 void reportMatrix(
-	       const char* message,
-	       const int num_col,
-	       const int num_nz,
-	       const int* start,
-	       const int* index,
-	       const double* value
-	       );
+		  const char* message,
+		  const int num_col,
+		  const int num_nz,
+		  const int* start,
+		  const int* index,
+		  const double* value
+		  );
 
 // Get the costs for a contiguous set of columns
 HighsStatus getLpCosts(
@@ -416,34 +416,34 @@ HighsStatus calculateRowValues(const HighsLp& lp, HighsSolution& solution);
 HighsStatus calculateColDuals(const HighsLp& lp, HighsSolution& solution);
 double calculateObjective(const HighsLp& lp, HighsSolution& solution);
 
-HighsStatus assess_interval_set_mask(
-				     const int max_ix, 
-				     const bool interval,
-				     const int from_ix,
-				     const int to_ix,
-				     const bool set,
-				     const int num_set_entries,
-				     const int* ix_set,
-				     const bool mask,
-				     const int* ix_mask,
-				     int &from_k,
-				     int &to_k
-				     );
+HighsStatus assessIntervalSetMask(
+				  const int max_ix, 
+				  const bool interval,
+				  const int from_ix,
+				  const int to_ix,
+				  const bool set,
+				  const int num_set_entries,
+				  const int* ix_set,
+				  const bool mask,
+				  const int* ix_mask,
+				  int &from_k,
+				  int &to_k
+				  );
 
-void update_out_in_ix(const int ix_dim, 
-		      const bool interval,
-		      const int from_ix,
-		      const int to_ix,
-		      const bool set,
-		      const int num_set_entries,
-		      const int* ix_set,
-		      const bool mask,
-		      const int* ix_mask,
-		      int& out_from_ix,
-		      int& out_to_ix,
-		      int& in_from_ix,
-		      int& in_to_ix,
-		      int& current_set_entry);
+void updateOutInIx(const int ix_dim, 
+		   const bool interval,
+		   const int from_ix,
+		   const int to_ix,
+		   const bool set,
+		   const int num_set_entries,
+		   const int* ix_set,
+		   const bool mask,
+		   const int* ix_mask,
+		   int& out_from_ix,
+		   int& out_to_ix,
+		   int& in_from_ix,
+		   int& in_to_ix,
+		   int& current_set_entry);
 
 bool isColDataNull(const double *usr_col_cost, const double *usr_col_lower,  const double *usr_col_upper);
 bool isRowDataNull(const double *usr_row_lower,  const double *usr_row_upper);

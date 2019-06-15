@@ -19,10 +19,10 @@
 #include "io/HMPSIO.h"
 #include "util/HighsUtils.h"
 
-HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
+HighsStatus HighsSimplexInterface::addCols(int XnumNewCol, const double *XcolCost, const double *XcolLower,  const double *XcolUpper,
 						 int XnumNewNZ, const int *XAstart, const int *XAindex, const double *XAvalue) {
 #ifdef HiGHSDEV
-  printf("Called util_add_cols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
+  printf("Called addCols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol, XnumNewNZ);
 #endif
   HighsStatus return_status = HighsStatus::NotSet;
   if (XnumNewCol < 0) return HighsStatus::Error;
@@ -62,14 +62,14 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
   }
 #endif
   HighsStatus call_status;
-  call_status = append_lp_cols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+  call_status = appendLpCols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 			       XnumNewNZ, XAstart, XAindex, XAvalue,
 			       options, valid_lp_matrix);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
-    call_status = append_lp_cols(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
+    call_status = appendLpCols(simplex_lp, XnumNewCol, XcolCost, XcolLower, XcolUpper,
 				 XnumNewNZ, XAstart, XAindex, XAvalue,
 				 options, valid_simplex_matrix);
     return_status = worseStatus(call_status, return_status);
@@ -113,31 +113,31 @@ HighsStatus HighsSimplexInterface::util_add_cols(int XnumNewCol, const double *X
 
 }
 
-HighsStatus HighsSimplexInterface::delete_cols(int from_col, int to_col) {
-  return delete_cols_general(
+HighsStatus HighsSimplexInterface::deleteCols(int from_col, int to_col) {
+  return deleteColsGeneral(
 			     true, from_col, to_col,
 			     false, 0, NULL,
 			     false, NULL
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_cols(int num_set_entries, const int* col_set) {
-  return delete_cols_general(
+HighsStatus HighsSimplexInterface::deleteCols(int num_set_entries, const int* col_set) {
+  return deleteColsGeneral(
 			     false, 0, 0,
 			     true, num_set_entries, col_set,
 			     false, NULL
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_cols(int* col_mask) {
-  return delete_cols_general(
+HighsStatus HighsSimplexInterface::deleteCols(int* col_mask) {
+  return deleteColsGeneral(
 			     false, 0, 0,
 			     false, 0, NULL,
 			     true, col_mask
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_col, int to_col,
+HighsStatus HighsSimplexInterface::deleteColsGeneral(bool interval, int from_col, int to_col,
 						       bool set, int num_set_entries, const int* col_set,
 						       bool mask, int* col_mask) {
   // Uses to_col in iterator style
@@ -161,21 +161,21 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
 #endif
   bool valid_matrix = true;
   HighsStatus returnStatus;
-  returnStatus = delete_lp_cols(lp, 
-				interval, from_col, to_col,
-				set, num_set_entries, col_set,
-				mask, col_mask,
-				valid_matrix);
+  returnStatus = deleteLpCols(lp, 
+			      interval, from_col, to_col,
+			      set, num_set_entries, col_set,
+			      mask, col_mask,
+			      valid_matrix);
   if (returnStatus != HighsStatus::OK) return returnStatus;
   // ToDo Determine consequences for basis when deleting columns
   basis.valid_ = false;
   
   if (valid_simplex_lp) {
-    returnStatus = delete_lp_cols(simplex_lp, 
-				  interval, from_col, to_col,
-				  set, num_set_entries, col_set,
-				  mask, col_mask,
-				  valid_simplex_matrix);
+    returnStatus = deleteLpCols(simplex_lp, 
+				interval, from_col, to_col,
+				set, num_set_entries, col_set,
+				mask, col_mask,
+				valid_simplex_matrix);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++) scale.col_[col] = scale.col_[col + numDeleteCol];
     // ToDo Determine consequences for basis when deleting columns
@@ -186,10 +186,10 @@ HighsStatus HighsSimplexInterface::delete_cols_general(bool interval, int from_c
   return HighsStatus::OK;
 }
 
-HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
+HighsStatus HighsSimplexInterface::addRows(int XnumNewRow, const double *XrowLower, const double *XrowUpper,
 						 int XnumNewNZ, const int *XARstart, const int *XARindex, const double *XARvalue) {
 #ifdef HiGHSDEV
-  printf("Called util_add_rows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
+  printf("Called addRows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow, XnumNewNZ);
 #endif
   HighsStatus return_status = HighsStatus::NotSet;
   if (XnumNewRow < 0) return HighsStatus::Error;
@@ -243,7 +243,7 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
   }
 
   // Append the columns to the LP vectors and matrix
-  append_rows_to_lp_vectors(lp, XnumNewRow, XrowLower, XrowUpper);
+  appendRowsToLpVectors(lp, XnumNewRow, XrowLower, XrowUpper);
 
   // Normalise the LP row bounds
   normalise = true;
@@ -267,18 +267,18 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     if (lc_XnumNewNZ) {
       // Append rows to LP matrix
-      append_rows_to_lp_matrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+      appendRowsToLpMatrix(lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
     }
   }
 
   if (valid_simplex_lp) {
-    append_rows_to_lp_vectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
+    appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
     call_status = assessBounds("Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow, false, 0, NULL, false, NULL,
 			       &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0], options.infinite_bound, normalise);
     return_status = worseStatus(call_status, return_status);
   }
   if (valid_simplex_matrix && lc_XnumNewNZ) {
-    append_rows_to_lp_matrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
+    appendRowsToLpMatrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart, lc_XARindex, lc_XARvalue);
   }
 
   // Now consider scaling
@@ -319,31 +319,31 @@ HighsStatus HighsSimplexInterface::util_add_rows(int XnumNewRow, const double *X
 
 }
 
-HighsStatus HighsSimplexInterface::delete_rows(int from_row, int to_row) {
-  return delete_rows_general(
+HighsStatus HighsSimplexInterface::deleteRows(int from_row, int to_row) {
+  return deleteRowsGeneral(
 			     true, from_row, to_row,
 			     false, 0, NULL,
 			     false, NULL
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_rows(int num_set_entries, const int* row_set) {
-  return delete_rows_general(
+HighsStatus HighsSimplexInterface::deleteRows(int num_set_entries, const int* row_set) {
+  return deleteRowsGeneral(
 			     false, 0, 0,
 			     true, num_set_entries, row_set,
 			     false, NULL
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_rows(int* row_mask) {
-  return delete_rows_general(
+HighsStatus HighsSimplexInterface::deleteRows(int* row_mask) {
+  return deleteRowsGeneral(
 			     false, 0, 0,
 			     false, 0, NULL,
 			     true, row_mask
 			     );
 }
 
-HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_row, int to_row,
+HighsStatus HighsSimplexInterface::deleteRowsGeneral(bool interval, int from_row, int to_row,
 						       bool set, int num_set_entries, const int* row_set,
 						       bool mask, int* row_mask) {
   // Uses to_row in iterator style
@@ -369,7 +369,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
 #endif
   bool valid_matrix = true;
   HighsStatus returnStatus;
-  returnStatus = delete_lp_rows(lp, 
+  returnStatus = deleteLpRows(lp, 
 				interval, from_row, to_row,
 				set, num_set_entries, row_set,
 				mask, row_mask,
@@ -379,7 +379,7 @@ HighsStatus HighsSimplexInterface::delete_rows_general(bool interval, int from_r
   basis.valid_ = false;
   
   if (valid_simplex_lp) {
-    returnStatus = delete_lp_rows(simplex_lp, 
+    returnStatus = deleteLpRows(simplex_lp, 
 				  interval, from_row, to_row,
 				  set, num_set_entries, row_set,
 				  mask, row_mask,
@@ -437,7 +437,7 @@ HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int
   int from_k;
   int to_k;
   HighsLp &lp = highs_model_object.lp_;
-  HighsStatus return_status = assess_interval_set_mask(lp.numCol_,
+  HighsStatus return_status = assessIntervalSetMask(lp.numCol_,
 						     interval, from_col, to_col,
 						     set, num_set_entries, col_set,
 						     mask, col_mask,
@@ -454,7 +454,7 @@ HighsStatus HighsSimplexInterface::getColsGeneral(const bool interval, const int
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   for (int k = from_k; k < to_k; k++) {
-    update_out_in_ix(col_dim,
+    updateOutInIx(col_dim,
 		     interval, from_col, to_col,
 		     set, num_set_entries, col_set,
 		     mask, col_mask,
@@ -522,7 +522,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(const bool interval, const int
   int from_k;
   int to_k;
   HighsLp &lp = highs_model_object.lp_;
-  HighsStatus return_status = assess_interval_set_mask(lp.numRow_,
+  HighsStatus return_status = assessIntervalSetMask(lp.numRow_,
 						     interval, from_row, to_row,
 						     set, num_set_entries, row_set,
 						     mask, row_mask,
@@ -548,7 +548,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(const bool interval, const int
     out_to_row = 0;
     current_set_entry = 0;
     for (int k = from_k; k < to_k; k++) {
-      update_out_in_ix(row_dim,
+      updateOutInIx(row_dim,
 		       interval, from_row, to_row,
 		       set, num_set_entries, row_set,
 		       mask, row_mask,
@@ -635,7 +635,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(const bool interval, const int
 }
 
 // Change a single coefficient in the matrix
-HighsStatus HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, const double XnewValue) {
+HighsStatus HighsSimplexInterface::changeCoefficient(int Xrow, int Xcol, const double XnewValue) {
 #ifdef HiGHSDEV
   printf("Called util_changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow, Xcol, XnewValue);
 #endif
@@ -653,12 +653,12 @@ HighsStatus HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, c
     //    assert(!apply_row_scaling);
   }
 #endif
-  change_lp_matrix_coefficient(lp, Xrow, Xcol, XnewValue);
+  changeLpMatrixCoefficient(lp, Xrow, Xcol, XnewValue);
   if (valid_simplex_lp) {
     HighsLp &simplex_lp = highs_model_object.simplex_lp_;
     HighsScale &scale = highs_model_object.scale_;
     double scaledXnewValue = XnewValue*scale.row_[Xrow]*scale.col_[Xcol];
-    change_lp_matrix_coefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
+    changeLpMatrixCoefficient(simplex_lp, Xrow, Xcol, scaledXnewValue);
   }
   // simplex_lp.reportLp();
   // Deduce the consequences of a changed element
@@ -668,8 +668,8 @@ HighsStatus HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, c
   //  simplex_lp.reportLp();
 }
 
-void HighsSimplexInterface::shift_objective_value(double Xshift) {
-  printf("Where is shift_objective_value required - so I can interpret what's required\n");
+void HighsSimplexInterface::shiftObjectiveValue(double Xshift) {
+  printf("Where is shiftObjectiveValue required - so I can interpret what's required\n");
   // Update the LP objective value with the shift
   highs_model_object.simplex_info_.dual_objective_value += Xshift;
   // Update the LP offset with the shift
@@ -682,7 +682,7 @@ void HighsSimplexInterface::shift_objective_value(double Xshift) {
   }
 }
 
-HighsStatus HighsSimplexInterface::change_ObjSense(int Xsense){
+HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense){
   HighsLp &lp = highs_model_object.lp_;
   if ((Xsense == OBJSENSE_MINIMIZE) != (lp.sense_ == OBJSENSE_MINIMIZE)) {
     // Flip the LP objective sense
@@ -736,7 +736,7 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  HighsStatus call_status = change_lp_costs(highs_model_object.lp_, 
+  HighsStatus call_status = changeLpCosts(highs_model_object.lp_, 
 					    interval, from_col, to_col,
 					    set, num_set_entries, col_set,
 					    mask, col_mask,
@@ -893,7 +893,7 @@ void HighsSimplexInterface::change_update_method(int updateMethod) {
 }
 #endif
 
-HighsStatus HighsSimplexInterface::LpStatusToHighsStatus(SimplexSolutionStatus simplex_solution_status) {
+HighsStatus HighsSimplexInterface::lpStatusToHighsStatus(SimplexSolutionStatus simplex_solution_status) {
   switch (simplex_solution_status) {
   case SimplexSolutionStatus::OUT_OF_TIME:
       return HighsStatus::Timeout;
