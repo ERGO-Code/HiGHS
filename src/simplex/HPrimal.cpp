@@ -327,7 +327,7 @@ void HPrimal::primalRebuild() {
   timer.stop(simplex_info.clock_[ComputePrimalClock]);
 
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
-  int numPrimalInfeas = computePrimalInfeasible(workHMO);
+  computePrimalInfeasible(workHMO);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
   // Primal objective section
@@ -592,7 +592,7 @@ void HPrimal::primalUpdate() {
 
   simplex_info.updated_primal_objective_value += workDual[columnIn]*thetaPrimal;
 
-  int numPrimalInfeas = computePrimalInfeasible(workHMO);
+  computePrimalInfeasible(workHMO);
 
   // If flipped, then no need touch the pivots
   if (flipped) {

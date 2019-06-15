@@ -503,8 +503,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
 
   // Store, analyse and possibly report the number of primal and dual
   // infeasiblities and the simplex status
-  simplex_info.num_primal_infeasibilities = computePrimalInfeasible(highs_model_object);
-  simplex_info.num_dual_infeasibilities = computeDualInfeasible(highs_model_object);
+  computePrimalInfeasible(highs_model_object);
+  computeDualInfeasible(highs_model_object);
   SimplexSolutionStatus solution_status;
   bool primal_feasible = simplex_info.num_primal_infeasibilities == 0;// && max_primal_residual < primal_feasibility_tolerance;
   bool dual_feasible = simplex_info.num_dual_infeasibilities == 0;// && max_dual_residual < dual_feasibility_tolerance;
@@ -2178,7 +2178,7 @@ void compute_primal(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_basic_primal_values = true;
 }
 
-int computePrimalInfeasible(HighsModelObject &highs_model_object) {
+void computePrimalInfeasible(HighsModelObject &highs_model_object, const bool report) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -2224,10 +2224,10 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
     }	
   }
   int num_primal_infeasibilities = num_nonbasic_primal_infeasibilities + num_basic_primal_infeasibilities;
-#ifdef HiGHSDEV
   double max_primal_infeasibility = std::max(max_nonbasic_primal_infeasibility, max_basic_primal_infeasibility);
   double sum_primal_infeasibilities = sum_nonbasic_primal_infeasibilities + sum_basic_primal_infeasibilities;
-  if (num_primal_infeasibilities) {
+#ifdef HiGHSDEV
+  if (report && num_primal_infeasibilities) {
     int num_iter = simplex_info.iteration_count;
     printf("Iter %d has %d (%d+%d) primal infeasibilities (max = %g = max[%g, %g]) summing to %g (%g+%g)\n", num_iter,
 	   num_primal_infeasibilities, num_nonbasic_primal_infeasibilities, num_basic_primal_infeasibilities,
@@ -2235,10 +2235,12 @@ int computePrimalInfeasible(HighsModelObject &highs_model_object) {
 	   sum_primal_infeasibilities, sum_nonbasic_primal_infeasibilities, sum_basic_primal_infeasibilities);
   }
 #endif
-  return num_primal_infeasibilities;  
+  simplex_info.num_primal_infeasibilities = num_primal_infeasibilities;
+  simplex_info.max_primal_infeasibility = max_primal_infeasibility;
+  simplex_info.sum_primal_infeasibilities = sum_primal_infeasibilities;
 }
 
-int computeDualInfeasible(HighsModelObject &highs_model_object) {
+void computeDualInfeasible(HighsModelObject &highs_model_object, const bool report) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
@@ -2269,13 +2271,15 @@ int computeDualInfeasible(HighsModelObject &highs_model_object) {
     }
   }
 #ifdef HiGHSDEV
-  if (num_dual_infeasibilities) {
+  if (report && num_dual_infeasibilities) {
     int num_iter = simplex_info.iteration_count;
     printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n", num_iter,
 	   num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
   }
 #endif
-  return num_dual_infeasibilities;  
+  simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
+  simplex_info.max_dual_infeasibility = max_dual_infeasibility;
+  simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
 void compute_dual(HighsModelObject &highs_model_object) {

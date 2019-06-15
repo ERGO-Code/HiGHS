@@ -275,12 +275,14 @@ void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
 
-int computePrimalInfeasible(
-		    HighsModelObject &highs_model_object
-		    );
+void computePrimalInfeasible(
+			    HighsModelObject &highs_model_object,
+			    const bool report = false
+			    );
 
-int computeDualInfeasible(
-			  HighsModelObject &highs_model_object
+void computeDualInfeasible(
+			  HighsModelObject &highs_model_object,
+			  const bool report = false
 			  );
 
 void compute_dual(
