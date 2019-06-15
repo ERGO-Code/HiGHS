@@ -469,8 +469,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   compute_dual(highs_model_object);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
-  compute_dual_objective_value(highs_model_object);
-  compute_primal_objective_value(highs_model_object);
+  computeDualObjectiveValue(highs_model_object);
+  computePrimalObjectiveValue(highs_model_object);
   simplex_lp_status.valid = true;
 
   // Store, analyse and possibly report the number of primal and dual
@@ -495,7 +495,7 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   }
   simplex_lp_status.solution_status = solution_status;
   HighsLogMessage(HighsMessageType::INFO, "Initial basic solution: Objective = %.15g; Infeasibilities primal/dual = %d/%d; Status: %s",
-		  simplex_info.primalObjectiveValue,
+		  simplex_info.primal_objective_value,
 		  simplex_info.num_primal_infeasibilities,
 		  simplex_info.num_dual_infeasibilities, 
 		  SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
@@ -697,47 +697,46 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 #endif
 */
 
-void compute_dual_objective_value(HighsModelObject &highs_model_object,
-                                  int phase) {
+void computeDualObjectiveValue(HighsModelObject &highs_model_object, int phase) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
 
-  simplex_info.dualObjectiveValue = 0;
+  simplex_info.dual_objective_value = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     if (highs_model_object.simplex_basis_.nonbasicFlag_[i]) {
-      simplex_info.dualObjectiveValue +=
+      simplex_info.dual_objective_value +=
           simplex_info.workValue_[i] * simplex_info.workDual_[i];
     }
   }
   if (phase != 1) {
-    simplex_info.dualObjectiveValue *= highs_model_object.scale_.cost_;
-    simplex_info.dualObjectiveValue -= simplex_lp.offset_;
+    simplex_info.dual_objective_value *= highs_model_object.scale_.cost_;
+    simplex_info.dual_objective_value -= simplex_lp.offset_;
   }
   // Now have dual objective value
   simplex_lp_status.has_dual_objective_value = true;
 }
 
-void compute_primal_objective_value(HighsModelObject &highs_model_object) {
+void computePrimalObjectiveValue(HighsModelObject &highs_model_object) {
   HighsLp &simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
   SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  simplex_info.primalObjectiveValue = 0;
+  simplex_info.primal_objective_value = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_basis.basicIndex_[row];
     if (var < simplex_lp.numCol_)
-      simplex_info.primalObjectiveValue +=
+      simplex_info.primal_objective_value +=
           simplex_info.baseValue_[row] * simplex_lp.colCost_[var];
   }
   for (int col = 0; col < simplex_lp.numCol_; col++) {
     if (simplex_basis.nonbasicFlag_[col])
-      simplex_info.primalObjectiveValue +=
+      simplex_info.primal_objective_value +=
           simplex_info.workValue_[col] * simplex_lp.colCost_[col];
   }
-  simplex_info.primalObjectiveValue *= highs_model_object.scale_.cost_;
-  simplex_info.primalObjectiveValue -= simplex_lp.offset_;
+  simplex_info.primal_objective_value *= highs_model_object.scale_.cost_;
+  simplex_info.primal_objective_value -= simplex_lp.offset_;
   // Now have primal objective value
   simplex_lp_status.has_primal_objective_value = true;
 }
@@ -2531,13 +2530,13 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
   }
   double nwValue = simplex_info.workValue_[columnOut];
   double vrDual = simplex_info.workDual_[columnOut];
-  double dlDualObjectiveValue = nwValue * vrDual;
+  double dl_dual_objective_value = nwValue * vrDual;
   //  if (fabs(nwValue))
   //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
   //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
   //			   columnOut, simplex_basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb,
-  //nwValue, vrDual, dlDualObjectiveValue);
-  simplex_info.updatedDualObjectiveValue += dlDualObjectiveValue;
+  //nwValue, vrDual, dl_dual_objective_value);
+  simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
   if (columnOut < simplex_lp.numCol_)
@@ -2564,18 +2563,17 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
 }
 
-void report_iteration_count_dual_objective_value(
+void reportIterationCountDualObjectiveValue(
     HighsModelObject &highs_model_object, int i_v) {
   int iteration_count = highs_model_object.simplex_info_.iteration_count;
-  double dual_objective_value =
-      highs_model_object.simplex_info_.dualObjectiveValue;
+  double dual_objective_value = highs_model_object.simplex_info_.dual_objective_value;
   HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %2d", iteration_count, dual_objective_value, i_v);
 }
 
-void report_iteration_count_primal_objective_value(
+void reportIterationCountPrimalObjectiveValue(
     HighsModelObject &highs_model_object, int i_v) {
   int iteration_count = highs_model_object.simplex_info_.iteration_count;
-  double primal_objective_value = highs_model_object.simplex_info_.primalObjectiveValue;
+  double primal_objective_value = highs_model_object.simplex_info_.primal_objective_value;
   HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %2d", iteration_count, primal_objective_value, i_v);
 }
 

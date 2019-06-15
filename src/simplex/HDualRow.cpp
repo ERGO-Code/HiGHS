@@ -322,20 +322,20 @@ void HDualRow::update_flip(HVector *bfrtColumn) {
   //  double *workLower = &workHMO.simplex_info_.workLower_[0];
   //  double *workUpper = &workHMO.simplex_info_.workUpper_[0];
   //  double *workValue = &workHMO.simplex_info_.workValue_[0];
-  double dualObjectiveValueChange = 0;
+  double dual_objective_value_change = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
     const int iCol = workData[i].first;
     const double change = workData[i].second;
 
-    double lcDualObjectiveValueChange = change*workDual[iCol];
-    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
-    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
-    dualObjectiveValueChange += lcDualObjectiveValueChange;
+    double lcdual_objective_value_change = change*workDual[iCol];
+    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dual_objective_value_change = %11.4g\n",
+    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcdual_objective_value_change, dual_objective_value_change);
+    dual_objective_value_change += lcdual_objective_value_change;
     flip_bound(workHMO, iCol);//workModel->flipBound(iCol);
     workHMO.matrix_.collect_aj(*bfrtColumn, iCol, change);
   }
-  workHMO.simplex_info_.updatedDualObjectiveValue += dualObjectiveValueChange;
+  workHMO.simplex_info_.updated_dual_objective_value += dual_objective_value_change;
   //  &workHMO.>checkDualObjectiveValue("After  update_flip");
 }
 
@@ -355,7 +355,7 @@ void HDualRow::update_dual(double theta, int columnOut) {
     double iColWorkValue = workHMO.simplex_info_.workValue_[iCol];
     double dlDuObj = workHMO.simplex_basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO.scale_.cost_;
-    workHMO.simplex_info_.updatedDualObjectiveValue += dlDuObj;
+    workHMO.simplex_info_.updated_dual_objective_value += dlDuObj;
   }
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 }

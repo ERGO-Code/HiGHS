@@ -62,7 +62,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   SimplexStrategy use_simplex_strategy = simplex_info.simplex_strategy;
   simplex_lp_status.solution_status = transition(highs_model_object);
   if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
-    return simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
+    return simplex_interface.lpStatusToHighsStatus(simplex_lp_status.solution_status);
   // Use the number of primal and dual infeasibilities to determine
   // whether the simplex solver is needed and, if so, possibly which
   // variant to use.
@@ -160,7 +160,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
 #endif
   }
 
-  HighsStatus result = simplex_interface.LpStatusToHighsStatus(simplex_lp_status.solution_status);
+  HighsStatus result = simplex_interface.lpStatusToHighsStatus(simplex_lp_status.solution_status);
   if (result == HighsStatus::Optimal) {
     // Optimal solution: copy the solution and basis
     simplex_interface.convertSimplexToHighsSolution();
