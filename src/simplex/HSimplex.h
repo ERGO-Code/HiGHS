@@ -339,15 +339,11 @@ void update_matrix(HighsModelObject &highs_model_object,
                    int columnOut
 		   );
 
-void reportIterationCountDualObjectiveValue(
-					    HighsModelObject &highs_model_object,
-					    int i_v
-					    );
-
-void reportIterationCountPrimalObjectiveValue(
-					      HighsModelObject &highs_model_object,
-					      int i_v
-					      );
+void logRebuild(
+		HighsModelObject &highs_model_object,
+		const bool primal, 
+		const int solve_phase,
+		const int i_v = -1);
 
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
 

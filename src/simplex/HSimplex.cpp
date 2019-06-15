@@ -2581,18 +2581,36 @@ void update_matrix(HighsModelObject &highs_model_object, int columnIn,
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
 }
 
-void reportIterationCountDualObjectiveValue(
-    HighsModelObject &highs_model_object, int i_v) {
-  int iteration_count = highs_model_object.simplex_info_.iteration_count;
-  double dual_objective_value = highs_model_object.simplex_info_.dual_objective_value;
-  HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %2d", iteration_count, dual_objective_value, i_v);
-}
-
-void reportIterationCountPrimalObjectiveValue(
-    HighsModelObject &highs_model_object, int i_v) {
-  int iteration_count = highs_model_object.simplex_info_.iteration_count;
-  double primal_objective_value = highs_model_object.simplex_info_.primal_objective_value;
-  HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %2d", iteration_count, primal_objective_value, i_v);
+void logRebuild(HighsModelObject &highs_model_object, const bool primal, const int solve_phase, const int i_v) {
+  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  double objective_value;
+  string simplex_variant;
+  if (primal) {
+    simplex_variant = "Pr";
+    objective_value = simplex_info.primal_objective_value;
+  } else {
+    simplex_variant = "Du";
+    objective_value = simplex_info.dual_objective_value;
+  }
+  if (solve_phase < 2) {
+    HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d",
+		    simplex_info.iteration_count,
+		    objective_value, simplex_variant.c_str(), solve_phase);
+  } else if (!primal && simplex_info.sum_dual_infeasibilities == 0) {
+    HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g)",
+		    simplex_info.iteration_count,
+		    objective_value, simplex_variant.c_str(), solve_phase, 
+		    simplex_info.num_primal_infeasibilities,
+		    simplex_info.sum_primal_infeasibilities);
+  } else {
+    HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
+		    simplex_info.iteration_count,
+		    objective_value, simplex_variant.c_str(), solve_phase, 
+		    simplex_info.num_primal_infeasibilities,
+		    simplex_info.sum_primal_infeasibilities,
+		    simplex_info.num_dual_infeasibilities,
+		    simplex_info.sum_dual_infeasibilities);
+  }
 }
 
 // Return a string representation of SimplexSolutionStatus.

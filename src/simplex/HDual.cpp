@@ -617,6 +617,14 @@ void HDual::rebuild() {
   dualRHS.create_infeasList(columnDensity);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
+  timer.start(simplex_info.clock_[ComputePrIfsClock]);
+  computePrimalInfeasible(workHMO);
+  timer.stop(simplex_info.clock_[ComputePrIfsClock]);
+
+  timer.start(simplex_info.clock_[ComputeDuIfsClock]);
+  computeDualInfeasible(workHMO);
+  timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
+
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
@@ -647,9 +655,9 @@ void HDual::rebuild() {
   //  printf("Checking INVERT in rebuild()\n"); workHMO.factor_.checkInvert();
 #endif
 
-  timer.start(simplex_info.clock_[ReportInvertClock]);
-  iterationReportInvert(sv_invertHint);
-  timer.stop(simplex_info.clock_[ReportInvertClock]);
+  timer.start(simplex_info.clock_[ReportRebuildClock]);
+  iterationReportRebuild(sv_invertHint);
+  timer.stop(simplex_info.clock_[ReportRebuildClock]);
 
   total_INVERT_TICK = factor->build_syntheticTick;  // Was factor->pseudoTick
   total_FT_inc_TICK = 0;
@@ -679,7 +687,7 @@ void HDual::cleanup() {
   initialise_bound(workHMO);
   compute_dual(workHMO);
   computeDualObjectiveValue(workHMO, solvePhase);
-  iterationReportInvert(-1);
+  iterationReportRebuild(-1);
 
   compute_dual_infeasible_in_primal(workHMO, &dualInfeasCount);
 }
@@ -1047,16 +1055,30 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
   }
 }
 
-void HDual::iterationReportInvert(int i_v) {
+void HDual::iterationReportRebuild(const int i_v) {
 #ifdef HiGHSDEV
   HighsPrintMessage(ML_MINIMAL, "Iter %10d:", workHMO.simplex_info_.iteration_count);
   iterationReportDensity(ML_MINIMAL, true);
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
-  HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
+  HighsPrintMessage(ML_MINIMAL, " Dual Ph%1d(%2d)", solvePhase, i_v);
+  if (solvePhase==2) reportInfeasibility(i_v);
+  HighsPrintMessage(ML_MINIMAL, "\n");
 #else
-  reportIterationCountDualObjectiveValue(workHMO, i_v);
+  logRebuild(workHMO, false, solvePhase, i_v);
 #endif
+}
+
+void HDual::reportInfeasibility(const int i_v) {
+  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsPrintMessage(ML_MINIMAL, " Pr: %d(%g)",
+		    simplex_info.num_primal_infeasibilities,
+		    simplex_info.sum_primal_infeasibilities);
+  if (simplex_info.sum_dual_infeasibilities>0) {
+    HighsPrintMessage(ML_MINIMAL, "; Du: %d(%g)",
+		      simplex_info.num_dual_infeasibilities,
+		      simplex_info.sum_dual_infeasibilities);
+  }
 }
 
 int HDual::intLog10(double v) {

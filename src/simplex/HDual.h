@@ -203,58 +203,65 @@ class HDual {
    * <tt>header</tt>
    */
   void iterationReportFull(
-		     bool header  //!< Logic to determine whether to write out column headers or data
-  );
+			   bool header  //!< Logic to determine whether to write out column headers or data
+			   );
 
   /**
    * @brief Report iteration number and LP phase headers or data according to value of <tt>header</tt>
    */
   void iterationReportIterationAndPhase(
-		       int iterate_log_level, //!< Iteration logging level
-		       bool header            //!< Logic to determine whether to write out column headers or data
-  );
+					int iterate_log_level, //!< Iteration logging level
+					bool header            //!< Logic to determine whether to write out column headers or data
+					);
 
   /**
    * @brief Report dual objective value header or data according to value of <tt>header</tt>
    */
   void iterationReportDualObjective(
-		      int iterate_log_level, //!< Iteration logging level
-		      bool header            //!< Logic to determine whether to write out column header or data
-  );
+				    int iterate_log_level, //!< Iteration logging level
+				    bool header            //!< Logic to determine whether to write out column header or data
+				    );
 
   /**
    * @brief Report dual iteration data header or data according to value of <tt>header</tt>
    */
   void iterationReportIterationData(
-		       int iterate_log_level, //!< Iteration logging level
-		       bool header            //!< Logic to determine whether to write out column headers or data
-  );
+				    int iterate_log_level, //!< Iteration logging level
+				    bool header            //!< Logic to determine whether to write out column headers or data
+				    );
 
   /**
    * @brief Report dual iteration operation density header or data according to value of <tt>header</tt>
    */
   void iterationReportDensity(
-		     int iterate_log_level, //!< Iteration logging level
-		     bool header            //!< Logic to determine whether to write out column headers or data
-  );
+			      int iterate_log_level, //!< Iteration logging level
+			      bool header            //!< Logic to determine whether to write out column headers or data
+			      );
   int intLog10(double v);
 
 
 
   /**
-   * @brief Single line report after INVERT
+   * @brief Single line report after rebuild
    */
-  void iterationReportInvert(
-		       int i_v  //!< Integer value to be reported - generally invertHint
-  );
+  void iterationReportRebuild(
+			      const int i_v  //!< Integer value for reporting - generally invertHint
+			      );
+
+  /**
+   * @brief Report infeasibility
+   */
+  void reportInfeasibility(
+			   const int i_v  //!< Integer value for reporting - generally invertHint
+			   );
 
   /**
    * @brief Update an average density record for BTRAN, an FTRAN or PRICE
    */
   void uOpRsDensityRec(
-      double lc_OpRsDensity,  //!< Recent density of the operation
-      double &opRsDensity     //!< Average density of the operation
-  );
+		       double lc_OpRsDensity,  //!< Recent density of the operation
+		       double &opRsDensity     //!< Average density of the operation
+		       );
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
    */

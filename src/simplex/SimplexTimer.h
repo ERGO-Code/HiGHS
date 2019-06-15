@@ -46,10 +46,12 @@ enum iClockSimplex {
   ComputeDualClock,   //!< Computation of dual values in dual rebuild()
   CorrectDualClock,   //!< Correction of dual values in dual rebuild()
   CollectPrIfsClock,  //!< Identification of primal infeasibilities in dual rebuild()
+  ComputePrIfsClock,  //!< Computation of num/max/sum of primal infeasibilities
+  ComputeDuIfsClock,  //!< Computation of num/max/sum of dual infeasibilities
   ComputePrimalClock, //!< Computation of primal values in dual rebuild()
   ComputeDuObjClock,  //!< Computation of dual objective value in dual rebuild()
   ComputePrObjClock,  //!< Computation of primalal objective value in primal rebuild()
-  ReportInvertClock,  //!< Reporting of log line in dual rebuild()
+  ReportRebuildClock,  //!< Reporting of log line in dual rebuild()
   ChuzrDualClock,     //!< CHUZR - Dual
   Chuzr1Clock,        //!< CHUZR - Primal stage 1
   Chuzr2Clock,        //!< CHUZR - Primal stage 2
@@ -111,9 +113,11 @@ class SimplexTimer {
     simplex_info.clock_[CorrectDualClock] = timer.clock_def("CORRECT_DUAL", "CRD");
     simplex_info.clock_[ComputePrimalClock] = timer.clock_def("COMPUTE_PRIMAL", "CPP");
     simplex_info.clock_[CollectPrIfsClock] = timer.clock_def("COLLECT_PR_IFS", "IFS");
+    simplex_info.clock_[ComputePrIfsClock] = timer.clock_def("COMPUTE_PR_IFS", "PIF");
+    simplex_info.clock_[ComputeDuIfsClock] = timer.clock_def("COMPUTE_DU_IFS", "DIF");
     simplex_info.clock_[ComputeDuObjClock] = timer.clock_def("COMPUTE_DUOBJ", "DOB");
     simplex_info.clock_[ComputePrObjClock] = timer.clock_def("COMPUTE_PROBJ", "POB");
-    simplex_info.clock_[ReportInvertClock] = timer.clock_def("REPORT_INVERT", "RPI");
+    simplex_info.clock_[ReportRebuildClock] = timer.clock_def("REPORT_REBUILD", "RPR");
     simplex_info.clock_[ChuzrDualClock] = timer.clock_def("CHUZR_DUAL", "CRD");
     simplex_info.clock_[Chuzr1Clock] = timer.clock_def("CHUZR1", "CR1");
     simplex_info.clock_[Chuzr2Clock] = timer.clock_def("CHUZR2", "CR2");
@@ -187,8 +191,9 @@ class SimplexTimer {
     std::vector<int> simplex_clock_list{
       CrashClock,BasisConditionClock,DseIzClock,
 	InvertClock, PermWtClock, ComputeDualClock, 
-	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock, 
-	ComputeDuObjClock, ComputePrObjClock, ReportInvertClock,
+	CorrectDualClock, ComputePrimalClock, CollectPrIfsClock,
+	ComputePrIfsClock, ComputeDuIfsClock, 
+	ComputeDuObjClock, ComputePrObjClock, ReportRebuildClock,
 	ChuzrDualClock, Chuzr1Clock, Chuzr2Clock, 
 	BtranClock, PriceClock,
 	ChuzcPrimalClock, Chuzc0Clock, Chuzc1Clock, Chuzc2Clock, Chuzc3Clock, Chuzc4Clock,
