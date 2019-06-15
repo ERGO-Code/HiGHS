@@ -323,8 +323,8 @@ HighsStatus Highs::run() {
       if (solved_hmo == presolve_hmo) {
         hmos_[original_hmo].simplex_info_.iteration_count =
             hmos_[solved_hmo].simplex_info_.iteration_count;
-        hmos_[original_hmo].simplex_info_.dualObjectiveValue =
-            hmos_[solved_hmo].simplex_info_.dualObjectiveValue;
+        hmos_[original_hmo].simplex_info_.dual_objective_value =
+            hmos_[solved_hmo].simplex_info_.dual_objective_value;
       }
     }
   } else {
@@ -371,7 +371,7 @@ HighsStatus Highs::run() {
 
   if (solve_status == HighsStatus::Optimal)
     message << "Objective  : " << std::scientific
-            << hmos_[original_hmo].simplex_info_.dualObjectiveValue
+            << hmos_[original_hmo].simplex_info_.dual_objective_value
             << std::endl;
 
   message << "Time       : " << std::fixed << std::setprecision(3)
@@ -400,7 +400,7 @@ const HighsBasis &Highs::getBasis() const {
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
-    return hmos_[0].simplex_info_.dualObjectiveValue;
+    return hmos_[0].simplex_info_.dual_objective_value;
   } else {
     // todo: ipx case
     // todo: error/warning message
@@ -1071,7 +1071,7 @@ HighsStatus Highs::solveNode(Node &node) {
 
   iteration_count1 = hmos_[0].simplex_info_.iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
-  solve0_objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  solve0_objective_value = hmos_[0].simplex_info_.dual_objective_value;
   solve0_status = (int)status;
   printf("Solve0: Obj = %12g; Iter =%6d; Status =%2d\n", solve0_objective_value, solve0_iteration_count, solve0_status);
 
@@ -1083,7 +1083,7 @@ HighsStatus Highs::solveNode(Node &node) {
     HighsStatus status = runSimplexSolver(options_, hmos_[0]);
     iteration_count1 = hmos_[0].simplex_info_.iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
-    solve1_objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+    solve1_objective_value = hmos_[0].simplex_info_.dual_objective_value;
     solve1_status = (int)status;
     printf("Solve1: Obj = %12g; Iter =%6d; Status =%2d\n", solve1_objective_value, solve1_iteration_count, solve1_status);
     double rlv_objective_value_difference = fabs(solve1_objective_value - solve0_objective_value)/max(1.0, fabs(solve1_objective_value));
@@ -1100,7 +1100,7 @@ HighsStatus Highs::solveNode(Node &node) {
   // Set solution.
   if (status == HighsStatus::Optimal) {
     node.primal_solution = hmos_[0].solution_.col_value;
-    node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+    node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
 
   // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
@@ -1117,7 +1117,7 @@ HighsStatus Highs::solveNode(Node &node) {
   // // Set solution.
   // if (status == HighsStatus::Optimal) {
   //   node.primal_solution = hmos_[0].solution_.col_value;
-  //   node.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+  //   node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   // }
 
   return status;
@@ -1133,7 +1133,7 @@ HighsStatus Highs::solveRootNode(Node &root) {
   
   if (status == HighsStatus::Optimal) {
     root.primal_solution = hmos_[0].solution_.col_value;
-    root.objective_value = hmos_[0].simplex_info_.dualObjectiveValue;
+    root.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
 
   return status;

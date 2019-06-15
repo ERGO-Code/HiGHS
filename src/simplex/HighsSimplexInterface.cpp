@@ -671,7 +671,7 @@ HighsStatus HighsSimplexInterface::util_change_coefficient(int Xrow, int Xcol, c
 void HighsSimplexInterface::shift_objective_value(double Xshift) {
   printf("Where is shift_objective_value required - so I can interpret what's required\n");
   // Update the LP objective value with the shift
-  highs_model_object.simplex_info_.dualObjectiveValue += Xshift;
+  highs_model_object.simplex_info_.dual_objective_value += Xshift;
   // Update the LP offset with the shift
   HighsLp &lp = highs_model_object.lp_;
   highs_model_object.lp_.offset_ += Xshift;
@@ -1536,8 +1536,8 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(const 
   }
   local_primal_objective_value += lp.offset_;
   local_dual_objective_value += lp.offset_;
-  double primal_objective_value = simplex_info.primalObjectiveValue;
-  double dual_objective_value = simplex_info.dualObjectiveValue;
+  double primal_objective_value = simplex_info.primal_objective_value;
+  double dual_objective_value = simplex_info.dual_objective_value;
   double primal_objective_error = fabs(primal_objective_value - local_primal_objective_value) / max(1.0, fabs(primal_objective_value));
   double dual_objective_error = fabs(dual_objective_value - local_primal_objective_value) / max(1.0, fabs(dual_objective_value));
   double relative_objective_difference = fabs(primal_objective_value-dual_objective_value)/max(fabs(primal_objective_value), max(fabs(dual_objective_value), 1.0));
@@ -1572,7 +1572,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(const 
 		    primal_objective_error, dual_objective_error, relative_objective_difference);
   } else {
     printf("grep_AnBsSol,%d,%d,%.15g,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g",
-	   num_non_basic_var, num_basic_var, simplex_info.primalObjectiveValue,
+	   num_non_basic_var, num_basic_var, simplex_info.primal_objective_value,
 	   num_off_bound_nonbasic,
 	   num_primal_residual, max_primal_residual, sum_primal_residual,
 	   num_primal_infeasibilities, max_primal_infeasibility, sum_primal_infeasibilities,
@@ -1581,7 +1581,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(const 
   }
   HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Iterations = %d; Objective = %.15g; Infeasibilities primal/dual = %d/%d; Status: %s",
 		  simplex_info.iteration_count,
-		  simplex_info.primalObjectiveValue,
+		  simplex_info.primal_objective_value,
 		  simplex_info.num_primal_infeasibilities,
 		  simplex_info.num_dual_infeasibilities, 
 		  SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());

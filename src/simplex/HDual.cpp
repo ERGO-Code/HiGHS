@@ -182,7 +182,8 @@ void HDual::solve(int num_threads) {
   }
   if (solve_bailout) {
     bool out_of_time = simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME;
-    bool reached_dual_objective_bound = simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+    bool reached_dual_objective_bound =
+      simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
     assert(out_of_time || reached_dual_objective_bound);
     return;
   }
@@ -208,7 +209,7 @@ void HDual::solve(int num_threads) {
   ok = ok_to_solve(workHMO, 1, solvePhase);
   if (!ok) {printf("NOT OK After Solve???\n"); cout << flush;}
   assert(ok);
-  compute_primal_objective_value(workHMO);
+  computePrimalObjectiveValue(workHMO);
 }
 
 void HDual::options() {
@@ -373,7 +374,7 @@ void HDual::solvePhase1() {
       if (invertHint) break;
       // printf("HDual::solvePhase1: Iter = %d; Objective = %g\n",
       // simplex_info.iteration_count, simplex_info.dual_objective_value);
-      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
+      double current_dual_objective_value = simplex_info.updated_dual_objective_value;
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
         printf("HDual::solvePhase1: %12g = Objective > ObjectiveUB\n",
@@ -401,7 +402,7 @@ void HDual::solvePhase1() {
   if (rowOut == -1) {
     HighsPrintMessage(ML_DETAILED, "dual-phase-1-optimal\n");
     // Go to phase 2
-    if (simplex_info.dualObjectiveValue == 0) {
+    if (simplex_info.dual_objective_value == 0) {
       solvePhase = 2;
     } else {
       // We still have dual infeasible
@@ -477,7 +478,7 @@ void HDual::solvePhase2() {
       }
       // invertHint can be true for various reasons see SimplexConst.h
       if (invertHint) break;
-      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
+      double current_dual_objective_value = simplex_info.updated_dual_objective_value;
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
         printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
@@ -619,16 +620,16 @@ void HDual::rebuild() {
   // Check the objective value maintained by updating against the
   // value when computed exactly - so long as there is a value to
   // check against
-  bool checkDualObjectiveValue = simplex_lp_status.has_dual_objective_value;
+  bool check_dual_objective_value = simplex_lp_status.has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuObjClock]);
-  compute_dual_objective_value(workHMO, solvePhase);
+  computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
 
-  double dualObjectiveValue = simplex_info.dualObjectiveValue;
-  if (checkDualObjectiveValue) {
-    double absDualObjectiveError = fabs(simplex_info.updatedDualObjectiveValue - dualObjectiveValue);
-    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(dualObjectiveValue));
+  double dual_objective_value = simplex_info.dual_objective_value;
+  if (check_dual_objective_value) {
+    double absDualObjectiveError = fabs(simplex_info.updated_dual_objective_value - dual_objective_value);
+    double rlvDualObjectiveError = absDualObjectiveError/max(1.0, fabs(dual_objective_value));
 #ifdef HiGHSDEV
     /*
     // TODO Investigate these Dual objective value errors
@@ -639,7 +640,7 @@ void HDual::rebuild() {
     */
 #endif
   }
-  simplex_info.updatedDualObjectiveValue = dualObjectiveValue;
+  simplex_info.updated_dual_objective_value = dual_objective_value;
 
 #ifdef HiGHSDEV
   //  checkDualObjectiveValue("After computing dual objective value");
@@ -677,7 +678,7 @@ void HDual::cleanup() {
   initialise_cost(workHMO);
   initialise_bound(workHMO);
   compute_dual(workHMO);
-  compute_dual_objective_value(workHMO, solvePhase);
+  computeDualObjectiveValue(workHMO, solvePhase);
   iterationReportInvert(-1);
 
   compute_dual_infeasible_in_primal(workHMO, &dualInfeasCount);
@@ -1007,7 +1008,7 @@ void HDual::iterationReportDualObjective(int iterate_log_level, bool header) {
   if (header) {
     HighsPrintMessage(iterate_log_level, "    DualObjective    ");
   } else {
-    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.updatedDualObjectiveValue);
+    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.updated_dual_objective_value);
   }
 }
 
@@ -1052,7 +1053,7 @@ void HDual::iterationReportInvert(int i_v) {
   iterationReportDualObjective(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
 #else
-  report_iteration_count_dual_objective_value(workHMO, i_v);
+  reportIterationCountDualObjectiveValue(workHMO, i_v);
 #endif
 }
 
@@ -1708,29 +1709,29 @@ void HDual::interpret_price_strategy(SimplexPriceStrategy price_strategy) {
 
 #ifdef HiGHSDEV
 double HDual::checkDualObjectiveValue(const char *message, int phase) {
-  static double previousUpdatedDualObjectiveValue = 0;
-  static double previousDualObjectiveValue = 0;
-  compute_dual_objective_value(workHMO, phase);
-  double updatedDualObjectiveValue = workHMO.simplex_info_.updatedDualObjectiveValue;
-  double dualObjectiveValue = workHMO.simplex_info_.dualObjectiveValue;
-  double changeInUpdatedDualObjectiveValue = updatedDualObjectiveValue - previousUpdatedDualObjectiveValue;
-  double changeInDualObjectiveValue = dualObjectiveValue - previousDualObjectiveValue;
-  double updatedDualObjectiveError = dualObjectiveValue - updatedDualObjectiveValue;
-  double rlvUpdatedDualObjectiveError = fabs(updatedDualObjectiveError)/max(1.0, fabs(dualObjectiveValue));
-  bool erFd = rlvUpdatedDualObjectiveError > 1e-8;
-  if (erFd)
+  static double previous_updated_dual_objective_value = 0;
+  static double previous_dual_objective_value = 0;
+  computeDualObjectiveValue(workHMO, phase);
+  double updated_dual_objective_value = workHMO.simplex_info_.updated_dual_objective_value;
+  double dual_objective_value = workHMO.simplex_info_.dual_objective_value;
+  double change_in_updated_dual_objective_value = updated_dual_objective_value - previous_updated_dual_objective_value;
+  double change_in_dual_objective_value = dual_objective_value - previous_dual_objective_value;
+  double updated_dual_objective_error = dual_objective_value - updated_dual_objective_value;
+  double relative_updated_dual_objective_error = fabs(updated_dual_objective_error)/max(1.0, fabs(dual_objective_value));
+  bool error_found = relative_updated_dual_objective_error > 1e-8;
+  if (error_found)
     printf("Phase %1d: duObjV = %11.4g (%11.4g); updated duObjV = %11.4g (%11.4g); Error(|Rel|) = %11.4g (%11.4g) |%s\n",
 	   phase,
-	   dualObjectiveValue, changeInDualObjectiveValue,
-	   updatedDualObjectiveValue, changeInUpdatedDualObjectiveValue,
-	   updatedDualObjectiveError, rlvUpdatedDualObjectiveError,
+	   dual_objective_value, change_in_dual_objective_value,
+	   updated_dual_objective_value, change_in_updated_dual_objective_value,
+	   updated_dual_objective_error, relative_updated_dual_objective_error,
 	   message);
-  previousDualObjectiveValue = dualObjectiveValue;
-  previousUpdatedDualObjectiveValue = dualObjectiveValue;
-  workHMO.simplex_info_.updatedDualObjectiveValue = dualObjectiveValue;
+  previous_dual_objective_value = dual_objective_value;
+  previous_updated_dual_objective_value = dual_objective_value;
+  workHMO.simplex_info_.updated_dual_objective_value = dual_objective_value;
   // Now have dual objective value
   workHMO.simplex_lp_status_.has_dual_objective_value = true;
-  return updatedDualObjectiveError;
+  return updated_dual_objective_error;
 }
 #endif
 

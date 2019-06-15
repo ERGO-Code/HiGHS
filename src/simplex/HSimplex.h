@@ -106,13 +106,13 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 }
 #endif
 */
-void compute_dual_objective_value(
-				  HighsModelObject &highs_model_object,
-                                  int phase = 2);
+void computeDualObjectiveValue(
+			       HighsModelObject &highs_model_object,
+			       int phase = 2);
 
-void compute_primal_objective_value(
-				    HighsModelObject &highs_model_object
-				    );
+void computePrimalObjectiveValue(
+				 HighsModelObject &highs_model_object
+				 );
 
 void initialiseSimplexLpRandomVectors(
 				      HighsModelObject &highs_model
@@ -330,15 +330,15 @@ void update_matrix(HighsModelObject &highs_model_object,
                    int columnOut
 		   );
 
-void report_iteration_count_dual_objective_value(
-						 HighsModelObject &highs_model_object,
-						 int i_v
-						 );
+void reportIterationCountDualObjectiveValue(
+					    HighsModelObject &highs_model_object,
+					    int i_v
+					    );
 
-void report_iteration_count_primal_objective_value(
-						 HighsModelObject &highs_model_object,
-						 int i_v
-						 );
+void reportIterationCountPrimalObjectiveValue(
+					      HighsModelObject &highs_model_object,
+					      int i_v
+					      );
 
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
 

@@ -243,7 +243,7 @@ void HPrimal::solvePhase2() {
       if (invertHint) {
         break;
       }
-      double current_dual_objective_value = simplex_info.updatedDualObjectiveValue;
+      double current_dual_objective_value = simplex_info.updated_dual_objective_value;
       // printf("HPrimal::solvePhase2: Iter = %d; Objective = %g\n",
       // simplex_info.iteration_count, current_dual_objective_value);
       if (current_dual_objective_value > simplex_info.dual_objective_value_upper_bound) {
@@ -286,7 +286,7 @@ void HPrimal::solvePhase2() {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
     simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
   }
-  compute_dual_objective_value(workHMO);
+  computeDualObjectiveValue(workHMO);
 }
 
 void HPrimal::primalRebuild() {
@@ -331,16 +331,16 @@ void HPrimal::primalRebuild() {
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
   // Primal objective section
-  bool checkPrimalObjectiveValue = simplex_lp_status.has_primal_objective_value;
+  bool check_primal_objective_value = simplex_lp_status.has_primal_objective_value;
   timer.start(simplex_info.clock_[ComputePrObjClock]);
-  compute_primal_objective_value(workHMO);
+  computePrimalObjectiveValue(workHMO);
   timer.stop(simplex_info.clock_[ComputePrObjClock]);
-  report_iteration_count_primal_objective_value(workHMO, sv_invertHint);
+  reportIterationCountPrimalObjectiveValue(workHMO, sv_invertHint);
 
-  double primalObjectiveValue = simplex_info.primalObjectiveValue;
-  if (checkPrimalObjectiveValue) {
-    double absPrimalObjectiveError = fabs(simplex_info.updatedPrimalObjectiveValue - primalObjectiveValue);
-    double rlvPrimalObjectiveError = absPrimalObjectiveError/max(1.0, fabs(primalObjectiveValue));
+  double primal_objective_value = simplex_info.primal_objective_value;
+  if (check_primal_objective_value) {
+    double absPrimalObjectiveError = fabs(simplex_info.updated_primal_objective_value - primal_objective_value);
+    double rlvPrimalObjectiveError = absPrimalObjectiveError/max(1.0, fabs(primal_objective_value));
 #ifdef HiGHSDEV
     // TODO Investigate these Primal objective value errors
     if (rlvPrimalObjectiveError >= 1e-8) {
@@ -349,7 +349,7 @@ void HPrimal::primalRebuild() {
     }
 #endif
   }
-  simplex_info.updatedPrimalObjectiveValue = primalObjectiveValue;
+  simplex_info.updated_primal_objective_value = primal_objective_value;
 
 #ifdef HiGHSDEV
   if (simplex_info.analyseRebuildTime) {
@@ -590,7 +590,7 @@ void HPrimal::primalUpdate() {
   }
   timer.stop(simplex_info.clock_[UpdatePrimalClock]);
 
-  simplex_info.updatedPrimalObjectiveValue += workDual[columnIn]*thetaPrimal;
+  simplex_info.updated_primal_objective_value += workDual[columnIn]*thetaPrimal;
 
   int numPrimalInfeas = computePrimalInfeasible(workHMO);
 
@@ -741,7 +741,7 @@ void HPrimal::iterationReportPrimalObjective(int iterate_log_level, bool header)
   if (header) {
     HighsPrintMessage(iterate_log_level, "  PrimalObjective    ");
   } else {
-    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.updatedPrimalObjectiveValue);
+    HighsPrintMessage(iterate_log_level, " %20.10e", simplex_info.updated_primal_objective_value);
   }
 }
 
@@ -800,7 +800,7 @@ void HPrimal::iterationReportInvert(int i_v) {
   iterationReportPrimalObjective(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " %2d\n", i_v);
 #else
-  report_iteration_count_primal_objective_value(workHMO, i_v);
+  reportIterationCountPrimalObjectiveValue(workHMO, i_v);
 #endif
 }
 
