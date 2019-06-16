@@ -51,7 +51,8 @@ class HPrimal {
   void iterationReportIterationAndPhase(int iterate_log_level, bool header);
   void iterationReportPrimalObjective(int iterate_log_level, bool header);
   void iterationReportIterationData(int iterate_log_level, bool header);
-  void iterationReportInvert(int i_v);
+  void iterationReportRebuild(const int i_v);
+  void reportInfeasibility(const int i_v);
 
   // Model pointer
   HighsModelObject &workHMO;

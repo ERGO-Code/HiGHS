@@ -512,7 +512,7 @@ void HCrash::ltssf() {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
-    no_ck_pv = true;
+    no_ck_pv = false;
   } else {
     //  Dev version
     crsh_fn_cf_pri_v = 1;
@@ -821,6 +821,7 @@ void HCrash::ltssf_iz_da() {
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsLp &simplex_lp = workHMO.simplex_lp_;
   HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  SimplexBasis &simplex_basis = workHMO.simplex_basis_;
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
   const int *Astart = &simplex_lp.Astart_[0];
@@ -882,8 +883,8 @@ void HCrash::ltssf_iz_da() {
   if (crash_strategy == SimplexCrashStrategy::BASIC) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
-    printf("Call replace_with_logical_basis()\n");
-    //    workHMO.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
+    for (int iCol = 0; iCol < numCol; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+    for (int iRow = 0; iRow < numRow; iRow++) simplex_basis.nonbasicFlag_[numCol + iRow] = NONBASIC_FLAG_FALSE;
   }
   mx_r_pri = crsh_mn_pri_v;
   for (int r_n = 0; r_n < numRow; r_n++) {

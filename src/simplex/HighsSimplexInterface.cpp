@@ -1352,7 +1352,7 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(bool report,
     } else if (primal_residual >= -primal_feasibility_tolerance) {
       // At a bound: check for dual feasibility
       if (lower < upper) {
-	// Non-fixed column
+	// Non-fixed variable
 	if (value < middle) {
 	  // At lower
 	  dual_infeasibility = max(-dual, 0.);
@@ -1370,6 +1370,9 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(bool report,
 	    if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
 	  }
 	}
+      } else {
+	// Fixed variable
+	dual_infeasibility = 0;
       }
     } else {
       // Between bounds (or free)

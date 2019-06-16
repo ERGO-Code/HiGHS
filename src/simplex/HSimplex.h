@@ -128,6 +128,13 @@ void scaleCosts(
 		HighsModelObject &highs_model
 		);
 
+void scaleFactorRanges(HighsModelObject &highs_model_object,
+		       double &min_col_scale,
+		       double &max_col_scale,
+		       double &min_row_scale,
+		       double &max_row_scale
+		       );
+
 void scaleSimplexLp(
 		    HighsModelObject &highs_model
 		    );
@@ -268,12 +275,14 @@ void compute_primal(
 		    HighsModelObject &highs_model_object
 		    );
 
-int computePrimalInfeasible(
-		    HighsModelObject &highs_model_object
-		    );
+void computePrimalInfeasible(
+			    HighsModelObject &highs_model_object,
+			    const bool report = false
+			    );
 
-int computeDualInfeasible(
-			  HighsModelObject &highs_model_object
+void computeDualInfeasible(
+			  HighsModelObject &highs_model_object,
+			  const bool report = false
 			  );
 
 void compute_dual(
@@ -330,15 +339,11 @@ void update_matrix(HighsModelObject &highs_model_object,
                    int columnOut
 		   );
 
-void reportIterationCountDualObjectiveValue(
-					    HighsModelObject &highs_model_object,
-					    int i_v
-					    );
-
-void reportIterationCountPrimalObjectiveValue(
-					      HighsModelObject &highs_model_object,
-					      int i_v
-					      );
+void logRebuild(
+		HighsModelObject &highs_model_object,
+		const bool primal, 
+		const int solve_phase,
+		const int i_v = -1);
 
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
 

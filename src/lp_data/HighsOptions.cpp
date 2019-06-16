@@ -99,6 +99,12 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
    else if (option == simplex_price_strategy_string) 
     return setSimplexPriceStrategyValue(options, atoi(value.c_str()));
 
+   else if (option == simplex_initial_condition_check_string) 
+    return setSimplexInitialConditionCheckValue(options, atoi(value.c_str()));
+
+   else if (option == simplex_initial_condition_tolerance_string) 
+    return setSimplexInitialConditionToleranceValue(options, atof(value.c_str()));
+
    else if (option == message_level_string) 
     return setMessageLevelValue(options, atoi(value.c_str()));
 
@@ -626,7 +632,7 @@ OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options, const i
 
 OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options, const double& value) {
   if (value >= SIMPLEX_INITIAL_CONDITION_TOLERANCE_MIN && value <= SIMPLEX_INITIAL_CONDITION_TOLERANCE_MAX)
-    options.dual_feasibility_tolerance = value;
+    options.simplex_initial_condition_tolerance = value;
   else {
     HighsLogMessage(HighsMessageType::ERROR,
 		    "simplex initial condition tolerance value \"%s\" is not permitted: legal values are between %d and %d\n",
