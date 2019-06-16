@@ -46,7 +46,7 @@ const string ipm_string = "ipm";
 const string highs_run_time_limit_string = "highs_run_time_limit";
 const string simplex_iteration_limit_string = "simplex_iteration_limit";
 const string options_file_string = "options_file";
-const string parser_type_string = "parser_type";
+const string mps_parser_type_string = "mps_parser_type";
 const string mip_string = "mip";
 const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
@@ -110,7 +110,7 @@ struct HighsOptions
   bool ipx = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
-  HighsMpsParserType parser_type = HighsMpsParserType::DEFAULT;
+  HighsMpsParserType mps_parser_type = HighsMpsParserType::DEFAULT;
 
   // Options not passed through the command line
   double infinite_cost = INFINITE_COST_DEFAULT;

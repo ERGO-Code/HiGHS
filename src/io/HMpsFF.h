@@ -389,11 +389,11 @@ typename HMpsFF::parsekey HMpsFF::parseCols(std::ifstream &file) {
   numCol = 0;
   bool integral_cols = false;
 
-  if (any_first_non_blank_as_star_implies_comment) {
-    printf("In free format MPS reader: treating line as comment if first non-blank character is *\n");
-  } else {
-    printf("In free format MPS reader: treating line as comment if first character is *\n");
-  }
+  // if (any_first_non_blank_as_star_implies_comment) {
+  //   printf("In free format MPS reader: treating line as comment if first non-blank character is *\n");
+  // } else {
+  //   printf("In free format MPS reader: treating line as comment if first character is *\n");
+  // }
   auto parsename = [&rowidx, this](std::string name) {
     auto mit = rowname2idx.find(name);
 

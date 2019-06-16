@@ -36,7 +36,7 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option, co
   else if (option == simplex_iteration_limit_string) 
     return setSimplexIterationLimitValue(options, atoi(value.c_str()));
 
-  else if (option == parser_type_string) 
+  else if (option == mps_parser_type_string) 
     return setParserTypeValue(options, value);
 
   else if (option == mip_string)
@@ -249,7 +249,7 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
 		       NULL, NULL);
   /*
     
-const string parser_type_string = "parser_type";
+const string mps_parser_type_string = "mps_parser_type";
 const string mip_string = "mip";
 const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
@@ -478,9 +478,9 @@ OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options, const std::st
 
 OptionStatus setParserTypeValue(HighsOptions& options, const std::string& value) {
   if (value == "fixed")
-    options.parser_type = HighsMpsParserType::fixed;
+    options.mps_parser_type = HighsMpsParserType::fixed;
   else if (value == "free")
-    options.parser_type = HighsMpsParserType::free;
+    options.mps_parser_type = HighsMpsParserType::free;
   else {
     HighsLogMessage(HighsMessageType::ERROR,
 		    "parser type value \"%s\" is not permitted: legal values are \"%s\" and \"%s\"\n",
