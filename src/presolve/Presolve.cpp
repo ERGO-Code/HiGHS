@@ -95,18 +95,19 @@ void Presolve::setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status
 
 int Presolve::presolve(int print) {
   iPrint = print;
-  iKKTcheck = 0;
-
-  chk.print = 0;  // 3 for experiments mode
-  if (chk.print == 3) {
-    iPrint = 0;
-    if (iKKTcheck) {
-      iKKTcheck = 2;
-      countsFile = "../experiments/t2";
-    }
-  }
-
   // iPrint = 1;
+
+  iKKTcheck = 1;
+
+  // chk.print = 0;  // 3 for experiments mode
+  // if (chk.print == 3) {
+  //   iPrint = 0;
+  //   if (iKKTcheck) {
+  //     iKKTcheck = 2;
+  //     countsFile = "../experiments/t2";
+  //   }
+  // }
+
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
