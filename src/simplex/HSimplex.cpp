@@ -12,24 +12,24 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 
-#include "HConfig.h"
-#include "lp_data/HighsStatus.h"
-#include "simplex/HCrash.h"
 #include "simplex/HSimplex.h"
-#include "simplex/HighsSimplexInterface.h"
+#include "HConfig.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
-#include "util/HighsUtils.h"
+#include "lp_data/HighsStatus.h"
+#include "simplex/HCrash.h"
 #include "simplex/HVector.h"
-#include "simplex/SimplexConst.h" // For simplex strategy constants
+#include "simplex/HighsSimplexInterface.h"
+#include "simplex/SimplexConst.h"  // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
+#include "util/HighsUtils.h"
 
 using std::runtime_error;
 #include <cassert>
 #include <vector>
 
-void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void options(HighsModelObject& highs_model_object, const HighsOptions& opt) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   //
   // Copy values of HighsOptions for the simplex solver
   //
@@ -38,11 +38,13 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
   // that will need converting into a specific simplex strategy value.
   //
   simplex_info.simplex_strategy = opt.simplex_strategy;
-  simplex_info.dual_edge_weight_strategy = opt.simplex_dual_edge_weight_strategy;
+  simplex_info.dual_edge_weight_strategy =
+      opt.simplex_dual_edge_weight_strategy;
   simplex_info.price_strategy = opt.simplex_price_strategy;
   simplex_info.primal_feasibility_tolerance = opt.primal_feasibility_tolerance;
   simplex_info.dual_feasibility_tolerance = opt.dual_feasibility_tolerance;
-  simplex_info.dual_objective_value_upper_bound = opt.dual_objective_value_upper_bound;
+  simplex_info.dual_objective_value_upper_bound =
+      opt.dual_objective_value_upper_bound;
   simplex_info.perturb_costs = opt.simplex_perturb_costs;
   simplex_info.iteration_limit = opt.simplex_iteration_limit;
   simplex_info.update_limit = opt.simplex_update_limit;
@@ -65,44 +67,47 @@ void options(HighsModelObject &highs_model_object, const HighsOptions &opt) {
 #endif
 }
 
-SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
+SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   // Perform the transition from whatever information is known about
   // the LP to a status where simplex data are set up for the initial
   // rebuild() of the chosen solver - primal, scalar dual or parallel
   // dual.
-  // 
+  //
   // First look at what basis and solution information is known. If a
   // simplex basis is known, then it's used, and there's no need for
   // the solution values. This will usually correspond to hot start
   // when solving MIP problems. Otherwise, generate a simplex basis,
   // thus:
   //
-  // If there is a HiGHS basis: use it to determine what's basic and nonbasic (nonbasicFlag).
+  // If there is a HiGHS basis: use it to determine what's basic and nonbasic
+  // (nonbasicFlag).
   //
-  // If there's no HiGHS basis: generate nonbasicFlag, possibly by dualising and performing a crash.
+  // If there's no HiGHS basis: generate nonbasicFlag, possibly by dualising and
+  // performing a crash.
   //
   // Use nonbasicFlag to generate basicIndex
   //
   // Use nonbasicFlag and any HiGHS solution to determine nonbasicMove
   //
-  HighsTimer &timer = highs_model_object.timer_;
-  const HighsOptions &options = highs_model_object.options_;
-  const HighsSolution &solution = highs_model_object.solution_;
-  HighsBasis &basis = highs_model_object.basis_;
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsScale &scale = highs_model_object.scale_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HFactor &factor = highs_model_object.factor_;
-  HMatrix &matrix = highs_model_object.matrix_;
+  HighsTimer& timer = highs_model_object.timer_;
+  const HighsOptions& options = highs_model_object.options_;
+  const HighsSolution& solution = highs_model_object.solution_;
+  HighsBasis& basis = highs_model_object.basis_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsScale& scale = highs_model_object.scale_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HFactor& factor = highs_model_object.factor_;
+  HMatrix& matrix = highs_model_object.matrix_;
   // First determine whether the HiGHS solution space has been
   // allocated, a necessary condition for its values to be used later
-  bool have_highs_solution = 
-    solution.col_value.size() == highs_model_object.lp_.numCol_ &&
-    solution.col_dual.size() == highs_model_object.lp_.numCol_ &&
-    solution.row_value.size() == highs_model_object.lp_.numRow_ &&
-    solution.row_dual.size() == highs_model_object.lp_.numRow_;
+  bool have_highs_solution =
+      solution.col_value.size() == highs_model_object.lp_.numCol_ &&
+      solution.col_dual.size() == highs_model_object.lp_.numCol_ &&
+      solution.row_value.size() == highs_model_object.lp_.numRow_ &&
+      solution.row_dual.size() == highs_model_object.lp_.numRow_;
   if (!simplex_lp_status.valid) {
     // Simplex LP is not valid, so ensure that it is fully invalidated
     invalidateSimplexLp(simplex_lp_status);
@@ -118,81 +123,94 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       // checking that it has the right number of basic variables
       //
       // Allocate memory for nonbasicFlag
-      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_);
+      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ +
+                                         highs_model_object.lp_.numRow_);
       int num_basic_variables = 0;
       for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
-	int iVar = iCol;
-	if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
-	  num_basic_variables++;
-	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-	} else {
-	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-	}
+        int iVar = iCol;
+        if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
+          num_basic_variables++;
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+        } else {
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+        }
       }
       for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
-	int iVar = simplex_lp.numCol_ + iRow;
-	if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
-	  num_basic_variables++;
-	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
-	} else {
-	  simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
-	}
+        int iVar = simplex_lp.numCol_ + iRow;
+        if (basis.row_status[iRow] == HighsBasisStatus::BASIC) {
+          num_basic_variables++;
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_FALSE;
+        } else {
+          simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+        }
       }
       assert(num_basic_variables == simplex_lp.numRow_);
       if (num_basic_variables != simplex_lp.numRow_) basis.valid_ = false;
     }
-    // nonbasicFlag is valid if the HiGHS basis exists and has the correct number of basic variables
+    // nonbasicFlag is valid if the HiGHS basis exists and has the correct
+    // number of basic variables
     bool nonbasicFlag_valid = basis.valid_;
     if (!nonbasicFlag_valid) {
-      // nonbasicFlag is not valid, so generate a simplex basis, possibly by performing a crash, and possibly after dualising
+      // nonbasicFlag is not valid, so generate a simplex basis, possibly by
+      // performing a crash, and possibly after dualising
 
       /*
-      // Possibly dualise, making sure that no simplex or other data are used to initialise
-      if (options.simplex_dualise_strategy != SimplexDualiseStrategy::OFF) {
-	dualiseSimplexLp(highs_model_object); have_highs_solution = false;
-	// Initialise the real and integer random vectors
-	initialiseSimplexLpRandomVectors(highs_model_object);
+      // Possibly dualise, making sure that no simplex or other data are used to
+      initialise if (options.simplex_dualise_strategy !=
+      SimplexDualiseStrategy::OFF) { dualiseSimplexLp(highs_model_object);
+      have_highs_solution = false;
+        // Initialise the real and integer random vectors
+        initialiseSimplexLpRandomVectors(highs_model_object);
       }
       */
-      // Possibly permute the columns of the LP to be used by the solver. 
-      if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF) permuteSimplexLp(highs_model_object);
-      
+      // Possibly permute the columns of the LP to be used by the solver.
+      if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF)
+        permuteSimplexLp(highs_model_object);
+
       // Allocate memory for nonbasicFlag
-      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ + highs_model_object.lp_.numRow_);
+      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ +
+                                         highs_model_object.lp_.numRow_);
       // Set up nonbasicFlag for a logical basis
-      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_+iRow] = NONBASIC_FLAG_FALSE;
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
+        simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
+        simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow] =
+            NONBASIC_FLAG_FALSE;
 
       // Possibly find a crash basis
       if (options.simplex_crash_strategy != SimplexCrashStrategy::OFF) {
-	HCrash crash(highs_model_object);
-	timer.start(timer.crash_clock);
-	timer.start(simplex_info.clock_[CrashClock]);
-	crash.crash(options.simplex_crash_strategy);
-	timer.stop(simplex_info.clock_[CrashClock]);
-	timer.stop(timer.crash_clock);	
-	int num_basic_structurals=0;
-	for (int iCol=0; iCol < simplex_lp.numCol_; iCol++) {
-	  if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE) num_basic_structurals++;
-	}
-	HighsLogMessage(HighsMessageType::INFO, "Crash has created a basis with %d/%d structurals",
-			num_basic_structurals, simplex_lp.numRow_);
+        HCrash crash(highs_model_object);
+        timer.start(timer.crash_clock);
+        timer.start(simplex_info.clock_[CrashClock]);
+        crash.crash(options.simplex_crash_strategy);
+        timer.stop(simplex_info.clock_[CrashClock]);
+        timer.stop(timer.crash_clock);
+        int num_basic_structurals = 0;
+        for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+          if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE)
+            num_basic_structurals++;
+        }
+        HighsLogMessage(HighsMessageType::INFO,
+                        "Crash has created a basis with %d/%d structurals",
+                        num_basic_structurals, simplex_lp.numRow_);
       }
     }
     // Now that the dimensions of the LP to be solved by the simplex
     // method are known, make sure that there is a postive number of
     // rows. ToDo: Ensure that LPs with no rows can still be solved
-    assert(simplex_lp.numRow_>0);
+    assert(simplex_lp.numRow_ > 0);
     if (simplex_lp.numRow_ == 0) {
-      printf("Cannot currently solve LPs with no rows using the simplex method\n");
+      printf(
+          "Cannot currently solve LPs with no rows using the simplex method\n");
       return SimplexSolutionStatus::FAILED;
     }
-    
+
     // There is now a nonbasicFlag that should be valid - have the
     // right number of basic variables - so check this
     int num_basic_variables = 0;
-    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
-      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) num_basic_variables++;
+    for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE)
+        num_basic_variables++;
     }
     nonbasicFlag_valid = num_basic_variables == simplex_lp.numRow_;
     assert(nonbasicFlag_valid);
@@ -201,8 +219,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       // if there isn't one or it's been found to be invalid, a
       // logical or crash basis has been set up. Both should guarantee
       // the right number of basic variables
-      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
-      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow] = NONBASIC_FLAG_FALSE;
+      for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
+        simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
+        simplex_basis.nonbasicFlag_[simplex_lp.numCol_ + iRow] =
+            NONBASIC_FLAG_FALSE;
       nonbasicFlag_valid = true;
       // The HiGHS basis shouldn't be valid at this point
       assert(!basis.valid_);
@@ -212,11 +233,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
     num_basic_variables = 0;
     simplex_info.num_basic_logicals = 0;
-    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
+    for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
-	simplex_basis.basicIndex_[num_basic_variables] = iVar;
-	if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
-	num_basic_variables++;
+        simplex_basis.basicIndex_[num_basic_variables] = iVar;
+        if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
+        num_basic_variables++;
       }
     }
     // Double-check that we have the right number of basic variables
@@ -226,7 +247,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   }
   // Execute from here for all calls
   //
-  // Note whether a HiGHS basis can be used to (try to) choose the better bound for boxed variables
+  // Note whether a HiGHS basis can be used to (try to) choose the better bound
+  // for boxed variables
   bool have_highs_basis = basis.valid_;
   //
   // Possibly scale the LP to be solved
@@ -237,8 +259,10 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   // hot-started - but is this really going to happen?
   if (!simplex_lp_status.is_scaled) scaleHighsModelInit(highs_model_object);
   //
-  // Scale the LP to be used by the solver if scaling is to be used and the LP is not already scaled
-  bool scale_lp = options.simplex_scale_strategy != SimplexScaleStrategy::OFF && !simplex_lp_status.is_scaled;
+  // Scale the LP to be used by the solver if scaling is to be used and the LP
+  // is not already scaled
+  bool scale_lp = options.simplex_scale_strategy != SimplexScaleStrategy::OFF &&
+                  !simplex_lp_status.is_scaled;
   if (scale_lp) {
     scaleSimplexLp(highs_model_object);
 #ifdef HiGHSDEV
@@ -246,9 +270,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     if (simplex_info.analyseLp) {
       analyseLp(highs_model_object.lp_, "Unscaled");
       if (simplex_lp_status.is_scaled) {
-	analyseVectorValues("Column scaling factors", simplex_lp.numCol_, scale.col_, false);
-	analyseVectorValues("Row    scaling factors", simplex_lp.numRow_, scale.row_, false);
-	analyseLp(simplex_lp, "Scaled");
+        analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
+                            scale.col_, false);
+        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
+                            scale.row_, false);
+        analyseLp(simplex_lp, "Scaled");
       }
     }
 #endif
@@ -258,14 +284,13 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   //
   // First setup the factor arrays if they don't exist
   if (!simplex_lp_status.has_factor_arrays) {
-    factor.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-		 &simplex_lp.Astart_[0],
-		 &simplex_lp.Aindex_[0],
-		 &simplex_lp.Avalue_[0],
-		 &simplex_basis.basicIndex_[0]);
+    factor.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
+                 &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
+                 &simplex_basis.basicIndex_[0]);
     simplex_lp_status.has_factor_arrays = true;
   }
-  // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot start
+  // Reinvert if there isn't a fresh INVERT. ToDo Override this for MIP hot
+  // start
   bool reinvert = !simplex_lp_status.has_fresh_invert;
   if (reinvert) {
     int rankDeficiency = compute_factor(highs_model_object);
@@ -281,7 +306,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     timer.start(simplex_info.clock_[BasisConditionClock]);
     double basis_condition = computeBasisCondition(highs_model_object);
     timer.stop(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
+    double basis_condition_tolerance =
+        highs_model_object.options_.simplex_initial_condition_tolerance;
     basis_condition_ok = basis_condition < basis_condition_tolerance;
     HighsMessageType message_type = HighsMessageType::INFO;
     std::string condition_comment;
@@ -291,8 +317,10 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       message_type = HighsMessageType::WARNING;
       condition_comment = "exceeds";
     }
-    HighsLogMessage(message_type, "Initial basis condition estimate of %g %s the tolerance of %g",
-		    basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+    HighsLogMessage(
+        message_type,
+        "Initial basis condition estimate of %g %s the tolerance of %g",
+        basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   }
   // ToDo Handle ill-conditioned basis with basis crash, in which case
   // ensure that HiGHS and simplex basis are invalidated and simplex
@@ -305,17 +333,19 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     crash.crash(SimplexCrashStrategy::BASIC);
     timer.stop(simplex_info.clock_[CrashClock]);
     timer.stop(timer.crash_clock);
-    HighsLogMessage(HighsMessageType::INFO, "Performed crash to prioritise previously basic variables in well-conditioned basis");
+    HighsLogMessage(HighsMessageType::INFO,
+                    "Performed crash to prioritise previously basic variables "
+                    "in well-conditioned basis");
     // Use nonbasicFlag to form basicIndex
     // Allocate memory for basicIndex
     simplex_basis.basicIndex_.resize(highs_model_object.lp_.numRow_);
     int num_basic_variables = 0;
     simplex_info.num_basic_logicals = 0;
-    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
+    for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
-	simplex_basis.basicIndex_[num_basic_variables] = iVar;
-	if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
-	num_basic_variables++;
+        simplex_basis.basicIndex_[num_basic_variables] = iVar;
+        if (iVar >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
+        num_basic_variables++;
       }
     }
     // Double-check that we have the right number of basic variables
@@ -323,9 +353,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     assert(nonbasicFlag_valid);
     updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
     // Report on the outcome of crash
-    int num_basic_structurals = simplex_lp.numRow_ - simplex_info.num_basic_logicals;
-    HighsLogMessage(HighsMessageType::INFO, "Crash has created a basis with %d/%d structurals",
-		    num_basic_structurals, simplex_lp.numRow_);
+    int num_basic_structurals =
+        simplex_lp.numRow_ - simplex_info.num_basic_logicals;
+    HighsLogMessage(HighsMessageType::INFO,
+                    "Crash has created a basis with %d/%d structurals",
+                    num_basic_structurals, simplex_lp.numRow_);
     // Now reinvert
     int rankDeficiency = compute_factor(highs_model_object);
     if (rankDeficiency) {
@@ -338,7 +370,8 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     timer.start(simplex_info.clock_[BasisConditionClock]);
     double basis_condition = computeBasisCondition(highs_model_object);
     timer.stop(simplex_info.clock_[BasisConditionClock]);
-    double basis_condition_tolerance = highs_model_object.options_.simplex_initial_condition_tolerance;
+    double basis_condition_tolerance =
+        highs_model_object.options_.simplex_initial_condition_tolerance;
     basis_condition_ok = basis_condition < basis_condition_tolerance;
     HighsMessageType message_type = HighsMessageType::INFO;
     std::string condition_comment;
@@ -348,145 +381,147 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
       message_type = HighsMessageType::WARNING;
       condition_comment = "exceeds";
     }
-    HighsLogMessage(message_type, "Initial basis condition estimate of %11.4g %s the tolerance of %g",
-		    basis_condition, condition_comment.c_str(), basis_condition_tolerance);
+    HighsLogMessage(
+        message_type,
+        "Initial basis condition estimate of %11.4g %s the tolerance of %g",
+        basis_condition, condition_comment.c_str(), basis_condition_tolerance);
   }
 
   // Now there are nonbasicFlag and basicIndex corresponding to a
   // basis with well-conditioned invertible representation
   //
   // Possibly set up the column-wise and row-wise copies of the matrix
-  if (!simplex_lp_status.has_matrix_col_wise || simplex_lp_status.has_matrix_row_wise) {
-    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_,
-		 &simplex_lp.Astart_[0],
-		 &simplex_lp.Aindex_[0],
-		 &simplex_lp.Avalue_[0],
-		 &simplex_basis.nonbasicFlag_[0]);
+  if (!simplex_lp_status.has_matrix_col_wise ||
+      simplex_lp_status.has_matrix_row_wise) {
+    matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
+                 &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
+                 &simplex_basis.nonbasicFlag_[0]);
     simplex_lp_status.has_matrix_col_wise = true;
     simplex_lp_status.has_matrix_row_wise = true;
   }
   // Possibly set up the simplex work and base arrays
   // ToDo Stop doing this always
   //  if (!simplex_lp_status.has_basis) {
-    // Allocate memory for nonbasicMove
-    simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_+simplex_lp.numRow_);
-    allocate_work_and_base_arrays(highs_model_object);
-    initialise_cost(highs_model_object);
-    initialise_bound(highs_model_object);
-    // Don't have a simplex basis since nonbasicMove is not set up. 
-    const int illegal_move_value = -99;
-    for (int iVar = 0; iVar < simplex_lp.numCol_+simplex_lp.numRow_; iVar++) {
-      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
-	// Nonbasic variable
-	double lower = simplex_info.workLower_[iVar];
-	double upper = simplex_info.workUpper_[iVar];
-	int move = illegal_move_value;
-	double value;
-	if (lower == upper) {
-	  // Fixed
-	  value = lower;
-	  move = NONBASIC_MOVE_ZE;
-	} else if (!highs_isInfinity(-lower)) {
-	  // Finite lower bound so boxed or lower
-	  if (!highs_isInfinity(upper)) {
-	    // Finite upper bound so boxed
-	    // Determine the bound to set the value to according to, in order of priority
-	    // 1. Any valid HiGHS basis status
-	    if (have_highs_basis) {
-	      if (iVar < simplex_lp.numCol_) {
-		// Column
-		if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
-		  // Set to lower bound
-		  move = NONBASIC_MOVE_UP;
-		  value = lower;
-		} else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
-		  // Set to upper bound
-		  move = NONBASIC_MOVE_DN;
-		  value = upper;
-		}
-	      } else {
-		// Row
-		int iRow = iVar - simplex_lp.numCol_;
-		if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
-		  // Set to upper bound
-		  move = NONBASIC_MOVE_DN;
-		  value = upper;
-		} else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
-		  // Set to lower bound
-		  move = NONBASIC_MOVE_UP;
-		  value = lower;
-		}
-	      }
-	    }
-	    // 2. Any HiGHS solution value
-	    if (move == illegal_move_value && have_highs_solution) {
-	      double midpoint = 0.5*(lower + upper);
-	      if (iVar < simplex_lp.numCol_) {
-		// Column
-		if (solution.col_value[iVar] < midpoint) {
-		  // Set to lower bound
-		  move = NONBASIC_MOVE_UP;
-		  value = lower;
-		} else {
-		  // Set to upper bound
-		  move = NONBASIC_MOVE_DN;
-		  value = upper;
-		}
-	      } else {
-		// Row
-		int iRow = iVar - simplex_lp.numCol_;
-		if (solution.col_value[iVar] < midpoint) {
-		  // Set to upper bound
-		  move = NONBASIC_MOVE_DN;
-		  value = upper;
-		} else {
-		  // Set to lower bound
-		  move = NONBASIC_MOVE_UP;
-		  value = lower;
-		}
-	      }
-	    }
-	    // 3. Lower bound for original LP
-	    if (move == illegal_move_value) {
-	      if (iVar < simplex_lp.numCol_) {
-		// Set to lower bound
-		move = NONBASIC_MOVE_UP;
-		value = lower;
-	      } else {
-		// Row
-		int iRow = iVar - simplex_lp.numCol_;
-		// Set to upper bound
-		move = NONBASIC_MOVE_DN;
-		value = upper;
-	      }
-	    }
-	  } else {
-	    // Lower (since upper bound is infinite)
-	    value = lower;
-	    move = NONBASIC_MOVE_UP;
-	  }
-	} else if (!highs_isInfinity(upper)) {
-	  // Upper
-	  value = upper;
-	  move = NONBASIC_MOVE_DN;
-	} else {
-	  // FREE
-	  value = 0;
-	  move = NONBASIC_MOVE_ZE;
-	}
-	assert(move != illegal_move_value);
-	simplex_info.workValue_[iVar] = value;
-	simplex_basis.nonbasicMove_[iVar] = move;
+  // Allocate memory for nonbasicMove
+  simplex_basis.nonbasicMove_.resize(simplex_lp.numCol_ + simplex_lp.numRow_);
+  allocate_work_and_base_arrays(highs_model_object);
+  initialise_cost(highs_model_object);
+  initialise_bound(highs_model_object);
+  // Don't have a simplex basis since nonbasicMove is not set up.
+  const int illegal_move_value = -99;
+  for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
+    if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+      // Nonbasic variable
+      double lower = simplex_info.workLower_[iVar];
+      double upper = simplex_info.workUpper_[iVar];
+      int move = illegal_move_value;
+      double value;
+      if (lower == upper) {
+        // Fixed
+        value = lower;
+        move = NONBASIC_MOVE_ZE;
+      } else if (!highs_isInfinity(-lower)) {
+        // Finite lower bound so boxed or lower
+        if (!highs_isInfinity(upper)) {
+          // Finite upper bound so boxed
+          // Determine the bound to set the value to according to, in order of
+          // priority
+          // 1. Any valid HiGHS basis status
+          if (have_highs_basis) {
+            if (iVar < simplex_lp.numCol_) {
+              // Column
+              if (basis.col_status[iVar] == HighsBasisStatus::LOWER) {
+                // Set to lower bound
+                move = NONBASIC_MOVE_UP;
+                value = lower;
+              } else if (basis.col_status[iVar] == HighsBasisStatus::UPPER) {
+                // Set to upper bound
+                move = NONBASIC_MOVE_DN;
+                value = upper;
+              }
+            } else {
+              // Row
+              int iRow = iVar - simplex_lp.numCol_;
+              if (basis.row_status[iRow] == HighsBasisStatus::LOWER) {
+                // Set to upper bound
+                move = NONBASIC_MOVE_DN;
+                value = upper;
+              } else if (basis.row_status[iRow] == HighsBasisStatus::UPPER) {
+                // Set to lower bound
+                move = NONBASIC_MOVE_UP;
+                value = lower;
+              }
+            }
+          }
+          // 2. Any HiGHS solution value
+          if (move == illegal_move_value && have_highs_solution) {
+            double midpoint = 0.5 * (lower + upper);
+            if (iVar < simplex_lp.numCol_) {
+              // Column
+              if (solution.col_value[iVar] < midpoint) {
+                // Set to lower bound
+                move = NONBASIC_MOVE_UP;
+                value = lower;
+              } else {
+                // Set to upper bound
+                move = NONBASIC_MOVE_DN;
+                value = upper;
+              }
+            } else {
+              // Row
+              int iRow = iVar - simplex_lp.numCol_;
+              if (solution.col_value[iVar] < midpoint) {
+                // Set to upper bound
+                move = NONBASIC_MOVE_DN;
+                value = upper;
+              } else {
+                // Set to lower bound
+                move = NONBASIC_MOVE_UP;
+                value = lower;
+              }
+            }
+          }
+          // 3. Lower bound for original LP
+          if (move == illegal_move_value) {
+            if (iVar < simplex_lp.numCol_) {
+              // Set to lower bound
+              move = NONBASIC_MOVE_UP;
+              value = lower;
+            } else {
+              // Row
+              int iRow = iVar - simplex_lp.numCol_;
+              // Set to upper bound
+              move = NONBASIC_MOVE_DN;
+              value = upper;
+            }
+          }
+        } else {
+          // Lower (since upper bound is infinite)
+          value = lower;
+          move = NONBASIC_MOVE_UP;
+        }
+      } else if (!highs_isInfinity(upper)) {
+        // Upper
+        value = upper;
+        move = NONBASIC_MOVE_DN;
       } else {
-	// Basic variable
-	simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
+        // FREE
+        value = 0;
+        move = NONBASIC_MOVE_ZE;
       }
+      assert(move != illegal_move_value);
+      simplex_info.workValue_[iVar] = value;
+      simplex_basis.nonbasicMove_[iVar] = move;
+    } else {
+      // Basic variable
+      simplex_basis.nonbasicMove_[iVar] = NONBASIC_MOVE_ZE;
     }
-    //  } else {}
+  }
+  //  } else {}
 
   // Simplex basis is now valid
   simplex_lp_status.has_basis = true;
-    
+
   // Possibly solve for the basic primal and nonbasic dual values to determine
   // which simplex solver to use, unless it's forced
   //  if (simplex_lp_status.has_basic_primal_values) {
@@ -506,8 +541,11 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
   computePrimalInfeasible(highs_model_object);
   computeDualInfeasible(highs_model_object);
   SimplexSolutionStatus solution_status;
-  bool primal_feasible = simplex_info.num_primal_infeasibilities == 0;// && max_primal_residual < primal_feasibility_tolerance;
-  bool dual_feasible = simplex_info.num_dual_infeasibilities == 0;// && max_dual_residual < dual_feasibility_tolerance;
+  bool primal_feasible =
+      simplex_info.num_primal_infeasibilities ==
+      0;  // && max_primal_residual < primal_feasibility_tolerance;
+  bool dual_feasible = simplex_info.num_dual_infeasibilities ==
+                       0;  // && max_dual_residual < dual_feasibility_tolerance;
   if (primal_feasible) {
     if (dual_feasible) {
       solution_status = SimplexSolutionStatus::OPTIMAL;
@@ -522,18 +560,22 @@ SimplexSolutionStatus transition(HighsModelObject &highs_model_object) {
     }
   }
   simplex_lp_status.solution_status = solution_status;
-  HighsLogMessage(HighsMessageType::INFO, "Initial basic solution: Objective = %.15g; Infeasibilities primal/dual = %d/%d; Status: %s",
-		  simplex_info.primal_objective_value,
-		  simplex_info.num_primal_infeasibilities,
-		  simplex_info.num_dual_infeasibilities, 
-		  SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+  HighsLogMessage(
+      HighsMessageType::INFO,
+      "Initial basic solution: Objective = %.15g; Infeasibilities primal/dual "
+      "= %d/%d; Status: %s",
+      simplex_info.primal_objective_value,
+      simplex_info.num_primal_infeasibilities,
+      simplex_info.num_dual_infeasibilities,
+      SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
   return solution_status;
 }
 
-bool dual_infeasible(const double value, const double lower, const double upper, const double dual,
-		     const double value_tolerance, const double dual_tolerance) {
-  double midpoint = (lower+upper)*0.5;
-  double residual = max(lower-value, value-upper);
+bool dual_infeasible(const double value, const double lower, const double upper,
+                     const double dual, const double value_tolerance,
+                     const double dual_tolerance) {
+  double midpoint = (lower + upper) * 0.5;
+  double residual = max(lower - value, value - upper);
   bool infeasible = false;
   if (highs_isInfinity(-lower)) {
     // Infinite lower bound
@@ -545,7 +587,8 @@ bool dual_infeasible(const double value, const double lower, const double upper,
       // Finite upper bound
       // Upper bounded - and assumed to be nonbasic at that bound
       if (fabs(residual) >= value_tolerance) {
-	printf("dual_infeasible: %12g %12g %12g %12g %12g\n", value, lower, upper, residual, value_tolerance);
+        printf("dual_infeasible: %12g %12g %12g %12g %12g\n", value, lower,
+               upper, residual, value_tolerance);
       }
       assert(fabs(residual) < value_tolerance);
       infeasible = dual >= dual_tolerance;
@@ -562,24 +605,25 @@ bool dual_infeasible(const double value, const double lower, const double upper,
       // Assumed to be nonbasic at that bound
       assert(fabs(residual) < value_tolerance);
       if (lower < upper) {
-	// Boxed
-	if (value < midpoint) {
-	  // At lower bound
-	  infeasible = dual <= -dual_tolerance;
-	} else {
-	  // At upper bound
-	  infeasible = dual >= dual_tolerance;
-	}
+        // Boxed
+        if (value < midpoint) {
+          // At lower bound
+          infeasible = dual <= -dual_tolerance;
+        } else {
+          // At upper bound
+          infeasible = dual >= dual_tolerance;
+        }
       } else {
-	// Fixed
-	infeasible = false;
+        // Fixed
+        infeasible = false;
       }
     }
   }
   return infeasible;
 }
 
-void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCol) {
+void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
+                                   int XnumNewCol) {
 #ifdef HiGHSDEV
   printf("!! Don't do this if basis is invalid! !!\n");
 #endif
@@ -591,7 +635,7 @@ void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCo
   for (int col = lp.numCol_; col < newNumCol; col++) {
     if (!highs_isInfinity(-lp.colLower_[col])) {
       // Has finite lower bound so set it there
-	basis.col_status[col] = HighsBasisStatus::LOWER;
+      basis.col_status[col] = HighsBasisStatus::LOWER;
     } else if (!highs_isInfinity(lp.colUpper_[col])) {
       // Has finite upper bound so set it there
       basis.col_status[col] = HighsBasisStatus::UPPER;
@@ -602,7 +646,8 @@ void append_nonbasic_cols_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewCo
   }
 }
 
-void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &simplex_basis, int XnumNewCol) {
+void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& simplex_basis,
+                                   int XnumNewCol) {
 #ifdef HiGHSDEV
   printf("!! Don't do this if basis is invalid! !!\n");
 #endif
@@ -614,7 +659,8 @@ void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &simplex_basis, int
   // Shift the row data in basicIndex and nonbasicFlag if necessary
   for (int row = lp.numRow_ - 1; row >= 0; row--) {
     simplex_basis.basicIndex_[row] += XnumNewCol;
-    simplex_basis.nonbasicFlag_[newNumCol + row] = simplex_basis.nonbasicFlag_[lp.numCol_ + row];
+    simplex_basis.nonbasicFlag_[newNumCol + row] =
+        simplex_basis.nonbasicFlag_[lp.numCol_ + row];
   }
   // Make any new columns nonbasic
   for (int col = lp.numCol_; col < newNumCol; col++) {
@@ -622,7 +668,8 @@ void append_nonbasic_cols_to_basis(HighsLp &lp, SimplexBasis &simplex_basis, int
   }
 }
 
-void append_basic_rows_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewRow) {
+void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis,
+                                int XnumNewRow) {
 #ifdef HiGHSDEV
   printf("!! Don't do this if basis is invalid! !!\n");
 #endif
@@ -636,7 +683,7 @@ void append_basic_rows_to_basis(HighsLp &lp, HighsBasis &basis, int XnumNewRow) 
   }
 }
 
-bool highs_basis_ok(HighsLp &lp, HighsBasis &basis) {
+bool highs_basis_ok(HighsLp& lp, HighsBasis& basis) {
 #ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
   printf("!! WRITE highs_basis_ok for HighsBasis !!\n");
@@ -644,13 +691,14 @@ bool highs_basis_ok(HighsLp &lp, HighsBasis &basis) {
   return false;
 }
 
-bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &simplex_basis) {
+bool nonbasic_flag_basic_index_ok(HighsLp& lp, SimplexBasis& simplex_basis) {
 #ifdef HiGHSDEV
   printf("!! Don't check if basis is invalid! !!\n");
 #endif
   int numTot = lp.numCol_ + lp.numRow_;
   int num_basic_variables = 0;
-  for (int var = 0; var < numTot; var++) if (!simplex_basis.nonbasicFlag_[var]) num_basic_variables++;
+  for (int var = 0; var < numTot; var++)
+    if (!simplex_basis.nonbasicFlag_[var]) num_basic_variables++;
   assert(num_basic_variables == lp.numRow_);
   if (num_basic_variables != lp.numRow_) return false;
   for (int row = 0; row < lp.numRow_; row++) {
@@ -662,19 +710,20 @@ bool nonbasic_flag_basic_index_ok(HighsLp &lp, SimplexBasis &simplex_basis) {
 }
 
 #ifdef HiGHSDEV
-void report_basis(HighsLp &lp, HighsBasis &basis) {
+void report_basis(HighsLp& lp, HighsBasis& basis) {
 #ifdef HiGHSDEV
   printf("!! WRITE report_basis for HighsBasis !!\n");
 #endif
   if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
   if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
 }
-void report_basis(HighsLp &lp, SimplexBasis &simplex_basis) {
+void report_basis(HighsLp& lp, SimplexBasis& simplex_basis) {
   if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
   for (int col = 0; col < lp.numCol_; col++) {
     int var = col;
     if (simplex_basis.nonbasicFlag_[var])
-      printf("%6d %6d        %6d\n", var, col, simplex_basis.nonbasicFlag_[var]);
+      printf("%6d %6d        %6d\n", var, col,
+             simplex_basis.nonbasicFlag_[var]);
     // simplex_basis.nonbasicMove_[var]);
     else
       printf("%6d %6d %6d\n", var, col, simplex_basis.nonbasicFlag_[var]);
@@ -683,10 +732,12 @@ void report_basis(HighsLp &lp, SimplexBasis &simplex_basis) {
   for (int row = 0; row < lp.numRow_; row++) {
     int var = lp.numCol_ + row;
     if (simplex_basis.nonbasicFlag_[var])
-      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.basicIndex_[row], simplex_basis.nonbasicFlag_[var]);
+      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.basicIndex_[row],
+             simplex_basis.nonbasicFlag_[var]);
     // simplex_basis.nonbasicMove_[var]);
     else
-      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.basicIndex_[row], simplex_basis.nonbasicFlag_[var]);
+      printf("%6d %6d %6d %6d\n", var, row, simplex_basis.basicIndex_[row],
+             simplex_basis.nonbasicFlag_[var]);
   }
 }
 #endif
@@ -694,7 +745,6 @@ void report_basis(HighsLp &lp, SimplexBasis &simplex_basis) {
 /**
  * @brief Simplex utilities
  */
-
 
 /*
 // Increment iteration count (here!) and (possibly) store the pivots for
@@ -725,10 +775,12 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 #endif
 */
 
-void computeDualObjectiveValue(HighsModelObject &highs_model_object, int phase) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+void computeDualObjectiveValue(HighsModelObject& highs_model_object,
+                               int phase) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
 
   simplex_info.dual_objective_value = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -746,11 +798,12 @@ void computeDualObjectiveValue(HighsModelObject &highs_model_object, int phase) 
   simplex_lp_status.has_dual_objective_value = true;
 }
 
-void computePrimalObjectiveValue(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
   simplex_info.primal_objective_value = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = simplex_basis.basicIndex_[row];
@@ -769,20 +822,19 @@ void computePrimalObjectiveValue(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_primal_objective_value = true;
 }
 
-void initialiseSimplexLpRandomVectors(HighsModelObject &highs_model_object) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const int numCol = highs_model_object.simplex_lp_.numCol_;
-  const int numTot =
-      highs_model_object.simplex_lp_.numCol_ + highs_model_object.simplex_lp_.numRow_;
+  const int numTot = highs_model_object.simplex_lp_.numCol_ +
+                     highs_model_object.simplex_lp_.numRow_;
   // Instantiate and (re-)initialise the random number generator
-  HighsRandom &random = highs_model_object.random_;
+  HighsRandom& random = highs_model_object.random_;
   random.initialise();
   //
   // Generate a random permutation of the column indices
   simplex_info.numColPermutation_.resize(numCol);
-  int *numColPermutation = &simplex_info.numColPermutation_[0];
-  for (int i = 0; i < numCol; i++)
-    numColPermutation[i] = i;
+  int* numColPermutation = &simplex_info.numColPermutation_[0];
+  for (int i = 0; i < numCol; i++) numColPermutation[i] = i;
   for (int i = numCol - 1; i >= 1; i--) {
     int j = random.integer() % (i + 1);
     std::swap(numColPermutation[i], numColPermutation[j]);
@@ -795,9 +847,8 @@ void initialiseSimplexLpRandomVectors(HighsModelObject &highs_model_object) {
   //
   // Generate a random permutation of all the indices
   simplex_info.numTotPermutation_.resize(numTot);
-  int *numTotPermutation = &simplex_info.numTotPermutation_[0];
-  for (int i = 0; i < numTot; i++)
-    numTotPermutation[i] = i;
+  int* numTotPermutation = &simplex_info.numTotPermutation_[0];
+  for (int i = 0; i < numTot; i++) numTotPermutation[i] = i;
   for (int i = numTot - 1; i >= 1; i--) {
     int j = random.integer() % (i + 1);
     std::swap(numTotPermutation[i], numTotPermutation[j]);
@@ -805,7 +856,7 @@ void initialiseSimplexLpRandomVectors(HighsModelObject &highs_model_object) {
 
   // Generate a vector of random reals
   simplex_info.numTotRandomValue_.resize(numTot);
-  double *numTotRandomValue = &simplex_info.numTotRandomValue_[0];
+  double* numTotRandomValue = &simplex_info.numTotRandomValue_[0];
   for (int i = 0; i < numTot; i++) {
     numTotRandomValue[i] = random.fraction();
   }
@@ -820,23 +871,28 @@ vector<int> largeCostFlag;
 double largeCostScale;
 #endif
 
-void scaleHighsModelInit(HighsModelObject &highs_model_object) {
-  highs_model_object.scale_.col_.assign(highs_model_object.simplex_lp_.numCol_, 1);
-  highs_model_object.scale_.row_.assign(highs_model_object.simplex_lp_.numRow_, 1);
+void scaleHighsModelInit(HighsModelObject& highs_model_object) {
+  highs_model_object.scale_.col_.assign(highs_model_object.simplex_lp_.numCol_,
+                                        1);
+  highs_model_object.scale_.row_.assign(highs_model_object.simplex_lp_.numRow_,
+                                        1);
   highs_model_object.scale_.cost_ = 1;
 #ifdef HiGHSDEV
   //  largeCostScale = 1;
 #endif
 }
 
-void scaleCosts(HighsModelObject &highs_model_object) {
+void scaleCosts(HighsModelObject& highs_model_object) {
   // Scale the costs by no less than minAlwCostScale
-  double max_allowed_cost_scale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+  double max_allowed_cost_scale =
+      pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
   double cost_scale;
   double max_nonzero_cost = 0;
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
     if (highs_model_object.simplex_lp_.colCost_[iCol]) {
-      max_nonzero_cost = max(fabs(highs_model_object.simplex_lp_.colCost_[iCol]), max_nonzero_cost);
+      max_nonzero_cost =
+          max(fabs(highs_model_object.simplex_lp_.colCost_[iCol]),
+              max_nonzero_cost);
     }
   }
   // Scaling the costs up effectively increases the dual tolerance to
@@ -847,15 +903,16 @@ void scaleCosts(HighsModelObject &highs_model_object) {
   cost_scale = 1;
   const double ln2 = log(2.0);
   // Scale if the max cost is positive and outside the range [1/16, 16]
-  if ((max_nonzero_cost > 0) && ((max_nonzero_cost < (1.0 / 16)) || (max_nonzero_cost > 16))) {
+  if ((max_nonzero_cost > 0) &&
+      ((max_nonzero_cost < (1.0 / 16)) || (max_nonzero_cost > 16))) {
     cost_scale = max_nonzero_cost;
     cost_scale = pow(2.0, floor(log(cost_scale) / ln2 + 0.5));
     cost_scale = min(cost_scale, max_allowed_cost_scale);
   }
   highs_model_object.scale_.cost_ = cost_scale;
   if (cost_scale == 1) return;
-  // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at most
-  // max_allowed_cost_scale
+  // Scale the costs (and record of max_nonzero_cost) by cost_scale, being at
+  // most max_allowed_cost_scale
   for (int iCol = 0; iCol < highs_model_object.simplex_lp_.numCol_; iCol++) {
     highs_model_object.simplex_lp_.colCost_[iCol] /= cost_scale;
   }
@@ -881,17 +938,18 @@ void scaleCosts(HighsModelObject &highs_model_object) {
     }
   */
   //  utils.analyseVectorValues("Column costs",
-  //  highs_model_object.simplex_lp_.numCol_, highs_model_object.simplex_lp_.colCost_, false);
+  //  highs_model_object.simplex_lp_.numCol_,
+  //  highs_model_object.simplex_lp_.colCost_, false);
 #endif
 }
 
-void scaleFactorRanges(HighsModelObject &highs_model_object,
-		       double &min_col_scale, double &max_col_scale,
-		       double &min_row_scale, double &max_row_scale) {
+void scaleFactorRanges(HighsModelObject& highs_model_object,
+                       double& min_col_scale, double& max_col_scale,
+                       double& min_row_scale, double& max_row_scale) {
   int numCol = highs_model_object.simplex_lp_.numCol_;
   int numRow = highs_model_object.simplex_lp_.numRow_;
-  double *colScale = &highs_model_object.scale_.col_[0];
-  double *rowScale = &highs_model_object.scale_.row_[0];
+  double* colScale = &highs_model_object.scale_.col_[0];
+  double* rowScale = &highs_model_object.scale_.row_[0];
   // Determine the max and min row and column scaling factors
   min_col_scale = HIGHS_CONST_INF;
   max_col_scale = 1 / HIGHS_CONST_INF;
@@ -907,31 +965,33 @@ void scaleFactorRanges(HighsModelObject &highs_model_object,
   }
 }
 
-void scaleSimplexLp(HighsModelObject &highs_model_object) {
+void scaleSimplexLp(HighsModelObject& highs_model_object) {
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.is_scaled) return;
   // Scale the LP highs_model_object.simplex_lp_, assuming all data are in place
   // Reset all scaling to 1
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsTimer &timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsTimer& timer = highs_model_object.timer_;
   timer.start(timer.scale_clock);
   scaleHighsModelInit(highs_model_object);
   int numCol = highs_model_object.simplex_lp_.numCol_;
   int numRow = highs_model_object.simplex_lp_.numRow_;
-  double *colScale = &highs_model_object.scale_.col_[0];
-  double *rowScale = &highs_model_object.scale_.row_[0];
-  int *Astart = &highs_model_object.simplex_lp_.Astart_[0];
-  int *Aindex = &highs_model_object.simplex_lp_.Aindex_[0];
-  double *Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
-  double *colCost = &highs_model_object.simplex_lp_.colCost_[0];
-  double *colLower = &highs_model_object.simplex_lp_.colLower_[0];
-  double *colUpper = &highs_model_object.simplex_lp_.colUpper_[0];
-  double *rowLower = &highs_model_object.simplex_lp_.rowLower_[0];
-  double *rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
+  double* colScale = &highs_model_object.scale_.col_[0];
+  double* rowScale = &highs_model_object.scale_.row_[0];
+  int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
+  int* Aindex = &highs_model_object.simplex_lp_.Aindex_[0];
+  double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
+  double* colCost = &highs_model_object.simplex_lp_.colCost_[0];
+  double* colLower = &highs_model_object.simplex_lp_.colLower_[0];
+  double* colUpper = &highs_model_object.simplex_lp_.colUpper_[0];
+  double* rowLower = &highs_model_object.simplex_lp_.rowLower_[0];
+  double* rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  bool original_scaling = highs_model_object.options_.simplex_scale_strategy == SimplexScaleStrategy::HSOL;
+  bool original_scaling = highs_model_object.options_.simplex_scale_strategy ==
+                          SimplexScaleStrategy::HSOL;
   bool allow_cost_scaling = true;
   if (original_scaling) allow_cost_scaling = false;
   if (original_scaling) printf("Using original scaling\n");
@@ -950,14 +1010,14 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
     // Possibly scale the costs
     if (allow_cost_scaling) scaleCosts(highs_model_object);
     timer.stop(timer.scale_clock);
-    updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::SCALE);
+    updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                          LpAction::SCALE);
     return;
   }
   // Include cost in scaling if minimum nonzero cost is less than 0.1
   double min_nonzero_cost = HIGHS_CONST_INF;
   for (int i = 0; i < numCol; i++) {
-    if (colCost[i])
-      min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
+    if (colCost[i]) min_nonzero_cost = min(fabs(colCost[i]), min_nonzero_cost);
   }
   bool include_cost_in_scaling = false;
   //  if (original_scaling)
@@ -969,16 +1029,17 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
   if (original_scaling) {
     max_allow_scale = HIGHS_CONST_INF;
   } else {
-    max_allow_scale = pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
-  } 
-  min_allow_scale = 1/max_allow_scale;
-  
+    max_allow_scale =
+        pow(2.0, highs_model_object.options_.allowed_simplex_scale_factor);
+  }
+  min_allow_scale = 1 / max_allow_scale;
+
   double min_allow_col_scale = min_allow_scale;
   double max_allow_col_scale = max_allow_scale;
   double min_allow_row_scale = min_allow_scale;
   double max_allow_row_scale = max_allow_scale;
 
-// Search up to 6 times
+  // Search up to 6 times
   vector<double> row_min_value(numRow, HIGHS_CONST_INF);
   vector<double> row_max_value(numRow, 1 / HIGHS_CONST_INF);
   for (int search_count = 0; search_count < 6; search_count++) {
@@ -990,16 +1051,17 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
       double abs_col_cost = fabs(colCost[iCol]);
       if (include_cost_in_scaling && abs_col_cost != 0) {
         col_min_value = min(col_min_value, abs_col_cost);
-	col_max_value = max(col_max_value, abs_col_cost);
+        col_max_value = max(col_max_value, abs_col_cost);
       }
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         double value = fabs(Avalue[k]) * rowScale[Aindex[k]];
         col_min_value = min(col_min_value, value);
-	col_max_value = max(col_max_value, value);
+        col_max_value = max(col_max_value, value);
       }
       colScale[iCol] = 1 / sqrt(col_min_value * col_max_value);
       // Ensure that column scale factor is not excessively large or small
-      colScale[iCol] = min(max(min_allow_col_scale, colScale[iCol]), max_allow_col_scale);
+      colScale[iCol] =
+          min(max(min_allow_col_scale, colScale[iCol]), max_allow_col_scale);
       // For row scale (only collect)
       for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
         int iRow = Aindex[k];
@@ -1013,7 +1075,8 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
     for (int iRow = 0; iRow < numRow; iRow++) {
       rowScale[iRow] = 1 / sqrt(row_min_value[iRow] * row_max_value[iRow]);
       // Ensure that row scale factor is not excessively large or small
-      rowScale[iRow] = min(max(min_allow_row_scale, rowScale[iRow]), max_allow_row_scale);
+      rowScale[iRow] =
+          min(max(min_allow_row_scale, rowScale[iRow]), max_allow_row_scale);
     }
     row_min_value.assign(numRow, HIGHS_CONST_INF);
     row_max_value.assign(numRow, 1 / HIGHS_CONST_INF);
@@ -1059,8 +1122,9 @@ void scaleSimplexLp(HighsModelObject &highs_model_object) {
 
 // PERMUTE:
 
-void permuteSimplexLp(HighsModelObject &highs_model_object) {
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+void permuteSimplexLp(HighsModelObject& highs_model_object) {
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
 #ifdef HiGHSDEV
   printf("Called permuteSimplexLp: simplex_lp_status.is_permuted = %d\n",
          simplex_lp_status.is_permuted);
@@ -1068,14 +1132,15 @@ void permuteSimplexLp(HighsModelObject &highs_model_object) {
   if (simplex_lp_status.is_permuted) return;
 
   int numCol = highs_model_object.simplex_lp_.numCol_;
-  vector<int> &numColPermutation = highs_model_object.simplex_info_.numColPermutation_;
-  vector<int> &Astart = highs_model_object.simplex_lp_.Astart_;
-  vector<int> &Aindex = highs_model_object.simplex_lp_.Aindex_;
-  vector<double> &Avalue = highs_model_object.simplex_lp_.Avalue_;
-  vector<double> &colCost = highs_model_object.simplex_lp_.colCost_;
-  vector<double> &colLower = highs_model_object.simplex_lp_.colLower_;
-  vector<double> &colUpper = highs_model_object.simplex_lp_.colUpper_;
-  vector<double> &colScale = highs_model_object.scale_.col_;
+  vector<int>& numColPermutation =
+      highs_model_object.simplex_info_.numColPermutation_;
+  vector<int>& Astart = highs_model_object.simplex_lp_.Astart_;
+  vector<int>& Aindex = highs_model_object.simplex_lp_.Aindex_;
+  vector<double>& Avalue = highs_model_object.simplex_lp_.Avalue_;
+  vector<double>& colCost = highs_model_object.simplex_lp_.colCost_;
+  vector<double>& colLower = highs_model_object.simplex_lp_.colLower_;
+  vector<double>& colUpper = highs_model_object.simplex_lp_.colUpper_;
+  vector<double>& colScale = highs_model_object.scale_.col_;
 
   // 2. Duplicate the original data to copy from
   vector<int> saveAstart = highs_model_object.simplex_lp_.Astart_;
@@ -1103,12 +1168,13 @@ void permuteSimplexLp(HighsModelObject &highs_model_object) {
   }
   assert(Astart[numCol] == countX);
   // Deduce the consequences of permuting the LP
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::PERMUTE);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::PERMUTE);
 }
 
-void initialise_basic_index(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+void initialise_basic_index(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   int num_basic_variables = 0;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -1121,16 +1187,16 @@ void initialise_basic_index(HighsModelObject &highs_model_object) {
   }
   /*
   if (num_basic_variables != simplex_lp.numRow_) {
-    printf("STRANGE: %d = num_basic_variables != simplex_lp.numRow_ = %d\n", num_basic_variables, simplex_lp.numRow_);
-    fflush(stdout);
+    printf("STRANGE: %d = num_basic_variables != simplex_lp.numRow_ = %d\n",
+  num_basic_variables, simplex_lp.numRow_); fflush(stdout);
   }
   */
   assert(num_basic_variables == simplex_lp.numRow_);
 }
 
-void allocate_work_and_base_arrays(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void allocate_work_and_base_arrays(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   // Allocate bounds and solution spaces
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   simplex_info.workCost_.resize(numTot);
@@ -1147,7 +1213,7 @@ void allocate_work_and_base_arrays(HighsModelObject &highs_model_object) {
   simplex_info.baseValue_.resize(simplex_lp.numRow_);
 }
 
-void initialise_from_nonbasic(HighsModelObject &highs_model_object) {
+void initialise_from_nonbasic(HighsModelObject& highs_model_object) {
   // Initialise basicIndex from nonbasic* then allocate and populate
   // (where possible) work* arrays and allocate basis* arrays
   initialise_basic_index(highs_model_object);
@@ -1155,29 +1221,34 @@ void initialise_from_nonbasic(HighsModelObject &highs_model_object) {
   populate_work_arrays(highs_model_object);
 
   // Deduce the consequences of a new basis
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
 }
 
-void replace_from_nonbasic(HighsModelObject &highs_model_object) {
+void replace_from_nonbasic(HighsModelObject& highs_model_object) {
   // Initialise basicIndex using nonbasic* then populate (where possible)
   // work* arrays
   initialise_basic_index(highs_model_object);
   populate_work_arrays(highs_model_object);
 
   // Deduce the consequences of a new basis
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
 }
 
-void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
+void initialise_with_logical_basis(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
   // Initialise with a logical basis then allocate and populate (where
   // possible) work* arrays and allocate basis* arrays
 
-  for (int row = 0; row < simplex_lp.numRow_; row++) simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
-  for (int col = 0; col < simplex_lp.numCol_; col++) simplex_basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
+  for (int row = 0; row < simplex_lp.numRow_; row++)
+    simplex_basis.basicIndex_[row] = simplex_lp.numCol_ + row;
+  for (int col = 0; col < simplex_lp.numCol_; col++)
+    simplex_basis.nonbasicFlag_[col] = NONBASIC_FLAG_TRUE;
   simplex_lp_status.has_basis = true;
   simplex_info.num_basic_logicals = simplex_lp.numRow_;
 
@@ -1185,17 +1256,18 @@ void initialise_with_logical_basis(HighsModelObject &highs_model_object) {
   populate_work_arrays(highs_model_object);
 
   // Deduce the consequences of a new basis
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
 }
 
-void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
+void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
                                     int firstvar, int lastvar) {
   // Initialise workValue and nonbasicMove from nonbasicFlag and
   // bounds, except for boxed variables when nonbasicMove is used to
   // set workValue=workLower/workUpper
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   assert(firstvar >= 0);
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   assert(lastvar < numTot);
@@ -1243,7 +1315,7 @@ void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
       //      if (fabs(dl_pr_act) > 1e-4) printf("Var %5d: [LB; Pr; UB] of [%8g;
       //      %8g; %8g] Du = %8g; DlPr = %8g\n",
       //					var,
-      //simplex_info.workLower_[var],
+      // simplex_info.workLower_[var],
       // simplex_info.workValue_[var], simplex_info.workUpper_[var],
       // simplex_info.workDual_[var], dl_pr_act);
     } else {
@@ -1256,17 +1328,17 @@ void initialise_value_from_nonbasic(HighsModelObject &highs_model_object,
   //  %g\n", norm_dl_pr_act);
 }
 
-void initialise_value(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+void initialise_value(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   initialise_value_from_nonbasic(highs_model_object, 0, numTot - 1);
 }
 
-void initialise_phase2_col_bound(HighsModelObject &highs_model_object,
+void initialise_phase2_col_bound(HighsModelObject& highs_model_object,
                                  int firstcol, int lastcol) {
   // Copy bounds and compute ranges
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   assert(firstcol >= 0);
   assert(lastcol < simplex_lp.numCol_);
   for (int col = firstcol; col <= lastcol; col++) {
@@ -1277,11 +1349,11 @@ void initialise_phase2_col_bound(HighsModelObject &highs_model_object,
   }
 }
 
-void initialise_phase2_row_bound(HighsModelObject &highs_model_object,
+void initialise_phase2_row_bound(HighsModelObject& highs_model_object,
                                  int firstrow, int lastrow) {
   // Copy bounds and compute ranges
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   assert(firstrow >= 0);
   assert(lastrow < simplex_lp.numRow_);
   for (int row = firstrow; row <= lastrow; row++) {
@@ -1293,15 +1365,14 @@ void initialise_phase2_row_bound(HighsModelObject &highs_model_object,
   }
 }
 
-void initialise_bound(HighsModelObject &highs_model_object, int phase) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void initialise_bound(HighsModelObject& highs_model_object, int phase) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   // Initialise the Phase 2 bounds (and ranges). NB Phase 2 bounds
   // necessary to compute Phase 1 bounds
   initialise_phase2_col_bound(highs_model_object, 0, simplex_lp.numCol_ - 1);
   initialise_phase2_row_bound(highs_model_object, 0, simplex_lp.numRow_ - 1);
-  if (phase == 2)
-    return;
+  if (phase == 2) return;
 
   // In Phase 1: change to dual phase 1 bound
   const double inf = HIGHS_CONST_INF;
@@ -1311,28 +1382,27 @@ void initialise_bound(HighsModelObject &highs_model_object, int phase) {
         simplex_info.workUpper_[i] == inf) {
       // Won't change for row variables: they should never become
       // non basic
-      if (i >= simplex_lp.numCol_)
-        continue;
+      if (i >= simplex_lp.numCol_) continue;
       simplex_info.workLower_[i] = -1000,
-      simplex_info.workUpper_[i] = 1000; // FREE
+      simplex_info.workUpper_[i] = 1000;  // FREE
     } else if (simplex_info.workLower_[i] == -inf) {
-      simplex_info.workLower_[i] = -1, simplex_info.workUpper_[i] = 0; // UPPER
+      simplex_info.workLower_[i] = -1, simplex_info.workUpper_[i] = 0;  // UPPER
     } else if (simplex_info.workUpper_[i] == inf) {
-      simplex_info.workLower_[i] = 0, simplex_info.workUpper_[i] = 1; // LOWER
+      simplex_info.workLower_[i] = 0, simplex_info.workUpper_[i] = 1;  // LOWER
     } else {
       simplex_info.workLower_[i] = 0,
-      simplex_info.workUpper_[i] = 0; // BOXED or FIXED
+      simplex_info.workUpper_[i] = 0;  // BOXED or FIXED
     }
     simplex_info.workRange_[i] =
         simplex_info.workUpper_[i] - simplex_info.workLower_[i];
   }
 }
 
-void initialise_phase2_col_cost(HighsModelObject &highs_model_object,
+void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
                                 int firstcol, int lastcol) {
   // Copy the Phase 2 cost and zero the shift
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   for (int col = firstcol; col <= lastcol; col++) {
     int var = col;
     simplex_info.workCost_[var] = simplex_lp.sense_ * simplex_lp.colCost_[col];
@@ -1340,11 +1410,11 @@ void initialise_phase2_col_cost(HighsModelObject &highs_model_object,
   }
 }
 
-void initialise_phase2_row_cost(HighsModelObject &highs_model_object,
+void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
                                 int firstrow, int lastrow) {
   // Zero the cost and shift
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   for (int row = firstrow; row <= lastrow; row++) {
     int var = simplex_lp.numCol_ + row;
     simplex_info.workCost_[var] = 0;
@@ -1352,24 +1422,22 @@ void initialise_phase2_row_cost(HighsModelObject &highs_model_object,
   }
 }
 
-void initialise_cost(HighsModelObject &highs_model_object, int perturb) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   // Copy the cost
   initialise_phase2_col_cost(highs_model_object, 0, simplex_lp.numCol_ - 1);
   initialise_phase2_row_cost(highs_model_object, 0, simplex_lp.numRow_ - 1);
   // See if we want to skip perturbation
   simplex_info.costs_perturbed = 0;
-  if (perturb == 0 || simplex_info.perturb_costs == 0)
-    return;
+  if (perturb == 0 || simplex_info.perturb_costs == 0) return;
   simplex_info.costs_perturbed = 1;
 
   // Perturb the original costs, scale down if is too big
   double bigc = 0;
   for (int i = 0; i < simplex_lp.numCol_; i++)
     bigc = max(bigc, fabs(simplex_info.workCost_[i]));
-  if (bigc > 100)
-    bigc = sqrt(sqrt(bigc));
+  if (bigc > 100) bigc = sqrt(sqrt(bigc));
 
   // If there's few boxed variables, we will just use Simple perturbation
   double boxedRate = 0;
@@ -1377,8 +1445,7 @@ void initialise_cost(HighsModelObject &highs_model_object, int perturb) {
   for (int i = 0; i < numTot; i++)
     boxedRate += (simplex_info.workRange_[i] < 1e30);
   boxedRate /= numTot;
-  if (boxedRate < 0.01)
-    bigc = min(bigc, 1.0);
+  if (boxedRate < 0.01) bigc = min(bigc, 1.0);
   if (bigc < 1) {
     //        bigc = sqrt(bigc);
   }
@@ -1394,11 +1461,11 @@ void initialise_cost(HighsModelObject &highs_model_object, int perturb) {
                    (1 + simplex_info.numTotRandomValue_[i]);
     if (lower == -HIGHS_CONST_INF && upper == HIGHS_CONST_INF) {
       // Free - no perturb
-    } else if (upper == HIGHS_CONST_INF) { // Lower
+    } else if (upper == HIGHS_CONST_INF) {  // Lower
       simplex_info.workCost_[i] += xpert;
-    } else if (lower == -HIGHS_CONST_INF) { // Upper
+    } else if (lower == -HIGHS_CONST_INF) {  // Upper
       simplex_info.workCost_[i] += -xpert;
-    } else if (lower != upper) { // Boxed
+    } else if (lower != upper) {  // Boxed
       simplex_info.workCost_[i] +=
           (simplex_info.workCost_[i] >= 0) ? xpert : -xpert;
     } else {
@@ -1412,9 +1479,9 @@ void initialise_cost(HighsModelObject &highs_model_object, int perturb) {
   }
 }
 
-int get_nonbasicMove(HighsModelObject &highs_model_object, int var) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+int get_nonbasicMove(HighsModelObject& highs_model_object, int var) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   //  printf("Calling get_nonbasicMove with var = %2d; numTot = %2d\n", var,
   //  numTot);
@@ -1443,17 +1510,17 @@ int get_nonbasicMove(HighsModelObject &highs_model_object, int var) {
   return NONBASIC_MOVE_ZE;
 }
 
-void populate_work_arrays(HighsModelObject &highs_model_object) {
+void populate_work_arrays(HighsModelObject& highs_model_object) {
   // Initialize the values
   initialise_cost(highs_model_object);
   initialise_bound(highs_model_object);
   initialise_value(highs_model_object);
 }
 
-void replace_with_logical_basis(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void replace_with_logical_basis(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   // Replace basis with a logical basis then populate (where possible)
   // work* arrays
   for (int row = 0; row < simplex_lp.numRow_; row++) {
@@ -1469,14 +1536,15 @@ void replace_with_logical_basis(HighsModelObject &highs_model_object) {
   populate_work_arrays(highs_model_object);
 
   // Deduce the consequences of a new basis
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
 }
 
-void replace_with_new_basis(HighsModelObject &highs_model_object,
-                            const int *XbasicIndex) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void replace_with_new_basis(HighsModelObject& highs_model_object,
+                            const int* XbasicIndex) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   // Replace basis with a new basis then populate (where possible)
   // work* arrays
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
@@ -1486,8 +1554,7 @@ void replace_with_new_basis(HighsModelObject &highs_model_object,
   simplex_info.num_basic_logicals = 0;
   for (int row = 0; row < simplex_lp.numRow_; row++) {
     int var = XbasicIndex[row];
-    if (var >= simplex_lp.numCol_)
-      simplex_info.num_basic_logicals++;
+    if (var >= simplex_lp.numCol_) simplex_info.num_basic_logicals++;
     simplex_basis.basicIndex_[row] = var;
     simplex_basis.nonbasicFlag_[var] = NONBASIC_FLAG_FALSE;
   }
@@ -1495,13 +1562,14 @@ void replace_with_new_basis(HighsModelObject &highs_model_object,
   populate_work_arrays(highs_model_object);
 
   // Deduce the consequences of a new basis
-  updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::NEW_BASIS);
+  updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
+                        LpAction::NEW_BASIS);
 }
 
-void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void setup_num_basic_logicals(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   simplex_info.num_basic_logicals = 0;
   for (int i = 0; i < simplex_lp.numRow_; i++)
     if (simplex_basis.basicIndex_[i] >= simplex_lp.numCol_)
@@ -1513,10 +1581,10 @@ void setup_num_basic_logicals(HighsModelObject &highs_model_object) {
 }
 
 #ifdef HiGHSDEV
-void reportSimplexProfiling(HighsModelObject &highs_model_object) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void reportSimplexProfiling(HighsModelObject& highs_model_object) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   SimplexTimer simplex_timer;
-  HighsTimer &timer = highs_model_object.timer_;
+  HighsTimer& timer = highs_model_object.timer_;
 
   if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
@@ -1531,7 +1599,7 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
       simplex_timer.reportDualSimplexOuterClock(highs_model_object);
     }
   }
-  
+
   //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
@@ -1543,7 +1611,7 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
   //    int reportCount = sizeof(reportList) / sizeof(int);
   //    timer.report(reportCount, reportList, 0.0);
   //  }
-  
+
   if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
     //    int reportList[] = {
     //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
@@ -1555,10 +1623,10 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
     //    int reportCount = sizeof(reportList) / sizeof(int);
     //    timer.report(reportCount, reportList, 0.0);
     printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
-	   highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
-	   simplex_info.iteration_count / (1.0 + simplex_info.multi_iteration));
+           highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
+           simplex_info.iteration_count / (1.0 + simplex_info.multi_iteration));
   }
-  
+
   if (simplex_info.report_simplex_phases_clock) {
     simplex_timer.reportSimplexTotalClock(highs_model_object);
     simplex_timer.reportSimplexPhasesClock(highs_model_object);
@@ -1569,12 +1637,15 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
     int iClock = simplex_info.clock_[InvertClock];
     simplex_info.total_inverts = timer.clock_num_call[iClock];
     simplex_info.total_invert_time = timer.clock_time[iClock];
-    
+
     printf(
-	   "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time = %11.4g",
-	   simplex_info.total_inverts, simplex_info.total_invert_time, current_run_highs_time);
+        "Time: Total inverts =  %4d; Total invert  time = %11.4g of Total time "
+        "= %11.4g",
+        simplex_info.total_inverts, simplex_info.total_invert_time,
+        current_run_highs_time);
     if (current_run_highs_time > 0.001) {
-      printf(" (%6.2f%%)\n", (100 * simplex_info.total_invert_time) / current_run_highs_time);
+      printf(" (%6.2f%%)\n",
+             (100 * simplex_info.total_invert_time) / current_run_highs_time);
     } else {
       printf("\n");
     }
@@ -1583,13 +1654,14 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
     double current_run_highs_time = timer.readRunHighsClock();
     HighsClockRecord totalRebuildClock;
     timer.clockInit(totalRebuildClock);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IterateDualRebuildClock]);
-    timer.clockAdd(totalRebuildClock, simplex_info.clock_[IteratePrimalRebuildClock]);
+    timer.clockAdd(totalRebuildClock,
+                   simplex_info.clock_[IterateDualRebuildClock]);
+    timer.clockAdd(totalRebuildClock,
+                   simplex_info.clock_[IteratePrimalRebuildClock]);
     int totalRebuilds = 0;
     double totalRebuildTime = 0;
-    printf(
-        "Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
-        totalRebuildTime, totalRebuilds, current_run_highs_time);
+    printf("Time: Total rebuild time = %11.4g (%4d) of Total time = %11.4g",
+           totalRebuildTime, totalRebuilds, current_run_highs_time);
     if (current_run_highs_time > 0.001) {
       printf(" (%6.2f%%)\n", (100 * totalRebuildTime) / current_run_highs_time);
     } else {
@@ -1599,9 +1671,7 @@ void reportSimplexProfiling(HighsModelObject &highs_model_object) {
 }
 #endif
 
-double computeBasisCondition(
-			     HighsModelObject &highs_model_object
-			     ) {
+double computeBasisCondition(HighsModelObject& highs_model_object) {
   int solver_num_row = highs_model_object.simplex_lp_.numRow_;
   int solver_num_col = highs_model_object.simplex_lp_.numCol_;
   vector<double> bs_cond_x;
@@ -1611,9 +1681,9 @@ double computeBasisCondition(
   HVector row_ep;
   row_ep.setup(solver_num_row);
 
-  HFactor &factor = highs_model_object.factor_;
-  const int *Astart = &highs_model_object.simplex_lp_.Astart_[0];
-  const double *Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
+  HFactor& factor = highs_model_object.factor_;
+  const int* Astart = &highs_model_object.simplex_lp_.Astart_[0];
+  const double* Avalue = &highs_model_object.simplex_lp_.Avalue_[0];
   // Compute the Hager condition number estimate for the basis matrix
   double NoDensity = 1;
   bs_cond_x.resize(solver_num_row);
@@ -1702,16 +1772,18 @@ double computeBasisCondition(
   }
   double cond_B = norm_Binv * norm_B;
 #ifdef HiGHSDEV
-  printf("Hager estimate of ||B||_1 = %g; ||B^{-1}||_1 = %g so cond_1(B) estimate is %g\n",
-	 norm_B, norm_Binv, cond_B);
+  printf(
+      "Hager estimate of ||B||_1 = %g; ||B^{-1}||_1 = %g so cond_1(B) estimate "
+      "is %g\n",
+      norm_B, norm_Binv, cond_B);
 #endif
   return cond_B;
 }
 
-bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+bool work_arrays_ok(HighsModelObject& highs_model_object, int phase) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   //  printf("Called work_arrays_ok(%d)\n", phase);cout << flush;
   bool ok = true;
   // Only check phase 2 bounds: others will have been set by solve() so can be
@@ -1761,11 +1833,12 @@ bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
     ok = simplex_info.workRange_[var] ==
          (simplex_info.workUpper_[var] - simplex_info.workLower_[var]);
     if (!ok) {
-      printf("For variable %d, simplex_info.workRange_ should be %g = %g - %g "
-             "but is %g\n",
-             var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
-             simplex_info.workUpper_[var], simplex_info.workLower_[var],
-             simplex_info.workRange_[var]);
+      printf(
+          "For variable %d, simplex_info.workRange_ should be %g = %g - %g "
+          "but is %g\n",
+          var, simplex_info.workUpper_[var] - simplex_info.workLower_[var],
+          simplex_info.workUpper_[var], simplex_info.workLower_[var],
+          simplex_info.workRange_[var]);
       return ok;
     }
   }
@@ -1797,22 +1870,21 @@ bool work_arrays_ok(HighsModelObject &highs_model_object, int phase) {
   return ok;
 }
 
-bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
+bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object,
                                          int var) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   //  printf("Calling oneNonbasicMoveVsWorkArrays_ok with var = %2d; numTot =
   //  %2d\n Bounds [%11g, %11g] nonbasicMove = %d\n",
   //	 var, numTot, simplex_info.workLower_[var],
-  //simplex_info.workUpper_[var], simplex_basis.nonbasicMove_[var]);
+  // simplex_info.workUpper_[var], simplex_basis.nonbasicMove_[var]);
   // cout<<flush;
   assert(var >= 0);
   assert(var < numTot);
   // Make sure we're not checking a basic variable
-  if (!simplex_basis.nonbasicFlag_[var])
-    return true;
+  if (!simplex_basis.nonbasicFlag_[var]) return true;
   bool ok;
   if (!highs_isInfinity(-simplex_info.workLower_[var])) {
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
@@ -1822,21 +1894,23 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
         // Fixed variable
         ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
         if (!ok) {
-          printf("Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
-                 "%11g] so nonbasic "
-                 "move should be zero but is %d\n",
-                 var, simplex_lp.numCol_, simplex_info.workLower_[var],
-                 simplex_info.workValue_[var], simplex_info.workUpper_[var],
-                 simplex_basis.nonbasicMove_[var]);
+          printf(
+              "Fixed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
+              "%11g] so nonbasic "
+              "move should be zero but is %d\n",
+              var, simplex_lp.numCol_, simplex_info.workLower_[var],
+              simplex_info.workValue_[var], simplex_info.workUpper_[var],
+              simplex_basis.nonbasicMove_[var]);
           return ok;
         }
         ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
         if (!ok) {
-          printf("Fixed variable %d (simplex_lp.numCol_ = %d) so "
-                 "simplex_info.work value should be %g but "
-                 "is %g\n",
-                 var, simplex_lp.numCol_, simplex_info.workLower_[var],
-                 simplex_info.workValue_[var]);
+          printf(
+              "Fixed variable %d (simplex_lp.numCol_ = %d) so "
+              "simplex_info.work value should be %g but "
+              "is %g\n",
+              var, simplex_lp.numCol_, simplex_info.workLower_[var],
+              simplex_info.workValue_[var]);
           return ok;
         }
       } else {
@@ -1844,33 +1918,36 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
         ok = (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) ||
              (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN);
         if (!ok) {
-          printf("Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
-                 "%11g] range %g so "
-                 "nonbasic move should be up/down but is  %d\n",
-                 var, simplex_lp.numCol_, simplex_info.workLower_[var],
-                 simplex_info.workValue_[var], simplex_info.workUpper_[var],
-                 simplex_info.workUpper_[var] - simplex_info.workLower_[var],
-                 simplex_basis.nonbasicMove_[var]);
+          printf(
+              "Boxed variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, "
+              "%11g] range %g so "
+              "nonbasic move should be up/down but is  %d\n",
+              var, simplex_lp.numCol_, simplex_info.workLower_[var],
+              simplex_info.workValue_[var], simplex_info.workUpper_[var],
+              simplex_info.workUpper_[var] - simplex_info.workLower_[var],
+              simplex_basis.nonbasicMove_[var]);
           return ok;
         }
         if (simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_UP) {
           ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
           if (!ok) {
-            printf("Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                   "NONBASIC_MOVE_UP so work "
-                   "value should be %g but is %g\n",
-                   var, simplex_lp.numCol_, simplex_info.workLower_[var],
-                   simplex_info.workValue_[var]);
+            printf(
+                "Boxed variable %d (simplex_lp.numCol_ = %d) with "
+                "NONBASIC_MOVE_UP so work "
+                "value should be %g but is %g\n",
+                var, simplex_lp.numCol_, simplex_info.workLower_[var],
+                simplex_info.workValue_[var]);
             return ok;
           }
         } else {
           ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
           if (!ok) {
-            printf("Boxed variable %d (simplex_lp.numCol_ = %d) with "
-                   "NONBASIC_MOVE_DN so work "
-                   "value should be %g but is %g\n",
-                   var, simplex_lp.numCol_, simplex_info.workUpper_[var],
-                   simplex_info.workValue_[var]);
+            printf(
+                "Boxed variable %d (simplex_lp.numCol_ = %d) with "
+                "NONBASIC_MOVE_DN so work "
+                "value should be %g but is %g\n",
+                var, simplex_lp.numCol_, simplex_info.workUpper_[var],
+                simplex_info.workValue_[var]);
             return ok;
           }
         }
@@ -1891,11 +1968,12 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
       }
       ok = simplex_info.workValue_[var] == simplex_info.workLower_[var];
       if (!ok) {
-        printf("Finite lower bound and infinite upper bound variable %d "
-               "(simplex_lp.numCol_ = "
-               "%d) so work value should be %g but is %g\n",
-               var, simplex_lp.numCol_, simplex_info.workLower_[var],
-               simplex_info.workValue_[var]);
+        printf(
+            "Finite lower bound and infinite upper bound variable %d "
+            "(simplex_lp.numCol_ = "
+            "%d) so work value should be %g but is %g\n",
+            var, simplex_lp.numCol_, simplex_info.workLower_[var],
+            simplex_info.workValue_[var]);
         return ok;
       }
     }
@@ -1904,42 +1982,46 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_DN;
       if (!ok) {
-        printf("Finite upper bound and infinite lower bound variable %d "
-               "(simplex_lp.numCol_ = "
-               "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
-               "%d\n",
-               var, simplex_lp.numCol_, simplex_info.workLower_[var],
-               simplex_info.workValue_[var], simplex_info.workUpper_[var],
-               simplex_basis.nonbasicMove_[var]);
+        printf(
+            "Finite upper bound and infinite lower bound variable %d "
+            "(simplex_lp.numCol_ = "
+            "%d) [%11g, %11g, %11g] so nonbasic move should be down but is  "
+            "%d\n",
+            var, simplex_lp.numCol_, simplex_info.workLower_[var],
+            simplex_info.workValue_[var], simplex_info.workUpper_[var],
+            simplex_basis.nonbasicMove_[var]);
         return ok;
       }
       ok = simplex_info.workValue_[var] == simplex_info.workUpper_[var];
       if (!ok) {
-        printf("Finite upper bound and infinite lower bound variable %d "
-               "(simplex_lp.numCol_ = "
-               "%d) so work value should be %g but is %g\n",
-               var, simplex_lp.numCol_, simplex_info.workUpper_[var],
-               simplex_info.workValue_[var]);
+        printf(
+            "Finite upper bound and infinite lower bound variable %d "
+            "(simplex_lp.numCol_ = "
+            "%d) so work value should be %g but is %g\n",
+            var, simplex_lp.numCol_, simplex_info.workUpper_[var],
+            simplex_info.workValue_[var]);
         return ok;
       }
     } else {
       // Infinite upper bound
       ok = simplex_basis.nonbasicMove_[var] == NONBASIC_MOVE_ZE;
       if (!ok) {
-        printf("Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
-               "so nonbasic "
-               "move should be zero but is  %d\n",
-               var, simplex_lp.numCol_, simplex_info.workLower_[var],
-               simplex_info.workValue_[var], simplex_info.workUpper_[var],
-               simplex_basis.nonbasicMove_[var]);
+        printf(
+            "Free variable %d (simplex_lp.numCol_ = %d) [%11g, %11g, %11g] "
+            "so nonbasic "
+            "move should be zero but is  %d\n",
+            var, simplex_lp.numCol_, simplex_info.workLower_[var],
+            simplex_info.workValue_[var], simplex_info.workUpper_[var],
+            simplex_basis.nonbasicMove_[var]);
         return ok;
       }
       ok = simplex_info.workValue_[var] == 0.0;
       if (!ok) {
-        printf("Free variable %d (simplex_lp.numCol_ = %d) so work value should "
-               "be zero but "
-               "is %g\n",
-               var, simplex_lp.numCol_, simplex_info.workValue_[var]);
+        printf(
+            "Free variable %d (simplex_lp.numCol_ = %d) so work value should "
+            "be zero but "
+            "is %g\n",
+            var, simplex_lp.numCol_, simplex_info.workValue_[var]);
         return ok;
       }
     }
@@ -1949,18 +2031,18 @@ bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object,
   return ok;
 }
 
-bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   //    HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   bool ok;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int var = 0; var < numTot; ++var) {
     printf(
-        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] = %2d\n",
+        "NonbasicMoveVsWorkArrays: var = %2d; simplex_basis.nonbasicFlag_[var] "
+        "= %2d\n",
         var, simplex_basis.nonbasicFlag_[var]);
-    if (!simplex_basis.nonbasicFlag_[var])
-      continue;
+    if (!simplex_basis.nonbasicFlag_[var]) continue;
     ok = one_nonbasic_move_vs_work_arrays_ok(highs_model_object, var);
     if (!ok) {
       printf("Error in NonbasicMoveVsWorkArrays for nonbasic variable %d\n",
@@ -1974,11 +2056,12 @@ bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject &highs_model_object) {
   return ok;
 }
 
-bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
+bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   //  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   //  printf("Called ok_to_solve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
@@ -1991,32 +2074,36 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   ok = true;
   if (!ok) {
     if (!simplex_lp_status.has_basis)
-      printf("Not OK to solve since simplex_lp_status.has_basis = %d\n", simplex_lp_status.has_basis);
+      printf("Not OK to solve since simplex_lp_status.has_basis = %d\n",
+             simplex_lp_status.has_basis);
     if (!simplex_lp_status.has_matrix_col_wise)
-      printf("Not OK to solve since simplex_lp_status.has_matrix_col_wise "
-             "= %d\n",
-             simplex_lp_status.has_matrix_col_wise);
+      printf(
+          "Not OK to solve since simplex_lp_status.has_matrix_col_wise "
+          "= %d\n",
+          simplex_lp_status.has_matrix_col_wise);
     if (!simplex_lp_status.has_matrix_row_wise)
-      printf("Not OK to solve since simplex_lp_status.has_matrix_row_wise "
-             "= %d\n",
-             simplex_lp_status.has_matrix_row_wise);
+      printf(
+          "Not OK to solve since simplex_lp_status.has_matrix_row_wise "
+          "= %d\n",
+          simplex_lp_status.has_matrix_row_wise);
     //    if (!simplex_lp_status.has_factor_arrays)
     //      printf("Not OK to solve since
     //      simplex_lp_status.has_factor_arrays = %d\n",
     //             simplex_lp_status.has_factor_arrays);
     if (!simplex_lp_status.has_dual_steepest_edge_weights)
-      printf("Not OK to solve since "
-             "simplex_lp_status.has_dual_steepest_edge_weights = %d\n",
-             simplex_lp_status.has_dual_steepest_edge_weights);
+      printf(
+          "Not OK to solve since "
+          "simplex_lp_status.has_dual_steepest_edge_weights = %d\n",
+          simplex_lp_status.has_dual_steepest_edge_weights);
     if (!simplex_lp_status.has_invert)
       printf("Not OK to solve since simplex_lp_status.has_invert = %d\n",
              simplex_lp_status.has_invert);
   }
   assert(ok);
-  if (level <= 0)
-    return ok;
+  if (level <= 0) return ok;
   // Level 1: Basis and data check
-  ok = nonbasic_flag_basic_index_ok(simplex_lp, highs_model_object.simplex_basis_);
+  ok = nonbasic_flag_basic_index_ok(simplex_lp,
+                                    highs_model_object.simplex_basis_);
   if (!ok) {
     printf("Error in nonbasicFlag and basicIndex\n");
     assert(ok);
@@ -2044,9 +2131,9 @@ bool ok_to_solve(HighsModelObject &highs_model_object, int level, int phase) {
   return ok;
 }
 
-void flip_bound(HighsModelObject &highs_model_object, int iCol) {
-  int *nonbasicMove = &highs_model_object.simplex_basis_.nonbasicMove_[0];
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void flip_bound(HighsModelObject& highs_model_object, int iCol) {
+  int* nonbasicMove = &highs_model_object.simplex_basis_.nonbasicMove_[0];
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   const int move = nonbasicMove[iCol] = -nonbasicMove[iCol];
   simplex_info.workValue_[iCol] =
       move == 1 ? simplex_info.workLower_[iCol] : simplex_info.workUpper_[iCol];
@@ -2067,8 +2154,8 @@ int handle_rank_deficiency(HighsModelObject &highs_model_object) {
 iRow<simplex_lp.numRow_; iRow++)
   //    printf(" %2d", simplex_basis.basicIndex_[iRow]); printf("\n");
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++)
-basicRows[simplex_basis.basicIndex_[iRow]] = iRow; for (int k = 0; k < rankDeficiency;
-k++) {
+basicRows[simplex_basis.basicIndex_[iRow]] = iRow; for (int k = 0; k <
+rankDeficiency; k++) {
     //      printf("noPvR[%2d] = %d; noPvC[%2d] = %d; \n", k, factor.noPvR[k],
     //      k, noPvC[k]);fflush(stdout);
     int columnIn = simplex_lp.numCol_ + factor.noPvR[k];
@@ -2095,18 +2182,18 @@ iRow<simplex_lp.numRow_; iRow++)
   return 0;
 }
 */
-int compute_factor(HighsModelObject &highs_model_object) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HMatrix &matrix = highs_model_object.matrix_;
-  HFactor &factor = highs_model_object.factor_;
+int compute_factor(HighsModelObject& highs_model_object) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HMatrix& matrix = highs_model_object.matrix_;
+  HFactor& factor = highs_model_object.factor_;
 #ifdef HiGHSDEV
-  HighsTimer &timer = highs_model_object.timer_;
+  HighsTimer& timer = highs_model_object.timer_;
   double tt0 = 0;
   int iClock = simplex_info.clock_[InvertClock];
-  if (simplex_info.analyse_invert_time)
-    tt0 = timer.clock_time[iClock];
+  if (simplex_info.analyse_invert_time) tt0 = timer.clock_time[iClock];
 #endif
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -2145,27 +2232,33 @@ int compute_factor(HighsModelObject &highs_model_object) {
 
 // Compute the primal values (in baseValue) and set the lower and upper bounds
 // of basic variables
-void compute_primal(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HMatrix &matrix = highs_model_object.matrix_;
-  HFactor &factor = highs_model_object.factor_;
+void compute_primal(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HMatrix& matrix = highs_model_object.matrix_;
+  HFactor& factor = highs_model_object.factor_;
   // Setup a local buffer for the values of basic variables
   HVector buffer;
   buffer.setup(simplex_lp.numRow_);
   buffer.clear();
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
-    //    if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] == 0) printf("\nAfter adding in %12g*a[%2d]\n", simplex_info.workValue_[i], i);
+    //    if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] == 0)
+    //    printf("\nAfter adding in %12g*a[%2d]\n", simplex_info.workValue_[i],
+    //    i);
     if (simplex_basis.nonbasicFlag_[i] && simplex_info.workValue_[i] != 0) {
       matrix.collect_aj(buffer, i, simplex_info.workValue_[i]);
-      //      printf("\nAfter adding in %12g*a[%2d]\nRow     value\n", simplex_info.workValue_[i], i);
-      //      for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) printf("%3d %12g\n", iRow, buffer.array[iRow]);
+      //      printf("\nAfter adding in %12g*a[%2d]\nRow     value\n",
+      //      simplex_info.workValue_[i], i); for (int iRow = 0; iRow <
+      //      simplex_lp.numRow_; iRow++) printf("%3d %12g\n", iRow,
+      //      buffer.array[iRow]);
     }
   }
-  //  for (int i = 0; i < simplex_lp.numRow_; i++) printf("Bf FTRAN: Row %2d has value %12g\n", i, buffer.array[i]);
+  //  for (int i = 0; i < simplex_lp.numRow_; i++) printf("Bf FTRAN: Row %2d has
+  //  value %12g\n", i, buffer.array[i]);
   factor.ftran(buffer, 1);
 
   for (int i = 0; i < simplex_lp.numRow_; i++) {
@@ -2178,11 +2271,13 @@ void compute_primal(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_basic_primal_values = true;
 }
 
-void computePrimalInfeasible(HighsModelObject &highs_model_object, const bool report) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+void computePrimalInfeasible(HighsModelObject& highs_model_object,
+                             const bool report) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   int num_nonbasic_primal_infeasibilities = 0;
   int num_basic_primal_infeasibilities = 0;
@@ -2199,13 +2294,15 @@ void computePrimalInfeasible(HighsModelObject &highs_model_object, const bool re
       double value = simplex_info.workValue_[i];
       double lower = simplex_info.workLower_[i];
       double upper = simplex_info.workUpper_[i];
-      double primal_infeasibility = max(lower-value, value-upper);
-      //      printf("Nonbasic column %2d is %2d, [%12g, %12g, %12g] primal_infeasibility = %12g\n", nonbasic_ix, i, lower, value, upper, primal_infeasibility);
-      //      nonbasic_ix++;
+      double primal_infeasibility = max(lower - value, value - upper);
+      //      printf("Nonbasic column %2d is %2d, [%12g, %12g, %12g]
+      //      primal_infeasibility = %12g\n", nonbasic_ix, i, lower, value,
+      //      upper, primal_infeasibility); nonbasic_ix++;
       if (primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
-	num_nonbasic_primal_infeasibilities++;
-	max_nonbasic_primal_infeasibility = std::max(primal_infeasibility, max_nonbasic_primal_infeasibility);
-	sum_nonbasic_primal_infeasibilities += primal_infeasibility;
+        num_nonbasic_primal_infeasibilities++;
+        max_nonbasic_primal_infeasibility =
+            std::max(primal_infeasibility, max_nonbasic_primal_infeasibility);
+        sum_nonbasic_primal_infeasibilities += primal_infeasibility;
       }
     }
   }
@@ -2215,24 +2312,34 @@ void computePrimalInfeasible(HighsModelObject &highs_model_object, const bool re
     double value = simplex_info.baseValue_[i];
     double lower = simplex_info.baseLower_[i];
     double upper = simplex_info.baseUpper_[i];
-    double primal_infeasibility = max(lower-value, value-upper);
-    //    if (value > 0.1) printf("Basic row %2d is %2d, [%12g, %12g, %12g] primal_infeasibility = %12g\n", i, iCol, lower, value, upper, primal_infeasibility);
+    double primal_infeasibility = max(lower - value, value - upper);
+    //    if (value > 0.1) printf("Basic row %2d is %2d, [%12g, %12g, %12g]
+    //    primal_infeasibility = %12g\n", i, iCol, lower, value, upper,
+    //    primal_infeasibility);
     if (primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
       num_basic_primal_infeasibilities++;
-      max_basic_primal_infeasibility = std::max(primal_infeasibility, max_basic_primal_infeasibility);
+      max_basic_primal_infeasibility =
+          std::max(primal_infeasibility, max_basic_primal_infeasibility);
       sum_basic_primal_infeasibilities += primal_infeasibility;
-    }	
+    }
   }
-  int num_primal_infeasibilities = num_nonbasic_primal_infeasibilities + num_basic_primal_infeasibilities;
-  double max_primal_infeasibility = std::max(max_nonbasic_primal_infeasibility, max_basic_primal_infeasibility);
-  double sum_primal_infeasibilities = sum_nonbasic_primal_infeasibilities + sum_basic_primal_infeasibilities;
+  int num_primal_infeasibilities =
+      num_nonbasic_primal_infeasibilities + num_basic_primal_infeasibilities;
+  double max_primal_infeasibility = std::max(max_nonbasic_primal_infeasibility,
+                                             max_basic_primal_infeasibility);
+  double sum_primal_infeasibilities =
+      sum_nonbasic_primal_infeasibilities + sum_basic_primal_infeasibilities;
 #ifdef HiGHSDEV
   if (report && num_primal_infeasibilities) {
     int num_iter = simplex_info.iteration_count;
-    printf("Iter %d has %d (%d+%d) primal infeasibilities (max = %g = max[%g, %g]) summing to %g (%g+%g)\n", num_iter,
-	   num_primal_infeasibilities, num_nonbasic_primal_infeasibilities, num_basic_primal_infeasibilities,
-	   max_primal_infeasibility, max_nonbasic_primal_infeasibility, max_basic_primal_infeasibility,
-	   sum_primal_infeasibilities, sum_nonbasic_primal_infeasibilities, sum_basic_primal_infeasibilities);
+    printf(
+        "Iter %d has %d (%d+%d) primal infeasibilities (max = %g = max[%g, "
+        "%g]) summing to %g (%g+%g)\n",
+        num_iter, num_primal_infeasibilities,
+        num_nonbasic_primal_infeasibilities, num_basic_primal_infeasibilities,
+        max_primal_infeasibility, max_nonbasic_primal_infeasibility,
+        max_basic_primal_infeasibility, sum_primal_infeasibilities,
+        sum_nonbasic_primal_infeasibilities, sum_basic_primal_infeasibilities);
   }
 #endif
   simplex_info.num_primal_infeasibilities = num_primal_infeasibilities;
@@ -2240,11 +2347,13 @@ void computePrimalInfeasible(HighsModelObject &highs_model_object, const bool re
   simplex_info.sum_primal_infeasibilities = sum_primal_infeasibilities;
 }
 
-void computeDualInfeasible(HighsModelObject &highs_model_object, const bool report) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+void computeDualInfeasible(HighsModelObject& highs_model_object,
+                           const bool report) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   int num_dual_infeasibilities = 0;
   double max_dual_infeasibility = 0;
@@ -2261,20 +2370,24 @@ void computeDualInfeasible(HighsModelObject &highs_model_object, const bool repo
       // Free: any nonzero dual value is infeasible
       dual_infeasibility = fabs(simplex_info.workDual_[iVar]);
     } else if (lower < upper) {
-      // Not fixed: any dual infeasibility is given by value signed by nonbasicMove
-      dual_infeasibility = -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
+      // Not fixed: any dual infeasibility is given by value signed by
+      // nonbasicMove
+      dual_infeasibility =
+          -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
     }
     if (dual_infeasibility > simplex_info.dual_feasibility_tolerance) {
       num_dual_infeasibilities++;
-      max_dual_infeasibility = std::max(dual_infeasibility, max_dual_infeasibility);
+      max_dual_infeasibility =
+          std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
     }
   }
 #ifdef HiGHSDEV
   if (report && num_dual_infeasibilities) {
     int num_iter = simplex_info.iteration_count;
-    printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n", num_iter,
-	   num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
+    printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n",
+           num_iter, num_dual_infeasibilities, max_dual_infeasibility,
+           sum_dual_infeasibilities);
   }
 #endif
   simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
@@ -2282,13 +2395,14 @@ void computeDualInfeasible(HighsModelObject &highs_model_object, const bool repo
   simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
-void compute_dual(HighsModelObject &highs_model_object) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HMatrix &matrix = highs_model_object.matrix_;
-  HFactor &factor = highs_model_object.factor_;
+void compute_dual(HighsModelObject& highs_model_object) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HMatrix& matrix = highs_model_object.matrix_;
+  HFactor& factor = highs_model_object.factor_;
   bool an_compute_dual_norm2 = false;
   double btran_rhs_norm2;
   double btran_sol_norm2;
@@ -2300,8 +2414,9 @@ void compute_dual(HighsModelObject &highs_model_object) {
   buffer.clear();
   for (int iRow = 0; iRow < simplex_lp.numRow_; iRow++) {
     buffer.index[iRow] = iRow;
-    buffer.array[iRow] = simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
-                         simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
+    buffer.array[iRow] =
+        simplex_info.workCost_[simplex_basis.basicIndex_[iRow]] +
+        simplex_info.workShift_[simplex_basis.basicIndex_[iRow]];
   }
   buffer.count = simplex_lp.numRow_;
   if (an_compute_dual_norm2) {
@@ -2347,9 +2462,10 @@ void compute_dual(HighsModelObject &highs_model_object) {
           work_dual_norm2);
     } else if (new_dual_feasibility_tolerance >
                10 * current_dual_feasibility_tolerance) {
-      printf("||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
-             "%12g\n",
-             work_dual_norm2, new_dual_feasibility_tolerance);
+      printf(
+          "||pi^TA-c|| = %12g so solving with dual_feasibility_tolerance = "
+          "%12g\n",
+          work_dual_norm2, new_dual_feasibility_tolerance);
       simplex_info.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
     }
   }
@@ -2358,12 +2474,12 @@ void compute_dual(HighsModelObject &highs_model_object) {
   simplex_lp_status.has_nonbasic_dual_values = true;
 }
 
-void correct_dual(HighsModelObject &highs_model_object,
-                  int *free_infeasibility_count) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsRandom &random = highs_model_object.random_;
+void correct_dual(HighsModelObject& highs_model_object,
+                  int* free_infeasibility_count) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsRandom& random = highs_model_object.random_;
   const double tau_d = simplex_info.dual_feasibility_tolerance;
   const double inf = HIGHS_CONST_INF;
   int workCount = 0;
@@ -2374,7 +2490,8 @@ void correct_dual(HighsModelObject &highs_model_object,
           simplex_info.workUpper_[i] == inf) {
         // FREE variable
         workCount += (fabs(simplex_info.workDual_[i]) >= tau_d);
-      } else if (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d) {
+      } else if (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <=
+                 -tau_d) {
         if (simplex_info.workLower_[i] != -inf &&
             simplex_info.workUpper_[i] != inf) {
           // Boxed variable = flip
@@ -2401,11 +2518,11 @@ void correct_dual(HighsModelObject &highs_model_object,
   *free_infeasibility_count = workCount;
 }
 
-void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
-                                     int *dual_infeasibility_count) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+void compute_dual_infeasible_in_dual(HighsModelObject& highs_model_object,
+                                     int* dual_infeasibility_count) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   int work_count = 0;
   double sum_dual_infeasibilities = 0;
   const double inf = HIGHS_CONST_INF;
@@ -2422,43 +2539,45 @@ void compute_dual_infeasible_in_dual(HighsModelObject &highs_model_object,
     // In dual, assuming that boxed variables will be flipped
     if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf)
       work_count +=
-          (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
+          (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <=
+    -tau_d);
     */
 
-    if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf) {
+    if (simplex_info.workLower_[i] == -inf &&
+        simplex_info.workUpper_[i] == inf) {
       double fabs_dual = fabs(simplex_info.workDual_[i]);
       if (fabs_dual >= tau_d) {
-	sum_dual_infeasibilities += fabs_dual;
-	work_count++;
+        sum_dual_infeasibilities += fabs_dual;
+        work_count++;
       }
     }
 
     // In dual, assuming that boxed variables will be flipped
-    if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf) {
-      double signed_dual = simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i];
+    if (simplex_info.workLower_[i] == -inf ||
+        simplex_info.workUpper_[i] == inf) {
+      double signed_dual =
+          simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i];
       if (signed_dual <= -tau_d) {
-	sum_dual_infeasibilities -= signed_dual;
-	work_count++; 
+        sum_dual_infeasibilities -= signed_dual;
+        work_count++;
       }
     }
-
   }
   *dual_infeasibility_count = work_count;
 }
 
-void compute_dual_infeasible_in_primal(HighsModelObject &highs_model_object,
-                                       int *dual_infeasibility_count) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
+void compute_dual_infeasible_in_primal(HighsModelObject& highs_model_object,
+                                       int* dual_infeasibility_count) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   int work_count = 0;
   const double inf = HIGHS_CONST_INF;
   const double tau_d = simplex_info.dual_feasibility_tolerance;
   const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
-    if (!simplex_basis.nonbasicFlag_[i])
-      continue;
+    if (!simplex_basis.nonbasicFlag_[i]) continue;
     // Free
     if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
       work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);
@@ -2470,17 +2589,16 @@ void compute_dual_infeasible_in_primal(HighsModelObject &highs_model_object,
 }
 
 // Record the shift in the cost of a particular column
-void shift_cost(HighsModelObject &highs_model_object, int iCol,
-                  double amount) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   simplex_info.costs_perturbed = 1;
   assert(simplex_info.workShift_[iCol] == 0);
   simplex_info.workShift_[iCol] = amount;
 }
 
 // Undo the shift in the cost of a particular column
-void shift_back(HighsModelObject &highs_model_object, int iCol) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void shift_back(HighsModelObject& highs_model_object, int iCol) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   simplex_info.workDual_[iCol] -= simplex_info.workShift_[iCol];
   simplex_info.workShift_[iCol] = 0;
 }
@@ -2488,13 +2606,14 @@ void shift_back(HighsModelObject &highs_model_object, int iCol) {
 // The major model updates. Factor calls factor.update; Matrix
 // calls matrix.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
-void update_factor(HighsModelObject &highs_model_object, HVector *column,
-                   HVector *row_ep, int *iRow, int *hint) {
+void update_factor(HighsModelObject& highs_model_object, HVector* column,
+                   HVector* row_ep, int* iRow, int* hint) {
   //    HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  HFactor &factor = highs_model_object.factor_;
-  HighsTimer &timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  HFactor& factor = highs_model_object.factor_;
+  HighsTimer& timer = highs_model_object.timer_;
 
   timer.start(simplex_info.clock_[UpdateFactorClock]);
   factor.update(column, row_ep, iRow, hint);
@@ -2505,13 +2624,14 @@ void update_factor(HighsModelObject &highs_model_object, HVector *column,
   timer.stop(simplex_info.clock_[UpdateFactorClock]);
 }
 
-void update_pivots(HighsModelObject &highs_model_object, int columnIn,
+void update_pivots(HighsModelObject& highs_model_object, int columnIn,
                    int rowOut, int sourceOut) {
-  HighsLp &simplex_lp = highs_model_object.simplex_lp_;
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = highs_model_object.simplex_lp_status_;
-  SimplexBasis &simplex_basis = highs_model_object.simplex_basis_;
-  HighsTimer &timer = highs_model_object.timer_;
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  HighsTimer& timer = highs_model_object.timer_;
 
   timer.start(simplex_info.clock_[UpdatePivotsClock]);
   int columnOut = simplex_basis.basicIndex_[rowOut];
@@ -2552,15 +2672,13 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
   //  if (fabs(nwValue))
   //    printf("update_pivots columnOut = %6d (%2d): [%11.4g, %11.4g, %11.4g],
   //    nwValue = %11.4g, dual = %11.4g, dlObj = %11.4g\n",
-  //			   columnOut, simplex_basis.nonbasicMove_[columnOut], vrLb, vrV, vrUb,
-  //nwValue, vrDual, dl_dual_objective_value);
+  //			   columnOut, simplex_basis.nonbasicMove_[columnOut], vrLb, vrV,
+  //vrUb, nwValue, vrDual, dl_dual_objective_value);
   simplex_info.updated_dual_objective_value += dl_dual_objective_value;
   simplex_info.update_count++;
   // Update the number of basic logicals
-  if (columnOut < simplex_lp.numCol_)
-    simplex_info.num_basic_logicals -= 1;
-  if (columnIn < simplex_lp.numCol_)
-    simplex_info.num_basic_logicals += 1;
+  if (columnOut < simplex_lp.numCol_) simplex_info.num_basic_logicals -= 1;
+  if (columnIn < simplex_lp.numCol_) simplex_info.num_basic_logicals += 1;
   // No longer have a representation of B^{-1}, and certainly not
   // fresh!
   simplex_lp_status.has_invert = false;
@@ -2570,19 +2688,20 @@ void update_pivots(HighsModelObject &highs_model_object, int columnIn,
   timer.stop(simplex_info.clock_[UpdatePivotsClock]);
 }
 
-void update_matrix(HighsModelObject &highs_model_object, int columnIn,
+void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
-  HMatrix &matrix = highs_model_object.matrix_;
-  HighsTimer &timer = highs_model_object.timer_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HMatrix& matrix = highs_model_object.matrix_;
+  HighsTimer& timer = highs_model_object.timer_;
 
   timer.start(simplex_info.clock_[UpdateMatrixClock]);
   matrix.update(columnIn, columnOut);
   timer.stop(simplex_info.clock_[UpdateMatrixClock]);
 }
 
-void logRebuild(HighsModelObject &highs_model_object, const bool primal, const int solve_phase, const int i_v) {
-  HighsSimplexInfo &simplex_info = highs_model_object.simplex_info_;
+void logRebuild(HighsModelObject& highs_model_object, const bool primal,
+                const int solve_phase, const int i_v) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   double objective_value;
   string simplex_variant;
   if (primal) {
@@ -2594,83 +2713,100 @@ void logRebuild(HighsModelObject &highs_model_object, const bool primal, const i
   }
   if (solve_phase < 2) {
     HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d",
-		    simplex_info.iteration_count,
-		    objective_value, simplex_variant.c_str(), solve_phase);
+                    simplex_info.iteration_count, objective_value,
+                    simplex_variant.c_str(), solve_phase);
   } else if (!primal && simplex_info.sum_dual_infeasibilities == 0) {
-    HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g)",
-		    simplex_info.iteration_count,
-		    objective_value, simplex_variant.c_str(), solve_phase, 
-		    simplex_info.num_primal_infeasibilities,
-		    simplex_info.sum_primal_infeasibilities);
+    HighsLogMessage(
+        HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g)",
+        simplex_info.iteration_count, objective_value, simplex_variant.c_str(),
+        solve_phase, simplex_info.num_primal_infeasibilities,
+        simplex_info.sum_primal_infeasibilities);
   } else {
-    HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
-		    simplex_info.iteration_count,
-		    objective_value, simplex_variant.c_str(), solve_phase, 
-		    simplex_info.num_primal_infeasibilities,
-		    simplex_info.sum_primal_infeasibilities,
-		    simplex_info.num_dual_infeasibilities,
-		    simplex_info.sum_dual_infeasibilities);
+    HighsLogMessage(HighsMessageType::INFO,
+                    "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
+                    simplex_info.iteration_count, objective_value,
+                    simplex_variant.c_str(), solve_phase,
+                    simplex_info.num_primal_infeasibilities,
+                    simplex_info.sum_primal_infeasibilities,
+                    simplex_info.num_dual_infeasibilities,
+                    simplex_info.sum_dual_infeasibilities);
   }
 }
 
 // Return a string representation of SimplexSolutionStatus.
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status) {
   switch (status) {
-  case SimplexSolutionStatus::UNSET:
-    return "Unset";
-    break;
-  case SimplexSolutionStatus::OPTIMAL:
-    return "Optimal";
-    break;
-  case SimplexSolutionStatus::PRIMAL_FEASIBLE:
-    return "Primal feasible";
-    break;
-  case SimplexSolutionStatus::DUAL_FEASIBLE:
-    return "Dual feasible";
-    break;
-  case SimplexSolutionStatus::INFEASIBLE:
-    return "Infeasible";
-    break;
-  case SimplexSolutionStatus::UNBOUNDED:
-    return "Primal unbounded";
-    break;
-  case SimplexSolutionStatus::SINGULAR:
-    return "Singular basis";
-    break;
-  case SimplexSolutionStatus::FAILED:
-    return "Failed";
-    break;
-  case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-    return "Reached dual objective value upper bound";
-    break;
-  case SimplexSolutionStatus::OUT_OF_TIME:
-    return "Time limit exceeded";
-    break;
+    case SimplexSolutionStatus::UNSET:
+      return "Unset";
+      break;
+    case SimplexSolutionStatus::OPTIMAL:
+      return "Optimal";
+      break;
+    case SimplexSolutionStatus::PRIMAL_FEASIBLE:
+      return "Primal feasible";
+      break;
+    case SimplexSolutionStatus::DUAL_FEASIBLE:
+      return "Dual feasible";
+      break;
+    case SimplexSolutionStatus::INFEASIBLE:
+      return "Infeasible";
+      break;
+    case SimplexSolutionStatus::UNBOUNDED:
+      return "Primal unbounded";
+      break;
+    case SimplexSolutionStatus::SINGULAR:
+      return "Singular basis";
+      break;
+    case SimplexSolutionStatus::FAILED:
+      return "Failed";
+      break;
+    case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+      return "Reached dual objective value upper bound";
+      break;
+    case SimplexSolutionStatus::OUT_OF_TIME:
+      return "Time limit exceeded";
+      break;
   }
   return "";
 }
 
-void reportSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, const char* message) {
+void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
+                           const char* message) {
   printf("\nReporting solver status and flags: %s\n\n", message);
   printf("  valid =                          %d\n", simplex_lp_status.valid);
-  printf("  is_dualised =                    %d\n", simplex_lp_status.is_dualised);
-  printf("  is_permuted =                    %d\n", simplex_lp_status.is_permuted);
-  printf("  is_scaled =                      %d\n", simplex_lp_status.is_scaled);
-  printf("  has_basis =                      %d\n", simplex_lp_status.has_basis);
-  printf("  has_matrix_col_wise =            %d\n", simplex_lp_status.has_matrix_col_wise);
-  printf("  has_matrix_row_wise =            %d\n", simplex_lp_status.has_matrix_row_wise);
-  printf("  has_factor_arrays =              %d\n", simplex_lp_status.has_factor_arrays);
-  printf("  has_dual_steepest_edge_weights = %d\n", simplex_lp_status.has_dual_steepest_edge_weights);
-  printf("  has_nonbasic_dual_values =       %d\n", simplex_lp_status.has_nonbasic_dual_values);
-  printf("  has_basic_primal_values =        %d\n", simplex_lp_status.has_basic_primal_values);
-  printf("  has_invert =                     %d\n", simplex_lp_status.has_invert);
-  printf("  has_fresh_invert =               %d\n", simplex_lp_status.has_fresh_invert);
-  printf("  has_fresh_rebuild =              %d\n", simplex_lp_status.has_fresh_rebuild);
-  printf("  has_dual_objective_value =       %d\n", simplex_lp_status.has_dual_objective_value);
-  printf("  has_primal_objective_value =     %d\n", simplex_lp_status.has_primal_objective_value);
+  printf("  is_dualised =                    %d\n",
+         simplex_lp_status.is_dualised);
+  printf("  is_permuted =                    %d\n",
+         simplex_lp_status.is_permuted);
+  printf("  is_scaled =                      %d\n",
+         simplex_lp_status.is_scaled);
+  printf("  has_basis =                      %d\n",
+         simplex_lp_status.has_basis);
+  printf("  has_matrix_col_wise =            %d\n",
+         simplex_lp_status.has_matrix_col_wise);
+  printf("  has_matrix_row_wise =            %d\n",
+         simplex_lp_status.has_matrix_row_wise);
+  printf("  has_factor_arrays =              %d\n",
+         simplex_lp_status.has_factor_arrays);
+  printf("  has_dual_steepest_edge_weights = %d\n",
+         simplex_lp_status.has_dual_steepest_edge_weights);
+  printf("  has_nonbasic_dual_values =       %d\n",
+         simplex_lp_status.has_nonbasic_dual_values);
+  printf("  has_basic_primal_values =        %d\n",
+         simplex_lp_status.has_basic_primal_values);
+  printf("  has_invert =                     %d\n",
+         simplex_lp_status.has_invert);
+  printf("  has_fresh_invert =               %d\n",
+         simplex_lp_status.has_fresh_invert);
+  printf("  has_fresh_rebuild =              %d\n",
+         simplex_lp_status.has_fresh_rebuild);
+  printf("  has_dual_objective_value =       %d\n",
+         simplex_lp_status.has_dual_objective_value);
+  printf("  has_primal_objective_value =     %d\n",
+         simplex_lp_status.has_primal_objective_value);
 }
 
-void invalidateSimplexLpData(HighsSimplexLpStatus &simplex_lp_status) {
+void invalidateSimplexLpData(HighsSimplexLpStatus& simplex_lp_status) {
   simplex_lp_status.has_basis = false;
   simplex_lp_status.has_matrix_col_wise = false;
   simplex_lp_status.has_matrix_row_wise = false;
@@ -2685,7 +2821,7 @@ void invalidateSimplexLpData(HighsSimplexLpStatus &simplex_lp_status) {
   simplex_lp_status.has_primal_objective_value = false;
 }
 
-void invalidateSimplexLp(HighsSimplexLpStatus &simplex_lp_status) {
+void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
   simplex_lp_status.valid = false;
   simplex_lp_status.is_dualised = false;
   simplex_lp_status.is_permuted = false;
@@ -2693,93 +2829,92 @@ void invalidateSimplexLp(HighsSimplexLpStatus &simplex_lp_status) {
   invalidateSimplexLpData(simplex_lp_status);
 }
 
-void updateSimplexLpStatus(HighsSimplexLpStatus &simplex_lp_status, LpAction action) {
-
+void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
+                           LpAction action) {
   switch (action) {
-  case LpAction::DUALISE:
+    case LpAction::DUALISE:
 #ifdef HIGHSDEV
-    printf(" LpAction::DUALISE\n");
+      printf(" LpAction::DUALISE\n");
 #endif
-    simplex_lp_status.is_dualised = true;
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::PERMUTE:
+      simplex_lp_status.is_dualised = true;
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::PERMUTE:
 #ifdef HIGHSDEV
-    printf(" LpAction::PERMUTE\n");
+      printf(" LpAction::PERMUTE\n");
 #endif
-    simplex_lp_status.is_permuted = true;
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::SCALE:
+      simplex_lp_status.is_permuted = true;
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::SCALE:
 #ifdef HIGHSDEV
-    printf(" LpAction::SCALE\n");
+      printf(" LpAction::SCALE\n");
 #endif
-    simplex_lp_status.is_scaled = true;
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::NEW_COSTS:
+      simplex_lp_status.is_scaled = true;
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::NEW_COSTS:
 #ifdef HIGHSDEV
-    printf(" LpAction::NEW_COSTS\n");
+      printf(" LpAction::NEW_COSTS\n");
 #endif
-    //      initCost();
-    simplex_lp_status.has_nonbasic_dual_values = false;
-    simplex_lp_status.has_fresh_rebuild = false;
-    simplex_lp_status.has_dual_objective_value = false;
-    simplex_lp_status.has_primal_objective_value = false;
-    break;
-  case LpAction::NEW_BOUNDS:
+      //      initCost();
+      simplex_lp_status.has_nonbasic_dual_values = false;
+      simplex_lp_status.has_fresh_rebuild = false;
+      simplex_lp_status.has_dual_objective_value = false;
+      simplex_lp_status.has_primal_objective_value = false;
+      break;
+    case LpAction::NEW_BOUNDS:
 #ifdef HIGHSDEV
-    printf(" LpAction::NEW_BOUNDS\n");
+      printf(" LpAction::NEW_BOUNDS\n");
 #endif
-    //      simplex_info.simplex_lp_ = true;
-    //     initBound();
-    //     initValue();
-    simplex_lp_status.has_basic_primal_values = false;
-    simplex_lp_status.has_fresh_rebuild = false;
-    simplex_lp_status.has_dual_objective_value = false;
-    simplex_lp_status.has_primal_objective_value = false;
-    break;
-  case LpAction::NEW_BASIS:
+      //      simplex_info.simplex_lp_ = true;
+      //     initBound();
+      //     initValue();
+      simplex_lp_status.has_basic_primal_values = false;
+      simplex_lp_status.has_fresh_rebuild = false;
+      simplex_lp_status.has_dual_objective_value = false;
+      simplex_lp_status.has_primal_objective_value = false;
+      break;
+    case LpAction::NEW_BASIS:
 #ifdef HIGHSDEV
-    printf(" LpAction::NEW_BASIS\n");
+      printf(" LpAction::NEW_BASIS\n");
 #endif
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::NEW_COLS:
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::NEW_COLS:
 #ifdef HIGHSDEV
-    printf(" LpAction::NEW_COLS\n");
+      printf(" LpAction::NEW_COLS\n");
 #endif
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::NEW_ROWS:
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::NEW_ROWS:
 #ifdef HIGHSDEV
-    printf(" LpAction::NEW_ROWS\n");
+      printf(" LpAction::NEW_ROWS\n");
 #endif
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::DEL_COLS:
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::DEL_COLS:
 #ifdef HIGHSDEV
-    printf(" LpAction::DEL_COLS\n");
+      printf(" LpAction::DEL_COLS\n");
 #endif
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::DEL_ROWS:
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::DEL_ROWS:
 #ifdef HIGHSDEV
-    printf(" LpAction::DEL_ROWS\n");
+      printf(" LpAction::DEL_ROWS\n");
 #endif
-    invalidateSimplexLpData(simplex_lp_status);
-    break;
-  case LpAction::DEL_ROWS_BASIS_OK:
+      invalidateSimplexLpData(simplex_lp_status);
+      break;
+    case LpAction::DEL_ROWS_BASIS_OK:
 #ifdef HIGHSDEV
-    printf(" LpAction::DEL_ROWS_BASIS_OK\n");
+      printf(" LpAction::DEL_ROWS_BASIS_OK\n");
 #endif
-    //      simplex_info.simplex_lp_ = true;
-    break;
-  default:
+      //      simplex_info.simplex_lp_ = true;
+      break;
+    default:
 #ifdef HIGHSDEV
-    printf(" Unrecognised LpAction::%d\n", (int) action);
+      printf(" Unrecognised LpAction::%d\n", (int)action);
 #endif
-    break;
+      break;
   }
 }
-

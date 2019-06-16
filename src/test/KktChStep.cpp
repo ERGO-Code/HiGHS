@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file test/KktChStep.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "test/KktChStep.h"
@@ -20,10 +20,10 @@
 
 using std::cout;
 using std::endl;
+using std::get;
 using std::pair;
 using std::setw;
 using std::vector;
-using std::get;
 
 void KktChStep::passSolution(const vector<double>& colVal,
                              const vector<double>& colDu,

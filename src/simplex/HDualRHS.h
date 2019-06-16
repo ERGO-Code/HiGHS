@@ -43,15 +43,15 @@ class HDualRHS {
    * @brief Choose the row index of a good variable to leave the basis (CHUZR)
    */
   void choose_normal(
-      int *chIndex  //!< Row index of variable chosen to leave the basis
+      int* chIndex  //!< Row index of variable chosen to leave the basis
   );
 
   /**
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_global(int *chIndex,  //!< Set of indices of chosen rows
-                           int *chCount,  //!< Number of chosen rows
+  void choose_multi_global(int* chIndex,  //!< Set of indices of chosen rows
+                           int* chCount,  //!< Number of chosen rows
                            int chLimit    //!< Limit on number of of chosen rows
   );
 
@@ -59,8 +59,8 @@ class HDualRHS {
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_HGauto(int *chIndex,  //!< Set of indices of chosen rows
-                           int *chCount,  //!< Number of chosen rows
+  void choose_multi_HGauto(int* chIndex,  //!< Set of indices of chosen rows
+                           int* chCount,  //!< Number of chosen rows
                            int chLimit    //!< Limit on number of of chosen rows
   );
 
@@ -68,8 +68,8 @@ class HDualRHS {
    * @brief Choose a set of row indices of good variables to leave the basis
    * (Multiple CHUZR)
    */
-  void choose_multi_HGpart(int *chIndex,  //!< Set of indices of chosen rows
-                           int *chCount,  //!< Number of chosen rows
+  void choose_multi_HGpart(int* chIndex,  //!< Set of indices of chosen rows
+                           int* chCount,  //!< Number of chosen rows
                            int chLimit    //!< Limit on number of of chosen rows
   );
 
@@ -77,7 +77,7 @@ class HDualRHS {
    * @brief Update the primal values by adding a multiple of a given std::vector
    */
   void update_primal(
-      HVector *column,  //!< Column to add into primal values
+      HVector* column,  //!< Column to add into primal values
       double theta      //!< Multiple of column to add into primal values
   );
 
@@ -85,16 +85,16 @@ class HDualRHS {
    * @brief Update the DSE weights
    */
   void update_weight_DSE(
-      HVector *column,         //!< Pivotal column
+      HVector* column,         //!< Pivotal column
       double DSE_wt_o_rowOut,  //!< (Edge weight of leaving row)/alpha^2
       double Kai,              //!< -2/alpha
-      double *dse              //!< DSE std::vector
+      double* dse              //!< DSE std::vector
   );
   /**
    * @brief Update the Devex weights
    */
   void update_weight_Dvx(
-      HVector *column,        //!< Pivotal column
+      HVector* column,        //!< Pivotal column
       double dvx_wt_o_rowOut  //!< max(1, (Edge weight of leaving row)/alpha^2)
   );
   /**
@@ -109,7 +109,7 @@ class HDualRHS {
    * @brief Update the list of primal infeasibilities using indices of primal
    * values which have changed
    */
-  void update_infeasList(HVector *column  //!< Changes in primal values
+  void update_infeasList(HVector* column  //!< Changes in primal values
   );
 
   /**
@@ -125,19 +125,20 @@ class HDualRHS {
    */
   void create_infeasArray();
 
-  HighsModelObject& workHMO;        //!< Local copy of pointer to model
+  HighsModelObject& workHMO;  //!< Local copy of pointer to model
 
-  double workCutoff;      //!< Limit for row to be in list with greatest primal
-                          //!< infeasibilities
-  int workCount;          //!< Number of rows in list with greatest primal
-                          //!< infeasibilities
-  std::vector<char> workMark;  //!< Flag set if row is in list of those with greatest
-                          //!< primal infeasibilities
-  std::vector<int> workIndex;  //!< List of rows with greatest primal infeasibilities
+  double workCutoff;  //!< Limit for row to be in list with greatest primal
+                      //!< infeasibilities
+  int workCount;      //!< Number of rows in list with greatest primal
+                      //!< infeasibilities
+  std::vector<char> workMark;  //!< Flag set if row is in list of those with
+                               //!< greatest primal infeasibilities
+  std::vector<int>
+      workIndex;  //!< List of rows with greatest primal infeasibilities
   std::vector<double> workArray;     //!< Vector of all primal infeasiblities
   std::vector<double> workEdWt;      //!< DSE or Dvx weight
-  std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights are
-                                //!< scattered during INVERT
+  std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
+                                     //!< are scattered during INVERT
 
   int partNum;
   int partNumRow;
