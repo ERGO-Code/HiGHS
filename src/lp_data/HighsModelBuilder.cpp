@@ -9,8 +9,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "HighsModelBuilder.h"
 
-#include "lp_data/HConst.h"
 #include <math.h>
+#include "lp_data/HConst.h"
 
 HighsModelBuilder::~HighsModelBuilder() {
   while (this->variables.size() > 0) {
@@ -139,7 +139,8 @@ HighsLinearConsCoef::~HighsLinearConsCoef() {}
 #pragma region HighsModel Variables
 
 void HighsModelBuilder::HighsCreateVar(const char* name, double lo, double hi,
-                                double obj, HighsVarType type, HighsVar** var) {
+                                       double obj, HighsVarType type,
+                                       HighsVar** var) {
   if (name != NULL) {
     // make sure name is available
     VarMap::iterator it = this->variableMap.find(name);
@@ -163,7 +164,8 @@ void HighsModelBuilder::HighsCreateVar(const char* name, HighsVar** var) {
                        var);
 }
 
-void HighsModelBuilder::HighsGetOrCreateVarByName(const char* name, HighsVar** var) {
+void HighsModelBuilder::HighsGetOrCreateVarByName(const char* name,
+                                                  HighsVar** var) {
   this->HighsGetVarByName(name, var);
   if (*var == NULL) {
     this->HighsCreateVar(name, var);
@@ -207,8 +209,9 @@ void HighsModelBuilder::HighsRemoveVar(HighsVar* var) {
 
 #pragma region HighsModel Constraints
 
-void HighsModelBuilder::HighsCreateLinearCons(const char* name, double lo, double hi,
-                                       HighsLinearCons** cons) {
+void HighsModelBuilder::HighsCreateLinearCons(const char* name, double lo,
+                                              double hi,
+                                              HighsLinearCons** cons) {
   if (name != NULL) {
     // make sure name is available
     ConsMap::iterator it = this->constraintMap.find(name);
@@ -228,7 +231,7 @@ void HighsModelBuilder::HighsCreateLinearCons(const char* name, double lo, doubl
 }
 
 void HighsModelBuilder::HighsCreateLinearCons(const char* name,
-                                       HighsLinearCons** cons) {
+                                              HighsLinearCons** cons) {
   this->HighsCreateLinearCons(name, -HIGHS_CONST_INF, HIGHS_CONST_INF, cons);
 }
 
@@ -237,7 +240,7 @@ void HighsModelBuilder::HighsCreateLinearCons(HighsLinearCons** cons) {
 }
 
 void HighsModelBuilder::HighsGetLinearConsByName(const char* name,
-                                          HighsLinearCons** cons) {}
+                                                 HighsLinearCons** cons) {}
 
 void HighsModelBuilder::HighsDestroyLinearCons() {}
 
@@ -245,8 +248,8 @@ void HighsModelBuilder::HighsDestroyLinearCons() {}
 
 #pragma region HighsModel Coefficients
 
-void HighsModelBuilder::HighsCreateLinearConsCoef(HighsVar* var, double coef,
-                                           HighsLinearConsCoef** consCoef) {
+void HighsModelBuilder::HighsCreateLinearConsCoef(
+    HighsVar* var, double coef, HighsLinearConsCoef** consCoef) {
   *consCoef = new HighsLinearConsCoef(var, coef);
   VarConsCoefsMap::iterator it =
       this->variableConstraintCoefficientMap.find(var);
@@ -262,12 +265,10 @@ void HighsModelBuilder::HighsCreateLinearConsCoef(HighsVar* var, double coef,
   }
 }
 
-int HighsModelBuilder::getNumberOfVariables() {
-  return this->variables.size();
-}
+int HighsModelBuilder::getNumberOfVariables() { return this->variables.size(); }
 
-void HighsModelBuilder::HighsAddLinearConsCoefToCons(HighsLinearCons* cons,
-                                              HighsLinearConsCoef* coef) {
+void HighsModelBuilder::HighsAddLinearConsCoefToCons(
+    HighsLinearCons* cons, HighsLinearConsCoef* coef) {
   VarConsCoefMap::iterator it = cons->linearCoefs.find(coef->var);
   if (it != cons->linearCoefs.end()) {
     // constraint already has a coefficient for this variable

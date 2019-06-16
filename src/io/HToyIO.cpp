@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/HToyIO.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifdef __cplusplus
@@ -29,43 +29,43 @@ using std::string;
 #include <string.h>
 #include <time.h>
 
-#include "lp_data/HConst.h"
 #include "io/HToyIO.h"
+#include "lp_data/HConst.h"
 
-int readToy_LP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
-                   double *offset, double **A, double **b, double **c,
-                   double **lb, double **ub) {
-  int *integerColumn;
+int readToy_LP_cpp(const char* filename, int* m_p, int* n_p, int* maxmin,
+                   double* offset, double** A, double** b, double** c,
+                   double** lb, double** ub) {
+  int* integerColumn;
   int RtCd = readToy_MIP_cpp(filename, m_p, n_p, maxmin, offset, A, b, c, lb,
                              ub, &integerColumn);
   return RtCd;
 }
-extern "C" int readToy_LP_c(const char *filename, int *m_p, int *n_p,
-                            int *maxmin, double *offset, double **A, double **b,
-                            double **c, double **lb, double **ub) {
+extern "C" int readToy_LP_c(const char* filename, int* m_p, int* n_p,
+                            int* maxmin, double* offset, double** A, double** b,
+                            double** c, double** lb, double** ub) {
   int RtCd =
       readToy_LP_cpp(filename, m_p, n_p, maxmin, offset, A, b, c, lb, ub);
   return RtCd;
 }
 
-int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
-                    double *offset, double **A, double **b, double **c,
-                    double **lb, double **ub, int **integerColumn) {
+int readToy_MIP_cpp(const char* filename, int* m_p, int* n_p, int* maxmin,
+                    double* offset, double** A, double** b, double** c,
+                    double** lb, double** ub, int** integerColumn) {
   const int buff_ln = 255;
   char buff[buff_ln];
-  char *fgets_rt;
+  char* fgets_rt;
   int n, m;
   int start, end;
   int rp_rd = 0;
   double rl_v;
   int i_v;
-  char *term;
+  char* term;
   int i, j, k;
 
 #ifdef HiGHSDEV
   printf("readMPS: Trying to open file %s\n", filename);
 #endif
-  FILE *file_p = fopen(filename, "r");
+  FILE* file_p = fopen(filename, "r");
   if (file_p == 0) {
 #ifdef HiGHSDEV
     printf("readInput: Not opened file OK\n");
@@ -84,12 +84,12 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
   m = *(m_p);
 
   // Allocate arrays
-  *c = (double *)malloc(sizeof(double) * n);
-  *A = (double *)malloc(sizeof(double) * (m * n));
-  *b = (double *)malloc(sizeof(double) * m);
-  *lb = (double *)malloc(sizeof(double) * n);
-  *ub = (double *)malloc(sizeof(double) * n);
-  *integerColumn = (int *)malloc(sizeof(int) * n);
+  *c = (double*)malloc(sizeof(double) * n);
+  *A = (double*)malloc(sizeof(double) * (m * n));
+  *b = (double*)malloc(sizeof(double) * m);
+  *lb = (double*)malloc(sizeof(double) * n);
+  *ub = (double*)malloc(sizeof(double) * n);
+  *integerColumn = (int*)malloc(sizeof(int) * n);
 
   fgets_rt = fgets(buff, buff_ln, file_p);
   start = 0;
@@ -112,7 +112,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
     if (rp_rd > 0)
       printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
     if (len > 0) {
-      term = (char *)malloc(sizeof(char) * len);
+      term = (char*)malloc(sizeof(char) * len);
       for (k = 0; k < len; k++) term[k] = buff[start + k];
     } else {
       // JAJH: QY - LEN<=0 means that the end of the line has been reached
@@ -159,7 +159,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
       int len = end - start;
 
       if (len > 0) {
-        term = (char *)malloc(sizeof(char) * len);
+        term = (char*)malloc(sizeof(char) * len);
         for (k = 0; k < len; k++) term[k] = buff[start + k];
       } else {
         // JAJH: QY - LEN<=0 means that the end of the line has been reached
@@ -192,7 +192,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
 
     int len = end - start;
     if (len > 0) {
-      term = (char *)malloc(sizeof(char) * len);
+      term = (char*)malloc(sizeof(char) * len);
       for (k = 0; k < len; k++) term[k] = buff[start + k];
     } else {
       // JAJH: QY - LEN<=0 means that the end of the line has been reached
@@ -238,7 +238,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
     if (rp_rd > 0)
       printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
     if (len > 0) {
-      term = (char *)malloc(sizeof(char) * len);
+      term = (char*)malloc(sizeof(char) * len);
       for (k = 0; k < len; k++) term[k] = buff[start + k];
     } else {
       // JAJH: QY - LEN<=0 means that the end of the line has been reached
@@ -283,7 +283,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
     if (rp_rd > 0)
       printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
     if (len > 0) {
-      term = (char *)malloc(sizeof(char) * len);
+      term = (char*)malloc(sizeof(char) * len);
       for (k = 0; k < len; k++) term[k] = buff[start + k];
     } else {
       // JAJH: QY - LEN<=0 means that the end of the line has been reached
@@ -328,7 +328,7 @@ int readToy_MIP_cpp(const char *filename, int *m_p, int *n_p, int *maxmin,
     if (rp_rd > 0)
       printf("buff: start =%2d, len =%2d, end =%2d\n", start, len, end);
     if (len > 0) {
-      term = (char *)malloc(sizeof(char) * len);
+      term = (char*)malloc(sizeof(char) * len);
       for (k = 0; k < len; k++) term[k] = buff[start + k];
     } else {
       // JAJH: QY - LEN<=0 means that the end of the line has been reached

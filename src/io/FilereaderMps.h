@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file io/FilereaderMps.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef IO_FILEREADER_MPS_H_
@@ -18,8 +18,10 @@
 
 class FilereaderMps : public Filereader {
  public:
-  FilereaderRetcode readModelFromFile(const HighsOptions& options, HighsLp& model);
-  FilereaderRetcode readModelFromFile(const char* filename, HighsModelBuilder& model);
+  FilereaderRetcode readModelFromFile(const HighsOptions& options,
+                                      HighsLp& model);
+  FilereaderRetcode readModelFromFile(const char* filename,
+                                      HighsModelBuilder& model);
   FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
 };
 

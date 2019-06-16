@@ -4,8 +4,7 @@
 #include <string>
 
 // HiGHS status
-enum class HighsStatus
-{
+enum class HighsStatus {
   NotSet,
   OK,
   Info,

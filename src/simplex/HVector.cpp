@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HVector.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HVector.h"
@@ -151,7 +151,7 @@ void HVector::pack() {
   }
 }
 
-void HVector::copy(const HVector *from) {
+void HVector::copy(const HVector* from) {
   /*
    * Copy from another HVector structure to this instance
    */
@@ -159,8 +159,8 @@ void HVector::copy(const HVector *from) {
   //    fakeTick = from->fakeTick;
   syntheticTick = from->syntheticTick;
   const int fromCount = count = from->count;
-  const int *fromIndex = &from->index[0];
-  const double *fromArray = &from->array[0];
+  const int* fromIndex = &from->index[0];
+  const double* fromArray = &from->array[0];
   const int frompWd = from->pWd;
   if (frompWd == dfSparseDaStr) {
     for (int i = 0; i < fromCount; i++) {
@@ -170,8 +170,8 @@ void HVector::copy(const HVector *from) {
       array[iFrom] = xFrom;
     }
   } else if (frompWd == p1SparseDaStr) {
-    const unsigned char *fromValueP1 = &from->valueP1[0];
-    const double *fromPackValue = &from->packValue[0];
+    const unsigned char* fromValueP1 = &from->valueP1[0];
+    const double* fromPackValue = &from->packValue[0];
     for (int i = 0; i < fromCount; i++) {
       const int iFrom = fromIndex[i];
       const int valueP = fromValueP1[iFrom];
@@ -180,8 +180,8 @@ void HVector::copy(const HVector *from) {
       array[iFrom] = xFrom;
     }
   } else if (frompWd == p2SparseDaStr) {
-    const unsigned short *fromValueP2 = &from->valueP2[0];
-    const double *fromPackValue = &from->packValue[0];
+    const unsigned short* fromValueP2 = &from->valueP2[0];
+    const double* fromPackValue = &from->packValue[0];
     for (int i = 0; i < fromCount; i++) {
       const int iFrom = fromIndex[i];
       const int valueP = fromValueP2[iFrom];
@@ -197,8 +197,8 @@ double HVector::norm2() {
    * Compute the squared 2-norm of the vector
    */
   const int workCount = count;
-  const int *workIndex = &index[0];
-  const double *workArray = &array[0];
+  const int* workIndex = &index[0];
+  const double* workArray = &array[0];
 
   if (pWd != dfSparseDaStr) {
     printf("ERROR: HVector::norm2() not implemented for pWd=%d\n", pWd);
@@ -211,18 +211,18 @@ double HVector::norm2() {
   return result;
 }
 
-void HVector::saxpy(const double pivotX, const HVector *pivot) {
+void HVector::saxpy(const double pivotX, const HVector* pivot) {
   /*
    * Add a multiple pivotX of *pivot into this vector, maintaining
    * indices of nonzeros but not tracking cancellation
    */
   int workCount = count;
-  int *workIndex = &index[0];
-  double *workArray = &array[0];
+  int* workIndex = &index[0];
+  double* workArray = &array[0];
 
   const int pivotCount = pivot->count;
-  const int *pivotIndex = &pivot->index[0];
-  const double *pivotArray = &pivot->array[0];
+  const int* pivotIndex = &pivot->index[0];
+  const double* pivotArray = &pivot->array[0];
 
   if (pWd != dfSparseDaStr) {
     printf(

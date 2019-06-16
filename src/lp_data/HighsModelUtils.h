@@ -19,25 +19,17 @@
 
 #ifdef HiGHSDEV
 // Analyse lower and upper bounds of a model
-void analyseModelBounds(const char* message,
-			int numBd,
-			const std::vector<double>& lower,
-			const std::vector<double>& upper
-			);
+void analyseModelBounds(const char* message, int numBd,
+                        const std::vector<double>& lower,
+                        const std::vector<double>& upper);
 #endif
-void reportModelBoundSol(
-			 const bool columns,
-			 const int dim,
-			 const std::vector<double>& lower,
-			 const std::vector<double>& upper,
-			 const std::vector<std::string>& names,
-			 const std::vector<double>& primal,
-			 const std::vector<double>& dual,
-			 const std::vector<HighsBasisStatus>& status
-			 );
-int maxNameLength(
-		  const int num_name,
-		  const std::vector<std::string>& names
-		  );
+void reportModelBoundSol(const bool columns, const int dim,
+                         const std::vector<double>& lower,
+                         const std::vector<double>& upper,
+                         const std::vector<std::string>& names,
+                         const std::vector<double>& primal,
+                         const std::vector<double>& dual,
+                         const std::vector<HighsBasisStatus>& status);
+int maxNameLength(const int num_name, const std::vector<std::string>& names);
 
 #endif

@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file test/KktChStep.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef TEST_KKTCHSTEP_H_
@@ -78,11 +78,13 @@ class KktChStep {
   std::stack<std::vector<std::pair<int, double> > > costs;
   // std::stack<double> M;
 
-  void passSolution(const std::vector<double>& colVal, const std::vector<double>& colDu,
+  void passSolution(const std::vector<double>& colVal,
+                    const std::vector<double>& colDu,
                     const std::vector<double>& rDu);
   // full matrix
   void setMatrixAR(int nCol, int nRow, const std::vector<int>& ARstart_,
-                   const std::vector<int>& ARindex_, const std::vector<double>& ARvalue_);
+                   const std::vector<int>& ARindex_,
+                   const std::vector<double>& ARvalue_);
   void setBoundsCostRHS(const std::vector<double>& colUpper_,
                         const std::vector<double>& colLower_,
                         const std::vector<double>& cost,

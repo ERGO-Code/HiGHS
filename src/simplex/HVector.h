@@ -17,8 +17,8 @@
 #include <map>
 #include <vector>
 
-using std::vector;
 using std::map;
+using std::vector;
 
 /**
  * @brief Class for the vector structure for HiGHS
@@ -96,11 +96,11 @@ class HVector {
   // For update
   vector<char> cwork;  //!< char working buffer for UPDATE
   vector<int> iwork;   //!< integer working buffer for UPDATE
-  HVector *next;       //!< Allows vectors to be linked for PAMI
+  HVector* next;       //!< Allows vectors to be linked for PAMI
 
   /**
-   * @brief Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY in
-   * magnitude
+   * @brief Packing: Zero values in Vector.array which exceed HIGHS_CONST_TINY
+   * in magnitude
    *
    */
   void tight();
@@ -120,7 +120,7 @@ class HVector {
   /**
    * @brief Copy from another HVector structure to this instance
    */
-  void copy(const HVector *from  //!< Source of HVector structure to be copied
+  void copy(const HVector* from  //!< Source of HVector structure to be copied
   );
 
   /**
@@ -133,10 +133,10 @@ class HVector {
    * maintaining indices of nonzeros but not tracking cancellation
    */
   void saxpy(const double pivotX,  //!< The multiple of *pivot to be added
-             const HVector *pivot  //!< The vector whose multiple is to be added
+             const HVector* pivot  //!< The vector whose multiple is to be added
   );
 };
 
-typedef HVector *HVector_ptr;
+typedef HVector* HVector_ptr;
 
 #endif /* SIMPLEX_HVECTOR_H_ */

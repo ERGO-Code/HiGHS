@@ -13,19 +13,17 @@
  */
 #include "io/FilereaderMps.h"
 #include "io/HMPSIO.h"
-#include "lp_data/HighsLp.h"
 #include "io/HMpsFF.h"
+#include "lp_data/HighsLp.h"
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
-                                                   HighsLp &model)
-{
+FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
+                                                   HighsLp& model) {
   int status = 1;
   const char* filename = options.filename.c_str();
 
   // if free format parser
   // Parse file and return status.
-  if (options.mps_parser_type == HighsMpsParserType::free)
-  {
+  if (options.mps_parser_type == HighsMpsParserType::free) {
     HMpsFF parser{};
     FreeFormatParserReturnCode result = parser.loadProblem(filename, model);
     switch (result) {
@@ -45,34 +43,28 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions &options,
 
   // else use fixed format parser
   status = readMPS(
-		   filename, -1, -1,
-		   model.numRow_, model.numCol_, model.numInt_,
-		   model.sense_, model.offset_,
-		   model.Astart_, model.Aindex_, model.Avalue_,
-		   model.colCost_, model.colLower_, model.colUpper_,
-		   model.rowLower_, model.rowUpper_,
-		   model.integrality_,
-		   model.col_names_, model.row_names_);
+      filename, -1, -1, model.numRow_, model.numCol_, model.numInt_,
+      model.sense_, model.offset_, model.Astart_, model.Aindex_, model.Avalue_,
+      model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+      model.rowUpper_, model.integrality_, model.col_names_, model.row_names_);
 
-  if (status)
-    return FilereaderRetcode::PARSERERROR;
+  if (status) return FilereaderRetcode::PARSERERROR;
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::writeModelToFile(const char *filename,
-                                                  HighsLp &model)
-{
+FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
+                                                  HighsLp& model) {
   int objsense = 1;
   double objoffset = 0;
-  writeMPS(filename, model.numRow_, model.numCol_, model.numInt_, objsense, objoffset,
-           model.Astart_, model.Aindex_, model.Avalue_, model.colCost_,
-           model.colLower_, model.colUpper_, model.rowLower_, model.rowUpper_,
-           model.integrality_, model.col_names_, model.row_names_);
+  writeMPS(filename, model.numRow_, model.numCol_, model.numInt_, objsense,
+           objoffset, model.Astart_, model.Aindex_, model.Avalue_,
+           model.colCost_, model.colLower_, model.colUpper_, model.rowLower_,
+           model.rowUpper_, model.integrality_, model.col_names_,
+           model.row_names_);
   return FilereaderRetcode::OKAY;
 }
 
-FilereaderRetcode FilereaderMps::readModelFromFile(const char *filename,
-                                                   HighsModelBuilder &model)
-{
+FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
+                                                   HighsModelBuilder& model) {
   return FilereaderRetcode::PARSERERROR;
 }

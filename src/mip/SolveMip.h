@@ -1,9 +1,9 @@
 #ifndef MIP_SOLVEMIP_H_
 #define MIP_SOLVEMIP_H_
 
+#include <functional>
 #include <memory>
 #include <stack>
-#include <functional>
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsStatus.h"
@@ -14,11 +14,11 @@ struct Node {
   int level;
 
   Node();
-  Node(int parent, int index, int depth) :
-    id(index), parent_id(parent), level(depth) {
-      left_child = nullptr;
-      right_child = nullptr;
-    }
+  Node(int parent, int index, int depth)
+      : id(index), parent_id(parent), level(depth) {
+    left_child = nullptr;
+    right_child = nullptr;
+  }
 
   std::vector<int> integer_variables;
   std::vector<double> primal_solution;
@@ -36,9 +36,8 @@ using NodeIndex = int;
 constexpr NodeIndex kNoNodeIndex = -1;
 constexpr NodeIndex kNodeIndexError = -2;
 
-
 class Tree {
-public:
+ public:
   Tree(Node& node) {
     std::reference_wrapper<Node> ref(node);
     nodes_.push_back(ref);
@@ -47,22 +46,20 @@ public:
   bool branch(Node& node);
 
   Node& next() { return nodes_[nodes_.size() - 1]; }
-  void pop() { nodes_.erase(nodes_.end() -1); }
-  bool empty() {return (nodes_.size() == 0); }
+  void pop() { nodes_.erase(nodes_.end() - 1); }
+  bool empty() { return (nodes_.size() == 0); }
 
-  const std::vector<double>& getBestSolution() const {
-    return best_solution_;
-  }
+  const std::vector<double>& getBestSolution() const { return best_solution_; }
 
   double getBestObjective() { return best_objective_; }
 
-private:
+ private:
   std::vector<std::reference_wrapper<Node> > nodes_;
   std::vector<double> best_solution_;
   double best_objective_ = HIGHS_CONST_INF;
 
   NodeIndex chooseBranchingVariable(const Node& node);
-  
+
   int num_nodes = 0;
 };
 
