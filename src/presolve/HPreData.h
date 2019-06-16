@@ -35,7 +35,7 @@ struct change {
 };
 
 class HPreData {
-public:
+ public:
   HPreData();
 
   // Model data
@@ -72,12 +72,12 @@ public:
   vector<double> valueColDual;
   vector<double> valueRowDual;
 
-  vector<int> nzCol; // nonzeros in columns and rows
+  vector<int> nzCol;  // nonzeros in columns and rows
   vector<int> nzRow;
   vector<int> flagCol;
   vector<int> flagRow;
 
-  const bool use_simplex_basis_logic = false; // true;//
+  const bool use_simplex_basis_logic = false;  // true;//
   vector<int> nonbasicFlag;
 
   // Record of whether a column or row is basic or nonbasic
@@ -106,7 +106,7 @@ public:
   KktChStep chk;
 
   stack<change> chng;
-  stack<pair<int, vector<double>>> oldBounds; //(j, l, u)
+  stack<pair<int, vector<double>>> oldBounds;  //(j, l, u)
 
   void writeNewFormat(string fileName);
 };
