@@ -171,6 +171,7 @@ HighsStatus Highs::run() {
       int iteration_count = lp_solve_final_simplex_iteration_count - lp_solve_initial_simplex_iteration_count;
       lp_solve_simplex_iteration_count += iteration_count;
 
+      /*
       // Solve the unscaled model from the optimal basis to see if any iterations are required
       if (hmos_[solved_hmo].simplex_lp_status_.is_scaled) {
 	// Get the scale factor ranges for reporting
@@ -206,7 +207,7 @@ HighsStatus Highs::run() {
 	// Recover the options
 	options_ = save_options;
       }
-
+      */
       break;
     }
     case HighsPresolveStatus::NotReduced: {
