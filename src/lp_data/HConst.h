@@ -81,6 +81,7 @@ enum class HighsBasisStatus {
   BASIC,  // (slack) variable is basic
   UPPER,  // (slack) variable is at its upper bound
   ZERO,   // free variable is non-basic and set to zero
+  NONBASIC, // nonbasic with no specific bound information - useful for users and postsolve
   SUPER   // Super-basic variable: non-basic and either free and
           // nonzero or not at a bound. No SCIP equivalent
 };

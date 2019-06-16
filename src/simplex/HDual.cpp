@@ -1108,7 +1108,7 @@ void HDual::iterationReportRebuild(const int i_v) {
   iterationReportDensity(ML_MINIMAL, true);
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
-  HighsPrintMessage(ML_MINIMAL, " Dual Ph%1d(%2d)", solvePhase, i_v);
+  HighsPrintMessage(ML_MINIMAL, " DuPh%1d(%2d)", solvePhase, i_v);
   if (solvePhase == 2) reportInfeasibility(i_v);
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else
