@@ -8,22 +8,23 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/HPreData.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "presolve/HPreData.h"
 #include "lp_data/HConst.h"
 
 using std::cout;
-using std::setw;
 using std::endl;
+using std::setw;
 
 HPreData::HPreData() {}
 
 double HPreData::getRowValue(int i) {
   double sum = 0;
   for (int k = ARstart[i]; k < ARstart[i + 1]; k++)
-    if (flagRow[ARindex[k]]) sum += ARvalue[k] * valuePrimal[ARindex[k]];
+    if (flagRow[ARindex[k]])
+      sum += ARvalue[k] * valuePrimal[ARindex[k]];
   return sum;
 }
 
@@ -33,7 +34,8 @@ void HPreData::printSolution() {
   for (int i = 0; i < numColOriginal; i++) {
     sprintf(buff, "%2.2f ", valuePrimal[i]);
     cout << setw(5) << buff;
-    if ((i % 30) == 0) cout << std::flush;
+    if ((i % 30) == 0)
+      cout << std::flush;
   }
 
   cout << endl << endl;
@@ -41,7 +43,8 @@ void HPreData::printSolution() {
 
 double HPreData::getaij(int i, int j) {
   int k = ARstart[i];
-  while (j != ARindex[k] && k <= ARstart[i + 1]) k++;
+  while (j != ARindex[k] && k <= ARstart[i + 1])
+    k++;
   if (k == ARstart[i + 1]) {
     // cout<<"Error: No such element in A: row "<<i<<", column "<<j<<endl;
     // exit(0);
@@ -51,7 +54,8 @@ double HPreData::getaij(int i, int j) {
 
 bool HPreData::isZeroA(int i, int j) {
   int k = ARstart[i];
-  while (j != ARindex[k] && k < ARstart[i + 1]) k++;
+  while (j != ARindex[k] && k < ARstart[i + 1])
+    k++;
   if (k == ARstart[i + 1]) {
     return true;
   }
@@ -66,10 +70,12 @@ void HPreData::makeARCopy() {
   int AcountX = Aindex.size();
   ARindex.resize(AcountX);
   ARvalue.resize(AcountX);
-  for (int k = 0; k < AcountX; k++) iwork.at(Aindex.at(k))++;
+  for (int k = 0; k < AcountX; k++)
+    iwork.at(Aindex.at(k))++;
   for (i = 1; i <= numRow; i++)
     ARstart.at(i) = ARstart.at(i - 1) + iwork.at(i - 1);
-  for (i = 0; i < numRow; i++) iwork.at(i) = ARstart.at(i);
+  for (i = 0; i < numRow; i++)
+    iwork.at(i) = ARstart.at(i);
   for (int iCol = 0; iCol < numCol; iCol++) {
     for (k = Astart.at(iCol); k < Astart.at(iCol + 1); k++) {
       int iRow = Aindex.at(k);
@@ -90,10 +96,12 @@ void HPreData::makeACopy() {
   Aindex.resize(AcountX);
   Avalue.resize(AcountX);
   for (int k = 0; k < AcountX; k++)
-    if (ARindex[k] < numColOriginal) iwork[ARindex[k]]++;
+    if (ARindex[k] < numColOriginal)
+      iwork[ARindex[k]]++;
   for (i = 1; i <= numColOriginal; i++)
     Astart[i] = Astart[i - 1] + iwork[i - 1];
-  for (i = 0; i < numColOriginal; i++) iwork[i] = Astart[i];
+  for (i = 0; i < numColOriginal; i++)
+    iwork[i] = Astart[i];
   for (int iRow = 0; iRow < numRowOriginal; iRow++) {
     for (k = ARstart[iRow]; k < ARstart[iRow + 1]; k++) {
       int iColumn = ARindex[k];
@@ -106,7 +114,8 @@ void HPreData::makeACopy() {
   }
 
   Aend.resize(numColOriginal + 1, 0);
-  for (i = 0; i < numColOriginal; i++) Aend[i] = Astart[i + 1];
+  for (i = 0; i < numColOriginal; i++)
+    Aend[i] = Astart[i + 1];
 }
 
 void HPreData::print(int k) {
@@ -137,15 +146,18 @@ void HPreData::print(int k) {
   cout << endl;
   cout << "------A-|-b-----\n";
   int rows = numRow;
-  if (k) rows = numRowOriginal;
+  if (k)
+    rows = numRowOriginal;
 
   for (int i = 0; i < rows; i++) {
     if (flagRow[i]) {
       for (size_t j = 0; j < Astart.size() - 1; j++) {
         int ind = Astart[j];
-        while (Aindex[ind] != i && ind < Aend[j]) ind++;
+        while (Aindex[ind] != i && ind < Aend[j])
+          ind++;
 
-        if (!flagCol[j]) continue;
+        if (!flagCol[j])
+          continue;
 
         // if a_ij is nonzero print
         if (Aindex[ind] == i && ind < Aend[j]) {
@@ -191,7 +203,8 @@ void HPreData::printAR(int i) {
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
       int ind = ARstart[i];
-      while (ARindex[ind] != j && ind < ARstart[i + 1]) ind++;
+      while (ARindex[ind] != j && ind < ARstart[i + 1])
+        ind++;
       // if a_ij is nonzero print
       if (ARindex[ind] == j && ind < ARstart[i + 1])
         cout << ARvalue[ind];
