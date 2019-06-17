@@ -1461,11 +1461,14 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   double primal_infeasibility;
   double dual_infeasibility;
   int num_primal_infeasibilities = 0;
-  int num_dual_infeasibilities = 0;
-  double sum_primal_infeasibilities = 0;
-  double sum_dual_infeasibilities = 0;
   double max_primal_infeasibility = 0;
+  double sum_primal_infeasibilities = 0;
+  int num_dual_infeasibilities = 0;
   double max_dual_infeasibility = 0;
+  double sum_dual_infeasibilities = 0;
+  int num_nonzero_basic_duals = 0;
+  double max_nonzero_basic_dual = 0;
+  double sum_nonzero_basic_duals = 0;
   double local_primal_objective_value = 0;
   double local_dual_objective_value = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
@@ -1488,10 +1491,19 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     max_primal_infeasibility =
         max(primal_infeasibility, max_primal_infeasibility);
     sum_primal_infeasibilities += primal_infeasibility;
-    if (dual_infeasibility > dual_feasibility_tolerance)
-      num_dual_infeasibilities++;
-    max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-    sum_dual_infeasibilities += dual_infeasibility;
+    if (status == HighsBasisStatus::BASIC) {
+      double abs_basic_dual = dual_infeasibility;
+      if (abs_basic_dual > 0) {
+	num_nonzero_basic_duals++;
+	max_nonzero_basic_dual = max(abs_basic_dual, max_nonzero_basic_dual);
+	sum_nonzero_basic_duals += abs_basic_dual;
+      }
+    } else {
+      if (dual_infeasibility > dual_feasibility_tolerance)
+	num_dual_infeasibilities++;
+      max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibilities += dual_infeasibility;
+    }
     report = report_level == 3 || (report_level == 2 && query);
     if (report) {
       if (!header_written) {
@@ -1546,6 +1558,10 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   double max_dual_residual = 0;
   double sum_dual_residual = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
+      double abs_basic_col_dual = fabs(solution.col_dual[iCol]);
+      if (abs_basic_col_dual) printf("Column %6d is basic with dual %11.4g\n", iCol, abs_basic_col_dual);
+    }
     double dual_residual =
         fabs(dual_activities[iCol] - solution.col_dual[iCol]);
     if (dual_residual > dual_feasibility_tolerance) {
@@ -1579,15 +1595,19 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
         report, status, lower, upper, value, dual, num_non_basic_var,
         num_basic_var, num_off_bound_nonbasic, primal_infeasibility,
         dual_infeasibility);
-    if (primal_infeasibility > primal_feasibility_tolerance)
-      num_primal_infeasibilities++;
-    max_primal_infeasibility =
-        max(primal_infeasibility, max_primal_infeasibility);
-    sum_primal_infeasibilities += primal_infeasibility;
-    if (dual_infeasibility > dual_feasibility_tolerance)
-      num_dual_infeasibilities++;
-    max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-    sum_dual_infeasibilities += dual_infeasibility;
+    if (status == HighsBasisStatus::BASIC) {
+      double abs_basic_dual = dual_infeasibility;
+      if (abs_basic_dual > 0) {
+	num_nonzero_basic_duals++;
+	max_nonzero_basic_dual = max(abs_basic_dual, max_nonzero_basic_dual);
+	sum_nonzero_basic_duals += abs_basic_dual;
+      }
+    } else {
+      if (dual_infeasibility > dual_feasibility_tolerance)
+	num_dual_infeasibilities++;
+      max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibilities += dual_infeasibility;
+    }
     report = report_level == 3 || (report_level == 2 && query);
     if (report) {
       if (!header_written) {
@@ -1608,8 +1628,19 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   }
   local_primal_objective_value += lp.offset_;
   local_dual_objective_value += lp.offset_;
-  double primal_objective_value = simplex_info.primal_objective_value;
-  double dual_objective_value = simplex_info.dual_objective_value;
+  double primal_objective_value;
+  double dual_objective_value;
+  if (simplex_lp_status.has_primal_objective_value) {
+    primal_objective_value = simplex_info.primal_objective_value;
+  } else {
+    primal_objective_value = local_primal_objective_value;
+  }
+    
+  if (simplex_lp_status.has_dual_objective_value) {
+    dual_objective_value = simplex_info.dual_objective_value;
+  } else {
+    dual_objective_value = local_dual_objective_value;
+  }
   double primal_objective_error =
       fabs(primal_objective_value - local_primal_objective_value) /
       max(1.0, fabs(primal_objective_value));
@@ -1678,12 +1709,18 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       HighsMessageType::INFO,
       "HiGHS basic solution: Iterations = %d; Objective = %.15g; "
       "Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
-      simplex_info.iteration_count, simplex_info.primal_objective_value,
+      simplex_info.iteration_count, primal_objective_value,
       simplex_info.num_primal_infeasibilities,
       simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
       SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+  if (num_nonzero_basic_duals) {
+    HighsLogMessage(
+		    HighsMessageType::WARNING,
+		    "HiGHS basic solution: %d nonzero basic duals; max = %g; sum = %g",
+		    num_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals);
+  }
   return solution_status;
 }
 

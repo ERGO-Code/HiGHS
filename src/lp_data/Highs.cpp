@@ -364,6 +364,12 @@ HighsStatus Highs::run() {
             hmos_[original_hmo].basis_.row_status =
                 presolve_info.presolve_[0].getRowStatus();
             hmos_[original_hmo].basis_.valid_ = true;
+	    // Possibly analyse the Highs basic solution returned from postsolve
+	    if (hmos_[original_hmo].simplex_info_.analyseLpSolution) {
+	      printf("Analyse the Highs basic solution returned from postsolve\n");
+	      HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
+	      simplex_interface.analyseHighsSolutionAndBasis(1);
+	    }
             // Now hot-start the simplex solver for the original_hmo
             solved_hmo = original_hmo;
             int lp_solve_initial_simplex_iteration_count =
