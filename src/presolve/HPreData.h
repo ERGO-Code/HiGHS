@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/HPreData.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef PRESOLVE_HPREDATA_H_
@@ -23,10 +23,10 @@
 #include "lp_data/HConst.h"
 #include "test/KktChStep.h"
 
-using std::vector;
+using std::pair;
 using std::stack;
 using std::string;
-using std::pair;
+using std::vector;
 
 struct change {
   int type;
@@ -77,7 +77,7 @@ class HPreData {
   vector<int> flagCol;
   vector<int> flagRow;
 
-  const bool use_simplex_basis_logic = false;//true;//
+  const bool use_simplex_basis_logic = false;  // true;//
   vector<int> nonbasicFlag;
 
   // Record of whether a column or row is basic or nonbasic
