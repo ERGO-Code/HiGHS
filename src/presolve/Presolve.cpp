@@ -97,8 +97,8 @@ void Presolve::setBasisInfo(
 
 int Presolve::presolve(int print) {
   iPrint = print;
-  // iPrint = 1;
 
+  iPrint = 1;
   iKKTcheck = 1;
   chk.print = 1;
 
@@ -2437,6 +2437,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                  << " re-introduced. Variable: " << c.col << " -----\n";
           chk.addChange(1, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
+          chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
         }
         break;
@@ -3227,6 +3228,9 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   double u = (get<1>(bnd))[1];
   double lrow = (get<1>(bnd))[2];
   double urow = (get<1>(bnd))[3];
+
+  double sum_aty_without_aij = 0;
+
   if ((aij * valuePrimal.at(col) - lrow) > tol &&
       (-aij * valuePrimal.at(col) + urow) > tol) {
     valueRowDual.at(row) = 0;
@@ -3246,6 +3250,7 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       if (flagRow.at(Aindex.at(k)))
         sum = sum + valueRowDual.at(Aindex.at(k)) * Avalue.at(k);
 
+    sum_aty_without_aij = sum;
     flagRow.at(row) = 1;
 
     double y = (valueColDual.at(col) - cost - sum) / aij;
@@ -3380,6 +3385,9 @@ void Presolve::getDualsSingletonRow(int row, int col) {
         printf("3.2 : Make row %3d basic\n", row);
       }
       row_status.at(row) = HighsBasisStatus::BASIC;
+      // here row is basic so the dual has to be transferred to the column.
+      // valueRowDual[row] = 0;
+      // valueColDual[col] = sum_aty_without_aij + cost; 
     }
     //  } else if (local_status == HighsBasisStatus::BASIC) {
   } else {
