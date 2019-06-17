@@ -372,6 +372,16 @@ void HDual::solvePhase1() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
+  // When starting a new phase the (updated) dual objective function
+  // value isn't known. Indicate this so that when the value computed
+  // from scratch in build() isn't checked against the the updated
+  // value
+  simplex_lp_status.has_dual_objective_value = 0;
+  // Set invertHint so that it's assigned when first tested
+  invertHint = INVERT_HINT_NO;
+  // Set solvePhase=1 so it's set if solvePhase1() is called directly
+  solvePhase = 1;
+  // Report the phase start
   HighsPrintMessage(ML_DETAILED, "dual-phase-1-start\n");
   // Switch to dual phase 1 bounds
   initialise_bound(workHMO, 1);
@@ -476,8 +486,17 @@ void HDual::solvePhase2() {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
+  // When starting a new phase the (updated) dual objective function
+  // value isn't known. Indicate this so that when the value computed
+  // from scratch in build() isn't checked against the the updated
+  // value
+  simplex_lp_status.has_dual_objective_value = 0;
+  // Set invertHint so that it's assigned when first tested
+  invertHint = INVERT_HINT_NO;
+  // Set solvePhase=2 so it's set if solvePhase2() is called directly
+  solvePhase = 2;
+  // Report the phase start
   HighsPrintMessage(ML_DETAILED, "dual-phase-2-start\n");
-
   // Collect free variables
   dualRow.create_Freelist();
   // Main solving structure
@@ -693,6 +712,8 @@ void HDual::rebuild() {
   timer.start(simplex_info.clock_[ReportRebuildClock]);
   iterationReportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
+  // Indicate that a header must be printed before the next iteration log
+  previous_iteration_report_header_iteration_count = -1;
 
   total_INVERT_TICK = factor->build_syntheticTick;  // Was factor->pseudoTick
   total_FT_inc_TICK = 0;
@@ -1015,10 +1036,15 @@ void HDual::iterationAnalysis() {
 }
 
 void HDual::iterationReport() {
-  int numIter = workHMO.simplex_info_.iteration_count;
-  bool header = numIter % 10 == 1;
-  //  header = true;  // JAJH10/10
-  if (header) iterationReportFull(header);
+  int iteration_count = workHMO.simplex_info_.iteration_count;
+  int iteration_count_difference = iteration_count -
+    previous_iteration_report_header_iteration_count;
+  bool header = (previous_iteration_report_header_iteration_count < 0)
+    || (iteration_count - previous_iteration_report_header_iteration_count > 10);
+  if (header) {
+    iterationReportFull(header);
+    previous_iteration_report_header_iteration_count = iteration_count;
+  }
   iterationReportFull(false);
 }
 
@@ -1056,7 +1082,7 @@ void HDual::iterationReportIterationAndPhase(int iterate_log_level,
 void HDual::iterationReportDualObjective(int iterate_log_level, bool header) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "    DualObjective    ");
+    HighsPrintMessage(iterate_log_level, "        DualObjective");
   } else {
     HighsPrintMessage(iterate_log_level, " %20.10e",
                       simplex_info.updated_dual_objective_value);
@@ -1108,7 +1134,7 @@ void HDual::iterationReportRebuild(const int i_v) {
   iterationReportDensity(ML_MINIMAL, true);
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
-  HighsPrintMessage(ML_MINIMAL, " Dual Ph%1d(%2d)", solvePhase, i_v);
+  HighsPrintMessage(ML_MINIMAL, " DuPh%1d(%2d)", solvePhase, i_v);
   if (solvePhase == 2) reportInfeasibility(i_v);
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else

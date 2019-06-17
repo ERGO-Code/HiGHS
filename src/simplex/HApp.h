@@ -177,7 +177,7 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
     if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(1);
+      simplex_interface.analyseHighsSolutionAndBasis(-1);
   }
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After solve");

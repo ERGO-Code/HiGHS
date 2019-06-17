@@ -2252,8 +2252,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   vector<HighsBasisStatus> temp_row_status = row_status;
 
   nonbasicFlag.assign(numColOriginal + numRowOriginal, 1);
-  col_status.assign(numColOriginal, HighsBasisStatus::LOWER);  // Really LOWER?
-  row_status.assign(numRowOriginal, HighsBasisStatus::LOWER);  // Really LOWER?
+  col_status.assign(numColOriginal, HighsBasisStatus::NONBASIC);  // Was LOWER
+  row_status.assign(numRowOriginal, HighsBasisStatus::NONBASIC);  // Was LOWER
 
   for (int i = 0; i < numCol; ++i) {
     int iCol = eqIndexOfReduced.at(i);
@@ -2680,7 +2680,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           if (report_postsolve) {
             printf("1.0 : Recover col %3d as %3d (nonbasic)\n", c.col, j);
           }
-          col_status.at(c.col) = HighsBasisStatus::LOWER;  // Really LOWER?
+          col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
           if (j < numColOriginal) {
             // j is a column
             col_status.at(j) = HighsBasisStatus::BASIC;
@@ -2903,7 +2903,7 @@ void Presolve::setBasisElement(change c) {
             "column\n",
             c.row, numColOriginal + c.row);
       }
-      row_status.at(c.row) = HighsBasisStatus::LOWER;  // Really LOWER?
+      row_status.at(c.row) = HighsBasisStatus::NONBASIC;  // Was LOWER
       break;
     }
     case SING_COL_DOUBLETON_INEQ: {
@@ -2922,7 +2922,7 @@ void Presolve::setBasisElement(change c) {
             "doubleton inequality\n",
             c.row, numColOriginal + c.row);
       }
-      row_status.at(c.row) = HighsBasisStatus::LOWER;  // Really LOWER?
+      row_status.at(c.row) = HighsBasisStatus::NONBASIC;  // Was LOWER
       break;
     }
     case EMPTY_COL:
@@ -2932,7 +2932,7 @@ void Presolve::setBasisElement(change c) {
         printf("2.7 : Recover column %3d (nonbasic): weakly dominated column\n",
                c.col);
       }
-      col_status.at(c.col) = HighsBasisStatus::LOWER;  // Really LOWER?
+      col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
       break;
     }
     case FIXED_COL: {  // fixed variable:
@@ -2945,7 +2945,7 @@ void Presolve::setBasisElement(change c) {
                 "column\n",
                 c.col);
           }
-          col_status.at(c.col) = HighsBasisStatus::LOWER;  // Really LOWER?
+          col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
         }
       break;
     }
@@ -3368,7 +3368,7 @@ void Presolve::getDualsSingletonRow(int row, int col) {
         printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
       }
       col_status.at(col) = HighsBasisStatus::BASIC;
-      row_status.at(row) = HighsBasisStatus::LOWER;  // Really LOWER?
+      row_status.at(row) = HighsBasisStatus::NONBASIC;  // Was LOWER
     }
     // x was not basic and is not now either, row is basic
     else {

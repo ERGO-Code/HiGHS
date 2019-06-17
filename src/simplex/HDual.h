@@ -511,6 +511,7 @@ class HDual {
   double dual_objective_value_upper_bound;
 
   int solvePhase;
+  int previous_iteration_report_header_iteration_count = -1;
   int invertHint;
 
   HVector row_ep;

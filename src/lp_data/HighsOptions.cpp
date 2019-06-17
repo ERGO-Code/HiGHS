@@ -132,13 +132,19 @@ OptionStatus checkOptionsValue(HighsOptions& options) {
 void reportStringOptionValue(const int report_level, const string option_string,
                              const string option_value,
                              const string option_default) {
+  string default_space;
+  if (report_level) {
+    default_space = "       ";
+  } else {
+    default_space = "";
+  }
   bool is_default = option_value == option_default;
-  if (!is_default || report_level > 0) {
+  if (!is_default || report_level) {
     printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
       printf(" default value \"%s\"\n", option_default.c_str());
     } else {
-      printf("         value \"%s\"", option_value.c_str());
+      printf("%s value \"%s\"", default_space.c_str(), option_value.c_str());
       printf(": default value is \"%s\"\n", option_default.c_str());
     }
   }
@@ -147,13 +153,19 @@ void reportStringOptionValue(const int report_level, const string option_string,
 void reportIntOptionValue(const int report_level, const string option_string,
                           const int option_value, const int option_default,
                           const int* option_min, const int* option_max) {
+  string default_space;
+  if (report_level) {
+    default_space = "       ";
+  } else {
+    default_space = "";
+  }
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
     printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
       printf(" default value %6d", option_default);
     } else {
-      printf("         value %6d", option_value);
+      printf("%s value %6d", default_space.c_str(), option_value);
       printf(": default value is %6d", option_default);
     }
     if (option_min == NULL) {
@@ -177,13 +189,19 @@ void reportDoubleOptionValue(const int report_level, const string option_string,
                              const double option_default,
                              const double* option_min,
                              const double* option_max) {
+  string default_space;
+  if (report_level) {
+    default_space = "       ";
+  } else {
+    default_space = "";
+  }
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
     printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
       printf(" default value %12g", option_default);
     } else {
-      printf("         value %12g", option_value);
+      printf("%s value %612g", default_space.c_str(), option_value);
       printf(": default value is %12g", option_default);
     }
     if (option_min == NULL) {
@@ -205,9 +223,19 @@ void reportDoubleOptionValue(const int report_level, const string option_string,
 void reportOptionsValue(const HighsOptions& options, const int report_level) {
   // Report on the command line options
   bool is_default;
+  string default_space;
+  if (report_level) {
+    default_space = "       ";
+  } else {
+    default_space = "";
+  }
   // Model file name
-  reportStringOptionValue(report_level, file_string, options.filename,
-                          FILENAME_DEFAULT);
+  //
+  // Don't report this since hiGHS returns an error if it's not
+  // changed from the default.
+  //
+  //  reportStringOptionValue(report_level, file_string, options.filename,
+  //                          FILENAME_DEFAULT);
   // Options file name
   reportStringOptionValue(report_level, options_file_string,
                           options.options_file, OPTIONS_FILE_DEFAULT);
@@ -218,9 +246,8 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
       printf("Option: %-32s has default value \"off\"\n",
              presolve_string.c_str());
     } else {
-      printf(
-          "Option: %-32s has         value \"on\": default value is \"off\"\n",
-          presolve_string.c_str());
+      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+	     presolve_string.c_str(), default_space.c_str());
     }
   }
   // Crash option
@@ -229,9 +256,8 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
     if (is_default) {
       printf("Option: %-32s has default value \"off\"\n", crash_string.c_str());
     } else {
-      printf(
-          "Option: %-32s has         value \"on\": default value is \"off\"\n",
-          crash_string.c_str());
+      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+	     crash_string.c_str(), default_space.c_str());
     }
   }
   // Parallel option
@@ -241,9 +267,8 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
       printf("Option: %-32s has default value \"off\"\n",
              parallel_string.c_str());
     } else {
-      printf(
-          "Option: %-32s has         value \"on\": default value is \"off\"\n",
-          parallel_string.c_str());
+      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+	     parallel_string.c_str(), default_space.c_str());
     }
   }
   // Simplex option
@@ -253,9 +278,8 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
       printf("Option: %-32s has default value \"off\"\n",
              simplex_string.c_str());
     } else {
-      printf(
-          "Option: %-32s has         value \"on\": default value is \"off\"\n",
-          simplex_string.c_str());
+      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+	     simplex_string.c_str(), default_space.c_str());
     }
   }
   // Ipx option ToDo This is a mess name-wise and should use
@@ -265,10 +289,9 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
     if (is_default) {
       printf("Option: %-32s has default value \"false\"\n", ipm_string.c_str());
     } else {
-      printf(
-          "Option: %-32s has         value \"true\": default value is "
-          "\"false\"\n",
-          ipm_string.c_str());
+      printf("Option: %-32s has%s value \"true\": default value is "
+	     "\"false\"\n",
+	     ipm_string.c_str(), default_space.c_str());
     }
   }
   // HiGHS run time limit
@@ -725,6 +748,7 @@ OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options,
 }
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
+  HighsSetMessagelevel(value);
   options.messageLevel = value;
   return OptionStatus::OK;
 }
