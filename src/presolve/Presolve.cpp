@@ -2203,22 +2203,26 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.
   // basis info and solution should be somehow connected to each other.
-
-  if (noPostSolve) {
-    // set valuePrimal
-    for (int i = 0; i < numCol; ++i) {
-      valuePrimal.at(i) = colValue.at(i);
-      valueColDual.at(i) = colDual.at(i);
-    }
-    for (int i = 0; i < numRow; ++i) valueRowDual.at(i) = rowDual.at(i);
-    // For KKT check: first check solverz` results before we do any postsolve
-    if (iKKTcheck == 1) {
-      chk.passSolution(colValue, colDual, rowDual);
-      chk.makeKKTCheck();
-    }
-    // testBasisMatrixSingularity();
-    return HighsPostsolveStatus::NoPostsolve;
-  }
+  
+  // here noPostSolve is always false. If the problem has not been reduced
+  // Presolve::postsolve(..) is never called. todo: delete block below. For now
+  // left just as legacy.
+  // if (noPostSolve) {
+  //   // set valuePrimal
+  //   for (int i = 0; i < numCol; ++i) {
+  //     valuePrimal.at(i) = colValue.at(i);
+  //     valueColDual.at(i) = colDual.at(i);
+  //   }
+  //   for (int i = 0; i < numRow; ++i) valueRowDual.at(i) = rowDual.at(i);
+  //   // For KKT check: first check solverz` results before we do any postsolve
+  //   if (iKKTcheck == 1) {
+  //     chk.passSolution(colValue, colDual, rowDual);
+  //     chk.passBasis(col_status, row_status);
+  //     chk.makeKKTCheck();
+  //   }
+  //   // testBasisMatrixSingularity();
+  //   return HighsPostsolveStatus::NoPostsolve;
+  // }
 
   // For KKT check: first check solver results before we do any postsolve
   if (iKKTcheck == 1) {
@@ -2279,7 +2283,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
     setBasisElement(c);
     if (iKKTcheck == 1)
-      chk.passBasis(col_status, row_status);
+      chk.replaceBasis(col_status, row_status);
 
     switch (c.type) {
       case DOUBLETON_EQUATION: {  // Doubleton equation row

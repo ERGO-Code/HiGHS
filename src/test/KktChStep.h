@@ -28,9 +28,7 @@ class KktCheck;
 
 class KktChStep {
  public:
-  KktChStep() {
-    print = 0;
-  }
+  KktChStep() { print = 0; }
 
   // model: full matrix in AR (row-wise) and working copy(column-wise)
   std::vector<int> ARstart;
@@ -89,6 +87,9 @@ class KktChStep {
 
   void passBasis(const std::vector<HighsBasisStatus>& columns,
                  const std::vector<HighsBasisStatus>& rows);
+
+  void replaceBasis(const std::vector<HighsBasisStatus>& columns,
+                    const std::vector<HighsBasisStatus>& rows);
 
   void passSolution(const std::vector<double>& colVal,
                     const std::vector<double>& colDu,
