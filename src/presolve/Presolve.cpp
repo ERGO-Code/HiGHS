@@ -3372,7 +3372,10 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   local_status = col_status.at(col);
   if (local_status != HighsBasisStatus::BASIC) {
     // x was not basic but is now
-    if (valuePrimal.at(col) != l && valuePrimal.at(col) != u) {
+    // if x is strictly between original bounds or a_ij is at a bound.
+    bool isRowAtBound = false;
+    if (aij*valuePrimal[col] == lrow || aij*valuePrimal[col] == urow) isRowAtBound = true;
+    if ((valuePrimal.at(col) != l && valuePrimal.at(col) != u) || isRowAtBound) {
       if (report_postsolve) {
         printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
       }
@@ -3386,8 +3389,6 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       }
       row_status.at(row) = HighsBasisStatus::BASIC;
       // here row is basic so the dual has to be transferred to the column.
-      // valueRowDual[row] = 0;
-      // valueColDual[col] = sum_aty_without_aij + cost; 
     }
     //  } else if (local_status == HighsBasisStatus::BASIC) {
   } else {
