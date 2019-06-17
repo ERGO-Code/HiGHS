@@ -1620,7 +1620,11 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       fabs(primal_objective_value - dual_objective_value) /
       max(fabs(primal_objective_value), max(fabs(dual_objective_value), 1.0));
   simplex_info.num_primal_infeasibilities = num_primal_infeasibilities;
+  simplex_info.max_primal_infeasibility = max_primal_infeasibility;
+  simplex_info.sum_primal_infeasibilities = sum_primal_infeasibilities;
   simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
+  simplex_info.max_dual_infeasibility = max_dual_infeasibility;
+  simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
   SimplexSolutionStatus solution_status;
   bool primal_feasible =
       num_primal_infeasibilities ==
@@ -1641,7 +1645,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     }
   }
   simplex_lp_status.solution_status = solution_status;
-  if (report_level) {
+  if (report_level>0) {
     HighsMessageType message_type = HighsMessageType::INFO;
     HighsLogMessage(message_type,
                     "Primal num/max/sum residuals %6d/%12g/%12g: num/max/sum "
@@ -1660,7 +1664,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
                     "relative objective difference = %.4g",
                     primal_objective_error, dual_objective_error,
                     relative_objective_difference);
-  } else {
+  } else if (report_level==0) {
     printf("grep_AnBsSol,%d,%d,%.15g,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g",
            num_non_basic_var, num_basic_var,
            simplex_info.primal_objective_value, num_off_bound_nonbasic,
@@ -1673,10 +1677,12 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   HighsLogMessage(
       HighsMessageType::INFO,
       "HiGHS basic solution: Iterations = %d; Objective = %.15g; "
-      "Infeasibilities primal/dual = %d/%d; Status: %s",
+      "Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
       simplex_info.iteration_count, simplex_info.primal_objective_value,
       simplex_info.num_primal_infeasibilities,
+      simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
+      simplex_info.sum_dual_infeasibilities,
       SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
   return solution_status;
 }

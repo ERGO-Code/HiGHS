@@ -355,24 +355,26 @@ HighsStatus Highs::run() {
             hmos_[original_hmo].basis_.row_status =
                 presolve_info.presolve_[0].getRowStatus();
             hmos_[original_hmo].basis_.valid_ = true;
-
             // Now hot-start the simplex solver for the original_hmo
             solved_hmo = original_hmo;
             int lp_solve_initial_simplex_iteration_count =
                 hmos_[solved_hmo].simplex_info_.iteration_count;
-            //
-            // Save the options to allow the best simplex strategy to be used
+            // Save the options to allow the best simplex strategy to
+            // be used
             HighsOptions save_options = options_;
             options_.simplex_strategy = SimplexStrategy::CHOOSE;
-            //
+	    // Set the message level to ML_ALWAYS so that data for
+	    // individual iterations are reported
+            HighsSetMessagelevel(ML_ALWAYS);
             // Call runSolver
             HighsLogMessage(
                 HighsMessageType::INFO,
                 "Solving the original LP from the solution after postsolve");
             solve_status = runSolver(hmos_[solved_hmo]);
-            //
             // Recover the options
             options_ = save_options;
+	    // Reset the message level
+            HighsSetMessagelevel(options_.messageLevel);
             int lp_solve_final_simplex_iteration_count =
                 hmos_[solved_hmo].simplex_info_.iteration_count;
             lp_solve_postsolve_iteration_count =
