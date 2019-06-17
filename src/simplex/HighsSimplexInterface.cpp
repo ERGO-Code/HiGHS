@@ -1467,6 +1467,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   double max_dual_infeasibility = 0;
   double sum_dual_infeasibilities = 0;
   int num_nonzero_basic_duals = 0;
+  int num_large_nonzero_basic_duals = 0;
   double max_nonzero_basic_dual = 0;
   double sum_nonzero_basic_duals = 0;
   double local_primal_objective_value = 0;
@@ -1495,6 +1496,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
 	num_nonzero_basic_duals++;
+	if (abs_basic_dual > dual_feasibility_tolerance) num_large_nonzero_basic_duals++;
 	max_nonzero_basic_dual = max(abs_basic_dual, max_nonzero_basic_dual);
 	sum_nonzero_basic_duals += abs_basic_dual;
       }
@@ -1558,10 +1560,6 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   double max_dual_residual = 0;
   double sum_dual_residual = 0;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    if (basis.col_status[iCol] == HighsBasisStatus::BASIC) {
-      double abs_basic_col_dual = fabs(solution.col_dual[iCol]);
-      if (abs_basic_col_dual) printf("Column %6d is basic with dual %11.4g\n", iCol, abs_basic_col_dual);
-    }
     double dual_residual =
         fabs(dual_activities[iCol] - solution.col_dual[iCol]);
     if (dual_residual > dual_feasibility_tolerance) {
@@ -1599,6 +1597,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
 	num_nonzero_basic_duals++;
+	if (abs_basic_dual > dual_feasibility_tolerance) num_large_nonzero_basic_duals++;
 	max_nonzero_basic_dual = max(abs_basic_dual, max_nonzero_basic_dual);
 	sum_nonzero_basic_duals += abs_basic_dual;
       }
@@ -1676,6 +1675,12 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     }
   }
   simplex_lp_status.solution_status = solution_status;
+  if (num_nonzero_basic_duals) {
+    HighsLogMessage(
+		    HighsMessageType::WARNING,
+		    "HiGHS basic solution: %d (%d large) nonzero basic duals; max = %g; sum = %g",
+		    num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals);
+  }
   if (report_level>0) {
     HighsMessageType message_type = HighsMessageType::INFO;
     HighsLogMessage(message_type,
@@ -1715,12 +1720,6 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
       SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
-  if (num_nonzero_basic_duals) {
-    HighsLogMessage(
-		    HighsMessageType::WARNING,
-		    "HiGHS basic solution: %d nonzero basic duals; max = %g; sum = %g",
-		    num_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals);
-  }
   return solution_status;
 }
 
