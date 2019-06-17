@@ -89,9 +89,12 @@ class HighsLp {
 
 // Cost, column and row scaling factors
 struct HighsScale {
+  bool is_scaled_;
   double cost_;
   std::vector<double> col_;
   std::vector<double> row_;
+  double extreme_equilibration_improvement_;
+  double mean_equilibration_improvement_;
 };
 
 struct SimplexBasis {
@@ -110,7 +113,7 @@ struct HighsSimplexLpStatus {
   bool valid = false;
   bool is_dualised = false;
   bool is_permuted = false;
-  bool is_scaled = false;
+  bool scaling_tried = false;
   bool has_basis = false;  // The LP has a valid simplex basis
   bool has_matrix_col_wise =
       false;  // The LP has a column-wise constraint matrix

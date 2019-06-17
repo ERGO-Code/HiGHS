@@ -52,7 +52,7 @@ HighsStatus HighsSimplexInterface::addCols(
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
-  bool apply_row_scaling = simplex_lp_status.is_scaled;
+  bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of rows
@@ -219,7 +219,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
-  bool apply_row_scaling = simplex_lp_status.is_scaled;
+  bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
   // of columns
@@ -805,7 +805,7 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
         num_set_entries, col_set, mask, col_mask, usr_col_lower, usr_col_upper,
         highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
-    if (highs_model_object.simplex_lp_status_.is_scaled) {
+    if (highs_model_object.scale_.is_scaled_) {
       scaleLpColBounds(highs_model_object.simplex_lp_,
                        highs_model_object.scale_.col_, interval, from_col,
                        to_col, set, num_set_entries, col_set, mask, col_mask);
@@ -871,7 +871,7 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
         num_set_entries, row_set, mask, row_mask, usr_row_lower, usr_row_upper,
         highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
-    if (highs_model_object.simplex_lp_status_.is_scaled) {
+    if (highs_model_object.scale_.is_scaled_) {
       scaleLpRowBounds(highs_model_object.simplex_lp_,
                        highs_model_object.scale_.row_, interval, from_row,
                        to_row, set, num_set_entries, row_set, mask, row_mask);
