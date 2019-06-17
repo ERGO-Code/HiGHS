@@ -97,18 +97,10 @@ void Presolve::setBasisInfo(
 
 int Presolve::presolve(int print) {
   iPrint = print;
-  iKKTcheck = 0;
-
-  chk.print = 0;  // 3 for experiments mode
-  if (chk.print == 3) {
-    iPrint = 0;
-    if (iKKTcheck) {
-      iKKTcheck = 2;
-      countsFile = "../experiments/t2";
-    }
-  }
 
   // iPrint = 1;
+  // iKKTcheck = 1;
+  // chk.print = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -2211,28 +2203,33 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.
   // basis info and solution should be somehow connected to each other.
-
-  if (noPostSolve) {
-    // set valuePrimal
-    for (int i = 0; i < numCol; ++i) {
-      valuePrimal.at(i) = colValue.at(i);
-      valueColDual.at(i) = colDual.at(i);
-    }
-    for (int i = 0; i < numRow; ++i) valueRowDual.at(i) = rowDual.at(i);
-    // For KKT check: first check solverz` results before we do any postsolve
-    if (iKKTcheck == 1) {
-      chk.passSolution(colValue, colDual, rowDual);
-      chk.makeKKTCheck();
-    }
-    // testBasisMatrixSingularity();
-    return HighsPostsolveStatus::NoPostsolve;
-  }
+  
+  // here noPostSolve is always false. If the problem has not been reduced
+  // Presolve::postsolve(..) is never called. todo: delete block below. For now
+  // left just as legacy.
+  // if (noPostSolve) {
+  //   // set valuePrimal
+  //   for (int i = 0; i < numCol; ++i) {
+  //     valuePrimal.at(i) = colValue.at(i);
+  //     valueColDual.at(i) = colDual.at(i);
+  //   }
+  //   for (int i = 0; i < numRow; ++i) valueRowDual.at(i) = rowDual.at(i);
+  //   // For KKT check: first check solverz` results before we do any postsolve
+  //   if (iKKTcheck == 1) {
+  //     chk.passSolution(colValue, colDual, rowDual);
+  //     chk.passBasis(col_status, row_status);
+  //     chk.makeKKTCheck();
+  //   }
+  //   // testBasisMatrixSingularity();
+  //   return HighsPostsolveStatus::NoPostsolve;
+  // }
 
   // For KKT check: first check solver results before we do any postsolve
   if (iKKTcheck == 1) {
     cout << "----KKT check on HiGHS solution-----\n";
 
     chk.passSolution(colValue, colDual, rowDual);
+    chk.passBasis(col_status, row_status);
     chk.makeKKTCheck();
   }
   // So there have been changes definitely ->
@@ -2285,6 +2282,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     // cout<<"chng.pop:       "<<c.col<<"       "<<c.row << endl;
 
     setBasisElement(c);
+    if (iKKTcheck == 1)
+      chk.replaceBasis(col_status, row_status);
+
     switch (c.type) {
       case DOUBLETON_EQUATION: {  // Doubleton equation row
         getDualsDoubletonEquation(c.row, c.col);
@@ -2437,6 +2437,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                  << " re-introduced. Variable: " << c.col << " -----\n";
           chk.addChange(1, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
+          chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
         }
         break;
@@ -3227,6 +3228,9 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   double u = (get<1>(bnd))[1];
   double lrow = (get<1>(bnd))[2];
   double urow = (get<1>(bnd))[3];
+
+  double sum_aty_without_aij = 0;
+
   if ((aij * valuePrimal.at(col) - lrow) > tol &&
       (-aij * valuePrimal.at(col) + urow) > tol) {
     valueRowDual.at(row) = 0;
@@ -3246,6 +3250,7 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       if (flagRow.at(Aindex.at(k)))
         sum = sum + valueRowDual.at(Aindex.at(k)) * Avalue.at(k);
 
+    sum_aty_without_aij = sum;
     flagRow.at(row) = 1;
 
     double y = (valueColDual.at(col) - cost - sum) / aij;
@@ -3367,7 +3372,10 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   local_status = col_status.at(col);
   if (local_status != HighsBasisStatus::BASIC) {
     // x was not basic but is now
-    if (valuePrimal.at(col) != l && valuePrimal.at(col) != u) {
+    // if x is strictly between original bounds or a_ij is at a bound.
+    bool isRowAtBound = false;
+    if (aij*valuePrimal[col] == lrow || aij*valuePrimal[col] == urow) isRowAtBound = true;
+    if ((valuePrimal.at(col) != l && valuePrimal.at(col) != u) || isRowAtBound) {
       if (report_postsolve) {
         printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
       }
@@ -3380,6 +3388,7 @@ void Presolve::getDualsSingletonRow(int row, int col) {
         printf("3.2 : Make row %3d basic\n", row);
       }
       row_status.at(row) = HighsBasisStatus::BASIC;
+      // here row is basic so the dual has to be transferred to the column.
     }
     //  } else if (local_status == HighsBasisStatus::BASIC) {
   } else {
