@@ -331,6 +331,11 @@ void KktCheck::chStOfLagrangian() {
   }
 }
 
+void KktCheck::checkBFS() {
+  // Go over rows and check that the duals of basic values are zero.
+  std::cout << "bfs check. " << std::endl;
+}
+
 void KktCheck::checkKKT() {
   if (numCol == 0) return;
 
@@ -344,15 +349,17 @@ void KktCheck::checkKKT() {
   chComplementarySlackness();
   chStOfLagrangian();
 
-  if (print == 2) {
-    std::ofstream myfile;
-    myfile.open("../experiments/out", std::ios::app);
-    if (istrueGlb)
-      myfile << "           KKT fail      ";
-    else
-      myfile << "           KKT pass      ";
-    myfile.close();
-  }
+  checkBFS();
+
+  // if (print == 2) {
+  //   std::ofstream myfile;
+  //   myfile.open("../experiments/out", std::ios::app);
+  //   if (istrueGlb)
+  //     myfile << "           KKT fail      ";
+  //   else
+  //     myfile << "           KKT pass      ";
+  //   myfile.close();
+  // }
 }
 
 void KktCheck::passSolution(const std::vector<double>& colVal,

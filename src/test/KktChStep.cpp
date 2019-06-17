@@ -25,6 +25,12 @@ using std::pair;
 using std::setw;
 using std::vector;
 
+void KktChStep::passBasis(const vector<HighsBasisStatus>& columns,
+                          const vector<HighsBasisStatus>& rows) {
+  col_status = columns;
+  row_status = rows;
+}
+
 void KktChStep::passSolution(const vector<double>& colVal,
                              const vector<double>& colDu,
                              const vector<double>& rDu) {
@@ -527,6 +533,8 @@ void KktChStep::makeKKTCheck() {
   }
 
   checker.passSolution(cV, cD, rD);
+  checker.col_status = col_status;
+  checker.row_status = row_status;
   checker.checkKKT();
 }
 

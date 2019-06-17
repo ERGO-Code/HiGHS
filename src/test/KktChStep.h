@@ -22,20 +22,25 @@
 #include <string>
 #include <vector>
 
+#include "lp_data/HConst.h"
+
 class KktCheck;
 
 class KktChStep {
-  // model: full matrix in AR (row-wise) and working copy(column-wise)
-
-  int RnumCol;
-  int RnumRow;
-
  public:
+  KktChStep() {
+    print = 0;
+  }
+
+  // model: full matrix in AR (row-wise) and working copy(column-wise)
   std::vector<int> ARstart;
   std::vector<int> ARindex;
   std::vector<double> ARvalue;
 
  private:
+  int RnumCol;
+  int RnumRow;
+
   // the 4 std::vectors below always of full length
   std::vector<double> RcolCost;
   std::vector<double> RcolLower;
@@ -65,6 +70,10 @@ class KktChStep {
   std::vector<double> rowUpper;
   int print;
 
+  // basis
+  std::vector<HighsBasisStatus> col_status;
+  std::vector<HighsBasisStatus> row_status;
+
   // solution
   std::vector<double> colValue;
   std::vector<double> colDual;
@@ -77,6 +86,9 @@ class KktChStep {
   std::stack<std::vector<std::pair<int, double> > > cUppers;
   std::stack<std::vector<std::pair<int, double> > > costs;
   // std::stack<double> M;
+
+  void passBasis(const std::vector<HighsBasisStatus>& columns,
+                 const std::vector<HighsBasisStatus>& rows);
 
   void passSolution(const std::vector<double>& colVal,
                     const std::vector<double>& colDu,

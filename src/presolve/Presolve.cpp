@@ -100,16 +100,7 @@ int Presolve::presolve(int print) {
   // iPrint = 1;
 
   iKKTcheck = 1;
-
-  // chk.print = 0;  // 3 for experiments mode
-  // if (chk.print == 3) {
-  //   iPrint = 0;
-  //   if (iKKTcheck) {
-  //     iKKTcheck = 2;
-  //     countsFile = "../experiments/t2";
-  //   }
-  // }
-
+  chk.print = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -2234,6 +2225,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     cout << "----KKT check on HiGHS solution-----\n";
 
     chk.passSolution(colValue, colDual, rowDual);
+    chk.passBasis(col_status, row_status);
     chk.makeKKTCheck();
   }
   // So there have been changes definitely ->
@@ -2286,6 +2278,9 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     // cout<<"chng.pop:       "<<c.col<<"       "<<c.row << endl;
 
     setBasisElement(c);
+    if (iKKTcheck == 1)
+      chk.passBasis(col_status, row_status);
+
     switch (c.type) {
       case DOUBLETON_EQUATION: {  // Doubleton equation row
         getDualsDoubletonEquation(c.row, c.col);
