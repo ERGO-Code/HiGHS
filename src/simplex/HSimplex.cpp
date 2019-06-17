@@ -54,7 +54,7 @@ void options(HighsModelObject& highs_model_object, const HighsOptions& opt) {
   // Option for analysing the LP solution
   simplex_info.analyseLpSolution = true;
 #ifdef HiGHSDEV
-  bool useful_analysis = true;
+  bool useful_analysis = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
   simplex_info.report_simplex_outer_clock = false;
@@ -1013,7 +1013,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
     timer.stop(timer.scale_clock);
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::SCALE);
-    HighsLogMessage(HighsMessageType::INFO, "Scaling: min(max) matrix values of %g(%g) so none performed", min_matrix_value, max_matrix_value);
+    HighsLogMessage(HighsMessageType::INFO, "Scaling: Matrix has min(max) values of %g(%g) so none performed", min_matrix_value, max_matrix_value);
     return;
   }
   // Include cost in scaling if minimum nonzero cost is less than 0.1
@@ -1157,7 +1157,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   }
   double geomean_original_col_equilibration = exp(sum_original_log_col_equilibration/numCol);
   double geomean_original_row_equilibration = exp(sum_original_log_row_equilibration/numRow);
-  HighsLogMessage(HighsMessageType::INFO, "Scaling: original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
+  HighsLogMessage(HighsMessageType::INFO, "Scaling: Original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
 	 min_original_col_equilibration,
 	 geomean_original_col_equilibration,
 	 max_original_col_equilibration,
@@ -1166,7 +1166,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 	 max_original_row_equilibration);
   double geomean_col_equilibration = exp(sum_log_col_equilibration/numCol);
   double geomean_row_equilibration = exp(sum_log_row_equilibration/numRow);
-  HighsLogMessage(HighsMessageType::INFO, "Scaling: final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
+  HighsLogMessage(HighsMessageType::INFO, "Scaling: Final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
 	 min_col_equilibration,
 	 geomean_col_equilibration,
 	 max_col_equilibration,
@@ -1197,12 +1197,12 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
       timer.stop(timer.scale_clock);
       updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
 			    LpAction::SCALE);
-      HighsLogMessage(HighsMessageType::INFO, "Scaling: extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
+      HighsLogMessage(HighsMessageType::INFO, "Scaling: Extreme equilibration improved by a factor of only %g and mean equilibration by factor of only %g so no scaling applied",
 		      extreme_equilibration_improvement, mean_equilibration_improvement);
       return;
     }
   }
-  HighsLogMessage(HighsMessageType::INFO, "Scaling: improved extreme equilibration by factor %g and mean equilibration by factor %g",
+  HighsLogMessage(HighsMessageType::INFO, "Scaling: Improved extreme equilibration by factor %g and mean equilibration by factor %g",
 		  extreme_equilibration_improvement, mean_equilibration_improvement);
 
   for (int iCol = 0; iCol < numCol; iCol++) {
@@ -1824,16 +1824,6 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
     }
     row_ep.packFlag = false;
     factor.btran(row_ep, NoDensity);
-    // norm_z = norm(z,'inf');
-    // ztx = z'*x ;
-    // NormEst = norm(y,1);
-    // fd_i = 0;
-    // for i=1:n
-    //    if fabs(z(i)) == norm_z
-    //        fd_i = i;
-    //        break
-    //    end
-    // end
     double norm_z = 0.0;
     double ztx = 0.0;
     norm_Binv = 0.0;
@@ -1848,8 +1838,6 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
       ztx += bs_cond_z[r_n] * bs_cond_x[r_n];
       norm_Binv += fabs(bs_cond_y[r_n]);
     }
-    // printf("%2d: ||z||_inf = %8.2g; z^T*x = %8.2g; ||y||_1 = %g\n", ps_n,
-    // norm_z, ztx, norm_Binv);
     if (norm_z <= ztx) break;
     // x = zeros(n,1);
     // x(fd_i) = 1;
@@ -1872,12 +1860,6 @@ double computeBasisCondition(HighsModelObject& highs_model_object) {
     norm_B = max(c_norm, norm_B);
   }
   double cond_B = norm_Binv * norm_B;
-#ifdef HiGHSDEV
-  printf(
-      "Hager estimate of ||B||_1 = %g; ||B^{-1}||_1 = %g so cond_1(B) estimate "
-      "is %g\n",
-      norm_B, norm_Binv, cond_B);
-#endif
   return cond_B;
 }
 

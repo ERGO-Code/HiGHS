@@ -748,6 +748,7 @@ OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options,
 }
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
+  HighsSetMessagelevel(value);
   options.messageLevel = value;
   return OptionStatus::OK;
 }

@@ -125,11 +125,6 @@ void HPrimal::solve() {
 
   while (solvePhase) {
     int it0 = simplex_info.iteration_count;
-    // When starting a new phase the (updated) primal objective function
-    // value isn't known. Indicate this so that when the value
-    // computed from scratch in build() isn't checked against the the
-    // updated value
-    simplex_lp_status.has_primal_objective_value = 0;
     /*
     switch (solvePhase) {
       case 1:
@@ -186,10 +181,16 @@ void HPrimal::solvePhase2() {
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   HighsTimer& timer = workHMO.timer_;
 
+  // When starting a new phase the (updated) primal objective function
+  // value isn't known. Indicate this so that when the value
+  // computed from scratch in build() isn't checked against the the
+  // updated value
+  simplex_lp_status.has_primal_objective_value = 0;
+  // Set invertHint so that it's assigned when first tested
   invertHint = INVERT_HINT_NO;
-  // Set solvePhase=2 so it's set when solvePhase2() is called directly from
-  // HDual.solve()
+  // Set solvePhase=2 so it's set if solvePhase2() is called directly
   solvePhase = 2;
+  // Set up local copies of model dimensions
   solver_num_col = workHMO.simplex_lp_.numCol_;
   solver_num_row = workHMO.simplex_lp_.numRow_;
   solver_num_tot = solver_num_col + solver_num_row;
@@ -228,7 +229,6 @@ void HPrimal::solvePhase2() {
   // Setup other buffers
 
   HighsPrintMessage(ML_DETAILED, "primal-phase2-start\n");
-  iterationReportFull(true);
   // Main solving structure
   for (;;) {
     timer.start(simplex_info.clock_[IteratePrimalRebuildClock]);
@@ -376,7 +376,8 @@ void HPrimal::primalRebuild() {
   timer.start(simplex_info.clock_[ReportRebuildClock]);
   iterationReportRebuild(sv_invertHint);
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
-
+  // Indicate that a header must be printed before the next iteration log
+  previous_iteration_report_header_iteration_count = -1;
 #ifdef HiGHSDEV
   if (simplex_info.analyseRebuildTime) {
     int iClock = simplex_info.clock_[IteratePrimalRebuildClock];
@@ -742,10 +743,15 @@ void HPrimal::primalUpdate() {
 }
 
 void HPrimal::iterationReport() {
-  int numIter = workHMO.simplex_info_.iteration_count;
-  bool header = numIter % 10 == 1;
-  //  header = true;  // JAJH10/10
-  if (header) iterationReportFull(header);
+  int iteration_count = workHMO.simplex_info_.iteration_count;
+  int iteration_count_difference = iteration_count -
+    previous_iteration_report_header_iteration_count;
+  bool header = (previous_iteration_report_header_iteration_count < 0)
+    || (iteration_count - previous_iteration_report_header_iteration_count > 10);
+  if (header) {
+    iterationReportFull(header);
+    previous_iteration_report_header_iteration_count = iteration_count;
+  }
   iterationReportFull(false);
 }
 
@@ -777,8 +783,8 @@ void HPrimal::iterationReportIterationAndPhase(int iterate_log_level,
   if (header) {
     HighsPrintMessage(iterate_log_level, " Iteration Ph");
   } else {
-    int numIter = workHMO.simplex_info_.iteration_count;
-    HighsPrintMessage(iterate_log_level, " %9d %2d", numIter, solvePhase);
+    int iteration_count = workHMO.simplex_info_.iteration_count;
+    HighsPrintMessage(iterate_log_level, " %9d %2d", iteration_count, solvePhase);
   }
 }
 
@@ -786,7 +792,7 @@ void HPrimal::iterationReportPrimalObjective(int iterate_log_level,
                                              bool header) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   if (header) {
-    HighsPrintMessage(iterate_log_level, "  PrimalObjective    ");
+    HighsPrintMessage(iterate_log_level, "      PrimalObjective");
   } else {
     HighsPrintMessage(iterate_log_level, " %20.10e",
                       simplex_info.updated_primal_objective_value);
