@@ -98,9 +98,9 @@ void Presolve::setBasisInfo(
 int Presolve::presolve(int print) {
   iPrint = print;
 
-  // iPrint = 1;
-  // iKKTcheck = 1;
-  // chk.print = 1;
+  iPrint = 1;
+  iKKTcheck = 1;
+  chk.print = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
@@ -2203,7 +2203,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
   // todo: add nonbasic flag to Solution.
   // todo: change to new basis info structure later or keep.
   // basis info and solution should be somehow connected to each other.
-  
+
   // here noPostSolve is always false. If the problem has not been reduced
   // Presolve::postsolve(..) is never called. todo: delete block below. For now
   // left just as legacy.
@@ -2282,8 +2282,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
     // cout<<"chng.pop:       "<<c.col<<"       "<<c.row << endl;
 
     setBasisElement(c);
-    if (iKKTcheck == 1)
-      chk.replaceBasis(col_status, row_status);
+    if (iKKTcheck == 1) chk.replaceBasis(col_status, row_status);
 
     switch (c.type) {
       case DOUBLETON_EQUATION: {  // Doubleton equation row
@@ -2296,6 +2295,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
                 << c.row << ", column " << c.col << " -----\n";
           chk.addChange(17, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
+          chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
         }
         // exit(2);
@@ -3374,8 +3374,10 @@ void Presolve::getDualsSingletonRow(int row, int col) {
     // x was not basic but is now
     // if x is strictly between original bounds or a_ij is at a bound.
     bool isRowAtBound = false;
-    if (aij*valuePrimal[col] == lrow || aij*valuePrimal[col] == urow) isRowAtBound = true;
-    if ((valuePrimal.at(col) != l && valuePrimal.at(col) != u) || isRowAtBound) {
+    if (aij * valuePrimal[col] == lrow || aij * valuePrimal[col] == urow)
+      isRowAtBound = true;
+    if ((valuePrimal.at(col) != l && valuePrimal.at(col) != u) ||
+        isRowAtBound) {
       if (report_postsolve) {
         printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
       }
@@ -3443,35 +3445,7 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
   // column cost of x
   colCostAtEl.at(x) = cxOld;
 
-  // get nzCol.at(y) before unflag row as missing
-  int nzy = Aend.at(y) - Astart.at(y);
-  for (int kk = Astart.at(y); kk < Aend.at(y); ++kk)
-    if (!flagRow.at(Aindex.at(kk))) nzy--;
-
-  double lo = -HIGHS_CONST_INF;
-  double up = HIGHS_CONST_INF;
-
-  getBoundOnLByZj(row, x, &lo, &up, lbxOld, ubxOld);
-  getBoundOnLByZj(row, y, &lo, &up, lby, uby);
-
-  // calculate yi
-  if (lo - up > tol)
-    cout << "PR: Error in postsolving doubleton equation " << row
-         << " : inconsistent bounds for its dual value.\n";
-
-  if (lo <= 0 && up >= 0) {
-    valueRowDual.at(row) = 0;
-  } else if (lo > 0) {
-    valueRowDual.at(row) = lo;
-  } else if (up < 0) {
-    valueRowDual.at(row) = up;
-  }
-
   flagRow.at(row) = 1;
-  valueColDual.at(y) = getColumnDualPost(y);
-  valueColDual.at(x) = getColumnDualPost(x);
-
-  if (iKKTcheck == 1) chk.colDual.at(x) = valueColDual.at(x);
 
   HighsBasisStatus local_status;
   if (x < numColOriginal) {
@@ -3485,11 +3459,20 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
        lbxNew > lbxOld)) {
     if (x < numColOriginal) {
       col_status.at(x) = HighsBasisStatus::BASIC;
+      // transfer dual of x to dual of row
+      valueColDual.at(x) = 0;
+      valueRowDual.at(row) = getRowDualPost(row, x);
+      valueColDual.at(y) = getColumnDualPost(y);
+
       if (report_postsolve) printf("4.1 : Make column %3d basic\n", x);
     } else {
       row_status.at(x - numColOriginal) = HighsBasisStatus::BASIC;
       if (report_postsolve)
         printf("4.1 : Make row    %3d basic\n", x - numColOriginal);
+
+      valueRowDual.at(row) = 0;
+      valueColDual.at(x) = getColumnDualPost(x);
+      valueColDual.at(y) = getColumnDualPost(y);
     }
   } else {
     // row becomes basic unless y is between bounds, in which case y is basic
@@ -3497,28 +3480,49 @@ void Presolve::getDualsDoubletonEquation(int row, int col) {
       if (y < numColOriginal) {
         col_status.at(y) = HighsBasisStatus::BASIC;
         if (report_postsolve) printf("4.2 : Make column %3d basic\n", y);
+
+        valueColDual.at(y) = 0;
+        valueRowDual.at(row) = getRowDualPost(row, y);
       } else {
         row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
         if (report_postsolve)
           printf("4.2 : Make row    %3d basic\n", y - numColOriginal);
+
+        valueRowDual.at(row) = 0;
+        valueColDual.at(x) = getColumnDualPost(x);
+        valueColDual.at(y) = getColumnDualPost(y);
       }
     } else if (fabs(valueX - ubxNew) < tol || fabs(valueX - lbxNew) < tol) {
       if (y < numColOriginal) {
         col_status.at(y) = HighsBasisStatus::BASIC;
         if (report_postsolve) printf("4.3 : Make column %3d basic\n", y);
+
+        valueColDual.at(y) = 0;
+        valueRowDual.at(row) = getRowDualPost(row, y);
       } else {
         row_status.at(y - numColOriginal) = HighsBasisStatus::BASIC;
         if (report_postsolve)
           printf("4.3 : Make row    %3d basic\n", y - numColOriginal);
+
+        valueRowDual.at(row) = 0;
+        valueColDual.at(x) = getColumnDualPost(x);
+        valueColDual.at(y) = getColumnDualPost(y);
       }
     } else {
       if (report_postsolve) {
         printf("4.4 : Make row    %3d basic\n", row);
       }
       row_status.at(row) = HighsBasisStatus::BASIC;
+      valueRowDual.at(row) = 0;
+      valueColDual.at(x) = getColumnDualPost(x);
+      valueColDual.at(y) = getColumnDualPost(y);
     }
   }
+  if (iKKTcheck == 1) {
+    chk.colDual.at(x) = valueColDual.at(x);
+    chk.colDual.at(y) = valueColDual.at(y);
+    chk.rowDual.at(row) = valueRowDual.at(row);
+  }
 
-  // flagRow.at(row) = true;
   flagCol.at(y) = 1;
 }
