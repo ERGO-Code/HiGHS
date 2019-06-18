@@ -117,13 +117,13 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  timer.recordStart(FIXED_COL);
-  for (int j = 0; j < numCol; ++j)
-    if (flagCol.at(j)) {
-      removeIfFixed(j);
-      if (status) return status;
-    }
-  timer.recordFinish(FIXED_COL);
+  // timer.recordStart(FIXED_COL);
+  // for (int j = 0; j < numCol; ++j)
+  //   if (flagCol.at(j)) {
+  //     removeIfFixed(j);
+  //     if (status) return status;
+  //   }
+  // timer.recordFinish(FIXED_COL);
 
   while (hasChange == 1) {
     hasChange = false;
@@ -132,21 +132,21 @@ int Presolve::presolve(int print) {
 
     removeRowSingletons();
     if (status) return status;
-    removeForcingConstraints(iter);
-    if (status) return status;
+    // removeForcingConstraints(iter);
+    // if (status) return status;
 
-    removeRowSingletons();
-    if (status) return status;
-    removeDoubletonEquations();
-    if (status) return status;
+    // removeRowSingletons();
+    // if (status) return status;
+    // removeDoubletonEquations();
+    // if (status) return status;
 
-    removeRowSingletons();
-    if (status) return status;
-    removeColumnSingletons();
-    if (status) return status;
+    // removeRowSingletons();
+    // if (status) return status;
+    // removeColumnSingletons();
+    // if (status) return status;
 
-    removeDominatedColumns();
-    if (status) return status;
+    // removeDominatedColumns();
+    // if (status) return status;
 
     //***************** main loop ******************
     iter++;
@@ -708,10 +708,10 @@ void Presolve::initializeVectors() {
     nzRow.at(i) = ARstart.at(i + 1) - ARstart.at(i);
     if (nzRow.at(i) == 1) singRow.push_back(i);
     if (nzRow.at(i) == 0) {
-      timer.recordStart(EMPTY_ROW);
-      removeEmptyRow(i);
-      countRemovedRows[EMPTY_ROW]++;
-      timer.recordFinish(EMPTY_ROW);
+      // timer.recordStart(EMPTY_ROW);
+      // removeEmptyRow(i);
+      // countRemovedRows[EMPTY_ROW]++;
+      // timer.recordFinish(EMPTY_ROW);
     }
   }
 
@@ -1759,6 +1759,7 @@ void Presolve::removeRowSingletons() {
     i = singRow.front();
     singRow.pop_front();
 
+    if (i != 650) continue;
     if (!flagRow.at(i)) {
       cout << "Warning: Row " << i
            << " already flagged off but in singleton row list. Ignored.\n";
@@ -3230,7 +3231,12 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   double urow = (get<1>(bnd))[3];
 
   double sum_aty_without_aij = 0;
+  double sum = 0;
+  for (int k = Astart.at(col); k < Aend.at(col); ++k)
+    if (flagRow.at(Aindex.at(k)))
+      sum = sum + valueRowDual.at(Aindex.at(k)) * Avalue.at(k);
 
+  sum_aty_without_aij = sum;
   if ((aij * valuePrimal.at(col) - lrow) > tol &&
       (-aij * valuePrimal.at(col) + urow) > tol) {
     valueRowDual.at(row) = 0;
@@ -3372,25 +3378,60 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   local_status = col_status.at(col);
   if (local_status != HighsBasisStatus::BASIC) {
     // x was not basic but is now
-    // if x is strictly between original bounds or a_ij is at a bound.
-    bool isRowAtBound = false;
-    if (aij * valuePrimal[col] == lrow || aij * valuePrimal[col] == urow)
-      isRowAtBound = true;
-    if ((valuePrimal.at(col) != l && valuePrimal.at(col) != u) ||
-        isRowAtBound) {
+    // if x is strictly between original bounds or a_ij*x_j is at a bound.
+    if (fabs(valuePrimal.at(col) - l) > tol &&
+        fabs(valuePrimal.at(col) - u) > tol) {
       if (report_postsolve) {
         printf("3.1 : Make column %3d basic and row %3d nonbasic\n", col, row);
       }
       col_status.at(col) = HighsBasisStatus::BASIC;
       row_status.at(row) = HighsBasisStatus::NONBASIC;  // Was LOWER
-    }
+      valueColDual[col] = 0;
+      valueRowDual[row] = getRowDualPost(row, col);
+    } else {
+      // column is at bound
+      bool isRowAtLB = fabs(aij * valuePrimal[col] - lrow) < tol;
+      bool isRowAtUB = fabs(aij * valuePrimal[col] - urow) < tol;
+
+      // todo: save valueColDual
+      // change it to zero
+      // calculate what valueRowDual would be#
+      // use in check below
+      // sometimes recover previous value of col dual 
+        // if row is basic see if column dual is feasible. row dual is zero so the
+        // column dual should be equal to the cost
+        if (isRowAtLB && !isRowAtUB && valueRowDual[row] > 0) {
+          // make row basic
+          row_status.at(row) = HighsBasisStatus::BASIC;
+          valueRowDual[row] = 0;
+        } else {
+          // column is basic
+          // see if row dual is feasible?
+          col_status.at(col) = HighsBasisStatus::BASIC;
+          row_status.at(row) = HighsBasisStatus::NONBASIC;
+          valueColDual[col] = 0;
+          valueRowDual[row] = getRowDualPost(row, col);
+        }
+      // make sure row is dual feasible
+      // if ((isRowAtBound && valueRowDual[row] > 0 &&
+      //      aij * valuePrimal[col] == lrow) ||
+      //     (isRowAtBound && valueRowDual[row] < 0 &&
+      //      aij * valuePrimal[col] == urow)) {
+      //   row_status.at(row) = HighsBasisStatus::BASIC;
+      //   col_status.at(col) = HighsBasisStatus::NONBASIC;
+      //   valueRowDual[row] = 0;
+      //   valueColDual[col] = getColumnDualPost(col);
+      // // if the row dual is zero it does not contribute to the column dual.
+      // }
     // x was not basic and is not now either, row is basic
-    else {
-      if (report_postsolve) {
-        printf("3.2 : Make row %3d basic\n", row);
-      }
-      row_status.at(row) = HighsBasisStatus::BASIC;
-      // here row is basic so the dual has to be transferred to the column.
+    
+    //  else {
+    //   if (report_postsolve) {
+    //     printf("3.2 : Make row %3d basic\n", row);
+    //   }
+    //   row_status.at(row) = HighsBasisStatus::BASIC;
+    //   valueRowDual[row] = 0;
+      // if the row dual is zero it does not contribute to the column dual.
     }
     //  } else if (local_status == HighsBasisStatus::BASIC) {
   } else {
@@ -3399,6 +3440,14 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       printf("3.3 : Make row %3d basic\n", row);
     }
     row_status.at(row) = HighsBasisStatus::BASIC;
+    valueRowDual[row] = 0;
+    // if the row dual is zero it does not contribute to the column dual.
+  }
+
+  if (iKKTcheck == 1) {
+    chk.colDual.at(col) = valueColDual.at(col);
+    chk.rowDual.at(row) = valueRowDual.at(row);
+    // if (valueRowDual[row] != 0) chk.addCost(col, cost);
   }
 }
 
