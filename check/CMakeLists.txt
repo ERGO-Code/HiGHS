@@ -157,7 +157,7 @@ set(failInstances
 set(settings
     " "
 #    "--parallel=on"
-#    "--presolve=on"
+    "--presolve=on"
     )
 
 # define a macro to add tests
@@ -191,12 +191,15 @@ foreach(instance ${${instances}})
                 "Run status : ${solutionstatus}")
 
         if(${solutionstatus} STREQUAL "Optimal")
-            set_tests_properties (${name}${setting} PROPERTIES
-                    PASS_REGULAR_EXPRESSION
-                    "Iterations : ${iter}\nObjective  : ${optval}")
-          #  set_tests_properties (${name}${setting} PROPERTIES
-          #          PASS_REGULAR_EXPRESSION
-          #          "Objective  : ${optval}")
+            if(NOT ${setting} STREQUAL "--presolve=on")
+                set_tests_properties (${name}${setting} PROPERTIES
+                        PASS_REGULAR_EXPRESSION
+                        "Iterations : ${iter}\nObjective  : ${optval}")
+            else()
+                set_tests_properties (${name}${setting} PROPERTIES
+                        PASS_REGULAR_EXPRESSION
+                        "Objective  : ${optval}")
+            endif()
         endif()
 
     endforeach(setting)

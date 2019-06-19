@@ -504,7 +504,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     // update singleton col list
     if (nzCol.at(x) == 1) singCol.push_back(x);
     if (nzCol.at(x) == 0) {
-      nzRow.at(i)++;  // need this because below we decrease it by 1 too
       removeEmptyColumn(x);
     }
   }
@@ -2463,6 +2462,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
         break;
       }
       case REDUNDANT_ROW: {
+        // this is not zero if the row bounds got relaxed and transferred to a
+        // column which then had a nonzero dual.
         valueRowDual[c.row] = 0;
 
         flagRow[c.row] = 1;
@@ -2640,11 +2641,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         double rowVal = aij * xj + aik * xkValue;
         if (rowub - rowVal > tol && rowVal - rowlb > tol) {
-            row_status.at(c.row) = HighsBasisStatus::BASIC;
-            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
-            valueRowDual[c.row] = 0;
-            flagRow[c.row] = 1;
-            valueColDual[c.col] = getColumnDualPost(c.col);
+          row_status.at(c.row) = HighsBasisStatus::BASIC;
+          col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+          valueRowDual[c.row] = 0;
+          flagRow[c.row] = 1;
+          valueColDual[c.col] = getColumnDualPost(c.col);
         } else {
           double lo, up;
           if (fabs(rowlb - rowub) < tol) {
@@ -2684,7 +2685,8 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
             valueRowDual[c.row] = getRowDualPost(c.row, c.col);
             valueColDual[j] = getColumnDualPost(j);
           } else {
-            // zero row dual is feasible, set row to basic and column to nonbasic.
+            // zero row dual is feasible, set row to basic and column to
+            // nonbasic.
             row_status.at(c.row) = HighsBasisStatus::BASIC;
             col_status.at(c.col) = HighsBasisStatus::NONBASIC;
             valueRowDual[c.row] = 0;
