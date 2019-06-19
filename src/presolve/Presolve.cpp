@@ -98,7 +98,7 @@ void Presolve::setBasisInfo(
 int Presolve::presolve(int print) {
   iPrint = print;
 
-  iPrint = 1;
+  // iPrint = 1;
   // iKKTcheck = 1;
   // chk.print = 1;
 
@@ -130,23 +130,23 @@ int Presolve::presolve(int print) {
     if (iPrint > 0) cout << "PR: main loop " << iter << ":" << endl;
     //***************** main loop ******************
 
-    // removeRowSingletons();
-    // if (status) return status;
+    removeRowSingletons();
+    if (status) return status;
      removeForcingConstraints(iter);
      if (status) return status;
 
-    // removeRowSingletons();
-    // if (status) return status;
-    // removeDoubletonEquations();
-    // if (status) return status;
+    removeRowSingletons();
+    if (status) return status;
+    removeDoubletonEquations();
+    if (status) return status;
 
-    // removeRowSingletons();
-    // if (status) return status;
+    removeRowSingletons();
+    if (status) return status;
     removeColumnSingletons();
     if (status) return status;
 
-    // removeDominatedColumns();
-    // if (status) return status;
+    removeDominatedColumns();
+    if (status) return status;
 
     //***************** main loop ******************
     iter++;
@@ -504,7 +504,6 @@ void Presolve::UpdateMatrixCoeffDoubletonEquationXnonZero(
     // update singleton col list
     if (nzCol.at(x) == 1) singCol.push_back(x);
     if (nzCol.at(x) == 0) {
-      nzRow.at(i)++;  // need this because below we decrease it by 1 too
       removeEmptyColumn(x);
     }
   }
@@ -1328,18 +1327,18 @@ void Presolve::removeColumnSingletons() {
       // free
       if (colLower.at(col) == -HIGHS_CONST_INF &&
           colUpper.at(col) == HIGHS_CONST_INF) {
-        // removeFreeColumnSingleton(col, i, k);
-        // it = singCol.erase(it);
-        // continue;
+        removeFreeColumnSingleton(col, i, k);
+        it = singCol.erase(it);
+        continue;
       }
       // singleton column in a doubleton inequality
       // case two column singletons
       else if (nzRow.at(i) == 2) {
-        // bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
-        // if (result) {
-        //   it = singCol.erase(it);
-        //   continue;
-        // }
+        bool result = removeColumnSingletonInDoubletonInequality(col, i, k);
+        if (result) {
+          it = singCol.erase(it);
+          continue;
+        }
       }
       // implied free
       else {
