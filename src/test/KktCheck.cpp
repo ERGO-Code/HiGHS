@@ -12,9 +12,11 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "test/KktCheck.h"
-#include "lp_data/HConst.h"
 
+#include <cassert>
 #include <vector>
+
+#include "lp_data/HConst.h"
 
 void KktCheck::printAR() {
   std::cout << "N=" << numCol << ",  M=" << numRow
@@ -331,6 +333,28 @@ void KktCheck::chStOfLagrangian() {
   }
 }
 
+void KktCheck::checkBFS() {
+  // Go over cols and check that the duals of basic values are zero.
+  assert(col_status.size() == numCol);
+  assert(colDual.size() == numCol);
+  for (int j = 0; j < numCol; j++) {
+    if (col_status[j] == HighsBasisStatus::BASIC && colDual[j] != 0) {
+      if (print == 1)
+        std::cout << "Col " << cIndexRev[j] << " is basic but has nonzero dual." << std::endl;
+    }
+  }
+
+  // Go over rows and check that the duals of basic values are zero.
+  assert(row_status.size() == numRow);
+  assert(rowDual.size() == numRow);
+  for (int i = 0; i < numRow; i++) {
+    if (row_status[i] == HighsBasisStatus::BASIC && rowDual[i] != 0) {
+      if (print == 1)
+        std::cout << "Row " << rIndexRev[i] << " is basic but has nonzero dual." << std::endl;
+    }
+  }
+}
+
 void KktCheck::checkKKT() {
   if (numCol == 0) return;
 
@@ -344,15 +368,17 @@ void KktCheck::checkKKT() {
   chComplementarySlackness();
   chStOfLagrangian();
 
-  if (print == 2) {
-    std::ofstream myfile;
-    myfile.open("../experiments/out", std::ios::app);
-    if (istrueGlb)
-      myfile << "           KKT fail      ";
-    else
-      myfile << "           KKT pass      ";
-    myfile.close();
-  }
+  checkBFS();
+
+  // if (print == 2) {
+  //   std::ofstream myfile;
+  //   myfile.open("../experiments/out", std::ios::app);
+  //   if (istrueGlb)
+  //     myfile << "           KKT fail      ";
+  //   else
+  //     myfile << "           KKT pass      ";
+  //   myfile.close();
+  // }
 }
 
 void KktCheck::passSolution(const std::vector<double>& colVal,
