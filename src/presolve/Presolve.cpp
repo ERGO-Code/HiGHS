@@ -117,13 +117,13 @@ int Presolve::presolve(int print) {
   int iter = 1;
   // print(0);
 
-  // timer.recordStart(FIXED_COL);
-  // for (int j = 0; j < numCol; ++j)
-  //   if (flagCol.at(j)) {
-  //     removeIfFixed(j);
-  //     if (status) return status;
-  //   }
-  // timer.recordFinish(FIXED_COL);
+  timer.recordStart(FIXED_COL);
+  for (int j = 0; j < numCol; ++j)
+    if (flagCol.at(j)) {
+      removeIfFixed(j);
+      if (status) return status;
+    }
+  timer.recordFinish(FIXED_COL);
 
   while (hasChange == 1) {
     hasChange = false;
@@ -132,21 +132,21 @@ int Presolve::presolve(int print) {
 
     removeRowSingletons();
     if (status) return status;
-    // removeForcingConstraints(iter);
-    // if (status) return status;
+    removeForcingConstraints(iter);
+    if (status) return status;
 
-    // removeRowSingletons();
-    // if (status) return status;
-    // removeDoubletonEquations();
-    // if (status) return status;
+    removeRowSingletons();
+    if (status) return status;
+    removeDoubletonEquations();
+    if (status) return status;
 
-    // removeRowSingletons();
-    // if (status) return status;
-    // removeColumnSingletons();
-    // if (status) return status;
+    removeRowSingletons();
+    if (status) return status;
+    removeColumnSingletons();
+    if (status) return status;
 
-    // removeDominatedColumns();
-    // if (status) return status;
+    removeDominatedColumns();
+    if (status) return status;
 
     //***************** main loop ******************
     iter++;
@@ -708,10 +708,10 @@ void Presolve::initializeVectors() {
     nzRow.at(i) = ARstart.at(i + 1) - ARstart.at(i);
     if (nzRow.at(i) == 1) singRow.push_back(i);
     if (nzRow.at(i) == 0) {
-      // timer.recordStart(EMPTY_ROW);
-      // removeEmptyRow(i);
-      // countRemovedRows[EMPTY_ROW]++;
-      // timer.recordFinish(EMPTY_ROW);
+      timer.recordStart(EMPTY_ROW);
+      removeEmptyRow(i);
+      countRemovedRows[EMPTY_ROW]++;
+      timer.recordFinish(EMPTY_ROW);
     }
   }
 
@@ -2455,6 +2455,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
           if (chk.print == 1)
             cout << "----KKT check after forcing row " << c.row
                  << " re-introduced. Variable(s): " << str << " -----\n";
+          chk.replaceBasis(col_status, row_status);
           chk.addChange(3, c.row, 0, 0, 0, valueRowDual[c.row]);
           chk.makeKKTCheck();
         }
@@ -2639,10 +2640,11 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
         double rowVal = aij * xj + aik * xkValue;
         if (rowub - rowVal > tol && rowVal - rowlb > tol) {
-          valueRowDual[c.row] = 0;
-          flagRow[c.row] = 1;
-          valueColDual.at(j) = getColumnDualPost(j);
-          valueColDual[c.col] = getColumnDualPost(c.col);
+            row_status.at(c.row) = HighsBasisStatus::BASIC;
+            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+            valueRowDual[c.row] = 0;
+            flagRow[c.row] = 1;
+            valueColDual[c.col] = getColumnDualPost(c.col);
         } else {
           double lo, up;
           if (fabs(rowlb - rowub) < tol) {
@@ -2666,36 +2668,33 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
             cout << "PR: Error in postsolving doubleton inequality " << c.row
                  << " : inconsistent bounds for its dual value.\n";
 
-          if (lo <= 0 && up >= 0) {
-            valueRowDual[c.row] = 0;
-          } else if (lo > 0) {
-            valueRowDual[c.row] = lo;
+          double bound_row_dual = 0;
+          if (lo > 0) {
+            bound_row_dual = lo;
           } else if (up < 0) {
-            valueRowDual[c.row] = up;
+            bound_row_dual = up;
           }
 
-          flagRow[c.row] = 1;
-          valueColDual.at(j) = getColumnDualPost(j);
-          if (iKKTcheck == 1) chk.colDual.at(j) = valueColDual.at(j);
-
-          valueColDual[c.col] = getColumnDualPost(c.col);
-        }
-
-        if (fabs(valueColDual[c.col]) > tol) {
-          if (report_postsolve) {
-            printf("1.0 : Recover col %3d as %3d (nonbasic)\n", c.col, j);
-          }
-          col_status.at(c.col) = HighsBasisStatus::NONBASIC;  // Was LOWER
-          if (j < numColOriginal) {
-            // j is a column
-            col_status.at(j) = HighsBasisStatus::BASIC;
+          if (lo > 0 || up < 0) {
+            // row is nonbasic, since dual value zero for it is infeasible.
+            row_status.at(c.row) = HighsBasisStatus::NONBASIC;
+            col_status.at(c.col) = HighsBasisStatus::BASIC;
+            valueColDual[c.col] = 0;
+            flagRow[c.row] = 1;
+            valueRowDual[c.row] = getRowDualPost(c.row, c.col);
+            valueColDual[j] = getColumnDualPost(j);
           } else {
-            // j is a row
-            row_status.at(j - numColOriginal) = HighsBasisStatus::BASIC;
+            // zero row dual is feasible, set row to basic and column to nonbasic.
+            row_status.at(c.row) = HighsBasisStatus::BASIC;
+            col_status.at(c.col) = HighsBasisStatus::NONBASIC;
+            valueRowDual[c.row] = 0;
+            flagRow[c.row] = 1;
+            valueColDual[c.col] = getColumnDualPost(c.col);
           }
+
+          if (iKKTcheck == 1) chk.colDual.at(j) = valueColDual.at(j);
         }
 
-        flagRow[c.row] = 1;
         flagCol[c.col] = 1;
 
         if (iKKTcheck == 1) {
@@ -2706,7 +2705,7 @@ HighsPostsolveStatus Presolve::postsolve(const HighsSolution& reduced_solution,
 
           chk.addChange(5, c.row, c.col, valuePrimal[c.col],
                         valueColDual[c.col], valueRowDual[c.row]);
-
+          chk.replaceBasis(col_status, row_status);
           chk.makeKKTCheck();
         }
         // exit(2);
@@ -2867,23 +2866,11 @@ void Presolve::setBasisElement(change c) {
       row_status.at(c.row) = HighsBasisStatus::BASIC;
       break;
     }
-    case SING_ROW: {
-      // elsewhere
-      break;
-    }
+    case SING_ROW:
     case FORCING_ROW_VARIABLE:
-      // variables set at a bound by forcing row fRjs.p
-      // all nonbasic
-
+    case FORCING_ROW:
+    case SING_COL_DOUBLETON_INEQ:
       break;
-    case FORCING_ROW: {
-      if (report_postsolve) {
-        printf("2.2 : Recover row %3d as %3d (basic): forcing row\n", c.row,
-               numColOriginal + c.row);
-      }
-      row_status.at(c.row) = HighsBasisStatus::BASIC;
-      break;
-    }
     case REDUNDANT_ROW: {
       if (report_postsolve) {
         printf("2.3 : Recover row %3d as %3d (basic): redundant\n", c.row,
@@ -2906,25 +2893,6 @@ void Presolve::setBasisElement(change c) {
         printf(
             "2.5b: Recover row %3d as %3d (nonbasic): implied free singleton "
             "column\n",
-            c.row, numColOriginal + c.row);
-      }
-      row_status.at(c.row) = HighsBasisStatus::NONBASIC;  // Was LOWER
-      break;
-    }
-    case SING_COL_DOUBLETON_INEQ: {
-      // column singleton in a doubleton inequality.
-      if (report_postsolve) {
-        printf(
-            "2.6b: Recover col %3d as %3d (basic): singleton column doubleton "
-            "inequality\n",
-            c.col, numColOriginal + c.row);
-      }
-      col_status.at(c.col) = HighsBasisStatus::BASIC;
-
-      if (report_postsolve) {
-        printf(
-            "2.6b: Recover row %3d as %3d (nonbasic): singleton column "
-            "doubleton inequality\n",
             c.row, numColOriginal + c.row);
       }
       row_status.at(c.row) = HighsBasisStatus::NONBASIC;  // Was LOWER
@@ -3161,6 +3129,8 @@ string Presolve::getDualsForcingRow(int row, vector<int>& fRjs) {
 
   double lo = -HIGHS_CONST_INF;
   double up = HIGHS_CONST_INF;
+  int lo_col = -1;
+  int up_col = -1;
 
   double cost, sum;
 
@@ -3174,7 +3144,11 @@ string Presolve::getDualsForcingRow(int row, vector<int>& fRjs) {
     double colUpp = v[1];
 
     // calculate bound x imposed by zj
+    double save_lo = lo;
+    double save_up = up;
     getBoundOnLByZj(row, j, &lo, &up, colLow, colUpp);
+    if (lo > save_lo) lo_col = j;
+    if (up < save_up) up_col = j;
   }
 
   // calculate yi
@@ -3184,16 +3158,31 @@ string Presolve::getDualsForcingRow(int row, vector<int>& fRjs) {
 
   if (lo <= 0 && up >= 0) {
     valueRowDual.at(row) = 0;
+    row_status[row] = HighsBasisStatus::BASIC;
   } else if (lo > 0) {
+    // row is set to basic and column to non-basic but that should change
+    row_status[row] = HighsBasisStatus::NONBASIC;
+    col_status.at(lo_col) = HighsBasisStatus::BASIC;
     valueRowDual.at(row) = lo;
+    valueColDual.at(lo_col) = 0;
+    // valueColDual[lo_col] should be zero since it imposed the lower bound.
   } else if (up < 0) {
+    // row is set to basic and column to non-basic but that should change
+    row_status[row] = HighsBasisStatus::NONBASIC;
+    col_status.at(up_col) = HighsBasisStatus::BASIC;
     valueRowDual.at(row) = up;
+    valueColDual.at(up_col) = 0;
   }
 
   flagRow.at(row) = 1;
 
   for (size_t jj = 0; jj < fRjs.size(); ++jj) {
     j = fRjs[jj];
+    if (lo > 0 && j == lo_col) continue;
+    if (up < 0 && j == up_col) continue;
+
+    col_status[j] = HighsBasisStatus::NONBASIC;
+
     cost = valueColDual.at(j);
     sum = 0;
     for (int k = Astart.at(j); k < Aend.at(j); ++k)

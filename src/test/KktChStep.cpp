@@ -594,6 +594,16 @@ void KktChStep::makeKKTCheck() {
   checker.col_status = col_stat;
   checker.row_status = row_stat;
   checker.checkKKT();
+
+  int count = 0;
+  for (int i = 0; i < col_status.size(); i++)
+    if (col_status[i] == HighsBasisStatus::BASIC) count++;
+  for (int i = 0; i < row_status.size(); i++)
+    if (row_status[i] == HighsBasisStatus::BASIC) count++;
+
+  if (count != numRow)
+    std::cout << "Wrong number of basic variables: numRow = " << numRow
+              << ", count = " << count << std::endl;
 }
 
 void KktChStep::printA() {
