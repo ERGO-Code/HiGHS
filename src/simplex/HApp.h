@@ -62,13 +62,16 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // dual feasibility
   //
   SimplexStrategy use_simplex_strategy = simplex_info.simplex_strategy;
+  //
+  // Transition to the best possible simplex basis and solution
   simplex_lp_status.solution_status = transition(highs_model_object);
   if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
     return simplex_interface.lpStatusToHighsStatus(
         simplex_lp_status.solution_status);
-  // Use the number of primal and dual infeasibilities to determine
-  // whether the simplex solver is needed and, if so, possibly which
-  // variant to use.
+  //
+  // Given a simplex basis and solution, use the number of primal and
+  // dual infeasibilities to determine whether the simplex solver is
+  // needed and, if so, possibly which variant to use.
   if (simplex_info.num_primal_infeasibilities == 0) {
     // Primal feasible
     if (simplex_info.num_dual_infeasibilities == 0) {
@@ -183,5 +186,63 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   //  reportSimplexLpStatus(simplex_lp_status, "After solve");
 #endif
   return result;
+}
+
+HighsStatus solveModelSimplex(const HighsOptions& opt,
+			      HighsModelObject& highs_model_object) {
+  HighsStatus highs_status = runSimplexSolver(opt, highs_model_object);
+
+  if (highs_status != HighsStatus::Optimal) return highs_status;
+
+  HighsScale& scale = highs_model_object.scale_;
+  double extreme_equilibration_improvement = scale.extreme_equilibration_improvement_;
+  double mean_equilibration_improvement = scale.mean_equilibration_improvement_;
+  if (!scale.is_scaled_) {
+    // Scaling has not been performed so report equilibration and return
+    printf("grep_scaling,%s,%g,%g\n",
+	   highs_model_object.lp_.model_name_.c_str(),
+	   extreme_equilibration_improvement,
+	   mean_equilibration_improvement);
+    return highs_status;
+  }
+  int scaled_lp_iteration_count = highs_model_object.simplex_info_.iteration_count;
+  double scaled_lp_objective_value = highs_model_object.simplex_info_.primal_objective_value;
+  // Get the scale factor ranges for reporting
+  scaleFactorRanges(highs_model_object, min_col_scale, max_col_scale,
+		    min_row_scale, max_row_scale);
+  double cost_scale = scale.cost_;
+
+
+  // Now solve the unscaled LP using the optimal basis and solution
+          lp_solve_initial_simplex_iteration_count =
+	    lp_solve_final_simplex_iteration_count;
+          // Save the options to switch off scaling and allow the best
+          // simplex strategy to be used
+	  HighsOptions save_options = options_;
+          options_.simplex_strategy = SimplexStrategy::CHOOSE;
+          options_.simplex_scale_strategy = SimplexScaleStrategy::OFF;
+          invalidateSimplexLp(highs_model_object.simplex_lp_status_);
+          // Call runSolver
+          HighsLogMessage(HighsMessageType::INFO, "Solving the unscaled LP");
+          solve_status = runSolver(highs_model_object);
+          lp_solve_final_simplex_iteration_count = highs_model_object.simplex_info_.iteration_count;
+	  unscaled_lp_iteration_count = lp_solve_final_simplex_iteration_count -
+            lp_solve_initial_simplex_iteration_count;
+          lp_solve_simplex_iteration_count += unscaled_lp_iteration_count;
+          unscaled_lp_objective_value =
+	    highs_model_object.simplex_info_.primal_objective_value;
+          // Recover the options
+          options_ = save_options;
+        }
+	printf("grep_scaling,%s,%g,%g,%g,%g,%g,%g,%g,%d,%d,%.15g,%.15g\n",
+	       highs_model_object.lp_.model_name_.c_str(),
+	       extreme_equilibration_improvement,
+	       mean_equilibration_improvement,
+	       cost_scale,
+	       -1/min_col_scale, max_col_scale,
+	       -1/min_row_scale, max_row_scale,
+	       scaled_lp_iteration_count, unscaled_lp_iteration_count,
+	       scaled_lp_objective_value, unscaled_lp_objective_value);
+	
 }
 #endif
