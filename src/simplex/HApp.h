@@ -35,8 +35,8 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 
-// Single function to solve an lp according to options and covert simplex
-// solution and basis
+// Single function to solve an lp according to options and convert
+// simplex solution and basis
 HighsStatus runSimplexSolver(const HighsOptions& opt,
                              HighsModelObject& highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);

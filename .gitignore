@@ -85,6 +85,7 @@ buildDebug/
 Makefile
 Makefile_opt_sw
 ml.mps
+options_file
 
 # Visual C++ cache files
 ipch/
