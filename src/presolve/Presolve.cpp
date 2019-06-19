@@ -1759,7 +1759,6 @@ void Presolve::removeRowSingletons() {
     i = singRow.front();
     singRow.pop_front();
 
-    if (i != 650) continue;
     if (!flagRow.at(i)) {
       cout << "Warning: Row " << i
            << " already flagged off but in singleton row list. Ignored.\n";
@@ -3230,150 +3229,8 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   double lrow = (get<1>(bnd))[2];
   double urow = (get<1>(bnd))[3];
 
-  double sum_aty_without_aij = 0;
-  double sum = 0;
-  for (int k = Astart.at(col); k < Aend.at(col); ++k)
-    if (flagRow.at(Aindex.at(k)))
-      sum = sum + valueRowDual.at(Aindex.at(k)) * Avalue.at(k);
-
-  sum_aty_without_aij = sum;
-  if ((aij * valuePrimal.at(col) - lrow) > tol &&
-      (-aij * valuePrimal.at(col) + urow) > tol) {
-    valueRowDual.at(row) = 0;
-    // row is nonbasic
-  } else {
-    if ((valuePrimal.at(col) > l && valuePrimal.at(col) < u &&
-         fabs(valueColDual.at(col)) > tol) ||
-        (valuePrimal.at(col) == l && valuePrimal.at(col) < u &&
-         valueColDual.at(col) < -tol) ||
-        (valuePrimal.at(col) == u && valuePrimal.at(col) > l &&
-         valueColDual.at(col) > tol)) {
-      valueColDual.at(col) = 0;
-    }
-
-    double sum = 0;
-    for (int k = Astart.at(col); k < Aend.at(col); ++k)
-      if (flagRow.at(Aindex.at(k)))
-        sum = sum + valueRowDual.at(Aindex.at(k)) * Avalue.at(k);
-
-    sum_aty_without_aij = sum;
-    flagRow.at(row) = 1;
-
-    double y = (valueColDual.at(col) - cost - sum) / aij;
-    if (y != 0) {
-      if (iKKTcheck == 1) chk.addCost(col, cost);
-
-      // aij * yi + sum + ci = zi
-      if (urow != lrow)
-        if ((aij * valuePrimal.at(col) == lrow && y > tol) ||
-            (aij * valuePrimal.at(col) == urow && y < -tol)) {
-          // bounds on y_row
-          double loY = -HIGHS_CONST_INF;
-          double upY = HIGHS_CONST_INF;
-
-          if (y > tol)
-            upY = 0;
-          else  // y < -tol
-            loY = 0;
-
-          // bounds on z_col
-          double loZ = -HIGHS_CONST_INF;
-          double upZ = HIGHS_CONST_INF;
-          if (valuePrimal.at(col) == l && l < u) {
-            loZ = 0;
-          } else if (valuePrimal.at(col) == u && l < u) {
-            upZ = 0;
-          } else if (l == u) {
-            loZ = 0;
-            upZ = 0;
-          }
-          // aij * yi + sum + ci = zi
-
-          double lo = -HIGHS_CONST_INF;
-          double up = HIGHS_CONST_INF;
-          // bounds on z by y
-          if (aij > 0) {
-            if (loY > -HIGHS_CONST_INF) {
-              lo = sum + cost + aij * loY;
-              if (lo > loZ) loZ = lo;
-            }
-            if (upY < HIGHS_CONST_INF) {
-              up = sum + cost + aij * upY;
-              if (up < upZ) upZ = up;
-            }
-          } else if (aij < 0) {
-            if (loY > -HIGHS_CONST_INF) {
-              up = sum + cost + aij * loY;
-              if (up < upZ) upZ = up;
-            }
-            if (upY < HIGHS_CONST_INF) {
-              lo = sum + cost + aij * upY;
-              if (lo > loZ) loZ = lo;
-            }
-          }
-          // bounds on y by z
-          // aij * yi  = zi - sum - ci
-          if (aij > 0) {
-            if (loZ > -HIGHS_CONST_INF) {
-              lo = (loZ - sum - cost) / aij;
-              if (lo > loY) loY = lo;
-            }
-            if (upZ < HIGHS_CONST_INF) {
-              up = (upZ - sum - cost) / aij;
-              if (up < upY) upY = up;
-            }
-          } else if (aij < 0) {
-            if (loZ > -HIGHS_CONST_INF) {
-              up = (loZ - sum - cost) / aij;
-              if (up < upY) upY = up;
-            }
-            if (upZ < HIGHS_CONST_INF) {
-              lo = (loZ - sum - cost) / aij;
-              if (lo > loY) loY = lo;
-            }
-          }
-
-          cout << "loY= " << loY << " upY= " << upY << "loZ= " << loZ
-               << " upZ= " << upZ << endl;
-
-          valueRowDual.at(row) = 0;
-
-          sum = 0;
-          for (int k = Astart.at(col); k < Aend.at(col); ++k)
-            if (flagRow.at(Aindex.at(k))) {
-              sum = sum + valueRowDual.at(Aindex.at(k)) * Avalue.at(k);
-              // cout<<" row "<<Aindex.at(k)<<" dual
-              // "<<valueRowDual.at(Aindex.at(k))<<"
-              // a_"<<Aindex.at(k)<<"_"<<j<<"\n";
-            }
-          double newz = cost + sum;
-          if ((valueColDual.at(col) > 0 && newz < 0) ||
-              (valueColDual.at(col) < 0 && newz > 0)) {
-            // valueColDual.at(col) = 0;
-            // update valueRowDual.at(row)
-            // newz = 0 if cost + sum + aijyi = 0 so aijyi = - cost - sum
-
-            valueRowDual.at(row) = (-cost - sum) / aij;
-            valueColDual.at(col) = 0;
-            if (iKKTcheck == 1) {
-              chk.addChange(2, 0, col, valuePrimal.at(col),
-                            valueColDual.at(col), cost);
-            }
-            return;
-          }
-
-          valueColDual.at(col) = newz;
-          return;
-        }
-      valueRowDual.at(row) = y;
-    }
-  }
-
   flagRow.at(row) = 1;
-  // row is introduced so something needs to become basic :
 
-  // check if x is at a bound forced by the singleton row: then x becomes basic
-  // and row nonbasic
   HighsBasisStatus local_status;
   local_status = col_status.at(col);
   if (local_status != HighsBasisStatus::BASIC) {
@@ -3393,47 +3250,25 @@ void Presolve::getDualsSingletonRow(int row, int col) {
       bool isRowAtLB = fabs(aij * valuePrimal[col] - lrow) < tol;
       bool isRowAtUB = fabs(aij * valuePrimal[col] - urow) < tol;
 
-      // todo: save valueColDual
-      // change it to zero
-      // calculate what valueRowDual would be#
-      // use in check below
-      // sometimes recover previous value of col dual 
-        // if row is basic see if column dual is feasible. row dual is zero so the
-        // column dual should be equal to the cost
-        if (isRowAtLB && !isRowAtUB && valueRowDual[row] > 0) {
-          // make row basic
-          row_status.at(row) = HighsBasisStatus::BASIC;
-          valueRowDual[row] = 0;
-        } else {
-          // column is basic
-          // see if row dual is feasible?
-          col_status.at(col) = HighsBasisStatus::BASIC;
-          row_status.at(row) = HighsBasisStatus::NONBASIC;
-          valueColDual[col] = 0;
-          valueRowDual[row] = getRowDualPost(row, col);
-        }
-      // make sure row is dual feasible
-      // if ((isRowAtBound && valueRowDual[row] > 0 &&
-      //      aij * valuePrimal[col] == lrow) ||
-      //     (isRowAtBound && valueRowDual[row] < 0 &&
-      //      aij * valuePrimal[col] == urow)) {
-      //   row_status.at(row) = HighsBasisStatus::BASIC;
-      //   col_status.at(col) = HighsBasisStatus::NONBASIC;
-      //   valueRowDual[row] = 0;
-      //   valueColDual[col] = getColumnDualPost(col);
-      // // if the row dual is zero it does not contribute to the column dual.
-      // }
-    // x was not basic and is not now either, row is basic
-    
-    //  else {
-    //   if (report_postsolve) {
-    //     printf("3.2 : Make row %3d basic\n", row);
-    //   }
-    //   row_status.at(row) = HighsBasisStatus::BASIC;
-    //   valueRowDual[row] = 0;
-      // if the row dual is zero it does not contribute to the column dual.
+      double save_dual = valueColDual[col];
+      valueColDual[col] = 0;
+      double row_dual = getRowDualPost(row, col);
+
+      if ((isRowAtLB && !isRowAtUB && row_dual > 0) ||
+          (!isRowAtLB && isRowAtUB && row_dual < 0) ||
+          (!isRowAtLB && !isRowAtUB)) {
+        // make row basic
+        row_status.at(row) = HighsBasisStatus::BASIC;
+        valueRowDual[row] = 0;
+        valueColDual[col] = save_dual;
+      } else {
+        // column is basic
+        col_status.at(col) = HighsBasisStatus::BASIC;
+        row_status.at(row) = HighsBasisStatus::NONBASIC;
+        valueColDual[col] = 0;
+        valueRowDual[row] = getRowDualPost(row, col);
+      }
     }
-    //  } else if (local_status == HighsBasisStatus::BASIC) {
   } else {
     // x is basic
     if (report_postsolve) {
@@ -3447,7 +3282,6 @@ void Presolve::getDualsSingletonRow(int row, int col) {
   if (iKKTcheck == 1) {
     chk.colDual.at(col) = valueColDual.at(col);
     chk.rowDual.at(row) = valueRowDual.at(row);
-    // if (valueRowDual[row] != 0) chk.addCost(col, cost);
   }
 }
 
