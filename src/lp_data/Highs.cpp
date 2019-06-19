@@ -185,22 +185,6 @@ HighsStatus Highs::run() {
         solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
 				     "Solving the presolved LP");
         solve_iteration_count += iteration_count;
-
-
-        if (hmos_[solved_hmo].scale_.is_scaled_) {
-          // Now solve the unscaled LP using the optimal basis and solution
-          // Save the options to switch off scaling and allow the best simplex
-          // strategy to be used
-          HighsOptions save_options = options_;
-          options_.simplex_strategy = SimplexStrategy::CHOOSE;
-          options_.simplex_scale_strategy = SimplexScaleStrategy::OFF;
-          invalidateSimplexLp(hmos_[solved_hmo].simplex_lp_status_);
-          solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
-				     "Solving the unscaled presolved LP");
-          solve_iteration_count += iteration_count;
-          // Recover the options
-          options_ = save_options;
-        }
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {

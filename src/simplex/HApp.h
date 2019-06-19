@@ -194,6 +194,10 @@ HighsStatus solveModelSimplex(const HighsOptions& opt,
 
   if (highs_status != HighsStatus::Optimal) return highs_status;
 
+  HighsOptions& options = highs_model_object.options_;
+  HighsLp& lp = highs_model_object.lp_;
+  SimplexBasis& basis = highs_model_object.simplex_basis_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsScale& scale = highs_model_object.scale_;
   double extreme_equilibration_improvement = scale.extreme_equilibration_improvement_;
   double mean_equilibration_improvement = scale.mean_equilibration_improvement_;
@@ -208,11 +212,109 @@ HighsStatus solveModelSimplex(const HighsOptions& opt,
   int scaled_lp_iteration_count = highs_model_object.simplex_info_.iteration_count;
   double scaled_lp_objective_value = highs_model_object.simplex_info_.primal_objective_value;
   // Get the scale factor ranges for reporting
+  double min_col_scale;
+  double max_col_scale;
+  double min_row_scale;
+  double max_row_scale;
   scaleFactorRanges(highs_model_object, min_col_scale, max_col_scale,
 		    min_row_scale, max_row_scale);
   double cost_scale = scale.cost_;
-
-
+  if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
+  assert(cost_scale == 1);
+  int num_scaled_dual_infeasibilities = 0;
+  double max_scaled_dual_infeasibility = 0;
+  double sum_scaled_dual_infeasibilities = 0;
+  int num_unscaled_dual_infeasibilities = 0;
+  double max_unscaled_dual_infeasibility = 0;
+  double sum_unscaled_dual_infeasibilities = 0;
+  int num_scaled_primal_infeasibilities = 0;
+  double max_scaled_primal_infeasibility = 0;
+  double sum_scaled_primal_infeasibilities = 0;
+  int num_unscaled_primal_infeasibilities = 0;
+  double max_unscaled_primal_infeasibility = 0;
+  double sum_unscaled_primal_infeasibilities = 0;
+  for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+    // Look at the nonbasic dual infeasibilities
+    if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+    // No dual infeasiblity for fixed rows and columns
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
+    bool col = iVar < lp.numCol_;
+    double scale_mu;
+    int iCol;
+    int iRow;
+    if (col) {
+      iCol = iVar;
+      scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
+    } else {
+      iRow = iVar - lp.numCol_;
+      scale_mu = scale.row_[iRow] * scale.cost_;
+    }
+    double scaled_dual = simplex_info.workDual_[iVar];
+    double unscaled_dual = scaled_dual * scale_mu;
+    double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
+    double unscaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * unscaled_dual, 0.);
+    if (scaled_dual_infeasibility > simplex_info.dual_feasibility_tolerance) 
+      num_scaled_dual_infeasibilities++;
+    max_scaled_dual_infeasibility = max(scaled_dual_infeasibility, max_scaled_dual_infeasibility);
+    sum_scaled_dual_infeasibilities += scaled_dual_infeasibility;
+    if (unscaled_dual_infeasibility > options.dual_feasibility_tolerance)
+      num_unscaled_dual_infeasibilities++;
+    max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
+    sum_unscaled_dual_infeasibilities += unscaled_dual_infeasibility;
+  }
+  for (int ix = 0; ix < lp.numRow_; ix++) {
+    // Look at the basic primal infeasibilities
+    int iVar = basis.basicIndex_[ix];
+    // No dual infeasiblity for fixed rows and columns
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
+    bool col = iVar < lp.numCol_;
+    double scale_mu;
+    int iCol;
+    int iRow;
+    if (col) {
+      iCol = iVar;
+      scale_mu = scale.col_[iCol];
+    } else {
+      iRow = iVar - lp.numCol_;
+      scale_mu = 1 / scale.row_[iRow];
+    }
+    double lower = simplex_info.workLower_[iVar];
+    double upper = simplex_info.workUpper_[iVar];
+    double value = simplex_info.workValue_[iVar];
+    double scaled_primal_infeasibility = max(max(lower-value, value-upper), 0.);
+    double unscaled_primal_infeasibility = scaled_primal_infeasibility * scale_mu;
+    if (scaled_primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
+      num_scaled_primal_infeasibilities++;
+    }
+    max_scaled_primal_infeasibility = max(scaled_primal_infeasibility, max_scaled_primal_infeasibility);
+    sum_scaled_primal_infeasibilities += scaled_primal_infeasibility;
+    if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance)
+      num_unscaled_primal_infeasibilities++;
+    max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
+    sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
+  }
+  printf("  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
+	 num_scaled_primal_infeasibilities,
+	 max_scaled_primal_infeasibility,
+	 sum_scaled_primal_infeasibilities);
+  printf("Unscaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
+	 num_unscaled_primal_infeasibilities,
+	 max_unscaled_primal_infeasibility,
+	 sum_unscaled_primal_infeasibilities);
+  printf("  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
+	 num_scaled_dual_infeasibilities,
+	 max_scaled_dual_infeasibility,
+	 sum_scaled_dual_infeasibilities);
+  printf("Unscaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
+	 num_unscaled_dual_infeasibilities,
+	 max_unscaled_dual_infeasibility,
+	 sum_unscaled_dual_infeasibilities);
+  if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
+    printf("\n!! HANDLE THIS: Have %d primal and %d dual infeasibilities after unscaling\n",
+	   num_unscaled_primal_infeasibilities,
+	   num_unscaled_dual_infeasibilities);
+  }
+  /*
   // Now solve the unscaled LP using the optimal basis and solution
           lp_solve_initial_simplex_iteration_count =
 	    lp_solve_final_simplex_iteration_count;
@@ -243,6 +345,7 @@ HighsStatus solveModelSimplex(const HighsOptions& opt,
 	       -1/min_row_scale, max_row_scale,
 	       scaled_lp_iteration_count, unscaled_lp_iteration_count,
 	       scaled_lp_objective_value, unscaled_lp_objective_value);
-	
+  */
+    return highs_status;
 }
 #endif
