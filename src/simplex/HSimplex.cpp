@@ -532,6 +532,81 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   compute_dual(highs_model_object);
   simplex_lp_status.has_nonbasic_dual_values = true;
   //}
+  //
+  // If there is a HiGHS solution then determine the changes in basic
+  // and nonbasic values and duals for columns and rows
+  if (have_highs_solution) {
+    // Go through the columns, finding the differences in nonbasic column values and duals
+    double sum_nonbasic_col_value_differences = 0;
+    double sum_nonbasic_col_dual_differences = 0;
+    for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
+      int iVar = iCol;
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+	// Consider this nonbasic column
+	double local_col_value = simplex_info.workValue_[iVar] * scale.col_[iCol];
+	double local_col_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] / (scale.col_[iCol] / scale.cost_);
+	double value_difference = fabs(local_col_value - solution.col_value[iCol]);
+	double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
+	sum_nonbasic_col_value_differences += value_difference;
+	sum_nonbasic_col_dual_differences += dual_difference; 
+      }
+    }
+    // Go through the rows, finding the differences in nonbasic and
+    // basic row values and duals, as well as differences in basic
+    // column values and duals
+    double sum_nonbasic_row_value_differences = 0;
+    double sum_nonbasic_row_dual_differences = 0;
+    double sum_basic_col_value_differences = 0;
+    double sum_basic_col_dual_differences = 0;
+    double sum_basic_row_value_differences = 0;
+    double sum_basic_row_dual_differences = 0;
+
+    for (int ix = 0; ix < simplex_lp.numRow_; ix++) {
+      int iRow = ix;
+      int iVar = simplex_lp.numCol_ + iRow;
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
+	// Consider this nonbasic row
+	double local_row_value = - simplex_info.workValue_[iVar] / scale.row_[iRow];
+	double local_row_dual = simplex_lp.sense_ * simplex_info.workDual_[iVar] * (scale.row_[iRow] * scale.cost_);
+	double value_difference = fabs(local_row_value - solution.row_value[iRow]);
+	double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
+	sum_nonbasic_row_value_differences += value_difference;
+	sum_nonbasic_row_dual_differences += dual_difference; 
+	
+      }
+      // Consider the basic variable associated with this row index
+      iVar = simplex_basis.basicIndex_[ix];
+      if (iVar < simplex_lp.numCol_) {
+	// Consider this basic column
+	int iCol = iVar;
+	double local_col_value = simplex_info.baseValue_[ix] * scale.col_[iCol];
+	double local_col_dual = 0;
+	double value_difference = fabs(local_col_value - solution.col_value[iCol]);
+	double dual_difference = fabs(local_col_dual - solution.col_dual[iCol]);
+	sum_basic_col_value_differences += value_difference;
+	sum_basic_col_dual_differences += dual_difference; 
+      } else {
+	// Consider this basic row
+	iRow = iVar - simplex_lp.numCol_;
+	double local_row_value = -simplex_info.baseValue_[ix] / scale.row_[iRow];
+	double local_row_dual = 0;
+	double value_difference = fabs(local_row_value - solution.row_value[iRow]);
+	double dual_difference = fabs(local_row_dual - solution.row_dual[iRow]);
+	sum_basic_row_value_differences += value_difference;
+	sum_basic_row_dual_differences += dual_difference;
+      }
+    }	
+    printf("Nonbasic column value differences sum to %11.4g\n", sum_nonbasic_col_value_differences);
+    printf("Nonbasic row    value differences sum to %11.4g\n", sum_nonbasic_row_value_differences);
+    printf("Basic    column value differences sum to %11.4g\n", sum_basic_col_value_differences);
+    printf("Basic    row    value differences sum to %11.4g\n", sum_basic_row_value_differences);
+    printf("Nonbasic column  dual differences sum to %11.4g\n", sum_nonbasic_col_dual_differences);
+    printf("Nonbasic row     dual differences sum to %11.4g\n", sum_nonbasic_row_dual_differences);
+    printf("Basic    column  dual differences sum to %11.4g\n", sum_basic_col_dual_differences);
+    printf("Basic    row     dual differences sum to %11.4g\n", sum_basic_row_dual_differences);
+  }
+
+
   computeDualObjectiveValue(highs_model_object);
   computePrimalObjectiveValue(highs_model_object);
   simplex_lp_status.valid = true;
