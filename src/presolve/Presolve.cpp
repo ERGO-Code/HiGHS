@@ -98,9 +98,9 @@ void Presolve::setBasisInfo(
 int Presolve::presolve(int print) {
   iPrint = print;
 
-  iPrint = 1;
-  iKKTcheck = 1;
-  chk.print = 1;
+  // iPrint = 1;
+  // iKKTcheck = 1;
+  // chk.print = 1;
 
   // counter for the different types of reductions
   countRemovedCols.resize(HTICK_ITEMS_COUNT_PRE, 0);
