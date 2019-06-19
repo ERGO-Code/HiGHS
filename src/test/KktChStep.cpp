@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file test/KktChStep.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "test/KktChStep.h"
@@ -20,10 +20,66 @@
 
 using std::cout;
 using std::endl;
+using std::get;
 using std::pair;
 using std::setw;
 using std::vector;
-using std::get;
+
+void KktChStep::replaceBasis(const vector<HighsBasisStatus>& columns,
+                             const vector<HighsBasisStatus>& rows) {
+  col_status = columns;
+  row_status = rows;
+}
+
+void KktChStep::passBasis(const vector<HighsBasisStatus>& columns,
+                          const vector<HighsBasisStatus>& rows) {
+  col_status.resize(RnumCol);
+  row_status.resize(RnumRow);
+
+  // This can be done much faster but it's just for checking and
+  // re-used the code from passSolution.
+
+  numRow = rows.size();
+  numCol = columns.size();
+
+  // arrays to keep track of indices
+  vector<int> rIndex(RnumRow, -1);
+  vector<int> cIndex(RnumCol, -1);
+  int nR = 0;
+  int nC = 0;
+
+  for (int i = 0; i < RnumRow; i++)
+    if (flagRow[i]) {
+      rIndex[i] = nR;
+      nR++;
+    }
+
+  for (int i = 0; i < RnumCol; i++)
+    if (flagCol[i]) {
+      cIndex[i] = nC;
+      nC++;
+    }
+
+  // set corresponding parts of solution vectors:
+  int j = 0;
+  vector<int> eqIndexOfReduced(numCol, -1);
+  vector<int> eqIndexOfReduROW(numRow, -1);
+  for (int i = 0; i < RnumCol; i++)
+    if (cIndex[i] > -1) {
+      eqIndexOfReduced[j] = i;
+      j++;
+    }
+  j = 0;
+  for (int i = 0; i < RnumRow; i++)
+    if (rIndex[i] > -1) {
+      eqIndexOfReduROW[j] = i;
+      j++;
+    }
+
+  for (int i = 0; i < numCol; i++) col_status[eqIndexOfReduced[i]] = columns[i];
+
+  for (int i = 0; i < numRow; i++) row_status[eqIndexOfReduROW[i]] = rows[i];
+}
 
 void KktChStep::passSolution(const vector<double>& colVal,
                              const vector<double>& colDu,
@@ -506,27 +562,37 @@ void KktChStep::makeKKTCheck() {
   vector<double> cD;
   vector<double> rD;
 
+  std::vector<HighsBasisStatus> col_stat;
+  std::vector<HighsBasisStatus> row_stat;
+
   cV.resize(numCol);
   cD.resize(numCol);
+  col_stat.resize(numCol);
 
   int k = 0;
   for (int i = 0; i < RnumCol; i++)
     if (flagCol[i]) {
       cV[k] = colValue[i];
       cD[k] = colDual[i];
+      col_stat[k] = col_status[i];
       k++;
     }
 
   rD.resize(numRow);
+  row_stat.resize(numRow);
+
   k = 0;
   for (int i = 0; i < RnumRow; i++) {
     if (flagRow[i]) {
       rD[k] = rowDual[i];
+      row_stat[k] = row_status[i];
       k++;
     }
   }
 
   checker.passSolution(cV, cD, rD);
+  checker.col_status = col_stat;
+  checker.row_status = row_stat;
   checker.checkKKT();
 }
 

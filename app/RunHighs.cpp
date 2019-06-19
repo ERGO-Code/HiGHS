@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = false;//true
+  bool force_options_file = false;//true;//
   if (force_options_file) {
     printf("In main: set options.options_file = options_file so vscode can be used to debug\n");
     options.options_file = "options_file";
@@ -96,10 +96,11 @@ int main(int argc, char **argv) {
     HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
     return (int)HighsStatus::LpError;
   }
+  HighsStatus run_status;
+  //  run_status = highs.writeToFile("write.mps"); if (run_status != HighsStatus::OK) printf("Error return from highs.writeToFile\n");
 
-  //  bool write_mps_return = highs.writeMPS("write.mps"); if (!write_mps_return) printf("Error return from highs.writeMPS\n");
   highs.options_ = options;
-  HighsStatus run_status = highs.run();
+  run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
   if (run_status != HighsStatus::OK &&
       run_status != HighsStatus::Optimal)

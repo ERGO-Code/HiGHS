@@ -23,8 +23,8 @@
 FILE* logfile = stdout;
 FILE* output = stdout;
 unsigned int messageLevel = ML_MINIMAL;
-void (*printmsgcb) (unsigned int, const char*, void*) = NULL;
-void (*logmsgcb) (HighsMessageType, const char*, void*) = NULL;
+void (*printmsgcb)(unsigned int, const char*, void*) = NULL;
+void (*logmsgcb)(HighsMessageType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
 
 char msgbuffer[65536];
@@ -39,8 +39,9 @@ void HighsPrintMessage(unsigned int level, const char* format, ...) {
       int len;
       len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
       if (len >= sizeof(msgbuffer)) {
-         /* output was truncated: for now just ensure string is null-terminated */
-         msgbuffer[sizeof(msgbuffer)-1] = '\0';
+        /* output was truncated: for now just ensure string is null-terminated
+         */
+        msgbuffer[sizeof(msgbuffer) - 1] = '\0';
       }
       printmsgcb(level, msgbuffer, msgcb_data);
     }
@@ -58,45 +59,40 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
   va_start(argptr, format);
 
   if (logmsgcb == NULL) {
-    fprintf(logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour, timeinfo->tm_min,
-            timeinfo->tm_sec, HighsMessageTypeTag[(int) type]);
+    fprintf(logfile, "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour,
+            timeinfo->tm_min, timeinfo->tm_sec, HighsMessageTypeTag[(int)type]);
     vfprintf(logfile, format, argptr);
     fprintf(logfile, "\n");
   } else {
-	int len;
-	len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ", timeinfo->tm_hour, timeinfo->tm_min,
-                   timeinfo->tm_sec, HighsMessageTypeTag[(int) type]);
-	if (len < sizeof(msgbuffer))
-	  len += vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
-	if (len < sizeof(msgbuffer)-1) {
-	  msgbuffer[len] = '\n';
-	  ++len;
-	  msgbuffer[len] = '\0';
-	}
-	else
-	  msgbuffer[sizeof(msgbuffer)-1] = '\0';
-	logmsgcb(type, msgbuffer, msgcb_data);
+    int len;
+    len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
+                   timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
+                   HighsMessageTypeTag[(int)type]);
+    if (len < sizeof(msgbuffer))
+      len +=
+          vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
+    if (len < sizeof(msgbuffer) - 1) {
+      msgbuffer[len] = '\n';
+      ++len;
+      msgbuffer[len] = '\0';
+    } else
+      msgbuffer[sizeof(msgbuffer) - 1] = '\0';
+    logmsgcb(type, msgbuffer, msgcb_data);
   }
 
   va_end(argptr);
 }
 
-void HighsSetLogfile(FILE* lf) {
-  logfile = lf;
-}
+void HighsSetLogfile(FILE* lf) { logfile = lf; }
 
-void HighsSetOutput(FILE* op) {
-  output = op;
-}
+void HighsSetOutput(FILE* op) { output = op; }
 
-void HighsSetMessagelevel(unsigned int level) {
-  messageLevel = level;
-}
+void HighsSetMessagelevel(unsigned int level) { messageLevel = level; }
 
 void HighsSetMessageCallback(
-	void (*printmsgcb_) (unsigned int level, const char* msg, void* msgcb_data),
-	void (*logmsgcb_) (HighsMessageType type, const char* msg, void* msgcb_data),
-	void* msgcb_data_) {
+    void (*printmsgcb_)(unsigned int level, const char* msg, void* msgcb_data),
+    void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
+    void* msgcb_data_) {
   printmsgcb = printmsgcb_;
   logmsgcb = logmsgcb_;
   msgcb_data = msgcb_data_;
