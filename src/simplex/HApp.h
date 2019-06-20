@@ -37,8 +37,7 @@
 
 // Single function to solve an lp according to options and convert
 // simplex solution and basis
-HighsStatus runSimplexSolver(const HighsOptions& opt,
-                             HighsModelObject& highs_model_object) {
+HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
   HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -189,9 +188,8 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   return result;
 }
 
-HighsStatus solveModelSimplex(HighsOptions& opt,
-			      HighsModelObject& highs_model_object) {
-  HighsStatus highs_status = runSimplexSolver(opt, highs_model_object);
+HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+  HighsStatus highs_status = runSimplexSolver(highs_model_object);
 
   if (highs_status != HighsStatus::Optimal) return highs_status;
 
@@ -345,12 +343,13 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
 		      num_unscaled_dual_infeasibilities,
 		      new_primal_feasibility_tolerance,
 		      new_dual_feasibility_tolerance);
-      HighsOptions save_opt = opt;
-      opt.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
-      opt.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
-      opt.simplex_strategy = SimplexStrategy::CHOOSE;
-      HighsStatus highs_status = runSimplexSolver(opt, highs_model_object);
-      opt = save_opt;
+      HighsOptions save_options = highs_model_object.options_;
+      HighsOptions& options = highs_model_object.options_;
+      options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
+      options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+      options.simplex_strategy = SimplexStrategy::CHOOSE;
+      HighsStatus highs_status = runSimplexSolver(highs_model_object);
+      options = save_options;
     } else {
       return highs_status;
     }

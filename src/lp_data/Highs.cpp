@@ -263,8 +263,9 @@ HighsStatus Highs::run() {
 	  solved_hmo = original_hmo;
 	  // Save the options to allow the best simplex strategy to
 	  // be used
-	  HighsOptions save_options = options_;
-	  options_.simplex_strategy = SimplexStrategy::CHOOSE;
+	  HighsOptions save_options = hmos_[solved_hmo].options_;
+	  HighsOptions& options = hmos_[solved_hmo].options_;
+	  options.simplex_strategy = SimplexStrategy::CHOOSE;
 	  // Set the message level to ML_ALWAYS so that data for
 	  // individual iterations are reported
 	  bool full_iteration_logging = false;
@@ -274,7 +275,7 @@ HighsStatus Highs::run() {
 	  postsolve_iteration_count = iteration_count;
 	  solve_iteration_count += iteration_count;
 	  // Recover the options
-	  options_ = save_options;
+	  options = save_options;
 	  // Reset the message level
 	  if (full_iteration_logging) HighsSetMessagelevel(options_.messageLevel);
 	}
@@ -891,7 +892,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveModelSimplex(options_, model);
+  status = solveModelSimplex(model);
   simplex_has_run_ = true;
 #else
   // IPX
@@ -1018,7 +1019,7 @@ HighsStatus Highs::solveNode(Node& node) {
 
   iteration_count0 = hmos_[0].simplex_info_.iteration_count;
 
-  HighsStatus status = solveModelSimplex(options_, hmos_[0]);
+  HighsStatus status = solveModelSimplex(hmos_[0]);
   simplex_has_run_ = true;
 
   iteration_count1 = hmos_[0].simplex_info_.iteration_count;
@@ -1033,7 +1034,7 @@ HighsStatus Highs::solveNode(Node& node) {
     hmos_[0].simplex_lp_status_.has_basis = false;
     hmos_[0].basis_.valid_ = false;
     iteration_count0 = hmos_[0].simplex_info_.iteration_count;
-    HighsStatus status = solveModelSimplex(options_, hmos_[0]);
+    HighsStatus status = solveModelSimplex(hmos_[0]);
     iteration_count1 = hmos_[0].simplex_info_.iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_objective_value = hmos_[0].simplex_info_.dual_objective_value;
@@ -1073,7 +1074,7 @@ HighsStatus Highs::solveNode(Node& node) {
   // lp_.colLower_ = node.col_lower_bound;
   // lp_.colUpper_ = node.col_upper_bound;
 
-  // HighsStatus status = solveModelSimplex(options_, hmos_[0]);
+  // HighsStatus status = solveModelSimplex(hmos_[0]);
 
   // // Set solution.
   // if (status == HighsStatus::Optimal) {
@@ -1089,7 +1090,7 @@ HighsStatus Highs::solveRootNode(Node& root) {
   options_.messageLevel = ML_NONE;
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
-  HighsStatus status = solveModelSimplex(options_, hmos_[0]);
+  HighsStatus status = solveModelSimplex(hmos_[0]);
   simplex_has_run_ = true;
 
   if (status == HighsStatus::Optimal) {
