@@ -278,9 +278,9 @@ HighsStatus solveModelSimplex(const HighsOptions& opt,
       iRow = iVar - lp.numCol_;
       scale_mu = 1 / scale.row_[iRow];
     }
-    double lower = simplex_info.workLower_[iVar];
-    double upper = simplex_info.workUpper_[iVar];
-    double value = simplex_info.workValue_[iVar];
+    double lower = simplex_info.baseLower_[ix];
+    double upper = simplex_info.baseUpper_[ix];
+    double value = simplex_info.baseValue_[ix];
     double scaled_primal_infeasibility = max(max(lower-value, value-upper), 0.);
     double unscaled_primal_infeasibility = scaled_primal_infeasibility * scale_mu;
     if (scaled_primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
