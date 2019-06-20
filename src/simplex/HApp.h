@@ -305,35 +305,42 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
       max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
       sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
     }
-    printf("  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
-	   num_scaled_primal_infeasibilities,
-	   max_scaled_primal_infeasibility,
-	   sum_scaled_primal_infeasibilities);
-    printf("Unscaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
-	   num_unscaled_primal_infeasibilities,
-	   max_unscaled_primal_infeasibility,
-	   sum_unscaled_primal_infeasibilities);
-    printf("  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
-	   num_scaled_dual_infeasibilities,
-	   max_scaled_dual_infeasibility,
-	   sum_scaled_dual_infeasibilities);
-    printf("Unscaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g\n",
-	   num_unscaled_dual_infeasibilities,
-	   max_unscaled_dual_infeasibility,
-	   sum_unscaled_dual_infeasibilities);
+    HighsLogMessage(HighsMessageType::INFO, "solveModelSimplex pass %1d:", pass);
+    if (num_scaled_primal_infeasibilities>0) {
+      HighsLogMessage(HighsMessageType::ERROR, "  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		      num_scaled_primal_infeasibilities,
+		      max_scaled_primal_infeasibility,
+		      sum_scaled_primal_infeasibilities);
+    }
+    HighsLogMessage(HighsMessageType::INFO, "Unscaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		    num_unscaled_primal_infeasibilities,
+		    max_unscaled_primal_infeasibility,
+		    sum_unscaled_primal_infeasibilities);
+    if (num_scaled_dual_infeasibilities>0) {
+      HighsLogMessage(HighsMessageType::ERROR, "  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		      num_scaled_dual_infeasibilities,
+		      max_scaled_dual_infeasibility,
+		      sum_scaled_dual_infeasibilities);
+    }
+    HighsLogMessage(HighsMessageType::INFO, "Unscaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		    num_unscaled_dual_infeasibilities,
+		    max_unscaled_dual_infeasibility,
+		    sum_unscaled_dual_infeasibilities);
     if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
-      printf("\n!! Have %d primal and %d dual infeasibilities after unscaling\n",
-	     num_unscaled_primal_infeasibilities,
-	     num_unscaled_dual_infeasibilities);
-      printf("Re-solve with infeasibility tolerances of %g primal and %g dual\n",
-	     new_primal_feasibility_tolerance,
-	     new_dual_feasibility_tolerance);
+      HighsLogMessage(HighsMessageType::INFO,
+		      "Have %d primal and %d dual unscaled infeasibilities so re-solve with infeasibility tolerances of %g primal and %g dual",
+		      num_unscaled_primal_infeasibilities,
+		      num_unscaled_dual_infeasibilities,
+		      new_primal_feasibility_tolerance,
+		      new_dual_feasibility_tolerance);
       HighsOptions save_opt = opt;
       opt.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
       opt.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
       opt.simplex_strategy = SimplexStrategy::CHOOSE;
       HighsStatus highs_status = runSimplexSolver(opt, highs_model_object);
       opt = save_opt;
+    } else {
+      return highs_status;
     }
   }
   return highs_status;

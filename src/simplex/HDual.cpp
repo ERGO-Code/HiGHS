@@ -214,11 +214,11 @@ void HDual::solve(int num_threads) {
     // Use primal to clean up if not out of time
     int it0 = simplex_info.iteration_count;
     HPrimal hPrimal(workHMO);
-    HighsSetMessagelevel(ML_ALWAYS);
+    //    HighsSetMessagelevel(ML_ALWAYS);
     timer.start(simplex_info.clock_[SimplexPrimalPhase2Clock]);
     hPrimal.solvePhase2();
     timer.stop(simplex_info.clock_[SimplexPrimalPhase2Clock]);
-    HighsSetMessagelevel(workHMO.options_.messageLevel);
+    //    HighsSetMessagelevel(workHMO.options_.messageLevel);
     simplex_info.primal_phase2_iteration_count +=
         (simplex_info.iteration_count - it0);
   }
