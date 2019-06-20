@@ -28,7 +28,8 @@ using std::runtime_error;
 #include <cassert>
 #include <vector>
 
-void options(HighsModelObject& highs_model_object, const HighsOptions& opt) {
+void setSimplexOptions(HighsModelObject& highs_model_object) {
+  HighsOptions& options = highs_model_object.options_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   //
   // Copy values of HighsOptions for the simplex solver
@@ -37,18 +38,18 @@ void options(HighsModelObject& highs_model_object, const HighsOptions& opt) {
   // will become valuable when "choose" becomes a HiGHS strategy value
   // that will need converting into a specific simplex strategy value.
   //
-  simplex_info.simplex_strategy = opt.simplex_strategy;
+  simplex_info.simplex_strategy = options.simplex_strategy;
   simplex_info.dual_edge_weight_strategy =
-      opt.simplex_dual_edge_weight_strategy;
-  simplex_info.price_strategy = opt.simplex_price_strategy;
-  simplex_info.primal_feasibility_tolerance = opt.primal_feasibility_tolerance;
-  simplex_info.dual_feasibility_tolerance = opt.dual_feasibility_tolerance;
+      options.simplex_dual_edge_weight_strategy;
+  simplex_info.price_strategy = options.simplex_price_strategy;
+  simplex_info.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  simplex_info.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   simplex_info.dual_objective_value_upper_bound =
-      opt.dual_objective_value_upper_bound;
-  simplex_info.perturb_costs = opt.simplex_perturb_costs;
-  simplex_info.iteration_limit = opt.simplex_iteration_limit;
-  simplex_info.update_limit = opt.simplex_update_limit;
-  simplex_info.highs_run_time_limit = opt.highs_run_time_limit;
+      options.dual_objective_value_upper_bound;
+  simplex_info.perturb_costs = options.simplex_perturb_costs;
+  simplex_info.iteration_limit = options.simplex_iteration_limit;
+  simplex_info.update_limit = options.simplex_update_limit;
+  simplex_info.highs_run_time_limit = options.highs_run_time_limit;
 
   // Set values of internal options
   // Option for analysing the LP solution
@@ -116,8 +117,23 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
     // Initialise the real and integer random vectors
     initialiseSimplexLpRandomVectors(highs_model_object);
   }
+  if (simplex_lp_status.has_basis) {
+    // There is a simplex basis: it should be valid - since it's set internally - but check
+    int num_basic_variables = 0;
+    for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
+      if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) {
+	num_basic_variables++;
+      } else {
+	simplex_basis.nonbasicFlag_[iVar] = NONBASIC_FLAG_TRUE;
+      }
+    }
+    assert(num_basic_variables == simplex_lp.numRow_);
+    if (num_basic_variables != simplex_lp.numRow_) simplex_lp_status.has_basis = false;
+  }
+  // Now we know whether the simplex basis at least has the right number
+  // of basic and nonbasic variables
   if (!simplex_lp_status.has_basis) {
-    // There is no simplex basis, so try to identify one
+    // There is no simplex basis (or it was found to be invalid) so try to identify one
     if (basis.valid_) {
       // There is is HiGHS basis: use it to construct nonbasicFlag,
       // checking that it has the right number of basic variables
@@ -151,8 +167,22 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
     // number of basic variables
     bool nonbasicFlag_valid = basis.valid_;
     if (!nonbasicFlag_valid) {
-      // nonbasicFlag is not valid, so generate a simplex basis, possibly by
-      // performing a crash, and possibly after dualising
+      // So, nonbasicFlag is not valid - either because there is no
+      // simplex or HiGHS basis, or because what was claimed to be
+      // valid has been found to have the wrong number of basic and
+      // nonbasic variables
+      //
+      // This is taken to imply that this is a "new" LP to be solved, so
+      //
+      // 1. Set simplex options from HiGHS options. This is only done with a new LP so that strategy
+      // and knowledge based on run-time experience with the same LP should be preserved.
+      //      setSimplexOptions(highs_model_object);
+      //
+      // 2. Initialise the simplex timing 
+      //      SimplexTimer simplex_timer; simplex_timer.initialiseSimplexClocks(highs_model_object);
+      //
+      // 3. Generate a simplex basis, possibly by performing a crash,
+      // and possibly after dualising
 
       /*
       // Possibly dualise, making sure that no simplex or other data are used to

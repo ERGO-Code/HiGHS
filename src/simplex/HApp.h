@@ -48,12 +48,21 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
   // knowledge based on run-time experience should be preserved.
-  options(highs_model_object, opt);
+  setSimplexOptions(highs_model_object);
 
   SimplexTimer simplex_timer;
   simplex_timer.initialiseSimplexClocks(highs_model_object);
 
-  // Copy the simplex stratgy so that it can be modified:
+  //
+  // Transition to the best possible simplex basis and solution
+  simplex_lp_status.solution_status = transition(highs_model_object);
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED) {
+    return simplex_interface.lpStatusToHighsStatus(
+        simplex_lp_status.solution_status);
+  }
+  // Given a simplex basis and solution, use the number of primal and
+  // dual infeasibilities to determine whether the simplex solver is
+  // needed and, if so, possibly which variant to use.
   //
   // 1. If it is "CHOOSE", in which case an approapriate stratgy is
   // used
@@ -61,17 +70,9 @@ HighsStatus runSimplexSolver(const HighsOptions& opt,
   // 2. If re-solving choose the strategy appropriate to primal or
   // dual feasibility
   //
+  // Copy the simplex stratgy so that it can be modified:
+  //
   SimplexStrategy use_simplex_strategy = simplex_info.simplex_strategy;
-  //
-  // Transition to the best possible simplex basis and solution
-  simplex_lp_status.solution_status = transition(highs_model_object);
-  if (simplex_lp_status.solution_status == SimplexSolutionStatus::FAILED)
-    return simplex_interface.lpStatusToHighsStatus(
-        simplex_lp_status.solution_status);
-  //
-  // Given a simplex basis and solution, use the number of primal and
-  // dual infeasibilities to determine whether the simplex solver is
-  // needed and, if so, possibly which variant to use.
   if (simplex_info.num_primal_infeasibilities == 0) {
     // Primal feasible
     if (simplex_info.num_dual_infeasibilities == 0) {
