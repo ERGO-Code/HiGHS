@@ -1587,12 +1587,16 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     HighsBasisStatus status = basis.row_status[iRow];
     if (status != HighsBasisStatus::BASIC)
       local_dual_objective_value += value * dual;
-
     bool report = false;
     bool query = analyseSingleHighsSolutionAndBasis(
         report, status, lower, upper, value, dual, num_non_basic_var,
         num_basic_var, num_off_bound_nonbasic, primal_infeasibility,
         dual_infeasibility);
+    if (primal_infeasibility > primal_feasibility_tolerance)
+      num_primal_infeasibilities++;
+    max_primal_infeasibility =
+        max(primal_infeasibility, max_primal_infeasibility);
+    sum_primal_infeasibilities += primal_infeasibility;
     if (status == HighsBasisStatus::BASIC) {
       double abs_basic_dual = dual_infeasibility;
       if (abs_basic_dual > 0) {
@@ -1684,14 +1688,14 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   if (report_level>0) {
     HighsMessageType message_type = HighsMessageType::INFO;
     HighsLogMessage(message_type,
-                    "Primal num/max/sum residuals %6d/%12g/%12g: num/max/sum "
-                    "infeasibilities %6d/%12g/%12g",
+                    "Primal num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
+                    "infeasibilities %6d/%11.4g/%11.4g",
                     num_primal_residual, max_primal_residual,
                     sum_primal_residual, num_primal_infeasibilities,
                     max_primal_infeasibility, sum_primal_infeasibilities);
     HighsLogMessage(message_type,
-                    "Dual   num/max/sum residuals %6d/%12g/%12g: num/max/sum "
-                    "infeasibilities %6d/%12g/%12g",
+                    "Dual   num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
+                    "infeasibilities %6d/%11.4g/%11.4g",
                     num_dual_residual, max_dual_residual, sum_dual_residual,
                     num_dual_infeasibilities, max_dual_infeasibility,
                     sum_dual_infeasibilities);

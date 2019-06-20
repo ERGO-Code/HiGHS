@@ -267,7 +267,8 @@ HighsStatus Highs::run() {
 	  options_.simplex_strategy = SimplexStrategy::CHOOSE;
 	  // Set the message level to ML_ALWAYS so that data for
 	  // individual iterations are reported
-	  HighsSetMessagelevel(ML_ALWAYS);
+	  bool full_iteration_logging = false;
+	  if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
 	  solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
 				       "Solving the original LP from the solution after postsolve");
 	  postsolve_iteration_count = iteration_count;
@@ -275,7 +276,7 @@ HighsStatus Highs::run() {
 	  // Recover the options
 	  options_ = save_options;
 	  // Reset the message level
-	  HighsSetMessagelevel(options_.messageLevel);
+	  if (full_iteration_logging) HighsSetMessagelevel(options_.messageLevel);
 	}
       }
     }

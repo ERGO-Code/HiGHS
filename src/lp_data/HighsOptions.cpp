@@ -163,10 +163,10 @@ void reportIntOptionValue(const int report_level, const string option_string,
   if (!is_default || report_level > 0) {
     printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
-      printf(" default value %6d", option_default);
+      printf(" default value %12d", option_default);
     } else {
-      printf("%s value %6d", default_space.c_str(), option_value);
-      printf(": default value is %6d", option_default);
+      printf("%s value %12d", default_space.c_str(), option_value);
+      printf(": default value is %12d", option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
@@ -201,7 +201,7 @@ void reportDoubleOptionValue(const int report_level, const string option_string,
     if (is_default) {
       printf(" default value %12g", option_default);
     } else {
-      printf("%s value %612g", default_space.c_str(), option_value);
+      printf("%s value %12g", default_space.c_str(), option_value);
       printf(": default value is %12g", option_default);
     }
     if (option_min == NULL) {

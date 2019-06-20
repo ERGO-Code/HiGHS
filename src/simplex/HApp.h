@@ -243,8 +243,8 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
       if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
       bool col = iVar < lp.numCol_;
       double scale_mu;
-      int iCol;
-      int iRow;
+      int iCol=0;
+      int iRow=0;
       if (col) {
 	iCol = iVar;
 	scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
@@ -252,6 +252,9 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
 	iRow = iVar - lp.numCol_;
 	scale_mu = scale.row_[iRow] * scale.cost_;
       }
+      double lower = simplex_info.workLower_[iVar];
+      double upper = simplex_info.workUpper_[iVar];
+      double value = simplex_info.workValue_[iVar];
       double scaled_dual = simplex_info.workDual_[iVar];
       double unscaled_dual = scaled_dual * scale_mu;
       double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
@@ -264,7 +267,11 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
       if (unscaled_dual_infeasibility > options.dual_feasibility_tolerance) {
 	num_unscaled_dual_infeasibilities++;
 	double multiplier = options.dual_feasibility_tolerance / scale_mu;
-	printf("Identified dual feasibility tolerance multiplier = %g\n", multiplier);
+	HighsLogMessage(HighsMessageType::INFO,
+			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
+			iVar, iCol, iRow, lower, value, upper,
+			scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
+			multiplier);
 	new_dual_feasibility_tolerance = min(multiplier, new_dual_feasibility_tolerance);
       }
       max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
@@ -277,8 +284,8 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
       if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
       bool col = iVar < lp.numCol_;
       double scale_mu;
-      int iCol;
-      int iRow;
+      int iCol=0;
+      int iRow=0;
       if (col) {
 	iCol = iVar;
 	scale_mu = scale.col_[iCol];
@@ -299,7 +306,11 @@ HighsStatus solveModelSimplex(HighsOptions& opt,
       if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance) {
 	num_unscaled_primal_infeasibilities++;
 	double multiplier = options.primal_feasibility_tolerance / scale_mu;
-	printf("Identified primal feasibility tolerance multiplier = %g\n", multiplier);
+	HighsLogMessage(HighsMessageType::INFO,
+			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
+			iVar, iCol, iRow, lower, value, upper,
+			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
+			multiplier);
 	new_primal_feasibility_tolerance = min(multiplier, new_primal_feasibility_tolerance);
       }
       max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
