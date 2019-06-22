@@ -47,11 +47,6 @@ public class HighsSolution
    public double[] rowvalue;
    public double[] rowdual;
 
-   public HighsSolution()
-   {
-
-   }
-
    public HighsSolution(int numcol, int numrow)
    {
       this.colvalue = new double[numcol];
@@ -73,11 +68,6 @@ public class HighsBasis
 {
    public int[] colbasisstatus;
    public int[] rowbasisstatus;
-
-   public HighsBasis()
-   {
-
-   }
 
    public HighsBasis(int numcol, int numrow)
    {
@@ -148,7 +138,8 @@ public unsafe class HighsLpSolver
    private static extern int Highs_addRow(void* highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
 
    [DllImport("libhighs.so")]
-   private static extern int Highs_addRows(void* highs, int num_new_row, double[] lower, double[] upper, int num_new_nz, int[] starts, int[] indices, double[] values);
+   private static extern int Highs_addRows(void* highs, int num_new_row, double[] lower, double[] upper, 
+   int num_new_nz, int[] starts, int[] indices, double[] values);
 
    [DllImport("libhighs.so")]
    private static extern int Highs_addCol(void* highs, double cost, double lower, double upper, 
@@ -209,16 +200,29 @@ public unsafe class HighsLpSolver
    [DllImport("libhighs.so")]
    private static extern int Highs_deleteRowsByMask(void* highs, int[] mask);
 
+   [DllImport("libhighs.so")]
+   private static extern int Highs_getColsByRange(void *highs, int from_col, int to_col, ref int num_col, double[] costs, 
+   double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
+   [DllImport("libhighs.so")]
+   private static extern int Highs_getColsBySet(void *highs, int num_set_entries, int[] set, ref int num_col, double[] costs, 
+   double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
+   [DllImport("libhighs.so")]
+   private static extern int Highs_getColsByMask(void *highs, int[] mask, ref int num_col, double[] costs, 
+   double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
+   [DllImport("libhighs.so")]
+   private static extern int Highs_getRowsByRange(void *highs, int from_row, int to_row, ref int num_row, 
+   double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-
-
-
-
-
-
+   [DllImport("libhighs.so")]
+   private static extern int Highs_getRowsBySet(void *highs, int num_set_entries, int[] set, ref int num_row, 
+   double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
+   
+   [DllImport("libhighs.so")]
+   private static extern int Highs_getRowsByMask(void *highs, int[] mask, ref int num_row, 
+   double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
    public static int callhighs(HighsModel model, ref HighsSolution sol, ref HighsBasis bas)
    {
@@ -395,146 +399,27 @@ public unsafe class HighsLpSolver
    public int deleteRowsByMask(bool[] mask) {
       return HighsLpSolver.Highs_deleteRowsByMask(this.highs, mask.Select(x => x ? 1 : 0).ToArray());
    }
+
+   // int Highs_getColsByRange(void *highs, int from_col, int to_col, ref int num_col, double[] costs, 
+   // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
+
+   // [DllImport("libhighs.so")]
+   // int Highs_getColsBySet(void *highs, int num_set_entries, int[] set, ref int num_col, double[] costs, 
+   // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
+
+   // [DllImport("libhighs.so")]
+   // int Highs_getColsByMask(void *highs, int[] mask, ref int num_col, double[] costs, 
+   // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
+
+   // [DllImport("libhighs.so")]
+   // int Highs_getRowsByRange(void *highs, int from_row, int to_row, ref int num_row, 
+   // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
+
+   // [DllImport("libhighs.so")]
+   // int Highs_getRowsBySet(void *highs, int num_set_entries, int[] set, ref int num_row, 
+   // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
+   
+   // [DllImport("libhighs.so")]
+   // int Highs_getRowsByMask(void *highs, int[] mask, ref int num_row, 
+   // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// int Highs_getColsByRange(
-//     void *highs,          //!< HiGHS object reference
-//     const int from_col,   //!< The index of the first column to
-//                           //!< get from the model
-//     const int to_col,     //!< One more than the last column to get
-//                           //!< from the model
-//     int* num_col,          //!< Number of columns got from the model
-//     double *costs,        //!< Array of size num_col with costs
-//     double *lower,        //!< Array of size num_col with lower bounds
-//     double *upper,        //!< Array of size num_col with upper bounds
-//     int* num_nz,           //!< Number of nonzeros got from the model
-//     int *matrix_start,    //!< Array of size num_col with start
-//                           //!< indices of the columns
-//     int *matrix_index,    //!< Array of size num_nz with row
-//                           //!< indices for the columns
-//     double *matrix_value  //!< Array of size num_nz with row
-//                           //!< values for the columns
-// );
-
-// /**
-//  * @brief Get multiple columns from the model given by a set
-//  */
-// int Highs_getColsBySet(
-//     void *highs,                //!< HiGHS object reference
-//     const int num_set_entries,  //!< The number of indides in the set
-//     const int *set,             //!< Array of size num_set_entries with indices
-//                                 //!< of columns to get
-//     int* num_col,                //!< Number of columns got from the model
-//     double *costs,              //!< Array of size num_col with costs
-//     double *lower,              //!< Array of size num_col with lower bounds
-//     double *upper,              //!< Array of size num_col with upper bounds
-//     int* num_nz,                 //!< Number of nonzeros got from the model
-//     int *matrix_start,          //!< Array of size num_col with start indices
-//                                 //!< of the columns
-//     int *matrix_index,          //!< Array of size num_nz with row indices
-//                                 //!< for the columns
-//     double *matrix_value        //!< Array of size num_nz with row values
-//                                 //!< for the columns
-// );
-
-// /**
-//  * @brief Get multiple columns from the model given by a mask
-//  */
-// int Highs_getColsByMask(
-//     void *highs,          //!< HiGHS object reference
-//     const int *mask,      //!< Full length array with 1 => get; 0 => not
-//     int* num_col,          //!< Number of columns got from the model
-//     double *costs,        //!< Array of size num_col with costs
-//     double *lower,        //!< Array of size num_col with lower bounds
-//     double *upper,        //!< Array of size num_col with upper bounds
-//     int* num_nz,           //!< Number of nonzeros got from the model
-//     int *matrix_start,    //!<  Array of size num_col with start
-//                           //!<  indices of the columns
-//     int *matrix_index,    //!<  Array of size num_nz with row indices
-//                           //!<  for the columns
-//     double *matrix_value  //!<  Array of size num_nz with row values
-//                           //!<  for the columns
-// );
-
-// /**
-//  * @brief Get multiple rows from the model given by an interval
-//  */
-// int Highs_getRowsByRange(
-//     void *highs,          //!< HiGHS object reference
-//     const int from_row,   //!< The index of the first row to get from the model
-//     const int to_row,     //!< One more than the last row get from the model
-//     int* num_row,          //!< Number of rows got from the model
-//     double *lower,        //!< Array of size num_row with lower bounds
-//     double *upper,        //!< Array of size num_row with upper bounds
-//     int* num_nz,           //!< Number of nonzeros got from the model
-//     int *matrix_start,    //!< Array of size num_row with start indices of the
-//                           //!< rows
-//     int *matrix_index,    //!< Array of size num_nz with column indices for the
-//                           //!< rows
-//     double *matrix_value  //!< Array of size num_nz with column values for the
-//                           //!< rows
-// );
-
-// /**
-//  * @brief Get multiple rows from the model given by a set
-//  */
-// int Highs_getRowsBySet(
-//     void *highs,                //!< HiGHS object reference
-//     const int num_set_entries,  //!< The number of indides in the set
-//     const int *set,             //!< Array of size num_set_entries with indices
-//                                 //!< of rows to get
-//     int* num_row,                //!< Number of rows got from the model
-//     double *lower,              //!< Array of size num_row with lower bounds
-//     double *upper,              //!< Array of size num_row with upper bounds
-//     int* num_nz,                 //!< Number of nonzeros got from the model
-//     int *matrix_start,          //!< Array of size num_row with start indices
-//                                 //!< of the rows
-//     int *matrix_index,          //!< Array of size num_nz with column indices
-//                                 //!< for the rows
-//     double *matrix_value        //!< Array of size num_nz with column
-//                                 //!< values for the rows
-// );
-
-// /**
-//  * @brief Get multiple rows from the model given by a mask
-//  */
-// int Highs_getRowsByMask(
-//     void *highs,          //!< HiGHS object reference
-//     const int *mask,      //!< Full length array with 1 => get; 0 => not
-//     int* num_row,          //!< Number of rows got from the model
-//     double *lower,        //!< Array of size num_row with lower bounds
-//     double *upper,        //!< Array of size num_row with upper bounds
-//     int* num_nz,           //!< Number of nonzeros got from the model
-//     int *matrix_start,    //!< Array of size num_row with start indices
-//                           //!< of the rows
-//     int *matrix_index,    //!< Array of size num_nz with column indices
-//                           //!< for the rows
-//     double *matrix_value  //!< Array of size num_nz with column
-//                           //!< values for the rows
-// );
