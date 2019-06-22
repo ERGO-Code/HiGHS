@@ -189,6 +189,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 }
 
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+  const bool refinement = false;
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
 
   if (highs_status != HighsStatus::Optimal) return highs_status;
@@ -338,18 +339,25 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 		    sum_unscaled_dual_infeasibilities);
     if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
       HighsLogMessage(HighsMessageType::INFO,
-		      "Have %d primal and %d dual unscaled infeasibilities so re-solve with infeasibility tolerances of %g primal and %g dual",
+		      "Have %d primal and %d dual unscaled infeasibilities so possibly re-solve with infeasibility tolerances of %g primal and %g dual",
 		      num_unscaled_primal_infeasibilities,
 		      num_unscaled_dual_infeasibilities,
 		      new_primal_feasibility_tolerance,
 		      new_dual_feasibility_tolerance);
-      HighsOptions save_options = highs_model_object.options_;
-      HighsOptions& options = highs_model_object.options_;
-      options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
-      options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
-      options.simplex_strategy = SimplexStrategy::CHOOSE;
-      HighsStatus highs_status = runSimplexSolver(highs_model_object);
-      options = save_options;
+      if (refinement) {
+	HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
+	HighsOptions save_options = highs_model_object.options_;
+	HighsOptions& options = highs_model_object.options_;
+	options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
+	options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+	options.simplex_strategy = SimplexStrategy::CHOOSE;
+	HighsStatus highs_status = runSimplexSolver(highs_model_object);
+	if (highs_status != HighsStatus::Optimal) return highs_status;
+	options = save_options;
+      } else {
+	HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
+	return highs_status;
+      }
     } else {
       return highs_status;
     }
