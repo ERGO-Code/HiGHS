@@ -256,9 +256,8 @@ HighsStatus Highs::run() {
 	    presolve_info.presolve_[0].getRowStatus();
 	  hmos_[original_hmo].basis_.valid_ = true;
 	  // Analyse the Highs basic solution returned from postsolve
-	  printf("Analyse the Highs basic solution returned from postsolve\n");
 	  HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
-	  simplex_interface.analyseHighsSolutionAndBasis(1);
+	  simplex_interface.analyseHighsSolutionAndBasis(1, "after returning from postsolve");
 	  // Now hot-start the simplex solver for the original_hmo
 	  solved_hmo = original_hmo;
 	  // Save the options to allow the best simplex strategy to

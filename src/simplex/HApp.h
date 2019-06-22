@@ -180,10 +180,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
     if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(1);
+      simplex_interface.analyseHighsSolutionAndBasis(1, "after running the simplex solver");
   }
 #ifdef HiGHSDEV
-  //  reportSimplexLpStatus(simplex_lp_status, "After solve");
+  //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
 #endif
   return result;
 }

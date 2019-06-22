@@ -54,7 +54,7 @@ void Presolve::load(const HighsLp& lp) {
   rowLower = lp.rowLower_;
   rowUpper = lp.rowUpper_;
 
-  modelName = &modelName[0];
+  modelName = lp.model_name_;//&modelName[0];
 }
 
 HighsLp& PresolveInfo::getReducedProblem() {
@@ -82,6 +82,9 @@ HighsLp& PresolveInfo::getReducedProblem() {
       reduced_lp_.rowUpper_ = std::move(presolve_[0].rowUpper);
 
       reduced_lp_.sense_ = 1;
+      reduced_lp_.offset_ = 0;
+      reduced_lp_.model_name_ = std::move(presolve_[0].modelName);//"Presolved model";
+      
       reduced_lp_.nnz_ = reduced_lp_.Avalue_.size();
     }
   }

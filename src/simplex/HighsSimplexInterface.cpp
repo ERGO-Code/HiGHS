@@ -1341,7 +1341,7 @@ void HighsSimplexInterface::convertSimplexToHighsSolution() {
 bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
     bool report, const HighsBasisStatus status, const double lower,
     const double upper, const double value, const double dual,
-    int& num_non_basic_var, int& num_basic_var, int& num_off_bound_nonbasic,
+    int& num_non_basic_var, int& num_basic_var, double& off_bound_nonbasic,
     double& primal_infeasibility, double& dual_infeasibility) {
   double primal_feasibility_tolerance =
       highs_model_object.options_.primal_feasibility_tolerance;
@@ -1351,6 +1351,7 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
 
   bool query = false;
   bool count = !report;
+  off_bound_nonbasic = 0;
   double primal_residual = max(lower - value, value - upper);
   primal_infeasibility = max(primal_residual, 0.);
   // ToDo Strange: nonbasic_flag seems to be inverted???
@@ -1425,7 +1426,7 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
       } else {
         query = true;
         if (report) printf(": Nonbasic off bound by %12g", -primal_residual);
-        num_off_bound_nonbasic++;
+        off_bound_nonbasic = -primal_residual;
       }
       dual_infeasibility = fabs(dual);
       if (dual_infeasibility > dual_feasibility_tolerance) {
@@ -1439,7 +1440,9 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
 }
 
 SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
-    const int report_level) {
+									  const int report_level,
+									  const string message) {
+  HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Analysis %s", message.c_str());
   HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsLp& lp = highs_model_object.lp_;
@@ -1457,7 +1460,10 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   int num_non_basic_var = 0;
   int num_basic_var = 0;
   int num_off_bound_nonbasic = 0;
+  double max_off_bound_nonbasic = 0;
+  double sum_off_bound_nonbasic = 0;
   bool header_written = false;
+  double off_bound_nonbasic;
   double primal_infeasibility;
   double dual_infeasibility;
   int num_primal_infeasibilities = 0;
@@ -1485,8 +1491,11 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     bool report = false;
     bool query = analyseSingleHighsSolutionAndBasis(
         report, status, lower, upper, value, dual, num_non_basic_var,
-        num_basic_var, num_off_bound_nonbasic, primal_infeasibility,
+        num_basic_var, off_bound_nonbasic, primal_infeasibility,
         dual_infeasibility);
+    if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
+    max_off_bound_nonbasic = max(off_bound_nonbasic, max_off_bound_nonbasic);
+    sum_off_bound_nonbasic += off_bound_nonbasic;
     if (primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibilities++;
     max_primal_infeasibility =
@@ -1519,7 +1528,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
       analyseSingleHighsSolutionAndBasis(
           report, status, lower, upper, value, dual, num_non_basic_var,
-          num_basic_var, num_off_bound_nonbasic, primal_infeasibility,
+          num_basic_var, off_bound_nonbasic, primal_infeasibility,
           dual_infeasibility);
       printf("\n");
     }
@@ -1590,8 +1599,11 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     bool report = false;
     bool query = analyseSingleHighsSolutionAndBasis(
         report, status, lower, upper, value, dual, num_non_basic_var,
-        num_basic_var, num_off_bound_nonbasic, primal_infeasibility,
+        num_basic_var, off_bound_nonbasic, primal_infeasibility,
         dual_infeasibility);
+    if (off_bound_nonbasic > 0) num_off_bound_nonbasic++;
+    max_off_bound_nonbasic = max(off_bound_nonbasic, max_off_bound_nonbasic);
+    sum_off_bound_nonbasic += off_bound_nonbasic;
     if (primal_infeasibility > primal_feasibility_tolerance)
       num_primal_infeasibilities++;
     max_primal_infeasibility =
@@ -1624,7 +1636,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       printf(" %12g %12g", primal_infeasibility, dual_infeasibility);
       analyseSingleHighsSolutionAndBasis(
           report, status, lower, upper, value, dual, num_non_basic_var,
-          num_basic_var, num_off_bound_nonbasic, primal_infeasibility,
+          num_basic_var, off_bound_nonbasic, primal_infeasibility,
           dual_infeasibility);
       printf("\n");
     }
@@ -1685,35 +1697,30 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
 		    "HiGHS basic solution: %d (%d large) nonzero basic duals; max = %g; sum = %g",
 		    num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals);
   }
+  if (num_off_bound_nonbasic)  {
+    HighsLogMessage(HighsMessageType::WARNING,
+                    "Off-bound num/max/sum           %6d/%11.4g/%11.4g",
+                    num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic);
+  }
   if (report_level>0) {
-    HighsMessageType message_type = HighsMessageType::INFO;
-    HighsLogMessage(message_type,
-                    "Primal num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
+    HighsLogMessage(HighsMessageType::INFO,
+                    "Primal    num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
                     "infeasibilities %6d/%11.4g/%11.4g",
                     num_primal_residual, max_primal_residual,
                     sum_primal_residual, num_primal_infeasibilities,
                     max_primal_infeasibility, sum_primal_infeasibilities);
-    HighsLogMessage(message_type,
-                    "Dual   num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
+    HighsLogMessage(HighsMessageType::INFO,
+                    "Dual      num/max/sum residuals %6d/%11.4g/%11.4g: num/max/sum "
                     "infeasibilities %6d/%11.4g/%11.4g",
                     num_dual_residual, max_dual_residual, sum_dual_residual,
                     num_dual_infeasibilities, max_dual_infeasibility,
                     sum_dual_infeasibilities);
-    HighsLogMessage(message_type,
+    HighsLogMessage(HighsMessageType::INFO,
                     "Relative objective errors (primal = %.4g; dual = %.4g); "
                     "relative objective difference = %.4g",
                     primal_objective_error, dual_objective_error,
                     relative_objective_difference);
-  } else if (report_level==0) {
-    printf("grep_AnBsSol,%d,%d,%.15g,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g",
-           num_non_basic_var, num_basic_var,
-           simplex_info.primal_objective_value, num_off_bound_nonbasic,
-           num_primal_residual, max_primal_residual, sum_primal_residual,
-           num_primal_infeasibilities, max_primal_infeasibility,
-           sum_primal_infeasibilities, num_dual_residual, max_dual_residual,
-           sum_dual_residual, num_dual_infeasibilities, max_dual_infeasibility,
-           sum_dual_infeasibilities);
-  }
+  } 
   HighsLogMessage(
       HighsMessageType::INFO,
       "HiGHS basic solution: Iterations = %d; Objective = %.15g; "
@@ -1724,6 +1731,15 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
       SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+  printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
+	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
+	 SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str(),
+	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
+	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
+	 num_primal_residual, max_primal_residual, sum_primal_residual,
+	 num_primal_infeasibilities, max_primal_infeasibility, sum_primal_infeasibilities,
+	 num_dual_residual, max_dual_residual, sum_dual_residual,
+	 num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
   return solution_status;
 }
 
