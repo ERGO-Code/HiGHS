@@ -3,7 +3,6 @@ program fortrantest
   use highs_lp_solver
   implicit none
 
-
   integer ( c_int ), parameter :: n = 2
   integer ( c_int ), parameter :: m = 2
   integer ( c_int ), parameter :: nz = 4
