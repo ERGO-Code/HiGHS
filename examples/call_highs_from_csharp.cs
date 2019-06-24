@@ -19,11 +19,10 @@ class Program {
 
       HighsBasis bas = new HighsBasis(2, 2);
 
-      int status = HighsLpSolver.callhighs(model, ref sol, ref bas);
+      int status = HighsLpSolver.call(model, ref sol, ref bas);
       Console.WriteLine("Status: " + status);
 
       HighsLpSolver solver = new HighsLpSolver();
-      Console.WriteLine(solver.ToString());
 
       solver.readFromFile("qap04.mps");
       solver.run();

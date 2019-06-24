@@ -12,7 +12,7 @@ avalue = [1.0, 2.0, 1.0, 3.0]
 model = HighsModel(cc, cl, cu, rl, ru, astart, aindex, avalue)
 
 # solve model in one go
-status, solution, basis = callhighs(model)
+status, solution, basis = Highs_call(model)
 
 # create highs object and work with it
 highs = Highs_create()

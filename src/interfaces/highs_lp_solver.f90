@@ -1,6 +1,6 @@
 module highs_lp_solver
   interface
-    function callhighs ( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs ) result( s ) bind ( c )
+    function Highs_call (n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs) result(s) bind (c, name='Highs_call')
       use iso_c_binding
       integer ( c_int ), VALUE :: n
       integer ( c_int ), VALUE :: m
@@ -20,7 +20,7 @@ module highs_lp_solver
       integer ( c_int ) :: cbs(*)
       integer ( c_int ) :: rbs(*)
       integer ( c_int ) :: s
-    end function callhighs
+    end function Highs_call
 
     function Highs_create () result ( h ) bind( c, name='Highs_create' )
       use iso_c_binding
@@ -106,98 +106,82 @@ module highs_lp_solver
       type(c_ptr), VALUE :: h
       integer ( c_int ) :: ic
     end function Highs_getIterationCount
-  end interface
 
-end module highs_lp_solver
+    function Highs_addRow (h, lo, up, nz, idx, val) result(s) bind(c, name='Highs_addRow')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      real ( c_double ), VALUE :: lo
+      real ( c_double ), VALUE :: up
+      integer ( c_int ), VALUE :: nz
+      integer ( c_int ) :: idx(*)
+      real ( c_double ) :: val(*)
+      integer ( c_int ) :: s
+    end function Highs_addRow
+
+    function Highs_addRows (h, nnr, lo, up, nnz, st, idx, val) result(s) bind(c, name='Highs_addRows')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: nnr
+      real ( c_double ) :: lo(*)
+      real ( c_double ) :: up(*)
+      integer ( c_int ), VALUE :: nnz
+      integer ( c_int ) :: st(*)
+      integer ( c_int ) :: idx(*)
+      real ( c_double ) :: val(*)
+      integer ( c_int ) :: s
+    end function Highs_addRows
+
+    function Highs_addCol (h, cc, cl, cu, nnz, idx, val) result(s) bind(c, name='Highs_addCol')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      real ( c_double ) :: cc
+      real ( c_double ) :: cl
+      real ( c_double ) :: cu
+      integer ( c_int ), VALUE :: nnz
+      integer ( c_int ) :: idx(*)
+      real ( c_double ) :: val(*)
+      integer ( c_int ) :: s
+    end function Highs_addCol
+
+    function Highs_addCols (h, nnc, cc, cl, cu, nnz, st, idx, val) result(s) bind(c, name='Highs_addCols')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: nnc
+      real ( c_double ) :: cc(*)
+      real ( c_double ) :: cl(*)
+      real ( c_double ) :: cu(*)
+      integer ( c_int ), VALUE :: nnz
+      integer ( c_int ) :: st(*)
+      integer ( c_int ) :: idx(*)
+      real ( c_double ) :: val(*)
+      integer ( c_int ) :: s
+    end function Highs_addCols
+
+    function Highs_changeObjectiveSense (h, sns) result(s) bind(c, name='Highs_changeObjectiveSense')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: sns
+      integer ( c_int ) :: s
+    end function Highs_changeObjectiveSense
+    
+    function Highs_changeColCost (h, c, co) result(s) bind(c, name='Highs_changeColCost')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: c
+      real ( c_double ), VALUE :: co
+      integer ( c_int ) :: s
+    end function Highs_changeColCost
+
+    function Highs_changeColsCostBySet (h, nse, set, cost) result(s) bind(c, name='Highs_changeColsCostBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: nse
+      integer ( c_int ) :: set(*)
+      real ( c_double ) :: cost(*)
+      integer ( c_int ) :: s
+    end function Highs_changeColsCostBySet
 
 
-! int Highs_addRow(
-!     void *highs,           //!< HiGHS object reference
-!     const double lower,    //!< Lower bound of the row
-!     const double upper,    //!< Upper bound of the row
-!     const int num_new_nz,  //!< Number of nonzeros in the row
-!     const int *indices,    //!< Array of size num_new_nz with column indices
-!     const double *values   //!< Array of size num_new_nz with column values
-! );
-
-! /**
-!  * @brief Adds multiple rows to the model
-!  */
-! int Highs_addRows(
-!     void *highs,            //!< HiGHS object reference
-!     const int num_new_row,  //!< Number of new rows
-!     const double *lower,    //!< Array of size num_new_row with lower bounds
-!     const double *upper,    //!< Array of size num_new_row with upper bounds
-!     const int num_new_nz,   //!< Number of new nonzeros
-!     const int
-!         *starts,  //!< Array of size num_new_row with start indices of the rows
-!     const int *
-!         indices,  //!< Array of size num_new_nz with column indices for all rows
-!     const double
-!         *values  //!< Array of size num_new_nz with column values for all rows
-! );
-
-! /**
-!  * @brief Adds a column to the model
-!  */
-! int Highs_addCol(
-!     void *highs,           //!< HiGHS object reference
-!     const double cost,     //!< Cost of the column
-!     const double lower,    //!< Lower bound of the column
-!     const double upper,    //!< Upper bound of the column
-!     const int num_new_nz,  //!< Number of nonzeros in the column
-!     const int *indices,    //!< Array of size num_new_nz with row indices
-!     const double *values   //!< Array of size num_new_nz with row values
-! );
-
-! /**
-!  * @brief Adds multiple columns to the model
-!  */
-! int Highs_addCols(
-!     void *highs,            //!< HiGHS object reference
-!     const int num_new_col,  //!< Number of new columns
-!     const double *costs,    //!< Array of size num_new_col with costs
-!     const double *lower,    //!< Array of size num_new_col with lower bounds
-!     const double *upper,    //!< Array of size num_new_col with upper bounds
-!     const int num_new_nz,   //!< Number of new nonzeros
-!     const int *starts,      //!< Array of size num_new_row with start indices of
-!                             //!< the columns
-!     const int *indices,     //!< Array of size num_new_nz with row indices for
-!                             //!< all columns
-!     const double
-!         *values  //!< Array of size num_new_nz with row values for all columns
-! );
-
-! /**
-!  * @brief Change the objective sense of the model
-!  */
-! int Highs_changeObjectiveSense(void *highs,     //!< HiGHS object reference
-!                                const int sense  //!< New objective sense
-! );
-
-! /**
-!  * @brief Change the cost of a column
-!  */
-! int Highs_changeColCost(
-!     void *highs,       //!< HiGHS object reference
-!     const int col,     //!< The index of the column whose cost is to change
-!     const double cost  //!< The new cost
-! );
-
-! /**
-!  * @brief Change the cost of multiple columns given by a set of indices
-!  */
-! int Highs_changeColsCostBySet(
-!     void *highs,                //!< HiGHS object reference
-!     const int num_set_entries,  //!< The number of indides in the set
-!     const int *set,     //!< Array of size num_set_entries with indices of
-!                         //!< columns whose costs change
-!     const double *cost  //!< Array of size num_set_entries with new costs
-! );
-
-! /**
-!  * @brief Change the cost of multiple columns given by a mask
-!  */
 ! int Highs_changeColsCostByMask(
 !     void *highs,        //!< HiGHS object reference
 !     const int *mask,    //!< Full length array with 1 => change; 0 => not
@@ -482,3 +466,10 @@ end module highs_lp_solver
 ! int Highs_getNumNz(
 !     void* highs //!< HiGHS object reference
 ! );
+  
+  
+  
+  
+    end interface
+
+end module highs_lp_solver

@@ -45,7 +45,7 @@ program fortrantest
   av(3) = 3
   av(4) = 0.2
 
-  call callhighs( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
+  call Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
       
 
 end program fortrantest

@@ -49,7 +49,7 @@ program fortrantest
   av(3) = 3
   av(4) = 0.2
 
-  status = callhighs( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
+  status = Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
   
 
   highs = Highs_create( )

@@ -87,7 +87,7 @@ public unsafe class HighsLpSolver
    private void* highs;
 
    [DllImport("libhighs.so")]
-   private static extern int callhighs(Int32 numcol, Int32 numrow, Int32 numnz, double[] colcost,
+   private static extern int Highs_call(Int32 numcol, Int32 numrow, Int32 numnz, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue,
    double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual, int[] colbasisstatus, int[] rowbasisstatus);
 
@@ -224,7 +224,7 @@ public unsafe class HighsLpSolver
    private static extern int Highs_getRowsByMask(void *highs, int[] mask, ref int num_row, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   public static int callhighs(HighsModel model, ref HighsSolution sol, ref HighsBasis bas)
+   public static int call(HighsModel model, ref HighsSolution sol, ref HighsBasis bas)
    {
       int nc = model.colcost.Length;
       int nr = model.rowlower.Length;
