@@ -14,8 +14,8 @@
 #ifndef UTIL_HIGHSTIMER_H_
 #define UTIL_HIGHSTIMER_H_
 
-#include <chrono>
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -206,7 +206,7 @@ class HighsTimer {
     //    run_highs_clock_start_time); printf("startRunHighsClock() clock_ticks
     //    = %g; clock_start = %g, run_highs_clock_start_time = %g\n",
     //	   clock_ticks[run_highs_clock], clock_start[run_highs_clock],
-    //run_highs_clock_start_time);
+    // run_highs_clock_start_time);
   }
 
   /**
@@ -229,7 +229,7 @@ class HighsTimer {
     //    printf("stopRunHighsClock() clock_ticks = %g; clock_start = %g,
     //    run_highs_clock_start_time = %g\n",
     //	   clock_ticks[run_highs_clock], clock_start[run_highs_clock],
-    //run_highs_clock_start_time);
+    // run_highs_clock_start_time);
   }
 
   /**
@@ -251,7 +251,7 @@ class HighsTimer {
       if (current_run_clock_time > 1e-2) {
         double nw_tick2sec = current_run_clock_time / read_tick;
         //	printf("Updating tick2sec = %12g to %12g/%12g = %12g\n",
-        //tick2sec, current_run_clock_time, read_tick, nw_tick2sec);
+        // tick2sec, current_run_clock_time, read_tick, nw_tick2sec);
         tick2sec = nw_tick2sec;
       }
     } else {
@@ -262,7 +262,7 @@ class HighsTimer {
     //    printf("readRunHighsClock() clock_ticks = %g; clock_start = %g,
     //    run_highs_clock_start_time = %g\n",
     //	   clock_ticks[run_highs_clock], clock_start[run_highs_clock],
-    //run_highs_clock_start_time);
+    // run_highs_clock_start_time);
     return read_time;
   }
 
@@ -440,22 +440,23 @@ class HighsTimer {
   /**
    * @brief Return the current CPU ticks
    */
-  double getWallTick() {
-    return __rdtsc();
-  }
+  double getWallTick() { return __rdtsc(); }
 
-  // private: 
+  // private:
   using wall_clock = std::chrono::high_resolution_clock;
   using time_point = wall_clock::time_point;
 
-  time_point start_time; //!< Elapsed time when the clocks were reset
-  double start_tick;  //!< CPU ticks when the clocks were reset
-  int run_highs_clock; //!< The index of the RunHighsClock - should always be 0
-  double run_highs_clock_time; //!< HiGHS run time - used to scale ticks to time
-  double run_highs_clock_start_time; //!< HiGHS run start time - used to compute HiGHS run time
+  time_point start_time;  //!< Elapsed time when the clocks were reset
+  double start_tick;      //!< CPU ticks when the clocks were reset
+  int run_highs_clock;  //!< The index of the RunHighsClock - should always be 0
+  double
+      run_highs_clock_time;  //!< HiGHS run time - used to scale ticks to time
+  double run_highs_clock_start_time;  //!< HiGHS run start time - used to
+                                      //!< compute HiGHS run time
 
-  const double initial_clock_start = 1.0; //!< Dummy positive start ticks for clocks - so they can be
-					//!checked as having been stopped
+  const double initial_clock_start =
+      1.0;  //!< Dummy positive start ticks for clocks - so they can be
+            //! checked as having been stopped
   int num_clock;
   std::vector<int> clock_num_call;
   std::vector<double> clock_start;

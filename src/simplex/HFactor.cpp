@@ -1162,8 +1162,8 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
     // Save the count
     rhs.count = RHScount;
   } else {
-    const int *Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
-    const double *Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
+    const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
+    const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
   }
@@ -1203,8 +1203,8 @@ void HFactor::btranL(HVector& rhs, double hist_dsty) const {
     // Save the count
     rhs.count = RHScount;
   } else {
-    const int *LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
-    const double *LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
+    const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
+    const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
   }
@@ -1281,8 +1281,8 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty) const {
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
   } else {
-    const int *Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
-    const double *Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
+    const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
+    const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
   }
@@ -1376,7 +1376,7 @@ void HFactor::ftranFT(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
   int* PFpivotIndex = NULL;
-    if(this->PFpivotIndex.size() > 0)
+  if (this->PFpivotIndex.size() > 0)
     PFpivotIndex = (int*)&this->PFpivotIndex[0];
 
   const int* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
@@ -1422,7 +1422,8 @@ void HFactor::ftranFT(HVector& vector) const {
 void HFactor::btranFT(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
-  const int* PFpivotIndex = this->PFpivotIndex.size() > 0 ? &this->PFpivotIndex[0] : NULL;
+  const int* PFpivotIndex =
+      this->PFpivotIndex.size() > 0 ? &this->PFpivotIndex[0] : NULL;
   const int* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
   const int* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
   const double* PFvalue = this->PFvalue.size() > 0 ? &this->PFvalue[0] : NULL;
