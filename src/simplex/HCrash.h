@@ -14,8 +14,8 @@
 #ifndef SIMPLEX_HCRASH_H_
 #define SIMPLEX_HCRASH_H_
 
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "lp_data/HighsModelObject.h"
 
@@ -56,12 +56,12 @@ const bool reportBixbyPass = false;
  */
 class HCrash {
  public:
- HCrash(HighsModelObject& model_object) : workHMO(model_object)
-   {  }
-/**
- * @brief Determine a particular crash basis for a given model instance
- */
+  HCrash(HighsModelObject& model_object) : workHMO(model_object) {}
+  /**
+   * @brief Determine a particular crash basis for a given model instance
+   */
   void crash(SimplexCrashStrategy pass_crash_strategy);
+
  private:
   // Internal methods
   void bixby();
@@ -97,8 +97,8 @@ class HCrash {
 #endif
 
   // Model to be crashed
-  HighsModelObject &workHMO;
-  
+  HighsModelObject& workHMO;
+
   // Crash strategy to be used
   SimplexCrashStrategy crash_strategy;
 

@@ -22,14 +22,13 @@ const int initial_random_mz = 2012;
  */
 class HighsRandom {
  public:
-
   /**
    * @brief Initialisations
    */
   HighsRandom() {
-  /**
-   * @brief Initialise the two seeds to default values
-   */
+    /**
+     * @brief Initialise the two seeds to default values
+     */
     random_mw = initial_random_mw;
     random_mz = initial_random_mz;
   }
@@ -66,6 +65,5 @@ class HighsRandom {
  private:
   unsigned random_mw;
   unsigned random_mz;
-
 };
 #endif

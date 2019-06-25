@@ -15,16 +15,15 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
-#include "io/HighsIO.h"
 
 #ifdef HiGHSDEV
-void analyseModelBounds(const char *message,
-			     int numBd,
-			     const std::vector<double> &lower,
-			     const std::vector<double> &upper) {
+void analyseModelBounds(const char* message, int numBd,
+                        const std::vector<double>& lower,
+                        const std::vector<double>& upper) {
   if (numBd == 0) return;
   int numFr = 0;
   int numLb = 0;
@@ -75,44 +74,49 @@ void analyseModelBounds(const char *message,
 }
 
 #endif
-std::string ch4VarStatus(const HighsBasisStatus status, const double lower, const double upper) {
+std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
+                         const double upper) {
   switch (status) {
-  case HighsBasisStatus::LOWER:
-    if (lower == upper) {
-      return "FX";
-    } else {
-      return "LB";
-    }
-    break;
-  case HighsBasisStatus::BASIC:
-    return "BS";
-    break;
-  case HighsBasisStatus::UPPER:
-    return "UB";
-    break;
-  case HighsBasisStatus::ZERO:
-    return "FR";
-    break;
+    case HighsBasisStatus::LOWER:
+      if (lower == upper) {
+        return "FX";
+      } else {
+        return "LB";
+      }
+      break;
+    case HighsBasisStatus::BASIC:
+      return "BS";
+      break;
+    case HighsBasisStatus::UPPER:
+      return "UB";
+      break;
+    case HighsBasisStatus::ZERO:
+      return "FR";
+      break;
   }
   return "";
 }
 
 void reportModelBoundSol(const bool columns, const int dim,
-			 const std::vector<double>& lower, const std::vector<double>& upper,
-			 const std::vector<std::string>& names,
-			 const std::vector<double>& primal, const std::vector<double>& dual,
-			 const std::vector<HighsBasisStatus>& status) {
-  const bool have_names = names.size()>0;
-  const bool have_basis = status.size()>0;
-  const bool have_primal = primal.size()>0;
-  const bool have_dual = dual.size()>0;
+                         const std::vector<double>& lower,
+                         const std::vector<double>& upper,
+                         const std::vector<std::string>& names,
+                         const std::vector<double>& primal,
+                         const std::vector<double>& dual,
+                         const std::vector<HighsBasisStatus>& status) {
+  const bool have_names = names.size() > 0;
+  const bool have_basis = status.size() > 0;
+  const bool have_primal = primal.size() > 0;
+  const bool have_dual = dual.size() > 0;
   std::string ch4_var_status;
   if (columns) {
     HighsPrintMessage(ML_ALWAYS, "Columns\n");
   } else {
     HighsPrintMessage(ML_ALWAYS, "Rows\n");
   }
-  HighsPrintMessage(ML_ALWAYS, "    Index Status        Lower        Upper       Primal         Dual");
+  HighsPrintMessage(
+      ML_ALWAYS,
+      "    Index Status        Lower        Upper       Primal         Dual");
   if (have_names) {
     HighsPrintMessage(ML_ALWAYS, "  Name\n");
   } else {
@@ -124,7 +128,8 @@ void reportModelBoundSol(const bool columns, const int dim,
     } else {
       ch4_var_status = "";
     }
-    HighsPrintMessage(ML_ALWAYS, "%9d   %4s %12g %12g", ix, ch4_var_status.c_str(), lower[ix], upper[ix]);
+    HighsPrintMessage(ML_ALWAYS, "%9d   %4s %12g %12g", ix,
+                      ch4_var_status.c_str(), lower[ix], upper[ix]);
     if (have_primal) {
       HighsPrintMessage(ML_ALWAYS, " %12g", primal[ix]);
     } else {
@@ -141,4 +146,13 @@ void reportModelBoundSol(const bool columns, const int dim,
       HighsPrintMessage(ML_ALWAYS, "\n");
     }
   }
+}
+
+int maxNameLength(const int num_name, const std::vector<std::string>& names) {
+  int max_name_length = 0;
+  for (int ix = 0; ix < num_name; ix++) {
+    int name_length = names[ix].length();
+    max_name_length = std::max(name_length, max_name_length);
+  }
+  return max_name_length;
 }

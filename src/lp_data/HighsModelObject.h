@@ -12,18 +12,19 @@
 
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
-#include "util/HighsTimer.h"
-#include "util/HighsRandom.h"
-#include "simplex/HMatrix.h"
 #include "simplex/HFactor.h"
+#include "simplex/HMatrix.h"
+#include "util/HighsRandom.h"
+#include "util/HighsTimer.h"
 // include Sensitivity(or Ranging) header
 
 // Class to communicate data between the simplex solver and the class
 // Highs below. Sensitivity data structure would be added here. Only
 // include essential data.
 class HighsModelObject {
-public:
- HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer) : lp_(lp), options_(options), timer_(timer) {}
+ public:
+  HighsModelObject(HighsLp& lp, HighsOptions& options, HighsTimer& timer)
+      : lp_(lp), options_(options), timer_(timer) {}
 
   HighsLp& lp_;
   HighsOptions& options_;
@@ -45,4 +46,4 @@ public:
   bool reportModelOperationsClock = false;
 };
 
-#endif // LP_DATA_HIGHS_MODEL_OBJECT_H_
+#endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_

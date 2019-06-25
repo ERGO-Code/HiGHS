@@ -11,35 +11,35 @@
  * @brief Sorting routines for HiGHS
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "lp_data/HConst.h"
 #include "util/HighsSort.h"
 #include <cstddef>
+#include "lp_data/HConst.h"
 
-void maxheapsort(int *heap_v, int n) {
+void maxheapsort(int* heap_v, int n) {
   build_maxheap(heap_v, n);
   max_heapsort(heap_v, n);
 }
 
-void maxheapsort(double *heap_v, int *heap_i, int n) {
+void maxheapsort(double* heap_v, int* heap_i, int n) {
   build_maxheap(heap_v, heap_i, n);
   max_heapsort(heap_v, heap_i, n);
 }
 
-void build_maxheap(int *heap_v, int n) {
+void build_maxheap(int* heap_v, int n) {
   int i;
   for (i = n / 2; i >= 1; i--) {
     max_heapify(heap_v, i, n);
   }
 }
 
-void build_maxheap(double *heap_v, int *heap_i, int n) {
+void build_maxheap(double* heap_v, int* heap_i, int n) {
   int i;
   for (i = n / 2; i >= 1; i--) {
     max_heapify(heap_v, heap_i, i, n);
   }
 }
 
-void max_heapsort(int *heap_v, int n) {
+void max_heapsort(int* heap_v, int n) {
   int temp_v;
   int i;
   for (i = n; i >= 2; i--) {
@@ -50,7 +50,7 @@ void max_heapsort(int *heap_v, int n) {
   }
 }
 
-void max_heapsort(double *heap_v, int *heap_i, int n) {
+void max_heapsort(double* heap_v, int* heap_i, int n) {
   double temp_v;
   int i, temp_i;
   for (i = n; i >= 2; i--) {
@@ -64,7 +64,7 @@ void max_heapsort(double *heap_v, int *heap_i, int n) {
   }
 }
 
-void max_heapify(int *heap_v, int i, int n) {
+void max_heapify(int* heap_v, int i, int n) {
   int temp_v;
   int j;
   temp_v = heap_v[i];
@@ -82,7 +82,7 @@ void max_heapify(int *heap_v, int i, int n) {
   return;
 }
 
-void max_heapify(double *heap_v, int *heap_i, int i, int n) {
+void max_heapify(double* heap_v, int* heap_i, int i, int n) {
   double temp_v;
   int j, temp_i;
   temp_v = heap_v[i];
@@ -103,7 +103,8 @@ void max_heapify(double *heap_v, int *heap_i, int i, int n) {
   return;
 }
 
-bool increasing_set_ok(const int *set, const int set_num_entries, const int set_entry_lower, const int set_entry_upper) {
+bool increasing_set_ok(const int* set, const int set_num_entries,
+                       const int set_entry_lower, const int set_entry_upper) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;
@@ -119,10 +120,12 @@ bool increasing_set_ok(const int *set, const int set_num_entries, const int set_
     if (check_bounds && entry > set_entry_upper) return false;
     previous_entry = entry;
   }
-  return true;			
+  return true;
 }
 
-bool increasing_set_ok(const double *set, const int set_num_entries, const double set_entry_lower, const double set_entry_upper) {
+bool increasing_set_ok(const double* set, const int set_num_entries,
+                       const double set_entry_lower,
+                       const double set_entry_upper) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;
@@ -130,7 +133,8 @@ bool increasing_set_ok(const double *set, const int set_num_entries, const doubl
   if (check_bounds) {
     previous_entry = set_entry_lower;
   } else {
-    previous_entry = -HIGHS_CONST_INF;;
+    previous_entry = -HIGHS_CONST_INF;
+    ;
   }
   for (int k = 0; k < set_num_entries; k++) {
     double entry = set[k];
@@ -138,5 +142,5 @@ bool increasing_set_ok(const double *set, const int set_num_entries, const doubl
     if (check_bounds && entry > set_entry_upper) return false;
     previous_entry = entry;
   }
-  return true;			
+  return true;
 }

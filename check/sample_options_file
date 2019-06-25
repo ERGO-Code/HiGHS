@@ -5,4 +5,4 @@
 
 presolve=on
 small_matrix_value=0.001
-parser_type=free
+mps_parser_type=free

@@ -9,8 +9,7 @@ enum class MinimizationType {
   kExact,
 };
 
-HighsStatus runFeasibility(const HighsLp& lp,
-                           HighsSolution& solution,
+HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution,
                            const MinimizationType type);
 
 #endif

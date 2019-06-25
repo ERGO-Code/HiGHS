@@ -4,8 +4,7 @@
 #include <string>
 
 // HiGHS status
-enum class HighsStatus
-{
+enum class HighsStatus {
   NotSet,
   OK,
   Info,
@@ -22,7 +21,8 @@ enum class HighsStatus
   ReachedDualObjectiveUpperBound,
   Unbounded,
   Infeasible,
-  Feasible,
+  PrimalFeasible,
+  DualFeasible,
   Optimal,
   Timeout,
   ReachedIterationLimit,
