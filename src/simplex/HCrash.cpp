@@ -12,28 +12,25 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HCrash.h"
-#include "util/HighsSort.h"
 #include "lp_data/HConst.h"
 #include "simplex/HSimplex.h"
+#include "util/HighsSort.h"
 
 #include <cassert>
 #include <set>
 #include <string>
 #include <vector>
 
-using std::vector;
-using std::string;
-using std::max;
 using std::abs;
 using std::cout;
 using std::flush;
+using std::max;
+using std::string;
+using std::vector;
 
 void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
   crash_strategy = pass_crash_strategy;
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  SimplexBasis &simplex_basis = workHMO.simplex_basis_;
-  //  HMatrix &matrix = workHMO.matrix_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
   if (simplex_lp.numRow_ == 0) return;
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;
@@ -88,14 +85,15 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
 
 void HCrash::bixby() {
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
 
-  const int *Astart = &simplex_lp.Astart_[0];
-  const int *Aindex = &simplex_lp.Aindex_[0];
-  const double *Avalue = &simplex_lp.Avalue_[0];
+  const int* Astart = &simplex_lp.Astart_[0];
+  const int* Aindex = &simplex_lp.Aindex_[0];
+  const double* Avalue = &simplex_lp.Avalue_[0];
 
-  bixby_no_nz_c_co = crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS;
+  bixby_no_nz_c_co =
+      crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS;
   bixby_no_nz_c_co = false;
 
   bool perform_crash = bixby_iz_da();
@@ -172,7 +170,8 @@ void HCrash::bixby() {
         int r_n = Aindex[el_n];
         // If this value in the column would give an unacceptable
         // multiplier then continue to next pass
-        nx_ps = fabs(Avalue[el_n]) > bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
+        nx_ps = fabs(Avalue[el_n]) >
+                bixby_mu_b * bixby_pseudo_pv_v[r_n] * c_mx_abs_v;
         if (nx_ps) {
 #ifdef HiGHSDEV
           rp_v = fabs(Avalue[el_n]) / (bixby_pseudo_pv_v[r_n] * c_mx_abs_v);
@@ -234,13 +233,9 @@ void HCrash::bixby() {
     int cz_r_n = r_n;
     int cz_c_n = bixby_vr_in_r[r_n];
     int columnIn = cz_c_n;
-    int rowOut = cz_r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-    // Update the basic/nonbasic variable info and the row-wise copy
-    // of the matrix
-    update_pivots(workHMO, columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+    workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+    workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
 #ifdef HiGHSDEV
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
@@ -249,18 +244,22 @@ void HCrash::bixby() {
 #endif
   }
 #ifdef HiGHSDEV
+  // Analyse the row and column status after Crash
+  // basicIndex is only required for this analysis, so set it here.
+  workHMO.simplex_basis_.basicIndex_.resize(numRow);
+  initialise_basic_index(workHMO);
   crsh_an_r_c_st_af();
 #endif
 }
 
 bool HCrash::bixby_iz_da() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  const int *Astart = &simplex_lp.Astart_[0];
-  const double *Avalue = &simplex_lp.Avalue_[0];
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const int* Astart = &simplex_lp.Astart_[0];
+  const double* Avalue = &simplex_lp.Avalue_[0];
   const int objSense = simplex_lp.sense_;
-  const double *colCost = &simplex_lp.colCost_[0];
-  const double *colLower = &simplex_lp.colLower_[0];
-  const double *colUpper = &simplex_lp.colUpper_[0];
+  const double* colCost = &simplex_lp.colCost_[0];
+  const double* colLower = &simplex_lp.colLower_[0];
+  const double* colUpper = &simplex_lp.colUpper_[0];
 
   // const double *primalColLowerImplied = simplex_lp.primalColLowerImplied_;
   // const double *primalColUpperImplied = simplex_lp.primalColUpperImplied_;
@@ -436,11 +435,11 @@ bool HCrash::bixby_iz_da() {
 }
 
 void HCrash::bixby_rp_mrt() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
   const int objSense = simplex_lp.sense_;
-  const double *colCost = &simplex_lp.colCost_[0];
-  const double *colLower = &simplex_lp.colLower_[0];
-  const double *colUpper = &simplex_lp.colUpper_[0];
+  const double* colCost = &simplex_lp.colCost_[0];
+  const double* colLower = &simplex_lp.colLower_[0];
+  const double* colUpper = &simplex_lp.colUpper_[0];
   double mx_co_v = -HIGHS_CONST_INF;
   for (int c_n = 0; c_n < numCol; c_n++) {
     double sense_col_cost = objSense * colCost[c_n];
@@ -479,14 +478,16 @@ void HCrash::bixby_rp_mrt() {
       prev_mrt_v = mrt_v;
     }
     if (rp_c)
-      printf("%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; [%10.4g,%10.4g]\n",
-	     ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
+      printf(
+          "%5d: Col %5d, Type = %1d; MrtV = %10.4g; MrtV0 = %10.4g; "
+          "[%10.4g,%10.4g]\n",
+          ps_n, c_n, crsh_c_ty[c_n], mrt_v, mrt_v0, c_lb, c_ub);
   }
   printf("\n%6d different Bixby merits\n", n_mrt_v);
 }
 
 void HCrash::ltssf() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
   if (crash_strategy == SimplexCrashStrategy::LTSSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
@@ -516,7 +517,7 @@ void HCrash::ltssf() {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
-    no_ck_pv = true;
+    no_ck_pv = false;
   } else {
     //  Dev version
     crsh_fn_cf_pri_v = 1;
@@ -554,7 +555,9 @@ void HCrash::ltssf() {
 #endif
   if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) {
 #ifdef HiGHSDEV
-    printf("Max row priority of %d + Max col priority of %d = %d <= %d: no value in performing LTSSF crash\n",
+    printf(
+        "Max row priority of %d + Max col priority of %d = %d <= %d: no value "
+        "in performing LTSSF crash\n",
         mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
 #endif
     // Save the solved results
@@ -562,7 +565,8 @@ void HCrash::ltssf() {
   }
 #ifdef HiGHSDEV
   if (ltssf_ck_fq > 0) {
-    printf("\nCHECKING LTSSF DATA NOW AND EVERY %d PASS(ES)!!\n\n", ltssf_ck_fq);
+    printf("\nCHECKING LTSSF DATA NOW AND EVERY %d PASS(ES)!!\n\n",
+           ltssf_ck_fq);
     ltssf_ck_da();
   }
   if (reportCrashData) ltssf_rp_pri_k_da();
@@ -584,6 +588,10 @@ void HCrash::ltssf() {
       " Relative tolerance (%6.4f): Rejected %7d pivots: min relative pivot "
       "value = %6.4e\n",
       tl_crsh_rlv_pv_v, n_rlv_pv_no_ok, mn_rlv_pv_v);
+  // Analyse the row and column status after Crash
+  // basicIndex is only required for this analysis, so set it here.
+  workHMO.simplex_basis_.basicIndex_.resize(numRow);
+  initialise_basic_index(workHMO);
   crsh_an_r_c_st_af();
 #endif
 }
@@ -598,7 +606,7 @@ void HCrash::ltssf_iz_mode() {
 void HCrash::ltssf_iterate() {
   // LTSSF Main loop
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
   bool ltssf_stop = false;
@@ -620,13 +628,9 @@ void HCrash::ltssf_iterate() {
       mn_abs_pv_v = min(abs_pv_v, mn_abs_pv_v);
       mn_rlv_pv_v = min(rlv_pv_v, mn_rlv_pv_v);
       int columnIn = cz_c_n;
-      int rowOut = cz_r_n;
       int columnOut = numCol + cz_r_n;
-      int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-      // Update the basic/nonbasic variable info and the row-wise copy
-      // of the matrix
-      update_pivots(workHMO, columnIn, rowOut, sourceOut);
-      if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+      workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+      workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
       // Update the count of this type of removal and addition
 #ifdef HiGHSDEV
       int vr_ty = crsh_r_ty[cz_r_n];
@@ -653,15 +657,16 @@ void HCrash::ltssf_iterate() {
     mx_r_pri = crsh_mn_pri_v - 1;
     for (int pri_v = crsh_mx_pri_v; pri_v > crsh_mn_pri_v; pri_v--) {
       if (crsh_r_pri_mn_r_k[pri_v] < numCol + 1) {
-	mx_r_pri = pri_v;
-	break;
+        mx_r_pri = pri_v;
+        break;
       }
     }
     if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) {
 #ifdef HiGHSDEV
-      printf("Max active row priority of %d + Max original col priority of %d = "
-	     "%d <= %d: no value in performing further LTSSF crash\n",
-	     mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
+      printf(
+          "Max active row priority of %d + Max original col priority of %d = "
+          "%d <= %d: no value in performing further LTSSF crash\n",
+          mx_r_pri, mx_c_pri, mx_r_pri + mx_c_pri, crsh_mx_pri_v);
 #endif
       ltssf_stop = true;
     }
@@ -687,11 +692,12 @@ void HCrash::ltssf_u_da() {
 }
 
 void HCrash::ltssf_u_da_af_bs_cg() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  const int *Astart = &simplex_lp.Astart_[0];
-  const int *Aindex = &simplex_lp.Aindex_[0];
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const int* Astart = &simplex_lp.Astart_[0];
+  const int* Aindex = &simplex_lp.Aindex_[0];
   // ltssf_rp_r_k();
-  for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1]; r_el_n++) {
+  for (int r_el_n = CrshARstart[cz_r_n]; r_el_n < CrshARstart[cz_r_n + 1];
+       r_el_n++) {
     int c_n = CrshARindex[r_el_n];
     if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
@@ -703,69 +709,72 @@ void HCrash::ltssf_u_da_af_bs_cg() {
       int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
 #ifdef HiGHSDEV
       if (reportCrashData) {
-	ltssf_rp_pri_k_da();
-	printf("1: Remove row %d of pri %d from linked list with %d entries\n",
-	       r_n, pri_v, r_k);
+        ltssf_rp_pri_k_da();
+        printf("1: Remove row %d of pri %d from linked list with %d entries\n",
+               r_n, pri_v, r_k);
       }
 #endif
       int hdr_ix = pri_v * (numCol + 1) + r_k;
       // Remove the row from the linked list with this number of active entries
       int nx_r_n = crsh_r_pri_k_lkf[r_n];
       if (r_n == crsh_r_pri_k_hdr[hdr_ix]) {
-	prev_r_n = no_lk;
-	crsh_r_pri_k_hdr[hdr_ix] = nx_r_n;
+        prev_r_n = no_lk;
+        crsh_r_pri_k_hdr[hdr_ix] = nx_r_n;
       } else {
-	prev_r_n = crsh_r_pri_k_lkb[r_n];
-	crsh_r_pri_k_lkf[prev_r_n] = nx_r_n;
+        prev_r_n = crsh_r_pri_k_lkb[r_n];
+        crsh_r_pri_k_lkf[prev_r_n] = nx_r_n;
       }
       if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = prev_r_n;
       if ((crsh_r_pri_k_hdr[hdr_ix] == no_lk) &&
-	  (crsh_r_pri_mn_r_k[pri_v] == r_k)) {
-	// This was the only row of minimum row count so look for the next row
-	// count with non-null header
-	//
-	// Set crsh_r_pri_mn_r_k to numCol+1 in case r_k=numCol so priority is cleared
-	crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
-	for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
-	  int hdr_ix = pri_v * (numCol + 1) + qy_k;
-	  if (crsh_r_pri_k_hdr[hdr_ix] != no_lk) {
-	    crsh_r_pri_mn_r_k[pri_v] = qy_k;
-	    break;
-	  }
-	}
+          (crsh_r_pri_mn_r_k[pri_v] == r_k)) {
+        // This was the only row of minimum row count so look for the next row
+        // count with non-null header
+        //
+        // Set crsh_r_pri_mn_r_k to numCol+1 in case r_k=numCol so priority is
+        // cleared
+        crsh_r_pri_mn_r_k[pri_v] = numCol + 1;
+        for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
+          int hdr_ix = pri_v * (numCol + 1) + qy_k;
+          if (crsh_r_pri_k_hdr[hdr_ix] != no_lk) {
+            crsh_r_pri_mn_r_k[pri_v] = qy_k;
+            break;
+          }
+        }
       }
       // Reduce the number of active entries in this row by one and...
       r_k -= 1;
       crsh_r_k[r_n] = r_k;
       if (r_k > 0) {
-	// ... either add the row as the header of the list with one
-	// fewer number of active entries...
+        // ... either add the row as the header of the list with one
+        // fewer number of active entries...
 #ifdef HiGHSDEV
-	if (reportCrashData) {
-	  ltssf_rp_pri_k_da();
-	  printf("Add row %d of pri %d to linked list with %d entries\n", r_n, pri_v, r_k);
-	}
+        if (reportCrashData) {
+          ltssf_rp_pri_k_da();
+          printf("Add row %d of pri %d to linked list with %d entries\n", r_n,
+                 pri_v, r_k);
+        }
 #endif
-	int hdr_ix = pri_v * (numCol + 1) + r_k;
-	nx_r_n = crsh_r_pri_k_hdr[hdr_ix];
-	crsh_r_pri_k_hdr[hdr_ix] = r_n;
-	crsh_r_pri_k_lkf[r_n] = nx_r_n;
-	if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = r_n;
-	if (crsh_r_pri_mn_r_k[pri_v] > r_k) {
-	  // There is now a row of smaller count for this priority
-	  crsh_r_pri_mn_r_k[pri_v] = r_k;
-	}
+        int hdr_ix = pri_v * (numCol + 1) + r_k;
+        nx_r_n = crsh_r_pri_k_hdr[hdr_ix];
+        crsh_r_pri_k_hdr[hdr_ix] = r_n;
+        crsh_r_pri_k_lkf[r_n] = nx_r_n;
+        if (nx_r_n != no_lk) crsh_r_pri_k_lkb[nx_r_n] = r_n;
+        if (crsh_r_pri_mn_r_k[pri_v] > r_k) {
+          // There is now a row of smaller count for this priority
+          crsh_r_pri_mn_r_k[pri_v] = r_k;
+        }
       } else {
 #ifdef HiGHSDEV
-	if (reportCrashData) {
-	  ltssf_rp_pri_k_da();
-	  printf("2: Remove row %d of pri %d and count %d from active submatrix\n",
-		 r_n, pri_v, r_k);
-	}
+        if (reportCrashData) {
+          ltssf_rp_pri_k_da();
+          printf(
+              "2: Remove row %d of pri %d and count %d from active submatrix\n",
+              r_n, pri_v, r_k);
+        }
 #endif
-	// ...or, if the count is zero, the row leaves the active submatrix...
-	crsh_act_r[r_n] = crsh_vr_st_no_act;
-	// ... and has already left the priority value and count data structure
+        // ...or, if the count is zero, the row leaves the active submatrix...
+        crsh_act_r[r_n] = crsh_vr_st_no_act;
+        // ... and has already left the priority value and count data structure
       }
     }
     // The column leaves the active submatrix
@@ -789,7 +798,8 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
   }
   int r_n = cz_r_n;
   // Remove the row from the linked list with this number of active entries
-  // Remove the row from the linked list with this priority and number of active entries
+  // Remove the row from the linked list with this priority and number of active
+  // entries
   crsh_act_r[r_n] = crsh_vr_st_no_act;
   int pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
   int r_k = crsh_r_k[r_n];
@@ -815,8 +825,8 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
     for (int qy_k = r_k + 1; qy_k < numCol + 1; qy_k++) {
       int hdr_ix = pri_v * (numCol + 1) + qy_k;
       if (crsh_r_pri_k_hdr[hdr_ix] != no_lk) {
-	crsh_r_pri_mn_r_k[pri_v] = qy_k;
-	break;
+        crsh_r_pri_mn_r_k[pri_v] = qy_k;
+        break;
       }
     }
   }
@@ -824,13 +834,14 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
 
 void HCrash::ltssf_iz_da() {
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
+  SimplexBasis& simplex_basis = workHMO.simplex_basis_;
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
-  const int *Astart = &simplex_lp.Astart_[0];
-  const int *Aindex = &simplex_lp.Aindex_[0];
-  const double *Avalue = &simplex_lp.Avalue_[0];
+  const int* Astart = &simplex_lp.Astart_[0];
+  const int* Aindex = &simplex_lp.Aindex_[0];
+  const double* Avalue = &simplex_lp.Avalue_[0];
   ;
   int numEl = Astart[numCol];
   // const double *primalColLowerImplied = simplex_lp.primalColLowerImplied_;
@@ -848,7 +859,6 @@ void HCrash::ltssf_iz_da() {
   crsh_c_ty_pri_v.resize(crsh_l_vr_ty);
   if (crash_strategy == SimplexCrashStrategy::BASIC) {
     // Basis-preserving crash:
-    printf("Basis-preserving crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_non_bc] = 1;
     crsh_r_ty_pri_v[crsh_vr_ty_bc] = 0;
     crsh_c_ty_pri_v[crsh_vr_ty_non_bc] = 0;
@@ -856,7 +866,6 @@ void HCrash::ltssf_iz_da() {
 
   } else {
     // Standard crash:
-    printf("Standard crash:\n");
     crsh_r_ty_pri_v[crsh_vr_ty_fx] = 3;
     crsh_r_ty_pri_v[crsh_vr_ty_2_sd] = 2;
     crsh_r_ty_pri_v[crsh_vr_ty_1_sd] = 1;
@@ -889,15 +898,19 @@ void HCrash::ltssf_iz_da() {
   if (crash_strategy == SimplexCrashStrategy::BASIC) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
-    printf("Call replace_with_logical_basis()\n");
-    //    workHMO.matrix_.setup_lgBs(numCol, numRow, &Astart[0], &Aindex[0], &Avalue[0]);
+    for (int iCol = 0; iCol < numCol; iCol++)
+      simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;
+    for (int iRow = 0; iRow < numRow; iRow++)
+      simplex_basis.nonbasicFlag_[numCol + iRow] = NONBASIC_FLAG_FALSE;
   }
   mx_r_pri = crsh_mn_pri_v;
   for (int r_n = 0; r_n < numRow; r_n++) {
-    mx_r_pri = max(mx_r_pri, crsh_r_ty_pri_v[crsh_r_ty[r_n]]);}
+    mx_r_pri = max(mx_r_pri, crsh_r_ty_pri_v[crsh_r_ty[r_n]]);
+  }
   mx_c_pri = crsh_mn_pri_v;
   for (int c_n = 0; c_n < numCol; c_n++) {
-    mx_c_pri = max(mx_c_pri, crsh_c_ty_pri_v[crsh_c_ty[c_n]]);}
+    mx_c_pri = max(mx_c_pri, crsh_c_ty_pri_v[crsh_c_ty[c_n]]);
+  }
 
   if ((!alw_al_bs_cg) && (mx_r_pri + mx_c_pri <= crsh_mx_pri_v)) return;
   for (int c_n = 0; c_n < numCol + 1; c_n++) {
@@ -1022,8 +1035,10 @@ void HCrash::ltssf_ck_da() {
     }
     if (ck_k != k) {
       er_fd = true;
-      printf("ERROR: Row %d has number of entries error: True = %d; Updated = %d\n",
-      r_n, ck_k, k);
+      printf(
+          "ERROR: Row %d has number of entries error: True = %d; Updated = "
+          "%d\n",
+          r_n, ck_k, k);
     }
   }
   for (int pri_v = crsh_mn_pri_v; pri_v < crsh_mx_pri_v + 1; pri_v++) {
@@ -1033,34 +1048,37 @@ void HCrash::ltssf_ck_da() {
       int r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + k];
       if (r_n == no_ix) continue;
       do {
-	int ck_pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
-	if (ck_pri_v != pri_v) {
-	  er_fd = true;
-	  printf("ERROR: Row %d has ck_pri_v = %d but pri_v = %d\n", r_n,
-		 ck_pri_v, pri_v);
-	}
-	int ck_k = crsh_r_k[r_n];
-	if (ck_k != k) {
-	  er_fd = true;
-	  printf("ERROR: Row %d has ck_k = %d but k = %d\n", r_n, ck_k, k);
-	}
-	int nx_r_n = crsh_r_pri_k_lkf[r_n];
-	if (nx_r_n != no_lk) {
-	  int prev_nx_r_n = crsh_r_pri_k_lkb[nx_r_n];
-	  if (prev_nx_r_n != r_n) {
-	    er_fd = true;
-	    printf("ERROR: Back link error for nx_r_n = %d: prev_nx_r_n = %d but r_n = %d\n",
-		   nx_r_n, prev_nx_r_n, r_n);
-	  }
-	}
-	// Update the true minimum row count
-	mn_r_k = min(k, mn_r_k);
-	r_n = nx_r_n;
+        int ck_pri_v = crsh_r_ty_pri_v[crsh_r_ty[r_n]];
+        if (ck_pri_v != pri_v) {
+          er_fd = true;
+          printf("ERROR: Row %d has ck_pri_v = %d but pri_v = %d\n", r_n,
+                 ck_pri_v, pri_v);
+        }
+        int ck_k = crsh_r_k[r_n];
+        if (ck_k != k) {
+          er_fd = true;
+          printf("ERROR: Row %d has ck_k = %d but k = %d\n", r_n, ck_k, k);
+        }
+        int nx_r_n = crsh_r_pri_k_lkf[r_n];
+        if (nx_r_n != no_lk) {
+          int prev_nx_r_n = crsh_r_pri_k_lkb[nx_r_n];
+          if (prev_nx_r_n != r_n) {
+            er_fd = true;
+            printf(
+                "ERROR: Back link error for nx_r_n = %d: prev_nx_r_n = %d but "
+                "r_n = %d\n",
+                nx_r_n, prev_nx_r_n, r_n);
+          }
+        }
+        // Update the true minimum row count
+        mn_r_k = min(k, mn_r_k);
+        r_n = nx_r_n;
       } while (r_n != no_lk);
     }
     if (crsh_r_pri_mn_r_k[pri_v] != mn_r_k)
-      printf("ERROR: Priority %d has crsh_r_pri_mn_r_k = %d < %d = true mn_r_k\n",
-	     pri_v, crsh_r_pri_mn_r_k[pri_v], mn_r_k);
+      printf(
+          "ERROR: Priority %d has crsh_r_pri_mn_r_k = %d < %d = true mn_r_k\n",
+          pri_v, crsh_r_pri_mn_r_k[pri_v], mn_r_k);
     crsh_r_pri_mn_r_k[pri_v] = mn_r_k;
   }
   if (er_fd) {
@@ -1081,8 +1099,10 @@ void HCrash::ltssf_cz_r() {
       if (r_k > numCol) continue;
       cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
       if (cz_r_n == no_ix) {
-	printf("ERROR: header for pri_v = %d and count = %d is empty for crsh_r_pri_mn_r_k[pri_v] = %d\n",
-	       pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
+        printf(
+            "ERROR: header for pri_v = %d and count = %d is empty for "
+            "crsh_r_pri_mn_r_k[pri_v] = %d\n",
+            pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
       }
       break;
     }
@@ -1092,22 +1112,24 @@ void HCrash::ltssf_cz_r() {
     for (int pri_v = crsh_mx_pri_v; pri_v > crsh_mn_pri_v; pri_v--) {
       int r_k = crsh_r_pri_mn_r_k[pri_v];
       if (r_k < mn_r_k) {
-	cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
-	if (cz_r_n == no_ix) {
-	  printf("ERROR: header for pri_v = %d and count = %d is empty for crsh_r_pri_mn_r_k[pri_v] = %d\n",
-		 pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
-	}
-	mn_r_k = r_k;
-	if (mn_r_k == 1) break;
+        cz_r_n = crsh_r_pri_k_hdr[pri_v * (numCol + 1) + r_k];
+        if (cz_r_n == no_ix) {
+          printf(
+              "ERROR: header for pri_v = %d and count = %d is empty for "
+              "crsh_r_pri_mn_r_k[pri_v] = %d\n",
+              pri_v, r_k, crsh_r_pri_mn_r_k[pri_v]);
+        }
+        mn_r_k = r_k;
+        if (mn_r_k == 1) break;
       }
     }
   }
 }
 
 void HCrash::ltssf_cz_c() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
   const int objSense = simplex_lp.sense_;
-  const double *colCost = &simplex_lp.colCost_[0];
+  const double* colCost = &simplex_lp.colCost_[0];
 
   cz_c_n = no_ix;
   int su_r_c_pri_v_lm = crsh_mx_pri_v;
@@ -1138,7 +1160,8 @@ void HCrash::ltssf_cz_c() {
     if (crsh_act_c[c_n] == crsh_vr_st_no_act) continue;
     // Don't allow the row to be replaced by a column whose priority
     // to remain nonbasic is the same or greater.
-    if (!alw_al_bs_cg && (crsh_c_ty_pri_v[crsh_c_ty[c_n]] + cz_r_pri_v <= su_r_c_pri_v_lm))
+    if (!alw_al_bs_cg &&
+        (crsh_c_ty_pri_v[crsh_c_ty[c_n]] + cz_r_pri_v <= su_r_c_pri_v_lm))
       continue;
     // If column is worse than current best then break
     int c_pri_fn_v = crsh_fn_cf_pri_v * crsh_c_ty_pri_v[crsh_c_ty[c_n]] -
@@ -1183,7 +1206,7 @@ void HCrash::ltssf_cz_c() {
 #ifdef HiGHSDEV
 void HCrash::tsSing() {
   //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsSimplexLpStatus &simplex_lp_status = workHMO.simplex_lp_status_;
+  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number
@@ -1191,13 +1214,9 @@ void HCrash::tsSing() {
   for (int c_n = 0; c_n < numTot; c_n++) {
     int r_n = c_n;
     int columnIn = c_n;
-    int rowOut = r_n;
     int columnOut = numCol + r_n;
-    int sourceOut = set_source_out_from_bound(workHMO, columnOut);
-    // Update the basic/nonbasic variable info and the row-wise copy of the
-    // matrix
-    update_pivots(workHMO, columnIn, rowOut, sourceOut);
-    if (simplex_lp_status.has_matrix_row_wise) update_matrix(workHMO, columnIn, columnOut);
+    workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
+    workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
     nBcVr++;
     if (nBcVr == numRow) break;
   }
@@ -1298,12 +1317,12 @@ void HCrash::ltssf_rp_pri_k_da() {
 #endif
 
 void HCrash::crsh_iz_vr_ty() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
-  const double *colLower = &simplex_lp.colLower_[0];
-  const double *colUpper = &simplex_lp.colUpper_[0];
-  const double *rowLower = &simplex_lp.rowLower_[0];
-  const double *rowUpper = &simplex_lp.rowUpper_[0];
-  const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
+  const double* colLower = &simplex_lp.colLower_[0];
+  const double* colUpper = &simplex_lp.colUpper_[0];
+  const double* rowLower = &simplex_lp.rowLower_[0];
+  const double* rowUpper = &simplex_lp.rowUpper_[0];
+  const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
@@ -1388,11 +1407,11 @@ void HCrash::crsh_iz_vr_ty() {
 
 #ifdef HiGHSDEV
 void HCrash::crsh_an_c_co() {
-  HighsLp &simplex_lp = workHMO.simplex_lp_;
+  HighsLp& simplex_lp = workHMO.simplex_lp_;
   const int objSense = simplex_lp.sense_;
-  const double *colCost = &simplex_lp.colCost_[0];
-  const double *colLower = &simplex_lp.colLower_[0];
-  const double *colUpper = &simplex_lp.colUpper_[0];
+  const double* colCost = &simplex_lp.colCost_[0];
+  const double* colLower = &simplex_lp.colLower_[0];
+  const double* colUpper = &simplex_lp.colUpper_[0];
 
   int n_ze_c_co = 0;
   int n_fs_c_co = 0;
@@ -1481,10 +1500,10 @@ void HCrash::crsh_rp_r_c_st(const int mode) {
                  (100 * crsh_vr_ty_rm_n_r[vr_ty]) / crsh_vr_ty_og_n_r[vr_ty]);
       } else if (mode == 2) {
         if (ps_n == 0) {
-	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
-	  ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
-	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
-	  ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
+          ck_su_n_bc_vr += crsh_bs_vr_ty_n_r[vr_ty];
+          ck_su_n_bc_vr += crsh_bs_vr_ty_n_c[vr_ty];
+          ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_r[vr_ty];
+          ck_su_n_nonbc_vr += crsh_nonbc_vr_ty_n_c[vr_ty];
           if (crsh_bs_vr_ty_n_r[vr_ty] > 0)
             printf(" Basic    variables contain %7d %3s rows (%3d%%)\n",
                    crsh_bs_vr_ty_n_r[vr_ty], TyNm.c_str(),
@@ -1537,7 +1556,7 @@ void HCrash::crsh_rp_r_c_st(const int mode) {
   }
 }
 void HCrash::crsh_an_r_c_st_af() {
-  const int *Astart = &workHMO.simplex_lp_.Astart_[0];
+  const int* Astart = &workHMO.simplex_lp_.Astart_[0];
   for (int k = 0; k < numRow; k++) {
     int vr_n = workHMO.simplex_basis_.basicIndex_[k];
     if (vr_n < numCol) {

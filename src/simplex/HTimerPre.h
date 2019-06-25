@@ -97,7 +97,7 @@ class HTimerPre {
   }
 
   // Report specific items in the list
-  void report(int itemCount, int *itemList) {
+  void report(int itemCount, int* itemList) {
     double totalTick = getTick();
     printf("Presolve times ");
     for (int i = 0; i < itemCount; i++)

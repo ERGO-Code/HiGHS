@@ -8,9 +8,9 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "io/Filereader.h"
+#include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
-#include "io/FilereaderEms.h"
 
 #include <string.h>
 #include <stdexcept>

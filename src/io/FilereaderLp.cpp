@@ -14,8 +14,8 @@
 
 #include "io/FilereaderLp.h"
 #include <stdarg.h>
-#include "util/stringutil.h"
 #include "lp_data/HConst.h"
+#include "util/stringutil.h"
 
 FilereaderLp::FilereaderLp() {
   this->isFileBufferFullyRead = true;
@@ -922,7 +922,8 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFileLineend();
 
   // write objective
-  this->writeToFile("%s", model.sense_ == 1.0 ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
+  this->writeToFile(
+      "%s", model.sense_ == 1.0 ? LP_KEYWORD_MIN[0] : LP_KEYWORD_MAX[0]);
   this->writeToFileLineend();
   this->writeToFile(" obj: ");
   for (int i = 0; i < model.numCol_; i++) {

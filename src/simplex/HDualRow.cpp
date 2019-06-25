@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HDualRow.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "simplex/HDualRow.h"
@@ -18,9 +18,9 @@
 #include <iostream>
 
 #include "lp_data/HConst.h"
-#include "simplex/SimplexTimer.h"
-#include "simplex/HVector.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HVector.h"
+#include "simplex/SimplexTimer.h"
 
 using std::make_pair;
 using std::pair;
@@ -46,17 +46,16 @@ void HDualRow::setup() {
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   setupSlice(numTot);
   workNumTotPermutation = &workHMO.simplex_info_.numTotPermutation_[0];
-  
- // delete_Freelist() is being called in Phase 1 and Phase 2 since
- // it's in updatePivots(), but create_Freelist() is only called in
- // Phase 2. Hence freeList and freeListSize are not initialised when
- // freeList.empty() is used to identify that freeListSize should be
- // tested for zero. Suddenly freeListSize is 1212631365 rather than
- // zero when uninitialised, triggering a warning. So, let's set
- // clear freeList and set freeListSize = 0.
+
+  // delete_Freelist() is being called in Phase 1 and Phase 2 since
+  // it's in updatePivots(), but create_Freelist() is only called in
+  // Phase 2. Hence freeList and freeListSize are not initialised when
+  // freeList.empty() is used to identify that freeListSize should be
+  // tested for zero. Suddenly freeListSize is 1212631365 rather than
+  // zero when uninitialised, triggering a warning. So, let's set
+  // clear freeList and set freeListSize = 0.
   freeList.clear();
   freeListSize = 0;
-
 }
 
 void HDualRow::clear() {
@@ -64,16 +63,16 @@ void HDualRow::clear() {
   workCount = 0;
 }
 
-void HDualRow::choose_makepack(const HVector *row, const int offset) {
+void HDualRow::choose_makepack(const HVector* row, const int offset) {
   /**
    * Pack the indices and values for the row
    *
    * Offset of numCol is used when packing row_ep
    */
   const int rowCount = row->count;
-  const int *rowIndex = &row->index[0];
-  const double *rowArray = &row->array[0];
-  const double *rowPackValue = &row->packValue[0];
+  const int* rowIndex = &row->index[0];
+  const double* rowArray = &row->array[0];
+  const double* rowPackValue = &row->packValue[0];
   const int rowPWd = row->pWd;
 
   if (rowPWd == row->dfSparseDaStr) {
@@ -119,21 +118,21 @@ void HDualRow::choose_possible() {
   }
 }
 
-void HDualRow::choose_joinpack(const HDualRow *otherRow) {
+void HDualRow::choose_joinpack(const HDualRow* otherRow) {
   /**
    * Join pack of possible candidates in this row with possible
    * candidates in otherRow
    */
   const int otherCount = otherRow->workCount;
-  const pair<int, double> *otherData = &otherRow->workData[0];
+  const pair<int, double>* otherData = &otherRow->workData[0];
   copy(otherData, otherData + otherCount, &workData[workCount]);
   workCount = workCount + otherCount;
   workTheta = min(workTheta, otherRow->workTheta);
 }
 
 bool HDualRow::choose_final() {
-  HighsTimer &timer = workHMO.timer_;
-  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   /**
    * Chooses the entering variable via BFRT and EXPAND
    *
@@ -316,35 +315,38 @@ bool HDualRow::choose_final() {
   return false;
 }
 
-void HDualRow::update_flip(HVector *bfrtColumn) {
+void HDualRow::update_flip(HVector* bfrtColumn) {
   //  checkDualObjectiveValue("Before update_flip");
-  double *workDual = &workHMO.simplex_info_.workDual_[0];//
+  double* workDual = &workHMO.simplex_info_.workDual_[0];  //
   //  double *workLower = &workHMO.simplex_info_.workLower_[0];
   //  double *workUpper = &workHMO.simplex_info_.workUpper_[0];
   //  double *workValue = &workHMO.simplex_info_.workValue_[0];
-  double dualObjectiveValueChange = 0;
+  double dual_objective_value_change = 0;
   bfrtColumn->clear();
   for (int i = 0; i < workCount; i++) {
     const int iCol = workData[i].first;
     const double change = workData[i].second;
 
-    double lcDualObjectiveValueChange = change*workDual[iCol];
-    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g dualObjectiveValueChange = %11.4g\n",
-    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change, lcDualObjectiveValueChange, dualObjectiveValueChange);
-    dualObjectiveValueChange += lcDualObjectiveValueChange;
-    flip_bound(workHMO, iCol);//workModel->flipBound(iCol);
+    double lcdual_objective_value_change = change * workDual[iCol];
+    //    printf("%6d: [%11.4g, %11.4g, %11.4g], (%11.4g) DlObj = %11.4g
+    //    dual_objective_value_change = %11.4g\n",
+    //	   iCol, workLower[iCol], workValue[iCol], workUpper[iCol], change,
+    //lcdual_objective_value_change, dual_objective_value_change);
+    dual_objective_value_change += lcdual_objective_value_change;
+    flip_bound(workHMO, iCol);  // workModel->flipBound(iCol);
     workHMO.matrix_.collect_aj(*bfrtColumn, iCol, change);
   }
-  workHMO.simplex_info_.updatedDualObjectiveValue += dualObjectiveValueChange;
+  workHMO.simplex_info_.updated_dual_objective_value +=
+      dual_objective_value_change;
   //  &workHMO.>checkDualObjectiveValue("After  update_flip");
 }
 
 void HDualRow::update_dual(double theta, int columnOut) {
-  HighsTimer &timer = workHMO.timer_;
-  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
+  HighsTimer& timer = workHMO.timer_;
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   //  &workHMO.>checkDualObjectiveValue("Before update_dual");
   timer.start(simplex_info.clock_[UpdateDualClock]);
-  double *workDual = &workHMO.simplex_info_.workDual_[0];
+  double* workDual = &workHMO.simplex_info_.workDual_[0];
   //  int columnOut_i = -1;
   for (int i = 0; i < packCount; i++) {
     workDual[packIndex[i]] -= theta * packValue[i];
@@ -353,16 +355,17 @@ void HDualRow::update_dual(double theta, int columnOut) {
     //    if (iCol == columnOut) columnOut_i = i;
     double dlDual = theta * packValue[i];
     double iColWorkValue = workHMO.simplex_info_.workValue_[iCol];
-    double dlDuObj = workHMO.simplex_basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
+    double dlDuObj =
+        workHMO.simplex_basis_.nonbasicFlag_[iCol] * (-iColWorkValue * dlDual);
     dlDuObj *= workHMO.scale_.cost_;
-    workHMO.simplex_info_.updatedDualObjectiveValue += dlDuObj;
+    workHMO.simplex_info_.updated_dual_objective_value += dlDuObj;
   }
   timer.stop(simplex_info.clock_[UpdateDualClock]);
 }
 
 void HDualRow::create_Freelist() {
   freeList.clear();
-  const int *nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
+  const int* nonbasicFlag = &workHMO.simplex_basis_.nonbasicFlag_[0];
   int ckFreeListSize = 0;
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   for (int i = 0; i < numTot; i++) {
@@ -382,10 +385,9 @@ void HDualRow::create_Freelist() {
     //  printf("Create Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
     //  freeListE, freeListSize, 100*freeListSize/numTot);
   }
-
 }
 
-void HDualRow::create_Freemove(HVector *row_ep) {
+void HDualRow::create_Freemove(HVector* row_ep) {
   // TODO: Check with Qi what this is doing and why it's expensive
   if (!freeList.empty()) {
     double Ta = workHMO.simplex_info_.update_count < 10
@@ -429,7 +431,8 @@ void HDualRow::delete_Freelist(int iColumn) {
     if (freeListSize != ckFreeListSize) {
       printf("!! STRANGE: freeListSize != ckFreeListSize\n");
     }
-    // const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
+    // const int numTot = workHMO.simplex_lp_.numCol_ +
+    // workHMO.simplex_lp_.numRow_;
     //  printf("Update Freelist %d:%d has size %d (%3d%%)\n", freeListSa,
     //  freeListE, freeListSize, 100*freeListSize/numTot); if
     //  (freeList.empty()) {

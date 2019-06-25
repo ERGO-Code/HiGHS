@@ -8,11 +8,11 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file simplex/HMatrix.cpp
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#include "HConfig.h"
 #include "simplex/HMatrix.h"
+#include "HConfig.h"
 
 #include <cassert>
 #include <cmath>
@@ -22,13 +22,13 @@
 #include "lp_data/HConst.h"
 #include "simplex/HVector.h"
 
-using std::swap;
 using std::fabs;
 using std::max;
+using std::swap;
 
-void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
-                    const int *Aindex_, const double *Avalue_,
-                    const int *nonbasicFlag_) {
+void HMatrix::setup(int numCol_, int numRow_, const int* Astart_,
+                    const int* Aindex_, const double* Avalue_,
+                    const int* nonbasicFlag_) {
   // Copy the A matrix and setup row-wise matrix with the nonbasic
   // columns before the basic columns for a general set of nonbasic
   // variables
@@ -95,8 +95,8 @@ void HMatrix::setup(int numCol_, int numRow_, const int *Astart_,
 #endif
 }
 
-void HMatrix::setup_lgBs(int numCol_, int numRow_, const int *Astart_,
-                         const int *Aindex_, const double *Avalue_) {
+void HMatrix::setup_lgBs(int numCol_, int numRow_, const int* Astart_,
+                         const int* Aindex_, const double* Avalue_) {
   // Copy the A matrix and setup row-wise matrix with the nonbasic
   // columns before the basic columns for a logical basis
   //
@@ -157,7 +157,7 @@ void HMatrix::update(int columnIn, int columnOut) {
   }
 }
 
-double HMatrix::compute_dot(HVector &vector, int iCol) const {
+double HMatrix::compute_dot(HVector& vector, int iCol) const {
   double result = 0;
   if (iCol < numCol) {
     for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++)
@@ -168,7 +168,7 @@ double HMatrix::compute_dot(HVector &vector, int iCol) const {
   return result;
 }
 
-void HMatrix::collect_aj(HVector &vector, int iCol, double multiplier) const {
+void HMatrix::collect_aj(HVector& vector, int iCol, double multiplier) const {
   if (iCol < numCol) {
     for (int k = Astart[iCol]; k < Astart[iCol + 1]; k++) {
       int index = Aindex[k];
@@ -188,12 +188,12 @@ void HMatrix::collect_aj(HVector &vector, int iCol, double multiplier) const {
   }
 }
 
-void HMatrix::price_by_col(HVector &row_ap, HVector &row_ep) const {
+void HMatrix::price_by_col(HVector& row_ap, HVector& row_ep) const {
   // Alias
   int ap_count = 0;
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
-  const double *ep_array = &row_ep.array[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
+  const double* ep_array = &row_ep.array[0];
   // Computation
   for (int iCol = 0; iCol < numCol; iCol++) {
     double value = 0;
@@ -208,7 +208,7 @@ void HMatrix::price_by_col(HVector &row_ap, HVector &row_ep) const {
   row_ap.count = ap_count;
 }
 
-void HMatrix::price_by_row(HVector &row_ap, HVector &row_ep) const {
+void HMatrix::price_by_row(HVector& row_ap, HVector& row_ep) const {
   // Vanilla hyper-sparse row-wise PRICE
   // Set up parameters so that price_by_row_w_sw runs as vanilla hyper-sparse
   // PRICE
@@ -219,7 +219,7 @@ void HMatrix::price_by_row(HVector &row_ap, HVector &row_ep) const {
   price_by_row_w_sw(row_ap, row_ep, hist_dsty, fm_i, sw_dsty);
 }
 
-void HMatrix::price_by_row_w_sw(HVector &row_ap, HVector &row_ep,
+void HMatrix::price_by_row_w_sw(HVector& row_ap, HVector& row_ep,
                                 double hist_dsty, int fm_i,
                                 double sw_dsty) const {
   // (Continue) hyper-sparse row-wise PRICE with possible switches to
@@ -227,11 +227,11 @@ void HMatrix::price_by_row_w_sw(HVector &row_ap, HVector &row_ep,
   // density or during hyper-sparse PRICE if there is too much fill-in
   // Alias
   int ap_count = row_ap.count;
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
   const int ep_count = row_ep.count;
-  const int *ep_index = &row_ep.index[0];
-  const double *ep_array = &row_ep.array[0];
+  const int* ep_index = &row_ep.index[0];
+  const double* ep_array = &row_ep.array[0];
   bool rpRow = false;
   bool rpOps = false;
   //  rpRow = true;
@@ -255,7 +255,8 @@ void HMatrix::price_by_row_w_sw(HVector &row_ap, HVector &row_ep,
       if (price_by_row_sw) break;
       double multiplier = ep_array[iRow];
       if (rpRow) {
-        printf("Hyper_p Row %1d: multiplier = %g; NNz = %d\n", i, multiplier, iRowNNz);
+        printf("Hyper_p Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
+               iRowNNz);
         fflush(stdout);
       }
       for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
@@ -304,15 +305,15 @@ void HMatrix::price_by_row_w_sw(HVector &row_ap, HVector &row_ep,
   }
 }
 
-void HMatrix::price_by_row_no_index(HVector &row_ap, HVector &row_ep,
+void HMatrix::price_by_row_no_index(HVector& row_ap, HVector& row_ep,
                                     int fm_i) const {
   // (Continue) standard row-wise PRICE
   // Alias
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
   const int ep_count = row_ep.count;
-  const int *ep_index = &row_ep.index[0];
-  const double *ep_array = &row_ep.array[0];
+  const int* ep_index = &row_ep.index[0];
+  const double* ep_array = &row_ep.array[0];
   bool rpRow = false;
   bool rpOps = false;
   //  rpRow = true;
@@ -323,7 +324,8 @@ void HMatrix::price_by_row_no_index(HVector &row_ap, HVector &row_ep,
     int iRowNNz = AR_Nend[iRow] - ARstart[iRow];
     double multiplier = ep_array[iRow];
     if (rpRow) {
-      printf("StdRowPRICE Row %1d: multiplier = %g; NNz = %d\n", i, multiplier, iRowNNz);
+      printf("StdRowPRICE Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
+             iRowNNz);
       fflush(stdout);
     }
     for (int k = ARstart[iRow]; k < AR_Nend[iRow]; k++) {
@@ -358,7 +360,7 @@ void HMatrix::price_by_row_no_index(HVector &row_ap, HVector &row_ep,
   row_ap.count = ap_count;
 }
 
-void HMatrix::price_by_row_ultra(HVector &row_ap, HVector &row_ep) const {
+void HMatrix::price_by_row_ultra(HVector& row_ap, HVector& row_ep) const {
   const int ep_count = row_ep.count;
   int fm_i = 0;
 
@@ -404,16 +406,16 @@ void HMatrix::price_by_row_ultra(HVector &row_ap, HVector &row_ep) const {
   //  %d\n", ap_pWd, ap_count);
 }
 
-void HMatrix::price_by_row_ultra0(HVector &row_ap, HVector &row_ep,
-                                  int *fm_i_) const {
+void HMatrix::price_by_row_ultra0(HVector& row_ap, HVector& row_ep,
+                                  int* fm_i_) const {
   int ap_count = 0;
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
   //  double *ap_packValue = &row_ap.packValue[0];
-  map<int, double> &row_apPackMap = row_ap.packMap;
+  map<int, double>& row_apPackMap = row_ap.packMap;
   const int ep_count = row_ep.count;
-  const int *ep_index = &row_ep.index[0];
-  const double *ep_array = &row_ep.array[0];
+  const int* ep_index = &row_ep.index[0];
+  const double* ep_array = &row_ep.array[0];
 
   double value0;
   double value1;
@@ -443,7 +445,8 @@ void HMatrix::price_by_row_ultra0(HVector &row_ap, HVector &row_ep,
     double multiplier = ep_array[iRow];
     iRowNNz = AR_Nend[iRow] - ARstart[iRow];
     if (rpRow) {
-      printf("Ultra-0 Row %1d: multiplier = %g; NNz = %d\n", i, multiplier, iRowNNz);
+      printf("Ultra-0 Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
+             iRowNNz);
       fflush(stdout);
     }
     if (ap_count + iRowNNz >= row_ap.packMapMxZ) {
@@ -557,18 +560,18 @@ void HMatrix::price_by_row_ultra0(HVector &row_ap, HVector &row_ep,
   *fm_i_ = fm_i;
 }
 
-void HMatrix::price_by_row_ultra12(HVector &row_ap, HVector &row_ep,
-                                   int *fm_i_) const {
+void HMatrix::price_by_row_ultra12(HVector& row_ap, HVector& row_ep,
+                                   int* fm_i_) const {
   // Alias
   int ap_count = 0;
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
-  double *ap_packValue = &row_ap.packValue[0];
-  unsigned char *ap_valueP1 = &row_ap.valueP1[0];
-  unsigned short *ap_valueP2 = &row_ap.valueP2[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
+  double* ap_packValue = &row_ap.packValue[0];
+  unsigned char* ap_valueP1 = &row_ap.valueP1[0];
+  unsigned short* ap_valueP2 = &row_ap.valueP2[0];
   const int ep_count = row_ep.count;
-  const int *ep_index = &row_ep.index[0];
-  const double *ep_array = &row_ep.array[0];
+  const int* ep_index = &row_ep.index[0];
+  const double* ep_array = &row_ep.array[0];
 
   int valueP = 0;
   double value0;
@@ -598,7 +601,8 @@ void HMatrix::price_by_row_ultra12(HVector &row_ap, HVector &row_ep,
     double multiplier = ep_array[iRow];
     iRowNNz = AR_Nend[iRow] - ARstart[iRow];
     if (rpRow) {
-      printf("Ultra-1 Row %1d: multiplier = %g; NNz = %d\n", i, multiplier, iRowNNz);
+      printf("Ultra-1 Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
+             iRowNNz);
       fflush(stdout);
     }
     if (ap_count + iRowNNz >= ilP) {
@@ -668,7 +672,8 @@ void HMatrix::price_by_row_ultra12(HVector &row_ap, HVector &row_ep,
       double multiplier = ep_array[iRow];
       iRowNNz = AR_Nend[iRow] - ARstart[iRow];
       if (rpRow) {
-        printf("Ultra-2 Row %1d: multiplier = %g; NNz = %d\n", i, multiplier, iRowNNz);
+        printf("Ultra-2 Row %1d: multiplier = %g; NNz = %d\n", i, multiplier,
+               iRowNNz);
         fflush(stdout);
       }
       if (ap_count + iRowNNz >= ilP) {
@@ -744,11 +749,11 @@ void HMatrix::price_by_row_ultra12(HVector &row_ap, HVector &row_ep,
   *fm_i_ = fm_i;
 }
 
-void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
+void HMatrix::price_by_row_rm_cancellation(HVector& row_ap) const {
   // Alias
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
-  double *ap_packValue = &row_ap.packValue[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
+  double* ap_packValue = &row_ap.packValue[0];
   int valueP = 0;
   int ap_pWd;
   // Computation
@@ -773,7 +778,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
       }
     }
   } else if (ap_pWd == row_ap.p0SparseDaStr) {
-    map<int, double> &row_apPackMap = row_ap.packMap;
+    map<int, double>& row_apPackMap = row_ap.packMap;
     map<int, double>::iterator itPackMap;
     //    int *ap_packIndex = &row_ap.packIndex[0];
     for (itPackMap = row_apPackMap.begin(); itPackMap != row_apPackMap.end();
@@ -787,7 +792,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
     }
     row_apPackMap.clear();
   } else if (ap_pWd == row_ap.p1SparseDaStr) {
-    unsigned char *ap_valueP1 = &row_ap.valueP1[0];
+    unsigned char* ap_valueP1 = &row_ap.valueP1[0];
     for (int i = 0; i < apcount1; i++) {
       const int index = ap_index[i];
       valueP = ap_valueP1[index];
@@ -802,7 +807,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
       }
     }
   } else if (ap_pWd == row_ap.p2SparseDaStr) {
-    unsigned short *ap_valueP2 = &row_ap.valueP2[0];
+    unsigned short* ap_valueP2 = &row_ap.valueP2[0];
     if (rpRow) {
       printf("PRICE cancellation removal for ap_pWd = %1d\n", ap_pWd);
       fflush(stdout);
@@ -855,7 +860,7 @@ void HMatrix::price_by_row_rm_cancellation(HVector &row_ap) const {
 }
 
 #ifdef HiGHSDEV
-bool HMatrix::setup_ok(const int *nonbasicFlag_) {
+bool HMatrix::setup_ok(const int* nonbasicFlag_) {
   printf("Checking row-wise matrix\n");
   for (int row = 0; row < numRow; row++) {
     for (int el = ARstart[row]; el < AR_Nend[row]; el++) {
@@ -878,13 +883,13 @@ bool HMatrix::setup_ok(const int *nonbasicFlag_) {
   }
   return true;
 }
-bool HMatrix::price_er_ck(HVector &row_ap, HVector &row_ep) const {
+bool HMatrix::price_er_ck(HVector& row_ap, HVector& row_ep) const {
   // Alias
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
-  double *ap_packValue = &row_ap.packValue[0];
-  unsigned char *ap_valueP1 = &row_ap.valueP1[0];
-  unsigned short *ap_valueP2 = &row_ap.valueP2[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
+  double* ap_packValue = &row_ap.packValue[0];
+  unsigned char* ap_valueP1 = &row_ap.valueP1[0];
+  unsigned short* ap_valueP2 = &row_ap.valueP2[0];
   int ap_pWd = row_ap.pWd;
 
   //  printf("HMatrix::price_er_ck_ultra, count = %d, pWd = %d\n", row_ap.count,
@@ -923,16 +928,16 @@ bool HMatrix::price_er_ck(HVector &row_ap, HVector &row_ep) const {
   return price_er;
 }
 
-bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
+bool HMatrix::price_er_ck_core(HVector& row_ap, HVector& row_ep) const {
   // Alias
-  int *ap_index = &row_ap.index[0];
-  double *ap_array = &row_ap.array[0];
+  int* ap_index = &row_ap.index[0];
+  double* ap_array = &row_ap.array[0];
 
   //  printf("HMatrix::price_er_ck      , count = %d\n", ap_count);
   HVector lc_row_ap;
   lc_row_ap.setup(numCol);
   //  int *lc_ap_index = &lc_row_ap.index[0];
-  double *lc_ap_array = &lc_row_ap.array[0];
+  double* lc_ap_array = &lc_row_ap.array[0];
 
   price_by_row(lc_row_ap, row_ep);
 
@@ -946,8 +951,10 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
   for (int index = 0; index < numCol; index++) {
     double PriceV = ap_array[index];
     double lcPriceV = lc_ap_array[index];
-    if ((fabs(PriceV) > HIGHS_CONST_TINY && fabs(lcPriceV) <= HIGHS_CONST_TINY) ||
-        (fabs(lcPriceV) > HIGHS_CONST_TINY && fabs(PriceV) <= HIGHS_CONST_TINY)) {
+    if ((fabs(PriceV) > HIGHS_CONST_TINY &&
+         fabs(lcPriceV) <= HIGHS_CONST_TINY) ||
+        (fabs(lcPriceV) > HIGHS_CONST_TINY &&
+         fabs(PriceV) <= HIGHS_CONST_TINY)) {
       double TinyVEr = std::max(fabs(PriceV), fabs(lcPriceV));
       mxTinyVEr = max(TinyVEr, mxTinyVEr);
       if (TinyVEr > 1e-4) {
@@ -1020,4 +1027,3 @@ bool HMatrix::price_er_ck_core(HVector &row_ap, HVector &row_ep) const {
   return price_er;
 }
 #endif
-

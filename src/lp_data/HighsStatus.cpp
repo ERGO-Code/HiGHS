@@ -3,7 +3,8 @@
 
 // Report a HighsStatus.
 void HighsStatusReport(const char* message, HighsStatus status) {
-  HighsLogMessage(HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n", message, (int)status, HighsStatusToString(status).c_str());
+  HighsLogMessage(HighsMessageType::INFO, "%s: HighsStatus = %d - %s\n",
+                  message, (int)status, HighsStatusToString(status).c_str());
 }
 
 // Return a string representation of HighsStatus.
@@ -57,8 +58,11 @@ std::string HighsStatusToString(HighsStatus status) {
     case HighsStatus::Infeasible:
       return "Infeasible";
       break;
-    case HighsStatus::Feasible:
-      return "Feasible";
+    case HighsStatus::PrimalFeasible:
+      return "PrimalFeasible";
+      break;
+    case HighsStatus::DualFeasible:
+      return "DualFeasible";
       break;
     case HighsStatus::Optimal:
       return "Optimal";
@@ -81,7 +85,7 @@ HighsStatus worseStatus(HighsStatus status0, HighsStatus status1) {
     return_status = HighsStatus::Warning;
   else if (status0 == HighsStatus::Info || status1 == HighsStatus::Info)
     return_status = HighsStatus::Info;
-  else 
+  else
     return_status = HighsStatus::OK;
   return return_status;
 }

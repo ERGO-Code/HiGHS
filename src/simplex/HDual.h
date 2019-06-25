@@ -19,27 +19,19 @@
 #include <vector>
 
 #include "HConfig.h"
+#include "lp_data/HighsModelObject.h"
 #include "simplex/HCrash.h"
 #include "simplex/HDualRHS.h"
 #include "simplex/HDualRow.h"
-#include "lp_data/HighsModelObject.h"
-#include "simplex/HVector.h"
 #include "simplex/HMatrix.h"
 #include "simplex/HSimplex.h"
+#include "simplex/HVector.h"
 
 class HFactor;
 
-enum class DualEdgeWeightMode {
-  DANTZIG = 0,
-    DEVEX,
-    STEEPEST_EDGE,
-    Count
-};
+enum class DualEdgeWeightMode { DANTZIG = 0, DEVEX, STEEPEST_EDGE, Count };
 
-enum class PriceMode {
-  ROW = 0,
-  COL
-};
+enum class PriceMode { ROW = 0, COL };
 
 /**
  * Limit on number of threads used to dimension many identifiers
@@ -86,26 +78,25 @@ const double pami_cutoff = 0.95;
  */
 class HDual {
  public:
- HDual(HighsModelObject& model_object) : workHMO(model_object),
-    dualRow(model_object),
-    dualRHS(model_object) {
-      dualRow.setup();
-      for (int i=0; i<HIGHS_SLICED_LIMIT; i++) slice_dualRow.push_back(HDualRow(model_object));
-      dualRHS.setup();
-    }
-  
+  HDual(HighsModelObject& model_object)
+      : workHMO(model_object), dualRow(model_object), dualRHS(model_object) {
+    dualRow.setup();
+    for (int i = 0; i < HIGHS_SLICED_LIMIT; i++)
+      slice_dualRow.push_back(HDualRow(model_object));
+    dualRHS.setup();
+  }
+
   /**
    * @brief Solve a model instance with a given number of threads
    */
-  void solve(
-	     int num_threads = 1  //!< Default number of threads is 1
+  void solve(int num_threads = 1  //!< Default number of threads is 1
   );
 
  public:
   /**
    * @brief Set solver options from simplex options
    */
-  void options(); 
+  void options();
   /**
    * @brief Initialise a dual simplex instance
    *
@@ -126,7 +117,7 @@ class HDual {
    * used with non-logical initial basis
    */
   void initSlice(int init_sliced_num  //!< Ideal number of slices - true number
-                                       //!< is modified in light of limits
+                                      //!< is modified in light of limits
   );
 
   /**
@@ -193,8 +184,8 @@ class HDual {
 #endif
 
   /**
-   * @brief Report on the iteration using iterationReportFull, possibly using it to
-   * write out column headers
+   * @brief Report on the iteration using iterationReportFull, possibly using it
+   * to write out column headers
    */
   void iterationReport();
 
@@ -202,50 +193,63 @@ class HDual {
    * @brief Report full iteration headers or data according to value of
    * <tt>header</tt>
    */
-  void iterationReportFull(
-		     bool header  //!< Logic to determine whether to write out column headers or data
+  void iterationReportFull(bool header  //!< Logic to determine whether to write
+                                        //!< out column headers or data
   );
 
   /**
-   * @brief Report iteration number and LP phase headers or data according to value of <tt>header</tt>
+   * @brief Report iteration number and LP phase headers or data according to
+   * value of <tt>header</tt>
    */
   void iterationReportIterationAndPhase(
-		       int iterate_log_level, //!< Iteration logging level
-		       bool header            //!< Logic to determine whether to write out column headers or data
+      int iterate_log_level,  //!< Iteration logging level
+      bool header  //!< Logic to determine whether to write out column headers
+                   //!< or data
   );
 
   /**
-   * @brief Report dual objective value header or data according to value of <tt>header</tt>
+   * @brief Report dual objective value header or data according to value of
+   * <tt>header</tt>
    */
   void iterationReportDualObjective(
-		      int iterate_log_level, //!< Iteration logging level
-		      bool header            //!< Logic to determine whether to write out column header or data
+      int iterate_log_level,  //!< Iteration logging level
+      bool header  //!< Logic to determine whether to write out column header or
+                   //!< data
   );
 
   /**
-   * @brief Report dual iteration data header or data according to value of <tt>header</tt>
+   * @brief Report dual iteration data header or data according to value of
+   * <tt>header</tt>
    */
   void iterationReportIterationData(
-		       int iterate_log_level, //!< Iteration logging level
-		       bool header            //!< Logic to determine whether to write out column headers or data
+      int iterate_log_level,  //!< Iteration logging level
+      bool header  //!< Logic to determine whether to write out column headers
+                   //!< or data
   );
 
   /**
-   * @brief Report dual iteration operation density header or data according to value of <tt>header</tt>
+   * @brief Report dual iteration operation density header or data according to
+   * value of <tt>header</tt>
    */
   void iterationReportDensity(
-		     int iterate_log_level, //!< Iteration logging level
-		     bool header            //!< Logic to determine whether to write out column headers or data
+      int iterate_log_level,  //!< Iteration logging level
+      bool header  //!< Logic to determine whether to write out column headers
+                   //!< or data
   );
   int intLog10(double v);
 
-
+  /**
+   * @brief Single line report after rebuild
+   */
+  void iterationReportRebuild(
+      const int i_v  //!< Integer value for reporting - generally invertHint
+  );
 
   /**
-   * @brief Single line report after INVERT
+   * @brief Report infeasibility
    */
-  void iterationReportInvert(
-		       int i_v  //!< Integer value to be reported - generally invertHint
+  void reportInfeasibility(
+      const int i_v  //!< Integer value for reporting - generally invertHint
   );
 
   /**
@@ -253,7 +257,7 @@ class HDual {
    */
   void uOpRsDensityRec(
       double lc_OpRsDensity,  //!< Recent density of the operation
-      double &opRsDensity     //!< Average density of the operation
+      double& opRsDensity     //!< Average density of the operation
   );
   /**
    * @brief Choose the index of a good row to leave the basis (CHUZR)
@@ -264,13 +268,13 @@ class HDual {
    * @brief Compute pivot row (PRICE) and choose the index of a good column to
    * enter the basis (CHUZC)
    */
-  void chooseColumn(HVector *row_ep);
+  void chooseColumn(HVector* row_ep);
 
   /**
    * @brief Choose the index of a good column to enter the basis (CHUZC) by
    * exploiting slices of the pivotal row - for SIP and PAMI
    */
-  void chooseColumn_slice(HVector *row_ep);
+  void chooseColumn_slice(HVector* row_ep);
 
   /**
    * @brief Compute the pivotal column (FTRAN)
@@ -287,7 +291,7 @@ class HDual {
    * @brief Compute the std::vector required to update DSE weights - being
    * FTRAN applied to the pivotal column (FTRAN-DSE)
    */
-  void updateFtranDSE(HVector *DSE_Vector  //!< Pivotal column as RHS for FTRAN
+  void updateFtranDSE(HVector* DSE_Vector  //!< Pivotal column as RHS for FTRAN
   );
   /**
    * @brief Compare the pivot value computed row-wise and column-wise
@@ -303,7 +307,7 @@ class HDual {
   /**
    * @brief Update the primal values and any edge weights
    */
-  void updatePrimal(HVector *DSE_Vector  //!< FTRANned pivotal column
+  void updatePrimal(HVector* DSE_Vector  //!< FTRANned pivotal column
   );
 
   /**
@@ -324,9 +328,11 @@ class HDual {
   void iz_dvx_fwk();
 
   /**
-   * @brief Interpret the dual edge weight strategy as setting of a mode and other actions
+   * @brief Interpret the dual edge weight strategy as setting of a mode and
+   * other actions
    */
-  void interpret_dual_edge_weight_strategy(SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy);
+  void interpret_dual_edge_weight_strategy(
+      SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy);
 
   /**
    * @brief Interpret the PRICE strategy as setting of a mode and other actions
@@ -334,17 +340,16 @@ class HDual {
   void interpret_price_strategy(SimplexPriceStrategy simplex_price_strategy);
 
 #ifdef HiGHSDEV
-  double checkDualObjectiveValue(const char *message, int phase = 2);
+  double checkDualObjectiveValue(const char* message, int phase = 2);
 #endif
-
 
   /**
    * @brief Get a row of the inverse of the basis matrix for SCIP
    */
   int util_getBasisInvRow(int r,         //!< Index of row required
-                          double *coef,  //!< Value of entries in row required
-                          int *inds,     //!< Indices of entries in row required
-                          int *ninds     //!< Number of indices in row required
+                          double* coef,  //!< Value of entries in row required
+                          int* inds,     //!< Indices of entries in row required
+                          int* ninds     //!< Number of indices in row required
   );
 
   /**
@@ -431,13 +436,13 @@ class HDual {
   void major_rollback();
 
 #ifdef HiGHSDEV
-  void iterateOpRecBf(int opTy, HVector &vector, double hist_dsty);
-  void iterateOpRecAf(int opTy, HVector &vector);
+  void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
+  void iterateOpRecAf(int opTy, HVector& vector);
 #endif
 
-  int Crash_Mode = 0;     //!< Crash mode. TODO: handle this otherwise
+  int Crash_Mode = 0;  //!< Crash mode. TODO: handle this otherwise
   bool solve_bailout;  //!< Set true if control is to be returned immediately to
-                      //!< calling function
+                       //!< calling function
 
   // Devex scalars
   int n_dvx_fwk;    //!< Number of Devex frameworks used
@@ -448,8 +453,8 @@ class HDual {
 
   // Price scalars
   // DSE scalars
-  int AnIterNumCostlyDseIt;    //!< Number of iterations when DSE is costly
-  double AnIterCostlyDseFq;    //!< Frequency of iterations when DSE is costly
+  int AnIterNumCostlyDseIt;  //!< Number of iterations when DSE is costly
+  double AnIterCostlyDseFq;  //!< Frequency of iterations when DSE is costly
   const double AnIterCostlyDseMeasureLimit = 1000.0;  //!<
   const double AnIterCostlyDseMnDensity = 0.01;       //!<
   const double AnIterFracNumTot_ItBfSw = 0.1;         //!<
@@ -465,26 +470,26 @@ class HDual {
 #endif
 
   // Model
-  HighsModelObject &workHMO;
+  HighsModelObject& workHMO;
   int solver_num_row;
   int solver_num_col;
   int solver_num_tot;
 
-  const HMatrix *matrix;
-  const HFactor *factor;
+  const HMatrix* matrix;
+  const HFactor* factor;
 
-  const int *jMove;
-  const double *workRange;
-  const double *baseLower;
-  const double *baseUpper;
-  double *baseValue;
-  double *workDual;
-  double *workValue;
-  double *colLower;
-  double *colUpper;
-  double *rowLower;
-  double *rowUpper;
-  int *nonbasicFlag;
+  const int* jMove;
+  const double* workRange;
+  const double* baseLower;
+  const double* baseUpper;
+  double* baseValue;
+  double* workDual;
+  double* workValue;
+  double* colLower;
+  double* colUpper;
+  double* rowLower;
+  double* rowUpper;
+  int* nonbasicFlag;
 
   // Options
   DualEdgeWeightMode dual_edge_weight_mode;
@@ -495,7 +500,8 @@ class HDual {
   bool allow_price_by_col_switch;
   bool allow_price_by_row_switch;
   bool allow_price_ultra;
-  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE when pi_p has at least this density
+  const double dstyColPriceSw = 0.75;  //!< By default switch to column PRICE
+                                       //!< when pi_p has at least this density
 
   double Tp;  // Tolerance for primal
   double primal_feasibility_tolerance;
@@ -503,8 +509,9 @@ class HDual {
   double Td;  // Tolerance for dual
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
-  
+
   int solvePhase;
+  int previous_iteration_report_header_iteration_count = -1;
   int invertHint;
 
   HVector row_ep;
@@ -634,10 +641,10 @@ class HDual {
     int AnIterTrace_dual_edge_weight_mode;
   };
 
-  enum AnIterTraceMxNumRec {AN_ITER_TRACE_MX_NUM_REC = 20};
+  enum AnIterTraceMxNumRec { AN_ITER_TRACE_MX_NUM_REC = 20 };
   int AnIterTraceNumRec;
   int AnIterTraceIterDl;
-  AnIterTraceRec AnIterTrace[1+AN_ITER_TRACE_MX_NUM_REC+1];
+  AnIterTraceRec AnIterTrace[1 + AN_ITER_TRACE_MX_NUM_REC + 1];
 
   int AnIterNumInvert[INVERT_HINT_Count];
   int AnIterNumColPrice;
@@ -646,7 +653,7 @@ class HDual {
   int AnIterNumRowPriceUltra;
   int AnIterNumPrDgnIt;
   int AnIterNumDuDgnIt;
-  int AnIterNumEdWtIt[(int) DualEdgeWeightMode::Count];
+  int AnIterNumEdWtIt[(int)DualEdgeWeightMode::Count];
 #endif
 };
 
