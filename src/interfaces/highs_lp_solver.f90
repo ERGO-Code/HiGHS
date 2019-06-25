@@ -181,98 +181,145 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_changeColsCostBySet
 
+    function Highs_changeColsCostByMask (h, mask, cost) result(s) bind(c, name='Highs_changeColsCostByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ) :: mask(*)
+      real ( c_double ) :: cost(*)
+      integer ( c_int ) :: s
+    end function Highs_changeColsCostByMask
 
-! int Highs_changeColsCostByMask(
-!     void *highs,        //!< HiGHS object reference
-!     const int *mask,    //!< Full length array with 1 => change; 0 => not
-!     const double *cost  //!< Full length array of new costs
-! );
+    function Highs_changeColBounds (h, col, lo, up) result(s) bind(c, name='Highs_changeColBounds')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer ( c_int ), VALUE :: col
+      real ( c_double ), VALUE :: lo
+      real (c_double ), VALUE :: up
+      integer ( c_int ) :: s
+    end function Highs_changeColBounds
 
-! /**
-!  * @brief Change the bounds of a column
-!  */
-! int Highs_changeColBounds(
-!     void *highs,         //!< HiGHS object reference
-!     const int col,       //!< The index of the column whose bounds are to change
-!     const double lower,  //!< The new lower bound
-!     const double upper   //!< The new upper bound
-! );
+    function Highs_changeColsBoundsByRange (h, from, to, lo, up) result(s) bind(c, name='Highs_changeColsBoundsByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      real(c_double) :: lo(*)
+      real(c_double) :: up(*)
+      integer(c_int) :: s
+    end function Highs_changeColsBoundsByRange
 
-! /**
-!  * @brief Change the bounds of multiple columns given by an interval
-!  */
-! int Highs_changeColsBoundsByRange(
-!     void *highs,         //!< HiGHS object reference
-!     const int from_col,  //!< The index of the first column whose bounds change
-!     const int to_col,    //!< One more than the index of the last column whose
-!                          //!< bounds change
-!     const double
-!         *lower,  //!< Array of size to_col-from_col with new lower bounds
-!     const double
-!         *upper  //!< Array of size to_col-from_col with new upper bounds
-! );
+    function Highs_changeColsBoundsBySet (h, nse, set, lo, up) result(s) bind(c, name='Highs_changeColsBoundsBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: nse
+      integer(c_int) :: set(*)
+      real(c_double) :: lo(*)
+      real(c_double) :: up(*)
+      integer(c_int) :: s
+    end function Highs_changeColsBoundsBySet
 
-! /**
-!  * @brief Change the bounds of multiple columns given by a set of indices
-!  */
-! int Highs_changeColsBoundsBySet(
-!     void *highs,                //!< HiGHS object reference
-!     const int num_set_entries,  //!< The number of indides in the set
-!     const int *set,  //!< Array of size num_set_entries with indices of
-!                      //!< columns whose bounds change
-!     const double
-!         *lower,  //!< Array of size num_set_entries with new lower bounds
-!     const double
-!         *upper  //!< Array of size num_set_entries with new upper bounds
-! );
+    function Highs_changeColsBoundsByMask (h, mask, lo, up) result(s) bind(c, name='Highs_changeColsBoundsByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: mask(*)
+      real(c_double) :: lo(*)
+      real(c_double) :: up(*)
+      integer(c_int) :: s
+    end function Highs_changeColsBoundsByMask
 
-! /**
-!  * @brief Change the cost of multiple columns given by a mask
-!  */
-! int Highs_changeColsBoundsByMask(
-!     void *highs,          //!< HiGHS object reference
-!     const int *mask,      //!< Full length array with 1 => change; 0 => not
-!     const double *lower,  //!< Full length array of new lower bounds
-!     const double *upper   //!< Full length array of new upper bounds
-! );
+    function Highs_changeRowBounds (h, row, lo, up) result(s) bind(c, name='Highs_changeRowBounds')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: row
+      real(c_double), VALUE :: lo
+      real(c_double), VALUE :: up
+      integer(c_int) :: s
+    end function Highs_changeRowBounds
 
-! /**
-!  * @brief Change the bounds of a row
-!  */
-! int Highs_changeRowBounds(
-!     void *highs,         //!< HiGHS object reference
-!     const int row,       //!< The index of the row whose bounds are to change
-!     const double lower,  //!< The new lower bound
-!     const double upper   //!< The new upper bound
-! );
+    function Highs_changeRowsBoundsBySet (h, nse, set, lo, up) result(s) bind(c, name='Highs_changeRowsBoundsBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: nse
+      integer(c_int) :: set(*)
+      real(c_double) :: lo(*)
+      real(c_double) :: up(*)
+      integer(c_int) :: s
+    end function Highs_changeRowsBoundsBySet
 
-! /**
-!  * @brief Change the bounds of multiple rows given by a set of indices
-!  */
-! int Highs_changeRowsBoundsBySet(
-!     void *highs,                //!< HiGHS object reference
-!     const int num_set_entries,  //!< The number of indides in the set
-!     const int *set,  //!< Array of size num_set_entries with indices of rows
-!                      //!< whose bounds change
-!     const double
-!         *lower,  //!< Array of size num_set_entries with new lower bounds
-!     const double
-!         *upper  //!< Array of size num_set_entries with new upper bounds
-! );
+    function Highs_changeRowsBoundsByMask (h, mask, lo, up) result(s) bind(c, name='Highs_changeRowsBoundsByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: mask(*)
+      real(c_double) :: lo(*)
+      real(c_double) :: up(*)
+      integer(c_int) :: s
+    end function Highs_changeRowsBoundsByMask
 
-! /**
-!  * @brief Change the cost of multiple rows given by a mask
-!  */
-! int Highs_changeRowsBoundsByMask(
-!     void *highs,          //!< HiGHS object reference
-!     const int *mask,      //!< Full length array with 1 => change; 0 => not
-!     const double *lower,  //!< Full length array of new lower bounds
-!     const double *upper   //!< Full length array of new upper bounds
-! );
+    function Highs_deleteColsByRange (h, from, to) result(s) bind(c, name='Highs_deleteColsByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      integer(c_int) :: s
+    end function
 
-! /**
-!  * @brief Get multiple columns from the model given by an interval
-!  */
+    function Highs_deleteColsBySet (h, nse, set) result(s) bind(c, name='Highs_deleteColsBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: nse
+      integer(c_int) :: set(*)
+      integer(c_int) :: s
+    end function Highs_deleteColsBySet
+
+    function Highs_deleteColsByMask (h, mask) result(s) bind(c, name='Highs_deleteColsByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: mask(*)
+      integer(c_int) :: s
+    end function Highs_deleteColsByMask
+
+    function Highs_deleteRowsByRange (h, from, to) result(s) bind(c, name='Highs_deleteRowsByRange')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: from
+      integer(c_int), VALUE :: to
+      integer(c_int) :: s
+    end function Highs_deleteRowsByRange
+
+    function Highs_deleteRowsBySet (h, nse, set) result(s) bind(c, name='Highs_deleteRowsBySet')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int), VALUE :: nse
+      integer(c_int) :: set(*)
+      integer(c_int) :: s
+    end function Highs_deleteRowsBySet
+
+    function Highs_deleteRowsByMask (h, mask) result(s) bind(c, name='Highs_deleteRowsByMask')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: mask(*)
+      integer(c_int) :: s
+    end function Highs_deleteRowsByMask
+
+    function Highs_getNumCols (h) result(nc) bind(c, name='Highs_getNumCols')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: nc
+    end function Highs_getNumCols
+
+    function Highs_getNumRows (h) result(nr) bind(c, name='Highs_getNumRows')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: nr
+    end function Highs_getNumRows
+
+    function Highs_getNumNz (h) result(nnz) bind(c, name='Highs_getNumNz')
+      use iso_c_binding
+      type(c_ptr), VALUE :: h
+      integer(c_int) :: nnz
+    end function Highs_getNumNz
+
+  
 ! int Highs_getColsByRange(
 !     void *highs,          //!< HiGHS object reference
 !     const int from_col,   //!< The index of the first column to
@@ -388,86 +435,6 @@ module highs_lp_solver
 !     double *matrix_value  //!< Array of size num_nz with column
 !                           //!< values for the rows
 ! );
-
-! /**
-!  * @brief Delete multiple columns from the model given by an interval
-!  */
-! int Highs_deleteColsByRange(
-!     void *highs,         //!< HiGHS object reference
-!     const int from_col,  //!< The index of the first column
-!                          //!< to delete from the model
-!     const int to_col     //!< One more than the last column to
-!                          //!< delete from the model
-! );
-
-! /**
-!  * @brief Delete multiple columns from the model given by a set
-!  */
-! int Highs_deleteColsBySet(
-!     void *highs,                //!< HiGHS object reference
-!     const int num_set_entries,  //!< The number of indides in the set
-!     const int *set  //!< Array of size num_set_entries with indices of columns
-!                     //!< to delete
-! );
-
-! /**
-!  * @brief Delete multiple columns from the model given by a mask
-!  */
-! int Highs_deleteColsByMask(
-!     void *highs,  //!< HiGHS object reference
-!     int *mask     //!< Full length array with 1 => delete; 0 => not
-! );
-
-! /**
-!  * @brief Delete multiple rows from the model given by an interval
-!  */
-! int Highs_deleteRowsByRange(
-!     void *highs,  //!< HiGHS object reference
-!     const int
-!         from_row,     //!< The index of the first row to delete from the model
-!     const int to_row  //!< One more than the last row delete from the model
-! );
-
-! /**
-!  * @brief Delete multiple rows from the model given by a set
-!  */
-! int Highs_deleteRowsBySet(
-!     void *highs,                //!< HiGHS object reference
-!     const int num_set_entries,  //!< The number of indides in the set
-!     const int *set  //!< Array of size num_set_entries with indices of columns
-!                     //!< to delete
-! );
-
-! /**
-!  * @brief Delete multiple rows from the model given by a mask
-!  */
-! int Highs_deleteRowsByMask(
-!     void *highs,  //!< HiGHS object reference
-!     int *mask     //!< Full length array with 1 => delete; 0 => not
-! );
-
-! /**
-!  * @brief Returns the number of columns of the current model
-!  */
-! int Highs_getNumCols(
-!     void* highs //!< HiGHS object reference
-! );
-
-! /**
-!  * @brief Returns the number of rows of the current model
-!  */
-! int Highs_getNumRows(
-!     void* highs //!< HiGHS object reference
-! );
-
-! /**
-!  * @brief Returns the number of nonzeroes of the current model
-!  */
-! int Highs_getNumNz(
-!     void* highs //!< HiGHS object reference
-! );
-  
-  
   
   
     end interface
