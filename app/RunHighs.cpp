@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
       printf("In main: fail return from loadOptionsFromFile\n");
     }
   }
-
+  if (options.run_as_hsol) setHsolOptions(options);
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {

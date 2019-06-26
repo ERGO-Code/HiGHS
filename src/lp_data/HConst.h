@@ -44,6 +44,9 @@ enum class IpmOption { OFF = 0, ON, DEFAULT = OFF };
 
 const std::string FILENAME_DEFAULT = "";
 const std::string OPTIONS_FILE_DEFAULT = "";
+const int RUN_AS_HSOL_MIN = 0;
+const int RUN_AS_HSOL_DEFAULT = 0;
+const int RUN_AS_HSOL_MAX = 1;
 const double INFINITE_COST_MIN = 1e15;
 const double INFINITE_COST_DEFAULT = 1e20;
 const double INFINITE_COST_MAX = 1e25;
