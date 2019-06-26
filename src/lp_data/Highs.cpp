@@ -257,7 +257,11 @@ HighsStatus Highs::run() {
 	  hmos_[original_hmo].basis_.valid_ = true;
 	  // Analyse the Highs basic solution returned from postsolve
 	  HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
-	  simplex_interface.analyseHighsSolutionAndBasis(1, "after returning from postsolve");
+	  int report_level=-1;
+#ifdef HiGHSDEV
+	  report_level = 1
+#endif
+	  simplex_interface.analyseHighsSolutionAndBasis(report_level, "after returning from postsolve");
 	  // Now hot-start the simplex solver for the original_hmo
 	  solved_hmo = original_hmo;
 	  // Save the options to allow the best simplex strategy to

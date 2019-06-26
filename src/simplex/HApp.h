@@ -179,8 +179,12 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // Optimal solution: copy the solution and basis
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
+    int report_level=-1;
+#ifdef HiGHSDEV
+    report_level = 1
+#endif
     if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(1, "after running the simplex solver");
+      simplex_interface.analyseHighsSolutionAndBasis(report_level, "after running the simplex solver");
   }
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
@@ -199,25 +203,9 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   SimplexBasis& basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsScale& scale = highs_model_object.scale_;
-  double extreme_equilibration_improvement = scale.extreme_equilibration_improvement_;
-  double mean_equilibration_improvement = scale.mean_equilibration_improvement_;
-  if (!scale.is_scaled_) {
-    // Scaling has not been performed so report equilibration and return
-    printf("grep_scaling,%s,%g,%g\n",
-	   highs_model_object.lp_.model_name_.c_str(),
-	   extreme_equilibration_improvement,
-	   mean_equilibration_improvement);
-    return highs_status;
-  }
+  if (!scale.is_scaled_) return highs_status;
   int scaled_lp_iteration_count = highs_model_object.simplex_info_.iteration_count;
   double scaled_lp_objective_value = highs_model_object.simplex_info_.primal_objective_value;
-  // Get the scale factor ranges for reporting
-  double min_col_scale;
-  double max_col_scale;
-  double min_row_scale;
-  double max_row_scale;
-  scaleFactorRanges(highs_model_object, min_col_scale, max_col_scale,
-		    min_row_scale, max_row_scale);
   double cost_scale = scale.cost_;
   if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
   assert(cost_scale == 1);
@@ -267,11 +255,13 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
       if (unscaled_dual_infeasibility > options.dual_feasibility_tolerance) {
 	num_unscaled_dual_infeasibilities++;
 	double multiplier = options.dual_feasibility_tolerance / scale_mu;
+#ifdef HiGHSDEV
 	HighsLogMessage(HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			iVar, iCol, iRow, lower, value, upper,
 			scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
 			multiplier);
+#endif
 	new_dual_feasibility_tolerance = min(multiplier, new_dual_feasibility_tolerance);
       }
       max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
@@ -306,16 +296,19 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
       if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance) {
 	num_unscaled_primal_infeasibilities++;
 	double multiplier = options.primal_feasibility_tolerance / scale_mu;
+#ifdef HiGHSDEV
 	HighsLogMessage(HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			iVar, iCol, iRow, lower, value, upper,
 			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
 			multiplier);
+#endif
 	new_primal_feasibility_tolerance = min(multiplier, new_primal_feasibility_tolerance);
       }
       max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
       sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
     }
+#ifdef HiGHSDEV
     HighsLogMessage(HighsMessageType::INFO, "solveModelSimplex pass %1d:", pass);
     if (num_scaled_primal_infeasibilities>0) {
       HighsLogMessage(HighsMessageType::ERROR, "  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
@@ -337,6 +330,7 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 		    num_unscaled_dual_infeasibilities,
 		    max_unscaled_dual_infeasibility,
 		    sum_unscaled_dual_infeasibilities);
+#endif
     if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
       HighsLogMessage(HighsMessageType::INFO,
 		      "Have %d primal and %d dual unscaled infeasibilities so possibly re-solve with infeasibility tolerances of %g primal and %g dual",

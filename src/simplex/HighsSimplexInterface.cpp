@@ -1731,6 +1731,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
       SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+#ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
 	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
 	 SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str(),
@@ -1740,6 +1741,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
 	 num_primal_infeasibilities, max_primal_infeasibility, sum_primal_infeasibilities,
 	 num_dual_residual, max_dual_residual, sum_dual_residual,
 	 num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
+#endif
   return solution_status;
 }
 

@@ -591,6 +591,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   }
   simplex_lp_status.solution_status = solution_status;
   //
+#ifdef HiGHSDEV
   // If there is a HiGHS solution then determine the changes in basic
   // and nonbasic values and duals for columns and rows
   if (have_highs_solution) {
@@ -718,7 +719,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
 	   num_basic_col_dual_differences, sum_basic_col_dual_differences,
 	   num_basic_row_dual_differences, sum_basic_row_dual_differences);
   }
-
+#endif  
   HighsLogMessage(
       HighsMessageType::INFO,
       "Initial basic solution: Objective = %.15g; "
@@ -1324,6 +1325,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   }
   double geomean_original_col_equilibration = exp(sum_original_log_col_equilibration/numCol);
   double geomean_original_row_equilibration = exp(sum_original_log_row_equilibration/numRow);
+#ifdef HiGHSDEV
   HighsLogMessage(HighsMessageType::INFO, "Scaling: Original equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
 	 min_original_col_equilibration,
 	 geomean_original_col_equilibration,
@@ -1331,8 +1333,10 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 	 min_original_row_equilibration,
 	 geomean_original_row_equilibration,
 	 max_original_row_equilibration);
+#endif
   double geomean_col_equilibration = exp(sum_log_col_equilibration/numCol);
   double geomean_row_equilibration = exp(sum_log_row_equilibration/numRow);
+#ifdef HiGHSDEV
   HighsLogMessage(HighsMessageType::INFO, "Scaling: Final    equilibration: min/mean/max %11.4f/%11.4f/%11.4f (cols); min/mean/max %11.4f/%11.4f/%11.4f (rows)",
 	 min_col_equilibration,
 	 geomean_col_equilibration,
@@ -1340,6 +1344,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 	 min_row_equilibration,
 	 geomean_row_equilibration,
 	 max_row_equilibration);
+#endif
   scale.extreme_equilibration_improvement_ =
     (max_original_col_equilibration/min_original_col_equilibration +
      max_original_row_equilibration/min_original_row_equilibration)/

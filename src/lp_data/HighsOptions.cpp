@@ -140,12 +140,12 @@ void reportStringOptionValue(const int report_level, const string option_string,
   }
   bool is_default = option_value == option_default;
   if (!is_default || report_level) {
-    printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
-      printf(" default value \"%s\"\n", option_default.c_str());
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"%s\"\n",
+		      option_string.c_str(), option_default.c_str());
     } else {
-      printf("%s value \"%s\"", default_space.c_str(), option_value.c_str());
-      printf(": default value is \"%s\"\n", option_default.c_str());
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has %s value \"%s\": default value is \"%s\"",
+		      option_string.c_str(), default_space.c_str(), option_value.c_str(), option_default.c_str());
     }
   }
 }
@@ -243,10 +243,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.presolve_option == PresolveOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      printf("Option: %-32s has default value \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
              presolve_string.c_str());
     } else {
-      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
 	     presolve_string.c_str(), default_space.c_str());
     }
   }
@@ -254,9 +254,9 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.crash_option == CrashOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      printf("Option: %-32s has default value \"off\"\n", crash_string.c_str());
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"", crash_string.c_str());
     } else {
-      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
 	     crash_string.c_str(), default_space.c_str());
     }
   }
@@ -264,10 +264,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.parallel_option == ParallelOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      printf("Option: %-32s has default value \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
              parallel_string.c_str());
     } else {
-      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
 	     parallel_string.c_str(), default_space.c_str());
     }
   }
@@ -275,10 +275,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.simplex_option == SimplexOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      printf("Option: %-32s has default value \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
              simplex_string.c_str());
     } else {
-      printf("Option: %-32s has%s value \"on\": default value is \"off\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
 	     simplex_string.c_str(), default_space.c_str());
     }
   }
@@ -287,10 +287,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.ipx == false;
   if (!is_default || report_level) {
     if (is_default) {
-      printf("Option: %-32s has default value \"false\"\n", ipm_string.c_str());
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"false\"", ipm_string.c_str());
     } else {
-      printf("Option: %-32s has%s value \"true\": default value is "
-	     "\"false\"\n",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"true\": default value is "
+	     "\"false\"",
 	     ipm_string.c_str(), default_space.c_str());
     }
   }
