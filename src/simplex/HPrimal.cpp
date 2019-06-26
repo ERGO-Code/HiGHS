@@ -250,21 +250,6 @@ void HPrimal::solvePhase2() {
       if (invertHint) {
         break;
       }
-      double current_dual_objective_value =
-          simplex_info.updated_dual_objective_value;
-      // printf("HPrimal::solvePhase2: Iter = %d; Objective = %g\n",
-      // simplex_info.iteration_count, current_dual_objective_value);
-      if (current_dual_objective_value >
-          simplex_info.dual_objective_value_upper_bound) {
-#ifdef SCIP_DEV
-        printf("HPrimal::solvePhase2: %12g = Objective > ObjectiveUB\n",
-               current_dual_objective_value,
-               simplex_info.dual_objective_value_upper_bound);
-#endif
-        simplex_lp_status.solution_status =
-            SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
-        break;
-      }
     }
 
     double currentRunHighsTime = timer.readRunHighsClock();
@@ -272,9 +257,6 @@ void HPrimal::solvePhase2() {
       simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
     }
-    if (simplex_lp_status.solution_status ==
-        SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND)
-      break;
     // If the data are fresh from rebuild(), break out of
     // the outer loop to see what's ocurred
     // Was:	if (simplex_info.update_count == 0) break;
@@ -288,10 +270,7 @@ void HPrimal::solvePhase2() {
     }
   }
 
-  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
-      simplex_lp_status.solution_status ==
-          SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND)
-    return;
+  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME) return;
 
   if (columnIn == -1) {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");

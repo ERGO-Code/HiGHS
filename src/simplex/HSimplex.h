@@ -19,14 +19,14 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
 
-void options(
-    HighsModelObject& highs_model_object,  //!< Model object in which simplex
-                                           //!< options are to be set
-    const HighsOptions&
-        opt  //!< HiGHS options to be used to set simplex options
-);
+void setSimplexOptions(
+	     HighsModelObject& highs_model_object  //!< Model object in which simplex
+	                                           //!< options are to be set
+	     );
 
-SimplexSolutionStatus transition(HighsModelObject& highs_model_object);
+SimplexSolutionStatus transition(
+				 HighsModelObject& highs_model_object  //!< Model object
+				 );
 
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,

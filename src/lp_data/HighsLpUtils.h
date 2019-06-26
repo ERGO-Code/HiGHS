@@ -278,4 +278,6 @@ bool isMatrixDataNull(const int* usr_matrix_start, const int* usr_matrix_index,
 HighsLp transformIntoEqualityProblem(const HighsLp& lp);
 HighsLp dualizeEqualityProblem(const HighsLp& lp);
 
+void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp);
+
 #endif  // LP_DATA_HIGHSLPUTILS_H_
