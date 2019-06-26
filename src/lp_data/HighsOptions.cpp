@@ -144,7 +144,7 @@ void reportStringOptionValue(const int report_level, const string option_string,
       HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"%s\"\n",
 		      option_string.c_str(), option_default.c_str());
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has %s value \"%s\": default value is \"%s\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"%s\": default value is \"%s\"",
 		      option_string.c_str(), default_space.c_str(), option_value.c_str(), option_default.c_str());
     }
   }
@@ -159,28 +159,31 @@ void reportIntOptionValue(const int report_level, const string option_string,
   } else {
     default_space = "";
   }
+  char value_char [100];
+  char range_char [100];
+  int value_num_char;
+  int range_num_char;
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
-    printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
-      printf(" default value %12d", option_default);
+      value_num_char = sprintf(value_char, " default value %12d", option_default);
     } else {
-      printf("%s value %12d", default_space.c_str(), option_value);
-      printf(": default value is %12d", option_default);
+      value_num_char = sprintf(value_char, "%s value %12d: default value is %12d", default_space.c_str(), option_value, option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
-        printf("\n");
+        range_num_char = sprintf(range_char, " ");
       } else {
-        printf(": valid range is [-Inf, %6d]\n", *option_max);
+        range_num_char = sprintf(range_char, ": valid range is [-Inf, %6d]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        printf(": valid range is [%6d, Inf]\n", *option_min);
+        range_num_char = sprintf(range_char, ": valid range is [%6d, Inf]", *option_min);
       } else {
-        printf(": valid range is [%6d, %6d]\n", *option_min, *option_max);
+        range_num_char = sprintf(range_char, ": valid range is [%6d, %6d]", *option_min, *option_max);
       }
     }
+    HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);
   }
 }
 
@@ -195,28 +198,32 @@ void reportDoubleOptionValue(const int report_level, const string option_string,
   } else {
     default_space = "";
   }
+  char value_char [100];
+  char range_char [100];
+  int value_num_char;
+  int range_num_char;
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
-    printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
-      printf(" default value %12g", option_default);
+      value_num_char = sprintf(value_char, " default value %12g", option_default);
     } else {
-      printf("%s value %12g", default_space.c_str(), option_value);
-      printf(": default value is %12g", option_default);
+      value_num_char = sprintf(value_char,
+	      "%s value %12g: default value is %12g", default_space.c_str(), option_value, option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
-        printf("\n");
+        range_num_char = sprintf(range_char, " ");
       } else {
-        printf(": valid range is [-Inf, %12g]\n", *option_max);
+        range_num_char = sprintf(range_char, ": valid range is [-Inf, %12g]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        printf(": valid range is [%12g, Inf]\n", *option_min);
+        range_num_char = sprintf(range_char, ": valid range is [%12g, Inf]", *option_min);
       } else {
-        printf(": valid range is [%12g, %12g]\n", *option_min, *option_max);
+        range_num_char = sprintf(range_char, ": valid range is [%12g, %12g]", *option_min, *option_max);
       }
     }
+    HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);
   }
 }
 
