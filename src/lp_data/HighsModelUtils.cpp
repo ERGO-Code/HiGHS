@@ -13,6 +13,7 @@
  */
 
 #include <vector>
+#include <algorithm>
 
 #include "HConfig.h"
 #include "io/HighsIO.h"
