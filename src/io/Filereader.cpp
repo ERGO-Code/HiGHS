@@ -15,7 +15,7 @@
 #include <string.h>
 #include <stdexcept>
 
-static __inline__ const char* getFilenameExt(const char* filename) {
+static const char* getFilenameExt(const char* filename) {
   const char* dot = strrchr(filename, '.');
   if (!dot || dot == filename) return "";
   return dot + 1;

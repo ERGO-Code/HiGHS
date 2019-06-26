@@ -71,10 +71,11 @@ void HDual::major_chooseRow() {
    * Major loop:
    *     repeat 1-5, until we found a good sets of choices
    */
+  int* choiceIndex = new int[multi_num];
   for (;;) {
     // 1. Multiple CHUZR
     int initialCount = 0;
-    int choiceIndex[multi_num];
+    
     dualRHS.choose_multi_HGauto(&choiceIndex[0], &initialCount, multi_num);
     //        dualRHS.choose_multi_global(&choiceIndex[0], &initialCount,
     //        multi_num);
@@ -128,6 +129,7 @@ void HDual::major_chooseRow() {
     }
     if (countWrongEdWt <= choiceCount / 3) break;
   }
+  delete[] choiceIndex;
 
   // 6. Take other info associated with choices
   double pami_cutoff = 0.95;
@@ -685,7 +687,7 @@ void HDual::major_updateFactor() {
   /**
    * 9. Update the factor by CFT
    */
-  int iRows[multi_nFinish];
+  int* iRows = new int[multi_nFinish];
   for (int iCh = 0; iCh < multi_nFinish - 1; iCh++) {
     multi_finish[iCh].row_ep->next = multi_finish[iCh + 1].row_ep;
     multi_finish[iCh].column->next = multi_finish[iCh + 1].column;
@@ -700,6 +702,7 @@ void HDual::major_updateFactor() {
   if (total_FT_inc_TICK > total_INVERT_TICK * 1.5 &&
       workHMO.simplex_info_.update_count > 200)
     invertHint = INVERT_HINT_SYNTHETIC_CLOCK_SAYS_INVERT;
+  delete[] iRows;
 }
 
 void HDual::major_rollback() {

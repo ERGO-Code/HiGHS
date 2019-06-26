@@ -25,7 +25,7 @@ FilereaderLp::FilereaderLp() {
   this->status = LP_FILEREADER_STATUS::SUCCESS;
 }
 
-void __inline__ emptyTokenQueue(std::list<LpToken*>& list) {
+void emptyTokenQueue(std::list<LpToken*>& list) {
   while (list.size() > 0) {
     LpToken* token = list.front();
     list.pop_front();

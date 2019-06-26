@@ -1066,6 +1066,7 @@ void HFactor::buildFinish() {
   }
 
   // U pointer
+  Ustart.push_back(0);
   Ulastp.assign(&Ustart[1], &Ustart[numRow + 1]);
   Ustart.resize(numRow);
 
@@ -1141,8 +1142,8 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
 
     // Alias to factor L
     const int* Lstart = &this->Lstart[0];
-    const int* Lindex = &this->Lindex[0];
-    const double* Lvalue = &this->Lvalue[0];
+    const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
+    const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
 
     // Transform
     for (int i = 0; i < numRow; i++) {
@@ -1161,6 +1162,8 @@ void HFactor::ftranL(HVector& rhs, double hist_dsty) const {
     // Save the count
     rhs.count = RHScount;
   } else {
+    const int* Lindex = this->Lindex.size() > 0 ? &this->Lindex[0] : NULL;
+    const double* Lvalue = this->Lvalue.size() > 0 ? &this->Lvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &Lstart[0],
                &Lstart[1], &Lindex[0], &Lvalue[0], &rhs);
   }
@@ -1179,8 +1182,8 @@ void HFactor::btranL(HVector& rhs, double hist_dsty) const {
 
     // Alias to factor L
     const int* LRstart = &this->LRstart[0];
-    const int* LRindex = &this->LRindex[0];
-    const double* LRvalue = &this->LRvalue[0];
+    const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
+    const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
 
     // Transform
     for (int i = numRow - 1; i >= 0; i--) {
@@ -1200,6 +1203,8 @@ void HFactor::btranL(HVector& rhs, double hist_dsty) const {
     // Save the count
     rhs.count = RHScount;
   } else {
+    const int* LRindex = this->LRindex.size() > 0 ? &this->LRindex[0] : NULL;
+    const double* LRvalue = this->LRvalue.size() > 0 ? &this->LRvalue[0] : NULL;
     solveHyper(numRow, &LpivotLookup[0], &LpivotIndex[0], 0, &LRstart[0],
                &LRstart[1], &LRindex[0], &LRvalue[0], &rhs);
   }
@@ -1240,8 +1245,8 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty) const {
     // Alias to the factor
     const int* Ustart = &this->Ustart[0];
     const int* Uend = &this->Ulastp[0];
-    const int* Uindex = &this->Uindex[0];
-    const double* Uvalue = &this->Uvalue[0];
+    const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
+    const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
 
     // Transform
     //        double RHS_TickStart = RHS_Tick;
@@ -1276,6 +1281,8 @@ void HFactor::ftranU(HVector& rhs, double hist_dsty) const {
     //        numRow) * 10;
     rhs.syntheticTick += RHS_syntheticTick * 15 + (UpivotCount - numRow) * 10;
   } else {
+    const int* Uindex = this->Uindex.size() > 0 ? &this->Uindex[0] : NULL;
+    const double* Uvalue = this->Uvalue.size() > 0 ? &this->Uvalue[0] : NULL;
     solveHyper(numRow, &UpivotLookup[0], &UpivotIndex[0], &UpivotValue[0],
                &Ustart[0], &Ulastp[0], &Uindex[0], &Uvalue[0], &rhs);
   }
@@ -1368,10 +1375,13 @@ void HFactor::btranU(HVector& rhs, double hist_dsty) const {
 void HFactor::ftranFT(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
-  const int* PFpivotIndex = &this->PFpivotIndex[0];
-  const int* PFstart = &this->PFstart[0];
-  const int* PFindex = &this->PFindex[0];
-  const double* PFvalue = &this->PFvalue[0];
+  int* PFpivotIndex = NULL;
+  if (this->PFpivotIndex.size() > 0)
+    PFpivotIndex = (int*)&this->PFpivotIndex[0];
+
+  const int* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
+  const int* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
+  const double* PFvalue = this->PFvalue.size() > 0 ? &this->PFvalue[0] : NULL;
 
   // Alias to non constant
   //    int RHS_Tick = vector.pseudoTick;
@@ -1412,10 +1422,11 @@ void HFactor::ftranFT(HVector& vector) const {
 void HFactor::btranFT(HVector& vector) const {
   // Alias to PF buffer
   const int PFpivotCount = PFpivotIndex.size();
-  const int* PFpivotIndex = &this->PFpivotIndex[0];
-  const int* PFstart = &this->PFstart[0];
-  const int* PFindex = &this->PFindex[0];
-  const double* PFvalue = &this->PFvalue[0];
+  const int* PFpivotIndex =
+      this->PFpivotIndex.size() > 0 ? &this->PFpivotIndex[0] : NULL;
+  const int* PFstart = this->PFstart.size() > 0 ? &this->PFstart[0] : NULL;
+  const int* PFindex = this->PFindex.size() > 0 ? &this->PFindex[0] : NULL;
+  const double* PFvalue = this->PFvalue.size() > 0 ? &this->PFvalue[0] : NULL;
 
   // Alias to non constant
   //    int RHS_Tick = vector.pseudoTick;
@@ -1600,8 +1611,8 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow, int* hint) {
   int numUpdate = 0;
   for (HVector* vec = aq; vec != 0; vec = vec->next) numUpdate++;
 
-  HVector* aqWork[numUpdate];
-  HVector* epWork[numUpdate];
+  HVector** aqWork = new HVector*[numUpdate];
+  HVector** epWork = new HVector*[numUpdate];
 
   for (int i = 0; i < numUpdate; i++) {
     aqWork[i] = aq;
@@ -1612,9 +1623,9 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow, int* hint) {
 
   // Pivot related buffers
   int PFnp0 = PFpivotIndex.size();
-  int pLogic[numUpdate];
-  double pValue[numUpdate];
-  double pAlpha[numUpdate];
+  int* pLogic = new int[numUpdate];
+  double* pValue = new double[numUpdate];
+  double* pAlpha = new double[numUpdate];
   for (int cp = 0; cp < numUpdate; cp++) {
     int cRow = iRow[cp];
     int iLogic = UpivotLookup[cRow];
@@ -1624,8 +1635,8 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow, int* hint) {
   }
 
   // Temporary U pointers
-  int Tstart[numUpdate + 1];
-  double Tpivot[numUpdate];
+  int* Tstart = new int[numUpdate + 1];
+  double* Tpivot = new double[numUpdate];
   Tstart[0] = Uindex.size();
 
   // Logically sorted previous row_ep
@@ -1840,6 +1851,13 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow, int* hint) {
   //    // See if we want refactor
   //    if (UtotalX > UmeritX && PFpivotIndex.size() > 100)
   //        *hint = 1;
+  delete[] aqWork;
+  delete[] epWork;
+  delete[] pLogic;
+  delete[] pValue;
+  delete[] pAlpha;
+  delete[] Tstart;
+  delete[] Tpivot;
 }
 
 void HFactor::updateFT(HVector* aq, HVector* ep, int iRow, int* hint) {

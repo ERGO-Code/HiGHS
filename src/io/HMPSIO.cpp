@@ -19,6 +19,8 @@
 #include "util/HighsUtils.h"
 #include "util/stringutil.h"
 
+#include <algorithm>
+
 using std::map;
 
 //
