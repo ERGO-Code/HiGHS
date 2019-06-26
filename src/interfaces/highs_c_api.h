@@ -8,7 +8,7 @@ extern "C" {
 /*
  * @brief runs a model using HiGHS
  */
-int callhighs(
+int Highs_call(
     int numcol,        //!< number of columns
     int numrow,        //!< number of rows
     int numnz,         //!< number of entries in the constraint matrix

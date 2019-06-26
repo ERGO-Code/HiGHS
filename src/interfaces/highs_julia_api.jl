@@ -21,7 +21,7 @@ struct HighsBasis
    rowbasisstatus
 end
 
-function callhighs(model)
+function Highs_call(model)
    n_col = convert(Cint, size(model.colcost, 1))
    n_row = convert(Cint, size(model.rowlower, 1))
    n_nz = convert(Cint, size(model.aindex, 1))
@@ -39,7 +39,7 @@ function callhighs(model)
    solution = HighsSolution(Array{Cdouble, 1}(undef, n_col), Array{Cdouble, 1}(undef, n_col), Array{Cdouble, 1}(undef, n_row),  Array{Cdouble, 1}(undef, n_row))
    basis = HighsBasis(Array{Cint, 1}(undef, n_col), Array{Cint, 1}(undef, n_row)) 
 
-   status = ccall((:callhighs, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}),
+   status = ccall((:Highs_call, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}),
    n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual, basis.colbasisstatus, basis.rowbasisstatus)
 
    return status, solution, basis
@@ -300,11 +300,11 @@ int Highs_getColsByRange(
                           //!< get from the model
     const int to_col,     //!< One more than the last column to get
                           //!< from the model
-    int num_col,          //!< Number of columns got from the model
+    int* num_col,          //!< Number of columns got from the model
     double *costs,        //!< Array of size num_col with costs
     double *lower,        //!< Array of size num_col with lower bounds
     double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_col with start
                           //!< indices of the columns
     int *matrix_index,    //!< Array of size num_nz with row
@@ -318,11 +318,11 @@ int Highs_getColsBySet(
     const int num_set_entries,  //!< The number of indides in the set
     const int *set,             //!< Array of size num_set_entries with indices
                                 //!< of columns to get
-    int num_col,                //!< Number of columns got from the model
+    int* num_col,                //!< Number of columns got from the model
     double *costs,              //!< Array of size num_col with costs
     double *lower,              //!< Array of size num_col with lower bounds
     double *upper,              //!< Array of size num_col with upper bounds
-    int num_nz,                 //!< Number of nonzeros got from the model
+    int* num_nz,                 //!< Number of nonzeros got from the model
     int *matrix_start,          //!< Array of size num_col with start indices
                                 //!< of the columns
     int *matrix_index,          //!< Array of size num_nz with row indices
@@ -334,11 +334,11 @@ int Highs_getColsBySet(
 int Highs_getColsByMask(
     void *highs,          //!< HiGHS object reference
     const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_col,          //!< Number of columns got from the model
+    int* num_col,          //!< Number of columns got from the model
     double *costs,        //!< Array of size num_col with costs
     double *lower,        //!< Array of size num_col with lower bounds
     double *upper,        //!< Array of size num_col with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!<  Array of size num_col with start
                           //!<  indices of the columns
     int *matrix_index,    //!<  Array of size num_nz with row indices
@@ -351,10 +351,10 @@ int Highs_getRowsByRange(
     void *highs,          //!< HiGHS object reference
     const int from_row,   //!< The index of the first row to get from the model
     const int to_row,     //!< One more than the last row get from the model
-    int num_row,          //!< Number of rows got from the model
+    int* num_row,          //!< Number of rows got from the model
     double *lower,        //!< Array of size num_row with lower bounds
     double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_row with start indices of the
                           //!< rows
     int *matrix_index,    //!< Array of size num_nz with column indices for the
@@ -368,10 +368,10 @@ int Highs_getRowsBySet(
     const int num_set_entries,  //!< The number of indides in the set
     const int *set,             //!< Array of size num_set_entries with indices
                                 //!< of rows to get
-    int num_row,                //!< Number of rows got from the model
+    int* num_row,                //!< Number of rows got from the model
     double *lower,              //!< Array of size num_row with lower bounds
     double *upper,              //!< Array of size num_row with upper bounds
-    int num_nz,                 //!< Number of nonzeros got from the model
+    int* num_nz,                 //!< Number of nonzeros got from the model
     int *matrix_start,          //!< Array of size num_row with start indices
                                 //!< of the rows
     int *matrix_index,          //!< Array of size num_nz with column indices
@@ -383,10 +383,10 @@ int Highs_getRowsBySet(
 int Highs_getRowsByMask(
     void *highs,          //!< HiGHS object reference
     const int *mask,      //!< Full length array with 1 => get; 0 => not
-    int num_row,          //!< Number of rows got from the model
+    int* num_row,          //!< Number of rows got from the model
     double *lower,        //!< Array of size num_row with lower bounds
     double *upper,        //!< Array of size num_row with upper bounds
-    int num_nz,           //!< Number of nonzeros got from the model
+    int* num_nz,           //!< Number of nonzeros got from the model
     int *matrix_start,    //!< Array of size num_row with start indices
                           //!< of the rows
     int *matrix_index,    //!< Array of size num_nz with column indices
