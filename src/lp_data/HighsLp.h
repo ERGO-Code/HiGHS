@@ -199,7 +199,6 @@ struct HighsSimplexInfo {
   SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
   SimplexPrimalEdgeWeightStrategy primal_edge_weight_strategy;
   SimplexPriceStrategy price_strategy;
-  bool allow_primal_flips_for_dual_feasibility;
 
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
@@ -209,7 +208,7 @@ struct HighsSimplexInfo {
   //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
-
+  bool allow_primal_flips_for_dual_feasibility;
   bool analyseLpSolution;
 #ifdef HiGHSDEV
   // Options for reporting timing

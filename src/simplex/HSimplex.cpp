@@ -48,6 +48,8 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.update_limit = options.simplex_update_limit;
 
   // Set values of internal options
+  simplex_info.allow_primal_flips_for_dual_feasibility = true;
+  if (options.run_as_hsol) simplex_info.allow_primal_flips_for_dual_feasibility = true;
   // Option for analysing the LP solution
   simplex_info.analyseLpSolution = true;
 #ifdef HiGHSDEV
