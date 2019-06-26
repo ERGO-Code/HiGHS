@@ -464,6 +464,7 @@ class Highs {
 
   bool simplex_has_run_;
 
+  HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count, const string message);
   HighsStatus runSolver(HighsModelObject& model);
 
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);
