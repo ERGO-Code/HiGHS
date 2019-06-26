@@ -137,6 +137,7 @@ struct HighsSimplexLpStatus {
 };
 
 struct HighsSimplexInfo {
+  bool initialised = false;
   // Simplex information regarding primal and dual solution, objective
   // and iteration counts for this Highs Model Object. This is
   // information which should be retained from one run to the next in
@@ -193,18 +194,19 @@ struct HighsSimplexInfo {
   std::vector<int> clock_;
   //
   // Options from HighsOptions for the simplex solver
-  double highs_run_time_limit;
+  //  double highs_run_time_limit;
   SimplexStrategy simplex_strategy;
   SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
   SimplexPrimalEdgeWeightStrategy primal_edge_weight_strategy;
   SimplexPriceStrategy price_strategy;
+  bool allow_primal_flips_for_dual_feasibility;
 
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   bool perturb_costs;
   int update_limit;
-  int iteration_limit;
-  double dual_objective_value_upper_bound;
+  //  int iteration_limit;
+  //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
 

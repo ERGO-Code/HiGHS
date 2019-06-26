@@ -205,13 +205,13 @@ void reportIntOptionValue(const int report_level, const string option_string,
       if (option_max == NULL) {
         range_num_char = sprintf(range_char, " ");
       } else {
-        range_num_char = sprintf(range_char, ": valid range is [-Inf, %6d]", *option_max);
+        range_num_char = sprintf(range_char, ": valid range is [        -Inf, %6d]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        range_num_char = sprintf(range_char, ": valid range is [%6d, Inf]", *option_min);
+        range_num_char = sprintf(range_char, ": valid range is [%12d,         Inf]", *option_min);
       } else {
-        range_num_char = sprintf(range_char, ": valid range is [%6d, %6d]", *option_min, *option_max);
+        range_num_char = sprintf(range_char, ": valid range is [%12d, %12d]", *option_min, *option_max);
       }
     }
     HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);

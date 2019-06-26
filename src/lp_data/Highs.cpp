@@ -78,6 +78,9 @@ HighsStatus Highs::writeToFile(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+  // If running as hsol, reset any changed options
+  if (options_.run_as_hsol) setHsolOptions(options_);
+  // Assess the LP, normalising its values
   bool normalise = true;
   HighsStatus return_status = assessLp(lp_, options_, normalise);
   if (return_status == HighsStatus::Error) return return_status;

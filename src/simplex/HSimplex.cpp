@@ -44,12 +44,8 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.price_strategy = options.simplex_price_strategy;
   simplex_info.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   simplex_info.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  simplex_info.dual_objective_value_upper_bound =
-      options.dual_objective_value_upper_bound;
   simplex_info.perturb_costs = options.simplex_perturb_costs;
-  simplex_info.iteration_limit = options.simplex_iteration_limit;
   simplex_info.update_limit = options.simplex_update_limit;
-  simplex_info.highs_run_time_limit = options.highs_run_time_limit;
 
   // Set values of internal options
   // Option for analysing the LP solution

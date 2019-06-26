@@ -253,7 +253,7 @@ void HPrimal::solvePhase2() {
     }
 
     double currentRunHighsTime = timer.readRunHighsClock();
-    if (currentRunHighsTime > simplex_info.highs_run_time_limit) {
+    if (currentRunHighsTime > workHMO.options_.highs_run_time_limit) {
       simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
     }

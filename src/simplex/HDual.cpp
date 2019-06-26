@@ -249,7 +249,7 @@ void HDual::options() {
   primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
   dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
   dual_objective_value_upper_bound =
-      simplex_info.dual_objective_value_upper_bound;
+      workHMO.options_.dual_objective_value_upper_bound;
   //  perturb_costs = simplex_info.perturb_costs;
   //  iterationLimit = simplex_info.iterationLimit;
 
@@ -413,11 +413,11 @@ void HDual::solvePhase1() {
       double current_dual_objective_value =
           simplex_info.updated_dual_objective_value;
       if (current_dual_objective_value >
-          simplex_info.dual_objective_value_upper_bound) {
+          workHMO.options_.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
         printf("HDual::solvePhase1: %12g = Objective > ObjectiveUB\n",
                current_dual_objective_value,
-               simplex_info.dual_objective_value_upper_bound);
+               workHMO.options_.dual_objective_value_upper_bound);
 #endif
         simplex_lp_status.solution_status =
             SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
@@ -425,7 +425,7 @@ void HDual::solvePhase1() {
       }
     }
     double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > simplex_info.highs_run_time_limit) {
+    if (current_run_highs_time > workHMO.options_.highs_run_time_limit) {
       solve_bailout = true;
       simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       break;
@@ -530,11 +530,11 @@ void HDual::solvePhase2() {
       double current_dual_objective_value =
           simplex_info.updated_dual_objective_value;
       if (current_dual_objective_value >
-          simplex_info.dual_objective_value_upper_bound) {
+          workHMO.options_.dual_objective_value_upper_bound) {
 #ifdef SCIP_DEV
         printf("HDual::solvePhase2: %12g = Objective > ObjectiveUB\n",
                current_dual_objective_value,
-               simplex_info.dual_objective_value_upper_bound);
+               workHMO.options_.dual_objective_value_upper_bound);
 #endif
         simplex_lp_status.solution_status =
             SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
@@ -548,7 +548,7 @@ void HDual::solvePhase2() {
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > simplex_info.highs_run_time_limit) {
+    if (current_run_highs_time > workHMO.options_.highs_run_time_limit) {
       simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
       solve_bailout = true;
       break;
