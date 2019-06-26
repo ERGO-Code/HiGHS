@@ -1,6 +1,6 @@
 module highs_lp_solver
   interface
-    subroutine callhighs ( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs ) bind ( c )
+    function Highs_call (n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs) result(s) bind (c, name='Highs_call')
       use iso_c_binding
       integer ( c_int ), VALUE :: n
       integer ( c_int ), VALUE :: m
@@ -19,6 +19,7 @@ module highs_lp_solver
       real ( c_double ) :: rd(*)
       integer ( c_int ) :: cbs(*)
       integer ( c_int ) :: rbs(*)
-    end subroutine callhighs
+      integer ( c_int ) :: s
+    end function Highs_call
   end interface
 end module highs_lp_solver

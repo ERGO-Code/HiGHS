@@ -24,6 +24,8 @@ program fortrantest
   integer ( c_int ) cbs(n)
   integer ( c_int ) rbs(m)
 
+  integer ( c_int ) s
+
   cc(1) = 1
   cc(2) = -2
   cl(1) = 0
@@ -46,7 +48,7 @@ program fortrantest
   av(3) = 3
   av(4) = 0.2
 
-  call callhighs( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
+  s = Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
       
 
 end program fortrantest
