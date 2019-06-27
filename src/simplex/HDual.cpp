@@ -137,7 +137,17 @@ void HDual::solve(int num_threads) {
   // Compute the dual values
   compute_dual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
-  compute_dual_infeasible_in_dual(workHMO, &dualInfeasCount);
+  if ( simplex_info.allow_primal_flips_for_dual_feasibility) {
+    bool use_computeDualInfeasibleWithFlips = true;
+    if (use_computeDualInfeasibleWithFlips) {
+      computeDualInfeasibleWithFlips(workHMO);
+      dualInfeasCount = simplex_info.num_dual_infeasibilities;
+    } else {
+      compute_dual_infeasible_with_flips(workHMO, &dualInfeasCount);
+    }
+  } else {
+    compute_dual_infeasible_without_flips(workHMO, &dualInfeasCount);
+  }
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
   //
   // Check that the model is OK to solve:
@@ -764,7 +774,7 @@ void HDual::cleanup() {
 
   iterationReportRebuild(-1);
 
-  compute_dual_infeasible_in_primal(workHMO, &dualInfeasCount);
+  compute_dual_infeasible_without_flips(workHMO, &dualInfeasCount);
 }
 
 void HDual::iterate() {

@@ -178,16 +178,19 @@ void computePrimalInfeasible(HighsModelObject& highs_model_object,
 void computeDualInfeasible(HighsModelObject& highs_model_object,
                            const bool report = false);
 
+void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
+				    const bool report = false);
+
 void compute_dual(HighsModelObject& highs_model_object);
 
 void correct_dual(HighsModelObject& highs_model_object,
                   int* free_infeasibility_count);
 
-void compute_dual_infeasible_in_dual(HighsModelObject& highs_model_object,
-                                     int* dual_infeasibility_count);
+void compute_dual_infeasible_with_flips(HighsModelObject& highs_model_object,
+					int* dual_infeasibility_count);
 
-void compute_dual_infeasible_in_primal(HighsModelObject& highs_model_object,
-                                       int* dual_infeasibility_count);
+void compute_dual_infeasible_without_flips(HighsModelObject& highs_model_object,
+					   int* dual_infeasibility_count);
 
 // Record the shift in the cost of a particular column
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);

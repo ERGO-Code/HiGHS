@@ -181,7 +181,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     simplex_interface.convertSimplexToHighsBasis();
     int report_level=-1;
 #ifdef HiGHSDEV
-    report_level = 1
+    report_level = 1;
 #endif
     if (simplex_info.analyseLpSolution)
       simplex_interface.analyseHighsSolutionAndBasis(report_level, "after running the simplex solver");

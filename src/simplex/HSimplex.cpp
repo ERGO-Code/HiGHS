@@ -2637,7 +2637,55 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
           -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
     }
     if (dual_infeasibility > 0) {
-      if (dual_infeasibility > simplex_info.dual_feasibility_tolerance) num_dual_infeasibilities++;
+      if (dual_infeasibility >= simplex_info.dual_feasibility_tolerance) num_dual_infeasibilities++;
+      max_dual_infeasibility =
+	std::max(dual_infeasibility, max_dual_infeasibility);
+      sum_dual_infeasibilities += dual_infeasibility;
+    }
+  }
+#ifdef HiGHSDEV
+  if (report && num_dual_infeasibilities) {
+    int num_iter = simplex_info.iteration_count;
+    printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n",
+           num_iter, num_dual_infeasibilities, max_dual_infeasibility,
+           sum_dual_infeasibilities);
+  }
+#endif
+  simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
+  simplex_info.max_dual_infeasibility = max_dual_infeasibility;
+  simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
+}
+
+void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
+				    const bool report) {
+  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsSimplexLpStatus& simplex_lp_status =
+      highs_model_object.simplex_lp_status_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+
+  int num_dual_infeasibilities = 0;
+  double max_dual_infeasibility = 0;
+  double sum_dual_infeasibilities = 0;
+  const int numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
+
+  for (int iVar = 0; iVar < numTot; iVar++) {
+    if (!simplex_basis.nonbasicFlag_[iVar]) continue;
+    // Nonbasic column
+    double lower = simplex_info.workLower_[iVar];
+    double upper = simplex_info.workUpper_[iVar];
+    double dual_infeasibility = 0;
+    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+      // Free: any nonzero dual value is infeasible
+      dual_infeasibility = fabs(simplex_info.workDual_[iVar]);
+    } else if (highs_isInfinity(-lower) || highs_isInfinity(upper)) {
+      // Not boxed: any dual infeasibility is given by value signed by
+      // nonbasicMove
+      dual_infeasibility =
+          -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
+    }
+    if (dual_infeasibility > 0) {
+      if (dual_infeasibility >= simplex_info.dual_feasibility_tolerance) num_dual_infeasibilities++;
       max_dual_infeasibility =
 	std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
@@ -2779,8 +2827,8 @@ void correct_dual(HighsModelObject& highs_model_object,
   *free_infeasibility_count = workCount;
 }
 
-void compute_dual_infeasible_in_dual(HighsModelObject& highs_model_object,
-                                     int* dual_infeasibility_count) {
+void compute_dual_infeasible_with_flips(HighsModelObject& highs_model_object,
+				       int* dual_infeasibility_count) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -2792,20 +2840,10 @@ void compute_dual_infeasible_in_dual(HighsModelObject& highs_model_object,
   for (int i = 0; i < numTot; i++) {
     // Only for non basic variables
     if (!simplex_basis.nonbasicFlag_[i]) continue;
-    // Free
-
-    /*
-    if (simplex_info.workLower_[i] == -inf && simplex_info.workUpper_[i] == inf)
-      work_count += (fabs(simplex_info.workDual_[i]) >= tau_d);
-    // In dual, assuming that boxed variables will be flipped
-    if (simplex_info.workLower_[i] == -inf || simplex_info.workUpper_[i] == inf)
-      work_count +=
-          (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <=
-    -tau_d);
-    */
 
     if (simplex_info.workLower_[i] == -inf &&
         simplex_info.workUpper_[i] == inf) {
+      // Free
       double fabs_dual = fabs(simplex_info.workDual_[i]);
       if (fabs_dual >= tau_d) {
         sum_dual_infeasibilities += fabs_dual;
@@ -2827,8 +2865,8 @@ void compute_dual_infeasible_in_dual(HighsModelObject& highs_model_object,
   *dual_infeasibility_count = work_count;
 }
 
-void compute_dual_infeasible_in_primal(HighsModelObject& highs_model_object,
-                                       int* dual_infeasibility_count) {
+void compute_dual_infeasible_without_flips(HighsModelObject& highs_model_object,
+					   int* dual_infeasibility_count) {
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
