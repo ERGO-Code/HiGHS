@@ -230,7 +230,7 @@ public unsafe class HighsLpSolver
       int nr = model.rowlower.Length;
       int nnz = model.avalue.Length;
 
-      return HighsLpSolver.callhighs(nc, nr, nnz, model.colcost, model.collower, model.colupper,
+      return HighsLpSolver.Highs_call(nc, nr, nnz, model.colcost, model.collower, model.colupper,
       model.rowlower, model.rowupper, model.astart, model.aindex, model.avalue,
       sol.colvalue, sol.coldual, sol.rowvalue, sol.rowdual, bas.colbasisstatus, bas.rowbasisstatus);
    }
