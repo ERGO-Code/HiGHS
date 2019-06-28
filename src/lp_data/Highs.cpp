@@ -259,7 +259,7 @@ HighsStatus Highs::run() {
 	  HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
 	  int report_level=-1;
 #ifdef HiGHSDEV
-	  report_level = 1
+	  report_level = 1;
 #endif
 	  simplex_interface.analyseHighsSolutionAndBasis(report_level, "after returning from postsolve");
 	  // Now hot-start the simplex solver for the original_hmo
