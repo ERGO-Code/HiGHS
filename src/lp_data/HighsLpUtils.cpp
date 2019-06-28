@@ -14,6 +14,7 @@
 #include "lp_data/HighsLpUtils.h"
 
 #include <cassert>
+#include <algorithm>
 
 #include "HConfig.h"
 #include "io/HMPSIO.h"

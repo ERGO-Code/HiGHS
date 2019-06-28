@@ -14,6 +14,8 @@
 #ifndef IO_LOAD_PROBLEM_H_
 #define IO_LOAD_PROBLEM_H_
 
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <cstdio>
 #include <fstream>
 
@@ -27,6 +29,19 @@
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   if (options.filename.size() == 0) return HighsStatus::LpError;
 
+  // Make sure it is not a folder.
+
+  struct stat info;
+  const char* pathname = options.filename.c_str();
+  if (stat(pathname, &info) != 0) {
+    HighsPrintMessage(ML_ALWAYS, "Cannot access %s\n", pathname);
+    return HighsStatus::LpError;
+  } else if (info.st_mode & S_IFDIR) {
+    HighsPrintMessage(ML_ALWAYS, "%s is a directory. Please specify a file.\n",
+                      pathname);
+    return HighsStatus::LpError;
+  }
+  
   Filereader* reader = Filereader::getFilereader(options.filename.c_str());
   FilereaderRetcode success = reader->readModelFromFile(options, lp);
   delete reader;

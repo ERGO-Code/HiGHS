@@ -1,7 +1,7 @@
 #include "highs_c_api.h"
 #include "Highs.h"
 
-int callhighs(int numcol, int numrow, int numnz, double *colcost,
+int Highs_call(int numcol, int numrow, int numnz, double *colcost,
               double *collower, double *colupper, double *rowlower,
               double *rowupper, int *astart, int *aindex, double *avalue,
               double *colvalue, double *coldual, double *rowvalue,
