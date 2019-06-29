@@ -11,8 +11,6 @@
 #define SIMPLX_HAPP_H_
 
 // todo: clear includes.
-#include <getopt.h>
-#include <unistd.h>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
