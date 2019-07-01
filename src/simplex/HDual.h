@@ -248,9 +248,7 @@ class HDual {
   /**
    * @brief Report infeasibility
    */
-  void reportInfeasibility(
-      const int i_v  //!< Integer value for reporting - generally invertHint
-  );
+  void reportInfeasibility();
 
   /**
    * @brief Update an average density record for BTRAN, an FTRAN or PRICE

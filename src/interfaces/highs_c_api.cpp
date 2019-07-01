@@ -98,19 +98,19 @@ void Highs_getSolution(void *highs, double *colvalue, double *coldual,
                        double *rowvalue, double *rowdual) {
   HighsSolution solution = ((Highs *)highs)->getSolution();
 
-  for (int i = 0; i < solution.col_value.size(); i++) {
+  for (int i = 0; i < (int)solution.col_value.size(); i++) {
     colvalue[i] = solution.col_value[i];
   }
 
-  for (int i = 0; i < solution.col_dual.size(); i++) {
+  for (int i = 0; i < (int)solution.col_dual.size(); i++) {
     coldual[i] = solution.col_dual[i];
   }
 
-  for (int i = 0; i < solution.row_value.size(); i++) {
+  for (int i = 0; i < (int)solution.row_value.size(); i++) {
     rowvalue[i] = solution.row_value[i];
   }
 
-  for (int i = 0; i < solution.row_dual.size(); i++) {
+  for (int i = 0; i < (int)solution.row_dual.size(); i++) {
     rowdual[i] = solution.row_dual[i];
   }
 }
@@ -118,11 +118,11 @@ void Highs_getSolution(void *highs, double *colvalue, double *coldual,
 void Highs_getBasis(void *highs, int *colstatus, int *rowstatus) {
   HighsBasis basis = ((Highs *)highs)->getBasis();
 
-  for (int i = 0; i < basis.col_status.size(); i++) {
+  for (int i = 0; i < (int)basis.col_status.size(); i++) {
     colstatus[i] = (int)basis.col_status[i];
   }
 
-  for (int i = 0; i < basis.row_status.size(); i++) {
+  for (int i = 0; i < (int)basis.row_status.size(); i++) {
     rowstatus[i] = (int)basis.row_status[i];
   }
 }

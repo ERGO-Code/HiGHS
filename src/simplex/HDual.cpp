@@ -208,12 +208,8 @@ void HDual::solve(int num_threads) {
     if (solve_bailout) break;
   }
   if (solve_bailout) {
-    bool out_of_time =
-        simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME;
-    bool reached_dual_objective_bound =
-        simplex_lp_status.solution_status ==
-        SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
-    assert(out_of_time || reached_dual_objective_bound);
+    assert(simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
+	   SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
 
@@ -689,31 +685,30 @@ void HDual::rebuild() {
   computeDualInfeasible(workHMO);
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
 
-  // Check the objective value maintained by updating against the
-  // value when computed exactly - so long as there is a value to
-  // check against
-  bool check_dual_objective_value = simplex_lp_status.has_dual_objective_value;
   // Compute the objective value
   timer.start(simplex_info.clock_[ComputeDuObjClock]);
   computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
 
   double dual_objective_value = simplex_info.dual_objective_value;
-  if (check_dual_objective_value) {
+#ifdef HiGHSDEV
+  // Check the objective value maintained by updating against the
+  // value when computed exactly - so long as there is a value to
+  // check against
+  /*
+  if (simplex_lp_status.has_dual_objective_value) {
     double absDualObjectiveError =
         fabs(simplex_info.updated_dual_objective_value - dual_objective_value);
     double rlvDualObjectiveError =
         absDualObjectiveError / max(1.0, fabs(dual_objective_value));
-#ifdef HiGHSDEV
-    /*
     // TODO Investigate these Dual objective value errors
     if (rlvDualObjectiveError >= 1e-8) {
       HighsLogMessage(HighsMessageType::WARNING, "Dual objective value error
     |rel| = %12g (%12g)", absDualObjectiveError, rlvDualObjectiveError);
     }
-    */
-#endif
   }
+  */
+#endif
   simplex_info.updated_dual_objective_value = dual_objective_value;
 
 #ifdef HiGHSDEV
@@ -881,7 +876,6 @@ void HDual::iterateTasks() {
 }
 
 void HDual::iterationAnalysisInitialise() {
-  HighsTimer& timer = workHMO.timer_;
   AnIterIt0 = workHMO.simplex_info_.iteration_count;
   AnIterCostlyDseFq = 0;
 #ifdef HiGHSDEV
@@ -941,12 +935,11 @@ void HDual::iterationAnalysisInitialise() {
   AnIterTraceIterDl = 1;
   AnIterTraceRec* lcAnIter = &AnIterTrace[0];
   lcAnIter->AnIterTraceIter = AnIterIt0;
-  lcAnIter->AnIterTraceTime = timer.getTime();
+  lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
 #endif
 }
 
 void HDual::iterationAnalysis() {
-  HighsTimer& timer = workHMO.timer_;
   // Possibly report on the iteration
   iterationReport();
 
@@ -1043,7 +1036,7 @@ void HDual::iterationAnalysis() {
       AnIterTraceNumRec++;
       lcAnIter = &AnIterTrace[AnIterTraceNumRec];
       lcAnIter->AnIterTraceIter = workHMO.simplex_info_.iteration_count;
-      lcAnIter->AnIterTraceTime = timer.getTime();
+      lcAnIter->AnIterTraceTime = workHMO.timer_.getTime();
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Btran] = row_epDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Price] = row_apDensity;
       lcAnIter->AnIterTraceDsty[AnIterOpTy_Ftran] = columnDensity;
@@ -1066,8 +1059,8 @@ void HDual::iterationReport() {
   int iteration_count = workHMO.simplex_info_.iteration_count;
   int iteration_count_difference = iteration_count -
     previous_iteration_report_header_iteration_count;
-  bool header = (previous_iteration_report_header_iteration_count < 0)
-    || (iteration_count - previous_iteration_report_header_iteration_count > 10);
+  bool header = previous_iteration_report_header_iteration_count < 0
+    || iteration_count_difference > 10;
   if (header) {
     iterationReportFull(header);
     previous_iteration_report_header_iteration_count = iteration_count;
@@ -1162,14 +1155,14 @@ void HDual::iterationReportRebuild(const int i_v) {
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " DuPh%1d(%2d)", solvePhase, i_v);
-  if (solvePhase == 2) reportInfeasibility(i_v);
+  if (solvePhase == 2) reportInfeasibility();
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else
   logRebuild(workHMO, false, solvePhase, i_v);
 #endif
 }
 
-void HDual::reportInfeasibility(const int i_v) {
+void HDual::reportInfeasibility() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsPrintMessage(ML_MINIMAL, " Pr: %d(%g)",
                     simplex_info.num_primal_infeasibilities,
