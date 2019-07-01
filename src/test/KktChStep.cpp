@@ -596,9 +596,9 @@ void KktChStep::makeKKTCheck() {
   checker.checkKKT();
 
   int count = 0;
-  for (int i = 0; i < col_status.size(); i++)
+  for (int i = 0; i < (int)col_status.size(); i++)
     if (col_status[i] == HighsBasisStatus::BASIC) count++;
-  for (int i = 0; i < row_status.size(); i++)
+  for (int i = 0; i < (int)row_status.size(); i++)
     if (row_status[i] == HighsBasisStatus::BASIC) count++;
 
   if (count != numRow)

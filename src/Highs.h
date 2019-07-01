@@ -94,7 +94,7 @@ class Highs {
    * @brief Returns the number of simplex iterations for the LP of the
    * (first?) HighsModelObject
    */
-  const int getIterationCount() const;
+  int getIterationCount() const;
   // todo: getRangingInformation(..)
 
   /**
@@ -464,7 +464,8 @@ class Highs {
 
   bool simplex_has_run_;
 
-  HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count, const string message);
+  HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count,
+                            const string message);
   HighsStatus runSolver(HighsModelObject& model);
 
   HighsPresolveStatus runPresolve(PresolveInfo& presolve_info);

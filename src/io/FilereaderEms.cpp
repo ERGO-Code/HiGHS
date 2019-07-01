@@ -259,11 +259,11 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
     f << "names" << std::endl;
 
     f << "columns" << std::endl;
-    for (int i = 0; i < model.col_names_.size(); i++)
+    for (int i = 0; i < (int)model.col_names_.size(); i++)
       f << model.col_names_[i] << std::endl;
 
     f << "rows" << std::endl;
-    for (int i = 0; i < model.row_names_.size(); i++)
+    for (int i = 0; i < (int)model.row_names_.size(); i++)
       f << model.row_names_[i] << std::endl;
   }
 
@@ -279,5 +279,9 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
                                                    HighsModelBuilder& model) {
+  if (filename) {
+  }  // surpress warning.
+  if (model.getNumberOfVariables() > 0) {
+  }  // surpress warning.
   return FilereaderRetcode::NOT_IMPLEMENTED;
 }
