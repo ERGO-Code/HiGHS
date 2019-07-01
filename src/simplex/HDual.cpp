@@ -1635,14 +1635,14 @@ void HDual::updateDual() {
     shift_cost(workHMO, columnIn, -workDual[columnIn]);
   else {
     // Update the dual values (if packCount>0)
-    dualRow.update_dual(thetaDual, columnOut);
+    dualRow.update_dual(thetaDual);//, columnOut);
     if (workHMO.simplex_info_.simplex_strategy != SimplexStrategy::DUAL_PLAIN &&
         slice_PRICE) {
       // Update the dual variables slice-by-slice [presumably
       // nothing is done in the previous call to
       // dualRow.update_dual. TODO: Check with Qi
       for (int i = 0; i < slice_num; i++)
-        slice_dualRow[i].update_dual(thetaDual, columnOut);
+        slice_dualRow[i].update_dual(thetaDual);//, columnOut);
     }
   }
   workDual[columnIn] = 0;
