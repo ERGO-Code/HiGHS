@@ -19,7 +19,6 @@
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
                                                    HighsLp& model) {
-  int status = 1;
   const char* filename = options.filename.c_str();
 
   // if free format parser
@@ -51,8 +50,6 @@ FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
 
 FilewriterRetcode FilereaderMps::writeModelToFile(const char* filename,
                                                   HighsLp& model) {
-  int objsense = 1;
-  double objoffset = 0;
   return writeLpAsMPS(filename, model);
 }
 

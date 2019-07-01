@@ -192,26 +192,24 @@ void reportIntOptionValue(const int report_level, const string option_string,
   }
   char value_char [100];
   char range_char [100];
-  int value_num_char;
-  int range_num_char;
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
     if (is_default) {
-      value_num_char = sprintf(value_char, " default value %12d", option_default);
+      sprintf(value_char, " default value %12d", option_default);
     } else {
-      value_num_char = sprintf(value_char, "%s value %12d: default value is %12d", default_space.c_str(), option_value, option_default);
+      sprintf(value_char, "%s value %12d: default value is %12d", default_space.c_str(), option_value, option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
-        range_num_char = sprintf(range_char, " ");
+        sprintf(range_char, " ");
       } else {
-        range_num_char = sprintf(range_char, ": valid range is [        -Inf, %6d]", *option_max);
+        sprintf(range_char, ": valid range is [        -Inf, %6d]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        range_num_char = sprintf(range_char, ": valid range is [%12d,         Inf]", *option_min);
+        sprintf(range_char, ": valid range is [%12d,         Inf]", *option_min);
       } else {
-        range_num_char = sprintf(range_char, ": valid range is [%12d, %12d]", *option_min, *option_max);
+        sprintf(range_char, ": valid range is [%12d, %12d]", *option_min, *option_max);
       }
     }
     HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);
@@ -231,27 +229,25 @@ void reportDoubleOptionValue(const int report_level, const string option_string,
   }
   char value_char [100];
   char range_char [100];
-  int value_num_char;
-  int range_num_char;
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
     if (is_default) {
-      value_num_char = sprintf(value_char, " default value %12g", option_default);
+      sprintf(value_char, " default value %12g", option_default);
     } else {
-      value_num_char = sprintf(value_char,
+      sprintf(value_char,
 	      "%s value %12g: default value is %12g", default_space.c_str(), option_value, option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
-        range_num_char = sprintf(range_char, " ");
+        sprintf(range_char, " ");
       } else {
-        range_num_char = sprintf(range_char, ": valid range is [-Inf, %12g]", *option_max);
+        sprintf(range_char, ": valid range is [-Inf, %12g]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        range_num_char = sprintf(range_char, ": valid range is [%12g, Inf]", *option_min);
+        sprintf(range_char, ": valid range is [%12g, Inf]", *option_min);
       } else {
-        range_num_char = sprintf(range_char, ": valid range is [%12g, %12g]", *option_min, *option_max);
+        sprintf(range_char, ": valid range is [%12g, %12g]", *option_min, *option_max);
       }
     }
     HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);

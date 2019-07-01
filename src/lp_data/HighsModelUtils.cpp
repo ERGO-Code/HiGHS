@@ -94,6 +94,12 @@ std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
     case HighsBasisStatus::ZERO:
       return "FR";
       break;
+    case HighsBasisStatus::SUPER:
+      return "SU";
+      break;
+    case HighsBasisStatus::NONBASIC:
+      return "NB";
+      break;
   }
   return "";
 }

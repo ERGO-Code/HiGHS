@@ -599,7 +599,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
 #ifdef HiGHSDEV
     // Check zeroing of check vector
     for (int component = 0; component < vec_dim; component++) {
-      if (check_vector[component]) error_found;
+      if (check_vector[component]) error_found = true;
     }
     if (error_found)
       HighsLogMessage(HighsMessageType::ERROR,
@@ -2137,8 +2137,9 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 
   for (int row = 0; row < lp.numRow_; row++) {
     assert(equality_lp.Astart_[equality_lp.numCol_] ==
-           equality_lp.Avalue_.size());
-    assert(equality_lp.Aindex_.size() == equality_lp.Avalue_.size());
+           (int)equality_lp.Avalue_.size());
+    assert((int)equality_lp.Aindex_.size() ==
+	   (int)equality_lp.Avalue_.size());
     const int nnz = equality_lp.Astart_[equality_lp.numCol_];
 
     if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
