@@ -1240,3 +1240,9 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     }
 
 }
+
+void OsiHiGHSSolverInterface ::setRowNames(OsiNameVec& srcNames, int srcStart,
+                                           int len, int tgtStart) {}
+
+void OsiHiGHSSolverInterface ::setColNames(OsiNameVec& srcNames, int srcStart,
+                                           int len, int tgtStart) {}

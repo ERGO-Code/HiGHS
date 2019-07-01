@@ -386,6 +386,12 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
   /// Apply a column cut (bound adjustment).
   virtual void applyColCut(const OsiColCut& cc);
 
+  void setRowNames(OsiNameVec& srcNames, int srcStart,
+
+                   int len, int tgtStart);
+
+  void setColNames(OsiNameVec& srcNames, int srcStart, int len, int tgtStart);
+
  private:
   Highs* highs;
   HighsStatus status;
@@ -401,5 +407,9 @@ class OsiHiGHSSolverInterface : virtual public OsiSolverInterface {
 
   OsiHiGHSSolverInterface(const OsiHiGHSSolverInterface& original);
 };
+
+void OsiSolverInterfaceMpsUnitTest(
+    const std::vector<OsiSolverInterface*>& vecSiP, const std::string& mpsDir) {
+}
 
 #endif
