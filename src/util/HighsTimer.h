@@ -294,7 +294,7 @@ class HighsTimer {
 
     // Check validity of the clock list and check no clocks are still running
     for (int i = 0; i < num_clock_list_entries; i++) {
-      // int i_clock = clock_list[i];
+      int i_clock = clock_list[i];
       assert(i_clock >= 0);
       assert(i_clock < num_clock);
       // Check that the clock's not still running. It should be set to
