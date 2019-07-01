@@ -361,6 +361,7 @@ const int Highs::getIterationCount() const {
 }
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
+  underDevelopmentLogMessage("setSolution");
   // Check if solution is valid.
   assert(solution_.col_value.size() != 0 ||
          solution_.col_value.size() != lp_.numCol_);
@@ -389,6 +390,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 }
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
+  underDevelopmentLogMessage("setBasis");
   basis_ = basis;
   return HighsStatus::OK;
 }
@@ -414,6 +416,7 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
                     const double* upper_bounds, const int num_new_nz,
                     const int* starts, const int* indices,
                     const double* values) {
+  underDevelopmentLogMessage("addRows");
   HighsStatus return_status = HighsStatus::NotSet;
   // if simplex has not solved already
   if (!simplex_has_run_) {
@@ -445,6 +448,7 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                     const double* lower_bounds, const double* upper_bounds,
                     const int num_new_nz, const int* starts, const int* indices,
                     const double* values) {
+  underDevelopmentLogMessage("addCols");
   HighsStatus return_status = HighsStatus::NotSet;
   // if simplex has not solved already
   if (!simplex_has_run_) {
@@ -467,6 +471,7 @@ bool Highs::addCols(const int num_new_col, const double* costs,
 }
 
 bool Highs::changeObjectiveSense(const int sense) {
+  underDevelopmentLogMessage("changeObjectiveSense");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     this->lp_.sense_ = sense;
@@ -487,6 +492,7 @@ bool Highs::changeColCost(const int col, const double cost) {
 
 bool Highs::changeColsCost(const int num_set_entries, const int* set,
                            const double* cost) {
+  underDevelopmentLogMessage("changeColsCost");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     for (int i = 0; i < num_set_entries; i++) {
@@ -505,6 +511,7 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
 }
 
 bool Highs::changeColsCost(const int* mask, const double* cost) {
+  underDevelopmentLogMessage("changeColsCost");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     for (int i = 0; i < this->lp_.numCol_; i++) {
@@ -529,6 +536,7 @@ bool Highs::changeColBounds(const int col, const double lower,
 
 bool Highs::changeColsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
+  underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     for (int i = 0; i < num_set_entries; i++) {
@@ -550,6 +558,7 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
 
 bool Highs::changeColsBounds(const int from_col, const int to_col,
                              const double* lower, const double* upper) {
+  underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     int num_changed_bounds = to_col - from_col;
@@ -572,6 +581,7 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
 
 bool Highs::changeColsBounds(const int* mask, const double* lower,
                              const double* upper) {
+  underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     for (int i = 0; i < this->lp_.numCol_; i++) {
@@ -600,6 +610,7 @@ bool Highs::changeRowBounds(const int row, const double lower,
 
 bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
+  underDevelopmentLogMessage("changeRowsBounds");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     for (int i = 0; i < num_set_entries; i++) {
@@ -621,6 +632,7 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
 
 bool Highs::changeRowsBounds(const int* mask, const double* lower,
                              const double* upper) {
+  underDevelopmentLogMessage("changeRowsBounds");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     for (int i = 0; i < this->lp_.numRow_; i++) {
@@ -645,6 +657,7 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
 bool Highs::getCols(const int from_col, const int to_col, int& num_col,
                     double* costs, double* lower, double* upper, int& num_nz,
                     int* start, int* index, double* value) {
+  underDevelopmentLogMessage("getCols");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -664,6 +677,7 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
 bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
+  underDevelopmentLogMessage("getCols");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -683,6 +697,7 @@ bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
 bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
+  underDevelopmentLogMessage("getCols");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -702,6 +717,7 @@ bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
 bool Highs::getRows(const int from_row, const int to_row, int& num_row,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
+  underDevelopmentLogMessage("getRows");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -721,6 +737,7 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
 bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
+  underDevelopmentLogMessage("getRows");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -739,6 +756,7 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
 
 bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
                     int& num_nz, int* start, int* index, double* value) {
+  underDevelopmentLogMessage("getRows");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -756,6 +774,7 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
 }
 
 bool Highs::deleteCols(const int from_col, const int to_col) {
+  underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -771,6 +790,7 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
 }
 
 bool Highs::deleteCols(const int num_set_entries, const int* set) {
+  underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -786,6 +806,7 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
 }
 
 bool Highs::deleteCols(int* mask) {
+  underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -801,6 +822,7 @@ bool Highs::deleteCols(int* mask) {
 }
 
 bool Highs::deleteRows(const int from_row, const int to_row) {
+  underDevelopmentLogMessage("deleteRows");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -816,6 +838,7 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
 }
 
 bool Highs::deleteRows(const int num_set_entries, const int* set) {
+  underDevelopmentLogMessage("deleteRows");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -831,6 +854,7 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
 }
 
 bool Highs::deleteRows(int* mask) {
+  underDevelopmentLogMessage("deleteRows");
   HighsStatus return_status = HighsStatus::NotSet;
   if (!simplex_has_run_) {
     // TODO: modify local lp
@@ -1106,3 +1130,8 @@ HighsStatus Highs::solveRootNode(Node& root) {
 
   return status;
 }
+
+void Highs::underDevelopmentLogMessage(const string method_name) {
+  HighsLogMessage(HighsMessageType::WARNING, "Method %s is still under development and behaviour may be unpredictable", method_name.c_str());
+}
+

@@ -473,6 +473,8 @@ class Highs {
   HighsStatus runBnb();
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
+
+  void underDevelopmentLogMessage(const string method_name);
 };
 
 #endif
