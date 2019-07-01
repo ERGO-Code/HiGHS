@@ -217,5 +217,3 @@ void HPreData::printAR(int i) {
   }
   cout << endl;
 }
-
-void HPreData::writeNewFormat(string fileName) {}

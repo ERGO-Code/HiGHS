@@ -4,7 +4,7 @@ void strRemoveWhitespace(char* str) {
   char* dest = str;
   do
     while (isspace(*str)) str++;
-  while (*dest++ = *str++);
+  while ((*dest++ = *str++));
 }
 
 char* strClone(const char* str) {
@@ -64,19 +64,19 @@ std::string& trim(std::string& str, const std::string& chars) {
 
 bool is_empty(char c, const std::string& chars) {
   int pos = chars.find_first_of(c);
-  if (pos == -1 || pos == chars.size()) return false;
+  if (pos == -1 || pos == (int)chars.size()) return false;
   return true;
 }
 
 bool is_empty(std::string& str, const std::string& chars) {
   int pos = str.find_first_not_of(chars);
-  if (pos == -1 || pos == str.size()) return true;
+  if (pos == -1 || pos == (int)str.size()) return true;
   return false;
 }
 
 bool is_end(std::string& str, int end, const std::string& chars) {
   int pos = str.find_first_not_of(chars, end);
-  if (pos == -1 || pos == str.size()) return true;
+  if (pos == -1 || pos == (int)str.size()) return true;
   return false;
 }
 
@@ -84,7 +84,7 @@ int first_word_end(std::string& str, int start) {
   const std::string chars = "\t\n\v\f\r ";
   int next_word_start = str.find_first_not_of(chars, start);
   int next_word_end = str.find_first_of(chars, next_word_start);
-  if (next_word_end < 0 || next_word_end > str.size()) return str.size();
+  if (next_word_end < 0 || next_word_end > (int)str.size()) return str.size();
   return next_word_end;
 }
 

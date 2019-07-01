@@ -66,5 +66,9 @@ FilereaderRetcode FilereaderMps::writeModelToFile(const char* filename,
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const char* filename,
                                                    HighsModelBuilder& model) {
+  if (filename) {
+  }  // surpress warning.
+  if (model.getNumberOfVariables() > 0) {
+  }  // surpress warning.
   return FilereaderRetcode::PARSERERROR;
 }
