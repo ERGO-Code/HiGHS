@@ -1571,7 +1571,7 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
+FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp) {
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
@@ -1592,7 +1592,7 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
     local_col_names = lp.col_names_;
   } else {
     // Cannot (easily) make up names for more than 10^7 columns
-    if (lp.numCol_ > 10000000) return false;
+    if (lp.numCol_ > 10000000) return FilewriterRetcode::FAIL;
     for (int iCol = 0; iCol < lp.numCol_; iCol++) {
       std::string name = "C" + std::to_string(iCol);
       local_col_names[iCol] = name;
@@ -1611,19 +1611,16 @@ bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
     local_row_names = lp.row_names_;
   } else {
     // Cannot (easily) make up names for more than 10^7 rows
-    if (lp.numRow_ > 10000000) return false;
+    if (lp.numRow_ > 10000000) return FilewriterRetcode::FAIL;
     for (int iRow = 0; iRow < lp.numRow_; iRow++) {
       std::string name = "R" + std::to_string(iRow);
       local_row_names[iRow] = name;
     }
   }
-  int writeMPS_return =
-      writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
-               lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
-               lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
-               lp.integrality_, local_col_names, local_row_names);
-  bool return_value = writeMPS_return == 0;
-  return return_value;
+  return writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
+		  lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
+		  lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
+		  lp.integrality_, local_col_names, local_row_names);
 }
 
 // Methods for reporting an LP, including its row and column data and matrix

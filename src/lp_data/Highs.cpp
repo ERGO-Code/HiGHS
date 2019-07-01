@@ -56,7 +56,7 @@ HighsStatus Highs::initializeFromFile(const std::string filename) {
   this->options_.filename = filename;
 
   FilereaderRetcode retcode = reader->readModelFromFile(this->options_, model);
-  if (retcode != FilereaderRetcode::OKAY) {
+  if (retcode != FilereaderRetcode::OK) {
     return HighsStatus::Error;
   }
 
@@ -67,8 +67,8 @@ HighsStatus Highs::writeToFile(const std::string filename) {
   HighsLp model = this->lp_;
 
   Filereader* writer = Filereader::getFilereader(filename.c_str());
-  FilereaderRetcode retcode = writer->writeModelToFile(filename.c_str(), model);
-  if (retcode != FilereaderRetcode::OKAY) {
+  FilewriterRetcode retcode = writer->writeModelToFile(filename.c_str(), model);
+  if (retcode != FilewriterRetcode::OK) {
     return HighsStatus::Error;
   }
 

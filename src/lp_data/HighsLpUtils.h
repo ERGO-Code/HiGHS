@@ -15,6 +15,7 @@
 #define LP_DATA_HIGHSLPUTILS_H_
 
 #include "HConfig.h"
+#include "io/Filereader.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
@@ -186,7 +187,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
 /**
  * @brief Write out the LP as an MPS file
  */
-bool writeLpAsMPS(const char* filename, const HighsLp& lp);
+FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp);
 
 /**
  * @brief Report the data of an LP
