@@ -362,12 +362,12 @@ int Highs::getIterationCount() const {
 
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   // Check if solution is valid.
-  assert(solution_.col_value.size() != 0 ||
-         solution_.col_value.size() != lp_.numCol_);
-  assert(solution.col_dual.size() == 0 ||
-         solution.col_dual.size() == lp_.numCol_);
-  assert(solution.row_dual.size() == 0 ||
-         solution.row_dual.size() == lp_.numRow_);
+  assert((int)solution_.col_value.size() != 0 ||
+         (int)solution_.col_value.size() != lp_.numCol_);
+  assert((int)solution.col_dual.size() == 0 ||
+         (int)solution.col_dual.size() == lp_.numCol_);
+  assert((int)solution.row_dual.size() == 0 ||
+         (int)solution.row_dual.size() == lp_.numRow_);
 
   if (solution.col_value.size()) solution_.col_value = solution.col_value;
   if (solution.col_dual.size()) solution_.col_dual = solution.col_dual;
