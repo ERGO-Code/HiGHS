@@ -209,7 +209,7 @@ void HDual::solve(int num_threads) {
   }
   if (solve_bailout) {
     assert(simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
-	   SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+	   simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
 
