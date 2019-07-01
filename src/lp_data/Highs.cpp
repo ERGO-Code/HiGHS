@@ -89,7 +89,7 @@ HighsStatus Highs::run() {
   if (options_.find_feasibility) {
     // use when you do something with solution depending on whether we have
     // dualized or not.
-    HighsSolution& solution = solution_;
+    // HighsSolution& solution = solution_;
 
     // options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
     // HighsSetIO(options_);
@@ -166,13 +166,14 @@ HighsStatus Highs::run() {
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
         solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
-				     "Not presolved: solving the LP");
+                                     "Not presolved: solving the LP");
         solve_iteration_count += iteration_count;
         break;
       }
       case HighsPresolveStatus::NotReduced: {
-        solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
-				     "Problem not reduced by presolve: solving the LP");
+        solve_status =
+            callRunSolver(hmos_[solved_hmo], iteration_count,
+                          "Problem not reduced by presolve: solving the LP");
         solve_iteration_count += iteration_count;
         break;
       }
@@ -182,11 +183,11 @@ HighsStatus Highs::run() {
         // so the last one in lp_ is the presolved one.
         hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
         // Log the presolve reductions
-	logPresolveReductions(hmos_[original_hmo].lp_, hmos_[presolve_hmo].lp_);	
-	// Record the HMO to be solved
+        logPresolveReductions(hmos_[original_hmo].lp_, hmos_[presolve_hmo].lp_);
+        // Record the HMO to be solved
         solved_hmo = presolve_hmo;
         solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
-				     "Solving the presolved LP");
+                                     "Solving the presolved LP");
         solve_iteration_count += iteration_count;
         break;
       }
@@ -216,8 +217,7 @@ HighsStatus Highs::run() {
         message_not_opt << "Run status : " << HighsStatusToString(result)
                         << std::endl;
         message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
-                        << lp_solve_final_time - initial_time
-                        << std::endl;
+                        << lp_solve_final_time - initial_time << std::endl;
 
         message_not_opt << std::endl;
 
@@ -234,64 +234,67 @@ HighsStatus Highs::run() {
     // Postsolve. Does nothing if there were no reductions during presolve.
     if (solve_status == HighsStatus::Optimal) {
       if (presolve_status == HighsPresolveStatus::Reduced) {
-	// If presolve is nontrivial, extract the optimal solution
-	// and basis for the presolved problem in order to generate
-	// the solution and basis for postsolve to use to generate a
-	// solution(?) and basis that is, hopefully, optimal. This is
-	// confirmed or corrected by hot-starting the simplex solver
-	presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
-	presolve_info.presolve_[0].setBasisInfo(
-						hmos_[solved_hmo].basis_.col_status,
-						hmos_[solved_hmo].basis_.row_status);
-	// Run postsolve
-	timer_.start(timer_.postsolve_clock);
-	HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
-	timer_.stop(timer_.postsolve_clock);
-	if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
-	  HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
-	  // Set solution(?) and basis to hot-start the simplex solver
-	  // for the original_hmo
-	  hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
-	  
-	  hmos_[original_hmo].basis_.col_status =
-	    presolve_info.presolve_[0].getColStatus();
-	  hmos_[original_hmo].basis_.row_status =
-	    presolve_info.presolve_[0].getRowStatus();
-	  hmos_[original_hmo].basis_.valid_ = true;
-	  // Analyse the Highs basic solution returned from postsolve
-	  HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
-	  int report_level=-1;
+        // If presolve is nontrivial, extract the optimal solution
+        // and basis for the presolved problem in order to generate
+        // the solution and basis for postsolve to use to generate a
+        // solution(?) and basis that is, hopefully, optimal. This is
+        // confirmed or corrected by hot-starting the simplex solver
+        presolve_info.reduced_solution_ = hmos_[solved_hmo].solution_;
+        presolve_info.presolve_[0].setBasisInfo(
+            hmos_[solved_hmo].basis_.col_status,
+            hmos_[solved_hmo].basis_.row_status);
+        // Run postsolve
+        timer_.start(timer_.postsolve_clock);
+        HighsPostsolveStatus postsolve_status = runPostsolve(presolve_info);
+        timer_.stop(timer_.postsolve_clock);
+        if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
+          HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
+          // Set solution(?) and basis to hot-start the simplex solver
+          // for the original_hmo
+          hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
+
+          hmos_[original_hmo].basis_.col_status =
+              presolve_info.presolve_[0].getColStatus();
+          hmos_[original_hmo].basis_.row_status =
+              presolve_info.presolve_[0].getRowStatus();
+          hmos_[original_hmo].basis_.valid_ = true;
+          // Analyse the Highs basic solution returned from postsolve
+          HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
+          int report_level = -1;
 #ifdef HiGHSDEV
-	  report_level = 1;
+          report_level = 1;
 #endif
-	  simplex_interface.analyseHighsSolutionAndBasis(report_level, "after returning from postsolve");
-	  // Now hot-start the simplex solver for the original_hmo
-	  solved_hmo = original_hmo;
-	  // Save the options to allow the best simplex strategy to
-	  // be used
-	  HighsOptions save_options = hmos_[solved_hmo].options_;
-	  HighsOptions& options = hmos_[solved_hmo].options_;
-	  options.simplex_strategy = SimplexStrategy::CHOOSE;
-	  // Set the message level to ML_ALWAYS so that data for
-	  // individual iterations are reported
-	  bool full_iteration_logging = false;
-	  if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
-	  solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
-				       "Solving the original LP from the solution after postsolve");
-	  postsolve_iteration_count = iteration_count;
-	  solve_iteration_count += iteration_count;
-	  // Recover the options
-	  options = save_options;
-	  // Reset the message level
-	  if (full_iteration_logging) HighsSetMessagelevel(options_.messageLevel);
-	}
+          simplex_interface.analyseHighsSolutionAndBasis(
+              report_level, "after returning from postsolve");
+          // Now hot-start the simplex solver for the original_hmo
+          solved_hmo = original_hmo;
+          // Save the options to allow the best simplex strategy to
+          // be used
+          HighsOptions save_options = hmos_[solved_hmo].options_;
+          HighsOptions& options = hmos_[solved_hmo].options_;
+          options.simplex_strategy = SimplexStrategy::CHOOSE;
+          // Set the message level to ML_ALWAYS so that data for
+          // individual iterations are reported
+          bool full_iteration_logging = false;
+          if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
+          solve_status = callRunSolver(
+              hmos_[solved_hmo], iteration_count,
+              "Solving the original LP from the solution after postsolve");
+          postsolve_iteration_count = iteration_count;
+          solve_iteration_count += iteration_count;
+          // Recover the options
+          options = save_options;
+          // Reset the message level
+          if (full_iteration_logging)
+            HighsSetMessagelevel(options_.messageLevel);
+        }
       }
     }
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
     solved_hmo = original_hmo;
-    solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
-				 "Re-solving the LP");
+    solve_status =
+        callRunSolver(hmos_[solved_hmo], iteration_count, "Re-solving the LP");
     solve_iteration_count += iteration_count;
   }
   // else if (reduced problem failed to solve) {
@@ -355,7 +358,7 @@ double Highs::getObjectiveValue() const {
   return 0;
 }
 
-const int Highs::getIterationCount() const {
+int Highs::getIterationCount() const {
   if (hmos_.size() == 0) return 0;
   return hmos_[0].simplex_info_.iteration_count;
 }
@@ -383,8 +386,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
     result_duals = calculateColDuals(lp_, solution_);
 
   if (result_values == HighsStatus::Error || result_duals == HighsStatus::Error)
-    ;
-  return HighsStatus::Error;
+    return HighsStatus::Error;
 
   return HighsStatus::OK;
 }
@@ -902,7 +904,8 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 }
 
 // The method below runs simplex or ipx solver on the lp.
-HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count, const string message) {
+HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
+                                 const string message) {
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
   int initial_iteration_count = model.simplex_info_.iteration_count;
   HighsStatus solve_status = runSolver(model);

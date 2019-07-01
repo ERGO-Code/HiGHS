@@ -691,4 +691,4 @@ FilewriterRetcode writeMPS(const char* filename, const int& numRow, const int& n
   return FilewriterRetcode::OK;
 }
 
-inline const char* const BoolToString(bool b) { return b ? "True" : "False"; }
+inline const char* BoolToString(bool b) { return b ? "True" : "False"; }

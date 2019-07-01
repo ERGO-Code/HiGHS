@@ -66,6 +66,6 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
 // int isspace(int c);
 // char* fgets(char* str, int num, FILE* stream);
 
-inline const char* const BoolToString(bool b);
+inline const char* BoolToString(bool b);
 
 #endif /* IO_HMPSIO_H_ */

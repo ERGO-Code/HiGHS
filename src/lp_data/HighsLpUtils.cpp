@@ -13,8 +13,8 @@
  */
 #include "lp_data/HighsLpUtils.h"
 
-#include <cassert>
 #include <algorithm>
+#include <cassert>
 
 #include "HConfig.h"
 #include "io/HMPSIO.h"
@@ -624,7 +624,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
     if (normalise) {
       // Accommodate the loss of these values in any subsequent packed vectors
       for (int ix = to_ix; ix < num_vec; ix++) {
-        int from_el = Xstart[ix];
+        // int from_el = Xstart[ix];
         Xstart[ix] = num_new_nz;
         int to_el;
         if (ix < num_vec) {
@@ -899,7 +899,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::NotSet;
-  int new_num_row = lp.numRow_ + num_new_row;
+  // int new_num_row = lp.numRow_ + num_new_row;
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
   HighsStatus call_status;
@@ -1035,7 +1035,7 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
   if (num_new_row == 0) return HighsStatus::OK;
   // Check that nonzeros aren't being appended to a matrix with no columns
   if (num_new_nz > 0 && lp.numCol_ <= 0) return HighsStatus::Error;
-  int new_num_row = lp.numRow_ + num_new_row;
+  // int new_num_row = lp.numRow_ + num_new_row;
   if (num_new_nz == 0) return HighsStatus::OK;
   int current_num_nz = lp.Astart_[lp.numCol_];
   vector<int> Alength;
@@ -1382,6 +1382,8 @@ HighsStatus changeLpMatrixCoefficient(HighsLp& lp, const int row, const int col,
   }
   lp.Aindex_[changeElement] = row;
   lp.Avalue_[changeElement] = new_value;
+
+  return HighsStatus::OK;
 }
 
 HighsStatus changeLpCosts(HighsLp& lp, const bool interval, const int from_col,
@@ -2059,6 +2061,9 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
       }
     }
   }
+
+  if (mask) {
+  }  // surpress warning.
 }
 
 bool isColDataNull(const double* usr_col_cost, const double* usr_col_lower,
@@ -2331,10 +2336,9 @@ void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp) {
   int num_row_to = presolve_lp.numRow_;
   int num_els_to = presolve_lp.Astart_[num_col_to];
   HighsLogMessage(HighsMessageType::INFO,
-		  "Presolve reductions: columns %d(-%d); rows %d(-%d) "
-		  "elements %d(-%d)",
-		  num_col_to, (num_col_from - num_col_to), num_row_to,
-		  (num_row_from - num_row_to), num_els_to,
-		  (num_els_from - num_els_to));
+                  "Presolve reductions: columns %d(-%d); rows %d(-%d) "
+                  "elements %d(-%d)",
+                  num_col_to, (num_col_from - num_col_to), num_row_to,
+                  (num_row_from - num_row_to), num_els_to,
+                  (num_els_from - num_els_to));
 }
-
