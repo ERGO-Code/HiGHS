@@ -289,7 +289,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   }
 
   if (valid_simplex_lp) {
-    //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
     appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
     call_status = assessBounds(
         "Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow, false, 0,
@@ -315,6 +314,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   // Update the basis correponding to new basic rows
   if (valid_basis) append_basic_rows_to_basis(lp, basis, newNumRow);
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   //  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp,
   //  simplex_basis, newNumRow);
 

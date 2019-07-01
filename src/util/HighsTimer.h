@@ -309,7 +309,7 @@ class HighsTimer {
         fflush(stdout);
       }
 #endif
-      assert(clock_start[i_clock] > 0);
+      assert(clock_start[clock_list[i]] > 0);
     }
 
     // Report in one line the per-mille contribution from each clock
