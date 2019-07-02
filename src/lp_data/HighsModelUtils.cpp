@@ -155,15 +155,16 @@ void reportModelBoundSol(const bool columns, const int dim,
   }
 }
 
-bool namesWithSpaces(const int num_name, const std::vector<std::string>& names) {
+bool namesWithSpaces(const int num_name, const std::vector<std::string>& names, const bool report) {
+  bool names_with_spaces = false;
   for (int ix = 0; ix < num_name; ix++) {
     int space_pos = names[ix].find(" ");
     if (space_pos >= 0) {
-      printf("Name |%s| contains a space character in position %d\n", names[ix].c_str(), space_pos);
-      return true;
+      if (report) printf("Name |%s| contains a space character in position %d\n", names[ix].c_str(), space_pos);
+      names_with_spaces = true;
     }
   }
-  return false;
+  return names_with_spaces;
 }
 
 int maxNameLength(const int num_name, const std::vector<std::string>& names) {
@@ -183,13 +184,9 @@ int regulariseNames(const std::string name_type, const int num_name, std::vector
   for (int ix = 0; ix < num_name; ix++) {
     if ((int)names[ix].length() == 0) num_empty_name++;
   }
-  printf("Number of empty names is %d\n", num_empty_name);
   // If there are no empty names - in which case they will all be
   // replaced - find the maximum name length
-  if (!num_empty_name) {
-    max_name_length = maxNameLength(num_name, names);
-    printf("Initial maximum name length is %d\n", max_name_length);
-  }
+  if (!num_empty_name) max_name_length = maxNameLength(num_name, names);
   bool construct_names = num_empty_name ||
     max_name_length > desired_max_name_length;
   if (construct_names) {
@@ -204,11 +201,9 @@ int regulariseNames(const std::string name_type, const int num_name, std::vector
   } else {
     // Using original names, so look to see whether there are names with spaces
     names_with_spaces = namesWithSpaces(num_name, names);
-    if (names_with_spaces) printf("Found names with spaces\n");
   }
   // Find the final maximum name length
   max_name_length = maxNameLength(num_name, names);
-  printf("Final   maximum name length is %d\n", max_name_length);
   // Can't have names with spaces and more than 8 characters
   if (max_name_length > 8 && names_with_spaces) return 1;
   return 0;

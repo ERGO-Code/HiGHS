@@ -1546,7 +1546,7 @@ void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   assert(firstvar >= 0);
-  assert(lastvar < simplex_lp.numCol_ + simplex_lp.numRow_);
+  assert(lastvar < highs_model_object.simplex_lp_.numCol_ + highs_model_object.simplex_lp_.numRow_);
   // double dl_pr_act, norm_dl_pr_act;
   // norm_dl_pr_act = 0.0;
   for (int var = firstvar; var <= lastvar; var++) {
@@ -1758,7 +1758,7 @@ void initialise_cost(HighsModelObject& highs_model_object, int perturb) {
 int get_nonbasicMove(HighsModelObject& highs_model_object, int var) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   assert(var >= 0);
-  assert(var < simplex_lp.numCol_ + simplex_lp.numRow_);
+  assert(var < highs_model_object.simplex_lp_.numCol_ + highs_model_object.simplex_lp_.numRow_);
   if (!highs_isInfinity(-simplex_info.workLower_[var])) {
     if (!highs_isInfinity(simplex_info.workUpper_[var])) {
       // Finite lower and upper bounds so nonbasic move depends on whether they
