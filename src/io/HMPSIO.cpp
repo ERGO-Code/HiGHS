@@ -437,7 +437,8 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
-FilewriterRetcode writeMPS(const char* filename, const int& numRow, const int& numCol,
+FilewriterRetcode writeMPS(const char* filename, const bool use_free_format,
+			   const int& numRow, const int& numCol,
 			   const int& numInt, const int& objSense, const double& objOffset,
 			   const vector<int>& Astart, const vector<int>& Aindex,
 			   const vector<double>& Avalue, const vector<double>& colCost,
@@ -462,15 +463,13 @@ FilewriterRetcode writeMPS(const char* filename, const int& numRow, const int& n
 #ifdef HiGHSDEV
   printf("writeMPS: Opened file  OK\n");
 #endif
-  // Check that the names are no longer than 8 characters
+  // Check that the names are no longer than 8 characters for fixed format write
   int max_col_name_length = maxNameLength(numCol, col_names);
   int max_row_name_length = maxNameLength(numRow, row_names);
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
-  if (max_name_length > 8) {
-#ifdef HiGHSDEV
+  if (!use_free_format && max_name_length > 8) {
     printf("writeMPS: Cannot write fixed MPS with names of length (up to) %d\n",
            max_name_length);
-#endif
     return FilewriterRetcode::FAIL;
   }
   vector<int> r_ty;

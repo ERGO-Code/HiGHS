@@ -1158,7 +1158,7 @@ void HDual::iterationReportRebuild(const int i_v) {
   if (solvePhase == 2) reportInfeasibility();
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else
-  logRebuild(workHMO, false, solvePhase, i_v);
+  logRebuild(workHMO, false, solvePhase);
 #endif
 }
 

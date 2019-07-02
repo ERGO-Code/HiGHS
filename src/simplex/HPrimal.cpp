@@ -836,7 +836,7 @@ void HPrimal::iterationReportRebuild(const int i_v) {
   if (solvePhase == 2) reportInfeasibility();
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else
-  logRebuild(workHMO, true, solvePhase, i_v);
+  logRebuild(workHMO, true, solvePhase);
 #endif
 }
 

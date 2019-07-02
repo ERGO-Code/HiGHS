@@ -1573,53 +1573,39 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp) {
+FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bool free_format) {
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.numCol_);
   local_row_names.resize(lp.numRow_);
-  // Determine whether any existing names can be used
-  // Consider column names
-  if (have_col_names) {
-    int max_col_name_length = maxNameLength(lp.numCol_, lp.col_names_);
-    if (max_col_name_length > 8) {
-      printf("Cannot use model column names since maximum length is %d\n",
-             max_col_name_length);
-      have_col_names = false;
-    }
+  //
+  // Initialise the local names to any existing names
+  if (have_col_names) local_col_names = lp.col_names_;
+  if (have_row_names) local_row_names = lp.row_names_;
+  //
+  // Regularise the column names
+  int max_col_name_length = HIGHS_CONST_I_INF;
+  if (!free_format) max_col_name_length = 8;
+  int col_name_status = regulariseNames("Column", lp.numCol_, local_col_names, max_col_name_length);
+  if (col_name_status) return FilewriterRetcode::FAIL;
+  //
+  // Regularise the row names
+  int max_row_name_length = HIGHS_CONST_I_INF;
+  if (!free_format) max_row_name_length = 8;
+  int row_name_status = regulariseNames("Row", lp.numRow_, local_row_names, max_row_name_length);
+  if (row_name_status) return FilewriterRetcode::FAIL;
+  int max_name_length = std::max(max_col_name_length, max_row_name_length);
+  bool use_free_format = free_format;
+  if (!free_format) {
+    if (max_name_length > 8) {
+      HighsLogMessage(HighsMessageType::WARNING, "Maximum name length is %d so using free format rather than fixed format", max_name_length);
+      use_free_format = true;
+    }      
   }
-  if (have_col_names) {
-    local_col_names = lp.col_names_;
-  } else {
-    // Cannot (easily) make up names for more than 10^7 columns
-    if (lp.numCol_ > 10000000) return FilewriterRetcode::FAIL;
-    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-      std::string name = "C" + std::to_string(iCol);
-      local_col_names[iCol] = name;
-    }
-  }
-  // Consider row names
-  if (have_row_names) {
-    int max_row_name_length = maxNameLength(lp.numRow_, lp.row_names_);
-    if (max_row_name_length > 8) {
-      printf("Cannot use model row    names since maximum length is %d\n",
-             max_row_name_length);
-      have_row_names = false;
-    }
-  }
-  if (have_row_names) {
-    local_row_names = lp.row_names_;
-  } else {
-    // Cannot (easily) make up names for more than 10^7 rows
-    if (lp.numRow_ > 10000000) return FilewriterRetcode::FAIL;
-    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-      std::string name = "R" + std::to_string(iRow);
-      local_row_names[iRow] = name;
-    }
-  }
-  return writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
+  return writeMPS(filename, use_free_format,
+		  lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
 		  lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
 		  lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
 		  lp.integrality_, local_col_names, local_row_names);

@@ -110,7 +110,7 @@ HighsStatus HighsSimplexInterface::addCols(
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highs_basis_ok(lp, basis);
+    bool basisOK = highs_basis_ok();//lp, basis);
     assert(basisOK);
     report_basis(lp, basis);
   }
@@ -216,7 +216,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_basis = simplex_lp_status.has_basis;
   bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = scale.is_scaled_;
 
@@ -314,8 +313,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   // Update the basis correponding to new basic rows
   if (valid_basis) append_basic_rows_to_basis(lp, basis, newNumRow);
-  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  //  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp,
+  //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
+  //  if (simplex_lp_status.has_basis) append_basic_rows_to_basis(simplex_lp,
   //  simplex_basis, newNumRow);
 
   // Deduce the consequences of adding new rows
@@ -327,11 +326,11 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highs_basis_ok(lp, basis);
+    bool basisOK = highs_basis_ok();//lp, basis);
     assert(basisOK);
     report_basis(lp, basis);
   }
-  if (valid_simplex_basis) {
+  if (simplex_lp_status.has_basis) {
     bool simplex_basisOK =
         nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
     assert(simplex_basisOK);
@@ -648,11 +647,10 @@ HighsStatus HighsSimplexInterface::changeCoefficient(int Xrow, int Xcol,
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
 #ifdef HiGHSDEV
   // Check that if there is no simplex LP then there is no matrix or scaling
   if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
+    assert(!simplex_lp_status.has_matrix_col_wise);
     //    assert(!apply_row_scaling);
   }
 #endif
@@ -669,6 +667,7 @@ HighsStatus HighsSimplexInterface::changeCoefficient(int Xrow, int Xcol,
   // Otherwise, treat it as if
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
   //  simplex_lp.reportLp();
+  return HighsStatus::OK;
 }
 
 void HighsSimplexInterface::shiftObjectiveValue(double Xshift) {
@@ -678,11 +677,8 @@ void HighsSimplexInterface::shiftObjectiveValue(double Xshift) {
   // Update the LP objective value with the shift
   highs_model_object.simplex_info_.dual_objective_value += Xshift;
   // Update the LP offset with the shift
-  HighsLp& lp = highs_model_object.lp_;
   highs_model_object.lp_.offset_ += Xshift;
-  HighsSimplexLpStatus& simplex_lp_status =
-      highs_model_object.simplex_lp_status_;
-  if (simplex_lp_status.valid) {
+  if (highs_model_object.simplex_lp_status_.valid) {
     // Update the simplex LP offset with the shift
     highs_model_object.simplex_lp_.offset_ += Xshift;
   }
@@ -698,7 +694,6 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
       highs_model_object.simplex_lp_status_;
   if (simplex_lp_status.valid) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-    HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
     if ((Xsense == OBJSENSE_MINIMIZE) !=
         (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
       // Flip the objective sense
@@ -1483,7 +1478,6 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
     double upper = lp.colUpper_[iCol];
     double value = solution.col_value[iCol];
     double dual = solution.col_dual[iCol];
-    int iVar = iCol;
     HighsBasisStatus status = basis.col_status[iCol];
     local_primal_objective_value += lp.colCost_[iCol] * value;
     if (status != HighsBasisStatus::BASIC)

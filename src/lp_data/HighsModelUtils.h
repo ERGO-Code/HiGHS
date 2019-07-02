@@ -30,6 +30,8 @@ void reportModelBoundSol(const bool columns, const int dim,
                          const std::vector<double>& primal,
                          const std::vector<double>& dual,
                          const std::vector<HighsBasisStatus>& status);
+bool namesWithSpaces(const int num_name, const std::vector<std::string>& names);
 int maxNameLength(const int num_name, const std::vector<std::string>& names);
+int regulariseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length);
 
 #endif

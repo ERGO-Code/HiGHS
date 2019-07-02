@@ -187,7 +187,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
 /**
  * @brief Write out the LP as an MPS file
  */
-FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp);
+FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bool free = true);
 
 /**
  * @brief Report the data of an LP

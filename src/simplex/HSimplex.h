@@ -42,7 +42,9 @@ void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& simplex_basis,
 
 void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
 
-bool highs_basis_ok(HighsLp& lp, HighsBasis& basis);
+bool highs_basis_ok(
+		    //		    HighsLp& lp, HighsBasis& basis
+		    );
 
 bool nonbasic_flag_basic_index_ok(HighsLp& lp, SimplexBasis& simplex_basis);
 
@@ -211,7 +213,7 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
                    int columnOut);
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
-                const int solve_phase, const int i_v = -1);
+                const int solve_phase);
 
 std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
 

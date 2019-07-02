@@ -155,11 +155,62 @@ void reportModelBoundSol(const bool columns, const int dim,
   }
 }
 
-int maxNameLength(const int num_name, const std::vector<std::string>& names) {
-  int max_name_length = 0;
+bool namesWithSpaces(const int num_name, const std::vector<std::string>& names) {
   for (int ix = 0; ix < num_name; ix++) {
-    int name_length = names[ix].length();
-    max_name_length = std::max(name_length, max_name_length);
+    int space_pos = names[ix].find(" ");
+    if (space_pos >= 0) {
+      printf("Name |%s| contains a space character in position %d\n", names[ix].c_str(), space_pos);
+      return true;
+    }
   }
-  return max_name_length;
+  return false;
 }
+
+int maxNameLength(const int num_name, const std::vector<std::string>& names) {
+    int max_name_length = 0;
+    for (int ix = 0; ix < num_name; ix++)
+      max_name_length = std::max((int)names[ix].length(), max_name_length);
+    return max_name_length;
+}
+
+int regulariseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length) {
+  // Record the desired maximum name length
+  int desired_max_name_length = max_name_length;
+  // First look for empty names
+  int num_empty_name = 0;
+  std::string name_prefix = name_type.substr(0, 1);
+  bool names_with_spaces = false;
+  for (int ix = 0; ix < num_name; ix++) {
+    if ((int)names[ix].length() == 0) num_empty_name++;
+  }
+  printf("Number of empty names is %d\n", num_empty_name);
+  // If there are no empty names - in which case they will all be
+  // replaced - find the maximum name length
+  if (!num_empty_name) {
+    max_name_length = maxNameLength(num_name, names);
+    printf("Initial maximum name length is %d\n", max_name_length);
+  }
+  bool construct_names = num_empty_name ||
+    max_name_length > desired_max_name_length;
+  if (construct_names) {
+    // Construct names, either because they are empty names, or
+    // because the existing names are too long
+
+    HighsLogMessage(HighsMessageType::WARNING,
+    "There are empty or excessively-long %s names: using constructed names with prefix %s",
+	   name_type.c_str(), name_prefix.c_str());
+    for (int ix = 0; ix < num_name; ix++)
+      names[ix] = name_prefix + std::to_string(ix);
+  } else {
+    // Using original names, so look to see whether there are names with spaces
+    names_with_spaces = namesWithSpaces(num_name, names);
+    if (names_with_spaces) printf("Found names with spaces\n");
+  }
+  // Find the final maximum name length
+  max_name_length = maxNameLength(num_name, names);
+  printf("Final   maximum name length is %d\n", max_name_length);
+  // Can't have names with spaces and more than 8 characters
+  if (max_name_length > 8 && names_with_spaces) return 1;
+  return 0;
+}
+
