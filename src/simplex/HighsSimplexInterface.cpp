@@ -327,12 +327,15 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 #ifdef HiGHSDEV
   if (valid_basis) {
     bool basisOK = highs_basis_ok();//lp, basis);
+    if (!basisOK) printf("HiGHS basis not OK in addRows\n");
     assert(basisOK);
     report_basis(lp, basis);
   }
   if (simplex_lp_status.has_basis) {
+    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
     bool simplex_basisOK =
         nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
+    if (!simplex_basisOK) printf("Simplex basis not OK in addRows\n");
     assert(simplex_basisOK);
     report_basis(simplex_lp, simplex_basis);
   }

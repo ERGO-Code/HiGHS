@@ -472,6 +472,8 @@ FilewriterRetcode writeMPS(const char* filename, const bool use_free_format,
            max_name_length);
     return FilewriterRetcode::FAIL;
   }
+  bool free_format = use_free_format;
+  //  free_format = false;
   vector<int> r_ty;
   vector<double> rhs, ranges;
   bool have_rhs = false;
@@ -558,13 +560,29 @@ FilewriterRetcode writeMPS(const char* filename, const bool use_free_format,
   fprintf(file, " N  COST\n");
   for (int r_n = 0; r_n < numRow; r_n++) {
     if (r_ty[r_n] == MPS_ROW_TY_E) {
-      fprintf(file, " E  %-8s\n", row_names[r_n].c_str());
+      if (free_format) {
+	fprintf(file, " E  %s\n", row_names[r_n].c_str());
+      } else {
+	fprintf(file, " E  %-8s\n", row_names[r_n].c_str());
+      }
     } else if (r_ty[r_n] == MPS_ROW_TY_G) {
-      fprintf(file, " G  %-8s\n", row_names[r_n].c_str());
+      if (free_format) {
+	fprintf(file, " G  %s\n", row_names[r_n].c_str());
+      } else {
+	fprintf(file, " G  %-8s\n", row_names[r_n].c_str());
+      }
     } else if (r_ty[r_n] == MPS_ROW_TY_L) {
-      fprintf(file, " L  %-8s\n", row_names[r_n].c_str());
+      if (free_format) {
+	fprintf(file, " L  %s\n", row_names[r_n].c_str());
+      } else {
+	fprintf(file, " L  %-8s\n", row_names[r_n].c_str());
+      }
     } else {
-      fprintf(file, " N  %-8s\n", row_names[r_n].c_str());
+      if (free_format) {
+	fprintf(file, " N  %s\n", row_names[r_n].c_str());
+      } else {
+	fprintf(file, " N  %-8s\n", row_names[r_n].c_str());
+      }
     }
   }
   bool integerFg = false;
@@ -581,34 +599,51 @@ FilewriterRetcode writeMPS(const char* filename, const bool use_free_format,
       if (write_zero_no_cost_columns) {
         // Give the column a presence by writing out a zero cost
         double v = 0;
-        fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+	if (free_format) {
+	  fprintf(file, "    %s  COST      %.15g\n", col_names[c_n].c_str(), v);
+	} else {
+	  fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+	}
       }
       continue;
     }
     if (numInt) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
-        fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n",
-                nIntegerMk);
+	if (free_format) {
+	  fprintf(file, "    MARK%-d  'MARKER'                 'INTORG'\n", nIntegerMk);
+	} else {
+	  fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n", nIntegerMk);
+	}
         nIntegerMk++;
         integerFg = true;
       } else if (!integerColumn[c_n] && integerFg) {
         // End an integer section
-        fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n",
-                nIntegerMk);
+	if (free_format) {
+	  fprintf(file, "    MARK%-d  'MARKER'                 'INTEND'\n", nIntegerMk);
+	} else {
+	  fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n", nIntegerMk);
+	}
         nIntegerMk++;
         integerFg = false;
       }
     }
     if (colCost[c_n] != 0) {
       double v = objSense * colCost[c_n];
-      fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+      if (free_format) {
+	fprintf(file, "    %s  COST      %.15g\n", col_names[c_n].c_str(), v);
+      } else {
+	fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+      }
     }
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       double v = Avalue[el_n];
       int r_n = Aindex[el_n];
-      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
-              row_names[r_n].c_str(), v);
+      if (free_format) {
+	fprintf(file, "    %s  %s  %.15g\n", col_names[c_n].c_str(), row_names[r_n].c_str(), v);
+      } else {
+	fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(), row_names[r_n].c_str(), v);
+      }
     }
   }
   have_rhs = true;
@@ -621,16 +656,26 @@ FilewriterRetcode writeMPS(const char* filename, const bool use_free_format,
     }
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = rhs[r_n];
-      if (v)
-        fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      if (v) {
+	if (free_format) {
+	  fprintf(file, "    RHS_V     %s  %.15g\n", row_names[r_n].c_str(), v);
+	} else {
+	  fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+	}
+      }
     }
   }
   if (have_ranges) {
     fprintf(file, "RANGES\n");
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = ranges[r_n];
-      if (v)
-        fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      if (v) {
+	if (free_format) {
+	  fprintf(file, "    RANGE     %s  %.15g\n", row_names[r_n].c_str(), v);
+	} else {
+	  fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+	}
+      }
     }
   }
   if (have_bounds) {
@@ -651,23 +696,36 @@ FilewriterRetcode writeMPS(const char* filename, const bool use_free_format,
         if (write_zero_no_cost_columns) continue;
       }
       if (lb == ub) {
-        fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                lb);
+	if (free_format) {
+	  fprintf(file, " FX BOUND     %s  %.15g\n", col_names[c_n].c_str(), lb);
+	} else {
+	  fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
+	}
       } else {
         if (!highs_isInfinity(ub)) {
           // Upper bounded variable
-          fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                  ub);
+	  if (free_format) {
+	    fprintf(file, " UP BOUND     %s  %.15g\n", col_names[c_n].c_str(), ub);
+	  } else {
+	    fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), ub);
+	  }
         }
         if (!highs_isInfinity(-lb)) {
           // Lower bounded variable - default is 0
           if (lb) {
-            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
+	    if (free_format) {
+	      fprintf(file, " LO BOUND     %s  %.15g\n", col_names[c_n].c_str(), lb);
+	    } else {
+	      fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
+	    }
           }
         } else {
           // Infinite lower bound
-          fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
+	  if (free_format) {
+	    fprintf(file, " MI BOUND     %s\n", col_names[c_n].c_str());
+	  } else {
+	    fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
+	  }
         }
       }
     }

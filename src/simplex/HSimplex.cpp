@@ -296,6 +296,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
     // Analyse the scaled LP
     if (simplex_info.analyseLp) {
       analyseLp(highs_model_object.lp_, "Unscaled");
+      HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
         analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
                             scale.col_, false);
@@ -594,6 +595,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
     double sum_nonbasic_col_value_differences = 0;
     int num_nonbasic_col_dual_differences = 0;
     double sum_nonbasic_col_dual_differences = 0;
+    HighsScale& scale = highs_model_object.scale_;
     for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
       int iVar = iCol;
       if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
