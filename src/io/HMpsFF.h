@@ -693,15 +693,17 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
 
     // start of new section?
     if (key != parsekey::NONE) {
-      if (num_change_bv_lb + num_change_bv_ub) {
-        if (handle_bv_in_bounds) {
-          printf(" Found %d BV entries: changed %d LB to 0 and %d UB to 1\n",
-                 num_bv, num_change_bv_lb, num_change_bv_ub);
-        } else {
-          printf(" Found %d BV entries: not changed %d LB to 0 or %d UB to 1\n",
-                 num_bv, num_change_bv_lb, num_change_bv_ub);
-        }
-      }
+      // integer bounds set to default [0,1] at initialization.
+      // todo: delete code below when we've made sure mips work.
+      // if (num_change_bv_lb + num_change_bv_ub) {
+      //   if (handle_bv_in_bounds) {
+      //     printf(" Found %d BV entries: changed %d LB to 0 and %d UB to 1\n",
+      //            num_bv, num_change_bv_lb, num_change_bv_ub);
+      //   } else {
+      //     printf(" Found %d BV entries: not changed %d LB to 0 or %d UB to 1\n",
+      //            num_bv, num_change_bv_lb, num_change_bv_ub);
+      //   }
+      // }
       return key;
     }
     bool islb = false;
