@@ -1585,16 +1585,16 @@ FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bo
   if (have_col_names) local_col_names = lp.col_names_;
   if (have_row_names) local_row_names = lp.row_names_;
   //
-  // Regularise the column names
+  // Normalise the column names
   int max_col_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_col_name_length = 8;
-  int col_name_status = regulariseNames("Column", lp.numCol_, local_col_names, max_col_name_length);
+  int col_name_status = normaliseNames("Column", lp.numCol_, local_col_names, max_col_name_length);
   if (col_name_status) return FilewriterRetcode::FAIL;
   //
-  // Regularise the row names
+  // Normalise the row names
   int max_row_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_row_name_length = 8;
-  int row_name_status = regulariseNames("Row", lp.numRow_, local_row_names, max_row_name_length);
+  int row_name_status = normaliseNames("Row", lp.numRow_, local_row_names, max_row_name_length);
   if (row_name_status) return FilewriterRetcode::FAIL;
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
   bool use_free_format = free_format;
@@ -1604,11 +1604,12 @@ FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bo
       use_free_format = true;
     }      
   }
-  return writeMPS(filename, use_free_format,
+  return writeMPS(filename,
 		  lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
 		  lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
 		  lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
-		  lp.integrality_, local_col_names, local_row_names);
+		  lp.integrality_, local_col_names, local_row_names,
+		  use_free_format);
 }
 
 // Methods for reporting an LP, including its row and column data and matrix
