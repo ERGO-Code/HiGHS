@@ -38,7 +38,7 @@ void HighsPrintMessage(unsigned int level, const char* format, ...) {
     else {
       int len;
       len = vsnprintf(msgbuffer, sizeof(msgbuffer), format, argptr);
-      if (len >= sizeof(msgbuffer)) {
+      if (len >= (int)sizeof(msgbuffer)) {
         /* output was truncated: for now just ensure string is null-terminated
          */
         msgbuffer[sizeof(msgbuffer) - 1] = '\0';
@@ -68,10 +68,10 @@ void HighsLogMessage(HighsMessageType type, const char* format, ...) {
     len = snprintf(msgbuffer, sizeof(msgbuffer), "%02d:%02d:%02d [%-7s] ",
                    timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
                    HighsMessageTypeTag[(int)type]);
-    if (len < sizeof(msgbuffer))
+    if (len < (int)sizeof(msgbuffer))
       len +=
           vsnprintf(msgbuffer + len, sizeof(msgbuffer) - len, format, argptr);
-    if (len < sizeof(msgbuffer) - 1) {
+    if (len < (int)sizeof(msgbuffer) - 1) {
       msgbuffer[len] = '\n';
       ++len;
       msgbuffer[len] = '\0';

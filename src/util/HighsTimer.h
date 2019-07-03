@@ -294,12 +294,12 @@ class HighsTimer {
 
     // Check validity of the clock list and check no clocks are still running
     for (int i = 0; i < num_clock_list_entries; i++) {
-      int i_clock = clock_list[i];
-      assert(i_clock >= 0);
-      assert(i_clock < num_clock);
+      assert(clock_list[i] >= 0);
+      assert(clock_list[i] < num_clock);
       // Check that the clock's not still running. It should be set to
       // getWallTick() >= 0 (or initialised to initial_clock_start > 0)
 #ifdef HiGHSDEV
+      int i_clock = clock_list[i];
       if (clock_start[i_clock] <= 0) {
         printf(
             "Clock %2d (%s) is still running: Start = %11.4g: Ticks = %11.4g: "
@@ -309,7 +309,7 @@ class HighsTimer {
         fflush(stdout);
       }
 #endif
-      assert(clock_start[i_clock] > 0);
+      assert(clock_start[clock_list[i]] > 0);
     }
 
     // Report in one line the per-mille contribution from each clock

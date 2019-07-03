@@ -26,13 +26,13 @@ using std::map;
 //
 // Read file called filename. Returns 0 if OK and 1 if file can't be opened
 //
-int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
-            int& numCol, int& numInt, int& objSense, double& objOffset,
-            vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
-            vector<double>& colCost, vector<double>& colLower,
-            vector<double>& colUpper, vector<double>& rowLower,
-            vector<double>& rowUpper, vector<int>& integerColumn,
-            vector<string>& col_names, vector<string>& row_names) {
+FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
+			  int& numCol, int& numInt, int& objSense, double& objOffset,
+			  vector<int>& Astart, vector<int>& Aindex, vector<double>& Avalue,
+			  vector<double>& colCost, vector<double>& colLower,
+			  vector<double>& colUpper, vector<double>& rowLower,
+			  vector<double>& rowUpper, vector<int>& integerColumn,
+			  vector<string>& col_names, vector<string>& row_names) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -50,7 +50,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 #ifdef HiGHSDEV
     printf("readMPS: Not opened file OK\n");
 #endif
-    return 1;
+    return FilereaderRetcode::FILENOTFOUND;
   }
 #ifdef HiGHSDEV
   printf("readMPS: Opened file  OK\n");
@@ -89,7 +89,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
       // N-row: take the first as the objective and ignore any others
       if (objName == 0) objName = data[1];
     } else {
-      if (mxNumRow > 0 && numRow >= mxNumRow) return 2;
+      if (mxNumRow > 0 && numRow >= mxNumRow) return FilereaderRetcode::PARSERERROR;
       rowType.push_back(flag[0]);
       // rowIndex is used to get the row index from a row name in the
       // COLUMNS, RHS and RANGES section. However, if this contains a
@@ -120,7 +120,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
     std::string name = "";
     if (iRow >= 0) name = row_names[iRow];
     if (lastName != data[1]) {  // New column
-      if (mxNumCol > 0 && numCol >= mxNumCol) return 2;
+      if (mxNumCol > 0 && numCol >= mxNumCol) return FilereaderRetcode::PARSERERROR;
       lastName = data[1];
       // colIndex is used to get the column index from a column name
       // in the BOUNDS section. However, if this contains a reference
@@ -364,7 +364,7 @@ int readMPS(const char* filename, int mxNumRow, int mxNumCol, int& numRow,
 #endif
   // Load ENDATA and close file
   fclose(file);
-  return 0;
+  return FilereaderRetcode::OK;
 }
 
 bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
@@ -437,15 +437,17 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
-int writeMPS(const char* filename, const int& numRow, const int& numCol,
-             const int& numInt, const int& objSense, const double& objOffset,
-             const vector<int>& Astart, const vector<int>& Aindex,
-             const vector<double>& Avalue, const vector<double>& colCost,
-             const vector<double>& colLower, const vector<double>& colUpper,
-             const vector<double>& rowLower, const vector<double>& rowUpper,
-             const vector<int>& integerColumn,
-             const vector<std::string>& col_names,
-             const vector<std::string>& row_names) {
+FilewriterRetcode writeMPS(const char* filename,
+			   const int& numRow, const int& numCol,
+			   const int& numInt, const int& objSense, const double& objOffset,
+			   const vector<int>& Astart, const vector<int>& Aindex,
+			   const vector<double>& Avalue, const vector<double>& colCost,
+			   const vector<double>& colLower, const vector<double>& colUpper,
+			   const vector<double>& rowLower, const vector<double>& rowUpper,
+			   const vector<int>& integerColumn,
+			   const vector<std::string>& col_names,
+			   const vector<std::string>& row_names,
+			   const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
   int num_zero_no_cost_columns = 0;
   int num_zero_no_cost_columns_in_bounds_section = 0;
@@ -457,21 +459,19 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol,
 #ifdef HiGHSDEV
     printf("writeMPS: Not opened file OK\n");
 #endif
-    return 1;
+    return FilewriterRetcode::FILE_NOT_OPENED;
   }
 #ifdef HiGHSDEV
   printf("writeMPS: Opened file  OK\n");
 #endif
-  // Check that the names are no longer than 8 characters
+  // Check that the names are no longer than 8 characters for fixed format write
   int max_col_name_length = maxNameLength(numCol, col_names);
   int max_row_name_length = maxNameLength(numRow, row_names);
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
-  if (max_name_length > 8) {
-#ifdef HiGHSDEV
+  if (!use_free_format && max_name_length > 8) {
     printf("writeMPS: Cannot write fixed MPS with names of length (up to) %d\n",
            max_name_length);
-#endif
-    return 1;
+    return FilewriterRetcode::FAIL;
   }
   vector<int> r_ty;
   vector<double> rhs, ranges;
@@ -582,21 +582,19 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol,
       if (write_zero_no_cost_columns) {
         // Give the column a presence by writing out a zero cost
         double v = 0;
-        fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
+	fprintf(file, "    %-8s  COST      %.15g\n", col_names[c_n].c_str(), v);
       }
       continue;
     }
     if (numInt) {
       if (integerColumn[c_n] && !integerFg) {
         // Start an integer section
-        fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n",
-                nIntegerMk);
+	fprintf(file, "    MARK%04d  'MARKER'                 'INTORG'\n", nIntegerMk);
         nIntegerMk++;
         integerFg = true;
       } else if (!integerColumn[c_n] && integerFg) {
         // End an integer section
-        fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n",
-                nIntegerMk);
+	fprintf(file, "    MARK%04d  'MARKER'                 'INTEND'\n", nIntegerMk);
         nIntegerMk++;
         integerFg = false;
       }
@@ -608,8 +606,7 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol,
     for (int el_n = Astart[c_n]; el_n < Astart[c_n + 1]; el_n++) {
       double v = Avalue[el_n];
       int r_n = Aindex[el_n];
-      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(),
-              row_names[r_n].c_str(), v);
+      fprintf(file, "    %-8s  %-8s  %.15g\n", col_names[c_n].c_str(), row_names[r_n].c_str(), v);
     }
   }
   have_rhs = true;
@@ -622,16 +619,18 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol,
     }
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = rhs[r_n];
-      if (v)
-        fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      if (v) {
+	fprintf(file, "    RHS_V     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      }
     }
   }
   if (have_ranges) {
     fprintf(file, "RANGES\n");
     for (int r_n = 0; r_n < numRow; r_n++) {
       double v = ranges[r_n];
-      if (v)
-        fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      if (v) {
+	fprintf(file, "    RANGE     %-8s  %.15g\n", row_names[r_n].c_str(), v);
+      }
     }
   }
   if (have_bounds) {
@@ -652,23 +651,20 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol,
         if (write_zero_no_cost_columns) continue;
       }
       if (lb == ub) {
-        fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                lb);
+	fprintf(file, " FX BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
       } else {
         if (!highs_isInfinity(ub)) {
           // Upper bounded variable
-          fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                  ub);
+	  fprintf(file, " UP BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), ub);
         }
         if (!highs_isInfinity(-lb)) {
           // Lower bounded variable - default is 0
           if (lb) {
-            fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(),
-                    lb);
+	    fprintf(file, " LO BOUND     %-8s  %.15g\n", col_names[c_n].c_str(), lb);
           }
         } else {
           // Infinite lower bound
-          fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
+	  fprintf(file, " MI BOUND     %-8s\n", col_names[c_n].c_str());
         }
       }
     }
@@ -688,7 +684,7 @@ int writeMPS(const char* filename, const int& numRow, const int& numCol,
   }
   //#endif
   fclose(file);
-  return 0;
+  return FilewriterRetcode::OK;
 }
 
-inline const char* const BoolToString(bool b) { return b ? "True" : "False"; }
+inline const char* BoolToString(bool b) { return b ? "True" : "False"; }

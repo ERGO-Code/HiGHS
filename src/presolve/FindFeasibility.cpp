@@ -147,7 +147,7 @@ void Quadratic::minimize_by_component(const double mu,
       // Formulas for a and b when minimizing for x_j
       // a = (1/(2*mu)) * sum_i a_ij^2
       // b = -(1/(2*mu)) sum_i (2 * a_ij * (sum_{k!=j} a_ik * x_k - b_i)) + c_j
-      // \
+      //
       //     + sum_i a_ij * lambda_i
       // b / 2 = -(1/(2*mu)) sum_i (2 * a_ij
       double a = 0.0;
@@ -209,6 +209,10 @@ void Quadratic::minimize_by_component(const double mu,
 }
 
 double chooseStartingMu(const HighsLp& lp) {
+  // for now just surpress warning but later use LP data to determine starting
+  // mu.
+  if (lp.numCol_ > 0) {
+  }
   // return 0.001;
   return 10;
 }
@@ -262,6 +266,10 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution,
   std::vector<double> lambda;
 
   HighsStatus status = initialize(lp, solution, mu, lambda);
+  if (status != HighsStatus::OK) {
+    // todo: handle errors.
+  }
+
   Quadratic quadratic(lp, solution.col_value);
 
   if (type == MinimizationType::kComponentWise)

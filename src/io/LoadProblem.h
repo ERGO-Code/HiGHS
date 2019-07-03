@@ -41,7 +41,7 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
                       pathname);
     return HighsStatus::LpError;
   }
-  
+
   Filereader* reader = Filereader::getFilereader(options.filename.c_str());
   FilereaderRetcode success = reader->readModelFromFile(options, lp);
   delete reader;
@@ -88,7 +88,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
       if (line.size() == 0 || line[0] == '#') continue;
 
       int equals = line.find_first_of("=");
-      if (equals < 0 || equals >= line.size() - 1) {
+      if (equals < 0 || equals >= (int)line.size() - 1) {
         HighsLogMessage(HighsMessageType::ERROR,
                         "Error on line %d of options file.", line_count);
         return false;

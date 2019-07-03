@@ -107,8 +107,6 @@ class HPreData {
 
   stack<change> chng;
   stack<pair<int, vector<double>>> oldBounds;  //(j, l, u)
-
-  void writeNewFormat(string fileName);
 };
 
 #endif /* PRESOLVE_HPREDATA_H_ */

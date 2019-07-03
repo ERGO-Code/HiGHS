@@ -202,8 +202,6 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsScale& scale = highs_model_object.scale_;
   if (!scale.is_scaled_) return highs_status;
-  int scaled_lp_iteration_count = highs_model_object.simplex_info_.iteration_count;
-  double scaled_lp_objective_value = highs_model_object.simplex_info_.primal_objective_value;
   double cost_scale = scale.cost_;
   if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
   assert(cost_scale == 1);
@@ -238,9 +236,6 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 	iRow = iVar - lp.numCol_;
 	scale_mu = scale.row_[iRow] * scale.cost_;
       }
-      double lower = simplex_info.workLower_[iVar];
-      double upper = simplex_info.workUpper_[iVar];
-      double value = simplex_info.workValue_[iVar];
       double scaled_dual = simplex_info.workDual_[iVar];
       double unscaled_dual = scaled_dual * scale_mu;
       double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
@@ -254,6 +249,9 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 	num_unscaled_dual_infeasibilities++;
 	double multiplier = options.dual_feasibility_tolerance / scale_mu;
 #ifdef HiGHSDEV
+	double lower = simplex_info.workLower_[iVar];
+	double upper = simplex_info.workUpper_[iVar];
+	double value = simplex_info.workValue_[iVar];
 	HighsLogMessage(HighsMessageType::INFO,
 			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
 			iVar, iCol, iRow, lower, value, upper,

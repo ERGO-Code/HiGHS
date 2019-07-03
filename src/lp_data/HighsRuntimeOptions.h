@@ -52,7 +52,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       auto& v = result[file_string].as<std::vector<std::string>>();
       if (v.size() > 1) {
         int nonEmpty = 0;
-        for (int i = 0; i < v.size(); i++) {
+        for (int i = 0; i < (int)v.size(); i++) {
           std::string arg = v[i];
           if (trim(arg).size() > 0) {
             nonEmpty++;

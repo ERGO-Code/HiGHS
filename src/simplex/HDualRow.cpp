@@ -341,7 +341,9 @@ void HDualRow::update_flip(HVector* bfrtColumn) {
   //  &workHMO.>checkDualObjectiveValue("After  update_flip");
 }
 
-void HDualRow::update_dual(double theta, int columnOut) {
+void HDualRow::update_dual(double theta
+			   //, int columnOut
+			   ) {
   HighsTimer& timer = workHMO.timer_;
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   //  &workHMO.>checkDualObjectiveValue("Before update_dual");

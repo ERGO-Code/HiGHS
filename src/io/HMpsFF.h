@@ -247,7 +247,7 @@ FreeFormatParserReturnCode HMpsFF::parse(const std::string& filename) {
 HMpsFF::parsekey HMpsFF::checkFirstWord(std::string& strline, int& start,
                                         int& end, std::string& word) const {
   start = strline.find_first_not_of(" ");
-  if ((start == strline.size() - 1) || is_empty(strline[start + 1])) {
+  if ((start == (int)strline.size() - 1) || is_empty(strline[start + 1])) {
     end = start + 1;
     word = strline[start];
     return HMpsFF::parsekey::NONE;
@@ -767,7 +767,7 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
     // If empty column with empty cost add column
     if (colidx == numCol) {
       std::string colname = marker;
-      auto ret = colname2idx.emplace(colname, numCol++);
+      // auto ret = colname2idx.emplace(colname, numCol++);
       colNames.push_back(colname);
 
       col_integrality.push_back(0);

@@ -51,7 +51,7 @@ double HPreData::getaij(int i, int j) {
 
 bool HPreData::isZeroA(int i, int j) {
   int k = ARstart[i];
-  while (j != ARindex[k] && k < ARstart[i + 1]) k++;
+  while (k < ARstart[i + 1] && j != ARindex[k]) k++;
   if (k == ARstart[i + 1]) {
     return true;
   }
@@ -217,5 +217,3 @@ void HPreData::printAR(int i) {
   }
   cout << endl;
 }
-
-void HPreData::writeNewFormat(string fileName) {}

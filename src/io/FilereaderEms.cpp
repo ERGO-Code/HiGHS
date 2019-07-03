@@ -168,7 +168,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     if (trim(line) == "end_linear") {
       // File read completed OK
       f.close();
-      return FilereaderRetcode::OKAY;
+      return FilereaderRetcode::OK;
     }
 
     // Act if the next keyword is names
@@ -196,7 +196,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     } else {
       // OK if file just ends after the integer_columns section without
       // end_linear
-      if (!f) return FilereaderRetcode::OKAY;
+      if (!f) return FilereaderRetcode::OK;
       HighsLogMessage(HighsMessageType::ERROR, "names not found in EMS file");
       return FilereaderRetcode::PARSERERROR;
     }
@@ -205,10 +205,10 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
     HighsLogMessage(HighsMessageType::ERROR, "EMS file not found");
     return FilereaderRetcode::FILENOTFOUND;
   }
-  return FilereaderRetcode::OKAY;
+  return FilereaderRetcode::OK;
 }
 
-FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
+FilewriterRetcode FilereaderEms::writeModelToFile(const char* filename,
                                                   HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
@@ -259,11 +259,11 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
     f << "names" << std::endl;
 
     f << "columns" << std::endl;
-    for (int i = 0; i < model.col_names_.size(); i++)
+    for (int i = 0; i < (int)model.col_names_.size(); i++)
       f << model.col_names_[i] << std::endl;
 
     f << "rows" << std::endl;
-    for (int i = 0; i < model.row_names_.size(); i++)
+    for (int i = 0; i < (int)model.row_names_.size(); i++)
       f << model.row_names_[i] << std::endl;
   }
 
@@ -274,10 +274,14 @@ FilereaderRetcode FilereaderEms::writeModelToFile(const char* filename,
 
   f << std::endl;
   f.close();
-  return FilereaderRetcode::OKAY;
+  return FilewriterRetcode::OK;
 }
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
                                                    HighsModelBuilder& model) {
+  if (filename) {
+  }  // surpress warning.
+  if (model.getNumberOfVariables() > 0) {
+  }  // surpress warning.
   return FilereaderRetcode::NOT_IMPLEMENTED;
 }

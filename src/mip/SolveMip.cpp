@@ -10,7 +10,7 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
 
   assert(node.integer_variables.size() == node.primal_solution.size());
 
-  for (int col = 0; col < node.integer_variables.size(); col++) {
+  for (int col = 0; col < (int)node.integer_variables.size(); col++) {
     if (!node.integer_variables[col]) continue;
 
     double value = node.primal_solution[col];
@@ -23,12 +23,12 @@ NodeIndex Tree::chooseBranchingVariable(const Node& node) {
   return kNoNodeIndex;
 }
 
-struct testn {
-  testn* left;
-  testn* right;
-  testn(int a, int b) : a_(a) {}
-  int a_;
-};
+// struct testn {
+//   testn* left;
+//   testn* right;
+//   testn(int a, int b) : a_(a) {}
+//   int a_;
+// };
 
 bool Tree::branch(Node& node) {
   NodeIndex branch_col = chooseBranchingVariable(node);
