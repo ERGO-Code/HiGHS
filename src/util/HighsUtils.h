@@ -18,6 +18,8 @@
 
 #include "HConfig.h"
 
+double getNorm2(const std::vector<double> values);
+
 /**
  * @brief Logical check of double being +Infinity
  */
