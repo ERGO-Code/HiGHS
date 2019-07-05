@@ -48,7 +48,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.update_limit = options.simplex_update_limit;
 
   // Set values of internal options
-  simplex_info.allow_primal_flips_for_dual_feasibility = true;
+  simplex_info.allow_primal_flips_for_dual_feasibility = false;
   if (options.run_as_hsol) simplex_info.allow_primal_flips_for_dual_feasibility = true;
   // Option for analysing the LP solution
   simplex_info.analyseLpSolution = true;
@@ -666,7 +666,6 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
 	sum_basic_row_dual_differences += dual_difference;
       }
     }	
-    double critical_difference_sum = 0;
     double acceptable_difference_sum = simplex_info.primal_feasibility_tolerance + simplex_info.dual_feasibility_tolerance;
     bool significant_nonbasic_value_differences = sum_nonbasic_col_value_differences + sum_nonbasic_row_value_differences > 0;
     bool significant_basic_value_differences = sum_basic_col_value_differences + sum_basic_row_value_differences > acceptable_difference_sum;      
@@ -875,9 +874,16 @@ void report_basis(HighsLp& lp, HighsBasis& basis) {
 #ifdef HiGHSDEV
   printf("!! WRITE report_basis for HighsBasis !!\n");
 #endif
-  if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
-  if (lp.numRow_ > 0) printf("   Var    Row  Basic   Flag   Move\n");
+  if (lp.numCol_ > 0) printf("   Col          Flag   Move\n");
+  for (int col = 0; col < lp.numCol_; col++) {
+    printf("%6d         %6d\n", col, (int)basis.col_status[col]);
+  }
+  if (lp.numRow_ > 0) printf("   Row  Basic   Flag   Move\n");
+  for (int row = 0; row < lp.numRow_; row++) {
+    printf("%6d         %6d\n", row, (int)basis.row_status[row]);
+  }
 }
+
 void report_basis(HighsLp& lp, SimplexBasis& simplex_basis) {
   if (lp.numCol_ > 0) printf("   Var    Col          Flag   Move\n");
   for (int col = 0; col < lp.numCol_; col++) {
@@ -1082,8 +1088,8 @@ void scaleCosts(HighsModelObject& highs_model_object) {
   max_nonzero_cost /= cost_scale;
 
 #ifdef HiGHSDEV
-  bool alwLargeCostScaling = false;
   /*
+  bool alwLargeCostScaling = false;
     if (alwLargeCostScaling && (numLargeCo > 0)) {
     // Scale any large costs by largeCostScale, being at most (a further)
     // max_allowed_cost_scale
