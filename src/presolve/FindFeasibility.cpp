@@ -8,6 +8,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLpUtils.h"
+#include "util/HighsUtils.h"
 
 constexpr double kExitTolerance = 0.00000001;
 
@@ -40,6 +41,47 @@ std::vector<double> getAtLambda(const HighsLp& lp,
     }
   }
   return atl;
+}
+
+// if you want to test accuracy of residual use something like
+// assert(getResidual(..) == quadratic.residual_);
+
+double getQuadraticObjective(const std::vector<double> cost,
+                             const std::vector<double>& x,
+                             std::vector<double>& r, const double mu,
+                             const std::vector<double> lambda) {
+  assert(cost.size() == x.size());
+  // c'x
+  double quadratic = 0;
+  for (int col = 0; col < x.size(); col++) quadratic += cost[col] * x[col];
+
+  // lambda'x
+  for (int row = 0; row < lambda.size(); row++) {
+    quadratic += lambda[row] * r[row];
+  }
+
+  // 1/2mu r'r
+  for (int row = 0; row < lambda.size(); row++) {
+    quadratic += (r[row] * r[row]) / mu;
+  }
+
+  return quadratic;
+}
+
+void printMinorIterationDetails(const double iteration, const double col,
+                                const double old_value, const double update,
+                                const double ctx, const std::vector<double>& r,
+                                const double quadratic_objective) {
+  double rnorm = getNorm2(r);
+  std::cout << "iter " << iteration;
+  std::cout << ", col " << col;
+  std::cout << ", update " << update;
+  std::cout << ", old_value " << old_value;
+  std::cout << ", new_value " << old_value + update;
+  std::cout << ", ctx " << ctx;
+  std::cout << ", r " << rnorm;
+  std::cout << ", quadratic_objective " << quadratic_objective;
+  std::cout << std::endl;
 }
 
 class Quadratic {
@@ -131,6 +173,7 @@ void Quadratic::minimize_by_component(const double mu,
                                       const std::vector<double>& lambda) {
   HighsPrintMessageLevel ML_DESC = ML_DETAILED;
   int iterations = 100;
+  bool minor_iteration_details = false;
 
   HighsPrintMessage(ML_DESC, "Values at start: %3.2g, %3.4g, \n", objective_,
                     residual_norm_2_);
@@ -192,6 +235,14 @@ void Quadratic::minimize_by_component(const double mu,
         int row = lp_.Aindex_[k];
         residual_[row] -= lp_.Avalue_[k] * delta_x;
         row_value_[row] += lp_.Avalue_[k] * delta_x;
+      }
+
+      if (minor_iteration_details) {
+        double quadratic_objective = getQuadraticObjective(
+            lp_.colCost_, col_value_, residual_, mu, lambda);
+        printMinorIterationDetails(iteration, col, col_value_[col] - delta_x,
+                                   delta_x, objective_, residual_,
+                                   quadratic_objective);
       }
     }
 

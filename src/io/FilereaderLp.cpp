@@ -100,9 +100,26 @@ void FilereaderLp::handleBinarySection(HighsModelBuilder& model) {
   delete token;
 
   // TODO
+  while (this->binSection.size() > 0) {
+    LpToken* token = this->binSection.front();
+    assert(token->type == LpTokenType::VARIDENTIFIER);
+
+    // update bounds if necessary
+    HighsVar* variable;
+    model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
+                                      &variable);
+    if(variable->lowerBound == 0.0 && variable->upperBound == HIGHS_CONST_INF) {
+      variable->upperBound = 1.0;
+    }
+    
+    this->binSection.pop_front();
+    delete token;
+  }
+
 
   while (this->binSection.size() > 0) {
     LpToken* token = this->binSection.front();
+    assert(token->type == LpTokenType::VARIDENTIFIER);
     this->binSection.pop_front();
     delete token;
   }
