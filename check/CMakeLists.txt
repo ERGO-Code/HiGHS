@@ -143,7 +143,7 @@ set(infeasibleInstances
     "galenet\;       infeasible"
     "gams10am\;      infeasible"
     "klein1\;        infeasible"
-    "refinery\;      infeasible"
+#    "refinery\;      infeasible"
     "woodinfe\;      infeasible"
     )
 
