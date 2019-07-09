@@ -125,7 +125,9 @@ set(successInstances
     "80bau3b\;3760\;9.872242\;"
     "adlittle\;81\;2.254950\;"
     "afiro\;21\;-4.647531\;"
+    "etamacro\;507\;-7.557152\;"
     "greenbea\;5249\;-7.255525\;"
+    "pilot87\;9919\;3.017103\;"
     "shell\;558\;1.208825\;"
     "stair\;555\;-2.512670\;"
     "standata\;74\;1.257699\;"
@@ -154,9 +156,9 @@ set(failInstances
 
 # define settings
 set(settings
-    " "
-#    "--parallel=on"
+    "--presolve=off"
     "--presolve=on"
+#    "--parallel=on"
     )
 
 # define a macro to add tests
@@ -190,7 +192,7 @@ foreach(instance ${${instances}})
                 "Run status : ${solutionstatus}")
 
         if(${solutionstatus} STREQUAL "Optimal")
-            if(NOT ${setting} STREQUAL "--presolve=on")
+            if(${setting} STREQUAL "--presolve=off")
                 set_tests_properties (${name}${setting} PROPERTIES
                         PASS_REGULAR_EXPRESSION
                         "Iterations : ${iter}\nObjective  : ${optval}")

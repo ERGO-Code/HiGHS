@@ -34,7 +34,7 @@ enum HighsPrintMessageLevel {
 
 enum class ParallelOption { OFF = 0, ON, DEFAULT = OFF };
 
-enum class PresolveOption { OFF = 0, ON, DEFAULT = OFF };
+enum class PresolveOption { OFF = 0, ON, DEFAULT = ON };
 
 enum class CrashOption { OFF = 0, ON, DEFAULT = OFF };
 
