@@ -188,12 +188,6 @@ void compute_dual(HighsModelObject& highs_model_object);
 void correct_dual(HighsModelObject& highs_model_object,
                   int* free_infeasibility_count);
 
-void compute_dual_infeasible_with_flips(HighsModelObject& highs_model_object,
-					int* dual_infeasibility_count);
-
-void compute_dual_infeasible_without_flips(HighsModelObject& highs_model_object,
-					   int* dual_infeasibility_count);
-
 // Record the shift in the cost of a particular column
 void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);
 
