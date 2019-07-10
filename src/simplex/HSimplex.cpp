@@ -2594,6 +2594,7 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
+  int num_fixed_variable_move_errors = 0;
   int num_dual_infeasibilities = 0;
   double max_dual_infeasibility = 0;
   double sum_dual_infeasibilities = 0;
@@ -2608,11 +2609,13 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
     if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free: any nonzero dual value is infeasible
       dual_infeasibility = fabs(simplex_info.workDual_[iVar]);
-    } else if (lower < upper) {
+    } else {
       // Not fixed: any dual infeasibility is given by value signed by
-      // nonbasicMove
+      // nonbasicMove. This assumes that nonbasicMove=0 for fixed
+      // variables
       dual_infeasibility =
           -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
+      if (lower == upper && simplex_basis.nonbasicMove_[iVar]) num_fixed_variable_move_errors++;
     }
     if (dual_infeasibility > 0) {
       if (dual_infeasibility >= simplex_info.dual_feasibility_tolerance) num_dual_infeasibilities++;
@@ -2621,6 +2624,14 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
       sum_dual_infeasibilities += dual_infeasibility;
     }
   }
+  // Check that there are no fixed variables with nonzero nonbasicMove
+  if (num_fixed_variable_move_errors) {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "In computeDualInfeasible there are %d fixed variables with nonzero nonbasicMove",
+		    num_fixed_variable_move_errors);
+  }
+  assert(num_fixed_variable_move_errors==0);
+
   if (report) {
 #ifdef HiGHSDEV
     if (num_dual_infeasibilities) {
@@ -2865,6 +2876,13 @@ void compute_dual_infeasible_without_flips(HighsModelObject& highs_model_object,
         (simplex_basis.nonbasicMove_[i] * simplex_info.workDual_[i] <= -tau_d);
   }
   *dual_infeasibility_count = work_count;
+  computeDualInfeasible(highs_model_object);
+  if (simplex_info.num_dual_infeasibilities != work_count) {
+    HighsLogMessage(HighsMessageType::ERROR,
+		    "In compute_dual_infeasible_without_flips there num_dual_infeasibilities = %d != %d = work_count",
+		    simplex_info.num_dual_infeasibilities, work_count);
+  }
+  assert(simplex_info.num_dual_infeasibilities == work_count);
 }
 
 // Record the shift in the cost of a particular column

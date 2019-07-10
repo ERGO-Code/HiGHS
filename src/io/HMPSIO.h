@@ -49,7 +49,8 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
 			  vector<double>& colCost, vector<double>& colLower,
 			  vector<double>& colUpper, vector<double>& rowLower,
 			  vector<double>& rowUpper, vector<int>& integerColumn,
-			  vector<std::string>& col_names, vector<std::string>& row_names);
+			  vector<std::string>& col_names, vector<std::string>& row_names,
+			  const int keep_n_rows = 0);
 
 FilewriterRetcode writeMPS(const char* filename,
 			   const int& numRow, const int& numCol,

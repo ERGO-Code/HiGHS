@@ -32,7 +32,8 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
 			  vector<double>& colCost, vector<double>& colLower,
 			  vector<double>& colUpper, vector<double>& rowLower,
 			  vector<double>& rowUpper, vector<int>& integerColumn,
-			  vector<string>& col_names, vector<string>& row_names) {
+			  vector<string>& col_names, vector<string>& row_names,
+			  const int keep_n_rows) {
   // MPS file buffer
   numRow = 0;
   numCol = 0;
@@ -83,10 +84,8 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
   map<double, int> rowIndex;
   double objName = 0;
   while (load_mpsLine(file, integerCol, lmax, line, flag, data)) {
-    if (flag[0] == 'N'
-        //       	&& objName == 0
-    ) {
-      // N-row: take the first as the objective and ignore any others
+    if (flag[0] == 'N' && (objName == 0 || keep_n_rows == KEEP_N_ROWS_DELETE_ROWS)) {
+      // N-row: take the first as the objective and possibly ignore any others
       if (objName == 0) objName = data[1];
     } else {
       if (mxNumRow > 0 && numRow >= mxNumRow) return FilereaderRetcode::PARSERERROR;
@@ -143,8 +142,10 @@ FilereaderRetcode readMPS(const char* filename, int mxNumRow, int mxNumCol, int&
     else if (data[0] != 0) {
       int iRow = rowIndex[data[2]] - 1;
       if (iRow >= 0) {
-        Aindex.push_back(iRow);
-        Avalue.push_back(data[0]);
+	if (rowType[iRow] != 'N' || keep_n_rows != KEEP_N_ROWS_DELETE_ENTRIES) {
+	  Aindex.push_back(iRow);
+	  Avalue.push_back(data[0]);
+	}
       } else {
         // Spurious row name
         std::string name;

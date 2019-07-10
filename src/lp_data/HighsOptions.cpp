@@ -55,6 +55,9 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
   else if (option == run_as_hsol_string)
     return setRunAsHsolValue(options, atoi(value.c_str()));
 
+  else if (option == keep_n_rows_string)
+    return setKeepNRowsValue(options, atoi(value.c_str()));
+
   else if (option == infinite_cost_string)
     return setInfiniteCostValue(options, atof(value.c_str()));
 
@@ -142,6 +145,7 @@ void setHsolOptions(HighsOptions& options) {
   options.highs_run_time_limit = HIGHS_CONST_INF;
   options.simplex_iteration_limit = HIGHS_CONST_I_INF;
   options.mps_parser_type = HighsMpsParserType::fixed;
+  options.keep_n_rows = KEEP_N_ROWS_KEEP_ROWS;
   options.infinite_cost = HIGHS_CONST_INF;
   options.infinite_bound = HIGHS_CONST_INF;
   options.small_matrix_value = 0;
@@ -349,6 +353,11 @@ const string find_feasibility_dualize_string = "feasibility_dualize";
   reportIntOptionValue(report_level, run_as_hsol_string,
 		       options.run_as_hsol, RUN_AS_HSOL_DEFAULT,
 		       &RUN_AS_HSOL_MIN, &RUN_AS_HSOL_MAX);
+
+  // keep_n_rows
+  reportIntOptionValue(report_level, keep_n_rows_string,
+		       options.keep_n_rows, KEEP_N_ROWS_DEFAULT,
+		       &KEEP_N_ROWS_MIN, &KEEP_N_ROWS_MAX);
 
   // infinite_cost
   reportDoubleOptionValue(report_level, infinite_cost_string,
@@ -615,6 +624,19 @@ OptionStatus setRunAsHsolValue(HighsOptions& options, const int& value) {
                     "infinite cost value \"%s\" is not permitted: legal values "
                     "are between %d and %d\n",
                     value, RUN_AS_HSOL_MIN, RUN_AS_HSOL_MAX);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setKeepNRowsValue(HighsOptions& options, const int& value) {
+  if (value >= KEEP_N_ROWS_MIN && value <= KEEP_N_ROWS_MAX)
+    options.keep_n_rows = value;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+                    "keep N-type rows value \"%s\" is not permitted: legal values "
+                    "are between %d and %d\n",
+                    value, KEEP_N_ROWS_MIN, KEEP_N_ROWS_MAX);
     return OptionStatus::ILLEGAL_VALUE;
   }
   return OptionStatus::OK;

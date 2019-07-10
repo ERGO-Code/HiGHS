@@ -48,6 +48,7 @@ const string find_feasibility_dualize_string = "feasibility_dualize";
 
 // Strings for file options
 const string run_as_hsol_string = "run_as_hsol";
+const string keep_n_rows_string = "keep_n_rows";
 const string infinite_cost_string = "infinite_cost";
 const string infinite_bound_string = "infinite_bound";
 const string small_matrix_value_string = "small_matrix_value";
@@ -106,6 +107,7 @@ struct HighsOptions {
 
   // Options not passed through the command line
   int run_as_hsol = RUN_AS_HSOL_DEFAULT;
+  int keep_n_rows = KEEP_N_ROWS_DEFAULT;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
@@ -195,6 +197,7 @@ OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options,
                                             const std::string& value);
 
 OptionStatus setRunAsHsolValue(HighsOptions& options, const int& value);
+OptionStatus setKeepNRowsValue(HighsOptions& options, const int& value);
 
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
