@@ -39,6 +39,7 @@ enum iClockSimplex {
   IterateDevexIzClock,        //!< Second level timing of initialise Devex
   IteratePivotsClock,         //!< Second level timing of pivoting
 
+  ScaleClock,           //!< Scale
   CrashClock,           //!< Crash
   BasisConditionClock,  //!< Basis condition estimation
   DseIzClock,           //!< DSE weight initialisation
@@ -119,6 +120,7 @@ class SimplexTimer {
     simplex_info.clock_[IterateDevexIzClock] =
         timer.clock_def("DEVEX_IZ", "DVI");
     simplex_info.clock_[IteratePivotsClock] = timer.clock_def("PIVOTS", "PIV");
+    simplex_info.clock_[ScaleClock] = timer.clock_def("SCALE", "SCL");
     simplex_info.clock_[CrashClock] = timer.clock_def("CRASH", "CSH");
     simplex_info.clock_[BasisConditionClock] =
         timer.clock_def("BASIS_CONDITION", "CON");
@@ -220,6 +222,7 @@ class SimplexTimer {
 
   void reportSimplexInnerClock(HighsModelObject& model_object) {
     std::vector<int> simplex_clock_list{
+        ScaleClock,
         CrashClock,        BasisConditionClock, DseIzClock,
         InvertClock,       PermWtClock,         ComputeDualClock,
         CorrectDualClock,  ComputePrimalClock,  CollectPrIfsClock,

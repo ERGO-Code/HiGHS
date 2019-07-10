@@ -54,8 +54,6 @@ class HighsTimer {
     run_highs_clock_start_time = initial_clock_start;
 
     presolve_clock = clock_def("Presolve", "Pre");
-    scale_clock = clock_def("Scale", "Scl");
-    crash_clock = clock_def("Crash", "Csh");
     solve_clock = clock_def("Solve", "Slv");
     postsolve_clock = clock_def("Postsolve", "Pst");
   }
@@ -468,8 +466,6 @@ class HighsTimer {
 
   // Fundamental Highs clocks
   int presolve_clock;
-  int scale_clock;
-  int crash_clock;
   int solve_clock;
   int postsolve_clock;
 };

@@ -23,6 +23,7 @@
 #include "lp_data/HighsStatus.h"
 #include "util/HighsSort.h"
 #include "util/HighsUtils.h"
+#include "util/HighsTimer.h"
 
 HighsStatus checkLp(const HighsLp& lp) {
   // Check dimensions.
@@ -460,6 +461,9 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
                          const double small_matrix_value,
                          const double large_matrix_value,
                          const bool normalise) {
+  HighsTimer timer;
+  timer.startRunHighsClock();
+  printf("In assessMatrix, initial HiGHS clock is %g\n", timer.readRunHighsClock());
   // Uses to_ix in iterator style
   if (from_ix < 0) return HighsStatus::Error;
   if (from_ix >= to_ix) return HighsStatus::OK;
@@ -597,13 +601,17 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
       for (int el = Xstart[ix]; el < to_el; el++) check_vector[Xindex[el]] = 0;
     }
 #ifdef HiGHSDEV
-    // Check zeroing of check vector
-    for (int component = 0; component < vec_dim; component++) {
-      if (check_vector[component]) error_found = true;
+    // NB This is very expensive so shouldn't be true
+    const bool check_check_vector = false;
+    if (check_check_vector) {
+      // Check zeroing of check vector
+      for (int component = 0; component < vec_dim; component++) {
+	if (check_vector[component]) error_found = true;
+      }
+      if (error_found)
+	HighsLogMessage(HighsMessageType::ERROR,
+			"assessMatrix: check_vector not zeroed");
     }
-    if (error_found)
-      HighsLogMessage(HighsMessageType::ERROR,
-                      "assessMatrix: check_vector not zeroed");
 #endif
   }
   if (num_small_values) {
@@ -648,6 +656,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
   else
     return_status = HighsStatus::OK;
 
+  printf("In assessMatrix, final HiGHS clock is %g\n", timer.readRunHighsClock());
   return return_status;
 }
 

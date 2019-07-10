@@ -54,15 +54,16 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.analyseLpSolution = true;
 #ifdef HiGHSDEV
   bool useful_analysis = false;
+  bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
-  simplex_info.report_simplex_outer_clock = false;
-  simplex_info.report_simplex_phases_clock = false;
+  simplex_info.report_simplex_outer_clock = full_timing;
+  simplex_info.report_simplex_phases_clock = full_timing;
   // Options for analysing the LP and simplex iterations
   simplex_info.analyseLp = useful_analysis;
   simplex_info.analyseSimplexIterations = useful_analysis;
-  simplex_info.analyse_invert_time = false;
-  simplex_info.analyseRebuildTime = false;
+  simplex_info.analyse_invert_time = full_timing;
+  simplex_info.analyseRebuildTime = full_timing;
 #endif
 }
 
@@ -207,11 +208,9 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
       // Possibly find a crash basis
       if (options.simplex_crash_strategy != SimplexCrashStrategy::OFF) {
         HCrash crash(highs_model_object);
-        timer.start(timer.crash_clock);
         timer.start(simplex_info.clock_[CrashClock]);
         crash.crash(options.simplex_crash_strategy);
         timer.stop(simplex_info.clock_[CrashClock]);
-        timer.stop(timer.crash_clock);
         int num_basic_structurals = 0;
         for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
           if (simplex_basis.nonbasicFlag_[iCol] == NONBASIC_FLAG_FALSE)
@@ -291,7 +290,9 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   bool scale_lp = options.simplex_scale_strategy != SimplexScaleStrategy::OFF &&
                   !simplex_lp_status.scaling_tried;
   if (scale_lp) {
+    timer.start(simplex_info.clock_[ScaleClock]);    
     scaleSimplexLp(highs_model_object);
+    timer.stop(simplex_info.clock_[ScaleClock]);    
 #ifdef HiGHSDEV
     // Analyse the scaled LP
     if (simplex_info.analyseLp) {
@@ -356,11 +357,9 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   //  assert(basis_condition_ok);
   if (!basis_condition_ok) {
     HCrash crash(highs_model_object);
-    timer.start(timer.crash_clock);
     timer.start(simplex_info.clock_[CrashClock]);
     crash.crash(SimplexCrashStrategy::BASIC);
     timer.stop(simplex_info.clock_[CrashClock]);
-    timer.stop(timer.crash_clock);
     HighsLogMessage(HighsMessageType::INFO,
                     "Performed crash to prioritise previously basic variables "
                     "in well-conditioned basis");
@@ -1142,8 +1141,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   // Scale the LP highs_model_object.simplex_lp_, assuming all data are in place
   // Reset all scaling to 1
   HighsScale& scale = highs_model_object.scale_;
-  HighsTimer& timer = highs_model_object.timer_;
-  timer.start(timer.scale_clock);
   scaleHighsModelInit(highs_model_object);
   int numCol = highs_model_object.simplex_lp_.numCol_;
   int numRow = highs_model_object.simplex_lp_.numRow_;
@@ -1182,7 +1179,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
       // Simplex LP is now only scaled if there is a cost scaling factor
       scale.is_scaled_ = scale.cost_ != 1;
     }
-    timer.stop(timer.scale_clock);
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::SCALE);
     return;
@@ -1378,7 +1374,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
 	// Simplex LP is now only scaled if there is a cost scaling factor
 	scale.is_scaled_ = scale.cost_ != 1;
 	  }
-      timer.stop(timer.scale_clock);
       updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
 			    LpAction::SCALE);
       return;
@@ -1401,7 +1396,6 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_, LpAction::SCALE);
   // Possibly scale the costs
   if (allow_cost_scaling) scaleCosts(highs_model_object);
-  timer.stop(timer.scale_clock);
 }
 
 // PERMUTE:

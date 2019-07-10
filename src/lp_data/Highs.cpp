@@ -307,10 +307,11 @@ HighsStatus Highs::run() {
   basis_ = hmos_[original_hmo].basis_;
 
   // Report times
-  if (hmos_[original_hmo].reportModelOperationsClock) {
-    std::vector<int> clockList{timer_.presolve_clock, timer_.scale_clock,
-                               timer_.crash_clock, timer_.solve_clock,
-                               timer_.postsolve_clock};
+  if (hmos_[original_hmo].report_model_operations_clock) {
+    std::vector<int> clockList{
+        timer_.presolve_clock,
+	timer_.solve_clock,
+	timer_.postsolve_clock};
     timer_.report("ModelOperations", clockList);
   }
   // Stop and read the HiGHS clock, then work out time for this call
