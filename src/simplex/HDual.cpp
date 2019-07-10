@@ -137,7 +137,7 @@ void HDual::solve(int num_threads) {
   // Compute the dual values
   compute_dual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
-  computeDualInfeasibleWithFlips(workHMO);
+  computeDualInfeasible(workHMO);
   int num_dual_infeasibilities_without_flips = simplex_info.num_dual_infeasibilities;
   if (simplex_info.allow_primal_flips_for_dual_feasibility) {
     computeDualInfeasibleWithFlips(workHMO);

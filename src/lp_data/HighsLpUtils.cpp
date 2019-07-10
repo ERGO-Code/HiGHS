@@ -461,9 +461,6 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
                          const double small_matrix_value,
                          const double large_matrix_value,
                          const bool normalise) {
-  HighsTimer timer;
-  timer.startRunHighsClock();
-  printf("In assessMatrix, initial HiGHS clock is %g\n", timer.readRunHighsClock());
   // Uses to_ix in iterator style
   if (from_ix < 0) return HighsStatus::Error;
   if (from_ix >= to_ix) return HighsStatus::OK;
@@ -656,7 +653,6 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
   else
     return_status = HighsStatus::OK;
 
-  printf("In assessMatrix, final HiGHS clock is %g\n", timer.readRunHighsClock());
   return return_status;
 }
 
