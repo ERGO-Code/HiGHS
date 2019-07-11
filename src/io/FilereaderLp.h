@@ -230,7 +230,7 @@ class FilereaderLp : public Filereader {
                                       HighsLp& model);
   FilereaderRetcode readModelFromFile(const char* filename,
                                       HighsModelBuilder& model);
-  FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
+  FilewriterRetcode writeModelToFile(const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
 

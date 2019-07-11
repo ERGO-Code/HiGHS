@@ -52,6 +52,12 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
   else if (option == find_feasibility_dualize_string)
     return setFindFeasibilityDualizeValue(options, value);
 
+  else if (option == run_as_hsol_string)
+    return setRunAsHsolValue(options, atoi(value.c_str()));
+
+  else if (option == keep_n_rows_string)
+    return setKeepNRowsValue(options, atoi(value.c_str()));
+
   else if (option == infinite_cost_string)
     return setInfiniteCostValue(options, atof(value.c_str()));
 
@@ -129,6 +135,35 @@ OptionStatus checkOptionsValue(HighsOptions& options) {
   return OptionStatus::OK;
 }
 
+// Set values of options so that HiGHS runs as Hsol
+void setHsolOptions(HighsOptions& options) {
+  // Set command line options to their hsol values
+  options.presolve_option = PresolveOption::OFF;
+  options.crash_option = CrashOption::OFF;
+  options.parallel_option = ParallelOption::OFF;
+  options.simplex_option = SimplexOption::ON;
+  options.highs_run_time_limit = HIGHS_CONST_INF;
+  options.simplex_iteration_limit = HIGHS_CONST_I_INF;
+  options.mps_parser_type = HighsMpsParserType::fixed;
+  options.keep_n_rows = KEEP_N_ROWS_KEEP_ROWS;
+  options.infinite_cost = HIGHS_CONST_INF;
+  options.infinite_bound = HIGHS_CONST_INF;
+  options.small_matrix_value = 0;
+  options.large_matrix_value = HIGHS_CONST_INF;
+  options.allowed_simplex_scale_factor = HIGHS_CONST_I_INF;
+  options.primal_feasibility_tolerance = 1e-7;
+  options.dual_feasibility_tolerance = 1e-7;
+  options.dual_objective_value_upper_bound = HIGHS_CONST_INF;
+  options.simplex_strategy = SimplexStrategy::DUAL_PLAIN;
+  options.simplex_dualise_strategy = SimplexDualiseStrategy::OFF;
+  options.simplex_permute_strategy = SimplexPermuteStrategy::OFF;
+  options.simplex_scale_strategy = SimplexScaleStrategy::HSOL;
+  options.simplex_crash_strategy = SimplexCrashStrategy::OFF;
+  options.simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;
+  options.simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DANTZIG;
+  options.simplex_price_strategy = SimplexPriceStrategy::ROW;
+}
+
 void reportStringOptionValue(const int report_level, const string option_string,
                              const string option_value,
                              const string option_default) {
@@ -144,7 +179,7 @@ void reportStringOptionValue(const int report_level, const string option_string,
       HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"%s\"\n",
 		      option_string.c_str(), option_default.c_str());
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has %s value \"%s\": default value is \"%s\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"%s\": default value is \"%s\"",
 		      option_string.c_str(), default_space.c_str(), option_value.c_str(), option_default.c_str());
     }
   }
@@ -159,28 +194,29 @@ void reportIntOptionValue(const int report_level, const string option_string,
   } else {
     default_space = "";
   }
+  char value_char [100];
+  char range_char [100];
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
-    printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
-      printf(" default value %12d", option_default);
+      sprintf(value_char, " default value %12d", option_default);
     } else {
-      printf("%s value %12d", default_space.c_str(), option_value);
-      printf(": default value is %12d", option_default);
+      sprintf(value_char, "%s value %12d: default value is %12d", default_space.c_str(), option_value, option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
-        printf("\n");
+        sprintf(range_char, " ");
       } else {
-        printf(": valid range is [-Inf, %6d]\n", *option_max);
+        sprintf(range_char, ": valid range is [        -Inf, %6d]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        printf(": valid range is [%6d, Inf]\n", *option_min);
+        sprintf(range_char, ": valid range is [%12d,         Inf]", *option_min);
       } else {
-        printf(": valid range is [%6d, %6d]\n", *option_min, *option_max);
+        sprintf(range_char, ": valid range is [%12d, %12d]", *option_min, *option_max);
       }
     }
+    HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);
   }
 }
 
@@ -195,28 +231,30 @@ void reportDoubleOptionValue(const int report_level, const string option_string,
   } else {
     default_space = "";
   }
+  char value_char [100];
+  char range_char [100];
   bool is_default = option_value == option_default;
   if (!is_default || report_level > 0) {
-    printf("Option: %-32s has", option_string.c_str());
     if (is_default) {
-      printf(" default value %12g", option_default);
+      sprintf(value_char, " default value %12g", option_default);
     } else {
-      printf("%s value %12g", default_space.c_str(), option_value);
-      printf(": default value is %12g", option_default);
+      sprintf(value_char,
+	      "%s value %12g: default value is %12g", default_space.c_str(), option_value, option_default);
     }
     if (option_min == NULL) {
       if (option_max == NULL) {
-        printf("\n");
+        sprintf(range_char, " ");
       } else {
-        printf(": valid range is [-Inf, %12g]\n", *option_max);
+        sprintf(range_char, ": valid range is [-Inf, %12g]", *option_max);
       }
     } else {
       if (option_max == NULL) {
-        printf(": valid range is [%12g, Inf]\n", *option_min);
+        sprintf(range_char, ": valid range is [%12g, Inf]", *option_min);
       } else {
-        printf(": valid range is [%12g, %12g]\n", *option_min, *option_max);
+        sprintf(range_char, ": valid range is [%12g, %12g]", *option_min, *option_max);
       }
     }
+    HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s%s", option_string.c_str(), value_char, range_char);
   }
 }
 
@@ -243,10 +281,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.presolve_option == PresolveOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"on\"",
              presolve_string.c_str());
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"off\": default value is \"on\"",
 	     presolve_string.c_str(), default_space.c_str());
     }
   }
@@ -275,10 +313,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.simplex_option == SimplexOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"on\"",
              simplex_string.c_str());
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"off\": default value is \"on\"",
 	     simplex_string.c_str(), default_space.c_str());
     }
   }
@@ -310,6 +348,16 @@ const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize";
   */
+
+  // run_as_hsol
+  reportIntOptionValue(report_level, run_as_hsol_string,
+		       options.run_as_hsol, RUN_AS_HSOL_DEFAULT,
+		       &RUN_AS_HSOL_MIN, &RUN_AS_HSOL_MAX);
+
+  // keep_n_rows
+  reportIntOptionValue(report_level, keep_n_rows_string,
+		       options.keep_n_rows, KEEP_N_ROWS_DEFAULT,
+		       &KEEP_N_ROWS_MIN, &KEEP_N_ROWS_MAX);
 
   // infinite_cost
   reportDoubleOptionValue(report_level, infinite_cost_string,
@@ -563,6 +611,32 @@ OptionStatus setParserTypeValue(HighsOptions& options,
                     "parser type value \"%s\" is not permitted: legal values "
                     "are \"%s\" and \"%s\"\n",
                     value.c_str(), fixed_string.c_str(), free_string.c_str());
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setRunAsHsolValue(HighsOptions& options, const int& value) {
+  if (value >= RUN_AS_HSOL_MIN && value <= RUN_AS_HSOL_MAX)
+    options.run_as_hsol = value;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+                    "infinite cost value \"%s\" is not permitted: legal values "
+                    "are between %d and %d\n",
+                    value, RUN_AS_HSOL_MIN, RUN_AS_HSOL_MAX);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus setKeepNRowsValue(HighsOptions& options, const int& value) {
+  if (value >= KEEP_N_ROWS_MIN && value <= KEEP_N_ROWS_MAX)
+    options.keep_n_rows = value;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR,
+                    "keep N-type rows value \"%s\" is not permitted: legal values "
+                    "are between %d and %d\n",
+                    value, KEEP_N_ROWS_MIN, KEEP_N_ROWS_MAX);
     return OptionStatus::ILLEGAL_VALUE;
   }
   return OptionStatus::OK;

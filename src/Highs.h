@@ -34,7 +34,7 @@ class Highs {
   HighsStatus setHighsOptionValue(const std::string& option,
                                   const std::string& value) {
     OptionStatus status = setOptionValue(options_, option, value);
-    if (status != OptionStatus::OK) return HighsStatus::OK;
+    if (status == OptionStatus::OK) return HighsStatus::OK;
     return HighsStatus::Error;
   }
 
@@ -474,6 +474,8 @@ class Highs {
   HighsStatus runBnb();
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
+
+  void underDevelopmentLogMessage(const string method_name);
 };
 
 #endif

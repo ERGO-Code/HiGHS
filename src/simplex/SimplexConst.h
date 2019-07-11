@@ -46,7 +46,7 @@ enum class SimplexScaleStrategy {
   CHOOSE,
   HSOL,
   HIGHS,
-  DEFAULT = HSOL
+  DEFAULT = HIGHS
 };
 
 enum class SimplexCrashStrategy {

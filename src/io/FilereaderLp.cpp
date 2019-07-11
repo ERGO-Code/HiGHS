@@ -50,7 +50,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
   const char* filename = options.filename.c_str();
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
-  return FilereaderRetcode::OKAY;
+  return FilereaderRetcode::OK;
 }
 
 FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
@@ -81,7 +81,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
 
   fclose(file);
   if (this->status != LP_FILEREADER_STATUS::ERROR) {
-    return FilereaderRetcode::OKAY;
+    return FilereaderRetcode::OK;
   } else {
     return FilereaderRetcode::PARSERERROR;
   }
@@ -490,7 +490,7 @@ FilereaderRetcode FilereaderLp::tokenizeInput() {
     cont = this->readNextToken();
   } while (cont);
 
-  return FilereaderRetcode::OKAY;
+  return FilereaderRetcode::OK;
 }
 
 LpSectionKeyword FilereaderLp::tryParseLongSectionKeyword(const char* str,
@@ -930,7 +930,7 @@ void FilereaderLp::writeToFileLineend() {
   this->linelength = 0;
 }
 
-FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
+FilewriterRetcode FilereaderLp::writeModelToFile(const char* filename,
                                                  HighsLp& model) {
   this->file = fopen(filename, "w");
 
@@ -1041,5 +1041,5 @@ FilereaderRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFileLineend();
 
   fclose(this->file);
-  return FilereaderRetcode::OKAY;
+  return FilewriterRetcode::OK;
 }

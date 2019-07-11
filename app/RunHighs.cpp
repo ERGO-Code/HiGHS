@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = false;  // true;//
+  bool force_options_file = false;  // true;// 
   if (force_options_file) {
     printf(
         "In main: set options.options_file = options_file so vscode can be "
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
       printf("In main: fail return from loadOptionsFromFile\n");
     }
   }
-
+  if (options.run_as_hsol) setHsolOptions(options);
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {
@@ -102,8 +102,7 @@ int main(int argc, char** argv) {
     return (int)HighsStatus::LpError;
   }
   HighsStatus run_status;
-  //  run_status = highs.writeToFile("write.mps"); if (run_status !=
-  //  HighsStatus::OK) printf("Error return from highs.writeToFile\n");
+  //  run_status = highs.writeToFile("write.mps"); if (run_status != HighsStatus::OK) printf("Error return from highs.writeToFile\n");
 
   highs.options_ = options;
   run_status = highs.run();

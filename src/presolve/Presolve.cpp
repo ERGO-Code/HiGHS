@@ -586,13 +586,6 @@ void Presolve::resizeProblem() {
   numCol = nC;
   numTot = nR + nC;
 
-  std::stringstream ss;
-  ss << "Problem reduced: ";
-  ss << "rows " << numRow << "(-" << numRowOriginal - numRow << "), ";
-  ss << "columns " << numCol << "(-" << numColOriginal - numCol << "), ";
-  ss << "nonzeros " << nz << "(-" << ARindex.size() - nz << ") " << std::endl;
-  HighsPrintMessage(ML_MINIMAL, ss.str().c_str());
-
   if (nR + nC == 0) {
     status = Empty;
     return;

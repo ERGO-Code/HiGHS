@@ -43,7 +43,7 @@ class HighsModelObject {
   HFactor factor_;
   HighsRandom random_;
 
-  bool reportModelOperationsClock = false;
+  bool report_model_operations_clock = false;
 };
 
 #endif  // LP_DATA_HIGHS_MODEL_OBJECT_H_

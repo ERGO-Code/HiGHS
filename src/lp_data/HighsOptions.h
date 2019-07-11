@@ -47,6 +47,8 @@ const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize";
 
 // Strings for file options
+const string run_as_hsol_string = "run_as_hsol";
+const string keep_n_rows_string = "keep_n_rows";
 const string infinite_cost_string = "infinite_cost";
 const string infinite_bound_string = "infinite_bound";
 const string small_matrix_value_string = "small_matrix_value";
@@ -104,6 +106,8 @@ struct HighsOptions {
   HighsMpsParserType mps_parser_type = HighsMpsParserType::DEFAULT;
 
   // Options not passed through the command line
+  int run_as_hsol = RUN_AS_HSOL_DEFAULT;
+  int keep_n_rows = KEEP_N_ROWS_DEFAULT;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
@@ -171,6 +175,7 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
 OptionStatus checkOptionsValue(HighsOptions& options);
 void reportOptionsValue(const HighsOptions& options,
                         const int report_level = 0);
+void setHsolOptions(HighsOptions& options);
 
 OptionStatus setPresolveValue(HighsOptions& options, const std::string& value);
 OptionStatus setCrashValue(HighsOptions& options, const std::string& value);
@@ -191,9 +196,8 @@ OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options,
 OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options,
                                             const std::string& value);
 
-OptionStatus setDualiseSimplexLpValue(HighsOptions& options, const int& value);
-OptionStatus setPermuteSimplexLpValue(HighsOptions& options, const int& value);
-OptionStatus setScaleSimplexLpValue(HighsOptions& options, const int& value);
+OptionStatus setRunAsHsolValue(HighsOptions& options, const int& value);
+OptionStatus setKeepNRowsValue(HighsOptions& options, const int& value);
 
 OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
 OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);

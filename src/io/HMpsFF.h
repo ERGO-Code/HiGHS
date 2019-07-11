@@ -149,11 +149,14 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename,
 }
 
 int HMpsFF::fillMatrix() {
-  if ((int)entries.size() != nnz) return 1;
+  int num_entries = entries.size();
+  if (num_entries != nnz) return 1;
 
   Avalue.resize(nnz);
   Aindex.resize(nnz);
   Astart.assign(numCol + 1, 0);
+  // Nothing to do if there are no entries in the matrix
+  if (!num_entries) return 0;
 
   int newColIndex = std::get<0>(entries.at(0));
 
@@ -658,9 +661,11 @@ HMpsFF::parsekey HMpsFF::parseRhs(std::ifstream& file) {
 HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
   std::string strline, word;
 
+  int num_mi = 0;
+  int num_pl = 0;
   int num_bv = 0;
-  int num_change_bv_lb = 0;
-  int num_change_bv_ub = 0;
+  int num_li = 0;
+  int num_ui = 0;
   auto parsename = [this](const std::string& name, int& colidx) {
     auto mit = colname2idx.find(name);
     // assert(mit != colname2idx.end());
@@ -693,24 +698,17 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
 
     // start of new section?
     if (key != parsekey::NONE) {
-      // integer bounds set to default [0,1] at initialization.
-      // todo: delete code below when we've made sure mips work.
-      // if (num_change_bv_lb + num_change_bv_ub) {
-      //   if (handle_bv_in_bounds) {
-      //     printf(" Found %d BV entries: changed %d LB to 0 and %d UB to 1\n",
-      //            num_bv, num_change_bv_lb, num_change_bv_ub);
-      //   } else {
-      //     printf(" Found %d BV entries: not changed %d LB to 0 or %d UB to 1\n",
-      //            num_bv, num_change_bv_lb, num_change_bv_ub);
-      //   }
-      // }
+      if (num_mi) printf("Number of MI entries in BOUNDS section is %d\n", num_mi);
+      if (num_pl) printf("Number of PL entries in BOUNDS section is %d\n", num_pl);
+      if (num_bv) printf("Number of BV entries in BOUNDS section is %d\n", num_bv);
+      if (num_li) printf("Number of LI entries in BOUNDS section is %d\n", num_li);
+      if (num_ui) printf("Number of UI entries in BOUNDS section is %d\n", num_ui);
       return key;
     }
     bool islb = false;
     bool isub = false;
     bool isintegral = false;
     bool isdefaultbound = false;
-    bool found_bv = false;
     if (word == "UP")  // lower bound
       isub = true;
     else if (word == "LO")  // upper bound
@@ -723,23 +721,29 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
     {
       islb = true;
       isdefaultbound = true;
+      num_mi++;
     } else if (word == "PL")  // infinite upper bound (redundant)
     {
       isub = true;
       isdefaultbound = true;
+      num_pl++;
     } else if (word == "BV")  // binary
     {
+      islb = true;
+      isub = true;
       isintegral = true;
       isdefaultbound = true;
-      found_bv = true;
+      num_bv++;
     } else if (word == "LI")  // integer lower bound
     {
       islb = true;
       isintegral = true;
+      num_li++;
     } else if (word == "UI")  // integer upper bound
     {
       isub = true;
       isintegral = true;
+      num_ui++;
     } else if (word == "FR")  // free variable
     {
       islb = true;
@@ -780,29 +784,21 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
       numCol++;
     }
     if (isdefaultbound) {
-      if (isintegral)  // binary
+      // MI, PL, BV or FR
+      if (isintegral)
+	// binary: BV
       {
         if (islb) colLower[colidx] = 0.0;
         if (isub) colUpper[colidx] = 1.0;
         col_integrality[colidx] = true;
       } else {
+	// continuous: MI, PL or FR
         if (islb) colLower[colidx] = -HIGHS_CONST_INF;
         if (isub) colUpper[colidx] = HIGHS_CONST_INF;
       }
-      if (found_bv) {
-        if (colLower[colidx] != 0) {
-          if (handle_bv_in_bounds) colLower[colidx] = 0.0;
-          num_change_bv_lb++;
-        }
-        if (colUpper[colidx] != 0) {
-          if (handle_bv_in_bounds) colUpper[colidx] = 1.0;
-          num_change_bv_ub++;
-        }
-        num_bv++;
-      }
       continue;
     }
-
+    // Bounds now are UP, LO, FX, LI or UI
     // here marker is the col name and end marks its end
     word = "";
     word = first_word(strline, end_marker);
@@ -813,8 +809,22 @@ HMpsFF::parsekey HMpsFF::parseBounds(std::ifstream& file) {
                       marker.c_str());
       return HMpsFF::parsekey::FAIL;
     }
-
     double value = atof(word.c_str());
+    if (isintegral) {
+      // Must be LI or UI
+      //
+      // Bounds will be either [-inf, value] (if LI) or [value, inf] (if UI)
+      //
+      // Slightly clunky, but set bounds to be [-inf, inf] and one
+      // bounds will be over-written by value according to islb/isub
+      colLower[colidx] = -HIGHS_CONST_INF;
+      colUpper[colidx] = HIGHS_CONST_INF;
+      //
+      // Also, value should be integer
+      int i_value = static_cast<int>(value);
+      double dl = value-i_value;
+      if (dl) HighsLogMessage(HighsMessageType::ERROR, "Bound for for LI/UI row %s is %g: not integer", marker.c_str(), value);
+    }
     if (islb) colLower[colidx] = value;
     if (isub) colUpper[colidx] = value;
     if (isintegral) col_integrality[colidx] = true;

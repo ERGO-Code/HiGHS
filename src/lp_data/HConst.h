@@ -34,16 +34,25 @@ enum HighsPrintMessageLevel {
 
 enum class ParallelOption { OFF = 0, ON, DEFAULT = OFF };
 
-enum class PresolveOption { OFF = 0, ON, DEFAULT = OFF };
+enum class PresolveOption { OFF = 0, ON, DEFAULT = ON };
 
 enum class CrashOption { OFF = 0, ON, DEFAULT = OFF };
 
-enum class SimplexOption { OFF = 0, ON, DEFAULT = OFF };
+enum class SimplexOption { OFF = 0, ON, DEFAULT = ON };
 
 enum class IpmOption { OFF = 0, ON, DEFAULT = OFF };
 
 const std::string FILENAME_DEFAULT = "";
 const std::string OPTIONS_FILE_DEFAULT = "";
+const int RUN_AS_HSOL_MIN = 0;
+const int RUN_AS_HSOL_DEFAULT = 0;
+const int RUN_AS_HSOL_MAX = 1;
+const int KEEP_N_ROWS_DELETE_ROWS = -1;
+const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
+const int KEEP_N_ROWS_KEEP_ROWS = 1;
+const int KEEP_N_ROWS_MIN = KEEP_N_ROWS_DELETE_ROWS;
+const int KEEP_N_ROWS_DEFAULT = KEEP_N_ROWS_DELETE_ROWS;
+const int KEEP_N_ROWS_MAX = KEEP_N_ROWS_KEEP_ROWS;
 const double INFINITE_COST_MIN = 1e15;
 const double INFINITE_COST_DEFAULT = 1e20;
 const double INFINITE_COST_MAX = 1e25;

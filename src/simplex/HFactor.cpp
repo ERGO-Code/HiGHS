@@ -294,14 +294,14 @@ void HFactor::btran(HVector& vector, double hist_dsty) const {
 void HFactor::update(HVector* aq, HVector* ep, int* iRow, int* hint) {
   // Special case
   if (aq->next) {
-    updateCFT(aq, ep, iRow, hint);
+    updateCFT(aq, ep, iRow);//, hint);
     return;
   }
 
-  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, ep, *iRow, hint);
+  if (updateMethod == UPDATE_METHOD_FT) updateFT(aq, ep, *iRow);//, hint);
+  if (updateMethod == UPDATE_METHOD_PF) updatePF(aq, *iRow, hint);
   if (updateMethod == UPDATE_METHOD_MPF) updateMPF(aq, ep, *iRow, hint);
-  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow, hint);
+  if (updateMethod == UPDATE_METHOD_APF) updateAPF(aq, ep, *iRow);//, hint);
 }
 
 #ifdef HiGHSDEV
@@ -1600,7 +1600,9 @@ void HFactor::btranAPF(HVector& vector) const {
   vector.count = RHScount;
 }
 
-void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow, int* hint) {
+void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow
+			//, int* hint
+			) {
   /*
    * In the major update loop, the prefix
    *
@@ -1860,7 +1862,9 @@ void HFactor::updateCFT(HVector* aq, HVector* ep, int* iRow, int* hint) {
   delete[] Tpivot;
 }
 
-void HFactor::updateFT(HVector* aq, HVector* ep, int iRow, int* hint) {
+void HFactor::updateFT(HVector* aq, HVector* ep, int iRow
+		       //, int* hint
+		       ) {
   // Store pivot
   int pLogic = UpivotLookup[iRow];
   double pivot = UpivotValue[pLogic];
@@ -1987,7 +1991,7 @@ void HFactor::updateFT(HVector* aq, HVector* ep, int iRow, int* hint) {
   //        *hint = 1;
 }
 
-void HFactor::updatePF(HVector* aq, HVector* ep, int iRow, int* hint) {
+void HFactor::updatePF(HVector* aq, int iRow, int* hint) {
   // Check space
   const int columnCount = aq->packCount;
   const int* columnIndex = &aq->packIndex[0];
@@ -2054,7 +2058,9 @@ void HFactor::updateMPF(HVector* aq, HVector* ep, int iRow, int* hint) {
   if (UtotalX > UmeritX) *hint = 1;
 }
 
-void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow, int* hint) {
+void HFactor::updateAPF(HVector* aq, HVector* ep, int iRow
+			//, int* hint
+			) {
 #ifdef HiGHSDEV
   int PFcountX0 = PFindex.size();
 #endif

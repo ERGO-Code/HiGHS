@@ -35,14 +35,14 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
   numRow = simplex_lp.numRow_;
   numCol = simplex_lp.numCol_;
   numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
-  const int objSense = simplex_lp.sense_;
 #ifdef HiGHSDEV
+  const int objSense = simplex_lp.sense_;
   if (fabs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
     cout << flush;
   }
 #endif
-  assert(fabs(objSense) == 1);
+  assert(fabs(simplex_lp.sense_) == 1);
 
   if (crash_strategy == SimplexCrashStrategy::BASIC
 #ifdef HiGHSDEV
@@ -84,9 +84,7 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
 }
 
 void HCrash::bixby() {
-  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsLp& simplex_lp = workHMO.simplex_lp_;
-  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
 
   const int* Astart = &simplex_lp.Astart_[0];
   const int* Aindex = &simplex_lp.Aindex_[0];
@@ -230,13 +228,13 @@ void HCrash::bixby() {
   for (int r_n = 0; r_n < numRow; r_n++) {
     if (bixby_vr_in_r[r_n] == no_ix) continue;
     if (bixby_vr_in_r[r_n] == numCol + r_n) continue;
-    int cz_r_n = r_n;
     int cz_c_n = bixby_vr_in_r[r_n];
     int columnIn = cz_c_n;
     int columnOut = numCol + r_n;
     workHMO.simplex_basis_.nonbasicFlag_[columnIn] = NONBASIC_FLAG_FALSE;
     workHMO.simplex_basis_.nonbasicFlag_[columnOut] = NONBASIC_FLAG_TRUE;
 #ifdef HiGHSDEV
+    int cz_r_n = r_n;
     int vr_ty = crsh_r_ty[cz_r_n];
     crsh_vr_ty_rm_n_r[vr_ty] += 1;
     vr_ty = crsh_c_ty[cz_c_n];
@@ -605,8 +603,6 @@ void HCrash::ltssf_iz_mode() {
 
 void HCrash::ltssf_iterate() {
   // LTSSF Main loop
-  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   n_crsh_ps = 0;
   n_crsh_bs_cg = 0;
   bool ltssf_stop = false;
@@ -833,9 +829,7 @@ void HCrash::ltssf_u_da_af_no_bs_cg() {
 }
 
 void HCrash::ltssf_iz_da() {
-  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
   HighsLp& simplex_lp = workHMO.simplex_lp_;
-  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   SimplexBasis& simplex_basis = workHMO.simplex_basis_;
   // bool ImpliedDualLTSSF = false;
   // ImpliedDualLTSSF = true;
@@ -1205,8 +1199,6 @@ void HCrash::ltssf_cz_c() {
 
 #ifdef HiGHSDEV
 void HCrash::tsSing() {
-  //  HighsSimplexInfo &simplex_info = workHMO.simplex_info_;
-  HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   printf("\nTesting singularity Crash\n");
   int nBcVr = 0;
   // Make columns basic until they are either all basic or the number

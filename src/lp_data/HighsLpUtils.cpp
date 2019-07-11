@@ -23,6 +23,7 @@
 #include "lp_data/HighsStatus.h"
 #include "util/HighsSort.h"
 #include "util/HighsUtils.h"
+#include "util/HighsTimer.h"
 
 HighsStatus checkLp(const HighsLp& lp) {
   // Check dimensions.
@@ -110,19 +111,20 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
       "Col", 0, lp.numCol_, true, 0, lp.numCol_, false, 0, NULL, false, NULL,
       &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  // Assess the LP row bounds
-  call_status = assessBounds(
-      "Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
-      &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
-  // Assess the LP matrix
-  int lp_num_nz = lp.Astart_[lp.numCol_];
-  call_status = assessMatrix(lp.numRow_, 0, lp.numCol_, lp.numCol_, lp_num_nz,
-                             &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
-                             options.small_matrix_value,
-                             options.large_matrix_value, normalise);
-  lp.Astart_[lp.numCol_] = lp_num_nz;
-  return_status = worseStatus(call_status, return_status);
+  if (lp.numRow_) {
+    // Assess the LP row bounds
+    call_status = assessBounds("Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
+			       &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+    return_status = worseStatus(call_status, return_status);
+    // Assess the LP matrix
+    int lp_num_nz = lp.Astart_[lp.numCol_];
+    call_status = assessMatrix(lp.numRow_, 0, lp.numCol_, lp.numCol_, lp_num_nz,
+			       &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+			       options.small_matrix_value,
+			       options.large_matrix_value, normalise);
+    lp.Astart_[lp.numCol_] = lp_num_nz;
+    return_status = worseStatus(call_status, return_status);
+  }
   if (return_status == HighsStatus::Error)
     return_status = HighsStatus::LpError;
   else
@@ -597,13 +599,17 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
       for (int el = Xstart[ix]; el < to_el; el++) check_vector[Xindex[el]] = 0;
     }
 #ifdef HiGHSDEV
-    // Check zeroing of check vector
-    for (int component = 0; component < vec_dim; component++) {
-      if (check_vector[component]) error_found;
+    // NB This is very expensive so shouldn't be true
+    const bool check_check_vector = false;
+    if (check_check_vector) {
+      // Check zeroing of check vector
+      for (int component = 0; component < vec_dim; component++) {
+	if (check_vector[component]) error_found = true;
+      }
+      if (error_found)
+	HighsLogMessage(HighsMessageType::ERROR,
+			"assessMatrix: check_vector not zeroed");
     }
-    if (error_found)
-      HighsLogMessage(HighsMessageType::ERROR,
-                      "assessMatrix: check_vector not zeroed");
 #endif
   }
   if (num_small_values) {
@@ -1573,59 +1579,43 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
   return HighsStatus::OK;
 }
 
-bool writeLpAsMPS(const char* filename, const HighsLp& lp) {
+FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bool free_format) {
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
   std::vector<std::string> local_row_names;
   local_col_names.resize(lp.numCol_);
   local_row_names.resize(lp.numRow_);
-  // Determine whether any existing names can be used
-  // Consider column names
-  if (have_col_names) {
-    int max_col_name_length = maxNameLength(lp.numCol_, lp.col_names_);
-    if (max_col_name_length > 8) {
-      printf("Cannot use model column names since maximum length is %d\n",
-             max_col_name_length);
-      have_col_names = false;
-    }
+  //
+  // Initialise the local names to any existing names
+  if (have_col_names) local_col_names = lp.col_names_;
+  if (have_row_names) local_row_names = lp.row_names_;
+  //
+  // Normalise the column names
+  int max_col_name_length = HIGHS_CONST_I_INF;
+  if (!free_format) max_col_name_length = 8;
+  int col_name_status = normaliseNames("Column", lp.numCol_, local_col_names, max_col_name_length);
+  if (col_name_status) return FilewriterRetcode::FAIL;
+  //
+  // Normalise the row names
+  int max_row_name_length = HIGHS_CONST_I_INF;
+  if (!free_format) max_row_name_length = 8;
+  int row_name_status = normaliseNames("Row", lp.numRow_, local_row_names, max_row_name_length);
+  if (row_name_status) return FilewriterRetcode::FAIL;
+  int max_name_length = std::max(max_col_name_length, max_row_name_length);
+  bool use_free_format = free_format;
+  if (!free_format) {
+    if (max_name_length > 8) {
+      HighsLogMessage(HighsMessageType::WARNING, "Maximum name length is %d so using free format rather than fixed format", max_name_length);
+      use_free_format = true;
+    }      
   }
-  if (have_col_names) {
-    local_col_names = lp.col_names_;
-  } else {
-    // Cannot (easily) make up names for more than 10^7 columns
-    if (lp.numCol_ > 10000000) return false;
-    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-      std::string name = "C" + std::to_string(iCol);
-      local_col_names[iCol] = name;
-    }
-  }
-  // Consider row names
-  if (have_row_names) {
-    int max_row_name_length = maxNameLength(lp.numRow_, lp.row_names_);
-    if (max_row_name_length > 8) {
-      printf("Cannot use model row    names since maximum length is %d\n",
-             max_row_name_length);
-      have_row_names = false;
-    }
-  }
-  if (have_row_names) {
-    local_row_names = lp.row_names_;
-  } else {
-    // Cannot (easily) make up names for more than 10^7 rows
-    if (lp.numRow_ > 10000000) return false;
-    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-      std::string name = "R" + std::to_string(iRow);
-      local_row_names[iRow] = name;
-    }
-  }
-  int writeMPS_return =
-      writeMPS(filename, lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
-               lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
-               lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
-               lp.integrality_, local_col_names, local_row_names);
-  bool return_value = writeMPS_return == 0;
-  return return_value;
+  return writeMPS(filename,
+		  lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
+		  lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
+		  lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
+		  lp.integrality_, local_col_names, local_row_names,
+		  use_free_format);
 }
 
 // Methods for reporting an LP, including its row and column data and matrix
@@ -2140,8 +2130,9 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 
   for (int row = 0; row < lp.numRow_; row++) {
     assert(equality_lp.Astart_[equality_lp.numCol_] ==
-           equality_lp.Avalue_.size());
-    assert(equality_lp.Aindex_.size() == equality_lp.Avalue_.size());
+           (int)equality_lp.Avalue_.size());
+    assert((int)equality_lp.Aindex_.size() ==
+	   (int)equality_lp.Avalue_.size());
     const int nnz = equality_lp.Astart_[equality_lp.numCol_];
 
     if (lp.rowLower_[row] == -HIGHS_CONST_INF &&
@@ -2337,7 +2328,12 @@ void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp) {
   int num_els_from = lp.Astart_[num_col_from];
   int num_col_to = presolve_lp.numCol_;
   int num_row_to = presolve_lp.numRow_;
-  int num_els_to = presolve_lp.Astart_[num_col_to];
+  int num_els_to;
+  if (num_col_to) {
+    num_els_to = presolve_lp.Astart_[num_col_to];
+  } else {
+    num_els_to = 0;
+  }
   HighsLogMessage(HighsMessageType::INFO,
                   "Presolve reductions: columns %d(-%d); rows %d(-%d) "
                   "elements %d(-%d)",
