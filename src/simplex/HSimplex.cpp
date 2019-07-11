@@ -3152,7 +3152,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   const HighsLp& lp = highs_model_object.lp_;
   assert(lp.numRow_==0);
-  HighsLogMessage(HighsMessageType::INFO, "Solving unconstrained LP problem with %d columns", lp.numCol_);
+  HighsLogMessage(HighsMessageType::INFO, "Solving an unconstrained LP with %d columns", lp.numCol_);
   HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
   solution.col_value.assign(lp.numCol_, 0);

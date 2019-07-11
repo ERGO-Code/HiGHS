@@ -2328,7 +2328,12 @@ void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp) {
   int num_els_from = lp.Astart_[num_col_from];
   int num_col_to = presolve_lp.numCol_;
   int num_row_to = presolve_lp.numRow_;
-  int num_els_to = presolve_lp.Astart_[num_col_to];
+  int num_els_to;
+  if (num_col_to) {
+    num_els_to = presolve_lp.Astart_[num_col_to];
+  } else {
+    num_els_to = 0;
+  }
   HighsLogMessage(HighsMessageType::INFO,
                   "Presolve reductions: columns %d(-%d); rows %d(-%d) "
                   "elements %d(-%d)",
