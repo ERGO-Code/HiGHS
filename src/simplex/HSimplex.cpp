@@ -3148,3 +3148,44 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
       break;
   }
 }
+
+SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
+  const HighsLp& lp = highs_model_object.lp_;
+  assert(lp.numRow_==0);
+  HighsLogMessage(HighsMessageType::INFO, "Solving unconstrained LP problem with %d columns", lp.numCol_);
+  HighsSolution& solution = highs_model_object.solution_;
+  HighsBasis& basis = highs_model_object.basis_;
+  solution.col_value.assign(lp.numCol_, 0);
+  solution.col_dual.assign(lp.numCol_, 0);
+  basis.col_status.assign(lp.numCol_, HighsBasisStatus::NONBASIC);
+  double objective = lp.offset_;
+  for (int iCol=0; iCol<lp.numCol_; iCol++) {
+    double cost = lp.sense_*lp.colCost_[iCol];
+    double lower = lp.colLower_[iCol];
+    double upper = lp.colUpper_[iCol];
+    double value;
+    HighsBasisStatus status;
+    if (lower > upper) return SimplexSolutionStatus::INFEASIBLE;
+    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+      // Free column: must have zero cost
+      if (cost) return SimplexSolutionStatus::UNBOUNDED;
+      value = 0;
+      status = HighsBasisStatus::ZERO;
+    } else if (cost >= 0) {
+      if (cost && highs_isInfinity(-lower)) return SimplexSolutionStatus::UNBOUNDED;
+      value = lower;
+      status = HighsBasisStatus::LOWER;
+    } else {
+      if (highs_isInfinity(upper)) return SimplexSolutionStatus::UNBOUNDED;
+      value = upper;
+      status = HighsBasisStatus::UPPER;
+    }
+    solution.col_value[iCol] = value;
+    solution.col_dual[iCol] = cost;
+    basis.col_status[iCol] = status;
+    objective += value*cost;
+  }
+  highs_model_object.simplex_info_.dual_objective_value = objective;
+  highs_model_object.simplex_info_.primal_objective_value = objective;
+  return SimplexSolutionStatus::OPTIMAL;
+}

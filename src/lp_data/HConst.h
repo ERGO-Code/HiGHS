@@ -38,7 +38,7 @@ enum class PresolveOption { OFF = 0, ON, DEFAULT = ON };
 
 enum class CrashOption { OFF = 0, ON, DEFAULT = OFF };
 
-enum class SimplexOption { OFF = 0, ON, DEFAULT = OFF };
+enum class SimplexOption { OFF = 0, ON, DEFAULT = ON };
 
 enum class IpmOption { OFF = 0, ON, DEFAULT = OFF };
 

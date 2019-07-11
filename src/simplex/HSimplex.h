@@ -232,4 +232,5 @@ void updateSimplexLpStatus(
     LpAction action         // !< Action prompting update
 );
 
+SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
 #endif  // SIMPLEX_HSIMPLEX_H_

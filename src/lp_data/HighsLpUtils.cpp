@@ -111,19 +111,20 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
       "Col", 0, lp.numCol_, true, 0, lp.numCol_, false, 0, NULL, false, NULL,
       &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  // Assess the LP row bounds
-  call_status = assessBounds(
-      "Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
-      &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
-  return_status = worseStatus(call_status, return_status);
-  // Assess the LP matrix
-  int lp_num_nz = lp.Astart_[lp.numCol_];
-  call_status = assessMatrix(lp.numRow_, 0, lp.numCol_, lp.numCol_, lp_num_nz,
-                             &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
-                             options.small_matrix_value,
-                             options.large_matrix_value, normalise);
-  lp.Astart_[lp.numCol_] = lp_num_nz;
-  return_status = worseStatus(call_status, return_status);
+  if (lp.numRow_) {
+    // Assess the LP row bounds
+    call_status = assessBounds("Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
+			       &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
+    return_status = worseStatus(call_status, return_status);
+    // Assess the LP matrix
+    int lp_num_nz = lp.Astart_[lp.numCol_];
+    call_status = assessMatrix(lp.numRow_, 0, lp.numCol_, lp.numCol_, lp_num_nz,
+			       &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
+			       options.small_matrix_value,
+			       options.large_matrix_value, normalise);
+    lp.Astart_[lp.numCol_] = lp_num_nz;
+    return_status = worseStatus(call_status, return_status);
+  }
   if (return_status == HighsStatus::Error)
     return_status = HighsStatus::LpError;
   else

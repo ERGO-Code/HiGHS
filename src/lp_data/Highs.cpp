@@ -908,6 +908,12 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
                                  const string message) {
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
+  // Handle the case of unconstrained LPs here
+  if (!model.lp_.numRow_) {
+    HighsSimplexInterface simplex_interface(model);
+    iteration_count = 0;
+    return simplex_interface.lpStatusToHighsStatus(solveUnconstrainedLp(model));
+  }
   int initial_iteration_count = model.simplex_info_.iteration_count;
   HighsStatus solve_status = runSolver(model);
   int final_iteration_count = model.simplex_info_.iteration_count;

@@ -42,6 +42,20 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
 
+  // Handle the case of unconstrained LPs here
+  if (!highs_model_object.lp_.numRow_) {
+    setSimplexOptions(highs_model_object);
+    SimplexSolutionStatus simplex_solution_status = solveUnconstrainedLp(highs_model_object);
+    HighsStatus result = simplex_interface.lpStatusToHighsStatus(simplex_solution_status);
+    int report_level = -1;
+#ifdef HiGHSDEV
+    report_level = 1;
+#endif
+    if (simplex_info.analyseLpSolution)
+      simplex_interface.analyseHighsSolutionAndBasis(report_level, "after solving unconstrained LP");
+    return result;
+  }
+
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
   // knowledge based on run-time experience should be preserved.

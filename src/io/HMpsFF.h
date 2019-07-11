@@ -149,11 +149,14 @@ FreeFormatParserReturnCode HMpsFF::loadProblem(const std::string filename,
 }
 
 int HMpsFF::fillMatrix() {
-  if ((int)entries.size() != nnz) return 1;
+  int num_entries = entries.size();
+  if (num_entries != nnz) return 1;
 
   Avalue.resize(nnz);
   Aindex.resize(nnz);
   Astart.assign(numCol + 1, 0);
+  // Nothing to do if there are no entries in the matrix
+  if (!num_entries) return 0;
 
   int newColIndex = std::get<0>(entries.at(0));
 

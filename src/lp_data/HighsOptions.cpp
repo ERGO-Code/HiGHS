@@ -281,10 +281,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.presolve_option == PresolveOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"on\"",
              presolve_string.c_str());
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"off\": default value is \"on\"",
 	     presolve_string.c_str(), default_space.c_str());
     }
   }
@@ -313,10 +313,10 @@ void reportOptionsValue(const HighsOptions& options, const int report_level) {
   is_default = options.simplex_option == SimplexOption::DEFAULT;
   if (!is_default || report_level) {
     if (is_default) {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has default value \"on\"",
              simplex_string.c_str());
     } else {
-      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"on\": default value is \"off\"",
+      HighsLogMessage(HighsMessageType::INFO, "Option: %-32s has%s value \"off\": default value is \"on\"",
 	     simplex_string.c_str(), default_space.c_str());
     }
   }
