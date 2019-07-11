@@ -144,10 +144,12 @@ void HDual::solve(int num_threads) {
   } else {
     computeDualInfeasible(workHMO);
   }
+  /*
   printf("Dual infeasibilities with / without flips is %d / %d: Difference = %d\n",
 	 simplex_info.num_dual_infeasibilities,
 	 num_dual_infeasibilities_without_flips,
 	 num_dual_infeasibilities_without_flips - simplex_info.num_dual_infeasibilities);
+  */
   dualInfeasCount = simplex_info.num_dual_infeasibilities;
   solvePhase = dualInfeasCount > 0 ? 1 : 2;
   //
