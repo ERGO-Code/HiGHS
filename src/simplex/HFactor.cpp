@@ -265,6 +265,8 @@ int HFactor::build() {
   // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
   // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
+  kernel_size = nwork;
+  //  double pct = (100.0*kernel_size)/numRow;  printf("In build: kernel size is %d (%6.2f %%)\n", kernel_size, pct);
   rankDeficiency = buildKernel();
   if (rankDeficiency > 0) {
     printf("buildKernel() returns rankDeficiency = %d\n", rankDeficiency);

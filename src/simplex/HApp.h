@@ -208,12 +208,21 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   const bool refinement = false;
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
 
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  if (simplex_info.num_kernel) {
+    printf("grep_kernel,%s,%d,%g,%g,%g,%g\n",
+	   highs_model_object.lp_.model_name_.c_str(),
+	   simplex_info.num_kernel,
+	   simplex_info.min_kernel_size,
+	   simplex_info.sum_kernel_size/simplex_info.num_kernel,
+	   simplex_info.running_average_kernel_size,
+	   simplex_info.max_kernel_size);
+  }
   if (highs_status != HighsStatus::Optimal) return highs_status;
 
   HighsOptions& options = highs_model_object.options_;
   HighsLp& lp = highs_model_object.lp_;
   SimplexBasis& basis = highs_model_object.simplex_basis_;
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsScale& scale = highs_model_object.scale_;
   if (!scale.is_scaled_) return highs_status;
   double cost_scale = scale.cost_;

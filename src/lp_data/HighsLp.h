@@ -262,6 +262,12 @@ struct HighsSimplexInfo {
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
 
+  int num_kernel = 0;
+  double min_kernel_size = HIGHS_CONST_INF;
+  double max_kernel_size = 0;
+  double sum_kernel_size = 0.;
+  double running_average_kernel_size = 0.;
+
 #ifdef HiGHSDEV
   // Analysis of INVERT
   int total_inverts;

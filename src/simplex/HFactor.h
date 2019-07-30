@@ -222,6 +222,7 @@ class HFactor {
   int haveInvert;
   // The representation of B^{-1} corresponds to the current basis and is fresh
   int haveFreshInvert;
+  int kernel_size;
 
  private:
   /**

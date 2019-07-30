@@ -2453,6 +2453,13 @@ int compute_factor(HighsModelObject& highs_model_object) {
   }
   //    printf("INVERT: After %d iterations and %d updates\n",
   //    simplex_info.iteration_count, simplex_info.update_count);
+  simplex_info.num_kernel++;
+  double relative_kernel_size = (1.0*factor.kernel_size)/highs_model_object.simplex_lp_.numRow_;
+  simplex_info.min_kernel_size = min(relative_kernel_size, simplex_info.min_kernel_size);
+  simplex_info.max_kernel_size = max(relative_kernel_size, simplex_info.max_kernel_size);
+  simplex_info.sum_kernel_size += relative_kernel_size;
+  simplex_info.running_average_kernel_size = 0.95*simplex_info.running_average_kernel_size + 0.05*relative_kernel_size;
+
   simplex_info.update_count = 0;
 
 #ifdef HiGHSDEV
