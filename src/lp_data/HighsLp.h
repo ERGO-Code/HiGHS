@@ -59,6 +59,7 @@ class HighsLp {
   double offset_ = 0;
 
   std::string model_name_ = "";
+  std::string lp_name_ = "";
 
   std::vector<std::string> row_names_;
   std::vector<std::string> col_names_;
@@ -262,11 +263,19 @@ struct HighsSimplexInfo {
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
 
+  int num_invert = 0;
   int num_kernel = 0;
-  double min_kernel_size = HIGHS_CONST_INF;
-  double max_kernel_size = 0;
-  double sum_kernel_size = 0.;
-  double running_average_kernel_size = 0.;
+  int num_major_kernel = 0;
+  const double major_kernel_relative_dim_threshhold = 0.1;
+  double max_kernel_dim = 0;
+  double sum_kernel_dim = 0;
+  double running_average_kernel_dim = 0;
+  double sum_invert_fill_factor = 0;
+  double sum_kernel_fill_factor = 0;
+  double sum_major_kernel_fill_factor = 0;
+  double running_average_invert_fill_factor = 1;
+  double running_average_kernel_fill_factor = 1;
+  double running_average_major_kernel_fill_factor = 1;
 
 #ifdef HiGHSDEV
   // Analysis of INVERT

@@ -209,15 +209,26 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
 
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  if (simplex_info.num_kernel) {
-    printf("grep_kernel,%s,%d,%g,%g,%g,%g\n",
-	   highs_model_object.lp_.model_name_.c_str(),
-	   simplex_info.num_kernel,
-	   simplex_info.min_kernel_size,
-	   simplex_info.sum_kernel_size/simplex_info.num_kernel,
-	   simplex_info.running_average_kernel_size,
-	   simplex_info.max_kernel_size);
-  }
+  printf("grep_kernel,%s,%s,%d,%d,%d,",
+	 highs_model_object.lp_.model_name_.c_str(),
+	 highs_model_object.lp_.lp_name_.c_str(),
+	 simplex_info.num_invert,
+	 simplex_info.num_kernel,
+	 simplex_info.num_major_kernel);
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
+  printf(",%g,%g,",
+	 simplex_info.running_average_kernel_dim,
+	 simplex_info.max_kernel_dim);
+  if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
+  printf(",");
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
+  printf(",");
+  if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
+  printf(",%g,%g,%g\n",
+	 simplex_info.running_average_invert_fill_factor,
+	 simplex_info.running_average_kernel_fill_factor,
+	 simplex_info.running_average_major_kernel_fill_factor);
+
   if (highs_status != HighsStatus::Optimal) return highs_status;
 
   HighsOptions& options = highs_model_object.options_;

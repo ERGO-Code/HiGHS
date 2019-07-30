@@ -265,8 +265,7 @@ int HFactor::build() {
   // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
   // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
-  kernel_size = nwork;
-  //  double pct = (100.0*kernel_size)/numRow;  printf("In build: kernel size is %d (%6.2f %%)\n", kernel_size, pct);
+  //  double pct = (100.0*kernel_dim)/numRow;  printf("In build: kernel size is %d (%6.2f %%)\n", kernel_dim, pct);
   rankDeficiency = buildKernel();
   if (rankDeficiency > 0) {
     printf("buildKernel() returns rankDeficiency = %d\n", rankDeficiency);
@@ -280,6 +279,8 @@ int HFactor::build() {
   // Complete INVERT
   buildFinish();
   build_realTick = timer.getTick() - build_realTick;
+  // Record the number of entries in the INVERT
+  invert_num_el = Lstart[numRow] + Ustart[numRow] + numRow;
   return rankDeficiency;
 }
 
@@ -400,11 +401,11 @@ void HFactor::buildSimple() {
       int count = Astart[iMat + 1] - start;
       int lc_iRow = Aindex[start];
       // Check for unit column with double pivot
-      bool unit_column = count == 1 && Avalue[start] == 1;
-      if (unit_column && MRcountb4[lc_iRow] >= 0) {
+      bool unit_col = count == 1 && Avalue[start] == 1;
+      if (unit_col && MRcountb4[lc_iRow] >= 0) {
         iRow = lc_iRow;
       } else {
-        if (unit_column)
+        if (unit_col)
           printf("STRANGE: Found a second unit column with pivot in row %d\n",
                  lc_iRow);
         for (int k = start; k < start + count; k++) {
@@ -431,6 +432,9 @@ void HFactor::buildSimple() {
 #ifdef HiGHSDEV
   BtotalX = numRow - nwork + BcountX;
 #endif
+  // Record the number of elements in the basis matrix
+  basis_matrix_num_el = numRow - nwork + BcountX;
+  
   // count1 = 0;
   // Comments: for pds-20, dfl001: 60 / 80
   // Comments: when system is large: enlarge
@@ -537,6 +541,8 @@ void HFactor::buildSimple() {
   rlinkFirst.assign(numRow + 1, -1);
   MRcount.assign(numRow, 0);
   int MRcountX = 0;
+  // Determine the number of entries in the kernel
+  kernel_num_el = 0;
   for (int iRow = 0; iRow < numRow; iRow++) {
     int count = MRcountb4[iRow];
     if (count > 0) {
@@ -544,10 +550,11 @@ void HFactor::buildSimple() {
       MRspace[iRow] = count * 2;
       MRcountX += count * 2;
       rlinkAdd(iRow, count);
+      kernel_num_el += count+1;
     }
   }
   MRindex.resize(MRcountX);
-
+  
   // 3.2 Prepare column links, kernel matrix
   clinkFirst.assign(numRow + 1, -1);
   MCindex.clear();
@@ -562,7 +569,6 @@ void HFactor::buildSimple() {
     MCcountX += MCspace[iCol];
     MCindex.resize(MCcountX);
     MCvalue.resize(MCcountX);
-
     for (int k = Bstart[iCol]; k < Bstart[iCol + 1]; k++) {
       const int iRow = Bindex[k];
       const double value = Bvalue[k];
@@ -577,6 +583,8 @@ void HFactor::buildSimple() {
     clinkAdd(iCol, MCcountA[iCol]);
   }
   build_syntheticTick += (numRow + nwork + MCcountX) * 40 + MRcountX * 20;
+  // Record the kernel dimension
+  kernel_dim = nwork;
 }
 
 int HFactor::buildKernel() {
