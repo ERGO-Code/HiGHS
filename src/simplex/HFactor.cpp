@@ -280,7 +280,7 @@ int HFactor::build() {
   buildFinish();
   build_realTick = timer.getTick() - build_realTick;
   // Record the number of entries in the INVERT
-  invert_num_el = Lstart[numRow] + Ustart[numRow] + numRow;
+  invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
   return rankDeficiency;
 }
 
