@@ -265,7 +265,6 @@ int HFactor::build() {
   // printf("Before buildSimple(): Model has %d basic indices: ", numRow);
   // for (int i=0; i<numRow; i++){printf(" %d", baseIndex[i]);} printf("\n");
   buildSimple();
-  //  double pct = (100.0*kernel_dim)/numRow;  printf("In build: kernel size is %d (%6.2f %%)\n", kernel_dim, pct);
   rankDeficiency = buildKernel();
   if (rankDeficiency > 0) {
     printf("buildKernel() returns rankDeficiency = %d\n", rankDeficiency);
@@ -281,6 +280,17 @@ int HFactor::build() {
   build_realTick = timer.getTick() - build_realTick;
   // Record the number of entries in the INVERT
   invert_num_el = Lstart[numRow] + Ulastp[numRow-1] + numRow;
+  
+  if (rankDeficiency) {
+    kernel_dim -= rankDeficiency;
+    printf("Rank deficiency %1d: basis_matrix (%d el); INVERT (%d el); kernel (%d dim; %d el): nwork = %d\n",
+	   rankDeficiency,
+	   basis_matrix_num_el,
+	   invert_num_el,
+	   kernel_dim,
+	   kernel_num_el,
+	   nwork);
+  }
   return rankDeficiency;
 }
 

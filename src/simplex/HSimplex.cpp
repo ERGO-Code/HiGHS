@@ -696,7 +696,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
       printf("Basic    column  dual differences: %6d (%11.4g)\n", num_basic_col_dual_differences, sum_basic_col_dual_differences);
       printf("Basic    row     dual differences: %6d (%11.4g)\n", num_basic_row_dual_differences, sum_basic_row_dual_differences);
     }
-    printf("grep_transition,%s,%.15g,%d,%g,%d,%g,%s,%d,%g,%d,%g,%d,%g,%d,%g,%d,%g,%d,%g,%d,%g,%d,%g\n",
+    printf("grep_transition,%s,%.15g,%d,%g,%d,%g,%s,%d,%g,%d,%g,%d,%g,%d,%g,Primal,%d,%g,%d,%g,Dual,%d,%g,%d,%g\n",
 	   simplex_lp.model_name_.c_str(),
 	   simplex_info.primal_objective_value,
 	   simplex_info.num_primal_infeasibilities,
