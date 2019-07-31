@@ -1073,6 +1073,7 @@ void HDual::iterationReport() {
 }
 
 void HDual::iterationReportFull(bool header) {
+  const bool report_condition = false;
   if (header) {
     iterationReportIterationAndPhase(ML_DETAILED, true);
     iterationReportDualObjective(ML_DETAILED, true);
@@ -1080,6 +1081,7 @@ void HDual::iterationReportFull(bool header) {
     iterationReportIterationData(ML_DETAILED, true);
     iterationReportDensity(ML_DETAILED, true);
     HighsPrintMessage(ML_DETAILED, " FreeLsZ");
+    if (report_condition) HighsPrintMessage(ML_DETAILED, "   Condition");
 #endif
     HighsPrintMessage(ML_DETAILED, "\n");
   } else {
@@ -1090,6 +1092,7 @@ void HDual::iterationReportFull(bool header) {
     iterationReportDensity(ML_DETAILED, false);
     HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
 #endif
+    if (report_condition) HighsPrintMessage(ML_DETAILED, " %11.4g", computeBasisCondition(workHMO));
     HighsPrintMessage(ML_DETAILED, "\n");
   }
 }

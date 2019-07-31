@@ -2501,6 +2501,9 @@ int compute_factor(HighsModelObject& highs_model_object) {
   // Now have a representation of B^{-1}, and it is fresh!
   simplex_lp_status.has_invert = true;
   simplex_lp_status.has_fresh_invert = true;
+
+  //  printf("Basis condition estimate is %11.4g\n", computeBasisCondition(highs_model_object));
+  
   return 0;
 }
 
