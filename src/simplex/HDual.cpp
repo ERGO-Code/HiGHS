@@ -1256,26 +1256,34 @@ void HDual::chooseRow() {
       int low_weight_error = 0;
       int high_weight_error = 0;
       double weight_error;
+      string error_type = "  OK";
       num_dual_steepest_edge_weight_check++;
       if (!accept_weight) num_dual_steepest_edge_weight_reject++;
       if (u_weight < c_weight) {
 	// Updated weight is low
 	weight_error = c_weight/u_weight;
-	if (weight_error > weight_error_threshhold) low_weight_error = 1;
+	if (weight_error > weight_error_threshhold) {
+	  low_weight_error = 1;
+	  error_type = " Low";
+	}
 	average_log_low_dual_steepest_edge_weight_error = 0.99*average_log_low_dual_steepest_edge_weight_error + 0.01*log(weight_error);
       } else {
 	// Updated weight is correct or high
 	weight_error = u_weight/c_weight;
-	if (weight_error > weight_error_threshhold) high_weight_error = 1;
+	if (weight_error > weight_error_threshhold) {
+	  high_weight_error = 1;
+	  error_type = "High";
+	}
 	average_log_high_dual_steepest_edge_weight_error = 0.99*average_log_high_dual_steepest_edge_weight_error + 0.01*log(weight_error);
       }
       average_frequency_low_dual_steepest_edge_weight = 0.99*average_frequency_low_dual_steepest_edge_weight + 0.01*low_weight_error;
       average_frequency_high_dual_steepest_edge_weight = 0.99*average_frequency_high_dual_steepest_edge_weight + 0.01*high_weight_error;
       if (weight_error > 0.5*weight_error_threshhold) {
-	printf("DSE Wt Ck %6d(%1d - %4d) (c%10.4g, u%10.4g, er=%10.4g): Low (Fq%10.4g, Er%10.4g); High (Fq%10.4g, Er%10.4g)\n",
-	       num_dual_steepest_edge_weight_check, 
-	       accept_weight,num_dual_steepest_edge_weight_reject,
-	       c_weight, u_weight, weight_error,
+	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c%10.4g, u%10.4g, er=%10.4g - %s): Low (Fq%10.4g, Er%10.4g); High (Fq%10.4g, Er%10.4g)\n",
+	       simplex_info.iteration_count,
+	       accept_weight, 
+	       num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
+	       c_weight, u_weight, weight_error, error_type.c_str(),
 	       average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
 	       average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error);
       }
