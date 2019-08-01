@@ -85,8 +85,16 @@ void HDual::solve(int num_threads) {
           solver_num_row - simplex_info.num_basic_logicals;
       bool computeExactDseWeights =
           num_basic_structurals > 0 && initialise_dual_steepest_edge_weights;
+      // Initialise the measures used to analyse accuracy of steepest edge weights
+      num_dual_steepest_edge_weight_check = 0;
+      num_dual_steepest_edge_weight_reject = 0;
+      num_wrong_low_dual_steepest_edge_weight = 0;
+      num_wrong_high_dual_steepest_edge_weight = 0;
+      average_frequency_low_dual_steepest_edge_weight = 0;
+      average_frequency_high_dual_steepest_edge_weight = 0;
+      average_log_low_dual_steepest_edge_weight_error = 0;
+      average_log_high_dual_steepest_edge_weight_error = 0;
 #ifdef HiGHSDEV
-      n_wg_DSE_wt = 0;
       if (computeExactDseWeights) {
         printf(
             "If (0<num_basic_structurals = %d) && %d = "
@@ -1242,11 +1250,37 @@ void HDual::chooseRow() {
       // loop. All we worry about is accepting rows with weights
       // which are not too small, since this can make the row look
       // unreasonably attractive
-      if (u_weight >= 0.25 * c_weight) break;
-#ifdef HiGHSDEV
-      // Count the number of wrong DSE weights for reporting
-      n_wg_DSE_wt += 1;
-#endif
+      const double accept_weight_threshhold = 0.25;
+      const double weight_error_threshhold = 4.0;
+      bool accept_weight = u_weight >= accept_weight_threshhold * c_weight;
+      int low_weight_error = 0;
+      int high_weight_error = 0;
+      double weight_error;
+      num_dual_steepest_edge_weight_check++;
+      if (!accept_weight) num_dual_steepest_edge_weight_reject++;
+      if (u_weight < c_weight) {
+	// Updated weight is low
+	weight_error = c_weight/u_weight;
+	if (weight_error > weight_error_threshhold) low_weight_error = 1;
+	average_log_low_dual_steepest_edge_weight_error = 0.99*average_log_low_dual_steepest_edge_weight_error + 0.01*log(weight_error);
+      } else {
+	// Updated weight is correct or high
+	weight_error = u_weight/c_weight;
+	if (weight_error > weight_error_threshhold) high_weight_error = 1;
+	average_log_high_dual_steepest_edge_weight_error = 0.99*average_log_high_dual_steepest_edge_weight_error + 0.01*log(weight_error);
+      }
+      average_frequency_low_dual_steepest_edge_weight = 0.99*average_frequency_low_dual_steepest_edge_weight + 0.01*low_weight_error;
+      average_frequency_high_dual_steepest_edge_weight = 0.99*average_frequency_high_dual_steepest_edge_weight + 0.01*high_weight_error;
+      if (weight_error > 0.5*weight_error_threshhold) {
+	printf("DSE Wt Ck %6d(%1d - %4d) (c%10.4g, u%10.4g, er=%10.4g): Low (Fq%10.4g, Er%10.4g); High (Fq%10.4g, Er%10.4g)\n",
+	       num_dual_steepest_edge_weight_check, 
+	       accept_weight,num_dual_steepest_edge_weight_reject,
+	       c_weight, u_weight, weight_error,
+	       average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
+	       average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error);
+      }
+	     
+      if (accept_weight) break;
       // Weight error is unacceptable so look for another
       // candidate. Of course, it's possible that the same
       // candidate is chosen, but the weight will be correct (so
