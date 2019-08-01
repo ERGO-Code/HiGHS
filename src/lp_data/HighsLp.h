@@ -220,6 +220,8 @@ struct HighsSimplexInfo {
   // time
   bool analyseLp;
   bool analyseSimplexIterations;
+  bool analyse_invert_form;
+  bool analyse_invert_condition;
   bool analyse_invert_time;
   bool analyseRebuildTime;
 #endif
@@ -263,7 +265,10 @@ struct HighsSimplexInfo {
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
 
+#ifdef HiGHSDEV
+  // Analysis of INVERT
   int num_invert = 0;
+  // Analysis of INVERT form
   int num_kernel = 0;
   int num_major_kernel = 0;
   const double major_kernel_relative_dim_threshhold = 0.1;
@@ -277,10 +282,9 @@ struct HighsSimplexInfo {
   double running_average_kernel_fill_factor = 1;
   double running_average_major_kernel_fill_factor = 1;
 
-#ifdef HiGHSDEV
-  // Analysis of INVERT
   int total_inverts;
   double total_invert_time;
+  double invert_condition = 1;
 #endif
 
   /*

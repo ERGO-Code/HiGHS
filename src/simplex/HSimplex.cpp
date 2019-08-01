@@ -53,7 +53,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   // Option for analysing the LP solution
   simplex_info.analyseLpSolution = true;
 #ifdef HiGHSDEV
-  bool useful_analysis = false;
+  bool useful_analysis = true;
   bool full_timing = false;
   // Options for reporting timing
   simplex_info.report_simplex_inner_clock = useful_analysis;
@@ -62,6 +62,8 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   // Options for analysing the LP and simplex iterations
   simplex_info.analyseLp = useful_analysis;
   simplex_info.analyseSimplexIterations = useful_analysis;
+  simplex_info.analyse_invert_form = useful_analysis;
+  simplex_info.analyse_invert_condition = useful_analysis;
   simplex_info.analyse_invert_time = full_timing;
   simplex_info.analyseRebuildTime = full_timing;
 #endif
@@ -2453,35 +2455,39 @@ int compute_factor(HighsModelObject& highs_model_object) {
   }
   //    printf("INVERT: After %d iterations and %d updates\n",
   //    simplex_info.iteration_count, simplex_info.update_count);
-  const bool report_kernel = false;
-  simplex_info.num_invert++;
-  assert(factor.basis_matrix_num_el);
-  double invert_fill_factor = ((1.0*factor.invert_num_el)/factor.basis_matrix_num_el);
-  if (report_kernel) printf("INVERT fill = %6.2f", invert_fill_factor);
-  simplex_info.sum_invert_fill_factor += invert_fill_factor;
-  simplex_info.running_average_invert_fill_factor = 0.95*simplex_info.running_average_invert_fill_factor + 0.05*invert_fill_factor;
-
-  double kernel_relative_dim = (1.0*factor.kernel_dim)/highs_model_object.simplex_lp_.numRow_;
-  if (report_kernel) printf("; kernel dim = %11.4g", kernel_relative_dim);
-  if (factor.kernel_dim) {
-    simplex_info.num_kernel++;
-    simplex_info.max_kernel_dim = max(kernel_relative_dim, simplex_info.max_kernel_dim);
-    simplex_info.sum_kernel_dim += kernel_relative_dim;
-    simplex_info.running_average_kernel_dim = 0.95*simplex_info.running_average_kernel_dim + 0.05*kernel_relative_dim;
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_invert_form) {
+    const bool report_kernel = false;
+    simplex_info.num_invert++;
+    assert(factor.basis_matrix_num_el);
+    double invert_fill_factor = ((1.0*factor.invert_num_el)/factor.basis_matrix_num_el);
+    if (report_kernel) printf("INVERT fill = %6.2f", invert_fill_factor);
+    simplex_info.sum_invert_fill_factor += invert_fill_factor;
+    simplex_info.running_average_invert_fill_factor = 0.95*simplex_info.running_average_invert_fill_factor + 0.05*invert_fill_factor;
     
-    int kernel_invert_num_el = factor.invert_num_el - (factor.basis_matrix_num_el-factor.kernel_num_el);
-    assert(factor.kernel_num_el);
-    double kernel_fill_factor = (1.0*kernel_invert_num_el)/factor.kernel_num_el;
-    simplex_info.sum_kernel_fill_factor += kernel_fill_factor;
-    simplex_info.running_average_kernel_fill_factor = 0.95*simplex_info.running_average_kernel_fill_factor + 0.05*kernel_fill_factor;
-    if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
-    if (kernel_relative_dim > simplex_info.major_kernel_relative_dim_threshhold) {
-      simplex_info.num_major_kernel++;
-      simplex_info.sum_major_kernel_fill_factor += kernel_fill_factor;
-      simplex_info.running_average_major_kernel_fill_factor = 0.95*simplex_info.running_average_major_kernel_fill_factor + 0.05*kernel_fill_factor;
-    }
-  }  
-  if (report_kernel) printf("\n");
+    double kernel_relative_dim = (1.0*factor.kernel_dim)/highs_model_object.simplex_lp_.numRow_;
+    if (report_kernel) printf("; kernel dim = %11.4g", kernel_relative_dim);
+    if (factor.kernel_dim) {
+      simplex_info.num_kernel++;
+      simplex_info.max_kernel_dim = max(kernel_relative_dim, simplex_info.max_kernel_dim);
+      simplex_info.sum_kernel_dim += kernel_relative_dim;
+      simplex_info.running_average_kernel_dim = 0.95*simplex_info.running_average_kernel_dim + 0.05*kernel_relative_dim;
+    
+      int kernel_invert_num_el = factor.invert_num_el - (factor.basis_matrix_num_el-factor.kernel_num_el);
+      assert(factor.kernel_num_el);
+      double kernel_fill_factor = (1.0*kernel_invert_num_el)/factor.kernel_num_el;
+      simplex_info.sum_kernel_fill_factor += kernel_fill_factor;
+      simplex_info.running_average_kernel_fill_factor = 0.95*simplex_info.running_average_kernel_fill_factor + 0.05*kernel_fill_factor;
+      if (report_kernel) printf("; fill = %6.2f", kernel_fill_factor);
+      if (kernel_relative_dim > simplex_info.major_kernel_relative_dim_threshhold) {
+	simplex_info.num_major_kernel++;
+	simplex_info.sum_major_kernel_fill_factor += kernel_fill_factor;
+	simplex_info.running_average_major_kernel_fill_factor = 0.95*simplex_info.running_average_major_kernel_fill_factor + 0.05*kernel_fill_factor;
+      }
+    }  
+    if (report_kernel) printf("\n");
+  }
+#endif
   simplex_info.update_count = 0;
 
 #ifdef HiGHSDEV
@@ -2502,8 +2508,14 @@ int compute_factor(HighsModelObject& highs_model_object) {
   simplex_lp_status.has_invert = true;
   simplex_lp_status.has_fresh_invert = true;
 
-  //  printf("Basis condition estimate is %11.4g\n", computeBasisCondition(highs_model_object));
-  
+#ifdef HiGHSDEV
+  if (simplex_info.analyse_invert_condition) {
+    timer.start(simplex_info.clock_[BasisConditionClock]);
+    simplex_info.invert_condition = computeBasisCondition(highs_model_object);
+    timer.stop(simplex_info.clock_[BasisConditionClock]);
+  }    
+#endif
+ 
   return 0;
 }
 

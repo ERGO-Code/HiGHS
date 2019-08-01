@@ -1073,7 +1073,6 @@ void HDual::iterationReport() {
 }
 
 void HDual::iterationReportFull(bool header) {
-  const bool report_condition = false;
   if (header) {
     iterationReportIterationAndPhase(ML_DETAILED, true);
     iterationReportDualObjective(ML_DETAILED, true);
@@ -1081,7 +1080,6 @@ void HDual::iterationReportFull(bool header) {
     iterationReportIterationData(ML_DETAILED, true);
     iterationReportDensity(ML_DETAILED, true);
     HighsPrintMessage(ML_DETAILED, " FreeLsZ");
-    if (report_condition) HighsPrintMessage(ML_DETAILED, "   Condition");
 #endif
     HighsPrintMessage(ML_DETAILED, "\n");
   } else {
@@ -1092,7 +1090,6 @@ void HDual::iterationReportFull(bool header) {
     iterationReportDensity(ML_DETAILED, false);
     HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
 #endif
-    if (report_condition) HighsPrintMessage(ML_DETAILED, " %11.4g", computeBasisCondition(workHMO));
     HighsPrintMessage(ML_DETAILED, "\n");
   }
 }
@@ -1156,12 +1153,15 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
 
 void HDual::iterationReportRebuild(const int i_v) {
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  bool report_condition = simplex_info.analyse_invert_condition;
   HighsPrintMessage(ML_MINIMAL,
                     "Iter %10d:", workHMO.simplex_info_.iteration_count);
   iterationReportDensity(ML_MINIMAL, true);
   iterationReportDensity(ML_MINIMAL, false);
   iterationReportDualObjective(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " DuPh%1d(%2d)", solvePhase, i_v);
+  if (report_condition) HighsPrintMessage(ML_MINIMAL, " k(B)%10.4g", simplex_info.invert_condition);
   if (solvePhase == 2) reportInfeasibility();
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else
