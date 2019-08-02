@@ -94,6 +94,12 @@ void HDual::solve(int num_threads) {
       average_frequency_high_dual_steepest_edge_weight = 0;
       average_log_low_dual_steepest_edge_weight_error = 0;
       average_log_high_dual_steepest_edge_weight_error = 0;
+      max_average_frequency_low_dual_steepest_edge_weight = 0;
+      max_average_frequency_high_dual_steepest_edge_weight = 0;
+      max_sum_average_frequency_extreme_dual_steepest_edge_weight = 0;
+      max_average_log_low_dual_steepest_edge_weight_error = 0;
+      max_average_log_high_dual_steepest_edge_weight_error = 0;
+      max_sum_average_log_extreme_dual_steepest_edge_weight_error = 0;
 #ifdef HiGHSDEV
       if (computeExactDseWeights) {
         printf(
@@ -218,6 +224,15 @@ void HDual::solve(int num_threads) {
     // Possibly bail out
     if (solve_bailout) break;
   }
+
+  printf("grep_DSE_WtCk,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
+	 max_average_frequency_low_dual_steepest_edge_weight,
+	 max_average_frequency_high_dual_steepest_edge_weight,
+	 max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	 max_average_log_low_dual_steepest_edge_weight_error,
+	 max_average_log_high_dual_steepest_edge_weight_error,
+	 max_sum_average_log_extreme_dual_steepest_edge_weight_error);
+
   if (solve_bailout) {
     assert(simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
 	   simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
@@ -1278,14 +1293,32 @@ void HDual::chooseRow() {
       }
       average_frequency_low_dual_steepest_edge_weight = 0.99*average_frequency_low_dual_steepest_edge_weight + 0.01*low_weight_error;
       average_frequency_high_dual_steepest_edge_weight = 0.99*average_frequency_high_dual_steepest_edge_weight + 0.01*high_weight_error;
+      max_average_frequency_low_dual_steepest_edge_weight = max(max_average_frequency_low_dual_steepest_edge_weight,
+								average_frequency_low_dual_steepest_edge_weight);
+      max_average_frequency_high_dual_steepest_edge_weight = max(max_average_frequency_high_dual_steepest_edge_weight,
+								 average_frequency_high_dual_steepest_edge_weight);
+      max_sum_average_frequency_extreme_dual_steepest_edge_weight = max(max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+									average_frequency_low_dual_steepest_edge_weight + average_frequency_high_dual_steepest_edge_weight);
+      max_average_log_low_dual_steepest_edge_weight_error = max(max_average_log_low_dual_steepest_edge_weight_error,
+								average_log_low_dual_steepest_edge_weight_error);
+      max_average_log_high_dual_steepest_edge_weight_error = max(max_average_log_high_dual_steepest_edge_weight_error,
+								 average_log_high_dual_steepest_edge_weight_error);
+      max_sum_average_log_extreme_dual_steepest_edge_weight_error = max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
+									average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
       if (weight_error > 0.5*weight_error_threshhold) {
-	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c%10.4g, u%10.4g, er=%10.4g - %s): Low (Fq%10.4g, Er%10.4g); High (Fq%10.4g, Er%10.4g)\n",
+	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
 	       simplex_info.iteration_count,
 	       accept_weight, 
 	       num_dual_steepest_edge_weight_check, num_dual_steepest_edge_weight_reject,
 	       c_weight, u_weight, weight_error, error_type.c_str(),
 	       average_frequency_low_dual_steepest_edge_weight, average_log_low_dual_steepest_edge_weight_error,
-	       average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error);
+	       average_frequency_high_dual_steepest_edge_weight, average_log_high_dual_steepest_edge_weight_error,
+	       max_average_frequency_low_dual_steepest_edge_weight,
+	       max_average_frequency_high_dual_steepest_edge_weight,
+	       max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	       max_average_log_low_dual_steepest_edge_weight_error,
+	       max_average_log_high_dual_steepest_edge_weight_error,
+	       max_sum_average_log_extreme_dual_steepest_edge_weight_error);
       }
 	     
       if (accept_weight) break;

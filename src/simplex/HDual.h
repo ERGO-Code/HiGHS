@@ -605,6 +605,12 @@ class HDual {
   double average_frequency_high_dual_steepest_edge_weight;
   double average_log_low_dual_steepest_edge_weight_error;
   double average_log_high_dual_steepest_edge_weight_error;
+  double max_average_frequency_low_dual_steepest_edge_weight;
+  double max_average_frequency_high_dual_steepest_edge_weight;
+  double max_sum_average_frequency_extreme_dual_steepest_edge_weight;
+  double max_average_log_low_dual_steepest_edge_weight_error;
+  double max_average_log_high_dual_steepest_edge_weight_error;
+  double max_sum_average_log_extreme_dual_steepest_edge_weight_error;
 
   int AnIterIt0;
 #ifdef HiGHSDEV
