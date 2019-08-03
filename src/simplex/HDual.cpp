@@ -225,13 +225,21 @@ void HDual::solve(int num_threads) {
     if (solve_bailout) break;
   }
 
-  printf("grep_DSE_WtCk,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
-	 max_average_frequency_low_dual_steepest_edge_weight,
-	 max_average_frequency_high_dual_steepest_edge_weight,
-	 max_sum_average_frequency_extreme_dual_steepest_edge_weight,
-	 max_average_log_low_dual_steepest_edge_weight_error,
-	 max_average_log_high_dual_steepest_edge_weight_error,
-	 max_sum_average_log_extreme_dual_steepest_edge_weight_error);
+#ifdef HiGHSDEV
+  SimplexDualEdgeWeightStrategy strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
+  if (
+      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE ||
+      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL ||
+      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+    printf("grep_DSE_WtCk,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
+	   max_average_frequency_low_dual_steepest_edge_weight,
+	   max_average_frequency_high_dual_steepest_edge_weight,
+	   max_sum_average_frequency_extreme_dual_steepest_edge_weight,
+	   max_average_log_low_dual_steepest_edge_weight_error,
+	   max_average_log_high_dual_steepest_edge_weight_error,
+	   max_sum_average_log_extreme_dual_steepest_edge_weight_error);
+  }
+#endif
 
   if (solve_bailout) {
     assert(simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
@@ -972,10 +980,11 @@ void HDual::iterationAnalysis() {
 
   // Possibly switch from DSE to Dvx
   if (dual_edge_weight_mode == DualEdgeWeightMode::STEEPEST_EDGE) {
+    bool switch_to_devex = false;
+    // Firstly consider switching on the basis of NLA cost
     double AnIterCostlyDseMeasureDen;
-    //    AnIterCostlyDseMeasureDen = row_epDensity*columnDensity;
     AnIterCostlyDseMeasureDen =
-        max(max(row_epDensity, columnDensity), row_apDensity);
+      max(max(row_epDensity, columnDensity), row_apDensity);
     if (AnIterCostlyDseMeasureDen > 0) {
       AnIterCostlyDseMeasure = rowdseDensity / AnIterCostlyDseMeasureDen;
       AnIterCostlyDseMeasure = AnIterCostlyDseMeasure * AnIterCostlyDseMeasure;
@@ -983,30 +992,49 @@ void HDual::iterationAnalysis() {
       AnIterCostlyDseMeasure = 0;
     }
     bool CostlyDseIt = AnIterCostlyDseMeasure > AnIterCostlyDseMeasureLimit &&
-                       rowdseDensity > AnIterCostlyDseMnDensity;
+      rowdseDensity > AnIterCostlyDseMnDensity;
     AnIterCostlyDseFq = (1 - runningAverageMu) * AnIterCostlyDseFq;
     if (CostlyDseIt) {
       AnIterNumCostlyDseIt++;
       AnIterCostlyDseFq += runningAverageMu * 1.0;
       int lcNumIter = workHMO.simplex_info_.iteration_count - AnIterIt0;
-      if (allow_dual_steepest_edge_to_devex_switch &&
-          (AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
-          (lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot)) {
-        // At least 5% of the (at least) 0.1NumTot iterations have been costly
-        // DSE so switch to Devex
+      // Switch to Devex if at least 5% of the (at least) 0.1NumTot iterations have been costly
+      switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
+	(AnIterNumCostlyDseIt > lcNumIter * AnIterFracNumCostlyDseItbfSw) &&
+	(lcNumIter > AnIterFracNumTot_ItBfSw * solver_num_tot);
 #ifdef HiGHSDEV
-        printf(
-            "Switch from DSE to Dvx after %d costly DSE iterations of %d: "
-            "Col_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g\n",
-            AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,
-            columnDensity);
-#endif
-        dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
-        // Zero the number of Devex frameworks used and set up the first one
-        n_dvx_fwk = 0;
-        dvx_ix.assign(solver_num_tot, 0);
-        iz_dvx_fwk();
+      if (switch_to_devex) {
+	HighsLogMessage(HighsMessageType::INFO,
+			"Switch from DSE to Devex after %d costly DSE iterations of %d: "
+			"Col_Dsty = %11.4g; R_Ep_Dsty = %11.4g; DSE_Dsty = %11.4g",
+			AnIterNumCostlyDseIt, lcNumIter, rowdseDensity, row_epDensity,
+			columnDensity);
       }
+#endif
+    }
+    if (!switch_to_devex) {
+      // Secondly consider switching on the basis of weight accuracy
+      double dse_weight_error_measure =
+	average_log_low_dual_steepest_edge_weight_error +
+	average_log_high_dual_steepest_edge_weight_error;
+      double dse_weight_error_threshhold =
+	workHMO.options_.dual_steepest_edge_weight_log_error_threshhold;
+      switch_to_devex = allow_dual_steepest_edge_to_devex_switch &&
+	dse_weight_error_measure > dse_weight_error_threshhold;
+#ifdef HiGHSDEV
+      if (switch_to_devex) {
+	HighsLogMessage(HighsMessageType::INFO,
+			"Switch from DSE to Devex with log error measure of %g > %g = threshhold",
+			dse_weight_error_measure, dse_weight_error_threshhold);
+      }
+#endif
+    }
+    if (switch_to_devex) {
+      dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
+      // Zero the number of Devex frameworks used and set up the first one
+      n_dvx_fwk = 0;
+      dvx_ix.assign(solver_num_tot, 0);
+      iz_dvx_fwk();
     }
   }
 
@@ -1305,7 +1333,9 @@ void HDual::chooseRow() {
 								 average_log_high_dual_steepest_edge_weight_error);
       max_sum_average_log_extreme_dual_steepest_edge_weight_error = max(max_sum_average_log_extreme_dual_steepest_edge_weight_error,
 									average_log_low_dual_steepest_edge_weight_error + average_log_high_dual_steepest_edge_weight_error);
-      if (weight_error > 0.5*weight_error_threshhold) {
+#ifdef HiGHSDEV
+      const bool report_weight_error = false;
+      if (report_weight_error && weight_error > 0.5*weight_error_threshhold) {
 	printf("DSE Wt Ck |%8d| OK = %1d (%4d / %6d) (c %10.4g, u %10.4g, er %10.4g - %s): Low (Fq %10.4g, Er %10.4g); High (Fq%10.4g, Er%10.4g) | %10.4g %10.4g %10.4g %10.4g %10.4g %10.4g\n",
 	       simplex_info.iteration_count,
 	       accept_weight, 
@@ -1320,6 +1350,7 @@ void HDual::chooseRow() {
 	       max_average_log_high_dual_steepest_edge_weight_error,
 	       max_sum_average_log_extreme_dual_steepest_edge_weight_error);
       }
+#endif
 	     
       if (accept_weight) break;
       // Weight error is unacceptable so look for another

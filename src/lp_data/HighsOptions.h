@@ -133,6 +133,8 @@ struct HighsOptions {
   bool simplex_initial_condition_check = true;
   double simplex_initial_condition_tolerance =
       SIMPLEX_INITIAL_CONDITION_TOLERANCE_DEFAULT;
+  double dual_steepest_edge_weight_log_error_threshhold =
+    DUAL_STEEPEST_EDGE_WEIGHT_LOG_ERROR_THRESHHOLD_DEFAULT;
   int allow_superbasic = false;
 
   bool pami = 0;
