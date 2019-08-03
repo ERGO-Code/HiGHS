@@ -231,7 +231,13 @@ void HDual::solve(int num_threads) {
       strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE ||
       strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL ||
       strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
-    printf("grep_DSE_WtCk,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
+    printf("grep_DSE_WtCk,%s,%s,%d,%d,%d,%d,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
+	   workHMO.lp_.model_name_.c_str(),
+	   workHMO.lp_.lp_name_.c_str(),
+	   num_dual_steepest_edge_weight_check,
+	   num_dual_steepest_edge_weight_reject,
+	   num_wrong_low_dual_steepest_edge_weight,
+	   num_wrong_high_dual_steepest_edge_weight,
 	   max_average_frequency_low_dual_steepest_edge_weight,
 	   max_average_frequency_high_dual_steepest_edge_weight,
 	   max_sum_average_frequency_extreme_dual_steepest_edge_weight,
