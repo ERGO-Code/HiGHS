@@ -734,6 +734,10 @@ void HPrimal::iterationReport() {
 }
 
 void HPrimal::iterationReportFull(bool header) {
+#ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  bool report_condition = simplex_info.analyse_invert_condition;
+#endif
   if (header) {
     iterationReportIterationAndPhase(ML_DETAILED, true);
     iterationReportPrimalObjective(ML_DETAILED, true);
@@ -741,6 +745,7 @@ void HPrimal::iterationReportFull(bool header) {
     iterationReportIterationData(ML_DETAILED, true);
     //    iterationReportDsty(ML_DETAILED, true);
     //    HighsPrintMessage(ML_DETAILED, " FreeLsZ");
+    if (report_condition) HighsPrintMessage(ML_DETAILED, "   Condition");
 #endif
     HighsPrintMessage(ML_DETAILED, "\n");
   } else {
@@ -750,6 +755,7 @@ void HPrimal::iterationReportFull(bool header) {
     iterationReportIterationData(ML_DETAILED, false);
     //    iterationReportDsty(ML_DETAILED, false);
     //    HighsPrintMessage(ML_DETAILED, " %7d", dualRow.freeListSize);
+    if (report_condition) HighsPrintMessage(ML_DETAILED, " %11.4g", simplex_info.invert_condition);
 #endif
     HighsPrintMessage(ML_DETAILED, "\n");
   }
@@ -827,12 +833,15 @@ int HPrimal::intLog10(double v) {
 */
 void HPrimal::iterationReportRebuild(const int i_v) {
 #ifdef HiGHSDEV
+  HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
+  bool report_condition = simplex_info.analyse_invert_condition;
   HighsPrintMessage(ML_MINIMAL,
                     "Iter %10d:", workHMO.simplex_info_.iteration_count);
   //  iterationReportDsty(ML_MINIMAL, true);
   //  iterationReportDsty(ML_MINIMAL, false);
   iterationReportPrimalObjective(ML_MINIMAL, false);
   HighsPrintMessage(ML_MINIMAL, " PrPh%1d(%2d)", solvePhase, i_v);
+  if (report_condition) HighsPrintMessage(ML_MINIMAL, " k(B)%10.4g", simplex_info.invert_condition);
   if (solvePhase == 2) reportInfeasibility();
   HighsPrintMessage(ML_MINIMAL, "\n");
 #else

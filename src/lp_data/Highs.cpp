@@ -165,15 +165,16 @@ HighsStatus Highs::run() {
     // Run solver.
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
+	hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
         solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
                                      "Not presolved: solving the LP");
         solve_iteration_count += iteration_count;
         break;
       }
       case HighsPresolveStatus::NotReduced: {
-        solve_status =
-            callRunSolver(hmos_[solved_hmo], iteration_count,
-                          "Problem not reduced by presolve: solving the LP");
+	hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
+        solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+				     "Problem not reduced by presolve: solving the LP");
         solve_iteration_count += iteration_count;
         break;
       }
@@ -186,6 +187,7 @@ HighsStatus Highs::run() {
         logPresolveReductions(hmos_[original_hmo].lp_, hmos_[presolve_hmo].lp_);
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
+	hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
         solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
                                      "Solving the presolved LP");
         solve_iteration_count += iteration_count;
@@ -277,9 +279,9 @@ HighsStatus Highs::run() {
           // individual iterations are reported
           bool full_iteration_logging = false;
           if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
-          solve_status = callRunSolver(
-              hmos_[solved_hmo], iteration_count,
-              "Solving the original LP from the solution after postsolve");
+	  hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
+          solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+				       "Solving the original LP from the solution after postsolve");
           postsolve_iteration_count = iteration_count;
           solve_iteration_count += iteration_count;
           // Recover the options
@@ -293,8 +295,9 @@ HighsStatus Highs::run() {
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
     solved_hmo = original_hmo;
-    solve_status =
-        callRunSolver(hmos_[solved_hmo], iteration_count, "Re-solving the LP");
+    hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
+    solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+				 "Re-solving the LP");
     solve_iteration_count += iteration_count;
   }
   // else if (reduced problem failed to solve) {
