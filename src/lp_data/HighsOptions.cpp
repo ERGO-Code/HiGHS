@@ -15,7 +15,7 @@
 #include "io/HighsIO.h"
 
 OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
-                            const std::string& value) {
+			    const std::string& value) {
   if (option == presolve_string)
     return setPresolveValue(options, value);
 
@@ -30,12 +30,6 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
 
   else if (option == ipm_string)
     return setIpmValue(options, value);
-
-  else if (option == highs_run_time_limit_string)
-    return setHighsRunTimeLimitValue(options, atof(value.c_str()));
-
-  else if (option == simplex_iteration_limit_string)
-    return setSimplexIterationLimitValue(options, atoi(value.c_str()));
 
   else if (option == mps_parser_type_string)
     return setParserTypeValue(options, value);
@@ -52,73 +46,218 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
   else if (option == find_feasibility_dualize_string)
     return setFindFeasibilityDualizeValue(options, value);
 
-  else if (option == run_as_hsol_string)
-    return setRunAsHsolValue(options, atoi(value.c_str()));
+  else {
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot set unknown string option: %s.", option.c_str());
+    return OptionStatus::UNKNOWN_OPTION;
+  }
 
-  else if (option == keep_n_rows_string)
-    return setKeepNRowsValue(options, atoi(value.c_str()));
+  return OptionStatus::OK;
+}
+
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
+                            const double& value) {
+  if (option == highs_run_time_limit_string)
+    return setHighsRunTimeLimitValue(options, value);
 
   else if (option == infinite_cost_string)
-    return setInfiniteCostValue(options, atof(value.c_str()));
+    return setInfiniteCostValue(options, value);
 
   else if (option == infinite_bound_string)
-    return setInfiniteBoundValue(options, atof(value.c_str()));
+    return setInfiniteBoundValue(options, value);
 
   else if (option == small_matrix_value_string)
-    return setSmallMatrixValueValue(options, atof(value.c_str()));
+    return setSmallMatrixValueValue(options, value);
 
   else if (option == large_matrix_value_string)
-    return setLargeMatrixValueValue(options, atof(value.c_str()));
-
-  else if (option == allowed_simplex_scale_factor_string)
-    return setAllowedSimplexScaleFactorValue(options, atoi(value.c_str()));
+    return setLargeMatrixValueValue(options, value);
 
   else if (option == primal_feasibility_tolerance_string)
-    return setPrimalFeasibilityToleranceValue(options, atof(value.c_str()));
+    return setPrimalFeasibilityToleranceValue(options, value);
 
   else if (option == dual_feasibility_tolerance_string)
-    return setDualFeasibilityToleranceValue(options, atof(value.c_str()));
+    return setDualFeasibilityToleranceValue(options, value);
 
   else if (option == dual_objective_value_upper_bound_string)
-    return setDualObjectiveValueUpperBoundValue(options, atof(value.c_str()));
-
-  else if (option == simplex_strategy_string)
-    return setSimplexStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_dualise_strategy_string)
-    return setSimplexDualiseStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_permute_strategy_string)
-    return setSimplexPermuteStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_scale_strategy_string)
-    return setSimplexScaleStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_crash_strategy_string)
-    return setSimplexCrashStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_dual_edge_weight_strategy_string)
-    return setSimplexDualEdgeWeightStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_primal_edge_weight_strategy_string)
-    return setSimplexPrimalEdgeWeightStrategyValue(options,
-                                                   atoi(value.c_str()));
-
-  else if (option == simplex_price_strategy_string)
-    return setSimplexPriceStrategyValue(options, atoi(value.c_str()));
-
-  else if (option == simplex_initial_condition_check_string)
-    return setSimplexInitialConditionCheckValue(options, atoi(value.c_str()));
+    return setDualObjectiveValueUpperBoundValue(options, value);
 
   else if (option == simplex_initial_condition_tolerance_string)
-    return setSimplexInitialConditionToleranceValue(options,
-                                                    atof(value.c_str()));
-
-  else if (option == message_level_string)
-    return setMessageLevelValue(options, atoi(value.c_str()));
+    return setSimplexInitialConditionToleranceValue(options, value);
 
   else {
-    HighsLogMessage(HighsMessageType::WARNING, "Unknown option: %s.",
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot set unknown double option: %s.", option.c_str());
+    return OptionStatus::UNKNOWN_OPTION;
+  }
+
+  return OptionStatus::OK;
+}
+
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
+                            const int& value) {
+  if (option == simplex_iteration_limit_string)
+    return setSimplexIterationLimitValue(options, value);
+
+  else if (option == run_as_hsol_string)
+    return setRunAsHsolValue(options, value);
+
+  else if (option == keep_n_rows_string)
+    return setKeepNRowsValue(options, value);
+
+  else if (option == allowed_simplex_scale_factor_string)
+    return setAllowedSimplexScaleFactorValue(options, value);
+
+  else if (option == simplex_strategy_string)
+    return setSimplexStrategyValue(options, value);
+
+  else if (option == simplex_dualise_strategy_string)
+    return setSimplexDualiseStrategyValue(options, value);
+
+  else if (option == simplex_permute_strategy_string)
+    return setSimplexPermuteStrategyValue(options, value);
+
+  else if (option == simplex_scale_strategy_string)
+    return setSimplexScaleStrategyValue(options, value);
+
+  else if (option == simplex_crash_strategy_string)
+    return setSimplexCrashStrategyValue(options, value);
+
+  else if (option == simplex_dual_edge_weight_strategy_string)
+    return setSimplexDualEdgeWeightStrategyValue(options, value);
+
+  else if (option == simplex_primal_edge_weight_strategy_string)
+    return setSimplexPrimalEdgeWeightStrategyValue(options, value);
+
+  else if (option == simplex_price_strategy_string)
+    return setSimplexPriceStrategyValue(options, value);
+
+  else if (option == simplex_initial_condition_check_string)
+    return setSimplexInitialConditionCheckValue(options, value);
+
+  else if (option == message_level_string)
+    return setMessageLevelValue(options, value);
+
+  else {
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot set unknown int option: %s.", option.c_str());
+    return OptionStatus::UNKNOWN_OPTION;
+  }
+
+  return OptionStatus::OK;
+}
+
+OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
+                            std::string& value) {
+}
+
+OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
+                            double& value) {
+}
+
+OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
+                            int& value) {
+}
+
+OptionStatus getOptionType(const std::string& option,
+			   HighsOptionType& type) {
+  if (option == presolve_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == crash_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == parallel_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == simplex_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == ipm_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == highs_run_time_limit_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == simplex_iteration_limit_string)
+    type = HighsOptionType::INT;
+
+  else if (option == mps_parser_type_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == mip_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == find_feasibility_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == find_feasibility_strategy_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == find_feasibility_dualize_string)
+    type = HighsOptionType::STRING;
+
+  else if (option == run_as_hsol_string)
+    type = HighsOptionType::INT;
+
+  else if (option == keep_n_rows_string)
+    type = HighsOptionType::INT;
+
+  else if (option == infinite_cost_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == infinite_bound_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == small_matrix_value_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == large_matrix_value_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == allowed_simplex_scale_factor_string)
+    type = HighsOptionType::INT;
+
+  else if (option == primal_feasibility_tolerance_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == dual_feasibility_tolerance_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == dual_objective_value_upper_bound_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == simplex_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_dualise_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_permute_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_scale_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_crash_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_dual_edge_weight_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_primal_edge_weight_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_price_strategy_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_initial_condition_check_string)
+    type = HighsOptionType::INT;
+
+  else if (option == simplex_initial_condition_tolerance_string)
+    type = HighsOptionType::DOUBLE;
+
+  else if (option == message_level_string)
+    type = HighsOptionType::INT;
+
+  else {
+    HighsLogMessage(HighsMessageType::WARNING, "No type for unknown option: %s.",
                     option.c_str());
     return OptionStatus::UNKNOWN_OPTION;
   }

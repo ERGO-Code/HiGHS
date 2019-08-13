@@ -170,7 +170,25 @@ struct HighsOptions {
 };
 
 OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
-                            const std::string& value);
+			    const std::string& value);
+
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
+			    const double& value);
+
+OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
+			    const int& value);
+
+OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
+                            std::string& value);
+
+OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
+                            double& value);
+
+OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
+                            int& value);
+
+OptionStatus getOptionType(const std::string& option,
+			   HighsOptionType& type);
 
 // Called before solve. This would check whether tolerances are set to correct
 // values and all options are consistent.
