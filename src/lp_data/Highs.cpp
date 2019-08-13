@@ -637,18 +637,21 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::NotSet;
+  /*
   if (!simplex_has_run_) {
+    printf("changeColsBounds: Simplex has not run\n");
     for (int i = 0; i < num_set_entries; i++) {
       this->lp_.colLower_[set[i]] = lower[i];
       this->lp_.colUpper_[set[i]] = upper[i];
     }
 
   } else {
+  */
     assert(hmos_.size() > 0);
     HighsSimplexInterface interface(hmos_[0]);
     return_status =
         interface.changeColBounds(num_set_entries, set, lower, upper);
-  }
+    //  }
   if (return_status == HighsStatus::Error ||
       return_status == HighsStatus::NotSet)
     return false;
