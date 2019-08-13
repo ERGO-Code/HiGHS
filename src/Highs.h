@@ -34,105 +34,48 @@ class Highs {
   Highs(HighsOptions& options) { options_ = options; }
 
   /**
+   * @brief Get the number of columns in the LP of the (first?)
+   * HighsModelObject
+   */
+  int getNumCols() { return lp_.numCol_; }
+
+  /**
+   * @brief Get the number of rows in the LP of the (first?)
+   * HighsModelObject
+   */
+  int getNumRows() { return lp_.numRow_; }
+
+  /**
+   * @brief Get the number of entries in the LP of the (first?)
+   * HighsModelObject
+   */
+  int getNumEntries() { return lp_.Astart_[lp_.numCol_]; }
+
+  /**
    * @brief Sets an option to the string/double/int value if it's
    * legal and, for double/int of the correct type
    */
   HighsStatus setHighsOptionValue(const std::string& option,
-                                  const std::string& value) {
-    OptionStatus status;
-    HighsOptionType type;
-    status = getOptionType(option, type);
-    switch( type )
-      {
-      case HighsOptionType::BOOL:
-	printf("ERROR: No method to set option %s of type bool\n", option.c_str());
-	return HighsStatus::Error;
-      case HighsOptionType::INT:
-	status = setOptionValue(options_, option, atoi(value.c_str()));
-	break;
-      case HighsOptionType::DOUBLE:
-	status = setOptionValue(options_, option, atof(value.c_str()));
-	break;
-      case HighsOptionType::STRING:
-	status = setOptionValue(options_, option, value);
-	break;
-      default:
-	printf("ERROR: No method to set option %s of unknown type %d\n", option.c_str(), (int)type);
-	return HighsStatus::Error;
-      }
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+                                  const std::string& value);
 
   HighsStatus setHighsOptionValue(const std::string& option,
-                                  const double& value) {
-    OptionStatus status = setOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+                                  const double& value);
 
   HighsStatus setHighsOptionValue(const std::string& option,
-                                  const int& value) {
-    OptionStatus status = setOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+                                  const int& value);
 
   /**
    * @brief Gets an option value as string/double/int and, for
    * double/int, only if it's of the correct type.
    */
   HighsStatus getHighsOptionValue(const std::string& option,
-                                  std::string& value) {
-    OptionStatus status;
-    HighsOptionType type;
-    std::stringstream stringstream_value;
-    status = getOptionType(option, type);
-    switch( type )
-      {
-      case HighsOptionType::BOOL:
-	printf("ERROR: No method to get option %s of type bool\n", option.c_str());
-	return HighsStatus::Error;
-      case HighsOptionType::INT:
-	int int_value;
-	status = getOptionValue(options_, option, int_value);
-	if (status == OptionStatus::OK) {
-	  stringstream_value << int_value;
-	  value = stringstream_value.str();
-	}
-	break;
-      case HighsOptionType::DOUBLE:
-	double double_value;
-	status = getOptionValue(options_, option, double_value);
-	if (status == OptionStatus::OK) {
-	  stringstream_value << double_value;
-	  value = stringstream_value.str();
-	}
-	break;
-      case HighsOptionType::STRING:
-	status = getOptionValue(options_, option, value);
-	break;
-      default:
-	printf("ERROR: No method to get option %s of unknown type %d\n", option.c_str(), (int)type);
-	return HighsStatus::Error;
-      }
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+                                  std::string& value);
+  
   HighsStatus getHighsOptionValue(const std::string& option,
-                                  const double& value) {
-    OptionStatus status = getOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+                                  double& value);
 
   HighsStatus getHighsOptionValue(const std::string& option,
-                                  const int& value) {
-    OptionStatus status = getOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
-
+                                  int& value);
 
   /**
    * @brief Clears the vector of HighsModelObjects (hmos), creates a
