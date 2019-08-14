@@ -49,7 +49,7 @@ class Highs {
    * @brief Get the number of entries in the LP of the (first?)
    * HighsModelObject
    */
-  int getNumEntries() { return lp_.Astart_[lp_.numCol_]; }
+  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
 
   /**
    * @brief Sets an option to the string/double/int value if it's

@@ -145,14 +145,44 @@ OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
 
 OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
                             std::string& value) {
+  
 }
 
 OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
                             double& value) {
+  if (option == primal_feasibility_tolerance_string)
+    value = options.primal_feasibility_tolerance;
+
+  else if (option == dual_feasibility_tolerance_string)
+    value = options.dual_feasibility_tolerance;
+
+  else if (option == dual_objective_value_upper_bound_string)
+    value = options.dual_objective_value_upper_bound;
+  else {
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot get unknown double option: %s.", option.c_str());
+    return OptionStatus::UNKNOWN_OPTION;
+  }
+  printf("getOptionValue(options, %s, %g)\n", option.c_str(), value);
+  return OptionStatus::OK;
 }
 
 OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
                             int& value) {
+  if (option == simplex_iteration_limit_string)
+    value = options.simplex_iteration_limit;
+
+  else if (option == simplex_scale_strategy_string)
+    value = (int)options.simplex_scale_strategy;
+
+  else if (option == message_level_string)
+    value = options.messageLevel;
+
+  else {
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot get unknown int option: %s.", option.c_str());
+    return OptionStatus::UNKNOWN_OPTION;
+  }
+  printf("getOptionValue(options, %s, %d)\n", option.c_str(), value);
+  return OptionStatus::OK;
 }
 
 OptionStatus getOptionType(const std::string& option,

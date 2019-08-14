@@ -120,6 +120,7 @@ Highs::Highs() {
   HighsStatus Highs::getHighsOptionValue(const std::string& option,
                                   double& value) {
     OptionStatus status = getOptionValue(options_, option, value);
+    printf("getHighsOptionValue(%s, %g)\n", option.c_str(), value);
     if (status == OptionStatus::OK) return HighsStatus::OK;
     return HighsStatus::Error;
   }

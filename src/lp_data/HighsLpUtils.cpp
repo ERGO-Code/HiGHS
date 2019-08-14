@@ -1115,6 +1115,11 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
       lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
       mask, col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
+  if (set != NULL) {
+    // For deletion by set it must be increasing
+    printf("Calling increasing_set_ok from deleteColsFromLpVectors\n");
+    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
+  }
   // Initialise new_num_col in case none is removed due to from_k >= to_k
   new_num_col = lp.numCol_;
   if (from_k >= to_k) return HighsStatus::OK;
@@ -1160,6 +1165,11 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
       lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
       mask, col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
+  if (set != NULL) {
+    // For deletion by set it must be increasing
+    printf("Calling increasing_set_ok from deleteColsFromLpMatrix\n");
+    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
+  }
   if (from_k >= to_k) return HighsStatus::OK;
 
   int delete_from_col;
@@ -1248,6 +1258,11 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
       lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
       mask, row_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
+  if (set != NULL) {
+    // For deletion by set it must be increasing
+    printf("Calling increasing_set_ok from deleteRowsFromLpVectors\n");
+    if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
+  }
   // Initialise new_num_row in case none is removed due to from_k >= to_k
   new_num_row = lp.numRow_;
   if (from_k >= to_k) return HighsStatus::OK;
@@ -1292,6 +1307,11 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
       lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
       mask, row_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
+  if (set != NULL) {
+    // For deletion by set it must be increasing
+    printf("Calling increasing_set_ok from deleteRowsFromLpMatrix\n");
+    if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
+  }
   if (from_k >= to_k) return HighsStatus::OK;
 
   int delete_from_row;
@@ -1974,10 +1994,12 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
     to_k = num_set_entries;
     // Check that the values in the vector of integers are ascending
     int set_entry_upper = (int)ix_dim - 1;
-    bool ok = increasing_set_ok(ix_set, num_set_entries, 0, set_entry_upper);
-    if (!ok) {
-      HighsLogMessage(HighsMessageType::ERROR, "Index set is not ordered");
-      return HighsStatus::Error;
+    for (int k = 0; k < num_set_entries; k++) {
+      if (ix_set[k] < 0 || ix_set[k] > set_entry_upper) {
+	HighsLogMessage(HighsMessageType::ERROR, "Index set entry ix_set[%d] = %d is out of bounds [0, %d]\n",
+			k, ix_set[k], set_entry_upper);
+	return HighsStatus::Error;
+      }
     }
   } else if (mask) {
     // Changing by mask: check the parameters and check that set and interval
