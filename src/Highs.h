@@ -323,6 +323,15 @@ class Highs {
   );
 
   /**
+   * @brief Change a matrix coefficient
+   */
+  bool changeCoeff(
+		   const int row,     //!< Row of coefficient to be changed
+		   const int col,     //!< Column of coefficient to be changed
+		   const double value //!< Coefficient
+		   );
+
+  /**
    * @brief Get multiple columns from the model given by an interval
    */
   bool getCols(const int from_col,  //!< The index of the first column to get
@@ -475,10 +484,10 @@ class Highs {
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
-  bool deleteRows(int* mask  //!< Full length array with 1 => delete; 0 => not
+  bool deleteRows(
+		  int* mask  //!< Full length array with 1 => delete; 0 => not
   );
 
-  // change coeff (int row, int col) | ...
   // ipx (not implemented)
 
   // todo: Set warm/hot start methods

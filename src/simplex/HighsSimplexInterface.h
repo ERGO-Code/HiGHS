@@ -118,7 +118,7 @@ class HighsSimplexInterface {
                                 bool set, int num_set_entries,
                                 const int* row_set, bool mask, int* row_mask);
 
-  HighsStatus changeCoefficient(int Xrow, int Xcol, const double XnewValue);
+  HighsStatus changeCoefficient(const int Xrow, const int Xcol, const double XnewValue);
 
   // Shift the objective
   void shiftObjectiveValue(double Xshift);

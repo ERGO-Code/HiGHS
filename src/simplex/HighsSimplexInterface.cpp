@@ -470,17 +470,19 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
     assert(out_to_col <= col_dim);
     assert(in_to_col <= col_dim);
     for (int col = out_from_col; col < out_to_col; col++) {
-      col_cost[num_col] = lp.colCost_[col];
-      col_lower[num_col] = lp.colLower_[col];
-      col_upper[num_col] = lp.colUpper_[col];
-      col_matrix_start[num_col] =
-          num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
+      if (col_cost != NULL) col_cost[num_col] = lp.colCost_[col];
+      if (col_lower != NULL) col_lower[num_col] = lp.colLower_[col];
+      if (col_upper != NULL) col_upper[num_col] = lp.colUpper_[col];
+      if (col_matrix_start != NULL) col_matrix_start[num_col] =
+				      num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
       num_col++;
     }
-    for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col]; el++) {
-      col_matrix_index[num_nz] = lp.Aindex_[el];
-      col_matrix_value[num_nz] = lp.Avalue_[el];
-      num_nz++;
+    if (col_matrix_index != NULL || col_matrix_value != NULL) {
+      for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col]; el++) {
+	if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
+	if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
+	num_nz++;
+      }
     }
     if (out_to_col == col_dim || in_to_col == col_dim) break;
   }
@@ -591,8 +593,8 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     int new_row = new_index[row];
     if (new_row >= 0) {
       assert(new_row < num_row);
-      row_lower[new_row] = lp.rowLower_[row];
-      row_upper[new_row] = lp.rowUpper_[row];
+      if (row_lower != NULL) row_lower[new_row] = lp.rowLower_[row];
+      if (row_upper != NULL) row_upper[new_row] = lp.rowUpper_[row];
       row_matrix_length[new_row] = 0;
     }
   }
@@ -605,41 +607,51 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     }
   }
 
-  row_matrix_start[0] = 0;
-  for (int row = 0; row < num_row - 1; row++) {
-    row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
-  }
+  if (row_matrix_start == NULL) {
+    // If the matrix start vector is null then don't get values of
+    // indices, otherwise both are meaningless
+    if (row_matrix_index != NULL || row_matrix_value != NULL) {
+      HighsLogMessage(HighsMessageType::ERROR,
+		      "Cannot supply meaningful row matrix indices/values with null starts");
+      return HighsStatus::Error;
+    }
+  } else {
+    row_matrix_start[0] = 0;
+    for (int row = 0; row < num_row - 1; row++) {
+      row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
+    }
 
-  // Fill the row-wise matrix with indices and values
-  for (int col = 0; col < lp.numCol_; col++) {
-    for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-      int row = lp.Aindex_[el];
-      int new_row = new_index[row];
-      if (new_row >= 0) {
-        int row_el = row_matrix_start[new_row];
-        row_matrix_index[row_el] = col;
-        row_matrix_value[row_el] = lp.Avalue_[el];
-        row_matrix_start[new_row]++;
+    // Fill the row-wise matrix with indices and values
+    for (int col = 0; col < lp.numCol_; col++) {
+      for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
+	int row = lp.Aindex_[el];
+	int new_row = new_index[row];
+	if (new_row >= 0) {
+	  int row_el = row_matrix_start[new_row];
+	  if (row_matrix_index != NULL) row_matrix_index[row_el] = col;
+	  if (row_matrix_value != NULL) row_matrix_value[row_el] = lp.Avalue_[el];
+	  row_matrix_start[new_row]++;
+	}
       }
     }
+    // Restore the starts of the row-wise matrix and count the number of nonzeros
+    // in it
+    num_nz = 0;
+    row_matrix_start[0] = 0;
+    for (int row = 0; row < num_row - 1; row++) {
+      row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
+      num_nz += row_matrix_length[row];
+    }
+    num_nz += row_matrix_length[num_row - 1];
   }
-  // Restore the starts of the row-wise matrix and count the number of nonzeros
-  // in it
-  num_nz = 0;
-  row_matrix_start[0] = 0;
-  for (int row = 0; row < num_row - 1; row++) {
-    row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
-    num_nz += row_matrix_length[row];
-  }
-  num_nz += row_matrix_length[num_row - 1];
   return HighsStatus::OK;
 }
 
 // Change a single coefficient in the matrix
-HighsStatus HighsSimplexInterface::changeCoefficient(int Xrow, int Xcol,
+HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow, const int Xcol,
                                                      const double XnewValue) {
 #ifdef HiGHSDEV
-  printf("Called util_changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow,
+  printf("Called changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow,
          Xcol, XnewValue);
 #endif
   HighsLp& lp = highs_model_object.lp_;

@@ -757,6 +757,20 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
   return true;
 }
 
+bool Highs::changeCoeff(const int row, const int col, const double value) {
+  underDevelopmentLogMessage("changeCoeff");
+  HighsStatus return_status = HighsStatus::NotSet;
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+
+  return_status = interface.changeCoefficient(row, col, value);
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet)
+    return false;
+  return true;
+  
+}
+
 bool Highs::getCols(const int from_col, const int to_col, int& num_col,
                     double* costs, double* lower, double* upper, int& num_nz,
                     int* start, int* index, double* value) {
