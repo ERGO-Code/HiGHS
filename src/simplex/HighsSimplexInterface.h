@@ -100,6 +100,8 @@ class HighsSimplexInterface {
                              int* row_matrix_start, int* row_matrix_index,
                              double* row_matrix_value);
 
+  HighsStatus getCoefficient(const int Xrow, const int Xcol, double& value);
+
   /**
    * @brief Add a contiguous set of rows to the model data---making them basic
    */

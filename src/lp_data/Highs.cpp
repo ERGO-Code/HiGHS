@@ -890,6 +890,20 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
   return true;
 }
 
+bool Highs::getCoeff(const int row, const int col, double& value) {
+  underDevelopmentLogMessage("getCoeff");
+  HighsStatus return_status = HighsStatus::NotSet;
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+
+  return_status = interface.getCoefficient(row, col, value);
+  if (return_status == HighsStatus::Error ||
+      return_status == HighsStatus::NotSet)
+    return false;
+  return true;
+
+}
+
 bool Highs::deleteCols(const int from_col, const int to_col) {
   underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::NotSet;

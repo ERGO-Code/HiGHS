@@ -440,6 +440,15 @@ class Highs {
   );
 
   /**
+   * @brief Get a matrix coefficient
+   */
+  bool getCoeff(
+		const int row, //!< Row of coefficient to be changed
+		const int col, //!< Column of coefficient to be changed
+		double& value   //!< Coefficient
+		);
+
+  /**
    * @brief Delete multiple columns from the model given by an interval
    */
   bool deleteCols(const int from_col,  //!< The index of the first column to

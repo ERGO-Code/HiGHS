@@ -185,6 +185,25 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
   return HighsStatus::OK;
 }
 
+// Get a single coefficient from the matrix
+HighsStatus HighsSimplexInterface::getCoefficient(const int Xrow, const int Xcol,
+						  double& value) {
+#ifdef HiGHSDEV
+  printf("Called getCoeff(Xrow=%d, Xcol=%d)\n", Xrow, Xcol);
+#endif
+  HighsLp& lp = highs_model_object.lp_;
+  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
+  value = 0;
+  for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol+1]; el++) {
+    if (lp.Aindex_[el] == Xrow) {
+      value = lp.Avalue_[el];
+      break;
+    }
+  }
+  return HighsStatus::OK;
+}
+
 HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
                                            const double* XrowLower,
                                            const double* XrowUpper,
