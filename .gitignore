@@ -238,3 +238,6 @@ test.out.gz
 test2.lp
 test2.out
 
+#SCIP interface
+lpi_highs.cpp
+
