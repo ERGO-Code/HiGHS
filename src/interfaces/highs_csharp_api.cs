@@ -86,141 +86,143 @@ public unsafe class HighsLpSolver
 {
    private void* highs;
 
-   [DllImport("libhighs.so")]
+   private const string highslibname = "libhighs.so";
+
+   [DllImport(highslibname)]
    private static extern int Highs_call(Int32 numcol, Int32 numrow, Int32 numnz, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue,
    double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual, int[] colbasisstatus, int[] rowbasisstatus);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern void* Highs_create();
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern void Highs_destroy(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_run(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_readFromFile(void* highs, string filename);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_writeToFile(void* highs, string filename);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_loadModel(void* highs, int numcol, int numrow, int numnz, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_setOptionValue(void* highs, string option, string value);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern void Highs_getSolution(void* highs, double[] colvalue, double[] coldual, double[] rowvalue, double[] rowdual);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getNumCols(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getNumRows(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getNumNz(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern void Highs_getBasis(void* highs, int[] colstatus, int[] rowstatus);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern double Highs_getObjectiveValue(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getIterationCount(void* highs);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_addRow(void* highs, double lower, double upper, int num_new_nz, int[] indices, double[] values);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_addRows(void* highs, int num_new_row, double[] lower, double[] upper, 
    int num_new_nz, int[] starts, int[] indices, double[] values);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_addCol(void* highs, double cost, double lower, double upper, 
    int num_new_nz, int[] indices, double[] values);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_addCols(void* highs, int num_new_col, double[] costs, double[] lower, double[] upper, 
    int num_new_nz, int[] starts, int[] indices, double[] values);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeObjectiveSense(void* highs, int sense);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColCost(void* highs, int col,  double cost);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColsCostBySet(void* highs, int num_set_entries, int[] set, double[] cost);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColsCostByMask(void* highs, int[] mask, double[] cost);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColBounds(void* highs, int col, double lower, double upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColsBoundsByRange(void* highs, int from_col, int to_col, double[] lower, double[] upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColsBoundsBySet(void* highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeColsBoundsByMask(void* highs, int[] mask, double[] lower, double[] upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeRowBounds(void* highs, int row, double lower, double upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeRowsBoundsBySet(void* highs, int num_set_entries, int[] set, double[] lower, double[] upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_changeRowsBoundsByMask(void* highs, int[] mask, double[] lower, double[] upper);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_deleteColsByRange(void* highs, int from_col, int to_col);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_deleteColsBySet(void* highs, int num_set_entries, int[] set);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_deleteColsByMask(void* highs, int[] mask);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_deleteRowsByRange(void* highs, int from_row, int to_row);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_deleteRowsBySet(void* highs, int num_set_entries, int[] set);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_deleteRowsByMask(void* highs, int[] mask);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getColsByRange(void *highs, int from_col, int to_col, ref int num_col, double[] costs, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getColsBySet(void *highs, int num_set_entries, int[] set, ref int num_col, double[] costs, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getColsByMask(void *highs, int[] mask, ref int num_col, double[] costs, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getRowsByRange(void *highs, int from_row, int to_row, ref int num_row, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getRowsBySet(void *highs, int num_set_entries, int[] set, ref int num_row, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
    
-   [DllImport("libhighs.so")]
+   [DllImport(highslibname)]
    private static extern int Highs_getRowsByMask(void *highs, int[] mask, ref int num_row, 
    double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
@@ -403,23 +405,23 @@ public unsafe class HighsLpSolver
    // int Highs_getColsByRange(void *highs, int from_col, int to_col, ref int num_col, double[] costs, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   // [DllImport("libhighs.so")]
+   // [DllImport(highslibname)]
    // int Highs_getColsBySet(void *highs, int num_set_entries, int[] set, ref int num_col, double[] costs, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   // [DllImport("libhighs.so")]
+   // [DllImport(highslibname)]
    // int Highs_getColsByMask(void *highs, int[] mask, ref int num_col, double[] costs, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   // [DllImport("libhighs.so")]
+   // [DllImport(highslibname)]
    // int Highs_getRowsByRange(void *highs, int from_row, int to_row, ref int num_row, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   // [DllImport("libhighs.so")]
+   // [DllImport(highslibname)]
    // int Highs_getRowsBySet(void *highs, int num_set_entries, int[] set, ref int num_row, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
    
-   // [DllImport("libhighs.so")]
+   // [DllImport(highslibname)]
    // int Highs_getRowsByMask(void *highs, int[] mask, ref int num_row, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 }

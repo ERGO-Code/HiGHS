@@ -132,6 +132,18 @@ if(FORTRAN_FOUND)
     set_target_properties(FortranHighs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
  endif(FORTRAN_FOUND)
 
+ check_language("CSharp")
+if(CSHARP_FOUND)
+  message(STATUS "CSharp supported")
+  set(csharpsources
+  interfaces/highs_csharp_api.cs)
+
+  add_library(HighsCsharp interfaces/highs_csharp_api.cs)
+  target_link_libraries(HighsCsharp, PUBLIC libhighs)
+else()
+  message(STATUS "No CSharp support")
+endif()
+
 if (OSI_FOUND)
     add_library(OsiHighs interfaces/OsiHiGHSSolverInterface.cpp)
     set(headers ${headers} interfaces/OsiHiGHSSolverInterface.hpp)
