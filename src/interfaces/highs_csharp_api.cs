@@ -86,7 +86,7 @@ public unsafe class HighsLpSolver
 {
    private void* highs;
 
-   private const string highslibname = "libhighs.so";
+   private const string highslibname = "Highs.dll";
 
    [DllImport(highslibname)]
    private static extern int Highs_call(Int32 numcol, Int32 numrow, Int32 numnz, double[] colcost,
