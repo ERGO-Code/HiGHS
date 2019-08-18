@@ -137,9 +137,11 @@ if(CSHARP_FOUND)
   message(STATUS "CSharp supported")
   set(csharpsources
   interfaces/highs_csharp_api.cs)
-
   add_library(HighsCsharp interfaces/highs_csharp_api.cs)
-  target_link_libraries(HighsCsharp, PUBLIC libhighs)
+  target_compile_options(HighsCsharp PUBLIC "/unsafe")
+  add_executable(csharpexample ../examples/call_highs_from_csharp.cs)
+  target_compile_options(csharpexample PUBLIC "/unsafe")
+  target_link_libraries(csharpexample PUBLIC HighsCsharp)
 else()
   message(STATUS "No CSharp support")
 endif()
