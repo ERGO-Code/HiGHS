@@ -248,7 +248,7 @@ void HDual::solve(int num_threads) {
 #endif
 
   if (solve_bailout) {
-    assert(workHMO.model_status_ == HighsModelStatus::OUT_OF_TIME ||
+    assert(workHMO.model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
 	   workHMO.model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }

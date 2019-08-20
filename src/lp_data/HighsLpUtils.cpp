@@ -86,7 +86,7 @@ HighsStatus checkLp(const HighsLp& lp) {
 
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
                      const bool normalise) {
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
   HighsStatus call_status;
   // Assess the LP dimensions and vector sizes, returning on error
   call_status = assessLpDimensions(lp);
@@ -266,7 +266,7 @@ HighsStatus assess_costs(const int ml_col_os, const int col_dim,
   if (return_status != HighsStatus::OK) return return_status;
   if (from_k >= to_k) return HighsStatus::OK;
 
-  return_status = HighsStatus::Error;
+  return_status = HighsStatus::OK;
   bool error_found = false;
   // Work through the data to be assessed.
   //
@@ -336,7 +336,7 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os, const int ix_dim,
   if (return_status != HighsStatus::OK) return return_status;
   if (from_k >= to_k) return HighsStatus::OK;
 
-  return_status = HighsStatus::Error;
+  return_status = HighsStatus::OK;
   bool error_found = false;
   bool warning_found = false;
   bool info_found = false;
@@ -461,7 +461,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
                          const double large_matrix_value,
                          const bool normalise) {
   // Uses to_ix in iterator style
-  if (from_ix < 0) return HighsStatus::Error;
+  if (from_ix < 0) return HighsStatus::OK;
   if (from_ix >= to_ix) return HighsStatus::OK;
   if (num_nz > 0 && vec_dim <= 0) return HighsStatus::Error;
   if (num_nz <= 0) return HighsStatus::OK;
