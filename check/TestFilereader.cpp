@@ -179,16 +179,19 @@ TEST_CASE("dualize", "[highs_data]") {
   HighsStatus status;
 
   Highs highs_lp;
+  HighsModelStatus model_status;
   status = highs_lp.initializeLp(lp);
   REQUIRE(status == HighsStatus::OK);
   status = highs_lp.run();
-  REQUIRE(status == HighsStatus::Optimal);
+  model_status = highs_lp.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   Highs highs_primal;
   status = highs_primal.initializeLp(primal);
   REQUIRE(status == HighsStatus::OK);
   status = highs_primal.run();
-  REQUIRE(status == HighsStatus::Optimal);
+  model_status = highs_lp.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   double lp_objective = highs_lp.getObjectiveValue();
   double primal_objective = highs_primal.getObjectiveValue();
@@ -203,7 +206,8 @@ TEST_CASE("dualize", "[highs_data]") {
   status = highs_dual.initializeLp(dual);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.run();
-  REQUIRE(status == HighsStatus::Optimal);
+  model_status = highs_lp.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   double dual_objective = highs_dual.getObjectiveValue();
 

@@ -59,7 +59,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   return_status = hsi.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
   //  printf("addRows: return_status = %s\n", HighsStatusToString(return_status).c_str());
-  REQUIRE(return_status == HighsStatus::Info);
+  REQUIRE(return_status == HighsStatus::OK);
   reportLp(lp);
   
   return_status = hsi.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
@@ -82,7 +82,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   // Add an empty column
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
 				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
-  REQUIRE(return_status == HighsStatus::Info);
+  REQUIRE(return_status == HighsStatus::OK);
   XcolUpper[0] = my_infinity;
   reportLp(lp);
 

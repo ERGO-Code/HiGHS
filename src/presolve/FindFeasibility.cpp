@@ -53,15 +53,15 @@ double getQuadraticObjective(const std::vector<double> cost,
   assert(cost.size() == x.size());
   // c'x
   double quadratic = 0;
-  for (int col = 0; col < x.size(); col++) quadratic += cost[col] * x[col];
+  for (int col = 0; col < (int)x.size(); col++) quadratic += cost[col] * x[col];
 
   // lambda'x
-  for (int row = 0; row < lambda.size(); row++) {
+  for (int row = 0; row < (int)lambda.size(); row++) {
     quadratic += lambda[row] * r[row];
   }
 
   // 1/2mu r'r
-  for (int row = 0; row < lambda.size(); row++) {
+  for (int row = 0; row < (int)lambda.size(); row++) {
     quadratic += (r[row] * r[row]) / mu;
   }
 
@@ -304,7 +304,10 @@ HighsStatus initialize(const HighsLp& lp, HighsSolution& solution, double& mu,
 
 HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution,
                            const MinimizationType type) {
-  if (!isEqualityProblem(lp)) return HighsStatus::NotImplemented;
+  if (!isEqualityProblem(lp)) {
+    printf("runFeasibility: Not an equality problem\n");
+    return HighsStatus::Error;
+  }
 
   if (lp.sense_ != OBJSENSE_MINIMIZE) {
     HighsPrintMessage(
@@ -326,11 +329,12 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution,
   if (type == MinimizationType::kComponentWise)
     HighsPrintMessage(ML_ALWAYS,
                       "Minimizing quadratic subproblem component-wise...\n");
-  else if (type == MinimizationType::kExact)
+  else if (type == MinimizationType::kExact) {
     // exact minimization requires projected gradient code which is still not in
     // master.
-    return HighsStatus::NotImplemented;
-
+    printf("runFeasibility: Exact minimization requires projected gradient code which is still not in master\n");
+    return HighsStatus::Error;
+  }
   // Report values at start.
   std::stringstream ss;
   double residual_norm_2 = quadratic.getResidualNorm2();
@@ -355,9 +359,11 @@ HighsStatus runFeasibility(const HighsLp& lp, HighsSolution& solution,
     // Minimize quadratic function.
     if (type == MinimizationType::kComponentWise)
       quadratic.minimize_by_component(mu, lambda);
-    else if (type == MinimizationType::kExact)
+    else if (type == MinimizationType::kExact) {
       // while projected gradient code which is still not in master.
-      return HighsStatus::NotImplemented;
+      printf("runFeasibility: Exact minimization requires projected gradient code which is still not in master\n");
+      return HighsStatus::Error;
+    }
 
     // Report outcome.
     residual_norm_2 = quadratic.getResidualNorm2();

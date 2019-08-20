@@ -30,7 +30,7 @@ class HighsModelObject {
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsModelStatus model_status_;
+  HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
   HighsBasis basis_;
   HighsSolution solution_;
 

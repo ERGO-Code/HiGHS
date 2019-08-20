@@ -219,7 +219,10 @@ HighsStatus Highs::run() {
   }
 
   // Return immediately if the LP has no columns
-  if (!lp_.numCol_) return HighsStatus::LpEmpty;
+  if (!lp_.numCol_) {
+    hmos_[0].model_status_ = HighsModelStatus::MODEL_EMPTY;
+    return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
+  }
 
   // todo: check options.
   HighsSetIO(options_);
@@ -237,7 +240,6 @@ HighsStatus Highs::run() {
   int postsolve_iteration_count = 0;
   // todo: make sure it should remain Init for calls of run() after
   // simplex_has_run_ is valid.
-  HighsStatus solve_status = HighsStatus::Init;
   // Define identifiers to refer to the HMO of the original LP
   // (0) and the HMO created when using presolve (1)
   const int original_hmo = 0;
@@ -260,16 +262,18 @@ HighsStatus Highs::run() {
     switch (presolve_status) {
       case HighsPresolveStatus::NotPresolved: {
 	hmos_[solved_hmo].lp_.lp_name_ = "Original LP";
-        solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+        HighsStatus return_status = callRunSolver(hmos_[solved_hmo], iteration_count,
                                      "Not presolved: solving the LP");
         solve_iteration_count += iteration_count;
+	if (return_status != HighsStatus::OK) return return_status;
         break;
       }
       case HighsPresolveStatus::NotReduced: {
 	hmos_[solved_hmo].lp_.lp_name_ = "Unreduced LP";
-        solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+        HighsStatus return_status = callRunSolver(hmos_[solved_hmo], iteration_count,
 				     "Problem not reduced by presolve: solving the LP");
         solve_iteration_count += iteration_count;
+	if (return_status != HighsStatus::OK) return return_status;
         break;
       }
       case HighsPresolveStatus::Reduced: {
@@ -282,9 +286,10 @@ HighsStatus Highs::run() {
         // Record the HMO to be solved
         solved_hmo = presolve_hmo;
 	hmos_[solved_hmo].lp_.lp_name_ = "Presolved LP";
-        solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+        HighsStatus return_status = callRunSolver(hmos_[solved_hmo], iteration_count,
                                      "Solving the presolved LP");
         solve_iteration_count += iteration_count;
+	if (return_status != HighsStatus::OK) return return_status;
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
@@ -293,13 +298,14 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::Infeasible:
       case HighsPresolveStatus::Unbounded: {
-        HighsStatus result =
-            (presolve_status == HighsPresolveStatus::Infeasible)
-                ? HighsStatus::Infeasible
-                : HighsStatus::Unbounded;
+	if (presolve_status == HighsPresolveStatus::Infeasible) {
+	  hmos_[original_hmo].model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+	} else {
+	  hmos_[original_hmo].model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+	}
         HighsPrintMessage(ML_ALWAYS,
                           "Problem status detected on presolve: %s\n",
-                          HighsStatusToString(result).c_str());
+                          highsModelStatusToString(hmos_[original_hmo].model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -310,7 +316,7 @@ HighsStatus Highs::run() {
 
         std::stringstream message_not_opt;
         message_not_opt << std::endl;
-        message_not_opt << "Run status : " << HighsStatusToString(result)
+        message_not_opt << "Run status : " << highsModelStatusToString(hmos_[original_hmo].model_status_)
                         << std::endl;
         message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
                         << lp_solve_final_time - initial_time << std::endl;
@@ -318,17 +324,18 @@ HighsStatus Highs::run() {
         message_not_opt << std::endl;
 
         HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
-        return result;
+        return HighsStatus::OK;
       }
       default: {
         // case HighsPresolveStatus::Error
         HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-        return HighsStatus::PresolveError;
+	hmos_[original_hmo].model_status_ = HighsModelStatus::PRESOLVE_ERROR;
+        return HighsStatus::Error;
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
-    if (solve_status == HighsStatus::Optimal) {
+    if (hmos_[solved_hmo].model_status_ == HighsModelStatus::OPTIMAL) {
       if (presolve_status == HighsPresolveStatus::Reduced) {
         // If presolve is nontrivial, extract the optimal solution
         // and basis for the presolved problem in order to generate
@@ -374,7 +381,7 @@ HighsStatus Highs::run() {
           bool full_iteration_logging = false;
           if (full_iteration_logging) HighsSetMessagelevel(ML_ALWAYS);
 	  hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
-          solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+          HighsStatus return_status = callRunSolver(hmos_[solved_hmo], iteration_count,
 				       "Solving the original LP from the solution after postsolve");
           postsolve_iteration_count = iteration_count;
           solve_iteration_count += iteration_count;
@@ -383,6 +390,7 @@ HighsStatus Highs::run() {
           // Reset the message level
           if (full_iteration_logging)
             HighsSetMessagelevel(options_.messageLevel);
+	  if (return_status != HighsStatus::OK) return return_status;
         }
       }
     }
@@ -390,9 +398,10 @@ HighsStatus Highs::run() {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
     solved_hmo = original_hmo;
     hmos_[solved_hmo].lp_.lp_name_ = "Re-solved LP";
-    solve_status = callRunSolver(hmos_[solved_hmo], iteration_count,
+    HighsStatus return_status = callRunSolver(hmos_[solved_hmo], iteration_count,
 				 "Re-solving the LP");
     solve_iteration_count += iteration_count;
+    if (return_status != HighsStatus::OK) return return_status;
   }
   // else if (reduced problem failed to solve) {
   //   todo: handle case when presolved problem failed to solve. Try to solve
@@ -417,13 +426,13 @@ HighsStatus Highs::run() {
 
   std::stringstream message;
   message << std::endl;
-  message << "Run status : " << HighsStatusToString(solve_status) << std::endl;
+  message << "Run status : " << highsModelStatusToString(hmos_[solved_hmo].model_status_) << std::endl;
   message
       << "Iterations : "
       << solve_iteration_count  // hmos_[solved_hmo].simplex_info_.iteration_count
       << std::endl;
 
-  if (solve_status == HighsStatus::Optimal)
+  if (hmos_[solved_hmo].model_status_ == HighsModelStatus::OPTIMAL)
     message << "Objective  : " << std::scientific
             << hmos_[original_hmo].simplex_info_.dual_objective_value
             << std::endl;
@@ -437,7 +446,7 @@ HighsStatus Highs::run() {
 
   HighsPrintMessage(ML_MINIMAL, message.str().c_str());
 
-  return solve_status;
+  return highsStatusFromHighsModelStatus(hmos_[solved_hmo].model_status_);
 }
 
 const HighsLp& Highs::getLp() const { return lp_; }
@@ -454,6 +463,11 @@ double Highs::getObjectiveValue() const {
     // todo: error/warning message
   }
   return 0;
+}
+
+HighsModelStatus Highs::getModelStatus() const {
+  if (hmos_.size() == 0) return HighsModelStatus::NOTSET;
+  return hmos_[0].model_status_;
 }
 
 int Highs::getIterationCount() const {
@@ -475,16 +489,14 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
   if (solution.col_dual.size()) solution_.col_dual = solution.col_dual;
   if (solution.row_dual.size()) solution_.row_dual = solution.row_dual;
 
-  HighsStatus result_values = HighsStatus::NotSet;
-  HighsStatus result_duals = HighsStatus::NotSet;
-
-  if (solution.col_value.size() > 0)
-    result_values = calculateRowValues(lp_, solution_);
-  if (solution.row_dual.size() > 0)
-    result_duals = calculateColDuals(lp_, solution_);
-
-  if (result_values == HighsStatus::Error || result_duals == HighsStatus::Error)
-    return HighsStatus::Error;
+  if (solution.col_value.size() > 0) {
+    HighsStatus return_status = calculateRowValues(lp_, solution_);
+    if (return_status != HighsStatus::OK) return return_status;
+  }
+  if (solution.row_dual.size() > 0) {
+    HighsStatus return_status = calculateColDuals(lp_, solution_);
+    if (return_status != HighsStatus::OK) return return_status;
+  }
 
   return HighsStatus::OK;
 }
@@ -517,7 +529,7 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
                     const int* starts, const int* indices,
                     const double* values) {
   underDevelopmentLogMessage("addRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   // if simplex has not solved already
   if (!simplex_has_run_) {
     return_status = addLpRows(lp_, num_new_row, lower_bounds, upper_bounds,
@@ -530,10 +542,7 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
     return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
                                       num_new_nz, starts, indices, values);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::addCol(const double cost, const double lower_bound,
@@ -549,7 +558,7 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                     const int num_new_nz, const int* starts, const int* indices,
                     const double* values) {
   underDevelopmentLogMessage("addCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   // if simplex has not solved already
   if (!simplex_has_run_) {
     return_status =
@@ -564,15 +573,12 @@ bool Highs::addCols(const int num_new_col, const double* costs,
         interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
                           num_new_nz, starts, indices, values);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeObjectiveSense(const int sense) {
   underDevelopmentLogMessage("changeObjectiveSense");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     this->lp_.sense_ = sense;
   } else {
@@ -580,10 +586,7 @@ bool Highs::changeObjectiveSense(const int sense) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.changeObjectiveSense(sense);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeColCost(const int col, const double cost) {
@@ -593,7 +596,7 @@ bool Highs::changeColCost(const int col, const double cost) {
 bool Highs::changeColsCost(const int num_set_entries, const int* set,
                            const double* cost) {
   underDevelopmentLogMessage("changeColsCost");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     for (int i = 0; i < num_set_entries; i++) {
       this->lp_.colCost_[set[i]] = cost[i];
@@ -604,15 +607,12 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
 
     return_status = interface.changeCosts(num_set_entries, set, cost);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeColsCost(const int* mask, const double* cost) {
   underDevelopmentLogMessage("changeColsCost");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     for (int i = 0; i < this->lp_.numCol_; i++) {
       if (mask[i]) this->lp_.colCost_[i] = cost[i];
@@ -623,10 +623,7 @@ bool Highs::changeColsCost(const int* mask, const double* cost) {
 
     return_status = interface.changeCosts(mask, cost);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeColBounds(const int col, const double lower,
@@ -637,7 +634,7 @@ bool Highs::changeColBounds(const int col, const double lower,
 bool Highs::changeColsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   /*
   if (!simplex_has_run_) {
     printf("changeColsBounds: Simplex has not run\n");
@@ -653,16 +650,13 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
     return_status =
         interface.changeColBounds(num_set_entries, set, lower, upper);
     //  }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeColsBounds(const int from_col, const int to_col,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     int num_changed_bounds = to_col - from_col;
     for (int i = 0; i < num_changed_bounds; i++) {
@@ -676,16 +670,13 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
 
     return_status = interface.changeColBounds(from_col, to_col, lower, upper);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeColsBounds(const int* mask, const double* lower,
                              const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     for (int i = 0; i < this->lp_.numCol_; i++) {
       if (mask[i]) {
@@ -700,10 +691,7 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
 
     return_status = interface.changeColBounds(mask, lower, upper);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeRowBounds(const int row, const double lower,
@@ -714,7 +702,7 @@ bool Highs::changeRowBounds(const int row, const double lower,
 bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeRowsBounds");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     for (int i = 0; i < num_set_entries; i++) {
       this->lp_.rowLower_[set[i]] = lower[i];
@@ -727,16 +715,13 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
     return_status =
         interface.changeRowBounds(num_set_entries, set, lower, upper);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeRowsBounds(const int* mask, const double* lower,
                              const double* upper) {
   underDevelopmentLogMessage("changeRowsBounds");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     for (int i = 0; i < this->lp_.numRow_; i++) {
       if (mask[i]) {
@@ -751,23 +736,17 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
 
     return_status = interface.changeRowBounds(mask, lower, upper);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeCoeff(const int row, const int col, const double value) {
   underDevelopmentLogMessage("changeCoeff");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
 
   return_status = interface.changeCoefficient(row, col, value);
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
   
 }
 
@@ -775,7 +754,7 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
                     double* costs, double* lower, double* upper, int& num_nz,
                     int* start, int* index, double* value) {
   underDevelopmentLogMessage("getCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -785,17 +764,14 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
     return_status = interface.getCols(from_col, to_col, num_col, costs, lower,
                                       upper, num_nz, start, index, value);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
   underDevelopmentLogMessage("getCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -805,17 +781,14 @@ bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
     return_status = interface.getCols(n, set, num_col, costs, lower, upper,
                                       num_nz, start, index, value);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
   underDevelopmentLogMessage("getCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -825,17 +798,14 @@ bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
     return_status = interface.getCols(col_mask, num_col, costs, lower, upper,
                                       num_nz, start, index, value);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::getRows(const int from_row, const int to_row, int& num_row,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
   underDevelopmentLogMessage("getRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -845,17 +815,14 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
     return_status = interface.getRows(from_row, to_row, num_row, lower, upper,
                                       num_nz, start, index, value);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
                     double* lower, double* upper, int& num_nz, int* start,
                     int* index, double* value) {
   underDevelopmentLogMessage("getRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -865,16 +832,13 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
     return_status = interface.getRows(num_set_entries, set, num_row, lower,
                                       upper, num_nz, start, index, value);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
                     int& num_nz, int* start, int* index, double* value) {
   underDevelopmentLogMessage("getRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -884,29 +848,23 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
     return_status = interface.getRows(mask, num_row, lower, upper, num_nz,
                                       start, index, value);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::getCoeff(const int row, const int col, double& value) {
   underDevelopmentLogMessage("getCoeff");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
 
   return_status = interface.getCoefficient(row, col, value);
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 
 }
 
 bool Highs::deleteCols(const int from_col, const int to_col) {
   underDevelopmentLogMessage("deleteCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -914,15 +872,12 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.deleteCols(from_col, to_col);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteCols(const int num_set_entries, const int* set) {
   underDevelopmentLogMessage("deleteCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -930,15 +885,12 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.deleteCols(num_set_entries, set);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteCols(int* mask) {
   underDevelopmentLogMessage("deleteCols");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -946,15 +898,12 @@ bool Highs::deleteCols(int* mask) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.deleteCols(mask);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteRows(const int from_row, const int to_row) {
   underDevelopmentLogMessage("deleteRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -962,15 +911,12 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.deleteRows(from_row, to_row);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteRows(const int num_set_entries, const int* set) {
   underDevelopmentLogMessage("deleteRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -978,15 +924,12 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.deleteRows(num_set_entries, set);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteRows(int* mask) {
   underDevelopmentLogMessage("deleteRows");
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (!simplex_has_run_) {
     // TODO: modify local lp
   } else {
@@ -994,10 +937,7 @@ bool Highs::deleteRows(int* mask) {
     HighsSimplexInterface interface(hmos_[0]);
     return_status = interface.deleteRows(mask);
   }
-  if (return_status == HighsStatus::Error ||
-      return_status == HighsStatus::NotSet)
-    return false;
-  return true;
+  return return_status == HighsStatus::OK;
 }
 
 // Private methods
@@ -1040,13 +980,13 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
   if (!model.lp_.numRow_) {
     HighsSimplexInterface simplex_interface(model);
     iteration_count = 0;
-    return simplex_interface.lpStatusToHighsStatus(solveUnconstrainedLp(model));
+    return highsStatusFromHighsModelStatus(solveUnconstrainedLp(model));
   }
   int initial_iteration_count = model.simplex_info_.iteration_count;
-  HighsStatus solve_status = runSolver(model);
+  HighsStatus return_status = runSolver(model);
   int final_iteration_count = model.simplex_info_.iteration_count;
   iteration_count = final_iteration_count - initial_iteration_count;
-  return solve_status;
+  return return_status;
 }
 
 // The method below runs simplex or ipx solver on the lp.
@@ -1055,12 +995,11 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   HighsStatus return_status = assessLp(model.lp_, model.options_, normalise);
   if (return_status == HighsStatus::Error) return return_status;
 
-  HighsStatus status = HighsStatus::Init;
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  status = solveModelSimplex(model);
+  return_status = solveModelSimplex(model);
   simplex_has_run_ = true;
 #else
   // IPX
@@ -1071,7 +1010,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 
 #endif
 
-  if (status != HighsStatus::Optimal) return status;
+  if (model.model_status_ != HighsModelStatus::OPTIMAL) return highsStatusFromHighsModelStatus(model.model_status_);
 
   // Check.
   if (!isSolutionConsistent(model.lp_, model.solution_)) {
@@ -1081,7 +1020,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   // todo:
   // assert(KktSatisfied(lp, solution));
 
-  return status;
+  return highsStatusFromHighsModelStatus(model.model_status_);
 }
 
 // Solve a mixed integer problem using branch and bound.
@@ -1100,12 +1039,13 @@ HighsStatus Highs::runBnb() {
   root->col_lower_bound = lp_.colLower_;
   root->col_upper_bound = lp_.colUpper_;
 
-  HighsStatus status = solveRootNode(*(root.get()));
-  if (status != HighsStatus::Optimal) {
+  HighsStatus return_status = solveRootNode(*(root.get()));
+  if (return_status != HighsStatus::OK) return return_status;
+  if (hmos_[0].model_status_ != HighsModelStatus::OPTIMAL) {
     HighsPrintMessage(ML_ALWAYS,
                       "Root note not solved to optimality. Status: %s\n",
-                      HighsStatusToString(status).c_str());
-    return status;
+                      highsModelStatusToString(hmos_[0].model_status_).c_str());
+    return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
   }
 
   // The method branch(...) below calls chooseBranchingVariable(..) which
@@ -1123,10 +1063,11 @@ HighsStatus Highs::runBnb() {
   //   Branch.
   while (!tree.empty()) {
     Node& node = tree.next();
-    HighsStatus status = solveNode(node);
+    HighsStatus return_status = solveNode(node);
+    if (return_status != HighsStatus::OK) return return_status;
     tree.pop();
 
-    if (status == HighsStatus::Infeasible) continue;
+    if (hmos_[0].model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE)  continue;
 
     options_.messageLevel = message_level;
     tree.branch(node);
@@ -1137,11 +1078,12 @@ HighsStatus Highs::runBnb() {
   double mip_solve_final_time = timer_.readRunHighsClock();
 
   if (tree.getBestSolution().size() > 0) {
+    hmos_[0].model_status_ = HighsModelStatus::OPTIMAL;
     std::stringstream message;
     message << std::endl;
     message << "Optimal solution found.";
     message << std::endl;
-    message << "Run status : " << HighsStatusToString(HighsStatus::Optimal)
+    message << "Run status : " << highsModelStatusToString(hmos_[0].model_status_)
             << std::endl;
     message << "Objective  : " << std::scientific << tree.getBestObjective()
             << std::endl;
@@ -1151,6 +1093,7 @@ HighsStatus Highs::runBnb() {
 
     HighsPrintMessage(ML_MINIMAL, message.str().c_str());
   } else {
+    hmos_[0].model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     HighsPrintMessage(ML_ALWAYS, "No feasible solution found.\n");
   }
 
@@ -1187,13 +1130,14 @@ HighsStatus Highs::solveNode(Node& node) {
 
   iteration_count0 = hmos_[0].simplex_info_.iteration_count;
 
-  HighsStatus status = solveModelSimplex(hmos_[0]);
+  HighsStatus return_status = solveModelSimplex(hmos_[0]);
+  if (return_status != HighsStatus::OK) return return_status;
   simplex_has_run_ = true;
 
   iteration_count1 = hmos_[0].simplex_info_.iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
   solve0_objective_value = hmos_[0].simplex_info_.dual_objective_value;
-  solve0_status = (int)status;
+  solve0_status = (int)hmos_[0].model_status_;
   printf("Solve0: Obj = %12g; Iter =%6d; Status =%2d\n", solve0_objective_value,
          solve0_iteration_count, solve0_status);
 
@@ -1202,11 +1146,12 @@ HighsStatus Highs::solveNode(Node& node) {
     hmos_[0].simplex_lp_status_.has_basis = false;
     hmos_[0].basis_.valid_ = false;
     iteration_count0 = hmos_[0].simplex_info_.iteration_count;
-    HighsStatus status = solveModelSimplex(hmos_[0]);
+    HighsStatus return_status = solveModelSimplex(hmos_[0]);
+    if (return_status != HighsStatus::OK) return return_status;
     iteration_count1 = hmos_[0].simplex_info_.iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_objective_value = hmos_[0].simplex_info_.dual_objective_value;
-    solve1_status = (int)status;
+    solve1_status = (int)hmos_[0].model_status_;
     printf("Solve1: Obj = %12g; Iter =%6d; Status =%2d\n",
            solve1_objective_value, solve1_iteration_count, solve1_status);
     double rlv_objective_value_difference =
@@ -1218,7 +1163,7 @@ HighsStatus Highs::solveNode(Node& node) {
           "!! NodeSolveInequality: Status difference: Status0=%2d; Status1=%2d "
           "!!\n",
           solve0_status, solve1_status);
-    } else if (solve0_status != (int)HighsStatus::Infeasible) {
+    } else if (solve0_status != (int)HighsModelStatus::PRIMAL_INFEASIBLE) {
       // Unless infeasible, look for unequal objective
       if (rlv_objective_value_difference > 1e-12)
         printf(
@@ -1228,7 +1173,7 @@ HighsStatus Highs::solveNode(Node& node) {
   }
 
   // Set solution.
-  if (status == HighsStatus::Optimal) {
+  if (hmos_[0].model_status_ == HighsModelStatus::OPTIMAL) {
     node.primal_solution = hmos_[0].solution_.col_value;
     node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
@@ -1250,7 +1195,7 @@ HighsStatus Highs::solveNode(Node& node) {
   //   node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   // }
 
-  return status;
+  return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
 }
 
 HighsStatus Highs::solveRootNode(Node& root) {
@@ -1258,15 +1203,16 @@ HighsStatus Highs::solveRootNode(Node& root) {
   options_.messageLevel = ML_NONE;
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
-  HighsStatus status = solveModelSimplex(hmos_[0]);
+  HighsStatus return_status = solveModelSimplex(hmos_[0]);
+  if (return_status != HighsStatus::OK) return return_status;
   simplex_has_run_ = true;
 
-  if (status == HighsStatus::Optimal) {
+  if (hmos_[0].model_status_ == HighsModelStatus::OPTIMAL) {
     root.primal_solution = hmos_[0].solution_.col_value;
     root.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
 
-  return status;
+  return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
 }
 
 void Highs::underDevelopmentLogMessage(const string method_name) {

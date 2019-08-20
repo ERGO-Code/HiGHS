@@ -130,6 +130,11 @@ class Highs {
   double getObjectiveValue() const;
 
   /**
+   * @brief Returns the current status of the (first?) HighsModelObject
+   */
+  HighsModelStatus getModelStatus() const;
+
+  /**
    * @brief Returns the number of simplex iterations for the LP of the
    * (first?) HighsModelObject
    */

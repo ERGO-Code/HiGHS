@@ -192,8 +192,6 @@ class HighsSimplexInterface {
   void change_update_method(int updateMethod);
 #endif
 
-  HighsStatus lpStatusToHighsStatus(
-      SimplexSolutionStatus simplex_solution_status);
   /**
    * @brief Convert a SCIP baseStat for columns and rows to HiGHS basis
    * Postive  return value k implies invalid basis status for column k-1
@@ -240,10 +238,10 @@ class HighsSimplexInterface {
    * @brief Analyse the HiGHS solution and basis, looking for
    * inconsistencies, as well as primal and dual infeasibilities
    */
-  SimplexSolutionStatus analyseHighsSolutionAndBasis(
-						     const int report_level,
-						     const string message
-						     );
+  HighsModelStatus analyseHighsSolutionAndBasis(
+						const int report_level,
+						const string message
+						);
 
   /**
    * @brief Get the indices of the basic variables for SCIP

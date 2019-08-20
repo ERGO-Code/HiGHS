@@ -5,11 +5,10 @@
 
 // HiGHS status
 enum class HighsStatus {
-  NotSet,
   OK,
-  Info,
+    //  Info,
   Warning,
-  Error,
+    /*
   NotImplemented,
   Init,
   LpError,
@@ -27,6 +26,8 @@ enum class HighsStatus {
   Timeout,
   ReachedIterationLimit,
   NumericalDifficulties
+    */
+  Error
 };
 
 // Report a HighsStatus.

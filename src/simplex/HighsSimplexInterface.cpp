@@ -16,6 +16,7 @@
 #include "io/HMPSIO.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsUtils.h"
 
@@ -27,7 +28,7 @@ HighsStatus HighsSimplexInterface::addCols(
   printf("Called addCols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol,
          XnumNewNZ);
 #endif
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
@@ -214,7 +215,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   printf("Called addRows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow,
          XnumNewNZ);
 #endif
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::Error;
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
@@ -732,7 +733,7 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
         (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
-      simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
+      highs_model_object.model_status_ = HighsModelStatus::NOTSET;
     }
   }
   return HighsStatus::OK;
@@ -917,32 +918,6 @@ void HighsSimplexInterface::change_update_method(int updateMethod) {
   highs_model_object.factor_.change(updateMethod);
 }
 #endif
-
-HighsStatus HighsSimplexInterface::lpStatusToHighsStatus(
-    SimplexSolutionStatus simplex_solution_status) {
-  switch (simplex_solution_status) {
-    case SimplexSolutionStatus::OUT_OF_TIME:
-      return HighsStatus::Timeout;
-    case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return HighsStatus::ReachedDualObjectiveUpperBound;
-    case SimplexSolutionStatus::FAILED:
-      return HighsStatus::SolutionError;
-    case SimplexSolutionStatus::SINGULAR:
-      return HighsStatus::SolutionError;
-    case SimplexSolutionStatus::UNBOUNDED:
-      return HighsStatus::Unbounded;
-    case SimplexSolutionStatus::INFEASIBLE:
-      return HighsStatus::Infeasible;
-    case SimplexSolutionStatus::DUAL_FEASIBLE:
-      return HighsStatus::DualFeasible;
-    case SimplexSolutionStatus::PRIMAL_FEASIBLE:
-      return HighsStatus::PrimalFeasible;
-    case SimplexSolutionStatus::OPTIMAL:
-      return HighsStatus::Optimal;
-    default:
-      return HighsStatus::NotImplemented;
-  }
-}
 
 // Utilities to convert model basic/nonbasic status to/from SCIP-like status
 int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat,
@@ -1468,9 +1443,9 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
   return query;
 }
 
-SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
-									  const int report_level,
-									  const string message) {
+HighsModelStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
+								     const int report_level,
+								     const string message) {
   HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Analysis %s", message.c_str());
   HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -1699,7 +1674,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
   simplex_info.max_dual_infeasibility = max_dual_infeasibility;
   simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
-  SimplexSolutionStatus solution_status;
+  HighsModelStatus model_status;
   bool primal_feasible =
       num_primal_infeasibilities ==
       0;  // && max_primal_residual < primal_feasibility_tolerance;
@@ -1707,18 +1682,18 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
                        0;  // && max_dual_residual < dual_feasibility_tolerance;
   if (primal_feasible) {
     if (dual_feasible) {
-      solution_status = SimplexSolutionStatus::OPTIMAL;
+      model_status = HighsModelStatus::OPTIMAL;
     } else {
-      solution_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
     }
   } else {
     if (dual_feasible) {
-      solution_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+      model_status = HighsModelStatus::DUAL_FEASIBLE;
     } else {
-      solution_status = SimplexSolutionStatus::UNSET;
+      model_status = HighsModelStatus::NOTSET;
     }
   }
-  simplex_lp_status.solution_status = solution_status;
+  highs_model_object.model_status_ = model_status;
   if (num_nonzero_basic_duals) {
     HighsLogMessage(
 		    HighsMessageType::WARNING,
@@ -1758,11 +1733,11 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
-      SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+      highsModelStatusToString(highs_model_object.model_status_).c_str());
 #ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
 	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
-	 SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str(),
+	 highsModelStatusToString(highs_model_object.model_status_).c_str(),
 	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
 	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
 	 num_primal_residual, max_primal_residual, sum_primal_residual,
@@ -1770,7 +1745,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
 	 num_dual_residual, max_dual_residual, sum_dual_residual,
 	 num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
 #endif
-  return solution_status;
+  return model_status;
 }
 
 int HighsSimplexInterface::get_basic_indices(int* bind) {

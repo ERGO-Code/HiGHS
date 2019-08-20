@@ -209,3 +209,104 @@ int normaliseNames(const std::string name_type, const int num_name, std::vector<
   return 0;
 }
 
+// Return a string representation of HighsModelStatus.
+std::string highsModelStatusToString(HighsModelStatus model_status) {
+
+  switch (model_status) {
+  case HighsModelStatus::NOTSET:
+      return "Not Set";
+      break;
+  case HighsModelStatus::LOAD_ERROR:
+      return "Load error";
+      break;
+  case HighsModelStatus::MODEL_ERROR:
+      return "Model error";
+      break;
+  case HighsModelStatus::MODEL_EMPTY:
+      return "Model empty";
+      break;
+  case HighsModelStatus::PRESOLVE_ERROR:
+      return "Presolve error";
+      break;
+  case HighsModelStatus::SOLVE_ERROR:
+      return "Solve error";
+      break;
+  case HighsModelStatus::POSTSOLVE_ERROR:
+      return "Postsolve error";
+      break;
+  case HighsModelStatus::PRIMAL_FEASIBLE:
+      return "Primal feasible";
+      break;
+  case HighsModelStatus::DUAL_FEASIBLE:
+      return "Dual feasible";
+      break;
+  case HighsModelStatus::PRIMAL_INFEASIBLE:
+      return "Primal infeasible";
+      break;
+  case HighsModelStatus::PRIMAL_UNBOUNDED:
+      return "Primal unbounded";
+      break;
+  case HighsModelStatus::OPTIMAL:
+      return "Optimal";
+      break;
+  case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+      return "Reached dual objective upper bound";
+      break;
+  case HighsModelStatus::REACHED_TIME_LIMIT:
+      return "Reached time limit";
+      break;
+  case HighsModelStatus::REACHED_ITERATION_LIMIT:
+      return "Reached iteration limit";
+      break;
+    default:
+      return "Status toString() not implemented.";
+      break;
+  }
+  return "";
+}
+
+// Report a HighsModelStatus.
+void highsModelStatusReport(const char* message, HighsModelStatus model_status) {
+  HighsLogMessage(HighsMessageType::INFO, "%s: HighsModelStatus = %d - %s\n",
+                  message, (int)model_status, highsModelStatusToString(model_status).c_str());
+}
+
+// Return a string representation of HighsModelStatus.
+HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
+  switch (model_status) {
+  case HighsModelStatus::NOTSET:
+    return HighsStatus::Error;
+  case HighsModelStatus::LOAD_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::MODEL_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::MODEL_EMPTY:
+    return HighsStatus::Error;
+  case HighsModelStatus::PRESOLVE_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::SOLVE_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::POSTSOLVE_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::PRIMAL_FEASIBLE:
+    return HighsStatus::OK;
+  case HighsModelStatus::DUAL_FEASIBLE:
+    return HighsStatus::OK;
+  case HighsModelStatus::PRIMAL_INFEASIBLE:
+    return HighsStatus::OK;
+  case HighsModelStatus::PRIMAL_UNBOUNDED:
+    return HighsStatus::OK;
+  case HighsModelStatus::OPTIMAL:
+    return HighsStatus::OK;
+  case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    return HighsStatus::OK;
+  case HighsModelStatus::REACHED_TIME_LIMIT:
+    return HighsStatus::Warning;
+  case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    return HighsStatus::Warning;
+  default:
+    return HighsStatus::Error;
+  }
+}
+  
+
