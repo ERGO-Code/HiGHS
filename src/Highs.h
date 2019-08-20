@@ -516,7 +516,7 @@ class Highs {
 
   // Each HighsModelObject holds a const ref to its lp_. There are potentially
   // several hmos_ to allow for the solution of several different modified
-  // versions of the original LP for instance different levels of presolve.
+  // versions of the original LP. For instance different levels of presolve.
   std::vector<HighsModelObject> hmos_;
 
   bool simplex_has_run_;

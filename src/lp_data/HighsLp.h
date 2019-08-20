@@ -37,6 +37,24 @@ enum class LpAction {
   DEL_ROWS_BASIS_OK
 };
 
+enum class HighsModelStatus {
+  NOTSET = 0,
+    LOAD_ERROR,
+    MODEL_ERROR,
+    MODEL_EMPTY,
+    PRESOLVE_ERROR,
+    SOLVE_ERROR,
+    POSTSOLVE_ERROR,
+    PRIMAL_FEASIBLE,
+    DUAL_FEASIBLE,
+    PRIMAL_INFEASIBLE,
+    PRIMAL_UNBOUNDED,
+    OPTIMAL,
+    REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
+    REACHED_TIME_LIMIT,
+    REACHED_ITERATION_LIMIT
+    };
+
 class HighsLp {
  public:
   // Model data
@@ -86,6 +104,7 @@ class HighsLp {
 
     return true;
   }
+
 };
 
 // Cost, column and row scaling factors
