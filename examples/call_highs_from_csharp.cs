@@ -21,10 +21,5 @@ class Program {
 
       int status = HighsLpSolver.call(model, ref sol, ref bas);
       Console.WriteLine("Status: " + status);
-
-      HighsLpSolver solver = new HighsLpSolver();
-
-      solver.readFromFile("qap04.mps");
-      solver.run();
    }
 }
