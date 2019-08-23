@@ -137,7 +137,7 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
 }
 
 HighsStatus assessLpDimensions(const HighsLp& lp) {
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
 
   // Use error_found to track whether an error has been found in multiple tests
   bool error_found = false;
@@ -339,7 +339,6 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os, const int ix_dim,
   return_status = HighsStatus::OK;
   bool error_found = false;
   bool warning_found = false;
-  bool info_found = false;
   // Work through the data to be assessed.
   //
   // Loop is k \in [from_k...to_k) covering the entries in the
@@ -433,14 +432,12 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os, const int ix_dim,
           HighsMessageType::INFO,
           "%3ss:%12d lower bounds exceeding %12g are treated as -Infinity",
           type, num_infinite_lower_bound, -infinite_bound);
-      info_found = true;
     }
     if (num_infinite_upper_bound) {
       HighsLogMessage(
           HighsMessageType::INFO,
           "%3ss:%12d upper bounds exceeding %12g are treated as +Infinity",
           type, num_infinite_upper_bound, infinite_bound);
-      info_found = true;
     }
   }
 
@@ -466,7 +463,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
   if (num_nz > 0 && vec_dim <= 0) return HighsStatus::Error;
   if (num_nz <= 0) return HighsStatus::OK;
 
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
   bool error_found = false;
   bool warning_found = false;
 
@@ -787,7 +784,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
                          const bool valid_matrix) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
   int newNumCol = lp.numCol_ + num_new_col;
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
@@ -902,7 +899,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
                          const HighsOptions& options, bool valid_matrix) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
   // int new_num_row = lp.numRow_ + num_new_row;
   // Assess the bounds and matrix indices, returning on error
   bool normalise = false;
@@ -1113,7 +1110,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
       lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
       mask, col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (set != NULL) {
+  if (col_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpVectors\n");
     if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
@@ -1163,7 +1160,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
       lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
       mask, col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (set != NULL) {
+  if (col_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpMatrix\n");
     if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
@@ -1256,7 +1253,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
       lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
       mask, row_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (set != NULL) {
+  if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpVectors\n");
     if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
@@ -1305,7 +1302,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
       lp.numRow_, interval, from_row, to_row, set, num_set_entries, row_set,
       mask, row_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (set != NULL) {
+  if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpMatrix\n");
     if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
@@ -1423,7 +1420,7 @@ HighsStatus changeLpCosts(HighsLp& lp, const bool interval, const int from_col,
   HighsStatus call_status = assessIntervalSetMask(
       lp.numCol_, interval, from_col, to_col, set, num_set_entries, col_set,
       mask, col_mask, from_k, to_k);
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
   if (call_status != HighsStatus::OK) {
     return_status = call_status;
     return return_status;
@@ -1494,7 +1491,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
   HighsStatus call_status = assessIntervalSetMask(
       ix_dim, interval, from_ix, to_ix, set, num_set_entries, ix_set, mask,
       ix_mask, from_k, to_k);
-  HighsStatus return_status = HighsStatus::Error;
+  HighsStatus return_status = HighsStatus::OK;
   if (call_status != HighsStatus::OK) {
     return_status = call_status;
     return return_status;

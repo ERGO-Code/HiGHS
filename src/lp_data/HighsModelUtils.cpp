@@ -241,10 +241,10 @@ std::string highsModelStatusToString(HighsModelStatus model_status) {
       return "Dual feasible";
       break;
   case HighsModelStatus::PRIMAL_INFEASIBLE:
-      return "Primal infeasible";
+    return "Infeasible";//"Primal infeasible";
       break;
   case HighsModelStatus::PRIMAL_UNBOUNDED:
-      return "Primal unbounded";
+    return "Unbounded";//"Primal unbounded";
       break;
   case HighsModelStatus::OPTIMAL:
       return "Optimal";

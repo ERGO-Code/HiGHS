@@ -182,6 +182,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
   }
 
+  // JAJH 230819: Frig to retain highs_model_object.model_status_ 
+  HighsModelStatus save_model_status = highs_model_object.model_status_;
   if (highs_model_object.model_status_ == HighsModelStatus::OPTIMAL) {
     // Optimal solution: copy the solution and basis
     simplex_interface.convertSimplexToHighsSolution();
@@ -193,6 +195,8 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     if (simplex_info.analyseLpSolution)
       simplex_interface.analyseHighsSolutionAndBasis(report_level, "after running the simplex solver");
   }
+  // JAJH 230819: Frig to retain highs_model_object.model_status_ 
+  highs_model_object.model_status_ = save_model_status;
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
 #endif
