@@ -24,6 +24,171 @@
 
 enum class OptionStatus { OK = 0, NO_FILE, UNKNOWN_OPTION, ILLEGAL_VALUE };
 
+enum class OptionEntryType { BOOL = 0, INT, DOUBLE, STRING };
+
+class OptionEntry {
+ public:
+  OptionEntryType type;
+  std::string name;
+  std::string description;
+  bool advanced;
+  
+  OptionEntry(OptionEntryType Xtype, std::string Xname, std::string Xdescription, bool Xadvanced) {
+    this->type = Xtype;
+    this->name = Xname;
+    this->description = Xdescription;
+    this->advanced = Xadvanced;
+  }
+  
+  ~OptionEntry() {}
+};
+
+class OptionEntryBool : public OptionEntry {
+ public:
+  bool* value;
+  bool default_value;
+ OptionEntryBool(
+		 std::string Xname,
+		 std::string Xdescription,
+		 bool Xadvanced,
+		 bool* Xvalue_pointer,
+		 bool Xdefault_value) : OptionEntry(
+						    OptionEntryType::BOOL,
+						    Xname,
+						    Xdescription,
+						    Xadvanced)  {
+    advanced = Xadvanced;
+    value = Xvalue_pointer;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+  
+  void assignvalue(bool Xvalue) {
+    *value = Xvalue;
+  }
+  
+  ~OptionEntryBool() {}
+};
+
+class OptionEntryInt : public OptionEntry {
+ public:
+  int* value;
+  int lower_bound;
+  int upper_bound;
+  int default_value;
+ OptionEntryInt(
+		std::string Xname,
+		std::string Xdescription,
+		bool Xadvanced,
+		int* Xvalue_pointer,
+		int Xlower_bound,
+		int Xupper_bound,
+		int Xdefault_value) : OptionEntry(
+						  OptionEntryType::INT,
+						  Xname,
+						  Xdescription,
+						  Xadvanced) {
+    value = Xvalue_pointer;
+    lower_bound = Xlower_bound;
+    upper_bound = Xupper_bound;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+
+void assignvalue(int Xvalue) {
+  *value = Xvalue;
+}
+
+~OptionEntryInt() {}
+};
+
+class OptionEntryDouble : public OptionEntry {
+ public:
+  double* value;
+  double lower_bound;
+  double upper_bound;
+  double default_value;
+  OptionEntryDouble(std::string Xname,
+		    std::string Xdescription,
+		    bool Xadvanced,
+		    double* Xvalue_pointer,
+		    double Xlower_bound,
+		    double Xupper_bound,
+		    double Xdefault_value) : OptionEntry(
+							 OptionEntryType::DOUBLE,
+							 Xname,
+							 Xdescription,
+							 Xadvanced)  {
+    value = Xvalue_pointer;
+    lower_bound = Xlower_bound;
+    upper_bound = Xupper_bound;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+
+void assignvalue(double Xvalue) {
+  *value = Xvalue;
+}
+
+~OptionEntryDouble() {}
+};
+
+class OptionEntryString : public OptionEntry {
+ public:
+  std::string* value;
+  std::string default_value;
+  OptionEntryString(
+		    std::string Xname,
+		    std::string Xdescription,
+		    bool Xadvanced,
+		    std::string* Xvalue_pointer,
+		    std::string Xdefault_value) : OptionEntry(
+							      OptionEntryType::STRING,
+							      Xname,
+							      Xdescription,
+							      Xadvanced)  {
+    value = Xvalue_pointer;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+
+void assignvalue(std::string Xvalue) {
+  *value = Xvalue;
+}
+
+~OptionEntryString() {}
+};
+
+inline const char* bool2string(bool b);
+
+bool boolFromString(const std::string value, bool& bool_value);
+
+OptionStatus getOptionIndex(const std::string name, const std::vector<OptionEntry*> options, int& index);
+
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, bool& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, int& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, double& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, std::string& value);
+
+OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const bool value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const int value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const double value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const std::string value);
+
+OptionStatus setOptionValue(OptionEntryBool& option, const bool value);
+OptionStatus setOptionValue(OptionEntryInt& option, const int value);
+OptionStatus setOptionValue(OptionEntryDouble& option, const double value);
+OptionStatus setOptionValue(OptionEntryString& option, std::string const value);
+
+void reportOptions(FILE* file, const std::vector<OptionEntry*> options, const bool force_report=false);
+void reportOption(FILE* file, const OptionEntryBool& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionEntryInt& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionEntryDouble& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionEntryString& option, const bool force_report=false);
+
+//======================================
+
+
 const string on_string = "on";
 const string off_string = "off";
 
