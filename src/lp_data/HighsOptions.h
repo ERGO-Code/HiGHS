@@ -24,36 +24,34 @@
 
 enum class OptionStatus { OK = 0, NO_FILE, UNKNOWN_OPTION, ILLEGAL_VALUE };
 
-enum class OptionEntryType { BOOL = 0, INT, DOUBLE, STRING };
-
-class OptionEntry {
+class OptionRecord {
  public:
-  OptionEntryType type;
+  HighsOptionType type;
   std::string name;
   std::string description;
   bool advanced;
   
-  OptionEntry(OptionEntryType Xtype, std::string Xname, std::string Xdescription, bool Xadvanced) {
+  OptionRecord(HighsOptionType Xtype, std::string Xname, std::string Xdescription, bool Xadvanced) {
     this->type = Xtype;
     this->name = Xname;
     this->description = Xdescription;
     this->advanced = Xadvanced;
   }
   
-  ~OptionEntry() {}
+  ~OptionRecord() {}
 };
 
-class OptionEntryBool : public OptionEntry {
+class OptionRecordBool : public OptionRecord {
  public:
   bool* value;
   bool default_value;
- OptionEntryBool(
+ OptionRecordBool(
 		 std::string Xname,
 		 std::string Xdescription,
 		 bool Xadvanced,
 		 bool* Xvalue_pointer,
-		 bool Xdefault_value) : OptionEntry(
-						    OptionEntryType::BOOL,
+		 bool Xdefault_value) : OptionRecord(
+						    HighsOptionType::BOOL,
 						    Xname,
 						    Xdescription,
 						    Xadvanced)  {
@@ -67,24 +65,24 @@ class OptionEntryBool : public OptionEntry {
     *value = Xvalue;
   }
   
-  ~OptionEntryBool() {}
+  ~OptionRecordBool() {}
 };
 
-class OptionEntryInt : public OptionEntry {
+class OptionRecordInt : public OptionRecord {
  public:
   int* value;
   int lower_bound;
   int upper_bound;
   int default_value;
- OptionEntryInt(
+ OptionRecordInt(
 		std::string Xname,
 		std::string Xdescription,
 		bool Xadvanced,
 		int* Xvalue_pointer,
 		int Xlower_bound,
 		int Xupper_bound,
-		int Xdefault_value) : OptionEntry(
-						  OptionEntryType::INT,
+		int Xdefault_value) : OptionRecord(
+						  HighsOptionType::INT,
 						  Xname,
 						  Xdescription,
 						  Xadvanced) {
@@ -99,23 +97,23 @@ void assignvalue(int Xvalue) {
   *value = Xvalue;
 }
 
-~OptionEntryInt() {}
+~OptionRecordInt() {}
 };
 
-class OptionEntryDouble : public OptionEntry {
+class OptionRecordDouble : public OptionRecord {
  public:
   double* value;
   double lower_bound;
   double upper_bound;
   double default_value;
-  OptionEntryDouble(std::string Xname,
+  OptionRecordDouble(std::string Xname,
 		    std::string Xdescription,
 		    bool Xadvanced,
 		    double* Xvalue_pointer,
 		    double Xlower_bound,
 		    double Xupper_bound,
-		    double Xdefault_value) : OptionEntry(
-							 OptionEntryType::DOUBLE,
+		    double Xdefault_value) : OptionRecord(
+							 HighsOptionType::DOUBLE,
 							 Xname,
 							 Xdescription,
 							 Xadvanced)  {
@@ -130,20 +128,20 @@ void assignvalue(double Xvalue) {
   *value = Xvalue;
 }
 
-~OptionEntryDouble() {}
+~OptionRecordDouble() {}
 };
 
-class OptionEntryString : public OptionEntry {
+class OptionRecordString : public OptionRecord {
  public:
   std::string* value;
   std::string default_value;
-  OptionEntryString(
+  OptionRecordString(
 		    std::string Xname,
 		    std::string Xdescription,
 		    bool Xadvanced,
 		    std::string* Xvalue_pointer,
-		    std::string Xdefault_value) : OptionEntry(
-							      OptionEntryType::STRING,
+		    std::string Xdefault_value) : OptionRecord(
+							      HighsOptionType::STRING,
 							      Xname,
 							      Xdescription,
 							      Xadvanced)  {
@@ -156,35 +154,35 @@ void assignvalue(std::string Xvalue) {
   *value = Xvalue;
 }
 
-~OptionEntryString() {}
+~OptionRecordString() {}
 };
 
 inline const char* bool2string(bool b);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(const std::string name, const std::vector<OptionEntry*> options, int& index);
+OptionStatus getOptionIndex(const std::string name, const std::vector<OptionRecord*> option_records, int& index);
 
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, bool& value);
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, int& value);
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, double& value);
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionEntry*> options, std::string& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, bool& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, int& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, double& value);
+OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, std::string& value);
 
-OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const bool value);
-OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const int value);
-OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const double value);
-OptionStatus setOptionValue(const std::string name, std::vector<OptionEntry*> options, const std::string value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const bool value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const int value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const double value);
+OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const std::string value);
 
-OptionStatus setOptionValue(OptionEntryBool& option, const bool value);
-OptionStatus setOptionValue(OptionEntryInt& option, const int value);
-OptionStatus setOptionValue(OptionEntryDouble& option, const double value);
-OptionStatus setOptionValue(OptionEntryString& option, std::string const value);
+OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
+OptionStatus setOptionValue(OptionRecordInt& option, const int value);
+OptionStatus setOptionValue(OptionRecordDouble& option, const double value);
+OptionStatus setOptionValue(OptionRecordString& option, std::string const value);
 
-void reportOptions(FILE* file, const std::vector<OptionEntry*> options, const bool force_report=false);
-void reportOption(FILE* file, const OptionEntryBool& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionEntryInt& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionEntryDouble& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionEntryString& option, const bool force_report=false);
+void reportOptions(FILE* file, const std::vector<OptionRecord*> option_records, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false);
 
 //======================================
 
@@ -257,11 +255,13 @@ enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
 struct HighsOptions {
+  std::vector<OptionRecord*> records;
+
   std::string filename = FILENAME_DEFAULT;
   std::string options_file = OPTIONS_FILE_DEFAULT;
 
   // Options passed through the command line
-  PresolveOption presolve_option = PresolveOption::DEFAULT;
+  int presolve_option = PresolveOption::DEFAULT;
   CrashOption crash_option = CrashOption::DEFAULT;
   ParallelOption parallel_option = ParallelOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
