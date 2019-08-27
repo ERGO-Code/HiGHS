@@ -32,11 +32,11 @@ enum HighsPrintMessageLevel {
   ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL
 };
 
+enum PresolveOption { OFF = 0, ON, DEFAULT = ON };
+
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
 enum class ParallelOption { OFF = 0, ON, DEFAULT = OFF };
-
-enum class PresolveOption { OFF = 0, ON, DEFAULT = ON };
 
 enum class CrashOption { OFF = 0, ON, DEFAULT = OFF };
 

@@ -241,8 +241,8 @@ class PresolveInfo {
  public:
   PresolveInfo() {}
   // option_presolve : 0 means don't presolve.
-  PresolveInfo(PresolveOption option_presolve, const HighsLp& lp) {
-    if (option_presolve == PresolveOption::ON) {
+  PresolveInfo(int option_presolve, const HighsLp& lp) {
+    if (option_presolve == (int)PresolveOption::ON) {
       lp_ = &lp;
       presolve_.push_back(Presolve());
     }
