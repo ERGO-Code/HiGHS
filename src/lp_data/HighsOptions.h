@@ -261,7 +261,12 @@ struct HighsOptions {
   std::string options_file = OPTIONS_FILE_DEFAULT;
 
   // Options passed through the command line
-  int presolve_option = PresolveOption::DEFAULT;
+  int presolve_option;// = PresolveOption::DEFAULT;
+  OptionRecordInt* presolve_record = new OptionRecordInt("presolve", "Presolve command line option",
+							 false, &presolve_option,
+							 0, 1, (int)PresolveOption::DEFAULT);
+  //  records.push_back(presolve_record);
+
   CrashOption crash_option = CrashOption::DEFAULT;
   ParallelOption parallel_option = ParallelOption::DEFAULT;
   SimplexOption simplex_option = SimplexOption::DEFAULT;
