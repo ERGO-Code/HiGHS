@@ -30,6 +30,10 @@ void* msgcb_data = NULL;
 char msgbuffer[65536];
 
 void HighsPrintMessage(unsigned int level, const char* format, ...) {
+  if (output == NULL) {
+    return;
+  }
+
   if (messageLevel & level) {
     va_list argptr;
     va_start(argptr, format);
@@ -50,6 +54,10 @@ void HighsPrintMessage(unsigned int level, const char* format, ...) {
 }
 
 void HighsLogMessage(HighsMessageType type, const char* format, ...) {
+  if (logfile == NULL) {
+    return;
+  }
+  
   time_t rawtime;
   struct tm* timeinfo;
 
