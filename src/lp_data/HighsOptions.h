@@ -254,21 +254,25 @@ enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 // are just what has been used to parse options from argv.
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
-struct HighsOptions {
-  std::vector<OptionRecord*> records;
+class HighsOptions {
+ public:
+  HighsOptions() {
+  OptionRecordInt* presolve_record = new OptionRecordInt("presolve", "Presolve command line option",
+							 false, &presolve_option,
+							 0, 1, PRESOLVE_OPTION_DEFAULT);
 
+  records.push_back(presolve_record);
+
+  }
+  std::vector<OptionRecord*> records;
   std::string filename = FILENAME_DEFAULT;
   std::string options_file = OPTIONS_FILE_DEFAULT;
 
   // Options passed through the command line
   int presolve_option = PRESOLVE_OPTION_DEFAULT;
-  OptionRecordInt* presolve_record = new OptionRecordInt("presolve", "Presolve command line option",
-							 false, &presolve_option,
-							 0, 1, PRESOLVE_OPTION_DEFAULT);
   int simplex_option = SIMPLEX_OPTION_DEFAULT;
   int crash_option = CRASH_OPTION_DEFAULT;
   int parallel_option = PARALLEL_OPTION_DEFAULT;
-  //  records.push_back(presolve_record);
 
   bool ipx = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
@@ -337,6 +341,7 @@ struct HighsOptions {
   bool feasibility_strategy_dualize = false;
 
   bool mip = false;
+
 };
 
 
