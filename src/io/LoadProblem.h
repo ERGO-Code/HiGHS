@@ -95,28 +95,7 @@ bool loadOptionsFromFile(HighsOptions& options) {
       }
       option = line.substr(0, equals);
       value = line.substr(equals + 1, line.size() - equals);
-      OptionStatus status;
-      HighsOptionType type;
-      status = getOptionType(option, type);
-      switch( type )
-	{
-	case HighsOptionType::BOOL:
-	  printf("ERROR: No method to set options of type bool\n");
-	  return false;
-	case HighsOptionType::INT:
-	  status = setOptionValue(options, option, atoi(value.c_str()));
-	  break;
-	case HighsOptionType::DOUBLE:
-	  status = setOptionValue(options, option, atof(value.c_str()));
-	  break;
-	case HighsOptionType::STRING:
-	  status = setOptionValue(options, option, value);
-	  break;
-	default:
-	  printf("ERROR: No method to set option %s of unknown type %d\n", option.c_str(), (int)type);
-	  return false;
-	}
-      if (status != OptionStatus::OK) return false;
+      if (setOptionValue(option, options.records, value) != OptionStatus::OK) return false;
     }
   } else {
     HighsLogMessage(HighsMessageType::ERROR, "Options file not found.");

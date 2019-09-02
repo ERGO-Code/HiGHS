@@ -68,6 +68,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       }
     }
 
+    /*
     if (result.count(presolve_string)) {
       std::string value = result[presolve_string].as<std::string>();
       if (setPresolveValue(options, value) == OptionStatus::ILLEGAL_VALUE)
@@ -111,7 +112,7 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
           OptionStatus::ILLEGAL_VALUE)
         return false;
     }
-
+    */
     if (result.count(options_file_string)) {
       auto& v = result[options_file_string].as<std::vector<std::string>>();
       if (v.size() > 1) {
@@ -122,12 +123,14 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       if (!loadOptionsFromFile(options)) return false;
     }
 
+    /*
     // For testing of new parser
     if (result.count(mps_parser_type_string)) {
       std::string value = result[mps_parser_type_string].as<std::string>();
       if (setParserTypeValue(options, value) == OptionStatus::ILLEGAL_VALUE)
         return false;
     }
+    */
   } catch (const cxxopts::OptionException& e) {
     HighsLogMessage(HighsMessageType::ERROR, "Error parsing options: %s",
                     e.what());

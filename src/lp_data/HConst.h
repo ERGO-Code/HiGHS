@@ -32,17 +32,17 @@ enum HighsPrintMessageLevel {
   ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL
 };
 
-enum PresolveOption { OFF = 0, ON, DEFAULT = ON };
-
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
-enum class ParallelOption { OFF = 0, ON, DEFAULT = OFF };
+enum PresolveOption { PRESOLVE_OPTION_OFF = 0, PRESOLVE_OPTION_ON, PRESOLVE_OPTION_DEFAULT = PRESOLVE_OPTION_ON };
 
-enum class CrashOption { OFF = 0, ON, DEFAULT = OFF };
+enum ParallelOption { PARALLEL_OPTION_OFF = 0, PARALLEL_OPTION_ON, PARALLEL_OPTION_DEFAULT = PARALLEL_OPTION_OFF };
 
-enum class SimplexOption { OFF = 0, ON, DEFAULT = ON };
+enum CrashOption { CRASH_OPTION_OFF = 0, CRASH_OPTION_ON, CRASH_OPTION_DEFAULT = CRASH_OPTION_OFF };
 
-enum class IpmOption { OFF = 0, ON, DEFAULT = OFF };
+enum SimplexOption { SIMPLEX_OPTION_OFF = 0, SIMPLEX_OPTION_ON, SIMPLEX_OPTION_DEFAULT = SIMPLEX_OPTION_ON };
+
+enum IpmOption { IPM_OPTION_OFF = 0, IPM_OPTION_ON, IPM_OPTION_DEFAULT = IPM_OPTION_OFF };
 
 const std::string FILENAME_DEFAULT = "";
 const std::string OPTIONS_FILE_DEFAULT = "";

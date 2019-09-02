@@ -52,31 +52,38 @@ class Highs {
   int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
 
   /**
-   * @brief Sets an option to the string/double/int value if it's
-   * legal and, for double/int of the correct type
+   * @brief Sets an option to the bool/int/double/string  value if it's
+   * legal and, for bool/int/double, only if it's of the correct type
    */
   HighsStatus setHighsOptionValue(const std::string& option,
-                                  const std::string& value);
+                                  const bool value);
 
   HighsStatus setHighsOptionValue(const std::string& option,
-                                  const double& value);
+                                  const int value);
 
   HighsStatus setHighsOptionValue(const std::string& option,
-                                  const int& value);
+                                  const double value);
+
+  HighsStatus setHighsOptionValue(const std::string& option,
+                                  const std::string value);
+
 
   /**
-   * @brief Gets an option value as string/double/int and, for
-   * double/int, only if it's of the correct type.
+   * @brief Gets an option value as bool/int/double/string and, for
+   * bool/int/double, only if it's of the correct type.
    */
   HighsStatus getHighsOptionValue(const std::string& option,
-                                  std::string& value);
-  
-  HighsStatus getHighsOptionValue(const std::string& option,
-                                  double& value);
+                                  bool& value);
 
   HighsStatus getHighsOptionValue(const std::string& option,
                                   int& value);
 
+  HighsStatus getHighsOptionValue(const std::string& option,
+                                  double& value);
+
+  HighsStatus getHighsOptionValue(const std::string& option,
+                                  std::string& value);
+  
   /**
    * @brief Clears the vector of HighsModelObjects (hmos), creates a
    * HighsModelObject for this LP and makes it the first of the vector

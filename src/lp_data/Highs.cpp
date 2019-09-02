@@ -39,98 +39,53 @@ Highs::Highs() {
   simplex_has_run_ = false;
 }
 
-  HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                  const std::string& value) {
-    OptionStatus status;
-    HighsOptionType type;
-    status = getOptionType(option, type);
-    switch( type )
-      {
-      case HighsOptionType::BOOL:
-	printf("ERROR: No method to set option %s of type bool\n", option.c_str());
-	return HighsStatus::Error;
-      case HighsOptionType::INT:
-	status = setOptionValue(options_, option, atoi(value.c_str()));
-	break;
-      case HighsOptionType::DOUBLE:
-	status = setOptionValue(options_, option, atof(value.c_str()));
-	break;
-      case HighsOptionType::STRING:
-	status = setOptionValue(options_, option, value);
-	break;
-      default:
-	printf("ERROR: No method to set option %s of unknown type %d\n", option.c_str(), (int)type);
-	return HighsStatus::Error;
-      }
-    if (status == OptionStatus::OK) return HighsStatus::OK;
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+				       const bool value) {
+    if (setOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
     return HighsStatus::Error;
   }
 
-  HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                  const double& value) {
-    OptionStatus status = setOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+				       const int value) {
+    if (setOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
     return HighsStatus::Error;
-  }
+}
 
-  HighsStatus Highs::setHighsOptionValue(const std::string& option,
-                                  const int& value) {
-    OptionStatus status = setOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+				       const double value) {
+  if (setOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
 
-  HighsStatus Highs::getHighsOptionValue(const std::string& option,
-                                  std::string& value) {
-    OptionStatus status;
-    HighsOptionType type;
-    std::stringstream stringstream_value;
-    status = getOptionType(option, type);
-    switch( type )
-      {
-      case HighsOptionType::BOOL:
-	printf("ERROR: No method to get option %s of type bool\n", option.c_str());
-	return HighsStatus::Error;
-      case HighsOptionType::INT:
-	int int_value;
-	status = getOptionValue(options_, option, int_value);
-	if (status == OptionStatus::OK) {
-	  stringstream_value << int_value;
-	  value = stringstream_value.str();
-	}
-	break;
-      case HighsOptionType::DOUBLE:
-	double double_value;
-	status = getOptionValue(options_, option, double_value);
-	if (status == OptionStatus::OK) {
-	  stringstream_value << double_value;
-	  value = stringstream_value.str();
-	}
-	break;
-      case HighsOptionType::STRING:
-	status = getOptionValue(options_, option, value);
-	break;
-      default:
-	printf("ERROR: No method to get option %s of unknown type %d\n", option.c_str(), (int)type);
-	return HighsStatus::Error;
-      }
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
-  HighsStatus Highs::getHighsOptionValue(const std::string& option,
-                                  double& value) {
-    OptionStatus status = getOptionValue(options_, option, value);
-    printf("getHighsOptionValue(%s, %g)\n", option.c_str(), value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+				       const std::string value) {
+  if (setOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
 
-  HighsStatus Highs::getHighsOptionValue(const std::string& option,
-                                  int& value) {
-    OptionStatus status = getOptionValue(options_, option, value);
-    if (status == OptionStatus::OK) return HighsStatus::OK;
-    return HighsStatus::Error;
-  }
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+				       bool& value) {
+  if (getOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+				       int& value) {
+  if (getOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+				       double& value) {
+  if (getOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getHighsOptionValue(const std::string& option,
+				       std::string& value) {
+  if (getOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
 
 
 HighsStatus Highs::initializeLp(const HighsLp& lp) {
@@ -227,7 +182,7 @@ HighsStatus Highs::run() {
   // todo: check options.
   HighsSetIO(options_);
 
-  reportOptionsValue(options_, 0);
+  reportOptions(stdout, options_.records);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();
 
@@ -942,7 +897,7 @@ bool Highs::deleteRows(int* mask) {
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
-  if (options_.presolve_option != PresolveOption::ON)
+  if (options_.presolve_option != PRESOLVE_OPTION_ON)
     return HighsPresolveStatus::NotPresolved;
 
   if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;

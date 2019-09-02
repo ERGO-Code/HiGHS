@@ -161,24 +161,24 @@ inline const char* bool2string(bool b);
 
 bool boolFromString(const std::string value, bool& bool_value);
 
-OptionStatus getOptionIndex(const std::string name, const std::vector<OptionRecord*> option_records, int& index);
+OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
 
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, bool& value);
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, int& value);
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, double& value);
-OptionStatus getOptionValue(const std::string name, const std::vector<OptionRecord*> option_records, std::string& value);
-
-OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const bool value);
-OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const int value);
-OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const double value);
-OptionStatus setOptionValue(const std::string name, std::vector<OptionRecord*> option_records, const std::string value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
 OptionStatus setOptionValue(OptionRecordInt& option, const int value);
 OptionStatus setOptionValue(OptionRecordDouble& option, const double value);
 OptionStatus setOptionValue(OptionRecordString& option, std::string const value);
 
-void reportOptions(FILE* file, const std::vector<OptionRecord*> option_records, const bool force_report=false);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
+
+void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false);
@@ -261,15 +261,15 @@ struct HighsOptions {
   std::string options_file = OPTIONS_FILE_DEFAULT;
 
   // Options passed through the command line
-  int presolve_option;// = PresolveOption::DEFAULT;
+  int presolve_option = PRESOLVE_OPTION_DEFAULT;
   OptionRecordInt* presolve_record = new OptionRecordInt("presolve", "Presolve command line option",
 							 false, &presolve_option,
-							 0, 1, (int)PresolveOption::DEFAULT);
+							 0, 1, PRESOLVE_OPTION_DEFAULT);
+  int simplex_option = SIMPLEX_OPTION_DEFAULT;
+  int crash_option = CRASH_OPTION_DEFAULT;
+  int parallel_option = PARALLEL_OPTION_DEFAULT;
   //  records.push_back(presolve_record);
 
-  CrashOption crash_option = CrashOption::DEFAULT;
-  ParallelOption parallel_option = ParallelOption::DEFAULT;
-  SimplexOption simplex_option = SimplexOption::DEFAULT;
   bool ipx = false;
   double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
@@ -339,92 +339,11 @@ struct HighsOptions {
   bool mip = false;
 };
 
-OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
-			    const std::string& value);
-
-OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
-			    const double& value);
-
-OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
-			    const int& value);
-
-OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
-                            std::string& value);
-
-OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
-                            double& value);
-
-OptionStatus getOptionValue(HighsOptions& options, const std::string& option,
-                            int& value);
-
-OptionStatus getOptionType(const std::string& option,
-			   HighsOptionType& type);
 
 // Called before solve. This would check whether tolerances are set to correct
 // values and all options are consistent.
 OptionStatus checkOptionsValue(HighsOptions& options);
-void reportOptionsValue(const HighsOptions& options,
-                        const int report_level = 0);
 void setHsolOptions(HighsOptions& options);
-
-OptionStatus setPresolveValue(HighsOptions& options, const std::string& value);
-OptionStatus setCrashValue(HighsOptions& options, const std::string& value);
-OptionStatus setParallelValue(HighsOptions& options, const std::string& value);
-OptionStatus setSimplexValue(HighsOptions& options, const std::string& value);
-OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
-OptionStatus setHighsRunTimeLimitValue(HighsOptions& options,
-                                       const double& value);
-OptionStatus setSimplexIterationLimitValue(HighsOptions& options,
-                                           const int& value);
-OptionStatus setParserTypeValue(HighsOptions& options,
-                                const std::string& value);
-OptionStatus setMipValue(HighsOptions& options, const std::string& value);
-OptionStatus setFindFeasibilityValue(HighsOptions& options,
-                                     const std::string& value);
-OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options,
-                                             const std::string& value);
-OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options,
-                                            const std::string& value);
-
-OptionStatus setRunAsHsolValue(HighsOptions& options, const int& value);
-OptionStatus setKeepNRowsValue(HighsOptions& options, const int& value);
-
-OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
-OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
-OptionStatus setSmallMatrixValueValue(HighsOptions& options,
-                                      const double& value);
-OptionStatus setLargeMatrixValueValue(HighsOptions& options,
-                                      const double& value);
-OptionStatus setAllowedSimplexScaleFactorValue(HighsOptions& options,
-                                               const int& value);
-OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options,
-                                                const double& value);
-OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options,
-                                              const double& value);
-OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options,
-                                                  const double& value);
-OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
-OptionStatus setSimplexDualiseStrategyValue(HighsOptions& options,
-                                            const int& value);
-OptionStatus setSimplexPermuteStrategyValue(HighsOptions& options,
-                                            const int& value);
-OptionStatus setSimplexScaleStrategyValue(HighsOptions& options,
-                                          const int& value);
-OptionStatus setSimplexCrashStrategyValue(HighsOptions& options,
-                                          const int& value);
-OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options,
-                                                     const int& value);
-OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options,
-                                                   const int& value);
-OptionStatus setSimplexPriceStrategyValue(HighsOptions& options,
-                                          const int& value);
-
-OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options,
-                                                  const int& value);
-OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options,
-                                                      const double& value);
-
-OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
 
 SimplexStrategy intToSimplexStrategy(const int& value);
 SimplexDualiseStrategy intToSimplexDualiseStrategy(const int& value);
