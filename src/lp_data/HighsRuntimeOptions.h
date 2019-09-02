@@ -68,13 +68,18 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
       }
     }
 
-    /*
     if (result.count(presolve_string)) {
       std::string value = result[presolve_string].as<std::string>();
-      if (setPresolveValue(options, value) == OptionStatus::ILLEGAL_VALUE)
-        return false;
+      printf("Found option %s = %s\n", presolve_string.c_str(), value.c_str());
+      //      if (setOptionValue(presolve_string, options.records, value) != OptionStatus::OK) return false;
+      if (value == "off") {
+	options.presolve_option = 0;
+      } else {
+	options.presolve_option = 1;
+      }
     }
 
+    /*
     if (result.count(crash_string)) {
       std::string value = result[crash_string].as<std::string>();
       if (setCrashValue(options, value) == OptionStatus::ILLEGAL_VALUE)
