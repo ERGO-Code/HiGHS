@@ -20,9 +20,9 @@ set(CPACK_PACKAGE_VERSION_MINOR "${HIGHS_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${HIGHS_VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "University of Edinburgh")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${HIGHS_BINARY_DIR}/lib)
 
 option(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS "Export all symbols into the DLL" ON)
 
@@ -122,18 +122,18 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
-configure_file(${CMAKE_SOURCE_DIR}/src/HConfig.h.in ${CMAKE_BINARY_DIR}/HConfig.h)
+configure_file(${HIGHS_SOURCE_DIR}/src/HConfig.h.in ${HIGHS_BINARY_DIR}/HConfig.h)
 include_directories(
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/app
-    ${CMAKE_SOURCE_DIR}/external
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/io
-    ${CMAKE_SOURCE_DIR}/src/lp_data
-    ${CMAKE_SOURCE_DIR}/src/presolve
-    ${CMAKE_SOURCE_DIR}/src/simplex
-    ${CMAKE_SOURCE_DIR}/src/test
-    ${CMAKE_SOURCE_DIR}/src/util)
+    ${HIGHS_BINARY_DIR}
+    ${HIGHS_SOURCE_DIR}/app
+    ${HIGHS_SOURCE_DIR}/external
+    ${HIGHS_SOURCE_DIR}/src
+    ${HIGHS_SOURCE_DIR}/src/io
+    ${HIGHS_SOURCE_DIR}/src/lp_data
+    ${HIGHS_SOURCE_DIR}/src/presolve
+    ${HIGHS_SOURCE_DIR}/src/simplex
+    ${HIGHS_SOURCE_DIR}/src/test
+    ${HIGHS_SOURCE_DIR}/src/util)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)

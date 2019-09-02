@@ -121,7 +121,7 @@ if(FORTRAN_FOUND)
     set(fortransources
     interfaces/highs_lp_solver.f90
     )
-    set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
+    set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
     add_library(FortranHighs interfaces/highs_lp_solver.f90)
     target_link_libraries(FortranHighs PUBLIC libhighs)
     install(TARGETS FortranHighs
@@ -170,7 +170,7 @@ if (OSI_FOUND)
     set_target_properties(OsiHighs PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
     #configure and install the pkg-config file
-    configure_file(${CMAKE_SOURCE_DIR}/osi-highs.pc.in
+    configure_file(${HIGHS_SOURCE_DIR}/osi-highs.pc.in
         "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" @ONLY)
     install(FILES "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/osi-highs.pc" DESTINATION lib/pkg-config)
 endif()
@@ -184,7 +184,7 @@ foreach ( file ${headers} )
     get_filename_component( dir ${file} DIRECTORY )
     install( FILES ${file} DESTINATION include/${dir} )
 endforeach()
-install(FILES ${CMAKE_BINARY_DIR}/HConfig.h DESTINATION include)
+install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
 # install the binary and the library to appropriate locations and add them to an export group
 install(TARGETS libhighs EXPORT highs-targets
@@ -194,22 +194,22 @@ install(TARGETS libhighs EXPORT highs-targets
 
 # Add library targets to the build-tree export set
 export(TARGETS libhighs
-  FILE "${CMAKE_BINARY_DIR}/highs-targets.cmake")
+  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree
 #Either list all the src/* directories here, or put explicit paths in all the #include statements
 #M reckons that the latter is more transparent, and I'm inclined to agree.
-set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${CMAKE_BINARY_DIR}")
-configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
-  "${CMAKE_BINARY_DIR}/highs-config.cmake" @ONLY)
+set(CONF_INCLUDE_DIRS "${PROJECT_SOURCE_DIR}/src" "${HIGHS_BINARY_DIR}")
+configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
+  "${HIGHS_BINARY_DIR}/highs-config.cmake" @ONLY)
 
 #configure the config file for the install
 set(CONF_INCLUDE_DIRS "\${CMAKE_CURRENT_LIST_DIR}/../../../include")
-configure_file(${CMAKE_SOURCE_DIR}/highs-config.cmake.in
+configure_file(${HIGHS_SOURCE_DIR}/highs-config.cmake.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs-config.cmake" @ONLY)
 
 #configure the pkg-config file for the install
-configure_file(${CMAKE_SOURCE_DIR}/highs.pc.in
+configure_file(${HIGHS_SOURCE_DIR}/highs.pc.in
   "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/highs.pc" @ONLY)
 
 # install the targets of the highs export group, the config file so that other cmake-projects
