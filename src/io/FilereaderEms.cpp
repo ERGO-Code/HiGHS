@@ -24,7 +24,7 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   std::ifstream f;
   int i;
 
-  const char* filename = options.filename.c_str();
+  const char* filename = options.model_file.c_str();
   f.open(filename, std::ios::in);
   if (f.is_open()) {
     std::string line;

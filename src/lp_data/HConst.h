@@ -20,6 +20,9 @@ const int HIGHS_CONST_I_INF = 2147483647;  // 32767;
 const double HIGHS_CONST_INF = 1e200;
 const double HIGHS_CONST_TINY = 1e-14;
 const double HIGHS_CONST_ZERO = 1e-50;
+const std::string off_string = "off";
+const std::string choose_string = "choose";
+const std::string on_string = "on";
 
 constexpr double kBoundTolerance = 1e-8;
 
@@ -34,21 +37,12 @@ enum HighsPrintMessageLevel {
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
-enum PresolveOption { PRESOLVE_OPTION_OFF = 0, PRESOLVE_OPTION_ON, PRESOLVE_OPTION_DEFAULT = PRESOLVE_OPTION_ON };
+enum CommandLineOption { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
-enum ParallelOption { PARALLEL_OPTION_OFF = 0, PARALLEL_OPTION_ON, PARALLEL_OPTION_DEFAULT = PARALLEL_OPTION_OFF };
-
-enum CrashOption { CRASH_OPTION_OFF = 0, CRASH_OPTION_ON, CRASH_OPTION_DEFAULT = CRASH_OPTION_OFF };
-
-enum SimplexOption { SIMPLEX_OPTION_OFF = 0, SIMPLEX_OPTION_ON, SIMPLEX_OPTION_DEFAULT = SIMPLEX_OPTION_ON };
-
-enum IpmOption { IPM_OPTION_OFF = 0, IPM_OPTION_ON, IPM_OPTION_DEFAULT = IPM_OPTION_OFF };
+enum SolverOption { SOLVER_OPTION_SIMPLEX = -1, SOLVER_OPTION_CHOOSE, SOLVER_OPTION_IPM }; 
 
 const std::string FILENAME_DEFAULT = "";
 const std::string OPTIONS_FILE_DEFAULT = "";
-const int RUN_AS_HSOL_MIN = 0;
-const int RUN_AS_HSOL_DEFAULT = 0;
-const int RUN_AS_HSOL_MAX = 1;
 const int KEEP_N_ROWS_DELETE_ROWS = -1;
 const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
 const int KEEP_N_ROWS_KEEP_ROWS = 1;

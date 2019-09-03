@@ -101,8 +101,8 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   std::cout << dir << std::endl;
 
   // For debugging use the latter.
-  options.filename = dir + "/../../check/instances/adlittle.mps";
-  // options.filename = dir + "/check/instances/adlittle.mps";
+  options.model_file = dir + "/../../check/instances/adlittle.mps";
+  // options.model_file = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_mps;
@@ -114,7 +114,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   ems.writeModelToFile("adlittle.ems", lp_mps);
 
   // Read ems and compare.
-  options.filename = "adlittle.ems"; // todo: check how to specify path
+  options.model_file = "adlittle.ems"; // todo: check how to specify path
 
   HighsLp lp_ems;
   HighsStatus ems_read_status = loadLpFromFile(options, lp_ems);
@@ -123,7 +123,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   bool are_the_same = lp_mps == lp_ems;
   REQUIRE(are_the_same);
 
-  std::remove(options.filename.c_str());
+  std::remove(options.model_file.c_str());
 }
 
 TEST_CASE("integrality-constraints", "[highs_filereader]") {
@@ -134,7 +134,7 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
   // std::string filename = dir + "/check/instances/small_mip.mps";
 
   HighsOptions options;
-  options.filename = filename;
+  options.model_file = filename;
   // integer variables are COL03,COL04 so x[2], x[3].
   const std::vector<int> kIntegers{0, 0, 1, 1, 0, 0, 0, 0};
 
@@ -168,7 +168,7 @@ TEST_CASE("dualize", "[highs_data]") {
 
   // Read mps.
   HighsOptions options;
-  options.filename = filename;
+  options.model_file = filename;
 
   HighsLp lp;
   HMpsFF parser{};

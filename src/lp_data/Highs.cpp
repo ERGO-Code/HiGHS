@@ -102,7 +102,7 @@ HighsStatus Highs::initializeLp(const HighsLp& lp) {
 HighsStatus Highs::initializeFromFile(const std::string filename) {
   Filereader* reader = Filereader::getFilereader(filename.c_str());
   HighsLp model;
-  this->options_.filename = filename;
+  this->options_.model_file = filename;
 
   FilereaderRetcode retcode = reader->readModelFromFile(this->options_, model);
   if (retcode != FilereaderRetcode::OK) {
@@ -209,7 +209,7 @@ HighsStatus Highs::run() {
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
     timer_.start(timer_.presolve_clock);
-    PresolveInfo presolve_info(options_.presolve_option, lp_);
+    PresolveInfo presolve_info(options_.presolve, lp_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
 
@@ -897,7 +897,7 @@ bool Highs::deleteRows(int* mask) {
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
-  if (options_.presolve_option != PRESOLVE_OPTION_ON)
+  if (options_.presolve == off_string)
     return HighsPresolveStatus::NotPresolved;
 
   if (info.lp_ == nullptr) return HighsPresolveStatus::NullError;

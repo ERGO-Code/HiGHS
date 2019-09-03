@@ -24,15 +24,16 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsOptions.h"
 
-// Parses the file in options.filename using the parser specified in
+// Parses the file in options.model_file using the parser specified in
 // options.parser
 HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
-  if (options.filename.size() == 0) return HighsStatus::Error;
+  if (options.model_file.size() == 0) return HighsStatus::Error;
 
   // Make sure it is not a folder.
 
   struct stat info;
-  const char* pathname = options.filename.c_str();
+  const char* pathname = options.model_file.c_str();
+  printf("loadLpFromFile: %s\n", pathname);
   if (stat(pathname, &info) != 0) {
     HighsPrintMessage(ML_ALWAYS, "Cannot access %s\n", pathname);
     return HighsStatus::Error;
@@ -42,7 +43,7 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
     return HighsStatus::Error;
   }
 
-  Filereader* reader = Filereader::getFilereader(options.filename.c_str());
+  Filereader* reader = Filereader::getFilereader(options.model_file.c_str());
   FilereaderRetcode success = reader->readModelFromFile(options, lp);
   delete reader;
 
@@ -60,7 +61,7 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   lp.nnz_ = lp.Avalue_.size();
 
   // Extract model name.
-  std::string name = options.filename;
+  std::string name = options.model_file;
   std::size_t found = name.find_last_of("/\\");
   if (found < name.size()) name = name.substr(found + 1);
   found = name.find_last_of(".");

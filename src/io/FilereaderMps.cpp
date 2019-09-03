@@ -20,7 +20,7 @@
 
 FilereaderRetcode FilereaderMps::readModelFromFile(const HighsOptions& options,
                                                    HighsLp& model) {
-  const char* filename = options.filename.c_str();
+  const char* filename = options.model_file.c_str();
 
   // if free format parser
   // Parse file and return status.

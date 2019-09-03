@@ -27,6 +27,20 @@ std::string optionEntryType2string(const HighsOptionType type) {
     return "string";
 }
 
+bool commandLineOffChooseOnOk(const string& value) {
+  if (value == off_string || value == choose_string || value == on_string) return true;
+  HighsLogMessage(HighsMessageType::ERROR, "Command line option value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
+		  value.c_str(), off_string.c_str(), choose_string.c_str(), on_string.c_str());
+  return false;
+}
+
+bool commandLineSolverOk(const string& value) {
+  if (value == simplex_string || value == choose_string || value == ipm_string) return true;
+  HighsLogMessage(HighsMessageType::ERROR, "Command line option value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
+		  value.c_str(), simplex_string.c_str(), choose_string.c_str(), ipm_string.c_str());
+  return false;
+}
+
 bool boolFromString(const std::string value, bool& bool_value) {
   if (
       value == "t" ||
@@ -51,7 +65,7 @@ bool boolFromString(const std::string value, bool& bool_value) {
 OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index) {
   int num_options = option_records.size();
   for (index=0; index<num_options; index++) if (option_records[index]->name == name) return OptionStatus::OK;
-  HighsLogMessage(HighsMessageType::ERROR, "Option \"%s\" is unknown", name.c_str());
+  HighsLogMessage(HighsMessageType::ERROR, "getOptionIndex: Option \"%s\" is unknown", name.c_str());
   return OptionStatus::UNKNOWN_OPTION;
 }
 
@@ -60,7 +74,10 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::BOOL) return OptionStatus::ILLEGAL_VALUE;
+  if (type != HighsOptionType::BOOL) {
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Option \"%s\" cannot be assigned a bool", name.c_str());
+    return OptionStatus::ILLEGAL_VALUE;
+  }
   return setOptionValue(((OptionRecordBool*)option_records[index])[0], value);
 }
 
@@ -69,7 +86,10 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::INT) return OptionStatus::ILLEGAL_VALUE;
+  if (type != HighsOptionType::INT) {
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Option \"%s\" cannot be assigned an int", name.c_str());
+    return OptionStatus::ILLEGAL_VALUE;
+  }
   return setOptionValue(((OptionRecordInt*)option_records[index])[0], value);
 }
 
@@ -78,7 +98,10 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
-  if (type != HighsOptionType::DOUBLE) return OptionStatus::ILLEGAL_VALUE;
+  if (type != HighsOptionType::DOUBLE) {
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Option \"%s\" cannot be assigned a double", name.c_str());
+    return OptionStatus::ILLEGAL_VALUE;
+  }
   return setOptionValue(((OptionRecordDouble*)option_records[index])[0], value);
 }
 
@@ -90,7 +113,10 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
   if (type == HighsOptionType::BOOL) {
     bool bool_value;
     bool return_status = boolFromString(value, bool_value);
-    if (!return_status) return OptionStatus::ILLEGAL_VALUE;
+    if (!return_status) {
+      HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Value \"%s\" cannot be interpreted as a bool", value.c_str());
+      return OptionStatus::ILLEGAL_VALUE;
+    }
     return setOptionValue(((OptionRecordBool*)option_records[index])[0], bool_value);
   } else if (type == HighsOptionType::INT) {
     return setOptionValue(((OptionRecordInt*)option_records[index])[0], atoi(value.c_str()));
@@ -108,11 +134,11 @@ OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {
 
 OptionStatus setOptionValue(OptionRecordInt& option, const int value) {
   if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "Trying to set option %s to value %d below lower bound of %d",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %d below lower bound of %d",
 	   option.name.c_str(), value, option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "Trying to set option %s to value %d above upper bound of %d",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %d above upper bound of %d",
 	   option.name.c_str(), value, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -122,11 +148,11 @@ OptionStatus setOptionValue(OptionRecordInt& option, const int value) {
 
 OptionStatus setOptionValue(OptionRecordDouble& option, const double value) {
   if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "Trying to set option %s to value %g below lower bound of %g",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %g below lower bound of %g",
 	   option.name.c_str(), value, option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "Trying to set option %s to value %g above upper bound of %g",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %g above upper bound of %g",
 	   option.name.c_str(), value, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -145,7 +171,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::BOOL) {
-    HighsLogMessage(HighsMessageType::ERROR, "Option \"%s\" requires value of type %s, not bool", name.c_str(), optionEntryType2string(type).c_str());
+    HighsLogMessage(HighsMessageType::ERROR, "getOptionValue: Option \"%s\" requires value of type %s, not bool", name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordBool option = ((OptionRecordBool*)option_records[index])[0];
@@ -159,7 +185,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::INT) {
-    HighsLogMessage(HighsMessageType::ERROR, "Option \"%s\" requires value of type %s, not int", name.c_str(), optionEntryType2string(type).c_str());
+    HighsLogMessage(HighsMessageType::ERROR, "getOptionValue: Option \"%s\" requires value of type %s, not int", name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordInt option = ((OptionRecordInt*)option_records[index])[0];
@@ -173,7 +199,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::DOUBLE) {
-    HighsLogMessage(HighsMessageType::ERROR, "Option \"%s\" requires value of type %s, not double", name.c_str(), optionEntryType2string(type).c_str());
+    HighsLogMessage(HighsMessageType::ERROR, "getOptionValue: Option \"%s\" requires value of type %s, not double", name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordDouble option = ((OptionRecordDouble*)option_records[index])[0];
@@ -187,7 +213,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type != HighsOptionType::STRING) {
-    HighsLogMessage(HighsMessageType::ERROR, "Option \"%s\" requires value of type %s, not string", name.c_str(), optionEntryType2string(type).c_str());
+    HighsLogMessage(HighsMessageType::ERROR, "getOptionValue: Option \"%s\" requires value of type %s, not string", name.c_str(), optionEntryType2string(type).c_str());
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordString option = ((OptionRecordString*)option_records[index])[0];
@@ -267,21 +293,15 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
 //==========================================
 
 OptionStatus checkOptionsValue(HighsOptions& options) {
-  if (options.simplex_option == SIMPLEX_OPTION_ON && options.ipx == true) {
-    HighsPrintMessage(ML_MINIMAL,
-                      "Options error: both simplex and ipm set to on.\n");
-    return OptionStatus::ILLEGAL_VALUE;
-  }
   return OptionStatus::OK;
 }
 
 // Set values of options so that HiGHS runs as Hsol
 void setHsolOptions(HighsOptions& options) {
   // Set command line options to their hsol values
-  options.presolve_option = PRESOLVE_OPTION_OFF;
-  options.crash_option = CRASH_OPTION_OFF;
-  options.parallel_option = PARALLEL_OPTION_OFF;
-  options.simplex_option = SIMPLEX_OPTION_ON;
+  options.presolve = OPTION_OFF;
+  options.solver = SOLVER_OPTION_SIMPLEX;
+  options.parallel = OPTION_OFF;
 
   options.highs_run_time_limit = HIGHS_CONST_INF;
   options.simplex_iteration_limit = HIGHS_CONST_I_INF;

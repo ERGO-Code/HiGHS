@@ -159,6 +159,9 @@ void assignvalue(std::string Xvalue) {
 
 inline const char* bool2string(bool b);
 
+bool commandLineOffChooseOnOk(const string& value);
+bool commandLineSolverOk(const string& value);
+
 bool boolFromString(const std::string value, bool& bool_value);
 
 OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
@@ -187,29 +190,24 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
 //======================================
 
 
-const string on_string = "on";
-const string off_string = "off";
-
-const string fixed_string = "fixed";
-const string free_string = "free";
-
-// Strings for command line options
-const string file_string = "file";
-const string presolve_string = "presolve";
-const string crash_string = "crash";
-const string parallel_string = "parallel";
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
-const string highs_run_time_limit_string = "highs_run_time_limit";
-const string simplex_iteration_limit_string = "simplex_iteration_limit";
+
+// Strings for command line options
+const string model_file_string = "model_file";
+const string presolve_string = "presolve";
+const string solver_string = "solver";
+const string parallel_string = "parallel";
+const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
-const string mps_parser_type_string = "mps_parser_type";
+
 const string mip_string = "mip";
 const string find_feasibility_string = "find_feasibility";
 const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize";
 
 // Strings for file options
+const string highs_run_time_limit_string = "highs_run_time_limit";
 const string run_as_hsol_string = "run_as_hsol";
 const string keep_n_rows_string = "keep_n_rows";
 const string infinite_cost_string = "infinite_cost";
@@ -257,30 +255,63 @@ enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 class HighsOptions {
  public:
   HighsOptions() {
-  OptionRecordInt* presolve_record = new OptionRecordInt("presolve", "Presolve command line option",
-							 false, &presolve_option,
-							 0, 1, PRESOLVE_OPTION_DEFAULT);
+    // Options read from the command line
+    OptionRecordString* command_model_file_record =
+      new OptionRecordString(model_file_string,
+			     "Model file", false, &model_file, FILENAME_DEFAULT);
+    records.push_back(command_model_file_record);
+    OptionRecordString* command_presolve_record =
+      new OptionRecordString(presolve_string,
+			     "Presolve option: \"off\", \"choose\" or \"on\"",
+			     false, &presolve, choose_string);
+    records.push_back(command_presolve_record);
+    OptionRecordString* command_solver_record =
+      new OptionRecordString(solver_string,
+			     "Solver option: \"simplex\", \"choose\" or \"ipm\"",
+			     false, &solver, choose_string);
+    records.push_back(command_solver_record);
+    OptionRecordString* command_parallel_record =
+      new OptionRecordString(parallel_string,
+			     "Parallel option: \"off\", \"choose\" or \"on\"",
+			     false, &parallel, choose_string);
+    records.push_back(command_parallel_record);
+    /*
+    OptionRecordDouble* command_time_limit_record =
+      new OptionRecordDouble(time_limit_string,
+			     "Time limit", false, &time_limit, 0, HIGHS_CONST_INF, HIGHS_RUN_TIME_LIMIT_DEFAULT);
+    records.push_back(command_time_limit_record);
+    */
+    OptionRecordString* command_options_file_record =
+      new OptionRecordString(options_file_string,
+			     "Options file: name", false, &options_file, FILENAME_DEFAULT);
+    records.push_back(command_options_file_record);
 
-  records.push_back(presolve_record);
+    // Integer-valued and modifiable copies of command line options 
+    OptionRecordBool* record_bool;
+    record_bool = new OptionRecordBool("run_as_hsol", "Run as hsol: bool", true, &run_as_hsol, false);
+    records.push_back(record_bool);
 
   }
   std::vector<OptionRecord*> records;
-  std::string filename = FILENAME_DEFAULT;
-  std::string options_file = OPTIONS_FILE_DEFAULT;
 
   // Options passed through the command line
-  int presolve_option = PRESOLVE_OPTION_DEFAULT;
-  int simplex_option = SIMPLEX_OPTION_DEFAULT;
-  int crash_option = CRASH_OPTION_DEFAULT;
-  int parallel_option = PARALLEL_OPTION_DEFAULT;
+  std::string model_file;
+  std::string presolve;
+  std::string solver;
+  std::string parallel;
+  //  double time_limit;
+  std::string options_file;
+  
 
+  // Options not passed through the command line
   bool ipx = false;
-  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
   int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
   HighsMpsParserType mps_parser_type = HighsMpsParserType::DEFAULT;
 
-  // Options not passed through the command line
-  int run_as_hsol = RUN_AS_HSOL_DEFAULT;
+  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
+
+  bool run_as_hsol;
+
   int keep_n_rows = KEEP_N_ROWS_DEFAULT;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
