@@ -161,6 +161,14 @@ OptionStatus setOptionValue(OptionRecordDouble& option, const double value) {
 }
 
 OptionStatus setOptionValue(OptionRecordString& option, const std::string value) {
+  // Setting a string option: check that value is OK
+  if (option.name == presolve_string) {
+    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  } else if (option.name == solver_string) {
+    if (!commandLineSolverOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  } else if (option.name == parallel_string) {
+    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  }
   option.assignvalue(value);
   return OptionStatus::OK;
 }

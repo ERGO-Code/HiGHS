@@ -192,6 +192,9 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
+const int KEEP_N_ROWS_DELETE_ROWS = -1;
+const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
+const int KEEP_N_ROWS_KEEP_ROWS = 1;
 
 // Strings for command line options
 const string model_file_string = "model_file";
@@ -200,44 +203,6 @@ const string solver_string = "solver";
 const string parallel_string = "parallel";
 const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
-
-const string mip_string = "mip";
-const string find_feasibility_string = "find_feasibility";
-const string find_feasibility_strategy_string = "feasibility_strategy";
-const string find_feasibility_dualize_string = "feasibility_dualize";
-
-// Strings for file options
-const string run_as_hsol_string = "run_as_hsol";
-const string keep_n_rows_string = "keep_n_rows";
-const string infinite_cost_string = "infinite_cost";
-const string infinite_bound_string = "infinite_bound";
-const string small_matrix_value_string = "small_matrix_value";
-const string large_matrix_value_string = "large_matrix_value";
-const string allowed_simplex_scale_factor_string =
-    "allowed_simplex_scale_factor";
-const string primal_feasibility_tolerance_string =
-    "primal_feasibility_tolerance";
-const string dual_feasibility_tolerance_string = "dual_feasibility_tolerance";
-const string dual_objective_value_upper_bound_string =
-    "dual_objective_value_upper_bound";
-
-const string simplex_strategy_string = "simplex_strategy";
-const string simplex_dualise_strategy_string = "simplex_dualise_strategy";
-const string simplex_permute_strategy_string = "simplex_permute_strategy";
-const string simplex_scale_strategy_string = "simplex_scale_strategy";
-const string simplex_crash_strategy_string = "simplex_crash_strategy";
-const string simplex_dual_edge_weight_strategy_string =
-    "simplex_dual_edge_weight_strategy";
-const string simplex_primal_edge_weight_strategy_string =
-    "simplex_primal_edge_weight_strategy";
-const string simplex_price_strategy_string = "simplex_price_strategy";
-
-const string simplex_initial_condition_check_string =
-    "simplex_initial_condition_check";
-const string simplex_initial_condition_tolerance_string =
-    "simplex_initial_condition_tolerance";
-
-const string message_level_string = "message_level";
 
 /** SCIP/HiGHS Objective sense */
 enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
@@ -303,6 +268,11 @@ class HighsOptions {
 				       true, &mps_parser_type_free,
 				       true);
     records.push_back(record_bool);
+    record_int = new OptionRecordInt("keep_n_rows",
+				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows -1/0/1",
+				     true, &keep_n_rows,
+				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS, KEEP_N_ROWS_DELETE_ROWS);
+    records.push_back(record_int);
 
   }
   std::vector<OptionRecord*> records;
@@ -321,9 +291,8 @@ class HighsOptions {
   // Advanced options
   bool run_as_hsol;
   bool mps_parser_type_free;
+  int keep_n_rows;
 
-
-  int keep_n_rows = KEEP_N_ROWS_DEFAULT;
   double infinite_cost = INFINITE_COST_DEFAULT;
   double infinite_bound = INFINITE_BOUND_DEFAULT;
   double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;

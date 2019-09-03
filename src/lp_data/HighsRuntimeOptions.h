@@ -41,7 +41,6 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
     }
 
     if (result.count(model_file_string)) {
-      printf("Identified model_file_string\n");
       auto& v = result[model_file_string].as<std::vector<std::string>>();
       if (v.size() > 1) {
         int nonEmpty = 0;
@@ -63,32 +62,24 @@ bool loadOptions(int argc, char** argv, HighsOptions& options) {
 
     if (result.count(presolve_string)) {
       std::string value = result[presolve_string].as<std::string>();
-      printf("Found option %s = %s\n", presolve_string.c_str(), value.c_str());
-      if (!commandLineOffChooseOnOk(value)) return false;
       if (setOptionValue(presolve_string, options.records, value) != OptionStatus::OK) return false;
     }
 
-    /*
     if (result.count(solver_string)) {
       std::string value = result[solver_string].as<std::string>();
-      if (setCrashValue(options, value) == OptionStatus::ILLEGAL_VALUE)
-        return false;
+      if (setOptionValue(solver_string, options.records, value) != OptionStatus::OK) return false;
     }
 
     if (result.count(parallel_string)) {
       std::string value = result[parallel_string].as<std::string>();
-      if (setParallelValue(options, value) == OptionStatus::ILLEGAL_VALUE)
-        return false;
+      if (setOptionValue(parallel_string, options.records, value) != OptionStatus::OK) return false;
     }
 
     if (result.count(time_limit_string)) {
       double value = result[time_limit_string].as<double>();
-      if (setHighsRunTimeLimitValue(options, value) ==
-          OptionStatus::ILLEGAL_VALUE)
-        return false;
+      if (setOptionValue(time_limit_string, options.records, value) != OptionStatus::OK) return false;
     }
 
-    */
     if (result.count(options_file_string)) {
       auto& v = result[options_file_string].as<std::vector<std::string>>();
       if (v.size() > 1) {
