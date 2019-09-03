@@ -61,12 +61,11 @@ HiGHS options
 Usage:
     highs [OPTION...] [file]
 
-      --file arg             Filename of LP to solve.
+      --model_file arg       File of model to solve.
       --presolve arg         Presolve: "choose" by default - "on"/"off" are alternatives.
       --solver arg           Solver: "choose" by default - "simplex"/"ipm" are alternatives.
       --parallel arg         Parallel solve: "choose" by default - "on"/"off" are alternatives.
-      --time_limit arg       Use time limit (double).
-      --iteration_limit arg  Use iteration limit (integer).
+      --time_limit arg       Run time limit (double).
       --options_file arg     File containing HiGHS options.
 
   -h, --help                 Print help.
