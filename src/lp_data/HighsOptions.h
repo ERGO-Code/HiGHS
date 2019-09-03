@@ -207,7 +207,6 @@ const string find_feasibility_strategy_string = "feasibility_strategy";
 const string find_feasibility_dualize_string = "feasibility_dualize";
 
 // Strings for file options
-const string highs_run_time_limit_string = "highs_run_time_limit";
 const string run_as_hsol_string = "run_as_hsol";
 const string keep_n_rows_string = "keep_n_rows";
 const string infinite_cost_string = "infinite_cost";
@@ -240,10 +239,6 @@ const string simplex_initial_condition_tolerance_string =
 
 const string message_level_string = "message_level";
 
-// The free parser also reads fixed format MPS files but the fixed
-// parser does not read free mps files.
-enum class HighsMpsParserType { free, fixed, DEFAULT = free };
-
 /** SCIP/HiGHS Objective sense */
 enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 
@@ -255,62 +250,78 @@ enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 class HighsOptions {
  public:
   HighsOptions() {
-    // Options read from the command line
-    OptionRecordString* command_model_file_record =
-      new OptionRecordString(model_file_string,
-			     "Model file", false, &model_file, FILENAME_DEFAULT);
-    records.push_back(command_model_file_record);
-    OptionRecordString* command_presolve_record =
-      new OptionRecordString(presolve_string,
-			     "Presolve option: \"off\", \"choose\" or \"on\"",
-			     false, &presolve, choose_string);
-    records.push_back(command_presolve_record);
-    OptionRecordString* command_solver_record =
-      new OptionRecordString(solver_string,
-			     "Solver option: \"simplex\", \"choose\" or \"ipm\"",
-			     false, &solver, choose_string);
-    records.push_back(command_solver_record);
-    OptionRecordString* command_parallel_record =
-      new OptionRecordString(parallel_string,
-			     "Parallel option: \"off\", \"choose\" or \"on\"",
-			     false, &parallel, choose_string);
-    records.push_back(command_parallel_record);
-    /*
-    OptionRecordDouble* command_time_limit_record =
-      new OptionRecordDouble(time_limit_string,
-			     "Time limit", false, &time_limit, 0, HIGHS_CONST_INF, HIGHS_RUN_TIME_LIMIT_DEFAULT);
-    records.push_back(command_time_limit_record);
-    */
-    OptionRecordString* command_options_file_record =
-      new OptionRecordString(options_file_string,
-			     "Options file: name", false, &options_file, FILENAME_DEFAULT);
-    records.push_back(command_options_file_record);
-
-    // Integer-valued and modifiable copies of command line options 
     OptionRecordBool* record_bool;
-    record_bool = new OptionRecordBool("run_as_hsol", "Run as hsol: bool", true, &run_as_hsol, false);
+    OptionRecordInt* record_int;
+    OptionRecordDouble* record_double;
+    OptionRecordString* record_string;
+    // Options read from the command line
+    record_string = new OptionRecordString(model_file_string,
+					   "Model file",
+					   false, &model_file,
+					   FILENAME_DEFAULT);
+    records.push_back(record_string);
+    record_string = new OptionRecordString(presolve_string,
+					   "Presolve option: \"off\", \"choose\" or \"on\"",
+					   false, &presolve,
+					   choose_string);
+    records.push_back(record_string);
+    record_string = new OptionRecordString(solver_string,
+					   "Solver option: \"simplex\", \"choose\" or \"ipm\"",
+					   false, &solver,
+					   choose_string);
+    records.push_back(record_string);
+    record_string = new OptionRecordString(parallel_string,
+					   "Parallel option: \"off\", \"choose\" or \"on\"",
+					   false, &parallel,
+					   choose_string);
+    records.push_back(record_string);
+    record_double = new OptionRecordDouble(time_limit_string,
+					   "Time limit",
+					   false, &time_limit,
+					   0, HIGHS_CONST_INF, HIGHS_CONST_INF);
+    records.push_back(record_double);
+    record_string = new OptionRecordString(options_file_string,
+					   "Options file: name",
+					   false, &options_file,
+					   FILENAME_DEFAULT);
+    records.push_back(record_string);
+    // Options read from the file
+    record_int = new OptionRecordInt("simplex_iteration_limit",
+				     "Iteration limit for simplex solver",
+				     false, &simplex_iteration_limit,
+				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    // Advanced options
+    record_bool = new OptionRecordBool("run_as_hsol",
+				       "Run HiGHS simplex solver as if it were hsol",
+				       true, &run_as_hsol,
+				       false);
+    records.push_back(record_bool);
+    record_bool = new OptionRecordBool("mps_parser_type_free",
+				       "Use the free format MPS file reader",
+				       true, &mps_parser_type_free,
+				       true);
     records.push_back(record_bool);
 
   }
   std::vector<OptionRecord*> records;
 
-  // Options passed through the command line
+  // Options read from the command line
   std::string model_file;
   std::string presolve;
   std::string solver;
   std::string parallel;
-  //  double time_limit;
+  double time_limit;
   std::string options_file;
   
+  // Options read from the file
+  int simplex_iteration_limit;
 
-  // Options not passed through the command line
-  bool ipx = false;
-  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
-  HighsMpsParserType mps_parser_type = HighsMpsParserType::DEFAULT;
-
-  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
-
+  // Advanced options
   bool run_as_hsol;
+  bool mps_parser_type_free;
+
 
   int keep_n_rows = KEEP_N_ROWS_DEFAULT;
   double infinite_cost = INFINITE_COST_DEFAULT;

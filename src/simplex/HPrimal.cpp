@@ -253,7 +253,7 @@ void HPrimal::solvePhase2() {
     }
 
     double currentRunHighsTime = timer.readRunHighsClock();
-    if (currentRunHighsTime > workHMO.options_.highs_run_time_limit) {
+    if (currentRunHighsTime > workHMO.options_.time_limit) {
       workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }

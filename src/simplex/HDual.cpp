@@ -471,7 +471,7 @@ void HDual::solvePhase1() {
       }
     }
     double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > workHMO.options_.highs_run_time_limit) {
+    if (current_run_highs_time > workHMO.options_.time_limit) {
       solve_bailout = true;
       workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
@@ -594,7 +594,7 @@ void HDual::solvePhase2() {
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > workHMO.options_.highs_run_time_limit) {
+    if (current_run_highs_time > workHMO.options_.time_limit) {
       workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       solve_bailout = true;
       break;

@@ -302,10 +302,10 @@ void setHsolOptions(HighsOptions& options) {
   options.presolve = OPTION_OFF;
   options.solver = SOLVER_OPTION_SIMPLEX;
   options.parallel = OPTION_OFF;
-
-  options.highs_run_time_limit = HIGHS_CONST_INF;
+  options.time_limit = HIGHS_CONST_INF;
+  
   options.simplex_iteration_limit = HIGHS_CONST_I_INF;
-  options.mps_parser_type = HighsMpsParserType::fixed;
+  options.mps_parser_type_free = false;
   options.keep_n_rows = KEEP_N_ROWS_KEEP_ROWS;
   options.infinite_cost = HIGHS_CONST_INF;
   options.infinite_bound = HIGHS_CONST_INF;
