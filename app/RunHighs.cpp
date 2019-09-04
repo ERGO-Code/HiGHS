@@ -67,13 +67,14 @@ int main(int argc, char** argv) {
   if (!options_ok) return 0;
 
   bool force_options_file = true;// false;  // 
-  if (force_options_file) {
+  if (force_options_file && options.options_file.size() > 0) {
     printf(
         "In main: set options.options_file = options_file so vscode can be "
         "used to debug\n");
     options.options_file = "options_file";
     if (!loadOptionsFromFile(options)) {
       printf("In main: fail return from loadOptionsFromFile\n");
+      return (int)HighsStatus::Error;
     }
   }
   if (options.run_as_hsol) setHsolOptions(options);

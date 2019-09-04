@@ -134,11 +134,11 @@ OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {
 
 OptionStatus setOptionValue(OptionRecordInt& option, const int value) {
   if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %d below lower bound of %d",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %d below lower bound of %d",
 	   option.name.c_str(), value, option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %d above upper bound of %d",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %d above upper bound of %d",
 	   option.name.c_str(), value, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -148,11 +148,11 @@ OptionStatus setOptionValue(OptionRecordInt& option, const int value) {
 
 OptionStatus setOptionValue(OptionRecordDouble& option, const double value) {
   if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %g below lower bound of %g",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %g below lower bound of %g",
 	   option.name.c_str(), value, option.lower_bound);
     return OptionStatus::ILLEGAL_VALUE;
   } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option %s to value %g above upper bound of %g",
+    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %g above upper bound of %g",
 	   option.name.c_str(), value, option.upper_bound);
     return OptionStatus::ILLEGAL_VALUE;
   }
@@ -233,7 +233,7 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
   int num_options = option_records.size();
   for (int i=0; i<num_options; i++) {
     HighsOptionType type = option_records[i]->type;
-    fprintf(file, "\n# Option %1d\n", i);
+    //    fprintf(file, "\n# Option %1d\n", i);
     if (type == HighsOptionType::BOOL) {
       reportOption(file, ((OptionRecordBool*)option_records[i])[0], force_report);
     } else if (type == HighsOptionType::INT) {
@@ -252,9 +252,7 @@ void reportOption(FILE* file, const OptionRecordBool& option, const bool force_r
     fprintf(file, "# [type: bool, advanced: %s, range: {false, true}, default: %s]\n",
 	   bool2string(option.advanced),
 	   bool2string(option.default_value));
-    fprintf(file, "%s=%s\n",
-	   option.name.c_str(),
-	   bool2string(*(option.value)));
+    fprintf(file, "%s = %s\n", option.name.c_str(), bool2string(*(option.value)));
   }
 }
 
@@ -266,9 +264,7 @@ void reportOption(FILE* file, const OptionRecordInt& option, const bool force_re
 	   option.lower_bound,
 	   option.upper_bound,
 	   option.default_value);
-    fprintf(file, "%s=%d\n",
-	   option.name.c_str(),
-	   *(option.value));
+    fprintf(file, "%s = %d\n", option.name.c_str(), *(option.value));
   }
 }
 
@@ -280,21 +276,21 @@ void reportOption(FILE* file, const OptionRecordDouble& option, const bool force
 	   option.lower_bound,
 	   option.upper_bound,
 	   option.default_value);
-    fprintf(file, "%s=%g\n",
-	   option.name.c_str(),
-	   *(option.value));
+    fprintf(file, "%s = %g\n", option.name.c_str(), *(option.value));
   }
 }
 
 void reportOption(FILE* file, const OptionRecordString& option, const bool force_report) {
+  // Don't report for the options file if writing to an options file
+  if (
+      //file != stdout &&
+      option.name == options_file_string) return;
   if (force_report || option.default_value != *(option.value)) {
     fprintf(file, "\n# %s\n", option.description.c_str());
-    fprintf(file, "# [type: string, advanced: %s, default: %s]\n",
+    fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
 	   bool2string(option.advanced),
 	   option.default_value.c_str());
-    fprintf(file, "%s=%s\n",
-	   option.name.c_str(),
-	   (*(option.value)).c_str());
+    fprintf(file, "%s = %s\n", option.name.c_str(), (*(option.value)).c_str());
   }
 }
 

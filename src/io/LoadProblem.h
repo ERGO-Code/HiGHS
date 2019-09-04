@@ -23,6 +23,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsOptions.h"
+#include "util/stringutil.h"
 
 // Parses the file in options.model_file using the parser specified in
 // options.parser
@@ -96,6 +97,9 @@ bool loadOptionsFromFile(HighsOptions& options) {
       }
       option = line.substr(0, equals);
       value = line.substr(equals + 1, line.size() - equals);
+      trim(option);
+      trim(value);
+      printf("Setting option \"%s\" = \"%s\"\n", option.c_str(), value.c_str());
       if (setOptionValue(option, options.records, value) != OptionStatus::OK) return false;
     }
   } else {

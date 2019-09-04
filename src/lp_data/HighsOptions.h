@@ -246,7 +246,7 @@ class HighsOptions {
 					   0, HIGHS_CONST_INF, HIGHS_CONST_INF);
     records.push_back(record_double);
     record_string = new OptionRecordString(options_file_string,
-					   "Options file: name",
+					   "Options file",
 					   false, &options_file,
 					   FILENAME_DEFAULT);
     records.push_back(record_string);

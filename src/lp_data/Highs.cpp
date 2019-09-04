@@ -182,7 +182,7 @@ HighsStatus Highs::run() {
   // todo: check options.
   HighsSetIO(options_);
 
-  reportOptions(stdout, options_.records, true);
+  reportOptions(stdout, options_.records);//, true);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();
 
