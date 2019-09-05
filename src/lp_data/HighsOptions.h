@@ -223,106 +223,133 @@ class HighsOptions {
     OptionRecordInt* record_int;
     OptionRecordDouble* record_double;
     OptionRecordString* record_string;
+    bool advanced;
+    advanced = false;
     // Options read from the command line
     record_string = new OptionRecordString(model_file_string,
 					   "Model file",
-					   false, &model_file,
+					   advanced, &model_file,
 					   FILENAME_DEFAULT);
     records.push_back(record_string);
     record_string = new OptionRecordString(presolve_string,
 					   "Presolve option: \"off\", \"choose\" or \"on\"",
-					   false, &presolve,
+					   advanced, &presolve,
 					   choose_string);
     records.push_back(record_string);
     record_string = new OptionRecordString(solver_string,
 					   "Solver option: \"simplex\", \"choose\" or \"ipm\"",
-					   false, &solver,
+					   advanced, &solver,
 					   choose_string);
     records.push_back(record_string);
     record_string = new OptionRecordString(parallel_string,
 					   "Parallel option: \"off\", \"choose\" or \"on\"",
-					   false, &parallel,
+					   advanced, &parallel,
 					   choose_string);
     records.push_back(record_string);
     record_double = new OptionRecordDouble(time_limit_string,
 					   "Time limit",
-					   false, &time_limit,
+					   advanced, &time_limit,
 					   0, HIGHS_CONST_INF, HIGHS_CONST_INF);
     records.push_back(record_double);
     record_string = new OptionRecordString(options_file_string,
 					   "Options file",
-					   false, &options_file,
+					   advanced, &options_file,
 					   FILENAME_DEFAULT);
     records.push_back(record_string);
     // Options read from the file
     record_int = new OptionRecordInt("simplex_iteration_limit",
 				     "Iteration limit for simplex solver",
-				     false, &simplex_iteration_limit,
+				     advanced, &simplex_iteration_limit,
 				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
     
     record_double = new OptionRecordDouble("infinite_cost",
 					   "Limit on cost coefficient: values larger than this will be treated as infinite",
-					   false, &infinite_cost,
+					   advanced, &infinite_cost,
 					   1e15, 1e20, 1e25);
     records.push_back(record_double);
     
     record_double = new OptionRecordDouble("infinite_bound",
 					   "Limit on |constraint bound|: values larger than this will be treated as infinite",
-					   false, &infinite_bound,
+					   advanced, &infinite_bound,
 					   1e15 , 1e20, 1e25);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble("small_matrix_value",
 					   "Lower limit on |matrix entries|: values smaller than this will be treated as zero",
-					   false, &small_matrix_value,
+					   advanced, &small_matrix_value,
 					   1e-12, 1e-9, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble("large_matrix_value",
 				     "Upper limit on |matrix entries|: values larger than this will be treated as infinite",
-				     false, &large_matrix_value,
+				     advanced, &large_matrix_value,
 				     1e0, 1e15, 1e20);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble("primal_feasibility_tolerance",
 				     "Primal feasibility tolerance",
-				     false, &primal_feasibility_tolerance,
+				     advanced, &primal_feasibility_tolerance,
 				     1e-10, 1e-7, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble("dual_feasibility_tolerance",
 				     "Dual feasibility tolerance",
-				     false, &dual_feasibility_tolerance,
+				     advanced, &dual_feasibility_tolerance,
 				     1e-10, 1e-7, HIGHS_CONST_INF);
     records.push_back(record_double);
 
     record_double = new OptionRecordDouble("dual_objective_value_upper_bound",
 				     "Upper bound on objective value for dual simplex: algorithm terminates if reached",
-				     false, &dual_objective_value_upper_bound,
+				     advanced, &dual_objective_value_upper_bound,
 				     -HIGHS_CONST_INF, HIGHS_CONST_INF, HIGHS_CONST_INF);
     records.push_back(record_double);
 
+    record_int = new OptionRecordInt("simplex_strategy",
+				     "Strategy for simplex solver",
+				     advanced, &simplex_strategy,
+				     SIMPLEX_STRATEGY_MIN, SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_strategy",
+				     "Strategy for simplex solver",
+				     advanced, &simplex_strategy,
+				     SIMPLEX_STRATEGY_MIN, SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
+    records.push_back(record_int);
+
     // Advanced options
+    advanced = true;
     record_bool = new OptionRecordBool("run_as_hsol",
 				       "Run HiGHS simplex solver as if it were hsol",
-				       true, &run_as_hsol,
-				       false);
+				       advanced, &run_as_hsol,
+				       advanced);
     records.push_back(record_bool);
     record_bool = new OptionRecordBool("mps_parser_type_free",
 				       "Use the free format MPS file reader",
-				       true, &mps_parser_type_free,
+				       advanced, &mps_parser_type_free,
 				       true);
     records.push_back(record_bool);
     record_int = new OptionRecordInt("keep_n_rows",
 				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows -1/0/1",
-				     true, &keep_n_rows,
+				     advanced, &keep_n_rows,
 				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
     records.push_back(record_int);
     record_int = new OptionRecordInt("allowed_simplex_scale_factor",
 				     "Largest power-of-two factor permitted when scaling for the simplex solver",
-				     true, &allowed_simplex_scale_factor,
+				     advanced, &allowed_simplex_scale_factor,
 				     0, 10, 20);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("dualise_strategy",
+				     "Strategy for dualising before simlpex",
+				     advanced, &simplex_dualise_strategy,
+				     OPTION_OFF, OPTION_OFF, OPTION_ON);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("permute_strategy",
+				     "Strategy for permuting before simlpex",
+				     advanced, &simplex_permute_strategy,
+				     OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
   }
@@ -345,19 +372,17 @@ class HighsOptions {
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
-
+  int simplex_strategy;
+  
   // Advanced options
   bool run_as_hsol;
   bool mps_parser_type_free;
   int keep_n_rows;
   int allowed_simplex_scale_factor;
+  int simplex_dualise_strategy;
+  int simplex_permute_strategy;
 
 
-  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
-  SimplexDualiseStrategy simplex_dualise_strategy =
-      SimplexDualiseStrategy::DEFAULT;
-  SimplexPermuteStrategy simplex_permute_strategy =
-      SimplexPermuteStrategy::DEFAULT;
   SimplexScaleStrategy simplex_scale_strategy = SimplexScaleStrategy::DEFAULT;
   SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
   SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy =
@@ -412,9 +437,6 @@ class HighsOptions {
 OptionStatus checkOptionsValue(HighsOptions& options);
 void setHsolOptions(HighsOptions& options);
 
-SimplexStrategy intToSimplexStrategy(const int& value);
-SimplexDualiseStrategy intToSimplexDualiseStrategy(const int& value);
-SimplexPermuteStrategy intToSimplexPermuteStrategy(const int& value);
 SimplexScaleStrategy intToSimplexScaleStrategy(const int& value);
 SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
 SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(

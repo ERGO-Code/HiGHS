@@ -27,19 +27,20 @@ enum class SimplexSolutionStatus {
   OUT_OF_TIME
 };
 
-enum class SimplexStrategy {
-  CHOOSE = 0,
-  DUAL,
-  DUAL_PLAIN = DUAL,
-  DUAL_TASKS,
-  DUAL_MULTI,
-  PRIMAL,
-  DEFAULT = DUAL
+enum SimplexStrategy {
+  SIMPLEX_STRATEGY_MIN = 0,
+  SIMPLEX_STRATEGY_CHOOSE = SIMPLEX_STRATEGY_MIN,
+  SIMPLEX_STRATEGY_DUAL,
+  SIMPLEX_STRATEGY_DUAL_PLAIN = SIMPLEX_STRATEGY_DUAL,
+  SIMPLEX_STRATEGY_DUAL_TASKS,
+  SIMPLEX_STRATEGY_DUAL_MULTI,
+  SIMPLEX_STRATEGY_PRIMAL,
+  SIMPLEX_STRATEGY_MAX = SIMPLEX_STRATEGY_PRIMAL
 };
 
-enum class SimplexDualiseStrategy { OFF = 0, CHOOSE, ON, DEFAULT = OFF };
+//enum class SimplexDualiseStrategy { OFF = 0, CHOOSE, ON, DEFAULT = OFF };
 
-enum class SimplexPermuteStrategy { OFF = 0, CHOOSE, ON, DEFAULT = OFF };
+//enum class SimplexPermuteStrategy { OFF = 0, CHOOSE, ON, DEFAULT = OFF };
 
 enum class SimplexScaleStrategy {
   OFF = 0,

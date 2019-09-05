@@ -384,9 +384,9 @@ void setHsolOptions(HighsOptions& options) {
   options.primal_feasibility_tolerance = 1e-7;
   options.dual_feasibility_tolerance = 1e-7;
   options.dual_objective_value_upper_bound = HIGHS_CONST_INF;
-  options.simplex_strategy = SimplexStrategy::DUAL_PLAIN;
-  options.simplex_dualise_strategy = SimplexDualiseStrategy::OFF;
-  options.simplex_permute_strategy = SimplexPermuteStrategy::OFF;
+  options.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
+  options.simplex_dualise_strategy = OPTION_OFF;
+  options.simplex_permute_strategy = OPTION_OFF;
   options.simplex_scale_strategy = SimplexScaleStrategy::HSOL;
   options.simplex_crash_strategy = SimplexCrashStrategy::OFF;
   options.simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;

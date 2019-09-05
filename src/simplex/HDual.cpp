@@ -341,12 +341,12 @@ void HDual::init(int num_threads) {
   dualRHS.setup();
 
   // Initialize for tasks
-  if (workHMO.simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  if (workHMO.simplex_info_.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
     initSlice(num_threads - 2);
   }
 
   // Initialize for multi
-  if (workHMO.simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  if (workHMO.simplex_info_.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
     if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
@@ -443,13 +443,13 @@ void HDual::solvePhase1() {
     for (;;) {
       switch (simplex_info.simplex_strategy) {
         default:
-        case SimplexStrategy::DUAL_PLAIN:
+        case SIMPLEX_STRATEGY_DUAL_PLAIN:
           iterate();
           break;
-        case SimplexStrategy::DUAL_TASKS:
+        case SIMPLEX_STRATEGY_DUAL_TASKS:
           iterateTasks();
           break;
-        case SimplexStrategy::DUAL_MULTI:
+        case SIMPLEX_STRATEGY_DUAL_MULTI:
           iterateMulti();
           break;
       }
@@ -558,16 +558,16 @@ void HDual::solvePhase2() {
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solvePhase2()
-      // Performs one iteration in case SimplexStrategy::DUAL_PLAIN:
+      // Performs one iteration in case SIMPLEX_STRATEGY_DUAL_PLAIN:
       switch (simplex_info.simplex_strategy) {
         default:
-        case SimplexStrategy::DUAL_PLAIN:
+        case SIMPLEX_STRATEGY_DUAL_PLAIN:
           iterate();
           break;
-        case SimplexStrategy::DUAL_TASKS:
+        case SIMPLEX_STRATEGY_DUAL_TASKS:
           iterateTasks();
           break;
-        case SimplexStrategy::DUAL_MULTI:
+        case SIMPLEX_STRATEGY_DUAL_MULTI:
           iterateMulti();
           break;
       }
@@ -1755,7 +1755,7 @@ void HDual::updateDual() {
   else {
     // Update the dual values (if packCount>0)
     dualRow.update_dual(thetaDual);//, columnOut);
-    if (workHMO.simplex_info_.simplex_strategy != SimplexStrategy::DUAL_PLAIN &&
+    if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
         slice_PRICE) {
       // Update the dual variables slice-by-slice [presumably
       // nothing is done in the previous call to

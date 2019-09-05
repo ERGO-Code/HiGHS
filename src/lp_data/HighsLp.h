@@ -214,7 +214,7 @@ struct HighsSimplexInfo {
   std::vector<int> clock_;
   //
   // Options from HighsOptions for the simplex solver
-  SimplexStrategy simplex_strategy;
+  int simplex_strategy;
   SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
   SimplexPrimalEdgeWeightStrategy primal_edge_weight_strategy;
   SimplexPriceStrategy price_strategy;

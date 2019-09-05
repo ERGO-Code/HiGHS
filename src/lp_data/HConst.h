@@ -37,7 +37,7 @@ enum HighsPrintMessageLevel {
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
-enum CommandLineOption { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
+enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };
 
 enum SolverOption { SOLVER_OPTION_SIMPLEX = -1, SOLVER_OPTION_CHOOSE, SOLVER_OPTION_IPM }; 
 

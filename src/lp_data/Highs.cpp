@@ -330,7 +330,7 @@ HighsStatus Highs::run() {
           // be used
           HighsOptions save_options = hmos_[solved_hmo].options_;
           HighsOptions& options = hmos_[solved_hmo].options_;
-          options.simplex_strategy = SimplexStrategy::CHOOSE;
+          options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
           // Set the message level to ML_ALWAYS so that data for
           // individual iterations are reported
           bool full_iteration_logging = false;

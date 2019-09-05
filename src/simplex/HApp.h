@@ -80,7 +80,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   //
   // Copy the simplex stratgy so that it can be modified:
   //
-  SimplexStrategy use_simplex_strategy = simplex_info.simplex_strategy;
+  int use_simplex_strategy = simplex_info.simplex_strategy;
   if (simplex_info.num_primal_infeasibilities == 0) {
     // Primal feasible
     if (simplex_info.num_dual_infeasibilities == 0) {
@@ -89,13 +89,13 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       highs_model_object.model_status_ = HighsModelStatus::OPTIMAL;
     } else {
       // Only dual infeasible, so maybe use primal simplex
-      if (use_simplex_strategy == SimplexStrategy::CHOOSE)
-        use_simplex_strategy = SimplexStrategy::PRIMAL;
+      if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+        use_simplex_strategy = SIMPLEX_STRATEGY_PRIMAL;
     }
   } else {
     // Not primal feasible, so maybe use dual simplex
-    if (use_simplex_strategy == SimplexStrategy::CHOOSE)
-      use_simplex_strategy = SimplexStrategy::DUAL;
+    if (use_simplex_strategy == SIMPLEX_STRATEGY_CHOOSE)
+      use_simplex_strategy = SIMPLEX_STRATEGY_DUAL;
   }
   if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) {
     // Official start of solver Start the solve clock - because
@@ -109,7 +109,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // reportSimplexLpStatus(simplex_lp_status, "After transition");
 #endif
   if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) {
-    if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
+    if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       // Use primal simplex solver
       HPrimal primal_solver(highs_model_object);
       primal_solver.solve();
@@ -118,14 +118,14 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       HDual dual_solver(highs_model_object);
       dual_solver.options();
       // Solve, depending on the particular strategy
-      if (use_simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+      if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
         // Serial
         dual_solver.solve();
-      } else if (use_simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+      } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
         // Parallel - SIP
         // writePivots("tasks");
         dual_solver.solve(8);
-      } else if (use_simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+      } else if (use_simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
         // Parallel - PAMI
         // writePivots("multi");
         // if (opt.partitionFile.size() > 0)
@@ -165,7 +165,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     printf("!! Move iterationAnalysisReport() to HSimplex\n");
     //    if (simplex_info.analyseSimplexIterations) iterationAnalysisReport();
 
-    if (use_simplex_strategy == SimplexStrategy::PRIMAL) {
+    if (use_simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
       HighsLogMessage(HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
                       simplex_info.primal_phase1_iteration_count,
@@ -378,7 +378,7 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
 	HighsOptions& options = highs_model_object.options_;
 	options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
 	options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
-	options.simplex_strategy = SimplexStrategy::CHOOSE;
+	options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
 	HighsStatus highs_status = runSimplexSolver(highs_model_object);
 	if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
 	options = save_options;

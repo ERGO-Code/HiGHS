@@ -186,16 +186,16 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
       // and possibly after dualising
 
       /*
-      // Possibly dualise, making sure that no simplex or other data are used to
-      initialise if (options.simplex_dualise_strategy !=
-      SimplexDualiseStrategy::OFF) { dualiseSimplexLp(highs_model_object);
+      // Possibly dualise, making sure that no simplex or other data are used to initialise 
+      //
+      if (options.simplex_dualise_strategy != OPTION_OFF) { dualiseSimplexLp(highs_model_object);
       have_highs_solution = false;
         // Initialise the real and integer random vectors
         initialiseSimplexLpRandomVectors(highs_model_object);
       }
       */
       // Possibly permute the columns of the LP to be used by the solver.
-      if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF)
+      if (options.simplex_permute_strategy != OPTION_OFF)
         permuteSimplexLp(highs_model_object);
 
       // Allocate memory for nonbasicFlag
