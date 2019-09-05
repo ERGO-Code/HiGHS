@@ -72,24 +72,24 @@ class OptionRecordInt : public OptionRecord {
  public:
   int* value;
   int lower_bound;
-  int upper_bound;
   int default_value;
+  int upper_bound;
  OptionRecordInt(
 		std::string Xname,
 		std::string Xdescription,
 		bool Xadvanced,
 		int* Xvalue_pointer,
 		int Xlower_bound,
-		int Xupper_bound,
-		int Xdefault_value) : OptionRecord(
+		int Xdefault_value,
+		int Xupper_bound) : OptionRecord(
 						  HighsOptionType::INT,
 						  Xname,
 						  Xdescription,
 						  Xadvanced) {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
-    upper_bound = Xupper_bound;
     default_value = Xdefault_value;
+    upper_bound = Xupper_bound;
     *value = default_value;
   }
 
@@ -111,16 +111,16 @@ class OptionRecordDouble : public OptionRecord {
 		    bool Xadvanced,
 		    double* Xvalue_pointer,
 		    double Xlower_bound,
-		    double Xupper_bound,
-		    double Xdefault_value) : OptionRecord(
+		    double Xdefault_value,
+		    double Xupper_bound) : OptionRecord(
 							 HighsOptionType::DOUBLE,
 							 Xname,
 							 Xdescription,
 							 Xadvanced)  {
     value = Xvalue_pointer;
     lower_bound = Xlower_bound;
-    upper_bound = Xupper_bound;
     default_value = Xdefault_value;
+    upper_bound = Xupper_bound;
     *value = default_value;
   }
 
@@ -165,6 +165,10 @@ bool commandLineSolverOk(const string& value);
 bool boolFromString(const std::string value, bool& bool_value);
 
 OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
+
+OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records);
+OptionStatus checkOption(const OptionRecordInt& option);
+OptionStatus checkOption(const OptionRecordDouble& option);
 
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
@@ -256,6 +260,48 @@ class HighsOptions {
 				     false, &simplex_iteration_limit,
 				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
     records.push_back(record_int);
+    
+    record_double = new OptionRecordDouble("infinite_cost",
+					   "Limit on cost coefficient: values larger than this will be treated as infinite",
+					   false, &infinite_cost,
+					   1e15, 1e20, 1e25);
+    records.push_back(record_double);
+    
+    record_double = new OptionRecordDouble("infinite_bound",
+					   "Limit on |constraint bound|: values larger than this will be treated as infinite",
+					   false, &infinite_bound,
+					   1e15 , 1e20, 1e25);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("small_matrix_value",
+					   "Lower limit on |matrix entries|: values smaller than this will be treated as zero",
+					   false, &small_matrix_value,
+					   1e-12, 1e-9, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("large_matrix_value",
+				     "Upper limit on |matrix entries|: values larger than this will be treated as infinite",
+				     false, &large_matrix_value,
+				     1e0, 1e15, 1e20);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("primal_feasibility_tolerance",
+				     "Primal feasibility tolerance",
+				     false, &primal_feasibility_tolerance,
+				     1e-10, 1e-7, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("dual_feasibility_tolerance",
+				     "Dual feasibility tolerance",
+				     false, &dual_feasibility_tolerance,
+				     1e-10, 1e-7, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("dual_objective_value_upper_bound",
+				     "Upper bound on objective value for dual simplex: algorithm terminates if reached",
+				     false, &dual_objective_value_upper_bound,
+				     -HIGHS_CONST_INF, HIGHS_CONST_INF, HIGHS_CONST_INF);
+    records.push_back(record_double);
 
     // Advanced options
     record_bool = new OptionRecordBool("run_as_hsol",
@@ -271,7 +317,12 @@ class HighsOptions {
     record_int = new OptionRecordInt("keep_n_rows",
 				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows -1/0/1",
 				     true, &keep_n_rows,
-				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS, KEEP_N_ROWS_DELETE_ROWS);
+				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
+    records.push_back(record_int);
+    record_int = new OptionRecordInt("allowed_simplex_scale_factor",
+				     "Largest power-of-two factor permitted when scaling for the simplex solver",
+				     true, &allowed_simplex_scale_factor,
+				     0, 10, 20);
     records.push_back(record_int);
 
   }
@@ -287,21 +338,21 @@ class HighsOptions {
   
   // Options read from the file
   int simplex_iteration_limit;
+  double infinite_cost;
+  double infinite_bound;
+  double small_matrix_value;
+  double large_matrix_value;
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  double dual_objective_value_upper_bound;
 
   // Advanced options
   bool run_as_hsol;
   bool mps_parser_type_free;
   int keep_n_rows;
+  int allowed_simplex_scale_factor;
 
-  double infinite_cost = INFINITE_COST_DEFAULT;
-  double infinite_bound = INFINITE_BOUND_DEFAULT;
-  double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
-  double large_matrix_value = LARGE_MATRIX_VALUE_DEFAULT;
-  int allowed_simplex_scale_factor = ALLOWED_SIMPLEX_SCALE_FACTOR_DEFAULT;
-  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
-  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
-  double dual_objective_value_upper_bound =
-      DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
+
   SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
   SimplexDualiseStrategy simplex_dualise_strategy =
       SimplexDualiseStrategy::DEFAULT;

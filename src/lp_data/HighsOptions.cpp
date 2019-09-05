@@ -64,9 +64,72 @@ bool boolFromString(const std::string value, bool& bool_value) {
 
 OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index) {
   int num_options = option_records.size();
-  for (index=0; index<num_options; index++) if (option_records[index]->name == name) return OptionStatus::OK;
+  for (index = 0; index < num_options; index++) if (option_records[index]->name == name) return OptionStatus::OK;
   HighsLogMessage(HighsMessageType::ERROR, "getOptionIndex: Option \"%s\" is unknown", name.c_str());
   return OptionStatus::UNKNOWN_OPTION;
+}
+
+
+OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records) {
+  bool error_found = false;
+  int num_options = option_records.size();
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = option_records[index]->type;
+    if (type == HighsOptionType::INT) {
+      OptionRecordInt& option = ((OptionRecordInt*)option_records[index])[0];
+      if (checkOption(option) != OptionStatus::OK) error_found = true;
+    } else if (type == HighsOptionType::DOUBLE) {
+      OptionRecordDouble& option = ((OptionRecordDouble*)option_records[index])[0];
+      if (checkOption(option) != OptionStatus::OK) error_found = true;
+    }
+  }
+  if (error_found) return OptionStatus::ILLEGAL_VALUE;
+  HighsLogMessage(HighsMessageType::INFO, "checkOptions: OK");
+  return OptionStatus::OK;
+}
+
+OptionStatus checkOption(const OptionRecordInt& option) {
+  if (option.lower_bound > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::ERROR, "checkOption: Option \"%s\" has inconsistent bounds [%d, %d]",
+		    option.name.c_str(), option.lower_bound, option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  if (option.default_value < option.lower_bound ||
+      option.default_value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::ERROR, "checkOption: Option \"%s\" has default value %d inconsistent with bounds [%d, %d]",
+		    option.name.c_str(), option.default_value, option.lower_bound, option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  int value = *option.value;
+  if (value < option.lower_bound ||
+      value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::ERROR, "checkOption: Option \"%s\" has value %d inconsistent with bounds [%d, %d]",
+		    option.name.c_str(), value, option.lower_bound, option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus checkOption(const OptionRecordDouble& option) {
+  if (option.lower_bound > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::ERROR, "checkOption: Option \"%s\" has inconsistent bounds [%g, %g]",
+		    option.name.c_str(), option.lower_bound, option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  if (option.default_value < option.lower_bound ||
+      option.default_value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::ERROR, "checkOption: Option \"%s\" has default value %g inconsistent with bounds [%g, %g]",
+		    option.name.c_str(), option.default_value, option.lower_bound, option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  double value = *option.value;
+  if (value < option.lower_bound ||
+      value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::ERROR, "checkOption: Option \"%s\" has value %g inconsistent with bounds [%g, %g]",
+		    option.name.c_str(), value, option.lower_bound, option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
 }
 
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value) {
@@ -183,7 +246,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordBool option = ((OptionRecordBool*)option_records[index])[0];
-  value = *(option.value);
+  value = *option.value;
   return OptionStatus::OK;
 }
 
@@ -197,7 +260,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordInt option = ((OptionRecordInt*)option_records[index])[0];
-  value = *(option.value);
+  value = *option.value;
   return OptionStatus::OK;
 }
 
@@ -211,7 +274,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordDouble option = ((OptionRecordDouble*)option_records[index])[0];
-  value = *(option.value);
+  value = *option.value;
   return OptionStatus::OK;
 }
 
@@ -225,58 +288,58 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
     return OptionStatus::ILLEGAL_VALUE;
   }
   OptionRecordString option = ((OptionRecordString*)option_records[index])[0];
-  value = *(option.value);
+  value = *option.value;
   return OptionStatus::OK;
 }
 
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report) {
   int num_options = option_records.size();
-  for (int i=0; i<num_options; i++) {
-    HighsOptionType type = option_records[i]->type;
-    //    fprintf(file, "\n# Option %1d\n", i);
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = option_records[index]->type;
+    //    fprintf(file, "\n# Option %1d\n", index);
     if (type == HighsOptionType::BOOL) {
-      reportOption(file, ((OptionRecordBool*)option_records[i])[0], force_report);
+      reportOption(file, ((OptionRecordBool*)option_records[index])[0], force_report);
     } else if (type == HighsOptionType::INT) {
-      reportOption(file, ((OptionRecordInt*)option_records[i])[0], force_report);
+      reportOption(file, ((OptionRecordInt*)option_records[index])[0], force_report);
     } else if (type == HighsOptionType::DOUBLE) {
-      reportOption(file, ((OptionRecordDouble*)option_records[i])[0], force_report);
+      reportOption(file, ((OptionRecordDouble*)option_records[index])[0], force_report);
     } else {
-      reportOption(file, ((OptionRecordString*)option_records[i])[0], force_report);
+      reportOption(file, ((OptionRecordString*)option_records[index])[0], force_report);
     } 
   }
 }
 
 void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report) {
-  if (force_report || option.default_value != *(option.value)) {
+  if (force_report || option.default_value != *option.value) {
     fprintf(file, "\n# %s\n", option.description.c_str());
     fprintf(file, "# [type: bool, advanced: %s, range: {false, true}, default: %s]\n",
 	   bool2string(option.advanced),
 	   bool2string(option.default_value));
-    fprintf(file, "%s = %s\n", option.name.c_str(), bool2string(*(option.value)));
+    fprintf(file, "%s = %s\n", option.name.c_str(), bool2string(*option.value));
   }
 }
 
 void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report) {
-  if (force_report || option.default_value != *(option.value)) {
+  if (force_report || option.default_value != *option.value) {
     fprintf(file, "\n# %s\n", option.description.c_str());
     fprintf(file, "# [type: int, advanced: %s, range: {%d, %d}, default: %d]\n",
 	   bool2string(option.advanced),
 	   option.lower_bound,
 	   option.upper_bound,
 	   option.default_value);
-    fprintf(file, "%s = %d\n", option.name.c_str(), *(option.value));
+    fprintf(file, "%s = %d\n", option.name.c_str(), *option.value);
   }
 }
 
 void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report) {
-  if (force_report || option.default_value != *(option.value)) {
+  if (force_report || option.default_value != *option.value) {
     fprintf(file, "\n# %s\n", option.description.c_str());
     fprintf(file, "# [type: double, advanced: %s, range: [%g, %g], default: %g]\n",
 	   bool2string(option.advanced),
 	   option.lower_bound,
 	   option.upper_bound,
 	   option.default_value);
-    fprintf(file, "%s = %g\n", option.name.c_str(), *(option.value));
+    fprintf(file, "%s = %g\n", option.name.c_str(), *option.value);
   }
 }
 
@@ -285,12 +348,12 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
   if (
       //file != stdout &&
       option.name == options_file_string) return;
-  if (force_report || option.default_value != *(option.value)) {
+  if (force_report || option.default_value != *option.value) {
     fprintf(file, "\n# %s\n", option.description.c_str());
     fprintf(file, "# [type: string, advanced: %s, default: \"%s\"]\n",
 	   bool2string(option.advanced),
 	   option.default_value.c_str());
-    fprintf(file, "%s = %s\n", option.name.c_str(), (*(option.value)).c_str());
+    fprintf(file, "%s = %s\n", option.name.c_str(), (*option.value).c_str());
   }
 }
 
