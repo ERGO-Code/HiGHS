@@ -50,6 +50,7 @@ set(headers
     io/HToyIO.h
     io/HighsIO.h
     io/LoadProblem.h
+    io/LoadOptions.h
     lp_data/HConst.h
     lp_data/HighsLp.h
     lp_data/HighsLpUtils.h

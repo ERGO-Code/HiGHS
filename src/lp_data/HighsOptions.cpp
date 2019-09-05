@@ -84,7 +84,6 @@ OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records) {
     }
   }
   if (error_found) return OptionStatus::ILLEGAL_VALUE;
-  HighsLogMessage(HighsMessageType::INFO, "checkOptions: OK");
   return OptionStatus::OK;
 }
 
@@ -134,6 +133,7 @@ OptionStatus checkOption(const OptionRecordDouble& option) {
 
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value) {
   int index;
+  //  printf("setOptionValue: \"%s\" with bool %d\n", name.c_str(), value);
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
@@ -146,6 +146,7 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
 
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value) {
   int index;
+  //  printf("setOptionValue: \"%s\" with int %d\n", name.c_str(), value);
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
@@ -158,6 +159,7 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
 
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value) {
   int index;
+  //  printf("setOptionValue: \"%s\" with double %g\n", name.c_str(), value);
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
@@ -170,12 +172,14 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
 
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value) {
   int index;
+  //  printf("setOptionValue: \"%s\" with value string %s\n", name.c_str(), value.c_str());
   OptionStatus status = getOptionIndex(name, option_records, index);
   if (status != OptionStatus::OK) return status;
   HighsOptionType type = option_records[index]->type;
   if (type == HighsOptionType::BOOL) {
     bool bool_value;
     bool return_status = boolFromString(value, bool_value);
+    //    printf("boolFromString for \"%s\" returns %d from \"%s\" with status %d\n", name.c_str(), bool_value, value.c_str(), return_status);
     if (!return_status) {
       HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Value \"%s\" cannot be interpreted as a bool", value.c_str());
       return OptionStatus::ILLEGAL_VALUE;
@@ -357,8 +361,6 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
   }
 }
 
-//==========================================
-
 OptionStatus checkOptionsValue(HighsOptions& options) {
   return OptionStatus::OK;
 }
@@ -396,82 +398,4 @@ OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
   HighsSetMessagelevel(value);
   options.messageLevel = value;
   return OptionStatus::OK;
-}
-
-SimplexStrategy intToSimplexStrategy(const int& value) {
-  if (value == (int)SimplexStrategy::CHOOSE) return SimplexStrategy::CHOOSE;
-  if (value == (int)SimplexStrategy::DUAL_PLAIN)
-    return SimplexStrategy::DUAL_PLAIN;
-  if (value == (int)SimplexStrategy::DUAL_MULTI)
-    return SimplexStrategy::DUAL_MULTI;
-  if (value == (int)SimplexStrategy::PRIMAL) return SimplexStrategy::PRIMAL;
-  return SimplexStrategy::DEFAULT;
-}
-SimplexDualiseStrategy intToSimplexDualiseStrategy(const int& value) {
-  if (value == (int)SimplexDualiseStrategy::OFF)
-    return SimplexDualiseStrategy::OFF;
-  if (value == (int)SimplexDualiseStrategy::CHOOSE)
-    return SimplexDualiseStrategy::CHOOSE;
-  if (value == (int)SimplexDualiseStrategy::ON)
-    return SimplexDualiseStrategy::ON;
-  return SimplexDualiseStrategy::DEFAULT;
-}
-SimplexPermuteStrategy intToSimplexPermuteStrategy(const int& value) {
-  if (value == (int)SimplexPermuteStrategy::OFF)
-    return SimplexPermuteStrategy::OFF;
-  if (value == (int)SimplexPermuteStrategy::CHOOSE)
-    return SimplexPermuteStrategy::CHOOSE;
-  if (value == (int)SimplexPermuteStrategy::ON)
-    return SimplexPermuteStrategy::ON;
-  return SimplexPermuteStrategy::DEFAULT;
-}
-SimplexScaleStrategy intToSimplexScaleStrategy(const int& value) {
-  if (value == (int)SimplexScaleStrategy::OFF) return SimplexScaleStrategy::OFF;
-  if (value == (int)SimplexScaleStrategy::CHOOSE)
-    return SimplexScaleStrategy::CHOOSE;
-  if (value == (int)SimplexScaleStrategy::HSOL)
-    return SimplexScaleStrategy::HSOL;
-  if (value == (int)SimplexScaleStrategy::HIGHS)
-    return SimplexScaleStrategy::HIGHS;
-  return SimplexScaleStrategy::DEFAULT;
-}
-SimplexCrashStrategy intToSimplexCrashStrategy(const int& value) {
-  if (value == (int)SimplexCrashStrategy::LTSSF_K)
-    return SimplexCrashStrategy::LTSSF_K;
-  if (value == (int)SimplexCrashStrategy::LTSSF_PRI)
-    return SimplexCrashStrategy::LTSSF_PRI;
-  if (value == (int)SimplexCrashStrategy::BIXBY)
-    return SimplexCrashStrategy::BIXBY;
-  printf("Crash strategy option %d cannot be parsed yet!\n", value);
-  return SimplexCrashStrategy::DEFAULT;
-}
-SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(
-    const int& value) {
-  if (value == (int)SimplexDualEdgeWeightStrategy::DANTZIG)
-    return SimplexDualEdgeWeightStrategy::DANTZIG;
-  if (value == (int)SimplexDualEdgeWeightStrategy::DEVEX)
-    return SimplexDualEdgeWeightStrategy::DEVEX;
-  if (value == (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE)
-    return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;
-  if (value ==
-      (int)SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH)
-    return SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH;
-  return SimplexDualEdgeWeightStrategy::DEFAULT;
-}
-SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(
-    const int& value) {
-  if (value == (int)SimplexPrimalEdgeWeightStrategy::DANTZIG)
-    return SimplexPrimalEdgeWeightStrategy::DANTZIG;
-  if (value == (int)SimplexPrimalEdgeWeightStrategy::DEVEX)
-    return SimplexPrimalEdgeWeightStrategy::DEVEX;
-  return SimplexPrimalEdgeWeightStrategy::DEFAULT;
-}
-SimplexPriceStrategy intToSimplexPriceStrategy(const int& value) {
-  if (value == (int)SimplexPriceStrategy::COL) return SimplexPriceStrategy::COL;
-  if (value == (int)SimplexPriceStrategy::ROW) return SimplexPriceStrategy::ROW;
-  if (value == (int)SimplexPriceStrategy::ROW_SWITCH)
-    return SimplexPriceStrategy::ROW_SWITCH;
-  if (value == (int)SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH)
-    return SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH;
-  return SimplexPriceStrategy::DEFAULT;
 }

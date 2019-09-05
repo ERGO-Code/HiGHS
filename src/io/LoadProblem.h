@@ -15,15 +15,15 @@
 #define IO_LOAD_PROBLEM_H_
 
 #include <sys/stat.h>
-#include <sys/types.h>
-#include <cstdio>
-#include <fstream>
+//#include <sys/types.h>
+//#include <cstdio>
+//#include <fstream>
 
-#include "io/Filereader.h"
-#include "io/HighsIO.h"
+//#include "io/Filereader.h"
+//#include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
-#include "lp_data/HighsOptions.h"
-#include "util/stringutil.h"
+//#include "lp_data/HighsOptions.h"
+//#include "util/stringutil.h"
 
 // Parses the file in options.model_file using the parser specified in
 // options.parser
@@ -75,6 +75,7 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   return assessLp(lp, options, normalise);
 }
 
+/*
 // For extended options to be parsed from a file. Assuming options file is
 // specified.
 bool loadOptionsFromFile(HighsOptions& options) {
@@ -109,4 +110,5 @@ bool loadOptionsFromFile(HighsOptions& options) {
 
   return true;
 }
+*/
 #endif
