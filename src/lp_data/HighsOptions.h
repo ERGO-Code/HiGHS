@@ -344,7 +344,7 @@ class HighsOptions {
     record_bool = new OptionRecordBool("run_as_hsol",
 				       "Run HiGHS simplex solver as if it were hsol",
 				       advanced, &run_as_hsol,
-				       advanced);
+				       false);
     records.push_back(record_bool);
     record_bool = new OptionRecordBool("mps_parser_type_free",
 				       "Use the free format MPS file reader",
