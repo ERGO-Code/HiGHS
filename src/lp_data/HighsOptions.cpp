@@ -268,12 +268,35 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
     }
     return setOptionValue(((OptionRecordBool*)option_records[index])[0], bool_value);
   } else if (type == HighsOptionType::INT) {
-    return setOptionValue(((OptionRecordInt*)option_records[index])[0], atoi(value.c_str()));
+    int value_int = atoi(value.c_str());
+    double value_double = atof(value.c_str());
+    double value_int_double = value_int;
+    if (value_double != value_int_double) {
+      HighsLogMessage(HighsMessageType::ERROR,
+		      "setOptionValue: Value = \"%s\" converts via atoi as %d so is %g as double, but as %g via atof",
+		      value.c_str(), value_int, value_int_double, value_double);
+      return OptionStatus::ILLEGAL_VALUE;
+    }
+    return setOptionValue(((OptionRecordInt*)option_records[index])[0], value_int);
   } else if (type == HighsOptionType::DOUBLE) {
+    int value_int = atoi(value.c_str());
+    double value_double = atof(value.c_str());
+    double value_int_double = value_int;
+    if (value_double == value_int_double) {
+      HighsLogMessage(HighsMessageType::INFO,
+		      "setOptionValue: Value = \"%s\" converts via atoi as %d so is %g as double, and %g via atof\n",
+		      value.c_str(), value_int, value_int_double, value_double);
+    }
     return setOptionValue(((OptionRecordDouble*)option_records[index])[0], atof(value.c_str()));
   } else {
     return setOptionValue(((OptionRecordString*)option_records[index])[0], value);
   }
+}
+
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const char* value) {
+  // Handles values passed as explicit values in quotes 
+  std::string value_as_string(value);
+  return setOptionValue(name, option_records, value_as_string);
 }
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {

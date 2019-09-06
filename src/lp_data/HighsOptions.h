@@ -174,6 +174,7 @@ OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>&
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
 
 OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
 OptionStatus setOptionValue(OptionRecordInt& option, const int value);
@@ -407,6 +408,7 @@ class HighsOptions {
   int simplex_crash_strategy;
   int simplex_dual_edge_weight_strategy;
   int simplex_primal_edge_weight_strategy;
+  int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
   
   // Advanced options
   bool run_as_hsol;
@@ -422,11 +424,7 @@ class HighsOptions {
       SIMPLEX_INITIAL_CONDITION_TOLERANCE_DEFAULT;
   double dual_steepest_edge_weight_log_error_threshhold =
     DUAL_STEEPEST_EDGE_WEIGHT_LOG_ERROR_THRESHHOLD_DEFAULT;
-  int allow_superbasic = false;
-
-  bool pami = 0;
-  bool sip = 0;
-  bool scip = 0;
+  bool simplex_perturb_costs = true;
 
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
@@ -438,15 +436,6 @@ class HighsOptions {
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-
-  // Declare HighsOptions for an LP model, any solver and simplex solver,
-  // setting the default value
-  //
-  // For the simplex solver
-  //
-  bool simplex_perturb_costs = true;
-  // Maximum number of simplex updates
-  int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
 
   bool find_feasibility = false;
   FeasibilityStrategy feasibility_strategy =
