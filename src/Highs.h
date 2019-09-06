@@ -55,34 +55,59 @@ class Highs {
    * @brief Sets an option to the bool/int/double/string  value if it's
    * legal and, for bool/int/double, only if it's of the correct type
    */
-  HighsStatus setHighsOptionValue(const std::string& option,
-                                  const bool value);
+  HighsStatus setHighsOptionValue(
+				  const std::string& option,
+                                  const bool value
+				  );
 
-  HighsStatus setHighsOptionValue(const std::string& option,
-                                  const int value);
+  HighsStatus setHighsOptionValue(
+				  const std::string& option,
+                                  const int value
+				  );
 
-  HighsStatus setHighsOptionValue(const std::string& option,
-                                  const double value);
+  HighsStatus setHighsOptionValue(
+				  const std::string& option,
+                                  const double value
+				  );
 
-  HighsStatus setHighsOptionValue(const std::string& option,
-                                  const std::string value);
+  HighsStatus setHighsOptionValue(
+				  const std::string& option,
+                                  const std::string value
+				  );
+
+  HighsStatus setHighsOptionValue(
+				  const std::string& option,
+                                  const char* value
+				  );
 
 
   /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
-  HighsStatus getHighsOptionValue(const std::string& option,
+  HighsStatus getHighsOptionValue(
+				  const std::string& option,
                                   bool& value);
 
-  HighsStatus getHighsOptionValue(const std::string& option,
+  HighsStatus getHighsOptionValue(
+				  const std::string& option,
                                   int& value);
 
-  HighsStatus getHighsOptionValue(const std::string& option,
+  HighsStatus getHighsOptionValue(
+				  const std::string& option,
                                   double& value);
 
-  HighsStatus getHighsOptionValue(const std::string& option,
+  HighsStatus getHighsOptionValue(
+				  const std::string& option,
                                   std::string& value);
+  
+  HighsStatus getHighsOptionValue(
+				  const std::string& option,
+                                  std::string& value);
+  
+  HighsStatus writeHighsOptions(
+				const std::string filename  //!< the filename
+				);
   
   /**
    * @brief Clears the vector of HighsModelObjects (hmos), creates a
@@ -96,7 +121,8 @@ class Highs {
   /**
    * @brief reads a model from a file and initializes the Highs object
    */
-  HighsStatus initializeFromFile(const std::string filename  //!< the filename
+  HighsStatus initializeFromFile(
+				 const std::string filename  //!< the filename
   );
 
   /**

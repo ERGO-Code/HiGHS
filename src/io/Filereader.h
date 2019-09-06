@@ -37,12 +37,6 @@ enum class FilereaderRetcode {
     NOT_IMPLEMENTED = 3
 };
 
-enum class FilewriterRetcode {
-  OK = 0,
-  FILE_NOT_OPENED = 1,
-  FAIL = 2
-};
-
 class Filereader {
  public:
   virtual FilereaderRetcode readModelFromFile(const HighsOptions& options,

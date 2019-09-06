@@ -12,7 +12,8 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "lp_data/HighsOptions.h"
-#include "io/HighsIO.h"
+//#include "io/Filereader.h"
+//#include "io/HighsIO.h"
 
 inline const char* bool2string(bool b) { return b ? "true" : "false"; }
 
@@ -399,6 +400,10 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   OptionRecordString option = ((OptionRecordString*)option_records[index])[0];
   value = *option.value;
   return OptionStatus::OK;
+}
+
+FilewriterRetcode reportOptionsToFile(const std::string filename) {
+  return FilewriterRetcode::OK;
 }
 
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report) {

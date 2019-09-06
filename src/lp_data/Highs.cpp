@@ -63,6 +63,12 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
+HighsStatus Highs::setHighsOptionValue(const std::string& option,
+				       const char* value) {
+  if (setOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
 HighsStatus Highs::getHighsOptionValue(const std::string& option,
 				       bool& value) {
   if (getOptionValue(option, options_.records, value) == OptionStatus::OK) return HighsStatus::OK;
@@ -87,6 +93,10 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
+HighsStatus writeHighsOptions(const std::string filename) {
+  if (reportOptionsToFile(filename) != FilereaderRetcode::OK) HighsStatus::Error;
+  return HighsStatus::OK;
+}
 
 HighsStatus Highs::initializeLp(const HighsLp& lp) {
   // todo:(julian) add code to check that LP is valid.
@@ -160,13 +170,11 @@ HighsStatus Highs::run() {
       initializeLp(primal);
     }
 
-    if (options_.feasibility_strategy ==
-        FeasibilityStrategy::kApproxComponentWise)
+    if (options_.feasibility_strategy == FEASIBILITY_STRATEGY_kApproxComponentWise)
       return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);
-    else if (options_.feasibility_strategy == FeasibilityStrategy::kApproxExact)
+    else if (options_.feasibility_strategy == FEASIBILITY_STRATEGY_kApproxExact)
       return runFeasibility(lp_, solution_, MinimizationType::kExact);
-    else if (options_.feasibility_strategy ==
-             FeasibilityStrategy::kDirectSolve) {
+    else if (options_.feasibility_strategy == FEASIBILITY_STRATEGY_kDirectSolve) {
       // Proceed to normal exection of run().
       // If dualize has been called replace LP is replaced with dual in code
       // above.

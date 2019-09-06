@@ -17,6 +17,7 @@
 #include <cstring>
 
 #include "io/HighsIO.h"
+//#include "io/Filereader.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "presolve/Presolve.h"
@@ -186,14 +187,12 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
+FilewriterRetcode reportOptionsToFile(const std::string filename);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false);
-
-//======================================
-
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
@@ -313,18 +312,18 @@ class HighsOptions {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_scale_strategy",
-				     "Strategy for scaling before simplex solver",
+				     "Strategy for scaling before simplex solver: off / on 0/1",
 				     advanced, &simplex_scale_strategy,
 				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_crash_strategy",
+    record_int = new OptionRecordInt("simplex_crash_strategy: off / LTSSF / Bixby 0/1/2",
 				     "Strategy for simplex crash",
 				     advanced, &simplex_crash_strategy,
 				     SIMPLEX_CRASH_STRATEGY_MIN, SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy",
+    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy: Dantzix / Devex / Steepest Edge 0/1/2",
 				     "Strategy for simplex dual edge weights",
 				     advanced, &simplex_dual_edge_weight_strategy,
 				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
@@ -332,12 +331,18 @@ class HighsOptions {
 				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy",
+    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy: Dantzix / Devex 0/1",
 				     "Strategy for simplex primal edge weights",
 				     advanced, &simplex_primal_edge_weight_strategy,
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_update_limit",
+				     "Limit on the number of simplex UPDATE operations",
+				     advanced, &simplex_update_limit,
+				     0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
     // Advanced options
@@ -363,25 +368,66 @@ class HighsOptions {
 				     0, 10, 20);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("dualise_strategy",
+    record_int = new OptionRecordInt("simplex_dualise_strategy",
 				     "Strategy for dualising before simplex",
 				     advanced, &simplex_dualise_strategy,
 				     OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("permute_strategy",
+    record_int = new OptionRecordInt("simplex_permute_strategy",
 				     "Strategy for permuting before simplex",
 				     advanced, &simplex_permute_strategy,
 				     OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("price_strategy",
+    record_int = new OptionRecordInt("simplex_price_strategy",
 				     "Strategy for PRICE in simplex",
 				     advanced, &simplex_price_strategy,
 				     SIMPLEX_PRICE_STRATEGY_MIN,
 				     SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
 				     SIMPLEX_PRICE_STRATEGY_MAX);
     records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("simplex_initial_condition_check",
+				     "Perform initial basis condition check in simplex",
+				     advanced, &simplex_initial_condition_check,
+				     true);
+    records.push_back(record_bool);
+
+    record_double = new OptionRecordDouble("simplex_initial_condition_tolerance",
+				     "Tolerance on initial basis condition in simplex",
+				     advanced, &simplex_initial_condition_tolerance,
+				     1.0, 1e14, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("dual_steepest_edge_weight_log_error_threshhold",
+				     "Threshhold on dual steepest edge weight errors for Devex switch",
+				     advanced, &dual_steepest_edge_weight_log_error_threshhold,
+				     1.0, 1e1, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_bool = new OptionRecordBool("find_feasibility",
+				     "Run iCrash",
+				     advanced, &find_feasibility,
+				     false);
+    records.push_back(record_bool);
+
+    record_int = new OptionRecordInt("feasibility_strategy",
+				     "Strategy for iCrash",
+				     advanced, &feasibility_strategy,
+				     FEASIBILITY_STRATEGY_MIN,
+				     FEASIBILITY_STRATEGY_kApproxComponentWise,
+				     FEASIBILITY_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("feasibility_strategy_dualize",
+				     "Dualise strategy for iCrash",
+				     advanced, &feasibility_strategy_dualize,
+				     false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("mip", "Run MIP solver", advanced, &mip, false);
+    records.push_back(record_bool);
 
   }
   std::vector<OptionRecord*> records;
@@ -408,7 +454,7 @@ class HighsOptions {
   int simplex_crash_strategy;
   int simplex_dual_edge_weight_strategy;
   int simplex_primal_edge_weight_strategy;
-  int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
+  int simplex_update_limit;
   
   // Advanced options
   bool run_as_hsol;
@@ -418,14 +464,19 @@ class HighsOptions {
   int simplex_dualise_strategy;
   int simplex_permute_strategy;
   int simplex_price_strategy;
+  bool simplex_initial_condition_check;
+  double simplex_initial_condition_tolerance;
+  double dual_steepest_edge_weight_log_error_threshhold;
+  bool simplex_perturb_costs;
 
-  bool simplex_initial_condition_check = true;
-  double simplex_initial_condition_tolerance =
-      SIMPLEX_INITIAL_CONDITION_TOLERANCE_DEFAULT;
-  double dual_steepest_edge_weight_log_error_threshhold =
-    DUAL_STEEPEST_EDGE_WEIGHT_LOG_ERROR_THRESHHOLD_DEFAULT;
-  bool simplex_perturb_costs = true;
+  // Options for iCrash
+  bool find_feasibility;
+  int feasibility_strategy;
+  bool feasibility_strategy_dualize;
 
+  // Switch for MIP solver
+  bool mip;
+  
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
   FILE* output = stdout;
@@ -436,14 +487,6 @@ class HighsOptions {
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-
-  bool find_feasibility = false;
-  FeasibilityStrategy feasibility_strategy =
-      FeasibilityStrategy::kApproxComponentWise;
-  bool feasibility_strategy_dualize = false;
-
-  bool mip = false;
-
 };
 
 
