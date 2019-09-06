@@ -311,10 +311,32 @@ class HighsOptions {
 				     SIMPLEX_STRATEGY_MIN, SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_strategy",
-				     "Strategy for simplex solver",
-				     advanced, &simplex_strategy,
-				     SIMPLEX_STRATEGY_MIN, SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
+    record_int = new OptionRecordInt("simplex_scale_strategy",
+				     "Strategy for scaling before simplex solver",
+				     advanced, &simplex_scale_strategy,
+				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_crash_strategy",
+				     "Strategy for simplex crash",
+				     advanced, &simplex_crash_strategy,
+				     SIMPLEX_CRASH_STRATEGY_MIN, SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy",
+				     "Strategy for simplex dual edge weights",
+				     advanced, &simplex_dual_edge_weight_strategy,
+				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
+				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
+				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy",
+				     "Strategy for simplex primal edge weights",
+				     advanced, &simplex_primal_edge_weight_strategy,
+				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
+				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
+				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
     // Advanced options
@@ -341,15 +363,23 @@ class HighsOptions {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("dualise_strategy",
-				     "Strategy for dualising before simlpex",
+				     "Strategy for dualising before simplex",
 				     advanced, &simplex_dualise_strategy,
 				     OPTION_OFF, OPTION_OFF, OPTION_ON);
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("permute_strategy",
-				     "Strategy for permuting before simlpex",
+				     "Strategy for permuting before simplex",
 				     advanced, &simplex_permute_strategy,
 				     OPTION_OFF, OPTION_OFF, OPTION_ON);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("price_strategy",
+				     "Strategy for PRICE in simplex",
+				     advanced, &simplex_price_strategy,
+				     SIMPLEX_PRICE_STRATEGY_MIN,
+				     SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
+				     SIMPLEX_PRICE_STRATEGY_MAX);
     records.push_back(record_int);
 
   }
@@ -373,6 +403,10 @@ class HighsOptions {
   double dual_feasibility_tolerance;
   double dual_objective_value_upper_bound;
   int simplex_strategy;
+  int simplex_scale_strategy;
+  int simplex_crash_strategy;
+  int simplex_dual_edge_weight_strategy;
+  int simplex_primal_edge_weight_strategy;
   
   // Advanced options
   bool run_as_hsol;
@@ -381,15 +415,7 @@ class HighsOptions {
   int allowed_simplex_scale_factor;
   int simplex_dualise_strategy;
   int simplex_permute_strategy;
-
-
-  SimplexScaleStrategy simplex_scale_strategy = SimplexScaleStrategy::DEFAULT;
-  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy =
-      SimplexDualEdgeWeightStrategy::DEFAULT;
-  SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy =
-      SimplexPrimalEdgeWeightStrategy::DEFAULT;
-  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
+  int simplex_price_strategy;
 
   bool simplex_initial_condition_check = true;
   double simplex_initial_condition_tolerance =
@@ -436,13 +462,5 @@ class HighsOptions {
 // values and all options are consistent.
 OptionStatus checkOptionsValue(HighsOptions& options);
 void setHsolOptions(HighsOptions& options);
-
-SimplexScaleStrategy intToSimplexScaleStrategy(const int& value);
-SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
-SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(
-    const int& value);
-SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(
-    const int& value);
-SimplexPriceStrategy intToSimplexPriceStrategy(const int& value);
 
 #endif

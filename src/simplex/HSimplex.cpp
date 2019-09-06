@@ -209,7 +209,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
             NONBASIC_FLAG_FALSE;
 
       // Possibly find a crash basis
-      if (options.simplex_crash_strategy != SimplexCrashStrategy::OFF) {
+      if (options.simplex_crash_strategy != SIMPLEX_CRASH_STRATEGY_OFF) {
         HCrash crash(highs_model_object);
         timer.start(simplex_info.clock_[CrashClock]);
         crash.crash(options.simplex_crash_strategy);
@@ -290,7 +290,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
   //
   // Scale the LP to be used by the solver if scaling is to be used and the LP
   // is not already scaled
-  bool scale_lp = options.simplex_scale_strategy != SimplexScaleStrategy::OFF &&
+  bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
                   !simplex_lp_status.scaling_tried;
   if (scale_lp) {
     timer.start(simplex_info.clock_[ScaleClock]);    
@@ -361,7 +361,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
   if (!basis_condition_ok) {
     HCrash crash(highs_model_object);
     timer.start(simplex_info.clock_[CrashClock]);
-    crash.crash(SimplexCrashStrategy::BASIC);
+    crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
     timer.stop(simplex_info.clock_[CrashClock]);
     HighsLogMessage(HighsMessageType::INFO,
                     "Performed crash to prioritise previously basic variables "
@@ -1159,8 +1159,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   double* rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  bool original_scaling = highs_model_object.options_.simplex_scale_strategy ==
-                          SimplexScaleStrategy::HSOL;
+  bool original_scaling = highs_model_object.options_.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL;
   bool allow_cost_scaling = false;
   if (original_scaling) allow_cost_scaling = false;
   // Find out range of matrix values and skip matrix scaling if all

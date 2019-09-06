@@ -74,16 +74,98 @@ OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records) {
   bool error_found = false;
   int num_options = option_records.size();
   for (int index = 0; index < num_options; index++) {
+    std::string name = option_records[index]->name;
     HighsOptionType type = option_records[index]->type;
-    if (type == HighsOptionType::INT) {
+    // Check that there are no other options with the same name
+    for (int check_index = 0; check_index < num_options; check_index++) {
+      if (check_index == index) continue;
+      std::string check_name = option_records[check_index]->name;
+      if (check_name == name) {
+	HighsLogMessage(HighsMessageType::ERROR,
+			"checkOptions: Option %d (\"%s\") has the same name as option %d \"%s\"",
+			index, name.c_str(),
+			check_index, check_name.c_str());
+	error_found = true;
+      }
+    }
+    if (type == HighsOptionType::BOOL) {
+      // Check bool option
+      OptionRecordBool& option = ((OptionRecordBool*)option_records[index])[0];
+      // Check that there are no other options with the same value pointers
+      bool* value_pointer = option.value;
+      for (int check_index = 0; check_index < num_options; check_index++) {
+	if (check_index == index) continue;
+	OptionRecordBool& check_option = ((OptionRecordBool*)option_records[check_index])[0];
+	if (check_option.type == HighsOptionType::BOOL) {
+	  if (check_option.value == value_pointer) {
+	    HighsLogMessage(HighsMessageType::ERROR,
+			    "checkOptions: Option %d (\"%s\") has the same value pointer as option %d (\"%s\")",
+			    index, option.name.c_str(),
+			    check_index, check_option.name.c_str());
+	    error_found = true;
+	  }
+	}
+      }
+    } else if (type == HighsOptionType::INT) {
+      // Check int option
       OptionRecordInt& option = ((OptionRecordInt*)option_records[index])[0];
       if (checkOption(option) != OptionStatus::OK) error_found = true;
+      // Check that there are no other options with the same value pointers
+      int* value_pointer = option.value;
+      for (int check_index = 0; check_index < num_options; check_index++) {
+	if (check_index == index) continue;
+	OptionRecordInt& check_option = ((OptionRecordInt*)option_records[check_index])[0];
+	if (check_option.type == HighsOptionType::INT) {
+	  if (check_option.value == value_pointer) {
+	    HighsLogMessage(HighsMessageType::ERROR,
+			    "checkOptions: Option %d (\"%s\") has the same value pointer as option %d (\"%s\")",
+			    index, option.name.c_str(),
+			    check_index, check_option.name.c_str());
+	    error_found = true;
+	  }
+	}
+      }
     } else if (type == HighsOptionType::DOUBLE) {
+      // Check double option
       OptionRecordDouble& option = ((OptionRecordDouble*)option_records[index])[0];
       if (checkOption(option) != OptionStatus::OK) error_found = true;
+      // Check that there are no other options with the same value pointers
+      double* value_pointer = option.value;
+      for (int check_index = 0; check_index < num_options; check_index++) {
+	if (check_index == index) continue;
+	OptionRecordDouble& check_option = ((OptionRecordDouble*)option_records[check_index])[0];
+	if (check_option.type == HighsOptionType::DOUBLE) {
+	  if (check_option.value == value_pointer) {
+	    HighsLogMessage(HighsMessageType::ERROR,
+			    "checkOptions: Option %d (\"%s\") has the same value pointer as option %d (\"%s\")",
+			    index, option.name.c_str(),
+			    check_index, check_option.name.c_str());
+	    error_found = true;
+	  }
+	}
+      }
+    } else if (type == HighsOptionType::STRING) {
+      // Check string option
+      OptionRecordString& option = ((OptionRecordString*)option_records[index])[0];
+      // Check that there are no other options with the same value pointers
+      std::string* value_pointer = option.value;
+      for (int check_index = 0; check_index < num_options; check_index++) {
+	if (check_index == index) continue;
+	OptionRecordString& check_option = ((OptionRecordString*)option_records[check_index])[0];
+	if (check_option.type == HighsOptionType::STRING) {
+	  if (check_option.value == value_pointer) {
+	    HighsLogMessage(HighsMessageType::ERROR,
+			    "checkOptions: Option %d (\"%s\") has the same value pointer as option %d (\"%s\")",
+			    index, option.name.c_str(),
+			    check_index, check_option.name.c_str());
+	    error_found = true;
+	  }
+	}
+      }
     }
   }
   if (error_found) return OptionStatus::ILLEGAL_VALUE;
+  HighsLogMessage(HighsMessageType::INFO, "checkOptions: Options are OK");
   return OptionStatus::OK;
 }
 
@@ -387,11 +469,11 @@ void setHsolOptions(HighsOptions& options) {
   options.simplex_strategy = SIMPLEX_STRATEGY_DUAL_PLAIN;
   options.simplex_dualise_strategy = OPTION_OFF;
   options.simplex_permute_strategy = OPTION_OFF;
-  options.simplex_scale_strategy = SimplexScaleStrategy::HSOL;
-  options.simplex_crash_strategy = SimplexCrashStrategy::OFF;
-  options.simplex_dual_edge_weight_strategy = SimplexDualEdgeWeightStrategy::STEEPEST_EDGE;
-  options.simplex_primal_edge_weight_strategy = SimplexPrimalEdgeWeightStrategy::DANTZIG;
-  options.simplex_price_strategy = SimplexPriceStrategy::ROW;
+  options.simplex_scale_strategy = SIMPLEX_SCALE_STRATEGY_HSOL;
+  options.simplex_crash_strategy = SIMPLEX_CRASH_STRATEGY_OFF;
+  options.simplex_dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE;
+  options.simplex_primal_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
+  options.simplex_price_strategy = SIMPLEX_PRICE_STRATEGY_ROW;
 }
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {

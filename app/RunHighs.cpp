@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = true;// false;  // 
+  bool force_options_file = false;  // true;// 
   if (force_options_file && options.options_file.size() > 0) {
     printf(
         "In main: set options.options_file = options_file so vscode can be "

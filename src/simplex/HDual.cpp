@@ -226,11 +226,11 @@ void HDual::solve(int num_threads) {
   }
 
 #ifdef HiGHSDEV
-  SimplexDualEdgeWeightStrategy strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
+  int strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
   if (
-      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE ||
-      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL ||
-      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
+      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL ||
+      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     printf("grep_DSE_WtCk,%s,%s,%d,%d,%d,%d,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
 	   workHMO.lp_.model_name_.c_str(),
 	   workHMO.lp_.lp_name_.c_str(),
@@ -1903,25 +1903,24 @@ void HDual::iz_dvx_fwk() {
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
-void HDual::interpret_dual_edge_weight_strategy(
-    SimplexDualEdgeWeightStrategy dual_edge_weight_strategy) {
-  if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DANTZIG) {
+void HDual::interpret_dual_edge_weight_strategy(const int dual_edge_weight_strategy) {
+  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
     dual_edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::DEVEX) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX) {
     dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
@@ -1937,22 +1936,22 @@ void HDual::interpret_dual_edge_weight_strategy(
   }
 }
 
-void HDual::interpret_price_strategy(SimplexPriceStrategy price_strategy) {
+void HDual::interpret_price_strategy(const int price_strategy) {
   allow_price_by_col_switch = false;
   allow_price_by_row_switch = false;
   allow_price_ultra = false;
-  if (price_strategy == SimplexPriceStrategy::COL) {
+  if (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
     price_mode = PriceMode::COL;
-  } else if (price_strategy == SimplexPriceStrategy::ROW) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
     price_mode = PriceMode::ROW;
-  } else if (price_strategy == SimplexPriceStrategy::ROW_SWITCH) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
     price_mode = PriceMode::ROW;
     allow_price_by_row_switch = true;
-  } else if (price_strategy == SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
-  } else if (price_strategy == SimplexPriceStrategy::ROW_ULTRA) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_ULTRA) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;

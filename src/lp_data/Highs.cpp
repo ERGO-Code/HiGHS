@@ -182,6 +182,10 @@ HighsStatus Highs::run() {
   // todo: check options.
   HighsSetIO(options_);
 
+  if (checkOptions(options_.records) != OptionStatus::OK) return HighsStatus::Error;
+#ifdef HiGHSDEV
+  checkOptions(options_.records);
+#endif
   reportOptions(stdout, options_.records);//, true);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();

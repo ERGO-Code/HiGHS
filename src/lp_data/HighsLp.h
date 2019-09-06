@@ -215,9 +215,9 @@ struct HighsSimplexInfo {
   //
   // Options from HighsOptions for the simplex solver
   int simplex_strategy;
-  SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
-  SimplexPrimalEdgeWeightStrategy primal_edge_weight_strategy;
-  SimplexPriceStrategy price_strategy;
+  int dual_edge_weight_strategy;
+  int primal_edge_weight_strategy;
+  int price_strategy;
 
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
