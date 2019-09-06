@@ -402,7 +402,10 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   return OptionStatus::OK;
 }
 
-FilewriterRetcode reportOptionsToFile(const std::string filename) {
+FilewriterRetcode reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records) {
+  FILE* file = fopen(filename.c_str(), "w");
+  if (file == 0) return FilewriterRetcode::FILE_NOT_OPENED;
+  reportOptions(file, option_records, true);
   return FilewriterRetcode::OK;
 }
 

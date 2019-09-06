@@ -78,6 +78,7 @@ int main(int argc, char** argv) {
     }
   }
   if (options.run_as_hsol) setHsolOptions(options);
+
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {
@@ -96,6 +97,7 @@ int main(int argc, char** argv) {
   }
 
   Highs highs;
+  highs.writeHighsOptions("HiGHS.set");
 
   HighsStatus init_status = highs.initializeLp(lp);
   if (init_status != HighsStatus::OK) {

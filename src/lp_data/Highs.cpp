@@ -93,8 +93,8 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
   return HighsStatus::Error;
 }
 
-HighsStatus writeHighsOptions(const std::string filename) {
-  if (reportOptionsToFile(filename) != FilereaderRetcode::OK) HighsStatus::Error;
+HighsStatus Highs::writeHighsOptions(const std::string filename) {
+  if (reportOptionsToFile(filename, options_.records) != FilewriterRetcode::OK) return HighsStatus::Error;
   return HighsStatus::OK;
 }
 

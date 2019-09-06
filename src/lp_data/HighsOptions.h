@@ -17,7 +17,6 @@
 #include <cstring>
 
 #include "io/HighsIO.h"
-//#include "io/Filereader.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 #include "presolve/Presolve.h"
@@ -187,7 +186,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
-FilewriterRetcode reportOptionsToFile(const std::string filename);
+FilewriterRetcode reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
@@ -312,27 +311,27 @@ class HighsOptions {
     records.push_back(record_int);
 
     record_int = new OptionRecordInt("simplex_scale_strategy",
-				     "Strategy for scaling before simplex solver: off / on 0/1",
+				     "Strategy for scaling before simplex solver: off / on (0/1)",
 				     advanced, &simplex_scale_strategy,
 				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_crash_strategy: off / LTSSF / Bixby 0/1/2",
-				     "Strategy for simplex crash",
+    record_int = new OptionRecordInt("simplex_crash_strategy",
+				     "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)",
 				     advanced, &simplex_crash_strategy,
 				     SIMPLEX_CRASH_STRATEGY_MIN, SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy: Dantzix / Devex / Steepest Edge 0/1/2",
-				     "Strategy for simplex dual edge weights",
+    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy",
+				     "Strategy for simplex dual edge weights: Dantzig / Devex / Steepest Edge (0/1/2)",
 				     advanced, &simplex_dual_edge_weight_strategy,
 				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
 				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
 				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
     records.push_back(record_int);
 
-    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy: Dantzix / Devex 0/1",
-				     "Strategy for simplex primal edge weights",
+    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy",
+				     "Strategy for simplex primal edge weights: Dantzig / Devex (0/1)",
 				     advanced, &simplex_primal_edge_weight_strategy,
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
 				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
@@ -358,7 +357,7 @@ class HighsOptions {
 				       true);
     records.push_back(record_bool);
     record_int = new OptionRecordInt("keep_n_rows",
-				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows -1/0/1",
+				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows (-1/0/1)",
 				     advanced, &keep_n_rows,
 				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
     records.push_back(record_int);

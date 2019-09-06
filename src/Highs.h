@@ -80,7 +80,6 @@ class Highs {
                                   const char* value
 				  );
 
-
   /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
@@ -97,10 +96,6 @@ class Highs {
 				  const std::string& option,
                                   double& value);
 
-  HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  std::string& value);
-  
   HighsStatus getHighsOptionValue(
 				  const std::string& option,
                                   std::string& value);
