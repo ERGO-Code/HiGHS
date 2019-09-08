@@ -411,6 +411,12 @@ class HighsOptions {
 				     1.0, 1e1, HIGHS_CONST_INF);
     records.push_back(record_double);
 
+    record_bool = new OptionRecordBool("simplex_perturb_costs",
+				     "Perturb costs in dual simplex solver",
+				     advanced, &simplex_perturb_costs,
+				     true);
+    records.push_back(record_bool);
+
     record_bool = new OptionRecordBool("find_feasibility",
 				     "Run iCrash",
 				     advanced, &find_feasibility,
