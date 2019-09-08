@@ -26,7 +26,7 @@
 #include "CoinWarmStartBasis.hpp"
 
 static
-void printtomessagehandler(unsigned int level, const char* msg, void* msgcb_data) {
+void printtomessagehandler(int level, const char* msg, void* msgcb_data) {
   assert(msgcb_data != NULL);
 
   CoinMessageHandler* handler = (CoinMessageHandler*) msgcb_data;

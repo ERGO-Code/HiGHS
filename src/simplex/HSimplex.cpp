@@ -1860,11 +1860,11 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   SimplexTimer simplex_timer;
   HighsTimer& timer = highs_model_object.timer_;
 
-  if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
+  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
-  } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+  } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
@@ -1874,7 +1874,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     }
   }
 
-  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  //  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -1886,7 +1886,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   //    timer.report(reportCount, reportList, 0.0);
   //  }
 
-  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     //    int reportList[] = {
     //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
     //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,

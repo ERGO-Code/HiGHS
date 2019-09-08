@@ -27,12 +27,13 @@ const std::string on_string = "on";
 constexpr double kBoundTolerance = 1e-8;
 
 enum HighsPrintMessageLevel {
-  ML_NONE = 0,
+  ML_MIN = 0,
+  ML_NONE = ML_MIN,
   ML_VERBOSE = 1,
   ML_DETAILED = 2,
   ML_MINIMAL = 4,
-  ML_DEFAULT = ML_MINIMAL,
-  ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL
+  ML_ALWAYS = ML_VERBOSE | ML_DETAILED | ML_MINIMAL,
+  ML_MAX = ML_ALWAYS
 };
 
 enum class FilewriterRetcode {

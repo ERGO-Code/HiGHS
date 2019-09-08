@@ -344,6 +344,12 @@ class HighsOptions {
 				     0, 5000, HIGHS_CONST_I_INF);
     records.push_back(record_int);
 
+    record_int = new OptionRecordInt("message_level",
+				     "HiGHS message level: bit-mask 1 => VERBOSE; 2 => DETAILED 4 => MINIMAL",
+				     advanced, &message_level,
+				     ML_MIN, ML_MINIMAL, ML_MAX);
+    records.push_back(record_int);
+
     // Advanced options
     advanced = true;
     record_bool = new OptionRecordBool("run_as_hsol",
@@ -454,6 +460,7 @@ class HighsOptions {
   int simplex_dual_edge_weight_strategy;
   int simplex_primal_edge_weight_strategy;
   int simplex_update_limit;
+  int message_level;
   
   // Advanced options
   bool run_as_hsol;
@@ -479,9 +486,8 @@ class HighsOptions {
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
   FILE* output = stdout;
-  unsigned int messageLevel = ML_MINIMAL;
 
-  void (*printmsgcb)(unsigned int level, const char* msg,
+  void (*printmsgcb)(int level, const char* msg,
                      void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;

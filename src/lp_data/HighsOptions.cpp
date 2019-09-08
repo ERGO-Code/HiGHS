@@ -509,6 +509,6 @@ void setHsolOptions(HighsOptions& options) {
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {
   HighsSetMessagelevel(value);
-  options.messageLevel = value;
+  options.message_level = value;
   return OptionStatus::OK;
 }

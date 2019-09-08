@@ -150,7 +150,7 @@ HighsStatus Highs::run() {
     // dualized or not.
     // HighsSolution& solution = solution_;
 
-    // options_.messageLevel = HighsPrintMessageLevel::ML_DETAILED;
+    // options_.message_level = HighsPrintMessageLevel::ML_DETAILED;
     // HighsSetIO(options_);
 
     // Add slacks and make sure a minimization problem is passed to
@@ -356,7 +356,7 @@ HighsStatus Highs::run() {
           options = save_options;
           // Reset the message level
           if (full_iteration_logging)
-            HighsSetMessagelevel(options_.messageLevel);
+            HighsSetMessagelevel(options_.message_level);
 	  if (return_status != HighsStatus::OK) return return_status;
         }
       }
@@ -1021,7 +1021,7 @@ HighsStatus Highs::runBnb() {
   // constraints we have a feasible solution, if it is best than current best,
   // the current best is updated.
   int message_level = ML_DETAILED | ML_VERBOSE;
-  options_.messageLevel = message_level;
+  options_.message_level = message_level;
   Tree tree(*(root.get()));
   tree.branch(*(root.get()));
 
@@ -1036,7 +1036,7 @@ HighsStatus Highs::runBnb() {
 
     if (hmos_[0].model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE)  continue;
 
-    options_.messageLevel = message_level;
+    options_.message_level = message_level;
     tree.branch(node);
   }
 
@@ -1167,7 +1167,7 @@ HighsStatus Highs::solveNode(Node& node) {
 
 HighsStatus Highs::solveRootNode(Node& root) {
   // No presolve for the moment.
-  options_.messageLevel = ML_NONE;
+  options_.message_level = ML_NONE;
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
   HighsStatus return_status = solveModelSimplex(hmos_[0]);
