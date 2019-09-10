@@ -57,8 +57,10 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsModelObject hmo(lp, options, timer);
   HighsSimplexInterface hsi(hmo);
 
+  printf("Before addRows\n");
   return_status = hsi.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
   //  printf("addRows: return_status = %s\n", HighsStatusToString(return_status).c_str());
+  printf("After addRows: %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::OK);
   reportLp(lp);
   
@@ -122,7 +124,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(return_status == HighsStatus::OK);
 
   reportLp(lp);
-  /*
   Highs highs(options);
   
   HighsStatus init_status = highs.initializeLp(lp);

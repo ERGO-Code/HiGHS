@@ -30,13 +30,13 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
 
 HighsStatus assessLpDimensions(const HighsLp& lp);
 
-HighsStatus assess_costs(const int col_ix_os, const int mask_num_col,
-                         const bool interval, const int from_col,
-                         const int to_col, const bool set,
-                         const int num_set_entries, const int* col_set,
-                         const bool mask, const int* col_mask,
-                         const double* usr_col_cost,
-                         const double infinite_cost);
+HighsStatus assessCosts(const int col_ix_os, const int mask_num_col,
+			const bool interval, const int from_col,
+			const int to_col, const bool set,
+			const int num_set_entries, const int* col_set,
+			const bool mask, const int* col_mask,
+			const double* usr_col_cost,
+			const double infinite_cost);
 
 HighsStatus assessBounds(const char* type, const int ix_os,
                          const int mask_num_ix, const bool interval,

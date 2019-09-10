@@ -23,7 +23,8 @@
 
 double getNorm2(const std::vector<double> values) {
   double sum = 0;
-  for (int i = 0; i < values.size(); i++) sum += values[i] * values[i];
+  int values_size = values.size();
+  for (int i = 0; i < values_size; i++) sum += values[i] * values[i];
   return sum;
 }
 

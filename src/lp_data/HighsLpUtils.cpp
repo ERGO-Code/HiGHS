@@ -102,23 +102,21 @@ HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
   assert(lp.numCol_ > 0);
 
   // Assess the LP column costs
-  call_status =
-      assess_costs(0, lp.numCol_, true, 0, lp.numCol_, false, 0, NULL, false,
-                   NULL, &lp.colCost_[0], options.infinite_cost);
+  call_status = assessCosts(0, lp.numCol_, true, 0, lp.numCol_-1, false, 0, NULL, false,
+			    NULL, &lp.colCost_[0], options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
   // Assess the LP column bounds
-  call_status = assessBounds(
-      "Col", 0, lp.numCol_, true, 0, lp.numCol_, false, 0, NULL, false, NULL,
-      &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
+  call_status = assessBounds("Col", 0, lp.numCol_, true, 0, lp.numCol_-1, false, 0, NULL, false, NULL,
+			     &lp.colLower_[0], &lp.colUpper_[0], options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (lp.numRow_) {
     // Assess the LP row bounds
-    call_status = assessBounds("Row", 0, lp.numRow_, true, 0, lp.numRow_, false, 0, NULL, false, NULL,
+    call_status = assessBounds("Row", 0, lp.numRow_, true, 0, lp.numRow_-1, false, 0, NULL, false, NULL,
 			       &lp.rowLower_[0], &lp.rowUpper_[0], options.infinite_bound, normalise);
     return_status = worseStatus(call_status, return_status);
     // Assess the LP matrix
     int lp_num_nz = lp.Astart_[lp.numCol_];
-    call_status = assessMatrix(lp.numRow_, 0, lp.numCol_, lp.numCol_, lp_num_nz,
+    call_status = assessMatrix(lp.numRow_, 0, lp.numCol_-1, lp.numCol_, lp_num_nz,
 			       &lp.Astart_[0], &lp.Aindex_[0], &lp.Avalue_[0],
 			       options.small_matrix_value,
 			       options.large_matrix_value, normalise);
@@ -250,12 +248,12 @@ HighsStatus assessLpDimensions(const HighsLp& lp) {
   return return_status;
 }
 
-HighsStatus assess_costs(const int ml_col_os, const int col_dim,
-                         const bool interval, const int from_col,
-                         const int to_col, const bool set,
-                         const int num_set_entries, const int* col_set,
-                         const bool mask, const int* col_mask,
-                         const double* col_cost, const double infinite_cost) {
+HighsStatus assessCosts(const int ml_col_os, const int col_dim,
+			const bool interval, const int from_col,
+			const int to_col, const bool set,
+			const int num_set_entries, const int* col_set,
+			const bool mask, const int* col_mask,
+			const double* col_cost, const double infinite_cost) {
   // Check parameters for technique and, if OK set the loop limits
   int from_k;
   int to_k;
@@ -784,15 +782,13 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
   bool normalise = false;
   HighsStatus call_status;
   // Assess the column costs
-  call_status =
-      assess_costs(lp.numCol_, num_new_col, true, 0, num_new_col, false, 0,
-                   NULL, false, NULL, (double*)XcolCost, options.infinite_cost);
+  call_status = assessCosts(lp.numCol_, num_new_col, true, 0, num_new_col-1, false, 0,
+			    NULL, false, NULL, (double*)XcolCost, options.infinite_cost);
   return_status = worseStatus(call_status, return_status);
   // Assess the column bounds
-  call_status =
-      assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false,
-                   0, NULL, false, NULL, (double*)XcolLower, (double*)XcolUpper,
-                   options.infinite_bound, normalise);
+  call_status = assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col-1, false,
+			     0, NULL, false, NULL, (double*)XcolLower, (double*)XcolUpper,
+			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Assess the matrix columns
@@ -800,7 +796,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
     // modify it [XAstart, XAindex and XAvalue] when normalise is
     // true---which is not the case here
     int pass_num_new_nz = num_new_nz;
-    call_status = assessMatrix(lp.numRow_, 0, num_new_col, num_new_col,
+    call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
                                pass_num_new_nz, (int*)XAstart, (int*)XAindex,
                                (double*)XAvalue, options.small_matrix_value,
                                options.large_matrix_value, normalise);
@@ -823,16 +819,15 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
 
   // Normalise the new LP column bounds
   normalise = true;
-  call_status =
-      assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col, false,
-                   0, NULL, false, NULL, &lp.colLower_[0], &lp.colUpper_[0],
-                   options.infinite_bound, normalise);
+  call_status = assessBounds("Col", lp.numCol_, num_new_col, true, 0, num_new_col-1, false,
+			     0, NULL, false, NULL, &lp.colLower_[0], &lp.colUpper_[0],
+			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
   if (valid_matrix) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
-    call_status = assessMatrix(lp.numRow_, 0, num_new_col, num_new_col,
+    call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
                                lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0],
                                &lp.Avalue_[0], options.small_matrix_value,
                                options.large_matrix_value, normalise);
@@ -899,10 +894,9 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
   bool normalise = false;
   HighsStatus call_status;
   // Assess the row bounds
-  call_status =
-      assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false,
-                   0, NULL, false, NULL, (double*)XrowLower, (double*)XrowUpper,
-                   options.infinite_bound, normalise);
+  call_status = assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row-1, false,
+			     0, NULL, false, NULL, (double*)XrowLower, (double*)XrowUpper,
+			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (valid_matrix) {
     // Assess the matrix columns
@@ -910,7 +904,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
     // modify it [XAstart, XAindex and XAvalue] when normalise is
     // true---which is not the case here
     int pass_num_new_nz = num_new_nz;
-    call_status = assessMatrix(lp.numCol_, 0, num_new_row, num_new_row,
+    call_status = assessMatrix(lp.numCol_, 0, num_new_row-1, num_new_row,
                                pass_num_new_nz, (int*)XARstart, (int*)XARindex,
                                (double*)XARvalue, options.small_matrix_value,
                                options.large_matrix_value, normalise);
@@ -925,10 +919,9 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
 
   // Normalise the new LP row bounds
   normalise = true;
-  call_status =
-      assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row, false,
-                   0, NULL, false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
-                   options.infinite_bound, normalise);
+  call_status = assessBounds("Row", lp.numRow_, num_new_row, true, 0, num_new_row-1, false,
+			     0, NULL, false, NULL, &lp.rowLower_[0], &lp.rowUpper_[0],
+			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
   if (valid_matrix) {
@@ -947,9 +940,9 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
       lc_row_matrix_value[el] = XARvalue[el];
     }
     call_status = assessMatrix(
-        lp.numCol_, 0, num_new_row, num_new_row, lc_num_new_nz,
-        lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
-        options.small_matrix_value, options.large_matrix_value, normalise);
+			       lp.numCol_, 0, num_new_row-1, num_new_row, lc_num_new_nz,
+			       lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
+			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
     if (return_status == HighsStatus::Error) return return_status;
     // Append the matrix to the LP vectors
@@ -1422,9 +1415,9 @@ HighsStatus changeLpCosts(HighsLp& lp, const bool interval, const int from_col,
   if (usr_col_cost == NULL) return HighsStatus::Error;
 
   // Assess the user costs and return on error
-  call_status = assess_costs(0, lp.numCol_, interval, from_col, to_col, set,
-                             num_set_entries, col_set, mask, col_mask,
-                             usr_col_cost, infinite_cost);
+  call_status = assessCosts(0, lp.numCol_, interval, from_col, to_col, set,
+			    num_set_entries, col_set, mask, col_mask,
+			    usr_col_cost, infinite_cost);
   if (call_status != HighsStatus::OK) {
     return_status = call_status;
     return return_status;
@@ -1494,10 +1487,9 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
 
   // Assess the user bounds and return on error
   bool normalise = false;
-  call_status =
-      assessBounds(type, 0, ix_dim, interval, from_ix, to_ix, set,
-                   num_set_entries, ix_set, mask, ix_mask, (double*)usr_lower,
-                   (double*)usr_upper, infinite_bound, normalise);
+  call_status = assessBounds(type, 0, ix_dim, interval, from_ix, to_ix, set,
+			     num_set_entries, ix_set, mask, ix_mask, (double*)usr_lower,
+			     (double*)usr_upper, infinite_bound, normalise);
   if (call_status != HighsStatus::OK) {
     return_status = call_status;
     return return_status;

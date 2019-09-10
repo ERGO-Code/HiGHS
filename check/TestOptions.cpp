@@ -47,7 +47,7 @@ TEST_CASE("options", "[highs_options]") {
 
   // For debugging use the latter.
     options.options_file= dir + "/../../check/sample_options_file";
-    //  options.options_file = dir + "/check/sample_options_file";
+    //    options.options_file = dir + "/check/sample_options_file";
 
   bool success = loadOptionsFromFile(options); 
   REQUIRE(success == true);
