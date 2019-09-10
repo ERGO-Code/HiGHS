@@ -61,18 +61,13 @@ HiGHS options
 Usage:
     highs [OPTION...] [file]
 
-      --file arg             Filename of LP to solve.
-      --presolve arg         Use presolve: off by default.
-      --crash arg            Use crash to start simplex: off by default.
-      --simplex arg          Use simplex solver: on by default.
-      --ipm arg              Use interior point method solver: off by
-                             default.
-      --parallel arg         Use parallel solve: off by default.
-      --time_limit arg       Use time limit.
-      --iteration_limit arg  Use iteration limit (integer).
+      --model_file arg       File of model to solve.
+      --presolve arg         Presolve: "choose" by default - "on"/"off" are alternatives.
+      --solver arg           Solver: "choose" by default - "simplex"/"ipm" are alternatives.
+      --parallel arg         Parallel solve: "choose" by default - "on"/"off" are alternatives.
+      --time_limit arg       Run time limit (double).
       --options_file arg     File containing HiGHS options.
-      --parser arg           Mps parser type: swap back to fixed format
-                             parser.
+
   -h, --help                 Print help.
 
 
