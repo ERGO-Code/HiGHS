@@ -256,15 +256,14 @@ HighsStatus assess_costs(const int ml_col_os, const int col_dim,
                          const int num_set_entries, const int* col_set,
                          const bool mask, const int* col_mask,
                          const double* col_cost, const double infinite_cost) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int from_k;
   int to_k;
   HighsStatus return_status = assessIntervalSetMask(
       col_dim, interval, from_col, to_col, set, num_set_entries, col_set, mask,
       col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   return_status = HighsStatus::OK;
   bool error_found = false;
@@ -292,7 +291,7 @@ HighsStatus assess_costs(const int ml_col_os, const int col_dim,
   int local_col;
   int data_col;
   int ml_col;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       local_col = k;
       data_col = k;
@@ -326,15 +325,14 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os, const int ix_dim,
                          const bool mask, const int* ix_mask,
                          double* lower_bounds, double* upper_bounds,
                          const double infinite_bound, bool normalise) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int from_k;
   int to_k;
   HighsStatus return_status = assessIntervalSetMask(
       ix_dim, interval, from_ix, to_ix, set, num_set_entries, ix_set, mask,
       ix_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   return_status = HighsStatus::OK;
   bool error_found = false;
@@ -369,7 +367,7 @@ HighsStatus assessBounds(const char* type, const int ml_ix_os, const int ix_dim,
   int local_ix;
   int data_ix;
   int ml_ix;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       local_ix = k;
       data_ix = k;
@@ -457,9 +455,8 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
                          const double small_matrix_value,
                          const double large_matrix_value,
                          const bool normalise) {
-  // Uses to_ix in iterator style
   if (from_ix < 0) return HighsStatus::OK;
-  if (from_ix >= to_ix) return HighsStatus::OK;
+  if (from_ix > to_ix) return HighsStatus::OK;
   if (num_nz > 0 && vec_dim <= 0) return HighsStatus::Error;
   if (num_nz <= 0) return HighsStatus::OK;
 
@@ -477,7 +474,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
   // Assess the starts
   // Set up previous_start for a fictitious previous empty packed vector
   int previous_start = std::max(0, Xstart[from_ix]);
-  for (int ix = from_ix; ix < to_ix; ix++) {
+  for (int ix = from_ix; ix < to_ix+1; ix++) {
     int this_start = Xstart[ix];
     bool this_start_too_small = this_start < previous_start;
     if (this_start_too_small) {
@@ -506,7 +503,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
   // Set up a zeroed vector to detect duplicate indices
   vector<int> check_vector;
   if (vec_dim > 0) check_vector.assign(vec_dim, 0);
-  for (int ix = from_ix; ix < to_ix; ix++) {
+  for (int ix = from_ix; ix < to_ix+1; ix++) {
     int from_el = Xstart[ix];
     int to_el;
     if (ix < num_vec - 1) {
@@ -624,7 +621,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
     warning_found = true;
     if (normalise) {
       // Accommodate the loss of these values in any subsequent packed vectors
-      for (int ix = to_ix; ix < num_vec; ix++) {
+      for (int ix = to_ix+1; ix < num_vec; ix++) {
         // int from_el = Xstart[ix];
         Xstart[ix] = num_new_nz;
         int to_el;
@@ -657,8 +654,7 @@ HighsStatus scaleLpColCosts(HighsLp& lp, vector<double>& colScale,
                             const int to_col, const bool set,
                             const int num_set_entries, const int* col_set,
                             const bool mask, const int* col_mask) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int col_dim = lp.numCol_;
   int from_k;
   int to_k;
@@ -666,12 +662,12 @@ HighsStatus scaleLpColCosts(HighsLp& lp, vector<double>& colScale,
       col_dim, interval, from_col, to_col, set, num_set_entries, col_set, mask,
       col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int local_col;
   int ml_col;
   const int ml_col_os = 0;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       local_col = k;
     } else {
@@ -690,8 +686,7 @@ HighsStatus scaleLpColBounds(HighsLp& lp, vector<double>& colScale,
                              const int to_col, const bool set,
                              const int num_set_entries, const int* col_set,
                              const bool mask, const int* col_mask) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int col_dim = lp.numCol_;
   int from_k;
   int to_k;
@@ -699,12 +694,12 @@ HighsStatus scaleLpColBounds(HighsLp& lp, vector<double>& colScale,
       col_dim, interval, from_col, to_col, set, num_set_entries, col_set, mask,
       col_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int local_col;
   int ml_col;
   const int ml_col_os = 0;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       local_col = k;
     } else {
@@ -726,8 +721,7 @@ HighsStatus scaleLpRowBounds(HighsLp& lp, vector<double>& rowScale,
                              const int to_row, const bool set,
                              const int num_set_entries, const int* row_set,
                              const bool mask, const int* row_mask) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int row_dim = lp.numRow_;
   int from_k;
   int to_k;
@@ -735,12 +729,12 @@ HighsStatus scaleLpRowBounds(HighsLp& lp, vector<double>& rowScale,
       row_dim, interval, from_row, to_row, set, num_set_entries, row_set, mask,
       row_mask, from_k, to_k);
   if (return_status != HighsStatus::OK) return return_status;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int local_row;
   int ml_row;
   const int ml_row_os = 0;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       local_row = k;
     } else {
@@ -1115,9 +1109,9 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
     printf("Calling increasing_set_ok from deleteColsFromLpVectors\n");
     if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
   }
-  // Initialise new_num_col in case none is removed due to from_k >= to_k
+  // Initialise new_num_col in case none is removed due to from_k > to_k
   new_num_col = lp.numCol_;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int delete_from_col;
   int delete_to_col;
@@ -1127,7 +1121,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
   int col_dim = lp.numCol_;
   new_num_col = 0;
   bool have_names = lp.col_names_.size();
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
@@ -1165,7 +1159,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
     printf("Calling increasing_set_ok from deleteColsFromLpMatrix\n");
     if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
   }
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int delete_from_col;
   int delete_to_col;
@@ -1175,7 +1169,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
   int col_dim = lp.numCol_;
   int new_num_col = 0;
   int new_num_nz = 0;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
@@ -1258,9 +1252,9 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
     printf("Calling increasing_set_ok from deleteRowsFromLpVectors\n");
     if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
   }
-  // Initialise new_num_row in case none is removed due to from_k >= to_k
+  // Initialise new_num_row in case none is removed due to from_k > to_k
   new_num_row = lp.numRow_;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int delete_from_row;
   int delete_to_row;
@@ -1270,7 +1264,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
   int row_dim = lp.numRow_;
   new_num_row = 0;
   bool have_names = lp.row_names_.size();
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                   row_set, mask, row_mask, delete_from_row, delete_to_row,
                   keep_from_row, keep_to_row, current_set_entry);
@@ -1307,7 +1301,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
     printf("Calling increasing_set_ok from deleteRowsFromLpMatrix\n");
     if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
   }
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
 
   int delete_from_row;
   int delete_to_row;
@@ -1323,7 +1317,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
   if (!mask) {
     keep_to_row = 0;
     current_set_entry = 0;
-    for (int k = from_k; k < to_k; k++) {
+    for (int k = from_k; k < to_k+1; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                     row_set, mask, row_mask, delete_from_row, delete_to_row,
                     keep_from_row, keep_to_row, current_set_entry);
@@ -1413,8 +1407,7 @@ HighsStatus changeLpCosts(HighsLp& lp, const bool interval, const int from_col,
                           const bool mask, const int* col_mask,
                           const double* usr_col_cost,
                           const double infinite_cost) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int from_k;
   int to_k;
   HighsStatus call_status = assessIntervalSetMask(
@@ -1425,7 +1418,7 @@ HighsStatus changeLpCosts(HighsLp& lp, const bool interval, const int from_col,
     return_status = call_status;
     return return_status;
   }
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
   if (usr_col_cost == NULL) return HighsStatus::Error;
 
   // Assess the user costs and return on error
@@ -1438,7 +1431,7 @@ HighsStatus changeLpCosts(HighsLp& lp, const bool interval, const int from_col,
   }
   // Change the costs to the user-supplied costs, according to the technique
   int usr_col;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       usr_col = k;
     } else {
@@ -1484,8 +1477,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
                          const bool mask, const int* ix_mask,
                          const double* usr_lower, const double* usr_upper,
                          const double infinite_bound) {
-  // Check parameters for technique and, if OK set the loop limits - in iterator
-  // style
+  // Check parameters for technique and, if OK set the loop limits
   int from_k;
   int to_k;
   HighsStatus call_status = assessIntervalSetMask(
@@ -1496,7 +1488,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
     return_status = call_status;
     return return_status;
   }
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
   if (usr_lower == NULL) return HighsStatus::Error;
   if (usr_upper == NULL) return HighsStatus::Error;
 
@@ -1512,7 +1504,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
   }
   // Change the bounds to the user-supplied bounds, according to the technique
   int usr_ix;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k < to_k+1; k++) {
     if (interval || mask) {
       usr_ix = k;
     } else {
@@ -1536,10 +1528,9 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
 
 HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
                        double* XcolCost) {
-  // Uses to_col in iterator style
-  if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
+  if (from_col < 0 || to_col >= lp.numCol_) return HighsStatus::Error;
   if (from_col > to_col) return HighsStatus::OK;
-  for (int col = from_col; col < to_col; col++)
+  for (int col = from_col; col < to_col+1; col++)
     XcolCost[col - from_col] = lp.colCost_[col];
   return HighsStatus::OK;
 }
@@ -1547,10 +1538,9 @@ HighsStatus getLpCosts(const HighsLp& lp, const int from_col, const int to_col,
 HighsStatus getLpColBounds(const HighsLp& lp, const int from_col,
                            const int to_col, double* XcolLower,
                            double* XcolUpper) {
-  // Uses to_col in iterator style
-  if (from_col < 0 || to_col > lp.numCol_) return HighsStatus::Error;
+  if (from_col < 0 || to_col >= lp.numCol_) return HighsStatus::Error;
   if (from_col > to_col) return HighsStatus::OK;
-  for (int col = from_col; col < to_col; col++) {
+  for (int col = from_col; col < to_col+1; col++) {
     if (XcolLower != NULL) XcolLower[col - from_col] = lp.colLower_[col];
     if (XcolUpper != NULL) XcolUpper[col - from_col] = lp.colUpper_[col];
   }
@@ -1560,10 +1550,9 @@ HighsStatus getLpColBounds(const HighsLp& lp, const int from_col,
 HighsStatus getLpRowBounds(const HighsLp& lp, const int from_row,
                            const int to_row, double* XrowLower,
                            double* XrowUpper) {
-  // Uses to_row in iterator style
-  if (from_row < 0 || to_row > lp.numRow_) return HighsStatus::Error;
+  if (from_row < 0 || to_row >= lp.numRow_) return HighsStatus::Error;
   if (from_row > to_row) return HighsStatus::OK;
-  for (int row = from_row; row < to_row; row++) {
+  for (int row = from_row; row < to_row+1; row++) {
     if (XrowLower != NULL) XrowLower[row - from_row] = lp.rowLower_[row];
     if (XrowUpper != NULL) XrowUpper[row - from_row] = lp.rowUpper_[row];
   }
@@ -1576,8 +1565,8 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
 #ifdef HiGHSDEV
   printf("Called getLpMatrixCoefficient(row=%d, col=%d)\n", Xrow, Xcol);
 #endif
-  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
-  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
+  if (Xrow < 0 || Xrow >= lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol >= lp.numCol_) return HighsStatus::Error;
 
   int get_el = -1;
   for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol + 1]; el++) {
@@ -1941,8 +1930,7 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
                                   const bool set, int num_set_entries,
                                   const int* ix_set, const bool mask,
                                   const int* ix_mask, int& from_k, int& to_k) {
-  // Check parameter for technique and, if OK, set the loop limits - in iterator
-  // style
+  // Check parameter for technique and, if OK, set the loop limits
   if (interval) {
     // Changing by interval: check the parameters and that check set and mask
     // are false
@@ -1986,7 +1974,7 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
       return HighsStatus::Error;
     }
     from_k = 0;
-    to_k = num_set_entries;
+    to_k = num_set_entries-1;
     // Check that the values in the vector of integers are ascending
     int set_entry_upper = (int)ix_dim - 1;
     for (int k = 0; k < num_set_entries; k++) {
@@ -2014,7 +2002,7 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
       return HighsStatus::Error;
     }
     from_k = 0;
-    to_k = ix_dim;
+    to_k = ix_dim-1;
   } else {
     // No method defined
     HighsLogMessage(HighsMessageType::ERROR,
@@ -2033,7 +2021,7 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
     out_from_ix = from_ix;
     out_to_ix = to_ix;
     in_from_ix = to_ix;
-    in_to_ix = ix_dim;
+    in_to_ix = ix_dim-1;
   } else if (set) {
     out_from_ix = ix_set[current_set_entry];
     out_to_ix = out_from_ix + 1;
@@ -2043,22 +2031,22 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
          set_entry++) {
       int ix = ix_set[set_entry];
       if (ix > out_to_ix) break;
-      out_to_ix = ix_set[current_set_entry] + 1;
+      out_to_ix = ix_set[current_set_entry];
       current_set_entry++;
     }
     in_from_ix = out_to_ix;
     if (current_set_entry < num_set_entries) {
-      in_to_ix = ix_set[current_set_entry];
+      in_to_ix = ix_set[current_set_entry]-1;
     } else {
       // Account for getting to the end of the set
-      in_to_ix = ix_dim;
+      in_to_ix = ix_dim-1;
     }
   } else {
     out_from_ix = in_to_ix;
     out_to_ix = ix_dim;
     for (int ix = in_to_ix; ix < ix_dim; ix++) {
       if (!ix_mask[ix]) {
-        out_to_ix = ix;
+        out_to_ix = ix-1;
         break;
       }
     }
@@ -2066,7 +2054,7 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
     in_to_ix = ix_dim;
     for (int ix = out_to_ix; ix < ix_dim; ix++) {
       if (ix_mask[ix]) {
-        in_to_ix = ix;
+        in_to_ix = ix-1;
         break;
       }
     }

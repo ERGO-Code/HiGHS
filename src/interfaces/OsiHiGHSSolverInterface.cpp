@@ -1168,7 +1168,7 @@ void OsiHiGHSSolverInterface::setRowSetBounds(const int *indexFirst,
                                               const double *boundList) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setRowSetBounds()\n");
-  OsiSolverInterface::setRowSetBounds(indexFirst, indexLast, boundList);
+  OsiSolverInterface::setRowSetBounds(indexFirst, indexLast-1, boundList);
 }
 
 void OsiHiGHSSolverInterface::setColSetBounds(const int *indexFirst,
@@ -1176,7 +1176,7 @@ void OsiHiGHSSolverInterface::setColSetBounds(const int *indexFirst,
                                               const double *boundList) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setColSetBounds()\n");
-  OsiSolverInterface::setColSetBounds(indexFirst, indexLast, boundList);
+  OsiSolverInterface::setColSetBounds(indexFirst, indexLast-1, boundList);
 }
 
 void OsiHiGHSSolverInterface::branchAndBound() {
@@ -1190,7 +1190,7 @@ void OsiHiGHSSolverInterface::setObjCoeffSet(const int *indexFirst,
                                              const double *coeffList) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjCoeffSet()\n");
-  OsiSolverInterface::setObjCoeffSet(indexFirst, indexLast, coeffList);
+  OsiSolverInterface::setObjCoeffSet(indexFirst, indexLast-1, coeffList);
 }
 
 int OsiHiGHSSolverInterface::canDoSimplexInterface() const {
