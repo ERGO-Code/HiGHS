@@ -40,7 +40,7 @@ using std::runtime_error;
 void HDual::solve(int num_threads) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
+  workHMO.model_status_ = HighsModelStatus::NOTSET;
   // Cannot solve box-constrained LPs
   if (workHMO.simplex_lp_.numRow_ == 0) return;
 
@@ -226,11 +226,11 @@ void HDual::solve(int num_threads) {
   }
 
 #ifdef HiGHSDEV
-  SimplexDualEdgeWeightStrategy strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
+  int strategy = workHMO.options_.simplex_dual_edge_weight_strategy;
   if (
-      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE ||
-      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL ||
-      strategy == SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE ||
+      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL ||
+      strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     printf("grep_DSE_WtCk,%s,%s,%d,%d,%d,%d,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g,%10.4g\n",
 	   workHMO.lp_.model_name_.c_str(),
 	   workHMO.lp_.lp_name_.c_str(),
@@ -248,8 +248,8 @@ void HDual::solve(int num_threads) {
 #endif
 
   if (solve_bailout) {
-    assert(simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME ||
-	   simplex_lp_status.solution_status == SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+    assert(workHMO.model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	   workHMO.model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
 
@@ -341,12 +341,12 @@ void HDual::init(int num_threads) {
   dualRHS.setup();
 
   // Initialize for tasks
-  if (workHMO.simplex_info_.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  if (workHMO.simplex_info_.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
     initSlice(num_threads - 2);
   }
 
   // Initialize for multi
-  if (workHMO.simplex_info_.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  if (workHMO.simplex_info_.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     multi_num = num_threads;
     if (multi_num < 1) multi_num = 1;
     if (multi_num > HIGHS_THREAD_LIMIT) multi_num = HIGHS_THREAD_LIMIT;
@@ -443,13 +443,13 @@ void HDual::solvePhase1() {
     for (;;) {
       switch (simplex_info.simplex_strategy) {
         default:
-        case SimplexStrategy::DUAL_PLAIN:
+        case SIMPLEX_STRATEGY_DUAL_PLAIN:
           iterate();
           break;
-        case SimplexStrategy::DUAL_TASKS:
+        case SIMPLEX_STRATEGY_DUAL_TASKS:
           iterateTasks();
           break;
-        case SimplexStrategy::DUAL_MULTI:
+        case SIMPLEX_STRATEGY_DUAL_MULTI:
           iterateMulti();
           break;
       }
@@ -465,15 +465,15 @@ void HDual::solvePhase1() {
                current_dual_objective_value,
                workHMO.options_.dual_objective_value_upper_bound);
 #endif
-        simplex_lp_status.solution_status =
-            SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        workHMO.model_status_ =
+            HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
     }
     double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > workHMO.options_.highs_run_time_limit) {
+    if (current_run_highs_time > workHMO.options_.time_limit) {
       solve_bailout = true;
-      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }
     // If the data are fresh from rebuild(), break out of
@@ -500,7 +500,7 @@ void HDual::solvePhase1() {
         // Report dual infeasible
         solvePhase = -1;
         HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
-        simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
+        workHMO.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
@@ -508,7 +508,7 @@ void HDual::solvePhase1() {
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-    simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
+    workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
@@ -520,7 +520,7 @@ void HDual::solvePhase1() {
       // Report strange issues
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-      simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
+      workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
     }
   }
 
@@ -558,16 +558,16 @@ void HDual::solvePhase2() {
     if (dualInfeasCount > 0) break;
     for (;;) {
       // Inner loop of solvePhase2()
-      // Performs one iteration in case SimplexStrategy::DUAL_PLAIN:
+      // Performs one iteration in case SIMPLEX_STRATEGY_DUAL_PLAIN:
       switch (simplex_info.simplex_strategy) {
         default:
-        case SimplexStrategy::DUAL_PLAIN:
+        case SIMPLEX_STRATEGY_DUAL_PLAIN:
           iterate();
           break;
-        case SimplexStrategy::DUAL_TASKS:
+        case SIMPLEX_STRATEGY_DUAL_TASKS:
           iterateTasks();
           break;
-        case SimplexStrategy::DUAL_MULTI:
+        case SIMPLEX_STRATEGY_DUAL_MULTI:
           iterateMulti();
           break;
       }
@@ -582,20 +582,20 @@ void HDual::solvePhase2() {
                current_dual_objective_value,
                workHMO.options_.dual_objective_value_upper_bound);
 #endif
-        simplex_lp_status.solution_status =
-            SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
+        workHMO.model_status_ =
+            HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         solve_bailout = true;
         break;
       }
     }
-    if (simplex_lp_status.solution_status ==
-        SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
+    if (workHMO.model_status_ ==
+        HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
       solve_bailout = true;
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
-    if (current_run_highs_time > workHMO.options_.highs_run_time_limit) {
-      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+    if (current_run_highs_time > workHMO.options_.time_limit) {
+      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       solve_bailout = true;
       break;
     }
@@ -626,14 +626,14 @@ void HDual::solvePhase2() {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
       HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-      simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
+      workHMO.model_status_ = HighsModelStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
-    simplex_lp_status.solution_status = SimplexSolutionStatus::FAILED;
+    workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
@@ -645,7 +645,7 @@ void HDual::solvePhase2() {
       // primal infeasible
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
-      simplex_lp_status.solution_status = SimplexSolutionStatus::INFEASIBLE;
+      workHMO.model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     }
   }
 }
@@ -1755,7 +1755,7 @@ void HDual::updateDual() {
   else {
     // Update the dual values (if packCount>0)
     dualRow.update_dual(thetaDual);//, columnOut);
-    if (workHMO.simplex_info_.simplex_strategy != SimplexStrategy::DUAL_PLAIN &&
+    if (workHMO.simplex_info_.simplex_strategy != SIMPLEX_STRATEGY_DUAL_PLAIN &&
         slice_PRICE) {
       // Update the dual variables slice-by-slice [presumably
       // nothing is done in the previous call to
@@ -1903,25 +1903,24 @@ void HDual::iz_dvx_fwk() {
   timer.stop(simplex_info.clock_[DevexIzClock]);
 }
 
-void HDual::interpret_dual_edge_weight_strategy(
-    SimplexDualEdgeWeightStrategy dual_edge_weight_strategy) {
-  if (dual_edge_weight_strategy == SimplexDualEdgeWeightStrategy::DANTZIG) {
+void HDual::interpret_dual_edge_weight_strategy(const int dual_edge_weight_strategy) {
+  if (dual_edge_weight_strategy == SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG) {
     dual_edge_weight_mode = DualEdgeWeightMode::DANTZIG;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::DEVEX) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DEVEX) {
     dual_edge_weight_mode = DualEdgeWeightMode::DEVEX;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::STEEPEST_EDGE) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_UNIT_INITIAL) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_UNIT_INITIAL) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = false;
     allow_dual_steepest_edge_to_devex_switch = false;
   } else if (dual_edge_weight_strategy ==
-             SimplexDualEdgeWeightStrategy::STEEPEST_EDGE_TO_DEVEX_SWITCH) {
+             SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH) {
     dual_edge_weight_mode = DualEdgeWeightMode::STEEPEST_EDGE;
     initialise_dual_steepest_edge_weights = true;
     allow_dual_steepest_edge_to_devex_switch = true;
@@ -1937,22 +1936,22 @@ void HDual::interpret_dual_edge_weight_strategy(
   }
 }
 
-void HDual::interpret_price_strategy(SimplexPriceStrategy price_strategy) {
+void HDual::interpret_price_strategy(const int price_strategy) {
   allow_price_by_col_switch = false;
   allow_price_by_row_switch = false;
   allow_price_ultra = false;
-  if (price_strategy == SimplexPriceStrategy::COL) {
+  if (price_strategy == SIMPLEX_PRICE_STRATEGY_COL) {
     price_mode = PriceMode::COL;
-  } else if (price_strategy == SimplexPriceStrategy::ROW) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW) {
     price_mode = PriceMode::ROW;
-  } else if (price_strategy == SimplexPriceStrategy::ROW_SWITCH) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH) {
     price_mode = PriceMode::ROW;
     allow_price_by_row_switch = true;
-  } else if (price_strategy == SimplexPriceStrategy::ROW_SWITCH_COL_SWITCH) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
-  } else if (price_strategy == SimplexPriceStrategy::ROW_ULTRA) {
+  } else if (price_strategy == SIMPLEX_PRICE_STRATEGY_ROW_ULTRA) {
     price_mode = PriceMode::ROW;
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;

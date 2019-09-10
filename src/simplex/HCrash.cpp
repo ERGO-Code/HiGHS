@@ -28,7 +28,7 @@ using std::max;
 using std::string;
 using std::vector;
 
-void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
+void HCrash::crash(const int pass_crash_strategy) {
   crash_strategy = pass_crash_strategy;
   HighsLp& simplex_lp = workHMO.simplex_lp_;
   if (simplex_lp.numRow_ == 0) return;
@@ -44,9 +44,9 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
 #endif
   assert(fabs(simplex_lp.sense_) == 1);
 
-  if (crash_strategy == SimplexCrashStrategy::BASIC
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC
 #ifdef HiGHSDEV
-      || crash_strategy == SimplexCrashStrategy::TEST_SING
+      || crash_strategy == SIMPLEX_CRASH_STRATEGY_TEST_SING
 #endif
   ) {
     // First and last variable types are the only types for basis and
@@ -66,13 +66,13 @@ void HCrash::crash(SimplexCrashStrategy pass_crash_strategy) {
     crsh_no_act_pri_v = crsh_mn_pri_v;
   }
 
-  if (crash_strategy == SimplexCrashStrategy::BIXBY ||
-      crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS) {
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BIXBY ||
+      crash_strategy == SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS) {
     // Use the Bixby crash
     bixby();
   }
 #ifdef HiGHSDEV
-  else if (crash_strategy == SimplexCrashStrategy::TEST_SING) {
+  else if (crash_strategy == SIMPLEX_CRASH_STRATEGY_TEST_SING) {
     // Use the test singularity crash
     tsSing();
   }
@@ -91,7 +91,7 @@ void HCrash::bixby() {
   const double* Avalue = &simplex_lp.Avalue_[0];
 
   bixby_no_nz_c_co =
-      crash_strategy == SimplexCrashStrategy::BIXBY_NO_NONZERO_COL_COSTS;
+      crash_strategy == SIMPLEX_CRASH_STRATEGY_BIXBY_NO_NONZERO_COL_COSTS;
   bixby_no_nz_c_co = false;
 
   bool perform_crash = bixby_iz_da();
@@ -486,32 +486,32 @@ void HCrash::bixby_rp_mrt() {
 
 void HCrash::ltssf() {
   HighsLp& simplex_lp = workHMO.simplex_lp_;
-  if (crash_strategy == SimplexCrashStrategy::LTSSF_K) {
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_LTSSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
     alw_al_bs_cg = false;
     no_ck_pv = false;
-  } else if (crash_strategy == SimplexCrashStrategy::LTSF_K) {
+  } else if (crash_strategy == SIMPLEX_CRASH_STRATEGY_LTSF_K) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
     alw_al_bs_cg = false;
     no_ck_pv = true;
-  } else if (crash_strategy == SimplexCrashStrategy::LTSF) {
+  } else if (crash_strategy == SIMPLEX_CRASH_STRATEGY_LTSF) {
     crsh_fn_cf_pri_v = 1;
     crsh_fn_cf_k = 10;
     alw_al_bs_cg = true;
     no_ck_pv = true;
-  } else if (crash_strategy == SimplexCrashStrategy::LTSSF_PRI) {
+  } else if (crash_strategy == SIMPLEX_CRASH_STRATEGY_LTSSF_PRI) {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
     no_ck_pv = false;
-  } else if (crash_strategy == SimplexCrashStrategy::LTSF_PRI) {
+  } else if (crash_strategy == SIMPLEX_CRASH_STRATEGY_LTSF_PRI) {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
     no_ck_pv = false;
-  } else if (crash_strategy == SimplexCrashStrategy::BASIC) {
+  } else if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC) {
     crsh_fn_cf_pri_v = 10;
     crsh_fn_cf_k = 1;
     alw_al_bs_cg = false;
@@ -851,7 +851,7 @@ void HCrash::ltssf_iz_da() {
   // Allocate the crash variable type arrays
   crsh_r_ty_pri_v.resize(crsh_l_vr_ty);
   crsh_c_ty_pri_v.resize(crsh_l_vr_ty);
-  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC) {
     // Basis-preserving crash:
     crsh_r_ty_pri_v[crsh_vr_ty_non_bc] = 1;
     crsh_r_ty_pri_v[crsh_vr_ty_bc] = 0;
@@ -889,7 +889,7 @@ void HCrash::ltssf_iz_da() {
 
   crsh_iz_vr_ty();
 
-  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC) {
     // For the basis crash, once the row and column priorities have
     // been set, start from a logical basis
     for (int iCol = 0; iCol < numCol; iCol++)
@@ -1318,7 +1318,7 @@ void HCrash::crsh_iz_vr_ty() {
   // Allocate the arrays required for crash
   crsh_r_ty.resize(numRow);
   crsh_c_ty.resize(numCol);
-  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC) {
     for (int r_n = 0; r_n < numRow; r_n++) {
       if (nonbasicFlag[numCol + r_n] == NONBASIC_FLAG_TRUE)
         crsh_r_ty[r_n] = crsh_vr_ty_non_bc;
@@ -1588,7 +1588,7 @@ void HCrash::crsh_an_r_c_st_af() {
 
 string HCrash::crsh_nm_o_crsh_vr_ty(const int vr_ty) {
   string TyNm;
-  if (crash_strategy == SimplexCrashStrategy::BASIC) {
+  if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC) {
     if (vr_ty == crsh_vr_ty_non_bc)
       TyNm = "NBc";
     else if (vr_ty == crsh_vr_ty_bc)

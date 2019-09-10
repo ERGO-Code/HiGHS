@@ -240,9 +240,9 @@ class Presolve : public HPreData {
 class PresolveInfo {
  public:
   PresolveInfo() {}
-  // option_presolve : 0 means don't presolve.
-  PresolveInfo(PresolveOption option_presolve, const HighsLp& lp) {
-    if (option_presolve == PresolveOption::ON) {
+  // option_presolve : off_string means don't presolve.
+  PresolveInfo(std::string option_presolve, const HighsLp& lp) {
+    if (option_presolve != off_string) {
       lp_ = &lp;
       presolve_.push_back(Presolve());
     }

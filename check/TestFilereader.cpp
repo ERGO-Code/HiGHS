@@ -79,21 +79,6 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 }
 
 // No commas in test case name.
-TEST_CASE("load-options-from-file", "[highs_data]") {
-  HighsOptions options;
-  std::string dir = GetCurrentWorkingDir();
-  
-  // For debugging use the latter.
-  options.options_file= dir + "/../../check/sample_options_file";
-  // options.options_file = dir + "/check/sample_options_file";
-
-  bool success = loadOptionsFromFile(options); 
-
-  REQUIRE(success == true);
-  REQUIRE(options.small_matrix_value == 0.001);
-}
-
-// No commas in test case name.
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
   HighsOptions options;
   std::string dir = GetCurrentWorkingDir();
@@ -101,8 +86,8 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   std::cout << dir << std::endl;
 
   // For debugging use the latter.
-  options.filename = dir + "/../../check/instances/adlittle.mps";
-  // options.filename = dir + "/check/instances/adlittle.mps";
+  options.model_file = dir + "/../../check/instances/adlittle.mps";
+  // options.model_file = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_mps;
@@ -114,7 +99,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   ems.writeModelToFile("adlittle.ems", lp_mps);
 
   // Read ems and compare.
-  options.filename = "adlittle.ems"; // todo: check how to specify path
+  options.model_file = "adlittle.ems"; // todo: check how to specify path
 
   HighsLp lp_ems;
   HighsStatus ems_read_status = loadLpFromFile(options, lp_ems);
@@ -123,7 +108,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
   bool are_the_same = lp_mps == lp_ems;
   REQUIRE(are_the_same);
 
-  std::remove(options.filename.c_str());
+  std::remove(options.model_file.c_str());
 }
 
 TEST_CASE("integrality-constraints", "[highs_filereader]") {
@@ -134,13 +119,13 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
   // std::string filename = dir + "/check/instances/small_mip.mps";
 
   HighsOptions options;
-  options.filename = filename;
+  options.model_file = filename;
   // integer variables are COL03,COL04 so x[2], x[3].
   const std::vector<int> kIntegers{0, 0, 1, 1, 0, 0, 0, 0};
 
   // Read mps with fixed format parser.
   HighsLp lp_fixed;
-  options.mps_parser_type = HighsMpsParserType::fixed;
+  options.mps_parser_type_free = false;
 
   HighsStatus read_status = loadLpFromFile(options, lp_fixed);
   REQUIRE(read_status == HighsStatus::OK);
@@ -149,7 +134,7 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 
   // Read mps with free format parser.
   HighsLp lp_free;
-  options.mps_parser_type = HighsMpsParserType::free;
+  options.mps_parser_type_free = true;
 
   read_status = loadLpFromFile(options, lp_free);
   REQUIRE(read_status == HighsStatus::OK);
@@ -168,7 +153,7 @@ TEST_CASE("dualize", "[highs_data]") {
 
   // Read mps.
   HighsOptions options;
-  options.filename = filename;
+  options.model_file = filename;
 
   HighsLp lp;
   HMpsFF parser{};
@@ -179,16 +164,19 @@ TEST_CASE("dualize", "[highs_data]") {
   HighsStatus status;
 
   Highs highs_lp;
+  HighsModelStatus model_status;
   status = highs_lp.initializeLp(lp);
   REQUIRE(status == HighsStatus::OK);
   status = highs_lp.run();
-  REQUIRE(status == HighsStatus::Optimal);
+  model_status = highs_lp.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   Highs highs_primal;
   status = highs_primal.initializeLp(primal);
   REQUIRE(status == HighsStatus::OK);
   status = highs_primal.run();
-  REQUIRE(status == HighsStatus::Optimal);
+  model_status = highs_lp.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   double lp_objective = highs_lp.getObjectiveValue();
   double primal_objective = highs_primal.getObjectiveValue();
@@ -203,7 +191,8 @@ TEST_CASE("dualize", "[highs_data]") {
   status = highs_dual.initializeLp(dual);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.run();
-  REQUIRE(status == HighsStatus::Optimal);
+  model_status = highs_lp.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   double dual_objective = highs_dual.getObjectiveValue();
 

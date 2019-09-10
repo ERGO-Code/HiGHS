@@ -24,9 +24,9 @@ void setSimplexOptions(
 	                                           //!< options are to be set
 	     );
 
-SimplexSolutionStatus transition(
-				 HighsModelObject& highs_model_object  //!< Model object
-				 );
+HighsModelStatus transition(
+			    HighsModelObject& highs_model_object  //!< Model object
+			    );
 
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,
@@ -209,8 +209,6 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
 
-std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
-
 void reportSimplexLpStatus(
     HighsSimplexLpStatus&
         simplex_lp_status,  // !< Status of simplex LP to be reported
@@ -232,5 +230,5 @@ void updateSimplexLpStatus(
     LpAction action         // !< Action prompting update
 );
 
-SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
+HighsModelStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
 #endif  // SIMPLEX_HSIMPLEX_H_

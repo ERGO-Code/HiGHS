@@ -10,6 +10,7 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/lp_data)
 # Make test executable
 set(TEST_SOURCES
     TestMain.cpp
+    TestOptions.cpp
     TestFilereader.cpp
     TestIO.cpp
     TestSort.cpp

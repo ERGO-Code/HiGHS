@@ -26,7 +26,7 @@
 #include "CoinWarmStartBasis.hpp"
 
 static
-void printtomessagehandler(unsigned int level, const char* msg, void* msgcb_data) {
+void printtomessagehandler(int level, const char* msg, void* msgcb_data) {
   assert(msgcb_data != NULL);
 
   CoinMessageHandler* handler = (CoinMessageHandler*) msgcb_data;
@@ -60,7 +60,8 @@ void logtomessagehandler(HighsMessageType type, const char* msg, void* msgcb_dat
 }
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
-: status(HighsStatus::Init) {
+  //  : status(HighsStatus::Init) {
+  : status(HighsStatus::OK) {
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
 
   HighsPrintMessage(
@@ -79,7 +80,10 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
     const OsiHiGHSSolverInterface &original)
-    : OsiSolverInterface(original), status(HighsStatus::Init) {
+    : OsiSolverInterface(original),
+      //      status(HighsStatus::Init)
+      status(HighsStatus::OK)
+{
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
 
   HighsPrintMessage(
@@ -260,27 +264,31 @@ void OsiHiGHSSolverInterface::initialSolve() {
 bool OsiHiGHSSolverInterface::isAbandoned() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::isAbandoned()\n");
-  return this->status == HighsStatus::NumericalDifficulties;
+  //  return this->status == HighsStatus::NumericalDifficulties;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenOptimal() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::isProvenOptimal()\n");
-  return (this->status == HighsStatus::Optimal) ||
-         (this->status == HighsStatus::OK);
+  //  return (this->status == HighsStatus::Optimal) ||
+  //         (this->status == HighsStatus::OK);
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isProvenPrimalInfeasible()\n");
-  return this->status == HighsStatus::Infeasible;
+  //  return this->status == HighsStatus::Infeasible;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenDualInfeasible() const {
   HighsPrintMessage(
       ML_ALWAYS, "Calling OsiHiGHSSolverInterface::isProvenDualInfeasible()\n");
-  return this->status == HighsStatus::Unbounded;
+  //  return this->status == HighsStatus::Unbounded;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const {
@@ -294,14 +302,16 @@ bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isDualObjectiveLimitReached()\n");
-  return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
+  //  return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isIterationLimitReached()\n");
-  return this->status == HighsStatus::ReachedIterationLimit;
+  //  return this->status == HighsStatus::ReachedIterationLimit;
+  return false;
 }
 
 int OsiHiGHSSolverInterface::getNumCols() const {

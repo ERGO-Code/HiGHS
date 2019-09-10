@@ -76,7 +76,7 @@ int setupOptions(
 
    gh->options = new HighsOptions;
 
-   gh->options->highs_run_time_limit = gevGetDblOpt(gh->gev, gevResLim);
+   gh->options->time_limit = gevGetDblOpt(gh->gev, gevResLim);
    gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
 
    if( gevGetIntOpt(gh->gev, gevUseCutOff) )

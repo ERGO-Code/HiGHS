@@ -28,7 +28,7 @@ using std::runtime_error;
 void HPrimal::solve() {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
+  workHMO.model_status_ = HighsModelStatus::NOTSET;
   // Cannot solve box-constrained LPs
   if (workHMO.simplex_lp_.numRow_ == 0) return;
 
@@ -148,7 +148,7 @@ void HPrimal::solve() {
     */
   }
   solvePhase = 2;
-  if (simplex_lp_status.solution_status != SimplexSolutionStatus::OUT_OF_TIME) {
+  if (workHMO.model_status_ != HighsModelStatus::REACHED_TIME_LIMIT) {
     if (solvePhase == 2) {
       int it0 = simplex_info.iteration_count;
 
@@ -253,8 +253,8 @@ void HPrimal::solvePhase2() {
     }
 
     double currentRunHighsTime = timer.readRunHighsClock();
-    if (currentRunHighsTime > workHMO.options_.highs_run_time_limit) {
-      simplex_lp_status.solution_status = SimplexSolutionStatus::OUT_OF_TIME;
+    if (currentRunHighsTime > workHMO.options_.time_limit) {
+      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }
     // If the data are fresh from rebuild(), break out of
@@ -270,15 +270,15 @@ void HPrimal::solvePhase2() {
     }
   }
 
-  if (simplex_lp_status.solution_status == SimplexSolutionStatus::OUT_OF_TIME) return;
+  if (workHMO.model_status_ == HighsModelStatus::REACHED_TIME_LIMIT) return;
 
   if (columnIn == -1) {
     HighsPrintMessage(ML_DETAILED, "primal-optimal\n");
     HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-    simplex_lp_status.solution_status = SimplexSolutionStatus::OPTIMAL;
+    workHMO.model_status_ = HighsModelStatus::OPTIMAL;
   } else {
     HighsPrintMessage(ML_MINIMAL, "primal-unbounded\n");
-    simplex_lp_status.solution_status = SimplexSolutionStatus::UNBOUNDED;
+    workHMO.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
   }
   computeDualObjectiveValue(workHMO);
 }

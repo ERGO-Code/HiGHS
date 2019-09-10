@@ -7,75 +7,24 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file io/LoadProblem.h
+/**@file io/LoadOptions.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef IO_LOAD_PROBLEM_H_
-#define IO_LOAD_PROBLEM_H_
+#ifndef IO_LOAD_OPTIONS_H_
+#define IO_LOAD_OPTIONS_H_
 
-#include <sys/stat.h>
+//#include <sys/stat.h>
 //#include <sys/types.h>
 //#include <cstdio>
 //#include <fstream>
 
 //#include "io/Filereader.h"
 //#include "io/HighsIO.h"
-#include "lp_data/HighsLpUtils.h"
+//#include "lp_data/HighsLpUtils.h"
 //#include "lp_data/HighsOptions.h"
-//#include "util/stringutil.h"
+#include "util/stringutil.h"
 
-// Parses the file in options.model_file using the parser specified in
-// options.parser
-HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
-  if (options.model_file.size() == 0) return HighsStatus::Error;
-
-  // Make sure it is not a folder.
-
-  struct stat info;
-  const char* pathname = options.model_file.c_str();
-  printf("loadLpFromFile: %s\n", pathname);
-  if (stat(pathname, &info) != 0) {
-    HighsPrintMessage(ML_ALWAYS, "Cannot access %s\n", pathname);
-    return HighsStatus::Error;
-  } else if (info.st_mode & S_IFDIR) {
-    HighsPrintMessage(ML_ALWAYS, "%s is a directory. Please specify a file.\n",
-                      pathname);
-    return HighsStatus::Error;
-  }
-
-  Filereader* reader = Filereader::getFilereader(options.model_file.c_str());
-  FilereaderRetcode success = reader->readModelFromFile(options, lp);
-  delete reader;
-
-  switch (success) {
-    case FilereaderRetcode::FILENOTFOUND:
-      HighsPrintMessage(ML_ALWAYS, "File not found.\n");
-      return HighsStatus::Error;
-    case FilereaderRetcode::PARSERERROR:
-      HighsPrintMessage(ML_ALWAYS, "Error when parsing file.\n");
-      return HighsStatus::Error;
-    default:
-      break;
-  }
-
-  lp.nnz_ = lp.Avalue_.size();
-
-  // Extract model name.
-  std::string name = options.model_file;
-  std::size_t found = name.find_last_of("/\\");
-  if (found < name.size()) name = name.substr(found + 1);
-  found = name.find_last_of(".");
-  if (found < name.size()) name.erase(found, name.size() - found);
-  lp.model_name_ = name;
-
-  //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp, 1);
-  //  return checkLp(lp);
-  bool normalise = true;
-  return assessLp(lp, options, normalise);
-}
-
-/*
 // For extended options to be parsed from a file. Assuming options file is
 // specified.
 bool loadOptionsFromFile(HighsOptions& options) {
@@ -100,7 +49,6 @@ bool loadOptionsFromFile(HighsOptions& options) {
       value = line.substr(equals + 1, line.size() - equals);
       trim(option);
       trim(value);
-      printf("Setting option \"%s\" = \"%s\"\n", option.c_str(), value.c_str());
       if (setOptionValue(option, options.records, value) != OptionStatus::OK) return false;
     }
   } else {
@@ -110,5 +58,4 @@ bool loadOptionsFromFile(HighsOptions& options) {
 
   return true;
 }
-*/
 #endif

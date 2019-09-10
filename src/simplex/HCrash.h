@@ -60,7 +60,7 @@ class HCrash {
   /**
    * @brief Determine a particular crash basis for a given model instance
    */
-  void crash(SimplexCrashStrategy pass_crash_strategy);
+  void crash(const int pass_crash_strategy);
 
  private:
   // Internal methods
@@ -100,7 +100,7 @@ class HCrash {
   HighsModelObject& workHMO;
 
   // Crash strategy to be used
-  SimplexCrashStrategy crash_strategy;
+  int crash_strategy;
 
   // Model dimensions
   int numCol;

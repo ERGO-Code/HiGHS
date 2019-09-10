@@ -24,64 +24,188 @@
 
 enum class OptionStatus { OK = 0, NO_FILE, UNKNOWN_OPTION, ILLEGAL_VALUE };
 
-const string on_string = "on";
-const string off_string = "off";
+class OptionRecord {
+ public:
+  HighsOptionType type;
+  std::string name;
+  std::string description;
+  bool advanced;
+  
+  OptionRecord(HighsOptionType Xtype, std::string Xname, std::string Xdescription, bool Xadvanced) {
+    this->type = Xtype;
+    this->name = Xname;
+    this->description = Xdescription;
+    this->advanced = Xadvanced;
+  }
+  
+  ~OptionRecord() {}
+};
 
-const string fixed_string = "fixed";
-const string free_string = "free";
+class OptionRecordBool : public OptionRecord {
+ public:
+  bool* value;
+  bool default_value;
+ OptionRecordBool(
+		 std::string Xname,
+		 std::string Xdescription,
+		 bool Xadvanced,
+		 bool* Xvalue_pointer,
+		 bool Xdefault_value) : OptionRecord(
+						    HighsOptionType::BOOL,
+						    Xname,
+						    Xdescription,
+						    Xadvanced)  {
+    advanced = Xadvanced;
+    value = Xvalue_pointer;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+  
+  void assignvalue(bool Xvalue) {
+    *value = Xvalue;
+  }
+  
+  ~OptionRecordBool() {}
+};
 
-// Strings for command line options
-const string file_string = "file";
-const string presolve_string = "presolve";
-const string crash_string = "crash";
-const string parallel_string = "parallel";
+class OptionRecordInt : public OptionRecord {
+ public:
+  int* value;
+  int lower_bound;
+  int default_value;
+  int upper_bound;
+ OptionRecordInt(
+		std::string Xname,
+		std::string Xdescription,
+		bool Xadvanced,
+		int* Xvalue_pointer,
+		int Xlower_bound,
+		int Xdefault_value,
+		int Xupper_bound) : OptionRecord(
+						  HighsOptionType::INT,
+						  Xname,
+						  Xdescription,
+						  Xadvanced) {
+    value = Xvalue_pointer;
+    lower_bound = Xlower_bound;
+    default_value = Xdefault_value;
+    upper_bound = Xupper_bound;
+    *value = default_value;
+  }
+
+void assignvalue(int Xvalue) {
+  *value = Xvalue;
+}
+
+~OptionRecordInt() {}
+};
+
+class OptionRecordDouble : public OptionRecord {
+ public:
+  double* value;
+  double lower_bound;
+  double upper_bound;
+  double default_value;
+  OptionRecordDouble(std::string Xname,
+		    std::string Xdescription,
+		    bool Xadvanced,
+		    double* Xvalue_pointer,
+		    double Xlower_bound,
+		    double Xdefault_value,
+		    double Xupper_bound) : OptionRecord(
+							 HighsOptionType::DOUBLE,
+							 Xname,
+							 Xdescription,
+							 Xadvanced)  {
+    value = Xvalue_pointer;
+    lower_bound = Xlower_bound;
+    default_value = Xdefault_value;
+    upper_bound = Xupper_bound;
+    *value = default_value;
+  }
+
+void assignvalue(double Xvalue) {
+  *value = Xvalue;
+}
+
+~OptionRecordDouble() {}
+};
+
+class OptionRecordString : public OptionRecord {
+ public:
+  std::string* value;
+  std::string default_value;
+  OptionRecordString(
+		    std::string Xname,
+		    std::string Xdescription,
+		    bool Xadvanced,
+		    std::string* Xvalue_pointer,
+		    std::string Xdefault_value) : OptionRecord(
+							      HighsOptionType::STRING,
+							      Xname,
+							      Xdescription,
+							      Xadvanced)  {
+    value = Xvalue_pointer;
+    default_value = Xdefault_value;
+    *value = default_value;
+  }
+
+void assignvalue(std::string Xvalue) {
+  *value = Xvalue;
+}
+
+~OptionRecordString() {}
+};
+
+inline const char* bool2string(bool b);
+
+bool commandLineOffChooseOnOk(const string& value);
+bool commandLineSolverOk(const string& value);
+
+bool boolFromString(const std::string value, bool& bool_value);
+
+OptionStatus getOptionIndex(const std::string& name, const std::vector<OptionRecord*>& option_records, int& index);
+
+OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records);
+OptionStatus checkOption(const OptionRecordInt& option);
+OptionStatus checkOption(const OptionRecordDouble& option);
+
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
+OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const char* value);
+
+OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
+OptionStatus setOptionValue(OptionRecordInt& option, const int value);
+OptionStatus setOptionValue(OptionRecordDouble& option, const double value);
+OptionStatus setOptionValue(OptionRecordString& option, std::string const value);
+
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
+OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
+
+FilewriterRetcode reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
+void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false);
+void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false);
+
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";
-const string highs_run_time_limit_string = "highs_run_time_limit";
-const string simplex_iteration_limit_string = "simplex_iteration_limit";
+const int KEEP_N_ROWS_DELETE_ROWS = -1;
+const int KEEP_N_ROWS_DELETE_ENTRIES = 0;
+const int KEEP_N_ROWS_KEEP_ROWS = 1;
+
+// Strings for command line options
+const string model_file_string = "model_file";
+const string presolve_string = "presolve";
+const string solver_string = "solver";
+const string parallel_string = "parallel";
+const string time_limit_string = "time_limit";
 const string options_file_string = "options_file";
-const string mps_parser_type_string = "mps_parser_type";
-const string mip_string = "mip";
-const string find_feasibility_string = "find_feasibility";
-const string find_feasibility_strategy_string = "feasibility_strategy";
-const string find_feasibility_dualize_string = "feasibility_dualize";
-
-// Strings for file options
-const string run_as_hsol_string = "run_as_hsol";
-const string keep_n_rows_string = "keep_n_rows";
-const string infinite_cost_string = "infinite_cost";
-const string infinite_bound_string = "infinite_bound";
-const string small_matrix_value_string = "small_matrix_value";
-const string large_matrix_value_string = "large_matrix_value";
-const string allowed_simplex_scale_factor_string =
-    "allowed_simplex_scale_factor";
-const string primal_feasibility_tolerance_string =
-    "primal_feasibility_tolerance";
-const string dual_feasibility_tolerance_string = "dual_feasibility_tolerance";
-const string dual_objective_value_upper_bound_string =
-    "dual_objective_value_upper_bound";
-
-const string simplex_strategy_string = "simplex_strategy";
-const string simplex_dualise_strategy_string = "simplex_dualise_strategy";
-const string simplex_permute_strategy_string = "simplex_permute_strategy";
-const string simplex_scale_strategy_string = "simplex_scale_strategy";
-const string simplex_crash_strategy_string = "simplex_crash_strategy";
-const string simplex_dual_edge_weight_strategy_string =
-    "simplex_dual_edge_weight_strategy";
-const string simplex_primal_edge_weight_strategy_string =
-    "simplex_primal_edge_weight_strategy";
-const string simplex_price_strategy_string = "simplex_price_strategy";
-
-const string simplex_initial_condition_check_string =
-    "simplex_initial_condition_check";
-const string simplex_initial_condition_tolerance_string =
-    "simplex_initial_condition_tolerance";
-
-const string message_level_string = "message_level";
-
-// The free parser also reads fixed format MPS files but the fixed
-// parser does not read free mps files.
-enum class HighsMpsParserType { free, fixed, DEFAULT = free };
 
 /** SCIP/HiGHS Objective sense */
 enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
@@ -91,162 +215,295 @@ enum objSense { OBJSENSE_MINIMIZE = 1, OBJSENSE_MAXIMIZE = -1 };
 // are just what has been used to parse options from argv.
 // todo: when creating the new options don't forget underscores for class
 // variables but no underscores for struct
-struct HighsOptions {
-  std::string filename = FILENAME_DEFAULT;
-  std::string options_file = OPTIONS_FILE_DEFAULT;
+class HighsOptions {
+ public:
+  HighsOptions() {
+    OptionRecordBool* record_bool;
+    OptionRecordInt* record_int;
+    OptionRecordDouble* record_double;
+    OptionRecordString* record_string;
+    bool advanced;
+    advanced = false;
+    // Options read from the command line
+    record_string = new OptionRecordString(model_file_string,
+					   "Model file",
+					   advanced, &model_file,
+					   FILENAME_DEFAULT);
+    records.push_back(record_string);
+    record_string = new OptionRecordString(presolve_string,
+					   "Presolve option: \"off\", \"choose\" or \"on\"",
+					   advanced, &presolve,
+					   choose_string);
+    records.push_back(record_string);
+    record_string = new OptionRecordString(solver_string,
+					   "Solver option: \"simplex\", \"choose\" or \"ipm\"",
+					   advanced, &solver,
+					   choose_string);
+    records.push_back(record_string);
+    record_string = new OptionRecordString(parallel_string,
+					   "Parallel option: \"off\", \"choose\" or \"on\"",
+					   advanced, &parallel,
+					   choose_string);
+    records.push_back(record_string);
+    record_double = new OptionRecordDouble(time_limit_string,
+					   "Time limit",
+					   advanced, &time_limit,
+					   0, HIGHS_CONST_INF, HIGHS_CONST_INF);
+    records.push_back(record_double);
+    record_string = new OptionRecordString(options_file_string,
+					   "Options file",
+					   advanced, &options_file,
+					   FILENAME_DEFAULT);
+    records.push_back(record_string);
+    // Options read from the file
+    record_int = new OptionRecordInt("simplex_iteration_limit",
+				     "Iteration limit for simplex solver",
+				     advanced, &simplex_iteration_limit,
+				     0, HIGHS_CONST_I_INF, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+    
+    record_double = new OptionRecordDouble("infinite_cost",
+					   "Limit on cost coefficient: values larger than this will be treated as infinite",
+					   advanced, &infinite_cost,
+					   1e15, 1e20, 1e25);
+    records.push_back(record_double);
+    
+    record_double = new OptionRecordDouble("infinite_bound",
+					   "Limit on |constraint bound|: values larger than this will be treated as infinite",
+					   advanced, &infinite_bound,
+					   1e15 , 1e20, 1e25);
+    records.push_back(record_double);
 
-  // Options passed through the command line
-  PresolveOption presolve_option = PresolveOption::DEFAULT;
-  CrashOption crash_option = CrashOption::DEFAULT;
-  ParallelOption parallel_option = ParallelOption::DEFAULT;
-  SimplexOption simplex_option = SimplexOption::DEFAULT;
-  bool ipx = false;
-  double highs_run_time_limit = HIGHS_RUN_TIME_LIMIT_DEFAULT;
-  int simplex_iteration_limit = SIMPLEX_ITERATION_LIMIT_DEFAULT;
-  HighsMpsParserType mps_parser_type = HighsMpsParserType::DEFAULT;
+    record_double = new OptionRecordDouble("small_matrix_value",
+					   "Lower limit on |matrix entries|: values smaller than this will be treated as zero",
+					   advanced, &small_matrix_value,
+					   1e-12, 1e-9, HIGHS_CONST_INF);
+    records.push_back(record_double);
 
-  // Options not passed through the command line
-  int run_as_hsol = RUN_AS_HSOL_DEFAULT;
-  int keep_n_rows = KEEP_N_ROWS_DEFAULT;
-  double infinite_cost = INFINITE_COST_DEFAULT;
-  double infinite_bound = INFINITE_BOUND_DEFAULT;
-  double small_matrix_value = SMALL_MATRIX_VALUE_DEFAULT;
-  double large_matrix_value = LARGE_MATRIX_VALUE_DEFAULT;
-  int allowed_simplex_scale_factor = ALLOWED_SIMPLEX_SCALE_FACTOR_DEFAULT;
-  double primal_feasibility_tolerance = PRIMAL_FEASIBILITY_TOLERANCE_DEFAULT;
-  double dual_feasibility_tolerance = DUAL_FEASIBILITY_TOLERANCE_DEFAULT;
-  double dual_objective_value_upper_bound =
-      DUAL_OBJECTIVE_VALUE_UPPER_BOUND_DEFAULT;
-  SimplexStrategy simplex_strategy = SimplexStrategy::DEFAULT;
-  SimplexDualiseStrategy simplex_dualise_strategy =
-      SimplexDualiseStrategy::DEFAULT;
-  SimplexPermuteStrategy simplex_permute_strategy =
-      SimplexPermuteStrategy::DEFAULT;
-  SimplexScaleStrategy simplex_scale_strategy = SimplexScaleStrategy::DEFAULT;
-  SimplexCrashStrategy simplex_crash_strategy = SimplexCrashStrategy::DEFAULT;
-  SimplexDualEdgeWeightStrategy simplex_dual_edge_weight_strategy =
-      SimplexDualEdgeWeightStrategy::DEFAULT;
-  SimplexPrimalEdgeWeightStrategy simplex_primal_edge_weight_strategy =
-      SimplexPrimalEdgeWeightStrategy::DEFAULT;
-  SimplexPriceStrategy simplex_price_strategy = SimplexPriceStrategy::DEFAULT;
+    record_double = new OptionRecordDouble("large_matrix_value",
+				     "Upper limit on |matrix entries|: values larger than this will be treated as infinite",
+				     advanced, &large_matrix_value,
+				     1e0, 1e15, 1e20);
+    records.push_back(record_double);
 
-  bool simplex_initial_condition_check = true;
-  double simplex_initial_condition_tolerance =
-      SIMPLEX_INITIAL_CONDITION_TOLERANCE_DEFAULT;
-  double dual_steepest_edge_weight_log_error_threshhold =
-    DUAL_STEEPEST_EDGE_WEIGHT_LOG_ERROR_THRESHHOLD_DEFAULT;
-  int allow_superbasic = false;
+    record_double = new OptionRecordDouble("primal_feasibility_tolerance",
+				     "Primal feasibility tolerance",
+				     advanced, &primal_feasibility_tolerance,
+				     1e-10, 1e-7, HIGHS_CONST_INF);
+    records.push_back(record_double);
 
-  bool pami = 0;
-  bool sip = 0;
-  bool scip = 0;
+    record_double = new OptionRecordDouble("dual_feasibility_tolerance",
+				     "Dual feasibility tolerance",
+				     advanced, &dual_feasibility_tolerance,
+				     1e-10, 1e-7, HIGHS_CONST_INF);
+    records.push_back(record_double);
 
+    record_double = new OptionRecordDouble("dual_objective_value_upper_bound",
+				     "Upper bound on objective value for dual simplex: algorithm terminates if reached",
+				     advanced, &dual_objective_value_upper_bound,
+				     -HIGHS_CONST_INF, HIGHS_CONST_INF, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_int = new OptionRecordInt("simplex_strategy",
+				     "Strategy for simplex solver",
+				     advanced, &simplex_strategy,
+				     SIMPLEX_STRATEGY_MIN, SIMPLEX_STRATEGY_DUAL, SIMPLEX_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_scale_strategy",
+				     "Strategy for scaling before simplex solver: off / on (0/1)",
+				     advanced, &simplex_scale_strategy,
+				     SIMPLEX_SCALE_STRATEGY_MIN, SIMPLEX_SCALE_STRATEGY_HIGHS, SIMPLEX_SCALE_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_crash_strategy",
+				     "Strategy for simplex crash: off / LTSSF / Bixby (0/1/2)",
+				     advanced, &simplex_crash_strategy,
+				     SIMPLEX_CRASH_STRATEGY_MIN, SIMPLEX_CRASH_STRATEGY_OFF, SIMPLEX_CRASH_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_dual_edge_weight_strategy",
+				     "Strategy for simplex dual edge weights: Dantzig / Devex / Steepest Edge (0/1/2)",
+				     advanced, &simplex_dual_edge_weight_strategy,
+				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MIN,
+				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE_TO_DEVEX_SWITCH,
+				     SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_primal_edge_weight_strategy",
+				     "Strategy for simplex primal edge weights: Dantzig / Devex (0/1)",
+				     advanced, &simplex_primal_edge_weight_strategy,
+				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MIN,
+				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_DANTZIG,
+				     SIMPLEX_PRIMAL_EDGE_WEIGHT_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_update_limit",
+				     "Limit on the number of simplex UPDATE operations",
+				     advanced, &simplex_update_limit,
+				     0, 5000, HIGHS_CONST_I_INF);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("message_level",
+				     "HiGHS message level: bit-mask 1 => VERBOSE; 2 => DETAILED 4 => MINIMAL",
+				     advanced, &message_level,
+				     ML_MIN, ML_MINIMAL, ML_MAX);
+    records.push_back(record_int);
+
+    // Advanced options
+    advanced = true;
+    record_bool = new OptionRecordBool("run_as_hsol",
+				       "Run HiGHS simplex solver as if it were hsol",
+				       advanced, &run_as_hsol,
+				       false);
+    records.push_back(record_bool);
+    record_bool = new OptionRecordBool("mps_parser_type_free",
+				       "Use the free format MPS file reader",
+				       advanced, &mps_parser_type_free,
+				       true);
+    records.push_back(record_bool);
+    record_int = new OptionRecordInt("keep_n_rows",
+				     "For multiple N-rows in MPS files: delete rows / delete entries / keep rows (-1/0/1)",
+				     advanced, &keep_n_rows,
+				     KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_DELETE_ROWS, KEEP_N_ROWS_KEEP_ROWS);
+    records.push_back(record_int);
+    record_int = new OptionRecordInt("allowed_simplex_scale_factor",
+				     "Largest power-of-two factor permitted when scaling for the simplex solver",
+				     advanced, &allowed_simplex_scale_factor,
+				     0, 10, 20);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_dualise_strategy",
+				     "Strategy for dualising before simplex",
+				     advanced, &simplex_dualise_strategy,
+				     OPTION_OFF, OPTION_OFF, OPTION_ON);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_permute_strategy",
+				     "Strategy for permuting before simplex",
+				     advanced, &simplex_permute_strategy,
+				     OPTION_OFF, OPTION_OFF, OPTION_ON);
+    records.push_back(record_int);
+
+    record_int = new OptionRecordInt("simplex_price_strategy",
+				     "Strategy for PRICE in simplex",
+				     advanced, &simplex_price_strategy,
+				     SIMPLEX_PRICE_STRATEGY_MIN,
+				     SIMPLEX_PRICE_STRATEGY_ROW_SWITCH_COL_SWITCH,
+				     SIMPLEX_PRICE_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("simplex_initial_condition_check",
+				     "Perform initial basis condition check in simplex",
+				     advanced, &simplex_initial_condition_check,
+				     true);
+    records.push_back(record_bool);
+
+    record_double = new OptionRecordDouble("simplex_initial_condition_tolerance",
+				     "Tolerance on initial basis condition in simplex",
+				     advanced, &simplex_initial_condition_tolerance,
+				     1.0, 1e14, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_double = new OptionRecordDouble("dual_steepest_edge_weight_log_error_threshhold",
+				     "Threshhold on dual steepest edge weight errors for Devex switch",
+				     advanced, &dual_steepest_edge_weight_log_error_threshhold,
+				     1.0, 1e1, HIGHS_CONST_INF);
+    records.push_back(record_double);
+
+    record_bool = new OptionRecordBool("simplex_perturb_costs",
+				     "Perturb costs in dual simplex solver",
+				     advanced, &simplex_perturb_costs,
+				     true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("find_feasibility",
+				     "Run iCrash",
+				     advanced, &find_feasibility,
+				     false);
+    records.push_back(record_bool);
+
+    record_int = new OptionRecordInt("feasibility_strategy",
+				     "Strategy for iCrash",
+				     advanced, &feasibility_strategy,
+				     FEASIBILITY_STRATEGY_MIN,
+				     FEASIBILITY_STRATEGY_kApproxComponentWise,
+				     FEASIBILITY_STRATEGY_MAX);
+    records.push_back(record_int);
+
+    record_bool = new OptionRecordBool("feasibility_strategy_dualize",
+				     "Dualise strategy for iCrash",
+				     advanced, &feasibility_strategy_dualize,
+				     false);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("mip", "Run MIP solver", advanced, &mip, false);
+    records.push_back(record_bool);
+
+  }
+  std::vector<OptionRecord*> records;
+
+  // Options read from the command line
+  std::string model_file;
+  std::string presolve;
+  std::string solver;
+  std::string parallel;
+  double time_limit;
+  std::string options_file;
+  
+  // Options read from the file
+  int simplex_iteration_limit;
+  double infinite_cost;
+  double infinite_bound;
+  double small_matrix_value;
+  double large_matrix_value;
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  double dual_objective_value_upper_bound;
+  int simplex_strategy;
+  int simplex_scale_strategy;
+  int simplex_crash_strategy;
+  int simplex_dual_edge_weight_strategy;
+  int simplex_primal_edge_weight_strategy;
+  int simplex_update_limit;
+  int message_level;
+  
+  // Advanced options
+  bool run_as_hsol;
+  bool mps_parser_type_free;
+  int keep_n_rows;
+  int allowed_simplex_scale_factor;
+  int simplex_dualise_strategy;
+  int simplex_permute_strategy;
+  int simplex_price_strategy;
+  bool simplex_initial_condition_check;
+  double simplex_initial_condition_tolerance;
+  double dual_steepest_edge_weight_log_error_threshhold;
+  bool simplex_perturb_costs;
+
+  // Options for iCrash
+  bool find_feasibility;
+  int feasibility_strategy;
+  bool feasibility_strategy_dualize;
+
+  // Switch for MIP solver
+  bool mip;
+  
   // Options for HighsPrintMessage and HighsLogMessage
   FILE* logfile = stdout;
   FILE* output = stdout;
-  unsigned int messageLevel = ML_MINIMAL;
 
-  void (*printmsgcb)(unsigned int level, const char* msg,
+  void (*printmsgcb)(int level, const char* msg,
                      void* msgcb_data) = NULL;
   void (*logmsgcb)(HighsMessageType type, const char* msg,
                    void* msgcb_data) = NULL;
   void* msgcb_data = NULL;
-
-  // Declare HighsOptions for an LP model, any solver and simplex solver,
-  // setting the default value
-  //
-  // For the simplex solver
-  //
-  bool simplex_perturb_costs = true;
-  // Maximum number of simplex updates
-  int simplex_update_limit = SIMPLEX_UPDATE_LIMIT_DEFAULT;
-
-  bool find_feasibility = false;
-  FeasibilityStrategy feasibility_strategy =
-      FeasibilityStrategy::kApproxComponentWise;
-  bool feasibility_strategy_dualize = false;
-
-  bool mip = false;
 };
 
-OptionStatus setOptionValue(HighsOptions& options, const std::string& option,
-                            const std::string& value);
 
 // Called before solve. This would check whether tolerances are set to correct
 // values and all options are consistent.
 OptionStatus checkOptionsValue(HighsOptions& options);
-void reportOptionsValue(const HighsOptions& options,
-                        const int report_level = 0);
 void setHsolOptions(HighsOptions& options);
-
-OptionStatus setPresolveValue(HighsOptions& options, const std::string& value);
-OptionStatus setCrashValue(HighsOptions& options, const std::string& value);
-OptionStatus setParallelValue(HighsOptions& options, const std::string& value);
-OptionStatus setSimplexValue(HighsOptions& options, const std::string& value);
-OptionStatus setIpmValue(HighsOptions& options, const std::string& value);
-OptionStatus setHighsRunTimeLimitValue(HighsOptions& options,
-                                       const double& value);
-OptionStatus setSimplexIterationLimitValue(HighsOptions& options,
-                                           const int& value);
-OptionStatus setParserTypeValue(HighsOptions& options,
-                                const std::string& value);
-OptionStatus setMipValue(HighsOptions& options, const std::string& value);
-OptionStatus setFindFeasibilityValue(HighsOptions& options,
-                                     const std::string& value);
-OptionStatus setFindFeasibilityStrategyValue(HighsOptions& options,
-                                             const std::string& value);
-OptionStatus setFindFeasibilityDualizeValue(HighsOptions& options,
-                                            const std::string& value);
-
-OptionStatus setRunAsHsolValue(HighsOptions& options, const int& value);
-OptionStatus setKeepNRowsValue(HighsOptions& options, const int& value);
-
-OptionStatus setInfiniteCostValue(HighsOptions& options, const double& value);
-OptionStatus setInfiniteBoundValue(HighsOptions& options, const double& value);
-OptionStatus setSmallMatrixValueValue(HighsOptions& options,
-                                      const double& value);
-OptionStatus setLargeMatrixValueValue(HighsOptions& options,
-                                      const double& value);
-OptionStatus setAllowedSimplexScaleFactorValue(HighsOptions& options,
-                                               const int& value);
-OptionStatus setPrimalFeasibilityToleranceValue(HighsOptions& options,
-                                                const double& value);
-OptionStatus setDualFeasibilityToleranceValue(HighsOptions& options,
-                                              const double& value);
-OptionStatus setDualObjectiveValueUpperBoundValue(HighsOptions& options,
-                                                  const double& value);
-OptionStatus setSimplexStrategyValue(HighsOptions& options, const int& value);
-OptionStatus setSimplexDualiseStrategyValue(HighsOptions& options,
-                                            const int& value);
-OptionStatus setSimplexPermuteStrategyValue(HighsOptions& options,
-                                            const int& value);
-OptionStatus setSimplexScaleStrategyValue(HighsOptions& options,
-                                          const int& value);
-OptionStatus setSimplexCrashStrategyValue(HighsOptions& options,
-                                          const int& value);
-OptionStatus setSimplexPrimalEdgeWeightStrategyValue(HighsOptions& options,
-                                                     const int& value);
-OptionStatus setSimplexDualEdgeWeightStrategyValue(HighsOptions& options,
-                                                   const int& value);
-OptionStatus setSimplexPriceStrategyValue(HighsOptions& options,
-                                          const int& value);
-
-OptionStatus setSimplexInitialConditionCheckValue(HighsOptions& options,
-                                                  const int& value);
-OptionStatus setSimplexInitialConditionToleranceValue(HighsOptions& options,
-                                                      const double& value);
-
-OptionStatus setMessageLevelValue(HighsOptions& options, const int& value);
-
-SimplexStrategy intToSimplexStrategy(const int& value);
-SimplexDualiseStrategy intToSimplexDualiseStrategy(const int& value);
-SimplexPermuteStrategy intToSimplexPermuteStrategy(const int& value);
-SimplexScaleStrategy intToSimplexScaleStrategy(const int& value);
-SimplexCrashStrategy intToSimplexCrashStrategy(const int& value);
-SimplexDualEdgeWeightStrategy intToSimplexDualEdgeWeightStrategy(
-    const int& value);
-SimplexPrimalEdgeWeightStrategy intToSimplexPrimalEdgeWeightStrategy(
-    const int& value);
-SimplexPriceStrategy intToSimplexPriceStrategy(const int& value);
 
 #endif

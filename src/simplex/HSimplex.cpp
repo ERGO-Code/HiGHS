@@ -15,8 +15,9 @@
 #include "simplex/HSimplex.h"
 #include "HConfig.h"
 #include "io/HighsIO.h"
-#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsStatus.h"
+#include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "simplex/HCrash.h"
 #include "simplex/HVector.h"
 #include "simplex/HighsSimplexInterface.h"
@@ -69,7 +70,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
 #endif
 }
 
-SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
+HighsModelStatus transition(HighsModelObject& highs_model_object) {
   // Perform the transition from whatever information is known about
   // the LP to a status where simplex data are set up for the initial
   // rebuild() of the chosen solver - primal, scalar dual or parallel
@@ -185,16 +186,16 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
       // and possibly after dualising
 
       /*
-      // Possibly dualise, making sure that no simplex or other data are used to
-      initialise if (options.simplex_dualise_strategy !=
-      SimplexDualiseStrategy::OFF) { dualiseSimplexLp(highs_model_object);
+      // Possibly dualise, making sure that no simplex or other data are used to initialise 
+      //
+      if (options.simplex_dualise_strategy != OPTION_OFF) { dualiseSimplexLp(highs_model_object);
       have_highs_solution = false;
         // Initialise the real and integer random vectors
         initialiseSimplexLpRandomVectors(highs_model_object);
       }
       */
       // Possibly permute the columns of the LP to be used by the solver.
-      if (options.simplex_permute_strategy != SimplexPermuteStrategy::OFF)
+      if (options.simplex_permute_strategy != OPTION_OFF)
         permuteSimplexLp(highs_model_object);
 
       // Allocate memory for nonbasicFlag
@@ -208,7 +209,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
             NONBASIC_FLAG_FALSE;
 
       // Possibly find a crash basis
-      if (options.simplex_crash_strategy != SimplexCrashStrategy::OFF) {
+      if (options.simplex_crash_strategy != SIMPLEX_CRASH_STRATEGY_OFF) {
         HCrash crash(highs_model_object);
         timer.start(simplex_info.clock_[CrashClock]);
         crash.crash(options.simplex_crash_strategy);
@@ -229,8 +230,8 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
     assert(simplex_lp.numRow_ > 0);
     if (simplex_lp.numRow_ == 0) {
       printf(
-          "Cannot currently solve LPs with no rows using the simplex method\n");
-      return SimplexSolutionStatus::FAILED;
+          "Solution of LPs with no rows shouldn't reach transition()\n");
+      return HighsModelStatus::SOLVE_ERROR;
     }
 
     // There is now a nonbasicFlag that should be valid - have the
@@ -289,7 +290,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   //
   // Scale the LP to be used by the solver if scaling is to be used and the LP
   // is not already scaled
-  bool scale_lp = options.simplex_scale_strategy != SimplexScaleStrategy::OFF &&
+  bool scale_lp = options.simplex_scale_strategy != SIMPLEX_SCALE_STRATEGY_OFF &&
                   !simplex_lp_status.scaling_tried;
   if (scale_lp) {
     timer.start(simplex_info.clock_[ScaleClock]);    
@@ -360,7 +361,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   if (!basis_condition_ok) {
     HCrash crash(highs_model_object);
     timer.start(simplex_info.clock_[CrashClock]);
-    crash.crash(SimplexCrashStrategy::BASIC);
+    crash.crash(SIMPLEX_CRASH_STRATEGY_BASIC);
     timer.stop(simplex_info.clock_[CrashClock]);
     HighsLogMessage(HighsMessageType::INFO,
                     "Performed crash to prioritise previously basic variables "
@@ -566,7 +567,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
   // infeasiblities and the simplex status
   computePrimalInfeasible(highs_model_object);
   computeDualInfeasible(highs_model_object);
-  SimplexSolutionStatus solution_status;
+  HighsModelStatus model_status;
   bool primal_feasible =
       simplex_info.num_primal_infeasibilities ==
       0;  // && max_primal_residual < primal_feasibility_tolerance;
@@ -574,18 +575,18 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
                        0;  // && max_dual_residual < dual_feasibility_tolerance;
   if (primal_feasible) {
     if (dual_feasible) {
-      solution_status = SimplexSolutionStatus::OPTIMAL;
+      model_status = HighsModelStatus::OPTIMAL;
     } else {
-      solution_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
     }
   } else {
     if (dual_feasible) {
-      solution_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+      model_status = HighsModelStatus::DUAL_FEASIBLE;
     } else {
-      solution_status = SimplexSolutionStatus::UNSET;
+      model_status = HighsModelStatus::NOTSET;
     }
   }
-  simplex_lp_status.solution_status = solution_status;
+  highs_model_object.model_status_ = model_status;
   //
 #ifdef HiGHSDEV
   // If there is a HiGHS solution then determine the changes in basic
@@ -705,7 +706,7 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
 	   simplex_info.sum_primal_infeasibilities,
 	   simplex_info.num_dual_infeasibilities,
 	   simplex_info.sum_dual_infeasibilities,
-	   SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str(),
+	   highsModelStatusToString(highs_model_object.model_status_).c_str(),
 	   num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences,
 	   num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences,
 	   num_basic_col_value_differences, sum_basic_col_value_differences,
@@ -725,9 +726,9 @@ SimplexSolutionStatus transition(HighsModelObject& highs_model_object) {
       simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
-      SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+      highsModelStatusToString(highs_model_object.model_status_).c_str());
 	 
-  return solution_status;
+  return model_status;
 }
 
 bool dual_infeasible(const double value, const double lower, const double upper,
@@ -1158,8 +1159,7 @@ void scaleSimplexLp(HighsModelObject& highs_model_object) {
   double* rowUpper = &highs_model_object.simplex_lp_.rowUpper_[0];
 
   // Allow a switch to/from the original scaling rules
-  bool original_scaling = highs_model_object.options_.simplex_scale_strategy ==
-                          SimplexScaleStrategy::HSOL;
+  bool original_scaling = highs_model_object.options_.simplex_scale_strategy == SIMPLEX_SCALE_STRATEGY_HSOL;
   bool allow_cost_scaling = false;
   if (original_scaling) allow_cost_scaling = false;
   // Find out range of matrix values and skip matrix scaling if all
@@ -1860,11 +1860,11 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   SimplexTimer simplex_timer;
   HighsTimer& timer = highs_model_object.timer_;
 
-  if (simplex_info.simplex_strategy == SimplexStrategy::PRIMAL) {
+  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_PRIMAL) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
-  } else if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_PLAIN) {
+  } else if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_PLAIN) {
     if (simplex_info.report_simplex_inner_clock) {
       simplex_timer.reportSimplexInnerClock(highs_model_object);
     }
@@ -1874,7 +1874,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     }
   }
 
-  //  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_TASKS) {
+  //  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_TASKS) {
   //    int reportList[] = {
   //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
   //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -1886,7 +1886,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
   //    timer.report(reportCount, reportList, 0.0);
   //  }
 
-  if (simplex_info.simplex_strategy == SimplexStrategy::DUAL_MULTI) {
+  if (simplex_info.simplex_strategy == SIMPLEX_STRATEGY_DUAL_MULTI) {
     //    int reportList[] = {
     //        HTICK_INVERT,        HTICK_CHUZR1,        HTICK_BTRAN,
     //        HTICK_PRICE,         HTICK_CHUZC1,        HTICK_CHUZC2,
@@ -2447,7 +2447,7 @@ int compute_factor(HighsModelObject& highs_model_object) {
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
     //    handle_rank_deficiency();
-    //    simplex_lp_status.solution_status = SimplexSolutionStatus::SINGULAR;
+    //    highs_model_object.model_status_ = HighsModelStatus::SOLVE_ERROR;
 #ifdef HiGHSDEV
     //    writePivots("failed");
 #endif
@@ -3007,43 +3007,6 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
   }
 }
 
-// Return a string representation of SimplexSolutionStatus.
-std::string SimplexSolutionStatusToString(SimplexSolutionStatus status) {
-  switch (status) {
-    case SimplexSolutionStatus::UNSET:
-      return "Unset";
-      break;
-    case SimplexSolutionStatus::OPTIMAL:
-      return "Optimal";
-      break;
-    case SimplexSolutionStatus::PRIMAL_FEASIBLE:
-      return "Primal feasible";
-      break;
-    case SimplexSolutionStatus::DUAL_FEASIBLE:
-      return "Dual feasible";
-      break;
-    case SimplexSolutionStatus::INFEASIBLE:
-      return "Infeasible";
-      break;
-    case SimplexSolutionStatus::UNBOUNDED:
-      return "Primal unbounded";
-      break;
-    case SimplexSolutionStatus::SINGULAR:
-      return "Singular basis";
-      break;
-    case SimplexSolutionStatus::FAILED:
-      return "Failed";
-      break;
-    case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return "Reached dual objective value upper bound";
-      break;
-    case SimplexSolutionStatus::OUT_OF_TIME:
-      return "Time limit exceeded";
-      break;
-  }
-  return "";
-}
-
 void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
                            const char* message) {
   printf("\nReporting solver status and flags: %s\n\n", message);
@@ -3193,7 +3156,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
   }
 }
 
-SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
+HighsModelStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   const HighsLp& lp = highs_model_object.lp_;
   assert(lp.numRow_==0);
   HighsLogMessage(HighsMessageType::INFO, "Solving an unconstrained LP with %d columns", lp.numCol_);
@@ -3209,18 +3172,18 @@ SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object)
     double upper = lp.colUpper_[iCol];
     double value;
     HighsBasisStatus status;
-    if (lower > upper) return SimplexSolutionStatus::INFEASIBLE;
+    if (lower > upper) return HighsModelStatus::PRIMAL_INFEASIBLE;
     if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free column: must have zero cost
-      if (cost) return SimplexSolutionStatus::UNBOUNDED;
+      if (cost) return HighsModelStatus::PRIMAL_UNBOUNDED;
       value = 0;
       status = HighsBasisStatus::ZERO;
     } else if (cost >= 0) {
-      if (cost && highs_isInfinity(-lower)) return SimplexSolutionStatus::UNBOUNDED;
+      if (cost && highs_isInfinity(-lower)) return HighsModelStatus::PRIMAL_UNBOUNDED;
       value = lower;
       status = HighsBasisStatus::LOWER;
     } else {
-      if (highs_isInfinity(upper)) return SimplexSolutionStatus::UNBOUNDED;
+      if (highs_isInfinity(upper)) return HighsModelStatus::PRIMAL_UNBOUNDED;
       value = upper;
       status = HighsBasisStatus::UPPER;
     }
@@ -3231,5 +3194,5 @@ SimplexSolutionStatus solveUnconstrainedLp(HighsModelObject& highs_model_object)
   }
   highs_model_object.simplex_info_.dual_objective_value = objective;
   highs_model_object.simplex_info_.primal_objective_value = objective;
-  return SimplexSolutionStatus::OPTIMAL;
+  return HighsModelStatus::OPTIMAL;
 }

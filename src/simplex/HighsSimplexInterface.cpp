@@ -16,6 +16,7 @@
 #include "io/HMPSIO.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
+#include "lp_data/HighsModelUtils.h"
 #include "simplex/HSimplex.h"
 #include "util/HighsUtils.h"
 
@@ -27,7 +28,7 @@ HighsStatus HighsSimplexInterface::addCols(
   printf("Called addCols(XnumNewCol=%d, XnumNewNZ = %d)\n", XnumNewCol,
          XnumNewNZ);
 #endif
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::OK;
   if (XnumNewCol < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewCol == 0) return HighsStatus::OK;
@@ -185,6 +186,25 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
   return HighsStatus::OK;
 }
 
+// Get a single coefficient from the matrix
+HighsStatus HighsSimplexInterface::getCoefficient(const int Xrow, const int Xcol,
+						  double& value) {
+#ifdef HiGHSDEV
+  printf("Called getCoeff(Xrow=%d, Xcol=%d)\n", Xrow, Xcol);
+#endif
+  HighsLp& lp = highs_model_object.lp_;
+  if (Xrow < 0 || Xrow > lp.numRow_) return HighsStatus::Error;
+  if (Xcol < 0 || Xcol > lp.numCol_) return HighsStatus::Error;
+  value = 0;
+  for (int el = lp.Astart_[Xcol]; el < lp.Astart_[Xcol+1]; el++) {
+    if (lp.Aindex_[el] == Xrow) {
+      value = lp.Avalue_[el];
+      break;
+    }
+  }
+  return HighsStatus::OK;
+}
+
 HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
                                            const double* XrowLower,
                                            const double* XrowUpper,
@@ -195,7 +215,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   printf("Called addRows(XnumNewRow=%d, XnumNewNZ = %d)\n", XnumNewRow,
          XnumNewNZ);
 #endif
-  HighsStatus return_status = HighsStatus::NotSet;
+  HighsStatus return_status = HighsStatus::OK;
   if (XnumNewRow < 0) return HighsStatus::Error;
   if (XnumNewNZ < 0) return HighsStatus::Error;
   if (XnumNewRow == 0) return HighsStatus::OK;
@@ -470,17 +490,19 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
     assert(out_to_col <= col_dim);
     assert(in_to_col <= col_dim);
     for (int col = out_from_col; col < out_to_col; col++) {
-      col_cost[num_col] = lp.colCost_[col];
-      col_lower[num_col] = lp.colLower_[col];
-      col_upper[num_col] = lp.colUpper_[col];
-      col_matrix_start[num_col] =
-          num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
+      if (col_cost != NULL) col_cost[num_col] = lp.colCost_[col];
+      if (col_lower != NULL) col_lower[num_col] = lp.colLower_[col];
+      if (col_upper != NULL) col_upper[num_col] = lp.colUpper_[col];
+      if (col_matrix_start != NULL) col_matrix_start[num_col] =
+				      num_nz + lp.Astart_[col] - lp.Astart_[out_from_col];
       num_col++;
     }
-    for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col]; el++) {
-      col_matrix_index[num_nz] = lp.Aindex_[el];
-      col_matrix_value[num_nz] = lp.Avalue_[el];
-      num_nz++;
+    if (col_matrix_index != NULL || col_matrix_value != NULL) {
+      for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col]; el++) {
+	if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
+	if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
+	num_nz++;
+      }
     }
     if (out_to_col == col_dim || in_to_col == col_dim) break;
   }
@@ -591,8 +613,8 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     int new_row = new_index[row];
     if (new_row >= 0) {
       assert(new_row < num_row);
-      row_lower[new_row] = lp.rowLower_[row];
-      row_upper[new_row] = lp.rowUpper_[row];
+      if (row_lower != NULL) row_lower[new_row] = lp.rowLower_[row];
+      if (row_upper != NULL) row_upper[new_row] = lp.rowUpper_[row];
       row_matrix_length[new_row] = 0;
     }
   }
@@ -605,41 +627,51 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     }
   }
 
-  row_matrix_start[0] = 0;
-  for (int row = 0; row < num_row - 1; row++) {
-    row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
-  }
+  if (row_matrix_start == NULL) {
+    // If the matrix start vector is null then don't get values of
+    // indices, otherwise both are meaningless
+    if (row_matrix_index != NULL || row_matrix_value != NULL) {
+      HighsLogMessage(HighsMessageType::ERROR,
+		      "Cannot supply meaningful row matrix indices/values with null starts");
+      return HighsStatus::Error;
+    }
+  } else {
+    row_matrix_start[0] = 0;
+    for (int row = 0; row < num_row - 1; row++) {
+      row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
+    }
 
-  // Fill the row-wise matrix with indices and values
-  for (int col = 0; col < lp.numCol_; col++) {
-    for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
-      int row = lp.Aindex_[el];
-      int new_row = new_index[row];
-      if (new_row >= 0) {
-        int row_el = row_matrix_start[new_row];
-        row_matrix_index[row_el] = col;
-        row_matrix_value[row_el] = lp.Avalue_[el];
-        row_matrix_start[new_row]++;
+    // Fill the row-wise matrix with indices and values
+    for (int col = 0; col < lp.numCol_; col++) {
+      for (int el = lp.Astart_[col]; el < lp.Astart_[col + 1]; el++) {
+	int row = lp.Aindex_[el];
+	int new_row = new_index[row];
+	if (new_row >= 0) {
+	  int row_el = row_matrix_start[new_row];
+	  if (row_matrix_index != NULL) row_matrix_index[row_el] = col;
+	  if (row_matrix_value != NULL) row_matrix_value[row_el] = lp.Avalue_[el];
+	  row_matrix_start[new_row]++;
+	}
       }
     }
+    // Restore the starts of the row-wise matrix and count the number of nonzeros
+    // in it
+    num_nz = 0;
+    row_matrix_start[0] = 0;
+    for (int row = 0; row < num_row - 1; row++) {
+      row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
+      num_nz += row_matrix_length[row];
+    }
+    num_nz += row_matrix_length[num_row - 1];
   }
-  // Restore the starts of the row-wise matrix and count the number of nonzeros
-  // in it
-  num_nz = 0;
-  row_matrix_start[0] = 0;
-  for (int row = 0; row < num_row - 1; row++) {
-    row_matrix_start[row + 1] = row_matrix_start[row] + row_matrix_length[row];
-    num_nz += row_matrix_length[row];
-  }
-  num_nz += row_matrix_length[num_row - 1];
   return HighsStatus::OK;
 }
 
 // Change a single coefficient in the matrix
-HighsStatus HighsSimplexInterface::changeCoefficient(int Xrow, int Xcol,
+HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow, const int Xcol,
                                                      const double XnewValue) {
 #ifdef HiGHSDEV
-  printf("Called util_changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow,
+  printf("Called changeCoeff(Xrow=%d, Xcol=%d, XnewValue=%g)\n", Xrow,
          Xcol, XnewValue);
 #endif
   HighsLp& lp = highs_model_object.lp_;
@@ -701,7 +733,7 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
         (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
-      simplex_lp_status.solution_status = SimplexSolutionStatus::UNSET;
+      highs_model_object.model_status_ = HighsModelStatus::NOTSET;
     }
   }
   return HighsStatus::OK;
@@ -886,32 +918,6 @@ void HighsSimplexInterface::change_update_method(int updateMethod) {
   highs_model_object.factor_.change(updateMethod);
 }
 #endif
-
-HighsStatus HighsSimplexInterface::lpStatusToHighsStatus(
-    SimplexSolutionStatus simplex_solution_status) {
-  switch (simplex_solution_status) {
-    case SimplexSolutionStatus::OUT_OF_TIME:
-      return HighsStatus::Timeout;
-    case SimplexSolutionStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
-      return HighsStatus::ReachedDualObjectiveUpperBound;
-    case SimplexSolutionStatus::FAILED:
-      return HighsStatus::SolutionError;
-    case SimplexSolutionStatus::SINGULAR:
-      return HighsStatus::SolutionError;
-    case SimplexSolutionStatus::UNBOUNDED:
-      return HighsStatus::Unbounded;
-    case SimplexSolutionStatus::INFEASIBLE:
-      return HighsStatus::Infeasible;
-    case SimplexSolutionStatus::DUAL_FEASIBLE:
-      return HighsStatus::DualFeasible;
-    case SimplexSolutionStatus::PRIMAL_FEASIBLE:
-      return HighsStatus::PrimalFeasible;
-    case SimplexSolutionStatus::OPTIMAL:
-      return HighsStatus::Optimal;
-    default:
-      return HighsStatus::NotImplemented;
-  }
-}
 
 // Utilities to convert model basic/nonbasic status to/from SCIP-like status
 int HighsSimplexInterface::convertBaseStatToHighsBasis(const int* cstat,
@@ -1437,9 +1443,9 @@ bool HighsSimplexInterface::analyseSingleHighsSolutionAndBasis(
   return query;
 }
 
-SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
-									  const int report_level,
-									  const string message) {
+HighsModelStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
+								     const int report_level,
+								     const string message) {
   HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Analysis %s", message.c_str());
   HighsSolution& solution = highs_model_object.solution_;
   HighsBasis& basis = highs_model_object.basis_;
@@ -1668,7 +1674,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
   simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
   simplex_info.max_dual_infeasibility = max_dual_infeasibility;
   simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
-  SimplexSolutionStatus solution_status;
+  HighsModelStatus model_status;
   bool primal_feasible =
       num_primal_infeasibilities ==
       0;  // && max_primal_residual < primal_feasibility_tolerance;
@@ -1676,18 +1682,18 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
                        0;  // && max_dual_residual < dual_feasibility_tolerance;
   if (primal_feasible) {
     if (dual_feasible) {
-      solution_status = SimplexSolutionStatus::OPTIMAL;
+      model_status = HighsModelStatus::OPTIMAL;
     } else {
-      solution_status = SimplexSolutionStatus::PRIMAL_FEASIBLE;
+      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
     }
   } else {
     if (dual_feasible) {
-      solution_status = SimplexSolutionStatus::DUAL_FEASIBLE;
+      model_status = HighsModelStatus::DUAL_FEASIBLE;
     } else {
-      solution_status = SimplexSolutionStatus::UNSET;
+      model_status = HighsModelStatus::NOTSET;
     }
   }
-  simplex_lp_status.solution_status = solution_status;
+  highs_model_object.model_status_ = model_status;
   if (num_nonzero_basic_duals) {
     HighsLogMessage(
 		    HighsMessageType::WARNING,
@@ -1727,11 +1733,11 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
-      SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str());
+      highsModelStatusToString(highs_model_object.model_status_).c_str());
 #ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
 	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
-	 SimplexSolutionStatusToString(simplex_lp_status.solution_status).c_str(),
+	 highsModelStatusToString(highs_model_object.model_status_).c_str(),
 	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
 	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
 	 num_primal_residual, max_primal_residual, sum_primal_residual,
@@ -1739,7 +1745,7 @@ SimplexSolutionStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
 	 num_dual_residual, max_dual_residual, sum_dual_residual,
 	 num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
 #endif
-  return solution_status;
+  return model_status;
 }
 
 int HighsSimplexInterface::get_basic_indices(int* bind) {

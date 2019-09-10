@@ -47,7 +47,7 @@ FilereaderLp::~FilereaderLp() {
 FilereaderRetcode FilereaderLp::readModelFromFile(const HighsOptions& options,
                                                   HighsLp& model) {
   HighsModelBuilder m;
-  const char* filename = options.filename.c_str();
+  const char* filename = options.model_file.c_str();
   this->readModelFromFile(filename, m);
   m.HighsBuildTechnicalModel(&model);
   return FilereaderRetcode::OK;

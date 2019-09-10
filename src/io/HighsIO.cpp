@@ -22,19 +22,18 @@
 
 FILE* logfile = stdout;
 FILE* output = stdout;
-unsigned int messageLevel = ML_MINIMAL;
-void (*printmsgcb)(unsigned int, const char*, void*) = NULL;
+int message_level = ML_MINIMAL;
+void (*printmsgcb)(int, const char*, void*) = NULL;
 void (*logmsgcb)(HighsMessageType, const char*, void*) = NULL;
 void* msgcb_data = NULL;
 
 char msgbuffer[65536];
 
-void HighsPrintMessage(unsigned int level, const char* format, ...) {
+void HighsPrintMessage(int level, const char* format, ...) {
   if (output == NULL) {
     return;
   }
-
-  if (messageLevel & level) {
+  if (message_level & level) {
     va_list argptr;
     va_start(argptr, format);
     if (printmsgcb == NULL)
@@ -95,10 +94,10 @@ void HighsSetLogfile(FILE* lf) { logfile = lf; }
 
 void HighsSetOutput(FILE* op) { output = op; }
 
-void HighsSetMessagelevel(unsigned int level) { messageLevel = level; }
+void HighsSetMessagelevel(int level) { message_level = level; }
 
 void HighsSetMessageCallback(
-    void (*printmsgcb_)(unsigned int level, const char* msg, void* msgcb_data),
+    void (*printmsgcb_)(int level, const char* msg, void* msgcb_data),
     void (*logmsgcb_)(HighsMessageType type, const char* msg, void* msgcb_data),
     void* msgcb_data_) {
   printmsgcb = printmsgcb_;
@@ -109,7 +108,7 @@ void HighsSetMessageCallback(
 void HighsSetIO(HighsOptions& options) {
   logfile = options.logfile;
   output = options.output;
-  messageLevel = options.messageLevel;
+  message_level = options.message_level;
   printmsgcb = options.printmsgcb;
   logmsgcb = options.logmsgcb;
   msgcb_data = options.msgcb_data;
