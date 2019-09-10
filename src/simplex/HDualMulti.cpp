@@ -88,7 +88,7 @@ void HDual::major_chooseRow() {
     int choiceCount = 0;
     for (int i = 0; i < initialCount; i++) {
       int iRow = choiceIndex[i];
-      if (dualRHS.workArray[iRow] / dualRHS.workEdWt[iRow] >=
+      if (dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow] >=
           dualRHS.workCutoff) {
         choiceIndex[choiceCount++] = iRow;
       }
@@ -140,10 +140,10 @@ void HDual::major_chooseRow() {
     multi_choice[i].baseValue = baseValue[iRow];
     multi_choice[i].baseLower = baseLower[iRow];
     multi_choice[i].baseUpper = baseUpper[iRow];
-    multi_choice[i].infeasValue = dualRHS.workArray[iRow];
+    multi_choice[i].infeasValue = dualRHS.work_infeasibility[iRow];
     multi_choice[i].infeasEdWt = dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit =
-        dualRHS.workArray[iRow] / dualRHS.workEdWt[iRow];
+        dualRHS.work_infeasibility[iRow] / dualRHS.workEdWt[iRow];
     multi_choice[i].infeasLimit *= pami_cutoff;
   }
 
@@ -615,7 +615,7 @@ void HDual::major_updatePrimal() {
   if (updatePrimal_inDense) {
     // Update the RHS in dense
     const double* mixArray = &columnBFRT.array[0];
-    double* rhs = &dualRHS.workArray[0];
+    double* local_work_infeasibility = &dualRHS.work_infeasibility[0];
 #pragma omp parallel for schedule(static)
     for (int iRow = 0; iRow < solver_num_row; iRow++) {
       baseValue[iRow] -= mixArray[iRow];
@@ -623,7 +623,11 @@ void HDual::major_updatePrimal() {
       const double less = baseLower[iRow] - value;
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      rhs[iRow] = infeas * infeas;
+      //      local_work_infeasibility[iRow] = infeas * infeas;
+      if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+	local_work_infeasibility[iRow] = infeas * infeas;
+      else
+	local_work_infeasibility[iRow] = fabs(infeas);
     }
 
     // Update the weight in dense

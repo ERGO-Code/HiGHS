@@ -24,6 +24,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelObject.h"
 #include "simplex/HCrash.h"
 #include "simplex/HPrimal.h"
@@ -55,6 +56,14 @@ void HDual::solve(int num_threads) {
   // initialisation of edge weights to 1s. Should only be called if
   // model dimension changes
   init(num_threads);
+
+  printf("\n workHMO.options_.less_infeasible_DSE_check = %d\n", workHMO.options_.less_infeasible_DSE_check);
+  if (workHMO.options_.less_infeasible_DSE_check) {
+    workHMO.simplex_lp_.less_infeasible_DSE_candidate_ = isLessInfeasibleDSECandidate(workHMO.simplex_lp_);
+    if (workHMO.simplex_lp_.less_infeasible_DSE_candidate_ &&
+	workHMO.options_.less_infeasible_DSE_choose_row)
+      simplex_info.store_squared_primal_infeasibility = false;
+  }
 
   initialise_cost(workHMO, 1);
   assert(simplex_lp_status.has_fresh_invert);
@@ -713,7 +722,7 @@ void HDual::rebuild() {
 
   // Collect primal infeasible as a list
   timer.start(simplex_info.clock_[CollectPrIfsClock]);
-  dualRHS.create_infeasArray();
+  dualRHS.createArrayOfPrimalInfeasibilities();
   dualRHS.create_infeasList(columnDensity);
   timer.stop(simplex_info.clock_[CollectPrIfsClock]);
 
@@ -1853,8 +1862,8 @@ void HDual::updatePivots() {
   dualRow.delete_Freelist(columnIn);
   //
   // Update the primal value for the row where the basis change has
-  // occurred, and set the corresponding squared primal infeasibility
-  // value in dualRHS.workArray
+  // occurred, and set the corresponding primal infeasibility value in
+  // dualRHS.work_infeasibility
   dualRHS.update_pivots(
       rowOut, workHMO.simplex_info_.workValue_[columnIn] + thetaPrimal);
   // Determine whether to reinvert based on the synthetic clock

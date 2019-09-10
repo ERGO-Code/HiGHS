@@ -2338,3 +2338,37 @@ void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp) {
                   (num_row_from - num_row_to), num_els_to,
                   (num_els_from - num_els_to));
 }
+
+bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
+  printf("\n!!Called isLessInfeasibleDSECandidate!!\n\n");
+  const int max_allowed_col_num_en = 3;
+  vector<int> col_length_k;
+  col_length_k.resize(1+max_allowed_col_num_en, 0);
+  for (int col = 0; col < lp.numCol_; col++) {
+    // Check limit on number of entries in the column has not been breached
+    int col_num_en = lp.Astart_[col+1] - lp.Astart_[col];
+    if (col_num_en > max_allowed_col_num_en) {
+      printf("Column %d has %d > %d entries so LP is not LiDSE candidate\n", col, col_num_en, max_allowed_col_num_en);
+      return false;
+    }
+    col_length_k[col_num_en]++;
+    for (int en = lp.Astart_[col]; en < lp.Astart_[col+1]; en++) {
+      double value = lp.Avalue_[en];
+      // All nonzeros must be +1 or -1
+      if (fabs(value) != 1) {
+	printf("Column %d has entry %d with value %g so LP is not LiDSE candidate\n", col, en-lp.Astart_[col], value);
+	return false;
+      }
+    }
+  }
+  printf("\nLP is LiDSE candidate!\n");
+  printf("LP has\n");
+  int check_num_col = 0;
+  for (int col_num_en = 0; col_num_en < max_allowed_col_num_en+1; col_num_en++) {
+    check_num_col += col_length_k[col_num_en];
+    printf("%7d columns of number of count %1d\n", col_length_k[col_num_en], col_num_en);
+  }
+  if (check_num_col != lp.numCol_)
+    printf("Sum of number of columns with allowed number of entries is %d, not %d\n", check_num_col, lp.numCol_);
+  return true;
+}

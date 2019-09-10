@@ -76,6 +76,9 @@ class HighsLp {
   int sense_ = 1;
   double offset_ = 0;
 
+  // Record near-network property of the constraint matrix
+  bool less_infeasible_DSE_candidate_ = false;
+
   std::string model_name_ = "";
   std::string lp_name_ = "";
 
@@ -227,6 +230,7 @@ struct HighsSimplexInfo {
   //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
+  bool store_squared_primal_infeasibility;
   bool allow_primal_flips_for_dual_feasibility;
   bool analyseLpSolution;
 #ifdef HiGHSDEV
