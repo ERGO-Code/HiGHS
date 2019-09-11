@@ -2340,14 +2340,16 @@ void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp) {
 }
 
 bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
-  printf("\n!!Called isLessInfeasibleDSECandidate!!\n\n");
-  const int max_allowed_col_num_en = 3;
+  int max_col_num_en = -1;
+  const int max_assess_col_num_en = 9;
+  const int max_allowed_col_num_en = 6;
   vector<int> col_length_k;
-  col_length_k.resize(1+max_allowed_col_num_en, 0);
+  col_length_k.resize(1+max_assess_col_num_en, 0);
   for (int col = 0; col < lp.numCol_; col++) {
     // Check limit on number of entries in the column has not been breached
     int col_num_en = lp.Astart_[col+1] - lp.Astart_[col];
-    if (col_num_en > max_allowed_col_num_en) {
+    max_col_num_en = std::max(col_num_en, max_col_num_en);
+    if (col_num_en > max_assess_col_num_en) {
       printf("Column %d has %d > %d entries so LP is not LiDSE candidate\n", col, col_num_en, max_allowed_col_num_en);
       return false;
     }
@@ -2361,14 +2363,19 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
       }
     }
   }
-  printf("\nLP is LiDSE candidate!\n");
   printf("LP has\n");
   int check_num_col = 0;
-  for (int col_num_en = 0; col_num_en < max_allowed_col_num_en+1; col_num_en++) {
+  for (int col_num_en = 0; col_num_en < max_col_num_en+1; col_num_en++) {
     check_num_col += col_length_k[col_num_en];
-    printf("%7d columns of number of count %1d\n", col_length_k[col_num_en], col_num_en);
+    printf("%7d columns of count %1d\n", col_length_k[col_num_en], col_num_en);
   }
   if (check_num_col != lp.numCol_)
     printf("Sum of number of columns with allowed number of entries is %d, not %d\n", check_num_col, lp.numCol_);
-  return true;
+  bool LiDSE_candidate = max_col_num_en <= max_allowed_col_num_en;
+  std::string logic = "is not";
+  if (LiDSE_candidate) logic = "is";
+  printf("LP %s has all |entries|=1 and max column count = %d so %s a candidate for LiDSE\n",
+	 lp.model_name_.c_str(), max_col_num_en, logic.c_str());
+  if (max_col_num_en <= max_allowed_col_num_en) return true;
+  return false;
 }

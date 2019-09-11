@@ -76,9 +76,6 @@ class HighsLp {
   int sense_ = 1;
   double offset_ = 0;
 
-  // Record near-network property of the constraint matrix
-  bool less_infeasible_DSE_candidate_ = false;
-
   std::string model_name_ = "";
   std::string lp_name_ = "";
 

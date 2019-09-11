@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
   }
 
   Highs highs;
-  highs.writeHighsOptions("HiGHS.set");
+  //  highs.writeHighsOptions("HiGHS.set");
 
   HighsStatus init_status = highs.initializeLp(lp);
   if (init_status != HighsStatus::OK) {
