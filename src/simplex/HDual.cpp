@@ -58,9 +58,10 @@ void HDual::solve(int num_threads) {
   init(num_threads);
 
   if (workHMO.options_.less_infeasible_DSE_check) {
-    //    if (isLessInfeasibleDSECandidate(workHMO.simplex_lp_)) {
+    if (isLessInfeasibleDSECandidate(workHMO.simplex_lp_)) {
       // LP is a candidate for LiDSE
       printf("LP is a candidate for LiDSE: ");
+    }
       if (workHMO.options_.less_infeasible_DSE_choose_row) {
 	// Use LiDSE
 	printf("using LiDSE\n");

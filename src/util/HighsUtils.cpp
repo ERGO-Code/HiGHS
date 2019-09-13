@@ -154,7 +154,7 @@ void analyseVectorValues(const char* message, int vecDim,
       int pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
       printf("     %12g %12d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
     }
-    printf("grep_value_distrib,Model,%s,%d", model_name.c_str(), VLsZ);
+    printf("grep_value_distrib,%s,%d", model_name.c_str(), VLsZ);
     printf(",");
     if (excessVLsV) printf("!");
     for (int ix = 0; ix < VLsZ; ix++) printf(",%g", VLsV[ix]);

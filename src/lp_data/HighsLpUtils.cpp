@@ -2345,21 +2345,27 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
   const int max_allowed_col_num_en = 6;
   vector<int> col_length_k;
   col_length_k.resize(1+max_assess_col_num_en, 0);
+  bool is_less_infeasible_DSE_candidate = true;
   for (int col = 0; col < lp.numCol_; col++) {
     // Check limit on number of entries in the column has not been breached
     int col_num_en = lp.Astart_[col+1] - lp.Astart_[col];
     max_col_num_en = std::max(col_num_en, max_col_num_en);
     if (col_num_en > max_assess_col_num_en) {
-      printf("Column %d has %d > %d entries so LP is not LiDSE candidate\n", col, col_num_en, max_allowed_col_num_en);
-      return false;
+      if (is_less_infeasible_DSE_candidate)
+	printf("Column %d has %d > %d entries so LP is not LiDSE candidate\n", col, col_num_en, max_allowed_col_num_en);
+      is_less_infeasible_DSE_candidate = false;
+      //      return false;
+    } else {
+      col_length_k[col_num_en]++;
     }
-    col_length_k[col_num_en]++;
     for (int en = lp.Astart_[col]; en < lp.Astart_[col+1]; en++) {
       double value = lp.Avalue_[en];
       // All nonzeros must be +1 or -1
       if (fabs(value) != 1) {
-	printf("Column %d has entry %d with value %g so LP is not LiDSE candidate\n", col, en-lp.Astart_[col], value);
-	return false;
+	if (is_less_infeasible_DSE_candidate)
+	  printf("Column %d has entry %d with value %g so LP is not LiDSE candidate\n", col, en-lp.Astart_[col], value);
+      is_less_infeasible_DSE_candidate = false;
+      //	return false;
       }
     }
   }
@@ -2376,6 +2382,9 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
   if (LiDSE_candidate) logic = "is";
   printf("LP %s has all |entries|=1 and max column count = %d so %s a candidate for LiDSE\n",
 	 lp.model_name_.c_str(), max_col_num_en, logic.c_str());
-  if (max_col_num_en <= max_allowed_col_num_en) return true;
-  return false;
+  double average_col_num_en = lp.Astart_[lp.numCol_];
+  average_col_num_en = average_col_num_en/lp.numCol_;
+  is_less_infeasible_DSE_candidate = is_less_infeasible_DSE_candidate && max_col_num_en <= max_allowed_col_num_en;
+  printf("grep_count_distrib,%s,%d,%g,%d\n", lp.model_name_.c_str(), max_col_num_en, average_col_num_en, is_less_infeasible_DSE_candidate);
+  return is_less_infeasible_DSE_candidate;
 }
