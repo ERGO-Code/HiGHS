@@ -1795,13 +1795,13 @@ rowDual, rowStatus);
 #ifdef HiGHSDEV
 void analyseLp(const HighsLp& lp, const char* message) {
   printf("\n%s model data: Analysis\n", message);
-  analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
-  analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
-  analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
-  analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
-  analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
+  analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
+  analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
+  analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
+  analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_);
+  analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_);
   analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_,
-                      true);
+		      true, lp.model_name_);
   analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_,
                         lp.Aindex_);
   analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);

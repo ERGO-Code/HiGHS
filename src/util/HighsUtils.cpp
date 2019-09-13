@@ -36,7 +36,8 @@ bool highs_isInfinity(double val) {
 #ifdef HiGHSDEV
 void analyseVectorValues(const char* message, int vecDim,
                          const std::vector<double>& vec,
-                         bool analyseValueList) {
+                         bool analyseValueList,
+			 std::string model_name) {
   if (vecDim == 0) return;
   double log10 = log(10.0);
   const int nVK = 20;
@@ -153,6 +154,11 @@ void analyseVectorValues(const char* message, int vecDim,
       int pct = ((100.0 * VLsK[ix]) / vecDim) + 0.5;
       printf("     %12g %12d (%3d%%)\n", VLsV[ix], VLsK[ix], pct);
     }
+    printf("grep_value_distrib,Model,%s,%d", model_name.c_str(), VLsZ);
+    printf(",");
+    if (excessVLsV) printf("!");
+    for (int ix = 0; ix < VLsZ; ix++) printf(",%g", VLsV[ix]);
+    printf("\n");      
   }
 }
 

@@ -303,10 +303,8 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
       analyseLp(highs_model_object.lp_, "Unscaled");
       HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
-        analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
-                            scale.col_, false);
-        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
-                            scale.row_, false);
+        analyseVectorValues("Column scaling factors", simplex_lp.numCol_, scale.col_);
+        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_, scale.row_);
         analyseLp(simplex_lp, "Scaled");
       }
     }
@@ -1111,7 +1109,7 @@ void scaleCosts(HighsModelObject& highs_model_object) {
   */
   //  utils.analyseVectorValues("Column costs",
   //  highs_model_object.simplex_lp_.numCol_,
-  //  highs_model_object.simplex_lp_.colCost_, false);
+  //  highs_model_object.simplex_lp_.colCost_);
 #endif
 }
 
