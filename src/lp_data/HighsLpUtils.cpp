@@ -2378,6 +2378,11 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
       }
     }
   }
+#ifdef HiGHSDEV
+  printf("LP has\n");
+  for (int col_num_en = 0; col_num_en < to_num_en+1; col_num_en++)
+    printf("%7d columns of count %1d\n", col_length_k[col_num_en], col_num_en);
+#endif
   double average_col_num_en = lp.Astart_[lp.numCol_];
   average_col_num_en = average_col_num_en/lp.numCol_;
   int int_average_col_num_en = average_col_num_en;
