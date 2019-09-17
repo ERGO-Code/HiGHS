@@ -449,7 +449,7 @@ class HighsOptions {
     record_bool = new OptionRecordBool("less_infeasible_DSE_choose_row",
 				     "Use LiDSE if LP has right properties",
 				     advanced, &less_infeasible_DSE_choose_row,
-				     false);
+				     true);
     records.push_back(record_bool);
 
   }

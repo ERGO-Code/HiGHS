@@ -505,6 +505,7 @@ void setHsolOptions(HighsOptions& options) {
   options.simplex_dual_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_STEEPEST_EDGE;
   options.simplex_primal_edge_weight_strategy = SIMPLEX_DUAL_EDGE_WEIGHT_STRATEGY_DANTZIG;
   options.simplex_price_strategy = SIMPLEX_PRICE_STRATEGY_ROW;
+  options.less_infeasible_DSE_check = false;
 }
 
 OptionStatus setMessageLevelValue(HighsOptions& options, const int& value) {

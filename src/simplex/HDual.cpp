@@ -57,24 +57,15 @@ void HDual::solve(int num_threads) {
   // model dimension changes
   init(num_threads);
 
+  // Decide whether to use LiDSE by not storing squared primal infeasibilities
+  simplex_info.store_squared_primal_infeasibility = true;
   if (workHMO.options_.less_infeasible_DSE_check) {
     if (isLessInfeasibleDSECandidate(workHMO.simplex_lp_)) {
       // LP is a candidate for LiDSE
-      printf("LP is a candidate for LiDSE: ");
-    }
-      if (workHMO.options_.less_infeasible_DSE_choose_row) {
+      if (workHMO.options_.less_infeasible_DSE_choose_row)
 	// Use LiDSE
-	printf("using LiDSE\n");
 	simplex_info.store_squared_primal_infeasibility = false;
-      } else {
-	printf("not using LiDSE\n");
-      }
-      /*
-    } else {
-      printf("LP is not a candidate for LiDSE so don't solve it!\n");
-      return;
     }
-      */
   }
 
   initialise_cost(workHMO, 1);
