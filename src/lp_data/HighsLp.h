@@ -227,6 +227,7 @@ struct HighsSimplexInfo {
   //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
+  bool store_squared_primal_infeasibility;
   bool allow_primal_flips_for_dual_feasibility;
   bool analyseLpSolution;
 #ifdef HiGHSDEV

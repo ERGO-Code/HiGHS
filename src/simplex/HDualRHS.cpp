@@ -33,7 +33,7 @@ void HDualRHS::setup() {
   const int numTot = workHMO.simplex_lp_.numCol_ + workHMO.simplex_lp_.numRow_;
   workMark.resize(numRow);
   workIndex.resize(numRow);
-  workArray.resize(numRow);
+  work_infeasibility.resize(numRow);
   workEdWt.assign(numRow, 1);
   workEdWtFull.resize(numTot);
   partNum = 0;
@@ -71,8 +71,8 @@ void HDualRHS::choose_normal(int* chIndex) {
       const int start = (section == 0) ? randomStart : 0;
       const int end = (section == 0) ? numRow : randomStart;
       for (int iRow = start; iRow < end; iRow++) {
-        if (workArray[iRow] > HIGHS_CONST_ZERO) {
-          const double myInfeas = workArray[iRow];
+        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+          const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
@@ -100,8 +100,8 @@ void HDualRHS::choose_normal(int* chIndex) {
       const int end = (section == 0) ? workCount : randomStart;
       for (int i = start; i < end; i++) {
         int iRow = workIndex[i];
-        if (workArray[iRow] > HIGHS_CONST_ZERO) {
-          const double myInfeas = workArray[iRow];
+        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+          const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           if (bestMerit * myWeight < myInfeas) {
             bestMerit = myInfeas / myWeight;
@@ -146,8 +146,8 @@ void HDualRHS::choose_multi_global(int* chIndex, int* chCount, int chLimit) {
     const int numRow = -workCount;
     double cutoffMerit = 0;
     for (int iRow = 0; iRow < numRow; iRow++) {
-      if (workArray[iRow] > HIGHS_CONST_ZERO) {
-        const double myInfeas = workArray[iRow];
+      if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        const double myInfeas = work_infeasibility[iRow];
         const double myWeight = workEdWt[iRow];
         if (cutoffMerit * myWeight < myInfeas) {
           // Save
@@ -166,8 +166,8 @@ void HDualRHS::choose_multi_global(int* chIndex, int* chCount, int chLimit) {
     double cutoffMerit = 0;
     for (int i = 0; i < workCount; i++) {
       int iRow = workIndex[i];
-      if (workArray[iRow] > HIGHS_CONST_ZERO) {
-        const double myInfeas = workArray[iRow];
+      if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
+        const double myInfeas = work_infeasibility[iRow];
         const double myWeight = workEdWt[iRow];
         if (cutoffMerit * myWeight < myInfeas) {
           // Save
@@ -227,9 +227,9 @@ void HDualRHS::choose_multi_HGpart(int* chIndex, int* chCount, int chLimit) {
       const int start = (section == 0) ? randomStart : 0;
       const int end = (section == 0) ? numRow : randomStart;
       for (int iRow = start; iRow < end; iRow++) {
-        if (workArray[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           int iPart = workPartition[iRow];
-          const double myInfeas = workArray[iRow];
+          const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           if (bestMerit[iPart] * myWeight < myInfeas) {
             bestMerit[iPart] = myInfeas / myWeight;
@@ -260,9 +260,9 @@ void HDualRHS::choose_multi_HGpart(int* chIndex, int* chCount, int chLimit) {
       const int end = (section == 0) ? workCount : randomStart;
       for (int i = start; i < end; i++) {
         int iRow = workIndex[i];
-        if (workArray[iRow] > HIGHS_CONST_ZERO) {
+        if (work_infeasibility[iRow] > HIGHS_CONST_ZERO) {
           int iPart = workPartition[iRow];
-          const double myInfeas = workArray[iRow];
+          const double myInfeas = work_infeasibility[iRow];
           const double myWeight = workEdWt[iRow];
           if (bestMerit[iPart] * myWeight < myInfeas) {
             bestMerit[iPart] = myInfeas / myWeight;
@@ -307,7 +307,12 @@ void HDualRHS::update_primal(HVector* column, double theta) {
       const double less = baseLower[iRow] - value;
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      workArray[iRow] = infeas * infeas;
+      //    work_infeasibility[iRow] = infeas * infeas;
+      if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+	work_infeasibility[iRow] = infeas * infeas;
+      else
+	work_infeasibility[iRow] = fabs(infeas);
+	
     }
   } else {
     for (int i = 0; i < columnCount; i++) {
@@ -317,7 +322,10 @@ void HDualRHS::update_primal(HVector* column, double theta) {
       const double less = baseLower[iRow] - value;
       const double more = value - baseUpper[iRow];
       double infeas = less > Tp ? less : (more > Tp ? more : 0);
-      workArray[iRow] = infeas * infeas;
+      if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+	work_infeasibility[iRow] = infeas * infeas;
+      else
+	work_infeasibility[iRow] = fabs(infeas);
     }
   }
 
@@ -385,7 +393,7 @@ void HDualRHS::update_weight_Dvx(HVector* column, double dvx_wt_o_rowOut) {
 void HDualRHS::update_pivots(int iRow, double value) {
   // Update the primal value for the row (iRow) where the basis change
   // has occurred, and set the corresponding squared primal
-  // infeasibility value in workArray
+  // infeasibility value in work_infeasibility
   //
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
   const double* baseUpper = &workHMO.simplex_info_.baseUpper_[0];
@@ -397,7 +405,11 @@ void HDualRHS::update_pivots(int iRow, double value) {
     pivotInfeas = baseValue[iRow] - baseLower[iRow];
   if (baseValue[iRow] > baseUpper[iRow] + Tp)
     pivotInfeas = baseValue[iRow] - baseUpper[iRow];
-  workArray[iRow] = pivotInfeas * pivotInfeas;
+  // work_infeasibility[iRow] = pivotInfeas * pivotInfeas;
+  if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+    work_infeasibility[iRow] = pivotInfeas * pivotInfeas;
+  else
+    work_infeasibility[iRow] = fabs(pivotInfeas);
 }
 
 void HDualRHS::update_infeasList(HVector* column) {
@@ -416,7 +428,7 @@ void HDualRHS::update_infeasList(HVector* column) {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       if (workMark[iRow] == 0) {
-        if (workArray[iRow]) {
+        if (work_infeasibility[iRow]) {
           workIndex[workCount++] = iRow;
           workMark[iRow] = 1;
         }
@@ -427,7 +439,7 @@ void HDualRHS::update_infeasList(HVector* column) {
     for (int i = 0; i < columnCount; i++) {
       int iRow = columnIndex[i];
       if (workMark[iRow] == 0) {
-        if (workArray[iRow] > workEdWt[iRow] * workCutoff) {
+        if (work_infeasibility[iRow] > workEdWt[iRow] * workCutoff) {
           workIndex[workCount++] = iRow;
           workMark[iRow] = 1;
         }
@@ -438,7 +450,7 @@ void HDualRHS::update_infeasList(HVector* column) {
   timer.stop(simplex_info.clock_[UpdatePrimalClock]);
 }
 
-void HDualRHS::create_infeasArray() {
+void HDualRHS::createArrayOfPrimalInfeasibilities() {
   int numRow = workHMO.simplex_lp_.numRow_;
   const double* baseValue = &workHMO.simplex_info_.baseValue_[0];
   const double* baseLower = &workHMO.simplex_info_.baseLower_[0];
@@ -449,7 +461,11 @@ void HDualRHS::create_infeasArray() {
     const double less = baseLower[i] - value;
     const double more = value - baseUpper[i];
     double infeas = less > Tp ? less : (more > Tp ? more : 0);
-    workArray[i] = infeas * infeas;
+    //    work_infeasibility[i] = infeas * infeas;
+    if (workHMO.simplex_info_.store_squared_primal_infeasibility) 
+      work_infeasibility[i] = infeas * infeas;
+    else
+      work_infeasibility[i] = fabs(infeas);
   }
 }
 
@@ -462,7 +478,7 @@ void HDualRHS::create_infeasList(double columnDensity) {
   workCount = 0;
   workCutoff = 0;
   for (int iRow = 0; iRow < numRow; iRow++) {
-    if (workArray[iRow]) {
+    if (work_infeasibility[iRow]) {
       workMark[iRow] = 1;
       workIndex[workCount++] = iRow;
     }
@@ -475,7 +491,7 @@ void HDualRHS::create_infeasList(double columnDensity) {
     double maxMerit = 0;
     for (int iRow = 0, iPut = 0; iRow < numRow; iRow++)
       if (workMark[iRow]) {
-        double myMerit = workArray[iRow] / workEdWt[iRow];
+        double myMerit = work_infeasibility[iRow] / workEdWt[iRow];
         if (maxMerit < myMerit) maxMerit = myMerit;
         dwork[iPut++] = -myMerit;
       }
@@ -487,7 +503,7 @@ void HDualRHS::create_infeasList(double columnDensity) {
     fill_n(&workMark[0], numRow, 0);
     workCount = 0;
     for (int iRow = 0; iRow < numRow; iRow++) {
-      if (workArray[iRow] >= workEdWt[iRow] * workCutoff) {
+      if (work_infeasibility[iRow] >= workEdWt[iRow] * workCutoff) {
         workIndex[workCount++] = iRow;
         workMark[iRow] = 1;
       }
@@ -500,7 +516,7 @@ void HDualRHS::create_infeasList(double columnDensity) {
       workCount = icutoff;
       for (int i = icutoff; i < fullCount; i++) {
         int iRow = workIndex[i];
-        if (workArray[iRow] > workEdWt[iRow] * cutMerit) {
+        if (work_infeasibility[iRow] > workEdWt[iRow] * cutMerit) {
           workIndex[workCount++] = iRow;
         } else {
           workMark[iRow] = 0;

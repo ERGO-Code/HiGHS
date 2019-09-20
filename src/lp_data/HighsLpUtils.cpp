@@ -1795,13 +1795,13 @@ rowDual, rowStatus);
 #ifdef HiGHSDEV
 void analyseLp(const HighsLp& lp, const char* message) {
   printf("\n%s model data: Analysis\n", message);
-  analyseVectorValues("Column costs", lp.numCol_, lp.colCost_, false);
-  analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_, false);
-  analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_, false);
-  analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_, false);
-  analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_, false);
+  analyseVectorValues("Column costs", lp.numCol_, lp.colCost_);
+  analyseVectorValues("Column lower bounds", lp.numCol_, lp.colLower_);
+  analyseVectorValues("Column upper bounds", lp.numCol_, lp.colUpper_);
+  analyseVectorValues("Row lower bounds", lp.numRow_, lp.rowLower_);
+  analyseVectorValues("Row upper bounds", lp.numRow_, lp.rowUpper_);
   analyseVectorValues("Matrix sparsity", lp.Astart_[lp.numCol_], lp.Avalue_,
-                      true);
+		      true, lp.model_name_);
   analyseMatrixSparsity("Constraint matrix", lp.numCol_, lp.numRow_, lp.Astart_,
                         lp.Aindex_);
   analyseModelBounds("Column", lp.numCol_, lp.colLower_, lp.colUpper_);
@@ -2337,4 +2337,65 @@ void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp) {
                   num_col_to, (num_col_from - num_col_to), num_row_to,
                   (num_row_from - num_row_to), num_els_to,
                   (num_els_from - num_els_to));
+}
+
+bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
+  int max_col_num_en = -1;
+  const int max_allowed_col_num_en = 24;
+  const int max_assess_col_num_en = std::max(9, max_allowed_col_num_en);
+  const int max_average_col_num_en = 6;
+  vector<int> col_length_k;
+  col_length_k.resize(1+max_assess_col_num_en, 0);
+  bool LiDSE_candidate = true;
+  for (int col = 0; col < lp.numCol_; col++) {
+    // Check limit on number of entries in the column has not been breached
+    int col_num_en = lp.Astart_[col+1] - lp.Astart_[col];
+    max_col_num_en = std::max(col_num_en, max_col_num_en);
+    if (col_num_en > max_assess_col_num_en) {
+#ifdef HiGHSDEV
+      if (LiDSE_candidate)
+	printf("Column %d has %d > %d entries so LP is not LiDSE candidate\n", col, col_num_en, max_allowed_col_num_en);
+      LiDSE_candidate = false;
+#else
+      LiDSE_candidate = false;
+      return LiDSE_candidate;
+#endif
+    } else {
+      col_length_k[col_num_en]++;
+    }
+    for (int en = lp.Astart_[col]; en < lp.Astart_[col+1]; en++) {
+      double value = lp.Avalue_[en];
+      // All nonzeros must be +1 or -1
+      if (fabs(value) != 1) {
+#ifdef HiGHSDEV
+	if (LiDSE_candidate)
+	  printf("Column %d has entry %d with value %g so LP is not LiDSE candidate\n", col, en-lp.Astart_[col], value);
+	LiDSE_candidate = false;
+#else
+	LiDSE_candidate = false;
+	return LiDSE_candidate;
+#endif
+      }
+    }
+  }
+#ifdef HiGHSDEV
+  printf("LP has\n");
+  for (int col_num_en = 0; col_num_en < to_num_en+1; col_num_en++)
+    printf("%7d columns of count %1d\n", col_length_k[col_num_en], col_num_en);
+#endif
+  double average_col_num_en = lp.Astart_[lp.numCol_];
+  average_col_num_en = average_col_num_en/lp.numCol_;
+  int int_average_col_num_en = average_col_num_en;
+  LiDSE_candidate = LiDSE_candidate && average_col_num_en <= max_average_col_num_en;
+  std::string logic = "is not";
+  if (LiDSE_candidate) logic = "is";
+  HighsLogMessage(HighsMessageType::INFO, "LP %s has all |entries|=1 and max column count = %d (limit %d) and average column count = %0.2g (limit %d) so %s a candidate for LiDSE",
+	 lp.model_name_.c_str(),
+	 max_col_num_en, max_allowed_col_num_en,
+	 average_col_num_en, max_average_col_num_en,
+	 logic.c_str());
+#ifdef HiGHSDEV
+  printf("grep_count_distrib,%s,%d,%d,%d\n", lp.model_name_.c_str(), max_col_num_en, int_average_col_num_en, LiDSE_candidate);
+#endif
+  return LiDSE_candidate;
 }

@@ -312,10 +312,11 @@ class HDual {
    * @brief Update the basic and nonbasic variables, iteration count,
    * invertible representation of the basis matrix and row-wise
    * representation of the nonbasic columns, delete the Freelist entry
-   * for the entering column, update the primal value for the row where
-   * the basis change has occurred, and set the corresponding squared
-   * primal infeasibility value in dualRHS.workArray, and then determine
-   * whether to reinvert according to the synthetic clock
+   * for the entering column, update the primal value for the row
+   * where the basis change has occurred, and set the corresponding
+   * primal infeasibility value in dualRHS.work_infeasibility, and
+   * then determine whether to reinvert according to the synthetic
+   * clock
    */
   void updatePivots();
 

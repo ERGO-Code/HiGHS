@@ -281,4 +281,6 @@ HighsLp dualizeEqualityProblem(const HighsLp& lp);
 
 void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp);
 
+bool isLessInfeasibleDSECandidate(const HighsLp& lp);
+
 #endif  // LP_DATA_HIGHSLPUTILS_H_

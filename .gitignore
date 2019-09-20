@@ -241,3 +241,7 @@ test2.out
 #SCIP interface
 lpi_highs.cpp
 
+
+#HiGHS options files
+*.set
+

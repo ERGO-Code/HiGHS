@@ -120,10 +120,8 @@ class HDualRHS {
   /**
    * @brief Create the std::vector of primal infeasibilities
    *
-   * TODO: Change the name of "workArray" to something clearer like
-   * workInfeasArray!
    */
-  void create_infeasArray();
+  void createArrayOfPrimalInfeasibilities();
 
   HighsModelObject& workHMO;  //!< Local copy of pointer to model
 
@@ -135,7 +133,7 @@ class HDualRHS {
                                //!< greatest primal infeasibilities
   std::vector<int>
       workIndex;  //!< List of rows with greatest primal infeasibilities
-  std::vector<double> workArray;     //!< Vector of all primal infeasiblities
+  std::vector<double> work_infeasibility; //!< Vector of all primal infeasiblities
   std::vector<double> workEdWt;      //!< DSE or Dvx weight
   std::vector<double> workEdWtFull;  //!< Full-length std::vector where weights
                                      //!< are scattered during INVERT

@@ -440,6 +440,18 @@ class HighsOptions {
     record_bool = new OptionRecordBool("mip", "Run MIP solver", advanced, &mip, false);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("less_infeasible_DSE_check",
+				     "Check whether LP is candidate for LiDSE",
+				     advanced, &less_infeasible_DSE_check,
+				     true);
+    records.push_back(record_bool);
+
+    record_bool = new OptionRecordBool("less_infeasible_DSE_choose_row",
+				     "Use LiDSE if LP has right properties",
+				     advanced, &less_infeasible_DSE_choose_row,
+				     true);
+    records.push_back(record_bool);
+
   }
   std::vector<OptionRecord*> records;
 
@@ -480,6 +492,8 @@ class HighsOptions {
   double simplex_initial_condition_tolerance;
   double dual_steepest_edge_weight_log_error_threshhold;
   bool simplex_perturb_costs;
+  bool less_infeasible_DSE_check;
+  bool less_infeasible_DSE_choose_row;
 
   // Options for iCrash
   bool find_feasibility;

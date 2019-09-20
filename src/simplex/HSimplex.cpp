@@ -49,6 +49,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   simplex_info.update_limit = options.simplex_update_limit;
 
   // Set values of internal options
+  simplex_info.store_squared_primal_infeasibility = true;
   simplex_info.allow_primal_flips_for_dual_feasibility = true;
   if (options.run_as_hsol) simplex_info.allow_primal_flips_for_dual_feasibility = true;
   // Option for analysing the LP solution
@@ -302,10 +303,8 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
       analyseLp(highs_model_object.lp_, "Unscaled");
       HighsScale& scale = highs_model_object.scale_;
       if (scale.is_scaled_) {
-        analyseVectorValues("Column scaling factors", simplex_lp.numCol_,
-                            scale.col_, false);
-        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_,
-                            scale.row_, false);
+        analyseVectorValues("Column scaling factors", simplex_lp.numCol_, scale.col_);
+        analyseVectorValues("Row    scaling factors", simplex_lp.numRow_, scale.row_);
         analyseLp(simplex_lp, "Scaled");
       }
     }
@@ -1110,7 +1109,7 @@ void scaleCosts(HighsModelObject& highs_model_object) {
   */
   //  utils.analyseVectorValues("Column costs",
   //  highs_model_object.simplex_lp_.numCol_,
-  //  highs_model_object.simplex_lp_.colCost_, false);
+  //  highs_model_object.simplex_lp_.colCost_);
 #endif
 }
 
