@@ -358,6 +358,9 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
+  free (lc_XARstart);
+  free (lc_XARindex);
+  free (lc_XARvalue);
   return return_status;
 }
 
@@ -602,7 +605,10 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   }
 
   // Bail out if no rows are to be extracted
-  if (num_row == 0) return HighsStatus::OK;
+  if (num_row == 0) {
+    free (new_index);
+    return HighsStatus::OK;
+  }
 
   // Allocate an array of lengths for the row-wise matrix to be extracted
   int* row_matrix_length = (int*)malloc(sizeof(int) * num_row);
@@ -631,6 +637,8 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     if (row_matrix_index != NULL || row_matrix_value != NULL) {
       HighsLogMessage(HighsMessageType::ERROR,
 		      "Cannot supply meaningful row matrix indices/values with null starts");
+      free (new_index);
+      free (row_matrix_length);
       return HighsStatus::Error;
     }
   } else {
@@ -662,6 +670,8 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
     }
     num_nz += row_matrix_length[num_row - 1];
   }
+  free (new_index);
+  free (row_matrix_length);
   return HighsStatus::OK;
 }
 

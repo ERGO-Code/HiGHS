@@ -944,12 +944,20 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
 			       lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
 			       options.small_matrix_value, options.large_matrix_value, normalise);
     return_status = worseStatus(call_status, return_status);
-    if (return_status == HighsStatus::Error) return return_status;
+    if (return_status == HighsStatus::Error) {
+      free(lc_row_matrix_start);
+      free(lc_row_matrix_index);
+      free(lc_row_matrix_value);
+      return return_status;
+    }
     // Append the matrix to the LP vectors
     call_status = appendRowsToLpMatrix(lp, num_new_row, lc_num_new_nz,
                                        lc_row_matrix_start, lc_row_matrix_index,
                                        lc_row_matrix_value);
     return_status = worseStatus(call_status, return_status);
+    free(lc_row_matrix_start);
+    free(lc_row_matrix_index);
+    free(lc_row_matrix_value);
     if (return_status == HighsStatus::Error) return return_status;
   }
   return return_status;
@@ -1357,6 +1365,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
     }
   }
   lp.Astart_[lp.numCol_] = new_num_nz;
+  free (new_index);
   return HighsStatus::OK;
 }
 
