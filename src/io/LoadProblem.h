@@ -70,8 +70,9 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
   lp.model_name_ = name;
 
   //  HighsSetMessagelevel(HighsPrintMessageLevel::ML_ALWAYS); reportLp(lp, 1);
-  // Check validity of the LP, normalising its values (by default).
-  return assessLp(lp, options);
+  // Don't check validity of the LP here: do it when calling highs.initializeLp
+  //  return assessLp(lp, options);
+  return HighsStatus::OK;
 }
 
 /*

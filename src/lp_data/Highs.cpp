@@ -502,18 +502,10 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
                     const double* values) {
   underDevelopmentLogMessage("addRows");
   HighsStatus return_status = HighsStatus::Error;
-  // if simplex has not solved already
-  if (!simplex_has_run_) {
-    return_status = addLpRows(lp_, num_new_row, lower_bounds, upper_bounds,
-                              num_new_nz, starts, indices, values, options_);
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    // todo: change to take int return value
-    return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
-                                      num_new_nz, starts, indices, values);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
+				    num_new_nz, starts, indices, values);
   return return_status == HighsStatus::OK;
 }
 
@@ -531,33 +523,19 @@ bool Highs::addCols(const int num_new_col, const double* costs,
                     const double* values) {
   underDevelopmentLogMessage("addCols");
   HighsStatus return_status = HighsStatus::Error;
-  // if simplex has not solved already
-  if (!simplex_has_run_) {
-    return_status =
-        addLpCols(lp_, num_new_col, costs, lower_bounds, upper_bounds,
-                  num_new_nz, starts, indices, values, options_);
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    // todo: change to take int return value
-    return_status =
-        interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
-                          num_new_nz, starts, indices, values);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
+				    num_new_nz, starts, indices, values);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeObjectiveSense(const int sense) {
   underDevelopmentLogMessage("changeObjectiveSense");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    this->lp_.sense_ = sense;
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.changeObjectiveSense(sense);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeObjectiveSense(sense);
   return return_status == HighsStatus::OK;
 }
 
@@ -569,32 +547,18 @@ bool Highs::changeColsCost(const int num_set_entries, const int* set,
                            const double* cost) {
   underDevelopmentLogMessage("changeColsCost");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    for (int i = 0; i < num_set_entries; i++) {
-      this->lp_.colCost_[set[i]] = cost[i];
-    }
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.changeCosts(num_set_entries, set, cost);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeCosts(num_set_entries, set, cost);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::changeColsCost(const int* mask, const double* cost) {
   underDevelopmentLogMessage("changeColsCost");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    for (int i = 0; i < this->lp_.numCol_; i++) {
-      if (mask[i]) this->lp_.colCost_[i] = cost[i];
-    }
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.changeCosts(mask, cost);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeCosts(mask, cost);
   return return_status == HighsStatus::OK;
 }
 
@@ -607,21 +571,9 @@ bool Highs::changeColsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::Error;
-  /*
-  if (!simplex_has_run_) {
-    printf("changeColsBounds: Simplex has not run\n");
-    for (int i = 0; i < num_set_entries; i++) {
-      this->lp_.colLower_[set[i]] = lower[i];
-      this->lp_.colUpper_[set[i]] = upper[i];
-    }
-
-  } else {
-  */
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status =
-        interface.changeColBounds(num_set_entries, set, lower, upper);
-    //  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeColBounds(num_set_entries, set, lower, upper);
   return return_status == HighsStatus::OK;
 }
 
@@ -629,19 +581,9 @@ bool Highs::changeColsBounds(const int from_col, const int to_col,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    int num_changed_bounds = to_col - from_col;
-    for (int i = 0; i < num_changed_bounds; i++) {
-      this->lp_.colLower_[from_col + i] = lower[i];
-      this->lp_.colUpper_[from_col + i] = upper[i];
-    }
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.changeColBounds(from_col, to_col, lower, upper);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeColBounds(from_col, to_col, lower, upper);
   return return_status == HighsStatus::OK;
 }
 
@@ -649,20 +591,9 @@ bool Highs::changeColsBounds(const int* mask, const double* lower,
                              const double* upper) {
   underDevelopmentLogMessage("changeColsBounds");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    for (int i = 0; i < this->lp_.numCol_; i++) {
-      if (mask[i]) {
-        this->lp_.colLower_[i] = lower[i];
-        this->lp_.colUpper_[i] = upper[i];
-      }
-    }
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.changeColBounds(mask, lower, upper);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeColBounds(mask, lower, upper);
   return return_status == HighsStatus::OK;
 }
 
@@ -675,18 +606,9 @@ bool Highs::changeRowsBounds(const int num_set_entries, const int* set,
                              const double* lower, const double* upper) {
   underDevelopmentLogMessage("changeRowsBounds");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    for (int i = 0; i < num_set_entries; i++) {
-      this->lp_.rowLower_[set[i]] = lower[i];
-      this->lp_.rowUpper_[set[i]] = upper[i];
-    }
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status =
-        interface.changeRowBounds(num_set_entries, set, lower, upper);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeRowBounds(num_set_entries, set, lower, upper);
   return return_status == HighsStatus::OK;
 }
 
@@ -694,20 +616,9 @@ bool Highs::changeRowsBounds(const int* mask, const double* lower,
                              const double* upper) {
   underDevelopmentLogMessage("changeRowsBounds");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    for (int i = 0; i < this->lp_.numRow_; i++) {
-      if (mask[i]) {
-        this->lp_.rowLower_[i] = lower[i];
-        this->lp_.rowUpper_[i] = upper[i];
-      }
-    }
-
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.changeRowBounds(mask, lower, upper);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.changeRowBounds(mask, lower, upper);
   return return_status == HighsStatus::OK;
 }
 
@@ -716,7 +627,6 @@ bool Highs::changeCoeff(const int row, const int col, const double value) {
   HighsStatus return_status = HighsStatus::Error;
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
-
   return_status = interface.changeCoefficient(row, col, value);
   return return_status == HighsStatus::OK;
   
@@ -727,15 +637,10 @@ bool Highs::getCols(const int from_col, const int to_col, int& num_col,
                     int* start, int* index, double* value) {
   underDevelopmentLogMessage("getCols");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.getCols(from_col, to_col, num_col, costs, lower,
-                                      upper, num_nz, start, index, value);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.getCols(from_col, to_col, num_col, costs, lower,
+				    upper, num_nz, start, index, value);
   return return_status == HighsStatus::OK;
 }
 
@@ -744,15 +649,10 @@ bool Highs::getCols(const int n, const int* set, int& num_col, double* costs,
                     int* index, double* value) {
   underDevelopmentLogMessage("getCols");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.getCols(n, set, num_col, costs, lower, upper,
-                                      num_nz, start, index, value);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.getCols(n, set, num_col, costs, lower, upper,
+				    num_nz, start, index, value);
   return return_status == HighsStatus::OK;
 }
 
@@ -761,15 +661,10 @@ bool Highs::getCols(const int* col_mask, int& num_col, double* costs,
                     int* index, double* value) {
   underDevelopmentLogMessage("getCols");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.getCols(col_mask, num_col, costs, lower, upper,
-                                      num_nz, start, index, value);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.getCols(col_mask, num_col, costs, lower, upper,
+				    num_nz, start, index, value);
   return return_status == HighsStatus::OK;
 }
 
@@ -778,15 +673,10 @@ bool Highs::getRows(const int from_row, const int to_row, int& num_row,
                     int* index, double* value) {
   underDevelopmentLogMessage("getRows");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.getRows(from_row, to_row, num_row, lower, upper,
-                                      num_nz, start, index, value);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.getRows(from_row, to_row, num_row, lower, upper,
+				    num_nz, start, index, value);
   return return_status == HighsStatus::OK;
 }
 
@@ -795,15 +685,10 @@ bool Highs::getRows(const int num_set_entries, const int* set, int& num_row,
                     int* index, double* value) {
   underDevelopmentLogMessage("getRows");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.getRows(num_set_entries, set, num_row, lower,
-                                      upper, num_nz, start, index, value);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.getRows(num_set_entries, set, num_row, lower,
+				    upper, num_nz, start, index, value);
   return return_status == HighsStatus::OK;
 }
 
@@ -811,15 +696,10 @@ bool Highs::getRows(const int* mask, int& num_row, double* lower, double* upper,
                     int& num_nz, int* start, int* index, double* value) {
   underDevelopmentLogMessage("getRows");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-
-    return_status = interface.getRows(mask, num_row, lower, upper, num_nz,
-                                      start, index, value);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.getRows(mask, num_row, lower, upper, num_nz,
+				    start, index, value);
   return return_status == HighsStatus::OK;
 }
 
@@ -837,78 +717,54 @@ bool Highs::getCoeff(const int row, const int col, double& value) {
 bool Highs::deleteCols(const int from_col, const int to_col) {
   underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.deleteCols(from_col, to_col);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.deleteCols(from_col, to_col);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteCols(const int num_set_entries, const int* set) {
   underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.deleteCols(num_set_entries, set);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.deleteCols(num_set_entries, set);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteCols(int* mask) {
   underDevelopmentLogMessage("deleteCols");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.deleteCols(mask);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.deleteCols(mask);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteRows(const int from_row, const int to_row) {
   underDevelopmentLogMessage("deleteRows");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.deleteRows(from_row, to_row);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.deleteRows(from_row, to_row);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteRows(const int num_set_entries, const int* set) {
   underDevelopmentLogMessage("deleteRows");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.deleteRows(num_set_entries, set);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.deleteRows(num_set_entries, set);
   return return_status == HighsStatus::OK;
 }
 
 bool Highs::deleteRows(int* mask) {
   underDevelopmentLogMessage("deleteRows");
   HighsStatus return_status = HighsStatus::Error;
-  if (!simplex_has_run_) {
-    // TODO: modify local lp
-  } else {
-    assert(hmos_.size() > 0);
-    HighsSimplexInterface interface(hmos_[0]);
-    return_status = interface.deleteRows(mask);
-  }
+  assert(hmos_.size() > 0);
+  HighsSimplexInterface interface(hmos_[0]);
+  return_status = interface.deleteRows(mask);
   return return_status == HighsStatus::OK;
 }
 
