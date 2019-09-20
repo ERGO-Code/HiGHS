@@ -552,7 +552,7 @@ class Highs {
   // versions of the original LP. For instance different levels of presolve.
   std::vector<HighsModelObject> hmos_;
 
-  bool simplex_has_run_;
+  bool allow_presolve_;
 
   HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count,
                             const string message);

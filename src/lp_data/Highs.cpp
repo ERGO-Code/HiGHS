@@ -36,7 +36,7 @@
 Highs::Highs() {
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
-  simplex_has_run_ = false;
+  allow_presolve_ = true;
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
@@ -107,7 +107,7 @@ HighsStatus Highs::initializeLp(const HighsLp& lp) {
   // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
-  simplex_has_run_ = false;
+  allow_presolve_ = true;
   return HighsStatus::OK;
 }
 
@@ -211,7 +211,7 @@ HighsStatus Highs::run() {
   int solve_iteration_count = 0;
   int postsolve_iteration_count = 0;
   // todo: make sure it should remain Init for calls of run() after
-  // simplex_has_run_ is valid.
+  // allow_presolve_ is valid.
   // Define identifiers to refer to the HMO of the original LP
   // (0) and the HMO created when using presolve (1)
   const int original_hmo = 0;
@@ -222,7 +222,7 @@ HighsStatus Highs::run() {
 
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   int iteration_count;
-  if (!simplex_has_run_) {
+  if (allow_presolve_) {
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
     timer_.start(timer_.presolve_clock);
@@ -832,7 +832,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   //     = solve_simplex(options, reduced_lp, reduced_solution)
   HighsStatus return_status = solveModelSimplex(model);
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
-  simplex_has_run_ = true;
+  allow_presolve_ = false;
 #else
   // IPX
   // todo:Check options for simplex-specific options
@@ -963,8 +963,8 @@ HighsStatus Highs::solveNode(Node& node) {
   iteration_count0 = hmos_[0].simplex_info_.iteration_count;
 
   HighsStatus return_status = solveModelSimplex(hmos_[0]);
-  if (return_status != HighsStatus::OK) return return_status;
-  simplex_has_run_ = true;
+  if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  allow_presolve_ = false;
 
   iteration_count1 = hmos_[0].simplex_info_.iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
@@ -1010,7 +1010,7 @@ HighsStatus Highs::solveNode(Node& node) {
     node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
 
-  // JAJH(8519) Need to understand why simplex_has_run_ is false for lp_
+  // JAJH(8519) Need to understand why allow_presolve_ is false for lp_
   // changeColsBounds(0, lp_.numCol_, &node.col_lower_bound[0],
   // &node.col_upper_bound[0]);
 
@@ -1036,8 +1036,8 @@ HighsStatus Highs::solveRootNode(Node& root) {
   // HighsStatus status = run();
   // call works but simply calling run() should be enough.
   HighsStatus return_status = solveModelSimplex(hmos_[0]);
-  if (return_status != HighsStatus::OK) return return_status;
-  simplex_has_run_ = true;
+  if (return_status == HighsStatus::Error) return HighsStatus::Error;
+  allow_presolve_ = false;
 
   if (hmos_[0].model_status_ == HighsModelStatus::OPTIMAL) {
     root.primal_solution = hmos_[0].solution_.col_value;
