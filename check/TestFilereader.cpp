@@ -187,7 +187,7 @@ TEST_CASE("dualize", "[highs_data]") {
 
   HighsLp dual = dualizeEqualityProblem(primal);
   Highs highs_dual;
-  status = checkLp(dual);
+  status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.initializeLp(dual);
   REQUIRE(status == HighsStatus::OK);

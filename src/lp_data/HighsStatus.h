@@ -5,28 +5,8 @@
 
 // HiGHS status
 enum class HighsStatus {
-  OK,
-    //  Info,
+  OK = 0,
   Warning,
-    /*
-  NotImplemented,
-  Init,
-  LpError,
-  OptionsError,
-  PresolveError,
-  SolutionError,
-  PostsolveError,
-  LpEmpty,
-  ReachedDualObjectiveUpperBound,
-  Unbounded,
-  Infeasible,
-  PrimalFeasible,
-  DualFeasible,
-  Optimal,
-  Timeout,
-  ReachedIterationLimit,
-  NumericalDifficulties
-    */
   Error
 };
 

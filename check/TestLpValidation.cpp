@@ -46,10 +46,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
     avgas.col(col, num_col, num_col_nz, colCost, colLower, colUpper, Astart, Aindex, Avalue);
   }
 
-  return_status = checkLp(lp);
-  REQUIRE(return_status == HighsStatus::OK);
-  bool normalise = true;
-  return_status = assessLp(lp, options, normalise);
+  return_status = assessLp(lp, options);
   REQUIRE(return_status == HighsStatus::OK);
   reportLp(lp);
 

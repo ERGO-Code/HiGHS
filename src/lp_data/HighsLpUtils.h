@@ -23,10 +23,8 @@
 class HighsLp;
 
 // Methods taking HighsLp as an argument
-HighsStatus checkLp(const HighsLp& lp);
-
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
-                     const bool normalise);
+                     const bool normalise = true);
 
 HighsStatus assessLpDimensions(const HighsLp& lp);
 

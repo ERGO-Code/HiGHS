@@ -25,65 +25,6 @@
 #include "util/HighsUtils.h"
 #include "util/HighsTimer.h"
 
-HighsStatus checkLp(const HighsLp& lp) {
-  // Check dimensions.
-  if (lp.numCol_ < 0 || lp.numRow_ < 0) return HighsStatus::Error;
-
-  // Check vectors.
-  if ((int)lp.colCost_.size() != lp.numCol_) return HighsStatus::Error;
-
-  if ((int)lp.colLower_.size() != lp.numCol_ ||
-      (int)lp.colUpper_.size() != lp.numCol_)
-    return HighsStatus::Error;
-  if ((int)lp.rowLower_.size() != lp.numRow_ ||
-      (int)lp.rowUpper_.size() != lp.numRow_)
-    return HighsStatus::Error;
-
-  for (int i = 0; i < lp.numRow_; i++)
-    if (lp.rowLower_[i] < -HIGHS_CONST_INF || lp.rowUpper_[i] > HIGHS_CONST_INF)
-      return HighsStatus::Error;
-
-  for (int j = 0; j < lp.numCol_; j++) {
-    if (lp.colCost_[j] < -HIGHS_CONST_INF || lp.colCost_[j] > HIGHS_CONST_INF)
-      return HighsStatus::Error;
-
-    if (lp.colLower_[j] < -HIGHS_CONST_INF || lp.colUpper_[j] > HIGHS_CONST_INF)
-      return HighsStatus::Error;
-    if (lp.colLower_[j] > lp.colUpper_[j] + kBoundTolerance)
-      return HighsStatus::Error;
-  }
-
-  // Check matrix.
-  if (lp.numCol_ == 0) return HighsStatus::OK;
-  int lp_num_nz = lp.Astart_[lp.numCol_];
-  if ((int)lp.Avalue_.size() < lp_num_nz) return HighsStatus::Error;
-  if (lp_num_nz < 0) return HighsStatus::Error;
-  if ((int)lp.Aindex_.size() < lp_num_nz) return HighsStatus::Error;
-
-  if (lp.numCol_ > 0) {
-    if ((int)lp.Astart_.size() < lp.numCol_ + 1) return HighsStatus::Error;
-    // Was lp.Astart_[i] >= lp.nnz_ (below), but this is wrong when the
-    // last column is empty. Need to check as follows, and also check
-    // the entry lp.Astart_[lp.numCol_] > lp.nnz_
-    for (int i = 0; i < lp.numCol_; i++) {
-      if (lp.Astart_[i] > lp.Astart_[i + 1] || lp.Astart_[i] > lp_num_nz ||
-          lp.Astart_[i] < 0)
-        return HighsStatus::Error;
-    }
-    if (lp.Astart_[lp.numCol_] > lp_num_nz || lp.Astart_[lp.numCol_] < 0)
-      return HighsStatus::Error;
-
-    for (int k = 0; k < lp.nnz_; k++) {
-      if (lp.Aindex_[k] < 0 || lp.Aindex_[k] >= lp.numRow_)
-        return HighsStatus::Error;
-      if (lp.Avalue_[k] < -HIGHS_CONST_INF || lp.Avalue_[k] > HIGHS_CONST_INF)
-        return HighsStatus::Error;
-    }
-  }
-
-  return HighsStatus::OK;
-}
-
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
                      const bool normalise) {
   HighsStatus return_status = HighsStatus::OK;
@@ -2123,11 +2064,6 @@ bool isMatrixDataNull(const int* usr_matrix_start, const int* usr_matrix_index,
 }
 
 HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
-  HighsStatus check = checkLp(lp);
-  if (check != HighsStatus::OK)
-    HighsPrintMessage(ML_ALWAYS,
-                      "Check LP failed: transformIntoEqualityProblem.\n");
-
   // Copy lp.
   HighsLp equality_lp = lp;
 
@@ -2226,10 +2162,6 @@ HighsLp transformIntoEqualityProblem(const HighsLp& lp) {
 //     st A'y + zl - zu = c
 //        y free, zl >=0, zu >= 0
 HighsLp dualizeEqualityProblem(const HighsLp& lp) {
-  HighsStatus check = checkLp(lp);
-  if (check != HighsStatus::OK)
-    HighsPrintMessage(ML_ALWAYS, "Check LP failed: dualizeEqualityProblem.\n");
-
   std::vector<double> colCost = lp.colCost_;
   if (lp.sense_ != OBJSENSE_MINIMIZE) {
     for (int col = 0; col < lp.numCol_; col++) colCost[col] = -colCost[col];

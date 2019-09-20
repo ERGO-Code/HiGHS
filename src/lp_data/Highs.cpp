@@ -99,9 +99,11 @@ HighsStatus Highs::writeHighsOptions(const std::string filename) {
 }
 
 HighsStatus Highs::initializeLp(const HighsLp& lp) {
-  // todo:(julian) add code to check that LP is valid.
+  // Copy the LP to the internal LP
   lp_ = lp;
-
+  // Check validity of the LP, normalising its values (by default).
+  HighsStatus return_status = assessLp(lp_, options_);
+  if (return_status != HighsStatus::OK) return return_status;
   // hmos_[0] is the HighsModelObject corresponding to the original LP
   hmos_.clear();
   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
@@ -139,10 +141,13 @@ HighsStatus Highs::writeToFile(const std::string filename) {
 HighsStatus Highs::run() {
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
-  // Assess the LP, normalising its values
-  bool normalise = true;
-  HighsStatus return_status = assessLp(lp_, options_, normalise);
-  if (return_status == HighsStatus::Error) return return_status;
+#ifdef HIGHSDEV
+  // Shouldn't have to check validity of the LP since this is done when it is loaded or modified
+  //  bool normalise = true;
+  HighsStatus return_status = assessLp(lp_, options_);//, normalise);
+  assert(return_status == HighsStatus::OK);
+  if (return_status != HighsStatus::OK) return HighsStatus::Error;
+#endif
 
   // For the moment runFeasibility as standalone.
   if (options_.find_feasibility) {
@@ -958,15 +963,19 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
 
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::runSolver(HighsModelObject& model) {
-  bool normalise = true;
-  HighsStatus return_status = assessLp(model.lp_, model.options_, normalise);
-  if (return_status == HighsStatus::Error) return return_status;
-
+#ifdef HIGHSDEV
+  // Shouldn't have to check validity of the LP since this is done when it is loaded or modified
+  //  bool normalise = true;
+  HighsStatus assess_lp_status = assessLp(lp_, options_);//, normalise);
+  assert(assess_lp_status == HighsStatus::OK);
+  if (assess_lp_status != HighsStatus::OK) return HighsStatus::Error;
+#endif
 #ifndef IPX
   // HiGHS
   // todo: Without the presolve part, so will be
   //     = solve_simplex(options, reduced_lp, reduced_solution)
-  return_status = solveModelSimplex(model);
+  HighsStatus return_status = solveModelSimplex(model);
+  if (return_status == HighsStatus::Error) return HighsStatus::Error;
   simplex_has_run_ = true;
 #else
   // IPX
