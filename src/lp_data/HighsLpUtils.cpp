@@ -1526,6 +1526,7 @@ HighsStatus getLpMatrixCoefficient(const HighsLp& lp, const int Xrow,
 }
 
 FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bool free_format) {
+  bool warning_found = false;
   bool have_col_names = lp.col_names_.size();
   bool have_row_names = lp.row_names_.size();
   std::vector<std::string> local_col_names;
@@ -1540,28 +1541,35 @@ FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bo
   // Normalise the column names
   int max_col_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_col_name_length = 8;
-  int col_name_status = normaliseNames("Column", lp.numCol_, local_col_names, max_col_name_length);
-  if (col_name_status) return FilewriterRetcode::FAIL;
+  HighsStatus col_name_status = normaliseNames("Column", lp.numCol_, local_col_names, max_col_name_length);
+  if (col_name_status == HighsStatus::Error) return FilewriterRetcode::FAIL;
+  warning_found = col_name_status == HighsStatus::Warning || warning_found;
   //
   // Normalise the row names
   int max_row_name_length = HIGHS_CONST_I_INF;
   if (!free_format) max_row_name_length = 8;
-  int row_name_status = normaliseNames("Row", lp.numRow_, local_row_names, max_row_name_length);
-  if (row_name_status) return FilewriterRetcode::FAIL;
+  HighsStatus row_name_status = normaliseNames("Row", lp.numRow_, local_row_names, max_row_name_length);
+  if (row_name_status == HighsStatus::Error) return FilewriterRetcode::FAIL;
+  warning_found = row_name_status == HighsStatus::Warning || warning_found;
+
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
   bool use_free_format = free_format;
   if (!free_format) {
     if (max_name_length > 8) {
       HighsLogMessage(HighsMessageType::WARNING, "Maximum name length is %d so using free format rather than fixed format", max_name_length);
       use_free_format = true;
+      warning_found = true;
     }      
   }
-  return writeMPS(filename,
-		  lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
-		  lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
-		  lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
-		  lp.integrality_, local_col_names, local_row_names,
-		  use_free_format);
+  FilewriterRetcode write_status = writeMPS(filename,
+					    lp.numRow_, lp.numCol_, lp.numInt_, lp.sense_,
+					    lp.offset_, lp.Astart_, lp.Aindex_, lp.Avalue_, lp.colCost_,
+					    lp.colLower_, lp.colUpper_, lp.rowLower_, lp.rowUpper_,
+					    lp.integrality_, local_col_names, local_row_names,
+					    use_free_format);
+  if (write_status == FilewriterRetcode::OK && warning_found)
+    return FilewriterRetcode::WARNING;
+  return write_status;
 }
 
 // Methods for reporting an LP, including its row and column data and matrix
@@ -1595,7 +1603,7 @@ void reportLpDimensions(const HighsLp& lp) {
     HighsPrintMessage(ML_MINIMAL, ", %d nonzeros and %d integer columns\n",
                       lp_num_nz, lp.numInt_);
   } else {
-    HighsPrintMessage(ML_MINIMAL, "and %d nonzeros\n", lp_num_nz, lp.numInt_);
+    HighsPrintMessage(ML_MINIMAL, " and %d nonzeros\n", lp_num_nz, lp.numInt_);
   }
 }
 
@@ -2326,7 +2334,6 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
 #endif
   double average_col_num_en = lp.Astart_[lp.numCol_];
   average_col_num_en = average_col_num_en/lp.numCol_;
-  int int_average_col_num_en = average_col_num_en;
   LiDSE_candidate = LiDSE_candidate && average_col_num_en <= max_average_col_num_en;
   std::string logic = "is not";
   if (LiDSE_candidate) logic = "is";
@@ -2336,6 +2343,7 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
 	 average_col_num_en, max_average_col_num_en,
 	 logic.c_str());
 #ifdef HiGHSDEV
+  int int_average_col_num_en = average_col_num_en;
   printf("grep_count_distrib,%s,%d,%d,%d\n", lp.model_name_.c_str(), max_col_num_en, int_average_col_num_en, LiDSE_candidate);
 #endif
   return LiDSE_candidate;

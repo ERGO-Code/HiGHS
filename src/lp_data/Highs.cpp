@@ -129,10 +129,10 @@ HighsStatus Highs::writeToFile(const std::string filename) {
 
   Filereader* writer = Filereader::getFilereader(filename.c_str());
   FilewriterRetcode retcode = writer->writeModelToFile(filename.c_str(), model);
-  if (retcode != FilewriterRetcode::OK) {
+  if (retcode == FilewriterRetcode::FAIL) 
     return HighsStatus::Error;
-  }
-
+  else if (retcode == FilewriterRetcode::WARNING) 
+    return HighsStatus::Warning;
   return HighsStatus::OK;
 }
 

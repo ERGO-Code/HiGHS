@@ -68,7 +68,6 @@ TEST_CASE("LP-validation", "[highs_data]") {
   reportLp(lp);
   
 
-  /*
   // Create an empty column
   int XnumNewCol = 1;
   int XnumNewNZ = 0;
@@ -76,56 +75,77 @@ TEST_CASE("LP-validation", "[highs_data]") {
   vector<double> XcolLower; XcolLower.resize(XnumNewCol); XcolLower[0] = 0;
   vector<double> XcolUpper; XcolUpper.resize(XnumNewCol); XcolUpper[0] = 1e25;
   vector<int> XAstart; XAstart.resize(XnumNewCol);
-  vector<int> XAindex; 
+  vector<int> XAindex;
   vector<double> XAvalue;
   // Add an empty column
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+			      XnumNewNZ, &XAstart[0], NULL, NULL); 
   REQUIRE(return_status == HighsStatus::OK);
   XcolUpper[0] = my_infinity;
-  reportLp(lp);
+  reportLp(lp, 1);
 
   // Try to add a column with illegal cost
   XcolCost[0] = my_infinity;
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+			      XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::Error);
   XcolCost[0] = -my_infinity;
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+			      XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::Error);
   XcolCost[0] = 1;
 
   // Add a column with bound inconsistency due to upper
-  XcolUpper[0] = -my_infinity;
+  XcolUpper[0] = -1;
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+				    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::Warning);
   XcolUpper[0] = 0;
 
-  reportLp(lp);
-
   // Add a column with bound inconsistency due to lower
-  XcolLower[0] = my_infinity;
+  XcolLower[0] = 1;
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+				    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::Warning);
   XcolLower[0] = 0;
 
-  reportLp(lp);
+  // Add a column with illegal bound due to lower
+  XcolLower[0] = my_infinity;
+  return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+				    XnumNewNZ, &XAstart[0], NULL, NULL);
+  REQUIRE(return_status == HighsStatus::Error);
+  XcolLower[0] = 0;
+
+  // Add a column with illegal bound due to upper
+  XcolUpper[0] = -my_infinity;
+  return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+				    XnumNewNZ, &XAstart[0], NULL, NULL);
+  REQUIRE(return_status == HighsStatus::Error);
+  XcolUpper[0] = 0;
 
   // Add a legitimate column
   XcolLower[0] = 0;
   return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
-				    XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+				    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::OK);
 
-  reportLp(lp);
+  reportLp(lp, 1);
   Highs highs(options);
   
   HighsStatus init_status = highs.initializeLp(lp);
-  REQUIRE(return_status == HighsStatus::OK);
+  REQUIRE(init_status == HighsStatus::OK);
 
+  HighsStatus write_status;
+  write_status = highs.writeToFile("ml.mps");
+  REQUIRE(write_status == HighsStatus::Warning);
+  //  REQUIRE(write_status == HighsStatus::OK);
+ 
+  write_status =  highs.writeToFile("");
+  //  REQUIRE(write_status == HighsStatus::Warning);
+  REQUIRE(write_status == HighsStatus::OK);
+ 
+
+  /*
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
   */

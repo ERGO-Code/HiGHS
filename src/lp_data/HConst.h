@@ -38,8 +38,9 @@ enum HighsPrintMessageLevel {
 
 enum class FilewriterRetcode {
   OK = 0,
-  FILE_NOT_OPENED = 1,
-  FAIL = 2
+  WARNING,
+  FILE_NOT_OPENED,
+  FAIL
 };
 
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
