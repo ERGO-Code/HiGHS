@@ -11,13 +11,13 @@ int Highs_call(int numcol, int numrow, int numnz, double *colcost,
   int status =
       Highs_loadModel(&highs, numcol, numrow, numnz, colcost, collower,
                       colupper, rowlower, rowupper, astart, aindex, avalue);
-  if (status != 1) {
+  if (status != 0) {
     return status;
   }
 
   status = (int)highs.run();
 
-  if (status == 1 || status == 17) {
+  if (status == 0) {
     HighsSolution solution;
     HighsBasis basis;
 
