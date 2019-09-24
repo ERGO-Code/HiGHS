@@ -43,15 +43,15 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Handle the case of unconstrained LPs here
   if (!highs_model_object.lp_.numRow_) {
     setSimplexOptions(highs_model_object);
-    HighsModelStatus model_status = solveUnconstrainedLp(highs_model_object);
-    HighsStatus result = highsStatusFromHighsModelStatus(model_status);
+    HighsStatus solver_return_status = solveUnconstrainedLp(highs_model_object);
+    if (solver_return_status == HighsStatus::Error) return solver_return_status;
     int report_level = -1;
 #ifdef HiGHSDEV
     report_level = 1;
 #endif
     if (simplex_info.analyseLpSolution)
       simplex_interface.analyseHighsSolutionAndBasis(report_level, "after solving unconstrained LP");
-    return result;
+    return solver_return_status;
   }
 
   // Set simplex options from HiGHS options.

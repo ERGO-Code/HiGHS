@@ -3155,7 +3155,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
   }
 }
 
-HighsModelStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
+HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   const HighsLp& lp = highs_model_object.lp_;
   assert(lp.numRow_==0);
   HighsLogMessage(HighsMessageType::INFO, "Solving an unconstrained LP with %d columns", lp.numCol_);
@@ -3171,18 +3171,30 @@ HighsModelStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
     double upper = lp.colUpper_[iCol];
     double value;
     HighsBasisStatus status;
-    if (lower > upper) return HighsModelStatus::PRIMAL_INFEASIBLE;
+    if (lower > upper) {
+      highs_model_object.model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+      return HighsStatus::OK;
+    }
     if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free column: must have zero cost
-      if (cost) return HighsModelStatus::PRIMAL_UNBOUNDED;
+      if (cost) {
+	highs_model_object.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+	return HighsStatus::OK;
+      }
       value = 0;
       status = HighsBasisStatus::ZERO;
     } else if (cost >= 0) {
-      if (cost && highs_isInfinity(-lower)) return HighsModelStatus::PRIMAL_UNBOUNDED;
+      if (cost && highs_isInfinity(-lower)) {
+	highs_model_object.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+	return HighsStatus::OK;
+      }
       value = lower;
       status = HighsBasisStatus::LOWER;
     } else {
-      if (highs_isInfinity(upper)) return HighsModelStatus::PRIMAL_UNBOUNDED;
+      if (highs_isInfinity(upper)) {
+	highs_model_object.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+	return HighsStatus::OK;
+      }
       value = upper;
       status = HighsBasisStatus::UPPER;
     }
@@ -3193,5 +3205,6 @@ HighsModelStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   }
   highs_model_object.simplex_info_.dual_objective_value = objective;
   highs_model_object.simplex_info_.primal_objective_value = objective;
-  return HighsModelStatus::OPTIMAL;
+  highs_model_object.model_status_ = HighsModelStatus::OPTIMAL;
+  return HighsStatus::OK;
 }
