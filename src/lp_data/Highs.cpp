@@ -942,18 +942,20 @@ HighsPostsolveStatus Highs::runPostsolve(PresolveInfo& info) {
 // The method below runs simplex or ipx solver on the lp.
 HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
                                  const string message) {
+  HighsStatus solver_return_status;
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
-  // Handle the case of unconstrained LPs here
   if (!model.lp_.numRow_) {
+    // Handle the case of unconstrained LPs here
     HighsSimplexInterface simplex_interface(model);
+    solver_return_status = solveUnconstrainedLp(model);
     iteration_count = 0;
-    return highsStatusFromHighsModelStatus(solveUnconstrainedLp(model));
+  } else {
+    int initial_iteration_count = model.simplex_info_.iteration_count;
+    solver_return_status = runSolver(model);
+    int final_iteration_count = model.simplex_info_.iteration_count;
+    iteration_count = final_iteration_count - initial_iteration_count;
   }
-  int initial_iteration_count = model.simplex_info_.iteration_count;
-  HighsStatus return_status = runSolver(model);
-  int final_iteration_count = model.simplex_info_.iteration_count;
-  iteration_count = final_iteration_count - initial_iteration_count;
-  return return_status;
+  return solver_return_status;
 }
 
 // The method below runs simplex or ipx solver on the lp.
