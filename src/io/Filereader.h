@@ -43,7 +43,7 @@ class Filereader {
                                               HighsLp& model) = 0;
   virtual FilereaderRetcode readModelFromFile(const char* filename,
                                               HighsModelBuilder& model) = 0;
-  virtual FilewriterRetcode writeModelToFile(const char* filename,
+  virtual HighsStatus writeModelToFile(const char* filename,
                                              HighsLp& model) = 0;
   static Filereader* getFilereader(const char* filename);
 

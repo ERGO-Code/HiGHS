@@ -94,8 +94,7 @@ HighsStatus Highs::getHighsOptionValue(const std::string& option,
 }
 
 HighsStatus Highs::writeHighsOptions(const std::string filename) {
-  if (reportOptionsToFile(filename, options_.records) != FilewriterRetcode::OK) return HighsStatus::Error;
-  return HighsStatus::OK;
+  return reportOptionsToFile(filename, options_.records);
 }
 
 HighsStatus Highs::initializeLp(const HighsLp& lp) {
@@ -128,12 +127,7 @@ HighsStatus Highs::writeToFile(const std::string filename) {
   HighsLp model = this->lp_;
 
   Filereader* writer = Filereader::getFilereader(filename.c_str());
-  FilewriterRetcode retcode = writer->writeModelToFile(filename.c_str(), model);
-  if (retcode == FilewriterRetcode::FAIL) 
-    return HighsStatus::Error;
-  else if (retcode == FilewriterRetcode::WARNING) 
-    return HighsStatus::Warning;
-  return HighsStatus::OK;
+  return writer->writeModelToFile(filename.c_str(), model);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called

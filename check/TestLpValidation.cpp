@@ -138,11 +138,10 @@ TEST_CASE("LP-validation", "[highs_data]") {
   HighsStatus write_status;
   write_status = highs.writeToFile("ml.mps");
   REQUIRE(write_status == HighsStatus::Warning);
-  //  REQUIRE(write_status == HighsStatus::OK);
  
   write_status =  highs.writeToFile("");
   //  REQUIRE(write_status == HighsStatus::Warning);
-  REQUIRE(write_status == HighsStatus::OK);
+  REQUIRE(write_status == HighsStatus::Error);
  
 
   /*

@@ -36,13 +36,6 @@ enum HighsPrintMessageLevel {
   ML_MAX = ML_ALWAYS
 };
 
-enum class FilewriterRetcode {
-  OK = 0,
-  WARNING,
-  FILE_NOT_OPENED,
-  FAIL
-};
-
 enum class HighsOptionType { BOOL = 0, INT, DOUBLE, STRING};
 
 enum OptionOffChooseOn { OPTION_OFF = -1, OPTION_CHOOSE, OPTION_ON };

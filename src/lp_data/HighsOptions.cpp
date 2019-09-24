@@ -402,11 +402,14 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
   return OptionStatus::OK;
 }
 
-FilewriterRetcode reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records) {
+HighsStatus reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records) {
   FILE* file = fopen(filename.c_str(), "w");
-  if (file == 0) return FilewriterRetcode::FILE_NOT_OPENED;
+  if (file == 0) {
+    HighsLogMessage(HighsMessageType::ERROR, "reportOptionsToFile: cannot open file");
+    return HighsStatus::Error;
+  }
   reportOptions(file, option_records, true);
-  return FilewriterRetcode::OK;
+  return HighsStatus::OK;
 }
 
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report) {

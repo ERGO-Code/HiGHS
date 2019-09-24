@@ -208,8 +208,8 @@ FilereaderRetcode FilereaderEms::readModelFromFile(const HighsOptions& options,
   return FilereaderRetcode::OK;
 }
 
-FilewriterRetcode FilereaderEms::writeModelToFile(const char* filename,
-                                                  HighsLp& model) {
+HighsStatus FilereaderEms::writeModelToFile(const char* filename,
+					    HighsLp& model) {
   std::ofstream f;
   f.open(filename, std::ios::out);
 
@@ -274,7 +274,7 @@ FilewriterRetcode FilereaderEms::writeModelToFile(const char* filename,
 
   f << std::endl;
   f.close();
-  return FilewriterRetcode::OK;
+  return HighsStatus::OK;
 }
 
 FilereaderRetcode FilereaderEms::readModelFromFile(const char* filename,
