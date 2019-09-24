@@ -831,7 +831,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
     int* as = NULL;
     int* ai = NULL;
     double* av = NULL;
-    if (lp.numCol_ > 0) {
+    if (lp.Astart_.size() > 0) {
       as = &lp.Astart_[0];
       ai = &lp.Aindex_[0];
       av = &lp.Avalue_[0];
