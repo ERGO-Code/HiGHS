@@ -827,9 +827,18 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
   if (valid_matrix) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
+
+    int* as = NULL;
+    int* ai = NULL;
+    double* av = NULL;
+    if (lp.numCol_ > 0) {
+      as = &lp.Astart_[0];
+      ai = &lp.Aindex_[0];
+      av = &lp.Avalue_[0];
+    }
     call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
-                               lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0],
-                               &lp.Avalue_[0], options.small_matrix_value,
+                               lp_num_nz, as, ai,
+                               av, options.small_matrix_value,
                                options.large_matrix_value, normalise);
     lp.Astart_[newNumCol] = lp_num_nz;
     return_status = worseStatus(call_status, return_status);

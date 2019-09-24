@@ -324,8 +324,11 @@ int Highs_deleteRowsByMask(void *highs, int *mask) {
   return ((Highs *)highs)->deleteRows(mask);
 }
 
-int Highs_getNumCols(void *highs) { return ((Highs *)highs)->getNumCols(); }
+int Highs_getNumCols(void *highs) { return ((Highs *)highs)->getLp().numCol_; }
 
-int Highs_getNumRows(void *highs) { return ((Highs *)highs)->getNumRows(); }
+int Highs_getNumRows(void *highs) { return ((Highs *)highs)->getLp().numRow_; }
 
-int Highs_getNumNz(void *highs) { return ((Highs *)highs)->getNumEntries(); }
+int Highs_getNumNz(void *highs) { 
+  int numCol = Highs_getNumCols(highs);
+  return ((Highs *)highs)->getLp().Astart_[numCol]; 
+}
