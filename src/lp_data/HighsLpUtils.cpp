@@ -824,21 +824,12 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
 			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
-  if (valid_matrix) {
+  if (valid_matrix && num_new_nz) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
-
-    int* as = NULL;
-    int* ai = NULL;
-    double* av = NULL;
-    if (lp.Astart_.size() > 0) {
-      as = &lp.Astart_[0];
-      ai = &lp.Aindex_[0];
-      av = &lp.Avalue_[0];
-    }
     call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
-                               lp_num_nz, as, ai,
-                               av, options.small_matrix_value,
+                               lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0],
+                               &lp.Avalue_[0], options.small_matrix_value,
                                options.large_matrix_value, normalise);
     lp.Astart_[newNumCol] = lp_num_nz;
     return_status = worseStatus(call_status, return_status);
