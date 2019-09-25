@@ -824,7 +824,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
 			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
-  if (valid_matrix) {
+  if (valid_matrix && num_new_nz) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
     call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
