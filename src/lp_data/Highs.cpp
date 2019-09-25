@@ -126,8 +126,15 @@ HighsStatus Highs::initializeFromFile(const std::string filename) {
 HighsStatus Highs::writeToFile(const std::string filename) {
   HighsLp model = this->lp_;
 
-  Filereader* writer = Filereader::getFilereader(filename.c_str());
-  return writer->writeModelToFile(filename.c_str(), model);
+  if (filename == "") {
+    // Empty file name: report model on stdout
+    HighsLogMessage(HighsMessageType::WARNING, "Empty file name so reporting model on stdout");
+    reportLp(model, 2);
+    return HighsStatus::Warning;
+  } else {
+    Filereader* writer = Filereader::getFilereader(filename.c_str());
+    return writer->writeModelToFile(filename.c_str(), model);
+  }
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called

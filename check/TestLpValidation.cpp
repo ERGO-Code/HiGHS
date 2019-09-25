@@ -48,7 +48,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   return_status = assessLp(lp, options);
   REQUIRE(return_status == HighsStatus::OK);
-  reportLp(lp);
+  reportLp(lp, 2);
 
   const double my_infinity = 1e30;
   HighsModelObject hmo(lp, options, timer);
@@ -59,13 +59,13 @@ TEST_CASE("LP-validation", "[highs_data]") {
   //  printf("addRows: return_status = %s\n", HighsStatusToString(return_status).c_str());
   printf("After addRows: %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::OK);
-  reportLp(lp);
+  reportLp(lp, 2);
   
   return_status = hsi.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
 				    num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
   printf("addCols: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
-  reportLp(lp);
+  reportLp(lp, 2);
   
 
   // Create an empty column
@@ -82,7 +82,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 			      XnumNewNZ, &XAstart[0], NULL, NULL); 
   REQUIRE(return_status == HighsStatus::OK);
   XcolUpper[0] = my_infinity;
-  reportLp(lp, 1);
+  reportLp(lp, 2);
 
   // Try to add a column with illegal cost
   XcolCost[0] = my_infinity;
@@ -129,24 +129,55 @@ TEST_CASE("LP-validation", "[highs_data]") {
 				    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::OK);
 
-  reportLp(lp, 1);
+  reportLp(lp, 2);
+
+  // Add a couple of non-empty columns with some small and large values
+  XnumNewCol = 2;
+  XnumNewNZ = 7;
+  XcolCost.resize(XnumNewCol); XcolCost[0] = 1; XcolCost[1] = 2;
+  XcolLower.resize(XnumNewCol); XcolLower[0] = 0; XcolLower[1] = 0;
+  XcolUpper.resize(XnumNewCol); XcolUpper[0] = 1; XcolUpper[1] = 1;
+  XAstart.resize(XnumNewCol+1);
+  XAindex.resize(XnumNewNZ);
+  XAstart[1] = 4;
+  XAstart[2] = XnumNewNZ;
+  XAindex[0] = 0;
+  XAindex[1] = 2;
+  XAindex[2] = 3;
+  XAindex[3] = 9;
+  XAindex[4] = 1;
+  XAindex[5] = 3;
+  XAindex[6] = 8;
+  XAvalue.resize(XnumNewNZ);
+  XAvalue[0] = 1;
+  XAvalue[1] = 1e-12;
+  XAvalue[2] = -1e-20;
+  XAvalue[3] = -1;
+  XAvalue[4] = -1e60;
+  XAvalue[5] = 1e100;
+  XAvalue[6] = -1;
+  return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+			      XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+  REQUIRE(return_status == HighsStatus::Error);
+
+  // Legitimise large matrix entries. Small entries now cause warning
+  XAvalue[4] = -1;
+  XAvalue[5] = 1;
+  return_status = hsi.addCols(XnumNewCol, &XcolCost[0], &XcolLower[0], &XcolUpper[0],
+			      XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
+  REQUIRE(return_status == HighsStatus::Warning);
+
+  reportLp(lp, 2);
+
   Highs highs(options);
   
   HighsStatus init_status = highs.initializeLp(lp);
   REQUIRE(init_status == HighsStatus::OK);
 
-  HighsStatus write_status;
-  write_status = highs.writeToFile("ml.mps");
+  HighsStatus write_status =  highs.writeToFile("");
   REQUIRE(write_status == HighsStatus::Warning);
- 
-  write_status =  highs.writeToFile("");
-  //  REQUIRE(write_status == HighsStatus::Warning);
-  REQUIRE(write_status == HighsStatus::Error);
- 
 
-  /*
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
-  */
 }
 

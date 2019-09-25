@@ -448,6 +448,10 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
     if (ix < num_vec - 1) {
       to_el = Xstart[ix + 1];
     } else {
+      // num_vec is the number of vectors in the whole matrix data
+      // structure. Need to know if only the final columns are being
+      // assessed so that num_nz rather than Xstart[num_vec] is
+      // accessed since the latter may not be assigned.
       to_el = num_nz;
     }
     if (normalise) {
@@ -456,6 +460,7 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
     }
     for (int el = from_el; el < to_el; el++) {
       int component = Xindex[el];
+      printf("assessMatrix: ix=%d; el=%d; component=%d\n", ix, el, component);
       // Check that the index is non-negative
       bool legal_component = component >= 0;
       if (!legal_component) {
@@ -690,25 +695,6 @@ HighsStatus scaleLpRowBounds(HighsLp& lp, vector<double>& rowScale,
   return HighsStatus::OK;
 }
 
-HighsStatus addLpCols(HighsLp& lp, const int num_new_col,
-                      const double* XcolCost, const double* XcolLower,
-                      const double* XcolUpper, const int num_new_nz,
-                      const int* XAstart, const int* XAindex,
-                      const double* XAvalue, const HighsOptions& options) {
-  const bool valid_matrix = true;
-  if (num_new_col < 0) return HighsStatus::Error;
-  if (num_new_col == 0) return HighsStatus::OK;
-  HighsStatus return_status =
-      appendLpCols(lp, num_new_col, XcolCost, XcolLower, XcolUpper, num_new_nz,
-                   XAstart, XAindex, XAvalue, options, valid_matrix);
-  // Which of the following two??
-  if (return_status == HighsStatus::Error) return HighsStatus::Error;
-  //  if (return_status != HighsStatus::OK && return_status !=
-  //  HighsStatus::Warning) return return_status
-  lp.numCol_ += num_new_col;
-  return return_status;
-}
-
 HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
                          const double* XcolCost, const double* XcolLower,
                          const double* XcolUpper, const int num_new_nz,
@@ -768,7 +754,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
   if (valid_matrix && num_new_nz) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
-    call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
+    call_status = assessMatrix(lp.numRow_, lp.numCol_, newNumCol-1, newNumCol,
                                lp_num_nz, &lp.Astart_[0], &lp.Aindex_[0],
                                &lp.Avalue_[0], options.small_matrix_value,
                                options.large_matrix_value, normalise);
@@ -800,26 +786,6 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
     if (have_names) lp.col_names_[iCol] = "";
   }
   return HighsStatus::OK;
-}
-
-HighsStatus addLpRows(HighsLp& lp, const int num_new_row,
-                      const double* XrowLower, const double* XrowUpper,
-                      const int num_new_nz, const int* XARstart,
-                      const int* XARindex, const double* XARvalue,
-                      const HighsOptions& options) {
-  const bool valid_matrix = true;
-  if (num_new_row < 0) return HighsStatus::Error;
-  if (num_new_row == 0) return HighsStatus::OK;
-  HighsStatus return_status =
-      appendLpRows(lp, num_new_row, XrowLower, XrowUpper, num_new_nz, XARstart,
-                   XARindex, XARvalue, options, valid_matrix);
-  // Which of the following two??
-  if (return_status == HighsStatus::Error) return HighsStatus::Error;
-  //  if (return_status != HighsStatus::OK && return_status !=
-  //  HighsStatus::Warning) return return_status
-  lp.numRow_ += num_new_row;
-  lp.nnz_ += num_new_nz;
-  return return_status;
 }
 
 HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
@@ -933,31 +899,30 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
   // Check that nonzeros aren't being appended to a matrix with no rows
   if (num_new_nz > 0 && lp.numRow_ <= 0) return HighsStatus::Error;
   // Determine the new number of columns in the matrix and resize the
-  // starts accordingly. Even if no matrix entries are added, f they
-  // are added later as rows it will be assumesd that the starts are
-  // of the right size.
+  // starts accordingly. 
   int new_num_col = lp.numCol_ + num_new_col;
   lp.Astart_.resize(new_num_col + 1);
   // If adding columns to an empty LP then introduce the start for the
   // fictitious column 0
   if (lp.numCol_ == 0) lp.Astart_[0] = 0;
-  // If no nonzeros are bing added then there's nothing to do
-  if (num_new_nz <= 0) return HighsStatus::OK;
-  //
-  // Adding a non-trivial matrix so determine the current number of nonzeros
+
+  // Determine the current number of nonzeros and the new number of nonzeros
   int current_num_nz = lp.Astart_[lp.numCol_];
-
-  // Determine the new number of nonzeros and resize the column-wise matrix
-  // arrays accordingly
   int new_num_nz = current_num_nz + num_new_nz;
-  lp.Aindex_.resize(new_num_nz);
-  lp.Avalue_.resize(new_num_nz);
 
-  // Append the new columns
+  // Append the starts of the new columns
   for (int col = 0; col < num_new_col; col++)
     lp.Astart_[lp.numCol_ + col] = current_num_nz + XAstart[col];
   lp.Astart_[lp.numCol_ + num_new_col] = new_num_nz;
 
+  // If no nonzeros are being added then there's nothing else to do
+  if (num_new_nz <= 0) return HighsStatus::OK;
+
+  // Adding a non-trivial matrix: resize the column-wise matrix arrays
+  // accordingly
+  lp.Aindex_.resize(new_num_nz);
+  lp.Avalue_.resize(new_num_nz);
+  // Copy in the new indices and values
   for (int el = 0; el < num_new_nz; el++) {
     lp.Aindex_[current_num_nz + el] = XAindex[el];
     lp.Avalue_[current_num_nz + el] = XAvalue[el];
@@ -2328,6 +2293,7 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
   }
 #ifdef HiGHSDEV
   printf("LP has\n");
+  int to_num_en = std::min(max_assess_col_num_en, max_col_num_en);
   for (int col_num_en = 0; col_num_en < to_num_en+1; col_num_en++)
     printf("%7d columns of count %1d\n", col_length_k[col_num_en], col_num_en);
 #endif
