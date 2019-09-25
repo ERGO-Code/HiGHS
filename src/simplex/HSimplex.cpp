@@ -437,6 +437,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
   initialise_bound(highs_model_object);
   // Don't have a simplex basis since nonbasicMove is not set up.
   const int illegal_move_value = -99;
+
   for (int iVar = 0; iVar < simplex_lp.numCol_ + simplex_lp.numRow_; iVar++) {
     if (simplex_basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_TRUE) {
       // Nonbasic variable
