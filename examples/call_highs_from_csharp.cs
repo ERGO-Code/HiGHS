@@ -21,5 +21,9 @@ class Program {
 
       int status = HighsLpSolver.call(model, ref sol, ref bas);
       Console.WriteLine("Status: " + status);
+   
+      for (int i=0; i<sol.colvalue.Length; i++) {
+         Console.WriteLine("x" + i + " = " + sol.colvalue[i]);
+      }
    }
 }
