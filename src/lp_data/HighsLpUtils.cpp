@@ -460,7 +460,6 @@ HighsStatus assessMatrix(const int vec_dim, const int from_ix, const int to_ix,
     }
     for (int el = from_el; el < to_el; el++) {
       int component = Xindex[el];
-      printf("assessMatrix: ix=%d; el=%d; component=%d\n", ix, el, component);
       // Check that the index is non-negative
       bool legal_component = component >= 0;
       if (!legal_component) {
@@ -2260,6 +2259,7 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
   vector<int> col_length_k;
   col_length_k.resize(1+max_assess_col_num_en, 0);
   bool LiDSE_candidate = true;
+  bool all_unit_nonzeros = true;
   for (int col = 0; col < lp.numCol_; col++) {
     // Check limit on number of entries in the column has not been breached
     int col_num_en = lp.Astart_[col+1] - lp.Astart_[col];
@@ -2280,6 +2280,7 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
       double value = lp.Avalue_[en];
       // All nonzeros must be +1 or -1
       if (fabs(value) != 1) {
+	all_unit_nonzeros = false;
 #ifdef HiGHSDEV
 	if (LiDSE_candidate)
 	  printf("Column %d has entry %d with value %g so LP is not LiDSE candidate\n", col, en-lp.Astart_[col], value);
@@ -2300,13 +2301,16 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
   double average_col_num_en = lp.Astart_[lp.numCol_];
   average_col_num_en = average_col_num_en/lp.numCol_;
   LiDSE_candidate = LiDSE_candidate && average_col_num_en <= max_average_col_num_en;
-  std::string logic = "is not";
-  if (LiDSE_candidate) logic = "is";
-  HighsLogMessage(HighsMessageType::INFO, "LP %s has all |entries|=1 and max column count = %d (limit %d) and average column count = %0.2g (limit %d) so %s a candidate for LiDSE",
-	 lp.model_name_.c_str(),
-	 max_col_num_en, max_allowed_col_num_en,
-	 average_col_num_en, max_average_col_num_en,
-	 logic.c_str());
+  std::string logic0 = "has";
+  if (!all_unit_nonzeros) logic0 = "does not have";
+  std::string logic1 = "is not";
+  if (LiDSE_candidate) logic1 = "is";
+  HighsLogMessage(HighsMessageType::INFO, "LP %s %s all |entries|=1; max column count = %d (limit %d); average column count = %0.2g (limit %d): So %s a candidate for LiDSE",
+		  lp.model_name_.c_str(),
+		  logic0.c_str(),
+		  max_col_num_en, max_allowed_col_num_en,
+		  average_col_num_en, max_average_col_num_en,
+		  logic1.c_str());
 #ifdef HiGHSDEV
   int int_average_col_num_en = average_col_num_en;
   printf("grep_count_distrib,%s,%d,%d,%d\n", lp.model_name_.c_str(), max_col_num_en, int_average_col_num_en, LiDSE_candidate);

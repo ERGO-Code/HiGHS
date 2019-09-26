@@ -249,8 +249,11 @@ HighsStatus Highs::run() {
       }
       case HighsPresolveStatus::Reduced: {
         HighsLp& reduced_lp = presolve_info.getReducedProblem();
+	// Validate the reduced LP
+	assessLp(reduced_lp, options_);
         // Add reduced lp object to vector of HighsModelObject,
         // so the last one in lp_ is the presolved one.
+
         hmos_.push_back(HighsModelObject(reduced_lp, options_, timer_));
         // Log the presolve reductions
         logPresolveReductions(hmos_[original_hmo].lp_, hmos_[presolve_hmo].lp_);
