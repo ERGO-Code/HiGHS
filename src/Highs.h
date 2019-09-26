@@ -530,6 +530,12 @@ class Highs {
 		  int* mask  //!< Full length array with 1 => delete; 0 => not
   );
 
+  
+  /**
+   * @brief Clear data associated with solving the model: basis, solution and internal data etc
+   */
+  HighsStatus clearSolver();
+
   // ipx (not implemented)
 
   // todo: Set warm/hot start methods

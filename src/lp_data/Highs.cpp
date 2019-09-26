@@ -770,6 +770,12 @@ bool Highs::deleteRows(int* mask) {
   return return_status == HighsStatus::OK;
 }
 
+HighsStatus Highs::clearSolver() {
+  underDevelopmentLogMessage("clearSolver");
+  basis_.valid_ = false;
+  return HighsStatus::OK;
+}
+
 // Private methods
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
   if (options_.presolve == off_string)
@@ -859,6 +865,7 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
   return highsStatusFromHighsModelStatus(model.model_status_);
 }
 
+// Branch-and-bound code below here:
 // Solve a mixed integer problem using branch and bound.
 HighsStatus Highs::runBnb() {
   HighsPrintMessage(ML_ALWAYS, "Using branch and bound solver\n");
