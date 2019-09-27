@@ -140,7 +140,7 @@ HighsStatus Highs::writeToFile(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
-  printf("Highs::run() 0\n");fflush(stdout);
+  printf("\nHighs::run() 0\n\n");fflush(stdout);
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
 #ifdef HIGHSDEV
@@ -221,6 +221,7 @@ HighsStatus Highs::run() {
   int solved_hmo = original_hmo;
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   int iteration_count;
+  printf("\nHighs::run() 1: basis_.valid_ = %d\n\n", basis_.valid_);fflush(stdout);
   if (!basis_.valid_) {
     // No HiGHS basis so consider presolve
     // Presolve. runPresolve handles the level of presolving (0 = don't
