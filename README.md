@@ -7,10 +7,14 @@ linear programming (LP) problems of the form
 
     Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
 
-It is written in C++ with OpenMP directives. 
+It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers.
 
-HiGHS is based on the dual revised simplex method implemented in HSOL. It has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python. Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
 
+Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+
+Reference
+---------
 
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
@@ -18,10 +22,6 @@ Mathematical Programming Computation, 10 (1), 119-142, 2018.
 DOI: 10.1007/s12532-017-0130-5
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
-
-HSOL was originally written by Qi Huangfu, with features such as presolve,
-crash and advanced basis start added by Julian Hall and Ivet Galabova and
-further work by Michael Feldmeier.
 
 Compilation
 -----------
