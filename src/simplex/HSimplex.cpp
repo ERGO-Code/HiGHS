@@ -499,7 +499,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
             } else {
               // Row
               int iRow = iVar - simplex_lp.numCol_;
-              if (solution.col_value[iRow] < midpoint) {
+              if (solution.row_value[iRow] < midpoint) {
                 // Set to upper bound
                 move = NONBASIC_MOVE_DN;
                 value = upper;
