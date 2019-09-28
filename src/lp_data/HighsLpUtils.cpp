@@ -910,8 +910,17 @@ HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
   int new_num_nz = current_num_nz + num_new_nz;
 
   // Append the starts of the new columns
-  for (int col = 0; col < num_new_col; col++)
-    lp.Astart_[lp.numCol_ + col] = current_num_nz + XAstart[col];
+  if (num_new_nz) {
+  // Nontrivial number of nonzeros being added, so use XAstart
+    assert(XAstart != NULL);
+    for (int col = 0; col < num_new_col; col++)
+      lp.Astart_[lp.numCol_ + col] = current_num_nz + XAstart[col];
+  } else {
+    // No nonzeros being added, so XAstart may be null, but entries of
+    // zero are implied.
+    for (int col = 0; col < num_new_col; col++)
+      lp.Astart_[lp.numCol_ + col] = current_num_nz;    
+  }
   lp.Astart_[lp.numCol_ + num_new_col] = new_num_nz;
 
   // If no nonzeros are being added then there's nothing else to do
