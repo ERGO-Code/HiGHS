@@ -279,9 +279,9 @@ HighsStatus Highs::run() {
 	} else {
 	  hmos_[original_hmo].model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
 	}
-        HighsPrintMessage(ML_ALWAYS,
-                          "Problem status detected on presolve: %s\n",
-                          highsModelStatusToString(hmos_[original_hmo].model_status_).c_str());
+        HighsLogMessage(HighsMessageType::INFO,
+			"Problem status detected on presolve: %s",
+			highsModelStatusToString(hmos_[original_hmo].model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a

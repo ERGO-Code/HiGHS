@@ -48,24 +48,22 @@ TEST_CASE("LP-validation", "[highs_data]") {
 
   return_status = assessLp(lp, options);
   REQUIRE(return_status == HighsStatus::OK);
-  reportLp(lp, 2);
+  //  reportLp(lp, 2);
 
   const double my_infinity = 1e30;
   HighsModelObject hmo(lp, options, timer);
   HighsSimplexInterface hsi(hmo);
 
-  printf("Before addRows\n");
   return_status = hsi.addRows(num_row, &rowLower[0], &rowUpper[0], 0, NULL, NULL, NULL);
   //  printf("addRows: return_status = %s\n", HighsStatusToString(return_status).c_str());
-  printf("After addRows: %d\n", (int)return_status);
   REQUIRE(return_status == HighsStatus::OK);
-  reportLp(lp, 2);
+  //  reportLp(lp, 2);
   
   return_status = hsi.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0],
 				    num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
-  printf("addCols: return_status = %s\n", HighsStatusToString(return_status).c_str());
+  //  printf("addCols: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
-  reportLp(lp, 2);
+  //  reportLp(lp, 2);
   
 
   // Create an empty column
@@ -82,7 +80,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 			      XnumNewNZ, &XAstart[0], NULL, NULL); 
   REQUIRE(return_status == HighsStatus::OK);
   XcolUpper[0] = my_infinity;
-  reportLp(lp, 2);
+  //  reportLp(lp, 2);
 
   // Try to add a column with illegal cost
   XcolCost[0] = my_infinity;
@@ -129,7 +127,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
 				    XnumNewNZ, &XAstart[0], NULL, NULL);
   REQUIRE(return_status == HighsStatus::OK);
 
-  reportLp(lp, 2);
+  //  reportLp(lp, 2);
 
   // Add a couple of non-empty columns with some small and large values
   XnumNewCol = 2;
@@ -167,17 +165,22 @@ TEST_CASE("LP-validation", "[highs_data]") {
 			      XnumNewNZ, &XAstart[0], &XAindex[0], &XAvalue[0]);
   REQUIRE(return_status == HighsStatus::Warning);
 
-  reportLp(lp, 2);
+  //  reportLp(lp, 2);
 
   Highs highs(options);
   
   HighsStatus init_status = highs.initializeLp(lp);
   REQUIRE(init_status == HighsStatus::OK);
 
+  /*
   HighsStatus write_status =  highs.writeToFile("");
   REQUIRE(write_status == HighsStatus::Warning);
+  */
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
+
+  HighsModelStatus model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::PRIMAL_INFEASIBLE);
 }
 
