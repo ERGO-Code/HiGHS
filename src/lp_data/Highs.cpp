@@ -221,7 +221,7 @@ HighsStatus Highs::run() {
   int solved_hmo = original_hmo;
   // Initial solve. Presolve, choose solver (simplex, ipx), postsolve.
   int iteration_count;
-  printf("\nHighs::run() 1: basis_.valid_ = %d\n\n", basis_.valid_);fflush(stdout);
+  printf("\nHighs::run() 1: basis_.valid_ = %d\n", basis_.valid_);fflush(stdout);
   if (!basis_.valid_) {
     // No HiGHS basis so consider presolve
     // Presolve. runPresolve handles the level of presolving (0 = don't
@@ -230,6 +230,7 @@ HighsStatus Highs::run() {
     PresolveInfo presolve_info(options_.presolve, lp_);
     HighsPresolveStatus presolve_status = runPresolve(presolve_info);
     timer_.stop(timer_.presolve_clock);
+    printf("\nHighs::run() 2: presolve status = %d\n", (int)presolve_status);fflush(stdout);
 
     // Run solver.
     switch (presolve_status) {
@@ -272,6 +273,7 @@ HighsStatus Highs::run() {
         // Proceed to postsolve.
         break;
       }
+	printf("\nHighs::run() 3: presolve status = %d\n", (int)presolve_status);fflush(stdout);
       case HighsPresolveStatus::Infeasible:
       case HighsPresolveStatus::Unbounded: {
 	if (presolve_status == HighsPresolveStatus::Infeasible) {
