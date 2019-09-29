@@ -453,6 +453,71 @@ int Highs::getIterationCount() const {
   return hmos_[0].simplex_info_.iteration_count;
 }
 
+HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (row <0 || row >= hmos_[0].lp_.numRow_) {
+    HighsLogMessage(HighsMessageType::ERROR, "Row index %d out of range [0, %d] in getBasisInverseRow",
+		    row, hmos_[0].lp_.numRow_-1);
+    return HighsStatus::Error;
+  }
+  if (!hmos_[0].simplex_lp_status_.has_invert) {
+    // No INVERT to use
+    HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisInverseRow");
+    return HighsStatus::Error;
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (col <0 || col >= hmos_[0].lp_.numRow_) {
+    HighsLogMessage(HighsMessageType::ERROR, "Column index %d out of range [0, %d] in getBasisInverseCol",
+		    col, hmos_[0].lp_.numRow_-1);
+    return HighsStatus::Error;
+  }
+  if (!hmos_[0].simplex_lp_status_.has_invert) {
+    // No INVERT to use
+    HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisInverseCol");
+    return HighsStatus::Error;
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::getBasisSolve(const double* rhs, double* solution) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (!hmos_[0].simplex_lp_status_.has_invert) {
+    // No INVERT to use
+    HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisSolve");
+    return HighsStatus::Error;
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::getBasisTransposeSolve(const double* rhs, double* solution) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (!hmos_[0].simplex_lp_status_.has_invert) {
+    // No INVERT to use
+    HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisTransposeSolve");
+    return HighsStatus::Error;
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::getReducedColumn(const int col, double* solution) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (col <0 || col >= hmos_[0].lp_.numCol_) {
+    HighsLogMessage(HighsMessageType::ERROR, "Column index %d out of range [0, %d] in getReducedColumn",
+		    col, hmos_[0].lp_.numCol_-1);
+    return HighsStatus::Error;
+  }
+  if (!hmos_[0].simplex_lp_status_.has_invert) {
+    // No INVERT to use
+    HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getReducedColumn");
+    return HighsStatus::Error;
+  }
+  return HighsStatus::OK;
+}
+
 HighsStatus Highs::setSolution(const HighsSolution& solution) {
   underDevelopmentLogMessage("setSolution");
   // Check if solution is valid.

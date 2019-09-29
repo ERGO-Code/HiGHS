@@ -170,6 +170,31 @@ class Highs {
   // todo: getRangingInformation(..)
 
   /**
+   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseRow(const int row, double* basis_inverse_row);
+
+  /**
+   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseCol(const int col, double* basis_inverse_col);
+
+  /**
+   * @brief Solves \f$B\mathbf{x}=\mathbf{b}\f$ for a given vector \mathbf{b}\f$
+   */
+  HighsStatus getBasisSolve(const double* rhs, double* solution);
+
+  /**
+   * @brief Solves \f$B^{-1}\mathbf{x}=\mathbf{b}\f$ for a given vector \mathbf{b}\f$
+   */
+  HighsStatus getBasisTransposeSolve(const double* rhs, double* solution);
+
+  /**
+   * @brief Solves \f$B^{-1}\mathbf{x}=\mathbf{a_i}\f$
+   */
+  HighsStatus getReducedColumn(const int col, double* solution);
+
+  /**
    * @brief Uses the HighsSolution passed to set the solution for the
    * LP of the (first?) HighsModelObject, according to ?? TODO Understand this
    * ??
