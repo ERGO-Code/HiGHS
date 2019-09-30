@@ -33,6 +33,7 @@ class Highs {
   Highs();
   Highs(HighsOptions& options) { options_ = options; }
 
+  //  virtual ~Highs() { delete &hmos_; }
   /**
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject

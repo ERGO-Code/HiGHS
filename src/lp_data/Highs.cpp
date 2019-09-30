@@ -35,7 +35,9 @@
 
 Highs::Highs() {
   hmos_.clear();
-  hmos_.push_back(HighsModelObject(lp_, options_, timer_));
+  //  HighsModelObject* hmo = new HighsModelObject(lp_, options_, timer_);
+  //  hmos_.push_back(*hmo);
+   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   //  allow_presolve_ = true;
 }
 
