@@ -187,6 +187,14 @@ class HighsSimplexInterface {
                                      const double* usr_row_lower,
                                      const double* usr_row_upper);
 
+  HighsStatus basisSolve(
+			 const vector<double>& rhs,
+			 double* basis_inverse_row,
+			 int num_nz,
+			 int* nz_indices,
+			 bool transpose=false
+			 );
+
 #ifdef HiGHSDEV
   // Changes the update method, but only used in HTester.cpp
   void change_update_method(int updateMethod);

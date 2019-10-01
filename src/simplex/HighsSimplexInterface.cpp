@@ -921,6 +921,59 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
   return HighsStatus::OK;
 }
 
+// Solve (transposed) system involving the basis matrix
+
+HighsStatus HighsSimplexInterface::basisSolve(
+					      const vector<double>& rhs,
+					      double* solution, int num_nz, int* nz_indices,
+					      bool transpose) {
+  HVector solve_vector;
+  int numRow = highs_model_object.simplex_lp_.numRow_;
+  solve_vector.setup(numRow);
+  solve_vector.clear();
+  int rhs_num_nz = 0;
+  for (int row = 0; row < numRow; row++) {
+    if (rhs[row]) {
+      solve_vector.index[rhs_num_nz++] = row;
+      solve_vector.array[row] = rhs[row];
+    }
+  }
+  solve_vector.count = rhs_num_nz;
+  //  printf("RHS has %d nonzeros\n", rhs_num_nz);
+  // Get hist_dsty from analysis during simplex solve
+  double hist_dsty=0.5;
+  if (transpose) {
+    highs_model_object.factor_.btran(solve_vector, hist_dsty);
+  } else {
+    highs_model_object.factor_.ftran(solve_vector, hist_dsty);
+  }
+  //  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
+  if (nz_indices == NULL) {
+    // Nonzeros in the solution not required
+    if (solve_vector.count > numRow) {
+      // Solution nonzeros not known
+      for (int row = 0; row < numRow; row++) {
+	solution[row] = solve_vector.array[row];
+	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g\n", row, solution[row]);
+      }
+    } else {
+      // Solution nonzeros are known
+      for (int row = 0; row < numRow; row++) solution[row] = 0;
+      for (int ix = 0; ix < solve_vector.count; ix++) {
+	int row = solve_vector.index[ix];
+	solution[row] = solve_vector.array[row];
+	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d\n", row, solution[row], ix);
+      }
+    }
+  } else {
+    printf("Extraction of nonzeros in HighsSimplexInterface::basisSolve is not implemented\n");
+    num_nz = -1;
+    return HighsStatus::Error;
+  }
+  //  for (int row = 0; row < numRow; row++) printf("Solution[%2d] = %11.4g\n", row, solution[row]);
+  return HighsStatus::OK;
+}
+
 #ifdef HiGHSDEV
 void HighsSimplexInterface::change_update_method(int updateMethod) {
   highs_model_object.factor_.change(updateMethod);
