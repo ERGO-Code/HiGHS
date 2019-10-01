@@ -929,17 +929,19 @@ HighsStatus HighsSimplexInterface::basisSolve(
 					      bool transpose) {
   HVector solve_vector;
   int numRow = highs_model_object.simplex_lp_.numRow_;
+  int numCol = highs_model_object.simplex_lp_.numCol_;
+  HighsScale& scale = highs_model_object.scale_;
   solve_vector.setup(numRow);
   solve_vector.clear();
   int rhs_num_nz = 0;
   for (int row = 0; row < numRow; row++) {
     if (rhs[row]) {
       solve_vector.index[rhs_num_nz++] = row;
-      solve_vector.array[row] = rhs[row];
+      solve_vector.array[row] = rhs[row]/scale.row_[row];
     }
   }
   solve_vector.count = rhs_num_nz;
-  //  printf("RHS has %d nonzeros\n", rhs_num_nz);
+  printf("RHS has %d nonzeros\n", rhs_num_nz);
   // Get hist_dsty from analysis during simplex solve
   double hist_dsty=0.5;
   if (transpose) {
@@ -947,14 +949,21 @@ HighsStatus HighsSimplexInterface::basisSolve(
   } else {
     highs_model_object.factor_.ftran(solve_vector, hist_dsty);
   }
-  //  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
+  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
   if (nz_indices == NULL) {
     // Nonzeros in the solution not required
     if (solve_vector.count > numRow) {
       // Solution nonzeros not known
       for (int row = 0; row < numRow; row++) {
 	solution[row] = solve_vector.array[row];
-	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g\n", row, solution[row]);
+	int col = highs_model_object.simplex_basis_.basicIndex_[row];
+	printf("Solution[%2d] = solve_vector.array[row] = %11.4g", row, solution[row]);
+	if (col < numCol) {
+	  solution[row] /= scale.col_[col];
+	  printf(": Col %2d so scale by %11.4g\n", col, scale.col_[col]);
+	} else {
+	  printf(": Row %2d so no scaling\n", col - numCol);
+	}
       }
     } else {
       // Solution nonzeros are known
@@ -962,7 +971,14 @@ HighsStatus HighsSimplexInterface::basisSolve(
       for (int ix = 0; ix < solve_vector.count; ix++) {
 	int row = solve_vector.index[ix];
 	solution[row] = solve_vector.array[row];
-	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d\n", row, solution[row], ix);
+	int col = highs_model_object.simplex_basis_.basicIndex_[row];
+	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d", row, solution[row], ix);
+	if (col < numCol) {
+	  solution[row] /= scale.col_[col];
+	  printf(": Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
+	} else {
+	  printf(": Row %2d so no scaling\n", col - numCol);
+	}
       }
     }
   } else {

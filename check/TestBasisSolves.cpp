@@ -94,7 +94,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   filename = dir + "/../../check/instances/chip.mps";
   //  filename = dir + "/../../check/instances/blending.mps";
     filename = dir + "/../../check/instances/avgas.mps";
-  //  filename = dir + "/../../check/instances/adlittle.mps";
+    //    filename = dir + "/../../check/instances/adlittle.mps";
 
   //For debugging
 
@@ -179,6 +179,28 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   }
 
   double residual_norm;
+
+
+  int basic_col=0;
+  for (int row=0; row < numRow; row++) {
+    int var = basic_variables[row];
+    if (var>=0) {
+      basic_col = var;
+      break;
+    }
+  }
+  for (int row=0; row<numRow; row++) rhs[row]=0;
+  for (int el=lp.Astart_[basic_col]; el<lp.Astart_[basic_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
+
+  highs_status = highs.getBasisSolve(rhs, solution);
+  REQUIRE(highs_status==HighsStatus::OK);
+  residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+  //  if (residual_norm > 1e-8)
+  printf("\n FIRST!! getBasisSolve: residual_norm = %g\n\n\n", residual_norm);
+  REQUIRE(fabs(residual_norm) < 1e-6);
+
+
+
   int max_k = min(numRow, 9);
   int k;
   k = 0;
@@ -256,7 +278,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     // Check solution
     for (int row=0; row<numRow; row++) rhs[row]=0;
     for (int el=lp.Astart_[check_col]; el<lp.Astart_[check_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
-    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, true);
+    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
     //  if (residual_norm > 1e-8)
     printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
     REQUIRE(fabs(residual_norm) < 1e-8);

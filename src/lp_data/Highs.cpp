@@ -488,7 +488,6 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, 
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    // No INVERT to use
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisInverseRow");
     return HighsStatus::Error;
   }
@@ -510,7 +509,6 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, 
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    // No INVERT to use
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisInverseCol");
     return HighsStatus::Error;
   }
@@ -526,7 +524,6 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, 
 HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    // No INVERT to use
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisSolve");
     return HighsStatus::Error;
   }
@@ -542,7 +539,6 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int num_n
 HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs, double* solution, int num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    // No INVERT to use
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisTransposeSolve");
     return HighsStatus::Error;
   }
@@ -563,7 +559,6 @@ HighsStatus Highs::getReducedColumn(const int col, double* solution, int num_nz,
     return HighsStatus::Error;
   }
   if (!hmos_[0].simplex_lp_status_.has_invert) {
-    // No INVERT to use
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getReducedColumn");
     return HighsStatus::Error;
   }
@@ -573,7 +568,7 @@ HighsStatus Highs::getReducedColumn(const int col, double* solution, int num_nz,
   rhs.assign(numRow, 0);
   for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, solution, num_nz, nz_indices, true);
+  simplex_interface.basisSolve(rhs, solution, num_nz, nz_indices, false);
   return HighsStatus::OK;
 }
 
