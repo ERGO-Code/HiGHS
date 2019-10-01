@@ -124,7 +124,8 @@ class Highs {
   /**
    * @brief writes the current model to a file
    */
-  HighsStatus writeToFile(const std::string filename  //!< the filename
+  HighsStatus writeToFile(
+			  const std::string filename  //!< the filename
   );
 
   /**
@@ -147,8 +148,7 @@ class Highs {
 
   /**
    * @brief Returns the HighsBasis instance for the LP of the
-   * (first?) HighsModelObject TODO: rename to HighsBasis when the
-   * current HighsBasis becomes SimplexBasis
+   * (first?) HighsModelObject
    */
   const HighsBasis& getBasis() const;
 
@@ -171,29 +171,64 @@ class Highs {
   // todo: getRangingInformation(..)
 
   /**
+   * @brief Gets the basic variables in the order corresponding to
+   * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
+   * getBasisTransposeSolve and getReducedColumn. As required by SCIP,
+   * non-negative entries are indices of columns, and negative entries
+   * are -(row_index+1).
+   */
+  HighsStatus getBasicVariables(
+				int* basic_variables  //!< Basic variables
+				);
+  /**
    * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
-  HighsStatus getBasisInverseRow(const int row, double* basis_inverse_row);
+  HighsStatus getBasisInverseRow(
+				 const int row,             //!< Index of row required
+				 double* basis_inverse_row, //!< Row required
+				 int num_nz = -1,           //!< Number of nonzeros
+				 int* nz_indices = NULL     //!< Indices of nonzeros
+				 );  
 
   /**
    * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
-  HighsStatus getBasisInverseCol(const int col, double* basis_inverse_col);
+  HighsStatus getBasisInverseCol(
+				 const int col,             //!< Index of column required
+				 double* basis_inverse_col, //!< Column required
+				 int num_nz = -1,           //!< Number of nonzeros
+				 int* nz_indices = NULL     //!< Indices of nonzeros
+);
 
   /**
    * @brief Solves \f$B\mathbf{x}=\mathbf{b}\f$ for a given vector \mathbf{b}\f$
    */
-  HighsStatus getBasisSolve(const double* rhs, double* solution);
+  HighsStatus getBasisSolve(
+			    const double* rhs,     //!< RHS \f$mathbf{b}\f$ 
+			    double* solution,      //!< Solution  \f$mathbf{x}\f$ 
+			    int num_nz = -1,       //!< Number of nonzeros
+			    int* nz_indices = NULL //!< Indices of nonzeros
+			    );
 
   /**
    * @brief Solves \f$B^{-1}\mathbf{x}=\mathbf{b}\f$ for a given vector \mathbf{b}\f$
    */
-  HighsStatus getBasisTransposeSolve(const double* rhs, double* solution);
+  HighsStatus getBasisTransposeSolve(
+				     const double* rhs,     //!< RHS \f$mathbf{b}\f$ 
+				     double* solution,      //!< Solution  \f$mathbf{x}\f$ 
+				     int num_nz = -1,       //!< Number of nonzeros
+				     int* nz_indices = NULL //!< Indices of nonzeros
+				     );
 
   /**
    * @brief Solves \f$B^{-1}\mathbf{x}=\mathbf{a_i}\f$
    */
-  HighsStatus getReducedColumn(const int col, double* solution);
+  HighsStatus getReducedColumn(
+			       const int col,         //!< Index of column required
+			       double* solution,      //!< Column required
+			       int num_nz = -1,       //!< Number of nonzeros
+			       int* nz_indices = NULL //!< Indices of nonzeros
+			       );
 
   /**
    * @brief Uses the HighsSolution passed to set the solution for the

@@ -31,6 +31,53 @@ std::string GetBasisSolvesCurrentWorkingDir(void) {
   return "";
 }
 
+double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables, double* rhs, double* solution, const bool transpose=false) {
+  double residual_norm = 0;
+  if (transpose) {
+    for (int k=0; k<lp.numRow_; k++) {
+      int var = basic_variables[k];
+      double residual;
+      if (var < 0) {
+	int row = -(1+var);
+	residual = fabs(rhs[k] - solution[row]);
+	if (residual > 1e-8) printf("Row |[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual);
+      } else {
+	int col = var;
+	residual = 0;
+	for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) {
+	  int row = lp.Aindex_[col];
+	  residual += lp.Avalue_[col]*solution[row];
+	}
+	residual = fabs(rhs[k] - residual);
+	if (residual > 1e-8) printf("Col |[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual);
+      }
+      residual_norm += residual;
+    }
+  } else {
+    vector<double> basis_matrix_times_solution;
+    basis_matrix_times_solution.assign(lp.numRow_, 0);
+    for (int k=0; k<lp.numRow_; k++) {
+      int var = basic_variables[k];
+      if (var < 0) {
+	int row = -(1+var);
+	basis_matrix_times_solution[row] = solution[k];
+      } else {
+	int col = var;
+	for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) {
+	  int row = lp.Aindex_[col];
+	  basis_matrix_times_solution[row] += lp.Avalue_[col]*solution[k];
+	}
+      }
+    }
+    for (int k=0; k<lp.numRow_; k++) {
+      double residual = fabs(rhs[k] - basis_matrix_times_solution[k]);
+      if (residual > 1e-8) printf("|[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual); 
+      residual_norm += residual;
+    }
+  }
+  return residual_norm;
+}
+
 // No commas in test case name.
 TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
@@ -40,16 +87,20 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   // For debugging use the latter.
   std::string filename;
-  filename = dir + "/../../check/instances/adlittle.mps";
+  filename = dir + "/../../check/instances/avgas.mps";
+  //  filename = dir + "/../../check/instances/adlittle.mps";
   //  filename = dir + "/check/instances/adlittle.mps";
 
   Highs highs;
 
-  int* basic;
+  int* basic_variables;
   double* rhs;
   double* solution;
 
   HighsStatus highs_status;
+
+  highs_status = highs.getBasicVariables(basic_variables);
+  REQUIRE(highs_status==HighsStatus::Error);
 
   highs_status = highs.getBasisInverseRow(0, solution);
   REQUIRE(highs_status==HighsStatus::Error);
@@ -73,9 +124,12 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   REQUIRE(highs_status == HighsStatus::OK);
 
   int numRow = lp.numRow_;
-  basic = (int*)malloc(sizeof(int) * numRow);
+  basic_variables = (int*)malloc(sizeof(int) * numRow);
   solution = (double*)malloc(sizeof(double) * numRow);
   rhs = (double*)malloc(sizeof(double) * numRow);
+
+  highs_status = highs.getBasicVariables(basic_variables);
+  REQUIRE(highs_status==HighsStatus::Error);
 
   highs_status = highs.getBasisInverseRow(0, solution);
   REQUIRE(highs_status==HighsStatus::Error);
@@ -95,6 +149,9 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.run();
   REQUIRE(highs_status == HighsStatus::OK);
 
+  highs_status = highs.getBasicVariables(basic_variables);
+  REQUIRE(highs_status==HighsStatus::OK);
+
   highs_status = highs.getBasisInverseRow(0, solution);
   REQUIRE(highs_status==HighsStatus::OK);
 
@@ -110,26 +167,15 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.getReducedColumn(0, solution);
   REQUIRE(highs_status==HighsStatus::OK);
 
-  /*
-  HighsBasis basis = getBasis();
-  int basic_var_num = 0;
-  for (int col=0; col < lp.numCol_; col++) {
-    if (basis.col_status_[col] == HighsBasisStatus::BASIC) {
-      if (basic_var_num >= numRow) break;
-      printf("Basic var %d is col %d\n", basic_var_num, col);
-      basic[basic_var_num++] = col;
-    }
-  }
-  assert(basic_var_num < numRow);
   for (int row=0; row < numRow; row++) {
-    if (basis.row_status_[row] == HighsBasisStatus::BASIC) {
-      if (basic_var_num >= numRow) break;
-      basic[basic_var_num++] = row;
+    printf("Basic variable %3d is ", row);
+    int var = basic_variables[row];
+    if (var<0) {
+      printf("row %d\n", -(1+var));
+    } else {
+      printf("col %d\n", var);
     }
   }
-  assert(basic_var_num == numRow);
-   for (int row=0; row < numRow; row++) {
-     printf(
-  */
+
 }
     

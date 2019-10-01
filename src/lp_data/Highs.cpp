@@ -35,9 +35,9 @@
 
 Highs::Highs() {
   hmos_.clear();
-  //  HighsModelObject* hmo = new HighsModelObject(lp_, options_, timer_);
-  //  hmos_.push_back(*hmo);
-   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
+  HighsModelObject* hmo = new HighsModelObject(lp_, options_, timer_);
+  hmos_.push_back(*hmo);
+  //   hmos_.push_back(HighsModelObject(lp_, options_, timer_));
   //  allow_presolve_ = true;
 }
 
@@ -455,9 +455,33 @@ int Highs::getIterationCount() const {
   return hmos_[0].simplex_info_.iteration_count;
 }
 
-HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row) {
+HighsStatus Highs::getBasicVariables(int* basic_variables) {
   if (hmos_.size() == 0) return HighsStatus::Error;
-  if (row <0 || row >= hmos_[0].lp_.numRow_) {
+  if (!hmos_[0].simplex_lp_status_.has_basis) {
+    HighsLogMessage(HighsMessageType::ERROR, "No basis available in getBasicVariables");
+    return HighsStatus::Error;
+  }
+  int numRow = hmos_[0].lp_.numRow_;
+  int numCol = hmos_[0].lp_.numCol_;
+  if (numRow != hmos_[0].simplex_lp_.numRow_) {
+    HighsLogMessage(HighsMessageType::ERROR, "Model LP and simplex LP row dimension difference (%d-%d=%d",
+		    numRow, hmos_[0].simplex_lp_.numRow_, numRow-hmos_[0].simplex_lp_.numRow_);
+    return HighsStatus::Error;
+  }
+  for (int row=0; row<numRow; row++) {
+    int var = hmos_[0].simplex_basis_.basicIndex_[row];
+    if (var < numCol) {
+      basic_variables[row] = var;
+    } else {
+      basic_variables[row] = -(1+var-numCol);
+    }
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, int num_nz, int* nz_indices) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (row < 0 || row >= hmos_[0].lp_.numRow_) {
     HighsLogMessage(HighsMessageType::ERROR, "Row index %d out of range [0, %d] in getBasisInverseRow",
 		    row, hmos_[0].lp_.numRow_-1);
     return HighsStatus::Error;
@@ -470,9 +494,9 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row) 
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col) {
+HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, int num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
-  if (col <0 || col >= hmos_[0].lp_.numRow_) {
+  if (col < 0 || col >= hmos_[0].lp_.numRow_) {
     HighsLogMessage(HighsMessageType::ERROR, "Column index %d out of range [0, %d] in getBasisInverseCol",
 		    col, hmos_[0].lp_.numRow_-1);
     return HighsStatus::Error;
@@ -485,7 +509,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col) 
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisSolve(const double* rhs, double* solution) {
+HighsStatus Highs::getBasisSolve(const double* rhs, double* solution, int num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     // No INVERT to use
@@ -495,7 +519,7 @@ HighsStatus Highs::getBasisSolve(const double* rhs, double* solution) {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisTransposeSolve(const double* rhs, double* solution) {
+HighsStatus Highs::getBasisTransposeSolve(const double* rhs, double* solution, int num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     // No INVERT to use
@@ -505,9 +529,9 @@ HighsStatus Highs::getBasisTransposeSolve(const double* rhs, double* solution) {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getReducedColumn(const int col, double* solution) {
+HighsStatus Highs::getReducedColumn(const int col, double* solution, int num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
-  if (col <0 || col >= hmos_[0].lp_.numCol_) {
+  if (col < 0 || col >= hmos_[0].lp_.numCol_) {
     HighsLogMessage(HighsMessageType::ERROR, "Column index %d out of range [0, %d] in getReducedColumn",
 		    col, hmos_[0].lp_.numCol_-1);
     return HighsStatus::Error;
