@@ -255,7 +255,7 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::Reduced: {
         HighsLp& reduced_lp = presolve_info.getReducedProblem();
 	// Validate the reduced LP
-	assessLp(reduced_lp, options_);
+	assert(assessLp(reduced_lp, options_) == HighsStatus::OK);
         // Add reduced lp object to vector of HighsModelObject,
         // so the last one in lp_ is the presolved one.
 

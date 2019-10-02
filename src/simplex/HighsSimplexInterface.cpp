@@ -937,7 +937,8 @@ HighsStatus HighsSimplexInterface::basisSolve(
   for (int row = 0; row < numRow; row++) {
     if (rhs[row]) {
       solve_vector.index[rhs_num_nz++] = row;
-      solve_vector.array[row] = rhs[row]/scale.row_[row];
+      printf("RHS row %2d: scale rhs[row] = %11.4g by scale.row_[row] = %11.4g\n", row, rhs[row], scale.row_[row]);
+      solve_vector.array[row] = rhs[row]*scale.row_[row];
     }
   }
   solve_vector.count = rhs_num_nz;
@@ -959,10 +960,12 @@ HighsStatus HighsSimplexInterface::basisSolve(
 	int col = highs_model_object.simplex_basis_.basicIndex_[row];
 	printf("Solution[%2d] = solve_vector.array[row] = %11.4g", row, solution[row]);
 	if (col < numCol) {
-	  solution[row] /= scale.col_[col];
-	  printf(": Col %2d so scale by %11.4g\n", col, scale.col_[col]);
+	  solution[row] *= scale.col_[col];
+	  printf(": Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
 	} else {
-	  printf(": Row %2d so no scaling\n", col - numCol);
+	  double scale_value = scale.row_[col - numCol];
+	  solution[row] /= scale_value;
+	  printf(": Row %2d so scale by %11.4g to give %11.4g\n", col - numCol, scale_value, solution[row]);
 	}
       }
     } else {
@@ -974,10 +977,12 @@ HighsStatus HighsSimplexInterface::basisSolve(
 	int col = highs_model_object.simplex_basis_.basicIndex_[row];
 	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d", row, solution[row], ix);
 	if (col < numCol) {
-	  solution[row] /= scale.col_[col];
+	  solution[row] *= scale.col_[col];
 	  printf(": Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
 	} else {
-	  printf(": Row %2d so no scaling\n", col - numCol);
+	  double scale_value = scale.row_[col - numCol];
+	  solution[row] /= scale_value;
+	  printf(": Row %2d so scale by %11.4g to give %11.4g\n", col - numCol, scale_value, solution[row]);
 	}
       }
     }
