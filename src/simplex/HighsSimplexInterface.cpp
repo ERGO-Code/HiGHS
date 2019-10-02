@@ -942,11 +942,11 @@ HighsStatus HighsSimplexInterface::basisSolve(
 	double rhs_value = rhs[row];
 	int col = highs_model_object.simplex_basis_.basicIndex_[row];
 	if (col < numCol) {
-	  printf("RHS row %2d: col %2d: scale rhs[row] = %11.4g by %11.4g\n", row, col, rhs_value, scale.col_[col]);
+	  //	  printf("RHS row %2d: col %2d: scale rhs[row] = %11.4g by %11.4g\n", row, col, rhs_value, scale.col_[col]);
 	  rhs_value *= scale.col_[col];
 	} else {
 	  double scale_value = scale.row_[col - numCol];
-	  printf("RHS row %2d: row %2d: scale rhs[row] = %11.4g by %11.4g\n", row, col - numCol, rhs_value, scale_value);
+	  //	  printf("RHS row %2d: row %2d: scale rhs[row] = %11.4g by %11.4g\n", row, col - numCol, rhs_value, scale_value);
 	  rhs_value /= scale_value;
 	}
 	solve_vector.array[row] = rhs_value;
@@ -956,13 +956,13 @@ HighsStatus HighsSimplexInterface::basisSolve(
     for (int row = 0; row < numRow; row++) {
       if (rhs[row]) {
 	solve_vector.index[rhs_num_nz++] = row;
-	printf("RHS row %2d: scale rhs[row] = %11.4g by scale.row_[row] = %11.4g\n", row, rhs[row], scale.row_[row]);
+	//	printf("RHS row %2d: scale rhs[row] = %11.4g by scale.row_[row] = %11.4g\n", row, rhs[row], scale.row_[row]);
 	solve_vector.array[row] = rhs[row]*scale.row_[row];
       }
     }
   }
   solve_vector.count = rhs_num_nz;
-  printf("RHS has %d nonzeros\n", rhs_num_nz);
+  //  printf("RHS has %d nonzeros\n", rhs_num_nz);
   // Get hist_dsty from analysis during simplex solve
   double hist_dsty=0.5;
   if (transpose) {
@@ -970,7 +970,7 @@ HighsStatus HighsSimplexInterface::basisSolve(
   } else {
     highs_model_object.factor_.ftran(solve_vector, hist_dsty);
   }
-  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
+  //  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
   // Extract the solution
   if (nz_indices == NULL) {
     // Nonzeros in the solution not required
@@ -978,7 +978,7 @@ HighsStatus HighsSimplexInterface::basisSolve(
       // Solution nonzeros not known
       for (int row = 0; row < numRow; row++) {
 	solution[row] = solve_vector.array[row];
-	printf("Solution[%2d] = solve_vector.array[row] = %11.4g\n", row, solution[row]);
+	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g\n", row, solution[row]);
       }
     } else {
       // Solution nonzeros are known
@@ -986,7 +986,7 @@ HighsStatus HighsSimplexInterface::basisSolve(
       for (int ix = 0; ix < solve_vector.count; ix++) {
 	int row = solve_vector.index[ix];
 	solution[row] = solve_vector.array[row];
-	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d\n", row, solution[row], ix);
+	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d\n", row, solution[row], ix);
       }
     }
   } else {
@@ -1001,14 +1001,14 @@ HighsStatus HighsSimplexInterface::basisSolve(
       for (int row = 0; row < numRow; row++) {
 	double scale_value = scale.row_[row];
 	solution[row] *= scale_value;
-	printf("Row %2d so scale by %11.4g to give %11.4g\n", row, scale_value, solution[row]);
+	//	printf("Row %2d so scale by %11.4g to give %11.4g\n", row, scale_value, solution[row]);
       }
     } else {
       for (int ix = 0; ix < solve_vector.count; ix++) {
 	int row = solve_vector.index[ix];
 	double scale_value = scale.row_[row];
 	solution[row] *= scale_value;
-	printf("Row %2d so scale by %11.4g to give %11.4g\n", row, scale_value, solution[row]);
+	//	printf("Row %2d so scale by %11.4g to give %11.4g\n", row, scale_value, solution[row]);
       }
     }
   } else {
@@ -1018,11 +1018,11 @@ HighsStatus HighsSimplexInterface::basisSolve(
 	int col = highs_model_object.simplex_basis_.basicIndex_[row];
 	if (col < numCol) {
 	  solution[row] *= scale.col_[col];
-	  printf("Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
+	  //	  printf("Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
 	} else {
 	  double scale_value = scale.row_[col - numCol];
 	  solution[row] /= scale_value;
-	  printf("Row %2d so scale by %11.4g to give %11.4g\n", col - numCol, scale_value, solution[row]);
+	  //	  printf("Row %2d so scale by %11.4g to give %11.4g\n", col - numCol, scale_value, solution[row]);
 	}
       }
     } else {
@@ -1031,11 +1031,11 @@ HighsStatus HighsSimplexInterface::basisSolve(
 	int col = highs_model_object.simplex_basis_.basicIndex_[row];
 	if (col < numCol) {
 	  solution[row] *= scale.col_[col];
-	  printf("Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
+	  //	  printf("Col %2d so scale by %11.4g to give %11.4g\n", col, scale.col_[col], solution[row]);
 	} else {
 	  double scale_value = scale.row_[col - numCol];
 	  solution[row] /= scale_value;
-	  printf("Row %2d so scale by %11.4g to give %11.4g\n", col - numCol, scale_value, solution[row]);
+	  //	  printf("Row %2d so scale by %11.4g to give %11.4g\n", col - numCol, scale_value, solution[row]);
 	}
       }
     }

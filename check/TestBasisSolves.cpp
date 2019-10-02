@@ -33,6 +33,7 @@ std::string GetBasisSolvesCurrentWorkingDir(void) {
 }
 
 double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables, double* rhs, double* solution, const bool transpose=false) {
+  const double residual_tolerance = 1e-8;
   double residual_norm = 0;
   //  for (int k=0; k<lp.numRow_; k++) printf("solution[%2d]=%11.4g\n", k, solution[k]);
   if (transpose) {
@@ -42,7 +43,7 @@ double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables, double* rh
       if (var < 0) {
 	int row = -(1+var);
 	residual = fabs(rhs[k] - solution[row]);
-	if (residual > 1e-8) printf("Row |[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual);
+	if (residual > residual_tolerance) printf("Row |[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual);
       } else {
 	int col = var;
 	for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) {
@@ -51,7 +52,7 @@ double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables, double* rh
 	  //	  printf("k=%1d; col=%1d; el=%1d; row=%1d; lp.Avalue_[col]=%11.4g; solution[row]=%11.4g; residual=%1.4g\n", k, col, el, row, lp.Avalue_[col], solution[row], residual);
 	}
 	residual = fabs(rhs[k] - residual);
-	if (residual > 1e-8) printf("Col |[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual);
+	if (residual > residual_tolerance) printf("Col |[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual);
       }
       residual_norm += residual;
     }
@@ -73,8 +74,7 @@ double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables, double* rh
     }
     for (int k=0; k<lp.numRow_; k++) {
       double residual = fabs(rhs[k] - basis_matrix_times_solution[k]);
-      if (residual > 1e-8)
-	printf("|[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual); 
+      if (residual > residual_tolerance) printf("|[B^Tx-b]_{%2d}| = %11.4g\n", k,  residual); 
       residual_norm += residual;
     }
   }
@@ -128,6 +128,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   //  filename = dir + "/../../check/instances/blending.mps";
     filename = dir + "/../../check/instances/avgas.mps";
         filename = dir + "/../../check/instances/adlittle.mps";
+	//        filename = dir + "/../../check/instances/25fv47.mps";
 
   //For debugging
 
@@ -216,40 +217,12 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   */
 
   double residual_norm;
-  double max_residual_norm;
+  const double residual_norm_tolerance = 1e-8;
+  const double solution_error_tolerance = 1e-8;
   HighsRandom random;
 
-  int max_k = min(numRow, 9);
-  int k;
+  int basic_col;
 
-  int basic_col=0;
-  /*
-  k = 0;
-  max_residual_norm=0;
-  for (int row=0; row < numRow; row++) {
-    int var = basic_variables[row];
-    if (var>=0) {
-      basic_col = var;
-      int rhs_nnz = lp.Astart_[basic_col+1]-lp.Astart_[basic_col];
-      printf("Row %2d; Var %3d; RHS nnz = %d\n", row, basic_col, rhs_nnz);
-      for (int ix=0; ix<numRow; ix++) rhs[ix]=0;
-      for (int el=lp.Astart_[basic_col]; el<lp.Astart_[basic_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
-
-      highs_status = highs.getBasisSolve(rhs, solution);
-      REQUIRE(highs_status==HighsStatus::OK);
-      residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
-      max_residual_norm = std::max(residual_norm, max_residual_norm);
-      //  if (residual_norm > 1e-8)
-      printf("getBasisSolve(%d): residual_norm = %g\n\n", k, residual_norm);
-      REQUIRE(fabs(residual_norm) < 1e-6);
-      if (k<max_k) k++; else k*=2;
-    }
-    if (k>=numRow) break;
-  }
-  printf("\n!! Test set 0: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
-  */
-
-  max_residual_norm=0;
   for (int ix=0; ix<numRow; ix++) known_solution[ix]=0;
   bool transpose = true;
   int num_ix=3;
@@ -257,20 +230,20 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   col = 6;
   basic_col = basic_variables[col];
   known_solution[col] = 1;//random.fraction();
-  printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
+  //  printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
 
   if (num_ix>1) {
     col = 15;
     basic_col = basic_variables[col];
     known_solution[col] = 1;//random.fraction();
-    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
+    //    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
   }
 
   if (num_ix>2) {
     col = 12;
     basic_col = basic_variables[col];
     known_solution[col] = 1;//random.fraction();
-    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
+    //    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
   }
 
   GetBasisSolvesFormRHS(lp, basic_variables, known_solution, rhs, transpose);
@@ -281,22 +254,44 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   }
   REQUIRE(highs_status==HighsStatus::OK);
   residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, transpose);
-  max_residual_norm = std::max(residual_norm, max_residual_norm);
-  //  if (residual_norm > 1e-8)
-  printf("getBasisSolve(): residual_norm = %g\n", residual_norm);
-  REQUIRE(fabs(residual_norm) < 1e-6);
+  REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
   double solution_error_norm = 0;
   for (int ix=0; ix<numRow; ix++) {
     double solution_error = fabs(known_solution[ix]-solution[ix]);
-    if (solution_error>1e-6) printf("Row %2d: |x-x^|_i = %11.4g\n", ix, solution_error);
+    if (solution_error > solution_error_tolerance) printf("Row %2d: |x-x^|_i = %11.4g\n", ix, solution_error);
     solution_error_norm += solution_error;
   }
-  printf("getBasisSolve(): solution_error_norm = %g\n", solution_error_norm);
+  printf("Test 0:     residual_norm = %11.4g\n      solution_error_norm = %11.4g (Known solution)\n",
+	 residual_norm, solution_error_norm);
   
-  
-  printf("\n!! Test set 0.5: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
-  
-  max_k = min(numRow, 9);
+  double max_residual_norm;
+  int max_k = min(numRow, 9);
+  int k;
+
+  k = 0;
+  max_residual_norm=0;
+  for (int row=0; row < numRow; row++) {
+    int var = basic_variables[row];
+    if (var>=0) {
+      basic_col = var;
+      int rhs_nnz = lp.Astart_[basic_col+1]-lp.Astart_[basic_col];
+      //      printf("Row %2d; Var %3d; RHS nnz = %d\n", row, basic_col, rhs_nnz);
+      for (int ix=0; ix<numRow; ix++) rhs[ix]=0;
+      for (int el=lp.Astart_[basic_col]; el<lp.Astart_[basic_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
+
+      highs_status = highs.getBasisSolve(rhs, solution);
+      REQUIRE(highs_status==HighsStatus::OK);
+      residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+      max_residual_norm = std::max(residual_norm, max_residual_norm);
+      if (residual_norm > residual_norm_tolerance)
+	printf("getBasisSolve(%d): residual_norm = %g\n", k, residual_norm);
+      REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
+      if (k<max_k) k++; else k*=2;
+    }
+    if (k>=numRow) break;
+  }
+  printf("Test 1: max_residual_norm = %11.4g (Basic column)\n", max_residual_norm);
+
   k = 0;
   max_residual_norm=0;
   for (;;) {
@@ -309,13 +304,13 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     for (int row=0; row<numRow; row++) rhs[row]=0;
     rhs[check_row] = 1;
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, true);
-      max_residual_norm = std::max(residual_norm, max_residual_norm);
-    //    if (residual_norm > 1e-8)
-    printf("getBasisInverseRow(%d): residual_norm = %g\n", k, residual_norm);
-    REQUIRE(fabs(residual_norm) < 1e-8);
+    max_residual_norm = std::max(residual_norm, max_residual_norm);
+    if (residual_norm > residual_norm_tolerance)
+      printf("getBasisInverseRow(%d): residual_norm = %g\n", k, residual_norm);
+    REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k<max_k) k++; else k*=2; if (k>=numRow) break;
   }
-  printf("\n!! Test set 1: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
+  printf("Test 2: max_residual_norm = %11.4g (getBasisInverseRow)\n", max_residual_norm);
   
   k = 0;
   max_residual_norm=0;
@@ -330,12 +325,12 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     rhs[check_col] = 1;
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
-    //  if (residual_norm > 1e-8)
-    printf("getBasisInverseCol(%d): residual_norm = %g\n\n", k, residual_norm);
-    REQUIRE(fabs(residual_norm) < 1e-8);
+    if (residual_norm > residual_norm_tolerance)
+      printf("getBasisInverseCol(%d): residual_norm = %g\n", k, residual_norm);
+    REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k<max_k) k++; else k*=2; if (k>=numRow) break;
   }
-  printf("\n!! Test set 2: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
+  printf("Test 3: max_residual_norm = %11.4g (getBasisInverseCol)\n", max_residual_norm);
 
 
   k = 0;
@@ -347,12 +342,12 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     // Check solution
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
-    //  if (residual_norm > 1e-8)
-    printf("getBasisSolve(%d): residual_norm = %g\n", k, residual_norm);
-    REQUIRE(fabs(residual_norm) < 1e-8);
+    if (residual_norm > residual_norm_tolerance)
+      printf("getBasisSolve(%d): residual_norm = %g\n", k, residual_norm);
+    REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k<max_k) k++; else k*=2; if (k>=numRow) break;
   }
-  printf("\n!! Test set 3: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
+  printf("Test 4: max_residual_norm = %11.4g (getBasisSolve)\n", max_residual_norm);
 
     
 
@@ -364,13 +359,13 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     REQUIRE(highs_status==HighsStatus::OK);
     // Check solution
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, true);
-      max_residual_norm = std::max(residual_norm, max_residual_norm);
-    //  if (residual_norm > 1e-8)
-    printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
-    REQUIRE(fabs(residual_norm) < 1e-8);
+    max_residual_norm = std::max(residual_norm, max_residual_norm);
+    if (residual_norm > residual_norm_tolerance)
+      printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
+    REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k<max_k) k++; else k*=2; if (k>=numRow) break;
   }
-  printf("\n!! Test set 4: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
+  printf("Test 5: max_residual_norm = %11.4g (getBasisTransposeSolve)\n", max_residual_norm);
 
   k = 0;
   max_residual_norm=0;
@@ -383,12 +378,12 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     for (int row=0; row<numRow; row++) rhs[row]=0;
     for (int el=lp.Astart_[check_col]; el<lp.Astart_[check_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
     residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
-      max_residual_norm = std::max(residual_norm, max_residual_norm);
-    //  if (residual_norm > 1e-8)
-    printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
-    REQUIRE(fabs(residual_norm) < 1e-8);
+    max_residual_norm = std::max(residual_norm, max_residual_norm);
+    if (residual_norm > residual_norm_tolerance)
+      printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
+    REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k<max_k) k++; else k*=2; if (k>=numCol) break;
   }
-  printf("\n!! Test set 5: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
+  printf("Test 6: max_residual_norm = %11.4g (getReducedColumn)\n", max_residual_norm);
 }
     
