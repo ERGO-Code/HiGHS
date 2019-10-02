@@ -251,17 +251,20 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   max_residual_norm=0;
   for (int ix=0; ix<numRow; ix++) known_solution[ix]=0;
-  int col;
+  bool transpose = true;
   int num_ix=3;
+  int col;
   col = 6;
   basic_col = basic_variables[col];
   known_solution[col] = 1;//random.fraction();
   printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
 
-  col = 15;
-  basic_col = basic_variables[col];
-  known_solution[col] = 1;//random.fraction();
-  printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
+  if (num_ix>1) {
+    col = 15;
+    basic_col = basic_variables[col];
+    known_solution[col] = 1;//random.fraction();
+    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
+  }
 
   if (num_ix>2) {
     col = 12;
@@ -270,10 +273,14 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
     printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
   }
 
-  GetBasisSolvesFormRHS(lp, basic_variables, known_solution, rhs);
-  highs_status = highs.getBasisSolve(rhs, solution);
+  GetBasisSolvesFormRHS(lp, basic_variables, known_solution, rhs, transpose);
+  if (transpose) {
+    highs_status = highs.getBasisTransposeSolve(rhs, solution);
+  } else {
+    highs_status = highs.getBasisSolve(rhs, solution);
+  }
   REQUIRE(highs_status==HighsStatus::OK);
-  residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+  residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, transpose);
   max_residual_norm = std::max(residual_norm, max_residual_norm);
   //  if (residual_norm > 1e-8)
   printf("getBasisSolve(): residual_norm = %g\n", residual_norm);
@@ -290,7 +297,6 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   printf("\n!! Test set 0.5: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
   
   max_k = min(numRow, 9);
-  /*
   k = 0;
   max_residual_norm=0;
   for (;;) {
@@ -311,7 +317,6 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   }
   printf("\n!! Test set 1: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
   
-  */
   k = 0;
   max_residual_norm=0;
   for (;;) {
@@ -351,7 +356,6 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
     
 
-  /*
   k = 0;
   max_residual_norm=0;
   for (;;) {
@@ -368,7 +372,6 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   }
   printf("\n!! Test set 4: max_residual_norm = %11.4g!!\n\n", max_residual_norm);
 
-  */
   k = 0;
   max_residual_norm=0;
   max_k = min(numCol, 9);
