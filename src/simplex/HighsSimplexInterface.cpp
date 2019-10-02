@@ -923,9 +923,10 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
 
 // Solve (transposed) system involving the basis matrix
 
-HighsStatus HighsSimplexInterface::basisSolve(
-					      const vector<double>& rhs,
-					      double* solution, int num_nz, int* nz_indices,
+HighsStatus HighsSimplexInterface::basisSolve(const vector<double>& rhs,
+					      double* solution,
+					      int* solution_num_nz,
+					      int* solution_nz_indices,
 					      bool transpose) {
   HVector solve_vector;
   int numRow = highs_model_object.simplex_lp_.numRow_;
@@ -963,8 +964,14 @@ HighsStatus HighsSimplexInterface::basisSolve(
   }
   solve_vector.count = rhs_num_nz;
   //  printf("RHS has %d nonzeros\n", rhs_num_nz);
-  // Get hist_dsty from analysis during simplex solve
-  double hist_dsty=0.5;
+  //
+  // Note that solve_vector.count is just used to determine whether
+  // hyper-sparse solves should be used. The indices of the nonzeros
+  // in the solution are always accumulated. There's no switch (such
+  // as setting solve_vector.count = numRow+1) to not do this.
+  //
+  // Get hist_dsty from analysis during simplex solve.
+  double hist_dsty = 1;
   if (transpose) {
     highs_model_object.factor_.btran(solve_vector, hist_dsty);
   } else {
@@ -972,7 +979,7 @@ HighsStatus HighsSimplexInterface::basisSolve(
   }
   //  printf("After solve: solve_vector.count = %d\n", solve_vector.count);
   // Extract the solution
-  if (nz_indices == NULL) {
+  if (solution_nz_indices == NULL) {
     // Nonzeros in the solution not required
     if (solve_vector.count > numRow) {
       // Solution nonzeros not known
@@ -990,9 +997,32 @@ HighsStatus HighsSimplexInterface::basisSolve(
       }
     }
   } else {
-    printf("Extraction of nonzeros in HighsSimplexInterface::basisSolve is not implemented\n");
-    num_nz = -1;
-    return HighsStatus::Error;
+    // Nonzeros in the solution are required
+    if (solve_vector.count > numRow) {
+      // Solution nonzeros not known
+      solution_num_nz = 0;
+      for (int row = 0; row < numRow; row++) {
+	solution[row] = 0;
+	if (solve_vector.array[row]) {
+	  solution[row] = solve_vector.array[row];
+	  solution_nz_indices[*solution_num_nz++] = row;
+	  //	  printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d\n", row, solution[row], solution_num_nz-1);
+	}
+      }  
+    } else {
+      // Solution nonzeros are known
+      for (int row = 0; row < numRow; row++) solution[row] = 0;
+      for (int ix = 0; ix < solve_vector.count; ix++) {
+	int row = solve_vector.index[ix];
+	solution[row] = solve_vector.array[row];
+	solution_nz_indices[ix] = row;
+	//	printf("Solution[%2d] = solve_vector.array[row] = %11.4g from index %2d\n", row, solution[row], ix);
+      }
+      if (solution_num_nz == NULL) {
+	printf("STRANGE: solution_num_nz == NULL and about to assign a value to it\n");
+      }
+      *solution_num_nz = solve_vector.count;
+    }
   }
   // Scale the solution
   if (transpose) {

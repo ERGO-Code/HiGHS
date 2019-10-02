@@ -186,7 +186,7 @@ class Highs {
   HighsStatus getBasisInverseRow(
 				 const int row,             //!< Index of row required
 				 double* basis_inverse_row, //!< Row required
-				 int num_nz = -1,           //!< Number of nonzeros
+				 int* num_nz = NULL,        //!< Number of nonzeros
 				 int* nz_indices = NULL     //!< Indices of nonzeros
 				 );  
 
@@ -196,7 +196,7 @@ class Highs {
   HighsStatus getBasisInverseCol(
 				 const int col,             //!< Index of column required
 				 double* basis_inverse_col, //!< Column required
-				 int num_nz = -1,           //!< Number of nonzeros
+				 int* num_nz = NULL,        //!< Number of nonzeros
 				 int* nz_indices = NULL     //!< Indices of nonzeros
 );
 
@@ -206,7 +206,7 @@ class Highs {
   HighsStatus getBasisSolve(
 			    const double* rhs,     //!< RHS \f$mathbf{b}\f$ 
 			    double* solution,      //!< Solution  \f$mathbf{x}\f$ 
-			    int num_nz = -1,       //!< Number of nonzeros
+			    int* num_nz = NULL,    //!< Number of nonzeros
 			    int* nz_indices = NULL //!< Indices of nonzeros
 			    );
 
@@ -216,7 +216,7 @@ class Highs {
   HighsStatus getBasisTransposeSolve(
 				     const double* rhs,     //!< RHS \f$mathbf{b}\f$ 
 				     double* solution,      //!< Solution  \f$mathbf{x}\f$ 
-				     int num_nz = -1,       //!< Number of nonzeros
+				     int* num_nz = NULL,    //!< Number of nonzeros
 				     int* nz_indices = NULL //!< Indices of nonzeros
 				     );
 
@@ -226,7 +226,7 @@ class Highs {
   HighsStatus getReducedColumn(
 			       const int col,         //!< Index of column required
 			       double* solution,      //!< Column required
-			       int num_nz = -1,       //!< Number of nonzeros
+			       int* num_nz = NULL,    //!< Number of nonzeros
 			       int* nz_indices = NULL //!< Indices of nonzeros
 			       );
 

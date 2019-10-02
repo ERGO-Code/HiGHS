@@ -189,9 +189,9 @@ class HighsSimplexInterface {
 
   HighsStatus basisSolve(
 			 const vector<double>& rhs,
-			 double* basis_inverse_row,
-			 int num_nz,
-			 int* nz_indices,
+			 double* solution,
+			 int* solution_num_nz,
+			 int* solution_nz_indices,
 			 bool transpose=false
 			 );
 

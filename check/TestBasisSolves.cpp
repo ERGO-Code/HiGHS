@@ -32,6 +32,33 @@ std::string GetBasisSolvesCurrentWorkingDir(void) {
   return "";
 }
 
+bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution, int* solution_num_nz, int* solution_nz_indices) {
+  double* solution = (double*)malloc(sizeof(double) * numRow);
+  if (solution_num_nz == NULL) return true;
+  bool solution_nz_ok = true;
+  for (int row=0; row<numRow; row++) solution[row] = pass_solution[row];
+  // Check that the indexed entries are nonzero
+  for (int ix=0; ix < *solution_num_nz; ix++) {
+    int row = solution_nz_indices[ix];
+    if (!solution[row]) {
+      printf("SolutionNzOk: Indexed entry solution[%2d] = %11.4g\n", row, solution[row]);
+      solution_nz_ok = false;
+    } else {
+      solution[row] = 0;
+    }
+  }
+  // Solution should now be zero
+  for (int row=0; row<numRow; row++) {
+    if (solution[row]) {
+      printf("SolutionNzOk: Non-indexed entry solution[%2d] = %11.4g\n", row, solution[row]);
+      solution_nz_ok = false;
+    }
+  }
+  delete solution;
+  return solution_nz_ok;
+  
+  
+}
 double GetBasisSolvesCheckSolution(HighsLp& lp, int* basic_variables, double* rhs, double* solution, const bool transpose=false) {
   const double residual_tolerance = 1e-8;
   double residual_norm = 0;
@@ -126,9 +153,9 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   std::string filename;
   filename = dir + "/../../check/instances/chip.mps";
   //  filename = dir + "/../../check/instances/blending.mps";
-    filename = dir + "/../../check/instances/avgas.mps";
-        filename = dir + "/../../check/instances/adlittle.mps";
-	//        filename = dir + "/../../check/instances/25fv47.mps";
+  filename = dir + "/../../check/instances/avgas.mps";
+  filename = dir + "/../../check/instances/adlittle.mps";
+  //  filename = dir + "/../../check/instances/25fv47.mps";
 
   //For debugging
 
@@ -140,6 +167,8 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   double* rhs;
   double* known_solution;
   double* solution;
+  int solution_num_nz;
+  int* solution_nz_indices;
 
   HighsStatus highs_status;
 
@@ -178,6 +207,7 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   basic_variables = (int*)malloc(sizeof(int) * numRow);
   known_solution = (double*)malloc(sizeof(double) * numRow);
   solution = (double*)malloc(sizeof(double) * numRow);
+  solution_nz_indices = (int*)malloc(sizeof(int) * numRow);
   rhs = (double*)malloc(sizeof(double) * numRow);
 
   highs_status = highs.getBasicVariables(basic_variables);
@@ -229,20 +259,20 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   int col;
   col = 6;
   basic_col = basic_variables[col];
-  known_solution[col] = 1;//random.fraction();
+  known_solution[col] = random.fraction();
   //  printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
 
   if (num_ix>1) {
     col = 15;
     basic_col = basic_variables[col];
-    known_solution[col] = 1;//random.fraction();
+    known_solution[col] = random.fraction();
     //    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
   }
 
   if (num_ix>2) {
     col = 12;
     basic_col = basic_variables[col];
-    known_solution[col] = 1;//random.fraction();
+    known_solution[col] = random.fraction();
     //    printf("Known solution col %2d is basic_col %2d\n", col, basic_col);
   }
 
@@ -279,8 +309,10 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
       for (int ix=0; ix<numRow; ix++) rhs[ix]=0;
       for (int el=lp.Astart_[basic_col]; el<lp.Astart_[basic_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
 
-      highs_status = highs.getBasisSolve(rhs, solution);
+      highs_status = highs.getBasisSolve(rhs, solution, &solution_num_nz, solution_nz_indices);
       REQUIRE(highs_status==HighsStatus::OK);
+      bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution, &solution_num_nz, solution_nz_indices);
+      REQUIRE(solution_nz_ok == true);
       residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
       if (residual_norm > residual_norm_tolerance)
@@ -297,8 +329,10 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   for (;;) {
     check_row = k;
     // Determine row check_row of B^{-1}
-    highs_status = highs.getBasisInverseRow(check_row, solution);
+    highs_status = highs.getBasisInverseRow(check_row, solution, &solution_num_nz, solution_nz_indices);
     REQUIRE(highs_status==HighsStatus::OK);
+    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution, &solution_num_nz, solution_nz_indices);
+    REQUIRE(solution_nz_ok == true);
     // Check solution
     // Set up RHS as e_{check_row}
     for (int row=0; row<numRow; row++) rhs[row]=0;
@@ -317,8 +351,10 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   for (;;) {
     check_col = k;
     // Determine col check_col of B^{-1}
-    highs_status = highs.getBasisInverseCol(check_col, solution);
+    highs_status = highs.getBasisInverseCol(check_col, solution, &solution_num_nz, solution_nz_indices);
     REQUIRE(highs_status==HighsStatus::OK);
+    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution, &solution_num_nz, solution_nz_indices);
+    REQUIRE(solution_nz_ok == true);
     // Check solution
     // Set up RHS as e_{check_col}
     for (int row=0; row<numRow; row++) rhs[row]=0;

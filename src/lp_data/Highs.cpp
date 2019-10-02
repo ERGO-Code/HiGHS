@@ -479,7 +479,7 @@ HighsStatus Highs::getBasicVariables(int* basic_variables) {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, int num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, int* num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   int numRow = hmos_[0].lp_.numRow_;
   if (row < 0 || row >= numRow) {
@@ -500,7 +500,7 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, 
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, int num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, int* num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   int numRow = hmos_[0].lp_.numRow_;
   if (col < 0 || col >= numRow) {
@@ -521,7 +521,7 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, 
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int* num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisSolve");
@@ -536,7 +536,7 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int num_n
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs, double* solution, int num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs, double* solution, int* num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisTransposeSolve");
@@ -551,7 +551,7 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs, double* solution, 
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getReducedColumn(const int col, double* solution, int num_nz, int* nz_indices) {
+HighsStatus Highs::getReducedColumn(const int col, double* solution, int* num_nz, int* nz_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (col < 0 || col >= hmos_[0].lp_.numCol_) {
     HighsLogMessage(HighsMessageType::ERROR, "Column index %d out of range [0, %d] in getReducedColumn",
