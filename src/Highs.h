@@ -153,15 +153,15 @@ class Highs {
   const HighsBasis& getBasis() const;
 
   /**
+   * @brief Returns the current status of the (first?) HighsModelObject
+   */
+  HighsModelStatus getModelStatus() const;
+
+  /**
    * @brief Returns the (dual) objective function value for the LP of
    * the (first?) HighsModelObject
    */
   double getObjectiveValue() const;
-
-  /**
-   * @brief Returns the current status of the (first?) HighsModelObject
-   */
-  HighsModelStatus getModelStatus() const;
 
   /**
    * @brief Returns the number of simplex iterations for the LP of the
@@ -173,9 +173,9 @@ class Highs {
   /**
    * @brief Gets the basic variables in the order corresponding to
    * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
-   * getBasisTransposeSolve and getReducedColumn. As required by SCIP,
-   * non-negative entries are indices of columns, and negative entries
-   * are -(row_index+1).
+   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
+   * required by SCIP, non-negative entries are indices of columns,
+   * and negative entries are -(row_index+1).
    */
   HighsStatus getBasicVariables(
 				int* basic_variables  //!< Basic variables
@@ -184,50 +184,60 @@ class Highs {
    * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseRow(
-				 const int row,             //!< Index of row required
-				 double* basis_inverse_row, //!< Row required
-				 int* num_nz = NULL,        //!< Number of nonzeros
-				 int* nz_indices = NULL     //!< Indices of nonzeros
+				 const int row,          //!< Index of row required
+				 double* row_vector,     //!< Row required
+				 int* row_num_nz = NULL, //!< Number of nonzeros
+				 int* row_indices = NULL //!< Indices of nonzeros
 				 );  
 
   /**
    * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
    */
   HighsStatus getBasisInverseCol(
-				 const int col,             //!< Index of column required
-				 double* basis_inverse_col, //!< Column required
-				 int* num_nz = NULL,        //!< Number of nonzeros
-				 int* nz_indices = NULL     //!< Indices of nonzeros
+				 const int col,          //!< Index of column required
+				 double* col_vector,     //!< Column required
+				 int* col_num_nz = NULL, //!< Number of nonzeros
+				 int* col_indices = NULL //!< Indices of nonzeros
 );
 
   /**
-   * @brief Solves \f$B\mathbf{x}=\mathbf{b}\f$ for a given vector \mathbf{b}\f$
+   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
    */
   HighsStatus getBasisSolve(
-			    const double* rhs,     //!< RHS \f$mathbf{b}\f$ 
-			    double* solution,      //!< Solution  \f$mathbf{x}\f$ 
-			    int* num_nz = NULL,    //!< Number of nonzeros
-			    int* nz_indices = NULL //!< Indices of nonzeros
+			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
+			    int* solution_num_nz = NULL, //!< Number of nonzeros
+			    int* solution_indices = NULL //!< Indices of nonzeros
 			    );
 
   /**
-   * @brief Solves \f$B^{-1}\mathbf{x}=\mathbf{b}\f$ for a given vector \mathbf{b}\f$
+   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
    */
   HighsStatus getBasisTransposeSolve(
-				     const double* rhs,     //!< RHS \f$mathbf{b}\f$ 
-				     double* solution,      //!< Solution  \f$mathbf{x}\f$ 
-				     int* num_nz = NULL,    //!< Number of nonzeros
-				     int* nz_indices = NULL //!< Indices of nonzeros
+				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
+				     int* solution_nz = NULL,     //!< Number of nonzeros
+				     int* solution_indices = NULL //!< Indices of nonzeros
 				     );
 
   /**
-   * @brief Solves \f$B^{-1}\mathbf{x}=\mathbf{a_i}\f$
+   * @brief Forms a row of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedRow(
+			       const int row,          //!< Index of row required
+			       double* row_vector,     //!< Row required
+			       int* row_num_nz = NULL, //!< Number of nonzeros
+			       int* row_indices = NULL //!< Indices of nonzeros
+			       );
+
+  /**
+   * @brief Forms a column of \f$B^{-1}A\f$
    */
   HighsStatus getReducedColumn(
-			       const int col,         //!< Index of column required
-			       double* solution,      //!< Column required
-			       int* num_nz = NULL,    //!< Number of nonzeros
-			       int* nz_indices = NULL //!< Indices of nonzeros
+			       const int col,          //!< Index of column required
+			       double* col_vector,     //!< Column required
+			       int* col_num_nz = NULL, //!< Number of nonzeros
+			       int* col_indices = NULL //!< Indices of nonzeros
 			       );
 
   /**

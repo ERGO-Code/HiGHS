@@ -435,6 +435,11 @@ const HighsSolution& Highs::getSolution() const { return solution_; }
 
 const HighsBasis& Highs::getBasis() const { return basis_; }
 
+HighsModelStatus Highs::getModelStatus() const {
+  if (hmos_.size() == 0) return HighsModelStatus::NOTSET;
+  return hmos_[0].model_status_;
+}
+
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
     return hmos_[0].simplex_info_.dual_objective_value;
@@ -443,11 +448,6 @@ double Highs::getObjectiveValue() const {
     // todo: error/warning message
   }
   return 0;
-}
-
-HighsModelStatus Highs::getModelStatus() const {
-  if (hmos_.size() == 0) return HighsModelStatus::NOTSET;
-  return hmos_[0].model_status_;
 }
 
 int Highs::getIterationCount() const {
@@ -468,7 +468,7 @@ HighsStatus Highs::getBasicVariables(int* basic_variables) {
 		    numRow, hmos_[0].simplex_lp_.numRow_, numRow-hmos_[0].simplex_lp_.numRow_);
     return HighsStatus::Error;
   }
-  for (int row=0; row<numRow; row++) {
+  for (int row = 0; row<numRow; row++) {
     int var = hmos_[0].simplex_basis_.basicIndex_[row];
     if (var < numCol) {
       basic_variables[row] = var;
@@ -479,7 +479,8 @@ HighsStatus Highs::getBasicVariables(int* basic_variables) {
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, int* num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisInverseRow(const int row,
+				      double* row_vector, int* row_num_nz, int* row_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   int numRow = hmos_[0].lp_.numRow_;
   if (row < 0 || row >= numRow) {
@@ -496,11 +497,12 @@ HighsStatus Highs::getBasisInverseRow(const int row, double* basis_inverse_row, 
   rhs.assign(numRow, 0);
   rhs[row] = 1;
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, basis_inverse_row, num_nz, nz_indices, true);
+  simplex_interface.basisSolve(rhs, row_vector, row_num_nz, row_indices, true);
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, int* num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisInverseCol(const int col,
+				      double* col_vector, int* col_num_nz, int* col_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   int numRow = hmos_[0].lp_.numRow_;
   if (col < 0 || col >= numRow) {
@@ -517,11 +519,12 @@ HighsStatus Highs::getBasisInverseCol(const int col, double* basis_inverse_col, 
   rhs.assign(numRow, 0);
   rhs[col] = 1;
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, basis_inverse_col, num_nz, nz_indices, false);
+  simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices, false);
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int* num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisSolve(const double* Xrhs,
+				 double* solution_vector, int* solution_num_nz, int* solution_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisSolve");
@@ -530,13 +533,14 @@ HighsStatus Highs::getBasisSolve(const double* Xrhs, double* solution, int* num_
   int numRow = hmos_[0].lp_.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
-  for (int row=0; row<numRow; row++) rhs[row]=Xrhs[row];
+  for (int row = 0; row<numRow; row++) rhs[row]=Xrhs[row];
    HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, solution, num_nz, nz_indices, false);
+  simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz, solution_indices, false);
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs, double* solution, int* num_nz, int* nz_indices) {
+HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs,
+					  double* solution_vector, int* solution_num_nz, int* solution_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (!hmos_[0].simplex_lp_status_.has_invert) {
     HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getBasisTransposeSolve");
@@ -545,13 +549,54 @@ HighsStatus Highs::getBasisTransposeSolve(const double* Xrhs, double* solution, 
   int numRow = hmos_[0].lp_.numRow_;
   vector<double> rhs;
   rhs.assign(numRow, 0);
-  for (int row=0; row<numRow; row++) rhs[row]=Xrhs[row];
+  for (int row = 0; row<numRow; row++) rhs[row]=Xrhs[row];
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, solution, num_nz, nz_indices, true);
+  simplex_interface.basisSolve(rhs, solution_vector, solution_num_nz, solution_indices, true);
   return HighsStatus::OK;
 }
 
-HighsStatus Highs::getReducedColumn(const int col, double* solution, int* num_nz, int* nz_indices) {
+HighsStatus Highs::getReducedRow(const int row, double* row_vector, int* row_num_nz, int* row_indices) {
+  if (hmos_.size() == 0) return HighsStatus::Error;
+  if (row < 0 || row >= hmos_[0].lp_.numRow_) {
+    HighsLogMessage(HighsMessageType::ERROR, "Row index %d out of range [0, %d] in getReducedRow",
+		    row, hmos_[0].lp_.numRow_-1);
+    return HighsStatus::Error;
+  }
+  if (!hmos_[0].simplex_lp_status_.has_invert) {
+    HighsLogMessage(HighsMessageType::ERROR, "No invertible representation for getReducedRow");
+    return HighsStatus::Error;
+  }
+  HighsLp& lp = hmos_[0].lp_;
+  int numRow = lp.numRow_;
+  vector<double> rhs;
+  vector<double> col_vector;
+  vector<int> col_indices;
+  int col_num_nz;
+  rhs.assign(numRow, 0);
+  rhs[row] = 1;
+  col_vector.resize(numRow, 0);
+  col_indices.resize(numRow, 0);
+  HighsSimplexInterface simplex_interface(hmos_[0]);
+  // Form B^{-T}e_{row}
+  simplex_interface.basisSolve(rhs, &col_vector[0], &col_num_nz, &col_indices[0], true);
+  bool return_indices = row_num_nz != NULL;
+  if (return_indices) *row_num_nz = 0;
+  for (int col = 0; col < lp.numCol_; col++) {
+    double value = 0;
+    for (int el = lp.Astart_[col]; el < lp.Astart_[col+1]; el++) {
+      int row = lp.Aindex_[el];
+      value += lp.Avalue_[el]*col_vector[row];
+    }
+    row_vector[col] = 0;
+    if (fabs(value) > HIGHS_CONST_TINY) {
+      if (return_indices) row_indices[(*row_num_nz)++] = col;
+      row_vector[col] = value;
+    }
+  }
+  return HighsStatus::OK;
+}
+
+HighsStatus Highs::getReducedColumn(const int col, double* col_vector, int* col_num_nz, int* col_indices) {
   if (hmos_.size() == 0) return HighsStatus::Error;
   if (col < 0 || col >= hmos_[0].lp_.numCol_) {
     HighsLogMessage(HighsMessageType::ERROR, "Column index %d out of range [0, %d] in getReducedColumn",
@@ -568,7 +613,7 @@ HighsStatus Highs::getReducedColumn(const int col, double* solution, int* num_nz
   rhs.assign(numRow, 0);
   for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
   HighsSimplexInterface simplex_interface(hmos_[0]);
-  simplex_interface.basisSolve(rhs, solution, num_nz, nz_indices, false);
+  simplex_interface.basisSolve(rhs, col_vector, col_num_nz, col_indices, false);
   return HighsStatus::OK;
 }
 
@@ -628,6 +673,9 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   underDevelopmentLogMessage("addRows");
   HighsStatus return_status = HighsStatus::Error;
   assert(hmos_.size() > 0);
+  for (int row = 0; row<num_new_row; row++) {
+    printf("addRows: row %2d / %2d; [%11.4g, %11.4g]\n", row, num_new_row, lower_bounds[row], upper_bounds[row]);
+  }
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
 				    num_new_nz, starts, indices, values);

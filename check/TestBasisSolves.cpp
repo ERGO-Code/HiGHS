@@ -32,29 +32,29 @@ std::string GetBasisSolvesCurrentWorkingDir(void) {
   return "";
 }
 
-bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution, int* solution_num_nz, int* solution_nz_indices) {
-  double* solution = (double*)malloc(sizeof(double) * numRow);
+bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector, int* solution_num_nz, int* solution_indices) {
+  double* solution_vector = (double*)malloc(sizeof(double) * numRow);
   if (solution_num_nz == NULL) return true;
   bool solution_nz_ok = true;
-  for (int row=0; row<numRow; row++) solution[row] = pass_solution[row];
+  for (int row=0; row<numRow; row++) solution_vector[row] = pass_solution_vector[row];
   // Check that the indexed entries are nonzero
   for (int ix=0; ix < *solution_num_nz; ix++) {
-    int row = solution_nz_indices[ix];
-    if (!solution[row]) {
-      printf("SolutionNzOk: Indexed entry solution[%2d] = %11.4g\n", row, solution[row]);
+    int row = solution_indices[ix];
+    if (!solution_vector[row]) {
+      printf("SolutionNzOk: Indexed entry solution_vector[%2d] = %11.4g\n", row, solution_vector[row]);
       solution_nz_ok = false;
     } else {
-      solution[row] = 0;
+      solution_vector[row] = 0;
     }
   }
   // Solution should now be zero
   for (int row=0; row<numRow; row++) {
-    if (solution[row]) {
-      printf("SolutionNzOk: Non-indexed entry solution[%2d] = %11.4g\n", row, solution[row]);
+    if (solution_vector[row]) {
+      printf("SolutionNzOk: Non-indexed entry solution_vector[%2d] = %11.4g\n", row, solution_vector[row]);
       solution_nz_ok = false;
     }
   }
-  delete solution;
+  delete solution_vector;
   return solution_nz_ok;
   
   
@@ -166,28 +166,31 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   int* basic_variables;
   double* rhs;
   double* known_solution;
-  double* solution;
+  double* solution_vector;
   int solution_num_nz;
-  int* solution_nz_indices;
+  int* solution_indices;
 
   HighsStatus highs_status;
 
   highs_status = highs.getBasicVariables(basic_variables);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisInverseRow(0, solution);
+  highs_status = highs.getBasisInverseRow(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisInverseCol(0, solution);
+  highs_status = highs.getBasisInverseCol(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisSolve(rhs, solution);
+  highs_status = highs.getBasisSolve(rhs, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisTransposeSolve(rhs, solution);
+  highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getReducedColumn(0, solution);
+  highs_status = highs.getReducedRow(0, solution_vector);
+  REQUIRE(highs_status==HighsStatus::Error);
+
+  highs_status = highs.getReducedColumn(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
   highs_status = highs.initializeFromFile(filename);
@@ -206,26 +209,29 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   basic_variables = (int*)malloc(sizeof(int) * numRow);
   known_solution = (double*)malloc(sizeof(double) * numRow);
-  solution = (double*)malloc(sizeof(double) * numRow);
-  solution_nz_indices = (int*)malloc(sizeof(int) * numRow);
+  solution_vector = (double*)malloc(sizeof(double) * numRow);
+  solution_indices = (int*)malloc(sizeof(int) * numRow);
   rhs = (double*)malloc(sizeof(double) * numRow);
 
   highs_status = highs.getBasicVariables(basic_variables);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisInverseRow(check_row, solution);
+  highs_status = highs.getBasisInverseRow(check_row, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisInverseCol(0, solution);
+  highs_status = highs.getBasisInverseCol(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisSolve(rhs, solution);
+  highs_status = highs.getBasisSolve(rhs, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getBasisTransposeSolve(rhs, solution);
+  highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.getReducedColumn(0, solution);
+  highs_status = highs.getReducedRow(0, solution_vector);
+  REQUIRE(highs_status==HighsStatus::Error);
+
+  highs_status = highs.getReducedColumn(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
   highs_status = highs.run();
@@ -278,16 +284,16 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
 
   GetBasisSolvesFormRHS(lp, basic_variables, known_solution, rhs, transpose);
   if (transpose) {
-    highs_status = highs.getBasisTransposeSolve(rhs, solution);
+    highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
   } else {
-    highs_status = highs.getBasisSolve(rhs, solution);
+    highs_status = highs.getBasisSolve(rhs, solution_vector);
   }
   REQUIRE(highs_status==HighsStatus::OK);
-  residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, transpose);
+  residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, transpose);
   REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
   double solution_error_norm = 0;
   for (int ix=0; ix<numRow; ix++) {
-    double solution_error = fabs(known_solution[ix]-solution[ix]);
+    double solution_error = fabs(known_solution[ix]-solution_vector[ix]);
     if (solution_error > solution_error_tolerance) printf("Row %2d: |x-x^|_i = %11.4g\n", ix, solution_error);
     solution_error_norm += solution_error;
   }
@@ -309,11 +315,11 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
       for (int ix=0; ix<numRow; ix++) rhs[ix]=0;
       for (int el=lp.Astart_[basic_col]; el<lp.Astart_[basic_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
 
-      highs_status = highs.getBasisSolve(rhs, solution, &solution_num_nz, solution_nz_indices);
+      highs_status = highs.getBasisSolve(rhs, solution_vector, &solution_num_nz, solution_indices);
       REQUIRE(highs_status==HighsStatus::OK);
-      bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution, &solution_num_nz, solution_nz_indices);
+      bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution_vector, &solution_num_nz, solution_indices);
       REQUIRE(solution_nz_ok == true);
-      residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+      residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
       if (residual_norm > residual_norm_tolerance)
 	printf("getBasisSolve(%d): residual_norm = %g\n", k, residual_norm);
@@ -329,15 +335,15 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   for (;;) {
     check_row = k;
     // Determine row check_row of B^{-1}
-    highs_status = highs.getBasisInverseRow(check_row, solution, &solution_num_nz, solution_nz_indices);
+    highs_status = highs.getBasisInverseRow(check_row, solution_vector, &solution_num_nz, solution_indices);
     REQUIRE(highs_status==HighsStatus::OK);
-    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution, &solution_num_nz, solution_nz_indices);
+    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution_vector, &solution_num_nz, solution_indices);
     REQUIRE(solution_nz_ok == true);
     // Check solution
     // Set up RHS as e_{check_row}
     for (int row=0; row<numRow; row++) rhs[row]=0;
     rhs[check_row] = 1;
-    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, true);
+    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, true);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance)
       printf("getBasisInverseRow(%d): residual_norm = %g\n", k, residual_norm);
@@ -351,15 +357,15 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   for (;;) {
     check_col = k;
     // Determine col check_col of B^{-1}
-    highs_status = highs.getBasisInverseCol(check_col, solution, &solution_num_nz, solution_nz_indices);
+    highs_status = highs.getBasisInverseCol(check_col, solution_vector, &solution_num_nz, solution_indices);
     REQUIRE(highs_status==HighsStatus::OK);
-    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution, &solution_num_nz, solution_nz_indices);
+    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numRow, solution_vector, &solution_num_nz, solution_indices);
     REQUIRE(solution_nz_ok == true);
     // Check solution
     // Set up RHS as e_{check_col}
     for (int row=0; row<numRow; row++) rhs[row]=0;
     rhs[check_col] = 1;
-    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance)
       printf("getBasisInverseCol(%d): residual_norm = %g\n", k, residual_norm);
@@ -373,10 +379,10 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   max_residual_norm=0;
   for (;;) {
     for (int row=0; row<numRow; row++) rhs[row]=random.fraction();
-    highs_status = highs.getBasisSolve(rhs, solution);
+    highs_status = highs.getBasisSolve(rhs, solution_vector);
     REQUIRE(highs_status==HighsStatus::OK);
     // Check solution
-    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, false);
       max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance)
       printf("getBasisSolve(%d): residual_norm = %g\n", k, residual_norm);
@@ -386,15 +392,14 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   printf("Test 4: max_residual_norm = %11.4g (getBasisSolve)\n", max_residual_norm);
 
     
-
   k = 0;
   max_residual_norm=0;
   for (;;) {
     for (int row=0; row<numRow; row++) rhs[row]=random.fraction();
-    highs_status = highs.getBasisTransposeSolve(rhs, solution);
+    highs_status = highs.getBasisTransposeSolve(rhs, solution_vector);
     REQUIRE(highs_status==HighsStatus::OK);
     // Check solution
-    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, true);
+    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, true);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance)
       printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
@@ -403,23 +408,42 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   }
   printf("Test 5: max_residual_norm = %11.4g (getBasisTransposeSolve)\n", max_residual_norm);
 
+  if (numCol > numRow) {
+    solution_vector = (double*)malloc(sizeof(double) * numCol);
+    solution_indices = (int*)malloc(sizeof(int) * numCol);
+  }
+
+  k = 0;
+  max_residual_norm=0;
+  max_k = min(numRow, 9);
+  for (;;) {
+    check_row = k;
+    highs_status = highs.getReducedRow(check_row, solution_vector, &solution_num_nz, solution_indices);
+    REQUIRE(highs_status==HighsStatus::OK);
+    bool solution_nz_ok = GetBasisSolvesSolutionNzOk(numCol, solution_vector, &solution_num_nz, solution_indices);
+    REQUIRE(solution_nz_ok == true);
+    if (k<max_k) k++; else k*=2; if (k>=numRow) break;
+  }
+  printf("Test 6: max_residual_norm = %11.4g (getReducedRow)\n", max_residual_norm);
+
   k = 0;
   max_residual_norm=0;
   max_k = min(numCol, 9);
   for (;;) {
     check_col = k;
-    highs_status = highs.getReducedColumn(check_col, solution);
+    highs_status = highs.getReducedColumn(check_col, solution_vector, &solution_num_nz, solution_indices);
     REQUIRE(highs_status==HighsStatus::OK);
     // Check solution
     for (int row=0; row<numRow; row++) rhs[row]=0;
     for (int el=lp.Astart_[check_col]; el<lp.Astart_[check_col+1]; el++) rhs[lp.Aindex_[el]] = lp.Avalue_[el];
-    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution, false);
+    residual_norm = GetBasisSolvesCheckSolution(lp, basic_variables, rhs, solution_vector, false);
     max_residual_norm = std::max(residual_norm, max_residual_norm);
     if (residual_norm > residual_norm_tolerance)
       printf("getBasisTransposeSolve(%d): residual_norm = %g\n", k, residual_norm);
     REQUIRE(fabs(residual_norm) < residual_norm_tolerance);
     if (k<max_k) k++; else k*=2; if (k>=numCol) break;
   }
-  printf("Test 6: max_residual_norm = %11.4g (getReducedColumn)\n", max_residual_norm);
+  printf("Test 7: max_residual_norm = %11.4g (getReducedColumn)\n", max_residual_norm);
+
 }
     
