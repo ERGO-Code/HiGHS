@@ -104,19 +104,28 @@ void max_heapify(double* heap_v, int* heap_i, int i, int n) {
 }
 
 bool increasing_set_ok(const int* set, const int set_num_entries,
-                       const int set_entry_lower, const int set_entry_upper) {
+                       const int set_entry_lower, const int set_entry_upper,
+		       bool strict) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;
   int previous_entry;
   if (check_bounds) {
-    previous_entry = set_entry_lower;
+    if (strict) {
+      previous_entry = set_entry_lower-1;
+    } else {
+      previous_entry = set_entry_lower;
+    }
   } else {
     previous_entry = -HIGHS_CONST_I_INF;
   }
   for (int k = 0; k < set_num_entries; k++) {
     int entry = set[k];
-    if (entry < previous_entry) return false;
+    if (strict) {
+      if (entry <= previous_entry) return false;
+    } else {
+      if (entry < previous_entry) return false;
+    }
     if (check_bounds && entry > set_entry_upper) return false;
     previous_entry = entry;
   }
@@ -125,20 +134,34 @@ bool increasing_set_ok(const int* set, const int set_num_entries,
 
 bool increasing_set_ok(const double* set, const int set_num_entries,
                        const double set_entry_lower,
-                       const double set_entry_upper) {
+                       const double set_entry_upper,
+		       bool strict) {
   if (set_num_entries < 0) return false;
   if (set == NULL) return false;
   bool check_bounds = set_entry_lower <= set_entry_upper;
   double previous_entry;
   if (check_bounds) {
-    previous_entry = set_entry_lower;
+    if (strict) {
+      if (set_entry_lower<0) {
+	previous_entry = (1+HIGHS_CONST_TINY)*set_entry_lower;
+      } else if (set_entry_lower>0) {
+	previous_entry = (1-HIGHS_CONST_TINY)*set_entry_lower;
+      } else {
+	previous_entry = -HIGHS_CONST_TINY;
+      }
+    } else {
+      previous_entry = set_entry_lower;
+    }
   } else {
     previous_entry = -HIGHS_CONST_INF;
-    ;
   }
   for (int k = 0; k < set_num_entries; k++) {
     double entry = set[k];
-    if (entry < previous_entry) return false;
+    if (strict) {
+      if (entry <= previous_entry) return false;
+    } else {
+      if (entry < previous_entry) return false;
+    }
     if (check_bounds && entry > set_entry_upper) return false;
     previous_entry = entry;
   }

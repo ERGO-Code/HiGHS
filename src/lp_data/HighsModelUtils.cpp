@@ -282,7 +282,7 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   case HighsModelStatus::MODEL_ERROR:
     return HighsStatus::Error;
   case HighsModelStatus::MODEL_EMPTY:
-    return HighsStatus::Error;
+    return HighsStatus::OK;
   case HighsModelStatus::PRESOLVE_ERROR:
     return HighsStatus::Error;
   case HighsModelStatus::SOLVE_ERROR:

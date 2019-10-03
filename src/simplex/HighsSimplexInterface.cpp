@@ -477,20 +477,20 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
   if (from_k < 0 || to_k > lp.numCol_) return HighsStatus::Error;
   num_col = 0;
   num_nz = 0;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
   int out_from_col;
   int out_to_col;
   int in_from_col;
   int in_to_col = 0;
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
-  for (int k = from_k; k < to_k; k++) {
+  for (int k = from_k; k <= to_k; k++) {
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, out_from_col, out_to_col,
                   in_from_col, in_to_col, current_set_entry);
-    assert(out_to_col <= col_dim);
-    assert(in_to_col <= col_dim);
-    for (int col = out_from_col; col < out_to_col; col++) {
+    assert(out_to_col < col_dim);
+    assert(in_to_col < col_dim);
+    for (int col = out_from_col; col <= out_to_col; col++) {
       if (col_cost != NULL) col_cost[num_col] = lp.colCost_[col];
       if (col_lower != NULL) col_lower[num_col] = lp.colLower_[col];
       if (col_upper != NULL) col_upper[num_col] = lp.colUpper_[col];
@@ -499,13 +499,13 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
       num_col++;
     }
     if (col_matrix_index != NULL || col_matrix_value != NULL) {
-      for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col]; el++) {
+      for (int el = lp.Astart_[out_from_col]; el < lp.Astart_[out_to_col+1]; el++) {
 	if (col_matrix_index != NULL) col_matrix_index[num_nz] = lp.Aindex_[el];
 	if (col_matrix_value != NULL) col_matrix_value[num_nz] = lp.Avalue_[el];
 	num_nz++;
       }
     }
-    if (out_to_col == col_dim || in_to_col == col_dim) break;
+    if (out_to_col == col_dim-1 || in_to_col == col_dim-1) break;
   }
   return HighsStatus::OK;
 }
@@ -558,7 +558,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   if (from_k < 0 || to_k > lp.numRow_) return HighsStatus::Error;
   num_row = 0;
   num_nz = 0;
-  if (from_k >= to_k) return HighsStatus::OK;
+  if (from_k > to_k) return HighsStatus::OK;
   // "Out" means not in the set to be extrated
   // "In" means in the set to be extrated
   int out_from_row;
@@ -574,7 +574,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   if (!mask) {
     out_to_row = 0;
     current_set_entry = 0;
-    for (int k = from_k; k < to_k; k++) {
+    for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                     row_set, mask, row_mask, in_from_row, in_to_row,
                     out_from_row, out_to_row, current_set_entry);

@@ -1022,7 +1022,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
   if (col_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpVectors\n");
-    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
+    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1, true)) return  HighsStatus::Error;
   }
   // Initialise new_num_col in case none is removed due to from_k > to_k
   new_num_col = lp.numCol_;
@@ -1046,7 +1046,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
       // Account for the initial columns being kept
       new_num_col = delete_from_col;
     }
-    for (int col = keep_from_col; col < keep_to_col; col++) {
+    for (int col = keep_from_col; col <= keep_to_col; col++) {
       lp.colCost_[new_num_col] = lp.colCost_[col];
       lp.colLower_[new_num_col] = lp.colLower_[col];
       lp.colUpper_[new_num_col] = lp.colUpper_[col];
@@ -1072,7 +1072,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
   if (col_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteColsFromLpMatrix\n");
-    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1)) return  HighsStatus::Error;
+    if (!increasing_set_ok(col_set, num_set_entries, 0, lp.numCol_-1, true)) return  HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;
 
@@ -1165,7 +1165,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
   if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpVectors\n");
-    if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
+    if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1, true)) return  HighsStatus::Error;
   }
   // Initialise new_num_row in case none is removed due to from_k > to_k
   new_num_row = lp.numRow_;
@@ -1214,7 +1214,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
   if (row_set != NULL) {
     // For deletion by set it must be increasing
     printf("Calling increasing_set_ok from deleteRowsFromLpMatrix\n");
-    if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1)) return  HighsStatus::Error;
+    if (!increasing_set_ok(row_set, num_set_entries, 0, lp.numRow_-1, true)) return  HighsStatus::Error;
   }
   if (from_k > to_k) return HighsStatus::OK;
 
@@ -1682,8 +1682,14 @@ void reportLpRowVectors(const HighsLp& lp) {
 // Report the LP column-wise matrix
 void reportLpColMatrix(const HighsLp& lp) {
   if (lp.numCol_ <= 0) return;
-  reportMatrix("Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0],
-               &lp.Aindex_[0], &lp.Avalue_[0]);
+  if (lp.numRow_) {
+    // With postitive number of rows, can assume that there are index and value vectors to pass
+    reportMatrix("Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0],
+		 &lp.Aindex_[0], &lp.Avalue_[0]);
+  } else {
+    // With no rows, can's assume that there are index and value vectors to pass
+    reportMatrix("Column", lp.numCol_, lp.Astart_[lp.numCol_], &lp.Astart_[0], NULL, NULL);
+  }
 }
 
 void reportMatrix(const char* message, const int num_col, const int num_nz,
@@ -1871,13 +1877,13 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
                       "Index interval lower limit is %d < 0", from_ix);
       return HighsStatus::Error;
     }
-    if (to_ix > ix_dim) {
+    if (to_ix > ix_dim-1) {
       HighsLogMessage(HighsMessageType::ERROR,
-                      "Index interval upper limit is %d > %d", to_ix, ix_dim);
+                      "Index interval upper limit is %d > %d", to_ix, ix_dim-1);
       return HighsStatus::Error;
     }
-    from_k = from_ix;
-    to_k = to_ix;
+    from_k = 0;//from_ix;
+    to_k = 0;//to_ix;
   } else if (set) {
     // Changing by set: check the parameters and check that interval and mask
     // are false
@@ -1899,12 +1905,19 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
     to_k = num_set_entries-1;
     // Check that the values in the vector of integers are ascending
     int set_entry_upper = (int)ix_dim - 1;
+    int prev_set_entry = -1;
     for (int k = 0; k < num_set_entries; k++) {
       if (ix_set[k] < 0 || ix_set[k] > set_entry_upper) {
-	HighsLogMessage(HighsMessageType::ERROR, "Index set entry ix_set[%d] = %d is out of bounds [0, %d]\n",
+	HighsLogMessage(HighsMessageType::ERROR, "Index set entry ix_set[%d] = %d is out of bounds [0, %d]",
 			k, ix_set[k], set_entry_upper);
 	return HighsStatus::Error;
       }
+      if (ix_set[k] <= prev_set_entry) {
+	HighsLogMessage(HighsMessageType::ERROR, "Index set entry ix_set[%d] = %d is not greater than previous entry %d",
+			k, ix_set[k], prev_set_entry);
+	return HighsStatus::Error;
+      }
+      prev_set_entry = ix_set[k];
     }
   } else if (mask) {
     // Changing by mask: check the parameters and check that set and interval
@@ -1942,21 +1955,21 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
   if (interval) {
     out_from_ix = from_ix;
     out_to_ix = to_ix;
-    in_from_ix = to_ix;
+    in_from_ix = to_ix+1;
     in_to_ix = ix_dim-1;
   } else if (set) {
     out_from_ix = ix_set[current_set_entry];
-    out_to_ix = out_from_ix + 1;
+    out_to_ix = out_from_ix;//+1;
     current_set_entry++;
     int current_set_entry0 = current_set_entry;
     for (int set_entry = current_set_entry0; set_entry < num_set_entries;
          set_entry++) {
       int ix = ix_set[set_entry];
-      if (ix > out_to_ix) break;
+      if (ix > out_to_ix+1) break;
       out_to_ix = ix_set[current_set_entry];
       current_set_entry++;
     }
-    in_from_ix = out_to_ix;
+    in_from_ix = out_to_ix+1;
     if (current_set_entry < num_set_entries) {
       in_to_ix = ix_set[current_set_entry]-1;
     } else {
@@ -1964,19 +1977,19 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
       in_to_ix = ix_dim-1;
     }
   } else {
-    out_from_ix = in_to_ix;
-    out_to_ix = ix_dim;
+    out_from_ix = in_to_ix+1;
+    out_to_ix = ix_dim-1;
     for (int ix = in_to_ix; ix < ix_dim; ix++) {
       if (!ix_mask[ix]) {
-        out_to_ix = ix-1;
+        out_to_ix = ix;
         break;
       }
     }
-    in_from_ix = out_to_ix;
-    in_to_ix = ix_dim;
+    in_from_ix = out_to_ix+1;
+    in_to_ix = ix_dim-1;
     for (int ix = out_to_ix; ix < ix_dim; ix++) {
       if (ix_mask[ix]) {
-        in_to_ix = ix-1;
+        in_to_ix = ix;
         break;
       }
     }

@@ -53,11 +53,11 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   //  maxheapsort(&int_values[0], num_values);
 
   bool ok;
-  // Check that the values in the vector of integers are ascending
-  ok = increasing_set_ok(&double_values[0], num_values, 0, 1);
+  // Check that the values in the vector of doubles are ascending - can do strict test
+  ok = increasing_set_ok(&double_values[0], num_values, 0, 1, true);
   REQUIRE(ok == true);  
 
-  // Check that the values in the vector of integers are ascending
-  ok = increasing_set_ok(&int_values[0], num_values, 0, num_values);
+  // Check that the values in the vector of integers are ascending - maybe can't do strict test
+  ok = increasing_set_ok(&int_values[0], num_values, 0, num_values, false);
   REQUIRE(ok == true);  
 }

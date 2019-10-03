@@ -58,8 +58,7 @@ bool areLpColEqual(
   return true;		      
 }
 
-bool areLpRowEqual(
-		   const int num_row0,const double* rowLower0, const double* rowUpper0,
+bool areLpRowEqual(const int num_row0,const double* rowLower0, const double* rowUpper0,
 		   const int num_nz0, const int* ARstart0, const int* ARindex0, const double* ARvalue0,
 		   const int num_row1, const double* rowLower1, const double* rowUpper1,
 		   const int num_nz1, const int* ARstart1, const int* ARindex1, const double* ARvalue1,
@@ -126,9 +125,9 @@ bool areLpEqual(const HighsLp lp0, const HighsLp lp1, const double infinite_boun
     int lp1_num_nz = 0;
     return_bool = areLpRowEqual(
 				lp0.numRow_, &lp0.rowLower_[0], &lp0.rowUpper_[0],
-				0, NULL, NULL, NULL,
+				lp0_num_nz, NULL, NULL, NULL,
 				lp1.numRow_, &lp1.rowLower_[0], &lp1.rowUpper_[0],
-				0, NULL, NULL, NULL,
+				lp1_num_nz, NULL, NULL, NULL,
 				infinite_bound);
   }
   return return_bool;
@@ -147,12 +146,16 @@ void test_delete_keep(const int row_dim,
     printf("With index interval [%d, %d) in [%d, %d)\n", from_row, to_row, 0, row_dim);
   } else if (set) {
     printf("With index set\n");
-    for (int set = 0; set < num_set_entries; set++) printf(" %2d", set); printf("\n");
-    for (int set = 0; set < num_set_entries; set++) printf(" %2d", row_set[set]); printf("\n");
+    for (int set = 0; set < num_set_entries; set++) printf(" %2d", set);
+    printf("\n");
+    for (int set = 0; set < num_set_entries; set++) printf(" %2d", row_set[set]);
+    printf("\n");
   } else {
     printf("With index mask\n");
-    for (int row = 0; row < row_dim; row++) printf(" %2d", row); printf("\n");
-    for (int row = 0; row < row_dim; row++) printf(" %2d", row_mask[row]); printf("\n");
+    for (int row = 0; row < row_dim; row++) printf(" %2d", row);
+    printf("\n");
+    for (int row = 0; row < row_dim; row++) printf(" %2d", row_mask[row]);
+    printf("\n");
   }
   
   keep_from_row = 0;
@@ -196,7 +199,6 @@ bool test_all_delete_keep(int num_row) {
   int to_row = 7;
   int num_set_entries = 4;
   int row_set[] = {1, 4, 5, 8};
-  int current_set_entry;
   int row_mask[] = {0,1,0,0,1,1,0,0,1,0};
   for (int pass = 0; pass < 3; pass++) {
     printf("\nTesting delete-keep: pass %d\n", pass);
@@ -251,7 +253,6 @@ void messageReportMatrix(const char* message, const int num_col, const int num_n
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
-  /*
   HighsOptions options;
   HighsSetMessagelevel(ML_ALWAYS);
 
@@ -284,18 +285,18 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   bool return_bool;
   HighsStatus return_status;
+  HighsModelStatus model_status;
 
-  // Create an empty LP
+  // Create two empty LPs: one to be initialised as AVGAS by adding
+  // all the columns and rows separately, the other to be built by
+  // adding piecemeal.
   HighsLp avgas_lp;
-
-  // Create an empty LP
   HighsLp lp;
 
   Highs avgas_highs(options);
   return_status = avgas_highs.initializeLp(avgas_lp);
   //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
-  const HighsLp &reference_avgas = avgas_highs.getLp();
 
   return_bool = avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
@@ -308,13 +309,17 @@ TEST_CASE("LP-modification", "[highs_data]") {
   //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
 
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::NOTSET);
+
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::LpEmpty);
+  REQUIRE(return_status == HighsStatus::OK);
 
-  const HighsLp &reference_lp = highs.getLp();
-  //  messageReportLp("Empty", reference_lp);
-  //  test_all_delete_keep(num_row);
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::MODEL_EMPTY);
+
+  test_all_delete_keep(num_row);
 
   // Adding column vectors and matrix to model with no rows returns an error
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
@@ -324,21 +329,37 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
-  //  messageReportLp("With columns but no rows", reference_lp);
+  return_status = highs.writeToFile("");
+  HighsStatusReport("highs.writeToFile(\"\")", return_status);
+  REQUIRE(return_status == HighsStatus::Warning);
 
   // Adding row vectors and matrix to model with columns returns OK
   return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
-  //  messageReportLp("With columns and rows", reference_lp);
+  return_status = highs.writeToFile("");
+  HighsStatusReport("highs.writeToFile(\"\")", return_status);
+  REQUIRE(return_status == HighsStatus::Warning);
 
-  return_bool = areLpEqual(reference_avgas, reference_lp, options.infinite_bound);
+  //  const HighsLp &reference_avgas = avgas_highs.getLp();
+  //  const HighsLp &reference_lp = highs.getLp();
+
+  return_bool = areLpEqual(highs.getLp(), avgas_highs.getLp(), options.infinite_bound);
   REQUIRE(return_bool);
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::Optimal);
-  
+  REQUIRE(return_status == HighsStatus::OK);
+
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+
+  double avgas_optimal_objective_value;
+  avgas_optimal_objective_value = highs.getObjectiveValue();
+
+  double avgas_iteration_count;
+  avgas_iteration_count = highs.getObjectiveValue();
+
   // Getting columns from the LP is OK
   int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
   int col1357_col_set[] = {1, 3, 5, 7};
@@ -354,9 +375,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   double *col1357_value = (double *)malloc(sizeof(double) * num_col_nz);
 
     
-  return_bool = highs.getCols(3, 7, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
+  return_bool = highs.getCols(3, 6, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
-  REQUIRE(return_bool);
+  REQUIRE(return_bool==true);
 
   //  messageReportMatrix("Get by interval\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
@@ -377,7 +398,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  messageReportMatrix("Get by mask\nColumn", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   
- // Try to delete an empty range of cols: OK
+  // Try to delete an empty range of cols: OK
   return_bool = highs.deleteCols(0, -1);
   REQUIRE(return_bool);
 
@@ -390,16 +411,30 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  messageReportLp("After deleting columns 1, 3, 5, 7", reference_lp);
 
+  printf("After deleting columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 0);
+
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
-  //  messageReportLp("After restoring columns 1, 3, 5, 7", reference_lp);
+  printf("After restoring columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 0);
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::Optimal);
-  
+  REQUIRE(return_status == HighsStatus::OK);
+
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+
+  double optimal_objective_value;
+  optimal_objective_value = highs.getObjectiveValue();
+  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+
+  double iteration_count;
+  iteration_count = highs.getObjectiveValue();
+  REQUIRE(iteration_count == avgas_iteration_count);
+
+  /*
   // Delete all the columns: OK
   return_bool = highs.deleteCols(0, num_col);
   REQUIRE(return_bool);
