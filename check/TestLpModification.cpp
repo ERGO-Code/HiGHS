@@ -143,7 +143,7 @@ void test_delete_keep(const int row_dim,
   int keep_to_row;
   int current_set_entry;
   if (interval) {
-    printf("With index interval [%d, %d) in [%d, %d)\n", from_row, to_row, 0, row_dim);
+    printf("With index interval [%d, %d] in [%d, %d]\n", from_row, to_row, 0, row_dim-1);
   } else if (set) {
     printf("With index set\n");
     for (int set = 0; set < num_set_entries; set++) printf(" %2d", set);
@@ -160,21 +160,21 @@ void test_delete_keep(const int row_dim,
   
   keep_from_row = 0;
   if (interval) {
-    keep_to_row = from_row;
+    keep_to_row = from_row-1;
   } else if (set) {
     current_set_entry = 0;
-    keep_to_row = row_set[0];
+    keep_to_row = row_set[0]-1;
   } else {
     keep_to_row = row_dim;
     for (int row = 0; row < row_dim; row++) {
       if (row_mask[row]) {
-	keep_to_row = row;
+	keep_to_row = row-1;
 	break;	
       }
     }
   }
-  printf("Keep   [%2d, %2d)\n", 0, keep_to_row);
-  if (keep_to_row >= row_dim) return;
+  printf("Keep   [%2d, %2d]\n", 0, keep_to_row);
+  if (keep_to_row >= row_dim-1) return;
   for (int k = 0; k < row_dim; k++) {
     updateOutInIx(row_dim,
 		  interval, from_row, to_row,
@@ -183,8 +183,8 @@ void test_delete_keep(const int row_dim,
 		  delete_from_row, delete_to_row,
 		  keep_from_row, keep_to_row,
 		  current_set_entry);
-    printf("Delete [%2d, %2d); keep [%2d, %2d)\n", delete_from_row, delete_to_row, keep_from_row, keep_to_row);
-    if (delete_to_row == row_dim || keep_to_row == row_dim) break;
+    printf("Delete [%2d, %2d]; keep [%2d, %2d]\n", delete_from_row, delete_to_row, keep_from_row, keep_to_row);
+    if (delete_to_row >= row_dim-1 || keep_to_row >= row_dim-1) break;
   }
 }
 
@@ -196,22 +196,32 @@ bool test_all_delete_keep(int num_row) {
   int row_dim = num_row;
   
   int from_row = 3;
-  int to_row = 7;
+  int to_row = 6;
   int num_set_entries = 4;
   int row_set[] = {1, 4, 5, 8};
   int row_mask[] = {0,1,0,0,1,1,0,0,1,0};
-  for (int pass = 0; pass < 3; pass++) {
+  int save_from_row;
+  int save_row_set_0;
+  int save_row_mask_0;
+  
+  int to_pass = 2;//2
+  for (int pass = 0; pass <= to_pass; pass++) {
     printf("\nTesting delete-keep: pass %d\n", pass);
     if (pass == 1) {
+      // Mods to test LH limit behaviour
+      save_from_row = from_row;
+      save_row_set_0 = row_set[0];
+      save_row_mask_0 = row_mask[0];
       from_row = 0;
       row_set[0] = 0;
       row_mask[0] = 1;
     } else if (pass == 2) {
-      from_row = 3;
-      to_row = 10;
-      row_set[0] = 1;
+      // Mods to test RH limit behaviour
+      from_row = save_from_row;
+      to_row = 9;
+      row_set[0] = save_row_set_0;
       row_set[3] = 9;
-      row_mask[0] = 0;
+      row_mask[0] = save_row_mask_0;
       row_mask[9] = 1;
     }
     
@@ -417,7 +427,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
-  printf("After restoring columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 0);
+  printf("After restoring columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 2);
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);

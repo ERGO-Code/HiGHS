@@ -1031,7 +1031,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
   int delete_from_col;
   int delete_to_col;
   int keep_from_col;
-  int keep_to_col = 0;
+  int keep_to_col = -1;
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   new_num_col = 0;
@@ -1979,17 +1979,17 @@ void updateOutInIx(const int ix_dim, const bool interval, const int from_ix,
   } else {
     out_from_ix = in_to_ix+1;
     out_to_ix = ix_dim-1;
-    for (int ix = in_to_ix; ix < ix_dim; ix++) {
+    for (int ix = in_to_ix+1; ix < ix_dim; ix++) {
       if (!ix_mask[ix]) {
-        out_to_ix = ix;
+        out_to_ix = ix-1;
         break;
       }
     }
     in_from_ix = out_to_ix+1;
     in_to_ix = ix_dim-1;
-    for (int ix = out_to_ix; ix < ix_dim; ix++) {
+    for (int ix = out_to_ix+1; ix < ix_dim; ix++) {
       if (ix_mask[ix]) {
-        in_to_ix = ix;
+        in_to_ix = ix-1;
         break;
       }
     }
