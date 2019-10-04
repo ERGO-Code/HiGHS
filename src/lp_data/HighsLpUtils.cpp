@@ -1183,7 +1183,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
     updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                   row_set, mask, row_mask, delete_from_row, delete_to_row,
                   keep_from_row, keep_to_row, current_set_entry);
-    if (delete_to_row == row_dim) break;
+    if (delete_to_row >= row_dim-1) break;
     assert(delete_to_row < row_dim);
     if (k == from_k) {
       // Account for the initial rows being kept
@@ -1250,7 +1250,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
         new_index[row] = new_num_row;
         new_num_row++;
       }
-      if (keep_to_row == row_dim) break;
+      if (keep_to_row >= row_dim-1) break;
     }
   } else {
     for (int row = 0; row < lp.numRow_; row++) {
@@ -1552,7 +1552,6 @@ void reportLp(const HighsLp& lp, const int report_level) {
   if (report_level >= 1) {
     reportLpColVectors(lp);
     reportLpRowVectors(lp);
-    printf("reportLp(lp, %d)\n", report_level);
     if (report_level >= 2) reportLpColMatrix(lp);
   }
 }

@@ -308,7 +308,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   if (valid_simplex_lp) {
     appendRowsToLpVectors(simplex_lp, XnumNewRow, XrowLower, XrowUpper);
     call_status = assessBounds("Row", simplex_lp.numRow_, newNumRow, true, 0, newNumRow-1, false, 0,
-			       NULL, false, NULL, &simplex_lp.colLower_[0], &simplex_lp.colUpper_[0],
+			       NULL, false, NULL, &simplex_lp.rowLower_[0], &simplex_lp.rowUpper_[0],
 			       options.infinite_bound, normalise);
     return_status = worseStatus(call_status, return_status);
   }
@@ -420,7 +420,6 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
     //    scale.row_[row] = scale.row_[row + numDeleteRow];
     // ToDo Determine consequences for basis when deleting rows
-    simplex_lp_status.has_matrix_col_wise = false;
     simplex_lp_status.has_matrix_row_wise = false;
     simplex_lp_status.has_basis = false;
   }
@@ -563,7 +562,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   int out_from_row;
   int out_to_row;
   int in_from_row;
-  int in_to_row = 0;
+  int in_to_row = -1;
   int current_set_entry = 0;
   int row_dim = lp.numRow_;
   // Set up a row mask so that entries to be got from the column-wise
@@ -571,7 +570,7 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
   int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
 
   if (!mask) {
-    out_to_row = 0;
+    out_to_row = -1;
     current_set_entry = 0;
     for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
@@ -583,14 +582,14 @@ HighsStatus HighsSimplexInterface::getRowsGeneral(
           new_index[row] = -1;
         }
       }
-      for (int row = in_from_row; row < in_to_row; row++) {
+      for (int row = in_from_row; row <= in_to_row; row++) {
         new_index[row] = num_row;
         num_row++;
       }
-      for (int row = out_from_row; row < out_to_row; row++) {
+      for (int row = out_from_row; row <= out_to_row; row++) {
         new_index[row] = -1;
       }
-      if (out_to_row == row_dim) break;
+      if (out_to_row >= row_dim-1) break;
     }
   } else {
     for (int row = 0; row < lp.numRow_; row++) {

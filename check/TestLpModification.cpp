@@ -370,11 +370,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  double avgas_optimal_objective_value;
-  avgas_optimal_objective_value = highs.getObjectiveValue();
-
-  double avgas_iteration_count;
-  avgas_iteration_count = highs.getObjectiveValue();
+  double avgas_optimal_objective_value = highs.getObjectiveValue();
+  double avgas_iteration_count = highs.getObjectiveValue();
+  double optimal_objective_value;
+  double iteration_count;
 
   // Getting columns from the LP is OK
   int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
@@ -425,7 +424,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteCols(col1357_num_ix, col1357_col_set);
   REQUIRE(return_bool);
 
-  //  messageReportLp("After deleting columns 1, 3, 5, 7", reference_lp);
+  //  messageReportLp("After deleting columns 1, 3, 5, 7", highs.getLp());
 
   printf("After deleting columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 2);
 
@@ -442,40 +441,37 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  double optimal_objective_value;
   optimal_objective_value = highs.getObjectiveValue();
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
 
-  double iteration_count;
   iteration_count = highs.getObjectiveValue();
   REQUIRE(iteration_count == avgas_iteration_count);
 
-  /*
   // Delete all the columns: OK
-  return_bool = highs.deleteCols(0, num_col);
+  return_bool = highs.deleteCols(0, num_col-1);
   REQUIRE(return_bool);
-  messageReportLp("After deleting all columns", reference_lp);
+  //  messageReportLp("After deleting all columns", highs.getLp());
 
   // Delete all the rows: OK
-  return_bool = highs.deleteRows(0, num_row);
+  return_bool = highs.deleteRows(0, num_row-1);
   REQUIRE(return_bool);
-  messageReportLp("After deleting all rows", reference_lp);
+  //  messageReportLp("After deleting all rows", highs.getLp());
 
   // Adding column vectors to model with no rows returns OK
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
-  messageReportLp("With columns but no rows", reference_lp);
+  //  messageReportLp("With columns but no rows", highs.getLp());
 
   // Adding row vectors and matrix to model with columns returns OK
   return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
-   messageReportLp("With columns and rows", reference_lp);
-
-
+  //   messageReportLp("With columns and rows", highs.getLp());
 
   // Getting rows from the LP is OK
+  int from_row_ix = 0;
+  int to_row_ix = 3;
   int row0135789_row_set[] = {0, 1, 3, 5, 7, 8, 9};
   int row0135789_row_mask[] = {1, 1, 0, 1, 0, 1, 0, 1, 1, 1};
   int row0135789_num_ix = 7;
@@ -488,7 +484,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   double *row0135789_value = (double *)malloc(sizeof(double) * num_row_nz);
 
     
-  return_bool = highs.getRows(0, 4, row0135789_num_row, row0135789_lower, row0135789_upper,
+  return_bool = highs.getRows(from_row_ix, to_row_ix, row0135789_num_row, row0135789_lower, row0135789_upper,
 			      row0135789_num_nz, row0135789_start, row0135789_index, row0135789_value);
   REQUIRE(return_bool);
 
@@ -514,7 +510,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.deleteRows(row0135789_num_ix, row0135789_row_set);
   REQUIRE(return_bool);
 
-  messageReportLp("After deleting rows 0-1, 3, 5, 7-9", reference_lp);
+  messageReportLp("After deleting rows 0-1, 3, 5, 7-9", highs.getLp());
 
   int row012_row_set[] = {0, 1, 2};
   int row012_row_mask[] = {1, 1, 1};
@@ -535,9 +531,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   // Delete all the columns: OK
-  return_bool = highs.deleteCols(0, num_col);
+  return_bool = highs.deleteCols(0, num_col-1);
   REQUIRE(return_bool);
-  messageReportLp("After deleting all rows and columns", reference_lp);
+  messageReportLp("After deleting all rows and columns", highs.getLp());
 
   // Can't add rows with no columns
   return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
@@ -556,12 +552,22 @@ TEST_CASE("LP-modification", "[highs_data]") {
 			      row012_num_nz, row012_start, row012_index, row012_value);
   REQUIRE(return_bool);
 
-  messageReportLp("After restoring all rows", reference_lp);
+  messageReportLp("After restoring all rows", highs.getLp());
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::Optimal);
+  REQUIRE(return_status == HighsStatus::OK);
   
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+
+  optimal_objective_value = highs.getObjectiveValue();
+  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+
+  iteration_count = highs.getObjectiveValue();
+  REQUIRE(iteration_count == avgas_iteration_count);
+
+  /*
  // Try to delete an empty range of rows: OK
   return_bool = highs.deleteRows(0, -1);
   REQUIRE(return_bool);
@@ -600,7 +606,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
    
   return_bool = highs.deleteCols(col0123_col_mask);
   REQUIRE(return_bool);
-  messageReportLp("After deleting all rows and columns", reference_lp);
+  messageReportLp("After deleting all rows and columns", highs.getLp());
  
   // Adding row vectors to model with no columns returns OK
   return_bool = highs.addRows(row0135789_num_row, row0135789_lower, row0135789_upper,
@@ -610,19 +616,19 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.addRows(row012_num_row, row012_lower, row012_upper,
 			      0, row012_start, row012_index, row012_value);
   REQUIRE(return_bool);
-  messageReportLp("After restoring all rows", reference_lp);
+  messageReportLp("After restoring all rows", highs.getLp());
   
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
-  messageReportLp("After restoring columns 1, 3, 5, 7", reference_lp);
+  messageReportLp("After restoring columns 1, 3, 5, 7", highs.getLp());
   
   return_bool = highs.addCols(col0123_num_col, col0123_cost, col0123_lower, col0123_upper,
 			      col0123_num_nz, col0123_start, col0123_index, col0123_value);
   REQUIRE(return_bool);
 
-  messageReportLp("After restoring remaining 4 columns", reference_lp);
+  messageReportLp("After restoring remaining 4 columns", highs.getLp());
   
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
@@ -633,13 +639,13 @@ TEST_CASE("LP-modification", "[highs_data]") {
    
   return_bool = highs.deleteCols(0, num_col);
   REQUIRE(return_bool);
-  messageReportLp("After deleting all rows and columns", reference_lp);
+  messageReportLp("After deleting all rows and columns", highs.getLp());
  
   // Adding column vectors to model with no rows returns OK
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
-  //  messageReportLp("With columns but no rows", reference_lp);
+  //  messageReportLp("With columns but no rows", highs.getLp());
 
   // Adding row vectors and matrix to model with columns returns OK
   return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
@@ -705,7 +711,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.changeColsBounds(col1357_num_ix, col1357_col_set, col1357_lower, col1357_upper);
   REQUIRE(return_bool);
 
-  messageReportLp("After changing costs and bounds", reference_lp);
+  messageReportLp("After changing costs and bounds", highs.getLp());
 
   // Return the LP to its original state with a mask
   
@@ -724,10 +730,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.changeRowBounds(2, rowLower[2], rowUpper[2]);
   REQUIRE(return_bool);
 
-  return_bool = areLpEqual(reference_avgas, reference_lp, options.infinite_bound);
+  return_bool = areLpEqual(reference_avgas, highs.getLp(), options.infinite_bound);
   REQUIRE(return_bool);
 
-  messageReportLp("After restoring costs and bounds", reference_lp);
+  messageReportLp("After restoring costs and bounds", highs.getLp());
   printf("Finished successfully\n"); fflush(stdout);
   */
 }
