@@ -1036,7 +1036,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
   int col_dim = lp.numCol_;
   new_num_col = 0;
   bool have_names = lp.col_names_.size();
-  for (int k = from_k; k < to_k+1; k++) {
+  for (int k = from_k; k <= to_k; k++) {
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
@@ -1084,7 +1084,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
   int col_dim = lp.numCol_;
   int new_num_col = 0;
   int new_num_nz = 0;
-  for (int k = from_k; k < to_k+1; k++) {
+  for (int k = from_k; k <= to_k; k++) {
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
@@ -1106,20 +1106,20 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
     // all columns are deleted then something must be done to ensure
     // that the matrix isn't magially recreated by increasing the
     // number of columns from zero when there are no rows in the LP.
-    for (int col = delete_from_col; col < delete_to_col; col++)
+    for (int col = delete_from_col; col <= delete_to_col; col++)
       lp.Astart_[col] = 0;
-    for (int col = keep_from_col; col < keep_to_col; col++) {
+    for (int col = keep_from_col; col <= keep_to_col; col++) {
       lp.Astart_[new_num_col] =
           new_num_nz + lp.Astart_[col] - lp.Astart_[keep_from_col];
       new_num_col++;
     }
-    for (int el = lp.Astart_[keep_from_col]; el < lp.Astart_[keep_to_col];
+    for (int el = lp.Astart_[keep_from_col]; el < lp.Astart_[keep_to_col+1];
          el++) {
       lp.Aindex_[new_num_nz] = lp.Aindex_[el];
       lp.Avalue_[new_num_nz] = lp.Avalue_[el];
       new_num_nz++;
     }
-    if (keep_to_col == col_dim) break;
+    if (keep_to_col >= col_dim-1) break;
   }
   // Ensure that the start of the spurious last column is zeroed so
   // that it doesn't give a positive number of matrix entries if the
@@ -1179,7 +1179,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
   int row_dim = lp.numRow_;
   new_num_row = 0;
   bool have_names = lp.row_names_.size();
-  for (int k = from_k; k < to_k+1; k++) {
+  for (int k = from_k; k <= to_k; k++) {
     updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                   row_set, mask, row_mask, delete_from_row, delete_to_row,
                   keep_from_row, keep_to_row, current_set_entry);
@@ -1189,7 +1189,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
       // Account for the initial rows being kept
       new_num_row = delete_from_row;
     }
-    for (int row = keep_from_row; row < keep_to_row; row++) {
+    for (int row = keep_from_row; row <= keep_to_row; row++) {
       lp.rowLower_[new_num_row] = lp.rowLower_[row];
       lp.rowUpper_[new_num_row] = lp.rowUpper_[row];
       if (have_names) lp.row_names_[new_num_row] = lp.row_names_[row];
@@ -1232,7 +1232,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
   if (!mask) {
     keep_to_row = 0;
     current_set_entry = 0;
-    for (int k = from_k; k < to_k+1; k++) {
+    for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                     row_set, mask, row_mask, delete_from_row, delete_to_row,
                     keep_from_row, keep_to_row, current_set_entry);
@@ -1243,10 +1243,10 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
           new_num_row++;
         }
       }
-      for (int row = delete_from_row; row < delete_to_row; row++) {
+      for (int row = delete_from_row; row <= delete_to_row; row++) {
         new_index[row] = -1;
       }
-      for (int row = keep_from_row; row < keep_to_row; row++) {
+      for (int row = keep_from_row; row <= keep_to_row; row++) {
         new_index[row] = new_num_row;
         new_num_row++;
       }
@@ -1552,6 +1552,7 @@ void reportLp(const HighsLp& lp, const int report_level) {
   if (report_level >= 1) {
     reportLpColVectors(lp);
     reportLpRowVectors(lp);
+    printf("reportLp(lp, %d)\n", report_level);
     if (report_level >= 2) reportLpColMatrix(lp);
   }
 }
@@ -1882,8 +1883,8 @@ HighsStatus assessIntervalSetMask(const int ix_dim, const bool interval,
                       "Index interval upper limit is %d > %d", to_ix, ix_dim-1);
       return HighsStatus::Error;
     }
-    from_k = 0;//from_ix;
-    to_k = 0;//to_ix;
+    from_k = from_ix;
+    to_k = to_ix;
   } else if (set) {
     // Changing by set: check the parameters and check that interval and mask
     // are false

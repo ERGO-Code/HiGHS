@@ -179,7 +179,6 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
     //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++)
     //    scale.col_[col] = scale.col_[col + numDeleteCol];
     // ToDo Determine consequences for basis when deleting columns
-    simplex_lp_status.has_matrix_col_wise = false;
     simplex_lp_status.has_matrix_row_wise = false;
     simplex_lp_status.has_basis = false;
   }

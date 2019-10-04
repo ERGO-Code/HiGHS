@@ -263,7 +263,11 @@ void messageReportMatrix(const char* message, const int num_col, const int num_n
 
 // No commas in test case name.
 TEST_CASE("LP-modification", "[highs_data]") {
+
+  test_all_delete_keep(10);
+
   HighsOptions options;
+  options.message_level = ML_ALWAYS;
   HighsSetMessagelevel(ML_ALWAYS);
 
   Avgas avgas;
@@ -313,6 +317,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
+  return_status = avgas_highs.writeToFile("");
+  HighsStatusReport("avgas_highs.writeToFile(\"\")", return_status);
+  REQUIRE(return_status == HighsStatus::Warning);
+
 
   Highs highs(options);
   return_status = highs.initializeLp(lp);
@@ -328,8 +336,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::MODEL_EMPTY);
-
-  test_all_delete_keep(num_row);
 
   // Adding column vectors and matrix to model with no rows returns an error
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], num_col_nz, &Astart[0], &Aindex[0], &Avalue[0]);
@@ -421,7 +427,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   //  messageReportLp("After deleting columns 1, 3, 5, 7", reference_lp);
 
-  printf("After deleting columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 0);
+  printf("After deleting columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 2);
 
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
