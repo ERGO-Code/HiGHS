@@ -5,7 +5,7 @@
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear programming (LP) problems of the form
 
-    Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
+    Minimize c^Tx subject to L <= Ax <= U; l <= x <= u
 
 It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. It has no third-party dependencies.
 
