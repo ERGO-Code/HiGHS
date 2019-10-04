@@ -19,6 +19,7 @@
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsStatus.h"
 #include "presolve/Presolve.h"
 #include "simplex/SimplexConst.h"
 
@@ -186,7 +187,7 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, double& value);
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
-FilewriterRetcode reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
+HighsStatus reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
 void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
 void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);

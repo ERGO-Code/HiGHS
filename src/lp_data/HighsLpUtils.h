@@ -23,10 +23,8 @@
 class HighsLp;
 
 // Methods taking HighsLp as an argument
-HighsStatus checkLp(const HighsLp& lp);
-
 HighsStatus assessLp(HighsLp& lp, const HighsOptions& options,
-                     const bool normalise);
+                     const bool normalise = true);
 
 HighsStatus assessLpDimensions(const HighsLp& lp);
 
@@ -70,12 +68,6 @@ HighsStatus scaleLpRowBounds(HighsLp& lp, vector<double>& rowScale,
                              const int num_set_entries, const int* row_set,
                              const bool mask, const int* row_mask);
 
-HighsStatus addLpCols(HighsLp& lp, const int num_new_col,
-                      const double* XcolCost, const double* XcolLower,
-                      const double* XcolUpper, const int num_new_nz,
-                      const int* XAstart, const int* XAindex,
-                      const double* XAvalue, const HighsOptions& options);
-
 HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
                          const double* XcolCost, const double* XcolLower,
                          const double* XcolUpper, const int num_new_nz,
@@ -91,12 +83,6 @@ HighsStatus appendColsToLpVectors(HighsLp& lp, const int num_new_col,
 HighsStatus appendColsToLpMatrix(HighsLp& lp, const int num_new_col,
                                  const int num_new_nz, const int* XAstart,
                                  const int* XAindex, const double* XAvalue);
-
-HighsStatus addLpRows(HighsLp& lp, const int num_new_row,
-                      const double* XrowLower, const double* XrowUpper,
-                      const int num_new_nz, const int* XARstart,
-                      const int* XARindex, const double* XARvalue,
-                      const HighsOptions& options);
 
 HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
                          const double* XrowLower, const double* XrowUpper,
@@ -187,7 +173,7 @@ HighsStatus changeBounds(const char* type, double* lower, double* upper,
 /**
  * @brief Write out the LP as an MPS file
  */
-FilewriterRetcode writeLpAsMPS(const char* filename, const HighsLp& lp, const bool free = true);
+HighsStatus writeLpAsMPS(const char* filename, const HighsLp& lp, const bool free = true);
 
 /**
  * @brief Report the data of an LP

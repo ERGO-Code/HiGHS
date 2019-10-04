@@ -33,6 +33,7 @@ class Highs {
   Highs();
   Highs(HighsOptions& options) { options_ = options; }
 
+  //  virtual ~Highs() { delete &hmos_; }
   /**
    * @brief Get the number of columns in the LP of the (first?)
    * HighsModelObject
@@ -123,7 +124,8 @@ class Highs {
   /**
    * @brief writes the current model to a file
    */
-  HighsStatus writeToFile(const std::string filename  //!< the filename
+  HighsStatus writeToFile(
+			  const std::string filename  //!< the filename
   );
 
   /**
@@ -146,10 +148,14 @@ class Highs {
 
   /**
    * @brief Returns the HighsBasis instance for the LP of the
-   * (first?) HighsModelObject TODO: rename to HighsBasis when the
-   * current HighsBasis becomes SimplexBasis
+   * (first?) HighsModelObject
    */
   const HighsBasis& getBasis() const;
+
+  /**
+   * @brief Returns the current status of the (first?) HighsModelObject
+   */
+  HighsModelStatus getModelStatus() const;
 
   /**
    * @brief Returns the (dual) objective function value for the LP of
@@ -158,16 +164,81 @@ class Highs {
   double getObjectiveValue() const;
 
   /**
-   * @brief Returns the current status of the (first?) HighsModelObject
-   */
-  HighsModelStatus getModelStatus() const;
-
-  /**
    * @brief Returns the number of simplex iterations for the LP of the
    * (first?) HighsModelObject
    */
   int getIterationCount() const;
   // todo: getRangingInformation(..)
+
+  /**
+   * @brief Gets the basic variables in the order corresponding to
+   * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
+   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
+   * required by SCIP, non-negative entries are indices of columns,
+   * and negative entries are -(row_index+1).
+   */
+  HighsStatus getBasicVariables(
+				int* basic_variables  //!< Basic variables
+				);
+  /**
+   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseRow(
+				 const int row,          //!< Index of row required
+				 double* row_vector,     //!< Row required
+				 int* row_num_nz = NULL, //!< Number of nonzeros
+				 int* row_indices = NULL //!< Indices of nonzeros
+				 );  
+
+  /**
+   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseCol(
+				 const int col,          //!< Index of column required
+				 double* col_vector,     //!< Column required
+				 int* col_num_nz = NULL, //!< Number of nonzeros
+				 int* col_indices = NULL //!< Indices of nonzeros
+);
+
+  /**
+   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   */
+  HighsStatus getBasisSolve(
+			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
+			    int* solution_num_nz = NULL, //!< Number of nonzeros
+			    int* solution_indices = NULL //!< Indices of nonzeros
+			    );
+
+  /**
+   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   */
+  HighsStatus getBasisTransposeSolve(
+				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
+				     int* solution_nz = NULL,     //!< Number of nonzeros
+				     int* solution_indices = NULL //!< Indices of nonzeros
+				     );
+
+  /**
+   * @brief Forms a row of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedRow(
+			       const int row,          //!< Index of row required
+			       double* row_vector,     //!< Row required
+			       int* row_num_nz = NULL, //!< Number of nonzeros
+			       int* row_indices = NULL //!< Indices of nonzeros
+			       );
+
+  /**
+   * @brief Forms a column of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedColumn(
+			       const int col,          //!< Index of column required
+			       double* col_vector,     //!< Column required
+			       int* col_num_nz = NULL, //!< Number of nonzeros
+			       int* col_indices = NULL //!< Indices of nonzeros
+			       );
 
   /**
    * @brief Uses the HighsSolution passed to set the solution for the
@@ -530,6 +601,12 @@ class Highs {
 		  int* mask  //!< Full length array with 1 => delete; 0 => not
   );
 
+  
+  /**
+   * @brief Clear data associated with solving the model: basis, solution and internal data etc
+   */
+  HighsStatus clearSolver();
+
   // ipx (not implemented)
 
   // todo: Set warm/hot start methods
@@ -552,7 +629,7 @@ class Highs {
   // versions of the original LP. For instance different levels of presolve.
   std::vector<HighsModelObject> hmos_;
 
-  bool simplex_has_run_;
+  //  bool allow_presolve_;
 
   HighsStatus callRunSolver(HighsModelObject& model, int& iteration_count,
                             const string message);

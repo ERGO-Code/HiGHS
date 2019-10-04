@@ -1014,6 +1014,7 @@ void HFactor::buildRpRankDeficiency() {
     }
     printf("\n");
   }
+  free (ASM);
 }
 
 void HFactor::buildMarkSingC() {

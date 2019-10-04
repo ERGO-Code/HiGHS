@@ -32,7 +32,7 @@ void reportModelBoundSol(const bool columns, const int dim,
                          const std::vector<HighsBasisStatus>& status);
 bool namesWithSpaces(const int num_name, const std::vector<std::string>& names, const bool report = false);
 int maxNameLength(const int num_name, const std::vector<std::string>& names);
-int normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length);
+HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length);
 
 std::string highsModelStatusToString(HighsModelStatus model_status);
 

@@ -930,8 +930,8 @@ void FilereaderLp::writeToFileLineend() {
   this->linelength = 0;
 }
 
-FilewriterRetcode FilereaderLp::writeModelToFile(const char* filename,
-                                                 HighsLp& model) {
+HighsStatus FilereaderLp::writeModelToFile(const char* filename,
+					   HighsLp& model) {
   this->file = fopen(filename, "w");
 
   // write comment at the start of the file
@@ -1041,5 +1041,5 @@ FilewriterRetcode FilereaderLp::writeModelToFile(const char* filename,
   this->writeToFileLineend();
 
   fclose(this->file);
-  return FilewriterRetcode::OK;
+  return HighsStatus::OK;
 }

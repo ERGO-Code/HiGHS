@@ -14,6 +14,7 @@ set(TEST_SOURCES
     TestFilereader.cpp
     TestIO.cpp
     TestSort.cpp
+    TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestSetup.cpp

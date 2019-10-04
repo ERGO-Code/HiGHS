@@ -438,17 +438,17 @@ bool load_mpsLine(FILE* file, int& integerVar, int lmax, char* line, char* flag,
   return true;
 }
 
-FilewriterRetcode writeMPS(const char* filename,
-			   const int& numRow, const int& numCol,
-			   const int& numInt, const int& objSense, const double& objOffset,
-			   const vector<int>& Astart, const vector<int>& Aindex,
-			   const vector<double>& Avalue, const vector<double>& colCost,
-			   const vector<double>& colLower, const vector<double>& colUpper,
-			   const vector<double>& rowLower, const vector<double>& rowUpper,
-			   const vector<int>& integerColumn,
-			   const vector<std::string>& col_names,
-			   const vector<std::string>& row_names,
-			   const bool use_free_format) {
+HighsStatus writeMPS(const char* filename,
+		     const int& numRow, const int& numCol,
+		     const int& numInt, const int& objSense, const double& objOffset,
+		     const vector<int>& Astart, const vector<int>& Aindex,
+		     const vector<double>& Avalue, const vector<double>& colCost,
+		     const vector<double>& colLower, const vector<double>& colUpper,
+		     const vector<double>& rowLower, const vector<double>& rowUpper,
+		     const vector<int>& integerColumn,
+		     const vector<std::string>& col_names,
+		     const vector<std::string>& row_names,
+		     const bool use_free_format) {
   const bool write_zero_no_cost_columns = true;
   int num_zero_no_cost_columns = 0;
   int num_zero_no_cost_columns_in_bounds_section = 0;
@@ -457,10 +457,8 @@ FilewriterRetcode writeMPS(const char* filename,
 #endif
   FILE* file = fopen(filename, "w");
   if (file == 0) {
-#ifdef HiGHSDEV
-    printf("writeMPS: Not opened file OK\n");
-#endif
-    return FilewriterRetcode::FILE_NOT_OPENED;
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot open file %s", filename);
+    return HighsStatus::Error;
   }
 #ifdef HiGHSDEV
   printf("writeMPS: Opened file  OK\n");
@@ -470,9 +468,9 @@ FilewriterRetcode writeMPS(const char* filename,
   int max_row_name_length = maxNameLength(numRow, row_names);
   int max_name_length = std::max(max_col_name_length, max_row_name_length);
   if (!use_free_format && max_name_length > 8) {
-    printf("writeMPS: Cannot write fixed MPS with names of length (up to) %d\n",
+    HighsLogMessage(HighsMessageType::ERROR, "Cannot write fixed MPS with names of length (up to) %d",
            max_name_length);
-    return FilewriterRetcode::FAIL;
+    return HighsStatus::Error;
   }
   vector<int> r_ty;
   vector<double> rhs, ranges;
@@ -685,7 +683,7 @@ FilewriterRetcode writeMPS(const char* filename,
   }
   //#endif
   fclose(file);
-  return FilewriterRetcode::OK;
+  return HighsStatus::OK;
 }
 
 inline const char* BoolToString(bool b) { return b ? "True" : "False"; }
