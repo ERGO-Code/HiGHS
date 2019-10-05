@@ -531,31 +531,38 @@ public unsafe class HighsLpSolver
    // int Highs_getRowsByMask(void *highs, int[] mask, ref int num_row, 
    // double[] lower, double[] upper, ref int num_nz, int[] matrix_start, int[] matrix_index, double[] matrix_value);
 
-   public HighsStatus getBasicVariables(ref int[] basic_variables) {
+   public HighsStatus getBasicVariables(ref int[] basic_variables)
+   {
       return (HighsStatus)Highs_getBasicVariables(this.highs, basic_variables);
    }
 
-   public HighsStatus getBasisInverseRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices) {
+   public HighsStatus getBasisInverseRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices)
+   {
       return (HighsStatus)Highs_getBasisInverseRow(this.highs, row, row_vector, ref row_num_nz, row_indices);
    }
 
-   public HighsStatus getBasisInverseCol(int col, double[] col_vector, ref int col_num_nz, int[] col_indices) {
+   public HighsStatus getBasisInverseCol(int col, double[] col_vector, ref int col_num_nz, int[] col_indices)
+   {
       return (HighsStatus)Highs_getBasisInverseCol(this.highs, col, col_vector, ref col_num_nz, col_indices);
    }
 
-   public HighsStatus getBasisSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices) {
+   public HighsStatus getBasisSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices)
+   {
       return (HighsStatus)Highs_getBasisSolve(this.highs, rhs, solution_vector, ref solution_num_nz, solution_indices);
    }
 
-   public HighsStatus getBasisTransposeSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices) {
+   public HighsStatus getBasisTransposeSolve(double[] rhs, double[] solution_vector, ref int solution_num_nz, int[] solution_indices)
+   {
       return (HighsStatus)Highs_getBasisTransposeSolve(this.highs, rhs, solution_vector, ref solution_num_nz, solution_indices);
    }
 
-   public HighsStatus getReducedRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices) {
+   public HighsStatus getReducedRow(int row, double[] row_vector, ref int row_num_nz, int[] row_indices)
+   {
       return (HighsStatus)Highs_getReducedRow(this.highs, row, row_vector, ref row_num_nz, row_indices);
    }
 
-   public HighsStatus getReducedColumn(int col, double[] col_vector, ref int col_num_nz, int[] col_indices) {
+   public HighsStatus getReducedColumn(int col, double[] col_vector, ref int col_num_nz, int[] col_indices)
+   {
       return (HighsStatus)Highs_getReducedColumn(this.highs, col, col_vector, ref col_num_nz, col_indices);
    }
 }

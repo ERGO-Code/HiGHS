@@ -511,6 +511,7 @@ int Highs_getModelStatus(void* highs  //!< HiGHS object reference
 int Highs_getBasicVariables(void* highs,          //!< HiGHS object reference,
                             int* basic_variables  //!< Basic variables
 );
+
 /**
  * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
  */
