@@ -39,10 +39,12 @@ function Highs_call(model)
    solution = HighsSolution(Array{Cdouble, 1}(undef, n_col), Array{Cdouble, 1}(undef, n_col), Array{Cdouble, 1}(undef, n_row),  Array{Cdouble, 1}(undef, n_row))
    basis = HighsBasis(Array{Cint, 1}(undef, n_col), Array{Cint, 1}(undef, n_row)) 
 
-   status = ccall((:Highs_call, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}),
-   n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual, basis.colbasisstatus, basis.rowbasisstatus)
+   modelstatus = convert(Cint, 0)
 
-   return status, solution, basis
+   status = ccall((:Highs_call, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cint}),
+   n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual, basis.colbasisstatus, basis.rowbasisstatus, modelstatus)
+
+   return status, solution, basis, modelstatus
 end
 
 function Highs_create()

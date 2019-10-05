@@ -15,15 +15,28 @@ class Program {
 
       HighsModel model = new HighsModel(cc, cl, cu, rl, ru, astart, aindex, avalue);
 
-      HighsSolution sol = new HighsSolution(2, 2);
+      HighsLpSolver solver = new HighsLpSolver();
 
-      HighsBasis bas = new HighsBasis(2, 2);
-
-      int status = HighsLpSolver.call(model, ref sol, ref bas);
+      HighsStatus status = solver.loadModel(model);
+      status = solver.run();
+      HighsSolution sol = solver.getSolution();
+      HighsBasis bas = solver.getBasis();
+      HighsModelStatus modelStatus = solver.GetModelStatus();
+      
       Console.WriteLine("Status: " + status);
+      Console.WriteLine("Modelstatus: " + modelStatus);
    
+      for (int i=0; i<sol.rowvalue.Length; i++) {
+         Console.WriteLine("Activity for row " + i + " = " + sol.rowvalue[i]);
+      }
+      for (int i=0; i<sol.coldual.Length; i++) {
+         Console.WriteLine("Reduced cost x[" + i + "] = " + sol.coldual[i]);
+      }
+      for (int i=0; i<sol.rowdual.Length; i++) {
+         Console.WriteLine("Dual value for row " + i + " = " + sol.rowdual[i]);
+      }
       for (int i=0; i<sol.colvalue.Length; i++) {
-         Console.WriteLine("x" + i + " = " + sol.colvalue[i]);
+         Console.WriteLine("x" + i + " = " + sol.colvalue[i] + " is " + bas.colbasisstatus[i]);
       }
    }
 }
