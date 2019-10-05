@@ -174,7 +174,7 @@ int maxNameLength(const int num_name, const std::vector<std::string>& names) {
     return max_name_length;
 }
 
-int normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length) {
+HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length) {
   // Record the desired maximum name length
   int desired_max_name_length = max_name_length;
   // First look for empty names
@@ -205,8 +205,9 @@ int normaliseNames(const std::string name_type, const int num_name, std::vector<
   // Find the final maximum name length
   max_name_length = maxNameLength(num_name, names);
   // Can't have names with spaces and more than 8 characters
-  if (max_name_length > 8 && names_with_spaces) return 1;
-  return 0;
+  if (max_name_length > 8 && names_with_spaces) return HighsStatus::Error;
+  if (construct_names) return HighsStatus::Warning;
+  return HighsStatus::OK;
 }
 
 // Return a string representation of HighsModelStatus.
@@ -271,7 +272,7 @@ void highsModelStatusReport(const char* message, HighsModelStatus model_status) 
                   message, (int)model_status, highsModelStatusToString(model_status).c_str());
 }
 
-// Return a string representation of HighsModelStatus.
+// Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   switch (model_status) {
   case HighsModelStatus::NOTSET:
@@ -281,7 +282,7 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
   case HighsModelStatus::MODEL_ERROR:
     return HighsStatus::Error;
   case HighsModelStatus::MODEL_EMPTY:
-    return HighsStatus::Error;
+    return HighsStatus::OK;
   case HighsModelStatus::PRESOLVE_ERROR:
     return HighsStatus::Error;
   case HighsModelStatus::SOLVE_ERROR:

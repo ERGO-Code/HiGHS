@@ -134,6 +134,7 @@ class Presolve : public HPreData {
   void removeEmptyRow(int i);
   void removeEmptyColumn(int j);
   void removeRow(int i);
+  void checkBoundsAreConsistent();
 
   // singleton rows
   void removeRowSingletons();

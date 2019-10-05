@@ -330,5 +330,6 @@ int Highs_getNumRows(void *highs) { return ((Highs *)highs)->getLp().numRow_; }
 
 int Highs_getNumNz(void *highs) { 
   int numCol = Highs_getNumCols(highs);
+  if (numCol <=0 ) return 0;
   return ((Highs *)highs)->getLp().Astart_[numCol]; 
 }

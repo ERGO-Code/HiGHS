@@ -5,10 +5,16 @@
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear programming (LP) problems of the form
 
-    Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
+    Minimize c^Tx subject to L <= Ax <= U; l <= x <= u
 
-It is written in C++ with OpenMP directives. It is based on the dual revised
-simplex method implemented in HSOL.
+It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. It has no third-party dependencies.
+
+HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
+
+Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+
+Reference
+---------
 
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
@@ -17,12 +23,10 @@ DOI: 10.1007/s12532-017-0130-5
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
-HSOL was originally written by Qi Huangfu, with features such as presolve,
-crash and advanced basis start added by Julian Hall and Ivet Galabova and
-further work by Michael Feldmeier.
+Performance
+-----------
 
-HSOL has been developed and tested on various linux installations
-using both the GNU (g++) and Intel (icc) C++ compilers.
+The performance of HiGHS relative to some commercial and open-source simplex solvers may be assessed via the Mittelmann benchmarks on http://plato.asu.edu/ftp/lpsimp.html
 
 Compilation
 -----------
@@ -70,6 +74,10 @@ Usage:
 
   -h, --help                 Print help.
 
+Language interfaces and further documentation
+---------------------------------------------
+
+There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. Documentation beyond what is in this file is "work in progress", but we expect to have some available before the end of 2019. However, we are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
 Parallel code
 -------------
