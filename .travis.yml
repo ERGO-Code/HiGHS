@@ -58,7 +58,7 @@ matrix:
         
     - os: linux
       addons:
-        apt:
+        apt:    
           sources:
             - ubuntu-toolchain-r-test
           packages:
@@ -82,7 +82,7 @@ matrix:
     #  env:
     #    - MATRIX_EVAL="brew install gcc6 && CC=gcc-6 && CXX=g++-6"
 
-    #- os: osx
+    - os: osx
       osx_image: xcode11
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
