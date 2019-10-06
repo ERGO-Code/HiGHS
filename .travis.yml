@@ -151,6 +151,6 @@ install:
     - cmake --build Release
 
 script:
-    - cd Debug && ctest
+    - cd Debug && ctest --verbose
     - cd ..
     - cd Release && ctest
