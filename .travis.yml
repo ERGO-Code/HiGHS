@@ -84,10 +84,10 @@ matrix:
     #  env:
     #    - MATRIX_EVAL="brew install gcc6 && CC=gcc-6 && CXX=g++-6"
 
-    - os: osx
-      osx_image: xcode9
-      env:
-        - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
+    #- os: osx
+    #  osx_image: xcode9
+    #  env:
+    #    - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
     
     # CLANG on linux
     - os: linux
