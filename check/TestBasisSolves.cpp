@@ -3,10 +3,13 @@
 
 #include "catch.hpp"
 
+#include <algorithm>
+
 #ifdef __linux__
 #include <unistd.h>
 #elif _WIN32
 #define NOGDI
+#define NOMINMAX
 #include <windows.h>
 #else
 
