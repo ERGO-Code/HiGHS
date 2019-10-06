@@ -8,6 +8,8 @@
 #elif _WIN32
 #define NOGDI
 #include <windows.h>
+#elif __APPLE__
+#include <unistd.h>
 #else
 
 #endif
