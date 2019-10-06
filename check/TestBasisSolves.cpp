@@ -3,10 +3,13 @@
 
 #include "catch.hpp"
 
+#include <algorithm>
+
 #if defined(__linux__) or defined(__APPLE__)
 #include <unistd.h>
 #elif defined(_WIN32)
 #define NOGDI
+#define NOMINMAX
 #include <windows.h>
 #else
 

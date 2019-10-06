@@ -1,6 +1,6 @@
 module highs_lp_solver
   interface
-    function Highs_call (n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs) result(s) bind (c, name='Highs_call')
+    function Highs_call (n,m,nz,cc,cl,cu,rl,ru,as,ai,av, cv, cd, rv, rd, cbs, rbs, ms) result(s) bind (c, name='Highs_call')
       use iso_c_binding
       integer ( c_int ), VALUE :: n
       integer ( c_int ), VALUE :: m
@@ -20,6 +20,7 @@ module highs_lp_solver
       integer ( c_int ) :: cbs(*)
       integer ( c_int ) :: rbs(*)
       integer ( c_int ) :: s
+      integer ( c_int ) :: ms
     end function Highs_call
 
     function Highs_create () result ( h ) bind( c, name='Highs_create' )

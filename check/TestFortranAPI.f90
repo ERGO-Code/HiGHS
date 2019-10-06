@@ -23,6 +23,7 @@ program fortrantest
   real ( c_double ) rd(m)
   integer ( c_int ) cbs(n)
   integer ( c_int ) rbs(m)
+  integer ( c_int ) ms
 
   type (c_ptr) highs
   integer ( c_int ) status
@@ -49,17 +50,9 @@ program fortrantest
   av(3) = 3
   av(4) = 0.2
 
-  status = Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs )
+  status = Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs, ms )
   
-
-  highs = Highs_create( )
-  ! write (*, *) 'Highs '
-  ! write (*, 8) highs
-  ! 8 FORMAT(Z16)
-  status = Highs_readFromFile( highs, 'bin/qap04.mps')
   write (*, *) status
-  status = Highs_run( highs )
-  call Highs_destroy( highs )
-  write (*, *) status
+  write (*, *) ms
 
 end program fortrantest
