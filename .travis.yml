@@ -69,16 +69,18 @@ matrix:
     
     # CLANG on linux
     - os: linux
+      if: branch = master
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
+           - llvm-toolchain-trusty-3.9
           packages:
-            - clang-3.6
+            - clang-3.9
       env:
-        - MATRIX_EVAL="CC=clang-3.6 && CXX=clang++-3.6"
+        - MATRIX_EVAL="CC=clang-3.9 && CXX=clang++-3.9"
+        
     - os: linux
+      if: branch = master
       addons:
         apt:
           sources:
@@ -89,57 +91,25 @@ matrix:
       env:
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
-    #- os: linux
-    #  addons:
-    #    apt:
-    #      sources:
-    #        - ubuntu-toolchain-r-test
-    #        - llvm-toolchain-precise-3.7
-    #      packages:
-    #        - clang-3.7
-    #  env:
-    #    - MATRIX_EVAL="CC=clang-3.7 && CXX=clang++-3.7"
-
-    #- os: linux
-    #  addons:
-    #    apt:
-    #      sources:
-    #        - ubuntu-toolchain-r-test
-    #        - llvm-toolchain-precise-3.8
-    #      packages:
-    #        - clang-3.8
-    #  env:
-    #    - MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
-
-    #- os: linux
-    #  addons:
-    #    apt:
-    #      sources:
-    #        - llvm-toolchain-trusty-3.9
-    #      packages:
-    #        - clang-3.9
-    #  env:
-    #    - MATRIX_EVAL="CC=clang-3.9 && CXX=clang++-3.9"
-
-    #- os: linux
-    #  addons:
-    #    apt:
-    #      sources:
-    #        - llvm-toolchain-trusty-4.0
-    #      packages:
-    #        - clang-4.0
-    #  env:
-    #    - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
-
-    #- os: linux
-    #  addons:
-    #    apt:
-    #      sources:
-    #        - llvm-toolchain-trusty-5.0
-    #      packages:
-    #        - clang-5.0
-    #  env:
-    #    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+        
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-6.0
+          packages:
+            - clang-6.0
+      env:
+        - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
 
     # clang on macos
     - os: osx
@@ -154,7 +124,6 @@ matrix:
 before_install:
     - eval "${MATRIX_EVAL}"
     #- sudo apt-get install gfortran
-    #- if [ "$TRAVIS_OS_NAME" = "osx" ]; then sudo xcode-select -s /Library/Developer/CommandLineTools         ; fi
 
 install:
     - cmake -H. -BDebug -DCMAKE_BUILD_TYPE=Debug
@@ -163,6 +132,6 @@ install:
     - cmake --build Release
 
 script:
-    - cd Debug && ctest --verbose
+    - cd Debug && ctest
     - cd ..
     - cd Release && ctest
