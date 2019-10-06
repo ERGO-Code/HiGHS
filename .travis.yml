@@ -64,7 +64,7 @@ matrix:
     - os: osx
       osx_image: xcode11
       env:
-        - MATRIX_EVAL="brew install gcc && CC=gcc-7 && CXX=g++-7"
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
     
     # CLANG on linux
     #- os: linux
