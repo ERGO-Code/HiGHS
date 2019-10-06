@@ -46,6 +46,26 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
+      - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+      env:
+        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+        
+      - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
+      env:
+        - MATRIX_EVAL="CC=gcc-9 && CXX=g++-9"
+
     # GCC on macos
     #- os: osx
     #  osx_image: xcode11
@@ -92,6 +112,7 @@ matrix:
         - MATRIX_EVAL="CC=clang-4.0 && CXX=clang++-4.0"
 
     - os: linux
+      if: branch = master
       addons:
         apt:
           sources:
@@ -102,6 +123,7 @@ matrix:
         - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
         
     - os: linux
+      if: branch = master
       addons:
         apt:
           sources:
@@ -110,6 +132,16 @@ matrix:
             - clang-6.0
       env:
         - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
+        
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-7.0
+          packages:
+            - clang-7.0
+      env:
+        - MATRIX_EVAL="CC=clang-7.0 && CXX=clang++-7.0"
 
     # clang on macos
     - os: osx
