@@ -21,7 +21,7 @@
 std::string GetCurrentWorkingDirOptions(void) {
   char buff[FILENAME_MAX];
 
-#if defined(__linux__) or defined(__APPLE__)
+  #if defined(__linux__) or defined(__APPLE__)
     auto result = getcwd(buff, FILENAME_MAX);
     if (result) {
     std::string current_working_dir(buff);
