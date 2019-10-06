@@ -3,13 +3,11 @@
 
 #include "catch.hpp"
 
-#ifdef __linux__
+#if defined(__linux__) or defined(__APPLE__)
 #include <unistd.h>
-#elif _WIN32
+#elif defined(_WIN32)
 #define NOGDI
 #include <windows.h>
-#elif __APPLE__
-#include <unistd.h>
 #else
 
 #endif
@@ -23,7 +21,7 @@ std::string GetBasisSolvesCurrentWorkingDir(void) {
     std::string current_working_dir(buff);
     return current_working_dir;
   }
-  #elif _WIN32
+  #elif defined(_WIN32)
     GetModuleFileName( NULL, buff, FILENAME_MAX );
     string::size_type pos = string( buff ).find_last_of( "\\/" );
     return string( buff ).substr( 0, pos);
