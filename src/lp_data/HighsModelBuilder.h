@@ -95,7 +95,7 @@ class HighsModelBuilder {
                              HighsLinearCons** cons);
   void HighsCreateLinearCons(const char* name, HighsLinearCons** cons);
   void HighsCreateLinearCons(HighsLinearCons** cons);
-  void HighsGetLinearConsByName(const char* name, HighsLinearCons** cons);
+  void HighsGetLinearConsByName();
   void HighsDestroyLinearCons();
 
   // conversion from/to technical Lp representation
