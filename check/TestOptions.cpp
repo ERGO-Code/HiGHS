@@ -9,44 +9,13 @@
 #include "LoadOptions.h"
 #include "catch.hpp"
 
-#if defined(__linux__) or defined(__APPLE__)
-#include <unistd.h>
-#elif defined(_WIN32)
-#define NOGDI
-#include <windows.h>
-#else
-
-#endif
-
-std::string GetCurrentWorkingDirOptions(void) {
-  char buff[FILENAME_MAX];
-
-  #if defined(__linux__) or defined(__APPLE__)
-    auto result = getcwd(buff, FILENAME_MAX);
-    if (result) {
-    std::string current_working_dir(buff);
-    return current_working_dir;
-  }
-  #elif defined(_WIN32)
-    GetModuleFileName( NULL, buff, FILENAME_MAX );
-    string::size_type pos = string( buff ).find_last_of( "\\/" );
-    return string( buff ).substr( 0, pos);
-  #else
-
-  #endif
-
-  return "";
-}
-
 TEST_CASE("options", "[highs_options]") {
-  std::string dir = GetCurrentWorkingDirOptions();
-
   HighsOptions options;
   OptionStatus return_status = checkOptions(options.records);
   REQUIRE(return_status == OptionStatus::OK);
 
   // For debugging use the latter.
-    options.options_file= dir + "/../../check/sample_options_file";
+    options.options_file= std::string(HIGHS_DIR) + "/check/sample_options_file";
     //    options.options_file = dir + "/check/sample_options_file";
 
   bool success = loadOptionsFromFile(options); 
