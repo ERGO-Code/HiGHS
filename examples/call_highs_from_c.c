@@ -29,10 +29,14 @@ void minimal_api() {
   int* cbs = (int*)malloc(sizeof(int) * numcol);
   int* rbs = (int*)malloc(sizeof(int) * numrow);
 
+  int modelstatus; 
+
   int status = Highs_call(numcol, numrow, nnz, cc, cl, cu, rl, ru, astart, aindex, avalue, cv,
-            cd, rv, rd, cbs, rbs);
+            cd, rv, rd, cbs, rbs, &modelstatus);
             
-  assert(status == 1);
+  assert(status == 0);
+
+  printf("Status: %d\nModelstatus:%d\n", status, modelstatus);
 
   for (i = 0; i < numcol; i++) {
     printf("x%d = %lf\n", i, cv[i]);
