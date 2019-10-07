@@ -75,7 +75,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   if (this->status != LP_FILEREADER_STATUS::ERROR)
     this->handleSemiSection(model);
   if (this->status != LP_FILEREADER_STATUS::ERROR)
-    this->handleSosSection(model);
+    this->handleSosSection();
 
   assert(this->tokenQueue.size() == 0);
 
@@ -99,30 +99,24 @@ void FilereaderLp::handleBinarySection(HighsModelBuilder& model) {
   assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::BIN);
   delete token;
 
-  // TODO
   while (this->binSection.size() > 0) {
     LpToken* token = this->binSection.front();
     assert(token->type == LpTokenType::VARIDENTIFIER);
 
-    // update bounds if necessary
     HighsVar* variable;
     model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
                                       &variable);
+    // update bounds if necessary
     if(variable->lowerBound == 0.0 && variable->upperBound == HIGHS_CONST_INF) {
       variable->upperBound = 1.0;
     }
+    variable->type = HighsVarType::BIN;
     
     this->binSection.pop_front();
     delete token;
   }
-
-
-  while (this->binSection.size() > 0) {
-    LpToken* token = this->binSection.front();
-    assert(token->type == LpTokenType::VARIDENTIFIER);
-    this->binSection.pop_front();
-    delete token;
-  }
+  
+  assert(this->binSection.size() == 0);
 }
 
 void FilereaderLp::handleGeneralSection(HighsModelBuilder& model) {
@@ -130,20 +124,20 @@ void FilereaderLp::handleGeneralSection(HighsModelBuilder& model) {
     return;
   }
 
-  LpToken* token;
-  token = this->generalSection.front();
-  this->generalSection.pop_front();
-  assert(token->type == LpTokenType::SECTIONKEYWORD);
-  assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::GEN);
-  delete token;
-
-  // TODO
-
   while (this->generalSection.size() > 0) {
     LpToken* token = this->generalSection.front();
+    assert(token->type == LpTokenType::VARIDENTIFIER);
+
+    HighsVar* variable;
+    model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
+                                      &variable);
+    variable->type = HighsVarType::GEN;
+    
     this->generalSection.pop_front();
     delete token;
   }
+
+  assert(this->generalSection.size() == 0);
 }
 
 void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
@@ -151,38 +145,28 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
     return;
   }
 
-  LpToken* token;
-  token = this->semiSection.front();
-  this->semiSection.pop_front();
-  assert(token->type == LpTokenType::SECTIONKEYWORD);
-  assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::SEMI);
-  delete token;
-
-  // TODO
-
   while (this->semiSection.size() > 0) {
     LpToken* token = this->semiSection.front();
+    assert(token->type == LpTokenType::VARIDENTIFIER);
+
+    HighsVar* variable;
+    model.HighsGetOrCreateVarByName(((LpTokenVarIdentifier*)token)->value,
+                                      &variable);
+    variable->type = HighsVarType::SEMI;
+    
     this->semiSection.pop_front();
     delete token;
   }
+
+  assert(this->semiSection.size() == 0);
 }
 
-void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
-  if (this->sosSection.size() == 0) {
-    return;
-  }
-
-  LpToken* token;
-  token = this->sosSection.front();
-  this->sosSection.pop_front();
-  assert(token->type == LpTokenType::SECTIONKEYWORD);
-  assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::SOS);
-  delete token;
-
-  // TODO
+void FilereaderLp::handleSosSection() {
+  HighsPrintMessage(HighsPrintMessageLevel::ML_MINIMAL, "SoS section is not currenlty supported by the .lp filereader.");
 
   while (this->sosSection.size() > 0) {
     LpToken* token = this->sosSection.front();
+
     this->sosSection.pop_front();
     delete token;
   }
@@ -355,6 +339,9 @@ void FilereaderLp::handleConstraintSection(HighsModelBuilder& model) {
       case LpComparisonIndicator::GEQ:
         constraint->lowerBound = ((LpTokenConstant*)next)->value;
         break;
+      default:
+        // L or G: ignore for now, maybe error?
+        break;
     }
     delete current;
     delete next;
@@ -434,7 +421,7 @@ void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
 }
 
 void FilereaderLp::splitTokens() {
-  std::list<LpToken*>* dest;
+  std::list<LpToken*>* dest = NULL;
   while (this->tokenQueue.size() > 0) {
     LpToken* token = this->tokenQueue.front();
     assert(token->type == LpTokenType::SECTIONKEYWORD);
@@ -512,7 +499,6 @@ LpSectionKeyword FilereaderLp::tryParseLongSectionKeyword(const char* str,
     }
   }
 
-  char hyphen;
   nread = sscanf(str, "%s%n", s1, characters);
   if (nread == 1) {
     if (strcmp(s1, LP_KEYWORD_SEMI[0]) == 0) {

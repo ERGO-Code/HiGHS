@@ -250,7 +250,6 @@ class FilereaderLp : public Filereader {
   FILE* file;
   char fileBuffer[BUFFERSIZE];
   char stringBuffer[BUFFERSIZE];
-  char stringBuffer2[BUFFERSIZE];
   char* readingPosition;
   bool isFileBufferFullyRead;
   double constantBuffer;
@@ -272,7 +271,7 @@ class FilereaderLp : public Filereader {
   void handleBinarySection(HighsModelBuilder& model);
   void handleGeneralSection(HighsModelBuilder& model);
   void handleSemiSection(HighsModelBuilder& model);
-  void handleSosSection(HighsModelBuilder& model);
+  void handleSosSection();
 
   LP_FILEREADER_STATUS status;
 

@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef SIMPLEX_HAPP_H_
-#define SIMPLX_HAPP_H_
+#define SIMPLEX_HAPP_H_
 
 // todo: clear includes.
 #include <cstring>

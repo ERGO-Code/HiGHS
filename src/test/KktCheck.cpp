@@ -335,8 +335,8 @@ void KktCheck::chStOfLagrangian() {
 
 void KktCheck::checkBFS() {
   // Go over cols and check that the duals of basic values are zero.
-  assert(col_status.size() == numCol);
-  assert(colDual.size() == numCol);
+  assert((int)col_status.size() == numCol);
+  assert((int)colDual.size() == numCol);
   for (int j = 0; j < numCol; j++) {
     if (col_status[j] == HighsBasisStatus::BASIC && colDual[j] != 0) {
       if (print == 1)
@@ -345,8 +345,8 @@ void KktCheck::checkBFS() {
   }
 
   // Go over rows and check that the duals of basic values are zero.
-  assert(row_status.size() == numRow);
-  assert(rowDual.size() == numRow);
+  assert((int)row_status.size() == numRow);
+  assert((int)rowDual.size() == numRow);
   for (int i = 0; i < numRow; i++) {
     if (row_status[i] == HighsBasisStatus::BASIC && rowDual[i] != 0) {
       if (print == 1)
