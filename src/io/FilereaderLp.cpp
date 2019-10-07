@@ -421,7 +421,7 @@ void FilereaderLp::handleObjectiveSection(HighsModelBuilder& model) {
 }
 
 void FilereaderLp::splitTokens() {
-  std::list<LpToken*>* dest;
+  std::list<LpToken*>* dest = NULL;
   while (this->tokenQueue.size() > 0) {
     LpToken* token = this->tokenQueue.front();
     assert(token->type == LpTokenType::SECTIONKEYWORD);

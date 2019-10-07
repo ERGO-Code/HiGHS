@@ -250,7 +250,6 @@ class FilereaderLp : public Filereader {
   FILE* file;
   char fileBuffer[BUFFERSIZE];
   char stringBuffer[BUFFERSIZE];
-  char stringBuffer2[BUFFERSIZE];
   char* readingPosition;
   bool isFileBufferFullyRead;
   double constantBuffer;
