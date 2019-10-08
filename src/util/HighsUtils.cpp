@@ -14,7 +14,7 @@
 
 #include "util/HighsUtils.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <cmath>
 #include <vector>
 
