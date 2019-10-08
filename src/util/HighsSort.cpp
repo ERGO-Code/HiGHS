@@ -21,14 +21,8 @@ void maxheapsort(int* heap_v, int n) {
 }
 
 void maxheapsort(int* heap_v, int* heap_i, int n) {
-  printf("\nBefore\n");
-  for(int ix = 1; ix <= n; ix++) printf("heap_v[%2d] = %2d; heap_i[%2d] = %2d\n", ix, heap_v[ix],ix, heap_i[ix]);
   build_maxheap(heap_v, heap_i, n);
-  printf("\nDuring\n");
-  for(int ix = 1; ix <= n; ix++) printf("heap_v[%2d] = %2d; heap_i[%2d] = %2d\n", ix, heap_v[ix],ix, heap_i[ix]);
   max_heapsort(heap_v, heap_i, n);
-  printf("\nAfter\n");
-  for(int ix = 1; ix <= n; ix++) printf("heap_v[%2d] = %2d; heap_i[%2d] = %2d\n", ix, heap_v[ix],ix, heap_i[ix]);
 }
 
 void maxheapsort(double* heap_v, int* heap_i, int n) {
@@ -225,24 +219,25 @@ void sortSetData(const int num_entries,
 		 const int* set, 
 		 const double* data0,
 		 const double* data1,
+		 const double* data2,
 		 int* sorted_set, 
 		 double* sorted_data0,
-		 double* sorted_data1) {
+		 double* sorted_data1,
+		 double* sorted_data2) {
   
   int* sort_set = (int*)malloc(sizeof(int) * (1+num_entries));
   int* perm = (int*)malloc(sizeof(int) * (1+num_entries));
   for (int ix = 0; ix < num_entries; ix++) {
     sort_set[1+ix] = set[ix];
     perm[1+ix] = ix;
-    printf("set[%2d] = %2d\n", ix, sort_set[1+ix]);
   }
   maxheapsort(sort_set, perm, num_entries);
   for (int ix = 0; ix < num_entries; ix++) {
-    printf("sort_set[%2d] = %2d; perm[%2d] = %2d\n", ix, sort_set[1+ix], ix, perm[1+ix]);
+    sorted_set[ix] = set[perm[1+ix]];
+    if (data0 != NULL) sorted_data0[ix] = data0[perm[1+ix]];
+    if (data1 != NULL) sorted_data1[ix] = data1[perm[1+ix]];
+    if (data2 != NULL) sorted_data2[ix] = data2[perm[1+ix]];
   }
-  
   free(sort_set);
   free(perm);
-    
-  
 }

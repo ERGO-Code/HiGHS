@@ -904,15 +904,18 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
     if (set) {
       // Changing the bounds for a set of rows, so ensure that the set
       // and data are in ascending order
-      sortSetData(num_set_entries, row_set, usr_row_lower, usr_row_upper,
-		  use_set, use_lower, use_upper);
+      use_set = (int*)malloc(sizeof(int) * num_set_entries);
+      use_lower = (double*)malloc(sizeof(double) * num_set_entries);
+      use_upper = (double*)malloc(sizeof(double) * num_set_entries);
+      sortSetData(num_set_entries,
+		  row_set, usr_row_lower, usr_row_upper, NULL,
+		  use_set, use_lower, use_upper, NULL);
     } else {
       use_set = (int*)row_set;
       use_lower = (double*)usr_row_lower;
       use_upper = (double*)usr_row_upper;
     }
-    call_status = changeLpRowBounds(
-				    highs_model_object.simplex_lp_, interval, from_row, to_row, set,
+    call_status = changeLpRowBounds(highs_model_object.simplex_lp_, interval, from_row, to_row, set,
 				    num_set_entries, use_set, mask, row_mask, use_lower, use_upper,
 				    highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;

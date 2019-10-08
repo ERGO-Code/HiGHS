@@ -114,8 +114,10 @@ void sortSetData(const int num_set_entries,
 		 const int* set, 
 		 const double* data0,
 		 const double* data1,
+		 const double* data2,
 		 int* sorted_set, 
 		 double* sorted_data0,
-		 double* sorted_data1);
+		 double* sorted_data1,
+		 double* sorted_data2);
 
 #endif /* UTIL_HIGHSSORT_H_ */

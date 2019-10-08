@@ -1,4 +1,5 @@
 #include "catch.hpp"
+#include "lp_data/HConst.h"
 #include "util/HighsSort.h"
 #include "util/HighsRandom.h"
 
@@ -87,11 +88,27 @@ TEST_CASE("HiGHS_sort", "[highs_data]") {
   std::vector<int> sorted_set;
   std::vector<double> sorted_lb;
   std::vector<double> sorted_ub;
-  sorted_set.resize(1);
-  sorted_lb.resize(1);
-  sorted_ub.resize(1);
+  sorted_set.resize(num_values);
+  sorted_lb.resize(num_values);
+  sorted_ub.resize(num_values);
 
   sortSetData(num_values,
-	      &set[0], &lb[0], &ub[0],
-	      &sorted_set[0], &sorted_lb[0], &sorted_ub[0]);
+	      &set[0], &lb[0], &ub[0], NULL,
+	      &sorted_set[0], &sorted_lb[0], &sorted_ub[0], NULL);
+
+  int prev_ix = -HIGHS_CONST_I_INF;
+  for (int k0 = 0; k0 < num_values; k0++) {
+    int ix = sorted_set[k0];
+    REQUIRE(ix >= prev_ix);
+    int k1 = -HIGHS_CONST_I_INF;
+    for (int k_1 = 0; k_1 < num_values; k_1++) {
+      if (set[k_1]==ix) {
+	k1 = k_1;
+	break;
+      }
+    }
+    REQUIRE(k1 > -HIGHS_CONST_I_INF);
+    REQUIRE(sorted_lb[k0] == lb[k1]);
+    REQUIRE(sorted_ub[k0] == ub[k1]);
+  }
 }
