@@ -242,7 +242,9 @@ class HDual {
    * @brief Single line report after rebuild
    */
   void iterationReportRebuild(
-      const int i_v  //!< Integer value for reporting - generally invertHint
+#ifdef HiGHSDEV
+      const int i_v=-1  //!< Integer value for reporting - generally invertHint
+#endif
   );
 
   /**

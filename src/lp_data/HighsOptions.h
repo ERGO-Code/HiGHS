@@ -516,9 +516,6 @@ class HighsOptions {
 };
 
 
-// Called before solve. This would check whether tolerances are set to correct
-// values and all options are consistent.
-OptionStatus checkOptionsValue(HighsOptions& options);
 void setHsolOptions(HighsOptions& options);
 
 #endif

@@ -164,7 +164,7 @@ void HDual::solve(int num_threads) {
   compute_dual(workHMO);
   // Determine the number of dual infeasibilities, and hence the solve phase
   computeDualInfeasible(workHMO);
-  int num_dual_infeasibilities_without_flips = simplex_info.num_dual_infeasibilities;
+  //  int num_dual_infeasibilities_without_flips = simplex_info.num_dual_infeasibilities;
   if (simplex_info.allow_primal_flips_for_dual_feasibility) {
     computeDualInfeasibleWithFlips(workHMO);
   } else {
@@ -769,7 +769,11 @@ void HDual::rebuild() {
 #endif
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(sv_invertHint);
+  iterationReportRebuild(
+#ifdef HiGHSDEV
+			 sv_invertHint
+#endif
+			 );
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -819,7 +823,7 @@ void HDual::cleanup() {
   computeDualObjectiveValue(workHMO, solvePhase);
   timer.stop(simplex_info.clock_[ComputeDuObjClock]);
 
-  iterationReportRebuild(-1);
+  iterationReportRebuild();
 
   computeDualInfeasible(workHMO);
   dualInfeasCount = simplex_info.num_dual_infeasibilities;
@@ -1220,7 +1224,11 @@ void HDual::iterationReportDensity(int iterate_log_level, bool header) {
   }
 }
 
-void HDual::iterationReportRebuild(const int i_v) {
+void HDual::iterationReportRebuild(
+#ifdef HiGHSDEV
+				   const int i_v
+#endif
+				   ) {
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   bool report_condition = simplex_info.analyse_invert_condition;

@@ -354,7 +354,11 @@ void HPrimal::primalRebuild() {
   timer.stop(simplex_info.clock_[ComputeDuIfsClock]);
 
   timer.start(simplex_info.clock_[ReportRebuildClock]);
-  iterationReportRebuild(sv_invertHint);
+  iterationReportRebuild(
+#ifdef HiGHSDEV
+			 sv_invertHint
+#endif
+			 );
   timer.stop(simplex_info.clock_[ReportRebuildClock]);
   // Indicate that a header must be printed before the next iteration log
   previous_iteration_report_header_iteration_count = -1;
@@ -831,7 +835,11 @@ int HPrimal::intLog10(double v) {
 }
 
 */
-void HPrimal::iterationReportRebuild(const int i_v) {
+void HPrimal::iterationReportRebuild(
+#ifdef HiGHSDEV
+				     const int i_v
+#endif
+				     ) {
 #ifdef HiGHSDEV
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   bool report_condition = simplex_info.analyse_invert_condition;

@@ -200,18 +200,15 @@ bool test_all_delete_keep(int num_row) {
   int num_set_entries = 4;
   int row_set[] = {1, 4, 5, 8};
   int row_mask[] = {0,1,0,0,1,1,0,0,1,0};
-  int save_from_row;
-  int save_row_set_0;
-  int save_row_mask_0;
+  int save_from_row = from_row;
+  int save_row_set_0 = row_set[0];
+  int save_row_mask_0 = row_mask[0];
   
   int to_pass = 2;//2
   for (int pass = 0; pass <= to_pass; pass++) {
     printf("\nTesting delete-keep: pass %d\n", pass);
     if (pass == 1) {
       // Mods to test LH limit behaviour
-      save_from_row = from_row;
-      save_row_set_0 = row_set[0];
-      save_row_mask_0 = row_mask[0];
       from_row = 0;
       row_set[0] = 0;
       row_mask[0] = 1;

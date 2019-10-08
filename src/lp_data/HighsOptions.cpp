@@ -477,10 +477,6 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
   }
 }
 
-OptionStatus checkOptionsValue(HighsOptions& options) {
-  return OptionStatus::OK;
-}
-
 // Set values of options so that HiGHS runs as Hsol
 void setHsolOptions(HighsOptions& options) {
   // Set command line options to their hsol values
