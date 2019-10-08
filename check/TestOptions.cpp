@@ -14,9 +14,7 @@ TEST_CASE("options", "[highs_options]") {
   OptionStatus return_status = checkOptions(options.records);
   REQUIRE(return_status == OptionStatus::OK);
 
-  // For debugging use the latter.
-    options.options_file= std::string(HIGHS_DIR) + "/check/sample_options_file";
-    //    options.options_file = dir + "/check/sample_options_file";
+  options.options_file= std::string(HIGHS_DIR) + "/check/sample_options_file";
 
   bool success = loadOptionsFromFile(options); 
   REQUIRE(success == true);

@@ -49,10 +49,8 @@ HighsStatus HighsSimplexInterface::addCols(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
-  bool valid_lp_matrix = true;
   bool valid_simplex_lp = simplex_lp_status.valid;
   bool valid_simplex_basis = simplex_lp_status.has_basis;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -68,21 +66,19 @@ HighsStatus HighsSimplexInterface::addCols(
   // Check that if there is no simplex LP then there is no basis, matrix or
   // scaling
   if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
   HighsStatus call_status;
-  call_status =
-      appendLpCols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper, XnumNewNZ,
-                   XAstart, XAindex, XAvalue, options, valid_lp_matrix);
+  call_status = appendLpCols(lp, XnumNewCol, XcolCost, XcolLower, XcolUpper, XnumNewNZ,
+			     XAstart, XAindex, XAvalue, options);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
   if (valid_simplex_lp) {
     call_status = appendLpCols(simplex_lp, XnumNewCol, XcolCost, XcolLower,
                                XcolUpper, XnumNewNZ, XAstart, XAindex, XAvalue,
-                               options, valid_simplex_matrix);
+                               options);
     return_status = worseStatus(call_status, return_status);
   }
 
@@ -151,19 +147,10 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
-
-#ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no matrix
-  if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
-  }
-#endif
-  bool valid_matrix = true;
   HighsStatus returnStatus;
   returnStatus =
       deleteLpCols(lp, interval, from_col, to_col, set, num_set_entries,
-                   col_set, mask, col_mask, valid_matrix);
+                   col_set, mask, col_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
   // ToDo Determine consequences for basis when deleting columns
   basis.valid_ = false;
@@ -172,15 +159,13 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
     returnStatus = deleteLpCols(simplex_lp, interval, from_col, to_col, set,
-                                num_set_entries, col_set, mask, col_mask,
-                                valid_simplex_matrix);
+                                num_set_entries, col_set, mask, col_mask);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++)
     //    scale.col_[col] = scale.col_[col + numDeleteCol];
     // ToDo Determine consequences for basis when deleting columns
-    simplex_lp_status.has_matrix_row_wise = false;
-    simplex_lp_status.has_basis = false;
+    invalidateSimplexLpBasis(simplex_lp_status);
   }
   return HighsStatus::OK;
 }
@@ -235,7 +220,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
   bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -251,7 +235,6 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   // Check that if there is no simplex LP then there is no basis, matrix or
   // scaling
   if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
     assert(!apply_row_scaling);
   }
 #endif
@@ -312,7 +295,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 			       options.infinite_bound, normalise);
     return_status = worseStatus(call_status, return_status);
   }
-  if (valid_simplex_matrix && lc_XnumNewNZ) {
+  if (lc_XnumNewNZ) {
     appendRowsToLpMatrix(simplex_lp, XnumNewRow, lc_XnumNewNZ, lc_XARstart,
                          lc_XARindex, lc_XARvalue);
   }
@@ -392,19 +375,10 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
-  bool valid_simplex_matrix = simplex_lp_status.has_matrix_col_wise;
-
-#ifdef HiGHSDEV
-  // Check that if there is no simplex LP then there is no matrix
-  if (!valid_simplex_lp) {
-    assert(!valid_simplex_matrix);
-  }
-#endif
-  bool valid_matrix = true;
   HighsStatus returnStatus;
   returnStatus =
       deleteLpRows(lp, interval, from_row, to_row, set, num_set_entries,
-                   row_set, mask, row_mask, valid_matrix);
+                   row_set, mask, row_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
   // ToDo Determine consequences for basis when deleting rows
   basis.valid_ = false;
@@ -413,18 +387,13 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
     returnStatus = deleteLpRows(simplex_lp, interval, from_row, to_row, set,
-                                num_set_entries, row_set, mask, row_mask,
-                                valid_simplex_matrix);
+                                num_set_entries, row_set, mask, row_mask);
     if (returnStatus != HighsStatus::OK) return returnStatus;
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
     //    scale.row_[row] = scale.row_[row + numDeleteRow];
-    // ToDo Determine consequences for basis when deleting rows
-    simplex_lp_status.has_matrix_row_wise = false;
-    simplex_lp_status.has_basis = false;
+    invalidateSimplexLpBasis(simplex_lp_status);
   }
-  // ToDo Determine consequences for basis when deleting rows
-  //  updateSimplexLpStatus(simplex_lp_status, LpAction::DEL_ROWS);
   return HighsStatus::OK;
 }
 

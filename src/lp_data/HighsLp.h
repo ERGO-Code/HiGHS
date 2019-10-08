@@ -134,10 +134,9 @@ struct HighsSimplexLpStatus {
   bool is_dualised = false;
   bool is_permuted = false;
   bool scaling_tried = false;
-  bool has_basis = false;  // The LP has a valid simplex basis
-  bool has_matrix_col_wise =
-      false;  // The LP has a column-wise constraint matrix
-  bool has_matrix_row_wise = false;  // The LP has a row-wise constraint matrix
+  bool has_basis = false;  // The simplex LP has a valid simplex basis
+  bool has_matrix_col_wise = false;  // The HMatrix column-wise matrix is valid
+  bool has_matrix_row_wise = false;  // The HMatrix row-wise matrix is valid
   bool has_factor_arrays =
       false;  // Has the arrays for the representation of B^{-1}
   bool has_dual_steepest_edge_weights = false;  // The DSE weights are known

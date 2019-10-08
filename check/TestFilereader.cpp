@@ -12,10 +12,8 @@
 TEST_CASE("free-format-parser", "[highs_filereader]") {
   std::cout << std::string(HIGHS_DIR) << std::endl;
 
-  // For debugging use the latter.
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  //  filename = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_free_format, lp_fixed_format;
@@ -54,9 +52,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 
   std::cout << std::string(HIGHS_DIR) << std::endl;
 
-  // For debugging use the latter.
   options.model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  // options.model_file = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
   HighsLp lp_mps;
@@ -81,9 +77,7 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 }
 
 TEST_CASE("integrality-constraints", "[highs_filereader]") {
-  // For debugging use the latter.
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
-  // std::string filename = dir + "/check/instances/small_mip.mps";
 
   HighsOptions options;
   options.model_file = filename;
@@ -110,9 +104,7 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 }
 
 TEST_CASE("dualize", "[highs_data]") {
-  // For debugging use the latter.
   std::string filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
-  //std::string filename = dir + "/check/instances/adlittle.mps";
   //std::string filename = "/home/s1131817/test-problems/qaps/qap04";
 
   // Read mps.

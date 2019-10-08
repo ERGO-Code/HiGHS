@@ -698,8 +698,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
                          const double* XcolCost, const double* XcolLower,
                          const double* XcolUpper, const int num_new_nz,
                          const int* XAstart, const int* XAindex,
-                         const double* XAvalue, const HighsOptions& options,
-                         const bool valid_matrix) {
+                         const double* XAvalue, const HighsOptions& options) {
   if (num_new_col < 0) return HighsStatus::Error;
   if (num_new_col == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::OK;
@@ -716,18 +715,16 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
 			     0, NULL, false, NULL, (double*)XcolLower, (double*)XcolUpper,
 			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  if (valid_matrix) {
-    // Assess the matrix columns
-    // Need to pass num_new_nz as non-const since assessMatrix can
-    // modify it [XAstart, XAindex and XAvalue] when normalise is
-    // true---which is not the case here
-    int pass_num_new_nz = num_new_nz;
-    call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
-                               pass_num_new_nz, (int*)XAstart, (int*)XAindex,
-                               (double*)XAvalue, options.small_matrix_value,
-                               options.large_matrix_value, normalise);
-    return_status = worseStatus(call_status, return_status);
-  }
+  // Assess the matrix columns
+  // Need to pass num_new_nz as non-const since assessMatrix can
+  // modify it [XAstart, XAindex and XAvalue] when normalise is
+  // true---which is not the case here
+  int pass_num_new_nz = num_new_nz;
+  call_status = assessMatrix(lp.numRow_, 0, num_new_col-1, num_new_col,
+			     pass_num_new_nz, (int*)XAstart, (int*)XAindex,
+			     (double*)XAvalue, options.small_matrix_value,
+			     options.large_matrix_value, normalise);
+  return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the columns to the LP vectors and matrix
@@ -736,12 +733,10 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
-  if (valid_matrix) {
-    call_status = appendColsToLpMatrix(lp, num_new_col, num_new_nz, XAstart,
-                                       XAindex, XAvalue);
-    return_status = worseStatus(call_status, return_status);
-    if (return_status == HighsStatus::Error) return return_status;
-  }
+  call_status = appendColsToLpMatrix(lp, num_new_col, num_new_nz, XAstart,
+				     XAindex, XAvalue);
+  return_status = worseStatus(call_status, return_status);
+  if (return_status == HighsStatus::Error) return return_status;
 
   // Normalise the new LP column bounds
   normalise = true;
@@ -750,7 +745,7 @@ HighsStatus appendLpCols(HighsLp& lp, const int num_new_col,
 			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
-  if (valid_matrix && num_new_nz) {
+  if (num_new_nz) {
     // Normalise the new LP matrix columns
     int lp_num_nz = lp.Astart_[newNumCol];
     call_status = assessMatrix(lp.numRow_, lp.numCol_, newNumCol-1, newNumCol,
@@ -791,7 +786,7 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
                          const double* XrowLower, const double* XrowUpper,
                          const int num_new_nz, const int* XARstart,
                          const int* XARindex, const double* XARvalue,
-                         const HighsOptions& options, bool valid_matrix) {
+                         const HighsOptions& options) {
   if (num_new_row < 0) return HighsStatus::Error;
   if (num_new_row == 0) return HighsStatus::OK;
   HighsStatus return_status = HighsStatus::OK;
@@ -804,18 +799,16 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
 			     0, NULL, false, NULL, (double*)XrowLower, (double*)XrowUpper,
 			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
-  if (valid_matrix) {
-    // Assess the matrix columns
-    // Need to pass num_new_nz as non-const since assessMatrix can
-    // modify it [XAstart, XAindex and XAvalue] when normalise is
-    // true---which is not the case here
-    int pass_num_new_nz = num_new_nz;
-    call_status = assessMatrix(lp.numCol_, 0, num_new_row-1, num_new_row,
-                               pass_num_new_nz, (int*)XARstart, (int*)XARindex,
-                               (double*)XARvalue, options.small_matrix_value,
-                               options.large_matrix_value, normalise);
-    return_status = worseStatus(call_status, return_status);
-  }
+  // Assess the matrix columns
+  // Need to pass num_new_nz as non-const since assessMatrix can
+  // modify it [XAstart, XAindex and XAvalue] when normalise is
+  // true---which is not the case here
+  int pass_num_new_nz = num_new_nz;
+  call_status = assessMatrix(lp.numCol_, 0, num_new_row-1, num_new_row,
+			     pass_num_new_nz, (int*)XARstart, (int*)XARindex,
+			     (double*)XARvalue, options.small_matrix_value,
+			     options.large_matrix_value, normalise);
+  return_status = worseStatus(call_status, return_status);
   if (return_status == HighsStatus::Error) return return_status;
 
   // Append the rows to the LP vectors
@@ -830,42 +823,39 @@ HighsStatus appendLpRows(HighsLp& lp, const int num_new_row,
 			     options.infinite_bound, normalise);
   return_status = worseStatus(call_status, return_status);
 
-  if (valid_matrix) {
-    // Copy the supplied row-wise matrix so it can be normalised before being
-    // appended
-    int lc_num_new_nz = num_new_nz;
-    int* lc_row_matrix_start = (int*)malloc(sizeof(int) * num_new_row);
-    int* lc_row_matrix_index = (int*)malloc(sizeof(int) * lc_num_new_nz);
-    double* lc_row_matrix_value =
-        (double*)malloc(sizeof(double) * lc_num_new_nz);
-    for (int row = 0; row < num_new_row; row++) {
-      lc_row_matrix_start[row] = XARstart[row];
-    }
-    for (int el = 0; el < lc_num_new_nz; el++) {
-      lc_row_matrix_index[el] = XARindex[el];
-      lc_row_matrix_value[el] = XARvalue[el];
-    }
-    call_status = assessMatrix(
-			       lp.numCol_, 0, num_new_row-1, num_new_row, lc_num_new_nz,
-			       lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
-			       options.small_matrix_value, options.large_matrix_value, normalise);
-    return_status = worseStatus(call_status, return_status);
-    if (return_status == HighsStatus::Error) {
-      free(lc_row_matrix_start);
-      free(lc_row_matrix_index);
-      free(lc_row_matrix_value);
-      return return_status;
-    }
-    // Append the matrix to the LP vectors
-    call_status = appendRowsToLpMatrix(lp, num_new_row, lc_num_new_nz,
-                                       lc_row_matrix_start, lc_row_matrix_index,
-                                       lc_row_matrix_value);
-    return_status = worseStatus(call_status, return_status);
+  // Copy the supplied row-wise matrix so it can be normalised before being
+  // appended
+  int lc_num_new_nz = num_new_nz;
+  int* lc_row_matrix_start = (int*)malloc(sizeof(int) * num_new_row);
+  int* lc_row_matrix_index = (int*)malloc(sizeof(int) * lc_num_new_nz);
+  double* lc_row_matrix_value =
+    (double*)malloc(sizeof(double) * lc_num_new_nz);
+  for (int row = 0; row < num_new_row; row++) {
+    lc_row_matrix_start[row] = XARstart[row];
+  }
+  for (int el = 0; el < lc_num_new_nz; el++) {
+    lc_row_matrix_index[el] = XARindex[el];
+    lc_row_matrix_value[el] = XARvalue[el];
+  }
+  call_status = assessMatrix(lp.numCol_, 0, num_new_row-1, num_new_row, lc_num_new_nz,
+			     lc_row_matrix_start, lc_row_matrix_index, lc_row_matrix_value,
+			     options.small_matrix_value, options.large_matrix_value, normalise);
+  return_status = worseStatus(call_status, return_status);
+  if (return_status == HighsStatus::Error) {
     free(lc_row_matrix_start);
     free(lc_row_matrix_index);
     free(lc_row_matrix_value);
-    if (return_status == HighsStatus::Error) return return_status;
+    return return_status;
   }
+  // Append the matrix to the LP vectors
+  call_status = appendRowsToLpMatrix(lp, num_new_row, lc_num_new_nz,
+				     lc_row_matrix_start, lc_row_matrix_index,
+				     lc_row_matrix_value);
+  return_status = worseStatus(call_status, return_status);
+  free(lc_row_matrix_start);
+  free(lc_row_matrix_index);
+  free(lc_row_matrix_value);
+  if (return_status == HighsStatus::Error) return return_status;
   return return_status;
 }
 
@@ -990,19 +980,15 @@ HighsStatus appendRowsToLpMatrix(HighsLp& lp, const int num_new_row,
 HighsStatus deleteLpCols(HighsLp& lp, const bool interval, const int from_col,
                          const int to_col, const bool set,
                          const int num_set_entries, const int* col_set,
-                         const bool mask, int* col_mask,
-                         const bool valid_matrix) {
+                         const bool mask, int* col_mask) {
   int new_num_col;
-  HighsStatus call_status =
-      deleteColsFromLpVectors(lp, new_num_col, interval, from_col, to_col, set,
-                              num_set_entries, col_set, mask, col_mask);
+  HighsStatus call_status;
+  call_status = deleteColsFromLpVectors(lp, new_num_col, interval, from_col, to_col, set,
+					num_set_entries, col_set, mask, col_mask);
   if (call_status != HighsStatus::OK) return call_status;
-  if (valid_matrix) {
-    HighsStatus call_status =
-        deleteColsFromLpMatrix(lp, interval, from_col, to_col, set,
-                               num_set_entries, col_set, mask, col_mask);
-    if (call_status != HighsStatus::OK) return call_status;
-  }
+  call_status = deleteColsFromLpMatrix(lp, interval, from_col, to_col, set,
+				       num_set_entries, col_set, mask, col_mask);
+  if (call_status != HighsStatus::OK) return call_status;
   lp.numCol_ = new_num_col;
   return HighsStatus::OK;
 }
@@ -1133,19 +1119,15 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
 HighsStatus deleteLpRows(HighsLp& lp, const bool interval, const int from_row,
                          const int to_row, const bool set,
                          const int num_set_entries, const int* row_set,
-                         const bool mask, int* row_mask,
-                         const bool valid_matrix) {
+                         const bool mask, int* row_mask) {
   int new_num_row;
-  HighsStatus return_status =
-      deleteRowsFromLpVectors(lp, new_num_row, interval, from_row, to_row, set,
-                              num_set_entries, row_set, mask, row_mask);
+  HighsStatus return_status;
+  return_status = deleteRowsFromLpVectors(lp, new_num_row, interval, from_row, to_row, set,
+					  num_set_entries, row_set, mask, row_mask);
   if (return_status != HighsStatus::OK) return return_status;
-  if (valid_matrix) {
-    HighsStatus return_status =
-        deleteRowsFromLpMatrix(lp, interval, from_row, to_row, set,
-                               num_set_entries, row_set, mask, row_mask);
-    if (return_status != HighsStatus::OK) return return_status;
-  }
+  return_status = deleteRowsFromLpMatrix(lp, interval, from_row, to_row, set,
+					 num_set_entries, row_set, mask, row_mask);
+  if (return_status != HighsStatus::OK) return return_status;
   lp.numRow_ = new_num_row;
   return HighsStatus::OK;
 }

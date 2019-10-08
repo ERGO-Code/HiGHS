@@ -112,10 +112,8 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
     (int)solution.row_value.size() == highs_model_object.lp_.numRow_ &&
     (int)solution.row_dual.size() == highs_model_object.lp_.numRow_;
   if (!simplex_lp_status.valid) {
-    // Simplex LP is not valid, so ensure that it is fully invalidated
-    invalidateSimplexLp(simplex_lp_status);
-    // Copy the LP to the structure to be used by the solver
-    simplex_lp = highs_model_object.lp_;
+    // Simplex LP is not valid so initialise the simplex LP data
+    initialiseSimplexLpDefinition(highs_model_object);
     // Initialise the real and integer random vectors
     initialiseSimplexLpRandomVectors(highs_model_object);
   }
@@ -276,7 +274,6 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
     updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_BASIS);
   }
   // Execute from here for all calls
-  //
   // Note whether a HiGHS basis can be used to (try to) choose the better bound
   // for boxed variables
   bool have_highs_basis = basis.valid_;
@@ -418,9 +415,9 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
   // Now there are nonbasicFlag and basicIndex corresponding to a
   // basis with well-conditioned invertible representation
   //
-  // Possibly set up the column-wise and row-wise copies of the matrix
+  // Possibly set up the HMatrix column-wise and row-wise copies of the matrix
   if (!simplex_lp_status.has_matrix_col_wise ||
-      simplex_lp_status.has_matrix_row_wise) {
+      !simplex_lp_status.has_matrix_row_wise) {
     matrix.setup(simplex_lp.numCol_, simplex_lp.numRow_, &simplex_lp.Astart_[0],
                  &simplex_lp.Aindex_[0], &simplex_lp.Avalue_[0],
                  &simplex_basis.nonbasicFlag_[0]);
@@ -990,6 +987,14 @@ void computePrimalObjectiveValue(HighsModelObject& highs_model_object) {
   simplex_info.primal_objective_value -= simplex_lp.offset_;
   // Now have primal objective value
   simplex_lp_status.has_primal_objective_value = true;
+}
+
+void initialiseSimplexLpDefinition(HighsModelObject& highs_model_object) {
+  HighsSimplexLpStatus& simplex_lp_status = highs_model_object.simplex_lp_status_;
+  // Ensure that the simplex LP is fully invalidated
+  invalidateSimplexLp(simplex_lp_status);
+  // Copy the LP to the structure to be used by the solver
+  highs_model_object.simplex_lp_ = highs_model_object.lp_;
 }
 
 void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model_object) {
@@ -2315,11 +2320,12 @@ bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase) {
   //  printf("Called ok_to_solve(%1d, %1d)\n", level, phase);
   bool ok;
   // Level 0: Minimal check - just look at flags. This means we trust them!
-  ok = simplex_lp_status.has_basis && simplex_lp_status.has_matrix_col_wise &&
-       simplex_lp_status.has_matrix_row_wise &&
-       simplex_lp_status.has_factor_arrays &&
-       simplex_lp_status.has_dual_steepest_edge_weights &&
-       simplex_lp_status.has_invert;
+  ok = simplex_lp_status.has_basis &&
+    simplex_lp_status.has_matrix_col_wise &&
+    simplex_lp_status.has_matrix_row_wise &&
+    simplex_lp_status.has_factor_arrays &&
+    simplex_lp_status.has_dual_steepest_edge_weights &&
+    simplex_lp_status.has_invert;
   // TODO: Eliminate the following line ASAP!!!
   ok = true;
   if (!ok) {
@@ -3044,7 +3050,9 @@ void reportSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
          simplex_lp_status.has_primal_objective_value);
 }
 
-void invalidateSimplexLpData(HighsSimplexLpStatus& simplex_lp_status) {
+void invalidateSimplexLpBasis(HighsSimplexLpStatus& simplex_lp_status) {
+  // Invalidate the basis of the simplex LP, and all its other
+  // properties - since they are basis-related
   simplex_lp_status.has_basis = false;
   simplex_lp_status.has_matrix_col_wise = false;
   simplex_lp_status.has_matrix_row_wise = false;
@@ -3064,7 +3072,7 @@ void invalidateSimplexLp(HighsSimplexLpStatus& simplex_lp_status) {
   simplex_lp_status.is_dualised = false;
   simplex_lp_status.is_permuted = false;
   simplex_lp_status.scaling_tried = false;
-  invalidateSimplexLpData(simplex_lp_status);
+  invalidateSimplexLpBasis(simplex_lp_status);
 }
 
 void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
@@ -3075,21 +3083,21 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
       printf(" LpAction::DUALISE\n");
 #endif
       simplex_lp_status.is_dualised = true;
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::PERMUTE:
 #ifdef HIGHSDEV
       printf(" LpAction::PERMUTE\n");
 #endif
       simplex_lp_status.is_permuted = true;
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::SCALE:
 #ifdef HIGHSDEV
       printf(" LpAction::SCALE\n");
 #endif
       simplex_lp_status.scaling_tried = true;
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::NEW_COSTS:
 #ifdef HIGHSDEV
@@ -3117,31 +3125,31 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_BASIS\n");
 #endif
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::NEW_COLS:
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_COLS\n");
 #endif
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::NEW_ROWS:
 #ifdef HIGHSDEV
       printf(" LpAction::NEW_ROWS\n");
 #endif
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::DEL_COLS:
 #ifdef HIGHSDEV
       printf(" LpAction::DEL_COLS\n");
 #endif
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::DEL_ROWS:
 #ifdef HIGHSDEV
       printf(" LpAction::DEL_ROWS\n");
 #endif
-      invalidateSimplexLpData(simplex_lp_status);
+      invalidateSimplexLpBasis(simplex_lp_status);
       break;
     case LpAction::DEL_ROWS_BASIS_OK:
 #ifdef HIGHSDEV

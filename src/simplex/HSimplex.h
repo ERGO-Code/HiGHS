@@ -86,6 +86,7 @@ void computeDualObjectiveValue(HighsModelObject& highs_model_object,
 
 void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 
+void initialiseSimplexLpDefinition(HighsModelObject& highs_model);
 void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model);
 
 // SCALE:
@@ -210,24 +211,25 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase);
 
 void reportSimplexLpStatus(
-    HighsSimplexLpStatus&
-        simplex_lp_status,  // !< Status of simplex LP to be reported
-    const char* message = "");
+			   HighsSimplexLpStatus&    
+			   simplex_lp_status,       // !< Status of simplex LP to be reported
+			   const char* message = "" // !< Message to be written in report
+			   );
 
-void invalidateSimplexLpData(
-    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
-                                             // data are to be invalidated
-);
+void invalidateSimplexLpBasis(
+			      HighsSimplexLpStatus&
+			      simplex_lp_status  // !< Status of simplex LP whose basis is to be invalidated
+			      );
 
 void invalidateSimplexLp(
-    HighsSimplexLpStatus&
-        simplex_lp_status  // !< Status of simplex LP to be invalidated
-);
+			 HighsSimplexLpStatus&
+			 simplex_lp_status  // !< Status of simplex LP to be invalidated
+			 );
 
 void updateSimplexLpStatus(
-    HighsSimplexLpStatus&
-        simplex_lp_status,  // !< Status of simplex LP to be updated
-    LpAction action         // !< Action prompting update
+			   HighsSimplexLpStatus&
+			   simplex_lp_status, // !< Status of simplex LP to be updated
+			   LpAction action    // !< Action prompting update
 );
 
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
