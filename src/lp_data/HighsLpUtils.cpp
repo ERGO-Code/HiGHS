@@ -1026,7 +1026,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
-    if (delete_to_col == col_dim) break;
+    if (delete_to_col >= col_dim-1) break;
     assert(delete_to_col < col_dim);
     if (k == from_k) {
       // Account for the initial columns being kept
@@ -1039,7 +1039,7 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
       if (have_names) lp.col_names_[new_num_col] = lp.col_names_[col];
       new_num_col++;
     }
-    if (keep_to_col == col_dim) break;
+    if (keep_to_col >= col_dim-1) break;
   }
   return HighsStatus::OK;
 }
@@ -1076,14 +1076,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
                   keep_from_col, keep_to_col, current_set_entry);
     if (k == from_k) {
       // Account for the initial columns being kept
-      if (mask) {
-        for (int col = 0; col < delete_from_col; col++) {
-          col_mask[col] = new_num_col;
-          new_num_col++;
-        }
-      } else {
-        new_num_col = delete_from_col;
-      }
+      new_num_col = delete_from_col;
       new_num_nz = lp.Astart_[delete_from_col];
     }
     // Ensure that the starts of the deleted columns are zeroed to
@@ -1238,10 +1231,8 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
     for (int row = 0; row < lp.numRow_; row++) {
       if (row_mask[row]) {
         new_index[row] = -1;
-        row_mask[row] = new_index[row];
       } else {
         new_index[row] = new_num_row;
-        row_mask[row] = new_index[row];
         new_num_row++;
       }
     }

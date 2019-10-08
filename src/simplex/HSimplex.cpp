@@ -198,8 +198,8 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
         permuteSimplexLp(highs_model_object);
 
       // Allocate memory for nonbasicFlag
-      simplex_basis.nonbasicFlag_.resize(highs_model_object.lp_.numCol_ +
-                                         highs_model_object.lp_.numRow_);
+      simplex_basis.nonbasicFlag_.resize(highs_model_object.simplex_lp_.numCol_ +
+                                         highs_model_object.simplex_lp_.numRow_);
       // Set up nonbasicFlag for a logical basis
       for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++)
         simplex_basis.nonbasicFlag_[iCol] = NONBASIC_FLAG_TRUE;

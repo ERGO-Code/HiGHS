@@ -84,7 +84,7 @@ HighsStatus HighsSimplexInterface::addCols(
 
   // Now consider scaling
   scale.col_.resize(newNumCol);
-  for (int col = 0; col < XnumNewCol; col++) scale.col_[lp.numCol_ + col] = 1.0;
+  for (int col = 0; col < XnumNewCol; col++) scale.col_[simplex_lp.numCol_ + col] = 1.0;
 
   if (apply_row_scaling) {
     // Determine scaling multipliers for this set of columns
@@ -140,13 +140,16 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
     const int* col_set, bool mask, int* col_mask) {
   // Uses to_col in iterator style
   HighsLp& lp = highs_model_object.lp_;
-
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
+  // Keep a copy of the original number of columns in case there's a
+  // mask to be updated
+  int original_num_col = lp.numCol_;
+
   HighsStatus returnStatus;
   returnStatus =
       deleteLpCols(lp, interval, from_col, to_col, set, num_set_entries,
@@ -166,6 +169,16 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
     //    scale.col_[col] = scale.col_[col + numDeleteCol];
     // ToDo Determine consequences for basis when deleting columns
     invalidateSimplexLpBasis(simplex_lp_status);
+  }
+  if (mask) {
+    int new_col = 0;
+    for (int col = 0; col < original_num_col; col++) {
+      if (!col_mask[col]) {
+	col_mask[col] = new_col;
+	new_col++;
+      }
+    }
+    assert(new_col == lp.numCol_);
   }
   return HighsStatus::OK;
 }
@@ -375,6 +388,10 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
+  // Keep a copy of the original number of rows in case there's a
+  // mask to be updated
+  int original_num_row = lp.numRow_;
+
   HighsStatus returnStatus;
   returnStatus =
       deleteLpRows(lp, interval, from_row, to_row, set, num_set_entries,
@@ -393,6 +410,16 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
     //    scale.row_[row] = scale.row_[row + numDeleteRow];
     invalidateSimplexLpBasis(simplex_lp_status);
+  }
+  if (mask) {
+    int new_row = 0;
+    for (int row = 0; row < original_num_row; row++) {
+      if (!row_mask[row]) {
+	row_mask[row] = new_row;
+	new_row++;
+      }
+    }
+    assert(new_row == lp.numRow_);
   }
   return HighsStatus::OK;
 }
@@ -448,7 +475,7 @@ HighsStatus HighsSimplexInterface::getColsGeneral(
   int out_from_col;
   int out_to_col;
   int in_from_col;
-  int in_to_col = 0;
+  int in_to_col = -1;
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   for (int k = from_k; k <= to_k; k++) {

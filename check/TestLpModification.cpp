@@ -564,13 +564,12 @@ TEST_CASE("LP-modification", "[highs_data]") {
   iteration_count = highs.getObjectiveValue();
   REQUIRE(iteration_count == avgas_iteration_count);
 
-  /*
- // Try to delete an empty range of rows: OK
+  // Try to delete an empty range of rows: OK
   return_bool = highs.deleteRows(0, -1);
   REQUIRE(return_bool);
 
   // Try to delete more rows than there are: ERROR
-  return_bool = highs.deleteRows(0, num_row+1);
+  return_bool = highs.deleteRows(0, num_row);
   REQUIRE(!return_bool);
 
   return_bool = highs.getCols(col1357_col_mask, col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
@@ -598,7 +597,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   messageReportMatrix("Get col1357 by mask\nRow   ", col1357_num_col, col1357_num_nz, col1357_start, col1357_index, col1357_value);
   messageReportMatrix("Get col0123 by mask\nRow   ", col0123_num_col, col0123_num_nz, col0123_start, col0123_index, col0123_value);
 
-  return_bool = highs.deleteRows(0, num_row);
+  return_bool = highs.deleteRows(0, num_row-1);
   REQUIRE(return_bool);
    
   return_bool = highs.deleteCols(col0123_col_mask);
@@ -629,9 +628,18 @@ TEST_CASE("LP-modification", "[highs_data]") {
   
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
-  REQUIRE(return_status == HighsStatus::Optimal);
+  REQUIRE(return_status == HighsStatus::OK);
+  
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  return_bool = highs.deleteRows(0, num_row);
+  optimal_objective_value = highs.getObjectiveValue();
+  REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
+
+  iteration_count = highs.getObjectiveValue();
+  REQUIRE(iteration_count == avgas_iteration_count);
+
+  /*  return_bool = highs.deleteRows(0, num_row);
   REQUIRE(return_bool);
    
   return_bool = highs.deleteCols(0, num_col);
