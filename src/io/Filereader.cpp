@@ -12,7 +12,7 @@
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
 
-#include <string.h>
+#include <cstring>
 #include <stdexcept>
 
 static const char* getFilenameExt(const char* filename) {

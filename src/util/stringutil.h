@@ -2,7 +2,7 @@
 #define STRINGUTIL_H
 
 #include <ctype.h>
-#include <string.h>
+#include <cstring>
 #include <string>
 
 void strRemoveWhitespace(char* str);
