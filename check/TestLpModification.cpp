@@ -580,7 +580,7 @@ TEST_CASE("LP-modification", "[highs_data]") {
   REQUIRE(return_bool);
 
   int col0123_col_mask[] = {1, 1, 1, 1};
-  int col0123_col_set[] = {0, 1, 2, 3};
+  //  int col0123_col_set[] = {0, 1, 2, 3};
   int col0123_num_ix = 4;
   int col0123_num_col;
   int col0123_num_nz;
@@ -639,10 +639,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   iteration_count = highs.getObjectiveValue();
   REQUIRE(iteration_count == avgas_iteration_count);
 
-  /*  return_bool = highs.deleteRows(0, num_row);
+  return_bool = highs.deleteRows(0, num_row-1);
   REQUIRE(return_bool);
    
-  return_bool = highs.deleteCols(0, num_col);
+  return_bool = highs.deleteCols(0, num_col-1);
   REQUIRE(return_bool);
   messageReportLp("After deleting all rows and columns", highs.getLp());
  
@@ -735,11 +735,10 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.changeRowBounds(2, rowLower[2], rowUpper[2]);
   REQUIRE(return_bool);
 
-  return_bool = areLpEqual(reference_avgas, highs.getLp(), options.infinite_bound);
+  return_bool = areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound);
   REQUIRE(return_bool);
 
   messageReportLp("After restoring costs and bounds", highs.getLp());
   printf("Finished successfully\n"); fflush(stdout);
-  */
 }
 
