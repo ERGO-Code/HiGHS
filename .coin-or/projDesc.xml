@@ -284,6 +284,14 @@
           <operatingSystem>Linux</operatingSystem>
           <compiler>CLANG</compiler>
         </platform>
+        <platform>
+          <operatingSystem>Macos</operatingSystem>
+          <compiler>CLANG</compiler>
+        </platform>
+        <platform>
+          <operatingSystem>Windows</operatingSystem>
+          <compiler>MSVC++</compiler>
+        </platform>
       </testedPlatforms>
 
       <!-- The projectCategories element contains a list of category -->

@@ -9,43 +9,12 @@
 #include "LoadProblem.h"
 #include "catch.hpp"
 
-#if defined(__linux__) or defined(__APPLE__)
-#include <unistd.h>
-#elif defined(_WIN32)
-#define NOGDI
-#include <windows.h>
-#else
-
-#endif
-
-std::string GetCurrentWorkingDir(void) {
-  char buff[FILENAME_MAX];
-
-  #if defined(__linux__) or defined(__APPLE__)
-    auto result = getcwd(buff, FILENAME_MAX);
-    if (result) {
-    std::string current_working_dir(buff);
-    return current_working_dir;
-  }
-  #elif defined(_WIN32)
-    GetModuleFileName( NULL, buff, FILENAME_MAX );
-    string::size_type pos = string( buff ).find_last_of( "\\/" );
-    return string( buff ).substr( 0, pos);
-  #else
-
-  #endif
-
-  return "";
-}
-
 TEST_CASE("free-format-parser", "[highs_filereader]") {
-  std::string dir = GetCurrentWorkingDir();
-
-  std::cout << dir << std::endl;
+  std::cout << std::string(HIGHS_DIR) << std::endl;
 
   // For debugging use the latter.
   std::string filename;
-  filename = dir + "/../../check/instances/adlittle.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   //  filename = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
@@ -82,12 +51,11 @@ TEST_CASE("free-format-parser", "[highs_filereader]") {
 // No commas in test case name.
 TEST_CASE("read-mps-ems", "[highs_filereader]") {
   HighsOptions options;
-  std::string dir = GetCurrentWorkingDir();
 
-  std::cout << dir << std::endl;
+  std::cout << std::string(HIGHS_DIR) << std::endl;
 
   // For debugging use the latter.
-  options.model_file = dir + "/../../check/instances/adlittle.mps";
+  options.model_file = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   // options.model_file = dir + "/check/instances/adlittle.mps";
 
   // Read mps.
@@ -113,10 +81,8 @@ TEST_CASE("read-mps-ems", "[highs_filereader]") {
 }
 
 TEST_CASE("integrality-constraints", "[highs_filereader]") {
-  std::string dir = GetCurrentWorkingDir();
-
   // For debugging use the latter.
-  std::string filename = dir + "/../../check/instances/small_mip.mps";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/small_mip.mps";
   // std::string filename = dir + "/check/instances/small_mip.mps";
 
   HighsOptions options;
@@ -144,11 +110,8 @@ TEST_CASE("integrality-constraints", "[highs_filereader]") {
 }
 
 TEST_CASE("dualize", "[highs_data]") {
-
-  std::string dir = GetCurrentWorkingDir();
-
   // For debugging use the latter.
-  std::string filename = dir + "/../../check/instances/adlittle.mps";
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   //std::string filename = dir + "/check/instances/adlittle.mps";
   //std::string filename = "/home/s1131817/test-problems/qaps/qap04";
 

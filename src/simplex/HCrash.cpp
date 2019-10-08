@@ -37,12 +37,12 @@ void HCrash::crash(const int pass_crash_strategy) {
   numTot = simplex_lp.numCol_ + simplex_lp.numRow_;
 #ifdef HiGHSDEV
   const int objSense = simplex_lp.sense_;
-  if (fabs(objSense) != 1) {
+  if (std::abs(objSense) != 1) {
     printf("HCrash::crash: objSense = %d has not been set\n", objSense);
     cout << flush;
   }
 #endif
-  assert(fabs(simplex_lp.sense_) == 1);
+  assert(std::abs(simplex_lp.sense_) == 1);
 
   if (crash_strategy == SIMPLEX_CRASH_STRATEGY_BASIC
 #ifdef HiGHSDEV

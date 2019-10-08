@@ -5,36 +5,6 @@
 
 #include <algorithm>
 
-#if defined(__linux__) or defined(__APPLE__)
-#include <unistd.h>
-#elif defined(_WIN32)
-#define NOGDI
-#define NOMINMAX
-#include <windows.h>
-#else
-
-#endif
-
-std::string GetBasisSolvesCurrentWorkingDir(void) {
-  char buff[FILENAME_MAX];
-
-  #if defined(__linux__) or defined(__APPLE__)
-    auto result = getcwd(buff, FILENAME_MAX);
-    if (result) {
-    std::string current_working_dir(buff);
-    return current_working_dir;
-  }
-  #elif defined(_WIN32)
-    GetModuleFileName( NULL, buff, FILENAME_MAX );
-    string::size_type pos = string( buff ).find_last_of( "\\/" );
-    return string( buff ).substr( 0, pos);
-  #else
-
-  #endif
-
-  return "";
-}
-
 bool GetBasisSolvesSolutionNzOk(int numRow, double* pass_solution_vector, int* solution_num_nz, int* solution_indices) {
   double* solution_vector = (double*)malloc(sizeof(double) * numRow);
   if (solution_num_nz == NULL) return true;
@@ -147,22 +117,21 @@ void GetBasisSolvesFormRHS(HighsLp& lp, int* basic_variables, double* solution, 
 
 // No commas in test case name.
 TEST_CASE("Basis-solves", "[highs_basis_solves]") {
-
-  std::string dir = GetBasisSolvesCurrentWorkingDir();
-
-  std::cout << dir << std::endl;
+  std::cout << std::string(HIGHS_DIR) << std::endl;
 
   // For debugging use the latter.
   std::string filename;
-  filename = dir + "/../../check/instances/chip.mps";
-  //  filename = dir + "/../../check/instances/blending.mps";
-  filename = dir + "/../../check/instances/avgas.mps";
-  filename = dir + "/../../check/instances/adlittle.mps";
-  //  filename = dir + "/../../check/instances/25fv47.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/chip.mps";
+  //  filename = std::string(HIGHS_DIR) + "/../../check/instances/blending.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
+  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
+  
+  // printf("CMAKE %s\n", HIGHS_DIR);
+  //  filename = std::string(HIGHS_DIR) + "/check/instances/25fv47.mps";
 
   //For debugging
 
-  //  filename = dir + "/check/instances/adlittle.mps";
+  //  filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
 
   Highs highs;
 

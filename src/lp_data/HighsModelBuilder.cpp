@@ -63,7 +63,6 @@ HighsModelBuilder::~HighsModelBuilder() {
   }
 }
 
-#pragma region HighsVar
 HighsVar::HighsVar(const char* name, double lo, double hi, double obj,
                    HighsVarType type) {
   // create a copy of the name
@@ -88,10 +87,6 @@ HighsVar::~HighsVar() {
   }
 }
 
-#pragma endregion
-
-#pragma region HighsCons
-
 HighsCons::HighsCons(const char* name, double lo, double hi) {
   // create a copy of the name
   if (name != NULL) {
@@ -113,18 +108,10 @@ HighsCons::~HighsCons() {
   }
 }
 
-#pragma endregion
-
-#pragma region HighsLinearCons
-
 HighsLinearCons::HighsLinearCons(const char* name, double lo, double hi)
     : HighsCons(name, lo, hi) {}
 
 HighsLinearCons::~HighsLinearCons() {}
-
-#pragma endregion
-
-#pragma region HighsLinearConsCoef
 
 HighsLinearConsCoef::HighsLinearConsCoef(HighsVar* var, double coef) {
   this->var = var;
@@ -132,11 +119,6 @@ HighsLinearConsCoef::HighsLinearConsCoef(HighsVar* var, double coef) {
 }
 
 HighsLinearConsCoef::~HighsLinearConsCoef() {}
-
-#pragma endregion
-
-#pragma region HighsModel
-#pragma region HighsModel Variables
 
 void HighsModelBuilder::HighsCreateVar(const char* name, double lo, double hi,
                                        double obj, HighsVarType type,
@@ -205,10 +187,6 @@ void HighsModelBuilder::HighsRemoveVar(HighsVar* var) {
   return;
 }
 
-#pragma endregion
-
-#pragma region HighsModel Constraints
-
 void HighsModelBuilder::HighsCreateLinearCons(const char* name, double lo,
                                               double hi,
                                               HighsLinearCons** cons) {
@@ -239,14 +217,13 @@ void HighsModelBuilder::HighsCreateLinearCons(HighsLinearCons** cons) {
   this->HighsCreateLinearCons(NULL, cons);
 }
 
-void HighsModelBuilder::HighsGetLinearConsByName(const char* name,
-                                                 HighsLinearCons** cons) {}
+void HighsModelBuilder::HighsGetLinearConsByName() {
+  // TODO
+}
 
-void HighsModelBuilder::HighsDestroyLinearCons() {}
-
-#pragma endregion
-
-#pragma region HighsModel Coefficients
+void HighsModelBuilder::HighsDestroyLinearCons() {
+  // TODO
+}
 
 void HighsModelBuilder::HighsCreateLinearConsCoef(
     HighsVar* var, double coef, HighsLinearConsCoef** consCoef) {
@@ -286,8 +263,6 @@ void HighsModelBuilder::HighsAddLinearConsCoefToCons(
     }
   }
 }
-
-#pragma endregion
 
 void HighsModelBuilder::HighsBuildTechnicalModel(HighsLp* lp) {
   lp->numCol_ = this->variables.size();
@@ -353,5 +328,3 @@ void HighsModelBuilder::HighsBuildTechnicalModel(HighsLp* lp) {
   delete[] variables;
   delete[] constraints;
 }
-
-#pragma endregion
