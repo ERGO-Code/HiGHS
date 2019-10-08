@@ -81,4 +81,13 @@ bool increasing_set_ok(const double* set, const int set_num_entries,
                        const double set_entry_upper,
 		       bool strict);
 
+
+void sortSetData(const int num_set_entries,
+		 const int* set, 
+		 const double* set_entry_data0,
+		 const double* set_entry_data1,
+		 const int* sorted_set, 
+		 const double* sorted_set_entry_data0,
+		 const double* sorted_set_entry_data1);
+
 #endif /* UTIL_HIGHSSORT_H_ */
