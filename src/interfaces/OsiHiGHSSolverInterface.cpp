@@ -259,7 +259,7 @@ void OsiHiGHSSolverInterface::initialSolve() {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::initialSolve()\n");
   this->status = this->highs->run();
-};
+}
 
 bool OsiHiGHSSolverInterface::isAbandoned() const {
   HighsPrintMessage(ML_ALWAYS,
@@ -514,7 +514,7 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   bool success = this->highs->addRow(rowlb, rowub, 
                                      vec.getNumElements(), vec.getIndices(), vec.getElements());
   assert(success);
-};
+}
 
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const char rowsen, const double rowrhs,
@@ -523,7 +523,7 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   double lb, ub;
   this->convertSenseToBound(rowsen, rowrhs, rowrng, lb, ub);
   this->addRow(vec, lb, ub);
-};
+}
 
 void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase &vec,
                                      const double collb, const double colub,
@@ -538,13 +538,13 @@ void OsiHiGHSSolverInterface::deleteCols(const int num, const int *colIndices) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::deleteCols()\n");
   this->highs->deleteCols(num, colIndices);
-};
+}
 
 void OsiHiGHSSolverInterface::deleteRows(const int num, const int *rowIndices) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::deleteRows()\n");
   this->highs->deleteRows(num, rowIndices);
-};
+}
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
                                             double *&collb, double *&colub,
@@ -632,7 +632,7 @@ void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
   if (rowrngnull) {
     delete[] myrowrng;
   }
-};
+}
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
                                             double *&collb, double *&colub,
@@ -655,7 +655,7 @@ void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
   rowrhs = 0;
   delete[] rowrng;
   rowrng = 0;
-};
+}
 
 void OsiHiGHSSolverInterface::loadProblem(
     const int numcols, const int numrows, const CoinBigIndex *start,
@@ -766,7 +766,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   double *value = new double[nnz];
 
   // get matrix data
-  const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
+  // const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
   const int *vectorLengths = matrix.getVectorLengths();
   const double *elements = matrix.getElements();
   const int *indices = matrix.getIndices();
@@ -996,8 +996,8 @@ void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
   for (int row = 0; row < highs->lp_.numRow_; row++)
     solution.row_dual[row] = rowprice[row];
 
-  HighsStatus result = highs->setSolution(solution);
-};
+  /*HighsStatus result =*/ highs->setSolution(solution);
+}
 
 void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
   HighsPrintMessage(ML_ALWAYS,
@@ -1008,7 +1008,7 @@ void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
   for (int col = 0; col < highs->lp_.numCol_; col++)
     solution.col_value[col] = colsol[col];
 
-  HighsStatus result = highs->setSolution(solution);
+  /*HighsStatus result =*/ highs->setSolution(solution);
 }
 
 void OsiHiGHSSolverInterface::applyRowCut(const OsiRowCut &rc) {
@@ -1029,7 +1029,7 @@ void OsiHiGHSSolverInterface::setContinuous(int index) {
 void OsiHiGHSSolverInterface::setInteger(int index) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setInteger()\n");
-};
+}
 
 bool OsiHiGHSSolverInterface::isContinuous(int colNumber) const {
   HighsPrintMessage(ML_ALWAYS,
@@ -1044,7 +1044,7 @@ void OsiHiGHSSolverInterface::setRowType(int index, char sense,
   double lo, hi;
   this->convertSenseToBound(sense, rightHandSide, range, lo, hi);
   this->setRowBounds(index, lo, hi);
-};
+}
 
 void OsiHiGHSSolverInterface::setRowLower(int elementIndex,
                                           double elementValue) {
@@ -1070,7 +1070,7 @@ void OsiHiGHSSolverInterface::setColLower(int elementIndex,
                     "Calling OsiHiGHSSolverInterface::setColLower()\n");
   double upper = this->getColUpper()[elementIndex];
   this->highs->changeColBounds(elementIndex, elementValue, upper);
-};
+}
 
 void OsiHiGHSSolverInterface::setColUpper(int elementIndex,
                                           double elementValue) {
@@ -1078,14 +1078,14 @@ void OsiHiGHSSolverInterface::setColUpper(int elementIndex,
                     "Calling OsiHiGHSSolverInterface::setColUpper()\n");
   double lower = this->getColLower()[elementIndex];
   this->highs->changeColBounds(elementIndex, lower, elementValue);
-};
+}
 
 void OsiHiGHSSolverInterface::setObjCoeff(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjCoeff()\n");
   this->highs->changeColCost(elementIndex, elementValue);
-};
+}
 
 std::vector<double *> OsiHiGHSSolverInterface::getDualRays(int maxNumRays,
                                                            bool fullRay) const {
@@ -1211,7 +1211,7 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
       highs->basis_.row_status.size() == 0)
     return;
 
-  for (int i = 0; i < highs->basis_.col_status.size(); ++i)
+  for (size_t i = 0; i < highs->basis_.col_status.size(); ++i)
     switch (highs->basis_.col_status[i]) {
     case HighsBasisStatus::BASIC:
       cstat[i] = 1;
@@ -1228,9 +1228,10 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     case HighsBasisStatus::ZERO:
       cstat[i] = 0;
       break;
+    //FIXME handle HighsBasisStatus::NONBASIC
     }
 
-  for (int i = 0; i < highs->basis_.row_status.size(); ++i)
+  for (size_t i = 0; i < highs->basis_.row_status.size(); ++i)
     switch (highs->basis_.row_status[i]) {
     case HighsBasisStatus::BASIC:
       cstat[i] = 1;
@@ -1247,6 +1248,7 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     case HighsBasisStatus::ZERO:
       cstat[i] = 0;
       break;
+      //FIXME handle HighsBasisStatus::NONBASIC
     }
 
 }
