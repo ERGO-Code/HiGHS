@@ -820,9 +820,26 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
+  int* use_set;
+  double* use_lower;
+  double* use_upper;
+  if (set) {
+    // Changing the bounds for a set of columns, so ensure that the set
+    // and data are in ascending order
+    use_set = (int*)malloc(sizeof(int) * num_set_entries);
+    use_lower = (double*)malloc(sizeof(double) * num_set_entries);
+    use_upper = (double*)malloc(sizeof(double) * num_set_entries);
+    sortSetData(num_set_entries,
+		col_set, usr_col_lower, usr_col_upper, NULL,
+		use_set, use_lower, use_upper, NULL);
+  } else {
+    use_set = (int*)col_set;
+    use_lower = (double*)usr_col_lower;
+    use_upper = (double*)usr_col_upper;
+  }
   HighsStatus call_status = changeLpColBounds(
       highs_model_object.lp_, interval, from_col, to_col, set, num_set_entries,
-      col_set, mask, col_mask, usr_col_lower, usr_col_upper,
+      use_set, mask, col_mask, use_lower, use_upper,
       highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
 
@@ -835,7 +852,7 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
 
     call_status = changeLpColBounds(
         highs_model_object.simplex_lp_, interval, from_col, to_col, set,
-        num_set_entries, col_set, mask, col_mask, usr_col_lower, usr_col_upper,
+        num_set_entries, use_set, mask, col_mask, use_lower, use_upper,
         highs_model_object.options_.infinite_bound);
     if (call_status == HighsStatus::Error) return HighsStatus::Error;
     if (highs_model_object.scale_.is_scaled_) {
@@ -887,9 +904,26 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
+  int* use_set;
+  double* use_lower;
+  double* use_upper;
+  if (set) {
+    // Changing the bounds for a set of rows, so ensure that the set
+    // and data are in ascending order
+    use_set = (int*)malloc(sizeof(int) * num_set_entries);
+    use_lower = (double*)malloc(sizeof(double) * num_set_entries);
+    use_upper = (double*)malloc(sizeof(double) * num_set_entries);
+    sortSetData(num_set_entries,
+		row_set, usr_row_lower, usr_row_upper, NULL,
+		use_set, use_lower, use_upper, NULL);
+  } else {
+    use_set = (int*)row_set;
+    use_lower = (double*)usr_row_lower;
+    use_upper = (double*)usr_row_upper;
+  }
   HighsStatus call_status = changeLpRowBounds(
       highs_model_object.lp_, interval, from_row, to_row, set, num_set_entries,
-      row_set, mask, row_mask, usr_row_lower, usr_row_upper,
+      use_set, mask, row_mask, use_lower, use_upper,
       highs_model_object.options_.infinite_bound);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   if (highs_model_object.simplex_lp_status_.valid) {
@@ -898,23 +932,6 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
            highs_model_object.simplex_lp_.numCol_);
     assert(highs_model_object.lp_.numRow_ ==
            highs_model_object.simplex_lp_.numRow_);
-    int* use_set;
-    double* use_lower;
-    double* use_upper;
-    if (set) {
-      // Changing the bounds for a set of rows, so ensure that the set
-      // and data are in ascending order
-      use_set = (int*)malloc(sizeof(int) * num_set_entries);
-      use_lower = (double*)malloc(sizeof(double) * num_set_entries);
-      use_upper = (double*)malloc(sizeof(double) * num_set_entries);
-      sortSetData(num_set_entries,
-		  row_set, usr_row_lower, usr_row_upper, NULL,
-		  use_set, use_lower, use_upper, NULL);
-    } else {
-      use_set = (int*)row_set;
-      use_lower = (double*)usr_row_lower;
-      use_upper = (double*)usr_row_upper;
-    }
     call_status = changeLpRowBounds(highs_model_object.simplex_lp_, interval, from_row, to_row, set,
 				    num_set_entries, use_set, mask, row_mask, use_lower, use_upper,
 				    highs_model_object.options_.infinite_bound);
