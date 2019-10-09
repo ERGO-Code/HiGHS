@@ -177,6 +177,8 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
       if (!col_mask[col]) {
 	col_mask[col] = new_col;
 	new_col++;
+      } else {
+	col_mask[col] = -1;
       }
     }
     assert(new_col == lp.numCol_);
@@ -418,6 +420,8 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
       if (!row_mask[row]) {
 	row_mask[row] = new_row;
 	new_row++;
+      } else {
+	row_mask[row] = -1;
       }
     }
     assert(new_row == lp.numRow_);

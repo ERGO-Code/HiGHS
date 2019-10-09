@@ -142,10 +142,17 @@ HighsStatus Highs::writeToFile(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
-  printf("\n\n!! Actually solving an LP with %d cols, %d rows", lp_.numCol_, lp_.numRow_);
-  if (lp_.numCol_) printf(" and %d nonzeros", lp_.Astart_[lp_.numCol_]);
-  printf(": basis.valid_ = %d!!\n\n", basis_.valid_);
-  
+  if (options_.message_level >= 0) {
+    printf("\n!! Actually solving an LP with %d cols, %d rows", lp_.numCol_, lp_.numRow_);
+    if (lp_.numCol_) printf(" and %d nonzeros", lp_.Astart_[lp_.numCol_]);
+    printf(":basis.valid_ = %d: basis_.valid_ = %d: simplex_lp_status_.has_basis = %d!!\n\n",
+	   basis_.valid_,
+	   hmos_[0].basis_.valid_,
+	   hmos_[0].simplex_lp_status_.has_basis);
+    if (basis_.valid_ != hmos_[0].basis_.valid_) {
+      printf("NB %d = basis_.valid_ != hmos_[0].basis_.valid_ = %d\n", basis_.valid_, hmos_[0].basis_.valid_);
+    }
+  }
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
 #ifdef HIGHSDEV
