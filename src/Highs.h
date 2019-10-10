@@ -607,6 +607,8 @@ class Highs {
    */
   HighsStatus clearSolver();
 
+  void reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis);
+
   // ipx (not implemented)
 
   // todo: Set warm/hot start methods
@@ -641,6 +643,8 @@ class Highs {
   HighsStatus runBnb();
   HighsStatus solveRootNode(Node& root);
   HighsStatus solveNode(Node& node);
+
+  void updateHighsSolutionBasis();
 
   void underDevelopmentLogMessage(const string method_name);
 };

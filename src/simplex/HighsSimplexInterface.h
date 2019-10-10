@@ -257,12 +257,6 @@ class HighsSimplexInterface {
   int get_basic_indices(int* bind  //!> Indices of basic variables
   );
 
-#ifdef HiGHSDEV
-  /**
-   * @brief Check that what's passed from postsolve is valid - Used?
-   */
-  void check_load_from_postsolve();
-#endif
 };
 
 #endif /* SIMPLEX_HIGHSSIMPLEXINTERFACE_H_ */

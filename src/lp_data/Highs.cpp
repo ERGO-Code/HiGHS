@@ -206,12 +206,9 @@ HighsStatus Highs::run() {
     return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
   }
 
-  // todo: check options.
   HighsSetIO(options_);
-
-  if (checkOptions(options_.records) != OptionStatus::OK) return HighsStatus::Error;
 #ifdef HiGHSDEV
-  checkOptions(options_.records);
+  if (checkOptions(options_.records) != OptionStatus::OK) return HighsStatus::Error;
 #endif
   reportOptions(stdout, options_.records);//, true);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
@@ -399,6 +396,7 @@ HighsStatus Highs::run() {
   // }
 
   assert(hmos_.size() > 0);
+  // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
 
@@ -655,6 +653,10 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   underDevelopmentLogMessage("setBasis");
+  if (!highsBasisOk(lp_, basis)) {
+    HighsLogMessage(HighsMessageType::ERROR, "setBasis: invalid basis");
+    return HighsStatus::Error;
+  }
   basis_ = basis;
   return HighsStatus::OK;
 }
@@ -689,6 +691,7 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
 				    num_new_nz, starts, indices, values);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -710,6 +713,7 @@ bool Highs::addCols(const int num_new_col, const double* costs,
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.addCols(num_new_col, costs, lower_bounds, upper_bounds,
 				    num_new_nz, starts, indices, values);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -903,6 +907,7 @@ bool Highs::deleteCols(const int from_col, const int to_col) {
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.deleteCols(from_col, to_col);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -912,6 +917,7 @@ bool Highs::deleteCols(const int num_set_entries, const int* set) {
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.deleteCols(num_set_entries, set);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -921,6 +927,7 @@ bool Highs::deleteCols(int* mask) {
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.deleteCols(mask);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -930,6 +937,7 @@ bool Highs::deleteRows(const int from_row, const int to_row) {
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.deleteRows(from_row, to_row);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -939,6 +947,7 @@ bool Highs::deleteRows(const int num_set_entries, const int* set) {
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.deleteRows(num_set_entries, set);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -948,6 +957,7 @@ bool Highs::deleteRows(int* mask) {
   assert(hmos_.size() > 0);
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.deleteRows(mask);
+  updateHighsSolutionBasis();
   return return_status == HighsStatus::OK;
 }
 
@@ -955,6 +965,13 @@ HighsStatus Highs::clearSolver() {
   underDevelopmentLogMessage("clearSolver");
   basis_.valid_ = false;
   return HighsStatus::OK;
+}
+
+void Highs::reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis) {
+  printf("\n%s\nModelStatus = %s; LP(%d, %d); solution (%d, %d; %d, %d); basis %d (%d, %d)\n\n",
+	 message.c_str(), highsModelStatusToString(model_status).c_str(), lp.numCol_, lp.numRow_,
+	 (int)solution.col_value.size(), (int)solution.row_value.size(), (int)solution.col_dual.size(), (int)solution.row_dual.size(),
+	 basis.valid_, (int)basis.col_status.size(), (int)basis.row_status.size());
 }
 
 // Private methods
@@ -1234,6 +1251,24 @@ HighsStatus Highs::solveRootNode(Node& root) {
 
   return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
 }
+
+void Highs::updateHighsSolutionBasis() {
+  assert(hmos_.size() > 0);
+  solution_.col_value.resize(lp_.numCol_);
+  solution_.row_value.resize(lp_.numRow_);
+  solution_.col_dual.resize(lp_.numCol_);
+  solution_.row_dual.resize(lp_.numRow_);
+
+  if (hmos_[0].basis_.valid_) {
+    basis_ = hmos_[0].basis_;
+  } else {
+    basis_.valid_ = false;
+    basis_.col_status.resize(lp_.numCol_);
+    basis_.row_status.resize(lp_.numRow_);
+  }
+  //  if (hmos[0].simplex_lp_status_.has_simplex_lp_.
+}  
+
 
 void Highs::underDevelopmentLogMessage(const string method_name) {
   HighsLogMessage(HighsMessageType::WARNING, "Method %s is still under development and behaviour may be unpredictable", method_name.c_str());

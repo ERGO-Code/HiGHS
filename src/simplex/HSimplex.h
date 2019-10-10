@@ -42,11 +42,11 @@ void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& simplex_basis,
 
 void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
 
-bool highs_basis_ok(
-		    //		    HighsLp& lp, HighsBasis& basis
-		    );
+bool highsBasisOk(const HighsLp& lp, const HighsBasis& basis);
 
-bool nonbasic_flag_basic_index_ok(HighsLp& lp, SimplexBasis& simplex_basis);
+bool nonbasicFlagOk(const HighsLp& lp, SimplexBasis& simplex_basis);
+
+bool simplexBasisOk(const HighsLp& lp, SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV
 void report_basis(HighsLp& lp, HighsBasis& basis);

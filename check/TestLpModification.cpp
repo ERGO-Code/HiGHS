@@ -367,10 +367,15 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
+  HighsSolution solution = highs.getSolution();
+  HighsBasis basis = highs.getBasis();
+
   double avgas_optimal_objective_value = highs.getObjectiveValue();
   double avgas_iteration_count = highs.getObjectiveValue();
   double optimal_objective_value;
   double iteration_count;
+
+  highs.reportModelStatusSolutionBasis("After avgas solve", model_status, highs.getLp(), solution, basis);
 
   // Getting columns from the LP is OK
   int col1357_col_mask[] = {0, 1, 0, 1, 0, 1, 0, 1};
@@ -425,11 +430,15 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   printf("After deleting columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 2);
 
+  highs.reportModelStatusSolutionBasis("After deleting columns 1, 3, 5, 7", highs.getModelStatus(), highs.getLp(), solution, basis);
+
+  /*
   return_bool = highs.addCols(col1357_num_col, col1357_cost, col1357_lower, col1357_upper,
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
   printf("After restoring columns 1, 3, 5, 7\n"); reportLp(highs.getLp(), 2);
+  highs.reportModelStatusSolutionBasis("After deleting columns 1, 3, 5, 7", highs.getModelStatus(), highs.getLp(), solution, basis);
 
   return_status = highs.run();
   HighsStatusReport("highs.run()", return_status);
@@ -740,5 +749,6 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
   messageReportLp("After restoring costs and bounds", highs.getLp());
   printf("Finished successfully\n"); fflush(stdout);
+  */
 }
 

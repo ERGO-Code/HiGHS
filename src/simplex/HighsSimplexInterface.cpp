@@ -100,6 +100,7 @@ HighsStatus HighsSimplexInterface::addCols(
     append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, newNumCol);
 
   // Deduce the consequences of adding new columns
+  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_COLS);
 
   // Increase the number of columns in the LPs
@@ -108,14 +109,13 @@ HighsStatus HighsSimplexInterface::addCols(
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highs_basis_ok();//lp, basis);
+    bool basisOK = highsBasisOk(lp, basis);
+    if (!basisOK) printf("HiGHS basis not OK in addCols\n");
     assert(basisOK);
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    bool simplex_basisOK =
-        nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
-    assert(simplex_basisOK);
+    assert(simplexBasisOk(simplex_lp, simplex_basis));
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
@@ -139,16 +139,14 @@ HighsStatus HighsSimplexInterface::deleteCols(int* col_mask) {
 HighsStatus HighsSimplexInterface::deleteColsGeneral(
     bool interval, int from_col, int to_col, bool set, int num_set_entries,
     const int* col_set, bool mask, int* col_mask) {
-  // Uses to_col in iterator style
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
-
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
-  // Keep a copy of the original number of columns in case there's a
-  // mask to be updated
+  // Keep a copy of the original number of columns to check whether
+  // any columns have been removed, and if there is mask to be updated
   int original_num_col = lp.numCol_;
 
   HighsStatus returnStatus;
@@ -156,9 +154,14 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
       deleteLpCols(lp, interval, from_col, to_col, set, num_set_entries,
                    col_set, mask, col_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
-  // ToDo Determine consequences for basis when deleting columns
-  basis.valid_ = false;
-
+  assert(lp.numCol_ <= original_num_col);
+  printf("deleteColsGeneral: %d %d\n", lp.numCol_, original_num_col);
+  if (lp.numCol_ < original_num_col) {
+    // Nontrivial deletion so reset the model_status and invalidate
+    // the Highs basis
+    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+    basis.valid_ = false;
+  }
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -168,8 +171,11 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int col = from_col; col < lp.numCol_ - numDeleteCol; col++)
     //    scale.col_[col] = scale.col_[col + numDeleteCol];
-    // ToDo Determine consequences for basis when deleting columns
-    invalidateSimplexLpBasis(simplex_lp_status);
+    assert(simplex_lp.numCol_ <= original_num_col);
+    if (simplex_lp.numCol_ < original_num_col) {
+    // Nontrivial deletion so invalidate all data relating to the simplex basis
+      invalidateSimplexLpBasis(simplex_lp_status);
+    }
   }
   if (mask) {
     int new_col = 0;
@@ -334,6 +340,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   //  simplex_basis, newNumRow);
 
   // Deduce the consequences of adding new rows
+  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
 
   // Increase the number of rows in the LPs
@@ -342,15 +349,14 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highs_basis_ok();//lp, basis);
+    bool basisOK = highsBasisOk(lp, basis);
     if (!basisOK) printf("HiGHS basis not OK in addRows\n");
     assert(basisOK);
     report_basis(lp, basis);
   }
   if (simplex_lp_status.has_basis) {
     SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    bool simplex_basisOK =
-        nonbasic_flag_basic_index_ok(simplex_lp, simplex_basis);
+    bool simplex_basisOK = simplexBasisOk(simplex_lp, simplex_basis);
     if (!simplex_basisOK) printf("Simplex basis not OK in addRows\n");
     assert(simplex_basisOK);
     report_basis(simplex_lp, simplex_basis);
@@ -379,7 +385,6 @@ HighsStatus HighsSimplexInterface::deleteRows(int* row_mask) {
 HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     bool interval, int from_row, int to_row, bool set, int num_set_entries,
     const int* row_set, bool mask, int* row_mask) {
-  // Uses to_row in iterator style
 #ifdef HiGHSDEV
   printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row,
          to_row);
@@ -391,8 +396,8 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_simplex_lp = simplex_lp_status.valid;
-  // Keep a copy of the original number of rows in case there's a
-  // mask to be updated
+  // Keep a copy of the original number of rows to check whether
+  // any rows have been removed, and if there is mask to be updated
   int original_num_row = lp.numRow_;
 
   HighsStatus returnStatus;
@@ -400,9 +405,13 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
       deleteLpRows(lp, interval, from_row, to_row, set, num_set_entries,
                    row_set, mask, row_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
-  // ToDo Determine consequences for basis when deleting rows
-  basis.valid_ = false;
-
+  assert(lp.numRow_ <= original_num_row);
+  if (lp.numRow_ < original_num_row) {
+    // Nontrivial deletion so reset the model_status and invalidate
+    // the Highs basis
+    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+    basis.valid_ = false;
+  }
   if (valid_simplex_lp) {
     HighsLp& simplex_lp = highs_model_object.simplex_lp_;
     //    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
@@ -412,7 +421,11 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     //    HighsScale& scale = highs_model_object.scale_;
     //    for (int row = from_row; row < lp.numRow_ - numDeleteRow; row++)
     //    scale.row_[row] = scale.row_[row + numDeleteRow];
-    invalidateSimplexLpBasis(simplex_lp_status);
+    assert(simplex_lp.numRow_ <= original_num_row);
+    if (simplex_lp.numRow_ < original_num_row) {
+    // Nontrivial deletion so invalidate all data relating to the simplex basis
+      invalidateSimplexLpBasis(simplex_lp_status);
+    }
   }
   if (mask) {
     int new_row = 0;
@@ -706,7 +719,8 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow, const int X
   // simplex_lp.reportLp();
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
-  // Otherwise, treat it as if
+  // Otherwise, treat it as if it's a new row
+  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
   //  simplex_lp.reportLp();
   return HighsStatus::OK;
@@ -782,6 +796,11 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
                     highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new costs
+  if (highs_model_object.model_status_ == HighsModelStatus::OPTIMAL) {
+    highs_model_object.model_status_ = HighsModelStatus::PRIMAL_FEASIBLE;
+  } else {
+    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+  }
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                         LpAction::NEW_COSTS);
   return HighsStatus::OK;
@@ -864,7 +883,8 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
                        highs_model_object.scale_.col_, interval, from_col,
                        to_col, set, num_set_entries, col_set, mask, col_mask);
     }
-    // Deduce the consequences of new bounds
+    // Deduce the consequences of new col bounds
+    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::NEW_BOUNDS);
   }
@@ -945,7 +965,8 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
                        highs_model_object.scale_.row_, interval, from_row,
                        to_row, set, num_set_entries, row_set, mask, row_mask);
     }
-    // Deduce the consequences of new bounds
+    // Deduce the consequences of new row bounds
+    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::NEW_BOUNDS);
   }
@@ -1949,25 +1970,3 @@ int HighsSimplexInterface::get_basic_indices(int* bind) {
   }
   return 0;
 }
-
-#ifdef HiGHSDEV
-void HighsSimplexInterface::check_load_from_postsolve() {
-  HighsLp& simplex_lp = highs_model_object.simplex_lp_;
-  bool ok;
-
-  ok = nonbasic_flag_basic_index_ok(simplex_lp,
-                                    highs_model_object.simplex_basis_);
-  printf(
-      "check_load_from_postsolve: return from nonbasic_flag_basic_index_ok = "
-      "%d\n",
-      ok);
-  assert(ok);
-
-  ok = all_nonbasic_move_vs_work_arrays_ok(highs_model_object);
-  printf(
-      "check_load_from_postsolve: return from "
-      "all_nonbasic_move_vs_work_arrays_ok = %d\n",
-      ok);
-  assert(ok);
-}
-#endif
