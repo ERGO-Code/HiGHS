@@ -658,6 +658,7 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
     return HighsStatus::Error;
   }
   basis_ = basis;
+  basis_.valid_ = true;
   return HighsStatus::OK;
 }
 
