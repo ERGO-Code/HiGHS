@@ -691,7 +691,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
 	   simplex_info.sum_primal_infeasibilities,
 	   simplex_info.num_dual_infeasibilities,
 	   simplex_info.sum_dual_infeasibilities,
-	   highsModelStatusToString(highs_model_object.model_status_).c_str(),
+	   utilHighsModelStatusToString(highs_model_object.model_status_).c_str(),
 	   num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences,
 	   num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences,
 	   num_basic_col_value_differences, sum_basic_col_value_differences,
@@ -711,7 +711,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
       simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
-      highsModelStatusToString(highs_model_object.model_status_).c_str());
+      utilHighsModelStatusToString(highs_model_object.model_status_).c_str());
 	 
   return model_status;
 }

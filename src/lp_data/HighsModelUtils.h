@@ -15,6 +15,7 @@
 #define LP_DATA_HIGHSMODELUTILS_H_
 
 #include "HConfig.h"
+#include "Highs.h"
 #include "lp_data/HighsStatus.h"
 
 #ifdef HiGHSDEV
@@ -34,9 +35,9 @@ bool namesWithSpaces(const int num_name, const std::vector<std::string>& names, 
 int maxNameLength(const int num_name, const std::vector<std::string>& names);
 HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length);
 
-std::string highsModelStatusToString(HighsModelStatus model_status);
+std::string utilHighsModelStatusToString(HighsModelStatus model_status);
 
-void HighsModelStatusReport(const char* message, HighsModelStatus model_status);
+//void HighsModelStatusReport(const char* message, HighsModelStatus model_status);
 
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status);
 #endif

@@ -1942,11 +1942,11 @@ HighsModelStatus HighsSimplexInterface::analyseHighsSolutionAndBasis(
       simplex_info.sum_primal_infeasibilities,
       simplex_info.num_dual_infeasibilities,
       simplex_info.sum_dual_infeasibilities,
-      highsModelStatusToString(highs_model_object.model_status_).c_str());
+      utilHighsModelStatusToString(highs_model_object.model_status_).c_str());
 #ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
 	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
-	 highsModelStatusToString(highs_model_object.model_status_).c_str(),
+	 utilHighsModelStatusToString(highs_model_object.model_status_).c_str(),
 	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
 	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
 	 num_primal_residual, max_primal_residual, sum_primal_residual,

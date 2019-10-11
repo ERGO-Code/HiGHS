@@ -292,7 +292,7 @@ HighsStatus Highs::run() {
 	}
         HighsLogMessage(HighsMessageType::INFO,
 			"Problem status detected on presolve: %s",
-			highsModelStatusToString(hmos_[original_hmo].model_status_).c_str());
+			utilHighsModelStatusToString(hmos_[original_hmo].model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -303,7 +303,7 @@ HighsStatus Highs::run() {
 
         std::stringstream message_not_opt;
         message_not_opt << std::endl;
-        message_not_opt << "Run status : " << highsModelStatusToString(hmos_[original_hmo].model_status_)
+        message_not_opt << "Run status : " << utilHighsModelStatusToString(hmos_[original_hmo].model_status_)
                         << std::endl;
         message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
                         << lp_solve_final_time - initial_time << std::endl;
@@ -414,7 +414,7 @@ HighsStatus Highs::run() {
 
   std::stringstream message;
   message << std::endl;
-  message << "Run status : " << highsModelStatusToString(hmos_[solved_hmo].model_status_) << std::endl;
+  message << "Run status : " << utilHighsModelStatusToString(hmos_[solved_hmo].model_status_) << std::endl;
   message
       << "Iterations : "
       << solve_iteration_count  // hmos_[solved_hmo].simplex_info_.iteration_count
@@ -966,10 +966,12 @@ HighsStatus Highs::clearSolver() {
 
 void Highs::reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis) {
   printf("\n%s\nModelStatus = %s; LP(%d, %d); solution (%d, %d; %d, %d); basis %d (%d, %d)\n\n",
-	 message.c_str(), highsModelStatusToString(model_status).c_str(), lp.numCol_, lp.numRow_,
+	 message.c_str(), utilHighsModelStatusToString(model_status).c_str(), lp.numCol_, lp.numRow_,
 	 (int)solution.col_value.size(), (int)solution.row_value.size(), (int)solution.col_dual.size(), (int)solution.row_dual.size(),
 	 basis.valid_, (int)basis.col_status.size(), (int)basis.row_status.size());
 }
+
+std::string Highs::highsModelStatusToString(HighsModelStatus model_status) { return utilHighsModelStatusToString(model_status); }
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {
@@ -1082,7 +1084,7 @@ HighsStatus Highs::runBnb() {
   if (hmos_[0].model_status_ != HighsModelStatus::OPTIMAL) {
     HighsPrintMessage(ML_ALWAYS,
                       "Root note not solved to optimality. Status: %s\n",
-                      highsModelStatusToString(hmos_[0].model_status_).c_str());
+                      utilHighsModelStatusToString(hmos_[0].model_status_).c_str());
     return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
   }
 
@@ -1121,7 +1123,7 @@ HighsStatus Highs::runBnb() {
     message << std::endl;
     message << "Optimal solution found.";
     message << std::endl;
-    message << "Run status : " << highsModelStatusToString(hmos_[0].model_status_)
+    message << "Run status : " << utilHighsModelStatusToString(hmos_[0].model_status_)
             << std::endl;
     message << "Objective  : " << std::scientific << tree.getBestObjective()
             << std::endl;

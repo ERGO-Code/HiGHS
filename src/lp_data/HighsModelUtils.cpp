@@ -211,7 +211,7 @@ HighsStatus normaliseNames(const std::string name_type, const int num_name, std:
 }
 
 // Return a string representation of HighsModelStatus.
-std::string highsModelStatusToString(HighsModelStatus model_status) {
+std::string utilHighsModelStatusToString(HighsModelStatus model_status) {
 
   switch (model_status) {
   case HighsModelStatus::NOTSET:
@@ -265,12 +265,13 @@ std::string highsModelStatusToString(HighsModelStatus model_status) {
   }
   return "";
 }
-
+/*
 // Report a HighsModelStatus.
 void highsModelStatusReport(const char* message, HighsModelStatus model_status) {
   HighsLogMessage(HighsMessageType::INFO, "%s: HighsModelStatus = %d - %s\n",
-                  message, (int)model_status, highsModelStatusToString(model_status).c_str());
+                  message, (int)model_status, utilHighsModelStatusToString(model_status).c_str());
 }
+*/
 
 // Deduce the HighsStatus value corresponding to a HighsModelStatus value.
 HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {

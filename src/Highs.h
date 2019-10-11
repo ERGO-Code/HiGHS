@@ -609,6 +609,8 @@ class Highs {
 
   void reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis);
 
+  std::string highsModelStatusToString(HighsModelStatus model_status);
+  
   // ipx (not implemented)
 
   // todo: Set warm/hot start methods
