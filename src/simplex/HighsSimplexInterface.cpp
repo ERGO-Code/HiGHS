@@ -155,7 +155,6 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
                    col_set, mask, col_mask);
   if (returnStatus != HighsStatus::OK) return returnStatus;
   assert(lp.numCol_ <= original_num_col);
-  printf("deleteColsGeneral: %d %d\n", lp.numCol_, original_num_col);
   if (lp.numCol_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis

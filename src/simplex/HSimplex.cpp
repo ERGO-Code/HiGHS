@@ -903,9 +903,11 @@ bool simplexBasisOk(const HighsLp& lp, SimplexBasis& simplex_basis) {
   for (int row = 0; row < lp.numRow_; row++) {
     int col = simplex_basis.basicIndex_[row];
     int flag = simplex_basis.nonbasicFlag_[col];
-    HighsLogMessage(HighsMessageType::ERROR, "Entry basicIndex_[%d] = %d is not basic", row, col);
     assert(!flag);
-    if (flag) return false;
+    if (flag) {
+      HighsLogMessage(HighsMessageType::ERROR, "Entry basicIndex_[%d] = %d is not basic", row, col);
+      return false;
+    }
   }
   return true;
 }

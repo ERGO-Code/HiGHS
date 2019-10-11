@@ -685,9 +685,6 @@ bool Highs::addRows(const int num_new_row, const double* lower_bounds,
   underDevelopmentLogMessage("addRows");
   HighsStatus return_status = HighsStatus::Error;
   assert(hmos_.size() > 0);
-  for (int row = 0; row<num_new_row; row++) {
-    printf("addRows: row %2d / %2d; [%11.4g, %11.4g]\n", row, num_new_row, lower_bounds[row], upper_bounds[row]);
-  }
   HighsSimplexInterface interface(hmos_[0]);
   return_status = interface.addRows(num_new_row, lower_bounds, upper_bounds,
 				    num_new_nz, starts, indices, values);
