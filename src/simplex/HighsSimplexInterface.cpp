@@ -95,9 +95,9 @@ HighsStatus HighsSimplexInterface::addCols(
   }
 
   // Update the basis correponding to new nonbasic columns
-  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, newNumCol);
+  if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, XnumNewCol);
   if (valid_simplex_basis)
-    append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, newNumCol);
+    append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, XnumNewCol);
 
   // Deduce the consequences of adding new columns
   highs_model_object.model_status_ = HighsModelStatus::NOTSET;
@@ -333,10 +333,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   }
 
   // Update the basis correponding to new basic rows
-  if (valid_basis) append_basic_rows_to_basis(lp, basis, newNumRow);
-  //  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-  //  if (simplex_lp_status.has_basis) append_basic_rows_to_basis(simplex_lp,
-  //  simplex_basis, newNumRow);
+  if (valid_basis) append_basic_rows_to_basis(lp, basis, XnumNewRow);
 
   // Deduce the consequences of adding new rows
   highs_model_object.model_status_ = HighsModelStatus::NOTSET;
@@ -789,9 +786,23 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
+  int* use_set;
+  double* use_cost;
+  if (set) {
+    // Changing the bounds for a set of columns, so ensure that the
+    // set and data are in ascending order
+    use_set = (int*)malloc(sizeof(int) * num_set_entries);
+    use_cost = (double*)malloc(sizeof(double) * num_set_entries);
+    sortSetData(num_set_entries,
+		col_set, usr_col_cost, NULL, NULL,
+		use_set, use_cost, NULL, NULL);
+  } else {
+    use_set = (int*)col_set;
+    use_cost = (double*)usr_col_cost;
+  }
   HighsStatus call_status =
       changeLpCosts(highs_model_object.lp_, interval, from_col, to_col, set,
-                    num_set_entries, col_set, mask, col_mask, usr_col_cost,
+                    num_set_entries, use_set, mask, col_mask, use_cost,
                     highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new costs

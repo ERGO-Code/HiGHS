@@ -136,6 +136,10 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
                                          highs_model_object.lp_.numRow_);
       basis.valid_ = highsBasisOk(highs_model_object.lp_, basis);
       assert(basis.valid_);
+      if (!basis.valid_) {
+	HighsLogMessage(HighsMessageType::ERROR, "Supposed to be a Highs basis, but not valid");
+	return HighsModelStatus::SOLVE_ERROR;
+      }
       if (basis.valid_) {
 	// Highs basis has the right number of nonbasic variables
 	for (int iCol = 0; iCol < simplex_lp.numCol_; iCol++) {
@@ -829,16 +833,18 @@ void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis,
 }
 
 bool highsBasisOk(const HighsLp& lp, const HighsBasis& basis) {
-  assert((int)basis.col_status.size() == lp.numCol_);
-  if ((int)basis.col_status.size() != lp.numCol_) {
+  int col_status_size = basis.col_status.size();
+  int row_status_size = basis.row_status.size();
+  assert(col_status_size == lp.numCol_);
+  if (col_status_size != lp.numCol_) {
     HighsLogMessage(HighsMessageType::ERROR, "Size of basis.col_status is %d, not %d",
-		    (int)basis.col_status.size(), lp.numCol_);
+		    col_status_size, lp.numCol_);
     return false;
   }
-  assert((int)basis.row_status.size() == lp.numRow_);
-  if ((int)basis.row_status.size() != lp.numRow_) {
+  assert(row_status_size == lp.numRow_);
+  if (row_status_size != lp.numRow_) {
     HighsLogMessage(HighsMessageType::ERROR, "Size of basis.row_status is %d, not %d",
-		    (int)basis.row_status.size(), lp.numRow_);
+		    row_status_size, lp.numRow_);
     return false;
   }
   int num_basic_variables = 0;
