@@ -96,8 +96,7 @@ HighsStatus HighsSimplexInterface::addCols(
 
   // Update the basis correponding to new nonbasic columns
   if (valid_basis) append_nonbasic_cols_to_basis(lp, basis, XnumNewCol);
-  if (valid_simplex_basis)
-    append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, XnumNewCol);
+  if (valid_simplex_basis) append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, XnumNewCol);
 
   // Deduce the consequences of adding new columns
   highs_model_object.model_status_ = HighsModelStatus::NOTSET;
@@ -109,13 +108,15 @@ HighsStatus HighsSimplexInterface::addCols(
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highsBasisOk(lp, basis);
-    if (!basisOK) printf("HiGHS basis not OK in addCols\n");
-    assert(basisOK);
+    bool basis_ok = basisOk(lp, basis);
+    if (!basis_ok) printf("HiGHS basis not OK in addCols\n");
+    assert(basis_ok);
     report_basis(lp, basis);
   }
   if (valid_simplex_basis) {
-    assert(simplexBasisOk(simplex_lp, simplex_basis));
+    bool basis_ok = basisOk(simplex_lp, simplex_basis);
+    if (!basis_ok) printf("Simplex basis not OK in addCols\n");
+    assert(basis_ok);
     report_basis(simplex_lp, simplex_basis);
   }
 #endif
@@ -237,10 +238,12 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   HighsSimplexLpStatus& simplex_lp_status =
       highs_model_object.simplex_lp_status_;
   HighsLp& simplex_lp = highs_model_object.simplex_lp_;
+  SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
 
   // Query: should simplex_lp_status.valid be simplex_lp_status.valid_?
   bool valid_basis = basis.valid_;
   bool valid_simplex_lp = simplex_lp_status.valid;
+  bool valid_simplex_basis = simplex_lp_status.has_basis;
   bool apply_row_scaling = scale.is_scaled_;
 
   // Check that if nonzeros are to be added then the model has a positive number
@@ -334,6 +337,7 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
   // Update the basis correponding to new basic rows
   if (valid_basis) append_basic_rows_to_basis(lp, basis, XnumNewRow);
+  if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp, simplex_basis, XnumNewRow);
 
   // Deduce the consequences of adding new rows
   highs_model_object.model_status_ = HighsModelStatus::NOTSET;
@@ -345,16 +349,15 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
 
 #ifdef HiGHSDEV
   if (valid_basis) {
-    bool basisOK = highsBasisOk(lp, basis);
-    if (!basisOK) printf("HiGHS basis not OK in addRows\n");
-    assert(basisOK);
+    bool basis_ok = basisOk(lp, basis);
+    if (!basis_ok) printf("HiGHS basis not OK in addRows\n");
+    assert(basis_ok);
     report_basis(lp, basis);
   }
-  if (simplex_lp_status.has_basis) {
-    SimplexBasis& simplex_basis = highs_model_object.simplex_basis_;
-    bool simplex_basisOK = simplexBasisOk(simplex_lp, simplex_basis);
-    if (!simplex_basisOK) printf("Simplex basis not OK in addRows\n");
-    assert(simplex_basisOK);
+  if (valid_simplex_basis) {
+    bool basis_ok = basisOk(simplex_lp, simplex_basis);
+    if (!basis_ok) printf("Simplex basis not OK in addRows\n");
+    assert(basis_ok);
     report_basis(simplex_lp, simplex_basis);
   }
 #endif

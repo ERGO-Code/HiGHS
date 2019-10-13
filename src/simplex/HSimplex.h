@@ -34,19 +34,16 @@ bool dual_infeasible(const double value, const double lower, const double upper,
 
 // Methods not requiring HighsModelObject
 
-void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
-                                   int XnumNewCol);
-
-void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& simplex_basis,
-                                   int XnumNewCol);
+void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewCol);
+void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewCol);
 
 void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
+void append_basic_rows_to_basis(HighsLp& lp, SimplexBasis& basis, int XnumNewRow);
 
-bool highsBasisOk(const HighsLp& lp, const HighsBasis& basis);
+bool basisOk(const HighsLp& lp, const HighsBasis& basis);
+bool basisOk(const HighsLp& lp, SimplexBasis& simplex_basis);
 
 bool nonbasicFlagOk(const HighsLp& lp, SimplexBasis& simplex_basis);
-
-bool simplexBasisOk(const HighsLp& lp, SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV
 void report_basis(HighsLp& lp, HighsBasis& basis);

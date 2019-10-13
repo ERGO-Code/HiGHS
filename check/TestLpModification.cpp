@@ -660,6 +660,16 @@ TEST_CASE("LP-modification", "[highs_data]") {
 			      col1357_num_nz, col1357_start, col1357_index, col1357_value);
   REQUIRE(return_bool);
 
+
+  return_status = highs.run();
+  HighsStatusReport("highs.run()", return_status);
+  REQUIRE(return_status == HighsStatus::OK);
+  
+  model_status = highs.getModelStatus();
+  REQUIRE(model_status == HighsModelStatus::OPTIMAL);
+
+  highs.reportModelStatusSolutionBasis(message, highs.getModelStatus(), highs.getLp(), solution, basis);
+
   //  messageReportLp("After restoring columns 1, 3, 5, 7", highs.getLp());
   
   return_bool = highs.addCols(col0123_num_col, col0123_cost, col0123_lower, col0123_upper,

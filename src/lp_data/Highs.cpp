@@ -653,7 +653,7 @@ HighsStatus Highs::setSolution(const HighsSolution& solution) {
 
 HighsStatus Highs::setBasis(const HighsBasis& basis) {
   underDevelopmentLogMessage("setBasis");
-  if (!highsBasisOk(lp_, basis)) {
+  if (!basisOk(lp_, basis)) {
     HighsLogMessage(HighsMessageType::ERROR, "setBasis: invalid basis");
     return HighsStatus::Error;
   }
