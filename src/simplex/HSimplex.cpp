@@ -871,7 +871,7 @@ bool basisOk(const HighsLp& lp, const HighsBasis& basis) {
   }
   assert(num_basic_variables == lp.numRow_);
   if (num_basic_variables != lp.numRow_) {
-    HighsLogMessage(HighsMessageType::ERROR, "Simplex basis has %d, not %d basic variables",
+    HighsLogMessage(HighsMessageType::ERROR, "HiGHS basis has %d, not %d basic variables",
 		    num_basic_variables, lp.numRow_);
     return false;
   }

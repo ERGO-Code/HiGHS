@@ -792,7 +792,7 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
   int* use_set;
   double* use_cost;
   if (set) {
-    // Changing the bounds for a set of columns, so ensure that the
+    // Changing the costs for a set of columns, so ensure that the
     // set and data are in ascending order
     use_set = (int*)malloc(sizeof(int) * num_set_entries);
     use_cost = (double*)malloc(sizeof(double) * num_set_entries);
@@ -856,6 +856,7 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
+  //  printf("Before changeLpColBounds: col_set = %p\n", (void *)col_set);
   int* use_set;
   double* use_lower;
   double* use_upper;
@@ -865,14 +866,17 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     use_set = (int*)malloc(sizeof(int) * num_set_entries);
     use_lower = (double*)malloc(sizeof(double) * num_set_entries);
     use_upper = (double*)malloc(sizeof(double) * num_set_entries);
+    //    printf("changeColBoundsGeneral: set before = {"); for (int ix = 0; ix < num_set_entries; ix++) printf(" %d", col_set[ix]); printf("}\n");
     sortSetData(num_set_entries,
 		col_set, usr_col_lower, usr_col_upper, NULL,
 		use_set, use_lower, use_upper, NULL);
+    //    printf("changeColBoundsGeneral: set after = {"); for (int ix = 0; ix < num_set_entries; ix++) printf(" %d", use_set[ix]); printf("}\n");
   } else {
     use_set = (int*)col_set;
     use_lower = (double*)usr_col_lower;
     use_upper = (double*)usr_col_upper;
   }
+  printf("Before changeLpColBounds: use_set = %p\n", (void *)use_set);
   HighsStatus call_status = changeLpColBounds(
       highs_model_object.lp_, interval, from_col, to_col, set, num_set_entries,
       use_set, mask, col_mask, use_lower, use_upper,
@@ -894,7 +898,7 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     if (highs_model_object.scale_.is_scaled_) {
       scaleLpColBounds(highs_model_object.simplex_lp_,
                        highs_model_object.scale_.col_, interval, from_col,
-                       to_col, set, num_set_entries, col_set, mask, col_mask);
+                       to_col, set, num_set_entries, use_set, mask, col_mask);
     }
     // Deduce the consequences of new col bounds
     highs_model_object.model_status_ = HighsModelStatus::NOTSET;
