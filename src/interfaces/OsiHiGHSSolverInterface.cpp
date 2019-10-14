@@ -766,7 +766,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   double *value = new double[nnz];
 
   // get matrix data
-  const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
+  // const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
   const int *vectorLengths = matrix.getVectorLengths();
   const double *elements = matrix.getElements();
   const int *indices = matrix.getIndices();
@@ -996,7 +996,7 @@ void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
   for (int row = 0; row < highs->lp_.numRow_; row++)
     solution.row_dual[row] = rowprice[row];
 
-  HighsStatus result = highs->setSolution(solution);
+  /*HighsStatus result =*/ highs->setSolution(solution);
 }
 
 void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
@@ -1008,7 +1008,7 @@ void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
   for (int col = 0; col < highs->lp_.numCol_; col++)
     solution.col_value[col] = colsol[col];
 
-  HighsStatus result = highs->setSolution(solution);
+  /*HighsStatus result =*/ highs->setSolution(solution);
 }
 
 void OsiHiGHSSolverInterface::applyRowCut(const OsiRowCut &rc) {
@@ -1211,7 +1211,7 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
       highs->basis_.row_status.size() == 0)
     return;
 
-  for (int i = 0; i < highs->basis_.col_status.size(); ++i)
+  for (size_t i = 0; i < highs->basis_.col_status.size(); ++i)
     switch (highs->basis_.col_status[i]) {
     case HighsBasisStatus::BASIC:
       cstat[i] = 1;
@@ -1228,9 +1228,10 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     case HighsBasisStatus::ZERO:
       cstat[i] = 0;
       break;
+    //FIXME handle HighsBasisStatus::NONBASIC
     }
 
-  for (int i = 0; i < highs->basis_.row_status.size(); ++i)
+  for (size_t i = 0; i < highs->basis_.row_status.size(); ++i)
     switch (highs->basis_.row_status[i]) {
     case HighsBasisStatus::BASIC:
       cstat[i] = 1;
@@ -1247,6 +1248,7 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     case HighsBasisStatus::ZERO:
       cstat[i] = 0;
       break;
+      //FIXME handle HighsBasisStatus::NONBASIC
     }
 
 }

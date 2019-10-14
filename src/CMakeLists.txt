@@ -94,6 +94,7 @@ if (GAMS_FOUND)
     set(sources ${sources} interfaces/GAMS.cpp)
     set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gmomcc.c")
     set(sources ${sources} "${GAMS_ROOT}/apifiles/C/api/gevmcc.c")
+    include_directories(${GAMS_ROOT}/apifiles/C/api)
 endif()
 
 add_library(libhighs ${sources})

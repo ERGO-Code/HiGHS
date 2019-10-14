@@ -13,7 +13,7 @@ typedef struct optRec* optHandle_t;
 
 /* HiGHS API */
 #include "Highs.h"
-#include "io/LoadProblem.h"  /* for loadOptionsFromFile */
+#include "io/LoadOptions.h"  /* for loadOptionsFromFile */
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
 
@@ -46,7 +46,7 @@ struct gamshighs_s
 typedef struct gamshighs_s gamshighs_t;
 
 void gevprint(
-   unsigned int  level,
+   int           level,
    const char*   msg,
    void*         msgcb_data)
 {
@@ -189,8 +189,7 @@ TERMINATE:
 
 static
 int processSolve(
-   gamshighs_t* gh,
-   HighsStatus status
+   gamshighs_t* gh
 )
 {
    assert(gh != NULL);
@@ -212,60 +211,58 @@ int processSolve(
 
    gmoSolveStatSet(gh->gmo, gmoSolveStat_Normal);
 
-   switch( status )
+   switch( gh->highs->getModelStatus() )
    {
-      case HighsStatus::NotSet:
-      case HighsStatus::Init:
-      case HighsStatus::LpError:
-      case HighsStatus::OptionsError:
-      case HighsStatus::PresolveError:
-      case HighsStatus::SolutionError:
-      case HighsStatus::PostsolveError:
-      case HighsStatus::NotImplemented:
+      case HighsModelStatus::NOTSET:
+      case HighsModelStatus::LOAD_ERROR:
+      case HighsModelStatus::MODEL_ERROR:
+      case HighsModelStatus::MODEL_EMPTY:
+      case HighsModelStatus::PRESOLVE_ERROR:
+      case HighsModelStatus::SOLVE_ERROR:
+      case HighsModelStatus::POSTSOLVE_ERROR:
          gmoModelStatSet(gh->gmo, gmoModelStat_ErrorNoSolution);
          gmoSolveStatSet(gh->gmo, gmoSolveStat_SolverErr);
          break;
 
-      case HighsStatus::ReachedDualObjectiveUpperBound:
+      case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
          /* TODO is solution feasible? */
          gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
          gmoSolveStatSet(gh->gmo, gmoSolveStat_Solver);
          break;
 
-      case HighsStatus::Unbounded:
+      case HighsModelStatus::PRIMAL_UNBOUNDED:
          gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_Unbounded : gmoModelStat_UnboundedNoSolution);
          break;
 
-      case HighsStatus::Infeasible:
+      case HighsModelStatus::PRIMAL_INFEASIBLE:
          gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleGlobal : gmoModelStat_InfeasibleNoSolution);
          break;
 
-      case HighsStatus::Feasible:
-         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleGlobal : gmoModelStat_InfeasibleNoSolution);
+      case HighsModelStatus::PRIMAL_FEASIBLE:
+         assert(havesol);
+         gmoModelStatSet(gh->gmo, gmoModelStat_Feasible);
          break;
 
-      case HighsStatus::OK:   /* ???? */
-      case HighsStatus::Optimal:
+      case HighsModelStatus::DUAL_FEASIBLE:
+         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
+         gmoSolveStatSet(gh->gmo, gmoSolveStat_Solver);
+         break;
+
+      case HighsModelStatus::OPTIMAL:
          assert(havesol);
          gmoModelStatSet(gh->gmo, gmoModelStat_OptimalGlobal);
          break;
 
-      case HighsStatus::Timeout:
+      case HighsModelStatus::REACHED_TIME_LIMIT:
          /* TODO is solution feasible? */
          gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
          gmoSolveStatSet(gh->gmo, gmoSolveStat_Resource);
          break;
 
-      case HighsStatus::ReachedIterationLimit:
+      case HighsModelStatus::REACHED_ITERATION_LIMIT:
          /* TODO is solution feasible? */
          gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
          gmoSolveStatSet(gh->gmo, gmoSolveStat_Iteration);
-         break;
-
-      case HighsStatus::NumericalDifficulties:
-         /* TODO is solution feasible? */
-         gmoModelStatSet(gh->gmo, havesol ? gmoModelStat_InfeasibleIntermed : gmoModelStat_NoSolutionReturned);
-         gmoSolveStatSet(gh->gmo, gmoSolveStat_Solver);
          break;
    }
 
@@ -378,7 +375,6 @@ DllExport int STDCALL C__hisReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t O
 DllExport int STDCALL C__hisCallSolver(void* Cptr)
 {
    int rc = 1;
-   char buffer[1024];
    gamshighs_t* gh;
    HighsStatus status;
 
@@ -410,9 +406,11 @@ DllExport int STDCALL C__hisCallSolver(void* Cptr)
 
    /* solve the problem */
    status = gh->highs->run();
+   if( status != HighsStatus::OK )
+      goto TERMINATE;
 
    /* pass solution, status, etc back to GMO */
-   if( processSolve(gh, status) )
+   if( processSolve(gh) )
       goto TERMINATE;
 
    rc = 0;
