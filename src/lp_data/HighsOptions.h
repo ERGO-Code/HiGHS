@@ -15,6 +15,8 @@
 #define LP_DATA_HIGHS_OPTIONS_H_
 
 #include <cstring>
+//#include <stdio.h> // For strrchr
+//#include <string.h> // For strrchr
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
@@ -188,11 +190,11 @@ OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRec
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, std::string& value);
 
 HighsStatus reportOptionsToFile(const std::string filename, const std::vector<OptionRecord*>& option_records);
-void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false);
-void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false);
+void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records, const bool force_report=false, const bool html=false);
+void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report=false, const bool html=false);
+void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report=false, const bool html=false);
+void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report=false, const bool html=false);
+void reportOption(FILE* file, const OptionRecordString& option, const bool force_report=false, const bool html=false);
 
 const string simplex_string = "simplex";
 const string ipm_string = "ipm";

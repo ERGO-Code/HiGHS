@@ -210,6 +210,10 @@ HighsStatus Highs::run() {
 #ifdef HiGHSDEV
   if (checkOptions(options_.records) != OptionStatus::OK) return HighsStatus::Error;
 #endif
+  // Report all the options to an options file
+  // reportOptionsToFile("Highs.set", options_.records);
+  // Report all the options as HTML
+  // reportOptionsToFile("Highs.html", options_.records);
   reportOptions(stdout, options_.records);//, true);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();
