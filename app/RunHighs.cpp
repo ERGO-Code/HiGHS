@@ -105,7 +105,10 @@ int main(int argc, char** argv) {
     return (int)HighsStatus::Error;
   }
   HighsStatus run_status;
-  //  run_status = highs.writeToFile("write.mps"); if (run_status != HighsStatus::OK) printf("Error return from highs.writeToFile\n");
+  /*
+  run_status = highs.writeModelToFile("write.mps"); 
+  if (run_status != HighsStatus::OK) printf("Error return from highs.writeModelToFile\n");
+  */
 
   highs.options_ = options;
   run_status = highs.run();

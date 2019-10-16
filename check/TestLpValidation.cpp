@@ -173,7 +173,7 @@ TEST_CASE("LP-validation", "[highs_data]") {
   REQUIRE(init_status == HighsStatus::OK);
 
   /*
-  HighsStatus write_status =  highs.writeToFile("");
+  HighsStatus write_status =  highs.writeModelToFile("");
   REQUIRE(write_status == HighsStatus::Warning);
   */
 

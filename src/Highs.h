@@ -124,7 +124,7 @@ class Highs {
   /**
    * @brief writes the current model to a file
    */
-  HighsStatus writeToFile(
+  HighsStatus writeModelToFile(
 			  const std::string filename  //!< the filename
   );
 
@@ -132,8 +132,9 @@ class Highs {
    * @brief writes the current solution to a file
    */
   HighsStatus writeSolutionToFile(
-				  const std::string filename  //!< the filename
-  );
+				  const std::string filename,  //!< the filename
+				  const bool pretty=false      //!< Write in pretty (human-readable) format
+				  );
 
   /**
    * @brief Calls runSolver to solve the LP according to the
@@ -262,12 +263,6 @@ class Highs {
    * LP of the (first?) HighsModelObject
    */
   HighsStatus setBasis(const HighsBasis& basis);
-
-  /**
-   * @brief Reports the solution and basis status for the LP of the
-   * (first?) HighsModelObject
-   */
-  void reportSolution();
 
   /**
    * @brief Adds a row to the model
@@ -655,7 +650,7 @@ class Highs {
 
   void updateHighsSolutionBasis();
 
-  HighsStatus reportSolutionToFile(const std::string filename);
+  HighsStatus reportSolutionToFile(const std::string filename, const bool pretty=false);
 
   void underDevelopmentLogMessage(const string method_name);
 };

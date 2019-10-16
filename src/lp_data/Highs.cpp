@@ -125,11 +125,7 @@ HighsStatus Highs::initializeFromFile(const std::string filename) {
   return this->initializeLp(model);
 }
 
-HighsStatus Highs::writeSolutionToFile(const std::string filename) {
-  return reportSolutionToFile(filename);
-}
-
-HighsStatus Highs::writeToFile(const std::string filename) {
+HighsStatus Highs::writeModelToFile(const std::string filename) {
   HighsLp model = this->lp_;
 
   if (filename == "") {
@@ -141,6 +137,10 @@ HighsStatus Highs::writeToFile(const std::string filename) {
     Filereader* writer = Filereader::getFilereader(filename.c_str());
     return writer->writeModelToFile(filename.c_str(), model);
   }
+}
+
+HighsStatus Highs::writeSolutionToFile(const std::string filename, const bool pretty) {
+  return reportSolutionToFile(filename, pretty);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -408,9 +408,7 @@ HighsStatus Highs::run() {
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
   // Possibly write the solution to a file
-  if (hmos_[solved_hmo].options_.write_solution_to_file) {
-    writeSolutionToFile(hmos_[solved_hmo].options_.solution_file);
-  }
+  if (hmos_[solved_hmo].options_.write_solution_to_file) writeSolutionToFile(hmos_[solved_hmo].options_.solution_file);
 
   // Report times
   if (hmos_[original_hmo].report_model_operations_clock) {
@@ -672,15 +670,6 @@ HighsStatus Highs::setBasis(const HighsBasis& basis) {
   basis_ = basis;
   basis_.valid_ = true;
   return HighsStatus::OK;
-}
-
-void Highs::reportSolution() {
-  reportModelBoundSol(true, lp_.numCol_, lp_.colLower_, lp_.colUpper_,
-                      lp_.col_names_, solution_.col_value, solution_.col_dual,
-                      basis_.col_status);
-  reportModelBoundSol(false, lp_.numRow_, lp_.rowLower_, lp_.rowUpper_,
-                      lp_.row_names_, solution_.row_value, solution_.row_dual,
-                      basis_.row_status);
 }
 
 bool Highs::addRow(const double lower_bound, const double upper_bound,
@@ -1281,7 +1270,7 @@ void Highs::updateHighsSolutionBasis() {
   //  if (hmos[0].simplex_lp_status_.has_simplex_lp_.
 }  
 
-HighsStatus Highs::reportSolutionToFile(const std::string filename) {
+HighsStatus Highs::reportSolutionToFile(const std::string filename, const bool pretty) {
 
   HighsLp lp = this->lp_;
   FILE* file;
@@ -1296,22 +1285,33 @@ HighsStatus Highs::reportSolutionToFile(const std::string filename) {
       return HighsStatus::Error;
     }
   }
-  fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
-  const bool with_basis = basis_.valid_;
-  if (with_basis) {
-    fprintf(file, "T\n");
+  if (pretty) {
+    reportModelBoundSol(file,
+			true, lp_.numCol_, lp_.colLower_, lp_.colUpper_,
+			lp_.col_names_, solution_.col_value, solution_.col_dual,
+			basis_.col_status);
+    reportModelBoundSol(file,
+			false, lp_.numRow_, lp_.rowLower_, lp_.rowUpper_,
+			lp_.row_names_, solution_.row_value, solution_.row_dual,
+			basis_.row_status);
   } else {
-    fprintf(file, "F\n");
-  }
-  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-    fprintf(file, "%g %g", solution_.col_value[iCol], solution_.col_dual[iCol]);
-    if (with_basis) fprintf(file, " %d", (int)basis_.col_status[iCol]);
-    fprintf(file, " \n");
-  }
-  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-    fprintf(file, "%g %g", solution_.row_value[iRow], solution_.row_dual[iRow]);
-    if (with_basis) fprintf(file, " %d", (int)basis_.row_status[iRow]);
-    fprintf(file, " \n");
+    fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
+    const bool with_basis = basis_.valid_;
+    if (with_basis) {
+      fprintf(file, "T\n");
+    } else {
+      fprintf(file, "F\n");
+    }
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      fprintf(file, "%g %g", solution_.col_value[iCol], solution_.col_dual[iCol]);
+      if (with_basis) fprintf(file, " %d", (int)basis_.col_status[iCol]);
+      fprintf(file, " \n");
+    }
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      fprintf(file, "%g %g", solution_.row_value[iRow], solution_.row_dual[iRow]);
+      if (with_basis) fprintf(file, " %d", (int)basis_.row_status[iRow]);
+      fprintf(file, " \n");
+    }
   }
   if (file == stdout) return HighsStatus::Warning;
   return HighsStatus::OK;

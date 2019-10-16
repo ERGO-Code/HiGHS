@@ -104,7 +104,8 @@ std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
   return "";
 }
 
-void reportModelBoundSol(const bool columns, const int dim,
+void reportModelBoundSol(FILE* file,
+			 const bool columns, const int dim,
                          const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<std::string>& names,
@@ -117,17 +118,15 @@ void reportModelBoundSol(const bool columns, const int dim,
   const bool have_dual = dual.size() > 0;
   std::string ch4_var_status;
   if (columns) {
-    HighsPrintMessage(ML_ALWAYS, "Columns\n");
+    fprintf(file, "Columns\n");
   } else {
-    HighsPrintMessage(ML_ALWAYS, "Rows\n");
+    fprintf(file, "Rows\n");
   }
-  HighsPrintMessage(
-      ML_ALWAYS,
-      "    Index Status        Lower        Upper       Primal         Dual");
+  fprintf(file, "    Index Status        Lower        Upper       Primal         Dual");
   if (have_names) {
-    HighsPrintMessage(ML_ALWAYS, "  Name\n");
+    fprintf(file, "  Name\n");
   } else {
-    HighsPrintMessage(ML_ALWAYS, "\n");
+    fprintf(file, "\n");
   }
   for (int ix = 0; ix < dim; ix++) {
     if (have_basis) {
@@ -135,22 +134,22 @@ void reportModelBoundSol(const bool columns, const int dim,
     } else {
       ch4_var_status = "";
     }
-    HighsPrintMessage(ML_ALWAYS, "%9d   %4s %12g %12g", ix,
+    fprintf(file, "%9d   %4s %12g %12g", ix,
                       ch4_var_status.c_str(), lower[ix], upper[ix]);
     if (have_primal) {
-      HighsPrintMessage(ML_ALWAYS, " %12g", primal[ix]);
+      fprintf(file, " %12g", primal[ix]);
     } else {
-      HighsPrintMessage(ML_ALWAYS, "             ");
+      fprintf(file, "             ");
     }
     if (have_dual) {
-      HighsPrintMessage(ML_ALWAYS, " %12g", dual[ix]);
+      fprintf(file, " %12g", dual[ix]);
     } else {
-      HighsPrintMessage(ML_ALWAYS, "             ");
+      fprintf(file, "             ");
     }
     if (have_names) {
-      HighsPrintMessage(ML_ALWAYS, "  %-s\n", names[ix].c_str());
+      fprintf(file, "  %-s\n", names[ix].c_str());
     } else {
-      HighsPrintMessage(ML_ALWAYS, "\n");
+      fprintf(file, "\n");
     }
   }
 }

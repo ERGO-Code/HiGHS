@@ -315,8 +315,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = avgas_highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
-  return_status = avgas_highs.writeToFile("");
-  HighsStatusReport("avgas_highs.writeToFile(\"\")", return_status);
+  return_status = avgas_highs.writeModelToFile("");
+  HighsStatusReport("avgas_highs.writeModelToFile(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::Warning);
 
 
@@ -343,16 +343,16 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
   REQUIRE(return_bool);
 
-  return_status = highs.writeToFile("");
-  HighsStatusReport("highs.writeToFile(\"\")", return_status);
+  return_status = highs.writeModelToFile("");
+  HighsStatusReport("highs.writeModelToFile(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::Warning);
 
   // Adding row vectors and matrix to model with columns returns OK
   return_bool = highs.addRows(num_row, &rowLower[0], &rowUpper[0], num_row_nz, &ARstart[0], &ARindex[0], &ARvalue[0]);
   REQUIRE(return_bool);
 
-  return_status = highs.writeToFile("");
-  HighsStatusReport("highs.writeToFile(\"\")", return_status);
+  return_status = highs.writeModelToFile("");
+  HighsStatusReport("highs.writeModelToFile(\"\")", return_status);
   REQUIRE(return_status == HighsStatus::Warning);
 
   //  const HighsLp &reference_avgas = avgas_highs.getLp();

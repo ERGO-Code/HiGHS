@@ -24,7 +24,8 @@ void analyseModelBounds(const char* message, int numBd,
                         const std::vector<double>& lower,
                         const std::vector<double>& upper);
 #endif
-void reportModelBoundSol(const bool columns, const int dim,
+void reportModelBoundSol(FILE* file,
+			 const bool columns, const int dim,
                          const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<std::string>& names,
