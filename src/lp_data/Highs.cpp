@@ -125,6 +125,10 @@ HighsStatus Highs::initializeFromFile(const std::string filename) {
   return this->initializeLp(model);
 }
 
+HighsStatus Highs::writeSolutionToFile(const std::string filename) {
+  return reportSolutionToFile(filename);
+}
+
 HighsStatus Highs::writeToFile(const std::string filename) {
   HighsLp model = this->lp_;
 
@@ -211,9 +215,9 @@ HighsStatus Highs::run() {
   if (checkOptions(options_.records) != OptionStatus::OK) return HighsStatus::Error;
 #endif
   // Report all the options to an options file
-  // reportOptionsToFile("Highs.set", options_.records);
+   reportOptionsToFile("Highs.set", options_.records);
   // Report all the options as HTML
-  // reportOptionsToFile("Highs.html", options_.records);
+  reportOptionsToFile("Highs.html", options_.records);
   reportOptions(stdout, options_.records);//, true);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();
@@ -403,6 +407,10 @@ HighsStatus Highs::run() {
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
+  // Possibly write the solution to a file
+  if (hmos_[solved_hmo].options_.write_solution_to_file) {
+    writeSolutionToFile(hmos_[solved_hmo].options_.solution_file);
+  }
 
   // Report times
   if (hmos_[original_hmo].report_model_operations_clock) {
@@ -1273,6 +1281,41 @@ void Highs::updateHighsSolutionBasis() {
   //  if (hmos[0].simplex_lp_status_.has_simplex_lp_.
 }  
 
+HighsStatus Highs::reportSolutionToFile(const std::string filename) {
+
+  HighsLp lp = this->lp_;
+  FILE* file;
+  if (filename == "") {
+    // Empty file name: report model on stdout
+    HighsLogMessage(HighsMessageType::WARNING, "Empty file name so reporting solution on stdout");
+    file = stdout;
+  } else {
+    file = fopen(filename.c_str(), "w");
+    if (file == 0) {
+      HighsLogMessage(HighsMessageType::ERROR, "reportSolutionToFile: cannot open file");
+      return HighsStatus::Error;
+    }
+  }
+  fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
+  const bool with_basis = basis_.valid_;
+  if (with_basis) {
+    fprintf(file, "T\n");
+  } else {
+    fprintf(file, "F\n");
+  }
+  for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+    fprintf(file, "%g %g", solution_.col_value[iCol], solution_.col_dual[iCol]);
+    if (with_basis) fprintf(file, " %d", (int)basis_.col_status[iCol]);
+    fprintf(file, " \n");
+  }
+  for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+    fprintf(file, "%g %g", solution_.row_value[iRow], solution_.row_dual[iRow]);
+    if (with_basis) fprintf(file, " %d", (int)basis_.row_status[iRow]);
+    fprintf(file, " \n");
+  }
+  if (file == stdout) return HighsStatus::Warning;
+  return HighsStatus::OK;
+}
 
 void Highs::underDevelopmentLogMessage(const string method_name) {
   HighsLogMessage(HighsMessageType::WARNING, "Method %s is still under development and behaviour may be unpredictable", method_name.c_str());

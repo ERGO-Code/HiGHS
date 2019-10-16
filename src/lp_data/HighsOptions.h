@@ -353,6 +353,18 @@ class HighsOptions {
 				     ML_MIN, ML_MINIMAL, ML_MAX);
     records.push_back(record_int);
 
+    record_string = new OptionRecordString("solution_file",
+					   "Solution file",
+					   advanced, &solution_file,
+					   FILENAME_DEFAULT);
+    records.push_back(record_string);
+
+    record_bool = new OptionRecordBool("write_solution_to_file",
+				       "Write the primal and dual solution to a file",
+				       advanced, &write_solution_to_file,
+				       false);
+    records.push_back(record_bool);
+
     // Advanced options
     advanced = true;
     record_bool = new OptionRecordBool("run_as_hsol",
@@ -482,6 +494,8 @@ class HighsOptions {
   int simplex_primal_edge_weight_strategy;
   int simplex_update_limit;
   int message_level;
+  std::string solution_file;
+  bool write_solution_to_file;
   
   // Advanced options
   bool run_as_hsol;

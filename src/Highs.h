@@ -129,6 +129,13 @@ class Highs {
   );
 
   /**
+   * @brief writes the current solution to a file
+   */
+  HighsStatus writeSolutionToFile(
+				  const std::string filename  //!< the filename
+  );
+
+  /**
    * @brief Calls runSolver to solve the LP according to the
    * specified options
    */
@@ -647,6 +654,8 @@ class Highs {
   HighsStatus solveNode(Node& node);
 
   void updateHighsSolutionBasis();
+
+  HighsStatus reportSolutionToFile(const std::string filename);
 
   void underDevelopmentLogMessage(const string method_name);
 };

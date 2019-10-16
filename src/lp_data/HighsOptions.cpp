@@ -410,14 +410,20 @@ HighsStatus reportOptionsToFile(const std::string filename, const std::vector<Op
   const char* dot = strrchr(filename.c_str(), '.');
   if (dot && dot != filename) html = strcmp(dot + 1, "html") == 0;
   if (html) {
-    fprintf(file, "<html>\n<head>\n<title>Options</title>\n</head>\n<h3>Options</h3>\n");
-    fprintf(file, "<!--link rel=\"stylesheet\" type=\"text/css\" href=\"HiGHS.css\"/-->\n");
+    fprintf(file, "<!DOCTYPE HTML>\n<html>\n\n<head>\n");
+    fprintf(file, "  <title>HiGHS Options</title>\n");
+    fprintf(file, "	<meta charset=\"utf-8\" />\n");
+    fprintf(file, "	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no\" />\n");
+    fprintf(file, "	<link rel=\"stylesheet\" href=\"assets/css/main.css\" />\n");
+    fprintf(file, "</head>\n");
+    fprintf(file, "<body style=\"background-color:f5fafa;\"></body>\n\n");
+    fprintf(file, "<h3>HiGHS Options</h3>\n\n");
     fprintf(file, "<ul>\n");
   }
   reportOptions(file, option_records, true, html);
   if (html) {
     fprintf(file, "</ul>\n");
-    fprintf(file, "</body></html>\n");
+    fprintf(file, "</body>\n\n</html>\n");
   }
   return HighsStatus::OK;
 }
@@ -427,6 +433,8 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
   for (int index = 0; index < num_options; index++) {
     HighsOptionType type = option_records[index]->type;
     //    fprintf(file, "\n# Option %1d\n", index);
+    // Skip the advanced options when creating HTML
+    if (html && option_records[index]->advanced) continue;
     if (type == HighsOptionType::BOOL) {
       reportOption(file, ((OptionRecordBool*)option_records[index])[0], force_report, html);
     } else if (type == HighsOptionType::INT) {
@@ -442,9 +450,9 @@ void reportOptions(FILE* file, const std::vector<OptionRecord*>& option_records,
 void reportOption(FILE* file, const OptionRecordBool& option, const bool force_report, const bool html) {
   if (force_report || option.default_value != *option.value) {
     if (html) {
-      fprintf(file, "<li><tt><font size=\"+1\">%s</font></tt><br>\n", option.name.c_str());
-      fprintf(file, "<p>%s<br>\n", option.description.c_str());
-      fprintf(file, "type: bool, advanced: %s, range: {false, true}, default: %s</p>\n",
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: bool, advanced: %s, range: {false, true}, default: %s\n",
 	      bool2string(option.advanced),
 	      bool2string(option.default_value));
       fprintf(file, "</li>\n");
@@ -461,9 +469,9 @@ void reportOption(FILE* file, const OptionRecordBool& option, const bool force_r
 void reportOption(FILE* file, const OptionRecordInt& option, const bool force_report, const bool html) {
   if (force_report || option.default_value != *option.value) {
     if (html) {
-      fprintf(file, "<li><tt><font size=\"+1\">%s</font></tt><br>\n", option.name.c_str());
-      fprintf(file, "<p>%s<br>\n", option.description.c_str());
-      fprintf(file, "type: int, advanced: %s, range: {%d, %d}, default: %d</p>\n",
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: int, advanced: %s, range: {%d, %d}, default: %d\n",
 	      bool2string(option.advanced),
 	      option.lower_bound,
 	      option.upper_bound,
@@ -484,9 +492,9 @@ void reportOption(FILE* file, const OptionRecordInt& option, const bool force_re
 void reportOption(FILE* file, const OptionRecordDouble& option, const bool force_report, const bool html) {
   if (force_report || option.default_value != *option.value) {
     if (html) {
-      fprintf(file, "<li><tt><font size=\"+1\">%s</font></tt><br>\n", option.name.c_str());
-      fprintf(file, "<p>%s<br>\n", option.description.c_str());
-      fprintf(file, "type: double, advanced: %s, range: [%g, %g], default: %g</p>\n",
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: double, advanced: %s, range: [%g, %g], default: %g\n",
 	      bool2string(option.advanced),
 	      option.lower_bound,
 	      option.upper_bound,
@@ -509,9 +517,9 @@ void reportOption(FILE* file, const OptionRecordString& option, const bool force
   if (option.name == options_file_string) return;
   if (force_report || option.default_value != *option.value) {
     if (html) {
-      fprintf(file, "<li><tt><font size=\"+1\">%s</font></tt><br>\n", option.name.c_str());
-      fprintf(file, "<p>%s<br>\n", option.description.c_str());
-      fprintf(file, "type: string, advanced: %s, default: \"%s\"</p>\n",
+      fprintf(file, "<li><tt><font size=\"+2\"><strong>%s</strong></font></tt><br>\n", option.name.c_str());
+      fprintf(file, "%s<br>\n", option.description.c_str());
+      fprintf(file, "type: string, advanced: %s, default: \"%s\"\n",
 	      bool2string(option.advanced),
 	      option.default_value.c_str());
       fprintf(file, "</li>\n");
