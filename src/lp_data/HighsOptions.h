@@ -365,6 +365,12 @@ class HighsOptions {
 				       false);
     records.push_back(record_bool);
 
+    record_bool = new OptionRecordBool("write_solution_pretty",
+				       "Write the primal and dual solution in a pretty (human-readable) format",
+				       advanced, &write_solution_pretty,
+				       false);
+    records.push_back(record_bool);
+
     // Advanced options
     advanced = true;
     record_bool = new OptionRecordBool("run_as_hsol",
@@ -496,6 +502,7 @@ class HighsOptions {
   int message_level;
   std::string solution_file;
   bool write_solution_to_file;
+  bool write_solution_pretty;
   
   // Advanced options
   bool run_as_hsol;

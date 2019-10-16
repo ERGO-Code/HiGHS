@@ -215,9 +215,9 @@ HighsStatus Highs::run() {
   if (checkOptions(options_.records) != OptionStatus::OK) return HighsStatus::Error;
 #endif
   // Report all the options to an options file
-  // reportOptionsToFile("Highs.set", options_.records);
+  //  reportOptionsToFile("Highs.set", options_.records);
   // Report all the options as HTML
-  // reportOptionsToFile("Highs.html", options_.records);
+  //  reportOptionsToFile("Highs.html", options_.records);
   reportOptions(stdout, options_.records);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();
@@ -408,7 +408,9 @@ HighsStatus Highs::run() {
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
   // Possibly write the solution to a file
-  if (hmos_[solved_hmo].options_.write_solution_to_file) writeSolutionToFile(hmos_[solved_hmo].options_.solution_file);
+  if (hmos_[solved_hmo].options_.write_solution_to_file)
+    writeSolutionToFile(hmos_[solved_hmo].options_.solution_file,
+			hmos_[solved_hmo].options_.write_solution_pretty);
 
   // Report times
   if (hmos_[original_hmo].report_model_operations_clock) {
