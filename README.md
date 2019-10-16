@@ -31,8 +31,8 @@ The performance of HiGHS relative to some commercial and open-source simplex sol
 Compilation
 -----------
 
-HiGHS uses CMake as build system. To compile the run you need to setup
-a build directory and call
+HiGHS uses CMake as build system. First setup
+a build directory and call CMake as follows
 
     mkdir build
     cd build
