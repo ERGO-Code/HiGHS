@@ -143,10 +143,10 @@ public unsafe class HighsLpSolver
    private static extern int Highs_run(void* highs);
 
    [DllImport(highslibname)]
-   private static extern int Highs_readFromFile(void* highs, string filename);
+   private static extern int Highs_readModel(void* highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_writeToFile(void* highs, string filename);
+   private static extern int Highs_writeModel(void* highs, string filename);
 
    [DllImport(highslibname)]
    private static extern int Highs_loadModel(void* highs, int numcol, int numrow, int numnz, double[] colcost,
@@ -328,14 +328,14 @@ public unsafe class HighsLpSolver
       return (HighsStatus)HighsLpSolver.Highs_run(this.highs);
    }
 
-   public HighsStatus readFromFile(string filename)
+   public HighsStatus readModel(string filename)
    {
-      return (HighsStatus)HighsLpSolver.Highs_readFromFile(this.highs, filename);
+      return (HighsStatus)HighsLpSolver.Highs_readModel(this.highs, filename);
    }
 
-   public HighsStatus writeToFile(string filename)
+   public HighsStatus writeModel(string filename)
    {
-      return (HighsStatus)HighsLpSolver.Highs_writeToFile(this.highs, filename);
+      return (HighsStatus)HighsLpSolver.Highs_writeModel(this.highs, filename);
    }
 
    public HighsStatus loadModel(HighsModel model)

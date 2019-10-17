@@ -52,15 +52,15 @@ int Highs_run(void* highs  //!< HiGHS object reference
 /*
  * @brief
  */
-int Highs_readFromFile(void* highs,          //!< HiGHS object reference
-                       const char* filename  //!< filename
+  int Highs_readModel(void* highs,          //!< HiGHS object reference
+		      const char* filename  //!< filename
 );
 
 /*
  * @brief
  */
-int Highs_writeToFile(void* highs,          //!< HiGHS object reference
-                      const char* filename  //!< filename
+int Highs_writeModel(void* highs,          //!< HiGHS object reference
+			   const char* filename  //!< filename
 );
 
 /*
@@ -618,7 +618,7 @@ int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
 //  * @brief Reports the solution and basis status for the LP of the
 //  * (first?) HighsModelObject
 //  */
-// void reportSolution();
+// void writeSolution(const std::string filename);
 
 #ifdef __cplusplus
 }

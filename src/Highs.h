@@ -34,23 +34,71 @@ class Highs {
   Highs(HighsOptions& options) { options_ = options; }
 
   //  virtual ~Highs() { delete &hmos_; }
-  /**
-   * @brief Get the number of columns in the LP of the (first?)
-   * HighsModelObject
-   */
-  int getNumCols() { return lp_.numCol_; }
 
   /**
-   * @brief Get the number of rows in the LP of the (first?)
-   * HighsModelObject
+   * Methods for model input
    */
-  int getNumRows() { return lp_.numRow_; }
 
   /**
-   * @brief Get the number of entries in the LP of the (first?)
-   * HighsModelObject
+   * @brief Clears the vector of HighsModelObjects (hmos), creates a
+   * HighsModelObject for this LP and makes it the first of the vector
+   * of HighsModelObjects
    */
-  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
+  HighsStatus initializeLp(
+      const HighsLp& lp  //!< The HighsLp instance for this LP
+  );
+
+  /**
+   * @brief reads in a model and initializes the HighsModelObject
+   */
+  HighsStatus readModel(
+			const std::string filename  //!< the filename
+  );
+
+  /**
+   * @brief Solves the model according to the specified options
+   */
+  HighsStatus run();
+
+  /**
+   * @brief Returns the current status of the (first?) HighsModelObject
+   */
+  HighsModelStatus getModelStatus() const;
+
+  /**
+   * @brief Returns the (dual) objective function value for the LP of
+   * the (first?) HighsModelObject
+   */
+  double getObjectiveValue() const;
+
+  /**
+   * @brief Returns the number of simplex iterations for the LP of the
+   * (first?) HighsModelObject
+   */
+  int getIterationCount() const;
+
+  /**
+   * @brief Returns the HighsSolution instance for the LP of the
+   * (first?)  HighsModelObject
+   */
+  const HighsSolution& getSolution() const;
+
+  /**
+   * @brief Returns the HighsBasis instance for the LP of the
+   * (first?) HighsModelObject
+   */
+  const HighsBasis& getBasis() const;
+
+  /**
+   * @brief writes the current solution to a file
+   */
+  HighsStatus writeSolution(
+			    const std::string filename,  //!< the filename
+			    const bool pretty=false      //!< Write in pretty (human-readable) format
+			    );
+  /**
+   * Methods for HiGHS option input/output
+   */
 
   /**
    * @brief Sets an option to the bool/int/double/string  value if it's
@@ -106,41 +154,8 @@ class Highs {
 				);
   
   /**
-   * @brief Clears the vector of HighsModelObjects (hmos), creates a
-   * HighsModelObject for this LP and makes it the first of the vector
-   * of HighsModelObjects
+   * Methods for model output
    */
-  HighsStatus initializeLp(
-      const HighsLp& lp  //!< The HighsLp instance for this LP
-  );
-
-  /**
-   * @brief reads a model from a file and initializes the Highs object
-   */
-  HighsStatus initializeFromFile(
-				 const std::string filename  //!< the filename
-  );
-
-  /**
-   * @brief writes the current model to a file
-   */
-  HighsStatus writeModelToFile(
-			  const std::string filename  //!< the filename
-  );
-
-  /**
-   * @brief writes the current solution to a file
-   */
-  HighsStatus writeSolutionToFile(
-				  const std::string filename,  //!< the filename
-				  const bool pretty=false      //!< Write in pretty (human-readable) format
-				  );
-
-  /**
-   * @brief Calls runSolver to solve the LP according to the
-   * specified options
-   */
-  HighsStatus run();
 
   /**
    * @brief Returns the HighsLp instance for the LP of the (first?)
@@ -149,120 +164,150 @@ class Highs {
   const HighsLp& getLp() const;
 
   /**
-   * @brief Returns the HighsSolution instance for the LP of the
-   * (first?)  HighsModelObject
+   * @brief Get the number of columns in the LP of the (first?)
+   * HighsModelObject
    */
-  const HighsSolution& getSolution() const;
+  int getNumCols() { return lp_.numCol_; }
 
   /**
-   * @brief Returns the HighsBasis instance for the LP of the
-   * (first?) HighsModelObject
+   * @brief Get the number of rows in the LP of the (first?)
+   * HighsModelObject
    */
-  const HighsBasis& getBasis() const;
+  int getNumRows() { return lp_.numRow_; }
 
   /**
-   * @brief Returns the current status of the (first?) HighsModelObject
+   * @brief Get the number of entries in the LP of the (first?)
+   * HighsModelObject
    */
-  HighsModelStatus getModelStatus() const;
+  int getNumEntries() { if (lp_.numCol_) return lp_.Astart_[lp_.numCol_]; return 0; }
 
   /**
-   * @brief Returns the (dual) objective function value for the LP of
-   * the (first?) HighsModelObject
+   * @brief Get multiple columns from the model given by an interval
    */
-  double getObjectiveValue() const;
+  bool getCols(const int from_col,  //!< The index of the first column to get
+                                    //!< from the model
+               const int to_col,  //!< One more than the last column to get from
+                                  //!< the model
+               int& num_col,      //!< Number of columns got from the model
+               double* costs,     //!< Array of size num_col with costs
+               double* lower,     //!< Array of size num_col with lower bounds
+               double* upper,     //!< Array of size num_col with upper bounds
+               int& num_nz,       //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_col with start indices
+                                   //!< of the columns
+               int* matrix_index,  //!< Array of size num_nz with row indices
+                                   //!< for the columns
+               double* matrix_value  //!< Array of size num_nz with row values
+                                     //!< for the columns
+  );
 
   /**
-   * @brief Returns the number of simplex iterations for the LP of the
-   * (first?) HighsModelObject
+   * @brief Get multiple columns from the model given by a set
    */
-  int getIterationCount() const;
-  // todo: getRangingInformation(..)
+  bool getCols(const int num_set_entries,  //!< The number of indides in the set
+               const int* set,  //!< Array of size num_set_entries with indices
+                                //!< of columns to get
+               int& num_col,    //!< Number of columns got from the model
+               double* costs,   //!< Array of size num_col with costs
+               double* lower,   //!< Array of size num_col with lower bounds
+               double* upper,   //!< Array of size num_col with upper bounds
+               int& num_nz,     //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_col with start indices
+                                   //!< of the columns
+               int* matrix_index,  //!< Array of size num_nz with row indices
+                                   //!< for the columns
+               double* matrix_value  //!< Array of size num_nz with row values
+                                     //!< for the columns
+  );
 
   /**
-   * @brief Gets the basic variables in the order corresponding to
-   * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
-   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
-   * required by SCIP, non-negative entries are indices of columns,
-   * and negative entries are -(row_index+1).
+   * @brief Get multiple columns from the model given by a mask
    */
-  HighsStatus getBasicVariables(
-				int* basic_variables  //!< Basic variables
-				);
-  /**
-   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
-   */
-  HighsStatus getBasisInverseRow(
-				 const int row,          //!< Index of row required
-				 double* row_vector,     //!< Row required
-				 int* row_num_nz = NULL, //!< Number of nonzeros
-				 int* row_indices = NULL //!< Indices of nonzeros
-				 );  
+  bool getCols(const int* mask,  //!< Full length array with 1 => get; 0 => not
+               int& num_col,     //!< Number of columns got from the model
+               double* costs,    //!< Array of size num_col with costs
+               double* lower,    //!< Array of size num_col with lower bounds
+               double* upper,    //!< Array of size num_col with upper bounds
+               int& num_nz,      //!< Number of nonzeros got from the model
+               int* matrix_start,    //!<  Array of size num_col with start
+                                     //!<  indices of the columns
+               int* matrix_index,    //!<  Array of size num_nz with row indices
+                                     //!<  for the columns
+               double* matrix_value  //!<  Array of size num_nz with row values
+                                     //!<  for the columns
+  );
 
   /**
-   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   * @brief Get multiple rows from the model given by an interval
    */
-  HighsStatus getBasisInverseCol(
-				 const int col,          //!< Index of column required
-				 double* col_vector,     //!< Column required
-				 int* col_num_nz = NULL, //!< Number of nonzeros
-				 int* col_indices = NULL //!< Indices of nonzeros
-);
+  bool getRows(
+      const int from_row,  //!< The index of the first row to get from the model
+      const int to_row,    //!< One more than the last row get from the model
+      int& num_row,        //!< Number of rows got from the model
+      double* lower,       //!< Array of size num_row with lower bounds
+      double* upper,       //!< Array of size num_row with upper bounds
+      int& num_nz,         //!< Number of nonzeros got from the model
+      int* matrix_start,   //!< Array of size num_row with start indices of the
+                           //!< rows
+      int* matrix_index,   //!< Array of size num_nz with column indices for the
+                           //!< rows
+      double* matrix_value  //!< Array of size num_nz with column values for the
+                            //!< rows
+  );
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   * @brief Get multiple rows from the model given by a set
    */
-  HighsStatus getBasisSolve(
-			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
-			    int* solution_num_nz = NULL, //!< Number of nonzeros
-			    int* solution_indices = NULL //!< Indices of nonzeros
-			    );
+  bool getRows(const int num_set_entries,  //!< The number of indides in the set
+               const int* set,  //!< Array of size num_set_entries with indices
+                                //!< of rows to get
+               int& num_row,    //!< Number of rows got from the model
+               double* lower,   //!< Array of size num_row with lower bounds
+               double* upper,   //!< Array of size num_row with upper bounds
+               int& num_nz,     //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_row with start indices
+                                   //!< of the rows
+               int* matrix_index,  //!< Array of size num_nz with column indices
+                                   //!< for the rows
+               double* matrix_value  //!< Array of size num_nz with column
+                                     //!< values for the rows
+  );
 
   /**
-   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   * @brief Get multiple rows from the model given by a mask
    */
-  HighsStatus getBasisTransposeSolve(
-				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
-				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
-				     int* solution_nz = NULL,     //!< Number of nonzeros
-				     int* solution_indices = NULL //!< Indices of nonzeros
-				     );
+  bool getRows(const int* mask,  //!< Full length array with 1 => get; 0 => not
+               int& num_row,     //!< Number of rows got from the model
+               double* lower,    //!< Array of size num_row with lower bounds
+               double* upper,    //!< Array of size num_row with upper bounds
+               int& num_nz,      //!< Number of nonzeros got from the model
+               int* matrix_start,  //!< Array of size num_row with start indices
+                                   //!< of the rows
+               int* matrix_index,  //!< Array of size num_nz with column indices
+                                   //!< for the rows
+               double* matrix_value  //!< Array of size num_nz with column
+                                     //!< values for the rows
+  );
 
   /**
-   * @brief Forms a row of \f$B^{-1}A\f$
+   * @brief Get a matrix coefficient
    */
-  HighsStatus getReducedRow(
-			       const int row,          //!< Index of row required
-			       double* row_vector,     //!< Row required
-			       int* row_num_nz = NULL, //!< Number of nonzeros
-			       int* row_indices = NULL //!< Indices of nonzeros
-			       );
+  bool getCoeff(
+		const int row, //!< Row of coefficient to be changed
+		const int col, //!< Column of coefficient to be changed
+		double& value   //!< Coefficient
+		);
 
   /**
-   * @brief Forms a column of \f$B^{-1}A\f$
+   * @brief writes out current model
    */
-  HighsStatus getReducedColumn(
-			       const int col,          //!< Index of column required
-			       double* col_vector,     //!< Column required
-			       int* col_num_nz = NULL, //!< Number of nonzeros
-			       int* col_indices = NULL //!< Indices of nonzeros
-			       );
+  HighsStatus writeModel(
+			 const std::string filename  //!< the filename
+  );
 
-  /**
-   * @brief Uses the HighsSolution passed to set the solution for the
-   * LP of the (first?) HighsModelObject, according to ?? TODO Understand this
-   * ??
+   /**
+   * Methods for model modification
    */
-  // In the solution passed as a parameter below can have one or many of
-  // col_value, col_dual and row_dual set. If any of them are not set the
-  // solution in Highs does not get updated.
-  HighsStatus setSolution(const HighsSolution& solution);
-
-  /**
-   * @brief Uses the HighsBasis passed to set the basis for the
-   * LP of the (first?) HighsModelObject
-   */
-  HighsStatus setBasis(const HighsBasis& basis);
 
   /**
    * @brief Adds a row to the model
@@ -438,123 +483,6 @@ class Highs {
 		   );
 
   /**
-   * @brief Get multiple columns from the model given by an interval
-   */
-  bool getCols(const int from_col,  //!< The index of the first column to get
-                                    //!< from the model
-               const int to_col,  //!< One more than the last column to get from
-                                  //!< the model
-               int& num_col,      //!< Number of columns got from the model
-               double* costs,     //!< Array of size num_col with costs
-               double* lower,     //!< Array of size num_col with lower bounds
-               double* upper,     //!< Array of size num_col with upper bounds
-               int& num_nz,       //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_col with start indices
-                                   //!< of the columns
-               int* matrix_index,  //!< Array of size num_nz with row indices
-                                   //!< for the columns
-               double* matrix_value  //!< Array of size num_nz with row values
-                                     //!< for the columns
-  );
-
-  /**
-   * @brief Get multiple columns from the model given by a set
-   */
-  bool getCols(const int num_set_entries,  //!< The number of indides in the set
-               const int* set,  //!< Array of size num_set_entries with indices
-                                //!< of columns to get
-               int& num_col,    //!< Number of columns got from the model
-               double* costs,   //!< Array of size num_col with costs
-               double* lower,   //!< Array of size num_col with lower bounds
-               double* upper,   //!< Array of size num_col with upper bounds
-               int& num_nz,     //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_col with start indices
-                                   //!< of the columns
-               int* matrix_index,  //!< Array of size num_nz with row indices
-                                   //!< for the columns
-               double* matrix_value  //!< Array of size num_nz with row values
-                                     //!< for the columns
-  );
-
-  /**
-   * @brief Get multiple columns from the model given by a mask
-   */
-  bool getCols(const int* mask,  //!< Full length array with 1 => get; 0 => not
-               int& num_col,     //!< Number of columns got from the model
-               double* costs,    //!< Array of size num_col with costs
-               double* lower,    //!< Array of size num_col with lower bounds
-               double* upper,    //!< Array of size num_col with upper bounds
-               int& num_nz,      //!< Number of nonzeros got from the model
-               int* matrix_start,    //!<  Array of size num_col with start
-                                     //!<  indices of the columns
-               int* matrix_index,    //!<  Array of size num_nz with row indices
-                                     //!<  for the columns
-               double* matrix_value  //!<  Array of size num_nz with row values
-                                     //!<  for the columns
-  );
-
-  /**
-   * @brief Get multiple rows from the model given by an interval
-   */
-  bool getRows(
-      const int from_row,  //!< The index of the first row to get from the model
-      const int to_row,    //!< One more than the last row get from the model
-      int& num_row,        //!< Number of rows got from the model
-      double* lower,       //!< Array of size num_row with lower bounds
-      double* upper,       //!< Array of size num_row with upper bounds
-      int& num_nz,         //!< Number of nonzeros got from the model
-      int* matrix_start,   //!< Array of size num_row with start indices of the
-                           //!< rows
-      int* matrix_index,   //!< Array of size num_nz with column indices for the
-                           //!< rows
-      double* matrix_value  //!< Array of size num_nz with column values for the
-                            //!< rows
-  );
-
-  /**
-   * @brief Get multiple rows from the model given by a set
-   */
-  bool getRows(const int num_set_entries,  //!< The number of indides in the set
-               const int* set,  //!< Array of size num_set_entries with indices
-                                //!< of rows to get
-               int& num_row,    //!< Number of rows got from the model
-               double* lower,   //!< Array of size num_row with lower bounds
-               double* upper,   //!< Array of size num_row with upper bounds
-               int& num_nz,     //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_row with start indices
-                                   //!< of the rows
-               int* matrix_index,  //!< Array of size num_nz with column indices
-                                   //!< for the rows
-               double* matrix_value  //!< Array of size num_nz with column
-                                     //!< values for the rows
-  );
-
-  /**
-   * @brief Get multiple rows from the model given by a mask
-   */
-  bool getRows(const int* mask,  //!< Full length array with 1 => get; 0 => not
-               int& num_row,     //!< Number of rows got from the model
-               double* lower,    //!< Array of size num_row with lower bounds
-               double* upper,    //!< Array of size num_row with upper bounds
-               int& num_nz,      //!< Number of nonzeros got from the model
-               int* matrix_start,  //!< Array of size num_row with start indices
-                                   //!< of the rows
-               int* matrix_index,  //!< Array of size num_nz with column indices
-                                   //!< for the rows
-               double* matrix_value  //!< Array of size num_nz with column
-                                     //!< values for the rows
-  );
-
-  /**
-   * @brief Get a matrix coefficient
-   */
-  bool getCoeff(
-		const int row, //!< Row of coefficient to be changed
-		const int col, //!< Column of coefficient to be changed
-		double& value   //!< Coefficient
-		);
-
-  /**
    * @brief Delete multiple columns from the model given by an interval
    */
   bool deleteCols(const int from_col,  //!< The index of the first column to
@@ -603,19 +531,121 @@ class Highs {
 		  int* mask  //!< Full length array with 1 => delete; 0 => not
   );
 
+  /**
+   * Other methods for specialist applications
+   */
+
+  /**
+   * Methods for setting the basis and solution
+   */
+
+  /**
+   * @brief Uses the HighsSolution passed to set the solution for the
+   * LP of the (first?) HighsModelObject, according to ?? TODO Understand this
+   * ??
+   */
+  // In the solution passed as a parameter below can have one or many of
+  // col_value, col_dual and row_dual set. If any of them are not set the
+  // solution in Highs does not get updated.
+  HighsStatus setSolution(const HighsSolution& solution);
+
+  /**
+   * @brief Uses the HighsBasis passed to set the basis for the
+   * LP of the (first?) HighsModelObject
+   */
+  HighsStatus setBasis(const HighsBasis& basis);
+
+  // todo: getRangingInformation(..)
+
+  /**
+   * Methods for operations with the invertible representation of the
+   * current basis matrix
+   */
+
+  /**
+   * @brief Gets the basic variables in the order corresponding to
+   * calls to getBasisInverseRow, getBasisInverseCol, getBasisSolve,
+   * getBasisTransposeSolve, getReducedRow and getReducedColumn. As
+   * required by SCIP, non-negative entries are indices of columns,
+   * and negative entries are -(row_index+1).
+   */
+  HighsStatus getBasicVariables(
+				int* basic_variables  //!< Basic variables
+				);
+  /**
+   * @brief Gets a row of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseRow(
+				 const int row,          //!< Index of row required
+				 double* row_vector,     //!< Row required
+				 int* row_num_nz = NULL, //!< Number of nonzeros
+				 int* row_indices = NULL //!< Indices of nonzeros
+				 );  
+
+  /**
+   * @brief Gets a column of \f$B^{-1}\f$ for basis matrix \f$B\f$
+   */
+  HighsStatus getBasisInverseCol(
+				 const int col,          //!< Index of column required
+				 double* col_vector,     //!< Column required
+				 int* col_num_nz = NULL, //!< Number of nonzeros
+				 int* col_indices = NULL //!< Indices of nonzeros
+);
+
+  /**
+   * @brief Forms \f$\mathbf{x}=B^{-1}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   */
+  HighsStatus getBasisSolve(
+			    const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+			    double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$
+			    int* solution_num_nz = NULL, //!< Number of nonzeros
+			    int* solution_indices = NULL //!< Indices of nonzeros
+			    );
+
+  /**
+   * @brief Forms \f$\mathbf{x}=B^{-T}\mathbf{b}\f$ for a given vector \f$\mathbf{b}\f$
+   */
+  HighsStatus getBasisTransposeSolve(
+				     const double* rhs,           //!< RHS \f$\mathbf{b}\f$ 
+				     double* solution_vector,     //!< Solution  \f$\mathbf{x}\f$ 
+				     int* solution_nz = NULL,     //!< Number of nonzeros
+				     int* solution_indices = NULL //!< Indices of nonzeros
+				     );
+
+  /**
+   * @brief Forms a row of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedRow(
+			       const int row,          //!< Index of row required
+			       double* row_vector,     //!< Row required
+			       int* row_num_nz = NULL, //!< Number of nonzeros
+			       int* row_indices = NULL //!< Indices of nonzeros
+			       );
+
+  /**
+   * @brief Forms a column of \f$B^{-1}A\f$
+   */
+  HighsStatus getReducedColumn(
+			       const int col,          //!< Index of column required
+			       double* col_vector,     //!< Column required
+			       int* col_num_nz = NULL, //!< Number of nonzeros
+			       int* col_indices = NULL //!< Indices of nonzeros
+			       );
+
   
   /**
    * @brief Clear data associated with solving the model: basis, solution and internal data etc
    */
   HighsStatus clearSolver();
 
+  /**
+   * @brief Report the model status, solution and basis vector sizes and basis validity
+   */
   void reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis);
 
   std::string highsModelStatusToString(HighsModelStatus model_status);
   
   // ipx (not implemented)
-
-  // todo: Set warm/hot start methods
 
 #ifdef OSI_FOUND
   friend class OsiHiGHSSolverInterface;

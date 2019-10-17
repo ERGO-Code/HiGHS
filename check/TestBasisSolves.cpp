@@ -160,13 +160,14 @@ TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   highs_status = highs.getReducedColumn(0, solution_vector);
   REQUIRE(highs_status==HighsStatus::Error);
 
-  highs_status = highs.initializeFromFile(filename);
+  highs_status = highs.readModel(filename);
   REQUIRE(highs_status==HighsStatus::OK);
  
   HighsLp lp = highs.getLp();
   REQUIRE(highs_status == HighsStatus::OK);
 
-  highs_status = highs.writeModelToFile("");
+  highs_status = highs.writeModel("");
+  //  highs_status = highs.writeModel("");
   REQUIRE(highs_status==HighsStatus::Warning);
  
   int numRow = lp.numRow_;

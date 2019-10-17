@@ -59,14 +59,14 @@ function Highs_run(highs)
    return ccall((:Highs_run, "libhighs.so"), Cint, (Ptr{Cvoid},), highs)
 end
 
-function Highs_readFromFile(highs, filename)
+function Highs_readModel(highs, filename)
    name = convert(Cstring, pointer(filename))
-   return ccall((:Highs_readFromFile, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
+   return ccall((:Highs_readModel, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
 end
 
-function Highs_writeToFile(highs, filename)
+function Highs_writeModel(highs, filename)
    name = convert(Cstring, pointer(filename))
-   return ccall((:Highs_writeToFile, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
+   return ccall((:Highs_writeModel, "libhighs.so"), Cint, (Ptr{Cvoid}, Cstring), highs, name)
 end
 
 function Highs_loadModel(highs, model)

@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
   }
   HighsStatus run_status;
   /*
-  run_status = highs.writeModelToFile("write.mps"); 
-  if (run_status != HighsStatus::OK) printf("Error return from highs.writeModelToFile\n");
+  run_status = highs.writeModel("write.mps"); 
+  if (run_status != HighsStatus::OK) printf("Error return from highs.writeModel\n");
   */
 
   highs.options_ = options;
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
   std::string statusname = HighsStatusToString(run_status);
   if (run_status != HighsStatus::OK)
     HighsPrintMessage(ML_ALWAYS, "Highs status: %s\n", statusname.c_str());
-  //    highs.reportSolution();
+  //    highs.writeSolution("");
 
   return (int)run_status;
 }

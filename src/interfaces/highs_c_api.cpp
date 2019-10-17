@@ -49,16 +49,16 @@ void Highs_destroy(void* highs) { delete (Highs*)highs; }
 
 int Highs_run(void* highs) { return (int)((Highs*)highs)->run(); }
 
-int Highs_readModelFromFile(void* highs, const char* filename) {
-  return (int)((Highs*)highs)->initializeFromFile(std::string(filename));
+int Highs_readModel(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->readModel(std::string(filename));
 }
 
-int Highs_writeModelToFile(void* highs, const char* filename) {
-  return (int)((Highs*)highs)->writeModelToFile(std::string(filename));
+int Highs_writeModel(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->writeModel(std::string(filename));
 }
 
-int Highs_writeSolutionToFile(void* highs, const char* filename) {
-  return (int)((Highs*)highs)->writeSolutionToFile(std::string(filename));
+int Highs_writeSolution(void* highs, const char* filename) {
+  return (int)((Highs*)highs)->writeSolution(std::string(filename));
 }
 
 int Highs_loadModel(void* highs, int numcol, int numrow, int numnz,

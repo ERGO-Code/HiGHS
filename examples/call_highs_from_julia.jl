@@ -26,7 +26,7 @@ Highs_destroy(highs)
 
 # read model from file
 highs = Highs_create()
-Highs_readFromFile(highs, "/home/s1613957/HiGHs/build/bin/avgas.mps")
+Highs_readmodel(highs, "../check/instances/avgas.mps")
 Highs_run(highs)
 Highs_getSolution(highs)
 Highs_getBasis(highs)
