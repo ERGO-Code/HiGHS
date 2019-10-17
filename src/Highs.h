@@ -680,8 +680,6 @@ class Highs {
 
   void updateHighsSolutionBasis();
 
-  HighsStatus reportSolutionToFile(const std::string filename, const bool pretty=false);
-
   void underDevelopmentLogMessage(const string method_name);
 };
 

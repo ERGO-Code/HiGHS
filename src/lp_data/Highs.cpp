@@ -398,7 +398,49 @@ const HighsSolution& Highs::getSolution() const { return solution_; }
 const HighsBasis& Highs::getBasis() const { return basis_; }
 
 HighsStatus Highs::writeSolution(const std::string filename, const bool pretty) {
-  return reportSolutionToFile(filename, pretty);
+  HighsLp lp = this->lp_;
+  FILE* file;
+  if (filename == "") {
+    // Empty file name: report model on stdout
+    HighsLogMessage(HighsMessageType::WARNING, "Empty file name so reporting solution on stdout");
+    file = stdout;
+  } else {
+    file = fopen(filename.c_str(), "w");
+    if (file == 0) {
+      HighsLogMessage(HighsMessageType::ERROR, "writeSolution: cannot open file");
+      return HighsStatus::Error;
+    }
+  }
+  if (pretty) {
+    reportModelBoundSol(file,
+			true, lp_.numCol_, lp_.colLower_, lp_.colUpper_,
+			lp_.col_names_, solution_.col_value, solution_.col_dual,
+			basis_.col_status);
+    reportModelBoundSol(file,
+			false, lp_.numRow_, lp_.rowLower_, lp_.rowUpper_,
+			lp_.row_names_, solution_.row_value, solution_.row_dual,
+			basis_.row_status);
+  } else {
+    fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
+    const bool with_basis = basis_.valid_;
+    if (with_basis) {
+      fprintf(file, "T\n");
+    } else {
+      fprintf(file, "F\n");
+    }
+    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
+      fprintf(file, "%g %g", solution_.col_value[iCol], solution_.col_dual[iCol]);
+      if (with_basis) fprintf(file, " %d", (int)basis_.col_status[iCol]);
+      fprintf(file, " \n");
+    }
+    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
+      fprintf(file, "%g %g", solution_.row_value[iRow], solution_.row_dual[iRow]);
+      if (with_basis) fprintf(file, " %d", (int)basis_.row_status[iRow]);
+      fprintf(file, " \n");
+    }
+  }
+  if (file == stdout) return HighsStatus::Warning;
+  return HighsStatus::OK;
 }
 
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
@@ -1271,53 +1313,6 @@ void Highs::updateHighsSolutionBasis() {
   }
   //  if (hmos[0].simplex_lp_status_.has_simplex_lp_.
 }  
-
-HighsStatus Highs::reportSolutionToFile(const std::string filename, const bool pretty) {
-
-  HighsLp lp = this->lp_;
-  FILE* file;
-  if (filename == "") {
-    // Empty file name: report model on stdout
-    HighsLogMessage(HighsMessageType::WARNING, "Empty file name so reporting solution on stdout");
-    file = stdout;
-  } else {
-    file = fopen(filename.c_str(), "w");
-    if (file == 0) {
-      HighsLogMessage(HighsMessageType::ERROR, "reportSolutionToFile: cannot open file");
-      return HighsStatus::Error;
-    }
-  }
-  if (pretty) {
-    reportModelBoundSol(file,
-			true, lp_.numCol_, lp_.colLower_, lp_.colUpper_,
-			lp_.col_names_, solution_.col_value, solution_.col_dual,
-			basis_.col_status);
-    reportModelBoundSol(file,
-			false, lp_.numRow_, lp_.rowLower_, lp_.rowUpper_,
-			lp_.row_names_, solution_.row_value, solution_.row_dual,
-			basis_.row_status);
-  } else {
-    fprintf(file, "%d %d : Number of columns and rows for primal and dual solution and basis\n", lp.numCol_, lp.numRow_);
-    const bool with_basis = basis_.valid_;
-    if (with_basis) {
-      fprintf(file, "T\n");
-    } else {
-      fprintf(file, "F\n");
-    }
-    for (int iCol = 0; iCol < lp.numCol_; iCol++) {
-      fprintf(file, "%g %g", solution_.col_value[iCol], solution_.col_dual[iCol]);
-      if (with_basis) fprintf(file, " %d", (int)basis_.col_status[iCol]);
-      fprintf(file, " \n");
-    }
-    for (int iRow = 0; iRow < lp.numRow_; iRow++) {
-      fprintf(file, "%g %g", solution_.row_value[iRow], solution_.row_dual[iRow]);
-      if (with_basis) fprintf(file, " %d", (int)basis_.row_status[iRow]);
-      fprintf(file, " \n");
-    }
-  }
-  if (file == stdout) return HighsStatus::Warning;
-  return HighsStatus::OK;
-}
 
 void Highs::underDevelopmentLogMessage(const string method_name) {
   HighsLogMessage(HighsMessageType::WARNING, "Method %s is still under development and behaviour may be unpredictable", method_name.c_str());
