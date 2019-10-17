@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 
 // mcs -out:highscslib.dll -t:library highs_csharp_api.cs -unsafe
 
-// TODO: add HighsStatus enum
 public enum HighsStatus
 {
    OK,
@@ -12,7 +11,6 @@ public enum HighsStatus
    Error
 }
 
-// TODO: add HighsBasisStatus enum
 public enum HighsBasisStatus
 {
    Lower,
@@ -23,14 +21,12 @@ public enum HighsBasisStatus
    Super
 }
 
-// TODO: add objective sense enum
 public enum HighsObjectiveSense
 {
    Minimize = 1,
    Maximize = -1
 }
 
-// TODO: add model status enum
 public enum HighsModelStatus
 {
    NOTSET,
