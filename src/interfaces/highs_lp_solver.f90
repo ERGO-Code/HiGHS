@@ -60,7 +60,7 @@ module highs_lp_solver
       integer ( c_int ) :: s
     end function Highs_writeSolution
 
-    function Highs_loadModel ( h, n, m, nz, cc, cl, cu, rl, ru, as, ai, av) result ( s ) bind ( c, name='Highs_loadModel' )
+    function Highs_passLp ( h, n, m, nz, cc, cl, cu, rl, ru, as, ai, av) result ( s ) bind ( c, name='Highs_passLp' )
       use iso_c_binding
       type(c_ptr), VALUE :: h
       integer ( c_int ), VALUE :: n
@@ -75,7 +75,7 @@ module highs_lp_solver
       integer ( c_int ) :: ai(*)
       real ( c_double ) :: av(*)
       integer ( c_int ) :: s
-    end function Highs_loadModel
+    end function Highs_passLp
 
     function Highs_setOptionValue ( h, o, v ) result( s ) bind ( c, name='Highs_setOptionValue' )
       use iso_c_binding

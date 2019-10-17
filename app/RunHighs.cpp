@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
   Highs highs;
   //  highs.writeHighsOptions("HiGHS.set");
 
-  HighsStatus init_status = highs.initializeLp(lp);
+  HighsStatus init_status = highs.passModel(lp);
   if (init_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
     return (int)HighsStatus::Error;

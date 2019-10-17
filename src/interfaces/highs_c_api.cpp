@@ -10,7 +10,7 @@ int Highs_call(int numcol, int numrow, int numnz, double* colcost,
   Highs highs;
 
   int status =
-      Highs_loadModel(&highs, numcol, numrow, numnz, colcost, collower,
+      Highs_passLp(&highs, numcol, numrow, numnz, colcost, collower,
                       colupper, rowlower, rowupper, astart, aindex, avalue);
   if (status != 0) {
     return status;
@@ -61,7 +61,7 @@ int Highs_writeSolution(void* highs, const char* filename) {
   return (int)((Highs*)highs)->writeSolution(std::string(filename));
 }
 
-int Highs_loadModel(void* highs, int numcol, int numrow, int numnz,
+int Highs_passLp(void* highs, int numcol, int numrow, int numnz,
                     double* colcost, double* collower, double* colupper,
                     double* rowlower, double* rowupper, int* astart,
                     int* aindex, double* avalue) {
@@ -90,7 +90,7 @@ int Highs_loadModel(void* highs, int numcol, int numrow, int numnz,
   lp.Aindex_.assign(aindex, aindex + numnz);
   lp.Avalue_.assign(avalue, avalue + numnz);
 
-  return (int)((Highs*)highs)->initializeLp(lp);
+  return (int)((Highs*)highs)->passModel(lp);
 }
 
 int Highs_setHighsOptionValue(void* highs, const char* option,

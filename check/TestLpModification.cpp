@@ -306,8 +306,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   HighsLp lp;
 
   Highs avgas_highs(options);
-  return_status = avgas_highs.initializeLp(avgas_lp);
-  //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
+  return_status = avgas_highs.passModel(avgas_lp);
+  //  printf("passModel: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
 
   return_bool = avgas_highs.addCols(num_col, &colCost[0], &colLower[0], &colUpper[0], 0, NULL, NULL, NULL);
@@ -321,8 +321,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
 
 
   Highs highs(options);
-  return_status = highs.initializeLp(lp);
-  //  printf("initializeLp: return_status = %s\n", HighsStatusToString(return_status).c_str());
+  return_status = highs.passModel(lp);
+  //  printf("passModel: return_status = %s\n", HighsStatusToString(return_status).c_str());
   REQUIRE(return_status == HighsStatus::OK);
 
   model_status = highs.getModelStatus();

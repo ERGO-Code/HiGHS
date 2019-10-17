@@ -44,7 +44,7 @@ class Highs {
    * HighsModelObject for this LP and makes it the first of the vector
    * of HighsModelObjects
    */
-  HighsStatus initializeLp(
+  HighsStatus passModel(
       const HighsLp& lp  //!< The HighsLp instance for this LP
   );
 

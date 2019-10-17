@@ -97,7 +97,7 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
   this->highs->options_.logmsgcb = logtomessagehandler;
   this->highs->options_.msgcb_data = (void*)handler_;
 
-  this->highs->initializeLp(original.highs->getLp());
+  this->highs->passModel(original.highs->getLp());
   setStrParam(OsiSolverName, "HiGHS");
 }
 
@@ -718,7 +718,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   lp.Astart_.assign(start, start + numcols + 1);
   lp.Aindex_.assign(index, index + start[numcols]);
   lp.Avalue_.assign(value, value + start[numcols]);
-  this->highs->initializeLp(lp);
+  this->highs->passModel(lp);
   this->setObjSense(oldObjSense);
 }
 
@@ -814,7 +814,7 @@ void OsiHiGHSSolverInterface::loadProblem(
 //   lp); if (rc != FilereaderRetcode::OK)
 // 	  return (int)rc;
 //   this->setDblParam(OsiDblParam::OsiObjOffset, lp.offset_);
-//   highs->initializeLp(lp);
+//   highs->passModel(lp);
 
 //   return 0;
 // }

@@ -176,7 +176,7 @@ int setupProblem(
    gh->lp->Avalue_.resize(numNz);
    gmoGetMatrixCol(gh->gmo, &gh->lp->Astart_[0], &gh->lp->Aindex_[0], &gh->lp->Avalue_[0], NULL);
 
-   gh->highs->initializeLp(*gh->lp);
+   gh->highs->passModel(*gh->lp);
 
    //FilereaderLp().writeModelToFile("highs.lp", *gh->lp);
    //FilereaderMps().writeModelToFile("highs.mps", *gh->lp);

@@ -41,7 +41,7 @@ Highs::Highs() {
   //  allow_presolve_ = true;
 }
 
-HighsStatus Highs::initializeLp(const HighsLp& lp) {
+HighsStatus Highs::passModel(const HighsLp& lp) {
   // Copy the LP to the internal LP
   lp_ = lp;
   // Check validity of the LP, normalising its values (by default).
@@ -64,7 +64,7 @@ HighsStatus Highs::readModel(const std::string filename) {
     return HighsStatus::Error;
   }
 
-  return this->initializeLp(model);
+  return this->passModel(model);
 }
 
 // Checks the options calls presolve and postsolve if needed. Solvers are called
@@ -107,14 +107,14 @@ HighsStatus Highs::run() {
       // Add slacks & dualize.
       HighsLp dual = dualizeEqualityProblem(primal);
       // dualizeEqualityProblem returns a minimization problem.
-      initializeLp(dual);
+      passModel(dual);
     } else {
       // If maximization, minimize before calling runFeasibility.
       if (primal.sense_ != OBJSENSE_MINIMIZE) {
         for (int col = 0; col < primal.numCol_; col++)
           primal.colCost_[col] = -primal.colCost_[col];
       }
-      initializeLp(primal);
+      passModel(primal);
     }
 
     if (options_.feasibility_strategy == FEASIBILITY_STRATEGY_kApproxComponentWise)
@@ -1265,7 +1265,7 @@ HighsStatus Highs::solveNode(Node& node) {
   }
 
   // Solve with a new hmo (replace with code above)
-  // initializeLp(lp_);
+  // passModel(lp_);
   // lp_.colLower_ = node.col_lower_bound;
   // lp_.colUpper_ = node.col_upper_bound;
 

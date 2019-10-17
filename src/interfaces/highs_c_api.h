@@ -64,9 +64,9 @@ int Highs_writeModel(void* highs,          //!< HiGHS object reference
 );
 
 /*
- * @brief load full model
+ * @brief pass an LP to HiGHS
  */
-int Highs_loadModel(
+int Highs_passLp(
     void* highs,       //!< HiGHS object reference
     int numcol,        //!< number of columns
     int numrow,        //!< number of rows
@@ -602,7 +602,7 @@ int Highs_getReducedColumn(void* highs,         //!< HiGHS object reference
 //  * HighsModelObject for this LP and makes it the first of the vector
 //  * of HighsModelObjects
 //  */
-// HighsStatus initializeLp(
+// HighsStatus passModel(
 //     const HighsLp &lp  //!< The HighsLp instance for this LP
 // );
 

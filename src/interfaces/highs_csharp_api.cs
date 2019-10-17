@@ -149,7 +149,7 @@ public unsafe class HighsLpSolver
    private static extern int Highs_writeModel(void* highs, string filename);
 
    [DllImport(highslibname)]
-   private static extern int Highs_loadModel(void* highs, int numcol, int numrow, int numnz, double[] colcost,
+   private static extern int Highs_passLp(void* highs, int numcol, int numrow, int numnz, double[] colcost,
    double[] collower, double[] colupper, double[] rowlower, double[] rowupper, int[] astart, int[] aindex, double[] avalue);
 
    [DllImport(highslibname)]
@@ -338,9 +338,9 @@ public unsafe class HighsLpSolver
       return (HighsStatus)HighsLpSolver.Highs_writeModel(this.highs, filename);
    }
 
-   public HighsStatus loadModel(HighsModel model)
+   public HighsStatus passLp(HighsModel model)
    {
-      return (HighsStatus)HighsLpSolver.Highs_loadModel(this.highs, model.colcost.Length, model.rowlower.Length, model.avalue.Length,
+      return (HighsStatus)HighsLpSolver.Highs_passLp(this.highs, model.colcost.Length, model.rowlower.Length, model.avalue.Length,
       model.colcost, model.collower, model.colupper, model.rowlower, model.rowupper, model.astart, model.aindex, model.avalue);
    }
 

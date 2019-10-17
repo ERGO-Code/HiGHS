@@ -121,14 +121,14 @@ TEST_CASE("dualize", "[highs_data]") {
 
   Highs highs_lp;
   HighsModelStatus model_status;
-  status = highs_lp.initializeLp(lp);
+  status = highs_lp.passModel(lp);
   REQUIRE(status == HighsStatus::OK);
   status = highs_lp.run();
   model_status = highs_lp.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
   Highs highs_primal;
-  status = highs_primal.initializeLp(primal);
+  status = highs_primal.passModel(primal);
   REQUIRE(status == HighsStatus::OK);
   status = highs_primal.run();
   model_status = highs_lp.getModelStatus();
@@ -144,7 +144,7 @@ TEST_CASE("dualize", "[highs_data]") {
   Highs highs_dual;
   status = assessLp(dual, options);
   REQUIRE(status == HighsStatus::OK);
-  status = highs_dual.initializeLp(dual);
+  status = highs_dual.passModel(dual);
   REQUIRE(status == HighsStatus::OK);
   status = highs_dual.run();
   model_status = highs_lp.getModelStatus();
