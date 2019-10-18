@@ -47,6 +47,8 @@ Then compile the code using
 
     make
 
+This installs the executable `bin/highs`. 
+
 Testing
 -------
 
@@ -123,12 +125,11 @@ some problems, it is typically faster in parallel.
 HiGHS Library
 -------------
 
-Highs is compiled in a shared library. Running
+HiGHS is compiled in a shared library. Running
 
 `make install`
 
-installs the highs executable in the bin/ and the highs library in the
-lib/ folder, as well as all header files in include/. For a custom
+from the build folder installs the library in `lib/`, as well as all header files in `include/`. For a custom
 installation in `install_folder` run
 
 `cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
@@ -146,8 +147,7 @@ and add the correct path to HIGHS_DIR.
 Compiling and linking without CMake
 -----------------------------------
 
-Suppose we want to link an executable defined in file `use_highs.cpp` with the
-highs library. After running the code above compile and run with
+An executable defined in the file `use_highs.cpp` is linked with the HiGHS library as follows. After running the code above, compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 
