@@ -45,6 +45,7 @@ struct gamshighs_s
 };
 typedef struct gamshighs_s gamshighs_t;
 
+static
 void gevprint(
    int           level,
    const char*   msg,
@@ -54,6 +55,7 @@ void gevprint(
    gevLogPChar(gev, msg);
 }
 
+static
 void gevlog(
    HighsMessageType type,
    const char*      msg,
