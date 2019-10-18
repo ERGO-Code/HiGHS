@@ -558,12 +558,94 @@ TERMINATE:
    return rc;
 }
 
-DllExport int STDCALL C__hisHaveModifyProblem(void* Cptr) { return 0; }
+DllExport int STDCALL C__hisHaveModifyProblem(void* Cptr) { return 1; }
 
 DllExport int STDCALL C__hisModifyProblem(void* Cptr)
 {
-   assert(Cptr != NULL);
-   return 1;
+   gamshighs_t* gh = (gamshighs_t*)Cptr;
+   assert(gh != NULL);
+
+   /* set the GMO styles, in case someone changed this */
+   gmoObjStyleSet(gh->gmo, gmoObjType_Fun);
+   gmoObjReformSet(gh->gmo, 1);
+   gmoIndexBaseSet(gh->gmo, 0);
+   gmoSetNRowPerm(gh->gmo); /* hide =N= rows */
+   gmoMinfSet(gh->gmo, -HIGHS_CONST_INF);
+   gmoPinfSet(gh->gmo,  HIGHS_CONST_INF);
+
+   int maxsize = std::max(gmoN(gh->gmo), gmoM(gh->gmo));
+
+   int jacnz;
+   gmoGetJacUpdate(gh->gmo, NULL, NULL, NULL, &jacnz);
+   if( jacnz+1 > maxsize )
+      maxsize = jacnz+1;
+
+   int* colidx = new int[maxsize];
+   int* rowidx = new int[maxsize];
+   double* array1 = new double[maxsize];
+   double* array2 = new double[maxsize];
+
+   Highs* highs = gh->highs;
+   assert(highs != NULL);
+
+   // update objective coefficients
+   int nz;
+   int nlnz;
+   gmoGetObjSparse(gh->gmo, colidx, array1, NULL, &nz, &nlnz);
+   assert(nlnz == gmoObjNZ(gh->gmo));
+   highs->changeColsCost(nz, colidx, array1);
+
+   // TODO update objective offset
+
+   // update variable bounds
+   gmoGetVarLower(gh->gmo, array1);
+   gmoGetVarUpper(gh->gmo, array2);
+   highs->changeColsBounds(0, gmoN(gh->gmo), array1, array2);
+
+   // update constraint sides
+   for( int i = 0; i < gmoM(gh->gmo); ++i )
+   {
+      double rhs = gmoGetRhsOne(gh->gmo, i);
+      rowidx[i] = 1;
+      switch( gmoGetEquTypeOne(gh->gmo, i) )
+      {
+         case gmoequ_E :
+            array1[i] = rhs;
+            array2[i] = rhs;
+            break;
+
+         case gmoequ_G :
+            array1[i] = rhs;
+            array2[i] = HIGHS_CONST_INF;
+            break;
+
+         case gmoequ_L :
+            array1[i] = -HIGHS_CONST_INF;
+            array2[i] = rhs;
+            break;
+
+         case gmoequ_N:
+         case gmoequ_X:
+         case gmoequ_C:
+         case gmoequ_B:
+            /* these should not occur */
+            rowidx[i] = 0;
+            break;
+      }
+   }
+   highs->changeRowsBounds(rowidx, array1, array2);
+
+   // update constraint matrix
+   gmoGetJacUpdate(gh->gmo, rowidx, colidx, array1, &jacnz);
+   for( int i = 0; i < nz; ++i )
+      highs->changeCoeff(rowidx[i], colidx[i], array1[i]);
+
+   delete[] array2;
+   delete[] array1;
+   delete[] rowidx;
+   delete[] colidx;
+
+   return 0;
 }
 
 void his_Initialize(void);
