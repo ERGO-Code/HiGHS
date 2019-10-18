@@ -196,8 +196,10 @@ int processSolve(
    assert(gh->highs != NULL);
    assert(gh->lp != NULL);
 
+   Highs* highs = gh->highs;
+
    gmoSetHeadnTail(gh->gmo, gmoHresused, gevTimeDiffStart(gh->gev));
-   gmoSetHeadnTail(gh->gmo, gmoHiterused, 42 /* FIXME number of iterations */);
+   gmoSetHeadnTail(gh->gmo, gmoHiterused, highs->getIterationCount());
 
    HighsSolution sol = gh->highs->getSolution();
    bool havesol = sol.col_value.size() > 0;
