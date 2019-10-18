@@ -69,7 +69,7 @@ void gevlog(
 }
 
 static
-gmoVarEquBasisStatus translateBasisStatus(
+enum gmoVarEquBasisStatus translateBasisStatus(
    HighsBasisStatus status)
 {
    switch( status )
@@ -89,6 +89,24 @@ gmoVarEquBasisStatus translateBasisStatus(
    return gmoBstat_Super;
 }
 
+static
+HighsBasisStatus translateBasisStatus(
+    enum gmoVarEquBasisStatus status)
+{
+   switch( status )
+   {
+      case gmoBstat_Basic:
+         return HighsBasisStatus::BASIC;
+      case gmoBstat_Lower :
+         return HighsBasisStatus::LOWER;
+      case gmoBstat_Super:
+         return HighsBasisStatus::SUPER;
+      case gmoBstat_Upper:
+         return HighsBasisStatus::UPPER;
+   }
+   // this should never happen
+   return HighsBasisStatus::SUPER;
+}
 
 static
 int setupOptions(
@@ -133,6 +151,7 @@ int setupProblem(
    int numNz;
    int i;
    int rc = 1;
+   HighsSolution sol;
 
    assert(gh != NULL);
    assert(gh->options != NULL);
@@ -206,6 +225,43 @@ int setupProblem(
 
    //FilereaderLp().writeModelToFile("highs.lp", *gh->lp);
    //FilereaderMps().writeModelToFile("highs.mps", *gh->lp);
+
+   // pass initial solution
+   sol.col_value.resize(numCol);
+   sol.col_dual.resize(numCol);
+   sol.row_value.resize(numRow);
+   sol.row_dual.resize(numRow);
+   gmoGetVarL(gh->gmo, &sol.col_value[0]);
+   gmoGetVarM(gh->gmo, &sol.col_dual[0]);
+   gmoGetEquL(gh->gmo, &sol.row_value[0]);
+   gmoGetEquM(gh->gmo, &sol.row_dual[0]);
+   gh->highs->setSolution(sol);
+
+   if( gmoHaveBasis(gh->gmo) )
+   {
+      HighsBasis basis;
+      basis.col_status.resize(numCol);
+      basis.row_status.resize(numRow);
+      int nbasic = 0;
+
+      for( int i = 0; i < numCol; ++i )
+      {
+         basis.col_status[i] = translateBasisStatus((enum gmoVarEquBasisStatus)gmoGetVarStatOne(gh->gmo, i));
+         if( basis.col_status[i] == HighsBasisStatus::BASIC )
+            ++nbasic;
+      }
+
+      for( int i = 0; i < numRow; ++i )
+      {
+         basis.row_status[i] = translateBasisStatus((enum gmoVarEquBasisStatus)gmoGetEquStatOne(gh->gmo, i));
+         if( basis.row_status[i] == HighsBasisStatus::BASIC )
+            ++nbasic;
+      }
+
+      basis.valid_ = nbasic == numRow;
+
+      gh->highs->setBasis(basis);
+   }
 
    rc = 0;
 TERMINATE:
