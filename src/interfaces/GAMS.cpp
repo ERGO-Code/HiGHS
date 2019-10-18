@@ -139,9 +139,10 @@ int setupProblem(
    gh->lp->colCost_.resize(numCol);
    gmoGetObjVector(gh->gmo, &gh->lp->colCost_[0], NULL);
    if( gmoSense(gh->gmo) == gmoObj_Min )
-      gh->lp->sense_ = 1;
+      gh->lp->sense_ = OBJSENSE_MINIMIZE;
    else
-      gh->lp->sense_ = -1;
+      gh->lp->sense_ = OBJSENSE_MAXIMIZE;
+   gh->lp->offset_ = gmoObjConst(gh->gmo);
 
    /* row left- and right-hand-side */
    gh->lp->rowLower_.resize(numRow);
