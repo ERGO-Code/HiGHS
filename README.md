@@ -37,7 +37,7 @@ Compilation
 -----------
 
 HiGHS uses CMake as build system. First setup
-a build directory and call CMake as follows
+a build folder and call CMake as follows
 
     mkdir build
     cd build
@@ -166,7 +166,7 @@ Set custom options with `-D<option>=<value>` during the configuration step (`cma
 
 If build with GAMS interface, then HiGHS can be made available as solver
 in GAMS by adding an entry for HiGHS to the file gmscmpun.txt in the GAMS
-system directory (gmscmpnt.txt on Windows):
+system folder (gmscmpnt.txt on Windows):
 ```
 HIGHS 11 5 0001020304 1 0 2 LP RMIP
 gmsgenus.run
@@ -176,4 +176,4 @@ gmsgenux.out
 OSI
 ---
 - `OSI_ROOT`:
-    path to COIN-OR/Osi build/install directory (OSI_ROOT/lib/pkg-config/osi.pc should exist)
+    path to COIN-OR/Osi build/install folder (OSI_ROOT/lib/pkg-config/osi.pc should exist)
