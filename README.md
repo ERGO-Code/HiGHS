@@ -139,6 +139,8 @@ To use the library from a cmake project use
 and add the correct path to HIGHS_DIR.
 
 Compiling and linking without cmake
+-----------------------------------
+
 Suppose we want to link an executable defined in file `use_highs.cpp` with the
 highs library. After running the code above compile and run with
 
