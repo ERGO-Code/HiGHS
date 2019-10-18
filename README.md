@@ -28,6 +28,11 @@ Performance
 
 The performance of HiGHS relative to some commercial and open-source simplex solvers may be assessed via the Mittelmann benchmarks on http://plato.asu.edu/ftp/lpsimp.html
 
+Documentation
+-------------
+
+The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available from https://www.maths.ed.ac.uk/hall/HiGHS.
+
 Compilation
 -----------
 
