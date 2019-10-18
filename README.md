@@ -137,13 +137,13 @@ and then
 
 `make install`
 
-To use the library from a cmake project use
+To use the library from a CMake project use
 
 `find_package(HiGHS)`
 
 and add the correct path to HIGHS_DIR.
 
-Compiling and linking without cmake
+Compiling and linking without CMake
 -----------------------------------
 
 Suppose we want to link an executable defined in file `use_highs.cpp` with the
