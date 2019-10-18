@@ -79,7 +79,8 @@ int setupOptions(
    gh->options = new HighsOptions;
 
    gh->options->time_limit = gevGetDblOpt(gh->gev, gevResLim);
-   gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
+   if( gevGetIntOpt(gh->gev, gevIterLim) != ITERLIM_INFINITY )
+      gh->options->simplex_iteration_limit = gevGetIntOpt(gh->gev, gevIterLim);
 
    if( gevGetIntOpt(gh->gev, gevUseCutOff) )
       gh->options->dual_objective_value_upper_bound = gevGetDblOpt(gh->gev, gevCutOff);
