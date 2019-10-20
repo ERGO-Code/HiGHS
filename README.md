@@ -31,7 +31,7 @@ The performance of HiGHS relative to some commercial and open-source simplex sol
 Documentation
 -------------
 
-The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available from https://www.maths.ed.ac.uk/hall/HiGHS.
+The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available from https://www.highs.dev.
 
 Compilation
 -----------
