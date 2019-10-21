@@ -3281,3 +3281,63 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   highs_model_object.model_status_ = HighsModelStatus::OPTIMAL;
   return HighsStatus::OK;
 }
+
+bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp, const HighsSimplexInfo& simplex_info) {
+  printf("In simplexInfoOk\n");
+  int numCol = lp.numCol_;
+  int numRow = lp.numRow_;
+  int numTot = numCol+numRow;
+  bool dimension_ok = 
+    numCol == simplex_lp.numCol_ &&
+    numRow == simplex_lp.numRow_;
+  assert(dimension_ok);
+  if (!dimension_ok) {
+    printf("LP-SimplexLP dimension incompatibility (%d, %d) != (%d, %d)\n",
+	   numCol, simplex_lp.numCol_, numRow, simplex_lp.numRow_);
+    return false;
+  }
+  //  if (!simplex_info.initialised) {printf("SimplexInfo not initialised)\n"); return true;}
+  int workCost_size = simplex_info.workCost_.size();
+  assert(workCost_size == numTot);
+  if (workCost_size != numTot) {
+    printf("workCost size is %d, not %d)\n", workCost_size, numTot);
+    return false;
+  }
+  int workDual_size = simplex_info.workDual_.size();
+  assert(workDual_size == numTot);
+  if (workDual_size != numTot) {
+    printf("workDual size is %d, not %d)\n", workDual_size, numTot);
+    return false;
+  }
+  int workShift_size = simplex_info.workShift_.size();
+  assert(workShift_size == numTot);
+  if (workShift_size != numTot) {
+    printf("workShift size is %d, not %d)\n", workShift_size, numTot);
+    return false;
+  }
+  int workLower_size = simplex_info.workLower_.size();
+  assert(workLower_size == numTot);
+  if (workLower_size != numTot) {
+    printf("workLower size is %d, not %d)\n", workLower_size, numTot);
+    return false;
+  }
+  int workUpper_size = simplex_info.workUpper_.size();
+  assert(workUpper_size == numTot);
+  if (workUpper_size != numTot) {
+    printf("workUpper size is %d, not %d)\n", workUpper_size, numTot);
+    return false;
+  }
+  int workRange_size = simplex_info.workRange_.size();
+  assert(workRange_size == numTot);
+  if (workRange_size != numTot) {
+    printf("workRange size is %d, not %d)\n", workRange_size, numTot);
+    return false;
+  }
+  int workValue_size = simplex_info.workValue_.size();
+  assert(workValue_size == numTot);
+  if (workValue_size != numTot) {
+    printf("workValue size is %d, not %d)\n", workValue_size, numTot);
+    return false;
+  }
+  return true;
+}

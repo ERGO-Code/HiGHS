@@ -388,6 +388,7 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
   printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row,
          to_row);
 #endif
+  if (interval) printf("deleteRowsGeneral: 0: [%d, %d], %d\n", from_row, to_row, highs_model_object.lp_.numRow_);
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -438,6 +439,7 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     }
     assert(new_row == lp.numRow_);
   }
+  if (interval) printf("deleteRowsGeneral: 1: [%d, %d], %d\n", from_row, to_row, highs_model_object.lp_.numRow_);
   return HighsStatus::OK;
 }
 

@@ -293,8 +293,8 @@ class Highs {
    * @brief Get a matrix coefficient
    */
   bool getCoeff(
-		const int row, //!< Row of coefficient to be changed
-		const int col, //!< Column of coefficient to be changed
+		const int row, //!< Row of coefficient to be got
+		const int col, //!< Column of coefficient to be got
 		double& value   //!< Coefficient
 		);
 
@@ -305,65 +305,9 @@ class Highs {
 			 const std::string filename  //!< the filename
   );
 
-   /**
+  /**
    * Methods for model modification
    */
-
-  /**
-   * @brief Adds a row to the model
-   */
-  bool addRow(
-      const double lower,    //!< Lower bound of the row
-      const double upper,    //!< Upper bound of the row
-      const int num_new_nz,  //!< Number of nonzeros in the row
-      const int* indices,    //!< Array of size num_new_nz with column indices
-      const double* values   //!< Array of size num_new_nz with column values
-  );
-
-  /**
-   * @brief Adds multiple rows to the model
-   */
-  bool addRows(
-      const int num_new_row,  //!< Number of new rows
-      const double* lower,    //!< Array of size num_new_row with lower bounds
-      const double* upper,    //!< Array of size num_new_row with upper bounds
-      const int num_new_nz,   //!< Number of new nonzeros
-      const int*
-          starts,  //!< Array of size num_new_row with start indices of the rows
-      const int* indices,  //!< Array of size num_new_nz with column indices for
-                           //!< all rows
-      const double*
-          values  //!< Array of size num_new_nz with column values for all rows
-  );
-
-  /**
-   * @brief Adds a column to the model
-   */
-  bool addCol(
-      const double cost,     //!< Cost of the column
-      const double lower,    //!< Lower bound of the column
-      const double upper,    //!< Upper bound of the column
-      const int num_new_nz,  //!< Number of nonzeros in the column
-      const int* indices,    //!< Array of size num_new_nz with row indices
-      const double* values   //!< Array of size num_new_nz with row values
-  );
-
-  /**
-   * @brief Adds multiple columns to the model
-   */
-  bool addCols(
-      const int num_new_col,  //!< Number of new columns
-      const double* costs,    //!< Array of size num_new_col with costs
-      const double* lower,    //!< Array of size num_new_col with lower bounds
-      const double* upper,    //!< Array of size num_new_col with upper bounds
-      const int num_new_nz,   //!< Number of new nonzeros
-      const int* starts,   //!< Array of size num_new_row with start indices of
-                           //!< the columns
-      const int* indices,  //!< Array of size num_new_nz with row indices for
-                           //!< all columns
-      const double*
-          values  //!< Array of size num_new_nz with row values for all columns
-  );
 
   /**
    * @brief Change the objective sense of the model
@@ -481,6 +425,62 @@ class Highs {
 		   const int col,     //!< Column of coefficient to be changed
 		   const double value //!< Coefficient
 		   );
+  /**
+   * @brief Adds a row to the model
+   */
+  bool addRow(
+      const double lower,    //!< Lower bound of the row
+      const double upper,    //!< Upper bound of the row
+      const int num_new_nz,  //!< Number of nonzeros in the row
+      const int* indices,    //!< Array of size num_new_nz with column indices
+      const double* values   //!< Array of size num_new_nz with column values
+  );
+
+  /**
+   * @brief Adds multiple rows to the model
+   */
+  bool addRows(
+      const int num_new_row,  //!< Number of new rows
+      const double* lower,    //!< Array of size num_new_row with lower bounds
+      const double* upper,    //!< Array of size num_new_row with upper bounds
+      const int num_new_nz,   //!< Number of new nonzeros
+      const int*
+          starts,  //!< Array of size num_new_row with start indices of the rows
+      const int* indices,  //!< Array of size num_new_nz with column indices for
+                           //!< all rows
+      const double*
+          values  //!< Array of size num_new_nz with column values for all rows
+  );
+
+  /**
+   * @brief Adds a column to the model
+   */
+  bool addCol(
+      const double cost,     //!< Cost of the column
+      const double lower,    //!< Lower bound of the column
+      const double upper,    //!< Upper bound of the column
+      const int num_new_nz,  //!< Number of nonzeros in the column
+      const int* indices,    //!< Array of size num_new_nz with row indices
+      const double* values   //!< Array of size num_new_nz with row values
+  );
+
+  /**
+   * @brief Adds multiple columns to the model
+   */
+  bool addCols(
+      const int num_new_col,  //!< Number of new columns
+      const double* costs,    //!< Array of size num_new_col with costs
+      const double* lower,    //!< Array of size num_new_col with lower bounds
+      const double* upper,    //!< Array of size num_new_col with upper bounds
+      const int num_new_nz,   //!< Number of new nonzeros
+      const int* starts,   //!< Array of size num_new_row with start indices of
+                           //!< the columns
+      const int* indices,  //!< Array of size num_new_nz with row indices for
+                           //!< all columns
+      const double*
+          values  //!< Array of size num_new_nz with row values for all columns
+  );
+
 
   /**
    * @brief Delete multiple columns from the model given by an interval
@@ -495,16 +495,17 @@ class Highs {
    * @brief Delete multiple columns from the model given by a set
    */
   bool deleteCols(
-      const int num_set_entries,  //!< The number of indides in the set
-      const int* set  //!< Array of size num_set_entries with indices of columns
-                      //!< to delete
-  );
+		  const int num_set_entries,  //!< The number of indides in the set
+		  const int* set              //!< Array of size num_set_entries with indices of columns
+                                              //!< to delete
+		  );
 
   /**
    * @brief Delete multiple columns from the model given by a mask
    */
-  bool deleteCols(int* mask  //!< Full length array with 1 => delete; 0 => not
-  );
+  bool deleteCols(int* mask  //!< Full length array with 1 => delete; !0 => not. The new index of any column
+			     //!not deleted is returned in place of the value 0.
+		  );
 
   /**
    * @brief Delete multiple rows from the model given by an interval
@@ -519,17 +520,18 @@ class Highs {
    * @brief Delete multiple rows from the model given by a set
    */
   bool deleteRows(
-      const int num_set_entries,  //!< The number of indides in the set
-      const int* set  //!< Array of size num_set_entries with indices of columns
-                      //!< to delete
-  );
+		  const int num_set_entries, //!< The number of indides in the set
+		  const int* set             //!< Array of size num_set_entries with indices of columns
+                                             //!< to delete
+		  );
 
   /**
    * @brief Delete multiple rows from the model given by a mask
    */
   bool deleteRows(
-		  int* mask  //!< Full length array with 1 => delete; 0 => not
-  );
+		  int* mask  //!< Full length array with 1 => delete; 0 => not. The new index of any row
+			     //!< not deleted is returned in place of the value 0.
+		  );
 
   /**
    * Other methods for specialist applications
@@ -547,13 +549,17 @@ class Highs {
   // In the solution passed as a parameter below can have one or many of
   // col_value, col_dual and row_dual set. If any of them are not set the
   // solution in Highs does not get updated.
-  HighsStatus setSolution(const HighsSolution& solution);
+  HighsStatus setSolution(
+			  const HighsSolution& solution //!< Solution to be used
+			  );
 
   /**
    * @brief Uses the HighsBasis passed to set the basis for the
    * LP of the (first?) HighsModelObject
    */
-  HighsStatus setBasis(const HighsBasis& basis);
+  HighsStatus setBasis(
+		       const HighsBasis& basis //!< Basis to be used
+		       );
 
   // todo: getRangingInformation(..)
 

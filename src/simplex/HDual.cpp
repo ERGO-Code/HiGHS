@@ -42,6 +42,11 @@ void HDual::solve(int num_threads) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
   workHMO.model_status_ = HighsModelStatus::NOTSET;
+  bool simplex_info_ok = simplexInfoOk(workHMO.lp_, workHMO.simplex_lp_, simplex_info);
+  if (!simplex_info_ok) {
+    printf("Error in simplex info\n");
+    return;
+  }
   // Cannot solve box-constrained LPs
   if (workHMO.simplex_lp_.numRow_ == 0) return;
 
@@ -56,6 +61,12 @@ void HDual::solve(int num_threads) {
   // initialisation of edge weights to 1s. Should only be called if
   // model dimension changes
   init(num_threads);
+
+  bool dual_info_ok = dualInfoOk(workHMO.lp_);
+  if (!dual_info_ok) {
+    printf("Error in dual info\n");
+    return;
+  }
 
   // Decide whether to use LiDSE by not storing squared primal infeasibilities
   simplex_info.store_squared_primal_infeasibility = true;
@@ -1986,6 +1997,27 @@ void HDual::interpret_price_strategy(const int price_strategy) {
     allow_price_by_col_switch = true;
     allow_price_by_row_switch = true;
   }
+}
+
+bool HDual::dualInfoOk(const HighsLp& lp) {
+  int lp_numCol = lp.numCol_;
+  int lp_numRow = lp.numRow_;
+  bool dimensions_ok;
+  dimensions_ok = lp_numCol == solver_num_col && lp_numRow == solver_num_row;
+  assert(dimensions_ok);
+  if (!dimensions_ok) {
+    printf("LP-Solver dimension incompatibility (%d, %d) != (%d, %d)\n",
+	   lp_numCol, solver_num_col, lp_numRow, solver_num_row);
+    return false;
+  }
+  dimensions_ok = lp_numCol == factor->numCol && lp_numRow == factor->numRow;
+  assert(dimensions_ok);
+  if (!dimensions_ok) {
+    printf("LP-Factor dimension incompatibility (%d, %d) != (%d, %d)\n",
+	   lp_numCol, factor->numCol, lp_numRow, factor->numRow);
+    return false;
+  }
+  return true;
 }
 
 #ifdef HiGHSDEV

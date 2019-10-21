@@ -439,6 +439,8 @@ class HDual {
    */
   void major_rollback();
 
+  bool dualInfoOk(const HighsLp& lp);
+
 #ifdef HiGHSDEV
   void iterateOpRecBf(int opTy, HVector& vector, double hist_dsty);
   void iterateOpRecAf(int opTy, HVector& vector);

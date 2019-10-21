@@ -1026,12 +1026,12 @@ HighsStatus deleteColsFromLpVectors(HighsLp& lp, int& new_num_col,
     updateOutInIx(col_dim, interval, from_col, to_col, set, num_set_entries,
                   col_set, mask, col_mask, delete_from_col, delete_to_col,
                   keep_from_col, keep_to_col, current_set_entry);
-    if (delete_to_col >= col_dim-1) break;
-    assert(delete_to_col < col_dim);
     if (k == from_k) {
       // Account for the initial columns being kept
       new_num_col = delete_from_col;
     }
+    if (delete_to_col >= col_dim-1) break;
+    assert(delete_to_col < col_dim);
     for (int col = keep_from_col; col <= keep_to_col; col++) {
       lp.colCost_[new_num_col] = lp.colCost_[col];
       lp.colLower_[new_num_col] = lp.colLower_[col];
@@ -1065,7 +1065,7 @@ HighsStatus deleteColsFromLpMatrix(HighsLp& lp, const bool interval,
   int delete_from_col;
   int delete_to_col;
   int keep_from_col;
-  int keep_to_col = 0;
+  int keep_to_col = -1;//0; 191021 change
   int current_set_entry = 0;
   int col_dim = lp.numCol_;
   int new_num_col = 0;
@@ -1149,7 +1149,7 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
   int delete_from_row;
   int delete_to_row;
   int keep_from_row;
-  int keep_to_row = 0;
+  int keep_to_row = -1;//0; 191021 change
   int current_set_entry = 0;
   int row_dim = lp.numRow_;
   new_num_row = 0;
@@ -1158,12 +1158,12 @@ HighsStatus deleteRowsFromLpVectors(HighsLp& lp, int& new_num_row,
     updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,
                   row_set, mask, row_mask, delete_from_row, delete_to_row,
                   keep_from_row, keep_to_row, current_set_entry);
-    if (delete_to_row >= row_dim-1) break;
-    assert(delete_to_row < row_dim);
     if (k == from_k) {
       // Account for the initial rows being kept
       new_num_row = delete_from_row;
     }
+    if (delete_to_row >= row_dim-1) break;
+    assert(delete_to_row < row_dim);
     for (int row = keep_from_row; row <= keep_to_row; row++) {
       lp.rowLower_[new_num_row] = lp.rowLower_[row];
       lp.rowUpper_[new_num_row] = lp.rowUpper_[row];
@@ -1205,7 +1205,7 @@ HighsStatus deleteRowsFromLpMatrix(HighsLp& lp, const bool interval,
   int* new_index = (int*)malloc(sizeof(int) * lp.numRow_);
   int new_num_row = 0;
   if (!mask) {
-    keep_to_row = 0;
+    keep_to_row = -1;//0; 191021 change
     current_set_entry = 0;
     for (int k = from_k; k <= to_k; k++) {
       updateOutInIx(row_dim, interval, from_row, to_row, set, num_set_entries,

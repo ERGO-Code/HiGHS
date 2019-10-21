@@ -790,6 +790,47 @@ TEST_CASE("LP-modification", "[highs_data]") {
   return_bool = areLpEqual(avgas_highs.getLp(), highs.getLp(), options.infinite_bound);
   REQUIRE(return_bool);
 
+  int before_num_col;
+  int after_num_col;
+  int rm_col; 
+  int before_num_row;
+  int after_num_row;
+  int rm_row; 
+
+  before_num_col = highs.getNumCols();
+  rm_col = 0;
+  return_bool = highs.deleteCols(rm_col, rm_col);
+  REQUIRE(return_bool);
+  after_num_col = highs.getNumCols();
+  printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col, after_num_col);
+  REQUIRE(after_num_col == before_num_col-1);
+
+  before_num_row = highs.getNumRows();
+  rm_row = 0;
+  return_bool = highs.deleteRows(rm_row, rm_row);
+  REQUIRE(return_bool);
+  after_num_row = highs.getNumRows();
+  printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row, after_num_row);
+  REQUIRE(after_num_row == before_num_row-1);
+
+  before_num_col = highs.getNumCols();
+  rm_col = before_num_col-1;
+  return_bool = highs.deleteCols(rm_col, rm_col);
+  REQUIRE(return_bool);
+  after_num_col = highs.getNumCols();
+  printf("After removing col %d / %d have %d cols\n", rm_col, before_num_col, after_num_col);
+  REQUIRE(after_num_col == before_num_col-1);
+
+  before_num_row = highs.getNumRows();
+  rm_row = before_num_row-1;
+  return_bool = highs.deleteRows(rm_row, rm_row);
+  REQUIRE(return_bool);
+  after_num_row = highs.getNumRows();
+  printf("After removing row %d / %d have %d rows\n", rm_row, before_num_row, after_num_row);
+  REQUIRE(after_num_row == before_num_row-1);
+
+  //  messageReportLp("After deleting all rows and columns", highs.getLp());
+
   //  messageReportLp("After restoring costs and bounds", highs.getLp());
   printf("Finished successfully\n"); fflush(stdout);
 }

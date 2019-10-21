@@ -174,9 +174,9 @@ enable_cxx_compiler_flag_if_supported("-Wextra")
 enable_cxx_compiler_flag_if_supported("-Wno-unused-parameter")
 enable_cxx_compiler_flag_if_supported("-pedantic")
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
-    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
-endif()
+#if(CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_BUILD_TYPE STREQUAL debug)
+#    enable_cxx_compiler_flag_if_supported("-D_GLIBCXX_DEBUG")
+#endif()
 
 # Targets
 enable_testing()
