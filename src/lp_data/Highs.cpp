@@ -1299,10 +1299,16 @@ HighsStatus Highs::solveRootNode(Node& root) {
 
 void Highs::updateHighsSolutionBasis() {
   assert(hmos_.size() > 0);
+  printf("Before: RowValue size = %d\n", (int)solution_.row_value.size());
   solution_.col_value.resize(lp_.numCol_);
   solution_.row_value.resize(lp_.numRow_);
   solution_.col_dual.resize(lp_.numCol_);
   solution_.row_dual.resize(lp_.numRow_);
+  hmos_[0].solution_.col_value.resize(lp_.numCol_);
+  hmos_[0].solution_.row_value.resize(lp_.numRow_);
+  hmos_[0].solution_.col_dual.resize(lp_.numCol_);
+  hmos_[0].solution_.row_dual.resize(lp_.numRow_);
+  printf("After : RowValue size = %d\n", (int)solution_.row_value.size());
 
   if (hmos_[0].basis_.valid_) {
     basis_ = hmos_[0].basis_;
