@@ -70,6 +70,7 @@ HighsStatus Highs::readModel(const std::string filename) {
 // Checks the options calls presolve and postsolve if needed. Solvers are called
 // with runSolver(..)
 HighsStatus Highs::run() {
+    /*
   if (options_.message_level >= 0) {
     printf("\n!! Actually solving an LP with %d cols, %d rows", lp_.numCol_, lp_.numRow_);
     if (lp_.numCol_) printf(" and %d nonzeros", lp_.Astart_[lp_.numCol_]);
@@ -81,6 +82,7 @@ HighsStatus Highs::run() {
       printf("NB %d = basis_.valid_ != hmos_[0].basis_.valid_ = %d\n", basis_.valid_, hmos_[0].basis_.valid_);
     }
   }
+    */
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
 #ifdef HIGHSDEV
@@ -142,7 +144,8 @@ HighsStatus Highs::run() {
   //  reportOptionsToFile("Highs.set", options_.records);
   // Report all the options as HTML
   //  reportOptionsToFile("Highs.html", options_.records);
-  reportOptions(stdout, options_.records);
+  // Possibly report options settings
+  //  reportOptions(stdout, options_.records);
   HighsPrintMessage(ML_VERBOSE, "Solving %s", lp_.model_name_.c_str());
   if (options_.mip) return runBnb();
 
@@ -1299,7 +1302,6 @@ HighsStatus Highs::solveRootNode(Node& root) {
 
 void Highs::updateHighsSolutionBasis() {
   assert(hmos_.size() > 0);
-  printf("Before: RowValue size = %d\n", (int)solution_.row_value.size());
   solution_.col_value.resize(lp_.numCol_);
   solution_.row_value.resize(lp_.numRow_);
   solution_.col_dual.resize(lp_.numCol_);
@@ -1308,7 +1310,6 @@ void Highs::updateHighsSolutionBasis() {
   hmos_[0].solution_.row_value.resize(lp_.numRow_);
   hmos_[0].solution_.col_dual.resize(lp_.numCol_);
   hmos_[0].solution_.row_dual.resize(lp_.numRow_);
-  printf("After : RowValue size = %d\n", (int)solution_.row_value.size());
 
   if (hmos_[0].basis_.valid_) {
     basis_ = hmos_[0].basis_;

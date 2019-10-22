@@ -388,9 +388,6 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
   printf("Called model.util_deleteRows(from_row=%d, to_row=%d)\n", from_row,
          to_row);
 #endif
-  if (interval) {
-    printf("deleteRowsGeneral: 0: [%d, %d], %d\n", from_row, to_row, highs_model_object.lp_.numRow_);
-  }
   HighsLp& lp = highs_model_object.lp_;
   HighsBasis& basis = highs_model_object.basis_;
   HighsSimplexLpStatus& simplex_lp_status =
@@ -441,7 +438,6 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
     }
     assert(new_row == lp.numRow_);
   }
-  if (interval) printf("deleteRowsGeneral: 1: [%d, %d], %d\n", from_row, to_row, highs_model_object.lp_.numRow_);
   return HighsStatus::OK;
 }
 
@@ -860,7 +856,6 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     null_data = true;
   }
   if (null_data) return HighsStatus::Error;
-  //  printf("Before changeLpColBounds: col_set = %p\n", (void *)col_set);
   int* use_set;
   double* use_lower;
   double* use_upper;
@@ -870,17 +865,14 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
     use_set = (int*)malloc(sizeof(int) * num_set_entries);
     use_lower = (double*)malloc(sizeof(double) * num_set_entries);
     use_upper = (double*)malloc(sizeof(double) * num_set_entries);
-    //    printf("changeColBoundsGeneral: set before = {"); for (int ix = 0; ix < num_set_entries; ix++) printf(" %d", col_set[ix]); printf("}\n");
     sortSetData(num_set_entries,
 		col_set, usr_col_lower, usr_col_upper, NULL,
 		use_set, use_lower, use_upper, NULL);
-    //    printf("changeColBoundsGeneral: set after = {"); for (int ix = 0; ix < num_set_entries; ix++) printf(" %d", use_set[ix]); printf("}\n");
   } else {
     use_set = (int*)col_set;
     use_lower = (double*)usr_col_lower;
     use_upper = (double*)usr_col_upper;
   }
-  printf("Before changeLpColBounds: use_set = %p\n", (void *)use_set);
   HighsStatus call_status = changeLpColBounds(
       highs_model_object.lp_, interval, from_col, to_col, set, num_set_entries,
       use_set, mask, col_mask, use_lower, use_upper,
