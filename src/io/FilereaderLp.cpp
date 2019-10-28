@@ -75,7 +75,7 @@ FilereaderRetcode FilereaderLp::readModelFromFile(const char* filename,
   if (this->status != LP_FILEREADER_STATUS::ERROR)
     this->handleSemiSection(model);
   if (this->status != LP_FILEREADER_STATUS::ERROR)
-    this->handleSosSection();
+    this->handleSosSection(model);
 
   assert(this->tokenQueue.size() == 0);
 
@@ -124,8 +124,15 @@ void FilereaderLp::handleGeneralSection(HighsModelBuilder& model) {
     return;
   }
 
+  LpToken* token;
+  token = this->generalSection.front();
+  this->generalSection.pop_front();
+  assert(token->type == LpTokenType::SECTIONKEYWORD);
+  assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::GEN);
+  delete token;
+
   while (this->generalSection.size() > 0) {
-    LpToken* token = this->generalSection.front();
+    token = this->generalSection.front();
     assert(token->type == LpTokenType::VARIDENTIFIER);
 
     HighsVar* variable;
@@ -145,8 +152,15 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
     return;
   }
 
+  LpToken* token;
+  token = this->semiSection.front();
+  this->semiSection.pop_front();
+  assert(token->type == LpTokenType::SECTIONKEYWORD);
+  assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::SEMI);
+  delete token;
+
   while (this->semiSection.size() > 0) {
-    LpToken* token = this->semiSection.front();
+    token = this->semiSection.front();
     assert(token->type == LpTokenType::VARIDENTIFIER);
 
     HighsVar* variable;
@@ -161,8 +175,19 @@ void FilereaderLp::handleSemiSection(HighsModelBuilder& model) {
   assert(this->semiSection.size() == 0);
 }
 
-void FilereaderLp::handleSosSection() {
+void FilereaderLp::handleSosSection(HighsModelBuilder& model) {
   HighsPrintMessage(HighsPrintMessageLevel::ML_MINIMAL, "SoS section is not currenlty supported by the .lp filereader.");
+
+  if (this->sosSection.size() == 0) {
+    return;
+  }
+
+  LpToken* token;
+  token = this->sosSection.front();
+  this->sosSection.pop_front();
+  assert(token->type == LpTokenType::SECTIONKEYWORD);
+  assert(((LpTokenSectionKeyword*)token)->section == LpSectionKeyword::SOS);
+  delete token;
 
   while (this->sosSection.size() > 0) {
     LpToken* token = this->sosSection.front();

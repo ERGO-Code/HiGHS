@@ -271,7 +271,7 @@ class FilereaderLp : public Filereader {
   void handleBinarySection(HighsModelBuilder& model);
   void handleGeneralSection(HighsModelBuilder& model);
   void handleSemiSection(HighsModelBuilder& model);
-  void handleSosSection();
+  void handleSosSection(HighsModelBuilder& model);
 
   LP_FILEREADER_STATUS status;
 

@@ -35,7 +35,7 @@ int Highs_call(
 /*
  * @brief creates a HiGHS object and returns the reference
  */
-void* Highs_create();
+void* Highs_create(void);
 
 /*
  * @brief destroys a HiGHS object

@@ -28,11 +28,16 @@ Performance
 
 The performance of HiGHS relative to some commercial and open-source simplex solvers may be assessed via the Mittelmann benchmarks on http://plato.asu.edu/ftp/lpsimp.html
 
+Documentation
+-------------
+
+The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available from https://www.highs.dev.
+
 Compilation
 -----------
 
-HiGHS uses CMake as build system. To compile the run you need to setup
-a build directory and call
+HiGHS uses CMake as build system. First setup
+a build folder and call CMake as follows
 
     mkdir build
     cd build
@@ -41,6 +46,8 @@ a build directory and call
 Then compile the code using
 
     make
+
+This installs the executable `bin/highs`. 
 
 Testing
 -------
@@ -118,12 +125,11 @@ some problems, it is typically faster in parallel.
 HiGHS Library
 -------------
 
-Highs is compiled in a shared library. Running
+HiGHS is compiled in a shared library. Running
 
 `make install`
 
-installs the highs executable in the bin/ and the highs library in the
-lib/ folder, as well as all header files in include/. For a custom
+from the build folder installs the library in `lib/`, as well as all header files in `include/`. For a custom
 installation in `install_folder` run
 
 `cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
@@ -132,15 +138,16 @@ and then
 
 `make install`
 
-To use the library from a cmake project use
+To use the library from a CMake project use
 
 `find_package(HiGHS)`
 
 and add the correct path to HIGHS_DIR.
 
-Compiling and linking without cmake
-Suppose we want to link an executable defined in file `use_highs.cpp` with the
-highs library. After running the code above compile and run with
+Compiling and linking without CMake
+-----------------------------------
+
+An executable defined in the file `use_highs.cpp` is linked with the HiGHS library as follows. After running the code above, compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 
@@ -159,7 +166,7 @@ Set custom options with `-D<option>=<value>` during the configuration step (`cma
 
 If build with GAMS interface, then HiGHS can be made available as solver
 in GAMS by adding an entry for HiGHS to the file gmscmpun.txt in the GAMS
-system directory (gmscmpnt.txt on Windows):
+system folder (gmscmpnt.txt on Windows):
 ```
 HIGHS 11 5 0001020304 1 0 2 LP RMIP
 gmsgenus.run
@@ -169,4 +176,4 @@ gmsgenux.out
 OSI
 ---
 - `OSI_ROOT`:
-    path to COIN-OR/Osi build/install directory (OSI_ROOT/lib/pkg-config/osi.pc should exist)
+    path to COIN-OR/Osi build/install folder (OSI_ROOT/lib/pkg-config/osi.pc should exist)

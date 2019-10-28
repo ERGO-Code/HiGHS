@@ -41,7 +41,7 @@ function Highs_call(model)
 
    modelstatus = convert(Cint, 0)
 
-   status = ccall((:Highs_call, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cint}),
+   status = ccall((:Highs_call, "libhighs.so"), Cint, (Cint, Cint, Cint, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cdouble}, Ptr{Cint}, Ptr{Cint}, Ref{Cint}),
    n_col, n_row, n_nz, colcost, collower, colupper, rowlower, rowupper, matstart, matindex, matvalue, solution.colvalue, solution.coldual, solution.rowvalue, solution.rowdual, basis.colbasisstatus, basis.rowbasisstatus, modelstatus)
 
    return status, solution, basis, modelstatus
