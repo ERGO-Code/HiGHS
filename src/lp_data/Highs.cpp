@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "HConfig.h"
+#include "interior_point/IpxWrapper.h"
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
@@ -983,6 +984,10 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
                                  const string message) {
   HighsStatus solver_return_status;
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
+  if (options_.solver == "ipm") {
+    IpxStatus ipx_return = solveModelWithIpx(lp_, solution_);
+  }
+
   if (!model.lp_.numRow_) {
     // Handle the case of unconstrained LPs here
     HighsSimplexInterface simplex_interface(model);

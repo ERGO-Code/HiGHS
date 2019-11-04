@@ -1,4 +1,74 @@
 # Define library.
+include_directories(interior_point/ipx/src)
+include_directories(interior_point/ipx/include)
+include_directories(interior_point/basiclu/src)
+include_directories(interior_point/basiclu/include)
+
+set(basiclu_sources
+    interior_point/basiclu/src/basiclu_factorize.c
+    interior_point/basiclu/src/basiclu_solve_dense.c
+    interior_point/basiclu/src/lu_build_factors.c
+    interior_point/basiclu/src/lu_factorize_bump.c
+    interior_point/basiclu/src/lu_initialize.c
+    interior_point/basiclu/src/lu_markowitz.c
+    interior_point/basiclu/src/lu_setup_bump.c
+    interior_point/basiclu/src/lu_solve_sparse.c
+    interior_point/basiclu/src/basiclu_get_factors.c
+    interior_point/basiclu/src/basiclu_solve_for_update.c
+    interior_point/basiclu/src/lu_condest.c
+    interior_point/basiclu/src/lu_file.c
+    interior_point/basiclu/src/lu_internal.c
+    interior_point/basiclu/src/lu_matrix_norm.c
+    interior_point/basiclu/src/lu_singletons.c
+    interior_point/basiclu/src/lu_solve_symbolic.c
+    interior_point/basiclu/src/lu_update.c
+    interior_point/basiclu/src/basiclu_initialize.c
+    interior_point/basiclu/src/basiclu_solve_sparse.c
+    interior_point/basiclu/src/lu_pivot.c
+    interior_point/basiclu/src/lu_solve_dense.c
+    interior_point/basiclu/src/lu_solve_triangular.c
+    interior_point/basiclu/src/basiclu_object.c
+    interior_point/basiclu/src/basiclu_update.c
+    interior_point/basiclu/src/lu_dfs.c
+    interior_point/basiclu/src/lu_garbage_perm.c
+    interior_point/basiclu/src/lu_residual_test.c
+    interior_point/basiclu/src/lu_solve_for_update.c
+    interior_point/basiclu/src/lu_timer.c)
+
+set(ipx_sources
+    interior_point/ipx/src/basiclu_kernel.cc
+    interior_point/ipx/src/basiclu_wrapper.cc
+    interior_point/ipx/src/basis.cc
+    interior_point/ipx/src/conjugate_residuals.cc
+    interior_point/ipx/src/control.cc
+    interior_point/ipx/src/crossover.cc
+    interior_point/ipx/src/diagonal_precond.cc
+    interior_point/ipx/src/forrest_tomlin.cc
+    interior_point/ipx/src/guess_basis.cc
+    interior_point/ipx/src/indexed_vector.cc
+    interior_point/ipx/src/info.cc
+    interior_point/ipx/src/ipm.cc
+    interior_point/ipx/src/ipx_c.cc
+    interior_point/ipx/src/iterate.cc
+    interior_point/ipx/src/kkt_solver.cc
+    interior_point/ipx/src/kkt_solver_basis.cc
+    interior_point/ipx/src/kkt_solver_diag.cc
+    interior_point/ipx/src/linear_operator.cc
+    interior_point/ipx/src/lp_solver.cc
+    interior_point/ipx/src/lu_factorization.cc
+    interior_point/ipx/src/lu_update.cc
+    interior_point/ipx/src/maxvolume.cc
+    interior_point/ipx/src/model.cc
+    interior_point/ipx/src/normal_matrix.cc
+    interior_point/ipx/src/sparse_matrix.cc
+    interior_point/ipx/src/sparse_utils.cc
+    interior_point/ipx/src/splitted_normal_matrix.cc
+    interior_point/ipx/src/starting_basis.cc
+    interior_point/ipx/src/symbolic_invert.cc
+    interior_point/ipx/src/timer.cc
+    interior_point/ipx/src/utils.cc)
+
+# Define library.
 
 set(sources
     io/Filereader.cpp
@@ -15,8 +85,8 @@ set(sources
     lp_data/HighsModelBuilder.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
-    presolve/FindFeasibility.cpp
     mip/SolveMip.cpp
+    presolve/FindFeasibility.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -97,28 +167,13 @@ if (GAMS_FOUND)
     include_directories(${GAMS_ROOT}/apifiles/C/api)
 endif()
 
+add_library(libbasiclu ${basiclu_sources})
+
+add_library(libipx ${ipx_sources})
+target_link_libraries(libipx libbasiclu)
+
 add_library(libhighs ${sources})
-
-# IPX part, probably have to move up above libhighs and edit.
-add_custom_target(
-    basiclu
-    COMMAND make
-    WORKING_DIRECTORY "${IPX_DIR}/basiclu")
-
-add_custom_target(
-    ipx
-    COMMAND make
-  # maybe target_link_libraries(ipx basiclu)
-    WORKING_DIRECTORY "${IPX_DIR}/ipx")
-
-  link_directories("${IPX_DIR}/ipx/lib")
-  find_library(IPX_LIB NAMES ipx PATHS "${IPX_DIR}/ipx/lib")
-  target_link_libraries(libhighs ipx basiclu)
-endif()
-
-if (Boost_FOUND)
-    target_link_libraries(libhighs ${Boost_LIBRARIES})
-endif()
+target_link_libraries(libhighs libipx)
 
 # put version information into shared library file
 
@@ -209,14 +264,13 @@ foreach ( file ${headers} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
-# install the binary and the library to appropriate locations and add them to an export group
-install(TARGETS libhighs EXPORT highs-targets
+install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         INCLUDES DESTINATION include)
 
 # Add library targets to the build-tree export set
-export(TARGETS libhighs
+export(TARGETS libhighs libipx libbasiclu
   FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
 
 #configure the config file for the build tree

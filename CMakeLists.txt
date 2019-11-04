@@ -129,25 +129,13 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/external
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
+    ${HIGHS_SOURCE_DIR}/src/interior_point/ipx
+    ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu
     ${HIGHS_SOURCE_DIR}/src/lp_data
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/simplex
     ${HIGHS_SOURCE_DIR}/src/test
     ${HIGHS_SOURCE_DIR}/src/util)
-
-# use interior point solver
-set(IPX_DIR "${CMAKE_SOURCE_DIR}/interior_point" CACHE STRING "Path to IPX folder.")
-#if(IPX_DIR)
-#    add_compile_options(-D IPX=ON)
-#    message(STATUS "Using interior point solver.")
-#    include_directories("${IPX_DIR}/src")
-#    include_directories("${IPX_DIR}/include")
-#    link_directories("${IPX_DIR}/lib")
-#endif()
-
-# add_executable(myexecutable myexcutable.c)
-# target_link_libraries(myexecutable full_path_to_generated_library)
-# add_dependencies(myexecutable extern_lib)
 
 # set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
