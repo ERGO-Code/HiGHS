@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file lp_data/HighsLp.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef LP_DATA_HIGHS_LP_H_
@@ -20,22 +20,39 @@
 #include <vector>
 
 #include "HConfig.h"
-#include "lp_data/HConst.h" // For HiGHS strategy options
-#include "simplex/SimplexConst.h" // For simplex strategy options
+#include "lp_data/HConst.h"        // For HiGHS strategy options
+#include "simplex/SimplexConst.h"  // For simplex strategy options
 
 enum class LpAction {
-  TRANSPOSE = 0,
-    SCALE,
-    PERMUTE,
-    TIGHTEN,
-    NEW_COSTS,
-    NEW_BOUNDS,
-    NEW_BASIS,
-    NEW_COLS,
-    NEW_ROWS,
-    DEL_COLS,
-    DEL_ROWS,
-    DEL_ROWS_BASIS_OK
+  DUALISE = 0,
+  PERMUTE,
+  SCALE,
+  NEW_COSTS,
+  NEW_BOUNDS,
+  NEW_BASIS,
+  NEW_COLS,
+  NEW_ROWS,
+  DEL_COLS,
+  DEL_ROWS,
+  DEL_ROWS_BASIS_OK
+};
+
+enum class HighsModelStatus {
+  NOTSET = 0,
+    LOAD_ERROR,
+    MODEL_ERROR,
+    MODEL_EMPTY,
+    PRESOLVE_ERROR,
+    SOLVE_ERROR,
+    POSTSOLVE_ERROR,
+    PRIMAL_FEASIBLE,
+    DUAL_FEASIBLE,
+    PRIMAL_INFEASIBLE,
+    PRIMAL_UNBOUNDED,
+    OPTIMAL,
+    REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND,
+    REACHED_TIME_LIMIT,
+    REACHED_ITERATION_LIMIT
     };
 
 class HighsLp {
@@ -60,6 +77,7 @@ class HighsLp {
   double offset_ = 0;
 
   std::string model_name_ = "";
+  std::string lp_name_ = "";
 
   std::vector<std::string> row_names_;
   std::vector<std::string> col_names_;
@@ -75,34 +93,36 @@ class HighsLp {
     if (row_names_ != lp.row_names_ || col_names_ != lp.col_names_)
       return false;
 
-    if (colCost_ != lp.colCost_)
-      return false;
+    if (colCost_ != lp.colCost_) return false;
 
     if (colUpper_ != lp.colUpper_ || colLower_ != lp.colLower_ ||
         rowUpper_ != lp.rowUpper_ || rowLower_ != lp.rowLower_)
       return false;
 
-    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ ||
-        Avalue_ != lp.Avalue_)
+    if (Astart_ != lp.Astart_ || Aindex_ != lp.Aindex_ || Avalue_ != lp.Avalue_)
       return false;
 
     return true;
   }
+
 };
 
 // Cost, column and row scaling factors
 struct HighsScale {
+  bool is_scaled_;
   double cost_;
   std::vector<double> col_;
   std::vector<double> row_;
+  double extreme_equilibration_improvement_;
+  double mean_equilibration_improvement_;
 };
 
-struct HighsBasis {
-  // Basis consists of basicIndex, nonbasicFlag and nonbasicMove.  If
-  // valid_ is true then they are self-consistent and correpond to the
-  // dimensions of an associated HighsLp, but the basis matrix B is
-  // not necessarily nonsingular.
-  bool valid_ = false;
+struct SimplexBasis {
+  // The basis for the simplex method consists of basicIndex,
+  // nonbasicFlag and nonbasicMove. If HighsSimplexLpStatus has_basis
+  // is true then it is assumed that basicIndex_ and nonbasicFlag_ are
+  // self-consistent and correpond to the dimensions of an associated
+  // HighsLp, but the basis matrix B is not necessarily nonsingular.
   std::vector<int> basicIndex_;
   std::vector<int> nonbasicFlag_;
   std::vector<int> nonbasicMove_;
@@ -111,40 +131,33 @@ struct HighsBasis {
 struct HighsSimplexLpStatus {
   // Status of LP solved by the simplex method and its data
   bool valid = false;
-  bool is_transposed = false;
-  bool is_scaled = false;
+  bool is_dualised = false;
   bool is_permuted = false;
-  bool is_tightened = false;
-  // The LP has a valid basis
-  bool has_basis = false;
-  // The LP has a column-wise constraint matrix
-  bool has_matrix_col_wise = false;
-  // The LP has a row-wise constraint matrix
-  bool has_matrix_row_wise = false;
-  // The LP has the constraint matrix and indices of basic variables used by INVERT
-  int has_factor_arrays = false;
-  // This refers to workEdWt, which is held in HDualRHS.h and is
-  // assigned and initialised to 1s in dualRHS.setup(model). To
-  // "have" the edge weights means that they are correct.
-  bool has_dual_steepest_edge_weights = false;
- // The nonbasic dual and basic primal values are known
-  bool has_nonbasic_dual_values = false;
-  bool has_basic_primal_values = false;
-  // The representation of B^{-1} corresponds to the current basis
-  bool has_invert = false;
-  // The representation of B^{-1} corresponds to the current basis and is fresh
-  bool has_fresh_invert = false;
-  // The data are fresh from rebuild
-  bool has_fresh_rebuild = false;
-  // The dual objective function value is known
-  bool has_dual_objective_value = false;
-  // The dual objective function value is known
-  bool has_primal_objective_value = false;
-  // The solution status is UNSET
-  SimplexSolutionStatus solution_status = SimplexSolutionStatus::UNSET;
+  bool scaling_tried = false;
+  bool has_basis = false;  // The LP has a valid simplex basis
+  bool has_matrix_col_wise =
+      false;  // The LP has a column-wise constraint matrix
+  bool has_matrix_row_wise = false;  // The LP has a row-wise constraint matrix
+  bool has_factor_arrays =
+      false;  // Has the arrays for the representation of B^{-1}
+  bool has_dual_steepest_edge_weights = false;  // The DSE weights are known
+  bool has_nonbasic_dual_values = false;  // The nonbasic dual values are known
+  bool has_basic_primal_values = false;   // The basic primal values are known
+  bool has_invert =
+      false;  // The representation of B^{-1} corresponds to the current basis
+  bool has_fresh_invert = false;  // The representation of B^{-1} corresponds to
+                                  // the current basis and is fresh
+  bool has_fresh_rebuild = false;  // The data are fresh from rebuild
+  bool has_dual_objective_value =
+      false;  // The dual objective function value is known
+  bool has_primal_objective_value =
+      false;  // The dual objective function value is known
+  SimplexSolutionStatus solution_status =
+      SimplexSolutionStatus::UNSET;  // The solution status is UNSET
 };
 
 struct HighsSimplexInfo {
+  bool initialised = false;
   // Simplex information regarding primal and dual solution, objective
   // and iteration counts for this Highs Model Object. This is
   // information which should be retained from one run to the next in
@@ -201,35 +214,33 @@ struct HighsSimplexInfo {
   std::vector<int> clock_;
   //
   // Options from HighsOptions for the simplex solver
-  double highs_run_time_limit;
-  SimplexStrategy simplex_strategy;
-  SimplexCrashStrategy crash_strategy;
-  SimplexDualEdgeWeightStrategy dual_edge_weight_strategy;
-  SimplexPriceStrategy price_strategy;
+  int simplex_strategy;
+  int dual_edge_weight_strategy;
+  int primal_edge_weight_strategy;
+  int price_strategy;
 
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   bool perturb_costs;
   int update_limit;
-  int iteration_limit;
-  double dual_objective_value_upper_bound;
-  
-  // Options for the LP to be solved
-  bool transpose_simplex_lp;
-  bool scale_simplex_lp;
-  bool permute_simplex_lp;
-  bool tighten_simplex_lp;
-  // Internal options - can't be changed externally
+  //  int iteration_limit;
+  //  double dual_objective_value_upper_bound;
 
+  // Internal options - can't be changed externally
+  bool store_squared_primal_infeasibility;
+  bool allow_primal_flips_for_dual_feasibility;
+  bool analyseLpSolution;
+#ifdef HiGHSDEV
   // Options for reporting timing
   bool report_simplex_inner_clock;
   bool report_simplex_outer_clock;
   bool report_simplex_phases_clock;
-#ifdef HiGHSDEV
-  // Option for analysing simplex iterations, INVERT time and rebuild time
+  // Option for analysing the LP simplex iterations, INVERT time and rebuild
+  // time
   bool analyseLp;
   bool analyseSimplexIterations;
-  bool analyseLpSolution;
+  bool analyse_invert_form;
+  bool analyse_invert_condition;
   bool analyse_invert_time;
   bool analyseRebuildTime;
 #endif
@@ -243,25 +254,56 @@ struct HighsSimplexInfo {
   int primal_phase1_iteration_count = 0;
   int primal_phase2_iteration_count = 0;
 
-  // Number of UPDATE operations performed - should be zeroed when INVERT is performed
-  int update_count;
-  // Value of dual objective - only set when computed from scratch in dual rebuild()
-  double dualObjectiveValue;
-  // Value of primal objective - only set when computed from scratch in primal rebuild()
-  double primalObjectiveValue;
+  // Cutoff for PAMI
+  double pami_cutoff = 0.95;
 
+  // Info on PAMI iterations
+  int multi_iteration = 0;
+
+  // Number of UPDATE operations performed - should be zeroed when INVERT is
+  // performed
+  int update_count;
+  // Value of dual objective - only set when computed from scratch in dual
+  // rebuild()
+  double dual_objective_value;
+  // Value of primal objective - only set when computed from scratch in primal
+  // rebuild()
+  double primal_objective_value;
 
   // Value of dual objective that is updated in dual simplex solver
-  double updatedDualObjectiveValue;
+  double updated_dual_objective_value;
   // Value of primal objective that is updated in primal simplex solver
-  double updatedPrimalObjectiveValue;
-  // Number of logical variables in the basis 
+  double updated_primal_objective_value;
+  // Number of logical variables in the basis
   int num_basic_logicals;
+  // Number/max/sum of primal and dual infeasibilities
+  int num_primal_infeasibilities;
+  double max_primal_infeasibility;
+  double sum_primal_infeasibilities;
+  int num_dual_infeasibilities;
+  double max_dual_infeasibility;
+  double sum_dual_infeasibilities;
 
 #ifdef HiGHSDEV
   // Analysis of INVERT
+  int num_invert = 0;
+  // Analysis of INVERT form
+  int num_kernel = 0;
+  int num_major_kernel = 0;
+  const double major_kernel_relative_dim_threshhold = 0.1;
+  double max_kernel_dim = 0;
+  double sum_kernel_dim = 0;
+  double running_average_kernel_dim = 0;
+  double sum_invert_fill_factor = 0;
+  double sum_kernel_fill_factor = 0;
+  double sum_major_kernel_fill_factor = 0;
+  double running_average_invert_fill_factor = 1;
+  double running_average_kernel_fill_factor = 1;
+  double running_average_major_kernel_fill_factor = 1;
+
   int total_inverts;
   double total_invert_time;
+  double invert_condition = 1;
 #endif
 
   /*
@@ -272,7 +314,6 @@ struct HighsSimplexInfo {
   vector<double> historyAlpha;
 #endif
   */
-
 };
 
 struct HighsSolution {
@@ -284,7 +325,8 @@ struct HighsSolution {
 
 // To be the basis representation given back to the user. Values of
 // HighsBasisStatus are defined in HConst.h
-struct HighsBasis_new {
+struct HighsBasis {
+  bool valid_ = false;
   std::vector<HighsBasisStatus> col_status;
   std::vector<HighsBasisStatus> row_status;
 };
@@ -292,20 +334,20 @@ struct HighsBasis_new {
 struct HighsRanging {
   std::vector<double> colCostRangeUpValue_;
   std::vector<double> colCostRangeUpObjective_;
-  std::vector<int>    colCostRangeUpInCol_;
-  std::vector<int>    colCostRangeUpOutCol_;
+  std::vector<int> colCostRangeUpInCol_;
+  std::vector<int> colCostRangeUpOutCol_;
   std::vector<double> colCostRangeDnValue_;
   std::vector<double> colCostRangeDnObjective_;
-  std::vector<int>    colCostRangeDnInCol_;
-  std::vector<int>    colCostRangeDnOutCol_;
+  std::vector<int> colCostRangeDnInCol_;
+  std::vector<int> colCostRangeDnOutCol_;
   std::vector<double> rowBoundRangeUpValue_;
   std::vector<double> rowBoundRangeUpObjective_;
-  std::vector<int>    rowBoundRangeUpInCol_;
-  std::vector<int>    rowBoundRangeUpOutCol_;
+  std::vector<int> rowBoundRangeUpInCol_;
+  std::vector<int> rowBoundRangeUpOutCol_;
   std::vector<double> rowBoundRangeDnValue_;
   std::vector<double> rowBoundRangeDnObjective_;
-  std::vector<int>    rowBoundRangeDnInCol_;
-  std::vector<int>    rowBoundRangeDnOutCol_;
+  std::vector<int> rowBoundRangeDnInCol_;
+  std::vector<int> rowBoundRangeDnOutCol_;
 };
 
 // Make sure the dimensions of solution are the same as numRow_ and numCol_.
@@ -313,7 +355,6 @@ bool isSolutionConsistent(const HighsLp& lp, const HighsSolution& solution);
 
 // If debug this method terminates the program when the status is not OK. If
 // standard build it only prints a message.
-//void checkStatus(HighsStatus status);
-
+// void checkStatus(HighsStatus status);
 
 #endif

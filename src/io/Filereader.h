@@ -31,10 +31,10 @@ enum class HighsInputStatus {
 };
 
 enum class FilereaderRetcode {
-  OKAY = 0,
+  OK = 0,
   FILENOTFOUND = 1,
   PARSERERROR = 2,
-  NOT_IMPLEMENTED = 3
+    NOT_IMPLEMENTED = 3
 };
 
 class Filereader {
@@ -43,7 +43,7 @@ class Filereader {
                                               HighsLp& model) = 0;
   virtual FilereaderRetcode readModelFromFile(const char* filename,
                                               HighsModelBuilder& model) = 0;
-  virtual FilereaderRetcode writeModelToFile(const char* filename,
+  virtual HighsStatus writeModelToFile(const char* filename,
                                              HighsLp& model) = 0;
   static Filereader* getFilereader(const char* filename);
 

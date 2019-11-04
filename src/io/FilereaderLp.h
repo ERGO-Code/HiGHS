@@ -24,11 +24,7 @@
 #define LP_MAX_LINE_LENGTH 560
 #define LP_MAX_NAME_LENGTH 255
 
-enum class LP_FILEREADER_STATUS {
-  NONE,
-  SUCCESS,
-  ERROR
-};
+enum class LP_FILEREADER_STATUS { NONE, SUCCESS, ERROR };
 
 #define LP_COMMENT_FILESTART ("File written by Highs .lp filereader")
 
@@ -106,7 +102,7 @@ class LpToken {
     HighsLogMessage(HighsMessageType::INFO, "%s ", LpTokenTypeString[type]);
   }
 
-  virtual ~LpToken() {;}
+  virtual ~LpToken() { ; }
 
   LpToken(LpTokenType t) { this->type = t; }
 };
@@ -195,7 +191,7 @@ class LpTokenComparison : public LpToken {
         } else {
           // error
           HighsLogMessage(HighsMessageType::ERROR,
-                            "Invalid comparison indicator.\n");
+                          "Invalid comparison indicator.\n");
         }
         break;
       case LpComparisonIndicator::L:
@@ -204,7 +200,7 @@ class LpTokenComparison : public LpToken {
         } else {
           // error
           HighsLogMessage(HighsMessageType::ERROR,
-                            "Invalid comparison indicator.\n");
+                          "Invalid comparison indicator.\n");
         }
         break;
       case LpComparisonIndicator::EQ:
@@ -217,22 +213,24 @@ class LpTokenComparison : public LpToken {
         } else {
           // error
           HighsLogMessage(HighsMessageType::ERROR,
-                            "Invalid comparison indicator.\n");
+                          "Invalid comparison indicator.\n");
         }
         break;
       default:
         // error
         HighsLogMessage(HighsMessageType::ERROR,
-                          "Invalid comparison indicator.\n");
+                        "Invalid comparison indicator.\n");
     }
   }
 };
 
 class FilereaderLp : public Filereader {
  public:
-  FilereaderRetcode readModelFromFile(const HighsOptions& options, HighsLp& model);
-  FilereaderRetcode readModelFromFile(const char* filename, HighsModelBuilder& model);
-  FilereaderRetcode writeModelToFile(const char* filename, HighsLp& model);
+  FilereaderRetcode readModelFromFile(const HighsOptions& options,
+                                      HighsLp& model);
+  FilereaderRetcode readModelFromFile(const char* filename,
+                                      HighsModelBuilder& model);
+  HighsStatus writeModelToFile(const char* filename, HighsLp& model);
   FilereaderLp();
   ~FilereaderLp();
 
@@ -252,7 +250,6 @@ class FilereaderLp : public Filereader {
   FILE* file;
   char fileBuffer[BUFFERSIZE];
   char stringBuffer[BUFFERSIZE];
-  char stringBuffer2[BUFFERSIZE];
   char* readingPosition;
   bool isFileBufferFullyRead;
   double constantBuffer;
@@ -282,7 +279,6 @@ class FilereaderLp : public Filereader {
   int linelength;
   void writeToFile(const char* format, ...);
   void writeToFileLineend();
-
 };
 
 #endif

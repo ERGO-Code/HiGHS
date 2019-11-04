@@ -80,7 +80,7 @@
       <!--                                                           -->
       <!-- Fill in your text below (outside this comment block)      -->
 
-      <projectDescription>High performance serial and parallel solver for large scale sparse linear programming
+      <projectDescription>HiGHS is a high performance serial and parallel solver for large scale sparse linear programming problems. Written in C++, and with no dependence on other COIN-OR software or third party code, it has interfaces to a range of other popular languages (C, C#, FORTRAN, Julia and Python, to date) and examples of their use. Problems are solved using the dual simplex method. Further solution techniques (primal simplex and interior point), extension to quadratic programming and proper documentation are being developed actively. Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice and support via email sent to highsopt@gmail.com.
       </projectDescription>
 
       <!-- Provide a one or two sentence description of your         -->
@@ -92,7 +92,7 @@
       <!--                                                           -->
       <!-- Fill in your text below (outside this comment block)      -->
 
-      <projectShortDescription>Linear optimization software
+      <projectShortDescription>High performance linear optimization software in C++, with interfaces to C, C#, FORTRAN, Julia and Python.
       </projectShortDescription>
 
       <!-- Fill in the project manager's name and (obfuscated)       -->
@@ -105,7 +105,7 @@
       <!--                                                           -->
       <!-- Fill in your text below (outside this comment block).     -->
 
-      <projectManager>Julian Hall, jajhall at ed dot ac dot uk</projectManager>
+      <projectManager>Julian Hall, jajhall@ed.ac.uk</projectManager>
 
       <!-- Fill in the URL you would like use for your project's     -->
       <!-- main home page. This could be your Trac page, or a static -->
@@ -118,7 +118,7 @@
       <!--                                                           -->
       <!-- Fill in your text below (outside this comment block).     -->
 
-      <projectHomePage>http://github.com/ERGO-Code/HiGHS</projectHomePage>
+      <projectHomePage>http://www.highs.dev/</projectHomePage>
 
       <!-- Fill in the name of the license your project uses and a   -->
       <!-- link to its page on www.opensource.org. For example, if   -->
@@ -283,6 +283,14 @@
         <platform>
           <operatingSystem>Linux</operatingSystem>
           <compiler>CLANG</compiler>
+        </platform>
+        <platform>
+          <operatingSystem>Macos</operatingSystem>
+          <compiler>CLANG</compiler>
+        </platform>
+        <platform>
+          <operatingSystem>Windows</operatingSystem>
+          <compiler>MSVC++</compiler>
         </platform>
       </testedPlatforms>
 

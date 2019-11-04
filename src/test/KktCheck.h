@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "lp_data/HConst.h"
+
 class KktCheck {
   // model
   int numCol;
@@ -54,6 +56,10 @@ class KktCheck {
   std::vector<double> colDual;  // lambda
   std::vector<double> rowDual;  // mu
 
+  // basis
+  std::vector<HighsBasisStatus> col_status;
+  std::vector<HighsBasisStatus> row_status;
+
   void printAR();
   void makeARCopy();
 
@@ -62,6 +68,7 @@ class KktCheck {
   void chDualFeas();
   void chComplementarySlackness();
   void chStOfLagrangian();
+  void checkBFS();
 
   void checkKKT();
   void printSol();

@@ -20,9 +20,9 @@
 
 #include "HConfig.h"
 
-using std::vector;
 using std::max;
 using std::min;
+using std::vector;
 
 class HVector;
 
@@ -63,7 +63,7 @@ const double hyperRESULT = 0.10;
  *
  * HFactor is initialised using HFactor::setup, which takes copies of
  * the pointers to the constraint matrix starts, indices, values and
- * basic column indices. 
+ * basic column indices.
  *
  * Forming \f$PBQ=LU\f$ (INVERT) is performed using HFactor::build
  *
@@ -96,12 +96,12 @@ class HFactor {
    * factor and Update buffer, allocated space for Markowitz matrices,
    * count-link-list, L factor and U factor
    */
-  void setup(int numCol,      //!< Number of columns
-             int numRow,      //!< Number of rows
-             const int *Astart,     //!< Column starts of constraint matrix
-             const int *Aindex,     //!< Row indices of constraint matrix
-             const double *Avalue,  //!< Row values of constraint matrix
-             int *baseIndex,  //!< Indices of basic variables
+  void setup(int numCol,            //!< Number of columns
+             int numRow,            //!< Number of rows
+             const int* Astart,     //!< Column starts of constraint matrix
+             const int* Aindex,     //!< Row indices of constraint matrix
+             const double* Avalue,  //!< Row values of constraint matrix
+             int* baseIndex,        //!< Indices of basic variables
              int updateMethod =
                  UPDATE_METHOD_FT  //!< Default update method is Forrest Tomlin
   );
@@ -114,9 +114,8 @@ class HFactor {
    * is only called in HTester.cpp Should only be compiled when
    * HiGHSDEV=on
    */
-  void change(
-	      int updateMethod  //!< New update method
-	      );
+  void change(int updateMethod  //!< New update method
+  );
 #endif
 
   /**
@@ -131,14 +130,14 @@ class HFactor {
   /**
    * @brief Solve \f$B\mathbf{x}=\mathbf{b}\f$ (FTRAN)
    */
-  void ftran(HVector &vector,  //!< RHS vector \f$\mathbf{b}\f$
+  void ftran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double hist_dsty  //!< Historical density of the result
              ) const;
 
   /**
    * @brief Solve \f$B^T\mathbf{x}=\mathbf{b}\f$ (BTRAN)
    */
-  void btran(HVector &vector,  //!< RHS vector \f$\mathbf{b}\f$
+  void btran(HVector& vector,  //!< RHS vector \f$\mathbf{b}\f$
              double hist_dsty  //!< Historical density of the result
              ) const;
 
@@ -146,10 +145,10 @@ class HFactor {
    * @brief Update according to
    * \f$B'=B+(\mathbf{a}_q-B\mathbf{e}_p)\mathbf{e}_p^T\f$
    */
-  void update(HVector *aq,  //!< Vector \f$B^{-1}\mathbf{a}_q\f$
-              HVector *ep,  //!< Vector \f$B^{-T}\mathbf{e}_p\f$
-              int *iRow,    //!< Index of pivotal row
-              int *hint     //!< Reinversion status
+  void update(HVector* aq,  //!< Vector \f$B^{-1}\mathbf{a}_q\f$
+              HVector* ep,  //!< Vector \f$B^{-T}\mathbf{e}_p\f$
+              int* iRow,    //!< Index of pivotal row
+              int* hint     //!< Reinversion status
   );
 
 #ifdef HiGHSDEV
@@ -196,12 +195,12 @@ class HFactor {
   /**
    * @brief Gets noPvR when HFactor.h cannot be included
    */
-  vector<int> &getNoPvR() { return noPvR; }
+  vector<int>& getNoPvR() { return noPvR; }
 
   /**
    * @brief Gets noPvC when HFactor.h cannot be included
    */
-  const int *getNoPvC() const { return &noPvC[0]; }
+  const int* getNoPvC() const { return &noPvC[0]; }
 
   // TODO Understand why handling noPvC and noPvR in what seem to be
   // different ways ends up equivalent.
@@ -216,7 +215,6 @@ class HFactor {
   void checkInvert();
 #endif
 
-
   // Properties of data held in HFactor.h. To "have" them means that
   // they are assigned.
   int haveArrays;
@@ -224,6 +222,10 @@ class HFactor {
   int haveInvert;
   // The representation of B^{-1} corresponds to the current basis and is fresh
   int haveFreshInvert;
+  int basis_matrix_num_el = 0;
+  int invert_num_el = 0;
+  int kernel_dim = 0;
+  int kernel_num_el = 0;
 
  private:
   /**
@@ -233,10 +235,10 @@ class HFactor {
   // Problem size, coefficient matrix and update method
   int numRow;
   int numCol;
-  const int *Astart;
-  const int *Aindex;
-  const double *Avalue;
-  int *baseIndex;
+  const int* Astart;
+  const int* Aindex;
+  const double* Avalue;
+  int* baseIndex;
   int updateMethod;
 
   // Working buffer
@@ -326,25 +328,25 @@ class HFactor {
   void buildMarkSingC();
   void buildFinish();
 
-  void ftranL(HVector &vector, double hist_dsty) const;
-  void btranL(HVector &vector, double hist_dsty) const;
-  void ftranU(HVector &vector, double hist_dsty) const;
-  void btranU(HVector &vector, double hist_dsty) const;
+  void ftranL(HVector& vector, double hist_dsty) const;
+  void btranL(HVector& vector, double hist_dsty) const;
+  void ftranU(HVector& vector, double hist_dsty) const;
+  void btranU(HVector& vector, double hist_dsty) const;
 
-  void ftranFT(HVector &vector) const;
-  void btranFT(HVector &vector) const;
-  void ftranPF(HVector &vector) const;
-  void btranPF(HVector &vector) const;
-  void ftranMPF(HVector &vector) const;
-  void btranMPF(HVector &vector) const;
-  void ftranAPF(HVector &vector) const;
-  void btranAPF(HVector &vector) const;
+  void ftranFT(HVector& vector) const;
+  void btranFT(HVector& vector) const;
+  void ftranPF(HVector& vector) const;
+  void btranPF(HVector& vector) const;
+  void ftranMPF(HVector& vector) const;
+  void btranMPF(HVector& vector) const;
+  void ftranAPF(HVector& vector) const;
+  void btranAPF(HVector& vector) const;
 
-  void updateCFT(HVector *aq, HVector *ep, int *iRow, int *hint);
-  void updateFT(HVector *aq, HVector *ep, int iRow, int *hint);
-  void updatePF(HVector *aq, HVector *ep, int iRow, int *hint);
-  void updateMPF(HVector *aq, HVector *ep, int iRow, int *hint);
-  void updateAPF(HVector *aq, HVector *ep, int iRow, int *hint);
+  void updateCFT(HVector* aq, HVector* ep, int* iRow);//, int* hint);
+  void updateFT(HVector* aq, HVector* ep, int iRow);//, int* hint);
+  void updatePF(HVector* aq, int iRow, int* hint);
+  void updateMPF(HVector* aq, HVector* ep, int iRow, int* hint);
+  void updateAPF(HVector* aq, HVector* ep, int iRow);//, int* hint);
 
   /**
    * Local in-line functions

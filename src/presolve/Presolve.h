@@ -8,7 +8,7 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file presolve/HPresolve.h
- * @brief 
+ * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #ifndef PRESOLVE_PRESOLVE_H_
@@ -21,9 +21,9 @@
 #include <utility>
 #include <vector>
 
+#include "lp_data/HighsLp.h"
 #include "presolve/HPreData.h"
 #include "simplex/HTimerPre.h"
-#include "lp_data/HighsLp.h"
 
 using std::list;
 using std::string;
@@ -33,20 +33,20 @@ enum class HighsPostsolveStatus {
   ReducedSolutionDimenionsError,
   SolutionRecovered,
   LpOrPresolveObjectMissing,
+  BasisError,
   NoPostsolve
 };
 
 enum class HighsPresolveStatus {
-    NotPresolved = -1,
-    NotReduced,
-    Infeasible,
-    Unbounded,
-    Empty,
-    Reduced,
-    ReducedToEmpty,
-    NullError
+  NotPresolved = -1,
+  NotReduced,
+  Infeasible,
+  Unbounded,
+  Empty,
+  Reduced,
+  ReducedToEmpty,
+  NullError
 };
-
 
 class Presolve : public HPreData {
  public:
@@ -55,20 +55,21 @@ class Presolve : public HPreData {
   HighsPostsolveStatus postsolve(const HighsSolution& reduced_solution,
                                  HighsSolution& recovered_solution);
 
-  void setBasisInfo(const std::vector<int>& index, const std::vector<int>& nbf, const std::vector<int>& nbm);
-  const std::vector<int>& getBasisIndex() { return basicIndex; }
-  const std::vector<int>& getNonbasicFlag() { return nonbasicFlag; }
-  const std::vector<int>& getNonbasicMove() { return nonbasicMove; }
+  void setBasisInfo(const std::vector<HighsBasisStatus>& pass_col_status,
+                    const std::vector<HighsBasisStatus>& pass_row_status);
+  const std::vector<HighsBasisStatus>& getRowStatus() { return row_status; }
+  const std::vector<HighsBasisStatus>& getColStatus() { return col_status; }
 
   void load(const HighsLp& lp);
- // todo: clear the public from below. 
+  // todo: clear the public from below.
   string modelName;
- private: 
 
+ private:
   int iPrint;
   int iKKTcheck;
   int presolve(int print);
 
+  const bool report_postsolve = false;
 
   double objShift;
   void initializeVectors();
@@ -133,6 +134,7 @@ class Presolve : public HPreData {
   void removeEmptyRow(int i);
   void removeEmptyColumn(int j);
   void removeRow(int i);
+  void checkBoundsAreConsistent();
 
   // singleton rows
   void removeRowSingletons();
@@ -206,11 +208,11 @@ class Presolve : public HPreData {
   void fillStackRowBounds(int col);
   void setKKTcheckerData();
 
-  void getBoundOnLByZj(int row, int j, double *lo, double *up, double colLow,
+  void getBoundOnLByZj(int row, int j, double* lo, double* up, double colLow,
                        double colUpp);
   double getRowDualPost(int row, int col);
   double getColumnDualPost(int col);
-  string getDualsForcingRow(int row, vector<int> &fRjs);
+  string getDualsForcingRow(int row, vector<int>& fRjs);
   void getDualsSingletonRow(int row, int col);
   void getDualsDoubletonEquation(int row, int col);
   void recordCounts(const string fileName);
@@ -239,20 +241,21 @@ class Presolve : public HPreData {
 class PresolveInfo {
  public:
   PresolveInfo() {}
-  // option_presolve : 0 means don't presolve.
-  PresolveInfo(PresolveOption option_presolve, const HighsLp& lp) {
-    if (option_presolve == PresolveOption::ON) {
+  // option_presolve : off_string means don't presolve.
+  PresolveInfo(std::string option_presolve, const HighsLp& lp) {
+    if (option_presolve != off_string) {
       lp_ = &lp;
       presolve_.push_back(Presolve());
-     }
+    }
   }
 
   HighsLp& getReducedProblem();
   HighsPresolveStatus presolve_status_;
   HighsPostsolveStatus postsolve_status_;
- public: 
+
+ public:
   // Original problem is lp_.
-  const  HighsLp * lp_;
+  const HighsLp* lp_;
   std::vector<Presolve> presolve_;
   HighsLp reduced_lp_;
 

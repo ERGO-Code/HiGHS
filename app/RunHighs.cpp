@@ -12,20 +12,24 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "Highs.h"
-#include "HighsTimer.h"
 #include "HighsIO.h"
 #include "HighsOptions.h"
 #include "HighsRuntimeOptions.h"
+#include "HighsTimer.h"
 #include "LoadProblem.h"
 
-void HiGHSRun(const char *message = nullptr) {
+void HiGHSRun(const char* message = nullptr) {
   std::stringstream ss;
   ss << "Running HiGHS " << HIGHS_VERSION_MAJOR << "." << HIGHS_VERSION_MINOR
      << "." << HIGHS_VERSION_PATCH << " [date: " << HIGHS_COMPILATION_DATE
      << ", git hash: " << HIGHS_GITHASH << "]" << std::endl;
 
   HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
-  HighsPrintMessage(ML_ALWAYS, "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
+  HighsPrintMessage(ML_ALWAYS,
+                    "Copyright (c) 2019 ERGO-Code under MIT licence terms\n\n");
+
+  if (message != nullptr) {
+  }
 
 #ifdef HiGHSDEV
   // Report on preprocessing macros
@@ -52,9 +56,9 @@ void HiGHSRun(const char *message = nullptr) {
   std::cout << "Built with CMAKE_BUILD_TYPE=" << CMAKE_BUILD_TYPE << std::endl;
 
 #endif
-};
+}
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   HiGHSRun();
 
   // Load user options.
@@ -62,23 +66,26 @@ int main(int argc, char **argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = false;
-  if (force_options_file) {
-    printf("In main: set options.options_file = options_file so vscode can be used to debug\n");
+  bool force_options_file = false;  // true;// 
+  if (force_options_file && options.options_file.size() > 0) {
+    printf(
+        "In main: set options.options_file = options_file so vscode can be "
+        "used to debug\n");
     options.options_file = "options_file";
     if (!loadOptionsFromFile(options)) {
       printf("In main: fail return from loadOptionsFromFile\n");
+      return (int)HighsStatus::Error;
     }
   }
+  if (options.run_as_hsol) setHsolOptions(options);
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
-    return (int)HighsStatus::LpError;
+    return (int)HighsStatus::Error;
   } else {
-    HighsPrintMessage(ML_MINIMAL, "LP       : %s\n",
-                      lp.model_name_.c_str());
+    HighsPrintMessage(ML_MINIMAL, "LP       : %s\n", lp.model_name_.c_str());
     HighsPrintMessage(ML_MINIMAL,
                       "Rows     : %d\nCols     : %d\nNonzeros : %d\n",
                       lp.numRow_, lp.numCol_, lp.Avalue_.size());
@@ -90,20 +97,22 @@ int main(int argc, char **argv) {
   }
 
   Highs highs;
-  
+  //  highs.writeHighsOptions("HiGHS.set");
+
   HighsStatus init_status = highs.initializeLp(lp);
   if (init_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
-    return (int)HighsStatus::LpError;
+    return (int)HighsStatus::Error;
   }
+  HighsStatus run_status;
+  //  run_status = highs.writeToFile("write.mps"); if (run_status != HighsStatus::OK) printf("Error return from highs.writeToFile\n");
 
-  //  bool write_mps_return = highs.writeMPS("write.mps"); if (!write_mps_return) printf("Error return from highs.writeMPS\n");
   highs.options_ = options;
-  HighsStatus run_status = highs.run();
+  run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
-  if (run_status != HighsStatus::OK &&
-      run_status != HighsStatus::Optimal)
+  if (run_status != HighsStatus::OK)
     HighsPrintMessage(ML_ALWAYS, "Highs status: %s\n", statusname.c_str());
+  //    highs.reportSolution();
 
-  return 0;
+  return (int)run_status;
 }

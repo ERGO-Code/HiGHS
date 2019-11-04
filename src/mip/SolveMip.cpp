@@ -6,42 +6,38 @@
 
 // For the moment just return first violated.
 NodeIndex Tree::chooseBranchingVariable(const Node& node) {
-  if (node.integer_variables.size() == 0)
-    return kNodeIndexError;
-  
+  if (node.integer_variables.size() == 0) return kNodeIndexError;
+
   assert(node.integer_variables.size() == node.primal_solution.size());
 
-  for (int col=0; col<node.integer_variables.size(); col++) {
-    if (!node.integer_variables[col])
-      continue;
+  for (int col = 0; col < (int)node.integer_variables.size(); col++) {
+    if (!node.integer_variables[col]) continue;
 
     double value = node.primal_solution[col];
     if (std::fabs(value - std::floor(value)) > 0.0000001) {
-				// This one is violated.
-        return NodeIndex(col);
-			}
+      // This one is violated.
+      return NodeIndex(col);
+    }
   }
 
   return kNoNodeIndex;
 }
 
-struct testn {
-  testn* left;
-  testn* right;
-  testn(int a, int b) : a_(a) {}
-  int a_;
-};
+// struct testn {
+//   testn* left;
+//   testn* right;
+//   testn(int a, int b) : a_(a) {}
+//   int a_;
+// };
 
 bool Tree::branch(Node& node) {
   NodeIndex branch_col = chooseBranchingVariable(node);
-  if (branch_col == kNodeIndexError)
-    return false;
+  if (branch_col == kNodeIndexError) return false;
 
   if (branch_col == kNoNodeIndex) {
     // All integer variables are feasible. Update best solution.
     // Assuming minimization.
-    HighsPrintMessage(ML_ALWAYS,
-                      "Updating best solution at node %d.\n",
+    HighsPrintMessage(ML_ALWAYS, "Updating best solution at node %d.\n",
                       node.id);
 
     if (node.objective_value < best_objective_) {
@@ -55,21 +51,20 @@ bool Tree::branch(Node& node) {
   double value = node.primal_solution[col];
 
   // todo: change always to whatever.
-  HighsPrintMessage(ML_ALWAYS,
-                    "Branching on variable %d\n",
-                    col);
+  HighsPrintMessage(ML_ALWAYS, "Branching on variable %d\n", col);
 
-  HighsPrintMessage(ML_ALWAYS,
-                    "%d(%d, %d) left child: %.2f, right child: %.2f\n",
-                    node.id, num_nodes + 1, num_nodes + 2,
-                    std::floor(value), std::ceil(value));
+  HighsPrintMessage(
+      ML_ALWAYS, "%d(%d, %d) left child: %.2f, right child: %.2f\n", node.id,
+      num_nodes + 1, num_nodes + 2, std::floor(value), std::ceil(value));
 
   // Branch.
   // Create children and add to node.
   num_nodes++;
-  node.left_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+  node.left_child =
+      std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
   num_nodes++;
-  node.right_child = std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
+  node.right_child =
+      std::unique_ptr<Node>(new Node(node.id, num_nodes, node.level + 1));
 
   // Copy bounds from parent.
   node.left_child->col_lower_bound = node.col_lower_bound;

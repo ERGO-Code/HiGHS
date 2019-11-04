@@ -13,16 +13,18 @@
  */
 
 #include <vector>
+#include <algorithm>
 
 #include "HConfig.h"
+#include "io/HighsIO.h"
+#include "lp_data/HConst.h"
 #include "lp_data/HighsModelUtils.h"
 #include "util/HighsUtils.h"
 
 #ifdef HiGHSDEV
-void util_analyseModelBounds(const char *message,
-			     int numBd,
-			     const std::vector<double> &lower,
-			     const std::vector<double> &upper) {
+void analyseModelBounds(const char* message, int numBd,
+                        const std::vector<double>& lower,
+                        const std::vector<double>& upper) {
   if (numBd == 0) return;
   int numFr = 0;
   int numLb = 0;
@@ -71,4 +73,241 @@ void util_analyseModelBounds(const char *message,
   printf("grep_CharMl,%d,%d,%d,%d,%d,%d\n", numBd, numFr, numLb, numUb, numBx,
          numFx);
 }
+
 #endif
+std::string ch4VarStatus(const HighsBasisStatus status, const double lower,
+                         const double upper) {
+  switch (status) {
+    case HighsBasisStatus::LOWER:
+      if (lower == upper) {
+        return "FX";
+      } else {
+        return "LB";
+      }
+      break;
+    case HighsBasisStatus::BASIC:
+      return "BS";
+      break;
+    case HighsBasisStatus::UPPER:
+      return "UB";
+      break;
+    case HighsBasisStatus::ZERO:
+      return "FR";
+      break;
+    case HighsBasisStatus::SUPER:
+      return "SU";
+      break;
+    case HighsBasisStatus::NONBASIC:
+      return "NB";
+      break;
+  }
+  return "";
+}
+
+void reportModelBoundSol(const bool columns, const int dim,
+                         const std::vector<double>& lower,
+                         const std::vector<double>& upper,
+                         const std::vector<std::string>& names,
+                         const std::vector<double>& primal,
+                         const std::vector<double>& dual,
+                         const std::vector<HighsBasisStatus>& status) {
+  const bool have_names = names.size() > 0;
+  const bool have_basis = status.size() > 0;
+  const bool have_primal = primal.size() > 0;
+  const bool have_dual = dual.size() > 0;
+  std::string ch4_var_status;
+  if (columns) {
+    HighsPrintMessage(ML_ALWAYS, "Columns\n");
+  } else {
+    HighsPrintMessage(ML_ALWAYS, "Rows\n");
+  }
+  HighsPrintMessage(
+      ML_ALWAYS,
+      "    Index Status        Lower        Upper       Primal         Dual");
+  if (have_names) {
+    HighsPrintMessage(ML_ALWAYS, "  Name\n");
+  } else {
+    HighsPrintMessage(ML_ALWAYS, "\n");
+  }
+  for (int ix = 0; ix < dim; ix++) {
+    if (have_basis) {
+      ch4_var_status = ch4VarStatus(status[ix], lower[ix], upper[ix]);
+    } else {
+      ch4_var_status = "";
+    }
+    HighsPrintMessage(ML_ALWAYS, "%9d   %4s %12g %12g", ix,
+                      ch4_var_status.c_str(), lower[ix], upper[ix]);
+    if (have_primal) {
+      HighsPrintMessage(ML_ALWAYS, " %12g", primal[ix]);
+    } else {
+      HighsPrintMessage(ML_ALWAYS, "             ");
+    }
+    if (have_dual) {
+      HighsPrintMessage(ML_ALWAYS, " %12g", dual[ix]);
+    } else {
+      HighsPrintMessage(ML_ALWAYS, "             ");
+    }
+    if (have_names) {
+      HighsPrintMessage(ML_ALWAYS, "  %-s\n", names[ix].c_str());
+    } else {
+      HighsPrintMessage(ML_ALWAYS, "\n");
+    }
+  }
+}
+
+bool namesWithSpaces(const int num_name, const std::vector<std::string>& names, const bool report) {
+  bool names_with_spaces = false;
+  for (int ix = 0; ix < num_name; ix++) {
+    int space_pos = names[ix].find(" ");
+    if (space_pos >= 0) {
+      if (report) printf("Name |%s| contains a space character in position %d\n", names[ix].c_str(), space_pos);
+      names_with_spaces = true;
+    }
+  }
+  return names_with_spaces;
+}
+
+int maxNameLength(const int num_name, const std::vector<std::string>& names) {
+    int max_name_length = 0;
+    for (int ix = 0; ix < num_name; ix++)
+      max_name_length = std::max((int)names[ix].length(), max_name_length);
+    return max_name_length;
+}
+
+HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length) {
+  // Record the desired maximum name length
+  int desired_max_name_length = max_name_length;
+  // First look for empty names
+  int num_empty_name = 0;
+  std::string name_prefix = name_type.substr(0, 1);
+  bool names_with_spaces = false;
+  for (int ix = 0; ix < num_name; ix++) {
+    if ((int)names[ix].length() == 0) num_empty_name++;
+  }
+  // If there are no empty names - in which case they will all be
+  // replaced - find the maximum name length
+  if (!num_empty_name) max_name_length = maxNameLength(num_name, names);
+  bool construct_names = num_empty_name ||
+    max_name_length > desired_max_name_length;
+  if (construct_names) {
+    // Construct names, either because they are empty names, or
+    // because the existing names are too long
+
+    HighsLogMessage(HighsMessageType::WARNING,
+    "There are empty or excessively-long %s names: using constructed names with prefix %s",
+	   name_type.c_str(), name_prefix.c_str());
+    for (int ix = 0; ix < num_name; ix++)
+      names[ix] = name_prefix + std::to_string(ix);
+  } else {
+    // Using original names, so look to see whether there are names with spaces
+    names_with_spaces = namesWithSpaces(num_name, names);
+  }
+  // Find the final maximum name length
+  max_name_length = maxNameLength(num_name, names);
+  // Can't have names with spaces and more than 8 characters
+  if (max_name_length > 8 && names_with_spaces) return HighsStatus::Error;
+  if (construct_names) return HighsStatus::Warning;
+  return HighsStatus::OK;
+}
+
+// Return a string representation of HighsModelStatus.
+std::string highsModelStatusToString(HighsModelStatus model_status) {
+
+  switch (model_status) {
+  case HighsModelStatus::NOTSET:
+      return "Not Set";
+      break;
+  case HighsModelStatus::LOAD_ERROR:
+      return "Load error";
+      break;
+  case HighsModelStatus::MODEL_ERROR:
+      return "Model error";
+      break;
+  case HighsModelStatus::MODEL_EMPTY:
+      return "Model empty";
+      break;
+  case HighsModelStatus::PRESOLVE_ERROR:
+      return "Presolve error";
+      break;
+  case HighsModelStatus::SOLVE_ERROR:
+      return "Solve error";
+      break;
+  case HighsModelStatus::POSTSOLVE_ERROR:
+      return "Postsolve error";
+      break;
+  case HighsModelStatus::PRIMAL_FEASIBLE:
+      return "Primal feasible";
+      break;
+  case HighsModelStatus::DUAL_FEASIBLE:
+      return "Dual feasible";
+      break;
+  case HighsModelStatus::PRIMAL_INFEASIBLE:
+    return "Infeasible";//"Primal infeasible";
+      break;
+  case HighsModelStatus::PRIMAL_UNBOUNDED:
+    return "Unbounded";//"Primal unbounded";
+      break;
+  case HighsModelStatus::OPTIMAL:
+      return "Optimal";
+      break;
+  case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+      return "Reached dual objective upper bound";
+      break;
+  case HighsModelStatus::REACHED_TIME_LIMIT:
+      return "Reached time limit";
+      break;
+  case HighsModelStatus::REACHED_ITERATION_LIMIT:
+      return "Reached iteration limit";
+      break;
+    default:
+      return "Status toString() not implemented.";
+      break;
+  }
+  return "";
+}
+
+// Report a HighsModelStatus.
+void highsModelStatusReport(const char* message, HighsModelStatus model_status) {
+  HighsLogMessage(HighsMessageType::INFO, "%s: HighsModelStatus = %d - %s\n",
+                  message, (int)model_status, highsModelStatusToString(model_status).c_str());
+}
+
+// Deduce the HighsStatus value corresponding to a HighsModelStatus value.
+HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
+  switch (model_status) {
+  case HighsModelStatus::NOTSET:
+    return HighsStatus::Error;
+  case HighsModelStatus::LOAD_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::MODEL_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::MODEL_EMPTY:
+    return HighsStatus::OK;
+  case HighsModelStatus::PRESOLVE_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::SOLVE_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::POSTSOLVE_ERROR:
+    return HighsStatus::Error;
+  case HighsModelStatus::PRIMAL_FEASIBLE:
+    return HighsStatus::OK;
+  case HighsModelStatus::DUAL_FEASIBLE:
+    return HighsStatus::OK;
+  case HighsModelStatus::PRIMAL_INFEASIBLE:
+    return HighsStatus::OK;
+  case HighsModelStatus::PRIMAL_UNBOUNDED:
+    return HighsStatus::OK;
+  case HighsModelStatus::OPTIMAL:
+    return HighsStatus::OK;
+  case HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND:
+    return HighsStatus::OK;
+  case HighsModelStatus::REACHED_TIME_LIMIT:
+    return HighsStatus::Warning;
+  case HighsModelStatus::REACHED_ITERATION_LIMIT:
+    return HighsStatus::Warning;
+  default:
+    return HighsStatus::Error;
+  }
+}
+  
+

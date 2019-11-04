@@ -85,6 +85,7 @@ buildDebug/
 Makefile
 Makefile_opt_sw
 ml.mps
+options_file
 
 # Visual C++ cache files
 ipch/
@@ -236,4 +237,11 @@ test.lp
 test.out.gz
 test2.lp
 test2.out
+
+#SCIP interface
+lpi_highs.cpp
+
+
+#HiGHS options files
+*.set
 

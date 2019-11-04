@@ -15,34 +15,39 @@
 #define UTIL_HIGHSUTILS_H_
 
 #include <vector>
+#include <string>
 
 #include "HConfig.h"
+
+double getNorm2(const std::vector<double> values);
 
 /**
  * @brief Logical check of double being +Infinity
  */
-bool highs_isInfinity(
-		      double val //!< Value being tested against +Infinity
-		      );
+bool highs_isInfinity(double val  //!< Value being tested against +Infinity
+);
 #ifdef HiGHSDEV
 /**
  * @brief Analyse the values of a vector, assessing how many are in
  * each power of ten, and possibly analyse the distribution of
  * different values
  */
-  void util_analyseVectorValues(
-				const char* message,            //!< Message to be printed
-				int vecDim,                     //!< Dimension of vector
-				const std::vector<double>& vec, //!< Vector of values
-				bool analyseValueList           //!< Possibly analyse the distribution of different values in the vector
-				);
+void analyseVectorValues(
+    const char* message,             //!< Message to be printed
+    int vecDim,                      //!< Dimension of vector
+    const std::vector<double>& vec,  //!< Vector of values
+    bool analyseValueList = false,  //!< Possibly analyse the distribution of different
+                           //!< values in the vector
+    std::string model_name = "Unknown" //!< Model name to report if analysing distribution of different
+                                       //!< values in the vector
+);
 
-  void util_analyseMatrixSparsity(
-				  const char* message,            //!< Message to be printed
-				  int numCol,                     //!< Number of columns
-				  int numRow,                     //!< Number of rows
-				  const std::vector<int>& Astart, //!< Matrix column starts
-				  const std::vector<int>& Aindex //!< Matrix row indices
-				  );
+void analyseMatrixSparsity(
+    const char* message,             //!< Message to be printed
+    int numCol,                      //!< Number of columns
+    int numRow,                      //!< Number of rows
+    const std::vector<int>& Astart,  //!< Matrix column starts
+    const std::vector<int>& Aindex   //!< Matrix row indices
+);
 #endif
-#endif // UTIL_HIGHSUTILS_H_
+#endif  // UTIL_HIGHSUTILS_H_

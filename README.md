@@ -5,10 +5,16 @@
 HiGHS is a high performance serial and parallel solver for large scale sparse
 linear programming (LP) problems of the form
 
-    Maximize c^Tx subject to L <= Ax <= U; l <= x <= u
+    Minimize c^Tx subject to L <= Ax <= U; l <= x <= u
 
-It is written in C++ with OpenMP directives. It is based on the dual revised
-simplex method implemented in HSOL.
+It is written in C++ with OpenMP directives, and has been developed and tested on various linux and Windows installations using both the GNU (g++) and Intel (icc) C++ compilers. It has no third-party dependencies.
+
+HiGHS is based on the dual revised simplex method implemented in HSOL, which was originally written by Qi Huangfu. Features such as presolve, crash and advanced basis start have been added by Julian Hall, Ivet Galabova. Other features, and interfaces to C, C#, FORTRAN, Julia and Python, have been written by Michael Feldmeier.
+
+Although HiGHS is freely available under the MIT license, we would be pleased to learn about users' experience and give advice via email sent to highsopt@gmail.com. 
+
+Reference
+---------
 
 Parallelizing the dual revised simplex method
 Q. Huangfu and J. A. J. Hall
@@ -17,18 +23,21 @@ DOI: 10.1007/s12532-017-0130-5
 
 http://www.maths.ed.ac.uk/hall/HuHa13/
 
-HSOL was originally written by Qi Huangfu, with features such as presolve,
-crash and advanced basis start added by Julian Hall and Ivet Galabova and
-further work by Michael Feldmeier.
+Performance
+-----------
 
-HSOL has been developed and tested on various linux installations
-using both the GNU (g++) and Intel (icc) C++ compilers.
+The performance of HiGHS relative to some commercial and open-source simplex solvers may be assessed via the Mittelmann benchmarks on http://plato.asu.edu/ftp/lpsimp.html
+
+Documentation
+-------------
+
+The rest of this file gives brief documentation for HiGHS. Comprehensive documentation is available from https://www.highs.dev.
 
 Compilation
 -----------
 
-HiGHS uses CMake as build system. To compile the run you need to setup
-a build directory and call
+HiGHS uses CMake as build system. First setup
+a build folder and call CMake as follows
 
     mkdir build
     cd build
@@ -37,6 +46,8 @@ a build directory and call
 Then compile the code using
 
     make
+
+This installs the executable `bin/highs`. 
 
 Testing
 -------
@@ -61,20 +72,19 @@ HiGHS options
 Usage:
     highs [OPTION...] [file]
 
-      --file arg             Filename of LP to solve.
-      --presolve arg         Use presolve: off by default.
-      --crash arg            Use crash to start simplex: off by default.
-      --simplex arg          Use simplex solver: on by default.
-      --ipm arg              Use interior point method solver: off by
-                             default.
-      --parallel arg         Use parallel solve: off by default.
-      --time_limit arg       Use time limit.
-      --iteration_limit arg  Use iteration limit (integer).
+      --model_file arg       File of model to solve.
+      --presolve arg         Presolve: "choose" by default - "on"/"off" are alternatives.
+      --solver arg           Solver: "choose" by default - "simplex"/"ipm" are alternatives.
+      --parallel arg         Parallel solve: "choose" by default - "on"/"off" are alternatives.
+      --time_limit arg       Run time limit (double).
       --options_file arg     File containing HiGHS options.
-      --parser arg           Mps parser type: swap back to fixed format
-                             parser.
+
   -h, --help                 Print help.
 
+Language interfaces and further documentation
+---------------------------------------------
+
+There are HiGHS interfaces for C, C#, FORTRAN, Julia and Python in HiGHS/src/interfaces, with example driver files in HiGHS/examples. Documentation beyond what is in this file is "work in progress", but we expect to have some available before the end of 2019. However, we are happy to give a reasonable level of support via email sent to highsopt@gmail.com.
 
 Parallel code
 -------------
@@ -115,12 +125,11 @@ some problems, it is typically faster in parallel.
 HiGHS Library
 -------------
 
-Highs is compiled in a shared library. Running
+HiGHS is compiled in a shared library. Running
 
 `make install`
 
-installs the highs executable in the bin/ and the highs library in the
-lib/ folder, as well as all header files in include/. For a custom
+from the build folder installs the library in `lib/`, as well as all header files in `include/`. For a custom
 installation in `install_folder` run
 
 `cmake -DCMAKE_INSTALL_PREFIX=install_folder ..`
@@ -129,19 +138,20 @@ and then
 
 `make install`
 
-To use the library from a cmake project use
+To use the library from a CMake project use
 
 `find_package(HiGHS)`
 
 and add the correct path to HIGHS_DIR.
 
-Compiling and linking without cmake
-Suppose we want to link an executable defined in file `use_highs.cpp` with the
-highs library. After running the code above compile and run with
+Compiling and linking without CMake
+-----------------------------------
+
+An executable defined in the file `use_highs.cpp` is linked with the HiGHS library as follows. After running the code above, compile and run with
 
 `g++ -o use_highs use_highs.cpp -I install_folder/include/ -L install_folder/lib/ -lhighs`
 
-`LD_LIBRARY_PATH=intstall_folder/lib/ ./use_highs`
+`LD_LIBRARY_PATH=install_folder/lib/ ./use_highs`
 
 Interfaces
 ----------
@@ -156,7 +166,7 @@ Set custom options with `-D<option>=<value>` during the configuration step (`cma
 
 If build with GAMS interface, then HiGHS can be made available as solver
 in GAMS by adding an entry for HiGHS to the file gmscmpun.txt in the GAMS
-system directory (gmscmpnt.txt on Windows):
+system folder (gmscmpnt.txt on Windows):
 ```
 HIGHS 11 5 0001020304 1 0 2 LP RMIP
 gmsgenus.run
@@ -166,4 +176,4 @@ gmsgenux.out
 OSI
 ---
 - `OSI_ROOT`:
-    path to COIN-OR/Osi build/install directory (OSI_ROOT/lib/pkg-config/osi.pc should exist)
+    path to COIN-OR/Osi build/install folder (OSI_ROOT/lib/pkg-config/osi.pc should exist)

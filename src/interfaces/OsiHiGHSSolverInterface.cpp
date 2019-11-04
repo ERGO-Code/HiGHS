@@ -26,7 +26,7 @@
 #include "CoinWarmStartBasis.hpp"
 
 static
-void printtomessagehandler(unsigned int level, const char* msg, void* msgcb_data) {
+void printtomessagehandler(int level, const char* msg, void* msgcb_data) {
   assert(msgcb_data != NULL);
 
   CoinMessageHandler* handler = (CoinMessageHandler*) msgcb_data;
@@ -60,7 +60,8 @@ void logtomessagehandler(HighsMessageType type, const char* msg, void* msgcb_dat
 }
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
-: status(HighsStatus::Init) {
+  //  : status(HighsStatus::Init) {
+  : status(HighsStatus::OK) {
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
 
   HighsPrintMessage(
@@ -79,7 +80,10 @@ OsiHiGHSSolverInterface::OsiHiGHSSolverInterface()
 
 OsiHiGHSSolverInterface::OsiHiGHSSolverInterface(
     const OsiHiGHSSolverInterface &original)
-    : OsiSolverInterface(original), status(HighsStatus::Init) {
+    : OsiSolverInterface(original),
+      //      status(HighsStatus::Init)
+      status(HighsStatus::OK)
+{
   HighsSetMessageCallback(printtomessagehandler, logtomessagehandler, (void*)handler_);
 
   HighsPrintMessage(
@@ -255,32 +259,36 @@ void OsiHiGHSSolverInterface::initialSolve() {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::initialSolve()\n");
   this->status = this->highs->run();
-};
+}
 
 bool OsiHiGHSSolverInterface::isAbandoned() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::isAbandoned()\n");
-  return this->status == HighsStatus::NumericalDifficulties;
+  //  return this->status == HighsStatus::NumericalDifficulties;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenOptimal() const {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::isProvenOptimal()\n");
-  return (this->status == HighsStatus::Optimal) ||
-         (this->status == HighsStatus::OK);
+  //  return (this->status == HighsStatus::Optimal) ||
+  //         (this->status == HighsStatus::OK);
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenPrimalInfeasible() const {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isProvenPrimalInfeasible()\n");
-  return this->status == HighsStatus::Infeasible;
+  //  return this->status == HighsStatus::Infeasible;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isProvenDualInfeasible() const {
   HighsPrintMessage(
       ML_ALWAYS, "Calling OsiHiGHSSolverInterface::isProvenDualInfeasible()\n");
-  return this->status == HighsStatus::Unbounded;
+  //  return this->status == HighsStatus::Unbounded;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isPrimalObjectiveLimitReached() const {
@@ -294,14 +302,16 @@ bool OsiHiGHSSolverInterface::isDualObjectiveLimitReached() const {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isDualObjectiveLimitReached()\n");
-  return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
+  //  return this->status == HighsStatus::ReachedDualObjectiveUpperBound;
+  return false;
 }
 
 bool OsiHiGHSSolverInterface::isIterationLimitReached() const {
   HighsPrintMessage(
       ML_ALWAYS,
       "Calling OsiHiGHSSolverInterface::isIterationLimitReached()\n");
-  return this->status == HighsStatus::ReachedIterationLimit;
+  //  return this->status == HighsStatus::ReachedIterationLimit;
+  return false;
 }
 
 int OsiHiGHSSolverInterface::getNumCols() const {
@@ -504,7 +514,7 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   bool success = this->highs->addRow(rowlb, rowub, 
                                      vec.getNumElements(), vec.getIndices(), vec.getElements());
   assert(success);
-};
+}
 
 void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
                                      const char rowsen, const double rowrhs,
@@ -513,7 +523,7 @@ void OsiHiGHSSolverInterface::addRow(const CoinPackedVectorBase &vec,
   double lb, ub;
   this->convertSenseToBound(rowsen, rowrhs, rowrng, lb, ub);
   this->addRow(vec, lb, ub);
-};
+}
 
 void OsiHiGHSSolverInterface::addCol(const CoinPackedVectorBase &vec,
                                      const double collb, const double colub,
@@ -528,13 +538,13 @@ void OsiHiGHSSolverInterface::deleteCols(const int num, const int *colIndices) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::deleteCols()\n");
   this->highs->deleteCols(num, colIndices);
-};
+}
 
 void OsiHiGHSSolverInterface::deleteRows(const int num, const int *rowIndices) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::deleteRows()\n");
   this->highs->deleteRows(num, rowIndices);
-};
+}
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
                                             double *&collb, double *&colub,
@@ -622,7 +632,7 @@ void OsiHiGHSSolverInterface::loadProblem(const CoinPackedMatrix &matrix,
   if (rowrngnull) {
     delete[] myrowrng;
   }
-};
+}
 
 void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
                                             double *&collb, double *&colub,
@@ -645,7 +655,7 @@ void OsiHiGHSSolverInterface::assignProblem(CoinPackedMatrix *&matrix,
   rowrhs = 0;
   delete[] rowrng;
   rowrng = 0;
-};
+}
 
 void OsiHiGHSSolverInterface::loadProblem(
     const int numcols, const int numrows, const CoinBigIndex *start,
@@ -756,7 +766,7 @@ void OsiHiGHSSolverInterface::loadProblem(
   double *value = new double[nnz];
 
   // get matrix data
-  const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
+  // const CoinBigIndex *vectorStarts = matrix.getVectorStarts();
   const int *vectorLengths = matrix.getVectorLengths();
   const double *elements = matrix.getElements();
   const int *indices = matrix.getIndices();
@@ -801,7 +811,7 @@ void OsiHiGHSSolverInterface::loadProblem(
 //   std::string(extension);
 
 //   FilereaderRetcode rc = FilereaderMps().readModelFromFile(highs->options_,
-//   lp); if (rc != FilereaderRetcode::OKAY)
+//   lp); if (rc != FilereaderRetcode::OK)
 // 	  return (int)rc;
 //   this->setDblParam(OsiDblParam::OsiObjOffset, lp.offset_);
 //   highs->initializeLp(lp);
@@ -826,9 +836,9 @@ void OsiHiGHSSolverInterface::writeMps(const char *filename,
   }
 
   FilereaderMps frmps;
-  FilereaderRetcode rc = frmps.writeModelToFile(fullname.c_str(), highs->lp_);
+  HighsStatus rc = frmps.writeModelToFile(fullname.c_str(), highs->lp_);
 
-  if (rc != FilereaderRetcode::OKAY)
+  if (rc != HighsStatus::OK)
     throw CoinError("Creating MPS file failed", "writeMps",
                     "OsiHiGHSSolverInterface", __FILE__, __LINE__);
 }
@@ -986,8 +996,8 @@ void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {
   for (int row = 0; row < highs->lp_.numRow_; row++)
     solution.row_dual[row] = rowprice[row];
 
-  HighsStatus result = highs->setSolution(solution);
-};
+  /*HighsStatus result =*/ highs->setSolution(solution);
+}
 
 void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
   HighsPrintMessage(ML_ALWAYS,
@@ -998,7 +1008,7 @@ void OsiHiGHSSolverInterface::setColSolution(const double *colsol) {
   for (int col = 0; col < highs->lp_.numCol_; col++)
     solution.col_value[col] = colsol[col];
 
-  HighsStatus result = highs->setSolution(solution);
+  /*HighsStatus result =*/ highs->setSolution(solution);
 }
 
 void OsiHiGHSSolverInterface::applyRowCut(const OsiRowCut &rc) {
@@ -1019,7 +1029,7 @@ void OsiHiGHSSolverInterface::setContinuous(int index) {
 void OsiHiGHSSolverInterface::setInteger(int index) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setInteger()\n");
-};
+}
 
 bool OsiHiGHSSolverInterface::isContinuous(int colNumber) const {
   HighsPrintMessage(ML_ALWAYS,
@@ -1034,7 +1044,7 @@ void OsiHiGHSSolverInterface::setRowType(int index, char sense,
   double lo, hi;
   this->convertSenseToBound(sense, rightHandSide, range, lo, hi);
   this->setRowBounds(index, lo, hi);
-};
+}
 
 void OsiHiGHSSolverInterface::setRowLower(int elementIndex,
                                           double elementValue) {
@@ -1060,7 +1070,7 @@ void OsiHiGHSSolverInterface::setColLower(int elementIndex,
                     "Calling OsiHiGHSSolverInterface::setColLower()\n");
   double upper = this->getColUpper()[elementIndex];
   this->highs->changeColBounds(elementIndex, elementValue, upper);
-};
+}
 
 void OsiHiGHSSolverInterface::setColUpper(int elementIndex,
                                           double elementValue) {
@@ -1068,14 +1078,14 @@ void OsiHiGHSSolverInterface::setColUpper(int elementIndex,
                     "Calling OsiHiGHSSolverInterface::setColUpper()\n");
   double lower = this->getColLower()[elementIndex];
   this->highs->changeColBounds(elementIndex, lower, elementValue);
-};
+}
 
 void OsiHiGHSSolverInterface::setObjCoeff(int elementIndex,
                                           double elementValue) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjCoeff()\n");
   this->highs->changeColCost(elementIndex, elementValue);
-};
+}
 
 std::vector<double *> OsiHiGHSSolverInterface::getDualRays(int maxNumRays,
                                                            bool fullRay) const {
@@ -1158,7 +1168,7 @@ void OsiHiGHSSolverInterface::setRowSetBounds(const int *indexFirst,
                                               const double *boundList) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setRowSetBounds()\n");
-  OsiSolverInterface::setRowSetBounds(indexFirst, indexLast, boundList);
+  OsiSolverInterface::setRowSetBounds(indexFirst, indexLast-1, boundList);
 }
 
 void OsiHiGHSSolverInterface::setColSetBounds(const int *indexFirst,
@@ -1166,7 +1176,7 @@ void OsiHiGHSSolverInterface::setColSetBounds(const int *indexFirst,
                                               const double *boundList) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setColSetBounds()\n");
-  OsiSolverInterface::setColSetBounds(indexFirst, indexLast, boundList);
+  OsiSolverInterface::setColSetBounds(indexFirst, indexLast-1, boundList);
 }
 
 void OsiHiGHSSolverInterface::branchAndBound() {
@@ -1180,7 +1190,7 @@ void OsiHiGHSSolverInterface::setObjCoeffSet(const int *indexFirst,
                                              const double *coeffList) {
   HighsPrintMessage(ML_ALWAYS,
                     "Calling OsiHiGHSSolverInterface::setObjCoeffSet()\n");
-  OsiSolverInterface::setObjCoeffSet(indexFirst, indexLast, coeffList);
+  OsiSolverInterface::setObjCoeffSet(indexFirst, indexLast-1, coeffList);
 }
 
 int OsiHiGHSSolverInterface::canDoSimplexInterface() const {
@@ -1201,7 +1211,7 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
       highs->basis_.row_status.size() == 0)
     return;
 
-  for (int i = 0; i < highs->basis_.col_status.size(); ++i)
+  for (size_t i = 0; i < highs->basis_.col_status.size(); ++i)
     switch (highs->basis_.col_status[i]) {
     case HighsBasisStatus::BASIC:
       cstat[i] = 1;
@@ -1218,9 +1228,10 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     case HighsBasisStatus::ZERO:
       cstat[i] = 0;
       break;
+    //FIXME handle HighsBasisStatus::NONBASIC
     }
 
-  for (int i = 0; i < highs->basis_.row_status.size(); ++i)
+  for (size_t i = 0; i < highs->basis_.row_status.size(); ++i)
     switch (highs->basis_.row_status[i]) {
     case HighsBasisStatus::BASIC:
       cstat[i] = 1;
@@ -1237,6 +1248,13 @@ void OsiHiGHSSolverInterface::getBasisStatus(int *cstat, int *rstat) const {
     case HighsBasisStatus::ZERO:
       cstat[i] = 0;
       break;
+      //FIXME handle HighsBasisStatus::NONBASIC
     }
 
 }
+
+void OsiHiGHSSolverInterface ::setRowNames(OsiNameVec& srcNames, int srcStart,
+                                           int len, int tgtStart) {}
+
+void OsiHiGHSSolverInterface ::setColNames(OsiNameVec& srcNames, int srcStart,
+                                           int len, int tgtStart) {}

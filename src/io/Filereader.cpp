@@ -8,14 +8,14 @@
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include "io/Filereader.h"
+#include "io/FilereaderEms.h"
 #include "io/FilereaderLp.h"
 #include "io/FilereaderMps.h"
-#include "io/FilereaderEms.h"
 
-#include <string.h>
+#include <cstring>
 #include <stdexcept>
 
-static __inline__ const char* getFilenameExt(const char* filename) {
+static const char* getFilenameExt(const char* filename) {
   const char* dot = strrchr(filename, '.');
   if (!dot || dot == filename) return "";
   return dot + 1;

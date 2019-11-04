@@ -1,18 +1,20 @@
 include(CTest)
 
 # prepare Catch library
-set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src/external/catch)
+set(CATCH_INCLUDE_DIR ${HIGHS_SOURCE_DIR}/src/external/catch)
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
-target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(Catch INTERFACE ${CMAKE_SOURCE_DIR}/src/lp_data)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/lp_data)
 
 # Make test executable
 set(TEST_SOURCES
     TestMain.cpp
+    TestOptions.cpp
     TestFilereader.cpp
     TestIO.cpp
     TestSort.cpp
+    TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
     TestSetup.cpp
@@ -28,27 +30,31 @@ if (NOT (${OSI_ROOT} STREQUAL "OFF"))
 endif ()
 pkg_check_modules(OSITEST osi osi-unittests)
 if (OSITEST_FOUND)
-    include_directories(${CMAKE_SOURCE_DIR}/src)
+    include_directories(${HIGHS_SOURCE_DIR}/src)
     add_executable(osi_unit_tests TestOsi.cpp)
     target_link_libraries(osi_unit_tests OsiHighs Catch ${OSITEST_LIBRARIES})
-    target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/src/interfaces)
+    target_include_directories(osi_unit_tests PUBLIC ${OSITEST_INCLUDE_DIRS} ${HIGHS_SOURCE_DIR}/src/interfaces)
     target_compile_options(osi_unit_tests PUBLIC ${OSITEST_CFLAGS_OTHER})
 endif (OSITEST_FOUND)
 endif (OSI_FOUND)
 
 if(FORTRAN_FOUND)
-   set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/modules)
-   include_directories(${CMAKE_SOURCE_DIR}/src)
+   set(CMAKE_Fortran_MODULE_DIRECTORY ${HIGHS_BINARY_DIR}/modules)
+   include_directories(${HIGHS_SOURCE_DIR}/src)
    add_executable(fortrantest TestFortranAPI.f90)
    target_link_libraries(fortrantest libhighs FortranHighs)
-   target_include_directories(fortrantest PUBLIC ${CMAKE_SOURCE_DIR}/src/interfaces)
+   target_include_directories(fortrantest PUBLIC ${HIGHS_SOURCE_DIR}/src/interfaces)
  else()
  endif(FORTRAN_FOUND)
+
+# check the C API
+add_executable(capi_unit_tests TestCAPI.c)
+target_link_libraries(capi_unit_tests libhighs)
 
 # Check whether test executable builds OK.
 add_test(NAME unit-test-build
          COMMAND ${CMAKE_COMMAND}
-                 --build ${CMAKE_BINARY_DIR}
+                 --build ${HIGHS_BINARY_DIR}
                  --target unit_tests
          )
 
@@ -68,7 +74,7 @@ if (OSITEST_FOUND)
 
 add_test(NAME osi-unit-test-build
          COMMAND ${CMAKE_COMMAND}
-                 --build ${CMAKE_BINARY_DIR}
+                 --build ${HIGHS_BINARY_DIR}
                  --target osi_unit_tests
          )
          
@@ -87,7 +93,7 @@ if (COINNETLIB_FOUND)
    pkg_get_variable(COINNETLIBDIR coindatanetlib datadir)
 endif ()
 
-configure_file(${CMAKE_SOURCE_DIR}/check/HCheckConfig.h.in ${CMAKE_BINARY_DIR}/HCheckConfig.h)
+configure_file(${HIGHS_SOURCE_DIR}/check/HCheckConfig.h.in ${HIGHS_BINARY_DIR}/HCheckConfig.h)
 
 # create a binary running all the tests in the executable
 add_test(NAME osi_unit_tests_all COMMAND osi_unit_tests)
@@ -98,7 +104,7 @@ DEPENDS osi-unit-test-build)
 endif()
 
 if (GAMS_FOUND)
-add_test(NAME rungams COMMAND ${CMAKE_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
+add_test(NAME rungams COMMAND ${HIGHS_SOURCE_DIR}/check/rungams.sh ${GAMS_ROOT})
 endif (GAMS_FOUND)
 
 # An individual test can be added with the command below but the approach
@@ -121,9 +127,10 @@ set(successInstances
     "80bau3b\;3760\;9.872242\;"
     "adlittle\;81\;2.254950\;"
     "afiro\;21\;-4.647531\;"
+    "etamacro\;507\;-7.557152\;"
     "greenbea\;5249\;-7.255525\;"
-    "greenbeb\;9801\;-4.302260\;"
-    "shell\;558\;1.208825\;"
+    "pilot87\;9919\;3.017103\;"
+    "shell\;624\;1.208825\;"
     "stair\;555\;-2.512670\;"
     "standata\;74\;1.257699\;"
     "standgub\;67\;1.257699\;"
@@ -138,7 +145,7 @@ set(infeasibleInstances
     "galenet\;       infeasible"
     "gams10am\;      infeasible"
     "klein1\;        infeasible"
-    "refinery\;      infeasible"
+#    "refinery\;      infeasible"
     "woodinfe\;      infeasible"
     )
 
@@ -151,9 +158,9 @@ set(failInstances
 
 # define settings
 set(settings
-    " "
+    "--presolve=off"
+    "--presolve=on"
 #    "--parallel=on"
-#    "--presolve=on"
     )
 
 # define a macro to add tests
@@ -173,7 +180,7 @@ foreach(instance ${${instances}})
     endif()
 
     # specify the instance and the settings load command
-    set(inst "${PROJECT_SOURCE_DIR}/check/instances/${name}.mps")
+    set(inst "${HIGHS_SOURCE_DIR}/check/instances/${name}.mps")
 
     # loop over all settings
     foreach(setting ${settings})
@@ -187,12 +194,15 @@ foreach(instance ${${instances}})
                 "Run status : ${solutionstatus}")
 
         if(${solutionstatus} STREQUAL "Optimal")
-            set_tests_properties (${name}${setting} PROPERTIES
-                    PASS_REGULAR_EXPRESSION
-                    "Iterations : ${iter}\nObjective  : ${optval}")
-          #  set_tests_properties (${name}${setting} PROPERTIES
-          #          PASS_REGULAR_EXPRESSION
-          #          "Objective  : ${optval}")
+            if(${setting} STREQUAL "--presolve=off")
+                set_tests_properties (${name}${setting} PROPERTIES
+                        PASS_REGULAR_EXPRESSION
+                        "Iterations : ${iter}\nObjective  : ${optval}")
+            else()
+                set_tests_properties (${name}${setting} PROPERTIES
+                        PASS_REGULAR_EXPRESSION
+                        "Objective  : ${optval}")
+            endif()
         endif()
 
     endforeach(setting)
@@ -212,24 +222,24 @@ add_instancetests(unboundedInstances "Unbounded")
 # manually add presolve tests until we fix presolve
 set(setting "--presolve=on")
 
-set(inst "${PROJECT_SOURCE_DIR}/check/instances/adlittle.mps")
+set(inst "${HIGHS_SOURCE_DIR}/check/instances/adlittle.mps")
 add_test(NAME "presolve-adlittle" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
 set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Optimal")
 set_tests_properties ("presolve-adlittle" PROPERTIES DEPENDS unit_tests_all)
 
-set(inst "${PROJECT_SOURCE_DIR}/check/instances/scrs8.mps")
+set(inst "${HIGHS_SOURCE_DIR}/check/instances/scrs8.mps")
 add_test(NAME "presolve-scrs8" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
 set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Optimal")
 set_tests_properties ("presolve-scrs8" PROPERTIES DEPENDS unit_tests_all)
 
 
-set(inst "${PROJECT_SOURCE_DIR}/check/instances/woodinfe.mps")
+set(inst "${HIGHS_SOURCE_DIR}/check/instances/woodinfe.mps")
 add_test(NAME "presolve-woodinfe" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
 set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Infeasible")
 set_tests_properties ("presolve-woodinfe" PROPERTIES DEPENDS unit_tests_all)
 
 
-set(inst "${PROJECT_SOURCE_DIR}/check/instances/gas11.mps")
+set(inst "${HIGHS_SOURCE_DIR}/check/instances/gas11.mps")
 add_test(NAME "presolve-gas11" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
 set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Unbounded")
 set_tests_properties ("presolve-gas11" PROPERTIES DEPENDS unit_tests_all)

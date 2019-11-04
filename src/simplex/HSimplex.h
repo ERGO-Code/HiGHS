@@ -17,31 +17,40 @@
 #include "HConfig.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsStatus.h"
 
-// Methods not requiring HighsModelObject 
+void setSimplexOptions(
+	     HighsModelObject& highs_model_object  //!< Model object in which simplex
+	                                           //!< options are to be set
+	     );
 
-void append_nonbasic_cols_to_basis(
-				   HighsLp &lp,
-				   HighsBasis &basis,
-				   int XnumNewCol
-				   );
+HighsModelStatus transition(
+			    HighsModelObject& highs_model_object  //!< Model object
+			    );
 
-void append_basic_rows_to_basis(
-				HighsLp &lp,
-				HighsBasis &basis,
-				int XnumNewRow
-				);
+bool dual_infeasible(const double value, const double lower, const double upper,
+                     const double dual, const double value_tolerance,
+                     const double dual_tolerance);
 
-bool nonbasic_flag_basic_index_ok(
-				  HighsLp &lp,
-				  HighsBasis &basis
-				  );
+// Methods not requiring HighsModelObject
+
+void append_nonbasic_cols_to_basis(HighsLp& lp, HighsBasis& basis,
+                                   int XnumNewCol);
+
+void append_nonbasic_cols_to_basis(HighsLp& lp, SimplexBasis& simplex_basis,
+                                   int XnumNewCol);
+
+void append_basic_rows_to_basis(HighsLp& lp, HighsBasis& basis, int XnumNewRow);
+
+bool highs_basis_ok(
+		    //		    HighsLp& lp, HighsBasis& basis
+		    );
+
+bool nonbasic_flag_basic_index_ok(HighsLp& lp, SimplexBasis& simplex_basis);
 
 #ifdef HiGHSDEV
-void report_basis(
-		  HighsLp &lp,
-		  HighsBasis &basis
-		  );
+void report_basis(HighsLp& lp, HighsBasis& basis);
+void report_basis(HighsLp& lp, SimplexBasis& simplex_basis);
 #endif
 
 /*
@@ -72,271 +81,154 @@ historyColumnOut[i] << "\t"; output << historyAlpha[i] << endl;
 }
 #endif
 */
-void options(
-	     HighsModelObject &highs_model_object, //!< Model object in which simplex options are to be set
-	     const HighsOptions &opt               //!< HiGHS options to be used to set simplex options
-	     );
+void computeDualObjectiveValue(HighsModelObject& highs_model_object,
+                               int phase = 2);
 
-void invalidate_simplex_lp_data(
-				HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP whose data are to be invalidated
-				);
+void computePrimalObjectiveValue(HighsModelObject& highs_model_object);
 
-void invalidate_simplex_lp(
-			   HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be invalidated
-);
+void initialiseSimplexLpRandomVectors(HighsModelObject& highs_model);
 
-void update_simplex_lp_status(
-			      HighsSimplexLpStatus &simplex_lp_status,// !< Status of simplex LP to be updated
-			      LpAction action// !< Action prompting update
-			      );
+// SCALE:
 
-void report_simplex_lp_status(
-			      HighsSimplexLpStatus &simplex_lp_status// !< Status of simplex LP to be reported
-			      );
+void scaleHighsModelInit(HighsModelObject& highs_model);
 
-void compute_dual_objective_value(
-				  HighsModelObject &highs_model_object,
-                                  int phase = 2);
+void scaleCosts(HighsModelObject& highs_model);
 
-void compute_primal_objective_value(
-				    HighsModelObject &highs_model_object
-				    );
+void scaleFactorRanges(HighsModelObject& highs_model_object,
+                       double& min_col_scale, double& max_col_scale,
+                       double& min_row_scale, double& max_row_scale);
 
-void initialise_simplex_lp_random_vectors(
-					  HighsModelObject &highs_model
-					  );
+void scaleSimplexLp(HighsModelObject& highs_model);
 
-// TRANSPOSE:
+// PERMUTE:
 
-void transpose_simplex_lp(
-			  HighsModelObject &highs_model
-			  );
+void permuteSimplexLp(HighsModelObject& highs_model);
 
-void scaleHighsModelInit(
-			 HighsModelObject &highs_model
-			 );
+void initialise_basic_index(HighsModelObject& highs_model_object);
 
-void scaleCosts(
-		HighsModelObject &highs_model
-		);
+void allocate_work_and_base_arrays(HighsModelObject& highs_model_object);
 
-void scale_simplex_lp(
-		      HighsModelObject &highs_model
-		      );
+void initialise_from_nonbasic(HighsModelObject& highs_model_object);
 
-void permute_simplex_lp(
-			HighsModelObject &highs_model
-			);
+void replace_from_nonbasic(HighsModelObject& highs_model_object);
 
-// TIGHTEN:
+void initialise_with_logical_basis(HighsModelObject& highs_model_object);
 
-void tighten_simplex_lp(
-			HighsModelObject &highs_model
-			);
+void initialise_value_from_nonbasic(HighsModelObject& highs_model_object,
+                                    int firstvar, int lastvar);
 
-void initialise_basic_index(
-			    HighsModelObject &highs_model_object
-			    );
+void initialise_value(HighsModelObject& highs_model_object);
 
-void allocate_work_and_base_arrays(
-				   HighsModelObject &highs_model_object
-				   );
+void initialise_phase2_col_bound(HighsModelObject& highs_model_object,
+                                 int firstcol, int lastcol);
 
-void initialise_from_nonbasic(
-			      HighsModelObject &highs_model_object
-			      );
+void initialise_phase2_row_bound(HighsModelObject& highs_model_object,
+                                 int firstrow, int lastrow);
 
-void replace_from_nonbasic(
-			   HighsModelObject &highs_model_object
-			   );
+void initialise_bound(HighsModelObject& highs_model_object, int phase = 2);
 
-void initialise_with_logical_basis(
-				   HighsModelObject &highs_model_object
-				   );
+void initialise_phase2_col_cost(HighsModelObject& highs_model_object,
+                                int firstcol, int lastcol);
 
-void initialise_value_from_nonbasic(
-				    HighsModelObject &highs_model_object,
-                                    int firstvar,
-				    int lastvar
-				    );
+void initialise_phase2_row_cost(HighsModelObject& highs_model_object,
+                                int firstrow, int lastrow);
 
-void initialise_value(
-		      HighsModelObject &highs_model_object
-		      );
+void initialise_cost(HighsModelObject& highs_model_object, int perturb = 0);
 
-void initialise_phase2_col_bound(
-				 HighsModelObject &highs_model_object,
-                                 int firstcol,
-				 int lastcol
-				 );
+int get_nonbasicMove(HighsModelObject& highs_model_object, int var);
 
-void initialise_phase2_row_bound(
-				 HighsModelObject &highs_model_object,
-                                 int firstrow,
-				 int lastrow);
+void populate_work_arrays(HighsModelObject& highs_model_object);
 
-void initialise_bound(
-		      HighsModelObject &highs_model_object,
-		      int phase = 2);
+void replace_with_logical_basis(HighsModelObject& highs_model_object);
 
-void initialise_phase2_col_cost(
-				HighsModelObject &highs_model_object,
-                                int firstcol,
-				int lastcol);
+void replace_with_new_basis(HighsModelObject& highs_model_object,
+                            const int* XbasicIndex);
 
-void initialise_phase2_row_cost(
-				HighsModelObject &highs_model_object,
-                                int firstrow,
-				int lastrow);
+void setup_num_basic_logicals(HighsModelObject& highs_model_object);
 
-void initialise_cost(
-		     HighsModelObject &highs_model_object,
-		     int perturb = 0);
+#ifdef HiGHSDEV
+void reportSimplexProfiling(HighsModelObject& highs_model_object);
 
-int get_nonbasicMove(
-		     HighsModelObject &highs_model_object,
-		     int var);
+#endif
 
-void populate_work_arrays(
-			  HighsModelObject &highs_model_object
-			  );
+/**
+ * @brief Get the Hager condition number estimate for the basis matrix of a
+ * model
+ */
+double computeBasisCondition(HighsModelObject& highs_model_object);
 
-void replace_with_logical_basis(
-				HighsModelObject &highs_model_object
-				);
+bool work_arrays_ok(HighsModelObject& highs_model_object, int phase);
 
-void replace_with_new_basis(
-			    HighsModelObject &highs_model_object,
-                            const int *XbasicIndex
-			    );
+bool one_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object,
+                                         int var);
 
-void setup_num_basic_logicals(
-			      HighsModelObject &highs_model_object
-			      );
+bool all_nonbasic_move_vs_work_arrays_ok(HighsModelObject& highs_model_object);
 
-void setup_for_solve(
-		     HighsModelObject &highs_model_object
-		     );
+bool ok_to_solve(HighsModelObject& highs_model_object, int level, int phase);
 
-bool work_arrays_ok(
-		    HighsModelObject &highs_model_object,
-		    int phase
-		    );
+void flip_bound(HighsModelObject& highs_model_object, int iCol);
 
-bool one_nonbasic_move_vs_work_arrays_ok(
-					 HighsModelObject &highs_model_object,
-                                         int var
-					 );
-
-bool all_nonbasic_move_vs_work_arrays_ok(
-					 HighsModelObject &highs_model_object
-					 );
-
-bool ok_to_solve(
-		 HighsModelObject &highs_model_object,
-		 int level,
-		 int phase
-		 );
-
-void flip_bound(
-		HighsModelObject &highs_model_object,
-		int iCol
-		);
-
-int compute_factor(
-		   HighsModelObject &highs_model_object
-		   );
-
-void compute_primal(
-		    HighsModelObject &highs_model_object
-		    );
-
-int computeNumBinaryColumnValues(
-				 HighsModelObject &highs_model_object,
-				 bool report_values = false
-				 );
-
-int computePrimalInfeasible(
-		    HighsModelObject &highs_model_object
-		    );
-
-void compute_dual(
-		  HighsModelObject &highs_model_object
-		  );
-
-void correct_dual(
-		  HighsModelObject &highs_model_object,
-                  int *free_infeasibility_count
-		  );
-
-void compute_dual_infeasible_in_dual(
-				     HighsModelObject &highs_model_object,
-                                     int *dual_infeasibility_count
-				     );
-
-void compute_dual_infeasible_in_primal(
-				       HighsModelObject &highs_model_object,
-                                       int *dual_infeasibility_count
-				       );
+int compute_factor(HighsModelObject& highs_model_object);
 
 // Compute the primal values (in baseValue) and set the lower and upper bounds
 // of basic variables
-int set_source_out_from_bound(
-			      HighsModelObject &highs_model_object,
-                              const int column_out
-			      );
+void compute_primal(HighsModelObject& highs_model_object);
+
+void computePrimalInfeasible(HighsModelObject& highs_model_object,
+                             const bool report = false);
+
+void computeDualInfeasible(HighsModelObject& highs_model_object,
+                           const bool report = false);
+
+void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
+				    const bool report = false);
+
+void compute_dual(HighsModelObject& highs_model_object);
+
+void correct_dual(HighsModelObject& highs_model_object,
+                  int* free_infeasibility_count);
 
 // Record the shift in the cost of a particular column
-void shift_cost(
-		  HighsModelObject &highs_model_object,
-		  int iCol,
-                  double amount
-		  );
+void shift_cost(HighsModelObject& highs_model_object, int iCol, double amount);
 
 // Undo the shift in the cost of a particular column
-void shift_back(
-		  HighsModelObject &highs_model_object,
-		  int iCol);
+void shift_back(HighsModelObject& highs_model_object, int iCol);
 
 // The major model updates. Factor calls factor.update; Matrix
 // calls matrix.update; updatePivots does everything---and is
 // called from the likes of HDual::updatePivots
-void update_factor(
-		   HighsModelObject &highs_model_object,
-		   HVector *column,
-                   HVector *row_ep,
-		   int *iRow,
-		   int *hint
-		   );
+void update_factor(HighsModelObject& highs_model_object, HVector* column,
+                   HVector* row_ep, int* iRow, int* hint);
 
-void update_pivots(
-		   HighsModelObject &highs_model_object,
-		   int columnIn,
-                   int rowOut,
-		   int sourceOut
-		   );
+void update_pivots(HighsModelObject& highs_model_object, int columnIn,
+                   int rowOut, int sourceOut);
 
-void update_matrix(HighsModelObject &highs_model_object,
-		   int columnIn,
-                   int columnOut
-		   );
+void update_matrix(HighsModelObject& highs_model_object, int columnIn,
+                   int columnOut);
 
-#ifdef HiGHSDEV
-void util_analyse_lp_solution(
-			      HighsModelObject &highs_model_object
-			      );
-#endif
+void logRebuild(HighsModelObject& highs_model_object, const bool primal,
+                const int solve_phase);
 
-void report_iteration_count_dual_objective_value(
-						 HighsModelObject &highs_model_object,
-						 int i_v
-						 );
+void reportSimplexLpStatus(
+    HighsSimplexLpStatus&
+        simplex_lp_status,  // !< Status of simplex LP to be reported
+    const char* message = "");
 
-void report_iteration_count_primal_objective_value(
-						 HighsModelObject &highs_model_object,
-						 int i_v
-						 );
+void invalidateSimplexLpData(
+    HighsSimplexLpStatus& simplex_lp_status  // !< Status of simplex LP whose
+                                             // data are to be invalidated
+);
 
-std::string SimplexSolutionStatusToString(SimplexSolutionStatus status);
+void invalidateSimplexLp(
+    HighsSimplexLpStatus&
+        simplex_lp_status  // !< Status of simplex LP to be invalidated
+);
 
-#endif // SIMPLEX_HSIMPLEX_H_
+void updateSimplexLpStatus(
+    HighsSimplexLpStatus&
+        simplex_lp_status,  // !< Status of simplex LP to be updated
+    LpAction action         // !< Action prompting update
+);
+
+HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object);
+#endif  // SIMPLEX_HSIMPLEX_H_

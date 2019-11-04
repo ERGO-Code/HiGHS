@@ -17,6 +17,17 @@ program fortrantest
   integer ( c_int ) ai(nz)
   real ( c_double ) av(nz)
 
+  real ( c_double ) cv(n)
+  real ( c_double ) cd(n)
+  real ( c_double ) rv(m)
+  real ( c_double ) rd(m)
+  integer ( c_int ) cbs(n)
+  integer ( c_int ) rbs(m)
+  integer ( c_int ) ms
+
+  type (c_ptr) highs
+  integer ( c_int ) status
+
   cc(1) = 1
   cc(2) = -2
   cl(1) = 0
@@ -39,7 +50,9 @@ program fortrantest
   av(3) = 3
   av(4) = 0.2
 
-  call callhighs( n, m, nz, cc, cl, cu, rl, ru, as, ai, av )
-      
+  status = Highs_call( n, m, nz, cc, cl, cu, rl, ru, as, ai, av, cv, cd, rv, rd, cbs, rbs, ms )
+  
+  write (*, *) status
+  write (*, *) ms
 
 end program fortrantest

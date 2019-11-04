@@ -4,29 +4,10 @@
 #include <string>
 
 // HiGHS status
-enum class HighsStatus
-{
-  NotSet,
-  OK,
-  Info,
+enum class HighsStatus {
+  OK = 0,
   Warning,
-  Error,
-  NotImplemented,
-  Init,
-  LpError,
-  OptionsError,
-  PresolveError,
-  SolutionError,
-  PostsolveError,
-  LpEmpty,
-  ReachedDualObjectiveUpperBound,
-  Unbounded,
-  Infeasible,
-  Feasible,
-  Optimal,
-  Timeout,
-  ReachedIterationLimit,
-  NumericalDifficulties
+  Error
 };
 
 // Report a HighsStatus.

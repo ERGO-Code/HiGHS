@@ -14,7 +14,7 @@
 #include "Avgas.h"
 #include <cassert>
 
-#include <stdio.h> // For printf
+#include <cstdio> // For printf
 
 void Avgas::row(int row, int &num_row, int &num_row_nz,
 		std::vector<double> &rowLower, std::vector<double> &rowUpper, 
