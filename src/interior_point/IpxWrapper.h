@@ -52,11 +52,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     } else if (lp.rowLower_[row] == lp.rowUpper_[row]) {
       rhs.push_back(lp.rowUpper_[row]);
       constraint_type.push_back('=');
-    } else {
-      std::cout << "Error setting up IPX data: free row encountered."
-                << std::endl;
-      return IpxStatus::ErrorFreeRow;
-    }
+    } // else: Free row. Ignored.
   }
 
   num_col += num_slack;
