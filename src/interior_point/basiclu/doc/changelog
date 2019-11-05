@@ -1,0 +1,35 @@
+May 06, 2019: version 2.1
+
+	- Reduce time of Markowitz search.
+	  Maintain the minimum column and row count; start Markowitz
+          search from this count rather than from 1. In fact, the old
+	  version had an asymptotic bug.
+
+	- Always remove columns from active submatrix when maximum is zero
+  	  or less than the absolute pivot tolerance. Parameter
+	  BASICLU_REMOVE_COLUMNS is now without effect.
+
+	- Do not drop numerical zeros from active submatrix when drop
+	  tolerance is negative.
+
+	- Add user parameter BASICLU_SEARCH_ROWS.
+
+	- Remove unused Julia code.
+
+Aug 31, 2018: version 2.0
+
+	Return LU factors with sorted indices to the user.
+	Implement option to drop columns from the active submatrix.
+	Report maximum entry of row eta vectors to user.
+	Bug fix: lu_normest() requires uplo flag (produced wrong results).
+	Report stability measure of LU factorization to user.
+	Adapt Makefile from SuiteSparse.
+	Version 2.0 is copyrighted by ERGO-Code.
+
+Aug 6, 2017: version 1.1
+
+	Bug fix in src/lu_build_factors.c: In version 1.0 the arrays
+	Wflink and Wblink were not correctly initialized when the
+	factorization was rank deficient.
+
+Jul 24, 2017: version 1.0

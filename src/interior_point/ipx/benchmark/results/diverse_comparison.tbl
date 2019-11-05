@@ -1,0 +1,4 @@
+ subset instances IPX/Gurobi IPX faster Gurobi faster
+      1       164       3.69         22           142
+     10        89       3.95         16            73
+    100        41       6.31          6            35

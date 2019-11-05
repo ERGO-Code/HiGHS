@@ -1,0 +1,622 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{multirow}
+
+% page size
+\setlength{\hoffset}{-1in}
+\setlength{\voffset}{-1in}
+\setlength{\oddsidemargin}{3.5cm}
+\setlength{\evensidemargin}{3.5cm}
+\setlength{\topmargin}{2cm}
+\setlength{\textwidth}{14cm}
+\setlength{\textheight}{22cm}
+
+\newcommand{\ct}{\texttt}
+\newcommand{\NULL}{\ct{NULL}}
+\newcommand{\rvec}[1]{\left(#1\right)}
+\newcommand{\param}[4]{
+  \noindent\begin{minipage}{\textwidth}
+    \textbf{#1}\\
+    Type: \ct{#2}\\
+    Default: \ct{#3}\\
+    #4
+  \end{minipage}
+  \vskip 1\baselineskip
+}
+\newcommand{\info}[2]{
+  \noindent\begin{minipage}{\textwidth}
+    \textbf{#1}\\
+    #2
+  \end{minipage}
+  \vskip 1\baselineskip
+}
+
+\newcommand{\obj}{\ct{obj}}
+\newcommand{\rhs}{\ct{rhs}}
+\newcommand{\lb}{\ct{lb}}
+\newcommand{\ub}{\ct{ub}}
+\newcommand{\numconstr}{\ct{num\_constr}}
+\newcommand{\numvar}{\ct{num\_var}}
+\newcommand{\x}{\ct{x}}
+\newcommand{\slack}{\ct{slack}}
+\newcommand{\xl}{\ct{xl}}
+\newcommand{\xu}{\ct{xu}}
+\newcommand{\y}{\ct{y}}
+\newcommand{\z}{\ct{z}}
+\newcommand{\zl}{\ct{zl}}
+\newcommand{\zu}{\ct{zu}}
+\newcommand{\vbasis}{\ct{vbasis}}
+\newcommand{\cbasis}{\ct{cbasis}}
+\newcommand{\basic}{\ct{IPX\_basic}}
+\newcommand{\nonbasic}{\ct{IPX\_nonbasic}}
+\newcommand{\nonbasiclb}{\ct{IPX\_nonbasic\_lb}}
+\newcommand{\nonbasicub}{\ct{IPX\_nonbasic\_ub}}
+\newcommand{\superbasic}{\ct{IPX\_superbasic}}
+
+\title{IPX Reference Guide}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+%-------------------------------------------------------------------------------
+\section{Functionality}
+%-------------------------------------------------------------------------------
+
+\subsection{Problem Formulation}
+IPX solves linear programming (LP) problems in the form
+\begin{subequations}
+  \label{eq:lp}
+  \begin{alignat}{2}
+    \underset{\x}{\text{minimize}} &\quad& &\obj^T\x \\
+    \label{eq:ax=b}
+    \text{subject to} && &A\x\{\ge,\le,=\}\rhs, \\
+    && &\lb\le\x\le\ub.\
+  \end{alignat}
+\end{subequations}
+The matrix $A$ has \numconstr\ rows and \numvar\ columns. Associated with
+\eqref{eq:ax=b} are dual variables \y\ with the sign convention that
+\begin{subequations}
+  \label{eq:signy}
+  \begin{alignat}{2}
+    \y[i]\ge0 &\quad& &\text{if constraint is of type $\ge$,} \\
+    \y[i]\le0 && &\text{if constraint is of type $\le$,} \\
+    \y[i]\text{ free} && &\text{if constraint is of type $=$.}
+  \end{alignat}
+\end{subequations}
+Associated with $\lb\le\x$ and $\x\le\ub$ are dual variable $\zl\ge0$ and
+$\zu\ge0$ respectively. Entries of $-\lb$ and $\ub$ can be infinity, in which
+case the dual is fixed at zero.
+
+\subsection{Interior Point Method}
+The interior point method (IPM) computes a primal-dual point
+$\rvec{\x,\slack,\xl,\xu,\y,\zl,\zu}$ that approximately satisfies
+\begin{subequations}
+  \label{eq:res}
+  \begin{align}
+    \label{eq:pres}
+    &A\x+\slack=\rhs, \quad \x-\xl=\lb, \quad \x+\xu=\ub,\\
+    \label{eq:dres}
+    &A^T\y+\zl-\zu=\obj,
+  \end{align}
+\end{subequations}
+and that is guaranteed to satisfy $\xl\ge0$, $\xu\ge0$, \eqref{eq:signy} and
+\begin{subequations}
+  \label{eq:signslack}
+  \begin{alignat}{2}
+    \slack[i]\le0 &\quad& &\text{if constraint is of type $\ge$,} \\
+    \slack[i]\ge0 && &\text{if constraint is of type $\le$,} \\
+    \slack[i]=0 && &\text{if constraint is of type $=$.}
+  \end{alignat}
+\end{subequations}
+In theory, the IPM iterates will in the limit satisfy \eqref{eq:pres} and
+\eqref{eq:dres}, and the primal objective will equal the dual objective
+\begin{equation}
+  \label{eq:dobj}
+  \rhs^T\y + \lb^T\zl - \ub^T\zu.
+\end{equation}
+(Entries for which -\lb\ or \ub\ is infinity are understood to be dropped from
+the sum.)
+
+\subsection{Crossover}
+The crossover method recovers an optimal basis from the interior solution. A
+basis is defined by variable and constraint statuses
+\begin{align}
+  \vbasis[j] &\in \{\basic, \nonbasiclb, \nonbasicub, \superbasic\}, \\
+  \cbasis[i] &\in \{\basic, \nonbasic\}.
+\end{align}
+The columns of $A$ for which $\vbasis[j]=\basic$ and the columns of the identity
+matrix for which $\cbasis[i]=\basic$ form a square, nonsingular matrix of
+dimension \numconstr. The corresponding basic solution $\rvec{\x,\slack,\y,\z}$
+is obtained by setting
+\begin{subequations}
+  \begin{alignat}{3}
+    \z[j]&=0& &\quad& &\text{if $\vbasis[j]=\basic$}, \\
+    \x[j]&=\lb[j]& && &\text{if $\vbasis[j]=\nonbasiclb$}, \\
+    \x[j]&=\ub[j]& && &\text{if $\vbasis[j]=\nonbasicub$}, \\
+    \x[j]&=0& &&      &\text{if $\vbasis[j]=\superbasic$}, \\
+    \y[i]&=0& &&      &\text{if $\cbasis[i]=\basic$}, \\
+    \slack[i]&=0& &&  &\text{if $\cbasis[i]=\nonbasic$}
+  \end{alignat}
+\end{subequations}
+and computing the remaining components such that $A\x+\slack=\rhs$ and
+$A^T\y+\z=\obj$. The basis is primal feasible if $\lb\le\x\le\ub$ and
+\eqref{eq:signslack} hold; the basis is dual feasible if \eqref{eq:signy} holds
+and
+\begin{subequations}
+  \begin{alignat}{2}
+    \z[j]\ge0 &\quad& &\text{if $\vbasis[j]=\nonbasiclb$}, \\
+    \z[j]\le0 &\quad& &\text{if $\vbasis[j]=\nonbasicub$}, \\
+    \z[j]=0 &\quad& &\text{if $\vbasis[j]=\superbasic$}.
+  \end{alignat}
+\end{subequations}
+The IPX crossover consists of a primal and dual push phase. Depending on the
+accuracy of the interior solution and the numerical stability of the LP problem,
+the obtained basis may not be primal and/or dual feasible. In this case
+reoptimization with an external simplex code is required.
+
+%-------------------------------------------------------------------------------
+\section{Usage}
+%-------------------------------------------------------------------------------
+
+\subsection{C++ Interface}
+User code written in C++ must include the header file \ct{src/lp\_solver.h}.
+Both the \ct{src/} and \ct{include/} directories must be in the compiler's
+search path for header files.
+
+The following code snippet illustrates the use of the C++ interface. The
+complete example program can be found in \ct{example/afiro.cc} and can be
+compiled by calling \ct{make} in the \ct{example/} directory.
+
+\newpage
+\begin{verbatim}
+#include <cmath>
+#include <iostream>
+#include "lp_solver.h"
+
+using Int = ipxint;
+
+constexpr Int num_var = 12;
+constexpr Int num_constr = 9;
+const double obj[] = { -0.2194, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.32,
+                       -0.5564, 0.6, -0.48 };
+const double lb[num_var] = { 0.0 };
+const double ub[] = { 80.0, 283.303, 283.303, 312.813, 349.187, INFINITY,
+                      INFINITY, INFINITY, 57.201, 500.0, 500.501, 357.501};
+// Constraint matrix in CSC format with 0-based indexing.
+const Int Ap[] = { 0, 2, 6, 10, 14, 18, 20, 22, 24, 26, 28, 30, 32 };
+const Int Ai[] = { 0, 5, ... };
+const double Ax[] = { -1.0, 0.301, ... };
+const double rhs[] = { 0.0, 80.0, 0.0, 0.0, 0.0, 0.0, 0.0, 44.0, 300.0 };
+const char constr_type[] = { '<', '<', '=', '<', '<', '=', '<', '<', '<' };
+
+int main() {
+    ipx::LpSolver lps;
+
+    // Solve the LP.
+    Int status = lps.Solve(num_var, obj, lb, ub, num_constr, Ap, Ai, Ax, rhs,
+                           constr_type);
+    if (status != IPX_STATUS_solved) {
+        // no solution
+        // (invalid input, time/iter limit, numerical failure, out of memory)
+        std::cout << " status: " << status << ','
+                  << " errflag: " << lps.GetInfo().errflag << '\n';
+        return 1;
+    }
+
+    // Get solver and solution information.
+    ipx::Info info = lps.GetInfo();
+
+    // Get the interior solution (available if IPM was started).
+    double x[num_var], xl[num_var], xu[num_var], slack[num_constr];
+    double y[num_constr], zl[num_var], zu[num_var];
+    lps.GetInteriorSolution(x, xl, xu, slack, y, zl, zu);
+
+    // Get the basic solution (available if crossover terminated without error).
+    double xbasic[num_var], sbasic[num_constr];
+    double ybasic[num_constr], zbasic[num_var];
+    Int cbasis[num_constr], vbasis[num_var];
+    lps.GetBasicSolution(xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
+
+    return 0;
+}
+\end{verbatim}
+
+\newpage
+All classes and functions belonging to IPX are declared in namespace \ct{ipx}.
+There are three classes that are intended for direct use from external code:
+\ct{ipx::LpSolver}, \ct{ipx::Parameters} and \ct{ipx::Info}. The \ct{Parameters}
+and \ct{Info} classes have no methods (except for a constructor that initializes
+them to default values). They are used to pass control parameters to IPX and to
+return information about the execution of the solver. They are documented in
+Sections \ref{sec:parameters} and \ref{sec:info}.
+
+The \ct{LpSolver} class provides the user interface to the LP solver. Its
+methods are documented through source code comments in \ct{src/lp\_solver.h}.
+The method
+\begin{verbatim}
+    Int Solve(Int num_var, const double* obj, const double* lb,
+              const double* ub, Int num_constr, const Int* Ap, const Int* Ai,
+              const double* Ax, const double* rhs, const char* constr_type);
+\end{verbatim}
+requires the LP problem in the form \eqref{eq:lp} with the constraint matrix $A$
+given in compressed sparse column (CSC) format. That means, \ct{Ap} is an array
+of size $\ct{num\_var}+1$ and \ct{Ai} and \ct{Ax} are arrays of size equal to
+the number of entries in $A$. They must be set such that
+\ct{Ai[Ap[j]..Ap[j+1]-1]} and \ct{Ax[Ap[j]..Ap[j+1]-1]} hold the row indices and
+nonzero values of the entries in column \ct{j} of $A$. The entries within each
+column can be in any order, but there must be no duplicates. The input is
+checked prior to running the solver and an error code is returned if it is
+invalid (see Section~\ref{sec:info}).
+
+\subsection{C Interface}
+C wrapper functions for the methods of class \ct{LpSolver} are provided to allow
+using the full functionality of IPX from C code. User code written in C must
+include the header file \ct{include/ipx\_c.h}.
+
+The following code snippet illustrates the use of the C interface. The
+complete example program can be found in \ct{example/afiro\_c.c} and can be
+compiled by calling \ct{make} in the \ct{example/} directory.
+
+\begin{verbatim}
+#include <math.h>
+#include <stdio.h>
+#include "ipx_c.h"
+
+typedef ipxint Int;
+
+#define NUM_VAR 12
+#define NUM_CONSTR 9
+const double obj[] = { -0.2194, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.32,
+                       -0.5564, 0.6, -0.48 };
+const double lb[NUM_VAR] = { 0.0 };
+const double ub[] = { 80.0, 283.303, 283.303, 312.813, 349.187, INFINITY,
+                      INFINITY, INFINITY, 57.201, 500.0, 500.501, 357.501};
+// Constraint matrix in CSC format with 0-based indexing.
+const Int Ap[] = { 0, 2, 6, 10, 14, 18, 20, 22, 24, 26, 28, 30, 32 };
+const Int Ai[] = { 0, 5, ... };
+const double Ax[] = { -1.0, 0.301, ... };
+const double rhs[] = { 0.0, 80.0, 0.0, 0.0, 0.0, 0.0, 0.0, 44.0, 300.0 };
+const char constr_type[] = { '<', '<', '=', '<', '<', '=', '<', '<', '<' };
+
+int main() {
+    void *lps = NULL;
+
+    // Create new solver instance. This allocates a tiny amount of memory.
+    ipx_new(&lps);
+    if (!lps) return 1;
+
+    // Solve the LP.
+    Int status = ipx_solve(lps, NUM_VAR, obj, lb, ub, NUM_CONSTR, Ap, Ai, Ax,
+                           rhs, constr_type);
+    if (status != IPX_STATUS_solved) {
+        // no solution
+        // (invalid input, time/iter limit, numerical failure, out of memory)
+        struct ipx_info info = ipx_get_info(lps);
+        printf(" status: %ld, errflag: %ld\n", (long) status,
+               (long) info.errflag);
+        return 2;
+    }
+
+    // Get solver and solution information.
+    struct ipx_info info = ipx_get_info(lps);
+
+    // Get the interior solution (available if IPM was started).
+    double x[NUM_VAR], xl[NUM_VAR], xu[NUM_VAR], slack[NUM_CONSTR];
+    double y[NUM_CONSTR], zl[NUM_VAR], zu[NUM_VAR];
+    ipx_get_interior_solution(lps, x, xl, xu, slack, y, zl, zu);
+
+    // Get the basic solution (available if crossover terminated without error).
+    double xbasic[NUM_VAR], sbasic[NUM_CONSTR];
+    double ybasic[NUM_CONSTR], zbasic[NUM_VAR];
+    Int cbasis[NUM_CONSTR], vbasis[NUM_VAR];
+    ipx_get_basic_solution(lps, xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
+
+    // Must call ipx_free() to deallocate memory in solver instance.
+    ipx_free(&lps);
+    return 0;
+}
+\end{verbatim}
+
+The solver is accessed through a \ct{void} pointer, which must be allocated by
+\ct{ipx\_new} and finally deallocated by \ct{ipx\_free} (see
+\ct{include/ipx\_c.h} for documentation of these functions). The remaining
+functions of the C interface are simply wrappers around the methods of class
+\ct{LpSolver}, which require the pointer to the solver as their first argument.
+
+Parameters and solver information are passed in and out through data types
+\ct{struct ipx\_parameters} and \ct{struct ipx\_info}, which are the same as
+\ct{ipx::Parameters} and \ct{ipx::Info} in the C++ interface and are documented
+in Sections \ref{sec:parameters} and \ref{sec:info}. In contrast to the C++
+interface, the struct members are uninitialized when a data type is defined.
+A \ct{struct ipx\_parameters} object with default parameter values is returned
+by \ct{ipx\_default\_parameters()}.
+
+%-------------------------------------------------------------------------------
+\section{Parameters}
+\label{sec:parameters}
+%-------------------------------------------------------------------------------
+
+\param{display}{ipxint}{1}{
+  If nonzero, then solver log is printed to standard output.
+}
+
+\param{logfile}{const char*}{\NULL}{
+  Name of file to which solver log is appended. The file is created if it does
+  not exist. If \ct{logfile} is \NULL\ or the empty string (\ct{""}), file
+  logging is turned off.
+}
+
+\param{print\_interval}{double}{5.0}{
+  Frequency (in seconds) for printing progress reports during construction of
+  the starting basis and crossover. If negative, progress reports are turned
+  off. If zero, a progress line is printed after each basis update.
+}
+
+\param{time\_limit}{double}{-1.0}{
+  Time limit (in seconds) for the solver. If negative, no time limit is
+  imposed.
+}
+
+\param{dualize}{ipxint}{-1}{
+  Controls dualization of the LP model by the preprocessor. \\
+  \begin{tabular}{rl}
+    0 & model is not dualized \\
+    $\ge1$ & model is dualized \\
+    $<0$ & an automatic choice is made
+  \end{tabular}
+}
+
+\param{scale}{ipxint}{1}{
+  Controls the automatic scaling of the LP model by the preprocessor. \\
+  \begin{tabular}{rl}
+    $\le0$ & no scaling is applied \\
+    1 & recursive equilibration of rows and columns of the constraint matrix \\
+    $>1$ & currently the same as 1, but reserved for future options
+  \end{tabular}
+}
+
+\param{ipm\_maxiter}{ipxint}{300}{
+  Maximum number of interior point iterations.
+}
+
+\param{ipm\_feasibility\_tol}{double}{1e-6}{
+  The interior point solver terminates when a feasibility and an optimality
+  criterion are satisfied. The feasibility criterion requires that the relative
+  primal and dual residuals are not larger than \ct{ipm\_feasibility\_tol}.
+}
+
+\param{ipm\_optimality\_tol}{double}{1e-8}{
+  The interior point solver terminates when a feasibility and an optimality
+  criterion are satisfied. The optimality criterion requires that the relative
+  gap between the primal and dual objective values is not larger than
+  \ct{ipm\_optimality\_tol}.
+}
+
+\param{ipm\_drop\_primal}{double}{1e-9}{
+  Controls handling of primal degeneracies in the interior point solve. If a
+  degenerate variable $\xl[j]$ or $\xu[j]$ is not larger than
+  \ct{ipm\_drop\_primal}, then its dual variable is fixed at its current value
+  and eliminated from the optimization; $\x[j]$ will then be at its bound in the
+  solution. If \ct{ipm\_drop\_primal} is zero or negative, no primal variables
+  are dropped. If the model was dualized by the preprocessor, then this option
+  affects dual degeneracies in the input model.
+}
+
+\param{ipm\_drop\_dual}{double}{1e-9}{
+  Controls handling of dual degeneracies in the interior point solve. If the
+  dual variables $\zl[j]$ and $\zu[j]$ are degenerate and not larger than
+  \ct{ipm\_drop\_dual}, then $\x[j]$ is fixed at its current value and
+  eliminated from the optimization. The dual variables will then be zero in the
+  solution. If \ct{ipm\_drop\_dual} is zero or negative, no dual variables are
+  dropped. If the model was dualized by the preprocessor, then this option
+  affects primal degeneracies in the input model.
+}
+
+\param{kkt\_tol}{double}{0.3}{
+  Controls the accuracy to which the KKT linear equation systems are solved by
+  an iterative method. A smaller value reduces the number of interior point
+  iterations but increases the computational cost per iteration. Typical values
+  are within the interval $[0.05,0.5]$.
+}
+
+\param{crash\_basis}{ipxint}{1}{
+  Controls the construction of the starting basis for the preconditioner. \\
+  \begin{tabular}{rl}
+    $\le0$ & slack basis \\
+    1 & crash method that prefers variables with a larger interior point scaling
+    factor \\
+    $>1$ & currently the same 1, but reserved for future options
+  \end{tabular} \\
+  The chosen procedure (slack basis, crash) is followed by a sequence of basis
+  updates that makes free variables basic and fixed (slack) variables nonbasic.
+}
+
+\param{dependency\_tol}{double}{1e-6}{
+  Controls the detection of linearly dependent rows and columns while
+  constructing the starting basis. If possible, columns corresponding to free
+  variables are pivoted into the basis, and slack columns corresponding to
+  equality constraints are pivoted out of the basis. Hereby a nonbasic variable
+  cannot replace a basic variable if the pivot element is less than or equal to
+  \ct{dependency\_tol}. A negative value is treated as 0.0.
+}
+
+\param{volume\_tol}{double}{2.0}{
+  Controls the update of the basis matrix from one interior point iteration to
+  the next. An entry of the scaled tableau matrix is used as pivot element if it
+  is larger than \ct{volume\_tol} in absolute value. Increasing the parameter
+  usually leads to fewer basis updates but more iterations of the linear solver.
+  Typical values are in the interval $[1.1,10.0]$. A value smaller than 1.0 is
+  treated as 1.0.
+}
+
+\param{rows\_per\_slice}{ipxint}{10000}{
+  Controls the update of the basis matrix from one interior point iteration to
+  the next. The search for pivot elements partitions the tableau matrix into
+  slices, each slice containing approximately \ct{rows\_per\_slice} rows. A
+  smaller value leads a finer pivot search and possibly a better preconditioner,
+  but makes the update procedure more expensive.
+}
+
+\param{maxskip\_updates}{ipxint}{10}{
+  Controls the update of the basis matrix from one interior point iteration to
+  the next. For each slice of the tableau matrix, the update search is
+  terminated after computing \ct{maxskip\_updates} columns of the tableau matrix
+  that do not contain eligible pivot elements. Decreasing the parameter makes
+  the update procedure faster, but may affect the quality of the basis.
+}
+
+\param{lu\_kernel}{ipxint}{0}{
+  Chooses the method/package for computing and updating the $LU$ factorization
+  of basis matrices.\\
+  \begin{tabular}{rl}
+    $\le0$ & BASICLU for factorization and update \\
+       1 & BASICLU for factorization, Forrest-Tomlin update without
+       hypersparsity \\
+       $>1$ & currently the same as 1, but reserved for future options
+  \end{tabular}
+}
+
+\param{lu\_pivottol}{double}{0.0625}{
+  Partial pivoting tolerance for the LU factorization. The tolerance is
+  tightened automatically if a factorization is detected unstable.
+}
+
+\param{crossover}{ipxint}{1}{
+  If nonzero, crossover is used for recovering an optimal basis.
+}
+
+\param{crossover\_start}{double}{1e-8}{
+  Tightens the IPM termination criterion for crossover. At the beginning of
+  crossover, the final IPM iterate is dropped to complementarity (i.\,e.\ for
+  each pair of variables either the primal is set to its bound or the dual is
+  set to zero). In addition to the standard IPM termination criterion, it is
+  required that the relative primal or dual residual caused by dropping any
+  variable is not larger than \ct{crossover\_start}. A nonpositive value means
+  that the standard criterion is used. This parameter has no effect if crossover
+  is turned off.
+}
+
+\param{pfeasibility\_tol}{double}{1e-7}{
+  A basic solution is considered primal feasible if the primal variables do not
+  violate their bounds by more than \ct{pfeasibility\_tol}.
+}
+
+\param{dfeasibility\_tol}{double}{1e-7}{
+  A basic solution is considered dual feasible if the dual variables do not
+  violate their sign condition by more than \ct{dfeasibility\_tol}.
+}
+
+%-------------------------------------------------------------------------------
+\section{Info}
+\label{sec:info}
+%-------------------------------------------------------------------------------
+
+Class \ct{ipx::Info} (for C++ users) and struct \ct{ipx\_info} (for C users)
+provide information about the input problem, the solver operations and the
+computed solution. Most of their members are almost self-explanatory and can be
+found in \ct{include/ipx\_info.h}.
+
+There are four members holding status and error codes that are documented below.
+Possible values are macro-defined constants that have the prefix
+\ct{IPX\_STATUS\_} and \ct{IPX\_ERROR\_}. They are defined in
+\ct{include/ipx\_status.h}.\\[2em]
+
+\info{status}{
+  Termination status of the solver. Possible values are:\\[1em]
+  \begin{tabular}{lp{8cm}}
+    \ct{IPX\_STATUS\_not\_run} & Solver has not been called.\\
+    \ct{IPX\_STATUS\_solved} & Solver terminated successfully. The solution
+    status (optimal, imprecise, infeasible) is given by \textbf{status\_ipm} and
+    \textbf{status\_crossover}.\\
+    \ct{IPX\_STATUS\_stopped} & Solver stopped without having reached its
+    termination criterion (time/iteration limit, numerical failure).
+    \textbf{status\_ipm} or \textbf{status\_crossover} hold further
+    information.\\
+    \ct{IPX\_STATUS\_invalid\_input} & Solver was not started because the input
+    to \ct{Solve()} was invalid. \textbf{errflag} holds further information.\\
+    \ct{IPX\_STATUS\_out\_of\_memory} & Memory allocation failed.\\
+    \ct{IPX\_STATUS\_internal\_error} & An internal error occured. This is a
+    bug in IPX.\\
+  \end{tabular}
+}
+
+\info{status\_ipm}{
+  Status of the interior solution. Possible values are:\\[1em]
+  \begin{tabular}{lp{8cm}}
+    \ct{IPX\_STATUS\_not\_run} & IPM has not been started.\\
+    \ct{IPX\_STATUS\_optimal} & IPM terminated successfully and the computed
+    solution satifies the feasibility and optimality tolerances.\\
+    \ct{IPX\_STATUS\_imprecise} & IPM reached its termination criterion, but the
+    solution after postprocessing does not satisfy the feasibility or optimality
+    tolerance.\\
+    \ct{IPX\_STATUS\_primal\_infeas} & The LP problem is primal infeasible
+    because equality constraints are inconsistent.\\
+    \ct{IPX\_STATUS\_dual\_infeas} & The LP problem is dual infeasible because
+    columns of the constraint matrix corresponding to free variables are
+    linearly dependent and their objective coefficients cause an unbounded ray
+    in primal space.\\
+    \ct{IPX\_STATUS\_time\_limit} & IPM stopped because of time limit.\\
+    \ct{IPX\_STATUS\_iter\_limit} & IPM stopped because of iteration limit.\\
+    \ct{IPX\_STATUS\_no\_progress} & IPM stopped because no progress was
+    achieved over a number of iterations.\\
+    \ct{IPX\_STATUS\_failed} & Linear system solve or building the
+    preconditioner failed. \textbf{errflag} holds further information.\\
+  \end{tabular}
+}
+
+\info{status\_crossover}{
+  Status of the basic solution obtained by crossover. Possible values
+  are:\\[1em]
+  \begin{tabular}{lp{8cm}}
+    \ct{IPX\_STATUS\_not\_run} & Crossover has not been started.\\
+    \ct{IPX\_STATUS\_optimal} & Crossover terminated successfully and the
+    computed basic solution satifies the feasibility and optimality
+    tolerances.\\
+    \ct{IPX\_STATUS\_imprecise} & Crossover terminated successfully, but the
+    basic solution does not satisfy the feasibility or optimality tolerance.
+    Reoptimization with a simplex solver is needed.\\
+    \ct{IPX\_STATUS\_time\_limit} & Crossover stopped because of time limit.\\
+    \ct{IPX\_STATUS\_failed} & Crossover failed due to linear algebra issues.
+    \textbf{errflag} holds further information.\\
+  \end{tabular}
+}
+
+\info{errflag}{
+  Possible values when \textbf{status} $=$
+  \ct{IPX\_STATUS\_invalid\_input}:\\[1em]
+  \begin{tabular}{lp{8cm}}
+    \ct{IPX\_ERROR\_argument\_null} & A pointer argument was \ct{NULL}.\\
+    \ct{IPX\_ERROR\_invalid\_dimension} & $\ct{num\_constr}<0$ or
+    $\ct{num\_var}\le0$.\\
+    \ct{IPX\_ERROR\_invalid\_matrix} & Constraint matrix was invalid
+    ($\ct{Ap}[0]\neq0$, $\ct{Ap}[j]>\ct{Ap}[j+1]$ for some $j$, non-finite entry
+    in \ct{Ax}, out-of-range or duplicate index in \ct{Ai}).\\
+    \ct{IPX\_ERROR\_invalid\_vector} & One of the vectors \ct{obj}, \ct{lb},
+    \ct{ub}, \ct{rhs} and \ct{constr\_type} contained an invalid entry, or
+    $\ct{lb}[j]>\ct{ub}[j]$ for some $j$.\\
+  \end{tabular}\\[1.5em]
+
+  Possible values when \textbf{status\_ipm} or \textbf{status\_crossover} $=$
+  \ct{IPX\_STATUS\_failed}:\\[1em]
+  \begin{tabular}{lp{8cm}}
+    \ct{IPX\_ERROR\_cr\_iter\_limit} &
+    \multirow{5}{8cm}{The iterative method for solving the linear systems in the
+      IPM did not converge.}\\
+    \ct{IPX\_ERROR\_cr\_matrix\_not\_posdef} &\\
+    \ct{IPX\_ERROR\_cr\_precond\_not\_posdef} &\\
+    \ct{IPX\_ERROR\_cr\_no\_progress} &\\
+    \ct{IPX\_ERROR\_cr\_inf\_or\_nan} &\\[1em]
+    \ct{IPX\_ERROR\_basis\_singular} &
+    \multirow{6}{8cm}{Factorizing or updating the basis matrix failed.}\\
+    \ct{IPX\_ERROR\_basis\_almost\_singular} &\\
+    \ct{IPX\_ERROR\_basis\_update\_singular} &\\
+    \ct{IPX\_ERROR\_basis\_repair\_overflow} &\\
+    \ct{IPX\_ERROR\_basis\_repair\_search} &\\
+    \ct{IPX\_ERROR\_basis\_too\_ill\_conditioned}
+  \end{tabular}\\[1em]
+  In all cases the failure is caused by numerical difficulties. The specific
+  error codes are meant for developers.
+}
+
+\end{document}

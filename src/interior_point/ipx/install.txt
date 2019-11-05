@@ -1,0 +1,9 @@
+(1) IPX depends on the software package BASICLU (version >= 2.0), which you can
+    download from https://github.com/ERGO-Code. Compile it by calling 'make' in
+    the top level directory of the package.
+
+(2) In the ipx/ directory edit config.mk as follows:
+    - change BASICLUROOT to the location of the basiclu directory
+    Then call 'make' in the top level directory.
+
+(3) Change into the example/ subdirectory and run the afiro program.

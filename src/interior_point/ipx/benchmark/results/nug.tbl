@@ -1,0 +1,5 @@
+ src   name                             rows        cols        nnz   IPXtotal    IPX_IPM        IPXpush   IPXclean   GRBtotal    GRB_IPM       GRB_cros   dsimplex
+  4a   nug12                            2794        8771      33443        2.4        2.3            0.1                   0.6        0.5            0.2       16.4
+  4a   nug15                            5698       22230      85425       15.1       13.3            1.8                   4.0        2.8            1.2      238.5
+  6c   nug20                           14098       72546     281906      192.3      176.1           16.1                 435.5       37.5          398.0     3515.0
+  6c   nug30                           52260      379350    1567800    11473.2     5125.2         6337.0       11.1                1400.5              t          t
