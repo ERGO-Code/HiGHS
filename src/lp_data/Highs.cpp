@@ -85,6 +85,11 @@ HighsStatus Highs::run() {
     */
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
+  // Initialise the HiGHS scalar values
+  model_status_ = HighsModelStatus::NOTSET;
+  objective_value_ = 0;
+  iteration_count_ = 0;
+  
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is loaded or modified
   //  bool normalise = true;
@@ -133,6 +138,7 @@ HighsStatus Highs::run() {
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) {
     hmos_[0].model_status_ = HighsModelStatus::MODEL_EMPTY;
+    model_status_ = hmos_[0].model_status_;
     return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
   }
 
@@ -248,6 +254,7 @@ HighsStatus Highs::run() {
 
         HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
 	*/
+	model_status_ = hmos_[original_hmo].model_status_;
         return HighsStatus::OK;
       }
       default: {
@@ -255,6 +262,7 @@ HighsStatus Highs::run() {
         HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 	hmos_[original_hmo].model_status_ = HighsModelStatus::PRESOLVE_ERROR;
+	model_status_ = hmos_[original_hmo].model_status_;
         return HighsStatus::Error;
       }
     }
@@ -383,13 +391,11 @@ HighsStatus Highs::run() {
   */
   HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
+  model_status_ = hmos_[solved_hmo].model_status_;
   return highsStatusFromHighsModelStatus(hmos_[solved_hmo].model_status_);
 }
 
-HighsModelStatus Highs::getModelStatus() const {
-  if (hmos_.size() == 0) return HighsModelStatus::NOTSET;
-  return hmos_[0].model_status_;
-}
+const HighsModelStatus& Highs::getModelStatus() const { return model_status_; }
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {

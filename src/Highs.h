@@ -61,31 +61,27 @@ class Highs {
   HighsStatus run();
 
   /**
-   * @brief Returns the current status of the (first?) HighsModelObject
+   * @brief Returns the current model status
    */
-  HighsModelStatus getModelStatus() const;
+  const HighsModelStatus& getModelStatus() const;
 
   /**
-   * @brief Returns the (dual) objective function value for the LP of
-   * the (first?) HighsModelObject
+   * @brief Returns the objective function value
    */
   double getObjectiveValue() const;
 
   /**
-   * @brief Returns the number of simplex iterations for the LP of the
-   * (first?) HighsModelObject
+   * @brief Returns the total number of solver iterations
    */
   int getIterationCount() const;
 
   /**
-   * @brief Returns the HighsSolution instance for the LP of the
-   * (first?)  HighsModelObject
+   * @brief Returns the HighsSolution 
    */
   const HighsSolution& getSolution() const;
 
   /**
-   * @brief Returns the HighsBasis instance for the LP of the
-   * (first?) HighsModelObject
+   * @brief Returns the HighsBasis 
    */
   const HighsBasis& getBasis() const;
 
@@ -665,6 +661,14 @@ class Highs {
   HighsLp lp_;
 
   HighsTimer timer_;
+
+  // Have copies in the HiGHS class so that const references to them
+  // can be passed back, regardless of whether there is a HMO, or not,
+  // and also to make objective_value and iteration_count independent
+  // of whether simplex or IMP is used as a solver.
+  HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
+  double objective_value_ = 0;
+  int iteration_count_ = 0;
 
   // Each HighsModelObject holds a const ref to its lp_. There are potentially
   // several hmos_ to allow for the solution of several different modified
