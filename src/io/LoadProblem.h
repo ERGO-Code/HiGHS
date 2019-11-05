@@ -34,7 +34,6 @@ HighsStatus loadLpFromFile(const HighsOptions& options, HighsLp& lp) {
 
   struct stat info;
   const char* pathname = options.model_file.c_str();
-  printf("loadLpFromFile: %s\n", pathname);
   if (stat(pathname, &info) != 0) {
     HighsPrintMessage(ML_ALWAYS, "Cannot access %s\n", pathname);
     return HighsStatus::Error;

@@ -82,18 +82,18 @@ int main(int argc, char** argv) {
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
   if (read_status != HighsStatus::OK) {
-    HighsPrintMessage(ML_ALWAYS, "Error loading file.\n");
+    std::cout << "Error loading file" << std::endl;
     return (int)HighsStatus::Error;
   } else {
-    HighsPrintMessage(ML_MINIMAL, "LP       : %s\n", lp.model_name_.c_str());
-    HighsPrintMessage(ML_MINIMAL,
-                      "Rows     : %d\nCols     : %d\nNonzeros : %d\n",
-                      lp.numRow_, lp.numCol_, lp.Avalue_.size());
-    if (lp.numInt_) {
-      HighsPrintMessage(ML_MINIMAL, "Integer  : %d\n\n", lp.numInt_);
-    } else {
-      HighsPrintMessage(ML_MINIMAL, "\n");
-    }
+    std::stringstream message;
+    message << "LP       : " << lp.model_name_.c_str() << std::endl;
+    message << "Rows     : " << lp.numRow_ << std::endl;
+    message << "Cols     : " << lp.numCol_ << std::endl;
+    message << "Nonzeros : " << lp.Avalue_.size() << std::endl;
+    if (lp.numInt_)
+      message << "Integer  : " << lp.numInt_ << std::endl;
+    message  << std::endl;
+    std::cout << message.str();
   }
 
   Highs highs;
@@ -104,6 +104,7 @@ int main(int argc, char** argv) {
     HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
     return (int)HighsStatus::Error;
   }
+
   HighsStatus run_status;
   /*
   run_status = highs.writeModel("write.mps"); 
@@ -113,9 +114,23 @@ int main(int argc, char** argv) {
   highs.options_ = options;
   run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
-  if (run_status != HighsStatus::OK)
-    HighsPrintMessage(ML_ALWAYS, "Highs status: %s\n", statusname.c_str());
-  //    highs.writeSolution("");
 
+  if (run_status != HighsStatus::OK) {
+    HighsPrintMessage(ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
+  } else {
+    HighsModelStatus model_status = highs.getModelStatus();
+    int iteration_count = highs.getIterationCount();
+    std::stringstream message;
+    message << std::endl;
+    message << "Run status : " << highs.highsModelStatusToString(model_status) << std::endl;
+    message << "Iterations : " << iteration_count << std::endl;
+
+    if (model_status == HighsModelStatus::OPTIMAL) {
+      double dual_objective_value = highs.getObjectiveValue();
+      message << "Objective  : " << std::scientific << dual_objective_value << std::endl;
+    }
+    message << std::endl;
+    std::cout << message.str();
+  }
   return (int)run_status;
 }

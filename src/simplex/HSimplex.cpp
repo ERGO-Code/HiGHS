@@ -3283,7 +3283,6 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
 }
 
 bool simplexInfoOk(const HighsLp& lp, const HighsLp& simplex_lp, const HighsSimplexInfo& simplex_info) {
-  printf("In simplexInfoOk\n");
   int numCol = lp.numCol_;
   int numRow = lp.numRow_;
   int numTot = numCol+numRow;

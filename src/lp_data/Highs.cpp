@@ -234,8 +234,9 @@ HighsStatus Highs::run() {
         // HighsModelObject and can support multiple calls to run(). Stop and
         // read the HiGHS clock, then work out time for this call
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-        double lp_solve_final_time = timer_.readRunHighsClock();
 
+	/*
+        double lp_solve_final_time = timer_.readRunHighsClock();
         std::stringstream message_not_opt;
         message_not_opt << std::endl;
         message_not_opt << "Run status : " << utilHighsModelStatusToString(hmos_[original_hmo].model_status_)
@@ -246,6 +247,7 @@ HighsStatus Highs::run() {
         message_not_opt << std::endl;
 
         HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
+	*/
         return HighsStatus::OK;
       }
       default: {
@@ -305,7 +307,7 @@ HighsStatus Highs::run() {
 	  hmos_[solved_hmo].lp_.lp_name_ = "Postsolve LP";
           HighsStatus return_status = callRunSolver(hmos_[solved_hmo], iteration_count,
 				       "Solving the original LP from the solution after postsolve");
-          postsolve_iteration_count = iteration_count;
+	  postsolve_iteration_count = iteration_count;
           solve_iteration_count += iteration_count;
           // Recover the options
           options = save_options;
@@ -315,6 +317,11 @@ HighsStatus Highs::run() {
 	  if (return_status != HighsStatus::OK) return return_status;
         }
       }
+    } else {
+      // Optimal solution of presolved problem has not been found
+      // The original model inherits the solved model's status and iteration count
+      hmos_[original_hmo].model_status_ = hmos_[solved_hmo].model_status_;
+      hmos_[original_hmo].simplex_info_.iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
     }
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
@@ -349,8 +356,9 @@ HighsStatus Highs::run() {
   }
   // Stop and read the HiGHS clock, then work out time for this call
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-  double lp_solve_final_time = timer_.readRunHighsClock();
 
+  double lp_solve_final_time = timer_.readRunHighsClock();
+  /*
   std::stringstream message;
   message << std::endl;
   message << "Run status : " << utilHighsModelStatusToString(hmos_[solved_hmo].model_status_) << std::endl;
@@ -372,7 +380,9 @@ HighsStatus Highs::run() {
   message << std::endl;
 
   HighsPrintMessage(ML_MINIMAL, message.str().c_str());
-
+  */
+  HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
+  HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
   return highsStatusFromHighsModelStatus(hmos_[solved_hmo].model_status_);
 }
 
