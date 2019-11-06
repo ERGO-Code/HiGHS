@@ -4,6 +4,7 @@ include_directories(interior_point/ipx/include)
 include_directories(interior_point/basiclu/src)
 include_directories(interior_point/basiclu/include)
 
+if (UNIX)
 set(basiclu_sources
     interior_point/basiclu/src/basiclu_factorize.c
     interior_point/basiclu/src/basiclu_solve_dense.c
@@ -67,6 +68,7 @@ set(ipx_sources
     interior_point/ipx/src/symbolic_invert.cc
     interior_point/ipx/src/timer.cc
     interior_point/ipx/src/utils.cc)
+endif()
 
 # Define library.
 
@@ -167,13 +169,17 @@ if (GAMS_FOUND)
     include_directories(${GAMS_ROOT}/apifiles/C/api)
 endif()
 
+if (UNIX)
 add_library(libbasiclu ${basiclu_sources})
 
 add_library(libipx ${ipx_sources})
 target_link_libraries(libipx libbasiclu)
+endif()
 
 add_library(libhighs ${sources})
+if (UNIX)
 target_link_libraries(libhighs libipx)
+endif()
 
 # put version information into shared library file
 
@@ -264,6 +270,7 @@ foreach ( file ${headers} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
+if (UNIX)
 install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
@@ -272,6 +279,18 @@ install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
 # Add library targets to the build-tree export set
 export(TARGETS libhighs libipx libbasiclu
   FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+else()
+install(TARGETS libhighs EXPORT highs-targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)
+
+# Add library targets to the build-tree export set
+export(TARGETS libhighs 
+  FILE "${HIGHS_BINARY_DIR}/highs-targets.cmake")
+
+endif()
+
 
 #configure the config file for the build tree
 #Either list all the src/* directories here, or put explicit paths in all the #include statements

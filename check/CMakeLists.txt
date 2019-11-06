@@ -25,6 +25,10 @@ set(TEST_SOURCES
     TestIpx.cpp
     Avgas.cpp)
 
+if (UNIX) 
+    set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
+endif()
+
 add_executable(unit_tests ${TEST_SOURCES})
 target_link_libraries(unit_tests libhighs Catch)
 
