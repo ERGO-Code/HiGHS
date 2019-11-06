@@ -81,7 +81,7 @@ std::vector<Int> InversePerm(const std::vector<Int>& perm) {
 
 static bool greater_or_equal(const std::pair<double,Int>& a,
                              const std::pair<double,Int>& b) {
-    return a>=b;
+    return a>b;
 }
 
 std::vector<Int> Sortperm(Int m, const double* values, bool reverse) {
