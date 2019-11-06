@@ -148,7 +148,7 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   return IpxStatus::OK;
 }
 
-IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution) {
+IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution, HighsBasis& basis) {
   int debug = 0;
 
 #ifdef CMAKE_BUILD_TYPE

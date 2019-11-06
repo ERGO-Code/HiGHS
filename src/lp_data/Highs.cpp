@@ -1035,7 +1035,7 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
 
   if (options_.solver == "ipm") {
-    IpxStatus ipx_return = solveModelWithIpx(lp_, solution_);
+    IpxStatus ipx_return = solveModelWithIpx(lp_, solution_, basis_);
     if (ipx_return != IpxStatus::OK) {
       // todo:
       return HighsStatus::Error;
