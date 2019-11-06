@@ -294,6 +294,7 @@ HighsStatus Highs::run() {
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
+        hmos_[0].model_status_ = HighsModelStatus::OPTIMAL;
         // Proceed to postsolve.
         break;
       }
@@ -344,7 +345,8 @@ HighsStatus Highs::run() {
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
     if (hmos_[solved_hmo].model_status_ == HighsModelStatus::OPTIMAL) {
-      if (presolve_status == HighsPresolveStatus::Reduced) {
+      if (presolve_status == HighsPresolveStatus::Reduced ||
+          presolve_status == HighsPresolveStatus::ReducedToEmpty) {
         // If presolve is nontrivial, extract the optimal solution
         // and basis for the presolved problem in order to generate
         // the solution and basis for postsolve to use to generate a

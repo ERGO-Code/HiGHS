@@ -177,7 +177,10 @@ HighsPresolveStatus Presolve::presolve() {
       presolve_status = HighsPresolveStatus::Infeasible;
       break;
     case stat::Reduced:
-      presolve_status = HighsPresolveStatus::Reduced;
+      if (numCol > 0 || numRow > 0)
+        presolve_status = HighsPresolveStatus::Reduced;
+      else 
+        presolve_status = HighsPresolveStatus::ReducedToEmpty;
       break;
     case stat::Empty:
       presolve_status = HighsPresolveStatus::Empty;
