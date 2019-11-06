@@ -1,8 +1,0 @@
-The problems come from the SuiteSparse Matrix Collection [1].
-
-LP: baxter, car4, ge, lp_cre_b, lp_dfl001, lp_stocfor3, rat, route, south31
-Least squares: Maragal4
-Power network: psse1
-SVD test problem: Pd_rhs
-
-[1] https://www.cise.ufl.edu/research/sparse/matrices/

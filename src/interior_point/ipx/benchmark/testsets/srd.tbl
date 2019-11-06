@@ -1,6 +1,0 @@
-   id name                 group                    rows     cols       nnz
- 0011 srd060               castro/irp              93200   178510   2796210
- 0012 srd120               castro/irp             186440   357070   9804510
- 0013 srd180               castro/irp             279680   535630  21024810
- 0014 srd240               castro/irp             372920   714190  36457110
- 0015 srd300               castro/irp             466160   892750  56101410

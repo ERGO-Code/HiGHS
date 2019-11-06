@@ -158,6 +158,8 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution) {
   ipx::LpSolver lps;
   ipx::Parameters parameters;
 
+  // todo: set tolerances
+
   // parameters.crossover = 1; by default
   if (debug) parameters.debug = 1;
 
@@ -182,22 +184,37 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution) {
 
   // Get solver and solution information.
   ipx::Info info = lps.GetInfo();
-  /*
-    // Get the interior solution (available if IPM was started).
-    double x[num_var], xl[num_var], xu[num_var], slack[num_constr];
-    double y[num_constr], zl[num_var], zu[num_var];
-    lps.GetInteriorSolution(x, xl, xu, slack, y, zl, zu);
-    */
+  // Get the interior solution (available if IPM was started).
+  // GetInteriorSolution() returns the final IPM iterate, regardless if the
+  // IPM terminated successfully or not. (Only in case of out-of-memory no
+  // solution exists.)
+  double x[num_col], xl[num_col], xu[num_col], slack[num_row];
+  double y[num_row], zl[num_col], zu[num_col];
+  lps.GetInteriorSolution(x, xl, xu, slack, y, zl, zu);
+  // todo: fill up HighsSolution
 
-  // Get the basic solution (available if crossover terminated without error).
-  double xbasic[num_col], sbasic[num_row];
-  double ybasic[num_row], zbasic[num_col];
-  ipx::Int cbasis[num_row], vbasis[num_col];
+  if (info.status_crossover == IPX_STATUS_optimal ||
+      info.status_crossover == IPX_STATUS_imprecise) {
+    if (info.status_crossover == IPX_STATUS_imprecise) {
+      HighsPrintMessage(
+          ML_ALWAYS,
+          "Ipx Crossover status imprecise: at least one of primal and dual "
+          "infeasibilities of basic solution is not within parameters pfeastol "
+          "and dfeastol. Simplex clean up will be required.\n");
+      // const double abs_presidual = info.abs_presidual;
+      // const double abs_dresidual = info.abs_dresidual;
+      // const double rel_presidual = info.rel_presidual;
+      // const double rel_dresidual = info.rel_dresidual;
+      // const double rel_objgap = info.rel_objgap;
+    }
 
-  lps.GetBasicSolution(xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
+    double xbasic[num_col], sbasic[num_row];
+    double ybasic[num_row], zbasic[num_col];
+    ipx::Int cbasis[num_row], vbasis[num_col];
 
-  // Set solution in lp.
-  // TODO
+    lps.GetBasicSolution(xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
+    // todo: fill up HighsBasis
+  }
 
   return IpxStatus::OK;
 }

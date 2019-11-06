@@ -1,5 +1,0 @@
-   id name                 group                    rows     cols       nnz
- 0398 nug12                meszaros/misc            2794     8771     33443
- 0399 nug15                meszaros/misc            5698    22230     85425
- 1782 nug20                mittelmann/nug          14098    72546    281906
- 1783 nug30                mittelmann/nug          52260   379350   1567800
