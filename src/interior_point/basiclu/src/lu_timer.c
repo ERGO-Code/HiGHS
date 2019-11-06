@@ -12,7 +12,7 @@
 void lu_tic (double tic[2])
 {
     struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &t);
+    clock_gettime(CLOCK_MONOTONIC, &t);
     tic[0] = (double) t.tv_sec;
     tic[1] = (double) t.tv_nsec;
 }
