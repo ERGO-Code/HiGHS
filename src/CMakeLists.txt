@@ -170,15 +170,16 @@ if (GAMS_FOUND)
 endif()
 
 if (UNIX)
-add_library(libbasiclu ${basiclu_sources})
-
-add_library(libipx ${ipx_sources})
-target_link_libraries(libipx libbasiclu)
+    set(headers ${headers} interior_point/IpxWrapper.h)
+    add_library(libbasiclu ${basiclu_sources})
+    add_library(libipx ${ipx_sources})
+    target_link_libraries(libipx libbasiclu)
 endif()
 
 add_library(libhighs ${sources})
+
 if (UNIX)
-target_link_libraries(libhighs libipx)
+    target_link_libraries(libhighs libipx)
 endif()
 
 # put version information into shared library file

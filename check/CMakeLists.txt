@@ -25,7 +25,7 @@ set(TEST_SOURCES
     TestIpx.cpp
     Avgas.cpp)
 
-if (UNIX) 
+if (LINUX) 
     set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 endif()
 

@@ -1037,16 +1037,17 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
 
   if (options_.solver == "ipm") {
-#ifdef __unix
-    IpxStatus ipx_return = solveModelWithIpx(lp_, solution_, basis_);
-    if (ipx_return != IpxStatus::OK) {
-      // todo:
-      return HighsStatus::Error;
-    }
-    return HighsStatus::OK;
-#else
-    return HighsStatus::Error;
-#endif
+// #ifdef __linux__
+//     IpxStatus ipx_return = solveModelWithIpx(lp_, solution_, basis_);
+//     if (ipx_return != IpxStatus::OK) {
+//       // todo:
+//       return HighsStatus::Error;
+//     }
+//     return HighsStatus::OK;
+// #else
+//     return HighsStatus::Error;
+// #endif
+return HighsStatus::Error;
   }
 
   HighsStatus solver_return_status;
