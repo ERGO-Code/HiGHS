@@ -4,7 +4,7 @@ include_directories(interior_point/ipx/include)
 include_directories(interior_point/basiclu/src)
 include_directories(interior_point/basiclu/include)
 
-if (UNIX)
+if (IPX_ON)
 set(basiclu_sources
     interior_point/basiclu/src/basiclu_factorize.c
     interior_point/basiclu/src/basiclu_solve_dense.c
@@ -169,7 +169,7 @@ if (GAMS_FOUND)
     include_directories(${GAMS_ROOT}/apifiles/C/api)
 endif()
 
-if (UNIX)
+if (IPX_ON)
     set(headers ${headers} interior_point/IpxWrapper.h)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
@@ -178,7 +178,7 @@ endif()
 
 add_library(libhighs ${sources})
 
-if (UNIX)
+if (IPX_ON)
     target_link_libraries(libhighs libipx)
 endif()
 
@@ -271,7 +271,7 @@ foreach ( file ${headers} )
 endforeach()
 install(FILES ${HIGHS_BINARY_DIR}/HConfig.h DESTINATION include)
 
-if (UNIX)
+if (IPX_ON)
 install(TARGETS libhighs libipx libbasiclu EXPORT highs-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib

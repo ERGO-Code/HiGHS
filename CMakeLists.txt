@@ -78,6 +78,11 @@ if (NOT (${OSI_ROOT} STREQUAL "OFF"))
 endif ()
 unset(OSI_ROOT CACHE)
 
+option(IPN_ON OFF)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
+    set(IPX_ON ON)
+endif()
+
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)

@@ -22,10 +22,9 @@ set(TEST_SOURCES
     TestLpValidation.cpp
     TestLpModification.cpp
     TestSetup.cpp
-    TestIpx.cpp
     Avgas.cpp)
 
-if (LINUX) 
+if (IPX_ON) 
     set (TEST_SOURCES ${TEST_SOURCES} TestIpx.cpp)
 endif()
 
