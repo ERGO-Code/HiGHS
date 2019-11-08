@@ -3,9 +3,9 @@
 
 #include <algorithm>
 
+#include "interior_point/IpxStatus.h"
 #include "interior_point/ipx/include/ipx_status.h"
 #include "interior_point/ipx/src/lp_solver.h"
-#include "interior_point/IpxStatus.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 
@@ -147,7 +147,8 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   return IpxStatus::OK;
 }
 
-IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution, HighsBasis& basis) {
+IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
+                            HighsBasis& basis) {
   int debug = 0;
 
 #ifdef CMAKE_BUILD_TYPE
@@ -187,9 +188,16 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution, HighsBas
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
   // IPM terminated successfully or not. (Only in case of out-of-memory no
   // solution exists.)
-  double x[num_col], xl[num_col], xu[num_col], slack[num_row];
-  double y[num_row], zl[num_col], zu[num_col];
-  lps.GetInteriorSolution(x, xl, xu, slack, y, zl, zu);
+  std::vector<double> x(num_col);
+  std::vector<double> xl(num_col);
+  std::vector<double> xu(num_col);
+  std::vector<double> zl(num_col);
+  std::vector<double> zu(num_col);
+  std::vector<double> slack(num_row);
+  std::vector<double> y(num_row);
+
+  lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
+                          &zu[0]);
   // todo: fill up HighsSolution
 
   if (info.status_crossover == IPX_STATUS_optimal ||
@@ -207,11 +215,14 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution, HighsBas
       // const double rel_objgap = info.rel_objgap;
     }
 
-    double xbasic[num_col], sbasic[num_row];
-    double ybasic[num_row], zbasic[num_col];
-    ipx::Int cbasis[num_row], vbasis[num_col];
+    std::vector<double> xbasic(num_col);
+    std::vector<double> ybasic(num_col);
+    std::vector<double> zbasic(num_row);
+    std::vector<double> sbasic(num_row);
+    std::vector<ipx::Int> cbasis(num_row);
+    std::vector<ipx::Int> vbasis(num_col);
 
-    lps.GetBasicSolution(xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
+    lps.GetBasicSolution(&xbasic[0], &sbasic[0], &ybasic[0], &zbasic[0], &cbasis[0], &vbasis[0]);
     // todo: fill up HighsBasis
   }
 

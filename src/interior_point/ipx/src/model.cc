@@ -1232,6 +1232,7 @@ void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
         for (Int j = 0; j < num_var_; j++)
             vbasis_user[j] = basic_status_solver[j];
     }
+    (void)(m);
 }
 
 void Model::CorrectScaledBasicSolution(Vector& x, Vector& slack, Vector& y,

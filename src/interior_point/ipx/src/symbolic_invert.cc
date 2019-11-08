@@ -39,6 +39,7 @@ static std::vector<Int> Matching(const Model& model,
                                           work.data(), work2.data(),
                                           work3.data());
             assert(matched);
+            (void)(matched);
         }
     }
     for (Int j : basis) {
@@ -48,6 +49,7 @@ static std::vector<Int> Matching(const Model& model,
                                           work.data(), work2.data(),
                                           work3.data());
             assert(matched);
+            (void)(matched);
         }
     }
     return jmatch;
