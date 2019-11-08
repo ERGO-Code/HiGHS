@@ -14,15 +14,6 @@
 #ifndef IO_LOAD_OPTIONS_H_
 #define IO_LOAD_OPTIONS_H_
 
-//#include <sys/stat.h>
-//#include <sys/types.h>
-//#include <cstdio>
-//#include <fstream>
-
-//#include "io/Filereader.h"
-//#include "io/HighsIO.h"
-//#include "lp_data/HighsLpUtils.h"
-//#include "lp_data/HighsOptions.h"
 #include "util/stringutil.h"
 
 // For extended options to be parsed from a file. Assuming options file is

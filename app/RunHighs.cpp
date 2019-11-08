@@ -60,24 +60,33 @@ void HiGHSRun(const char* message = nullptr) {
 
 int main(int argc, char** argv) {
   HiGHSRun();
+  HighsStatus return_status;
+
+  Highs highs;
+  //  highs.writeHighsOptions("HiGHS.set");
 
   // Load user options.
   HighsOptions options;
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = false;  // true;// 
-  if (force_options_file && options.options_file.size() > 0) {
+  bool force_options_file = false;  // true;//
+  if (force_options_file) {
     printf(
-        "In main: set options.options_file = options_file so vscode can be "
+        "In main: set options.options_file = Options.set so vscode can be "
         "used to debug\n");
-    options.options_file = "options_file";
+    options.options_file = "Options.set";
     if (!loadOptionsFromFile(options)) {
       printf("In main: fail return from loadOptionsFromFile\n");
       return (int)HighsStatus::Error;
     }
   }
-  if (options.run_as_hsol) setHsolOptions(options);
+
+  return_status = highs.passHighsOptions(options);
+  if (return_status != HighsStatus::OK) {
+    printf("In main: fail return from passHighsOptions\n");
+    return (int)return_status;
+  }
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
@@ -96,9 +105,6 @@ int main(int argc, char** argv) {
     std::cout << message.str();
   }
 
-  Highs highs;
-  //  highs.writeHighsOptions("HiGHS.set");
-
   HighsStatus init_status = highs.passModel(lp);
   if (init_status != HighsStatus::OK) {
     HighsPrintMessage(ML_ALWAYS, "Error setting HighsLp.\n");
@@ -111,7 +117,7 @@ int main(int argc, char** argv) {
   if (run_status != HighsStatus::OK) printf("Error return from highs.writeModel\n");
   */
 
-  highs.options_ = options;
+  //  highs.options_ = options;
   run_status = highs.run();
   std::string statusname = HighsStatusToString(run_status);
 

@@ -125,7 +125,15 @@ class Highs {
                                   const char* value
 				  );
 
-  /**
+  HighsStatus readHighsOptions(
+			       const std::string filename  //!< the filename
+			       );
+
+  HighsStatus passHighsOptions(
+			       const HighsOptions& options  //!< the options
+			       );
+
+   /**
    * @brief Gets an option value as bool/int/double/string and, for
    * bool/int/double, only if it's of the correct type.
    */
@@ -656,14 +664,14 @@ class Highs {
   friend class OsiHiGHSSolverInterface;
 #endif
 
-  HighsOptions options_;
-
  private:
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
 
   HighsTimer timer_;
+
+  HighsOptions options_;
 
   // Have copies in the HiGHS class so that const references to them
   // can be passed back, regardless of whether there is a HMO, or not,

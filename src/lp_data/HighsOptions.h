@@ -173,6 +173,10 @@ OptionStatus checkOptions(const std::vector<OptionRecord*>& option_records);
 OptionStatus checkOption(const OptionRecordInt& option);
 OptionStatus checkOption(const OptionRecordDouble& option);
 
+OptionStatus checkOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
+OptionStatus checkOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
+OptionStatus checkOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const std::string value);
+
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value);
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const int value);
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const double value);
@@ -183,6 +187,8 @@ OptionStatus setOptionValue(OptionRecordBool& option, const bool value);
 OptionStatus setOptionValue(OptionRecordInt& option, const int value);
 OptionStatus setOptionValue(OptionRecordDouble& option, const double value);
 OptionStatus setOptionValue(OptionRecordString& option, std::string const value);
+
+OptionStatus passOptions(const HighsOptions from_options, HighsOptions to_options);
 
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, bool& value);
 OptionStatus getOptionValue(const std::string& name, const std::vector<OptionRecord*>& option_records, int& value);

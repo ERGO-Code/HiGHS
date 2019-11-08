@@ -21,6 +21,7 @@
 #include "HConfig.h"
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
+#include "io/LoadOptions.h"
 #include "lp_data/HighsLp.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
@@ -72,6 +73,24 @@ HighsStatus Highs::setHighsOptionValue(const std::string& option,
 HighsStatus Highs::setHighsOptionValue(const std::string& option,
                                        const char* value) {
   if (setOptionValue(option, options_.records, value) == OptionStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::readHighsOptions(const std::string filename) {
+  if (filename.size() <= 0) {
+    HighsLogMessage(HighsMessageType::WARNING,
+                    "Empty file name so not reading options");
+    return HighsStatus::Error;
+  }
+  options_.options_file = filename;
+  if (!loadOptionsFromFile(options_)) return HighsStatus::Error;
+  return HighsStatus::OK;    
+}
+
+HighsStatus Highs::passHighsOptions(const HighsOptions& options) {
+
+  if (passOptions(options, options_) == OptionStatus::OK)
     return HighsStatus::OK;
   return HighsStatus::Error;
 }

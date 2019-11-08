@@ -28,14 +28,14 @@ std::string optionEntryType2string(const HighsOptionType type) {
 
 bool commandLineOffChooseOnOk(const string& value) {
   if (value == off_string || value == choose_string || value == on_string) return true;
-  HighsLogMessage(HighsMessageType::ERROR, "Command line option value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
+  HighsLogMessage(HighsMessageType::WARNING, "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
 		  value.c_str(), off_string.c_str(), choose_string.c_str(), on_string.c_str());
   return false;
 }
 
 bool commandLineSolverOk(const string& value) {
   if (value == simplex_string || value == choose_string || value == ipm_string) return true;
-  HighsLogMessage(HighsMessageType::ERROR, "Command line option value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
+  HighsLogMessage(HighsMessageType::WARNING, "Value \"%s\" is not one of \"%s\", \"%s\" or \"%s\"\n",
 		  value.c_str(), simplex_string.c_str(), choose_string.c_str(), ipm_string.c_str());
   return false;
 }
@@ -212,6 +212,44 @@ OptionStatus checkOption(const OptionRecordDouble& option) {
   return OptionStatus::OK;
 }
 
+OptionStatus checkOptionValue(OptionRecordInt& option, const int value) {
+  if (value < option.lower_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %d for option \"%s\" is below lower bound of %d",
+		    value, option.name.c_str(), option.lower_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  } else if (value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %d for option \"%s\" is above upper bound of %d",
+		    value, option.name.c_str(), option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus checkOptionValue(OptionRecordDouble& option, const double value) {
+  if (value < option.lower_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %g for option \"%s\" is below lower bound of %g",
+		    value, option.name.c_str(), option.lower_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  } else if (value > option.upper_bound) {
+    HighsLogMessage(HighsMessageType::WARNING, "checkOptionValue: Value %g for option \"%s\" is above upper bound of %g",
+		    value, option.name.c_str(), option.upper_bound);
+    return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
+OptionStatus checkOptionValue(OptionRecordString& option, const std::string value) {
+  // Setting a string option: check that value is OK
+  if (option.name == presolve_string) {
+    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  } else if (option.name == solver_string) {
+    if (!commandLineSolverOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  } else if (option.name == parallel_string) {
+    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
+  }
+  return OptionStatus::OK;
+}
+
 OptionStatus setOptionValue(const std::string& name, std::vector<OptionRecord*>& option_records, const bool value) {
   int index;
   //  printf("setOptionValue: \"%s\" with bool %d\n", name.c_str(), value);
@@ -304,43 +342,70 @@ OptionStatus setOptionValue(OptionRecordBool& option, const bool value) {
 }
 
 OptionStatus setOptionValue(OptionRecordInt& option, const int value) {
-  if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %d below lower bound of %d",
-	   option.name.c_str(), value, option.lower_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %d above upper bound of %d",
-	   option.name.c_str(), value, option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  }
+  OptionStatus return_status = checkOptionValue(option, value);
+  if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
 OptionStatus setOptionValue(OptionRecordDouble& option, const double value) {
-  if (value < option.lower_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %g below lower bound of %g",
-	   option.name.c_str(), value, option.lower_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  } else if (value > option.upper_bound) {
-    HighsLogMessage(HighsMessageType::ERROR, "setOptionValue: Trying to set option \"%s\" to value %g above upper bound of %g",
-	   option.name.c_str(), value, option.upper_bound);
-    return OptionStatus::ILLEGAL_VALUE;
-  }
+  OptionStatus return_status = checkOptionValue(option, value);
+  if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
   return OptionStatus::OK;
 }
 
 OptionStatus setOptionValue(OptionRecordString& option, const std::string value) {
-  // Setting a string option: check that value is OK
-  if (option.name == presolve_string) {
-    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
-  } else if (option.name == solver_string) {
-    if (!commandLineSolverOk(value)) return OptionStatus::ILLEGAL_VALUE;
-  } else if (option.name == parallel_string) {
-    if (!commandLineOffChooseOnOk(value)) return OptionStatus::ILLEGAL_VALUE;
-  }
+  OptionStatus return_status = checkOptionValue(option, value);
+  if (return_status != OptionStatus::OK) return return_status;
   option.assignvalue(value);
+  return OptionStatus::OK;
+}
+
+OptionStatus passOptions(const HighsOptions from_options, HighsOptions to_options) {
+  // (Attempt to) set option value from the HighsOptions passed in
+  OptionStatus return_status;
+  int num_options = to_options.records.size();
+  // Check all the option values before setting any of them - in case
+  // to_options are the main Highs options. Checks are only needed for
+  // int, double and string since bool values can't be illegal
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = to_options.records[index]->type;
+    if (type == HighsOptionType::INT) {
+      int value = *(((OptionRecordInt*)from_options.records[index])[0].value);
+      return_status = checkOptionValue(((OptionRecordInt*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::DOUBLE) {
+      double value = *(((OptionRecordDouble*)from_options.records[index])[0].value);
+      return_status = checkOptionValue(((OptionRecordDouble*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::STRING) {
+      std::string value = *(((OptionRecordString*)from_options.records[index])[0].value);
+      return_status = checkOptionValue(((OptionRecordString*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    }
+  }
+  // Checked from_options and found it to be OK, so set all the values
+  for (int index = 0; index < num_options; index++) {
+    HighsOptionType type = to_options.records[index]->type;
+    if (type == HighsOptionType::BOOL) {
+      bool value = *(((OptionRecordBool*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordBool*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::INT) {
+      int value = *(((OptionRecordInt*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordInt*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else if (type == HighsOptionType::DOUBLE) {
+      double value = *(((OptionRecordDouble*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordDouble*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    } else {
+      std::string value = *(((OptionRecordString*)from_options.records[index])[0].value);
+      return_status = setOptionValue(((OptionRecordString*)to_options.records[index])[0], value);
+      if (return_status != OptionStatus::OK) return return_status;
+    }
+  }
   return OptionStatus::OK;
 }
 
