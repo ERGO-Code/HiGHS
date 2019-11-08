@@ -67,6 +67,7 @@ void BasicLuKernel::_Factorize(Int dim, const Int* Bbegin, const Int* Bend,
     Int num_dropped = RemoveDiagonal(*L, nullptr);
     assert(num_dropped == dim);
     assert(L->entries() == lu.obj.xstore[BASICLU_LNZ]);
+    (void)(num_dropped);
 }
 
 }  // namespace ipx

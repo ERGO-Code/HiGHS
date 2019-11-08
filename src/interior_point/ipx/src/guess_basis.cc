@@ -186,7 +186,7 @@ static void ProcessRemaining(const Control& control, const Model& model,
         } else {
             num_failed++;
         }
-        if (num_failed >= 10*(m-basis->size()))
+        if (num_failed >= 10*(m - (Int) basis->size()))
             break;
     }
     for (Int i = 0; i < m; i++) {

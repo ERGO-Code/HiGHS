@@ -117,6 +117,8 @@ void Model::PresolveStartingPoint(const double* x_user,
     ScaleBasicSolution(x_temp, slack_temp, y_temp, z_temp);
     DualizeBasicSolution(x_temp, slack_temp, y_temp, z_temp,
                          x_solver, y_solver, z_solver);
+    (void)(n);
+    (void)(m);
 }
 
 void Model::PostsolveInteriorSolution(const Vector& x_solver,
@@ -165,6 +167,8 @@ void Model::PostsolveInteriorSolution(const Vector& x_solver,
         std::copy(std::begin(zl_temp), std::end(zl_temp), zl_user);
     if (zu_user)
         std::copy(std::begin(zu_temp), std::end(zu_temp), zu_user);
+    (void)(n);
+    (void)(m);
 }
 
 void Model::EvaluateInteriorSolution(const Vector& x_solver,
@@ -263,6 +267,8 @@ void Model::EvaluateInteriorSolution(const Vector& x_solver,
     info->normx = Infnorm(x);
     info->normy = Infnorm(y);
     info->normz = std::max(Infnorm(zl), Infnorm(zu));
+    (void)(n);
+    (void)(m);
 }
 
 void Model::PostsolveBasicSolution(const Vector& x_solver,
@@ -298,6 +304,8 @@ void Model::PostsolveBasicSolution(const Vector& x_solver,
         std::copy(std::begin(y_temp), std::end(y_temp), y_user);
     if (z_user)
         std::copy(std::begin(z_temp), std::end(z_temp), z_user);
+    (void)(n);
+    (void)(m);
 }
 
 void Model::EvaluateBasicSolution(const Vector& x_solver,
@@ -361,6 +369,8 @@ void Model::EvaluateBasicSolution(const Vector& x_solver,
     info->primal_infeas = std::max(Infnorm(xinfeas), Infnorm(sinfeas));
     info->dual_infeas = std::max(Infnorm(zinfeas), Infnorm(yinfeas));
     info->objval = pobj;
+    (void)(n);
+    (void)(m);
 }
 
 void Model::PostsolveBasis(const std::vector<Int>& basic_status_solver,
@@ -377,6 +387,8 @@ void Model::PostsolveBasis(const std::vector<Int>& basic_status_solver,
         std::copy(std::begin(cbasis_temp), std::end(cbasis_temp), cbasis_user);
     if (vbasis_user)
         std::copy(std::begin(vbasis_temp), std::end(vbasis_temp), vbasis_user);
+    (void)(m);
+    (void)(n);
 }
 
 // Checks if the vectors are valid LP data vectors. Returns 0 if OK and a
@@ -962,7 +974,7 @@ void Model::DualizeBasicSolution(const Vector& x_user,
         y_solver = -x_user;
         for (Int i = 0; i < num_constr_; i++)
             z_solver[i] = -slack_user[i];
-        for (Int k = 0; k < boxed_vars_.size(); k++) {
+        for (Int k = 0; k < (Int) boxed_vars_.size(); k++) {
             Int j = boxed_vars_[k];
             z_solver[num_constr_+k] = c(num_constr_+k) + y_solver[j];
         }
@@ -972,7 +984,7 @@ void Model::DualizeBasicSolution(const Vector& x_user,
         // Build primal solver variables from dual user variables.
         std::copy_n(std::begin(y_user), num_constr_, std::begin(x_solver));
         std::copy_n(std::begin(z_user), num_var_, std::begin(x_solver) + n);
-        for (Int k = 0; k < boxed_vars_.size(); k++) {
+        for (Int k = 0; k < (Int) boxed_vars_.size(); k++) {
             Int j = boxed_vars_[k];
             if (x_solver[n+j] < 0.0) {
                 // j is a boxed variable and z_user[j] < 0
@@ -1172,6 +1184,7 @@ void Model::DualizeBackBasicSolution(const Vector& x_solver,
         std::copy_n(std::begin(y_solver), num_constr_, std::begin(y_user));
         std::copy_n(std::begin(z_solver), num_var_, std::begin(z_user));
     }
+    (void)(m);
 }
 
 void Model::DualizeBackBasis(const std::vector<Int>& basic_status_solver,
@@ -1271,7 +1284,7 @@ double PrimalInfeasibility(const Model& model, const Vector& x) {
     assert(x.size() == lb.size());
 
     double infeas = 0.0;
-    for (Int j = 0; j < x.size(); j++) {
+    for (Int j = 0; j < (Int) x.size(); j++) {
         infeas = std::max(infeas, lb[j]-x[j]);
         infeas = std::max(infeas, x[j]-ub[j]);
     }
@@ -1286,7 +1299,7 @@ double DualInfeasibility(const Model& model, const Vector& x,
     assert(z.size() == lb.size());
 
     double infeas = 0.0;
-    for (Int j = 0; j < x.size(); j++) {
+    for (Int j = 0; j < (Int) x.size(); j++) {
         if (x[j] > lb[j])
             infeas = std::max(infeas, z[j]);
         if (x[j] < ub[j])
@@ -1301,7 +1314,7 @@ double PrimalResidual(const Model& model, const Vector& x) {
     assert(x.size() == AIt.rows());
 
     double res = 0.0;
-    for (Int i = 0; i < b.size(); i++) {
+    for (Int i = 0; i < (Int) b.size(); i++) {
         double r = b[i] - DotColumn(AIt, i, x);
         res = std::max(res, std::abs(r));
     }
@@ -1315,7 +1328,7 @@ double DualResidual(const Model& model, const Vector& y, const Vector& z) {
     assert(z.size() == AI.cols());
 
     double res = 0.0;
-    for (Int j = 0; j < c.size(); j++) {
+    for (Int j = 0; j < (Int) c.size(); j++) {
         double r = c[j] - z[j] - DotColumn(AI, j, y);
         res = std::max(res, std::abs(r));
     }

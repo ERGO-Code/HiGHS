@@ -206,6 +206,7 @@ void MultiplyAdd(const SparseMatrix& A, const Vector& rhs, double alpha,
         for (Int j = 0; j < n; j++)
             ScatterColumn(A, j, alpha*rhs[j], lhs);
     }
+    (void)(m);
 }
 
 void AddNormalProduct(const SparseMatrix& A, const double* D, const Vector& rhs,
@@ -219,6 +220,7 @@ void AddNormalProduct(const SparseMatrix& A, const double* D, const Vector& rhs,
         if (D) temp *= D[j]*D[j];
         ScatterColumn(A, j, temp, lhs);
     }
+    (void)(m);
 }
 
 Int TriangularSolve(const SparseMatrix& A, Vector& x, char trans,

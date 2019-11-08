@@ -426,6 +426,7 @@ void IPM::StepSizes(const Step& step) {
     }
     step_primal_ = std::min(alphap, 1.0-1e-6);
     step_dual_   = std::min(alphad, 1.0-1e-6);
+    (void)(mu);
 }
 
 void IPM::MakeStep(const Step& step) {
