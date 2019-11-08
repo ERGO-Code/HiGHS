@@ -68,4 +68,6 @@ TEST_CASE("afiro", "[highs_ipx]") {
   Int cbasis[num_constr], vbasis[num_var];
   lps.GetBasicSolution(xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
   REQUIRE(fabs(xbasic[11]-339.9) < 1);
+
+  (void)(info); //surpress unused variable.
 }
