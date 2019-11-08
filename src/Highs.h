@@ -145,10 +145,13 @@ class Highs {
 				  const std::string& option,
                                   std::string& value);
   
+  const HighsOptions& getHighsOptions() const;
+  
   HighsStatus writeHighsOptions(
 				const std::string filename  //!< the filename
 				);
   
+  //  const HighsInfo& getHighsInfo() const;
   /**
    * Methods for model output
    */

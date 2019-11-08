@@ -106,6 +106,10 @@ HighsStatus Highs::writeHighsOptions(const std::string filename) {
   return reportOptionsToFile(filename, options_.records);
 }
 
+const HighsOptions& Highs::getHighsOptions() const { return options_; }
+
+//const HighsInfo& Highs::getHighsInfo() const { return info_; }
+
 HighsStatus Highs::passModel(const HighsLp& lp) {
   // Copy the LP to the internal LP
   lp_ = lp;
