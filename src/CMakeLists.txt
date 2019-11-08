@@ -112,6 +112,7 @@ set(sources
 )
 
 set(headers
+    interior_point/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
