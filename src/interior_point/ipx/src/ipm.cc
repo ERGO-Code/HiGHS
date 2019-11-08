@@ -16,6 +16,7 @@ struct IPM::Step {
     Step& operator+=(const Step& rhs) {
         x += rhs.x; xl += rhs.xl; xu += rhs.xu;
         y += rhs.y; zl += rhs.zl; zu += rhs.zu;
+        return *this;
     }
 };
 
@@ -472,7 +473,7 @@ void IPM::SolveNewtonSystem(const double* rb, const double* rc,
         if (iterate_->has_barrier_ub(j))
             rhs1[j] -= (su[j] - zu[j]*ruj) / xu[j];
         if (iterate_->StateOf(j) == Iterate::State::fixed)
-            rhs1[j] == 0.0;
+            rhs1[j] = 0.0;
     }
     assert(AllFinite(rhs1));
     if (rb)
