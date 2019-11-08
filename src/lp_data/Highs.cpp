@@ -19,7 +19,6 @@
 #include <sstream>
 
 #include "HConfig.h"
-#include "interior_point/IpxWrapper.h"
 #include "io/Filereader.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLp.h"
@@ -33,6 +32,12 @@
 
 // until add_row_.. functions are moved to HighsLpUtils.h
 #include "simplex/HSimplex.h"
+
+#ifdef IPX_ON
+#include "interior_point/IpxWrapper.h"
+#else
+#include "interior_point/IpxWrapperEmpty.h"
+#endif
 
 Highs::Highs() {
   hmos_.clear();
@@ -1037,7 +1042,6 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
   HighsLogMessage(HighsMessageType::INFO, message.c_str());
 
   if (options_.solver == "ipm") {
-#ifdef IPX_ON
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
     IpxStatus ipx_return = solveModelWithIpx(lp_, solution_, basis_);
     if (ipx_return != IpxStatus::OK) {
@@ -1045,11 +1049,6 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
       return HighsStatus::Error;
     }
     return HighsStatus::OK;
-#else
-    HighsPrintMessage(ML_ALWAYS, "Not starting IPX.\n");
-    return HighsStatus::Error;
-#endif
-    return HighsStatus::Error;
   }
 
   HighsStatus solver_return_status;

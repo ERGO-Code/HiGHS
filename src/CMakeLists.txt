@@ -174,6 +174,9 @@ if (IPX_ON)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     target_link_libraries(libipx libbasiclu)
+else ()
+    set(headers ${headers} interior_point/IpxWrapperEmpty.h)
+    
 endif()
 
 add_library(libhighs ${sources})

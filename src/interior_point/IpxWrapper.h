@@ -5,6 +5,7 @@
 
 #include "interior_point/ipx/include/ipx_status.h"
 #include "interior_point/ipx/src/lp_solver.h"
+#include "interior_point/IpxStatus.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 
