@@ -9,8 +9,6 @@
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 
-enum class IpxStatus { OK, Error, ErrorFreeRow, ErrorOrNotOptimal };
-
 IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
                         std::vector<double>& obj, std::vector<double>& col_lb,
                         std::vector<double>& col_ub, ipx::Int& num_row,
