@@ -14,14 +14,15 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_poin
 # Make test executable
 set(TEST_SOURCES
     TestMain.cpp
-    TestOptions.cpp
-    TestFilereader.cpp
     TestIO.cpp
     TestSort.cpp
+    TestSetup.cpp
+    TestFilereader.cpp
+    TestOptions.cpp
+    TestInfo.cpp
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
-    TestSetup.cpp
     Avgas.cpp)
 
 if (IPX_ON) 

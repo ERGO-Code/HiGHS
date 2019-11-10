@@ -64,7 +64,9 @@ class Highs {
   /**
    * @brief Returns the current model status
    */
-  const HighsModelStatus& getModelStatus() const;
+  const HighsModelStatus& getModelStatus(
+					 const bool scaled_model=false
+					 ) const;
 
   /**
    * @brief Returns the objective function value

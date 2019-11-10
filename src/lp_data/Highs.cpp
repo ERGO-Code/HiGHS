@@ -133,7 +133,23 @@ HighsStatus Highs::writeHighsOptions(const std::string filename) {
 
 const HighsOptions& Highs::getHighsOptions() const { return options_; }
 
-//const HighsInfo& Highs::getHighsInfo() const { return info_; }
+const HighsInfo& Highs::getHighsInfo() const { return info_; }
+
+HighsStatus Highs::getHighsInfoValue(const std::string& info, int& value) {
+  if (getInfoValue(info, info_.records, value) == InfoStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::getHighsInfoValue(const std::string& info, double& value) {
+  if (getInfoValue(info, info_.records, value) == InfoStatus::OK)
+    return HighsStatus::OK;
+  return HighsStatus::Error;
+}
+
+HighsStatus Highs::writeHighsInfo(const std::string filename) {
+  return reportInfoToFile(filename, info_.records);
+}
 
 HighsStatus Highs::passModel(const HighsLp& lp) {
   // Copy the LP to the internal LP
@@ -532,7 +548,13 @@ const HighsSolution& Highs::getSolution() const { return solution_; }
 
 const HighsBasis& Highs::getBasis() const { return basis_; }
 
-const HighsModelStatus& Highs::getModelStatus() const { return model_status_; }
+const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
+  if (scaled_model) {
+    return model_status_;
+  } else {
+    return model_status_;
+  }
+}
 
 double Highs::getObjectiveValue() const {
   if (hmos_.size() > 0) {
