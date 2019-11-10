@@ -22,8 +22,9 @@ std::string optionEntryType2string(const HighsOptionType type) {
     return "int";
   } else if (type == HighsOptionType::DOUBLE) {
     return "double";
-  } else
+  } else {
     return "string";
+  }
 }
 
 bool commandLineOffChooseOnOk(const string& value) {

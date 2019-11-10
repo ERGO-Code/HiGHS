@@ -18,6 +18,7 @@
 #include "lp_data/HighsModelBuilder.h"
 #include "lp_data/HighsModelObject.h"
 #include "lp_data/HighsOptions.h"
+#include "lp_data/HighsInfo.h"
 #include "lp_data/HighsStatus.h"
 #include "mip/SolveMip.h"
 #include "util/HighsTimer.h"
@@ -101,36 +102,36 @@ class Highs {
    * legal and, for bool/int/double, only if it's of the correct type
    */
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const bool value
+				  const std::string& option, //!< The option name
+                                  const bool value           //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const int value
+				  const std::string& option, //!< The option name
+                                  const int value            //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const double value
+				  const std::string& option, //!< The option name
+                                  const double value         //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const std::string value
+				  const std::string& option, //!< The option name
+                                  const std::string value    //!< The option value
 				  );
 
   HighsStatus setHighsOptionValue(
-				  const std::string& option,
-                                  const char* value
+				  const std::string& option, //!< The option name
+                                  const char* value          //!< The option value
 				  );
 
   HighsStatus readHighsOptions(
-			       const std::string filename  //!< the filename
+			       const std::string filename  //!< The filename
 			       );
 
   HighsStatus passHighsOptions(
-			       const HighsOptions& options  //!< the options
+			       const HighsOptions& options  //!< The options
 			       );
 
    /**
@@ -138,28 +139,50 @@ class Highs {
    * bool/int/double, only if it's of the correct type.
    */
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  bool& value);
+				  const std::string& option, //!< The option name
+                                  bool& value                //!< The option value
+				  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  int& value);
+				  const std::string& option, //!< The option name
+                                  int& value                 //!< The option value
+				  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  double& value);
+				  const std::string& option, //!< The option name
+                                  double& value              //!< The option value
+				  );
 
   HighsStatus getHighsOptionValue(
-				  const std::string& option,
-                                  std::string& value);
+				  const std::string& option, //!< The option name
+                                  std::string& value         //!< The option value
+				  );
   
   const HighsOptions& getHighsOptions() const;
   
   HighsStatus writeHighsOptions(
-				const std::string filename  //!< the filename
+				const std::string filename  //!< The filename
 				);
   
-  //  const HighsInfo& getHighsInfo() const;
+   /**
+   * @brief Gets an option value as int/double, and only if it's of the correct type.
+   */
+
+  const HighsInfo& getHighsInfo() const;
+
+  HighsStatus getHighsInfoValue(
+				const std::string& info, //!< The info name
+				int& value               //!< The info value
+				);
+  
+  HighsStatus getHighsInfoValue(
+				const std::string& info, //!< The info name
+				double& value            //!< The info value
+				);
+  
+  HighsStatus writeHighsInfo(
+			     const std::string filename  //!< The filename
+			     );
   /**
    * Methods for model output
    */
@@ -672,6 +695,7 @@ class Highs {
   HighsTimer timer_;
 
   HighsOptions options_;
+  HighsInfo info_;
 
   // Have copies in the HiGHS class so that const references to them
   // can be passed back, regardless of whether there is a HMO, or not,

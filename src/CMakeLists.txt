@@ -87,6 +87,7 @@ set(sources
     lp_data/HighsModelBuilder.cpp
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
+    lp_data/HighsInfo.cpp
     mip/SolveMip.cpp
     presolve/FindFeasibility.cpp
     presolve/Presolve.cpp
@@ -131,6 +132,7 @@ set(headers
     lp_data/HighsModelObject.h
     lp_data/HighsModelObjectUtils.h
     lp_data/HighsOptions.h
+    lp_data/HighsInfo.h
     lp_data/HighsStatus.h
     lp_data/HighsModelBuilder.h
     mip/SolveMip.h

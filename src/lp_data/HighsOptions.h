@@ -14,9 +14,7 @@
 #ifndef LP_DATA_HIGHS_OPTIONS_H_
 #define LP_DATA_HIGHS_OPTIONS_H_
 
-#include <cstring>
-//#include <stdio.h> // For strrchr
-//#include <string.h> // For strrchr
+#include <cstring> // For strrchr
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
