@@ -8,6 +8,7 @@
 #cmakedefine OSI_FOUND
 #cmakedefine CMAKE_BUILD_TYPE "@CMAKE_BUILD_TYPE@"
 #cmakedefine HiGHSRELEASE
+#cmakedefine IPX_ON
 #define HIGHS_GITHASH "@GITHASH@"
 #define HIGHS_COMPILATION_DATE "@TODAY@"
 #define HIGHS_VERSION_MAJOR @HIGHS_VERSION_MAJOR@

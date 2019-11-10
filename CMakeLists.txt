@@ -78,6 +78,11 @@ if (NOT (${OSI_ROOT} STREQUAL "OFF"))
 endif ()
 unset(OSI_ROOT CACHE)
 
+option(IPN_ON OFF)
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5))
+    set(IPX_ON ON)
+endif()
+
 include(CheckLanguage)
 check_language("Fortran")
 if(CMAKE_Fortran_COMPILER)
@@ -129,6 +134,8 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/external
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
+    ${HIGHS_SOURCE_DIR}/src/interior_point/ipx
+    ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu
     ${HIGHS_SOURCE_DIR}/src/lp_data
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/simplex
