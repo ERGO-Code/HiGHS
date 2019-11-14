@@ -1,3 +1,16 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                       */
+/*    This file is part of the HiGHS linear optimization suite           */
+/*                                                                       */
+/*    Written and engineered 2008-2019 at the University of Edinburgh    */
+/*                                                                       */
+/*    Available as open-source under the MIT License                     */
+/*                                                                       */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/**@file interior_point/IpxWrapper.h
+ * @brief
+ * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
+ */
 #ifndef INTERIOR_POINT_IPX_WRAPPER_H_
 #define INTERIOR_POINT_IPX_WRAPPER_H_
 
@@ -162,9 +175,8 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   return IpxStatus::OK;
 }
 
-IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
-                            HighsBasis& basis    // todo: fill up HighsBasis
-) {
+IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, HighsInfo& highs_info, HighsSolution& highs_solution,
+                            HighsBasis& highs_basis) {
   int debug = 0;
 
 #ifdef CMAKE_BUILD_TYPE
@@ -199,7 +211,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
   }
 
   // Get solver and solution information.
-  ipx::Info info = lps.GetInfo();
+  ipx::Info ipx_info = lps.GetInfo();
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
   // IPM terminated successfully or not. (Only in case of out-of-memory no
@@ -214,21 +226,20 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
 
   lps.GetInteriorSolution(&x[0], &xl[0], &xu[0], &slack[0], &y[0], &zl[0],
                           &zu[0]);
-  // todo: fill up HighsSolution
 
-  if (info.status_crossover == IPX_STATUS_optimal ||
-      info.status_crossover == IPX_STATUS_imprecise) {
-    if (info.status_crossover == IPX_STATUS_imprecise) {
+  if (ipx_info.status_crossover == IPX_STATUS_optimal ||
+      ipx_info.status_crossover == IPX_STATUS_imprecise) {
+    if (ipx_info.status_crossover == IPX_STATUS_imprecise) {
       HighsPrintMessage(
           ML_ALWAYS,
           "Ipx Crossover status imprecise: at least one of primal and dual "
           "infeasibilities of basic solution is not within parameters pfeastol "
           "and dfeastol. Simplex clean up will be required.\n");
-      // const double abs_presidual = info.abs_presidual;
-      // const double abs_dresidual = info.abs_dresidual;
-      // const double rel_presidual = info.rel_presidual;
-      // const double rel_dresidual = info.rel_dresidual;
-      // const double rel_objgap = info.rel_objgap;
+      // const double abs_presidual = ipx_info.abs_presidual;
+      // const double abs_dresidual = ipx_info.abs_dresidual;
+      // const double rel_presidual = ipx_info.rel_presidual;
+      // const double rel_dresidual = ipx_info.rel_dresidual;
+      // const double rel_objgap = ipx_info.rel_objgap;
     }
 
     std::vector<double> xbasic(num_col);
@@ -250,12 +261,12 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
 	     lp.numCol_, (int)num_col, lp.numRow_, (int)num_row);
       return IpxStatus::OK;
     }
-    basis.col_status.resize(num_col);
-    basis.row_status.resize(num_row);
-    solution.col_value.resize(num_col);
-    solution.col_dual.resize(num_col);
-    solution.row_value.resize(num_row);
-    solution.row_dual.resize(num_row);
+    highs_basis.col_status.resize(num_col);
+    highs_basis.row_status.resize(num_row);
+    highs_solution.col_value.resize(num_col);
+    highs_solution.col_dual.resize(num_col);
+    highs_solution.row_value.resize(num_row);
+    highs_solution.row_dual.resize(num_row);
     const ipx::Int ipx_basic = 0;
     const ipx::Int ipx_nonbasic_at_lb = -1;
     const ipx::Int ipx_nonbasic_at_ub = -2;
@@ -276,37 +287,37 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
       double dual_infeasibility = 0;
       if (vbasis[col] == ipx_basic) {
 	// Column is basic
-	basis.col_status[col] = HighsBasisStatus::BASIC;
-	solution.col_value[col] = xbasic[col];
-	solution.col_dual[col] = 0;
+	highs_basis.col_status[col] = HighsBasisStatus::BASIC;
+	highs_solution.col_value[col] = xbasic[col];
+	highs_solution.col_dual[col] = 0;
       } else if (vbasis[col] == ipx_nonbasic_at_lb) {
 	// Column is nonbasic at lower bound
-	basis.col_status[col] = HighsBasisStatus::LOWER;
-	solution.col_value[col] = xbasic[col];
-	solution.col_dual[col] = zbasic[col];
-	dual_infeasibility = max(0.0, -solution.col_dual[col]);
+	highs_basis.col_status[col] = HighsBasisStatus::LOWER;
+	highs_solution.col_value[col] = xbasic[col];
+	highs_solution.col_dual[col] = zbasic[col];
+	dual_infeasibility = max(0.0, -highs_solution.col_dual[col]);
       } else if (vbasis[col] == ipx_nonbasic_at_ub) {
 	// Column is nonbasic at upper bound
-	basis.col_status[col] = HighsBasisStatus::UPPER;
-	solution.col_value[col] = xbasic[col];
-	solution.col_dual[col] = zbasic[col];
-	dual_infeasibility = max(0.0, solution.col_dual[col]);
+	highs_basis.col_status[col] = HighsBasisStatus::UPPER;
+	highs_solution.col_value[col] = xbasic[col];
+	highs_solution.col_dual[col] = zbasic[col];
+	dual_infeasibility = max(0.0, highs_solution.col_dual[col]);
       } else {
 	unrecognised = true;
-	solution.col_value[col] = 0;
-	solution.col_dual[col] = 0;
+	highs_solution.col_value[col] = 0;
+	highs_solution.col_dual[col] = 0;
 	dual_infeasibility = 1e200;
       }
-      primal_infeasibility = max(lp.colLower_[col] - solution.col_value[col], solution.col_value[col] - lp.colUpper_[col]);
+      primal_infeasibility = max(lp.colLower_[col] - highs_solution.col_value[col], highs_solution.col_value[col] - lp.colUpper_[col]);
       if (unrecognised) printf("Unrecognised vbasis value from IPX: ");
       //      if (unrecognised)
 	printf("Col %2d vbasis[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = %11.4g\n",
 	       col, col, (int)vbasis[col], col, xbasic[col], col, zbasic[col]);
       for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) {
 	int row = lp.Aindex_[el];
-	row_activity[row] += solution.col_value[col]*lp.Avalue_[el];
+	row_activity[row] += highs_solution.col_value[col]*lp.Avalue_[el];
       }
-      ipx_objective_value += solution.col_value[col]*lp.colCost_[col];
+      ipx_objective_value += highs_solution.col_value[col]*lp.colCost_[col];
       if (primal_infeasibility > 1e-7) {
 	num_primal_infeasibilities++;
 	max_primal_infeasibility = max(primal_infeasibility, max_primal_infeasibility);
@@ -325,36 +336,36 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
       double dual_infeasibility = 0;
       if (cbasis[row] == ipx_basic) {
 	// Row is basic
-	basis.row_status[row] = HighsBasisStatus::BASIC;
-	solution.row_value[row] = rhs[row]-sbasic[row];
-	solution.row_dual[row] = 0;
+	highs_basis.row_status[row] = HighsBasisStatus::BASIC;
+	highs_solution.row_value[row] = rhs[row]-sbasic[row];
+	highs_solution.row_dual[row] = 0;
       } else if (cbasis[row] == ipx_nonbasic_row) {
 	// Row is nonbasic
 	if (constraint_type[row] == '>') {
 	  // Row is at its lower bound
-	  basis.row_status[row] = HighsBasisStatus::LOWER;
-	  solution.row_value[row] = rhs[row]-sbasic[row];
-	  solution.row_dual[row] = -ybasic[row];
-	  dual_infeasibility = max(0.0, solution.row_dual[row]);
+	  highs_basis.row_status[row] = HighsBasisStatus::LOWER;
+	  highs_solution.row_value[row] = rhs[row]-sbasic[row];
+	  highs_solution.row_dual[row] = -ybasic[row];
+	  dual_infeasibility = max(0.0, highs_solution.row_dual[row]);
 	} else if (constraint_type[row] == '<') {
 	  // Row is at its upper bound
-	  basis.row_status[row] = HighsBasisStatus::UPPER;
-	  solution.row_value[row] = rhs[row]-sbasic[row];
-	  solution.row_dual[row] = -ybasic[row];
-	  dual_infeasibility = max(0.0, -solution.row_dual[row]);
+	  highs_basis.row_status[row] = HighsBasisStatus::UPPER;
+	  highs_solution.row_value[row] = rhs[row]-sbasic[row];
+	  highs_solution.row_dual[row] = -ybasic[row];
+	  dual_infeasibility = max(0.0, -highs_solution.row_dual[row]);
 	} else {
 	  printf("Need to handle constraint_type[%2d] = %d\n", row, constraint_type[row]);
 	}
       } else {
 	unrecognised = true;
-	solution.row_value[row] = 0;
-	solution.row_dual[row] = 0;
+	highs_solution.row_value[row] = 0;
+	highs_solution.row_dual[row] = 0;
 	dual_infeasibility = 1e200;
       }
       if (unrecognised) printf("Unrecognised cbasis value from IPX: ");
-      double row_activity_error = fabs(row_activity[row]-solution.row_value[row]);
+      double row_activity_error = fabs(row_activity[row]-highs_solution.row_value[row]);
       if (row_activity_error>1e-7) printf("\nRow activity error: %2d, %11.4g RHS = %11.4g [%11.4g, %11.4g]\n", row,
-      					  row_activity_error, rhs[row], row_activity[row], solution.row_value[row]);  
+      					  row_activity_error, rhs[row], row_activity[row], highs_solution.row_value[row]);  
       //      if (unrecognised)
       printf("Row %2d cbasis[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
 	     row, row, (int)cbasis[row], row, sbasic[row], row, ybasic[row]);
