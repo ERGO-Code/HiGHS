@@ -54,3 +54,4 @@ def Highs_call(colcost, collower, colupper, rowlower, rowupper, astart, aindex, 
       row_value, row_dual, 
       col_basis, row_basis, ctypes.byref(ctypes.c_int(return_val)))
    return retcode, list(col_value), list(col_dual), list(row_value), list(row_dual), list(col_basis), list(row_basis)
+
