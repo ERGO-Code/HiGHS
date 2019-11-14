@@ -496,11 +496,6 @@ HighsStatus Highs::run() {
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
-  // Possibly write the solution to a file
-  if (hmos_[solved_hmo].options_.write_solution_to_file)
-    writeSolution(hmos_[solved_hmo].options_.solution_file,
-		  hmos_[solved_hmo].options_.write_solution_pretty);
-
   // Report times
   if (hmos_[original_hmo].report_model_operations_clock) {
     std::vector<int> clockList{timer_.presolve_clock, timer_.solve_clock,

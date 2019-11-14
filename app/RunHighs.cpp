@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = false;  // true;//
+  bool force_options_file = true;//false;  // 
   if (force_options_file) {
     printf(
         "In main: set options.options_file = Options.set so vscode can be "
@@ -137,6 +137,10 @@ int main(int argc, char** argv) {
     }
     message << std::endl;
     std::cout << message.str();
+
+  // Possibly write the solution to a file
+  if (options.write_solution_to_file)
+    highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
   return (int)run_status;
 }
