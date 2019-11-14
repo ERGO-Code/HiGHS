@@ -21,6 +21,7 @@
 #include "interior_point/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
+#include "lp_data/HighsSolution.h"
 
 IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
                         std::vector<double>& obj, std::vector<double>& col_lb,
@@ -120,11 +121,11 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
     Ap[col+1] = Ap[col] + sizes[col];
     printf("Struc Ap[%2d] = %2d; Al[%2d] = %2d\n", col, (int)Ap[col], col, (int)sizes[col]);
   }
-  for (int col = lp.numCol_; col <= (int)num_col; col++) {
-    Ap[col] = Ap[col - 1] + 1;
+  for (int col = lp.numCol_; col < (int)num_col; col++) {
+    Ap[col+1] = Ap[col] + 1;
     printf("Slack Ap[%2d] = %2d\n", col, (int)Ap[col]);
   }
-  
+  printf("Fictn Ap[%2d] = %2d\n", (int)num_col, (int)Ap[num_col]);
   for (int k = 0; k < nnz; k++) {
     int row = lp.Aindex_[k];
     if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
@@ -383,6 +384,14 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
     }
     printf("IPX objective =            %g\n", ipx_objective_value);
     printf("  ||row activity error|| = %g\n", norm_row_activity_error);
+
+    HighsSolutionParams solution_params;
+    
+    solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+    solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+    solution_params.iteration_count = 0;
+    
+    analyseHighsSolution(lp, highs_basis, highs_solution, solution_params, 2, "After IPX");
   }
   return IpxStatus::OK;
 }
