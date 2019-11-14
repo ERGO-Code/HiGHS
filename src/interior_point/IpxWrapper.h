@@ -102,12 +102,16 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   Ax.reserve(nnz + num_slack);
 
   // Set starting points of original and newly introduced columns.
-  for (int col = 1; col <= lp.numCol_; col++)
-    Ap[col] = lp.Astart_[col - 1] + sizes[col - 1];
+  Ap[0] = 0;
+  for (int col = 0; col < lp.numCol_; col++) {
+    Ap[col+1] = Ap[col] + sizes[col];
+    printf("Struc Ap[%2d] = %2d; Al[%2d] = %2d\n", col, (int)Ap[col], col, (int)sizes[col]);
+  }
   for (int col = lp.numCol_; col <= (int)num_col; col++) {
     Ap[col] = Ap[col - 1] + 1;
+    printf("Slack Ap[%2d] = %2d\n", col, (int)Ap[col]);
   }
-
+  
   for (int k = 0; k < nnz; k++) {
     int row = lp.Aindex_[k];
     if (lp.rowLower_[row] > -HIGHS_CONST_INF ||
@@ -144,6 +148,17 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   obj = lp.colCost_;
   obj.insert(obj.end(), num_slack, 0);
+  printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col, (int)num_row, (int)Ap[num_col]);
+  for (int col = 0; col < num_col; col++)
+    printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col, col_lb[col], col_ub[col], obj[col], (int)Ap[col]);
+  for (int row = 0; row < num_row; row++) 
+    printf("Row %2d: RHS = %11.4g; Type = %d\n", row, rhs[row], constraint_type[row]);
+  for (int col = 0; col < num_col; col++) {
+    for (int el = Ap[col]; el < Ap[col+1]; el++) {
+      printf("El %2d: [%2d, %11.4g]\n", el, (int)Ai[el], Ax[el]);
+    }
+  }
+
   return IpxStatus::OK;
 }
 
@@ -244,6 +259,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
     const ipx::Int ipx_basic = 0;
     const ipx::Int ipx_nonbasic_at_lb = -1;
     const ipx::Int ipx_nonbasic_at_ub = -2;
+    const ipx::Int ipx_nonbasic_row = -1;
     double ipx_objective_value = lp.offset_;
     std::vector<double> row_activity;
     row_activity.assign(num_row, 0);
@@ -310,20 +326,25 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
       if (cbasis[row] == ipx_basic) {
 	// Row is basic
 	basis.row_status[row] = HighsBasisStatus::BASIC;
-	solution.row_value[row] = -sbasic[row];
+	solution.row_value[row] = rhs[row]-sbasic[row];
 	solution.row_dual[row] = 0;
-      } else if (cbasis[row] == ipx_nonbasic_at_lb) {
-	// Row is nonbasic at lower bound
-	basis.row_status[row] = HighsBasisStatus::LOWER;
-	solution.row_value[row] = lp.rowLower_[row]-sbasic[row];
-	solution.row_dual[row] = -ybasic[row];
-	dual_infeasibility = max(0.0, solution.row_dual[row]);
-      } else if (cbasis[row] == ipx_nonbasic_at_ub) {
-	// Row is nonbasic at upper bound
-	basis.row_status[row] = HighsBasisStatus::UPPER;
-	solution.row_value[row] = lp.rowUpper_[row]-sbasic[row];
-	solution.row_dual[row] = -ybasic[row];
-	dual_infeasibility = max(0.0, -solution.row_dual[row]);
+      } else if (cbasis[row] == ipx_nonbasic_row) {
+	// Row is nonbasic
+	if (constraint_type[row] == '>') {
+	  // Row is at its lower bound
+	  basis.row_status[row] = HighsBasisStatus::LOWER;
+	  solution.row_value[row] = rhs[row]-sbasic[row];
+	  solution.row_dual[row] = -ybasic[row];
+	  dual_infeasibility = max(0.0, solution.row_dual[row]);
+	} else if (constraint_type[row] == '<') {
+	  // Row is at its upper bound
+	  basis.row_status[row] = HighsBasisStatus::UPPER;
+	  solution.row_value[row] = rhs[row]-sbasic[row];
+	  solution.row_dual[row] = -ybasic[row];
+	  dual_infeasibility = max(0.0, -solution.row_dual[row]);
+	} else {
+	  printf("Need to handle constraint_type[%2d] = %d\n", row, constraint_type[row]);
+	}
       } else {
 	unrecognised = true;
 	solution.row_value[row] = 0;
@@ -331,12 +352,12 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, HighsSolution& solution,
 	dual_infeasibility = 1e200;
       }
       if (unrecognised) printf("Unrecognised cbasis value from IPX: ");
+      double row_activity_error = fabs(row_activity[row]-solution.row_value[row]);
+      if (row_activity_error>1e-7) printf("\nRow activity error: %2d, %11.4g RHS = %11.4g [%11.4g, %11.4g]\n", row,
+      					  row_activity_error, rhs[row], row_activity[row], solution.row_value[row]);  
       //      if (unrecognised)
       printf("Row %2d cbasis[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
 	     row, row, (int)cbasis[row], row, sbasic[row], row, ybasic[row]);
-      double row_activity_error = fabs(row_activity[row]-solution.row_value[row]);
-      //      if (row_activity_error>1e-7) printf("Row activity error: %2d, %11.4g [%11.4g, %11.4g]\n", row,
-      //					  row_activity_error, row_activity[row], solution.row_value[row]);  
       norm_row_activity_error += row_activity_error;
       if (primal_infeasibility > 1e-7) {
 	num_primal_infeasibilities++;
