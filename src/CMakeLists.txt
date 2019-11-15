@@ -127,6 +127,7 @@ set(headers
     io/LoadOptions.h
     lp_data/HConst.h
     lp_data/HighsLp.h
+    lp_data/HighsSolution.h
     lp_data/HighsLpUtils.h
     lp_data/HighsModelUtils.h
     lp_data/HighsModelObject.h
