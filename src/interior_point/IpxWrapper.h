@@ -274,20 +274,9 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
     const ipx::Int ipx_nonbasic_at_lb = -1;
     const ipx::Int ipx_nonbasic_at_ub = -2;
     const ipx::Int ipx_nonbasic_row = -1;
-    double ipx_objective_value = lp.offset_;
-    std::vector<double> row_activity;
-    row_activity.assign(num_row, 0);
     
-    int num_primal_infeasibilities = 0;
-    int num_dual_infeasibilities = 0;
-    double max_primal_infeasibility = 0;
-    double max_dual_infeasibility = 0;
-    double sum_primal_infeasibilities = 0;
-    double sum_dual_infeasibilities = 0;
     for (int col=0; col<num_col; col++) {
       bool unrecognised = false;
-      double primal_infeasibility = 0;
-      double dual_infeasibility = 0;
       if (vbasis[col] == ipx_basic) {
 	// Column is basic
 	highs_basis.col_status[col] = HighsBasisStatus::BASIC;
@@ -298,45 +287,23 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	highs_basis.col_status[col] = HighsBasisStatus::LOWER;
 	highs_solution.col_value[col] = xbasic[col];
 	highs_solution.col_dual[col] = zbasic[col];
-	dual_infeasibility = max(0.0, -highs_solution.col_dual[col]);
       } else if (vbasis[col] == ipx_nonbasic_at_ub) {
 	// Column is nonbasic at upper bound
 	highs_basis.col_status[col] = HighsBasisStatus::UPPER;
 	highs_solution.col_value[col] = xbasic[col];
 	highs_solution.col_dual[col] = zbasic[col];
-	dual_infeasibility = max(0.0, highs_solution.col_dual[col]);
       } else {
 	unrecognised = true;
 	highs_solution.col_value[col] = 0;
 	highs_solution.col_dual[col] = 0;
-	dual_infeasibility = 1e200;
       }
-      primal_infeasibility = max(lp.colLower_[col] - highs_solution.col_value[col], highs_solution.col_value[col] - lp.colUpper_[col]);
       if (unrecognised) printf("Unrecognised vbasis value from IPX: [%11.4g, %11.4g]", lp.colLower_[col], lp.colUpper_[col]);
       if (unrecognised)
 	printf("Col %2d vbasis[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = %11.4g\n",
 	       col, col, (int)vbasis[col], col, xbasic[col], col, zbasic[col]);
-      for (int el=lp.Astart_[col]; el<lp.Astart_[col+1]; el++) {
-	int row = lp.Aindex_[el];
-	row_activity[row] += highs_solution.col_value[col]*lp.Avalue_[el];
-      }
-      ipx_objective_value += highs_solution.col_value[col]*lp.colCost_[col];
-      if (primal_infeasibility > 1e-7) {
-	num_primal_infeasibilities++;
-	max_primal_infeasibility = max(primal_infeasibility, max_primal_infeasibility);
-	sum_primal_infeasibilities += primal_infeasibility;
-      }
-      if (dual_infeasibility > 1e-7) {
-	num_dual_infeasibilities++;
-	max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-	sum_dual_infeasibilities += dual_infeasibility;
-      }
     }
-    double norm_row_activity_error = 0;
     for (int row=0; row<num_row; row++) {
       bool unrecognised = false;
-      double primal_infeasibility = 0;
-      double dual_infeasibility = 0;
       if (cbasis[row] == ipx_basic) {
 	// Row is basic
 	highs_basis.row_status[row] = HighsBasisStatus::BASIC;
@@ -349,20 +316,17 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	  highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	  highs_solution.row_value[row] = rhs[row]-sbasic[row];
 	  highs_solution.row_dual[row] = -ybasic[row];
-	  dual_infeasibility = max(0.0, highs_solution.row_dual[row]);
 	} else if (constraint_type[row] == '<') {
 	  // Row is at its upper bound
 	  highs_basis.row_status[row] = HighsBasisStatus::UPPER;
 	  highs_solution.row_value[row] = rhs[row]-sbasic[row];
 	  highs_solution.row_dual[row] = -ybasic[row];
-	  dual_infeasibility = max(0.0, -highs_solution.row_dual[row]);
 	} else if (constraint_type[row] == '=') {
 	  // Row is at its fixed value or boxed
 	  if (lp.rowLower_[row] == lp.rowUpper_[row]) {
 	    highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	    highs_solution.row_value[row] = rhs[row]-sbasic[row];
 	    highs_solution.row_dual[row] = -ybasic[row];
-	    dual_infeasibility = 0;
 	  } else {
 	    //	    printf("Row is at a boxed value\n");
 	    assert(lp.rowLower_[row] > -HIGHS_CONST_INF);
@@ -374,13 +338,11 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	      highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	      highs_solution.row_value[row] = value;
 	      highs_solution.row_dual[row] = -ybasic[row];
-	      dual_infeasibility = max(0.0, highs_solution.row_dual[row]);
 	    } else {
 	      // Row is at its upper bound
 	      highs_basis.row_status[row] = HighsBasisStatus::UPPER;
 	      highs_solution.row_value[row] = value;
 	      highs_solution.row_dual[row] = -ybasic[row];
-	      dual_infeasibility = max(0.0, -highs_solution.row_dual[row]);
 	    }
 	  }
 	} else {
@@ -391,29 +353,12 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	unrecognised = true;
 	highs_solution.row_value[row] = 0;
 	highs_solution.row_dual[row] = 0;
-	dual_infeasibility = 1e200;
       }
       if (unrecognised) printf("Unrecognised cbasis value from IPX: [%11.4g, %11.4g]", lp.rowLower_[row], lp.rowUpper_[row]);
-      double row_activity_error = fabs(row_activity[row]-highs_solution.row_value[row]);
-      if (row_activity_error>1e-7) printf("\nRow activity error: %2d, %11.4g RHS = %11.4g [%11.4g, %11.4g]\n", row,
-      					  row_activity_error, rhs[row], row_activity[row], highs_solution.row_value[row]);  
       if (unrecognised)
 	printf("Row %2d cbasis[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
 	       row, row, (int)cbasis[row], row, sbasic[row], row, ybasic[row]);
-      norm_row_activity_error += row_activity_error;
-      if (primal_infeasibility > 1e-7) {
-	num_primal_infeasibilities++;
-	max_primal_infeasibility = max(primal_infeasibility, max_primal_infeasibility);
-	sum_primal_infeasibilities += primal_infeasibility;
-      }
-      if (dual_infeasibility > 1e-7) {
-	num_dual_infeasibilities++;
-	max_dual_infeasibility = max(dual_infeasibility, max_dual_infeasibility);
-	sum_dual_infeasibilities += dual_infeasibility;
-      }
     }
-    printf("IPX objective =            %g\n", ipx_objective_value);
-    printf("  ||row activity error|| = %g\n", norm_row_activity_error);
 
     HighsSolutionParams solution_params;
     
