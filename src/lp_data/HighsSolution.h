@@ -23,7 +23,7 @@
 struct HighsSolutionParams {
   double primal_objective_value;
   double dual_objective_value;
-  double iteration_count;
+  int iteration_count;
   double primal_feasibility_tolerance;
   double dual_feasibility_tolerance;
   int num_primal_infeasibilities;
@@ -175,8 +175,9 @@ HighsModelStatus analyseHighsSolution(const HighsLp& lp,
   int num_large_nonzero_basic_duals = 0;
   double max_nonzero_basic_dual = 0;
   double sum_nonzero_basic_duals = 0;
-  double primal_objective_value = 0;
-  double dual_objective_value = 0;
+  // Initialise the objective value calculations
+  double primal_objective_value = lp.offset_;
+  double dual_objective_value = lp.offset_;
   for (int iCol = 0; iCol < lp.numCol_; iCol++) {
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
@@ -351,17 +352,16 @@ HighsModelStatus analyseHighsSolution(const HighsLp& lp,
       printf("\n");
     }
   }
-  primal_objective_value += lp.offset_;
-  dual_objective_value += lp.offset_;
-  double relative_objective_difference =
-    fabs(primal_objective_value-dual_objective_value)/
-    max(max(1.0, fabs(primal_objective_value)), fabs(dual_objective_value));
+  // Save the solution data
+  solution_params.primal_objective_value = primal_objective_value;
+  solution_params.dual_objective_value = dual_objective_value;
   solution_params.num_primal_infeasibilities = num_primal_infeasibilities;
   solution_params.max_primal_infeasibility = max_primal_infeasibility;
   solution_params.sum_primal_infeasibilities = sum_primal_infeasibilities;
   solution_params.num_dual_infeasibilities = num_dual_infeasibilities;
   solution_params.max_dual_infeasibility = max_dual_infeasibility;
   solution_params.sum_dual_infeasibilities = sum_dual_infeasibilities;
+
   HighsModelStatus model_status;
   bool primal_feasible =
       num_primal_infeasibilities ==
@@ -405,6 +405,9 @@ HighsModelStatus analyseHighsSolution(const HighsLp& lp,
                     num_dual_residual, max_dual_residual, sum_dual_residual,
                     num_dual_infeasibilities, max_dual_infeasibility,
                     sum_dual_infeasibilities);
+    double relative_objective_difference =
+      fabs(primal_objective_value-dual_objective_value)/
+      max(max(1.0, fabs(primal_objective_value)), fabs(dual_objective_value));
     HighsLogMessage(HighsMessageType::INFO,
                     "Relative objective difference = %.4g",
                     relative_objective_difference);

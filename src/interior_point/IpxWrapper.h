@@ -259,23 +259,19 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
     // 
     // Check that IPX has the same number of rows and columns
     // Sometimes it won't, but can't handle that yet!
-    highs_basis.col_status.resize(num_col);
-    highs_basis.row_status.resize(num_row);
-    highs_solution.col_value.resize(num_col);
-    highs_solution.col_dual.resize(num_col);
-    highs_solution.row_value.resize(num_row);
-    highs_solution.row_dual.resize(num_row);
+    highs_basis.col_status.resize(lp.numCol_);
+    highs_basis.row_status.resize(lp.numRow_);
+    highs_solution.col_value.resize(lp.numCol_);
+    highs_solution.col_dual.resize(lp.numCol_);
+    highs_solution.row_value.resize(lp.numRow_);
+    highs_solution.row_dual.resize(lp.numRow_);
     const ipx::Int ipx_basic = 0;
     const ipx::Int ipx_nonbasic_at_lb = -1;
     const ipx::Int ipx_nonbasic_at_ub = -2;
-    const ipx::Int ipx_nonbasic_row = -1;
 
-    bool get_row_activities = num_row < lp.numRow_ || num_col > lp.numCol_;
     vector<double> row_activity;
-    if (get_row_activities) {
-      printf("Get row activities to accounting for boxed and free rows\n");
-      row_activity.assign(lp.numRow_, 0);
-    }
+    bool get_row_activities = num_row < lp.numRow_ || num_col > lp.numCol_;
+    if (get_row_activities) row_activity.assign(lp.numRow_, 0);
     for (int col = 0; col < lp.numCol_; col++) {
       bool unrecognised = false;
       if (vbasis[col] == ipx_basic) {
@@ -298,7 +294,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	highs_solution.col_value[col] = 0;
 	highs_solution.col_dual[col] = 0;
       }
-      if (unrecognised) printf("Unrecognised vbasis value from IPX: [%11.4g, %11.4g]", lp.colLower_[col], lp.colUpper_[col]);
+      if (unrecognised) printf("Unrecognised vbasis value from IPX: [%11.4g, %11.4g]\n", lp.colLower_[col], lp.colUpper_[col]);
       if (unrecognised)
 	printf("Col %2d vbasis[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = %11.4g\n",
 	       col, col, (int)vbasis[col], col, xbasic[col], col, zbasic[col]);
@@ -312,10 +308,14 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
     }
     int ipx_row = 0;
     int ipx_slack = lp.numCol_;
+    int num_boxed_rows = 0;
+    int num_boxed_rows_basic = 0;
+    int num_boxed_row_slacks_basic = 0;
     for (int row = 0; row < lp.numRow_; row++) {
       bool unrecognised = false;
       double lower = lp.rowLower_[row];
       double upper = lp.rowUpper_[row];
+      int this_ipx_row = ipx_row;
       if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
 	// Free row - removed by IPX so make it basic at its row activity
 	highs_basis.row_status[row] = HighsBasisStatus::BASIC;
@@ -325,19 +325,29 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	// Non-free row, so IPX will have it
 	if ((lower > -HIGHS_CONST_INF && upper < HIGHS_CONST_INF) && (lower < upper)) {
 	  // Boxed row - look at its slack
-	  double row_value = rhs[ipx_row]-sbasic[ipx_row];
-	  double row_dual = -ybasic[ipx_row];
+	  num_boxed_rows++;
 	  double slack_value = xbasic[ipx_slack];
 	  double slack_dual = zbasic[ipx_slack];
+	  /*
+	  double row_value = rhs[ipx_row]-sbasic[ipx_row];
+	  double row_dual = -ybasic[ipx_row];
 	  printf("Boxed row: %2d [%11.4g, %11.4g]\n", row, lower, upper);
 	  printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; cbasis = %d\n",
 		 row_value, row_activity[row], rhs[ipx_row], row_dual, (int)cbasis[ipx_row]);
 	  printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] vbasis = %d\n",
 		 slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)vbasis[ipx_slack]);
+	  */
 	  double value = slack_value;
 	  double dual = -slack_dual;
 	  if (cbasis[ipx_row] == ipx_basic) {
 	    // Row is basic
+	    num_boxed_rows_basic++;
+	    highs_basis.row_status[row] = HighsBasisStatus::BASIC;
+	    highs_solution.row_value[row] = value;
+	    highs_solution.row_dual[row] = 0;
+	  } else if (vbasis[ipx_slack] == ipx_basic) {
+	    // Slack is basic
+	    num_boxed_row_slacks_basic++;
 	    highs_basis.row_status[row] = HighsBasisStatus::BASIC;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = 0;
@@ -346,12 +356,23 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	    highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
-	  } else {
+	  } else if (vbasis[ipx_slack] == ipx_nonbasic_at_ub) {
 	    // Slack is at its upper bound
 	    assert(vbasis[ipx_slack] == ipx_nonbasic_at_ub);
 	    highs_basis.row_status[row] = HighsBasisStatus::UPPER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
+	  } else {
+	    unrecognised = true;
+	    printf("\nError in IPX conversion: Row %2d (IPX row %2d) has unrecognised value vbasis[%2d] = %d\n",
+		   row, ipx_row, ipx_slack, (int)vbasis[ipx_slack]);
+	    double row_value = rhs[ipx_row]-sbasic[ipx_row];
+	    double row_dual = -ybasic[ipx_row];
+	    printf("Boxed row: %2d [%11.4g, %11.4g]\n", row, lower, upper);
+	    printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; cbasis = %d\n",
+		   row_value, row_activity[row], rhs[ipx_row], row_dual, (int)cbasis[ipx_row]);
+	    printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] vbasis = %d\n",
+		   slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)vbasis[ipx_slack]);
 	  }
 	  // Update the slack to be used for boxed rows
 	  ipx_slack++;
@@ -362,39 +383,44 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	  highs_solution.row_dual[row] = 0;
 	} else {
 	  // Nonbasic row at fixed value, lower bound or upper bound
-	  assert(cbasis[ipx_row] == ipx_nonbasic_row);
+	  assert(cbasis[ipx_row] == -1);// const ipx::Int ipx_nonbasic_row = -1;
 	  double value = rhs[ipx_row]-sbasic[ipx_row];
 	  double dual = -ybasic[ipx_row];
-	  if (constraint_type[row] == '>') {
+	  if (constraint_type[ipx_row] == '>') {
 	    // Row is at its lower bound
 	    highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
-	  } else if (constraint_type[row] == '<') {
+	  } else if (constraint_type[ipx_row] == '<') {
 	    // Row is at its upper bound
 	    highs_basis.row_status[row] = HighsBasisStatus::UPPER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
-	  } else if (constraint_type[row] == '=') {
+	  } else if (constraint_type[ipx_row] == '=') {
 	    // Row is at its fixed value
 	    highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
 	  } else {
 	    unrecognised = true;
-	    printf("\nError in IPX conversion: cannot handle constraint_type[%2d] = %d", row, constraint_type[row]);
+	    printf("\nError in IPX conversion: Row %2d: cannot handle constraint_type[%2d] = %d\n", row, ipx_row, constraint_type[ipx_row]);
 	  }
 	}
 	  // Update the IPX row index
 	ipx_row++;
       }
-      if (unrecognised) printf("Unrecognised cbasis value from IPX: [%11.4g, %11.4g]", lp.rowLower_[row], lp.rowUpper_[row]);
+      if (unrecognised) printf("Unrecognised cbasis value from IPX: [%11.4g, %11.4g]\n", lp.rowLower_[row], lp.rowUpper_[row]);
       if (unrecognised)
 	printf("Row %2d cbasis[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
-	       row, row, (int)cbasis[row], row, sbasic[row], row, ybasic[row]);
+	       row, this_ipx_row, (int)cbasis[this_ipx_row], this_ipx_row, sbasic[this_ipx_row], this_ipx_row, ybasic[this_ipx_row]);
     }
     assert(ipx_row == num_row);
     assert(ipx_slack == num_col);
+
+    if (num_boxed_rows)
+      printf("Of %d boxed rows: %d are basic and %d have basic slacks\n", 
+	     num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
+
     HighsSolutionParams solution_params;
     
     solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
