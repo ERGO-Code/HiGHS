@@ -162,7 +162,9 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
 
   obj = lp.colCost_;
   obj.insert(obj.end(), num_slack, 0);
+#ifdef HiGHSDEV
   printf("IPX model has %d columns, %d rows and %d nonzeros\n", (int)num_col, (int)num_row, (int)Ap[num_col]);
+#endif  
   /*
   for (int col = 0; col < num_col; col++)
     printf("Col %2d: [%11.4g, %11.4g] Cost = %11.4g; Start = %d\n", col, col_lb[col], col_ub[col], obj[col], (int)Ap[col]);
@@ -186,13 +188,22 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
   debug = 1;
 #endif
 
+  // Create the LpSolver instance
   ipx::LpSolver lps;
+  // Set IPX parameters
+  //
+  // Cannot set internal IPX parameters directly since they are
+  // private, so create instance of parameters
   ipx::Parameters parameters;
-
-  // todo: set tolerances
-
   // parameters.crossover = 1; by default
   if (debug) parameters.debug = 1;
+  // Set IPX parameters from options
+  // Just test feasibility and optimality tolerances for now
+  // ToDo Set more parameters
+  parameters.ipm_feasibility_tol = options.primal_feasibility_tolerance;
+  parameters.ipm_optimality_tol = options.dual_feasibility_tolerance;
+  // Set the internal IPX parameters
+  lps.SetParameters(parameters);
 
   ipx::Int num_col, num_row;
   std::vector<ipx::Int> Ap, Ai;
@@ -215,6 +226,8 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 
   // Get solver and solution information.
   ipx::Info ipx_info = lps.GetInfo();
+  // Struct ipx_info defined in ipx/include/ipx_info.h
+
   // Get the interior solution (available if IPM was started).
   // GetInteriorSolution() returns the final IPM iterate, regardless if the
   // IPM terminated successfully or not. (Only in case of out-of-memory no
@@ -256,21 +269,29 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
     
     // Extract the basis and primal/dual solution from IPX into the
     // HighsSolution and HighsBasis
-    // 
-    // Check that IPX has the same number of rows and columns
-    // Sometimes it won't, but can't handle that yet!
+    //
+    // Resize the HighsSolution and HighsBasis
     highs_basis.col_status.resize(lp.numCol_);
     highs_basis.row_status.resize(lp.numRow_);
     highs_solution.col_value.resize(lp.numCol_);
     highs_solution.col_dual.resize(lp.numCol_);
     highs_solution.row_value.resize(lp.numRow_);
     highs_solution.row_dual.resize(lp.numRow_);
+    // Set up meaningful names for values of vbasis and cbasis to be
+    // used later in comparisons
     const ipx::Int ipx_basic = 0;
     const ipx::Int ipx_nonbasic_at_lb = -1;
     const ipx::Int ipx_nonbasic_at_ub = -2;
 
+    // Row activities are needed to set activity values of free rows -
+    // which are ignored by IPX
     vector<double> row_activity;
-    bool get_row_activities = num_row < lp.numRow_ || num_col > lp.numCol_;
+    bool get_row_activities = num_row < lp.numRow_;
+#ifdef HiGHSDEV
+    // For debugging, get the row activities if there are any boxed
+    // constraints
+    get_row_activities = get_row_activities || num_col > lp.numCol_;
+#endif    
     if (get_row_activities) row_activity.assign(lp.numRow_, 0);
     for (int col = 0; col < lp.numCol_; col++) {
       bool unrecognised = false;
@@ -291,13 +312,21 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	highs_solution.col_dual[col] = zbasic[col];
       } else {
 	unrecognised = true;
-	highs_solution.col_value[col] = 0;
-	highs_solution.col_dual[col] = 0;
+#ifdef HiGHSDEV
+	printf("\nError in IPX conversion: Unrecognised value vbasis[%2d] = %d\n", col, (int)vbasis[col]);
+#endif	    
       }
-      if (unrecognised) printf("Unrecognised vbasis value from IPX: [%11.4g, %11.4g]\n", lp.colLower_[col], lp.colUpper_[col]);
+#ifdef HiGHSDEV
+      if (unrecognised) printf("Bounds [%11.4g, %11.4g]\n", lp.colLower_[col], lp.colUpper_[col]);
       if (unrecognised)
 	printf("Col %2d vbasis[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = %11.4g\n",
 	       col, col, (int)vbasis[col], col, xbasic[col], col, zbasic[col]);
+#endif
+      assert(!unrecognised);
+      if (unrecognised) {
+	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised vbasis value from IPX");
+	return IpxStatus::Error;
+      }
       if (get_row_activities) {
 	// Accumulate row activities to assign value to free rows
 	for (int el = lp.Astart_[col]; el < lp.Astart_[col+1]; el++) {
@@ -315,7 +344,9 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
       bool unrecognised = false;
       double lower = lp.rowLower_[row];
       double upper = lp.rowUpper_[row];
+#ifdef HiGHSDEV
       int this_ipx_row = ipx_row;
+#endif      
       if (lower <= -HIGHS_CONST_INF && upper >= HIGHS_CONST_INF) {
 	// Free row - removed by IPX so make it basic at its row activity
 	highs_basis.row_status[row] = HighsBasisStatus::BASIC;
@@ -364,6 +395,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	    highs_solution.row_dual[row] = dual;
 	  } else {
 	    unrecognised = true;
+#ifdef HiGHSDEV
 	    printf("\nError in IPX conversion: Row %2d (IPX row %2d) has unrecognised value vbasis[%2d] = %d\n",
 		   row, ipx_row, ipx_slack, (int)vbasis[ipx_slack]);
 	    double row_value = rhs[ipx_row]-sbasic[ipx_row];
@@ -373,6 +405,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 		   row_value, row_activity[row], rhs[ipx_row], row_dual, (int)cbasis[ipx_row]);
 	    printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] vbasis = %d\n",
 		   slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)vbasis[ipx_slack]);
+#endif	    
 	  }
 	  // Update the slack to be used for boxed rows
 	  ipx_slack++;
@@ -403,31 +436,47 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
 	    highs_solution.row_dual[row] = dual;
 	  } else {
 	    unrecognised = true;
+#ifdef HiGHSDEV
 	    printf("\nError in IPX conversion: Row %2d: cannot handle constraint_type[%2d] = %d\n", row, ipx_row, constraint_type[ipx_row]);
+#endif	    
 	  }
 	}
 	  // Update the IPX row index
 	ipx_row++;
       }
-      if (unrecognised) printf("Unrecognised cbasis value from IPX: [%11.4g, %11.4g]\n", lp.rowLower_[row], lp.rowUpper_[row]);
+#ifdef HiGHSDEV
+      if (unrecognised) printf("Bounds [%11.4g, %11.4g]\n", lp.rowLower_[row], lp.rowUpper_[row]);
       if (unrecognised)
 	printf("Row %2d cbasis[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
 	       row, this_ipx_row, (int)cbasis[this_ipx_row], this_ipx_row, sbasic[this_ipx_row], this_ipx_row, ybasic[this_ipx_row]);
+#endif      
+      assert(!unrecognised);
+      if (unrecognised) {
+	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised cbasis value from IPX");
+	return IpxStatus::Error;
+      }
     }
     assert(ipx_row == num_row);
     assert(ipx_slack == num_col);
 
+#ifdef HiGHSDEV
     if (num_boxed_rows)
       printf("Of %d boxed rows: %d are basic and %d have basic slacks\n", 
 	     num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
-
+#endif
     HighsSolutionParams solution_params;
     
+    // Set solution_params for analyseHighsSolution
     solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
     solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-    solution_params.iteration_count = 0;
+    solution_params.iteration_count = (int)ipx_info.iter;
     
     analyseHighsSolution(lp, highs_basis, highs_solution, solution_params, 2, "after IPX");
+    // Extract HighsInfo
+    highs_info.objective_function_value = solution_params.primal_objective_value;
+#ifdef IPX
+    highs_info.ipm_iteration_count = (int)ipx_info.iter;
+#endif
   }
   return IpxStatus::OK;
 }

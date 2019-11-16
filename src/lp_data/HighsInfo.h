@@ -121,12 +121,21 @@ class HighsInfo {
 				   0);
     records.push_back(record_int);
     
+#ifdef IPX
+    record_int = new InfoRecordInt("ipm_iteration_count",
+				   "Iteration count for IPM solver",
+				   advanced, &ipm_iteration_count,
+				   0);
+    records.push_back(record_int);
+#endif    
   }
   std::vector<InfoRecord*> records;
 
   double objective_function_value;
   int simplex_iteration_count;
-  
+#ifdef IPX
+  int ipm_iteration_count;
+#endif  
 };
 
 
