@@ -262,12 +262,22 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
       // const double rel_objgap = ipx_info.rel_objgap;
     }
 
-    std::vector<double> xbasic(num_col);
-    std::vector<double> sbasic(num_row);
-    std::vector<double> ybasic(num_row);
-    std::vector<double> zbasic(num_col);
-    std::vector<ipx::Int> cbasis(num_row);
-    std::vector<ipx::Int> vbasis(num_col);
+    IpxSolution ipx_solution;
+    ipx_solution.num_col = num_col;
+    ipx_solution.num_row = num_row;
+    ipx_solution.xbasic.resize(num_col);
+    ipx_solution.sbasic.resize(num_row);
+    ipx_solution.ybasic.resize(num_row);
+    ipx_solution.zbasic.resize(num_col);
+    ipx_solution.cbasis.resize(num_row);
+    ipx_solution.vbasis.resize(num_col);
+
+    std::vector<double>& xbasic = ipx_solution.xbasic;
+    std::vector<double>& sbasic = ipx_solution.sbasic;
+    std::vector<double>& ybasic = ipx_solution.ybasic;
+    std::vector<double>& zbasic = ipx_solution.zbasic;
+    std::vector<ipx::Int>& cbasis = ipx_solution.cbasis;
+    std::vector<ipx::Int>& vbasis = ipx_solution.vbasis;
 
     lps.GetBasicSolution(&xbasic[0], &sbasic[0], &ybasic[0], &zbasic[0], &cbasis[0], &vbasis[0]);
     
@@ -281,6 +291,10 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
     highs_solution.col_dual.resize(lp.numCol_);
     highs_solution.row_value.resize(lp.numRow_);
     highs_solution.row_dual.resize(lp.numRow_);
+
+    ipxToHighsBasicSolution(lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
+
+    /*
     // Set up meaningful names for values of vbasis and cbasis to be
     // used later in comparisons
     const ipx::Int ipx_basic = 0;
@@ -372,6 +386,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
 	  printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] vbasis = %d\n",
 		 slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)vbasis[ipx_slack]);
 	  */
+	  /*
 	  double value = slack_value;
 	  double dual = -slack_dual;
 	  if (cbasis[ipx_row] == ipx_basic) {
@@ -468,6 +483,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
       printf("Of %d boxed rows: %d are basic and %d have basic slacks\n", 
 	     num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
 #endif
+	  */
     int report_level = -1;
 #ifdef HiGHSDEV
     report_level = 1;
