@@ -7,25 +7,26 @@
 /*    Available as open-source under the MIT License                     */
 /*                                                                       */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/**@file interior_point/IpxWrapperEmpty.h
+/**@file interior_point/IpxSolution.h
  * @brief
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
-#ifndef INTERIOR_POINT_IPX_WRAPPER_EMPTY_H_
-#define INTERIOR_POINT_IPX_WRAPPER_EMPTY_H_
+#ifndef INTERIOR_POINT_IPX_SOLUTION_H_
+#define INTERIOR_POINT_IPX_SOLUTION_H_
 
-#include "lp_data/HConst.h"
-#include "lp_data/HighsLp.h"
-#include "interior_point/IpxStatus.h"
+#include <stdint.h>
+#include <vector>
+typedef int64_t ipxint;
 
-IpxStatus solveModelWithIpx(const HighsLp& lp,
-			    const HighsOptions& options,
-			    HighsModelStatus& highs_model_status,
-			    HighsInfo& info,
-			    HighsSolution& solution,
-                            HighsBasis& basis) {
-  highs_model_status = HighsModelStatus::NotSet;
-  return IpxStatus::Error;
-}
+struct IpxSolution {
+  ipxint num_col;
+  ipxint num_row;
+  std::vector<double> xbasic;
+  std::vector<double> sbasic;
+  std::vector<double> ybasic;
+  std::vector<double> zbasic;
+  std::vector<ipxint> cbasis;
+  std::vector<ipxint> vbasis;
+};
 
 #endif

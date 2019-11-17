@@ -440,13 +440,29 @@ HighsStatus Highs::run() {
               presolve_info.presolve_[0].getRowStatus();
           hmos_[original_hmo].basis_.valid_ = true;
           // Analyse the Highs basic solution returned from postsolve
-          HighsSimplexInterface simplex_interface(hmos_[original_hmo]);
           int report_level = -1;
 #ifdef HiGHSDEV
           report_level = 1;
 #endif
-          simplex_interface.analyseHighsSolutionAndBasis(
-              report_level, "after returning from postsolve");
+	  HighsSimplexInfo& simplex_info = hmos_[original_hmo].simplex_info_;
+	  HighsSolutionParams solution_params;
+	  solution_params.primal_feasibility_tolerance =
+	    hmos_[original_hmo].options_.primal_feasibility_tolerance;
+	  solution_params.dual_feasibility_tolerance =
+	    hmos_[original_hmo].options_.dual_feasibility_tolerance;
+	  solution_params.iteration_count = simplex_info.iteration_count;
+	  hmos_[original_hmo].model_status_ = 
+	    analyseHighsSolution(hmos_[original_hmo].lp_,
+				 hmos_[original_hmo].basis_,
+				 hmos_[original_hmo].solution_,
+				 solution_params, report_level, "after returning from postsolve");
+	  simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+	  simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+	  simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+	  simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+	  simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+	  simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
           // Save the options to allow the best simplex strategy to
@@ -1127,7 +1143,8 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
 
   if (options_.solver == "ipm") {
     HighsPrintMessage(ML_ALWAYS, "Starting IPX...\n");
-    IpxStatus ipx_return = solveModelWithIpx(lp_, options_, info_, solution_, basis_);
+    IpxStatus ipx_return = solveModelWithIpx(lp_, options_, model_status_,
+					     info_, solution_, basis_);
     if (ipx_return != IpxStatus::OK) {
       // todo:
       return HighsStatus::Error;

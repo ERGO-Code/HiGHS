@@ -18,6 +18,7 @@
 
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
+#include "interior_point/IpxSolution.h"
 //#include "lp_data/HighsOptions.h"
 
 struct HighsSolutionParams {
@@ -412,29 +413,14 @@ HighsModelStatus analyseHighsSolution(const HighsLp& lp,
                     "Relative objective difference = %.4g",
                     relative_objective_difference);
   } 
-  std::string model_status_str = utilHighsModelStatusToString(model_status);
   HighsLogMessage(HighsMessageType::INFO,
-      "HiGHS basic solution: Iterations = %d; Objective = %.15g; ",
-      solution_params.iteration_count, primal_objective_value);
-  HighsLogMessage(HighsMessageType::INFO,
-		  "Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
+		  "HiGHS basic solution: Iterations = %d; Objective = %.15g; Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
+		  solution_params.iteration_count, primal_objective_value,
 		  solution_params.num_primal_infeasibilities,
 		  solution_params.sum_primal_infeasibilities,
 		  solution_params.num_dual_infeasibilities,
 		  solution_params.sum_dual_infeasibilities,
-		  model_status_str.c_str());
-
-
-  /*
-  HighsLogMessage(HighsMessageType::INFO,
-      "HiGHS basic solution: Iterations = %d; Objective = %.15g; Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
-      solution_params.iteration_count, primal_objective_value,
-      solution_params.num_primal_infeasibilities,
-      solution_params.sum_primal_infeasibilities,
-      solution_params.num_dual_infeasibilities,
-      solution_params.sum_dual_infeasibilities,
-      model_status_str.c_str());
-  */
+		  utilHighsModelStatusToString(model_status).c_str());
 
 #ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",

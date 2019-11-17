@@ -121,7 +121,7 @@ class HighsInfo {
 				   0);
     records.push_back(record_int);
     
-#ifdef IPX
+#ifdef IPX_ON
     record_int = new InfoRecordInt("ipm_iteration_count",
 				   "Iteration count for IPM solver",
 				   advanced, &ipm_iteration_count,
@@ -133,7 +133,7 @@ class HighsInfo {
 
   double objective_function_value;
   int simplex_iteration_count;
-#ifdef IPX
+#ifdef IPX_ON
   int ipm_iteration_count;
 #endif  
 };

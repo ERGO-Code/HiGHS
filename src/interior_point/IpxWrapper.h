@@ -180,7 +180,11 @@ IpxStatus fillInIpxData(const HighsLp& lp, ipx::Int& num_col,
   return IpxStatus::OK;
 }
 
-IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, HighsInfo& highs_info, HighsSolution& highs_solution,
+IpxStatus solveModelWithIpx(const HighsLp& lp,
+			    const HighsOptions& options,
+			    HighsModelStatus& highs_model_status,
+			    HighsInfo& highs_info,
+			    HighsSolution& highs_solution,
                             HighsBasis& highs_basis) {
   int debug = 0;
 
@@ -471,10 +475,11 @@ IpxStatus solveModelWithIpx(const HighsLp& lp, const HighsOptions& options, High
     solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
     solution_params.iteration_count = (int)ipx_info.iter;
     
-    analyseHighsSolution(lp, highs_basis, highs_solution, solution_params, 2, "after IPX");
+    highs_model_status = analyseHighsSolution(lp, highs_basis, highs_solution,
+					      solution_params, 2, "after IPX");
     // Extract HighsInfo
     highs_info.objective_function_value = solution_params.primal_objective_value;
-#ifdef IPX
+#ifdef IPX_ON
     highs_info.ipm_iteration_count = (int)ipx_info.iter;
 #endif
   }

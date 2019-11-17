@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   bool options_ok = loadOptions(argc, argv, options);
   if (!options_ok) return 0;
 
-  bool force_options_file = true;//false;  // 
+  bool force_options_file = false;  // true;//
   if (force_options_file) {
     printf(
         "In main: set options.options_file = Options.set so vscode can be "
@@ -142,5 +142,9 @@ int main(int argc, char** argv) {
   if (options.write_solution_to_file)
     highs.writeSolution(options.solution_file, options.write_solution_pretty);
   }
+  /*
+  highs.writeHighsInfo("HighsInfo.dat");
+  highs.writeHighsInfo("HighsInfo.html");
+  */
   return (int)run_status;
 }

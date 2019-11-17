@@ -27,6 +27,7 @@
 #include "simplex/HDual.h"
 #include "simplex/HPrimal.h"
 #include "util/HighsUtils.h"
+#include "lp_data/HighsSolution.h"
 //#include "HRanging.h"
 #include "simplex/HSimplex.h"
 #include "simplex/HighsSimplexInterface.h"
@@ -49,8 +50,27 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     report_level = 1;
 #endif
-    if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(report_level, "after solving unconstrained LP");
+    if (simplex_info.analyseLpSolution) {
+      HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+      HighsSolutionParams solution_params;
+      solution_params.primal_feasibility_tolerance =
+	highs_model_object.options_.primal_feasibility_tolerance;
+      solution_params.dual_feasibility_tolerance =
+	highs_model_object.options_.dual_feasibility_tolerance;
+      solution_params.iteration_count =
+	highs_model_object.simplex_info_.iteration_count;
+      highs_model_object.model_status_ = 
+	analyseHighsSolution(highs_model_object.lp_,
+			     highs_model_object.basis_,
+			     highs_model_object.solution_,
+			     solution_params, report_level, "after solving unconstrained LP");
+      simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+      simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+      simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+      simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+      simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+      simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+    }
     return solver_return_status;
   }
 
@@ -192,8 +212,26 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #ifdef HiGHSDEV
     report_level = 1;
 #endif
-    if (simplex_info.analyseLpSolution)
-      simplex_interface.analyseHighsSolutionAndBasis(report_level, "after running the simplex solver");
+    if (simplex_info.analyseLpSolution) {
+      HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+      HighsSolutionParams solution_params;
+      solution_params.primal_feasibility_tolerance =
+	highs_model_object.options_.primal_feasibility_tolerance;
+      solution_params.dual_feasibility_tolerance =
+	highs_model_object.options_.dual_feasibility_tolerance;
+      solution_params.iteration_count =	simplex_info.iteration_count;
+      highs_model_object.model_status_ = 
+	analyseHighsSolution(highs_model_object.lp_,
+			     highs_model_object.basis_,
+			     highs_model_object.solution_,
+			     solution_params, report_level, "after running the simplex solver");
+      simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+      simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+      simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+      simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+      simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+      simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+    }
   }
   // JAJH 230819: Frig to retain highs_model_object.model_status_ 
   highs_model_object.model_status_ = save_model_status;
