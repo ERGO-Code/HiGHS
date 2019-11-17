@@ -265,19 +265,19 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
     IpxSolution ipx_solution;
     ipx_solution.num_col = num_col;
     ipx_solution.num_row = num_row;
-    ipx_solution.xbasic.resize(num_col);
-    ipx_solution.sbasic.resize(num_row);
-    ipx_solution.ybasic.resize(num_row);
-    ipx_solution.zbasic.resize(num_col);
-    ipx_solution.cbasis.resize(num_row);
-    ipx_solution.vbasis.resize(num_col);
+    ipx_solution.ipx_col_value.resize(num_col);
+    ipx_solution.ipx_row_value.resize(num_row);
+    ipx_solution.ipx_row_dual.resize(num_row);
+    ipx_solution.ipx_col_dual.resize(num_col);
+    ipx_solution.ipx_row_status.resize(num_row);
+    ipx_solution.ipx_col_status.resize(num_col);
 
-    lps.GetBasicSolution(&ipx_solution.xbasic[0],
-			 &ipx_solution.sbasic[0],
-			 &ipx_solution.ybasic[0],
-			 &ipx_solution.zbasic[0],
-			 &ipx_solution.cbasis[0],
-			 &ipx_solution.vbasis[0]);
+    lps.GetBasicSolution(&ipx_solution.ipx_col_value[0],
+			 &ipx_solution.ipx_row_value[0],
+			 &ipx_solution.ipx_row_dual[0],
+			 &ipx_solution.ipx_col_dual[0],
+			 &ipx_solution.ipx_row_status[0],
+			 &ipx_solution.ipx_col_status[0]);
     
     // Extract the basis and primal/dual solution from IPX into the
     // HighsSolution and HighsBasis

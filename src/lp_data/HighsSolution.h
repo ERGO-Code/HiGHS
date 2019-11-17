@@ -91,16 +91,16 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
   highs_solution.row_value.resize(lp.numRow_);
   highs_solution.row_dual.resize(lp.numRow_);
 
-  const std::vector<double>& xbasic = ipx_solution.xbasic;
-  const std::vector<double>& sbasic = ipx_solution.sbasic;
-  const std::vector<double>& ybasic = ipx_solution.ybasic;
-  const std::vector<double>& zbasic = ipx_solution.zbasic;
-  const std::vector<ipx::Int>& cbasis = ipx_solution.cbasis;
-  const std::vector<ipx::Int>& vbasis = ipx_solution.vbasis;
+  const std::vector<double>& ipx_col_value = ipx_solution.ipx_col_value;
+  const std::vector<double>& ipx_row_value = ipx_solution.ipx_row_value;
+  const std::vector<double>& ipx_row_dual = ipx_solution.ipx_row_dual;
+  const std::vector<double>& ipx_col_dual = ipx_solution.ipx_col_dual;
+  const std::vector<ipx::Int>& ipx_row_status = ipx_solution.ipx_row_status;
+  const std::vector<ipx::Int>& ipx_col_status = ipx_solution.ipx_col_status;
   ipx::Int num_col = ipx_solution.num_col;
   ipx::Int num_row = ipx_solution.num_row;
 
-  // Set up meaningful names for values of vbasis and cbasis to be
+  // Set up meaningful names for values of ipx_col_status and ipx_row_status to be
   // used later in comparisons
   const ipx::Int ipx_basic = 0;
   const ipx::Int ipx_nonbasic_at_lb = -1;
@@ -117,36 +117,36 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
   for (int col = 0; col < lp.numCol_; col++) {
     bool unrecognised = false;
-    if (vbasis[col] == ipx_basic) {
+    if (ipx_col_status[col] == ipx_basic) {
       // Column is basic
       highs_basis.col_status[col] = HighsBasisStatus::BASIC;
-      highs_solution.col_value[col] = xbasic[col];
+      highs_solution.col_value[col] = ipx_col_value[col];
       highs_solution.col_dual[col] = 0;
-    } else if (vbasis[col] == ipx_nonbasic_at_lb) {
+    } else if (ipx_col_status[col] == ipx_nonbasic_at_lb) {
       // Column is nonbasic at lower bound
       highs_basis.col_status[col] = HighsBasisStatus::LOWER;
-      highs_solution.col_value[col] = xbasic[col];
-      highs_solution.col_dual[col] = zbasic[col];
-    } else if (vbasis[col] == ipx_nonbasic_at_ub) {
+      highs_solution.col_value[col] = ipx_col_value[col];
+      highs_solution.col_dual[col] = ipx_col_dual[col];
+    } else if (ipx_col_status[col] == ipx_nonbasic_at_ub) {
       // Column is nonbasic at upper bound
       highs_basis.col_status[col] = HighsBasisStatus::UPPER;
-      highs_solution.col_value[col] = xbasic[col];
-      highs_solution.col_dual[col] = zbasic[col];
+      highs_solution.col_value[col] = ipx_col_value[col];
+      highs_solution.col_dual[col] = ipx_col_dual[col];
     } else {
       unrecognised = true;
 #ifdef HiGHSDEV
-      printf("\nError in IPX conversion: Unrecognised value vbasis[%2d] = %d\n", col, (int)vbasis[col]);
+      printf("\nError in IPX conversion: Unrecognised value ipx_col_status[%2d] = %d\n", col, (int)ipx_col_status[col]);
 #endif	    
     }
 #ifdef HiGHSDEV
       if (unrecognised) printf("Bounds [%11.4g, %11.4g]\n", lp.colLower_[col], lp.colUpper_[col]);
       if (unrecognised)
-	printf("Col %2d vbasis[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = %11.4g\n",
-	       col, col, (int)vbasis[col], col, xbasic[col], col, zbasic[col]);
+	printf("Col %2d ipx_col_status[%2d] = %2d; x[%2d] = %11.4g; z[%2d] = %11.4g\n",
+	       col, col, (int)ipx_col_status[col], col, ipx_col_value[col], col, ipx_col_dual[col]);
 #endif
       assert(!unrecognised);
       if (unrecognised) {
-	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised vbasis value from IPX");
+	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised ipx_col_status value from IPX");
 	return HighsStatus::Error;
       }
       if (get_row_activities) {
@@ -179,68 +179,68 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 	if ((lower > -HIGHS_CONST_INF && upper < HIGHS_CONST_INF) && (lower < upper)) {
 	  // Boxed row - look at its slack
 	  num_boxed_rows++;
-	  double slack_value = xbasic[ipx_slack];
-	  double slack_dual = zbasic[ipx_slack];
+	  double slack_value = ipx_col_value[ipx_slack];
+	  double slack_dual = ipx_col_dual[ipx_slack];
 	  /*
-	  double row_value = rhs[ipx_row]-sbasic[ipx_row];
-	  double row_dual = -ybasic[ipx_row];
+	  double row_value = rhs[ipx_row]-ipx_row_value[ipx_row];
+	  double row_dual = -ipx_row_dual[ipx_row];
 	  printf("Boxed row: %2d [%11.4g, %11.4g]\n", row, lower, upper);
-	  printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; cbasis = %d\n",
-		 row_value, row_activity[row], rhs[ipx_row], row_dual, (int)cbasis[ipx_row]);
-	  printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] vbasis = %d\n",
-		 slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)vbasis[ipx_slack]);
+	  printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; ipx_row_status = %d\n",
+		 row_value, row_activity[row], rhs[ipx_row], row_dual, (int)ipx_row_status[ipx_row]);
+	  printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] ipx_col_status = %d\n",
+		 slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)ipx_col_status[ipx_slack]);
 	  */
 	  double value = slack_value;
 	  double dual = -slack_dual;
-	  if (cbasis[ipx_row] == ipx_basic) {
+	  if (ipx_row_status[ipx_row] == ipx_basic) {
 	    // Row is basic
 	    num_boxed_rows_basic++;
 	    highs_basis.row_status[row] = HighsBasisStatus::BASIC;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = 0;
-	  } else if (vbasis[ipx_slack] == ipx_basic) {
+	  } else if (ipx_col_status[ipx_slack] == ipx_basic) {
 	    // Slack is basic
 	    num_boxed_row_slacks_basic++;
 	    highs_basis.row_status[row] = HighsBasisStatus::BASIC;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = 0;
-	  } else if (vbasis[ipx_slack] == ipx_nonbasic_at_lb) {
+	  } else if (ipx_col_status[ipx_slack] == ipx_nonbasic_at_lb) {
 	    // Slack at lower bound
 	    highs_basis.row_status[row] = HighsBasisStatus::LOWER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
-	  } else if (vbasis[ipx_slack] == ipx_nonbasic_at_ub) {
+	  } else if (ipx_col_status[ipx_slack] == ipx_nonbasic_at_ub) {
 	    // Slack is at its upper bound
-	    assert(vbasis[ipx_slack] == ipx_nonbasic_at_ub);
+	    assert(ipx_col_status[ipx_slack] == ipx_nonbasic_at_ub);
 	    highs_basis.row_status[row] = HighsBasisStatus::UPPER;
 	    highs_solution.row_value[row] = value;
 	    highs_solution.row_dual[row] = dual;
 	  } else {
 	    unrecognised = true;
 #ifdef HiGHSDEV
-	    printf("\nError in IPX conversion: Row %2d (IPX row %2d) has unrecognised value vbasis[%2d] = %d\n",
-		   row, ipx_row, ipx_slack, (int)vbasis[ipx_slack]);
-	    double row_value = rhs[ipx_row]-sbasic[ipx_row];
-	    double row_dual = -ybasic[ipx_row];
+	    printf("\nError in IPX conversion: Row %2d (IPX row %2d) has unrecognised value ipx_col_status[%2d] = %d\n",
+		   row, ipx_row, ipx_slack, (int)ipx_col_status[ipx_slack]);
+	    double row_value = rhs[ipx_row]-ipx_row_value[ipx_row];
+	    double row_dual = -ipx_row_dual[ipx_row];
 	    printf("Boxed row: %2d [%11.4g, %11.4g]\n", row, lower, upper);
-	    printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; cbasis = %d\n",
-		   row_value, row_activity[row], rhs[ipx_row], row_dual, (int)cbasis[ipx_row]);
-	    printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] vbasis = %d\n",
-		   slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)vbasis[ipx_slack]);
+	    printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; ipx_row_status = %d\n",
+		   row_value, row_activity[row], rhs[ipx_row], row_dual, (int)ipx_row_status[ipx_row]);
+	    printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] ipx_col_status = %d\n",
+		   slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)ipx_col_status[ipx_slack]);
 #endif	    
 	  }
 	  // Update the slack to be used for boxed rows
 	  ipx_slack++;
-	} else if (cbasis[ipx_row] == ipx_basic) {
+	} else if (ipx_row_status[ipx_row] == ipx_basic) {
 	  // Row is basic
 	  highs_basis.row_status[row] = HighsBasisStatus::BASIC;
-	  highs_solution.row_value[row] = rhs[ipx_row]-sbasic[ipx_row];
+	  highs_solution.row_value[row] = rhs[ipx_row]-ipx_row_value[ipx_row];
 	  highs_solution.row_dual[row] = 0;
 	} else {
 	  // Nonbasic row at fixed value, lower bound or upper bound
-	  assert(cbasis[ipx_row] == -1);// const ipx::Int ipx_nonbasic_row = -1;
-	  double value = rhs[ipx_row]-sbasic[ipx_row];
-	  double dual = -ybasic[ipx_row];
+	  assert(ipx_row_status[ipx_row] == -1);// const ipx::Int ipx_nonbasic_row = -1;
+	  double value = rhs[ipx_row]-ipx_row_value[ipx_row];
+	  double dual = -ipx_row_dual[ipx_row];
 	  if (constraint_type[ipx_row] == '>') {
 	    // Row is at its lower bound
 	    highs_basis.row_status[row] = HighsBasisStatus::LOWER;
@@ -269,12 +269,12 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 #ifdef HiGHSDEV
       if (unrecognised) printf("Bounds [%11.4g, %11.4g]\n", lp.rowLower_[row], lp.rowUpper_[row]);
       if (unrecognised)
-	printf("Row %2d cbasis[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
-	       row, this_ipx_row, (int)cbasis[this_ipx_row], this_ipx_row, sbasic[this_ipx_row], this_ipx_row, ybasic[this_ipx_row]);
+	printf("Row %2d ipx_row_status[%2d] = %2d; s[%2d] = %11.4g; y[%2d] = %11.4g\n",
+	       row, this_ipx_row, (int)ipx_row_status[this_ipx_row], this_ipx_row, ipx_row_value[this_ipx_row], this_ipx_row, ipx_row_dual[this_ipx_row]);
 #endif      
       assert(!unrecognised);
       if (unrecognised) {
-	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised cbasis value from IPX");
+	HighsLogMessage(HighsMessageType::ERROR, "Unrecognised ipx_row_status value from IPX");
 	return HighsStatus::Error;
       }
     }

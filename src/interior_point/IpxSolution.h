@@ -21,12 +21,12 @@ typedef int64_t ipxint;
 struct IpxSolution {
   ipxint num_col;
   ipxint num_row;
-  std::vector<double> xbasic;
-  std::vector<double> sbasic;
-  std::vector<double> ybasic;
-  std::vector<double> zbasic;
-  std::vector<ipxint> cbasis;
-  std::vector<ipxint> vbasis;
+  std::vector<double> ipx_col_value;
+  std::vector<double> ipx_row_value;
+  std::vector<double> ipx_row_dual;
+  std::vector<double> ipx_col_dual;
+  std::vector<ipxint> ipx_row_status;
+  std::vector<ipxint> ipx_col_status;
 };
 
 #endif

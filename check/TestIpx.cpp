@@ -63,11 +63,11 @@ TEST_CASE("afiro", "[highs_ipx]") {
   REQUIRE(fabs(zu[11]) < 1.0);
 
   // Get the basic solution (available if crossover terminated without error).
-  double xbasic[num_var], sbasic[num_constr];
-  double ybasic[num_constr], zbasic[num_var];
-  Int cbasis[num_constr], vbasis[num_var];
-  lps.GetBasicSolution(xbasic, sbasic, ybasic, zbasic, cbasis, vbasis);
-  REQUIRE(fabs(xbasic[11]-339.9) < 1);
+  double ipx_col_value[num_var], ipx_row_value[num_constr];
+  double ipx_row_dual[num_constr], ipx_col_dual[num_var];
+  Int ipx_row_status[num_constr], ipx_col_status[num_var];
+  lps.GetBasicSolution(ipx_col_value, ipx_row_value, ipx_row_dual, ipx_col_dual, ipx_row_status, ipx_col_status);
+  REQUIRE(fabs(ipx_col_value[11]-339.9) < 1);
 
   (void)(info); //surpress unused variable.
 }
