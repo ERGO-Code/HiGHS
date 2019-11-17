@@ -83,6 +83,14 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    const IpxSolution& ipx_solution,
 				    HighsBasis& highs_basis,
 				    HighsSolution& highs_solution) {
+  // Resize the HighsSolution and HighsBasis
+  highs_basis.col_status.resize(lp.numCol_);
+  highs_basis.row_status.resize(lp.numRow_);
+  highs_solution.col_value.resize(lp.numCol_);
+  highs_solution.col_dual.resize(lp.numCol_);
+  highs_solution.row_value.resize(lp.numRow_);
+  highs_solution.row_dual.resize(lp.numRow_);
+
   const std::vector<double>& xbasic = ipx_solution.xbasic;
   const std::vector<double>& sbasic = ipx_solution.sbasic;
   const std::vector<double>& ybasic = ipx_solution.ybasic;
