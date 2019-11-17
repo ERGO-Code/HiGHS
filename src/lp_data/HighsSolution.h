@@ -19,7 +19,12 @@
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
 #include "interior_point/IpxSolution.h"
-//#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsOptions.h"
+#ifdef IPX_ON
+#include "interior_point/IpxStatus.h"
+#include "interior_point/ipx/include/ipx_status.h"
+#include "interior_point/ipx/src/lp_solver.h"
+#endif
 
 struct HighsSolutionParams {
   double primal_objective_value;
@@ -34,6 +39,45 @@ struct HighsSolutionParams {
   double sum_dual_infeasibilities;
   double max_dual_infeasibility;
 };
+
+void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info) {
+  solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  solution_params.iteration_count = simplex_info.iteration_count;
+}
+
+#ifdef IPX_ON
+void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const ipx::Info& ipx_info) {
+  solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
+  solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
+  solution_params.iteration_count = (int)ipx_info.iter;
+}
+#endif
+
+void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params) {
+  simplex_info.primal_objective_value = solution_params.primal_objective_value;
+  simplex_info.dual_objective_value = solution_params.dual_objective_value;
+  simplex_info.iteration_count = solution_params.iteration_count;
+  simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+  simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+  simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+  simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+}
+
+void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params) {
+  highs_info.objective_function_value = solution_params.primal_objective_value;
+  highs_info.ipm_iteration_count = solution_params.iteration_count;
+  /*
+  highs_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  highs_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+  highs_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+  highs_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+  highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  */
+}
 
 bool analyseVarSolution(
 			bool report,
@@ -141,12 +185,12 @@ bool analyseVarSolution(
   return query;
 }
 
-HighsModelStatus analyseHighsSolution(const HighsLp& lp,
-				      const HighsBasis& basis,
-				      const HighsSolution& solution,
-				      HighsSolutionParams& solution_params,
-				      const int report_level,
-				      const string message) {
+HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
+					   const HighsBasis& basis,
+					   const HighsSolution& solution,
+					   HighsSolutionParams& solution_params,
+					   const int report_level,
+					   const string message) {
 
   HighsLogMessage(HighsMessageType::INFO, "HiGHS basic solution: Analysis %s", message.c_str());
   double primal_feasibility_tolerance =

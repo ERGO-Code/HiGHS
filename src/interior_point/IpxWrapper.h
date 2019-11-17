@@ -468,20 +468,15 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
       printf("Of %d boxed rows: %d are basic and %d have basic slacks\n", 
 	     num_boxed_rows, num_boxed_rows_basic, num_boxed_row_slacks_basic);
 #endif
-    HighsSolutionParams solution_params;
-    
-    // Set solution_params for analyseHighsSolution
-    solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-    solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-    solution_params.iteration_count = (int)ipx_info.iter;
-    
-    highs_model_status = analyseHighsSolution(lp, highs_basis, highs_solution,
-					      solution_params, 2, "after IPX");
-    // Extract HighsInfo
-    highs_info.objective_function_value = solution_params.primal_objective_value;
-#ifdef IPX_ON
-    highs_info.ipm_iteration_count = (int)ipx_info.iter;
+    int report_level = -1;
+#ifdef HiGHSDEV
+    report_level = 1;
 #endif
+    HighsSolutionParams solution_params;
+    copyToSolutionParams(solution_params, options, ipx_info);
+    highs_model_status = analyseHighsBasicSolution(lp, highs_basis, highs_solution,
+						   solution_params, report_level, "after IPX");
+    copyFromSolutionParams(highs_info, solution_params);
   }
   return IpxStatus::OK;
 }

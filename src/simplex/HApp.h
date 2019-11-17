@@ -51,25 +51,14 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     report_level = 1;
 #endif
     if (simplex_info.analyseLpSolution) {
-      HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
       HighsSolutionParams solution_params;
-      solution_params.primal_feasibility_tolerance =
-	highs_model_object.options_.primal_feasibility_tolerance;
-      solution_params.dual_feasibility_tolerance =
-	highs_model_object.options_.dual_feasibility_tolerance;
-      solution_params.iteration_count =
-	highs_model_object.simplex_info_.iteration_count;
+      copyToSolutionParams(solution_params, highs_model_object.options_, highs_model_object.simplex_info_);
       highs_model_object.model_status_ = 
-	analyseHighsSolution(highs_model_object.lp_,
-			     highs_model_object.basis_,
-			     highs_model_object.solution_,
-			     solution_params, report_level, "after solving unconstrained LP");
-      simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
-      simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-      simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
-      simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
-      simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-      simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+	analyseHighsBasicSolution(highs_model_object.lp_,
+				  highs_model_object.basis_,
+				  highs_model_object.solution_,
+				  solution_params, report_level, "after solving unconstrained LP");
+      copyFromSolutionParams(highs_model_object.simplex_info_, solution_params);
     }
     return solver_return_status;
   }
@@ -202,9 +191,9 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
   }
 
-  // JAJH 230819: Frig to retain highs_model_object.model_status_ 
-  HighsModelStatus save_model_status = highs_model_object.model_status_;
   if (highs_model_object.model_status_ == HighsModelStatus::OPTIMAL) {
+    // JAJH 230819: Frig to retain highs_model_object.model_status_ 
+    HighsModelStatus save_model_status = highs_model_object.model_status_;
     // Optimal solution: copy the solution and basis
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
@@ -213,28 +202,18 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     report_level = 1;
 #endif
     if (simplex_info.analyseLpSolution) {
-      HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
       HighsSolutionParams solution_params;
-      solution_params.primal_feasibility_tolerance =
-	highs_model_object.options_.primal_feasibility_tolerance;
-      solution_params.dual_feasibility_tolerance =
-	highs_model_object.options_.dual_feasibility_tolerance;
-      solution_params.iteration_count =	simplex_info.iteration_count;
+      copyToSolutionParams(solution_params, highs_model_object.options_, highs_model_object.simplex_info_);
       highs_model_object.model_status_ = 
-	analyseHighsSolution(highs_model_object.lp_,
-			     highs_model_object.basis_,
-			     highs_model_object.solution_,
-			     solution_params, report_level, "after running the simplex solver");
-      simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
-      simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-      simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
-      simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
-      simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-      simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+	analyseHighsBasicSolution(highs_model_object.lp_,
+				  highs_model_object.basis_,
+				  highs_model_object.solution_,
+				  solution_params, report_level, "after running the simplex solver");
+      copyFromSolutionParams(highs_model_object.simplex_info_, solution_params);
     }
+    // JAJH 230819: Frig to retain highs_model_object.model_status_ 
+    highs_model_object.model_status_ = save_model_status;
   }
-  // JAJH 230819: Frig to retain highs_model_object.model_status_ 
-  highs_model_object.model_status_ = save_model_status;
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
 #endif
