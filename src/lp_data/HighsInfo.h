@@ -121,6 +121,42 @@ class HighsInfo {
 				   0);
     records.push_back(record_int);
     
+    record_int = new InfoRecordInt("num_primal_infeasibilities",
+				   "Number of primal infeasibilities",
+				   advanced, &num_primal_infeasibilities,
+				   0);
+    records.push_back(record_int);
+    
+    record_double = new InfoRecordDouble("max_primal_infeasibility",
+				   "Maximum primal infeasibility",
+				   advanced, &max_primal_infeasibility,
+				   0);
+    records.push_back(record_double);
+    
+    record_double = new InfoRecordDouble("sum_primal_infeasibilities",
+				   "Sum of primal infeasibilities",
+				   advanced, &sum_primal_infeasibilities,
+				   0);
+    records.push_back(record_double);
+    
+    record_int = new InfoRecordInt("num_dual_infeasibilities",
+				   "Number of dual infeasibilities",
+				   advanced, &num_dual_infeasibilities,
+				   0);
+    records.push_back(record_int);
+    
+    record_double = new InfoRecordDouble("max_dual_infeasibility",
+				   "Maximum dual infeasibility",
+				   advanced, &max_dual_infeasibility,
+				   0);
+    records.push_back(record_double);
+    
+    record_double = new InfoRecordDouble("sum_dual_infeasibilities",
+				   "Sum of dual infeasibilities",
+				   advanced, &sum_dual_infeasibilities,
+				   0);
+    records.push_back(record_double);
+    
 #ifdef IPX_ON
     record_int = new InfoRecordInt("ipm_iteration_count",
 				   "Iteration count for IPM solver",
@@ -133,6 +169,12 @@ class HighsInfo {
 
   double objective_function_value;
   int simplex_iteration_count;
+  int num_primal_infeasibilities;
+  double max_primal_infeasibility;
+  double sum_primal_infeasibilities;
+  int num_dual_infeasibilities;
+  double max_dual_infeasibility;
+  double sum_dual_infeasibilities;
 #ifdef IPX_ON
   int ipm_iteration_count;
 #endif  

@@ -69,14 +69,12 @@ void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionP
 void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params) {
   highs_info.objective_function_value = solution_params.primal_objective_value;
   highs_info.ipm_iteration_count = solution_params.iteration_count;
-  /*
   highs_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
   highs_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
   highs_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
   highs_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
   highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
   highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
-  */
 }
 
 bool analyseVarSolution(
