@@ -23,10 +23,10 @@ struct IpxSolution {
   ipxint num_row;
   std::vector<double> ipx_col_value;
   std::vector<double> ipx_row_value;
-  std::vector<double> ipx_row_dual;
   std::vector<double> ipx_col_dual;
-  std::vector<ipxint> ipx_row_status;
+  std::vector<double> ipx_row_dual;
   std::vector<ipxint> ipx_col_status;
+  std::vector<ipxint> ipx_row_status;
 };
 
 #endif

@@ -371,10 +371,9 @@ TEST_CASE("LP-modification", "[highs_data]") {
   const HighsSolution& solution = highs.getSolution();
   const HighsBasis& basis = highs.getBasis();
 
-  double avgas_optimal_objective_value = highs.getObjectiveValue();
-  double avgas_iteration_count = highs.getObjectiveValue();
+  double avgas_optimal_objective_value;
+  highs.getHighsInfoValue("objective_function_value", avgas_optimal_objective_value);
   double optimal_objective_value;
-  double iteration_count;
 
   highs.reportModelStatusSolutionBasis("After avgas solve", model_status, highs.getLp(), solution, basis);
 
@@ -446,11 +445,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  optimal_objective_value = highs.getObjectiveValue();
+  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
-
-  iteration_count = highs.getObjectiveValue();
-  REQUIRE(iteration_count == avgas_iteration_count);
 
   highs.reportModelStatusSolutionBasis("After re-solving",
 				       highs.getModelStatus(), highs.getLp(), solution, basis);
@@ -587,11 +583,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  optimal_objective_value = highs.getObjectiveValue();
+  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
-
-  iteration_count = highs.getObjectiveValue();
-  REQUIRE(iteration_count == avgas_iteration_count);
 
   message = "After resolve";
   highs.reportModelStatusSolutionBasis(message, highs.getModelStatus(), highs.getLp(), solution, basis);
@@ -685,11 +678,8 @@ TEST_CASE("LP-modification", "[highs_data]") {
   model_status = highs.getModelStatus();
   REQUIRE(model_status == HighsModelStatus::OPTIMAL);
 
-  optimal_objective_value = highs.getObjectiveValue();
+  highs.getHighsInfoValue("objective_function_value", optimal_objective_value);
   REQUIRE(optimal_objective_value == avgas_optimal_objective_value);
-
-  iteration_count = highs.getObjectiveValue();
-  REQUIRE(iteration_count == avgas_iteration_count);
 
   return_bool = highs.deleteRows(0, num_row-1);
   REQUIRE(return_bool);

@@ -69,16 +69,6 @@ class Highs {
 					 ) const;
 
   /**
-   * @brief Returns the objective function value
-   */
-  double getObjectiveValue() const;
-
-  /**
-   * @brief Returns the total number of solver iterations
-   */
-  int getIterationCount() const;
-
-  /**
    * @brief Returns the HighsSolution 
    */
   const HighsSolution& getSolution() const;
@@ -704,8 +694,7 @@ class Highs {
   // and also to make objective_value and iteration_count independent
   // of whether simplex or IMP is used as a solver.
   HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
-  double objective_value_ = 0;
-  int iteration_count_ = 0;
+  HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
 
   // Each HighsModelObject holds a const ref to its lp_. There are potentially
   // several hmos_ to allow for the solution of several different modified

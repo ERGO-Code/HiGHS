@@ -132,12 +132,12 @@ void Highs_getBasis(void* highs, int* colstatus, int* rowstatus) {
   }
 }
 
-double Highs_getObjectiveValue(void* highs) {
-  return ((Highs*)highs)->getObjectiveValue();
+int Highs_getIntHighsInfoValue(void* highs, const char* info, int& value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 
-int Highs_getIterationCount(void* highs) {
-  return ((Highs*)highs)->getIterationCount();
+int Highs_getDoubleHighsInfoValue(void* highs, const char* info, double& value) {
+  return (int)((Highs*)highs)->getHighsInfoValue(info, value);
 }
 
 int Highs_addRow(void* highs, const double lower, const double upper,
@@ -339,8 +339,8 @@ int Highs_getNumNz(void* highs) {
   return ((Highs*)highs)->getLp().Astart_[numCol];
 }
 
-int Highs_getModelStatus(void* highs) {
-  return (int)((Highs*)highs)->getModelStatus();
+int Highs_getModelStatus(void* highs, const bool scaled_model) {
+  return (int)((Highs*)highs)->getModelStatus(scaled_model);
 }
 
 int Highs_getBasicVariables(void* highs, int* basic_variables) {

@@ -24,7 +24,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
 			    HighsInfo& info,
 			    HighsSolution& solution,
                             HighsBasis& basis) {
-  highs_model_status = HighsModelStatus::NotSet;
+  highs_model_status = HighsModelStatus::NOTSET;
   return IpxStatus::Error;
 }
 

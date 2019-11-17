@@ -971,7 +971,7 @@ double OsiHiGHSSolverInterface::getObjValue() const {
       objVal += sol[i] * cost[i];
     }
   } else {
-    objVal = this->highs->getObjectiveValue();
+    this->highs->getHighsInfoValue("objective_function_value", objVal);
   }
 
   return objVal;
@@ -983,8 +983,9 @@ int OsiHiGHSSolverInterface::getIterationCount() const {
   if (!highs) {
     return 0;
   }
-
-  return highs->getIterationCount();
+  int iteration_count;
+  this->highs->getHighsInfoValue("simplex_iteration_count", iteration_count);
+  return iteration_count;
 }
 
 void OsiHiGHSSolverInterface::setRowPrice(const double *rowprice) {

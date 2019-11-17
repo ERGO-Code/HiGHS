@@ -210,10 +210,9 @@ HighsStatus Highs::run() {
     */
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
-  // Initialise the HiGHS scalar values
+  // Initialise the HiGHS model status values
   model_status_ = HighsModelStatus::NOTSET;
-  objective_value_ = 0;
-  iteration_count_ = 0;
+  scaled_model_status_ = HighsModelStatus::NOTSET;
   
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -500,8 +499,17 @@ HighsStatus Highs::run() {
   //   again with no presolve.
   // }
 
-  assert(hmos_.size() > 0);
+  int hmos_size = hmos_.size();
+  assert(hmos_size > 0);
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
+  // ToDo: make sure the model_status values are corrected
+  model_status_ = hmos_[original_hmo].model_status_;
+  scaled_model_status_ = hmos_[original_hmo].model_status_;
+  info_.objective_function_value = hmos_[original_hmo].simplex_info_.dual_objective_value;
+  info_.simplex_iteration_count = 0;
+  for (int k = 0; k < hmos_size; k++) {
+    info_.simplex_iteration_count += hmos_[k].simplex_info_.iteration_count;
+  }
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
   // Report times
@@ -553,25 +561,10 @@ const HighsBasis& Highs::getBasis() const { return basis_; }
 
 const HighsModelStatus& Highs::getModelStatus(const bool scaled_model) const {
   if (scaled_model) {
-    return model_status_;
+    return scaled_model_status_;
   } else {
     return model_status_;
   }
-}
-
-double Highs::getObjectiveValue() const {
-  if (hmos_.size() > 0) {
-    return hmos_[0].simplex_info_.dual_objective_value;
-  } else {
-    // todo: ipx case
-    // todo: error/warning message
-  }
-  return 0;
-}
-
-int Highs::getIterationCount() const {
-  if (hmos_.size() == 0) return 0;
-  return hmos_[0].simplex_info_.iteration_count;
 }
 
 HighsStatus Highs::getBasicVariables(int* basic_variables) {

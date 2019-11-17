@@ -66,6 +66,7 @@ void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionP
   simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
 }
 
+#ifdef IPX_ON
 void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params) {
   highs_info.objective_function_value = solution_params.primal_objective_value;
   highs_info.ipm_iteration_count = solution_params.iteration_count;
@@ -76,7 +77,9 @@ void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& so
   highs_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
   highs_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
 }
+#endif
 
+#ifdef IPX_ON
 HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    const std::vector<double>& rhs,
 				    const std::vector<char>& constraint_type,
@@ -84,21 +87,21 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    HighsBasis& highs_basis,
 				    HighsSolution& highs_solution) {
   // Resize the HighsSolution and HighsBasis
+  highs_solution.col_value.resize(lp.numCol_);
+  highs_solution.row_value.resize(lp.numRow_);
+  highs_solution.col_dual.resize(lp.numCol_);
+  highs_solution.row_dual.resize(lp.numRow_);
   highs_basis.col_status.resize(lp.numCol_);
   highs_basis.row_status.resize(lp.numRow_);
-  highs_solution.col_value.resize(lp.numCol_);
-  highs_solution.col_dual.resize(lp.numCol_);
-  highs_solution.row_value.resize(lp.numRow_);
-  highs_solution.row_dual.resize(lp.numRow_);
 
-  const std::vector<double>& ipx_col_value = ipx_solution.ipx_col_value;
-  const std::vector<double>& ipx_row_value = ipx_solution.ipx_row_value;
-  const std::vector<double>& ipx_row_dual = ipx_solution.ipx_row_dual;
-  const std::vector<double>& ipx_col_dual = ipx_solution.ipx_col_dual;
-  const std::vector<ipx::Int>& ipx_row_status = ipx_solution.ipx_row_status;
-  const std::vector<ipx::Int>& ipx_col_status = ipx_solution.ipx_col_status;
   ipx::Int num_col = ipx_solution.num_col;
   ipx::Int num_row = ipx_solution.num_row;
+  const std::vector<double>& ipx_col_value = ipx_solution.ipx_col_value;
+  const std::vector<double>& ipx_row_value = ipx_solution.ipx_row_value;
+  const std::vector<double>& ipx_col_dual = ipx_solution.ipx_col_dual;
+  const std::vector<double>& ipx_row_dual = ipx_solution.ipx_row_dual;
+  const std::vector<ipx::Int>& ipx_col_status = ipx_solution.ipx_col_status;
+  const std::vector<ipx::Int>& ipx_row_status = ipx_solution.ipx_row_status;
 
   // Set up meaningful names for values of ipx_col_status and ipx_row_status to be
   // used later in comparisons
@@ -113,7 +116,7 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
   // For debugging, get the row activities if there are any boxed
   // constraints
   get_row_activities = get_row_activities || num_col > lp.numCol_;
-#endif    
+#endif
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
   for (int col = 0; col < lp.numCol_; col++) {
     bool unrecognised = false;
@@ -288,6 +291,8 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 #endif
     return HighsStatus::OK; 
 }
+#endif    
+
 bool analyseVarBasicSolution(
 			bool report,
 			const double primal_feasibility_tolerance,

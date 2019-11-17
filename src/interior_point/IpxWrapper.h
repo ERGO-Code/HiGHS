@@ -267,8 +267,8 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
     ipx_solution.num_row = num_row;
     ipx_solution.ipx_col_value.resize(num_col);
     ipx_solution.ipx_row_value.resize(num_row);
-    ipx_solution.ipx_row_dual.resize(num_row);
     ipx_solution.ipx_col_dual.resize(num_col);
+    ipx_solution.ipx_row_dual.resize(num_row);
     ipx_solution.ipx_row_status.resize(num_row);
     ipx_solution.ipx_col_status.resize(num_col);
 
@@ -279,9 +279,7 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
 			 &ipx_solution.ipx_row_status[0],
 			 &ipx_solution.ipx_col_status[0]);
     
-    // Extract the basis and primal/dual solution from IPX into the
-    // HighsSolution and HighsBasis
-
+    // Convert the IPX basic solution to a HiGHS basic solution
     ipxToHighsBasicSolution(lp, rhs, constraint_type, ipx_solution, highs_basis, highs_solution);
 
     int report_level = -1;
