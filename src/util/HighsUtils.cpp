@@ -252,15 +252,15 @@ void analyseMatrixSparsity(const char* message, int numCol, int numRow,
   }
   printf("Max count is %d / %d\n\n", maxColCount, numRow);
 
-  lastRpCat;
+  lastRpCat = -1;
   for (int cat = 0; cat < maxCat + 1; cat++) {
     if (rowCatK[cat]) lastRpCat = cat;
   }
   cat = maxCat;
   if (rowCatK[cat]) lastRpCat = cat;
   sumK = 0;
-  pct;
-  v;
+  pct = 0;
+  v = 0;
   sumPct = 0;
   for (int cat = 0; cat < lastRpCat; cat++) {
     sumK += rowCatK[cat];

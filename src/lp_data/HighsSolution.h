@@ -176,15 +176,6 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 	  num_boxed_rows++;
 	  double slack_value = ipx_col_value[ipx_slack];
 	  double slack_dual = ipx_col_dual[ipx_slack];
-	  /*
-	  double row_value = rhs[ipx_row]-ipx_row_value[ipx_row];
-	  double row_dual = -ipx_row_dual[ipx_row];
-	  printf("Boxed row: %2d [%11.4g, %11.4g]\n", row, lower, upper);
-	  printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; ipx_row_status = %d\n",
-		 row_value, row_activity[row], rhs[ipx_row], row_dual, (int)ipx_row_status[ipx_row]);
-	  printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] ipx_col_status = %d\n",
-		 slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)ipx_col_status[ipx_slack]);
-	  */
 	  double value = slack_value;
 	  double dual = -slack_dual;
 	  if (ipx_row_status[ipx_row] == ipx_basic) {
@@ -215,13 +206,6 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 #ifdef HiGHSDEV
 	    printf("\nError in IPX conversion: Row %2d (IPX row %2d) has unrecognised value ipx_col_status[%2d] = %d\n",
 		   row, ipx_row, ipx_slack, (int)ipx_col_status[ipx_slack]);
-	    double row_value = rhs[ipx_row]-ipx_row_value[ipx_row];
-	    double row_dual = -ipx_row_dual[ipx_row];
-	    printf("Boxed row: %2d [%11.4g, %11.4g]\n", row, lower, upper);
-	    printf("   Value = %11.4g; RHS = %11.4g; Activity = %11.4g; Dual = %11.4g; ipx_row_status = %d\n",
-		   row_value, row_activity[row], rhs[ipx_row], row_dual, (int)ipx_row_status[ipx_row]);
-	    printf("   Slack = %11.4g;                Dual = %11.4g [%11.4g, %11.4g] ipx_col_status = %d\n",
-		   slack_value, slack_dual, xl[ipx_slack], xu[ipx_slack], (int)ipx_col_status[ipx_slack]);
 #endif	    
 	  }
 	  // Update the slack to be used for boxed rows
@@ -687,7 +671,7 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
 #ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
 	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
-	 utilHighsModelStatusToString(model_status_).c_str(),
+	 utilHighsModelStatusToString(model_status).c_str(),
 	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
 	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
 	 num_primal_residual, max_primal_residual, sum_primal_residual,

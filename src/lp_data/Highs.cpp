@@ -499,14 +499,15 @@ HighsStatus Highs::run() {
   //   again with no presolve.
   // }
 
-  assert(solved_hmo == original_hmo);
+  //   assert(solved_hmo == original_hmo);
 
+  // solved_hmo will be original_hmo unless the presolved LP is found to be infeasible or unbounded
   int hmos_size = hmos_.size();
   assert(hmos_size > 0);
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // ToDo: make sure the model_status values are corrected
-  model_status_ = hmos_[original_hmo].model_status_;
-  scaled_model_status_ = hmos_[original_hmo].scaled_model_status_;
+  model_status_ = hmos_[solved_hmo].model_status_;
+  scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
   
   info_.objective_function_value = hmos_[original_hmo].simplex_info_.dual_objective_value;
   info_.simplex_iteration_count = 0;
@@ -527,31 +528,6 @@ HighsStatus Highs::run() {
   if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
   double lp_solve_final_time = timer_.readRunHighsClock();
-  /*
-  std::stringstream message;
-  message << std::endl;
-  message << "Run status : "
-          << highsModelStatusToString(hmos_[solved_hmo].model_status_)
-          << std::endl;
-  message
-      << "Iterations : "
-      << solve_iteration_count  // hmos_[solved_hmo].simplex_info_.iteration_count
-      << std::endl;
-
-  if (hmos_[solved_hmo].model_status_ == HighsModelStatus::OPTIMAL)
-    message << "Objective  : " << std::scientific
-            << hmos_[original_hmo].simplex_info_.dual_objective_value
-            << std::endl;
-
-  message << "Time       : " << std::fixed << std::setprecision(3)
-          << lp_solve_final_time - initial_time << std::endl;
-
-  message << "Postsolve  : " << postsolve_iteration_count << std::endl;
-
-  message << std::endl;
-
-  HighsPrintMessage(ML_MINIMAL, message.str().c_str());
-  */
   HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
   model_status_ = hmos_[original_hmo].model_status_;
