@@ -102,8 +102,6 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
   highs_basis.col_status.resize(lp.numCol_);
   highs_basis.row_status.resize(lp.numRow_);
 
-  ipx::Int num_col = ipx_solution.num_col;
-  ipx::Int num_row = ipx_solution.num_row;
   const std::vector<double>& ipx_col_value = ipx_solution.ipx_col_value;
   const std::vector<double>& ipx_row_value = ipx_solution.ipx_row_value;
   const std::vector<double>& ipx_col_dual = ipx_solution.ipx_col_dual;
@@ -119,11 +117,11 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
   // Row activities are needed to set activity values of free rows -
   // which are ignored by IPX
   vector<double> row_activity;
-  bool get_row_activities = num_row < lp.numRow_;
+  bool get_row_activities = ipx_solution.num_row < lp.numRow_;
 #ifdef HiGHSDEV
   // For debugging, get the row activities if there are any boxed
   // constraints
-  get_row_activities = get_row_activities || num_col > lp.numCol_;
+  get_row_activities = get_row_activities || ipx_solution.num_col > lp.numCol_;
 #endif
   if (get_row_activities) row_activity.assign(lp.numRow_, 0);
   for (int col = 0; col < lp.numCol_; col++) {
@@ -289,8 +287,8 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 	return HighsStatus::Error;
       }
     }
-    assert(ipx_row == num_row);
-    assert(ipx_slack == num_col);
+    assert(ipx_row == ipx_solution.num_row);
+    assert(ipx_slack == ipx_solution.num_col);
 
 #ifdef HiGHSDEV
     if (num_boxed_rows)

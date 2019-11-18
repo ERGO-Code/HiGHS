@@ -233,22 +233,22 @@ set(setting "--presolve=on")
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/adlittle.mps")
 add_test(NAME "presolve-adlittle" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Optimal")
+set_tests_properties ("presolve-adlittle" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status     : Optimal")
 set_tests_properties ("presolve-adlittle" PROPERTIES DEPENDS unit_tests_all)
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/scrs8.mps")
 add_test(NAME "presolve-scrs8" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Optimal")
+set_tests_properties ("presolve-scrs8" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status     : Optimal")
 set_tests_properties ("presolve-scrs8" PROPERTIES DEPENDS unit_tests_all)
 
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/woodinfe.mps")
 add_test(NAME "presolve-woodinfe" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Infeasible")
+set_tests_properties ("presolve-woodinfe" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status     : Infeasible")
 set_tests_properties ("presolve-woodinfe" PROPERTIES DEPENDS unit_tests_all)
 
 
 set(inst "${HIGHS_SOURCE_DIR}/check/instances/gas11.mps")
 add_test(NAME "presolve-gas11" COMMAND $<TARGET_FILE:highs> ${setting} ${inst})
-set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Run status : Unbounded")
+set_tests_properties ("presolve-gas11" PROPERTIES PASS_REGULAR_EXPRESSION "Model   status     : Unbounded")
 set_tests_properties ("presolve-gas11" PROPERTIES DEPENDS unit_tests_all)
