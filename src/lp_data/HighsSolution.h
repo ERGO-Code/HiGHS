@@ -635,6 +635,7 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
       0;  // && max_primal_residual < primal_feasibility_tolerance;
   bool dual_feasible = num_dual_infeasibilities ==
                        0;  // && max_dual_residual < dual_feasibility_tolerance;
+  // Determine the model status
   if (primal_feasible) {
     if (dual_feasible) {
       model_status = HighsModelStatus::OPTIMAL;
@@ -647,6 +648,18 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
     } else {
       model_status = HighsModelStatus::NOTSET;
     }
+  }
+  // Determine the primal status
+  if (primal_feasible) {
+    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  } else {
+    solution_params.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
+  }
+  // Determine the dual status
+  if (dual_feasible) {
+    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  } else {
+    solution_params.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
   }
   if (num_nonzero_basic_duals) {
     HighsLogMessage(

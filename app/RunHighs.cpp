@@ -126,22 +126,18 @@ int main(int argc, char** argv) {
   } else {
     HighsModelStatus model_status = highs.getModelStatus();
     HighsInfo highs_info = highs.getHighsInfo();
-    int simplex_iteration_count;
-    highs.getHighsInfoValue("simplex_iteration_count", simplex_iteration_count);
-    int ipm_iteration_count;
-    highs.getHighsInfoValue("ipm_iteration_count", ipm_iteration_count);
     std::stringstream message;
     message << std::endl;
-    message << "Run status : " << highs.highsModelStatusToString(model_status) << std::endl;
-    message << "    Primal : " << highs.highsPrimalDualStatusToString(highs_info.primal_status) << std::endl;
-    message << "    Dual   : " << highs.highsPrimalDualStatusToString(highs_info.dual_status) << std::endl;
-    message << "Iterations : " << simplex_iteration_count << std::endl;
-    if (ipm_iteration_count)
-      message << "IMP iter : " << ipm_iteration_count << std::endl;
+    message << "Model   status     : " << highs.highsModelStatusToString(model_status) << std::endl;
+    message << "Primal  status     : " << highs.highsPrimalDualStatusToString(highs_info.primal_status) << std::endl;
+    message << "Dual    status     : " << highs.highsPrimalDualStatusToString(highs_info.dual_status) << std::endl;
+    message << "Simplex iterations : " << highs_info.simplex_iteration_count << std::endl;
+    if (highs_info.ipm_iteration_count)
+    message << "IMP     iterations : " << highs_info.ipm_iteration_count << std::endl;
     if (model_status == HighsModelStatus::OPTIMAL) {
-      double dual_objective_value;
-      highs.getHighsInfoValue("objective_function_value", dual_objective_value);
-      message << "Objective  : " << std::scientific << dual_objective_value << std::endl;
+      double objective_function_value;
+      highs.getHighsInfoValue("objective_function_value", objective_function_value);
+      message << "Objective value    : " << std::scientific << objective_function_value << std::endl;
     }
     message << std::endl;
     std::cout << message.str();

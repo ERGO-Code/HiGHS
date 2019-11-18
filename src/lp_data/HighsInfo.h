@@ -56,6 +56,7 @@ class InfoRecordInt : public InfoRecord {
 						Xdescription,
 						Xadvanced) {
     value = Xvalue_pointer;
+    default_value = Xdefault_value;
     *value = default_value;
   }
   
@@ -76,6 +77,7 @@ class InfoRecordDouble : public InfoRecord {
 						      Xdescription,
 						      Xadvanced)  {
     value = Xvalue_pointer;
+    default_value = Xdefault_value;
     *value = default_value;
   }
   
@@ -110,15 +112,15 @@ class HighsInfo {
     advanced = false;
 
     record_int = new InfoRecordInt("primal_status",
-				   "Primal status of the model: 0=> No solution; 1=> Feasible point",
+				   "Primal status of the model: -1 => Not set; 0 => No solution; 1=> Feasible point",
 				   advanced, &primal_status,
-				   0);
+				   (int)PrimalDualStatus::STATUS_NOTSET);
     records.push_back(record_int);
     
     record_int = new InfoRecordInt("dual_status",
-				   "Dual status of the model: 0=> No solution; 1=> Feasible point",
+				   "Dual status of the model: -1 => Not set; 0 => No solution; 1=> Feasible point",
 				   advanced, &dual_status,
-				   0);
+				   (int)PrimalDualStatus::STATUS_NOTSET);
     records.push_back(record_int);
     
     record_double = new InfoRecordDouble("objective_function_value",
@@ -164,9 +166,9 @@ class HighsInfo {
     records.push_back(record_double);
     
     record_double = new InfoRecordDouble("sum_dual_infeasibilities",
-				   "Sum of dual infeasibilities",
-				   advanced, &sum_dual_infeasibilities,
-				   0);
+					 "Sum of dual infeasibilities",
+					 advanced, &sum_dual_infeasibilities,
+					 0);
     records.push_back(record_double);
     
     record_int = new InfoRecordInt("ipm_iteration_count",

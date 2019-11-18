@@ -200,17 +200,17 @@ foreach(instance ${${instances}})
                 DEPENDS unit_tests_all)
         set_tests_properties (${name}${setting} PROPERTIES
                 PASS_REGULAR_EXPRESSION
-                "Run status : ${solutionstatus}")
+                "Model   status     : ${solutionstatus}")
 
         if(${solutionstatus} STREQUAL "Optimal")
             if(${setting} STREQUAL "--presolve=off")
                 set_tests_properties (${name}${setting} PROPERTIES
                         PASS_REGULAR_EXPRESSION
-                        "Iterations : ${iter}\nObjective  : ${optval}")
+                        "Simplex iterations : ${iter}\nObjective value    : ${optval}")
             else()
                 set_tests_properties (${name}${setting} PROPERTIES
                         PASS_REGULAR_EXPRESSION
-                        "Objective  : ${optval}")
+                        "Objective value    : ${optval}")
             endif()
         endif()
 
