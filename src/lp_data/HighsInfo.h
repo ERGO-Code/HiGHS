@@ -14,13 +14,12 @@
 #ifndef LP_DATA_HIGHS_INFO_H_
 #define LP_DATA_HIGHS_INFO_H_
 
-#include <cstring> // For strrchr
+#include <cstring> // For strchr
 
 #include "io/HighsIO.h"
 #include "lp_data/HConst.h"
 
 #include "lp_data/HighsStatus.h"
-//#include "simplex/SimplexConst.h"
 
 enum class InfoStatus { OK = 0, NO_FILE, UNKNOWN_INFO, ILLEGAL_VALUE };
 
@@ -189,9 +188,7 @@ class HighsInfo {
   int num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
-#ifdef IPX_ON
   int ipm_iteration_count;
-#endif  
 };
 
 
