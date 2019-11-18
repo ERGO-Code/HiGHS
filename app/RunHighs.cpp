@@ -125,13 +125,19 @@ int main(int argc, char** argv) {
     HighsPrintMessage(ML_ALWAYS, "HiGHS status: %s\n", statusname.c_str());
   } else {
     HighsModelStatus model_status = highs.getModelStatus();
-    int iteration_count;
-    highs.getHighsInfoValue("simplex_iteration_count", iteration_count);
+    HighsInfo highs_info = highs.getHighsInfo();
+    int simplex_iteration_count;
+    highs.getHighsInfoValue("simplex_iteration_count", simplex_iteration_count);
+    int ipm_iteration_count;
+    highs.getHighsInfoValue("ipm_iteration_count", ipm_iteration_count);
     std::stringstream message;
     message << std::endl;
     message << "Run status : " << highs.highsModelStatusToString(model_status) << std::endl;
-    message << "Iterations : " << iteration_count << std::endl;
-
+    message << "    Primal : " << highs.highsPrimalDualStatusToString(highs_info.primal_status) << std::endl;
+    message << "    Dual   : " << highs.highsPrimalDualStatusToString(highs_info.dual_status) << std::endl;
+    message << "Iterations : " << simplex_iteration_count << std::endl;
+    if (ipm_iteration_count)
+      message << "IMP iter : " << ipm_iteration_count << std::endl;
     if (model_status == HighsModelStatus::OPTIMAL) {
       double dual_objective_value;
       highs.getHighsInfoValue("objective_function_value", dual_objective_value);

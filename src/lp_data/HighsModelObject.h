@@ -31,6 +31,9 @@ class HighsModelObject {
   HighsTimer& timer_;
 
   HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
+  int primal_status_ = PrimalDualStatus::STATUS_NOTSET;
+  int dual_status_ = PrimalDualStatus::STATUS_NOTSET;
+
   HighsBasis basis_;
   HighsSolution solution_;
 

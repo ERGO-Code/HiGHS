@@ -671,7 +671,9 @@ class Highs {
    */
   void reportModelStatusSolutionBasis(const std::string message, const HighsModelStatus model_status, const HighsLp &lp, const HighsSolution &solution, const HighsBasis &basis);
 
-  std::string highsModelStatusToString(HighsModelStatus model_status);
+  std::string highsModelStatusToString(const HighsModelStatus model_status);
+  
+  std::string highsPrimalDualStatusToString(const int primal_dual_status);
   
   // ipx (not implemented)
 

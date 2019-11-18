@@ -109,6 +109,18 @@ class HighsInfo {
     bool advanced;
     advanced = false;
 
+    record_int = new InfoRecordInt("primal_status",
+				   "Primal status of the model: 0=> No solution; 1=> Feasible point",
+				   advanced, &primal_status,
+				   0);
+    records.push_back(record_int);
+    
+    record_int = new InfoRecordInt("dual_status",
+				   "Dual status of the model: 0=> No solution; 1=> Feasible point",
+				   advanced, &dual_status,
+				   0);
+    records.push_back(record_int);
+    
     record_double = new InfoRecordDouble("objective_function_value",
 					 "Objective function value",
 					 advanced, &objective_function_value,
@@ -157,16 +169,16 @@ class HighsInfo {
 				   0);
     records.push_back(record_double);
     
-#ifdef IPX_ON
     record_int = new InfoRecordInt("ipm_iteration_count",
 				   "Iteration count for IPM solver",
 				   advanced, &ipm_iteration_count,
 				   0);
     records.push_back(record_int);
-#endif    
   }
   std::vector<InfoRecord*> records;
 
+  int primal_status;
+  int dual_status;
   double objective_function_value;
   int simplex_iteration_count;
   int num_primal_infeasibilities;

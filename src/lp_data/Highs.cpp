@@ -1088,7 +1088,9 @@ void Highs::reportModelStatusSolutionBasis(const std::string message, const High
 	 basis.valid_, (int)basis.col_status.size(), (int)basis.row_status.size());
 }
 
-std::string Highs::highsModelStatusToString(HighsModelStatus model_status) { return utilHighsModelStatusToString(model_status); }
+std::string Highs::highsModelStatusToString(const HighsModelStatus model_status) { return utilHighsModelStatusToString(model_status); }
+
+std::string Highs::highsPrimalDualStatusToString(const int primal_dual_status) { return utilPrimalDualStatusToString(primal_dual_status); }
 
 // Private methods
 HighsPresolveStatus Highs::runPresolve(PresolveInfo& info) {

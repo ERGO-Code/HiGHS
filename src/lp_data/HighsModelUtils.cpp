@@ -209,8 +209,28 @@ HighsStatus normaliseNames(const std::string name_type, const int num_name, std:
   return HighsStatus::OK;
 }
 
+// Return a string representation of PrimalDualStatus
+std::string utilPrimalDualStatusToString(const int primal_dual_status) {
+
+  switch (primal_dual_status) {
+  case PrimalDualStatus::STATUS_NOTSET:
+    return "Not set";
+    break;
+  case PrimalDualStatus::STATUS_NO_SOLUTION:
+    return "No solution";
+    break;
+  case PrimalDualStatus::STATUS_FEASIBLE_POINT:
+    return "Feasible point";
+    break;
+  default:
+    return "Status toString() not implemented.";
+    break;
+  }
+  return "";
+}
+
 // Return a string representation of HighsModelStatus.
-std::string utilHighsModelStatusToString(HighsModelStatus model_status) {
+std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
 
   switch (model_status) {
   case HighsModelStatus::NOTSET:

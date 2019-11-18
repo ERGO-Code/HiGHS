@@ -247,6 +247,9 @@ struct HighsSimplexInfo {
   int costs_perturbed = 0;
   // Cumulative iteration count - updated in simplex solvers
   int iteration_count = 0;
+  // Status of the primal and dual solution
+  int primal_status = 0;
+  int dual_status = 0;
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
