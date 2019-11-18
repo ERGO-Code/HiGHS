@@ -110,6 +110,24 @@ class HighsInfo {
     bool advanced;
     advanced = false;
 
+    record_int = new InfoRecordInt("simplex_iteration_count",
+				   "Iteration count for simplex solver",
+				   advanced, &simplex_iteration_count,
+				   0);
+    records.push_back(record_int);
+    
+    record_int = new InfoRecordInt("ipm_iteration_count",
+				   "Iteration count for IPM solver",
+				   advanced, &ipm_iteration_count,
+				   0);
+    records.push_back(record_int);
+
+    record_int = new InfoRecordInt("crossover_iteration_count",
+				   "Iteration count for crossover",
+				   advanced, &crossover_iteration_count,
+				   0);
+    records.push_back(record_int);
+
     record_int = new InfoRecordInt("primal_status",
 				   "Primal status of the model: -1 => Not set; 0 => No solution; 1=> Feasible point",
 				   advanced, &primal_status,
@@ -127,12 +145,6 @@ class HighsInfo {
 					 advanced, &objective_function_value,
 					 0);
     records.push_back(record_double);
-    
-    record_int = new InfoRecordInt("simplex_iteration_count",
-				   "Iteration count for simplex solver",
-				   advanced, &simplex_iteration_count,
-				   0);
-    records.push_back(record_int);
     
     record_int = new InfoRecordInt("num_primal_infeasibilities",
 				   "Number of primal infeasibilities",
@@ -170,25 +182,21 @@ class HighsInfo {
 					 0);
     records.push_back(record_double);
     
-    record_int = new InfoRecordInt("ipm_iteration_count",
-				   "Iteration count for IPM solver",
-				   advanced, &ipm_iteration_count,
-				   0);
-    records.push_back(record_int);
   }
   std::vector<InfoRecord*> records;
 
+  int simplex_iteration_count;
+  int ipm_iteration_count;
+  int crossover_iteration_count;
   int primal_status;
   int dual_status;
   double objective_function_value;
-  int simplex_iteration_count;
   int num_primal_infeasibilities;
   double max_primal_infeasibility;
   double sum_primal_infeasibilities;
   int num_dual_infeasibilities;
   double max_dual_infeasibility;
   double sum_dual_infeasibilities;
-  int ipm_iteration_count;
 };
 
 

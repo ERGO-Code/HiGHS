@@ -499,17 +499,22 @@ HighsStatus Highs::run() {
   //   again with no presolve.
   // }
 
+  assert(solved_hmo == original_hmo);
+
   int hmos_size = hmos_.size();
   assert(hmos_size > 0);
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // ToDo: make sure the model_status values are corrected
   model_status_ = hmos_[original_hmo].model_status_;
-  scaled_model_status_ = hmos_[original_hmo].model_status_;
+  scaled_model_status_ = hmos_[original_hmo].scaled_model_status_;
+  
   info_.objective_function_value = hmos_[original_hmo].simplex_info_.dual_objective_value;
   info_.simplex_iteration_count = 0;
   for (int k = 0; k < hmos_size; k++) {
     info_.simplex_iteration_count += hmos_[k].simplex_info_.iteration_count;
   }
+  info_.primal_status = hmos_[original_hmo].simplex_info_.primal_status;
+  info_.dual_status = hmos_[original_hmo].simplex_info_.dual_status;
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
   // Report times
@@ -549,8 +554,8 @@ HighsStatus Highs::run() {
   */
   HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
-  model_status_ = hmos_[solved_hmo].model_status_;
-  return highsStatusFromHighsModelStatus(hmos_[solved_hmo].model_status_);
+  model_status_ = hmos_[original_hmo].model_status_;
+  return highsStatusFromHighsModelStatus(hmos_[original_hmo].model_status_);
 }
 
 const HighsLp& Highs::getLp() const { return lp_; }

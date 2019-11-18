@@ -248,8 +248,8 @@ struct HighsSimplexInfo {
   // Cumulative iteration count - updated in simplex solvers
   int iteration_count = 0;
   // Status of the primal and dual solution
-  int primal_status = 0;
-  int dual_status = 0;
+  int primal_status = PrimalDualStatus::STATUS_NOTSET;
+  int dual_status = PrimalDualStatus::STATUS_NOTSET;
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
@@ -316,6 +316,25 @@ struct HighsSimplexInfo {
   vector<double> historyAlpha;
 #endif
   */
+};
+
+struct HighsSolutionParams {
+  // Input to solution analysis method
+  double primal_feasibility_tolerance;
+  double dual_feasibility_tolerance;
+  int simplex_iteration_count;
+  int ipm_iteration_count;
+  int crossover_iteration_count;
+  // Output from solution analysis method
+  int primal_status;
+  int dual_status;
+  double objective_function_value;
+  int num_primal_infeasibilities;
+  double sum_primal_infeasibilities;
+  double max_primal_infeasibility;
+  int num_dual_infeasibilities;
+  double sum_dual_infeasibilities;
+  double max_dual_infeasibility;
 };
 
 struct HighsSolution {
