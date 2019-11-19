@@ -1,7 +1,7 @@
 #include "HighsStatus.h"
 #include "catch.hpp"
-#include "interior_point/ipx/include/ipx_status.h"
-#include "interior_point/ipx/src/lp_solver.h"
+#include "ipm/ipx/include/ipx_status.h"
+#include "ipm/ipx/src/lp_solver.h"
 #include "lp_data/HConst.h"
 #include "lp_data/HighsLp.h"
 

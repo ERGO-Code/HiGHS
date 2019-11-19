@@ -6,10 +6,10 @@ add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src)
 target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/lp_data)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/ipx/src)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu/src)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/ipx/include)
-target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu/include)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/src)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/src)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/ipx/include)
+target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/ipm/basiclu/include)
 
 # Make test executable
 set(TEST_SOURCES

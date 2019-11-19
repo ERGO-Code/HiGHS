@@ -134,8 +134,8 @@ include_directories(
     ${HIGHS_SOURCE_DIR}/external
     ${HIGHS_SOURCE_DIR}/src
     ${HIGHS_SOURCE_DIR}/src/io
-    ${HIGHS_SOURCE_DIR}/src/interior_point/ipx
-    ${HIGHS_SOURCE_DIR}/src/interior_point/basiclu
+    ${HIGHS_SOURCE_DIR}/src/ipm/ipx
+    ${HIGHS_SOURCE_DIR}/src/ipm/basiclu
     ${HIGHS_SOURCE_DIR}/src/lp_data
     ${HIGHS_SOURCE_DIR}/src/presolve
     ${HIGHS_SOURCE_DIR}/src/simplex

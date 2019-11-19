@@ -35,9 +35,9 @@
 #include "simplex/HSimplex.h"
 
 #ifdef IPX_ON
-#include "interior_point/IpxWrapper.h"
+#include "ipm/IpxWrapper.h"
 #else
-#include "interior_point/IpxWrapperEmpty.h"
+#include "ipm/IpxWrapperEmpty.h"
 #endif
 
 Highs::Highs() {

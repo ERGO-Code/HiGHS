@@ -18,12 +18,12 @@
 
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
-#include "interior_point/IpxSolution.h"
+#include "ipm/IpxSolution.h"
 #include "lp_data/HighsOptions.h"
 #ifdef IPX_ON
-#include "interior_point/IpxStatus.h"
-#include "interior_point/ipx/include/ipx_status.h"
-#include "interior_point/ipx/src/lp_solver.h"
+#include "ipm/IpxStatus.h"
+#include "ipm/ipx/include/ipx_status.h"
+#include "ipm/ipx/src/lp_solver.h"
 #endif
 
 void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info) {

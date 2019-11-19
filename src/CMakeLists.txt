@@ -1,73 +1,73 @@
 # Define library.
-include_directories(interior_point/ipx/src)
-include_directories(interior_point/ipx/include)
-include_directories(interior_point/basiclu/src)
-include_directories(interior_point/basiclu/include)
+include_directories(ipm/ipx/src)
+include_directories(ipm/ipx/include)
+include_directories(ipm/basiclu/src)
+include_directories(ipm/basiclu/include)
 
 if (IPX_ON)
 set(basiclu_sources
-    interior_point/basiclu/src/basiclu_factorize.c
-    interior_point/basiclu/src/basiclu_solve_dense.c
-    interior_point/basiclu/src/lu_build_factors.c
-    interior_point/basiclu/src/lu_factorize_bump.c
-    interior_point/basiclu/src/lu_initialize.c
-    interior_point/basiclu/src/lu_markowitz.c
-    interior_point/basiclu/src/lu_setup_bump.c
-    interior_point/basiclu/src/lu_solve_sparse.c
-    interior_point/basiclu/src/basiclu_get_factors.c
-    interior_point/basiclu/src/basiclu_solve_for_update.c
-    interior_point/basiclu/src/lu_condest.c
-    interior_point/basiclu/src/lu_file.c
-    interior_point/basiclu/src/lu_internal.c
-    interior_point/basiclu/src/lu_matrix_norm.c
-    interior_point/basiclu/src/lu_singletons.c
-    interior_point/basiclu/src/lu_solve_symbolic.c
-    interior_point/basiclu/src/lu_update.c
-    interior_point/basiclu/src/basiclu_initialize.c
-    interior_point/basiclu/src/basiclu_solve_sparse.c
-    interior_point/basiclu/src/lu_pivot.c
-    interior_point/basiclu/src/lu_solve_dense.c
-    interior_point/basiclu/src/lu_solve_triangular.c
-    interior_point/basiclu/src/basiclu_object.c
-    interior_point/basiclu/src/basiclu_update.c
-    interior_point/basiclu/src/lu_dfs.c
-    interior_point/basiclu/src/lu_garbage_perm.c
-    interior_point/basiclu/src/lu_residual_test.c
-    interior_point/basiclu/src/lu_solve_for_update.c
-    interior_point/basiclu/src/lu_timer.c)
+    ipm/basiclu/src/basiclu_factorize.c
+    ipm/basiclu/src/basiclu_solve_dense.c
+    ipm/basiclu/src/lu_build_factors.c
+    ipm/basiclu/src/lu_factorize_bump.c
+    ipm/basiclu/src/lu_initialize.c
+    ipm/basiclu/src/lu_markowitz.c
+    ipm/basiclu/src/lu_setup_bump.c
+    ipm/basiclu/src/lu_solve_sparse.c
+    ipm/basiclu/src/basiclu_get_factors.c
+    ipm/basiclu/src/basiclu_solve_for_update.c
+    ipm/basiclu/src/lu_condest.c
+    ipm/basiclu/src/lu_file.c
+    ipm/basiclu/src/lu_internal.c
+    ipm/basiclu/src/lu_matrix_norm.c
+    ipm/basiclu/src/lu_singletons.c
+    ipm/basiclu/src/lu_solve_symbolic.c
+    ipm/basiclu/src/lu_update.c
+    ipm/basiclu/src/basiclu_initialize.c
+    ipm/basiclu/src/basiclu_solve_sparse.c
+    ipm/basiclu/src/lu_pivot.c
+    ipm/basiclu/src/lu_solve_dense.c
+    ipm/basiclu/src/lu_solve_triangular.c
+    ipm/basiclu/src/basiclu_object.c
+    ipm/basiclu/src/basiclu_update.c
+    ipm/basiclu/src/lu_dfs.c
+    ipm/basiclu/src/lu_garbage_perm.c
+    ipm/basiclu/src/lu_residual_test.c
+    ipm/basiclu/src/lu_solve_for_update.c
+    ipm/basiclu/src/lu_timer.c)
 
 set(ipx_sources
-    interior_point/ipx/src/basiclu_kernel.cc
-    interior_point/ipx/src/basiclu_wrapper.cc
-    interior_point/ipx/src/basis.cc
-    interior_point/ipx/src/conjugate_residuals.cc
-    interior_point/ipx/src/control.cc
-    interior_point/ipx/src/crossover.cc
-    interior_point/ipx/src/diagonal_precond.cc
-    interior_point/ipx/src/forrest_tomlin.cc
-    interior_point/ipx/src/guess_basis.cc
-    interior_point/ipx/src/indexed_vector.cc
-    interior_point/ipx/src/info.cc
-    interior_point/ipx/src/ipm.cc
-    interior_point/ipx/src/ipx_c.cc
-    interior_point/ipx/src/iterate.cc
-    interior_point/ipx/src/kkt_solver.cc
-    interior_point/ipx/src/kkt_solver_basis.cc
-    interior_point/ipx/src/kkt_solver_diag.cc
-    interior_point/ipx/src/linear_operator.cc
-    interior_point/ipx/src/lp_solver.cc
-    interior_point/ipx/src/lu_factorization.cc
-    interior_point/ipx/src/lu_update.cc
-    interior_point/ipx/src/maxvolume.cc
-    interior_point/ipx/src/model.cc
-    interior_point/ipx/src/normal_matrix.cc
-    interior_point/ipx/src/sparse_matrix.cc
-    interior_point/ipx/src/sparse_utils.cc
-    interior_point/ipx/src/splitted_normal_matrix.cc
-    interior_point/ipx/src/starting_basis.cc
-    interior_point/ipx/src/symbolic_invert.cc
-    interior_point/ipx/src/timer.cc
-    interior_point/ipx/src/utils.cc)
+    ipm/ipx/src/basiclu_kernel.cc
+    ipm/ipx/src/basiclu_wrapper.cc
+    ipm/ipx/src/basis.cc
+    ipm/ipx/src/conjugate_residuals.cc
+    ipm/ipx/src/control.cc
+    ipm/ipx/src/crossover.cc
+    ipm/ipx/src/diagonal_precond.cc
+    ipm/ipx/src/forrest_tomlin.cc
+    ipm/ipx/src/guess_basis.cc
+    ipm/ipx/src/indexed_vector.cc
+    ipm/ipx/src/info.cc
+    ipm/ipx/src/ipm.cc
+    ipm/ipx/src/ipx_c.cc
+    ipm/ipx/src/iterate.cc
+    ipm/ipx/src/kkt_solver.cc
+    ipm/ipx/src/kkt_solver_basis.cc
+    ipm/ipx/src/kkt_solver_diag.cc
+    ipm/ipx/src/linear_operator.cc
+    ipm/ipx/src/lp_solver.cc
+    ipm/ipx/src/lu_factorization.cc
+    ipm/ipx/src/lu_update.cc
+    ipm/ipx/src/maxvolume.cc
+    ipm/ipx/src/model.cc
+    ipm/ipx/src/normal_matrix.cc
+    ipm/ipx/src/sparse_matrix.cc
+    ipm/ipx/src/sparse_utils.cc
+    ipm/ipx/src/splitted_normal_matrix.cc
+    ipm/ipx/src/starting_basis.cc
+    ipm/ipx/src/symbolic_invert.cc
+    ipm/ipx/src/timer.cc
+    ipm/ipx/src/utils.cc)
 endif()
 
 # Define library.
@@ -113,7 +113,7 @@ set(sources
 )
 
 set(headers
-    interior_point/IpxStatus.h
+    ipm/IpxStatus.h
     io/Filereader.h
     io/FilereaderLp.h
     io/FilereaderEms.h
@@ -174,12 +174,12 @@ if (GAMS_FOUND)
 endif()
 
 if (IPX_ON)
-    set(headers ${headers} interior_point/IpxWrapper.h)
+    set(headers ${headers} ipm/IpxWrapper.h)
     add_library(libbasiclu ${basiclu_sources})
     add_library(libipx ${ipx_sources})
     target_link_libraries(libipx libbasiclu)
 else ()
-    set(headers ${headers} interior_point/IpxWrapperEmpty.h)
+    set(headers ${headers} ipm/IpxWrapperEmpty.h)
     
 endif()
 
