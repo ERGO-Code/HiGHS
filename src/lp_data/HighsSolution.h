@@ -15,6 +15,7 @@
 #define LP_DATA_HIGHSSOLUTION_H_
 
 #include <vector>
+#include <stdlib.h>
 
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
@@ -375,6 +376,24 @@ bool analyseVarBasicSolution(
   return query;
 }
 
+std::string iterationToString(const string type, const int count) {
+  std::string iteration_statement = "";
+  /*
+  if (count) {
+    sprintf(iteration_statement, "");
+  } else {
+    sprintf(iteration_statement, " %d %s iterations; ", count, type.c_str());
+  }
+  */
+  return iteration_statement;
+}
+
+// Analyse the HiGHS basic solution of the given LP. Currently only
+// used with the unscaled LP, but would work just as well with a
+// scaled LP. The primal and dual feasibility tolerances are passed in
+// via solution_params, which returns the int and double data obtained
+// about the solution. The overall model status is returned in the
+// argument.
 HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
 					   const HighsBasis& basis,
 					   const HighsSolution& solution,
@@ -660,7 +679,10 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
                     relative_objective_difference);
   } 
   HighsLogMessage(HighsMessageType::INFO,
-		  "HiGHS basic solution: Objective = %.15g; Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
+		  "HiGHS basic solution: %s%s%sObjective = %.15g; Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
+		  iterationToString("Simplex", solution_params.simplex_iteration_count).c_str(),
+		  iterationToString("IPM", solution_params.ipm_iteration_count).c_str(),
+		  iterationToString("Crossover", solution_params.crossover_iteration_count).c_str(),
 		  primal_objective_value,
 		  solution_params.num_primal_infeasibilities,
 		  solution_params.sum_primal_infeasibilities,
@@ -669,8 +691,12 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
 		  utilHighsModelStatusToString(model_status).c_str());
 
 #ifdef HiGHSDEV
-  printf("grep_AnBsSol,%s,%s,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
-	 lp.model_name_.c_str(), message.c_str(), primal_objective_value,
+  printf("grep_AnBsSol,%s,%s,%d,%d,%d,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
+	 lp.model_name_.c_str(), message.c_str(),
+	 solution_params.simplex_iteration_count,
+	 solution_params.ipm_iteration_count,
+	 solution_params.crossover_iteration_count,
+	 primal_objective_value,
 	 utilHighsModelStatusToString(model_status).c_str(),
 	 num_nonzero_basic_duals, num_large_nonzero_basic_duals, max_nonzero_basic_dual, sum_nonzero_basic_duals,
 	 num_off_bound_nonbasic, max_off_bound_nonbasic, sum_off_bound_nonbasic,
