@@ -34,6 +34,166 @@
 #include "simplex/SimplexConst.h"
 #include "simplex/SimplexTimer.h"
 
+#ifdef HiGHSDEV
+void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  
+  printf("grep_kernel,%s,%s,%d,%d,%d,",
+	 highs_model_object.lp_.model_name_.c_str(),
+	 highs_model_object.lp_.lp_name_.c_str(),
+	 simplex_info.num_invert,
+	 simplex_info.num_kernel,
+	 simplex_info.num_major_kernel);
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
+  printf(",%g,%g,",
+	 simplex_info.running_average_kernel_dim,
+	 simplex_info.max_kernel_dim);
+  if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
+  printf(",");
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
+  printf(",");
+  if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
+  printf(",%g,%g,%g\n",
+	 simplex_info.running_average_invert_fill_factor,
+	 simplex_info.running_average_kernel_fill_factor,
+	 simplex_info.running_average_major_kernel_fill_factor);
+}
+#endif
+
+void analyseUnscaledSolution(const HighsModelObject& highs_model_object, const int pass,
+			     int& num_unscaled_primal_infeasibilities,
+			     int& num_unscaled_dual_infeasibilities,
+			     double& new_primal_feasibility_tolerance,
+			     double& new_dual_feasibility_tolerance) {
+  const HighsLp& lp = highs_model_object.lp_;
+  const HighsOptions& options = highs_model_object.options_;
+  const SimplexBasis& basis = highs_model_object.simplex_basis_;
+  const HighsScale& scale = highs_model_object.scale_;
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  int num_scaled_dual_infeasibilities = 0;
+  double max_scaled_dual_infeasibility = 0;
+  double sum_scaled_dual_infeasibilities = 0;
+  num_unscaled_dual_infeasibilities = 0;
+  double max_unscaled_dual_infeasibility = 0;
+  double sum_unscaled_dual_infeasibilities = 0;
+  int num_scaled_primal_infeasibilities = 0;
+  double max_scaled_primal_infeasibility = 0;
+  double sum_scaled_primal_infeasibilities = 0;
+  num_unscaled_primal_infeasibilities = 0;
+  double max_unscaled_primal_infeasibility = 0;
+  double sum_unscaled_primal_infeasibilities = 0;
+  new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
+  new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
+  for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
+    // Look at the nonbasic dual infeasibilities
+    if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+    // No dual infeasiblity for fixed rows and columns
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
+    bool col = iVar < lp.numCol_;
+    double scale_mu;
+    int iCol=0;
+    int iRow=0;
+    if (col) {
+      iCol = iVar;
+      scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
+    } else {
+      iRow = iVar - lp.numCol_;
+      scale_mu = scale.row_[iRow] * scale.cost_;
+    }
+    double scaled_dual = simplex_info.workDual_[iVar];
+    double unscaled_dual = scaled_dual * scale_mu;
+    double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
+    double unscaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * unscaled_dual, 0.);
+    if (scaled_dual_infeasibility > simplex_info.dual_feasibility_tolerance) {
+      num_scaled_dual_infeasibilities++;
+    }
+    max_scaled_dual_infeasibility = max(scaled_dual_infeasibility, max_scaled_dual_infeasibility);
+    sum_scaled_dual_infeasibilities += scaled_dual_infeasibility;
+    if (unscaled_dual_infeasibility > options.dual_feasibility_tolerance) {
+      num_unscaled_dual_infeasibilities++;
+      double multiplier = options.dual_feasibility_tolerance / scale_mu;
+#ifdef HiGHSDEV
+      double lower = simplex_info.workLower_[iVar];
+      double upper = simplex_info.workUpper_[iVar];
+      double value = simplex_info.workValue_[iVar];
+      HighsLogMessage(HighsMessageType::INFO,
+		      "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
+		      iVar, iCol, iRow, lower, value, upper,
+		      scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
+		      multiplier);
+#endif
+      new_dual_feasibility_tolerance = min(multiplier, new_dual_feasibility_tolerance);
+    }
+    max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
+    sum_unscaled_dual_infeasibilities += unscaled_dual_infeasibility;
+  }
+  for (int ix = 0; ix < lp.numRow_; ix++) {
+    // Look at the basic primal infeasibilities
+    int iVar = basis.basicIndex_[ix];
+    // No dual infeasiblity for fixed rows and columns
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
+    bool col = iVar < lp.numCol_;
+    double scale_mu;
+    int iCol=0;
+    int iRow=0;
+    if (col) {
+      iCol = iVar;
+      scale_mu = scale.col_[iCol];
+    } else {
+      iRow = iVar - lp.numCol_;
+      scale_mu = 1 / scale.row_[iRow];
+    }
+    double lower = simplex_info.baseLower_[ix];
+    double upper = simplex_info.baseUpper_[ix];
+    double value = simplex_info.baseValue_[ix];
+    double scaled_primal_infeasibility = max(max(lower-value, value-upper), 0.);
+    double unscaled_primal_infeasibility = scaled_primal_infeasibility * scale_mu;
+    if (scaled_primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
+      num_scaled_primal_infeasibilities++;
+    }
+    max_scaled_primal_infeasibility = max(scaled_primal_infeasibility, max_scaled_primal_infeasibility);
+    sum_scaled_primal_infeasibilities += scaled_primal_infeasibility;
+    if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance) {
+      num_unscaled_primal_infeasibilities++;
+      double multiplier = options.primal_feasibility_tolerance / scale_mu;
+#ifdef HiGHSDEV
+      HighsLogMessage(HighsMessageType::INFO,
+		      "Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
+		      iVar, iCol, iRow, lower, value, upper,
+		      scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
+		      multiplier);
+#endif
+      new_primal_feasibility_tolerance = min(multiplier, new_primal_feasibility_tolerance);
+    }
+    max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
+    sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
+  }
+#ifdef HiGHSDEV
+  HighsLogMessage(HighsMessageType::INFO, "solveModelSimplex pass %1d:", pass);
+  if (num_scaled_primal_infeasibilities>0) {
+    HighsLogMessage(HighsMessageType::ERROR, "  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		    num_scaled_primal_infeasibilities,
+		    max_scaled_primal_infeasibility,
+		    sum_scaled_primal_infeasibilities);
+  }
+  HighsLogMessage(HighsMessageType::INFO, "Unscaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		  num_unscaled_primal_infeasibilities,
+		  max_unscaled_primal_infeasibility,
+		  sum_unscaled_primal_infeasibilities);
+  if (num_scaled_dual_infeasibilities>0) {
+    HighsLogMessage(HighsMessageType::ERROR, "  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		    num_scaled_dual_infeasibilities,
+		    max_scaled_dual_infeasibility,
+		    sum_scaled_dual_infeasibilities);
+  }
+  HighsLogMessage(HighsMessageType::INFO, "Unscaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
+		  num_unscaled_dual_infeasibilities,
+		  max_unscaled_dual_infeasibility,
+		  sum_unscaled_dual_infeasibilities);
+#endif
+}
+  
+
 // Single function to solve an lp according to options and convert
 // simplex solution and basis
 HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
@@ -220,34 +380,48 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   return highsStatusFromHighsModelStatus(highs_model_object.model_status_);
 }
 
-#ifdef HiGHSDEV
-void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
-  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-  
-  printf("grep_kernel,%s,%s,%d,%d,%d,",
-	 highs_model_object.lp_.model_name_.c_str(),
-	 highs_model_object.lp_.lp_name_.c_str(),
-	 simplex_info.num_invert,
-	 simplex_info.num_kernel,
-	 simplex_info.num_major_kernel);
-  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
-  printf(",%g,%g,",
-	 simplex_info.running_average_kernel_dim,
-	 simplex_info.max_kernel_dim);
-  if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
-  printf(",");
-  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
-  printf(",");
-  if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
-  printf(",%g,%g,%g\n",
-	 simplex_info.running_average_invert_fill_factor,
-	 simplex_info.running_average_kernel_fill_factor,
-	 simplex_info.running_average_major_kernel_fill_factor);
+HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
+  for (int pass = 0; pass < 2; pass++) {
+    double new_primal_feasibility_tolerance;
+    double new_dual_feasibility_tolerance;
+    int num_unscaled_primal_infeasibilities;
+    int num_unscaled_dual_infeasibilities;
+    analyseUnscaledSolution(highs_model_object, pass,
+			    num_unscaled_primal_infeasibilities,
+			    num_unscaled_dual_infeasibilities,
+			    new_primal_feasibility_tolerance,
+			    new_dual_feasibility_tolerance);
+
+    if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
+      HighsLogMessage(HighsMessageType::INFO,
+		      "Have %d primal and %d dual unscaled infeasibilities so possibly re-solve with infeasibility tolerances of %g primal and %g dual",
+		      num_unscaled_primal_infeasibilities,
+		      num_unscaled_dual_infeasibilities,
+		      new_primal_feasibility_tolerance,
+		      new_dual_feasibility_tolerance);
+      const bool refinement = false;
+      if (refinement) {
+	HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
+	HighsOptions save_options = highs_model_object.options_;
+	HighsOptions& options = highs_model_object.options_;
+	options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
+	options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
+	options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
+	HighsStatus highs_status = runSimplexSolver(highs_model_object);
+	options = save_options;
+	if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
+      } else {
+	HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
+	return HighsStatus::OK;
+      }
+    } else {
+      return HighsStatus::OK;
+    }
+  }
+  return HighsStatus::OK;
 }
-#endif
 
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
-  const bool refinement = false;
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
 
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
@@ -258,161 +432,13 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   HighsModelStatus model_status = highs_model_object.model_status_;
   if (model_status != HighsModelStatus::OPTIMAL) return highsStatusFromHighsModelStatus(model_status);
 
-  HighsOptions& options = highs_model_object.options_;
-  HighsLp& lp = highs_model_object.lp_;
-  SimplexBasis& basis = highs_model_object.simplex_basis_;
-  HighsScale& scale = highs_model_object.scale_;
-  if (!scale.is_scaled_) return highs_status;
-  double cost_scale = scale.cost_;
+  if (!highs_model_object.scale_.is_scaled_) return highs_status;
+  double cost_scale = highs_model_object.scale_.cost_;
   if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
   assert(cost_scale == 1);
-  for (int pass = 0; pass < 2; pass++) {
-    int num_scaled_dual_infeasibilities = 0;
-    double max_scaled_dual_infeasibility = 0;
-    double sum_scaled_dual_infeasibilities = 0;
-    int num_unscaled_dual_infeasibilities = 0;
-    double max_unscaled_dual_infeasibility = 0;
-    double sum_unscaled_dual_infeasibilities = 0;
-    int num_scaled_primal_infeasibilities = 0;
-    double max_scaled_primal_infeasibility = 0;
-    double sum_scaled_primal_infeasibilities = 0;
-    int num_unscaled_primal_infeasibilities = 0;
-    double max_unscaled_primal_infeasibility = 0;
-    double sum_unscaled_primal_infeasibilities = 0;
-    double new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
-    double new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
-    for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
-      // Look at the nonbasic dual infeasibilities
-      if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
-      // No dual infeasiblity for fixed rows and columns
-      if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
-      bool col = iVar < lp.numCol_;
-      double scale_mu;
-      int iCol=0;
-      int iRow=0;
-      if (col) {
-	iCol = iVar;
-	scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
-      } else {
-	iRow = iVar - lp.numCol_;
-	scale_mu = scale.row_[iRow] * scale.cost_;
-      }
-      double scaled_dual = simplex_info.workDual_[iVar];
-      double unscaled_dual = scaled_dual * scale_mu;
-      double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
-      double unscaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * unscaled_dual, 0.);
-      if (scaled_dual_infeasibility > simplex_info.dual_feasibility_tolerance) {
-	num_scaled_dual_infeasibilities++;
-      }
-      max_scaled_dual_infeasibility = max(scaled_dual_infeasibility, max_scaled_dual_infeasibility);
-      sum_scaled_dual_infeasibilities += scaled_dual_infeasibility;
-      if (unscaled_dual_infeasibility > options.dual_feasibility_tolerance) {
-	num_unscaled_dual_infeasibilities++;
-	double multiplier = options.dual_feasibility_tolerance / scale_mu;
-#ifdef HiGHSDEV
-	double lower = simplex_info.workLower_[iVar];
-	double upper = simplex_info.workUpper_[iVar];
-	double value = simplex_info.workValue_[iVar];
-	HighsLogMessage(HighsMessageType::INFO,
-			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
-			iVar, iCol, iRow, lower, value, upper,
-			scaled_dual_infeasibility, scale_mu, unscaled_dual_infeasibility,
-			multiplier);
-#endif
-	new_dual_feasibility_tolerance = min(multiplier, new_dual_feasibility_tolerance);
-      }
-      max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
-      sum_unscaled_dual_infeasibilities += unscaled_dual_infeasibility;
-    }
-    for (int ix = 0; ix < lp.numRow_; ix++) {
-      // Look at the basic primal infeasibilities
-      int iVar = basis.basicIndex_[ix];
-      // No dual infeasiblity for fixed rows and columns
-      if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
-      bool col = iVar < lp.numCol_;
-      double scale_mu;
-      int iCol=0;
-      int iRow=0;
-      if (col) {
-	iCol = iVar;
-	scale_mu = scale.col_[iCol];
-      } else {
-	iRow = iVar - lp.numCol_;
-	scale_mu = 1 / scale.row_[iRow];
-      }
-      double lower = simplex_info.baseLower_[ix];
-      double upper = simplex_info.baseUpper_[ix];
-      double value = simplex_info.baseValue_[ix];
-      double scaled_primal_infeasibility = max(max(lower-value, value-upper), 0.);
-      double unscaled_primal_infeasibility = scaled_primal_infeasibility * scale_mu;
-      if (scaled_primal_infeasibility > simplex_info.primal_feasibility_tolerance) {
-	num_scaled_primal_infeasibilities++;
-      }
-      max_scaled_primal_infeasibility = max(scaled_primal_infeasibility, max_scaled_primal_infeasibility);
-      sum_scaled_primal_infeasibilities += scaled_primal_infeasibility;
-      if (unscaled_primal_infeasibility > options.primal_feasibility_tolerance) {
-	num_unscaled_primal_infeasibilities++;
-	double multiplier = options.primal_feasibility_tolerance / scale_mu;
-#ifdef HiGHSDEV
-	HighsLogMessage(HighsMessageType::INFO,
-			"Var %6d (%6d, %6d): [%11.4g, %11.4g, %11.4g] %11.4g s=%11.4g %11.4g: Mu = %g",
-			iVar, iCol, iRow, lower, value, upper,
-			scaled_primal_infeasibility, scale_mu, unscaled_primal_infeasibility,
-			multiplier);
-#endif
-	new_primal_feasibility_tolerance = min(multiplier, new_primal_feasibility_tolerance);
-      }
-      max_unscaled_primal_infeasibility = max(unscaled_primal_infeasibility, max_unscaled_primal_infeasibility);
-      sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
-    }
-#ifdef HiGHSDEV
-    HighsLogMessage(HighsMessageType::INFO, "solveModelSimplex pass %1d:", pass);
-    if (num_scaled_primal_infeasibilities>0) {
-      HighsLogMessage(HighsMessageType::ERROR, "  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		      num_scaled_primal_infeasibilities,
-		      max_scaled_primal_infeasibility,
-		      sum_scaled_primal_infeasibilities);
-    }
-    HighsLogMessage(HighsMessageType::INFO, "Unscaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		    num_unscaled_primal_infeasibilities,
-		    max_unscaled_primal_infeasibility,
-		    sum_unscaled_primal_infeasibilities);
-    if (num_scaled_dual_infeasibilities>0) {
-      HighsLogMessage(HighsMessageType::ERROR, "  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		      num_scaled_dual_infeasibilities,
-		      max_scaled_dual_infeasibility,
-		      sum_scaled_dual_infeasibilities);
-    }
-    HighsLogMessage(HighsMessageType::INFO, "Unscaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		    num_unscaled_dual_infeasibilities,
-		    max_unscaled_dual_infeasibility,
-		    sum_unscaled_dual_infeasibilities);
-#endif
-    if (num_unscaled_primal_infeasibilities || num_unscaled_dual_infeasibilities) {
-      HighsLogMessage(HighsMessageType::INFO,
-		      "Have %d primal and %d dual unscaled infeasibilities so possibly re-solve with infeasibility tolerances of %g primal and %g dual",
-		      num_unscaled_primal_infeasibilities,
-		      num_unscaled_dual_infeasibilities,
-		      new_primal_feasibility_tolerance,
-		      new_dual_feasibility_tolerance);
-      if (refinement) {
-	HighsLogMessage(HighsMessageType::INFO, "Re-solving with refined tolerances");
-	HighsOptions save_options = highs_model_object.options_;
-	HighsOptions& options = highs_model_object.options_;
-	options.primal_feasibility_tolerance = new_primal_feasibility_tolerance;
-	options.dual_feasibility_tolerance = new_dual_feasibility_tolerance;
-	options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
-	HighsStatus highs_status = runSimplexSolver(highs_model_object);
-	if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
-	options = save_options;
-      } else {
-	HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
-	return highs_status;
-      }
-    } else {
-      return highs_status;
-    }
-  }
+
+  highs_status = tryToSolveUnscaledLp(highs_model_object);
+  if (highs_status != HighsStatus::OK) return highs_status;
   return highs_status;
 }
 #endif
