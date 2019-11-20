@@ -192,10 +192,8 @@ void analyseUnscaledSolution(const HighsModelObject& highs_model_object, const i
 		  sum_unscaled_dual_infeasibilities);
 #endif
 }
-  
 
-// Single function to solve an lp according to options and convert
-// simplex solution and basis
+// Single function to solve an LP according to options
 HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexInterface simplex_interface(highs_model_object);
   HighsTimer& timer = highs_model_object.timer_;
@@ -421,24 +419,39 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
   return HighsStatus::OK;
 }
 
+// Single method to solve an LP with the simplex method. Solves the
+// scaled LP then analyses the unscaled solution. If it doesn't satisfy
+// the required tolerances, tolerances for the scaled LP are
+// identified which, if used, might yield an unscaled solution that
+// satisfies the required tolerances.
+//
+// This method and tryToSolveUnscaledLp may make mutiple calls to
+// runSimplexSolver
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+  // (Try to) solve the scaled LP
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
-
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
 #endif
-  HighsModelStatus model_status = highs_model_object.model_status_;
-  if (model_status != HighsModelStatus::OPTIMAL) return highsStatusFromHighsModelStatus(model_status);
+  // If the solution isn't optimal, then return, as there's no point
+  // in trying to solve with reduced tolerances.
+  if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL)
+    return highsStatusFromHighsModelStatus(highs_model_object.model_status_);
 
+  // If scaling hasn't been used, then return since the original LP
+  // has been solved to the required tolerances
   if (!highs_model_object.scale_.is_scaled_) return highs_status;
+
+  // The code that analyses the unscaled solution and identifies new
+  // tolerances for the scaled LP can't handle cost scaling
   double cost_scale = highs_model_object.scale_.cost_;
   if (cost_scale != 1) printf("solveModelSimplex: Cant't handle cost scaling\n");
   assert(cost_scale == 1);
 
-  highs_status = tryToSolveUnscaledLp(highs_model_object);
-  if (highs_status != HighsStatus::OK) return highs_status;
-  return highs_status;
+  // Analyses the unscaled solution and, if it doesn't satisfy the
+  // required tolerances, tolerances for the scaled LP are identified
+  // which, if used, might yield an unscaled solution that satisfies
+  // the required tolerances.
+  return tryToSolveUnscaledLp(highs_model_object);
 }
 #endif
