@@ -226,22 +226,22 @@ struct HighsSimplexInfo {
   //  double dual_objective_value_upper_bound;
 
   // Internal options - can't be changed externally
-  bool store_squared_primal_infeasibility;
-  bool allow_primal_flips_for_dual_feasibility;
-  bool analyseLpSolution;
+  bool store_squared_primal_infeasibility = false;
+  bool allow_primal_flips_for_dual_feasibility = true;
+  bool analyseLpSolution = true;
 #ifdef HiGHSDEV
   // Options for reporting timing
-  bool report_simplex_inner_clock;
-  bool report_simplex_outer_clock;
-  bool report_simplex_phases_clock;
+  bool report_simplex_inner_clock = false;
+  bool report_simplex_outer_clock = false;
+  bool report_simplex_phases_clock = false;
   // Option for analysing the LP simplex iterations, INVERT time and rebuild
   // time
-  bool analyseLp;
-  bool analyseSimplexIterations;
-  bool analyse_invert_form;
-  bool analyse_invert_condition;
-  bool analyse_invert_time;
-  bool analyseRebuildTime;
+  bool analyseLp = false;
+  bool analyseSimplexIterations = false;
+  bool analyse_invert_form = false;
+  bool analyse_invert_condition = false;
+  bool analyse_invert_time = false;
+  bool analyseRebuildTime = false;
 #endif
   // Simplex runtime information
   int costs_perturbed = 0;

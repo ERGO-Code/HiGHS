@@ -192,16 +192,16 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   }
 
   if (highs_model_object.model_status_ == HighsModelStatus::OPTIMAL) {
-    // JAJH 230819: Frig to retain highs_model_object.model_status_ 
-    HighsModelStatus save_model_status = highs_model_object.model_status_;
     // Optimal solution: copy the solution and basis
     simplex_interface.convertSimplexToHighsSolution();
     simplex_interface.convertSimplexToHighsBasis();
-    int report_level=-1;
-#ifdef HiGHSDEV
-    report_level = 1;
-#endif
     if (simplex_info.analyseLpSolution) {
+      // JAJH 230819: Frig to retain highs_model_object.model_status_ 
+      HighsModelStatus save_model_status = highs_model_object.model_status_;
+      int report_level=-1;
+#ifdef HiGHSDEV
+      report_level = 1;
+#endif
       HighsSolutionParams solution_params;
       copyToSolutionParams(solution_params, highs_model_object.options_, highs_model_object.simplex_info_);
       highs_model_object.model_status_ = 
@@ -210,15 +210,41 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 				  highs_model_object.solution_,
 				  solution_params, report_level, "after running the simplex solver");
       copyFromSolutionParams(highs_model_object.simplex_info_, solution_params);
+      // JAJH 230819: Frig to retain highs_model_object.model_status_ 
+      highs_model_object.model_status_ = save_model_status;
     }
-    // JAJH 230819: Frig to retain highs_model_object.model_status_ 
-    highs_model_object.model_status_ = save_model_status;
   }
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
 #endif
   return highsStatusFromHighsModelStatus(highs_model_object.model_status_);
 }
+
+#ifdef HiGHSDEV
+void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
+  const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  
+  printf("grep_kernel,%s,%s,%d,%d,%d,",
+	 highs_model_object.lp_.model_name_.c_str(),
+	 highs_model_object.lp_.lp_name_.c_str(),
+	 simplex_info.num_invert,
+	 simplex_info.num_kernel,
+	 simplex_info.num_major_kernel);
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
+  printf(",%g,%g,",
+	 simplex_info.running_average_kernel_dim,
+	 simplex_info.max_kernel_dim);
+  if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
+  printf(",");
+  if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
+  printf(",");
+  if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
+  printf(",%g,%g,%g\n",
+	 simplex_info.running_average_invert_fill_factor,
+	 simplex_info.running_average_kernel_fill_factor,
+	 simplex_info.running_average_major_kernel_fill_factor);
+}
+#endif
 
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   const bool refinement = false;
@@ -227,27 +253,7 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
 
 #ifdef HiGHSDEV
-  if (simplex_info.analyse_invert_form) {
-    printf("grep_kernel,%s,%s,%d,%d,%d,",
-	   highs_model_object.lp_.model_name_.c_str(),
-	   highs_model_object.lp_.lp_name_.c_str(),
-	   simplex_info.num_invert,
-	   simplex_info.num_kernel,
-	   simplex_info.num_major_kernel);
-    if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_dim/simplex_info.num_kernel);
-    printf(",%g,%g,",
-	   simplex_info.running_average_kernel_dim,
-	   simplex_info.max_kernel_dim);
-    if (simplex_info.num_invert) printf("Fill-in,%g", simplex_info.sum_invert_fill_factor/simplex_info.num_invert);
-    printf(",");
-    if (simplex_info.num_kernel) printf("%g", simplex_info.sum_kernel_fill_factor/simplex_info.num_kernel);
-    printf(",");
-    if (simplex_info.num_major_kernel) printf("%g", simplex_info.sum_major_kernel_fill_factor/simplex_info.num_major_kernel);
-    printf(",%g,%g,%g\n",
-	   simplex_info.running_average_invert_fill_factor,
-	   simplex_info.running_average_kernel_fill_factor,
-	   simplex_info.running_average_major_kernel_fill_factor);
-  }
+  if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
 #endif
   HighsModelStatus model_status = highs_model_object.model_status_;
   if (model_status != HighsModelStatus::OPTIMAL) return highsStatusFromHighsModelStatus(model_status);

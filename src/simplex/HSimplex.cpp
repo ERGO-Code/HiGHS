@@ -64,8 +64,8 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
   // Options for analysing the LP and simplex iterations
   simplex_info.analyseLp = useful_analysis;
   simplex_info.analyseSimplexIterations = useful_analysis;
-  simplex_info.analyse_invert_form = useful_analysis;
-  simplex_info.analyse_invert_condition = useful_analysis;
+  //  simplex_info.analyse_invert_form = useful_analysis;
+  //  simplex_info.analyse_invert_condition = useful_analysis;
   simplex_info.analyse_invert_time = full_timing;
   simplex_info.analyseRebuildTime = full_timing;
 #endif
@@ -659,7 +659,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
     }	
     double acceptable_difference_sum = simplex_info.primal_feasibility_tolerance + simplex_info.dual_feasibility_tolerance;
     bool significant_nonbasic_value_differences = sum_nonbasic_col_value_differences + sum_nonbasic_row_value_differences > 0;
-    bool significant_basic_value_differences = sum_basic_col_value_differences + sum_basic_row_value_differences > acceptable_difference_sum;      
+    bool significant_basic_value_differences = sum_basic_col_value_differences + sum_basic_row_value_differences > 2*acceptable_difference_sum;      
     bool significant_nonbasic_col_dual_differences = sum_nonbasic_col_dual_differences > acceptable_difference_sum;
     bool significant_nonbasic_row_dual_differences = sum_nonbasic_row_dual_differences > acceptable_difference_sum;
     bool significant_basic_dual_differences = sum_basic_col_dual_differences + sum_basic_row_dual_differences > 0;
@@ -669,24 +669,45 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
 	significant_nonbasic_row_dual_differences ||
 	significant_basic_dual_differences) {
       printf("In transition(): There are significant value and dual differences\n");
+      /*
+      printf("   nonbasic_value_differences = %d\n", significant_nonbasic_value_differences);
+      printf("   basic_value_differences = %d\n", significant_basic_value_differences);
+      printf("   nonbasic_col_dual_differences = %d\n", significant_nonbasic_col_dual_differences);
+      printf("   nonbasic_row_dual_differences = %d\n", significant_nonbasic_row_dual_differences);
+      printf("   basic_dual_differences = %d\n", significant_basic_dual_differences);
+      */
     } else {
       printf("In transition(): There are no significant value and dual differences\n");
     }
     if (significant_nonbasic_value_differences) {
-      printf("Nonbasic column value differences: %6d (%11.4g)\n", num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences);
-      printf("Nonbasic row    value differences: %6d (%11.4g)\n", num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences);
+      if (sum_nonbasic_col_value_differences > 0)
+	printf("Nonbasic column value differences: %6d (%11.4g)\n", 
+	       num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences);
+      if (sum_nonbasic_row_value_differences > 0)
+	printf("Nonbasic row    value differences: %6d (%11.4g)\n", 
+	       num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences);
     }
     if (significant_basic_value_differences) {
-      printf("Basic    column value differences: %6d (%11.4g)\n", num_basic_col_value_differences, sum_basic_col_value_differences);
-      printf("Basic    row    value differences: %6d (%11.4g)\n", num_basic_row_value_differences, sum_basic_row_value_differences);
+      if (sum_basic_col_value_differences > acceptable_difference_sum)
+	printf("Basic    column value differences: %6d (%11.4g)\n", 
+	       num_basic_col_value_differences, sum_basic_col_value_differences);
+      if (sum_basic_row_value_differences > acceptable_difference_sum)
+	printf("Basic    row    value differences: %6d (%11.4g)\n", 
+	       num_basic_row_value_differences, sum_basic_row_value_differences);
     }
-    if (significant_nonbasic_col_dual_differences) 
-      printf("Nonbasic column  dual differences: %6d (%11.4g)\n", num_nonbasic_col_dual_differences, sum_nonbasic_col_dual_differences);
+    if (significant_nonbasic_col_dual_differences)
+      printf("Nonbasic column  dual differences: %6d (%11.4g)\n",
+	     num_nonbasic_col_dual_differences, sum_nonbasic_col_dual_differences);
     if (significant_nonbasic_row_dual_differences)
-      printf("Nonbasic row     dual differences: %6d (%11.4g)\n", num_nonbasic_row_dual_differences, sum_nonbasic_row_dual_differences);
+      printf("Nonbasic row     dual differences: %6d (%11.4g)\n",
+	     num_nonbasic_row_dual_differences, sum_nonbasic_row_dual_differences);
     if (significant_basic_dual_differences) {
-      printf("Basic    column  dual differences: %6d (%11.4g)\n", num_basic_col_dual_differences, sum_basic_col_dual_differences);
-      printf("Basic    row     dual differences: %6d (%11.4g)\n", num_basic_row_dual_differences, sum_basic_row_dual_differences);
+      if (sum_basic_col_dual_differences > 0)
+	printf("Basic    column  dual differences: %6d (%11.4g)\n", 
+	       num_basic_col_dual_differences, sum_basic_col_dual_differences);
+      if (sum_basic_row_dual_differences > 0)
+	printf("Basic    row     dual differences: %6d (%11.4g)\n", 
+	       num_basic_row_dual_differences, sum_basic_row_dual_differences);
     }
     printf("grep_transition,%s,%.15g,%d,%g,%d,%g,%s,%d,%g,%d,%g,%d,%g,%d,%g,Primal,%d,%g,%d,%g,Dual,%d,%g,%d,%g\n",
 	   simplex_lp.model_name_.c_str(),
