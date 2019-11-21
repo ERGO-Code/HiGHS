@@ -204,19 +204,33 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     setSimplexOptions(highs_model_object);
     HighsStatus solver_return_status = solveUnconstrainedLp(highs_model_object);
     if (solver_return_status == HighsStatus::Error) return solver_return_status;
-    int report_level = -1;
-#ifdef HiGHSDEV
-    report_level = 1;
-#endif
+    // Unconstrained (unscaled) LP solved successfully (may still be
+    // infeasible or unbounded)
+    // 
+    // No scaling performed, so set the scaled_model_status equal to
+    // the unscaled_model_status.
+    highs_model_object.scaled_model_status_ = highs_model_object.unscaled_model_status_;
     if (simplex_info.analyseLpSolution) {
-      HighsSolutionParams solution_params;
-      copyToSolutionParams(solution_params, highs_model_object.options_, highs_model_object.simplex_info_);
-      highs_model_object.model_status_ = 
+      // Analyse and report on the HiGHS basic solution
+      int report_level = -1;
+#ifdef HiGHSDEV
+      report_level = 1;
+#endif
+      HighsSolutionParams unscaled_solution_params = highs_model_object.unscaled_solution_params_;
+      HighsModelStatus unscaled_model_status = 
 	analyseHighsBasicSolution(highs_model_object.lp_,
 				  highs_model_object.basis_,
 				  highs_model_object.solution_,
-				  solution_params, report_level, "after solving unconstrained LP");
-      copyFromSolutionParams(highs_model_object.simplex_info_, solution_params);
+				  unscaled_solution_params, report_level, "after solving unconstrained LP");
+      // Check that the status and solution parameters found by the
+      // analysis method are identical to those found by the solver
+      bool equal_model_status_solution_params =
+	equalModelStatusSolutionParams(unscaled_model_status,
+				       unscaled_solution_params,
+				       highs_model_object.unscaled_model_status_,
+				       highs_model_object.unscaled_solution_params_);
+      assert(equal_model_status_solution_params);
+      if (!equal_model_status_solution_params) return HighsStatus::Error;
     }
     return solver_return_status;
   }

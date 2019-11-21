@@ -31,6 +31,19 @@ void zeroSolutionIterationCountParams(HighsSolutionParams& solution_params);
 void zeroSolutionStatusParams(HighsSolutionParams& solution_params);
 void zeroSolutionParams(HighsSolutionParams& solution_params);
 
+bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
+				       const HighsSolutionParams& solution_params1);
+bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
+			       const HighsSolutionParams& solution_params1);
+
+bool equalSolutionParams(const HighsSolutionParams& solution_params0,
+			 const HighsSolutionParams& solution_params1);
+
+bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
+				    const HighsSolutionParams& solution_params0,
+				    const HighsModelStatus model_status1,
+				    const HighsSolutionParams& solution_params1);
+
 void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info);
 
 #ifdef IPX_ON

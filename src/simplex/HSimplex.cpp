@@ -3250,7 +3250,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
   }
 }
 
-// Solves an unconstrained LP without scaling, setting HighsBasis and HighsSolution
+// Solves an unconstrained LP without scaling, setting HighsBasis, HighsSolution and HighsSolutionParams
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   const HighsLp& lp = highs_model_object.lp_;
   assert(lp.numRow_==0);
