@@ -15,15 +15,16 @@
 #include "simplex/HSimplex.h"
 #include "HConfig.h"
 #include "io/HighsIO.h"
+#include "util/HighsUtils.h"
 #include "lp_data/HighsStatus.h"
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
+#include "lp_data/HighsSolution.h"
 #include "simplex/HCrash.h"
 #include "simplex/HVector.h"
 #include "simplex/HighsSimplexInterface.h"
 #include "simplex/SimplexConst.h"  // For simplex strategy constants
 #include "simplex/SimplexTimer.h"
-#include "util/HighsUtils.h"
 
 using std::runtime_error;
 #include <cassert>
@@ -3249,6 +3250,7 @@ void updateSimplexLpStatus(HighsSimplexLpStatus& simplex_lp_status,
   }
 }
 
+// Solves an unconstrained LP without scaling, setting HighsBasis and HighsSolution
 HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   const HighsLp& lp = highs_model_object.lp_;
   assert(lp.numRow_==0);
@@ -3258,48 +3260,98 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   solution.col_value.assign(lp.numCol_, 0);
   solution.col_dual.assign(lp.numCol_, 0);
   basis.col_status.assign(lp.numCol_, HighsBasisStatus::NONBASIC);
+  double primal_feasibility_tolerance = highs_model_object.simplex_info_.primal_feasibility_tolerance;
+  double dual_feasibility_tolerance = highs_model_object.simplex_info_.dual_feasibility_tolerance;
   double objective = lp.offset_;
+  bool infeasible = false;
+  bool unbounded = false;
+  HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
+  zeroSolutionParams(unscaled_solution_params);
   for (int iCol=0; iCol<lp.numCol_; iCol++) {
     double cost = lp.sense_*lp.colCost_[iCol];
     double lower = lp.colLower_[iCol];
     double upper = lp.colUpper_[iCol];
     double value;
+    double primal_infeasibility = 0;
     HighsBasisStatus status;
     if (lower > upper) {
-      highs_model_object.model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
-      return HighsStatus::OK;
-    }
-    if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-      // Free column: must have zero cost
-      if (cost) {
-	highs_model_object.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-	return HighsStatus::OK;
+      // Inconsistent bounds, so set the variable to lower bound,
+      // unless it's infinite. Otherwise set the variable to upper
+      // bound, unless it's infinite. Otherwise set the variable to
+      // zero.
+      if (highs_isInfinity(lower)) {
+	// Lower bound of +inf
+	if (highs_isInfinity(-upper)) {
+	  // Unite upper bound of -inf
+	  value = 0;
+	  status = HighsBasisStatus::ZERO;
+	  primal_infeasibility = HIGHS_CONST_INF;
+	} else {
+	  value = upper;
+	  status = HighsBasisStatus::UPPER;
+	  primal_infeasibility = lower-value;
+	}
+      } else {
+	value = lower;
+	status = HighsBasisStatus::LOWER;
+	primal_infeasibility = value-upper;
       }
+    } else if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+      // Free column: must have zero cost
       value = 0;
       status = HighsBasisStatus::ZERO;
-    } else if (cost >= 0) {
-      if (cost && highs_isInfinity(-lower)) {
-	highs_model_object.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-	return HighsStatus::OK;
-      }
+      if (fabs(cost) > dual_feasibility_tolerance) unbounded = true;
+    } else if (cost >= dual_feasibility_tolerance) {
+      // Column with sufficiently positive cost: set to lower bound
+      // and check for unboundedness
+      if (highs_isInfinity(-lower)) unbounded = true;
       value = lower;
       status = HighsBasisStatus::LOWER;
-    } else {
-      if (highs_isInfinity(upper)) {
-	highs_model_object.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
-	return HighsStatus::OK;
-      }
+    } else if (cost <= -dual_feasibility_tolerance) {
+      // Column with sufficiently negative cost: set to upper bound
+      // and check for unboundedness
+      if (highs_isInfinity(upper)) unbounded = true;
       value = upper;
       status = HighsBasisStatus::UPPER;
+    } else {
+      // Column with sufficiently small cost: set to lower bound (if
+      // finite) otherwise upper bound
+      if (highs_isInfinity(-lower)) {
+	value = upper;
+	status = HighsBasisStatus::UPPER;
+      } else {
+	value = lower;
+	status = HighsBasisStatus::LOWER;
+      }
     }
     solution.col_value[iCol] = value;
     solution.col_dual[iCol] = cost;
     basis.col_status[iCol] = status;
     objective += value*cost;
+    unscaled_solution_params.sum_primal_infeasibilities += primal_infeasibility;
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      infeasible = true;
+      unscaled_solution_params.num_primal_infeasibilities++;
+      unscaled_solution_params.max_primal_infeasibility =
+	max(primal_infeasibility, unscaled_solution_params.max_primal_infeasibility);
+    }
   }
   highs_model_object.simplex_info_.dual_objective_value = objective;
   highs_model_object.simplex_info_.primal_objective_value = objective;
-  highs_model_object.model_status_ = HighsModelStatus::OPTIMAL;
+
+  if (infeasible) {
+    highs_model_object.unscaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+    unscaled_solution_params.primal_status = STATUS_NO_SOLUTION;
+  } else {
+    unscaled_solution_params.primal_status = STATUS_FEASIBLE_POINT;
+    if (unbounded) {
+      highs_model_object.unscaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+      unscaled_solution_params.dual_status = STATUS_NO_SOLUTION;
+    } else {
+      highs_model_object.unscaled_model_status_ = HighsModelStatus::OPTIMAL;
+      unscaled_solution_params.dual_status = STATUS_FEASIBLE_POINT;
+    }
+  }
   return HighsStatus::OK;
 }
 
