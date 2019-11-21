@@ -108,12 +108,4 @@ enum InvertHint {
 // phase 2
 const bool invert_if_row_out_negative = true;
 
-enum FeasibilityStrategy {
-  FEASIBILITY_STRATEGY_MIN = 0,
-  FEASIBILITY_STRATEGY_kApproxComponentWise = FEASIBILITY_STRATEGY_MIN,
-  FEASIBILITY_STRATEGY_kApproxExact,
-  FEASIBILITY_STRATEGY_kDirectSolve,
-  FEASIBILITY_STRATEGY_MAX = FEASIBILITY_STRATEGY_kDirectSolve
-};
-
 #endif /* SIMPLEX_SIMPLEXCONST_H_ */

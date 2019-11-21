@@ -25,7 +25,6 @@
 #include "lp_data/HighsLpUtils.h"
 #include "lp_data/HighsModelUtils.h"
 #include "lp_data/HighsStatus.h"
-#include "presolve/FindFeasibility.h"
 #include "presolve/Presolve.h"
 #include "simplex/HApp.h"
 #include "simplex/HighsSimplexInterface.h"
@@ -167,43 +166,12 @@ HighsStatus Highs::run() {
   if (return_status != HighsStatus::OK) return HighsStatus::Error;
 #endif
 
-  // For the moment runFeasibility as standalone.
-  if (options_.find_feasibility) {
-    // use when you do something with solution depending on whether we have
-    // dualized or not.
-    // HighsSolution& solution = solution_;
-
-    // options_.message_level = HighsPrintMessageLevel::ML_DETAILED;
-    // HighsSetIO(options_);
-
-    // Add slacks and make sure a minimization problem is passed to
-    // runFeasibility.
-    HighsLp primal = transformIntoEqualityProblem(lp_);
-    if (options_.feasibility_strategy_dualize) {
-      // Add slacks & dualize.
-      HighsLp dual = dualizeEqualityProblem(primal);
-      // dualizeEqualityProblem returns a minimization problem.
-      initializeLp(dual);
-    } else {
-      // If maximization, minimize before calling runFeasibility.
-      if (primal.sense_ != OBJSENSE_MINIMIZE) {
-        for (int col = 0; col < primal.numCol_; col++)
-          primal.colCost_[col] = -primal.colCost_[col];
-      }
-      initializeLp(primal);
-    }
-
-    if (options_.feasibility_strategy ==
-        FEASIBILITY_STRATEGY_kApproxComponentWise)
-      return runFeasibility(lp_, solution_, MinimizationType::kComponentWise);
-    else if (options_.feasibility_strategy == FEASIBILITY_STRATEGY_kApproxExact)
-      return runFeasibility(lp_, solution_, MinimizationType::kExact);
-    else if (options_.feasibility_strategy ==
-             FEASIBILITY_STRATEGY_kDirectSolve) {
-      // Proceed to normal exection of run().
-      // If dualize has been called replace LP is replaced with dual in code
-      // above.
-    }
+  if (options_.icrash) {
+    ICrashInfo result;
+    ICrashOptions icrash_options{options_.icrash_dualize, options_.icrash_strategy, options_.icrash_starting_weight, options_.icrash_iterations, options_.icrash_approximate_minimization_iterations, options_.icrash_exact};
+    HighsStatus icrash_status = CallICrash(lp_, icrash_options, result, timer_);
+    solution_.col_value = result.x_values;
+    return icrash_status;
   }
 
   // Return immediately if the LP has no columns
