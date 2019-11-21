@@ -15,7 +15,8 @@
 #define LP_DATA_HIGHSSOLUTION_H_
 
 #include <vector>
-#include <stdlib.h>
+//#include <stdlib.h>
+#include <string>
 
 #include "HConfig.h"
 #include "lp_data/HighsLp.h"
@@ -376,15 +377,46 @@ bool analyseVarBasicSolution(
   return query;
 }
 
-std::string iterationToString(const string type, const int count) {
+std::string iterationsToString(const HighsSolutionParams& solution_params) {
   std::string iteration_statement = "";
-  /*
-  if (count) {
-    sprintf(iteration_statement, "");
-  } else {
-    sprintf(iteration_statement, " %d %s iterations; ", count, type.c_str());
+  bool not_first = false;
+  int num_positive_count = 0;
+  if (solution_params.simplex_iteration_count) num_positive_count++;
+  if (solution_params.ipm_iteration_count) num_positive_count++;
+  if (solution_params.crossover_iteration_count) num_positive_count++;
+  if (num_positive_count == 0) {
+    iteration_statement += "0 iterations; ";
+    return iteration_statement;
   }
-  */
+  if (num_positive_count > 1) iteration_statement += "(";
+  int count;
+  std::string count_str;
+  count = solution_params.simplex_iteration_count;
+  if (count) {
+    count_str = std::to_string(count);
+    if (not_first) iteration_statement += "; ";
+    iteration_statement += count_str + " " + "Simplex";
+    not_first = true;
+  }
+  count = solution_params.ipm_iteration_count;
+  if (count) {
+    count_str = std::to_string(count);
+    if (not_first) iteration_statement += "; ";
+    iteration_statement += count_str + " " + "IPM";
+    not_first = true;
+  }
+  count = solution_params.crossover_iteration_count;
+  if (count) {
+    count_str = std::to_string(count);
+    if (not_first) iteration_statement += "; ";
+    iteration_statement += count_str + " " + "Crossover";
+    not_first = true;
+  }
+  if (num_positive_count > 1) {
+    iteration_statement += ") Iterations; ";
+  } else {
+    iteration_statement += " iterations; ";
+  }
   return iteration_statement;
 }
 
@@ -679,16 +711,17 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
                     relative_objective_difference);
   } 
   HighsLogMessage(HighsMessageType::INFO,
-		  "HiGHS basic solution: %s%s%sObjective = %.15g; Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
-		  iterationToString("Simplex", solution_params.simplex_iteration_count).c_str(),
-		  iterationToString("IPM", solution_params.ipm_iteration_count).c_str(),
-		  iterationToString("Crossover", solution_params.crossover_iteration_count).c_str(),
+		  "HiGHS basic solution: %sObjective = %.15g; Status: %s",
+		  iterationsToString(solution_params).c_str(),
 		  primal_objective_value,
+		  utilHighsModelStatusToString(model_status).c_str());
+
+  HighsLogMessage(HighsMessageType::INFO,
+		  "HiGHS basic solution: Infeasibilities Pr %d(%g); Du %d(%g)",
 		  solution_params.num_primal_infeasibilities,
 		  solution_params.sum_primal_infeasibilities,
 		  solution_params.num_dual_infeasibilities,
-		  solution_params.sum_dual_infeasibilities,
-		  utilHighsModelStatusToString(model_status).c_str());
+		  solution_params.sum_dual_infeasibilities);
 
 #ifdef HiGHSDEV
   printf("grep_AnBsSol,%s,%s,%d,%d,%d,%.15g,%s,%d,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g,%d,%g,%g\n",
