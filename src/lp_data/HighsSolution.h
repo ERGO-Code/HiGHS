@@ -62,6 +62,8 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    HighsSolution& highs_solution);
 #endif    
 
+HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs_model_object);
+
 bool analyseVarBasicSolution(
 			bool report,
 			const double primal_feasibility_tolerance,
