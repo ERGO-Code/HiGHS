@@ -26,33 +26,6 @@
 #include "ipm/ipx/src/lp_solver.h"
 #endif
 
-void zeroSolutionIterationCountParams(HighsSolutionParams& solution_params);
-
-void zeroSolutionStatusParams(HighsSolutionParams& solution_params);
-void zeroSolutionParams(HighsSolutionParams& solution_params);
-
-bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
-				       const HighsSolutionParams& solution_params1);
-bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
-			       const HighsSolutionParams& solution_params1);
-
-bool equalSolutionParams(const HighsSolutionParams& solution_params0,
-			 const HighsSolutionParams& solution_params1);
-
-bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
-				    const HighsSolutionParams& solution_params0,
-				    const HighsModelStatus model_status1,
-				    const HighsSolutionParams& solution_params1);
-
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info);
-
-#ifdef IPX_ON
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const ipx::Info& ipx_info);
-#endif
-
-void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params);
-
-void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params);
 #ifdef IPX_ON
 HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    const std::vector<double>& rhs,
@@ -61,6 +34,17 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    HighsBasis& highs_basis,
 				    HighsSolution& highs_solution);
 #endif    
+
+// Wrapper for analyseUnscaledSolutionFromSimplexBasicSolution when
+// not used to get suggested feasibility tolerances
+HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& highs_model_object);
+
+// Analyse the unscaled solution from a Simplex basic solution to get
+// suggested feasibility tolerances for resolving the scaled LP
+// This sets highs_model_object.unscaled_solution_params_
+HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& highs_model_object, 
+							    double& new_primal_feasibility_tolerance,
+							    double& new_dual_feasibility_tolerance);
 
 HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs_model_object);
 
@@ -93,4 +77,35 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
 					   HighsSolutionParams& solution_params,
 					   const int report_level,
 					   const string message);
+
+void zeroSolutionIterationCountParams(HighsSolutionParams& solution_params);
+
+void zeroSolutionStatusParams(HighsSolutionParams& solution_params);
+void zeroSolutionParams(HighsSolutionParams& solution_params);
+
+bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
+				       const HighsSolutionParams& solution_params1);
+bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
+			       const HighsSolutionParams& solution_params1);
+
+bool equalSolutionParams(const HighsSolutionParams& solution_params0,
+			 const HighsSolutionParams& solution_params1);
+
+bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
+				    const HighsSolutionParams& solution_params0,
+				    const HighsModelStatus model_status1,
+				    const HighsSolutionParams& solution_params1);
+
+void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info);
+
+void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsSimplexInfo& simplex_info);
+
+#ifdef IPX_ON
+void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const ipx::Info& ipx_info);
+#endif
+
+void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params);
+
+void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params);
+
 #endif  // LP_DATA_HIGHSSOLUTION_H_
