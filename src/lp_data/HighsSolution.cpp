@@ -249,7 +249,13 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
   // method. These values should be known within simplex_info, so
   // their calculation here is just for checking
   HighsSolutionParams local_scaled_solution_params;
-  double& scaled_objective_function_value = local_scaled_solution_params.objective_function_value;
+  //
+  // Don't get the objective function directly: can't guarantee exact
+  // numerical equality due to order of calculation
+  //  double& scaled_objective_function_value = local_scaled_solution_params.objective_function_value;
+  // Take the primal_objective_value from simplex_info as the "scaled" objective function value
+  local_scaled_solution_params.objective_function_value =
+    highs_model_object.simplex_info_.primal_objective_value;
   int& num_scaled_primal_infeasibilities = local_scaled_solution_params.num_primal_infeasibilities;
   double& max_scaled_primal_infeasibility = local_scaled_solution_params.max_primal_infeasibility;
   double& sum_scaled_primal_infeasibilities = local_scaled_solution_params.sum_primal_infeasibilities;
@@ -260,7 +266,15 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
   // unscaled_solution_params are the retained values in
   // highs_model_object
   HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
-  double& unscaled_objective_function_value = unscaled_solution_params.objective_function_value;
+  //
+  // Don't get the objective function directly: can't guarantee exact
+  // numerical equality due to order of calculation
+  //  double& unscaled_objective_function_value = unscaled_solution_params.objective_function_value;
+  //
+  // Take the "scaled" objective function value as the "unscaled"
+  // objective function value since it's not affected by scaling
+  unscaled_solution_params.objective_function_value =
+    check_scaled_solution_params.objective_function_value;
   int& num_unscaled_primal_infeasibilities = unscaled_solution_params.num_primal_infeasibilities;
   double& max_unscaled_primal_infeasibility = unscaled_solution_params.max_primal_infeasibility;
   double& sum_unscaled_primal_infeasibilities = unscaled_solution_params.sum_primal_infeasibilities;
@@ -278,49 +292,25 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
   zeroSolutionStatusParams(local_scaled_solution_params);
   zeroSolutionStatusParams(unscaled_solution_params);
 
-  scaled_objective_function_value = highs_model_object.lp_.offset_;
-  unscaled_objective_function_value = scaled_objective_function_value;
-
   new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
   new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
   for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
-    if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
     // Look at the nonbasic variables
+    if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
+    // Look at the nonbasic dual infeasibilities
+    // No dual infeasiblity for fixed rows and columns
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
     bool col = iVar < lp.numCol_;
     double scale_mu;
-    double primal_scale_mu;
-    double cost_scale_mu;
     int iCol=0;
     int iRow=0;
     if (col) {
       iCol = iVar;
-      primal_scale_mu = 1 / scale.col_[iCol];
       scale_mu = 1 / (scale.col_[iCol] / scale.cost_);
     } else {
       iRow = iVar - lp.numCol_;
-      primal_scale_mu = scale.row_[iRow];
       scale_mu = scale.row_[iRow] * scale.cost_;
     }
-
-    cost_scale_mu = (1 / primal_scale_mu) * scale.cost_;
-
-    double scaled_value = simplex_info.workValue_[iVar];
-    double scaled_cost = simplex_info.workCost_[iVar];
-    double unscaled_cost = scaled_cost * cost_scale_mu;
-    double unscaled_value = scaled_value * primal_scale_mu;
-    scaled_objective_function_value += scaled_value*scaled_cost;
-    unscaled_objective_function_value += unscaled_value*unscaled_cost;
-    /*
-    if (scaled_cost)
-    printf("Obj %2d: Scaled %11.4g * %11.4g (%11.4g) Unscaled %11.4g * %11.4g (%11.4g)\n",
-	   iVar,
-	   scaled_value, scaled_cost, scaled_objective_function_value,
-	   unscaled_value, unscaled_cost, unscaled_objective_function_value);
-    */
-
-    // Look at the nonbasic dual infeasibilities
-    // No dual infeasiblity for fixed rows and columns
-    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
     double scaled_dual = simplex_info.workDual_[iVar];
     double unscaled_dual = scaled_dual * scale_mu;
     double scaled_dual_infeasibility = max(-basis.nonbasicMove_[iVar] * scaled_dual, 0.);
@@ -351,42 +341,21 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
   // Look at the basic variables
   for (int ix = 0; ix < lp.numRow_; ix++) {
     int iVar = basis.basicIndex_[ix];
+    // No dual infeasiblity for fixed rows and columns
+    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
     bool col = iVar < lp.numCol_;
     double scale_mu;
-    double primal_scale_mu;
-    double cost_scale_mu;
     int iCol=0;
     int iRow=0;
     if (col) {
       iCol = iVar;
-      primal_scale_mu = 1 / scale.col_[iCol];
       scale_mu = scale.col_[iCol];
     } else {
       iRow = iVar - lp.numCol_;
-      primal_scale_mu = scale.row_[iRow];
       scale_mu = 1 / scale.row_[iRow];
     }
-    cost_scale_mu = (1 / primal_scale_mu) * scale.cost_;
-
-    double scaled_value = simplex_info.baseValue_[ix];
-    double scaled_cost = simplex_info.workCost_[iVar];
-    double unscaled_cost = scaled_cost * cost_scale_mu;
-    double unscaled_value = scaled_value * primal_scale_mu;
-    scaled_objective_function_value += scaled_value*scaled_cost;
-    unscaled_objective_function_value += unscaled_value*unscaled_cost;
-    /*
-    if (scaled_cost)
-    printf("Obj %2d: Scaled %11.4g * %11.4g (%11.4g) Unscaled %11.4g * %11.4g (%11.4g)\n",
-	   iVar,
-	   scaled_value, scaled_cost, scaled_objective_function_value,
-	   unscaled_value, unscaled_cost, unscaled_objective_function_value);
-    */
-
-
     // Look at the basic primal infeasibilities
 
-    // No dual infeasiblity for fixed rows and columns
-    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
     double lower = simplex_info.baseLower_[ix];
     double upper = simplex_info.baseUpper_[ix];
     double value = simplex_info.baseValue_[ix];
@@ -438,7 +407,10 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
     equalSolutionParams(check_scaled_solution_params,
 			local_scaled_solution_params);
   //  assert(equal_scaled_solution_params);
-  //  if (!equal_scaled_solution_params) return HighsStatus::Error;
+  if (!equal_scaled_solution_params) {
+    printf("Unequal solution_params in analyseUnscaledSolutionFromSimplexBasicSolution\n");
+    //    return HighsStatus::Error;
+  }
   return HighsStatus::OK;
 }
 
@@ -468,7 +440,10 @@ HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs
 				   highs_model_object.unscaled_model_status_,
 				   highs_model_object.unscaled_solution_params_);
   //  assert(equal_model_status_solution_params);
-  //  if (!equal_model_status_solution_params) return HighsStatus::Error;
+  if (!equal_model_status_solution_params) {
+    printf("Unequal model status solution_params in analyseUnscaledModelHighsBasicSolution\n");
+    //    return HighsStatus::Error;
+  }
   return HighsStatus::OK;
 }
 
@@ -1074,7 +1049,6 @@ void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsSimpl
   solution_params.primal_status = simplex_info.primal_status;
   solution_params.dual_status = simplex_info.dual_status;
   solution_params.objective_function_value = simplex_info.primal_objective_value;
-  solution_params.objective_function_value = simplex_info.dual_objective_value;
   solution_params.num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
   solution_params.max_primal_infeasibility = simplex_info.max_primal_infeasibility;
   solution_params.sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
