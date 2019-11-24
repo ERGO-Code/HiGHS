@@ -168,9 +168,25 @@ HighsStatus Highs::run() {
 
   if (options_.icrash) {
     ICrashInfo result;
-    ICrashOptions icrash_options{options_.icrash_dualize, options_.icrash_strategy, options_.icrash_starting_weight, options_.icrash_iterations, options_.icrash_approximate_minimization_iterations, options_.icrash_exact};
-    HighsStatus icrash_status = CallICrash(lp_, icrash_options, result, timer_);
-    solution_.col_value = result.x_values;
+    ICrashStrategy strategy = ICrashStrategy::kICA;
+    bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
+    if (!strategy_ok) {
+      HighsPrintMessage(ML_ALWAYS, "ICrash error: unknown strategy./n");
+      return HighsStatus::Error;
+    }
+    ICrashOptions icrash_options{
+        options_.icrash_dualize,
+        strategy,
+        options_.icrash_starting_weight,
+        options_.icrash_iterations,
+        options_.icrash_approximate_minimization_iterations,
+        options_.icrash_exact};
+ 
+    // todo: timing. some strane compile issue.
+    HighsStatus icrash_status = CallICrash(lp_, icrash_options, result);
+    if (icrash_status == HighsStatus::OK)
+      solution_.col_value = result.x_values;
+
     return icrash_status;
   }
 

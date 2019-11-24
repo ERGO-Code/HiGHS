@@ -2340,3 +2340,44 @@ bool isLessInfeasibleDSECandidate(const HighsLp& lp) {
 #endif
   return LiDSE_candidate;
 }
+
+void convertToMinimization(HighsLp& lp) {
+  if (lp.sense_ != OBJSENSE_MINIMIZE) {
+    for (int col = 0; col < lp.numCol_; col++)
+      lp.colCost_[col] = -lp.colCost_[col];
+  }
+}
+
+bool isEqualityProblem(const HighsLp& lp) {
+  for (int row = 0; row < lp.numRow_; row++)
+    if (lp.rowLower_[row] != lp.rowUpper_[row]) return false;
+
+  return true;
+}
+
+double vectorProduct(const std::vector<double>& v1,
+                     const std::vector<double>& v2) {
+  assert(v1.size() == v2.size());
+  double sum = 0;
+  for (int i = 0; i < (int) v1.size(); i++) sum += v1[i] * v2[i];
+  return sum;
+}
+
+HighsStatus calculateResidual(const HighsLp& lp, HighsSolution& solution,
+                              std::vector<double>& residual) {
+  HighsStatus status = calculateRowValues(lp, solution);
+  if (status != HighsStatus::OK) return status;
+
+  residual.clear();
+  residual.resize(lp.numRow_);
+
+  for (int row = 0; row < lp.numRow_; row++) {
+    if (solution.row_value[row] < lp.rowLower_[row]) {
+      residual[row] = lp.rowLower_[row] - solution.row_value[row];
+    } else if (solution.row_value[row] > lp.rowUpper_[row]) {
+      residual[row] = solution.row_value[row] - lp.rowUpper_[row];
+    }
+  }
+
+  return status;
+}

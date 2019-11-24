@@ -16,11 +16,17 @@
 #define PRESOLVE_QUADRATIC_CRASH_H_
 
 #include "lp_data/HighsOptions.h"
-#include "HighsTimer.h"
+
+enum class ICrashStrategy {
+  kPenalty,
+  kAdmm,
+  kICA,
+  kBreakpoints,
+};
 
 struct ICrashOptions {
   bool dualize;
-  std::string strategy;
+  ICrashStrategy strategy;
   double starting_weight;
   int iterations;
   int approximate_minimization_iterations;
@@ -49,14 +55,10 @@ struct ICrashInfo {
   std::vector<double> x_values;
 };
 
-enum class ICrashStrategy {
-  PENALTY,
-  ADMM,
-  ICA,
-  BREAKPOINTS,
-};
-
 HighsStatus CallICrash(const HighsLp& lp, const ICrashOptions& options,
-                       ICrashInfo& result, HighsTimer& timer);
+                       ICrashInfo& result);
+
+bool parseICrashStrategy(const std::string& strategy,
+                         ICrashStrategy& icrash_strategy);
 
 #endif

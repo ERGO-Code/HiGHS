@@ -262,8 +262,14 @@ bool isRowDataNull(const double* usr_row_lower, const double* usr_row_upper);
 bool isMatrixDataNull(const int* usr_matrix_start, const int* usr_matrix_index,
                       const double* usr_matrix_value);
 
+bool isEqualityProblem(const HighsLp& lp);
 HighsLp transformIntoEqualityProblem(const HighsLp& lp);
 HighsLp dualizeEqualityProblem(const HighsLp& lp);
+void convertToMinimization(HighsLp& lp);
+HighsStatus calculateResidual(const HighsLp& lp, HighsSolution& solution,
+                              std::vector<double>& residual);
+
+double vectorProduct(const std::vector<double>& v1, const std::vector<double>& v2);
 
 void logPresolveReductions(const HighsLp& lp, const HighsLp& presolve_lp);
 
