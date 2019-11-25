@@ -15,7 +15,7 @@
 #ifndef PRESOLVE_QUADRATIC_CRASH_H_
 #define PRESOLVE_QUADRATIC_CRASH_H_
 
-#include "lp_data/HighsOptions.h"
+#include "lp_data/HighsLp.h"
 
 enum class ICrashStrategy {
   kPenalty,
@@ -24,21 +24,13 @@ enum class ICrashStrategy {
   kBreakpoints,
 };
 
-struct ICrashOptions {
-  bool dualize;
-  ICrashStrategy strategy;
-  double starting_weight;
-  int iterations;
-  int approximate_minimization_iterations;
-  bool exact;
-};
-
 struct ICrashIterationDetails {
+  int num;
   double weight;
 
-  double residual;
   double lp_objective;
   double quadratic_objective;
+  double residual_norm_2;
 };
 
 struct ICrashInfo {
@@ -53,6 +45,15 @@ struct ICrashInfo {
 
   std::vector<ICrashIterationDetails> details;
   std::vector<double> x_values;
+};
+
+struct ICrashOptions {
+  bool dualize;
+  ICrashStrategy strategy;
+  double starting_weight;
+  int iterations;
+  int approximate_minimization_iterations;
+  bool exact;
 };
 
 HighsStatus CallICrash(const HighsLp& lp, const ICrashOptions& options,

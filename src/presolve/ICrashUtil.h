@@ -24,13 +24,34 @@ struct IterationDetails {
 };
 
 // Calculates value of A^t*v in result.
-void MuptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
+void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
                          std::vector<double>& result);
 
 void printMinorIterationDetails(const double iteration, const double col,
                                 const double old_value, const double update,
                                 const double ctx, const std::vector<double>& r,
-                                const double quadratic_objective) {
-}
+                                const double quadratic_objective);
 
+bool initialize(const HighsLp& lp, HighsSolution& solution,
+                std::vector<double>& lambda);
+
+// todo:
+void minimize_exact_ica_admm();
+void minimize_exact_penalty();
+
+double minimize_component_ica(const int col, const double mu,
+                              const std::vector<double>& lambda,
+                              const HighsLp& lp, double& objective,
+                              std::vector<double>& residual,
+                              HighsSolution& sol);
+
+// todo:
+double minimize_component_breakpoints();
+
+void updateResidual(bool piecewise, const HighsLp& lp, const HighsSolution& sol,
+                    std::vector<double>& residual);
+
+// Allows negative residuals
+void updateResidualICA(const HighsLp& lp, const HighsSolution& sol,
+                       std::vector<double>& residual);
 #endif

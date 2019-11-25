@@ -12,7 +12,12 @@
  * @author Julian Hall, Ivet Galabova, Qi Huangfu and Michael Feldmeier
  */
 #include "presolve/ICrash.h"
+
+#include "HighsStatus.h"
+#include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
+#include "presolve/ICrashUtil.h"
+#include "util/HighsUtils.h"
 
 struct Quadratic {
   const HighsLp lp;
@@ -30,8 +35,7 @@ struct Quadratic {
 
   double mu;
   std::vector<double> lambda;
-  bool ok = false;
-  
+
   Quadratic(HighsLp lp_, ICrashOptions options_) : lp(lp_), options(options_) {}
 };
 
@@ -103,12 +107,34 @@ double getQuadraticObjective(const Quadratic& idata) {
   return quadratic;
 }
 
+bool initialize(Quadratic& idata, const ICrashOptions& options) {
+  if (!initialize(idata.lp, idata.xk, idata.lambda)) return false;
+
+  idata.mu = options.starting_weight;
+
+  // Maybe other values for x0.
+  return true;
+}
+
+void update(Quadratic& idata) {
+  idata.lp_objective = vectorProduct(idata.lp.colCost_, idata.xk.col_value);
+
+  calculateRowValues(idata.lp, idata.xk);
+  bool piecewise = (idata.options.strategy == ICrashStrategy::kBreakpoints)
+                       ? true
+                       : false;
+  updateResidual(piecewise, idata.lp, idata.xk, idata.residual);
+  idata.residual_norm_2 = getNorm2(idata.residual);
+}
+
 HighsStatus CallICrash(const HighsLp& lp, const ICrashOptions& options,
                        ICrashInfo& result) {
   if (!checkOptions(lp, options)) return HighsStatus::Error;
 
   Quadratic idata = parseOptions(lp, options);
 
+  initialize(idata, options);
+  update(idata);
   // todo: continue refactoring
 
   return HighsStatus::Warning;
