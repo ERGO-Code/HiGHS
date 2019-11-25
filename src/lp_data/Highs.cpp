@@ -452,7 +452,7 @@ HighsStatus Highs::run() {
 				 hmos_[original_hmo].basis_,
 				 hmos_[original_hmo].solution_,
 				 solution_params, report_level, "after returning from postsolve");
-	  copyFromSolutionParams(hmos_[original_hmo].simplex_info_, solution_params);
+	  //	  copyFromSolutionParams(hmos_[original_hmo].simplex_info_, solution_params);
 
           // Now hot-start the simplex solver for the original_hmo
           solved_hmo = original_hmo;
@@ -506,7 +506,10 @@ HighsStatus Highs::run() {
   assert(hmos_size > 0);
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // ToDo: make sure the model_status values are corrected
-  model_status_ = hmos_[solved_hmo].model_status_;
+
+  hmos_[solved_hmo].unscaled_model_status_ = setModelAndSolutionStatus(hmos_[solved_hmo].unscaled_solution_params_);
+
+  model_status_ = hmos_[solved_hmo].unscaled_model_status_;
   scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
   
   info_.objective_function_value = hmos_[original_hmo].simplex_info_.dual_objective_value;
@@ -514,8 +517,8 @@ HighsStatus Highs::run() {
   for (int k = 0; k < hmos_size; k++) {
     info_.simplex_iteration_count += hmos_[k].simplex_info_.iteration_count;
   }
-  info_.primal_status = hmos_[original_hmo].simplex_info_.primal_status;
-  info_.dual_status = hmos_[original_hmo].simplex_info_.dual_status;
+  info_.primal_status = hmos_[original_hmo].unscaled_solution_params_.primal_status;
+  info_.dual_status = hmos_[original_hmo].unscaled_solution_params_.dual_status;
   solution_ = hmos_[original_hmo].solution_;
   basis_ = hmos_[original_hmo].basis_;
   // Report times

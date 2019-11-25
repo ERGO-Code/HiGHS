@@ -46,7 +46,8 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
 							    double& new_primal_feasibility_tolerance,
 							    double& new_dual_feasibility_tolerance);
 
-HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs_model_object);
+HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs_model_object,
+						   const string message);
 
 bool analyseVarBasicSolution(
 			bool report,
@@ -64,6 +65,10 @@ bool analyseVarBasicSolution(
 			double& dual_infeasibility);
 
 std::string iterationsToString(const HighsSolutionParams& solution_params);
+
+// Returns the HighsModelStatus and sets the primal and dual solution
+// ststus for a given HighsSolutionParams instance
+HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params);
 
 // Analyse the HiGHS basic solution of the given LP. Currently only
 // used with the unscaled LP, but would work just as well with a
