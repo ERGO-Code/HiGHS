@@ -182,8 +182,8 @@ HighsStatus Highs::run() {
         options_.icrash_approximate_minimization_iterations,
         options_.icrash_exact};
  
-    // todo: timing. some strane compile issue.
-    HighsStatus icrash_status = CallICrash(lp_, icrash_options, result);
+    // todo: timing. some strange compile issue.
+    HighsStatus icrash_status = callICrash(lp_, icrash_options, result);
     if (icrash_status == HighsStatus::OK)
       solution_.col_value = result.x_values;
 

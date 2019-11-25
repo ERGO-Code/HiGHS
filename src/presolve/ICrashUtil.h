@@ -36,22 +36,21 @@ bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda);
 
 // todo:
-void minimize_exact_ica_admm();
-void minimize_exact_penalty();
+void minimizeExactIcaAdmm();
+void minimizeExactPenalty();
 
-double minimize_component_ica(const int col, const double mu,
-                              const std::vector<double>& lambda,
-                              const HighsLp& lp, double& objective,
-                              std::vector<double>& residual,
-                              HighsSolution& sol);
+double minimizeComponentIca(const int col, const double mu,
+                            const std::vector<double>& lambda,
+                            const HighsLp& lp, double& objective,
+                            std::vector<double>& residual, HighsSolution& sol);
 
 // todo:
-double minimize_component_breakpoints();
+double minimizeComponentBreakpoints();
 
 void updateResidual(bool piecewise, const HighsLp& lp, const HighsSolution& sol,
                     std::vector<double>& residual);
 
 // Allows negative residuals
-void updateResidualICA(const HighsLp& lp, const HighsSolution& sol,
+void updateResidualIca(const HighsLp& lp, const HighsSolution& sol,
                        std::vector<double>& residual);
 #endif

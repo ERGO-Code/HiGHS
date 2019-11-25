@@ -37,9 +37,9 @@ struct ICrashIterationDetails {
 struct ICrashInfo {
   int num_iterations;
 
-  double final_residual;
   double final_lp_objective;
   double final_quadratic_objective;
+  double final_residual_norm_2;
 
   double starting_weight;
   double final_weight;
@@ -57,7 +57,7 @@ struct ICrashOptions {
   bool exact;
 };
 
-HighsStatus CallICrash(const HighsLp& lp, const ICrashOptions& options,
+HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
                        ICrashInfo& result);
 
 bool parseICrashStrategy(const std::string& strategy,

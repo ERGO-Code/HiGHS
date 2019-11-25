@@ -83,20 +83,19 @@ bool initialize(const HighsLp& lp, HighsSolution& solution,
 }
 
 // Should only work with kLinearized type.
-void minimize_exact_ica_admm() {
+void minimizeExactIcaAdmm() {
   // !!! do not modify LP cost ***
   // update();
 }
 
-void minimize_exact_penalty() {
+void minimizeExactPenalty() {
   // update();
 }
 
-double minimize_component_ica(const int col, const double mu,
-                              const std::vector<double>& lambda,
-                              const HighsLp& lp, double& objective,
-                              std::vector<double>& residual,
-                              HighsSolution& sol) {
+double minimizeComponentIca(const int col, const double mu,
+                            const std::vector<double>& lambda,
+                            const HighsLp& lp, double& objective,
+                            std::vector<double>& residual, HighsSolution& sol) {
   // Minimize quadratic for column col.
 
   // Formulas for a and b when minimizing for x_j
@@ -177,7 +176,7 @@ void updateResidual(bool piecewise, const HighsLp& lp, const HighsSolution& sol,
 }
 
 // Allows negative residuals
-void updateResidualICA(const HighsLp& lp, const HighsSolution& sol,
+void updateResidualIca(const HighsLp& lp, const HighsSolution& sol,
                        std::vector<double>& residual) {
   assert(isEqualityProblem(lp));
   for (int row = 0; row < lp.numRow_; row++)
