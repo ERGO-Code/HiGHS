@@ -223,16 +223,20 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 }
 #endif    
 
-HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& highs_model_object) {
+HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
+					const bool report) {
   double new_primal_feasibility_tolerance;
   double new_dual_feasibility_tolerance;
-  return analyseUnscaledSolutionFromSimplexBasicSolution(highs_model_object,
-							 new_primal_feasibility_tolerance,
-							 new_dual_feasibility_tolerance);
+  return analyseSimplexBasicSolution(highs_model_object,
+				     new_primal_feasibility_tolerance,
+				     new_dual_feasibility_tolerance,
+				     report);
 }
-HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& highs_model_object, 
-							    double& new_primal_feasibility_tolerance,
-							    double& new_dual_feasibility_tolerance) {
+
+HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object, 
+					double& new_primal_feasibility_tolerance,
+					double& new_dual_feasibility_tolerance,
+					const bool report) {
   const HighsLp& lp = highs_model_object.lp_;
   const HighsOptions& options = highs_model_object.options_;
   const SimplexBasis& basis = highs_model_object.simplex_basis_;
@@ -297,9 +301,8 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
   new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
   new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
   for (int iVar = 0; iVar < lp.numCol_ + lp.numRow_; iVar++) {
-    // Look at the nonbasic variables
+    // Look at the dual infeasibilities of nonbasic variables
     if (basis.nonbasicFlag_[iVar] == NONBASIC_FLAG_FALSE) continue;
-    // Look at the nonbasic dual infeasibilities
     // No dual infeasiblity for fixed rows and columns
     if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
     bool col = iVar < lp.numCol_;
@@ -340,11 +343,9 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
     max_unscaled_dual_infeasibility = max(unscaled_dual_infeasibility, max_unscaled_dual_infeasibility);
     sum_unscaled_dual_infeasibilities += unscaled_dual_infeasibility;
   }
-  // Look at the basic variables
+  // Look at the primal infeasibilities of basic variables
   for (int ix = 0; ix < lp.numRow_; ix++) {
     int iVar = basis.basicIndex_[ix];
-    // No dual infeasiblity for fixed rows and columns
-    if (simplex_info.workLower_[iVar] == simplex_info.workUpper_[iVar]) continue;
     bool col = iVar < lp.numCol_;
     double scale_mu;
     int iCol=0;
@@ -384,17 +385,53 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
 #ifdef HiGHSDEV
-  if (num_scaled_primal_infeasibilities>0) {
-    HighsLogMessage(HighsMessageType::ERROR, "  Scaled primal infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		    num_scaled_primal_infeasibilities,
-		    max_scaled_primal_infeasibility,
-		    sum_scaled_primal_infeasibilities);
-  }
-  if (num_scaled_dual_infeasibilities>0) {
-    HighsLogMessage(HighsMessageType::ERROR, "  Scaled   dual infeasibilities: num/max/sum = %6d/%11.4g/%11.4g",
-		    num_scaled_dual_infeasibilities,
-		    max_scaled_dual_infeasibility,
-		    sum_scaled_dual_infeasibilities);
+  if (highs_model_object.scaled_model_status_ == HiGHSModelStatus::Optimal ||
+      highs_model_object.scaled_model_status_ == HiGHSModelStatus::PrimalFeasible ||
+      highs_model_object.scaled_model_status_ == HiGHSModelStatus::DualFeasible) {
+    // If numbers of scaled primal or dual infeasibilities are
+    // inconsistent with the scaled model status, then flag up an error
+    bool should_be_primal_infeasibilities = true;
+    bool should_be_dual_infeasibilities = true;
+    if (highs_model_object.scaled_model_status_ == HiGHSModelStatus::Optimal) {
+      should_be_primal_infeasibilities = false;
+      should_be_dual_infeasibilities = false;
+    } else if (highs_model_object.scaled_model_status_ == HiGHSModelStatus::PrimalFeasible) {
+      should_be_primal_infeasibilities = false;
+    } else {
+      should_be_dual_infeasibilities = false;
+    }
+    bool infeasibility_error;
+    std::string error_comment;
+    // Consider primal infeasibility errors
+    infeasibility_error = false;
+    if (num_scaled_primal_infeasibilities && !should_be_primal_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "Scaled primal infeasibilities, but should be none";
+    } else  if (num_scaled_primal_infeasibilities==0 && should_be_primal_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "No scaled primal infeasibilities, but should be some";
+    }
+    if (infeasibility_error)
+      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
+		      error_comment.c_str();
+		      num_scaled_primal_infeasibilities,
+		      max_scaled_primal_infeasibility,
+		      sum_scaled_primal_infeasibilities);
+    // Consider dual infeasibility errors
+    infeasibility_error = false;
+    if (num_scaled_dual_infeasibilities && !should_be_dual_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "Scaled dual infeasibilities, but should be none";
+    } else  if (num_scaled_dual_infeasibilities==0 && should_be_dual_infeasibilities) {
+      infeasibility_error = true;
+      error_comment = "No scaled dual infeasibilities, but should be some";
+    }
+    if (infeasibility_error)
+      HighsLogMessage(HighsMessageType::ERROR, "%s: num/max/sum = %6d/%0.4g/%0.4g",
+		      error_comment.c_str();
+		      num_scaled_dual_infeasibilities,
+		      max_scaled_dual_infeasibility,
+		      sum_scaled_dual_infeasibilities);
   }
 #endif
   bool equal_scaled_solution_params =
@@ -402,40 +439,42 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
 			local_scaled_solution_params);
   //  assert(equal_scaled_solution_params);
   if (!equal_scaled_solution_params) {
-    printf("Unequal solution_params in analyseUnscaledSolutionFromSimplexBasicSolution\n");
+    HighsLogMessage(HighsMessageType::ERROR,
+		  "Unequal solution_params in analyseSimplexBasicSolution");
     //    return HighsStatus::Error;
   }
-  HighsLogMessage(HighsMessageType::INFO,
-		  "Simplex basic solution: %sObjective = %.15g",
-		  iterationsToString(local_scaled_solution_params).c_str(),
-		  local_scaled_solution_params.objective_function_value);
-  
-  HighsLogMessage(HighsMessageType::INFO,
-		  "Infeasibilities -   scaled - Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, Sum %.4g); Status: %s",
-		  local_scaled_solution_params.num_primal_infeasibilities,
-		  local_scaled_solution_params.max_primal_infeasibility,
-		  local_scaled_solution_params.sum_primal_infeasibilities,
-		  local_scaled_solution_params.num_dual_infeasibilities,
-		  local_scaled_solution_params.max_dual_infeasibility,
-		  local_scaled_solution_params.sum_dual_infeasibilities,
-		  utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str());
-
   highs_model_object.unscaled_model_status_ = setModelAndSolutionStatus(unscaled_solution_params);
-  HighsLogMessage(HighsMessageType::INFO,
-		  "Infeasibilities - unscaled - Pr %d(Max %.4g, Sum %.4g); Du %d(Max %.4g, Sum %.4g); Status: %s",
-		  unscaled_solution_params.num_primal_infeasibilities,
-		  unscaled_solution_params.max_primal_infeasibility,
-		  unscaled_solution_params.sum_primal_infeasibilities,
-		  unscaled_solution_params.num_dual_infeasibilities,
-		  unscaled_solution_params.max_dual_infeasibility,
-		  unscaled_solution_params.sum_dual_infeasibilities,
-		  utilHighsModelStatusToString(highs_model_object.unscaled_model_status_).c_str());
+  if (report) {
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Simplex basic solution: %sObjective = %0.15g",
+		    iterationsToString(local_scaled_solution_params).c_str(),
+		    local_scaled_solution_params.objective_function_value);
+  
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
+		    local_scaled_solution_params.num_primal_infeasibilities,
+		    local_scaled_solution_params.max_primal_infeasibility,
+		    local_scaled_solution_params.sum_primal_infeasibilities,
+		    local_scaled_solution_params.num_dual_infeasibilities,
+		    local_scaled_solution_params.max_dual_infeasibility,
+		    local_scaled_solution_params.sum_dual_infeasibilities,
+		    utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str());
 
+    HighsLogMessage(HighsMessageType::INFO,
+		    "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
+		    unscaled_solution_params.num_primal_infeasibilities,
+		    unscaled_solution_params.max_primal_infeasibility,
+		    unscaled_solution_params.sum_primal_infeasibilities,
+		    unscaled_solution_params.num_dual_infeasibilities,
+		    unscaled_solution_params.max_dual_infeasibility,
+		    unscaled_solution_params.sum_dual_infeasibilities,
+		    utilHighsModelStatusToString(highs_model_object.unscaled_model_status_).c_str());
+  }
   return HighsStatus::OK;
 }
 
-HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs_model_object,
-						   const string message) {
+HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+				      const string message) {
   // Analyse and report on the (unscaled) HiGHS basic solution. Acts
   // as a check that the unscaled model status and unscaled solution
   // parameters have been set correctly.
@@ -464,196 +503,11 @@ HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs
 				   highs_model_object.unscaled_solution_params_);
   //  assert(equal_model_status_solution_params);
   if (!equal_model_status_solution_params) {
-    printf("Unequal model status solution_params in analyseUnscaledModelHighsBasicSolution\n");
+    HighsLogMessage(HighsMessageType::ERROR,
+		  "Unequal model status solution_params in analyseHighsBasicSolution");
     //    return HighsStatus::Error;
   }
   return HighsStatus::OK;
-}
-
-bool analyseVarBasicSolution(
-			bool report,
-			const double primal_feasibility_tolerance,
-			const double dual_feasibility_tolerance,
-			const HighsBasisStatus status,
-			const double lower,
-			const double upper,
-			const double value,
-			const double dual,
-			int& num_non_basic_var,
-			int& num_basic_var,
-			double& off_bound_nonbasic,
-			double& primal_infeasibility,
-			double& dual_infeasibility) {
-  double middle = (lower + upper) * 0.5;
-
-  bool query = false;
-  bool count = !report;
-  off_bound_nonbasic = 0;
-  double primal_residual = std::max(lower - value, value - upper);
-  primal_infeasibility = std::max(primal_residual, 0.);
-  // ToDo Strange: nonbasic_flag seems to be inverted???
-  if (status == HighsBasisStatus::BASIC) {
-    // Basic variable: look for primal infeasibility
-    if (count) num_basic_var++;
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      // Outside a bound
-      if (value < lower) {
-        query = true;
-        if (report)
-          printf(": Basic below lower bound by %12g", primal_residual);
-      } else {
-        query = true;
-        if (report)
-          printf(": Basic above upper bound by %12g", primal_residual);
-      }
-    }
-    dual_infeasibility = fabs(dual);
-    if (dual_infeasibility > dual_feasibility_tolerance) {
-      query = true;
-      if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
-    }
-  } else {
-    // Nonbasic variable: look for primal and dual infeasibility
-    if (count) num_non_basic_var++;
-
-    if (primal_infeasibility > primal_feasibility_tolerance) {
-      // Outside a bound
-      dual_infeasibility = 0;
-      if (value < lower) {
-        query = true;
-        if (report)
-          printf(": Nonbasic below lower bound by %12g", primal_residual);
-      } else {
-        query = true;
-        if (report)
-          printf(": Nonbasic above upper bound by %12g", primal_residual);
-      }
-    } else if (primal_residual >= -primal_feasibility_tolerance) {
-      // At a bound: check for dual feasibility
-      if (lower < upper) {
-        // Non-fixed variable
-        if (value < middle) {
-          // At lower
-          dual_infeasibility = std::max(-dual, 0.);
-          if (dual_infeasibility > dual_feasibility_tolerance) {
-            // Dual infeasiblility
-            query = true;
-            if (report)
-              printf(": Dual infeasibility of %12g", dual_infeasibility);
-          }
-        } else {
-          // At Upper
-          dual_infeasibility = std::max(dual, 0.);
-          if (dual_infeasibility > dual_feasibility_tolerance) {
-            // Dual infeasiblility
-            query = true;
-            if (report)
-              printf(": Dual infeasibility of %12g", dual_infeasibility);
-          }
-        }
-      } else {
-        // Fixed variable
-        dual_infeasibility = 0;
-      }
-    } else {
-      // Between bounds (or free)
-      if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
-        // Free
-        if (report) printf(": Nonbasic free");
-      } else {
-        query = true;
-        if (report) printf(": Nonbasic off bound by %12g", -primal_residual);
-        off_bound_nonbasic = -primal_residual;
-      }
-      dual_infeasibility = fabs(dual);
-      if (dual_infeasibility > dual_feasibility_tolerance) {
-        query = true;
-        if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
-      }
-    }
-  }
-  query = false;
-  return query;
-}
-
-std::string iterationsToString(const HighsSolutionParams& solution_params) {
-  std::string iteration_statement = "";
-  bool not_first = false;
-  int num_positive_count = 0;
-  if (solution_params.simplex_iteration_count) num_positive_count++;
-  if (solution_params.ipm_iteration_count) num_positive_count++;
-  if (solution_params.crossover_iteration_count) num_positive_count++;
-  if (num_positive_count == 0) {
-    iteration_statement += "0 iterations; ";
-    return iteration_statement;
-  }
-  if (num_positive_count > 1) iteration_statement += "(";
-  int count;
-  std::string count_str;
-  count = solution_params.simplex_iteration_count;
-  if (count) {
-    count_str = std::to_string(count);
-    if (not_first) iteration_statement += "; ";
-    iteration_statement += count_str + " " + "Simplex";
-    not_first = true;
-  }
-  count = solution_params.ipm_iteration_count;
-  if (count) {
-    count_str = std::to_string(count);
-    if (not_first) iteration_statement += "; ";
-    iteration_statement += count_str + " " + "IPM";
-    not_first = true;
-  }
-  count = solution_params.crossover_iteration_count;
-  if (count) {
-    count_str = std::to_string(count);
-    if (not_first) iteration_statement += "; ";
-    iteration_statement += count_str + " " + "Crossover";
-    not_first = true;
-  }
-  if (num_positive_count > 1) {
-    iteration_statement += ") Iterations; ";
-  } else {
-    iteration_statement += " iterations; ";
-  }
-  return iteration_statement;
-}
-
- HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params) {
-   HighsModelStatus model_status;
-   bool primal_feasible = solution_params.num_primal_infeasibilities == 0;
-  //  primal_feasible = primal_feasible &&
-  //    max_primal_residual < primal_feasibility_tolerance;
-  bool dual_feasible = solution_params.num_dual_infeasibilities == 0;
-  //  dual_feasible = dual_feasible &&
-  //    max_dual_residual < dual_feasibility_tolerance;
-  // Determine the model status
-  if (primal_feasible) {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::OPTIMAL;
-    } else {
-      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
-    }
-  } else {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::DUAL_FEASIBLE;
-    } else {
-      model_status = HighsModelStatus::NOTSET;
-    }
-  }
-  // Determine the primal status
-  if (primal_feasible) {
-    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  } else {
-    solution_params.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
-  }
-  // Determine the dual status
-  if (dual_feasible) {
-    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  } else {
-    solution_params.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
-  }
-  return model_status;
 }
 
 // Analyse the HiGHS basic solution of the given LP. Currently only
@@ -946,6 +800,192 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
 	 num_dual_residual, max_dual_residual, sum_dual_residual,
 	 num_dual_infeasibilities, max_dual_infeasibility, sum_dual_infeasibilities);
 #endif
+  return model_status;
+}
+
+bool analyseVarBasicSolution(
+			bool report,
+			const double primal_feasibility_tolerance,
+			const double dual_feasibility_tolerance,
+			const HighsBasisStatus status,
+			const double lower,
+			const double upper,
+			const double value,
+			const double dual,
+			int& num_non_basic_var,
+			int& num_basic_var,
+			double& off_bound_nonbasic,
+			double& primal_infeasibility,
+			double& dual_infeasibility) {
+  double middle = (lower + upper) * 0.5;
+
+  bool query = false;
+  bool count = !report;
+  off_bound_nonbasic = 0;
+  double primal_residual = std::max(lower - value, value - upper);
+  primal_infeasibility = std::max(primal_residual, 0.);
+  // ToDo Strange: nonbasic_flag seems to be inverted???
+  if (status == HighsBasisStatus::BASIC) {
+    // Basic variable: look for primal infeasibility
+    if (count) num_basic_var++;
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      // Outside a bound
+      if (value < lower) {
+        query = true;
+        if (report)
+          printf(": Basic below lower bound by %12g", primal_residual);
+      } else {
+        query = true;
+        if (report)
+          printf(": Basic above upper bound by %12g", primal_residual);
+      }
+    }
+    dual_infeasibility = fabs(dual);
+    if (dual_infeasibility > dual_feasibility_tolerance) {
+      query = true;
+      if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
+    }
+  } else {
+    // Nonbasic variable: look for primal and dual infeasibility
+    if (count) num_non_basic_var++;
+
+    if (primal_infeasibility > primal_feasibility_tolerance) {
+      // Outside a bound
+      dual_infeasibility = 0;
+      if (value < lower) {
+        query = true;
+        if (report)
+          printf(": Nonbasic below lower bound by %12g", primal_residual);
+      } else {
+        query = true;
+        if (report)
+          printf(": Nonbasic above upper bound by %12g", primal_residual);
+      }
+    } else if (primal_residual >= -primal_feasibility_tolerance) {
+      // At a bound: check for dual feasibility
+      if (lower < upper) {
+        // Non-fixed variable
+        if (value < middle) {
+          // At lower
+          dual_infeasibility = std::max(-dual, 0.);
+          if (dual_infeasibility > dual_feasibility_tolerance) {
+            // Dual infeasiblility
+            query = true;
+            if (report)
+              printf(": Dual infeasibility of %12g", dual_infeasibility);
+          }
+        } else {
+          // At Upper
+          dual_infeasibility = std::max(dual, 0.);
+          if (dual_infeasibility > dual_feasibility_tolerance) {
+            // Dual infeasiblility
+            query = true;
+            if (report)
+              printf(": Dual infeasibility of %12g", dual_infeasibility);
+          }
+        }
+      } else {
+        // Fixed variable
+        dual_infeasibility = 0;
+      }
+    } else {
+      // Between bounds (or free)
+      if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
+        // Free
+        if (report) printf(": Nonbasic free");
+      } else {
+        query = true;
+        if (report) printf(": Nonbasic off bound by %12g", -primal_residual);
+        off_bound_nonbasic = -primal_residual;
+      }
+      dual_infeasibility = fabs(dual);
+      if (dual_infeasibility > dual_feasibility_tolerance) {
+        query = true;
+        if (report) printf(": Dual infeasibility of %12g", dual_infeasibility);
+      }
+    }
+  }
+  query = false;
+  return query;
+}
+
+std::string iterationsToString(const HighsSolutionParams& solution_params) {
+  std::string iteration_statement = "";
+  bool not_first = false;
+  int num_positive_count = 0;
+  if (solution_params.simplex_iteration_count) num_positive_count++;
+  if (solution_params.ipm_iteration_count) num_positive_count++;
+  if (solution_params.crossover_iteration_count) num_positive_count++;
+  if (num_positive_count == 0) {
+    iteration_statement += "0 iterations; ";
+    return iteration_statement;
+  }
+  if (num_positive_count > 1) iteration_statement += "(";
+  int count;
+  std::string count_str;
+  count = solution_params.simplex_iteration_count;
+  if (count) {
+    count_str = std::to_string(count);
+    if (not_first) iteration_statement += "; ";
+    iteration_statement += count_str + " " + "Simplex";
+    not_first = true;
+  }
+  count = solution_params.ipm_iteration_count;
+  if (count) {
+    count_str = std::to_string(count);
+    if (not_first) iteration_statement += "; ";
+    iteration_statement += count_str + " " + "IPM";
+    not_first = true;
+  }
+  count = solution_params.crossover_iteration_count;
+  if (count) {
+    count_str = std::to_string(count);
+    if (not_first) iteration_statement += "; ";
+    iteration_statement += count_str + " " + "Crossover";
+    not_first = true;
+  }
+  if (num_positive_count > 1) {
+    iteration_statement += ") Iterations; ";
+  } else {
+    iteration_statement += " iterations; ";
+  }
+  return iteration_statement;
+}
+
+ HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params) {
+   HighsModelStatus model_status;
+   bool primal_feasible = solution_params.num_primal_infeasibilities == 0;
+  //  primal_feasible = primal_feasible &&
+  //    max_primal_residual < primal_feasibility_tolerance;
+  bool dual_feasible = solution_params.num_dual_infeasibilities == 0;
+  //  dual_feasible = dual_feasible &&
+  //    max_dual_residual < dual_feasibility_tolerance;
+  // Determine the model status
+  if (primal_feasible) {
+    if (dual_feasible) {
+      model_status = HighsModelStatus::OPTIMAL;
+    } else {
+      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
+    }
+  } else {
+    if (dual_feasible) {
+      model_status = HighsModelStatus::DUAL_FEASIBLE;
+    } else {
+      model_status = HighsModelStatus::NOTSET;
+    }
+  }
+  // Determine the primal status
+  if (primal_feasible) {
+    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  } else {
+    solution_params.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
+  }
+  // Determine the dual status
+  if (dual_feasible) {
+    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+  } else {
+    solution_params.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
+  }
   return model_status;
 }
 

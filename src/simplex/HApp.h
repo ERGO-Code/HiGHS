@@ -60,43 +60,23 @@ void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
 }
 #endif
 
-// Single function to solve an LP according to options. Solves the
-// unscaled LP if it has no constraints, otherwise solves the scaled
-// LP (if scaling option is set)
+// Single function to solve the (scaled) LP according to
+// options. Assumes that the LP has a positive number of rows, since
+// unconstrained LPs should be solved in solveModelSimplex
+//
+// Also sets the solution parameters for the unscaled LP
 HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   HighsTimer& timer = highs_model_object.timer_;
   // Set the solver_return_status to error so that not setting it
   // later is evident
   HighsStatus solver_return_status = HighsStatus::Error;
-  // Invalidate the model status and zero the solution status values
-  // for the unscaled model, then indicate that the objective funciton
-  // values are unknown
-  highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
-  invalidateSolutionStatusParams(simplex_info);
-  highs_model_object.simplex_lp_status_.has_primal_objective_value = false;
-  highs_model_object.simplex_lp_status_.has_dual_objective_value = false;
-  
-  // Handle the case of unconstrained LPs here
-  if (!highs_model_object.lp_.numRow_) {
-    setSimplexOptions(highs_model_object);
-    solver_return_status = solveUnconstrainedLp(highs_model_object);
-    if (solver_return_status == HighsStatus::Error) return solver_return_status;
-    // Unconstrained (unscaled) LP solved successfully (may still be
-    // infeasible or unbounded)
-    // 
-    // No scaling performed, so set the scaled_model_status equal to
-    // the unscaled_model_status.
-    highs_model_object.scaled_model_status_ = highs_model_object.unscaled_model_status_;
-#ifdef HiGHSDEV
-    if (highs_model_object.simplex_info_.analyseLpSolution) {
-      HighsStatus return_status = analyseUnscaledModelHighsBasicSolution(highs_model_object,
-									 "after solving unconstrained LP");
-      if (return_status != HighsStatus::OK) return return_status;
-    }
-#endif
-    return solver_return_status;
-  }
+
+  // Assumes that the LP has a positive number of rows, since
+  // unconstrained LPs should be solved in solveModelSimplex
+  bool positive_num_row = highs_model_object.lp_.numRow_ > 0;
+  assert(positive_num_row);
+  if (!positive_num_row) return HighsStatus::Error;
 
   // Set simplex options from HiGHS options.
   // ToDo: Should only be done when not hot-starting since strategy
@@ -224,36 +204,35 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
   }
 
+  // Frig until highs_model_object.model_status_ is removed
   highs_model_object.scaled_model_status_ = highs_model_object.model_status_;
 
+  if (simplex_info.analyseLpSolution) {
+    // Analyse the LP solution. Note that this sets
+    // unscaled_solution_params, which is assumed by
+    // analyseHighsBasicSolution.
+    HighsStatus return_status;
+    const bool report = true;
+    return_status = analyseSimplexBasicSolution(highs_model_object, report);
+    if (return_status != HighsStatus::OK) return return_status;
+
 #ifdef HiGHSDEV
-  if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
-    if (simplex_info.analyseLpSolution) {
-      // To analyse the unscaled model's Highs basic solution we need
-      // unscaled_solution_params to be set, since it's passed into
-      // analyseHighsBasicSolution.
-      //
-      // This is most conveniently done using
-      // analyseUnscaledSolutionFromSimplexBasicSolution
-      HighsStatus return_status;
-      return_status = analyseUnscaledSolutionFromSimplexBasicSolution(highs_model_object);
-      if (return_status != HighsStatus::OK) return return_status;
-
-      // Copy the solution and basis
-      HighsSimplexInterface simplex_interface(highs_model_object);
-      simplex_interface.convertSimplexToHighsSolution();
-      simplex_interface.convertSimplexToHighsBasis();
-      // Analyse the unscaled model's Highs basic solution
-      return_status = analyseUnscaledModelHighsBasicSolution(highs_model_object,
-							     "to check simplex basic soulution");
-      if (return_status != HighsStatus::OK) return return_status;
-      // Invalidate the basis to make sure it is set again later
-      // without HiGHSDEV
-      highs_model_object.basis_.valid_ = false;
-
-    }
-  }
+    // For debugging, it's good to be able to check what comes out of
+    // the solver. This is done fully by analyseHighsBasicSolution,
+    // which computes the primal and dual residuals so isn't cheap.
+    //
+    // Copy the solution and basis
+    HighsSimplexInterface simplex_interface(highs_model_object);
+    simplex_interface.convertSimplexToHighsSolution();
+    simplex_interface.convertSimplexToHighsBasis();
+    return_status = 
+      analyseHighsBasicSolution(highs_model_object, "to check simplex basic soulution");
+    if (return_status != HighsStatus::OK) return return_status;
+    // Invalidate the basis to make sure it is set again later
+    // without HiGHSDEV
+    highs_model_object.basis_.valid_ = false;
 #endif
+  }
   solver_return_status = highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 #ifdef HiGHSDEV
   //  reportSimplexLpStatus(simplex_lp_status, "After running the simplex solver");
@@ -270,9 +249,9 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 #endif
     // Deduce the unscaled solution parameters, and new fasibility tolerances if not primal and/or dual feasible
     HighsStatus return_status =
-      analyseUnscaledSolutionFromSimplexBasicSolution(highs_model_object, 
-						      new_primal_feasibility_tolerance,
-						      new_dual_feasibility_tolerance);
+      analyseSimplexBasicSolution(highs_model_object, 
+				  new_primal_feasibility_tolerance,
+				  new_dual_feasibility_tolerance);
     if (return_status != HighsStatus::OK) return return_status;
     // Set the model and solution status according to the unscaled solution parameters
     highs_model_object.unscaled_model_status_ =
@@ -322,10 +301,34 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
+  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+
+  // Invalidate the model status and zero the solution status values
+  // for the unscaled model, then indicate that the objective funciton
+  // values are unknown
+  highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
+  invalidateSolutionStatusParams(simplex_info);
+  highs_model_object.simplex_lp_status_.has_primal_objective_value = false;
+  highs_model_object.simplex_lp_status_.has_dual_objective_value = false;
+  
+  // Handle the case of unconstrained LPs here
+  if (!highs_model_object.lp_.numRow_) {
+    setSimplexOptions(highs_model_object);
+    HighsStatus solver_return_status = solveUnconstrainedLp(highs_model_object);
+    if (solver_return_status == HighsStatus::Error) return solver_return_status;
+    // Unconstrained (unscaled) LP solved successfully (may still be
+    // infeasible or unbounded)
+    // 
+    // No scaling performed, so set the scaled_model_status equal to
+    // the unscaled_model_status.
+    highs_model_object.scaled_model_status_ = highs_model_object.unscaled_model_status_;
+    return solver_return_status;
+  }
+
   // (Try to) solve the scaled LP
   HighsStatus highs_status = runSimplexSolver(highs_model_object);
 #ifdef HiGHSDEV
-  if (highs_model_object.simplex_info_.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
+  if (simplex_info.analyse_invert_form) reportAnalyseInvertForm(highs_model_object);
 #endif
   if (highs_status != HighsStatus::OK) return highs_status;
 

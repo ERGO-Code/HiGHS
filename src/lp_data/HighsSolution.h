@@ -35,19 +35,35 @@ HighsStatus ipxToHighsBasicSolution(const HighsLp& lp,
 				    HighsSolution& highs_solution);
 #endif    
 
-// Wrapper for analyseUnscaledSolutionFromSimplexBasicSolution when
+// Wrapper for analyseSimplexBasicSolution when
 // not used to get suggested feasibility tolerances
-HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& highs_model_object);
+HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
+					const bool report=false);
 
 // Analyse the unscaled solution from a Simplex basic solution to get
 // suggested feasibility tolerances for resolving the scaled LP
 // This sets highs_model_object.unscaled_solution_params_
-HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& highs_model_object, 
-							    double& new_primal_feasibility_tolerance,
-							    double& new_dual_feasibility_tolerance);
+HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object, 
+					double& new_primal_feasibility_tolerance,
+					double& new_dual_feasibility_tolerance,
+					const bool report=false);
 
-HighsStatus analyseUnscaledModelHighsBasicSolution(const HighsModelObject& highs_model_object,
-						   const string message);
+// Analyse the HiGHS basic solution of the unscaled LP in a HighsModelObject instance
+HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object,
+				      const string message);
+
+// Analyse the HiGHS basic solution of the given LP. Currently only
+// used with the unscaled LP, but would work just as well with a
+// scaled LP. The primal and dual feasibility tolerances are passed in
+// via solution_params, which returns the int and double data obtained
+// about the solution. The overall model status is returned in the
+// argument.
+HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
+					   const HighsBasis& basis,
+					   const HighsSolution& solution,
+					   HighsSolutionParams& solution_params,
+					   const int report_level,
+					   const string message);
 
 bool analyseVarBasicSolution(
 			bool report,
@@ -69,19 +85,6 @@ std::string iterationsToString(const HighsSolutionParams& solution_params);
 // Returns the HighsModelStatus and sets the primal and dual solution
 // ststus for a given HighsSolutionParams instance
 HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params);
-
-// Analyse the HiGHS basic solution of the given LP. Currently only
-// used with the unscaled LP, but would work just as well with a
-// scaled LP. The primal and dual feasibility tolerances are passed in
-// via solution_params, which returns the int and double data obtained
-// about the solution. The overall model status is returned in the
-// argument.
-HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
-					   const HighsBasis& basis,
-					   const HighsSolution& solution,
-					   HighsSolutionParams& solution_params,
-					   const int report_level,
-					   const string message);
 
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountParams(HighsSolutionParams& solution_params);

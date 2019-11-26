@@ -576,7 +576,9 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
       model_status = HighsModelStatus::NOTSET;
     }
   }
-  highs_model_object.model_status_ = model_status;
+  highs_model_object.scaled_model_status_ = model_status;
+  // Frig until highs_model_object.model_status_ is removed
+  highs_model_object.model_status_ = highs_model_object.scaled_model_status_;
   //
 #ifdef HiGHSDEV
   // If there is a HiGHS solution then determine the changes in basic
@@ -728,17 +730,9 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
 	   num_basic_row_dual_differences, sum_basic_row_dual_differences);
   }
 #endif  
-  HighsLogMessage(
-      HighsMessageType::INFO,
-      "Initial basic solution: Objective = %.15g; "
-      "Infeasibilities Pr %d(%g); Du %d(%g); Status: %s",
-      simplex_info.primal_objective_value,
-      simplex_info.num_primal_infeasibilities,
-      simplex_info.sum_primal_infeasibilities,
-      simplex_info.num_dual_infeasibilities,
-      simplex_info.sum_dual_infeasibilities,
-      utilHighsModelStatusToString(highs_model_object.model_status_).c_str());
-	 
+  // Use analyseSimplexBasicSolution to report the 
+  if (simplex_info.analyseLpSolution)
+    analyseSimplexBasicSolution(highs_model_object, true);
   return model_status;
 }
 
