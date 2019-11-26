@@ -3266,7 +3266,10 @@ HighsStatus solveUnconstrainedLp(HighsModelObject& highs_model_object) {
   bool infeasible = false;
   bool unbounded = false;
   HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
-  zeroSolutionParams(unscaled_solution_params);
+  invalidateSolutionParams(unscaled_solution_params);
+  unscaled_solution_params.num_primal_infeasibilities = 0;
+  unscaled_solution_params.num_dual_infeasibilities = 0;
+  
   for (int iCol=0; iCol<lp.numCol_; iCol++) {
     double cost = lp.sense_*lp.colCost_[iCol];
     double lower = lp.colLower_[iCol];

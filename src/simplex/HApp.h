@@ -64,13 +64,19 @@ void reportAnalyseInvertForm(const HighsModelObject& highs_model_object) {
 // unscaled LP if it has no constraints, otherwise solves the scaled
 // LP (if scaling option is set)
 HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
-  HighsSimplexInterface simplex_interface(highs_model_object);
-  HighsTimer& timer = highs_model_object.timer_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
+  HighsTimer& timer = highs_model_object.timer_;
   // Set the solver_return_status to error so that not setting it
   // later is evident
   HighsStatus solver_return_status = HighsStatus::Error;
-
+  // Invalidate the model status and zero the solution status values
+  // for the unscaled model, then indicate that the objective funciton
+  // values are unknown
+  highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
+  invalidateSolutionStatusParams(simplex_info);
+  highs_model_object.simplex_lp_status_.has_primal_objective_value = false;
+  highs_model_object.simplex_lp_status_.has_dual_objective_value = false;
+  
   // Handle the case of unconstrained LPs here
   if (!highs_model_object.lp_.numRow_) {
     setSimplexOptions(highs_model_object);
@@ -83,7 +89,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
     // the unscaled_model_status.
     highs_model_object.scaled_model_status_ = highs_model_object.unscaled_model_status_;
 #ifdef HiGHSDEV
-    if (simplex_info.analyseLpSolution) {
+    if (highs_model_object.simplex_info_.analyseLpSolution) {
       HighsStatus return_status = analyseUnscaledModelHighsBasicSolution(highs_model_object,
 									 "after solving unconstrained LP");
       if (return_status != HighsStatus::OK) return return_status;
@@ -234,6 +240,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
       if (return_status != HighsStatus::OK) return return_status;
 
       // Copy the solution and basis
+      HighsSimplexInterface simplex_interface(highs_model_object);
       simplex_interface.convertSimplexToHighsSolution();
       simplex_interface.convertSimplexToHighsBasis();
       // Analyse the unscaled model's Highs basic solution

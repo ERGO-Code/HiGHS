@@ -83,10 +83,10 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
 					   const int report_level,
 					   const string message);
 
-void zeroSolutionIterationCountParams(HighsSolutionParams& solution_params);
-
-void zeroSolutionStatusParams(HighsSolutionParams& solution_params);
-void zeroSolutionParams(HighsSolutionParams& solution_params);
+void invalidateSolutionParams(HighsSolutionParams& solution_params);
+void invalidateSolutionIterationCountParams(HighsSolutionParams& solution_params);
+void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);
+void invalidateSolutionStatusParams(HighsSimplexInfo& simplex_info);
 
 bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
 				       const HighsSolutionParams& solution_params1);

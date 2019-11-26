@@ -273,8 +273,14 @@ HighsStatus analyseUnscaledSolutionFromSimplexBasicSolution(HighsModelObject& hi
   copyToSolutionParams(local_scaled_solution_params,
 		       highs_model_object.simplex_info_);
  
-  zeroSolutionStatusParams(local_scaled_solution_params);
-  zeroSolutionStatusParams(unscaled_solution_params);
+  invalidateSolutionStatusParams(local_scaled_solution_params);
+  invalidateSolutionStatusParams(unscaled_solution_params);
+  
+  // Zero the counts of scaled and unscaled primal and dual infeasibilities 
+  num_scaled_primal_infeasibilities = 0;
+  num_scaled_dual_infeasibilities = 0;
+  num_unscaled_primal_infeasibilities = 0;
+  num_unscaled_dual_infeasibilities = 0;
 
   // Don't get the objective function directly: can't guarantee exact
   // numerical equality due to order of calculation.
@@ -943,27 +949,48 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
   return model_status;
 }
 
-void zeroSolutionIterationCountParams(HighsSolutionParams& solution_params) {
+// Zero a HighsSolutionParams instance
+void invalidateSolutionParams(HighsSolutionParams& solution_params) {
+  invalidateSolutionIterationCountParams(solution_params);
+  invalidateSolutionStatusParams(solution_params);
+}
+
+// Zero the iteration counts in a HighsSolutionParams instance
+void invalidateSolutionIterationCountParams(HighsSolutionParams& solution_params) {
   solution_params.simplex_iteration_count = 0;
   solution_params.ipm_iteration_count = 0;
   solution_params.crossover_iteration_count = 0;
 }
 
-void zeroSolutionStatusParams(HighsSolutionParams& solution_params) {
+// Zero the solution status values in a HighsSolutionParams
+// instance. Setting the number of infeasibilities to negative values
+// indicates that they aren't known
+void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
   solution_params.primal_status = PrimalDualStatus::STATUS_NOTSET;
   solution_params.dual_status = PrimalDualStatus::STATUS_NOTSET;
   solution_params.objective_function_value = 0;
-  solution_params.num_primal_infeasibilities = 0;
+  solution_params.num_primal_infeasibilities = -1;
   solution_params.sum_primal_infeasibilities = 0;
   solution_params.max_primal_infeasibility = 0;
-  solution_params.num_dual_infeasibilities = 0;
+  solution_params.num_dual_infeasibilities = -1;
   solution_params.sum_dual_infeasibilities = 0;
   solution_params.max_dual_infeasibility = 0;
 }
 
-void zeroSolutionParams(HighsSolutionParams& solution_params) {
-  zeroSolutionIterationCountParams(solution_params);
-  zeroSolutionStatusParams(solution_params);
+// Zero the solution status values in a HighsSimplexInfo
+// instance. Setting the number of infeasibilities to negative values
+// indicates that they aren't known
+void invalidateSolutionStatusParams(HighsSimplexInfo& simplex_info) {
+  simplex_info.primal_status = PrimalDualStatus::STATUS_NOTSET;
+  simplex_info.dual_status = PrimalDualStatus::STATUS_NOTSET;
+  simplex_info.primal_objective_value = 0;
+  simplex_info.dual_objective_value = 0;
+  simplex_info.num_primal_infeasibilities = -1;
+  simplex_info.sum_primal_infeasibilities = 0;
+  simplex_info.max_primal_infeasibility = 0;
+  simplex_info.num_dual_infeasibilities = -1;
+  simplex_info.sum_dual_infeasibilities = 0;
+  simplex_info.max_dual_infeasibility = 0;
 }
 
 bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
