@@ -80,6 +80,10 @@ bool analyseVarBasicSolution(
 			double& primal_infeasibility,
 			double& dual_infeasibility);
 
+#ifdef HiGHSDEV
+void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_model_object);
+#endif
+
 std::string iterationsToString(const HighsSolutionParams& solution_params);
 
 // Returns the HighsModelStatus and sets the primal and dual solution
