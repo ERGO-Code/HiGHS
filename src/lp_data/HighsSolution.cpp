@@ -445,9 +445,11 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   // objective function value
   local_scaled_solution_params.objective_function_value =
     highs_model_object.simplex_info_.primal_objective_value;
-
+  // Set the model and solution status for checking
   setModelAndSolutionStatus(check_scaled_solution_params);
 
+  // Set the model and solution status for the local scaled LP
+  // solution params
   HighsModelStatus local_scaled_model_status =
     setModelAndSolutionStatus(local_scaled_solution_params);
   bool equal_scaled_model_status_solution_params =
@@ -461,13 +463,13 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 		  "Unequal model_status or solution_params in analyseSimplexBasicSolution");
     //    return HighsStatus::Error;
   }
+  // Set the model and solution status for the unscaled LP
   highs_model_object.unscaled_model_status_ = setModelAndSolutionStatus(unscaled_solution_params);
   if (report) {
     HighsLogMessage(HighsMessageType::INFO,
 		    "Simplex basic solution: %sObjective = %0.15g",
 		    iterationsToString(local_scaled_solution_params).c_str(),
 		    local_scaled_solution_params.objective_function_value);
-  
     HighsLogMessage(HighsMessageType::INFO,
 		    "Infeasibilities -   scaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
 		    local_scaled_solution_params.num_primal_infeasibilities,
@@ -477,7 +479,6 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 		    local_scaled_solution_params.max_dual_infeasibility,
 		    local_scaled_solution_params.sum_dual_infeasibilities,
 		    utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str());
-
     HighsLogMessage(HighsMessageType::INFO,
 		    "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
 		    unscaled_solution_params.num_primal_infeasibilities,
@@ -1220,7 +1221,7 @@ bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
 				    const HighsSolutionParams& solution_params1) {
   bool equal = true;
   if (model_status0 != model_status1) {
-    printf("Model status: 0(%d) != 1(%d)\n", (int)model_status0, (int)model_status1);
+    printf("Model status: %d != %d\n", (int)model_status0, (int)model_status1);
     equal = false;
   }
   if (!equalSolutionParams(solution_params0, solution_params1)) equal = false;
@@ -1239,17 +1240,17 @@ bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_param
 				       const HighsSolutionParams& solution_params1) {
   bool equal = true;
   if (solution_params0.simplex_iteration_count != solution_params1.simplex_iteration_count) {
-    printf("Solution params: simplex_iteration_count 0(%d) != 1(%d)\n",
+    printf("Solution params: simplex_iteration_count %d != %d\n",
 	   solution_params0.simplex_iteration_count, solution_params1.simplex_iteration_count);
     equal = false;
   }
   if (solution_params0.ipm_iteration_count != solution_params1.ipm_iteration_count) {
-    printf("Solution params: ipm_iteration_count 0(%d) != 1(%d)\n",
+    printf("Solution params: ipm_iteration_count %d != %d\n",
 	   solution_params0.ipm_iteration_count, solution_params1.ipm_iteration_count);
     equal = false;
   }
   if (solution_params0.crossover_iteration_count != solution_params1.crossover_iteration_count) {
-    printf("Solution params: crossover_iteration_count 0(%d) != 1(%d)\n",
+    printf("Solution params: crossover_iteration_count %d != %d\n",
 	   solution_params0.crossover_iteration_count, solution_params1.crossover_iteration_count);
     equal = false;
   }
@@ -1260,50 +1261,50 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 			       const HighsSolutionParams& solution_params1) {
   bool equal = true;
   if (solution_params0.primal_status != solution_params1.primal_status) {
-    printf("Solution params: primal_status 0(%d) != 1(%d)\n",
+    printf("Solution params: primal_status %d != %d\n",
 	   solution_params0.primal_status, solution_params1.primal_status);
     equal = false;
   }
   if (solution_params0.dual_status != solution_params1.dual_status) {
-    printf("Solution params: dual_status 0(%d) != 1(%d)\n",
+    printf("Solution params: dual_status %d != %d\n",
 	   solution_params0.dual_status, solution_params1.dual_status);
     equal = false;
   }
   double delta_objective_function_value =
     fabs(solution_params0.objective_function_value - solution_params1.objective_function_value);
   if (solution_params0.objective_function_value != solution_params1.objective_function_value) {
-    printf("Solution params: objective_function_value 0(%g) != 1(%g) Difference = %g\n",
+    printf("Solution params: objective_function_value %g != %g Difference = %g\n",
 	   solution_params0.objective_function_value, solution_params1.objective_function_value,
 	   delta_objective_function_value);
     if (delta_objective_function_value > 1e-12) equal = false;
   }
   if (solution_params0.num_primal_infeasibilities != solution_params1.num_primal_infeasibilities) {
-    printf("Solution params: num_primal_infeasibilities 0(%d) != 1(%d)\n",
+    printf("Solution params: num_primal_infeasibilities %d != %d\n",
 	   solution_params0.num_primal_infeasibilities, solution_params1.num_primal_infeasibilities);
     equal = false;
   }
   if (solution_params0.sum_primal_infeasibilities != solution_params1.sum_primal_infeasibilities) {
-    printf("Solution params: sum_primal_infeasibilities 0(%g) != 1(%g)\n",
+    printf("Solution params: sum_primal_infeasibilities %g != %g\n",
 	   solution_params0.sum_primal_infeasibilities, solution_params1.sum_primal_infeasibilities);
     equal = false;
   }
   if (solution_params0.max_primal_infeasibility != solution_params1.max_primal_infeasibility) {
-    printf("Solution params: max_primal_infeasibility 0(%g) != 1(%g)\n",
+    printf("Solution params: max_primal_infeasibility %g != %g\n",
 	   solution_params0.max_primal_infeasibility, solution_params1.max_primal_infeasibility);
     equal = false;
   }
   if (solution_params0.num_dual_infeasibilities != solution_params1.num_dual_infeasibilities) {
-    printf("Solution params: num_dual_infeasibilities 0(%d) != 1(%d)\n",
+    printf("Solution params: num_dual_infeasibilities %d != %d\n",
 	   solution_params0.num_dual_infeasibilities, solution_params1.num_dual_infeasibilities);
     equal = false;
   }
   if (solution_params0.sum_dual_infeasibilities != solution_params1.sum_dual_infeasibilities) {
-    printf("Solution params: sum_dual_infeasibilities 0(%g) != 1(%g)\n",
+    printf("Solution params: sum_dual_infeasibilities %g != %g\n",
 	   solution_params0.sum_dual_infeasibilities, solution_params1.sum_dual_infeasibilities);
     equal = false;
   }
   if (solution_params0.max_dual_infeasibility != solution_params1.max_dual_infeasibility) {
-    printf("Solution params: max_dual_infeasibility 0(%g) != 1(%g)\n",
+    printf("Solution params: max_dual_infeasibility %g != %g\n",
 	   solution_params0.max_dual_infeasibility, solution_params1.max_dual_infeasibility);
     equal = false;
   }

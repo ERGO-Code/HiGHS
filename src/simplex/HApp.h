@@ -85,13 +85,11 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 
   SimplexTimer simplex_timer;
   simplex_timer.initialiseSimplexClocks(highs_model_object);
-
   //
   // Transition to the best possible simplex basis and solution
-  highs_model_object.scaled_model_status_ = transition(highs_model_object);
-  if (highs_model_object.scaled_model_status_ == HighsModelStatus::SOLVE_ERROR) {
-    return highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
-  }
+  solver_return_status = transition(highs_model_object);
+  if (solver_return_status != HighsStatus::OK) return solver_return_status;
+  //
   // Given a simplex basis and solution, use the number of primal and
   // dual infeasibilities to determine whether the simplex solver is
   // needed and, if so, possibly which variant to use.
@@ -339,11 +337,9 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   assert(cost_scale == 1);
   if (cost_scale != 1) return HighsStatus::Error;
 
-  HighsSimplexInterface simplex_interface(highs_model_object);
   bool try_to_solve_unscaled_lp =
     highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL &&
-    highs_model_object.scale_.is_scaled_ &&
-    highs_model_object.scale_.cost_ == 1;
+    highs_model_object.scale_.is_scaled_;
 
   if (try_to_solve_unscaled_lp) {
     // Either the scaled problem has been solved to optimality or
@@ -365,9 +361,10 @@ HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
   }
   
   // Deduce the HiGHS basis and solution from the simplex basis and solution
+  HighsSimplexInterface simplex_interface(highs_model_object);
   simplex_interface.convertSimplexToHighsSolution();
   simplex_interface.convertSimplexToHighsBasis();
 
-  return highsStatusFromHighsModelStatus(highs_model_object.model_status_);
+  return highsStatusFromHighsModelStatus(highs_model_object.scaled_model_status_);
 }
 #endif

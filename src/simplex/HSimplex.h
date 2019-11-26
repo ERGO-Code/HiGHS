@@ -24,9 +24,9 @@ void setSimplexOptions(
 	                                           //!< options are to be set
 	     );
 
-HighsModelStatus transition(
-			    HighsModelObject& highs_model_object  //!< Model object
-			    );
+HighsStatus transition(
+		       HighsModelObject& highs_model_object  //!< Model object
+		       );
 
 bool dual_infeasible(const double value, const double lower, const double upper,
                      const double dual, const double value_tolerance,

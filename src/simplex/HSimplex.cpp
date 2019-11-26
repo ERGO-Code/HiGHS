@@ -72,7 +72,7 @@ void setSimplexOptions(HighsModelObject& highs_model_object) {
 #endif
 }
 
-HighsModelStatus transition(HighsModelObject& highs_model_object) {
+HighsStatus transition(HighsModelObject& highs_model_object) {
   // Perform the transition from whatever information is known about
   // the LP to a status where simplex data are set up for the initial
   // rebuild() of the chosen solver - primal, scalar dual or parallel
@@ -139,7 +139,8 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
       assert(basis.valid_);
       if (!basis.valid_) {
 	HighsLogMessage(HighsMessageType::ERROR, "Supposed to be a Highs basis, but not valid");
-	return HighsModelStatus::SOLVE_ERROR;
+	highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+	return HighsStatus::Error;
       }
       if (basis.valid_) {
 	// Highs basis has the right number of nonbasic variables
@@ -228,7 +229,8 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
     if (simplex_lp.numRow_ == 0) {
       printf(
           "Solution of LPs with no rows shouldn't reach transition()\n");
-      return HighsModelStatus::SOLVE_ERROR;
+	highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
+	return HighsStatus::Error;
     }
     // There is now a nonbasicFlag that should be valid - have the
     // right number of basic variables - so check this
@@ -558,8 +560,7 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
   computePrimalInfeasible(highs_model_object);
   computeDualInfeasible(highs_model_object);
 
-  HighsModelStatus model_status = setModelAndSolutionStatus(simplex_info);
-  highs_model_object.scaled_model_status_ = model_status;
+  highs_model_object.scaled_model_status_ = setModelAndSolutionStatus(simplex_info);
   // Frig until highs_model_object.model_status_ is removed
   highs_model_object.model_status_ = highs_model_object.scaled_model_status_;
   //
@@ -570,9 +571,13 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
 #endif  
   // Use analyseSimplexBasicSolution to report the model status and
   // solution params for the scaled LP
-  if (simplex_info.analyseLpSolution)
-    analyseSimplexBasicSolution(highs_model_object, true);
-  return model_status;
+  if (simplex_info.analyseLpSolution) {
+    HighsStatus return_status;
+    const bool report = true;
+    return_status = analyseSimplexBasicSolution(highs_model_object, report);
+    if (return_status != HighsStatus::OK) return return_status;
+  }
+  return HighsStatus::OK;
 }
 
 bool dual_infeasible(const double value, const double lower, const double upper,
