@@ -557,30 +557,14 @@ HighsModelStatus transition(HighsModelObject& highs_model_object) {
   // infeasiblities and the simplex status
   computePrimalInfeasible(highs_model_object);
   computeDualInfeasible(highs_model_object);
-  HighsModelStatus model_status;
-  bool primal_feasible =
-      simplex_info.num_primal_infeasibilities ==
-      0;  // && max_primal_residual < primal_feasibility_tolerance;
-  bool dual_feasible = simplex_info.num_dual_infeasibilities ==
-                       0;  // && max_dual_residual < dual_feasibility_tolerance;
-  if (primal_feasible) {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::OPTIMAL;
-    } else {
-      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
-    }
-  } else {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::DUAL_FEASIBLE;
-    } else {
-      model_status = HighsModelStatus::NOTSET;
-    }
-  }
+
+  HighsModelStatus model_status = setModelAndSolutionStatus(simplex_info);
   highs_model_object.scaled_model_status_ = model_status;
   // Frig until highs_model_object.model_status_ is removed
   highs_model_object.model_status_ = highs_model_object.scaled_model_status_;
   //
 #ifdef HiGHSDEV
+  
   // If there is a HiGHS solution then determine the changes in basic
   // and nonbasic values and duals for columns and rows
   if (have_highs_solution) {

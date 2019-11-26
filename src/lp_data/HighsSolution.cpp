@@ -243,12 +243,6 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   const HighsScale& scale = highs_model_object.scale_;
   const HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
 
-  // Copy the scaled_solution_params from the data in simplex_info_
-  // for easy checking later
-  HighsSolutionParams check_scaled_solution_params;
-  copyToSolutionParams(check_scaled_solution_params,
-		       highs_model_object.options_,
-		       highs_model_object.simplex_info_);
   // local_scaled_solution_params are the values computed in this
   // method. These values should be known within simplex_info, so
   // their calculation here is just for checking
@@ -285,18 +279,6 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   num_scaled_dual_infeasibilities = 0;
   num_unscaled_primal_infeasibilities = 0;
   num_unscaled_dual_infeasibilities = 0;
-
-  // Don't get the objective function directly: can't guarantee exact
-  // numerical equality due to order of calculation.
-  //
-  // Take the "scaled" objective function value as the "unscaled"
-  // objective function value since it's not affected by scaling
-  unscaled_solution_params.objective_function_value =
-    check_scaled_solution_params.objective_function_value;
-  // Take the primal_objective_value from simplex_info as the "scaled"
-  // objective function value
-  local_scaled_solution_params.objective_function_value =
-    highs_model_object.simplex_info_.primal_objective_value;
 
   new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
   new_dual_feasibility_tolerance = simplex_info.dual_feasibility_tolerance;
@@ -434,13 +416,38 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 		      sum_scaled_dual_infeasibilities);
   }
 #endif
-  bool equal_scaled_solution_params =
-    equalSolutionParams(check_scaled_solution_params,
-			local_scaled_solution_params);
-  //  assert(equal_scaled_solution_params);
-  if (!equal_scaled_solution_params) {
+
+  // Copy the scaled_solution_params from the data in simplex_info_
+  // for easy checking later
+  HighsSolutionParams check_scaled_solution_params;
+  copyToSolutionParams(check_scaled_solution_params,
+		       highs_model_object.options_,
+		       highs_model_object.simplex_info_);
+  // Don't get the objective function directly: can't guarantee exact
+  // numerical equality due to order of calculation.
+  //
+  // Take the "scaled" objective function value as the "unscaled"
+  // objective function value since it's not affected by scaling
+  unscaled_solution_params.objective_function_value =
+    check_scaled_solution_params.objective_function_value;
+  // Take the primal_objective_value from simplex_info as the "scaled"
+  // objective function value
+  local_scaled_solution_params.objective_function_value =
+    highs_model_object.simplex_info_.primal_objective_value;
+
+  setModelAndSolutionStatus(check_scaled_solution_params);
+
+  HighsModelStatus local_scaled_model_status =
+    setModelAndSolutionStatus(local_scaled_solution_params);
+  bool equal_scaled_model_status_solution_params =
+    equalModelStatusSolutionParams(highs_model_object.scaled_model_status_,
+				   check_scaled_solution_params,
+				   local_scaled_model_status,
+				   local_scaled_solution_params);
+  //  assert(equal_scaled_model_status_solution_params);
+  if (!equal_scaled_model_status_solution_params) {
     HighsLogMessage(HighsMessageType::ERROR,
-		  "Unequal solution_params in analyseSimplexBasicSolution");
+		  "Unequal model_status or solution_params in analyseSimplexBasicSolution");
     //    return HighsStatus::Error;
   }
   highs_model_object.unscaled_model_status_ = setModelAndSolutionStatus(unscaled_solution_params);
@@ -952,9 +959,18 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
   return iteration_statement;
 }
 
- HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params) {
-   HighsModelStatus model_status;
-   bool primal_feasible = solution_params.num_primal_infeasibilities == 0;
+HighsModelStatus setModelAndSolutionStatus(HighsSimplexInfo& simplex_info) {
+  HighsSolutionParams solution_params;
+  solution_params.num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
+  solution_params.num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
+  HighsModelStatus model_status = setModelAndSolutionStatus(solution_params);
+  simplex_info.primal_status = solution_params.primal_status;
+  simplex_info.dual_status = solution_params.dual_status;
+  return model_status;
+}
+HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params) {
+  HighsModelStatus model_status;
+  bool primal_feasible = solution_params.num_primal_infeasibilities == 0;
   //  primal_feasible = primal_feasible &&
   //    max_primal_residual < primal_feasibility_tolerance;
   bool dual_feasible = solution_params.num_dual_infeasibilities == 0;
@@ -1033,6 +1049,27 @@ void invalidateSolutionStatusParams(HighsSimplexInfo& simplex_info) {
   simplex_info.max_dual_infeasibility = 0;
 }
 
+bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
+				    const HighsSolutionParams& solution_params0,
+				    const HighsModelStatus model_status1,
+				    const HighsSolutionParams& solution_params1) {
+  bool equal = true;
+  if (model_status0 != model_status1) {
+    printf("Model status: 0(%d) != 1(%d)\n", (int)model_status0, (int)model_status1);
+    equal = false;
+  }
+  if (!equalSolutionParams(solution_params0, solution_params1)) equal = false;
+  return equal;
+}
+
+bool equalSolutionParams(const HighsSolutionParams& solution_params0,
+			 const HighsSolutionParams& solution_params1) {
+  bool equal = true;
+  if (!equalSolutionIterationCountParams(solution_params0, solution_params1)) equal = false;
+  if (!equalSolutionStatusParams(solution_params0, solution_params1)) equal = false;
+  return equal;
+}
+
 bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
 				       const HighsSolutionParams& solution_params1) {
   bool equal = true;
@@ -1105,27 +1142,6 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 	   solution_params0.max_dual_infeasibility, solution_params1.max_dual_infeasibility);
     equal = false;
   }
-  return equal;
-}
-
-bool equalSolutionParams(const HighsSolutionParams& solution_params0,
-			 const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  if (!equalSolutionIterationCountParams(solution_params0, solution_params1)) equal = false;
-  if (!equalSolutionStatusParams(solution_params0, solution_params1)) equal = false;
-  return equal;
-}
-
-bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
-				    const HighsSolutionParams& solution_params0,
-				    const HighsModelStatus model_status1,
-				    const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  if (model_status0 != model_status1) {
-    printf("Model status: 0(%d) != 1(%d)\n", (int)model_status0, (int)model_status1);
-    equal = false;
-  }
-  if (!equalSolutionParams(solution_params0, solution_params1)) equal = false;
   return equal;
 }
 

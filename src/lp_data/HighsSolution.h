@@ -83,7 +83,8 @@ bool analyseVarBasicSolution(
 std::string iterationsToString(const HighsSolutionParams& solution_params);
 
 // Returns the HighsModelStatus and sets the primal and dual solution
-// ststus for a given HighsSolutionParams instance
+// ststus for a given HighsSolutionParams or HighsSimplexInfo instance
+HighsModelStatus setModelAndSolutionStatus(HighsSimplexInfo& simplex_info);
 HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params);
 
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
