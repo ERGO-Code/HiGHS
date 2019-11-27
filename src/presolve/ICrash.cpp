@@ -220,6 +220,7 @@ void solveSubproblemICA(Quadratic& idata, const ICrashOptions& options) {
     updateResidualIca(idata.lp, idata.xk, residual_ica_check);
     double difference = getNorm2(residual_ica) - getNorm2(residual_ica_check);
     assert(std::fabs(difference) < 1e08);
+    (void)difference;
   }
 }
 
@@ -228,6 +229,7 @@ bool solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
     case ICrashStrategy::kICA: {
       assert(!options.exact);
       solveSubproblemICA(idata, options);
+      break;
     }
     case ICrashStrategy::kPenalty: {
       HighsPrintMessage(ML_ALWAYS, "ICrash error: Not implemented yet./n");
@@ -273,7 +275,10 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   int iteration = 0;
   for (iteration = 1; iteration <= options.iterations; iteration++) {
     updateParameters(idata, options, iteration);
-    solveSubproblem(idata, options);
+
+    bool success = solveSubproblem(idata, options);
+    if (!success) return HighsStatus::Error;
+    
     update(idata);
     reportSubproblem(idata, iteration);
     result.details.push_back(fillDetails(iteration, idata));
