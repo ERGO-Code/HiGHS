@@ -256,6 +256,8 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 
   // unscaled_solution_params are the retained values in
   // highs_model_object
+  HighsModelStatus& scaled_model_status = highs_model_object.scaled_model_status_;
+  HighsModelStatus& unscaled_model_status = highs_model_object.unscaled_model_status_;
   HighsSolutionParams& unscaled_solution_params = highs_model_object.unscaled_solution_params_;
   int& num_unscaled_primal_infeasibilities = unscaled_solution_params.num_primal_infeasibilities;
   double& max_unscaled_primal_infeasibility = unscaled_solution_params.max_primal_infeasibility;
@@ -283,7 +285,7 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   // If the scaled LP has beeen solved to optimality, look at the
   // scaled solution and, if there are infeasibilities, identify new
   // feasibility tolerances for the scaled LP
-  const bool get_new_feasibility_tolerances = highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL;
+  const bool get_new_feasibility_tolerances = scaled_model_status == HighsModelStatus::OPTIMAL;
 
   if (get_new_feasibility_tolerances) {
     new_primal_feasibility_tolerance = simplex_info.primal_feasibility_tolerance;
@@ -378,7 +380,7 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
 #ifdef HiGHSDEV
-  if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
+  if (scaled_model_status == HighsModelStatus::OPTIMAL) {
     // If numbers of scaled primal or dual infeasibilities are
     // inconsistent with the scaled model status, then flag up an error
     bool should_be_primal_infeasibilities = false;
@@ -435,26 +437,39 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   // objective function value
   local_scaled_solution_params.objective_function_value =
     highs_model_object.simplex_info_.primal_objective_value;
-  // Set the model and solution status for checking
-  setModelAndSolutionStatus(check_scaled_solution_params);
 
-  // Set the model and solution status for the local scaled LP
-  // solution params
-  HighsModelStatus local_scaled_model_status =
-    setModelAndSolutionStatus(local_scaled_solution_params);
-  bool equal_scaled_model_status_solution_params =
-    equalModelStatusSolutionParams(highs_model_object.scaled_model_status_,
-				   check_scaled_solution_params,
-				   local_scaled_model_status,
-				   local_scaled_solution_params);
-  //  assert(equal_scaled_model_status_solution_params);
-  if (!equal_scaled_model_status_solution_params) {
+  // Copy the solution status for the local scaled LP so thy don't
+  // flag up as differences and can't be identified otherwise.
+  check_scaled_solution_params.primal_status = simplex_info.primal_status;
+  check_scaled_solution_params.dual_status = simplex_info.dual_status;
+
+  bool equal_scaled_solution_params =
+    equalSolutionParams(check_scaled_solution_params,
+			local_scaled_solution_params);
+  //  assert(equal_scaled_solution_params);
+  if (!equal_scaled_solution_params) {
     HighsLogMessage(HighsMessageType::ERROR,
-		  "Unequal model_status or solution_params in analyseSimplexBasicSolution");
+		  "Unequal solution_params in analyseSimplexBasicSolution");
     //    return HighsStatus::Error;
   }
-  // Set the model and solution status for the unscaled LP
-  highs_model_object.unscaled_model_status_ = setModelAndSolutionStatus(unscaled_solution_params);
+
+  // Frig until highs_model_object.model_status_ is removed
+  scaled_model_status = highs_model_object.model_status_;
+  unscaled_model_status = scaled_model_status;
+
+  // The solution status for the unscaled LP is inherited from the
+  // scaled LP, unless there are infeasibilities in the unscaled
+  // solution
+  unscaled_solution_params.primal_status = simplex_info.primal_status;
+  unscaled_solution_params.dual_status = simplex_info.dual_status;
+  if (num_unscaled_primal_infeasibilities) {
+    if (unscaled_model_status == HighsModelStatus::OPTIMAL)
+      unscaled_model_status = HighsModelStatus::NOTSET;
+    unscaled_solution_params.primal_status = STATUS_NO_SOLUTION;
+  }
+  if (num_unscaled_dual_infeasibilities) 
+    unscaled_solution_params.dual_status = STATUS_NO_SOLUTION;
+
   if (report) {
     HighsLogMessage(HighsMessageType::INFO,
 		    "Simplex basic solution: %sObjective = %0.15g",
@@ -468,7 +483,7 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 		    local_scaled_solution_params.num_dual_infeasibilities,
 		    local_scaled_solution_params.max_dual_infeasibility,
 		    local_scaled_solution_params.sum_dual_infeasibilities,
-		    utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str());
+		    utilHighsModelStatusToString(scaled_model_status).c_str());
     HighsLogMessage(HighsMessageType::INFO,
 		    "Infeasibilities - unscaled - Pr %d(Max %0.4g, Sum %0.4g); Du %d(Max %0.4g, Sum %0.4g); Status: %s",
 		    unscaled_solution_params.num_primal_infeasibilities,
@@ -477,7 +492,7 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 		    unscaled_solution_params.num_dual_infeasibilities,
 		    unscaled_solution_params.max_dual_infeasibility,
 		    unscaled_solution_params.sum_dual_infeasibilities,
-		    utilHighsModelStatusToString(highs_model_object.unscaled_model_status_).c_str());
+		    utilHighsModelStatusToString(unscaled_model_status).c_str());
   }
   return HighsStatus::OK;
 }
@@ -505,13 +520,11 @@ HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object
 			      message);
   // Check that the status and solution parameters found by the
   // analysis method are identical to those found by the solver
-  bool equal_model_status_solution_params =
-    equalModelStatusSolutionParams(unscaled_model_status,
-				   unscaled_solution_params,
-				   highs_model_object.unscaled_model_status_,
-				   highs_model_object.unscaled_solution_params_);
-  //  assert(equal_model_status_solution_params);
-  if (!equal_model_status_solution_params) {
+  bool equal_solution_params =
+    equalSolutionParams(unscaled_solution_params,
+			highs_model_object.unscaled_solution_params_);
+  //  assert(equal_solution_params);
+  if (!equal_solution_params) {
     HighsLogMessage(HighsMessageType::ERROR,
 		  "Unequal model status solution_params in analyseHighsBasicSolution");
     //    return HighsStatus::Error;
@@ -748,7 +761,20 @@ HighsModelStatus analyseHighsBasicSolution(const HighsLp& lp,
     }
   }
 
-  HighsModelStatus model_status = setModelAndSolutionStatus(solution_params);
+  bool primal_feasible = num_primal_infeasibilities == 0;
+  //  primal_feasible = primal_feasible &&
+  //    max_primal_residual < primal_feasibility_tolerance;
+  bool dual_feasible = num_dual_infeasibilities == 0;
+  //  dual_feasible = dual_feasible &&
+  //    max_dual_residual < dual_feasibility_tolerance;
+  // Determine the model status
+  HighsModelStatus model_status;
+  if (primal_feasible && dual_feasible) {
+    model_status = HighsModelStatus::OPTIMAL;
+  } else {
+    model_status = HighsModelStatus::NOTSET;
+  }
+
   if (num_nonzero_basic_duals) {
     HighsLogMessage(
 		    HighsMessageType::WARNING,
@@ -1115,36 +1141,6 @@ std::string iterationsToString(const HighsSolutionParams& solution_params) {
   return iteration_statement;
 }
 
-HighsModelStatus setModelAndSolutionStatus(HighsSimplexInfo& simplex_info) {
-  HighsSolutionParams solution_params;
-  solution_params.num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
-  HighsModelStatus model_status = setModelAndSolutionStatus(solution_params);
-  simplex_info.primal_status = solution_params.primal_status;
-  simplex_info.dual_status = solution_params.dual_status;
-  return model_status;
-}
-HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params) {
-  HighsModelStatus model_status;
-  bool primal_feasible = solution_params.num_primal_infeasibilities == 0;
-  //  primal_feasible = primal_feasible &&
-  //    max_primal_residual < primal_feasibility_tolerance;
-  bool dual_feasible = solution_params.num_dual_infeasibilities == 0;
-  //  dual_feasible = dual_feasible &&
-  //    max_dual_residual < dual_feasibility_tolerance;
-  // Determine the model status
-  if (primal_feasible && dual_feasible) {
-      model_status = HighsModelStatus::OPTIMAL;
-      solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-      solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  } else {
-    model_status = HighsModelStatus::NOTSET;
-    solution_params.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
-    solution_params.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
-  }
-  return model_status;
-}
-
 // Zero a HighsSolutionParams instance
 void invalidateSolutionParams(HighsSolutionParams& solution_params) {
   invalidateSolutionIterationCountParams(solution_params);
@@ -1187,21 +1183,6 @@ void invalidateSolutionStatusParams(HighsSimplexInfo& simplex_info) {
   simplex_info.num_dual_infeasibilities = -1;
   simplex_info.sum_dual_infeasibilities = 0;
   simplex_info.max_dual_infeasibility = 0;
-}
-
-bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
-				    const HighsSolutionParams& solution_params0,
-				    const HighsModelStatus model_status1,
-				    const HighsSolutionParams& solution_params1) {
-  bool equal = true;
-  if (model_status0 != model_status1) {
-    printf("Model status: %s = %d != %d = %s\n",
-	   utilHighsModelStatusToString(model_status0).c_str(), (int)model_status0,
-	   (int)model_status1, utilHighsModelStatusToString(model_status1).c_str());
-    equal = false;
-  }
-  if (!equalSolutionParams(solution_params0, solution_params1)) equal = false;
-  return equal;
 }
 
 bool equalSolutionParams(const HighsSolutionParams& solution_params0,

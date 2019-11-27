@@ -86,11 +86,6 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
 
 std::string iterationsToString(const HighsSolutionParams& solution_params);
 
-// Returns the HighsModelStatus and sets the primal and dual solution
-// ststus for a given HighsSolutionParams or HighsSimplexInfo instance
-HighsModelStatus setModelAndSolutionStatus(HighsSimplexInfo& simplex_info);
-HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params);
-
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountParams(HighsSolutionParams& solution_params);
 void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);
@@ -103,11 +98,6 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 
 bool equalSolutionParams(const HighsSolutionParams& solution_params0,
 			 const HighsSolutionParams& solution_params1);
-
-bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
-				    const HighsSolutionParams& solution_params0,
-				    const HighsModelStatus model_status1,
-				    const HighsSolutionParams& solution_params1);
 
 void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info);
 

@@ -507,8 +507,6 @@ HighsStatus Highs::run() {
   // Copy HMO solution/basis to HiGHS solution/basis: this resizes solution_ and basis_
   // ToDo: make sure the model_status values are corrected
 
-  hmos_[solved_hmo].unscaled_model_status_ = setModelAndSolutionStatus(hmos_[solved_hmo].unscaled_solution_params_);
-
   model_status_ = hmos_[solved_hmo].unscaled_model_status_;
   scaled_model_status_ = hmos_[solved_hmo].scaled_model_status_;
   

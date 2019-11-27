@@ -560,7 +560,7 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   computePrimalInfeasible(highs_model_object);
   computeDualInfeasible(highs_model_object);
 
-  highs_model_object.scaled_model_status_ = setModelAndSolutionStatus(simplex_info);
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
   // Frig until highs_model_object.model_status_ is removed
   highs_model_object.model_status_ = highs_model_object.scaled_model_status_;
   //

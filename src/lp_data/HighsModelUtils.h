@@ -36,6 +36,10 @@ bool namesWithSpaces(const int num_name, const std::vector<std::string>& names, 
 int maxNameLength(const int num_name, const std::vector<std::string>& names);
 HighsStatus normaliseNames(const std::string name_type, const int num_name, std::vector<std::string>& names, int& max_name_length);
 
+HighsBasisStatus checkedVarHighsNonbasicStatus(const HighsBasisStatus ideal_status,
+					       const double lower,
+					       const double upper);
+
 std::string utilHighsModelStatusToString(const HighsModelStatus model_status);
 
 std::string utilPrimalDualStatusToString(const int primal_dual_status);

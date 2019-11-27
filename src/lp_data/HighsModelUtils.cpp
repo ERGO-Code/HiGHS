@@ -209,6 +209,41 @@ HighsStatus normaliseNames(const std::string name_type, const int num_name, std:
   return HighsStatus::OK;
 }
 
+HighsBasisStatus checkedVarHighsNonbasicStatus(const HighsBasisStatus ideal_status, const double lower, const double upper) {
+  HighsBasisStatus checked_status;
+  if (ideal_status == HighsBasisStatus::LOWER ||
+      ideal_status == HighsBasisStatus::ZERO) {
+    // Looking to give status LOWER or ZERO
+    if (highs_isInfinity(-lower)) {
+      // Lower bound is infinite
+      if (highs_isInfinity(upper)) {
+	// Upper bound is infinite
+	checked_status = HighsBasisStatus::ZERO;
+      } else {
+	// Upper bound is finite
+	checked_status = HighsBasisStatus::UPPER;
+      }
+    } else {
+      checked_status = HighsBasisStatus::LOWER;
+    }
+  } else {
+    // Looking to give status UPPER
+    if (highs_isInfinity(upper)) {
+      // Upper bound is infinite
+      if (highs_isInfinity(-lower)) {
+	// Lower bound is infinite
+	checked_status = HighsBasisStatus::ZERO;
+      } else {
+	// Upper bound is finite
+	checked_status = HighsBasisStatus::LOWER;
+      }
+    } else {
+      checked_status = HighsBasisStatus::UPPER;
+    }
+  }
+  return checked_status;
+}
+
 // Return a string representation of PrimalDualStatus
 std::string utilPrimalDualStatusToString(const int primal_dual_status) {
 

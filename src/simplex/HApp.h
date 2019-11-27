@@ -252,8 +252,6 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 				  new_dual_feasibility_tolerance);
     if (return_status != HighsStatus::OK) return return_status;
     // Set the model and solution status according to the unscaled solution parameters
-    highs_model_object.unscaled_model_status_ =
-      setModelAndSolutionStatus(highs_model_object.unscaled_solution_params_);
     if (highs_model_object.unscaled_model_status_ == HighsModelStatus::OPTIMAL) return HighsStatus::OK;
 
     //Not optimal
