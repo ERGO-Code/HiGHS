@@ -35,10 +35,6 @@ void printMinorIterationDetails(const double iteration, const double col,
 bool initialize(const HighsLp& lp, HighsSolution& solution,
                 std::vector<double>& lambda);
 
-// todo:
-void minimizeExactIcaAdmm();
-void minimizeExactPenalty();
-
 double minimizeComponentIca(const int col, const double mu,
                             const std::vector<double>& lambda,
                             const HighsLp& lp, double& objective,

@@ -22,8 +22,8 @@
 
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
                          std::vector<double>& result) {
-  assert((int) result.size() == lp.numCol_);
-  assert((int) v.size() == lp.numRow_);
+  assert((int)result.size() == lp.numCol_);
+  assert((int)v.size() == lp.numRow_);
 
   result.assign(lp.numCol_, 0);
   for (int col = 0; col < lp.numCol_; col++) {
@@ -80,16 +80,6 @@ bool initialize(const HighsLp& lp, HighsSolution& solution,
   lambda.assign(lp.numRow_, 0);
 
   return true;
-}
-
-// Should only work with kLinearized type.
-void minimizeExactIcaAdmm() {
-  // !!! do not modify LP cost ***
-  // update();
-}
-
-void minimizeExactPenalty() {
-  // update();
 }
 
 double minimizeComponentIca(const int col, const double mu,
