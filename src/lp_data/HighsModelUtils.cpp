@@ -223,7 +223,10 @@ std::string utilPrimalDualStatusToString(const int primal_dual_status) {
     return "Feasible point";
     break;
   default:
-    return "Status toString() not implemented.";
+#ifdef HiGHSDEV
+    printf("Primal/dual status %d not recognised\n", primal_dual_status);
+#endif
+    return "Unrecognised primal/dual status";
     break;
   }
   return "";
@@ -279,7 +282,10 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
       return "Reached iteration limit";
       break;
     default:
-      return "Status toString() not implemented.";
+#ifdef HiGHSDEV
+      printf("HiGHS model status %d not recognised\n", (int)model_status);
+#endif
+      return "Unrecognised HiGHS model status";
       break;
   }
   return "";

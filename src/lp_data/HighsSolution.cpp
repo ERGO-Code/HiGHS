@@ -1221,7 +1221,9 @@ bool equalModelStatusSolutionParams(const HighsModelStatus model_status0,
 				    const HighsSolutionParams& solution_params1) {
   bool equal = true;
   if (model_status0 != model_status1) {
-    printf("Model status: %d != %d\n", (int)model_status0, (int)model_status1);
+    printf("Model status: %s = %d != %d = %s\n",
+	   utilHighsModelStatusToString(model_status0).c_str(), (int)model_status0,
+	   (int)model_status1, utilHighsModelStatusToString(model_status1).c_str());
     equal = false;
   }
   if (!equalSolutionParams(solution_params0, solution_params1)) equal = false;
