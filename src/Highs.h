@@ -20,6 +20,7 @@
 #include "lp_data/HighsOptions.h"
 #include "lp_data/HighsStatus.h"
 #include "mip/SolveMip.h"
+#include "presolve/ICrash.h"
 #include "util/HighsTimer.h"
 
 #include <sstream>
@@ -145,6 +146,8 @@ class Highs {
    * (first?)  HighsModelObject
    */
   const HighsSolution& getSolution() const;
+
+  const ICrashInfo& getICrashInfo() const;
 
   /**
    * @brief Returns the HighsBasis instance for the LP of the
@@ -621,6 +624,7 @@ class Highs {
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
+  ICrashInfo icrash_info_;
 
   HighsTimer timer_;
 

@@ -80,6 +80,7 @@ set(sources
     io/HighsIO.cpp
     io/HMPSIO.cpp
     io/HToyIO.cpp
+    io/LoadProblem.cpp
     lp_data/Highs.cpp
     lp_data/HighsLp.cpp
     lp_data/HighsLpUtils.cpp
@@ -88,7 +89,8 @@ set(sources
     lp_data/HighsStatus.cpp
     lp_data/HighsOptions.cpp
     mip/SolveMip.cpp
-    presolve/FindFeasibility.cpp
+    presolve/ICrash.cpp
+    presolve/ICrashUtil.cpp
     presolve/Presolve.cpp
     presolve/HPreData.cpp
     simplex/HCrash.cpp
@@ -147,7 +149,8 @@ set(headers
 #    simplex/HRanging.h
     simplex/HSimplex.h
     simplex/SimplexConst.h
-    presolve/FindFeasibility.h
+    presolve/ICrash.h
+    presolve/ICrashUtil.h
     presolve/Presolve.h
     presolve/HPreData.h
     simplex/HTimerPre.h

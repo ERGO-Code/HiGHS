@@ -15,6 +15,7 @@ target_include_directories(Catch INTERFACE ${HIGHS_SOURCE_DIR}/src/interior_poin
 set(TEST_SOURCES
     TestMain.cpp
     TestOptions.cpp
+    TestPresolve.cpp
     TestFilereader.cpp
     TestIO.cpp
     TestSort.cpp

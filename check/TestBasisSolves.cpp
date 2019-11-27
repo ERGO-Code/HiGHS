@@ -119,10 +119,8 @@ void GetBasisSolvesFormRHS(HighsLp& lp, int* basic_variables, double* solution, 
 TEST_CASE("Basis-solves", "[highs_basis_solves]") {
   std::cout << std::string(HIGHS_DIR) << std::endl;
 
-  // For debugging use the latter.
   std::string filename;
   filename = std::string(HIGHS_DIR) + "/check/instances/chip.mps";
-  //  filename = std::string(HIGHS_DIR) + "/../../check/instances/blending.mps";
   filename = std::string(HIGHS_DIR) + "/check/instances/avgas.mps";
   filename = std::string(HIGHS_DIR) + "/check/instances/adlittle.mps";
   
