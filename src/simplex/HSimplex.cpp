@@ -2574,22 +2574,24 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
   for (int iVar = 0; iVar < numTot; iVar++) {
     if (!simplex_basis.nonbasicFlag_[iVar]) continue;
     // Nonbasic column
-    double lower = simplex_info.workLower_[iVar];
-    double upper = simplex_info.workUpper_[iVar];
+    const double dual = simplex_info.workDual_[iVar];
+    const double lower = simplex_info.workLower_[iVar];
+    const double upper = simplex_info.workUpper_[iVar];
+    
     double dual_infeasibility = 0;
     if (highs_isInfinity(-lower) && highs_isInfinity(upper)) {
       // Free: any nonzero dual value is infeasible
-      dual_infeasibility = fabs(simplex_info.workDual_[iVar]);
+      dual_infeasibility = fabs(dual);
     } else {
       // Not fixed: any dual infeasibility is given by value signed by
       // nonbasicMove. This assumes that nonbasicMove=0 for fixed
       // variables
-      dual_infeasibility =
-          -simplex_basis.nonbasicMove_[iVar] * simplex_info.workDual_[iVar];
+      dual_infeasibility = -simplex_basis.nonbasicMove_[iVar] * dual;
       if (lower == upper && simplex_basis.nonbasicMove_[iVar]) num_fixed_variable_move_errors++;
     }
     if (dual_infeasibility > 0) {
-      if (dual_infeasibility >= simplex_info.dual_feasibility_tolerance) num_dual_infeasibilities++;
+      if (dual_infeasibility >= simplex_info.dual_feasibility_tolerance)
+	num_dual_infeasibilities++;
       max_dual_infeasibility =
 	std::max(dual_infeasibility, max_dual_infeasibility);
       sum_dual_infeasibilities += dual_infeasibility;
