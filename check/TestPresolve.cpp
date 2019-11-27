@@ -6,33 +6,22 @@
 #include "lp_data/HighsLpUtils.h"
 #include "util/HighsUtils.h"
 
-#ifdef __linux__
-#include <unistd.h>
-#elif _WIN32
-#define NOGDI
-#include <windows.h>
-#endif
-
 const double kOptimalQap04 = 32;
 
 // No commas in test case name.
-TEST_CASE("ff-qap04", "[highs_presolve]") {
-  HighsOptions options;
-
-  options.model_file = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
-
-  HighsLp lp;
-  HighsStatus read_status = loadLpFromFile(options, lp);
-  REQUIRE(read_status == HighsStatus::OK);
+TEST_CASE("irash-qap04", "[highs_presolve]") {
+  std::string filename = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
 
   Highs highs;
+  HighsStatus highs_status = highs.initializeFromFile(filename);
+  REQUIRE(highs_status==HighsStatus::OK);
+
+  HighsOptions options;
   options.icrash = true;
   options.icrash_starting_weight = 10;
   options.icrash_approximate_minimization_iterations = 100;
 
   highs.options_ = options;
-  HighsStatus init_status = highs.initializeLp(lp);
-  REQUIRE(init_status == HighsStatus::OK);
 
   HighsStatus run_status = highs.run();
   REQUIRE(run_status == HighsStatus::OK);
