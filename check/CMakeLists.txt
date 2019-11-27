@@ -22,7 +22,6 @@ set(TEST_SOURCES
     TestBasisSolves.cpp
     TestLpValidation.cpp
     TestLpModification.cpp
-    TestInstanceLoad.cpp
     TestSetup.cpp
     Avgas.cpp)
 

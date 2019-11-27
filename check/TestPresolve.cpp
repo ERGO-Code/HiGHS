@@ -1,7 +1,6 @@
 #include <cstdio>
 
 #include "Highs.h"
-#include "TestInstanceLoad.h"
 #include "catch.hpp"
 #include "io/LoadProblem.h"
 #include "lp_data/HighsLpUtils.h"
@@ -12,8 +11,6 @@
 #elif _WIN32
 #define NOGDI
 #include <windows.h>
-#else
-
 #endif
 
 const double kOptimalQap04 = 32;
@@ -21,13 +18,8 @@ const double kOptimalQap04 = 32;
 // No commas in test case name.
 TEST_CASE("ff-qap04", "[highs_presolve]") {
   HighsOptions options;
-  std::string dir = GetCurrentWorkingDir();
 
-  std::cout << dir << std::endl;
-
-  // For debugging use the latter.
-  options.model_file = dir + "/../../check/instances/qap04.mps";
-  // options.model_file = dir + "/check/instances/qap04.mps";
+  options.model_file = std::string(HIGHS_DIR) + "/check/instances/qap04.mps";
 
   HighsLp lp;
   HighsStatus read_status = loadLpFromFile(options, lp);
