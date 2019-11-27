@@ -202,9 +202,6 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
 #endif
   }
 
-  // Frig until highs_model_object.model_status_ is removed
-  highs_model_object.scaled_model_status_ = highs_model_object.model_status_;
-
   if (simplex_info.analyseLpSolution) {
     // Analyse the LP solution. Note that this sets
     // unscaled_solution_params, which is assumed by
@@ -276,7 +273,7 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
       options.simplex_strategy = SIMPLEX_STRATEGY_CHOOSE;
       HighsStatus highs_status = runSimplexSolver(highs_model_object);
       options = save_options;
-      if (highs_model_object.model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
+      if (highs_model_object.scaled_model_status_ != HighsModelStatus::OPTIMAL) return highs_status;
     } else {
       HighsLogMessage(HighsMessageType::INFO, "Not re-solving with refined tolerances");
       return HighsStatus::OK;

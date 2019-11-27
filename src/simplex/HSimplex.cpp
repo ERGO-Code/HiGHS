@@ -561,9 +561,6 @@ HighsStatus transition(HighsModelObject& highs_model_object) {
   computeDualInfeasible(highs_model_object);
 
   highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
-  // Frig until highs_model_object.model_status_ is removed
-  highs_model_object.model_status_ = highs_model_object.scaled_model_status_;
-  //
 #ifdef HiGHSDEV
     // If there is a HiGHS solution then determine the changes in basic
     // and nonbasic values and duals for columns and rows
@@ -2377,7 +2374,7 @@ int compute_factor(HighsModelObject& highs_model_object) {
   int rankDeficiency = factor.build();
   if (rankDeficiency) {
     //    handle_rank_deficiency();
-    //    highs_model_object.model_status_ = HighsModelStatus::SOLVE_ERROR;
+    //    highs_model_object.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
 #ifdef HiGHSDEV
     //    writePivots("failed");
 #endif

@@ -453,8 +453,6 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
     //    return HighsStatus::Error;
   }
 
-  // Frig until highs_model_object.model_status_ is removed
-  scaled_model_status = highs_model_object.model_status_;
   unscaled_model_status = scaled_model_status;
 
   // The solution status for the unscaled LP is inherited from the
@@ -1085,7 +1083,7 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
 	 simplex_info.sum_primal_infeasibilities,
 	 simplex_info.num_dual_infeasibilities,
 	 simplex_info.sum_dual_infeasibilities,
-	 utilHighsModelStatusToString(highs_model_object.model_status_).c_str(),
+	 utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str(),
 	 num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences,
 	 num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences,
 	 num_basic_col_value_differences, sum_basic_col_value_differences,

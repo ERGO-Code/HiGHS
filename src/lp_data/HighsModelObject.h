@@ -30,7 +30,6 @@ class HighsModelObject {
   HighsOptions& options_;
   HighsTimer& timer_;
 
-  HighsModelStatus model_status_ = HighsModelStatus::NOTSET;
   HighsModelStatus unscaled_model_status_ = HighsModelStatus::NOTSET;
   HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
 

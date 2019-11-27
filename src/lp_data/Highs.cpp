@@ -211,8 +211,10 @@ HighsStatus Highs::run() {
   // If running as hsol, reset any changed options
   if (options_.run_as_hsol) setHsolOptions(options_);
   // Initialise the HiGHS model status values
-  model_status_ = HighsModelStatus::NOTSET;
-  scaled_model_status_ = HighsModelStatus::NOTSET;
+  hmos_[0].scaled_model_status_ = HighsModelStatus::NOTSET;
+  hmos_[0].unscaled_model_status_ = HighsModelStatus::NOTSET;
+  model_status_ = hmos_[0].scaled_model_status_;
+  scaled_model_status_ = hmos_[0].unscaled_model_status_;
   
 #ifdef HIGHSDEV
   // Shouldn't have to check validity of the LP since this is done when it is
@@ -264,9 +266,9 @@ HighsStatus Highs::run() {
 
   // Return immediately if the LP has no columns
   if (!lp_.numCol_) {
-    hmos_[0].model_status_ = HighsModelStatus::MODEL_EMPTY;
-    model_status_ = hmos_[0].model_status_;
-    return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
+    hmos_[0].unscaled_model_status_ = HighsModelStatus::MODEL_EMPTY;
+    model_status_ = hmos_[0].unscaled_model_status_;
+    return highsStatusFromHighsModelStatus(hmos_[0].unscaled_model_status_);
   }
 
   HighsSetIO(options_);
@@ -308,6 +310,7 @@ HighsStatus Highs::run() {
   //  basis_.valid_);fflush(stdout);
   if (!basis_.valid_) {
     // No HiGHS basis so consider presolve
+    hmos_[original_hmo].scaled_model_status_ = HighsModelStatus::NOTSET;
     // Presolve. runPresolve handles the level of presolving (0 = don't
     // presolve).
     timer_.start(timer_.presolve_clock);
@@ -357,7 +360,7 @@ HighsStatus Highs::run() {
         break;
       }
       case HighsPresolveStatus::ReducedToEmpty: {
-        hmos_[0].model_status_ = HighsModelStatus::OPTIMAL;
+        hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
         // Proceed to postsolve.
         break;
       }
@@ -366,16 +369,15 @@ HighsStatus Highs::run() {
       case HighsPresolveStatus::Infeasible:
       case HighsPresolveStatus::Unbounded: {
         if (presolve_status == HighsPresolveStatus::Infeasible) {
-          hmos_[original_hmo].model_status_ =
+          hmos_[original_hmo].unscaled_model_status_ =
               HighsModelStatus::PRIMAL_INFEASIBLE;
         } else {
-          hmos_[original_hmo].model_status_ =
+          hmos_[original_hmo].unscaled_model_status_ =
               HighsModelStatus::PRIMAL_UNBOUNDED;
         }
         HighsLogMessage(
             HighsMessageType::INFO, "Problem status detected on presolve: %s",
-            highsModelStatusToString(hmos_[original_hmo].model_status_)
-                .c_str());
+            highsModelStatusToString(hmos_[original_hmo].unscaled_model_status_).c_str());
 
         // Report this way for the moment. May modify after merge with
         // OSIinterface branch which has new way of setting up a
@@ -383,35 +385,20 @@ HighsStatus Highs::run() {
         // read the HiGHS clock, then work out time for this call
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
 
-	/*
-        double lp_solve_final_time = timer_.readRunHighsClock();
-        std::stringstream message_not_opt;
-        message_not_opt << std::endl;
-        message_not_opt << "Run status : "
-                        << highsModelStatusToString(
-                               hmos_[original_hmo].model_status_)
-                        << std::endl;
-        message_not_opt << "Time       : " << std::fixed << std::setprecision(3)
-                        << lp_solve_final_time - initial_time << std::endl;
-
-        message_not_opt << std::endl;
-
-        HighsPrintMessage(ML_MINIMAL, message_not_opt.str().c_str());
-	*/
-	model_status_ = hmos_[original_hmo].model_status_;
+	model_status_ = hmos_[original_hmo].unscaled_model_status_;
         return HighsStatus::OK;
       }
       default: {
         // case HighsPresolveStatus::Error
         HighsPrintMessage(ML_ALWAYS, "Presolve failed.");
         if (!run_highs_clock_already_running) timer_.stopRunHighsClock();
-	hmos_[original_hmo].model_status_ = HighsModelStatus::PRESOLVE_ERROR;
-	model_status_ = hmos_[original_hmo].model_status_;
+	hmos_[original_hmo].unscaled_model_status_ = HighsModelStatus::PRESOLVE_ERROR;
+	model_status_ = hmos_[original_hmo].unscaled_model_status_;
         return HighsStatus::Error;
       }
     }
     // Postsolve. Does nothing if there were no reductions during presolve.
-    if (hmos_[solved_hmo].model_status_ == HighsModelStatus::OPTIMAL) {
+    if (hmos_[solved_hmo].unscaled_model_status_ == HighsModelStatus::OPTIMAL) {
       if (presolve_status == HighsPresolveStatus::Reduced ||
           presolve_status == HighsPresolveStatus::ReducedToEmpty) {
         // If presolve is nontrivial, extract the optimal solution
@@ -447,7 +434,7 @@ HighsStatus Highs::run() {
 	  copyToSolutionParams(solution_params,
 			       hmos_[original_hmo].options_,
 			       hmos_[original_hmo].simplex_info_);
-	  hmos_[original_hmo].model_status_ = 
+	  hmos_[original_hmo].unscaled_model_status_ = 
 	    analyseHighsBasicSolution(hmos_[original_hmo].lp_,
 				 hmos_[original_hmo].basis_,
 				 hmos_[original_hmo].solution_,
@@ -481,9 +468,8 @@ HighsStatus Highs::run() {
       }
     } else {
       // Optimal solution of presolved problem has not been found
-      // The original model inherits the solved model's status and iteration count
-      hmos_[original_hmo].model_status_ = hmos_[solved_hmo].model_status_;
-      hmos_[original_hmo].simplex_info_.iteration_count = hmos_[solved_hmo].simplex_info_.iteration_count;
+      // The original model inherits the solved model's status
+      hmos_[original_hmo].unscaled_model_status_ = hmos_[solved_hmo].unscaled_model_status_;
     }
   } else {
     // The problem has been solved before so we ignore presolve/postsolve/ipx.
@@ -531,8 +517,7 @@ HighsStatus Highs::run() {
   double lp_solve_final_time = timer_.readRunHighsClock();
   HighsPrintMessage(ML_MINIMAL, "Postsolve  : %d\n", postsolve_iteration_count);
   HighsPrintMessage(ML_MINIMAL, "Time       : %0.3g\n", lp_solve_final_time - initial_time);
-  model_status_ = hmos_[original_hmo].model_status_;
-  return highsStatusFromHighsModelStatus(hmos_[original_hmo].model_status_);
+  return highsStatusFromHighsModelStatus(model_status_);
 }
 
 const HighsLp& Highs::getLp() const { return lp_; }
@@ -1162,18 +1147,11 @@ HighsStatus Highs::runSolver(HighsModelObject& model) {
 
 #endif
 
-  if (model.model_status_ != HighsModelStatus::OPTIMAL)
-    return highsStatusFromHighsModelStatus(model.model_status_);
-
   // Check.
   if (!isSolutionConsistent(model.lp_, model.solution_)) {
     std::cout << "Error: Inconsistent solution returned from solver.\n";
   }
-
-  // todo:
-  // assert(KktSatisfied(lp, solution));
-
-  return highsStatusFromHighsModelStatus(model.model_status_);
+  return highsStatusFromHighsModelStatus(model.unscaled_model_status_);
 }
 
 // Branch-and-bound code below here:
@@ -1195,11 +1173,11 @@ HighsStatus Highs::runBnb() {
 
   HighsStatus return_status = solveRootNode(*(root.get()));
   if (return_status != HighsStatus::OK) return return_status;
-  if (hmos_[0].model_status_ != HighsModelStatus::OPTIMAL) {
+  if (hmos_[0].scaled_model_status_ != HighsModelStatus::OPTIMAL) {
     HighsPrintMessage(ML_ALWAYS,
                       "Root note not solved to optimality. Status: %s\n",
-                      utilHighsModelStatusToString(hmos_[0].model_status_).c_str());
-    return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
+                      utilHighsModelStatusToString(hmos_[0].scaled_model_status_).c_str());
+    return highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
   }
 
   // The method branch(...) below calls chooseBranchingVariable(..) which
@@ -1221,7 +1199,7 @@ HighsStatus Highs::runBnb() {
     if (return_status != HighsStatus::OK) return return_status;
     tree.pop();
 
-    if (hmos_[0].model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE) continue;
+    if (hmos_[0].scaled_model_status_ == HighsModelStatus::PRIMAL_INFEASIBLE) continue;
 
     options_.message_level = message_level;
     tree.branch(node);
@@ -1232,13 +1210,13 @@ HighsStatus Highs::runBnb() {
   double mip_solve_final_time = timer_.readRunHighsClock();
 
   if (tree.getBestSolution().size() > 0) {
-    hmos_[0].model_status_ = HighsModelStatus::OPTIMAL;
+    hmos_[0].unscaled_model_status_ = HighsModelStatus::OPTIMAL;
     std::stringstream message;
     message << std::endl;
     message << "Optimal solution found.";
     message << std::endl;
     message << "Run status : "
-            << highsModelStatusToString(hmos_[0].model_status_) << std::endl;
+            << highsModelStatusToString(hmos_[0].unscaled_model_status_) << std::endl;
     message << "Objective  : " << std::scientific << tree.getBestObjective()
             << std::endl;
     message << "Time       : " << std::fixed << std::setprecision(3)
@@ -1247,7 +1225,7 @@ HighsStatus Highs::runBnb() {
 
     HighsPrintMessage(ML_MINIMAL, message.str().c_str());
   } else {
-    hmos_[0].model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+    hmos_[0].unscaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     HighsPrintMessage(ML_ALWAYS, "No feasible solution found.\n");
   }
 
@@ -1291,7 +1269,7 @@ HighsStatus Highs::solveNode(Node& node) {
   iteration_count1 = hmos_[0].simplex_info_.iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
   solve0_objective_value = hmos_[0].simplex_info_.dual_objective_value;
-  solve0_status = (int)hmos_[0].model_status_;
+  solve0_status = (int)hmos_[0].scaled_model_status_;
   printf("Solve0: Obj = %12g; Iter =%6d; Status =%2d\n", solve0_objective_value,
          solve0_iteration_count, solve0_status);
 
@@ -1305,7 +1283,7 @@ HighsStatus Highs::solveNode(Node& node) {
     iteration_count1 = hmos_[0].simplex_info_.iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_objective_value = hmos_[0].simplex_info_.dual_objective_value;
-    solve1_status = (int)hmos_[0].model_status_;
+    solve1_status = (int)hmos_[0].scaled_model_status_;
     printf("Solve1: Obj = %12g; Iter =%6d; Status =%2d\n",
            solve1_objective_value, solve1_iteration_count, solve1_status);
     double rlv_objective_value_difference =
@@ -1327,7 +1305,7 @@ HighsStatus Highs::solveNode(Node& node) {
   }
 
   // Set solution.
-  if (hmos_[0].model_status_ == HighsModelStatus::OPTIMAL) {
+  if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     node.primal_solution = hmos_[0].solution_.col_value;
     node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
@@ -1345,7 +1323,7 @@ HighsStatus Highs::solveNode(Node& node) {
   //   node.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   // }
 
-  return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
+  return highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
 }
 
 HighsStatus Highs::solveRootNode(Node& root) {
@@ -1357,12 +1335,12 @@ HighsStatus Highs::solveRootNode(Node& root) {
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
   //  allow_presolve_ = false;
 
-  if (hmos_[0].model_status_ == HighsModelStatus::OPTIMAL) {
+  if (hmos_[0].scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     root.primal_solution = hmos_[0].solution_.col_value;
     root.objective_value = hmos_[0].simplex_info_.dual_objective_value;
   }
 
-  return highsStatusFromHighsModelStatus(hmos_[0].model_status_);
+  return highsStatusFromHighsModelStatus(hmos_[0].scaled_model_status_);
 }
 
 HighsStatus Highs::writeSolution(const std::string filename, const bool pretty) {

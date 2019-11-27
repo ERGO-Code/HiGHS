@@ -41,7 +41,7 @@ using std::runtime_error;
 void HDual::solve(int num_threads) {
   HighsSimplexInfo& simplex_info = workHMO.simplex_info_;
   HighsSimplexLpStatus& simplex_lp_status = workHMO.simplex_lp_status_;
-  workHMO.model_status_ = HighsModelStatus::NOTSET;
+  workHMO.scaled_model_status_ = HighsModelStatus::NOTSET;
   bool simplex_info_ok = simplexInfoOk(workHMO.lp_, workHMO.simplex_lp_, simplex_info);
   if (!simplex_info_ok) {
     printf("Error in simplex info\n");
@@ -271,8 +271,8 @@ void HDual::solve(int num_threads) {
 #endif
 
   if (solve_bailout) {
-    assert(workHMO.model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
-	   workHMO.model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
+    assert(workHMO.scaled_model_status_ == HighsModelStatus::REACHED_TIME_LIMIT ||
+	   workHMO.scaled_model_status_ == HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND);
     return;
   }
 
@@ -488,7 +488,7 @@ void HDual::solvePhase1() {
                current_dual_objective_value,
                workHMO.options_.dual_objective_value_upper_bound);
 #endif
-        workHMO.model_status_ =
+        workHMO.scaled_model_status_ =
             HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         break;
       }
@@ -496,7 +496,7 @@ void HDual::solvePhase1() {
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > workHMO.options_.time_limit) {
       solve_bailout = true;
-      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       break;
     }
     // If the data are fresh from rebuild(), break out of
@@ -523,7 +523,7 @@ void HDual::solvePhase1() {
         // Report dual infeasible
         solvePhase = -1;
         HighsPrintMessage(ML_MINIMAL, "dual-infeasible\n");
-        workHMO.model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
+        workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_UNBOUNDED;
       }
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
@@ -531,7 +531,7 @@ void HDual::solvePhase1() {
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-    workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
+    workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // We got dual phase 1 unbounded - strange
     HighsPrintMessage(ML_MINIMAL, "dual-phase-1-unbounded\n");
@@ -543,7 +543,7 @@ void HDual::solvePhase1() {
       // Report strange issues
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "dual-phase-1-not-solved\n");
-      workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
+      workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
     }
   }
 
@@ -605,20 +605,20 @@ void HDual::solvePhase2() {
                current_dual_objective_value,
                workHMO.options_.dual_objective_value_upper_bound);
 #endif
-        workHMO.model_status_ =
+        workHMO.scaled_model_status_ =
             HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND;
         solve_bailout = true;
         break;
       }
     }
-    if (workHMO.model_status_ ==
+    if (workHMO.scaled_model_status_ ==
         HighsModelStatus::REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND) {
       solve_bailout = true;
       break;
     }
     double current_run_highs_time = timer.readRunHighsClock();
     if (current_run_highs_time > workHMO.options_.time_limit) {
-      workHMO.model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
+      workHMO.scaled_model_status_ = HighsModelStatus::REACHED_TIME_LIMIT;
       solve_bailout = true;
       break;
     }
@@ -649,14 +649,14 @@ void HDual::solvePhase2() {
       // There are no dual infeasiblities after cleanup() so optimal!
       solvePhase = 0;
       HighsPrintMessage(ML_DETAILED, "problem-optimal\n");
-      workHMO.model_status_ = HighsModelStatus::OPTIMAL;
+      workHMO.scaled_model_status_ = HighsModelStatus::OPTIMAL;
     }
   } else if (invertHint == INVERT_HINT_CHOOSE_COLUMN_FAIL) {
     // chooseColumn has failed
     // Behave as "Report strange issues" below
     solvePhase = -1;
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-not-solved\n");
-    workHMO.model_status_ = HighsModelStatus::SOLVE_ERROR;
+    workHMO.scaled_model_status_ = HighsModelStatus::SOLVE_ERROR;
   } else if (columnIn == -1) {
     // There is no candidate in CHUZC, so probably dual unbounded
     HighsPrintMessage(ML_MINIMAL, "dual-phase-2-unbounded\n");
@@ -668,7 +668,7 @@ void HDual::solvePhase2() {
       // primal infeasible
       solvePhase = -1;
       HighsPrintMessage(ML_MINIMAL, "problem-infeasible\n");
-      workHMO.model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
+      workHMO.scaled_model_status_ = HighsModelStatus::PRIMAL_INFEASIBLE;
     }
   }
 }

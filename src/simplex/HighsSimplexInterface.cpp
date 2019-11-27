@@ -99,7 +99,8 @@ HighsStatus HighsSimplexInterface::addCols(
   if (valid_simplex_basis) append_nonbasic_cols_to_basis(simplex_lp, simplex_basis, XnumNewCol);
 
   // Deduce the consequences of adding new columns
-  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_COLS);
 
   // Increase the number of columns in the LPs
@@ -159,7 +160,8 @@ HighsStatus HighsSimplexInterface::deleteColsGeneral(
   if (lp.numCol_ < original_num_col) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
-    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     basis.valid_ = false;
   }
   if (valid_simplex_lp) {
@@ -340,7 +342,8 @@ HighsStatus HighsSimplexInterface::addRows(int XnumNewRow,
   if (valid_simplex_basis) append_basic_rows_to_basis(simplex_lp, simplex_basis, XnumNewRow);
 
   // Deduce the consequences of adding new rows
-  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
 
   // Increase the number of rows in the LPs
@@ -408,7 +411,8 @@ HighsStatus HighsSimplexInterface::deleteRowsGeneral(
   if (lp.numRow_ < original_num_row) {
     // Nontrivial deletion so reset the model_status and invalidate
     // the Highs basis
-    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     basis.valid_ = false;
   }
   if (valid_simplex_lp) {
@@ -719,7 +723,8 @@ HighsStatus HighsSimplexInterface::changeCoefficient(const int Xrow, const int X
   // Deduce the consequences of a changed element
   // ToDo: Can do something more intelligent if element is in nonbasic column.
   // Otherwise, treat it as if it's a new row
-  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(simplex_lp_status, LpAction::NEW_ROWS);
   //  simplex_lp.reportLp();
   return HighsStatus::OK;
@@ -753,7 +758,8 @@ HighsStatus HighsSimplexInterface::changeObjectiveSense(int Xsense) {
         (simplex_lp.sense_ == OBJSENSE_MINIMIZE)) {
       // Flip the objective sense
       simplex_lp.sense_ = Xsense;
-      highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+      highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+      highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     }
   }
   return HighsStatus::OK;
@@ -809,7 +815,8 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
                     highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new costs
-  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+  highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                         LpAction::NEW_COSTS);
   return HighsStatus::OK;
@@ -893,7 +900,8 @@ HighsStatus HighsSimplexInterface::changeColBoundsGeneral(
                        to_col, set, num_set_entries, use_set, mask, col_mask);
     }
     // Deduce the consequences of new col bounds
-    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::NEW_BOUNDS);
   }
@@ -975,7 +983,8 @@ HighsStatus HighsSimplexInterface::changeRowBoundsGeneral(
                        to_row, set, num_set_entries, row_set, mask, row_mask);
     }
     // Deduce the consequences of new row bounds
-    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.scaled_model_status_ = HighsModelStatus::NOTSET;
+    highs_model_object.unscaled_model_status_ = highs_model_object.scaled_model_status_;
     updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                           LpAction::NEW_BOUNDS);
   }
@@ -1253,8 +1262,6 @@ void HighsSimplexInterface::convertSimplexToHighsBasis() {
   int* numColPermutation =
       &highs_model_object.simplex_info_.numColPermutation_[0];
   // numColPermutation[iCol] is the true column in column iCol
-  // Frig until highs_model_object.model_status_ disappears
-  highs_model_object.scaled_model_status_ = highs_model_object.model_status_;
   const bool optimal_basis =
     highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL;
   bool error_found = false;
