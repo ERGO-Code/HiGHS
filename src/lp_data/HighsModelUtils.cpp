@@ -257,12 +257,6 @@ std::string utilHighsModelStatusToString(const HighsModelStatus model_status) {
   case HighsModelStatus::POSTSOLVE_ERROR:
       return "Postsolve error";
       break;
-  case HighsModelStatus::PRIMAL_FEASIBLE:
-      return "Primal feasible";
-      break;
-  case HighsModelStatus::DUAL_FEASIBLE:
-      return "Dual feasible";
-      break;
   case HighsModelStatus::PRIMAL_INFEASIBLE:
     return "Infeasible";//"Primal infeasible";
       break;
@@ -315,10 +309,6 @@ HighsStatus highsStatusFromHighsModelStatus(HighsModelStatus model_status) {
     return HighsStatus::Error;
   case HighsModelStatus::POSTSOLVE_ERROR:
     return HighsStatus::Error;
-  case HighsModelStatus::PRIMAL_FEASIBLE:
-    return HighsStatus::OK;
-  case HighsModelStatus::DUAL_FEASIBLE:
-    return HighsStatus::OK;
   case HighsModelStatus::PRIMAL_INFEASIBLE:
     return HighsStatus::OK;
   case HighsModelStatus::PRIMAL_UNBOUNDED:

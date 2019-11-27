@@ -378,21 +378,11 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
     sum_unscaled_primal_infeasibilities += unscaled_primal_infeasibility;
   }
 #ifdef HiGHSDEV
-  if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL ||
-      highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_FEASIBLE ||
-      highs_model_object.scaled_model_status_ == HighsModelStatus::DUAL_FEASIBLE) {
+  if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
     // If numbers of scaled primal or dual infeasibilities are
     // inconsistent with the scaled model status, then flag up an error
-    bool should_be_primal_infeasibilities = true;
-    bool should_be_dual_infeasibilities = true;
-    if (highs_model_object.scaled_model_status_ == HighsModelStatus::OPTIMAL) {
-      should_be_primal_infeasibilities = false;
-      should_be_dual_infeasibilities = false;
-    } else if (highs_model_object.scaled_model_status_ == HighsModelStatus::PRIMAL_FEASIBLE) {
-      should_be_primal_infeasibilities = false;
-    } else {
-      should_be_dual_infeasibilities = false;
-    }
+    bool should_be_primal_infeasibilities = false;
+    bool should_be_dual_infeasibilities = false;
     bool infeasibility_error;
     std::string error_comment;
     // Consider primal infeasibility errors
@@ -1143,29 +1133,13 @@ HighsModelStatus setModelAndSolutionStatus(HighsSolutionParams& solution_params)
   //  dual_feasible = dual_feasible &&
   //    max_dual_residual < dual_feasibility_tolerance;
   // Determine the model status
-  if (primal_feasible) {
-    if (dual_feasible) {
+  if (primal_feasible && dual_feasible) {
       model_status = HighsModelStatus::OPTIMAL;
-    } else {
-      model_status = HighsModelStatus::PRIMAL_FEASIBLE;
-    }
+      solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
+      solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
   } else {
-    if (dual_feasible) {
-      model_status = HighsModelStatus::DUAL_FEASIBLE;
-    } else {
-      model_status = HighsModelStatus::NOTSET;
-    }
-  }
-  // Determine the primal status
-  if (primal_feasible) {
-    solution_params.primal_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  } else {
+    model_status = HighsModelStatus::NOTSET;
     solution_params.primal_status = PrimalDualStatus::STATUS_NO_SOLUTION;
-  }
-  // Determine the dual status
-  if (dual_feasible) {
-    solution_params.dual_status = PrimalDualStatus::STATUS_FEASIBLE_POINT;
-  } else {
     solution_params.dual_status = PrimalDualStatus::STATUS_NO_SOLUTION;
   }
   return model_status;

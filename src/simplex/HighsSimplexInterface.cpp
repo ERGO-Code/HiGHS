@@ -809,11 +809,7 @@ HighsStatus HighsSimplexInterface::changeCostsGeneral(
                     highs_model_object.options_.infinite_cost);
   if (call_status == HighsStatus::Error) return HighsStatus::Error;
   // Deduce the consequences of new costs
-  if (highs_model_object.model_status_ == HighsModelStatus::OPTIMAL) {
-    highs_model_object.model_status_ = HighsModelStatus::PRIMAL_FEASIBLE;
-  } else {
-    highs_model_object.model_status_ = HighsModelStatus::NOTSET;
-  }
+  highs_model_object.model_status_ = HighsModelStatus::NOTSET;
   updateSimplexLpStatus(highs_model_object.simplex_lp_status_,
                         LpAction::NEW_COSTS);
   return HighsStatus::OK;

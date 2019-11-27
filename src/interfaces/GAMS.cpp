@@ -320,17 +320,21 @@ int processSolve(
          gmoSolveStatSet(gmo, gmoSolveStat_Normal);
          break;
 
-      case HighsModelStatus::PRIMAL_FEASIBLE:
+	 //case HighsModelStatus::PRIMAL_FEASIBLE:
+	 /*
          gmoModelStatSet(gmo, gmoModelStat_Feasible);
          gmoSolveStatSet(gmo, gmoSolveStat_Solver);
          writesol = true;
          break;
+	 */
 
-      case HighsModelStatus::DUAL_FEASIBLE:
+	//case HighsModelStatus::DUAL_FEASIBLE:
+	 /*
          gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
          gmoSolveStatSet(gmo, gmoSolveStat_Solver);
          writesol = true;
          break;
+	 */
 
       case HighsModelStatus::OPTIMAL:
          gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
