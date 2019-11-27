@@ -22,8 +22,8 @@
 
 void muptiplyByTranspose(const HighsLp& lp, const std::vector<double>& v,
                          std::vector<double>& result) {
-  assert(result.size() == lp.numCol_);
-  assert(v.size() == lp.numRow_);
+  assert((int) result.size() == lp.numCol_);
+  assert((int) v.size() == lp.numRow_);
 
   result.assign(lp.numCol_, 0);
   for (int col = 0; col < lp.numCol_; col++) {

@@ -147,6 +147,8 @@ class Highs {
    */
   const HighsSolution& getSolution() const;
 
+  const ICrashInfo& getICrashInfo() const;
+
   /**
    * @brief Returns the HighsBasis instance for the LP of the
    * (first?) HighsModelObject
@@ -622,7 +624,7 @@ class Highs {
   HighsSolution solution_;
   HighsBasis basis_;
   HighsLp lp_;
-  ICrashInfo info;
+  ICrashInfo icrash_info_;
 
   HighsTimer timer_;
 

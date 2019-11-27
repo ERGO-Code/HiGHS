@@ -167,7 +167,6 @@ HighsStatus Highs::run() {
 #endif
 
   if (options_.icrash) {
-    ICrashInfo result;
     ICrashStrategy strategy = ICrashStrategy::kICA;
     bool strategy_ok = parseICrashStrategy(options_.icrash_strategy, strategy);
     if (!strategy_ok) {
@@ -183,10 +182,7 @@ HighsStatus Highs::run() {
         options_.icrash_exact};
  
     // todo: timing. some strange compile issue.
-    HighsStatus icrash_status = callICrash(lp_, icrash_options, result);
-    if (icrash_status == HighsStatus::OK)
-      solution_.col_value = result.x_values;
-
+    HighsStatus icrash_status = callICrash(lp_, icrash_options, icrash_info_);
     return icrash_status;
   }
 
@@ -452,6 +448,8 @@ HighsStatus Highs::run() {
 const HighsLp& Highs::getLp() const { return lp_; }
 
 const HighsSolution& Highs::getSolution() const { return solution_; }
+
+const ICrashInfo& Highs::getICrashInfo() const { return icrash_info_; }
 
 const HighsBasis& Highs::getBasis() const { return basis_; }
 

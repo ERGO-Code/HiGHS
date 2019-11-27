@@ -13,11 +13,17 @@
  */
 #include "presolve/ICrash.h"
 
+#include <algorithm>
+#include <sstream>
+
 #include "HighsStatus.h"
 #include "io/HighsIO.h"
 #include "lp_data/HighsLpUtils.h"
 #include "presolve/ICrashUtil.h"
 #include "util/HighsUtils.h"
+#include "util/stringutil.h"
+
+constexpr double kExitTolerance = 0.00000001;
 
 struct Quadratic {
   const HighsLp lp;
@@ -39,7 +45,11 @@ struct Quadratic {
 
 bool parseICrashStrategy(const std::string& strategy,
                          ICrashStrategy& icrash_strategy) {
-  std::string lower = strategy;  // todo: tolower, trim
+  std::string lower = strategy;
+  trim(lower);
+  std::transform(lower.begin(), lower.end(), lower.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+
   if (lower == "penalty")
     icrash_strategy = ICrashStrategy::kPenalty;
   else if (lower == "admm")
@@ -139,7 +149,7 @@ ICrashIterationDetails fillDetails(const int num, const Quadratic& idata) {
 }
 
 void fillICrashInfo(const int n_iterations, ICrashInfo& result) {
-  assert(result.details.size() == n_iterations + 1);
+  assert((int)result.details.size() == n_iterations + 1);
   result.num_iterations = n_iterations;
 
   result.final_lp_objective = result.details[n_iterations].lp_objective;
@@ -151,14 +161,27 @@ void fillICrashInfo(const int n_iterations, ICrashInfo& result) {
   result.final_weight = result.details[n_iterations].weight;
 }
 
-void updateParameters(Quadratic& idata, const ICrashOptions& options) {}
+void updateParameters(Quadratic& idata, const ICrashOptions& options,
+                      const int iteration) {
+  if (iteration == 1) return;
+
+  // The other strategies are WIP.
+  assert(options.strategy == ICrashStrategy::kICA);
+  // Update mu every third iteration, otherwise update lambda.
+  if (iteration % 3 == 0) {
+    idata.mu = 0.1 * idata.mu;
+  } else {
+    std::vector<double> residual_ica(idata.lp.numRow_, 0);
+    updateResidualIca(idata.lp, idata.xk, residual_ica);
+    for (int row = 0; row < idata.lp.numRow_; row++)
+      idata.lambda[row] = idata.mu * idata.lambda[row];
+  }
+}
 
 void solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
   // todo: switch
   if (options.strategy == ICrashStrategy::kICA) {
     bool minor_iteration_details = false;
-    HighsPrintMessage(ML_ALWAYS, "Values at start: %3.2g, %3.4g, \n",
-                      idata.lp_objective, idata.residual_norm_2);
 
     std::vector<double> residual_ica(idata.lp.numRow_, 0);
     updateResidualIca(idata.lp, idata.xk, residual_ica);
@@ -181,17 +204,36 @@ void solveSubproblem(Quadratic& idata, const ICrashOptions& options) {
                                      quadratic_objective);
         }
 
-        assert(objective_ica ==
-               vectorProduct(idata.lp.colCost_, idata.xk.col_value));
+        assert(std::fabs(objective_ica -
+                         vectorProduct(idata.lp.colCost_, idata.xk.col_value)) <
+               1e08);
       }
 
       // code below just for checking. Can comment out later if speed up is
       // needed.
       std::vector<double> residual_ica_check(idata.lp.numRow_, 0);
       updateResidualIca(idata.lp, idata.xk, residual_ica_check);
-      assert(getNorm2(residual_ica) == getNorm2(residual_ica_check));
+      double difference = getNorm2(residual_ica) - getNorm2(residual_ica_check);
+      assert(std::fabs(difference) < 1e08);
     }
   }
+}
+
+void reportSubproblem(const Quadratic& idata, const int iteration) {
+  std::stringstream ss;
+  // Report outcome.
+  if (iteration == 0) {
+    ss << "Iteration " << std::setw(3) << 0 << ": objective " << std::setw(3)
+       << std::fixed << std::setprecision(2) << idata.lp_objective
+       << " residual " << std::setw(5) << std::scientific
+       << idata.residual_norm_2 << std::endl;
+  } else {
+    ss << "Iter " << std::setw(3) << iteration << ", mu " << idata.mu
+       << std::scientific << ", c'x " << std::setprecision(5)
+       << idata.lp_objective << ", res " << idata.residual_norm_2
+       << ", quad_obj " << idata.quadratic_objective << std::endl;
+  }
+  HighsPrintMessage(ML_ALWAYS, ss.str().c_str());
 }
 
 HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
@@ -202,20 +244,30 @@ HighsStatus callICrash(const HighsLp& lp, const ICrashOptions& options,
   Quadratic idata = parseOptions(lp, options);
   initialize(idata, options);
   update(idata);
+  reportSubproblem(idata, 0);
   result.details.push_back(fillDetails(0, idata));
 
   // Main loop.
   int iteration = 0;
-  for (iteration = 1; iteration < options.iterations; iteration++) {
-    updateParameters(idata, options);
+  for (iteration = 1; iteration <= options.iterations; iteration++) {
+    updateParameters(idata, options, iteration);
     solveSubproblem(idata, options);
     update(idata);
+    reportSubproblem(idata, iteration);
     result.details.push_back(fillDetails(iteration, idata));
 
-    // todo: check for exit.
+    // Exit if feasible.
+    if (idata.residual_norm_2 < kExitTolerance) {
+      HighsPrintMessage(ML_ALWAYS,
+                        "Solution feasible within exit tolerance: %g.\n",
+                        kExitTolerance);
+      iteration++;
+      break;
+    }
   }
 
   // Fill in return values.
+  iteration--;
   fillICrashInfo(iteration, result);
   result.x_values = idata.xk.col_value;
 
