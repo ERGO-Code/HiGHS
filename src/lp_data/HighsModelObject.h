@@ -34,6 +34,7 @@ class HighsModelObject {
   HighsModelStatus scaled_model_status_ = HighsModelStatus::NOTSET;
 
   HighsSolutionParams unscaled_solution_params_;
+  HighsSolutionParams scaled_solution_params_;
   HighsBasis basis_;
   HighsSolution solution_;
 

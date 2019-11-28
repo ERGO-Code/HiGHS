@@ -268,14 +268,10 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
 
   // Use this just to copy the simplex iteration count and primal/dual
   // objective values, and zero the other iteration counts
-  copyToSolutionParams(unscaled_solution_params,
-		       highs_model_object.simplex_info_);
-  copyToSolutionParams(local_scaled_solution_params,
-		       highs_model_object.simplex_info_);
+  double objective_function_value = simplex_info.primal_objective_value;
+  unscaled_solution_params.objective_function_value = objective_function_value;
+  local_scaled_solution_params.objective_function_value = objective_function_value;
  
-  invalidateSolutionStatusParams(local_scaled_solution_params);
-  invalidateSolutionStatusParams(unscaled_solution_params);
-  
   // Zero the counts of scaled and unscaled primal and dual infeasibilities 
   num_scaled_primal_infeasibilities = 0;
   num_scaled_dual_infeasibilities = 0;
@@ -436,31 +432,8 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   }
 #endif
 
-  // Copy the scaled_solution_params from the data in simplex_info_
-  // for easy checking later
-  HighsSolutionParams check_scaled_solution_params;
-  copyToSolutionParams(check_scaled_solution_params,
-		       highs_model_object.options_,
-		       highs_model_object.simplex_info_);
-  // Don't get the objective function directly: can't guarantee exact
-  // numerical equality due to order of calculation.
-  //
-  // Take the "scaled" objective function value as the "unscaled"
-  // objective function value since it's not affected by scaling
-  unscaled_solution_params.objective_function_value =
-    check_scaled_solution_params.objective_function_value;
-  // Take the primal_objective_value from simplex_info as the "scaled"
-  // objective function value
-  local_scaled_solution_params.objective_function_value =
-    highs_model_object.simplex_info_.primal_objective_value;
-
-  // Copy the solution status for the local scaled LP so thy don't
-  // flag up as differences and can't be identified otherwise.
-  check_scaled_solution_params.primal_status = simplex_info.primal_status;
-  check_scaled_solution_params.dual_status = simplex_info.dual_status;
-
   bool equal_scaled_solution_params =
-    equalSolutionParams(check_scaled_solution_params,
+    equalSolutionParams(highs_model_object.scaled_solution_params_,
 			local_scaled_solution_params);
   //  assert(equal_scaled_solution_params);
   if (!equal_scaled_solution_params) {
@@ -474,8 +447,8 @@ HighsStatus analyseSimplexBasicSolution(HighsModelObject& highs_model_object,
   // The solution status for the unscaled LP is inherited from the
   // scaled LP, unless there are infeasibilities in the unscaled
   // solution
-  unscaled_solution_params.primal_status = simplex_info.primal_status;
-  unscaled_solution_params.dual_status = simplex_info.dual_status;
+  // unscaled_solution_params.primal_status = scaled_solution_params.primal_status;
+  // unscaled_solution_params.dual_status = scaled_solution_params.dual_status;
   if (num_unscaled_primal_infeasibilities) {
     if (unscaled_model_status == HighsModelStatus::OPTIMAL)
       unscaled_model_status = HighsModelStatus::NOTSET;
@@ -523,15 +496,12 @@ HighsStatus analyseHighsBasicSolution(const HighsModelObject& highs_model_object
   report_level = 1;
 #endif
   HighsSolutionParams unscaled_solution_params;
-  copyToSolutionParams(unscaled_solution_params,
-		       highs_model_object.options_,
-		       highs_model_object.simplex_info_);
-  HighsModelStatus unscaled_model_status = 
-    analyseHighsBasicSolution(highs_model_object.lp_,
-			      highs_model_object.basis_,
-			      highs_model_object.solution_,
-			      unscaled_solution_params, report_level,
-			      message);
+  initialiseSolutionParams(unscaled_solution_params, highs_model_object.options_);
+  analyseHighsBasicSolution(highs_model_object.lp_,
+			    highs_model_object.basis_,
+			    highs_model_object.solution_,
+			    unscaled_solution_params, report_level,
+			    message);
   // Check that the status and solution parameters found by the
   // analysis method are identical to those found by the solver
   bool equal_solution_params =
@@ -1095,10 +1065,10 @@ void analyseSimplexAndHighsSolutionDifferences(const HighsModelObject& highs_mod
   printf("grep_transition,%s,%.15g,%d,%g,%d,%g,%s,%d,%g,%d,%g,%d,%g,%d,%g,Primal,%d,%g,%d,%g,Dual,%d,%g,%d,%g\n",
 	 simplex_lp.model_name_.c_str(),
 	 simplex_info.primal_objective_value,
-	 simplex_info.num_primal_infeasibilities,
-	 simplex_info.sum_primal_infeasibilities,
-	 simplex_info.num_dual_infeasibilities,
-	 simplex_info.sum_dual_infeasibilities,
+	 scaled_solution_params.num_primal_infeasibilities,
+	 scaled_solution_params.sum_primal_infeasibilities,
+	 scaled_solution_params.num_dual_infeasibilities,
+	 scaled_solution_params.sum_dual_infeasibilities,
 	 utilHighsModelStatusToString(highs_model_object.scaled_model_status_).c_str(),
 	 num_nonbasic_col_value_differences, sum_nonbasic_col_value_differences,
 	 num_nonbasic_row_value_differences, sum_nonbasic_row_value_differences,
@@ -1181,22 +1151,6 @@ void invalidateSolutionStatusParams(HighsSolutionParams& solution_params) {
   solution_params.num_dual_infeasibilities = -1;
   solution_params.sum_dual_infeasibilities = 0;
   solution_params.max_dual_infeasibility = 0;
-}
-
-// Zero the solution status values in a HighsSimplexInfo
-// instance. Setting the number of infeasibilities to negative values
-// indicates that they aren't known
-void invalidateSolutionStatusParams(HighsSimplexInfo& simplex_info) {
-  simplex_info.primal_status = PrimalDualStatus::STATUS_NOTSET;
-  simplex_info.dual_status = PrimalDualStatus::STATUS_NOTSET;
-  simplex_info.primal_objective_value = 0;
-  simplex_info.dual_objective_value = 0;
-  simplex_info.num_primal_infeasibilities = -1;
-  simplex_info.sum_primal_infeasibilities = 0;
-  simplex_info.max_primal_infeasibility = 0;
-  simplex_info.num_dual_infeasibilities = -1;
-  simplex_info.sum_dual_infeasibilities = 0;
-  simplex_info.max_dual_infeasibility = 0;
 }
 
 bool equalSolutionParams(const HighsSolutionParams& solution_params0,
@@ -1282,51 +1236,38 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
   return equal;
 }
 
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info) {
-  solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
-  solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
-  copyToSolutionParams(solution_params, simplex_info);
-}
-
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsSimplexInfo& simplex_info) {
-  solution_params.simplex_iteration_count = simplex_info.iteration_count;
-  solution_params.ipm_iteration_count = 0;
-  solution_params.crossover_iteration_count = 0;
-  solution_params.primal_status = simplex_info.primal_status;
-  solution_params.dual_status = simplex_info.dual_status;
-  solution_params.objective_function_value = simplex_info.primal_objective_value;
-  solution_params.num_primal_infeasibilities = simplex_info.num_primal_infeasibilities;
-  solution_params.max_primal_infeasibility = simplex_info.max_primal_infeasibility;
-  solution_params.sum_primal_infeasibilities = simplex_info.sum_primal_infeasibilities;
-  solution_params.num_dual_infeasibilities = simplex_info.num_dual_infeasibilities;
-  solution_params.max_dual_infeasibility = simplex_info.max_dual_infeasibility;
-  solution_params.sum_dual_infeasibilities = simplex_info.sum_dual_infeasibilities;
-}
-
-#ifdef IPX_ON
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const ipx::Info& ipx_info) {
+void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options) {
   solution_params.primal_feasibility_tolerance = options.primal_feasibility_tolerance;
   solution_params.dual_feasibility_tolerance = options.dual_feasibility_tolerance;
   solution_params.simplex_iteration_count = 0;
-  solution_params.ipm_iteration_count = (int)ipx_info.iter;
+  solution_params.ipm_iteration_count = 0;
   solution_params.crossover_iteration_count = 0;
+  solution_params.primal_status = PrimalDualStatus::STATUS_NOTSET;
+  solution_params.dual_status = PrimalDualStatus::STATUS_NOTSET;
+  solution_params.objective_function_value = 0;
+  solution_params.num_primal_infeasibilities = -1;
+  solution_params.max_primal_infeasibility = 0;
+  solution_params.sum_primal_infeasibilities = 0;
+  solution_params.num_dual_infeasibilities = -1;
+  solution_params.max_dual_infeasibility = 0;
+  solution_params.sum_dual_infeasibilities = 0;
 }
-#endif
 
+/*
 void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params) {
-  simplex_info.iteration_count = solution_params.simplex_iteration_count;
+  scaled_solution_params.simplex_iteration_count = solution_params.simplex_iteration_count;
   simplex_info.primal_status = solution_params.primal_status;
   simplex_info.dual_status = solution_params.dual_status;
   simplex_info.primal_objective_value = solution_params.objective_function_value;
   simplex_info.dual_objective_value = solution_params.objective_function_value;
-  simplex_info.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
-  simplex_info.max_primal_infeasibility = solution_params.max_primal_infeasibility;
-  simplex_info.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
-  simplex_info.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
-  simplex_info.max_dual_infeasibility = solution_params.max_dual_infeasibility;
-  simplex_info.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
+  scaled_solution_params.num_primal_infeasibilities = solution_params.num_primal_infeasibilities;
+  scaled_solution_params.max_primal_infeasibility = solution_params.max_primal_infeasibility;
+  scaled_solution_params.sum_primal_infeasibilities = solution_params.sum_primal_infeasibilities;
+  scaled_solution_params.num_dual_infeasibilities = solution_params.num_dual_infeasibilities;
+  scaled_solution_params.max_dual_infeasibility = solution_params.max_dual_infeasibility;
+  scaled_solution_params.sum_dual_infeasibilities = solution_params.sum_dual_infeasibilities;
 }
-
+*/
 void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params) {
   highs_info.simplex_iteration_count = solution_params.simplex_iteration_count;
   highs_info.ipm_iteration_count = solution_params.ipm_iteration_count;

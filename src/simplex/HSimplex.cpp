@@ -839,7 +839,7 @@ void report_basis(HighsLp& lp, SimplexBasis& simplex_basis) {
 // debugging NLA
 void record_pivots(int columnIn, int columnOut, double alpha) {
   // NB This is where the iteration count is updated!
-  if (columnIn >= 0) simplex_info.iteration_count++;
+  if (columnIn >= 0) scaled_solution_params.simplex_iteration_count++;
 #ifdef HiGHSDEV
   historyColumnIn.push_back(columnIn);
   historyColumnOut.push_back(columnOut);
@@ -1825,7 +1825,7 @@ void reportSimplexProfiling(HighsModelObject& highs_model_object) {
     //    timer.report(reportCount, reportList, 0.0);
     printf("PAMI   %-20s    CUTOFF  %6g    PERSISTENSE  %6g\n",
            highs_model_object.lp_.model_name_.c_str(), simplex_info.pami_cutoff,
-           simplex_info.iteration_count / (1.0 + simplex_info.multi_iteration));
+           scaled_solution_params.simplex_iteration_count / (1.0 + simplex_info.multi_iteration));
   }
 
   if (simplex_info.report_simplex_phases_clock) {
@@ -2381,7 +2381,7 @@ int compute_factor(HighsModelObject& highs_model_object) {
     //      return rankDeficiency;
   }
   //    printf("INVERT: After %d iterations and %d updates\n",
-  //    simplex_info.iteration_count, simplex_info.update_count);
+  //    scaled_solution_params.simplex_iteration_count, simplex_info.update_count);
 #ifdef HiGHSDEV
   if (simplex_info.analyse_invert_form) {
     const bool report_kernel = false;
@@ -2426,7 +2426,7 @@ int compute_factor(HighsModelObject& highs_model_object) {
     printf(
         "           INVERT  %4d     on iteration %9d: INVERT  time = %11.4g; "
         "Total INVERT  time = %11.4g\n",
-        simplex_info.total_inverts, simplex_info.iteration_count, invertTime,
+        simplex_info.total_inverts, scaled_solution_params.simplex_iteration_count, invertTime,
         simplex_info.total_invert_time);
   }
 #endif
@@ -2542,7 +2542,7 @@ void computePrimalInfeasible(HighsModelObject& highs_model_object,
   if (report) {
 #ifdef HiGHSDEV
     if (num_primal_infeasibilities) {
-      int num_iter = simplex_info.iteration_count;
+      int num_iter = scaled_solution_params.simplex_iteration_count;
       printf(
 	     "Iter %d has %d (%d+%d) primal infeasibilities (max = %g = max[%g, "
 	     "%g]) summing to %g (%g+%g)\n",
@@ -2554,9 +2554,9 @@ void computePrimalInfeasible(HighsModelObject& highs_model_object,
     }
 #endif
   }
-  simplex_info.num_primal_infeasibilities = num_primal_infeasibilities;
-  simplex_info.max_primal_infeasibility = max_primal_infeasibility;
-  simplex_info.sum_primal_infeasibilities = sum_primal_infeasibilities;
+  highs_model_object.scaled_solution_params_.num_primal_infeasibilities = num_primal_infeasibilities;
+  highs_model_object.scaled_solution_params_.max_primal_infeasibility = max_primal_infeasibility;
+  highs_model_object.scaled_solution_params_.sum_primal_infeasibilities = sum_primal_infeasibilities;
 }
 
 void computeDualInfeasible(HighsModelObject& highs_model_object,
@@ -2608,16 +2608,16 @@ void computeDualInfeasible(HighsModelObject& highs_model_object,
   if (report) {
 #ifdef HiGHSDEV
     if (num_dual_infeasibilities) {
-      int num_iter = simplex_info.iteration_count;
+      int num_iter = highs_model_object.scaled_solution_params_.simplex_iteration_count;
       printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n",
 	     num_iter, num_dual_infeasibilities, max_dual_infeasibility,
 	     sum_dual_infeasibilities);
     }
 #endif
   }
-  simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
-  simplex_info.max_dual_infeasibility = max_dual_infeasibility;
-  simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
+  highs_model_object.scaled_solution_params_.num_dual_infeasibilities = num_dual_infeasibilities;
+  highs_model_object.scaled_solution_params_.max_dual_infeasibility = max_dual_infeasibility;
+  highs_model_object.scaled_solution_params_.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
 void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
@@ -2656,16 +2656,16 @@ void computeDualInfeasibleWithFlips(HighsModelObject& highs_model_object,
   if (report) {
 #ifdef HiGHSDEV
     if (num_dual_infeasibilities) {
-      int num_iter = simplex_info.iteration_count;
+      int num_iter = highs_model_object.scaled_solution_params_.simplex_iteration_count;
       printf("Iter %d has %d dual infeasibilities (max = %g) summing to %g\n",
 	     num_iter, num_dual_infeasibilities, max_dual_infeasibility,
 	     sum_dual_infeasibilities);
     }
 #endif
   }
-  simplex_info.num_dual_infeasibilities = num_dual_infeasibilities;
-  simplex_info.max_dual_infeasibility = max_dual_infeasibility;
-  simplex_info.sum_dual_infeasibilities = sum_dual_infeasibilities;
+  highs_model_object.scaled_solution_params_.num_dual_infeasibilities = num_dual_infeasibilities;
+  highs_model_object.scaled_solution_params_.max_dual_infeasibility = max_dual_infeasibility;
+  highs_model_object.scaled_solution_params_.sum_dual_infeasibilities = sum_dual_infeasibilities;
 }
 
 void compute_dual(HighsModelObject& highs_model_object) {
@@ -2904,6 +2904,7 @@ void update_matrix(HighsModelObject& highs_model_object, int columnIn,
 
 void logRebuild(HighsModelObject& highs_model_object, const bool primal,
                 const int solve_phase) {
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
   HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
   double objective_value;
   string simplex_variant;
@@ -2916,23 +2917,23 @@ void logRebuild(HighsModelObject& highs_model_object, const bool primal,
   }
   if (solve_phase < 2) {
     HighsLogMessage(HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d",
-                    simplex_info.iteration_count, objective_value,
+                    scaled_solution_params.simplex_iteration_count, objective_value,
                     simplex_variant.c_str(), solve_phase);
-  } else if (!primal && simplex_info.sum_dual_infeasibilities == 0) {
+  } else if (!primal && scaled_solution_params.sum_dual_infeasibilities == 0) {
     HighsLogMessage(
         HighsMessageType::INFO, "Iter %10d: %20.10e %sPh%1d Pr: %d(%g)",
-        simplex_info.iteration_count, objective_value, simplex_variant.c_str(),
-        solve_phase, simplex_info.num_primal_infeasibilities,
-        simplex_info.sum_primal_infeasibilities);
+        scaled_solution_params.simplex_iteration_count, objective_value, simplex_variant.c_str(),
+        solve_phase, scaled_solution_params.num_primal_infeasibilities,
+        scaled_solution_params.sum_primal_infeasibilities);
   } else {
     HighsLogMessage(HighsMessageType::INFO,
                     "Iter %10d: %20.10e %sPh%1d Pr: %d(%g); Du: %d(%g)",
-                    simplex_info.iteration_count, objective_value,
+                    scaled_solution_params.simplex_iteration_count, objective_value,
                     simplex_variant.c_str(), solve_phase,
-                    simplex_info.num_primal_infeasibilities,
-                    simplex_info.sum_primal_infeasibilities,
-                    simplex_info.num_dual_infeasibilities,
-                    simplex_info.sum_dual_infeasibilities);
+                    scaled_solution_params.num_primal_infeasibilities,
+                    scaled_solution_params.sum_primal_infeasibilities,
+                    scaled_solution_params.num_dual_infeasibilities,
+                    scaled_solution_params.sum_dual_infeasibilities);
   }
 }
 

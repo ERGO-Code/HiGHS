@@ -243,11 +243,6 @@ struct HighsSimplexInfo {
 #endif
   // Simplex runtime information
   int costs_perturbed = 0;
-  // Cumulative iteration count - updated in simplex solvers
-  int iteration_count = 0;
-  // Status of the primal and dual solution
-  int primal_status = PrimalDualStatus::STATUS_NOTSET;
-  int dual_status = PrimalDualStatus::STATUS_NOTSET;
   // Records of cumulative iteration counts - updated at the end of a phase
   int dual_phase1_iteration_count = 0;
   int dual_phase2_iteration_count = 0;
@@ -276,13 +271,6 @@ struct HighsSimplexInfo {
   double updated_primal_objective_value;
   // Number of logical variables in the basis
   int num_basic_logicals;
-  // Number/max/sum of primal and dual infeasibilities
-  int num_primal_infeasibilities;
-  double max_primal_infeasibility;
-  double sum_primal_infeasibilities;
-  int num_dual_infeasibilities;
-  double max_dual_infeasibility;
-  double sum_dual_infeasibilities;
 
 #ifdef HiGHSDEV
   // Analysis of INVERT

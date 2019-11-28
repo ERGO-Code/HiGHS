@@ -287,7 +287,8 @@ IpxStatus solveModelWithIpx(const HighsLp& lp,
     report_level = 1;
 #endif
     HighsSolutionParams solution_params;
-    copyToSolutionParams(solution_params, options, ipx_info);
+    initialiseSolutionParams(solution_params, options);
+    solution_params.ipm_iteration_count = (int)ipx_info.iter;
     highs_model_status = analyseHighsBasicSolution(lp, highs_basis, highs_solution,
 						   solution_params, report_level, "after IPX");
     copyFromSolutionParams(highs_info, solution_params);

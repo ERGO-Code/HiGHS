@@ -254,6 +254,9 @@ std::string utilPrimalDualStatusToString(const int primal_dual_status) {
   case PrimalDualStatus::STATUS_NO_SOLUTION:
     return "No solution";
     break;
+  case PrimalDualStatus::STATUS_UNKNOWN:
+    return "Solution status unknown";
+    break;
   case PrimalDualStatus::STATUS_FEASIBLE_POINT:
     return "Feasible point";
     break;

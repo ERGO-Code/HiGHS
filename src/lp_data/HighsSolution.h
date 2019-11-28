@@ -89,7 +89,6 @@ std::string iterationsToString(const HighsSolutionParams& solution_params);
 void invalidateSolutionParams(HighsSolutionParams& solution_params);
 void invalidateSolutionIterationCountParams(HighsSolutionParams& solution_params);
 void invalidateSolutionStatusParams(HighsSolutionParams& solution_params);
-void invalidateSolutionStatusParams(HighsSimplexInfo& simplex_info);
 
 bool equalSolutionIterationCountParams(const HighsSolutionParams& solution_params0,
 				       const HighsSolutionParams& solution_params1);
@@ -99,15 +98,13 @@ bool equalSolutionStatusParams(const HighsSolutionParams& solution_params0,
 bool equalSolutionParams(const HighsSolutionParams& solution_params0,
 			 const HighsSolutionParams& solution_params1);
 
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const HighsSimplexInfo& simplex_info);
-
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsSimplexInfo& simplex_info);
+void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options);
 
 #ifdef IPX_ON
-void copyToSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const ipx::Info& ipx_info);
+void initialiseSolutionParams(HighsSolutionParams& solution_params, const HighsOptions& options, const ipx::Info& ipx_info);
 #endif
 
-void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params);
+//void copyFromSolutionParams(HighsSimplexInfo& simplex_info, const HighsSolutionParams& solution_params);
 
 void copyFromSolutionParams(HighsInfo& highs_info, const HighsSolutionParams& solution_params);
 

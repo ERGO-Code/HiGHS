@@ -416,10 +416,18 @@ HighsStatus Highs::run() {
         timer_.stop(timer_.postsolve_clock);
         if (postsolve_status == HighsPostsolveStatus::SolutionRecovered) {
           HighsPrintMessage(ML_VERBOSE, "Postsolve finished.");
-          // Set solution(?) and basis to hot-start the simplex solver
-          // for the original_hmo
+	  // Set up the solution parameters 
+	  HighsSolutionParams unscaled_solution_params;
+	  initialiseSolutionParams(unscaled_solution_params, hmos_[original_hmo].options_);
+	  //
+          // To hot-start the simplex solver for the original_hmo:
+	  //
+	  // Set solution and its status
           hmos_[original_hmo].solution_ = presolve_info.recovered_solution_;
-
+	  unscaled_solution_params.primal_status = PrimalDualStatus::STATUS_UNKNOWN;
+	  unscaled_solution_params.dual_status = PrimalDualStatus::STATUS_UNKNOWN;
+	  //
+	  // Set basis and its status
           hmos_[original_hmo].basis_.col_status =
               presolve_info.presolve_[0].getColStatus();
           hmos_[original_hmo].basis_.row_status =
@@ -430,15 +438,11 @@ HighsStatus Highs::run() {
 #ifdef HiGHSDEV
           report_level = 1;
 #endif
-	  HighsSolutionParams solution_params;
-	  copyToSolutionParams(solution_params,
-			       hmos_[original_hmo].options_,
-			       hmos_[original_hmo].simplex_info_);
 	  hmos_[original_hmo].unscaled_model_status_ = 
 	    analyseHighsBasicSolution(hmos_[original_hmo].lp_,
 				 hmos_[original_hmo].basis_,
 				 hmos_[original_hmo].solution_,
-				 solution_params, report_level, "after returning from postsolve");
+				 unscaled_solution_params, report_level, "after returning from postsolve");
 	  //	  copyFromSolutionParams(hmos_[original_hmo].simplex_info_, solution_params);
 
           // Now hot-start the simplex solver for the original_hmo
@@ -499,7 +503,7 @@ HighsStatus Highs::run() {
   info_.objective_function_value = hmos_[original_hmo].simplex_info_.dual_objective_value;
   info_.simplex_iteration_count = 0;
   for (int k = 0; k < hmos_size; k++) {
-    info_.simplex_iteration_count += hmos_[k].simplex_info_.iteration_count;
+    info_.simplex_iteration_count += hmos_[k].scaled_solution_params_.simplex_iteration_count;
   }
   info_.primal_status = hmos_[original_hmo].unscaled_solution_params_.primal_status;
   info_.dual_status = hmos_[original_hmo].unscaled_solution_params_.dual_status;
@@ -1113,9 +1117,9 @@ HighsStatus Highs::callRunSolver(HighsModelObject& model, int& iteration_count,
     solver_return_status = solveUnconstrainedLp(model);
     iteration_count = 0;
   } else {
-    int initial_iteration_count = model.simplex_info_.iteration_count;
+    int initial_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
     solver_return_status = runSolver(model);
-    int final_iteration_count = model.simplex_info_.iteration_count;
+    int final_iteration_count = model.scaled_solution_params_.simplex_iteration_count;
     iteration_count = final_iteration_count - initial_iteration_count;
   }
   return solver_return_status;
@@ -1260,13 +1264,13 @@ HighsStatus Highs::solveNode(Node& node) {
   int solve0_status;
   int solve1_status;
 
-  iteration_count0 = hmos_[0].simplex_info_.iteration_count;
+  iteration_count0 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
 
   HighsStatus return_status = solveModelSimplex(hmos_[0]);
   if (return_status == HighsStatus::Error) return HighsStatus::Error;
   //  allow_presolve_ = false;
 
-  iteration_count1 = hmos_[0].simplex_info_.iteration_count;
+  iteration_count1 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
   solve0_iteration_count = iteration_count1 - iteration_count0;
   solve0_objective_value = hmos_[0].simplex_info_.dual_objective_value;
   solve0_status = (int)hmos_[0].scaled_model_status_;
@@ -1277,10 +1281,10 @@ HighsStatus Highs::solveNode(Node& node) {
     // Generate a fresh model object for the LP at this node
     hmos_[0].simplex_lp_status_.has_basis = false;
     hmos_[0].basis_.valid_ = false;
-    iteration_count0 = hmos_[0].simplex_info_.iteration_count;
+    iteration_count0 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
     HighsStatus return_status = solveModelSimplex(hmos_[0]);
     if (return_status != HighsStatus::OK) return return_status;
-    iteration_count1 = hmos_[0].simplex_info_.iteration_count;
+    iteration_count1 = hmos_[0].scaled_solution_params_.simplex_iteration_count;
     solve1_iteration_count = iteration_count1 - iteration_count0;
     solve1_objective_value = hmos_[0].simplex_info_.dual_objective_value;
     solve1_status = (int)hmos_[0].scaled_model_status_;

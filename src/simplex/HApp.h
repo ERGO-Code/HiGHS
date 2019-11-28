@@ -103,9 +103,10 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
   // Copy the simplex stratgy so that it can be modified:
   //
   int use_simplex_strategy = simplex_info.simplex_strategy;
-  if (simplex_info.num_primal_infeasibilities == 0) {
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+  if (scaled_solution_params.num_primal_infeasibilities == 0) {
     // Primal feasible
-    if (simplex_info.num_dual_infeasibilities == 0) {
+    if (scaled_solution_params.num_dual_infeasibilities == 0) {
       // Dual feasible
       // Simplex solution is optimal
       highs_model_object.scaled_model_status_ = HighsModelStatus::OPTIMAL;
@@ -164,7 +165,7 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
             simplex_info.dual_phase2_iteration_count +
             simplex_info.primal_phase1_iteration_count +
             simplex_info.primal_phase2_iteration_count !=
-        simplex_info.iteration_count)
+        scaled_solution_params.simplex_iteration_count)
       printf("Iteration total error \n");
 
     if (highs_model_object.options_.simplex_initial_condition_check) {
@@ -190,14 +191,14 @@ HighsStatus runSimplexSolver(HighsModelObject& highs_model_object) {
                       "Iterations [Ph1 %d; Ph2 %d] Total %d",
                       simplex_info.primal_phase1_iteration_count,
                       simplex_info.primal_phase2_iteration_count,
-                      simplex_info.iteration_count);
+                      scaled_solution_params.simplex_iteration_count);
     } else {
       HighsLogMessage(HighsMessageType::INFO,
                       "Iterations [Ph1 %d; Ph2 %d; Pr %d] Total %d",
                       simplex_info.dual_phase1_iteration_count,
                       simplex_info.dual_phase2_iteration_count,
                       simplex_info.primal_phase2_iteration_count,
-                      simplex_info.iteration_count);
+                      scaled_solution_params.simplex_iteration_count);
     }
 #endif
   }
@@ -294,15 +295,11 @@ HighsStatus tryToSolveUnscaledLp(HighsModelObject& highs_model_object) {
 // It sets the HiGHS basis within highs_model_object and, if optimal,
 // the HiGHS solution, too
 HighsStatus solveModelSimplex(HighsModelObject& highs_model_object) {
-  HighsSimplexInfo& simplex_info = highs_model_object.simplex_info_;
-
-  // Invalidate the model status and zero the solution status values
-  // for the unscaled model, then indicate that the objective funciton
-  // values are unknown
+  HighsSolutionParams& scaled_solution_params = highs_model_object.scaled_solution_params_;
+  // Invalidate the model status and zero the solution params for the
+  // unscaled model values are unknown
   highs_model_object.unscaled_model_status_ = HighsModelStatus::NOTSET;
-  invalidateSolutionStatusParams(simplex_info);
-  highs_model_object.simplex_lp_status_.has_primal_objective_value = false;
-  highs_model_object.simplex_lp_status_.has_dual_objective_value = false;
+  invalidateSolutionStatusParams(scaled_solution_params);
   
   // Handle the case of unconstrained LPs here
   if (!highs_model_object.lp_.numRow_) {
